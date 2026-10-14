@@ -26,8 +26,8 @@ public final class TitleInputOwnership {
 
     /**
      * As {@link #routeDisplay(GameMode, MasterTitleScreen, boolean, BooleanSupplier, Runnable, Runnable)},
-     * where {@code sceneCapturesText} is true while an open mod scene claims keyboard text input:
-     * the scene then owns the keys exactly as a blocking title page does.
+     * where {@code sceneCapturesText} also represents a host modal's input claim.
+     * The modal owns the keys in any mode, including editor import/path forms.
      */
     public static boolean routeDisplay(GameMode mode, MasterTitleScreen title, boolean sceneCapturesText,
                                        boolean pickerAlreadyOpen, BooleanSupplier updatePicker,
@@ -55,7 +55,7 @@ public final class TitleInputOwnership {
     }
 
     private static boolean allowsGlobalShortcuts(GameMode mode, MasterTitleScreen title, boolean sceneCapturesText) {
-        if (mode == GameMode.MOD_SCENE) return !sceneCapturesText;
+        if (sceneCapturesText) return false;
         return mode != GameMode.MASTER_TITLE_SCREEN || (title != null && !title.blocksGlobalShortcuts());
     }
 

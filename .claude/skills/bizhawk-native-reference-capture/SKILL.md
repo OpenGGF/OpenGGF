@@ -71,3 +71,18 @@ Record the source/input hashes, command and bounded conclusion in the existing
 task artifact. Preserve reusable probes and lessons under repository policy;
 keep captures outside the repository. Follow the user's authorized scope for
 any fixture publication or broader implementation work.
+
+
+## Headless published-video API
+
+For an owned C# diagnostic, the optional pinned TraceChaser harness exposes
+`IGpgxVideoCaptureHost.AdvanceWithVideo()` and `CapturePublishedFrame()`.
+See [the host contract](../../../tools/tracechaser/bizhawk-headless/README.md#diagnostic-rendered-frames)
+and [OpenGGF observation guidance](../../../tools/bizhawk/README.md#native-headless-rendered-observations).
+It copies actual pixels and published VDP domains after one completed rendered
+hardware frame and rejects stale generations. This port supplies no scene,
+setup offsets, original input selection or canonical publication authority,
+and has no standalone screenshot CLI. Use explicit verified inputs and an
+external output directory; keep CPU/prepared/published identities and original
+RGB separate. A frame-end VRAM snapshot cannot certify earlier scanline
+residency. Ordinary trace advancement remains video-disabled.

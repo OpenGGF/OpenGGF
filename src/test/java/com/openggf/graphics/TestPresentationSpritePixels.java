@@ -80,6 +80,20 @@ class TestPresentationSpritePixels {
                 assertTrue((image[red]&255)>20);assertEquals(0,image[red+2]&255,"old red pose must not sample newest DPLC bytes");
                 assertTrue((image[blue+2]&255)>40);assertEquals(0,image[blue]&255);
                 assertEquals(255,image[green+1]&255);assertEquals(0,image[green]&255);
+                var crowdRuntime=mock(LivePresentationRuntime.class);
+                when(crowdRuntime.trailBank(graphics)).thenReturn(PresentationGraphicsAccess.base(bank,graphics,owner));
+                when(crowdRuntime.spritePolicies()).thenReturn(List.of());
+                var crowd=new ArrayList<LivePresentationRuntime.Pose>();
+                for(int echo=0;echo<24;echo++)crowd.add(new LivePresentationRuntime.Pose(
+                        picture(12+(echo%12)*24,70+(echo/12)*32,false,false,echo%2==0?1:3),0,0));
+                when(crowdRuntime.trails()).thenReturn(List.copyOf(crowd));
+                byte[] crowded=render(graphics,picture(300,150,false,false,2),crowdRuntime,width);
+                for(int echo=0;echo<24;echo++) {
+                    int at=((223-(73+(echo/12)*32))*width+15+(echo%12)*24)*4;
+                    int colour=echo%2==0?0:2;
+                    assertTrue((crowded[at+colour]&255)>=160,"every crowd member must remain strongly visible: "+echo);
+                    assertEquals(0,crowded[at+(echo%2==0?2:0)]&255,"each historical DPLC generation retains its own pixels");
+                }
                 Frame visible=picture(60,30,false,false,2);Tile tile=visible.tiles().getFirst();
                 var hidden=new Tile(tile.layer(),tile.patternId(),tile.palette(),tile.hFlip(),tile.vFlip(),tile.priority(),
                         tile.x(),tile.y(),tile.width(),tile.height(),tile.priorityShader(),tile.occlusionMask(),tile.ghost(),tile.ghostAlpha(),

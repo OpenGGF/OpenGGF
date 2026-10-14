@@ -5,6 +5,17 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Level authoring:** Named projects create, edit and reopen complete authored
+  levels for Sonic 1, Sonic 2 and Sonic 3&K using ROM-derived asset libraries.
+  Atomic saves retain placements and missing dependency records; close and quit
+  protect unsaved work. Start/cursor
+  playtests use fresh native runtime snapshots and return to the authored
+  document with selection and undo history. Host-validated exports support
+  S1/S2 v1 and S3K v2, including a native results goal for S3K. Title Tools and
+  the editor command palette expose creation, import, properties, resizing and
+  Save As; pattern browsing, descriptor controls, local collision edits, erase
+  and spawn inspection complete layout authoring.
+
 - **S3K level entry:** Captures that omit the title presentation complete the
   destination's deferred player assembly before its animation and art-loading
   tail, allowing ordinary movement after a fresh zone handoff. Publication also
@@ -22,6 +33,9 @@ Unreleased. The earlier development themes remain in
   while previews and seamless continuations preserve their sequence.
   Sky Sanctuary opening bridges use the native top-contact surface and exact
   overlap band, retaining the relative landing write before floor reset.
+  Its arrival controller retains the native light divider and ROM palette cycle,
+  admits the P2 release helper through the native continuation scan and retires
+  after the final light write. Tails-led teams preserve their native branch.
   Initial touch publication follows each object's native range/deletion tail,
   and a full object-table reset retires both collision buffers before slot reuse.
   Identity-keyed participant contact maps encode stable team IDs through
@@ -51,10 +65,16 @@ Unreleased. The earlier development themes remain in
   the shot's camera-relative position.
   Barrel waits allocate the next pair on native timer underflow, before their
   signed-counter return tail.
+  Common shots retain their final wait's deletion marker through the draw pass,
+  clear on the next dispatch and keep their native lifetime while offscreen.
   Firing and drop-position cycling share the native byte counter, including
   signed reads and wrap, so both facing directions select their native columns.
   The cutscene explosion controller owns a real sprite-table slot, preserving
   allocation-before-RNG, both random words and native retirement through rewind.
+  Its barrels select the real falling-shot family, preserving the cutscene's
+  cleared collision byte in independent explosion children. Floor and final
+  animation callbacks retain their sprite slots through the native draw pass
+  before clearing on the following dispatch, including through rewind.
 
 - **S3K breakable floors:** Cork's placed record becomes its first moving
   fragment, preserving checked sibling allocation, native motion and render

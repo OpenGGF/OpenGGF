@@ -214,6 +214,110 @@ class TestNativeMutatorRuntime {
         rig.active(new RingEconomyPolicy(RingEconomyPolicy.Kind.BALANCE),true);
         verify(rig.player).setRingCount(110);
     }
+    @Test
+    @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void encounterPaletteQueryIsExactWorldOwnedAndRebuildsDerivedResourcesAfterCapturedRestore() throws Exception {
+        var rig=new Rig();var other=new Rig();var rom=new com.openggf.data.Rom();
+        var romFile=com.openggf.tests.RomTestUtils.ensureSonic3kRomAvailable();assertNotNull(romFile);
+        assertTrue(rom.open(romFile.getAbsolutePath()));
+        var graphics=new com.openggf.graphics.GraphicsManager();graphics.initHeadless();
+        com.openggf.graphics.RenderContext.reset();
+        try {
+            when(rig.services.worldSession().getDataSource().rom()).thenReturn(Optional.of(rom));
+            rig.services.withGraphicsManager(graphics);
+            var provider=new com.openggf.game.sonic3k.Sonic3kObjectArtProvider();
+            when(rig.level.getObjectRenderManager()).thenReturn(new ObjectRenderManager(provider));
+            rig.active(new EncounterPolicy(EncounterPolicy.Kind.GHOST,EncounterPolicy.Side.AHEAD),false);
+            var ghost=rig.objects.objectQuery().activeObjectsOfType(com.openggf.game.sonic3k.objects.NativeGhostEncounterObjectInstance.class).getFirst();
+            ghost.update(1,rig.player);
+            var body=rig.objects.objectQuery().activeObjectsOfType(com.openggf.game.sonic3k.objects.SozHyudoroBodyObjectInstance.class).getFirst();
+            String key=com.openggf.game.sonic3k.Sonic3kObjectArtKeys.SOZ_GHOSTS;
+            assertTrue(NativeEncounterPaletteAccess.base(rig.services,body,key)>=4);
+            var replay=rig.runtime.encounterPaletteReplay(rig.services,body,key);assertNotNull(replay);
+            assertEquals(NativeEncounterPaletteAccess.base(rig.services,body,key)+1,replay.palette(graphics,1));
+            String wrongKey=com.openggf.game.sonic3k.Sonic3kObjectArtKeys.CNZ_BUMPER;
+            assertNull(rig.runtime.encounterPaletteReplay(rig.services,body,wrongKey));
+            assertEquals(-1,NativeEncounterPaletteAccess.base(rig.services,body,wrongKey));
+            assertEquals(-1,replay.palette(new com.openggf.graphics.GraphicsManager(),1));
+            graphics.clearPaletteTextures();assertEquals(-1,NativeEncounterPaletteAccess.base(rig.services,body,key));
+            assertNotNull(rig.runtime.encounterPaletteReplay(rig.services,body,key),"owned provenance survives unavailable GPU residency");
+            assertTrue(replay.palette(graphics,1)>=5,"deferred execution can rebuild exact-owner ROM residency");
+            var nativeBody=rig.objects.createDynamicObject(()->new com.openggf.game.sonic3k.objects.SozHyudoroBodyObjectInstance(new ObjectSpawn(300,100,0,0,0,false,0)));
+            assertEquals(-1,NativeEncounterPaletteAccess.base(rig.services,nativeBody,key));
+            assertNull(rig.runtime.encounterPaletteReplay(rig.services,nativeBody,key));
+            assertEquals(-1,NativeEncounterPaletteAccess.base(other.services,body,key));
+            var id=rig.objects.objectQuery().identityOf(body).orElseThrow();
+            var objects=rig.objects.rewindSnapshottable().capture();var state=rig.runtime.capture();
+            rig.runtime.leaveOrdinaryGameplay(com.openggf.game.GameplayObservation.Phase.STAGE);
+            assertEquals(-1,replay.palette(graphics,1),"retired owned subjects are suppressed instead of flashing host colours");
+            assertEquals(-1,NativeEncounterPaletteAccess.base(rig.services,body,key));
+            rig.objects.rewindSnapshottable().restore(objects);rig.runtime.restore(state);
+            rig.runtime.onPresentation(null,LogicalInputSnapshot.neutral(),com.openggf.game.GameplayObservation.Phase.HELD);
+            var restored=rig.objects.objectQuery().resolve(id).orElseThrow();
+            assertTrue(NativeEncounterPaletteAccess.base(rig.services,restored,key)>=4);
+            assertTrue(replay.palette(graphics,1)>=5,"the same captured logical resolver follows recreated object identity");
+            assertEquals(state.clocks(),rig.runtime.capture().clocks(),"GPU bank rebuild must not advance captured native clocks");
+            rig.runtime.beforeAssembly(LevelLoadCause.FULL_DEATH_RELOAD);
+            assertEquals(-1,replay.palette(graphics,1),"another assembly cannot reuse the captured resolver");
+            rig.runtime.retire();assertEquals(-1,NativeEncounterPaletteAccess.base(rig.services,restored,key));
+        } finally { rig.runtime.retire();graphics.cleanup();rom.close();com.openggf.graphics.RenderContext.reset(); }
+    }
+    @Test void ringRainSpansEachViewportAndUsesItsOwnBoundedRewindLifetime() throws Exception {
+        for(int width:new int[]{320,400,800}) {
+            var rig=new Rig();when(rig.camera.getWidth()).thenReturn((short)width);
+            when(rig.camera.getX()).thenReturn((short)512);when(rig.camera.getY()).thenReturn((short)64);
+            when(rig.camera.getMaxY()).thenReturn((short)2048);when(rig.camera.getHeight()).thenReturn((short)224);
+            var nativeSpin=mock(com.openggf.level.rings.RingManager.class);
+            when(nativeSpin.getSpillAnimationState()).thenReturn(new com.openggf.level.rings.SpillAnimationState());
+            when(rig.level.getRingManager()).thenReturn(nativeSpin);
+            rig.active(new RingEconomyPolicy(RingEconomyPolicy.Kind.RAIN),false);
+            var rings=rig.objects.objectQuery().activeObjectsOfType(com.openggf.level.rings.LostRingObjectInstance.class);
+            assertTrue(rings.size()>=4);assertTrue(rings.stream().anyMatch(r->r.getX()<512+width/4));
+            assertTrue(rings.stream().anyMatch(r->r.getX()>512+width*3/4));
+            assertTrue(rings.stream().allMatch(r->r.getY()==68 && r.getXVelForTest()>0 && r.getYVelForTest()>r.getXVelForTest()*4));
+            var first=rings.getFirst();var identity=rig.objects.objectQuery().identityOf(first).orElseThrow();
+            var objectsBefore=rig.objects.rewindSnapshottable().capture();var policiesBefore=rig.runtime.capture();
+            first.update(1,rig.player);assertTrue(first.getY()>68);
+            rig.objects.rewindSnapshottable().restore(objectsBefore);rig.runtime.restore(policiesBefore);
+            var restored=(com.openggf.level.rings.LostRingObjectInstance)rig.objects.objectQuery().resolve(identity).orElseThrow();
+            restored.update(1,rig.player);assertFalse(restored.isDestroyed(),"recreation must not attach a zero native hurt-spill lifetime");
+            assertEquals(first.getY(),restored.getY());
+            for(int tick=0;tick<120;tick++)rig.runtime.beforeNativeTick(rig.frame,LogicalInputSnapshot.neutral());
+            assertTrue(rig.runtime.capture().owned().size()>16,"ring rain must not starve behind the encounter-root quota");
+            assertTrue(rig.runtime.capture().owned().size()<=48);
+            rig.entries.set(List.of());rig.runtime.beforeNativeTick(rig.frame,LogicalInputSnapshot.neutral());
+            assertTrue(rig.runtime.capture().owned().isEmpty());
+        }
+    }
+    @Test void ringLeakDropsBehindTravelWithDelayedPickupAndNeverChargesRejectedAllocation() throws Exception {
+        for(int direction:new int[]{-1,1}) {
+            var rig=new Rig();var inventory=new com.openggf.game.LevelGamestate();
+            doReturn(inventory).when(rig.player).currentLevelState();rig.player.setRingCount(10);
+            rig.player.setXSpeed((short)(direction*0x400));
+            when(rig.camera.getMaxY()).thenReturn((short)2048);when(rig.camera.getHeight()).thenReturn((short)224);
+            rig.active(new RingEconomyPolicy(RingEconomyPolicy.Kind.LEAK),false);
+            for(int tick=1;tick<30;tick++)rig.runtime.beforeNativeTick(rig.frame,LogicalInputSnapshot.neutral());
+            assertEquals(9,rig.player.getRingCount());
+            var ring=rig.objects.objectQuery().activeObjectsOfType(com.openggf.level.rings.LostRingObjectInstance.class).getFirst();
+            assertTrue((ring.getX()-rig.player.getCentreX())*direction<=-24);
+            assertEquals(-direction*0x80,ring.getXVelForTest());assertTrue(ring.getYVelForTest()<0);
+            assertEquals(0,ring.getCollisionFlags());ring.markCollected(0);assertFalse(ring.isCollected());
+            var objectState=rig.objects.rewindSnapshottable().capture();var policyState=rig.runtime.capture();
+            for(int tick=0;tick<24;tick++)ring.update(tick,rig.player);
+            assertEquals(com.openggf.level.rings.LostRingObjectInstance.LOST_RING_COLLISION_FLAGS,ring.getCollisionFlags());
+            rig.objects.rewindSnapshottable().restore(objectState);rig.runtime.restore(policyState);
+            var restored=rig.objects.objectQuery().activeObjectsOfType(com.openggf.level.rings.LostRingObjectInstance.class).getFirst();
+            assertEquals(0,restored.getCollisionFlags());
+            for(int tick=0;tick<24;tick++)restored.update(tick,rig.player);
+            restored.markCollected(24);assertTrue(restored.isCollected(),"turning back must allow normal ring recovery");
+            var noSlots=spy(rig.objects);doReturn(null).when(noSlots).createDynamicObject(any());
+            rig.services.withDirectObjectManager(noSlots);when(rig.level.getObjectManager()).thenReturn(noSlots);
+            for(int tick=0;tick<30;tick++)rig.runtime.beforeNativeTick(rig.frame,LogicalInputSnapshot.neutral());
+            assertEquals(9,rig.player.getRingCount(),"a failed native allocation must leave inventory unchanged");
+            rig.entries.set(List.of());rig.runtime.beforeNativeTick(rig.frame,LogicalInputSnapshot.neutral());
+            assertFalse(restored.isDestroyed(),"spent inventory leaves recoverable pickups behind after the leaking effect ends");
+        }
+    }
     @Test void ringLeakRetainsTheLastRingAndDoesNotRestoreSpentInventoryOnExpiry() throws Exception {
         for (int initial : new int[] { 0, 1, 2 }) {
             var rig = new Rig();

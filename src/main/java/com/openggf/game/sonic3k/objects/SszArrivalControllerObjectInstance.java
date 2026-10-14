@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.CharacterKey;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
@@ -10,6 +11,9 @@ import com.openggf.game.sonic3k.runtime.SszZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectConstructionContext;
+import com.openggf.level.objects.NativeSstSlotAccess;
+import com.openggf.level.objects.ObjectSlotLayout;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
@@ -27,7 +31,7 @@ import java.util.List;
  * {@code SSZ2_ScreenInit} at X {@code $A0} with {@code $2D = $44}. Its first pass
  * ({@code Obj_57C1E}) allocates the beam through {@code AllocateObjectAfterCurrent} as
  * {@code Obj_TeleporterBeamExpand} — already expanded — sets its own {@code y_pos} to
- * {@code $1000} and {@code $38} to {@code -$100} (the flag the beam clears when it finishes
+ * {@code $1000} and {@code $38} to {@code -$100} (the active flag the beam clears when it finishes
  * contracting), spawns {@code Obj_57E34} in act 1, then puts Player 1 at
  * {@code Camera_Y + $65} under {@code object_control 3} and sets {@code Events_bg+$04}.
  *
@@ -42,7 +46,7 @@ import java.util.List;
  * until the swing speed turns non-negative, at which point it clears {@code object_control},
  * {@code anim} and {@code Events_bg+$04}. {@code loc_57DA2} finally raises {@code Camera_min_Y}
  * to the camera once it settles at {@code Camera_max_Y}, and deletes itself when the beam has
- * cleared {@code $38}.
+ * cleared {@code $38} and the light index has returned to zero.
  */
 public final class SszArrivalControllerObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable, TeleporterBeamOwner {
@@ -68,14 +72,18 @@ public final class SszArrivalControllerObjectInstance extends AbstractObjectInst
     /** {@code $2D(a0)}: the rise frame count from the screen init. */
     private int riseRemaining;
     private int phase = PHASE_INIT;
-    /** {@code $38(a0)}: {@code -$100} until the beam's deletion clears the low byte. */
+    /** {@code $38(a0)}: {@code -$100} until the beam's deletion clears the active high byte. */
     private int beamFlag;
+    /** Native byte $39, the divider shared by every sub_45866 call. */
+    private int lightTimer;
+    /** Native word $3A, a byte offset into word_4670C. */
+    private int lightIndex;
     /** {@code $3E(a0)}: Player 1's Y when the rise released. */
     private int releaseBaseY;
     private final S3kGradualSwing swing = new S3kGradualSwing();
     private TeleporterBeamObjectInstance beam;
 
-    private record RewindExtra(int riseRemaining, int phase, int beamFlag, int releaseBaseY,
+    private record RewindExtra(int riseRemaining, int phase, int beamFlag, int lightTimer, int lightIndex, int releaseBaseY,
                                S3kGradualSwing.Value swing,
                                ObjectRefId beamId)
             implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
@@ -97,7 +105,7 @@ public final class SszArrivalControllerObjectInstance extends AbstractObjectInst
         ObjectRefId beamId = context.identityTable()
                 .map(table -> table.encodeObject(beam)).orElse(null);
         return super.captureRewindState(context).withObjectSubclassExtra(new RewindExtra(
-                riseRemaining, phase, beamFlag, releaseBaseY,
+                riseRemaining, phase, beamFlag, lightTimer, lightIndex, releaseBaseY,
                 swing.captureRewindStateValue(), beamId));
     }
 
@@ -108,6 +116,8 @@ public final class SszArrivalControllerObjectInstance extends AbstractObjectInst
             riseRemaining = extra.riseRemaining();
             phase = extra.phase();
             beamFlag = extra.beamFlag();
+            lightTimer = extra.lightTimer();
+            lightIndex = extra.lightIndex();
             releaseBaseY = extra.releaseBaseY();
             swing.restoreRewindStateValue(extra.swing());
             beam = extra.beamId() == null ? null
@@ -164,6 +174,7 @@ public final class SszArrivalControllerObjectInstance extends AbstractObjectInst
 
     /** {@code loc_57CD2}/{@code loc_57D50}. */
     private void updateRise() {
+        advanceLight();
         AbstractPlayableSprite sprite = playerOne();
         if (sprite == null) {
             return;
@@ -193,10 +204,9 @@ public final class SszArrivalControllerObjectInstance extends AbstractObjectInst
         if (services().currentAct() != 0) {
             // move.b #7,art_tile(a1) bit set: act 2 draws Knuckles in front of the plane.
             sprite.setHighPriority(true);
-        } else if (sidekick() != null) {
-            // tst.w (Player_mode).w / bne.s loc_57D3C: only the Sonic + Tails team gets the helper.
-            spawnChild(() -> new SszTailsArrivalHelperObjectInstance(
-                    new ObjectSpawn(x, releaseBaseY, 0, 0x0C, 0, false, 0)));
+        } else if (CharacterKey.SONIC.equals(sprite.characterKey()) && sidekick() != null) {
+            // Player_mode == 0 belongs to Sonic with P2, not a Tails-led configured team.
+            spawnArrivalHelperFromContinuation();
         }
         services().camera().setScrollLocked(false);
         if (beam != null) {
@@ -205,8 +215,53 @@ public final class SszArrivalControllerObjectInstance extends AbstractObjectInst
         phase = PHASE_SWING;
     }
 
+    /**
+     * loc_57D18 calls CreateNewSprite4 with A1=Player_1 and the D0 word from sub_45866.
+     * Fresh $2D=$6C gives 108 rise passes then the release pass: that pass writes index$20.
+     * The scan includes P2, the implicit collision-reset owner at2, and the empty fixed slot3.
+     * Registration behind the live Process_Sprites cursor naturally waits until the next pass.
+     */
+    private void spawnArrivalHelperFromContinuation() {
+        var manager = services().objectManager();
+        if (manager == null) return;
+        for (int slot = 1; slot <= lightIndex; slot++) {
+            if (slot == 1 && sidekick() != null) continue;
+            // SpawnLevelMainSprites installs Obj_ResetCollisionResponseList here; the engine
+            // executes that owner implicitly, so absence from the object map is not emptiness.
+            if (slot == 2 || NativeSstSlotAccess.currentOwner(manager, slot) != null) continue;
+            boolean managed = ObjectSlotLayout.SONIC_3K.isDynamicSlot(slot);
+            if (managed && !manager.reserveDynamicSlot(slot)) continue;
+            int targetSlot = slot;
+            try {
+                var helper = ObjectConstructionContext.with(services(), targetSlot,
+                        () -> new SszTailsArrivalHelperObjectInstance(
+                                new ObjectSpawn(x, releaseBaseY, 0, 0x0C, 0, false, 0)));
+                manager.addDynamicObjectAtSlot(helper, targetSlot);
+            } catch (RuntimeException | Error failure) {
+                if (managed) manager.releaseDynamicSlot(targetSlot);
+                throw failure;
+            }
+            return;
+        }
+        // Exhausting the carried DBEQ budget leaves a nonzero header and skips the child.
+    }
+
+    /** sub_45866: byte divider then word-index advance; only the owning object writes its pair. */
+    private void advanceLight() {
+        if (lightTimer != 0) {
+            lightTimer = (lightTimer - 1) & 0xFF;
+            return;
+        }
+        lightTimer = 3;
+        int next = SSZHPZTeleporterObjectInstance.advanceLightCycle(lightIndex, beamFlag != 0);
+        if (next < 0) return;
+        lightIndex = next;
+        SSZHPZTeleporterObjectInstance.writeSszLightColours(services(), "s3k.ssz.arrivalLight", lightIndex);
+    }
+
     /** {@code Obj_57D64}. */
     private void updateSwing() {
+        advanceLight();
         AbstractPlayableSprite sprite = playerOne();
         if (sprite == null) {
             return;
@@ -234,10 +289,13 @@ public final class SszArrivalControllerObjectInstance extends AbstractObjectInst
             if (cameraY != camera.getMinY()) {
                 camera.setMinY((short) cameraY);
             }
-            if (beamFlag == 0) {
+            if (beamFlag == 0 && lightIndex == 0) {
                 com.openggf.level.objects.ObjectLifetimeOps.deleteNoRespawn(this);
+                return;
             }
         }
+        // loc_57DC6 tail-jumps here only after loc_57DB6 has checked the pre-write index.
+        advanceLight();
     }
 
     @Override

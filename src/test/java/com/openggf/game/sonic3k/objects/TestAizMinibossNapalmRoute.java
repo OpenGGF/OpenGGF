@@ -218,9 +218,13 @@ class TestAizMinibossNapalmRoute {
             when(camera.getWidth()).thenReturn((short) 320);
             when(camera.getHeight()).thenReturn((short) 224);
             when(camera.isVerticalWrapEnabled()).thenReturn(false);
+            var rawReader = TestAizMinibossFallingShotNativeGraph.rawReader();
             ObjectServices services = new StubObjectServices() {
                 @Override public ObjectManager objectManager() { return holder[0]; }
                 @Override public Camera camera() { return camera; }
+                @Override public com.openggf.data.RomByteReader romReader() {
+                    return rawReader;
+                }
             };
             ObjectManager manager = new ObjectManager(
                     List.of(), new Sonic3kObjectRegistry(), 0, null, null,

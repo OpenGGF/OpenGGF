@@ -87,7 +87,10 @@ public final class TestSecondStrikeRoutesColdInput {
                         if (pad != null && pad.p1InputMask() != 0) inputStarted = true;
                         cursor++;
                     }
-                    if (frame >= authorFrom && frame < authorUntil) pad = liveAuthor.next(session.player(), frame);
+                    if (frame >= authorFrom && frame < authorUntil
+                            && GameServices.camera().isLevelStarted()) {
+                        pad = liveAuthor.next(session.player(), frame);
+                    }
                     session.step(pad);
                     // Prepared load publication must be serviced even when the
                     // research driver does not draw every ordinary gameplay frame.
@@ -134,7 +137,9 @@ public final class TestSecondStrikeRoutesColdInput {
                             .map(object -> {
                                 String name = object.getClass().getSimpleName();
                                 if (observedEnemyClasses.add(name)) System.out.println("COLD enemy-admitted frame=" + observationFrame + " class=" + name);
-                                return name + "@" + object.getX() + ":" + object.getY() + "/" + readInt(object, "phase", -1);
+                                return name + "@" + object.getX() + ":" + object.getY()
+                                        + "/" + readInt(object, "phase", -1)
+                                        + "/hp=" + readInt(object, "remainingHits", -1);
                             }).collect(java.util.stream.Collectors.joining(";"));
                     if (manager.getCurrentAct() == 1 && !fireSeen) {
                         fireSeen = true;

@@ -14,6 +14,14 @@ import com.openggf.tools.GameplayCaptureSession;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import java.util.stream.Stream;
+import java.util.Collections;
+import java.util.EnumMap;
+import java.util.IdentityHashMap;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -21,7 +29,39 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** Declared production bonus requests, actual loads/return and advertised timeline policy. */
 @RequiresRom(SonicGame.SONIC_3K)
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class TestS3kBonusStageReturnProducts {
+    private final EnumMap<SonicConfiguration, Object> savedConfiguration = new EnumMap<>(SonicConfiguration.class);
+    @BeforeEach
+    void preserveConfiguration() {
+        var config = GameServices.configuration();
+        for (var key : SonicConfiguration.values()) {
+            if (config.hasSessionOverride(key)) savedConfiguration.put(key, config.getConfigValue(key));
+        }
+    }
+    @AfterEach
+    void restoreConfiguration() {
+        com.openggf.game.CrossGameFeatureProvider.getInstance().resetState();
+        var config = GameServices.configuration();
+        config.clearSessionOverrides();
+        savedConfiguration.forEach(config::setSessionOverride);
+        config.resolveDisplayAspect();
+        SessionManager.clear();
+        TestEnvironment.activeGameplayMode();
+    }
+    static Stream<Arguments> finiteProducts() {
+        return CanonicalEntryMatrixSupport.configurations().flatMap(row -> Stream.of(
+                BonusStageType.GUMBALL, BonusStageType.GLOWING_SPHERE, BonusStageType.SLOT_MACHINE)
+                .map(type -> Arguments.of(type, row.main(), row.followers(),
+                        row.aspect().pixelWidth(), row.donor())));
+    }
+    @Order(2)
+    @ParameterizedTest(name = "actual load and return {0}/{1}/{2}/{3}/{4}")
+    @MethodSource("finiteProducts")
+    void finiteSupportedProductsRetainRosterAndBothLoadBoundaries(BonusStageType type, String main,
+            String followers, int width, String donor) throws Exception {
+        checkStage(type, main, followers, width, donor);
+    }
     static Stream<Arguments> pilots() {
         return Stream.of(Arguments.of(BonusStageType.GUMBALL,"sonic","tails",320,"off"),
                 Arguments.of(BonusStageType.GLOWING_SPHERE,"knuckles","tails,sonic",352,"off"),
@@ -29,9 +69,14 @@ class TestS3kBonusStageReturnProducts {
                 Arguments.of(BonusStageType.GUMBALL,"tails","sonic,sonic",800,"s2"),
                 Arguments.of(BonusStageType.SLOT_MACHINE,"sonic","sonic,sonic",800,"s1"));
     }
+    @Order(1)
     @ParameterizedTest @MethodSource("pilots")
     void declaredStageRequestLoadsAndReturnsThroughRealBoundaries(BonusStageType type,String main,
             String followers,int width,String donor) throws Exception {
+        checkStage(type, main, followers, width, donor);
+    }
+    private void checkStage(BonusStageType type, String main, String followers, int width,
+            String donor) throws Exception {
         var donorRom=donor.equals("off")?null:(donor.equals("s1")?RomTestUtils.ensureSonic1RomAvailable():RomTestUtils.ensureSonic2RomAvailable()).toPath();
         var settings=new GameplayCaptureSession.Settings(width,main,followers,donor,donorRom,null,null);
         try(var session=new GameplayCaptureSession(settings)) {
@@ -45,6 +90,7 @@ class TestS3kBonusStageReturnProducts {
             assertFalse(GameServices.sprites().getMainPlayable().getDead());
             assertEquals(width,GameServices.camera().getWidth() & 0xFFFF);
             assertEquals(main,GameServices.sprites().getMainPlayable().characterKey().persisted());
+            assertRoster(main, followers, donor);
             var outgoing=GameServices.level().getObjectManager();
             var oldRewind=SessionManager.getCurrentGameplayMode().getRewindController();
             assertNotNull(oldRewind);assertTrue(oldRewind.currentFrame()>10);
@@ -94,15 +140,35 @@ class TestS3kBonusStageReturnProducts {
             assertEquals(lives,GameServices.gameState().getLives());assertFalse(GameServices.sprites().getMainPlayable().getDead());
             assertEquals(main,GameServices.sprites().getMainPlayable().characterKey().persisted());
             assertEquals(width,GameServices.camera().getWidth() & 0xFFFF);
-            assertEquals(followers.split(",").length,GameServices.sprites().getRegisteredSidekicks().size());
+            assertRoster(main, followers, donor);
             assertEquals(BonusStageType.NONE,coordinator.getActiveType());assertNull(coordinator.activeSlotRuntime());
             var returnedRewind=SessionManager.getCurrentGameplayMode().getRewindController();
             assertTrue(returnedRewind==null||returnedRewind.currentFrame()<oldFrame,
                     "return retires interior history rather than reviving origin snapshots");
             // The deliberate full-load boundary is followed by a real incoming-world replay.
             replayWorld(session, 45, GameMode.LEVEL, main, width, lives);
-            assertEquals(followers.split(",").length,GameServices.sprites().getRegisteredSidekicks().size());
+            assertRoster(main, followers, donor);
         }
+    }
+    private static void assertRoster(String main, String followers, String donor) {
+        var leader = GameServices.sprites().getMainPlayable();
+        assertEquals(main, leader.characterKey().persisted());
+        assertSame(leader, GameServices.camera().getFocusedSprite());
+        String[] expected = followers.isEmpty() ? new String[0] : followers.split(",");
+        var actual = GameServices.sprites().getRegisteredSidekicks();
+        assertEquals(expected.length, actual.size(), "all declared participants survive return");
+        var identities = Collections.newSetFromMap(new IdentityHashMap<com.openggf.sprites.playable.AbstractPlayableSprite, Boolean>());
+        identities.add(leader);
+        for (int i = 0; i < expected.length; i++) {
+            var follower = actual.get(i);
+            assertEquals(expected[i], follower.characterKey().persisted(), "ordered roster " + i);
+            assertTrue(identities.add(follower), "duplicate characters remain distinct actors");
+            assertTrue(follower.isCpuControlled());
+            assertNotNull(follower.getCpuController());
+            assertSame(leader, follower.getCpuController().getLeader(), "ordered CPU leader chain " + i);
+            leader = follower;
+        }
+        SozAcceptanceConfigurations.assertUsableTeam(donor);
     }
     private static void replayWorld(GameplayCaptureSession session, int frames, GameMode mode,
             String main, int width, int lives) {

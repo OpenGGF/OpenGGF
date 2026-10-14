@@ -33,6 +33,24 @@ later allocation. A production `LevelLoadContext` may leave zone/act unset, so
 an entry owner must use the admitted destination rather than those unset values.
 See the [fresh-title audit](audits/trace/2026-10-14-s3k-fresh-title-sst.md).
 
+**Editor rendering uses editor-owned managers.** Once an authored document enters
+`EDITOR`, `GameServices.camera()`, `level()` and `sprites()` require a gameplay
+mode and reject the call. Offscreen editor examples use the active
+`EditorModeContext` camera, level manager and sprite manager, matching Engine's
+retained managers. Global graphics ownership remains shared. Do not open a fake
+gameplay session just to satisfy these accessors; it would change the state being
+pictured (October 2026 editor-guide capture).
+
+**Native X words need unsigned comparison at the Java boundary.** Playable
+centre X and camera maximum X are exposed as signed Java shorts, while authored
+placements use unsigned words. In S1 Sign_Touch and S2 Obj0D_Main, native sub.w
+with blo/bcs and bhs compares the unsigned difference; do not subtract a signed
+centre from an unsigned placement. Sign_SonicRun and Obj0D_Main_State3 add.w the
+walk-off offset, then cmp.w/blo: truncate the sum to 16 bits and compare both
+words unsigned. Goals around 0x8000 and camera bounds around 0x7F00 exposed both
+errors during editor completion (host fixes 82bf7929c). Test activation, crossing
+the signed boundary, and native addition wrap separately.
+
 **Decoded storage capacity can differ from a layer's logical height.** S1's
 cleared eight-row background RAM must not enlarge foreground geometry merely
 because both layers share a `Map`. Keep the previous declared-layout maximum
@@ -918,6 +936,33 @@ logical image while a physical restore is deferred. A snapshot graph comparison
 alone missed this because both graphs retained the same stale journal. Check
 actual pattern pixels and rendered consumers after restore as well (2026-09-24).
 
+**Private palette residency is not retained SAT state.** Chaos donor objects
+keep native palette bits in published `Tile` records. Adding a private GPU bank
+base in the producer would capture that row in `LevelSpritePresentation.Tables`;
+restore could then sample another owner's colours after banks are released and
+allocated in a different order. Retain an exact semantic owner/object/donor
+resolver with the subject and acquire current residency at the draw boundary.
+Validate an actual prepared/published table restore with changed bank order,
+not only the gameplay runtime's snapshot (2026-10-14).
+Private rows also belong in the expanded underwater texture. Changing the total
+row count while leaving an older texture changes sampling even for ordinary
+host rows; rebuilding only when the owned command runs is too late for a preceding
+native batch. Rebuild at execution boundaries from the last published native
+water/fade basis, preserving pending palette writes. Uploads can bind the active
+atlas texture unit: invalidate deferred-command binding caches even when texture
+IDs are unchanged. Real priority-water and acquisition-between-draws pixels
+caught both defects; dry-only palette tests did not.
+Bound the private pool without capping ordinary donor/sidekick allocation.
+Ordinary contexts already support atlas growth beyond sixteen contexts; applying
+the private pool's 64-row ceiling to them broke the sixteenth allocation that
+previously grew to 68 rows. Search complete unoccupied private ranges, preserve
+ordinary growth and check coexistence, high-row sampling, exhaustion and reuse.
+Keep the renderer's captured inputs at its existing `PaletteView` boundary.
+Storing concrete `level.Palette` rows in a new graphics helper introduced 27
+frozen architecture violations despite passing pixel checks. Detached RGB bytes
+preserve publication/value equality and pending writes without adding runtime
+layer dependencies; verify the architecture rule as well as actual water pixels.
+
 **CPU sprite state is not the presented SAT.** S3K `VInt_8_Cont` uploads
 `Sprite_table` to VRAM `$F800`; the resumed `LevelLoop` then runs objects and
 later `Render_Sprites` builds the next table. An emulator-frame screenshot can
@@ -1765,16 +1810,11 @@ Scripted status-facing does not imply render_flags-facing when object mappings
 bypass the ordinary playable mapper. See the
 [ending publication evidence](designs/2026-10-13-s3k-ending-lifecycle.md#source-owned-initial-and-published-ending-presentation-2026-10-14).
 
-
-**KosM completion is a queued DMA, and equal descriptors are not FIFO identity.**
-Process_Kos_Module_Queue waits for the complete direct FIFO, then calls
-Add_To_DMA_Queue. The paired production pattern facade must wait for the actual
-submitted child receipts and publish only at a supported VInt. Keep receipts
-after parent claim and capture pending DMA separately from presented memory.
-Two identical source/destination entries need their admitted native FIFO
-position; Java identity is lost on copied snapshot restore and descriptor-only
-matching lets an unpaired predecessor borrow a later job's readiness. Shift
-only at actual archive retirement. Preflight both banks before admitting a
-global producer so failure cannot leave unpaired physical work. Preserve
-initial resident ingress separately: correct new upload timing does not prove
-retained pre-upload VRAM bytes. Origin: 2026-10-14 ending transfer69e4f51.
+**The first authored zone is not necessarily a scene mod's entry point.**
+Native friends qualification selected Starpost Valley's first owned zone, a
+festival, before opening its farm scene and hit the legitimate `Activity needs
+its retained scene session` guard (2026-10-14). Bootstrap scene-based diagnostics
+from the backing game's initial zone, then let the scene own authored-act
+admission. A matched real-JAR control reproduces the old failure and renders the
+farm after the corrected bootstrap. Do not remove the mod's lifecycle guard or
+invent session state to make an arbitrary zone load.

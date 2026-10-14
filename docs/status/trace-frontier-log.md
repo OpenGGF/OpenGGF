@@ -112590,3 +112590,62 @@ Sampled segment2 presence advances2977→3067 native-only21, preceding3066;
 FallingShot pending-floor retirement and wrong cutscene explosion-family context
 are next owners. Not strict/full-type closure; no broad/full run, hydration or
 new rendered/audio certification.
+
+
+### 2026-10-14 — AIZ cutscene uses real FallingShot and copied Hitboxes
+
+Owned bugfix/ai-s3k-parity-trace over1db1ebd89; exact four qualified runtime SHA256
+and [native owners/commands](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-real-cutscene-fallingshot-and-copied-explosion-lifecycle).
+Real barrel child admission, collision copy, ROM raw cursor, post-routine parent
+gate and delayed physical clearing replace the simulated advanced shot. Negative
+38406:14/8fail/0errors/0skip. Candidate97580 stops at missing test import; no tests.
+Affected49960:699/7fail/0errors/0skip, only old common-only family counters;
+corrected84889:7/0/0/0 on unchanged runtime.692 other affected identities retained,
+including new16/actual napalm4/standalone7/startup. Not one699green invocation.
+
+Canonical49498:5/1fail/0errors/0skip at20:31:43 BST (96s/70s queue), original AIZ/
+initial HCZ/two prefixes green. Chain6/8/11 raw189/12,719/82,067; physics189/
+12,604/69,393; animation0/115/12,674; first3319 P2X31C1/31CA,1583 P2X366C/3674,
+1510 Y7D6/7DF; incomplete input68,801/loadgen9 unchanged. Alternate31590:1/1fail/
+0errors/0skip at20:29:31 (35.301s/0s),60 grouped25physics/35anim; first25589
+animation13/05, firstphysics25590TailsSub7800/6C00. Guards85181:111/0/0/0 at
+20:30:05 (33.374s/36s). Same canonical/alternate/guard profiles/selectors as30405/
+50339/11033; Java25/EGL/absolute original ROM; slot directory
+ target/falling-shot-native-slot-occupancy.
+
+Presence advances3067→3084 native-only18, preceding3081. Source21 and seven
+39..45 children now match the actual Falling/Hitbox native context. At3084
+native common-shot18 remains B6 while engine18 is absent; both clear by3087.
+Common-shot final Obj_Wait marker is the next confirmed native owner. No strict
+closure, broad/full sweep, fixture/hydration/clock/allocator change, or new
+rendered/audio certification. Pure metadata and declared full registry replay
+are qualified; cold-route/team breadth and arbitrary reused-parent pressure
+remain distinct limits.
+
+
+### 2026-10-14 — AIZ common SIMPLE final wait retains its physical marker
+
+Owned bugfix/ai-s3k-parity-trace overcf19f8506; [qualified single-owner SHA256,
+native source and commands](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-common-simple-shot-final-native-wait-and-physical-retirement).
+MoveWait's underflow marks Go_Delete then draws; next dispatch clears without
+another move. Its extra Java screen cutoff is removed locally. Negative74033:
+8/8fail/0errors/0skip; independent repaired screen setup16779:1/1fail/0errors/0skip.
+Affected51679:707/0/0/0 at21:04:49 BST (72s/0s queue), including full registered
+world/two45-pass release replay and all previous699 consumers/startup.
+
+Canonical91214:5/1fail/0errors/0skip at21:07:37 (96s/0s); four controls green.
+Chain6/8/11 raw189/12,719/82,067; physics189/12,604/69,393; animation0/115/12,674;
+first3319P2X31C1/31CA,1583P2X366C/3674,1510Y7D6/7DF; incomplete input68,801/
+loadgen9 unchanged. Alternate36977:1/1fail/0errors/0skip at21:08:37 (37.111s/
+119s),60spans25physics/35anim; first25589animation13/05, firstphysics25590
+TailsSub7800/6C00. Guards47500:111/0/0/0 at21:09:53 (31.256s/201s).
+Same canonical/alternate/guard selectors/profiles as49498/31590/85181 with Java25/
+EGL/original absolute ROM; observer target/common-shot-native-slot-occupancy.
+
+Actual18 marker agrees3084 and both clear3087. Presence advances3084→3244,
+preceding3209, native-only24..37/engine-only4. Engine records new AIZ2 scenery;
+low native code bytes do not prove old actor retention. Full pointer/scene and
+physical/timed caller attribution is next read-only work; no guessed transition
+fix or unchanged trace rerun before relevant composition. Parent pressure and
+rendered/audio breadth remain unqualified; no hydration/fixture/clock/allocator
+or broad/full-suite change.

@@ -5,8 +5,9 @@ Remaining S3K parity follow-up (2026-10-14, delivery in progress): the
 qualifies corrected native320 and paired800 cold incoming-world boundaries,
 with50/44 whole-world replay windows; the native companion arrival discrepancy
 remains open. The [bonus transition matrix](../architecture/validation/levels/s3k-bonus-stage-transitions.md)
-records five actual load/return pilots and the unsupported whole-Slot rewind
-contract. These bounded checks expand the previous delivery's evidence;
+records five short pilots plus420 actual load/return products across the140
+supported configurations and all three stages, with the unsupported whole-Slot
+rewind contract preserved. These bounded checks expand the previous delivery's evidence;
 composed validation, integration/push and broader parity/products are pending.
 
 S3K playable completion (2026-10-13, delivery in progress): the [native ending matrix](../architecture/validation/levels/s3k-ending.md)
@@ -25,7 +26,7 @@ ICZ/MGZ/CNZ interactions, and shared score/pause/priority obligations. Whole-act
 viewport, donor, team, load/respawn and composed rewind coverage remains inherited;
 executed commands and limits belong in the dated validation record.
 
-Sonic3K Chaos Mode (2026-10-13): the [affected-context matrix](../architecture/plans/2026-10-13-sonic3k-chaos-mode-implementation.md#affected-context-matrix) separates native mechanic and picture checks from complete act routes. Catalogue/schema preparation covers 105 choices; route, character/team, viewport and target qualifications require their recorded behavioral checks. Cross-game donors are unavailable, and existing stock act/respawn/whole-route gaps remain inherited.
+Sonic3K Chaos Mode (2026-10-13): the [affected-context matrix](../architecture/plans/2026-10-13-sonic3k-chaos-mode-implementation.md#affected-context-matrix) separates native mechanic and picture checks from complete act routes. Catalogue/schema preparation covers 105 choices; route, character/team, viewport and target qualifications require their recorded behavioral checks. Cross-game donors are unavailable, and existing stock act/respawn/whole-route gaps remain inherited. The [2026-10-14 intensity revision](../architecture/plans/2026-10-14-chaos-intensity-and-reel.md) adds bounded native ring and private donor-palette checks; these do not close complete act or character/team route gaps.
 
 Starpost Valley phase 4 (2026-10-10): the [festival and lake matrix](../architecture/designs/2026-10-09-starpost-valley.md#festival-and-lake-route-matrix) adds native solo Sonic/Tails/Knuckles at 320/400 through Race, Ring Hunt, snowboard, lake and Ice Cap fishing with result consumption and whole-registry restore/replay. Wider viewport/donor/team, load/respawn and interaction-boundary obligations remain open.
 

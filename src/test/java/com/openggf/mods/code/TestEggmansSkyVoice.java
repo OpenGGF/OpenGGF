@@ -33,7 +33,12 @@ class TestEggmansSkyVoice {
 
     private static final class Audio implements SceneAudio {
         final List<String> played = new ArrayList<>();
-        @Override public boolean playSfx(String id) { played.add(id); return true; }
+        int rejectNext;
+        @Override public boolean playSfx(String id) {
+            if (rejectNext > 0) { rejectNext--; return false; }
+            played.add(id);
+            return true;
+        }
         @Override public void playMusic(int id) { }
         @Override public void playSfx(int id) { }
         @Override public void fadeOutMusic() { }
@@ -153,6 +158,66 @@ class TestEggmansSkyVoice {
         recharge.invoke(voice, player, 0);
         update(voice, audio, duration("SYSTEM_RECHARGED")+13L);
         assertEquals(List.of("voice-system-recharged", "voice-life-restored"), audio.played);
+    }
+
+    @Test void rejectedPlaybackRetriesTheAlreadyQueuedEventWithoutStartingItsLease() throws Exception {
+        Object voice = voice();
+        Audio audio = new Audio();
+        audio.rejectNext = 1;
+        say(voice, "SYSTEMS_ONLINE");
+        update(voice, audio, 1);
+        assertTrue(audio.played.isEmpty());
+        update(voice, audio, 2);
+        assertEquals(List.of("voice-systems-online"), audio.played,
+                "a temporarily unavailable host must not consume a one-time trigger");
+        say(voice, "DISCOVERY");
+        update(voice, audio, duration("SYSTEMS_ONLINE") + 13L);
+        assertEquals(1, audio.played.size(), "the lease starts at accepted playback, not the failed attempt");
+        update(voice, audio, duration("SYSTEMS_ONLINE") + 14L);
+        assertEquals(List.of("voice-systems-online", "voice-discovery"), audio.played);
+    }
+
+    @Test void mutingQueuedVitalWarningsDoesNotMarkThemAsAnnounced() throws Exception {
+        Class<?> catalog = harness.loader().loadClass("eggsky.game.Catalog");
+        var observe = voiceType.getMethod("vitals", playerType, boolean.class, boolean.class, boolean.class);
+        for (String[] warning : List.of(new String[]{"hull", "voice-hull-critical"},
+                new String[]{"shipShield", "voice-shield-empty"}, new String[]{"pulse", "voice-pulse-low"})) {
+            Object voice = voice();
+            Audio audio = new Audio();
+            Object player = playerType.getConstructor(catalog).newInstance(catalog.getConstructor().newInstance());
+            playerType.getField(warning[0]).setFloat(player, 0);
+            say(voice, "CRASH_LANDING");
+            update(voice, audio, 1);
+            // Hull's warning applies while damaged but still alive.
+            if (warning[0].equals("hull")) playerType.getField("hull").setFloat(player, 10);
+            observe.invoke(voice, player, false, true, true);
+            update(voice, audio, 2);
+            voiceType.getMethod("enabled", boolean.class).invoke(voice, false);
+            voiceType.getMethod("enabled", boolean.class).invoke(voice, true);
+            observe.invoke(voice, player, false, true, true);
+            update(voice, audio, 3);
+            assertEquals(1, audio.played.size(), "the current clip must still finish without overlap");
+            update(voice, audio, duration("CRASH_LANDING") + 13L);
+            assertEquals(List.of("voice-crash-landing", warning[1]), audio.played,
+                    warning[0] + " remains low after speech is enabled again");
+        }
+    }
+
+    @Test void persistentPulseWarningRetriesAfterEqualPriorityQueuePressure() throws Exception {
+        Object voice = voice();
+        Audio audio = new Audio();
+        Class<?> catalog = harness.loader().loadClass("eggsky.game.Catalog");
+        Object player = playerType.getConstructor(catalog).newInstance(catalog.getConstructor().newInstance());
+        playerType.getField("pulse").setFloat(player, 19);
+        for (String id : List.of("HEAT", "COLD", "TOXIN", "RADIATION", "STORM_APPROACHING",
+                "STORM_PASSED", "RAINSTORM", "BLIZZARD")) say(voice, id);
+        var observe = voiceType.getMethod("vitals", playerType, boolean.class, boolean.class, boolean.class);
+        for (long tick = 1; tick <= 2000; tick++) {
+            observe.invoke(voice, player, false, true, true);
+            update(voice, audio, tick);
+        }
+        assertEquals(1, audio.played.stream().filter("voice-pulse-low"::equals).count(),
+                "a warning rejected by a full queue must not be forgotten until the tank is refilled");
     }
 
     @Test void voiceMutePersistsIndependentlyAndPreservesOtherSettings() throws Exception {

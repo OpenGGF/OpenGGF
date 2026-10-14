@@ -2246,6 +2246,17 @@ overlap with Tails.
 
 ---
 
+**Opted-in warning presentation.** A parent timer scheduled after its timer-update
+step starts decrementing next pass, while a later-slot raw-animation child already
+consumes an update in its birth pass. Test through the real manager's native
+scheduling boundary and invoke the render producer after each pass; counting live
+children before updates can hide an invisible final pose. Second Strike's AIZ
+follow-up exposed a one-presentation gap with the ordinary sixteen-update flare.
+Its semantic opt-in cue captures a birth-update allowance and bounded final-pose
+hold; ordinary ROM flares retain their constructor and sequence. Verify exact
+anchor/remaining hold rewind, both parent/barrel slot orders, exhaustion and
+policy-disabled graph/timing equality. Origin: 2026-10-14 Second Strike expansion.
+
 ## P67 -- Solid checkpoints before same-entry deletion require manual execution
 
 **Symptom.** A player remains grounded and `Status_OnObj` stays set after the
@@ -5626,15 +5637,73 @@ the correction. Compare original RGB separately from logical palette indices.
 Origin: 2026-10-14 ending v6 over bf7361a3a3ce2b6fc71256fc2059c29d8402f163.
 
 
-**KosM completion is a queued DMA, and equal descriptors are not FIFO identity.**
-Process_Kos_Module_Queue waits for the complete direct FIFO, then calls
-Add_To_DMA_Queue. The paired production pattern facade must wait for the actual
-submitted child receipts and publish only at a supported VInt. Keep receipts
-after parent claim and capture pending DMA separately from presented memory.
-Two identical source/destination entries need their admitted native FIFO
-position; Java identity is lost on copied snapshot restore and descriptor-only
-matching lets an unpaired predecessor borrow a later job's readiness. Shift
-only at actual archive retirement. Preflight both banks before admitting a
-global producer so failure cannot leave unpaired physical work. Preserve
-initial resident ingress separately: correct new upload timing does not prove
-retained pre-upload VRAM bytes. Origin: 2026-10-14 ending transfer69e4f51.
+**Continuation DBEQ state can belong to a preceding palette helper.**
+At SSZ loc_57D18, CreateNewSprite4 receives Player1 in A1 and the D0 word
+left by sub_45866, not the standard allocator's full-table count. Native
+byte39 divides the ROM light writes; word3A is the byte offset into word_4670C.
+Keep both captured. The native occupied collision-reset slot2 is not empty
+merely because the engine executes it implicitly. Scan through the carried
+budget, count live zero-ID owners and respect held slots; do not replace this
+local continuation with a shared allocator or fitted frame delay. A helper in
+slot3, behind parent4, naturally first runs next pass; higher pressure slots
+can run this pass. loc_57DB6 checks active byte38 and index3A before the final
+sub_45866 fallthrough, so writing cycle zero does not delete until next dispatch.
+A fixture which preloads placements must assert the execution relationship,
+not pretend its controller occupies the independently observed cold slot4.
+Palette checks must advance real ownership epochs. Source: native allocation
+observer72373 and2026-10-14 arrival qualification on558e74833; palette asset
+words remain ROM-backed rather than copied from the disassembly.
+
+
+## A callback's Go_Delete marker does not clear its own outer draw/touch tail
+
+AIZ FallingShot dispatches its routine, then tests grandparent status7. Floor
+impact marks the shot itself, but that new bit does not satisfy the grandparent
+gate: the live-parent wrapper still adds touch/draw, and the next code-owner
+dispatch clears its physical SST. BossExplosionHitbox Animate similarly returns
+from F4/Go_Delete to Draw_And_Touch, retaining the final mapping/collision pass.
+Capture the terminal marker separately from destruction, and never substitute
+an immediate expire or a pre-routine parent test. Its cutscene Init compares
+the barrel operation and clears collision; seven Hitboxes copy that parent
+byte, retain their own stagger, and use low art priority without generic Init
+explosion sound. Clear raw cursor/timer on F4 while retaining the mapping byte.
+CreateChild1's child subtype02 is independent of the barrel subtype0/2/4.
+Qualify pure complete ctx.spawn shells, live links and forward/reverse world
+replay; logical links alone do not certify recycled physical-parent pressure.
+
+Origin:2026-10-14 FallingShot slice over1db1ebd89; asm137450–137586,176923,
+177563,178041,179136. Native Go_Delete marker versus next physical clear is
+visible at actual seg2 rows3067/3084; the latter remains the common-shot owner.
+
+
+## A hidden Draw_Sprite does not own a MoveWait lifetime
+
+AIZ common BarrelShot MoveWait runs Move_AnimateRaw_Wait then Draw_Sprite.
+Launch arms Go_Delete with a word60 wait; underflow completes move/animation,
+marks the code/status and still draws. Clear only on the next code-owner pass.
+Adding isOnScreen128 to the timer branch fits the locked-camera path while
+inventing an earlier retirement when the camera changes. Prove actual+copy Y
+versus merely copied Y, and isolate the first hidden update from the final
+marker assertion. Preserve manager culling and captured raw/position/marker
+state; test two-way graph and full-world replay around physical release.
+Low routine-code bytes at a scene boundary cannot distinguish actor families;
+resolve full pointers and the publication clock before fixing the next context.
+
+Origin:2026-10-14 common SIMPLE marker slice overcf19f8506; asm137079,137091,
+179136. Actual seg2 row3084 marker is repaired; next presence disagreement3244
+is transition-context evidence rather than proof of a particular teardown bug.
+
+## Spawned donor art keeps its native palette line
+
+The 2026-10-14 Chaos revision exposed wrong-colour CNZ bumpers and SOZ ghosts
+in AIZ. A correct donor pattern sheet is insufficient when its native mapping
+still indexes the host act's CRAM. `Obj_Bumper` selects CNZ Misc + `$13`, palette
+2 (`sonic3k.asm:68828–68860`); `Hyudoro_init_tbl` selects ghost palette 1
+(`sonic3k.asm:196064`). Do not apply SOZ darkness to that line: `AnPal_SOZ2`
+updates `Normal_palette_line_3/4`, engine indices 2/3
+(`sonic3k.asm:3492–3550`), while the ghost's index 1 stays in `Pal_SOZ2`.
+Read runtime colours from the verified ROM, and preserve host/donor consumers
+with an owner-scoped private palette projection. Retained SAT records must keep
+native palette bits and semantic donor ownership, never a leased GPU row number;
+restore may allocate banks in a different order. Check actual ROM-backed pixels
+at native/wide viewports and unchanged ordinary actors, not only loaded art.

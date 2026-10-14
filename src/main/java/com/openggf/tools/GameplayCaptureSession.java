@@ -366,7 +366,10 @@ public final class GameplayCaptureSession implements AutoCloseable {
         if (loop.getCurrentGameMode() == GameMode.TITLE_SCREEN) {
             var title = loop.getTitleScreenProvider();
             title.setClearColor(); glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-            title.draw(); graphics.flushScreenSpace();
+            title.draw();
+            title.drawOverlay(new com.openggf.mods.ui.LevelOverlayCanvas(graphics,
+                    graphics.getProjectionWidth(), graphics.getConfiguredScreenHeightPx()));
+            graphics.flushScreenSpace();
             if (graphics.getUiRenderPipeline()!=null) graphics.getUiRenderPipeline().renderFadePass();
             loop.renderHostedRunOverlay();
             glFinish(); return;

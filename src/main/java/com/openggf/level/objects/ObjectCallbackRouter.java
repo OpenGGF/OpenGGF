@@ -20,6 +20,7 @@ final class ObjectCallbackRouter {
     }
 
     private final ObjectCallbackBoundary boundary;
+    private final HostObjectKeyRegistry hostKeys;
     private final Supplier<String> scopedOwner;
     private final Function<ObjectInstance, String> createdOwner;
     private final IdentityHashMap<ObjectInstance, String> owners = new IdentityHashMap<>();
@@ -29,6 +30,7 @@ final class ObjectCallbackRouter {
     private int bucketSnapshotCount;
 
     ObjectCallbackRouter(ObjectRegistry registry) {
+        hostKeys=HostObjectKeyRegistry.trusted(registry);
         Object candidate = registry instanceof Supplier<?> supplier ? supplier.get() : null;
         if (candidate instanceof java.util.Map.Entry<?, ?> entry
                 && entry.getKey() instanceof ObjectCallbackBoundary callbackBoundary
@@ -51,6 +53,15 @@ final class ObjectCallbackRouter {
         }
     }
 
+    private String placementOwner(ObjectSpawn spawn,ObjectInstance instance) {
+        if(hostKeys!=null && hostKeys.hasHostObjectKey(spawn.objectKey())) {
+            if(!hostKeys.ownsHostObject(spawn,instance))
+                throw new IllegalStateException("Host key object lacks registered engine provenance");
+            return null;
+        }
+        return spawn.ownerModId();
+    }
+
     <T> T call(ObjectInstance instance, Supplier<T> callback) {
         String owner = owners.get(instance);
         if (owner == null || boundary == null) return callback.get();
@@ -67,13 +78,20 @@ final class ObjectCallbackRouter {
     void register(ObjectInstance instance, ObjectSpawn spawn) {
         Objects.requireNonNull(instance, "instance");
         createdOwner.apply(instance);
-        String owner = Objects.requireNonNull(spawn, "spawn").ownerModId();
+        String owner = placementOwner(Objects.requireNonNull(spawn, "spawn"),instance);
         if (owner == null) owners.remove(instance);
         else owners.put(instance, owner);
     }
 
     <T extends ObjectInstance> T construct(ObjectSpawn spawn, Supplier<T> factory) {
-        return construct(Objects.requireNonNull(spawn, "spawn").ownerModId(), factory);
+        Objects.requireNonNull(spawn,"spawn");
+        boolean host=hostKeys!=null && hostKeys.hasHostObjectKey(spawn.objectKey());
+        return construct(host?null:spawn.ownerModId(),()-> {
+            T instance=factory.get();
+            if(host && instance!=null && !hostKeys.ownsHostObject(spawn,instance))
+                throw new IllegalStateException("Host key factory returned an object without engine provenance");
+            return instance;
+        });
     }
 
     <T extends ObjectInstance> T construct(String owner, Supplier<T> factory) {

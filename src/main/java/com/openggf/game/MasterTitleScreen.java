@@ -202,6 +202,10 @@ public class MasterTitleScreen {
     private EngineSettingsScreen settingsScreen;
     private float[] currentProjection;
     private boolean toolsOpen;
+    private Runnable editorProjectsOpenHandler;
+    Runnable contentImportOpenHandler;
+
+    public void setEditorProjectsOpenHandler(Runnable handler) { editorProjectsOpenHandler = handler; }
     private boolean gameBrowserOpen;
     private int gameBrowserIndex;
     private MenuLoadTask<?> catalogLoad;
@@ -863,9 +867,11 @@ public class MasterTitleScreen {
         if (navigation.back() || backClicked()) { toolsOpen = false; playCancelSound(); return; }
         int previous = toolIndex;
         if (navigation.up()) toolIndex = Math.max(0, toolIndex - 1);
-        if (navigation.down()) toolIndex = Math.min(1, toolIndex + 1);
+        var tools = toolActions();
+        int count = tools.size();
+        if (navigation.down()) toolIndex = Math.min(count - 1, toolIndex + 1);
         boolean clickedTool = false;
-        for (int i = 0; pointer != null && i < 2; i++) {
+        for (int i = 0; pointer != null && i < count; i++) {
             if (pointer.over(10, 49 + i * 27, viewportWidth - 20, 22) && (pointer.moved() || pointer.click())) {
                 toolIndex = i;
                 clickedTool |= pointer.click();
@@ -874,12 +880,23 @@ public class MasterTitleScreen {
         if (toolIndex != previous) playNavigateSound();
         if (!navigation.accept() && !clickedTool) return;
         toolsOpen = false;
-        if (toolIndex == 0) {
+        tools.get(toolIndex).callback().run();
+        playConfirmSound();
+    }
+
+    private record ToolAction(String label, Runnable callback) { }
+
+    private List<ToolAction> toolActions() {
+        var actions = new ArrayList<ToolAction>();
+        actions.add(new ToolAction("Trace replays", () -> {
             Path root = Path.of(System.getProperty("user.dir"))
                     .resolve(configService.getString(SonicConfiguration.TRACE_CATALOG_DIR)).normalize();
             openTraceCatalog(root);
-            playConfirmSound();
-        } else { helpOpen = true; playConfirmSound(); }
+        }));
+        actions.add(new ToolAction("Controls / help", () -> helpOpen = true));
+        if (editorProjectsOpenHandler != null) actions.add(new ToolAction("Editor projects", editorProjectsOpenHandler));
+        if (contentImportOpenHandler != null) actions.add(new ToolAction("Import content", contentImportOpenHandler));
+        return actions;
     }
 
     private boolean openLaunchOptions() {
@@ -1252,10 +1269,12 @@ public class MasterTitleScreen {
         if (toolsOpen) focusBox(10, 49 + toolIndex * 27, viewportWidth - 20, 22);
         font.beginMegaBatch();
         font.drawText(toolsOpen ? "ADVANCED" : "CONTROLS / HELP", 10, 10, 1f, 1f, 1f, 1f);
-        String[] lines = toolsOpen ? new String[] { "Trace replays", "Controls / help" }
-                : new String[] { "Left/Right: choose game", "Up/Down: select action", confirmHint() + ": open action",
-                    backHint() + ": return one screen", "Settings: draft, then Apply" };
-        for (int i = 0; i < lines.length; i++) textFitted(lines[i], 17, 55 + i * 27,
+        var lines = new ArrayList<String>();
+        if (toolsOpen) {
+            toolActions().forEach(tool -> lines.add(tool.label()));
+        } else lines.addAll(List.of("Left/Right: choose game", "Up/Down: select action", confirmHint() + ": open action",
+                    backHint() + ": return one screen", "Settings: draft, then Apply"));
+        for (int i = 0; i < lines.size(); i++) textFitted(lines.get(i), 17, 55 + i * 27,
                 viewportWidth - 34, 1f, 1f, 1f, 1f);
         textFitted(toolsOpen ? directionHint() + " Menu  " + confirmHint() + " Open  " + backHint() + " Back"
                 : backHint() + " Back", 9, 211, viewportWidth - 18, 1f, 0.5f, 0.91f, 1f);
@@ -1585,7 +1604,7 @@ public class MasterTitleScreen {
         }
     }
 
-    private void openModManager() {
+    void openModManager() {
         if (modManagerScreenFactory != null) {
             modManagerScreen = Objects.requireNonNull(
                     modManagerScreenFactory.create(font), "mod manager screen");
@@ -1743,6 +1762,12 @@ public class MasterTitleScreen {
                 || settingsScreen != null || launchConfigPanel != null || modManagerScreen != null
                 || userRecordingMenu != null || tracePicker != null || standaloneActionOpen || extrasOpen
                 || toolsOpen || helpOpen || gameBrowserOpen || catalogLoad != null || configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED);
+    }
+
+    boolean acceptsContentDrop() {
+        return state == State.ACTIVE && !quitPrompt && !childInputPending
+                && settingsScreen == null && launchConfigPanel == null && modManagerScreen == null
+                && userRecordingMenu == null && tracePicker == null && catalogLoad == null;
     }
 
     public interface ModManagerView {

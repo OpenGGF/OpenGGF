@@ -4606,9 +4606,9 @@ public class ObjectManager {
     /**
      * Returns the game-specific {@link ObjectRegistry} for use by
      * {@link ObjectRewindDynamicCodecs#genericRecreate} during rewind restore.
-     * Package-private: accessed only through {@link DynamicObjectRecreateContext#objectRegistry()}.
+     * Package-private: shared by verified derivative admission and rewind recreation.
      */
-    ObjectRegistry rewindObjectRegistry() {
+    ObjectRegistry objectRegistry() {
         return registry;
     }
 

@@ -1,10 +1,9 @@
 package secondstrike;
 
 import com.openggf.control.InputHandler;
-import com.openggf.game.GameServices;
 import com.openggf.game.TitleScreenProvider;
 import com.openggf.mods.ui.CompactFont;
-import com.openggf.mods.ui.LevelOverlayCanvas;
+import com.openggf.mods.ui.PixelCanvas;
 
 import java.util.Objects;
 
@@ -16,12 +15,10 @@ final class SecondStrikeTitle implements TitleScreenProvider {
     }
     @Override public void initialize() { nativeTitle.initialize(); }
     @Override public void update(InputHandler input) { nativeTitle.update(input); }
-    @Override public void draw() {
-        nativeTitle.draw();
+    @Override public void draw() { nativeTitle.draw(); }
+    @Override public void drawOverlay(PixelCanvas canvas) {
+        nativeTitle.drawOverlay(canvas);
         if (nativeTitle.getState() != State.ACTIVE) return;
-        var graphics = GameServices.graphics();
-        var canvas = new LevelOverlayCanvas(graphics, graphics.getProjectionWidth(),
-                graphics.getConfiguredScreenHeightPx());
         int labelX = (canvas.width() - CompactFont.width("SECOND STRIKE", 1)) / 2;
         canvas.fill(labelX - 7, 195, 91, 12, 0xEF102438);
         CompactFont.draw(canvas, "SECOND STRIKE", labelX, 198, 1, 0xFFFFD685);

@@ -9,7 +9,9 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
+import java.io.IOException;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -35,10 +37,9 @@ import java.util.List;
  * {@code AIZMiniboss_SetFallingShotDelay} reaches the camera-relative drop.</p>
  */
 public class AizMinibossNapalmProjectile extends AbstractObjectInstance
-        implements TouchResponseProvider, SpawnCoordinateRewindRecreatable {
+        implements TouchResponseProvider, RewindRecreatable {
     private static final int COLLISION_FLAGS_HAZARD = 0x98; // ObjDat_AIZMiniboss_BarrelShot
     private static final int FRAME_RISE_A = 0x0C;
-    private static final int FRAME_RISE_B = 0x0D;
     private static final int PROJECTILE_PALETTE = 0;
     private static final int Y_RADIUS = 8; // FallingShot_Init: move.b #8,y_radius(a0)
     private static final int RISE_WAIT = 0x60; // BarrelShot_Init: move.w #$60,$2E(a0)
@@ -110,6 +111,11 @@ public class AizMinibossNapalmProjectile extends AbstractObjectInstance
     private int timer;
     private int mappingFrame;
     private int animTimer;
+    private int rawCursor;
+    private int collisionFlags;
+    private boolean touchPublished;
+    private boolean drawPublished;
+    private boolean pendingDelete;
     private boolean vFlip;
     private boolean needsInitSfx;
     private State state;
@@ -151,41 +157,39 @@ public class AizMinibossNapalmProjectile extends AbstractObjectInstance
                                          int barrelSubtype,
                                          boolean hFlip,
                                          int positionCounter) {
-        super(new ObjectSpawn(startX, startY, Sonic3kObjectIds.AIZ_MINIBOSS,
-                childSubtype & 0xFF, 0, false, 0), "AIZNapalmProjectile");
+        this(new ObjectSpawn(startX, startY, Sonic3kObjectIds.AIZ_MINIBOSS,
+                childSubtype & 0xFF, 0, false, 0));
         this.parent = parent;
         this.barrel = barrel;
-        this.childSubtype = childSubtype & 0xFF;
         this.barrelSubtype = barrelSubtype & 0xFF;
         this.standaloneHFlip = hFlip;
         this.standalonePositionCounter = positionCounter & 0xFF;
-        this.currentX = startX;
-        this.currentY = startY;
-        this.xFixed = startX << 16;
-        this.yFixed = startY << 16;
-        this.yVel = 0;
-        this.timer = 0;
-        this.mappingFrame = FRAME_RISE_A;
-        this.animTimer = 0;
-        this.vFlip = false;
-        this.needsInitSfx = true;
-        this.state = State.INIT;
     }
 
-    /** Probe constructor retained for object-construction tests. */
+    /** Pure phase-one shell; captured scalar state and exact links hydrate later. */
     AizMinibossNapalmProjectile(ObjectSpawn spawn) {
-        this(null, null, spawn.x(), spawn.y(), spawn.subtype(), 0, false, 0);
+        super(spawn, "AIZNapalmProjectile");
+        childSubtype = spawn.subtype() & 0xFF;
+        currentX = spawn.x(); currentY = spawn.y();
+        xFixed = currentX << 16; yFixed = currentY << 16;
+        mappingFrame = FRAME_RISE_A;
+        needsInitSfx = true;
+        state = State.INIT;
+    }
+
+    @Override
+    public AizMinibossNapalmProjectile recreateForRewind(RewindRecreateContext ctx) {
+        return new AizMinibossNapalmProjectile(ctx.spawn());
     }
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
-        if (parent != null && (parent.isDestroyed() || parent.getState().defeated)) {
-            // FallingShot checks parent3(barrel)->parent3(boss).status bit 7
-            // before publishing touch/draw; a defeated boss removes the shot,
-            // while already-spawned explosion children remain independent.
-            ObjectLifetimeOps.expireDynamic(this);
+        if (pendingDelete) {
+            ObjectLifetimeOps.expireDynamic(this); // Delete_Current_Sprite, next dispatch only.
             return;
         }
+        touchPublished = false;
+        drawPublished = false;
         switch (state) {
             case INIT -> initializeNativeObject();
             case RISE -> updateRise();
@@ -193,6 +197,14 @@ public class AizMinibossNapalmProjectile extends AbstractObjectInstance
             case DROP_WAIT -> updateDropWait();
             case FALL -> updateFall();
         }
+        // AIZMiniboss_FallingShot dispatches its routine before the grandparent
+        // status7 gate. Its own Go_Delete marker still reaches this live-parent tail.
+        if (parent != null && (parent.isDestroyed() || parent.getState().defeated)) {
+            pendingDelete = true;
+            return;
+        }
+        touchPublished = true;
+        drawPublished = true;
     }
 
     /** AIZMiniboss_FallingShot_Init -> AIZMiniboss_BarrelShot_Init. */
@@ -208,6 +220,9 @@ public class AizMinibossNapalmProjectile extends AbstractObjectInstance
         // that call consume the initial C/D prefix immediately; a timer of two
         // would introduce a frame not present in the ROM.
         animTimer = 0;
+        rawCursor = 0;
+        collisionFlags = barrel != null && barrel.isCutsceneController() ? 0 : COLLISION_FLAGS_HAZARD;
+        drawPublished = true; // common Init itself calls Draw_Sprite before the outer tail.
         state = State.RISE;
     }
 
@@ -306,9 +321,9 @@ public class AizMinibossNapalmProjectile extends AbstractObjectInstance
             int x = currentX + AizMinibossNapalmExplosionChild.X_OFFSETS[i];
             int y = currentY + AizMinibossNapalmExplosionChild.Y_OFFSETS[i];
             int subtype = i * 2; // CreateChild1_Normal's sequential subtype word index.
-            spawnChild(() -> new AizMinibossNapalmExplosionChild(x, y, subtype, true));
+            spawnChild(() -> new AizMinibossNapalmExplosionChild(x, y, subtype, collisionFlags != 0));
         }
-        ObjectLifetimeOps.expireDynamic(this);
+        pendingDelete = true; // Go_Delete_Sprite retains the SST through this wrapper's AddList/Draw.
     }
 
     private void moveSprite2() {
@@ -317,13 +332,29 @@ public class AizMinibossNapalmProjectile extends AbstractObjectInstance
         currentY = yFixed >> 16;
     }
 
-    /** Animate_Raw for AniRaw_AIZMiniboss_BarrelShot's looping C/D prefix. */
+    /** AniRaw_6914C: captured cleared byte cursor/timer, retained through Pause/Drop. */
     private void animateBarrelShot() {
-        if (--animTimer > 0) {
-            return;
+        animTimer = (animTimer - 1) & 0xFF;
+        if ((byte) animTimer >= 0) return;
+        rawCursor = (rawCursor + 1) & 0xFF;
+        int frame = rawByte(0x6914C + 1 + rawCursor);
+        if (frame == 0xFC) {
+            rawCursor = 0;
+            mappingFrame = rawByte(0x6914D);
+        } else {
+            mappingFrame = frame;
         }
-        animTimer = 2;
-        mappingFrame = mappingFrame == FRAME_RISE_A ? FRAME_RISE_B : FRAME_RISE_A;
+        animTimer = rawByte(0x6914C);
+    }
+
+    private int rawByte(int address) {
+        try {
+            var reader = services().romReader();
+            if (reader == null) throw new IllegalStateException("FallingShot requires its ROM raw animation");
+            return reader.readU8(address);
+        } catch (IOException e) {
+            throw new IllegalStateException("FallingShot requires its ROM raw animation", e);
+        }
     }
 
     int getChildSubtype() {
@@ -336,9 +367,7 @@ public class AizMinibossNapalmProjectile extends AbstractObjectInstance
 
     @Override
     public int getCollisionFlags() {
-        // FallingShot_Init retains ObjDat_AIZMiniboss_BarrelShot's $98 for the
-        // live route.  The cutscene parent clears it in a separate native branch.
-        return isDestroyed() ? 0 : COLLISION_FLAGS_HAZARD;
+        return isDestroyed() || !touchPublished ? 0 : collisionFlags;
     }
 
     @Override
@@ -397,6 +426,7 @@ public class AizMinibossNapalmProjectile extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        if (isDestroyed() || !drawPublished) return;
         ObjectRenderManager rm = services().renderManager();
         if (rm == null) {
             return;

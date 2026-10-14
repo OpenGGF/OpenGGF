@@ -26,6 +26,7 @@ import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 /** Executes the native boss owner around its semantic breath boundary and rewind. */
 class TestSecondStrikeBoss {
@@ -51,7 +52,7 @@ class TestSecondStrikeBoss {
         Harness harness = new Harness(policy, 3);
         int nativeCollision = harness.boss.getCollisionFlags();
         breathComplete(harness.boss);
-        harness.tick(19);
+        harness.tick(15);
         assertEquals(0, harness.flames().size(), "the second wave leaves a readable delay");
         harness.tick(1);
         assertEquals(4, harness.flames().size(), "the follow-up uses the native four-flame wave");
@@ -61,6 +62,117 @@ class TestSecondStrikeBoss {
         assertEquals(4, harness.flames().size(), "one breath completion cannot repeat indefinitely");
         assertFalse(harness.boss.getState().defeated);
         assertFalse(harness.gameState.isEndOfLevelFlag());
+    }
+
+    @Test void managerDispatchKeepsNativeSixteenTickCuePendingWaveReplayAndFatalCancellation() throws Exception {
+        var harness = new Harness(policy, 3);
+        startWarningAtNativePeak(harness);
+        for (int i=0;i<7;i++) {
+            harness.assertWarningPresentation(3);
+            harness.managerTick(1);
+        }
+        var saved = harness.objects.rewindSnapshottable().capture();
+        for (int i=7;i<16;i++) {
+            harness.assertWarningPresentation(3);
+            assertTrue(harness.flames().isEmpty()); harness.managerTick(1);
+        }
+        assertEquals(4, harness.flames().size()); var expected = harness.objects.rewindSnapshottable().capture();
+        harness.objects.rewindSnapshottable().restore(saved); harness.tick=8;
+        harness.boss = harness.objects.activeObjectsOfType(AizMinibossInstance.class).getFirst(); harness.managerTick(9);
+        assertEquals(expected.dynamicObjects(), harness.objects.rewindSnapshottable().capture().dynamicObjects());
+        harness.objects.rewindSnapshottable().restore(saved); harness.tick=8;
+        harness.boss = harness.objects.activeObjectsOfType(AizMinibossInstance.class).getFirst();
+        harness.boss.getState().hitCount=1; harness.boss.onPlayerAttack(null,null); harness.managerTick(20);
+        assertTrue(harness.flames().isEmpty()); assertTrue(harness.boss.getState().defeated);
+        assertEquals(0, liveFlares(harness));
+    }
+
+    @Test void longerAdmittedWarningHoldsNativeFinalPoseAndRestoresTheRemainingTail() throws Exception {
+        var harness = new Harness(hits -> 32, 3); startWarningAtNativePeak(harness);
+        for (int i=0;i<20;i++) { harness.assertWarningPresentation(3); harness.managerTick(1); }
+        var saved = harness.objects.rewindSnapshottable().capture(); int savedTick = harness.tick;
+        for (int i=0;i<11;i++) { harness.assertWarningPresentation(3); harness.managerTick(1); }
+        assertTrue(harness.flames().isEmpty()); harness.assertWarningPresentation(3);
+        harness.managerTick(1); assertEquals(4, harness.flames().size()); assertEquals(0, liveFlares(harness));
+        var expected = harness.objects.rewindSnapshottable().capture();
+        harness.objects.rewindSnapshottable().restore(saved); harness.tick=savedTick;
+        harness.boss = harness.objects.activeObjectsOfType(AizMinibossInstance.class).getFirst(); harness.managerTick(12);
+        assertEquals(expected.dynamicObjects(), harness.objects.rewindSnapshottable().capture().dynamicObjects());
+    }
+
+    @Test void ordinaryStockFlareRetainsInitAndF4BeforeItsNextPhysicalClear() throws Exception {
+        var harness = new Harness(null, 3);
+        var initialize = AizMinibossInstance.class.getDeclaredMethod("onInitialDelayComplete"); initialize.setAccessible(true);
+        initialize.invoke(harness.boss);
+        var barrel = harness.objects.activeObjectsOfType(com.openggf.game.sonic3k.objects.AizMinibossFlameBarrelChild.class).getFirst();
+        var flare = harness.objects.createDynamicObject(() -> new com.openggf.game.sonic3k.objects.AizMinibossBarrelShotFlareChild(barrel));
+        // Native Init,16 animation updates, then F4's retained outer draw.
+        for (int i=0;i<18;i++) { flare.update(i,null); assertFalse(flare.isDestroyed()); }
+        flare.update(18,null); assertTrue(flare.isDestroyed());
+    }
+
+    @Test void disabledPolicyKeepsTheOrdinaryManagerGraphAndTiming() throws Exception {
+        var stock = new Harness(null, 3);
+        var disabled = new Harness(hits -> -1, 3);
+        startWarningAtNativePeak(stock); startWarningAtNativePeak(disabled);
+        for (int i=0;i<40;i++) {
+            assertEquals(stock.objects.rewindSnapshottable().capture().dynamicObjects(),
+                    disabled.objects.rewindSnapshottable().capture().dynamicObjects());
+            stock.managerTick(1); disabled.managerTick(1);
+        }
+    }
+
+    @Test void childFirstAndParentFirstBarrelSlotsKeepEveryWarningPresentation() throws Exception {
+        for (boolean childFirst : List.of(false, true)) {
+            var harness = new Harness(policy, 3);
+            var initialize = AizMinibossInstance.class.getDeclaredMethod("onInitialDelayComplete");
+            initialize.setAccessible(true); initialize.invoke(harness.boss);
+            if (childFirst) {
+                harness.objects.removeDynamicObject(harness.boss);
+                harness.objects.addDynamicObjectAtSlot(harness.boss, 70);
+            }
+            startWarningAtNativePeak(harness);
+            for (int i=0;i<16;i++) {
+                harness.assertWarningPresentation(3); harness.managerTick(1);
+            }
+            assertEquals(4, harness.flames().size());
+        }
+    }
+
+    @Test void exhaustedSlotsBoundWarningAndWaveAllocationWithoutLateRetries() throws Exception {
+        var harness = new Harness(policy, 3);
+        var initialize = AizMinibossInstance.class.getDeclaredMethod("onInitialDelayComplete");
+        initialize.setAccessible(true); initialize.invoke(harness.boss);
+        var fillers = new java.util.ArrayList<com.openggf.level.objects.AbstractObjectInstance>();
+        while (harness.objects.hasFreeDynamicSlot()) {
+            fillers.add(harness.objects.createDynamicObject(() -> new com.openggf.level.objects.AbstractObjectInstance(
+                    new ObjectSpawn(0x1100, 0x300, 0x7f, 0, 0, false, 0), "WarningSlotFiller") {
+                @Override public void update(int vIntRunCount, com.openggf.game.PlayableEntity player) { }
+                @Override public void appendRenderCommands(List<com.openggf.graphics.GLCommand> commands) { }
+            }));
+        }
+        startWarningAtNativePeak(harness); harness.managerTick(16);
+        assertEquals(0, liveFlares(harness)); assertTrue(harness.flames().isEmpty());
+        fillers.forEach(harness.objects::removeDynamicObject);
+        harness.managerTick(10); assertTrue(harness.flames().isEmpty(), "failed slots are not retried later");
+    }
+
+    private static long liveFlares(Harness harness) {
+        return harness.objects.activeObjectsOfType(com.openggf.game.sonic3k.objects.AizMinibossBarrelShotFlareChild.class)
+                .stream().filter(o -> !o.isDestroyed()).count();
+    }
+
+    private static void startWarningAtNativePeak(Harness harness) throws Exception {
+        var initialize = AizMinibossInstance.class.getDeclaredMethod("onInitialDelayComplete"); initialize.setAccessible(true);
+        if (harness.objects.activeObjectsOfType(com.openggf.game.sonic3k.objects.AizMinibossFlameBarrelChild.class).isEmpty())
+            initialize.invoke(harness.boss);
+        var swing = AizMinibossInstance.class.getDeclaredField("swingMotion"); swing.setAccessible(true);
+        var motion = (com.openggf.game.sonic3k.objects.AizMinibossSwingMotion)swing.get(harness.boss);
+        motion.setup1(harness.boss.getState()); motion.setCycleCounter(0);
+        harness.boss.getState().routine=10; harness.boss.getState().yVel=-0xb0;
+        // The native negative peak schedules the warning DURING Process_Sprites,
+        // so its later-slot child executes in that same creation pass.
+        harness.managerTick(1);
     }
 
     @Test
@@ -90,7 +202,7 @@ class TestSecondStrikeBoss {
         RewindRegistry registry = new RewindRegistry();
         registry.register(harness.objects.rewindSnapshottable());
         var snapshot = registry.capture();
-        harness.tick(12);
+        harness.tick(8);
         assertTrue(harness.flames().isEmpty());
         harness.tick(1);
         List<String> expectedWave = harness.flamePositions();
@@ -99,7 +211,7 @@ class TestSecondStrikeBoss {
         registry.restore(snapshot);
         harness.boss = harness.objects.activeObjectsOfType(AizMinibossInstance.class).getFirst();
         assertTrue(harness.flames().isEmpty(), "restore drops the later wave and recreates its pending owner");
-        harness.tick(12);
+        harness.tick(8);
         assertTrue(harness.flames().isEmpty());
         harness.tick(1);
         assertEquals(expectedWave, harness.flamePositions());
@@ -148,6 +260,7 @@ class TestSecondStrikeBoss {
     private static final class Harness {
         final GameStateManager gameState = new GameStateManager();
         final ObjectManager objects;
+        final com.openggf.level.render.PatternSpriteRenderer renderer = mock(com.openggf.level.render.PatternSpriteRenderer.class);
         AizMinibossInstance boss;
         int tick;
 
@@ -160,13 +273,25 @@ class TestSecondStrikeBoss {
                     return contract == AizMinibossAttackPolicy.class ? contract.cast(attackPolicy) : null;
                 }
             };
+            when(renderer.isReady()).thenReturn(true);
+            var renderManager = mock(com.openggf.level.objects.ObjectRenderManager.class);
+            when(renderManager.getRenderer(com.openggf.game.sonic3k.Sonic3kObjectArtKeys.AIZ_MINIBOSS)).thenReturn(renderer);
+            var rom = mock(com.openggf.data.RomByteReader.class);
+            // Independent byte_6913F fixture; production reads through its ROM service.
+            when(rom.slice(0x6913F, 13)).thenReturn(new byte[]{7,1,7,1,8,1,9,3,10,3,11,3,(byte)0xF4});
+            ObjectManager[] holder = new ObjectManager[1];
+            camera.setX((short)0x1100); camera.setY((short)0x290);
             StubObjectServices services = new StubObjectServices() {
+                @Override public com.openggf.level.objects.ObjectRenderManager renderManager() { return renderManager; }
+                @Override public ObjectManager objectManager() { return holder[0]; }
                 @Override public GameStateManager gameState() { return gameState; }
+                @Override public com.openggf.data.RomByteReader romReader() { return rom; }
                 @Override public Camera camera() { return camera; }
                 @Override public SonicConfigurationService configuration() { return config; }
                 @Override public GameModule gameModule() { return module; }
-            }.withIsolatedObjectManager();
-            objects = services.objectManager();
+            };
+            objects = new ObjectManager(List.of(), module.createObjectRegistry(), 0, null, null, null, camera, services);
+            holder[0] = objects;
             boss = newBoss();
             boss.getState().hitCount = remainingHits;
         }
@@ -178,6 +303,23 @@ class TestSecondStrikeBoss {
 
         void tick(int count) {
             for (int i = 0; i < count; i++) boss.update(++tick, null);
+        }
+
+        void assertWarningPresentation(int expected) {
+            clearInvocations(renderer);
+            var flares = objects.activeObjectsOfType(com.openggf.game.sonic3k.objects.AizMinibossBarrelShotFlareChild.class)
+                    .stream().filter(o -> !o.isDestroyed()).toList();
+            assertEquals(expected, flares.size());
+            for (var flare : flares) {
+                flare.appendRenderCommands(new java.util.ArrayList<>());
+                verify(renderer).drawFrameIndex(intThat(frame -> frame >= 7 && frame <= 11),
+                        eq(flare.getX()), eq(flare.getY()), eq(false), eq(false), eq(0));
+            }
+            verify(renderer, times(expected)).drawFrameIndex(anyInt(), anyInt(), anyInt(), anyBoolean(), anyBoolean(), anyInt());
+        }
+
+        void managerTick(int count) {
+            for (int i=0;i<count;i++) objects.update(0x1100, null, List.of(), ++tick, false);
         }
 
         List<AizMinibossFlameChild> flames() {

@@ -28,6 +28,9 @@ public class AizMinibossBarrelShotFlareChild extends AbstractObjectInstance impl
     private int renderFlags;
     private boolean initialized;
     private boolean pendingDelete;
+    // Opted-in attack policy owns a bounded warning, separate from stock Go_Delete.
+    private boolean policyWarning;
+    private int warningRemainingTicks;
     private final S3kRawAnimation.State animation = new S3kRawAnimation.State();
     private transient S3kRawAnimation animator;
 
@@ -36,6 +39,16 @@ public class AizMinibossBarrelShotFlareChild extends AbstractObjectInstance impl
                 anchor == null ? 0 : (anchor.getY() + Y_OFFSET) & 0xFFFF,
                 0x90, 0, 0, false, 0));
         parentSlot = anchor == null ? -1 : anchor.getSlotIndex();
+    }
+
+    static AizMinibossBarrelShotFlareChild warning(AbstractObjectInstance anchor, int delayTicks) {
+        if (delayTicks < 16 || delayTicks > 60) {
+            throw new IllegalArgumentException("Warning delay must be 16..60 updates");
+        }
+        var flare = new AizMinibossBarrelShotFlareChild(anchor);
+        flare.policyWarning = true;
+        flare.warningRemainingTicks = delayTicks;
+        return flare;
     }
 
     private AizMinibossBarrelShotFlareChild(ObjectSpawn spawn) {
@@ -52,7 +65,11 @@ public class AizMinibossBarrelShotFlareChild extends AbstractObjectInstance impl
 
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
-        if (pendingDelete) {
+        if (pendingDelete && !policyWarning) {
+            ObjectLifetimeOps.deleteNoRespawn(this);
+            return;
+        }
+        if (policyWarning && NativeSstSlotAccess.currentOwner(services().objectManager(), parentSlot) == null) {
             ObjectLifetimeOps.deleteNoRespawn(this);
             return;
         }
@@ -67,6 +84,13 @@ public class AizMinibossBarrelShotFlareChild extends AbstractObjectInstance impl
             animation.script = SCRIPT;
             return;
         }
+        // Init/birth precedes the admitted warning delay. The stock raw cursor
+        // remains literal; a longer policy warning holds its terminal pose.
+        if (policyWarning && --warningRemainingTicks <= 0) {
+            ObjectLifetimeOps.deleteNoRespawn(this);
+            return;
+        }
+        if (pendingDelete) return;
         if (animator == null) {
             try { animator = S3kRawAnimation.load(services().romReader(), SCRIPT, SCRIPT_SIZE); }
             catch (IOException failure) { throw new UncheckedIOException(failure); }
