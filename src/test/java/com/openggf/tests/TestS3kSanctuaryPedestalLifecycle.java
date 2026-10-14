@@ -1,0 +1,181 @@
+package com.openggf.tests;
+
+import com.openggf.GameLoop;
+import com.openggf.configuration.WidescreenAspect;
+import com.openggf.control.InputHandler;
+import com.openggf.debug.playback.Bk2FrameInput;
+import com.openggf.debug.playback.RecordedInputSnapshots;
+import com.openggf.game.GameMode;
+import com.openggf.game.GameServices;
+import com.openggf.game.sonic3k.objects.HPZSuperEmeraldObjectInstance;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageProvider;
+import com.openggf.sprites.NativePositionOps;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+/** Actual placed-pedestal contact and GameLoop entry; no direct selection/outcome writes. */
+@RequiresRom(SonicGame.SONIC_3K)
+class TestS3kSanctuaryPedestalLifecycle {
+    private final CanonicalEntryMatrixSupport support = new CanonicalEntryMatrixSupport() {
+        @Override TestS3kCanonicalEntryLifecycle.Act binding() {
+            return new TestS3kCanonicalEntryLifecycle.Act("HPZ-sanctuary", 0x17, 1);
+        }
+    };
+    @BeforeEach void saveConfiguration() { support.saveConfiguration(); }
+    @AfterEach void restoreConfiguration() { support.restoreConfiguration(); }
+
+    @ParameterizedTest(name = "physical gray pedestal{0} → actual Super stage")
+    @ValueSource(ints = {0,1,2,3,4,5,6})
+    void eachPlacedGrayPedestalEntersItsActualSuperEmeraldStageAndRetiresHubHistory(int stage)
+            throws Exception {
+        var row = new CanonicalEntryMatrixSupport.Row("sonic", WidescreenAspect.NATIVE_4_3, "off", "");
+        var fixture = support.boot(row);
+        // Declared persistent progress only, before the controller first dispatch.
+        GameServices.gameState().restoreS3kEmeraldProgress(List.of(2,2,2,2,2,2,2), true);
+        var neutral = new Bk2FrameInput(0,0,0,false,"");
+        var input = new InputHandler();
+        input.setLogicalOverride(RecordedInputSnapshots.fromBk2(neutral, neutral));
+        var loop = new GameLoop(input);
+        loop.setGameplayMode(fixture.gameplayMode());
+        loop.setGameMode(GameMode.LEVEL);
+        try {
+            for (int frame = 0; frame < 200; frame++) advance(loop, row, 1);
+            var main = GameServices.sprites().getMainPlayable();
+            assertFalse(main.isObjectControlled(), "actual non-conversion intro has released");
+            var objects = GameServices.level().getObjectManager();
+            var pedestal = objects.activeObjectsOfType(HPZSuperEmeraldObjectInstance.class).stream()
+                    .filter(object -> object.getSpawn().subtype() == stage).findFirst().orElseThrow();
+            assertTrue(pedestal.isSelectable());
+            assertEquals(HPZSuperEmeraldObjectInstance.Display.GRAY, pedestal.display());
+            // A real fresh jump retires the arrival pad's standing owner before
+            // moving this local contact fixture to a different placed platform.
+            var jump = new Bk2FrameInput(0, 0x10, 1, false, "");
+            input.setLogicalOverride(RecordedInputSnapshots.fromBk2(jump, neutral));
+            advance(loop, row, 1);
+            input.setLogicalOverride(RecordedInputSnapshots.fromBk2(neutral, jump));
+            advance(loop, row, 1);
+            assertTrue(main.getAir(), "ordinary jump released the arrival pad");
+            assertNull(objects.getRidingObject(main), "jump owns prior ride retirement");
+            // Declared local falling-contact stimulus on the actual placed native geometry.
+            // The manager must establish standing; no contact, selection or timer is seeded.
+            NativePositionOps.writeXPosPreserveSubpixel(main, pedestal.getX());
+            NativePositionOps.writeYPosPreserveSubpixel(main,
+                    pedestal.getY() - 0x10 - main.getYRadius() - 4);
+            main.setXSpeed((short)0);main.setGSpeed((short)0);main.setYSpeed((short)0x100);
+            main.setAir(true);main.setJumping(false);
+            GameServices.camera().updatePosition(true);
+            for (int frame = 0; frame < 32 && !main.isObjectControlled(); frame++) advance(loop,row,1);
+            // Selection itself is gated by this exact pedestal's real manager
+            // ride in update(). Native control $81 then owns movement; a folded
+            // end-frame ride record is not the contact/selection contract.
+            assertTrue(main.isObjectControlled(), "loc908DE physical contact selected the pedestal");
+            assertEquals(5, main.getAnimationId());
+            assertEquals(0, main.getYSpeed(), "actual top landing stopped the fall");
+            assertEquals(pedestal.getY() - 0x10 - main.getYRadius() - 1,
+                    main.getCentreY(), "SolidObjectTop's actual surface snap");
+            // Native selection publishes after16 decrements. The8-tick window is
+            // clamped to this real short phase; a45-tick raw restore would cross a fade/load.
+            assertFalse(GameServices.fade().hasPendingCompletion());
+            var registry=fixture.gameplayMode().getRewindRegistry();
+            var before=registry.capture();advance(loop,row,8);var after=registry.capture();
+            for(int cycle=0;cycle<2;cycle++) {
+                registry.restore(before);
+                TestS3kCanonicalEntryLifecycle.assertSameWorld(before,registry.capture(),"physical selection restore",8);
+                advance(loop,row,8);
+                TestS3kCanonicalEntryLifecycle.assertSameWorld(after,registry.capture(),"physical selection replay",8);
+            }
+            assertTrue(fixture.gameplayMode().getRewindController().currentFrame()>10);
+            int outgoing=fixture.gameplayMode().getRewindController().currentFrame();
+            for(int frame=0;frame<300 && loop.getCurrentGameMode()==GameMode.LEVEL;frame++) {
+                advance(loop,row,1);
+                var history=fixture.gameplayMode().getRewindController();
+                if(history!=null)outgoing=Math.max(outgoing,history.currentFrame());
+            }
+            assertEquals(GameMode.SPECIAL_STAGE,loop.getCurrentGameMode(),"actual stage load"+stage);
+            var provider=assertInstanceOf(Sonic3kSpecialStageProvider.class,loop.getActiveSpecialStageProvider());
+            assertEquals(stage,provider.getCurrentStage());
+            assertTrue(provider.hasSpecialStages());assertTrue(provider.supportsRewind());
+            var incoming=fixture.gameplayMode().getRewindController();
+            assertTrue(incoming==null || incoming.currentFrame()<outgoing,"special world retires outgoing hub history");
+            assertFalse(main.getDead());
+        } finally {loop.closePresence();}
+    }
+
+    @ParameterizedTest(name = "actual full hub load / native target publication {0}")
+    @ValueSource(strings = {"sonic","knuckles"})
+    void actualFreshHubTransitionPublishesItsNativeTargetPalette(String character) throws Exception {
+        var origin = new CanonicalEntryMatrixSupport() {
+            @Override TestS3kCanonicalEntryLifecycle.Act binding() {
+                return new TestS3kCanonicalEntryLifecycle.Act("LRZ1",9,0);
+            }
+        };
+        var row = new CanonicalEntryMatrixSupport.Row(character,WidescreenAspect.NATIVE_4_3,"off","");
+        origin.saveConfiguration();
+        var fixture=origin.boot(row);
+        GameServices.gameState().restoreS3kEmeraldProgress(List.of(1,1,1,1,1,1,1),false);
+        var neutral=new Bk2FrameInput(0,0,0,false,"");var input=new InputHandler();
+        input.setLogicalOverride(RecordedInputSnapshots.fromBk2(neutral,neutral));
+        var loop=new GameLoop(input);loop.setGameplayMode(fixture.gameplayMode());loop.setGameMode(GameMode.LEVEL);
+        var source=GameServices.level().getObjectManager();int lives=GameServices.gameState().getLives();
+        try {
+            // Declared transition stimulus to distinguish actual production fade/assembly
+            // from direct fixture boot. This is not physical giant-ring route certification.
+            GameServices.level().requestZoneAndAct(0x17,1,true);
+            for(int frame=0;frame<400 && GameServices.level().getObjectManager()==source;frame++) {
+                loop.step();GameServices.graphics().runPendingRenderThreadTasks();
+            }
+            assertNotSame(source,GameServices.level().getObjectManager());
+            for(int frame=0;frame<400 && (GameServices.fade().isActive()
+                    ||GameServices.fade().hasPendingCompletion()
+                    ||GameServices.level().hasPendingFreshLevelTransitionBoundary());frame++) {
+                loop.step();GameServices.graphics().runPendingRenderThreadTasks();
+            }
+            assertEquals(GameMode.LEVEL,loop.getCurrentGameMode());
+            assertFalse(GameServices.fade().isActive());assertFalse(GameServices.fade().hasPendingCompletion());
+            assertFalse(GameServices.level().hasPendingFreshLevelTransitionBoundary());
+            support.assertOwners(row);assertEquals(lives,GameServices.gameState().getLives());
+            assertTrue(GameServices.level().getLevelGamestate().isTimerPaused());
+            var rom=GameServices.rom().getRom();
+            byte[] nativeLine1=rom.readBytes(character.equals("knuckles")
+                    ?Sonic3kConstants.PAL_SONIC_TAILS_ADDR:Sonic3kConstants.PAL_CUTSCENE_KNUX_ADDR,32);
+            byte[] nativeLines23=rom.readBytes(Sonic3kConstants.HPZ_MAIN_PALETTE_ADDR+32,64);
+            var errors=new java.util.ArrayList<String>();
+            for(int line=1;line<4;line++) {
+                byte[] expected=line==1?nativeLine1:java.util.Arrays.copyOfRange(nativeLines23,(line-2)*32,(line-1)*32);
+                // Master Emerald cyclic colors have a separate owner. Compare static cells.
+                for(int color=0;color<16;color++) {
+                    if(line==3&&(color==1||color==2))continue;
+                    int word=((expected[color*2]&255)<<8)|(expected[color*2+1]&255);
+                    var value=GameServices.level().getCurrentLevel().getPalette(line).getColor(color);
+                    int actual=((value.r&255)*7+127)/255*2|(((value.g&255)*7+127)/255*2<<4)
+                            |(((value.b&255)*7+127)/255*2<<8);
+                    var target=GameServices.paletteOwnershipRegistryOrNull().targetSegaData(line,color,1);
+                    int targetWord=((target[0]&255)<<8)|(target[1]&255);
+                    if((word&0xEEE)!=(actual&0xEEE)||(word&0xEEE)!=(targetWord&0xEEE))
+                        errors.add("line"+line+" color"+color+" native="+Integer.toHexString(word)
+                                +" current="+Integer.toHexString(actual)+" target="+Integer.toHexString(targetWord));
+                }
+            }
+            assertTrue(errors.isEmpty(),()->"actual native B5 target/current publication: "+errors);
+        } finally {loop.closePresence();}
+    }
+
+    private void advance(GameLoop loop,CanonicalEntryMatrixSupport.Row row,int frames) {
+        int lives=GameServices.gameState().getLives();
+        for(int frame=0;frame<frames;frame++) {
+            loop.step();GameServices.graphics().runPendingRenderThreadTasks();
+            assertFalse(GameServices.sprites().getMainPlayable().getDead());
+            assertEquals(lives,GameServices.gameState().getLives(),"no hidden life-loss load");
+            support.assertOwners(row);
+        }
+    }
+}

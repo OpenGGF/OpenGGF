@@ -302,10 +302,10 @@ class TestSonic3kLevelLoading {
                 GameServices.paletteOwnershipRegistry()
                         .targetSegaData(0, 0, 1),
                 "character target palette line must remain untouched");
-        assertArrayEquals(new byte[]{0x00, 0x00},
-                GameServices.paletteOwnershipRegistry()
-                        .targetSegaData(1, 0, 1),
-                "target palette line 2 must remain untouched");
+        assertArrayEquals(GameServices.rom().getRom().readBytes(
+                        com.openggf.game.sonic3k.constants.Sonic3kConstants.PAL_CUTSCENE_KNUX_ADDR, 32),
+                GameServices.paletteOwnershipRegistry().targetSegaData(1, 0, 16),
+                "loc_90998 must stage Pal_CutsceneKnux for Sonic before first dispatch");
         assertArrayEquals(new byte[]{0x00, 0x00},
                 GameServices.paletteOwnershipRegistry()
                         .targetSegaData(2, 0, 1),
@@ -320,7 +320,7 @@ class TestSonic3kLevelLoading {
                 "B5 controller must make the Master Emerald green before fade-in");
         assertEquals("none",
                 GameServices.paletteOwnershipRegistry().targetOwnerAt(0, 0));
-        assertEquals("none",
+        assertEquals(S3kPaletteOwners.HPZ_PALETTE_CONTROL,
                 GameServices.paletteOwnershipRegistry().targetOwnerAt(1, 0));
         assertEquals(S3kPaletteOwners.HPZ_PALETTE_CONTROL,
                 GameServices.paletteOwnershipRegistry().targetOwnerAt(2, 0));
