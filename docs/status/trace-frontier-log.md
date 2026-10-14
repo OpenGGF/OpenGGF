@@ -112513,3 +112513,19 @@ fixture/controller, shared allocator/clock or hydration change; no broad sweep.
 Actual segment2 shot18 now stays at native birthY816 on2881. Next sampled
 presence remains2910 native-only17/21. Cutscene-shot recreation/exact links and
 barrel callback are required separate next owners; no rendered/audio parity claim.
+
+
+### 2026-10-14 — AIZ shot recreation preserves exact live graph
+
+Owned bugfix/ai-s3k-parity-trace, source a06056a0b plus shot bbb24591/policy
+e5c9f9af/test b56ca3ee SHA256 candidates. [Native links, matched red and commands](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-shot-pure-recreation-and-exact-live-links).
+Pure ctx.spawn recreation replaces nearest fight/barrel lookup; local CAPTURED
+ObjectRefs restore legitimate cutscene ownership and exact moving metadata.
+Matched99092: 9/9fail/0errors/0skip. Affected37849: 639/0/0/0 at 16:59:09 BST,
+73s execution/23s queue; guards9839: 111/0/0/0 at 17:01:12 BST,31.854s/20s.
+Commands add TestAizMinibossShotNativeGraph to46911 and reuse the four -Pguards
+selectors, with Java25/EGL/original ROM for affected consumers. Normal production
+construction/dispatch and controller are unchanged; no new strict trajectory
+run is claimed. The preceding25467/27675 source-bounded strict errors/counts
+remain open. Barrel callback2910 is next; recycled numeric parent pressure and
+rendered/audio conformance remain separate. No broad/full sweep or hydration.

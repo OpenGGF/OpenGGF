@@ -652,3 +652,41 @@ the native stationary Init. Subsequent sampled presence still first misses17/21
 at2910, where the barrel's deferred callback is the next allocation owner. Pure
 cutscene-shot recreation/exact links remains required next work. Existing image
 provenance remains source-bounded; these checks add no rendered/audio parity.
+
+
+## AIZ shot pure recreation and exact live links
+
+Source `a06056a0b` plus shot SHA256 `bbb2459141faf1353959104c58f213d8d1cf3cb3b5b01a3e323e9bf046a74f6e`,
+policy `e5c9f9af5619c4fcb902b3ee9b1025b129e130b1c2825758ce12d0b8b01ba206`,
+TestAizMinibossShotNativeGraph `b56ca3eee67a043d23b5558ef7ca016ad9aedb24243f29e3060522f39cef3d38`.
+The normal constructor and dispatch are unchanged. Native Launch reads its
+firing barrel through parent3 (:137110); FallingShot reads the boss through that
+barrel (:137450). Camera-relative shot XY cannot identify either live owner.
+The former factory searched only AizMinibossInstance, dropping legitimate
+cutscene shots, and selected the nearest barrel when a fight graph was present.
+
+Matched negative99092 completes 9/9fail/0errors/0skip at 16:56:27 BST, 24.450s
+execution/12s queue. Three pure ctx.spawn shells return null; all five moving
+cutscene manager restorations lose shot slot9. Independent cutscene/fight graphs
+change captured shot subtype2 to another barrel's4. No graph difference was
+filtered or accepted. The pure shell now retains every ctx.spawn field without
+live lookup, child allocation, SFX or animation advancement. Two explicit local
+CAPTURED ObjectRef policies hydrate mutable parent/barrel fields in phase two,
+along with existing mode/state/needsInitSfx/raw fields, before any dispatch.
+
+Affected37849 passes 639/0/0/0 at 16:59:09 BST, 73s execution/23s queue, the
+46911 selection plus TestAizMinibossShotNativeGraph. Its nine cases cover all
+three shell modes, five declared camera widths320/352/400/528/800, moving
+metadata, forced recreation and two45-entry forward cycles in both directions,
+and independent exact two-parent/three-barrel identity. Existing actual AIZ2
+napalm/SecondStrike/scalar and four mandatory startup consumers remain green.
+Guards9839 passes 111/0/0/0 at 17:01:12 BST, 31.854s/20s with the existing four
+-Pguards selectors, Java25/EGL environment. These are full manager components,
+not whole registered-world/donor/host/cold-route product certification.
+
+No ordinary gameplay trajectory changes in this factory-only slice; the source-
+bounded canonical25467/alternate27675 strict observations remain the preceding
+INIT slice's qualification, rather than a new strict pass. Following barrel
+callback allocation at2910 remains the next ordinary-dispatch target. Exact
+logical ObjectRefs do not certify native reads after numeric parent3 is cleared
+or recycled. No new pixel/audio or full-pressure claim follows.

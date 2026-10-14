@@ -37,6 +37,8 @@ Unreleased. The earlier development themes remain in
   without borrowing a detached parent, and restores through rewind.
   Barrel shots draw at their native stationary initialization position and retain
   the cleared ROM raw-animation state through their pause and launch phases.
+  Their exact live cutscene and fight parent links restore independently of
+  the shot's camera-relative position.
 
 - **S3K breakable floors:** Cork's placed record becomes its first moving
   fragment, preserving checked sibling allocation, native motion and render

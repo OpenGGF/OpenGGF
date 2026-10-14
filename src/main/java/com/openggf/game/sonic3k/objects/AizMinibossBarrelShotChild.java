@@ -81,11 +81,12 @@ public class AizMinibossBarrelShotChild extends AbstractObjectInstance
         TOP_DROP_SIMPLE,
         TOP_DROP_ADVANCED
     }
-    private final AbstractBossInstance parent;
+    private AbstractBossInstance parent;
     /** ROM: parent3 of the shot = the barrel that spawned it. */
-    private final AizMinibossFlameBarrelChild barrel;
-    // barrelSubtype/mode are non-final so the rewind field capturer reapplies them
-    // after the recreate hook rebuilds the shot with placeholders; parent/barrel are relinked.
+    private AizMinibossFlameBarrelChild barrel;
+    // The pure rewind shell restores scalar state and exact live parent3 links
+    // in phase two, before any ordinary dispatch. Native recycled-slot reads
+    // remain a separate header contract from these live logical dependencies.
     private int barrelSubtype;
     private Mode mode;
 
@@ -151,17 +152,10 @@ public class AizMinibossBarrelShotChild extends AbstractObjectInstance
 
     @Override
     public AizMinibossBarrelShotChild recreateForRewind(RewindRecreateContext ctx) {
-        AizMinibossInstance boss = AizMinibossRewindLinks.nearestBoss(ctx);
-        AizMinibossFlameBarrelChild restoredBarrel = AizMinibossRewindLinks.nearestBarrel(ctx);
-        if (boss == null || restoredBarrel == null || ctx.spawn() == null) {
-            return null;
-        }
-        return new AizMinibossBarrelShotChild(
-                boss,
-                restoredBarrel,
-                ctx.spawn().x(),
-                ctx.spawn().y(),
-                Mode.SIMPLE);
+        // Native Launch reads the firing barrel's parent3, and FallingShot reads
+        // its exact boss through that barrel. XY can be far from either owner.
+        // Do not perform live lookup, fire SFX or advance the raw bank in phase one.
+        return ctx.spawn() == null ? null : new AizMinibossBarrelShotChild(ctx.spawn());
     }
 
     @Override

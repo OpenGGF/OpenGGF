@@ -682,3 +682,17 @@ shot recreation/exact links and barrel callback remain required next owners.
 [Native routines, negative attribution and exact qualification](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-shot-stationary-init-and-cleared-raw-state).
 Prior flare paragraph's shot-birth target is superseded by this qualified slice;
 its next callback target and rendered/audio/full-product limits remain.
+
+
+## AIZ shot exact live graph follow-up — 2026-10-14
+
+Pure captured-spawn recreation and explicit exact parent/barrel ObjectRefs now
+retain cutscene and fight shots independently of their camera-relative XY.
+Nine new component cases plus existing consumers pass639; guards111 pass.
+Moving metadata, both-way forced manager recreation, two45-entry cycles and
+five declared320/352/400/528/800 cameras are covered. This supersedes the prior
+shot factory gap, while full host/donor/roster/registered-world cold-route and
+numeric cleared/recycled-parent pressure remain unqualified. The factory-only
+change leaves ordinary dispatch unchanged; strict evidence remains scoped to
+the preceding INIT source, and barrel callback2910 is required next work.
+[Native links, exact negative and qualification](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-shot-pure-recreation-and-exact-live-links).

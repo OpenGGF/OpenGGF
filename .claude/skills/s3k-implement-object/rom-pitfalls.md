@@ -5471,3 +5471,17 @@ birth, zero-versus-underflow dispatch and the first post-pause mapping separatel
 
 Origin:2026-10-14 AIZ shot INIT slice over6932189b9; asm137065–137126,
 137474,177341,179640.
+
+
+## A shared shot factory must retain both native live graphs
+
+Common AIZ barrel shots can belong to the cutscene or fight boss. Searching only
+the fight type drops legitimate cutscene objects; nearest-barrel inference after
+camera-relative launch can select another graph and corrupt immutable metadata.
+Use a pure ctx.spawn shell with no SFX, allocation or animation advancement,
+then capture exact logical live parent/barrel ObjectRefs for phase-two hydration
+before dispatch. Test distinct graphs, movement, every spawn field and complete
+restore/replay. This proves exact live dependencies, not numeric parent reads
+after physical slot reuse; keep that pressure contract separate.
+
+Origin:2026-10-14 AIZ shot recreation over a06056a0b; asm137110,137450.
