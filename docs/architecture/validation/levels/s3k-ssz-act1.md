@@ -1392,4 +1392,8 @@ The lead's newer-source follow-up on `967b6db0a` completes at00:31:25 BST:
 with637 seconds queue waiting excluded. All44 spots and unchanged inputs pass
 with actual load20863, assembly20864 and native control release20946. The
 [completion plan](../../plans/2026-10-13-s3k-playable-completion.md#composed-source-focused-qualification-and-launch-plan-2026-10-14)
-records this combined-source command and the remaining smoke/delivery gate.
+records this combined-source command. Subsequent bounded
+[composed-source smoke/guard qualification](../../plans/2026-10-13-s3k-playable-completion.md#completed-composed-source-qualification)
+completes on `aaff73747`, with the separately attributed inherited CLI assertion
+and 680 passing guard tests. Develop integration, push and owned cleanup remain
+pending; the inherited breadth above remains open.

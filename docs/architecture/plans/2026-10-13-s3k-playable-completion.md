@@ -845,3 +845,53 @@ trace-isolation guards. All owned source writers are terminal. The35 existing
 shield/sprite/ground checks, seven profile checks and three other guard passes
 from the prior completed46-case invocation remain qualified on unchanged owners.
 Full composed smoke still remains a separate pending delivery gate.
+
+## Completed composed-source qualification
+
+Frozen source `aaff73747c3ada697008d7744952b0db85dad743`, including upstream
+`ea8c9c627`, completes run `20261014T002805Z-f1c80d7d`. Session57904 is terminal
+exit1, observed October14 at01:57:33 UTC; the entire retained lease is released.
+Actual preflight in the launch environment passes before submission. The inspected
+change-based plan selects all3,253 smoke candidate classes and all10 categories,
+66 batches of at most50 candidates, then fresh guards. `full:true` in the plan
+denotes complete smoke selection, not the release-only full suite. The command
+uses `MAIN_WORKSPACE` for the absolute main-checkout ROM directory:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null python3 tools/testing/run_categories.py --base 5e2f51f07917d5eff8ac120007dac55327f93f32 --rom-directory "$MAIN_WORKSPACE" --max-minutes 120 --run
+```
+
+All66 ordinary batches complete: **27,200 tests, one failure, zero errors,
+64 skips**,3,223 reports,4,459.28 execution seconds. Fresh guards complete
+**680 tests, zero failures/errors/skips**,88 reports,270.45 execution seconds.
+Combined execution is4,729.73 seconds (78.83 minutes); recorded admission waits
+total608 seconds and are excluded from the timeout. No failed or skipped identity
+is omitted. This is completed bounded smoke/guard qualification, not a full-suite
+or completely green invocation. No new or worsened failure remains identified.
+
+The sole failure is exactly
+`com.openggf.tools.audio.completerun.TestCompleteRunAudioCli#freshJvmBootstrapsTheS1ProfileButItsUnavailableDispatcherEmitsNoStandardOutput`,
+line182, `AssertionFailedError: expected <true> but was <false>`. The preceding
+exit4 and empty-stdout assertions pass. Its matched original-base source/assertion
+and controlled current pass are recorded above. The retained headless environment
+explains the inherited first-byte stderr premise; this run does not independently
+retain the child's raw stderr bytes. Keep graphics enabled and report this
+precisely attributed pre-existing assertion rather than weakening the test.
+
+All64 current skips are inspected:32 conditional Infinite Sonic terrain/stock
+platform scenarios; six individual graphics-context assumptions;24 opt-in
+measurement, soak, balance, route or capture checks; the CPZ spin-tube fixture's
+unverified capture/release premise; and one unavailable local deterministic
+BizHawk audio reference. None is a missing-ROM skip. Among those opt-in checks,
+is `com.openggf.tools.audio.timeline.TestS1Ghz1OpenGgfAudioTimelineCapture#captureRequestedOutput`,
+which aborts because no local timeline capture was requested. These groups match
+the preserved original64-skip scope; individual historical reason-byte equality
+is not claimed after consumed diagnostics are acknowledged. Bare-context skips
+do not erase the separately qualified owned ending pixels or certify those
+unrun graphics cases. Remaining donor/viewport/lifecycle/native-pixel products
+and strict trace frontiers stay explicitly open in the matrices.
+
+The original retained diagnostics are acknowledged/deleted. Composed diagnostics
+are now inspected and will be acknowledged before delivery; temporary Maven
+logs are discarded after their summaries are consumed. Final develop integration,
+push, portable media reconstruction targets and owned cleanup remain pending.

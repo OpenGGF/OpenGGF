@@ -33,8 +33,11 @@ native emerald-team DEZ1 chain and positioned Hyper incoming routes at320/800.
 Exact source-specific commands and corrections are in the October13 record
 below; earlier movie lengths and request-only stop lines remain historical.
 Native whole-scene matching and remaining viewport/donor/roster, deliberate
-load/respawn and lifecycle breadth remain open. Newer upstream-composed
-smoke/guard qualification and delivery remain lead-owned gates.
+load/respawn and lifecycle breadth remain open. All seven actual incoming
+DEZ/DDZ ending scenarios pass in smoke on composed `aaff73747`, with no
+failures/errors/skips. The bounded [composed-source qualification](../../plans/2026-10-13-s3k-playable-completion.md#completed-composed-source-qualification)
+records the completed ordinary/guard result and separately attributed inherited
+CLI assertion. Develop integration, push and owned cleanup remain pending.
 Nothing below certifies the act.
 
 LevelSizes (sonic3k.asm:38143): x `0`-`$6000`, y `$20`-`$20`. Level art
