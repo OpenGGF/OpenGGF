@@ -63,11 +63,19 @@ final class Hcz1Route {
     interface Check { void run(Hcz1Route route) throws Exception; }
 
     static void withConfiguration(int width, String donor, Check check) throws Exception {
+        withConfiguration(width, null, donor, check);
+    }
+
+    static void withConfiguration(WidescreenAspect aspect, String donor, Check check) throws Exception {
+        withConfiguration(aspect.pixelWidth(), aspect, donor, check);
+    }
+
+    private static void withConfiguration(int width, WidescreenAspect aspect, String donor, Check check) throws Exception {
         var saved = TraceReplaySessionBootstrap.snapshotGameplayConfig();
         var provider = CrossGameFeatureProvider.getInstance();
         try {
             provider.resetState();
-            check.run(new Hcz1Route(width, donor));
+            check.run(new Hcz1Route(width, aspect, donor));
         } finally {
             provider.resetState();
             GameServices.configuration().clearSessionOverrides();
@@ -75,14 +83,23 @@ final class Hcz1Route {
         }
     }
 
-    private static void configure(int width, String donor) {
+    private static void configure(int width, WidescreenAspect aspect, String donor) {
         var config = GameServices.configuration();
-        config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT,
-                (width == 320 ? WidescreenAspect.NATIVE_4_3 : WidescreenAspect.WIDE_16_9).name());
-        config.resolveDisplayAspect();
-        config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS, width);
-        config.setSessionOverride(SonicConfiguration.CROSS_GAME_SOURCE, donor);
-        config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, !donor.equals("off"));
+        if (aspect == null) {
+            // Retain historical route/custom-width fixtures without claiming production presets.
+            config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT,
+                    (width == 320 ? WidescreenAspect.NATIVE_4_3 : WidescreenAspect.WIDE_16_9).name());
+            config.resolveDisplayAspect();
+            config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS, width);
+            config.setSessionOverride(SonicConfiguration.CROSS_GAME_SOURCE, donor);
+            config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, !donor.equals("off"));
+        } else {
+            new com.openggf.game.launch.LaunchProfileApplier(config).apply(
+                    new com.openggf.game.launch.LaunchProfile(false, donor, false, aspect.name(),
+                            "sonic", donor.equals("s1") ? "sonic" : "tails"),
+                    com.openggf.game.MasterTitleScreen.GameEntry.SONIC_3K);
+            config.resolveDisplayAspect();
+        }
         if (!donor.equals("off")) {
             String property = donor.equals("s1") ? "sonic1.rom.path" : "sonic2.rom.path";
             String path = System.getProperty(property);
@@ -95,7 +112,7 @@ final class Hcz1Route {
         com.openggf.tests.TestEnvironment.activeGameplayMode();
     }
 
-    private Hcz1Route(int width, String donor) throws Exception {
+    private Hcz1Route(int width, WidescreenAspect aspect, String donor) throws Exception {
         // Authored pad approaches: intermediate viewports use the running corridor;
         // native and wider views retain the jumping approach. Both navigate live
         // placements and submit ordinary input; neither changes runtime state.
@@ -122,11 +139,15 @@ final class Hcz1Route {
         var runs = InputProgram.fromRecording(movie, offset + prefix, offset + end);
         input = new InputProgram.Cursor(runs, prefix);
         TraceReplaySessionBootstrap.prepareConfiguration(trace, trace.metadata());
-        configure(width, donor);
+        configure(width, aspect, donor);
         fixture = HeadlessTestFixture.builder().withZoneAndAct(1, 0)
                 .withCrossGameDonation(donor.equals("off") ? null : donor)
                 .withFreshLevelStartLifecycle().build();
         assertEquals(width, fixture.camera().getWidth());
+        if (aspect != null) {
+            com.openggf.tests.SozAcceptanceConfigurations.assertDisplay(aspect);
+            com.openggf.tests.SozAcceptanceConfigurations.assertUsableTeam(donor);
+        }
         assertEquals(!donor.equals("off"), CrossGameFeatureProvider.isActive());
         assertEquals(!donor.equals("s1"), fixture.sprite().getGameRules().playerCapability().spindashEnabled());
         // Route addresses select ROM-loaded placements, never trace physics rows. Offsets below
