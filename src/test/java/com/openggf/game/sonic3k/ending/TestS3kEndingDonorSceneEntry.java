@@ -118,12 +118,74 @@ class TestS3kEndingDonorSceneEntry {
         }
         assertEquals(fresh.getCentreX(),fresh.getRenderCentreX());assertEquals(fresh.getCentreY(),fresh.getRenderCentreY());
     }
+    @ParameterizedTest @org.junit.jupiter.params.provider.ValueSource(booleans={false,true})
+    void ordinaryPoweredDonorRamRestoresAfterItsMatchingControllerIsRebound(boolean alreadyActive) throws Exception {
+        var config=SonicConfigurationService.getInstance();
+        config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE,"sonic");
+        config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE,"");
+        config.setSessionOverride(SonicConfiguration.SONIC_2_ROM,
+                java.util.Objects.requireNonNull(System.getProperty("sonic2.rom.path")));
+        var f=HeadlessTestFixture.builder().withCrossGameDonation("s2").withZoneAndAct(13,1)
+                .withFreshLevelStartLifecycle().build();
+        var ordinary=assertInstanceOf(com.openggf.game.sonic2.Sonic2SuperStateController.class,
+                f.sprite().getSuperStateController());
+        // Declared pre-entry controller request, not a cold powered campaign.
+        ordinary.debugActivate();
+        if(alreadyActive) {
+            // Independently declared incoming HUD-timer context. No native scene has dispatched yet.
+            GameServices.level().getLevelGamestate().resumeTimer();
+            for(int n=0;n<80&&ordinary.getState()!=com.openggf.sprites.playable.SuperState.SUPER;n++)ordinary.update();
+            assertEquals(1,GameServices.level().getObjectManager()
+                    .activeObjectsOfType(com.openggf.game.sonic2.objects.SuperSonicStarsObjectInstance.class).size());
+        }
+        var ordinaryRam=ordinary.captureRewindState();assertNotNull(ordinaryRam);
+        assertEquals(alreadyActive?com.openggf.sprites.playable.SuperState.SUPER:
+                com.openggf.sprites.playable.SuperState.TRANSFORMING,ordinaryRam.state());
+        var registry=TestEnvironment.activeGameplayMode().getRewindRegistry();var before=registry.capture();
+        f.stepFrame(false,false,false,false,false);var after=registry.capture();
+        assertInstanceOf(com.openggf.game.sonic3k.Sonic3kSuperStateController.class,f.sprite().getSuperStateController());
+        for(int cycle=0;cycle<2;cycle++) {
+            registry.restore(before);assertSame(ordinary,f.sprite().getSuperStateController());
+            assertEquals(ordinaryRam,ordinary.captureRewindState());same(before,registry.capture(),"ordinary owner cycle"+cycle);
+            ordinary.update();assertNotEquals(ordinaryRam,ordinary.captureRewindState(),"changed ordinary future RAM");
+            registry.restore(after);same(after,registry.capture(),"native owner cycle"+cycle);
+            registry.restore(before);assertSame(ordinary,f.sprite().getSuperStateController());
+            assertEquals(ordinaryRam,ordinary.captureRewindState());same(before,registry.capture(),"ordinary reverse cycle"+cycle);
+            f.stepFrame(false,false,false,false,false);same(after,registry.capture(),"native entry forward cycle"+cycle);
+        }
+    }
+
+    @org.junit.jupiter.api.Test
+    void progressedNativeSceneDoesNotSupplyRamToReplayedFreshEntry() throws Exception {
+        var config=SonicConfigurationService.getInstance();
+        config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE,"sonic");
+        config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE,"");
+        config.setSessionOverride(SonicConfiguration.SONIC_2_ROM,
+                java.util.Objects.requireNonNull(System.getProperty("sonic2.rom.path")));
+        var f=HeadlessTestFixture.builder().withCrossGameDonation("s2").withZoneAndAct(13,1)
+                .withFreshLevelStartLifecycle().build();
+        for(int n=0;n<7;n++)GameServices.gameState().markEmeraldCollected(n);
+        var registry=TestEnvironment.activeGameplayMode().getRewindRegistry();var before=registry.capture();
+        f.stepFrame(false,false,false,false,false);var after=registry.capture();
+        var nativeController=assertInstanceOf(com.openggf.game.sonic3k.Sonic3kSuperStateController.class,
+                f.sprite().getSuperStateController());var firstRam=nativeController.captureRewindState();
+        for(int cycle=0;cycle<2;cycle++) {
+            for(int n=0;n<17;n++)f.stepFrame(false,false,false,false,false);
+            assertNotEquals(firstRam,nativeController.captureRewindState(),"real scene advanced its own palette RAM");
+            registry.restore(before);same(before,registry.capture(),"before progressed scene"+cycle);
+            f.stepFrame(false,false,false,false,false);same(after,registry.capture(),"fresh native replay"+cycle);
+        }
+    }
+
     private static void advancePlayer(com.openggf.sprites.playable.AbstractPlayableSprite player){
         if(player.getSuperStateController()!=null)player.getSuperStateController().update();
         if(player.getTailsTailsController()!=null)player.getTailsTailsController().update();
     }
     private void same(com.openggf.game.rewind.CompositeSnapshot a,com.openggf.game.rewind.CompositeSnapshot b,String label){
         assertEquals(a.entries().keySet(),b.entries().keySet(),label);
-        for(String key:a.entries().keySet())assertTrue(RewindSnapshotDiff.diffKey(key,a.get(key),b.get(key)).isEmpty(),label+" "+key);
+        for(String key:a.entries().keySet()) {
+            var diff=RewindSnapshotDiff.diffKey(key,a.get(key),b.get(key));
+            assertTrue(diff.isEmpty(),()->label+" "+key+": "+diff);
+        }
     }
 }

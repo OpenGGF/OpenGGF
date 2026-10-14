@@ -3598,3 +3598,21 @@ cause is a class of bug (not a one-off):
 5. If the pattern is cross-game (S2 + S3K share it), copy the entry into
    the `s3k-implement-object` skill's `rom-pitfalls.md` with the analogous
    S3K disasm citation.
+
+## Rewind current effect owners and matching controller RAM (2026-10-14)
+
+A controller-side Java reference is not a live object after world restoration.
+Ordinary Obj7E stars must be found by the owning playable in the current
+manager, including when a destroyed world is recreated. Preserve immutable
+normal scripts through revert; capture core/drain/palette RAM and reconcile
+presentation without replaying activation effects.
+
+A scene binding may swap controllers after generic playable restoration. Do
+not decode a foreign controller's snapshot while the old resource is still
+attached: a tiered S3 scene applied to S2 changed captured jump `$680` to `$800`.
+Reapply each matching owner's RAM after attach/detach. Opposite-direction
+S2's unset tier decoded as S3 quake255, so exact shape rejection is symmetric.
+Never test signed-negativity of S3's packed tier; companion bytes can legitimately
+set its sign. Native ending bindings also need a constructor-RAM baseline for
+fresh re-entry from an inactive snapshot, rather than a cached future scene.
+See the dated S3K completion record's matching-controller qualification.

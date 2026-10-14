@@ -1123,3 +1123,76 @@ Both commands use the original, identity-verified absolute S1 REV01, S2 REV01
 and locked-on S3K paths as applicable. No runtime source changed in this slice;
 combined follow-up validation and integration remain pending. Consumed local
 redirects are removed after this summary.
+
+### Ordinary S2 RAM and matching-controller binding qualification
+
+The inherited ordinary S2 controller returned a null RAM snapshot. On unchanged
+`99bfb689d` runtime, three new MGZ-hosted S2 donor regressions fail only that
+assertion: session40516,3 failures/0 errors/skips,26.843s Maven, completed
+08:46:39 UTC. The repair captures existing core/drain/palette fields, keeps
+immutable normal scripts through revert, and resolves each current world-owned
+Obj7E on activation/revert. It replays no activation audio, allocation or ring
+writes while restoring. The shipped signed delay/drain and high-byte-only
+`Palette_frame` residual remain unchanged.
+
+The first controller/default/KiS2/spindash check passes24/0/0/0 (26357,
+08:49:54 UTC,1:17 Maven,4s wait). Affected binding check58625 has55 tests and
+five S2 Tails/+2 reverse-boundary failures (08:53:19,1:20,0s wait). Exact
+diff24604 isolates captured `playerExtra.jump`1664 (`$680`) becoming2048
+(`$800`):45 tests/5 failures/0 errors/skips,08:57:05,30.727s,99s wait. The
+currently attached S2 owner had decoded a tiered S3 scene snapshot before the
+scene adapter restored the actual binding. Matching-owner RAM must be reapplied
+after the resource swap in both directions, not merely to the previous live
+controller.
+
+The next60-case candidate73808 retains59 passes but its new transforming-owner
+entry detects the early scene's normal-physics overwrite: expected2048,
+actual1664 (09:07:03 UTC,1:21,16s wait). A default-false local S3 scene-physics
+hook now lets the private bound scene preserve captured physics even before
+its first powered-flag writer. Candidate43844 retains59 passes but the two new
+real-entry vectors encounter quake index254 (09:13:41,1:21,105s wait). The
+opposite interim crossing had decoded S2's unset presentation tier `-1` as
+packed S3 quake255; the subsequent binding restored the ordinary owner but left
+that cached scene resource poisoned. Both local owners now reject the other
+snapshot shape before the matching adapter reapplies its full RAM. The scene
+compares exactly `-1`, because legitimate packed S3 companion fields may be
+signed-negative. A duplicate scene override stopped22266 at compile
+(09:17:11,48.346s):zero tests, zero behavioral credit. It was folded into the
+existing render-context override.
+
+A further fresh-entry obligation restores before entry from an actually
+progressed17-frame native Super palette. Fresh ensure replays the scene's
+immutable constructor/load-ROM baseline after binding, while active restore
+replays captured progressed state. The source baseline is never a trace row,
+future scene or fitted clock. New boundary vectors43178 pass3/0/0/0
+(09:22:33 UTC,1:17,0s wait), covering actual SUPER with its allocated stars,
+TRANSFORMING, and progressed native→before→fresh-forward entry. The active
+ordinary context declares a running incoming HUD timer; these are local
+owner-boundary witnesses, not cold campaign continuations.
+
+Final coherent request61774 passes64/0/0/0 at09:26:06 UTC (10:26:06 BST),
+Maven32.626s, no wait, from `99bfb689d` plus the repair:
+ordinary S2 full-world3; native ending-controller11; donor binding48;
+ordinary jump1; debug-grant1. All six newly introduced world/binding cases
+exercise two complete forward/reverse registry cycles. The final donor48
+includes the45 production-preset/progress rows already qualified for its
+explicit local scene scope. Completed checks use the original identity-verified
+S1 REV01/S2 REV01/locked-on S3K absolute paths; early KiS2 neighbors also used
+the existing independently classified lock-on image. There are no ROM skips.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestSonic2DonorSuperStateRewind,TestS3kEndingDonorSceneEntry,TestSonic3kEndingSuperState,TestMutatorDebugRingGrant,TestPlayableSpriteMovement#s2JumpTriggerStillActivatesSuperSonic' "-Dsonic1.rom.path=$S1_TASK_ROM" "-Dsonic2.rom.path=$S2_TASK_ROM" "-Ds3k.rom.path=$S3K_TASK_ROM" test -B
+```
+
+The red command selected only `TestSonic2DonorSuperStateRewind`; initial green
+selected it plus `TestSuperStateController,TestCrossGameSuperSonic,TestKis2SuperStateController,TestSuperSpindashTable`.
+Affected58625 selected ordinary3, donor45, `TestSonic3kModSuperFormGate`, debug
+and jump;24604 selected donor45 for exact messages.73808/43844 selected
+ordinary3, donor and native ending11.43178 selected
+`TestS3kEndingDonorSceneEntry#ordinaryPoweredDonorRamRestoresAfterItsMatchingControllerIsRebound+progressedNativeSceneDoesNotSupplyRamToReplayedFreshEntry`;
+22266 selected only the former and failed compile. All use the same local
+queue/lean/EGL/unset-desktop/null-driver shape. No public snapshot/API shape or
+settings changed. Independent read-only review accepted matching-owner and
+constructor-baseline boundaries. No full native pixel, PCM, ordinary S2 cold
+route or additional cold donor-campaign claims follow. Consumed nine local
+redirects are removed; combined follow-up smoke/integration remain pending.

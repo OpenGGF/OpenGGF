@@ -386,7 +386,7 @@ appendage on reverse boundaries. The two Tails vectors advance that real
 appendage, assert its literal native bank and verify both registry directions
 and ordinary fresh-load artwork. No donor-name runtime branch is introduced.
 
-The ordinary S2 donor powered controller's lack of snapshot support is inherited:
+At this original repair, the ordinary S2 donor powered controller's lack of snapshot support was inherited:
 `Sonic2SuperStateController` leaves the base null snapshot hook because of its
 live stars reference. The new ending adapter captures the native S3K scene
 controller; it does not qualify preexisting S2 powered-controller RAM history
@@ -1062,3 +1062,16 @@ this core does not claim absent child progression from derived parent defaults.
 Across these focused selectors there are41 distinct cases (repeated pressure and
 facade checks are not new coverage). Whole legal graph pressure and native scene
 pixel/audio comparison remain pending; this evidence does not close them.
+
+### Ordinary donor RAM follow-up — 2026-10-14
+
+The [matching-controller qualification](../plans/2026-10-13-s3k-playable-completion.md#ordinary-s2-ram-and-matching-controller-binding-qualification)
+closes the inherited S2 snapshot limitation with unchanged public snapshot
+shapes, current world-owned sparkle lookup and silent script/physics
+reconciliation. Each actual controller's RAM is restored after its resource
+binding changes; foreign packed/unset-tier shapes cannot mutate the temporarily
+attached owner. The private scene preserves captured physics before any native
+powered writer, and inactive re-entry uses its own immutable fresh-construction
+RAM. A coherent64-case check includes actual transforming/Super and
+progressed-scene first-entry replay with two registry cycles. This does not
+retroactively broaden the original donor30 or native capture claims.

@@ -1111,10 +1111,13 @@ public class Sonic3kSuperStateController extends SuperStateController {
         }
     }
 
+    /** A bound scene owns presentation before its first powered-flag writer runs. */
+    protected boolean preservesScenePhysicsDuringRewind() { return false; }
+
     private void reconcileRewindPresentation(SuperState restoredState) {
-        if (endingSceneForm) {
-            // Player rewind already restored its captured physics profile. The
-            // rescue flag writers never replace those values or release control.
+        if (endingSceneForm || preservesScenePhysicsDuringRewind()) {
+            // Player rewind already restored its captured physics scalars. The
+            // scene binding and rescue flag writers never replace those values or release control.
             if (restoredState == SuperState.SUPER || restoredState == SuperState.TRANSFORMING
                     || endingRescueRevertMappingsPending) installPoweredMappingPresentation();
             else restoreNormalMappingPresentation();

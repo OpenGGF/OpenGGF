@@ -5285,3 +5285,20 @@ Test old→replacement→old full-world restoration and both earlier/later slot
 admission. Synthetic sentinels test the manager contract only; certify native
 scene pressure with the actual legal managed child types. Unknown consumed
 residue must never be silently replaced with zero or supplied by a trace.
+
+## Scene controller RAM belongs to its active binding (2026-10-14)
+
+Preserving controller references is not preserving matching RAM. Generic
+playable restoration can temporarily target the resource attached in the future
+world before the scene adapter swaps it. Reapply ordinary/native RAM after
+detach/attach and reject the foreign unset/packed tier shape locally. Otherwise
+ordinary S2 state can become S3 quake255, or a scene snapshot can overwrite
+Tails' captured jump `$680` with `$800`. Packed S3 tiers can be signed-negative;
+compare the exact unset sentinel, not the sign.
+
+A bound scene owns presentation before its first powered writer sets a form
+flag, so restoration must preserve already captured player physics at that
+early boundary. While inactive its cached controller is a derived resource,
+not a RAM owner; fresh ensure must return to its own immutable constructor/load
+baseline, while active snapshots restore actual progressed RAM. The real
+17-frame palette→before-entry→first-frame replay catches this lifecycle risk.

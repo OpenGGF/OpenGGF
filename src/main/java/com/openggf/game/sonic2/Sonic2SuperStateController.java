@@ -60,10 +60,8 @@ public class Sonic2SuperStateController extends SuperStateController {
 
     /** Super Sonic animation set (loaded from ROM). */
     private SpriteAnimationSet superAnimSet;
-    /** Normal animation set (saved on activation, restored on revert). */
+    /** Immutable normal scripts retained through revert for bidirectional rewind. */
     private SpriteAnimationSet normalAnimSet;
-    /** Super Sonic stars sparkle effect object (Obj7E). */
-    private SuperSonicStarsObjectInstance starsObject;
 
     /** Palette line index where Sonic's colors reside (line 1 = index 0). */
     private static final int SONIC_PALETTE_INDEX = 0;
@@ -86,6 +84,35 @@ public class Sonic2SuperStateController extends SuperStateController {
         paletteState = 0;
         paletteFrame = 0;
         paletteTimer = 0;
+        normalAnimSet = null;
+    }
+
+    @Override
+    public RewindState captureRewindState() {
+        return createRewindState(paletteState, paletteFrame, paletteTimer, 0);
+    }
+
+    @Override
+    public void restoreRewindState(RewindState snapshot) {
+        // This controller's snapshots keep the opaque presentation tier unset.
+        // A scene binding restores its explicitly tiered owner's RAM after rebinding;
+        // interpreting that foreign state here would replace captured player physics.
+        if (snapshot == null || snapshot.presentationTier() != -1) return;
+        restoreCoreRewindState(snapshot);
+        paletteState = snapshot.paletteState();
+        paletteFrame = snapshot.paletteFrame();
+        paletteTimer = snapshot.paletteTimer();
+        boolean active = snapshot.state() == com.openggf.sprites.playable.SuperState.SUPER;
+        reconcileRewindPhysicsAndAnimationProfile(active);
+        if (snapshot.state() == com.openggf.sprites.playable.SuperState.TRANSFORMING) {
+            // Sonic_CheckGoSuper installs Super physics before the palette ends;
+            // the run threshold and animation scripts switch only on activation.
+            player.applyExternalPhysicsProfile(getSuperProfile());
+        }
+        SpriteAnimationSet scripts = active ? superAnimSet : normalAnimSet;
+        if (scripts != null) player.setAnimationSet(scripts);
+        // Palette cells and Obj7E are restored by their registered world owners.
+        // Never replay music, ring writes or object allocation during restore.
     }
 
     @Override
@@ -131,6 +158,7 @@ public class Sonic2SuperStateController extends SuperStateController {
 
     @Override
     protected void onTransformationStarted() {
+        normalAnimSet = player.getAnimationSet();
         paletteState = 1;
         // ROM Sonic_CheckGoSuper (s2.asm:37476-37477) writes Super_Sonic_palette and
         // Palette_timer but deliberately does NOT write Palette_frame; the same holds
@@ -196,16 +224,16 @@ public class Sonic2SuperStateController extends SuperStateController {
         player.setInvincibleFrames(0);
         // Swap to Super Sonic animation set
         if (superAnimSet != null) {
-            normalAnimSet = player.getAnimationSet();
             player.setAnimationSet(superAnimSet);
         }
         // Hide shield - Super Sonic doesn't display shields
         player.setShieldVisible(false);
         // Spawn Super Sonic stars sparkle effect (Obj7E)
-        if (starsObject == null) {
-            starsObject = new SuperSonicStarsObjectInstance(player);
-            addStarsObject(starsObject);
-        }
+        ObjectManager objects = GameServices.level().getObjectManager();
+        boolean hasStars = objects.getActiveObjects().stream().anyMatch(object ->
+                object instanceof SuperSonicStarsObjectInstance stars
+                        && stars.isOwnedBy(player) && !stars.isDestroyed());
+        if (!hasStars) addStarsObject(new SuperSonicStarsObjectInstance(player));
         LOGGER.info("Super Sonic activated (S2)");
     }
 
@@ -272,14 +300,20 @@ public class Sonic2SuperStateController extends SuperStateController {
         // Restore normal animation set
         if (normalAnimSet != null) {
             player.setAnimationSet(normalAnimSet);
-            normalAnimSet = null;
         }
         // Re-show shield
         player.setShieldVisible(true);
         // Destroy Super Sonic stars
-        if (starsObject != null) {
-            starsObject.destroy();
-            starsObject = null;
+        // World restore can recreate Obj7E. Resolve the current owning instance,
+        // as KiS2 does, instead of destroying an erased Java object reference.
+        var level = GameServices.levelOrNull();
+        ObjectManager objects = level == null ? null : level.getObjectManager();
+        if (objects != null) {
+            for (var object : objects.getActiveObjects()) {
+                if (object instanceof SuperSonicStarsObjectInstance stars && stars.isOwnedBy(player)) {
+                    stars.destroy();
+                }
+            }
         }
         LOGGER.info("Super Sonic deactivated (S2)");
     }
