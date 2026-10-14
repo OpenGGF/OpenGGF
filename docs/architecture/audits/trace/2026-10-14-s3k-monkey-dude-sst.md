@@ -1070,3 +1070,29 @@ TestRewindSnapshotDiffPrivateRecords7, Terrain1, Patterns2 and DynamicIdentity12
 The selector/environment are identical to77331 above; the two additional pure
 controls establish derived-cache/telemetry exclusion and correct equal-counter
 diagnostics. No broader gameplay or strict-trace claim follows from this gate.
+
+
+## Complete Palette snapshot leaf — 2026-10-14
+
+Route's actual placed-stage3/352px HPZ witness3988 completed21:27:31 UTC with
+all four original/restored Palette identities distinct and all192 raw RGB bytes
+identical. Each PaletteSnapshot capture and restore deep-copies its palettes;
+Palette's only instance field is its sixteen Color objects, each containing
+exactly byte r,g,b. Palette.dataEquals compares all48 raw bytes. The previous
+generic leaf comparison treated those defensive copies as state differences.
+This is a verification false positive, not an HPZ palette runtime correction.
+
+Independent pure5896 completed22:33:13 BST,23.882s Maven/0s queue, lean:
+50 tests/49 failures/0 errors/skips. The equal-copy positive failed; all48 literal
+raw-component changes already failed equality, but the diagnostic reported only
+Java identity instead of the changed component. Missing palette, array length
+and unrelated phase controls passed. The concrete Palette leaf now uses its
+complete dataEquals contract and diagnoses each colors[index].r/g/b raw byte.
+It does not normalize to Genesis3-bit channels, filter any key, or treat Palette
+subclasses with additional state as this concrete leaf.
+
+Final pure26472 passes72/0/0/0 at22:34:41 BST,1:09 Maven/0s queue, lean: existing
+private-record7/terrain1/pattern2/dynamic-identity12 plus Palette50. Exact selector
+adds TestRewindSnapshotDiffPalettes to69530 above with the same JDK25/EGL launch.
+Actual HPZ/ending consumer qualification is owned by those lanes and remains
+separate from this pure helper result. Native AIZ handoff is still unstaged.
