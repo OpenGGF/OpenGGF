@@ -1063,6 +1063,11 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (currentZone == Sonic3kZoneIds.ZONE_CNZ && cnzEvents != null) {
             cnzEvents.spawnSoloLeaderCarryInTailsIfNeeded(currentAct);
         }
+        if (currentZone == Sonic3kZoneIds.ZONE_MHZ) {
+            // loc_68C2 also reaches loc_68D8 for locked-on MHZ1.
+            com.openggf.game.sonic3k.sidekick.Sonic3kIntroCarryParticipants.installIfNeeded(
+                    GameServices.module(), getPlayerCharacter(), currentZone, currentAct);
+        }
         primeSidekickIntroPresentation();
     }
 

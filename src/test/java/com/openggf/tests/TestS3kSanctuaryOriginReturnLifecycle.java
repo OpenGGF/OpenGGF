@@ -16,8 +16,11 @@ import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.List;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -45,7 +48,43 @@ class TestS3kSanctuaryOriginReturnLifecycle {
     @Test
     void actualPlacedForcedRingAndExitPadRestoreSaved2OriginAndIsolateBothTimelines()
             throws Exception {
-        var row = new CanonicalEntryMatrixSupport.Row("sonic", WidescreenAspect.NATIVE_4_3, "off", "");
+        assertOriginReturn(new CanonicalEntryMatrixSupport.Row(
+                "sonic", WidescreenAspect.NATIVE_4_3, "off", ""));
+    }
+
+    static Stream<CanonicalEntryMatrixSupport.Row> representativeRows() {
+        return Stream.of(
+                new CanonicalEntryMatrixSupport.Row("sonic", WidescreenAspect.NATIVE_4_3, "off", ""),
+                new CanonicalEntryMatrixSupport.Row("tails", WidescreenAspect.NATIVE_4_3, "off", ""),
+                new CanonicalEntryMatrixSupport.Row("knuckles", WidescreenAspect.NATIVE_4_3, "off", ""),
+                new CanonicalEntryMatrixSupport.Row("sonic", WidescreenAspect.NATIVE_4_3, "s1", ""),
+                new CanonicalEntryMatrixSupport.Row("sonic", WidescreenAspect.NATIVE_4_3, "s2", ""),
+                new CanonicalEntryMatrixSupport.Row("tails", WidescreenAspect.NATIVE_4_3, "s2", ""),
+                new CanonicalEntryMatrixSupport.Row("knuckles", WidescreenAspect.SUPER_32_9, "off",
+                        "tails,tails,knuckles,sonic,knuckles,sonic,tails"),
+                new CanonicalEntryMatrixSupport.Row("sonic", WidescreenAspect.SUPER_32_9, "s1",
+                        "sonic,sonic,sonic,sonic,sonic,sonic,sonic"));
+    }
+
+    @ParameterizedTest(name = "actual Saved2 inlet/exit representative {0}")
+    @MethodSource("representativeRows")
+    void configuredRepresentativeUsesTheActualSaved2OwnersAndIncomingWorldReplay(
+            CanonicalEntryMatrixSupport.Row row) throws Exception {
+        assertOriginReturn(row);
+    }
+
+    static Stream<CanonicalEntryMatrixSupport.Row> wideRows() {
+        return representativeRows().filter(row -> row.aspect() == WidescreenAspect.SUPER_32_9);
+    }
+
+    @ParameterizedTest(name = "actual wide Saved2 owner observation {0}")
+    @MethodSource("wideRows")
+    void wideContactAndReturnObserveTheActualLoadAndReleasedActors(CanonicalEntryMatrixSupport.Row row)
+            throws Exception {
+        assertOriginReturn(row);
+    }
+
+    private void assertOriginReturn(CanonicalEntryMatrixSupport.Row row) throws Exception {
         var fixture = origin.boot(row);
         GameServices.gameState().restoreS3kEmeraldProgress(List.of(0, 0, 0, 0, 0, 0, 0), false);
         var input = new InputHandler();
@@ -55,6 +94,7 @@ class TestS3kSanctuaryOriginReturnLifecycle {
         loop.setGameMode(GameMode.LEVEL);
         int lives = GameServices.gameState().getLives();
         try {
+            assertFalse(GameServices.level().getTransitions().isLastStarPostHitSet(), "native fresh entry flag");
             var sourceObjects = GameServices.level().getObjectManager();
             var ringSpawn = GameServices.level().getCurrentLevel().getObjects().stream()
                     .filter(spawn -> spawn.objectId() == 0x85 && spawn.subtype() == 0x81)
@@ -70,33 +110,71 @@ class TestS3kSanctuaryOriginReturnLifecycle {
             input.setLogicalOverride(RecordedInputSnapshots.fromBk2(NEUTRAL, jump));
             tick(loop, lives, 1);
 
-            // Earn a real placed ring before entry; Saved2 receives no synthetic count.
+            // Earn a real placed ring before entry. The further same-height
+            // cluster is beyond MHZ1's native Knuckles encounter and therefore
+            // cannot certify this inlet by a coordinate-only local stimulus.
             var stageRing = GameServices.level().getCurrentLevel().getRings().stream()
                     .min(java.util.Comparator.comparingInt(spawn ->
                             Math.abs(spawn.x() - ringSpawn.x()) + Math.abs(spawn.y() - ringSpawn.y())))
                     .orElseThrow();
+            assertEquals(496, stageRing.x());
+            assertEquals(1328, stageRing.y());
             int beforeRings = main.getRingCount();
             placeForLocalContact(main, stageRing.x(), stageRing.y());
             for (int frame = 0; frame < 8 && main.getRingCount() == beforeRings; frame++) {
                 tick(loop, lives, 1);
             }
-            assertTrue(main.getRingCount() > beforeRings, "actual placed ring pickup before Saved2");
-
-            // Stay outside the ring's +/-24 horizontal touch box during native formation.
-            placeForLocalContact(main, ringSpawn.x() - 40, ringSpawn.y() - 8);
+            assertTrue(main.getRingCount() > beforeRings, "actual placed ring pickup before Saved2: " + row
+                    + " P1=" + main.getCentreX() + "/" + main.getCentreY()
+                    + " ctrl=" + main.isObjectControlled() + " hidden=" + main.isHidden()
+                    + " role=" + main.getGameRules().playerCapability()
+                    + " camera=" + GameServices.camera().getX() + "/" + GameServices.camera().getY()
+                    + " writers=" + GameServices.sprites().getRegisteredSidekicks().stream()
+                        .map(player -> player.getCode() + ":" + player.getCpuController().getState()
+                            + "/" + player.getTailsCarryController().isCarryingMainCharacter()).toList());
+            // Let the actual render/offscreen owner observe the higher pickup.
+            // An untouched Obj_WaitOffscreen owner remains valid. Only an inlet
+            // already released at native Knuckles' lower start can now carry a
+            // real delayed retirement; that phase must clear before reentry.
+            tick(loop, lives, 2);
+            var outgoingRing = sourceObjects.activeObjectsOfType(Sonic3kSSEntryRingObjectInstance.class).stream()
+                    .filter(object -> object.getSpawn().equals(ringSpawn)).findFirst().orElse(null);
+            if (outgoingRing != null && !ringIsMain(outgoingRing)) {
+                assertTrue(sourceObjects.activeObjectsOfType(Sonic3kSSEntryFlashObjectInstance.class).isEmpty(),
+                        "the higher ring pickup did not enter the inlet");
+                for (int frame = 0; frame < 96 && !outgoingRing.isDestroyed(); frame++) tick(loop, lives, 1);
+                assertTrue(outgoingRing.isDestroyed(), "observed offscreen retirement really clears");
+                assertTrue(outgoingRing.isDestroyedRespawnable(), "uncollected inlet retains native reentry");
+            }
+            // Load_Sprites' native Y pass exposes one128px strip on each
+            // coarse crossing. Reenter after retirement in at-most128px local
+            // increments; the actual loader decides admission independently.
+            int approachY = ringSpawn.y() - 8;
+            for (int y = stageRing.y(); y < approachY; y = Math.min(y + 0x80, approachY)) {
+                placeForLocalContact(main, ringSpawn.x() - 40, y);
+                tick(loop, lives, 1);
+            }
+            // Stay outside the +/-24 horizontal touch box during formation.
+            placeForLocalContact(main, ringSpawn.x() - 40, approachY);
             Sonic3kSSEntryRingObjectInstance ring = null;
             for (int frame = 0; frame < 96; frame++) {
                 tick(loop, lives, 1);
                 ring = sourceObjects.activeObjectsOfType(Sonic3kSSEntryRingObjectInstance.class).stream()
                         .filter(object -> object.getSpawn().equals(ringSpawn)).findFirst().orElse(null);
-                if (ring != null && ringMapping(ring) >= 8) break;
+                if (ring != null && (ringMapping(ring) >= 8
+                        || !sourceObjects.activeObjectsOfType(Sonic3kSSEntryFlashObjectInstance.class).isEmpty())) break;
             }
             assertNotNull(ring, "actual placed $85 admission");
             assertTrue(ringMapping(ring) >= 8, "native formation reached its collision frame");
-            assertFalse(main.isObjectControlled(), "entry has not been seeded");
             assertFalse(GameServices.level().hasBigRingReturn());
-            placeForLocalContact(main, ringSpawn.x() + 8, ringSpawn.y() - 4);
-            tick(loop, lives, 1);
+            if (sourceObjects.activeObjectsOfType(Sonic3kSSEntryFlashObjectInstance.class).isEmpty()) {
+                assertFalse(main.isObjectControlled(), "entry has not been seeded");
+                placeForLocalContact(main, ringSpawn.x() + 8, ringSpawn.y() - 4);
+                tick(loop, lives, 1);
+            }
+            // An ordinary glide may already reach the touch box on formation's
+            // final pass; its actual flash is equally authoritative contact.
+
             assertTrue(main.isObjectControlled(), "real giant-ring touch owns control");
             assertTrue(main.isHidden(), "real capture owns hidden presentation");
             assertEquals(1, sourceObjects.activeObjectsOfType(Sonic3kSSEntryFlashObjectInstance.class).size());
@@ -114,7 +192,7 @@ class TestS3kSanctuaryOriginReturnLifecycle {
             assertEquals(7, saved.originZone());
             assertEquals(0, saved.originAct());
             assertTrue(saved.rings() > 0);
-            waitForReleasedWorld(loop, lives, 0x17, 1);
+            waitForReleasedWorld(loop, lives, 0x17, 1, row);
             hub.assertOwners(row);
             assertTrue(GameServices.level().getLevelGamestate().isTimerPaused());
             assertTrue(fixture.gameplayMode().getRewindController().currentFrame() < sourceHistory,
@@ -148,9 +226,13 @@ class TestS3kSanctuaryOriginReturnLifecycle {
             }
             input.setLogicalOverride(RecordedInputSnapshots.fromBk2(NEUTRAL, NEUTRAL));
             assertNotSame(hubObjects, GameServices.level().getObjectManager(), "real pad/exit band loads origin");
-            waitForReleasedWorld(loop, lives, 7, 0);
+            assertEquals(saved.playerX(), GameServices.sprites().getMainPlayable().getCentreX(),
+                    "actual Saved2 assembly position before ordinary destination movement");
+            assertEquals(saved.playerY(), GameServices.sprites().getMainPlayable().getCentreY());
+            waitForReleasedWorld(loop, lives, 7, 0, row);
             origin.assertOwners(row);
             assertFalse(GameServices.level().hasBigRingReturn(), "Saved2 consumed only after destination restore");
+            assertTrue(GameServices.level().getTransitions().isLastStarPostHitSet(), "native saved eligibility survives consumption");
             assertEquals(saved.rings(), GameServices.sprites().getMainPlayable().getRingCount());
             assertEquals(saved.playerX(), GameServices.sprites().getMainPlayable().getCentreX(),
                     "actual released Saved2 origin position");
@@ -164,6 +246,12 @@ class TestS3kSanctuaryOriginReturnLifecycle {
         } finally {
             loop.closePresence();
         }
+    }
+
+    private static boolean ringIsMain(Sonic3kSSEntryRingObjectInstance ring) throws Exception {
+        var method = Sonic3kSSEntryRingObjectInstance.class.getDeclaredMethod("isMainState");
+        method.setAccessible(true);
+        return (boolean) method.invoke(ring);
     }
 
     private static int ringMapping(Sonic3kSSEntryRingObjectInstance ring) throws Exception {
@@ -192,7 +280,8 @@ class TestS3kSanctuaryOriginReturnLifecycle {
         }
     }
 
-    private static void waitForReleasedWorld(GameLoop loop, int lives, int zone, int act) {
+    private static void waitForReleasedWorld(GameLoop loop, int lives, int zone, int act,
+                                            CanonicalEntryMatrixSupport.Row row) throws Exception {
         for (int frame = 0; frame < 400 && (GameServices.fade().isActive()
                 || GameServices.fade().hasPendingCompletion()
                 || GameServices.level().hasPendingFreshLevelTransitionBoundary()); frame++) {

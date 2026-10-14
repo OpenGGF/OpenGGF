@@ -24,11 +24,7 @@ import com.openggf.game.RuntimeArtAdmissionPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.Sprite;
 import com.openggf.sprites.managers.SpriteManager;
-import com.openggf.sprites.managers.SpriteManagerInternalAccess;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-import com.openggf.sprites.playable.SidekickCarryTrigger;
-import com.openggf.sprites.playable.SidekickCpuController;
-import com.openggf.sprites.playable.Tails;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -329,113 +325,10 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         // placement). See spawnSoloLeaderCarryInTailsIfNeeded().
     }
 
-    /** Unique code for the throwaway CNZ1 carry-in Tails so it never collides
-     *  with a configured "tails_p2" sidekick slot. */
-    private static final String SOLO_CARRY_TAILS_CODE = "tails_cnz_carry";
-
-    /**
-     * ROM SpawnLevelMainSprites loc_68D8 (sonic3k.asm:8187-8197): at CNZ Act 1 the
-     * intro carry fires for both Sonic+Tails and solo Sonic. In the solo case
-     * (Player_mode==1) the ROM still writes {@code Obj_Tails} into the Player_2
-     * slot at Sonic's position so Tails carries him in; after the drop ROM
-     * loc_14068 routes that throwaway carrier to routine $10 (fly off + self-
-     * delete) rather than the normal follow AI.
-     *
-     * <p>The engine has no Tails sprite at all in solo mode, so we spawn a
-     * temporary one here — mirroring the MGZ2 boss-transition rescue Tails
-     * pattern ({@code Sonic3kMGZEvents.ensureBossTransitionTails}) — flagged
-     * {@link SidekickCpuController#setTransientCarrySidekick(boolean)} so the
-     * controller flies it off-screen and removes it once Sonic lands.
-     *
-     * <p><b>Call site:</b> invoked from
-     * {@code Sonic3kLevelEventManager.applyZonePlayerState()} (the engine's
-     * initZonePlayerState load step), NOT from {@link #init(int)}. The ROM spawns
-     * the throwaway Tails inside {@code SpawnLevelMainSprites} (loc_68D8), which
-     * runs after {@code SpawnLevelMainSprites_SpawnPlayers} has placed the
-     * sidekicks. The engine mirrors that: the spawnSidekicks load step (which
-     * begins with {@code SpriteManager.removeTemporarySidekicks()}) runs between
-     * initLevelEvents and initZonePlayerState, so spawning the temporary carrier
-     * during init() would let the very next step delete it before gameplay.
-     */
+    /** Native loc_68D8 participant installation, after configured sidekick placement. */
     public void spawnSoloLeaderCarryInTailsIfNeeded(int act) {
-        if (act != 0 || playerCharacter() != PlayerCharacter.SONIC_ALONE) {
-            return;
-        }
-        GameModule gameModule = module();
-        if (gameModule == null || gameModule.getSidekickCarryTrigger() == null) {
-            return;
-        }
-        SpriteManager sprites = spriteManager();
-        if (sprites == null || camera().getFocusedSprite() == null) {
-            return;
-        }
-        // Don't double-spawn if a sidekick already exists (configured team) or a
-        // prior carry-in Tails is still registered (e.g. seamless re-init).
-        if (!sprites.getRegisteredSidekicks().isEmpty()) {
-            return;
-        }
-        AbstractPlayableSprite carrier = buildSoloCarryInTails();
-        if (carrier == null) {
-            return;
-        }
-        // Register with a re-creation factory so a rewind keyframe captured while
-        // the carrier is alive can rebuild it after it has flown off and been
-        // removed (ROM routine $10 self-delete). Without it, rewinding back into
-        // the carry would leave Sonic object-controlled with no carrier.
-        // loc_68D8 creates Obj_Tails from this ROM even when the configured P1
-        // uses donor movement/art. This transient script actor is not a launch participant.
-        SpriteManagerInternalAccess.addNativeScriptedTemporarySidekick(
-                sprites, carrier, "tails", this::recreateSoloCarryInTails);
-        refreshSoloCarryInTailsArt();
-    }
-
-    /** Builds and fully wires (but does NOT register) the throwaway carry-in Tails. */
-    private AbstractPlayableSprite buildSoloCarryInTails() {
-        GameModule gameModule = module();
-        if (gameModule == null) {
-            return null;
-        }
-        SidekickCarryTrigger carryTrigger = gameModule.getSidekickCarryTrigger();
-        AbstractPlayableSprite leader = camera() != null ? camera().getFocusedSprite() : null;
-        if (carryTrigger == null || leader == null) {
-            return null;
-        }
-        Tails carrier = new Tails(SOLO_CARRY_TAILS_CODE,
-                (short) Math.max(0, leader.getX() - 0x20),
-                (short) (leader.getY() + 4));
-        carrier.setCpuControlled(true);
-        carrier.setAir(true);
-        SidekickCpuController controller = new SidekickCpuController(carrier, leader);
-        controller.setCarryTrigger(carryTrigger);
-        controller.setTransientCarrySidekick(true);
-        carrier.setCpuController(controller);
-        return carrier;
-    }
-
-    /**
-     * Rewind re-creation factory (see {@code SpriteManager.addTemporarySidekick}
-     * with a recreator): rebuilds, registers, and re-uploads art for the carry-in
-     * Tails when a restored keyframe still references it. Returns the registered
-     * carrier (its per-sprite rewind state is reapplied by the caller), or null.
-     */
-    private AbstractPlayableSprite recreateSoloCarryInTails() {
-        SpriteManager sprites = spriteManager();
-        AbstractPlayableSprite carrier = buildSoloCarryInTails();
-        if (sprites == null || carrier == null) {
-            return null;
-        }
-        SpriteManagerInternalAccess.addNativeScriptedTemporarySidekick(sprites, carrier, "tails", null);
-        refreshSoloCarryInTailsArt();
-        return carrier;
-    }
-
-    private void refreshSoloCarryInTailsArt() {
-        // The art-load step already ran (no Tails was in the team), so upload the
-        // carrier's sprite art now — same as the MGZ2 rescue Tails path.
-        LevelManager manager = levelManager();
-        if (manager != null) {
-            manager.refreshPlayableSpriteArt();
-        }
+        com.openggf.game.sonic3k.sidekick.Sonic3kIntroCarryParticipants.installIfNeeded(
+                module(), playerCharacter(), com.openggf.game.sonic3k.constants.Sonic3kZoneIds.ZONE_CNZ, act);
     }
 
     /**

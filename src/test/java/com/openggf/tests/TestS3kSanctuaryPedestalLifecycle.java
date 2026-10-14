@@ -17,8 +17,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.List;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -37,7 +39,22 @@ class TestS3kSanctuaryPedestalLifecycle {
     @ValueSource(ints = {0,1,2,3,4,5,6})
     void eachPlacedGrayPedestalEntersItsActualSuperEmeraldStageAndRetiresHubHistory(int stage)
             throws Exception {
-        var row = new CanonicalEntryMatrixSupport.Row("sonic", WidescreenAspect.NATIVE_4_3, "off", "");
+        assertPhysicalEntry(new CanonicalEntryMatrixSupport.Row(
+                "sonic", WidescreenAspect.NATIVE_4_3, "off", ""), stage);
+    }
+
+    static Stream<CanonicalEntryMatrixSupport.Row> representativeRows() {
+        return TestS3kSanctuaryOriginReturnLifecycle.representativeRows();
+    }
+
+    @ParameterizedTest(name = "actual placed pedestal representative {0}")
+    @MethodSource("representativeRows")
+    void configuredRepresentativePhysicallySelectsAndLoadsItsSuperStage(
+            CanonicalEntryMatrixSupport.Row row) throws Exception {
+        assertPhysicalEntry(row, 3);
+    }
+
+    private void assertPhysicalEntry(CanonicalEntryMatrixSupport.Row row, int stage) throws Exception {
         var fixture = support.boot(row);
         // Declared persistent progress only, before the controller first dispatch.
         GameServices.gameState().restoreS3kEmeraldProgress(List.of(2,2,2,2,2,2,2), true);
