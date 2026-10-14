@@ -252,3 +252,34 @@ animation), first25,589 animation `$13/$05`, then25,590 Tails subpixel
 `$7800/$6C00`, unchanged. Final90744 affected rewind/source/trace/hardware
 111 guards pass at12:47:40 BST,33.760s execution/108s queue. These are bounded
 owner/control checks, not strict whole-chain, pixel, waveform or campaign certification.
+
+
+## Containing-run movie resolution for single-segment capture
+
+Separate tooling prerequisite over coarse retirement `c46334247`: the
+maintained TraceCaptureTool accepted ordinary segment paths, but TraceCatalog
+could not find HCZ's movie at its containing run root. Optional copying/linking
+was rejected. The resolver now reuses `resolveRunBk2` after structural manifest
+validation and exact metadata game/run/source/index/member/offset/count/profile
+matching; shared movie priority and lexical containment checks are retained.
+An invalid containing run fails closed without borrowing another per-segment
+movie. No fixture, controller, row bootstrap or run-capture support changed.
+
+62426's catalogue negative establishes four actual failures: two missing
+containing-run movie resolutions and two accepted unsafe aliases. Three new
+mismatched-header cases already reject. Candidate33919 passes all36 catalogue/
+discovery/descriptor cases together with19 projectile cases; exact capture
+arguments12 pass99063, and source/rewind/trace/hardware guards111 pass90744.
+The exact catalogue selector is
+`TraceCatalogTest,TestTraceCatalogRunDiscovery,TestTraceCatalogDescriptorOwnership,TraceCatalogSpecialStageTest`.
+Those pure checks use the bounded lean lane. All actual ROM/trace/native
+capture consumers retain normal admission. The previously supplied nonexistent
+shortened arguments class has no coverage; `TraceCaptureToolArgsTest` is the
+actual checked class. Runtime source stayed identical through these gates.
+
+Native/engine screenshot36213 retained original AIZ Monkey/body clips and
+native HCZ observations, then stopped before HCZ engine boot with
+`No trace matched`. Only that missing clip and a correctly identified shared
+projectile spot are retried after committed-source qualification; completed
+images are retained. Whole joined-run capture remains unsupported, and a
+matching RAM row does not identify the currently published framebuffer scene.
