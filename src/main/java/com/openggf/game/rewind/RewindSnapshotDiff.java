@@ -160,6 +160,20 @@ public final class RewindSnapshotDiff {
             collectDiffs(path + ".solidContactRiding", oa.solidContactRiding(),
                     ob.solidContactRiding(), diffs);
         }
+        if (oa.currentExecSlot() != ob.currentExecSlot()) {
+            collectDiffs(path + ".currentExecSlot", oa.currentExecSlot(), ob.currentExecSlot(), diffs);
+        }
+        if (oa.dynamicObjectIdCounter() != ob.dynamicObjectIdCounter()) {
+            collectDiffs(path + ".dynamicObjectIdCounter", oa.dynamicObjectIdCounter(), ob.dynamicObjectIdCounter(), diffs);
+        }
+        if (!fieldContentEqual(oa.solidContactState(), ob.solidContactState()))
+            collectDiffs(path + ".solidContactState", oa.solidContactState(), ob.solidContactState(), diffs);
+        if (!fieldContentEqual(oa.planeSwitchers(), ob.planeSwitchers()))
+            collectDiffs(path + ".planeSwitchers", oa.planeSwitchers(), ob.planeSwitchers(), diffs);
+        if (!fieldContentEqual(oa.touchResponseOverlap(), ob.touchResponseOverlap()))
+            collectDiffs(path + ".touchResponseOverlap", oa.touchResponseOverlap(), ob.touchResponseOverlap(), diffs);
+        if (!fieldContentEqual(oa.collisionResponseState(), ob.collisionResponseState()))
+            collectDiffs(path + ".collisionResponseState", oa.collisionResponseState(), ob.collisionResponseState(), diffs);
     }
 
     /**
@@ -508,6 +522,11 @@ public final class RewindSnapshotDiff {
         if (!Arrays.equals(oa.usedSlotsBits(), ob.usedSlotsBits())) return false;
         if (oa.frameCounter() != ob.frameCounter()) return false;
         if (oa.vblaCounter() != ob.vblaCounter()) return false;
+        // Restore invalidates render buckets intentionally; allocator peak is
+        // telemetry. Every captured gameplay cursor/contact/identity channel
+        // remains required by ObjectManager capture and restore.
+        if (oa.currentExecSlot() != ob.currentExecSlot()) return false;
+        if (oa.dynamicObjectIdCounter() != ob.dynamicObjectIdCounter()) return false;
         Map<Integer, ObjectManagerSnapshot.PerSlotEntry> aBySlot = new HashMap<>();
         for (var e : oa.slots()) aBySlot.put(e.slotIndex(), e);
         Map<Integer, ObjectManagerSnapshot.PerSlotEntry> bBySlot = new HashMap<>();
@@ -536,7 +555,11 @@ public final class RewindSnapshotDiff {
                 || bDyn.size() != ob.dynamicObjects().size()) return false;
         if (!fieldContentEqual(aDyn, bDyn)) return false;
         return fieldContentEqual(oa.placement(), ob.placement())
-                && fieldContentEqual(oa.solidContactRiding(), ob.solidContactRiding());
+                && fieldContentEqual(oa.solidContactRiding(), ob.solidContactRiding())
+                && fieldContentEqual(oa.solidContactState(), ob.solidContactState())
+                && fieldContentEqual(oa.planeSwitchers(), ob.planeSwitchers())
+                && fieldContentEqual(oa.touchResponseOverlap(), ob.touchResponseOverlap())
+                && fieldContentEqual(oa.collisionResponseState(), ob.collisionResponseState());
     }
 
     private static Map<Object, ObjectManagerSnapshot.DynamicObjectEntry> indexDynamicObjects(

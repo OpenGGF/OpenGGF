@@ -91,4 +91,5 @@ Unreleased. The earlier development themes remain in
   movie, preserving shared-movie priority and rejecting unsafe source aliases.
 
 Rewind verification compares private records and complete captured opaque arrays
-by content, with explicit failures when snapshot inspection cannot complete.
+by content, with explicit failures when snapshot inspection cannot complete. It also
+checks all captured ObjectManager gameplay cursors and contact buffers.

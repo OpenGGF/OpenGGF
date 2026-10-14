@@ -1040,5 +1040,33 @@ identity4). Command: `python3 tools/testing/maven_queue.py --lean -Dmse=off
 '-Dtest=TestRewindSnapshotDiffPrivateRecords,TestRewindSnapshotDiffTerrain,TestRewindSnapshotDiffPatterns,TestRewindSnapshotDiffDynamicIdentity' test`,
 JDK25 and the normal surfaceless-EGL environment. The gameplay handoff remains
 an uncommitted, separately qualifying candidate; this helper gate gives it no
-new native or strict-trace credit. Five omitted captured object-manager fields
+new native or strict-trace credit. Six omitted captured object-manager fields
 are a separate authorized comparator slice.
+
+
+## Complete captured ObjectManager comparison — 2026-10-14
+
+The existing custom comparator omitted six captured gameplay channels:
+solidContactState, planeSwitchers, touchResponseOverlap, collisionResponseState,
+dynamicObjectIdCounter and currentExecSlot. ObjectManager restores these values
+and uses them for contact admission, native list read/build selection, identity
+minting and after-current allocation. Independent mismatch vectors58765 all
+failed before repair:6 tests/6 failures/0 errors/skips,22:22:15 BST,25.838s Maven,
+0s queue, lean. The comparator now requires every one of those channels in both
+equality and diagnostic traversal. bucketsDirty remains excluded because restore
+explicitly invalidates the render buckets; peakSlotCount remains excluded because
+SlotAllocator only exposes it as telemetry and does not consult it for allocation.
+A separate positive changes only those two derived/telemetry values.
+
+First positive28642 passed21/0/0/0 at22:25:22 BST,1:07 Maven/0s queue. An additional
+independent diagnostic control27602 then failed1/1/0/0 at22:29:46 BST,24.676s/0s:
+equal boxed cursor/counter200 were printed alongside a genuine contact mismatch.
+Their diagnostic admission now checks primitive values first. This does not
+change gameplay or the snapshot/API shape; native AIZ handoff remains a separate
+unstaged candidate.
+
+Final focused69530 passes22/0/0/0 at22:31:31 BST,1:07 Maven/0s queue, lean:
+TestRewindSnapshotDiffPrivateRecords7, Terrain1, Patterns2 and DynamicIdentity12.
+The selector/environment are identical to77331 above; the two additional pure
+controls establish derived-cache/telemetry exclusion and correct equal-counter
+diagnostics. No broader gameplay or strict-trace claim follows from this gate.

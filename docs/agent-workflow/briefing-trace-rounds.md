@@ -77,7 +77,12 @@ record access was silently skipped by the walker, while top-level arrays and
 opaque state blobs could compare fresh equal arrays by Java identity. A known
 mismatch could therefore return an empty diff; equal native state could fail a
 world replay. Use the complete content comparator, make private access explicit,
-and fail closed on inspection failure. Never remove a registry key to get a pass.
+and fail closed on inspection failure. Never remove a registry key to get a pass. The object-manager comparator must also retain captured execution/identity
+cursors and every contact, plane-crossing and double-buffered touch channel.
+Its only local omissions are the render-bucket dirty cache (restore invalidates
+it deliberately) and allocator peak telemetry (allocation reads occupancy, not
+that peak). A scalar diagnostic must compare values before reporting boxed
+references, including counters beyond Java's small-integer cache.
 
 A performance-only flock does not isolate shared-worktree test jobs
 (2026-10-13, P5 CPU audit). Another task's queued Maven run overlapped a
