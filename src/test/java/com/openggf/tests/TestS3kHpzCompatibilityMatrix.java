@@ -81,6 +81,68 @@ class TestS3kHpzCompatibilityMatrix {
                                 .map(width -> new Scenario(main, null, donor, "", width))));
     }
 
+    private record ProfileRequest(String donor, String requestedMain, String requestedFollower,
+                                  String expectedMain, String expectedFollowers) { }
+    private record ProfileScenario(ProfileRequest request, WidescreenAspect aspect) { }
+
+    static Stream<ProfileScenario> normalizedProfiles() {
+        // Literal menu-policy expectations. In particular S1 Tails normalizes to None,
+        // unlike the explicit Sonic substitutions used by our comma-roster case generator.
+        return Stream.of(
+                new ProfileRequest("s1", "sonic", "tails", "sonic", ""),
+                new ProfileRequest("s1", "tails", "knuckles", "sonic", ""),
+                new ProfileRequest("s1", "sonic", "sonic", "sonic", "sonic"),
+                new ProfileRequest("s2", "knuckles", "knuckles", "sonic", "tails"),
+                new ProfileRequest("s2", "tails", "sonic", "tails", "sonic"),
+                new ProfileRequest("off", "knuckles", "knuckles", "knuckles", "knuckles"))
+                .flatMap(request -> Arrays.stream(WidescreenAspect.values())
+                        .map(aspect -> new ProfileScenario(request, aspect)));
+    }
+
+    @ParameterizedTest(name = "actual normalized launch-profile entry {0}")
+    @MethodSource("normalizedProfiles")
+    void launchProfileSanitizationFeedsTheActualHpzEntry(ProfileScenario scenario) {
+        var request = scenario.request();
+        config.clearSessionOverrides();
+        new com.openggf.game.launch.LaunchProfileApplier(config).apply(
+                new com.openggf.game.launch.LaunchProfile(true, request.donor(), false,
+                        scenario.aspect().name(), request.requestedMain(), request.requestedFollower()),
+                MasterTitleScreen.GameEntry.SONIC_3K);
+        assertEquals(request.expectedMain(), config.getString(SonicConfiguration.MAIN_CHARACTER_CODE));
+        assertEquals(request.expectedFollowers(), config.getString(SonicConfiguration.SIDEKICK_CHARACTER_CODE));
+        assertEquals(!request.donor().equals("off"), config.getBoolean(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED));
+        config.resolveDisplayAspect();
+        config.setSessionOverride(SonicConfiguration.DISCORD_RICH_PRESENCE_ENABLED, false);
+        if (!request.donor().equals("off")) {
+            var rom = request.donor().equals("s1") ? RomTestUtils.ensureSonic1RomAvailable()
+                    : RomTestUtils.ensureSonic2RomAvailable();
+            assertNotNull(rom, "required donor ROM " + request.donor());
+            config.setSessionOverride(request.donor().equals("s1") ? SonicConfiguration.SONIC_1_ROM
+                    : SonicConfiguration.SONIC_2_ROM, rom.getAbsolutePath());
+        }
+        CrossGameFeatureProvider.getInstance().resetState();
+        SessionManager.clear();
+        TestEnvironment.activeGameplayMode();
+        var builder = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_HPZ, 1).withFreshLevelStartLifecycle();
+        if (!request.donor().equals("off")) builder.withCrossGameDonation(request.donor());
+        // Do not invoke boot(row), which would clear and replace the actually applied profile.
+        var fixture = builder.build();
+        var row = new Scenario(request.expectedMain(), scenario.aspect(), request.donor(), request.expectedFollowers());
+        assertScenario(row);
+        boolean knuckles = row.main().equals("knuckles");
+        assertEquals(knuckles ? 0x10 : 0x30, fixture.sprite().getCentreX() & 0xFFFF);
+        assertEquals(knuckles ? 0x2EC : 0xAEC, fixture.sprite().getCentreY() & 0xFFFF);
+        fixture.stepIdleFrames(90);
+        assertFalse(fixture.sprite().getDead());
+        assertFalse(fixture.sprite().isControlLocked(), "actual profile reaches intro control release");
+        assertTrue((fixture.sprite().getCentreX() & 0xFFFF) + 0x10 >= (knuckles ? 0x10 : 0x30) + 0xB0);
+        assertScenario(row);
+        var before = fixture.gameplayMode().getRewindRegistry().capture();
+        fixture.stepIdleFrames(1);
+        replay(fixture, before, "actual normalized launch-profile entry", row);
+    }
+
     private final EnumMap<SonicConfiguration, Object> saved = new EnumMap<>(SonicConfiguration.class);
     private SonicConfigurationService config;
 

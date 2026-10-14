@@ -32,7 +32,8 @@ characters to retain its declared count; that is **not** launch-profile fallback
 `LaunchProfileApplier` sanitizes a requested S1 Tails sidekick to None, while an
 explicit S1 Sonic sidekick is supported. Menu profiles and the comma-roster
 configuration API are distinct. Seven followers do not establish a maximum;
-actual normalized-profile entry vectors are a separate remaining short check.
+the 30 actual normalized-profile entry vectors qualified below verify the literal
+fallback and supported-pair behavior through the production applier and ROM entry.
 
 ## Obligations
 
@@ -265,3 +266,36 @@ hazard-contact death, per-mechanic authority/lifecycle breadth, receiving-pad
 intangibility, pedestal entry, disk-save roundtrip, or native phase/pixel/audio
 conformance. No new native recording or media parity is claimed. Integration and
 combined qualification remain lead-owned and pending.
+
+
+## Actual launch-profile normalization and HPZ entry — 2026-10-14
+
+`TestS3kHpzCompatibilityMatrix#launchProfileSanitizationFeedsTheActualHpzEntry`
+adds 30 independent cases: six literal requested/expected configurations crossed
+with all five production presets. It calls `LaunchProfileApplier.apply` for the
+S3K host, resolves the applied aspect and builds a fresh ROM HPZ fixture **without
+clearing or replacing** the applied main/follower configuration. Each case checks
+native spawn, concrete roster/CPU chain, actual donor ROM renderer/animation,
+configuration/camera width, 90 ordinary intro frames and actual control release,
+then immediate entire-world restore and forward replay twice. Existing 450-case
+method bodies and their scoped evidence are unchanged.
+
+Literal expectations are S1 Sonic+requested Tails→Sonic solo, S1 requested
+Tails+Knuckles→Sonic solo, explicit S1 Sonic+Sonic retained, S2 requested
+Knuckles+Knuckles→Sonic+Tails, explicit S2 Tails+Sonic retained, and native
+Knuckles+Knuckles retained. `LaunchProfile.effectiveCharacterDonor`,
+`mainCharacterValues`, `sidekickValues` and `sanitize` own this policy; it is not
+a restriction inferred from helper names or receiving-game identity.
+`ActiveGameplayTeamResolver.parseConfiguredSidekicks` separately owns extended
+comma-roster configuration. The first slice's explicit S1 Sonic duplicates are
+supported participants, not an assertion that requesting S1 Tails produces them.
+
+Source is joined commit `e49ee9126` plus this appended test method. The sole focused
+request uses the same environment and three absolute ROM arguments above, with
+`maven_queue.py --lean` and selector
+`-Dtest=TestS3kHpzCompatibilityMatrix#launchProfileSanitizationFeedsTheActualHpzEntry`.
+It finishes 09:49:38 BST: **30 tests, zero failures/errors/skips**, 30.417 Maven
+seconds. This verifies actual normalized launch entry; it does not add full donor
+traversal, hazard/death or native presentation/oracle evidence. The previously
+qualified first-slice and joined-route obligations retain their precise source
+and execution provenance; combined delivery remains lead-owned.
