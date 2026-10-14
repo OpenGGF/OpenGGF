@@ -215,7 +215,7 @@ class TestS3kCanonicalEntryLifecycle {
         return builder.build();
     }
 
-    private static void assertRomStart(Entry row) throws IOException {
+    static void assertRomStart(Entry row) throws IOException {
         // Shipped SpawnLevelMainSprites selects the character table. The eight
         // canonical bindings have no bootstrap intro-position override.
         int table = row.main().equals("knuckles") ? Sonic3kConstants.KNUX_START_LOCATIONS_ADDR
@@ -289,8 +289,10 @@ class TestS3kCanonicalEntryLifecycle {
         var configured = row.donor().equals("off") ? host : CrossGameFeatureProvider.getInstance();
         var main = GameServices.sprites().getMainPlayable();
         assertFalse(SpriteManagerInternalAccess.usesNativeScriptedArt(GameServices.sprites(), main));
-        assertRendererSource(main.getSpriteRenderer(), configured.loadPlayerSpriteArt(row.main()));
-        assertPaletteSource(main.getSpriteRenderer(), configured.loadCharacterPalette(row.main()));
+        var mainProvider = SpriteManagerInternalAccess.hasBorrowedNativePlayerArt(GameServices.sprites(), main)
+                ? host : configured;
+        assertRendererSource(main.getSpriteRenderer(), mainProvider.loadPlayerSpriteArt(row.main()));
+        assertPaletteSource(main.getSpriteRenderer(), mainProvider.loadCharacterPalette(row.main()));
         for (var follower : GameServices.sprites().getRegisteredSidekicks()) {
             boolean nativeActor = hasNativeCarrier(row);
             assertEquals(nativeActor, SpriteManagerInternalAccess.usesNativeScriptedArt(GameServices.sprites(), follower));
@@ -312,7 +314,7 @@ class TestS3kCanonicalEntryLifecycle {
         }
     }
 
-    private static void assertRendererSource(PlayerSpriteRenderer renderer, SpriteArtSet expected) throws Exception {
+    static void assertRendererSource(PlayerSpriteRenderer renderer, SpriteArtSet expected) throws Exception {
         assertNotNull(renderer);
         assertNotNull(expected);
         var field = PlayerSpriteRenderer.class.getDeclaredField("artSet");
@@ -330,7 +332,7 @@ class TestS3kCanonicalEntryLifecycle {
         }
     }
 
-    private static void assertPaletteSource(PlayerSpriteRenderer renderer, com.openggf.level.Palette expected)
+    static void assertPaletteSource(PlayerSpriteRenderer renderer, com.openggf.level.Palette expected)
             throws Exception {
         assertNotNull(expected);
         var field = PlayerSpriteRenderer.class.getDeclaredField("renderContext");
@@ -376,10 +378,14 @@ class TestS3kCanonicalEntryLifecycle {
         }
     }
 
-    private static void assertSameWorld(CompositeSnapshot expected, CompositeSnapshot actual, String context) {
+    static void assertSameWorld(CompositeSnapshot expected, CompositeSnapshot actual, String context) {
+        assertSameWorld(expected, actual, context, 30);
+    }
+
+    static void assertSameWorld(CompositeSnapshot expected, CompositeSnapshot actual, String context, int replayFrames) {
         var differences = new ArrayList<String>();
         boolean divergent = new RewindDeterminismAuditor(differences::add)
-                .report(0, 30, contentSnapshot(expected), contentSnapshot(actual));
+                .report(0, replayFrames, contentSnapshot(expected), contentSnapshot(actual));
         assertFalse(divergent, () -> context + ": " + String.join("\n", differences));
     }
 

@@ -85,6 +85,11 @@ public class SpriteManager implements PlayableSstDispatcher {
 			temporarySidekickRecreators = new java.util.HashMap<>();
 
 	private final Map<String, RewindRetiredSidekick> rewindRetiredSidekicks = new java.util.LinkedHashMap<>();
+	final NativePlayerArtBindings nativePlayerArtBindings = new NativePlayerArtBindings(this);
+
+    void forgetNativePlayerArt(AbstractPlayableSprite player) {
+        nativePlayerArtBindings.forget(player);
+    }
 
 	private static final SensorConfiguration[][] MOVEMENT_MAPPING_ARRAY = createMovementMappingArray();
 
@@ -338,6 +343,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 	 * Useful for test cleanup to ensure a clean state.
 	 */
 	public void clearAllSprites() {
+		nativePlayerArtBindings.clear();
 		for (Sprite sprite : sprites.values()) {
 			if (sprite instanceof AbstractPlayableSprite playable) {
 				com.openggf.sprites.playable.PlayableSpriteInternalAccess.bindMutatorPolicies(playable, null);

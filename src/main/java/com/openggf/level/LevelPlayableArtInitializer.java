@@ -525,6 +525,7 @@ final class LevelPlayableArtInitializer {
     private void applyPlayableArt(AbstractPlayableSprite playable,
                                   PlayerSpriteRenderer renderer,
                                   SpriteArtSet artSet) {
+        SpriteManagerInternalAccess.forgetNativePlayerArt(spriteManager, playable);
         playable.setSpriteRenderer(renderer);
         // Mod playables can reach art init before an animation manager exists.
         if (playable.getAnimationManager() != null) {

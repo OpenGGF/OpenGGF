@@ -406,6 +406,8 @@ public final class GameplayModeContext implements ModeContext {
             rewindRegistry.deregister("water");
             rewindRegistry.deregister("collision-system");
             rewindRegistry.deregister("sprites");
+            rewindRegistry.deregister("native-player-art-bindings");
+            rewindRegistry.deregisterPostRestoreCallback("native-player-art-bindings");
             rewindRegistry.deregister("palette-colors");
             rewindRegistry.deregisterPostRestoreCallback("parallax-derived-state");
             rewindRegistry.deregisterPostRestoreCallback("sprite-powerup-derived-state");
@@ -415,6 +417,9 @@ public final class GameplayModeContext implements ModeContext {
             rewindRegistry.register(waterSystem);
             rewindRegistry.register(collisionSystem);
             rewindRegistry.register(spriteManager.rewindSnapshottable());
+            rewindRegistry.register(com.openggf.sprites.managers.SpriteManagerInternalAccess.nativePlayerArtAdapter(spriteManager));
+            rewindRegistry.registerPostRestoreCallback("native-player-art-bindings",
+                    () -> com.openggf.sprites.managers.SpriteManagerInternalAccess.restoreNativePlayerArtAfterRoster(spriteManager));
             rewindRegistry.register(new PaletteColorStateAdapter(
                     () -> levelPalettesOrNull(levelManager),
                     () -> underwaterPalettesOrNull(waterSystem, levelManager),

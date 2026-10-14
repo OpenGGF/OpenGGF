@@ -85,6 +85,9 @@ public final class TailsCarryController {
         int yOffset = isReverseGravity() ? -0x1C : 0x1C;
         NativePositionOps.writeYPosPreserveSubpixel(main, carrier.getCentreY() + yOffset);
         publishCarriedOrientation(main);
+        var sprites = carrier.currentSpriteManagerOrNull();
+        if (sprites != null && main.currentLevelManagerIfAvailable() != null && main.getSpriteRenderer() != null)
+            com.openggf.sprites.managers.SpriteManagerInternalAccess.borrowNativePlayerArt(sprites, main);
         int carriedAnimationId = main.resolveAnimationId(CanonicalAnimation.TAILS_CARRIED);
         // Tails_Carry_Sonic writes the carried id to both anim and prev_anim,
         // then clears anim_frame_timer and anim_frame in the carrier's slot.
@@ -296,6 +299,8 @@ public final class TailsCarryController {
             main.setControlLocked(false);
             main.setForcedAnimationId(-1);
             main.setObjectMappingFrameControl(false);
+            var sprites = carrier.currentSpriteManagerOrNull();
+            if (sprites != null) com.openggf.sprites.managers.SpriteManagerInternalAccess.releaseNativePlayerArt(sprites, main);
             // The engine updates Player 1's animation before the later CPU
             // Tails slot releases a grounded carry. That earlier pass can
             // temporarily re-apply the forced carried id over the Walk byte

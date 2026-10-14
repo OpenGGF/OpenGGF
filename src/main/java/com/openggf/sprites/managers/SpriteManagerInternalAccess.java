@@ -22,6 +22,31 @@ public final class SpriteManagerInternalAccess {
         return manager.usesNativeScriptedArt(sprite);
     }
 
+    /** Literal script mappings borrow only presentation resources, never gameplay RAM. */
+    public static void borrowNativePlayerArt(SpriteManager manager, com.openggf.sprites.playable.AbstractPlayableSprite player) {
+        manager.nativePlayerArtBindings.borrow(player);
+    }
+
+    public static void releaseNativePlayerArt(SpriteManager manager, com.openggf.sprites.playable.AbstractPlayableSprite player) {
+        manager.nativePlayerArtBindings.release(player);
+    }
+
+    public static boolean hasBorrowedNativePlayerArt(SpriteManager manager, com.openggf.sprites.playable.AbstractPlayableSprite player) {
+        return manager.nativePlayerArtBindings.isBorrowed(player);
+    }
+
+    public static void forgetNativePlayerArt(SpriteManager manager, com.openggf.sprites.playable.AbstractPlayableSprite player) {
+        manager.forgetNativePlayerArt(player);
+    }
+
+    public static com.openggf.game.rewind.RewindSnapshottable<?> nativePlayerArtAdapter(SpriteManager manager) {
+        return manager.nativePlayerArtBindings.adapter();
+    }
+
+    public static void restoreNativePlayerArtAfterRoster(SpriteManager manager) {
+        manager.nativePlayerArtBindings.afterRestore();
+    }
+
     /** Retire a scene's follower roster while retaining reversible same-world membership. */
     public static void retireAllSidekicksForRewind(SpriteManager manager) {
         manager.retireAllSidekicksForRewind();

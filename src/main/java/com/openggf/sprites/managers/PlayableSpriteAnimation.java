@@ -30,6 +30,7 @@ public class PlayableSpriteAnimation {
     private boolean animationUpdateSuppressedThisFrame;
     private DynamicArtDecisionOwner dynamicArtDecisionOwner;
     private boolean bootstrapDynamicArtPrime;
+    private boolean mappingPublishedThisUpdate;
 
     /**
      * Holds one animation dispatch while the rest of the playable tick runs.
@@ -66,6 +67,8 @@ public class PlayableSpriteAnimation {
             DynamicArtDecisionOwner dynamicArtDecisionOwner) {
         this.dynamicArtDecisionOwner = dynamicArtDecisionOwner;
     }
+
+    DynamicArtDecisionOwner dynamicArtDecisionOwner() { return dynamicArtDecisionOwner; }
 
     public boolean hasDynamicArtDecisionOwner() {
         return dynamicArtDecisionOwner != null;
@@ -153,7 +156,12 @@ public class PlayableSpriteAnimation {
         if (sprite != null && !sprite.isNativeSlotPresent()) {
             return;
         }
+        mappingPublishedThisUpdate = false;
         updateAnimation(frameCounter);
+        if (mappingPublishedThisUpdate && !sprite.isObjectMappingFrameControl()) {
+            var manager = sprite.currentSpriteManagerOrNull();
+            if (manager != null) manager.nativePlayerArtBindings.ordinaryMappingPublished(sprite);
+        }
         if (dynamicArtDecisionOwner != null) {
             if (bootstrapDynamicArtPrime) {
                 dynamicArtDecisionOwner.prime(sprite.getMappingFrame());
@@ -168,6 +176,11 @@ public class PlayableSpriteAnimation {
         // Obj02. S3K places Tails_tails identically in Level_object_RAM after
         // Dynamic_object_RAM_end (docs/skdisasm/sonic3k.constants.asm:307-315).
         // SpriteManager.advanceTailsTailsAfterObjectExecution() owns that slot.
+    }
+
+    private void publishMappingFrame(int frame) {
+        sprite.setMappingFrame(frame);
+        mappingPublishedThisUpdate = true;
     }
 
     private void updateAnimation(int frameCounter) {
@@ -230,7 +243,7 @@ public class PlayableSpriteAnimation {
             int frameCount = sprite.getAnimationFrameCount();
             if (frameCount > 0) {
                 int frame = profile.resolveFrame(sprite, frameCounter, frameCount);
-                sprite.setMappingFrame(frame);
+                publishMappingFrame(frame);
             }
         }
         applyReverseGravityRenderFlipAfterAnimation();
@@ -504,7 +517,7 @@ public class PlayableSpriteAnimation {
             // AniRaw_Tails_Carry's 17 entries (27417-27419).
             int flatByte = script.flatByteAt(frameIndex);
             if (flatByte >= 0 && flatByte != 0xFF) {
-                sprite.setMappingFrame(
+                publishMappingFrame(
                         applySuperAlternateFrame(flatByte + frameOffset));
                 if (remaining >= 0) {
                     sprite.setAnimationTick(remaining);
@@ -528,7 +541,7 @@ public class PlayableSpriteAnimation {
             }
         }
 
-        sprite.setMappingFrame(applySuperAlternateFrame(
+        publishMappingFrame(applySuperAlternateFrame(
                 script.frames().get(frameIndex) + frameOffset));
         if (remaining >= 0) {
             sprite.setAnimationTick(remaining);
@@ -563,7 +576,7 @@ public class PlayableSpriteAnimation {
                 vFlip = !facingLeft;
             }
             sprite.setRenderFlips(hFlip, vFlip);
-            sprite.setMappingFrame((adjusted / 0x16) + typedBase);
+            publishMappingFrame((adjusted / 0x16) + typedBase);
             sprite.setAnimationTick(0);
             return;
         }
@@ -572,7 +585,7 @@ public class PlayableSpriteAnimation {
             // sign and use (flip_angle+$B)/$16+$31, mirrored horizontally only by
             // Status_Facing (sonic3k.asm:25133-25148).
             sprite.setRenderFlips(facingLeft, false);
-            sprite.setMappingFrame((((d0 + 0x0B) & 0xFF) / 0x16) + base);
+            publishMappingFrame((((d0 + 0x0B) & 0xFF) / 0x16) + base);
             sprite.setAnimationTick(0);
             return;
         }
@@ -587,7 +600,7 @@ public class PlayableSpriteAnimation {
                     ? ((-d0 + 0x8F) & 0xFF)
                     : ((d0 + 0x0B) & 0xFF);
             int frame = adjusted / 0x16;
-            sprite.setMappingFrame(frame + base);
+            publishMappingFrame(frame + base);
             sprite.setAnimationTick(0);
             return;
         }
@@ -606,7 +619,7 @@ public class PlayableSpriteAnimation {
         }
         int frame = (adjusted / 0x16) + base;
         sprite.setRenderFlips(hFlip, vFlip);
-        sprite.setMappingFrame(frame);
+        publishMappingFrame(frame);
         sprite.setAnimationTick(0);
     }
 
@@ -691,7 +704,7 @@ public class PlayableSpriteAnimation {
             }
         }
         int mappingFrame = script.frames().get(frameIndex) + frameOffset;
-        sprite.setMappingFrame(walkRunPath
+        publishMappingFrame(walkRunPath
                 ? applySuperAlternateFrame(mappingFrame) : mappingFrame);
         sprite.setAnimationFrameIndex(frameIndex + 1);
     }
