@@ -58,6 +58,72 @@ class TestHostObjectKeys {
                 new ModObjectKeyRegistry.Registration("openggf","openggf:authored-goal",(spawn,r)->new Dummy(spawn)))));
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints={0x7FFF,0x8000})
+    void authoredGoalTriggersAcrossUnsignedNativeXBoundary(int goalX) {
+        TestEnvironment.resetAll();
+        var player=new TestablePlayableSprite("sonic",(short)0,(short)0);
+        com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(player,goalX-1);
+        com.openggf.sprites.NativePositionOps.writeYPosResetSubpixel(player,64);
+        var camera=new com.openggf.camera.Camera();
+        ObjectManager[] ref={null};
+        var services=new StubObjectServices() {
+            @Override public ObjectManager objectManager() { return ref[0]; }
+            @Override public com.openggf.camera.Camera camera() { return camera; }
+            @Override public com.openggf.configuration.SonicConfigurationService configuration() {
+                return com.openggf.game.GameServices.configuration();
+            }
+        };
+        var registry=new ModDecoratedObjectRegistry(new Sonic3kObjectRegistry(),new ModObjectKeyRegistry(List.of()));
+        ref[0]=new ObjectManager(List.of(),registry,0,null,null,null,camera,services);
+        var spawn=new CommonObjectPlacementEncoding().createKeyed(goalX,64,
+                S3kAuthoredGoalInstance.OBJECT_KEY,0,0,true,9);
+        var goal=ObjectConstructionContext.construct(services,()->registry.create(spawn));
+        ref[0].addDynamicObject(goal);
+        goal.update(1,player);
+        assertTrue(ref[0].activeObjectsOfType(S3kSignpostInstance.class).isEmpty());
+        com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(player,goalX);
+        goal.update(2,player);
+        assertEquals(1,ref[0].activeObjectsOfType(S3kSignpostInstance.class).size());
+        goal.update(3,player);
+        assertEquals(1,ref[0].activeObjectsOfType(S3kSignpostInstance.class).size());
+    }
+
+    @Test void foreignLoadedRegistryCannotGrantHostAuthorityRawOrDecorated() throws Exception {
+        String name=ForeignRegistry.class.getName();
+        byte[] bytes;
+        try(var resource=getClass().getResourceAsStream("/"+name.replace('.','/')+".class")) {
+            assertNotNull(resource); bytes=resource.readAllBytes();
+        }
+        var loader=new ClassLoader(getClass().getClassLoader()) {
+            Class<?> defineFixture() { return defineClass(name,bytes,0,bytes.length); }
+        };
+        var foreign=(ObjectRegistry)loader.defineFixture().getConstructor().newInstance();
+        assertNotSame(HostObjectKeyRegistry.class.getClassLoader(),foreign.getClass().getClassLoader());
+        assertNull(HostObjectKeyRegistry.trusted(foreign));
+        var creator=new CommonObjectPlacementEncoding().createKeyed(64,64,"creator:goal",0,0,true,10);
+        var rawRouter=new ObjectCallbackRouter(foreign);
+        var raw=rawRouter.construct(creator,()->foreign.create(creator)); rawRouter.register(raw,creator);
+        assertEquals("creator",rawRouter.owner(raw),"Foreign authority claims must not bypass creator ownership");
+        var decorated=new ModDecoratedObjectRegistry(foreign,new ModObjectKeyRegistry(List.of(
+                new ModObjectKeyRegistry.Registration("creator","creator:goal",(spawn,r)->new Dummy(spawn)))));
+        assertFalse(decorated.hasHostObjectKey(S3kAuthoredGoalInstance.OBJECT_KEY));
+        assertFalse(decorated.hasObjectKey(S3kAuthoredGoalInstance.OBJECT_KEY));
+        assertThrows(IllegalArgumentException.class,()->decorated.create(hostSpawn()));
+        var wrappedRouter=new ObjectCallbackRouter(decorated);
+        var owned=wrappedRouter.construct(creator,()->decorated.create(creator)); wrappedRouter.register(owned,creator);
+        assertEquals("creator",wrappedRouter.owner(owned));
+    }
+
+    public static final class ForeignRegistry implements ObjectRegistry,HostObjectKeyRegistry {
+        public ForeignRegistry() { }
+        @Override public ObjectInstance create(ObjectSpawn spawn) { return new S3kAuthoredGoalInstance(spawn); }
+        @Override public void reportCoverage(List<ObjectSpawn> spawns) { }
+        @Override public String getPrimaryName(int id) { return "foreign"; }
+        @Override public boolean hasHostObjectKey(String key) { return true; }
+        @Override public boolean ownsHostObject(ObjectSpawn spawn,ObjectInstance instance) { return true; }
+    }
+
     @Test void aHostKeyCannotGrantAuthorityToAnUnrelatedReturnedClass() {
         var registry=new Sonic3kObjectRegistry() {
             @Override public ObjectInstance create(ObjectSpawn spawn) { return new Dummy(spawn); }

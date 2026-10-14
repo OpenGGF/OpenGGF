@@ -92,6 +92,13 @@ public final class FullLevelExporter {
                 || request.startX() < level.getMinX() || request.startX() > level.getMaxX()
                 || request.startY() < level.getMinY() || request.startY() > level.getMaxY())
             throw new IllegalArgumentException("start must lie inside ordered level bounds");
+        for (int i=0;i<level.getSolidTileCount();i++) {
+            SolidTile profile=level.getSolidTile(i);
+            if(profile==null || profile.heights==null || profile.widths==null
+                    || profile.heights.length!=SolidTile.TILE_SIZE_IN_ROM
+                    || profile.widths.length!=SolidTile.TILE_SIZE_IN_ROM)
+                throw new IllegalArgumentException("collision profiles require exactly 16 heights and widths");
+        }
         for (int p=0;p<level.getPatternCount();p++) for(int y=0;y<8;y++) for(int x=0;x<8;x++) {
             int pixel = Byte.toUnsignedInt(level.getPattern(p).getPixel(x,y));
             if (pixel > 15) throw new IllegalArgumentException("pattern pixels must be exact 4-bit indices");
@@ -143,6 +150,7 @@ public final class FullLevelExporter {
         if (metadataBytes.length > (1 << 20) || request.zoneName().length() > 65_536
                 || request.zoneName().getBytes(StandardCharsets.UTF_8).length > (1 << 20))
             throw new IllegalArgumentException("level metadata exceeds ModLevelDefinition v1 limits");
+        com.openggf.mods.code.ModLevelDefinitionParser.validateMetadataJson(metadataBytes);
     }
 
     /** Creates exactly the canonical data exported to disk, without touching the filesystem. */
