@@ -97,90 +97,99 @@ class TestS3kSanctuaryPedestalLifecycle {
         loop.setGameMode(GameMode.LEVEL);
         int lives=GameServices.gameState().getLives();
         try {
-            for (int frame = 0; frame < 200; frame++) advance(loop, row, 1);
-            var main = GameServices.sprites().getMainPlayable();
-            assertFalse(main.isObjectControlled(), "actual non-conversion intro has released");
-            var objects = GameServices.level().getObjectManager();
-            var pedestal = objects.activeObjectsOfType(HPZSuperEmeraldObjectInstance.class).stream()
-                    .filter(object -> object.getSpawn().subtype() == stage).findFirst().orElseThrow();
-            assertTrue(pedestal.isSelectable());
-            assertEquals(HPZSuperEmeraldObjectInstance.Display.GRAY, pedestal.display());
-            // A real fresh jump retires the arrival pad's standing owner before
-            // moving this local contact fixture to a different placed platform.
-            var jump = new Bk2FrameInput(0, 0x10, 1, false, "");
-            input.setLogicalOverride(RecordedInputSnapshots.fromBk2(jump, neutral));
-            advance(loop, row, 1);
-            input.setLogicalOverride(RecordedInputSnapshots.fromBk2(neutral, jump));
-            advance(loop, row, 1);
-            assertTrue(main.getAir(), "ordinary jump released the arrival pad");
-            assertNull(objects.getRidingObject(main), "jump owns prior ride retirement");
-            // Declared local falling-contact stimulus on the actual placed native geometry.
-            // The manager must establish standing; no contact, selection or timer is seeded.
-            NativePositionOps.writeXPosPreserveSubpixel(main, pedestal.getX());
-            NativePositionOps.writeYPosPreserveSubpixel(main,
-                    pedestal.getY() - 0x10 - main.getYRadius() - 4);
-            main.setXSpeed((short)0);main.setGSpeed((short)0);main.setYSpeed((short)0x100);
-            main.setAir(true);main.setJumping(false);
-            GameServices.camera().updatePosition(true);
-            for (int frame = 0; frame < 32 && !main.isObjectControlled(); frame++) advance(loop,row,1);
-            // Selection itself is gated by this exact pedestal's real manager
-            // ride in update(). Native control $81 then owns movement; a folded
-            // end-frame ride record is not the contact/selection contract.
-            assertTrue(main.isObjectControlled(), "loc908DE physical contact selected the pedestal");
-            assertEquals(5, main.getAnimationId());
-            assertEquals(0, main.getYSpeed(), "actual top landing stopped the fall");
-            assertEquals(pedestal.getY() - 0x10 - main.getYRadius() - 1,
-                    main.getCentreY(), "SolidObjectTop's actual surface snap");
-            // Native selection publishes after16 decrements. The8-tick window is
-            // clamped to this real short phase; a45-tick raw restore would cross a fade/load.
-            assertFalse(GameServices.fade().hasPendingCompletion());
-            var registry=fixture.gameplayMode().getRewindRegistry();
-            var before=registry.capture();advance(loop,row,8);var after=registry.capture();
-            for(int cycle=0;cycle<2;cycle++) {
-                registry.restore(before);
-                TestS3kCanonicalEntryLifecycle.assertSameWorld(before,registry.capture(),"physical selection restore",8);
-                advance(loop,row,8);
-                TestS3kCanonicalEntryLifecycle.assertSameWorld(after,registry.capture(),"physical selection replay",8);
-            }
-            assertTrue(fixture.gameplayMode().getRewindController().currentFrame()>10);
-            int outgoing=fixture.gameplayMode().getRewindController().currentFrame();
-            for(int frame=0;frame<300 && loop.getCurrentGameMode()==GameMode.LEVEL;frame++) {
-                advance(loop,row,1);
-                var history=fixture.gameplayMode().getRewindController();
-                if(history!=null)outgoing=Math.max(outgoing,history.currentFrame());
-            }
-            assertEquals(GameMode.SPECIAL_STAGE,loop.getCurrentGameMode(),"actual stage load"+stage);
-            var provider=assertInstanceOf(Sonic3kSpecialStageProvider.class,loop.getActiveSpecialStageProvider());
-            assertEquals(stage,provider.getCurrentStage());
-            // Scene drawing is omitted in this sparse lifecycle driver. Invoke
-            // Engine's actual presentation binding with the resolved preset,
-            // without constructing another engine/loop or changing gameplay RAM.
-            bindIncomingPresentation(provider, support.config.getInt(
-                    com.openggf.configuration.SonicConfiguration.SCREEN_WIDTH_PIXELS));
-            assertTrue(provider.hasSpecialStages());assertTrue(provider.supportsRewind());
-            var incoming=fixture.gameplayMode().getRewindController();
-            assertTrue(incoming==null || incoming.currentFrame()<outgoing,"special world retires outgoing hub history");
-            assertFalse(main.getDead());
-            // The actual incoming provider/fade owns readiness. Raw restoration
-            // begins only after that boundary releases, within this one special
-            // world; no native return/results callback is crossed.
-            for (int frame=0;frame<160 && (!provider.isEntryPresentationReady()
-                    ||GameServices.fade().isActive()||GameServices.fade().hasPendingCompletion());frame++)
-                advanceSpecial(loop,provider,stage,lives,1);
-            assertTrue(provider.isEntryPresentationReady());
-            assertFalse(GameServices.fade().isActive());
-            assertFalse(GameServices.fade().hasPendingCompletion());
-            assertEquals(support.config.getInt(com.openggf.configuration.SonicConfiguration.SCREEN_WIDTH_PIXELS),
-                    provider.getSpecialStageViewport().logicalWidth(), "actual resolved incoming presentation width");
-            var specialBefore=registry.capture();
-            advanceSpecial(loop,provider,stage,lives,45);var specialAfter=registry.capture();
-            for(int cycle=0;cycle<2;cycle++) {
-                registry.restore(specialBefore);
-                TestS3kCanonicalEntryLifecycle.assertSameWorld(specialBefore,registry.capture(),"incoming Super-stage restore",45);
-                advanceSpecial(loop,provider,stage,lives,45);
-                TestS3kCanonicalEntryLifecycle.assertSameWorld(specialAfter,registry.capture(),"incoming Super-stage replay",45);
-            }
+            for (int frame = 0; frame < 200; frame++) advance(loop, support, row, 1);
+            selectAndReplayIncomingStage(loop, input, fixture, support, row, stage, lives);
         } finally {loop.closePresence();}
+    }
+
+    /** Reuses actual placed geometry in an already released sanctuary; never boots or resets it. */
+    static Sonic3kSpecialStageProvider selectAndReplayIncomingStage(GameLoop loop, InputHandler input,
+            HeadlessTestFixture fixture, CanonicalEntryMatrixSupport support,
+            CanonicalEntryMatrixSupport.Row row, int stage, int lives) throws Exception {
+        var neutral = new Bk2FrameInput(0, 0, 0, false, "");
+        var main = GameServices.sprites().getMainPlayable();
+        assertFalse(main.isObjectControlled(), "actual non-conversion intro has released");
+        var objects = GameServices.level().getObjectManager();
+        var pedestal = objects.activeObjectsOfType(HPZSuperEmeraldObjectInstance.class).stream()
+                .filter(object -> object.getSpawn().subtype() == stage).findFirst().orElseThrow();
+        assertTrue(pedestal.isSelectable());
+        assertEquals(HPZSuperEmeraldObjectInstance.Display.GRAY, pedestal.display());
+        // A real fresh jump retires the arrival pad's standing owner before
+        // moving this local contact fixture to a different placed platform.
+        var jump = new Bk2FrameInput(0, 0x10, 1, false, "");
+        input.setLogicalOverride(RecordedInputSnapshots.fromBk2(jump, neutral));
+        advance(loop, support, row, 1);
+        input.setLogicalOverride(RecordedInputSnapshots.fromBk2(neutral, jump));
+        advance(loop, support, row, 1);
+        assertTrue(main.getAir(), "ordinary jump released the arrival pad");
+        assertNull(objects.getRidingObject(main), "jump owns prior ride retirement");
+        // Declared local falling-contact stimulus on the actual placed native geometry.
+        // The manager must establish standing; no contact, selection or timer is seeded.
+        NativePositionOps.writeXPosPreserveSubpixel(main, pedestal.getX());
+        NativePositionOps.writeYPosPreserveSubpixel(main,
+                pedestal.getY() - 0x10 - main.getYRadius() - 4);
+        main.setXSpeed((short)0);main.setGSpeed((short)0);main.setYSpeed((short)0x100);
+        main.setAir(true);main.setJumping(false);
+        GameServices.camera().updatePosition(true);
+        for (int frame = 0; frame < 32 && !main.isObjectControlled(); frame++) advance(loop,support,row,1);
+        // Selection itself is gated by this exact pedestal's real manager
+        // ride in update(). Native control $81 then owns movement; a folded
+        // end-frame ride record is not the contact/selection contract.
+        assertTrue(main.isObjectControlled(), "loc908DE physical contact selected the pedestal");
+        assertEquals(5, main.getAnimationId());
+        assertEquals(0, main.getYSpeed(), "actual top landing stopped the fall");
+        assertEquals(pedestal.getY() - 0x10 - main.getYRadius() - 1,
+                main.getCentreY(), "SolidObjectTop's actual surface snap");
+        // Native selection publishes after16 decrements. The8-tick window is
+        // clamped to this real short phase; a45-tick raw restore would cross a fade/load.
+        assertFalse(GameServices.fade().hasPendingCompletion());
+        var registry=fixture.gameplayMode().getRewindRegistry();
+        var before=registry.capture();advance(loop,support,row,8);var after=registry.capture();
+        for(int cycle=0;cycle<2;cycle++) {
+            registry.restore(before);
+            TestS3kCanonicalEntryLifecycle.assertSameWorld(before,registry.capture(),"physical selection restore",8);
+            advance(loop,support,row,8);
+            TestS3kCanonicalEntryLifecycle.assertSameWorld(after,registry.capture(),"physical selection replay",8);
+        }
+        assertTrue(fixture.gameplayMode().getRewindController().currentFrame()>10);
+        int outgoing=fixture.gameplayMode().getRewindController().currentFrame();
+        for(int frame=0;frame<300 && loop.getCurrentGameMode()==GameMode.LEVEL;frame++) {
+            advance(loop,support,row,1);
+            var history=fixture.gameplayMode().getRewindController();
+            if(history!=null)outgoing=Math.max(outgoing,history.currentFrame());
+        }
+        assertEquals(GameMode.SPECIAL_STAGE,loop.getCurrentGameMode(),"actual stage load"+stage);
+        var provider=assertInstanceOf(Sonic3kSpecialStageProvider.class,loop.getActiveSpecialStageProvider());
+        assertEquals(stage,provider.getCurrentStage());
+        // Scene drawing is omitted in this sparse lifecycle driver. Invoke
+        // Engine's actual presentation binding with the resolved preset,
+        // without constructing another engine/loop or changing gameplay RAM.
+        bindIncomingPresentation(provider, support.config.getInt(
+                com.openggf.configuration.SonicConfiguration.SCREEN_WIDTH_PIXELS));
+        assertTrue(provider.hasSpecialStages());assertTrue(provider.supportsRewind());
+        var incoming=fixture.gameplayMode().getRewindController();
+        assertTrue(incoming==null || incoming.currentFrame()<outgoing,"special world retires outgoing hub history");
+        assertFalse(main.getDead());
+        // The actual incoming provider/fade owns readiness. Raw restoration
+        // begins only after that boundary releases, within this one special
+        // world; no native return/results callback is crossed.
+        for (int frame=0;frame<160 && (!provider.isEntryPresentationReady()
+                ||GameServices.fade().isActive()||GameServices.fade().hasPendingCompletion());frame++)
+            advanceSpecial(loop,provider,stage,lives,1);
+        assertTrue(provider.isEntryPresentationReady());
+        assertFalse(GameServices.fade().isActive());
+        assertFalse(GameServices.fade().hasPendingCompletion());
+        assertEquals(support.config.getInt(com.openggf.configuration.SonicConfiguration.SCREEN_WIDTH_PIXELS),
+                provider.getSpecialStageViewport().logicalWidth(), "actual resolved incoming presentation width");
+        var specialBefore=registry.capture();
+        advanceSpecial(loop,provider,stage,lives,45);var specialAfter=registry.capture();
+        for(int cycle=0;cycle<2;cycle++) {
+            registry.restore(specialBefore);
+            TestS3kCanonicalEntryLifecycle.assertSameWorld(specialBefore,registry.capture(),"incoming Super-stage restore",45);
+            advanceSpecial(loop,provider,stage,lives,45);
+            TestS3kCanonicalEntryLifecycle.assertSameWorld(specialAfter,registry.capture(),"incoming Super-stage replay",45);
+        }
+        return provider;
     }
 
     @ParameterizedTest(name = "actual full hub load / native target publication {0}")
@@ -266,7 +275,8 @@ class TestS3kSanctuaryPedestalLifecycle {
         }
     }
 
-    private void advance(GameLoop loop,CanonicalEntryMatrixSupport.Row row,int frames) {
+    private static void advance(GameLoop loop, CanonicalEntryMatrixSupport support,
+                                CanonicalEntryMatrixSupport.Row row, int frames) {
         int lives=GameServices.gameState().getLives();
         for(int frame=0;frame<frames;frame++) {
             loop.step();GameServices.graphics().runPendingRenderThreadTasks();
