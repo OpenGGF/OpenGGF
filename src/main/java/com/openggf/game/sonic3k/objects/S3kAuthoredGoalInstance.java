@@ -25,7 +25,7 @@ public final class S3kAuthoredGoalInstance extends AbstractObjectInstance implem
     @Override
     public void update(int vIntRunCount, PlayableEntity entity) {
         if (triggered || !(entity instanceof AbstractPlayableSprite player)) return;
-        int dx = player.getCentreX() - spawn.x();
+        int dx = (player.getCentreX() & 0xFFFF) - spawn.x();
         if (dx < 0 || dx >= 32 || Math.abs(player.getCentreY() - spawn.y()) > 64) return;
         S3kSignpostInstance sign = spawnFreeChild(() -> new S3kSignpostInstance(spawn.x(), 0, true));
         // Preserve the trigger if the native allocator is full; a later pass may retry.

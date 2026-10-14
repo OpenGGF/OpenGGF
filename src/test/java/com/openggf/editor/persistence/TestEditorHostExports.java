@@ -191,6 +191,76 @@ class TestEditorHostExports {
         }
     }
 
+    @Test void boundedMetadataTokenLimitIsSharedByMemoryAndDisk() throws Exception {
+        var fixture=new Fixture(GameId.S2);
+        var exporter=new FullLevelExporter(new ModLevelExportStagingValidator(new Sonic2GameModule()));
+        var request=request(GameId.S2,temp.resolve("ring-heavy"));
+        fixture.setRings(java.util.stream.IntStream.range(0,10_000)
+                .mapToObj(id->new RingSpawn(id,64,id)).toList());
+        assertDoesNotThrow(()->exporter.prepareHostData(MutableLevel.snapshot(fixture),request),
+                "Large metadata below the canonical token cap remains usable");
+        fixture.setRings(java.util.stream.IntStream.range(0,20_000)
+                .mapToObj(id->new RingSpawn(id,64,id)).toList());
+        var source=MutableLevel.snapshot(fixture);
+        assertAll(
+                ()->assertThrows(java.io.IOException.class,()->exporter.prepareHostData(source,request)),
+                ()->assertThrows(java.io.IOException.class,()->exporter.export(source,request)),
+                ()->assertFalse(Files.exists(request.outputDirectory())),
+                ()->assertFalse(Files.exists(temp.resolve("ring-heavy.export-lock"))));
+    }
+
+    @Test void malformedCollisionProfileFailsBothPublicationPaths() {
+        var source=MutableLevel.snapshot(new Fixture(GameId.S2));
+        source.setSolidTile(0,new SolidTile(0,new byte[16],new byte[15],(byte)0));
+        var exporter=new FullLevelExporter(new ModLevelExportStagingValidator(new Sonic2GameModule()));
+        var request=request(GameId.S2,temp.resolve("short-width"));
+        assertAll(
+                ()->assertThrows(IllegalArgumentException.class,()->exporter.prepareHostData(source,request)),
+                ()->assertThrows(IllegalArgumentException.class,()->exporter.export(source,request)),
+                ()->assertFalse(Files.exists(request.outputDirectory())));
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({
+            "S1,32767,32512", "S1,32768,32512", "S1,32,65500",
+            "S2,32767,32512", "S2,32768,32512", "S2,32,65500"})
+    void nativeSignpostUsesUnsignedWordActivationAndWalkOff(GameId game,int goalX,int cameraMaxX) {
+        TestEnvironment.resetAll();
+        GameModule module=game==GameId.S1?new Sonic1GameModule():new Sonic2GameModule();
+        var player=new TestablePlayableSprite("sonic",(short)0,(short)0);
+        player.setGameRulesForTest(module.getRules()); player.setAirForTest(false);
+        com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(player,goalX);
+        com.openggf.sprites.NativePositionOps.writeYPosResetSubpixel(player,64);
+        var camera=new com.openggf.camera.Camera(); camera.setMaxX((short)cameraMaxX);
+        var state=new GameStateManager();
+        ObjectManager[] ref={null};
+        var services=new StubObjectServices() {
+            @Override public ObjectManager objectManager() { return ref[0]; }
+            @Override public com.openggf.camera.Camera camera() { return camera; }
+            @Override public GameStateManager gameState() { return state; }
+            @Override public GameModule gameModule() { return module; }
+            @Override public com.openggf.configuration.SonicConfigurationService configuration() {
+                return GameServices.configuration();
+            }
+        };
+        var registry=module.createObjectRegistry();
+        ref[0]=new ObjectManager(List.of(),registry,0,null,null,null,camera,services);
+        var spawn=module.getObjectPlacementEncoding().create(goalX,64,0x0D,0,0,true,9);
+        var sign=ObjectConstructionContext.construct(services,()->registry.create(spawn));
+        ref[0].addDynamicObject(sign); sign.update(0,player);
+        assertTrue(state.isActCompletionSignalActive(),"Unsigned native X must activate the signpost");
+        for(int frame=1;frame<300;frame++) sign.update(frame,player);
+        java.util.function.BooleanSupplier results=()->ref[0].getActiveObjects().stream().anyMatch(object ->
+                object instanceof com.openggf.game.sonic1.objects.Sonic1ResultsScreenObjectInstance
+                || object instanceof com.openggf.game.sonic2.objects.ResultsScreenObjectInstance);
+        assertFalse(results.getAsBoolean());
+        int threshold=(cameraMaxX+0x128)&0xFFFF;
+        com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(player,(threshold-1)&0xFFFF);
+        sign.update(300,player); assertFalse(results.getAsBoolean(),"Below unsigned cmp.w threshold");
+        com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(player,threshold);
+        sign.update(301,player); assertTrue(results.getAsBoolean(),"Native unsigned walk-off must allocate results");
+    }
+
     @Test void missingKeyDependenciesFailMemoryAndDiskBeforePublication() throws Exception {
         var fixture=new Fixture(GameId.S2);
         fixture.setObjects(List.of(new com.openggf.game.common.CommonObjectPlacementEncoding()
@@ -273,6 +343,7 @@ class TestEditorHostExports {
             rings=List.of(new RingSpawn(48,64,11)); minX=0;maxX=side*16-1;minY=0;maxY=side*16-1;
         }
         void setObjects(List<ObjectSpawn> values) { objects=values; }
+        void setRings(List<RingSpawn> values) { rings=values; }
         @Override public int getChunksPerBlockSide() { return side; }
         @Override public int getBlockPixelSize() { return side*16; }
     }
