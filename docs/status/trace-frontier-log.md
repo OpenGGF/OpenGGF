@@ -112460,3 +112460,34 @@ presence advances2133→2897, native-only20; last preceding sample2881. Existing
 reservations are included, so this is allocation evidence, not full child/type
 conformance or strict closure. Ring25/flash17 versus native18/22 remains. No new
 native rendered/audio or complete-game parity claim follows.
+
+
+### 2026-10-14 — AIZ flare physical lifetime; strict frontiers unchanged
+
+Owned bugfix/ai-s3k-parity-trace, source8f7ec20a1 plus exact flare2d292933,
+barrel5ebe0400/policyfdb281a2 SHA256 candidates.
+[Native owners, qualified hashes and rejected premises](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-barrel-flare-raw-lifetime-and-physical-parent3).
+Init/raw/F4/following-clear now retain the real muzzle SST lifetime and priority;
+physical parent3 consumes the current verified XY/flip header through recreation.
+Unknown nonempty headers reject before mutation. No shared allocator/clock,
+fixture/controller or hydration change. Affected25518 passes619/0/0/0 (new19
+component cases, actual AIZ2 napalm, scalar/SecondStrike and mandatory startup).
+
+The exact three25714 commands/profiles above are reused. Canonical40282 adds
+`OGGF_SLOT_PROBE=1 OGGF_SLOT_PROBE_FULL=1 OGGF_SLOT_PROBE_OUT=target/flare-native-slot-occupancy`;
+misspelled observer54825 canceled waiting130/no tests, sole corrected request.
+Java25/EGL/original absolute ROM retained. Canonical40282 is5/1fail/0errors/0skip
+at15:58:37 BST (96s execution/29s queue): original AIZ/initial HCZ/two prefixes
+remain green. Chain6/8/11 raw totals remain189/12,719/82,067; physics189/12,604/
+69,393, animation0/115/12,674. First non-camera physics3319 P2X$31C1/$31CA,
+1583 P2X$366C/$3674,1510 Y$7D6/$7DF; incomplete stop68801/load-generation9.
+Alternate34650 is1/1fail/0errors/0skip at15:56:25 BST (34.901s/26s),60 grouped
+spans, first25589 animation$13/$05. Guards91291 passes111/0/0/0 at15:56:59 BST
+(33.758s/62s). Metrics and source-closure rules unchanged; no broad/full sweep.
+
+In the **segment2** allocation ledger, the actual second pair19/20 is present
+at2897. Sampled presence including reserved keys advances2897→2910, native-only
+17/21, preceding sample2898. This is not first whole-chain presence or complete
+child/type parity. Following callback allocation and shot18 birth movement
+(engine812/native816) remain concrete next owners. Prior-build native/engine
+images stay source-bounded; no rendered/audio/full-game parity claim follows.

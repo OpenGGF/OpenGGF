@@ -5435,3 +5435,25 @@ manager culling must not collapse them. Test both-direction recreation across
 wait/publication/release/Init/delete markers, not just current visibility.
 
 Origin: 2026-10-14 Rhinobot parity slice over `6fc85aab8`.
+
+
+## Raw-animation F4 and physical child links retain their own dispatch
+
+The AIZ flare wrapper refreshes numeric parent3, calls its routine, then draws.
+Init only loads attributes/script and returns; Animate_RawMultiDelay starts at
+cleared cursor/timer0, skips the first pair, and advances on signed underflow.
+F4 calls Go_Delete_Sprite; that dispatch still draws the last frame, while the
+next Delete_Current clears the physical slot. Premature clear changes a later
+AfterCurrent pair even if its firing clock already matches.
+
+Refresh_ChildPositionAdjusted has no destroyed-parent gate. Read the current
+physical SST XY/lower-two flip bits and signed offsets; a cleared slot is zero,
+a recycled verified header is its new data, and unknown nonempty residue must
+not silently become zero. Capture the numeric parent link and raw state, recreate
+from ctx.spawn without a nearest-parent seed, and test moving metadata plus
+live/cleared/recycled restoration. A declared inert boss checkpoint must publish
+its native lastUpdatedVIntRunCount for real children to execute; idle child
+vectors cannot certify motion or constructor metadata.
+
+Origin: 2026-10-14 AIZ flare parity slice over8f7ec20a1; asm137029–137047,
+177300–177332,177563–177617,179136–179140.

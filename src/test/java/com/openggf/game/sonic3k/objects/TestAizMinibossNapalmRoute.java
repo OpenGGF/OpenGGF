@@ -89,8 +89,8 @@ class TestAizMinibossNapalmRoute {
                         AizMinibossFlameBarrelChild.class);
                 AizMinibossBarrelShotFlareChild flare = live(harness.manager(),
                         AizMinibossBarrelShotFlareChild.class).stream()
-                        .filter(candidate -> readObjectField(candidate, "anchor",
-                                AbstractObjectInstance.class) == barrel)
+                        .filter(candidate -> readObjectField(candidate, "parentSlot",
+                                Integer.class) == barrel.getSlotIndex())
                         .findFirst()
                         .orElseThrow(() -> new AssertionError("FallingShot was not preceded by its flare"));
                 observations.add(new RouteObservation(projectile, barrel,

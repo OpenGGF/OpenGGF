@@ -501,3 +501,97 @@ remains. Earlier native/engine Monkey/projectile/HCZ images stay separately
 source-bounded; this slice adds no native pixel/audio qualification. Rhinobot
 charge/brake children, slotted art/DPLC pressure and the inherited dash-timeout
 fallback remain separate native-conformance limits, not claims from these tests.
+
+
+## AIZ barrel flare raw lifetime and physical parent3
+
+Source context: `8f7ec20a1` plus local flare SHA256
+`2d292933cffc459cb0a6e3e79ebc9e21fe7985c606c38096c5d57bffda742eb3`,
+barrel `5ebe04009423b8001b586a7cc33538c36f01e5c4f90c6c95a83194b6738be343`
+and owning policy `fdb281a21a362102e494d69be4d18da5d04c7ce1a1a8258822dc28655374210b`.
+New component test hash `df8337b7e26140da076fcd89b1225e087bf88b40687f1e30a52bb39eea40d265`;
+updated actual-ROM napalm test `cb13b075166ffef388d2610833f6084cd7e55d62648f52d3945a7905efdf0d87`.
+
+The owning allocation ledger is returned AIZ **segment2**, separately from the
+first strict physics reds in segments6/8/11. Original-controller row2881 creates
+flare17/shot18 in both engines. Native keeps flare17 until Go_Delete at2898 and
+physical clear2899, so barrel1 at2897 allocates19/20. The old Java sequence freed
+17 early, placing that next pair in17/19 and leaving20 absent. The existing $10
+barrel stagger is therefore not evidence for a fitted fire-delay correction.
+
+`AIZMiniboss_BarrelShotFlare` (:137029–137047) refreshes physical parent3, dispatches
+its routine, then Draw_Sprite. Init publishes frame7/priority$200/dimensions8 and
+returns without animation. The exact13 ROM bytes at$6913F match
+`AniRaw_AIZMiniboss_BarrelShotFlare` (:137954):7/1,7/1,8/1,9/3,A/3,B/3,F4.
+The existing ROM-backed raw interpreter applies `Animate_RawMultiDelay`
+(:177563–177617): cursor0 skips the first pair on the first animation call, signed
+byte underflow advances, and F4 invokes Go_Delete_Sprite. That marker still draws
+B in its wrapper on birth+17; Delete_Current clears the following dispatch.
+The local wrapper has no coarse-X deletion tail, so shared manager culling is
+locally bypassed without changing the manager or checked allocation.
+
+`Refresh_ChildPositionAdjusted` (:177300–177332) reads the current numeric SST,
+not the original parent object, copies lower-two render bits and negates the
+signed offsets. The flare now captures the physical parent3 slot; a pure
+ctx.spawn shell restores the birth metadata, raw cursor and numeric link.
+The barrel's existing refresh stores its copied bits/signed Y offset. Empty
+slots provide genuinely cleared XY/flags. Live barrel/flare projections and
+existing NativeSstStateSource provide only consumed header data; an unknown
+nonempty owner fails before any position/animation mutation. No fake full-header
+projection or unknown zero default was added. Arbitrary pressure residue remains
+unsupported, not certified by the literal recycled-header vector.
+
+Draft99161/52600 terminated at test compilation, with no behavioral credit.
+Draft49556 ran19 setup errors because its fixed placement attempted reserved
+player SST0..3; dynamic admission correctly rejected it. Corrected negative72464
+on8f completes19/13fail/0errors/0skip at15:38:30 BST,26.753s execution/36s queue.
+First candidate84527 is619/5fail/0errors/0skip at15:42:09 BST,73s/20s: three live
+flip vectors still had an idle FrozenBoss without its native dispatch stamp;
+two actual-ROM consumer helpers still reflected removed anchor/cursor fields.
+The initial five moving passes were also idle-barrel controls, not proof that
+phase-two restoration compensates wrong birth metadata.
+
+The corrected matched nine-vector negative29122 restores only the exact8f
+flare/barrel/policy runtime, retaining declared test inputs. It completes9/
+8fail/0errors/0skip at15:48:47 BST,65s execution/144s queue: all five genuinely
+moving cases lose flare birth metadata (12320/816→nearest-barrel12329/820), while
+flip1/2/3 fail and flip0 passes. Exact candidate hashes were restored and the
+three temporary source backups removed. Consumer helpers now resolve numeric
+parent3 to the actual live owner identity and compare initialized/delete,
+mapping, cursor and timer state, without filtering comparisons.
+
+Final affected25518 is619/0/0/0 at15:54:05 BST,71s execution/148s queue:
+`TestAizMinibossFlareNativeGraph,TestS3kAizMinibossGraphRewind,TestAizMinibossNapalmRoute,TestAizMinibossNapalmProductionRoute,TestAizMinibossBarrelShotChild,TestSecondStrikeBoss,TestS3kSelfContainedTransientRewind,TestScalarOnlyCodecDeletion,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`.
+The19 new component cases cover literal INIT/raw/deletion/header/two-pair
+allocation, five declared camera widths320/352/400/528/800, both-way recreation
+and two45-frame forward cycles, live/cleared/recycled parent3, all flip bits and
+unknown-header rejection. These are component cameras, not full host preset,
+donor/roster/registered-world route certification. Actual AIZ2 napalm production
+consumers, SecondStrike and all four mandatory startup consumers pass.
+
+Canonical40282 uses the same25714 trace selector/profile plus documented
+`OGGF_SLOT_PROBE=1 OGGF_SLOT_PROBE_FULL=1 OGGF_SLOT_PROBE_OUT=target/flare-native-slot-occupancy`.
+A misspelled observer-only request54825 was canceled while waiting, terminal130,
+no tests; only the corrected request ran. Canonical40282 completes5/1fail/
+0errors/0skip at15:58:37 BST,96s execution/29s queue: original AIZ, initial HCZ
+and two prefixes green. Segment6/8/11 raw totals remain189/12,719/82,067;
+physics189/12,604/69,393 and animation0/115/12,674. First non-camera physics
+remains3319 P2X$31C1/$31CA,1583 P2X$366C/$3674,1510 Y$7D6/$7DF. Segment11 still
+loses ownership before closure at input68,801/load-generation9. No additional
+first-animation field is exposed by these chain summaries.
+
+Alternate34650 completes1/1fail/0errors/0skip at15:56:25 BST,34.901s/26s:60
+grouped spans (25physics/35animation), first25589 animation$13/$05; first physics
+25590 tails_x_sub$7800/$6C00. Guards91291 passes111/0/0/0 at15:56:59 BST,
+33.758s/62s, the same four source/rewind/timing classes/profile as41681. All
+commands retain Java25, exact surfaceless EGL and the absolute verified original
+S3K ROM. No broad/full-suite sweep, controller change or comparison hydration.
+
+The segment2 observer now shows actual flare/shot19/20 at2897. Including reserved
+keys, sampled allocation-presence advances2897→2910, native-only17/21; preceding
+sample2898. That following callback's allocation remains a separate owner.
+Shot18 is still born at engineY812 versus native816: native shot Init draws/RTS
+before movement (:137065–137085), while current Java moves on its birth dispatch.
+These are explicit next targets, not a whole native graph or strict trace pass.
+Existing inspected native/engine images remain source-bounded to their recorded
+builds; this slice adds no rendered-pixel, SAT/priority or audio certification.

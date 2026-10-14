@@ -65,6 +65,8 @@ public class AizMinibossFlameBarrelChild extends AbstractBossChild implements Re
     /** ROM: $39(a0) on the barrel — per-barrel counter for drop position cycling.
      *  Incremented by 4 each time a shot enters the top-drop phase (sub_68EE4). */
     private int positionCounter;
+    // Lower render bits copied by this barrel's Refresh_ChildPositionAdjusted dispatch.
+    private int nativeRenderFlags;
 
     public AizMinibossFlameBarrelChild(AbstractBossInstance parent, int barrelIndex, boolean cutsceneVariant) {
         super(parent, "AIZMinibossBarrel" + barrelIndex, 4, 0x90);
@@ -95,12 +97,14 @@ public class AizMinibossFlameBarrelChild extends AbstractBossChild implements Re
         }
         int xOffset = BARREL_OFFSETS[barrelIndex][0];
         int yOffset = BARREL_OFFSETS[barrelIndex][1];
-        boolean hFlip = (parent.getState().renderFlags & 1) != 0;
+        nativeRenderFlags = parent.getState().renderFlags & 3;
+        boolean hFlip = (nativeRenderFlags & 1) != 0;
         if (hFlip) {
             xOffset = -xOffset;
         }
         this.currentX = parent.getX() + xOffset;
-        this.currentY = parent.getY() + yOffset;
+        if ((nativeRenderFlags & 2) != 0) yOffset = -yOffset;
+        this.currentY = (parent.getY() + yOffset) & 0xFFFF;
     }
 
     @Override
@@ -264,6 +268,9 @@ public class AizMinibossFlameBarrelChild extends AbstractBossChild implements Re
         this.positionCounter = value & 0xFF;
     }
 
+    /** Narrow native header read for physical parent3 consumers; no status/lifetime inference. */
+    int nativeRefreshRenderFlags() { return nativeRenderFlags; }
+
     /** ROM render_flags(a1) read by AIZMiniboss_SetShotPosition. */
     boolean isFacingFlipped() {
         return parent != null && (parent.getState().renderFlags & 1) != 0;
@@ -294,7 +301,7 @@ public class AizMinibossFlameBarrelChild extends AbstractBossChild implements Re
         if (renderer == null || !renderer.isReady()) {
             return;
         }
-        boolean hFlip = (parent != null) && ((parent.getState().renderFlags & 1) != 0);
-        renderer.drawFrameIndex(mappingFrame, currentX, currentY, hFlip, false);
+        renderer.drawFrameIndex(mappingFrame, currentX, currentY,
+                (nativeRenderFlags & 1) != 0, (nativeRenderFlags & 2) != 0);
     }
 }

@@ -156,10 +156,10 @@ class TestS3kAizMinibossGraphRewind {
         assertSame(graph.boss(), readObjectField(graph.shot(), "parent"));
         assertSame(graph.barrel2(), readObjectField(graph.shot(), "barrel"),
                 "barrel shot must relink to the selected nearest flame barrel");
-        assertSame(graph.barrel2(), readObjectField(graph.flare(), "anchor"),
-                "barrel shot flare must follow production topology and relink to the flame barrel");
-        assertNotSame(graph.shot(), readObjectField(graph.flare(), "anchor"),
-                "barrel shot flare must not relink to the shot object");
+        assertEquals(graph.barrel2().getSlotIndex(), readObjectField(graph.flare(), "parentSlot"),
+                "barrel shot flare must retain the exact physical barrel parent3 address");
+        assertNotEquals(graph.shot().getSlotIndex(), readObjectField(graph.flare(), "parentSlot"),
+                "barrel shot flare must not substitute the shot SST for its parent3");
     }
 
     private static void assertRestoredObjectsAreFresh(AizGraph before, AizGraph restored) {

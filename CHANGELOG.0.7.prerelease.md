@@ -21,7 +21,7 @@ Unreleased. The earlier development themes remain in
   Identity-keyed participant contact maps encode stable team IDs through
   recreation while preserving their live associations and ordered-map behavior.
 
-- **S3K badniks:** Monkey Dude retains five independent arm and hand objects,
+- **S3K objects:** Monkey Dude retains five independent arm and hand objects,
   their physical predecessor links, native dispatch and retirement order, and
   the body's explosion state before initialization. The complete graph restores
   and replays without creating duplicate children. Its body preserves the ROM
@@ -32,6 +32,9 @@ Unreleased. The earlier development themes remain in
   Rhinobot waits for its native placeholder render sign and keeps initialization
   and delayed slot retirement as separate phases, including through rewind.
   It remains dormant while vertically hidden.
+  AIZ muzzle flares keep their native initialization, raw-animation and delayed
+  retirement phases. Their physical parent link reads cleared or reused slots
+  without borrowing a detached parent, and restores through rewind.
 
 - **S3K breakable floors:** Cork's placed record becomes its first moving
   fragment, preserving checked sibling allocation, native motion and render

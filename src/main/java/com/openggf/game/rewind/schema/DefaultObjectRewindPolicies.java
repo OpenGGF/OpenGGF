@@ -482,7 +482,7 @@ final class DefaultObjectRewindPolicies {
             // recreate hooks retain nearest-object lookup only as a phase-one seed.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossNapalmProjectile", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossNapalmProjectile", "barrel"), RewindFieldPolicy.CAPTURED),
-            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossBarrelShotFlareChild", "anchor"), RewindFieldPolicy.CAPTURED),
+            // Barrel-shot flares capture numeric parent3: cleared/recycled SST headers remain readable.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance$FallingLogChild", "linkedSplash"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance$SplashChild", "linkedLog"), RewindFieldPolicy.CAPTURED),
             // Ride-vine link chains carry the rendered swing/deploy state of a ride mechanic.

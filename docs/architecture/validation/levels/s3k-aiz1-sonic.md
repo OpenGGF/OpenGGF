@@ -647,3 +647,23 @@ frontiers remain red. This does not certify physical contact/registered-world
 Rhinobot windows across products or native pixels/audio. Its charge/brake child
 owners, slotted art/DPLC pressure and inherited nonnative dash timeout remain
 separate source-conformance follow-ups.
+
+
+## AIZ muzzle-flare native owner — 2026-10-14
+
+Flare Init now precedes the ROM-backed raw cursor; F4 retains its final frame and
+physical slot until the next dispatch. Its captured numeric parent3 reads live,
+cleared and verified recycled headers with signed offsets/flip bits, and pure
+recreation preserves birth metadata. The actual second returned-AIZ barrel pair
+now uses19/20 at2897. Independent component19, existing actual-ROM napalm and
+scalar/startup/SecondStrike consumers total619 passing checks; source/rewind/
+timing guards111 pass on the exact owned candidate over8f7ec20a1.
+[Native routines, matched negatives and commands](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-barrel-flare-raw-lifetime-and-physical-parent3).
+The five declared component camera widths are320/352/400/528/800, with two-way
+recreation/two45-frame cycles; this does not extend full donor/team/product or
+registered-world physical route qualification. Unknown nonempty parent headers
+remain unsupported. Original AIZ/initial HCZ/prefix2 are green; alternate and
+whole-chain strict frontiers remain unchanged red. Sampled segment2 allocation
+advances2897→2910 (native-only17/21). Next callback allocation and shot birth
+movement remain concrete separate owners; native rendered/palette/SAT/priority
+and audio parity are not certified by these fields or prior-build spot images.
