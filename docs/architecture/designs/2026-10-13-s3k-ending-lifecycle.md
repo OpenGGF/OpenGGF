@@ -1301,3 +1301,40 @@ The old61-second films/reel/index and every intermediate native/engine source,
 jar/input hash and negative observation are preserved separately. The stable
 observer protocol still needs promotion from its owned external prototype;
 none of these diagnostic generations certifies a complete cold campaign.
+
+
+### Tails' separate Sonic/Flicky palette timer (2026-10-14)
+
+The34 early Tails pixels were not an RGB conversion effect: native published
+CRAM2–4 remains `$E66,$C42,$822` at ordinary31/63/511, while the engine advances
+that Sonic/Flicky palette. `Obj_5D86A` writes `Palette_timer=$7F` after every
+rescue dispatch for Player_mode2; `loc_5E4E2` repeats it only in terminal reunion
+routine18. Neither writer holds Tails' separate `Palette_timer_Tails`, whose
+body cycle still precedes the Sonic/Flicky cycle in AnPal. Both omitted writers
+now call the internal companion-timer operation at those exact owner boundaries.
+Earlier reunion swing and AIZ return do not gain an invented blanket hold.
+
+The existing S3 snapshot only retained the companion timer's low nibble. Literal
+126/127 restored as14/15. The high nibble now occupies unused bits12–15 of S3's
+existing transformation owner word; flags8–11 and the previous low-nibble
+presentation encoding remain intact. All word consumers were inspected: S3's
+four flag masks and two full-word copies preserve it, the base core restore
+ignores the word, and S2 has no reader. Public RewindState/Value shapes, ordinary
+0/6/15 representations and S2 matching-owner rejection remain unchanged.
+
+Request78374 completed9 cases with6 genuine failures, zero errors/skips:
+three actual rescue holds and the terminal writer were missing, and both larger
+timer values truncated; ordinary low timers passed. Corrected request42899
+passed126 cases, zero failures/errors/skips, at15:33:01 BST (1:11 Maven), on
+production SHA256 `130b8e4d2d095882642d4bc8f6b2a210d016c68e8b4e730e16e62c71007a1649`:
+initial palette15 including all three progress values, actual body/held-cell
+checks and two complete registry cycles; ending literal16; ordinary S3/generic43;
+ordinary S2 donor4; and native binding48. This qualifies the owner and byte
+capture, not a new native screenshot generation or complete scene acceptance.
+The historical v4 Tails pictures remain negative evidence until the next
+coherent palette-owner capture. Native small-plane palette destination and
+other listed visual/RGB/PAL/PCM obligations remain open at this checkpoint.
+
+```bash
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk python3 tools/testing/maven_queue.py -Dmse=off '-Ds3k.rom.path=<MAIN_WORKSPACE>/Sonic and Knuckles & Sonic 3 (W) [!].gen' '-Dsonic1.rom.path=<MAIN_WORKSPACE>/Sonic The Hedgehog (W) (REV01) [!].gen' '-Dsonic2.rom.path=<MAIN_WORKSPACE>/Sonic The Hedgehog 2 (W) (REV01) [!].gen' '-Dtest=TestSonic3kEndingSuperState,TestS3kEndingInitialPalette,TestSonic3kSuperStateRewind,TestSonic3kSuperTransformationEligibility,TestSuperStateController,TestSonic3kModSuperFormGate,TestSonic2DonorSuperStateRewind,TestS3kEndingDonorSceneEntry' test -B
+```

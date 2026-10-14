@@ -80,9 +80,15 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
     @Override public void update(int vIntRunCount, PlayableEntity player) {
         nativeVInt=vIntRunCount;
         ending().art().service(services());
-        if(sequence==RESCUE) rescue(); else if(sequence==AIZ_RETURN) aizReturn(); else reunion();
+        if(sequence==RESCUE){rescue();holdTailsCompanionPalette();}
+        else if(sequence==AIZ_RETURN)aizReturn();else reunion();
         if(sequence==REUNION) ram().scrollXFixed-=2<<16;
         if(sequence!=AIZ_RETURN)publishPlayer();
+    }
+    private void holdTailsCompanionPalette() {
+        // Obj_5D86A's post-dispatch writer applies even without a powered form.
+        var p=mainPlayer();if(tails()&&p!=null&&p.getSuperStateController() instanceof Sonic3kSuperStateController powered)
+            powered.holdEndingTailsCompanionPaletteTimer();
     }
     private void rescue() {
         switch(routine) {
@@ -295,7 +301,8 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
             case 12 -> {setX(getX()+4);if(getX()>=0x200){routine=14;timer=0x1F;}}
             case 14 -> {if((timer=(short)(timer-1))<0){routine=16;mappingFrame=2;flipX=false;hidePlayer=true;}}
             case 16 -> {setX(getX()-8);if(getX()<=0x160){routine=18;setX(0x160);S3kEndingCoordinator.beginPostCredits(services());}}
-            case 18 -> {if(ending().flag(3))ObjectLifetimeOps.deleteNoRespawn(this);}
+            case 18 -> {holdTailsCompanionPalette(); // loc_5E4E2 only, not the earlier reunion routines.
+                if(ending().flag(3))ObjectLifetimeOps.deleteNoRespawn(this);}
             default -> { }
         }
     }
