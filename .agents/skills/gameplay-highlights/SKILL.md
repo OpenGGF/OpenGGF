@@ -1,6 +1,6 @@
 ---
 name: gameplay-highlights
-description: Curate OpenGGF gameplay captures into an act-ordered moving highlights reel with a unified source archive and reproducible chapter map. Use for work compilations or refreshing footage after fixes, not individual capture or parity testing.
+description: Use for OpenGGF work compilations, promotional reels, mod showcases, or refreshing highlights after fixes; not individual capture or parity testing.
 ---
 
 # Gameplay work highlights
@@ -12,7 +12,7 @@ across games; it does not require an S3K bring-up or authorize engine changes.
 
 ## Collect evidence as work proceeds
 
-Use one explicit task directory outside the repository for durable media. Reuse
+Use one explicit task directory outside the engine repository for durable media. Reuse
 an existing task root when resuming. Give each scenario/version its own directory;
 never overwrite an earlier source capture when recording a correction.
 
@@ -89,6 +89,38 @@ cross incompatible H.264 configurations. Add chapters and fast-start metadata.
 Write a new output file; validate it before replacing an existing published reel.
 Keep the old deliverable if assembly or verification fails.
 
+## Archive production sources in OpenGGF-Media (required)
+
+Every delivered OpenGGF highlights reel, promo or showcase must publish its
+production sources and external asset catalog to the public
+[OpenGGF-Media repository](https://github.com/OpenGGF/OpenGGF-Media).
+This is part of reel delivery, including follow-up edits; a local task folder
+alone does not satisfy it. Use a separate media-repository checkout and follow
+its [archive policy](https://github.com/OpenGGF/OpenGGF-Media/blob/main/docs/archive-policy.md)
+and [rebuilding guidance](https://github.com/OpenGGF/OpenGGF-Media/blob/main/docs/rebuilding.md).
+
+- Reuse the production's stable `projects/<id>/` directory. Preserve earlier
+  revisions and identify final, superseded, rejected and unfinished material.
+- Store the blueprints/plans, capture drivers and commands, controller inputs,
+  preference recipes, original editing project files, assembly scripts, edit
+  lists, chapters, source-commit provenance and retained verification/decisions.
+  Document required dependencies and path relocation so the edit can be rebuilt.
+- Update the project index and the repository's project/root/source catalogs,
+  including source sizes and SHA-256 hashes. Catalogue footage, finished reels,
+  audio, artwork, frame sequences and bulk state data that remain external in
+  `catalog/assets.csv`, with their durable locations and root mappings. Never
+  imply that a catalog entry uploads or makes an external asset downloadable.
+- Keep ROMs, extracted ROM art/audio, recordings, frame dumps, packaged builds,
+  installed environments, temporary logs and credentials out of the commit.
+  Preserve original notices and review production sources for public exposure.
+- Run `python3 tools/catalog.py verify` from the media checkout, relevant source
+  syntax checks and index/link checks. Commit and push the integrated media
+  branch under the normal delivery rules; verify the remote commit and paths.
+
+Include the public production-directory link and archive commit in the delivery.
+If archiving or pushing fails, preserve the sources and report the exact unfinished
+state; do not claim the archive or reel delivery is complete.
+
 ## Verify and deliver
 
 - Inspect the manifest against actual source durations: no missing inputs,
@@ -103,7 +135,9 @@ Keep the old deliverable if assembly or verification fails.
 - Reconcile output duration with the edit list and confirm the chapter map points
   to the actual final sources. Keep full cold runs for uninterrupted reachability;
   editorial cuts cannot prove a continuous completion.
-- Deliver the reel link, duration, source-folder link and any material limits.
+- Complete the required OpenGGF-Media publication, then deliver the reel link,
+  duration, public production-directory link, archive commit, external source-folder
+  location and any material limits.
   Remove only known temporary encoding files after successful publication.
   Preserve source captures, inputs, state/provenance and the reproducible edit.
 
