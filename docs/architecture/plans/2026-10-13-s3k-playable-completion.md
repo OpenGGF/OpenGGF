@@ -1982,3 +1982,17 @@ These are separately qualified selections, not one current green1510 run.
 Native d726 screenshots retain missing beams at850 and do not certify original
 whole-scene pixels. Root affected verification and existing sky publication
 repair follow this composition; combined smoke/guards and delivery are pending.
+
+
+## Captured SSZ beam art qualification (2026-10-14)
+
+The actual generic recreation probe supplied HPZ's constructor art selector
+to an SSZ beam. Native slot/motion data restored, but192 prepared beam tiles
+were absent. Capturing the structural selector and retaining its native local
+priority removes the inherited sky replay failure. Literal negative6748 and
+final22/0/0/0 affected97786 with all five viewport replay products are recorded
+in the [SSZ matrix](../validation/levels/s3k-ssz-act1.md#beam-structural-art-and-complete-sky-replay-2026-10-14).
+Two actual Slot portal negatives remain correctly red on missing complete
+interior rewind; the next owner repair covers stage RAM, object rebinding and
+lifecycle exit state. Whole-scene original RGB, Tails1342, composed broad checks
+and destination integration/push remain pending.

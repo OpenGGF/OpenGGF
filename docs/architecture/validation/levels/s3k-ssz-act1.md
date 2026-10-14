@@ -1586,3 +1586,34 @@ the identical failure (1/1/0/0); all five priority candidate files are restored
 byte-identically after attribution. This inherited publication failure remains
 active owner work. Combined smoke/guards and integration/push remain pending.
 Consumed owned Maven redirects are removed after this durable account.
+
+
+## Beam structural art and complete sky replay (2026-10-14)
+
+The inherited prepared496→304 sky failure is repaired on17b47cb48 plus the
+beam draft. Passive table attribution67368 identifies192 missing SSZ beam
+tiles; unchanged motion/child fields concealed a constructor-only selector.
+Generic recreation's harmless parent-null probe chooses the HPZ art bank.
+The beam now captures its own native art selector and reconstructs from it,
+rejecting a missing selector. Ordinary SSZ transports likewise select the SSZ
+bank; native art-word bit15 remains1 there and0 in loc_45908's HPZ branch.
+Shared graphics policy, frame/scroll clocks and public snapshot shapes stay
+unchanged. Literal probe-art negative6748 fails1/1/0/0 at22:24:52 UTC.
+
+The corrected source's36057 at22:27:16 UTC completes11/2/0/0: all three beam
+cases and six original sky cases pass; the two separately authored actual
+Slot portal cases fail only the missing interior-rewind support obligation.
+The unmatched TestSszArrivalControllerNative selector contributes no tests.
+Final SSZ/HPZ affected97786 completes22:30:27 UTC,22/0/0/0,25.937s Maven:
+`TestTeleporterBeamRendering,TestS3kSszBackgroundClouds,TestS3kSszTeleporterPads,`
+`TestS3kHpzTeleporterHeadless`. All five actual viewport widths compare every
+registry key, both restoration directions and forward replay twice around
+120→121 ordinary frames. The captured motion, owning art bank and prepared
+picture survive together. Commands use the normal local queue, original
+absolute S3K ROM, EGL, null audio and no ambient desktop.
+
+Root composed load/deformation check65987 separately passes78 of79 tests
+at22:21:09 UTC (1:18); its one failure is the same now-repaired sky publication
+owner. Final22 is the bounded new repair gate; it is not a claimed green79
+rerun. The original RGB and1342 Tails pose limits above remain active.
+Consumed attribution/focused redirects are removed after this account.

@@ -155,9 +155,10 @@ class TestS3kSszBackgroundClouds {
     }
 
     /** Rewind spot: before, during and after the sky's first oscillator reversal. */
-    @Test
-    void theSkySurvivesACaptureRestoreAndForwardReplay() {
-        HeadlessTestFixture fixture = boot(320);
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {320, 352, 400, 528, 800})
+    void theSkySurvivesACaptureRestoreAndForwardReplay(int width) {
+        HeadlessTestFixture fixture = boot(width);
         fixture.stepIdleFrames(120);
 
         var registry = fixture.gameplayMode().getRewindRegistry();
@@ -165,12 +166,18 @@ class TestS3kSszBackgroundClouds {
         fixture.stepIdleFrames(1);
         CompositeSnapshot after = registry.capture();
 
-        registry.restore(before);
-        same(before, registry.capture(), "restore");
-        fixture.runner().primeInputState(
-                new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, ""));
-        fixture.stepIdleFrames(1);
-        same(after, registry.capture(), "forward replay");
+        for (int cycle = 0; cycle < 2; cycle++) {
+            registry.restore(before);
+            same(before, registry.capture(), "restore");
+            fixture.runner().primeInputState(
+                    new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, ""));
+            fixture.stepIdleFrames(1);
+            same(after, registry.capture(), "forward replay");
+            registry.restore(before);
+            same(before, registry.capture(), "backward restore");
+            registry.restore(after);
+            same(after, registry.capture(), "forward restore");
+        }
     }
 
     /**
@@ -213,7 +220,7 @@ class TestS3kSszBackgroundClouds {
     private static void same(CompositeSnapshot a, CompositeSnapshot b, String label) {
         assertEquals(a.entries().keySet(), b.entries().keySet(), label);
         for (String key : a.entries().keySet()) {
-            assertTrue(RewindSnapshotDiff.diffKey(key, a.get(key), b.get(key)).isEmpty(),
+            assertTrue(RewindSnapshotDiff.keyEquals(key, a.get(key), b.get(key)),
                     () -> label + " " + key + ": "
                             + RewindSnapshotDiff.diffKey(key, a.get(key), b.get(key)));
         }

@@ -3,8 +3,8 @@
 Remaining S3K parity follow-up (2026-10-14, delivery in progress): native
 SSZ cloud priority and the RINGS ROM glyph have73 focused passing checks and
 viewed emulator/engine pictures; three diagnostic-bin pictures match, while
-original RGB, the1342 Tails pose and a matched sky publication replay failure
-remain open in the [local evidence](../architecture/validation/levels/s3k-ssz-act1.md#native-cloud-priority-and-rings-glyph-2026-10-14). The
+original RGB and the1342 Tails pose remain open; the inherited sky publication
+replay failure now passes all five supported widths in the [local evidence](../architecture/validation/levels/s3k-ssz-act1.md#native-cloud-priority-and-rings-glyph-2026-10-14). The
 [SSZ matrix](../architecture/validation/levels/s3k-ssz-act1.md#corrected-cold-incoming-world-qualification-2026-10-14)
 qualifies corrected native320 and paired800 cold incoming-world boundaries,
 with50/44 whole-world replay windows. The subsequent native companion arrival

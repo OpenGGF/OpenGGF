@@ -35,6 +35,8 @@ Unreleased. The earlier development themes remain in
   overlap band, retaining the relative landing write before floor reset.
   Its clouds and collapsing columns retain native foreground priority, and
   the HUD RINGS label uses its dedicated ROM R glyph.
+  Teleporter beams retain the selected ROM art bank through recreation,
+  including SSZ transport priority and whole-sky rewind publication.
   Slot bonus-stage layouts, player starts, prize/reel tables and cell animations
   load from the runtime ROM, with no copied asset fallback; panel publication
   retains its allocation-free path.

@@ -5732,3 +5732,19 @@ array getters can still allocate on every draw: give package-owned read-only
 consumers stable immutable views and retain the independent allocation oracle.
 Origin:2026-10-14 Slot resource repair over0a05aa118; native SlotBonusLayout,
 Slots_CycleOptions, sub_4C7A2 and sub_4B592.
+
+
+## Recreation probes do not supply structural art selectors
+
+ObjectRewindDynamicCodecs may construct a harmless default instance before
+calling recreateForRewind. TeleporterBeam's parent-null constructor selects
+HPZ art, while native Obj_57C1E selects the SSZ art bank. Reading that probe's
+final artKey recreated equal motion/child RAM with invisible columns. Capture
+the owning art selector in the per-object extra and construct from that value;
+fail closed if it is absent. Native Obj_TeleporterBeam's default art word is
+make_art_tile(ArtTile_SSZMisc+$88,3,1); loc_45908 changes HPZ to priority0.
+SSZ transport and fully expanded arrival retain priority1 independently of
+bucket1. Five-width whole-world replay and a literal harmless-HPZ-probe negative
+verify both the structural art and the publication, not merely object counts.
+Origin:2026-10-14 SSZ sky496→304 prepared tiles on17b47cb48; asm91244–91265
+and116772–116786.

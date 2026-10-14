@@ -268,8 +268,7 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
                 || sprite.getDead() || sprite.isDebugMode()) {
             return;
         }
-        beam = spawnChild(() -> new TeleporterBeamObjectInstance(
-                new ObjectSpawn(x, y, 0, 0, 0, false, 0), this));
+        beam = spawnChild(() -> createTransportBeam());
         if (beam == null) {
             return;
         }
@@ -318,6 +317,12 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
             sinkOffset--;
         }
         return false;
+    }
+
+    private TeleporterBeamObjectInstance createTransportBeam() {
+        var spawn = new ObjectSpawn(x, y, 0, 0, 0, false, 0);
+        return isSkySanctuary() ? TeleporterBeamObjectInstance.sszTransportBeam(spawn, this)
+                : new TeleporterBeamObjectInstance(spawn, this);
     }
 
     /** {@code loc_456F4}. */
@@ -527,8 +532,7 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
         if (!altarActivated) {
             return;
         }
-        beam = spawnChild(() -> new TeleporterBeamObjectInstance(
-                new ObjectSpawn(x, y, 0, 0, 0, false, 0), this));
+        beam = spawnChild(() -> createTransportBeam());
         if (beam == null) {
             return;
         }
