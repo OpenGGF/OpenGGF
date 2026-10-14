@@ -168,3 +168,9 @@ The completed run above verifies the final production source. Import/editor
 focused coverage, fresh required S3K coverage and the affected structural guards
 pass. The wider combined run retains only the precisely attributed baseline
 ordering failure described above; no release-only full suite was run.
+
+Implementation commit: `13d8aee7757df4f6eb050646fe3e3200ea2ad178`, developed in
+`.worktrees/ai-editor-import-screen` from destination `88fc03dac`. The completed
+final run tested the source now in that commit. This follow-up records its
+identity without changing production code; integration can compare the tracked
+tree directly and reuse that bounded verification.
