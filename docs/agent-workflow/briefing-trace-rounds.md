@@ -71,6 +71,14 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Snapshot equality and its diagnostic walker must inspect the same captured
+content (2026-10-14, AIZ retained-scene qualification). Cross-package private
+record access was silently skipped by the walker, while top-level arrays and
+opaque state blobs could compare fresh equal arrays by Java identity. A known
+mismatch could therefore return an empty diff; equal native state could fail a
+world replay. Use the complete content comparator, make private access explicit,
+and fail closed on inspection failure. Never remove a registry key to get a pass.
+
 A performance-only flock does not isolate shared-worktree test jobs
 (2026-10-13, P5 CPU audit). Another task's queued Maven run overlapped a
 negative timing pair; its result was excluded and a preliminary rejection
