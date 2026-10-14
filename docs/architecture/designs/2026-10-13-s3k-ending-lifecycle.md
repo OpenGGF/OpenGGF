@@ -1062,3 +1062,72 @@ this core does not claim absent child progression from derived parent defaults.
 Across these focused selectors there are41 distinct cases (repeated pressure and
 facade checks are not new coverage). Whole legal graph pressure and native scene
 pixel/audio comparison remain pending; this evidence does not close them.
+
+
+### Actual managed ending graph under continuation pressure (2026-10-14)
+
+The allocation worker fast-forwarded its clean tree from core
+`ae632fe2a6eec9bece7cafb4f2643c74365565c3` to the coordinator's qualified native
+child graph `1c8cfbe33`. New `TestS3kEndingNativeGraphPressure` uses real D01
+production phases and fills only free slots with actual IslandLift owners.
+Fragmentation admits the native prefix once, with the final child at global
+SST93: two flame subtypes, propeller, passenger, Master passenger, small
+propeller, small Master, and the fixed Tornado's separately allocated pilot,
+for both Sonic and Tails. Attributes are literal retail values from
+`Obj_5EB32`, `loc_5ECB4`, `word_600F2/600F8/600FE/60110` and the native parent
+copy rules, independently of the field projection being tested. The byte-RAM
+oracle binds the five partial writes in `Create_Continue_Sprite`; the engine
+retains the child's actual headers/cursor/fractions and numeric identity.
+Every case executes two old-owner/replacement full-world restore cycles and
+forward replay. No synthetic sentinel supplies scene residue.
+
+The physical-alias case admits catcher93 through the real fixed Tornado8,
+then follows native `_unkFAA4` into Master48's parent3. Master reads the
+replacement's X/Y before and after the new IslandLift initializer, rather than
+the displaced catcher's Java fields. Two full-registry class/identity restore
+cycles retain the alias. Displacement leaves the old object undestroyed and
+keeps its numeric object identity; it does not call native deletion/onUnload.
+This is declared allocation-pressure evidence, not an observed cold campaign
+or arbitrary 74-byte SST export. Fixed Tornado8/Master48 cannot be SST93 victims
+at these D01 calls. Knuckles-only primary children have no continuation caller:
+`loc_5DD6A` explicitly skips Player_mode3. The existing real cloud and palette
+helper pressure cases remain separate complementary evidence.
+
+The first request43234 on `1c8cfbe33` plus test blob
+`6c0215f1ef0610339c5361ae2863faa549485d65` completed at09:33:32 BST:17 tests,
+12 passed, five assertion failures, zero errors/skips;1:13 Maven. Four failures
+were fixture assumptions that all90 owners remain after small-group admission:
+the native flag4 retires four earlier large children later in that same object
+pass, leaving86. The fifth compared catcher93's just-updated Y against
+Master48's earlier read. The corrected fixture asserts the four real
+retirements, declares the subsequent full-table helper boundary explicitly,
+and compares the catcher value actually available before Master48 executes.
+No runtime timing, state or allocation behavior changed.
+
+Corrected test blob `a790f70589fad4c003f4f53322426589aadb58f9` passed all15
+affected cases in19591 at09:35:55 BST,31.519s Maven, zero failures/errors/skips.
+The two unchanged pilot cases already passed43234; these results qualify17
+distinct graph-pressure cases, not32 new cases. On the identical composed
+runtime, the complete existing continuation core class passes11/0/0/0 in7093
+at09:38:14 BST,26.058s Maven. All commands used Java25, the local normal queued
+wrapper and the original locked-on ROM through its absolute property; no
+smoke/full suite or graphics acceptance is claimed.
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestS3kEndingNativeGraphPressure' '-Ds3k.rom.path=<MAIN_WORKSPACE>/Sonic and Knuckles & Sonic 3 (W) [!].gen' test
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestS3kEndingNativeGraphPressure#admittedNativeGroupPreservesRealChildResidueAndBothRewindDirections+nativeMasterCatcherAliasReadsPhysicalSuccessorBeforeAndAfterFirstDispatchAndRestoresTwice' '-Ds3k.rom.path=<MAIN_WORKSPACE>/Sonic and Knuckles & Sonic 3 (W) [!].gen' test
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestS3kEndingContinuationPressure' '-Ds3k.rom.path=<MAIN_WORKSPACE>/Sonic and Knuckles & Sonic 3 (W) [!].gen' test
+```
+
+Native scene pixels, PAL and full PCM acceptance remain open. The independently
+specified VInt0/RNG0 setup was frozen before observations in the owned external
+`declared-scene-spec-v1.json` (SHA256
+`82b6458c4e86a5b0d63fa8b25f3513b02675f4aa5c5e5d3f8493430c95320f68`).
+The historical SSZ input clock410766 originated from a native RAM comparison
+and is not reused as an independent setup. The exact official BizHawk2.11
+archive (`cdaf9650d880bae660d63a388430f630b8d8a96b1ba59ebf0e0195a645c3bab8`)
+and immutable host/core bytes are separately owned/pinned. The trace host's
+ordinary Advance passes video=false; a video-enabled capture/observation port
+must establish current framebuffer and publication semantics before pixel
+acceptance. Prepared RAM SAT/palette and published VRAM SAT/CRAM are distinct.
+Historical film, input, source-index and capture-index bytes remain untouched.
