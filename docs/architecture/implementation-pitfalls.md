@@ -1719,3 +1719,13 @@ in both collision buffers after a real checkpoint death/title boundary
 clearing identity tables and reusing slots. Do not hide missing identities,
 replace them with new slot occupants, or suppress every native pending-delete
 actor: the response-list eligibility owner retains its own native predicate.
+
+**Identity-map iteration is not captured gameplay order.** Recreated players have
+different Java identity hashes. Capturing an `IdentityHashMap` of player keys
+verbatim can swap serialized associations after restore even though every key
+resolves to the right participant. The AIZ2 S2-Tails/800/seven-Sonic entry
+exposed refs3/5 swapping in AutoSpin state (2026-10-14). Encode this unordered
+map in stable `PlayerRefId` order; preserve key/value pairs, null keys, the live
+identity map and explicitly ordered maps. A deterministic changed-bucket-order
+fixture checks replacement identities and duplicate character labels in both
+restore directions. Never filter snapshot bytes to hide this discrepancy.

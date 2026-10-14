@@ -18,6 +18,8 @@ Unreleased. The earlier development themes remain in
   while previews and seamless continuations preserve their sequence.
   Initial touch publication follows each object's native range/deletion tail,
   and a full object-table reset retires both collision buffers before slot reuse.
+  Identity-keyed participant contact maps encode stable team IDs through
+  recreation while preserving their live associations and ordered-map behavior.
 
 - **S3K badniks:** Monkey Dude retains five independent arm and hand objects,
   their physical predecessor links, native dispatch and retirement order, and
