@@ -97,6 +97,17 @@ public final class LaunchConfigPanel {
         this.font = font;
     }
 
+    /** Non-null while this game is suspended: true when it was paused in a level. */
+    private Boolean pausedInLevel;
+
+    /**
+     * This game is suspended behind the master title. Rewind, debug tools and (in a level) aspect
+     * reach it when it resumes; the rest of the setup waits for its next start.
+     */
+    public void setPausedGame(boolean inLevel) {
+        pausedInLevel = inLevel;
+    }
+
     /** Names of enabled mods that apply to this game, shown read-only in the Mods row. */
     public void setEnabledMods(List<String> names) {
         enabledMods = List.copyOf(Objects.requireNonNull(names, "names"));
@@ -364,6 +375,7 @@ public final class LaunchConfigPanel {
         List<String> lines = new ArrayList<>();
         List<float[]> colors = new ArrayList<>();
         if (item != null) describe(item, lines, colors);
+        if (item != null && item != Item.MODS && pausedInLevel != null) describePaused(item, lines, colors);
         MenuChrome.descriptionBox(font, 8, DESC_Y, w - 16, DESC_H, lines, colors);
         if (item == Item.MODS) {
             MenuChrome.hints(font, 14, keyLineY(lines.size()), List.of(MenuChrome.hint(MenuChrome.confirmKey(lastInput), "MANAGE MODS")),
@@ -436,6 +448,15 @@ public final class LaunchConfigPanel {
                 lines.add("together, in the mod manager.");
             }
         }
+    }
+
+    /** Whether the suspended game takes this row on resume (see LiveSettings). */
+    private void describePaused(Item item, List<String> lines, List<float[]> colors) {
+        boolean live = item == Item.REWIND || item == Item.DEBUG || item == Item.ASPECT && pausedInLevel;
+        while (colors.size() < lines.size()) colors.add(null);
+        lines.add(live ? "Your paused game takes this when it resumes."
+                : "Applies when you next start " + entry.menuLabel + ".");
+        colors.add(live ? MenuChrome.CYAN : MenuChrome.DIM);
     }
 
     private String effective(LaunchToggle toggle, SonicConfiguration allGames) {

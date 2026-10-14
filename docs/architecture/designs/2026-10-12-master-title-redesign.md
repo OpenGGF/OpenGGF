@@ -316,3 +316,66 @@ and the stock-card scenes were inspected for regressions. The change-based plan 
 GameLoop and Engine are shared, so this is focused consumer validation, not a smoke
 or full-suite pass. Engine's GL-side suspend, thumbnail and resume path has no
 automated test; it needs an interactive playtest.
+
+
+## In-flight settings for a suspended game (2026-10-15)
+
+James asked for the settings that are easy to apply mid-game (aspect, debug, rewind and
+others that make sense) to reach a suspended game on resume, without a reload.
+
+- **`LiveSettings` is the single list.** A setting is listed only when its readers take
+  a new value without a reload. Rewind (`LiveRewindManager` reads it per frame and
+  installs the recorder lazily), debug tools (read per frame; Engine's cached copy is
+  refreshed on resume), the editor flag, rewind history length and tear bands, all key
+  bindings (looked up when pressed through `InputBindingFactory`'s supplier),
+  controller settings, wide camera movement (re-read by `Camera.refreshViewportDimensions`),
+  automatic window size and capture settings (read when a recording starts). Aspect is
+  listed only when the game was paused in a level.
+- **Not listed**, so pinned until the next launch: characters and Borrow from (the
+  player objects and donor content are built at launch), ROMs, audio backend settings
+  and region, frame rate (Engine reads it once), Discord (PresenceManager reads it once),
+  the rewind VHS effect (its pass exists only if enabled at boot) and tape-coast tuning.
+- **Resume = a fresh launch for live keys.** `SuspendedSettings.resume` asks
+  `LaunchProfileApplier` what a launch of this game would set now (saved preferences
+  plus its Game Setup profile), applies those values to live keys and pins the rest.
+  The paused card gained a Game Setup button. Its rows, and every Settings row, say
+  whether the paused game takes the change.
+- **Mid-level aspect.** Width was cached at level load in `LevelManager`
+  (screen size and debug overlay), `ParallaxManager` (final per-column VScroll arrays)
+  and `BackgroundRenderer` (column buffer, which outlives sessions). `Engine.applyResolvedDisplayDimensions`
+  now also calls `LevelManager.refreshDisplayDimensions`, which resizes parallax,
+  rebuilds the debug context and resizes the shared background column buffer. Level
+  loads resize that buffer too, which fixes a pre-existing bug: a later game at a
+  wider aspect lost background column scroll past the first game's width. The resize
+  sits in `LevelManager` because ArchUnit's frozen layering rule forbids graphics
+  calling the level render package (a first attempt in `GraphicsManager` failed
+  `low_level_layers_do_not_depend_on_runtime_layers`). `LevelManager`, `ParallaxManager`
+  and `BackgroundRenderer` are `@ModApi` classes, so the new methods are package-private.
+  The engine reaches them through unannotated `LevelDisplayWidth` and
+  `BackgroundRendererWidth`, and the candidate Mod API surface and its pin are unchanged.
+  Creators never resize the display.
+  `rebuildLevelDerivedState` was rejected for this: it also rebuilds the tilemap
+  manager, which does not depend on width.
+  Title, special-stage and ending screens size themselves on entry, so a new aspect
+  waits for a level there.
+
+Evidence. `AspectSwitchProbeTool` loads a level at 4:3, holds right for 60 frames,
+switches to 16:9 through those hooks, runs 60 more frames and renders. For S1 GHZ1 and
+SBZ1, S2 EHZ1, HTZ1 and CPZ1, and S3K AIZ1, HCZ1 and MGZ1, the frame is pixel-identical
+to a native 16:9 start with the same input (0 differing pixels). The `stale` negative
+control, refreshing only the camera, differs by 18,665 to 62,071 pixels per zone (AIZ
+draws the level against the old width and loses the waterfall), so the comparison
+does detect missing hooks. In `TestGameLoopSuspension`, rewind switched on mid-level
+in S2 EHZ rewinds, and stops at the frame it was enabled. A mid-level 16:9 change gives
+a 400-pixel camera and 25 parallax columns, and the level keeps running.
+`TestSuspendedSettings` covers settings saved in the hub, Game Setup for the paused
+game, aspect in and out of a level, and characters staying as launched. The capture
+tool's paused scenes 24–28 show the Game Setup button and the row status lines.
+Validation: the consumer selection above plus Game Setup, Settings, configuration,
+camera, parallax, background and level-manager tests passed 635 tests with no skips;
+`run_categories.py --category rendering` (with common, 471 classes) ran 3,003 tests with
+0 failures, 4 errors and 19 skips. All 4 errors are `UnsatisfiedLinkError` for the Linux
+surfaceless-EGL library on macOS, in palette-presentation classes this change does not
+touch; they were not checked against a baseline. The skips need an offscreen GL context
+or opt-in properties. `-Pguards` passed 108 tests after the layering fix. These
+results are not a full smoke pass.

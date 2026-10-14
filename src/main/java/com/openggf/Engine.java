@@ -1086,6 +1086,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		graphicsManager.applyResolvedDisplayWidth((int) projectionWidth);
         var camera = GameServices.cameraOrNull();
         if (camera != null) camera.refreshViewportDimensions(configService);
+        var level = GameServices.levelOrNull();
+        if (level != null) com.openggf.level.LevelDisplayWidth.refresh(level);
 
 		if (glfwInitialized && window != 0L) {
 			DisplayWindowFit.apply(window, configService.getBoolean(SonicConfiguration.DISPLAY_WINDOW_AUTOSIZE),
@@ -1654,7 +1656,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			LOGGER.warning("Suspending without part of its state: " + failure.getMessage());
 		}
 		pendingSuspend = new SuspendedGame.Pending(audio,
-				SuspendedGame.card(game.code(), SuspendedGame.location(mode, zone, world.getApparentAct() + 1)));
+				SuspendedGame.card(game.code(), mode, SuspendedGame.location(mode, zone, world.getApparentAct() + 1)));
 		pendingSuspendThumbnail = null;
 		suspendThumbnailRequested = true;
 		return true;
@@ -1691,7 +1693,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		LOGGER.info("Suspended " + pending.card().menuLabel() + " to the master title");
 	}
 
-	/** After the master title fades out: restore the settings, picture size, camera and music. */
+	/**
+	 * After the master title fades out: restore the settings (live ones take their new values, see
+	 * {@code LiveSettings}), then the picture size, camera and music.
+	 */
 	private void resumeSuspendedGame() {
 		SuspendedGame game = suspendedGame;
 		if (game == null) return;
@@ -1700,7 +1705,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			masterTitleScreen.cleanup();
 			masterTitleScreen = null;
 		}
-		game.settings().resume(configService);
+		game.settings().resume(configService, game.card().game().game(), game.mode() == GameMode.LEVEL);
 		refreshLaunchSessionCachedConfig();
 		gameLoop.suspension.unpark(game.mode());
 		applyResolvedDisplayDimensions();

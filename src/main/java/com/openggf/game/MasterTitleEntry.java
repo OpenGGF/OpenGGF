@@ -32,9 +32,10 @@ public sealed interface MasterTitleEntry
 
     /**
      * A stock game left with a held Escape and kept in memory. Its card sits first on the shelf
-     * and resumes the game; it is never launched, so it has no {@link Launch}.
+     * and resumes the game; it is never launched, so it has no {@link Launch}. {@code inLevel}
+     * says it was paused in a level, where a new aspect can take effect on resume.
      */
-    record Suspended(Stock game, String location) implements MasterTitleEntry {
+    record Suspended(Stock game, String location, boolean inLevel) implements MasterTitleEntry {
         public Suspended {
             Objects.requireNonNull(game, "game");
             location = location == null ? "" : location;

@@ -100,9 +100,10 @@ final class SuspendedGame {
         return out.toString();
     }
 
-    static MasterTitleEntry.Suspended card(String gameCode, String location) {
+    static MasterTitleEntry.Suspended card(String gameCode, GameMode mode, String location) {
         return new MasterTitleEntry.Suspended(
-                new MasterTitleEntry.Stock(MasterTitleScreen.GameEntry.fromGameId(gameCode)), location);
+                new MasterTitleEntry.Stock(MasterTitleScreen.GameEntry.fromGameId(gameCode)), location,
+                mode == GameMode.LEVEL);
     }
 
     /**

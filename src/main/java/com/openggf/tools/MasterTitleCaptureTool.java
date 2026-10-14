@@ -75,7 +75,12 @@ public final class MasterTitleCaptureTool {
                 new Scene("20-paused-end-button", List.of(down, right), 40),
                 new Scene("21-paused-start-other", List.of(right, enter), 20),
                 new Scene("22-paused-quit", List.of(esc), 20),
-                new Scene("23-paused-resume-flash", List.of(enter), 3));
+                new Scene("23-paused-resume-flash", List.of(enter), 3),
+                new Scene("24-paused-setup-button", List.of(down, right), 40),
+                new Scene("25-paused-setup-rewind", List.of(down, right, enter, down, down, down, down), 20),
+                new Scene("26-paused-setup-character", List.of(down, right, enter), 20),
+                new Scene("27-paused-settings", List.of(up, right, enter), 20),
+                new Scene("28-paused-settings-row", List.of(up, right, enter, down), 20));
 
         GLFWErrorCallback.createPrint(System.err).set();
         if (!glfwInit()) throw new IllegalStateException("Unable to initialize GLFW");
@@ -109,7 +114,7 @@ public final class MasterTitleCaptureTool {
                         List.of("Widescreen+", "HUD Tweaks")));
                 if (paused != null && scene.name().contains("paused")) {
                     screen.setSuspendedGame(new MasterTitleEntry.Suspended(
-                                    new MasterTitleEntry.Stock(MasterTitleScreen.GameEntry.SONIC_2), "Emerald Hill, Act 1"),
+                                    new MasterTitleEntry.Stock(MasterTitleScreen.GameEntry.SONIC_2), "Emerald Hill, Act 1", true),
                             paused.width(), paused.height(), rgba(paused));
                 }
                 InputHandler input = new InputHandler();

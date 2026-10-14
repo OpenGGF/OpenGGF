@@ -94,6 +94,14 @@ public final class EngineSettingsScreen {
         this.tabs = scope.tabs;
     }
 
+    /** Set while a game is suspended behind the master title: says which saved changes reach it. */
+    private java.util.function.Predicate<SonicConfiguration> pausedGameTakes;
+
+    /** A game is suspended: the description box says whether each setting reaches it on resume. */
+    public void setPausedGame(java.util.function.Predicate<SonicConfiguration> appliesOnResume) {
+        pausedGameTakes = appliesOnResume;
+    }
+
     public void update(InputHandler input) {
         if (input == null || closeRequested) return;
         ticks++;
@@ -328,7 +336,8 @@ public final class EngineSettingsScreen {
                     CAPTURE_OUTPUT_DIR, CAPTURE_CONTAINER -> "After saving: used for the next recording.";
             // LaunchProfileApplier only overrides these for games whose setup is not Default.
             case LIVE_REWIND_ENABLED, DEBUG_VIEW_ENABLED, DISPLAY_ASPECT ->
-                    "Used by every game whose Game Setup says Default. Takes effect at the next game start.";
+                    "Used by every game whose Game Setup says Default. Takes effect at the next game start,"
+                            + " or when a paused game resumes (aspect: a game paused in a level).";
             default -> "Saved when you leave Settings. Restart the engine to ensure this setting takes effect.";
         };
     }
@@ -541,7 +550,8 @@ public final class EngineSettingsScreen {
         List<float[]> colors = new ArrayList<>();
         if (tabsFocused) {
             lines.add(tabSummary(tabs[category]));
-            lines.add("These settings apply to every game.");
+            lines.add(pausedGameTakes == null ? "These settings apply to every game."
+                    : "Every game; your paused game takes some on resume.");
             colors.add(null);
             colors.add(MenuChrome.DIM);
         } else {
@@ -551,10 +561,18 @@ public final class EngineSettingsScreen {
                 descriptionWidth = width;
                 descriptionLines = MenuDetailsScreen.wrapText(MenuDetailsScreen.readable(description), (width - 28) / 6);
             }
-            for (int i = 0; i < 2 && i < descriptionLines.size(); i++) lines.add(descriptionLines.get(i));
-            if (descriptionLines.size() > 2) {
-                String last = lines.get(1);
-                lines.set(1, MenuChrome.fitCompact(last + "...", width - 28));
+            // With a paused game the second line says whether it takes the change; Details has the rest.
+            int rows = pausedGameTakes == null ? 2 : 1;
+            for (int i = 0; i < rows && i < descriptionLines.size(); i++) lines.add(descriptionLines.get(i));
+            if (descriptionLines.size() > rows) {
+                String last = lines.get(rows - 1);
+                lines.set(rows - 1, MenuChrome.fitCompact(last + "...", width - 28));
+            }
+            if (pausedGameTakes != null) {
+                boolean live = pausedGameTakes.test(selected());
+                while (colors.size() < lines.size()) colors.add(null);
+                lines.add(live ? "Your paused game takes this when it resumes." : "Applies when you next start a game.");
+                colors.add(live ? MenuChrome.CYAN : MenuChrome.DIM);
             }
         }
         MenuChrome.descriptionBox(font, 8, DESC_Y, width - 16, DESC_H, lines, colors);

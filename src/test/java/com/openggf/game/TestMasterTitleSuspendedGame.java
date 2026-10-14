@@ -18,7 +18,7 @@ class TestMasterTitleSuspendedGame {
     @TempDir Path directory;
 
     private static final MasterTitleEntry.Suspended SONIC_2_EHZ = new MasterTitleEntry.Suspended(
-            new MasterTitleEntry.Stock(MasterTitleScreen.GameEntry.SONIC_2), "EMERALD HILL 1");
+            new MasterTitleEntry.Stock(MasterTitleScreen.GameEntry.SONIC_2), "Emerald Hill, Act 1", true);
 
     private final AtomicInteger ended = new AtomicInteger();
 
@@ -42,8 +42,8 @@ class TestMasterTitleSuspendedGame {
         assertEquals(SONIC_2_EHZ, entries.getFirst());
         assertEquals(4, entries.size(), "S1, S2 and S3K stay on the shelf");
         assertEquals("s2", screen.getSelectedGameId());
-        assertEquals(List.of(TitleHubNavigation.Action.RESUME, TitleHubNavigation.Action.END),
-                screen.hubActionsForTest());
+        assertEquals(List.of(TitleHubNavigation.Action.RESUME, TitleHubNavigation.Action.SETUP,
+                TitleHubNavigation.Action.END), screen.hubActionsForTest());
     }
 
     @Test void enterOnThePausedCardResumesInsteadOfLaunching() {
@@ -90,7 +90,8 @@ class TestMasterTitleSuspendedGame {
     @Test void endGameButtonRemovesTheCardAndSelectsTheSameStockGame() {
         var screen = screenWithSuspendedGame();
         press(screen, GLFW_KEY_DOWN);
-        press(screen, GLFW_KEY_RIGHT); // Resume, then End game
+        press(screen, GLFW_KEY_RIGHT);
+        press(screen, GLFW_KEY_RIGHT); // Resume, Game Setup, then End game
         press(screen, GLFW_KEY_ENTER);
         assertTrue(screen.isEndPromptOpenForTest());
         press(screen, GLFW_KEY_DOWN);

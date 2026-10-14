@@ -507,7 +507,7 @@ public class MasterTitleScreen {
                 // A host without an in-title manager screen opens it elsewhere: resume at once.
                 if (modManagerScreen == null) launchConfigPanel.resumeAfterMods();
             } else if (result == LaunchConfigPanel.Result.CLOSED) {
-                MasterTitleEntry.Stock stock = (MasterTitleEntry.Stock) selectedEntry();
+                MasterTitleEntry.Stock stock = stockOf(selectedEntry());
                 try {
                     launchProfileStore.save(stock.game(), launchConfigPanel.currentProfile());
                     launchConfigPanel = null;
@@ -927,7 +927,7 @@ public class MasterTitleScreen {
     private void showActionError(String action) {
         if (selectedEntry() == null) { showUnavailableAction("No games are available. Check Mods and Settings."); return; }
         if (selectedEntry() instanceof MasterTitleEntry.Suspended paused) {
-            showUnavailableAction(action + " is on the " + paused.menuLabel() + " card; changes apply to your next game");
+            showUnavailableAction(action + " is on the " + paused.menuLabel() + " card");
         } else if (selectedEntry() instanceof MasterTitleEntry.Stock stock && !isEntryAvailable(stock)) {
             launchErrorTitle = null;
             launchErrorDetail = null;
@@ -938,8 +938,23 @@ public class MasterTitleScreen {
                 : "Could not open " + action.toLowerCase(java.util.Locale.ROOT));
     }
 
+    /** The stock game a card sets up: its own, or the one a paused card holds. */
+    private static MasterTitleEntry.Stock stockOf(MasterTitleEntry entry) {
+        return entry instanceof MasterTitleEntry.Suspended paused ? paused.game()
+                : entry instanceof MasterTitleEntry.Stock stock ? stock : null;
+    }
+
+    /** Settings say which saved changes reach the paused game on resume. */
+    private void markPausedGame(EngineSettingsScreen screen) {
+        if (suspended != null) {
+            boolean inLevel = suspended.inLevel();
+            screen.setPausedGame(key -> com.openggf.game.launch.LiveSettings.appliesOnResume(key, inLevel));
+        }
+    }
+
     private void openSettings() {
         settingsScreen = new EngineSettingsScreen(configService, font);
+        markPausedGame(settingsScreen);
         playConfirmSound();
         childInputPending = true;
     }
@@ -977,6 +992,7 @@ public class MasterTitleScreen {
         actions.replaceAll(this::endingSuspendedFirst);
         actions.add(new ToolAction("Advanced settings", "Debug, Discord and other expert settings", () -> {
             settingsScreen = new EngineSettingsScreen(configService, font, EngineSettingsScreen.Scope.ADVANCED);
+            markPausedGame(settingsScreen);
             childInputPending = true;
         }));
         actions.add(new ToolAction("Controls / help", "How the menus and shortcuts work", () -> helpOpen = true));
@@ -994,10 +1010,12 @@ public class MasterTitleScreen {
 
     /** Opens Game Setup for the selected stock game, optionally focused on one row. */
     private boolean openLaunchOptions(com.openggf.game.launch.LaunchProfile.Row focusRow) {
-        if (!(selectedEntry() instanceof MasterTitleEntry.Stock stock) || !isEntryAvailable(stock)) return false;
+        MasterTitleEntry.Stock stock = stockOf(selectedEntry());
+        if (stock == null || !isEntryAvailable(stock) && !(selectedEntry() instanceof MasterTitleEntry.Suspended)) return false;
         launchConfigPanel = new LaunchConfigPanel(stock.game(), launchProfileStore.load(stock.game()),
                 launchProfileStore, configService, font, renderer);
         launchConfigPanel.setEnabledMods(enabledModsByGame.getOrDefault(stock.game(), List.of()));
+        if (selectedEntry() instanceof MasterTitleEntry.Suspended paused) launchConfigPanel.setPausedGame(paused.inLevel());
         if (focusRow != null) launchConfigPanel.focus(focusRow);
         playConfirmSound();
         childInputPending = true;
@@ -1265,7 +1283,7 @@ public class MasterTitleScreen {
 
     private List<TitleHubNavigation.Action> hubActions() {
         if (selectedEntry() instanceof MasterTitleEntry.Suspended)
-            return List.of(TitleHubNavigation.Action.RESUME, TitleHubNavigation.Action.END);
+            return List.of(TitleHubNavigation.Action.RESUME, TitleHubNavigation.Action.SETUP, TitleHubNavigation.Action.END);
         return selectedEntry() instanceof MasterTitleEntry.Standalone
                 ? List.of(TitleHubNavigation.Action.START)
                 : List.of(TitleHubNavigation.Action.START, TitleHubNavigation.Action.SETUP,
@@ -1611,8 +1629,11 @@ public class MasterTitleScreen {
         String summary = hubSummary(entry, chips);
         MenuChrome.compact(font, MenuChrome.fitCompact(summary, w - 16),
                 (w - Math.min(w - 16, MenuChrome.compactWidth(summary))) / 2, SUMMARY_Y, MenuChrome.MUTED);
-        if (entry instanceof MasterTitleEntry.Suspended) {
-            String legend = MenuChrome.fitCompact("Settings you change apply to your next game", w - 16);
+        boolean setupFocused = navigation.zone() == TitleHubNavigation.Zone.ACTIONS
+                && focusedAction() == TitleHubNavigation.Action.SETUP; // its summary already says this
+        if (entry instanceof MasterTitleEntry.Suspended paused && !setupFocused) {
+            String legend = MenuChrome.fitCompact(paused.inLevel() ? "Aspect, rewind, debug and controls apply on resume"
+                    : "Rewind, debug and controls apply on resume", w - 16);
             MenuChrome.compact(font, legend, (w - MenuChrome.compactWidth(legend)) / 2, LEGEND_Y, MenuChrome.DIM);
         }
         if (anyAmber && entry != null) {
@@ -1645,9 +1666,13 @@ public class MasterTitleScreen {
     private String hubSummary(MasterTitleEntry entry, List<HubSetupChips.Chip> chips) {
         if (entry == null) return "Add a game in Settings > Files or Mods";
         String game = entry.menuLabel();
-        if (entry instanceof MasterTitleEntry.Suspended && navigation.zone() != TitleHubNavigation.Zone.TABS)
-            return navigation.zone() == TitleHubNavigation.Zone.ACTIONS && focusedAction() == TitleHubNavigation.Action.END
-                    ? "End your paused " + game + " game" : "Carry on with " + game + " where you left it";
+        if (entry instanceof MasterTitleEntry.Suspended paused && navigation.zone() != TitleHubNavigation.Zone.TABS) {
+            TitleHubNavigation.Action action = navigation.zone() == TitleHubNavigation.Zone.ACTIONS ? focusedAction() : null;
+            if (action == TitleHubNavigation.Action.END) return "End your paused " + game + " game";
+            if (action == TitleHubNavigation.Action.SETUP)
+                return (paused.inLevel() ? "Rewind, debug and aspect" : "Rewind and debug") + " apply when you resume";
+            return "Carry on with " + game + " where you left it";
+        }
         return switch (navigation.zone()) {
             case CARD -> entry instanceof MasterTitleEntry.Stock && isEntryAvailable(entry)
                     ? HubSetupChips.startSummary(game, chips) : "Start " + game;
@@ -1660,7 +1685,7 @@ public class MasterTitleScreen {
             };
             case TABS -> switch (navigation.tab()) {
                 case MODS -> "Turn mods on or off for all games";
-                case SETTINGS -> suspended != null ? "For all games; your paused game keeps its own"
+                case SETTINGS -> suspended != null ? "For all games; some reach your paused game"
                         : "Display, sound, controls and more for all games";
                 case EXTRAS -> "Extra modes added by your mods";
                 case ADVANCED -> "Trace replays, advanced settings and help";

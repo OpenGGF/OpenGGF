@@ -37,10 +37,10 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
     // Optional per-line BG VScroll deltas (added on top of vscrollFactorBG).
     private final short[] vScrollPerLineBG = new short[VISIBLE_LINES];
     // Per-column VScroll buffer size: ceil(screenWidth / 16). 20 at native 320px.
-    private final int BG_VSCROLL_COLUMN_COUNT;
-    private final short[] vScrollPerColumnBG;
-    private final int FG_VSCROLL_COLUMN_COUNT;
-    private final short[] vScrollPerColumnFG;
+    private int BG_VSCROLL_COLUMN_COUNT;
+    private short[] vScrollPerColumnBG;
+    private int FG_VSCROLL_COLUMN_COUNT;
+    private short[] vScrollPerColumnFG;
 
     public ParallaxManager() {
         int screenWidth;
@@ -57,6 +57,24 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
 
     private static int columnCount(int width) {
         return (width + 15) / 16;
+    }
+
+    /** Per-column VScroll entries: one per 16 pixels of the picture width. */
+    int vScrollColumnCount() {
+        return BG_VSCROLL_COLUMN_COUNT;
+    }
+
+    /**
+     * Resizes the per-column VScroll tables after the picture width changes mid-level (a game
+     * resumed from the master title at a new aspect). Column values are refilled every frame.
+     */
+    void resizeForDisplayWidth(int screenWidth) {
+        int columns = columnCount(Math.max(1, screenWidth));
+        if (columns == BG_VSCROLL_COLUMN_COUNT && columns == FG_VSCROLL_COLUMN_COUNT) return;
+        BG_VSCROLL_COLUMN_COUNT = columns;
+        FG_VSCROLL_COLUMN_COUNT = columns;
+        vScrollPerColumnBG = new short[columns];
+        vScrollPerColumnFG = new short[columns];
     }
 
     private boolean hasPerLineVScrollBG = false;

@@ -7,6 +7,8 @@ import com.openggf.graphics.RgbaImage;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSuspendedGame {
 
@@ -43,10 +45,12 @@ class TestSuspendedGame {
 
     @Test
     void cardIsTheStockGameItCameFrom() {
-        MasterTitleEntry.Suspended card = SuspendedGame.card("s3k", "Special Stage");
+        MasterTitleEntry.Suspended card = SuspendedGame.card("s3k", GameMode.SPECIAL_STAGE, "Special Stage");
 
         assertEquals(new MasterTitleEntry.Stock(MasterTitleScreen.GameEntry.SONIC_3K), card.game());
         assertEquals("s3k", card.gameId());
         assertEquals("Sonic 3K", card.menuLabel());
+        assertFalse(card.inLevel(), "a new aspect waits for a level");
+        assertTrue(SuspendedGame.card("s2", GameMode.LEVEL, "").inLevel());
     }
 }

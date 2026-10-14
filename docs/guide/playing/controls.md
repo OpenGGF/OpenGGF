@@ -213,9 +213,18 @@ waits as a **Paused** card, showing the moment you left, first on the game shelf
 **Resume** (or Enter on the card) carries on from exactly that moment, music included;
 **End game** closes it. Starting another game, watching a recording, changing mods or
 opening an extra, trace replays, editor projects or content import asks before ending
-the paused game, and **Keep it paused** is the default. Settings and Game Setup can be
-changed while a game is paused; the paused game keeps the settings it was running
-with, and the changes apply to the next game you start. Recordings, trace replays,
+the paused game, and **Keep it paused** is the default.
+
+Settings and Game Setup stay open while a game is paused, and the paused card has its
+own **Game Setup** button. When you resume, the game takes your changes to **rewind**,
+**debug tools**, **controls** (key bindings and controller), **wide camera movement**,
+the window's **automatic size** and **capture** settings, and, if you paused in a level,
+the **aspect ratio**. Everything else (characters, Borrow from, ROMs, sound, region,
+frame rate) is part of how the game was started and applies the next time you start
+it. Each row's description says which applies: *Your paused game takes this when it
+resumes* or *Applies when you next start a game*. Rewind switched on mid-game records
+from the moment you resume, so you can rewind back to there but not further.
+Recordings, trace replays,
 editor playtests, mod scenes and standalone mod games still close when you hold Escape.
 
 Mod scenes and standalone mod games often use a tap of Escape themselves (for

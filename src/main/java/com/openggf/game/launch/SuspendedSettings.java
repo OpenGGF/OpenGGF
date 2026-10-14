@@ -2,6 +2,7 @@ package com.openggf.game.launch;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.game.MasterTitleScreen;
 
 import java.util.Collections;
 import java.util.EnumMap;
@@ -11,9 +12,10 @@ import java.util.Set;
 
 /**
  * The settings a game suspended to the master title was running with. The hub runs on the
- * player's saved preferences, as it does after a normal return; Settings, Game Setup and Mods
- * saved there apply to the next launch. Resuming pins every value the paused game read so it
- * carries on unchanged.
+ * player's saved preferences, as it does after a normal return. On resume the settings in
+ * {@link LiveSettings} take their new values, exactly as a fresh launch of the game would set
+ * them (saved preferences plus the game's own Game Setup profile); every other value the paused
+ * game read is pinned, so those changes wait for the next launch.
  *
  * <p>Built from the public configuration surface only, so the Mod API surface of
  * {@link SonicConfigurationService} is unchanged.
@@ -53,17 +55,41 @@ public final class SuspendedSettings {
     }
 
     /**
-     * Restores the paused game's overrides and pins any value saved in the hub since, so the
-     * game reads exactly what it read before. The next launch clears these overrides.
+     * Restores the paused game's settings for resuming {@code game}. Live settings take the values
+     * a fresh launch would set now; the rest are pinned to what the game was running with. The
+     * next launch clears these overrides. {@code inLevel} admits a new aspect (see
+     * {@link LiveSettings}).
      */
-    public void resume(SonicConfigurationService config) {
+    public void resume(SonicConfigurationService config, MasterTitleScreen.GameEntry game, boolean inLevel) {
         Objects.requireNonNull(config, "config");
+        Objects.requireNonNull(game, "game");
+        Map<SonicConfiguration, Object> fresh = freshLaunchValues(config, game, inLevel);
         config.clearSessionOverrides();
         overrides.forEach(config::setSessionOverride);
         effective.forEach((key, value) -> {
+            if (fresh.containsKey(key)) return;
+            if (!Objects.equals(config.getConfigValue(key), value)) config.setSessionOverride(key, value);
+        });
+        fresh.forEach((key, value) -> {
             if (!Objects.equals(config.getConfigValue(key), value)) config.setSessionOverride(key, value);
         });
         config.resolveDisplayAspect();
+    }
+
+    /** The live settings as MasterTitleLaunchCoordinator.prepareExit would leave them for this game. */
+    private static Map<SonicConfiguration, Object> freshLaunchValues(SonicConfigurationService config,
+                                                                     MasterTitleScreen.GameEntry game, boolean inLevel) {
+        config.clearSessionOverrides();
+        LaunchProfileStore store = new LaunchProfileStore(config);
+        new LaunchProfileApplier(config).apply(store.load(game), game, store);
+        Map<SonicConfiguration, Object> fresh = new EnumMap<>(SonicConfiguration.class);
+        for (SonicConfiguration key : SonicConfiguration.values()) {
+            Object value = config.getConfigValue(key);
+            if (value != null && !NOT_PINNED.contains(key) && LiveSettings.appliesOnResume(key, inLevel)) {
+                fresh.put(key, value);
+            }
+        }
+        return fresh;
     }
 
     Map<SonicConfiguration, Object> overridesForTest() {

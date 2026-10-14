@@ -124,6 +124,66 @@ class TestGameLoopSuspension {
     }
 
     @Test
+    void rewindSwitchedOnMidLevelRecordsFromThenAndRewinds() {
+        var config = loop.configService;
+        boolean before = config.getBoolean(SonicConfiguration.LIVE_REWIND_ENABLED);
+        try {
+            config.setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, false);
+            int right = config.getInt(SonicConfiguration.RIGHT);
+            input.handleKeyEvent(right, GLFW_PRESS);
+            steps(30);
+            int enabledAt = fixture.sprite().getCentreX();
+
+            config.setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, true); // what resume applies
+            steps(90);
+            input.handleKeyEvent(right, GLFW_RELEASE);
+            int ranTo = fixture.sprite().getCentreX();
+            assertTrue(ranTo > enabledAt + 16, "Sonic kept running after rewind was switched on");
+
+            int rewindKey = config.getInt(SonicConfiguration.LIVE_REWIND_KEY);
+            input.handleKeyEvent(rewindKey, GLFW_PRESS);
+            steps(240);
+            input.handleKeyEvent(rewindKey, GLFW_RELEASE);
+            steps(2);
+
+            int rewoundTo = fixture.sprite().getCentreX();
+            assertTrue(rewoundTo < ranTo - 16, "holding rewind stepped back: " + ranTo + " -> " + rewoundTo);
+            assertTrue(rewoundTo >= enabledAt - 2,
+                    "history starts when rewind was switched on, not at the level start: " + rewoundTo);
+        } finally {
+            config.setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, before);
+        }
+    }
+
+    @Test
+    void aspectChangedMidLevelResizesTheCameraLevelAndParallax() {
+        var config = loop.configService;
+        steps(10);
+        try {
+            config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, "WIDE_16_9");
+            config.resolveDisplayAspect();
+            // Engine.applyResolvedDisplayDimensions' runtime half, as on resume.
+            gameplay.getCamera().refreshViewportDimensions(config);
+            com.openggf.level.LevelDisplayWidth.refresh(gameplay.getLevelManager());
+
+            assertEquals(400, gameplay.getCamera().getWidth());
+            assertEquals(25, com.openggf.level.LevelDisplayWidth.parallaxColumns(com.openggf.game.GameServices.parallax()),
+                    "a per-column VScroll entry for every 16 pixels of the wider picture");
+            int right = config.getInt(SonicConfiguration.RIGHT);
+            input.handleKeyEvent(right, GLFW_PRESS);
+            int x = fixture.sprite().getCentreX();
+            steps(120);
+            input.handleKeyEvent(right, GLFW_RELEASE);
+            assertTrue(fixture.sprite().getCentreX() > x, "the level runs on at the new width");
+        } finally {
+            config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
+            config.resolveDisplayAspect();
+            gameplay.getCamera().refreshViewportDimensions(config);
+            com.openggf.level.LevelDisplayWidth.refresh(gameplay.getLevelManager());
+        }
+    }
+
+    @Test
     void escapeHeldDuringAnActiveRecordingKeepsTheFullReturn() {
         loop.userRecordingSessionLauncher.beginRecordingFromCurrentLevel();
         assertFalse(loop.suspension.suspendable(), "a recording owns its own ending");

@@ -713,8 +713,16 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   replace the paused game (another game's Start, Recordings, Mods, Extras, trace
   replays, editor projects, content import) asks first, defaulting to *Keep it paused*,
   and Quit warns that the paused game will end. Settings and Game Setup stay
-  available; the paused game keeps the settings it was running with and changes
-  apply to the next launch. Recordings, traces, hosted runs, editor playtests, mod
+  available, with a Game Setup button on the paused card: on resume the game takes
+  new rewind, debug tools, controls, wide camera movement, automatic window size and
+  capture settings, and, if paused in a level, a new aspect ratio (the camera, level,
+  parallax and background widths are refreshed in place; renders after a mid-level
+  switch match a native start pixel for pixel in GHZ, SBZ, EHZ, HTZ, CPZ, AIZ, HCZ and
+  MGZ). Settings and Game Setup rows say whether the paused game takes them; the rest
+  (characters, Borrow from, ROMs, sound, region, frame rate) apply to the next launch.
+  Fixed: the background renderer's per-column scroll buffer kept the width of the
+  first game played, so a later game at a wider aspect lost column scroll beyond it.
+  Recordings, traces, hosted runs, editor playtests, mod
   scenes and standalone games keep the full return. In mod scenes and standalone mod
   games a tap of Escape reaches the mod without the toast, which appears only after a
   quarter-second hold. Mouse hover, click and wheel work across
