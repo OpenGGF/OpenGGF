@@ -1324,3 +1324,42 @@ Original identity-verified absolute S1/S2/S3K paths execute without ROM skips.
 Only the normal S2 controller and its direct regression are committed in this
 repair; the physical matrix and its corrected production fade driver remain
 separate qualification work. No public API or snapshot shape changes.
+
+### Single fade ownership in captures and actual death drivers
+
+A read-only peer review found that GameplayCaptureSession.step explicitly
+retained the older direct-level UI fade tick even though HeadlessGameBoot
+attaches a runtime-ready context and GameLoop's PLC lifecycle owns the same
+manager. Live Engine already guards its UI fallback with
+`!loop.ownsGameplayFadeLifecycle()`. Root's actual-session59550 red confirms
+frameCount2 after one presentation of an independently started90-frame fade,
+expected1. The request completes9 tests,2 failures,0 errors/skips at
+11:40:56 UTC (25.826s Maven): the other failure is the invalid LRZ1 post5
+left-wall approach; seven contact/two-death witnesses pass with the corrected
+loop-only death driver. No tests or runtime values are supplied by native rows.
+
+The direct capture now uses Engine's existing ownership predicate for every
+launch. Title-first behavior is unchanged; pre-runtime UI fallback remains.
+A separate local post5 setup approaches from the open right ledge, preserving
+the literal8px horizontal activation window, untouched-post assertion and
+actual contact. Universal64px and post5-left32px approaches were rejected as
+terrain setup failures, not repaired in gameplay.
+
+On `be23fffb5` (qualified Route79630ebd entry/early-donor composition),49253
+passes48/0/0/0 at11:45:57 UTC (1:23 Maven): open-right post5 real contact and
+two deaths1; actual direct fade owner1; deferred destination1; native S1/S2
+omitted-title movement2; fully drawn title/data-select/results consumers8;
+data-select launch3; configured donor entry28; S3K ending entry4. The command:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestLrzSszCheckpointRoutes#lrz1PostFiveHasARealContactAndDeathBoundary,TestGameplayCaptureFadeOwnership,TestGameplayCaptureFreshLoad,TestGameplayCaptureSkippedTitles,TestGameplayCaptureFrameRendering,TestGameplayCaptureDataSelectLaunch,TestGameplayCaptureDonorEntry,TestGameplayCaptureS3kEndingEntry' "-Dsonic1.rom.path=$S1_TASK_ROM" "-Dsonic2.rom.path=$S2_TASK_ROM" "-Ds3k.rom.path=$S3K_TASK_ROM" test -B
+```
+
+All three original absolute ROM paths execute, with no skips. Root separately
+composes the qualified camera guard4fd998fa9 as22d5e6ffc. Its final combined
+capture-boundary consumers, complete880 physical products and affected cold
+route timing remain pending. Short placement/contact checks run before the
+independent ordinary SSZ opening and the long product method. The four duplicate
+frontier diagnostic parameters are removed; the distinct post5 terrain witness
+remains. This source repair does not certify historical movies under the new
+driver or native whole-scene/PCM parity.
