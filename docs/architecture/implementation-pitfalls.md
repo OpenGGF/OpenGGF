@@ -1738,3 +1738,13 @@ map in stable `PlayerRefId` order; preserve key/value pairs, null keys, the live
 identity map and explicitly ordered maps. A deterministic changed-bucket-order
 fixture checks replacement identities and duplicate character labels in both
 restore directions. Never filter snapshot bytes to hide this discrepancy.
+
+**A capture does not need a second fade owner.** The runtime-ready GameLoop's
+PLC lifecycle already services the FadeManager once per presentation, exactly
+as the live Engine. A direct GameplayCaptureSession formerly also called its
+UI pipeline, giving frameCount2 after one step of an actual90-frame fade
+(2026-10-14). Use the existing production ownership predicate for the UI
+fallback. The same rule applies to death/reload helpers: external manual fade
+ticks can trigger fresh assembly outside its logical iteration. Preserve input
+cadence and requalify affected cold routes after repairing a driver; do not fit
+runtime timing or silently retain the accelerated protocol for old inputs.
