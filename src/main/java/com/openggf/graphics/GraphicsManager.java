@@ -371,12 +371,13 @@ public class GraphicsManager {
 	private final java.util.IdentityHashMap<Object,Integer> presentationTrailBanks=new java.util.IdentityHashMap<>();
 	private final java.util.IdentityHashMap<Object,Long> presentationTrailGenerations=new java.util.IdentityHashMap<>();
 	private long nextPresentationTrailGeneration;
-	/** One bank per live owner; four poses, each with at most 256 distinct frozen tiles. */
+	private static final int PRESENTATION_TRAIL_BANK_SIZE = 24 * 256;
+	/** One bank per live owner; 24 poses, each with at most 256 distinct frozen tiles. */
 	int presentationTrailBank(Object owner) {
 		java.util.Objects.requireNonNull(owner);
 		var existing=presentationTrailBanks.get(owner);if(existing!=null)return existing;
 		var range=PatternAtlasRange.PRESENTATION_TRAILS;
-		for(int base=range.base();base<range.endExclusive();base+=1024) {
+		for(int base=range.base();base+PRESENTATION_TRAIL_BANK_SIZE<=range.endExclusive();base+=PRESENTATION_TRAIL_BANK_SIZE) {
 			// Owners use identity, but reserved numeric addresses must use value equality.
 			boolean occupied=false;
 			for(int assigned:presentationTrailBanks.values())if(assigned==base){occupied=true;break;}
@@ -389,7 +390,7 @@ public class GraphicsManager {
 	void releasePresentationTrailBank(Object owner) {
 		Integer base=presentationTrailBanks.remove(owner);if(base==null)return;
 		presentationTrailGenerations.remove(owner);
-		for(int id=base;id<base+1024;id++) {
+		for(int id=base;id<base+PRESENTATION_TRAIL_BANK_SIZE;id++) {
 			uncachePattern(id);
 			if(patternAtlas!=null)patternAtlas.releaseScenePatternSample(id);
 		}
