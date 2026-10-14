@@ -768,3 +768,239 @@ contracts remain unchanged. It is not a whole-suite qualification.
   lock after inspecting the classpath plugin's no-fork lifecycle descriptor;
   the earlier queued build was cancelled before execution. Byte checks cover
   every packaged Ogg, preserved provenance and absence of shipped WAV masters.
+
+
+## Announcement trigger recovery — 2026-10-14
+
+The user's Windows ZIP feedback concerned missing announcements without a
+remembered specific event. The preceding native bank check proved all 122 Ogg
+clips could decode and produce final PCM when played individually; it did not
+prove gameplay queue admission. The new investigation pins base
+`5b2ff8e7851b99dd40998dfc41fbfd21c80031ef`. All 122 lines have source trigger
+references, and the announcer source is unchanged from the delivered October 9
+ZIP. Two independent loss paths were reproduced in the actual packaged mod:
+
+- `Voice.update` removed a request and began its cooldown even when
+  `SceneAudio.playSfx` returned false. A single startup event could disappear
+  before the prepared host accepted it. The original request now remains in
+  the existing bounded/expiring queue; only accepted playback starts its lease
+  and cooldown.
+- Hull/shield/pulse hysteresis flags were set when the condition was observed,
+  before the queue admitted or played the clip. A crowded queue or muting pending
+  speech could therefore suppress the ongoing warning until the system recovered.
+  The flags now latch only after accepted playback. Existing recovery thresholds,
+  priorities, duplicate coalescing, queue size, expiry, mute and clip spacing remain.
+
+Baseline `maven_queue.py --lean -B -Dmse=off
+-Dtest=TestEggmansSkyVoice,TestEggmansSkyVoiceAssets test` passed nine cases
+without failures/errors/skips. Three added regressions then failed on unchanged
+production code: rejected one-time playback remained silent, re-enabled speech
+lost the queued hull warning, and persistent low pulse was forgotten after equal-
+priority queue pressure. The mute regression also checks shield and pulse states
+in its successful run. With the correction, those two suites passed 12 cases.
+
+A further integration control uses the real validator, preparation factory,
+session view, namespaced engine request and final live PCM capture. It requests
+`SYSTEMS_ONLINE` before installation, then installs the prepared bank without
+reissuing the event. Restoring only the baseline `Voice.java` produces one
+ordinary assertion failure: the original announcement never reaches mixed PCM
+(two asset-suite cases, one failure, zero errors/skips). The unchanged 122-clip
+bank check still passes in that negative control. The first attempt at the added
+integration control had a test-setup descriptor type error and executed no tests;
+it was corrected before the behavioral negative was measured.
+
+The change-based runner selects all 3,253 smoke candidate classes through its
+unclassified example fallback. Focused validation is proportionate here: only
+this mod's private announcer changes; engine/audio algorithms, SDK/API, timing,
+POM, workflows, decoder and all encoded clip bytes are unchanged. Five focused
+suites cover queue regression, cold-to-prepared final PCM, the full bank, scene
+lifecycle, expedition/UI behavior and ROM-backed startup audio. Java 25 / Lua 5.4 /
+PowerShell preflight passes with `LUA_BIN=lua5.4`; default Lua was rejected before
+tests. ROM-backed checks use rehashed original absolute paths, and routine GL
+checks use `-Dopenggf.headless.gl=surfaceless-egl`. This is bounded validation,
+not a release full-suite claim. No full suite is requested or run.
+
+The final five-suite command completed 2026-10-14 09:04:36Z, Maven exit 0:
+53 cases, zero failures/errors/skips, at the pinned base plus the corrected mod
+and two regression test files. Exact fresh suite identities were read from its
+terminal log and matched to reports; earlier negative-control reports are not
+counted. `TestEggmansSkyVoice` has 11 cases, the asset/real-PCM suite has two,
+and the remaining 40 exercise scene, quality-of-life and original-ROM startup
+paths. The actual cold-to-prepared PCM regression passes with the correction.
+The command uses `maven_queue.py --lean -B -Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl
+-Dtest=TestEggmansSkyVoice,TestEggmansSkyVoiceAssets,TestEggmansSkyScene,TestEggmansSkyQualityOfLife,TestEggmansSkyStartupAudio test`,
+plus all three rehashed original absolute ROM properties. The reported Maven
+execution time is 47.128 seconds; queue waiting was separate (approximately five
+minutes by the wrapper notices).
+
+Terminal Windows qualification, publication and refreshed ZIP evidence
+will follow. Because the reported event was not remembered, these reproduced
+losses cannot be attributed to a specific announcement from the user's session.
+The intentional warning cooldowns, wanted-state coalescing and stale-message
+expiry still mean not every event produces an immediate spoken message.
+
+
+### Native retention follow-up
+
+The announcer correction integrated without conflict as
+`4a0e714d5e29b65a5b1ba8e6cbb6a8223f560c75`, with production/test input bytes
+identical to the 53-case focused run. Its first fresh Windows workflow
+[38540745692](https://github.com/OpenGGF/OpenGGF/actions/runs/38540745692)
+completed all 680 structural guard cases without failures/errors/skips but
+rejected the image before packaging:
+the runtime-loaded bootstrap control aborted with `Unable to call AOT method`
+for `java.nio.file.Path.of(String, String[])`. Metadata audit alone passed;
+the callable body was absent. This is a native build-input failure, separate
+from the confirmed mod queue faults, and no failed image was delivered.
+
+The contract had scanned only maintained mod JARs, while the separate runtime
+control's JDK calls depended on those mods continuing to reference their packages.
+Both experimental builders now scan a private union of shipped mod JARs and the
+compiled bootstrap-control JAR. This derives retention from the control's actual
+bytecode, including `Path.of`, instead of adding a guessed package whitelist.
+The control remains outside image analysis and outside the shipped mod/quick-mod
+sets. Shared staging preserves immutable input bytes, rejects name collisions,
+and is exercised by the packaging regression. This adds no normal engine/API/
+POM/workflow change. The 53-case mod result remains reusable on unchanged inputs;
+actual retention generation and native runtime controls validate the added build
+correction directly, with the workflow's fresh guard gate still mandatory.
+
+
+An initial standalone retention diagnostic ran without the worktree build lease
+or shared admission. Its `javac` PID 20164 was observed at 09:44:15Z and caused
+an independently owned native-memory diagnostic to stop safely. The compiler's
+exact process interval is unknown; generated class writes were at
+09:44:15.116–09:44:15.232Z. No foreign processes or locks were changed. Although
+the local script completed, its results are excluded from qualification. The
+same generator, bootstrap-only scan/audit and packaging checks are resubmitted
+through normal `maven_queue.py exec:exec` admission and the worktree lease.
+
+The bootstrap-only regression uses **zero shipped mod JARs**: it requires the
+exact `Path.of` method and `java.nio.file` preservation while excluding
+`nativecontrol` classes from retained engine members. This tests the observed
+missing dependency without incidental references from any current example.
+Windows and Linux packaging controls also check that the fixture enters retention
+inputs but never shipped mod/quick-mod directories. Build-only Java 25 packaging
+passed under the wrapper's worktree lease. No engine suite is repeated for this
+standalone input correction; a new Windows workflow must still qualify callable
+native bodies.
+
+The leased requalification completed 2026-10-14 09:58:45Z with Maven exit 0:
+`maven_queue.py -B -Dmse=off exec:exec -Dexec.executable=python3
+-Dexec.args=target/run_retention_checks.py`. It passed the generator's standalone
+regressions, bootstrap-only exact-member assertions and 16,431-entry/1,300-type
+audit, plus three Windows and three Linux packaging cases. The complete check
+held normal shared admission and the worktree lease; Maven execution was 2.436
+seconds, after queue waiting. The script and raw diagnostics are disposable
+outputs, not archived evidence. Changes integrated upstream since the announcer
+fix affect Second Strike and its S3K art/monitor consumers; the tested announcer
+and audio/test inputs remain unchanged. Those upstream changes are preserved
+in the next image and receive the workflow's own gates and native gameplay checks.
+
+### Refreshed Windows image qualification
+
+The retention correction integrated conflict-free and published as
+`485e89fbea5a2587b763052f0db115986ca681ce`, after preserving the separately
+integrated Second Strike changes. Windows workflow
+[38546428448](https://github.com/OpenGGF/OpenGGF/actions/runs/38546428448)
+completed successfully: the Windows job finished 10:12:24Z and fresh guards
+finished 10:14:09Z, with 680 cases and zero failures/errors/skips. The new
+executable passes the actual separately loaded bootstrap control, including
+file operations; the previously absent `Path.of` body is therefore exercised
+on Microsoft Windows. Its 18,192-entry/1,469-type audit passes, deliberate missing
+field/method controls fail with ordinary exit 1, all 25 shipped mods match their
+JVM registration results, and native development-source boot/batch launcher
+checks pass. The scanned 26th JAR is the disposable bootstrap fixture, not a
+shipped mod.
+
+The downloaded immutable artifact is source-pinned to that commit and SHA-256
+`e303626fbb6690a8023b017b75efc5195d20ab96a2dc668bb2a772769ca718e6`.
+Its Windows executable SHA-256 is
+`123610afc2574cf048dc2a054a9794981850d0c12365e775a24a644679e0277c`.
+Representative rendered gameplay, full voice-bank PCM and matched old/corrected
+announcer controls are submitted together through normal admission and the
+worktree lease, using an owned isolated Xvfb display rather than the shared
+desktop. Terminal results and the delivered ZIP checksum remain pending.
+
+The first leased Wine run admitted after 121 seconds and stopped with ordinary
+exit 1 after 38.185 seconds, at the same immutable Windows image. Act Practice
+and Eggman's Sky passed; all 122 voice clips reached final mixed PCM (minimum
+peak 17,272, minimum range 26,146). The next mod, Example Mutators, threw
+`AbstractMethodError` at `Sonic3kMutatorPolicyProvider.open`: its prepared catalog
+projection invokes `MutatorCatalog.hasDefinitions`, whose implementation was
+absent from the retention manifest. Registration and metadata for directly named
+members do not cover this engine-created service dispatch. This image is not
+qualified as a complete friends bundle and is not delivered.
+
+Both builders now include every implementation of the semantic prepared/transient
+mutator service and world-policy provider/state interfaces, alongside `GameModule`.
+The existing generator includes anonymous/unreferenced implementations and their
+method-owning ancestors automatically; this is not a concrete-class whitelist.
+A bootstrap-only matched contract control confirms that the old selection omits
+`MutatorCatalog.hasDefinitions()Z`, and that the new policy roots retain and audit
+it. It passed under normal admission at 10:21:27Z (Maven 3.332 seconds), with the
+standalone generator controls and six portable packaging cases. A further shared
+runtime bootstrap regression constructs the engine catalog reflectively and
+invokes its prepared policy projection, so the Windows builder exercises this
+callable body without ROMs. Its implementation class is named only as a string;
+creator bytecode therefore cannot incidentally supply its retention. Native
+gameplay of the full updated bundle is still required.
+
+The final updated fixture/selection check passed at 10:29:22Z under normal
+admission and the worktree lease, after 353 seconds of queue waiting and 3.408
+seconds of Maven execution. `maven_queue.py -B -Dmse=off exec:exec
+-Dexec.executable=python3 -Dexec.args=target/run_policy_retention_final_checks.py`
+compiled and executed the actual bootstrap fixture on Java 25, passed the
+matched omission/retention assertion for `hasDefinitions`, audited the corrected
+17,999-entry/1,413-type bootstrap-only contract, and passed the standalone
+generator regressions and six Windows/Linux packaging cases. Actual Windows
+dispatch and all-mod gameplay on the rebuilt image remain pending; the prior
+image's successes do not qualify changed native bodies.
+
+The policy correction integrated and published as
+`5e8961ffbc4ea532edea159b23ce36c0ffb1ebf5`. Workflow
+[38550048115](https://github.com/OpenGGF/OpenGGF/actions/runs/38550048115)
+passed: fresh guards completed 10:45:05Z with 680 cases and zero failures/errors/
+skips; Windows completed 10:47:52Z after the actual reflected catalog projection,
+the original JDK bootstrap controls, 25 JVM/native registrations and shortcut
+checks passed. The generated contract retains 1,446 engine types with 19,461
+member entries; its scanned 26th JAR is again the unshipped fixture. The downloaded
+ZIP hash is `0771a40e298f02e3aaf3e29c6043f70861ff05c4b7f02dafa64cdeddc75ae4d4`,
+and the executable hash is
+`bcede08a878ca5e64601e44a4a0561dd25835b1f250338fb965fb366fc63aef5`.
+Both source pins and the published artifact checksum match. The previous partial
+capture outputs were accounted for and discarded; terminal gameplay/audio/queue
+controls and the clean delivered ZIP checksum will follow from this image.
+
+The next leased Wine run (128-second wait, 37.979-second execution) exercised
+the restored catalog dispatch but stopped on a second erased-factory omission:
+`HudRenderManager.timerWarning` invoked an unretained anonymous
+`HudWarningPolicyProvider.isTimerWarning(int)`. Act Practice and Eggman's Sky,
+including all 122 final PCM samples, still passed. The 5e8961ffb image is likewise
+withheld from delivery; its builder/guard successes alone do not certify gameplay.
+
+Adding each anonymous class to the root list was rejected as brittle. The opt-in
+`--service-factories` generator now scans actual bytecode of retained Class-keyed
+factories whose erased descriptor is `(Class)Object`, repeating to a fixed point
+for newly discovered service-bearing classes. It uses the existing exact member/
+handle/constant reference scanner and preserves original class bytes. Normal
+generator mode and production engine/build/API inputs are unchanged. Explicit
+semantic roots still cover the world-policy graph; arbitrary string reflection
+and generated classes remain outside static inference. Execution coverage is
+therefore still mandatory, rather than treating metadata lookup as invocation.
+
+A new ASM fixture reproduces the omission before discovery, then requires its
+anonymous returned implementation's method and exact class bytes afterward. It
+also rejects retention of an unrelated class. The real bootstrap regression now
+constructs the module reflectively, obtains its HUD warning service through the
+actual factory, and checks timer/flash behavior alongside the prepared catalog.
+The final local control passed at 11:00:23Z with zero queue wait and 4.074 seconds
+of Maven execution under normal admission and the worktree lease:
+`maven_queue.py -B -Dmse=off exec:exec -Dexec.executable=python3
+-Dexec.args=target/run_factory_retention_final_checks.py`. Generator regressions,
+actual Java-25 bootstrap execution, a 20,821-entry/1,583-type bootstrap-only audit,
+exact HUD-member assertions, and all six portable packaging cases passed. The
+earlier discovery check also passed (65-second wait, 4.138-second execution).
+The next image must still pass actual Windows controls and full representative
+mod gameplay before the ZIP can be delivered.

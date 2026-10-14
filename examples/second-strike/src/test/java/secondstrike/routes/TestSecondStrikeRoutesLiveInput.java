@@ -13,6 +13,7 @@ final class TestSecondStrikeRoutesLiveInput {
     private int lastX = -1;
     private int stationary;
     private boolean jump, charge, chargeJump, boost, waitingForFollowup, followupSeen;
+    private boolean guardJump;
     private int priorFollowup = -1;
 
     Bk2FrameInput next(AbstractPlayableSprite player, int frame) {
@@ -24,6 +25,9 @@ final class TestSecondStrikeRoutesLiveInput {
                 .map(AizMinibossInstance.class::cast).findFirst().orElse(null);
         boolean bossActive = boss != null && GameServices.gameState().getCurrentBossId() != 0;
         int mask = bossActive ? INPUT_RIGHT : traverse(player, x);
+        if (!bossActive && Boolean.getBoolean("secondstrike.route.hard_enemy_author")) {
+            mask = approachGuard(player, mask);
+        }
         var cutscene = objects.stream().filter(AizMinibossCutsceneInstance.class::isInstance)
                 .map(AizMinibossCutsceneInstance.class::cast).findFirst().orElse(null);
         if (cutscene != null && cutscene.getState().routine >= 4) {
@@ -89,6 +93,27 @@ final class TestSecondStrikeRoutesLiveInput {
     private static int steer(AbstractPlayableSprite player, int target, int tolerance) {
         int dx = target - (player.getCentreX() & 0xffff);
         return dx > tolerance ? INPUT_RIGHT : dx < -tolerance ? INPUT_LEFT : 0;
+    }
+
+    /** Optional controller authoring only; the exported recipe contains pad rows, not observations. */
+    private int approachGuard(AbstractPlayableSprite player, int ordinaryMask) {
+        if (player.isObjectControlled() || player.isControlLocked()) return ordinaryMask;
+        var guard = GameServices.level().getObjectManager().getActiveObjects().stream()
+                .filter(object -> object.getClass().getName().equals("secondstrike.enemies.GuardBadnik"))
+                .filter(object -> !object.isDestroyed()
+                        && Math.abs(object.getX() - player.getCentreX()) < 128
+                        && Math.abs(object.getY() - player.getCentreY()) < 72)
+                .min(java.util.Comparator.comparingInt(object -> Math.abs(object.getX() - player.getCentreX())))
+                .orElse(null);
+        if (guard == null) {
+            guardJump = false;
+            return ordinaryMask;
+        }
+        // Stay above a committed charge, then approach its recovery with real jump edges.
+        // Health, movement, collision and rewards are never written by this author.
+        if (!player.getAir()) guardJump = !guardJump;
+        charge = false;
+        return steer(player, guard.getX(), 8) | (guardJump ? INPUT_JUMP : 0);
     }
 
     private static int readInt(Object owner, String name) {

@@ -11,6 +11,8 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.PoweredScreenAttackable;
 import com.openggf.level.objects.TerrainSurface;
+import com.openggf.level.objects.TouchResponseResult;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 
 import java.util.List;
 
@@ -26,12 +28,98 @@ abstract class SecondStrikeBadnik extends AbstractBadnikInstance
     protected int targetY;
     protected int xFraction;
     protected int yFraction;
+    protected int remainingHits;
+    private int hitCooldown;
+    private boolean awaitingSeparation;
+    private boolean companion;
+    private boolean parentDefeated;
+    private int parentAnchorX;
+    private int parentAnchorY;
+    private int parentLayoutIndex;
 
-    protected SecondStrikeBadnik(ObjectSpawn spawn, String name) {
+    protected SecondStrikeBadnik(ObjectSpawn spawn, String name, int hits) {
         super(spawn, name);
+        remainingHits = hits;
         anchorX = spawn.x();
         anchorY = spawn.y();
         facingLeft = (spawn.renderFlags() & 1) == 0;
+    }
+
+    /** Executed object updates own this cooldown, not the V-int value passed to update. */
+    protected final boolean updateHitAndLifetime(PlayableEntity player) {
+        if (!hasLiveParent()) {
+            ObjectLifetimeOps.destroyLatched(this);
+            return false;
+        }
+        if (hitCooldown > 0) hitCooldown--;
+        if (awaitingSeparation) {
+            boolean near = inRange(player, 48, 64);
+            for (PlayableEntity participant : services().playerQuery()
+                    .playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
+                near |= inRange(participant, 48, 64);
+            }
+            if (!near) awaitingSeparation = false;
+        }
+        return true;
+    }
+
+    final void attachToParent(ArtilleryBadnik parent) {
+        companion = true;
+        parentAnchorX = parent.anchorX;
+        parentAnchorY = parent.anchorY;
+        parentLayoutIndex = parent.getSpawn().layoutIndex();
+    }
+
+    private boolean hasLiveParent() {
+        if (!companion) return true;
+        if (!activeOnScreen()) return false;
+        if (parentDefeated) return true;
+        return services().objectQuery().activeObjectsOfType(ArtilleryBadnik.class).stream()
+                .anyMatch(parent -> !parent.isDestroyed() && parent.activeOnScreen()
+                        && parent.anchorX == parentAnchorX && parent.anchorY == parentAnchorY
+                        && parent.getSpawn().layoutIndex() == parentLayoutIndex);
+    }
+
+    final boolean companionOf(int x, int y, int layoutIndex) {
+        return companion && parentAnchorX == x && parentAnchorY == y && parentLayoutIndex == layoutIndex;
+    }
+
+    final void releaseFromDefeatedParent(ArtilleryBadnik parent) {
+        if (companionOf(parent.anchorX, parent.anchorY, parent.getSpawn().layoutIndex())) parentDefeated = true;
+    }
+
+    private void releaseCompanions() {
+        if (this instanceof ArtilleryBadnik parent) {
+            for (GuardBadnik ally : services().objectQuery().activeObjectsOfType(GuardBadnik.class)) {
+                ally.releaseFromDefeatedParent(parent);
+            }
+        }
+    }
+
+    protected boolean damageImmune() { return false; }
+    protected void onNonfatalHit() { }
+    private boolean acceptsHit() {
+        return !isDestroyed() && hasLiveParent() && !damageImmune()
+                && hitCooldown == 0 && !awaitingSeparation;
+    }
+
+    @Override public int getCollisionProperty() {
+        // S3K Touch_Enemy: nonzero uses native velocity rebound; zero uses final kill bounce.
+        return Math.max(0, remainingHits - 1);
+    }
+
+    @Override public final void onPlayerAttack(PlayableEntity player, TouchResponseResult result) {
+        if (!acceptsHit()) return;
+        if (remainingHits > 1) nonfatalHit();
+        else { remainingHits = 0; releaseCompanions(); destroyBadnik(player); }
+    }
+
+    private void nonfatalHit() {
+        remainingHits--;
+        hitCooldown = 24;
+        awaitingSeparation = true;
+        onNonfatalHit();
+        services().playSfx(0x6e); // Native S3K sfx_BossHit; no explosion/animal/score until final hit.
     }
 
     protected final PlayableEntity nearestPlayer(PlayableEntity main) {
@@ -99,11 +187,15 @@ abstract class SecondStrikeBadnik extends AbstractBadnikInstance
     }
 
     @Override public int getCollisionFlags() {
-        return isDestroyed() ? 0 : super.getCollisionFlags();
+        return isDestroyed() || !hasLiveParent() || hitCooldown > 0 || awaitingSeparation
+                ? 0 : super.getCollisionFlags();
     }
 
     @Override public void onPoweredScreenAttack(PlayableEntity player) {
-        if (isDestroyed()) return;
+        if (!acceptsHit()) return;
+        if (remainingHits > 1) { nonfatalHit(); return; }
+        remainingHits = 0;
+        releaseCompanions();
         int slot = ObjectLifetimeOps.detachSlotForTransfer(this);
         ObjectLifetimeOps.destroyLatched(this);
         DestructionEffects.destroyBadnikPowered(currentX, currentY, spawn, slot, player,
@@ -124,7 +216,7 @@ abstract class SecondStrikeBadnik extends AbstractBadnikInstance
     }
 
     @Override public final void appendRenderCommands(List<GLCommand> commands) {
-        if (!isDestroyed()) drawBody();
+        if (!isDestroyed() && hasLiveParent() && (hitCooldown == 0 || (hitCooldown & 2) == 0)) drawBody();
     }
 
     protected abstract void drawBody();
