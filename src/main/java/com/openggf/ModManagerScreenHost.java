@@ -15,6 +15,12 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE;
 /** Root composition adapter between engine input/rendering and the neutral mod UI. */
 public final class ModManagerScreenHost implements MasterTitleScreen.ModManagerView {
     private final ModManagerScreen screen;
+    private Pointer pointer = Pointer.NONE;
+
+    /** One frame of the mouse in the manager's 320x224 page; x is negative without a mouse. */
+    private record Pointer(int x, int y, boolean moved, boolean click, boolean backClick, int wheel) {
+        static final Pointer NONE = new Pointer(-1, -1, false, false, false, 0);
+    }
 
     public ModManagerScreenHost(ModManagerScreen screen) {
         this.screen = Objects.requireNonNull(screen, "screen");
@@ -22,8 +28,15 @@ public final class ModManagerScreenHost implements MasterTitleScreen.ModManagerV
 
     @Override
     public void update(InputHandler input) {
-        screen.update(menuInput(Objects.requireNonNull(input, "input")),
+        Pointer frame = pointer;
+        pointer = Pointer.NONE;
+        screen.update(menuInput(Objects.requireNonNull(input, "input"), frame),
                 event -> MenuFeedback.emit(MenuFeedback.Cue.valueOf(event.name())));
+    }
+
+    @Override
+    public void pointer(int x, int y, boolean moved, boolean click, boolean backClick, int wheel) {
+        pointer = new Pointer(x, y, moved, click, backClick, wheel);
     }
 
     @Override public void render() { screen.render(); }
@@ -36,6 +49,10 @@ public final class ModManagerScreenHost implements MasterTitleScreen.ModManagerV
     @Override public void activationFailed(String message) { screen.activationFailed(message); }
 
     static ModManagerScreen.MenuInput menuInput(InputHandler input) {
+        return menuInput(input, Pointer.NONE);
+    }
+
+    private static ModManagerScreen.MenuInput menuInput(InputHandler input, Pointer pointer) {
         var logical = input.logical();
         boolean escape = input.isKeyPressed(GLFW_KEY_ESCAPE);
         // Mod UI retains this object as its previous frame; never close over mutable input.
@@ -61,6 +78,12 @@ public final class ModManagerScreenHost implements MasterTitleScreen.ModManagerV
             @Override public String confirmLabel() { return confirmLabel; }
             @Override public String backLabel() { return backLabel; }
             @Override public String directionLabel() { return directionLabel; }
+            @Override public int pointerX() { return pointer.x(); }
+            @Override public int pointerY() { return pointer.y(); }
+            @Override public boolean pointerMoved() { return pointer.moved(); }
+            @Override public boolean pointerClick() { return pointer.click(); }
+            @Override public boolean pointerBack() { return pointer.backClick(); }
+            @Override public int wheel() { return pointer.wheel(); }
         };
     }
 

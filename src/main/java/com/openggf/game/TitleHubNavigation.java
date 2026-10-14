@@ -6,8 +6,10 @@ import com.openggf.control.MenuInput;
 /**
  * Focus model for the cartridge-shelf hub. Four rows from top to bottom: engine-wide
  * header tabs, the game card, the setup chips and the per-game action bar. Up/Down
- * moves between rows (skipping empty ones); Left/Right moves within a row, and on the
- * card changes game. Physical/replay input authority remains in InputHandler.
+ * moves between rows; Left/Right moves within a row, and on the card changes game.
+ * The setup chips only report what Start will launch, so Up/Down passes over them;
+ * the pointer can still focus one ({@link #selectChip}) to read or open it.
+ * Physical/replay input authority remains in InputHandler.
  */
 final class TitleHubNavigation {
     enum Zone { TABS, CARD, CHIPS, ACTIONS }
@@ -98,7 +100,7 @@ final class TitleHubNavigation {
         do {
             index += delta;
             if (index < 0 || index >= order.length) return false;
-        } while (order[index] == Zone.CHIPS && chipCount == 0);
+        } while (order[index] == Zone.CHIPS);
         zone = order[index];
         clampIndices();
         return true;

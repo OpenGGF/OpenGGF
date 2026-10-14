@@ -216,3 +216,34 @@ with `sonic1.rom.path`, `sonic2.rom.path` and `s3k.rom.path` set to the existing
 absolute root ROM paths passed all 31 preview tests with no skips. Both completed
 runs measured the resolved merge tree before its merge commit; no production
 changes followed those runs.
+
+
+## Playtest feedback follow-up on 2026-10-14
+
+- **Setup chips leave the keyboard path.** Moving Down from the card had to step
+  through the chip row before reaching Start, Game Setup and Recordings. Up/Down
+  now passes over the chips, so they work as a status line under the card. Hover
+  still describes a chip and a click still opens its Game Setup row. Rejected:
+  making Left/Right cycle a chip's value in place. That would edit a per-game
+  profile from the hub without Game Setup's draft and Save / Discard prompt, and
+  it would keep the extra row on the path to the buttons.
+- **Borrow from kept its focus by index.** Choosing or leaving the S3K donor swaps
+  Character and Sidekick for the read-only Team row, which shifts the focusable
+  rows above Borrow from by one. The focus now follows the focused item rather
+  than its index.
+- **Mod Manager mouse support.** The title passes its pointer, already moved into
+  the centred 320-pixel page, to `ModManagerView.pointer` before each update. The
+  neutral `ModManagerScreen.MenuInput` carries it as default methods, so the
+  `mods.ui` package still has no engine dependency. Hover focuses list rows,
+  buttons and prompt choices, and a click runs them. The wheel moves the list,
+  scrolls reading pages and reorders on the order page. A click closes a details
+  or notices page, because their Enter actions (disable without trust, retry
+  Apply) stay keyboard-only to avoid accidental activation. On an armed
+  confirmation, a second click confirms, as a second Enter does. Right-click goes
+  back, skipping the keyboard's intermediate step from the buttons to the list.
+
+Validation: with Java 25,
+`python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestMasterTitle*,TestTitleHubNavigation,TestTitleContentImportAccess,TestModManagerScreen,TestModManagerScreenHost,TestModManagerScreenNativeGuard,TestLaunchConfigPanel,TestHubSetupChips,TestChildMenuFeedback' test`
+passed 183 tests. Three ROM-preview tests were skipped because no ROM paths were
+configured. This is focused validation of menu-only input changes. It is not a
+smoke-suite or full-suite pass.

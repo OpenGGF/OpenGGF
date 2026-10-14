@@ -951,6 +951,54 @@ class TestModManagerScreen {
         assertTrue(ids.indexOf("pack-core") < ids.indexOf("pack-addon"));
     }
 
+    @Test
+    void mouseHoverClickWheelAndRightClickDriveTheManager() {
+        ModDescriptor one = descriptor("pack-one", "One", List.of(), List.of());
+        ModDescriptor two = descriptor("pack-two", "Two", List.of(), List.of());
+        ModState startup = state(false, false, "pack-one", "pack-two");
+        ModCatalog catalog = new EffectiveCatalogBuilder().build(List.of(one, two), startup);
+        RecordingFont font = new RecordingFont();
+        ModManagerScreen screen = screen(catalog, startup, new ModRuntimeFindingStore(), font,
+                temp.resolve("mouse"));
+
+        mouse(screen, 100, 66, false, false, 0);
+        assertEquals(1, screen.selectedIndex(), "hovering the second row selects it");
+        mouse(screen, 100, 66, true, false, 0);
+        assertTrue(enabled(screen, "pack-two"), "clicking a row toggles that mod");
+        assertFalse(enabled(screen, "pack-one"));
+
+        mouse(screen, 100, 66, false, false, 1);
+        assertEquals(0, screen.selectedIndex(), "the wheel moves through the list");
+
+        mouse(screen, 20, 185, true, false, 0);
+        font.drawn.clear();
+        screen.render();
+        assertTrue(font.drawn.contains("MOD DETAILS"), "clicking Details opens the details page");
+        mouse(screen, 20, 185, false, true, 0);
+        font.drawn.clear();
+        screen.render();
+        assertTrue(font.drawn.contains("MOD MANAGER"), "right-click leaves the details page");
+
+        mouse(screen, 200, 100, false, true, 0);
+        assertFalse(screen.closeRequested(), "unsaved changes ask before leaving");
+        mouse(screen, 100, 120, true, false, 0);
+        assertTrue(screen.closeRequested(), "clicking Discard leaves");
+        assertFalse(enabled(screen, "pack-two"), "Discard drops the pending toggle");
+    }
+
+    /** One frame of mouse input followed by a neutral frame, in the manager's 320x224 page. */
+    private static void mouse(ModManagerScreen screen, int x, int y, boolean click, boolean back, int wheel) {
+        screen.update(new ModManagerScreen.MenuInput() {
+            @Override public int pointerX() { return x; }
+            @Override public int pointerY() { return y; }
+            @Override public boolean pointerMoved() { return true; }
+            @Override public boolean pointerClick() { return click; }
+            @Override public boolean pointerBack() { return back; }
+            @Override public int wheel() { return wheel; }
+        });
+        screen.update(ModManagerScreen.MenuInput.NEUTRAL);
+    }
+
     private ModManagerScreen screen(ModCatalog catalog, ModState startup,
                                     ModRuntimeFindingStore runtime, PixelFont font, Path root) {
         PendingModStateEditor editor = new PendingModStateEditor(startup, catalog.scanned(),

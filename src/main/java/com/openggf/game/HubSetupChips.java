@@ -12,8 +12,9 @@ import java.util.Locale;
 
 /**
  * The setup chips under the selected game on the hub: what Start will launch.
- * Amber chips are values set for this game only; selecting a chip opens Game Setup
- * on its row (or the mod manager for the mods chip).
+ * Amber chips are values set for this game only. Keyboard and pad focus passes over
+ * them; hovering one describes it and clicking it opens Game Setup on its row (or the
+ * mod manager for the mods chip).
  */
 final class HubSetupChips {
     private HubSetupChips() { }

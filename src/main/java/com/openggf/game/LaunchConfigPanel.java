@@ -176,7 +176,10 @@ public final class LaunchConfigPanel {
                 confirmCue = true;
             }
         }
-        focusIndex = Math.clamp(focusIndex, 0, focusableItems().size() - 1);
+        // Borrow from can swap Character/Sidekick for Team, which shifts the rows above it;
+        // keep the focus on the row that was changed rather than on its old index.
+        int kept = focusableItems().indexOf(items.get(focusIndex));
+        focusIndex = kept >= 0 ? kept : Math.clamp(focusIndex, 0, focusableItems().size() - 1);
         if (beforeFocus != focusIndex) focusTicks = 0;
         if (!beforeProfile.equals(profile)) changeTicks = 0;
         if (beforeFocus != focusIndex || !beforeProfile.equals(profile)) {

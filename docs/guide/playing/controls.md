@@ -57,11 +57,15 @@ controller input. On data select screens, east/C is Back; A, B, and Start
 confirm.
 
 The master title also takes the mouse: point at a tab, chip or button to highlight it
-and click to open it, click a side card (or roll the wheel) to change game, click the
+and click to open it (the setup chips are only reachable this way; the keyboard and
+controller pass over them), click a side card (or roll the wheel) to change game, click the
 centre card to start it, click the page dots to browse the list, and right-click to go
 back. The game browser, quit prompt, tools and start choices answer clicks the same way.
-Settings and Game Setup accept hover and click on their rows, tabs and prompt buttons;
-the Mod Manager remains a keyboard and controller screen.
+Settings and Game Setup accept hover and click on their rows, tabs and prompt buttons.
+In the Mod Manager, hover a mod or button to highlight it and click to toggle the mod or
+open the button; the wheel moves through the list (or scrolls a details page), clicking a
+details or notices page closes it, a second click confirms a pending change, and
+right-click goes back.
 
 Additional gamepad bindings are hardcoded (not configurable) on the primary
 connected pad:

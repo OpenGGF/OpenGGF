@@ -418,6 +418,12 @@ public class MasterTitleScreen {
         }
         if (modManagerScreen != null) {
             ModManagerView menu = modManagerScreen;
+            // The manager draws as a centred 320-pixel page (drawNativePage).
+            int margin = Math.max(0, (viewportWidth - SCREEN_W) / 2);
+            if (pointer != null) {
+                menu.pointer(pointer.x() - margin, pointer.y(), pointer.moved(), pointer.click(),
+                        pointer.backClick(), pointer.wheel());
+            }
             menu.update(inputHandler);
             if (menu.consumeActivationRequested()) {
                 modApplyPending = true;
@@ -573,7 +579,7 @@ public class MasterTitleScreen {
         }
     }
 
-    /** Selecting a setup chip opens Game Setup on that row, or the mod manager for the mods chip. */
+    /** Clicking a setup chip opens Game Setup on that row, or the mod manager for the mods chip. */
     private void openChip(int index) {
         List<HubSetupChips.Chip> chips = hubChips();
         if (index < 0 || index >= chips.size()) return;
@@ -1658,7 +1664,7 @@ public class MasterTitleScreen {
             String ok = MenuChrome.confirmKey(menuInput);
             String back = MenuChrome.backKey(menuInput);
             String[][] rows = {
-                    { MenuChrome.ARROWS_LR, "Choose a game, chip, button or tab" },
+                    { MenuChrome.ARROWS_LR, "Choose a game, button or tab" },
                     { MenuChrome.ARROWS_UD, "Move between the rows of the hub" },
                     { ok, "Start the game or open what is selected" },
                     { back, "Go back one step; on the game card, quit" },
@@ -2162,6 +2168,8 @@ public class MasterTitleScreen {
         void render();
         boolean consumeCloseRequested();
         void suppressInputUntilNeutral();
+        /** This frame's mouse in the manager's 320-pixel page, before {@link #update}. */
+        default void pointer(int x, int y, boolean moved, boolean click, boolean backClick, int wheel) { }
         default boolean consumeActivationRequested() { return false; }
         default void activationFailed(String message) { }
     }

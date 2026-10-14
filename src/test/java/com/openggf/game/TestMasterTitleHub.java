@@ -56,13 +56,14 @@ class TestMasterTitleHub {
         assertEquals("s2", screen.getSelectedGameId());
 
         press(screen, GLFW_KEY_DOWN);
-        assertEquals(TitleHubNavigation.Zone.CHIPS, screen.hubZoneForTest());
-        press(screen, GLFW_KEY_RIGHT);
-        assertEquals("s2", screen.getSelectedGameId(), "left/right moves between chips, not games");
+        assertEquals(TitleHubNavigation.Zone.ACTIONS, screen.hubZoneForTest(),
+                "the setup chips only report the launch; Down passes over them");
         press(screen, GLFW_KEY_ESCAPE);
         assertEquals(TitleHubNavigation.Zone.CARD, screen.hubZoneForTest(), "Back returns to the card");
-
         press(screen, GLFW_KEY_DOWN);
+        press(screen, GLFW_KEY_UP);
+        assertEquals(TitleHubNavigation.Zone.CARD, screen.hubZoneForTest(), "Up from the buttons skips the chips too");
+
         press(screen, GLFW_KEY_DOWN);
         assertEquals(TitleHubNavigation.Zone.ACTIONS, screen.hubZoneForTest());
         press(screen, GLFW_KEY_RIGHT);
@@ -123,20 +124,24 @@ class TestMasterTitleHub {
     @Test void gameSetupIsReachableWithoutShortcut() {
         var screen = screen();
         press(screen, GLFW_KEY_DOWN);
-        press(screen, GLFW_KEY_DOWN);
         press(screen, GLFW_KEY_RIGHT);
         press(screen, GLFW_KEY_ENTER);
         assertTrue(screen.isLaunchConfigPanelOpenForTest());
         assertFalse(screen.isGameSelected());
     }
 
-    @Test void aSetupChipOpensGameSetupOnItsRow() {
+    @Test void theKeyboardPassesOverTheSetupChips() {
         var screen = screen();
+        assertFalse(screen.hubChips().isEmpty(), "the selected game shows setup chips");
         press(screen, GLFW_KEY_DOWN);
-        press(screen, GLFW_KEY_RIGHT);
-        press(screen, GLFW_KEY_ENTER);
-        assertTrue(screen.isLaunchConfigPanelOpenForTest());
-        assertEquals(LaunchProfile.Row.WIDESCREEN, screen.launchPanelRowForTest(), "the second chip is the screen shape");
+        assertEquals(TitleHubNavigation.Zone.ACTIONS, screen.hubZoneForTest());
+        press(screen, GLFW_KEY_UP);
+        press(screen, GLFW_KEY_UP);
+        assertEquals(TitleHubNavigation.Zone.TABS, screen.hubZoneForTest());
+        press(screen, GLFW_KEY_DOWN);
+        press(screen, GLFW_KEY_DOWN);
+        assertEquals(TitleHubNavigation.Zone.ACTIONS, screen.hubZoneForTest(),
+                "chips are reached by pointer only; clicking one is covered by TestMasterTitleMouse");
     }
 
     @Test void cancelledLaunchDraftDoesNotWriteAndFailedSaveCanBeRetried() {

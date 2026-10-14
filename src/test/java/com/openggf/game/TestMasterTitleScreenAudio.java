@@ -38,8 +38,7 @@ class TestMasterTitleScreenAudio {
         MasterTitleScreen screen = activeScreen(true);
         InputHandler input = new InputHandler();
 
-        pressFrame(screen, input, GLFW_KEY_DOWN); // chips
-        pressFrame(screen, input, GLFW_KEY_DOWN); // actions, on Start
+        pressFrame(screen, input, GLFW_KEY_DOWN); // past the chips to the actions, on Start
         pressFrame(screen, input, GLFW_KEY_ENTER);
         // CONFIRMING consumes another press without replaying the cue.
         pressFrame(screen, input, GLFW_KEY_ENTER);
@@ -48,7 +47,7 @@ class TestMasterTitleScreenAudio {
         pressFrame(missingRomScreen, input, GLFW_KEY_DOWN); // no chips without a ROM
         pressFrame(missingRomScreen, input, GLFW_KEY_ENTER);
 
-        assertEquals(List.of("UI_NAVIGATE", "UI_NAVIGATE", "UI_CONFIRM", "UI_NAVIGATE", "UI_ERROR"),
+        assertEquals(List.of("UI_NAVIGATE", "UI_CONFIRM", "UI_NAVIGATE", "UI_ERROR"),
                 emittedSfxNames());
     }
 
@@ -79,12 +78,11 @@ class TestMasterTitleScreenAudio {
         MasterTitleScreen screen = activeScreen(true);
         InputHandler input = new InputHandler();
         pressFrame(screen, input, GLFW_KEY_DOWN);
-        pressFrame(screen, input, GLFW_KEY_DOWN);
         pressFrame(screen, input, GLFW_KEY_RIGHT);
         pressFrame(screen, input, GLFW_KEY_ENTER);
         pressFrame(screen, input, GLFW_KEY_ESCAPE); // leave an unchanged Game Setup
         pressFrame(screen, input, GLFW_KEY_ESCAPE); // back from the actions to the card
-        assertEquals(List.of("UI_NAVIGATE", "UI_NAVIGATE", "UI_NAVIGATE", "UI_CONFIRM", "UI_CANCEL", "UI_CANCEL"),
+        assertEquals(List.of("UI_NAVIGATE", "UI_NAVIGATE", "UI_CONFIRM", "UI_CANCEL", "UI_CANCEL"),
                 emittedSfxNames());
     }
 

@@ -296,6 +296,26 @@ class TestLaunchConfigPanel {
         return config;
     }
 
+    @Test
+    void changingBorrowFromKeepsTheFocusOnBorrowFrom() {
+        SonicConfigurationService config = configuredWasd();
+        LaunchConfigPanel panel = new LaunchConfigPanel(MasterTitleScreen.GameEntry.SONIC_2,
+                LaunchProfile.stockFor(MasterTitleScreen.GameEntry.SONIC_2), new TrackingStore(config), config, null, null);
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
+        panel.focus(LaunchProfile.Row.CROSS_GAME);
+
+        boolean sawTeam = false;
+        for (int i = 0; i < 4; i++) {
+            pressFrame(panel, input, GLFW_KEY_D);
+            sawTeam |= panel.currentProfileForTest().usesS3kDataSelectCharacters();
+            assertEquals(LaunchProfile.Row.CROSS_GAME, panel.selectedRowForTest(),
+                    "donor " + panel.currentProfileForTest().crossGameSource() + " keeps the focus on Borrow from");
+        }
+        assertTrue(sawTeam, "the cycle reaches the S3K donor that swaps Character and Sidekick for Team");
+        pressFrame(panel, input, GLFW_KEY_S);
+        assertEquals(DEBUG_TOOLS, panel.selectedRowForTest(), "Down from Borrow from still reaches Debug tools");
+    }
+
     private static LaunchConfigPanel panel(SonicConfigurationService config,
                                            LaunchProfile profile,
                                            LaunchProfileStore store) {
