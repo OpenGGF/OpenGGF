@@ -429,7 +429,7 @@ public final class EditorInputHandler {
             CellKey key = new CellKey(layer, x, y);
             deltas.computeIfAbsent(key, ignored -> {
                 int before = Byte.toUnsignedInt(level.getMap().getValue(layer, x, y));
-                return new StrokeCommand.CellDelta(layer, x, y, before, selectedBlock);
+                return before == selectedBlock ? null : new StrokeCommand.CellDelta(layer, x, y, before, selectedBlock);
             });
         }
 
