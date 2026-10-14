@@ -484,6 +484,7 @@ final class DefaultObjectRewindPolicies {
             // Common/falling shots can belong to the cutscene or fight graph. Their
             // camera-relative launch XY cannot identify the firing barrel/boss.
             // A pure spawn shell binds these exact live ObjectRefs in phase two.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossDebrisChild", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossBarrelShotChild", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossBarrelShotChild", "barrel"), RewindFieldPolicy.CAPTURED),
             // Barrel-shot flares capture numeric parent3: cleared/recycled SST headers remain readable.

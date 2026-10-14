@@ -2988,6 +2988,14 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         persistTransitionCheckpoint();
         SessionSaveRequests.requestCurrentSessionSave(SaveReason.PROGRESSION_SAVE);
         LevelManager levelManager = levelManager();
+        // AIZ1BGE_Finish retains Object_RAM. Its only object-coordinate scan is
+        // Offset_SomeObjectsDuringTransition: four Invincibility_stars iff
+        // Super_Tails_flag is set (sonic3k.asm:104154-104182,104727-104775).
+        boolean superTails = camera().getFocusedSprite() instanceof AbstractPlayableSprite main
+                && main.getSuperStateController() != null
+                && main.getSuperStateController().isSuperTailsFormActive();
+        int firstOffsetSlot = superTails ? 102 : 0; // CD7C: global SST102
+        int endOffsetSlot = superTails ? 106 : 0;   // ordinary branch is an empty scan
         SeamlessLevelTransitionRequest request =
                 SeamlessLevelTransitionRequest.builder(
                                 SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
@@ -3011,6 +3019,8 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                         // them inflates the AIZ2 results bonus and delays exit.
                         .preserveLevelGamestate(true)
                         .showInLevelTitleCard(false)
+                        .objectSurvivalPolicy(SeamlessLevelTransitionRequest.ObjectSurvivalPolicy.ALL_LIVE_SST)
+                        .romWorldObjectOffsetRange(firstOffsetSlot, endOffsetSlot)
                         .forceAirOnStaleObjectSupportLoss(true)
                         .mutationKey(S3kSeamlessMutationExecutor.MUTATION_AIZ1_POST_RELOAD_ACT2)
                         .playerOffset(-0x2F00, -0x80)

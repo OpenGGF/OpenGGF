@@ -31,6 +31,8 @@ public final class AizTransitionFloorObjectInstance extends AbstractObjectInstan
     private static final SolidObjectParams SOLID_PARAMS =
             SolidObjectParams.of(0xA0, 0x10, 0x10);
     private final Map<PlayableEntity, Integer> zeroDistanceRejects = new IdentityHashMap<>(2);
+    private int currentX = X;
+    private boolean pendingDelete;
 
     public AizTransitionFloorObjectInstance() {
         super(new ObjectSpawn(X, Y, OBJECT_ID, 0, 0, false, 0), "AIZTransitionFloor");
@@ -38,11 +40,37 @@ public final class AizTransitionFloorObjectInstance extends AbstractObjectInstan
 
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
-        // ROM deletes the helper once Current_act is non-zero.
+        if (pendingDelete) {
+            com.openggf.level.objects.ObjectLifetimeOps.deleteNoRespawn(this);
+            return;
+        }
+        // Obj_AIZTransitionFloor's Act2 branch writes the hidden sentinel and
+        // Delete_Current_Sprite code, then still calls SolidObjectTop. Physical
+        // deletion belongs to the next dispatch (sonic3k.asm:104777-104790).
         if (services().currentAct() != 0) {
-            setDestroyed(true);
+            currentX = 0x7FFF;
+            pendingDelete = true;
         }
     }
+
+    @Override
+    public int getX() { return currentX; }
+
+    @Override
+    public boolean suppressesObjectEdgeBalance() {
+        // Every SolidObjectTop pass sets status bit7 first. Sonic_Move's
+        // tst.b/bmi skips the object-edge branch (sonic3k.asm:22458-22460).
+        return true;
+    }
+
+    @Override
+    public int getBalanceWidthPixels() { return 0; } // cleared SST width is never written
+
+    @Override
+    public boolean usesCustomOutOfRangeCheck() { return true; }
+
+    @Override
+    public boolean isCustomOutOfRange(int cameraX) { return false; } // no native range tail
 
     @Override
     public SolidObjectParams getSolidParams() {
@@ -105,7 +133,7 @@ public final class AizTransitionFloorObjectInstance extends AbstractObjectInstan
     @Override
     public int romObjectCodePointerHighWord() {
         // Obj_AIZTransitionFloor = 0x0004FE38 (sonic3k.asm:104777).
-        return 0x0004;
+        return pendingDelete ? 0x0001 : 0x0004; // Delete_Current_Sprite versus floor code
     }
 
     @Override

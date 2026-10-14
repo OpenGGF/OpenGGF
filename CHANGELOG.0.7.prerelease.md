@@ -94,3 +94,8 @@ Rewind verification compares private records and complete captured opaque arrays
 by content, with explicit failures when snapshot inspection cannot complete. It also
 checks all captured ObjectManager gameplay cursors and contact buffers. Palette
 copies retain complete raw RGB comparison.
+
+The AIZ fire handoff retains its native scene slots and delayed retirement
+markers. Its transition floor preserves the native solid tail and prevents
+false edge balancing after the coordinate change. Continuous results-boundary
+qualification remains separate from these scoped native-owner checks.

@@ -112649,3 +112649,33 @@ physical/timed caller attribution is next read-only work; no guessed transition
 fix or unchanged trace rerun before relevant composition. Parent pressure and
 rendered/audio breadth remain unqualified; no hydration/fixture/clock/allocator
 or broad/full-suite change.
+
+
+### 2026-10-14 — native AIZ scene retention and floor, local dependent candidate
+
+Owned bugfix/ai-s3k-parity-trace over7001b1eef; actual source hashes/native owners/
+full commands in [the owning audit](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#native-aiz-retained-scene-and-transition-floor-handoff--2026-10-14).
+AIZ1BGE_Finish retains all physical scene SSTs with an empty ordinary object
+coordinate scan. Cutscene38bit4 and floor X7FFF/Delete_Current markers survive
+until next dispatch. Native floor status7 suppresses stale edge balancing.
+Focused7345 passes827/0/0/0 at22:49:12 BST (80s/40s queue); strengthened3055
+passes5 five-preset full-world cases at22:51:35 (24.906s/0s). Source/rewind/timing
+84112 passes111 at22:54:35 (35.158s/127s). Earlier candidate balance regressions
+and stale Napalm marker inventory are source-attributed/corrected in the audit.
+
+Canonical50751 (-Ptrace-replay, unchanged five-case91214 selector, Java25/EGL/
+absolute original ROM, observer target/aiz-handoff-floor-native-slot-occupancy)
+completes5/2fail/0errors/skips at22:53:24 BST (93s/0s): originalAIZ/initialHCZ/
+first prefix pass, second prefix and chain remain red. Former segment6 raw189→0;
+segment4 raw51, first7589 rings111/0; segment8 raw1765, first6000 P2X4997/4996;
+chain remains incomplete atinput68801/loadgen9. No strict complete-run claim.
+Alternate39702 (-Ptrace-segments, unchanged36977 selector) retains60 grouped
+25physics/35anim spans/first25589 animation13/05, firstphysics25590 TailsSub7800/
+6C00 at22:53:59 (34.379s/93s). Slot-key presence advances3244→3887, preceding3858,
+native-only52/58/noengine-only key; code-type parity is not inferred from bytes.
+
+This is a local scoped native candidate with an explicit unresolved dependency,
+not delivery/integration/overall-green status. Adopt coherent Rootda27f4f3d,
+including df8 physical/timed RESULTS child/FIFO/VInt publication, before treating
+the newly earlier ring/results seam as an owning runtime fix. No fitted waits,
+fixture changes, hydration, shared clock/allocator or broad/full sweep.

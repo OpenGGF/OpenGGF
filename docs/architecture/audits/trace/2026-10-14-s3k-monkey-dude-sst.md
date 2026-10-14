@@ -1096,3 +1096,109 @@ private-record7/terrain1/pattern2/dynamic-identity12 plus Palette50. Exact selec
 adds TestRewindSnapshotDiffPalettes to69530 above with the same JDK25/EGL launch.
 Actual HPZ/ending consumer qualification is owned by those lanes and remains
 separate from this pure helper result. Native AIZ handoff is still unstaged.
+
+
+## Native AIZ retained scene and transition-floor handoff — 2026-10-14
+
+Source7001b1eef plus this local candidate; the qualified native handoff is kept
+separate from its unresolved results/core composition. AIZ1BGE_Finish
+(sonic3k.asm:104727–104775) calls Load_Level, which reads the layout header rather
+than clearing Object_RAM. Offset_SomeObjectsDuringTransition(:104154–104182)
+returns without a scan normally; Super_Tails_flag admits only the four physical
+Invincibility_stars at globalSST102..105. The existing ALL_LIVE_SST and
+ROM_WORLD_OFFSET_RANGE policies now express this retained graph and empty normal
+scan. The builder admits an actual empty range; negative/inverted ranges still
+fail. No allocator, shared clock, snapshot/API shape or fixture is changed.
+The consolidated SuperTails auxiliary still lacks the native four-slot graph;
+this request's source branch does not certify that unimplemented breadth.
+
+Full native pointers in the committed segment2 auxiliary resolve5=68690,
+6..11=68E8C,12=686E8,13=68720 and14..16=6872C before and after row3244. They are the
+same cutscene/debris/body/arm/barrel owners, not new AIZ2 scenery. At3283 all5..16
+hold1ABB6 Go_Delete markers; by3332 they clear/reuse. The old handoff explicitly
+removed this cutscene graph and carried only persistent objects, which discarded
+its nonpersistent debris. That incorrect clear and offset premise is removed.
+Debris now has a pure ctx.spawn shell and captured exact parent3; native Wait
+and Move own retirement rather than an engine screen cutoff. The moving callback
+only replaces code and returns; Draw is admitted on the next actual Move pass.
+
+AIZMinibossCutscene_End(:136896–136901) clears Boss_flag, restores level music,
+loads the actual PLC_Monitors and jumps Go_Delete_Sprite_2(:179146–179149), which
+changes code and sets38bit4. Its child Draw tails(:178087–178109) observe that bit,
+mark their own code and return without drawing. Physical clear is next dispatch.
+The cutscene, body, arm, barrels and debris capture this marker state; the boss's
+original camera-reset branch was not native and is removed. Fightable91's
+separate ordinary lifetime is retained.
+
+ALL_LIVE_SST exposed the transition floor's previous omission. Its native Act2
+branch(:104777–104790) writes X7FFF/Delete_Current_Sprite, then still runs
+SolidObjectTop with statusbit7. Java immediately destroyed it, and its missing
+existing suppressesObjectEdgeBalance semantic made Sonic balance against the old
+world-space support after his coordinate rebase. Sonic_Move's tst.b/bmi bypass
+at22458–22460 is the exact owner. The floor now preserves currentX and a captured
+pending-clear marker, publishes the changed code highword, suppresses the native
+edge branch, and keeps its no-range-tail contract. No shared contact/physics
+carve-out is introduced.
+
+| Normal queue request | Observed result | BST execution / queue |
+| --- | --- | --- |
+|93361 initial literal candidate|3/2fail/1error: empty range and early parent clear; third was void-reflection setup|21:47:17;24.622s/2s|
+|28516 declared actual handoff negative|1/1fail/0errors/skips, slot5 lost|21:49:35;24.912s/78s|
+|33995 independent Debris draw negative|1/1fail/0errors/skips|21:59:24;21.632s/0s|
+|47726 complete helper/new native case|8/0/0/0 across production5widths|22:36:17;26.974s/0s|
+|74544 native families/event/carry/recreation/startup|819/2fail/0errors/skips, only stale Napalm marker inventory|22:37:38;36.218s/0s|
+|79594 two corrected inventory predicates, runtime unchanged|2/0/0/0|22:39:15;25.110s/37s|
+|58655 before floor correction|5/3fail/0errors/skips; originalAIZ/prefix balance regressions|22:41:27;95s/79s|
+|7015 before floor correction|66 grouped spans, first6302 animation05/0C|22:39:51;34.606s/43s|
+|55671 initial source/rewind/timing guards|111/0/0/0|22:43:16;31.947s/250s|
+|14257 independent floor literals/normal-manager graph negative|6/6fail/0errors/skips|22:46:39;26.389s/0s|
+|7345 corrected floor and complete affected selection|827/0/0/0|22:49:12;80s/40s|
+|3055 five strengthened actual floor+rider world cases|5/0/0/0|22:51:35;24.906s/0s|
+|50751 canonical controls/chain with corrected floor|5/2fail/0errors/skips; originalAIZ/initialHCZ/first prefix pass|22:53:24;93s/0s|
+|39702 alternate exact trace-segments|1/1fail/0errors/skips; original60 spans restored|22:53:59;34.379s/93s|
+|84112 final source/rewind/timing guards|111/0/0/0|22:54:35;35.158s/127s|
+
+Earlier19583 had3 setup errors;75339 was canceled before execution. Initial
+10045's byte-array diagnostic and the800px compact-blob equality issue were
+verification false positives, closed separately by c3d/d8/7001. Those do not
+count as native runtime negatives. The3055 draft52232 failed compilation only
+because its test named the two NativePositionOps helpers incorrectly; corrected
+helper names did not change runtime.817 passing identities plus corrected2 from
+74544/79594 qualified the earlier native candidate;7345 is the one827 green
+invocation. Its selection adds TestAizCutsceneNativeTransition,
+TestAizTransitionFloorObjectInstance, TestSpawnRewindRecreatableCleanup,
+TestSonic3kAIZEvents, TestLevelSeamlessTransitionExecutor and
+TestSeamlessCarryExcludesBossChildren to51679's707 selection. The five actual
+receiving worlds additionally include floor17 and literal stopped support; all
+registry keys replay for two45-pass cycles in both directions, including marker
+and physical-clear states. This is a declared ROM-loaded scene, not cold input,
+full donor/team or rendering/PCM certification. The old Napalm marker list is
+reconciled with cf19's already-qualified pure ctx.spawn recreation, not weakened.
+
+Profiles, selectors and Java25/EGL/original absolute ROM remain those of91214/
+36977/47500; observer target/aiz-handoff-floor-native-slot-occupancy. Alternate
+returns the same60 grouped25physics/35animation spans: first25589 animation13/05,
+firstphysics25590 TailsSub7800/6C00. Sampled slot-presence frontier advances
+3244→3887, preceding3858, native-only52/58 and no engine-only key. This counts
+physical keys, not code-type parity; low code bytes are not object IDs.
+
+Canonical remaining fields are not green: segment4 raw51, first noncamera7589
+rings111/0; segment8 raw1765, first6000 P2X4997/4996. Former segment6 raw189 is now0,
+but full chain still stops input68801/loadgeneration9 before source closure.
+The second-return prefix inherits that new segment4 results/ring failure. Native
+signpost25/stub26 still exist at7589; the engine's results owner5 disappeared by
+7566 and reset the new world's rings earlier. OriginalAIZ and initialHCZ remain
+green after the local floor correction. This candidate is a LOCAL scoped commit,
+not an integration/overall-green claim. Root explicitly requires coherent
+qualified da27f4f3d adoption before attributing that seam: df8 pairs the physical
+RESULTS producer to real timed direct children/FIFO/VInt publication and may
+change actual creation/wait readiness. No counter fit is admitted to hide it.
+
+Runtime source SHA256 at the final focused/strict candidate:
+- Sonic3kAIZEvents.java: `a7ead67bd378b9282a363e377e67704d46b4e8f2c2530e62245fb271f85f1d2b`
+- AizMinibossCutsceneInstance.java: `5658c543b769b59d8beb7ca70b3e2eaf2ed6de30c5965b70475892824dbb0722`
+- AizMinibossBodyChild.java: `575f1b11fc08439f9a3adaa1ca29aff381189c95c8119d651162e53aace51307`
+- AizMinibossArmChild.java: `e3f8193436fab0dd1b1afa51bfc4560ea647f31ef54d1608eb77b8339379b8bd`
+- AizMinibossFlameBarrelChild.java: `90626f976f0da7485c8cbd450f8072f53ac552e3c3ee617fcf79e36001653495`
+- AizMinibossDebrisChild.java: `b7a7ead31f09dda44b2b988c0b376be5c1b0ba60399506e8712ba22ecbeae706`
+- AizTransitionFloorObjectInstance.java: `b9087c7ff72fcf49c2c6c0c8d7c2382474190a48edd52a98fa0e35b7cadd66ca`

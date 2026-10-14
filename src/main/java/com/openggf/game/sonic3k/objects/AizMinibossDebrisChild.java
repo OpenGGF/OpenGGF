@@ -6,7 +6,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.SpawnCoordinateZeroPairRewindRecreatable;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -18,24 +19,33 @@ import java.util.List;
  *
  * ROM: loc_68DFA (init) → loc_68E7E (Obj_Wait) → loc_68E8C (MoveSprite2)
  * - Init sets $2E = x_vel (staggered wait: faster craft wait LONGER)
- * - After wait: MoveSprite2 applies velocity + gravity ($38/frame)
+ * - After wait: MoveSprite2 applies horizontal velocity, then Child_Draw_Sprite2 tests parent $38 bit4
  * - Slower aircraft (x_vel=$100) appear first, fastest ($200) last
  */
 public class AizMinibossDebrisChild extends AbstractObjectInstance
-        implements SpawnCoordinateZeroPairRewindRecreatable {
+        implements RewindRecreatable {
+    private AizMinibossCutsceneInstance parent;
+    private boolean retirementPending;
+    private boolean drawPublished;
     private int worldX;
     private int worldY;
     private int xFixed;
     private int yFixed;
     // xVel/mappingFrame are non-final so the rewind field capturer reapplies them
-    // after spawn-coordinate recreate uses placeholders 0.
+    // after a pure spawn-shell recreation.
     private int xVel;
     private int waitTimer;
     private boolean moving;
     private int mappingFrame;
 
+    /** Legacy standalone helper; native cutscene admission supplies parent3 below. */
     public AizMinibossDebrisChild(int x, int y, int xVel, int mappingFrame) {
-        super(new ObjectSpawn(x, y, 0x90, 0, 0, false, 0), "AIZMinibossDebris");
+        this(null, x, y, xVel, mappingFrame);
+    }
+
+    public AizMinibossDebrisChild(AizMinibossCutsceneInstance parent, int x, int y, int xVel, int mappingFrame) {
+        this(new ObjectSpawn(x, y, 0x90, 0, 0, false, 0));
+        this.parent = parent;
         this.worldX = x;
         this.worldY = y;
         this.xFixed = x << 16;
@@ -47,8 +57,30 @@ public class AizMinibossDebrisChild extends AbstractObjectInstance
         this.mappingFrame = mappingFrame;
     }
 
+    private AizMinibossDebrisChild(ObjectSpawn spawn) {
+        super(spawn, "AIZMinibossDebris");
+        worldX = spawn.x(); worldY = spawn.y();
+        xFixed = worldX << 16; yFixed = worldY << 16;
+    }
+
+    @Override
+    public AizMinibossDebrisChild recreateForRewind(RewindRecreateContext ctx) {
+        // Pure shell; captured exact parent3 and native motion hydrate before dispatch.
+        return new AizMinibossDebrisChild(ctx.spawn());
+    }
+
+    @Override public boolean isPersistent() {
+        // Native Wait/Move has no range tail; Child_Draw_Sprite2 owns retirement.
+        return parent != null;
+    }
+
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        drawPublished = false;
+        if (retirementPending) {
+            com.openggf.level.objects.ObjectLifetimeOps.deleteNoRespawn(this);
+            return;
+        }
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (!moving) {
             // ROM: loc_68E7E → Obj_Wait, decrements $2E each frame
@@ -63,9 +95,13 @@ public class AizMinibossDebrisChild extends AbstractObjectInstance
         xFixed += (xVel << 8);
         worldX = xFixed >> 16;
 
-        if (!isOnScreen(256)) {
-            setDestroyed(true);
+        if (parent != null) {
+            // loc_68E8C moves first, then Child_Draw_Sprite2 observes $38 bit4.
+            retirementPending = (parent.getCustomFlag(0x38) & 0x10) != 0;
+        } else if (!isOnScreen(256)) {
+            setDestroyed(true); // legacy independent helper has no native parent3
         }
+        drawPublished = !retirementPending && !isDestroyed();
     }
 
     @Override
@@ -76,8 +112,8 @@ public class AizMinibossDebrisChild extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (!moving) {
-            return; // Not visible during wait phase
+        if (!drawPublished || isDestroyed()) {
+            return; // Wait has no Draw; bit4/GoDelete2 also returns before Draw
         }
         ObjectRenderManager rm = services().renderManager();
         if (rm == null) {

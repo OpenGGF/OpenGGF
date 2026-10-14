@@ -5567,3 +5567,19 @@ resolve full pointers and the publication clock before fixing the next context.
 Origin:2026-10-14 common SIMPLE marker slice overcf19f8506; asm137079,137091,
 179136. Actual seg2 row3084 marker is repaired; next presence disagreement3244
 is transition-context evidence rather than proof of a particular teardown bug.
+
+
+### AIZ Load_Level retains the scene; status7 defeats stale edge balancing
+
+AIZ1BGE_Finish reads level resources without clearing Object_RAM. Its normal
+Offset_SomeObjects branch scans no slots; active SuperTails scans only102..105.
+Do not destroy the old cutscene graph on that seamless reload. Its End writes
+Go_Delete_Sprite_2/38bit4 and child Draw tails mark their own code before next
+physical clear. Debris StartMove only replaces code/RTS; moving-state alone does
+not grant that dispatch a draw. The retained transition floor writes X7FFF and
+Delete_Current then still calls SolidObjectTop. Its statusbit7 makes native
+Sonic_Move skip object-edge balance; use the existing object semantic rather
+than resetting player facing or changing shared collision math. Exact source,
+negative/replay evidence and pending composed RESULTS dependency are in the
+2026-10-14 s3k-monkey-dude-sst audit; this local owner proof is not a whole trace
+or cold-route pass.

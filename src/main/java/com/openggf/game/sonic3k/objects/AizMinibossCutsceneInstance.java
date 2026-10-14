@@ -145,26 +145,8 @@ public class AizMinibossCutsceneInstance extends AbstractBossInstance
         return true;
     }
 
-    /**
-     * The AIZ1 cutscene miniboss is a one-shot scripted scene object: its long fly-off
-     * (EXIT_TIME_AIZ1 = 0x120) is usually still running when the AIZ1->AIZ2 fire transition
-     * snapshots persistent objects, so it (and its persistent flame-barrel children) would
-     * otherwise be carried into AIZ2. There the world delta is not applied to it (the default
-     * {@code onCarriedAcrossSeamlessTransition} is a no-op), stranding its still-firing flame
-     * children partway through AIZ2 with no coherent parent — they keep hurting the player.
-     *
-     * <p>ROM: Obj_AIZMinibossCutscene's object RAM slot does not survive the AIZ2 level reload.
-     * Mirror that by removing this object and its tracked children when the act transition
-     * carries them, instead of letting them ride into AIZ2.
-     */
-    @Override
-    public void onCarriedAcrossSeamlessTransition(int offsetX, int offsetY) {
-        for (var child : getChildComponents()) {
-            ObjectLifetimeOps.destroyBossChildLatched(child);
-        }
-        getChildComponents().clear();
-        ObjectLifetimeOps.destroyLatched(this);
-    }
+    // Go_Delete_Sprite_2 keeps the physical owner until the next code dispatch.
+    private boolean retirementPending;
 
     /**
      * The cutscene miniboss publishes its touch entry AFTER its own movement,
@@ -193,6 +175,10 @@ public class AizMinibossCutsceneInstance extends AbstractBossInstance
 
     @Override
     protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
+        if (retirementPending) {
+            ObjectLifetimeOps.deleteNoRespawn(this);
+            return;
+        }
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (state.routine) {
             case ROUTINE_INIT -> updateInit();
@@ -339,26 +325,16 @@ public class AizMinibossCutsceneInstance extends AbstractBossInstance
     }
 
     private void onExitComplete() {
+        // AIZMinibossCutscene_End restores level music and PLC_Monitors, then
+        // Go_Delete_Sprite_2 changes only code + $38 bit4. No camera words are
+        // written here (sonic3k.asm:136896-136901,179146-179149).
         S3kAizEventWriteSupport.setBossFlag(services(), false);
-        boolean transitionInProgress = S3kAizEventWriteSupport.isFireTransitionActive(services())
-                || S3kAizEventWriteSupport.isAct2TransitionRequested(services());
-
-        // During the unwinnable AIZ1 cutscene transition, BG events own camera/music flow.
-        // Only restore defaults when no transition handoff is active.
-        if (!transitionInProgress) {
-            int levelMusicId = services().getApparentLevelMusicId();
-            if (levelMusicId >= 0) {
-                // ROM restores the level track here; AudioManager.restoreMusic()
-                // only unwinds a temporary saved-song slot.
-                services().playMusic(levelMusicId);
-            }
-            var camera = services().camera();
-            camera.setMinX((short) 0);
-            camera.setMaxX((short) savedCameraMaxX);
-            services().gameState().setCurrentBossId(0);
-        }
-
-        setDestroyed(true);
+        int musicId = services().getApparentLevelMusicId();
+        if (musicId >= 0) services().playMusic(musicId);
+        com.openggf.game.sonic3k.Sonic3kPlcLoader.applyRawQuietly(
+                com.openggf.game.sonic3k.Sonic3kPlcLoader.monitorPlcEntries(), services());
+        setCustomFlag(FLAG_PARENT_BITS, getCustomFlag(FLAG_PARENT_BITS) | 0x10);
+        retirementPending = true;
     }
 
     private void setWait(int frames, WaitCallback callback) {
@@ -406,7 +382,7 @@ public class AizMinibossCutsceneInstance extends AbstractBossInstance
             int y = DEBRIS_Y_POSITIONS[i];
             int xVelocity = DEBRIS_X_VELOCITIES[i];
             int frame = DEBRIS_FRAMES[i];
-            spawnChild(() -> new AizMinibossDebrisChild(x, y, xVelocity, frame));
+            spawnChild(() -> new AizMinibossDebrisChild(this, x, y, xVelocity, frame));
         }
     }
 
@@ -433,7 +409,7 @@ public class AizMinibossCutsceneInstance extends AbstractBossInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (state.routine < ROUTINE_DESCEND || isDestroyed()) {
+        if (state.routine < ROUTINE_DESCEND || retirementPending || isDestroyed()) {
             return;
         }
         ObjectRenderManager renderManager = services().renderManager();
