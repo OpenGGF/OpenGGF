@@ -1,5 +1,14 @@
 # Level test coverage backlog
 
+Remaining S3K parity follow-up (2026-10-14, delivery in progress): the
+[SSZ matrix](../architecture/validation/levels/s3k-ssz-act1.md#corrected-cold-incoming-world-qualification-2026-10-14)
+qualifies corrected native320 and paired800 cold incoming-world boundaries,
+with50/44 whole-world replay windows; the native companion arrival discrepancy
+remains open. The [bonus transition matrix](../architecture/validation/levels/s3k-bonus-stage-transitions.md)
+records five actual load/return pilots and the unsupported whole-Slot rewind
+contract. These bounded checks expand the previous delivery's evidence;
+composed validation, integration/push and broader parity/products are pending.
+
 S3K playable completion (2026-10-13, delivery in progress): the [native ending matrix](../architecture/validation/levels/s3k-ending.md)
 records Sonic/Tails `$0D01`, Knuckles SSZ2 and all native emerald-progress branches.
 Bounded native lifecycle, roster, donor and whole-world replay checks pass; seven

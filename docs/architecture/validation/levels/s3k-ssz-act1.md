@@ -1482,3 +1482,24 @@ This is bounded owner/contact evidence, not whole-scene pixel/audio, every
 cold product, full suite or combined delivery. Maintained cold completions
 and corrected final engine spot captures follow. Consumed target redirects
 are removed after this durable account.
+
+
+## Corrected cold incoming-world qualification (2026-10-14)
+
+On b930df4868 plus the qualified route drafts, request12506 is terminal0 at
+15:17:45 UTC: native320 completion and upper route, paired800 completion,
+and five independent bonus pilots pass8/0/0/0. The native completion has50
+and paired800 has44 two-cycle45-input whole-registry windows, including actual
+DEZ assembly and released incoming worlds, with outgoing history retired.
+The320 movie preserves its original20540 rows and appends180 neutral rows.
+Actual load/assembly is20550/20551 at320 and20874/20875 at800; both fades
+take22 presentations. Semantic load predicates replace obsolete double-fade
+row assumptions. Exact matched negative attribution, source hashes and
+commands are in the [completion plan](../../plans/2026-10-13-s3k-playable-completion.md#ssz-cold-boundaries-and-bonus-return-pilots-2026-10-14).
+
+The corrected original-input contact capture matches1432 native P1/camera/
+counter/ring observations. P2 retains one X discrepancy and74 Y discrepancies
+in the arrival window119–209. The allocation owner is still under investigation.
+These bounded routes/contact checks do not certify all viewport/character/
+donor/roster combinations, whole-scene original RGB/audio or entire campaign
+parity. Remaining matrix obligations retain their prior status.

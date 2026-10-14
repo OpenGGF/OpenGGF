@@ -599,6 +599,14 @@ that native call. Ten literal controls, original-controller full-world replay
 and existing bridge/profile consumers pass54/0/0/0. This fixes identified
 native poll1342 acquisition, not whole SSZ RGB/audio or campaign parity.
 
+The corrected passive capture now matches all1432 native P1/camera/counter/
+ring observations. Maintained320/800 completions retain50/44 two-cycle
+whole-world windows and actual DEZ incoming history retirement. The separate
+P2 arrival discrepancy remains open: one X row and74 Y rows within119–209.
+Native continuation allocation and dispatch order still need exact ownership;
+no fitted delay or accepted intentional difference is claimed.
+
+
 ---
 
 ## Large-bubble character branch (resolved local owner, 2026-10-14)

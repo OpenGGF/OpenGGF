@@ -120,6 +120,7 @@ class TestSszWidePairedColdRouteCapture {
         var mtzHealth = new HashSet<Integer>();
         var mechaHealth = new HashSet<Integer>();
         int reload = -1;
+        int launchFadeStarted = -1;
         int released = -1;
         int controlsReleased = -1;
         long outgoingHistory = 0;
@@ -191,6 +192,13 @@ class TestSszWidePairedColdRouteCapture {
                 if (frame >= 20743 && level.getCurrentZone() == 10 && rewind != null) {
                     outgoingHistory = Math.max(outgoingHistory, rewind.currentFrame());
                 }
+                if (level.getCurrentZone() == 10 && launchFadeStarted < 0
+                        && mode.getFadeManager().getState()
+                        == com.openggf.graphics.FadeManager.FadeState.FADING_TO_BLACK
+                        && !manager.activeObjectsOfType(
+                                com.openggf.game.sonic3k.objects.SszLaunchControllerObjectInstance.class).isEmpty()) {
+                    launchFadeStarted = frame;
+                }
                 if (level.getCurrentZone() == 11) {
                     assertEquals(0, level.getCurrentAct());
                     if (reload < 0) {
@@ -216,7 +224,7 @@ class TestSszWidePairedColdRouteCapture {
                                 "the released DEZ timeline retires outgoing SSZ history");
                         isolatedHistory = true;
                     }
-                    if (frame == 20870) pending.add("dez-intro");
+                    if (frame == released) pending.add("dez-intro");
                     if (released >= 0 && controlsReleased < 0 && !session.player().isControlLocked()
                             && manager.activeObjectsOfType(
                                 com.openggf.game.sonic3k.objects.LevelIntroPlayerRunInstance.class).isEmpty()) {
@@ -239,7 +247,7 @@ class TestSszWidePairedColdRouteCapture {
                 var savedLevel = level.getCurrentLevel();
                 int horizon = 45;
                 assertTrue(frame + horizon < movie.getFrameCount());
-                if (level.getCurrentZone() == 10) assertTrue(frame + horizon < 20863,
+                if (level.getCurrentZone() == 10) assertTrue(frame + horizon < 20743,
                         "raw registry replay cannot cross the actual full load");
                 for (int n = 1; n <= horizon; n++) {
                     session.step(movie.getFrame(frame + n)); drawing.draw(session);
@@ -277,8 +285,10 @@ class TestSszWidePairedColdRouteCapture {
             assertEquals(allHealth, ghzHealth, "all first-replica native hits");
             assertEquals(allHealth, mtzHealth, "all second-replica native hits");
             assertEquals(allHealth, mechaHealth, "all final Mecha native hits");
-            assertEquals(20863, reload, "actual DEZ load");
-            assertEquals(20864, released, "ordinary destination assembly dispatch");
+            assertTrue(launchFadeStarted >= 0, "actual launch fade was observed");
+            assertEquals(22, reload - launchFadeStarted,
+                    "21 color steps and black completion publication precede the full load");
+            assertEquals(reload + 1, released, "ordinary destination assembly dispatch");
             assertTrue(isolatedHistory);
             assertTrue(controlsReleased > released, "native entrance releases after assembly");
             assertFalse(GameServices.level().hasPendingFreshLevelTransitionBoundary());

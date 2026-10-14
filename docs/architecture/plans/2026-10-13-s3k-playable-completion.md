@@ -1581,3 +1581,57 @@ This is bounded owner/contact evidence, not whole-scene pixel/audio, every
 cold product, full suite or combined delivery. Maintained cold completions
 and corrected final engine spot captures follow. Consumed target redirects
 are removed after this durable account.
+
+
+## SSZ cold boundaries and bonus return pilots (2026-10-14)
+
+The corrected opening bridge is retained. Matched unchanged maintained route
+checks on pre-bridge656e21eb1 and candidate9c9c27f67 both fail the same two
+expectations: native320 lacks enough neutral tail for DEZ, and paired800 looks
+for its intro at an obsolete fixed input. This attributes neither failure to
+the bridge correction. Independent ordinary-loop observation on90897f41d
+shows both320 drawing policies load DEZ at20550, assemble20551 and release
+controls20633;800 loads20874, assembles20875 and releases20957. The actual
+launch fade takes21 color presentations plus black-completion publication.
+The previous local route assertions were baked into double-serviced fading;
+runtime clocks are not changed to fit those expectations.
+
+The320 author script now appends180 neutral rows. All20540 original rows are
+preserved byte-for-byte, total20720; InputLogAuthorTool compilation and BK2
+round-trip are checked. The tests observe the actual load and assembly, retain
+all native fight/health/ring predicates, and compare every registry key in two
+forward/reverse45-input cycles. Incoming assembly and released-world windows
+are independent; no raw restore crosses a full load. The native320 completion
+records50 windows and paired800 records44, including actual DEZ introduction
+and release. Older fixed-row expectations are superseded, not removed without
+an equivalent incoming-world obligation.
+
+Request12506 is terminal0 at2026-10-14 15:17:45 UTC,1:53 Maven:
+`TestSszColdRouteCapture,TestSszWidePairedColdRouteCapture,TestS3kBonusStageReturnProducts`
+passes8/0/0/0 on b930df4868e01a116f6e76578101080ef98791ca plus these drafts.
+The command uses normal queued admission, `-Dmse=off`,
+`-Dopenggf.headless.gl=surfaceless-egl`, the exact three-class `-Dtest` selector,
+`test -B`, original absolute S1/S2/S3K ROM properties, Java25,
+`LUA_BIN=/usr/bin/lua5.4`, null OpenAL and unset DISPLAY/WAYLAND_DISPLAY.
+Five bonus pilots cover logical production requests, actual stage load and
+return, fresh managers and retired history; they do not claim physical portal
+traversal, reward mechanisms or cold routes. Gumball and Pachinko have two
+18-tick full-world replay cycles; Slot advertises no whole-stage rewind and
+is checked by ordinary18 ticks. All five origins have two45-tick full-world
+cycles after real fade/title/control release. The [bonus matrix](../validation/levels/s3k-bonus-stage-transitions.md)
+records supported pilot axes and remaining obligations.
+
+The passive corrected9c engine scene1432 observations exactly matches native
+P1 X/Y, X/Y speed, ground speed, mapping, camera/copies, level counter and rings.
+P2 still differs at one X row119 and74 Y rows within119–209; this is an open
+arrival ownership/allocation issue, not accepted intentional divergence or
+whole-scene RGB/audio parity. Native/engine source domains and original images
+remain in the external task directory. Launch intervals have been relayed to
+the performance coordinator; compiler helpers retain the intended source
+worktree build lease, including external class output, and release before
+queued tests. No performance result is inferred from these checks.
+
+Qualified test hashes:
+- `src/test/java/com/openggf/tools/TestSszColdRouteCapture.java`: SHA256`d2c7be7a67708b0ab1ab9f54b9e604508f79df498d054b994c1bdb73cb7b946c`.
+- `src/test/java/com/openggf/tools/TestSszWidePairedColdRouteCapture.java`: SHA256`2d23891c38affa20014278c385d080700faae1bf455efb5975e399149bf2a5c7`.
+- `src/test/java/com/openggf/tests/TestS3kBonusStageReturnProducts.java`: SHA256`37ac77e5fbb8e44c720696317afc002fbf5c9d4ce6a9b280cdfbf191eeb7fefe`.
