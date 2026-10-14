@@ -29,7 +29,9 @@ public final class NativeModMemberContractTest implements Opcodes {
         Map<String, byte[]> input = Map.of("Base", host("Base", "java/lang/Object"),
                 "Child", host("Child", PREFIX + "Base"), "Dormant", host("Dormant", "java/lang/Object"),
                 "Signature", host("Signature", "java/lang/Object"),
-                "Unreferenced", host("Unreferenced", PREFIX + "Base"));
+                "Unreferenced", host("Unreferenced", PREFIX + "Base"),
+                "ClassFactory", host("ClassFactory", "java/lang/Object"),
+                "ClassFactory$1", host("ClassFactory$1", "java/lang/Object"));
         try (var jar = new JarOutputStream(Files.newOutputStream(engine))) {
             for (var entry : input.entrySet()) {
                 jar.putNextEntry(new JarEntry(PREFIX + entry.getKey() + ".class"));
@@ -51,7 +53,7 @@ public final class NativeModMemberContractTest implements Opcodes {
             if (!contract.contains(expected)) throw new AssertionError("Not retained: " + expected);
         }
         try (var jar = new JarFile(output.resolve("preserved-engine.jar").toFile())) {
-            for (var entry : input.entrySet().stream().filter(e -> !e.getKey().equals("Unreferenced")).toList()) {
+            for (var entry : input.entrySet().stream().filter(e -> java.util.Set.of("Base", "Child", "Dormant", "Signature").contains(e.getKey())).toList()) {
                 try (var stream = jar.getInputStream(jar.getJarEntry(PREFIX + entry.getKey() + ".class"))) {
                     if (!Arrays.equals(entry.getValue(), stream.readAllBytes())) throw new AssertionError("Rewritten class bytes");
                 }
@@ -63,6 +65,24 @@ public final class NativeModMemberContractTest implements Opcodes {
         if (!Files.readAllLines(implementations.resolve("members.tsv")).contains(
                 "M\tcom.openggf.nativefixture.Unreferenced\tprobe\t()V"))
             throw new AssertionError("Unreferenced implementation method omitted");
+        writeMod(mods, "factory");
+        Path oldFactory = root.resolve("factory-without-discovery");
+        generate(engine, mods, oldFactory);
+        String factoryMember = "M\tcom.openggf.nativefixture.ClassFactory$1\tprobe\t()V";
+        if (Files.readAllLines(oldFactory.resolve("members.tsv")).contains(factoryMember))
+            throw new AssertionError("Factory omission negative no longer reproduces");
+        Path factory = root.resolve("factory-discovery");
+        NativeModMemberContract.main(new String[]{engine.toString(), mods.toString(), factory.toString(),
+                "--references-only", "--service-factories"});
+        var factoryContract = Files.readAllLines(factory.resolve("members.tsv"));
+        if (!factoryContract.contains(factoryMember)
+                || factoryContract.contains("C\tcom.openggf.nativefixture.Unreferenced"))
+            throw new AssertionError("Factory implementation discovery is missing or unbounded");
+        try (var jar = new JarFile(factory.resolve("preserved-engine.jar").toFile());
+             var stream = jar.getInputStream(jar.getJarEntry(PREFIX + "ClassFactory$1.class"))) {
+            if (!Arrays.equals(input.get("ClassFactory$1"), stream.readAllBytes()))
+                throw new AssertionError("Discovered factory class bytes changed");
+        }
         writeMod(mods, "jdk-fields");
         Path jdk = root.resolve("jdk-fields");
         NativeModMemberContract.main(new String[] {engine.toString(), mods.toString(), jdk.toString(),
@@ -133,6 +153,17 @@ public final class NativeModMemberContractTest implements Opcodes {
         }
         if (name.equals("Dormant")) writer.visitMethod(ACC_PRIVATE | ACC_STATIC | ACC_NATIVE, "future", "()V", null, null).visitEnd();
         if (name.equals("Unreferenced")) writer.visitMethod(ACC_PUBLIC | ACC_NATIVE, "probe", "()V", null, null).visitEnd();
+        if (name.equals("ClassFactory$1")) writer.visitMethod(ACC_PUBLIC | ACC_NATIVE, "probe", "()V", null, null).visitEnd();
+        if (name.equals("ClassFactory")) {
+            var factory = writer.visitMethod(ACC_PUBLIC | ACC_STATIC, "service", "(Ljava/lang/Class;)Ljava/lang/Object;", null, null);
+            factory.visitCode();
+            factory.visitTypeInsn(NEW, PREFIX + "ClassFactory$1");
+            factory.visitInsn(DUP);
+            factory.visitMethodInsn(INVOKESPECIAL, PREFIX + "ClassFactory$1", "<init>", "()V", false);
+            factory.visitInsn(ARETURN);
+            factory.visitMaxs(2, 1);
+            factory.visitEnd();
+        }
         constructor(writer, parent, "()V");
         writer.visitEnd();
         return writer.toByteArray();
@@ -154,6 +185,11 @@ public final class NativeModMemberContractTest implements Opcodes {
         var method = writer.visitMethod(ACC_PUBLIC | ACC_STATIC, "laterCallback", "()V", null, null);
         method.visitCode();
         switch (mode) {
+            case "factory" -> {
+                method.visitInsn(ACONST_NULL);
+                method.visitMethodInsn(INVOKESTATIC, PREFIX + "ClassFactory", "service", "(Ljava/lang/Class;)Ljava/lang/Object;", false);
+                method.visitInsn(POP);
+            }
             case "jdk-methods" -> {
                 method.visitMethodInsn(INVOKESPECIAL, "java/io/StringWriter", "<init>", "()V", false);
                 method.visitMethodInsn(INVOKEVIRTUAL, "java/io/StringWriter", "wait", "(J)V", false);

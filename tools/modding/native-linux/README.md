@@ -44,6 +44,12 @@ The generated member contract covers dormant creator callbacks as well as live
 ones. The Linux build also retains engine implementations of `GameModule`,
 including anonymous wrappers, because owner-bound dispatch inspects their concrete
 methods reflectively. Their members enter the same mandatory startup audit.
+Both platform builders also preserve world-policy service implementations and
+enable `--service-factories`: the shared generator scans the bytecode of retained
+Class-keyed factories with erased `Object` returns, including returned anonymous
+implementations. It repeats discovery for new service-bearing classes. Runtime
+bootstrap controls exercise the actual prepared catalog and HUD policy dispatch
+without ROMs; rendered gameplay remains a separate required check when supplied.
 Direct JDK method, constructor and static-field references also enter the contract,
 including dormant callbacks and method handles. Their declaring packages are
 preserved automatically. The image explicitly resolves `java.logging` so its

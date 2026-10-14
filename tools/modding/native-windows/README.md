@@ -43,6 +43,15 @@ analysis and the shipped mod set. Additional runtime bootstrap, reflection,
 stream and charset packages cover interpreter-generated calls. `java.logging`
 is explicitly resolved during image building.
 
+Class-keyed service factories erase their return type to `Object`. The opt-in
+`--service-factories` scan follows those methods' actual bytecode in retained
+engine classes, repeating for newly discovered service-bearing classes. This
+retains returned anonymous implementations such as the HUD warning policy, without
+adding each concrete class to a list. A matched bytecode fixture checks discovery,
+exact class bytes and exclusion of unrelated classes; the runtime control invokes
+the actual catalog and HUD projections. String-based arbitrary reflection still
+requires explicit seams and execution coverage.
+
 It audits types/fields/methods before execution, rejects deliberate
 missing fields and methods with ordinary exit 1, compares JVM/native registration
 results exactly for each mod, then exercises Engine's real development-source
