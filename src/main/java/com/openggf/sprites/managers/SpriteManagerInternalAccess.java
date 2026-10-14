@@ -6,6 +6,22 @@ import com.openggf.sprites.playable.PlayableMutatorPolicySource;
 public final class SpriteManagerInternalAccess {
     private SpriteManagerInternalAccess() { }
 
+    /**
+     * Register a native script's temporary actor independently of configured donor participants.
+     * Its body, palette and auxiliary art come from the host ROM. The recreation
+     * factory must use this same binding; retired same-world membership retains it.
+     */
+    public static void addNativeScriptedTemporarySidekick(SpriteManager manager,
+            com.openggf.sprites.playable.AbstractPlayableSprite sprite, String characterName,
+            java.util.function.Supplier<com.openggf.sprites.playable.AbstractPlayableSprite> recreator) {
+        manager.addNativeScriptedTemporarySidekick(sprite, characterName, recreator);
+    }
+
+    public static boolean usesNativeScriptedArt(SpriteManager manager,
+            com.openggf.sprites.playable.AbstractPlayableSprite sprite) {
+        return manager.usesNativeScriptedArt(sprite);
+    }
+
     /** Retire a scene's follower roster while retaining reversible same-world membership. */
     public static void retireAllSidekicksForRewind(SpriteManager manager) {
         manager.retireAllSidekicksForRewind();

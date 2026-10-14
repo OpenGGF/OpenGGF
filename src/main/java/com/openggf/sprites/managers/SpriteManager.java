@@ -68,6 +68,9 @@ public class SpriteManager implements PlayableSstDispatcher {
 	private final Map<AbstractPlayableSprite, String> sidekickCharacterNames = new IdentityHashMap<>();
 	private final Set<AbstractPlayableSprite> temporarySidekicks =
 			Collections.newSetFromMap(new IdentityHashMap<>());
+	// Immutable registration role: script-created actors own host ROM art, not launch donation.
+	private final Set<AbstractPlayableSprite> nativeScriptedArtSidekicks =
+			Collections.newSetFromMap(new IdentityHashMap<>());
 	/**
 	 * Re-creation factories for temporary sidekicks (e.g. the CNZ1 throwaway
 	 * carry-in Tails), keyed by sprite code. A temporary sidekick can be removed
@@ -213,6 +216,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 			sidekicks.remove(previousPlayable);
 			sidekickCharacterNames.remove(previousPlayable);
 			temporarySidekicks.remove(previousPlayable);
+			nativeScriptedArtSidekicks.remove(previousPlayable);
 		}
 		if (sprite instanceof AbstractPlayableSprite playable && playable.isCpuControlled()) {
 			sidekicks.add(playable);
@@ -258,11 +262,22 @@ public class SpriteManager implements PlayableSstDispatcher {
 		}
 	}
 
+	void addNativeScriptedTemporarySidekick(AbstractPlayableSprite sprite, String characterName,
+			java.util.function.Supplier<AbstractPlayableSprite> recreator) {
+		addTemporarySidekick(sprite, characterName, recreator);
+		if (sprite.isCpuControlled()) nativeScriptedArtSidekicks.add(sprite);
+	}
+
+	boolean usesNativeScriptedArt(AbstractPlayableSprite sprite) {
+		return nativeScriptedArtSidekicks.contains(sprite);
+	}
+
 	/** A scene may erase its followers while its same-world history still contains them. */
 	void retireAllSidekicksForRewind() {
 		for (var sidekick : new ArrayList<>(sidekicks)) {
 			rewindRetiredSidekicks.put(sidekick.getCode(), new RewindRetiredSidekick(
-					sidekick, sidekickCharacterNames.get(sidekick), temporarySidekicks.contains(sidekick)));
+					sidekick, sidekickCharacterNames.get(sidekick), temporarySidekicks.contains(sidekick),
+					nativeScriptedArtSidekicks.contains(sidekick)));
 			removeSprite(sidekick);
 		}
 	}
@@ -277,6 +292,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 			} else if (getSprite(entry.getKey()) == null) {
 				if (retired.temporary()) addTemporarySidekick(retired.sprite(), retired.characterName());
 				else addSprite(retired.sprite(), retired.characterName());
+				if (retired.nativeScriptedArt()) nativeScriptedArtSidekicks.add(retired.sprite());
 			}
 		}
 	}
@@ -332,6 +348,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 		sidekicks.clear();
 		sidekickCharacterNames.clear();
 		temporarySidekicks.clear();
+		nativeScriptedArtSidekicks.clear();
 		temporarySidekickRecreators.clear();
 		rewindRetiredSidekicks.clear();
 		bucketsDirty = true;
@@ -1642,6 +1659,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 			sidekicks.remove(playable);
 			sidekickCharacterNames.remove(playable);
 			temporarySidekicks.remove(playable);
+			nativeScriptedArtSidekicks.remove(playable);
 		}
 		return (sprites.remove(sprite.getCode()) != null);
 	}
