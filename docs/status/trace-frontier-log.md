@@ -112197,3 +112197,35 @@ preserves baseline scores, source hashes, complete-runtime/media evidence and
 rejected hypotheses. Broad C1–C7 matching validation had 26 inherited failures and
 64 identical skips, with passing separate guards; C8/tools combined updated-base
 validation, integration, push and cleanup remain pending.
+
+
+## 2026-10-14 — current S3K baselines and fresh-title SST slice
+
+Matched source `5b2ff8e78`, `.worktrees/ai-s3k-parity-trace`, verified locked-on
+ROM, Java25 and normal queued trace profiles. The [native title audit](../architecture/audits/trace/2026-10-14-s3k-fresh-title-sst.md)
+records exact selectors, native core/movie pins, negative checks and scope.
+Original AIZ20,463 and initialHCZ3,519 compared observations pass with both
+canonical prefixes (11784:4/0/0/0). `-Ptrace-segments` with
+`TestS3kAizZoneSliceTraceReplay#replayMatchesTrace,TestS3kSonicTailsHcz2SegmentTraceReplay#replayMatchesTrace`
+fails2/2/0/0: alternateAIZ has60 spans, first25,589 animation`$13/$05`;
+standalone returnedHCZ has3,433, firstrow0 Y-speed`$00/$0E`. The old59 figure
+is historical; no standalone bootstrap hydrates a returned campaign.
+
+`-Ptrace-replay` with
+`TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds`
+fails1/1/0/0: segment6 retains189 spans, first3,319 TailsX`$31C1/$31CA`;
+segment8 retains12,719, first1,583 TailsX`$366C/$3674`; segment9 initialHCZ is
+green. Segment11 retains82,067, firstmapping1,507`$63/$95`, firstY1,510
+`$7D6/$7DF`; only5,725/14,208rows complete, losing LEVEL ownership atinput68,801.
+Commands use `python3 tools/testing/maven_queue.py -Dmse=off <profile>
+'-Dtest=<selectors>' '-Ds3k.rom.path=<absolute verified ROM>' test -B`,
+`JAVA_HOME=/usr/lib/jvm/java-25-openjdk` and the documented surfaceless EGL flag.
+
+The candidate restores fresh title owner SST8 and real children9–12 before
+placements, retaining native wait/retirement and exact graph replay after
+omitted visual presentation. Actual production preset graph checks45290 pass
+10/0/0/0 at09:32:19 BST; focused controls2446 pass3/0/0/0; strictpost-title
+8113 passes the two-return prefix but leaves the chain profile andinput68,801
+stop unchanged. Native presence now matches through AIZ2row126; the next
+measured omission is five MonkeyDude arm children atrow127. Ring/flash placement
+remains engine25/17 vsnative18/22, so no trace-frontier closure is claimed.

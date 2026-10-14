@@ -5264,3 +5264,26 @@ publish one immutable cache only after success, and propagate invalid bytes
 before changing RAM/output. Cache construction during pure post-restore rebuild
 must not advance captured scroll state. Missing required data still fails; no
 fallback table or ROM-required fixture skip replaces that boundary.
+
+
+## Optional title presentation still occupies the native SST graph
+
+`Level/loc_62B6` writes `Obj_TitleCard` at `Dynamic_object_RAM+5` (absolute
+SST8), not absolute slot5. `Obj_TitleCardCreate` then allocates four children
+with `AllocateObjectAfterCurrent` before `loc_6468` loads ordinary placements.
+`loc_64DC` seeds the surviving owner's `$2E` wait with `$16` after the initial
+sprite pass. Omitting visual presentation does not retire those objects.
+Children consume their preceding `Render_Sprites` visibility; their lower-slot
+owner sees the final `$30` decrement only on its next dispatch. Preserve exact
+captured parent2 links and pure recreation without allocating another graph.
+
+Do not substitute the intro-controller slot: `Dynamic_object_RAM+2` is absolute
+SST5. D01's `Obj_TitleCardInit` deletes before child/art creation, leaving SST8
+for the ending owner. Use semantic fresh-level admission and the actual loaded
+destination; production `LevelLoadContext` zone/act can be unset.
+
+The maintained `SlotOccupancyProbe` masks native code pointers to a low byte for
+its type display. Use that channel to compare occupancy only; identify native
+routines from the full auxiliary pointer or a source-backed native observation.
+The [2026-10-14 audit](../../../docs/architecture/audits/trace/2026-10-14-s3k-fresh-title-sst.md)
+records the matched graph repair and its unchanged strict trace frontier.

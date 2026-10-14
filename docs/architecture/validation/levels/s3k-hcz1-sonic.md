@@ -235,3 +235,17 @@ Composed canonical71207 passes standalone HCZ and complete chain segment9:
 giant-ring handoff succeeds. The newly reached segment11 is incomplete, first
 row1510 Y07D6/07DF; AIZ frontiers remain unchanged. This does not establish
 native pixel, dynamic-art or audio parity beyond the fixture's comparisons.
+
+
+## Native fresh-title ownership follow-up — 2026-10-14
+
+`TestS3kFreshTitleCardSstGraph` independently loads actual AIZ2 and HCZ1
+fresh boundaries: absolute SST8 and four following children precede placements,
+survive omitted presentation, and obey native wait/retirement order. Its graph
+restore/replay checks use the five actual production display presets
+320/352/400/528/800, with camera width verified before and after loading, two
+independent parent graphs and two complete registry replay cycles. D01 excludes
+the ordinary title graph. This is a bounded native entry/graph contract; it does
+not qualify the older route width inventory above or rendered pixels/audio.
+The [audit](../../audits/trace/2026-10-14-s3k-fresh-title-sst.md) records commands,
+negative evidence and the unchanged original AIZ/initial HCZ controls.
