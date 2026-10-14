@@ -129,3 +129,109 @@ and its producer lag are recorded separately from observed RAM. No PAL, donor,
 wide, whole-scene pixel or native trajectory conformance is claimed here.
 The earlier unavailable-Xvfb attempt failed before any emulator launch and
 provides no native execution or screenshot credit.
+
+## Native HUD lifetime and crystal midpoint fall-through — 2026-10-14
+
+Four actual engine captures on immutable `d2808bacd` candidate classes completed
+exit0 through normal queued `exec:exec`, 13:40:31.638742–13:40:59.238430 UTC.
+Each case has its exact argv, child PID and pre-Popen/post-wait epoch bounds under
+external `hpz-sanctuary-ceremony/engine-pairs-d135-native-pose/*-launch/command.json`.
+The pre-repair runtime is `e57236d51` and the candidate jar is the one recorded
+above. Each genuine fresh `$1701` capture declares seven Chaos Emeralds and uses
+the original BK2 controller slice starting at227779,950 steps, every frame drawn;
+no position, camera, timer, physics or auxiliary observation is injected.
+
+Midpoint and conversion images were inspected. S1's missing Sonic body is visible
+with borrowed native art after the repair; all950 before/after S1 state rows are
+byte-identical. The native pair differs only in P2 Y on854 rows, the literal Tails
+four-pixel adjustment. Paired Tails' wrong pose changes to the character table's
+AD/B0 presentation. Independent 3-bit component normalization uses engine
+`(channel*7+127)//255` and GPGX `(channel+17)//34`. The explicit body rectangle
+`[136,112,184,160)` still differs from native at339/2304 midpoint and336/2304
+conversion pixels (before:536 and496). That rectangle includes animated scene
+colors. These are measured residuals and visual repair evidence, **not a native
+pixel match**. The wider scene rectangle also remains unequal.
+
+The same images expose a native HUD omission: Level `loc_6460` clears both
+`Update_HUD_timer` and `Level_started_flag` at `$1701`; `Render_Sprites` skips
+`Render_HUD` while the latter is zero (sonic3k.asm:7841–7846,36326–36328).
+The existing S3K zone-feature HUD provider now consults the sanctuary resource
+profile. Existing profile post-load player initialization pauses the level timer
+and clears the camera's started flag before initial Process_Sprites. The existing
+level/camera snapshots capture those values; no public or snapshot field is added.
+The finite products check timer pause and inactive HUD through every ordinary and
+replayed tick, including released sanctuary. Ordinary origin restore is a separate
+pending destination test, not inferred from the hub's pause.
+
+A second actual discrepancy is source-backed: at `$20`, `loc_90D30` calls
+`sub_90E9A` and falls through to `loc_90D42`, immediately arming raw landing
+animation. The prior crystal implementation wrongly waited33 further decrements
+for a negative timer. It now arms at the midpoint. Three independent short
+contracts first complete **3 tests /3 failures /0 errors /0 skips** at13:48:21 UTC:
+missing raw animation at the midpoint, HUD suppression false, and native fresh
+`levelStarted` incorrectly true. No production change was made before this red.
+
+The coherent corrected selection completes **422 tests /0 failures /0 errors /
+0 skips**, whole-command exit0 at **13:52:35 UTC**,2:40 Maven time. The selector is:
+
+```text
+TestS3kHpzSanctuaryLifecycleProduction,TestHpzSanctuaryObjects,TestS3kHpzGraphRewind,
+TestSonic3kNonlinearHpzProfile,TestSonic3kLevelInitProfile,TestSonic3kZoneFeatureProvider,
+TestS3kHpzSanctuaryHeadless,TestS3kSpecialStageResultsReveal,
+TestS3kSanctuaryResultsBackdropHeadless,TestNativeCarriedPlayerArtBinding,
+TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,
+TestSonic3kDecodingUtils
+```
+
+It uses the earlier queued lean/EGL environment and all three absolute original
+ROM arguments. This includes284 ceremony/clock cases,27 components,1 graph,
+9 profile,6 initialization-profile,8 zone-feature,19 results,4 carried-art,
+4 older sanctuary and60 required bootstrap/loading/decoding/AIZ checks.
+This new runtime correction requires those affected checks; it does not repeat an
+unchanged gate merely to erase the earlier outer143 observation.
+
+Equal native Level_frame_counter values are not equal first sprite-dispatch
+origins. The genuine LFC1 snapshot already has B5 `loc_90A72` and timer `$0015`;
+at LFC81 it has `loc_90B22/$021C` and rising child `loc_90DA2/$007B`.
+Initial load/fade sprite passes therefore precede the LFC origin in that native
+execution. The reference records one published-producer lag separately. No9-tick
+counter seed or fitted phase adjustment follows. The native raw-animation cursor,
+actual initial fade/target-palette publication and a new rendered HUD observation
+remain explicit follow-up obligations; this gate is not full choreography or
+whole-scene visual parity.
+
+## Raw landing cursor and deferred deletion marker — 2026-10-14
+
+A bounded independent shipped-source review confirms the cleared free-slot entry
+context for both `loc_90CA2` paths. `SetUp_ObjAttributes` does not change
+`anim_frame` or its timer. `Animate_RawNoSST` decrements timer0, increments cursor0
+to1, then reads `1(a1,d0)`; `byte_90FF6` therefore first publishes `$1F`, not the
+leading `$1D`. Twelve mappings precede `$F4` on the thirteenth raw call
+(sonic3k.asm:197833–197840,197990–198000,176901–176919,177341–177388).
+Allocation scans an already-cleared slot; no new allocator clearing is invented.
+
+The callback publishes the parent signal and tail-calls `Go_Delete_Sprite`,
+which installs a deletion operation and status bit7 without clearing the slot.
+`loc_90D52` still falls through its parity draw tail on that pass; the following
+fourteenth dispatch runs `Delete_Current_Sprite` and physically retires the child
+(179136–179140). The prior fourteen-call immediate deletion could accidentally
+match physical removal while publishing the signal one call late and drawing an
+extra leading `$1D`. The existing captured `published` flag now represents that
+pending deletion operation. No snapshot or public API field is added.
+
+The independent native contract completes **1 test /1 failure /0 errors /0 skips**
+at13:59:36 UTC before the runtime correction, expected12 remaining raw mappings
+but actual13. It now checks every literal mapping, callback timing, occupied parity
+marker and subsequent physical deletion. The affected selection
+`TestS3kHpzSanctuaryLifecycleProduction,TestHpzSanctuaryObjects,TestS3kHpzGraphRewind`
+completes **312 tests /0 failures /0 errors /0 skips**, observed whole-command
+exit0 at **14:02:59 UTC**,2:31 Maven time, using the earlier queue/EGL/ROM recipe.
+This includes all284 finite ceremony/clock cases and their two complete world
+cycles across natural child expiry/recreation,27 components and1 graph. Source
+is `fae39a7fb` plus the crystal/test changes in this commit. The unchanged
+HUD/profile/loading/results/art neighbors retain their separate422-source
+qualification; combined delivery validation remains lead-owned.
+
+The repaired callback and captured pending deletion lifetime do not certify the
+native pre-LFC loading/fade passes, staged target-palette publication, actual
+origin return, or full scene/pixel timing. Those remain the next concrete owners.
