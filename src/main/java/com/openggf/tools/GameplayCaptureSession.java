@@ -44,10 +44,12 @@ import static org.lwjgl.opengl.GL11.glFinish;
  * {@link Bk2FrameInput} through the {@code InputHandler} logical override, so an
  * authored input log and a recorded BK2 drive the session identically.
  *
- * <p>Cross-game donation: the boot's {@code ResetCrossGameFeatures} step deactivates
- * the donor provider, so when a donor is requested the session re-initialises it after
- * boot, re-registers the team and refreshes playable art, then verifies the provider
- * reports active. Originating task: FBZ2 {@code $1DC0} squeeze capture, 2026-09-13.
+ * <p>Cross-game donation: headless boot initializes the configured donor after
+ * subsystem reset and before the original team and native entry owners bind.
+ * This session retains a late fallback for a host that returns without an active
+ * requested provider, and verifies activation. Originating fallback: FBZ2
+ * {@code $1DC0} squeeze capture, 2026-09-13; original-roster correction: CNZ1
+ * donor carry screenshots, 2026-10-14.
  */
 public final class GameplayCaptureSession implements AutoCloseable {
 
