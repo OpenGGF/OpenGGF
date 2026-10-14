@@ -6,8 +6,11 @@ import com.openggf.game.rewind.*;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.TeleporterBeamObjectInstance;
+import com.openggf.game.sonic3k.objects.SSZHPZTeleporterObjectInstance;
 import com.openggf.game.sonic3k.runtime.HpzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
+import com.openggf.sprites.NativePositionOps;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.rules.*;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -25,25 +28,57 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestS3kHpzCompatibilityMatrix {
-    record Scenario(String main, int width, String donor, String followers) {}
+    record Scenario(String main, WidescreenAspect aspect, String donor, String followers,
+                    int customWidth) {
+        Scenario(String main, WidescreenAspect aspect, String donor, String followers) {
+            this(main, aspect, donor, followers, 0);
+        }
+
+        int width() {
+            return aspect == null ? customWidth : aspect.pixelWidth();
+        }
+
+        @Override public String toString() {
+            return main + "/" + donor + "/" + (aspect == null ? "custom-" + customWidth : aspect)
+                    + "/" + (followers.isEmpty() ? "solo" : followers);
+        }
+    }
 
     static Stream<Scenario> scenarios() {
-        List<Scenario> rows = new ArrayList<>();
+        Set<Scenario> rows = new LinkedHashSet<>();
         for (String donor : List.of("off", "s1", "s2")) {
             for (String main : List.of("sonic", "tails", "knuckles")) {
                 if (!SozAcceptanceConfigurations.supportsCharacter(donor, main)) {
                     continue;
                 }
-                for (int width : new int[]{320, 400, 512, 640, 800}) {
-                    rows.add(new Scenario(main, width, donor, ""));
+                for (var aspect : WidescreenAspect.values()) {
+                    rows.add(new Scenario(main, aspect, donor, ""));
                 }
             }
         }
-        rows.add(new Scenario("sonic", 320, "off", "tails"));
-        rows.add(new Scenario("sonic", 320, "s1", SozAcceptanceConfigurations.supportedFollowers("s1", "sonic")));
-        rows.add(new Scenario("sonic", 400, "s2", "tails"));
-        rows.add(new Scenario("sonic", 800, "off", "tails,knuckles"));
+        for (String donor : List.of("off", "s1", "s2")) {
+            for (var aspect : WidescreenAspect.values()) {
+                for (String followers : List.of("tails", "tails,knuckles", "tails,tails",
+                        "tails,tails,knuckles,sonic,knuckles,sonic,tails")) {
+                    rows.add(new Scenario("sonic", aspect, donor,
+                            SozAcceptanceConfigurations.supportedFollowers(donor, followers)));
+                }
+            }
+        }
         return rows.stream();
+    }
+
+    static Stream<Scenario> followerScenarios() {
+        return scenarios().filter(row -> !row.followers().isEmpty());
+    }
+
+    /** Retain the old custom-width geometry checks without claiming menu-preset coverage. */
+    static Stream<Scenario> legacyGeometryScenarios() {
+        return Stream.of("off", "s1", "s2").flatMap(donor ->
+                Stream.of("sonic", "tails", "knuckles")
+                        .filter(main -> SozAcceptanceConfigurations.supportsCharacter(donor, main))
+                        .flatMap(main -> Stream.of(512, 640)
+                                .map(width -> new Scenario(main, null, donor, "", width))));
     }
 
     private final EnumMap<SonicConfiguration, Object> saved = new EnumMap<>(SonicConfiguration.class);
@@ -69,13 +104,19 @@ class TestS3kHpzCompatibilityMatrix {
         TestEnvironment.activeGameplayMode();
     }
 
-    private HeadlessTestFixture boot(Scenario row, Integer x, Integer y) {
+    static HeadlessTestFixture boot(Scenario row, Integer x, Integer y) {
+        var config = SonicConfigurationService.getInstance();
         config.clearSessionOverrides();
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, row.main());
         config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, row.followers());
-        config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, WidescreenAspect.NATIVE_4_3.name());
-        config.resolveDisplayAspect();
-        config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS, row.width());
+        config.setSessionOverride(SonicConfiguration.DISCORD_RICH_PRESENCE_ENABLED, false);
+        config.setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, true);
+        if (row.aspect() != null) {
+            SozAcceptanceConfigurations.selectDisplay(row.aspect());
+        } else {
+            SozAcceptanceConfigurations.selectDisplay(WidescreenAspect.NATIVE_4_3);
+            config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS, row.customWidth());
+        }
         config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, !row.donor().equals("off"));
         config.setSessionOverride(SonicConfiguration.CROSS_GAME_SOURCE, row.donor());
         if (!row.donor().equals("off")) {
@@ -98,12 +139,39 @@ class TestS3kHpzCompatibilityMatrix {
             builder.withCrossGameDonation(row.donor());
         }
         var fixture = builder.build();
-        SozAcceptanceConfigurations.assertUsableTeam(row.donor());
-        assertEquals(row.width(), fixture.camera().getWidth() & 0xFFFF);
-        assertEquals(row.followers().isEmpty() ? 0 : row.followers().split(",").length,
-                GameServices.sprites().getRegisteredSidekicks().size());
-        assertEquals(!row.donor().equals("off"), CrossGameFeatureProvider.isActive());
+        assertScenario(row);
         return fixture;
+    }
+
+    static void assertScenario(Scenario row) {
+        if (row.aspect() != null) {
+            SozAcceptanceConfigurations.assertDisplay(row.aspect());
+        } else {
+            assertEquals(row.customWidth(), GameServices.camera().getWidth() & 0xFFFF,
+                    "declared legacy custom width");
+        }
+        SozAcceptanceConfigurations.assertUsableTeam(row.donor());
+        assertEquals(!row.donor().equals("off"), CrossGameFeatureProvider.isActive());
+        if (!row.donor().equals("off")) {
+            assertEquals(row.donor(), CrossGameFeatureProvider.getInstance().getDonorGameId());
+        }
+        var sprites = GameServices.sprites();
+        var previous = sprites.getMainPlayable();
+        assertEquals(row.main(), previous.getCode());
+        assertSame(previous, GameServices.camera().getFocusedSprite());
+        String[] expected = row.followers().isEmpty() ? new String[0] : row.followers().split(",");
+        var followers = sprites.getRegisteredSidekicks();
+        assertEquals(expected.length, followers.size(), "configured participants: " + row);
+        Set<AbstractPlayableSprite> identities = Collections.newSetFromMap(new IdentityHashMap<>());
+        identities.add(previous);
+        for (int i = 0; i < expected.length; i++) {
+            var follower = followers.get(i);
+            assertTrue(identities.add(follower), "duplicate characters have independent live identities");
+            assertEquals(expected[i], sprites.getSidekickCharacterName(follower));
+            assertTrue(follower.isCpuControlled());
+            assertSame(previous, follower.getCpuController().getLeader(), "ordered CPU leader chain");
+            previous = follower;
+        }
     }
 
     private static HpzZoneRuntimeState hpz() {
@@ -113,6 +181,16 @@ class TestS3kHpzCompatibilityMatrix {
     @ParameterizedTest
     @MethodSource("scenarios")
     void coldEntryAppliesCharacterStartLimitsAndPaletteControl(Scenario row) {
+        checkColdEntry(row);
+    }
+
+    @ParameterizedTest(name = "legacy custom-width entry {0}")
+    @MethodSource("legacyGeometryScenarios")
+    void legacyCustomWidthEntryRetainsItsGeometryContract(Scenario row) {
+        checkColdEntry(row);
+    }
+
+    private void checkColdEntry(Scenario row) {
         var fixture = boot(row, null, null);
         var player = fixture.sprite();
         boolean knuckles = row.main().equals("knuckles");
@@ -134,12 +212,22 @@ class TestS3kHpzCompatibilityMatrix {
         }
         var before = fixture.gameplayMode().getRewindRegistry().capture();
         fixture.stepFrame(false, false, false, false, false);
-        replay(fixture, before, "cold entry");
+        replay(fixture, before, "cold entry", row);
     }
 
     @ParameterizedTest
     @MethodSource("scenarios")
     void lowerTeleporterTransportReplaysAtChargeAndRise(Scenario row) {
+        checkTransport(row);
+    }
+
+    @ParameterizedTest(name = "legacy custom-width transport {0}")
+    @MethodSource("legacyGeometryScenarios")
+    void legacyCustomWidthTransportRetainsItsGeometryContract(Scenario row) {
+        checkTransport(row);
+    }
+
+    private void checkTransport(Scenario row) {
         var fixture = boot(row, 0xB40, 0x8B0);
         var player = fixture.sprite();
         boolean charged = false;
@@ -154,19 +242,19 @@ class TestS3kHpzCompatibilityMatrix {
             int yBefore = player.getCentreY() & 0xFFFF;
             fixture.stepFrame(false, false, false, false, false);
             if (rose && !beamDeleted && beamBefore && !beamPresent()) {
-                replay(fixture, before, "Obj_TeleporterBeam contraction delete");
+                replay(fixture, before, "Obj_TeleporterBeam contraction delete", row);
                 beamDeleted = true;
                 if (controlledBefore && !player.isObjectControlled()) {
                     released = true;
                 }
             } else if (!charged && !transportBefore && hpz().teleporterTransportActive()) {
-                replay(fixture, before, "beam progress 8 roll");
+                replay(fixture, before, "beam progress 8 roll", row);
                 charged = true;
             } else if (charged && !rose && yBefore - (player.getCentreY() & 0xFFFF) == 0x10) {
-                replay(fixture, before, "loc_457BE rise step");
+                replay(fixture, before, "loc_457BE rise step", row);
                 rose = true;
             } else if (rose && !released && controlledBefore && !player.isObjectControlled()) {
-                replay(fixture, before, "loc_4581C settle release");
+                replay(fixture, before, "loc_4581C settle release", row);
                 released = true;
             }
         }
@@ -178,11 +266,22 @@ class TestS3kHpzCompatibilityMatrix {
         assertTrue((player.getCentreY() & 0xFFFF) < 0x480, "player reaches the upper floor");
         assertTrue(GameServices.level().getObjectManager().getActiveObjects().stream()
                 .noneMatch(TeleporterBeamObjectInstance.class::isInstance), "beam contracts and deletes");
+        assertScenario(row);
     }
 
     @ParameterizedTest
     @MethodSource("scenarios")
     void upperCorridorEntrySelectsPalHpzAndCharacterCameraLimit(Scenario row) {
+        checkUpperCorridor(row);
+    }
+
+    @ParameterizedTest(name = "legacy custom-width corridor {0}")
+    @MethodSource("legacyGeometryScenarios")
+    void legacyCustomWidthCorridorRetainsItsGeometryContract(Scenario row) {
+        checkUpperCorridor(row);
+    }
+
+    private void checkUpperCorridor(Scenario row) {
         var fixture = boot(row, 0xCF0, 0x3C0);
         for (int i = 0; i < 90; i++) {
             fixture.stepFrame(false, false, false, false, false);
@@ -200,7 +299,49 @@ class TestS3kHpzCompatibilityMatrix {
         }
         var before = fixture.gameplayMode().getRewindRegistry().capture();
         fixture.stepFrame(false, false, false, false, false);
-        replay(fixture, before, "upper corridor entry");
+        replay(fixture, before, "upper corridor entry", row);
+    }
+
+    @ParameterizedTest(name = "P1-only pad authority {0}")
+    @MethodSource("followerScenarios")
+    void standingFollowersCannotClaimTheLeadersTeleporter(Scenario row) {
+        // loc_45660 tests p1_standing_bit after SolidObjectTopSloped2 has resolved both
+        // native players. Extra standing latches must preserve the same P1-only authority.
+        var fixture = boot(row, 0xA20, 0x8B0);
+        fixture.stepIdleFrames(90); // release the real intro owner before the contact stimulus
+        var objects = GameServices.level().getObjectManager();
+        var pad = objects.activeObjectsOfType(SSZHPZTeleporterObjectInstance.class).stream()
+                .filter(object -> object.getX() == 0xB40 && object.getY() > 0x800)
+                .findFirst().orElseThrow();
+        var main = GameServices.sprites().getMainPlayable();
+        NativePositionOps.writeXPosResetSubpixel(main, 0xAE0);
+        NativePositionOps.writeYPosResetSubpixel(main, 0x8B0);
+        main.setXSpeed((short) 0); main.setGSpeed((short) 0); main.setYSpeed((short) 0);
+        // Declared local falling-contact setup; standing, pad state and outcome are not seeded.
+        for (var follower : GameServices.sprites().getRegisteredSidekicks()) {
+            NativePositionOps.writeXPosResetSubpixel(follower, pad.getX());
+            // byte_466E8's centre is $11 pixels above pad.y; the next four-pixel
+            // fall crosses that surface by one pixel, inside loc_1E45A's 1..16 window.
+            NativePositionOps.writeYPosResetSubpixel(follower,
+                    pad.getY() - 0x11 - follower.getYRadius() - 3);
+            follower.setAir(true);
+            follower.setYSpeed((short) 0x100);
+            follower.setXSpeed((short) 0); follower.setGSpeed((short) 0);
+        }
+        var before = fixture.gameplayMode().getRewindRegistry().capture();
+        fixture.stepFrame(false, false, false, false, false);
+        for (var follower : GameServices.sprites().getRegisteredSidekicks()) {
+            assertSame(pad, objects.getRidingObject(follower),
+                    "real follower standing contact " + row + " " + follower.getCode()
+                            + " xy=" + follower.getCentreX() + "/" + follower.getCentreY()
+                            + " ys=" + follower.getYSpeed() + " pad=" + pad.getX() + "/" + pad.getY());
+            assertTrue(objects.hasObjectStandingBit(follower, pad));
+        }
+        assertFalse(objects.hasObjectStandingBit(main, pad), "P1 stays outside the pad");
+        assertFalse(main.isObjectControlled(), "follower contact cannot seize P1");
+        assertFalse(hpz().teleporterTransportActive());
+        assertFalse(beamPresent(), "only P1 can allocate the charging beam");
+        replay(fixture, before, "follower standing without P1 authority", row);
     }
 
     private static boolean beamPresent() {
@@ -208,14 +349,19 @@ class TestS3kHpzCompatibilityMatrix {
                 .anyMatch(TeleporterBeamObjectInstance.class::isInstance);
     }
 
-    private static void replay(HeadlessTestFixture fixture, CompositeSnapshot before, String label) {
+    private static void replay(HeadlessTestFixture fixture, CompositeSnapshot before, String label,
+                               Scenario row) {
         var registry = fixture.gameplayMode().getRewindRegistry();
         var after = registry.capture();
-        registry.restore(before);
-        same(before, registry.capture(), label + " restore");
-        fixture.runner().primeInputState(new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, ""));
-        fixture.stepFrame(false, false, false, false, false);
-        same(after, registry.capture(), label + " forward");
+        for (int cycle = 0; cycle < 2; cycle++) {
+            registry.restore(before);
+            same(before, registry.capture(), label + " restore " + cycle);
+            assertScenario(row);
+            fixture.runner().primeInputState(new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, ""));
+            fixture.stepFrame(false, false, false, false, false);
+            same(after, registry.capture(), label + " forward " + cycle);
+            assertScenario(row);
+        }
     }
 
     private static void same(CompositeSnapshot a, CompositeSnapshot b, String label) {
