@@ -23,6 +23,31 @@ class TestEngineSettingsScreen {
     @TempDir Path directory;
 
     @Test
+    void colourExpansionDisplaysFullAndLimitedAndSavesFromTheDisplayPage() {
+        Fixture f = new Fixture();
+        f.press(GLFW_KEY_ENTER);
+        var catalog = new EngineSettingsDraft(f.config);
+        int row = catalog.keys(EngineSettingsDraft.Category.DISPLAY).indexOf(DISPLAY_COLOR_EXPANSION);
+        assertTrue(row >= 0);
+        f.press(GLFW_KEY_DOWN, row);
+        assertTrue(f.texts().contains("Colour expansion"));
+        assertTrue(f.texts().contains("Full"));
+        f.press(GLFW_KEY_ENTER);
+        assertTrue(f.texts().contains("Full"));
+        assertTrue(f.texts().contains("Limited"));
+        f.press(GLFW_KEY_DOWN);
+        f.press(GLFW_KEY_ENTER);
+        assertEquals("FULL", f.config.getString(DISPLAY_COLOR_EXPANSION));
+        assertTrue(f.texts().contains("Limited *"));
+        f.press(GLFW_KEY_ESCAPE);
+        f.press(GLFW_KEY_UP, 2); // Display -> Cancel -> Apply
+        f.press(GLFW_KEY_ENTER);
+        assertTrue(f.screen.consumeApplied());
+        assertEquals("LIMITED", SonicConfigurationService.createStandalone(directory).getString(DISPLAY_COLOR_EXPANSION));
+        assertEquals("RAW_RGB", f.config.getString(DISPLAY_COLOR_PROFILE));
+    }
+
+    @Test
     void backLeavesFieldsBeforeClosingTheScreen() {
         Fixture f = new Fixture();
         f.press(GLFW_KEY_ENTER);

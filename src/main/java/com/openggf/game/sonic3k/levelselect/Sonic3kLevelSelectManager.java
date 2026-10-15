@@ -615,7 +615,7 @@ public class Sonic3kLevelSelectManager implements LevelSelectProvider {
         Palette pal0 = dataLoader.getMenuPalette(0);
         if (pal0 != null) {
             Palette.Color backdrop = pal0.getColor(0);
-            glClearColor(backdrop.rFloat(), backdrop.gFloat(), backdrop.bFloat(), 1.0f);
+            com.openggf.graphics.color.PaletteDisplayColor.glClear(backdrop, com.openggf.game.GameServices.graphics());
         } else {
             glClearColor(BG_R, BG_G, BG_B, 1.0f);
         }

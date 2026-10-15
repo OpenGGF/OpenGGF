@@ -71,6 +71,9 @@ public final class ConfigCatalog {
         put(DISPLAY_COLOR_PROFILE, ofEnum("display", "colorProfile",
                 "Display-only color profile for Mega Drive palette presentation",
                 Set.of("RAW_RGB", "MD_ANALOG", "NTSC_SOFT")));
+        put(DISPLAY_COLOR_EXPANSION, ofEnum("display", "colorExpansion",
+                "Palette RGB output range after fades and colour profile: Full keeps current output; Limited caps channels at 238",
+                Set.of("FULL", "LIMITED")));
         put(DISPLAY_COLOR_PROFILE_TOGGLE_KEY, of("display", "colorProfileToggleKey", KEY,
                 "Runtime key to cycle the display color profile"));
         put(FPS, of("display", "fps", INT, "Frames per second to render (changes game speed)"));

@@ -4620,7 +4620,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             return;
         }
         Palette.Color backdrop = resolveLevelBackdropColor();
-        glClearColor(backdrop.rFloat(), backdrop.gFloat(), backdrop.bFloat(), 1.0f);
+        com.openggf.graphics.color.PaletteDisplayColor.glClear(backdrop, graphicsManager);
     }
 
     /**

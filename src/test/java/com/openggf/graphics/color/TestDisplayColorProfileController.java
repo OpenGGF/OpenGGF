@@ -8,11 +8,91 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_V;
 import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
 import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
 
 class TestDisplayColorProfileController {
+
+    @org.junit.jupiter.api.io.TempDir java.nio.file.Path directory;
+
+    @Test
+    void savedExpansionAppliesAtRuntimeWithoutChangingTheProfileOrNativePalette() throws Exception {
+        var config = com.openggf.configuration.SonicConfigurationService.createStandalone(directory);
+        var graphics = new com.openggf.graphics.GraphicsManager();
+        graphics.initHeadless();
+        AtomicInteger refreshed = new AtomicInteger();
+        var controller = DisplayColorProfileController.fromConfig(config, graphics, refreshed::incrementAndGet);
+        assertEquals(DisplayColorExpansion.FULL, graphics.getDisplayColorExpansion());
+        var draft = new com.openggf.configuration.EngineSettingsDraft(config);
+        draft.set(com.openggf.configuration.SonicConfiguration.DISPLAY_COLOR_EXPANSION, "LIMITED");
+        controller.synchronizeSavedSettings();
+        assertEquals(DisplayColorExpansion.FULL, graphics.getDisplayColorExpansion(), "unsaved drafts are not live");
+        draft.apply();
+        controller.synchronizeSavedSettings();
+        assertEquals(DisplayColorExpansion.LIMITED, graphics.getDisplayColorExpansion());
+        assertEquals(DisplayColorProfile.RAW_RGB, controller.currentProfile());
+        assertEquals(0, refreshed.get(), "output gain must not reload or mutate the native palette owner");
+        var reloaded = com.openggf.configuration.SonicConfigurationService.createStandalone(directory);
+        assertEquals("LIMITED", reloaded.getString(com.openggf.configuration.SonicConfiguration.DISPLAY_COLOR_EXPANSION));
+        draft.reset(com.openggf.configuration.SonicConfiguration.DISPLAY_COLOR_EXPANSION);
+        draft.apply();
+        controller.synchronizeSavedSettings();
+        assertEquals(DisplayColorExpansion.FULL, graphics.getDisplayColorExpansion());
+        graphics.cleanup();
+    }
+
+    @Test
+    void steadyStateSavedSettingSynchronizationAllocatesNothing() throws Exception {
+        var bean = (com.sun.management.ThreadMXBean) java.lang.management.ManagementFactory.getThreadMXBean();
+        org.junit.jupiter.api.Assumptions.assumeTrue(bean.isThreadAllocatedMemorySupported(),
+                "JVM cannot measure thread allocation");
+        if (!bean.isThreadAllocatedMemoryEnabled()) bean.setThreadAllocatedMemoryEnabled(true);
+        long thread = Thread.currentThread().threadId();
+        var config = com.openggf.configuration.SonicConfigurationService.createStandalone(directory);
+        var graphics = new com.openggf.graphics.GraphicsManager();
+        graphics.initHeadless();
+        var controller = DisplayColorProfileController.fromConfig(config, graphics, () -> { });
+        var draft = new com.openggf.configuration.EngineSettingsDraft(config);
+        draft.set(com.openggf.configuration.SonicConfiguration.DISPLAY_COLOR_EXPANSION, "LIMITED");
+        draft.apply();
+        controller.synchronizeSavedSettings();
+        assertEquals(DisplayColorExpansion.LIMITED, graphics.getDisplayColorExpansion());
+        // Warm the exact measured loops before enforcing the per-frame budget.
+        for (int warm = 0; warm < 20; warm++) {
+            synchronizeFrames(controller, 10_000);
+            readSavedSettings(config, 10_000);
+        }
+        long before = bean.getThreadAllocatedBytes(thread);
+        synchronizeFrames(controller, 10_000);
+        long allocated = bean.getThreadAllocatedBytes(thread) - before;
+        before = bean.getThreadAllocatedBytes(thread);
+        readSavedSettings(config, 10_000);
+        long reads = bean.getThreadAllocatedBytes(thread) - before;
+        // The two saved-string reads are 0 B in an ordinary JVM. Another test in a
+        // reused fork mocking SonicConfigurationService makes Mockito's inline mock
+        // maker instrument every instance (measured 96 B per frame for both reads),
+        // so the oracle is: the controller adds nothing beyond its own two reads.
+        assertTrue(allocated <= reads,
+                "an unchanged saved display setting must not parse or allocate per rendered frame: "
+                        + allocated + " B for sync vs " + reads + " B for its two config reads");
+        assertEquals(DisplayColorExpansion.LIMITED, graphics.getDisplayColorExpansion());
+        graphics.cleanup();
+    }
+
+    private static void synchronizeFrames(DisplayColorProfileController controller, int frames) {
+        for (int frame = 0; frame < frames; frame++) controller.synchronizeSavedSettings();
+    }
+
+    private static int readSink;
+
+    private static void readSavedSettings(com.openggf.configuration.SonicConfigurationService config, int frames) {
+        for (int frame = 0; frame < frames; frame++) {
+            readSink += config.getString(com.openggf.configuration.SonicConfiguration.DISPLAY_COLOR_PROFILE).length()
+                    + config.getString(com.openggf.configuration.SonicConfiguration.DISPLAY_COLOR_EXPANSION).length();
+        }
+    }
 
     @Test
     void update_cyclesProfilePersistsRefreshesAndShowsNotification() {

@@ -16,6 +16,23 @@ class TestEngineSettingsDraft {
     @TempDir Path directory;
 
     @Test
+    void colourExpansionHasItsOwnSavedDisplayAxisAndCancelsWithoutChangingProfile() throws IOException {
+        SonicConfigurationService config = service();
+        assertEquals("FULL", config.getDefaultValue(DISPLAY_COLOR_EXPANSION));
+        var draft = new EngineSettingsDraft(config);
+        assertTrue(draft.keys(EngineSettingsDraft.Category.DISPLAY).contains(DISPLAY_COLOR_EXPANSION));
+        draft.set(DISPLAY_COLOR_EXPANSION, "LIMITED");
+        assertEquals("FULL", config.getString(DISPLAY_COLOR_EXPANSION));
+        assertEquals("FULL", new EngineSettingsDraft(config).text(DISPLAY_COLOR_EXPANSION));
+        draft.apply();
+        assertEquals("LIMITED", service().getString(DISPLAY_COLOR_EXPANSION));
+        assertEquals("RAW_RGB", service().getString(DISPLAY_COLOR_PROFILE));
+        draft.reset(DISPLAY_COLOR_EXPANSION);
+        draft.apply();
+        assertEquals("FULL", service().getString(DISPLAY_COLOR_EXPANSION));
+    }
+
+    @Test
     void presentationRevisionChangesOnlyWithDraftOrSavedState() throws IOException {
         EngineSettingsDraft draft = new EngineSettingsDraft(service());
         long initial = draft.revision();

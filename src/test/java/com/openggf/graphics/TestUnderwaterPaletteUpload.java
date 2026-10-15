@@ -23,6 +23,51 @@ class TestUnderwaterPaletteUpload {
     }
 
     @Test
+    void expansionToggleReuploadsDirectAndDerivedRowsWithoutChangingNativePaletteBytes() throws Exception {
+        graphics = new GraphicsManager();
+        graphics.initHeadless();
+        RecordingUnderwaterUploadOps uploads = new RecordingUnderwaterUploadOps();
+        graphics.setUnderwaterPaletteUploadOps(uploads);
+        RenderContext donor = RenderContext.getOrCreateDonor(GameId.S2);
+        Palette rawDonor = paletteWithColor(1, 181, 81, 41);
+        donor.setPalette(0, rawDonor);
+        Palette[] underwater = fourRows();
+        underwater[0] = paletteWithColor(1, 100, 50, 25);
+        Palette normal = paletteWithColor(1, 200, 100, 50);
+        graphics.cacheUnderwaterPaletteTexture(underwater, normal);
+        byte[] full = uploads.lastUpload.clone();
+        int derived = graphics.getUnderwaterDerivedRowRecomputeCount();
+        graphics.setDisplayColorExpansion(com.openggf.graphics.color.DisplayColorExpansion.LIMITED);
+        graphics.cacheUnderwaterPaletteTexture(underwater, normal);
+        assertEquals(2, uploads.uploadCount);
+        assertEquals(derived + 1, graphics.getUnderwaterDerivedRowRecomputeCount());
+        for (int i = 0; i < full.length; i++) {
+            int expected = i % 4 == 3 ? full[i] & 255 : (int) Math.round((full[i] & 255) * 238.0 / 255);
+            assertEquals(expected, uploads.lastUpload[i] & 255, "uploaded component " + i);
+        }
+        assertEquals(181, rawDonor.getColor(1).r & 255);
+        assertEquals(100, underwater[0].getColor(1).r & 255);
+        graphics.cacheUnderwaterPaletteTexture(copyRows(underwater), normal.deepCopy());
+        assertEquals(2, uploads.uploadCount, "unchanged range/content reuses the uploaded texture");
+        graphics.setDisplayColorExpansion(com.openggf.graphics.color.DisplayColorExpansion.FULL);
+        graphics.cacheUnderwaterPaletteTexture(underwater, normal);
+        assertEquals(3, uploads.uploadCount);
+        assertArrayEquals(full, uploads.lastUpload);
+    }
+
+    @Test
+    void limitedExpansionFollowsFadeAndRetainsTransparentColourZero() throws Exception {
+        graphics = new GraphicsManager();
+        graphics.setDisplayColorExpansion(com.openggf.graphics.color.DisplayColorExpansion.LIMITED);
+        graphics.setPaletteFadePresentation(PaletteFadePresentation.Mode.TO_BLACK, 1, 1);
+        Palette[] underwater = fourRows();
+        underwater[0] = paletteWithColor(1, 255, 255, 255);
+        cacheUnderwaterPaletteTexture(underwater, new Palette());
+        assertArrayEquals(new int[]{204, 238, 238, 255}, rgbaAt(uploadBuffer(graphics), 1));
+        assertArrayEquals(new int[]{0, 0, 0, 0}, rgbaAt(uploadBuffer(graphics), 0));
+    }
+
+    @Test
     void unchangedContentReusesPreparedStaging() throws Exception {
         graphics = new GraphicsManager();
         Palette[] underwater = fourRows();

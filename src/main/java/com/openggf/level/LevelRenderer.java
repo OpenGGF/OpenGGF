@@ -1445,10 +1445,11 @@ public final class LevelRenderer {
             return;
 
         Palette.Color backdropColor = lm.resolveLevelBackdropColor();
+        int displayedBackdrop = com.openggf.graphics.color.PaletteDisplayColor.packed(backdropColor, lm.graphicsManager);
         bgRenderer.setBackdropColor(
-                backdropColor.rFloat(),
-                backdropColor.gFloat(),
-                backdropColor.bFloat());
+                com.openggf.graphics.color.PaletteDisplayColor.red(displayedBackdrop),
+                com.openggf.graphics.color.PaletteDisplayColor.green(displayedBackdrop),
+                com.openggf.graphics.color.PaletteDisplayColor.blue(displayedBackdrop));
 
         int[] hScrollData = presentationHScroll();
         short[] vScrollData = currentScrollPresentation == null

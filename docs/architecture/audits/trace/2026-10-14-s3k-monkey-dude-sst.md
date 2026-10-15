@@ -1358,3 +1358,82 @@ SST, rendered/audio and broader product obligations remain separate. The actual
 strict AIZ5/returned-HCZ and alternate frontiers are still open.
 
 Exact conversion production SHA-256: `5dabe3ee8f2445df6c12251cacdcf572d9e5a2021f91b10e4a014374291532d2`.
+
+
+## Prepared independent colour-expansion feature — 2026-10-15
+
+The user requested a saved Full/Limited display setting during the measurement
+window. This supersedes the earlier optional capture-only native-word provenance
+proposal. Its owned source writer was canceled while blocked, before mutation;
+no metadata, codec or property draft entered this tree. Source-only feature and
+test preparation holds the normal worktree EX lease and runs no heavy work.
+The qualified AIZ tip remains b8f3da8a1; pending boss tests remain a separate slice.
+
+The exact minimal transfer is forward rounded RGB * 238/255 after existing fade
+and colour-profile conversion. Existing Palette.Color ROM decode levels
+0/36/73/109/146/182/219/255 therefore become exactly
+0/34/68/102/136/170/204/238. Primary GPGX source
+051d430d3d1b54625f9900c8f152d7f232e06daf core/vdp_render.c987–998 builds the normal
+3-bit→even-nibble LUT; MAKE_PIXEL498–500 replicates the nibble. Shadow/highlight
+is a distinct VDP mode (1135–1151), outside this setting. Direct gain also preserves
+intermediate arbitrary creator colours; native word inference is unnecessary.
+Default Full, existing profiles, gameplay palette bytes, copies, codecs, rewind
+state and source constants stay unchanged. Changing a display preference does not
+restore a previous preference when the gameplay timeline rewinds.
+
+The source draft owns display.colorExpansion, the independent annotated enum,
+GraphicsManager accessors/upload paths and underwater keys, settings labels,
+config defaults, pre-render saved-setting synchronization and documentation.
+Normal palette refresh uses the existing latchable publication path; direct and
+derived water keys include expansion separately. UI and shaders outside palette
+uploads retain their own colour contracts. Candidate API version remains
+unpublished0.7.0; authoritative compiled signature generation is pending resumed
+builds, not hand-written pin certification.
+
+Prepared meaningful checks cover all512 ROM RGB combinations, all256 arbitrary
+channel values under every independent profile, writer/alpha boundaries, saved
+UI apply/cancel/default round trips, live setting change, native V-int ownership,
+both direct/derived water cache reuse and invalidation, fade order, and actual
+surfaceless palette texture plus framebuffer pixels.
+
+Qualification (Opus frontier lane, 2026-10-15). The first focused 14-class run
+gave 114 tests, 0 failures, 2 errors, 0 skips. Both errors came from an
+explanatory comment that had been added to `mod-api-release-policy.properties`.
+That descriptor's parser accepts only strict `key=value` lines, so the comment
+was dropped and the descriptor is unchanged. `TestPresentationSpritePixels`
+genuinely rendered: its EGL assumptions held and it reported 0 skips.
+
+An audit then found three gaps, all closed in the same commit:
+
+- **Captures ignored the saved setting.** Only `Engine` applied it. The same
+  owner, `DisplayColorProfileController.applySavedSettings`, now also runs at
+  every `HeadlessGameBoot` boot. It runs per boot because capture sessions
+  install their configuration overrides after constructing the boot's GL
+  context. `TestCaptureColourExpansion` renders S2 EHZ1 through
+  `GameplayCaptureSession` under Full and Limited and reads the framebuffer.
+  Full must contain 255, Limited's maximum must be 238 with 238 present, and
+  at least 99% of pixels must equal the forward gain. With the wiring removed
+  on purpose, the test failed (1 test, 1 failure: "Limited ... was 255").
+- **The CRAM colour-0 backdrop and clear colour bypassed profile and
+  expansion.** Affected: the parallax uniform, the level clear, S1 special
+  stage, S1/S2/S3K level select, S1/S2/S3K/KiS2 title screens, S3K data
+  select, the S2 ending and the CRAM-white special-stage results clear. All
+  now use `PaletteDisplayColor`. A GL clear-pixel case covers this.
+  Constant black clears are unchanged, because every profile maps 0 to 0.
+- **Per-frame synchronisation parsed the settings every frame.** It now
+  compares the raw saved strings and parses only on change. In a clean JVM a
+  probe measured 0 B for both the synchronisation and its two config reads.
+  After any `mock(SonicConfigurationService.class)` in the same JVM, Mockito's
+  inline mock maker instruments every instance at 96 B/frame; the shared
+  qualification fork showed exactly that. The oracle therefore asserts that
+  synchronisation allocates no more than its own two reads. There is no
+  existing Engine-draw allocation oracle. The 5254 warmed-draw oracle in the
+  plan is the Slot panel's.
+
+Bounded SSZ screenshot corroboration uses the already verified original movie
+and native publication boundary: separate neutral SETUP_ONLY render, then
+unchanged original controller suffix at ordinary poll0. Compare Full/Limited
+engine spots680 and1341 with the retained native images/CRAM and actual image
+inspection; preserve source/core/movie/geometry/published-boundary provenance.
+Do not re-encode or normalize screenshots, repaint RGB, infer shadow/highlight,
+or claim full pixel parity from the range transfer. Root owns SSZ source/matrix.

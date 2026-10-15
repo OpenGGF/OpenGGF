@@ -22,6 +22,86 @@ import static org.lwjgl.opengl.GL11.*;
 /** Actual source-pixel replay through the private quad bridge, using an owned EGL/null display. */
 @Isolated
 class TestPresentationSpritePixels {
+    @Test
+    void savedExpansionReuploadsResidentPaletteAndChangesActualFramebufferPixels() throws Exception {
+        assumeTrue(com.openggf.tools.PresentationOffscreenTestContext.requested(), "requires owned surfaceless EGL");
+        try (var offscreen = com.openggf.tools.PresentationOffscreenTestContext.open(320, 224)) {
+            GraphicsManager graphics = new GraphicsManager();
+            try {
+                glDisable(GL_DITHER);
+                graphics.init("shaders/shader_the_hedgehog.glsl");
+                graphics.setBatchingEnabled(false);
+                graphics.setViewport(0, 0, 320, 224);
+                graphics.setProjectionWidth(320);
+                graphics.setProjectionMatrixBuffer(new Matrix4f().ortho(0, 320, 0, 224, -1, 1).get(new float[16]));
+                Palette palette = new Palette();
+                palette.setColor(1, new Palette.Color((byte) 149, (byte) 87, (byte) 227));
+                graphics.cachePaletteTexture(palette, 0);
+                Frame frame = picture(20, 30, false, false, 1);
+                assertPicturePixel(graphics, frame, new int[]{149, 87, 227});
+                graphics.setDisplayColorExpansion(com.openggf.graphics.color.DisplayColorExpansion.LIMITED);
+                assertPicturePixel(graphics, frame, new int[]{139, 81, 212});
+                graphics.setDisplayColorExpansion(com.openggf.graphics.color.DisplayColorExpansion.FULL);
+                assertPicturePixel(graphics, frame, new int[]{149, 87, 227});
+                assertEquals(149, palette.getColor(1).r & 255, "display settings do not mutate creator palette bytes");
+                graphics.setPaletteFadePresentation(PaletteFadePresentation.Mode.TO_BLACK, 1, 1);
+                graphics.setDisplayColorExpansion(com.openggf.graphics.color.DisplayColorExpansion.LIMITED);
+                assertPicturePixel(graphics, frame, new int[]{102, 68, 204});
+                graphics.clearPaletteFadePresentation();
+                assertPicturePixel(graphics, frame, new int[]{139, 81, 212});
+                assertEquals(GL_NO_ERROR, glGetError());
+            } finally { graphics.cleanup(); RenderContext.reset(); }
+        }
+    }
+
+    @Test
+    void paletteBackdropClearUsesTheDisplayedProfileAndExpansion() throws Exception {
+        assumeTrue(com.openggf.tools.PresentationOffscreenTestContext.requested(), "requires owned surfaceless EGL");
+        try (var offscreen = com.openggf.tools.PresentationOffscreenTestContext.open(320, 224)) {
+            GraphicsManager graphics = new GraphicsManager();
+            glDisable(GL_DITHER);
+            glViewport(0, 0, 320, 224);
+            Palette.Color white = new Palette.Color((byte) 255, (byte) 255, (byte) 255);
+            Palette.Color creator = new Palette.Color((byte) 149, (byte) 87, (byte) 227);
+            assertBackdropPixel(graphics, white, new int[]{255, 255, 255});
+            graphics.setDisplayColorExpansion(com.openggf.graphics.color.DisplayColorExpansion.LIMITED);
+            assertBackdropPixel(graphics, white, new int[]{238, 238, 238});
+            assertBackdropPixel(graphics, creator, new int[]{139, 81, 212});
+            graphics.setDisplayColorProfile(com.openggf.graphics.color.DisplayColorProfile.MD_ANALOG);
+            int[] analog = com.openggf.graphics.color.DisplayColorConverter.toRgbBytes(149, 87, 227,
+                    com.openggf.graphics.color.DisplayColorProfile.MD_ANALOG,
+                    com.openggf.graphics.color.DisplayColorExpansion.LIMITED);
+            assertBackdropPixel(graphics, creator, analog);
+            assertEquals(149, creator.r & 255, "display settings do not mutate the backdrop palette entry");
+            assertEquals(GL_NO_ERROR, glGetError());
+        }
+    }
+
+    private static void assertBackdropPixel(GraphicsManager graphics, Palette.Color colour, int[] expected) {
+        com.openggf.graphics.color.PaletteDisplayColor.glClear(colour, graphics);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glFinish();
+        ByteBuffer pixel = MemoryUtil.memAlloc(4);
+        try {
+            glReadPixels(160, 112, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+            for (int channel = 0; channel < 3; channel++) assertEquals(expected[channel], pixel.get(channel) & 255);
+        } finally { MemoryUtil.memFree(pixel); }
+    }
+
+    private static void assertPicturePixel(GraphicsManager graphics, Frame frame, int[] expected) {
+        byte[] image = render(graphics, frame, null, 320);
+        int offset = ((223 - 33) * 320 + 23) * 4;
+        for (int channel = 0; channel < 3; channel++) assertEquals(expected[channel], image[offset + channel] & 255);
+        assertEquals(255, image[offset + 3] & 255);
+        ByteBuffer uploaded = MemoryUtil.memAlloc(16 * RenderContext.getTotalPaletteLines() * 4);
+        try {
+            glBindTexture(GL_TEXTURE_2D, graphics.getCombinedPaletteTextureId());
+            glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, uploaded);
+            for (int channel = 0; channel < 3; channel++) assertEquals(expected[channel], uploaded.get(4 + channel) & 255);
+            assertEquals(0, uploaded.get(3) & 255, "palette colour zero remains transparent");
+        } finally { MemoryUtil.memFree(uploaded); }
+    }
+
     @Test void admittedRowsFlipsWholeBodyTransformsAndDistinctFrozenTrailVersionsRenderAt320And640() throws Exception {
         long window=0;boolean initialized=false;GraphicsManager graphics=null;
         com.openggf.tools.PresentationOffscreenTestContext offscreen=null;

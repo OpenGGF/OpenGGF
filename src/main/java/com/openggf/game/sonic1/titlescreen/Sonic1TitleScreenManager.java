@@ -1129,13 +1129,13 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
         Palette.Color override = backgroundOverride == null ? null
                 : backgroundOverride.backdrop(paletteFadeMode(), paletteFadeSteps());
         if (override != null) {
-            glClearColor(override.rFloat(), override.gFloat(), override.bFloat(), 1.0f);
+            com.openggf.graphics.color.PaletteDisplayColor.glClear(override, com.openggf.game.GameServices.graphics());
             return;
         }
         Palette bgPal = dataLoader.resolveTitlePaletteLine(2, paletteFadeMode(), paletteFadeSteps());
         if (bgPal != null) {
             Palette.Color backdrop = bgPal.getColor(0);
-            glClearColor(backdrop.rFloat(), backdrop.gFloat(), backdrop.bFloat(), 1.0f);
+            com.openggf.graphics.color.PaletteDisplayColor.glClear(backdrop, com.openggf.game.GameServices.graphics());
         } else {
             glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         }

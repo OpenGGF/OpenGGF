@@ -439,6 +439,12 @@ public final class HeadlessGameBoot implements AutoCloseable {
         // the EngineServices locator rather than raw singletons.
         EngineContext services = engineServices;
 
+        // Captures render through the same saved display owner as the window.
+        // Applied per boot because capture sessions install their configuration
+        // overrides after constructing this boot's GL context.
+        com.openggf.graphics.color.DisplayColorProfileController.applySavedSettings(
+                services.configuration(), services.graphics());
+
         // --- ROM + module ------------------------------------------------
         rom = openedRom;
         services.roms().setRom(rom);

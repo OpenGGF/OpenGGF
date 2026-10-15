@@ -24,6 +24,13 @@ constructors, methods, fields, generic bounds, annotations, nested types,
 supertypes, interfaces, record components, and sealed permits clauses belongs to
 the same recursive contract and must also be annotated.
 
+Colour expansion adds the independent `DisplayColorExpansion` enum, a saved
+`DISPLAY_COLOR_EXPANSION` preference and GraphicsManager range accessors.
+Full preserves current output; Limited changes only palette upload RGB. The
+mutable `0.7` pin is regenerated from the compiled inventory after qualification;
+the descriptor and runtime description retain unpublished candidate `0.7.0`.
+No published contract exists or is changed.
+
 The exact current candidate inventory is
 `src/test/resources/mods/mod-api-signatures-0.7.txt`. `TestModApiSignatureSurface`
 requires that file to be unique, sorted canonical UTF-8 text and exactly equal to

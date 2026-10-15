@@ -5,6 +5,12 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Colour expansion:** Settings → Display offers a saved Full/Limited range
+  independently of the existing colour profile. Full keeps current output;
+  Limited caps palette RGB at 238 after fades and profile conversion, including
+  creator colours, with live normal and underwater palette refresh. The palette
+  backdrop and headless gameplay captures use the same saved setting.
+
 - **Level authoring:** Named projects create, edit and reopen complete authored
   levels for Sonic 1, Sonic 2 and Sonic 3&K using ROM-derived asset libraries.
   Atomic saves retain placements and missing dependency records; close and quit
