@@ -32,7 +32,15 @@ Unreleased. The earlier development themes remain in
   machine's native random seed, ejected balls also push the second player, and a
   companion that drops into the exit is removed as in the original (it rejoins
   on return). Pachinko orb rewards follow the level frame counter. All three bonus
-  traces now replay without errors.
+  traces now replay without errors. The Slot cage keeps re-centring the machine
+  through the goal wind-down, so the machine stays where the original shows it,
+  the Gumball background stays pinned as in the original instead of scrolling
+  with the camera, and Pachinko's background survives rewind.
+
+- **S3K animated scenery:** Hydrocity, Carnival Night, IceCap, Launch Base,
+  Mushroom Hill, Sandopolis and Lava Reef animated tiles change on the original
+  frame instead of one frame early, through the same once-per-frame upload as the
+  hardware's VBlank transfer queue, including through rewind.
 
 - **S3K special stage results:** The results card sits on the locked-on game's
   grey backdrop instead of white, matching native frames of won and failed stages.

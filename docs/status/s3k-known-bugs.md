@@ -136,6 +136,8 @@ Entries should include:
 44. [S3K Special-Property Sidekick Behaviour: Corrected Diagnosis](#s3k-special-property-sidekick-behaviour-corrected-diagnosis)
 45. [Object Art and Clock Reads Found by the Slay the Robotnik Sprite Research (SUSPECTED)](#object-art-and-clock-reads-found-by-the-slay-the-robotnik-sprite-research-suspected)
 46. [Ending Reunion Kos Service Count — Per-Object CPU Budget (OPEN)](#ending-reunion-kos-service-count--per-object-cpu-budget-open)
+47. [Non-Fresh Title Card Holds 90 Locked Frames (OPEN)](#non-fresh-title-card-holds-90-locked-frames-open)
+48. [AIZ2 First-Tree and HCZ1 Zero-Offset Animated Tile Uploads (OPEN)](#aiz2-first-tree-and-hcz1-zero-offset-animated-tile-uploads-open)
 
 ---
 
@@ -6485,3 +6487,41 @@ reaches the Sonic/+2 and team/+2 reunion gate one frame after native.
 A budget model without route keys that reproduces all six measured native counts
 (NTSC and PAL) and the 46 multi-valued corpus fingerprints. Evidence and rejected
 candidates are in the [ending lifecycle design](../architecture/designs/2026-10-13-s3k-ending-lifecycle.md#kos-idle-budget-measurement-of-the-hyper-sonic-residual-2026-10-15-opus-kos-budget-lane).
+
+---
+
+## Non-Fresh Title Card Holds 90 Locked Frames (OPEN)
+
+Native `Level` arms a 22-frame title-card hold at `loc_64DC` (sonic3k.asm:7874-7878)
+while `LevelLoop` already runs, and the card exits when that hold ends. Only the fresh
+zone-request route models this. Direct boots with the card shown, data-select launches,
+bonus-stage entry and death restarts use the engine's 90-frame non-fresh card, which
+locks the loop until it exits. The level's lines 1-3 fade therefore plays while that card
+leaves rather than during a native 22-frame hold. The death restart also keeps the host's
+blocking whole-screen reveal over the card's slide-in. Rings draw under the card, where
+the original draws them above it, and the `$1701` arena's `Pal_FromWhite` reveal is not
+presented. Per-route measurements are in the
+[HPZ matrix](../architecture/validation/levels/s3k-hpz-act.md).
+
+### Removal condition
+Every `Level` entry uses the native card hold and releases `LevelLoop` with it. Recorded
+route movies that cross these entries are re-timed by measurement in the same change.
+
+---
+
+## AIZ2 First-Tree and HCZ1 Zero-Offset Animated Tile Uploads (OPEN)
+
+Custom zone `AnimateTiles` routines queue their art through `Add_To_DMA_Queue`
+(sonic3k.asm:1673), drained at VBlank. Two cases still differ:
+- `AnimateTiles_AIZ2`'s first-tree upload still writes immediately, one frame early. It was
+  left unchanged to keep the AIZ to HCZ route stable.
+- When `Events_bg+$10` is 0, `AnimateTiles_HCZ1` falls through `AniHCZ_FixLowerBG` into
+  `AniHCZ_FixUpperBG` (sonic3k.asm:53993, 54071-54091) and skips its normal tile animations.
+  The engine uploads only the lower strips.
+
+Evidence is in the
+[bonus-stage transitions matrix](../architecture/validation/levels/s3k-bonus-stage-transitions.md).
+
+### Removal condition
+Both cases follow the ROM routine, with a focused publication test and an unchanged S3K
+canonical trace result.
