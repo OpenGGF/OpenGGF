@@ -561,6 +561,28 @@ class TestObjectManagerRewindSnapshot {
         assertTrue(state.pushingBits().isEmpty(), "deleted solid must not keep a pushing latch");
     }
 
+    @Test
+    void deletingAnOverlappedTouchObjectRemovesItFromTheOverlapBuffers() throws Exception {
+        var table = new TouchResponseTable(new com.openggf.data.RomByteReader(new byte[0x80]), 0, 0x40);
+        ObjectManager manager = new ObjectManager(List.of(), new TrackingRegistry(), 0, null, table);
+        manager.reset(0);
+        ReservedTouchPublisher publisher = new ReservedTouchPublisher(spawn(100, 200));
+        manager.addDynamicObject(publisher);
+        java.lang.reflect.Field controllerField = ObjectManager.class.getDeclaredField("touchResponses");
+        controllerField.setAccessible(true);
+        Object controller = controllerField.get(manager);
+        java.lang.reflect.Field overlappingField = controller.getClass().getDeclaredField("overlapping");
+        overlappingField.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        var overlapping = (java.util.Set<ObjectInstance>) overlappingField.get(controller);
+        overlapping.add(publisher);
+
+        manager.removeDynamicObject(publisher);
+
+        assertFalse(overlapping.contains(publisher),
+                "a deleted SST slot carries no overlap into later touch passes");
+    }
+
     private static Sonic landOn(ObjectManager manager, AbstractObjectInstance solid) {
         Sonic player = new Sonic("sonic", (short) 0, (short) 0);
         player.setCentreX((short) solid.getX());

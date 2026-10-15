@@ -115,6 +115,16 @@ final class ObjectTouchResponseController {
         currentFrameCounter = 0;
     }
 
+    /** Drops a deleted object from both halves of every overlap buffer. */
+    void forgetRemovedObject(ObjectInstance object) {
+        bufferA.remove(object);
+        bufferB.remove(object);
+        for (OverlapBufferPair pair : sidekickOverlaps.values()) {
+            pair.bufferA.remove(object);
+            pair.bufferB.remove(object);
+        }
+    }
+
     boolean hadSpecialTouchThisFrame(PlayableEntity player) {
         return player != null
                 && lastSpecialTouchFrame.getOrDefault(player, Integer.MIN_VALUE) == currentFrameCounter;

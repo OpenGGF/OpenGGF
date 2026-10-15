@@ -1995,7 +1995,13 @@ public class ObjectManager {
         return removed;
     }
 
-    private static void notifyObjectManagerRemoval(ObjectInstance object) {
+    private void notifyObjectManagerRemoval(ObjectInstance object) {
+        // The deleted SST slot carries nothing into later touch passes: S3K
+        // Delete_Current_Sprite zeroes it (docs/skdisasm/sonic3k.asm:36108-36125)
+        // and Collision_response_list is rebuilt by every ExecuteObjects pass.
+        if (touchResponses != null) {
+            touchResponses.forgetRemovedObject(object);
+        }
         if (object instanceof AbstractObjectInstance instance) {
             instance.onRemovedFromObjectManager();
         }

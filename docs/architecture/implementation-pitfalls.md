@@ -540,8 +540,9 @@ does not survive a restore. A member that has since been deleted keeps its old
 slot, so restore either drops it or binds whichever object now occupies that
 slot (SOZ Rockn shells, LRZ flames). Dynamic deletion therefore evicts
 instance-keyed latches as `removeActiveObject` already did for layout objects
-(`Delete_Current_Sprite` zeroes the slot's status bits), touch capture records
-only live members, and restore resolves a captured slot before its spawn: a
+(`Delete_Current_Sprite` zeroes the slot's status bits), deletion also drops the
+object from the touch-overlap buffers, touch capture records only live members
+as the restore-view guard, and restore resolves a captured slot before its spawn: a
 child that shares its parent's spawn otherwise rebinds to the parent. Physical
 double-buffer parity is not state; capture the logical contents. These gaps were
 latent until `da27f4f3d` made the restore comparator inspect these channels.
