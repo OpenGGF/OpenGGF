@@ -122,6 +122,11 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
             if (state.foregroundRoutine() == 0x18)
                 state.endingPlane().streamRows(camera().getYCopy(),
                         services.levelManager()::getForegroundTileDescriptorAtWorld);
+            // SSZ2_BackgroundEvent follows the screen event. Routine 4 (sonic3k.asm:117996)
+            // swaps in the foreground row pointers before loc_58D1E's Draw_TileRow, so Plane B
+            // fills from Level_layout_main as loc_59208 lowers Camera_Y_pos_BG_copy.
+            if (state.backgroundRoutine() != 0)
+                state.endingBackgroundPlane().drawTileRow(state.backgroundCameraY());
             state.advanceScreenShake(frameCounter,
                     services.playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite p && p.getDead());
             camera().setYCopy((short) (camera().getYCopy() + state.appliedScreenShakeOffset()));
@@ -192,7 +197,9 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
                         && state.backgroundRoutine() == 0) {
                     var clouds = state.ending().clouds(); // clr.b (_unkFAB9).w; FAC2/FAC4 stay
                     clouds.configure(0, clouds.xVelocity(), clouds.yVelocity());
-                    state.setBackgroundCameraY(state.backgroundCameraY() + 0x100);
+                    int liftedY = state.backgroundCameraY() + 0x100;
+                    state.endingBackgroundPlane().lift(state.backgroundCameraY(), liftedY);
+                    state.setBackgroundCameraY(liftedY);
                     for (int line = 1; line < 4; line++)
                         com.openggf.game.sonic3k.ending.S3kEndingPalette.loadLine(services,line,
                                 com.openggf.game.sonic3k.ending.S3kEndingResources.PAL_ENDING_GOOD_ISLAND+(line-1)*32);

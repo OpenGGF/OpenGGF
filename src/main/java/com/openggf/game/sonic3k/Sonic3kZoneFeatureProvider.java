@@ -458,6 +458,11 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
         if (GameServices.zoneRuntimeState() instanceof com.openggf.game.sonic3k.runtime.EndingZoneRuntimeState endingZone
                 && endingZone.ending().scene().background().revision() != 0)
             return endingZone.ending().scene().background().revision();
+        if (GameServices.zoneRuntimeState() instanceof com.openggf.game.sonic3k.runtime.SszZoneRuntimeState ssz
+                && ssz.actIndex() == 1 && ssz.endingBackgroundPlane().revision() != 0) {
+            return ((long) ssz.endingBackgroundPlane().revision() << 32) | (1L << 31)
+                    | GameServices.camera().getWidth();
+        }
         if (GameServices.hasRuntime() && GameServices.zoneRuntimeState() instanceof
                 com.openggf.game.sonic3k.runtime.SszZoneRuntimeState ssz
                 && ssz.actIndex() == 1 && ssz.endingPlane().revision() != 0
@@ -488,19 +493,22 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
         if (ending != null && ending.postCreditsStarted() && ending.flag(3)) return 0;
         if (GameServices.zoneRuntimeState() instanceof com.openggf.game.sonic3k.runtime.EndingZoneRuntimeState endingZone)
             return endingZone.ending().scene().background().descriptor(sourceX, sourceY);
+        if (GameServices.zoneRuntimeState() instanceof com.openggf.game.sonic3k.runtime.SszZoneRuntimeState ssz
+                && ssz.actIndex() == 1 && ssz.endingBackgroundPlane().revision() != 0) {
+            // Background routine 4: each 16-line slot of the 256-line ring shows either
+            // the island row it held at loc_58BBC or the Level_layout_main row that
+            // Draw_TileRow (d1=0, d6=$20) last wrote there, across the 64-cell plane.
+            var plane = ssz.endingBackgroundPlane();
+            int y = plane.sourceY(sourceY);
+            return plane.foregroundRow(sourceY)
+                    ? GameServices.level().getForegroundTileDescriptorAtWorld(sourceX & 0x1FF, y)
+                    : sszIslandBackgroundDescriptor(ssz, sourceX, y);
+        }
         if (GameServices.hasRuntime() && GameServices.zoneRuntimeState() instanceof
                 com.openggf.game.sonic3k.runtime.SszZoneRuntimeState ssz
                 && ssz.actIndex() == 1 && ssz.endingPlane().revision() != 0
                 && GameServices.camera().getWidth() > 320) {
-            // SSZ2_BackgroundEvent draws a 512px Plane B, displayed through the
-            // ROM's 320px viewport. The island presentation never shows layout
-            // columns beyond that right edge; widening our full-layout sampler
-            // exposes unrelated cloud strips. Extend the last visible sky tile
-            // column instead. Native columns (including the partly visible last
-            // tile), vertical sampling and the island's priority bits stay intact.
-            int edgeTileX = (ssz.backgroundCameraX() + 319) & ~7;
-            return GameServices.level().getBackgroundTileDescriptorAtWorld(
-                    Math.min(sourceX, edgeTileX), sourceY);
+            return sszIslandBackgroundDescriptor(ssz, sourceX, sourceY);
         }
         if (GameServices.hasRuntime() && GameServices.zoneRuntimeState() instanceof
                 com.openggf.game.sonic3k.runtime.DezFinalBossZoneRuntimeState state)
@@ -530,6 +538,21 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
         }
         return state != null && state.events().postBossPlane().revision() != 0
                 ? state.events().postBossPlane().descriptor(sourceX, sourceY) : 0;
+    }
+
+    /**
+     * The SSZ2 island Plane B. SSZ2_BackgroundEvent draws a 512px Plane B, displayed through
+     * the ROM's 320px viewport. The island presentation never shows layout columns beyond
+     * that right edge; widening our full-layout sampler exposes unrelated cloud strips.
+     * Extend the last visible sky tile column instead. Native columns (including the partly
+     * visible last tile), vertical sampling and the island's priority bits stay intact.
+     */
+    private static int sszIslandBackgroundDescriptor(com.openggf.game.sonic3k.runtime.SszZoneRuntimeState ssz,
+                                                     int sourceX, int sourceY) {
+        if (GameServices.camera().getWidth() <= 320)
+            return GameServices.level().getBackgroundTileDescriptorAtWorld(sourceX, sourceY);
+        int edgeTileX = (ssz.backgroundCameraX() + 319) & ~7;
+        return GameServices.level().getBackgroundTileDescriptorAtWorld(Math.min(sourceX, edgeTileX), sourceY);
     }
 
     private boolean extendedDezInterior() {
