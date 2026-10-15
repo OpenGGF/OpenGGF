@@ -173,3 +173,115 @@ selected reward branch, spring/dispenser/bumper and other Pachinko mechanics,
 cold traversal, native pictures and PCM remain separate active obligations.
 The trap window does not certify outgoing callback restoration; Root owns
 that shared bonus-exit lifecycle repair. Current combined smoke remains pending.
+
+
+## Native initialization, bumper deletion and reward clock — 2026-10-15
+
+Three ROM-cited source repairs follow the reward-restoration slice above. The
+mechanism fixtures are declared logical bonus entries with local free-P1
+contacts, not cold portal routes; no reward, subtype, RNG, timer, delegate or
+exit state is seeded and no comparison data enters gameplay.
+
+* **Triangle bumper deletion.** Native `loc_60F64`/`loc_60F80` jump directly
+  to `Delete_Current_Sprite` after `sub_60F94`, clearing the SST in the same
+  pass. The engine kept a consumed bumper permanently inert. Negative 57671
+  (5 tests / 2 failures / 0 errors or skips, 2026-10-14 23:04:33 UTC) found
+  that retirement gap; its other failure was a rejected spring fixture whose
+  remote P1 freefall reached the real exit inside an unnecessary 100-tick tail.
+  The corrected spring window stops at actual dispenser deletion, sibling
+  falls and debris birth before the exit. Pilot 45157 then passed 30/0/0/0 at
+  23:07:42 UTC: native plus three representative products × five mechanisms
+  (Knuckles/352/Tails+Sonic, Tails/S2/800/Sonic+Sonic, Sonic/S1/528/seven
+  Sonic followers) and ten bounded neighbours.
+* **Gumball RNG initialization.** `Obj_GumballMachine` (`sonic3k.asm:127412`,
+  `move.l (V_int_run_count).w,(RNG_seed).w`) assigns the entire V-int long to
+  the RNG on its first pass; prior shared entropy is not proof of equality.
+  Three declared zero/full-long/high-bit vectors failed in 16706 at 23:09:52
+  UTC. **Rejected:** the assignment alone (8921, 23:14:36 UTC) moved the
+  canonical trace's first error earlier (122 errors at row 380 became 110 at
+  row 365; paired 78 became 71, first row still 209). Fewer errors with an
+  earlier first error is a worsened candidate and was not delivered.
+* **Bonus trace initial dispatch.** `TraceReplaySessionBootstrap` discarded the
+  admitted initial `Process_Sprites` token (`loc_6468`, `sonic3k.asm:7849-7853`),
+  manually dispatched only the injected Pachinko trap and published a partial
+  collision list, so Gumball initialized on the first driven row and clobbered
+  the recorded seed. Two real-ROM setup checks failed in 1298 (2/2/0/0, 23:21:16
+  UTC). The repair preserves the token for `applyBootstrap`'s existing pre-row
+  production walk, so native initialization precedes the declared RNG metadata
+  publication; no fixture exemption or synthetic owner update is added.
+  Composed 87321 (60/5/0/0, 23:28:08 UTC) restored both Gumball error vectors
+  byte-identically to the matched-before baseline; its two setup failures were
+  an invalid premise equating ObjectManager's setup-inclusive dispatch ordinal
+  with `Level_frame_counter`, since corrected to check the LevelManager
+  counter, input-runner count and V-int separately.
+* **Pachinko reward selector.** Native `loc_4A238` reads
+  `move.w (Level_frame_counter).w,d0`. The engine read ObjectManager's ordinal,
+  which the initial setup pass advances by one. Production now reads the
+  injected `LevelManager.getFrameCounter()`; only bare component fixtures
+  without a level manager keep their declared update clock. There is no reset,
+  offset or reward override. **Rejected evidence:** 49830 (6/3/0/0, 00:32:15
+  UTC) used a selector mock that did not wire `LevelManager.getObjectManager()`
+  and so exercised the old V-int fallback; it is not the ordinal red. The
+  corrected negative 10499 (4/4/0/0, 00:34:45 UTC) fails all four independent
+  native-level/dispatch-ordinal vectors.
+
+### Pachinko ring-error attribution
+
+Before the selector repair the canonical Pachinko trace reported six ring-error
+spans (350–1324, 1792, 1801–1850, 1852–1902, 1904–2115, 2117–2902) over 2900
+compared rows. Native `bonus_pachinko/aux_state.jsonl.gz` (comparison only)
+records slot 7 converting at raw row 226, Y $0D50, native LFC 227 to subtype 7
+(Bubble); the extra ordinal 228 selects subtype 3 (rings), and the native
+pickup at 350 creates the Bubble owner where subtype 3 at Y $0CD8 would award
+ten rings (engine 59 vs native 49). Slot 8 at 467 (Y $0BA8, LFC 468) repeats
+the wrong Bubble-to-rings choice. Slot 18 at 1316 (Y $079C, LFC 1317) selects
+subtype 3, awarding 20 rings at 1325; ordinal 1318 selects subtype 8,
+Lightning, whose `RingManager.attractStageRings` attraction then collected
+ordinary rings early. The native shield sequence contains only Bubble/Fire
+owners (350/625/1149/2174). All six spans disappear under the corrected owner.
+
+### Current qualification — request 90875
+
+From the owned HPZ tree on 279442451 plus these repairs, with the three
+original absolute ROM paths (`ROM_ROOT` names the existing ROM directory):
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay-r7 -Dsurefire.forkCount=1 \
+  '-Dtest=TestPachinkoItemOrbObjectInstance,TestS3kBonusTraceInitialSetup,TestGumballMachineRngInitialization,TestGameRngGoldenSequence,TestGameRngRewindSnapshot,TestGumballTriangleBumperObjectInstance,TestGumballMachineDrift,TestGumballMachineExitTrigger,TestS3kGumballPachinkoRewardMechanics#actualNativeContactAndNaturalLifecycleReplaysItsCompleteWorldTwice+actualRepresentativeProductsReplayEveryMechanism,TestS3kGumballBonusTraceReplay,TestS3kSonicTailsGumballBonusTraceReplay,TestS3kPachinkoBonusTraceReplay' \
+  "-Ds3k.rom.path=${ROM_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dsonic1.rom.path=${ROM_ROOT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${ROM_ROOT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  -Dopenggf.headless.gl=surfaceless-egl test
+```
+
+Terminal exit 1 at 2026-10-15 00:37:21 UTC (1:18 Maven, 17 s admission wait):
+**58 tests, 2 failures, 0 errors, 0 skips** — not a green command.
+
+| Selection | Cases | Result |
+|---|---|---|
+| RNG golden/rewind, Gumball drift/exit, RNG initialization, triangle bumper | 6+4+5+3+3+2 | pass |
+| Pachinko item orb (including the four native-clock vectors) | 10 | pass |
+| Bonus trace initial setup (Gumball initialized before seed publication; one trap decrement $F0→239) | 2 | pass |
+| Actual native contact plus representative products × five mechanisms | 20 | pass |
+| `TestS3kPachinkoBonusTraceReplay` | 1 | **pass**: 0 errors, 0 warnings, 0 bootstrap errors, 2900 compared rows |
+| `TestS3kGumballBonusTraceReplay` | 1 | **fail, inherited**: 122 errors over 1277 rows, first row 380 `x_speed` expected −$0395 actual −$03E2 |
+| `TestS3kSonicTailsGumballBonusTraceReplay` | 1 | **fail, inherited**: 78 errors over 590 rows, first row 209 `tails_x` $010B→$0109 |
+
+The two Gumball failures are exact inherited identities, not equal totals: the
+SHA-256 of `json.dumps(report['errors'], sort_keys=True)` is
+`c5e43c43…772ac481f` (canonical) and `e9e3e90e…bb9cc70d` (paired) both in the
+matched-before run 16706 (279442451 plus the bumper repair only) and in 90875.
+The Pachinko trace still advertises nine missing aux schemas (cage, velocity/
+position writes, recorded positions, Tails CPU step, sidekick interaction, CNZ
+cylinder); its pass is bounded to the recorded fields.
+
+### Pending in this lane
+
+* The finite `actualFiniteSupportedProductsReplayEveryMechanism` selection
+  (140 `CanonicalEntryMatrixSupport.configurations()` rows × five mechanisms =
+  700) has not executed at this commit. Its result is recorded below when run.
+* The inherited Gumball trace errors remain open trace-parity obligations.
+* Every naturally selected reward subtype, spring expiry beyond the safe local
+  window, other cage/flipper/magnet mechanisms, cold traversal, outgoing exit
+  callback/live history (Root's shared owner), native pictures and PCM remain
+  separate obligations. Current combined smoke remains pending (Root).

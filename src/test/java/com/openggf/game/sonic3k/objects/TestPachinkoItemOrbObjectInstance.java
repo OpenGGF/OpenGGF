@@ -75,7 +75,7 @@ class TestPachinkoItemOrbObjectInstance {
         assertEquals(0, orb.getSpawn().subtype());
 
         // Touch signal resolves clear (player released contact): converts now, using this
-        // release pass's frame counter (3; TestObjectServices has no ObjectManager wired, so
+        // release pass's frame counter (3; TestObjectServices has no LevelManager wired, so
         // resolveRomFrameCounter falls back to the raw update() parameter). The reward index
         // keys on the HIGH byte of y_pos: yNibble=3 ((0x383 >> 8) & 0xF), 3&3=3 ->
         // REWARD_TABLE[(3<<2)+3]=REWARD_TABLE[15]=5.
@@ -107,6 +107,38 @@ class TestPachinkoItemOrbObjectInstance {
 
         assertEquals(0xEB, orb.getSpawn().objectId());
         assertEquals(6, orb.getSpawn().subtype());
+    }
+
+    static java.util.stream.Stream<org.junit.jupiter.params.provider.Arguments> distinctRewardClocks() {
+        return java.util.stream.Stream.of(
+                org.junit.jupiter.params.provider.Arguments.of(0x383, 2, 0, 6),
+                // Native bonus_pachinko releases: slot7 at raw226, slot18 at
+                // raw1316, slot17 at raw569. Values assert loc_4A238's literal
+                // selector independently of the manager's extra setup ordinal.
+                org.junit.jupiter.params.provider.Arguments.of(0xD50, 227, 228, 7),
+                org.junit.jupiter.params.provider.Arguments.of(0x79C, 1317, 1318, 3),
+                org.junit.jupiter.params.provider.Arguments.of(0xAD0, 570, 571, 6));
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.MethodSource("distinctRewardClocks")
+    void rewardSelectionReadsNativeLevelCounterRatherThanInitialObjectDispatchOrdinal(
+            int y, int nativeLevelCounter, int objectOrdinal, int expectedSubtype) {
+        var level = org.mockito.Mockito.mock(com.openggf.level.LevelManager.class);
+        var objects = org.mockito.Mockito.mock(com.openggf.level.objects.ObjectManager.class);
+        org.mockito.Mockito.when(level.getFrameCounter()).thenReturn(nativeLevelCounter);
+        org.mockito.Mockito.when(objects.getFrameCounter()).thenReturn(objectOrdinal);
+        org.mockito.Mockito.when(level.getObjectManager()).thenReturn(objects);
+        var services = new TestObjectServices().withLevelManager(level).withDirectObjectManager(objects);
+        var orb = new PachinkoItemOrbObjectInstance(new ObjectSpawn(0x140, y, 0xED, 0, 0, false, 0));
+        orb.setServices(services);
+        // loc_4A238 reads the native loop word; neither the initial object
+        // ordinal nor the object-visible V-int is that authority. These are
+        // declared component clocks, not writes into a gameplay/trace route.
+        orb.onTouchResponse(null, null, 0);
+        orb.update(0x100, null);
+        orb.update(0x101, null);
+        assertEquals(expectedSubtype, orb.getSpawn().subtype());
     }
 
     @Test

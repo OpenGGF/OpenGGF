@@ -174,16 +174,13 @@ public class PachinkoItemOrbObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * Resolves the ROM-aligned {@code Level_frame_counter} equivalent for subtype selection.
-     * Falls back to the object-visible V-int run count only when the object manager is
-     * unavailable (e.g. bare unit-test construction without full services wiring).
+     * Reads {@code Level_frame_counter}, not the object manager's dispatch ordinal:
+     * the initial {@code Process_Sprites} setup advances only the latter. Bare
+     * component fixtures without a level manager retain their declared update clock.
      */
     private int resolveRomFrameCounter(int vIntRunCount) {
-        try {
-            return services().objectManager().getFrameCounter();
-        } catch (Exception e) {
-            return vIntRunCount;
-        }
+        var levelManager = services().levelManager();
+        return levelManager != null ? levelManager.getFrameCounter() : vIntRunCount;
     }
 
     @Override
