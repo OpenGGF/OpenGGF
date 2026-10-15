@@ -443,26 +443,12 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
         // Initialize drift state on first update (separated from child spawning
         // so tests can exercise drift logic without requiring services()).
         if (!driftInitialized) {
-            // ROM: Obj_GumballMachine seeds RNG_seed from V_int_run_count at init
-            // (move.l (V_int_run_count).w,(RNG_seed).w, sonic3k.asm:127412). The
-            // intent is to fold run-history entropy (VBlanks since power-on: menu
-            // time, prior acts, etc.) into the bonus-stage RNG so the ball-subtype
-            // roll (sub_612A8, sonic3k.asm:127988-128008) varies run-to-run.
-            //
-            // The engine's shared RNG ALREADY carries that run-history entropy when
-            // the machine spawns: it has been advanced by all prior gameplay in live
-            // play, and in trace replay the bootstrap has already primed it to the
-            // recorded run's exact seed (V_int_run_count for that recording;
-            // TraceReplaySessionBootstrap.applyInitialRngSeedForReplay, uniform for
-            // every trace carrying metadata.rng_seed). So the ROM invariant
-            // "RNG_seed == V_int_run_count" is already satisfied by the RNG's own
-            // established state on this tick, and modeling the reseed here is a
-            // read of that same value -- i.e. a no-op.
-            //
-            // The update parameter is now named vIntRunCount because it represents this
-            // ROM clock. This terminology-only refactor deliberately does not change the
-            // established shared-RNG ownership or add a reseed here; that behavior needs
-            // separate ROM-parity validation before it can change safely.
+            // Obj_GumballMachine, sonic3k.asm:127412: move.l
+            // (V_int_run_count).w,(RNG_seed).w. This replaces prior gameplay
+            // entropy with the full native long on the first object pass only.
+            // Rewind captures driftInitialized, so restoring an initialized
+            // machine preserves the captured evolving seed instead of reseeding.
+            services().rng().setSeed(Integer.toUnsignedLong(vIntRunCount));
             initDrift();
         }
 
@@ -697,6 +683,19 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
         ObjectSpawn gumballSpawn = new ObjectSpawn(x, y, 0xEB, subtype, 0, false, 0);
         spawnChild(() -> new GumballItemObjectInstance(gumballSpawn, 0, true, parentYSupplier));
         LOGGER.fine("GumballMachine: container spawned ball, subtype=" + subtype);
+    }
+
+    /** Native parent3 is the live container SST, captured with the ejected item. */
+    private void spawnBallFromContainer(ContainerDisplayChild container) {
+        int subtype = chooseBallSubtype();
+        ObjectSpawn item = new ObjectSpawn(container.getX(), container.getY(), 0xEB, subtype, 0, false, 0);
+        // loc_60E5C runs CreateChild6_Simple with a0 = the container, so
+        // AllocateObjectAfterCurrent searches after the CONTAINER's SST and the
+        // ball's loc_60EBA setup falls through to loc_60ECE in the same pass.
+        // Anchoring at the machine's lower slot could reuse a slot the walk had
+        // already passed, delaying the ball's whole fall by one frame.
+        spawnChildAfterSlot(container.getSlotIndex(),
+                () -> GumballItemObjectInstance.createEjectedItem(item, container));
     }
 
     /** ROM loc_60EA2: called by container when animation completes. */
@@ -1062,8 +1061,7 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
                     // until the following frame's loc_60E8C call.
                     animStep = 0;
                     animTimer = 0;
-                    int spawnY = parent.getCurrentY() + offsetFromMachine;
-                    parent.onContainerSpawnBall(spawn.x(), spawnY, this::getY);
+                    parent.spawnBallFromContainer(this);
                 }
                 return;
             }
@@ -1139,6 +1137,9 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
         private static final int EXIT_Y_MAX = 0x30;
 
         private boolean exitFired;
+        // The native Player_2 SST has been cleared; later engine-only followers
+        // have no Player_2 identity for Check_PlayerInRange to read.
+        private boolean player2Deleted;
 
         ExitTriggerChild(ObjectSpawn spawn) {
             super(spawn, "GumballExitTrigger");
@@ -1155,21 +1156,33 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
                 return;
             }
 
-            int playerX = playerEntity.getCentreX();
-            int playerY = playerEntity.getCentreY();
-            int dx = playerX - spawn.x();
-            int dy = playerY - spawn.y();
-
-            if (dx >= EXIT_X_MIN && dx < EXIT_X_MAX
-                    && dy >= EXIT_Y_MIN && dy < EXIT_Y_MAX) {
-                exitFired = true;
-                LOGGER.info("GumballExitTrigger: player in exit range, requesting bonus stage exit");
-                try {
-                    services().requestBonusStageExit();
-                } catch (Exception e) {
-                    LOGGER.warning("GumballExitTrigger: failed to request exit: " + e.getMessage());
+            if (!inExitRange(playerEntity)) {
+                // loc_61050 (sonic3k.asm:127741-127753): with Player_1 out of
+                // range, a Player_2 in range is removed by Delete_Referenced_Sprite.
+                // Check_PlayerInRange reads only the Player_1/Player_2 SSTs, so
+                // only the native P2 (first registered follower) is eligible.
+                if (!player2Deleted
+                        && services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite player2
+                        && inExitRange(player2)) {
+                    player2Deleted = true;
+                    com.openggf.sprites.managers.SpriteManagerInternalAccess
+                            .retireSidekickForRewind(services().spriteManager(), player2);
                 }
+                return;
             }
+            exitFired = true;
+            LOGGER.info("GumballExitTrigger: player in exit range, requesting bonus stage exit");
+            try {
+                services().requestBonusStageExit();
+            } catch (Exception e) {
+                LOGGER.warning("GumballExitTrigger: failed to request exit: " + e.getMessage());
+            }
+        }
+
+        private boolean inExitRange(PlayableEntity player) {
+            int dx = player.getCentreX() - spawn.x();
+            int dy = player.getCentreY() - spawn.y();
+            return dx >= EXIT_X_MIN && dx < EXIT_X_MAX && dy >= EXIT_Y_MIN && dy < EXIT_Y_MAX;
         }
 
         @Override
@@ -1399,17 +1412,14 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
         // ROM: red spring uses strength -$1000
         private static final int BOUNCE_STRENGTH = -0x1000;
 
-        // ROM: short bounce animation before crumbling.
-        // Ani_Spring anim 1 is `dc.b 0, 1, 0, 0, 2, 2, 2, 2, 2, 2, $FD, 0` — 10 animation entries.
-        private static final int CRUMBLE_DELAY_FRAMES = 10;
-
         // ROM: Map_Spring frames — frame 0 idle, frame 1 compressed (played on bounce)
         private static final int IDLE_FRAME = 0;
         private static final int COMPRESSED_FRAME = 1;
         private GumballMachineObjectInstance parent;
         private DispenserChild dispenser;
         private boolean triggered;
-        private int crumbleTimer;
+        // loc_60E36 ran after this pass's solid calls; MoveChkDel starts next pass.
+        private boolean fallPending;
         private boolean signaledDispenser;
         private boolean falling;    // MoveChkDel state: falling with gravity
         private int fallY;          // current Y during fall
@@ -1462,6 +1472,10 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
 
         @Override
         public void update(int vIntRunCount, PlayableEntity playerEntity) {
+            if (fallPending) {
+                fallPending = false;
+                startFalling();
+            }
             // Falling state: apply gravity until off-screen, then destroy.
             if (falling) {
                 fallYVel += FALL_GRAVITY;
@@ -1483,16 +1497,6 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
                 return;
             }
 
-            if (triggered) {
-                crumbleTimer--;
-                if (crumbleTimer <= 0) {
-                    if (!signaledDispenser && dispenser != null) {
-                        dispenser.setSpringBit();
-                        signaledDispenser = true;
-                    }
-                    startFalling();
-                }
-            }
         }
 
         /** ROM: move.l #MoveChkDel,(a0) — transition to gravity-fall + off-screen delete. */
@@ -1509,7 +1513,19 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
 
         @Override
         public boolean isTopSolidOnly() {
-            // ROM: SolidObjectFull2_1P — solid from above only
+            // ROM loc_60DAC: SolidObjectFull2_1P falls through to the full
+            // SolidObject_cont for a non-standing player, including its side
+            // branch (loc_1E042/loc_1E06E: sub.w d0,x_pos(a1)). Adjacent springs
+            // are 32 px apart with $1B half-widths, so a falling player inside
+            // both is side-pushed by the lower slot before landing on the next.
+            return false;
+        }
+
+        @Override
+        public boolean bypassesOffscreenSolidGate() {
+            // SolidObjectFull2_1P never tests render_flags bit 7 (only
+            // SolidObjectFull_1P does), so an off-screen CPU sidekick still
+            // collides with these springs.
             return true;
         }
 
@@ -1530,12 +1546,16 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
 
         @Override
         public boolean isSolidFor(PlayableEntity playerEntity) {
-            return !triggered && !falling;
+            // loc_60DAC tests the parent's bit 1 before SolidObjectFull2_1P, so a
+            // spring later in the same pass than the triggering one is no longer
+            // solid. The triggering spring itself still runs its Player_2 call.
+            return !falling && (fallPending
+                    || dispenser == null || !(dispenser.isSpringBitSet() || dispenser.isDestroyed()));
         }
 
         @Override
         public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
-            if (triggered || falling || !contact.standing()) {
+            if (falling || !contact.standing()) {
                 return;
             }
             if (!(playerEntity instanceof AbstractPlayableSprite player)) {
@@ -1580,10 +1600,15 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
             // Player_2 (sidekick) bounces but does NOT trigger crumble.
             // isCpuControlled() identifies the AI-driven sidekick.
             if (!player.isCpuControlled()) {
+                // bset #5,$38(a0); sub_22F98 sets anim 1, so Animate_Sprite's
+                // prev_anim is already 1 and loc_60E36 runs in this same pass:
+                // MoveChkDel and the parent's bit 1 (sonic3k.asm:127514-127556).
                 triggered = true;
-                crumbleTimer = CRUMBLE_DELAY_FRAMES;
-                LOGGER.fine("GumballSpring: triggered by P1, will crumble in "
-                        + CRUMBLE_DELAY_FRAMES + " frames");
+                fallPending = true;
+                if (!signaledDispenser && dispenser != null) {
+                    dispenser.setSpringBit();
+                    signaledDispenser = true;
+                }
             } else {
                 LOGGER.fine("GumballSpring: sidekick bounced (no crumble)");
             }

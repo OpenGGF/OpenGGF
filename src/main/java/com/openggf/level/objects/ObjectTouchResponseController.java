@@ -215,6 +215,11 @@ final class ObjectTouchResponseController {
                             buildingSlots,
                             pair.overlapping == pair.bufferB));
         }
+        // The identity-keyed map and sets iterate in identity-hash/probe order,
+        // which differs after a restore re-inserts the same members. Emit a
+        // canonical order so equal overlap state captures equal snapshots.
+        sidekickEntries.sort(java.util.Comparator.comparing(
+                com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.SidekickOverlapEntry::sidekickCode));
         return new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.TouchResponseOverlapState(
                 mainOver, mainBuild, mainSwapped, sidekickEntries);
     }
@@ -267,7 +272,9 @@ final class ObjectTouchResponseController {
                 result[n++] = objectCallbacks.call(inst, aoi::getSlotIndex);
             }
         }
-        return n == result.length ? result : Arrays.copyOf(result, n);
+        int[] slots = n == result.length ? result : Arrays.copyOf(result, n);
+        Arrays.sort(slots);
+        return slots;
     }
 
     private void populateBuffer(Set<ObjectInstance> buffer, int[] slotIndices) {

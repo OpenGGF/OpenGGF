@@ -45,9 +45,8 @@ import java.util.List;
  * </ul>
  * <p>
  * ROM collision: SolidObjectFull with D1=$D (13), D2=8, D3=$11 (17).
- * On player standing or side push contact, applies bounce and deletes self
- * (the Gumball machine respawns bumpers). For placed-engine operation we keep
- * the bumper inert after a hit instead of deleting the instance.
+ * On player standing or side push contact, applies bounce and physically
+ * clears its SST in the same pass (loc_60F64/loc_60F80).
  * <p>
  * Contact is resolved exclusively through the generic {@link SolidObjectProvider}
  * / {@link SolidObjectListener} pass (matching ROM's single SolidObjectFull call
@@ -183,6 +182,10 @@ public class GumballTriangleBumperObjectInstance extends AbstractObjectInstance
         }
 
         consumed = true;
+        // loc_60F64/loc_60F80 directly jump Delete_Current_Sprite after
+        // sub_60F94, rather than scheduling a later Delete_Current dispatch.
+        // The shared slot/cooldown response above remains owned by the machine.
+        setDestroyed(true);
     }
 
     private GumballMachineObjectInstance currentMachineForThisContext() {

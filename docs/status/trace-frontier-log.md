@@ -112766,3 +112766,22 @@ first 1510 Y to first 1768 Y (ROM 0870, engine 0871); raw 82067 -> 81981
 other segments stay at 0. Alternate is unchanged: 60, first 25589 (03:00:34
 BST). The engine bubble mass-removal at the old fans' retirement (89 -> 16 used
 slots) is recorded but not attributed, and is unchanged.
+
+### 2026-10-15 — S3K bonus traces: Pachinko and both Gumball traces green
+
+Owned `.worktrees/ai-s3k-parity-hpz` (`feature/ai-s3k-parity-hpz`), commits
+37f7ee912..f00355e1d over 279442451 (includes cherry-picked Root seam e63e4ccb3). Details, rejected candidates and ROM
+routines: [bonus-stage matrix](../architecture/validation/levels/s3k-bonus-stage-transitions.md#gumball-trace-parity-and-finite-mechanism-products--2026-10-15-later).
+
+| Trace class | Before (matched 16706, 279442451 + bumper) | After |
+|---|---|---|
+| `TestS3kPachinkoBonusTraceReplay` | six ring-error spans from row 350 (no matched pre-candidate run) | 0 errors / 0 warnings / 2900 rows (c907cefa2: `loc_4A238` reads `Level_frame_counter`) |
+| `TestS3kGumballBonusTraceReplay` | 122 errors / 1277 rows, first row 380 `x_speed` −$0395/−$03E2, vector `c5e43c43…772ac481f` | 0 errors / 0 warnings / 1277 rows (5b9b8eaea ball allocated after the container slot) |
+| `TestS3kSonicTailsGumballBonusTraceReplay` | 78 errors / 590 rows, first row 209 `tails_x` $010B/$0109, vector `e9e3e90e…bb9cc70d` | 0 errors / 0 warnings / 590 rows (2e18f3098 springs → 68 @ 323; d80a6d53c P2 push → 1 @ 483 `tails_present`; f00355e1d `loc_61050` P2 deletion → 0) |
+
+Vectors are SHA-256 of `json.dumps(report['errors'], sort_keys=True)`.
+
+Command (HPZ tree; Java 25, surfaceless EGL, original absolute ROM paths):
+`python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay-r7 -Dsurefire.forkCount=1
+"-Dtest=<17 classes listed in the matrix>" "-Ds3k.rom.path=…" "-Dsonic1.rom.path=…" "-Dsonic2.rom.path=…"
+-Dopenggf.headless.gl=surfaceless-egl test`. Run 2026-10-15 02:30 UTC: 796 tests / 3 failures / 0 errors / 0 skips; all three traces and all 700 finite mechanism products pass; the 3 failures were the new P2-deletion fixture's placement (fixed with a 90-step CPU settle; 3/0/0/0 after, 3/3 red with the source reverted).

@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestGumballTriangleBumperObjectInstance {
 
     @Test
-    void consumedBumper_stopsRenderingAndSolidityAfterBounce() {
+    void consumedBumper_physicallyRetiresAndStopsRenderingAndSolidityAfterBounce() {
         GumballTriangleBumperObjectInstance bumper =
                 new GumballTriangleBumperObjectInstance(new ObjectSpawn(0, 0, 0x87, 0, 0, false, 0));
         bumper.setServices(new TestObjectServices());
@@ -25,6 +25,7 @@ class TestGumballTriangleBumperObjectInstance {
 
         bumper.onSolidContact(player, new SolidContact(true, false, false, true, false), 0);
 
+        assertTrue(bumper.isDestroyed(), "loc_60F64 directly clears the contacted SST");
         assertFalse(bumper.isSolidFor(player));
         ArrayList<com.openggf.graphics.GLCommand> commands = new ArrayList<>();
         bumper.appendRenderCommands(commands);

@@ -95,9 +95,43 @@ class TestS3kSanctuaryOriginReturnLifecycle {
         assertOriginReturn(row);
     }
 
+    static Stream<org.junit.jupiter.params.provider.Arguments> nativeOutcomes() {
+        return Stream.of("sonic", "tails", "knuckles").flatMap(main ->
+                Stream.of(SanctuaryResultsLifecycleProbe.Outcome.values()).map(outcome ->
+                        org.junit.jupiter.params.provider.Arguments.of(
+                                new CanonicalEntryMatrixSupport.Row(main, WidescreenAspect.NATIVE_4_3,
+                                        "off", ""), outcome)));
+    }
+
+    static Stream<org.junit.jupiter.params.provider.Arguments> supportedOutcomes() {
+        return configurations().flatMap(row -> Stream.of(SanctuaryResultsLifecycleProbe.Outcome.values())
+                .map(outcome -> org.junit.jupiter.params.provider.Arguments.of(row, outcome)));
+    }
+
+    @ParameterizedTest(name = "actual native results/Saved2 {0}/{1}")
+    @MethodSource("nativeOutcomes")
+    void nativeResultOutcomeOwnersReturnToTheActualSaved2Origin(CanonicalEntryMatrixSupport.Row row,
+            SanctuaryResultsLifecycleProbe.Outcome outcome) throws Exception {
+        assertOriginReturn(row, outcome);
+    }
+
+    @ParameterizedTest(name = "actual supported results/Saved2 {0}/{1}")
+    @MethodSource("supportedOutcomes")
+    void everySupportedOutcomeUsesTheRealPedestalResultsAndOriginOwners(
+            CanonicalEntryMatrixSupport.Row row, SanctuaryResultsLifecycleProbe.Outcome outcome) throws Exception {
+        assertOriginReturn(row, outcome);
+    }
+
     private void assertOriginReturn(CanonicalEntryMatrixSupport.Row row) throws Exception {
+        assertOriginReturn(row, null);
+    }
+
+    private void assertOriginReturn(CanonicalEntryMatrixSupport.Row row,
+                                   SanctuaryResultsLifecycleProbe.Outcome outcome) throws Exception {
         var fixture = origin.boot(row);
-        GameServices.gameState().restoreS3kEmeraldProgress(List.of(0, 0, 0, 0, 0, 0, 0), false);
+        // Declared persistent progress precedes every native controller dispatch.
+        GameServices.gameState().restoreS3kEmeraldProgress(outcome == null
+                ? List.of(0, 0, 0, 0, 0, 0, 0) : outcome.initialProgress(), outcome != null);
         var input = new InputHandler();
         input.setLogicalOverride(RecordedInputSnapshots.fromBk2(NEUTRAL, NEUTRAL));
         var loop = new GameLoop(input);
@@ -215,31 +249,48 @@ class TestS3kSanctuaryOriginReturnLifecycle {
             replayTwice(loop, fixture, hub, row, lives);
             assertEquals(saved, GameServices.level().getBigRingReturn(), "hub replay preserves Saved2");
 
-            var hubObjects = GameServices.level().getObjectManager();
-            main = GameServices.sprites().getMainPlayable();
-            input.setLogicalOverride(RecordedInputSnapshots.fromBk2(new Bk2FrameInput(0,
-                    AbstractPlayableSprite.INPUT_RIGHT, 0, false, ""), NEUTRAL));
-            for (int frame = 0; frame < 64 && main.getCentreX() < 0x1640 + 24; frame++) {
-                tick(loop, lives, 1);
-            }
-            assertTrue(main.getCentreX() >= 0x1640 + 24, "ordinary movement arms native exit band");
-            input.setLogicalOverride(RecordedInputSnapshots.fromBk2(new Bk2FrameInput(0,
-                    AbstractPlayableSprite.INPUT_LEFT, 0, false, ""), NEUTRAL));
-            int hubHistory = fixture.gameplayMode().getRewindController().currentFrame();
-            for (int frame = 0; frame < 320 && GameServices.level().getObjectManager() == hubObjects; frame++) {
-                tick(loop, lives, 1);
-                hubHistory = Math.max(hubHistory, fixture.gameplayMode().getRewindController().currentFrame());
-                if (GameServices.level().isLevelInactiveForTransition()) {
-                    // The actual exit owner has published; destination gets
-                    // neutral input rather than another walking command.
-                    input.setLogicalOverride(RecordedInputSnapshots.fromBk2(NEUTRAL, NEUTRAL));
+            int hubHistory;
+            if (outcome != null) {
+                var provider = TestS3kSanctuaryPedestalLifecycle.selectAndReplayIncomingStage(
+                        loop, input, fixture, hub, row, 6, lives);
+                assertEquals(saved, GameServices.level().getBigRingReturn(), "stage entry preserves Saved2");
+                hubHistory = SanctuaryResultsLifecycleProbe.completeAndReturn(
+                        loop, provider, fixture, row, outcome, lives, saved);
+                // Results can legitimately award score lives; they may never consume one.
+                assertTrue(GameServices.gameState().getLives() >= lives);
+                lives = GameServices.gameState().getLives();
+            } else {
+                var hubObjects = GameServices.level().getObjectManager();
+                main = GameServices.sprites().getMainPlayable();
+                input.setLogicalOverride(RecordedInputSnapshots.fromBk2(new Bk2FrameInput(0,
+                        AbstractPlayableSprite.INPUT_RIGHT, 0, false, ""), NEUTRAL));
+                for (int frame = 0; frame < 64 && main.getCentreX() < 0x1640 + 24; frame++) {
+                    tick(loop, lives, 1);
                 }
+                assertTrue(main.getCentreX() >= 0x1640 + 24, "ordinary movement arms native exit band");
+                input.setLogicalOverride(RecordedInputSnapshots.fromBk2(new Bk2FrameInput(0,
+                        AbstractPlayableSprite.INPUT_LEFT, 0, false, ""), NEUTRAL));
+                hubHistory = fixture.gameplayMode().getRewindController().currentFrame();
+                for (int frame = 0; frame < 320 && GameServices.level().getObjectManager() == hubObjects; frame++) {
+                    tick(loop, lives, 1);
+                    hubHistory = Math.max(hubHistory, fixture.gameplayMode().getRewindController().currentFrame());
+                    if (GameServices.level().isLevelInactiveForTransition()) {
+                        // The actual exit owner has published; destination gets
+                        // neutral input rather than another walking command.
+                        input.setLogicalOverride(RecordedInputSnapshots.fromBk2(NEUTRAL, NEUTRAL));
+                    }
+                }
+                input.setLogicalOverride(RecordedInputSnapshots.fromBk2(NEUTRAL, NEUTRAL));
+                assertNotSame(hubObjects, GameServices.level().getObjectManager(), "real pad/exit band loads origin");
             }
-            input.setLogicalOverride(RecordedInputSnapshots.fromBk2(NEUTRAL, NEUTRAL));
-            assertNotSame(hubObjects, GameServices.level().getObjectManager(), "real pad/exit band loads origin");
             assertEquals(saved.playerX(), GameServices.sprites().getMainPlayable().getCentreX(),
                     "actual Saved2 assembly position before ordinary destination movement");
-            assertEquals(saved.playerY(), GameServices.sprites().getMainPlayable().getCentreY());
+            // Results' actual SpawnLevelMainSprites return owner applies the
+            // literal Player_mode2 +4 to P1 (loc_6B42/asm8388). Pad exits use
+            // the distinct existing ordinary reload path above.
+            int returnSpawnY = saved.playerY()
+                    + (outcome != null && row.main().equals("tails") ? 4 : 0);
+            assertEquals(returnSpawnY, GameServices.sprites().getMainPlayable().getCentreY());
             waitForReleasedWorld(loop, lives, 7, 0, row);
             origin.assertOwners(row);
             assertFalse(GameServices.level().hasBigRingReturn(), "Saved2 consumed only after destination restore");
@@ -251,8 +302,10 @@ class TestS3kSanctuaryOriginReturnLifecycle {
             assertTrue(GameServices.level().getLevelGamestate().getTimerFrames()
                     >= Math.max(0, saved.timerFrames() / 60 * 60 - 1), "native Saved2 second/frame bank restored");
             assertTrue(GameServices.camera().isLevelStarted(), "ordinary origin HUD owner resumes");
-            assertTrue(fixture.gameplayMode().getRewindController().currentFrame() < hubHistory,
-                    "origin reload retires outgoing hub history");
+            if (outcome == null) {
+                assertTrue(fixture.gameplayMode().getRewindController().currentFrame() < hubHistory,
+                        "origin reload retires outgoing hub history");
+            }
             replayTwice(loop, fixture, origin, row, lives);
         } finally {
             loop.closePresence();
@@ -291,9 +344,10 @@ class TestS3kSanctuaryOriginReturnLifecycle {
         }
     }
 
-    private static void waitForReleasedWorld(GameLoop loop, int lives, int zone, int act,
+    static void waitForReleasedWorld(GameLoop loop, int lives, int zone, int act,
                                             CanonicalEntryMatrixSupport.Row row) throws Exception {
-        for (int frame = 0; frame < 400 && (GameServices.fade().isActive()
+        for (int frame = 0; frame < 400 && (loop.getCurrentGameMode() != GameMode.LEVEL
+                || GameServices.fade().isActive()
                 || GameServices.fade().hasPendingCompletion()
                 || GameServices.level().hasPendingFreshLevelTransitionBoundary()); frame++) {
             tick(loop, lives, 1);
@@ -306,7 +360,7 @@ class TestS3kSanctuaryOriginReturnLifecycle {
         assertFalse(GameServices.level().hasPendingFreshLevelTransitionBoundary());
     }
 
-    private static void replayTwice(GameLoop loop, HeadlessTestFixture fixture,
+    static void replayTwice(GameLoop loop, HeadlessTestFixture fixture,
                                     CanonicalEntryMatrixSupport owner, CanonicalEntryMatrixSupport.Row row,
                                     int lives) {
         owner.assertOwners(row);
