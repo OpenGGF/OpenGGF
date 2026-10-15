@@ -35,7 +35,9 @@ class TestS3kMhzAuthoredRoute {
         var fixture = HeadlessTestFixture.builder().withZoneAndAct(7, 0).withFreshLevelStartLifecycle().build();
         assertEquals(320, fixture.camera().getWidth());
         assertEquals("sonic", fixture.sprite().getCode());
-        assertTrue(GameServices.sprites().getSidekicks().isEmpty());
+        var introCarriers = GameServices.sprites().getSidekicks();
+        assertEquals(1, introCarriers.size(), "native MHZ1 carry-in Tails is the only Player_2");
+        assertTrue(nativeIntroCarrier(introCarriers.getFirst()));
         assertTrue(GameServices.level().consumePendingInitialProcessSpritesPass());
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/mhz1-sonic-fresh-320.bk2"));
@@ -102,5 +104,14 @@ class TestS3kMhzAuthoredRoute {
                     GameServices.level().getCurrentLevel().getPalette(line).getColor(color)));
         return result.append('|').append(HexFormat.of().formatHex(
                 ((MhzZoneRuntimeState) GameServices.zoneRuntimeState()).captureBytes())).toString();
+    }
+
+    /**
+     * SpawnLevelMainSprites loc_68C2/loc_68D8 (sonic3k.asm:8180-8197): locked-on MHZ1
+     * (SK_alone_flag clear) gives solo Sonic (Player_mode 1) a temporary Obj_Tails carrier
+     * at Player_2, which flies off after the drop. It is not a configured follower.
+     */
+    private static boolean nativeIntroCarrier(com.openggf.sprites.playable.AbstractPlayableSprite sprite) {
+        return sprite.getCpuController() != null && sprite.getCpuController().isTransientCarrySidekick();
     }
 }
