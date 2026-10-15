@@ -27,6 +27,19 @@ Unreleased. The earlier development themes remain in
   leads to, as the original does, instead of the level it was saved in. The
   data-select menu reads slots from the configured save root.
 
+- **S3K bonus stages:** Gumball bumpers disappear when hit, springs are fully
+  solid and crumble in the same pass, gumballs drop from the container with the
+  machine's native random seed, ejected balls also push the second player, and a
+  companion that drops into the exit is removed as in the original (it rejoins
+  on return). Pachinko orb rewards follow the level frame counter. All three bonus
+  traces now replay without errors.
+
+- **S3K objects and bosses:** The Angel Island end boss starts its defeat at the
+  native hit check of whichever phase it is in. When the object table is full,
+  pending placements wait for the next camera block crossing, which restores the
+  Hydrocity fan timing. Ending reunion loads use measured native decompression
+  costs, and the credits start on the original frame.
+
 - **S3K level entry:** Captures that omit the title presentation complete the
   destination's deferred player assembly before its animation and art-loading
   tail, allowing ordinary movement after a fresh zone handoff. Publication also
