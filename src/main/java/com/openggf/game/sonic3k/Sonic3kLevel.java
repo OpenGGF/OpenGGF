@@ -141,6 +141,17 @@ public class Sonic3kLevel extends AbstractLevel {
             int levelPaletteAddr, Integer minXOverride, List<ObjectSpawn> objects,
             List<RingSpawn> rings, RingSpriteSheet ringSpriteSheet,
             boolean publishGraphicsOnLoad, TerrainArtSources terrainArtSources) throws IOException {
+        this(rom, zoneIndex, resourcePlan, primaryCollisionAddr, secondaryCollisionAddr, interleavedCollision,
+                layoutAddr, levelBoundariesAddr, characterPaletteAddr, levelPaletteAddr, minXOverride,
+                objects, rings, ringSpriteSheet, publishGraphicsOnLoad, terrainArtSources, new byte[0]);
+    }
+
+    Sonic3kLevel(Rom rom, int zoneIndex, LevelResourcePlan resourcePlan,
+            int primaryCollisionAddr, int secondaryCollisionAddr, boolean interleavedCollision,
+            int layoutAddr, int levelBoundariesAddr, int characterPaletteAddr,
+            int levelPaletteAddr, Integer minXOverride, List<ObjectSpawn> objects,
+            List<RingSpawn> rings, RingSpriteSheet ringSpriteSheet, boolean publishGraphicsOnLoad,
+            TerrainArtSources terrainArtSources, byte[] retainedPatterns) throws IOException {
         super(zoneIndex);
         this.terrainArtSources = terrainArtSources;
         this.publishGraphicsOnLoad = publishGraphicsOnLoad;
@@ -153,7 +164,7 @@ public class Sonic3kLevel extends AbstractLevel {
         this.patternLoadCueSchedule = resourcePlan.getPatternLoadCueSchedule();
 
         loadPalettes(rom, characterPaletteAddr, levelPaletteAddr);
-        loadPatternsWithPlan(rom, resourcePlan);
+        loadPatternsWithPlan(rom, resourcePlan, retainedPatterns);
         loadSolidTiles(rom);
         loadChunksWithCollision(rom, resourcePlan, primaryCollisionAddr, secondaryCollisionAddr,
                 interleavedCollision);
@@ -586,11 +597,11 @@ public class Sonic3kLevel extends AbstractLevel {
         }
     }
 
-    private void loadPatternsWithPlan(Rom rom, LevelResourcePlan plan) throws IOException {
+    private void loadPatternsWithPlan(Rom rom, LevelResourcePlan plan, byte[] retained) throws IOException {
         GraphicsManager graphicsMan = publishGraphicsOnLoad ? GameServices.graphics() : null;
         ResourceLoader loader = new ResourceLoader(rom);
 
-        byte[] result = loader.loadWithOverlays(plan.getPatternOps(), 0x10000);
+        byte[] result = loader.loadWithRetainedBytes(plan.getPatternOps(), 0x10000, retained);
 
         if (result.length % Pattern.PATTERN_SIZE_IN_ROM != 0) {
             LOG.warning(String.format("S3K pattern data not 32-byte aligned: %d bytes (remainder %d). Truncating.",

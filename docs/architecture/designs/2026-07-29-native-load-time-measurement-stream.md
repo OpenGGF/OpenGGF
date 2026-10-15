@@ -192,3 +192,59 @@ acceptance thresholds.
   C# and Java must emit identical fingerprints and feature vectors;
 - architecture guards prove runtime/replay cannot load measurement records;
 - end-to-end capture replays at least three independent movie families.
+
+## Exact FIFO v2 supplemental authority (2026-10-15)
+
+Schema 1 (`load-time-measurement-v1`) and everything above remain unchanged and are
+still the only inputs to `S3kLoadTimeProfileGenerator.publish` and the generator-owned
+`s3k-v1.json`. A separate optional TraceChaser observer, `S3kExactKosMeasurementObserver`
+(TraceChaser `de43cf78c25478b5d23d69cf7bd541faa9923745`), emits
+`measurement_schema: 2` / `load-time-measurement-v2` rows from the literal shipped FIFO
+instructions in `sonic3k.asm` (`Queue_Kos`, `Process_Kos_Queue`, lines 2803–2965):
+
+- `$1B46` module child after `Queue_Kos` appended its descriptor, and opt-in `$1BEE`
+  (`Queue_Kos` `rts`) for top-level submissions; a `$1BEE` return to `$1B46` is skipped;
+- `$1C1A` each occupied-head service (one service opportunity per call, busy/resumed
+  calls included; waiting entries receive none);
+- `$1CE4` after `Process_Kos_Queue_EndReached` stores the consumed cursors and
+  decrements the count, before the remaining entries shift.
+
+Hook opcodes and both `jsr Process_Kos_Queue` callers (`$6516` LevelLoop, `$62D2`
+title-card loop) are byte-checked before registration. A service returning anywhere
+other than `$651C`/`$62D8` in game mode `$0C` marks the sample unclassified; an
+enqueue the observer did not see is `head_service_censored`. Neither can publish.
+V2 rows carry `submission_pc` and a null parent; the generator parses them for
+diagnostics but both `publish` and `Result.publicationTsv()` reject any non-v1 input.
+
+V2 costs enter a profile only through `S3kLoadTimeProfileSupplement`, which needs the
+executed BK2 and its hash, a selected source/fingerprint inventory, the frozen setup
+spec and its SHA-256, and the native recorder commit. It appends only fingerprints the
+base manifest lacks (lower median, sample/min/max, fixture index), preserves every
+existing row, the estimator and fixture indexes byte-for-byte, writes the manifest's
+own canonical layout so the result is a pure append, and refuses existing outputs.
+Its audit TSV records every input/output hash. The target is the hand-tunable FAST
+manifest `s3k-fast-v1.json`; the generator-owned `s3k-v1.json` is not supplemented.
+
+First publication: the declared NTSC Tails/Super D01 ending scene (authored
+`tails-super-d01-measurement.bk2`, SHA-256 `baac2646…eabeef0`; frozen setup
+`module-child-load-measurement-spec-v1.json`, SHA-256 `ce7a78ae…19bd57`) captured on
+immutable host `fa8954d8…2539efa`. All 30 retired heads were exact; an independent
+read-only `$1C1A`/`$1CD2` witness agreed with the writer on source, destination,
+opportunities and consumed cursors for 30/30; all 113 services returned to `$651C`;
+24 jobs resumed after VInt interruption (83 busy calls) with unchanged original
+descriptors. Seven missing reunion module rows were appended to `s3k-fast-v1.json`
+(output SHA-256 `fc894e33…a47a15b9`): `1CFB46`, `1D02B6`, `1D0C56` = 4, `1D14B6`,
+`160D8E` = 2, `163B6A`, `1630E6` = 1. A second, separately audited supplement
+(output SHA-256 `c9a0e04c…2fbcf06`) appends the two top-level direct jobs that
+precede the module chain in the same FIFO: `1D17A6` = 4 and `1CF2D4` = 3. Their
+separate proof is the opt-in `$1BEE` enqueue with a non-`$1B46` return (genuinely
+top-level), exact precision and writer/oracle agreement. Without them FAST fell
+back to the estimator (`ceil(shortCopyCommands/133)` = 2 and 4), opening the
+reunion `loc_5AE0A` `Kos_modules_left` gate one frame early. The existing initial-nose rows `16341A`/`162916` are
+preserved although the same run measured them at 5/6 at scene entry and 4/4 at the
+reunion; the context dependence is recorded, not averaged in.
+
+The rejected earlier v1 writer (aggregate frame-end reconciliation) under-counted
+these reunion heads by 0–1 inconsistently (`1CFB46` 4/4 but `1D02B6` 3/4, `163B6A`
+0/1), so no blanket correction was applied and none of its costs were published.
+No title-card (`$62D8`) service was exercised by this capture.
