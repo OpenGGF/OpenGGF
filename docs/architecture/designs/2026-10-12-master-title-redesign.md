@@ -416,3 +416,79 @@ Validation: `TestSettingTiming` (classification, consistency with `LiveSettings`
 pending rules) and the Settings screen test. The consumer selection passed 520 tests
 and `-Pguards` with the Mod API checks passed 143. `MasterTitleCaptureTool` scenes
 29–31 were inspected.
+
+## Usability review follow-up (2026-10-15)
+
+Starting checkout: `d11b86a6ff53580b15bac153eb404cbfd0e7626d`. The review used
+native 320x224 offscreen captures plus input/layout source inspection. James
+selected quieter status, bounded layouts, direct ROM setup, simpler Settings,
+calmer presentation and visible Save actions, and explicitly removed Browse Games.
+
+- Status badges no longer share button outlines. The status line keeps its first
+  useful values and reserves space for `+N options` when the full profile exceeds
+  the viewport; Game Setup remains the editing owner. The repeated launch sentence
+  now points to Game Setup. Pagination remains read-only.
+- Optional Extras at native width shortens Advanced to More and suppresses the
+  header mod count, retaining space for the brand. Navigation order is unchanged.
+- Missing stock games offer Locate ROM. A file-only path picker checks image
+  identity through the runtime classifier (including lock-on windows), then saves
+  through the settings draft. It never relies on a filename, launches automatically,
+  or changes the selected card. Invalid files and save failures offer retry.
+- Shader library location, rendering phase, FPS and debug viewer scale move to
+  Advanced settings. Everyday Display help describes the result on screen;
+  Details retains the technical catalog explanation.
+- A navy overlay quiets the checkerboard behind settings and tools. Game Setup
+  uses compact ordinary rows. Description controls reserve their own width before
+  any default-value text is drawn.
+- Dirty Game Setup and Settings drafts expose Save changes to keyboard, controller
+  and mouse. The existing Back save/discard prompt remains, and inherited values
+  explicitly say Use global.
+
+Rejected for this iteration: making status badges interactive again, silently
+truncating the full profile, keeping a second game-selection browser, or accepting
+an arbitrary file as a ROM merely because the path exists. No gameplay, timing,
+ROM decoding or public Mod API behavior changes are intended.
+
+Validation is focused on menu/input/layout, settings persistence, image identity
+and offscreen presentation. The change-based plan selects 3,295 classes because
+these files include unclassified shared owners; that broad engine selection is
+disproportionate to the bounded UI changes. Java 25/Lua/PowerShell preflight passed
+once JAVA_HOME selected the installed JDK 25. Final results are recorded below.
+
+Final focused checks (same base plus the uncommitted changes above, Java 25):
+
+- `python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestMasterTitle*,TestTitleHubNavigation,TestHubSetupChips,TestLaunchConfigPanel,TestEngineSettingsScreen,TestEngineSettingsDraft,TestMenuRomLocator,TestMenuPathBrowser,TestMenuTextEditor,TestChildMenuFeedback,TestMenuRenderAlignment' '-Dsonic1.rom.path=<repo-root>/Sonic The Hedgehog (W) (REV01) [!].gen' '-Dsonic2.rom.path=<repo-root>/Sonic The Hedgehog 2 (W) (REV01) [!].gen' '-Ds3k.rom.path=<repo-root>/Sonic 3 & Knuckles (W) [!].gen' test`
+  executed 195 tests: 193 passed, two hub-message assertions still expected the
+  removed missing-ROM error page and redundant launch sentence; no errors/skips.
+- After updating those expectations and adding the native-width Extras/header
+  regression, `python3 tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestMasterTitleHubMessages' test`
+  passed all seven tests without skips. Production behavior was unchanged.
+- Captures exposed a focused Save footer touching the bottom edge and losing its
+  Enter hint. The final tighter frame and shorter Back hint passed
+  `python3 tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestLaunchConfigPanel,TestMenuRenderAlignment' test`:
+  20 tests, no failures/errors/skips. This completes 196 distinct focused tests
+  across the delivery; no broad smoke/full-suite pass is claimed.
+
+Earlier invocations stopped during compilation, before tests: disappearing class
+files while the IDE compiler was active, and a cleanup-method test compiled against
+classes read before that method was added. Sources were held stable and James
+closed the project before the completed runs above. The external-writer hazard is
+recorded in the existing measurement-hazard catalogue. Runtime gameplay/trace and
+subjective controller/audio playtesting are outside this UI validation scope.
+
+The final picker capture exposed immediate-font buffer growth dropping the start
+of a long filename. The picker now uses the existing preserving mega-batch path
+and shared quiet page background. `python3 tools/testing/maven_queue.py --lean
+-Dmse=off '-Dtest=TestMenuPathBrowser,TestMenuRomLocator,TestMenuPixelFont' test`
+passed 15 tests without failures/errors/skips. Eight font checks add to the earlier
+196 distinct cases, for 204 distinct focused checks across the completed runs.
+The generic immediate-font limitation is recorded in implementation pitfalls.
+
+Final `MasterTitleCaptureTool <output> <width> 3` runs, Java 25 with
+`-XstartOnFirstThread` and production classes/dependencies, generated 26 scenes
+at each of 320 and 400 logical pixels. Inspected hub, crowded profile/Extras,
+missing-ROM, completed file picker, Settings, setup and focused Save scenes;
+long filenames, status overflow, branding and footer focus fit. Captures are in
+`/private/tmp/openggf-menu-after` and `/private/tmp/openggf-menu-after-wide`.
+No paused-frame capture was supplied; existing suspended-menu behavior is covered
+by the focused tests. Final `git diff --check` passed. Validation used the working changes before commit.

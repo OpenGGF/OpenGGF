@@ -17,6 +17,19 @@ class TestMenuPathBrowser {
     @TempDir Path directory;
 
     @Test
+    void ownerCancellationStopsLoadingAndIgnoresSubsequentInput() {
+        var browser = new MenuPathBrowser(directory.toString());
+        browser.cancel();
+        browser.cancel();
+        InputHandler input = input();
+        input.handleKeyEvent(GLFW_KEY_ENTER, GLFW_PRESS);
+        input.refreshLogicalSnapshot(); browser.update(input);
+        assertFalse(browser.loading());
+        assertTrue(browser.cancelled());
+        assertNull(browser.selected());
+    }
+
+    @Test
     void cancellingAnOutstandingReadNeverPublishesASelection() {
         var browser = new MenuPathBrowser(directory.toString());
         InputHandler input = input();

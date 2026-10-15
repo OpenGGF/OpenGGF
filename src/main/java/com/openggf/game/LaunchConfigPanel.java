@@ -23,7 +23,7 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_TAB;
  * Game Setup: the per-game launch profile editor hosted by {@link MasterTitleScreen}.
  *
  * <p>Rows are grouped as Players, Screen, Extras and Mods. Rewind, debug tools and
- * aspect ratio follow the all-games Settings value ("Default (Off)") until overridden.
+ * aspect ratio follow the all-games Settings value ("Use global (Off)") until overridden.
  * Edits form a draft: Back with unsaved changes asks Save / Discard / Keep editing,
  * matching Settings and the mod manager.
  */
@@ -44,7 +44,8 @@ public final class LaunchConfigPanel {
         REWIND(LaunchProfile.Row.REWIND, "Rewind", 109),
         BORROW(LaunchProfile.Row.CROSS_GAME, "Borrow from", 122),
         DEBUG(LaunchProfile.Row.DEBUG_TOOLS, "Debug tools", 135),
-        MODS(null, "Mods", 148);
+        MODS(null, "Mods", 148),
+        SAVE(null, "Save changes", 209);
 
         final LaunchProfile.Row row;
         final String label;
@@ -168,16 +169,21 @@ public final class LaunchConfigPanel {
         // Mouse: hovering a row focuses it; clicking the left or right half steps the value.
         for (int i = 0; i < items.size(); i++) {
             Item candidate = items.get(i);
-            if (!pointer.over(8, candidate.y - 2, viewportWidth - 16, 13)) continue;
+            int hitWidth = candidate == Item.SAVE ? saveButtonWidth() : viewportWidth - 16;
+            if (!pointer.over(candidate == Item.SAVE ? 6 : 8, candidate == Item.SAVE ? 209 : candidate.y - 2,
+                    hitWidth, candidate == Item.SAVE ? 11 : 13)) continue;
             if (focusIndex != i && (pointer.leftPressed() || movedOver(pointer))) focusIndex = i;
             if (pointer.leftPressed()) {
                 item = candidate;
+                if (item == Item.SAVE) { close(Result.CLOSED); MenuFeedback.emit(CONFIRM); return; }
                 if (item == Item.MODS) { openMods(); return; }
                 profile = step(item, pointer.x() >= viewportWidth / 2);
             }
         }
 
-        if (item == Item.MODS) {
+        if (item == Item.SAVE) {
+            if (MenuInput.accept(inputHandler)) { close(Result.CLOSED); MenuFeedback.emit(CONFIRM); return; }
+        } else if (item == Item.MODS) {
             if (MenuInput.accept(inputHandler)) { openMods(); return; }
         } else if (item.row != null) {
             if (MenuInput.left(inputHandler)) profile = step(item, false);
@@ -282,6 +288,8 @@ public final class LaunchConfigPanel {
     void saveFailed() {
         closed = false;
         saveError = "Save failed - try again";
+        int saveIndex = focusableItems().indexOf(Item.SAVE);
+        if (saveIndex >= 0) focusIndex = saveIndex;
     }
 
     private void close(Result result) {
@@ -309,23 +317,32 @@ public final class LaunchConfigPanel {
             MenuChrome.section(font, "EXTRAS", 12, 97, w - 24);
             Item focused = focusedItem();
             for (Item item : items()) {
-                drawRow(item, item == focused && !prompt, w);
+                if (item != Item.SAVE) drawRow(item, item == focused && !prompt, w);
             }
             drawDescription(focused, w);
-            MenuChrome.footer(font, w, saveError != null ? saveError
-                            : unsavedCount() == 0 ? null : unsavedCount() + " UNSAVED",
+            MenuChrome.footer(font, w, unsavedCount() == 0 ? saveError : "SAVE CHANGES",
                     footerHints(focused), MenuChrome.controller(lastInput));
+            if (unsavedCount() != 0) {
+                if (focused == Item.SAVE && !prompt) MenuChrome.focus(font, 6, 209, saveButtonWidth(), 11, focusTicks);
+                else MenuChrome.panel(font, 6, 209, saveButtonWidth(), 11);
+                MenuChrome.compact(font, "SAVE CHANGES", 10, 211, MenuChrome.GOLD);
+            }
             if (prompt) drawPrompt(w);
         } finally {
             font.endMegaBatch();
         }
     }
 
+    private static int saveButtonWidth() {
+        return MenuChrome.compactWidth("SAVE CHANGES") + 8;
+    }
+
     private List<MenuChrome.Hint> footerHints(Item focused) {
         List<MenuChrome.Hint> hints = new ArrayList<>();
         // The Mods row's own key (Enter) is shown in its description box.
-        if (focused != Item.MODS) hints.add(MenuChrome.leftRight("CHANGE"));
-        hints.add(MenuChrome.hint(MenuChrome.backKey(lastInput), unsavedCount() == 0 ? "BACK" : "SAVE OR DISCARD"));
+        if (focused == Item.SAVE) hints.add(MenuChrome.hint(MenuChrome.confirmKey(lastInput), "SAVE"));
+        else if (focused != Item.MODS) hints.add(MenuChrome.leftRight("CHANGE"));
+        hints.add(MenuChrome.hint(MenuChrome.backKey(lastInput), unsavedCount() == 0 || focused == Item.SAVE ? "BACK" : "SAVE OR DISCARD"));
         return hints;
     }
 
@@ -333,9 +350,9 @@ public final class LaunchConfigPanel {
         int y = item.y;
         if (focused) MenuChrome.focus(font, 8, y - 1, w - 16, 12, focusTicks);
         if (item == Item.MODS) {
-            MenuChrome.label(font, item.label, 18, y, focused ? MenuChrome.WHITE : MenuChrome.TEXT);
+            MenuChrome.compact(font, item.label, 18, y + 1, focused ? MenuChrome.WHITE : MenuChrome.TEXT);
             String names = enabledMods.isEmpty() ? "NONE FOR THIS GAME" : String.join(", ", enabledMods);
-            int labelEnd = 18 + MenuChrome.labelWidth(item.label) + 10;
+            int labelEnd = 18 + MenuChrome.compactWidth(item.label) + 10;
             names = MenuChrome.fitCompact(names, w - 30 - labelEnd);
             MenuChrome.compact(font, names, w - 26 - MenuChrome.compactWidth(names), y + 1,
                     enabledMods.isEmpty() ? MenuChrome.DIM : MenuChrome.CYAN);
@@ -343,7 +360,7 @@ public final class LaunchConfigPanel {
             return;
         }
         if (item == Item.TEAM) {
-            MenuChrome.label(font, item.label, 18, y, MenuChrome.DIM);
+            MenuChrome.compact(font, item.label, 18, y + 1, MenuChrome.DIM);
             String v = "CHOSEN ON SAVE SCREEN";
             MenuChrome.compact(font, v, w - 16 - MenuChrome.compactWidth(v), y + 1, MenuChrome.DIM);
             return;
@@ -352,17 +369,16 @@ public final class LaunchConfigPanel {
         boolean inherit = isInheriting(item);
         boolean changed = !view.stock() && !inherit;
         if (changed) MenuChrome.changedMarker(font, 11, y + 3);
-        MenuChrome.label(font, item.label, 18, y, focused ? MenuChrome.WHITE : MenuChrome.TEXT);
+        MenuChrome.compact(font, item.label, 18, y + 1, focused ? MenuChrome.WHITE : MenuChrome.TEXT);
         float[] color = view.experimental() ? MenuChrome.RED
                 : inherit ? MenuChrome.DIM : changed ? MenuChrome.AMBER : MenuChrome.WHITE;
         String value = view.value();
-        int labelEnd = 18 + MenuChrome.labelWidth(item.label) + 8;
+        int labelEnd = 18 + MenuChrome.compactWidth(item.label) + 8;
         int right = w - 16 - (focused ? 8 : 0);
-        boolean compact = inherit || right - MenuChrome.labelWidth(value) < labelEnd;
-        int valueWidth = compact ? MenuChrome.compactWidth(value) : MenuChrome.labelWidth(value);
+        value = MenuChrome.fitCompact(value, right - labelEnd - (focused ? 8 : 0));
+        int valueWidth = MenuChrome.compactWidth(value);
         int valueX = right - valueWidth;
-        if (compact) MenuChrome.compact(font, value, valueX, y + 1, color);
-        else MenuChrome.label(font, value, valueX, y, color);
+        MenuChrome.compact(font, value, valueX, y + 1, color);
         if (focused) {
             // The arrows hop outward for a few frames after each change.
             int nudge = changeTicks < 6 ? 1 : 0;
@@ -375,7 +391,12 @@ public final class LaunchConfigPanel {
         List<String> lines = new ArrayList<>();
         List<float[]> colors = new ArrayList<>();
         if (item != null) describe(item, lines, colors);
-        if (item != null && item != Item.MODS && pausedInLevel != null) describePaused(item, lines, colors);
+        if (item != null && item.row != null && pausedInLevel != null) describePaused(item, lines, colors);
+        if (saveError != null) {
+            lines.add(saveError);
+            while (colors.size() < lines.size() - 1) colors.add(null);
+            colors.add(MenuChrome.RED);
+        }
         MenuChrome.descriptionBox(font, 8, DESC_Y, w - 16, DESC_H, lines, colors);
         if (item == Item.MODS) {
             MenuChrome.hints(font, 14, keyLineY(lines.size()), List.of(MenuChrome.hint(MenuChrome.confirmKey(lastInput), "MANAGE MODS")),
@@ -385,7 +406,7 @@ public final class LaunchConfigPanel {
             String key = MenuChrome.controller(lastInput) ? MenuChrome.detailsKey(lastInput) : "Bksp";
             MenuChrome.hints(font, 14, keyLineY(lines.size()), List.of(MenuChrome.hint(key,
                     isResettable(item) ? (item == Item.REWIND || item == Item.DEBUG || item == Item.ASPECT
-                            ? "USE DEFAULT" : "USE STOCK") : "ALREADY DEFAULT")),
+                            ? "USE GLOBAL" : "USE STOCK") : (isInheriting(item) ? "USING GLOBAL" : "ALREADY STOCK"))),
                     MenuChrome.controller(lastInput), isResettable(item) ? MenuChrome.MUTED : MenuChrome.DIM);
         }
     }
@@ -420,7 +441,7 @@ public final class LaunchConfigPanel {
                     colors.add(null);
                     colors.add(MenuChrome.RED);
                 } else {
-                    lines.add("Default follows Settings > Display (" + globalAspectLabel() + ").");
+                    lines.add("Global follows Settings > Display (" + globalAspectLabel() + ").");
                 }
             }
             case REWIND -> {
@@ -440,6 +461,9 @@ public final class LaunchConfigPanel {
                         + ".  " + game + ": " + effective(profile.debugTools(), SonicConfiguration.DEBUG_VIEW_ENABLED) + ".");
                 colors.add(null);
                 colors.add(profile.debugTools().isDefault() ? null : MenuChrome.AMBER);
+            }
+            case SAVE -> {
+                lines.add("Save " + unsavedCount() + (unsavedCount() == 1 ? " change" : " changes") + " and return to the menu.");
             }
             case MODS -> {
                 lines.add(enabledMods.isEmpty() ? "No enabled mods change " + game + "."
@@ -525,6 +549,7 @@ public final class LaunchConfigPanel {
         items.add(Item.BORROW);
         items.add(Item.DEBUG);
         items.add(Item.MODS);
+        if (unsavedCount() != 0) items.add(Item.SAVE);
         return items;
     }
 
@@ -551,7 +576,7 @@ public final class LaunchConfigPanel {
         String value = switch (item) {
             case REWIND -> toggleValue(profile.rewind(), SonicConfiguration.LIVE_REWIND_ENABLED);
             case DEBUG -> toggleValue(profile.debugTools(), SonicConfiguration.DEBUG_VIEW_ENABLED);
-            case ASPECT -> "global".equals(profile.aspect()) ? "DEFAULT (" + globalAspectLabel() + ")"
+            case ASPECT -> "global".equals(profile.aspect()) ? "USE GLOBAL (" + globalAspectLabel() + ")"
                     : store.displayValue(profile, row, entry).toUpperCase(Locale.ROOT);
             case BORROW -> borrowLabel(profile.crossGameSource());
             default -> store.displayValue(profile, row, entry).toUpperCase(Locale.ROOT);
@@ -562,7 +587,7 @@ public final class LaunchConfigPanel {
 
     private String toggleValue(LaunchToggle toggle, SonicConfiguration allGames) {
         return switch (toggle) {
-            case DEFAULT -> "DEFAULT (" + onOff(configService.getBoolean(allGames)).toUpperCase(Locale.ROOT) + ")";
+            case DEFAULT -> "USE GLOBAL (" + onOff(configService.getBoolean(allGames)).toUpperCase(Locale.ROOT) + ")";
             case ON -> "ON";
             case OFF -> "OFF";
         };
@@ -619,6 +644,10 @@ public final class LaunchConfigPanel {
 
     boolean isModsRowFocusedForTest() {
         return focusedItem() == Item.MODS;
+    }
+
+    boolean isSaveFocusedForTest() {
+        return focusedItem() == Item.SAVE;
     }
 
     boolean isPromptOpenForTest() {

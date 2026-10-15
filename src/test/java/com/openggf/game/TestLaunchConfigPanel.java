@@ -159,6 +159,58 @@ class TestLaunchConfigPanel {
     }
 
     @Test
+    void dirtyDraftExposesSaveAfterModsAndCanRetryAFailedSave() {
+        SonicConfigurationService config = configuredWasd();
+        LaunchConfigPanel panel = panel(config, LaunchProfile.stockFor(SONIC_3K), new TrackingStore(config));
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
+        panel.focus(REWIND);
+        pressFrame(panel, input, GLFW_KEY_D);
+        panel.focusMods();
+        pressFrame(panel, input, GLFW_KEY_S);
+        assertTrue(panel.isSaveFocusedForTest());
+        pressFrame(panel, input, GLFW_KEY_ENTER);
+        assertEquals(LaunchConfigPanel.Result.CLOSED, panel.consumeResult());
+        assertFalse(panel.isPromptOpenForTest());
+        panel.saveFailed();
+        assertTrue(panel.isSaveFocusedForTest());
+        assertEquals(LaunchToggle.ON, panel.currentProfileForTest().rewind());
+        pressFrame(panel, input, GLFW_KEY_ENTER);
+        assertEquals(LaunchConfigPanel.Result.CLOSED, panel.consumeResult());
+    }
+
+    @Test
+    void revertingDraftRemovesSaveFromNavigation() {
+        SonicConfigurationService config = configuredWasd();
+        LaunchConfigPanel panel = panel(config, LaunchProfile.stockFor(SONIC_3K), new TrackingStore(config));
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
+        panel.focus(REWIND);
+        pressFrame(panel, input, GLFW_KEY_D);
+        pressFrame(panel, input, GLFW_KEY_BACKSPACE);
+        assertEquals(0, panel.unsavedCount());
+        panel.focusMods();
+        pressFrame(panel, input, GLFW_KEY_S);
+        assertEquals(MAIN_CHARACTER, panel.selectedRowForTest());
+    }
+
+    @Test
+    void gamepadCanReachAndActivateSaveChanges() {
+        SonicConfigurationService config = configuredWasd();
+        LaunchConfigPanel panel = panel(config, LaunchProfile.stockFor(SONIC_3K), new TrackingStore(config));
+        config.setConfigValue(SonicConfiguration.CONTROLLER_ENABLED, true);
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER1, "auto");
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER2, "none");
+        FakeGamepadStateSource source = new FakeGamepadStateSource();
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config), source);
+        panel.focus(REWIND);
+        pressGamepadFrame(panel, input, source, GLFW_GAMEPAD_BUTTON_DPAD_RIGHT);
+        panel.focusMods();
+        pressGamepadFrame(panel, input, source, GLFW_GAMEPAD_BUTTON_DPAD_DOWN);
+        assertTrue(panel.isSaveFocusedForTest());
+        pressGamepadFrame(panel, input, source, org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_A);
+        assertEquals(LaunchConfigPanel.Result.CLOSED, panel.consumeResult());
+    }
+
+    @Test
     void gamepadDpadMovesRowsAndCyclesValues() {
         SonicConfigurationService config = configuredWasd();
         LaunchConfigPanel panel = panel(config, LaunchProfile.stockFor(SONIC_3K), new TrackingStore(config));
@@ -219,10 +271,10 @@ class TestLaunchConfigPanel {
         List<LaunchConfigPanel.RowView> rows = panel.rowViews();
         assertIterableEquals(List.of("Character", "Sidekick", "Aspect ratio", "Rewind", "Borrow from", "Debug tools"),
                 rows.stream().map(LaunchConfigPanel.RowView::label).toList());
-        assertEquals("DEFAULT (16:9)", rows.get(2).value());
-        assertEquals("DEFAULT (ON)", rows.get(3).value(), "Default shows the all-games value it follows");
+        assertEquals("USE GLOBAL (16:9)", rows.get(2).value());
+        assertEquals("USE GLOBAL (ON)", rows.get(3).value(), "Default shows the all-games value it follows");
         assertEquals("OFF", rows.get(4).value());
-        assertEquals("DEFAULT (OFF)", rows.get(5).value());
+        assertEquals("USE GLOBAL (OFF)", rows.get(5).value());
 
         LaunchConfigPanel pinned = panel(config,
                 new LaunchProfile(LaunchToggle.OFF, "s2", LaunchToggle.ON, "ULTRA_21_9", "sonic", "tails"),

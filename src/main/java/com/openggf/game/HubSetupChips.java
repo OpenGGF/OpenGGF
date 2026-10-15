@@ -62,6 +62,23 @@ final class HubSetupChips {
         chips.add(new Chip(text, !toggle.isDefault(), row));
     }
 
+    /** Bound the status line, reserving room for an honest count of hidden options. */
+    static List<Chip> fit(List<Chip> chips, int width) {
+        List<Chip> shown = new ArrayList<>(chips);
+        while (!shown.isEmpty()) {
+            int hidden = chips.size() - shown.size();
+            String more = "+" + hidden + " options";
+            int used = shown.stream().mapToInt(c -> MenuChrome.chipWidth(c.label()) + 4).sum() - 4;
+            if (hidden > 0) used += 4 + MenuChrome.chipWidth(more);
+            if (used <= width) {
+                if (hidden > 0) shown.add(new Chip(more, false, null));
+                return List.copyOf(shown);
+            }
+            shown.removeLast();
+        }
+        return chips.isEmpty() ? List.of() : List.of(new Chip("+" + chips.size() + " options", false, null));
+    }
+
     static String aspectLabel(String aspect) {
         return switch (aspect) {
             case "WIDE_16_10" -> "16:10";

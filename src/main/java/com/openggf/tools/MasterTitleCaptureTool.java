@@ -70,7 +70,12 @@ public final class MasterTitleCaptureTool {
                 new Scene("15-advanced", List.of(up, right, right, enter), 20),
                 new Scene("16-help", List.of(up, right, right, enter, down, down, enter), 20),
                 new Scene("17-quit", List.of(esc), 20),
-                new Scene("18-confirm", List.of(enter), 3));
+                new Scene("18-confirm", List.of(enter), 3),
+                new Scene("38-hub-crowded", List.of(), 40),
+                new Scene("39-hub-missing-rom", List.of(), 40),
+                new Scene("40-locate-rom", List.of(enter), 40),
+                new Scene("41-settings-save", List.of(up, right, enter, right, up, up), 20),
+                new Scene("42-setup-save", List.of(down, right, enter, right, up), 20));
         List<Scene> pausedScenes = List.of(
                 new Scene("19-paused-card", List.of(), 40),
                 new Scene("20-paused-end-button", List.of(down, right), 40),
@@ -82,7 +87,7 @@ public final class MasterTitleCaptureTool {
                 new Scene("26-paused-setup-character", List.of(down, right, enter), 20),
                 new Scene("27-paused-settings", List.of(up, right, enter), 20),
                 new Scene("28-paused-settings-row", List.of(up, right, enter, down), 20),
-                new Scene("29-settings-restart-row", List.of(up, right, enter, down, down, down, down, down, down, down), 20),
+                new Scene("29-settings-restart-row", advancedSettingKeys(SonicConfiguration.FPS), 20),
                 new Scene("30-hub-restart-pending", List.of(), 40),
                 new Scene("31-settings-restart-pending", List.of(up, right, enter, up), 20),
                 new Scene("32-paused-zoom-start", List.of(), 0),
@@ -128,8 +133,17 @@ public final class MasterTitleCaptureTool {
                 } else {
                     com.openggf.configuration.PendingRestart.captureAtStart(config);
                 }
+                if (scene.name().contains("missing-rom") || scene.name().contains("locate-rom"))
+                    config.setConfigValue(SonicConfiguration.SONIC_2_ROM, configDir.resolve("not-present.gen").toString());
+                if (scene.name().contains("crowded")) {
+                    var store = new com.openggf.game.launch.LaunchProfileStore(config);
+                    store.save(MasterTitleScreen.GameEntry.SONIC_2, new com.openggf.game.launch.LaunchProfile(
+                            com.openggf.game.launch.LaunchToggle.ON, "s3k",
+                            com.openggf.game.launch.LaunchToggle.ON, "NATIVE_4_3", "sonic", "tails"));
+                }
                 MasterTitleScreen screen = new MasterTitleScreen(config);
                 screen.initialize();
+                if (scene.name().contains("crowded")) screen.setTitleEntries(List.of("Extra mode"), (games, index) -> { });
                 screen.setEnabledModsByGame(Map.of(MasterTitleScreen.GameEntry.SONIC_2,
                         List.of("Widescreen+", "HUD Tweaks")));
                 if (paused != null && scene.name().contains("paused")) {
@@ -147,7 +161,11 @@ public final class MasterTitleCaptureTool {
                     input.handleKeyEvent(enter, GLFW_RELEASE);
                     input.update();
                 }
-                for (int i = 0; i < scene.settleFrames(); i++) screen.update(input);
+                for (int i = 0; i < scene.settleFrames(); i++) {
+                    // The file picker reads asynchronously; allow real time for its folder listing.
+                    if (scene.name().contains("locate-rom")) Thread.sleep(10);
+                    screen.update(input);
+                }
                 int[] fb = new int[2];
                 int[] fbH = new int[1];
                 glfwGetFramebufferSize(window, fb, fbH);
@@ -166,6 +184,16 @@ public final class MasterTitleCaptureTool {
             if (window != NULL) glfwDestroyWindow(window);
             glfwTerminate();
         }
+    }
+
+    private static List<Integer> advancedSettingKeys(SonicConfiguration key) {
+        var keys = new java.util.ArrayList<>(List.of(GLFW_KEY_UP, GLFW_KEY_RIGHT, GLFW_KEY_RIGHT,
+                GLFW_KEY_ENTER, GLFW_KEY_DOWN, GLFW_KEY_ENTER));
+        var settings = com.openggf.configuration.ConfigCatalog.emitOrder().stream()
+                .filter(k -> com.openggf.configuration.EngineSettingsDraft.category(k)
+                        == com.openggf.configuration.EngineSettingsDraft.Category.ADVANCED).toList();
+        for (int i = 0; i < settings.indexOf(key); i++) keys.add(GLFW_KEY_DOWN);
+        return keys;
     }
 
     private static byte[] rgba(RgbaImage image) {

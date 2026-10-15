@@ -25,7 +25,7 @@ class TestMasterTitleHubMessages {
     @TempDir Path directory;
     private final RecordingFont font = new RecordingFont();
 
-    @Test void unavailableStandaloneActionCannotLeakIntoTheNextMissingRomError() throws Exception {
+    @Test void unavailableStandaloneActionCannotLeakIntoRomLocation() throws Exception {
         var screen = screen(true);
         screen.setSelectedIndexForTest(3);
         press(screen, GLFW_KEY_TAB); // Game Setup shortcut on a standalone game.
@@ -40,9 +40,9 @@ class TestMasterTitleHubMessages {
         press(screen, GLFW_KEY_DOWN);
         press(screen, GLFW_KEY_ENTER);
         draw(screen);
-        assertTrue(font.has("ROM NOT FOUND"));
-        assertTrue(font.has("missing-s3k.gen"));
-        assertTrue(font.has("Check Files in Engine Settings"));
+        assertTrue(screen.isRomLocatorOpenForTest());
+        assertTrue(font.has("LOCATE SONIC 3K"));
+        assertFalse(font.has("ROM NOT FOUND"));
         assertFalse(font.allText().contains("is not available for standalone games"));
     }
 
@@ -80,13 +80,14 @@ class TestMasterTitleHubMessages {
     @Test void setupChipsOnlyAppearForAnAvailableGame() throws Exception {
         var screen = screen(false);
         draw(screen);
-        assertTrue(font.has("Add s2.gen in Settings > Files to play"));
+        assertTrue(font.has("Choose your Sonic 2 ROM file to play"));
+        assertTrue(font.has("LOCATE ROM"));
         assertFalse(font.has("SONIC & TAILS"));
         screen.setRomAvailableForTest(MasterTitleScreen.GameEntry.SONIC_2, true);
         draw(screen);
         assertTrue(font.has("SONIC & TAILS"));
         assertTrue(font.has("4:3"));
-        assertTrue(font.has("Start Sonic 2 as Sonic & Tails, 4:3"));
+        assertTrue(font.has("Game Setup changes players, screen and extras"));
         screen.setRomAvailableForTest(MasterTitleScreen.GameEntry.SONIC_2, false);
         draw(screen);
         assertFalse(font.has("SONIC & TAILS"));
@@ -110,6 +111,16 @@ class TestMasterTitleHubMessages {
         screen.setSelectedIndexForTest(2);
         draw(screen);
         assertFalse(font.allText().contains(" MOD"), "no mods chip when no mod changes the game");
+    }
+
+    @Test void optionalExtrasRetainBrandSpaceAtNativeWidth() throws Exception {
+        var screen = screen(false);
+        screen.setTitleEntries(List.of("Extra mode"), (games, index) -> { });
+        screen.setEnabledModsByGame(Map.of(MasterTitleScreen.GameEntry.SONIC_2, List.of("One", "Two")));
+        draw(screen);
+        assertTrue(screen.hubLayout().tabs().getFirst().x() >= 80);
+        assertTrue(font.has("MORE"));
+        assertTrue(font.has("EXTRAS"));
     }
 
     private MasterTitleScreen screen(boolean standalone) throws Exception {

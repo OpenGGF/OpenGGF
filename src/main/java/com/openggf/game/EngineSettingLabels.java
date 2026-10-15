@@ -66,6 +66,23 @@ final class EngineSettingLabels {
         };
     }
 
+    /** Short player-facing help; Details retains the catalog's technical explanation. */
+    static String description(SonicConfiguration key) {
+        return switch (key) {
+            case DISPLAY_ASPECT -> "Choose the shape of the game screen.";
+            case DISPLAY_WINDOW_AUTOSIZE -> "Fit the window to your chosen screen shape automatically.";
+            case SCREEN_WIDTH -> "Set the window width when automatic sizing is off.";
+            case SCREEN_HEIGHT -> "Set the window height when automatic sizing is off.";
+            case DISPLAY_SHADER_SELECTION -> "Choose a visual effect for the game screen.";
+            case DISPLAY_COLOR_PROFILE -> "Choose how the game's colours appear.";
+            case WIDESCREEN_DEADZONE_MODE -> "Choose how closely the camera follows you on wide screens.";
+            case AUDIO_ENABLED -> "Turn game music and sound effects on or off.";
+            case CONTROLLER_DEADZONE -> "Ignore small stick movements to prevent unwanted movement.";
+            case ROMS_DIRECTORY -> "Choose the folder containing your game ROM files.";
+            default -> ConfigCatalog.meta(key).description();
+        };
+    }
+
     private static String contextualLabel(ConfigKeyMeta meta) {
         String prefix = "";
         String section = meta.section();

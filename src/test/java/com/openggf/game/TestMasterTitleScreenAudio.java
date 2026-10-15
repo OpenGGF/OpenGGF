@@ -34,7 +34,7 @@ class TestMasterTitleScreenAudio {
     }
 
     @Test
-    void navigationConfirmAndMissingRomEmitDistinctCuesWithoutDuplicates() {
+    void navigationAndRomLocationEmitConfirmationWithoutDuplicates() {
         MasterTitleScreen screen = activeScreen(true);
         InputHandler input = new InputHandler();
 
@@ -47,7 +47,7 @@ class TestMasterTitleScreenAudio {
         pressFrame(missingRomScreen, input, GLFW_KEY_DOWN); // no chips without a ROM
         pressFrame(missingRomScreen, input, GLFW_KEY_ENTER);
 
-        assertEquals(List.of("UI_NAVIGATE", "UI_CONFIRM", "UI_NAVIGATE", "UI_ERROR"),
+        assertEquals(List.of("UI_NAVIGATE", "UI_CONFIRM", "UI_NAVIGATE", "UI_CONFIRM"),
                 emittedSfxNames());
     }
 
@@ -106,13 +106,13 @@ class TestMasterTitleScreenAudio {
     }
 
     @Test
-    void acknowledgingMissingRomUsesCancelWithoutRepeatingError() {
+    void cancellingRomLocationEmitsCancel() {
         MasterTitleScreen screen = activeScreen(false);
         InputHandler input = new InputHandler();
         pressFrame(screen, input, GLFW_KEY_DOWN);
         pressFrame(screen, input, GLFW_KEY_ENTER);
         pressFrame(screen, input, GLFW_KEY_ESCAPE);
-        assertEquals(List.of("UI_NAVIGATE", "UI_ERROR", "UI_CANCEL"), emittedSfxNames());
+        assertEquals(List.of("UI_NAVIGATE", "UI_CONFIRM", "UI_CANCEL"), emittedSfxNames());
     }
 
     @Test

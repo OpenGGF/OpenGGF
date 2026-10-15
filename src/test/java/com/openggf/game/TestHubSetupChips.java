@@ -58,4 +58,17 @@ class TestHubSetupChips {
         assertEquals("1 MOD", chips.getLast().label());
         assertEquals("Start Sonic 2 as Sonic & Tails, 4:3, rewind on", HubSetupChips.startSummary("Sonic 2", chips));
     }
+    @Test void crowdedProfilesKeepStatusInsideNativeViewport() {
+        var config = SonicConfigurationService.createStandalone(directory);
+        var store = new LaunchProfileStore(config);
+        var all = HubSetupChips.forStock(SONIC_2,
+                new LaunchProfile(LaunchToggle.ON, "s3k", LaunchToggle.ON, "NATIVE_4_3", "sonic", "tails"),
+                store, config, 12);
+        var shown = HubSetupChips.fit(all, 304);
+        assertTrue(shown.stream().mapToInt(c -> MenuChrome.chipWidth(c.label()) + 4).sum() - 4 <= 304);
+        assertEquals(all.getFirst(), shown.getFirst());
+        assertEquals("+" + (all.size() - shown.size() + 1) + " options", shown.getLast().label());
+        assertEquals(all, HubSetupChips.fit(all, 1000));
+    }
+
 }

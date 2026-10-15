@@ -81,6 +81,39 @@ class TestEngineSettingsScreen {
     }
 
     @Test
+    void visibleSaveActionPersistsWithoutTheBackDialog() {
+        Fixture f = new Fixture();
+        f.tab(SOUND);
+        boolean original = f.config.getBoolean(AUDIO_ENABLED);
+        f.press(GLFW_KEY_RIGHT);
+        assertTrue(f.texts().contains("SAVE CHANGES"));
+        f.press(GLFW_KEY_UP); // tabs
+        f.press(GLFW_KEY_UP); // save action
+        assertTrue(f.descriptionLines().contains("Save your changes and return to the menu."));
+        f.press(GLFW_KEY_ENTER);
+        assertTrue(f.screen.consumeApplied());
+        assertTrue(f.screen.consumeCloseRequested());
+        assertEquals(!original, SonicConfigurationService.createStandalone(directory).getBoolean(AUDIO_ENABLED));
+    }
+
+    @Test
+    void controllerCanReachSaveAndReturnToEditing() {
+        Fixture f = new Fixture();
+        f.padPress(GLFW_GAMEPAD_BUTTON_DPAD_RIGHT);
+        f.padPress(GLFW_GAMEPAD_BUTTON_DPAD_UP);
+        f.padPress(GLFW_GAMEPAD_BUTTON_DPAD_UP);
+        assertTrue(f.descriptionLines().contains("Save your changes and return to the menu."));
+        f.padPress(GLFW_GAMEPAD_BUTTON_DPAD_DOWN);
+        f.padPress(GLFW_GAMEPAD_BUTTON_DPAD_DOWN);
+        assertEquals(List.of(EngineSettingLabels.description(DISPLAY_ASPECT)), f.descriptionLines());
+        f.padPress(GLFW_GAMEPAD_BUTTON_DPAD_UP);
+        f.padPress(GLFW_GAMEPAD_BUTTON_DPAD_UP);
+        f.padPress(GLFW_GAMEPAD_BUTTON_A);
+        assertTrue(f.screen.consumeApplied());
+        assertTrue(f.screen.consumeCloseRequested());
+    }
+
+    @Test
     void physicalTextEditorCanReplaceAPathAndCancelAnotherEdit() {
         Fixture f = new Fixture();
         f.tab(FILES);
@@ -181,9 +214,8 @@ class TestEngineSettingsScreen {
         for (int width : new int[] {320, 426}) {
             f.assertTextBounds(width);
             List<Line> help = f.font.lines.stream().filter(line -> line.y == 173 || line.y == 181).toList();
-            if (width == 320) assertEquals(2, help.size(), "Both native-width help lines appear without waiting");
-            else assertTrue(help.size() >= 1 && help.size() <= 2, "Wider screens may fit the description on one line");
-            assertEquals(MenuDetailsScreen.readable(ConfigCatalog.meta(DISPLAY_ASPECT).description()),
+            assertTrue(help.size() >= 1 && help.size() <= 2, "Help appears immediately");
+            assertEquals(EngineSettingLabels.description(DISPLAY_ASPECT),
                     String.join(" ", help.stream().map(Line::text).toList()));
             for (Line line : help) assertEquals(MenuStyle.COMPACT, line.scale);
         }
@@ -206,7 +238,7 @@ class TestEngineSettingsScreen {
         assertEquals(first, f.descriptionLines());
         assertTrue(EngineSettingsScreen.effect(CONTROLLER_DEADZONE).contains("immediately"));
         assertTrue(EngineSettingsScreen.effect(SCREEN_WIDTH).contains("Restart"));
-        assertTrue(EngineSettingsScreen.effect(LIVE_REWIND_ENABLED).contains("Default"),
+        assertTrue(EngineSettingsScreen.effect(LIVE_REWIND_ENABLED).contains("Use global"),
                 "all-games switches explain that Game Setup can override them");
     }
 
@@ -218,7 +250,8 @@ class TestEngineSettingsScreen {
                 "a game-start setting keeps both description lines");
         assertFalse(f.texts().contains("RESTART"), "unchanged settings need no restart badge");
 
-        int fpsRow = new EngineSettingsDraft(f.config).keys(EngineSettingsDraft.Category.DISPLAY).indexOf(FPS);
+        f = new Fixture(EngineSettingsScreen.Scope.ADVANCED);
+        int fpsRow = new EngineSettingsDraft(f.config).keys(EngineSettingsDraft.Category.ADVANCED).indexOf(FPS);
         f.press(GLFW_KEY_DOWN, fpsRow);
         assertFalse(f.descriptionLines().contains("Needs a restart: close and reopen OpenGGF."));
         f.press(GLFW_KEY_RIGHT);
@@ -248,7 +281,7 @@ class TestEngineSettingsScreen {
         List<String> texts = f.texts();
         assertTrue(texts.contains("ADVANCED SETTINGS"));
         assertFalse(texts.contains("DISPLAY"), "no tab strip for a single page");
-        assertTrue(texts.contains("Direct-launch character"), "global characters only matter for direct launches");
+        assertTrue(texts.stream().anyMatch(text -> text.startsWith("Game speed")), "technical display controls live here");
     }
 
     @Test
@@ -259,6 +292,9 @@ class TestEngineSettingsScreen {
                 "every non-debug hotkey lives under Controls");
         assertEquals(EngineSettingsDraft.Category.INPUT, EngineSettingsDraft.category(LIVE_REWIND_KEY));
         assertEquals(EngineSettingsDraft.Category.ADVANCED, EngineSettingsDraft.category(MAIN_CHARACTER_CODE));
+        for (var key : List.of(FPS, SCALE, DISPLAY_SHADER_LIBRARY_ROOT, DISPLAY_SHADER_DEFAULT_PHASE)) {
+            assertEquals(EngineSettingsDraft.Category.ADVANCED, EngineSettingsDraft.category(key));
+        }
         assertEquals(EngineSettingsDraft.Category.ADVANCED, EngineSettingsDraft.category(CROSS_GAME_SOURCE));
         assertEquals(EngineSettingsDraft.Category.LAUNCH, EngineSettingsDraft.category(LAUNCH_S2_REWIND));
         assertFalse(java.util.Arrays.asList(EngineSettingsScreen.Scope.MAIN.tabs).contains(EngineSettingsDraft.Category.LAUNCH),

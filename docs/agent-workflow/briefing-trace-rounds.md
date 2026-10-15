@@ -71,6 +71,15 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+An IDE build can bypass the Maven worktree lock (2026-10-15, menu polish).
+Main compilation succeeded but test compilation lost `MasterTitleScreen` and
+other class files while IntelliJ's compiler was active. Closing the project
+removed the missing-class failures on the same stable sources. Queue admission
+coordinates participating Maven commands, not external IDE writers. Keep sources
+stable across compilation too: tests added after their production classes were
+read can otherwise see the prior API. Coordinate with the user before stopping
+an unrelated IDE build; a missing class during compilation is not a test failure.
+
 Offscreen editor captures can leak pointer projection into later tests
 (2026-10-14, editor guide pictures). `GraphicsManager.cleanup()` and its test
 reset retain viewport/projection overrides. A 426px capture followed by a

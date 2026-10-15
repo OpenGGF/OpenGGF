@@ -276,31 +276,35 @@ its original ROM-backed animated title logo; neighbouring games recede to the
 sides, and the shelf slides when the selection changes. Logo textures are drawn
 directly into the window viewport, so a larger window recovers source detail. The
 default logical resolution remains 320x224; wider viewports show more of the shelf.
-Games without a ROM stay on the shelf with a **ROM MISSING** card that names the
-expected file.
+Games without a ROM stay on the shelf with a **ROM MISSING** card and a
+**Locate ROM** action. Images are identified by their contents, not filenames.
 
-Focus moves between four rows with Up/Down:
+Focus moves between three rows with Up/Down:
 
 1. **Header tabs**, engine-wide: **Mods** (with the enabled-mod count),
    **Settings**, **Extras** (only when mods add title entries), **Advanced**, **Quit**.
 2. **The game card**. Left/Right changes game (wrapping), `Enter`/A starts it.
-3. **Setup chips**: what Start will launch, such as `SONIC & TAILS`, `4:3`,
-   `REWIND ON` or `2 MODS`. Amber chips are values set for this game only, and a
-   key under the buttons says so. `Enter` on a chip opens Game Setup on that row;
-   the mods chip opens the mod manager.
-4. **Actions** for the selected game: **Start**, **Game Setup**, **Recordings**.
-   Standalone mod games offer Start only.
+3. **Actions** for the selected game: **Start**, **Game Setup**, **Recordings**.
+   Standalone mod games offer Start only. A missing stock ROM replaces Start with
+   **Locate ROM**, opening a file picker. The selected image is identified by its
+   contents before its path is saved; any filename is accepted. Cancelling leaves
+   the selected game and saved preferences unchanged.
+
+The quiet badges below the game name report the saved setup, such as
+`SONIC & TAILS`, `4:3`, `REWIND ON` or `2 MODS`; they are not controls.
+Amber means a value is set for this game only. Long configurations end with
+`+N options`; Game Setup shows the full configuration. Pagination dots are also
+status only; game selection stays on the carousel. With Extras present at narrow
+widths, Advanced is labelled **More** and Mods omits its count to preserve branding.
 
 `Esc`/B returns to the card from any other row; on the card it opens the quit
 confirmation (**Return to menu** is selected by default). A line under the
-buttons describes the focused item, for example "Start Sonic 2 as Sonic & Tails,
-4:3, rewind on". The footer lists only the controls that work on the current row,
+buttons describes the focused action or points to Game Setup. The footer lists only the controls that work on the current row,
 as key caps (or controller buttons) with what each does; it never lists Up/Down.
 `Tab` (controller Back/Select) opens Game Setup and `M` opens Mods as optional
-shortcuts. Clicking the page dots under the chips opens **Browse Games**, a
-paginated list for large catalogs. Error pages wait for `Enter`/A or `Esc`/B.
+shortcuts. Error pages wait for `Enter`/A or `Esc`/B.
 
-The mouse works throughout the hub: hovering focuses a tab, chip or button and
+The mouse works throughout the hub: hovering focuses a tab or button and
 clicking runs it, clicking a side card selects that game, clicking the centre card
 starts it, the wheel changes game and the right button goes back.
 
@@ -315,7 +319,7 @@ focused row and, for switches, shows both the all-games value and this game's
 value.
 
 Rewind, Debug tools and Aspect ratio follow the all-games Settings value until a
-game overrides them. Those rows show **Default (Off)**, with the current all-games
+game overrides them. Those rows show **Use global (Off)**, with the current all-games
 value in brackets; choosing On or Off overrides it for this game only and marks
 the row amber. **Borrow from** (cross-game donation) and the Players rows are
 per-game only. When Borrow from is Sonic 3&K, the donated save screen picks the
@@ -323,7 +327,8 @@ team, so the Players rows show **Chosen on save screen**. The Mods row lists the
 enabled mods that change this game; `Enter` opens the mod manager, and Game Setup
 resumes when it closes.
 
-Edits form a draft. The footer shows how many are unsaved. `Esc`/B with unsaved
+Edits form a draft. A **Save changes** footer button appears while edits are unsaved;
+reach it after Mods with Down, before the first row with Up, or click it to save and close. `Esc`/B with unsaved
 changes asks **Save**, **Discard** or **Keep editing**; without changes it simply
 returns. `Tab` (controller Back/Select) saves and closes. Failed saves keep the
 draft open for another try. 21:9 and 32:9 aspect ratios are marked EXPERIMENTAL.
@@ -341,7 +346,9 @@ and a dot marks tabs that contain them. **Controls** holds the player bindings a
 every non-debug shortcut key (display, rewind and capture shortcuts included).
 **Gameplay** holds Rewind and Debug tools, which games follow unless their Game
 Setup overrides them. Debug, playback, Discord, direct-launch characters and
-cross-game keys live in **Advanced > Advanced settings**.
+cross-game keys live in **Advanced > Advanced settings**, alongside the shader
+library folder, shader rendering phase, game speed and debug viewer scale. Display
+keeps everyday screen, shader selection and colour options.
 
 Text editing supports ordinary keyboard typing and an onscreen keyboard with all
 printable ASCII, case/symbol pages, cursor movement, deletion, and default
@@ -353,7 +360,9 @@ devices changes prompts without moving focus. This editor is shared with recordi
 target frames, join addresses, and lobby chat. Key bindings also offer physical
 key/chord capture.
 
-Edits form a draft, counted in the footer. `Esc`/B with unsaved changes asks
+Edits form a draft, counted in the footer. A **Save changes** header button appears
+when dirty; click it or navigate Up past the category tabs (or Down past the last
+row) and confirm to save and close. `Esc`/B with unsaved changes asks
 **Save**, **Discard** or **Keep editing**, the same prompt as Game Setup. Save
 writes the draft atomically; save errors retain the draft for retry.
 

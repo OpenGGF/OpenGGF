@@ -262,7 +262,7 @@ public final class MenuChrome {
     public static int chip(PixelFont font, int x, int y, String text, boolean amber) {
         int w = compactWidth(text) + 10;
         fill(font, x, y, w, 12, NAVY, .94f);
-        outline(font, x, y, w, 12, amber ? new float[] {.72f, .5f, .14f} : EDGE, 1f, 1);
+        // Status only: no control-like outline or focus treatment.
         compact(font, text, x + 5, y + 2, amber ? AMBER : TEXT);
         return w;
     }
@@ -294,6 +294,7 @@ public final class MenuChrome {
     public static void background(PixelFont font, int width) {
         fill(font, 0, 0, width, SCREEN_H, new float[] {.012f, .04f, .15f});
         MenuStyle.checkerboard(font, width);
+        fill(font, 0, HEADER_H, width, FOOTER_Y - HEADER_H, NAVY, .72f);
     }
 
     /** Section caption: small cyan caps with a fading rule to the right. */

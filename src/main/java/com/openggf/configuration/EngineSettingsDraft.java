@@ -57,6 +57,9 @@ public final class EngineSettingsDraft {
         // Every non-debug hotkey lives with the other controls, wherever its section is.
         if (meta.type() == ConfigType.KEY && !section.startsWith("debug")) return Category.INPUT;
         if (key == SonicConfiguration.DEBUG_VIEW_ENABLED) return Category.GAMEPLAY;
+        if (key == SonicConfiguration.DISPLAY_SHADER_LIBRARY_ROOT
+                || key == SonicConfiguration.DISPLAY_SHADER_DEFAULT_PHASE
+                || key == SonicConfiguration.FPS || key == SonicConfiguration.SCALE) return Category.ADVANCED;
         if (section.startsWith("display")) return Category.DISPLAY;
         if (section.startsWith("audio")) return Category.AUDIO;
         if (section.startsWith("input")) return Category.INPUT;

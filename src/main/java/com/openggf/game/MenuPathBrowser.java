@@ -13,6 +13,11 @@ import java.util.List;
 public final class MenuPathBrowser {
     private static final int ROWS = 7;
     private Path directory;
+    private final boolean filesOnly;
+    private final String title;
+    private final String instruction;
+    private MasterTitlePointer pointer;
+    private int width = 320;
     private record Entry(Path path, boolean directory) { }
     private record Listing(Path directory, List<Entry> entries, String error) { }
     private List<Entry> entries = List.of();
@@ -25,6 +30,12 @@ public final class MenuPathBrowser {
     private String acceptHint = "Enter", backHint = "Esc", detailsHint = "F1", directionsHint = "Arrows";
 
     public MenuPathBrowser(String initial) {
+        this(initial, false, "BROWSE PATH", "type in editor for a new path");
+    }
+    public MenuPathBrowser(String initial, boolean filesOnly, String title, String instruction) {
+        this.filesOnly = filesOnly;
+        this.title = title;
+        this.instruction = instruction;
         load = new MenuLoadTask<>(() -> {
             Path candidate = Path.of(initial.isBlank() ? "." : initial).toAbsolutePath().normalize();
             while (candidate != null && !Files.isDirectory(candidate)) {
@@ -56,26 +67,53 @@ public final class MenuPathBrowser {
         load = null;
     }
     public boolean loading() { return load != null; }
+    /** Stop outstanding reads when the owning menu closes. */
+    public void cancel() {
+        if (load != null) { load.cancel(); load = null; }
+        selected = null;
+        details = null;
+        pointer = null;
+        cancelled = true;
+    }
+    public void pointer(int x, int y, boolean moved, boolean click, boolean backClick, int wheel) {
+        pointer = new MasterTitlePointer(x, y, moved, click, backClick, wheel);
+    }
+    private int prefixRows() { return filesOnly ? 1 : 2; }
     public void update(InputHandler input) {
+        MasterTitlePointer mouse = pointer;
+        pointer = null;
         if (input == null || selected != null || cancelled) return;
         acceptHint = MenuInput.confirmLabel(input); backHint = MenuInput.backLabel(input); detailsHint = MenuInput.detailsLabel(input); directionsHint = MenuInput.directionLabel(input);
-        if (details != null) { if (details.update(input)) details = null; return; }
-        if (MenuInput.textBack(input)) { if (load != null) { load.cancel(); load = null; } cancelled = true; MenuFeedback.emit(MenuFeedback.Cue.CANCEL); return; }
+        if (details != null) { if (details.update(input) || mouse != null && mouse.backClick()) details = null; return; }
+        if (MenuInput.textBack(input) || mouse != null && (mouse.backClick()
+                || mouse.click() && mouse.over(0, 207, width, 17))) { cancel(); MenuFeedback.emit(MenuFeedback.Cue.CANCEL); return; }
         consumeLoad();
         if (load != null) return;
         if (MenuInput.textDetails(input)) {
-            String full = directory == null ? "" : row < 2 ? directory.toString() : entries.get(row - 2).path().toString();
+            String full = directory == null ? "" : row < prefixRows() ? directory.toString() : entries.get(row - prefixRows()).path().toString();
             details = new MenuDetailsScreen("PATH", error == null ? full : error + "\n" + full); return;
         }
         if (directory == null) return;
-        int count = entries.size() + 2;
+        int count = entries.size() + prefixRows();
+        boolean clicked = false;
+        if (mouse != null) {
+            if (mouse.wheel() != 0) row = Math.clamp(row - mouse.wheel(), 0, count - 1);
+            int first = row / ROWS * ROWS;
+            for (int i = first; i < Math.min(count, first + ROWS); i++) {
+                if (mouse.over(8, 52 + (i - first) * 19, width - 16, 18)
+                        && (mouse.moved() || mouse.click())) {
+                    row = i;
+                    clicked = mouse.click();
+                }
+            }
+        }
         if (MenuInput.textUp(input)) { row = Math.floorMod(row - 1, count); MenuFeedback.emit(MenuFeedback.Cue.NAVIGATE); }
         if (MenuInput.textDown(input)) { row = (row + 1) % count; MenuFeedback.emit(MenuFeedback.Cue.NAVIGATE); }
-        if (MenuInput.textAccept(input)) {
-            if (row == 0) selected = directory.toString();
-            else if (row == 1) { if (directory.getParent() != null) { refresh(directory.getParent()); } }
+        if (MenuInput.textAccept(input) || clicked) {
+            if (!filesOnly && row == 0) selected = directory.toString();
+            else if (row == prefixRows() - 1) { if (directory.getParent() != null) { refresh(directory.getParent()); } }
             else {
-                Entry entry = entries.get(row - 2);
+                Entry entry = entries.get(row - prefixRows());
                 if (entry.directory()) refresh(entry.path());
                 else selected = entry.path().toString();
             }
@@ -87,8 +125,15 @@ public final class MenuPathBrowser {
     public void render(PixelFont font, int width) {
         if (font == null) return;
         if (details != null) { details.render(font, width); return; }
-        width = Math.max(320, width);
-        MenuStyle.page(font, width, "BROWSE PATH", null);
+        font.beginMegaBatch();
+        try { renderContents(font, Math.max(320, width)); }
+        finally { font.endMegaBatch(); }
+    }
+
+    private void renderContents(PixelFont font, int width) {
+        this.width = width;
+        MenuChrome.background(font, width);
+        MenuChrome.header(font, width, title, null);
         MenuStyle.text(font, MenuDetailsScreen.readable(directory == null ? "" : directory.toString()), 10, 34, width - 20, .6f, .8f, 1);
         if (load != null || directory == null) {
             MenuStyle.text(font, load != null ? "Loading folder..." : "Cannot open path", 10, 60, width - 20, 1, .8f, .4f);
@@ -96,14 +141,14 @@ public final class MenuPathBrowser {
             return;
         }
         int first = row / ROWS * ROWS;
-        for (int i = first; i < Math.min(entries.size() + 2, first + ROWS); i++) {
+        for (int i = first; i < Math.min(entries.size() + prefixRows(), first + ROWS); i++) {
             int y = 52 + (i - first) * 19;
             if (i == row) MenuStyle.focusLabel(font, 8, y, width - 16, 18);
-            String name = i == 0 ? "Use this folder" : i == 1 ? ".. Parent folder" :
-                    (entries.get(i - 2).directory() ? "/ " : "") + entries.get(i - 2).path().getFileName();
+            String name = !filesOnly && i == 0 ? "Use this folder" : i == prefixRows() - 1 ? ".. Parent folder" :
+                    (entries.get(i - prefixRows()).directory() ? "/ " : "") + entries.get(i - prefixRows()).path().getFileName();
             MenuStyle.label(font, MenuDetailsScreen.readable(name), 13, y, width - 26, 1, 1, 1);
         }
-        MenuStyle.footer(font, width, detailsHint + " Details; " + (error == null ? "type in editor for a new path" : error),
+        MenuStyle.footer(font, width, detailsHint + " Details; " + (error == null ? instruction : error),
                 acceptHint + " Choose  " + backHint + " Back  " + directionsHint);
     }
 }

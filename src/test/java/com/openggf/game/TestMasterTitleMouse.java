@@ -93,7 +93,7 @@ class TestMasterTitleMouse {
     }
 
     @Test
-    void sideCardsAndWheelChangeGameAndThePageDotsOpenTheBrowser() {
+    void sideCardsAndWheelChangeGameAndThePageDotsAreStatusOnly() {
         var screen = screen();
         int[] left = card(screen, -1);
         click(screen, left[0], left[1], GLFW_MOUSE_BUTTON_LEFT);
@@ -108,11 +108,21 @@ class TestMasterTitleMouse {
         assertEquals("s3k", screen.getSelectedGameId());
         int[] dots = centre(screen.hubLayout().dots());
         click(screen, dots[0], dots[1], GLFW_MOUSE_BUTTON_LEFT);
-        assertTrue(screen.isGameBrowserOpenForTest());
-        click(screen, 100, 51 + 12, GLFW_MOUSE_BUTTON_LEFT); // first row: Sonic 1
-        assertFalse(screen.isGameBrowserOpenForTest());
-        assertEquals("s1", screen.getSelectedGameId());
-        assertFalse(screen.isGameSelected(), "the browser picks a game; it does not launch it");
+        assertEquals("s3k", screen.getSelectedGameId());
+        assertFalse(screen.isGameSelected(), "pagination is status only");
+    }
+
+    @Test
+    void missingRomOpensLocatorAndCancelKeepsSelectedCard() {
+        var screen = screen();
+        screen.setRomAvailableForTest(MasterTitleScreen.GameEntry.SONIC_2, false);
+        int[] start = centre(screen.hubLayout().actions().getFirst());
+        click(screen, start[0], start[1], GLFW_MOUSE_BUTTON_LEFT);
+        assertTrue(screen.isRomLocatorOpenForTest());
+        click(screen, 200, 100, GLFW_MOUSE_BUTTON_RIGHT);
+        assertFalse(screen.isRomLocatorOpenForTest());
+        assertEquals("s2", screen.getSelectedGameId());
+        assertFalse(screen.isGameSelected());
     }
 
     @Test
