@@ -1440,3 +1440,20 @@ load (14 live frames before the native 22-frame fade-out). Rows still red there 
 not fade timing and are owned elsewhere: the Knuckles act-2 restore at 37130 and the
 LRZ boss sidekick overlap parity at 47471 (rewind-snapshot rows) and solo Tails' SSZ1
 opening camera (behaviour row). No skips.
+
+
+### Sonic+Tails clear movie retimed (2026-10-15)
+
+Surfaced after the rewind-snapshot rows cleared on Root 2adfa37a7: the movie was
+authored under the pre-8179ccd80 double fade advance, so its full load landed 11
+frames early. `FadeWindowRetimeTool` measured the owned frozen fade-out window in
+the production harness, inserted the native remainder and verified one
+uninterrupted replay with no death. Test frame constants move by 11 at and after
+the old load. No runtime behaviour changed.
+
+| Movie | Old SHA-256 | New SHA-256 | Windows `start:native→+inserted` | Frames | New full loads | Verified end |
+|---|---|---|---|---|---|---|
+| `dez2-sonic-tails-incoming-clear-320.bk2` | `ab01a02930a2e676a39a510704484c1f12a6ca026a02de3964a5511471f8440b` | `cf332549b203c14a1f93a8cbde10c6833b9e50e45b01a003acba9d51a50e7e36` | 40304:23→+11 | 40327 | 14230, 40326 | 96,112, 0 rings, zone 23/0 |
+
+Validation: run `probe-v1` (focused queued selectors, S3K ROM, branch
+bugfix/ai-s3k-route-behaviour-regressions on 2adfa37a7) passed the owning test, 0 skips.
