@@ -290,3 +290,50 @@ repair preserves the colours rather than relabelling or regenerating footage.
 No trace frontier moved, and no timing optimization or measurement acceptance
 is claimed. Required S3K route/load checks passed on the composed tree; complete
 act-route breadth and rebuilt native-image bundles remain separate obligations.
+
+## 2026-10-15 player-facing polish
+
+Base `7277cef4040af3ae95d86a794bce7f75a16cc483` on `develop`, worktree
+`feature/ai-sonic3k-chaos-polish`. The user asked for an Opus polish pass on the
+mod itself while a separate creative lead rebuilt the promo. Effect identities,
+numbers, names, severities, durations, defaults, rarity tickets and the settings
+format are unchanged; all 105 entries stay visible and configurable.
+
+Audit of the shipped UI (earlier reel captures and code) found: typographic
+dashes and curly apostrophes rendering as `?` (CompactFont has no such glyphs);
+engineering-intent descriptions truncated to one line; the Chaos countdown drawn
+over native data select, because the observer keeps its last observation there;
+host lease states `Active`/`Pending native service` printed as raw text; the
+GameSound `ERROR` cue silent in S3K (no table entry); and the title modal drawn
+only by the gameplay-world overlay pass, not by the title provider.
+
+Changes, all in `examples/sonic3k-chaos-mode`:
+
+- Player-facing copy for all 105 descriptions (the design intent stays in the
+  [shortlist](../research/2026-10-13-chaos-effect-shortlist.md)); a model check
+  limits copy to CompactFont glyphs and two detail-card lines at 320 pixels.
+- Configuration: framed lists with position counters, scroll bars and severity
+  pips, a detail card with category/severity/duration and wrapped description,
+  value arrows, a search caret, filtered **Add/Remove shown**, Left/Right cycling
+  settings→Available→Selected, and hints from `MenuInput` labels. Pause home shows
+  the next draw and active effects. Art not yet prepared is no longer reported as
+  "unavailable"; only a missing or rejected decode is.
+- HUD: a top bar fills towards the next draw (genre convention), the panel shows
+  per-effect remaining bars, an activation card names the effect with its first
+  description sentence, live `Task:` prompts show progress, and receipts name their
+  effect (captured `Launch` history). The HUD requires an ACTIVE presentation in
+  the current visit. The Starpost cue marks activation; Skid replaces silent ERROR.
+- Sidegames: framed boards with titles, scores, draining timers and controls,
+  a Monitor Stack landing ghost, and score/breather or quit receipts.
+
+Card timing reads the captured Chaos clock (`announcedAt`, `noticeUntil`), so
+pause, rewind and skipped draws agree; menu animation uses a menu-input age.
+Captured `Snapshot` gains `noticeEffect`, `announced`, `announcedAt` and a
+16-entry `launches` history; boundary and missing-snapshot reset clear them.
+Packaged mods may hold only literal static constants, so lists are split strings.
+
+Rejected after captures: a chat box under the native HUD, which every activation
+card covered (chat now sits in a narrow left column below the card zone); generic
+lease states as prompt cards; a 260-pixel card text cap that wrapped short
+taglines. List scrolling is adjusted only by input; drawing derives the visible
+window without changing menu state.
