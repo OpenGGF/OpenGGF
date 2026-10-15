@@ -88,6 +88,113 @@ class TestS3kGumballPachinkoRewardMechanics {
         check(row, mechanism);
     }
 
+    static java.util.stream.Stream<CanonicalEntryMatrixSupport.Row> player2ExitRows() {
+        return java.util.stream.Stream.of(
+                new CanonicalEntryMatrixSupport.Row("sonic", WidescreenAspect.NATIVE_4_3, "off", "tails"),
+                new CanonicalEntryMatrixSupport.Row("knuckles", WidescreenAspect.WIDE_16_10, "off", "tails,sonic"),
+                new CanonicalEntryMatrixSupport.Row("sonic", WidescreenAspect.ULTRA_21_9, "s1", "sonic,sonic,sonic"));
+    }
+
+    /**
+     * loc_61050: with Player_1 outside word_610AE, a Player_2 inside it is
+     * deleted (Delete_Referenced_Sprite) while the stage continues; the ordinary
+     * exit later reloads the origin, recreating the configured companion.
+     */
+    @ParameterizedTest(name = "actual exit trigger deletes native Player_2 {0}")
+    @MethodSource("player2ExitRows")
+    void actualExitTriggerDeletesOnlyNativePlayer2AndReturnRestoresCompanions(
+            CanonicalEntryMatrixSupport.Row row) throws Exception {
+        try (var session = enter(row, BonusStageType.GUMBALL)) {
+            var objects = GameServices.level().getObjectManager();
+            // Let the entry's leader-locked CPU start state hand over to ordinary
+            // follow control before the declared local placement.
+            for (int frame = 0; frame < 90; frame++) step(session, GameMode.BONUS_STAGE, objects);
+            var exit = children(objects, "ExitTriggerChild").getFirst();
+            var sprites = GameServices.sprites();
+            var player2 = sprites.getRegisteredSidekicks().getFirst();
+            var later = new java.util.ArrayList<>(sprites.getRegisteredSidekicks().subList(1,
+                    sprites.getRegisteredSidekicks().size()));
+            String code = player2.getCode();
+            var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+            var before = registry.capture();
+            Runnable deleteAndContinue = () -> {
+                var p2 = sprites.getRegisteredSidekicks().getFirst();
+                assertEquals(code, p2.getCode());
+                NativePositionOps.writeXPosResetSubpixel(p2, exit.getX());
+                NativePositionOps.writeYPosResetSubpixel(p2, exit.getY() + 8);
+                p2.setXSpeed((short) 0);p2.setYSpeed((short) 0);p2.setGSpeed((short) 0);
+                for (int frame = 0; frame < 3 && sprites.getSprite(code) != null; frame++)
+                    step(session, GameMode.BONUS_STAGE, objects);
+                assertNull(sprites.getSprite(code), () -> "loc_61050 Delete_Referenced_Sprite clears Player_2; p2="
+                        + Integer.toHexString(p2.getCentreX()) + "," + Integer.toHexString(p2.getCentreY())
+                        + " exit=" + Integer.toHexString(exit.getX()) + "," + Integer.toHexString(exit.getY())
+                        + " spawn=" + Integer.toHexString(exit.getSpawn().x()) + "," + Integer.toHexString(exit.getSpawn().y())
+                        + " p1=" + Integer.toHexString(sprites.getMainPlayable().getCentreX()) + ","
+                        + Integer.toHexString(sprites.getMainPlayable().getCentreY())
+                        + " destroyed=" + exit.isDestroyed() + " slot=" + exit.getSlotIndex());
+                assertFalse(sprites.getRegisteredSidekicks().contains(p2));
+                assertEquals(later, sprites.getRegisteredSidekicks(), "later followers have no Player_2 slot");
+                int x = p2.getCentreX(), y = p2.getCentreY(), frameIndex = p2.getMappingFrame();
+                for (int frame = 0; frame < 12; frame++) step(session, GameMode.BONUS_STAGE, objects);
+                assertEquals(x, p2.getCentreX(), "deleted Player_2 no longer updates");
+                assertEquals(y, p2.getCentreY());
+                assertEquals(frameIndex, p2.getMappingFrame());
+                assertNull(sprites.getSprite(code), "deleted Player_2 is neither drawn nor collided");
+                assertEquals(GameMode.BONUS_STAGE, session.loop().getCurrentGameMode(), "P2 alone does not exit");
+            };
+            replayTwice(before, deleteAndContinue, "actual exit-trigger Player_2 deletion");
+            assertNull(sprites.getSprite(code));
+            var main = sprites.getMainPlayable();
+            NativePositionOps.writeXPosResetSubpixel(main, exit.getX());
+            NativePositionOps.writeYPosResetSubpixel(main, exit.getY() + 8);
+            main.setXSpeed((short) 0);main.setYSpeed((short) 0);main.setGSpeed((short) 0);
+            for (int frame = 0; frame < 900; frame++) {
+                session.step(NEUTRAL);session.renderFrame();
+                if (session.loop().getCurrentGameMode() == GameMode.LEVEL
+                        && !GameServices.fade().isActive() && !GameServices.fade().hasPendingCompletion()) break;
+            }
+            assertEquals(GameMode.LEVEL, session.loop().getCurrentGameMode(), "ordinary exit returns to the origin");
+            assertNotEquals(BonusStageType.GUMBALL, GameServices.bonusStage().getActiveType());
+            assertRoster(row);
+            assertSame(player2, GameServices.sprites().getRegisteredSidekicks().getFirst(),
+                    "the origin reload recreates the configured Player_2 first");
+        }
+    }
+
+    private GameplayCaptureSession enter(CanonicalEntryMatrixSupport.Row row, BonusStageType type) throws Exception {
+        var donorRom = row.donor().equals("off") ? null : (row.donor().equals("s1")
+                ? RomTestUtils.ensureSonic1RomAvailable() : RomTestUtils.ensureSonic2RomAvailable()).toPath();
+        var settings = new GameplayCaptureSession.Settings(row.aspect().pixelWidth(), row.main(),
+                row.followers(), row.donor(), donorRom, null, null);
+        var session = new GameplayCaptureSession(settings);
+        try {
+            enterStage(session, settings, row, type);
+            return session;
+        } catch (Exception | Error e) {
+            session.close();
+            throw e;
+        }
+    }
+
+    private static void enterStage(GameplayCaptureSession session, GameplayCaptureSession.Settings settings,
+            CanonicalEntryMatrixSupport.Row row, BonusStageType type) throws Exception {
+        GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, true);
+        session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 8, 0, settings);
+        for (int frame = 0; frame < 60; frame++) step(session, GameMode.LEVEL, null);
+        GameServices.level().requestBonusStageEntry(type);
+        for (int frame = 0; frame < 600; frame++) {
+            session.step(NEUTRAL);session.renderFrame();
+            if (session.loop().getCurrentGameMode() == GameMode.BONUS_STAGE
+                    && !GameServices.fade().isActive() && !GameServices.fade().hasPendingCompletion()) break;
+        }
+        assertEquals(GameMode.BONUS_STAGE, session.loop().getCurrentGameMode());
+        assertFalse(GameServices.fade().isActive());assertFalse(GameServices.fade().hasPendingCompletion());
+        var coordinator = assertInstanceOf(Sonic3kBonusStageCoordinator.class, GameServices.bonusStage());
+        assertEquals(type, coordinator.getActiveType());assertTrue(coordinator.supportsRewind());
+        assertEquals(row.aspect().pixelWidth(), GameServices.camera().getWidth() & 0xFFFF);
+        assertRoster(row);
+    }
+
     private void check(CanonicalEntryMatrixSupport.Row row, Mechanism mechanism) throws Exception {
         var donorRom = row.donor().equals("off") ? null : (row.donor().equals("s1")
                 ? RomTestUtils.ensureSonic1RomAvailable() : RomTestUtils.ensureSonic2RomAvailable()).toPath();

@@ -1137,6 +1137,9 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
         private static final int EXIT_Y_MAX = 0x30;
 
         private boolean exitFired;
+        // The native Player_2 SST has been cleared; later engine-only followers
+        // have no Player_2 identity for Check_PlayerInRange to read.
+        private boolean player2Deleted;
 
         ExitTriggerChild(ObjectSpawn spawn) {
             super(spawn, "GumballExitTrigger");
@@ -1153,21 +1156,33 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
                 return;
             }
 
-            int playerX = playerEntity.getCentreX();
-            int playerY = playerEntity.getCentreY();
-            int dx = playerX - spawn.x();
-            int dy = playerY - spawn.y();
-
-            if (dx >= EXIT_X_MIN && dx < EXIT_X_MAX
-                    && dy >= EXIT_Y_MIN && dy < EXIT_Y_MAX) {
-                exitFired = true;
-                LOGGER.info("GumballExitTrigger: player in exit range, requesting bonus stage exit");
-                try {
-                    services().requestBonusStageExit();
-                } catch (Exception e) {
-                    LOGGER.warning("GumballExitTrigger: failed to request exit: " + e.getMessage());
+            if (!inExitRange(playerEntity)) {
+                // loc_61050 (sonic3k.asm:127741-127753): with Player_1 out of
+                // range, a Player_2 in range is removed by Delete_Referenced_Sprite.
+                // Check_PlayerInRange reads only the Player_1/Player_2 SSTs, so
+                // only the native P2 (first registered follower) is eligible.
+                if (!player2Deleted
+                        && services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite player2
+                        && inExitRange(player2)) {
+                    player2Deleted = true;
+                    com.openggf.sprites.managers.SpriteManagerInternalAccess
+                            .retireSidekickForRewind(services().spriteManager(), player2);
                 }
+                return;
             }
+            exitFired = true;
+            LOGGER.info("GumballExitTrigger: player in exit range, requesting bonus stage exit");
+            try {
+                services().requestBonusStageExit();
+            } catch (Exception e) {
+                LOGGER.warning("GumballExitTrigger: failed to request exit: " + e.getMessage());
+            }
+        }
+
+        private boolean inExitRange(PlayableEntity player) {
+            int dx = player.getCentreX() - spawn.x();
+            int dy = player.getCentreY() - spawn.y();
+            return dx >= EXIT_X_MIN && dx < EXIT_X_MAX && dy >= EXIT_Y_MIN && dy < EXIT_Y_MAX;
         }
 
         @Override
