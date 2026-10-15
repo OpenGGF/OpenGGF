@@ -362,12 +362,30 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
         if (!ringRewardAllowed() || !(playerEntity instanceof AbstractPlayableSprite sprite)) {
             return;
         }
+        // Check_PlayerInRange (sonic3k.asm:179994) tests Player_2 into the high
+        // word and Player_1 into the low word; sub_610E0 dispatches when either
+        // is in range. Rewards address Player_1 directly, but loc_6115C's push
+        // calls sub_61176 for P1 and then for P2 (sonic3k.asm:127850-127871).
+        PlayableEntity nativeP2 = tryServices() == null ? null : services().playerQuery().nativeP2OrNull();
+        AbstractPlayableSprite sidekick = nativeP2 instanceof AbstractPlayableSprite p2 ? p2 : null;
+        boolean mainInRange = inProximity(sprite);
+        boolean sidekickInRange = sidekick != null && inProximity(sidekick);
+        if (!mainInRange && !sidekickInRange) {
+            return;
+        }
+        if (subtype == 4) {
+            if (mainInRange) onCollectPush(sprite, vIntRunCount);
+            if (sidekickInRange) onCollectPush(sidekick, vIntRunCount);
+            return;
+        }
+        handleGumballReward(playerEntity, vIntRunCount, subtype);
+    }
+
+    private boolean inProximity(AbstractPlayableSprite sprite) {
         int dx = sprite.getCentreX() - motionState.x;
         int dy = sprite.getCentreY() - motionState.y;
-        if (dx >= -PROXIMITY_RADIUS && dx < PROXIMITY_RADIUS
-                && dy >= -PROXIMITY_RADIUS && dy < PROXIMITY_RADIUS) {
-            handleGumballReward(playerEntity, vIntRunCount, subtype);
-        }
+        return dx >= -PROXIMITY_RADIUS && dx < PROXIMITY_RADIUS
+                && dy >= -PROXIMITY_RADIUS && dy < PROXIMITY_RADIUS;
     }
 
     @Override
