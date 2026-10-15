@@ -1715,3 +1715,9 @@ covered the level until the card exited, and the level then appeared at full col
 1-3 sums 146/136/120). Covered by `TestS3kFreshTitleCardLevelFadeIn`. The ROM evidence,
 native comparison and remaining direct-boot and omitted-presentation capture limits are
 recorded in [the HPZ act matrix](s3k-hpz-act.md).
+
+The same fade now belongs to the level (`Sonic3kLevelAnimationManager`'s `Animate_Palette`),
+so every LRZ1 entry that passes through `Level` fades lines 1-3 in, with or without the card.
+A death restart measured 0, 68/70/68, 113/112/100 and 146/136/120 at counters 0, 5, 10 and 21;
+before the change it showed full colour as the card left. See `TestS3kLevelPaletteFadeOwner`
+and the 2026-10-15 level-owned fade entry in [the HPZ act matrix](s3k-hpz-act.md).

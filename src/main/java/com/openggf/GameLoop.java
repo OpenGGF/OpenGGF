@@ -4110,8 +4110,8 @@ public class GameLoop {
                 } catch (RuntimeException e) {
                     restoreDataSelectAfterLaunchFailure(dataSelect, pendingAction, e);
                 }
-                resolveFadeManager().startFadeFromBlack(
-                        null, transition.revealTerminalNoOpFrames());
+                GameLoopPlcLifecycle.revealDataSelectLaunch(resolveFadeManager(), currentGameMode
+                        == GameMode.DATA_SELECT ? null : GameServices.levelOrNull(), transition.revealTerminalNoOpFrames());
             });
             return;
         }

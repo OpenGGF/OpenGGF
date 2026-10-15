@@ -920,6 +920,8 @@ public final class LevelRenderer {
     final LevelBoundsMaskTransition boundsMask = new LevelBoundsMaskTransition();
     private boolean preparingSpritePresentation;
     private LevelScrollPresentation currentScrollPresentation;
+    /** One draw's {@link LevelHudUnderlay}; cleared once painted. */
+    Runnable hudUnderlay;
 
     /** Capture the same full player/object/ring pass used for gameplay, before any GPU submission.
      * This deliberately excludes HUD and never resolves deformation/camera-follow/world events.
@@ -1206,6 +1208,11 @@ public final class LevelRenderer {
         }
         PerformanceProfiler profiler = lm.profiler;
         DebugOverlayManager overlayManager = lm.overlayManager;
+        if (options.includeHud() && hudUnderlay != null) {
+            Runnable underlay = hudUnderlay;
+            hudUnderlay = null;
+            underlay.run();
+        }
         profiler.beginSection("render.hud");
         if (options.includeHud() && lm.hudRenderManager != null
                 && (LevelSpritePresentation.enabled(lm) || !lm.isHudSuppressed())

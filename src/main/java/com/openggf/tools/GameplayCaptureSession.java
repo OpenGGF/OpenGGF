@@ -388,17 +388,31 @@ public final class GameplayCaptureSession implements AutoCloseable {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         var controller = includeSprites ? com.openggf.game.mode.ControlledFrameRuntime.controller(
                 com.openggf.game.session.SessionManager.getCurrentGameplayMode()) : null;
-        if (controller == null || !controller.drawScene())
-            level.drawWithSpritePriority(GameServices.sprites(), includeSprites);
+        var shown = showTitleCard ? loop.getTitleCardProvider() : null;
+        var titleCard = shown != null && (loop.getCurrentGameMode() == GameMode.TITLE_CARD
+                || shown.isOverlayActive()) ? shown : null;
+        boolean titleCardDrawn = false;
+        if (controller == null || !controller.drawScene()) {
+            Runnable levelDraw = () -> level.drawWithSpritePriority(GameServices.sprites(), includeSprites);
+            if (com.openggf.game.internal.TitleCardBeneathLevelHud.appliesTo(titleCard)) {
+                // Engine.drawLevelWithTitleCard: the card sits beneath the level HUD.
+                titleCardDrawn = com.openggf.level.LevelHudUnderlay.draw(level, levelDraw, () -> {
+                    graphics.flush();
+                    graphics.resetForFixedFunction();
+                    titleCard.draw();
+                    graphics.flushScreenSpace();
+                });
+            } else {
+                levelDraw.run();
+            }
+        }
         graphics.flush();
         if (controller != null) {
             graphics.resetForFixedFunction();
             controller.drawOverlay();
             graphics.flushScreenSpace();
         }
-        var titleCard = showTitleCard ? loop.getTitleCardProvider() : null;
-        if (titleCard != null && (loop.getCurrentGameMode() == GameMode.TITLE_CARD
-                || titleCard.isOverlayActive())) {
+        if (titleCard != null && !titleCardDrawn) {
             // Engine.drawTitleCardMode / drawActiveLevelTitleCardOverlay.
             graphics.resetForFixedFunction();
             titleCard.draw();
