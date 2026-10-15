@@ -19,6 +19,7 @@ import java.util.logging.Logger;
 /** S3K-owned facade for the direct Kosinski FIFO and KosM parent queue. */
 public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator,
         com.openggf.game.internal.PatternModuleQueueOwner,
+        com.openggf.game.internal.FrontendPatternHandoffOwner,
         RewindSnapshottable<S3kRuntimeArtCoordinator.Snapshot> {
     public static final String REWIND_KEY = "s3k-runtime-art-coordinator";
 
@@ -28,6 +29,12 @@ public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator,
     private final S3kKosDecompressionQueue directQueue;
     private final S3kKosModuleQueue moduleQueue;
     private final S3kPatternModuleTransfer patternTransfer = new S3kPatternModuleTransfer();
+    private final S3kFrontendPatternResidency frontendPatterns = new S3kFrontendPatternResidency();
+    public S3kFrontendPatternResidency frontendPatternResidency(){return frontendPatterns;}
+    @Override public String frontendPatternFormat(){return "genesis-native-patterns-v1";}
+    @Override public byte[] captureFrontendPatterns(){return frontendPatterns.handoff();}
+    @Override public void acceptFrontendPatterns(byte[] packed){frontendPatterns.inherit(packed);}
+    @Override public void retireFrontendPatterns(){frontendPatterns.retire();}
     private FreshLevelRuntimeArtRequest deferredFreshLevelRuntimeArt;
     private boolean deferredFreshLevelPublicationBlockedReported;
 
@@ -346,18 +353,21 @@ public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator,
         registry.register(directQueue);
         registry.register(this);
         registry.register(patternTransfer);
+        registry.register(frontendPatterns);
     }
 
     @Override
     public void deregisterRewindAdapters(RewindRegistry registry) {
         registry.deregister(REWIND_KEY);
         registry.deregister(S3kPatternModuleTransfer.REWIND_KEY);
+        registry.deregister(S3kFrontendPatternResidency.KEY);
         registry.deregister(S3kKosDecompressionQueue.REWIND_KEY);
     }
 
     @Override
     public void resetForMissingSnapshot() {
         patternTransfer.clear();
+        frontendPatterns.resetForMissingSnapshot();
         directQueue.resetForMissingSnapshot();
         moduleQueue.resetForMissingSnapshot();
         deferredFreshLevelRuntimeArt = null;

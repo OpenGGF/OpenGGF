@@ -25,7 +25,7 @@ class TestDezSoloActTwoColdRouteCapture {
     void coldSonicAloneClearsActTwoAndLoadsFinalStage() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/dez2-sonic-solo-incoming-clear-320.bk2"));
-        assertEquals(53842, movie.getFrameCount());
+        assertEquals(53853, movie.getFrameCount());
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "", "off", null, null, null);
         // The separate Act1 test covers its prefix. These windows cover incoming control,
         // gravity tubes, conveyor/staircase, energy bridges, pressure pads, transporters,
@@ -42,7 +42,7 @@ class TestDezSoloActTwoColdRouteCapture {
                 43325, 43553, 43800, 44100, 44483, 44550, 44724, 44900,
                 45300, 45600, 45900, 46300, 46600, 46900, 47200, 47500,
                 47800, 48263, 48500, 49000, 49660, 50680, 50980, 51340,
-                51700, 52000, 53020, 53380, 53500, 53600, 53750, 53790);
+                51700, 52000, 53020, 53380, 53500, 53600, 53761, 53801);
         var checked = new HashSet<Integer>();
         var health = DezEndBossInstance.class.getDeclaredMethod("healthForTest");
         health.setAccessible(true);
@@ -99,7 +99,7 @@ class TestDezSoloActTwoColdRouteCapture {
             assertEquals(spots, checked);
             assertTrue(bossSeen);
             assertEquals(8, hits, "all eight hits must come from the production encounter");
-            assertEquals(53721, loadFrame);
+            assertEquals(53732, loadFrame);
             assertEquals(23, GameServices.level().getCurrentZone());
             assertEquals(0, GameServices.level().getCurrentAct());
             assertTrue(outgoingFrame > 10);
@@ -117,7 +117,7 @@ class TestDezSoloActTwoColdRouteCapture {
     void coldWideSonicAloneClearsActTwoAndLoadsFinalStage() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/dez2-sonic-solo-incoming-clear-800.bk2"));
-        assertEquals(53564, movie.getFrameCount());
+        assertEquals(53575, movie.getFrameCount());
         var settings = new GameplayCaptureSession.Settings(800, "sonic", "", "off", null, null, null);
         // Independent 800px cold route: periodic whole-world windows plus bridge,
         // gravity, launcher, tilting-platform, hub, boss and incoming-load boundaries.
@@ -194,7 +194,7 @@ class TestDezSoloActTwoColdRouteCapture {
             assertEquals(spots, checked);
             assertTrue(bossSeen);
             assertEquals(8, hits, "all eight hits must come from the production encounter");
-            assertEquals(53443, loadFrame);
+            assertEquals(53454, loadFrame);
             assertEquals(23, GameServices.level().getCurrentZone());
             assertEquals(0, GameServices.level().getCurrentAct());
             assertTrue(outgoingFrame > 10);
@@ -212,7 +212,7 @@ class TestDezSoloActTwoColdRouteCapture {
     void coldTailsAloneClearsActTwoAndLoadsFinalStage() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/dez2-tails-solo-incoming-clear-320.bk2"));
-        assertEquals(62588, movie.getFrameCount());
+        assertEquals(62599, movie.getFrameCount());
         var settings = new GameplayCaptureSession.Settings(320, "tails", "", "off", null, null, null);
         // Keep the short pending-pad test independent; extend coverage through the
         // return launcher, upper route, all boss cycles and the real final-stage load.
@@ -222,7 +222,7 @@ class TestDezSoloActTwoColdRouteCapture {
                 51450, 51800, 52400, 53000, 53140, 53300, 53360, 53520,
                 53800, 53990, 54200, 54400, 54600, 54860, 55200, 55600,
                 55890, 56400, 57000, 57600, 58200, 58800, 59400, 60000,
-                60600, 61200, 61800, 62100, 62200, 62300, 62490, 62530);
+                60600, 61200, 61800, 62100, 62200, 62300, 62501, 62541);
         var checked = new HashSet<Integer>();
         var health = DezEndBossInstance.class.getDeclaredMethod("healthForTest");
         health.setAccessible(true);
@@ -279,7 +279,7 @@ class TestDezSoloActTwoColdRouteCapture {
             assertEquals(spots, checked);
             assertTrue(bossSeen);
             assertEquals(8, hits, "all eight hits must come from the production encounter");
-            assertEquals(62467, loadFrame);
+            assertEquals(62478, loadFrame);
             assertEquals(23, GameServices.level().getCurrentZone());
             assertEquals(0, GameServices.level().getCurrentAct());
             assertTrue(outgoingFrame > 10);

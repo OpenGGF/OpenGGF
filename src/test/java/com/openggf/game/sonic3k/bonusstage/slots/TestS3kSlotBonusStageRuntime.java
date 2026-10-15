@@ -58,9 +58,10 @@ class TestS3kSlotBonusStageRuntime {
         TestEnvironment.activeGameplayMode();
         SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "tails");
 
+        // Presentation-less participant: rendered players receive loc_4B9E8's
+        // ROM-backed host art, qualified with the real ROM in
+        // TestS3kBonusPortalMechanismProducts; this synthetic fixture has none.
         AbstractPlayableSprite originalPlayer = new Tails("tails", (short) 0x460, (short) 0x430);
-        PlayerSpriteRenderer renderer = new PlayerSpriteRenderer(SpriteArtSet.EMPTY);
-        originalPlayer.setSpriteRenderer(renderer);
         originalPlayer.setMappingFrame(3);
         originalPlayer.setAnimationFrameCount(5);
         originalPlayer.setAnimationId(7);
@@ -88,7 +89,7 @@ class TestS3kSlotBonusStageRuntime {
         assertEquals("tails", slotPlayer.getCode());
         assertEquals(S3kSlotRomData.SLOT_BONUS_PLAYER_START_X, slotPlayer.getCentreX());
         assertEquals(S3kSlotRomData.SLOT_BONUS_PLAYER_START_Y, slotPlayer.getCentreY());
-        assertSame(renderer, slotPlayer.getSpriteRenderer());
+        assertNull(slotPlayer.getSpriteRenderer(), "no presentation is invented for a renderer-less participant");
         assertEquals(3, slotPlayer.getMappingFrame());
         assertEquals(5, slotPlayer.getAnimationFrameCount());
         assertEquals(7, slotPlayer.getAnimationId());

@@ -1647,3 +1647,34 @@ at22:21:09 UTC (1:18); its one failure is the same now-repaired sky publication
 owner. Final22 is the bounded new repair gate; it is not a claimed green79
 rerun. The original RGB and1342 Tails pose limits above remain active.
 Consumed attribution/focused redirects are removed after this account.
+
+## Native single-fade retiming (2026-10-15)
+
+8179ccd80 stopped `GameplayCaptureSession.step` from advancing a runtime-ready
+loop's FadeManager a second time. Movies authored before it budget half of each
+frozen fade-out (11 of the native 22 frames, during which gameplay and object
+VInt do not advance), so their later inputs landed early. `FadeWindowRetimeTool`
+(41405e073, 5333aece6) measured each owned frozen window in the production harness,
+inserted the native remainder as repeats of the held input and verified every
+movie by one uninterrupted replay with no death. On the LRZ Knuckles and Tails
+chains the retimed rows equal the 22d5e6ffc rows shifted by the inserted frames,
+VInt included (0 differing rows). Test frame constants move by 11 at and after each
+old load frame. Base: Root ef61a560f; no runtime behaviour changed.
+
+| Movie | Old SHA-256 | New SHA-256 | Windows `start:native→+inserted` | Frames | New full loads | Verified end |
+|---|---|---|---|---|---|---|
+| `ssz1-sonic-solo-cold-complete-320.bk2` | `26e16d273bca81b1983028c89d683a3a7c616e104ec350900db431fe98401d10` | `6c7469ca579364cd9b0abb121b37f8eaaee0171e11a1a811ae82ae9095d4742b` |  | 17600 |  | 6899,294, 3 rings, zone 10/0 |
+
+Validation on ef61a560f plus the retimed fixtures (`TestSszSoloColdRouteCapture`), focused selectors through
+`tools/testing/maven_queue.py` with the S3K ROM: run `cold-fade-verify` (Maven
+Finished 04:15:51Z) passed `TestDezIncomingFinalRouteCapture` 7/0/0/0,
+`TestDezSoloActTwoColdRouteCapture` 4/0/0/0, `TestLrzActTwoColdRouteCapture` 2/0/0/0,
+`TestLrzTailsColdRouteCapture` 4/0/0/0 and the fade rows of `TestLrzKnucklesColdRouteCapture`
+and `TestSszSoloColdRouteCapture`; run `cold-joined-retimed` (Finished 04:21:19Z) passed
+`TestS3kHpzJoinedColdRouteCapture` 2/0/0/0 (pair 66 spots, HPZ 52947/52948, SSZ1
+67037/67038, release 67211; Knuckles 27 spots, HPZ 49297/49298, SSZ2 50160/50161,
+release 51586). That test's LRZ live-history tail now starts 36 frames before the HPZ
+load (14 live frames before the native 22-frame fade-out). Rows still red there are
+not fade timing and are owned elsewhere: the Knuckles act-2 restore at 37130 and the
+LRZ boss sidekick overlap parity at 47471 (rewind-snapshot rows) and solo Tails' SSZ1
+opening camera (behaviour row). No skips.

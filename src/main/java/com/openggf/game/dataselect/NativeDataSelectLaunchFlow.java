@@ -48,15 +48,19 @@ public final class NativeDataSelectLaunchFlow {
         if (CrossGameFeatureProvider.isActive()) {
             available.addAll(stockCharacters(services.crossGameFeatures().getDonorGameId()));
         }
+        var frontendPatterns = com.openggf.game.internal.FrontendPatternHandoffAccess.capture(
+                SessionManager.getCurrentGameplayMode());
         GameplayModeContext gameplay = openSession(save, available, prepared, host);
         if (gameplay == null) return;
         host.initialize(gameplay);
+        com.openggf.game.internal.FrontendPatternHandoffAccess.transfer(frontendPatterns, gameplay);
         try {
             gameplay.getLevelManager().loadZoneAndActForFreshRuntime(action.zone(), action.act());
         } catch (IOException failure) {
             throw new IllegalStateException("Failed to load zone " + action.zone() + " act " + action.act()
                     + " from data select", failure);
         }
+        com.openggf.game.internal.FrontendPatternHandoffAccess.installed(gameplay);
         restoreProgress(gameplay, payload);
         loop.setGameMode(GameMode.LEVEL);
         saveReason(action.type()).ifPresent(loop::requestSaveForCurrentSession);

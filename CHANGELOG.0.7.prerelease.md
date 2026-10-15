@@ -22,11 +22,32 @@ Unreleased. The earlier development themes remain in
   Save As; pattern browsing, descriptor controls, local collision edits, erase
   and spawn inspection complete layout authoring.
 
+- **S3K save slots:** A file saved by the native SaveGame (act results, Knuckles'
+  Lava Reef exit and both Hidden Palace exits) now resumes at the level that exit
+  leads to, as the original does, instead of the level it was saved in. The
+  data-select menu reads slots from the configured save root.
+
+- **S3K bonus stages:** Gumball bumpers disappear when hit, springs are fully
+  solid and crumble in the same pass, gumballs drop from the container with the
+  machine's native random seed, ejected balls also push the second player, and a
+  companion that drops into the exit is removed as in the original (it rejoins
+  on return). Pachinko orb rewards follow the level frame counter. All three bonus
+  traces now replay without errors.
+
+- **S3K objects and bosses:** The Angel Island end boss starts its defeat at the
+  native hit check of whichever phase it is in. When the object table is full,
+  pending placements wait for the next camera block crossing, which restores the
+  Hydrocity fan timing. Ending reunion loads use measured native decompression
+  costs, and the credits start on the original frame.
+
 - **S3K level entry:** Captures that omit the title presentation complete the
   destination's deferred player assembly before its animation and art-loading
   tail, allowing ordinary movement after a fresh zone handoff. Publication also
   restores the destination ring count after the title boundary temporarily
   retains the source count, including rewind across that boundary.
+  Admitted title and save-menu ROM patterns survive the following level overlays,
+  retaining unwritten spans while newer zero/art uploads supersede them.
+  Prepared installation rejects detached art owners and stale generations.
   Native title-card objects retain their fixed slots and child lifetimes after
   omitted presentation, with exact graph restoration before gameplay placements.
   Initial touch publication follows each object's native range/deletion tail,
@@ -135,7 +156,8 @@ Unreleased. The earlier development themes remain in
   object and screen-event timing. Paired pattern uploads wait for their actual
   decompression child and publish at the supported VInt; duplicate descriptors
   preserve FIFO ownership through rewind. Capture entry preserves native camera locks
-  and scene origins, and capture fades retain their production owner. Ending resource initialization preserves scroll handling
+  and scene origins, and capture fades retain their production owner. Ending
+  resource initialization preserves scroll handling
   in other zones. Donated Sonic 2 powered controllers restore
   palette and ring timing, current sparkle ownership and animation scripts through
   rewind, while normal Tails restores retain his body and balance profile.

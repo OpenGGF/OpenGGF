@@ -30,6 +30,22 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestResourceLoaderModSources {
 
     @Test
+    void retainedPhysicalBytesSurviveGapsButZerosAndAppendWritesRemainAuthoritative(@TempDir Path tmp) throws Exception {
+        Path jar = writeJar(tmp.resolve("retained.jar"), Map.of(
+                "base.bin", new byte[]{0,9}, "append.bin", new byte[]{5}, "zero.bin",new byte[]{0}));
+        byte[] retained = new byte[16];java.util.Arrays.fill(retained,(byte)7);
+        try (ModAssetRoot root = ModAssetRoot.jar(tmp,jar)) {
+            var loader=new ResourceLoader(null);
+            byte[] actual=loader.loadWithRetainedBytes(List.of(
+                    LoadOp.modAssetBase(root,"base.bin"),LoadOp.modAssetAppend(root,"append.bin"),
+                    LoadOp.modAssetOverlay(root,"zero.bin",6)),4,retained);
+            assertArrayEquals(new byte[]{0,9,5,7,7,7,0,7,7,7,7,7,7,7,7,7},actual);
+            org.junit.jupiter.api.Assertions.assertEquals(7,loader.lastOpEndBytes(),"retained extent is not the decompressor write cursor");
+            assertArrayEquals(new byte[]{7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7},retained);
+        }
+    }
+
+    @Test
     void modAssetOpsComposeWithOverlaysWithoutRom(@TempDir Path tmp) throws Exception {
         Path jar = writeJar(tmp.resolve("m.jar"), Map.of(
                 "base.bin", new byte[]{1, 1, 1, 1},

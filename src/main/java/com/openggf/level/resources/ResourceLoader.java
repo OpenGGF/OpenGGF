@@ -101,6 +101,13 @@ public class ResourceLoader {
      * @throws IOException if decompression or source reading fails
      */
     public byte[] loadWithOverlays(List<LoadOp> ops, int initialBufferSize) throws IOException {
+        return loadWithRetainedBytes(ops, initialBufferSize, new byte[0]);
+    }
+
+    /** Internal resource handoff: prior physical bytes survive only unwritten spans. */
+    public byte[] loadWithRetainedBytes(List<LoadOp> ops, int initialBufferSize,
+                                       byte[] retained) throws IOException {
+        java.util.Objects.requireNonNull(retained, "retained");
         if (ops == null || ops.isEmpty()) {
             throw new IllegalArgumentException("At least one LoadOp is required");
         }
@@ -120,7 +127,13 @@ public class ResourceLoader {
             preflightKnownModExtents(ops, cachedModData, outputCap);
         }
 
-        byte[] buffer = new byte[initialBufferSize];
+        if (initialBufferSize < 0) {
+            throw new NegativeArraySizeException("Initial buffer size: " + initialBufferSize);
+        }
+        if (retained.length > outputCap) {
+            throw new IOException("Retained resource bytes exceed source output limit");
+        }
+        byte[] buffer = Arrays.copyOf(retained, Math.max(initialBufferSize, retained.length));
         int usedLength = 0;
         lastOpEndBytes = 0;
 
@@ -158,8 +171,9 @@ public class ResourceLoader {
         }
 
         // Trim buffer to actual used size
-        if (usedLength < buffer.length) {
-            buffer = Arrays.copyOf(buffer, usedLength);
+        int resultLength = Math.max(usedLength, retained.length);
+        if (resultLength < buffer.length) {
+            buffer = Arrays.copyOf(buffer, resultLength);
         }
 
         return buffer;

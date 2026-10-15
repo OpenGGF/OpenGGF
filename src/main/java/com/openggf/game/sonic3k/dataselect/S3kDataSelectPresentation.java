@@ -84,7 +84,7 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
     }
 
     public S3kDataSelectPresentation(DataSelectSessionController controller) {
-        this(controller, Path.of("saves"), EngineServices.current().configuration());
+        this(controller, com.openggf.game.save.SavePaths.root(), EngineServices.current().configuration());
     }
 
     public S3kDataSelectPresentation(Path saveRoot, SonicConfigurationService config) {
@@ -173,6 +173,7 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
             return;
         }
         if (assetsLoaded) {
+            assets.publishNativePatterns();
             musicPlayer.accept(assets.getMusicId());
         }
         frameCounter = 0;
@@ -1090,6 +1091,11 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
         @Override
         public int[] getMenuBackgroundLayoutWords() {
             return loader != null ? loader.getMenuBackgroundLayoutWords() : new int[0];
+        }
+
+        @Override
+        public void publishNativePatterns() {
+            if(loader!=null)loader.publishNativePatterns();
         }
 
         @Override

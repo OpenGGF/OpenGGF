@@ -46,7 +46,6 @@ public class EggPrisonAnimalInstance extends AbstractObjectInstance
         FLY            // routine=6,E,12 - flying movement
     }
 
-    private final PatternSpriteRenderer renderer;
     private int currentX;
     private int currentY;
     private int xVelocity;      // Fixed-point (8.8)
@@ -67,7 +66,6 @@ public class EggPrisonAnimalInstance extends AbstractObjectInstance
     public EggPrisonAnimalInstance(ObjectSpawn spawn, int delay, int artVariant) {
         super(spawn, "Animal");
         ObjectRenderManager renderManager = getRenderManager();
-        this.renderer = renderManager != null ? renderManager.getAnimalRenderer() : null;
         this.currentX = spawn.x();
         this.currentY = spawn.y();
         this.animFrameTimer = ANIM_TIMER_INIT;
@@ -265,6 +263,11 @@ public class EggPrisonAnimalInstance extends AbstractObjectInstance
         if (state == State.PRISON_WAIT) {
             return;
         }
+        // Resolved per draw: rewind recreates the animal through its spawn
+        // constructor before services are injected, so a constructor-cached
+        // renderer would stay null and hide the restored animal.
+        ObjectRenderManager renderManager = getRenderManager();
+        PatternSpriteRenderer renderer = renderManager != null ? renderManager.getAnimalRenderer() : null;
         if (renderer == null || !renderer.isReady()) {
             return;
         }

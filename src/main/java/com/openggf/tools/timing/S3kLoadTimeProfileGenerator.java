@@ -90,6 +90,7 @@ public final class S3kLoadTimeProfileGenerator {
             Path manifest,
             Path validation,
             Path publicationTsv) throws IOException {
+        result.requireLegacyPublicationInputs();
         EstimatorValidation estimator = result.validateEstimator();
         String manifestContent = result.manifestJson(estimator);
         String validationContent = result.validationMarkdown(estimator);
@@ -124,18 +125,18 @@ public final class S3kLoadTimeProfileGenerator {
         if (!node.isObject()) {
             throw invalid(input, lineNumber, "record must be an object");
         }
+        int schema = integer(node, "measurement_schema");
+        String recorder = text(node, "recorder_version");
+        if (schema != 1 && schema != 2
+                || !recorder.equals("load-time-measurement-v" + schema)
+                || !"s3k-kos-v1".equals(text(node, "service_model"))) {
+            throw invalid(input, lineNumber, "invalid measurement schema/recorder/service model");
+        }
         node.fieldNames().forEachRemaining(name -> {
-            if (!FIELDS.contains(name)) {
+            if (!FIELDS.contains(name) && !(schema == 2 && name.equals("submission_pc"))) {
                 throw invalid(input, lineNumber, "unknown field " + name);
             }
         });
-        if (integer(node, "measurement_schema") != 1) {
-            throw invalid(input, lineNumber, "unsupported measurement schema");
-        }
-        if (!"load-time-measurement-v1".equals(text(node, "recorder_version"))
-                || !"s3k-kos-v1".equals(text(node, "service_model"))) {
-            throw invalid(input, lineNumber, "invalid recorder/service model");
-        }
         String movieSha256 = text(node, "movie_sha256");
         String romSha1 = text(node, "rom_sha1");
         requireHash(movieSha256, 64, "movie_sha256", input, lineNumber);
@@ -151,14 +152,25 @@ public final class S3kLoadTimeProfileGenerator {
             throw invalid(input, lineNumber, "invalid completion boundary");
         }
         String precision = text(node, "observation_precision");
-        if (!precision.equals("exact_callback")
-                && !precision.equals("frame_end_censored")) {
-            throw invalid(input, lineNumber, "invalid observation precision");
-        }
         String parentFingerprint = optionalText(node, "parent_fingerprint");
-        boolean exact = precision.equals("exact_callback");
-        if (exact != (parentFingerprint != null)) {
-            throw invalid(input, lineNumber, "parent identity disagrees with precision");
+        boolean exact;
+        if (schema == 1) {
+            if (!precision.equals("exact_callback") && !precision.equals("frame_end_censored")) {
+                throw invalid(input, lineNumber, "invalid observation precision");
+            }
+            exact = precision.equals("exact_callback");
+            if (exact != (parentFingerprint != null)) {
+                throw invalid(input, lineNumber, "parent identity disagrees with precision");
+            }
+        } else {
+            if (!precision.equals("exact_fifo_callbacks") && !precision.equals("head_service_censored")) {
+                throw invalid(input, lineNumber, "invalid exact FIFO observation precision");
+            }
+            exact = precision.equals("exact_fifo_callbacks");
+            long pc = unsignedInt(node, "submission_pc");
+            if (parentFingerprint != null || exact && pc != 0x1B46 && pc != 0x1BEE || !exact && pc != 0) {
+                throw invalid(input, lineNumber, "exact FIFO submission proof disagrees with precision");
+            }
         }
         if (parentFingerprint != null) {
             requireFingerprint(parentFingerprint, input, lineNumber);
@@ -324,7 +336,7 @@ public final class S3kLoadTimeProfileGenerator {
         }
     }
 
-    private record Observation(
+    record Observation(
             String fixture,
             String movieSha256,
             String romSha1,
@@ -727,12 +739,26 @@ public final class S3kLoadTimeProfileGenerator {
         }
 
         public String publicationTsv() throws IOException {
+            requireLegacyPublicationInputs();
             EstimatorValidation estimator = validateEstimator();
             return publicationTsv(
                     Path.of("src/main/resources/load-time-profiles/s3k-v1.json"),
                     manifestJson(estimator),
                     Path.of("docs/architecture/audits/2026-07-29-s3k-load-time-profile-validation.md"),
                     validationMarkdown(estimator));
+        }
+
+        private void requireLegacyPublicationInputs() throws IOException {
+            for (Path input : inputs) {
+                for (String line : Files.readAllLines(input, StandardCharsets.UTF_8)) {
+                    JsonNode row = MAPPER.readTree(line);
+                    if (row.path("measurement_schema").asInt() != 1
+                            || !"load-time-measurement-v1".equals(row.path("recorder_version").asText())) {
+                        throw new IllegalArgumentException(
+                                "v2 measurements require the supplemental publication path");
+                    }
+                }
+            }
         }
 
         private String publicationTsv(

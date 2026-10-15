@@ -534,6 +534,19 @@ Capture before consumption and replay both the armed and occupied-rearm cases;
 a mid-count snapshot does not cover them. The cold Tails DEZ2 pad at input46581
 exposed an 8px change on the first replayed frame where ordinary play stayed put.
 
+**Slot-encoded identity sets must not hold dead objects.** Touch-overlap sets and
+instance-keyed solid latches are captured as slot numbers because Java identity
+does not survive a restore. A member that has since been deleted keeps its old
+slot, so restore either drops it or binds whichever object now occupies that
+slot (SOZ Rockn shells, LRZ flames). Dynamic deletion therefore evicts
+instance-keyed latches as `removeActiveObject` already did for layout objects
+(`Delete_Current_Sprite` zeroes the slot's status bits), deletion also drops the
+object from the touch-overlap buffers, touch capture records only live members
+as the restore-view guard, and restore resolves a captured slot before its spawn: a
+child that shares its parent's spawn otherwise rebinds to the parent. Physical
+double-buffer parity is not state; capture the logical contents. These gaps were
+latent until `da27f4f3d` made the restore comparator inspect these channels.
+
 **Subsystem SST reservations must follow object restore.** Attracted rings own
 slots outside the object manager's captured occupant set. Re-register the ring
 adapter after the object adapter when level adapters move, including seamless
@@ -1793,6 +1806,10 @@ fallback. The same rule applies to death/reload helpers: external manual fade
 ticks can trigger fresh assembly outside its logical iteration. Preserve input
 cadence and requalify affected cold routes after repairing a driver; do not fit
 runtime timing or silently retain the accelerated protocol for old inputs.
+Movies authored under the doubled fade spent 11 of the native 22 frozen fade-out
+frames before each full load; `FadeWindowRetimeTool` inserts only the held-input
+remainder there (gameplay and object VInt do not advance) and verifies the movie
+uninterruptedly. A fade that runs alongside live gameplay is not a retiming site.
 
 
 **Replay the displayed plane generation and the complete multipart order.**
@@ -1831,3 +1848,23 @@ only at actual archive retirement. Preflight both banks before admitting a
 global producer so failure cannot leave unpaired physical work. Preserve
 initial resident ingress separately: correct new upload timing does not prove
 retained pre-upload VRAM bytes. Origin: 2026-10-14 ending transfer69e4f51.
+
+
+**Decoded frontend sheets are not physical pattern residency.** A frontend can
+render a virtual sheet correctly while the following level decoder replaces
+its unwritten native pattern gaps with zero. S3K's initial Master span at
+VRAM $A5C0 was exactly 2,176 bytes of title-banner ROM $35026C+$5C0, not new
+Master art. Retain only admitted frontend CPU uploads at their literal native
+destinations, seeded from the current stock Level's bounded physical patterns;
+never copy virtual atlases or comparison VRAM. Overlay writes of zero still
+overwrite retained bytes, and retained extent must not move the append cursor.
+
+Freeze immutable bytes and resource-owner generation before an async build;
+validate that owner is still installed before GPU publication. Equal bytes and
+generation in a detached owner are insufficient. A menu's world replacement
+may transfer these bytes only through a capture-created token binding the
+exact reused data source and supported owner type. Consume the seed at real
+resource installation, preserve it over ordinary title reset, and clear it on
+a fresh context/hardware lifetime. Newer admitted SaveScreen uploads supersede
+title art. This does not model untouched name tables, SAT or every level-to-level
+gap (2026-10-14 ending ingress; d0fabc3ef candidate4d401bcc).
