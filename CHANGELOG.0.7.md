@@ -32,7 +32,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   host palette. Offscreen title captures share the native save-selection launch,
   retain the selected team and prepare fresh mod callbacks for the new world.
   Menus use framed lists with scroll position, severity colours, filtered add/remove,
-  player-facing effect descriptions and controller-aware hints. A top bar counts down
+  player-facing effect descriptions and controller-aware hints; search keeps Space,
+  Backspace and letters bound to game buttons as text. A top bar counts down
   to each draw, new effects announce themselves with a short card and Starpost cue,
   native challenge prompts show progress, receipts name their effect and sidegame
   boards show their title, score, timer and controls. The HUD no longer appears over

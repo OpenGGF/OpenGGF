@@ -359,3 +359,40 @@ pacing: the title tour through native data select into AIZ1, HUD/banner/prompt/c
 at 400, the pause menu at 320, Monitor Stack and a Start-cancelled Ring Snake.
 Effect activation timing is unchanged; a five-second interval still fires at
 presentation 600. No smoke run, desktop window or Windows bundle is claimed here.
+
+### Repair round after static review
+
+Root review found the configuration search editor ending on gameplay-mapped input
+(inherited from the base menu). A new real-`InputHandler` check with the shipped
+bindings reproduced all three cases on `48fbf77b3`: Space (P1 A) appended a space and
+finished typing (`'ice '`), a held Backspace (Start) deleted once and finished
+(`'ice'`), and letters rebound to C/B finished then reopened the editor without typing.
+The editor now uses the existing `MenuInput.textBack`/`textAccept` (Esc, Enter, keypad
+Enter, physical pad), so typed keys stay text and Backspace repeats; mapped confirm/back
+outside the editor and pad controls are unchanged, and entering configuration clears a
+stale editing flag. Logical replay input cannot finish a search edit, as with the
+engine's own text editors; the browser recipe never enters the editor.
+
+Empty lists now say "All selected" or "Nothing selected" when every match sits in
+the other list, and "No matches" only when the search/filter matches nothing; before,
+a VISUAL filter with every visual effect selected read "No matches". The detail card
+follows the same distinction.
+
+Validation scope (root, `run_categories.py --base 7277cef40` at `48fbf77b3`): the
+change-based plan selects 3,287 smoke classes plus guards only because example and
+prose paths are unclassified; no engine production, Mod API, build or runtime source
+changed. Proportionate validation therefore uses the Chaos example model and ROM art
+checks, the targeted search/empty-list regressions, zero SDK packaging findings and
+offscreen title/menu/HUD/receipt captures, not the broad smoke selection or full suite.
+`TestMenuInput` is not rerun: `MenuInput` is unchanged and only consumed.
+
+Verification on the repaired sources, Java 25 and the verified locked-on S3K ROM:
+
+```sh
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestSonic3kChaosModeExampleModels,TestSonic3kChaosModeExampleArt' \
+  "-Ds3k.rom.path=$OPENGGF_ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+20 tests passed (19 model, 1 ROM art), zero failures/errors/skips; the reproduction
+run of the new search check alone failed on the unfixed menu with the three cases above.

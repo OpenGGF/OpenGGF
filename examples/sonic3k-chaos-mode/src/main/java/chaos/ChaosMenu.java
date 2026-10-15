@@ -48,6 +48,8 @@ public final class ChaosMenu implements LevelInputOverlay {
         return true;
     }
     public void leaveTitle() {title=false;open=false;configure=false;waiting=false;}
+    String query() {return search;}
+    boolean typing() {return searchEditing;}
     @Override public boolean pausesGameplay() {return open && !title;}
     @Override public Command consumeCommand() {Command result=command;command=Command.NONE;return result;}
     @Override public void commandQueued(boolean blocked) {waiting=blocked;if(!blocked)open=false;}
@@ -80,6 +82,11 @@ public final class ChaosMenu implements LevelInputOverlay {
                 .filter(e->filter==0 || e.category().ordinal()==filter-1)
                 .filter(e->search.isEmpty() || (e.name()+" "+e.id()).toLowerCase(Locale.ROOT).contains(search.toLowerCase(Locale.ROOT))).toList();
     }
+    /** Empty-list wording: nothing matches the search/filter, or every match is in the other list. */
+    String emptyLabel(boolean selected) {
+        if(!list(selected).isEmpty())return "";
+        return list(!selected).isEmpty()?"No matches":selected?"Nothing selected":"All selected";
+    }
     private int visibleRows() {return Math.max(3,(cardTop()-2-listTop()-16)/ROW_HEIGHT);}
     private int listTop() {return 62;}
     private int cardTop() {return height-11-44;}
@@ -101,22 +108,24 @@ public final class ChaosMenu implements LevelInputOverlay {
         age++;
         controllerHints=MenuInput.controller(input);confirm=MenuInput.confirmLabel(input);back=MenuInput.backLabel(input);
         directions=MenuInput.directionLabel(input);sideways=MenuInput.horizontalLabel(input);
+        if(configure && searchEditing) {
+            // Only Esc/Enter or a physical pad end typing: Space (A), Backspace (Start)
+            // and letters bound to game buttons stay text.
+            if(MenuInput.textBack(input)) {searchEditing=false;controller.cue(false);return;}
+            String typed=MenuInput.consumeText(input);
+            for(int i=0;i<typed.length() && search.length()<24;i++) if(!Character.isISOControl(typed.charAt(i)))search+=typed.charAt(i);
+            if(MenuInput.textKeyRepeated(input,259) && !search.isEmpty())search=search.substring(0,search.length()-1);
+            if(MenuInput.textAccept(input))searchEditing=false;
+            availableRow=selectedRow=availableFirst=selectedFirst=0;
+            return;
+        }
         if(MenuInput.back(input)) {
-            if(searchEditing) searchEditing=false;
-            else if(configure) {configure=false;row=title?2:1;message="";}
+            if(configure) {configure=false;row=title?2:1;message="";}
             else if(title) {message="Choose Play normally or Return to hub.";}
             else message="Choose Resume play to apply settings.";
             controller.cue(false);return;
         }
         if(configure) {
-            if(searchEditing) {
-                String typed=MenuInput.consumeText(input);
-                for(int i=0;i<typed.length() && search.length()<24;i++) if(!Character.isISOControl(typed.charAt(i)))search+=typed.charAt(i);
-                if(MenuInput.textKeyRepeated(input,259) && !search.isEmpty())search=search.substring(0,search.length()-1);
-                if(MenuInput.accept(input))searchEditing=false;
-                availableRow=selectedRow=availableFirst=selectedFirst=0;
-                return;
-            }
             int horizontal=(MenuInput.right(input)?1:0)-(MenuInput.left(input)?1:0);
             int vertical=(MenuInput.down(input)?1:0)-(MenuInput.up(input)?1:0);
             if(panel==0) {
@@ -187,7 +196,7 @@ public final class ChaosMenu implements LevelInputOverlay {
         controller.requestSettings(draft);return true;
     }
     private void activateHome() {
-        if(row==1 && !title || row==2 && title) {configure=true;panel=0;row=0;message="";return;}
+        if(row==1 && !title || row==2 && title) {configure=true;searchEditing=false;panel=0;row=0;message="";return;}
         if(title) {
             if(row==0 || row==1) {draft=draft.enabled(row==0);if(save()){open=false;launch=true;controller.cue(false);}}
             else if(row==3) {if(preferences.reset()){draft=preferences.saved();controller.requestSettings(draft);message="Defaults restored and saved.";}else message=preferences.error();}
@@ -318,7 +327,11 @@ public final class ChaosMenu implements LevelInputOverlay {
             return;
         }
         var entries=list(panel==2);int focus=panel==2?selectedRow:availableRow;
-        if(entries.isEmpty()) {ChaosUi.text(canvas,filtered()?"No effects match this filter.":"This list is empty.",10,top+5,1,ChaosUi.DIM);return;}
+        if(entries.isEmpty()) {
+            String why=emptyLabel(panel==2);
+            ChaosUi.text(canvas,ChaosUi.fit(why.equals("No matches")?"No effects match this search or filter.":why+(filtered()?" in this view.":"."),width-20,1),10,top+5,1,ChaosUi.DIM);
+            return;
+        }
         var effect=entries.get(Math.min(focus,entries.size()-1));
         String duration=effect.instant()?"INSTANT":ChaosUi.seconds(effect.duration(draft.durationQuarters()));
         ChaosUi.text(canvas,ChaosUi.fit(effect.name(),width-80,1),10,top+5,1,ChaosUi.GOLD);
@@ -340,7 +353,7 @@ public final class ChaosMenu implements LevelInputOverlay {
         ChaosUi.text(canvas,selected?"SELECTED":"AVAILABLE",left+5,top+3,1,active?ChaosUi.GOLD:ChaosUi.CYAN);
         String counter=entries.isEmpty()?"0":(Math.min(focus,entries.size()-1)+1)+"/"+entries.size();
         ChaosUi.right(canvas,counter,left+w-6,top+3,1,ChaosUi.DIM);
-        if(entries.isEmpty()) ChaosUi.text(canvas,filtered()?"No matches":selected?"Nothing selected":"All selected",left+8,top+16,1,ChaosUi.DIM);
+        if(entries.isEmpty()) ChaosUi.text(canvas,emptyLabel(selected),left+8,top+16,1,ChaosUi.DIM);
         for(int i=start;i<Math.min(entries.size(),start+visible);i++) {
             int y=top+13+(i-start)*ROW_HEIGHT;boolean current=i==Math.min(focus,entries.size()-1);
             var effect=entries.get(i);
