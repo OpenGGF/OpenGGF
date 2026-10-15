@@ -1868,3 +1868,110 @@ pixel parity. Complete native-nine products, PAL50, PCM, actual prepared/
 published scanline overflow and the late one-input resource boundary remain
 active obligations; this commit closes only admitted frontend pattern
 residency and its focused construction/installation/rewind consumers.
+
+
+### Exact FIFO measurement publication preparation (2026-10-15)
+
+The later Tails restoration is still a measured-cost qualification task, not a
+scene-delay correction. Native source/destination/FIFO observations match the
+production submissions. The unchanged v1 aggregate writer fails independent
+occupied-head opportunity counts: several reunion children report3 against4,
+final short children report0 against1. The first reunion SSZ child already
+reports4 against the independent native4, rejecting a global+1 adjustment.
+The initial nose reports5 against the existing measured profile row4; a matched
+initial CPU-head count remains pending and is not credited as a same-run oracle. The exact v1 declared
+capture22262/output `af313f95aa49380a23b440f6e8858e647f057f4ab0b5e72d0f952bc1220b366c`
+remains diagnostic evidence; no cost from it is newly published.
+
+A separate optional native observer prepares schema2/v2 exact FIFO diagnostics.
+The three default hooks are literal post-module-child enqueue1B46, occupied-head
+service1C1A and count/cursor-committed retirement1CE4 before tail shift. Optional
+post-Queue_Kos enqueue1BEE skips the module return1B46 to avoid duplicates.
+The supplied ROM must match both hook bytes and the LevelLoop6516/title-card62D2
+JSR instructions. Waiting jobs gain no service units; unknown callers contaminate
+rather than classify the sample. Original head descriptors are checked on every
+service and consumed cursors against the ROM-decoded shape on retirement. Actual
+interrupted/resumed native stability remains to be observed; fake cases alone
+cannot establish that premise. Canonical v5 completion and the v1 capture path
+remain unchanged.
+
+The Java diagnostic parser preserves v1 reads and admits the explicit v2
+precision contract. Both legacy publication entries now share a v1-only check,
+including direct `Result.publicationTsv()`, before legacy corpus paths/output
+can be used. Supplemental CLI publication requires the executed movie hash,
+selected production source/fingerprint inventory, exact declared frozen-setup
+SHA256 and native recorder40hex commit. Its audit retains all base/input/output
+hashes and the verified frozen setup hash. Known costs, estimator data and
+fixture indexes remain unchanged; missing rows may be appended only after
+independent native qualification. Native v2 metadata rejects missing movie,
+fixture and locked-ROM identity before observer registration. Compatible v1
+construction/diagnostic reads are not tightened by this new optional observer.
+
+Earlier Java candidate56020 passed11/0/0/0 at23:29:18UTC (1:08Maven): new7
+parser/supplement cases plus4 existing generator cases. The two newly completed
+publication guards and three new Java cases are prepared afterward and have
+not run. Earlier native8 cases passed in34843; its follow-on legacy control
+failed before tests because the launcher lacked MONO_PATH. The corrected native
+composition now has11 registered cases, including caller opcode, interrupted
+head and missing/malformed identity checks, and has not run. Source-only
+writer29214 acquired/released normal allocation/native leases after waiting;
+no compiler, engine/native runtime, test, capture or media execution occurred
+for these source additions during the requested M1 window.
+
+After explicit coordinator resume, the bounded selections are Java
+`TestS3kExactLoadTimeProfile,TestS3kLoadTimeProfileGenerator` (10+4), native
+`ExactKosMeasurement` (11) plus unchanged `HardwareTiming`, then one actual v2
+native writer against the independently specified Title Start/D01/Tails+2 setup.
+Seven missing module fingerprints must agree with retained independent CPU-head
+observations before publication; two top-level jobs have separate exact-enqueue
+qualification. One finite Tails320 engine product then reuses immutable native
+references for6144 ordinary inputs, comparing the established setup/controller
+identity at11 whole-scene checkpoints. Original RGB is retained, and end-of-Advance
+VDP domains are not automatically asserted to be the earlier scanline producer.
+All-nine native products, PAL/PCM, strict backend RGB and native SAT overflow
+remain distinct open obligations. Existing media/index/jar hashes remain unchanged.
+
+#### Actual v2 qualification and FAST publication (2026-10-15, Opus ending lane)
+
+The preparation above is superseded by actual results. TraceChaser
+`de43cf78c25478b5d23d69cf7bd541faa9923745` commits the observer plus a path-only
+repair of five legacy HardwareTiming fixtures: they read the consumer's
+`tools/bizhawk/{lib,s3k_*_recorder.lua}`, which OpenGGF `4667f2c3b` deleted or
+replaced with forwarders. The bf3 test blobs (`00587912`, `061e1d84`) were unchanged,
+so the 65/5 result was inherited; `EndToEndTests.TraceChaserRoot` now reads
+TraceChaser's own `bizhawk/` Lua, no assertion changed, and the queued run passes
+ExactKosMeasurement 11/0/0 and HardwareTiming 70/0/0 (00:53:37–00:53:39 UTC).
+
+The deterministic rebuild of that commit (`fa8954d8…2539efa`, equal to the tested
+build) is the immutable `host-exact-kos-v2`. The actual declared Title Start/D01/
+Tails+2 run executed first time (measurement 00:56:32.7–00:56:53.6 UTC; attaching at
+the initial ProcessSprites fence inside a callback worked). All 30 retired heads were
+exact and classified; the writer agreed with the independent `$1C1A`/`$1CD2` witness
+30/30 on source, destination, service opportunities and consumed cursors; all 113
+head services returned to `$651C`; 24 jobs resumed after VInt interruption (83 busy
+calls) with unchanged original descriptors. Every reunion count equals the retained
+oracle table (`1CFB46`/`1D02B6`/`1D0C56`/`16341A`/`162916`/`1D17A6` 4, `1CF2D4` 3,
+`1D14B6`/`160D8E` 2, `163B6A`/`1630E6` 1). The same run gives the initial nose a
+same-run head oracle: `16341A` 5 and `162916` 6 at scene entry. Existing rows are
+preserved; the context dependence is recorded rather than averaged in.
+
+`S3kLoadTimeProfileSupplement` appended the seven missing module rows to the FAST
+manifest (output `fc894e33…a47a15b9`, audit
+`B/exact-kos-v2-publication-r2/publication.tsv`); `s3k-v1.json` is generator-owned
+and unchanged. A first invocation (`B/exact-kos-v2-publication/`) was rejected
+before install because Jackson's default printer rewrote every line; the tool now
+writes the manifest's canonical layout and a test pins byte-identical round trip of
+the checked-in FAST manifest, so the installed change is a pure append. The direct
+`1D17A6`/`1CF2D4` rows remain unpublished.
+
+Focused selection (one queued invocation): `TestS3kExactLoadTimeProfile`,
+`TestS3kLoadTimeProfileGenerator`, `TestS3kLoadTimeProfile`,
+`TestProfiledLoadTimeManifest`, `TestGameModuleLoadTimeProfile`,
+`TestLoadTimeProfileContract`, `TestSonic3kTitleScreenFrameLoadTiming`,
+`TestNativeImageResourceGuard`, `TestS3kEndingReunionPresentation`,
+`TestS3kEndingScenePriorityPixels`, `TestS3kEndingLifecycleCapture`: 74 run,
+68 pass, 6 fail, 0 skipped. The six failures are the three Sonic+Tails cases of each
+lifecycle method (NTSC and PAL) at `team initial pass forward replay
+level-sprite-presentation.preparedScroll`. A matched baseline of the same class with
+the HEAD manifest bytes fails the identical six with identical snapshot hashes, so
+they are inherited by `2b9eb431d`, not caused by this publication.
