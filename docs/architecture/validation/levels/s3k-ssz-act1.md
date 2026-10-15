@@ -1696,3 +1696,43 @@ drops through while the direct run is still grounded. Making the pair continuati
 traversal re-authoring of SSZ1 from that bridge onward plus a Mecha encounter search; this
 lane stopped there. Solo Tails (needs an HPZ Knuckles-fight author for Tails plus the same
 SSZ1 traversal) and solo Sonic (no Sonic-alone LRZ/HPZ cold movie exists) are not started.
+
+## Solo Tails movies re-authored for the native opening bridge (2026-10-15)
+
+Two ROM-correct runtime changes invalidated the five solo Tails controller movies:
+82539953f (the opening bridge's top contact follows `sub_45026` → `SolidObjectTop`
+`loc_1E44C`/`loc_1E45A`, so a re-landing keeps its y subpixel) and 56615e135 (Tails
+keeps the Wait pose on the bridge, `loc_14A16`, so the held Down that used to stand
+in the Balance pose now ducks and `D+B` spindashes). Attribution and the
+old-emulation proof that these two changes alone made the rows red are in the
+behaviour lane's record; no runtime behaviour changed here.
+
+Re-authoring, all controller-only from a cold boot (no position, ring, clock or
+health seeds): inputs 1379-1382 drop the held Down (`1 -`, `3 B`), which reproduces
+the old run exactly to 1419; after that the native re-landings drift (3px at 2243,
+40px at 4142), but the old inputs still reach the GHZ replica. Each width's GHZ,
+MTZ and Mecha fights were authored by the committed `SszBossInputAuthorTool`
+(12 policies, 180-input horizon, 30-input commit) from prefixes 4460 (320) and 4476
+(800); the transits between them followed the old route's P1 path (a temporary
+reference-path follower: old inputs while within 6px, otherwise scored time-shifted
+old inputs, waits and steer/jump policies from rewind marks, the method of the
+cold-campaign `ReferencePathInputAuthor` candidate); the Death Egg lift ends on
+neutral input at the actual DEZ1 load. Replica movies are the complete-movie prefix
+to the MTZ pad release (320: 8001, 800: 8225) plus neutral input standing at the top.
+Rewind-spot frames up to 4460 are unchanged; later ones are the old spots mapped
+piecewise-linearly between matching landmarks (GHZ lock, pad rides, MTZ lock, Mecha
+spawner pad, Mecha lock, Death Egg lift, DEZ load) and land in the same phases.
+
+| Movie | Old SHA-256 | New SHA-256 | Frames | Landmarks (new) | Verified end |
+|---|---|---|---|---|---|
+| `ssz1-tails-solo-cold-flight-320.bk2` | `e6edf7fc12c54c6c44fd8c60b05b3be77e3aab089506d3b1abaf0380103e0537` | `4bc319486424dd52f0689b9a453fd5f39a464cf549144e7b511a368f59fe06ac` | 2556 | 2345: (1323,3006) flying, minY −$100 | (2091,2953), 3 rings (was 2085,2954) |
+| `ssz1-tails-solo-cold-replicas-320.bk2` | `2b06d0e42d9158e87ff6d0407386af1abb68e2d3c5d06ca29e3f988c8b4d87bc` | `7895138785a8f37ed8da9996dbf2b7a83a9518043eb9ad949a7427736c90eb01` | 8200 | GHZ 4452→hp0 4895; pad 5218-5476; MTZ 6819→hp0 7417; pad 7733-8000 | (5888,144), 3 rings |
+| `ssz1-tails-solo-cold-replicas-800.bk2` | `bb2455d0ce681e120bf7b5a31f04230174e1d0b7b67576503839e652f5ce18ac` | `e502d16c49912a95d4a4db276078c1af0d0ad0855426c9360266feaca1884c8a` | 8425 | GHZ 4468→hp0 4839; pad 5158-5416; MTZ 6779→hp0 7640; pad 7956-8224 | (5888,144), 0 rings |
+| `ssz1-tails-solo-cold-complete-320.bk2` | `ffdc452123aa06188a77879a8a018ae43fcd3ccb5c05027ccebd5cf11bd83a91` | `0e57c593403e4bf73019e6b7613da2c492c165534f15be70eac9696b619150cd` | 13667 | as replicas; Mecha pad 10450, hp8 10685→hp0 11348; lift 12228 | DEZ1 load 13666 |
+| `ssz1-tails-solo-cold-complete-800.bk2` | `bd285c6b5f033523fa96ef4bc35f9337001af9bb2f06fea5078909526f0bdba7` | `61a3d2fe1352340d50c977a04f84904e147bd82978895aaae625408a3d6c16f4` | 15132 | as replicas; Mecha pad 10680, hp8 10909→hp0 12814; lift 13693 | DEZ1 load 15131 |
+
+Test updates: `TestSszTailsColdRouteCapture` frame counts, per-width spot sets, Mecha
+entry windows (320: 10443/10645, 800: 10667/10819) and replica-end rings (3/0);
+`TestSszSoloColdRouteCapture` flight end (2091,2953); `TestSszBossInputAuthorTool`
+authors from 4829 (two GHZ hits left) within 240 inputs. The five-width GHZ
+approach case is unchanged (spawn 4452 at 320/352/400, 4453 at 528, 4468 at 800).

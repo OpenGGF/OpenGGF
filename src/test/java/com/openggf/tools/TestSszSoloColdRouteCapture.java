@@ -217,8 +217,9 @@ class TestSszSoloColdRouteCapture {
             }
             drawing.checkpoint(session);
             assertEquals(spots, checked);
-            assertEquals(2085, session.player().getCentreX());
-            assertEquals(2954, session.player().getCentreY());
+            // Native opening bridge contact (82539953f) keeps the landing subpixel; measured end.
+            assertEquals(2091, session.player().getCentreX());
+            assertEquals(2953, session.player().getCentreY());
         }
     }
 
