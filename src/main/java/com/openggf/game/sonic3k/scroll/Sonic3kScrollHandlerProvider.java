@@ -95,7 +95,7 @@ public class Sonic3kScrollHandlerProvider implements ScrollHandlerProvider {
         dezFinalHandler = new SwScrlS3kDezFinalBoss();
         gumballHandler = new SwScrlGumball();
         pachinkoHandler = new SwScrlPachinko();
-        slotsHandler = new SwScrlSlots();
+        slotsHandler = new SwScrlSlots(rom);
         defaultHandler = new SwScrlS3kDefault();
         loaded = true;
         LOGGER.info("Sonic 3K scroll handlers loaded.");

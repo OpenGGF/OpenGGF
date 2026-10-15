@@ -49,7 +49,7 @@ class TestRewindFixS3KSlotCodecs {
         GraphicsManager.getInstance().initHeadless();
 
         Sonic3kBonusStageCoordinator coordinator = new Sonic3kBonusStageCoordinator();
-        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
+        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources());
         runtime.bootstrap();
         installSlotRuntime(coordinator, runtime);
         controller = runtime.stageController();

@@ -119,3 +119,72 @@ are not added as one green run. Current combined smoke remains pending.
 Whole Slot interior rewind remains unsupported in the portal fixture. The
 ROM-bank repair does not certify reward mechanisms, cold traversal, native
 pixels or PCM. Those obligations stay active.
+
+
+## Actual Slot mechanisms and live history — 2026-10-14 candidate
+
+The later complete-runtime candidate on Root3d633ffe5 passes all140 finite
+Slot products in request58926,225.1s test execution with zero failures/errors/
+skips for that method. Native/S1/S2 donor-compatible products span320,352,400,
+528,800 and solo, mixed, duplicate and seven-follower configurations. Actual
+placed SOZ post/stars, controller approach and normal title/fade/load own entry.
+Declared local interaction inlets exercise loaded ring, bumper, spike and
+wall cells; cage/reel resolution, natural rewards, removal-and-restoration
+recreation and payout expiry; goal wind-down/fade and the real origin return.
+The installed live controller verifies the load floor, held backward/forward
+and seek, with all registry keys compared in both restore directions and two
+replays. These are finite mechanism/history products, not cold interior routes.
+
+The previous unsupported Slot rows above describe their original source.
+The current candidate advertises complete within-stage rewind and captures
+its stage RAM, both layout/render buffers, animators, completed native scroll
+output, cage/reward identities and movement/exit phases. The runtime bank also
+reads the selected background deformation599BE and band rows599DE from ROM.
+The enclosing319-test run is red: one independent SSZ body-pose assertion,
+six synthetic coordinator ROM prerequisites and two new shared-helper
+null-context regressions. The latter source repairs await positive focused
+checks. A read-only audit also found a stale Tails tail parent; its new actual
+coordinator/late-dispatch/render regression is prepared but unrun. Accordingly
+this finite pass does not certify Slot visual/native parity or delivery.
+Matched native screenshots/audio, cold traversal, goal-fade DPLC attribution,
+composed smoke/guards and integration/push remain open. Exact invocation and
+source scope are in the [completion plan](../../plans/2026-10-13-s3k-playable-completion.md#complete-slot-runtime-candidate-and-native-ssz-parent-header-2026-10-14).
+
+## Native Slot sprite banks and complete rewind — 2026-10-15
+
+This supersedes the pending items of the 2026-10-14 candidate above. The
+dedicated Slot sprite now owns its native host presentation
+(`S3kSlotPlayerArt`): `loc_4B9E8` installs host `Map_Sonic`/`Map_Tails`/
+`Map_Knuckles` and scripts by `Player_mode`, `ArtTile_Player_1` (Tails alone:
+`ArtTile_Player_2` plus a fresh `Obj_Tails_Tail` parented to the Slot sprite),
+whatever donor the ordinary player uses. After each Animate the owner runs
+`Perform_Player_DPLC`: `character_id` selects `Sonic_Load_PLC2`/`Knuckles_Load_PLC2`
+(shared `Player_prev_frame`, D000) or `Tails_Load_PLC2` (`Player_prev_frame_P2`,
+D400), each storing the frame before its empty-cue check. The goal write
+`move.w #60,$38(a0)` zeroes `character_id`, so the fade submits Sonic cues: Knuckles
+keeps `Map_Knuckles` over Sonic's roll tiles at `$96`-`$9A`, while Tails' D400 body
+keeps its last tiles and its tail continues on its own D600 path. Level's
+`clearRAM` zeroes the previous-frame bytes on entry. Rewind restores both resident
+banks (CPU and GPU), both previous-frame bytes and the selected `character_id`
+without animating or submitting cues. The configured player's renderer, scripts
+and tail return untouched; the shared atlas indices are re-published on return.
+Renderers stay Mod-API-neutral through the internal `PlayerResidentBanks` bridge.
+
+Qualification on Root `3d633ffe5` plus the uncommitted Slot candidate, normal lane,
+unset displays, EGL, null audio and the three original ROMs:
+
+| Selection | Finished (UTC) | Tests/failures/errors/skips |
+|---|---|---|
+| Slot coordinator, live-stepper lifecycle, bonus priority (fresh tail, cleared dust/Super, shared replay priority) | 00:47:46 | 16/0/0/0 |
+| Three actual-portal Slot bank pilots plus Slot graph/codec/scroll/ROM/rewind-capability neighbours and the Mod API signature surface | 01:00:51 | 59/0/0/0 |
+| `finiteSlotMechanicsAndLiveHistoryProducts` | 01:14:27 | 140/0/0/0 |
+| `TestS3kSlotsBonusTraceReplay` Knuckles (1024 frames) and Sonic+Tails (5259 frames) | 01:20:59, 01:26:02 | 1/0/0/0 and 1/0/0/0, zero errors/warnings |
+
+The three pilots were the 79598 reds (Tails400 D400 mutated in the fade; S1-donor800
+and Knuckles320 restored banks differing). They now also assert host Sonic PLC bytes
+for every changed fade mapping on Sonic/Knuckles mains, Tails tail cues resident for
+the current tail map, host mapping counts inside the stage and the configured
+donor's mapping count/bank on return. Opt-in `TestS3kSlotsGlassNative` stays red 5/5
+(overlap 0) with and without the new owner in a matched control; its capture shows
+Sonic correctly behind the glass, so its priority-toggle premise is an inherited,
+separately attributed limit. Native Slot pictures, cold traversal and PCM remain open.

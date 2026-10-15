@@ -116,26 +116,25 @@ Entries should include:
 24. [CNZ F=621 Clamer re-fire — Touch_Special cprop latch landed (round 4, fixed)](#cnz-f621-clamer-re-fire--touch_special-cprop-latch-landed-round-4-fixed)
 25. [AIZ Trace F8927 — Sonic Air-Roll x_speed Not Cleared by Wall Collision (OPEN — diagnosis only)](#aiz-trace-f8927--sonic-air-roll-x_speed-not-cleared-by-wall-collision-open--diagnosis-only)
 26. [Blue Sphere FM Pickup Onset — Automated Parity Complete, Listening Gate Open](#blue-sphere-fm-pickup-onset--automated-parity-complete-listening-gate-open)
-27. [Slot Machine Bonus Stage Is Not Rewindable](#slot-machine-bonus-stage-is-not-rewindable)
-28. [AIZ2 Fire Terrain Swap Uses an Invented Decompression Span](#aiz2-fire-terrain-swap-uses-an-invented-decompression-span)
-29. [MGZ Swinging Platform Endpoint: Inherited `d1` High Word Not Modelled](#mgz-swinging-platform-endpoint-inherited-d1-high-word-not-modelled)
-30. [Segment Trace Replays Start With an Empty Save-Game Inventory](#segment-trace-replays-start-with-an-empty-save-game-inventory)
-31. [S3K Sound Driver: PSG Stale-IX Writes and Mailbox Items Still Open](#s3k-sound-driver-psg-stale-ix-writes-and-mailbox-items-still-open)
-32. [SOZ Act 2 Pushable Rock Puzzle Reachability Unverified](#soz-act-2-pushable-rock-puzzle-reachability-unverified)
-33. [SOZ Recording: Presentation Certification](#soz-recording-presentation-certification)
-34. [S3K Cheat Flags Have No Consumers Yet](#s3k-cheat-flags-have-no-consumers-yet)
-35. [Gumball Exit: Title-Card Loop and Load Span Not Row-Matched](#gumball-exit-title-card-loop-and-load-span-not-row-matched)
-36. [S3K Mega Run Chain: Duplicate VINT_SERVICE Boundary in Segment 0](#s3k-mega-run-chain-duplicate-vint_service-boundary-in-segment-0)
-37. [Doomsday: Presentation Gaps and Unseeded Entry](#doomsday-presentation-gaps-and-unseeded-entry)
-38. [Ring Window Floor Admits a Leading `(0,0)` Ring Record the ROM Always Skips](#ring-window-floor-admits-a-leading-00-ring-record-the-rom-always-skips)
-39. [Sky Sanctuary Act 1 Cutscene: Death Egg Palette, Children and Knuckles' Resting Position](#sky-sanctuary-act-1-cutscene-death-egg-palette-children-and-knuckles-resting-position)
-40. [Sky Sanctuary Background Mode Switch Completes a Frame Early](#sky-sanctuary-background-mode-switch-completes-a-frame-early)
-41. [Sky Sanctuary Plain-Mode Background Below `Camera_Y $800` Renders Flat Sky](#sky-sanctuary-plain-mode-background-below-camera_y-800-renders-flat-sky)
-42. [Sky Sanctuary Mecha Sonic Hit-Window Phase and Slot-Reuse Fidelity](#sky-sanctuary-mecha-sonic-hit-window-phase-and-slot-reuse-fidelity)
-43. [Sky Sanctuary Explosion Controller Replacement-Slot Stop Bit](#sky-sanctuary-explosion-controller-replacement-slot-stop-bit)
-44. [Sky Sanctuary Metropolis Orb Reads After a Freed Parent Slot Remain Unmodelled](#sky-sanctuary-metropolis-orb-reads-after-a-freed-parent-slot-remain-unmodelled)
-45. [S3K Special-Property Sidekick Behaviour: Corrected Diagnosis](#s3k-special-property-sidekick-behaviour-corrected-diagnosis)
-46. [Object Art and Clock Reads Found by the Slay the Robotnik Sprite Research (SUSPECTED)](#object-art-and-clock-reads-found-by-the-slay-the-robotnik-sprite-research-suspected)
+27. [AIZ2 Fire Terrain Swap Uses an Invented Decompression Span](#aiz2-fire-terrain-swap-uses-an-invented-decompression-span)
+28. [MGZ Swinging Platform Endpoint: Inherited `d1` High Word Not Modelled](#mgz-swinging-platform-endpoint-inherited-d1-high-word-not-modelled)
+29. [Segment Trace Replays Start With an Empty Save-Game Inventory](#segment-trace-replays-start-with-an-empty-save-game-inventory)
+30. [S3K Sound Driver: PSG Stale-IX Writes and Mailbox Items Still Open](#s3k-sound-driver-psg-stale-ix-writes-and-mailbox-items-still-open)
+31. [SOZ Act 2 Pushable Rock Puzzle Reachability Unverified](#soz-act-2-pushable-rock-puzzle-reachability-unverified)
+32. [SOZ Recording: Presentation Certification](#soz-recording-presentation-certification)
+33. [S3K Cheat Flags Have No Consumers Yet](#s3k-cheat-flags-have-no-consumers-yet)
+34. [Gumball Exit: Title-Card Loop and Load Span Not Row-Matched](#gumball-exit-title-card-loop-and-load-span-not-row-matched)
+35. [S3K Mega Run Chain: Duplicate VINT_SERVICE Boundary in Segment 0](#s3k-mega-run-chain-duplicate-vint_service-boundary-in-segment-0)
+36. [Doomsday: Presentation Gaps and Unseeded Entry](#doomsday-presentation-gaps-and-unseeded-entry)
+37. [Ring Window Floor Admits a Leading `(0,0)` Ring Record the ROM Always Skips](#ring-window-floor-admits-a-leading-00-ring-record-the-rom-always-skips)
+38. [Sky Sanctuary Act 1 Cutscene: Death Egg Palette, Children and Knuckles' Resting Position](#sky-sanctuary-act-1-cutscene-death-egg-palette-children-and-knuckles-resting-position)
+39. [Sky Sanctuary Background Mode Switch Completes a Frame Early](#sky-sanctuary-background-mode-switch-completes-a-frame-early)
+40. [Sky Sanctuary Plain-Mode Background Below `Camera_Y $800` Renders Flat Sky](#sky-sanctuary-plain-mode-background-below-camera_y-800-renders-flat-sky)
+41. [Sky Sanctuary Mecha Sonic Hit-Window Phase and Slot-Reuse Fidelity](#sky-sanctuary-mecha-sonic-hit-window-phase-and-slot-reuse-fidelity)
+42. [Sky Sanctuary Explosion Controller Replacement-Slot Stop Bit](#sky-sanctuary-explosion-controller-replacement-slot-stop-bit)
+43. [Sky Sanctuary Metropolis Orb Reads After a Freed Parent Slot Remain Unmodelled](#sky-sanctuary-metropolis-orb-reads-after-a-freed-parent-slot-remain-unmodelled)
+44. [S3K Special-Property Sidekick Behaviour: Corrected Diagnosis](#s3k-special-property-sidekick-behaviour-corrected-diagnosis)
+45. [Object Art and Clock Reads Found by the Slay the Robotnik Sprite Research (SUSPECTED)](#object-art-and-clock-reads-found-by-the-slay-the-robotnik-sprite-research-suspected)
 
 ---
 
@@ -6004,15 +6003,6 @@ preserve cross-game parity (no regressions in S1/S2 traces or in the
 existing `TestCnzBumperObjectInstance` tests) and remain ROM-cited
 against `sub_32F56` (sonic3k.asm:68950-68992) and Obj_Bumper
 (sonic3k.asm:68823-68886).
-
----
-
-## Slot Machine Bonus Stage Is Not Rewindable
-
-- **Location** — `S3kSlotBonusStageRuntime`, `S3kSlotStageState`, `S3kSlotPlayerRuntime`, `S3kSlotRenderBuffers`, `S3kSlotRewindSupport`, `AbstractBonusStageCoordinator.supportsRewind`, `GameLoop.isBonusStageRewindable`
-- **Symptom** — Holding rewind during the S3K Slot Machine bonus stage is a no-op and no keyframes are recorded for it; Gumball and Pachinko rewind normally.
-- **Suspected cause** — The slots runtime keeps its state outside the object/level snapshot model: `S3kSlotStageState` (about 35 scalars, six `int[3]`, two `Deque<int[]>` reward queues), runtime bookkeeping (`continueAwarded`, `exitFadeStarted`, `exitTriggered`, `lastFrameCounter`, `slotFrameCounter`), a swapped-in `slotPlayer` with its own `slotPlayerRuntime`, parallel reward-object lists needing re-resolution, and mutable render buffers. Because its `updateDuringLevelFrame()` is true, held-rewind re-simulation would drive it, so a complete snapshot is mandatory. Sonic 1's Special Stage has the same shape.
-- **Removal condition** — A self-contained runtime snapshot (state object, bookkeeping, swapped player runtime, reward-object re-resolution, render-buffer rebuild) registered for rewind, `supportsRewind()` true for slots, and a capture/restore/re-simulate test. Design it once for slots and the S1 Special Stage.
 
 ---
 

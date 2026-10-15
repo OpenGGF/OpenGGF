@@ -149,7 +149,7 @@ class TestS3kSlotBonusGraphRewind {
 
         static Harness withSlotRuntime() {
             Sonic3kBonusStageCoordinator coordinator = new Sonic3kBonusStageCoordinator();
-            S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
+            S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources());
             runtime.bootstrap();
             installSlotRuntime(coordinator, runtime);
             return create(coordinator, runtime.stageController());

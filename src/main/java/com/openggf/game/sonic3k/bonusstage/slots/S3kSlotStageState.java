@@ -8,6 +8,8 @@ public final class S3kSlotStageState {
     private static final int DEFAULT_EVENTS_BG_X = 0x10;
     private static final int DEFAULT_EVENTS_BG_Y = 0x2D;
 
+    // Immutable ROM asset bank: stage RAM below is captured independently.
+    @com.openggf.game.rewind.RewindTransient(reason="Immutable ROM asset bank; all changing stage RAM is captured")
     private final S3kSlotResources romData;
 
     private S3kSlotStageState(S3kSlotResources romData) {
@@ -52,7 +54,9 @@ public final class S3kSlotStageState {
     private final int[] optionCycleDisplaySymbols = new int[3];
     private final int[] optionCycleOffsets = new int[3];
     private final int[] optionCycleReelWords = new int[3];
+    @com.openggf.game.rewind.RewindTransient(reason="Ordered reward positions are captured explicitly beside the scalar stage blob")
     private final Deque<int[]> pendingRingRewardPositions = new ArrayDeque<>();
+    @com.openggf.game.rewind.RewindTransient(reason="Ordered reward positions are captured explicitly beside the scalar stage blob")
     private final Deque<int[]> pendingSpikeRewardPositions = new ArrayDeque<>();
 
     public static S3kSlotStageState bootstrap() {
@@ -488,5 +492,23 @@ public final class S3kSlotStageState {
         rewardCounter = 0;
         pendingRingRewardPositions.clear();
         pendingSpikeRewardPositions.clear();
+    }
+    record RewindState(com.openggf.game.rewind.schema.RewindObjectStateBlob ram,
+                       java.util.List<int[]> rings, java.util.List<int[]> spikes) {
+        RewindState { rings=copyRewardPositions(rings);spikes=copyRewardPositions(spikes); }
+        @Override public java.util.List<int[]> rings() { return copyRewardPositions(rings); }
+        @Override public java.util.List<int[]> spikes() { return copyRewardPositions(spikes); }
+    }
+    private static java.util.List<int[]> copyRewardPositions(java.util.Collection<int[]> positions) {
+        return positions.stream().map(int[]::clone).toList();
+    }
+    RewindState captureRuntimeRewindState() {
+        return new RewindState(com.openggf.game.rewind.schema.CompactFieldCapturer.capture(this),
+                copyRewardPositions(pendingRingRewardPositions),copyRewardPositions(pendingSpikeRewardPositions));
+    }
+    void restoreRuntimeRewindState(RewindState state) {
+        com.openggf.game.rewind.schema.CompactFieldCapturer.restore(this,state.ram());
+        pendingRingRewardPositions.clear();pendingRingRewardPositions.addAll(state.rings());
+        pendingSpikeRewardPositions.clear();pendingSpikeRewardPositions.addAll(state.spikes());
     }
 }

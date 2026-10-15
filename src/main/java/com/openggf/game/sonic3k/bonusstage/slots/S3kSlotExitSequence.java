@@ -12,6 +12,7 @@ public final class S3kSlotExitSequence {
     static final int FADE_FRAMES = 60;
     static final int FADE_CALL_INTERVAL = 3; // Pal_ToBlack every 3 frames
 
+    @com.openggf.game.rewind.RewindTransient(reason="Stable live controller; its stage RAM is owned by the Slot runtime snapshot")
     private final S3kSlotStageController controller;
     private int currentScalar;
     private int fadeTimer;

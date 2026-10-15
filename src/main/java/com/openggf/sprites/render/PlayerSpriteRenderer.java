@@ -26,6 +26,8 @@ public class PlayerSpriteRenderer {
     private RenderContext renderContext;
     private int lastFrame = -1;
     private int headFragmentBase = -1;
+    /** Set when a native owner models this bank's DPLC command path itself. */
+    private boolean residentBankExternal;
 
     public PlayerSpriteRenderer(SpriteArtSet artSet) {
         this(artSet, GameServices.graphics());
@@ -72,7 +74,7 @@ public class PlayerSpriteRenderer {
         if (frameIndex < 0 || frameIndex >= artSet.mappingFrames().size()) {
             return;
         }
-        if (frameIndex != lastFrame) {
+        if (!residentBankExternal && frameIndex != lastFrame) {
             // ROM behavior: Only update lastFrame when tiles were actually loaded.
             // Empty DPLCs mean "reuse previously loaded tiles", so we shouldn't
             // update lastFrame in that case - otherwise a subsequent frame with
@@ -177,6 +179,12 @@ public class PlayerSpriteRenderer {
             lastFrame = mappingFrame;
         }
     }
+
+    // Engine-internal resident-bank access, reached through PlayerResidentBanks.
+    DynamicPatternBank residentBank() { return patternBank; }
+    int residentLastFrame() { return lastFrame; }
+    void restoreResidentLastFrame(int frame) { lastFrame = frame; }
+    void setResidentBankExternal(boolean external) { residentBankExternal = external; }
 
     public SpritePieceRenderer.FrameBounds getFrameBounds(int frameIndex, boolean hFlip, boolean vFlip) {
         if (frameIndex < 0 || frameIndex >= artSet.mappingFrames().size()) {

@@ -1092,15 +1092,15 @@ public final class GameplayModeContext implements ModeContext {
 
     /**
      * Registers a rewind adapter capturing the active bonus-stage coordinator's
-     * reward accumulators, but only for a rewind-supported stage
-     * (Gumball/Pachinko). No-op for the Slot Machine or when rewind is
-     * unavailable. Idempotent -- deregisters any prior adapter first.
+     * reward accumulators and native lifecycle/runtime state for a supported
+     * interior. No-op when rewind is unavailable. Idempotent -- deregisters any prior adapter first.
      */
     public void registerBonusStageAdapter(BonusStageProvider provider) {
         if (rewindRegistry == null) {
             return;
         }
         rewindRegistry.deregister(BonusStageCoordinatorRewindAdapter.KEY);
+        com.openggf.game.internal.BonusStageRuntimeRewindAccess.register(rewindRegistry, provider);
         if (provider instanceof AbstractBonusStageCoordinator coordinator
                 && provider.supportsRewind()) {
             rewindRegistry.register(new BonusStageCoordinatorRewindAdapter(coordinator));
@@ -1111,6 +1111,7 @@ public final class GameplayModeContext implements ModeContext {
     public void deregisterBonusStageAdapter() {
         if (rewindRegistry != null) {
             rewindRegistry.deregister(BonusStageCoordinatorRewindAdapter.KEY);
+            com.openggf.game.internal.BonusStageRuntimeRewindAccess.unregister(rewindRegistry);
         }
     }
 

@@ -9,7 +9,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * The bonus-stage rewind capability is a per-provider semantic predicate:
  * Gumball and Pachinko (GLOWING_SPHERE) run the plain LevelFrameStep pipeline
  * that the rewind re-simulation stepper can replay, so they are rewindable;
- * the Slot Machine (dedicated uncaptured runtime) and NONE are not.
+ * the base coordinator has no Slot runtime. The S3K provider additionally owns
+ * the dedicated captured Slot loop; NONE remains unsupported.
  */
 class TestBonusStageRewindCapability {
 
@@ -17,6 +18,15 @@ class TestBonusStageRewindCapability {
         @Override public BonusStageType selectBonusStage(int ringCount) { return BonusStageType.NONE; }
         @Override public int getZoneId(BonusStageType type) { return 0; }
         @Override public int getMusicId(BonusStageType type) { return -1; }
+    }
+
+    @Test
+    void actualS3kProviderAdmitsItsCapturedSlotRuntimeAndRetiresTheCapabilityOnExit() {
+        var coordinator=new com.openggf.game.sonic3k.Sonic3kBonusStageCoordinator();
+        coordinator.onEnter(BonusStageType.SLOT_MACHINE,null);
+        assertTrue(coordinator.supportsRewind());
+        coordinator.onExit();
+        assertFalse(coordinator.supportsRewind());
     }
 
     @Test

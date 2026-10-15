@@ -18,6 +18,33 @@ class TestBonusStageCoordinatorRewindAdapter {
     }
 
     @Test
+    void nativeRuntimeRegistrationRestoresExitAlongsideRewardsAndRejectsAnotherVisit() {
+        var coordinator=new FakeCoordinator();
+        coordinator.onEnter(BonusStageType.GUMBALL,null);
+        var registry=new RewindRegistry();
+        com.openggf.game.internal.BonusStageRuntimeRewindAccess.register(registry,coordinator);
+        registry.register(new BonusStageCoordinatorRewindAdapter(coordinator));
+        var before=registry.capture();
+        coordinator.requestExit();coordinator.addRings(7);
+        var after=registry.capture();
+        for(int cycle=0;cycle<2;cycle++) {
+            registry.restore(before);
+            org.junit.jupiter.api.Assertions.assertFalse(coordinator.isStageComplete());
+            assertEquals(0,coordinator.getRewards().rings());
+            registry.restore(after);
+            org.junit.jupiter.api.Assertions.assertTrue(coordinator.isStageComplete());
+            assertEquals(7,coordinator.getRewards().rings());
+            for(String key:after.entries().keySet())
+                org.junit.jupiter.api.Assertions.assertTrue(RewindSnapshotDiff.keyEquals(key,after.get(key),registry.capture().get(key)),key);
+        }
+        coordinator.onExit();coordinator.onEnter(BonusStageType.GUMBALL,null);coordinator.addRings(32);
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,()->registry.restore(before));
+        assertEquals(32,coordinator.getRewards().rings(),"stale visit fails before reward mutation");
+        com.openggf.game.internal.BonusStageRuntimeRewindAccess.unregister(registry);
+        org.junit.jupiter.api.Assertions.assertFalse(registry.capture().containsKey(com.openggf.game.internal.BonusStageRuntimeRewindAccess.KEY));
+    }
+
+    @Test
     void keyIsStable() {
         FakeCoordinator coordinator = new FakeCoordinator();
         BonusStageCoordinatorRewindAdapter adapter = new BonusStageCoordinatorRewindAdapter(coordinator);

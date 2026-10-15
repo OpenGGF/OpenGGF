@@ -1748,8 +1748,9 @@ production diff SHA2563f19b8b1d04c59c5174c2678f9af0016aad6a9cea0aaa5e3afa53cd9a6
 Original ROM/AD40 hashes and exact complete argv are external capture provenance.
 No shadow runtime class, trace hydration or later input/gameplay write is used.
 
-Both complete1432-row arms match all recorded P1/P2 positions, velocities,
-ground speed, mapping frame, cameras/copies, level clock and rings. Prior P2
+Both complete1432-row arms match the recorded P1 X/Y, X/Y velocities,
+ground speed and mapping frame, P2 X/Y, cameras/copies, level clock and rings.
+That CSV does not record P2 velocity or body/tail animation. Prior P2
 one-X/74-Y deficits are removed. Pictures are inspected after reading state:
 title-card suppression differs at input0, and the native published-producer
 column is not sufficient to justify a global previous-row pixel shift.
@@ -1996,3 +1997,178 @@ Two actual Slot portal negatives remain correctly red on missing complete
 interior rewind; the next owner repair covers stage RAM, object rebinding and
 lifecycle exit state. Whole-scene original RGB, Tails1342, composed broad checks
 and destination integration/push remain pending.
+
+
+## Complete Slot runtime candidate and native SSZ parent header (2026-10-14)
+
+On committed Root3d633ffe5 plus the source draft, real Slot entry now owns a
+complete stage/runtime snapshot: ordered position queues, in-place layout/cell
+buffers, both visible-buffer indices, legacy and live cell animators, native
+scroll accumulators/last output, movement/exit phases and stable reward/cage
+identities. Restore rebuilds actors before rebinding their owners and reproduces
+the completed scroll output without executing another native tick. The selected
+Slot bank reads background deformation599BE and eight background rows599DE
+from the actual ROM; unselected providers do not read those resources. The
+generic live-replay path now runs the same title overlay and coordinator hooks
+as ordinary gameplay. The real floor/held/seek negatives exposed that missing
+overlay owner; corrected request23100 passes both independent Slot pilots.
+
+Request58926 is terminal1 at23:25:57 UTC:319 tests, one failure, eight errors,
+zero skips,4:11 Maven execution. Its separately reported finite Slot method
+passes140/0/0/0 in225.1s, covering every admitted width/donor/main/ordered roster
+with real placed-post entry, title/fade, live held-backward/forward/seek replay,
+ring, bumper, spike, wall, cage/reel/payout actors, actual reward recreation,
+goal wind-down/fade and real origin return. Every registry key remains compared
+in both restore directions and two forward runs. Local free-movement inlets
+are declared; these are not cold whole-stage traversal or native pixel/audio
+acceptance. The other170 passing checks are a separate affected selection,
+not permission to call the whole invocation green. Six errors were synthetic
+coordinator fixtures lacking an explicit ROM bank; two were new null-context
+regressions in the shared replay helper. Both source repairs are prepared,
+not yet positively qualified.
+
+The one assertion failure is the native SSZ moving cutscene-bridge header.
+Original RAM at arrival inputs1341–1343 points P2's interacting-object word
+toB73A, code44FA2, native negative status90/98. Obj_SSZCutsceneBridge sets
+status bit7; Tails loc14A16 selects Wait5 and skips the object-edge Balance
+branch for that header. The engine produced Balance6 at the first genuine
+pre-dispatch stationary witness1338. The object-local no-balance flag is now
+prepared; its positive run and new passive capture remain pending. This owner
+is not the separate flat/diagonal bridge. Engine P2 observations at1342 read
+anim6/map9A and tail anim0/map0, while selected original RAM reads anim5/mapAD
+and tail anim1/map22. The earlier1432-row state comparison covered P2 X/Y,
+not those additional P2 fields.
+
+A source-only follow-up audit found that Slot copied the original Tails tail
+controller, whose final parent still points to the retired level sprite.
+Native loc4B9E8 creates Obj_Tails_Tail with the live Slot parent in$30. A new
+actual coordinator/late-tail-dispatch/render-coordinate regression is prepared;
+no new production tail correction or executed negative is credited yet. The
+suspected dynamic-art capability omission was rejected: S3K deliberately uses
+EVERY_CLAIM_WITHOUT_PLAYER_ART_AUDIT and supplies no such owner already.
+No Slot-specific dynamic-art capability is added. Goal-fade DPLC bank ownership
+is a separate unresolved native lead.
+
+Farrell's23:30–00:30 UTC M1 measurement window defers new heavy validation.
+Every existing Root/worker request completed normally before the window;
+the last worker56020 ended23:29:18 UTC and its two leases were observed free
+at23:30:28 UTC. Source-only fixture/header repairs retain the normal worktree
+lease. No queued work was cancelled, restarted or preempted. Positive focused
+checks, further finite products, composed smoke/guards and integration/push
+remain pending.
+
+
+### Slot presentation audit after the finite functional pass
+
+The140-product pass renders gameplay, but did not assert active mapping
+validity or retained body/tail bank bytes. S1 Sonic's configured renderer
+has88 mappings; it rejects the host fade script's literal96–9A indices and
+can draw no body. Native Slot init assigns Map_Sonic/Map_Tails/Map_Knuckles
+and selects the host animator. Scoped host-resource borrowing must preserve
+configured donation and restore its resources on return. A new short Knuckles
+pilot supplements the two original Slot pilots; source-only active-pose and
+raw body/tail-bank restore/replay assertions are prepared, not executed.
+
+The fade bank owner is source/ROM-proven: loc4BC1E's003C write changes
+character_id to0 while retaining mappings. Perform_Player_DPLC selects
+Sonic_Load_PLC2. Verified PLC_Sonic96–9A entriesFBA2/FBB2/FBC2/FBD2/FBE2 write
+16 tiles intoD000–D1FF. Knuckles shares that destination and Player_prev_frame
+with Sonic, so unchanged mappings initially suppress the transfer; the next
+changed mapping replaces its bank. Tails usesD400 and a separate previous-
+frame register; Sonic writes leave its last body bank unchanged while the
+tail continues atD600. The current renderer couples retained mappings to
+the old character DPLC/source. Prepared checks cover admission, selected
+Sonic bytes, retained Tails bytes and exact restoration without RGB conversion.
+Production correction remains pending. Mapping replacement, immediate blank
+banks, global donor disable and global player-art audit enablement are rejected.
+
+Copied dust and Super controllers retain the retired original player too.
+Their shared dispatch paths can run in Slot; normal entry leaves those effects
+inactive. Native loc6B76 bypasses ordinary player/dust creation, so Slot must
+not receive unsupported copied controllers. Original controller identities
+and state must survive shutdown unchanged; no new Slot effects are proposed.
+
+
+### Slot corrective execution chain before the M1 window
+
+All times below are UTC2026-10-14, converted from Maven's+01:00 timestamps.
+These are overlapping, source-specific development selections, not summed
+green coverage or a broad-suite result. The owning wrapper selection is the
+local normal queue with unset ambient displays, EGL, null audio and the three
+absolute original ROM paths; only known bounded pure selections use lean.
+
+| Scope | Terminal time | Tests/failures/errors/skips | Attribution |
+|---|---|---|---|
+| Initial Slot capture builds |22:32:39,22:33:48|No tests|Compile prerequisites repaired; no validation credit|
+| First complete-state pilot|22:36:19|6/0/2/0|Ordered position queues require explicit capture rather than unsupported collection reflection|
+| Ordered state +publication|22:41:44|9/2/0/0|Published sprite/scroll output differs after restore|
+| Scroll ownership diagnostic|22:45:14|2/2/0/0|Restore must reproduce completed output without ticking scroll/band RAM|
+| Scroll focused|22:50:21|19/0/8/0|Eight synthetic fixtures lack the selected ROM background bank|
+| ROM background focused|22:58:26|32/1/0/0|Unit fixture accidentally supplied a longer live animation; its independent first-zero premise expected the wrong tick|
+| Actual live controller +bank|23:00:59|7/2/0/0|Fresh-load controller is a placeholder; actual interior controller installs on the next ordinary host step|
+| Installed-controller diagnostic|23:02:38|2/2/0/0|Confirms actual installation boundary|
+| Installed live replay|23:03:35|2/2/0/0|Replay omitted the ordinary title-overlay update|
+| Overlay helper compile|23:05:40|No tests|Use the world session's module; no pass credit|
+| Shared overlay positive|23:07:30|2/0/0/0|Actual load floor, held backward/forward and seek replay qualify both original pilots|
+| Native Slot contacts|23:11:43|2/2/0/0|Cage inlet used the rotating rendered marker instead of native fixed460/430; earlier ring/bumper/spike/reel contacts reached their owners|
+| Payout +SSZ negative|23:15:07|3/1/0/0|Both complete Slot pilots pass; SSZ flat-bridge premise has no witness|
+| Physical SSZ rider negative|23:17:21|1/1/0/0|First post-step zero speed still entered dispatch moving; Walk0 is not yet the standing premise|
+| Finite Slot +affected selection|23:25:57|319/1/8/0|140 Slot products pass; genuine stationary SSZ Balance6 plus six ROM-fixture and two null-context errors remain red|
+
+The latest new visual assertions inspect actual resident body/tail pattern
+bytes through thirteen-tick wind/fade intervals and both restore directions;
+that prime-length window avoids mistaking a completed short animation cycle
+for bank restoration. They retain all registered-world keys and do not
+normalize pixels, choose gameplay values from observations or alter input
+rows. New ownership/pose/priority checks await execution after the window.
+Consumed Root slot/SSZ Maven redirects are removed after this scoped account;
+external capture provenance and original images remain at their documented
+task paths. No raw Maven log is archived.
+
+### User-requested colour expansion feature
+
+The user requests a separate end-user Full/Limited choice, with Full as the
+current default and Limited's maximum238. This supersedes the private native
+comparison-profile proposal. Forward scaling final RGB by238/255 maps every
+canonical ROM channel level0,36,73,109,146,182,219,255 exactly to0,34,68,102,
+136,170,204,238 and handles arbitrary palette RGB without reconstructing a
+CRAM word. The feature keeps display profiles and fades as independent
+operations, persists display.colorExpansion and invalidates direct/derived
+underwater palette uploads when the preference changes. Default Full preserves
+current output. Feature source/UI/config/API-pin drafts are worker-owned and
+unexecuted during the window; no private colour-word/rewind migration is
+needed for this range setting. Exact physical CRAM and shadow/highlight
+acceptance remain separate. Final feature tests and fresh Full/Limited SSZ
+spot captures are required before delivery.
+
+## Opus delivery takeover and native Slot banks (2026-10-15)
+
+The user moved remaining implementation to Opus 5.5 at about00:30 UTC. Root Codex
+became coordinator; an Opus delivery lead adopted this tree and assigned three
+Opus lanes through T3 to the released frontier (`ai-s3k-parity-trace`: colour
+expansion, AIZ end-boss CheckHit order, HCZ attribution), route
+(`ai-s3k-parity-hpz`: finite700, Gumball/Pachinko parity and native spot pairs)
+and ending (`ai-s3k-parity-allocation` plus the native TraceChaser tree: exact
+KosM v2 costs, full-table dispatch, Tails reunion spots) trees.
+
+The untested Root repairs passed first (00:47:46, 16/0/0/0). The resident-bank
+owner then followed the native command path rather than a clamp: a dedicated
+`S3kSlotPlayerArt` installs host mappings/scripts/banks and a fresh tail,
+performs `Perform_Player_DPLC` after Animate with the native previous-frame bytes
+and switches to Sonic cues at the goal `character_id` write; package-private
+renderer hooks reached through the unannotated `PlayerResidentBanks` bridge keep
+the `@ModApi` surface unchanged (the draft public `TailsTailsController.forNewParent`
+was dropped for that reason; the fresh tail uses the existing constructor).
+Results and the matched glass-test control are in the
+[bonus matrix](../validation/levels/s3k-bonus-stage-transitions.md#native-slot-sprite-banks-and-complete-rewind--2026-10-15).
+
+Rejected: enabling the global S3K player-art audit, routing direct DPLC through
+the ordinary Kos queue, reusing the borrowed donor renderer (S1's 88 frames cannot
+draw the fade's `$96`-`$9A`), and keying the bank on parent identity. Goal-frame
+Animate phase remains the existing engine order (the goal override applies after
+that frame's animation); Sonic mains are unaffected and no trace currently
+distinguishes the Tails/Knuckles goal frame, so it is recorded rather than changed.
+
+The stale Slot rewind entries in the general discrepancy file and S3K known-bug #27
+are retired, and the eight finite-restart act matrices are now linked from the
+coverage backlog.

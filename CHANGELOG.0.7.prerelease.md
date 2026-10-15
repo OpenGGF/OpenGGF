@@ -39,9 +39,12 @@ Unreleased. The earlier development themes remain in
   the HUD RINGS label uses its dedicated ROM R glyph.
   Teleporter beams retain the selected ROM art bank through recreation,
   including SSZ transport priority and whole-sky rewind publication.
-  Slot bonus-stage layouts, player starts, prize/reel tables and cell animations
-  load from the runtime ROM, with no copied asset fallback; panel publication
-  retains its allocation-free path.
+  Slot bonus-stage layouts, player starts, prize/reel tables, background
+  deformation and cell animations load from the runtime ROM, with no copied asset
+  fallback; panel publication retains its allocation-free path. The Slot Machine
+  now rewinds completely, and its dedicated sprite uses the host mappings, pattern
+  banks and a fresh tail, so the goal fade shows the native Sonic roll tiles on
+  Knuckles and keeps Tails' last body tiles; the configured donor art returns on exit.
   Its arrival controller retains the native light divider and ROM palette cycle,
   admits the P2 release helper through the native continuation scan and retires
   after the final light write. Tails-led teams preserve their native branch.

@@ -12,6 +12,13 @@ import java.util.Objects;
 public final class S3kSlotResources {
     private final RomByteReader reader;
     private final byte[][] reelSequences;
+    private final int[] backgroundDeformHeights;
+    private final java.util.List<BackgroundBand> backgroundBands;
+
+    /** word_599DE: eight $14-byte rows consumed by loc_598B4. */
+    public record BackgroundBand(int stepWord, int deltaLong, int resetCountdown, int phaseLimit,
+            int destVramAddress, int oddPhaseDestDelta, boolean doubleRow, int sourceY, int longWordCount) { }
+
 
     private S3kSlotResources(RomByteReader reader) {
         this.reader = Objects.requireNonNull(reader, "reader");
@@ -22,6 +29,28 @@ public final class S3kSlotResources {
         animationFrames(0x4B622, 3);
         animationFrames(0x4B656, 4);
         animationFrames(0x4B688, 25);
+        backgroundDeformHeights = new int[16];
+        for (int i = 0; i < backgroundDeformHeights.length; i++) {
+            int height = reader.readU16BE(0x599BE + i * 2);
+            if (height == 0 || height > 0x7FFF || (i == 15 && height != 0x7FFF)) {
+                throw new IllegalArgumentException("Invalid Slot background deformation height at " + i);
+            }
+            backgroundDeformHeights[i] = height;
+        }
+        var bands = new java.util.ArrayList<BackgroundBand>(8);
+        for (int i = 0; i < 8; i++) {
+            int row = 0x599DE + i * 0x14;
+            int step = reader.readU16BE(row);
+            int countdown = reader.readS16BE(row + 6);
+            int phases = reader.readU16BE(row + 8);
+            if (step == 0 || countdown < 0 || phases == 0) {
+                throw new IllegalArgumentException("Invalid Slot background band at " + i);
+            }
+            bands.add(new BackgroundBand(step, reader.readU32BE(row + 2), countdown, phases,
+                    reader.readU16BE(row + 10), reader.readS16BE(row + 12),
+                    reader.readU16BE(row + 14) != 0, reader.readU16BE(row + 16), reader.readU16BE(row + 18)));
+        }
+        backgroundBands = java.util.List.copyOf(bands);
         reelSequences = new byte[][] {reader.slice(0x4C8CC, 8), reader.slice(0x4C8D4, 8), reader.slice(0x4C8DC, 8)};
     }
 
@@ -36,6 +65,9 @@ public final class S3kSlotResources {
             throw new IllegalStateException("Slot bonus resources require the active ROM", e);
         }
     }
+
+    public int[] backgroundDeformHeights() { return backgroundDeformHeights.clone(); }
+    public java.util.List<BackgroundBand> backgroundBands() { return backgroundBands; }
 
     public short playerStartX() { return (short) reader.readU16BE(0x1E4080); }
     public short playerStartY() { return (short) reader.readU16BE(0x1E4082); }

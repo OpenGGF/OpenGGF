@@ -13,7 +13,11 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestS3kSlotRomData {
     @AfterEach void reset() { TestEnvironment.resetAll(); }
 
-    private static byte[] image() { return new byte[0x1E4484]; }
+    private static byte[] image() {
+        byte[] image=new byte[0x1E4484];
+        System.arraycopy(S3kSlotRomTestData.image(),0x599BE,image,0x599BE,0xC0);
+        return image;
+    }
     private static void word(byte[] image, int address, int value) {
         image[address] = (byte) (value >>> 8); image[address + 1] = (byte) value;
     }
@@ -77,6 +81,8 @@ class TestS3kSlotRomData {
     @Test void verifiedLockedOnRomSuppliesOriginalLayoutReelsAndSignedPrizes() throws Exception {
         TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_3K);
         var bank = S3kSlotResources.fromRom(RomByteReader.fromRom(GameServices.rom().getRom()));
+        assertArrayEquals(S3kSlotRomTestData.resources().backgroundDeformHeights(),bank.backgroundDeformHeights());
+        assertEquals(S3kSlotRomTestData.resources().backgroundBands(),bank.backgroundBands());
         assertEquals(0x460, bank.playerStartX()); assertEquals(0x360, bank.playerStartY());
         assertArrayEquals(new short[] {100, 30, 20, 25, -1, 10, 8, 200}, bank.rewardValues());
         assertArrayEquals(new byte[] {0, 1, 2, 5, 4, 6, 5, 3}, bank.reelSequenceA());

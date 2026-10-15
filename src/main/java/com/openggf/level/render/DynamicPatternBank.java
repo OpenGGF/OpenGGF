@@ -83,6 +83,41 @@ public class DynamicPatternBank {
         }
     }
 
+    /** Copies every resident tile; the copies share no storage with this bank. */
+    public Pattern[] copyResident() {
+        Pattern[] copy = new Pattern[patterns.length];
+        for (int i = 0; i < patterns.length; i++) {
+            copy[i] = new Pattern();
+            copy[i].copyFrom(patterns[i]);
+        }
+        return copy;
+    }
+
+    /**
+     * Replaces the whole resident bank (CPU tiles and, when cached, their GPU
+     * textures) without a load request. Restoring VRAM is not a DMA transfer.
+     */
+    public void restoreResident(Pattern[] resident) {
+        if (resident == null || resident.length != patterns.length) {
+            throw new IllegalArgumentException("Resident bank restore requires " + patterns.length + " tiles");
+        }
+        for (int i = 0; i < patterns.length; i++) patterns[i].copyFrom(resident[i]);
+        refreshTextures();
+    }
+
+    /** Re-uploads every cached tile, e.g. after another bank shared these atlas indices. */
+    public void refreshTextures() {
+        if (!cached || graphicsManager == null) return;
+        graphicsManager.beginPatternAtlasBatch();
+        try {
+            for (int i = 0; i < patterns.length; i++) {
+                graphicsManager.updatePatternTexture(patterns[i], basePatternIndex + i);
+            }
+        } finally {
+            graphicsManager.endPatternAtlasBatch();
+        }
+    }
+
     /**
      * Applies an already-decided runtime art state. Lifecycle identity,
      * duplicate suppression, and completion are owned by the production

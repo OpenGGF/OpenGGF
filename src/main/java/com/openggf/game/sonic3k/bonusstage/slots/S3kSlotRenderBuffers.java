@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.bonusstage.slots;
 import java.util.Arrays;
 
 public final class S3kSlotRenderBuffers {
+    @com.openggf.game.rewind.RewindTransient(reason="Immutable ROM asset bank; layout and animation state are captured separately")
     private final S3kSlotResources romData;
     private final byte[] layout;
     private final byte[] expandedLayout;
@@ -195,6 +196,46 @@ public final class S3kSlotRenderBuffers {
             expandedLayout[expandedIndex] = tileId;
         }
     }
+
+    record RewindState(byte[] layout, byte[] expanded, short[] points, int cameraX, int cameraY,
+                       int nextFrame, java.util.List<com.openggf.game.rewind.schema.RewindObjectStateBlob> animations,
+                       java.util.List<com.openggf.game.rewind.schema.RewindObjectStateBlob> visibleFrames) {
+        RewindState {
+            layout=layout.clone(); expanded=expanded.clone(); points=points.clone();
+            animations=java.util.List.copyOf(animations); visibleFrames=java.util.List.copyOf(visibleFrames);
+        }
+        @Override public byte[] layout() { return layout.clone(); }
+        @Override public byte[] expanded() { return expanded.clone(); }
+        @Override public short[] points() { return points.clone(); }
+    }
+    RewindState captureRuntimeRewindState() {
+        var animations=new java.util.ArrayList<com.openggf.game.rewind.schema.RewindObjectStateBlob>(transientAnimationSlots.length);
+        for (var slot:transientAnimationSlots) animations.add(com.openggf.game.rewind.schema.CompactFieldCapturer.capture(slot));
+        var frames=new java.util.ArrayList<com.openggf.game.rewind.schema.RewindObjectStateBlob>(visibleCellFrames.length);
+        for (var frame:visibleCellFrames) frames.add(com.openggf.game.rewind.schema.CompactFieldCapturer.capture(frame));
+        return new RewindState(layout,expandedLayout,stagedPointGrid,stagedCameraX,stagedCameraY,
+                nextVisibleCellFrame,animations,frames);
+    }
+    void restoreRuntimeRewindState(RewindState state) {
+        if (state.layout().length != layout.length || state.expanded().length != expandedLayout.length
+                || state.animations().size() != transientAnimationSlots.length
+                || state.visibleFrames().size() != visibleCellFrames.length)
+            throw new IllegalArgumentException("Slot render snapshot belongs to different geometry");
+        System.arraycopy(state.layout(),0,layout,0,layout.length);
+        System.arraycopy(state.expanded(),0,expandedLayout,0,expandedLayout.length);
+        stagedPointGrid=state.points(); stagedCameraX=state.cameraX(); stagedCameraY=state.cameraY();
+        nextVisibleCellFrame=state.nextFrame();
+        for (int i=0;i<transientAnimationSlots.length;i++)
+            com.openggf.game.rewind.schema.CompactFieldCapturer.restore(transientAnimationSlots[i],state.animations().get(i));
+        for (int i=0;i<visibleCellFrames.length;i++)
+            com.openggf.game.rewind.schema.CompactFieldCapturer.restore(visibleCellFrames[i],state.visibleFrames().get(i));
+    }
+    int visibleFrameIndex(VisibleCells frame) {
+        if (frame==VisibleCells.empty()) return -1;
+        for (int i=0;i<visibleCellFrames.length;i++) if (visibleCellFrames[i]==frame) return i;
+        throw new IllegalStateException("Slot publication is not owned by its render buffers");
+    }
+    VisibleCells visibleFrame(int index) { return index<0 ? VisibleCells.empty() : visibleCellFrames[index]; }
 
     private static final class TransientAnimationSlot {
         private boolean active;

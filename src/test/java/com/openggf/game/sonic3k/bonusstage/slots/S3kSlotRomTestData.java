@@ -118,7 +118,24 @@ public final class S3kSlotRomTestData {
     public static S3kSlotResources resources() { return RESOURCES; }
 
     private static S3kSlotResources buildResources() {
+        return S3kSlotResources.fromRom(com.openggf.data.RomByteReader.fromBytes(image()));
+    }
+
+    /** Synthetic test bank, never used by production. */
+    public static byte[] image() {
         byte[] image = new byte[0x1E4484];
+        int[] heights = {32,32,32,32,48,32,16,32,32,32,32,32,48,32,16,0x7FFF};
+        for (int i=0;i<heights.length;i++) putWord(image,0x599BE+i*2,heights[i]);
+        int[][] bands = {
+            {0x48,0,0xC000,8,8,0xE000,0xFFFE,1,0,0x19},
+            {0x48,0,0xC000,9,8,0xE200,0xFFFE,1,0x20,0x19},
+            {0x50,0,0xA000,0xB,0x10,0xE400,0,1,0x40,0x19},
+            {0x40,0,0xE000,4,8,0,0,0,0,0},
+            {0x40,1,0,3,8,0,0,0,0,0},
+            {0x48,0,0xC000,0xA,8,0xEB00,0xFFFE,1,0xB0,0x19},
+            {0x58,0,0x8000,7,4,0xED00,0xFFFE,0,0xD0,0x19},
+            {0x40,0,0xE000,5,8,0,0,0,0,0}};
+        for(int i=0;i<bands.length;i++)for(int w=0;w<bands[i].length;w++)putWord(image,0x599DE+i*20+w*2,bands[i][w]);
         putWord(image, 0x1E4080, SLOT_BONUS_PLAYER_START_X);
         putWord(image, 0x1E4082, SLOT_BONUS_PLAYER_START_Y);
         System.arraycopy(SLOT_BONUS_LAYOUT, 0, image, 0x1E4084, SLOT_BONUS_LAYOUT.length);
@@ -131,7 +148,7 @@ public final class S3kSlotRomTestData {
         System.arraycopy(BUMPER_BOUNCE_FRAMES, 0, image, 0x4B622, BUMPER_BOUNCE_FRAMES.length);
         System.arraycopy(SPIKE_ANIMATION_FRAMES, 0, image, 0x4B656, SPIKE_ANIMATION_FRAMES.length);
         System.arraycopy(SLOT_WALL_COLOR_FRAMES, 0, image, 0x4B688, SLOT_WALL_COLOR_FRAMES.length);
-        return S3kSlotResources.fromRom(com.openggf.data.RomByteReader.fromBytes(image));
+        return image;
     }
 
     private static void putWord(byte[] image, int address, int value) {
