@@ -1537,7 +1537,28 @@ Balance. The bridge now advertises that negative header to the shared edge-balan
 check. `TestS3kSszArrivalHeadless#stationaryTailsUsesTheCutsceneBridgeNativeNoBalanceHeader`
 passed (1/0/0/0, request79598, 00:33:37) after the old Balance6 negative at input
 1338. It asserts anim5/no balance/tail anim1; the native map `$AD`/tail map `$22`
-and their 4,3,2 timers at inputs 1341-1343 are not asserted by it.
+and their 4,3,2 timers at inputs 1341-1343 are now asserted too (below).
+
+Direct original-RGB spot comparison (2026-10-15 UTC, composed Root `d5bfcc1c0`
+with the saved Limited expansion and Raw RGB profile, unmodified production
+runtime, original AD40 suffix from 448920 after the one-shot initial
+ProcessSprites; native `native-ssz-arrival-allocation-ntsc-v1` PPMs; no
+normalization, quantization, shift or crop):
+
+| Input | Differing pixels | Attribution |
+|---|---:|---|
+| 118, 119, 330, 680, 1430 | 0 | Exact |
+| 1341, 1342, 1343 | 15/19/19 → 0 | Fixed: SAT-collected zones submitted Tails' tail before his body, putting the tail in front. `Tails_tails` follows `Player_2` with the parent's copied priority (`Obj_Tails_Tail_Main`, sonic3k.asm:30034), so native sprite-table order puts the body first (native SAT entries 22 Sonic, 24 body `$6A0`, 25 tail `$6B0`) |
+| 120 | 538 | Inlet limit: native P2 is mapping 0, anim2, `object_control` 1 in RAM, as is the engine. `Player_prev_frame_P2` was zeroed by Level's `clearRAM`, so mapping 0 issues no `Tails_Load_PLC2` DMA and the native draws D400 tiles retained from the HPZ teleporter. The declared direct SSZ boot has no prior VRAM. The joined cold route has not been compared |
+| 0 | 71382 | Inlet limit: the native frame still shows the SSZ title card; the declared direct boot shows gameplay. Frames from 118 match exactly |
+
+`TestS3kSszArrivalHeadless#stationaryTailsUsesTheCutsceneBridgeNativeNoBalanceHeader`
+now also pins P2 map `$AD`, tail map `$22`, both 4,3,2 timers and published
+body-over-tail order at 1341-1343; without the order fix it fails at 1341. The
+positive selection (`TestS3kSszArrivalHeadless`, `TestSpriteManagerRewindCapture`)
+passed 37/0/0/0 at 02:31:22 UTC. Captures:
+external task capture `spot-checks/ssz-arrival-boundary-d5bfcc1c0-373a1e1d6ee9-af8673d1d8-limited-v1/`
+(with `spot-review.json`).
 
 Viewed native and engine gameplay pictures remain bounded spot evidence,
 not whole-scene original-RGB acceptance. Native input0 still publishes its

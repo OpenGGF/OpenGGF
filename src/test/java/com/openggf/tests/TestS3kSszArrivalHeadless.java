@@ -85,9 +85,39 @@ class TestS3kSszArrivalHeadless {
                     assertEquals(1,tails.getTailsTailsController().captureRewindState().currentAnim(),
                             "Wait selects the separate Swish owner, not a blank balance appendage");
                 }
+                if(frame>=1341&&frame<=1343) {
+                    // Native AD40 inputs 1341-1343 (comparison-only RAM observations):
+                    // P2 anim5 map$AD and Obj_Tails_Tail anim1 map$22, timers 4,3,2.
+                    int timer=1345-frame;
+                    var tail=tails.getTailsTailsController().captureRewindState();
+                    assertEquals(5,tails.getAnimationId());assertEquals(0xAD,tails.getMappingFrame());
+                    assertEquals(timer,tails.getAnimationTick(),"P2 timer at input "+frame);
+                    assertEquals(1,tail.currentAnim());assertEquals(0x22,tail.mappingFrame());
+                    assertEquals(timer,tail.frameTick(),"tail timer at input "+frame);
+                    assertTailBehindBodyInPublishedOrder(tails,frame);
+                }
             }
             assertTrue(witnesses>0,"the real cold controller route must reach the native standing branch");
         }
+    }
+
+    /**
+     * SSZ uses SAT collection. Tails_tails follows Player_2 with the parent's
+     * copied priority, so native sprite-table order puts the body in front;
+     * published painter order must therefore emit every tail tile first.
+     */
+    private static void assertTailBehindBodyInPublishedOrder(
+            com.openggf.sprites.playable.AbstractPlayableSprite tails,int frame) {
+        var tiles=com.openggf.level.LevelSpritePresentation.published(GameServices.level()).tiles();
+        var body=tails.getSpriteRenderer();var tail=tails.getTailsTailsController().getRenderer();
+        int lastTail=-1,firstBody=Integer.MAX_VALUE;
+        for(int i=0;i<tiles.size();i++) {
+            int id=tiles.get(i).patternId();
+            if(id>=tail.patternBankBase()&&id<tail.patternBankBase()+tail.patternBankCapacity())lastTail=i;
+            if(id>=body.patternBankBase()&&id<body.patternBankBase()+body.patternBankCapacity())firstBody=Math.min(firstBody,i);
+        }
+        assertTrue(lastTail>=0&&firstBody<Integer.MAX_VALUE,"both Tails parts are published at input "+frame);
+        assertTrue(lastTail<firstBody,"the body covers its tail at input "+frame);
     }
 
     @ParameterizedTest

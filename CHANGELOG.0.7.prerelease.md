@@ -40,7 +40,9 @@ Unreleased. The earlier development themes remain in
   Sky Sanctuary opening bridges use the native top-contact surface and exact
   overlap band, retaining the relative landing write before floor reset; a
   companion standing on the moving cutscene bridge waits without the edge-balance
-  pose, because the bridge sets its own native status bit 7.
+  pose, because the bridge sets its own native status bit 7. In zones that use
+  sprite-table masking (Gumball, Sandopolis, Lava Reef, Hidden Palace and Sky
+  Sanctuary), Tails' body again covers his tails as in the native sprite table.
   Its clouds and collapsing columns retain native foreground priority, and
   the HUD RINGS label uses its dedicated ROM R glyph.
   Teleporter beams retain the selected ROM art bank through recreation,
