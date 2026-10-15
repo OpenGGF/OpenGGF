@@ -7,6 +7,7 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.difficulty.HiddenPalaceDuelRecipe;
 import com.openggf.game.sonic3k.runtime.HpzZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
@@ -158,15 +159,23 @@ public final class CutsceneKnucklesHpzInstance extends AbstractObjectInstance
     private int collisionProperty;
     /** {@code V_int_run_count} of the current update, for the lost-ring spawn in {@code HurtCharacter}. */
     private int frameVInt;
+    private HiddenPalaceDuelRecipe duelRecipe;
+    private boolean nextChargeIsFeint = true;
+    private boolean feintCharge;
 
 
     public CutsceneKnucklesHpzInstance(ObjectSpawn spawn) {
-        this(spawn, false);
+        this(spawn, false, HiddenPalaceDuelRecipe.STOCK);
     }
 
-    private CutsceneKnucklesHpzInstance(ObjectSpawn spawn, boolean copied) {
+    public CutsceneKnucklesHpzInstance(ObjectSpawn spawn, HiddenPalaceDuelRecipe recipe) {
+        this(spawn, false, java.util.Objects.requireNonNull(recipe, "recipe"));
+    }
+
+    private CutsceneKnucklesHpzInstance(ObjectSpawn spawn, boolean copied, HiddenPalaceDuelRecipe recipe) {
         super(spawn, "CutsceneKnuxHPZ");
         this.copied = copied;
+        this.duelRecipe = recipe;
         x = spawn.x();
         y = spawn.y();
     }
@@ -178,7 +187,7 @@ public final class CutsceneKnucklesHpzInstance extends AbstractObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
-        if (tryServices() == null) {
+        if (isDestroyed() || tryServices() == null) {
             return;
         }
         if (!copied) {
@@ -200,7 +209,7 @@ public final class CutsceneKnucklesHpzInstance extends AbstractObjectInstance
     /** {@code CutsceneKnux_HPZ}: copy this SST into slot 45 of the dynamic object RAM. */
     private void cutsceneKnuxHpz() {
         var manager = services().objectManager();
-        CutsceneKnucklesHpzInstance copy = new CutsceneKnucklesHpzInstance(spawn, true);
+        CutsceneKnucklesHpzInstance copy = new CutsceneKnucklesHpzInstance(spawn, true, duelRecipe);
         if (manager != null) {
             if (manager.reserveDynamicSlot(COPY_SST_SLOT)) {
                 ObjectLifetimeOps.addDynamicAtReservedSlot(manager, copy, COPY_SST_SLOT);
@@ -209,7 +218,7 @@ public final class CutsceneKnucklesHpzInstance extends AbstractObjectInstance
                 // and takes the lowest free slot instead, which changes the fight's execution order.
                 LOG.warning("CutsceneKnux_HPZ: SST slot " + COPY_SST_SLOT
                         + " is occupied; Knuckles runs from the lowest free slot instead");
-                spawnFreeChild(() -> new CutsceneKnucklesHpzInstance(spawn, true));
+                spawnFreeChild(() -> new CutsceneKnucklesHpzInstance(spawn, true, duelRecipe));
             }
         }
         ObjectLifetimeOps.deleteNoRespawn(this);
@@ -547,7 +556,20 @@ public final class CutsceneKnucklesHpzInstance extends AbstractObjectInstance
         animateCheckResult();
         timer = (short) (timer - 1);
         if (timer < 0) {
-            loc64222();
+            if (feintCharge) {
+                // The full loc_641C4 charge has already played. Stand into the
+                // existing guard animation instead of releasing this dash, with
+                // the original side/back punish table in loc_63EDA. A 31 seed
+                // gives 32 native guard updates before its existing jump/glide.
+                feintCharge = false;
+                // loc_64222's native child-retirement signal also ends this
+                // charge: dust must not follow the guard/jump/glide feint.
+                flags |= 1;
+                loc63F20();
+                timer = 31;
+            } else {
+                loc64222();
+            }
             return;
         }
         if (timer == 43) {
@@ -560,6 +582,8 @@ public final class CutsceneKnucklesHpzInstance extends AbstractObjectInstance
 
     /** {@code loc_641C4}. */
     private void loc641C4() {
+        feintCharge = duelRecipe == HiddenPalaceDuelRecipe.FEINT && nextChargeIsFeint;
+        if (duelRecipe == HiddenPalaceDuelRecipe.FEINT) nextChargeIsFeint = !nextChargeIsFeint;
         routine = 0x12;
         sub66094(findSonicTails());
         xVel = 0;

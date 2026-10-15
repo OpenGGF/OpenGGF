@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.runtime.SozZoneRuntimeState;
+import com.openggf.game.sonic3k.difficulty.SandopolisChallengeRecipe;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.*;
 import com.openggf.sprites.playable.Knuckles;
@@ -24,6 +25,11 @@ public final class SozHyudoroControllerObjectInstance extends AbstractObjectInst
         spawnChild(()->new SozHyudoroBodyObjectInstance(new ObjectSpawn(0x120,0xA0,0xAA,0,0,false,0),this));
     }
     @Override public int darkness(){return services().zoneRuntimeState() instanceof SozZoneRuntimeState state?state.lighting().darknessLevel():0;}
+    @Override public boolean aggressiveAtCurrentLight(){
+        var module=services().gameModule();
+        return darkness()>0 && module!=null
+                && module.getGameService(SandopolisChallengeRecipe.class)==SandopolisChallengeRecipe.TOMB;
+    }
     @Override public void ghostDeleted(){count=(count-1)&255;}
     public int ghostCount(){return count;}
     @Override public int getX(){return 0x120;}

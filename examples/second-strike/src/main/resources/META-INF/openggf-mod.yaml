@@ -4,7 +4,7 @@ name: Second Strike
 version: 0.1.0
 authors:
   - OpenGGF contributors
-description: "A normal Sonic 3 & Knuckles campaign with cooperative enemies, scarce ring routes, committed attacks, a late boss trick and harder native special and bonus stages. Prototype slice: Angel Island Act 1 and its fire continuation."
+description: "An experimental Sonic 3 & Knuckles hard-mode layer with cooperative enemies, scarce ring routes and remixed native attacks. Authored content focuses on Angel Island and the early campaign."
 engineApiRange: ">=0.7.0 <0.8.0"
 type: patch
 baseGame: s3k

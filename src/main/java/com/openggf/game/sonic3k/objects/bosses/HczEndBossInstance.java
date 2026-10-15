@@ -170,8 +170,16 @@ public class HczEndBossInstance extends AbstractBossInstance
     // Constructor
     // =========================================================================
 
+    private boolean counterCadence;
+
     public HczEndBossInstance(ObjectSpawn spawn) {
+        this(spawn, false);
+    }
+
+    /** Internal finite encounter preset; the stock factory remains unchanged. */
+    public HczEndBossInstance(ObjectSpawn spawn, boolean counterCadence) {
         super(spawn, "HCZEndBoss");
+        this.counterCadence = counterCadence;
     }
 
     // =========================================================================
@@ -600,7 +608,11 @@ public class HczEndBossInstance extends AbstractBossInstance
         if (attackPassCounter >= 0) {
             // More passes remaining — fire blade, wait 0x5F, same callback
             bladeFireSignal = true;
-            setWait(0x5F, WaitCallback.ATTACK_PASS_COMPLETE);
+            // loc_6B08E owns the blade interval. Only alternating late passes
+            // tighten; the following native interval restores breathing room.
+            int interval = counterCadence && state.hitCount <= 4 && (attackPassCounter & 1) == 0
+                    ? (getPlayerCharacter() == PlayerCharacter.KNUCKLES ? 0x4F : 0x3F) : 0x5F;
+            setWait(interval, WaitCallback.ATTACK_PASS_COMPLETE);
         } else {
             // All passes done — save velocity, jump directly to phase decision
             // ROM: bra.w loc_6AFC8 (immediate, no wait)

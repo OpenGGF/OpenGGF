@@ -44,6 +44,8 @@ public class InputHandler {
 	/** Engine-internal ({@link MouseWheel#of}); not part of the creator API. */
 	final MouseWheel wheel = new MouseWheel(this);
 	private boolean controllerPresentation;
+	// Host-only: while a window-level editor front end owns the pads, mappings see a neutral pad.
+	private boolean gamepadSuppressed;
 	private boolean keyboardPresentationPending;
 	// Per logical player: null until that player's first intentional press, then whether it was a pad.
 	private final Boolean[] playerControllerPresentation = new Boolean[2];
@@ -236,7 +238,7 @@ public class InputHandler {
 		if (keyCode < MAX_KEYS && keys[keyCode]) {
 			return true;
 		}
-		return keyCode == inputBindings.rewindKey() && gamepadInputManager.isRewindHeld();
+		return keyCode == inputBindings.rewindKey() && !gamepadSuppressed && gamepadInputManager.isRewindHeld();
 	}
 
 	/**
@@ -247,7 +249,7 @@ public class InputHandler {
 	 */
 	public boolean isRewindHeld() {
 		return logicalOverride == null && (isPhysicalKeyDown(inputBindings.rewindKey())
-				|| gamepadInputManager.isRewindHeld());
+				|| !gamepadSuppressed && gamepadInputManager.isRewindHeld());
 	}
 
 	/** Returns raw keyboard state, ignoring any trace/replay logical override. */
@@ -306,10 +308,10 @@ public class InputHandler {
 			if (logicalOverride != null) {
 				return logicalOverride.debugModeTogglePressed();
 			}
-			return isRawKeyPressed(keyCode) || gamepadInputManager.isDebugModeTogglePressed();
+			return isRawKeyPressed(keyCode) || !gamepadSuppressed && gamepadInputManager.isDebugModeTogglePressed();
 		}
 		if (keyCode == inputBindings.frameStepKey()) {
-			return isRawKeyPressed(keyCode) || gamepadInputManager.isFrameStepTogglePressed();
+			return isRawKeyPressed(keyCode) || !gamepadSuppressed && gamepadInputManager.isFrameStepTogglePressed();
 		}
 		return isRawKeyPressed(keyCode);
 	}
@@ -323,7 +325,7 @@ public class InputHandler {
 	 * entry, art viewer), which are unrelated screens/modes.
 	 */
 	public boolean isGamepadBackButtonPressed() {
-		return logicalOverride == null && gamepadInputManager.isBackButtonPressed();
+		return logicalOverride == null && !gamepadSuppressed && gamepadInputManager.isBackButtonPressed();
 	}
 
 	boolean isRawKeyPressed(int keyCode) {
@@ -456,6 +458,8 @@ public class InputHandler {
 		PlayerInputState keyboardP2 = logicalOverride == null
 				? keyboardInputMapper.mapPlayer2(this, inputBindings) : PlayerInputState.neutral();
 		LogicalInputSnapshot gamepadSnapshot = gamepadInputManager.poll(inputBindings);
+		// Presentation (prompt family) tracking above still runs; only the mapping goes neutral.
+		if (gamepadSuppressed) gamepadSnapshot = LogicalInputSnapshot.neutral();
 		trackSceneGamepads(gamepadInputManager.physicalDevices(), monotonicClock.getAsLong());
 		physicalGamepadSnapshot = gamepadSnapshot;
 		if (gamepadInputManager.hasPresentationPress() && !keyboardPresentationPending) {
@@ -491,7 +495,9 @@ public class InputHandler {
 		return logicalOverride != null ? logicalOverride : physicalGamepadSnapshot;
 	}
 
-	boolean menuDetailsPressed() { return gamepadInputManager.isDebugModeTogglePressed(); }
+	boolean menuDetailsPressed() { return !gamepadSuppressed && gamepadInputManager.isDebugModeTogglePressed(); }
+
+	void setGamepadSuppressed(boolean suppressed) { gamepadSuppressed = suppressed; }
 
 	ControllerPromptStyle menuControllerStyle() { return gamepadInputManager.presentationStyle(); }
 

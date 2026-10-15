@@ -4,7 +4,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.mods.code.ModContext;
 import com.openggf.game.sonic3k.objects.Sonic3kMonitorFactory;
 
-/** Native Robotnik contents for ordinary first-act boxes, preserving every speed-shoe box. */
+/** Native Robotnik contents for ordinary AIZ boxes, preserving every speed-shoe box. */
 public final class SecondStrikeMonitors {
     public static final String ROBOTNIK = "second-strike:robotnik-monitor";
 

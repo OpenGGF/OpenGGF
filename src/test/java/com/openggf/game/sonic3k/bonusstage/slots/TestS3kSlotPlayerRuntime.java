@@ -31,7 +31,7 @@ class TestS3kSlotPlayerRuntime {
     void initializeUsesRomBootstrapState() {
         S3kSlotStageState state = S3kSlotStageState.bootstrap();
         S3kSlotCollisionSystem collisionSystem = new S3kSlotCollisionSystem(
-                S3kSlotRenderBuffers.fromRomData(), state);
+                S3kSlotLayoutFixture.buffers(), state);
         S3kSlotPlayerRuntime runtime = new S3kSlotPlayerRuntime(state, collisionSystem);
         Sonic player = new Sonic("sonic", (short) 0, (short) 0);
         player.setX((short) 0x460);
@@ -61,7 +61,7 @@ class TestS3kSlotPlayerRuntime {
     void advanceRotationUsesStageStateScalar() {
         S3kSlotStageState state = S3kSlotStageState.bootstrap();
         S3kSlotCollisionSystem collisionSystem = new S3kSlotCollisionSystem(
-                S3kSlotRenderBuffers.fromRomData(), state);
+                S3kSlotLayoutFixture.buffers(), state);
         S3kSlotPlayerRuntime runtime = new S3kSlotPlayerRuntime(state, collisionSystem);
 
         runtime.advanceRotation(false);
@@ -74,7 +74,7 @@ class TestS3kSlotPlayerRuntime {
     @Test
     void tickRecordsCollisionThroughCollisionSystem() {
         S3kSlotStageState state = S3kSlotStageState.bootstrap();
-        S3kSlotRenderBuffers buffers = S3kSlotRenderBuffers.fromRomData();
+        S3kSlotRenderBuffers buffers = S3kSlotLayoutFixture.buffers();
         Arrays.fill(buffers.expandedLayout(), (byte) 0);
         int compactIndex = 0;
         int expandedIndex = buffers.compactToExpandedIndex(compactIndex);
@@ -98,7 +98,7 @@ class TestS3kSlotPlayerRuntime {
     @Test
     void airMotionPreservesSpecialCollisionWhenLaterProbeHitsPlainSolid() {
         S3kSlotStageState state = S3kSlotStageState.bootstrap();
-        S3kSlotRenderBuffers buffers = S3kSlotRenderBuffers.fromRomData();
+        S3kSlotRenderBuffers buffers = S3kSlotLayoutFixture.buffers();
         Arrays.fill(buffers.expandedLayout(), (byte) 0);
         int specialCompactIndex = 1;
         int specialExpandedIndex = buffers.compactToExpandedIndex(specialCompactIndex);
@@ -125,7 +125,7 @@ class TestS3kSlotPlayerRuntime {
     void tickAppliesRotatedFallEvenWhenStartingGrounded() {
         S3kSlotStageState state = S3kSlotStageState.bootstrap();
         S3kSlotCollisionSystem collisionSystem = new S3kSlotCollisionSystem(
-                S3kSlotRenderBuffers.fromRomData(), state);
+                S3kSlotLayoutFixture.buffers(), state);
         S3kSlotPlayerRuntime runtime = new S3kSlotPlayerRuntime(state, collisionSystem);
         Sonic player = new Sonic("sonic", (short) 0x460, (short) 0x360);
 
@@ -147,7 +147,7 @@ class TestS3kSlotPlayerRuntime {
     void tickAppliesInertiaMovementWhileAirborne() {
         S3kSlotStageState state = S3kSlotStageState.bootstrap();
         S3kSlotCollisionSystem collisionSystem = new S3kSlotCollisionSystem(
-                S3kSlotRenderBuffers.fromRomData(), state);
+                S3kSlotLayoutFixture.buffers(), state);
         S3kSlotPlayerRuntime runtime = new S3kSlotPlayerRuntime(state, collisionSystem);
         Sonic player = new Sonic("sonic", (short) 0x460, (short) 0x360);
 
@@ -166,7 +166,7 @@ class TestS3kSlotPlayerRuntime {
     void tickAdvancesStageRotationInPlayerStep() {
         S3kSlotStageState state = S3kSlotStageState.bootstrap();
         S3kSlotCollisionSystem collisionSystem = new S3kSlotCollisionSystem(
-                S3kSlotRenderBuffers.fromRomData(), state);
+                S3kSlotLayoutFixture.buffers(), state);
         S3kSlotPlayerRuntime runtime = new S3kSlotPlayerRuntime(state, collisionSystem);
         Sonic player = new Sonic("sonic", (short) 0x460, (short) 0x360);
 
@@ -183,7 +183,7 @@ class TestS3kSlotPlayerRuntime {
     @Test
     void tickAcceptsExternalPositionAdjustmentBeforePhysicsStep() {
         S3kSlotStageState state = S3kSlotStageState.bootstrap();
-        S3kSlotRenderBuffers buffers = S3kSlotRenderBuffers.fromRomData();
+        S3kSlotRenderBuffers buffers = S3kSlotLayoutFixture.buffers();
         Arrays.fill(buffers.expandedLayout(), (byte) 0);
         int compactIndex = 0;
         int expandedIndex = buffers.compactToExpandedIndex(compactIndex);
@@ -206,7 +206,7 @@ class TestS3kSlotPlayerRuntime {
     void objectControlledTickSyncsFixedOriginFromPlayerPosition() {
         S3kSlotStageState state = S3kSlotStageState.bootstrap();
         S3kSlotCollisionSystem collisionSystem = new S3kSlotCollisionSystem(
-                S3kSlotRenderBuffers.fromRomData(), state);
+                S3kSlotLayoutFixture.buffers(), state);
         S3kSlotPlayerRuntime runtime = new S3kSlotPlayerRuntime(state, collisionSystem);
         Sonic player = new Sonic("sonic", (short) 0, (short) 0);
 
@@ -225,7 +225,7 @@ class TestS3kSlotPlayerRuntime {
     void objectControlledTickRoundTripsNativePositionWordsAndFractions() {
         S3kSlotStageState state = S3kSlotStageState.bootstrap();
         S3kSlotCollisionSystem collisionSystem = new S3kSlotCollisionSystem(
-                S3kSlotRenderBuffers.fromRomData(), state);
+                S3kSlotLayoutFixture.buffers(), state);
         S3kSlotPlayerRuntime runtime = new S3kSlotPlayerRuntime(state, collisionSystem);
         Sonic player = new Sonic("sonic", (short) 0, (short) 0);
 
@@ -248,7 +248,7 @@ class TestS3kSlotPlayerRuntime {
     @Test
     void tickAppliesMoveSprite2StepAfterVelocityUpdate() {
         S3kSlotStageState state = S3kSlotStageState.bootstrap();
-        S3kSlotRenderBuffers buffers = S3kSlotRenderBuffers.fromRomData();
+        S3kSlotRenderBuffers buffers = S3kSlotLayoutFixture.buffers();
         Arrays.fill(buffers.expandedLayout(), (byte) 0);
         S3kSlotCollisionSystem collisionSystem = new S3kSlotCollisionSystem(buffers, state);
         S3kSlotPlayerRuntime runtime = new S3kSlotPlayerRuntime(state, collisionSystem);
@@ -274,7 +274,7 @@ class TestS3kSlotPlayerRuntime {
     @Test
     void groundedMoveAppliesOnlyGroundInertiaDeltaBeforeVelocityStep() {
         S3kSlotStageState state = S3kSlotStageState.bootstrap();
-        S3kSlotRenderBuffers buffers = S3kSlotRenderBuffers.fromRomData();
+        S3kSlotRenderBuffers buffers = S3kSlotLayoutFixture.buffers();
         Arrays.fill(buffers.expandedLayout(), (byte) 0);
         S3kSlotCollisionSystem collisionSystem = new S3kSlotCollisionSystem(buffers, state);
         S3kSlotPlayerRuntime runtime = new S3kSlotPlayerRuntime(state, collisionSystem);
@@ -296,7 +296,7 @@ class TestS3kSlotPlayerRuntime {
     void bumperResponseUsesTileAnchorRatherThanTileCentre() {
         S3kSlotStageState state = S3kSlotStageState.bootstrap();
         S3kSlotCollisionSystem collisionSystem = new S3kSlotCollisionSystem(
-                S3kSlotRenderBuffers.fromRomData(), state);
+                S3kSlotLayoutFixture.buffers(), state);
 
         var anchor = collisionSystem.resolveTileResponse(5, (short) 0x460, (short) 0x430,
                 (short) 0x454, (short) 0x41C);
@@ -331,7 +331,7 @@ class TestS3kSlotPlayerRuntime {
     void debugModeForcesRotationOffAndRestoresSavedRotationOnExit() {
         S3kSlotStageState state = S3kSlotStageState.bootstrap();
         S3kSlotCollisionSystem collisionSystem = new S3kSlotCollisionSystem(
-                S3kSlotRenderBuffers.fromRomData(), state);
+                S3kSlotLayoutFixture.buffers(), state);
         S3kSlotPlayerRuntime runtime = new S3kSlotPlayerRuntime(state, collisionSystem);
         Sonic player = new Sonic("sonic", (short) 0x460, (short) 0x360);
 
@@ -360,7 +360,7 @@ class TestS3kSlotPlayerRuntime {
     void debugModeMovesDirectlyWithoutAdvancingRotation() {
         S3kSlotStageState state = S3kSlotStageState.bootstrap();
         S3kSlotCollisionSystem collisionSystem = new S3kSlotCollisionSystem(
-                S3kSlotRenderBuffers.fromRomData(), state);
+                S3kSlotLayoutFixture.buffers(), state);
         S3kSlotPlayerRuntime runtime = new S3kSlotPlayerRuntime(state, collisionSystem);
         Sonic player = new Sonic("sonic", (short) 0x460, (short) 0x360);
 
@@ -382,7 +382,7 @@ class TestS3kSlotPlayerRuntime {
     @Test
     void groundProjectedOriginStaysAtPreAirMotionSnapshotWhileSlotOriginAdvances() {
         S3kSlotStageState state = S3kSlotStageState.bootstrap();
-        S3kSlotRenderBuffers buffers = S3kSlotRenderBuffers.fromRomData();
+        S3kSlotRenderBuffers buffers = S3kSlotLayoutFixture.buffers();
         Arrays.fill(buffers.expandedLayout(), (byte) 0);
         S3kSlotCollisionSystem collisionSystem = new S3kSlotCollisionSystem(buffers, state);
         S3kSlotPlayerRuntime runtime = new S3kSlotPlayerRuntime(state, collisionSystem);
@@ -415,7 +415,7 @@ class TestS3kSlotPlayerRuntime {
     @Test
     void debugModeSuppressesCollisionState() {
         S3kSlotStageState state = S3kSlotStageState.bootstrap();
-        S3kSlotRenderBuffers buffers = S3kSlotRenderBuffers.fromRomData();
+        S3kSlotRenderBuffers buffers = S3kSlotLayoutFixture.buffers();
         Arrays.fill(buffers.expandedLayout(), (byte) 0);
         int compactIndex = 0;
         int expandedIndex = buffers.compactToExpandedIndex(compactIndex);

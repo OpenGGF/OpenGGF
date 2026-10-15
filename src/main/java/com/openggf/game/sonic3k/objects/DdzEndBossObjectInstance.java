@@ -4,6 +4,7 @@ import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.S3kFullSaveGame;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.difficulty.DoomsdayMissileRecipe;
 import com.openggf.game.sonic3k.runtime.DdzZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -13,6 +14,7 @@ import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * ROM {@code Obj_DDZEndBoss} ($B6, sonic3k.asm:173421-173820): the Doomsday end boss. The object
@@ -72,10 +74,16 @@ public final class DdzEndBossObjectInstance extends AbstractDdzObjectInstance
     private int hitPoints;
     private int flashTimer;
     private boolean initialized;
+    private DoomsdayMissileRecipe missileRecipe;
 
 
     public DdzEndBossObjectInstance(ObjectSpawn spawn) {
+        this(spawn, DoomsdayMissileRecipe.STOCK);
+    }
+
+    public DdzEndBossObjectInstance(ObjectSpawn spawn, DoomsdayMissileRecipe recipe) {
         super(spawn, "DDZEndBoss", null);
+        missileRecipe = Objects.requireNonNull(recipe, "recipe");
         xPos = (spawn.x() & 0xFFFF) << 16;
         yPos = (spawn.y() & 0xFFFF) << 16;
     }
@@ -109,6 +117,10 @@ public final class DdzEndBossObjectInstance extends AbstractDdzObjectInstance
 
     int routine() {
         return routine;
+    }
+
+    DoomsdayMissileRecipe missileRecipe() {
+        return missileRecipe;
     }
 
     @Override

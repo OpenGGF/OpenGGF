@@ -9,6 +9,7 @@ public final class SecondStrikeEnemies {
     public static final String SPOTTER = OWNER + ":spotter";
     public static final String GUARD = OWNER + ":guard";
     public static final String ARTILLERY = OWNER + ":artillery";
+    public static final String SPLIT_ARTILLERY = OWNER + ":artillery-split";
     public static final String SHOT = OWNER + ":shot";
 
     // AIZ's normal PLC art provider owns these ROM-backed mapping/DPLC sheets.
@@ -29,11 +30,14 @@ public final class SecondStrikeEnemies {
         context.registerObject("spotter", (spawn, registry) -> new SpotterBadnik(spawn));
         context.registerObject("guard", (spawn, registry) -> new GuardBadnik(spawn));
         context.registerObject("artillery", (spawn, registry) -> new ArtilleryBadnik(spawn));
+        context.registerObject("artillery-split", (spawn, registry) ->
+                new ArtilleryBadnik(spawn, ArtilleryBadnik.FanPattern.SPLIT));
         context.registerObject("shot", (spawn, registry) -> new CommittedShot(spawn));
     }
 
     public static ObjectSpawn ownedSpawn(String key, int x, int y, int layoutIndex) {
-        if (!SPOTTER.equals(key) && !GUARD.equals(key) && !ARTILLERY.equals(key) && !SHOT.equals(key)) {
+        if (!SPOTTER.equals(key) && !GUARD.equals(key) && !ARTILLERY.equals(key)
+                && !SPLIT_ARTILLERY.equals(key) && !SHOT.equals(key)) {
             throw new IllegalArgumentException("Unknown Second Strike enemy key: " + key);
         }
         return new ObjectSpawn(x, y, 0, 0, 0, false, y, layoutIndex, OWNER, key);

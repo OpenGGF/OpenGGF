@@ -347,12 +347,21 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
 
     // ===== Constructor =====
 
+    private boolean brittleSupport;
+
     public CollapsingBridgeObjectInstance(ObjectSpawn spawn) {
+        this(spawn, false);
+    }
+
+    /** Internal preset: only ordinary standing supports change; trigger/stomp owners stay native. */
+    public CollapsingBridgeObjectInstance(ObjectSpawn spawn, boolean brittleSupport) {
         super(spawn, "CollapsingBridge");
         this.x = spawn.x();
         this.y = spawn.y();
         this.hFlip = (spawn.renderFlags() & 0x01) != 0;
         resolveZoneConfig(spawn.subtype() & 0xFF);
+        this.brittleSupport = brittleSupport && mode == CollapseMode.STANDARD;
+        if (this.brittleSupport) collapseTimer = Math.min(collapseTimer, 16);
     }
 
     /**
@@ -1139,7 +1148,10 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
             renderer.drawFramePieceByIndex(fragmentFrameIndex, 0, x, y, hFlip, false);
         } else {
             // Intact bridge
-            renderer.drawFrameIndex(initialMappingFrame, x, y, hFlip, false);
+            // A visible tremor warns during the committed countdown. Collision stays
+            // at the native center; only the intact art moves by one pixel.
+            int warningX = brittleSupport && state == 1 ? ((collapseTimer & 2) == 0 ? -1 : 1) : 0;
+            renderer.drawFrameIndex(initialMappingFrame, x + warningX, y, hFlip, false);
         }
     }
 

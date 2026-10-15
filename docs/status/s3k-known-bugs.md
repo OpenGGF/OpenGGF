@@ -87,6 +87,8 @@ Entries should include:
 
 ## Table of Contents
 
+0. [MHZ Cluckoid Visual Child After Explicit Parent Removal (OPEN)](#mhz-cluckoid-visual-child-after-explicit-parent-removal-open)
+0. [ICZ2 Folded Boss Children and Reserved Slots on Rewind (OPEN)](#icz2-folded-boss-children-and-reserved-slots-on-rewind-open)
 0. [Native Ending Presentation Gaps (RESOLVED)](#native-ending-presentation-gaps-resolved)
 0. [AIZ1 Ledge — Ground Sensors and `checkFloorDist` Disagree About Solidity (OPEN — question, not yet a diagnosis)](#aiz1-ledge--ground-sensors-and-checkfloordist-disagree-about-solidity-open--question-not-yet-a-diagnosis)
 0. [Reverse Gravity — Native Route Qualification Remains Open](#reverse-gravity--native-route-qualification-remains-open)
@@ -138,6 +140,53 @@ Entries should include:
 46. [Object Art and Clock Reads Found by the Slay the Robotnik Sprite Research (SUSPECTED)](#object-art-and-clock-reads-found-by-the-slay-the-robotnik-sprite-research-suspected)
 
 ---
+
+## MHZ Cluckoid Visual Child After Explicit Parent Removal (OPEN)
+
+**Location:** `CluckoidBadnikInstance.ArrowChild`; native `loc_8E2CE` and
+`Child_Draw_Sprite` retire a child when its parent has status bit7.
+
+**Observed scope, 2026-10-15:** an explicit in-range dynamic-parent removal leaves
+STOCK's managed visual arrow alive through the next ordinary manager dispatch,
+because the arrow checks `parent.isDestroyed()` while removal clears its slot without
+setting that flag. The removed parent is not normally scheduled. Pressure/emissions
+from an explicit retained direct call are a different diagnostic and do not establish
+ordinary execution after removal. The arrow has no touch-response collision; detached
+leaves intentionally continue native motion. Natural offscreen retirement and death
+were not shown broken by this test, since they can retire both actors independently.
+
+Second Strike's PULSED opt-in unload defense retires its arrow and stops further
+pressure/emissions; it does not silently repair STOCK. The scoped tests and rejected
+broader interpretation are recorded in the [MHZ native plan](../architecture/plans/2026-10-15-second-strike-c2-mhz.md).
+**Removal condition:** native owner/child lifetime qualification covering explicit
+removal, normal offscreen/death, and rewind without altering detached leaves.
+
+## ICZ2 Folded Boss Children and Reserved Slots on Rewind (OPEN)
+
+**Location:** `IczEndBossInstance` structural/effect child collections and their
+native SST reservations. Both collections were deferred by the default rewind policy.
+
+**Observed scope, 2026-10-15:** destructive committed STOCK restore drops six frost
+children. Capturing only the effect list restores its tuples but leaves the raw puff
+slots free, since those slots are neither managed actors nor tracked reservations.
+Restoring only that list can alias later allocations. Structural offsets/timers also
+reset; an observed67-pixel future puff-anchor difference survives even when the
+reported snapshot-key differences are zero. Earlier quiet-control claims were limited
+to the inspected scalar/object keys, not complete folded-child geometry.
+
+A narrow placed-owner reservation seam now uses the existing captured reservation
+ledger and retires future child slots at their own ascending execution position;
+a Stock consumer now restores both lists, geometry and owned slots in the worker
+624-case focused union. Root composition excludes the later FLANKED preset. The
+consumer's rejected-placed-parent raw fallback is removed: placed rejection
+returns allocation failure without raw mutation, while only non-placed component
+fixtures retain the legacy path. Root53676 repeats genuine placed destructive
+restore plus both rejection controls on the actual composed STOCK owner. No global allocator-bit copy,
+synthetic parent key or generic rewind framework is accepted. **Removal condition:**
+both causal collections and exact owned SST slots survive destructive restore,
+partial capacity, release/reuse/teardown and forward replay with matching future
+anchors/player capture. FLANKED remains inactive/unqualified until those native and
+separate encounter-readability gates pass. See the [campaign delivery plan](../architecture/plans/2026-10-15-second-strike-campaign-delivery.md).
 
 <a id="native-ending-presentation-gaps-open"></a>
 ## Native Ending Presentation Gaps (RESOLVED)
@@ -5987,6 +6036,14 @@ against `sub_32F56` (sonic3k.asm:68950-68992) and Obj_Bumper
 ---
 
 ## Slot Machine Bonus Stage Is Not Rewindable
+
+**2026-10-15 source-authority candidate:** the original two entry words and1024
+layout cells now load from the bounded user-ROM source at1E4080 before runtime
+mutation. The former literal layout/start oracle exists only in test fixtures;
+canonical bytes were equal, so this is a source-authority repair rather than a
+stock-layout mismatch. The existing live-rewind capability gate below remains
+unchanged. Loader/codec/component graph tests do not qualify that runtime or an
+authored Slots challenge/reward/return.
 
 - **Location** — `S3kSlotBonusStageRuntime`, `S3kSlotStageState`, `S3kSlotPlayerRuntime`, `S3kSlotRenderBuffers`, `S3kSlotRewindSupport`, `AbstractBonusStageCoordinator.supportsRewind`, `GameLoop.isBonusStageRewindable`
 - **Symptom** — Holding rewind during the S3K Slot Machine bonus stage is a no-op and no keyframes are recorded for it; Gumball and Pachinko rewind normally.

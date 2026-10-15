@@ -408,8 +408,16 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         }
     }
 
+    private boolean counterCadence;
+
     public HczMinibossInstance(ObjectSpawn spawn) {
+        this(spawn, false);
+    }
+
+    /** Internal finite encounter preset; the stock factory remains unchanged. */
+    public HczMinibossInstance(ObjectSpawn spawn, boolean counterCadence) {
         super(spawn, "HCZMiniboss");
+        this.counterCadence = counterCadence;
     }
 
     @Override
@@ -696,7 +704,10 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         attackPatternIndex = (attackPatternIndex + 1) % ATTACK_PATTERNS.length;
 
         int xOffset = pattern[0];
-        passCounter = pattern[1];
+        // sub_48916 selects one finite native pass budget per attack cycle.
+        // The remix adds one readable ascent/dive only after damage; it never
+        // reselects the pattern while a cycle is in progress.
+        passCounter = pattern[1] + (counterCadence && state.hitCount <= 3 ? 1 : 0);
         storedHorizontalVelocity = (xOffset < 0xA0) ? 0x400 : -0x400;
         int targetX = services().camera().getX() + xOffset;
         setBossPosition(targetX, state.y);

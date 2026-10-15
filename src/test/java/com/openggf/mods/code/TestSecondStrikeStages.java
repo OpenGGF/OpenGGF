@@ -38,7 +38,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageConstants.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-/** ROM-board fidelity and native ring-loop behavior for the representative variant. */
+/** Native board consumers and unchanged Gumball recovery after campaign publication. */
 class TestSecondStrikeStages {
     @TempDir
     static Path content;
@@ -49,10 +49,10 @@ class TestSecondStrikeStages {
     @BeforeAll
     static void compileContent() throws Exception {
         loader = compilePolicies(content);
-        Object policy = loader.loadClass("secondstrike.stages.SecondStrikeStages")
+        boards = (BlueSphereLayoutPolicy) loader.loadClass("secondstrike.campaign.CampaignBlueSphereBoards")
                 .getConstructor().newInstance();
-        boards = (BlueSphereLayoutPolicy) policy;
-        springs = (GumballSpringPolicy) policy;
+        springs = (GumballSpringPolicy) loader.loadClass("secondstrike.stages.SecondStrikeStages")
+                .getConstructor().newInstance();
     }
 
     @AfterAll
@@ -155,12 +155,14 @@ class TestSecondStrikeStages {
 
     @Test
     @RequiresRom(SonicGame.SONIC_3K)
-    void otherChaosAndSuperBoardsRemainNativeAndPassHostAdmission() throws Exception {
-        for (int stage = 1; stage < 16; stage++) {
+    void unusedEighthSlotsRemainNativeAndPassHostAdmission() throws Exception {
+        // The fourteen authored boards have their own campaign fixture. These
+        // two unused native slots retain the original pass-through contract.
+        for (int stage : new int[] {7, 15}) {
             byte[] source = romBoard(stage);
             byte[] result = boards.transformLayout(stage, source);
             assertNotSame(source, result);
-            assertArrayEquals(source, result, "unrepresented board " + stage + " remains stock");
+            assertArrayEquals(source, result, "unused native slot " + stage + " remains stock");
             assertArrayEquals(source, S3kDifficultyRules.blueSphereLayout(source, result));
         }
     }
@@ -277,7 +279,7 @@ class TestSecondStrikeStages {
                         context.registerService("boss", com.openggf.game.sonic3k.difficulty.AizMinibossAttackPolicy.class,
                                 new secondstrike.boss.SecondStrikeBosses());
                         context.registerService("board", com.openggf.game.sonic3k.difficulty.BlueSphereLayoutPolicy.class,
-                                new secondstrike.stages.SecondStrikeStages());
+                                new secondstrike.campaign.CampaignBlueSphereBoards());
                         context.registerService("springs", com.openggf.game.sonic3k.difficulty.GumballSpringPolicy.class,
                                 new secondstrike.stages.SecondStrikeStages());
                     }
@@ -352,6 +354,7 @@ class TestSecondStrikeStages {
     static URLClassLoader compilePolicies(Path directory) throws Exception {
         return SecondStrikeSourceFixture.compile(directory.resolve("policies"),
                 SecondStrikeSourceFixture.MAIN.resolve("secondstrike/boss/SecondStrikeBosses.java"),
+                SecondStrikeSourceFixture.MAIN.resolve("secondstrike/campaign/CampaignBlueSphereBoards.java"),
                 SecondStrikeSourceFixture.MAIN.resolve("secondstrike/stages/SecondStrikeStages.java"));
     }
 }

@@ -90,9 +90,17 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance
     private SpikerTopSpikeChild topSpike;
     private boolean waitingForOnscreen = true;
 
+    private boolean landingGuard;
+
     public SpikerBadnikInstance(ObjectSpawn spawn) {
+        this(spawn, false);
+    }
+
+    /** Internal native preset entry; ordinary ROM factories keep the shipped defaults. */
+    public SpikerBadnikInstance(ObjectSpawn spawn, boolean landingGuard) {
         super(spawn, "Spiker",
                 Sonic3kObjectArtKeys.MGZ_SPIKER, COLLISION_SIZE_INDEX, PRIORITY_BUCKET);
+        this.landingGuard = landingGuard;
         this.mappingFrame = 0;
     }
 
@@ -190,7 +198,7 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance
     }
 
     private void updateDetect(AbstractPlayableSprite mainPlayer) {
-        if (nearestPlayerDistance(mainPlayer) >= DETECT_RANGE) {
+        if (nearestPlayerDistance(mainPlayer) >= (landingGuard ? DETECT_RANGE + 0x20 : DETECT_RANGE)) {
             return;
         }
         state = State.RISE;

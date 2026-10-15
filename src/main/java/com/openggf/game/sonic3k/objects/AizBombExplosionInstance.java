@@ -49,6 +49,7 @@ public class AizBombExplosionInstance extends AbstractObjectInstance
     /** ROM {@code mapping_frame}. */
     private int mappingFrame;
     private boolean active;
+    private AizBattleshipInstance difficultyOwner;
 
     /**
      * @param x          world X position
@@ -69,9 +70,19 @@ public class AizBombExplosionInstance extends AbstractObjectInstance
         this.active = false;
     }
 
+    AizBombExplosionInstance(int x, int y, int animIndex, int delay,
+                             AizBattleshipInstance difficultyOwner) {
+        this(x, y, animIndex, delay);
+        this.difficultyOwner = difficultyOwner;
+    }
+
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
         if (isDestroyed()) return;
+        if (difficultyOwner != null && !difficultyOwner.difficultyBombsAreLive()) {
+            setDestroyed(true);
+            return;
+        }
 
         if (!active) {
             // ROM Obj_AIZBombExplosion (sonic3k.asm:105471): subq.w #1,$2E(a0) /
@@ -110,6 +121,7 @@ public class AizBombExplosionInstance extends AbstractObjectInstance
 
     @Override
     public int getCollisionFlags() {
+        if (difficultyOwner != null && !difficultyOwner.difficultyBombsAreLive()) return 0;
         if (!active) {
             return 0;
         }

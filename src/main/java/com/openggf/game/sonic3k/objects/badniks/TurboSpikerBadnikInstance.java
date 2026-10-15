@@ -105,9 +105,17 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
     private TurboSpikerShellChild shellChild;
     private TurboSpikerWaterfallOverlayChild waterfallOverlayChild;
 
+    private boolean alert;
+
     public TurboSpikerBadnikInstance(ObjectSpawn spawn) {
+        this(spawn, false);
+    }
+
+    /** Internal native preset entry; ordinary ROM factories keep the shipped defaults. */
+    public TurboSpikerBadnikInstance(ObjectSpawn spawn, boolean alert) {
         super(spawn, "TurboSpiker",
                 Sonic3kObjectArtKeys.HCZ_TURBO_SPIKER, COLLISION_SIZE_INDEX, PRIORITY_BUCKET_NORMAL);
+        this.alert = alert;
         this.hiddenVariant = (spawn.renderFlags() & 0x02) != 0;
         this.state = hiddenVariant ? State.HIDDEN_WAIT : State.PATROL;
         this.turnTimer = (spawn.subtype() & 0xFF) << 1;
@@ -220,7 +228,7 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
 
     private void updateHiddenWait(AbstractPlayableSprite mainPlayer) {
         TargetSelection target = findNearestTarget(mainPlayer);
-        if (target.player() == null || target.distance() >= DETECT_RANGE) {
+        if (target.player() == null || target.distance() >= (alert ? DETECT_RANGE + 0x20 : DETECT_RANGE)) {
             return;
         }
 
@@ -364,7 +372,7 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
         if (player == null) {
             return false;
         }
-        if (target.distance() >= DETECT_RANGE) {
+        if (target.distance() >= (alert ? DETECT_RANGE + 0x20 : DETECT_RANGE)) {
             return false;
         }
 

@@ -71,6 +71,34 @@ entry as the brush, focus the destination canvas, and place it. `Enter` descends
 into the selected content and `Escape` returns to its parent. The active layer
 is shown as FG or BG.
 
+### Controller HUD
+
+The editor draws its interface at window resolution around the level, sized for a
+gamepad on a couch as well as a keyboard: a top bar with the view and layer, a
+ten-slot brush hotbar along the bottom and button prompts that follow the pad you
+are holding (Xbox, PlayStation or keyboard keycaps). The level is never covered by
+a panel.
+
+![The Emerald Practice course in World view with the controller HUD: a gold block cursor over the level, the ten-slot block hotbar along the bottom and Xbox button prompts below it.](images/level-editor/hud-world.png)
+
+*Steer with the left stick (the right stick moves faster; the D-pad steps whole
+blocks), hold South (A / Cross) and steer to paint a stroke that undoes as one
+edit, and pick with West (X / Square). LB/RB change brush along the hotbar.*
+
+![The library sheet open over the World view, showing ROM-decoded block thumbnails in a grid with the highlighted block enlarged and its details and usage count on the right.](images/level-editor/hud-library.png)
+
+*North (Y / Triangle) or `Tab` opens the library for the current brush kind;
+choosing an entry puts it on the hotbar. RT edits the block under the cursor and
+then its chunk; LT or East goes back up. Hold View (or press `Q`) for a wheel of
+tools for the current view, and press Menu (or `F1`) for save, playtest, export,
+project commands and every editor command.*
+
+The full pad table is in the [configuration guide](../../../CONFIGURATION.md#level-editor-experimental). The
+keyboard shortcuts below still apply, except that `Tab`, `F1`, `Q` and `1`–`0`
+belong to the HUD. The screenshots in the rest of this section show the earlier
+in-game chrome, which `-Dopenggf.editor.ui=classic` keeps; the hierarchy, brushes
+and edits are the same in both.
+
 ![The Emerald Practice sample course in World view, with the Emerald Hill block library on the left and the selected terrain cell outlined in the world.](images/level-editor/world.png)
 
 *World view of a blank Sonic 2 project with a sample floor assembled from decoded
@@ -104,7 +132,7 @@ H/J for flips, and T for priority. Escape returns to Block, then World.*
 | Input | Action |
 |---|---|
 | Arrows / menu directions | Move the canvas cursor or browse the focused library |
-| `Tab` | Cycle editor focus |
+| `Tab` | Open the library sheet (classic chrome: cycle editor focus) |
 | `Page Up` / `Page Down` | Move through library pages |
 | `Space` / Confirm in a library | Select the hovered brush |
 | `Space` / left click | Place or apply the brush |
@@ -126,13 +154,13 @@ H/J for flips, and T for priority. Escape returns to Block, then World.*
 | `Ctrl+Z` / `Ctrl+Y` | Undo / redo |
 | `Insert` | Start or end library filter text input |
 | `Backspace` / `Ctrl+Backspace` while filtering | Remove one filter character / clear the filter |
-| `F1` / north controller button | Open the command palette |
+| `F1` | Open the editor menu (classic chrome: the command palette) |
 
 Object-library Left/Right chooses the brush object; Up/Down changes the brush
 subtype. Picking an existing object lets you edit its subtype, flips, and respawn
-tracking without changing the brush for future placements. In spawn mode,
-gamepad A places, B picks, and C deletes. The visible prompts adapt to the
-controller family.
+tracking without changing the brush for future placements. In spawn mode the HUD
+places with South, picks with West and deletes from the tools wheel; the classic
+chrome uses gamepad A, B and C. The visible prompts adapt to the controller family.
 
 Pointer clicks on editor panes belong to those panes and do not paint through
 menus or chrome. Filter text and modal forms suppress underlying editing

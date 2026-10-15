@@ -14,7 +14,12 @@ import com.openggf.level.objects.ObjectSpawn;
 public final class MgzEndBossInstance extends MgzDrillingRobotnikInstance {
 
     public MgzEndBossInstance(ObjectSpawn spawn) {
-        super(spawn, false);
+        this(spawn, false);
+    }
+
+    /** Internal finite encounter preset; native motion and endings remain owned here. */
+    public MgzEndBossInstance(ObjectSpawn spawn, boolean counterCadence) {
+        super(spawn, false, counterCadence);
     }
 
 }

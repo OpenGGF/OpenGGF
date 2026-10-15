@@ -67,8 +67,8 @@ class TestS3kSlotMachineRenderer {
 
     @Test
     void displayScreenAnchorUsesSlotScreenOriginInsteadOfHiddenCageWorldAnchor() {
-        int cameraX = S3kSlotRomData.SLOT_BONUS_PLAYER_START_X - 0xA0;
-        int cameraY = S3kSlotRomData.SLOT_BONUS_PLAYER_START_Y - 0x70;
+        int cameraX = S3kSlotLayoutFixture.START_X - 0xA0;
+        int cameraY = S3kSlotLayoutFixture.START_Y - 0x70;
         int eventsBgX = S3kSlotRomData.SLOT_BONUS_CAGE_CENTER_X;
         int eventsBgY = S3kSlotRomData.SLOT_BONUS_CAGE_CENTER_Y;
 

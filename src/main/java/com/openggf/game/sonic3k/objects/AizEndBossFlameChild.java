@@ -91,6 +91,7 @@ public class AizEndBossFlameChild extends AbstractObjectInstance
     private int animTimer;
     private int mappingFrame;
     private boolean faceRight;
+    private boolean difficultyAttack;
 
     public AizEndBossFlameChild(AizEndBossInstance boss,
                                 AizEndBossPropellerChild propeller, int angle) {
@@ -111,6 +112,12 @@ public class AizEndBossFlameChild extends AbstractObjectInstance
         this.mappingFrame = vertical ? 0x0B : 0x07;
     }
 
+    AizEndBossFlameChild(AizEndBossInstance boss,
+                        AizEndBossPropellerChild propeller, int angle, boolean difficultyAttack) {
+        this(boss, propeller, angle);
+        this.difficultyAttack = difficultyAttack;
+    }
+
     @Override
     public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         AizEndBossInstance restoredBoss = AizEndBossRewindLinks.nearestBoss(ctx);
@@ -128,7 +135,7 @@ public class AizEndBossFlameChild extends AbstractObjectInstance
         if (isDestroyed()) return;
 
         // Check if parent boss is defeated
-        if (boss.isDefeatSignal()) {
+        if (boss.isDefeatSignal() || difficultyAttack && !boss.difficultyAttackIsLive()) {
             setDestroyed(true);
             return;
         }
@@ -164,12 +171,12 @@ public class AizEndBossFlameChild extends AbstractObjectInstance
     private void spawnBomb() {
         if (services().objectManager() == null) return;
 
-        spawnChild(() -> new AizEndBossBombChild(boss, currentX, currentY, angle));
+        spawnChild(() -> new AizEndBossBombChild(boss, currentX, currentY, angle, difficultyAttack));
     }
 
     @Override
     public int getCollisionFlags() {
-        return COLLISION_FLAGS;
+        return difficultyAttack && !boss.difficultyAttackIsLive() ? 0 : COLLISION_FLAGS;
     }
 
     @Override

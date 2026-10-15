@@ -12,6 +12,10 @@ import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseAttackable;
 import com.openggf.level.objects.PoweredScreenAttackable;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.rewind.identity.PlayerRefId;
+import com.openggf.game.rewind.identity.RewindIdentityTable;
+import com.openggf.game.rewind.schema.CompactFieldCapturer;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -154,7 +158,7 @@ class TestSecondStrikeEnemies {
         }
     }
 
-    @Test void prolongedRollingOverlapCannotConsumeASecondHitAfterTheTimer() throws Exception {
+    @Test void prolongedRollingOverlapCannotConsumeASecondHitButCollisionRecoversOnTime() throws Exception {
         try (var fixture = new Fixture()) {
             var enemy = fixture.enemy("ArtilleryBadnik", "artillery", 400, 200);
             fixture.playerX = 400;
@@ -162,7 +166,8 @@ class TestSecondStrikeEnemies {
             for (int tick = 0; tick < 60; tick++) enemy.update(tick, fixture.player);
             attack(enemy, fixture.player);
             assertFalse(enemy.isDestroyed(), "a distinct separated contact is required");
-            assertEquals(0, touch(enemy).getCollisionFlags());
+            assertEquals(0x23, touch(enemy).getCollisionFlags(),
+                    "body contact continuity must not extend the fixed24-update collision flash");
             fixture.playerX = 800;
             enemy.update(61, fixture.player);
             assertEquals(0x23, touch(enemy).getCollisionFlags());
@@ -360,12 +365,149 @@ class TestSecondStrikeEnemies {
 
     @Test void hurtHealthCooldownAndSeparationRecreateAndReplay() throws Exception {
         try (var fixture = new Fixture()) {
+            fixture.playerX = 400;
             for (String[] definition : List.of(new String[]{"SpotterBadnik", "spotter"},
                     new String[]{"GuardBadnik", "guard"}, new String[]{"ArtilleryBadnik", "artillery"})) {
                 var enemy = fixture.enemy(definition[0], definition[1], 400, 200);
                 attack(enemy, fixture.player);
-                assertReplay(enemy, fixture, 12);
+                var recreated = assertReplay(enemy, fixture, 30);
                 assertFalse(enemy.isDestroyed());
+                assertNotEquals(0, touch(enemy).getCollisionFlags(), "rewound held contact cannot prolong hit flash");
+                int property = touch(enemy).getCollisionProperty();
+                attack(enemy, fixture.player);
+                attack(recreated, fixture.player);
+                assertEquals(property, touch(enemy).getCollisionProperty(), "restored uninterrupted contact cannot take another hit");
+                assertEquals(property, touch(recreated).getCollisionProperty(), "the recreated actor keeps the actual held attacker");
+            }
+        }
+    }
+
+    @Test void heldContactFollowsActorIdentityAcrossReorderAndDropsReplacedActors() throws Exception {
+        try (var fixture = new Fixture()) {
+            fixture.playerX = 800;
+            var held = contactPlayer();
+            var fresh = contactPlayer();
+            var roster = new ArrayList<PlayableEntity>(List.of(held, fresh));
+            fixture.services.withPlayerQuery(new ObjectPlayerQuery(() -> fixture.player, () -> roster));
+            var enemy = fixture.enemy("ArtilleryBadnik", "artillery", 400, 200);
+            attack(enemy, held);
+            for (int tick = 0; tick < 24; tick++) enemy.update(tick, fixture.player);
+            java.util.Collections.swap(roster, 0, 1);
+            enemy.update(24, fixture.player);
+            attack(enemy, held);
+            assertFalse(enemy.isDestroyed(), "the held actor remains held after changing roster index");
+            attack(enemy, fresh);
+            assertTrue(enemy.isDestroyed(), "a fresh actor must not inherit the prior occupant's latch");
+
+            var replacementTarget = fixture.enemy("ArtilleryBadnik", "artillery", 400, 200);
+            attack(replacementTarget, held);
+            for (int tick = 0; tick < 24; tick++) replacementTarget.update(tick, fixture.player);
+            roster.remove(held);
+            var replacement = contactPlayer();
+            roster.add(replacement);
+            replacementTarget.update(24, fixture.player);
+            var latches = replacementTarget.getClass().getSuperclass().getDeclaredField("heldAttackers");
+            latches.setAccessible(true);
+            assertEquals(0, ((PlayableEntity[]) latches.get(replacementTarget)).length,
+                    "removal clears the exact old actor even when its replacement has identical coordinates");
+            attack(replacementTarget, replacement);
+            assertTrue(replacementTarget.isDestroyed());
+        }
+    }
+
+    private static PlayableEntity contactPlayer() {
+        var player = mock(PlayableEntity.class);
+        when(player.getCentreX()).thenReturn((short) 400);
+        when(player.getCentreY()).thenReturn((short) 200);
+        when(player.getYRadius()).thenReturn((short) 19);
+        when(player.incrementBadnikChain()).thenReturn(100);
+        return player;
+    }
+
+    @Test void raisedCoconutTellCanBeInterruptedBeforeAnyDefenderHearsIt() throws Exception {
+        try (var fixture = new Fixture()) {
+            var caller = fixture.enemy("SpotterBadnik", "spotter", 540, 200);
+            var gunner = fixture.enemy("ArtilleryBadnik", "artillery", 400, 200);
+            fixture.playerX = 700;
+            caller.update(0, fixture.player);
+            for (int tick = 0; tick < 12; tick++) {
+                caller.update(tick, fixture.player);
+                gunner.update(tick, fixture.player);
+            }
+            assertTrue((boolean) caller.getClass().getMethod("isTelling").invoke(caller));
+            attack(caller, fixture.player);
+            for (int tick = 0; tick < 60; tick++) {
+                caller.update(tick, fixture.player);
+                gunner.update(tick, fixture.player);
+            }
+            assertTrue(fixture.shots().isEmpty(), "interrupting the raised tell prevents a remote commitment");
+            assertEquals(List.of(0x6e), fixture.sounds, "no alert or gunner charging cue was committed");
+        }
+    }
+
+    @Test void aVisibleCallerCannotWakeACompletelyHiddenDefender() throws Exception {
+        var visibility = AbstractObjectInstance.class.getDeclaredMethod("isOnScreen", int.class);
+        visibility.setAccessible(true);
+        for (var aspect : com.openggf.configuration.WidescreenAspect.values()) {
+            int width = aspect.pixelWidth();
+            try (var fixture = new Fixture()) {
+                AbstractObjectInstance.updateCameraBounds(0, 0, width, 224, 0);
+                fixture.playerX = width - 140; fixture.playerY = 120;
+                var caller = fixture.enemy("SpotterBadnik", "spotter", width - 60, 120);
+                var guard = fixture.enemy("GuardBadnik", "guard", width + 32, 120);
+                assertTrue(guard.getX() - guard.getOnScreenHalfWidth() > width,
+                        "the entire declared body is beyond the actual preset's right edge: " + aspect);
+                assertTrue((boolean) visibility.invoke(guard, 32), "positive control for the old centre-only margin");
+                assertFalse((boolean) visibility.invoke(guard, 0));
+                for (int tick = 0; tick < 25; tick++) caller.update(tick, fixture.player);
+                assertTrue((boolean) caller.getClass().getMethod("isCalling").invoke(caller));
+                guard.update(25, fixture.player);
+                assertFalse((boolean) guard.getClass().getMethod("armed").invoke(guard),
+                        "a32px activation margin must not hide the whole charge tell: " + aspect);
+                assertEquals(List.of(0x51), fixture.sounds);
+                AbstractObjectInstance.updateCameraBounds(64, 0, width + 64, 224, 0);
+                assertTrue(guard.getX() + guard.getOnScreenHalfWidth() <= width + 64);
+                guard.update(26, fixture.player);
+                assertTrue((boolean) guard.getClass().getMethod("armed").invoke(guard),
+                        "the same floor and heard alert work with the whole body visible: " + aspect);
+                assertEquals(List.of(0x51, 0x48), fixture.sounds);
+            }
+        }
+    }
+
+    @Test void aPreEntryCompanionKeepsItsLifetimeWithoutStartingAHiddenCharge() throws Exception {
+        for (var aspect : com.openggf.configuration.WidescreenAspect.values()) {
+            try (var fixture = new Fixture()) {
+                int parentX = 0x1dc0, y = 0x27c;
+                int left = parentX + 16 - aspect.pixelWidth();
+                AbstractObjectInstance.updateCameraBounds(left, y - 112, parentX + 16, y + 112, 0);
+                fixture.playerX = parentX - 80; fixture.playerY = y;
+                var parent = fixture.enemy("ArtilleryBadnik", "artillery", parentX, y);
+                parent.update(0, fixture.player);
+                var ally = fixture.guards().getFirst();
+                var identity = fixture.services.objectQuery().identityOf(ally).orElseThrow();
+                assertTrue(ally.getX() - ally.getOnScreenHalfWidth() > parentX + 16);
+                ally.update(1, fixture.player);
+                assertFalse(ally.isDestroyed(), "existing32px companion lifetime includes this pre-entry ally: " + aspect);
+                assertFalse((boolean) ally.getClass().getMethod("armed").invoke(ally));
+                assertEquals(List.of(0x53), fixture.sounds);
+                AbstractObjectInstance.updateCameraBounds(left + 64, y - 112, parentX + 80, y + 112, 0);
+                ally.update(2, fixture.player);
+                assertFalse(ally.isDestroyed());
+                assertEquals(identity, fixture.services.objectQuery().identityOf(ally).orElseThrow());
+                assertTrue((boolean) ally.getClass().getMethod("armed").invoke(ally),
+                        "visible entry admits the complete tell with the original ally identity: " + aspect);
+                assertEquals(List.of(0x53, 0x48), fixture.sounds);
+                int tellX = ally.getX();
+                for (int tick = 0; tick < 35; tick++) {
+                    ally.update(tick, fixture.player);
+                    assertEquals(tellX, ally.getX(), "the visible36-update tell stays stationary");
+                }
+                assertFalse(fixture.sounds.contains(0x43));
+                ally.update(35, fixture.player);
+                assertEquals(tellX, ally.getX());
+                ally.update(36, fixture.player);
+                assertEquals(tellX - 10, ally.getX(), "the first dash movement follows the full visible tell");
             }
         }
     }
@@ -374,10 +516,15 @@ class TestSecondStrikeEnemies {
         try (var fixture = new Fixture()) {
             var spotter = fixture.enemy("SpotterBadnik", "spotter", 400, 200);
             spotter.update(0, fixture.player);
+            assertTrue(fixture.sounds.isEmpty(), "raised coconut is interruptible before the alert");
+            for (int tick = 0; tick < 23; tick++) spotter.update(tick, fixture.player);
+            assertTrue(fixture.sounds.isEmpty());
+            spotter.update(24, fixture.player);
             assertEquals(List.of(0x51), fixture.sounds);
             for (int tick = 0; tick < 168; tick++) spotter.update(tick, fixture.player);
             assertEquals(List.of(0x51), fixture.sounds, "call and rest cannot retrigger the cue");
             spotter.update(169, fixture.player);
+            for (int tick = 0; tick < 24; tick++) spotter.update(tick, fixture.player);
             assertEquals(List.of(0x51, 0x51), fixture.sounds);
         }
     }
@@ -389,8 +536,18 @@ class TestSecondStrikeEnemies {
             fixture.playerX = 700; // Outside the gunner's own detection but visible to its caller.
             caller.update(0, fixture.player);
             gunner.update(0, fixture.player);
-            for (int i = 0; i < 36; i++) gunner.update(i, fixture.player);
-            assertEquals(10, fixture.shots().size(), "live nearby caller must enable a committed supporting volley");
+            assertTrue(fixture.sounds.isEmpty(), "a raised tell is not yet an alert");
+            for (int i = 0; i < 24; i++) caller.update(i, fixture.player);
+            gunner.update(24, fixture.player);
+            var acknowledgement = gunner.getClass().getMethod("acknowledgingAlert");
+            acknowledgement.setAccessible(true);
+            assertTrue((boolean) acknowledgement.invoke(gunner));
+            assertEquals(List.of(0x51, 0x53), fixture.sounds, "the visual acknowledgement adds no ambient sound");
+            attack(caller, fixture.player); // Stop the caller after the defender committed.
+            for (int i = 0; i < 12; i++) gunner.update(i, fixture.player);
+            assertFalse((boolean) acknowledgement.invoke(gunner), "one bounded12-update acknowledgement");
+            for (int i = 0; i < 24; i++) gunner.update(i, fixture.player);
+            assertEquals(10, fixture.shots().size(), "the heard alert commits a volley that survives interruption of the caller");
 
             var other = fixture.enemy("ArtilleryBadnik", "artillery", 400, 200);
             caller.setDestroyed(true);
@@ -473,19 +630,30 @@ class TestSecondStrikeEnemies {
         }
     }
 
-    private static void assertReplay(AbstractObjectInstance original, Fixture fixture, int steps) {
-        var snapshot = original.captureRewindState();
+    private static AbstractObjectInstance assertReplay(AbstractObjectInstance original, Fixture fixture, int steps) {
+        var identities = new RewindIdentityTable();
+        var players = fixture.services.playerQuery().playersFor(
+                com.openggf.level.objects.ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS);
+        for (int index = 0; index < players.size(); index++) {
+            identities.registerPlayer(players.get(index), index == 0 ? PlayerRefId.mainPlayer() : PlayerRefId.sidekick(index - 1));
+        }
+        var context = RewindCaptureContext.withIdentityTable(identities);
+        assertTrue(CompactFieldCapturer.supportsDefaultObjectSubclassScalars(original.getClass()),
+                "the default schema must admit every captured field, including fresh player-reference arrays");
+        var snapshot = original.captureRewindState(context);
+        assertNotNull(snapshot.compactGenericState());
         var recreated = ((ModRewindRecreatable) original).recreateForRewind(
                 new RewindRecreateContext(original.getSpawn(), snapshot, fixture.services));
         recreated.setServices(fixture.services);
-        recreated.restoreRewindState(snapshot);
-        assertEquals(snapshot, recreated.captureRewindState(), "recreate must restore all captured phase/target/fraction state");
+        recreated.restoreRewindState(snapshot, context);
+        assertEquals(snapshot, recreated.captureRewindState(context), "recreate must restore all captured phase/target/fraction state");
         for (int i = 0; i < steps; i++) {
             original.update(i, fixture.player);
             recreated.update(i, fixture.player);
-            assertEquals(original.captureRewindState(), recreated.captureRewindState(),
+            assertEquals(original.captureRewindState(context), recreated.captureRewindState(context),
                     "restored state must produce the same forward frames");
         }
+        return recreated;
     }
 
     private static TouchResponseProvider touch(AbstractObjectInstance instance) { return (TouchResponseProvider) instance; }
@@ -511,6 +679,7 @@ class TestSecondStrikeEnemies {
                     case "getCentreX" -> (short) playerX;
                     case "getCentreY" -> (short) playerY;
                     case "getDead" -> false;
+                    case "getYRadius" -> (short) 19;
                     case "incrementBadnikChain" -> 100;
                     default -> throw new AssertionError("Unexpected player access: " + method.getName());
                 });

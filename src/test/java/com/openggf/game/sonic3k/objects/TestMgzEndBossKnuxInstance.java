@@ -29,7 +29,10 @@ class TestMgzEndBossKnuxInstance {
 
     private static MgzEndBossKnuxInstance bossWithServices() {
         MgzEndBossKnuxInstance boss = new MgzEndBossKnuxInstance(spawn());
-        boss.setServices(new StubObjectServices());
+        Camera camera = new Camera(); camera.setX((short)0x3D78); camera.setY((short)0x28);
+        boss.setServices(new StubObjectServices() { @Override public Camera camera() { return camera; } });
+        // Direct fight fixtures must traverse the native placed-owner staging.
+        for (int i=0;i<123;i++) boss.update(i,null);
         return boss;
     }
 
@@ -63,16 +66,17 @@ class TestMgzEndBossKnuxInstance {
 
     @Test
     void productionObjectGraphPublishesSeedsAndAdvancesBothDrops() throws Exception {
-        RewindRoundTripHarness harness = RewindRoundTripHarness.build(GameId.S3K);
+        var harness = new TestMgzEndBossKnuxAdmission.Fixture(false);
         var manager = harness.objectManager();
-        ObjectSpawn harnessSpawn = new ObjectSpawn(0x100, 0x100, Sonic3kObjectIds.MGZ_END_BOSS_KNUX,
-                0, 0, false, 0);
+        ObjectSpawn harnessSpawn = TestMgzEndBossKnuxAdmission.ORIGINAL;
         MgzEndBossKnuxInstance boss = manager.createDynamicObject(
                 () -> new MgzEndBossKnuxInstance(harnessSpawn));
+        admitFight(manager);
+        assertEquals(2,boss.getNativeRoutineForTesting(),"fixture must traverse native admission and opening init");
         boolean sawFirstDrop = false;
         boolean sawSecondDrop = false;
         for (int frame = 0; frame < 600 && !sawSecondDrop; frame++) {
-            manager.update(0, null, java.util.List.of(), frame, false);
+            manager.update(0x3D78, null, java.util.List.of(), frame+123, false);
             sawFirstDrop |= boss.getNativeRoutineForTesting() == 0x08;
             sawSecondDrop |= boss.getNativeRoutineForTesting() == 0x0C;
         }
@@ -82,15 +86,14 @@ class TestMgzEndBossKnuxInstance {
 
     @Test
     void rewindRoundTripRestoresEveryCompositeChildRoleIntoTheManagedBossGraph() throws Exception {
-        RewindRoundTripHarness harness = RewindRoundTripHarness.buildPlaced(
-                GameId.S3K, Sonic3kObjectIds.MGZ_END_BOSS_KNUX);
+        var harness = new TestMgzEndBossKnuxAdmission.Fixture(true);
         var manager = harness.objectManager();
         MgzEndBossKnuxInstance sourceBoss = manager.getActiveObjects().stream()
                 .filter(MgzEndBossKnuxInstance.class::isInstance)
                 .map(MgzEndBossKnuxInstance.class::cast)
                 .findFirst()
                 .orElseThrow();
-        manager.update(0, null, List.of(), 0, false);
+        admitFight(manager);
 
         List<MgzEndBossRenderChild> sourceChildren = compositeChildren(sourceBoss);
         assertEquals(8, sourceChildren.size(), "precondition: the live MGZ boss owns all eight composite children");
@@ -131,14 +134,13 @@ class TestMgzEndBossKnuxInstance {
 
     @Test
     void rewindRoundTripRecreatesDrillChildWithRestoredParentAndState() throws Exception {
-        RewindRoundTripHarness harness = RewindRoundTripHarness.buildPlaced(
-                GameId.S3K, Sonic3kObjectIds.MGZ_END_BOSS_KNUX);
+        var harness = new TestMgzEndBossKnuxAdmission.Fixture(true);
         var manager = harness.objectManager();
         MgzEndBossKnuxInstance sourceBoss = manager.getActiveObjects().stream()
                 .filter(MgzEndBossKnuxInstance.class::isInstance)
                 .map(MgzEndBossKnuxInstance.class::cast)
                 .findFirst().orElseThrow();
-        manager.update(0, null, List.of(), 0, false);
+        admitFight(manager);
         MgzEndBossKnuxDrillChild sourceChild = onlyDrillChild(manager);
         ObjectRefId sourceId = manager.captureIdentityContext().requireIdentityTable().idFor(sourceChild);
         int sourceTimer = intField(sourceChild, "timer");
@@ -215,6 +217,12 @@ class TestMgzEndBossKnuxInstance {
         resultsComplete.setAccessible(true);
         assertTrue(resultsComplete.getBoolean(bosses.getFirst()),
                 "the restored capsule must continue signaling its restored boss owner");
+    }
+
+    private static void admitFight(com.openggf.level.objects.ObjectManager manager) {
+        Camera camera = manager.getObjectServices().camera();
+        camera.setX((short)0x3D78); camera.setY((short)0x28);
+        for (int i=0;i<123;i++) manager.update(0x3D78,null,List.of(),i,false);
     }
 
     private static List<MgzEndBossRenderChild> compositeChildren(MgzEndBossKnuxInstance boss) {

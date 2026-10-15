@@ -4,6 +4,9 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.configuration.WidescreenAspect;
 import com.openggf.game.CheckpointState;
+import com.openggf.game.patch.DelegatingGameModule;
+import com.openggf.game.sonic3k.Sonic3kGameModule;
+import com.openggf.game.sonic3k.difficulty.SkySanctuaryMetropolisRecipe;
 import com.openggf.game.sonic3k.objects.bosses.SszBossExplosionController;
 import com.openggf.game.sonic3k.objects.S3kBossExplosionChild;
 import com.openggf.game.CrossGameFeatureProvider;
@@ -31,6 +34,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -537,9 +541,11 @@ class TestS3kSszMtzArenaHeadless {
      * {@code $1E} frames apart, and the second of each pair waits eight frames on the nose before
      * it moves.
      */
-    @Test
-    void theLastArmCycleStartsTheLaserPassAndFiresThreePairs() {
-        HeadlessTestFixture fixture = bootAtCheckpoint(320, APPROACH_X, APPROACH_Y);
+    @ParameterizedTest
+    @EnumSource(SkySanctuaryMetropolisRecipe.class)
+    void theLastArmCycleStartsTheLaserPassAndFiresTheCommittedNativePairs(SkySanctuaryMetropolisRecipe recipe) {
+        var intake = new RecipeIntake(recipe);
+        HeadlessTestFixture fixture = bootAtCheckpoint(320, APPROACH_X, APPROACH_Y, intake);
         SszMtzBossObjectInstance boss = runToPhase(fixture, SszMtzBossObjectInstance.STATE_PATROL,
                 0x200);
         while (boss.armCyclesForTest() > 0 && boss.hitsRemainingForTest() > 1) {
@@ -572,10 +578,18 @@ class TestS3kSszMtzArenaHeadless {
                 java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
         List<Integer> firedOnFrame = new ArrayList<>();
         List<Integer> recoilOnFire = new ArrayList<>();
+        int expectedPairs = recipe == SkySanctuaryMetropolisRecipe.FOURTH_PAIR ? 4 : 3;
+        assertEquals(1, intake.samples, "the actual native event samples once at accepted birth");
+        intake.available = null;
         int newestPairSize = 0;
+        boolean passStarted = false;
         for (int frame = 0; frame < 0x400; frame++) {
             pinNonAttackingAt(fixture, APPROACH_X, APPROACH_Y);
             fixture.stepIdleFrames(1);
+            if (boss.laserStateForTest() == 2 || boss.laserStateForTest() == 4) passStarted = true;
+            // Observe ONE unchanged native dive/climb. A subsequent budget reset cannot stand
+            // in for the fourth pair's feasibility in the selected pass.
+            if (passStarted && boss.laserStateForTest() == 0) break;
             List<SszMtzBossLaserChild> fresh = allActive(SszMtzBossLaserChild.class).stream()
                     .filter(seen::add).toList();
             if (fresh.isEmpty()) {
@@ -607,12 +621,10 @@ class TestS3kSszMtzArenaHeadless {
                         shot.mappingFrameForTest(),
                         "nonzero subtype overrides ObjDat3_7ABFA's frame $D with move.b #$C");
             }
-            if (firedOnFrame.size() == SszMtzBossObjectInstance.LASER_SHOTS) {
-                break;
-            }
         }
-        assertEquals(SszMtzBossObjectInstance.LASER_SHOTS, firedOnFrame.size(),
-                "move.b #3,$31(a0): three shots, and then the timer runs on with nothing left");
+        assertEquals(expectedPairs, firedOnFrame.size(),
+                "actual pair identities in one native dive/climb, without extending geometry or timers");
+        assertEquals(1, intake.samples, "after-birth withdrawal cannot resample or alter this native lifetime");
         assertEquals(SszMtzBossLaserChild.LASER_PAIR, newestPairSize, "the last shot was a pair");
         assertEquals(0, boss.laserShotsLeftForTest(), "$31(a0) is spent");
         for (int recoil : recoilOnFire) {
@@ -640,9 +652,10 @@ class TestS3kSszMtzArenaHeadless {
      * show. {@code loc_7AC92}'s own {@code (2*60)-1} then carries the ship off screen before
      * {@code loc_7ACA4} writes the beaten byte.
      */
-    @Test
-    void theDefeatTakesTheCartridgesFrameCountAndOpensTheGatedPad() {
-        HeadlessTestFixture fixture = bootAtCheckpoint(320, APPROACH_X, APPROACH_Y);
+    @ParameterizedTest
+    @EnumSource(SkySanctuaryMetropolisRecipe.class)
+    void theDefeatTakesTheCartridgesFrameCountAndOpensTheGatedPad(SkySanctuaryMetropolisRecipe recipe) {
+        HeadlessTestFixture fixture = bootAtCheckpoint(320, APPROACH_X, APPROACH_Y, new RecipeIntake(recipe));
         SszZoneRuntimeState state =
                 S3kRuntimeStates.currentSsz(GameServices.zoneRuntimeRegistry()).orElseThrow();
         SszMtzBossObjectInstance boss = runToPhase(fixture,
@@ -730,9 +743,11 @@ class TestS3kSszMtzArenaHeadless {
      * graph where a boss owns a list of children that each hold the boss back, and the ring's
      * three angles are per-orb state a restore has to carry.
      */
-    @Test
-    void theFightSurvivesACaptureRestoreAndForwardReplay() {
-        HeadlessTestFixture fixture = bootAtCheckpoint(320, APPROACH_X, APPROACH_Y);
+    @ParameterizedTest
+    @EnumSource(SkySanctuaryMetropolisRecipe.class)
+    void theFightSurvivesACaptureRestoreAndForwardReplay(SkySanctuaryMetropolisRecipe recipe) {
+        var intake = new RecipeIntake(recipe);
+        HeadlessTestFixture fixture = bootAtCheckpoint(320, APPROACH_X, APPROACH_Y, intake);
         SszMtzBossObjectInstance boss = runToPhase(fixture,
                 SszMtzBossObjectInstance.STATE_PATROL, 0x200);
         landOneHit(fixture, boss);
@@ -744,10 +759,19 @@ class TestS3kSszMtzArenaHeadless {
         fixture.stepIdleFrames(1);
         CompositeSnapshot after = registry.capture();
 
+        var manager = GameServices.level().getObjectManager();
+        intake.available = null;
+        int samplesBeforeRestore = intake.samples;
+        manager.setRewindInPlaceRestoreEnabledForTest(false);
+        manager.getActiveObjects().stream().toList().forEach(manager::removeDynamicObject);
         registry.restore(before);
-        sameSnapshot(before, registry.capture(), "restore mid-fight");
+        sameSnapshot(before, registry.capture(), "destructive restore mid-fight");
         SszMtzBossObjectInstance restored = active(SszMtzBossObjectInstance.class);
         assertNotNull(restored, "the ship is back");
+        org.junit.jupiter.api.Assertions.assertNotSame(boss, restored, "actual recreation, not same-instance restore");
+        assertEquals(samplesBeforeRestore, intake.samples, "recreation never calls the optional provider");
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+                () -> restored.commitEncounterRecipe(SkySanctuaryMetropolisRecipe.STOCK));
         assertEquals(SszMtzBossOrbChild.ORB_COUNT, restored.orbsForTest().size(),
                 "all seven orbs relinked");
         assertEquals(1, restored.liveOrbsForTest(), "$30(a0) came back with them");
@@ -756,6 +780,7 @@ class TestS3kSszMtzArenaHeadless {
                 new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, ""));
         fixture.stepIdleFrames(1);
         sameSnapshot(after, registry.capture(), "forward replay mid-fight");
+        assertEquals(samplesBeforeRestore, intake.samples, "forward replay stays pure-native");
     }
 
     /** Ordinary Touch_Special and HyperTouch_Special are separate ROM writers. */
@@ -970,6 +995,16 @@ class TestS3kSszMtzArenaHeadless {
     }
 
     private static HeadlessTestFixture bootAtCheckpoint(int width, int x, int y) {
+        return bootAtCheckpoint(width, x, y, null);
+    }
+
+    private static final class RecipeIntake {
+        SkySanctuaryMetropolisRecipe available;
+        int samples;
+        RecipeIntake(SkySanctuaryMetropolisRecipe recipe) { available = recipe; }
+    }
+
+    private static HeadlessTestFixture bootAtCheckpoint(int width, int x, int y, RecipeIntake intake) {
         var config = SonicConfigurationService.getInstance();
         config.clearSessionOverrides();
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
@@ -982,6 +1017,21 @@ class TestS3kSszMtzArenaHeadless {
         config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS, width);
         CrossGameFeatureProvider.getInstance().resetState();
         SessionManager.clear();
+        if (intake != null) {
+            // Native owner integration only; real creator service publication/quarantine is
+            // composed and tested by root. Install AFTER this helper's session reset.
+            var nativeModule = new Sonic3kGameModule();
+            var module = new DelegatingGameModule(nativeModule, "test:ssz-metropolis-recipe") {
+                @Override public <T> T getGameService(Class<T> type) {
+                    if (type == SkySanctuaryMetropolisRecipe.class) {
+                        intake.samples++;
+                        return type.cast(intake.available);
+                    }
+                    return super.getGameService(type);
+                }
+            };
+            SessionManager.openGameplaySession(nativeModule, module, null);
+        }
         TestEnvironment.activeGameplayMode();
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_SSZ, 0)

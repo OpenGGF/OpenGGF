@@ -78,6 +78,7 @@ public class AizShipBombInstance extends AbstractObjectInstance implements Touch
     private boolean lastFloorFound;
     private int lastFloorDistance;
     private int lastFloorTile;
+    private boolean difficultyAttack;
 
     /**
      * @param spawn            object spawn (engine bookkeeping)
@@ -107,6 +108,12 @@ public class AizShipBombInstance extends AbstractObjectInstance implements Touch
         this(spawn, sourceShip, 0, spawn != null ? spawn.y() : 0);
     }
 
+    AizShipBombInstance(ObjectSpawn spawn, AizBattleshipInstance sourceShip,
+                        int sourceSecondaryX, int startY, boolean difficultyAttack) {
+        this(spawn, sourceShip, sourceSecondaryX, startY);
+        this.difficultyAttack = difficultyAttack;
+    }
+
     @Override
     public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         if (ctx == null || ctx.spawn() == null || ctx.objectServices() == null
@@ -124,6 +131,10 @@ public class AizShipBombInstance extends AbstractObjectInstance implements Touch
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
         if (isDestroyed()) return;
+        if (difficultyAttack && (sourceShip == null || !sourceShip.difficultyBombsAreLive())) {
+            setDestroyed(true);
+            return;
+        }
         this.frameCounter++;
         if (initRoutinePending) {
             // ROM: Obj_AIZShipBomb's init ends at `move.w #6,$32(a0)` and is
@@ -215,7 +226,7 @@ public class AizShipBombInstance extends AbstractObjectInstance implements Touch
             // fragment (sonic3k.asm:105424), so children consume slots after
             // the bomb and may still execute later in the same object pass.
             spawnChild(() -> new AizBombExplosionInstance(
-                    fragX, fragY, data[2], data[3]));
+                    fragX, fragY, data[2], data[3], difficultyAttack ? sourceShip : null));
         }
     }
 

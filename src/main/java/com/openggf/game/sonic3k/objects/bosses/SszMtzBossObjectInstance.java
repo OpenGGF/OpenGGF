@@ -6,6 +6,7 @@ import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.difficulty.SkySanctuaryMetropolisRecipe;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.game.sonic3k.runtime.SszZoneRuntimeState;
 import com.openggf.game.rewind.identity.ObjectRefId;
@@ -256,11 +257,36 @@ public final class SszMtzBossObjectInstance extends AbstractBossInstance
     /** False through {@code Wait_FadeToLevelMusic}, true once {@code loc_7AC7A} has run. */
     private boolean escapeRunning;
 
+    // A pure-native commitment for this accepted boss lifetime. Neither ordinary updates nor
+    // rewind recreation execute the optional provider again.
+    private SkySanctuaryMetropolisRecipe encounterRecipe = SkySanctuaryMetropolisRecipe.STOCK;
+    private boolean encounterRecipeCommitted;
+    private boolean ordinaryUpdateStarted;
+
     private final List<SszMtzBossOrbChild> orbs = new ArrayList<>();
     private SszMechaSonicHeadChild head;
 
     public SszMtzBossObjectInstance(ObjectSpawn spawn) {
         super(spawn, "SSZMTZBoss");
+    }
+
+    /**
+     * Native event intake only, after accepted SST allocation and before the first update.
+     * This unexported native owner is intentionally not a creator-facing factory or setter.
+     */
+    public void commitEncounterRecipe(SkySanctuaryMetropolisRecipe recipe) {
+        java.util.Objects.requireNonNull(recipe, "recipe");
+        if (getSlotIndex() < 0 || ordinaryUpdateStarted || encounterRecipeCommitted) {
+            throw new IllegalStateException("recipe requires a new accepted SSZ Metropolis boss");
+        }
+        encounterRecipe = recipe;
+        encounterRecipeCommitted = true;
+    }
+
+    @Override
+    public void update(int vIntRunCount, PlayableEntity player) {
+        ordinaryUpdateStarted = true;
+        super.update(vIntRunCount, player);
     }
 
     private record RewindExtra(ObjectRefId headId, List<ObjectRefId> orbIds, int waitTimer,
@@ -274,7 +300,9 @@ public final class SszMtzBossObjectInstance extends AbstractBossInstance
                                boolean turnedOnce, boolean renderFlipped, int collisionSize,
                                boolean allOrbsShouldPop, boolean escaped, boolean escaping,
                                boolean escapeRunning, boolean invulnerable,
-                               int invulnerabilityTimer)
+                               int invulnerabilityTimer,
+                               SkySanctuaryMetropolisRecipe encounterRecipe,
+                               boolean encounterRecipeCommitted, boolean ordinaryUpdateStarted)
             implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
 
     @Override
@@ -291,7 +319,8 @@ public final class SszMtzBossObjectInstance extends AbstractBossInstance
                 laserShotsLeft, laserTimer, hoverPhase, armX, armY, armSignal, armCycles,
                 launchRequest, liveOrbs, headingRight, turnedOnce, renderFlipped, collisionSize,
                 allOrbsShouldPop, escaped, escaping, escapeRunning,
-                super.state.invulnerable, super.state.invulnerabilityTimer));
+                super.state.invulnerable, super.state.invulnerabilityTimer,
+                encounterRecipe, encounterRecipeCommitted, ordinaryUpdateStarted));
     }
 
     @Override
@@ -300,6 +329,9 @@ public final class SszMtzBossObjectInstance extends AbstractBossInstance
         if (!(snapshot.objectSubclassExtra() instanceof RewindExtra extra)) {
             return;
         }
+        encounterRecipe = extra.encounterRecipe();
+        encounterRecipeCommitted = extra.encounterRecipeCommitted();
+        ordinaryUpdateStarted = extra.ordinaryUpdateStarted();
         waitTimer = extra.waitTimer();
         initExecuted = extra.initExecuted();
         dispatcherInstalled = extra.dispatcherInstalled();
@@ -675,7 +707,8 @@ public final class SszMtzBossObjectInstance extends AbstractBossInstance
     private void armLaserDive(boolean flipped) {
         laserState = 2;
         bossYVel = LUNGE_SPEED;
-        laserShotsLeft = LASER_SHOTS;
+        laserShotsLeft = encounterRecipe == SkySanctuaryMetropolisRecipe.FOURTH_PAIR
+                ? LASER_SHOTS + 1 : LASER_SHOTS;
         laserTimer = LASER_INTERVAL;
         renderFlipped = flipped;
     }
