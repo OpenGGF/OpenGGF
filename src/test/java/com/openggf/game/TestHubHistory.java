@@ -73,38 +73,6 @@ class TestHubHistory {
         assertTrue(screen.isGameSelected());
     }
 
-    @Test void idlePreviewFadesBackWhenInputArrives() throws Exception {
-        var screen = active(SonicConfigurationService.createStandalone(root));
-        var type = Class.forName("com.openggf.game.MasterTitleScreen$RomPreviewState");
-        var constructor = type.getDeclaredConstructor();
-        constructor.setAccessible(true);
-        var preview = constructor.newInstance();
-        var texture = type.getDeclaredField("terrainTextureId");
-        texture.setAccessible(true);
-        texture.setInt(preview, 1);
-        var logo = type.getDeclaredField("textureId");
-        logo.setAccessible(true);
-        logo.setInt(preview, 1);
-        var sequence = type.getDeclaredField("sequence");
-        sequence.setAccessible(true);
-        sequence.set(preview, MasterTitleRomPreview.sequenceForTest(new MasterTitleRomPreview.Image[] {
-                new MasterTitleRomPreview.Image(1, 1, new byte[4])}));
-        var previews = MasterTitleScreen.class.getDeclaredField("romPreviews");
-        previews.setAccessible(true);
-        @SuppressWarnings("unchecked") var map = (java.util.Map<Object,Object>) previews.get(screen);
-        map.put(MasterTitleScreen.GameEntry.SONIC_2, preview);
-        for (int i = 0; i < MasterTitleScreen.IDLE_PREVIEW_DELAY; i++) screen.advanceIdlePreview(false);
-        assertEquals(0, screen.idlePreviewAlphaForTest());
-        for (int i = 0; i < MasterTitleScreen.IDLE_PREVIEW_FADE; i++) screen.advanceIdlePreview(false);
-        assertEquals(1, screen.idlePreviewAlphaForTest(), 0.0001);
-        screen.advanceIdlePreview(true);
-        assertTrue(screen.idlePreviewAlphaForTest() > 0 && screen.idlePreviewAlphaForTest() < 1,
-                "input fades back instead of removing the picture abruptly");
-        for (int i = 0; i < MasterTitleScreen.IDLE_PREVIEW_FADE; i++) screen.advanceIdlePreview(false);
-        assertEquals(0, screen.idlePreviewAlphaForTest());
-        assertFalse(screen.isGameSelected());
-    }
-
     private MasterTitleScreen active(SonicConfigurationService config) {
         var screen = new MasterTitleScreen(config);
         screen.setStateForTest(MasterTitleScreen.State.ACTIVE);

@@ -187,64 +187,6 @@ final class MasterTitleRomPreview {
         }
     }
 
-    /** A still of ROM terrain, decoded privately without starting or advancing gameplay. */
-    static Optional<Image> loadGameplayStill(MasterTitleScreen.GameEntry entry, Rom rom) {
-        try {
-            final int width = 640, height = 224;
-            com.openggf.game.ZoneRegistry registry = switch (entry) {
-                case SONIC_1 -> new com.openggf.game.sonic1.Sonic1ZoneRegistry();
-                case SONIC_2 -> new com.openggf.game.sonic2.Sonic2ZoneRegistry();
-                case SONIC_3K -> new com.openggf.game.sonic3k.Sonic3kZoneRegistry();
-            };
-            int[] start = registry.getStartPosition(0, 0);
-            int x = Math.max(0, start[0] - 144), y = Math.max(0, start[1] - 112);
-            int[] pixels;
-            if (entry == MasterTitleScreen.GameEntry.SONIC_3K) {
-                var source = new com.openggf.game.sonic3k.Sonic3kZoneArt(rom);
-                var foreground = source.foreground(0, 0, x, y, width, height);
-                var background = source.backdrop(0, 0).picture();
-                pixels = foreground.argb().clone();
-                int[] back = background.argb();
-                for (int py = 0; py < height; py++) for (int px = 0; px < width; px++) {
-                    int i = py * width + px;
-                    if ((pixels[i] >>> 24) == 0)
-                        pixels[i] = back[(py % background.height()) * background.width() + px % background.width()];
-                }
-            } else {
-                int index = registry.getLevelDataForZone(0).get(0).levelIndex();
-                com.openggf.level.Level level = entry == MasterTitleScreen.GameEntry.SONIC_1
-                        ? new com.openggf.game.sonic1.Sonic1(rom).buildDetachedLevel(index)
-                        : new com.openggf.game.sonic2.Sonic2(rom).buildDetachedLevel(index);
-                var tiles = (com.openggf.level.render.PlaneRasterizer.TileSource)
-                        (layer, pattern, layoutX) -> pattern < level.getPatternCount() ? level.getPattern(pattern) : null;
-                // Foreground uses the opening camera position. The backdrop is a private
-                // presentation of its ROM plane from its own origin, not foreground world Y:
-                // GHZ/EHZ keep their backdrop in different vertical coordinates from terrain.
-                pixels = com.openggf.level.render.PlaneRasterizer.rasterize(level, tiles,
-                        com.openggf.level.render.PlaneRasterizer.FOREGROUND, x, y, width, height, 0);
-                int bgWidth = Math.min(width, level.getLayerWidthBlocks(1) * level.getBlockPixelSize());
-                int[] background = com.openggf.level.render.PlaneRasterizer.rasterize(level, tiles,
-                        com.openggf.level.render.PlaneRasterizer.BACKGROUND, 0, 0, bgWidth, height,
-                        com.openggf.level.render.PlaneRasterizer.argb(level.getPalette(2).getColor(0)));
-                for (int py = 0; py < height; py++) for (int px = 0; px < width; px++) {
-                    int i = py * width + px;
-                    if ((pixels[i] >>> 24) == 0) pixels[i] = background[py * bgWidth + px % bgWidth];
-                }
-            }
-            byte[] rgba = new byte[width * height * 4];
-            for (int i = 0; i < pixels.length; i++) {
-                rgba[i * 4] = (byte) (pixels[i] >> 16);
-                rgba[i * 4 + 1] = (byte) (pixels[i] >> 8);
-                rgba[i * 4 + 2] = (byte) pixels[i];
-                rgba[i * 4 + 3] = (byte) 255;
-            }
-            return Optional.of(new Image(width, height, rgba));
-        } catch (IOException | RuntimeException failure) {
-            LOGGER.warning("Could not decode terrain preview for " + entry.gameId + ": " + failure.getMessage());
-            return Optional.empty();
-        }
-    }
-
     abstract static class PreviewSequence {
         final int width;
         final int height;

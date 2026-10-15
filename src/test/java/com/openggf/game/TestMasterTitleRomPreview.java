@@ -361,41 +361,6 @@ class TestMasterTitleRomPreview {
         }
     }
 
-    @Test
-    void terrainPanoramaDecodesForEachStockRomWithoutLaunchingGameplay() {
-        for (var entry : MasterTitleScreen.GameEntry.values()) {
-            Path path = providedRomPath(entry);
-            assumeTrue(path.toFile().isFile(), "ROM not present: " + path);
-            var rom = new com.openggf.data.Rom();
-            assertTrue(rom.open(path.toAbsolutePath().toString()));
-            try {
-                var image = MasterTitleRomPreview.loadGameplayStill(entry, rom).orElseThrow();
-                assertEquals(640, image.width());
-                assertEquals(224, image.height());
-                var colors = new java.util.HashSet<Integer>();
-                for (int i = 0; i < image.rgba().length; i += 4) {
-                    assertEquals(255, image.rgba()[i + 3] & 255);
-                    colors.add((image.rgba()[i] & 255) << 16 | (image.rgba()[i + 1] & 255) << 8
-                            | image.rgba()[i + 2] & 255);
-                }
-                assertTrue(colors.size() > 8, entry.gameId + " should show shaded ROM scenery");
-                // GHZ's legitimate opening crop uses eleven colours. Check spatial scenery,
-                // rather than requiring a palette count the ROM picture does not contain.
-                boolean horizontalDetail = false, verticalDetail = false;
-                byte[] rgba = image.rgba();
-                for (int y = 0; y < image.height(); y++) for (int x = 0; x < 320; x++) {
-                    int left = (y * image.width() + x) * 4;
-                    int right = left + 320 * 4;
-                    for (int c = 0; c < 3; c++) horizontalDetail |= rgba[left + c] != rgba[right + c];
-                }
-                for (int x = 0; x < image.width(); x++) for (int c = 0; c < 3; c++)
-                    verticalDetail |= rgba[x * 4 + c] != rgba[((image.height() - 1) * image.width() + x) * 4 + c];
-                assertTrue(horizontalDetail, entry.gameId + " panorama should reveal different terrain while panning");
-                assertTrue(verticalDetail, entry.gameId + " panorama should contain vertical scenery detail");
-            } finally { rom.close(); }
-        }
-    }
-
     private static Palette palette(int... colors) {
         Palette palette = new Palette();
         for (int i = 0; i < colors.length; i++) {

@@ -584,3 +584,24 @@ and hub music volume. Artifacts are in `/tmp/openggf-menu-polish-final` and
 `/tmp/openggf-menu-polish-final-wide`. No shared-desktop input was automated.
 Native audio ownership was tested with OpenAL's null driver; subjective speaker
 listening and physical-controller playtesting remain outside this validation.
+
+
+### 2026-10-15: remove idle gameplay scenery
+
+At the user's request, removed the idle terrain panorama, its deferred ROM
+decoder, texture ownership and panorama-only test from the master menu, based
+on `e69bf94d`. The earlier idle-preview notes above describe the superseded
+implementation. Those views were generated from the user's ROM at runtime;
+there were no bundled gameplay video clips to delete. Cards now retain their
+ROM-decoded title artwork while idle. Existing title animation and suspended
+game thumbnails retain their existing owners.
+
+Validation in `.worktrees/menu-remove-gameplay-previews`, based on
+`e69bf94d` with this removal applied: Java 25 queued Maven
+`-Dmse=off -Dtest=TestMasterTitle*,TestEscapeToMasterTitleController,TestHubHistory test`,
+with all three absolute root ROM paths passed through their test properties,
+passed 136 tests, zero failures/errors/skips. The initial test compilation found
+the obsolete idle-fade test in `TestHubHistory`; it was removed before the
+completed passing run. The change-based plan selected 3,301 smoke classes through
+the unclassified-file fallback; focused menu checks replace that disproportionate
+selection for this bounded removal. No full engine-suite or desktop visual claim.

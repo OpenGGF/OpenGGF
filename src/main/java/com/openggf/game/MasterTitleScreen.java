@@ -196,12 +196,7 @@ public class MasterTitleScreen {
     private final SonicConfigurationService configService;
     private final LaunchProfileStore launchProfileStore;
     private final HubProgressStore hubProgress;
-    private int idleTicks;
-    private int terrainPanTick;
-    private float idlePreviewAlpha;
     private boolean helpShortcutHeld;
-    static final int IDLE_PREVIEW_DELAY = 480;
-    static final int IDLE_PREVIEW_FADE = 45;
     private final AudioSink audioSink;
     private LaunchConfigPanel launchConfigPanel;
     private boolean programmaticSelection;
@@ -274,11 +269,6 @@ public class MasterTitleScreen {
         int width;
         int height;
         int frameToken = Integer.MIN_VALUE;
-        int terrainTextureId;
-        int terrainWidth;
-        boolean terrainRequested;
-        MenuLoadTask<Optional<MasterTitleRomPreview.Image>> terrainLoad;
-        RomImageCatalogue.Resolution resolution;
         MasterTitleRomPreview.PreviewSequence sequence;
     }
 
@@ -397,13 +387,6 @@ public class MasterTitleScreen {
         menuInput = inputHandler;
         navigation.capture(inputHandler);
         pointer = readPointer(inputHandler);
-        boolean activeInput = inputHandler.isAnyKeyJustPressed() || MenuInput.left(inputHandler) || MenuInput.right(inputHandler)
-                || MenuInput.up(inputHandler) || MenuInput.down(inputHandler)
-                || MenuInput.accept(inputHandler) || MenuInput.back(inputHandler)
-                || MenuInput.details(inputHandler) || inputHandler.isKeyPressed(GLFW_KEY_TAB)
-                || inputHandler.isKeyPressed(GLFW_KEY_M)
-                || pointer != null && (pointer.moved() || pointer.click() || pointer.backClick() || pointer.wheel() != 0);
-        advanceIdlePreview(activeInput);
         frameCounter++;
         if (hubMusic != null) hubMusic.update(getSelectedGameId(), settingsScreen != null || helpOpen || toolsOpen
                 || romLocator != null || onboarding != null || quitPrompt || endPrompt || state != State.ACTIVE);
@@ -1087,8 +1070,6 @@ public class MasterTitleScreen {
             RomPreviewState removed = romPreviews.remove(game);
             if (removed != null) {
                 PngTextureLoader.deleteTexture(removed.textureId);
-                PngTextureLoader.deleteTexture(removed.terrainTextureId);
-                if (removed.terrainLoad != null) removed.terrainLoad.cancel();
             }
             previewSources.remove(game);
             if (renderer != null && source != null) loadRomPreview(game, resolution.get(), source);
@@ -1522,14 +1503,7 @@ public class MasterTitleScreen {
             // Keep the original ROM texture: the final viewport samples its texels directly.
             PreviewLayout layout = cardLogoLayout(preview.width, preview.height, r.x() + 4, r.y() + 4, r.w() - 8, r.h() - 8);
             renderer.drawTexture(preview.textureId, layout.x(), layout.y(), layout.width(), layout.height(),
-                    1, 1, 1, selected ? 1 - idlePreviewAlpha : 1);
-            if (selected && preview.terrainTextureId != 0 && idlePreviewAlpha > 0) {
-                PreviewLayout terrain = cardLogoLayout(320, 224, r.x() + 4, r.y() + 4, r.w() - 8, r.h() - 8);
-                float span = 320f / preview.terrainWidth;
-                float pan = (1 - span) * (float) (0.5 - 0.5 * Math.cos(terrainPanTick * Math.PI / 600));
-                renderer.drawTextureRegion(preview.terrainTextureId, terrain.x(), terrain.y(), terrain.width(), terrain.height(),
-                        pan, 0, pan + span, 1, 1, 1, 1, idlePreviewAlpha);
-            }
+                    1, 1, 1, 1);
         }
         if (entry instanceof MasterTitleEntry.Suspended && suspendedImage != null) {
             if (suspendedTextureId == 0) suspendedTextureId = MasterTitleRomPreview.uploadTexture(suspendedImage);
@@ -1895,7 +1869,6 @@ public class MasterTitleScreen {
             preview.textureId = MasterTitleRomPreview.uploadTexture(firstFrame);
             preview.width = firstFrame.width();
             preview.height = firstFrame.height();
-            preview.resolution = resolution;
             romPreviews.put(game, preview);
         });
     }
@@ -2027,38 +2000,6 @@ public class MasterTitleScreen {
         return defaultSelectionIndex(entries);
     }
 
-    void advanceIdlePreview(boolean input) {
-        if (input || blocksGlobalShortcuts()) idleTicks = 0;
-        else if (idleTicks < Integer.MAX_VALUE) idleTicks++;
-        RomPreviewState preview = selectedPreview();
-        if (renderer != null && preview != null && idleTicks > IDLE_PREVIEW_DELAY - 120 && !preview.terrainRequested
-                && selectedEntry() instanceof MasterTitleEntry.Stock stock) {
-            preview.terrainRequested = true;
-            RomImageCatalogue catalogue = romCatalogue;
-            preview.terrainLoad = new MenuLoadTask<>(() -> {
-                try (Rom rom = Rom.fromReader(catalogue.open(preview.resolution.rom()), preview.resolution.describe())) {
-                    return MasterTitleRomPreview.loadGameplayStill(stock.game(), rom);
-                }
-            });
-        }
-        for (RomPreviewState item : romPreviews.values()) {
-            if (item.terrainLoad == null || !item.terrainLoad.done()) continue;
-            try {
-                item.terrainLoad.result().ifPresent(image -> {
-                    item.terrainTextureId = MasterTitleRomPreview.uploadTexture(image);
-                    item.terrainWidth = image.width();
-                });
-            } catch (Exception failure) { LOGGER.warning("Could not load terrain preview: " + failure.getMessage()); }
-            item.terrainLoad = null;
-        }
-        float target = idleTicks > IDLE_PREVIEW_DELAY && preview != null && preview.terrainTextureId != 0 ? 1 : 0;
-        float step = 1f / IDLE_PREVIEW_FADE;
-        idlePreviewAlpha = Math.clamp(idlePreviewAlpha + (target > idlePreviewAlpha ? step : -step), 0f, 1f);
-        terrainPanTick = idlePreviewAlpha > 0 ? (terrainPanTick + 1) % 1200 : 0;
-    }
-
-    float idlePreviewAlphaForTest() { return idlePreviewAlpha; }
-
     private static int defaultSelectionIndex(List<MasterTitleEntry> entries) {
         for (int i = 0; i < entries.size(); i++) {
             if (entries.get(i) instanceof MasterTitleEntry.Stock stock
@@ -2110,8 +2051,6 @@ public class MasterTitleScreen {
         }
         selectedIndex = clamped;
         previewAnimationFrame = 0;
-        idleTicks = 0;
-        idlePreviewAlpha = 0;
         if (remember && !(selectedEntry() instanceof MasterTitleEntry.Suspended)) hubProgress.rememberGame(getSelectedGameId());
         return true;
     }
@@ -2531,8 +2470,6 @@ public class MasterTitleScreen {
         PngTextureLoader.deleteTexture(cloudSmallTextureId);
         romPreviews.values().forEach(preview -> {
             PngTextureLoader.deleteTexture(preview.textureId);
-            PngTextureLoader.deleteTexture(preview.terrainTextureId);
-            if (preview.terrainLoad != null) preview.terrainLoad.cancel();
         });
         deleteSuspendedTexture();
         releaseSuspendFrame();
