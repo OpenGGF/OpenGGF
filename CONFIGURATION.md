@@ -52,7 +52,7 @@ The `config.yaml` is organized into the following top-level sections:
 | `roms` | ROM filenames for S1, S2, S3K; default game selection |
 | `capture` | Trace video capture output dir, scale, fps, codec |
 | `startup` | Title screen, master title, legal disclaimer flags |
-| `hub` | Last focused game and last reached stock zone/act for Continue |
+| `hub` | Last focused game |
 | `rewind` | Live rewind enable/key, tape-coast parameters, audio history settings |
 | `crossGame` | Cross-game feature donation enable and source |
 | `launch` | Per-game master-title launch profiles |
@@ -1372,19 +1372,11 @@ keeps Start, Resume, Restart and Return behind their persistence boundary.
 ### Hub history and game discovery
 
 The hub remembers the last focused game, falling back to Sonic 2 if that entry is
-no longer available. For stock games, **Continue** starts the last reached ordinary
-zone/act from its beginning. It does not restore rings, lives, position or Emeralds.
-The paused-game card remains the way to resume an exact live session.
-
-History is persisted under `hub.lastGame` and `hub.continueS1Zone` /
-`hub.continueS1Act`, `hub.continueS2Zone` / `hub.continueS2Act`, and
-`hub.continueS3kZone` / `hub.continueS3kAct`. Zone and act indices are zero-based;
-a zone of `-1` means there is no Continue destination. Matching
-`hub.continueS1Character`, `hub.continueS2Character` and
-`hub.continueS3kCharacter` values retain the leader for that route. Continue is
-shown only when Game Setup selects the same leader. Doomsday is excluded because
-it needs Emerald state that a zone-start restart does not restore. These history
-values are maintained by the launcher and are not ordinary Settings rows.
+no longer available. History is persisted under `hub.lastGame` and is maintained
+by the launcher rather than exposed as an ordinary Settings row. Use the
+paused-game card to resume an exact live session. The former `hub.continueS1*`,
+`hub.continueS2*` and `hub.continueS3k*` values are retained for configuration
+compatibility but are ignored; the hub no longer records or restarts reached acts.
 
 With no games found, **Add your games** offers **Locate a game** and
 **Scan a folder**. Discovery recognizes supported images by their contents,

@@ -107,9 +107,8 @@ When the engine starts, you will see:
    "PRESS START BUTTON" screen).
 3. **Gameplay** -- The first zone of the selected game.
 
-The hub remembers the game you last focused. **Continue** starts a stock game's
-last reached act from its beginning; use the paused card to resume a live session
-at its exact position. After a short idle, a ROM terrain preview pans inside the
+The hub remembers the game you last focused. **Start** opens the selected game's
+title screen; use the paused card to resume a live session at its exact position. After a short idle, a ROM terrain preview pans inside the
 card. Optional **Hub music** and its volume are under Settings → Sound.
 
 If no ROMs are found, **Add your games** lets you locate a game or scan a folder

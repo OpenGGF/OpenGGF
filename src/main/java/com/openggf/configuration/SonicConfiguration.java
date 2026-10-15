@@ -177,6 +177,7 @@ public enum SonicConfiguration {
     AUDIO_HUB_MUSIC_ENABLED,
     AUDIO_HUB_MUSIC_VOLUME,
     HUB_LAST_GAME,
+    // Legacy hub progress keys retained for configuration/API compatibility; ignored.
     HUB_CONTINUE_S1_CHARACTER,
     HUB_CONTINUE_S1_ZONE,
     HUB_CONTINUE_S1_ACT,

@@ -81,7 +81,6 @@ public final class MasterTitleCaptureTool {
                 new Scene("45-controls-group", List.of(up, right, enter, up, right, right, down), 20),
                 new Scene("46-controller-help", List.of(GLFW_KEY_F1), 20),
                 new Scene("47-controller-settings", List.of(up, right, enter), 20),
-                new Scene("48-hub-continue", List.of(down), 20),
                 new Scene("49-add-games", List.of(), 20),
                 new Scene("50-hub-music-volume", List.of(up, right, enter, up, right, down, down, down), 20));
         List<Scene> pausedScenes = List.of(
@@ -157,9 +156,6 @@ public final class MasterTitleCaptureTool {
                 if (scene.name().contains("add-games")) {
                     for (var game : MasterTitleScreen.GameEntry.values())
                         config.setConfigValue(game.romConfigKey, configDir.resolve(game.gameId + "-missing.gen").toString());
-                }
-                if (scene.name().contains("hub-continue")) {
-                    new com.openggf.game.launch.HubProgressStore(config).reached(MasterTitleScreen.GameEntry.SONIC_2, 1, 1, "sonic");
                 }
                 if (scene.name().contains("crowded")) {
                     var store = new com.openggf.game.launch.LaunchProfileStore(config);

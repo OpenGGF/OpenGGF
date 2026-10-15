@@ -644,7 +644,6 @@ public class MasterTitleScreen {
     private void runHubAction(TitleHubNavigation.Action action) {
         switch (action) {
             case START -> startSelectedEntry();
-            case CONTINUE -> continueSelectedEntry();
             case SETUP -> { if (!openLaunchOptions(null)) showActionError("Game setup"); }
             case RECORDINGS -> openRecordings();
             case RESUME -> requestResume();
@@ -1306,10 +1305,6 @@ public class MasterTitleScreen {
     private List<TitleHubNavigation.Action> hubActions() {
         if (selectedEntry() instanceof MasterTitleEntry.Suspended)
             return List.of(TitleHubNavigation.Action.RESUME, TitleHubNavigation.Action.SETUP, TitleHubNavigation.Action.END);
-        if (selectedEntry() instanceof MasterTitleEntry.Stock stock && isEntryAvailable(stock)
-                && continueProgress(stock.game()).isPresent())
-            return List.of(TitleHubNavigation.Action.CONTINUE, TitleHubNavigation.Action.START,
-                    TitleHubNavigation.Action.SETUP, TitleHubNavigation.Action.RECORDINGS);
         return selectedEntry() instanceof MasterTitleEntry.Standalone
                 ? List.of(TitleHubNavigation.Action.START)
                 : List.of(TitleHubNavigation.Action.START, TitleHubNavigation.Action.SETUP,
@@ -1348,7 +1343,6 @@ public class MasterTitleScreen {
     private String actionLabel(TitleHubNavigation.Action action) {
         if (action == TitleHubNavigation.Action.START && selectedEntry() instanceof MasterTitleEntry.Stock stock) {
             if (!isEntryAvailable(stock)) return "LOCATE ROM";
-            if (continueProgress(stock.game()).isPresent()) return "NEW GAME";
         }
         return action.label;
     }
@@ -1362,8 +1356,7 @@ public class MasterTitleScreen {
 
     /** Start and Resume are the gold buttons. */
     private static boolean primary(TitleHubNavigation.Action action) {
-        return action == TitleHubNavigation.Action.START || action == TitleHubNavigation.Action.RESUME
-                || action == TitleHubNavigation.Action.CONTINUE;
+        return action == TitleHubNavigation.Action.START || action == TitleHubNavigation.Action.RESUME;
     }
 
     HubLayout hubLayout() {
@@ -1735,9 +1728,6 @@ public class MasterTitleScreen {
                     ? "Game Setup changes players, screen and extras" : "Start " + game;
             case ACTIONS -> switch (focusedAction()) {
                 case START -> "Start " + game;
-                case CONTINUE -> selectedEntry() instanceof MasterTitleEntry.Stock stock
-                        ? "Restart " + continueProgress(stock.game()).map(HubProgressStore.Progress::label).orElse("last act") + " from its beginning"
-                        : "";
                 case SETUP -> "Players, screen and extras for " + game + " only";
                 case RECORDINGS -> "Watch and manage your " + game + " recordings";
                 case RESUME, END -> "";
@@ -1762,7 +1752,6 @@ public class MasterTitleScreen {
                     selectedEntry() instanceof MasterTitleEntry.Suspended ? "RESUME" : actionLabel(TitleHubNavigation.Action.START)), MenuChrome.hint(MenuChrome.detailsKey(menuInput), "HELP"), MenuChrome.hint(back, "QUIT"));
             case ACTIONS -> List.of(MenuChrome.leftRight(menuInput, "BUTTON"), MenuChrome.hint(ok, switch (focusedAction()) {
                 case START -> actionLabel(TitleHubNavigation.Action.START);
-                case CONTINUE -> "CONTINUE ZONE";
                 case SETUP -> "OPEN SETUP";
                 case RECORDINGS -> "OPEN RECORDINGS";
                 case RESUME -> "RESUME";
@@ -2069,20 +2058,6 @@ public class MasterTitleScreen {
     }
 
     float idlePreviewAlphaForTest() { return idlePreviewAlpha; }
-
-    private Optional<HubProgressStore.Progress> continueProgress(GameEntry game) {
-        LaunchProfile profile = launchProfileStore.load(game);
-        String character = profile.usesS3kDataSelectCharacters()
-                ? configService.getString(SonicConfiguration.MAIN_CHARACTER_CODE) : profile.mainCharacter();
-        return hubProgress.load(game, character);
-    }
-
-    private void continueSelectedEntry() {
-        if (!(selectedEntry() instanceof MasterTitleEntry.Stock stock) || !isEntryAvailable(stock)) return;
-        if (continueProgress(stock.game()).isEmpty()) return;
-        if (askToEndSuspended("Continuing " + stock.menuLabel() + " ends it", this::continueSelectedEntry)) return;
-        confirmLaunch(new MasterTitleEntry.Launch(stock, MasterTitleEntry.Action.CONTINUE), false);
-    }
 
     private static int defaultSelectionIndex(List<MasterTitleEntry> entries) {
         for (int i = 0; i < entries.size(); i++) {

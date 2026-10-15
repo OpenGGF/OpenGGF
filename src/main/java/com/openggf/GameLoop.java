@@ -158,7 +158,6 @@ public class GameLoop {
     private final EscapeToMasterTitleController escapeToMasterTitleController;
     final GameLoopSuspension suspension = new GameLoopSuspension(this);
     private MasterTitleLaunchCoordinator masterTitleLaunchCoordinator;
-    private com.openggf.game.launch.HubGameplayProgress hubProgress;
     private final MasterTitleExitCoordinator masterTitleExitCoordinator;
 
     // The active session-owned gameplay mode. Cached fields above are sourced from this context.
@@ -347,7 +346,6 @@ public class GameLoop {
         this.hostedRuns = new HostedRunController(configService);
         this.userRecordingPlaybackStarter = withPlaybackAppliedFrameReset(userRecordingSessionLauncher::beginPlayback);
         this.masterTitleLaunchCoordinator = new MasterTitleLaunchCoordinator(configService);
-        this.hubProgress = new com.openggf.game.launch.HubGameplayProgress(configService);
         this.masterTitleExitCoordinator = new MasterTitleExitCoordinator(
                 () -> masterTitleLaunchCoordinator,
                 () -> currentGameMode == GameMode.MASTER_TITLE_SCREEN, this::hasReadyGameplayRuntime,
@@ -847,7 +845,6 @@ public class GameLoop {
             runAfterStepMasterTitleLaunchCallbackIfPresent();
             presenceManager.tick();
         }
-        recordHubProgress();
     }
 
     /** Interactive 60/50 Hz presentation entry; canonical {@link #step()} remains one tick. */
@@ -3707,16 +3704,6 @@ public class GameLoop {
         masterTitleLaunchCoordinator.runAfterStepLaunchCallbackIfPresent();
     }
 
-    /** Called after ordinary gameplay has installed its loaded act. */
-    private void recordHubProgress() {
-        if (levelManager == null || hubProgress == null) return;
-        hubProgress.observe(levelManager.getGameModule(), levelManager.getCurrentZone(), levelManager.getCurrentAct(),
-                resolveMainCharacterCode(), currentGameMode == GameMode.LEVEL && levelManager.getCurrentLevel() != null
-                        && !levelManager.hasPendingFreshLevelTransitionBoundary()
-                        && TraceSessionLauncher.active() == null
-                        && userRecordingSessionLauncher.currentPlaybackOptions() == null);
-    }
-
     void setReturnToMasterTitleHandler(Runnable returnToMasterTitleHandler) {
         masterTitleLaunchCoordinator.setReturnToMasterTitleHandler(returnToMasterTitleHandler);
     }
@@ -3753,7 +3740,6 @@ public class GameLoop {
 
     /** Gameplay teardown shared by the master-title return and a hosted run's scene return. */
     void tearDownGameplayForReturn() {
-        hubProgress.end();
         escapeToMasterTitleController.reset();
         levelIterationAdmission.reset();
         userRecordingSessionLauncher.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
@@ -3783,8 +3769,6 @@ public class GameLoop {
      */
     private void exitMasterTitleScreen(MasterTitleScreen masterScreen) {
         if (resolveFadeManager().isActive()) return;
-        hubProgress.prepare(masterScreen.getSelectedLaunch(), masterScreen.isProgrammaticSelection(),
-                masterTitleLaunchCoordinator, GameServices::module, this::startLevelFromTitleScreenImmediate);
         GameLoopMenuTransitions.exitMasterTitleScreen(masterScreen, resolveFadeManager(), masterTitleExitCoordinator);
     }
 

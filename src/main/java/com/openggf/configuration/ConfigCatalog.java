@@ -136,15 +136,15 @@ public final class ConfigCatalog {
 
         // hub history (owned by the hub, hidden from Settings)
         put(HUB_LAST_GAME, of("hub", "lastGame", STRING, "Last selected game or standalone content ID"));
-        put(HUB_CONTINUE_S1_CHARACTER, of("hub", "continueS1Character", STRING, "Character owning this continue point"));
-        put(HUB_CONTINUE_S1_ZONE, of("hub", "continueS1Zone", INT, "Last Sonic 1 zone (-1 when unavailable)"));
-        put(HUB_CONTINUE_S1_ACT, of("hub", "continueS1Act", INT, "Last Sonic 1 act"));
-        put(HUB_CONTINUE_S2_CHARACTER, of("hub", "continueS2Character", STRING, "Character owning this continue point"));
-        put(HUB_CONTINUE_S2_ZONE, of("hub", "continueS2Zone", INT, "Last Sonic 2 zone (-1 when unavailable)"));
-        put(HUB_CONTINUE_S2_ACT, of("hub", "continueS2Act", INT, "Last Sonic 2 act"));
-        put(HUB_CONTINUE_S3K_CHARACTER, of("hub", "continueS3kCharacter", STRING, "Character owning this continue point"));
-        put(HUB_CONTINUE_S3K_ZONE, of("hub", "continueS3kZone", INT, "Last Sonic 3 & Knuckles zone (-1 when unavailable)"));
-        put(HUB_CONTINUE_S3K_ACT, of("hub", "continueS3kAct", INT, "Last Sonic 3 & Knuckles act"));
+        put(HUB_CONTINUE_S1_CHARACTER, of("hub", "continueS1Character", STRING, "Legacy hub progress (ignored)"));
+        put(HUB_CONTINUE_S1_ZONE, of("hub", "continueS1Zone", INT, "Legacy hub progress (ignored)"));
+        put(HUB_CONTINUE_S1_ACT, of("hub", "continueS1Act", INT, "Legacy hub progress (ignored)"));
+        put(HUB_CONTINUE_S2_CHARACTER, of("hub", "continueS2Character", STRING, "Legacy hub progress (ignored)"));
+        put(HUB_CONTINUE_S2_ZONE, of("hub", "continueS2Zone", INT, "Legacy hub progress (ignored)"));
+        put(HUB_CONTINUE_S2_ACT, of("hub", "continueS2Act", INT, "Legacy hub progress (ignored)"));
+        put(HUB_CONTINUE_S3K_CHARACTER, of("hub", "continueS3kCharacter", STRING, "Legacy hub progress (ignored)"));
+        put(HUB_CONTINUE_S3K_ZONE, of("hub", "continueS3kZone", INT, "Legacy hub progress (ignored)"));
+        put(HUB_CONTINUE_S3K_ACT, of("hub", "continueS3kAct", INT, "Legacy hub progress (ignored)"));
 
         // characters
         put(MAIN_CHARACTER_CODE, of("characters", "main", STRING, "Sprite code of the main playable character"));

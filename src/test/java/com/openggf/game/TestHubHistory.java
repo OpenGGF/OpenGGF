@@ -29,42 +29,19 @@ class TestHubHistory {
         assertEquals("custom-game", new MasterTitleScreen(fresh, new LaunchProfileStore(fresh), entries).getSelectedGameId());
     }
 
-    @Test void reachedStockActOffersContinueAndKeepsNewGameIndependent() {
+    @Test void legacyProgressDoesNotAddContinueOrChangeStart() {
         var config = SonicConfigurationService.createStandalone(root);
-        new HubProgressStore(config).reached(MasterTitleScreen.GameEntry.SONIC_2, 2, 1);
+        config.setConfigValue(SonicConfiguration.HUB_CONTINUE_S2_ZONE, 2);
+        config.setConfigValue(SonicConfiguration.HUB_CONTINUE_S2_ACT, 1);
+        config.setConfigValue(SonicConfiguration.HUB_CONTINUE_S2_CHARACTER, "sonic");
         var screen = active(config);
-        var buttons = screen.hubLayout().actions();
-        assertEquals(4, buttons.size());
-        assertTrue(buttons.getFirst().x() >= 0, buttons.toString());
-        assertTrue(buttons.getLast().x() + buttons.getLast().w() <= 320, buttons.toString());
-        press(screen, GLFW_KEY_DOWN);
-        press(screen, GLFW_KEY_ENTER);
-        assertEquals(MasterTitleEntry.Action.CONTINUE, screen.getSelectedLaunch().action());
-        var other = active(config);
-        press(other, GLFW_KEY_ENTER);
-        assertEquals(MasterTitleEntry.Action.NEW_GAME, other.getSelectedLaunch().action(), "the game card still starts normally");
-    }
-
-    @Test void invalidProgressDoesNotOfferContinue() {
-        var config = SonicConfigurationService.createStandalone(root);
-        config.setConfigValue(SonicConfiguration.HUB_CONTINUE_S2_ZONE, 200);
-        assertTrue(new HubProgressStore(config).load(MasterTitleScreen.GameEntry.SONIC_2).isEmpty());
-        var screen = active(config);
+        assertEquals(3, screen.hubLayout().actions().size());
         press(screen, GLFW_KEY_DOWN);
         press(screen, GLFW_KEY_ENTER);
         assertEquals(MasterTitleEntry.Action.NEW_GAME, screen.getSelectedLaunch().action());
-    }
-
-    @Test void continueIsBoundToTheReachedLeaderAndDoomsdayIsExcluded() {
-        var config = SonicConfigurationService.createStandalone(root);
-        var store = new HubProgressStore(config);
-        store.reached(MasterTitleScreen.GameEntry.SONIC_3K, 10, 1, "knuckles");
-        assertTrue(store.load(MasterTitleScreen.GameEntry.SONIC_3K, "sonic").isEmpty());
-        assertTrue(store.load(MasterTitleScreen.GameEntry.SONIC_3K, "knuckles").isPresent());
-        store.reached(MasterTitleScreen.GameEntry.SONIC_3K, 12, 0, "sonic");
-        assertEquals(10, store.load(MasterTitleScreen.GameEntry.SONIC_3K).orElseThrow().zone());
-        config.setConfigValue(SonicConfiguration.HUB_CONTINUE_S3K_ZONE, 12);
-        assertTrue(store.load(MasterTitleScreen.GameEntry.SONIC_3K).isEmpty());
+        var other = active(config);
+        press(other, GLFW_KEY_ENTER);
+        assertEquals(MasterTitleEntry.Action.NEW_GAME, other.getSelectedLaunch().action());
     }
 
     @Test void directHelpConsumesConfirmUntilItIsClosed() {
