@@ -799,3 +799,39 @@ This is bounded seven-scenario composition from actual incoming bosses, not
 joined direct-ending boots or complete donor/team/viewport/pixel certification.
 The unchanged branch tool guard4 and its headless controls2 passed in37588;
 short native DDZ entry/restore and inherited flight cases pass4/0/0/0 in8998.
+
+## Native single-fade retiming (2026-10-15)
+
+8179ccd80 stopped `GameplayCaptureSession.step` from advancing a runtime-ready
+loop's FadeManager a second time. Movies authored before it budget half of each
+frozen fade-out (11 of the native 22 frames, during which gameplay and object
+VInt do not advance), so their later inputs landed early. `FadeWindowRetimeTool`
+(41405e073, 5333aece6) measured each owned frozen window in the production harness,
+inserted the native remainder as repeats of the held input and verified every
+movie by one uninterrupted replay with no death. On the LRZ Knuckles and Tails
+chains the retimed rows equal the 22d5e6ffc rows shifted by the inserted frames,
+VInt included (0 differing rows). Test frame constants move by 11 at and after each
+old load frame. Base: Root ef61a560f; no runtime behaviour changed.
+
+| Movie | Old SHA-256 | New SHA-256 | Windows `start:native→+inserted` | Frames | New full loads | Verified end |
+|---|---|---|---|---|---|---|
+| `dez-sonic-tails-cold-ending-320.bk2` | `cd6914dc19cbcc248bee3c51a7c9e6a5a6d70e8ae33d353e035643829b7a59bd` | `45124d5f5428822ccd0714b57b1edc9ea395f71c2c14aa9d8a20c86ed379e9fe` | 40304:23→+11 | 49459 | 14230, 40326 | 12659,125, 11 rings, zone 23/0 |
+| `dez-sonic-solo-cold-ending-320.bk2` | `8cdf5840c8a8b3418a12a799312bc734251f3a6806ddae768ccb1a22f6f2a013` | `7a1287733ed5c9a72af0e053058d2d8ad9c729f500e694aac7cbd32e73bee933` | 50982:23→+11 | 60931 | 22332, 51004 | 13181,131, 12 rings, zone 23/0 |
+| `dez-sonic-solo-cold-ending-800.bk2` | `24f169c0e4ccd9c5ce65764fe90147c1774975e3b3c060e35d3a537c3165b18a` | `aa3a5a4df336f2dc5320e769ff24556a8fe56fd5e4b9a4aec7cadcfa5f20c842` | 50360:23→+11 | 60309 | 19889, 50382 | 13181,131, 15 rings, zone 23/0 |
+| `dez-tails-solo-cold-ending-320.bk2` | `6afdb54cc7b02f637b8bebe73355a0602831f3afacf1d2505a0242242e23245b` | `f24840e50eb0847f24b2d0c4beecd69ae68bc9ada88c79cf8432edecd0c0b8ee` | 58328:23→+11 | 68277 | 28320, 58350 | 13181,131, 11 rings, zone 23/0 |
+| `dez2-through-ddz-320.bk2` | `dc8fc357759598e7c8df9209ec7a10e25b77ea00e57eed8e4f1d3c559fc0e699` | `90c6d1b943c89a450b78c758f518cad7eb418e43ac4a4aac46d29e906c19591a` | 6818:23→+11 16755:22→+11 | 27144 | 6840, 16777 | 22954,256, 10 rings, zone 12/0 |
+| `dez2-through-ddz-800.bk2` | `962ebd2045dd75f13a904485de728231acc80b45883f342dee1ae46bac07ea39` | `5d5ca7eb6eb2b2e945e90b5a54dfc28f571eeea559b935bf1e4d36ccf2115698` | 6823:23→+11 16760:22→+11 | 27246 | 6845, 16782 | 23472,254, 10 rings, zone 12/0 |
+
+Validation on ef61a560f plus the retimed fixtures (`TestDezIncomingFinalRouteCapture`), focused selectors through
+`tools/testing/maven_queue.py` with the S3K ROM: run `cold-fade-verify` (Maven
+Finished 04:15:51Z) passed `TestDezIncomingFinalRouteCapture` 7/0/0/0,
+`TestDezSoloActTwoColdRouteCapture` 4/0/0/0, `TestLrzActTwoColdRouteCapture` 2/0/0/0,
+`TestLrzTailsColdRouteCapture` 4/0/0/0 and the fade rows of `TestLrzKnucklesColdRouteCapture`
+and `TestSszSoloColdRouteCapture`; run `cold-joined-retimed` (Finished 04:21:19Z) passed
+`TestS3kHpzJoinedColdRouteCapture` 2/0/0/0 (pair 66 spots, HPZ 52947/52948, SSZ1
+67037/67038, release 67211; Knuckles 27 spots, HPZ 49297/49298, SSZ2 50160/50161,
+release 51586). That test's LRZ live-history tail now starts 36 frames before the HPZ
+load (14 live frames before the native 22-frame fade-out). Rows still red there are
+not fade timing and are owned elsewhere: the Knuckles act-2 restore at 37130 and the
+LRZ boss sidekick overlap parity at 47471 (rewind-snapshot rows) and solo Tails' SSZ1
+opening camera (behaviour row). No skips.

@@ -33,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Controller-only cold LRZ1 through actual HPZ and the released character-specific SSZ entry. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestS3kHpzJoinedColdRouteCapture {
+    private static final int LRZ_HISTORY_LEAD = 36;
     private record Chain(boolean knuckles, String movie, String prefixMovie, int prefixLength,
                          int length, int hpzLoad, int sszLoad, int sszAct,
                          int sszHistoryStart, int endpointX, int endpointY, int endpointRings,
@@ -41,24 +42,24 @@ class TestS3kHpzJoinedColdRouteCapture {
     @Test
     void coldPairDefeatsKnucklesAndReplaysTheJoinedTheftCollapseAndSszArrival() throws Exception {
         verify(new Chain(false, "lrz-sonic-tails-cold-hpz-ssz1-320.bk2",
-                "lrz-boss-sonic-tails-cold-hpz-320.bk2", 53047, 67455, 52925, 67004,
-                0, 66900, 485, 3180, 0,
-                Set.of(52940, 53040, 53125, 53380, 53700, 54080, 57250, 57500,
-                        57900, 58400, 59400, 60217, 60400, 61053, 61745, 61850,
-                        61930, 62030, 62150, 62600, 62900, 63150, 63290, 63500,
-                        63800, 64000, 64250, 64800, 65000, 65300, 65500, 65750,
-                        65930, 66100, 66300, 66500, 66730, 66830, 67020, 67120,
-                        67220, 67320, 67400)));
+                "lrz-boss-sonic-tails-cold-hpz-320.bk2", 53069, 67488, 52947, 67037,
+                0, 66922, 485, 3180, 0,
+                Set.of(52962, 53062, 53147, 53402, 53722, 54102, 57272, 57522,
+                        57922, 58422, 59422, 60239, 60422, 61075, 61767, 61872,
+                        61952, 62052, 62172, 62622, 62922, 63172, 63312, 63522,
+                        63822, 64022, 64272, 64822, 65022, 65322, 65522, 65772,
+                        65952, 66122, 66322, 66522, 66752, 66852, 67053, 67153,
+                        67253, 67353, 67433)));
     }
 
     @Test
     void coldKnucklesReplaysUpperPadAndTheJoinedSszCraneControlRelease() throws Exception {
         verify(new Chain(true, "lrz-knuckles-cold-hpz-ssz2-320.bk2",
-                "lrz-knuckles-cold-hpz-320.bk2", 49526, 51710, 49286, 50138,
-                1, 50115, 356, 1196, 3,
-                Set.of(49295, 49380, 49530, 49700, 49800, 49895, 49970, 50040,
-                        50150, 50200, 50300, 50500, 50700, 50900, 51000, 51100,
-                        51200, 51300, 51400, 51550, 51620, 51650)));
+                "lrz-knuckles-cold-hpz-320.bk2", 49537, 51732, 49297, 50160,
+                1, 50126, 356, 1196, 3,
+                Set.of(49306, 49391, 49541, 49711, 49811, 49906, 49981, 50051,
+                        50172, 50222, 50322, 50522, 50722, 50922, 51022, 51122,
+                        51222, 51322, 51422, 51572, 51642, 51672)));
     }
 
     private static void verify(Chain chain) throws Exception {
@@ -84,7 +85,8 @@ class TestS3kHpzJoinedColdRouteCapture {
             for (int frame = 0; frame < movie.getFrameCount(); frame++) {
                 // Short live-history tails follow all source replay windows. Their real full
                 // loads retire history; raw registry restores never cross those boundaries.
-                if (frame == chain.hpzLoad() - 25 || frame == chain.sszHistoryStart()) {
+                // The LRZ tail is 14 live frames before the frozen 22-frame native fade-out.
+                if (frame == chain.hpzLoad() - LRZ_HISTORY_LEAD || frame == chain.sszHistoryStart()) {
                     GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, true);
                 }
                 session.step(movie.getFrame(frame)); drawing.afterStep(session);
@@ -94,7 +96,7 @@ class TestS3kHpzJoinedColdRouteCapture {
                 var mode = SessionManager.getCurrentGameplayMode();
                 var rewind = mode.getRewindController();
                 int zone = level.getCurrentZone(), act = level.getCurrentAct();
-                if (frame >= chain.hpzLoad() - 25 && hpzLoad < 0 && rewind != null) {
+                if (frame >= chain.hpzLoad() - LRZ_HISTORY_LEAD && hpzLoad < 0 && rewind != null) {
                     lrzHistory = Math.max(lrzHistory, rewind.currentFrame());
                 }
                 if (zone == 22 && act == 1 && hpzLoad < 0) {
@@ -222,9 +224,9 @@ class TestS3kHpzJoinedColdRouteCapture {
         var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
         assertFalse(level.hasPendingFreshLevelTransitionBoundary());
         assertFalse(SessionManager.getCurrentGameplayMode().getFadeManager().hasPendingCompletion());
-        // Knuckles' upper pad enters STATE_RISING at 50106, reaches loc_45B94's
-        // Camera_Y < $240 / Player_1 X >= $B00 handoff at 50126, and loads SSZ2 at 50138. Its eight-frame
-        // rise window ends before the independent 50115..50125 live-history tail.
+        // Knuckles' upper pad enters STATE_RISING at 50117, reaches loc_45B94's
+        // Camera_Y < $240 / Player_1 X >= $B00 handoff at 50137, and loads SSZ2 at 50160. Its eight-frame
+        // rise window ends before the independent 50126..50136 live-history tail.
         // Every other selected spot retains the full 45-frame window.
         int window = level.getCurrentZone() == 22
                 ? Math.min(45, chain.sszHistoryStart() - frame - 1) : 45;

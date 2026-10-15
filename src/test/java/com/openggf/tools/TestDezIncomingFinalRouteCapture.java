@@ -147,7 +147,7 @@ class TestDezIncomingFinalRouteCapture {
         // Earlier independently runnable cold-route tests own DEZ1/2. These
         // checkpoints cover final entry, finger retirement, core/button/beam,
         // the ordinary player's chase rebounds, defeat and ending departure.
-        var spots = Set.of(40406, 40706, 41006, 41356, 41636, 42066, 42500, 43000, 43500, 43565, 43947, 44309, 44692, 45161, 45573, 45948, 46382, 46430, 46600, 46860, 47136, 47168, 47519, 47921, 48226, 48626, 48836, 49141, 49200, 49300, 49380);
+        var spots = Set.of(40417, 40717, 41017, 41367, 41647, 42077, 42511, 43011, 43511, 43576, 43958, 44320, 44703, 45172, 45584, 45959, 46393, 46441, 46611, 46871, 47147, 47179, 47530, 47932, 48237, 48637, 48847, 49152, 49211, 49311, 49391);
         var checked = new HashSet<Integer>();
         var previousInput = GameplayCaptureSession.class.getDeclaredField("previousInput");
         previousInput.setAccessible(true);
@@ -222,10 +222,10 @@ class TestDezIncomingFinalRouteCapture {
                 null, null, null, false, false, null, null, false, null, false);
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/dez-sonic-solo-cold-ending-320.bk2"));
-        assertEquals(60920, movie.getFrameCount());
+        assertEquals(60931, movie.getFrameCount());
         // Cover the shortened Act2 waits, final entry, every core/ship hit,
         // collapse, chase and departure. Original full Act2 coverage remains separate.
-        var spots = Set.of(23532, 28849, 28910, 31810, 32000, 32200, 32500, 33000, 33700, 34000, 34500, 35000, 36000, 36250, 36500, 36800, 36930, 37100, 37500, 38000, 38500, 39000, 39500, 40000, 41000, 42000, 43000, 44000, 45000, 45535, 46000, 47000, 48000, 49000, 50000, 50920, 51020, 51364, 52069, 52500, 53000, 53500, 54000, 54210, 54600, 54835, 55207, 55798, 56212, 56540, 56903, 57264, 57739, 57780, 57900, 58100, 58220, 58495, 58542, 59085, 59390, 59792, 60098, 60402, 60613, 60650, 60750, 60850);
+        var spots = Set.of(23532, 28849, 28910, 31810, 32000, 32200, 32500, 33000, 33700, 34000, 34500, 35000, 36000, 36250, 36500, 36800, 36930, 37100, 37500, 38000, 38500, 39000, 39500, 40000, 41000, 42000, 43000, 44000, 45000, 45535, 46000, 47000, 48000, 49000, 50000, 50920, 51031, 51375, 52080, 52511, 53011, 53511, 54011, 54221, 54611, 54846, 55218, 55809, 56223, 56551, 56914, 57275, 57750, 57791, 57911, 58111, 58231, 58506, 58553, 59096, 59401, 59803, 60109, 60413, 60624, 60661, 60761, 60861);
         var checked = new HashSet<Integer>();
         var previousInput = GameplayCaptureSession.class.getDeclaredField("previousInput");
         previousInput.setAccessible(true);
@@ -302,7 +302,7 @@ class TestDezIncomingFinalRouteCapture {
                 null, null, null, false, false, null, null, false, null, false);
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/dez-sonic-solo-cold-ending-800.bk2"));
-        assertEquals(60298, movie.getFrameCount());
+        assertEquals(60309, movie.getFrameCount());
         // Cold 800px route: the direct lower-bridge path, repaired timed hazards,
         // all final phases and both actual full-load boundaries. No state seeding.
         var spots = Set.of(
@@ -318,14 +318,14 @@ class TestDezIncomingFinalRouteCapture {
                 41200, 41600, 42000, 42400, 42800, 43000, 43200, 43600, 44000,
                 44400, 44800, 45000, 45200, 45600, 46000, 46400, 46800, 47000,
                 47200, 47600, 48000, 48400, 48800, 49000, 49200, 49600, 50000,
-                50200, 50300, 50500, 50400, 50600, 50800, 51000, 51200, 51600,
-                52000, 52400, 52800, 53000, 53200, 53400, 53600, 54000, 54220,
-                54240, 54400, 54590, 54620, 54800, 55180, 55200, 55210, 55590,
-                55600, 55630, 55920, 55960, 56000, 56280, 56320, 56400, 56640,
-                56680, 56800, 57110, 57150, 57200, 57300, 57580, 57600, 57630,
-                57870, 57910, 57960, 58000, 58400, 58460, 58510, 58760, 58800,
-                58810, 59170, 59200, 59210, 59470, 59520, 59600, 59770, 59820,
-                59980, 60000, 60030, 60100, 60200, 60240);
+                50200, 50300, 50511, 50411, 50611, 50811, 51011, 51211, 51611,
+                52011, 52411, 52811, 53011, 53211, 53411, 53611, 54011, 54231,
+                54251, 54411, 54601, 54631, 54811, 55191, 55211, 55221, 55601,
+                55611, 55641, 55931, 55971, 56011, 56291, 56331, 56411, 56651,
+                56691, 56811, 57121, 57161, 57211, 57311, 57591, 57611, 57641,
+                57881, 57921, 57971, 58011, 58411, 58471, 58521, 58771, 58811,
+                58821, 59181, 59211, 59221, 59481, 59531, 59611, 59781, 59831,
+                59991, 60011, 60041, 60111, 60211, 60251);
         var checked = new HashSet<Integer>();
         boolean handsSeen = false, handsDefeated = false;
         boolean coreSeen = false, coreDefeated = false, shipSeen = false, shipDefeated = false;
@@ -339,12 +339,12 @@ class TestDezIncomingFinalRouteCapture {
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 11, 0, settings);
             for (int frame = 0; frame < movie.getFrameCount(); frame++) {
-                if (frame == 50200 || frame == 60050) GameServices.configuration().setSessionOverride(
+                if (frame == 50200 || frame == 60061) GameServices.configuration().setSessionOverride(
                         com.openggf.configuration.SonicConfiguration.LIVE_REWIND_ENABLED, true);
                 session.step(movie.getFrame(frame));
                 drawing.afterStep(session);
                 assertEquals(800, GameServices.camera().getWidth());
-                if (frame == 50372) {
+                if (frame == 50383) {
                     // Incoming callback-bearing fades intentionally reject rewind:
                     // FadeManagerSnapshot.isPoisoned / GameLoop.isRewindBlocked.
                     // Do not bypass that contract with a raw registry restore.
@@ -354,7 +354,7 @@ class TestDezIncomingFinalRouteCapture {
                     assertTrue((boolean) rewindBlocked.invoke(session.loop()));
                     checkedPendingFade = true;
                 }
-                if (frame == 50500) assertFalse((boolean) rewindBlocked.invoke(session.loop()),
+                if (frame == 50511) assertFalse((boolean) rewindBlocked.invoke(session.loop()),
                         "ordinary final gameplay becomes rewindable after the incoming fade");
                 int zone = GameServices.level().getCurrentZone();
                 if (zone == 11 && frame >= 50200) outgoingActTwoHistory = Math.max(outgoingActTwoHistory,
@@ -367,7 +367,7 @@ class TestDezIncomingFinalRouteCapture {
                     GameServices.configuration().setSessionOverride(
                             com.openggf.configuration.SonicConfiguration.LIVE_REWIND_ENABLED, false);
                 }
-                if (zone == 23 && frame >= 60050) outgoingFinalHistory = Math.max(outgoingFinalHistory,
+                if (zone == 23 && frame >= 60061) outgoingFinalHistory = Math.max(outgoingFinalHistory,
                         SessionManager.getCurrentGameplayMode().getRewindController().currentFrame());
                 if (zone == 13 && GameServices.level().getCurrentAct() == 1 && endingLoad < 0) {
                     endingLoad = frame;
@@ -424,7 +424,7 @@ class TestDezIncomingFinalRouteCapture {
             drawing.checkpoint(session);
             assertEquals(spots, checked);
             assertTrue(checkedPendingFade);
-            assertEquals(50371, finalLoad);
+            assertEquals(50382, finalLoad);
             assertTrue(outgoingActTwoHistory > 10);
             if (endingLoad < 0) {
                 var fade = (com.openggf.graphics.FadeManagerSnapshot) SessionManager.getCurrentGameplayMode()
@@ -452,7 +452,7 @@ class TestDezIncomingFinalRouteCapture {
                 null, null, null, false, false, null, null, false, null, false);
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/dez-tails-solo-cold-ending-320.bk2"));
-        assertEquals(68266, movie.getFrameCount());
+        assertEquals(68277, movie.getFrameCount());
         // Cover the shortened Act2 waits, final entry, every core/ship hit,
         // collapse, chase and departure. Original full Act2 coverage remains separate.
         var spots = Set.of(29520, 38800, 38950, 38960, 38991, 39300, 41000, 41380,
@@ -461,11 +461,11 @@ class TestDezIncomingFinalRouteCapture {
                 46342, 47000, 47330, 47361, 48000, 48039, 48070, 48137,
                 48168, 49000, 49393, 49424, 49947, 49978, 50000, 50233,
                 50264, 51000, 52000, 53000, 54000, 55000, 56000, 57000,
-                58000, 58260, 58370, 58600, 59000, 59400, 59800, 60200,
-                60600, 61000, 61400, 61800, 62181, 62553, 63144, 63558,
-                63886, 64249, 64610, 65085, 65120, 65200, 65300, 65400,
-                65560, 65841, 65888, 66431, 66736, 67138, 67444, 67748,
-                67959, 68010, 68100, 68200);
+                58000, 58260, 58381, 58611, 59011, 59411, 59811, 60211,
+                60611, 61011, 61411, 61811, 62192, 62564, 63155, 63569,
+                63897, 64260, 64621, 65096, 65131, 65211, 65311, 65411,
+                65571, 65852, 65899, 66442, 66747, 67149, 67455, 67759,
+                67970, 68021, 68111, 68211);
         var checked = new HashSet<Integer>();
         var previousInput = GameplayCaptureSession.class.getDeclaredField("previousInput");
         previousInput.setAccessible(true);

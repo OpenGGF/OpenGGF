@@ -174,7 +174,7 @@ class TestLrzTailsColdRouteCapture {
     void coldTailsCompletesActTwoAndRestoresTheBoulderHandoff() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/lrz-tails-cold-act2-clear-320.bk2"));
-        assertEquals(53259, movie.getFrameCount());
+        assertEquals(53270, movie.getFrameCount());
         var settings = new GameplayCaptureSession.Settings(320, "tails", "", "off", null, null, null);
         // Lower return, door8, cloud escape and flame timing, both eastern turbines, breakable
         // walls and tunnel, doors5/6, flight/platform landings, stairs and boulder.
@@ -190,8 +190,8 @@ class TestLrzTailsColdRouteCapture {
                 49468, 49558, 49648, 49790, 49971, 50028, 50221,
                 50462, 50783, 51024, 51205, 51320, 51460, 51650,
                 51760, 51960, 52020, 52050, 52220, 52400, 52510,
-                52600, 52700, 52800, 52950, 52977, 53100, 53180,
-                53200);
+                52600, 52700, 52800, 52950, 52977, 53111, 53191,
+                53211);
         var checked = new HashSet<Integer>();
         var drawing = new RouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
@@ -210,20 +210,20 @@ class TestLrzTailsColdRouteCapture {
                             .anyMatch(door -> door.triggerIndex() == trigger && door.isFullyOpen()),
                             "ordinary controller approach opens door" + trigger);
                 }
-                if (frame == 53057) {
+                if (frame == 53068) {
                     assertEquals(9, GameServices.level().getCurrentZone());
                     assertEquals(1, GameServices.level().getCurrentAct());
                     assertTrue(session.player().isObjectControlled(), "boulder owns the final drop");
                     assertEquals(0, session.player().getRingCount());
                 }
-                if (frame == 53058) {
+                if (frame == 53069) {
                     assertEquals(22, GameServices.level().getCurrentZone());
                     assertEquals(0, GameServices.level().getCurrentAct());
                     assertEquals(0, session.player().getRingCount(), "act load retains the ordinary carry");
                 }
                 if (!spots.contains(frame)) continue;
-                assertEquals(frame < 53058 ? 9 : 22, GameServices.level().getCurrentZone());
-                assertEquals(frame < 53058 ? 1 : 0, GameServices.level().getCurrentAct());
+                assertEquals(frame < 53069 ? 9 : 22, GameServices.level().getCurrentZone());
+                assertEquals(frame < 53069 ? 1 : 0, GameServices.level().getCurrentAct());
                 checked.add(frame);
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
                 drawing.checkpoint(session);
@@ -261,20 +261,20 @@ class TestLrzTailsColdRouteCapture {
     void coldTailsCompletesBossActAndReachesPlayableHiddenPalace() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/lrz-tails-cold-hpz-320.bk2"));
-        assertEquals(62524, movie.getFrameCount());
+        assertEquals(62546, movie.getFrameCount());
         var settings = new GameplayCaptureSession.Settings(320, "tails", "", "off", null, null, null);
         // Arrival flash, missiles, flight/landings, checkpoint, earned shield,
         // native left-bound arena entry, mine cycles, capsule/results and HPZ.
         // The outgoing callback-bearing load fade has separate destination spots.
-        var spots = Set.of(53267, 53347, 53447, 53597, 53710, 53797, 53897,
-                54047, 54165, 54297, 54447, 54610, 54791, 54912,
-                55047, 55247, 55397, 55449, 55547, 55720, 55797,
-                55914, 55947, 56047, 56247, 56447, 56597, 56697,
-                56797, 56897, 57047, 57197, 57297, 57397, 57647,
-                57947, 58147, 58297, 58397, 58647, 58947, 59097,
-                59247, 59347, 59647, 59947, 60097, 60197, 60297,
-                60547, 60847, 60997, 61097, 61197, 61347, 61547,
-                61747, 61947, 62147, 62297, 62427, 62467);
+        var spots = Set.of(53278, 53358, 53458, 53608, 53721, 53808, 53908,
+                54058, 54176, 54308, 54458, 54621, 54802, 54923,
+                55058, 55258, 55408, 55460, 55558, 55731, 55808,
+                55925, 55958, 56058, 56258, 56458, 56608, 56708,
+                56808, 56908, 57058, 57208, 57308, 57408, 57658,
+                57958, 58158, 58308, 58408, 58658, 58958, 59108,
+                59258, 59358, 59658, 59958, 60108, 60208, 60308,
+                60558, 60858, 61008, 61108, 61208, 61358, 61558,
+                61758, 61958, 62158, 62308, 62449, 62489);
         var checked = new HashSet<Integer>();
         var healthSeen = new HashSet<Integer>();
         boolean sawCapsule = false, sawResults = false;
@@ -288,22 +288,22 @@ class TestLrzTailsColdRouteCapture {
                 session.step(movie.getFrame(frame));
                 drawing.afterStep(session);
                 assertFalse(session.player().getDead(), "death at input " + frame);
-                if (frame < 53259) continue;
+                if (frame < 53270) continue;
                 var manager = GameServices.level().getObjectManager();
                 for (var boss : manager.activeObjectsOfType(LrzEndBossObjectInstance.class)) {
                     healthSeen.add(boss.getCollisionProperty());
                 }
                 sawCapsule |= !manager.activeObjectsOfType(LrzEndBossEggCapsule.class).isEmpty();
                 sawResults |= !manager.activeObjectsOfType(LrzEndBossEggCapsule.Results.class).isEmpty();
-                if (frame == 53259) assertFalse(session.player().hasShield(), "ordinary cold carry");
-                if (frame == 55947) {
+                if (frame == 53270) assertFalse(session.player().hasShield(), "ordinary cold carry");
+                if (frame == 55958) {
                     assertEquals(ShieldType.FIRE, session.player().getShieldType(), "placed monitor pickup");
                     assertEquals(12, session.player().getRingCount());
                 }
-                if (frame >= 55947) assertFalse(session.player().isHurt(), "encounter/exit hurt at " + frame);
+                if (frame >= 55958) assertFalse(session.player().isHurt(), "encounter/exit hurt at " + frame);
                 if (!spots.contains(frame)) continue;
                 assertEquals(22, GameServices.level().getCurrentZone());
-                assertEquals(frame < 62402 ? 0 : 1, GameServices.level().getCurrentAct());
+                assertEquals(frame < 62424 ? 0 : 1, GameServices.level().getCurrentAct());
                 checked.add(frame);
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
                 drawing.checkpoint(session);
