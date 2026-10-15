@@ -94,7 +94,7 @@ class TestSozColdRouteCapture {
                 // neither outgoing timeline can be restored into the replacement world.
                 if (bonusRoute && frame == 3100)
                     GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, true);
-                if (bonusRoute && frame == 3800)
+                if (bonusRoute && frame == 3822)
                     GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, false);
                 var beforeLevel = GameServices.level().getCurrentLevel();
                 var beforeHistory = SessionManager.getCurrentGameplayMode().getRewindController();
@@ -103,7 +103,7 @@ class TestSozColdRouteCapture {
                 var input = input(movie, frame);
                 session.step(input);
                 drawing.afterStep(session);
-                if (bonusRoute && frame >= 3100 && frame < 3800
+                if (bonusRoute && frame >= 3100 && frame < 3822
                         && beforeLevel != GameServices.level().getCurrentLevel()) {
                     assertTrue(beforeHistoryFrame > 10, "outgoing bonus boundary history at " + frame);
                     var afterHistory = SessionManager.getCurrentGameplayMode().getRewindController();
@@ -190,7 +190,7 @@ class TestSozColdRouteCapture {
                 int lastSourceSpot = knucklesActTwo ? 35000 : bonusRoute ? 23000 : main.equals("tails") ? (act == 0 ? 16000 : 28000)
                         : shorterSoloRoute ? 28000 : act == 0 && paired ? 26000 : 31000;
                 if ((frame >= 100 && frame <= lastSourceSpot && (frame == 100 || frame % 1000 == 0))
-                        || (bonusRoute && (frame == 3100 || frame == 3400 || frame == 3500 || frame == 3700))
+                        || (bonusRoute && (frame == 3100 || frame == 3411 || frame == 3511 || frame == 3722))
                         || (knucklesActTwo && knucklesPuzzleSpots.contains(frame))
                         || (readyFrame >= 0 && frame == readyFrame + 30)) {
                     replay(session, movie, frame, drawing);

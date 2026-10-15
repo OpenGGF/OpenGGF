@@ -40,6 +40,12 @@ import java.util.Set;
  * {@code --emeralds DDDDDDD}, {@code --authored-fade-advances N} (default 2; 1 is a no-op) and
  * {@code --keep-intros} for routes whose test driver boots with {@code S3K_SKIP_INTROS} off
  * (the capture session skips them by default).
+ * <p>Limits: an odd native window may have been authored as {@code floor} rather than
+ * {@code ceil(n / advances)} inputs depending on the fade phase (SOZ1 Knuckles' 21-frame bonus entry
+ * needed +11, not +10), and a fade-out that runs with live VInt (the bonus-stage exit) is not
+ * detected as frozen although the old driver doubled it too. Compare an old-harness state dump
+ * with the retimed one when the verification replay dies.
+ *
  * Origin: S3K cold LRZ→HPZ→SSZ campaign lane, 2026-10-15, after bisecting the LRZ/HPZ cold
  * route reds to 8179ccd80. This is fixture authoring; it never changes runtime behavior.
  */
