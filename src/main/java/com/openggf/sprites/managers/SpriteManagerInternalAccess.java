@@ -53,6 +53,20 @@ public final class SpriteManagerInternalAccess {
     }
 
     /**
+     * Retire one follower whose object a script deleted, retaining reversible
+     * same-world membership and its roster position.
+     */
+    public static void retireSidekickForRewind(SpriteManager manager,
+            com.openggf.sprites.playable.AbstractPlayableSprite sidekick) {
+        manager.retireSidekickForRewind(sidekick);
+    }
+
+    /** Re-admit retired followers on an ordinary return whose destination load recreates them. */
+    public static void restoreRetiredSidekicksForReturn(SpriteManager manager) {
+        manager.restoreRetiredSidekicksForReturn();
+    }
+
+    /**
      * Bind after gameplay-context creation. New/recreated roster members inherit
      * this source; a replacement gameplay context must be bound independently.
      */

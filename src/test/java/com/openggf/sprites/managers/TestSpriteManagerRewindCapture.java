@@ -93,6 +93,50 @@ class TestSpriteManagerRewindCapture {
     }
 
     @Test
+    void deletingOnlyPlayerTwoRestoresItsRosterPositionBothWaysAndOnReturn() {
+        // Gumball loc_61050 clears only Player_2; later followers keep running.
+        SpriteManager manager = new SpriteManager();
+        Sonic main = new Sonic("sonic", (short) 0x100, (short) 0x200);
+        Tails first = cpuTails("tails_p2", (short) 0x0E0, main);
+        Tails second = cpuTails("tails_p3", (short) 0x0C0, first);
+        Tails third = cpuTails("tails_p4", (short) 0x0A0, second);
+        manager.addSprite(main);
+        manager.addSprite(first, "tails");
+        manager.addSprite(second, "tails");
+        manager.addSprite(third, "tails");
+        var rewind = manager.rewindSnapshottable();
+        var before = rewind.capture();
+        int firstX = first.getCentreX();
+        SpriteManagerInternalAccess.retireSidekickForRewind(manager, first);
+        assertEquals(List.of(second, third), manager.getRegisteredSidekicks());
+        assertNull(manager.getSprite("tails_p2"), "a deleted Player_2 is no longer updated, drawn or touched");
+        var deleted = rewind.capture();
+        assertEquals(3, deleted.sprites().length);
+        first.setCentreX((short) 0x500);
+        for (int cycle = 0; cycle < 2; cycle++) {
+            rewind.restore(before);
+            assertEquals(List.of(first, second, third), manager.getRegisteredSidekicks(),
+                    "re-admission keeps the original follower update order");
+            assertEquals(firstX, first.getCentreX());
+            assertSame(main, first.getCpuController().getLeader());
+            assertSame(first, second.getCpuController().getLeader());
+            assertTrue(com.openggf.game.rewind.RewindSnapshotDiff.diffKey(
+                    "sprites", before, rewind.capture()).isEmpty());
+            rewind.restore(deleted);
+            assertEquals(List.of(second, third), manager.getRegisteredSidekicks());
+            assertTrue(com.openggf.game.rewind.RewindSnapshotDiff.diffKey(
+                    "sprites", deleted, rewind.capture()).isEmpty());
+        }
+        SpriteManagerInternalAccess.restoreRetiredSidekicksForReturn(manager);
+        assertEquals(List.of(first, second, third), manager.getRegisteredSidekicks(),
+                "the destination load recreates Player_2 in its configured position");
+        assertEquals("tails", manager.getSidekickCharacterName(first));
+        rewind.restore(deleted);
+        assertEquals(List.of(first, second, third), manager.getRegisteredSidekicks(),
+                "a returned world does not inherit the interior's retired membership");
+    }
+
+    @Test
     void clearingTheWorldDropsScriptRetiredParticipantResources() {
         SpriteManager manager = new SpriteManager();
         Sonic main = new Sonic("sonic", (short) 0x100, (short) 0x200);

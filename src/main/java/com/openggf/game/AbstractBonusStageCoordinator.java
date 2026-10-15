@@ -46,6 +46,13 @@ public abstract class AbstractBonusStageCoordinator implements BonusStageProvide
     @Override
     public void onExit() {
         pacingEntryEpoch++;
+        // An interior may delete a follower's object (Gumball loc_61050 clears
+        // Player_2); the origin reload recreates Player_2, so configured
+        // companions rejoin before the return load positions them.
+        var sprites = GameServices.spritesOrNull();
+        if (sprites != null) {
+            com.openggf.sprites.managers.SpriteManagerInternalAccess.restoreRetiredSidekicksForReturn(sprites);
+        }
         LOGGER.info("Exiting bonus stage: " + activeType
                 + " (rings collected: " + ringsCollected + ")");
         activeType = BonusStageType.NONE;

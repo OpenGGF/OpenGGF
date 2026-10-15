@@ -85,6 +85,8 @@ public class SpriteManager implements PlayableSstDispatcher {
 			temporarySidekickRecreators = new java.util.HashMap<>();
 
 	private final Map<String, RewindRetiredSidekick> rewindRetiredSidekicks = new java.util.LinkedHashMap<>();
+	/** Live and script-retired followers in their original update order. */
+	private final List<AbstractPlayableSprite> retiredRosterOrder = new ArrayList<>();
 	final NativePlayerArtBindings nativePlayerArtBindings = new NativePlayerArtBindings(this);
 
     void forgetNativePlayerArt(AbstractPlayableSprite player) {
@@ -279,27 +281,65 @@ public class SpriteManager implements PlayableSstDispatcher {
 
 	/** A scene may erase its followers while its same-world history still contains them. */
 	void retireAllSidekicksForRewind() {
-		for (var sidekick : new ArrayList<>(sidekicks)) {
-			rewindRetiredSidekicks.put(sidekick.getCode(), new RewindRetiredSidekick(
-					sidekick, sidekickCharacterNames.get(sidekick), temporarySidekicks.contains(sidekick),
-					nativeScriptedArtSidekicks.contains(sidekick)));
-			removeSprite(sidekick);
-		}
+		for (var sidekick : new ArrayList<>(sidekicks)) retireSidekickForRewind(sidekick);
+	}
+
+	/**
+	 * A script deleted one follower's object (for example a bonus object's
+	 * {@code Delete_Referenced_Sprite} on {@code Player_2}). It stops updating,
+	 * drawing and colliding, while same-world history can still restore it.
+	 */
+	void retireSidekickForRewind(AbstractPlayableSprite sidekick) {
+		if (!sidekicks.contains(sidekick)) return;
+		for (var live : sidekicks) if (!retiredRosterOrder.contains(live)) retiredRosterOrder.add(live);
+		rewindRetiredSidekicks.put(sidekick.getCode(), new RewindRetiredSidekick(
+				sidekick, sidekickCharacterNames.get(sidekick), temporarySidekicks.contains(sidekick),
+				nativeScriptedArtSidekicks.contains(sidekick)));
+		removeSprite(sidekick);
 	}
 
 	private void restoreRetiredSidekickRoster(Set<String> snapshotCodes) {
-		// Linked insertion order preserves the original CPU leader chain, including
-		// duplicate characters. Reapply per-sprite RAM in the ordinary restore below.
-		for (var entry : rewindRetiredSidekicks.entrySet()) {
-			var retired = entry.getValue();
-			if (!snapshotCodes.contains(entry.getKey())) {
-				if (getSprite(entry.getKey()) == retired.sprite()) removeSprite(retired.sprite());
-			} else if (getSprite(entry.getKey()) == null) {
-				if (retired.temporary()) addTemporarySidekick(retired.sprite(), retired.characterName());
-				else addSprite(retired.sprite(), retired.characterName());
-				if (retired.nativeScriptedArt()) nativeScriptedArtSidekicks.add(retired.sprite());
+		// Re-admit in original roster order, at the original positions, so the CPU
+		// leader chain and update order match, including duplicate characters.
+		// Reapply per-sprite RAM in the ordinary restore below.
+		for (var retired : rewindRetiredSidekicks.values()) {
+			String code = retired.sprite().getCode();
+			if (!snapshotCodes.contains(code)) {
+				if (getSprite(code) == retired.sprite()) removeSprite(retired.sprite());
+			} else if (getSprite(code) == null) {
+				readmitRetiredSidekick(retired);
 			}
 		}
+		restoreRetiredRosterOrder();
+	}
+
+	/**
+	 * Ordinary return from a scene that deleted followers: the destination load
+	 * recreates them, so the configured companions rejoin in their original order.
+	 */
+	void restoreRetiredSidekicksForReturn() {
+		for (var retired : rewindRetiredSidekicks.values()) {
+			if (getSprite(retired.sprite().getCode()) == null) readmitRetiredSidekick(retired);
+		}
+		restoreRetiredRosterOrder();
+		rewindRetiredSidekicks.clear();
+		retiredRosterOrder.clear();
+	}
+
+	private void readmitRetiredSidekick(RewindRetiredSidekick retired) {
+		if (retired.temporary()) addTemporarySidekick(retired.sprite(), retired.characterName());
+		else addSprite(retired.sprite(), retired.characterName());
+		if (retired.nativeScriptedArt()) nativeScriptedArtSidekicks.add(retired.sprite());
+	}
+
+	/** Stable: followers absent from the recorded order keep their relative order last. */
+	private void restoreRetiredRosterOrder() {
+		if (retiredRosterOrder.isEmpty()) return;
+		sidekicks.sort(java.util.Comparator.comparingInt(sidekick -> {
+			int index = retiredRosterOrder.indexOf(sidekick);
+			return index < 0 ? Integer.MAX_VALUE : index;
+		}));
+		bucketsDirty = true;
 	}
 
 	public void removeTemporarySidekicks() {
@@ -357,6 +397,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 		nativeScriptedArtSidekicks.clear();
 		temporarySidekickRecreators.clear();
 		rewindRetiredSidekicks.clear();
+		retiredRosterOrder.clear();
 		bucketsDirty = true;
 	}
 
