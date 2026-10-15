@@ -188,8 +188,19 @@ env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off
 python3 tools/testing/maven_queue.py -Dmse=off -Dtest=openggf.racing.e2e.TestDirectConnectEndToEnd test
 ```
 
-The desktop compatibility change is local commit `1686a71` in OpenGGF-Editor; it
-is not pushed. Its build uses the private Maven repository and shared admission:
+The retirement implementation is `f2c3cf2ca`; its executable source matches the
+focused, picture and guard runs above. The desktop compatibility change is local
+commit `1686a71` in OpenGGF-Editor and is not pushed. The admitted clean engine
+package/install and desktop package succeeded; all seven desktop tests passed
+with zero failures, errors or skips, including service discovery and palette
+input ownership. The clean engine jar contains the HUD, window-chrome seam and
+world overlay, none of the six retired renderer/layout/browser classes, and
+matches the engine jar installed in the desktop's private repository. The desktop
+jar retains its `EditorWindowChrome` service registration. This verifies package
+compatibility and headless behavior; a physical-pad or desktop-window runtime
+check was not performed.
+
+The desktop build uses the private Maven repository and shared admission:
 
 ```bash
 # From OpenGGF-Editor; MAVEN_ARGS points at its .m2/repository.
