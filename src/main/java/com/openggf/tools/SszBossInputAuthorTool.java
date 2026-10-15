@@ -111,54 +111,8 @@ public final class SszBossInputAuthorTool {
                 rows.append(session.stateLine(frame, previous)).append('\n');
                 if (session.player().getDead()) throw new IllegalStateException("Prefix died at " + frame);
             }
-            level = GameServices.level().getCurrentLevel();
-            while (frame < end && !session.player().getDead() && !defeated(encounter)) {
-                var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
-                var saved = registry.capture();
-                var oldInput = previous;
-                var before = encounter.observe();
-                int health = before == null ? 0 : before.health();
-                double best = -Double.MAX_VALUE;
-                int chosen = 0;
-                // Before allocation, a full-health spawn must not lose to avoiding the trigger.
-                int count = health > 0 ? POLICY_COUNT : 1;
-                for (int policy = 0; policy < count; policy++) {
-                    registry.restore(saved);
-                    session.restoreInputHistory(oldInput);
-                    var trialInput = oldInput;
-                    for (int n = 0; n < HORIZON; n++) {
-                        trialInput = buttons(session, encounter, frame + n, policy, trialInput);
-                        session.step(trialInput);
-                        session.render();
-                        requireSameLevel(level); // Never restore an outgoing snapshot into a new load.
-                        if (session.player().getDead() || defeated(encounter)) break;
-                    }
-                    var after = encounter.observe();
-                    double value = score(session.player().getDead(), health,
-                            after == null ? null : after.health(), session.player().getRingCount(),
-                            session.player().isHurt(), after == null ? 0
-                                    : Math.abs(after.x() - session.player().getCentreX()));
-                    if (value > best) { best = value; chosen = policy; }
-                }
-                registry.restore(saved);
-                session.restoreInputHistory(oldInput);
-                previous = oldInput;
-                for (int n = 0; n < COMMIT_INPUTS && frame < end; n++) {
-                    previous = buttons(session, encounter, frame, chosen, previous);
-                    session.step(previous);
-                    session.render();
-                    requireSameLevel(level);
-                    append(script, previous);
-                    rows.append(session.stateLine(frame++, previous)).append('\n');
-                    if (session.player().getDead() || defeated(encounter)) break;
-                }
-                var boss = encounter.observe();
-                System.out.printf("CHOICE frame=%d policy=%d score=%.2f hp=%d rings=%d%n",
-                        frame, chosen, best, boss == null ? -1 : boss.health(), session.player().getRingCount());
-                write(output, script, rows);
-            }
-            result = new Result(session.player().getDead() ? Stop.DEAD
-                    : defeated(encounter) ? Stop.DEFEATED : Stop.LIMIT_REACHED, frame);
+            result = authorEncounter(session, encounter, frame, end, previous, pad -> append(script, pad),
+                    rows, () -> write(output, script, rows));
         }
         write(output, script, rows);
         InputLogAuthorTool.author(script.toString(), output.resolve("input.bk2"), "s3k");
@@ -167,6 +121,67 @@ public final class SszBossInputAuthorTool {
                 + "\nmaxNewInputs=" + maxInputs + "\nFresh uninterrupted replay required.\n");
         return result;
     }
+
+    /**
+     * Rolling search from the session's current state: score each policy over {@link #HORIZON}
+     * restored inputs, commit {@link #COMMIT_INPUTS} of the best, repeat until defeat, death or
+     * {@code end}. Restores never leave the current world. {@code sink} receives each committed pad.
+     */
+    static Result authorEncounter(GameplayCaptureSession session, Encounter encounter, int frame, int end,
+                                  Bk2FrameInput previous, java.util.function.Consumer<Bk2FrameInput> sink,
+                                  StringBuilder rows, IoAction checkpoint) throws Exception {
+        var level = GameServices.level().getCurrentLevel();
+        while (frame < end && !session.player().getDead() && !defeated(encounter)) {
+            var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+            var saved = registry.capture();
+            var oldInput = previous;
+            var before = encounter.observe();
+            int health = before == null ? 0 : before.health();
+            double best = -Double.MAX_VALUE;
+            int chosen = 0;
+            // Before allocation, a full-health spawn must not lose to avoiding the trigger.
+            int count = health > 0 ? POLICY_COUNT : 1;
+            for (int policy = 0; policy < count; policy++) {
+                registry.restore(saved);
+                session.restoreInputHistory(oldInput);
+                var trialInput = oldInput;
+                for (int n = 0; n < HORIZON; n++) {
+                    trialInput = buttons(session, encounter, frame + n, policy, trialInput);
+                    session.step(trialInput);
+                    session.render();
+                    requireSameLevel(level); // Never restore an outgoing snapshot into a new load.
+                    if (session.player().getDead() || defeated(encounter)) break;
+                }
+                var after = encounter.observe();
+                double value = score(session.player().getDead(), health,
+                        after == null ? null : after.health(), session.player().getRingCount(),
+                        session.player().isHurt(), after == null ? 0
+                                : Math.abs(after.x() - session.player().getCentreX()));
+                if (value > best) { best = value; chosen = policy; }
+            }
+            registry.restore(saved);
+            session.restoreInputHistory(oldInput);
+            previous = oldInput;
+            for (int n = 0; n < COMMIT_INPUTS && frame < end; n++) {
+                previous = buttons(session, encounter, frame, chosen, previous);
+                session.step(previous);
+                session.render();
+                requireSameLevel(level);
+                sink.accept(previous);
+                rows.append(session.stateLine(frame++, previous)).append('\n');
+                if (session.player().getDead() || defeated(encounter)) break;
+            }
+            var boss = encounter.observe();
+            System.out.printf("CHOICE frame=%d policy=%d score=%.2f hp=%d rings=%d%n",
+                    frame, chosen, best, boss == null ? -1 : boss.health(), session.player().getRingCount());
+            checkpoint.run();
+        }
+        return new Result(session.player().getDead() ? Stop.DEAD
+                : defeated(encounter) ? Stop.DEFEATED : Stop.LIMIT_REACHED, frame);
+    }
+
+    @FunctionalInterface
+    interface IoAction { void run() throws Exception; }
 
     private static void requireSameLevel(Object level) {
         if (GameServices.level().getCurrentLevel() != level) {
