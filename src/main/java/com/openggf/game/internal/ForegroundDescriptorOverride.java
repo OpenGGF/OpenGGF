@@ -6,10 +6,12 @@ public interface ForegroundDescriptorOverride {
     int foregroundDescriptorAt(int sourceX, int sourceY);
 
     /**
-     * Whether the retained descriptors form a VDP plane ring that the tile pass must
-     * sample wrapped, as the VDP wraps V-scroll, instead of clamping to the layout height.
+     * Rows of the VDP plane ring the retained descriptors repeat over, or 0 when they follow
+     * the finite layout. The tile pass then builds and wraps exactly this many rows, as the
+     * VDP wraps V-scroll; wrapping at a layout height that is not a whole number of rings
+     * would shift every wrapped row.
      */
-    default boolean foregroundDescriptorsWrapVertically() {
-        return false;
+    default int foregroundDescriptorRingRows() {
+        return 0;
     }
 }

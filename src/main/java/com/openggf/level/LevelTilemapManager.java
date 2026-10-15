@@ -814,6 +814,14 @@ public class LevelTilemapManager {
                                             boolean verticalWrapEnabled) {
         TilemapData data = buildTilemapData((byte) 0, blockLookup, zoneFeatureProvider,
                 currentZone, parallaxManager, verticalWrapEnabled);
+        int ringRows = foregroundDescriptorRevision != 0
+                && zoneFeatureProvider instanceof com.openggf.game.internal.ForegroundDescriptorOverride ring
+                ? ring.foregroundDescriptorRingRows() : 0;
+        if (ringRows > 0) {
+            // A retained VDP plane ring replaces the layout rows: build exactly its height
+            // so the shader's WrapY (mod TilemapHeight) repeats it where the VDP does.
+            data = new TilemapData(new byte[data.widthTiles * ringRows * 4], data.widthTiles, ringRows);
+        }
         foregroundTilemapData = data.data;
         foregroundTilemapWidthTiles = data.widthTiles;
         foregroundTilemapHeightTiles = data.heightTiles;

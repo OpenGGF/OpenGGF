@@ -1915,7 +1915,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     boolean foregroundPlaneWrapsVertically() {
         return verticalWrapEnabled
                 || (zoneFeatureProvider instanceof com.openggf.game.internal.ForegroundDescriptorOverride owner
-                    && owner.foregroundDescriptorRevision() != 0 && owner.foregroundDescriptorsWrapVertically());
+                    && owner.foregroundDescriptorRevision() != 0 && owner.foregroundDescriptorRingRows() > 0);
     }
 
     boolean isHudSuppressed() {
