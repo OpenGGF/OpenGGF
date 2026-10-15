@@ -164,6 +164,8 @@ class TestEditorHudPictures {
                         camera.captureRenderCopy();
                     });
 
+                    // The HUD swallows controls already held when it takes over, so let it settle first.
+                    shot.tick();
                     // A first pad press switches every prompt to pad glyphs; RB then LB returns to slot one.
                     shot.press(BUTTON_RB);
                     int secondSlot = controller.selectedBlockIndex();

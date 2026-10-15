@@ -9,8 +9,6 @@ import com.openggf.editor.EditorHierarchyDepth;
 import com.openggf.editor.EditorInputHandler;
 import com.openggf.editor.LevelEditorController;
 import com.openggf.game.session.EditorCursorState;
-import com.openggf.game.session.EngineContext;
-import com.openggf.game.session.EngineServices;
 import com.openggf.level.AbstractLevel;
 import com.openggf.level.Block;
 import com.openggf.level.Chunk;
@@ -22,6 +20,7 @@ import com.openggf.level.SolidTile;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.rings.RingSpawn;
 import com.openggf.level.rings.RingSpriteSheet;
+import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -53,7 +52,7 @@ class TestEditorHudControls {
 
     @BeforeEach
     void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.resetAll();
         level = MutableLevel.snapshot(new TestLevel(4, 3, 2, 4, 12));
         controller = new LevelEditorController();
         controller.attachLevel(level);
