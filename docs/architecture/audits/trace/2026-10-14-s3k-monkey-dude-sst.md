@@ -1463,6 +1463,81 @@ Qualification:
     in the frontier log.
 
 
+## Returned HCZ fan load waits for the parked S3K X cursor — 2026-10-15
+
+This is the outcome of the bounded attribution named above.
+
+### Observer
+
+A temporary, comparison-only chain observer subclassed `AbstractRunChainTest`.
+It used `productionOutputRowObserver` on the original movie and
+`assertChainReplayThroughSegmentRow(seg 11, 5726)`. Per row it recorded engine
+fan pulse state, belt pose phase, oscillation byte $14, P1 state, camera, and
+the occupancy of slots 3–12. It read no trace rows. It was deleted after use
+and can be rebuilt from this description in minutes.
+
+### Native evidence (hcz_2 aux)
+
+- **Fan push.** Natively the $2250 fan pushes the belt rider from trace 1505:
+  the belt phase reaches 6 at 1505 and $24 at 1510, which is mapping $64,
+  Y $7D6.
+- **Fan load.** `object_appeared` dates the $2250 fan (y $874) and the $22B0 fan
+  to trace 1246, in slots 10 and 13, with the $227F hurt block and the $22B0
+  object $2413E between them.
+- **Crossing frame.** At the coarse-X crossing to $2000 (trace 1160),
+  `slot_dump` shows the dynamic SST full: slots 4–92 occupied except 7 and 8.
+  The two old fans in slots 7 and 8 delete only later in that frame's
+  `Process_Sprites`. Slot 3 is never returned by `AllocateObject`, whose loop
+  pre-increments past `Dynamic_object_RAM`.
+- **ROM behaviour.** `Load_Sprites` allocated 63, 64 and 65 (two $85AD2 and the
+  $2250/$78E $2413E). `CreateNewSprite4` then found no slot, so the
+  `loc_1B8E8` loop exited with `Object_load_addr_front` parked on the fan.
+  `loc_1B864` runs that loop again only on the next `Camera_X_pos_coarse`
+  change, which came at 1246.
+
+### Engine before the fix
+
+- **Early load.** The engine created the fan at trace 1161. At that point it
+  had 89 slots in use, against native's 87. In the frame the old fans
+  retired, its count fell from 89 to 16. `ObjectManager` retried pending
+  cursor entries on every loader pass, so the next frame loaded the parked
+  fan. Its 121/181 pulse ran 85 frames early.
+- **Effect at 1505.** The fan was idle (toggle 1, timer 82) when native was
+  active. The belt pose stayed at phase 0 (mapping $95/$94), and the first
+  error landed at 1510.
+- **Bubble removal (not attributed).** About 70 `FanBubbleChild`s disappeared
+  in one frame. `HCZCGZFan_Bubble` ($30834) has no camera deletion and
+  survives natively, and this lane did not attribute the mass removal. Engine
+  slot numbers therefore still differ: the fan is in slot 6 against native
+  slot 10. This is recorded, not changed.
+
+### Repair
+
+`ObjectPlacementController` latches one X-cursor loader pass per coarse change
+(and per reset), and clears the latch on rewind restore. The S3K branch of
+`ObjectManager` processes pending entries only on such a pass. The pass first
+needs a free SST, and stops at the first allocation failure or once the last
+free slot has been consumed (`loc_1B8D2`–`loc_1B8F2`, `CreateNewSprite4`).
+
+Pending ownership is unchanged. It is still captured and restored, as
+5fc1d61d4 introduced. Its test, which retried on an unchanged camera, now
+asserts that the entry stays parked until the next coarse pass. A new case
+covers the last-free-slot stop.
+
+### Qualification
+
+- **Focused selection:** placement, slot allocator, CNZ late ring, SS entry
+  ring and the four mandatory S3K classes passed 150/0/0/0.
+- **Canonical selection:** 5 tests, 1 failure, 0 errors, 0 skips.
+  - HCZ11 first error moved from 1510 to 1768 (Y ROM $870, engine $871).
+  - HCZ11 raw errors fell from 82067 to 81981 (69334 physics, 12647
+    animation).
+  - The walk still stops at input 68801/loadGeneration 9.
+  - AIZ5 is unchanged at 1692 (first 6111); the other segments stay at 0.
+- **Alternate selection:** unchanged at 60, first 25589.
+- **Observer confirmation:** the fan is now created at trace 1246, is active
+  at 1505, and the belt phase rises from 1505 exactly as native.
+
 ## Prepared independent colour-expansion feature — 2026-10-15
 
 The user requested a saved Full/Limited display setting during the measurement
