@@ -6,6 +6,7 @@ import com.openggf.game.CheckpointState;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -158,6 +159,9 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
     private static final int FRAME_HEAD = 3;      // Head alone
     private static final int FRAME_BLUE_BALL = 4; // Pole + blue ball
 
+    // Bounded factory opt-in; null follows the shipped ring-selection path.
+    // Captured scalar state restores this choice after spawn-based recreation.
+    private BonusStarVariant invitationVariant;
     private int checkpointIndex;
     private boolean cameraLockFlag;
     private int animId;
@@ -184,11 +188,35 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
         this.y = spawn.y();
     }
 
+    static Sonic3kStarPostObjectInstance withInvitation(ObjectSpawn spawn, BonusStageType family) {
+        java.util.Objects.requireNonNull(spawn, "spawn");
+        if (spawn.objectId() != Sonic3kObjectIds.STAR_POST) {
+            throw new IllegalArgumentException("Invitation requires an original native star post");
+        }
+        Sonic3kStarPostObjectInstance post = new Sonic3kStarPostObjectInstance(spawn);
+        post.invitationVariant = switch (java.util.Objects.requireNonNull(family, "family")) {
+            case GUMBALL -> BonusStarVariant.YELLOW;
+            case GLOWING_SPHERE -> BonusStarVariant.BLUE;
+            case SLOT_MACHINE -> BonusStarVariant.RED;
+            case NONE -> throw new IllegalArgumentException("Invitation requires a bonus family");
+        };
+        return post;
+    }
+
+    /** Arrival at this marked post completes its authored traversal challenge. */
+    boolean hasEarnedInvitation() { return invitationVariant != null && activated; }
+
     private void ensureInitialized() {
         if (initialized) {
             return;
         }
         initialized = true;
+        if (invitationVariant != null) {
+            ObjectRenderManager renderManager = services().renderManager();
+            if (renderManager != null && renderManager.getArtProvider() instanceof Sonic3kObjectArtProvider provider) {
+                provider.queueStarPostBonusArt(invitationVariant.artSourceAddress);
+            }
+        }
         // Init routine (loc_2CFC0): a star post is already-activated when its
         // respawn bit is set (btst #0,(a2), sonic3k.asm:61582) OR
         // Last_star_post_hit >= subtype (:61588). The engine folds both into the
@@ -343,7 +371,7 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
             return false;
         }
         int rings = player.getRingCount();
-        return rings >= BONUS_STAR_RING_THRESHOLD;
+        return invitationVariant != null || rings >= BONUS_STAR_RING_THRESHOLD;
     }
 
     /**
@@ -355,7 +383,7 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
         if (services().objectManager() == null) {
             return;
         }
-        BonusStarVariant variant = computeBonusStarVariant(ringCount);
+        BonusStarVariant variant = invitationVariant != null ? invitationVariant : computeBonusStarVariant(ringCount);
         LOGGER.fine("S3K bonus stars: rings=" + ringCount + " → variant=" + variant
                 + " (" + variant.bonusStageType + ")");
         // ROM: moveq #4-1,d1 / moveq #0,d2 / ... / addi.w #$40,d2 / dbf d1,...
@@ -444,6 +472,15 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
             return;
         }
         renderer.drawFrameIndex(mappingFrame, x, y, false, false);
+        if (invitationVariant != null && !activated) {
+            // Use the selected family's native ROM mappings/art, prepared by
+            // the normal PLC owner. A pending renderer draws no false reward.
+            PatternSpriteRenderer marker = renderManager.getCheckpointStarRenderer(invitationVariant.artKey);
+            if (marker != null && marker.isReady()) {
+                marker.drawFrameIndex(1, x - 12, y - 0x30, false, false);
+                marker.drawFrameIndex(1, x + 12, y - 0x30, false, false);
+            }
+        }
     }
 
     /**

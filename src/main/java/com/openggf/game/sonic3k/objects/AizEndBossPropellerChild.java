@@ -39,6 +39,10 @@ public class AizEndBossPropellerChild extends AbstractBossChild implements Rewin
     /** ROM routine 4: shared animate state — counts down anim steps with 3-frame delays. */
     private static final int ROUTINE_ANIMATE = 4;
     private static final int ROUTINE_WAIT = 6;
+    private static final int ROUTINE_PATTERN_WAIT = 8;
+    private static final int ROUTINE_PATTERN_WARNING = 10;
+    private static final int PATTERN_WARNING_PRESENTATIONS = 24;
+    private static final int PATTERN_ARM_SEPARATION = 48;
 
     /**
      * ROM: byte_69B0E — per-angle extension/retraction position table.
@@ -102,6 +106,9 @@ public class AizEndBossPropellerChild extends AbstractBossChild implements Rewin
      * Knuckles fires multiple times; Sonic fires once.
      */
     private int knuxFireCounter;
+    private boolean difficultyAttack;
+    private int patternWaitTicks;
+    private int warningPresentationsRemaining;
     /** Current callback to invoke when animStepsRemaining goes below 0. */
     private AnimCallback animCallback;
 
@@ -161,6 +168,14 @@ public class AizEndBossPropellerChild extends AbstractBossChild implements Rewin
             setDestroyed(true);
             return;
         }
+        if (difficultyAttack && !boss.difficultyAttackIsLive()) {
+            // Withdrawal/quarantine cancels this commitment, including an arm
+            // still waiting to fire. A later stock window can start normally.
+            difficultyAttack = false;
+            onRetractComplete();
+            animCallback = AnimCallback.NONE;
+            return;
+        }
         if (boss.isHidden()) return;
 
         switch (routine) {
@@ -201,6 +216,19 @@ public class AizEndBossPropellerChild extends AbstractBossChild implements Rewin
                     runAnimCallback();
                 }
             }
+            case ROUTINE_PATTERN_WAIT -> {
+                if (--patternWaitTicks == 0) {
+                    routine = ROUTINE_PATTERN_WARNING;
+                    mappingFrame = 5;
+                }
+            }
+            case ROUTINE_PATTERN_WARNING -> {
+                if (--warningPresentationsRemaining == 0) {
+                    beginNativeExtend(0);
+                } else {
+                    mappingFrame = ((warningPresentationsRemaining >> 2) & 1) == 0 ? 4 : 5;
+                }
+            }
         }
     }
 
@@ -209,12 +237,26 @@ public class AizEndBossPropellerChild extends AbstractBossChild implements Rewin
      * Sets up routine 4 with anim_frame=1 (2 sub_69AD8 calls before callback).
      */
     private void beginExtend() {
+        difficultyAttack = boss.usesAlternatingArmPattern();
+        if (difficultyAttack) {
+            // The commitment pass itself presents warning #1 for the leading
+            // arm. The other arm enters that same state exactly 48 passes later.
+            warningPresentationsRemaining = PATTERN_WARNING_PRESENTATIONS;
+            patternWaitTicks = subtype == boss.leadingArm() ? 0 : PATTERN_ARM_SEPARATION;
+            routine = patternWaitTicks == 0 ? ROUTINE_PATTERN_WARNING : ROUTINE_PATTERN_WAIT;
+            mappingFrame = patternWaitTicks == 0 ? 5 : 4;
+            return;
+        }
+        beginNativeExtend((subtype != 0) ? 0x4F : 0);
+    }
+
+    private void beginNativeExtend(int initialDelay) {
         routine = ROUTINE_ANIMATE;
         animStepsRemaining = 1;   // ROM: move.b #1,anim_frame(a0)
         knuxFireCounter = 1;      // ROM: move.b #1,$3A(a0) — ALWAYS 1
         // ROM: initial delay depends on parent ARM's subtype, not character.
         // subtype 0 (left arm) = no delay, subtype != 0 (right arm) = $4F delay.
-        waitTimer = (subtype != 0) ? 0x4F : 0;
+        waitTimer = initialDelay;
         animCallback = AnimCallback.ON_EXTEND_COMPLETE;
     }
 
@@ -319,7 +361,7 @@ public class AizEndBossPropellerChild extends AbstractBossChild implements Rewin
     /** Spawn a flame projectile child. */
     private void spawnFlameProjectile() {
         if (services().objectManager() != null) {
-            spawnChild(() -> new AizEndBossFlameChild(boss, this, boss.getAngle()));
+            spawnChild(() -> new AizEndBossFlameChild(boss, this, boss.getAngle(), difficultyAttack));
         }
     }
 

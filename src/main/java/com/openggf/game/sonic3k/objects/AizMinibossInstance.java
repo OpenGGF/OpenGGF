@@ -773,6 +773,10 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
     }
 
     private void spawnBreathFlames() {
+        spawnBreathFlames(false);
+    }
+
+    private void spawnBreathFlames(boolean difficultyAttack) {
         for (int i = 0; i < BREATH_FLAME_X_OFFSETS.length; i++) {
             int flameIndex = i;
             // CreateChild1_Normal sets subtype = d2 (increments by 2): 0, 2, 4, 6
@@ -780,7 +784,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
                     this,
                     BREATH_FLAME_X_OFFSETS[flameIndex],
                     BREATH_FLAME_Y_OFFSETS[flameIndex],
-                    flameIndex * 2));
+                    flameIndex * 2, difficultyAttack));
         }
     }
 
@@ -795,26 +799,43 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
         if (delay < 0) {
             return;
         }
-        difficultyFollowupTimer = delay;
+        var renderManager = services().renderManager();
+        var renderer = renderManager == null ? null : renderManager.getRenderer(Sonic3kObjectArtKeys.AIZ_MINIBOSS);
+        if (renderer == null || !renderer.isReady()) return;
         // The opted-in cue includes its same-pass child birth and holds the final
         // ROM pose for the admitted delay. Ordinary barrel flares are unchanged.
         int warnedBarrels = 0;
+        java.util.ArrayList<AizMinibossBarrelShotFlareChild> admittedWarnings = new java.util.ArrayList<>(3);
         for (var child : childComponents) {
             if (child instanceof AizMinibossFlameBarrelChild barrel && !barrel.isDestroyed()
                     && warnedBarrels++ < 3) {
-                spawnChild(() -> AizMinibossBarrelShotFlareChild.warning(barrel, delay));
+                var warning = spawnChild(() -> AizMinibossBarrelShotFlareChild.warning(barrel, delay));
+                if (warning.getSlotIndex() >= 0) admittedWarnings.add(warning);
             }
         }
+        if (admittedWarnings.size() != 3) {
+            // A partially visible cue cannot authorize a later invisible wave,
+            // even when slots become free again before the warning expires.
+            admittedWarnings.forEach(warning -> warning.setDestroyed(true));
+            return;
+        }
+        difficultyFollowupTimer = delay;
         services().playSfx(Sonic3kSfx.FLAMETHROWER_QUIET.id);
     }
 
+    boolean difficultyAttackIsLive() {
+        var module = services().gameModule();
+        return getSlotIndex() >= 0 && !isDestroyed() && !state.defeated && state.hitCount > 0 && module != null
+                && module.getGameService(AizMinibossAttackPolicy.class) != null;
+    }
+
     private void updateDifficultyFollowup() {
-        if (state.hitCount <= 0 || state.defeated || isDestroyed()) {
+        if (!difficultyAttackIsLive()) {
             difficultyFollowupTimer = -1;
         } else if (difficultyFollowupTimer > 0 && --difficultyFollowupTimer == 0) {
             difficultyFollowupTimer = -1;
             services().playSfx(Sonic3kSfx.FLAMETHROWER_QUIET.id);
-            spawnBreathFlames();
+            spawnBreathFlames(true);
         }
     }
 

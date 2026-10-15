@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.audio.GameSound;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.difficulty.ClamerRecipe;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.graphics.GLCommand;
@@ -67,11 +68,12 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
     private static final int LAUNCH_SPEED = 0x800;
     private static final int CLOSE_FRAMES = 10;
 
-    /** ROM loc_88FEC: cmpi.w #$60, d2; bhs loc_8900C. */
-    private static final int AUTO_CLOSE_DX_THRESHOLD = 0x60;
+    /** ROM loc_88FEC: cmpi.w #$60, d2; bhs loc_8900C (see {@link ClamerRecipe#STOCK}). */
     private static final int[] AUTO_CLOSE_ANIM_FRAMES = {0, 5, 6, 7, 8, 7, 6, 5, 0};
     private static final int[] AUTO_CLOSE_ANIM_DELAYS = {2, 2, 2, 0x2F, 5, 0x1F, 2, 2, 0x1F};
     private static final int AUTO_CLOSE_PROJECTILE_FRAME = 8;
+    /** Table index of the frame-7 open-mouth hold (delay $2F) before the projectile frame. */
+    private static final int AUTO_CLOSE_TELL_INDEX = 3;
     private static final int PROJECTILE_COLLISION_FLAGS = 0x80 | 0x18;
     private static final int PROJECTILE_SHIELD_REACTION_BOUNCE = 1 << 3;
     private static final int PROJECTILE_DEFLECT_SPEED = 0x800;
@@ -153,9 +155,16 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
     private ClamerSpringChild springChildSlot;
     private boolean waitingForOnscreen = true;
     private boolean initialized;
+    // Non-final so the rewind codec restores a creator preset recreated as STOCK.
+    private ClamerRecipe recipe = ClamerRecipe.STOCK;
 
     public ClamerObjectInstance(ObjectSpawn spawn) {
+        this(spawn, ClamerRecipe.STOCK);
+    }
+
+    public ClamerObjectInstance(ObjectSpawn spawn, ClamerRecipe recipe) {
         super(spawn, "Clamer");
+        this.recipe = java.util.Objects.requireNonNull(recipe, "recipe");
         this.currentX = spawn.x();
         this.currentY = spawn.y();
         this.facingRight = (spawn.renderFlags() & 0x01) != 0;
@@ -391,7 +400,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
             return;
         }
         int dxAbs = Math.abs(closest.dx);
-        if (dxAbs >= AUTO_CLOSE_DX_THRESHOLD) {
+        if (dxAbs >= recipe.autoCloseRange()) {
             return; // loc_8900C: just animate idle.
         }
         // ROM Find_SonicTails computes d2 = x_pos(a0) - x_pos(a1). bpl skips
@@ -463,6 +472,10 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
         int newFrame = AUTO_CLOSE_ANIM_FRAMES[autoCloseAnimIndex];
         mappingFrame = newFrame;
         autoCloseAnimTimer = AUTO_CLOSE_ANIM_DELAYS[autoCloseAnimIndex];
+        if (autoCloseAnimIndex == AUTO_CLOSE_TELL_INDEX) {
+            // Creator preset only: STOCK adds zero. Byte timer stays below $80.
+            autoCloseAnimTimer += recipe.tellHold();
+        }
         autoCloseAnimIndex++;
 
         if (newFrame == AUTO_CLOSE_PROJECTILE_FRAME
@@ -927,6 +940,11 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
     }
 
     // Test hooks (package-private) ------------------------------------------
+
+    /** Test-only: remaining auto-close animation delay. */
+    int testAutoCloseAnimTimer() {
+        return autoCloseAnimTimer;
+    }
 
     /** Test-only: current ROM-style routine value. */
     int testRoutine() {

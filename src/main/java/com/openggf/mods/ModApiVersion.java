@@ -9,7 +9,8 @@ public final class ModApiVersion {
     /**
      * Current unpublished compiled-mod API candidate, including native decoded
      * factory binding and original-ring retention on class-preserving levels,
-     * and bounded S3K boss/special/bonus-stage difficulty policies. The 0.7 candidate also includes
+     * bounded S3K boss/special/bonus-stage difficulty policies, and native-owned
+     * invitation, brittle-support and finite HCZ/MGZ/CNZ/ICZ/LBZ presets. The 0.7 candidate also includes
      * widescreen presentation, KiS2 movement/touch/checkpoint/menu handoff contracts,
      * deferred SMPS header construction, explicit dynamic solid-contact rewind binding,
      * opt-in whole-game presentation pacing, modal level input ownership, controlled level admission and opaque
@@ -85,6 +86,8 @@ public final class ModApiVersion {
      * Creator enemies share game-owned bounded Caterkiller/monitor recipes, shipped S3K
      * destruction rewards, exact lifetime identity, powered eligibility and targeting/firing
      * admission. Native preset/config types stay with their game; shared effects take factories.
+     * S3K native presets also cover brittle supports, post-arrival bonus invitations,
+     * finite AIZ and HCZ/MGZ boss attacks, and CNZ/ICZ/LBZ object recipes through native factories.
      * Host-supplied title canvases and attached-effect rendering preserve native
      * ownership and whole-picture transforms without exposing implementation classes.
      */

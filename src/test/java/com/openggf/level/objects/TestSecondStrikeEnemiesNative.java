@@ -1,6 +1,9 @@
 package com.openggf.level.objects;
 
 import com.openggf.camera.Camera;
+import com.openggf.configuration.SonicConfiguration;
+import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.configuration.WidescreenAspect;
 import com.openggf.debug.DebugOverlayManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
@@ -11,12 +14,16 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.Sonic;
 import com.openggf.sprites.playable.Tails;
+import com.openggf.sprites.playable.Knuckles;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import java.net.URLClassLoader;
 import java.nio.file.Path;
@@ -47,18 +54,22 @@ class TestSecondStrikeEnemiesNative {
         SessionManager.clear();
     }
 
-    private void setup(int act) throws Exception {
+    private void setup(int act) throws Exception { setup(act, false); }
+
+    private void setup(int act, boolean nativeViewport) throws Exception {
         fixture = HeadlessTestFixture.builder().withZoneAndAct(0, act).withSkippedZoneIntro().build();
-        sonic = new Sonic("sonic", (short) 400, (short) 200);
+        sonic = nativeViewport ? (Sonic) fixture.sprite() : new Sonic("sonic", (short) 400, (short) 200);
         tails = new Tails("tails", (short) 400, (short) 200);
         tails.setCpuControlled(true);
         score = new GameStateManager();
-        var camera = mock(Camera.class);
-        when(camera.getX()).thenReturn((short) 0);
-        when(camera.getY()).thenReturn((short) 0);
-        when(camera.getWidth()).thenReturn((short) 900);
-        when(camera.getHeight()).thenReturn((short) 500);
-        when(camera.getFocusedSprite()).thenReturn(sonic);
+        var camera = nativeViewport ? fixture.camera() : mock(Camera.class);
+        if (!nativeViewport) {
+            when(camera.getX()).thenReturn((short) 0);
+            when(camera.getY()).thenReturn((short) 0);
+            when(camera.getWidth()).thenReturn((short) 900);
+            when(camera.getHeight()).thenReturn((short) 500);
+            when(camera.getFocusedSprite()).thenReturn(sonic);
+        }
         var debug = mock(DebugOverlayManager.class);
         var module = new Sonic3kGameModule();
         // TestObjectServices otherwise prioritizes the level's stock manager over
@@ -110,6 +121,8 @@ class TestSecondStrikeEnemiesNative {
         assertEquals(-0x280, sonic.getGSpeed(), "S3K native rebound also negates ground velocity");
         assertEquals(0x280, tails.getXSpeed(), "P2 sees the post-hit zero collision byte");
         assertEquals(0, score.getScore());
+        assertTrue(manager.getActiveObjects().stream().noneMatch(AnimalObjectInstance.class::isInstance));
+        assertTrue(manager.getActiveObjects().stream().noneMatch(ExplosionObjectInstance.class::isInstance));
         NativePositionOps.writeXPosPreserveSubpixel(sonic, 800);
         NativePositionOps.writeXPosPreserveSubpixel(tails, 800);
         for (int tick = 0; tick < 24; tick++) enemy.update(tick, sonic);
@@ -119,6 +132,155 @@ class TestSecondStrikeEnemiesNative {
         assertTrue(enemy.isDestroyed());
         assertEquals(100, score.getScore());
         assertEquals(0x300, sonic.getYSpeed(), "native final enemy bounce subtracts $100 at/below the enemy");
+        var explosion = manager.getActiveObjects().stream().filter(ExplosionObjectInstance.class::isInstance)
+                .map(ExplosionObjectInstance.class::cast).findFirst().orElseThrow();
+        explosion.update(4, sonic);
+        assertEquals(1, manager.getActiveObjects().stream().filter(AnimalObjectInstance.class::isInstance).count());
+        assertEquals(1, manager.getActiveObjects().stream()
+                .filter(com.openggf.game.sonic3k.objects.Sonic3kPointsObjectInstance.class::isInstance).count());
+        explosion.update(5, sonic);
+        assertEquals(1, manager.getActiveObjects().stream().filter(AnimalObjectInstance.class::isInstance).count(),
+                "the rewarded final touch allocates one native animal, once");
+    }
+
+    @Test void nativeShortPlatformRecoveryDoesNotWaitForANearbyCpuSidekick() throws Exception {
+        setup(0);
+        int x = 0x1dc0, y = 0x27c;
+        when(services.camera().getX()).thenReturn((short) (x - 160));
+        when(services.camera().getY()).thenReturn((short) (y - 112));
+        AbstractObjectInstance.updateCameraBounds(x - 160, y - 112, x + 160, y + 112, 0);
+        var floor = services.floorSurface(x + 32, y + 16,
+                TerrainSurface.Layer.FOREGROUND, TerrainSurface.Path.PRIMARY);
+        assertTrue(floor.foundSurface(), "the nearby participant has actual native platform footing");
+        assertTrue(floor.distance() >= -1 && floor.distance() < 12);
+        var gunner = enemy("ArtilleryBadnik", "artillery", x, y, 40);
+        attackPosition(sonic, x, y);
+        NativePositionOps.writeXPosPreserveSubpixel(tails, x + 32);
+        NativePositionOps.writeYPosPreserveSubpixel(tails, y);
+        manager.snapshotTouchResponseState();
+        manager.runTouchResponsesForPlayer(sonic, 1);
+        assertEquals(0, touch(gunner).getCollisionProperty());
+        assertEquals(-0x280, sonic.getXSpeed());
+        assertEquals(-0x400, sonic.getYSpeed(), "the first contact uses native multi-hit rebound");
+        NativePositionOps.writeXPosPreserveSubpixel(sonic, x + 80);
+        for (int tick = 0; tick < 23; tick++) gunner.update(tick, sonic);
+        assertEquals(0, touch(gunner).getCollisionFlags());
+        gunner.update(23, sonic);
+        assertEquals(0x23, touch(gunner).getCollisionFlags(),
+                "fixed24-update recovery cannot be held by P2 standing32px away");
+        attackPosition(sonic, x, y);
+        manager.snapshotTouchResponseState();
+        manager.runTouchResponsesForPlayer(sonic, 2);
+        assertTrue(gunner.isDestroyed(), "a fresh P1 attack is accepted with nearby CPU Tails unchanged");
+        assertEquals(100, score.getScore());
+        assertEquals(0x300, sonic.getYSpeed(), "the final contact retains native kill bounce");
+    }
+
+    @Test void eachNativeAttackSlotKeepsOneHeldContactWithoutBlockingTheOtherSlot() throws Exception {
+        for (boolean p2First : List.of(false, true)) {
+            setup(0);
+            var gunner = enemy("ArtilleryBadnik", "artillery", 400, 200, -1);
+            var first = p2First ? tails : sonic;
+            var second = p2First ? sonic : tails;
+            attackPosition(first, 400, 200);
+            NativePositionOps.writeXPosPreserveSubpixel(second, 480);
+            manager.snapshotTouchResponseState();
+            manager.runTouchResponsesForPlayer(first, 1);
+            assertEquals(0, touch(gunner).getCollisionProperty());
+            assertEquals(-0x280, first.getXSpeed());
+            assertEquals(-0x400, first.getYSpeed());
+            for (int tick = 0; tick < 24; tick++) gunner.update(tick, sonic);
+            assertEquals(0x23, touch(gunner).getCollisionFlags());
+            manager.snapshotTouchResponseState();
+            manager.runTouchResponsesForPlayer(first, 2);
+            assertFalse(gunner.isDestroyed(), "one continuously held native attack cannot take both health points");
+            assertEquals(0, score.getScore());
+            assertEquals(-0x400, first.getYSpeed(), "a rejected final contact does not manufacture a native kill bounce");
+            attackPosition(second, 400, 200);
+            manager.runTouchResponsesForPlayer(second, 2);
+            assertTrue(gunner.isDestroyed(), "the other native slot can make its own fresh attack after recovery");
+            assertEquals(100, score.getScore());
+            assertEquals(0x300, second.getYSpeed());
+        }
+    }
+
+    @Test void recoveredNativeBodyHurtsAnUncurledAttackerAndScreenAttackIsADiscreteAction() throws Exception {
+        setup(0);
+        var gunner = enemy("ArtilleryBadnik", "artillery", 400, 200, -1);
+        attackPosition(sonic, 400, 200);
+        NativePositionOps.writeXPosPreserveSubpixel(tails, 480);
+        manager.snapshotTouchResponseState();
+        manager.runTouchResponsesForPlayer(sonic, 1);
+        for (int tick = 0; tick < 24; tick++) gunner.update(tick, sonic);
+        sonic.setRolling(false); sonic.setAnimationId(0); sonic.setRingCount(1);
+        manager.snapshotTouchResponseState();
+        manager.runTouchResponsesForPlayer(sonic, 2);
+        assertTrue(sonic.isHurt(), "collision recovers even while the attacker's old contact is held");
+        assertFalse(gunner.isDestroyed()); assertEquals(0, score.getScore());
+        // Publish a normal completed object pass before the actual screen dispatcher.
+        manager.update(0, sonic, List.of(tails), 3, false);
+        manager.poweredAttacks().apply(sonic);
+        assertTrue(gunner.isDestroyed(), "native property0 screen eligibility is independent of held body contact");
+        assertEquals(100, score.getScore());
+        manager.poweredAttacks().apply(sonic);
+        assertEquals(100, score.getScore());
+    }
+
+    @Test void additionalNativeAttackersKeepExactHeldContactsThroughProgressedWorldRecreation() throws Exception {
+        for (boolean mixed : List.of(false, true)) for (boolean fourthFirst : List.of(false, true)) {
+            setup(0);
+            AbstractPlayableSprite third = mixed ? new Knuckles("third", (short) 800, (short) 200)
+                    : new Tails("third", (short) 800, (short) 200);
+            var fourth = new Tails("fourth", (short) 800, (short) 200);
+            third.setCpuControlled(true); fourth.setCpuControlled(true);
+            var followers = List.of(tails, third, fourth);
+            var sprites = new com.openggf.sprites.managers.SpriteManager();
+            sprites.addSprite(sonic);
+            for (var follower : followers) sprites.addSprite(follower);
+            services.withSpriteManager(sprites).withSidekicks(followers);
+            NativePositionOps.writeXPosPreserveSubpixel(sonic, 800);
+            NativePositionOps.writeXPosPreserveSubpixel(tails, 800);
+            manager.update(0, sonic, followers, 0, false);
+            var participants = services.playerQuery().playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS);
+            assertEquals(4, participants.size());
+            assertSame(sonic, participants.get(0)); assertSame(tails, participants.get(1));
+            assertSame(third, participants.get(2)); assertSame(fourth, participants.get(3));
+            var gunner = enemy("ArtilleryBadnik", "artillery", 400, 200, -1);
+            var first = fourthFirst ? fourth : third;
+            var fresh = fourthFirst ? third : fourth;
+            attackPosition(first, 400, 200);
+            manager.snapshotTouchResponseState();
+            manager.runTouchResponsesForPlayer(first, 1);
+            assertEquals(0, touch(gunner).getCollisionProperty(), "actual P3/P4 touch consumes one health point");
+            assertEquals(-0x280, first.getXSpeed()); assertEquals(-0x400, first.getYSpeed());
+            for (int tick = 0; tick < 8; tick++) manager.update(0, sonic, followers, tick + 2, false);
+            manager.validateRewindReferenceClosure();
+            var captured = manager.rewindSnapshottable().capture();
+            assertNotNull(gunner.captureRewindState(manager.captureIdentityContext()).compactGenericState(),
+                    "the default object schema admits the fresh player-reference array");
+            for (int tick = 0; tick < 16; tick++) manager.update(0, sonic, followers, tick + 10, false);
+            var expected = manager.rewindSnapshottable().capture();
+            assertEquals(0x23, touch(gunner).getCollisionFlags());
+            manager.removeDynamicObject(gunner);
+            manager.rewindSnapshottable().restore(captured);
+            var recreated = manager.getActiveObjects().stream()
+                    .filter(object -> object.getClass().getSimpleName().equals("ArtilleryBadnik"))
+                    .map(AbstractObjectInstance.class::cast).findFirst().orElseThrow();
+            assertNotSame(gunner, recreated);
+            assertEquals(captured.dynamicObjects(), manager.rewindSnapshottable().capture().dynamicObjects());
+            for (int tick = 0; tick < 16; tick++) manager.update(0, sonic, followers, tick + 10, false);
+            manager.validateRewindReferenceClosure();
+            assertEquals(expected.dynamicObjects(), manager.rewindSnapshottable().capture().dynamicObjects(),
+                    "a progressed held-contact snapshot recreates and produces the same next16 object updates");
+            manager.snapshotTouchResponseState();
+            manager.runTouchResponsesForPlayer(first, 26);
+            assertFalse(recreated.isDestroyed(), "the recreated body rejects the same held P3/P4 attack");
+            assertEquals(-0x400, first.getYSpeed(), "a rejected final attack cannot manufacture a native kill bounce");
+            attackPosition(fresh, 400, 200);
+            manager.runTouchResponsesForPlayer(fresh, 26);
+            assertTrue(recreated.isDestroyed(), "the other fresh P3/P4 attacker is admitted after24 updates");
+            assertEquals(100, score.getScore()); assertEquals(0x300, fresh.getYSpeed());
+        }
     }
 
     @Test void actualNativeBloomPlatformsAdmitOnlyGroundedBoundedGuards() throws Exception {
@@ -160,6 +322,74 @@ class TestSecondStrikeEnemiesNative {
             }
         }
         assertAll(checks);
+    }
+
+    @ParameterizedTest @EnumSource(WidescreenAspect.class)
+    void nativeCompanionEntryKeepsItsFullTellAtEverySupportedViewport(WidescreenAspect aspect) throws Exception {
+        var config = SonicConfigurationService.getInstance();
+        config.clearSessionOverrides();
+        config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+        config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+        config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, aspect.name());
+        config.resolveDisplayAspect();
+        SessionManager.clear(); TestEnvironment.activeGameplayMode();
+        try {
+            setup(0, true);
+            var camera = fixture.camera();
+            assertSame(camera, services.camera());
+            assertFalse(mockingDetails(camera).isMock());
+            assertEquals(aspect.pixelWidth(), camera.getWidth(), "the production camera observes the configured preset");
+            assertEquals(224, camera.getHeight());
+            int x = 0x1dc0, y = 0x27c, left = x + 16 - aspect.pixelWidth();
+            camera.setFrozen(true);
+            camera.setX((short) left); camera.setY((short) (y - 112));
+            NativePositionOps.writeXPosPreserveSubpixel(sonic, x - 80);
+            NativePositionOps.writeYPosPreserveSubpixel(sonic, y);
+            NativePositionOps.writeXPosPreserveSubpixel(tails, x - 240);
+            NativePositionOps.writeYPosPreserveSubpixel(tails, y);
+            manager.snapshotTouchResponseState();
+            var parent = enemy("ArtilleryBadnik", "artillery", x, y, 40);
+            parent.update(0, sonic);
+            var ally = manager.getActiveObjects().stream()
+                    .filter(object -> object.getClass().getSimpleName().equals("GuardBadnik"))
+                    .map(AbstractObjectInstance.class::cast).findFirst().orElseThrow();
+            var identity = services.objectQuery().identityOf(ally).orElseThrow();
+            int slot = ally.getSlotIndex(), entryX = ally.getX();
+            assertTrue(entryX - ally.getOnScreenHalfWidth() > camera.getX() + camera.getWidth(),
+                    "the declared body is completely hidden beyond the real viewport");
+            var floor = services.floorSurface(ally.getX(), ally.getY() + 16,
+                    TerrainSurface.Layer.FOREGROUND, TerrainSurface.Path.PRIMARY);
+            assertTrue(floor.foundSurface()); assertEquals(0, floor.distance(), "actual ROM primary floor under the admitted ally");
+            for (int tick = 0; tick < 8; tick++) {
+                ally.update(tick, sonic);
+                assertFalse(ally.isDestroyed(), "the independent32px lifetime range preserves pre-entry identity");
+                assertEquals(0x0b, touch(ally).getCollisionFlags(), "a hidden ally has not armed its charge tell");
+                assertEquals(entryX, ally.getX());
+            }
+            camera.setX((short) (left + 64));
+            manager.snapshotTouchResponseState();
+            assertTrue(ally.getX() + ally.getOnScreenHalfWidth() <= camera.getX() + camera.getWidth());
+            ally.update(8, sonic);
+            assertEquals(identity, services.objectQuery().identityOf(ally).orElseThrow());
+            assertEquals(slot, ally.getSlotIndex());
+            assertEquals(0x8b, touch(ally).getCollisionFlags(), "visible entry begins the native HURT tell");
+            attackPosition(sonic, ally.getX(), ally.getY()); sonic.setRingCount(1);
+            manager.snapshotTouchResponseState();
+            manager.runTouchResponsesForPlayer(sonic, 9);
+            assertTrue(sonic.isHurt(), "the real native touch owner enforces the armed tell, even against rolling Sonic");
+            assertEquals(2, touch(ally).getCollisionProperty()); assertEquals(0, score.getScore());
+            for (int tick = 0; tick < 35; tick++) {
+                ally.update(10 + tick, sonic);
+                assertEquals(entryX, ally.getX(), "all36 visible tell updates remain stationary on native terrain");
+            }
+            ally.update(45, sonic);
+            assertEquals(entryX, ally.getX(), "dash entry follows the complete tell without early travel");
+            ally.update(46, sonic);
+            assertEquals(entryX - 10, ally.getX(), "the first native-floor dash stride follows the whole tell");
+            assertEquals(identity, services.objectQuery().identityOf(ally).orElseThrow());
+        } finally {
+            config.clearSessionOverrides();
+        }
     }
 
     @Test void nativeGuardMidReturnKeepsItsFloorSlotIdentityAndOrdinaryAttackBounce() throws Exception {

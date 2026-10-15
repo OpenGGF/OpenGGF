@@ -71,7 +71,12 @@ public final class MgzEndBossKnuxInstance extends MgzDrillingRobotnikInstance {
     };
 
     public MgzEndBossKnuxInstance(ObjectSpawn spawn) {
-        super(spawn, false);
+        this(spawn, false);
+    }
+
+    /** Internal finite encounter preset; native motion and endings remain owned here. */
+    public MgzEndBossKnuxInstance(ObjectSpawn spawn, boolean counterCadence) {
+        super(spawn, false, counterCadence);
     }
 
     @Override
@@ -135,7 +140,8 @@ public final class MgzEndBossKnuxInstance extends MgzDrillingRobotnikInstance {
                 }
             }
             case ROUTINE_FIRST_WAIT -> waitThen(ROUTINE_FIRST_DROP, FIRST_DROP_TIMER);
-            case ROUTINE_FIRST_DROP -> moveAndWait(0x28, ROUTINE_SECOND_WAIT, SECOND_WAIT_TIMER);
+            case ROUTINE_FIRST_DROP -> moveAndWait(0x28, ROUTINE_SECOND_WAIT,
+                    counterCadence && state.hitCount <= 4 ? 0x1F : SECOND_WAIT_TIMER);
             case ROUTINE_SECOND_WAIT -> waitThen(ROUTINE_SECOND_DROP, SECOND_DROP_TIMER);
             case ROUTINE_SECOND_DROP -> moveAndWait(0x48, ROUTINE_RESET, RESET_TIMER);
             case ROUTINE_RESET -> {

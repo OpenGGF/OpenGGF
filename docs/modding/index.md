@@ -56,7 +56,8 @@ See the detailed guides for narrower contracts; roadmap entries do not imply imp
 
 - [Second Strike](../../examples/second-strike/README.md) — a normal-campaign S3K
   difficulty prototype using native placement bindings, original-ring retention,
-  cooperating enemy roles and bounded boss/special/bonus-stage policies.
+  cooperating enemy roles, finite native presets and earned bonus invitations.
+  The linked matrix separates positioned checks from still-incomplete cold routes.
 
 - [Flappy Tails, a tutorial in nine parts](guides/flappy-tails/README.md) — from nothing
   to a polished S3K game. Part 1 chooses between changing the native game (the

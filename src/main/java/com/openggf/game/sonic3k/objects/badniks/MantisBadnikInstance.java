@@ -69,9 +69,17 @@ public final class MantisBadnikInstance extends AbstractS3kBadnikInstance
     private boolean waitPlaceholderRenderFlag;
     private boolean waitingForOnscreen = true;
 
+    private boolean landingGuard;
+
     public MantisBadnikInstance(ObjectSpawn spawn) {
+        this(spawn, false);
+    }
+
+    /** Internal native preset entry; ordinary ROM factories keep the shipped defaults. */
+    public MantisBadnikInstance(ObjectSpawn spawn, boolean landingGuard) {
         super(spawn, "Mantis",
                 Sonic3kObjectArtKeys.MGZ_MANTIS, COLLISION_SIZE_INDEX, PRIORITY_BUCKET);
+        this.landingGuard = landingGuard;
         this.mappingFrame = WAIT_FRAME;
     }
 
@@ -180,7 +188,7 @@ public final class MantisBadnikInstance extends AbstractS3kBadnikInstance
         AbstractPlayableSprite target = findNearestTarget(player);
         if (target != null) {
             facingLeft = target.getCentreX() < currentX;
-            if (Math.abs(target.getCentreX() - currentX) < DETECT_RANGE) {
+            if (Math.abs(target.getCentreX() - currentX) < (landingGuard ? DETECT_RANGE + 0x20 : DETECT_RANGE)) {
                 beginPrep();
             }
         }

@@ -8,13 +8,16 @@ import com.openggf.level.objects.ObjectCombatRules;
 
 /** Monkey caller: a raised coconut and native throw cue advertise a committed group alert. */
 public final class SpotterBadnik extends SecondStrikeBadnik {
-    private static final int WATCH = 0, CALL = 1, REST = 2;
+    private static final int WATCH = 0, TELL = 1, CALL = 2, REST = 3;
     private static final int PRIORITY_BUCKET = 5; // Native ObjDat $280 / $80.
-    private static final int CALL_UPDATES = 48, REST_UPDATES = 120;
+    private static final int TELL_UPDATES = 24, CALL_UPDATES = 48, REST_UPDATES = 120;
+    private int alertSequence;
 
     public SpotterBadnik(ObjectSpawn spawn) { super(spawn, "Second Strike spotter", 2); }
 
     public boolean isCalling() { return phase == CALL && !isDestroyed(); }
+    public boolean isTelling() { return phase == TELL && !isDestroyed(); }
+    int alertSequence() { return alertSequence; }
 
     @Override protected void updateMovement(int vIntRunCount, PlayableEntity updatePlayer) {
         if (!updateHitAndLifetime(updatePlayer)) return;
@@ -25,9 +28,16 @@ public final class SpotterBadnik extends SecondStrikeBadnik {
             case WATCH -> {
                 if (ObjectCombatRules.permitsTargeting(services()) && inRange(player, 208, 144)) {
                     commitTarget(player);
+                    phase = TELL;
+                    timer = TELL_UPDATES;
+                }
+            }
+            case TELL -> {
+                if (--timer <= 0) {
                     phase = CALL;
                     timer = CALL_UPDATES;
-                    services().playSfx(0x51); // Native MonkeyDude sfx_MissileThrow, one cue at call entry.
+                    alertSequence++;
+                    services().playSfx(0x51); // Native MonkeyDude sfx_MissileThrow, once after the interruptible tell.
                 }
             }
             case CALL -> {
@@ -42,7 +52,7 @@ public final class SpotterBadnik extends SecondStrikeBadnik {
 
     @Override protected void updateAnimation(int vIntRunCount) {
         // Obj_MonkeyDude: body frames 0/1 wait, 2 active; frame 6 is the coconut.
-        animFrame = isCalling() ? 2 : (age / 8) & 1;
+        animFrame = isTelling() || isCalling() ? 2 : (age / 8) & 1;
     }
 
     @Override protected int getCollisionSizeIndex() { return 0x0b; } // ObjDat_MonkeyDude.
@@ -53,7 +63,8 @@ public final class SpotterBadnik extends SecondStrikeBadnik {
     @Override protected void drawBody() {
         draw(SecondStrikeEnemies.MONKEY_ART, animFrame, currentX, currentY);
         // Paired raised coconuts distinguish this caller from the stock climbing monkey.
-        int lift = isCalling() ? 32 + ((age & 8) == 0 ? 3 : 0) : 25;
+        int lift = isTelling() ? 25 + (TELL_UPDATES - timer) / 3
+                : isCalling() ? 36 + ((age & 8) == 0 ? 3 : 0) : 25;
         draw(SecondStrikeEnemies.MONKEY_ART, 6, currentX - 11, currentY - lift);
         if (remainingHits > 1) draw(SecondStrikeEnemies.MONKEY_ART, 6, currentX + 11, currentY - lift);
     }

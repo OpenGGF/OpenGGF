@@ -53,6 +53,93 @@ class TestSecondStrikeBarrageNative {
         assertEquals(2, f.fireCues());
     }
 
+    @Test void actualNativeAttackInterruptsTheRaisedTellBeforeItsAlert() throws Exception {
+        var caller = f.enemy("SpotterBadnik", "spotter", 400, 300);
+        ticks(caller, f.player, 12);
+        assertTrue((boolean) caller.getClass().getMethod("isTelling").invoke(caller));
+        f.attack(caller, 1);
+        assertFalse(caller.isDestroyed());
+        assertEquals(0, touch(caller).getCollisionProperty());
+        assertEquals(-0x400, f.player.getYSpeed());
+        place(f.player, 900, 600);
+        ticks(caller, f.player, 60);
+        assertFalse((boolean) caller.getClass().getMethod("isCalling").invoke(caller));
+        assertEquals(List.of(0x6e), f.sounds, "the native hit interrupted the alert, with no caller cue");
+        assertEquals(0, f.score.getScore());
+    }
+
+    @Test void nativeAlarmTellAndDefenderAcknowledgementRecreateAcrossTheCommittedRelease() throws Exception {
+        var caller = f.enemy("SpotterBadnik", "spotter", 540, 300);
+        var gunner = f.gunner();
+        place(f.player, 700, 300);
+        ticks(caller, f.player, 12);
+        replayFrom(f.manager.rewindSnapshottable().capture(), 20);
+        gunner = f.manager.getActiveObjects().stream()
+                .filter(object -> object.getClass().getSimpleName().equals("ArtilleryBadnik"))
+                .map(AbstractObjectInstance.class::cast).findFirst().orElseThrow();
+        var acknowledgement = gunner.getClass().getMethod("acknowledgingAlert");
+        acknowledgement.setAccessible(true);
+        assertTrue((boolean) acknowledgement.invoke(gunner));
+        replayFrom(f.manager.rewindSnapshottable().capture(), 35);
+        assertEquals(10, f.shots().size());
+        assertEquals(1, f.fireCues());
+    }
+
+    @Test void splitFanLeavesANativeTouchLaneThatTheWideFanActuallyCloses() throws Exception {
+        for (boolean split : List.of(false, true)) {
+            if (split) f = new SecondStrikeBarrageFixture(creator);
+            var gunner = split ? f.splitGunner() : f.gunner();
+            f.firstRelease(gunner);
+            assertEquals(split ? 8 : 10, f.shots().size());
+            // Advance the producer as well: the second natural release must
+            // participate in this touch witness, rather than freezing its timer.
+            for (int frame = 0; frame < 24; frame++)
+                f.manager.update(0, f.player, List.of(), 100 + frame, false);
+            assertEquals(split ? 16 : 20, f.shots().size());
+            f.player.setRingCount(1);
+            place(f.player, 478, 244);
+            f.manager.snapshotTouchResponseState();
+            f.manager.runTouchResponsesForPlayer(f.player, 1);
+            assertEquals(!split, f.player.isHurt(),
+                    "wide-fan middle arc is a positive control for the omitted traversal lane");
+            if (split) {
+                for (int step = 0; step < 8; step++) {
+                    f.manager.update(0, f.player, List.of(), 124 + step, false);
+                    place(f.player, 478 + step * 2, 244);
+                    f.manager.snapshotTouchResponseState();
+                    f.manager.runTouchResponsesForPlayer(f.player, 2 + step);
+                    assertFalse(f.player.isHurt(), "the taught local opening stays clear while crossing it");
+                }
+                assertEquals(1, f.player.getRingCount());
+                for (var seed : f.shots()) assertNotEquals(0x2c0, f.velocity(seed, "horizontalVelocity"),
+                        "no middle right-hand arc was released");
+            }
+        }
+    }
+
+    @Test void splitRecipeKeepsItsTellReloadBudgetAndRecreatedPattern() throws Exception {
+        var gunner = f.splitGunner();
+        ticks(gunner, f.player, 20);
+        var tell = f.manager.rewindSnapshottable().capture();
+        replayFrom(tell, 35);
+        assertEquals(16, f.shots().size());
+        assertEquals(2, f.fireCues());
+        var flight = f.manager.rewindSnapshottable().capture();
+        replayFrom(flight, 20);
+        assertEquals(16, f.shots().size());
+    }
+
+    @Test void splitPartialSstAdmissionIsBoundedAndUsesOneActualLaunchCue() throws Exception {
+        var gunner = f.splitGunner();
+        f.exhaustLeaving(3);
+        f.firstRelease(gunner);
+        assertEquals(3, f.shots().size());
+        assertEquals(1, f.fireCues());
+        ticks(gunner, f.player, 12);
+        assertEquals(3, f.shots().size());
+        assertEquals(1, f.fireCues());
+    }
+
     @Test void fullNativeSstRejectsConstructedShotsWithoutLaunchCueOrRetry() throws Exception {
         var gunner = f.gunner();
         f.exhaustLeaving(0);

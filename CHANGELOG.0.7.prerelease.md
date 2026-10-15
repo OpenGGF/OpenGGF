@@ -5,6 +5,12 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Second Strike hard-mode prototype:** Native brittle supports, earned zero-ring
+  bonus invitations, finite badnik/boss patterns and original-ring retention keep
+  player physics unchanged. Authored AIZ and first-five-zone campaign ingredients
+  are being developed; cold routes, character breadth and visual verification
+  remain in progress.
+
 - **Level authoring:** Named projects create, edit and reopen complete authored
   levels for Sonic 1, Sonic 2 and Sonic 3&K using ROM-derived asset libraries.
   Atomic saves retain placements and missing dependency records; close and quit

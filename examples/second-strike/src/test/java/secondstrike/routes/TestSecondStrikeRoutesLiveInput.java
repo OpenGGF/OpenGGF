@@ -55,6 +55,20 @@ final class TestSecondStrikeRoutesLiveInput {
             }
         } else if (boss != null && boss.traceDebugDetails().contains("hp=0")
                 && GameServices.level().getApparentAct() == 0) mask = 0;
+        var waterfall = objects.stream().filter(AizEndBossInstance.class::isInstance)
+                .map(AizEndBossInstance.class::cast).findFirst().orElse(null);
+        if (waterfall != null && waterfall.getState().hitCount > 0
+                && !player.isObjectControlled() && !player.isControlLocked()) {
+            if (!player.getAir()) jump = !jump;
+            mask = steer(player, waterfall.getX(), 8) | (jump ? INPUT_JUMP : 0);
+        }
+        var capsule = objects.stream().filter(Aiz2EndEggCapsuleInstance.class::isInstance)
+                .map(Aiz2EndEggCapsuleInstance.class::cast).findFirst().orElse(null);
+        if (capsule != null && !capsule.traceDebugDetails().contains("o=1")
+                && !player.isObjectControlled() && !player.isControlLocked()) {
+            if (!player.getAir()) jump = !jump;
+            mask = steer(player, capsule.getX(), 8) | (jump ? INPUT_JUMP : 0);
+        }
         return new Bk2FrameInput(frame, mask, (mask & INPUT_JUMP) != 0 ? 1 : 0, false, "authored-live-pad");
     }
 

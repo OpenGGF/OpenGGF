@@ -5,6 +5,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.game.sonic3k.difficulty.IczStalagtiteRecipe;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -75,9 +76,8 @@ public class IczStalagtiteObjectInstance extends AbstractObjectInstance
     private static final int SOLID_HALF_WIDTH = 0x1B;
     private static final int SOLID_HALF_HEIGHT = 0x20;
 
-    // loc_8B1AE: Find_SonicTails, cmpi.w #$70,d2.
-    private static final int TRIGGER_X_RANGE = 0x70;
-    private static final int SHAKE_TIMER_START = 0x0F;
+    // loc_8B1AE: Find_SonicTails, cmpi.w #$70,d2; shake timer $0F. Both are the
+    // IczStalagtiteRecipe.STOCK values; a creator preset selects other bounded ones.
     private static final int SHAKE_STEP = 2;
     private static final int FALL_COLLISION_FLAGS = 0x82;
     private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
@@ -109,9 +109,16 @@ public class IczStalagtiteObjectInstance extends AbstractObjectInstance
     private boolean placeholderRenderedOnscreen;
     private boolean activeRoutineExecuted;
     private int timer;
+    // Non-final so the rewind codec restores a creator preset recreated as STOCK.
+    private IczStalagtiteRecipe recipe = IczStalagtiteRecipe.STOCK;
 
     public IczStalagtiteObjectInstance(ObjectSpawn spawn) {
+        this(spawn, IczStalagtiteRecipe.STOCK);
+    }
+
+    public IczStalagtiteObjectInstance(ObjectSpawn spawn, IczStalagtiteRecipe recipe) {
         super(spawn, "ICZStalagtite");
+        this.recipe = java.util.Objects.requireNonNull(recipe, "recipe");
         this.hFlip = (spawn.renderFlags() & 0x01) != 0;
         this.motion = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, 0, 0);
     }
@@ -165,9 +172,9 @@ public class IczStalagtiteObjectInstance extends AbstractObjectInstance
     }
 
     private void updateWaiting(PlayableEntity player) {
-        if (nearestPlayerXDistance(player) < TRIGGER_X_RANGE) {
+        if (nearestPlayerXDistance(player) < recipe.triggerRange()) {
             phase = Phase.SHAKING;
-            timer = SHAKE_TIMER_START;
+            timer = recipe.shakeTimerStart();
         }
     }
 

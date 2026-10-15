@@ -1692,6 +1692,23 @@ objects describe different lifetimes even when their names match. The native
 publication regression covers direct and hidden creator method references,
 foreign roots, bundle retagging, and both real ROM-backed PLC lifecycles.
 
+### Creator quarantine does not replace frame-abort recovery
+
+Fresh service withdrawal prevents a quarantined creator from supplying another
+recipe. It does not remove already assembled world actors, cached callback proxies
+or controllers. A first dynamic optional-recipe failure must propagate its typed
+abort to `Engine.runFrameWithModAbort`, which discards the failed frame and initiates
+world/title recovery. Catching that abort and selecting a native STOCK preset can
+let retained callbacks run later in the same frame. Missing or already-withdrawn
+services may still select STOCK; a newly failing provider is a different boundary.
+
+Second Strike’s 2026-10-15 real ModContext regression reproduced continued execution
+for all three tested MGZ character configurations before removing the catch. The
+Knuckles fixture originally used an inherited synthetic event admission and needs
+migration to the actual placed A2 owner; that limitation does not alter the shared
+fault-recovery finding. Keep cached/direct callback semantics and VM-fatal propagation
+unchanged, and test the native producer with the real frame-abort boundary.
+
 **Finite audio tails own the complete presentation.** A cue mixed after a song's
 end taper can remain audible beyond finite EOF even though the song clock has
 stopped. Fade the combined output and retire remaining cue voices at the finite

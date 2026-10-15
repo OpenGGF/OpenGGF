@@ -3,6 +3,8 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.game.sonic3k.difficulty.LbzAlarmRecipe;
+import com.openggf.game.sonic3k.objects.badniks.Flybot767BadnikInstance;
 import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
@@ -59,9 +61,18 @@ public final class LbzAlarmObjectInstance extends AbstractObjectInstance
     private int subtype;
     private int alarmTimer;
     private int collisionProperty;
+    // Non-final so the rewind codec restores a creator preset recreated as STOCK.
+    private LbzAlarmRecipe recipe = LbzAlarmRecipe.STOCK;
+    /** BOUNDED only: this alarm has summoned its single escort and stays inert. */
+    private boolean summoned;
 
     public LbzAlarmObjectInstance(ObjectSpawn spawn) {
+        this(spawn, LbzAlarmRecipe.STOCK);
+    }
+
+    public LbzAlarmObjectInstance(ObjectSpawn spawn, LbzAlarmRecipe recipe) {
         super(spawn, "LBZAlarm");
+        this.recipe = java.util.Objects.requireNonNull(recipe, "recipe");
         this.subtype = spawn.subtype();
     }
 
@@ -91,7 +102,18 @@ public final class LbzAlarmObjectInstance extends AbstractObjectInstance
             return;
         }
 
+        if (summoned) {
+            // BOUNDED: a latch from an earlier overlap cannot re-arm a spent alarm.
+            collisionProperty = 0;
+            return;
+        }
         if (collisionProperty == 0) {
+            return;
+        }
+        if (recipe == LbzAlarmRecipe.BOUNDED && liveEscortExists()) {
+            // BOUNDED: another alarm's escort is still alive. Check availability before
+            // the cue, timer and animation latch so a blocked alarm stays silent and armed.
+            collisionProperty = 0;
             return;
         }
 
@@ -106,7 +128,17 @@ public final class LbzAlarmObjectInstance extends AbstractObjectInstance
 
     @Override
     public int getCollisionFlags() {
-        return alarmTimer == 0 ? COLLISION_FLAGS : 0;
+        // BOUNDED: after the single summon the alarm never re-arms, and while another
+        // bounded escort is live it publishes no touch region at all: the alarm's
+        // STOP_AFTER_FIRST_OVERLAP profile would otherwise end the player's touch
+        // pass at this alarm and shadow later objects. STOCK is unchanged.
+        if (alarmTimer != 0 || summoned) {
+            return 0;
+        }
+        if (recipe == LbzAlarmRecipe.BOUNDED && liveEscortExists()) {
+            return 0;
+        }
+        return COLLISION_FLAGS;
     }
 
     @Override
@@ -141,6 +173,15 @@ public final class LbzAlarmObjectInstance extends AbstractObjectInstance
     }
 
     private void spawnFlybot(PlayableEntity playerEntity) {
+        if (recipe == LbzAlarmRecipe.BOUNDED) {
+            // One attempt per allocated alarm instance, latched before allocation so a
+            // slot failure is never retried. Unload/reload allocates a new instance
+            // (new attempt); a destructive rewind restore preserves this latch.
+            if (summoned) {
+                return;
+            }
+            summoned = true;
+        }
         if (playerEntity == null) {
             return;
         }
@@ -154,7 +195,29 @@ public final class LbzAlarmObjectInstance extends AbstractObjectInstance
                 0,
                 false,
                 0);
+        if (recipe == LbzAlarmRecipe.BOUNDED) {
+            // A delayed-spawn alarm may find an escort that appeared during its siren
+            // delay: the attempt is consumed without allocating (max one live escort).
+            if (!liveEscortExists()) {
+                spawnChild(() -> new Flybot767BadnikInstance(flybotSpawn).asBoundedEscort());
+            }
+            return;
+        }
         spawnChild(() -> createFlybotChild(flybotSpawn));
+    }
+
+    private boolean liveEscortExists() {
+        var services = tryServices();
+        if (services == null || services.objectQuery() == null) {
+            return false;
+        }
+        for (Flybot767BadnikInstance flybot
+                : services.objectQuery().activeObjectsOfType(Flybot767BadnikInstance.class)) {
+            if (!flybot.isDestroyed() && flybot.isBoundedEscort()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private AbstractObjectInstance createFlybotChild(ObjectSpawn flybotSpawn) {

@@ -59,12 +59,13 @@ public final class TestSecondStrikeRoutes {
         assertThrows(UnsupportedOperationException.class, () -> selected.clear());
     }
 
-    @Test void physicalActTwoKeepsLaterCampaignRoutesUntouched() {
+    @Test void physicalFireBankCarriesTwoIndependentApparentActBudgets() {
         assertEquals(306, fireRings.size());
         List<RingSpawn> selected = SecondStrikeRoutes.rings(fireRings, fireObjects);
         assertEquals(List.of(12, 68), selected.stream().filter(ring -> ring.x() < 0x1000).map(RingSpawn::placementId).toList());
-        assertEquals(fireRings.stream().filter(ring -> ring.x() >= 0x1000).toList(),
-                selected.stream().filter(ring -> ring.x() >= 0x1000).toList());
+        assertEquals(List.of(105, 126, 210, 250, 253), selected.stream()
+                .filter(ring -> ring.x() >= 0x1800).map(RingSpawn::placementId).toList());
+        assertEquals(7, selected.size());
         assertEquals(selected, SecondStrikeRoutes.rings(selected, fireObjects),
                 "Repeat native loads and prepared installs must not thin an already selected bank again");
     }
@@ -83,14 +84,14 @@ public final class TestSecondStrikeRoutes {
                 new LogicalRomResolver(() -> originalRomBytes), SonicConfigurationService.createStandalone(), List.of())) {
         var plan = kit.plan("second-strike");
         var module = kit.launch(new Sonic3kGameModule(), new GameplayLaunchRequest("s3k", "sonic", List.of()));
-        assertEquals(6, plan.objectFactories().size());
+        assertEquals(11, plan.objectFactories().size());
         for (boolean fire : List.of(false, true)) {
             var originals = fire ? fireObjects : forestObjects;
             var inventory = new NativeInventory(originals, fire ? fireRings : forestRings);
             assertSame(inventory, module.transformDecodedLevel(inventory));
             var bound = inventory.getObjects().stream().filter(spawn -> spawn.ownerModId() != null
-                    && !"second-strike:robotnik-monitor".equals(spawn.objectKey())).toList();
-            assertEquals(fire ? 6 : 10, bound.size());
+                    && java.util.Set.of(0x8C, 0x8D, 0x8E, 0x8F).contains(spawn.objectId())).toList();
+            assertEquals(fire ? 16 : 9, bound.size());
             for (var spawn : bound) {
                 var original = originals.get(spawn.layoutIndex());
                 assertEquals(original.objectId(), spawn.objectId()); assertEquals(original.subtype(), spawn.subtype());
@@ -99,13 +100,11 @@ public final class TestSecondStrikeRoutes {
                 assertEquals(original.respawnTracked(), spawn.respawnTracked());
                 assertTrue(List.of(0x8C, 0x8D, 0x8E, 0x8F).contains(spawn.objectId()));
                 assertTrue(plan.objectFactories().containsKey(spawn.objectKey()));
-                if (fire) assertTrue(spawn.x() < 0x1000);
             }
             if (fire) {
-                assertEquals(List.of(82, 100, 119), bound.stream().filter(s -> "second-strike:caterkiller".equals(s.objectKey()))
+                assertEquals(List.of(82, 100, 119, 244, 625), bound.stream().filter(s -> "second-strike:caterkiller".equals(s.objectKey()))
                         .map(ObjectSpawn::layoutIndex).toList());
-                assertEquals(originals.stream().filter(s -> s.x() >= 0x1000).toList(),
-                        inventory.getObjects().stream().filter(s -> s.x() >= 0x1000).toList());
+                assertTrue(inventory.getObjects().stream().anyMatch(s -> s.x() >= 0x1800 && s.ownerModId() != null));
             }
         }
         assertEquals(List.of("sonic", "tails", "knuckles"),

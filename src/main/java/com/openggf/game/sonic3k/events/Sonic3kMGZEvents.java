@@ -722,17 +722,25 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         }
         bossSpawned = true;
         setGenericBossFlag(true);
+        // The immutable admitted preset is sampled once at the native arena
+        // spawn boundary. Absent service preserves the shipped encounter.
+        var ownerModule = module();
+        var recipe = ownerModule == null ? null : ownerModule.getGameService(
+                com.openggf.game.sonic3k.difficulty.MarbleGardenBossRecipe.class);
+        // A newly faulting provider aborts this frame to the host teardown.
+        // Only an absent/already-withdrawn service takes the native STOCK path.
+        boolean counterCadence = recipe == com.openggf.game.sonic3k.difficulty.MarbleGardenBossRecipe.COUNTER_CADENCE;
         if (resolveBossTransitionPlayerCharacter() == PlayerCharacter.KNUCKLES) {
             gameState().setCurrentBossId(Sonic3kObjectIds.MGZ_END_BOSS_KNUX);
             audio().playMusic(Sonic3kMusic.MINIBOSS.id);
             spawnObject(() -> new MgzEndBossKnuxInstance(
                     new ObjectSpawn(0x3D20, 0x0068, Sonic3kObjectIds.MGZ_END_BOSS_KNUX,
-                            0, 0, false, 0)));
+                            0, 0, false, 0), counterCadence));
             return;
         }
         gameState().setCurrentBossId(Sonic3kObjectIds.MGZ_END_BOSS);
         spawnObject(() -> new MgzEndBossInstance(
-                new ObjectSpawn(0x3D20, 0x0668, Sonic3kObjectIds.MGZ_END_BOSS, 0, 0, false, 0)));
+                new ObjectSpawn(0x3D20, 0x0668, Sonic3kObjectIds.MGZ_END_BOSS, 0, 0, false, 0), counterCadence));
     }
 
     // ========================================================================

@@ -32,6 +32,7 @@ public class AizEndBossSmokeChild extends AbstractObjectInstance implements Rewi
     private boolean moving;
     private int animTimer;
     private int mappingFrame;
+    private boolean difficultyAttack;
 
     public AizEndBossSmokeChild(AizEndBossInstance boss, int x, int y, boolean moving) {
         super(null, "AIZEndBossSmoke");
@@ -41,6 +42,11 @@ public class AizEndBossSmokeChild extends AbstractObjectInstance implements Rewi
         this.moving = moving;
         this.animTimer = 0;
         this.mappingFrame = moving ? 0x12 : 0x18;
+    }
+
+    AizEndBossSmokeChild(AizEndBossInstance boss, int x, int y, boolean moving, boolean difficultyAttack) {
+        this(boss, x, y, moving);
+        this.difficultyAttack = difficultyAttack;
     }
 
     @Override
@@ -57,6 +63,10 @@ public class AizEndBossSmokeChild extends AbstractObjectInstance implements Rewi
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
         if (isDestroyed()) return;
+        if (difficultyAttack && !boss.difficultyAttackIsLive()) {
+            setDestroyed(true);
+            return;
+        }
 
         animTimer++;
         if (animTimer >= SMOKE_DURATION) {

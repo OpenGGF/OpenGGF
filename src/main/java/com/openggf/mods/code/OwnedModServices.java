@@ -3,6 +3,7 @@ package com.openggf.mods.code;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServiceBundle;
 import com.openggf.game.mode.GameplayFrameController;
+import com.openggf.game.sonic3k.difficulty.AizMinibossAttackPolicy;
 import com.openggf.game.patch.DelegatingGameModule;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.mods.runtime.OwnerBoundCallbacks;
@@ -69,7 +70,11 @@ final class OwnedModServices {
                             || type == com.openggf.game.session.GameplayObserverSnapshots.class)
                         return type.cast(accumulatedObservers);
                     Supplier<?> service = services.get(type);
-                    return service == null ? super.getGameService(type) : type.cast(service.get());
+                    // Enum choices and opt-in attack policies withdraw at fresh native decision boundaries.
+                    // Consult quarantine before dynamic providers; captured values/callbacks retain their semantics.
+                    boolean lifetimeScoped = type.isEnum() || type == AizMinibossAttackPolicy.class;
+                    return service == null || lifetimeScoped && !boundary.isOwnerAvailable(plan.ownerModId())
+                            ? super.getGameService(type) : type.cast(service.get());
                 }
                 @Override public GameplayFrameController gameplayFrameController() {
                     return services.containsKey(GameplayFrameController.class)

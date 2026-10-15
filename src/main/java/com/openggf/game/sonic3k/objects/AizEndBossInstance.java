@@ -10,6 +10,7 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.difficulty.AizEndBossRecipe;
 import com.openggf.game.sonic3k.events.S3kAizEventWriteSupport;
 import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
@@ -179,6 +180,9 @@ public class AizEndBossInstance extends AbstractBossInstance
 
     /** ROM: _unkFAA2 — signals propeller arms that fire window is active. */
     private boolean fireSignalActive;
+    private int difficultyAttackOrdinal;
+    private boolean alternatingArmPattern;
+    private int leadingArm;
     /** ROM: _unkFAA3 — signals children that boss is defeated. */
     private boolean defeatSignal;
     /** ROM: _unkFAA8 — set when egg capsule should spawn. */
@@ -643,6 +647,7 @@ public class AizEndBossInstance extends AbstractBossInstance
 
     /** ROM: loc_6937E — Post-hover: signal propellers to fire or prepare for retreat. */
     private void onHoverComplete() {
+        commitArmPattern();
         // ROM: bset #1,$38 — signal propellers
         flags38 |= FLAG_PROPELLER_FIRE;
 
@@ -661,6 +666,37 @@ public class AizEndBossInstance extends AbstractBossInstance
         }
 
         state.routine = ROUTINE_HOVER; // Continue hovering during fire window
+    }
+
+    private void commitArmPattern() {
+        var module = services().gameModule();
+        var recipe = module == null ? null : module.getGameService(AizEndBossRecipe.class);
+        var renderManager = services().renderManager();
+        var renderer = renderManager == null ? null : renderManager.getRenderer(Sonic3kObjectArtKeys.AIZ_END_BOSS);
+        // No new attack owner or allocation retries: both original propellers and
+        // their ROM art must exist before admitting the optional warning pattern.
+        alternatingArmPattern = recipe == AizEndBossRecipe.ALTERNATING_ARMS
+                && renderer != null && renderer.isReady()
+                && leftArm != null && rightArm != null
+                && leftArm.getPropeller() != null && rightArm.getPropeller() != null
+                && !leftArm.getPropeller().isDestroyed() && !rightArm.getPropeller().isDestroyed()
+                && leftArm.getPropeller().getSlotIndex() >= 0
+                && rightArm.getPropeller().getSlotIndex() >= 0;
+        leadingArm = difficultyAttackOrdinal++ & 1;
+    }
+
+    boolean usesAlternatingArmPattern() {
+        return alternatingArmPattern;
+    }
+
+    int leadingArm() {
+        return leadingArm;
+    }
+
+    boolean difficultyAttackIsLive() {
+        var module = services().gameModule();
+        return getSlotIndex() >= 0 && !isDestroyed() && !state.defeated && !defeatSignal && module != null
+                && module.getGameService(AizEndBossRecipe.class) == AizEndBossRecipe.ALTERNATING_ARMS;
     }
 
     /** ROM: loc_693DC — Fire signal active, propellers spawn projectiles. */
