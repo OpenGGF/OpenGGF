@@ -383,7 +383,7 @@ public final class EditorInputHandler {
 
     private void handleMouseInput(InputHandler inputHandler) {
         boolean leftDown = inputHandler.isMouseButtonDown(GLFW_MOUSE_BUTTON_LEFT);
-        if (!leftDown) finishPendingEdits();
+        if (!leftDown) finishActiveStroke();
         if (!inputHandler.hasMouseInputSeen()) return;
         MutableLevel level = controller.currentLevel();
         Camera camera = cameraSupplier.get();
