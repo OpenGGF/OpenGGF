@@ -128,6 +128,24 @@ public class TestS3kSlotsPaletteCycling {
     }
 
     @Test
+    public void slotPaletteTablesStartAtTheirListingLabels() throws IOException {
+        RomByteReader reader = RomByteReader.fromRom(com.openggf.tests.TestEnvironment.currentRom());
+        // sonic3k.lst: AnPal_PalSlots_1 $3620, AnPal_PalSlots_2 $3660, AnPal_PalSlots_3 $36E0
+        // (sonic3k.asm:4540-4574). _1's last group equals _2's first ($268,$EEE,$AC,$68), so the
+        // second group ($EEE x4) and the twelfth ($EE0 x4) are what tell the tables apart.
+        int capture = com.openggf.game.sonic3k.constants.Sonic3kConstants.ANPAL_SLOTS_2_ADDR;
+        assertEquals(0x0268, reader.readU16BE(capture));
+        for (int i = 0; i < 4; i++) {
+            assertEquals(0x0EEE, reader.readU16BE(capture + 8 + i * 2), "group 1 word " + i);
+            assertEquals(0x0EE0, reader.readU16BE(capture + 0x58 + i * 2), "group 11 word " + i);
+        }
+        assertEquals(0x0E02, reader.readU16BE(com.openggf.game.sonic3k.constants.Sonic3kConstants.ANPAL_SLOTS_3_ADDR));
+        assertEquals(com.openggf.game.sonic3k.constants.Sonic3kConstants.ANPAL_SLOTS_3_ADDR,
+                com.openggf.game.sonic3k.constants.Sonic3kConstants.ANPAL_SLOTS_2_ADDR
+                        + com.openggf.game.sonic3k.constants.Sonic3kConstants.ANPAL_SLOTS_2_SIZE);
+    }
+
+    @Test
     public void slotModeTracksAuthoritativeStageState() {
         S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
         runtime.bootstrap();
@@ -135,6 +153,9 @@ public class TestS3kSlotsPaletteCycling {
         assertEquals(0, Sonic3kPaletteCycler.resolveSlotsModeForTest(runtime));
 
         runtime.setPaletteCycleEnabledForTest(true);
+        assertEquals(0, Sonic3kPaletteCycler.resolveSlotsModeForTest(runtime),
+                "this iteration's Animate_Palette already ran");
+        runtime.latchAnimatePaletteModeForTest();
 
         assertEquals(1, Sonic3kPaletteCycler.resolveSlotsModeForTest(runtime));
     }
@@ -145,6 +166,7 @@ public class TestS3kSlotsPaletteCycling {
         S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
         runtime.bootstrap();
         runtime.setPaletteCycleEnabledForTest(true);
+        runtime.latchAnimatePaletteModeForTest();
 
         Field slotRuntimeField = Sonic3kBonusStageCoordinator.class.getDeclaredField("slotRuntime");
         slotRuntimeField.setAccessible(true);

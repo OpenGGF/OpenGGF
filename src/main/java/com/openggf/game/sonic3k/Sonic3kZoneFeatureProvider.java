@@ -691,10 +691,14 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
     /**
      * {@code Render_Sprites_NextLevel} (sonic3k.asm:36386-36390) appends the Lava Reef rocks while
      * the sprite-table pointer is still on priority level 0, so they sit behind everything already
-     * in that level and in front of every later one.
+     * in that level and in front of every later one. The Slot Machine layout follows the last
+     * level instead ({@link #appendSlotLayoutSprites}).
      */
     @Override
     public void appendSpritesAfterPriorityBucket(int bucket) {
+        if (bucket == com.openggf.graphics.RenderPriority.MAX && GameServices.hasRuntime()) {
+            appendSlotLayoutSprites();
+        }
         if (bucket == 6 && GameServices.hasRuntime() && getFeatureZoneId() == Sonic3kZoneIds.ZONE_SSZ) {
             com.openggf.game.sonic3k.render.SszMasterEmeraldPreview.draw(GameServices.camera().getWidth(),
                     S3kRuntimeStates.currentSsz(GameServices.zoneRuntimeRegistry()).orElse(null),
@@ -966,7 +970,25 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
         if (slotMachinePanelAnimator != null && slotMachinePanelAnimator.isInitialized()) {
             coordinator.activeSlotRuntime().syncSlotMachinePanel(slotMachinePanelAnimator);
         }
-        coordinator.activeSlotRuntime().renderSlotLayout(camera);
+        // The rotated layout is not drawn here: it belongs to the sprite table
+        // (see appendSpritesAfterPriorityBucket) and is displayed with its iteration.
+    }
+
+    /**
+     * Slots_RenderLayout (sonic3k.asm:98158-98269) runs after Render_Sprites in LevelLoop
+     * (sonic3k.asm:7911-7915) and continues the same {@code Sprite_table} from
+     * {@code Sprites_drawn}, so the layout pieces follow every Render_Sprites entry
+     * (behind them) and the next VBlank publishes them with that iteration's player and
+     * objects.
+     */
+    private void appendSlotLayoutSprites() {
+        var levelManager = GameServices.levelOrNull();
+        if (levelManager == null || levelManager.getCurrentZone() != Sonic3kZoneIds.ZONE_SLOT_MACHINE
+                || !(GameServices.module().getBonusStageProvider() instanceof Sonic3kBonusStageCoordinator coordinator)
+                || coordinator.activeSlotRuntime() == null) {
+            return;
+        }
+        coordinator.activeSlotRuntime().renderSlotLayout(GameServices.camera());
     }
 
     @Override

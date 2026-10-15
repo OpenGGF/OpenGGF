@@ -73,21 +73,29 @@ class TestS3kSlotExitSequence {
     }
 
     @Test
-    void fadeProgressAdvancesDuringFade() {
+    void palToBlackRunsOnFirstAndEveryThirdLoc4BC54Iteration() {
         S3kSlotStageController controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
                 com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         controller.bootstrap();
         S3kSlotExitSequence exit = new S3kSlotExitSequence(controller);
 
-        assertEquals(0f, exit.fadeProgress());
-
-        // Skip to fade phase
-        for (int i = 0; i < 95; i++) exit.tick();
-        assertEquals(0f, exit.fadeProgress(), 0.02f);
-
-        // Half through fade
-        for (int i = 0; i < 30; i++) exit.tick();
-        assertEquals(0.5f, exit.fadeProgress(), 0.02f);
+        // 95 wind-down ticks: the last is loc_4BC1E's trigger, which clears Pal_fade_delay.
+        for (int i = 0; i < 95; i++) {
+            exit.tick();
+            assertFalse(exit.palToBlackThisTick());
+        }
+        assertTrue(exit.stopsPaletteCycle(), "the trigger iteration writes st Palette_cycle_counters");
+        int calls = 0;
+        for (int iteration = 1; iteration <= 60; iteration++) {
+            exit.tick();
+            assertTrue(exit.stopsPaletteCycle());
+            assertEquals((iteration - 1) % 3 == 0, exit.palToBlackThisTick(), "loc_4BC54 iteration " + iteration);
+            if (exit.palToBlackThisTick()) calls++;
+        }
+        assertEquals(20, calls);
+        assertTrue(exit.isComplete());
+        exit.tick();
+        assertFalse(exit.palToBlackThisTick());
     }
 
     @Test

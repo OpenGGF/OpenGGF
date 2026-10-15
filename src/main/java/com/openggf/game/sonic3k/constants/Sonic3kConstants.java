@@ -2832,7 +2832,8 @@ public class Sonic3kConstants {
     public static final int ART_UNC_SLOT_OPTIONS_SIZE = 0x1000;
     public static final int ANPAL_SLOTS_1_ADDR = 0x003620;
     public static final int ANPAL_SLOTS_1_SIZE = 0x40;
-    public static final int ANPAL_SLOTS_2_ADDR = 0x003658;
+    // sonic3k.lst: AnPal_PalSlots_2 at $3660 (directly after the $40-byte _1 table).
+    public static final int ANPAL_SLOTS_2_ADDR = 0x003660;
     public static final int ANPAL_SLOTS_2_SIZE = 0x80;
     public static final int ANPAL_SLOTS_3_ADDR = 0x0036E0;
     public static final int ANPAL_SLOTS_3_SIZE = 0x0C;

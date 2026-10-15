@@ -280,7 +280,9 @@ class TestS3kBonusPortalMechanismProducts {
         int steps=0;
         while(!runtime.activeExitSequenceForTest().isFading()&&steps<160){step(session);steps++;}
         assertTrue(runtime.activeExitSequenceForTest().isFading());
-        assertTrue(SessionManager.getCurrentGameplayMode().getFadeManager().isActive());
+        // loc_4BC54 dims Normal_palette with Pal_ToBlack (sonic3k.asm:98981-98987); no screen
+        // overlay runs until Level:'s Pal_FadeToBlack after the $38 countdown.
+        assertFalse(SessionManager.getCurrentGameplayMode().getFadeManager().isActive());
         var after=registry.capture();
         for(int cycle=0;cycle<2;cycle++) {
             registry.restore(before);same(before,registry.capture());
