@@ -348,3 +348,36 @@ native fades in; `Sonic3kTitleCardManager` models the `loc_64DC` `Palette_fade_t
 so whether production or only the capture path skips it is unattributed. The load frame
 49297 itself (full-brightness partially decoded art) is the omitted-presentation capture's
 own frame; native shows the title card over black there.
+
+**Post-title-card fade-in attributed and fixed (titlefade lane, 2026-10-15).** ROM:
+`Level/loc_64DC` (sonic3k.asm:7874-7878) sets `Palette_fade_info = $202F` (lines 1-3), runs
+`Pal_FillBlack`, then writes `$16` to both `Palette_fade_timer` and the surviving title card's
+`$2E`; `Animate_Palette` (5018-5028) spends each LevelLoop frame on one `Pal_FromBlack` pass
+while gameplay runs and `Obj_TitleCardWait2` (62249) counts the card's hold down on the same
+frames. The native `hpz-entry` RAM/CRAM dumps (seq130-152, inputs 411495-411517) agree:
+`Level_frame_counter` 0 has lines 1-3 black with the timer and `$2E` at 22, counter k holds k
+passes (line sums 15, 30, 45, … 170/152/162 at 21), line 0 stays at full colour throughout,
+and the card holds until counter 22 before it exits; it does not leave during the fade.
+The production fresh route (a `requestZoneAndAct` handoff through `doZoneAct`, the card
+presented) was wrong as well: the card painted its opaque black field through the whole
+22-frame LevelLoop hold and no palette fade was presented, so the level appeared at full
+colour at counter 22 as the card began to exit (HPZ Knuckles and LRZ1 Sonic, identical).
+`Sonic3kTitleCardManager` now presents `Pal_FromBlack` on lines 1-3 with the hold frame as
+the pass count once `loc_64DC` has armed the hold, and drops the black field then. Measured
+after the fix, engine lines 1-3 equal the native `Normal_palette` sums at every counter 0-21
+for HPZ, and LRZ1 fades the same way. Engine pictures (LIMITED/RAW_RGB):
+`titlefade-v1/engine-hpz-fresh-after`. Red first: `TestS3kFreshTitleCardLevelFadeIn` failed
+both cases (black field, no fade) before the fix. Limits that remain: a direct boot whose
+card is not the fresh-boundary owner (`HeadlessGameBoot`/`GameplayCaptureSession` with the
+card shown, the campaign-visual `engine-*-titlecard` pictures) holds 90 locked frames and
+releases LevelLoop at the card's exit, so it still pops to full colour; by code reading the
+windowed data-select launch (`loadZoneAndActForFreshRuntime`) shows that non-fresh card
+after a whole-screen host fade. An omitted presentation (headless fixtures, trace
+bootstraps, captures with the card off) counts `Palette_fade_timer` but presents no fade.
+Natively both fade, because the fade belongs to `Level`, not to the card. The owner for
+those paths is `Animate_Palette` (`Sonic3kLevelAnimationManager`), but presenting the fade
+there would fade lines 1-3 twice wherever the host already runs its `FadeManager` reveal over
+the same LevelLoop frames (measured for the headless data-select load). Those paths are
+recorded as a capture limit until the host reveal is retired for S3K. Separately observed,
+not fixed: native draws the HUD digits over the card's red banner, while the engine draws the
+card over them.

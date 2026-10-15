@@ -1705,3 +1705,13 @@ rejected setups and the distinction from earlier qualification are recorded in
 This qualifies local physical contact and reload/replay products. It supplies
 no cold route for every configuration, native whole-scene/audio acceptance or
 combined smoke/guard/integration claim. Other matrix obligations stay open.
+
+## Post-title-card fade-in (2026-10-15)
+
+A fresh LRZ1 entry (`requestZoneAndAct` through the fresh title boundary, Sonic, card
+presented) now fades lines 1-3 in from black over the card's 22-frame LevelLoop hold, which
+is the `Level/loc_64DC` / `Animate_Palette` reveal. Before the fix the card's black field
+covered the level until the card exited, and the level then appeared at full colour (lines
+1-3 sums 146/136/120). Covered by `TestS3kFreshTitleCardLevelFadeIn`. The ROM evidence,
+native comparison and remaining direct-boot and omitted-presentation capture limits are
+recorded in [the HPZ act matrix](s3k-hpz-act.md).

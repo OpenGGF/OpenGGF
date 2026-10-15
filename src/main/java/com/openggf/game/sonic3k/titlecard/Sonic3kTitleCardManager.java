@@ -17,6 +17,7 @@ import com.openggf.game.titlecard.TitleCardMappings;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.PaletteFadePresentation;
 import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.graphics.TitleCardSpriteRenderer;
 import com.openggf.level.Pattern;
@@ -195,6 +196,9 @@ public class Sonic3kTitleCardManager
     private boolean freshLevelChildMovementObserved;
     private boolean freshLevelTitleReady;
     private boolean freshLevelTerrainStarted;
+    // Whether this owner last published the LevelLoop palette fade to the
+    // GraphicsManager; derived from captured state, so rewind re-applies it.
+    private boolean levelPaletteFadePresented;
 
     /**
      * Immutable live-title snapshot. Array accessors clone their payload so a
@@ -389,6 +393,7 @@ public class Sonic3kTitleCardManager
         } else {
             artQueue = null;
         }
+        applyLevelPaletteFade();
     }
 
     @Override
@@ -478,6 +483,9 @@ public class Sonic3kTitleCardManager
         stateTimer = 0;
         freshLevelTransitionMode = false;
         freshLevelTitleOwnerReplacedAtAssembly = false;
+        // The same loc_64DC block ran Pal_FillBlack on lines 1-3 before
+        // LevelLoop's first VBlank, so the released frame already shows them black.
+        applyLevelPaletteFade();
     }
 
     /**
@@ -944,6 +952,68 @@ public class Sonic3kTitleCardManager
         // The overlay remains renderable, but its real retained SST owns the
         // only child dispatch. An earlier generic overlay tick must not run it.
         if (!inLevelGameplayOwnedExternally) updateOwnedChildren();
+        applyLevelPaletteFade();
+    }
+
+    /**
+     * Whether the hold is the one {@code Level/loc_64DC} armed for LevelLoop
+     * (sonic3k.asm:7874-7878): {@code Pal_FillBlack} over
+     * {@code Palette_fade_info = $202F}, then {@code Palette_fade_timer} and
+     * this owner's {@code $2E} both set to {@code $16}. Only the fresh title
+     * owner's handoff installs that hold; in-level and bonus cards never pass
+     * through the Level routine.
+     */
+    private boolean levelLoopHoldArmed() {
+        return displayHoldFrames == FRESH_LEVEL_TRANSITION_HOLD_FRAMES
+                && !inLevelMode && !bonusMode;
+    }
+
+    /**
+     * {@code Pal_FromBlack} passes applied to lines 1-3 on this frame, or -1
+     * when the level palette is not fading. {@code Animate_Palette}
+     * (sonic3k.asm:5018-5028) spends one pass per LevelLoop frame while
+     * {@code Palette_fade_timer} counts down, and {@code Obj_TitleCardWait2}
+     * (62249-62254) counts this owner's {@code $2E} down on the same frames,
+     * so the hold frame is the pass count. Native HPZ (campaign-visual native
+     * hpz-entry dumps): Normal_palette lines 1-3 hold k passes at
+     * Level_frame_counter k and are complete at 21, one frame before the card
+     * starts its exit; line 0 (players, HUD, card) is never faded.
+     */
+    static int levelPaletteFadeStepsAt(
+            Sonic3kTitleCardState state, int stateTimer, boolean levelLoopHoldArmed) {
+        if (!levelLoopHoldArmed || state != Sonic3kTitleCardState.DISPLAY
+                || stateTimer >= PaletteFadePresentation.COLOR_STEPS) {
+            return -1;
+        }
+        return Math.max(0, stateTimer);
+    }
+
+    private void applyLevelPaletteFade() {
+        int steps = levelPaletteFadeStepsAt(state, stateTimer, levelLoopHoldArmed());
+        if (steps < 0 && !levelPaletteFadePresented) {
+            return;
+        }
+        GraphicsManager graphics = graphicsOrNull();
+        if (graphics == null) {
+            return;
+        }
+        if (steps < 0) {
+            graphics.clearPaletteFadePresentation();
+            levelPaletteFadePresented = false;
+            return;
+        }
+        graphics.setPaletteFadePresentation(PaletteFadePresentation.Mode.FROM_BLACK, steps,
+                PaletteFadePresentation.LINES_1_TO_3);
+        levelPaletteFadePresented = true;
+    }
+
+    private static GraphicsManager graphicsOrNull() {
+        try {
+            return GameServices.graphics();
+        } catch (RuntimeException ignored) {
+            // Focused tests drive the state machine without an engine session.
+            return null;
+        }
     }
 
     private void updateOwnedChildren() {
@@ -1136,6 +1206,18 @@ public class Sonic3kTitleCardManager
         return true;
     }
 
+    /**
+     * Whether {@link #draw} paints the opaque black field behind the card:
+     * native lines 1-3 stay black through the locked title loop. Once loc_64DC
+     * hands the hold to LevelLoop those lines fade in through the palette
+     * instead, and line 0 (players, HUD) shows at full colour behind the card,
+     * so the field would hide what the ROM displays.
+     */
+    public boolean drawsOpaqueLevelBackdrop() {
+        return !inLevelMode && !levelLoopHoldArmed()
+                && (state == Sonic3kTitleCardState.SLIDE_IN || state == Sonic3kTitleCardState.DISPLAY);
+    }
+
     @Override
     public void draw() {
         ensureArtCached();
@@ -1148,8 +1230,7 @@ public class Sonic3kTitleCardManager
         // Bonus mode: fully opaque during SLIDE_IN, then per-channel fade during DISPLAY
         // (B→G→R subtractive, 22 frames, synchronized with hold timer).
         // ROM: Pal_FadeFromBlack runs simultaneously with the title card wait.
-        if (!inLevelMode &&
-                (state == Sonic3kTitleCardState.SLIDE_IN || state == Sonic3kTitleCardState.DISPLAY)) {
+        if (drawsOpaqueLevelBackdrop()) {
             // Span the full viewport so no level bleeds through on wider screens.
             // viewportWidth()==SCREEN_WIDTH at native 320 — byte-identical.
             int vw = viewportWidth();
@@ -1198,6 +1279,8 @@ public class Sonic3kTitleCardManager
     public void reset() {
         state = Sonic3kTitleCardState.COMPLETE;
         stateTimer = 0;
+        // COMPLETE: release a fade this owner published (e.g. a reload mid-fade).
+        applyLevelPaletteFade();
         phaseCounter = 0;
         exitChildrenGone = false;
         inLevelMode = false;

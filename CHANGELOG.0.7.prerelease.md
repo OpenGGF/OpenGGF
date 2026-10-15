@@ -37,6 +37,11 @@ Unreleased. The earlier development themes remain in
 - **S3K special stage results:** The results card sits on the locked-on game's
   grey backdrop instead of white, matching native frames of won and failed stages.
 
+- **S3K zone title cards:** After a zone change (for example Lava Reef into Hidden
+  Palace), the level fades in from black behind the holding title card over 22
+  frames, with the player, HUD and card already at full colour, instead of staying
+  black and appearing at full brightness as the card leaves.
+
 - **S3K objects and bosses:** The Angel Island end boss starts its defeat at the
   native hit check of whichever phase it is in. When the object table is full,
   pending placements wait for the next camera block crossing, which restores the
