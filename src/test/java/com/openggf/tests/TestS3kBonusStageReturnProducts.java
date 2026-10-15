@@ -110,7 +110,7 @@ class TestS3kBonusStageReturnProducts {
             assertEquals(type,coordinator.getActiveType());assertEquals(0x800,coordinator.getSavedState().savedZoneAndAct());
             assertNotSame(outgoing,GameServices.level().getObjectManager());
             assertEquals(coordinator.getZoneId(type)>>8,GameServices.level().getCurrentZone());
-            assertEquals(type!=BonusStageType.SLOT_MACHINE,coordinator.supportsRewind());
+            assertTrue(coordinator.supportsRewind(),"every actual bonus interior supports complete rewind");
             var incoming=SessionManager.getCurrentGameplayMode().getRewindController();
             assertTrue(incoming==null||incoming.currentFrame()<oldFrame,"origin timeline is retired");
             assertEquals(main,GameServices.sprites().getMainPlayable().characterKey().persisted());

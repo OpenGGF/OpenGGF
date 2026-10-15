@@ -610,12 +610,19 @@ class TestGameplayModeContextRewindRegistry {
     void registersBonusCoordinatorAdapterOnlyForRewindSupportedStage() {
         GameplayModeContext ctx = buildAttachedContext();
 
+        var idle = new com.openggf.game.sonic3k.Sonic3kBonusStageCoordinator();
+        ctx.registerBonusStageAdapter(idle);
+        assertFalse(ctx.getRewindRegistry().capture().entries().containsKey(
+                com.openggf.game.rewind.BonusStageCoordinatorRewindAdapter.KEY),
+                "a coordinator with no active stage supports no rewind; no adapter should register");
+
         var slots = new com.openggf.game.sonic3k.Sonic3kBonusStageCoordinator();
         slots.onEnter(com.openggf.game.BonusStageType.SLOT_MACHINE, null);
         ctx.registerBonusStageAdapter(slots);
-        assertFalse(ctx.getRewindRegistry().capture().entries().containsKey(
+        assertTrue(ctx.getRewindRegistry().capture().entries().containsKey(
                 com.openggf.game.rewind.BonusStageCoordinatorRewindAdapter.KEY),
-                "Slots is not rewind-supported; no adapter should register");
+                "the Slot Machine now captures its complete interior; adapter must register");
+        ctx.deregisterBonusStageAdapter();
 
         var gumball = new com.openggf.game.sonic3k.Sonic3kBonusStageCoordinator();
         gumball.onEnter(com.openggf.game.BonusStageType.GUMBALL, null);
