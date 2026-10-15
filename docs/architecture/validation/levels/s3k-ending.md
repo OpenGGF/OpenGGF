@@ -287,9 +287,33 @@ acceptance is claimed.
 | Tails/+2 and Sonic/0 declared products | Qualified as declared scenes | 22/22 checkpoints, zero level mismatches, all whole frames viewed | Cold campaign identity, original-RGB bytes |
 | Sonic -2, Tails -2, Tails 0, Sonic+Tails -2/0 declared products | Qualified as declared scenes | Newly captured native references (unchanged v1 adapter, immutable host); engine `6ace9000f`: zero 3-bit-level mismatches and identical SST inventories at all 11 checkpoints each | Cold campaign identity, original-RGB bytes |
 | Sonic +2 and Sonic+Tails +2 (Hyper Sonic route) | Open, attributed | Checkpoints 1–4095 match exactly; SST identical at all 11 | 171/194 level pixels at 5119/6143: native `HScroll_table+0` is `$14F800` and `Camera_Y_pos` 517/1345 against engine `$14F000` and 516/1344, so native opens the reunion `Kos_modules_left` gate one frame earlier on this route than on Tails/+2 while the engine schedules both identically. The owner lies upstream of fg routine 40 on the Hyper Sonic AIZ-return route and needs a native per-frame ledger for that route |
-| Knuckles products (SSZ2 `$0A01`) | Open | Lifecycle 9 and terminal pixels pass; shares the corrected `updateCredits` | No native product; `loc_5B1A2` there clears only `Camera_Y_pos` and is not separately compared |
+| Knuckles products (SSZ2 `$0A01`) | Open | Lifecycle 9 and terminal pixels pass; shares the corrected `updateCredits`; cold-campaign credits compared with native frames (below) | No declared native product; `loc_5B1A2` there clears only `Camera_Y_pos` and is not separately compared |
 | Team retirement / full-frame replay | Inherited red | — | `TestS3kEndingLifecycleCapture` team cases (6) and `TestS3kEndingRescue` roster replay (30) fail identically on `2b9eb431d`: `level-sprite-presentation` prepared/published scroll differs after restore and replay. The COMPLETE LIFECYCLE row above therefore no longer holds for team entries |
 | Wrapped particle presentation | Inherited red | — | `TestS3kEndingPresentationCapture` wrapped-particle cases (2) fail identically on `2b9eb431d` (`native IslandLift missing/displaced: 0/398`) |
 | PAL | Open | Literal PAL tables and REGION=PAL lifecycles (earlier sections) | No PAL native product or 50 Hz capture |
 | PCM / audio | Open | Mailbox/request-level audio tests only | No rendered PCM comparison |
 | SAT overflow / original RGB | Open | — | Native 20-sprite/320-dot overflow still needs a real witness; byte-RGB acceptance awaits the LIMITED colour profile |
+
+### Knuckles credits against native frames (campaign-visual lane, 2026-10-15)
+
+The cold Knuckles campaign's credits (`lrz-knuckles-cold-hpz-ssz2-ending-320.bk2`) were
+compared with native frames of `runs/s3k-knuckles-complete-superemeralds` selected by
+`$FA86=4`, `$FA84>2` and `$FAAE` 0/4 (inputs 422795 and 428089) plus 150-frame spans;
+engine frames use `LIMITED`/`RAW_RGB`. Pictures, RAM/VRAM/CRAM/SST dumps and provenance are in
+`$HOME/Videos/OGGF/s3k-parity-coverage-2026-10-14/spot-checks/campaign-visual-v1/`.
+
+- **Black line across both parts (engine).** Natively the Plane B island box (transparent,
+  256×128) and `loc_591D6`'s `Map_KnuxEndingIslandMask` squares both start at line 48
+  (`Camera_Y_pos_BG_copy $D0.4000`, mask `y_pos $F0`). The engine froze the BG copy at `$D2`
+  because the flight init omitted `loc_5E70E`'s `clr.w (Screen_shake_flag).w` (native `$EECC`
+  drops from `$FF00` at input 419848), and projected the screen-space mask with the physical
+  camera instead of the render copy. Fixed in `13e2e9025`.
+- **Blank part two (engine).** Native shows every part-two name; the engine showed none.
+  `sub_5B18E` scrolls `Camera_Y_pos` to `$1CA0` over a 32-row Plane A ring that the VDP wraps
+  every 256 lines, but the engine tile pass discarded rows past the SSZ2 layout height.
+  The credits descriptor owner now makes the foreground pass wrap
+  (`d10afbcdc`).
+- Matching after `13e2e9025`: part-one text, island rows 63–199 in both, cloud sprites.
+  Part-two text after `d10afbcdc` awaits the queued re-render (`engine-k-fixed2`). The native run's Super-emerald progress ends in the S3 eyecatch; the cold movie's
+  banner and Mecha terminal have no native counterpart in this comparison.
+
