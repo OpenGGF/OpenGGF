@@ -163,7 +163,7 @@ class TestS3kBonusPortalMechanismProducts {
             var interior=GameServices.level().getObjectManager();
             var saved=coordinator.getSavedState();
             reachStageOwnedExit(session, type, coordinator);
-            if(type==BonusStageType.SLOT_MACHINE) verifySlotGoalWindAndFade(session,coordinator);
+            if(type==BonusStageType.SLOT_MACHINE) verifySlotGoalWindAndFade(session,coordinator,main+"-"+width+"-"+donor);
             int expectedLives=lives+coordinator.getRewards().lives();
             int expectedRings=GameServices.sprites().getMainPlayable().getRingCount();
             boolean returned=false;
@@ -272,9 +272,9 @@ class TestS3kBonusPortalMechanismProducts {
         positionFreePlayer(col*24-(ring?0x20:0x14)-(ring?0:1),row*24-(ring?0x50:0x44)-(ring?0:1));
     }
     private static void verifySlotGoalWindAndFade(GameplayCaptureSession session,
-            Sonic3kBonusStageCoordinator coordinator) throws Exception {
+            Sonic3kBonusStageCoordinator coordinator,String label) throws Exception {
         var runtime=coordinator.activeSlotRuntime();assertTrue(runtime.activeExitSequenceForTest().isWindingDown());
-        replaySlotPictureAction(session,13,()->step(session),
+        replaySlotPictureAction(session,13,()->{step(session);captureSlotPicture(session,label,"wind");},
                 ()->assertTrue(runtime.activeExitSequenceForTest().isWindingDown()));
         var registry=SessionManager.getCurrentGameplayMode().getRewindRegistry();var before=registry.capture();
         int steps=0;
@@ -294,7 +294,7 @@ class TestS3kBonusPortalMechanismProducts {
             var player=GameServices.sprites().getMainPlayable();
             int previousMapping=player.getMappingFrame();
             byte[] previousBank=readPlayerPatternBank(player.getSpriteRenderer());
-            step(session);assertActiveSlotPose();
+            step(session);assertActiveSlotPose();captureSlotPicture(session,label,"fade");
             byte[] currentBank=readPlayerPatternBank(player.getSpriteRenderer());
             int mapping=player.getMappingFrame();
             if(mapping!=previousMapping)changedMappings[0]++;
@@ -324,6 +324,17 @@ class TestS3kBonusPortalMechanismProducts {
         assertTrue(changedMappings[0]>0,"the fade interval exercises at least one Animate mapping change");
         if(!(GameServices.sprites().getMainPlayable() instanceof com.openggf.sprites.playable.Tails))
             assertTrue(sonicCueChecks[0]>0,"a changed fade mapping was checked against host Sonic cues");
+    }
+    /** Opt-in engine pictures for native comparison; no capture unless the directory is set. */
+    private static void captureSlotPicture(GameplayCaptureSession session,String label,String phase) {
+        String dir=System.getProperty("openggf.test.slot.captureDir");
+        if(dir==null)return;
+        var player=GameServices.sprites().getMainPlayable();
+        String name=String.format("%s-lfc%05d-map%02X",phase,GameServices.level().getFrameCounter()&0xFFFF,player.getMappingFrame());
+        try {
+            var out=java.nio.file.Path.of(dir).resolve(label);java.nio.file.Files.createDirectories(out);
+            com.openggf.graphics.ScreenshotCapture.savePNG(session.render(),out.resolve(name+".png"));
+        } catch(java.io.IOException error) { throw new java.io.UncheckedIOException(error); }
     }
     private static com.openggf.game.sonic3k.Sonic3kPlayerArt hostArt() {
         try { return new com.openggf.game.sonic3k.Sonic3kPlayerArt(
