@@ -287,7 +287,7 @@ acceptance is claimed.
 | Tails/+2 and Sonic/0 declared products | Qualified as declared scenes | 22/22 checkpoints, zero level mismatches, all whole frames viewed | Cold campaign identity, original-RGB bytes |
 | Sonic -2, Tails -2, Tails 0, Sonic+Tails -2/0 declared products | Qualified as declared scenes | Newly captured native references (unchanged v1 adapter, immutable host); engine `6ace9000f`: zero 3-bit-level mismatches and identical SST inventories at all 11 checkpoints each | Cold campaign identity, original-RGB bytes |
 | Sonic +2 and Sonic+Tails +2 (Hyper Sonic route) | Open, attributed to native CPU time | Checkpoints 1–4095 match exactly; SST identical at all 11. Native v5 ledgers (`B/native-cloud-transition-{tails,sonic,team}-super-320-v5`, Tails/+2 reproducing the v1 control) queue the same three Kos entries at LF 4402 and the module chain at 4403 on all three routes; only the FIFO head `$1D17A6` (fingerprint `5b4280f6…`) finishes in 3 polls on the Sonic and team routes (`Kos_decomp_queue_count` 3→2 at LF 4405) against 4 on Tails/+2 (LF 4406). Every later service step is identical, one frame earlier, so the `loc_5AE0A` gate opens at LF 4443 instead of 4444 | 171/194 level pixels at 5119/6143 (`HScroll_table+0` `$14F800`, `Camera_Y_pos` 517/1345 against engine `$14F000`, 516/1344). `Process_Kos_Queue` runs in main-loop idle time and resumes from a VInt bookmark (sonic3k.asm:2840), so the same job's duration depends on how much of those frames the route's objects consume. The FAST manifest holds one cost per fingerprint (4, measured on Tails/+2, which also matches Sonic/0 and the other five products); a route- or character-keyed cost would be a fitted constant (runtime invariant 3) and was not added. Closing it needs a CPU-cycle budget model for the Kos queue. The 2026-10-15 native measurement ([lifecycle design](../../designs/2026-10-13-s3k-ending-lifecycle.md#kos-idle-budget-measurement-of-the-hyper-sonic-residual-2026-10-15-opus-kos-budget-lane)) confirms the per-object idle-budget cause and rules out a route-free model; tracked in [S3K known bugs](../../../status/s3k-known-bugs.md#ending-reunion-kos-service-count--per-object-cpu-budget-open) |
-| Knuckles products (SSZ2 `$0A01`) | Open | Lifecycle 9 and terminal pixels pass. Credits against the native complete run (below): with the native inlet declared, `Camera_Y_pos`, all 32 Plane A rows and every cloud SST equal native at all 52 state-anchored spots (32 during the text, 20 after it), and 11 of the 32 text frames are pixel-identical; `8f602642c`, `9b0c85dd0`. Background routine 4's starfield and sea Plane B (`516ca64f1`): the first credits-done frame is pixel-identical once the native `HScroll_table` longword is also declared | The other 21 text frames differ by 1px of credit text because the native picture is one pass behind the RAM that selects it (capture limit, below); the engine draws the ending clouds one pass behind their own SSTs (unattributed); after credits-done the banner logo sits 65px lower than native and native Knuckles flashes pink (terminal objects, not compared); no declared native product; `loc_5B1A2` there clears only `Camera_Y_pos` and is not separately compared |
+| Knuckles products (SSZ2 `$0A01`) | Open | Lifecycle 9 and terminal pixels pass. Credits against the native complete run (below): with the native inlet declared, `Camera_Y_pos`, all 32 Plane A rows and every cloud SST equal native at all 52 state-anchored spots (32 during the text, 20 after it); `8f602642c`, `9b0c85dd0`. Background routine 4's starfield and sea Plane B (`516ca64f1`). The terminal banner's `word_5F260` row and TM, `loc_5FBA0`'s pink flash, `loc_5FF62`'s logo fade and SSZ2's Plane A V-scroll from `Camera_Y_pos_copy` (kterminal lane): all 20 credits-done spots are pixel-identical with the native `HScroll_table` longword declared, and the credit text sits where native shows it at all 32 text spots | Whole text frames differ in cloud pixels: this tree reaches the credits one V-int later than native (unattributed, [known bugs](../../../status/s3k-known-bugs.md#knuckles-credits-and-terminal-residuals-open)), which also lists a glyph fragment at credits-one spans 9-10, one zero-copy Plane A pass and the S3 eyecatch fades; no declared native product; `loc_5B1A2` there clears only `Camera_Y_pos` and is not separately compared |
 | Team retirement / full-frame replay | Passing on Root `e0a136b83` | `TestS3kEndingRescue` 36/36 and `TestS3kEndingLifecycleCapture` 18/18 (0 skipped), one queued focused run on 2026-10-15 05:58–06:01 UTC, Root plus the test-only wrapped-particle correction | The 30 roster and 6 team replay failures recorded on `be2a3f6d3`/`2b9eb431d` do not reproduce. Which composed commit cleared them was not bisected |
 | Wrapped particle presentation | Resolved: test premise corrected | Bisect (first-parent `5b2ff8e78..da27f4f3d`) puts the 0/398 failure at `90897f41d`, the merge of `9a7070930`, which added native Plane B high-priority sea composition. Subtype `$41` is low priority (`loc_5EDFE` clears art_tile bit 15). Native Sonic/0 spots at polls 1279, 1398–1401 and 1535 (`B/declared-native-spots-sonic-chaos-320-islandlift-v1`; engine input 1400 is poll 1399) hold 512/512 B-high opaque sea pixels under the old particle box (screen 224–255 × 188–203) and B-low sky at 40–71 × 40–55, so the VDP hides the old vector. The visible wrapped-Y cases now use the same threshold vector in the sky (Y `$FEB0`), and new `wrappedLowPriorityParticleIsCoveredByTheHighPrioritySea` (320/800) asserts that the old vector shows no particle pixels. No production change | The engine's B-high composition between native spot checkpoints is covered by the declared-product comparisons, not by this vector |
 | PAL | Open | Literal PAL tables and REGION=PAL lifecycles (earlier sections) | No PAL native product or 50 Hz capture |
@@ -394,11 +394,12 @@ x, y and mapping frame of every `loc_5FA8C` slot. Pixels compare the 320×224 pl
 
 All 20 credits-done spots also hold no clouds (`_unkFAB9` 0) in both. Limits:
 
-- **One pixel of credit text.** At the 11 of 32 text spots where native VSRAM equals
-  `Camera_Y_pos_copy` the frames are pixel-identical. At the other 21 every differing pixel
-  is a credit-text glyph: the native picture shows Plane A at the previous frame's
-  V-scroll (VSRAM = the previous copy). Attributed in the post-credits section below:
-  a capture limit, not a ROM phase split; no offset was fitted.
+- **One pixel of credit text (fixed by the kterminal lane).** At the 11 of 32 text spots
+  where native VSRAM equals `Camera_Y_pos_copy` the frames were pixel-identical. At the
+  other 21 the engine's text sat 1px above native. The native picture is one pass behind
+  RAM, and the engine models that by publishing the sprite table and scroll at VInt; the
+  text led because SSZ2's Plane A V-scroll followed the camera the credits had just moved.
+  See the kterminal section below.
 - **Post-credits Plane B.** Fixed in `516ca64f1`; see the post-credits section below.
 - **Part two after `$1660`.** The native spans stop at `$141B`. The lift itself is
   RAM-checked at credits-done but has no mid-transition native picture.
@@ -439,8 +440,8 @@ native `$032B2160` at flight init as well (`engine-k-postcredits-v2-hsaligned/`)
 native longword at every credits-done spot. Seq000 is then 100.0% pixel-identical. Seq001
 to seq019 are 92.9-93.6% equal, all in rows 28-159: the terminal banner. There the
 engine's logo sits at y 94-133 against native 29-69, and native Knuckles flashes pink.
-That offset is identical before this change, so it belongs to the terminal objects and
-was not studied here. `HScroll_table+6` stays `$3E0` against native `$3DE`, because the
+That offset is identical before this change, so it belongs to the terminal objects; the
+kterminal lane below fixed both. `HScroll_table+6` stays `$3E0` against native `$3DE`, because the
 engine's flight camera X is `$240` against native `$1CF`. Both are inherited from the
 fight. It shifts the eight horizon lines of the second band (160-167) by 2px; they are
 uniform, so no pixel differs.
@@ -448,7 +449,7 @@ uniform, so no pixel differs.
 sky, then the sea and the stars. No native picture exists between `$141B` and
 credits-done.
 
-**The 1px credit text is a capture limit, not a ROM split.** `VInt` writes VSRAM from
+**The native picture is one pass behind RAM.** `VInt` writes VSRAM from
 `V_scroll_value` (sonic3k.asm:528) and `VInt_8` DMAs `Sprite_table` (sonic3k.asm:761) in
 the same interrupt. `ScreenEvents` sets `V_scroll_value` from `Camera_Y_pos_copy`
 (sonic3k.asm:102253), before `sub_5B18E` advances `Camera_Y_pos`. At that interrupt both
@@ -463,18 +464,85 @@ from that VRAM:
 - the native picture shows rows 45-51, then 46-52, which no RAM position can produce.
 
 So the native picture is one pass behind the RAM that selects the spot, for planes and
-sprites alike. Paired by RAM, the engine's text is therefore one pass ahead of the native
-picture whenever `Camera_Y_pos_copy` changes. Nothing was modelled.
-
-The engine's own picture does not have that shape. Its cloud SSTs equal native RAM, yet
-it draws the clouds at the previous pass's position (slot 8: SST `$B2`/`$B4`, rows
-45-51/46-52; the lower-left cloud shows the same lag), while Plane A uses the current
-pass. This is why the credits lane saw the clouds match and the text lag.
-The engine-side cause was not found in the cloud's draw call or in sprite-table
-collection, which replays within the same render. It is left for a render-pipeline
-study. Fitting either side would hide it.
+sprites alike. The engine models that latch, so its clouds were already right and its text
+was a pass early. The kterminal lane below attributed and fixed it.
 
 Native flight-window capture: `native-knux-credits-flight/` (CampVisualProbe exe
 `516847eb…`, resumed from the campaign lane's `native-knux-2` savestate at input 412501;
 112 snapshots every 25 inputs plus 1420 per-frame log rows; provenance alongside).
+
+### Knuckles terminal banner, pose flash and the credits Plane A phase (kterminal lane, 2026-10-15)
+
+Same native spots (`native-knux`, credits-done inputs 432708-433088 every 20, with RAM,
+CRAM, VRAM and SST). Engine renders `engine-k-kterminal-v1/` and `-v2/` use the cold
+Knuckles movie with the postcredits lane's declared inlets: Super Emeralds after Mecha's
+defeat; `V_int_run_count` `$66142`, the swing/`_unkEE9C` state and `HScroll_table`
+`$032B2160` at flight init.
+
+- **Banner position (engine).** `Obj_5EF68` (sonic3k.asm:125476) indexes `off_5EFB6` by
+  `Player_mode`, `SK_alone_flag` and `_unkFA88`. Locked-on Knuckles at progress 0 or +2
+  takes `loc_5F0A6`: the end pose (`loc_5F480`) and `loc_5F20A` with the subtype that
+  `AllocateObject` cleared. `sub_5FF1C` (sonic3k.asm:126931) then reads `word_5F260[0]`,
+  (`$120`,`$B0`). Progress -2 takes `loc_5F0C4` (subtype 8, (`$120`,`$F0`)), and every
+  Sonic and Tails row takes `loc_5F05C` (subtype 4, (`$D0`,`$B8`)). The engine hard-coded
+  (`$120`,`$F0`) for Knuckles and (`$120`,`$B0`) for Sonic. Native holds the logo SST at
+  (`$120`,`$B0`) from input 432728. Sonic's and Tails' rows now follow the same table; no
+  native picture of those terminals exists.
+- **Trademark (engine).** `loc_5F20A` also allocates `loc_5F4FA` (sonic3k.asm:125982)
+  with subtype 2: `ObjDat3_60130`'s TM, mapping frame 2, at `byte_5F520[2]` (+`$34`,
+  -`$10`). Native slot 11 holds it at (`$154`,`$A0`). `loc_5F26C` passes subtype 4 for the
+  S3 eyecatch. The child deletes itself when `Graphics_flags` bit 7 is clear (Japanese
+  hardware); like the engine's title screen, the ending models overseas hardware. No
+  initializer draws in its own pass, so the banner first draws one pass after
+  `Obj_5EF68`'s init.
+- **Pink flash (engine).** `loc_5F480` allocates `loc_5FBA0` (sonic3k.asm:126562) only
+  when `_unkFA88` is positive. Until `Palette_cycle_counters+0` is set, it steps `$3A` by 6
+  through `Pal_KnuxEndPoseSuper` every third pass, waiting `$E` passes after the wrap at
+  `$3C`. `move.l (a1,d0.w),(a2)+` writes colours 2-3 of line 0 and
+  `move.w 4(a1,d0.w),2(a2)` writes colour 5, so colour 4 keeps `Pal_KnuxEndPose`'s
+  `$0080`; native CRAM agrees. Native RAM dates `Obj_5EF68`'s init to input 432709 (`$2E`
+  `$1EC` at 432728), with the first flash write in that pass. The engine reproduces the
+  native `$3A` colours at all 19 later spots.
+- **Logo fade (engine).** `sub_5FF1C` allocates `loc_5FF62` (sonic3k.asm:126958) after
+  the logo. From that pass, every fourth pass `sub_85EB4` raises the 16 line-1 colours a
+  level toward `$EEE`, eight times. `loc_5FF94` then falls into `loc_5FFA6`'s countdown,
+  and `sub_85F2A` lowers them toward `Target_palette_line_2` eight times (passes 31-59).
+  Native RAM holds `$0AAA` throughout at pass 19, and the target raised to at least `$888`
+  at pass 39. The engine stepped from black straight to the target.
+- **Credits Plane A phase (engine).** The engine prepares the sprite table and scroll
+  registers at the loop tail and publishes them at the next VInt (`LevelSpritePresentation`).
+  That is the native picture's one-pass latch. In SSZ2, `SwScrlSsz.getVscrollFactorFG()`
+  returned the physical camera plus shake. `ScreenEvents` (sonic3k.asm:102253) writes
+  `V_scroll_value` from `Camera_Y_pos_copy`, after `SSZ2_ScreenEvent` has added
+  `Screen_shake_offset` to the copy (sonic3k.asm:117750-117751). `loc_5B204` moves only
+  `Camera_Y_pos`, so Plane A led the published sprites by one pass. A temporary instrumented
+  render showed each cloud drawn inside the step (`LevelFrameStep` →
+  `LevelSpritePresentation.prepare`), never in the render pass. Plane A now takes the copy.
+
+Rejected: a render-camera offset (projection against subtraction camera). Slot 8's cloud
+stepped 1, 1, 2 lines while `Camera_Y_pos` stepped 1, 0, 1, so only a whole-pass SST lag
+fits. Also rejected: the earlier "capture limit, nothing modelled" reading of the text,
+which assumed the engine draws everything at the current pass.
+
+| Spots (3-bit levels, native cropped at 14,8) | Postcredits v2 | kterminal v1 | kterminal v2 |
+| --- | --- | --- | --- |
+| credits-done seq000 | 100.0% | 100.0% | 100.0% |
+| credits-done seq001-002 (logo fading in) | 92.9% | 96.3% | 100.0% |
+| credits-done seq003-019 | 92.9-93.6% | 100.0% | 100.0% |
+| credit text, 32 spots | 1px above native at 21 | dy 0 | dy 0 |
+
+At the 26 text spots with a yellow title, every title pixel matches native at dy 0. The
+text frames are 94.7-97.5% equal as wholes. At 30 of 32 spots every remaining pixel lies
+inside a cloud box: this tree reaches credits part one one V-int late, so the clouds
+differ. That and a glyph fragment at credits-one spans 9-10, both older than this lane,
+are recorded in [S3K known bugs](../../../status/s3k-known-bugs.md#knuckles-credits-and-terminal-residuals-open),
+with the zero-copy pass and the S3 eyecatch fades.
+
+Red first, all queued and focused with the ROM paths, 0 skipped: `TestS3kPostCredits` and
+`TestSszAct2CameraController` 23 run, 4 failed (banner y 240 at progress 0 and +2, flash
+colour, and the older 800 px case running at 320); `TestSszAct2CameraController` 13 run, 1
+failed (credits pass 123: Plane A 2 against copy 1); `TestS3kPostCredits` 13 run, 1 failed
+(logo colour `$0000` against native `$0AAA` at pass 19). The final run of the eleven
+keep-green classes, the four S3K guards, `TestS3kSszMechaSpawnHeadless` and the render ran
+215 tests with none failed or skipped.
 

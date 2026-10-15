@@ -138,6 +138,7 @@ Entries should include:
 46. [Ending Reunion Kos Service Count — Per-Object CPU Budget (OPEN)](#ending-reunion-kos-service-count--per-object-cpu-budget-open)
 47. [Non-Fresh Title Card Holds 90 Locked Frames (OPEN)](#non-fresh-title-card-holds-90-locked-frames-open)
 48. [AIZ2 First-Tree and HCZ1 Zero-Offset Animated Tile Uploads (OPEN)](#aiz2-first-tree-and-hcz1-zero-offset-animated-tile-uploads-open)
+49. [Knuckles Credits and Terminal Residuals (OPEN)](#knuckles-credits-and-terminal-residuals-open)
 
 ---
 
@@ -6525,3 +6526,34 @@ Evidence is in the
 ### Removal condition
 Both cases follow the ROM routine, with a focused publication test and an unchanged S3K
 canonical trace result.
+
+---
+
+## Knuckles Credits and Terminal Residuals (OPEN)
+
+The 2026-10-15 kterminal lane matched the Knuckles terminal banner, its pose flash and
+logo fade, and the credits' Plane A phase against the native complete run. Four gaps remain:
+
+- **Credits start one V-int late.** With the native inlets declared, the cold movie now
+  reaches credits part one with `V_int_run_count` `$66CC6`; native and the `9b0c85dd0`
+  render hold `$66CC5` at the same engine frame, with an identical flight log. The ending
+  clouds seed from `V_int_run_count` (`loc_5F94C`) and emit on its low bits (`loc_5F986`),
+  so every cloud differs. Unattributed; it arrived between `9b0c85dd0` and `516ca64f1`.
+- **A glyph fragment in credits part one.** At the credits-one spans 9 and 10 a white,
+  glyph-like fragment (screen x 128-191) scrolls with the planes. It is in every engine
+  render since `9b0c85dd0` and never in native. Unattributed.
+- **One zero-copy credits pass.** `ParallaxManager` reads a handler's zero FG V-scroll as
+  "use the camera", and `ZoneScrollHandler` is Mod API. On the pass where
+  `Camera_Y_pos_copy` is still 0 and `Camera_Y_pos` has reached 1, SSZ2's Plane A is prepared
+  one line low. No native picture covers that pass; its visibility was not measured.
+- **S3 eyecatch fades.** `loc_5F26C`, `loc_5F31C` and `loc_5F410` fade lines 1, 0 and 2
+  through `loc_5FF62` (up toward `$EEE`, then down to the target, every fourth pass). The
+  engine's S3 eyecatch uses a six-pass from-black fade. No native picture of that terminal
+  exists.
+
+Evidence and the measured spots are in the
+[ending matrix](../architecture/validation/levels/s3k-ending.md#knuckles-terminal-banner-pose-flash-and-the-credits-plane-a-phase-kterminal-lane-2026-10-15).
+
+### Removal condition
+Each gap is attributed to a ROM owner and modelled with a focused red-first test, or shown
+equal to a native capture of the same state.
