@@ -158,6 +158,11 @@ class TestS3kGumballPachinkoRewardMechanics {
         for (int frame = 0; frame < 120 && ejectedItem(objects) == null; frame++)
             step(session, GameMode.BONUS_STAGE, objects);
         var item = ejectedItem(objects);assertNotNull(item, "actual container created its native reward ball");
+        var container = children(objects, "ContainerDisplayChild").getFirst();
+        assertTrue(item.getSlotIndex() > container.getSlotIndex(),
+                "loc_60E5C CreateChild6_Simple allocates after the container's SST");
+        assertEquals(0x10, (int) field(field(item, "motionState"), "yVel"),
+                "loc_60EBA falls through to loc_60ECE's first fall step in its birth pass");
         assertFalse((boolean) field(item, "dockEligible"), "fresh ball remains on its live parent3 dock");
         int subtype = item.getSpawn().subtype();
         assertTrue(subtype >= 0 && subtype <= 7);

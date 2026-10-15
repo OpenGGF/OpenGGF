@@ -689,7 +689,13 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
     private void spawnBallFromContainer(ContainerDisplayChild container) {
         int subtype = chooseBallSubtype();
         ObjectSpawn item = new ObjectSpawn(container.getX(), container.getY(), 0xEB, subtype, 0, false, 0);
-        spawnChild(() -> GumballItemObjectInstance.createEjectedItem(item, container));
+        // loc_60E5C runs CreateChild6_Simple with a0 = the container, so
+        // AllocateObjectAfterCurrent searches after the CONTAINER's SST and the
+        // ball's loc_60EBA setup falls through to loc_60ECE in the same pass.
+        // Anchoring at the machine's lower slot could reuse a slot the walk had
+        // already passed, delaying the ball's whole fall by one frame.
+        spawnChildAfterSlot(container.getSlotIndex(),
+                () -> GumballItemObjectInstance.createEjectedItem(item, container));
     }
 
     /** ROM loc_60EA2: called by container when animation completes. */
