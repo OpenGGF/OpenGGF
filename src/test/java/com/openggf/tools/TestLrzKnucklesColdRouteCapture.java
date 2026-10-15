@@ -298,7 +298,7 @@ class TestLrzKnucklesColdRouteCapture {
     void coldKnucklesCompletesActTwoAndReachesPlayableHiddenPalace() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/lrz-knuckles-cold-hpz-320.bk2"));
-        assertEquals(49526, movie.getFrameCount());
+        assertEquals(49537, movie.getFrameCount());
         var settings = new GameplayCaptureSession.Settings(320, "knuckles", "", "off", null, null, null);
         // Reauthored after loc_165AE clears stale glide on transport capture.
         // Door9, flame ledges and tubes, lower westward return, eastern
@@ -315,8 +315,8 @@ class TestLrzKnucklesColdRouteCapture {
                 46177, 46227, 46317, 46991, 47047, 47107, 47187, 47429,
                 47457, 47497, 47587, 47714, 47747, 47797, 47967, 48329,
                 48367, 48437, 48497, 48680, 48735, 48790, 48828, 48857,
-                48907, 48987, 49047, 49077, 49127, 49167, 49307, 49407,
-                49467);
+                48907, 48987, 49047, 49077, 49127, 49167, 49318, 49418,
+                49478);
         var checked = new HashSet<Integer>();
         var drawing = new RouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
@@ -342,7 +342,7 @@ class TestLrzKnucklesColdRouteCapture {
                     }
                 }
                 if (!spots.contains(frame)) continue;
-                assertEquals(frame < 49286 ? 9 : 22, GameServices.level().getCurrentZone());
+                assertEquals(frame < 49297 ? 9 : 22, GameServices.level().getCurrentZone());
                 assertEquals(1, GameServices.level().getCurrentAct());
                 checked.add(frame);
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();

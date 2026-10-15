@@ -234,6 +234,77 @@ class TestS3kSaveSnapshotProvider {
                 com.openggf.game.save.RuntimeSaveCapture.capture(mode, save)).get("clear"));
     }
 
+    /**
+     * SaveGame stores {@code SaveGame_NextLevel[Current_zone_and_act]} (sonic3k.asm:15824-15872);
+     * data select loads it through {@code sub_DA4E}/{@code LevelList_DA6E} (:17480-17513).
+     * Rows are the native SaveGame callers' zone states.
+     */
+    @org.junit.jupiter.params.ParameterizedTest(name = "SaveGame at {0}/{1} as {2} resumes {3}/{4}")
+    @org.junit.jupiter.params.provider.CsvSource({
+            "0,1,sonic,1,0",        // AIZ2 results → HCZ1
+            "3,1,sonic,5,0",        // CNZ2 results → ICZ1
+            "7,1,sonic,4,0",        // MHZ2 results → FBZ1
+            "4,1,sonic,8,0",        // FBZ2 results → SOZ1
+            "9,1,knuckles,22,1",    // LRZ2 Obj_StartNewLevel → HPZ $1601
+            "22,0,sonic,22,1",      // LRZ3 results → HPZ $1601
+            "22,1,sonic,10,0",      // HPZ loc_45D8A → SSZ1
+            "22,1,tails,10,0",
+            "22,1,knuckles,10,1",   // HPZ loc_45B94 → $A01 (sub_DA4E Player_mode 3)
+            "10,0,sonic,11,0",      // SSZ1 results → DEZ1
+            "10,1,knuckles,11,0",   // SSZ2 loc_7BCB0 → code $C (complete file)
+            "23,0,sonic,12,0"})     // DEZ boss arena → DDZ
+    void fullSaveGameStoresTheNativeNextLevel(int zone, int act, String main, int nextZone, int nextAct) {
+        var team = new SelectedTeam(main, List.of());
+        var payload = fullSaveGamePayload(team, zone, act);
+        assertEquals(nextZone, payload.get("zone"));
+        assertEquals(nextAct, payload.get("act"));
+        assertEquals(new com.openggf.game.dataselect.DataSelectDestination(nextZone, nextAct),
+                new S3kDataSelectProfile().resolveLoadDestination(payload));
+    }
+
+    @Test
+    void fullSaveGameWithoutANextLevelCodeKeepsTheCurrentLocation() {
+        // DDZ's code $E has no LevelList_DA6E entry; SaveGame always writes it as a completed file.
+        var payload = fullSaveGamePayload(new SelectedTeam("sonic", List.of()), 12, 0);
+        assertEquals(12, payload.get("zone"));
+        assertEquals(0, payload.get("act"));
+    }
+
+    @Test
+    void persistenceOnlyProgressionRequestsKeepTheCurrentLocation() {
+        var save = SaveSessionContext.forSlot("s3k", 1, new SelectedTeam("knuckles", List.of()), 22, 1);
+        var payload = new S3kSaveSnapshotProvider().capture(SaveReason.PROGRESSION_SAVE,
+                com.openggf.game.save.RuntimeSaveCapture.capture(liveMode(22, 1), save));
+        assertEquals(22, payload.get("zone"));
+        assertEquals(1, payload.get("act"));
+    }
+
+    private static Map<String, Object> fullSaveGamePayload(SelectedTeam team, int zone, int act) {
+        var save = SaveSessionContext.forSlot("s3k", 1, team, zone, act);
+        var mode = liveMode(zone, act);
+        var captured = new java.util.ArrayList<Map<String, Object>>();
+        var services = new com.openggf.level.objects.TestObjectServices() {
+            @Override public void requestSessionSave(SaveReason reason) {
+                captured.add(new S3kSaveSnapshotProvider().capture(reason,
+                        com.openggf.game.save.RuntimeSaveCapture.capture(mode, save)));
+            }
+        }.withGameState(new com.openggf.game.GameStateManager());
+        com.openggf.game.sonic3k.S3kFullSaveGame.complete(services);
+        assertEquals(1, captured.size());
+        return captured.getFirst();
+    }
+
+    private static GameplayModeContext liveMode(int zone, int act) {
+        var mode = mock(GameplayModeContext.class);
+        var level = mock(com.openggf.level.LevelManager.class);
+        when(mode.getLevelManager()).thenReturn(level);
+        when(mode.getGameStateManager()).thenReturn(new com.openggf.game.GameStateManager());
+        when(level.getCurrentZone()).thenReturn(zone);
+        when(level.getCurrentAct()).thenReturn(act);
+        stubStockZones(level);
+        return mode;
+    }
+
     private static void stubStockZones(com.openggf.level.LevelManager levelManager) {
         GameModule module = mock(GameModule.class);
         when(levelManager.getGameModule()).thenReturn(module);

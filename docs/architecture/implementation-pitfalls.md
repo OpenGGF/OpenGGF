@@ -1806,6 +1806,10 @@ fallback. The same rule applies to death/reload helpers: external manual fade
 ticks can trigger fresh assembly outside its logical iteration. Preserve input
 cadence and requalify affected cold routes after repairing a driver; do not fit
 runtime timing or silently retain the accelerated protocol for old inputs.
+Movies authored under the doubled fade spent 11 of the native 22 frozen fade-out
+frames before each full load; `FadeWindowRetimeTool` inserts only the held-input
+remainder there (gameplay and object VInt do not advance) and verifies the movie
+uninterruptedly. A fade that runs alongside live gameplay is not a retiming site.
 
 
 **Replay the displayed plane generation and the complete multipart order.**

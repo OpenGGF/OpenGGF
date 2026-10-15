@@ -22,6 +22,11 @@ Unreleased. The earlier development themes remain in
   Save As; pattern browsing, descriptor controls, local collision edits, erase
   and spawn inspection complete layout authoring.
 
+- **S3K save slots:** A file saved by the native SaveGame (act results, Knuckles'
+  Lava Reef exit and both Hidden Palace exits) now resumes at the level that exit
+  leads to, as the original does, instead of the level it was saved in. The
+  data-select menu reads slots from the configured save root.
+
 - **S3K level entry:** Captures that omit the title presentation complete the
   destination's deferred player assembly before its animation and art-loading
   tail, allowing ordinary movement after a fresh zone handoff. Publication also

@@ -1,6 +1,7 @@
 # Cold LRZ1 -> LRZ2 -> playable boss act; native320 solo Tails.
 # Finish-S3K continuation from dd563ef67: controller input only, no gameplay seeding.
 # First 36714 inputs exactly match the qualified cold middle route.
+# Retimed by FadeWindowRetimeTool from lrz-tails-cold-act2-clear-320.bk2 (authored fade advances 2); windows start:native->+inserted [53047:23->+11]
 315 - / -
 11 D / -
 5 D+B / -
@@ -3900,4 +3901,4 @@
 1 R+A / -
 5 R / -
 1 R+A / -
-709 R / -
+720 R / -

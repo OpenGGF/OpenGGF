@@ -323,6 +323,10 @@ public final class TraceCaptureTool {
         TraceReplaySessionBootstrap.applyPostLoadLevelInit(trace);
 
         TraceReplaySessionBootstrap.applyStartPositionAndGroundSnap(trace, fixture);
+        // Bonus-stage segments enter their provider/runtime after the load and
+        // camera reset, exactly as AbstractS3kBonusStageTraceReplayTest does;
+        // without it a Slot/Gumball/Pachinko capture is a plain level load.
+        TraceReplaySessionBootstrap.applyBonusStageEntry(trace);
         TraceReplaySessionBootstrap.BootstrapResult bootResult =
                 TraceReplaySessionBootstrap.applyBootstrap(trace, fixture, -1);
         TraceReplayBootstrap.ReplayStartState replayStart = bootResult.replayStart();
