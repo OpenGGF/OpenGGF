@@ -120,6 +120,10 @@ public final class ConfigCatalog {
 
         // audio
         put(AUDIO_ENABLED, of("audio", "enabled", BOOL, "Enable music and SFX"));
+        put(AUDIO_HUB_MUSIC_ENABLED, of("audio", "hubMusicEnabled", BOOL,
+                "Play the selected game's ROM title theme quietly in the hub"));
+        put(AUDIO_HUB_MUSIC_VOLUME, of("audio", "hubMusicVolume", INT,
+                "Hub music volume from 0 to 100 percent; dialogs duck the filtered theme"));
         put(REGION, ofEnum("audio", "region", "Region for audio timing", Set.of("NTSC", "PAL")));
         put(DAC_INTERPOLATE, of("audio", "dacInterpolate", BOOL, "DAC interpolation (optional smoothing; disabled for hardware parity)"));
         put(AUDIO_FM_CORE, ofEnum("audio", "fmCore",
@@ -129,6 +133,18 @@ public final class ConfigCatalog {
                 "Output audio at the internal YM2612 rate (~53kHz)"));
         put(FM6_DAC_OFF, of("audio", "fm6DacOff", BOOL,
                 "Mute FM6 when a note plays on it while DAC is enabled (SMPSPlay parity hack)"));
+
+        // hub history (owned by the hub, hidden from Settings)
+        put(HUB_LAST_GAME, of("hub", "lastGame", STRING, "Last selected game or standalone content ID"));
+        put(HUB_CONTINUE_S1_CHARACTER, of("hub", "continueS1Character", STRING, "Character owning this continue point"));
+        put(HUB_CONTINUE_S1_ZONE, of("hub", "continueS1Zone", INT, "Last Sonic 1 zone (-1 when unavailable)"));
+        put(HUB_CONTINUE_S1_ACT, of("hub", "continueS1Act", INT, "Last Sonic 1 act"));
+        put(HUB_CONTINUE_S2_CHARACTER, of("hub", "continueS2Character", STRING, "Character owning this continue point"));
+        put(HUB_CONTINUE_S2_ZONE, of("hub", "continueS2Zone", INT, "Last Sonic 2 zone (-1 when unavailable)"));
+        put(HUB_CONTINUE_S2_ACT, of("hub", "continueS2Act", INT, "Last Sonic 2 act"));
+        put(HUB_CONTINUE_S3K_CHARACTER, of("hub", "continueS3kCharacter", STRING, "Character owning this continue point"));
+        put(HUB_CONTINUE_S3K_ZONE, of("hub", "continueS3kZone", INT, "Last Sonic 3 & Knuckles zone (-1 when unavailable)"));
+        put(HUB_CONTINUE_S3K_ACT, of("hub", "continueS3kAct", INT, "Last Sonic 3 & Knuckles act"));
 
         // characters
         put(MAIN_CHARACTER_CODE, of("characters", "main", STRING, "Sprite code of the main playable character"));
@@ -435,6 +451,7 @@ public final class ConfigCatalog {
         SECTION_TITLES.put("config", "Configuration");
         SECTION_TITLES.put("input", "Input");
         SECTION_TITLES.put("audio", "Audio");
+        SECTION_TITLES.put("hub", "Hub Navigation History");
         SECTION_TITLES.put("characters", "Characters");
         SECTION_TITLES.put("roms", "ROMs");
         SECTION_TITLES.put("startup", "Startup");

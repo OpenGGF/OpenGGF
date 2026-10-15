@@ -52,6 +52,7 @@ The `config.yaml` is organized into the following top-level sections:
 | `roms` | ROM filenames for S1, S2, S3K; default game selection |
 | `capture` | Trace video capture output dir, scale, fps, codec |
 | `startup` | Title screen, master title, legal disclaimer flags |
+| `hub` | Last focused game and last reached stock zone/act for Continue |
 | `rewind` | Live rewind enable/key, tape-coast parameters, audio history settings |
 | `crossGame` | Cross-game feature donation enable and source |
 | `launch` | Per-game master-title launch profiles |
@@ -339,6 +340,8 @@ draft open for another try. 21:9 and 32:9 aspect ratios are marked EXPERIMENTAL.
 **ALL GAMES**. Categories are tabs across the top: **Display**, **Sound**,
 **Controls**, **Gameplay**, **Files** and **Capture**. Up from the first row
 focuses the tab strip, where Left/Right switches tabs; Down returns to the rows.
+Controls first focuses its Player 1 / Player 2 / Controllers / Shortcuts group
+strip; Up again reaches the category tabs.
 On a row, Left/Right changes booleans, enums and numbers, and `Enter`/A opens a
 value picker, text editor or key-binding menu. Eight rows show at a time, with a
 scrollbar for longer pages. Values that differ from the engine default are amber,
@@ -347,7 +350,8 @@ every non-debug shortcut key (display, rewind and capture shortcuts included).
 **Gameplay** holds Rewind and Debug tools, which games follow unless their Game
 Setup overrides them. Debug, playback, Discord, direct-launch characters and
 cross-game keys live in **Advanced > Advanced settings**, alongside the shader
-library folder, shader rendering phase, game speed and debug viewer scale. Display
+library folder, shader rendering phase, game speed, debug viewer scale, ROM
+loading policy and Tape coast tuning. Rewind remains one Gameplay row. Display
 keeps everyday screen, shader selection and colour options.
 
 Text editing supports ordinary keyboard typing and an onscreen keyboard with all
@@ -359,6 +363,11 @@ also has an **OK** key. Typing directly returns focus to the field. Switching in
 devices changes prompts without moving focus. This editor is shared with recording
 target frames, join addresses, and lobby chat. Key bindings also offer physical
 key/chord capture.
+
+Each tab has a confirmed **Reset tab to defaults** action; Controls offers
+**Reset all bindings**. Resets remain draft edits until saved. Changed rows carry
+an amber dot. Save prompts list the old and new values, including per-game
+inheritance changes, so you can review what will be saved.
 
 Edits form a draft, counted in the footer. A **Save changes** header button appears
 when dirty; click it or navigate Up past the category tabs (or Down past the last
@@ -399,7 +408,8 @@ discarding unsaved changes. Applied mod changes still require a restart. Trace a
 recording catalogs load in the background with a visible Cancel action.
 
 **Advanced** offers **Trace replays** (the trace catalog, without enabling test
-mode), **Advanced settings** and **Controls / help**. Each enabled mod may add one
+mode), **Advanced settings** and **Controls / help** in compact rows. Help is also
+available directly from the hub footer (`F1` or the controller north button). Each enabled mod may add one
 entry of its own under the **Extras** tab, including when only one mod contributes
 an entry; existing function-key shortcuts remain optional accelerators. Global
 display and capture shortcuts remain available while the game card is focused,
@@ -495,6 +505,8 @@ Allowed launch profile enums:
 | Key | YAML path | Type | Default | Description |
 |-----|-----------|------|---------|-------------|
 | `AUDIO_ENABLED` | `audio.enabled` | bool | `true` | Master switch for all audio output (music and SFX). |
+| `AUDIO_HUB_MUSIC_ENABLED` | `audio.hubMusicEnabled` | bool | `false` | Play the selected stock game's ROM title theme in the hub. |
+| `AUDIO_HUB_MUSIC_VOLUME` | `audio.hubMusicVolume` | int | `20` | Hub theme volume, 0–100 percent; the theme is filtered and quieter while a child menu is open. |
 | `REGION` | `audio.region` | string | `"NTSC"` | Hardware region: `"NTSC"` (60 Hz) or `"PAL"` (50 Hz). Affects SMPS tempo timing and DAC sample rates. |
 | `DAC_INTERPOLATE` | `audio.dacInterpolate` | bool | `false` | Optional smoothing with no hardware counterpart: `true` writes a linearly interpolated value between DAC (drum) samples when the chip bus is idle. Off by default to preserve the hardware's stepped output; it never changes sample pitch or length. |
 | `AUDIO_FM_CORE` | `audio.fmCore` | string | `"fast"` | Which FM synthesis core renders music and SFX. `"accurate"` is the cycle-exact Nuked-OPN2 port and the audio parity oracle; `"fast"` is the default register-level clean-room core (lower CPU cost, not bit-exact). Existing explicit selections are preserved. Unknown values fall back to `"accurate"`. Physical audio parity captures explicitly use the accurate core. |
@@ -1354,3 +1366,28 @@ The common title owns Back: Escape backs out of help/options and, from the title
 saves before Return to the game hub. Failed saves keep that title and error;
 accepted exits hold menu input throughout the fade. Gameplay configuration also
 keeps Start, Resume, Restart and Return behind their persistence boundary.
+
+
+### Hub history and game discovery
+
+The hub remembers the last focused game, falling back to Sonic 2 if that entry is
+no longer available. For stock games, **Continue** starts the last reached ordinary
+zone/act from its beginning. It does not restore rings, lives, position or Emeralds.
+The paused-game card remains the way to resume an exact live session.
+
+History is persisted under `hub.lastGame` and `hub.continueS1Zone` /
+`hub.continueS1Act`, `hub.continueS2Zone` / `hub.continueS2Act`, and
+`hub.continueS3kZone` / `hub.continueS3kAct`. Zone and act indices are zero-based;
+a zone of `-1` means there is no Continue destination. Matching
+`hub.continueS1Character`, `hub.continueS2Character` and
+`hub.continueS3kCharacter` values retain the leader for that route. Continue is
+shown only when Game Setup selects the same leader. Doomsday is excluded because
+it needs Emerald state that a zone-start restart does not restore. These history
+values are maintained by the launcher and are not ordinary Settings rows.
+
+With no games found, **Add your games** offers **Locate a game** and
+**Scan a folder**. Discovery recognizes supported images by their contents,
+including all supported games found in the selected folder. Original files stay
+in place. The browser offers Home, Downloads and Last folder shortcuts and puts
+likely ROM extensions ahead of unrelated files; the ROM? marker is a filename
+hint, not proof that a file is a supported game. Selecting a file validates it.

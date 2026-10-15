@@ -51,9 +51,6 @@ public sealed interface MasterTitleEntry
         public Launch {
             Objects.requireNonNull(entry, "entry");
             Objects.requireNonNull(action, "action");
-            if (entry instanceof Stock && action != Action.NEW_GAME) {
-                throw new IllegalArgumentException("Stock master-title entries use the normal launch path");
-            }
             if (entry instanceof Standalone standalone
                     && action == Action.CONTINUE && !standalone.continueAvailable()) {
                 throw new IllegalArgumentException("Continue is unavailable for this standalone entry");

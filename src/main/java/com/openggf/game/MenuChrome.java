@@ -57,6 +57,22 @@ public final class MenuChrome {
     /** Left/Right hint, drawn as a pair of arrow triangles. */
     public static Hint leftRight(String label) { return new Hint(ARROWS_LR, label); }
 
+    public static String horizontalKey(InputHandler input) {
+        return controller(input) ? MenuInput.horizontalLabel(input) : ARROWS_LR;
+    }
+
+    public static String verticalKey(InputHandler input) {
+        return controller(input) ? "D-Pad U/D" : ARROWS_UD;
+    }
+
+    public static Hint leftRight(InputHandler input, String label) {
+        return hint(horizontalKey(input), label);
+    }
+
+    public static Hint upDown(InputHandler input, String label) {
+        return hint(verticalKey(input), label);
+    }
+
     public static String confirmKey(InputHandler input) {
         return input == null ? "Enter" : MenuInput.confirmLabel(input);
     }

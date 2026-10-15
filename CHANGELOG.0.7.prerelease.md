@@ -11,6 +11,12 @@ Unreleased. The earlier development themes remain in
   and returning live options to Default releases the earlier per-game overrides.
   Settings show **RESTART** only for changed
   values awaiting a restart, clearing it when restored to the running value.
+  The hub remembers the last game and offers Continue from the last reached act,
+  with idle ROM terrain previews and optional quiet title music. Controller hints
+  follow the last device used. Compact Controls, Advanced and ROM browsing pages,
+  player binding groups, conflict warnings, confirmed tab resets and save summaries
+  make setup easier to review. Expert loading and rewind tuning live in Advanced;
+  first-run discovery can locate one ROM or scan a folder for all three games.
 
 - **Level authoring:** Named projects create, edit and reopen complete authored
   levels for Sonic 1, Sonic 2 and Sonic 3&K using ROM-derived asset libraries.

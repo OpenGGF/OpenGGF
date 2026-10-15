@@ -14,6 +14,15 @@ headless tests, or audio. S3K-specific routing is in [AGENTS_S3K.md](../../AGENT
 
 The things that cost the most time when missed.
 
+**Concurrent hub music must retain device ownership.** A PCM filter around an
+`OpenAlPcmSink` hides its concrete type from `AudioManager.update()`: retain and
+service the original device on its owning thread or queued audio never starts.
+A second process-global OpenAL context also steals a suspended game's context.
+The optional hub owner requires `ALC_EXT_thread_local_context`; unsupported
+isolation falls back to silence. The two-context regression uses OpenAL's null
+driver and checks that opening, pumping and closing the hub leaves gameplay's
+context and AL dispatch intact (October 15 menu polish).
+
 **Capture long filenames on a fresh menu font.** The immediate full-size
 `PixelFont` path's `ensureBatchCapacity` replaces its vertex array without copying
 already-added glyphs when it grows within a string. A fresh ROM-picker capture

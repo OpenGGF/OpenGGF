@@ -82,6 +82,7 @@ public final class LaunchConfigPanel {
     private String saveError;
     private boolean prompt;
     private int promptChoice;
+    private int promptScroll;
 
     public LaunchConfigPanel(MasterTitleScreen.GameEntry entry,
                              LaunchProfile currentProfile,
@@ -248,6 +249,7 @@ public final class LaunchConfigPanel {
         }
         prompt = true;
         promptChoice = 0;
+        promptScroll = 0;
         MenuFeedback.emit(CONFIRM);
     }
 
@@ -260,12 +262,14 @@ public final class LaunchConfigPanel {
             MenuFeedback.emit(CANCEL);
             return;
         }
-        if (MenuInput.left(input) || MenuInput.up(input)) promptChoice = Math.floorMod(promptChoice - 1, 3);
-        if (MenuInput.right(input) || MenuInput.down(input)) promptChoice = (promptChoice + 1) % 3;
+        if (MenuInput.left(input)) promptChoice = Math.floorMod(promptChoice - 1, 3);
+        if (MenuInput.right(input)) promptChoice = (promptChoice + 1) % 3;
         boolean choose = MenuInput.accept(input);
+        if (MenuInput.up(input)) promptScroll = Math.max(0, promptScroll - 1);
+        if (MenuInput.down(input)) promptScroll = Math.min(Math.max(0, changeSummaryLines().size() - 8), promptScroll + 1);
         int[] xs = promptButtonXs(viewportWidth);
         for (int i = 0; i < 3; i++) {
-            if (!pointer.over(xs[i], 122, promptButtonWidth(i), 16)) continue;
+            if (!pointer.over(xs[i], 176, promptButtonWidth(i), 16)) continue;
             if (pointer.leftPressed() || movedOver(pointer)) promptChoice = i;
             choose |= pointer.leftPressed();
         }
@@ -341,7 +345,7 @@ public final class LaunchConfigPanel {
         List<MenuChrome.Hint> hints = new ArrayList<>();
         // The Mods row's own key (Enter) is shown in its description box.
         if (focused == Item.SAVE) hints.add(MenuChrome.hint(MenuChrome.confirmKey(lastInput), "SAVE"));
-        else if (focused != Item.MODS) hints.add(MenuChrome.leftRight("CHANGE"));
+        else if (focused != Item.MODS) hints.add(MenuChrome.leftRight(lastInput, "CHANGE"));
         hints.add(MenuChrome.hint(MenuChrome.backKey(lastInput), unsavedCount() == 0 || focused == Item.SAVE ? "BACK" : "SAVE OR DISCARD"));
         return hints;
     }
@@ -516,19 +520,22 @@ public final class LaunchConfigPanel {
         MenuChrome.fill(font, 0, 0, w, SCREEN_H, new float[] {0, 0, 0}, .62f);
         int bw = Math.min(w - 24, 300);
         int bx = (w - bw) / 2;
-        MenuChrome.fill(font, bx, 70, bw, 80, MenuChrome.NAVY, .98f);
-        MenuChrome.outline(font, bx, 70, bw, 80, MenuChrome.GOLD, 1f, 1);
+        MenuChrome.fill(font, bx, 45, bw, 153, MenuChrome.NAVY, .98f);
+        MenuChrome.outline(font, bx, 45, bw, 153, MenuChrome.GOLD, 1f, 1);
         String title = "SAVE " + entry.menuLabel.toUpperCase(Locale.ROOT) + " SETUP?";
-        MenuChrome.label(font, title, (w - MenuChrome.labelWidth(title)) / 2, 80, MenuChrome.GOLD);
-        String detail = unsavedCount() == 1 ? "1 change is not saved yet." : unsavedCount() + " changes are not saved yet.";
-        MenuChrome.compact(font, detail, (w - MenuChrome.compactWidth(detail)) / 2, 100, MenuChrome.MUTED);
+        MenuChrome.label(font, title, (w - MenuChrome.labelWidth(title)) / 2, 55, MenuChrome.GOLD);
+        List<String> changes = changeSummaryLines();
+        for (int i = 0; i < 8 && promptScroll + i < changes.size(); i++)
+            MenuChrome.compact(font, MenuChrome.fitCompact(changes.get(promptScroll + i), bw - 20), bx + 10, 77 + i * 10,
+                    i % 2 == 0 ? MenuChrome.TEXT : MenuChrome.CYAN);
+        if (changes.size() > 8) MenuChrome.compact(font, MenuChrome.verticalKey(lastInput) + ": REVIEW " + unsavedCount() + " CHANGES", bx + 10, 162, MenuChrome.DIM);
         int[] xs = promptButtonXs(w);
         for (int i = 0; i < 3; i++) {
             int bwidth = promptButtonWidth(i);
-            if (i == promptChoice) MenuChrome.focus(font, xs[i], 122, bwidth, 16, ticks);
-            else MenuChrome.panel(font, xs[i], 122, bwidth, 16);
+            if (i == promptChoice) MenuChrome.focus(font, xs[i], 176, bwidth, 16, ticks);
+            else MenuChrome.panel(font, xs[i], 176, bwidth, 16);
             float[] c = i == 1 ? MenuChrome.AMBER : MenuChrome.WHITE;
-            MenuChrome.label(font, PROMPT_OPTIONS[i], xs[i] + 7, 125, c);
+            MenuChrome.label(font, PROMPT_OPTIONS[i], xs[i] + 7, 179, c);
         }
     }
 
@@ -610,6 +617,20 @@ public final class LaunchConfigPanel {
             case "SUPER_32_9" -> "32:9";
             default -> "4:3";
         };
+    }
+
+    List<String> changeSummaryLines() {
+        List<String> changes = new ArrayList<>();
+        for (Item item : Item.values()) {
+            if (item.row == null) continue;
+            String before = store.displayValue(originalProfile, item.row, entry);
+            String after = store.displayValue(profile, item.row, entry);
+            if (before.equals(after)) continue;
+            changes.add(item.label);
+            changes.addAll(MenuDetailsScreen.wrapText(before + " -> " + after,
+                    (Math.min(viewportWidth - 24, 300) - 20) / 6));
+        }
+        return changes;
     }
 
     /** Rows whose draft value differs from the value the panel opened with. */

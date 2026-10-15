@@ -7,6 +7,8 @@ import org.lwjgl.openal.AL11;
 import org.lwjgl.openal.ALC;
 import org.lwjgl.openal.ALC10;
 import org.lwjgl.openal.ALCCapabilities;
+import org.lwjgl.openal.ALCapabilities;
+import org.lwjgl.openal.EXTThreadLocalContext;
 import org.lwjgl.openal.SOFTSourceLatency;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
@@ -110,7 +112,19 @@ public final class OpenAlPcmSink implements AudioPresentationSink {
     public static OpenAlPcmSink openDefault(
             Consumer<Throwable> failureHandler,
             Consumer<String> warning) {
-        return new OpenAlPcmSink(new LwjglDevice(), failureHandler,
+        return new OpenAlPcmSink(new LwjglDevice(false), failureHandler,
+                System::nanoTime, warning);
+    }
+
+    /**
+     * Opens an optional concurrent speaker on its caller's thread without replacing
+     * the process-wide gameplay context. The owner must perform all operations,
+     * including close, on that thread. Unsupported devices fail before binding a context.
+     */
+    public static OpenAlPcmSink openIsolatedDefault(
+            Consumer<Throwable> failureHandler,
+            Consumer<String> warning) {
+        return new OpenAlPcmSink(new LwjglDevice(true), failureHandler,
                 System::nanoTime, warning);
     }
 
@@ -321,6 +335,10 @@ public final class OpenAlPcmSink implements AudioPresentationSink {
     }
 
     private static final class LwjglDevice implements Device {
+        private final boolean isolated;
+        private long previousThreadContext;
+        private ALCapabilities previousThreadCapabilities;
+        private boolean threadContextBound;
         private long device;
         private long context;
         private int presentationSource = -1;
@@ -337,6 +355,8 @@ public final class OpenAlPcmSink implements AudioPresentationSink {
         private long underruns;
         private boolean started, stoppedAfterPlaying;
 
+        private LwjglDevice(boolean isolated) { this.isolated = isolated; }
+
         @Override
         public int initialize() {
             if (initialized) {
@@ -348,16 +368,30 @@ public final class OpenAlPcmSink implements AudioPresentationSink {
                 throw new IllegalStateException(
                         "Could not open the default OpenAL device");
             }
+            ALCCapabilities capabilities = isolated ? ALC.createCapabilities(device) : null;
+            if (isolated && !capabilities.ALC_EXT_thread_local_context) {
+                throw new IllegalStateException("Isolated OpenAL output requires ALC_EXT_thread_local_context");
+            }
             try (MemoryStack stack = MemoryStack.stackPush()) {
                 IntBuffer attributes = stack.ints(
                         ALC10.ALC_FREQUENCY, 48_000, 0);
                 context = ALC10.alcCreateContext(device, attributes);
             }
-            if (context == 0 || !ALC10.alcMakeContextCurrent(context)) {
+            boolean madeCurrent = false;
+            if (context != 0) {
+                if (isolated) {
+                    previousThreadContext = EXTThreadLocalContext.alcGetThreadContext();
+                    if (previousThreadContext != 0) previousThreadCapabilities = AL.getCapabilities();
+                    madeCurrent = EXTThreadLocalContext.alcSetThreadContext(context);
+                    threadContextBound = madeCurrent;
+                } else madeCurrent = ALC10.alcMakeContextCurrent(context);
+            }
+            if (!madeCurrent) {
                 throw new IllegalStateException(
                         "Could not create the OpenAL context");
             }
-            ALCCapabilities capabilities = ALC.createCapabilities(device);
+            if (!isolated) capabilities = ALC.createCapabilities(device);
+            // LWJGL detects a thread context and installs thread-local AL capabilities.
             AL.createCapabilities(capabilities);
             sourceLatencySupported = AL.getCapabilities().AL_SOFT_source_latency;
             presentationSource = AL10.alGenSources();
@@ -494,7 +528,13 @@ public final class OpenAlPcmSink implements AudioPresentationSink {
                 uploadScratch = null;
             }
             if (context != 0) {
-                ALC10.alcMakeContextCurrent(0);
+                if (isolated) {
+                    if (threadContextBound) {
+                        EXTThreadLocalContext.alcSetThreadContext(previousThreadContext);
+                        AL.setCurrentThread(previousThreadCapabilities);
+                        threadContextBound = false;
+                    }
+                } else ALC10.alcMakeContextCurrent(0);
                 ALC10.alcDestroyContext(context);
                 context = 0;
             }

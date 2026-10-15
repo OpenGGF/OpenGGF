@@ -301,6 +301,57 @@ class TestEngineSettingsScreen {
                 "Game Setup owns launch profiles");
     }
 
+    @Test
+    void controlsHaveDistinctPlayerGroupsWithEightCompactRows() {
+        Fixture f = new Fixture();
+        f.tab(CONTROLS);
+        List<String> text = f.texts();
+        assertTrue(text.contains("PLAYER 1"));
+        assertTrue(text.contains("RESET BINDINGS"));
+        assertTrue(text.contains("PLAYER 2"));
+        var rows = f.font.lines.stream().filter(line -> line.x == 18 && line.y >= 69 && line.y < 150).toList();
+        assertEquals(8, rows.size(), rows.toString());
+        assertTrue(rows.stream().allMatch(line -> line.scale == MenuStyle.COMPACT));
+        assertTrue(rows.stream().allMatch(line -> line.text.startsWith("Player 1")));
+        f.press(GLFW_KEY_UP); // subgroup strip
+        f.press(GLFW_KEY_RIGHT);
+        f.press(GLFW_KEY_DOWN);
+        assertTrue(f.texts().contains("Player 2 Up"));
+        assertFalse(f.texts().contains("Player 1 Up"));
+        f.assertTextBounds(320);
+    }
+
+    @Test
+    void resetTabAsksBeforeTouchingDraftAndPreservesOtherTabs() {
+        Fixture f = new Fixture();
+        f.tab(SOUND);
+        f.press(GLFW_KEY_RIGHT); // sound off
+        int count = new EngineSettingsDraft(f.config).keys(EngineSettingsDraft.Category.AUDIO).size();
+        f.press(GLFW_KEY_DOWN, count); // reset button after final row
+        f.press(GLFW_KEY_ENTER);
+        assertTrue(f.texts().contains("RESET SOUND DEFAULTS?"));
+        f.press(GLFW_KEY_ENTER); // Cancel is the safe initial choice.
+        assertTrue(f.texts().contains("1 UNSAVED"));
+        f.press(GLFW_KEY_ENTER);
+        f.press(GLFW_KEY_LEFT);
+        f.press(GLFW_KEY_ENTER);
+        assertFalse(f.texts().contains("1 UNSAVED"));
+        assertTrue(f.config.getBoolean(AUDIO_ENABLED), "Defaults stay in the draft until saved");
+    }
+
+    @Test
+    void promptListsConcreteChangesAndGameplayHasOneRewindRow() {
+        Fixture f = new Fixture();
+        f.tab(SOUND);
+        f.press(GLFW_KEY_RIGHT);
+        f.press(GLFW_KEY_ESCAPE);
+        assertTrue(f.texts().contains("On -> Off"));
+        EngineSettingsDraft catalog = new EngineSettingsDraft(f.config);
+        assertEquals(List.of(LIVE_REWIND_ENABLED), catalog.keys(EngineSettingsDraft.Category.GAMEPLAY).stream()
+                .filter(key -> ConfigCatalog.meta(key).section().equals("rewind")).toList());
+        assertEquals(EngineSettingsDraft.Category.ADVANCED, EngineSettingsDraft.category(LOAD_TIME_SIMULATION));
+    }
+
     private final class Fixture {
         final SonicConfigurationService config = SonicConfigurationService.createStandalone(directory);
         final RecordingFont font = new RecordingFont();

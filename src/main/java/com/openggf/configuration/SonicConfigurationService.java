@@ -736,6 +736,18 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.DAC_INTERPOLATE, false);
 		putDefault(SonicConfiguration.FM6_DAC_OFF, true); // Default true for Sonic 2 parity
 		putDefault(SonicConfiguration.AUDIO_ENABLED, true);
+        putDefault(SonicConfiguration.AUDIO_HUB_MUSIC_ENABLED, false);
+        putDefault(SonicConfiguration.AUDIO_HUB_MUSIC_VOLUME, 20);
+        putDefault(SonicConfiguration.HUB_LAST_GAME, "s2");
+        putDefault(SonicConfiguration.HUB_CONTINUE_S1_CHARACTER, "");
+        putDefault(SonicConfiguration.HUB_CONTINUE_S1_ZONE, -1);
+        putDefault(SonicConfiguration.HUB_CONTINUE_S1_ACT, 0);
+        putDefault(SonicConfiguration.HUB_CONTINUE_S2_CHARACTER, "");
+        putDefault(SonicConfiguration.HUB_CONTINUE_S2_ZONE, -1);
+        putDefault(SonicConfiguration.HUB_CONTINUE_S2_ACT, 0);
+        putDefault(SonicConfiguration.HUB_CONTINUE_S3K_CHARACTER, "");
+        putDefault(SonicConfiguration.HUB_CONTINUE_S3K_ZONE, -1);
+        putDefault(SonicConfiguration.HUB_CONTINUE_S3K_ACT, 0);
 		putDefault(SonicConfiguration.AUDIO_INTERNAL_RATE_OUTPUT, false);
 		putDefault(SonicConfiguration.AUDIO_FM_CORE, "fast");
 		putDefault(SonicConfiguration.REGION, "NTSC");

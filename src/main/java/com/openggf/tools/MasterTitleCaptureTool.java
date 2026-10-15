@@ -68,14 +68,22 @@ public final class MasterTitleCaptureTool {
                 new Scene("14-settings-controls", List.of(up, right, enter, up, right, right, down, down, down, down,
                         down, down, down, down, down, down), 20),
                 new Scene("15-advanced", List.of(up, right, right, enter), 20),
-                new Scene("16-help", List.of(up, right, right, enter, down, down, enter), 20),
+                new Scene("16-help", List.of(GLFW_KEY_F1), 20),
                 new Scene("17-quit", List.of(esc), 20),
                 new Scene("18-confirm", List.of(enter), 3),
                 new Scene("38-hub-crowded", List.of(), 40),
                 new Scene("39-hub-missing-rom", List.of(), 40),
                 new Scene("40-locate-rom", List.of(enter), 40),
                 new Scene("41-settings-save", List.of(up, right, enter, right, up, up), 20),
-                new Scene("42-setup-save", List.of(down, right, enter, right, up), 20));
+                new Scene("42-setup-save", List.of(down, right, enter, right, up), 20),
+                new Scene("43-hub-idle", List.of(), 560),
+                new Scene("44-settings-sound", List.of(up, right, enter, up, right, down), 20),
+                new Scene("45-controls-group", List.of(up, right, enter, up, right, right, down), 20),
+                new Scene("46-controller-help", List.of(GLFW_KEY_F1), 20),
+                new Scene("47-controller-settings", List.of(up, right, enter), 20),
+                new Scene("48-hub-continue", List.of(down), 20),
+                new Scene("49-add-games", List.of(), 20),
+                new Scene("50-hub-music-volume", List.of(up, right, enter, up, right, down, down, down), 20));
         List<Scene> pausedScenes = List.of(
                 new Scene("19-paused-card", List.of(), 40),
                 new Scene("20-paused-end-button", List.of(down, right), 40),
@@ -98,8 +106,15 @@ public final class MasterTitleCaptureTool {
                 new Scene("37-paused-resume-zoom-end", List.of(), 32));
 
         GLFWErrorCallback.createPrint(System.err).set();
-        if (!glfwInit()) throw new IllegalStateException("Unable to initialize GLFW");
+        boolean surfaceless = SurfacelessEglContext.requested();
+        if (surfaceless) glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_NULL);
+        try {
+            if (!glfwInit()) throw new IllegalStateException("Unable to initialize GLFW");
+        } finally {
+            if (surfaceless) glfwInitHint(GLFW_PLATFORM, GLFW_ANY_PLATFORM);
+        }
         long window = NULL;
+        SurfacelessEglContext egl = null;
         try {
             glfwDefaultWindowHints();
             glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
@@ -112,9 +127,13 @@ public final class MasterTitleCaptureTool {
             glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
             int fbw = width * scale;
             int fbh = 224 * scale;
-            window = glfwCreateWindow(fbw, fbh, "Master title capture", NULL, NULL);
-            if (window == NULL) throw new IllegalStateException("Failed to create hidden window");
-            glfwMakeContextCurrent(window);
+            if (surfaceless) {
+                egl = SurfacelessEglContext.create(fbw, fbh, true);
+            } else {
+                window = glfwCreateWindow(fbw, fbh, "Master title capture", NULL, NULL);
+                if (window == NULL) throw new IllegalStateException("Failed to create hidden window");
+                glfwMakeContextCurrent(window);
+            }
             GL.createCapabilities();
             float[] projection = new org.joml.Matrix4f().ortho2D(0, width, 0, 224).get(new float[16]);
             List<Scene> all = new java.util.ArrayList<>(scenes);
@@ -135,6 +154,13 @@ public final class MasterTitleCaptureTool {
                 }
                 if (scene.name().contains("missing-rom") || scene.name().contains("locate-rom"))
                     config.setConfigValue(SonicConfiguration.SONIC_2_ROM, configDir.resolve("not-present.gen").toString());
+                if (scene.name().contains("add-games")) {
+                    for (var game : MasterTitleScreen.GameEntry.values())
+                        config.setConfigValue(game.romConfigKey, configDir.resolve(game.gameId + "-missing.gen").toString());
+                }
+                if (scene.name().contains("hub-continue")) {
+                    new com.openggf.game.launch.HubProgressStore(config).reached(MasterTitleScreen.GameEntry.SONIC_2, 1, 1, "sonic");
+                }
                 if (scene.name().contains("crowded")) {
                     var store = new com.openggf.game.launch.LaunchProfileStore(config);
                     store.save(MasterTitleScreen.GameEntry.SONIC_2, new com.openggf.game.launch.LaunchProfile(
@@ -151,9 +177,25 @@ public final class MasterTitleCaptureTool {
                                     new MasterTitleEntry.Stock(MasterTitleScreen.GameEntry.SONIC_2), "Emerald Hill, Act 1", true),
                             paused.width(), paused.height(), rgba(paused));
                 }
-                InputHandler input = new InputHandler();
+                var pad = new java.util.concurrent.atomic.AtomicReference<List<com.openggf.control.GamepadStateSource.DeviceState>>(List.of());
+                InputHandler input = new InputHandler(com.openggf.InputBindingFactory.supplier(config), pad::get);
                 for (int i = 0; i < 20; i++) screen.update(input);
                 for (int key : scene.keys()) press(screen, input, key);
+                if (scene.name().contains("controller")) {
+                    config.setConfigValue(SonicConfiguration.CONTROLLER_ENABLED, true);
+                    boolean[] buttons = new boolean[GLFW_GAMEPAD_BUTTON_LAST + 1];
+                    pad.set(List.of(com.openggf.control.GamepadStateSource.DeviceState.connected(0, "Xbox capture pad", buttons, 0, 0)));
+                    input.refreshLogicalSnapshot();
+                    input.update();
+                    buttons[GLFW_GAMEPAD_BUTTON_DPAD_RIGHT] = true;
+                    pad.set(List.of(com.openggf.control.GamepadStateSource.DeviceState.connected(0, "Xbox capture pad", buttons, 0, 0)));
+                    input.refreshLogicalSnapshot();
+                    screen.update(input);
+                    input.update();
+                    pad.set(List.of(com.openggf.control.GamepadStateSource.DeviceState.connected(0, "Xbox capture pad", new boolean[buttons.length], 0, 0)));
+                    input.refreshLogicalSnapshot();
+                    input.update();
+                }
                 if (scene.name().contains("paused-zoom")) screen.animateSuspendedGame();
                 if (scene.name().contains("paused-resume-zoom")) {
                     input.handleKeyEvent(enter, GLFW_PRESS);
@@ -163,12 +205,12 @@ public final class MasterTitleCaptureTool {
                 }
                 for (int i = 0; i < scene.settleFrames(); i++) {
                     // The file picker reads asynchronously; allow real time for its folder listing.
-                    if (scene.name().contains("locate-rom")) Thread.sleep(10);
+                    if (scene.name().contains("locate-rom") || scene.name().contains("hub-idle")) Thread.sleep(10);
                     screen.update(input);
                 }
-                int[] fb = new int[2];
-                int[] fbH = new int[1];
-                glfwGetFramebufferSize(window, fb, fbH);
+                int[] fb = {fbw};
+                int[] fbH = {fbh};
+                if (!surfaceless) glfwGetFramebufferSize(window, fb, fbH);
                 glViewport(0, 0, fb[0], fbH[0]);
                 glClearColor(0, 0, 0, 1);
                 glClear(GL_COLOR_BUFFER_BIT);
@@ -181,6 +223,7 @@ public final class MasterTitleCaptureTool {
                 System.out.println("wrote " + scene.name());
             }
         } finally {
+            if (egl != null) egl.close();
             if (window != NULL) glfwDestroyWindow(window);
             glfwTerminate();
         }

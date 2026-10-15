@@ -41,6 +41,7 @@ public final class StandaloneAudioPresentationHost
 
     private final String gameId;
     private final AudioManager manager;
+    private final Runnable decoratedDevicePump;
     private final Thread ownerThread;
     /**
      * The executor that owns {@link #manager}'s presentation producer. It is
@@ -56,6 +57,12 @@ public final class StandaloneAudioPresentationHost
     private StandaloneAudioPresentationHost(
             String gameId, AudioManager manager,
             ExecutorService ownerExecutor) {
+        this(gameId, manager, ownerExecutor, () -> { });
+    }
+
+    private StandaloneAudioPresentationHost(String gameId, AudioManager manager,
+            ExecutorService ownerExecutor, Runnable decoratedDevicePump) {
+        this.decoratedDevicePump = decoratedDevicePump;
         this.gameId = gameId;
         this.manager = manager;
         ownerThread = Thread.currentThread();
@@ -74,6 +81,11 @@ public final class StandaloneAudioPresentationHost
                 normalizeGameId(gameId), manager, ownerExecutor);
     }
 
+    static StandaloneAudioPresentationHost fromManagerForTesting(
+            String gameId, AudioManager manager, Runnable decoratedDevicePump) {
+        return new StandaloneAudioPresentationHost(normalizeGameId(gameId), manager, null, decoratedDevicePump);
+    }
+
     AudioManager managerForTesting() {
         return manager;
     }
@@ -83,6 +95,19 @@ public final class StandaloneAudioPresentationHost
             SonicConfigurationService config,
             PerformanceProfiler profiler,
             boolean noDevice) {
+        return open(gameId, config, profiler, noDevice, java.util.function.UnaryOperator.identity(), false);
+    }
+
+    /** Decorates the final PCM sink without changing synthesis or gameplay audio ownership. */
+    public static StandaloneAudioPresentationHost open(
+            String gameId, SonicConfigurationService config, PerformanceProfiler profiler,
+            boolean noDevice, java.util.function.UnaryOperator<AudioPresentationSink> decorateSink) {
+        return open(gameId, config, profiler, noDevice, decorateSink, true);
+    }
+
+    private static StandaloneAudioPresentationHost open(
+            String gameId, SonicConfigurationService config, PerformanceProfiler profiler,
+            boolean noDevice, java.util.function.UnaryOperator<AudioPresentationSink> decorateSink, boolean isolateDevice) {
         ExecutorService ownerExecutor = Executors.newSingleThreadExecutor(
                 runnable -> {
                     Thread thread = new Thread(runnable,
@@ -95,7 +120,7 @@ public final class StandaloneAudioPresentationHost
                     return thread;
                 });
         Future<StandaloneAudioPresentationHost> creation = ownerExecutor.submit(
-                () -> create(gameId, config, profiler, noDevice, ownerExecutor));
+                () -> create(gameId, config, profiler, noDevice, ownerExecutor, decorateSink, isolateDevice));
         try {
             return creation.get(OWNER_CALL_TIMEOUT_SECONDS,
                     TimeUnit.SECONDS);
@@ -125,7 +150,8 @@ public final class StandaloneAudioPresentationHost
             SonicConfigurationService config,
             PerformanceProfiler profiler,
             boolean noDevice,
-            ExecutorService ownerExecutor) {
+            ExecutorService ownerExecutor,
+            java.util.function.UnaryOperator<AudioPresentationSink> decorateSink, boolean isolateDevice) {
         String boundGameId = normalizeGameId(gameId);
         GameAudioProfile profile = profile(boundGameId);
         AudioPresentationSink sink;
@@ -134,8 +160,7 @@ public final class StandaloneAudioPresentationHost
             sink = new NoDeviceAudioSink(48_000);
         } else {
             try {
-                sink = OpenAlPcmSink.openDefault(
-                        failure -> {
+                java.util.function.Consumer<Throwable> onFailure = failure -> {
                             AudioManager manager = managerRef.get();
                             if (manager != null) {
                                 try {
@@ -150,15 +175,23 @@ public final class StandaloneAudioPresentationHost
                                 LOGGER.log(Level.WARNING,
                                         "Sound-test speaker failed", failure);
                             }
-                        },
-                        warning -> LOGGER.warning(
-                                "Sound-test speaker: " + warning));
+                        };
+                java.util.function.Consumer<String> onWarning = warning -> LOGGER.warning("Sound-test speaker: " + warning);
+                sink = isolateDevice ? OpenAlPcmSink.openIsolatedDefault(onFailure, onWarning)
+                        : OpenAlPcmSink.openDefault(onFailure, onWarning);
             } catch (Throwable failure) {
                 LOGGER.log(Level.WARNING,
                         "Sound-test device unavailable; using silent output",
                         failure);
                 sink = new NoDeviceAudioSink(48_000);
             }
+        }
+        AudioPresentationSink originalSink = sink;
+        try {
+            sink = java.util.Objects.requireNonNull(decorateSink.apply(sink));
+        } catch (Throwable failure) {
+            sink.close();
+            throw failure;
         }
         SmpsCoordFlagHandlerOwner owner =
                 new SmpsCoordFlagHandlerOwner(
@@ -176,12 +209,20 @@ public final class StandaloneAudioPresentationHost
             throw failure;
         }
         managerRef.set(manager);
-        return new StandaloneAudioPresentationHost(
-                boundGameId, manager, ownerExecutor);
+        // AudioManager recognises direct OpenAL sinks. A decorator hides that identity;
+        // service its original device here, on the same owner, after PCM delivery.
+        Runnable devicePump = sink != originalSink && originalSink instanceof OpenAlPcmSink openAl
+                ? openAl::updateDevice : () -> { };
+        return new StandaloneAudioPresentationHost(boundGameId, manager, ownerExecutor, devicePump);
     }
 
     public void playMusic(AbstractSmpsData data, DacData dac) {
         runOnOwner(() -> manager.playStandaloneMusic(data, dac));
+    }
+
+    /** Reads the native driver's track completion state on this isolated session's owner. */
+    public boolean isMusicComplete() {
+        return callOnOwner(() -> com.openggf.audio.AudioStandaloneHostAccess.musicComplete(manager));
     }
 
     public void playSfx(
@@ -217,6 +258,7 @@ public final class StandaloneAudioPresentationHost
         runOnOwner(() -> {
             manager.presentFrame(PresentationMode.FORWARD);
             manager.update();
+            decoratedDevicePump.run();
         });
     }
 

@@ -24,8 +24,8 @@ public final class EngineSettingsDraft {
     static {
         for (Category category : Category.values()) {
             // Stable sort: within Controls, player bindings come before engine shortcuts.
-            CATEGORY_KEYS.put(category, ConfigCatalog.emitOrder().stream().filter(k -> category(k) == category)
-                    .sorted(java.util.Comparator.comparingInt(k -> ConfigCatalog.meta(k).section().startsWith("input") ? 0 : 1))
+            CATEGORY_KEYS.put(category, ConfigCatalog.emitOrder().stream().filter(k -> category(k) == category && !ConfigCatalog.meta(k).section().startsWith("hub"))
+                    .sorted(java.util.Comparator.comparingInt(k -> controlGroupOrder(k)))
                     .toList());
         }
     }
@@ -49,6 +49,14 @@ public final class EngineSettingsDraft {
         return CATEGORY_KEYS.get(category);
     }
 
+    private static int controlGroupOrder(SonicConfiguration key) {
+        String section = ConfigCatalog.meta(key).section();
+        if (section.equals("input.player1")) return 0;
+        if (section.equals("input.player2")) return 1;
+        if (section.equals("input.controller")) return 2;
+        return 3;
+    }
+
     public static Category category(SonicConfiguration key) {
         ConfigKeyMeta meta = ConfigCatalog.meta(key);
         if (!meta.persisted()) throw new IllegalArgumentException("Derived setting");
@@ -56,6 +64,9 @@ public final class EngineSettingsDraft {
         if (section.startsWith("launch")) return Category.LAUNCH;
         // Every non-debug hotkey lives with the other controls, wherever its section is.
         if (meta.type() == ConfigType.KEY && !section.startsWith("debug")) return Category.INPUT;
+        if (key == SonicConfiguration.LOAD_TIME_SIMULATION
+                || section.startsWith("rewind") && key != SonicConfiguration.LIVE_REWIND_ENABLED
+                || section.startsWith("hub")) return Category.ADVANCED;
         if (key == SonicConfiguration.DEBUG_VIEW_ENABLED) return Category.GAMEPLAY;
         if (key == SonicConfiguration.DISPLAY_SHADER_LIBRARY_ROOT
                 || key == SonicConfiguration.DISPLAY_SHADER_DEFAULT_PHASE
@@ -76,7 +87,9 @@ public final class EngineSettingsDraft {
     public long revision() { return revision; }
     public String text(SonicConfiguration key) { return textCache.getOrDefault(key, ""); }
     private String format(SonicConfiguration key) {
-        Object value = value(key);
+        return formatValue(key, value(key));
+    }
+    private static String formatValue(SonicConfiguration key, Object value) {
         if (ConfigCatalog.meta(key).type() == ConfigType.KEY && value instanceof Number) {
             int code = ((Number) value).intValue();
             return code == -1 ? "" : GlfwKeyNameResolver.nameOf(code);
@@ -92,6 +105,21 @@ public final class EngineSettingsDraft {
     public boolean dirty() { return changedCount > 0; }
     public int changedCount() { return changedCount; }
     public void reset(SonicConfiguration key) { put(key, config.getDefaultValue(key)); }
+    public void reset(Category category) { keys(category).forEach(this::reset); }
+    public record Change(SonicConfiguration key, String before, String after) { }
+    public List<Change> changes() {
+        return ConfigCatalog.emitOrder().stream().filter(this::changed)
+                .map(key -> new Change(key, formatValue(key, initial.get(key)), text(key))).toList();
+    }
+    /** Duplicate chords warn but remain legal: games deliberately share some controls. */
+    public List<SonicConfiguration> bindingConflicts(SonicConfiguration key) {
+        if (ConfigCatalog.meta(key).type() != ConfigType.KEY) return List.of();
+        KeyChord chord = KeyChord.parse(value(key));
+        if (!chord.isBound()) return List.of();
+        return ConfigCatalog.emitOrder().stream().filter(other -> other != key
+                && ConfigCatalog.meta(other).type() == ConfigType.KEY
+                && chord.equals(KeyChord.parse(value(other)))).toList();
+    }
     private void put(SonicConfiguration key, Object next) {
         if (Objects.equals(values.get(key), next)) return;
         values.put(key, next);
@@ -146,6 +174,10 @@ public final class EngineSettingsDraft {
 
     public void step(SonicConfiguration key, int direction) {
         ConfigKeyMeta meta = ConfigCatalog.meta(key);
+        if (key == SonicConfiguration.AUDIO_HUB_MUSIC_VOLUME) {
+            set(key, Integer.toString(Math.clamp(Integer.parseInt(text(key)) + direction * 5, 0, 100)));
+            return;
+        }
         switch (meta.type()) {
             case BOOL -> set(key, Boolean.toString(!Boolean.parseBoolean(text(key))));
             case ENUM -> {
@@ -187,6 +219,9 @@ public final class EngineSettingsDraft {
         double n = number.doubleValue();
         if (!Double.isFinite(n)) throw new IllegalArgumentException("Use a finite number");
         switch (key) {
+            case AUDIO_HUB_MUSIC_VOLUME -> {
+                if (n < 0 || n > 100) throw new IllegalArgumentException("Volume: 0 to 100");
+            }
             case CONTROLLER_DEADZONE -> {
                 if (n < 0 || n >= 1) throw new IllegalArgumentException("Deadzone: 0 to below 1");
             }

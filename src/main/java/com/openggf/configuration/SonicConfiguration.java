@@ -174,6 +174,18 @@ public enum SonicConfiguration {
 	 * Whether to enable Audio (Music/SFX)
 	 */
 	AUDIO_ENABLED,
+    AUDIO_HUB_MUSIC_ENABLED,
+    AUDIO_HUB_MUSIC_VOLUME,
+    HUB_LAST_GAME,
+    HUB_CONTINUE_S1_CHARACTER,
+    HUB_CONTINUE_S1_ZONE,
+    HUB_CONTINUE_S1_ACT,
+    HUB_CONTINUE_S2_CHARACTER,
+    HUB_CONTINUE_S2_ZONE,
+    HUB_CONTINUE_S2_ACT,
+    HUB_CONTINUE_S3K_CHARACTER,
+    HUB_CONTINUE_S3K_ZONE,
+    HUB_CONTINUE_S3K_ACT,
 
 	/**
 	 * Display-only color profile used when converting Mega Drive palette colors

@@ -368,6 +368,20 @@ class TestLaunchConfigPanel {
         assertEquals(DEBUG_TOOLS, panel.selectedRowForTest(), "Down from Borrow from still reaches Debug tools");
     }
 
+    @Test
+    void unsavedPromptNamesOldAndNewValuesForEachChangedRow() {
+        SonicConfigurationService config = configuredWasd();
+        LaunchConfigPanel panel = panel(config, LaunchProfile.stockFor(SONIC_3K), new TrackingStore(config));
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
+        panel.focus(REWIND);
+        pressFrame(panel, input, GLFW_KEY_D);
+        List<String> changes = panel.changeSummaryLines();
+        assertEquals("Rewind", changes.getFirst());
+        assertTrue(changes.stream().anyMatch(line -> line.contains(" -> ")), changes.toString());
+        pressFrame(panel, input, GLFW_KEY_D);
+        assertTrue(panel.changeSummaryLines().stream().anyMatch(line -> line.toLowerCase().contains("off")));
+    }
+
     private static LaunchConfigPanel panel(SonicConfigurationService config,
                                            LaunchProfile profile,
                                            LaunchProfileStore store) {

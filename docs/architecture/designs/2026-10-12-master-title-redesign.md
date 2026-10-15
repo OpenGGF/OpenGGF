@@ -492,3 +492,95 @@ long filenames, status overflow, branding and footer focus fit. Captures are in
 `/private/tmp/openggf-menu-after` and `/private/tmp/openggf-menu-after-wide`.
 No paused-frame capture was supplied; existing suspended-menu behavior is covered
 by the focused tests. Final `git diff --check` passed. Validation used the working changes before commit.
+
+
+## October 15 polish follow-up
+
+Integration base: `ab944c477d41d6022bc823f5132cc71386a555fb`, on
+`feature/ai-master-title-redesign`. Three isolated Sol workstreams delivered
+Settings/audio, hub history/Continue/preview, and input prompts/ROM discovery.
+The lead integrated their changes into the unchanged main workspace branch and
+reviewed the combined behavior, audio ownership, documentation and captures.
+The tested delivery is the uncommitted changes on that base.
+
+All twelve feedback items are implemented: last-card persistence; last-device
+prompts and Help; grouped compact Controls with binding conflicts and reset;
+expert gameplay settings moved to Advanced; compact ROM picker with shortcuts
+and likely-file ordering; compact Advanced and direct hub Help; Continue;
+idle preview; optional music and volume slider; first-run multi-ROM discovery;
+before/after save summaries; and confirmed tab reset with changed-value dots.
+
+Continue records the last reached ordinary stock zone/act and leader and starts
+that act from its beginning. The existing paused card remains the exact
+in-session resume path. Intro, bonus, competition, mod and state-dependent DDZ
+routes are excluded. Pending fresh-level boundaries do not save stale progress.
+Idle previews decode a detached ROM terrain panorama only after idle, cross-fade
+and slowly pan it, then return to the logo on input. This avoids a second gameplay
+session or replay state that could disturb a suspended game.
+
+Optional hub music uses an independent ROM-backed playback owner, a low-pass
+filter, dialog ducking and a smooth gain ramp. It loops on native sequencer
+completion. Review caught two audio ownership hazards: a PCM decorator concealed
+the device sink needed for pumping, and an ordinary OpenAL context would replace
+the gameplay context. The standalone owner now retains its device sink and uses
+an isolated thread-local context; unsupported isolation produces silence.
+
+Rejected approaches: a Controls layout with only six visible rows (worse density
+than before); persistent gameplay snapshots (larger state-compatibility scope
+than last-zone tracking); running a second gameplay session for idle preview;
+and a global OpenAL context for hub music. Controls retains eight visible rows.
+The preview test initially required an arbitrary sixteen-colour minimum; actual
+ROM terrain disproved that threshold. It now checks opacity, dimensions, spatial
+variation and a modest colour floor. No gameplay was changed to fit a test.
+
+The twelve new `SonicConfiguration` fields are reflected in the mutable 0.7 Mod
+API signature pin. The unpublished 0.7.0 candidate descriptor is unchanged, as
+required by the specific pin-regeneration hook policy; no version was published.
+
+### Validation
+
+Java 25, Lua 5.4 and PowerShell preflight passed. The change-based planner selected
+approximately 3,302 smoke classes because shared/unclassified owners select all
+categories. Focused menu, configuration, launch, audio, API and architecture
+checks replace that disproportionate broad selection here. No physics/timing or
+ROM parsing algorithms changed. Required affected S3K loading/bootstrap checks
+were included. No broad smoke or full-suite pass is claimed.
+
+With `ALSOFT_DRIVERS=null`, Java 25 and the installed Maven on PATH:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestMasterTitle*,TestEngineSettings*,TestLaunchConfigPanel,TestMenu*,TestChildMenuFeedback,TestHubHistory,TestHubGameplayProgress,TestHubMusic*,TestOpenAl*,TestSoundTestPresentationHost,TestConfig*,TestSparseUserConfig,TestSettingTiming,TestTitleHubNavigation,TestHubSetupChips,TestAudioManagerRuntimeInstallation,TestAudioPresentationMixer,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' \
+  '-Dsonic1.rom.path=<repo>/Sonic The Hedgehog (W) (REV01) [!].gen' \
+  '-Dsonic2.rom.path=<repo>/Sonic The Hedgehog 2 (W) (REV01) [!].gen' \
+  '-Ds3k.rom.path=<repo>/Sonic and Knuckles & Sonic 3 (W) [!].gen' test -B
+```
+
+This completed 449 tests: 448 passed, one native test assertion errored, no skips.
+The assertion incorrectly expected OpenAL's current-context query on the worker
+to return the gameplay context rather than its thread-local context. Correcting
+only that assertion and its cleanup produced the following passing fresh-JVM run:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Pguards \
+  '-Dtest=TestOpenAlIsolatedContext,TestModApiSignatureSurface,TestModApiReleasePolicy,TestModApiRuntimePolicy,TestModApiPinPolicy,TestModApiHookPolicy,TestAudioPresentationArchitectureGuard,TestAudioBackendBypassGuard,TestSmpsSessionArchitectureGuard' test -B
+```
+
+All 93 checks passed, none skipped: the corrected native case and 92 additional
+API/architecture checks. Thus 541 distinct checks passed across these completed
+runs. Production code was unchanged between them apart from API-version Javadoc.
+Final visual review shortened two Help strings; this text-only edit was rebuilt
+and captured without repeating unchanged behavioral tests.
+
+S1/S2 ROM SHA-1 identities match the documented reference images. The local S3K
+image is `b711a909cce238ca4af3e517a2edca306228efa5`, differing from the documented
+canonical locked-on image. All four required S3K test classes ran without skips
+(24 cases); their pass applies to that local image. ROM files were not altered.
+
+`MasterTitleCaptureTool` ran on the isolated surfaceless EGL backend at 320 and
+400 logical pixels, scale 3. Captures cover controller Help/settings, compact
+Advanced and Controls, picker, Continue, idle terrain, onboarding, save summaries
+and hub music volume. Artifacts are in `/tmp/openggf-menu-polish-final` and
+`/tmp/openggf-menu-polish-final-wide`. No shared-desktop input was automated.
+Native audio ownership was tested with OpenAL's null driver; subjective speaker
+listening and physical-controller playtesting remain outside this validation.

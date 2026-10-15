@@ -29,6 +29,8 @@ final class EngineSettingLabels {
             case DISPLAY_COLOR_PROFILE_TOGGLE_KEY -> "Colour profile shortcut";
             case WIDESCREEN_DEADZONE_MODE -> "Wide camera movement";
             case AUDIO_ENABLED -> "Music and sound effects";
+            case AUDIO_HUB_MUSIC_ENABLED -> "Hub music";
+            case AUDIO_HUB_MUSIC_VOLUME -> "Hub music volume";
             case AUDIO_FM_CORE -> "FM sound chip";
             case REGION -> "Audio region";
             case DAC_INTERPOLATE -> "Smooth sample playback";

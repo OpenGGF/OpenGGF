@@ -25,7 +25,7 @@ final class TitleHubNavigation {
      * and maps the focused index through that list: a suspended game offers Resume and End game.
      */
     enum Action {
-        START("START"), SETUP("GAME SETUP"), RECORDINGS("RECORDINGS"), RESUME("RESUME"), END("END GAME");
+        START("START"), CONTINUE("CONTINUE ZONE"), SETUP("GAME SETUP"), RECORDINGS("RECORDINGS"), RESUME("RESUME"), END("END GAME");
         final String label;
         Action(String label) { this.label = label; }
     }

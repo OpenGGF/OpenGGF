@@ -42,7 +42,7 @@ class TestEngineSettingsDraft {
             assertFalse(draft.keys(category).isEmpty(), category.name());
             for (SonicConfiguration key : draft.keys(category)) assertTrue(reachable.add(key), key.name());
         }
-        assertEquals(new HashSet<>(ConfigCatalog.emitOrder()), reachable);
+        assertEquals(new HashSet<>(ConfigCatalog.emitOrder().stream().filter(key -> !ConfigCatalog.meta(key).section().equals("hub")).toList()), reachable);
         assertFalse(reachable.contains(SCREEN_WIDTH_PIXELS));
         assertFalse(reachable.contains(SCREEN_HEIGHT_PIXELS));
     }
@@ -149,6 +149,33 @@ class TestEngineSettingsDraft {
         draft.set(P1_A, "");
         draft.apply();
         assertFalse(service().getKeyChord(P1_A).isBound());
+    }
+
+    @Test
+    void tabResetPreservesOtherTabsAndHiddenHubHistory() {
+        SonicConfigurationService config = service();
+        config.setConfigValue(AUDIO_HUB_MUSIC_VOLUME, 35);
+        config.setConfigValue(HUB_CONTINUE_S1_ZONE, 3);
+        EngineSettingsDraft draft = new EngineSettingsDraft(config);
+        draft.set(P1_A, "K");
+        draft.reset(EngineSettingsDraft.Category.AUDIO);
+        assertEquals("20", draft.text(AUDIO_HUB_MUSIC_VOLUME));
+        assertEquals("K", draft.text(P1_A));
+        draft.reset(EngineSettingsDraft.Category.ADVANCED);
+        assertEquals("3", draft.text(HUB_CONTINUE_S1_ZONE));
+        assertEquals("35", draft.changes().stream().filter(c -> c.key() == AUDIO_HUB_MUSIC_VOLUME).findFirst().orElseThrow().before());
+        assertThrows(IllegalArgumentException.class, () -> draft.set(AUDIO_HUB_MUSIC_VOLUME, "101"));
+    }
+
+    @Test
+    void duplicateChordsWarnAcrossPlayersAndShortcutsButRemainEditable() {
+        EngineSettingsDraft draft = new EngineSettingsDraft(service());
+        draft.set(P1_A, "CTRL+K");
+        draft.set(P2_A, "CTRL+K");
+        assertTrue(draft.bindingConflicts(P1_A).contains(P2_A));
+        draft.set(P2_A, "");
+        assertFalse(draft.bindingConflicts(P1_A).contains(P2_A));
+        assertTrue(draft.bindingConflicts(P2_A).isEmpty());
     }
 
     private SonicConfigurationService service() {

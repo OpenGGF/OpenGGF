@@ -107,7 +107,15 @@ When the engine starts, you will see:
    "PRESS START BUTTON" screen).
 3. **Gameplay** -- The first zone of the selected game.
 
-If a ROM file is missing for the game you selected, the engine will show an error.
+The hub remembers the game you last focused. **Continue** starts a stock game's
+last reached act from its beginning; use the paused card to resume a live session
+at its exact position. After a short idle, a ROM terrain preview pans inside the
+card. Optional **Hub music** and its volume are under Settings → Sound.
+
+If no ROMs are found, **Add your games** lets you locate a game or scan a folder
+for all three supported games. A missing game's card also opens its ROM browser.
+The browser has Home, Downloads and Last folder shortcuts and lists likely ROM
+files first. Your files stay in their original locations.
 
 ## Quick Configuration
 
@@ -118,7 +126,10 @@ until you choose a value for that game.
 
 **Settings** applies to every game. Categories are tabs across the top (Display,
 Sound, Controls, Gameplay, Files, Capture); press Up from the first row to switch
-tabs. Values that differ from the default are amber. In text editors, Down enters
+tabs. Controls groups player bindings and warns about duplicate keys. Expert ROM
+loading and rewind tuning live in Advanced settings; Gameplay keeps the Rewind
+switch. Values that differ from the default have an amber dot. Each tab offers a
+confirmed reset, which remains a draft until saved. In text editors, Down enters
 the keypad and Up from its top row returns to the text field. Enter/A chooses a key
 or accepts the focused field; you can also type normally. Number fields use a
 numeric keypad, and Up in path fields opens a controller file browser. **Details**
@@ -127,7 +138,7 @@ scrolling, including when a setting takes effect. Hold directions for repeated
 navigation.
 
 Settings, Game Setup and Mods all keep a draft: the footer counts unsaved changes,
-and Back asks **Save**, **Discard** or **Keep editing**. Applied mod changes reload
+and Back lists the old and new values before asking **Save**, **Discard** or **Keep editing**. Applied mod changes reload
 the mods at the title. Controller prompts follow Xbox/PlayStation labels or physical
 button positions. See [configuration](../../../CONFIGURATION.md#engine-settings-from-the-title)
 for details.

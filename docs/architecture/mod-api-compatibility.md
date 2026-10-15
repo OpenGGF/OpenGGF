@@ -816,3 +816,11 @@ unknown-character advances. The descriptor was reviewed and retains `0.7.0`
 candidate with no published baselines; its strict key/value schema does not carry
 surface prose. `ModApiVersion`, curated roots and the exact mutable pin describe
 the additions together.
+
+
+The October 15 hub polish adds twelve `SonicConfiguration` enum constants for
+optional hub music, volume, focused-game history and per-game Continue zone,
+act and leader. The normalized mutable `0.7` pin and runtime candidate description
+are updated together. The release descriptor was reviewed and remains byte-identical
+at unpublished candidate `0.7.0`: ordinary signature regeneration must not edit
+its publication or branch policy. No published baseline changes.

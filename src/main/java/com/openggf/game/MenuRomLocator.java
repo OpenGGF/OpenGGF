@@ -27,7 +27,7 @@ public final class MenuRomLocator {
     private boolean cancelled;
     private MasterTitlePointer pointer;
     private int width = 320;
-    private String acceptHint = "Enter", backHint = "Esc";
+    private InputHandler menuInput;
 
     public MenuRomLocator(MasterTitleScreen.GameEntry game, SonicConfigurationService config) {
         this.game = game;
@@ -53,8 +53,7 @@ public final class MenuRomLocator {
         MasterTitlePointer mouse = pointer;
         pointer = null;
         if (input == null || completed || cancelled) return;
-        acceptHint = MenuInput.confirmLabel(input);
-        backHint = MenuInput.backLabel(input);
+        menuInput = input;
         if (browser != null) {
             browser.update(input);
             if (browser.cancelled()) { cancelled = true; return; }
@@ -93,6 +92,7 @@ public final class MenuRomLocator {
 
     private void save() {
         try {
+            if (validated != null) draft.set(SonicConfiguration.ROMS_DIRECTORY, validated.getParent().toString());
             draft.apply();
             completed = true;
             MenuFeedback.emit(MenuFeedback.Cue.CONFIRM);
@@ -137,6 +137,9 @@ public final class MenuRomLocator {
             MenuStyle.label(font, validated == null ? "Choose another file" : "Retry saving", 16, 134,
                     this.width - 32, 1, 1, 1);
         }
-        MenuStyle.footer(font, this.width, "", (error == null ? "" : acceptHint + " Choose  ") + backHint + " Back");
+        var hints = error == null
+                ? java.util.List.of(MenuChrome.hint(MenuChrome.backKey(menuInput), "CANCEL"))
+                : java.util.List.of(MenuChrome.hint(MenuChrome.confirmKey(menuInput), "RETRY"), MenuChrome.hint(MenuChrome.backKey(menuInput), "BACK"));
+        MenuChrome.footer(font, this.width, null, hints, MenuChrome.controller(menuInput));
     }
 }

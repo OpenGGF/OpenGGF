@@ -54,6 +54,8 @@ public final class ModApiVersion {
      * NativePositionOps and the solid-platform provider/params are candidate creator contracts:
      * act controllers can reset native positions and provide rewindable top-solid decks.
      * Camera framing can cap the visible right edge independently of native player walls.
+     * Hub preferences include optional title music, its volume, last focused game,
+     * and per-game last-act/leader history for zone-start Continue.
      * Shared network contracts include direct/relay room clients, JDK room hosting,
      * identity, bounded ghost transport and protocol messages/codecs. Operator servers
      * and verifier tools remain separate and outside the creator API.

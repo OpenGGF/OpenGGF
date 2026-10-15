@@ -10,6 +10,7 @@ import com.openggf.data.RomImageCatalogue;
 import com.openggf.data.RomIdentity;
 import com.openggf.game.launch.LaunchProfile;
 import com.openggf.game.launch.LaunchProfileStore;
+import com.openggf.game.launch.HubProgressStore;
 import com.openggf.graphics.PngTextureLoader;
 import com.openggf.graphics.PixelFont;
 import com.openggf.graphics.TexturedQuadRenderer;
@@ -194,6 +195,13 @@ public class MasterTitleScreen {
     private final List<CloudSprite> clouds = new ArrayList<>();
     private final SonicConfigurationService configService;
     private final LaunchProfileStore launchProfileStore;
+    private final HubProgressStore hubProgress;
+    private int idleTicks;
+    private int terrainPanTick;
+    private float idlePreviewAlpha;
+    private boolean helpShortcutHeld;
+    static final int IDLE_PREVIEW_DELAY = 480;
+    static final int IDLE_PREVIEW_FADE = 45;
     private final AudioSink audioSink;
     private LaunchConfigPanel launchConfigPanel;
     private boolean programmaticSelection;
@@ -207,6 +215,8 @@ public class MasterTitleScreen {
 
     public void setEditorProjectsOpenHandler(Runnable handler) { editorProjectsOpenHandler = handler; }
     private MenuRomLocator romLocator;
+    private MenuGameOnboarding onboarding;
+    private HubMusicController hubMusic;
     private MenuLoadTask<?> catalogLoad;
     private java.util.function.Consumer<Object> catalogLoaded;
     private String catalogLoadingTitle;
@@ -264,6 +274,11 @@ public class MasterTitleScreen {
         int width;
         int height;
         int frameToken = Integer.MIN_VALUE;
+        int terrainTextureId;
+        int terrainWidth;
+        boolean terrainRequested;
+        MenuLoadTask<Optional<MasterTitleRomPreview.Image>> terrainLoad;
+        RomImageCatalogue.Resolution resolution;
         MasterTitleRomPreview.PreviewSequence sequence;
     }
 
@@ -303,9 +318,10 @@ public class MasterTitleScreen {
                              AudioSink audioSink) {
         this.configService = Objects.requireNonNull(configService, "configService");
         this.launchProfileStore = Objects.requireNonNull(launchProfileStore, "launchProfileStore");
+        this.hubProgress = new HubProgressStore(configService);
         this.entries = List.copyOf(Objects.requireNonNull(entries, "entries"));
         this.audioSink = Objects.requireNonNull(audioSink, "audioSink");
-        this.selectedIndex = defaultSelectionIndex(this.entries);
+        this.selectedIndex = rememberedSelectionIndex(this.entries);
         for (GameEntry game : GameEntry.values()) stockAvailability.put(game, false);
     }
 
@@ -356,6 +372,9 @@ public class MasterTitleScreen {
 
             loadRomPreviews();
             resetRomPreviewTextureFrames();
+            hubMusic = new HubMusicController(configService);
+            if (stockAvailability.values().stream().noneMatch(Boolean.TRUE::equals))
+                onboarding = new MenuGameOnboarding(configService);
 
             state = State.FADE_IN;
             LOGGER.info("Master title screen initialized");
@@ -378,7 +397,16 @@ public class MasterTitleScreen {
         menuInput = inputHandler;
         navigation.capture(inputHandler);
         pointer = readPointer(inputHandler);
+        boolean activeInput = inputHandler.isAnyKeyJustPressed() || MenuInput.left(inputHandler) || MenuInput.right(inputHandler)
+                || MenuInput.up(inputHandler) || MenuInput.down(inputHandler)
+                || MenuInput.accept(inputHandler) || MenuInput.back(inputHandler)
+                || MenuInput.details(inputHandler) || inputHandler.isKeyPressed(GLFW_KEY_TAB)
+                || inputHandler.isKeyPressed(GLFW_KEY_M)
+                || pointer != null && (pointer.moved() || pointer.click() || pointer.backClick() || pointer.wheel() != 0);
+        advanceIdlePreview(activeInput);
         frameCounter++;
+        if (hubMusic != null) hubMusic.update(getSelectedGameId(), settingsScreen != null || helpOpen || toolsOpen
+                || romLocator != null || onboarding != null || quitPrompt || endPrompt || state != State.ACTIVE);
         advancePreviewAnimationFrame();
         advanceHubAnimation();
         if (resumeZooming) {
@@ -432,6 +460,14 @@ public class MasterTitleScreen {
             childInputPending = false;
         }
         if (catalogLoad != null) { updateCatalogLoad(); return; }
+        if (onboarding != null) {
+            if (pointer != null) onboarding.pointer(pointer.x(), pointer.y(), pointer.moved(), pointer.click(),
+                    pointer.backClick(), pointer.wheel());
+            onboarding.update(inputHandler);
+            if (onboarding.completed()) { refreshRomPreviews(); onboarding = null; childInputPending = true; }
+            else if (onboarding.cancelled()) { onboarding = null; childInputPending = true; }
+            return;
+        }
         if (romLocator != null) {
             if (pointer != null) romLocator.pointer(pointer.x(), pointer.y(), pointer.moved(),
                     pointer.click(), pointer.backClick(), pointer.wheel());
@@ -557,6 +593,11 @@ public class MasterTitleScreen {
             return;
         }
 
+        boolean helpShortcut = MenuInput.details(inputHandler);
+        boolean openHelp = helpShortcut && !helpShortcutHeld;
+        helpShortcutHeld = helpShortcut;
+        if (openHelp) { helpOpen = true; childInputPending = true; playConfirmSound(); return; }
+
         // Shortcuts remain optional; every action is also in the visible menu.
         boolean modsShortcut = inputHandler.isKeyPressedWithoutModifiers(GLFW_KEY_M);
         boolean openMods = modsShortcut && !modsShortcutHeld;
@@ -603,6 +644,7 @@ public class MasterTitleScreen {
     private void runHubAction(TitleHubNavigation.Action action) {
         switch (action) {
             case START -> startSelectedEntry();
+            case CONTINUE -> continueSelectedEntry();
             case SETUP -> { if (!openLaunchOptions(null)) showActionError("Game setup"); }
             case RECORDINGS -> openRecordings();
             case RESUME -> requestResume();
@@ -743,6 +785,10 @@ public class MasterTitleScreen {
      */
     private boolean updateHubPointer() {
         if (pointer == null) return false;
+        Rect help = helpHintBounds();
+        if (pointer.click() && help != null && help.contains(pointer)) {
+            helpOpen = true; childInputPending = true; playConfirmSound(); return true;
+        }
         if (pointer.backClick()) {
             if (navigation.zone() != TitleHubNavigation.Zone.CARD) {
                 navigation.focus(TitleHubNavigation.Zone.CARD);
@@ -933,7 +979,7 @@ public class MasterTitleScreen {
         if (navigation.down()) toolIndex = Math.min(count - 1, toolIndex + 1);
         boolean clickedTool = false;
         for (int i = 0; pointer != null && i < count; i++) {
-            if (pointer.over(10, 44 + i * 30, viewportWidth - 20, 26) && (pointer.moved() || pointer.click())) {
+            if (pointer.over(10, 44 + i * 16, viewportWidth - 20, 14) && (pointer.moved() || pointer.click())) {
                 toolIndex = i;
                 clickedTool |= pointer.click();
             }
@@ -1040,7 +1086,11 @@ public class MasterTitleScreen {
             String source = resolution.isPresent() && listed ? resolution.get().changeToken() : null;
             if (Objects.equals(source, previewSources.get(game))) continue;
             RomPreviewState removed = romPreviews.remove(game);
-            if (removed != null) PngTextureLoader.deleteTexture(removed.textureId);
+            if (removed != null) {
+                PngTextureLoader.deleteTexture(removed.textureId);
+                PngTextureLoader.deleteTexture(removed.terrainTextureId);
+                if (removed.terrainLoad != null) removed.terrainLoad.cancel();
+            }
             previewSources.remove(game);
             if (renderer != null && source != null) loadRomPreview(game, resolution.get(), source);
         }
@@ -1067,6 +1117,7 @@ public class MasterTitleScreen {
     }
 
     private void confirmLaunch(MasterTitleEntry.Launch launch, boolean programmatic) {
+        if (!programmatic) hubProgress.rememberGame(launch.entry().gameId());
         selectedLaunch = launch;
         state = State.CONFIRMING;
         if (!programmatic) playConfirmSound();
@@ -1127,6 +1178,7 @@ public class MasterTitleScreen {
                     MenuChrome.controller(menuInput));
             return;
         }
+        if (onboarding != null) { onboarding.render(font, viewportWidth); return; }
         if (romLocator != null) { romLocator.render(font, viewportWidth); return; }
 
         if (tracePicker != null) {
@@ -1254,6 +1306,10 @@ public class MasterTitleScreen {
     private List<TitleHubNavigation.Action> hubActions() {
         if (selectedEntry() instanceof MasterTitleEntry.Suspended)
             return List.of(TitleHubNavigation.Action.RESUME, TitleHubNavigation.Action.SETUP, TitleHubNavigation.Action.END);
+        if (selectedEntry() instanceof MasterTitleEntry.Stock stock && isEntryAvailable(stock)
+                && continueProgress(stock.game()).isPresent())
+            return List.of(TitleHubNavigation.Action.CONTINUE, TitleHubNavigation.Action.START,
+                    TitleHubNavigation.Action.SETUP, TitleHubNavigation.Action.RECORDINGS);
         return selectedEntry() instanceof MasterTitleEntry.Standalone
                 ? List.of(TitleHubNavigation.Action.START)
                 : List.of(TitleHubNavigation.Action.START, TitleHubNavigation.Action.SETUP,
@@ -1290,18 +1346,24 @@ public class MasterTitleScreen {
     }
 
     private String actionLabel(TitleHubNavigation.Action action) {
-        return action == TitleHubNavigation.Action.START && selectedEntry() instanceof MasterTitleEntry.Stock
-                && !isEntryAvailable(selectedEntry()) ? "LOCATE ROM" : action.label;
+        if (action == TitleHubNavigation.Action.START && selectedEntry() instanceof MasterTitleEntry.Stock stock) {
+            if (!isEntryAvailable(stock)) return "LOCATE ROM";
+            if (continueProgress(stock.game()).isPresent()) return "NEW GAME";
+        }
+        return action.label;
     }
 
     private int actionWidth(TitleHubNavigation.Action action) {
-        return primary(action)
-                ? MenuChrome.labelWidth(actionLabel(action)) + 16 : MenuChrome.compactWidth(action.label) + 12;
+        return primary(action) && !compactActions()
+                ? MenuChrome.labelWidth(actionLabel(action)) + 16 : MenuChrome.compactWidth(actionLabel(action)) + 12;
     }
+
+    private boolean compactActions() { return hubActions().size() > 3; }
 
     /** Start and Resume are the gold buttons. */
     private static boolean primary(TitleHubNavigation.Action action) {
-        return action == TitleHubNavigation.Action.START || action == TitleHubNavigation.Action.RESUME;
+        return action == TitleHubNavigation.Action.START || action == TitleHubNavigation.Action.RESUME
+                || action == TitleHubNavigation.Action.CONTINUE;
     }
 
     HubLayout hubLayout() {
@@ -1466,7 +1528,15 @@ public class MasterTitleScreen {
             if (selected) updateSelectedRomPreviewTexture();
             // Keep the original ROM texture: the final viewport samples its texels directly.
             PreviewLayout layout = cardLogoLayout(preview.width, preview.height, r.x() + 4, r.y() + 4, r.w() - 8, r.h() - 8);
-            renderer.drawTexture(preview.textureId, layout.x(), layout.y(), layout.width(), layout.height());
+            renderer.drawTexture(preview.textureId, layout.x(), layout.y(), layout.width(), layout.height(),
+                    1, 1, 1, selected ? 1 - idlePreviewAlpha : 1);
+            if (selected && preview.terrainTextureId != 0 && idlePreviewAlpha > 0) {
+                PreviewLayout terrain = cardLogoLayout(320, 224, r.x() + 4, r.y() + 4, r.w() - 8, r.h() - 8);
+                float span = 320f / preview.terrainWidth;
+                float pan = (1 - span) * (float) (0.5 - 0.5 * Math.cos(terrainPanTick * Math.PI / 600));
+                renderer.drawTextureRegion(preview.terrainTextureId, terrain.x(), terrain.y(), terrain.width(), terrain.height(),
+                        pan, 0, pan + span, 1, 1, 1, 1, idlePreviewAlpha);
+            }
         }
         if (entry instanceof MasterTitleEntry.Suspended && suspendedImage != null) {
             if (suspendedTextureId == 0) suspendedTextureId = MasterTitleRomPreview.uploadTexture(suspendedImage);
@@ -1601,7 +1671,8 @@ public class MasterTitleScreen {
                 MenuChrome.fill(font, r.x() + (focused ? 2 : 0), r.y() + r.h() - (focused ? 3 : 1),
                         r.w() - (focused ? 4 : 0), 1, new float[] {.6f, .42f, .05f});
                 if (available) drawShimmer(r);
-                MenuChrome.label(font, actionLabel(action), r.x() + 8, r.y() + 5, MenuChrome.WHITE);
+                if (compactActions()) MenuChrome.compact(font, actionLabel(action), r.x() + 6, r.y() + 6, MenuChrome.WHITE);
+                else MenuChrome.label(font, actionLabel(action), r.x() + 8, r.y() + 5, MenuChrome.WHITE);
             } else {
                 if (focused) MenuChrome.focus(font, r.x(), r.y(), r.w(), r.h(), frameCounter);
                 else MenuChrome.panel(font, r.x(), r.y(), r.w(), r.h());
@@ -1664,6 +1735,9 @@ public class MasterTitleScreen {
                     ? "Game Setup changes players, screen and extras" : "Start " + game;
             case ACTIONS -> switch (focusedAction()) {
                 case START -> "Start " + game;
+                case CONTINUE -> selectedEntry() instanceof MasterTitleEntry.Stock stock
+                        ? "Restart " + continueProgress(stock.game()).map(HubProgressStore.Progress::label).orElse("last act") + " from its beginning"
+                        : "";
                 case SETUP -> "Players, screen and extras for " + game + " only";
                 case RECORDINGS -> "Watch and manage your " + game + " recordings";
                 case RESUME, END -> "";
@@ -1674,7 +1748,7 @@ public class MasterTitleScreen {
                         : suspended != null ? "For all games; some reach your paused game"
                         : "Display, sound, controls and more for all games";
                 case EXTRAS -> "Extra modes added by your mods";
-                case ADVANCED -> "Trace replays, advanced settings and help";
+                case ADVANCED -> "Trace replays, advanced settings and tools";
                 case QUIT -> "Close OpenGGF";
             };
         };
@@ -1684,18 +1758,34 @@ public class MasterTitleScreen {
         String ok = MenuChrome.confirmKey(menuInput);
         String back = MenuChrome.backKey(menuInput);
         return switch (navigation.zone()) {
-            case CARD -> List.of(MenuChrome.leftRight("GAME"), MenuChrome.hint(ok,
-                    selectedEntry() instanceof MasterTitleEntry.Suspended ? "RESUME" : actionLabel(TitleHubNavigation.Action.START)), MenuChrome.hint(back, "QUIT"));
-            case ACTIONS -> List.of(MenuChrome.leftRight("BUTTON"), MenuChrome.hint(ok, switch (focusedAction()) {
+            case CARD -> List.of(MenuChrome.leftRight(menuInput, "GAME"), MenuChrome.hint(ok,
+                    selectedEntry() instanceof MasterTitleEntry.Suspended ? "RESUME" : actionLabel(TitleHubNavigation.Action.START)), MenuChrome.hint(MenuChrome.detailsKey(menuInput), "HELP"), MenuChrome.hint(back, "QUIT"));
+            case ACTIONS -> List.of(MenuChrome.leftRight(menuInput, "BUTTON"), MenuChrome.hint(ok, switch (focusedAction()) {
                 case START -> actionLabel(TitleHubNavigation.Action.START);
+                case CONTINUE -> "CONTINUE ZONE";
                 case SETUP -> "OPEN SETUP";
                 case RECORDINGS -> "OPEN RECORDINGS";
                 case RESUME -> "RESUME";
                 case END -> "END GAME";
-            }), MenuChrome.hint(back, "GAMES"));
-            case TABS -> List.of(MenuChrome.leftRight("TAB"), MenuChrome.hint(ok, "OPEN " + navigation.tab().label),
-                    MenuChrome.hint(back, "GAMES"));
+            }), MenuChrome.hint(MenuChrome.detailsKey(menuInput), "HELP"), MenuChrome.hint(back, "GAMES"));
+            case TABS -> List.of(MenuChrome.leftRight(menuInput, "TAB"), MenuChrome.hint(ok, "OPEN " + navigation.tab().label),
+                    MenuChrome.hint(MenuChrome.detailsKey(menuInput), "HELP"), MenuChrome.hint(back, "GAMES"));
         };
+    }
+
+    Rect helpHintBounds() {
+        List<MenuChrome.Hint> shown = hubHints();
+        int left = 6;
+        if (restartPending()) left += MenuChrome.compactWidth(EngineSettingsScreen.RESTART_STATUS) + 18;
+        while (!shown.isEmpty() && MenuChrome.hintsWidth(shown) > viewportWidth - 8 - left)
+            shown = shown.subList(1, shown.size());
+        int x = viewportWidth - 8 - MenuChrome.hintsWidth(shown);
+        for (var hint : shown) {
+            int width = MenuChrome.hintsWidth(List.of(hint));
+            if ("HELP".equals(hint.label())) return new Rect(x - 2, MenuChrome.FOOTER_Y + 2, width + 4, 15);
+            x += width + 12;
+        }
+        return null;
     }
 
     private String carouselName(String name, int columns) {
@@ -1734,28 +1824,32 @@ public class MasterTitleScreen {
         if (toolsOpen) {
             var tools = toolActions();
             for (int i = 0; i < tools.size(); i++) {
-                int y = 44 + i * 30;
-                if (i == toolIndex) MenuChrome.focus(font, 10, y, w - 20, 26, frameCounter);
-                else MenuChrome.panel(font, 10, y, w - 20, 26);
-                MenuChrome.label(font, tools.get(i).label(), 18, y + 4, i == toolIndex ? MenuChrome.WHITE : MenuChrome.TEXT);
-                MenuChrome.compact(font, tools.get(i).note(), 18, y + 16, MenuChrome.MUTED);
+                int y = 44 + i * 16;
+                if (i == toolIndex) MenuChrome.focus(font, 10, y, w - 20, 14, frameCounter);
+                MenuChrome.compact(font, tools.get(i).label(), 18, y + 4, i == toolIndex ? MenuChrome.WHITE : MenuChrome.TEXT);
             }
+            MenuChrome.compact(font, MenuChrome.fitCompact(tools.get(toolIndex).note(), w - 24), 12, 183, MenuChrome.MUTED);
             MenuChrome.footer(font, w, null, List.of(MenuChrome.hint(MenuChrome.confirmKey(menuInput), "OPEN"),
                     MenuChrome.hint(MenuChrome.backKey(menuInput), "BACK")), MenuChrome.controller(menuInput));
         } else {
             String ok = MenuChrome.confirmKey(menuInput);
             String back = MenuChrome.backKey(menuInput);
             String[][] rows = {
-                    { MenuChrome.ARROWS_LR, "Choose a game, button or tab" },
-                    { MenuChrome.ARROWS_UD, "Move between the rows of the hub" },
-                    { ok, "Start the game or open what is selected" },
-                    { back, "Go back one step; on the game card, quit" },
-                    { "Tab", "Open Game Setup for the selected game" },
-                    { "M", "Open the mod manager" } };
+                    { MenuChrome.horizontalKey(menuInput), "Choose a game, button or tab" },
+                    { MenuChrome.verticalKey(menuInput), "Move between the rows of the hub" },
+                    { ok, "Start game / open selection" },
+                    { back, "Back / quit from game card" },
+                    { MenuChrome.controller(menuInput) ? MenuChrome.verticalKey(menuInput) : "Tab",
+                            MenuChrome.controller(menuInput) ? "Choose Game Setup below the game" : "Open Game Setup for the selected game" },
+                    { MenuChrome.controller(menuInput) ? MenuChrome.verticalKey(menuInput) : "M",
+                            MenuChrome.controller(menuInput) ? "Choose Mods in the top tabs" : "Open the mod manager" } };
+            int descriptionX = 18 + java.util.Arrays.stream(rows)
+                    .mapToInt(row -> MenuChrome.hintsWidth(List.of(MenuChrome.hint(row[0], ""))))
+                    .max().orElse(36) + 10;
             for (int i = 0; i < rows.length; i++) {
                 int y = 40 + i * 22;
                 MenuChrome.hints(font, 18, y, List.of(MenuChrome.hint(rows[i][0], "")), MenuChrome.controller(menuInput), MenuChrome.TEXT);
-                MenuChrome.compact(font, MenuChrome.fitCompact(rows[i][1], w - 78), 62, y + 2, MenuChrome.TEXT);
+                MenuChrome.compact(font, MenuChrome.fitCompact(rows[i][1], w - descriptionX - 12), descriptionX, y + 2, MenuChrome.TEXT);
             }
             MenuChrome.compact(font, "Amber values are set for one game only.", 18, 176, MenuChrome.AMBER);
             MenuChrome.footer(font, w, null, List.of(MenuChrome.hint(back, "BACK")), MenuChrome.controller(menuInput));
@@ -1812,6 +1906,7 @@ public class MasterTitleScreen {
             preview.textureId = MasterTitleRomPreview.uploadTexture(firstFrame);
             preview.width = firstFrame.width();
             preview.height = firstFrame.height();
+            preview.resolution = resolution;
             romPreviews.put(game, preview);
         });
     }
@@ -1848,7 +1943,7 @@ public class MasterTitleScreen {
         Objects.requireNonNull(entry, "entry");
         int index = indexOfStock(entry);
         if (index < 0) throw new IllegalArgumentException("Stock entry is not present: " + entry.gameId);
-        setSelectedIndex(index);
+        setSelectedIndex(index, false);
         if (!isEntryAvailable(selectedEntry())) {
             throw new IllegalStateException("Selected ROM is unavailable: " + entry.gameId);
         }
@@ -1937,6 +2032,58 @@ public class MasterTitleScreen {
         return -1;
     }
 
+    private int rememberedSelectionIndex(List<MasterTitleEntry> entries) {
+        for (int i = 0; i < entries.size(); i++)
+            if (entries.get(i).gameId().equals(hubProgress.lastGame())) return i;
+        return defaultSelectionIndex(entries);
+    }
+
+    void advanceIdlePreview(boolean input) {
+        if (input || blocksGlobalShortcuts()) idleTicks = 0;
+        else if (idleTicks < Integer.MAX_VALUE) idleTicks++;
+        RomPreviewState preview = selectedPreview();
+        if (renderer != null && preview != null && idleTicks > IDLE_PREVIEW_DELAY - 120 && !preview.terrainRequested
+                && selectedEntry() instanceof MasterTitleEntry.Stock stock) {
+            preview.terrainRequested = true;
+            RomImageCatalogue catalogue = romCatalogue;
+            preview.terrainLoad = new MenuLoadTask<>(() -> {
+                try (Rom rom = Rom.fromReader(catalogue.open(preview.resolution.rom()), preview.resolution.describe())) {
+                    return MasterTitleRomPreview.loadGameplayStill(stock.game(), rom);
+                }
+            });
+        }
+        for (RomPreviewState item : romPreviews.values()) {
+            if (item.terrainLoad == null || !item.terrainLoad.done()) continue;
+            try {
+                item.terrainLoad.result().ifPresent(image -> {
+                    item.terrainTextureId = MasterTitleRomPreview.uploadTexture(image);
+                    item.terrainWidth = image.width();
+                });
+            } catch (Exception failure) { LOGGER.warning("Could not load terrain preview: " + failure.getMessage()); }
+            item.terrainLoad = null;
+        }
+        float target = idleTicks > IDLE_PREVIEW_DELAY && preview != null && preview.terrainTextureId != 0 ? 1 : 0;
+        float step = 1f / IDLE_PREVIEW_FADE;
+        idlePreviewAlpha = Math.clamp(idlePreviewAlpha + (target > idlePreviewAlpha ? step : -step), 0f, 1f);
+        terrainPanTick = idlePreviewAlpha > 0 ? (terrainPanTick + 1) % 1200 : 0;
+    }
+
+    float idlePreviewAlphaForTest() { return idlePreviewAlpha; }
+
+    private Optional<HubProgressStore.Progress> continueProgress(GameEntry game) {
+        LaunchProfile profile = launchProfileStore.load(game);
+        String character = profile.usesS3kDataSelectCharacters()
+                ? configService.getString(SonicConfiguration.MAIN_CHARACTER_CODE) : profile.mainCharacter();
+        return hubProgress.load(game, character);
+    }
+
+    private void continueSelectedEntry() {
+        if (!(selectedEntry() instanceof MasterTitleEntry.Stock stock) || !isEntryAvailable(stock)) return;
+        if (continueProgress(stock.game()).isEmpty()) return;
+        if (askToEndSuspended("Continuing " + stock.menuLabel() + " ends it", this::continueSelectedEntry)) return;
+        confirmLaunch(new MasterTitleEntry.Launch(stock, MasterTitleEntry.Action.CONTINUE), false);
+    }
+
     private static int defaultSelectionIndex(List<MasterTitleEntry> entries) {
         for (int i = 0; i < entries.size(); i++) {
             if (entries.get(i) instanceof MasterTitleEntry.Stock stock
@@ -1979,13 +2126,18 @@ public class MasterTitleScreen {
         if (renderer != null) refreshRomPreviews();
     }
 
-    boolean setSelectedIndex(int newIndex) {
+    boolean setSelectedIndex(int newIndex) { return setSelectedIndex(newIndex, true); }
+
+    private boolean setSelectedIndex(int newIndex, boolean remember) {
         int clamped = Math.max(0, Math.min(entries.size() - 1, newIndex));
         if (clamped == selectedIndex) {
             return false;
         }
         selectedIndex = clamped;
         previewAnimationFrame = 0;
+        idleTicks = 0;
+        idlePreviewAlpha = 0;
+        if (remember && !(selectedEntry() instanceof MasterTitleEntry.Suspended)) hubProgress.rememberGame(getSelectedGameId());
         return true;
     }
 
@@ -2402,13 +2554,21 @@ public class MasterTitleScreen {
         PngTextureLoader.deleteTexture(titleTextId);
         PngTextureLoader.deleteTexture(cloudLargeTextureId);
         PngTextureLoader.deleteTexture(cloudSmallTextureId);
-        romPreviews.values().forEach(preview -> PngTextureLoader.deleteTexture(preview.textureId));
+        romPreviews.values().forEach(preview -> {
+            PngTextureLoader.deleteTexture(preview.textureId);
+            PngTextureLoader.deleteTexture(preview.terrainTextureId);
+            if (preview.terrainLoad != null) preview.terrainLoad.cancel();
+        });
         deleteSuspendedTexture();
         releaseSuspendFrame();
         if (renderer != null) renderer.cleanup();
         userRecordingMenu = null;
         if (romLocator != null) romLocator.cancel();
         romLocator = null;
+        if (onboarding != null) onboarding.cancel();
+        onboarding = null;
+        if (hubMusic != null) hubMusic.close();
+        hubMusic = null;
         settingsScreen = null;
         toolsOpen = false;
         helpOpen = false;
@@ -2432,12 +2592,12 @@ public class MasterTitleScreen {
         return state != State.ACTIVE || navigation.zone() != TitleHubNavigation.Zone.CARD || quitPrompt || childInputPending
                 || settingsScreen != null || launchConfigPanel != null || modManagerScreen != null
                 || userRecordingMenu != null || tracePicker != null || standaloneActionOpen || extrasOpen
-                || toolsOpen || helpOpen || romLocator != null || catalogLoad != null || configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED);
+                || toolsOpen || helpOpen || romLocator != null || onboarding != null || catalogLoad != null || configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED);
     }
 
     boolean acceptsContentDrop() {
         return state == State.ACTIVE && !quitPrompt && !childInputPending
-                && romLocator == null && settingsScreen == null && launchConfigPanel == null && modManagerScreen == null
+                && romLocator == null && onboarding == null && settingsScreen == null && launchConfigPanel == null && modManagerScreen == null
                 && userRecordingMenu == null && tracePicker == null && catalogLoad == null;
     }
 
