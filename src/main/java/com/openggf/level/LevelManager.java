@@ -1911,6 +1911,13 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         return actualEnd;
     }
 
+    /** Whether the foreground tile pass wraps vertically (layout wrap or a retained VDP-plane ring). */
+    boolean foregroundPlaneWrapsVertically() {
+        return verticalWrapEnabled
+                || (zoneFeatureProvider instanceof com.openggf.game.internal.ForegroundDescriptorOverride owner
+                    && owner.foregroundDescriptorRevision() != 0 && owner.foregroundDescriptorsWrapVertically());
+    }
+
     boolean isHudSuppressed() {
         return transitions.isForceHudSuppressed()
                 || (zoneFeatureProvider != null

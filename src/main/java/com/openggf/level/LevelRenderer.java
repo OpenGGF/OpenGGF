@@ -656,7 +656,7 @@ public final class LevelRenderer {
             bools[3] = r.pendingFgUseUnderwater_high;
             bools[4] = r.pendingBgTilePassHasWater;
             bools[5] = r.pendingBgTilePassPerLineScroll;
-            bools[6] = r.lm.verticalWrapEnabled;
+            bools[6] = r.lm.foregroundPlaneWrapsVertically();
             bools[7] = r.pendingFboSuppressFrontScenery;
             refs[0] = r.pendingFgAtlasId_low;
             refs[1] = r.pendingFgPaletteId_low;
