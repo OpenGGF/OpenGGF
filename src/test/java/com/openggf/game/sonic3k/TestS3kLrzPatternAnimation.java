@@ -220,6 +220,7 @@ class TestS3kLrzPatternAnimation {
             fixture.camera().setYCopy((short) 0x0320);
             handler.update(lines, cameraX, 0x0320, step, act);
             animator.update();
+            animator.publishAniPlcAtVBlank(); // loc_282D0's Add_To_DMA_Queue drains at the next VInt
 
             byte[] channel0 = tileBytes(level, 0x320, 0x24);
             byte[] channel1 = tileBytes(level, 0x344, 0x0C);
