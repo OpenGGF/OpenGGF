@@ -205,6 +205,10 @@ public enum SonicConfiguration {
 	WIDESCREEN_DEADZONE_MODE,
 	/** When true, the display window is derived from DISPLAY_ASPECT at the 2x baseline; when false, SCREEN_WIDTH/SCREEN_HEIGHT are used verbatim. */
 	DISPLAY_WINDOW_AUTOSIZE,
+	/** Windowed, borderless desktop fullscreen, or exclusive fullscreen presentation. */
+	DISPLAY_WINDOW_MODE,
+	/** Square-pixel presentation: whole-number scaling or largest proportional fit. */
+	DISPLAY_SCALING,
 	/** Root directory scanned for user display shaders (relative to working dir). */
 	DISPLAY_SHADER_LIBRARY_ROOT,
 	/** Last selected display shader: "OFF" or a root-relative forward-slash path. */

@@ -727,6 +727,8 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
 		putDefault(SonicConfiguration.WIDESCREEN_DEADZONE_MODE, "PROPORTIONAL");
 		putDefault(SonicConfiguration.DISPLAY_WINDOW_AUTOSIZE, true);
+		putDefault(SonicConfiguration.DISPLAY_WINDOW_MODE, "WINDOWED");
+		putDefault(SonicConfiguration.DISPLAY_SCALING, "INTEGER");
 		putDefault(SonicConfiguration.DISPLAY_SHADER_LIBRARY_ROOT, "shaders");
 		putDefault(SonicConfiguration.DISPLAY_SHADER_SELECTION, "OFF");
 		putDefaultKey(SonicConfiguration.DISPLAY_SHADER_NEXT_KEY, GLFW_KEY_RIGHT_BRACKET);

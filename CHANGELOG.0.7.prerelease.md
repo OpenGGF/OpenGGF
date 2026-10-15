@@ -9,6 +9,9 @@ Unreleased. The earlier development themes remain in
   picture into the paused-game card; Resume expands it back to full size before
   gameplay continues. Saved Game Setup preferences remain current on resume,
   and returning live options to Default releases the earlier per-game overrides.
+  Display settings offer windowed, borderless and fullscreen modes, with integer
+  or aspect-preserving fit scaling. Maximising and resizing retain the requested
+  window bounds, including on high-DPI screens.
   Settings show **RESTART** only for changed
   values awaiting a restart, clearing it when restored to the running value.
   The hub remembers the last game, with idle ROM terrain previews and optional

@@ -52,6 +52,12 @@ public final class ConfigCatalog {
         put(DISPLAY_ASPECT, ofEnum("display", "aspect",
                 "Display aspect preset; resolves screen pixel width, height stays 224",
                 Set.of("NATIVE_4_3", "WIDE_16_10", "WIDE_16_9", "ULTRA_21_9", "SUPER_32_9")));
+        put(DISPLAY_WINDOW_MODE, ofEnum("display", "windowMode",
+                "Window presentation: WINDOWED, desktop BORDERLESS, or exclusive FULLSCREEN",
+                Set.of("WINDOWED", "BORDERLESS", "FULLSCREEN")));
+        put(DISPLAY_SCALING, ofEnum("display", "scaling",
+                "Square-pixel scaling: INTEGER uses whole-number multiples; FIT fills the available area proportionally",
+                Set.of("INTEGER", "FIT")));
         put(DISPLAY_WINDOW_AUTOSIZE, of("display", "windowAutosize", BOOL,
                 "Derive the window size from the aspect preset at the 2x baseline"));
         put(DISPLAY_SHADER_LIBRARY_ROOT, of("display", "shaderLibraryRoot", STRING,

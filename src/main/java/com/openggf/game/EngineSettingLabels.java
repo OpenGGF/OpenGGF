@@ -14,6 +14,8 @@ final class EngineSettingLabels {
     static String label(SonicConfiguration key) {
         return switch (key) {
             case DISPLAY_ASPECT -> "Aspect ratio";
+            case DISPLAY_WINDOW_MODE -> "Window mode";
+            case DISPLAY_SCALING -> "Scaling";
             case DISPLAY_WINDOW_AUTOSIZE -> "Automatic window size";
             case SCREEN_WIDTH -> "Window width";
             case SCREEN_HEIGHT -> "Window height";
@@ -72,7 +74,9 @@ final class EngineSettingLabels {
     static String description(SonicConfiguration key) {
         return switch (key) {
             case DISPLAY_ASPECT -> "Choose the shape of the game screen.";
-            case DISPLAY_WINDOW_AUTOSIZE -> "Fit the window to your chosen screen shape automatically.";
+            case DISPLAY_WINDOW_MODE -> "Choose windowed, borderless or exclusive fullscreen.";
+            case DISPLAY_SCALING -> "Use whole-number pixels or fit the screen while keeping its proportions.";
+            case DISPLAY_WINDOW_AUTOSIZE -> "Fit the window when the game screen shape changes.";
             case SCREEN_WIDTH -> "Set the window width when automatic sizing is off.";
             case SCREEN_HEIGHT -> "Set the window height when automatic sizing is off.";
             case DISPLAY_SHADER_SELECTION -> "Choose a visual effect for the game screen.";

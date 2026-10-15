@@ -2,8 +2,8 @@ package com.openggf;
 
 import static org.lwjgl.glfw.GLFW.GLFW_MAXIMIZED;
 import static org.lwjgl.glfw.GLFW.GLFW_TRUE;
-import static org.lwjgl.glfw.GLFW.glfwGetPrimaryMonitor;
-import static org.lwjgl.glfw.GLFW.glfwGetVideoMode;
+import static org.lwjgl.glfw.GLFW.glfwGetFramebufferSize;
+import static org.lwjgl.glfw.GLFW.glfwGetMonitorWorkarea;
 import static org.lwjgl.glfw.GLFW.glfwGetWindowAttrib;
 import static org.lwjgl.glfw.GLFW.glfwGetWindowMonitor;
 import static org.lwjgl.glfw.GLFW.glfwGetWindowSize;
@@ -11,7 +11,6 @@ import static org.lwjgl.glfw.GLFW.glfwSetWindowSize;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
 import java.util.logging.Logger;
-import org.lwjgl.glfw.GLFWVidMode;
 
 /**
  * Fits the window to the display aspect when a launch changes it (a launch profile's aspect,
@@ -51,10 +50,18 @@ final class DisplayWindowFit {
         int[] width = new int[1];
         int[] height = new int[1];
         glfwGetWindowSize(window, width, height);
-        long monitor = glfwGetPrimaryMonitor();
-        GLFWVidMode mode = monitor == NULL ? null : glfwGetVideoMode(monitor);
-        int[] size = fit(width[0], height[0], pixelWidth, pixelHeight, mode == null ? 0 : mode.width(),
-                mode == null ? 0 : mode.height());
+        var monitor = DisplayWindowController.monitorForWindow(window);
+        int[] fbWidth = new int[1], fbHeight = new int[1];
+        glfwGetFramebufferSize(window, fbWidth, fbHeight);
+        if (width[0] <= 0 || height[0] <= 0 || fbWidth[0] <= 0 || fbHeight[0] <= 0) return false;
+        double dpiX = (double) fbWidth[0] / width[0], dpiY = (double) fbHeight[0] / height[0];
+        int[] availableW = new int[1], availableH = new int[1];
+        if (monitor != null) {
+            glfwGetMonitorWorkarea(monitor.handle(), new int[1], new int[1], availableW, availableH);
+        }
+        int[] pixels = fit(fbWidth[0], fbHeight[0], pixelWidth, pixelHeight,
+                (int) (availableW[0] * dpiX), (int) (availableH[0] * dpiY));
+        int[] size = {(int) Math.round(pixels[0] / dpiX), (int) Math.round(pixels[1] / dpiY)};
         if (size[0] == width[0] && size[1] == height[0]) {
             return false;
         }

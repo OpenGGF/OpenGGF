@@ -10,7 +10,7 @@ public final class ModApiVersion {
      * Current unpublished compiled-mod API candidate, including native decoded
      * factory binding and original-ring retention on class-preserving levels,
      * and bounded S3K boss/special/bonus-stage difficulty policies. The 0.7 candidate also includes
-     * widescreen presentation, KiS2 movement/touch/checkpoint/menu handoff contracts,
+     * live window mode and display scaling preferences, widescreen presentation, KiS2 movement/touch/checkpoint/menu handoff contracts,
      * deferred SMPS header construction, explicit dynamic solid-contact rewind binding,
      * opt-in whole-game presentation pacing, modal level input ownership, controlled level admission and opaque
      * course checkpoints, semantic native impulses, logical menu pointers, and read-only

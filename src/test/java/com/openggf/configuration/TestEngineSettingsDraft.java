@@ -178,6 +178,32 @@ class TestEngineSettingsDraft {
         assertTrue(draft.bindingConflicts(P2_A).isEmpty());
     }
 
+    @Test
+    void displayModesAreEditableImmediatePreferencesAndSurviveReload() throws IOException {
+        SonicConfigurationService config = service();
+        EngineSettingsDraft draft = new EngineSettingsDraft(config);
+        assertEquals("WINDOWED", draft.text(DISPLAY_WINDOW_MODE));
+        assertEquals("INTEGER", draft.text(DISPLAY_SCALING));
+        assertTrue(draft.keys(EngineSettingsDraft.Category.DISPLAY).contains(DISPLAY_WINDOW_MODE));
+        assertTrue(draft.keys(EngineSettingsDraft.Category.DISPLAY).contains(DISPLAY_SCALING));
+        assertEquals(SettingTiming.NOW, SettingTiming.of(DISPLAY_WINDOW_MODE));
+        assertEquals(SettingTiming.NOW, SettingTiming.of(DISPLAY_SCALING));
+        assertThrows(IllegalArgumentException.class, () -> draft.set(DISPLAY_WINDOW_MODE, "invalid"));
+        assertThrows(IllegalArgumentException.class, () -> draft.set(DISPLAY_SCALING, "STRETCH"));
+
+        for (String mode : new String[] { "BORDERLESS", "FULLSCREEN", "WINDOWED" }) {
+            draft.set(DISPLAY_WINDOW_MODE, mode);
+            draft.set(DISPLAY_SCALING, "FIT");
+            draft.apply();
+            SonicConfigurationService reloaded = service();
+            assertEquals(mode, reloaded.getString(DISPLAY_WINDOW_MODE));
+            assertEquals("FIT", reloaded.getString(DISPLAY_SCALING));
+        }
+        draft.reset(EngineSettingsDraft.Category.DISPLAY);
+        draft.apply();
+        assertEquals("INTEGER", service().getString(DISPLAY_SCALING));
+    }
+
     private SonicConfigurationService service() {
         return SonicConfigurationService.createStandalone(directory);
     }

@@ -6,6 +6,8 @@
 # ── Display ──
 display:
   aspect: "NATIVE_4_3"   # Display aspect preset; resolves screen pixel width, height stays 224
+  windowMode: "WINDOWED"   # WINDOWED, BORDERLESS desktop fullscreen, or exclusive FULLSCREEN
+  scaling: "INTEGER"   # Whole-number square pixels; FIT permits fractional proportional scaling
   windowAutosize: true   # Derive the window size from the aspect preset at the 2x baseline
   shaderLibraryRoot: shaders   # Root directory scanned for user display shaders
   shaderSelection: "OFF"   # Last selected display shader: OFF or a root-relative forward-slash path
