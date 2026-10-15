@@ -112785,3 +112785,32 @@ Command (HPZ tree; Java 25, surfaceless EGL, original absolute ROM paths):
 `python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay-r7 -Dsurefire.forkCount=1
 "-Dtest=<17 classes listed in the matrix>" "-Ds3k.rom.path=…" "-Dsonic1.rom.path=…" "-Dsonic2.rom.path=…"
 -Dopenggf.headless.gl=surfaceless-egl test`. Run 2026-10-15 02:30 UTC: 796 tests / 3 failures / 0 errors / 0 skips; all three traces and all 700 finite mechanism products pass; the 3 failures were the new P2-deletion fixture's placement (fixed with a 90-step CPU settle; 3/0/0/0 after, 3/3 red with the source reverted).
+
+### 2026-10-15 — S3K Slots Sonic+Tails: delivery regression attributed and fixed
+
+`TestS3kSlotsBonusTraceReplay$SonicAndTails$Segment1` (`trace-scope-r6`) had
+regressed inside this delivery: 71 errors / 0 warnings, first error frame 5
+`player_mapping_frame` (expected $97, engine $96). Every roll step published one frame
+late. The class was green in the 2026-08-20 control. The bonus entry above measured
+only `-Ptrace-replay-r7`, which excludes this r6 class, so the regression did not
+show there.
+
+Command (Root `.worktrees/ai-s3k-parity-coverage`; Java 25, surfaceless EGL, original
+absolute S3K ROM path): `python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay
+-Dsurefire.forkCount=1 "-Dtest=TestS3kSlotsBonusTraceReplay*" "-Ds3k.rom.path=…" test`.
+
+| Arm | Tree | Maven finished (UTC) | Result |
+|---|---|---|---|
+| control (temporary toggle present, off) | `19b7d70a6` + edit | 07:44:35 | 71 errors, first frame 5 (same as the slot-presentation lane's run on `2adfa37a7`) |
+| Slot host-art bind disabled (temporary) | `19b7d70a6` + edit | 07:51:50 | 71 errors, identical |
+| `b816f2d95` bootstrap hunk reverted (temporary) | `19b7d70a6` + reverse hunk | 08:16:05 | 1/0/0/0 |
+| fix `37991405c` + slot-presentation merge | `3ef45fbb3` | 09:02:48 | 1/0/0/0; report 0 errors / 0 warnings / 5259 frames |
+
+Cause: `b816f2d95` keeps the real initial `Process_Sprites` walk for bonus trace
+entry. That walk applied `Sonic_Init`'s assembly writes, including
+`publishPreviousAnimationId(0)`, to the Slot stage's dedicated
+`Obj_Sonic_RotatingSlotBonus`. Its spawn routine `loc_4B9CE` (sonic3k.asm:98710-98742)
+never reaches `Sonic_Init`, and the Slot runtime already models that pass. The reset
+`prev_anim` re-ran `Animate_Sonic`'s change branch on the first `LevelLoop` pass. Fix
+`37991405c` lets custom-physics playables own their spawn pass. Gumball and Pachinko
+have no custom-physics playable, so their initial walk is unchanged.

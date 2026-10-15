@@ -135,6 +135,7 @@ Entries should include:
 43. [Sky Sanctuary Metropolis Orb Reads After a Freed Parent Slot Remain Unmodelled](#sky-sanctuary-metropolis-orb-reads-after-a-freed-parent-slot-remain-unmodelled)
 44. [S3K Special-Property Sidekick Behaviour: Corrected Diagnosis](#s3k-special-property-sidekick-behaviour-corrected-diagnosis)
 45. [Object Art and Clock Reads Found by the Slay the Robotnik Sprite Research (SUSPECTED)](#object-art-and-clock-reads-found-by-the-slay-the-robotnik-sprite-research-suspected)
+46. [Ending Reunion Kos Service Count — Per-Object CPU Budget (OPEN)](#ending-reunion-kos-service-count--per-object-cpu-budget-open)
 
 ---
 
@@ -6459,3 +6460,28 @@ needs its own ROM check and focused test before changing.
 - **Removal condition** — EggRobo models the entry passes for all three subtypes, with
   rewind capture for the new state and a focused test of the first release, fly-by and
   fighter pass.
+
+---
+
+## Ending Reunion Kos Service Count — Per-Object CPU Budget (OPEN)
+
+Native completes the ending reunion's paired art job `$1D17A6` in four
+`Process_Kos_Queue` services on Tails/+2, but in three on Sonic/+2 and team/+2
+(NTSC) and on PAL Tails/+2. The job itself costs the same everywhere
+(211,058–211,062 decompressor cycles). What differs is the idle-loop budget left
+before each VInt after that frame's object code: on the third service Tails' player
+code and its tail's `Tails_Tail_Load_PLC` DMA leave it 1,924 cycles (0.9%) short.
+The engine's `s3k-kos-v1` profile keys service counts on the stable job
+fingerprint, so it publishes four services on every route. The engine therefore
+reaches the Sonic/+2 and team/+2 reunion gate one frame after native.
+
+### Why it stays open
+- A route- or character-keyed row, a Hyper-keyed shift, or a corpus-mean budget
+  would be fitted to this boundary. The runtime invariants reject all three.
+- A semantic budget model would need about ±0.7% precision. Per-frame budgets move
+  by about ±10% with scene state, and the deciding cost is per-object 68k code.
+
+### Removal condition
+A budget model without route keys that reproduces all six measured native counts
+(NTSC and PAL) and the 46 multi-valued corpus fingerprints. Evidence and rejected
+candidates are in the [ending lifecycle design](../architecture/designs/2026-10-13-s3k-ending-lifecycle.md#kos-idle-budget-measurement-of-the-hyper-sonic-residual-2026-10-15-opus-kos-budget-lane).
