@@ -2,7 +2,7 @@ package com.openggf.game.sonic3k.scroll;
 
 import com.openggf.game.sonic3k.runtime.SszZoneRuntimeState;
 
-/** SSZ2 encounter sub_58D3E / sub_58FBC, before the excluded ending redraw. */
+/** SSZ2 sub_58D3E / sub_58FBC: the encounter, the island redraw and background routine 4. */
 final class SszAct2Deformation {
     private SszAct2Deformation() { }
 
@@ -118,6 +118,62 @@ final class SszAct2Deformation {
             int bg = word(state, source) - 0x5E;
             output[line] = (output[line] & 0xFFFF0000) | (bg & 0xFFFF);
             source += 2;
+        }
+    }
+
+    /**
+     * {@code loc_58D44} (sonic3k.asm:118015-118032), taken by {@code sub_58D3E} once
+     * {@code Events_routine_bg} is non-zero: {@code HScroll_table}'s longword gains {@code $8000}
+     * and its old integer word seeds eight words that each drop by an eighth, from {@code +$16}
+     * down to {@code +$08}, under a fixed {@code $5E} at {@code +$18}.
+     */
+    static void endingBackgroundParameters(SszZoneRuntimeState state) {
+        int value = state.cloudDrift() & 0xFFFF0000;
+        state.setCloudDrift(state.cloudDrift() + 0x8000);
+        put(state, 0x18, 0x5E);
+        int step = value >> 3;
+        for (int offset = 0x16; offset >= 8; offset -= 2) {
+            put(state, offset, value >> 16);
+            value -= step;
+        }
+    }
+
+    /**
+     * {@code ApplyDeformation} (sonic3k.asm:103664-103760) as {@code sub_58FBC} enters it with
+     * {@code SSZ2_BGDeformArray} and {@code HScroll_table+$004}: bands measured down from
+     * {@code Camera_Y_pos_BG_copy}, each line pairing {@code -Camera_X_pos_copy} with the
+     * negated band word, or one word per line for a band with bit 15 set.
+     */
+    static void composeEndingBackground(SszZoneRuntimeState state, int[] output, int cameraXCopy, int[] bands) {
+        int foreground = (-cameraXCopy & 0xFFFF) << 16;
+        int y = (short) state.backgroundCameraY(), band = 0, source = 4, height;
+        boolean perLine;
+        while (true) {
+            height = bands[band++];
+            perLine = (height & 0x8000) != 0;
+            height &= 0x7FFF;
+            y = (short) (y - height);
+            if (y < 0) break;
+            source += perLine ? height * 2 : 2;
+        }
+        if (perLine) source += (height + y) * 2;
+        int count = -y, remaining = (0xE0 - 1) - count, line = 0; // move.w #$E0-1,d1
+        if (remaining < 0) count = 0xE0;
+        while (true) {
+            if (perLine) {
+                for (int i = 0; i < count; i++, source += 2)
+                    output[line++] = foreground | (-word(state, source) & 0xFFFF);
+            } else {
+                int background = -word(state, source) & 0xFFFF;
+                source += 2;
+                for (int i = 0; i < count; i++) output[line++] = foreground | background;
+            }
+            if (remaining < 0) return;
+            height = bands[band++];
+            perLine = (height & 0x8000) != 0;
+            height &= 0x7FFF;
+            count = remaining - height >= 0 ? height : remaining + 1;
+            remaining -= height;
         }
     }
 

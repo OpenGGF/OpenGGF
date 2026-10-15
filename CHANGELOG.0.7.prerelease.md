@@ -178,7 +178,8 @@ Unreleased. The earlier development themes remain in
   names again instead of an empty sky, each entering at the bottom of the screen
   where the original draws it. The credits start on the frame the original
   starts them, and with every emerald the second part lifts the island away and
-  stops new clouds where the original does.
+  stops new clouds where the original does. The island then scrolls out of the
+  background and the original's starfield and rolling sea replace it.
 
 - **Capture and controller tools:** Input branches reject checkpoints whose pending
   fresh assembly or transition callback cannot be restored by gameplay rewind.

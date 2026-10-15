@@ -2209,6 +2209,8 @@ public class Sonic3kConstants {
     public static final int MAP_SSZ_FLOATING_PLATFORM_ADDR = 0x046900;
     /** {@code word_58C80}: SSZ2 encounter foreground deformation band heights. */
     public static final int SSZ2_FG_DEFORM_TABLE_ADDR = 0x058C80;
+    /** {@code SSZ2_BGDeformArray}: background band heights {@code sub_58FBC} uses once {@code Events_routine_bg} is set. */
+    public static final int SSZ2_BG_DEFORM_TABLE_ADDR = 0x058CDE;
 
     /**
      * {@code word_5853E} (sonic3k.lst:136479): the count word {@code $A-1} followed by ten

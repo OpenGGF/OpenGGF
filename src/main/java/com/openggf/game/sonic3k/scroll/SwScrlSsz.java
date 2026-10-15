@@ -64,8 +64,8 @@ import static com.openggf.level.scroll.M68KMath.negWord;
  * <p>Act 2's encounter path uses {@code sub_58D3E}/{@code sub_58FBC}: ROM-backed
  * foreground bands, background horizontal waves and gated background VSRAM columns.
  * Its intermediate table and render clock live in the rewindable runtime state.
- * The later ending redraw branches (foreground routine {@code $C} onward) remain
- * unimplemented and currently use the default handler.
+ * The ending redraws (foreground routine {@code $C} onward) use the plain and island
+ * deformations, and background routine 4 uses {@code loc_58D44}'s fan.
  */
 public class SwScrlSsz extends SwScrlS3kDefault {
 
@@ -122,25 +122,14 @@ public class SwScrlSsz extends SwScrlS3kDefault {
 
     private int[] act2ForegroundBands;
     private int[] act2IslandBands;
+    private int[] act2EndingBackgroundBands;
 
     private void updateAct2(SszZoneRuntimeState state, int[] output, int cameraX, int cameraY, int frame) {
         // ParallaxManager supplies physical camera Y, whereas loc_58E6E and
         // ApplyFGDeformation consume Camera_Y_pos_copy, including the full shake.
         cameraY = (short) (cameraY + state.appliedScreenShakeOffset());
         if (act2ForegroundBands == null) {
-            try {
-                var rom = GameServices.level().getObjectManager().getObjectServices().romReader();
-                var bands = new java.util.ArrayList<Integer>();
-                for (int address = Sonic3kConstants.SSZ2_FG_DEFORM_TABLE_ADDR; ; address += 2) {
-                    int height = rom.readU16BE(address);
-                    bands.add(height);
-                    if (height == 0x7FFF) break;
-                    if (bands.size() > 64) throw new IllegalStateException("SSZ2 deform table terminator missing");
-                }
-                act2ForegroundBands = bands.stream().mapToInt(Integer::intValue).toArray();
-            } catch (java.io.IOException failure) {
-                throw new java.io.UncheckedIOException(failure);
-            }
+            act2ForegroundBands = readBands(Sonic3kConstants.SSZ2_FG_DEFORM_TABLE_ADDR);
         }
         if (frame != state.backgroundScrollFrame()) {
             state.setBackgroundScrollFrame(frame);
@@ -151,6 +140,45 @@ public class SwScrlSsz extends SwScrlS3kDefault {
         for (int i = 0; i < VISIBLE_LINES; i++) trackOffsetFromPacked(output[i]);
         vscrollFactorBG = (short) state.backgroundCameraY();
         currentBgPeriodWidth = SwScrlHpz.requiredBgPeriodWidth(output, viewportWidth());
+    }
+
+    /**
+     * {@code SSZ2_BackgroundEvent} once {@code loc_58BBC} has set {@code Events_routine_bg}:
+     * {@code sub_58D3E} takes {@code loc_58D44} and {@code sub_58FBC} applies
+     * {@code SSZ2_BGDeformArray} against {@code Camera_Y_pos_BG_copy}, whatever the
+     * foreground routine. Plane B's rows are {@code SszEndingBackgroundPlaneState}'s.
+     */
+    private void updateAct2EndingBackground(SszZoneRuntimeState state, int[] output, int frame) {
+        if (act2EndingBackgroundBands == null) {
+            act2EndingBackgroundBands = readBands(Sonic3kConstants.SSZ2_BG_DEFORM_TABLE_ADDR);
+        }
+        if (frame != state.backgroundScrollFrame()) {
+            state.setBackgroundScrollFrame(frame);
+            SszAct2Deformation.endingBackgroundParameters(state);
+        }
+        SszAct2Deformation.composeEndingBackground(state, output, GameServices.camera().getXCopy(),
+                act2EndingBackgroundBands);
+        vscrollFactorBG = (short) state.backgroundCameraY();
+        resetScrollTracking();
+        for (int i = 0; i < VISIBLE_LINES; i++) trackOffsetFromPacked(output[i]);
+        currentBgPeriodWidth = SwScrlHpz.requiredBgPeriodWidth(output, viewportWidth());
+    }
+
+    /** A ROM band-height table through its {@code $7FFF} terminator. */
+    private static int[] readBands(int address) {
+        try {
+            var rom = GameServices.level().getObjectManager().getObjectServices().romReader();
+            var bands = new java.util.ArrayList<Integer>();
+            for (; ; address += 2) {
+                int height = rom.readU16BE(address);
+                bands.add(height);
+                if (height == 0x7FFF) break;
+                if (bands.size() > 64) throw new IllegalStateException("SSZ2 deform table terminator missing");
+            }
+            return bands.stream().mapToInt(Integer::intValue).toArray();
+        } catch (java.io.IOException failure) {
+            throw new java.io.UncheckedIOException(failure);
+        }
     }
 
     @Override public short getVscrollFactorFG() {
@@ -169,6 +197,10 @@ public class SwScrlSsz extends SwScrlS3kDefault {
     @Override
     public void update(int[] horizScrollBuf, int cameraX, int cameraY, int frameCounter, int actId) {
         SszZoneRuntimeState state = state();
+        if (actId == 1 && state != null && state.screenInitApplied() && state.backgroundRoutine() != 0) {
+            updateAct2EndingBackground(state, horizScrollBuf, frameCounter);
+            return;
+        }
         if (actId == 1 && state != null && state.screenInitApplied()
                 && state.foregroundRoutine() >= 0x18 && state.backgroundRoutine() == 0) {
             if (act2IslandBands == null) {
