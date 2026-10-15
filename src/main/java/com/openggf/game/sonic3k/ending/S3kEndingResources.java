@@ -15,6 +15,8 @@ public final class S3kEndingResources {
     public static final int CREDIT_SPEED = 0x5B69E; // CreditsText_ScrollSpeed
     public static final int CREDIT_PARTS = 0x5B284; // off_5B284
     public static final int POST_CREDITS_DISPATCH = 0x5EFB6;
+    public static final int S3K_LOGO_POSITIONS = 0x5F260; // word_5F260, read by sub_5FF1C for loc_5F20A
+    public static final int TM_OFFSETS = 0x5F520; // byte_5F520, read by loc_5FFD4 for loc_5F4FA
     public static final int ENDING_PLANE = 0x163418;
     public static final int ENDING_PLANE_EXTRA = 0x162914;
     public static final int MAP_ENDING_PLANE = 0x6036E;
@@ -52,6 +54,7 @@ public final class S3kEndingResources {
     public static final int PAL_TAILS_POSE = 0x60B4A;
     public static final int PAL_SUPER_SONIC_POSE = 0x60B8A;
     public static final int PAL_KNUCKLES_POSE = 0x60BEA;
+    public static final int PAL_KNUCKLES_POSE_SUPER = 0x5FBE2; // Pal_KnuxEndPoseSuper, loc_5FBA0's LEA
     public static final int PAL_EGGMAN_EYECATCH = 0x60BCA;
     public static final int PAL_EGG_ROBO_EYECATCH = 0x60BAA;
     public static final int PAL_SMALL_PLANE = 0x60A9A;

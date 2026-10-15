@@ -146,8 +146,12 @@ class TestSszAct2CameraController {
                         : com.openggf.configuration.WidescreenAspect.SUPER_32_9).name());
         config.resolveDisplayAspect();
         config.setSessionOverride(com.openggf.configuration.SonicConfiguration.SCREEN_WIDTH_PIXELS, width);
+        // A reused gameplay session keeps its old viewport; rebuild it with this width.
+        com.openggf.game.session.SessionManager.clear();
+        TestEnvironment.activeGameplayMode();
         try {
             var fixture = boot(); fixture.stepIdleFrames(300);
+            assertEquals(width, fixture.camera().getWidth());
             for (int i = 0; i < 7; i++) TestEnvironment.objectServices().gameState().markEmeraldCollected(i);
             // Declared post-stop presentation entry: the excluded ending owner would
             // write the negative signal while the defeated arena holds camera control.
@@ -211,6 +215,47 @@ class TestSszAct2CameraController {
             assertEquals(0x10, state().foregroundRoutine());
             assertEquals(2, state().ending().credits().routine(),
                     "loc_58B9E runs sub_5B18E's init on the pass that finishes the redraw");
+        } finally {
+            config.clearSessionOverrides();
+        }
+    }
+
+    /**
+     * ScreenEvents (sonic3k.asm:102233-102255) copies Camera_Y_pos before the event dispatch
+     * and writes V_scroll_value from Camera_Y_pos_copy afterwards; SSZ2_ScreenEvent has added
+     * Screen_shake_offset to that copy (sonic3k.asm:117750-117751). The credits' loc_5B204
+     * moves only Camera_Y_pos, so Plane A keeps the copy: the generation the published sprite
+     * table is projected with. Native Knuckles credits frames show both one pass behind RAM.
+     * ParallaxManager reads a zero handler value as "use the camera", so a zero copy is skipped.
+     */
+    @Test
+    void creditsPlaneAVScrollFollowsCameraYCopyNotTheCameraTheCreditsMoved() {
+        var config = com.openggf.configuration.SonicConfigurationService.getInstance();
+        config.setSessionOverride(com.openggf.configuration.SonicConfiguration.MAIN_CHARACTER_CODE, "knuckles");
+        config.setSessionOverride(com.openggf.configuration.SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+        try {
+            var fixture = boot(); fixture.stepIdleFrames(300);
+            for (int i = 0; i < 7; i++) TestEnvironment.objectServices().gameState().markEmeraldCollected(i);
+            com.openggf.game.sonic3k.ending.S3kEndingCoordinator.initializeProgress(TestEnvironment.objectServices());
+            state().setEndingRunning(true);
+            state().setForegroundRoutine(8);
+            state().setEventsFg4(0xFF00);
+            state().setSpecialVIntRoutine(4);
+            fixture.camera().setScrollLocked(true);
+            int passes = 0;
+            while (state().foregroundRoutine() != 0x10 && passes++ < 5000) fixture.stepIdleFrames(1);
+            assertEquals(0x10, state().foregroundRoutine());
+            int moved = 0, zeroCopyMoves = 0;
+            for (int pass = 0; pass < 600; pass++) {
+                fixture.stepIdleFrames(1);
+                short copy = fixture.camera().getYCopy();
+                boolean differs = copy != fixture.camera().getY();
+                if (differs) moved++;
+                if (copy == 0) { if (differs) zeroCopyMoves++; continue; }
+                assertEquals(copy, GameServices.parallax().getVscrollFactorFG(), "credits pass " + pass);
+            }
+            assertTrue(moved > 100, "loc_5B204 moves Camera_Y_pos after the copy: " + moved);
+            assertTrue(zeroCopyMoves <= 1, "zero-copy passes with a moved camera: " + zeroCopyMoves);
         } finally {
             config.clearSessionOverrides();
         }
