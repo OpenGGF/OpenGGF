@@ -18,11 +18,13 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import static org.junit.jupiter.api.Assertions.*;
 
-/** Controlled native optional-intake witness; real packed-owner fault composition belongs to root. */
+/** Lower A1 event intake only. Upper A2 intake belongs to the placed owner and
+ * TestMgzEndBossKnuxAdmission; the historical synthetic Knuckles cases were wrong-owner evidence.
+ * Real packed-owner fault composition belongs to root. */
 class TestWestMgzRecipeBirth {
     @AfterEach void cleanup() { SessionManager.clear(); }
 
-    @ParameterizedTest @ValueSource(strings={"sonic","knuckles"})
+    @ParameterizedTest @ValueSource(strings={"sonic"})
     void firstAbortPropagatesBeforeAnyCharacterBossAllocation(String character) throws Exception {
         Witness witness = new Witness(character);
         witness.module.abort = true;
@@ -34,7 +36,7 @@ class TestWestMgzRecipeBirth {
         assertEquals(true, value(witness.events,"bossSpawned"));
     }
 
-    @ParameterizedTest @ValueSource(strings={"sonic","knuckles"})
+    @ParameterizedTest @ValueSource(strings={"sonic"})
     void alreadyAbsentProviderKeepsTheStockCharacterEncounter(String character) throws Exception {
         Witness witness=new Witness(character); witness.module.recipe=null; witness.enter();
         assertEquals(1,witness.module.samples); assertEquals(1,witness.manager.getActiveObjects().size());
@@ -44,13 +46,24 @@ class TestWestMgzRecipeBirth {
         assertEquals(1,witness.module.samples); assertEquals(1,witness.manager.getActiveObjects().size());
     }
 
-    @ParameterizedTest @ValueSource(strings={"sonic","knuckles"})
+    @ParameterizedTest @ValueSource(strings={"sonic"})
     void fullNativeSstDoesNotSwallowTheFirstProviderAbort(String character) throws Exception {
         Witness witness = new Witness(character); witness.module.abort = true;
         witness.manager.reserveAllButNFreeSlots(0);
         assertThrows(Declined.class, witness::enter);
         assertEquals(1, witness.module.samples);
         assertTrue(witness.manager.getActiveObjects().isEmpty());
+    }
+
+    @org.junit.jupiter.api.Test
+    void lowerResizeStillAllocatesA1EvenWhenTheSelectedCharacterIsKnuckles() throws Exception {
+        Witness witness = new Witness("knuckles");
+        GameServices.camera().setY((short)0x600);
+        witness.enter();
+        assertEquals(1,witness.module.samples);
+        assertEquals(1,witness.manager.getActiveObjects().size());
+        assertInstanceOf(MgzEndBossInstance.class,witness.manager.getActiveObjects().iterator().next());
+        assertEquals(0x668,witness.manager.getActiveObjects().iterator().next().getSpawn().y());
     }
 
     private static final class Declined extends ObjectCallbackAbortException { Declined(){super("controlled optional first fault",null);} }
@@ -64,8 +77,10 @@ class TestWestMgzRecipeBirth {
     private static final class Witness {
         final Module module=new Module(); final Sonic3kMGZEvents events=new Sonic3kMGZEvents(); final ObjectManager manager;
         Witness(String character) throws Exception {
+            SessionManager.clear();
             EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
             GameServices.configuration().resetToDefaults(); GameModuleRegistry.setCurrent(module); TestEnvironment.activeGameplayMode();
+            assertSame(module,GameServices.module(),"native witness must sample its actual active world module");
             GameServices.configuration().setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE,character);
             var main=new TestablePlayableSprite(character,(short)0x3A10,(short)0x680);
             GameServices.sprites().addSprite(main); GameServices.camera().setFocusedSprite(main);

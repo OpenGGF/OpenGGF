@@ -162,6 +162,11 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
     // Bounded factory opt-in; null follows the shipped ring-selection path.
     // Captured scalar state restores this choice after spawn-based recreation.
     private BonusStarVariant invitationVariant;
+    // Scalar intent only. SUBMITTED never means ready or claimed: the native
+    // art provider retains the one admitted handle through object retirement.
+    private enum InvitationArtState { PENDING, SUBMITTED, RETIRED }
+    private InvitationArtState invitationArtState = InvitationArtState.RETIRED;
+    private boolean invitationWasAllocated;
     private int checkpointIndex;
     private boolean cameraLockFlag;
     private int animId;
@@ -200,6 +205,8 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
             case SLOT_MACHINE -> BonusStarVariant.RED;
             case NONE -> throw new IllegalArgumentException("Invitation requires a bonus family");
         };
+        post.invitationArtState = InvitationArtState.PENDING;
+        post.invitationWasAllocated = post.getSlotIndex() >= 0;
         return post;
     }
 
@@ -211,12 +218,6 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
             return;
         }
         initialized = true;
-        if (invitationVariant != null) {
-            ObjectRenderManager renderManager = services().renderManager();
-            if (renderManager != null && renderManager.getArtProvider() instanceof Sonic3kObjectArtProvider provider) {
-                provider.queueStarPostBonusArt(invitationVariant.artSourceAddress);
-            }
-        }
         // Init routine (loc_2CFC0): a star post is already-activated when its
         // respawn bit is set (btst #0,(a2), sonic3k.asm:61582) OR
         // Last_star_post_hit >= subtype (:61588). The engine folds both into the
@@ -231,6 +232,53 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
             this.animId = ANIM_SPINNING;
             this.mappingFrame = FRAME_RED_BALL;
         }
+        // Resolve the ROM's already-used/high-water state BEFORE asking for
+        // optional marker art. Reconstructed visited posts create no new job.
+        if (activated || checkpointState instanceof CheckpointState cs && cs.isUsedForSpecialStage()) {
+            retirePendingInvitationArt();
+        }
+    }
+
+    private void retirePendingInvitationArt() {
+        if (invitationArtState == InvitationArtState.PENDING) invitationArtState = InvitationArtState.RETIRED;
+    }
+
+    private void updateInvitationArt() {
+        if (invitationArtState != InvitationArtState.PENDING) return;
+        var checkpointState = services().checkpointState();
+        if (isDestroyed() || invitationWasAllocated && getSlotIndex() < 0
+                || checkpointState instanceof CheckpointState cs && cs.isUsedForSpecialStage()) {
+            retirePendingInvitationArt();
+            return;
+        }
+        // A generic recreation shell can remain unallocated until the manager
+        // publishes its captured SST. It has not lost a previously live slot.
+        if (getSlotIndex() < 0) return;
+        ObjectRenderManager renderManager = services().renderManager();
+        if (renderManager != null && renderManager.getArtProvider() instanceof Sonic3kObjectArtProvider provider
+                && provider.tryQueueStarPostInvitationArt(invitationVariant.artSourceAddress)) {
+            invitationArtState = InvitationArtState.SUBMITTED;
+        }
+    }
+
+    @Override
+    public void setDestroyed(boolean destroyed) {
+        super.setDestroyed(destroyed);
+        if (destroyed) retirePendingInvitationArt();
+    }
+
+    @Override
+    public void onUnload() {
+        // Spawn-backed RememberState retirement need not clear this instance's
+        // slot number. Only unsubmitted intent belongs to the post lifetime.
+        retirePendingInvitationArt();
+    }
+
+    @Override
+    public void setSlotIndex(int index) {
+        super.setSlotIndex(index);
+        if (index >= 0) invitationWasAllocated = true;
+        else if (invitationWasAllocated) retirePendingInvitationArt();
     }
 
     @Override
@@ -241,6 +289,9 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
         if (!activated && player != null) {
             checkActivation(player);
         }
+        // A current activation may still be waiting for ordinary native FIFO
+        // admission; unlike a reconstructed visited post, keep that intent.
+        updateInvitationArt();
         // loc_2D0F8: animate
         updateAnimation();
     }
@@ -392,7 +443,7 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
             spawnFreeChild(() -> new Sonic3kStarPostBonusStarChild(this, angleOffset, variant));
         }
         ObjectRenderManager renderManager = services().renderManager();
-        if (renderManager != null
+        if (invitationVariant == null && renderManager != null
                 && renderManager.getArtProvider()
                 instanceof Sonic3kObjectArtProvider provider) {
             provider.queueStarPostBonusArt(variant.artSourceAddress);
@@ -408,6 +459,7 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
         if (checkpointState instanceof CheckpointState cs) {
             cs.markUsedForSpecialStage();
         }
+        retirePendingInvitationArt();
         LOGGER.fine("S3K StarPost " + checkpointIndex + " marked as used for special stage entry");
     }
 
@@ -472,10 +524,12 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
             return;
         }
         renderer.drawFrameIndex(mappingFrame, x, y, false, false);
-        if (invitationVariant != null && !activated) {
-            // Use the selected family's native ROM mappings/art, prepared by
-            // the normal PLC owner. A pending renderer draws no false reward.
-            PatternSpriteRenderer marker = renderManager.getCheckpointStarRenderer(invitationVariant.artKey);
+        if (invitationVariant != null && !activated && invitationArtState == InvitationArtState.SUBMITTED) {
+            // Select this family's ROM sheet directly: the shared star helper
+            // falls back to another family when a sheet is missing. GPU-ready
+            // art is distinct from completion of the provider-owned FIFO job.
+            PatternSpriteRenderer marker = renderManager.getArtProvider() instanceof Sonic3kObjectArtProvider provider
+                    ? provider.getRenderer(invitationVariant.artKey) : null;
             if (marker != null && marker.isReady()) {
                 marker.drawFrameIndex(1, x - 12, y - 0x30, false, false);
                 marker.drawFrameIndex(1, x + 12, y - 0x30, false, false);

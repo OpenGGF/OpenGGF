@@ -577,7 +577,12 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     /** Shared art/palette and child-SST setup used by both native MGZ end-boss variants. */
     protected final void prepareSharedBossPresentation() {
         ensureCompositeRenderChildren();
-        queueInitialAssetsIfNeeded();
+        queueInitialAssetsIfNeeded(true);
+    }
+
+    /** Obj_MGZEndBossKnux queues art after sub_85D6A, before any fight children. */
+    protected final void prepareSharedBossAssetsAfterNativeFade() {
+        queueInitialAssetsIfNeeded(false);
     }
 
     private void ensureCompositeRenderChildren() {
@@ -1240,12 +1245,12 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
      * queue MGZ end-boss art, load PLC #$6D (shared Robotnik ship art), and
      * load Pal_MGZEndBoss into palette line 1.
      */
-    private void queueInitialAssetsIfNeeded() {
+    private void queueInitialAssetsIfNeeded(boolean fadeMusic) {
         serviceBossArtQueue();
         if (artQueued) {
             return;
         }
-        services().fadeOutMusic();
+        if (fadeMusic) services().fadeOutMusic();
         ensureArtLoaded();
         loadBossPalette();
         artQueued = true;

@@ -8,8 +8,12 @@ Unreleased. The earlier development themes remain in
 - **Second Strike hard-mode prototype:** Native brittle supports, earned zero-ring
   bonus invitations, finite badnik/boss patterns and original-ring retention keep
   player physics unchanged. Authored AIZ and first-five-zone campaign ingredients
-  are being developed; cold routes, character breadth and visual verification
-  remain in progress.
+  are being developed, with native MHZ wind pulses, LRZ echo jets and an FBZ
+  extra attack beat available as finite ingredients. Native finale ingredients
+  cover HPZ feints, an SSZ returning-boss extra pair, DEZ guard detection and a
+  delayed Doomsday tail missile; these remain unactivated pending qualification.
+  Cold routes, character
+  breadth, full later-zone authoring and visual verification remain in progress.
 
 - **Level authoring:** Named projects create, edit and reopen complete authored
   levels for Sonic 1, Sonic 2 and Sonic 3&K using ROM-derived asset libraries.
@@ -29,7 +33,11 @@ Unreleased. The earlier development themes remain in
   destination's deferred player assembly before its animation and art-loading
   tail, allowing ordinary movement after a fresh zone handoff. Publication also
   restores the destination ring count after the title boundary temporarily
-  retains the source count, including rewind across that boundary.
+  retains the source count, including rewind across that boundary. Ordinary
+  checkpoint reloads restore post activation before the first object pass.
+  Opted-in checkpoint invitations defer shared art until native queue admission
+  and reuse that work for their marker and bonus stars. The Slots bonus stage
+  reads its original board and entry position from the supplied ROM.
 
 - **S3K Knuckles routes:** Locked-on Mushroom Hill deletes the standalone S&K
   intro before it can freeze the camera and take player control. Its native

@@ -38,7 +38,7 @@ class TestS3kSlotStageState {
 
     @Test
     void renderBuffersUseExpandedLayoutStride() {
-        S3kSlotRenderBuffers buffers = S3kSlotRenderBuffers.fromRomData();
+        S3kSlotRenderBuffers buffers = S3kSlotLayoutFixture.buffers();
 
         assertEquals(0x80, buffers.layoutStrideBytes());
         assertEquals(0x80, buffers.layoutRows());
@@ -47,7 +47,7 @@ class TestS3kSlotStageState {
 
     @Test
     void expandedLayoutCopiesRowsIntoRomWorldOffsetSlots() {
-        byte[] expandedLayout = S3kSlotRomData.buildExpandedLayoutBuffer();
+        byte[] expandedLayout = S3kSlotLayoutFixture.expandedLayout();
 
         assertEquals(0x80 * 0x80, expandedLayout.length);
         int firstRow = (0x20 * 0x80) + 0x20;
@@ -62,7 +62,7 @@ class TestS3kSlotStageState {
 
     private static byte[] row(int rowIndex) {
         int start = rowIndex * 0x20;
-        return Arrays.copyOfRange(S3kSlotRomData.SLOT_BONUS_LAYOUT, start, start + 0x20);
+        return Arrays.copyOfRange(S3kSlotLayoutFixture.layout(), start, start + 0x20);
     }
 }
 

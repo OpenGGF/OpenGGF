@@ -28,10 +28,11 @@ public final class S3kSlotRenderBuffers {
         }
     }
 
-    public static S3kSlotRenderBuffers fromRomData() {
+    static S3kSlotRenderBuffers fromLayout(S3kSlotLayoutData data) {
+        byte[] layout = data.layout();
         return new S3kSlotRenderBuffers(
-                S3kSlotRomData.SLOT_BONUS_LAYOUT.clone(),
-                S3kSlotRomData.buildExpandedLayoutBuffer(),
+                layout,
+                S3kSlotRomData.buildExpandedLayoutBuffer(layout),
                 S3kSlotRomData.SLOT_EXPANDED_STRIDE,
                 S3kSlotRomData.SLOT_EXPANDED_STRIDE,
                 S3kSlotRomData.SLOT_EXPANDED_STRIDE);

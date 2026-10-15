@@ -11,7 +11,7 @@ class TestS3kSlotCollisionSystem {
     @Test
     void collisionReadsExpandedStrideAndStoresCompactLayoutIndex() {
         S3kSlotStageState state = S3kSlotStageState.bootstrap();
-        S3kSlotRenderBuffers buffers = S3kSlotRenderBuffers.fromRomData();
+        S3kSlotRenderBuffers buffers = S3kSlotLayoutFixture.buffers();
         int row = Math.floorDiv(0x2BC + S3kSlotCollisionSystem.COLLISION_Y_OFFSET, S3kSlotCollisionSystem.CELL_SIZE);
         int col = Math.floorDiv(0x2EC + S3kSlotCollisionSystem.COLLISION_X_OFFSET, S3kSlotCollisionSystem.CELL_SIZE);
         int expandedIndex = row * buffers.layoutStrideBytes() + col;
@@ -33,7 +33,7 @@ class TestS3kSlotCollisionSystem {
     @Test
     void ringPickupConsumesCompactAndExpandedLayoutViews() {
         S3kSlotStageState state = S3kSlotStageState.bootstrap();
-        S3kSlotRenderBuffers buffers = S3kSlotRenderBuffers.fromRomData();
+        S3kSlotRenderBuffers buffers = S3kSlotLayoutFixture.buffers();
         int row = Math.floorDiv(0x2E0 + S3kSlotCollisionSystem.RING_Y_OFFSET, S3kSlotCollisionSystem.CELL_SIZE);
         int col = Math.floorDiv(0x2E0 + S3kSlotCollisionSystem.RING_X_OFFSET, S3kSlotCollisionSystem.CELL_SIZE);
         int expandedIndex = row * buffers.layoutStrideBytes() + col;
@@ -57,7 +57,7 @@ class TestS3kSlotCollisionSystem {
     void spikeTileReversesScalarOnlyOncePerThrottleWindow() {
         S3kSlotStageState state = S3kSlotStageState.bootstrap();
         S3kSlotCollisionSystem system = new S3kSlotCollisionSystem(
-                S3kSlotRenderBuffers.fromRomData(), state);
+                S3kSlotLayoutFixture.buffers(), state);
 
         S3kSlotCollisionSystem.TileResponse response = system.resolveTileResponse(
                 6, (short) 0, (short) 0, (short) 0, (short) 0);

@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.difficulty.DoomsdayMissileRecipe;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
@@ -62,7 +63,11 @@ final class DdzEndBossLauncherObjectInstance extends AbstractDdzObjectInstance
 
     @Override
     protected void updateObject(int vIntRunCount, PlayableEntity playerEntity) {
-        if (!(parent instanceof DdzEndBossObjectInstance boss) || boss.isDestroyed()) {
+        if (!(parent instanceof DdzEndBossObjectInstance boss) || boss.isDestroyed() || boss.getSlotIndex() < 0) {
+            // A removed managed root no longer owns a live SST. Its cached Java
+            // parent reference must not produce another loc_81FB0 volley. Keep
+            // native Go_Delete timing; missiles see this pending-delete parent
+            // through their existing launcherGoneCheck/parentGone paths.
             goDelete();
             return;
         }
@@ -75,7 +80,11 @@ final class DdzEndBossLauncherObjectInstance extends AbstractDdzObjectInstance
             boolean allocated = true;
             for (int index = 0; index < 3 && allocated; index++) {
                 int missileIndex = index;
-                allocated = spawnFreeChild(() -> new DdzMissileObjectInstance(x, y, missileIndex, this)) != null;
+                // The finite authored variation belongs only to the third native
+                // missile. Allocation count, prefix failure and spent accounting
+                // remain loc_81FB0; the first two missiles are always stock.
+                DoomsdayMissileRecipe recipe = index == 2 ? boss.missileRecipe() : DoomsdayMissileRecipe.STOCK;
+                allocated = spawnFreeChild(() -> new DdzMissileObjectInstance(x, y, missileIndex, this, recipe)) != null;
             }
             // AllocateObject failure branches to loc_81FDA past the sound.
             if (allocated) {

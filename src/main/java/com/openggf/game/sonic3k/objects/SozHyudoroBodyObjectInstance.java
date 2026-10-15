@@ -26,6 +26,7 @@ public final class SozHyudoroBodyObjectInstance extends AbstractObjectInstance
     private int routine,darkness,frame,animationAddress,animationIndex,animationTimer,attackTimer,collisionProperty;
     private boolean initialized,worldPosition,facingLeft,directionDown,fading;
     private boolean renderOnScreen=true,deletePending;
+    private boolean challengeCharge;
     private int lastVIntRunCount;
     private byte[] animations;
     public SozHyudoroBodyObjectInstance(ObjectSpawn spawn){this(spawn,null);}
@@ -38,14 +39,20 @@ public final class SozHyudoroBodyObjectInstance extends AbstractObjectInstance
         if(controller==null){ObjectLifetimeOps.deleteNoRespawn(this);return;}
         if(!initialized){initialize();}
         int dark=controller.darkness();
+        boolean aggressive=controller.aggressiveAtCurrentLight();
         if(fading){animate();return;}
+        if(challengeCharge && !aggressive){fade();return;}
+        // A light change still runs the native size-change animation before the
+        // next committed charge. An in-flight world-space charge retires through
+        // its native screen exit, or fades immediately when the light is reset.
+        if(aggressive && routine==12 && dark!=darkness){routine=6;challengeCharge=false;}
         switch(routine){
-            case 2 -> {if(animate()!=0){routine=dark==5?12:4;if(dark==5)setupBob(dark);}}
-            case 4 -> {animate();swing();move();bounce();if(dark!=darkness)routine=6;}
+            case 2 -> {if(animate()!=0){routine=dark==5||aggressive?12:4;if(routine==12){setupBob(dark);challengeCharge=aggressive&&dark<5;}}}
+            case 4 -> {animate();swing();move();bounce();if(dark!=darkness)routine=6;else if(aggressive){routine=12;challengeCharge=aggressive&&dark<5;}}
             case 6 -> {
                 animate();boolean turn=swing();
                 if(!turn){move();bounce();}
-                else {routine=8;if(dark==3||dark==5){darkness=dark;routine=dark==5?12:4;setupBob(dark);}}
+                else {routine=8;if(dark==3||dark==5){darkness=dark;routine=dark==5?12:4;setupBob(dark);challengeCharge=routine==12&&aggressive&&dark<5;}}
             }
             case 8 -> {
                 swing();move();bounce();

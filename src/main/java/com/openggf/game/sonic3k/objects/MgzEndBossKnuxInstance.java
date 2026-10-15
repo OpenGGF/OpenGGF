@@ -1,6 +1,9 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.AbstractLevelEventManager;
+import com.openggf.game.sonic3k.difficulty.MarbleGardenBossRecipe;
+import com.openggf.game.sonic3k.objects.bosses.S3kSharedBossCameraGate;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
@@ -40,6 +43,14 @@ public final class MgzEndBossKnuxInstance extends MgzDrillingRobotnikInstance {
     private static final int INVULNERABLE_FRAMES = 0x20;
     private static final int DEFEAT_EXPLOSION_FRAMES = 0xB3;
 
+    // Obj_MGZEndBossKnux -> loc_6C6F4 -> loc_6C702. These are native
+    // code-pointer phases, separate from the fight's routine byte.
+    private static final int DORMANT = 0, STAGING = 1, ACTIVE = 2;
+    private int admissionPhase;
+    private final S3kSharedBossCameraGate cameraGate = new S3kSharedBossCameraGate();
+    // sub_85D6A banks these native previous bounds. This encounter's later
+    // capsule continuation uses the destination bank, not these saved words.
+    private int storedMinY, storedMaxY, storedMinX, storedMaxX;
     private int nativeRoutine;
     private int nativeTimer;
     private boolean childReady;
@@ -110,6 +121,20 @@ public final class MgzEndBossKnuxInstance extends MgzDrillingRobotnikInstance {
 
     @Override
     protected void updateBossLogic(int vIntRunCount, PlayableEntity player) {
+        if (admissionPhase == DORMANT) {
+            admitPlacedBoss();
+            return;
+        }
+        if (admissionPhase == STAGING) {
+            prepareSharedBossAssetsAfterNativeFade();
+            if (cameraGate.update(services().camera(),
+                    () -> services().playMusic(Sonic3kMusic.MINIBOSS.id))) {
+                admissionPhase = ACTIVE;
+            }
+            // loc_6C6FA changes the code pointer and returns; children belong
+            // to loc_6C72A on the following object update.
+            return;
+        }
         prepareSharedBossPresentation();
         if (state.invulnerable && --state.invulnerabilityTimer <= 0) {
             state.invulnerable = false;
@@ -156,6 +181,55 @@ public final class MgzEndBossKnuxInstance extends MgzDrillingRobotnikInstance {
             }
             default -> throw new IllegalStateException("Unknown MGZ Knuckles boss routine " + nativeRoutine);
         }
+    }
+
+    private void admitPlacedBoss() {
+        var camera = services().camera();
+        if (camera == null) return;
+        int x = camera.getX() & 0xFFFF, y = camera.getY() & 0xFFFF;
+        // Check_CameraInRange, word_6C688: both ends inclusive; no character gate.
+        if (y > 0x0128 || x < 0x3C78 || x > 0x3E78) {
+            if (isCoarseXOutOfRange(state.x, x, coarseXCullRange())) {
+                ObjectLifetimeOps.destroyRespawnableOffscreen(this);
+            }
+            return;
+        }
+        var module = services().gameModule();
+        // Fresh intake at native admission, never construction/rewind. A new
+        // provider abort propagates to frame discard and host teardown.
+        var recipe = module == null ? null : module.getGameService(MarbleGardenBossRecipe.class);
+        counterCadence = recipe == MarbleGardenBossRecipe.COUNTER_CADENCE;
+        if (module != null && module.getLevelEventProvider() instanceof AbstractLevelEventManager events) {
+            events.setBossActive(true);
+        }
+        if (services().gameState() != null) {
+            services().gameState().setCurrentBossId(Sonic3kObjectIds.MGZ_END_BOSS_KNUX);
+        }
+        // sub_85D6A: flag, fade, raw 120 timer, stored previous bounds, destination.
+        services().fadeOutMusic();
+        storedMinY = camera.getMinY(); storedMaxY = camera.getMaxYTarget();
+        storedMinX = camera.getMinX(); storedMaxX = camera.getMaxX();
+        cameraGate.begin(camera, new S3kSharedBossCameraGate.LockBounds(
+                0x0028, 0x0028, 0x3D78, 0x3D78), 120);
+        admissionPhase = STAGING;
+        prepareSharedBossAssetsAfterNativeFade();
+    }
+
+    @Override
+    protected void recreateConstructionChildrenForRewind() {
+        // This hook runs before phase-2 field restore. Dormant/staging A2 has
+        // no constructor children. Captured fight children independently
+        // recreate and reattach to this parent through their native links.
+    }
+
+    @Override
+    public boolean isHidden() {
+        return admissionPhase != ACTIVE || super.isHidden();
+    }
+
+    @Override
+    public int getCollisionFlags() {
+        return admissionPhase != ACTIVE ? 0 : super.getCollisionFlags();
     }
 
     private void waitThen(int nextRoutine, int nextTimer) {
@@ -260,7 +334,7 @@ public final class MgzEndBossKnuxInstance extends MgzDrillingRobotnikInstance {
 
     @Override
     public void onPlayerAttack(PlayableEntity player, TouchResponseResult result) {
-        if (state.invulnerable || state.defeated) {
+        if (admissionPhase != ACTIVE || state.invulnerable || state.defeated) {
             return;
         }
         state.hitCount--;
@@ -307,6 +381,12 @@ public final class MgzEndBossKnuxInstance extends MgzDrillingRobotnikInstance {
         }
         if (!capsuleSpawned) {
             capsuleSpawned = true;
+            // loc_6C8B4 clears Boss_flag before AllocateObject, including the
+            // exhausted-slot outcome. Resume MGZ AniPLC at this same boundary.
+            var module = services().gameModule();
+            if (module != null && module.getLevelEventProvider() instanceof AbstractLevelEventManager events) {
+                events.setBossActive(false);
+            }
             services().gameState().setCurrentBossId(0);
             spawnFreeChild(() -> new MgzEndBossKnuxEggCapsuleInstance(this, new ObjectSpawn(
                     getCapsuleX(), getCapsuleY(), Sonic3kObjectIds.EGG_CAPSULE, 0, 0, false, 0)));

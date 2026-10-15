@@ -35,7 +35,7 @@ Selected posts offer earned, zero-ring native bonus invitations: forest post 102
 selects Gumball, and Act 2 post 476 selects Glowing Spheres. The native run, entry
 permit, activation and reward gates still apply. Positioned tests observe an earned
 life or rings and a stable return to LEVEL. Knuckles's actual eligible-post route,
-revisit/death lifetime and durable saves remain open; there is no claimed act-wide
+deliberate revisit/death-after-entry lifetime and bonus-flow durable saves remain open; there is no claimed act-wide
 once-entry guarantee from those short observations.
 
 Fire Breath gains a delayed second wave at three hits or fewer, with sixteen visible
@@ -45,7 +45,11 @@ recovery behavior. Bombing-run port staggering keeps native wraps and progressio
 All fourteen Chaos/Super Blue Sphere boards have bounded authored gates while
 retaining native blue/ring cells and conversion; individual full clears/perfects
 are still pending. Gumball uses three consumable springs with native prizes.
-Glowing Spheres currently retains its native gameplay.
+Glowing Spheres currently retains its native gameplay. A positioned Sonic visit
+clears authored Giant board 0, earns its native emerald/results and returns; a
+separate native-menu save-slot visit persists the emerald and loads it in a fresh
+process. The other boards, character routes and complete cold progression remain
+open.
 
 The first campaign batch adds native-owned ingredients to Hydrocity, Marble Garden,
 Carnival Night, IceCap and Launch Base: brittle supports, alert badniks, finite boss
@@ -91,8 +95,9 @@ root; use a separate profile for this difficulty mode.
 
 The [binding AIZ scope and full-campaign roadmap](../../docs/architecture/designs/2026-10-15-second-strike-campaign-scope.md)
 separates required work from current implementation. Both apparent AIZ acts and the
-first campaign ingredients are authored in source, but all four reference cold
-routes still have unmet boss/results/playable-HCZ gates. Positioned behavior,
+first campaign ingredients are authored in source. One fresh Sonic-solo route
+defeats Fire Breath and reaches its native results and apparent Act 2; all four
+reference routes still have unmet playable-HCZ gates. Positioned behavior,
 rewind and pixel checks are narrower evidence. Lives, abilities and progression
 remain native; complete checkpoint, character, viewport and save coverage is pending.
 

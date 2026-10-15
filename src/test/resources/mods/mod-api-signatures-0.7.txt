@@ -524,14 +524,22 @@ CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.BlueSphereLayoutPolicy vi
 CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.BlueSphereLayoutPolicy visible @java.lang.FunctionalInterface
 CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.ClamerRecipe visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.CollapsingBridgeRecipe visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.DeathEggGuardRecipe visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.DoomsdayMissileRecipe visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.FlyingBatteryBossRecipe visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.GumballSpringPolicy visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.GumballSpringPolicy visible @java.lang.FunctionalInterface
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.HiddenPalaceDuelRecipe visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.HydrocityBossRecipe visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.HydrocityEnemyRecipe visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.IczStalagtiteRecipe visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.LavaReefHazardRecipe visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.LbzAlarmRecipe visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.MarbleGardenBossRecipe visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.MarbleGardenEnemyRecipe visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.MushroomHillWindRecipe visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.SandopolisChallengeRecipe visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.SkySanctuaryMetropolisRecipe visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.sonic3k.objects.Sonic3kMonitorFactory visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.sonic3k.objects.Sonic3kStarPostFactory visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe visible @com.openggf.game.ModApi
@@ -891,10 +899,15 @@ CF-ANNOTATION TYPE com.openggf.mods.objects.AizLogBridgeFactory visible @com.ope
 CF-ANNOTATION TYPE com.openggf.mods.objects.CarnivalNightFactory visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.objects.CaterkillerJrFactory visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.objects.CollapsingBridgeFactory visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.objects.DeathEggFactory visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.objects.DoomsdayFactory visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.objects.HiddenPalaceFactory visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.objects.HydrocityFactory visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.objects.IceCapFactory visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.objects.LaunchBaseFactory visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.objects.LavaReefFactory visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.objects.MarbleGardenFactory visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.objects.MushroomHillFactory visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.run.GhostPose visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.run.PlayerPose visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.run.RunEndReason visible @com.openggf.game.ModApi
@@ -2759,18 +2772,34 @@ FIELD com.openggf.game.sonic3k.difficulty.ClamerRecipe public,static,final com.o
 FIELD com.openggf.game.sonic3k.difficulty.ClamerRecipe public,static,final com.openggf.game.sonic3k.difficulty.ClamerRecipe STOCK
 FIELD com.openggf.game.sonic3k.difficulty.CollapsingBridgeRecipe public,static,final com.openggf.game.sonic3k.difficulty.CollapsingBridgeRecipe BRITTLE
 FIELD com.openggf.game.sonic3k.difficulty.CollapsingBridgeRecipe public,static,final com.openggf.game.sonic3k.difficulty.CollapsingBridgeRecipe STOCK
+FIELD com.openggf.game.sonic3k.difficulty.DeathEggGuardRecipe public,static,final com.openggf.game.sonic3k.difficulty.DeathEggGuardRecipe ALERT
+FIELD com.openggf.game.sonic3k.difficulty.DeathEggGuardRecipe public,static,final com.openggf.game.sonic3k.difficulty.DeathEggGuardRecipe STOCK
+FIELD com.openggf.game.sonic3k.difficulty.DoomsdayMissileRecipe public,static,final com.openggf.game.sonic3k.difficulty.DoomsdayMissileRecipe STOCK
+FIELD com.openggf.game.sonic3k.difficulty.DoomsdayMissileRecipe public,static,final com.openggf.game.sonic3k.difficulty.DoomsdayMissileRecipe TAIL_ECHO
+FIELD com.openggf.game.sonic3k.difficulty.FlyingBatteryBossRecipe public,static,final com.openggf.game.sonic3k.difficulty.FlyingBatteryBossRecipe EXTRA_BEAT
+FIELD com.openggf.game.sonic3k.difficulty.FlyingBatteryBossRecipe public,static,final com.openggf.game.sonic3k.difficulty.FlyingBatteryBossRecipe STOCK
+FIELD com.openggf.game.sonic3k.difficulty.HiddenPalaceDuelRecipe public,static,final com.openggf.game.sonic3k.difficulty.HiddenPalaceDuelRecipe FEINT
+FIELD com.openggf.game.sonic3k.difficulty.HiddenPalaceDuelRecipe public,static,final com.openggf.game.sonic3k.difficulty.HiddenPalaceDuelRecipe STOCK
 FIELD com.openggf.game.sonic3k.difficulty.HydrocityBossRecipe public,static,final com.openggf.game.sonic3k.difficulty.HydrocityBossRecipe COUNTER_CADENCE
 FIELD com.openggf.game.sonic3k.difficulty.HydrocityBossRecipe public,static,final com.openggf.game.sonic3k.difficulty.HydrocityBossRecipe STOCK
 FIELD com.openggf.game.sonic3k.difficulty.HydrocityEnemyRecipe public,static,final com.openggf.game.sonic3k.difficulty.HydrocityEnemyRecipe ALERT
 FIELD com.openggf.game.sonic3k.difficulty.HydrocityEnemyRecipe public,static,final com.openggf.game.sonic3k.difficulty.HydrocityEnemyRecipe STOCK
 FIELD com.openggf.game.sonic3k.difficulty.IczStalagtiteRecipe public,static,final com.openggf.game.sonic3k.difficulty.IczStalagtiteRecipe STOCK
 FIELD com.openggf.game.sonic3k.difficulty.IczStalagtiteRecipe public,static,final com.openggf.game.sonic3k.difficulty.IczStalagtiteRecipe WARNED
+FIELD com.openggf.game.sonic3k.difficulty.LavaReefHazardRecipe public,static,final com.openggf.game.sonic3k.difficulty.LavaReefHazardRecipe ECHO_JET
+FIELD com.openggf.game.sonic3k.difficulty.LavaReefHazardRecipe public,static,final com.openggf.game.sonic3k.difficulty.LavaReefHazardRecipe STOCK
 FIELD com.openggf.game.sonic3k.difficulty.LbzAlarmRecipe public,static,final com.openggf.game.sonic3k.difficulty.LbzAlarmRecipe BOUNDED
 FIELD com.openggf.game.sonic3k.difficulty.LbzAlarmRecipe public,static,final com.openggf.game.sonic3k.difficulty.LbzAlarmRecipe STOCK
 FIELD com.openggf.game.sonic3k.difficulty.MarbleGardenBossRecipe public,static,final com.openggf.game.sonic3k.difficulty.MarbleGardenBossRecipe COUNTER_CADENCE
 FIELD com.openggf.game.sonic3k.difficulty.MarbleGardenBossRecipe public,static,final com.openggf.game.sonic3k.difficulty.MarbleGardenBossRecipe STOCK
 FIELD com.openggf.game.sonic3k.difficulty.MarbleGardenEnemyRecipe public,static,final com.openggf.game.sonic3k.difficulty.MarbleGardenEnemyRecipe LANDING_GUARD
 FIELD com.openggf.game.sonic3k.difficulty.MarbleGardenEnemyRecipe public,static,final com.openggf.game.sonic3k.difficulty.MarbleGardenEnemyRecipe STOCK
+FIELD com.openggf.game.sonic3k.difficulty.MushroomHillWindRecipe public,static,final com.openggf.game.sonic3k.difficulty.MushroomHillWindRecipe PULSED
+FIELD com.openggf.game.sonic3k.difficulty.MushroomHillWindRecipe public,static,final com.openggf.game.sonic3k.difficulty.MushroomHillWindRecipe STOCK
+FIELD com.openggf.game.sonic3k.difficulty.SandopolisChallengeRecipe public,static,final com.openggf.game.sonic3k.difficulty.SandopolisChallengeRecipe STOCK
+FIELD com.openggf.game.sonic3k.difficulty.SandopolisChallengeRecipe public,static,final com.openggf.game.sonic3k.difficulty.SandopolisChallengeRecipe TOMB
+FIELD com.openggf.game.sonic3k.difficulty.SkySanctuaryMetropolisRecipe public,static,final com.openggf.game.sonic3k.difficulty.SkySanctuaryMetropolisRecipe FOURTH_PAIR
+FIELD com.openggf.game.sonic3k.difficulty.SkySanctuaryMetropolisRecipe public,static,final com.openggf.game.sonic3k.difficulty.SkySanctuaryMetropolisRecipe STOCK
 FIELD com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe public,static,final com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe DOUBLE_LENGTH
 FIELD com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe public,static,final com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe STOCK
 FIELD com.openggf.graphics.FadeManager$FadeState public,static,final com.openggf.graphics.FadeManager$FadeState FADING_FROM_BLACK
@@ -8214,7 +8243,15 @@ METHOD com.openggf.game.sonic3k.difficulty.ClamerRecipe public,static  com.openg
 METHOD com.openggf.game.sonic3k.difficulty.ClamerRecipe public,static  com.openggf.game.sonic3k.difficulty.ClamerRecipe[] values()
 METHOD com.openggf.game.sonic3k.difficulty.CollapsingBridgeRecipe public,static  com.openggf.game.sonic3k.difficulty.CollapsingBridgeRecipe valueOf(java.lang.String)
 METHOD com.openggf.game.sonic3k.difficulty.CollapsingBridgeRecipe public,static  com.openggf.game.sonic3k.difficulty.CollapsingBridgeRecipe[] values()
+METHOD com.openggf.game.sonic3k.difficulty.DeathEggGuardRecipe public,static  com.openggf.game.sonic3k.difficulty.DeathEggGuardRecipe valueOf(java.lang.String)
+METHOD com.openggf.game.sonic3k.difficulty.DeathEggGuardRecipe public,static  com.openggf.game.sonic3k.difficulty.DeathEggGuardRecipe[] values()
+METHOD com.openggf.game.sonic3k.difficulty.DoomsdayMissileRecipe public,static  com.openggf.game.sonic3k.difficulty.DoomsdayMissileRecipe valueOf(java.lang.String)
+METHOD com.openggf.game.sonic3k.difficulty.DoomsdayMissileRecipe public,static  com.openggf.game.sonic3k.difficulty.DoomsdayMissileRecipe[] values()
+METHOD com.openggf.game.sonic3k.difficulty.FlyingBatteryBossRecipe public,static  com.openggf.game.sonic3k.difficulty.FlyingBatteryBossRecipe valueOf(java.lang.String)
+METHOD com.openggf.game.sonic3k.difficulty.FlyingBatteryBossRecipe public,static  com.openggf.game.sonic3k.difficulty.FlyingBatteryBossRecipe[] values()
 METHOD com.openggf.game.sonic3k.difficulty.GumballSpringPolicy public,abstract  int[] springOffsets()
+METHOD com.openggf.game.sonic3k.difficulty.HiddenPalaceDuelRecipe public,static  com.openggf.game.sonic3k.difficulty.HiddenPalaceDuelRecipe valueOf(java.lang.String)
+METHOD com.openggf.game.sonic3k.difficulty.HiddenPalaceDuelRecipe public,static  com.openggf.game.sonic3k.difficulty.HiddenPalaceDuelRecipe[] values()
 METHOD com.openggf.game.sonic3k.difficulty.HydrocityBossRecipe public,static  com.openggf.game.sonic3k.difficulty.HydrocityBossRecipe valueOf(java.lang.String)
 METHOD com.openggf.game.sonic3k.difficulty.HydrocityBossRecipe public,static  com.openggf.game.sonic3k.difficulty.HydrocityBossRecipe[] values()
 METHOD com.openggf.game.sonic3k.difficulty.HydrocityEnemyRecipe public,static  com.openggf.game.sonic3k.difficulty.HydrocityEnemyRecipe valueOf(java.lang.String)
@@ -8223,12 +8260,20 @@ METHOD com.openggf.game.sonic3k.difficulty.IczStalagtiteRecipe public  int shake
 METHOD com.openggf.game.sonic3k.difficulty.IczStalagtiteRecipe public  int triggerRange()
 METHOD com.openggf.game.sonic3k.difficulty.IczStalagtiteRecipe public,static  com.openggf.game.sonic3k.difficulty.IczStalagtiteRecipe valueOf(java.lang.String)
 METHOD com.openggf.game.sonic3k.difficulty.IczStalagtiteRecipe public,static  com.openggf.game.sonic3k.difficulty.IczStalagtiteRecipe[] values()
+METHOD com.openggf.game.sonic3k.difficulty.LavaReefHazardRecipe public,static  com.openggf.game.sonic3k.difficulty.LavaReefHazardRecipe valueOf(java.lang.String)
+METHOD com.openggf.game.sonic3k.difficulty.LavaReefHazardRecipe public,static  com.openggf.game.sonic3k.difficulty.LavaReefHazardRecipe[] values()
 METHOD com.openggf.game.sonic3k.difficulty.LbzAlarmRecipe public,static  com.openggf.game.sonic3k.difficulty.LbzAlarmRecipe valueOf(java.lang.String)
 METHOD com.openggf.game.sonic3k.difficulty.LbzAlarmRecipe public,static  com.openggf.game.sonic3k.difficulty.LbzAlarmRecipe[] values()
 METHOD com.openggf.game.sonic3k.difficulty.MarbleGardenBossRecipe public,static  com.openggf.game.sonic3k.difficulty.MarbleGardenBossRecipe valueOf(java.lang.String)
 METHOD com.openggf.game.sonic3k.difficulty.MarbleGardenBossRecipe public,static  com.openggf.game.sonic3k.difficulty.MarbleGardenBossRecipe[] values()
 METHOD com.openggf.game.sonic3k.difficulty.MarbleGardenEnemyRecipe public,static  com.openggf.game.sonic3k.difficulty.MarbleGardenEnemyRecipe valueOf(java.lang.String)
 METHOD com.openggf.game.sonic3k.difficulty.MarbleGardenEnemyRecipe public,static  com.openggf.game.sonic3k.difficulty.MarbleGardenEnemyRecipe[] values()
+METHOD com.openggf.game.sonic3k.difficulty.MushroomHillWindRecipe public,static  com.openggf.game.sonic3k.difficulty.MushroomHillWindRecipe valueOf(java.lang.String)
+METHOD com.openggf.game.sonic3k.difficulty.MushroomHillWindRecipe public,static  com.openggf.game.sonic3k.difficulty.MushroomHillWindRecipe[] values()
+METHOD com.openggf.game.sonic3k.difficulty.SandopolisChallengeRecipe public,static  com.openggf.game.sonic3k.difficulty.SandopolisChallengeRecipe valueOf(java.lang.String)
+METHOD com.openggf.game.sonic3k.difficulty.SandopolisChallengeRecipe public,static  com.openggf.game.sonic3k.difficulty.SandopolisChallengeRecipe[] values()
+METHOD com.openggf.game.sonic3k.difficulty.SkySanctuaryMetropolisRecipe public,static  com.openggf.game.sonic3k.difficulty.SkySanctuaryMetropolisRecipe valueOf(java.lang.String)
+METHOD com.openggf.game.sonic3k.difficulty.SkySanctuaryMetropolisRecipe public,static  com.openggf.game.sonic3k.difficulty.SkySanctuaryMetropolisRecipe[] values()
 METHOD com.openggf.game.sonic3k.objects.Sonic3kMonitorFactory public,static  com.openggf.level.objects.AbstractObjectInstance eggman(com.openggf.level.objects.ObjectSpawn)
 METHOD com.openggf.game.sonic3k.objects.Sonic3kStarPostFactory public,static  com.openggf.level.objects.AbstractObjectInstance invitation(com.openggf.level.objects.ObjectSpawn,com.openggf.game.BonusStageType)
 METHOD com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe public,static  com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe valueOf(java.lang.String)
@@ -12258,14 +12303,19 @@ METHOD com.openggf.mods.objects.AizLogBridgeFactory public,static  com.openggf.l
 METHOD com.openggf.mods.objects.CarnivalNightFactory public,static  com.openggf.level.objects.AbstractObjectInstance clamer(com.openggf.level.objects.ObjectSpawn,com.openggf.game.sonic3k.difficulty.ClamerRecipe)
 METHOD com.openggf.mods.objects.CaterkillerJrFactory public,static  com.openggf.level.objects.AbstractBadnikInstance create(com.openggf.level.objects.ObjectSpawn,com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe)
 METHOD com.openggf.mods.objects.CollapsingBridgeFactory public,static  com.openggf.level.objects.AbstractObjectInstance create(com.openggf.level.objects.ObjectSpawn,com.openggf.game.sonic3k.difficulty.CollapsingBridgeRecipe)
+METHOD com.openggf.mods.objects.DeathEggFactory public,static  com.openggf.level.objects.AbstractBadnikInstance spikebonker(com.openggf.level.objects.ObjectSpawn,com.openggf.game.sonic3k.difficulty.DeathEggGuardRecipe)
+METHOD com.openggf.mods.objects.DoomsdayFactory public,static  com.openggf.level.objects.AbstractObjectInstance endBoss(com.openggf.level.objects.ObjectSpawn,com.openggf.game.sonic3k.difficulty.DoomsdayMissileRecipe)
+METHOD com.openggf.mods.objects.HiddenPalaceFactory public,static  com.openggf.level.objects.AbstractObjectInstance duel(com.openggf.level.objects.ObjectSpawn,com.openggf.game.sonic3k.difficulty.HiddenPalaceDuelRecipe)
 METHOD com.openggf.mods.objects.HydrocityFactory public,static  com.openggf.level.objects.AbstractBadnikInstance turboSpiker(com.openggf.level.objects.ObjectSpawn,com.openggf.game.sonic3k.difficulty.HydrocityEnemyRecipe)
 METHOD com.openggf.mods.objects.HydrocityFactory public,static  com.openggf.level.objects.AbstractObjectInstance endBoss(com.openggf.level.objects.ObjectSpawn,com.openggf.game.sonic3k.difficulty.HydrocityBossRecipe)
 METHOD com.openggf.mods.objects.HydrocityFactory public,static  com.openggf.level.objects.AbstractObjectInstance miniboss(com.openggf.level.objects.ObjectSpawn,com.openggf.game.sonic3k.difficulty.HydrocityBossRecipe)
 METHOD com.openggf.mods.objects.IceCapFactory public,static  com.openggf.level.objects.AbstractObjectInstance stalactite(com.openggf.level.objects.ObjectSpawn,com.openggf.game.sonic3k.difficulty.IczStalagtiteRecipe)
 METHOD com.openggf.mods.objects.LaunchBaseFactory public,static  com.openggf.level.objects.AbstractObjectInstance alarm(com.openggf.level.objects.ObjectSpawn,com.openggf.game.sonic3k.difficulty.LbzAlarmRecipe)
+METHOD com.openggf.mods.objects.LavaReefFactory public,static  com.openggf.level.objects.AbstractObjectInstance flameThrower(com.openggf.level.objects.ObjectSpawn,com.openggf.game.sonic3k.difficulty.LavaReefHazardRecipe)
 METHOD com.openggf.mods.objects.MarbleGardenFactory public,static  com.openggf.level.objects.AbstractBadnikInstance mantis(com.openggf.level.objects.ObjectSpawn,com.openggf.game.sonic3k.difficulty.MarbleGardenEnemyRecipe)
 METHOD com.openggf.mods.objects.MarbleGardenFactory public,static  com.openggf.level.objects.AbstractBadnikInstance spiker(com.openggf.level.objects.ObjectSpawn,com.openggf.game.sonic3k.difficulty.MarbleGardenEnemyRecipe)
 METHOD com.openggf.mods.objects.MarbleGardenFactory public,static  com.openggf.level.objects.AbstractObjectInstance miniboss(com.openggf.level.objects.ObjectSpawn,com.openggf.game.sonic3k.difficulty.MarbleGardenBossRecipe)
+METHOD com.openggf.mods.objects.MushroomHillFactory public,static  com.openggf.level.objects.AbstractBadnikInstance cluckoid(com.openggf.level.objects.ObjectSpawn,com.openggf.game.sonic3k.difficulty.MushroomHillWindRecipe)
 METHOD com.openggf.mods.run.GhostPose public  com.openggf.mods.run.PlayerPose pose()
 METHOD com.openggf.mods.run.GhostPose public  float opacity()
 METHOD com.openggf.mods.run.GhostPose public  java.lang.String characterCode()
@@ -18867,10 +18917,15 @@ TYPE class public,final com.openggf.mods.objects.AizLogBridgeFactory SUPER java.
 TYPE class public,final com.openggf.mods.objects.CarnivalNightFactory SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.objects.CaterkillerJrFactory SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.objects.CollapsingBridgeFactory SUPER java.lang.Object
+TYPE class public,final com.openggf.mods.objects.DeathEggFactory SUPER java.lang.Object
+TYPE class public,final com.openggf.mods.objects.DoomsdayFactory SUPER java.lang.Object
+TYPE class public,final com.openggf.mods.objects.HiddenPalaceFactory SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.objects.HydrocityFactory SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.objects.IceCapFactory SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.objects.LaunchBaseFactory SUPER java.lang.Object
+TYPE class public,final com.openggf.mods.objects.LavaReefFactory SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.objects.MarbleGardenFactory SUPER java.lang.Object
+TYPE class public,final com.openggf.mods.objects.MushroomHillFactory SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.scene.SceneButtons SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.scene.SceneDraw SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.scene.SceneImage SUPER java.lang.Object
@@ -18988,12 +19043,20 @@ TYPE enum public,final com.openggf.game.sonic3k.difficulty.AizEndBossRecipe SUPE
 TYPE enum public,final com.openggf.game.sonic3k.difficulty.AizTreeExitRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.difficulty.AizTreeExitRecipe>
 TYPE enum public,final com.openggf.game.sonic3k.difficulty.ClamerRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.difficulty.ClamerRecipe>
 TYPE enum public,final com.openggf.game.sonic3k.difficulty.CollapsingBridgeRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.difficulty.CollapsingBridgeRecipe>
+TYPE enum public,final com.openggf.game.sonic3k.difficulty.DeathEggGuardRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.difficulty.DeathEggGuardRecipe>
+TYPE enum public,final com.openggf.game.sonic3k.difficulty.DoomsdayMissileRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.difficulty.DoomsdayMissileRecipe>
+TYPE enum public,final com.openggf.game.sonic3k.difficulty.FlyingBatteryBossRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.difficulty.FlyingBatteryBossRecipe>
+TYPE enum public,final com.openggf.game.sonic3k.difficulty.HiddenPalaceDuelRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.difficulty.HiddenPalaceDuelRecipe>
 TYPE enum public,final com.openggf.game.sonic3k.difficulty.HydrocityBossRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.difficulty.HydrocityBossRecipe>
 TYPE enum public,final com.openggf.game.sonic3k.difficulty.HydrocityEnemyRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.difficulty.HydrocityEnemyRecipe>
 TYPE enum public,final com.openggf.game.sonic3k.difficulty.IczStalagtiteRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.difficulty.IczStalagtiteRecipe>
+TYPE enum public,final com.openggf.game.sonic3k.difficulty.LavaReefHazardRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.difficulty.LavaReefHazardRecipe>
 TYPE enum public,final com.openggf.game.sonic3k.difficulty.LbzAlarmRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.difficulty.LbzAlarmRecipe>
 TYPE enum public,final com.openggf.game.sonic3k.difficulty.MarbleGardenBossRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.difficulty.MarbleGardenBossRecipe>
 TYPE enum public,final com.openggf.game.sonic3k.difficulty.MarbleGardenEnemyRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.difficulty.MarbleGardenEnemyRecipe>
+TYPE enum public,final com.openggf.game.sonic3k.difficulty.MushroomHillWindRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.difficulty.MushroomHillWindRecipe>
+TYPE enum public,final com.openggf.game.sonic3k.difficulty.SandopolisChallengeRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.difficulty.SandopolisChallengeRecipe>
+TYPE enum public,final com.openggf.game.sonic3k.difficulty.SkySanctuaryMetropolisRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.difficulty.SkySanctuaryMetropolisRecipe>
 TYPE enum public,final com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe>
 TYPE enum public,final com.openggf.graphics.PatternAtlasRange SUPER java.lang.Enum<com.openggf.graphics.PatternAtlasRange>
 TYPE enum public,final com.openggf.graphics.SpriteMaskReplayRole SUPER java.lang.Enum<com.openggf.graphics.SpriteMaskReplayRole>
@@ -20343,14 +20406,22 @@ TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.BlueSphereLayoutPolicy @com.
 TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.BlueSphereLayoutPolicy @java.lang.FunctionalInterface
 TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.ClamerRecipe @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.CollapsingBridgeRecipe @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.DeathEggGuardRecipe @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.DoomsdayMissileRecipe @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.FlyingBatteryBossRecipe @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.GumballSpringPolicy @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.GumballSpringPolicy @java.lang.FunctionalInterface
+TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.HiddenPalaceDuelRecipe @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.HydrocityBossRecipe @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.HydrocityEnemyRecipe @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.IczStalagtiteRecipe @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.LavaReefHazardRecipe @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.LbzAlarmRecipe @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.MarbleGardenBossRecipe @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.MarbleGardenEnemyRecipe @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.MushroomHillWindRecipe @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.SandopolisChallengeRecipe @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.SkySanctuaryMetropolisRecipe @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.sonic3k.objects.Sonic3kMonitorFactory @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.sonic3k.objects.Sonic3kStarPostFactory @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe @com.openggf.game.ModApi
@@ -20710,10 +20781,15 @@ TYPE-ANNOTATION com.openggf.mods.objects.AizLogBridgeFactory @com.openggf.game.M
 TYPE-ANNOTATION com.openggf.mods.objects.CarnivalNightFactory @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.objects.CaterkillerJrFactory @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.objects.CollapsingBridgeFactory @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.objects.DeathEggFactory @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.objects.DoomsdayFactory @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.objects.HiddenPalaceFactory @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.objects.HydrocityFactory @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.objects.IceCapFactory @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.objects.LaunchBaseFactory @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.objects.LavaReefFactory @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.objects.MarbleGardenFactory @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.objects.MushroomHillFactory @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.run.GhostPose @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.run.PlayerPose @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.run.RunEndReason @com.openggf.game.ModApi

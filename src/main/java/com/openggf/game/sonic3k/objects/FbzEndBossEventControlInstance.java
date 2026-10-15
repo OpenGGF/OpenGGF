@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic3k.difficulty.FlyingBatteryBossRecipe;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.events.S3kFbzEventWriteSupport;
@@ -207,8 +208,18 @@ public final class FbzEndBossEventControlInstance extends AbstractObjectInstance
     private void attemptBossAllocation() {
         ObjectSpawn bossSpawn = new ObjectSpawn(0x31C0, 0x690,
                 Sonic3kObjectIds.FBZ_END_BOSS, 0, 0, false, 0);
-        services().objectManager().createDynamicObject(
+        var allocated = services().objectManager().createDynamicObject(
                 () -> services().gameModule().createObjectRegistry().create(bossSpawn));
+        // Preserve $AC's S3KL/SK dispatch and its one allocation attempt. The
+        // factory runs even when SST admission fails, so sample only after an
+        // accepted native boss exists, before its historical first update.
+        if (allocated instanceof FbzEndBossInstance boss) {
+            var module = services().gameModule();
+            // A newly faulting provider aborts to host frame discard/teardown;
+            // an accepted root does not authorize continuing a quarantined graph.
+            var recipe = module == null ? null : module.getGameService(FlyingBatteryBossRecipe.class);
+            boss.commitEncounterRecipe(recipe);
+        }
     }
 
     private NativeState state() {

@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.difficulty.DoomsdayMissileRecipe;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -14,6 +15,7 @@ import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * ROM {@code Obj_DDZMissile} ($B8, sonic3k.asm:174131-174250) and its hit logic {@code sub_82B06}.
@@ -79,6 +81,7 @@ public final class DdzMissileObjectInstance extends AbstractDdzObjectInstance {
     private boolean highPriority;
     private int priorityWord = 0x180;
     private boolean initialized;
+    private DoomsdayMissileRecipe missileRecipe = DoomsdayMissileRecipe.STOCK;
 
 
     public DdzMissileObjectInstance(ObjectSpawn spawn) {
@@ -90,7 +93,13 @@ public final class DdzMissileObjectInstance extends AbstractDdzObjectInstance {
 
     /** {@code loc_81FB0}: a launcher missile at the launcher with index {@code $39}. */
     <T extends AbstractObjectInstance & Launcher> DdzMissileObjectInstance(int x, int y, int index, T launcher) {
+        this(x, y, index, launcher, DoomsdayMissileRecipe.STOCK);
+    }
+
+    <T extends AbstractObjectInstance & Launcher> DdzMissileObjectInstance(int x, int y, int index, T launcher,
+                                                                       DoomsdayMissileRecipe recipe) {
         this(new ObjectSpawn(x & 0xFFFF, y & 0xFFFF, 0, 1, 0, false, 0));
+        missileRecipe = Objects.requireNonNull(recipe, "recipe");
         this.index = index;
         this.parent = launcher;
     }
@@ -175,6 +184,12 @@ public final class DdzMissileObjectInstance extends AbstractDdzObjectInstance {
         yPos += LAUNCH_Y_OFFSETS[index] << 16;
         // add.w d0,d0 (word index) then lsl.w #3: sixteen frames per index.
         timer = index << 4;
+        // Native loc_82014's third ride seed is $20. TAIL_ECHO adds one
+        // $10 beat there alone; loc_82060's signed decrement and every
+        // post-release state, velocity and hit/retirement rule stay native.
+        if (index == 2 && missileRecipe == DoomsdayMissileRecipe.TAIL_ECHO) {
+            timer += 0x10;
+        }
         launcherGoneCheck();
     }
 

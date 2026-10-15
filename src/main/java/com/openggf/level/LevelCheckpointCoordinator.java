@@ -101,6 +101,10 @@ final class LevelCheckpointCoordinator {
                 ctx.getCheckpointX(), ctx.getCheckpointY(),
                 ctx.getCheckpointCameraX(), ctx.getCheckpointCameraY(),
                 ctx.getCheckpointIndex());
+        // Load_Starpost_Settings restores Last_star_post_hit before native posts initialize.
+        // Keep the activation representation consistent with that ordinary saved index;
+        // bonus/big-ring returns separately restore their captured high-water afterward.
+        checkpointState.restoreStarPostActivationMark(ctx.getCheckpointIndex());
         if (checkpointState instanceof CheckpointState cs) {
             cs.saveRingState(ctx.getCheckpointRings(), ctx.getCheckpointRingExtraLifeFlags());
             if (ctx.hasWaterState()) {

@@ -2688,6 +2688,73 @@ public class ObjectManager {
     }
 
     /**
+     * Reserves one folded native child's SST after its predecessor for a current placed parent.
+     * The fixed prefix must already exist; only released tail cells are reused. Dynamic parents
+     * are unsupported because their changing spawn identity cannot use this snapshot mapping.
+     * Engine-only: exposed across packages by {@link NativeChildSlotReservations}, not Mod API.
+     */
+    int reservePlacedChildSlotAfter(ObjectInstance parent, int predecessorSlot, int protectedPrefix) {
+        ObjectSpawn parentSpawn = placedReservationOwner(parent);
+        int[] slots = parentSpawn == null ? null : reservedChildSlots.get(parentSpawn);
+        if (protectedPrefix < 0 || slots == null || slots.length < protectedPrefix) {
+            throw new IllegalArgumentException("A current unambiguous placed parent and existing fixed prefix are required");
+        }
+        if (predecessorSlot < 0) return -1;
+        int slot = allocateSlotAfter(predecessorSlot);
+        if (slot < 0) return -1;
+        for (int index = protectedPrefix; index < slots.length; index++) {
+            if (slots[index] < 0) {
+                slots[index] = slot;
+                return slot;
+            }
+        }
+        int[] extended = Arrays.copyOf(slots, slots.length + 1);
+        extended[slots.length] = slot;
+        reservedChildSlots.put(parentSpawn, extended);
+        return slot;
+    }
+
+    /**
+     * Releases a folded tail reservation only for its current placed parent. The native caller
+     * must clear its saved slot after release; a numeric slot is not a same-owner generation token.
+     */
+    boolean releasePlacedChildSlot(ObjectInstance parent, int reservedSlot, int protectedPrefix) {
+        ObjectSpawn parentSpawn = placedReservationOwner(parent);
+        int[] slots = parentSpawn == null ? null : reservedChildSlots.get(parentSpawn);
+        if (protectedPrefix < 0 || slots == null || slots.length < protectedPrefix
+                || !isManagedDynamicSlot(reservedSlot)) return false;
+        for (int index = protectedPrefix; index < slots.length; index++) {
+            if (slots[index] == reservedSlot) {
+                slots[index] = -1;
+                // A folded child retires when the ascending native walk reaches its SST,
+                // not early at its parent's slot. Already-visited/outside-pass slots free now.
+                releaseChildSlotAtItsOwnExecPosition(reservedSlot);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private ObjectSpawn placedReservationOwner(ObjectInstance parent) {
+        ObjectSpawn parentSpawn = instanceToSpawn.get(parent);
+        if (parentSpawn == null || activeObjects.get(parentSpawn) != parent
+                || !rewindObjectIds.containsKey(parent)
+                || !(parent instanceof AbstractObjectInstance object)
+                || !isManagedDynamicSlot(objectCallbacks.call(parent, object::getSlotIndex))
+                || objectCallbacks.call(parent, parent::isDestroyed)) return null;
+        // Identity, not record equality: this is the exact registered native placement.
+        // Reject aliases before allocation/release so a second live actor cannot share its ledger.
+        for (ObjectInstance candidate : dynamicObjects) {
+            if (candidate != parent && candidate instanceof AbstractObjectInstance other
+                    && (other.spawn == parentSpawn || managedSpawn(candidate) == parentSpawn)) return null;
+        }
+        for (var entry : instanceToSpawn.entrySet()) {
+            if (entry.getKey() != parent && entry.getValue() == parentSpawn) return null;
+        }
+        return parentSpawn;
+    }
+
+    /**
      * Returns peak dynamic slot count seen during this level.
      */
     public int getPeakSlotCount() {

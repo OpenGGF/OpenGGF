@@ -148,7 +148,9 @@ class TestWestCampaignNativeRecipes {
             var boss = new MgzEndBossKnuxInstance(spawn(0xA2, 0), remix);
             boss.setServices(services(2)); boss.getState().hitCount = 4;
             set(boss, "nativeRoutine", 8); set(boss, "nativeTimer", 0);
-            boss.update(0, null);
+            // Isolated committed-fight cadence component, not admission evidence.
+            invoke(boss, "moveAndWait", new Class<?>[]{int.class,int.class,int.class},
+                    0x28, 0x0A, remix ? 0x1F : 0x3F);
             assertEquals(0x0A, boss.getNativeRoutineForTesting());
             assertEquals(remix ? 0x1F : 0x3F, boss.getNativeTimerForTesting());
             assertEquals(4, boss.getState().hitCount);

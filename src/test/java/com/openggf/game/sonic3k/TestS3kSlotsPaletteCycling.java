@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k;
 
+import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotLayoutFixture;
 import com.openggf.tests.TestEnvironment;
 
 import com.openggf.data.Rom;
@@ -130,7 +131,7 @@ public class TestS3kSlotsPaletteCycling {
     @Test
     public void slotModeTracksAuthoritativeStageState() {
         S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
-        runtime.bootstrap();
+        com.openggf.game.sonic3k.bonusstage.slots.S3kSlotLayoutFixture.bootstrap(runtime);
 
         assertEquals(0, Sonic3kPaletteCycler.resolveSlotsModeForTest(runtime));
 
@@ -143,7 +144,7 @@ public class TestS3kSlotsPaletteCycling {
     public void slotModeFollowsSessionCoordinatorLookupPath() throws Exception {
         Sonic3kBonusStageCoordinator coordinator = new Sonic3kBonusStageCoordinator();
         S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
-        runtime.bootstrap();
+        com.openggf.game.sonic3k.bonusstage.slots.S3kSlotLayoutFixture.bootstrap(runtime);
         runtime.setPaletteCycleEnabledForTest(true);
 
         Field slotRuntimeField = Sonic3kBonusStageCoordinator.class.getDeclaredField("slotRuntime");

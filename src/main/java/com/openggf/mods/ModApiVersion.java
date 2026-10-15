@@ -10,7 +10,11 @@ public final class ModApiVersion {
      * Current unpublished compiled-mod API candidate, including native decoded
      * factory binding and original-ring retention on class-preserving levels,
      * bounded S3K boss/special/bonus-stage difficulty policies, and native-owned
-     * invitation, brittle-support and finite HCZ/MGZ/CNZ/ICZ/LBZ presets. The 0.7 candidate also includes
+     * invitation, brittle-support and finite HCZ/MGZ/CNZ/ICZ/LBZ presets,
+     * plus native MHZ wind, LRZ echo-jet, FBZ extra-beat and SOZ light/ghost recipes.
+     * Native HPZ feints, an SSZ Metropolis extra pair, DEZ alert guards and a
+     * Doomsday delayed tail missile are finite unactivated campaign ingredients.
+     * The 0.7 candidate also includes
      * widescreen presentation, KiS2 movement/touch/checkpoint/menu handoff contracts,
      * deferred SMPS header construction, explicit dynamic solid-contact rewind binding,
      * opt-in whole-game presentation pacing, modal level input ownership, controlled level admission and opaque

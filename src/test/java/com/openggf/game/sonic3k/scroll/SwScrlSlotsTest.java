@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.scroll;
 
+import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotLayoutFixture;
 import com.openggf.data.Rom;
 import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotBonusStageRuntime;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
@@ -32,7 +33,7 @@ public class SwScrlSlotsTest {
     public void slotScrollUsesRuntimeAnchorsInsteadOfCameraOnlyApproximation() {
         SwScrlSlots scroll = new SwScrlSlots();
         S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
-        runtime.bootstrap();
+        com.openggf.game.sonic3k.bonusstage.slots.S3kSlotLayoutFixture.bootstrap(runtime);
         var visual = runtime.slotVisualState();
 
         scroll.updateForTest(runtime, 0x300, 0x200, 12);
@@ -51,7 +52,7 @@ public class SwScrlSlotsTest {
     public void slotBackgroundInitClearsDeformationBeforeEventTick() {
         SwScrlSlots scroll = new SwScrlSlots();
         S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
-        runtime.bootstrap();
+        com.openggf.game.sonic3k.bonusstage.slots.S3kSlotLayoutFixture.bootstrap(runtime);
         int[] horizScrollBuf = new int[224];
 
         scroll.updateForTest(runtime, horizScrollBuf, 0x300, 0x200, 0);
@@ -67,7 +68,7 @@ public class SwScrlSlotsTest {
     public void slotBackgroundUsesAccumulatorHighWordPlusBaseScroll() {
         SwScrlSlots scroll = new SwScrlSlots();
         S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
-        runtime.bootstrap();
+        com.openggf.game.sonic3k.bonusstage.slots.S3kSlotLayoutFixture.bootstrap(runtime);
         int[] horizScrollBuf = new int[224];
 
         scroll.updateForTest(runtime, horizScrollBuf, 0x300, 0x200, 0); // Slots_BackgroundInit
@@ -88,7 +89,7 @@ public class SwScrlSlotsTest {
     public void slotBackgroundVScrollUsesRomFixedPointAccumulatorHighWord() {
         SwScrlSlots scroll = new SwScrlSlots();
         S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
-        runtime.bootstrap();
+        com.openggf.game.sonic3k.bonusstage.slots.S3kSlotLayoutFixture.bootstrap(runtime);
         int[] horizScrollBuf = new int[224];
 
         scroll.updateForTest(runtime, horizScrollBuf, 0x300, 0x200, 0); // Slots_BackgroundInit
@@ -104,7 +105,7 @@ public class SwScrlSlotsTest {
     public void slotBackgroundQueuesRomPlaneRowRefreshesWhenBandsAdvance() {
         SwScrlSlots scroll = new SwScrlSlots();
         S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
-        runtime.bootstrap();
+        com.openggf.game.sonic3k.bonusstage.slots.S3kSlotLayoutFixture.bootstrap(runtime);
         int[] horizScrollBuf = new int[224];
 
         scroll.updateForTest(runtime, horizScrollBuf, 0x300, 0x200, 0); // Slots_BackgroundInit
@@ -128,7 +129,7 @@ public class SwScrlSlotsTest {
     public void slotScrollOwnsBackgroundAccumulatorAndRespondsToScalarDirectionChanges() {
         SwScrlSlots scroll = new SwScrlSlots();
         S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
-        runtime.bootstrap();
+        com.openggf.game.sonic3k.bonusstage.slots.S3kSlotLayoutFixture.bootstrap(runtime);
 
         for (int i = 0; i < 40; i++) {
             scroll.updateForTest(runtime, 0x300, 0x200, i);
@@ -155,7 +156,7 @@ public class SwScrlSlotsTest {
     public void slotBackgroundFreezesWhenDebugForcesRotationScalarToZero() {
         SwScrlSlots scroll = new SwScrlSlots();
         S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
-        runtime.bootstrap();
+        com.openggf.game.sonic3k.bonusstage.slots.S3kSlotLayoutFixture.bootstrap(runtime);
 
         for (int frame = 0; frame < 20; frame++) {
             scroll.updateForTest(runtime, 0x300, 0x200, frame);
@@ -177,7 +178,7 @@ public class SwScrlSlotsTest {
     public void slotScrollProducesStablePackedBufferWithoutBandCorruption() {
         SwScrlSlots scroll = new SwScrlSlots();
         S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
-        runtime.bootstrap();
+        com.openggf.game.sonic3k.bonusstage.slots.S3kSlotLayoutFixture.bootstrap(runtime);
         int[] horizScrollBuf = new int[224];
 
         scroll.updateForTest(runtime, horizScrollBuf, 0x300, 0x200, 12);

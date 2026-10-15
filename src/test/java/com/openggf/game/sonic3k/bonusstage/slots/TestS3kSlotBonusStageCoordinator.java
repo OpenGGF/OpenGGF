@@ -13,6 +13,7 @@ import com.openggf.level.LevelManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.Tails;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
@@ -26,9 +27,21 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 class TestS3kSlotBonusStageCoordinator {
+    private com.openggf.data.Rom previousRom;
+    private com.openggf.data.Rom fixtureRom;
+
+    @BeforeEach
+    void installExplicitLayoutSource() throws Exception {
+        var manager = GameServices.rom();
+        previousRom = manager.isRomAvailable() ? manager.getRom() : null;
+        fixtureRom = S3kSlotLayoutFixture.rom();
+        manager.setRom(fixtureRom);
+    }
 
     @AfterEach
-    void tearDown() {
+    void tearDown() throws Exception {
+        GameServices.rom().setRom(previousRom);
+        if (fixtureRom != null) fixtureRom.close();
         SessionManager.clear();
         SonicConfigurationService.getInstance().resetToDefaults();
     }
