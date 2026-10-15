@@ -1736,3 +1736,8 @@ entry windows (320: 10443/10645, 800: 10667/10819) and replica-end rings (3/0);
 `TestSszSoloColdRouteCapture` flight end (2091,2953); `TestSszBossInputAuthorTool`
 authors from 4829 (two GHZ hits left) within 240 inputs. The five-width GHZ
 approach case is unchanged (spawn 4452 at 320/352/400, 4453 at 528, 4468 at 800).
+
+Validation on 0b03f8705 (focused selectors through `tools/testing/maven_queue.py`, normal
+lane, S3K/S1/S2 ROMs, run `v-ssz`, Maven Finished 17:47:00Z):
+`TestSszTailsColdRouteCapture` 11/0/0/0, `TestSszBossInputAuthorTool` 2/0/0/0,
+`TestSszSoloColdRouteCapture` 3/0/0/0 — 16 tests, no failures, errors or skips.
