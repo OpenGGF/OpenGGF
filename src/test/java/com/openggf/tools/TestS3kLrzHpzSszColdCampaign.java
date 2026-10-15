@@ -403,6 +403,76 @@ class TestS3kLrzHpzSszColdCampaign {
                 "small-plane", "credits-one", "credits-two", "banner", "mecha-charge"), checked);
     }
 
+    /**
+     * G: the LRZ2 giant ring s9 at ($2640,$640), entered by cold Tails with the 12-input L+A hold
+     * recorded in s3k-lrz-act2.md, then the return to LRZ2 at Saved2. No emeralds are declared:
+     * {@code SSEntryFlash_GoSS} starts Blue Sphere, which neutral input fails. The seven-Chaos
+     * $1701 branch is not covered: HPZSSEntryControl's exit gate refuses to leave while any emerald
+     * awaits a pedestal stage, so a return needs a won Super stage, and with all seven Super the
+     * ring pays rings instead of opening a stage.
+     */
+    @ParameterizedTest(name = "giant ring s9 emeralds {0}")
+    @CsvSource({"0000000,lrz-tails-cold-giant-ring-s9-320"})
+    void tailsGiantRingGatewayReturnsToLrzTwo(String emeralds, String name) throws Exception {
+        var loader = new Bk2MovieLoader();
+        var movie = loader.loadMovieOrInputLog(route(name + ".bk2"));
+        var source = loader.loadMovieOrInputLog(route("lrz-tails-cold-hpz-320.bk2"));
+        for (int f = 0; f < 49073; f++) assertEquals(source.getFrame(f), movie.getFrame(f), "qualified Tails input " + f);
+        boolean sanctuary = emeralds.equals("3333333");
+        var settings = new GameplayCaptureSession.Settings(320, "tails", "", "off", null, null, null, emeralds,
+                false, false);
+        int entry = -1, results = -1, returned = -1, ringsBefore = -1;
+        Object outgoingObjects = null;
+        com.openggf.level.BigRingReturnState saved = null;
+        try (var session = new GameplayCaptureSession(settings)) {
+            session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 9, 0, settings);
+            for (int frame = 0; frame < movie.getFrameCount(); frame++) {
+                var level = GameServices.level();
+                if (entry < 0) {
+                    ringsBefore = session.player().getRingCount();
+                    outgoingObjects = level.getObjectManager();
+                }
+                session.step(movie.getFrame(frame)); session.renderFrame();
+                var mode = session.loop().getCurrentGameMode();
+                if (mode == GameMode.LEVEL) assertFalse(session.player().getDead(), "death " + frame);
+                boolean inStage = mode == GameMode.SPECIAL_STAGE
+                        || (mode == GameMode.LEVEL && level.getCurrentZone() == 0x17 && level.getCurrentAct() == 1);
+                if (entry < 0 && inStage) {
+                    entry = frame;
+                    assertEquals(sanctuary ? GameMode.LEVEL : GameMode.SPECIAL_STAGE, mode,
+                            "SSEntryFlash_GoSS: zone >= 7 with seven Chaos loads $1701, otherwise Blue Sphere");
+                    assertEquals(0x200, GameServices.gameState().capture().collectedSpecialRings() & 0x200,
+                            "Collected_special_ring_array bit = subtype 9");
+                    assertTrue(level.hasBigRingReturn(), "Save_Level_Data2 recorded the origin");
+                    saved = level.getBigRingReturn();
+                }
+                if (mode == GameMode.SPECIAL_STAGE_RESULTS && results < 0) results = frame;
+                if (entry >= 0 && returned < 0 && mode == GameMode.LEVEL && level.getCurrentZone() == 9
+                        && level.getCurrentAct() == 1 && !level.hasPendingFreshLevelTransitionBoundary()
+                        && !level.getTransitions().isTitleCardRequested() && !session.player().isControlLocked()) {
+                    returned = frame;
+                    assertNotSame(outgoingObjects, level.getObjectManager(), "the return is a real LRZ2 load");
+                    assertEquals(saved.playerX(), session.player().getCentreX(), "Saved2 X");
+                    assertEquals(ringsBefore, session.player().getRingCount(), "Saved2 rings");
+                    assertTrue(level.getObjectManager().activeObjectsOfType(
+                            com.openggf.game.sonic3k.objects.Sonic3kSSEntryRingObjectInstance.class).stream()
+                            .noneMatch(ring -> ring.getSpawn() != null && ring.getSpawn().subtype() == 9),
+                            "the collected giant ring is not respawned");
+                    assertEquals(sanctuary ? java.util.List.of(3, 3, 3, 3, 3, 3, 3) : java.util.List.of(0, 0, 0, 0, 0, 0, 0),
+                            GameServices.gameState().getS3kEmeraldStates(), "no emerald changes on a failed/exit path");
+                }
+                if (returned >= 0 && (frame == returned + 60 || frame == returned + 200)) {
+                    replayWindow(session, movie, frame, 45, "LRZ2 return +" + (frame - returned));
+                }
+            }
+        }
+        System.out.println("G " + emeralds + ": entry " + entry + ", results " + results + ", return " + returned
+                + ", Saved2 " + saved);
+        assertTrue(entry > 49073, "giant ring entered after the hold");
+        assertEquals(!sanctuary, results > entry, "Blue Sphere results only on the stage path");
+        assertTrue(returned > entry && returned + 245 < movie.getFrameCount(), "released LRZ2 return with replays");
+    }
+
     /** Two-cycle whole-world replay of {@code window} inputs inside the current world. */
     private static void replayWindow(GameplayCaptureSession session, Bk2Movie movie, int frame, int window,
                                      String label) {

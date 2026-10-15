@@ -1320,3 +1320,33 @@ load (14 live frames before the native 22-frame fade-out). Rows still red there 
 not fade timing and are owned elsewhere: the Knuckles act-2 restore at 37130 and the
 LRZ boss sidekick overlap parity at 47471 (rewind-snapshot rows) and solo Tails' SSZ1
 opening camera (behaviour row). No skips.
+
+## Cold giant-ring s9 gateway and LRZ2 return (2026-10-15)
+
+`TestS3kLrzHpzSszColdCampaign#tailsGiantRingGatewayReturnsToLrzTwo` replays one
+uninterrupted controller-only native320 solo Tails movie from the declared LRZ1 boot into
+the LRZ2 giant ring s9 at ($2640,$640) and back to LRZ2. No emeralds are declared.
+
+| Movie | SHA-256 | Inputs | Source |
+|---|---|---|---|
+| `lrz-tails-cold-giant-ring-s9-320.bk2` | `d0e1af426f3107140446428f925eb46babf06df697634d54f88f72098fa33d93` | 50947 | inputs 0–49072 equal `lrz-tails-cold-hpz-320.bk2` (`229c5036eb936aacb38603fd2195e76baa0c150c36deae900f1fc37e9ec0ec94`, the fade-retimed `a492bba2…`; unchanged before its first retimed load at 53058); 49073–49084 are the 12-input L+A hold recorded above as entering the adjacent giant ring; then neutral |
+
+Base ef61a560f, run `cold-g-verify` (Maven Finished 05:42:07Z): 1/0/0/0. The ring is entered
+at input 49165 with `Collected_special_ring_array` bit 9 set and Saved2
+(9792,1600, 1 ring, timer 20232) recorded; `SSEntryFlash_GoSS` starts Blue Sphere, which
+neutral input fails; results begin at 49912; the real LRZ2 reload releases control at 50546
+at the Saved2 X with the saved ring count, the collected ring is not respawned and the
+emerald states stay zero. Two-cycle 45-input whole-world replays run at +60 and +200 after
+release. Every input is drawn.
+
+Not covered: the seven-Chaos `$1701` branch. A probe with declared `1111111` reached the
+sanctuary at 49188 and released control at 50080, but `HPZSSEntryControl.exitEligible`
+refuses the exit band while any emerald awaits a pedestal stage, so returning needs a won
+Super stage (out of this bounded authoring scope). With all seven declared Super the ring
+pays out rings instead of opening a stage. Blue Sphere winning inputs and the LRZ1/LRZ2
+other giant rings remain open.
+
+Engine pictures (320 px) in `$HOME/Videos/OGGF/s3k-parity-coverage-2026-10-14/spot-checks/cold-campaign-v1/g/`
+were inspected: ring approach (49080), Tails taken by the ring (49150), Blue Sphere (49400),
+results (50100) and the released LRZ2 return with the saved timer and ring (50620). The results
+card draws blue spike glyphs over its SCORE/RING BONUS/PERFECT labels; native comparison is open.
