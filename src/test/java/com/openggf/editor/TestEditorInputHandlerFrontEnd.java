@@ -25,7 +25,7 @@ class TestEditorInputHandlerFrontEnd {
     }
 
     @Test
-    void aFrontEndThatOwnsTheTickStopsTheClassicHandler() {
+    void aFrontEndThatOwnsTheTickStopsWorldEditing() {
         var controller = new LevelEditorController();
         var handler = new EditorInputHandler(controller);
         handler.setFrontEnd(new EditorInputHandler.FrontEnd() {
@@ -33,9 +33,9 @@ class TestEditorInputHandlerFrontEnd {
             public void finishPendingEdits() { }
         });
         var input = new InputHandler();
-        input.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_F1, org.lwjgl.glfw.GLFW.GLFW_PRESS);
+        input.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT, org.lwjgl.glfw.GLFW.GLFW_PRESS);
         handler.update(input);
-        assertEquals(false, EditorCommandPalette.forController(controller).isOpen(),
-                "F1 belongs to the front end while it owns the tick");
+        assertEquals(0, controller.worldCursor().x(),
+                "Movement belongs to the front end while it owns the tick");
     }
 }

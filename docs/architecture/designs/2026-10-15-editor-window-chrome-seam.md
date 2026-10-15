@@ -15,15 +15,15 @@ engine. This branch adds only the seam that such an editor needs.
 | Piece | Role |
 |---|---|
 | `editor.EditorWindowChrome` | Lifecycle (init with GL, per-frame activate, game viewport, render after the final display pass, close), window input filters, editor-tick front end, optional gamepad ownership |
-| `editor.EditorWindowChromes` | `ServiceLoader` discovery; `-Dopenggf.editor.ui=classic` disables it |
-| `EditorInputHandler.FrontEnd` / `setExternalChrome` | The chrome sees each editor tick first; logical-pixel hit regions turn off while it draws the panels |
+| `editor.EditorWindowChromes` | `ServiceLoader` discovery; an external provider replaces the built-in controller HUD |
+| `EditorInputHandler.FrontEnd` | The chrome sees each editor tick first; the game viewport is always world canvas |
 | `InputHandlerInternalAccess.suppressGamepad` | While a chrome that owns the pads is active, Genesis/menu mappings, debug buttons and the rewind bumper see a neutral pad; physical state and prompt-family tracking remain |
 | `EditorCommandPalette.extraCommands` / `actionCommands` | Host and editor commands for chromes that draw their own menus |
 
-Without a provider the engine behaves as before. The engine never loads ImGui; the editor
-repository supplies `META-INF/services/com.openggf.editor.EditorWindowChrome` and a launcher
-that calls `Engine.main`. A controller-first in-engine HUD (`feature/ai-editor-controller-ui`)
-is expected to implement the same seam as the built-in default.
+Without an external provider the engine uses its controller-first HUD. The engine never
+loads ImGui; the editor repository supplies `META-INF/services/com.openggf.editor.EditorWindowChrome` and a launcher
+that calls `Engine.main`. The HUD implements this seam as the built-in default.
+Initialisation errors propagate; no classic chrome fallback remains.
 
 ## Review
 
@@ -34,8 +34,9 @@ An independent review of `179fb8e79` led to three changes:
 - Host calls belong in `update`. The ImGui editor ran Playtest, Save and project commands while
   drawing, i.e. after the frame's final display pass; it now queues them for its next tick.
 - `LevelEditorController.objectPaletteOrNull` and `EditorCommandPalette.actionCommands(dispatch,
-  include)` with `drivesInGamePanes`, so chromes test for spawn editing without catching and can
-  leave out commands for the in-game panes they do not draw.
+  include)` let chromes test for spawn editing without catching and select their action menus.
+  Classic pane actions and their `drivesInGamePanes` filter were subsequently removed when the
+  HUD became the sole built-in UI.
 
 Rejected: wrapping every per-frame chrome call to catch exceptions and fall back to the in-game
 chrome. Nothing was known to throw; the built-in HUD is engine code and an external editor is an
