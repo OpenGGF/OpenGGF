@@ -1795,3 +1795,39 @@ windows: `runs/s3k-tails-full-chain-all-emeralds` HPZ from 419298, SSZ1 423903, 
 
 Limits: as for the pair, the boot inlet has no save session; widescreen/donor breadth
 remains open.
+
+## Cold LRZ→HPZ→SSZ1 solo Sonic campaign: open (2026-10-15)
+
+No solo Sonic LRZ/HPZ cold movie exists, so lane cold3 authored one from the declared
+`boot(9,0)` inlet along the joined pair chain's P1 path (`ReferencePathInputAuthor`; the
+reference only scores positions) in finite batches on Root 19b7d70a6. It reached:
+
+- LRZ1: a spin dash through the rock wall the pair breaks (spin-dash candidates were added
+  for this); the door at (2800,1688) opened from its horizontal button (2618,1779), which
+  position progress had skipped; the dash elevator (4768,1976) by replaying the pair's
+  D+A taps (a stuck recovery that steers to where the reference stood 60–650 indices
+  earlier and replays its inputs); `Obj_LRZMiniboss` defeated with `SszBossInputAuthorTool`
+  `lrz1` (hits 0 after input 13030, no death).
+- LRZ2 (load after input 13370): the door at (10160,1576) opened from `Obj_Button` (9816,1652);
+  a search trial that touched giant ring s9 broke a restore (the special stage registers
+  its own rewind subsystem), after which both searches treat a giant-ring flash like a death.
+- LRZ3 (load ≈ input 21445): the end-boss arena (camera locked at `$A00`, 77 rings) at input
+  24204.
+
+It stopped there by the kill condition: three bounded searches failed in the same
+`Obj_LRZEndBoss` phase, routine 4 (the shot phase, callback 0), each time after the shots
+had taken all of Sonic's rings. The boss takes every hit from its own drifting mines, so
+the player only has to survive about 5500 inputs (the pair needed 46900→52500).
+
+| Attempt | Failure | Boss routine/timer/shots/interval/hits | V_int | RNG |
+|---|---|---|---|---|
+| s9 (search state from s8) | arena entry already doomed at 24669 | 4 / 31 / 2 / `$6F` / 14 | 24645 | `7c8be79b` |
+| s11 `lrz3` boss-policy search | death at 24873 | 4 / 5 / 0 / `$4F` / 13 | 24848 | `0f0d7083` |
+| s12 survival chase near (2720,1500) | no candidate survives 120 inputs at 25724 (neutral death 25809) | 4 / 27 / 1 / `$5F` / 11 (flipped side) | 25700 | `512a4c93` |
+
+Lava drift clock at those states: 208, 410, 308 (stream `$FFFF`, `$FFFF`, `1`). The partial
+inputs (miniboss defeat at 13031, arena entry at 24204, the last survival state) and the
+finite batch lists are preserved with SHA-256 sums in the task directory
+(`cold3-continuation/`). A next attempt needs a survival author for the shot phase that
+keeps rings (dodging the boss's projectiles over the lava platforms) rather than chasing
+the boss or a fixed spot; HPZ and the SSZ1 arrival for solo Sonic were not reached.
