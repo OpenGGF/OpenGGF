@@ -1096,3 +1096,344 @@ private-record7/terrain1/pattern2/dynamic-identity12 plus Palette50. Exact selec
 adds TestRewindSnapshotDiffPalettes to69530 above with the same JDK25/EGL launch.
 Actual HPZ/ending consumer qualification is owned by those lanes and remains
 separate from this pure helper result. Native AIZ handoff is still unstaged.
+
+
+## Native AIZ retained scene and transition-floor handoff — 2026-10-14
+
+Source7001b1eef plus this local candidate; the qualified native handoff is kept
+separate from its unresolved results/core composition. AIZ1BGE_Finish
+(sonic3k.asm:104727–104775) calls Load_Level, which reads the layout header rather
+than clearing Object_RAM. Offset_SomeObjectsDuringTransition(:104154–104182)
+returns without a scan normally; Super_Tails_flag admits only the four physical
+Invincibility_stars at globalSST102..105. The existing ALL_LIVE_SST and
+ROM_WORLD_OFFSET_RANGE policies now express this retained graph and empty normal
+scan. The builder admits an actual empty range; negative/inverted ranges still
+fail. No allocator, shared clock, snapshot/API shape or fixture is changed.
+The consolidated SuperTails auxiliary still lacks the native four-slot graph;
+this request's source branch does not certify that unimplemented breadth.
+
+Full native pointers in the committed segment2 auxiliary resolve5=68690,
+6..11=68E8C,12=686E8,13=68720 and14..16=6872C before and after row3244. They are the
+same cutscene/debris/body/arm/barrel owners, not new AIZ2 scenery. At3283 all5..16
+hold1ABB6 Go_Delete markers; by3332 they clear/reuse. The old handoff explicitly
+removed this cutscene graph and carried only persistent objects, which discarded
+its nonpersistent debris. That incorrect clear and offset premise is removed.
+Debris now has a pure ctx.spawn shell and captured exact parent3; native Wait
+and Move own retirement rather than an engine screen cutoff. The moving callback
+only replaces code and returns; Draw is admitted on the next actual Move pass.
+
+AIZMinibossCutscene_End(:136896–136901) clears Boss_flag, restores level music,
+loads the actual PLC_Monitors and jumps Go_Delete_Sprite_2(:179146–179149), which
+changes code and sets38bit4. Its child Draw tails(:178087–178109) observe that bit,
+mark their own code and return without drawing. Physical clear is next dispatch.
+The cutscene, body, arm, barrels and debris capture this marker state; the boss's
+original camera-reset branch was not native and is removed. Fightable91's
+separate ordinary lifetime is retained.
+
+ALL_LIVE_SST exposed the transition floor's previous omission. Its native Act2
+branch(:104777–104790) writes X7FFF/Delete_Current_Sprite, then still runs
+SolidObjectTop with statusbit7. Java immediately destroyed it, and its missing
+existing suppressesObjectEdgeBalance semantic made Sonic balance against the old
+world-space support after his coordinate rebase. Sonic_Move's tst.b/bmi bypass
+at22458–22460 is the exact owner. The floor now preserves currentX and a captured
+pending-clear marker, publishes the changed code highword, suppresses the native
+edge branch, and keeps its no-range-tail contract. No shared contact/physics
+carve-out is introduced.
+
+| Normal queue request | Observed result | BST execution / queue |
+| --- | --- | --- |
+|93361 initial literal candidate|3/2fail/1error: empty range and early parent clear; third was void-reflection setup|21:47:17;24.622s/2s|
+|28516 declared actual handoff negative|1/1fail/0errors/skips, slot5 lost|21:49:35;24.912s/78s|
+|33995 independent Debris draw negative|1/1fail/0errors/skips|21:59:24;21.632s/0s|
+|47726 complete helper/new native case|8/0/0/0 across production5widths|22:36:17;26.974s/0s|
+|74544 native families/event/carry/recreation/startup|819/2fail/0errors/skips, only stale Napalm marker inventory|22:37:38;36.218s/0s|
+|79594 two corrected inventory predicates, runtime unchanged|2/0/0/0|22:39:15;25.110s/37s|
+|58655 before floor correction|5/3fail/0errors/skips; originalAIZ/prefix balance regressions|22:41:27;95s/79s|
+|7015 before floor correction|66 grouped spans, first6302 animation05/0C|22:39:51;34.606s/43s|
+|55671 initial source/rewind/timing guards|111/0/0/0|22:43:16;31.947s/250s|
+|14257 independent floor literals/normal-manager graph negative|6/6fail/0errors/skips|22:46:39;26.389s/0s|
+|7345 corrected floor and complete affected selection|827/0/0/0|22:49:12;80s/40s|
+|3055 five strengthened actual floor+rider world cases|5/0/0/0|22:51:35;24.906s/0s|
+|50751 canonical controls/chain with corrected floor|5/2fail/0errors/skips; originalAIZ/initialHCZ/first prefix pass|22:53:24;93s/0s|
+|39702 alternate exact trace-segments|1/1fail/0errors/skips; original60 spans restored|22:53:59;34.379s/93s|
+|84112 final source/rewind/timing guards|111/0/0/0|22:54:35;35.158s/127s|
+
+Earlier19583 had3 setup errors;75339 was canceled before execution. Initial
+10045's byte-array diagnostic and the800px compact-blob equality issue were
+verification false positives, closed separately by c3d/d8/7001. Those do not
+count as native runtime negatives. The3055 draft52232 failed compilation only
+because its test named the two NativePositionOps helpers incorrectly; corrected
+helper names did not change runtime.817 passing identities plus corrected2 from
+74544/79594 qualified the earlier native candidate;7345 is the one827 green
+invocation. Its selection adds TestAizCutsceneNativeTransition,
+TestAizTransitionFloorObjectInstance, TestSpawnRewindRecreatableCleanup,
+TestSonic3kAIZEvents, TestLevelSeamlessTransitionExecutor and
+TestSeamlessCarryExcludesBossChildren to51679's707 selection. The five actual
+receiving worlds additionally include floor17 and literal stopped support; all
+registry keys replay for two45-pass cycles in both directions, including marker
+and physical-clear states. This is a declared ROM-loaded scene, not cold input,
+full donor/team or rendering/PCM certification. The old Napalm marker list is
+reconciled with cf19's already-qualified pure ctx.spawn recreation, not weakened.
+
+Profiles, selectors and Java25/EGL/original absolute ROM remain those of91214/
+36977/47500; observer target/aiz-handoff-floor-native-slot-occupancy. Alternate
+returns the same60 grouped25physics/35animation spans: first25589 animation13/05,
+firstphysics25590 TailsSub7800/6C00. Sampled slot-presence frontier advances
+3244→3887, preceding3858, native-only52/58 and no engine-only key. This counts
+physical keys, not code-type parity; low code bytes are not object IDs.
+
+Canonical remaining fields are not green: segment4 raw51, first noncamera7589
+rings111/0; segment8 raw1765, first6000 P2X4997/4996. Former segment6 raw189 is now0,
+but full chain still stops input68801/loadgeneration9 before source closure.
+The second-return prefix inherits that new segment4 results/ring failure. Native
+signpost25/stub26 still exist at7589; the engine's results owner5 disappeared by
+7566 and reset the new world's rings earlier. OriginalAIZ and initialHCZ remain
+green after the local floor correction. This candidate is a LOCAL scoped commit,
+not an integration/overall-green claim. Root explicitly requires coherent
+qualified da27f4f3d adoption before attributing that seam: df8 pairs the physical
+RESULTS producer to real timed direct children/FIFO/VInt publication and may
+change actual creation/wait readiness. No counter fit is admitted to hide it.
+
+Runtime source SHA256 at the final focused/strict candidate:
+- Sonic3kAIZEvents.java: `a7ead67bd378b9282a363e377e67704d46b4e8f2c2530e62245fb271f85f1d2b`
+- AizMinibossCutsceneInstance.java: `5658c543b769b59d8beb7ca70b3e2eaf2ed6de30c5965b70475892824dbb0722`
+- AizMinibossBodyChild.java: `575f1b11fc08439f9a3adaa1ca29aff381189c95c8119d651162e53aace51307`
+- AizMinibossArmChild.java: `e3f8193436fab0dd1b1afa51bfc4560ea647f31ef54d1608eb77b8339379b8bd`
+- AizMinibossFlameBarrelChild.java: `90626f976f0da7485c8cbd450f8072f53ac552e3c3ee617fcf79e36001653495`
+- AizMinibossDebrisChild.java: `b7a7ead31f09dda44b2b988c0b376be5c1b0ba60399506e8712ba22ecbeae706`
+- AizTransitionFloorObjectInstance.java: `b9087c7ff72fcf49c2c6c0c8d7c2382474190a48edd52a98fa0e35b7cadd66ca`
+
+
+## AIZ retained results/title SST and real child latches — 2026-10-14
+
+Local scene/floor candidate6894673ab composes with qualified Rootda27f4f3d,
+including df8 physical/timed RESULTS FIFO/DMA, as d3ca6c022. Composition31682
+completes60 with58passes/2strict failures at23:06:42 BST (140s Maven/0queue).
+The second prefix still has51 raw errors at7589 rings111/0; read-only observer
+49036 reproduces that exact frontier at23:14:56 (46.095s/0queue). The paired
+results dependency alone does not close it.
+
+Native loc_2DD06 replaces the results code with Obj_TitleCard, clears routine,
+sets$3E and returns (asm62708–62725); it does not delete the SST. Init queues four
+ROM archives and seeds$2E=90 (62108–62166). Create polls global Kos_modules_left
+before first checked after-current allocation; first failure retries, whereas an
+admitted prefix proceeds to Wait (62169–62210). The literal table starts at
+260/E0,2FC/100,344/120,E0/10, targets120/17C/184/C0, with$10 entry,$20 exit and
+stagger bytes3/5/7/1 (62303–62378,62450–62478). Higher-slot children write$34 on
+every movement, including their final movement. The lower parent clears that
+latch and returns; its following stationary poll clears rings/timer/air and
+restores music (62214–62245). Wait2 decrements90, then increments$32 while$30 is
+nonzero. Children retire from prior Render_Sprites sign; the next parent poll
+publishes LoadEnemyArt/End_of_level and deletes the owner.
+
+Native segment4 slot4 remains2D690 at7554/7566; children5–7 are2D95C and banner27
+2D8E2 by7566. Rings remain111 through7594 and reset7595. The old engine deletes
+its owner after Init and predicts reset from24 plus VBlank-phase compensation.
+This AIZ branch now keeps the same SST and four physical children, with captured
+parent2/movement/count/stagger/screen state and pure ctx.spawn restoration. The
+fresh table seed/visibility contract is reused. The provider claims prepared ROM
+art and presents actual child screen words without autonomous movement. No
+trace-state input, fitted delay, shared clock/allocator or snapshot/API change
+supplies these states. Other retained/slotless title workflows remain unchanged.
+
+The independent existing AIZ results-exit negative fails1/1 at actual owner
+deletion after Init. First63261:21 total,1obsolete oracle failure/5lease setup
+errors (23:26:01,67s/61squeue); corrected oracle37178:16passes/5same setup errors
+(23:27:41,24.130s/23s). Empty fresh-SST query did not prove the direct fixture's
+initial omitted lease completed. Pilot88827 passes1 (23:30:01,23.986s/62s) but
+shows stacked-FIFO art warnings; strengthened90391 correctly fails5 artLoaded
+assertions (23:34:41,66s/0s). Final setup waits for actual initial lease/FIFO,
+fresh assembly/real graph retirement, then admitted enemy FIFO before declaring
+later results exit. It writes no art readiness or fitted timing. Final15021
+passes5 production presets320/352/400/528/800 at23:37:00 (28.259s/0s), including
+ROM artLoaded, first creation-scan XY, final movement/latch reset ordering and
+two45-frame full-registry cycles at birth/reset and retirement, forced recreation.
+
+Test-only91037 passes those5 and exposes2invalid new fixture premises
+(23:42:33,25.284s/0s): no-op fillers were culled, and slot20 was a placed actor,
+so removing a dynamic object did not free it for another parent. Persistent/
+nonculling declared occupants and genuinely free SST69 correct those premises.
+8792 passes the2changed cases at23:45:39 (24.132s/18s): first failure retry,
+one-child prefix's20-move latch/two45 world cycles, exact ctx.spawn/parent2 with
+another owner/two pure recreation/replay cycles. Qualify7distinct cases; literal
+occupancy is not natural full-scene pressure certification. Bounded independent
+native review found no concrete new Create/Wait/Wait2 or child-tail defect.
+
+Affected16533 passes137/0/0/0 at23:48:33 (28.488s/0s): results art/children/
+rewind, FBZ retained-title sizes, provider/fresh graph, in-level progression and
+mandatory S3K startup60. Guards32336 passes100/0/0/0 at23:49:05 (31.552s/8s):
+architecture4,factory46,schema25,timing25. Canonical48379 completes5/1failure/
+0errors/skips at23:38:43 (96s/0s): originalAIZ,initialHCZ and BOTH return prefixes
+pass, segment4 raw51→0, segments2/6 remain0. Chain retains segment8 raw1765
+(1686physics/79animation), first6000 P2X4997/4996, and segment11 walk stop
+atinput68801/loadgen9. Alternate87590 completes1/1failure/0errors/skips at23:40:31
+(33.792s/140s), unchanged60 grouped25physics/35animation, first25589 animation
+13/05, firstphysics25590 TailsSub7800/6C00. No full-chain/alternate closure.
+
+Commands use local normal Maven queue, Java25, exact original absolute S3K ROM,
+surfaceless EGL and null audio. Graph: -Dtest=TestS3kAizResultsNativeTitleGraph;
+changed2: #firstCheckedFailureRetriesThenPartialPrefixUsesItsOwnMovementLatch+
+pureContextSpawnRecreationKeepsExactParent2WithAnotherResultsOwner. Affected:
+-Dtest=TestS3kResultsScreenObjectInstance,TestS3kResultsKosQueueAndChildren,
+TestS3kResultsKosQueueRewind,TestS3kBossDefeatSignpostFlow,TestFbzResultsTitleAndAct2Sizes,
+TestSonic3kTitleCardManagerRewind,TestSonic3kTitleCardKosQueue,
+TestS3kHeadlessInLevelTitleCardProgression,TestS3kFreshTitleCardSstGraph,
+TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,
+TestSonic3kDecodingUtils. Guards: -Pguards -Dtest=TestRewindArchitectureGuard,
+TestRewindSchemaRegistry,TestSpawnRewindRecreatableCleanup,TestHardwareTimingAuthorityGuard.
+Canonical/alternate profiles and selectors are unchanged from50751/39702.
+Native class labels in optional SlotOccupancyProbe now read the current physical
+owner and fail closed on multiple live claimants. The former first
+getActiveObjects match concealed a real hidden-monitor conversion slot leak;
+the independent follow-up below owns that diagnosis and repair.
+The probe adds callback-contained traceDebugDetails and title/ring phase views;
+input, comparison metrics and lag filtering remain unchanged. Temporary outputs
+stay under target/aiz-retained-native-title-occupancy, never durable raw logs.
+
+Current numeric recycled-parent pressure, same-act Init art-cache readiness,
+SuperTails four-star SST, rendered/audio and broader cold/donor/team obligations
+are separate work; no natural path consequence from the existing Init cache has
+been established in this slice. HCZ/alternate frontiers remain active. This is a
+bounded owner/frontier closure, not overall task completion.
+
+Exact final production SHA-256:
+- S3kResultsScreenObjectInstance.java: `4f5b6327d1bff805f141b943cd34d74fca390999f63f6e3701ff064442a13a25`
+- S3kInLevelTitleCardElementObjectInstance.java: `1e34deea29bc6365cd47b01d7a5073f3794cce153a368d35836d76e0f41c8b03`
+- Sonic3kTitleCardManager.java: `9c58638cdc23305ba0ff88b2c3c706ddeca546a33c87e43d1ab4e049a5c544a8`
+- DefaultObjectRewindPolicies.java: `bb5a064ff728a4aff39b1cb3ba4d53b07554eecd200cce9eca4253d93812192f`
+
+
+## Hidden monitor conversion retains its physical SST — 2026-10-15
+
+The physical label observer21444 fails at23:59:11 BST: one case, zero assertion
+failures, one error, `Multiple native SST dispatch owners: 24` (44.328s Maven,
+70s queue). This was a real monitor/title alias, not permission to select either
+claimant. `S3kHiddenMonitorInstance` installed its replacement without detaching
+its old slot. Manager cleanup then freed the old handle's SST while the revealed
+monitor remained live; a later title child allocated the same slot.
+
+Native loc_83760 changes the current code pointer to Obj_Monitor, sets routine2,
+$3C=4 and Y velocity-$500, clears the signpost bit and calls Sprite_OnScreen_Test
+(asm176074–176099). It neither allocates nor deletes that SST. Obj_MonitorBreak
+allocates icon/explosion children after current, retains the broken shell, and
+Obj_MonitorAnimate eventually changes its code to loc_1D61A. That owner retires
+only through Sprite_OnScreen_Test's coarse-X tail (asm40504–40520,40629–40677,
+37262–37279). The local conversion now uses the existing detachSlotForTransfer
+before addReplacementAtTransferredSlot; allocator, manager and header selection
+contracts remain unchanged.
+
+Independent negative52375 fails one assertion at00:07:57 BST (25.641s Maven,
+43s queue): old hidden handle expected slot-1, actual42. Fixed51420 passes8/0/0/0
+at00:13:21 (66s Maven): three existing components and five production-preset
+manager/whole-world cases. Those cases declare the literal loc_83760 local
+contact, admit the actual manager replacement at70, prove the first subsequent
+free slot is71, and replay two45-pass full-registry cycles before/after cleanup
+with forced recreation. This is local conversion coverage, not a natural cold
+signpost route or all-pressure certificate. Final24540 passes37/0/0/0 at00:21:45
+(28.550s Maven,96s queue): all12 title/transfer graph cases, hidden3, current
+monitor20 and monitor-graph2. The prior137 title consumers and100 architecture/
+schema/factory/timing guards remain qualified on the identical title source.
+
+Final canonical45615 completes5/1failure/0errors/skips at00:20:13 (93s Maven,
+0s queue). Original AIZ, initial HCZ and both AIZ return prefixes pass; the
+fail-closed physical observer now completes without duplicate-owner errors.
+The chain retains segment8 AIZ5 raw1765 (1686 physics,79 animation), first6000
+sidekick_x4997/4996, and returned HCZ segment11 ownership stop at original input
+68801/load generation9. Independent alternate31147 completes1/1failure/0errors/
+skips at00:20:50 (35.879s Maven,87s queue): unchanged60 spans,25 physics/35
+animation, first25589 animation13/05 and firstphysics25590 TailsSub7800/6C00.
+
+Commands retain the canonical/alternate profiles and exact five/one selectors
+above. Negative: --lean -Dtest=TestS3kHiddenMonitorInstance#inRangeLandedSignpostTransfersCurrentSlotToRevealedMonitor.
+51420: -Dtest=TestS3kHiddenMonitorInstance,TestS3kAizResultsNativeTitleGraph#hiddenRevealRetainsExactlyOnePhysicalOwnerThroughCleanupAndWholeWorldReplay.
+24540: -Dtest=TestS3kAizResultsNativeTitleGraph,TestS3kHiddenMonitorInstance,com.openggf.game.sonic3k.objects.TestSonic3kMonitorObjectInstance,TestS3kMonitorGraphRewind.
+Canonical enables only the optional read-only physical labels under
+ target/aiz-physical-title-label-post-transfer. Java25, normal queue, original
+absolute S3K ROM, EGL and null audio are unchanged. No trace hydration, arbitrary
+header choice, fixture fit, shared clock/allocator change or broad sweep.
+
+Flip/respawn header preservation beyond this replacement transfer, numeric
+recycled-parent pressure, same-act title Init art caching, SuperTails four-star
+SST, rendered/audio and broader product obligations remain separate. The actual
+strict AIZ5/returned-HCZ and alternate frontiers are still open.
+
+Exact conversion production SHA-256: `5dabe3ee8f2445df6c12251cacdcf572d9e5a2021f91b10e4a014374291532d2`.
+
+
+## Prepared independent colour-expansion feature — 2026-10-15
+
+The user requested a saved Full/Limited display setting during the measurement
+window. This supersedes the earlier optional capture-only native-word provenance
+proposal. Its owned source writer was canceled while blocked, before mutation;
+no metadata, codec or property draft entered this tree. Source-only feature and
+test preparation holds the normal worktree EX lease and runs no heavy work.
+The qualified AIZ tip remains b8f3da8a1; pending boss tests remain a separate slice.
+
+The exact minimal transfer is forward rounded RGB * 238/255 after existing fade
+and colour-profile conversion. Existing Palette.Color ROM decode levels
+0/36/73/109/146/182/219/255 therefore become exactly
+0/34/68/102/136/170/204/238. Primary GPGX source
+051d430d3d1b54625f9900c8f152d7f232e06daf core/vdp_render.c987–998 builds the normal
+3-bit→even-nibble LUT; MAKE_PIXEL498–500 replicates the nibble. Shadow/highlight
+is a distinct VDP mode (1135–1151), outside this setting. Direct gain also preserves
+intermediate arbitrary creator colours; native word inference is unnecessary.
+Default Full, existing profiles, gameplay palette bytes, copies, codecs, rewind
+state and source constants stay unchanged. Changing a display preference does not
+restore a previous preference when the gameplay timeline rewinds.
+
+The source draft owns display.colorExpansion, the independent annotated enum,
+GraphicsManager accessors/upload paths and underwater keys, settings labels,
+config defaults, pre-render saved-setting synchronization and documentation.
+Normal palette refresh uses the existing latchable publication path; direct and
+derived water keys include expansion separately. UI and shaders outside palette
+uploads retain their own colour contracts. Candidate API version remains
+unpublished0.7.0; authoritative compiled signature generation is pending resumed
+builds, not hand-written pin certification.
+
+Prepared meaningful checks cover all512 ROM RGB combinations, all256 arbitrary
+channel values under every independent profile, writer/alpha boundaries, saved
+UI apply/cancel/default round trips, live setting change, native V-int ownership,
+both direct/derived water cache reuse and invalidation, fade order, and actual
+surfaceless palette texture plus framebuffer pixels.
+
+Qualification (Opus frontier lane, 2026-10-15). The first focused 14-class run
+gave 114 tests, 0 failures, 2 errors, 0 skips. Both errors came from an
+explanatory comment that had been added to `mod-api-release-policy.properties`.
+That descriptor's parser accepts only strict `key=value` lines, so the comment
+was dropped and the descriptor is unchanged. `TestPresentationSpritePixels`
+genuinely rendered: its EGL assumptions held and it reported 0 skips.
+
+An audit then found three gaps, all closed in the same commit:
+
+- **Captures ignored the saved setting.** Only `Engine` applied it. The same
+  owner, `DisplayColorProfileController.applySavedSettings`, now also runs at
+  every `HeadlessGameBoot` boot. It runs per boot because capture sessions
+  install their configuration overrides after constructing the boot's GL
+  context. `TestCaptureColourExpansion` renders S2 EHZ1 through
+  `GameplayCaptureSession` under Full and Limited and reads the framebuffer.
+  Full must contain 255, Limited's maximum must be 238 with 238 present, and
+  at least 99% of pixels must equal the forward gain. With the wiring removed
+  on purpose, the test failed (1 test, 1 failure: "Limited ... was 255").
+- **The CRAM colour-0 backdrop and clear colour bypassed profile and
+  expansion.** Affected: the parallax uniform, the level clear, S1 special
+  stage, S1/S2/S3K level select, S1/S2/S3K/KiS2 title screens, S3K data
+  select, the S2 ending and the CRAM-white special-stage results clear. All
+  now use `PaletteDisplayColor`. A GL clear-pixel case covers this.
+  Constant black clears are unchanged, because every profile maps 0 to 0.
+- **Per-frame synchronisation parsed the settings every frame.** It now
+  compares the raw saved strings and parses only on change. In a clean JVM a
+  probe measured 0 B for both the synchronisation and its two config reads.
+  After any `mock(SonicConfigurationService.class)` in the same JVM, Mockito's
+  inline mock maker instruments every instance at 96 B/frame; the shared
+  qualification fork showed exactly that. The oracle therefore asserts that
+  synchronisation allocates no more than its own two reads. There is no
+  existing Engine-draw allocation oracle. The 5254 warmed-draw oracle in the
+  plan is the Slot panel's.
+
+Bounded SSZ screenshot corroboration uses the already verified original movie
+and native publication boundary: separate neutral SETUP_ONLY render, then
+unchanged original controller suffix at ordinary poll0. Compare Full/Limited
+engine spots680 and1341 with the retained native images/CRAM and actual image
+inspection; preserve source/core/movie/geometry/published-boundary provenance.
+Do not re-encode or normalize screenshots, repaint RGB, infer shadow/highlight,
+or claim full pixel parity from the range transfer. Root owns SSZ source/matrix.

@@ -2923,6 +2923,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				userRecordingSceneSuppressed);
 
 		profiler.beginSection("render");
+		if (displayColorProfileController != null) displayColorProfileController.synchronizeSavedSettings();
 		graphicsManager.runPendingRenderThreadTasks();
 		if (!userRecordingSceneSuppressed) {
 			draw();
@@ -3360,8 +3361,12 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void applySpecialStageResultsClearColor() {
-		glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+		// The results backdrop is CRAM white, so it takes the display profile/expansion.
+		com.openggf.graphics.color.PaletteDisplayColor.glClear(SPECIAL_STAGE_RESULTS_BACKDROP, graphicsManager);
 	}
+
+	private static final com.openggf.level.Palette.Color SPECIAL_STAGE_RESULTS_BACKDROP =
+			new com.openggf.level.Palette.Color((byte) 255, (byte) 255, (byte) 255);
 
 	private void applyTitleScreenClearColor() {
 		TitleScreenProvider titleScreen = gameLoop.getTitleScreenProvider();

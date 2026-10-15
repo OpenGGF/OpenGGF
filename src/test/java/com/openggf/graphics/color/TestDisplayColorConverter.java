@@ -10,6 +10,65 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class TestDisplayColorConverter {
 
     @Test
+    void limitedCanonicalRomColoursMatchNormalGpgxDigitalChannels() {
+        // GPGX normal palette LUT: 3-bit channels become even 4-bit nibbles,
+        // then MAKE_PIXEL replicates the nibble. This is not shadow/highlight.
+        for (int r = 0; r < 8; r++) for (int g = 0; g < 8; g++) for (int b = 0; b < 8; b++) {
+            var colour = new com.openggf.level.Palette.Color();
+            colour.fromSegaFormat((b << 9) | (g << 5) | (r << 1));
+            assertArrayEquals(new int[]{r * 34, g * 34, b * 34},
+                    DisplayColorConverter.toRgbBytes(colour.r & 255, colour.g & 255, colour.b & 255,
+                            DisplayColorProfile.RAW_RGB, DisplayColorExpansion.LIMITED));
+        }
+    }
+
+    @Test
+    void expansionIsIndependentOfProfilesAndRetainsIntermediateCreatorLevels() {
+        int prior = -1;
+        java.util.Set<Integer> levels = new java.util.HashSet<>();
+        for (int value = 0; value < 256; value++) {
+            for (DisplayColorProfile profile : DisplayColorProfile.values()) {
+                int[] full = DisplayColorConverter.toRgbBytes(value, 255 - value, 173, profile);
+                assertArrayEquals(full, DisplayColorConverter.toRgbBytes(value, 255 - value, 173,
+                        profile, DisplayColorExpansion.FULL));
+                int[] limited = DisplayColorConverter.toRgbBytes(value, 255 - value, 173,
+                        profile, DisplayColorExpansion.LIMITED);
+                for (int channel = 0; channel < 3; channel++) {
+                    assertEquals(Math.round(full[channel] * 238.0 / 255), limited[channel]);
+                    org.junit.jupiter.api.Assertions.assertTrue(limited[channel] <= 238);
+                }
+            }
+            int limited = DisplayColorConverter.toRgbBytes(value, value, value,
+                    DisplayColorProfile.RAW_RGB, DisplayColorExpansion.LIMITED)[0];
+            org.junit.jupiter.api.Assertions.assertTrue(limited >= prior);
+            prior = limited;
+            levels.add(limited);
+        }
+        assertEquals(239, levels.size(), "raw creator values must not be quantized to eight ROM levels");
+    }
+
+    @Test
+    void bothLimitedWritersPreserveBufferAndAlphaBoundaries() {
+        for (DisplayColorProfile profile : DisplayColorProfile.values()) {
+            ByteBuffer target = ByteBuffer.allocate(6);
+            target.put((byte) 42);
+            DisplayColorConverter.writeRgbBytes(146, 73, 219, profile, DisplayColorExpansion.LIMITED, target);
+            assertEquals(4, target.position());
+            int[] expected = DisplayColorConverter.toRgbBytes(146, 73, 219, profile, DisplayColorExpansion.LIMITED);
+            assertEquals(42, target.get(0));
+            for (int i = 0; i < 3; i++) assertEquals(expected[i], target.get(i + 1) & 255);
+            int[] rgba = {-1, -1, -1, -1, 77};
+            DisplayColorConverter.writeRgbBytes(146, 73, 219, profile, DisplayColorExpansion.LIMITED, rgba, 1);
+            assertEquals(-1, rgba[0]);
+            assertEquals(77, rgba[4]);
+            assertArrayEquals(expected, java.util.Arrays.copyOfRange(rgba, 1, 4));
+        }
+        assertEquals(DisplayColorExpansion.FULL, DisplayColorExpansion.parse(null));
+        assertEquals(DisplayColorExpansion.FULL, DisplayColorExpansion.parse("unknown"));
+        assertEquals(DisplayColorExpansion.LIMITED, DisplayColorExpansion.parse(" limited "));
+    }
+
+    @Test
     void callerProvidedBufferMatchesAllocatingApiForEveryProfile() {
         for (DisplayColorProfile profile : DisplayColorProfile.values()) {
             ByteBuffer target = ByteBuffer.allocate(8);

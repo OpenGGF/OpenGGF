@@ -72,6 +72,8 @@ class TestS3kHiddenMonitorInstance {
                 "Obj_HiddenMonitor loc_83760 clears signpost landed bit 0 at $38(a1)");
         assertEquals(1, services.bubbleAttackCount,
                 "Obj_HiddenMonitor must play sfx_BubbleAttack when the signpost is inside word_8379E");
+        assertEquals(-1, hidden.getSlotIndex(),
+                "loc_83760 keeps the replacement SST occupied; old-handle cleanup must not release that slot");
         verify(objectManager).addDynamicObjectAtSlot(any(Sonic3kMonitorObjectInstance.class), eq(42));
         verify(objectManager, never()).addDynamicObjectAfterCurrent(any());
     }

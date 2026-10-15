@@ -181,6 +181,9 @@ public enum SonicConfiguration {
 	 */
 	DISPLAY_COLOR_PROFILE,
 
+	/** Independent palette RGB output range: FULL (255 maximum) or LIMITED (238 maximum). */
+	DISPLAY_COLOR_EXPANSION,
+
 	/**
 	 * Key to cycle the display color profile at runtime.
 	 */

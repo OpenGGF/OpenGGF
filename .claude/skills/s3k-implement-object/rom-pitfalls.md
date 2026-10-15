@@ -5693,6 +5693,23 @@ Origin:2026-10-14 common SIMPLE marker slice overcf19f8506; asm137079,137091,
 179136. Actual seg2 row3084 marker is repaired; next presence disagreement3244
 is transition-context evidence rather than proof of a particular teardown bug.
 
+
+### AIZ Load_Level retains the scene; status7 defeats stale edge balancing
+
+AIZ1BGE_Finish reads level resources without clearing Object_RAM. Its normal
+Offset_SomeObjects branch scans no slots; active SuperTails scans only102..105.
+Do not destroy the old cutscene graph on that seamless reload. Its End writes
+Go_Delete_Sprite_2/38bit4 and child Draw tails mark their own code before next
+physical clear. Debris StartMove only replaces code/RTS; moving-state alone does
+not grant that dispatch a draw. The retained transition floor writes X7FFF and
+Delete_Current then still calls SolidObjectTop. Its statusbit7 makes native
+Sonic_Move skip object-edge balance; use the existing object semantic rather
+than resetting player facing or changing shared collision math. Exact source,
+negative/replay evidence and pending composed RESULTS dependency are in the
+2026-10-14 s3k-monkey-dude-sst audit; this local owner proof is not a whole trace
+or cold-route pass.
+
+
 ## Spawned donor art keeps its native palette line
 
 The 2026-10-14 Chaos revision exposed wrong-colour CNZ bumpers and SOZ ghosts
@@ -5748,3 +5765,29 @@ bucket1. Five-width whole-world replay and a literal harmless-HPZ-probe negative
 verify both the structural art and the publication, not merely object counts.
 Origin:2026-10-14 SSZ sky496→304 prepared tiles on17b47cb48; asm91244–91265
 and116772–116786.
+
+### AIZ results keep a real title SST, not a reset countdown
+
+`loc_2DD06` replaces results code with `Obj_TitleCard` and returns; Init retains
+that physical owner. Create polls global `Kos_modules_left` before checked
+after-current allocation, preserving retry or admitted prefix. Real table
+children write `$34` even on their final `$10` move. The lower parent clears
+that latch and returns before a later stationary poll clears rings/timer.
+Wait2's90 and `$30`/prior-render retirement belong to that graph. A slotless24/
+VBlank correction can reset rings early while player physics matches. Pure
+recreation keeps exact parent2/ctx.spawn, not another results owner. Complete
+actual initial lease and admitted enemy FIFO before declaring later results;
+an empty fresh-SST query alone does not prove completion. [Native graph and
+strict closure](../../../docs/architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-retained-resultstitle-sst-and-real-child-latches--2026-10-14).
+
+
+## Same-SST code replacement must detach the obsolete Java handle
+
+Obj_HiddenMonitor loc_83760 changes the current SST to Obj_Monitor without
+freeing occupancy (sonic3k.asm176074–176099). Installing a new Java owner at
+that slot while the old handle still owns it lets its manager destruction tail
+free the live replacement. Use the existing detachSlotForTransfer before
+addReplacementAtTransferredSlot. Prove the old handle is detached, the new
+physical owner remains unique after cleanup, and the next allocation skips its
+occupied slot; capture/restore both sides and replay the full registered world.
+Do not conceal duplicate physical owners by selecting a convenient list entry.

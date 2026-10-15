@@ -5,6 +5,12 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Colour expansion:** Settings → Display offers a saved Full/Limited range
+  independently of the existing colour profile. Full keeps current output;
+  Limited caps palette RGB at 238 after fades and profile conversion, including
+  creator colours, with live normal and underwater palette refresh. The palette
+  backdrop and headless gameplay captures use the same saved setting.
+
 - **Level authoring:** Named projects create, edit and reopen complete authored
   levels for Sonic 1, Sonic 2 and Sonic 3&K using ROM-derived asset libraries.
   Atomic saves retain placements and missing dependency records; close and quit
@@ -137,3 +143,12 @@ Rewind verification compares private records and complete captured opaque arrays
 by content, with explicit failures when snapshot inspection cannot complete. It also
 checks all captured ObjectManager gameplay cursors and contact buffers. Palette
 copies retain complete raw RGB comparison.
+
+The AIZ fire handoff retains its native scene slots and delayed retirement
+markers. Its transition floor preserves the native solid tail and prevents
+false edge balancing after the coordinate change. Its miniboss results retain
+that SST as the in-level title owner; real title children drive the ring reset,
+display hold and retirement through their native movement and visibility latches.
+Hidden-monitor conversion retains the occupied native SST through replacement
+cleanup. Both special-stage return prefixes pass; broader complete-route parity
+remains separate from these scoped native-owner checks.

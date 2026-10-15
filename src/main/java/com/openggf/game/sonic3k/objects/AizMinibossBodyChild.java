@@ -80,14 +80,30 @@ public class AizMinibossBodyChild extends AbstractBossChild implements TouchResp
         }
     }
 
+    private boolean nativeRetirementPending;
+
+    @Override
+    protected boolean destroyWhenParentDestroyed() {
+        // Cutscene children execute their own Child_Draw*Sprite2 bit4 tail.
+        return !(parent instanceof AizMinibossCutsceneInstance);
+    }
+
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (!shouldUpdate(vIntRunCount)) {
             return;
         }
+        if (nativeRetirementPending) {
+            com.openggf.level.objects.ObjectLifetimeOps.deleteNoRespawn(this);
+            return;
+        }
         syncPositionWithParent();
         updateAnimation();
+        // Child_Draw_Sprite2 / Child_DrawTouch_Sprite2 returns through
+        // Go_Delete_Sprite_2 instead of drawing when parent $38 bit4 is set.
+        if (parent instanceof AizMinibossCutsceneInstance
+                && (parent.getCustomFlag(0x38) & 0x10) != 0) nativeRetirementPending = true;
         updateDynamicSpawn();
     }
 
@@ -109,7 +125,7 @@ public class AizMinibossBodyChild extends AbstractBossChild implements TouchResp
 
     @Override
     public int getCollisionFlags() {
-        if (parent == null || parent.getState().defeated || isDestroyed()) {
+        if (nativeRetirementPending || parent == null || parent.getState().defeated || isDestroyed()) {
             return 0;
         }
         return COLLISION_FLAGS;
@@ -151,6 +167,7 @@ public class AizMinibossBodyChild extends AbstractBossChild implements TouchResp
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        if (nativeRetirementPending || isDestroyed()) return;
         ObjectRenderManager rm = services().renderManager();
         if (rm == null) {
             return;

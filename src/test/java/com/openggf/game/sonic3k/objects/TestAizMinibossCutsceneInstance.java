@@ -39,20 +39,9 @@ class TestAizMinibossCutsceneInstance {
                         + "$27..$01 before deleting at zero (sonic3k.asm:176746-176751,176780-176799)");
     }
 
-    /**
-     * The AIZ1 cutscene miniboss (object 0x90) is a one-shot scripted scene object whose
-     * fly-off (EXIT_TIME_AIZ1 = 0x120 frames) is still running when the AIZ1->AIZ2 fire
-     * transition snapshots persistent objects (~80-150 frames after Events_fg_5). Because it
-     * (and its flame-barrel children, persistent via AbstractBossChild) is persistent, it gets
-     * carried into AIZ2 with its world position un-offset, stranding its still-firing flame
-     * children partway through AIZ2 where they keep hurting the player with no coherent parent.
-     *
-     * <p>ROM Obj_AIZMinibossCutscene's object RAM slot does not survive the AIZ2 reload, so the
-     * engine must not carry the cutscene object or its children across the seamless act
-     * transition.
-     */
+    /** Load_Level copies layout only; the cutscene graph keeps its native exit/bit4 lifetime. */
     @Test
-    void aiz1CutsceneAndChildrenDoNotSurviveSeamlessActReload() throws Exception {
+    void aiz1CutsceneAndChildrenSurviveTheSeamUntilNativeRetirement() throws Exception {
         TestObjectServices services = new TestObjectServices();
         AizMinibossCutsceneInstance cutscene = buildCutscene(services);
 
@@ -63,10 +52,8 @@ class TestAizMinibossCutsceneInstance {
         // AIZ1 -> AIZ2 seamless transition world delta (LevelManager.offsetCarriedObjectsForTransition).
         cutscene.onCarriedAcrossSeamlessTransition(-0x2F00, -0x80);
 
-        assertTrue(cutscene.isDestroyed(),
-                "AIZ1 cutscene miniboss (0x90) must not survive the AIZ1->AIZ2 seamless reload");
-        assertTrue(barrel.isDestroyed(),
-                "AIZ1 cutscene miniboss flame-barrel children must not survive the reload");
+        org.junit.jupiter.api.Assertions.assertFalse(cutscene.isDestroyed());
+        org.junit.jupiter.api.Assertions.assertFalse(barrel.isDestroyed());
     }
 
     private static AizMinibossFlameBarrelChild buildBarrel(

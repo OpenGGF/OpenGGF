@@ -105,6 +105,7 @@ final class DefaultObjectRewindPolicies {
     private static final Map<FieldKey, RewindFieldPolicy> EXACT_FIELD_POLICIES = Map.ofEntries(
             // Fresh title child parent2 is native graph identity, not a nearest owner hint.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kFreshTitleCardElementObjectInstance", "parent"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kInLevelTitleCardElementObjectInstance", "parent"), RewindFieldPolicy.CAPTURED),
             // SSZ constructor-only scalars are rebuilt from each immutable recreation spawn.
             // Keep their existing exclusion explicit here; live motion and graph links remain captured.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SszBouncyCloudObjectInstance", "baseY"), RewindFieldPolicy.TRANSIENT),
@@ -487,6 +488,7 @@ final class DefaultObjectRewindPolicies {
             // Common/falling shots can belong to the cutscene or fight graph. Their
             // camera-relative launch XY cannot identify the firing barrel/boss.
             // A pure spawn shell binds these exact live ObjectRefs in phase two.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossDebrisChild", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossBarrelShotChild", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossBarrelShotChild", "barrel"), RewindFieldPolicy.CAPTURED),
             // Barrel-shot flares capture numeric parent3: cleared/recycled SST headers remain readable.

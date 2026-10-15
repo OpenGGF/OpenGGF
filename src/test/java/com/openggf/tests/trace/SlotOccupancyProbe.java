@@ -34,7 +34,8 @@ import java.util.TreeSet;
  *   <li>It never writes engine state. It only reads a freshly built occupancy map
  *       and appends a text report.</li>
  *   <li>It is off unless {@code OGGF_SLOT_PROBE=1} is set in the environment, so a
- *       committed build never pays for it and no test outcome depends on it.</li>
+ *       ordinary replay never pays for it. Enabled physical-owner inspection fails
+ *       closed on duplicate live SST claimants; it never chooses a convenient owner.</li>
  * </ul>
  *
  * <p><b>Lag-frame filter.</b> A {@code slot_dump} whose {@code vfc} equals the next
@@ -187,6 +188,16 @@ public final class SlotOccupancyProbe {
         write("f" + traceFrame + " (" + diffs.size() + " slots): " + String.join(", ", diffs) + "\n");
         if ("1".equals(System.getenv("OGGF_SLOT_PROBE_FULL"))) {
             write("    rom: " + formatMap(rom, null) + "\n    eng: " + formatMap(engine, objectManager) + "\n");
+            // Read existing production evidence views after the completed row;
+            // neither probe publication nor these getters advances an owner.
+            var level = com.openggf.game.GameServices.level();
+            var state = level.getLevelGamestate();
+            var title = com.openggf.game.GameServices.module().getTitleCardProvider();
+            if (title instanceof com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager s3k) {
+                write("    level: rings=" + (state == null ? "-" : state.getRings())
+                        + " title=" + s3k.getStateName() + " timer=" + s3k.getStateTimer()
+                        + " art=" + s3k.hasPublishedInLevelRuntimeArtAdmission() + "\n");
+            }
         }
     }
 
@@ -204,16 +215,18 @@ public final class SlotOccupancyProbe {
 
     /** Class + centre position of the engine occupant of {@code slot}, for extra-slot triage. */
     private static String describeOccupant(ObjectManager objectManager, int slot) {
-        for (com.openggf.level.objects.ObjectInstance instance : objectManager.getActiveObjects()) {
-            if (instance instanceof com.openggf.level.objects.AbstractObjectInstance aoi
-                    && aoi.getSlotIndex() == slot && !instance.isDestroyed()) {
-                return String.format("(%s @%d,%d spawn=%s persist=%s)",
+        // A detached logical actor can still render beside its replacement. Read the actual SST owner.
+        var instance=com.openggf.level.objects.NativeSstSlotAccess.currentOwner(objectManager,slot);
+        if (instance!=null) {
+            String detail = com.openggf.level.objects.ObjectCallbackDispatch.call(
+                        objectManager, instance, instance::traceDebugDetails);
+            return String.format("(%s @%d,%d spawn=%s persist=%s%s)",
                         instance.getClass().getSimpleName(),
                         instance.getX(), instance.getY(),
                         instance.getSpawn() == null ? "-"
                                 : instance.getSpawn().x() + "," + instance.getSpawn().y(),
-                        instance.isPersistent());
-            }
+                        instance.isPersistent(),
+                        detail == null || detail.isBlank() ? "" : " diag={" + detail + "}");
         }
         return "";
     }

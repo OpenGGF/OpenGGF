@@ -87,6 +87,8 @@ public final class ModApiVersion {
      * admission. Native preset/config types stay with their game; shared effects take factories.
      * Host-supplied title canvases and attached-effect rendering preserve native
      * ownership and whole-picture transforms without exposing implementation classes.
+     * Display colour expansion independently selects Full or Limited palette RGB output
+     * while retaining colour profile semantics and native palette ownership.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);

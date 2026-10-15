@@ -759,6 +759,35 @@ public class Sonic3kTitleCardManager
         }
     }
 
+    /** Actual in-level SST children own movement and retirement; this owner presents their words. */
+    public void useNativeInLevelSstChildren() {
+        useExternalInLevelGameplayOwner();
+        Arrays.fill(elemExited,true); // Unallocated/partial-prefix elements are not rendered.
+    }
+
+    /** Obj_TitleCardCreate claims prepared title art without advancing a visual child. */
+    public boolean prepareNativeInLevelTitleArt() {
+        return !artLoading || finishQueuedArtIfReady();
+    }
+
+    /** ObjArray_TtlCard order differs from the renderer's banner-first order. */
+    public void publishNativeInLevelTitleElement(int tableIndex,int x,int y,boolean retired) {
+        int index=tableIndex==3 ? ELEM_BANNER : tableIndex+1;
+        elemX[index]=(short)x-128;
+        elemY[index]=(short)y-128;
+        elemExited[index]=retired;
+    }
+
+    public void publishNativeInLevelTitleHold(int remainingWait) {
+        state=Sonic3kTitleCardState.DISPLAY;
+        stateTimer=90-remainingWait;
+    }
+
+    public void publishNativeInLevelTitleExit(int stagger) {
+        state=Sonic3kTitleCardState.EXIT;
+        phaseCounter=stagger;
+    }
+
     /** The retained SST consumes the preceding children's movement latch. */
     public boolean isExternalInLevelWaitReady() {
         // Last movement enters DISPLAY with timer zero. The next parent clears

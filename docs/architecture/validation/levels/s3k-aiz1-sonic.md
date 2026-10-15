@@ -835,3 +835,53 @@ transition context. Native-only24..37/engine-only4 need full pointer/scene-bound
 attribution; low code bytes do not prove old actor survival. No transition fix
 or shared allocator/clock change is inferred. [Native owner, exact negatives,
 commands and outcomes](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-common-simple-shot-final-native-wait-and-physical-retirement).
+
+
+## Native retained-scene handoff follow-up — 2026-10-14 local candidate
+
+The previous3244 context omission is attributed and repaired locally:
+AIZ1BGE_Finish retains physicalSST5..17; only active SuperTails stars102..105
+receive object offsets. The cutscene graph retires through captured38bit4/code
+markers and clears on the next dispatch. The transition floor likewise retains
+its X7FFF/Delete_Current solid tail and status7 edge-balance suppression.
+Debris Wait underflow swaps code without an early draw.827 affected/startup
+cases and111 guards pass; five ROM-loaded production presets320/352/400/528/800
+retain exact resource/slot/position identities and complete two45-frame full-world
+cycles around receipt, marking and clearing. Native SuperTails four-slot graph,
+full cold/donor/roster/rendered/audio breadth remain separate limits.
+
+OriginalAIZ and initialHCZ pass; alternate returns its prior60 spans. Slot-key
+presence advances3244→3887, preceding3858, native-only52/58. Former returned-AIZ
+segment6 raw189 closes to0, but a new earlier results seam leaves the second
+prefix red: segment4 rings111/0 at7589/raw51. Segment8 has raw1765/first6000 P2X
+4997/4996; full chain still loses production ownership atinput68801/loadgen9.
+This local candidate awaits the qualified paired RESULTS/core dependency and
+matched composition, and is not an integrated or overall-green route claim.
+[Exact native owners, rejected premises, commands and limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#native-aiz-retained-scene-and-transition-floor-handoff--2026-10-14).
+
+
+### Current retained results/title follow-up (2026-10-14)
+
+Paired core is composed in d3ca6c022. AIZ results retain their native title SST;
+real table children own reset/retirement through movement/render latches. Five
+production presets pass full-registry forced recreation/two45-pass cycles and
+ROM art, plus checked failure/partial-prefix/exact-parent cases. Affected137
+and guards100 pass. OriginalAIZ/initialHCZ and both return prefixes pass;
+segment4 rings51 errors→0. Segment8 raw1765/first6000 P2X4997/4996,
+input68801/loadgen9 walk-stop and alternate60 spans remain. This updates the
+preceding pending dependency/ring-seam claim; cold/donor/team/rendered/audio,
+SuperTails and native pressure/cache limits remain.
+[Native owner and exact evidence](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-retained-resultstitle-sst-and-real-child-latches--2026-10-14).
+
+
+Current follow-up (2026-10-15): optional physical title labels exposed an actual
+hidden-monitor conversion SST leak. Native loc83760 keeps that SST occupied;
+the Java replacement now detaches its obsolete handle before manager cleanup.
+Negative52375 fails; five production-preset local manager/recreation/two45-pass
+world cases plus three components pass51420. Final24540 passes37 including all
+12 title/transfer graph cases and existing monitor consumers. Canonical45615
+retains original AIZ/initial HCZ/both-prefix passes and now completes physical
+labels without duplicate owners. AIZ5 raw1765 and returned HCZ input68801 stop,
+alternate60 spans, broader cold/donor/team, header pressure and rendered/audio
+limits remain open. See the owning audit's hidden-monitor section; no natural
+cold-signpost completion is inferred from the declared local contact.
