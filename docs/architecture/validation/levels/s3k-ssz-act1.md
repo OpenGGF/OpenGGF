@@ -1748,3 +1748,50 @@ Limits: the boot inlet has no save session, so the results SaveGame is observed 
 results owner's tally-to-wait transition (with `Collected_special_ring_array` clear), and
 its persisted next level is covered by the save-site tests; widescreen/donor breadth of
 the campaign remains open.
+
+## Cold LRZ→HPZ→SSZ1→DEZ1 Tails campaign (2026-10-15)
+
+`TestS3kLrzHpzSszColdCampaign#tailsColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory`
+replays one uninterrupted controller-only native320 Tails-alone movie from the declared
+`boot(9,0)` LRZ1 inlet: the qualified cold Tails LRZ chain into HPZ, HPZ's Knuckles fight,
+theft, collapse and altar (the single-player helper timers) to `loc_45D8A` (`$A00`), Tails'
+SSZ1 arrival, the Knuckles-button bridge, both replicas, the clouds, Mecha Sonic, the results
+SaveGame and the launch into DEZ1 through the intro run's release. The shared verifier (also
+used by the pair test) additionally arms HPZ live history 120 inputs before the SSZ1 load and
+asserts its retirement and the SSZ1 assembly (P1 X `$100`, Camera Y + `$65`, 0 rings).
+
+| Movie | SHA-256 | Inputs | Source |
+|---|---|---|---|
+| `lrz-tails-cold-hpz-ssz1-dez1-320.bk2` | `54d25084b828db637068a3ba158954e3f64d5d859d49c686e5d6ddcb0b2282ff` | 86090 | inputs 0–62545 equal `lrz-tails-cold-hpz-320.bk2` (`229c5036eb936aacb38603fd2195e76baa0c150c36deae900f1fc37e9ec0ec94`, all of it) |
+
+Authoring on Root 19b7d70a6 (two finite batches, ts1 and ts2): the reference-path search
+followed the joined pair chain's HPZ P1 path to the lower teleporter (pair index 62475); the
+HPZ fight policy (`HpzJoinedControllerAuthor`'s FightBot, which reads only P1 and the live
+Knuckles owner) carried Tails through the fight, theft, collapse and altar to the SSZ1 load
+(input 69861; rings 12→1, no death); neutral input to the arrival release (input 70036, P1
+(256,3085), RNG `cfcd80f3`, the direct pair movie's release seed). In SSZ1 the search first
+stopped at the Knuckles-button bridge: P1 stood at the camera-bounded edge (max X 512) while
+`CutsceneKnux_SSZ` was still on its way to the button, so the search could not progress;
+1076 neutral inputs later `Obj_SSZCutsceneBridge` had retracted and `loc_44FBA` opened the
+act bounds. The search then followed the direct pair movie's P1 path (Tails flies where it
+helps), `SszBossInputAuthorTool` defeated GHZ (after 72972), MTZ (76304) and Mecha (83380;
+rings 52→0, no death, lives 3), and neutral input carried the results, launch and DEZ intro.
+The script expands byte-identically to the BK2 input log.
+
+Fresh replay (run `v3`, Maven Finished 17:18:46Z): 2/0/0/0 with the pair method. Tails: HPZ
+62424, SSZ1 69861/69862, GHZ 72972, MTZ 76304, Mecha 83380, results save 83998, DEZ1
+85689/85690 (Tails feet at `$9AC+$13`, centre Y 2480, no sidekick), release 85772; HPZ and
+SSZ histories retired at their loads; 45-input two-cycle replays at the three defeats, the
+results save and the DEZ release. The pair run in the same JVM matches its committed
+numbers (52947, 67037/67038, 71823, 76536, 82834, 83452, 85143/85144, 85226).
+
+Engine pictures (320 px) in
+`$HOME/Videos/OGGF/s3k-parity-coverage-2026-10-14/spot-checks/cold-campaign-v1/t/` were
+inspected: Tails in the HPZ lower teleporter (64546), the SSZ1 load and arrival with
+cutscene Knuckles beaming in over Tails' arrival spot (69862/70036), the opened bridge
+(71252), the GHZ replica's defeat (72973), MTZ (76305), the Mecha arena pad (81965), Mecha's
+defeat (83381; Tails off-screen above) and Tails released in DEZ1 at 0:06 (86090). Native
+windows: `runs/s3k-tails-full-chain-all-emeralds` HPZ from 419298, SSZ1 423903, DEZ 444059.
+
+Limits: as for the pair, the boot inlet has no save session; widescreen/donor breadth
+remains open.

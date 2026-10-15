@@ -331,3 +331,12 @@ load (14 live frames before the native 22-frame fade-out). Rows still red there 
 not fade timing and are owned elsewhere: the Knuckles act-2 restore at 37130 and the
 LRZ boss sidekick overlap parity at 47471 (rewind-snapshot rows) and solo Tails' SSZ1
 opening camera (behaviour row). No skips.
+
+## Cold Tails HPZ campaign leg (2026-10-15)
+
+The cold Tails-alone campaign (`TestS3kLrzHpzSszColdCampaign#tailsColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory`,
+SSZ1 matrix) is the first cold Tails replay through HPZ's Knuckles fight, theft, collapse and
+altar with the single-player helper timers to `loc_45D8A` (`$A00`): HPZ load 62424, SSZ1
+load 69861 with HPZ's live history retired at the SSZ1 assembly. It continues to DEZ1. The
+solo Sonic LRZ→HPZ→SSZ1 campaign remains open (SSZ1 matrix).
+
