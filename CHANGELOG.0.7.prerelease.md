@@ -5,6 +5,11 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Main menu:** Holding Escape freezes a stock game and smoothly shrinks its
+  picture into the paused-game card; Resume expands it back to full size before
+  gameplay continues. Settings show **RESTART** only for changed
+  values awaiting a restart, clearing it when restored to the running value.
+
 - **Level authoring:** Named projects create, edit and reopen complete authored
   levels for Sonic 1, Sonic 2 and Sonic 3&K using ROM-derived asset libraries.
   Atomic saves retain placements and missing dependency records; close and quit

@@ -20,19 +20,20 @@ import java.util.Objects;
 final class GameLoopSuspension {
     /** Engine-owned capture and restore of what the hub would otherwise change. */
     interface Host {
-        /** Captures the music and picture before the fade; false means use the full return instead. */
+        /** Captures the music and picture before parking; false means use the full return instead. */
         boolean prepareSuspend(GameMode mode);
 
-        /** Runs once the game has faded out: parks it and shows the master title. */
+        /** Runs after its last picture is captured: parks it and shows the master title. */
         void suspend();
 
-        /** Runs once the master title has faded out: removes it and brings the game back. */
+        /** Runs after the resume zoom finishes: removes the hub and brings the game back. */
         void resume();
     }
 
     private final GameLoop loop;
     private Host host;
     private boolean parked;
+    private boolean preparing;
     private boolean userPausedWhenParked;
 
     GameLoopSuspension(GameLoop loop) {
@@ -50,15 +51,24 @@ final class GameLoopSuspension {
     /** The Escape hold's completion: suspend when the run allows it, otherwise return as before. */
     void leave() {
         if (host != null && suspendable() && host.prepareSuspend(loop.getCurrentGameMode())) {
-            loop.fadeOutTo(host::suspend);
+            preparing = true;
         } else {
             loop.fadeOutTo(loop::returnToMasterTitle);
         }
     }
 
+    /** Freeze until the renderer has captured the final gameplay frame. */
+    boolean preparing() { return preparing; }
+
+    void completePreparedSuspend() {
+        if (!preparing) return;
+        preparing = false;
+        host.suspend();
+    }
+
     boolean suspendable() {
         var gameplay = loop.resolveGameplayModeContext();
-        return !parked && gameplay != null && gameplay.isGameplayRuntimeReady()
+        return !parked && !preparing && gameplay != null && gameplay.isGameplayRuntimeReady()
                 && loop.getCurrentGameMode() != GameMode.MOD_SCENE
                 && !loop.modSceneActBridge.ownsAct()
                 && TraceSessionLauncher.active() == null
@@ -107,10 +117,10 @@ final class GameLoopSuspension {
         loop.tearDownGameplayForReturn();
     }
 
-    /** Called each master-title frame: Resume on the paused card fades the hub out, then resumes. */
+    /** Called between display frames: restore gameplay only after the full-size picture was shown. */
     void routeResume(MasterTitleScreen screen) {
         if (screen == null || host == null || loop.resolveFadeManager().isActive()) return;
-        if (screen.consumeResumeRequest()) loop.resolveFadeManager().startFadeToBlack(host::resume);
+        if (screen.consumeResumeRequest()) host.resume();
     }
 
     private GameMode changeMode(GameMode mode) {

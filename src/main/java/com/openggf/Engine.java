@@ -1660,6 +1660,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				SuspendedGame.card(game.code(), mode, SuspendedGame.location(mode, zone, world.getApparentAct() + 1)));
 		pendingSuspendThumbnail = null;
 		suspendThumbnailRequested = true;
+		audioManager.fadeOutMusic();
 		return true;
 	}
 
@@ -1675,7 +1676,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		}
 	}
 
-	/** After the game fades out: keep its session, show the master title on the saved preferences. */
+	/** After capturing the frozen frame: park its session and animate the picture into the hub. */
 	private void suspendToMasterTitle() {
 		SuspendedGame.Pending pending = pendingSuspend;
 		pendingSuspend = null;
@@ -1690,12 +1691,13 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		if (masterTitleScreen != null) masterTitleScreen.cleanup();
 		masterTitleScreen = createMasterTitleScreen();
 		masterTitleScreen.initialize();
-		graphicsManager.getFadeManager().startFadeFromBlack(null);
+		graphicsManager.getFadeManager().cancel();
+		masterTitleScreen.animateSuspendedGame();
 		LOGGER.info("Suspended " + pending.card().menuLabel() + " to the master title");
 	}
 
 	/**
-	 * After the master title fades out: restore the settings (live ones take their new values, see
+	 * After the picture has zoomed back in: restore the settings (live ones take their new values, see
 	 * {@code LiveSettings}), then the picture size, camera and music.
 	 */
 	private void resumeSuspendedGame() {
@@ -1716,7 +1718,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		} catch (RuntimeException failure) {
 			LOGGER.warning("Resumed without its music state: " + failure.getMessage());
 		}
-		gameLoop.resolveFadeManager().startFadeFromBlack(null);
+		gameLoop.resolveFadeManager().cancel();
 		LOGGER.info("Resumed " + game.card().menuLabel());
 	}
 
@@ -2968,6 +2970,12 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void displayFrame() {
+		if (gameLoop.suspension.parked()) gameLoop.suspension.routeResume(masterTitleScreen);
+		// Complete between frames: no gameplay update may follow the captured picture, and
+		// the hub's dimensions/projection must be installed before this frame starts drawing.
+		if (gameLoop.suspension.preparing() && !suspendThumbnailRequested) {
+			gameLoop.suspension.completePreparedSuspend();
+		}
 		boolean performanceOverlayEnabled =
 				debugOverlayManager.isEnabled(DebugOverlayToggle.PERFORMANCE);
 		profiler.setEnabled(shouldEnablePerformanceProfiler(

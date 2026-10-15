@@ -11,17 +11,17 @@ import com.openggf.graphics.RgbaImage;
 import java.util.Objects;
 
 /**
- * A stock game kept in memory while the master title is shown. Holding Escape fades the game out
+ * A stock game kept in memory while the master title is shown. Holding Escape freezes the game
  * and parks it here instead of tearing it down; its card resumes it, and starting anything else
  * from the hub ends it through the normal teardown.
  *
  * <p>The live session stays published in {@code SessionManager}; GameLoop stops binding it, so the
  * hub runs on the bootstrap camera and fade. This object holds what the hub would otherwise
- * change: the game mode, the music state (captured before the fade-out), the settings, the camera
+ * change: the game mode, the music state (captured before parking), the settings, the camera
  * position the hub resets for screen-space drawing, and the card.
  */
 final class SuspendedGame {
-    /** Captured when the hold completes, before the fade changes the picture or the music. */
+    /** Captured when the hold completes, before parking changes the picture or the music. */
     record Pending(AudioLogicalSnapshot audio, MasterTitleEntry.Suspended card) {
         Pending {
             Objects.requireNonNull(card, "card");

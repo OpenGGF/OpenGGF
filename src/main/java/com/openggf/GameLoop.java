@@ -1125,6 +1125,10 @@ public class GameLoop {
     }
 
     private void stepInternal() {
+        if (suspension.preparing()) {
+            inputHandler.update();
+            return;
+        }
         if (editorMode.consumeSuspendedFrame(inputHandler, () -> audioUpdatedThisStep = false)) {
             return;
         }
@@ -1261,7 +1265,6 @@ public class GameLoop {
                     masterScreen,
                     inputHandler,
                     this::exitMasterTitleScreen);
-            suspension.routeResume(masterScreen);
             if (!resolveFadeManager().isActive()) {
                 com.openggf.game.TitleInputOwnership.routeQuit(masterScreen, () -> fadeOutTo(applicationExitHandler));
             }

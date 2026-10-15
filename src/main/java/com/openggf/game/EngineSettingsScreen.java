@@ -237,7 +237,7 @@ public final class EngineSettingsScreen {
      * paused game's view of the change. When the rest apply is in Details ({@link #effect}).
      */
     Timing status(SonicConfiguration key) {
-        if (SettingTiming.of(key) == SettingTiming.RESTART) {
+        if (restartPending(key)) {
             return new Timing("Needs a restart: close and reopen OpenGGF.", MenuChrome.AMBER);
         }
         if (pausedGameTakes == null) return null;
@@ -245,11 +245,15 @@ public final class EngineSettingsScreen {
                 : new Timing("Applies when you next start a game.", MenuChrome.MUTED);
     }
 
+    boolean restartPending(SonicConfiguration key) {
+        return PendingRestart.awaiting(key, draft.value(key), draft.changed(key));
+    }
+
     private static int restartTagWidth() {
         return MenuChrome.compactWidth(RESTART_TAG) + 6;
     }
 
-    /** A small amber tag on rows that only take effect after a restart. */
+    /** A small amber tag on rows with changes awaiting a restart. */
     private void restartTag(int x, int y) {
         int w = restartTagWidth();
         MenuChrome.fill(font, x, y, w, 10, MenuChrome.NAVY, .95f);
@@ -548,7 +552,7 @@ public final class EngineSettingsScreen {
             float[] valueColor = nonDefault ? MenuChrome.AMBER : MenuChrome.WHITE;
             float[] labelColor = focused ? MenuChrome.WHITE : MenuChrome.TEXT;
             int valueX;
-            boolean restart = SettingTiming.of(key) == SettingTiming.RESTART;
+            boolean restart = restartPending(key);
             if (fullSize) {
                 valueX = right - MenuChrome.labelWidth(value);
                 MenuChrome.label(font, value, valueX, y, valueColor);

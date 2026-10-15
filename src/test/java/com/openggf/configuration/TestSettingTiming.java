@@ -71,6 +71,23 @@ class TestSettingTiming {
     }
 
     @Test
+    void rowBadgesCompareDraftsToTheRunningValueEvenAfterSaving() throws Exception {
+        var config = SonicConfigurationService.createStandalone(directory);
+        PendingRestart.captureAtStart(config);
+        var key = SonicConfiguration.FPS;
+        int fps = config.getInt(key);
+        assertFalse(PendingRestart.awaiting(key, fps, false));
+        assertTrue(PendingRestart.awaiting(key, fps + 15, true));
+        assertFalse(PendingRestart.awaiting(key, fps, true));
+        save(config, key, Integer.toString(fps + 15));
+        assertTrue(PendingRestart.awaiting(key, fps + 15, false), "saved still awaits restart");
+        assertFalse(PendingRestart.awaiting(key, fps, true), "draft reverting to running value clears badge");
+        save(config, key, Integer.toString(fps));
+        assertFalse(PendingRestart.awaiting(key, fps, false));
+        assertFalse(PendingRestart.awaiting(SonicConfiguration.DISPLAY_ASPECT, "16:9", true));
+    }
+
+    @Test
     void engineWritesDoNotAskForARestart() {
         SonicConfigurationService config = SonicConfigurationService.createStandalone(directory);
         PendingRestart.captureAtStart(config);

@@ -38,6 +38,18 @@ public final class PendingRestart {
         return tracker == null ? List.of() : tracker.changed(config);
     }
 
+    /** A draft row needs a restart only when it differs from the running value. */
+    public static boolean awaiting(SonicConfiguration key, Object draftValue,
+                                   boolean edited) {
+        if (SettingTiming.of(key) != SettingTiming.RESTART) return false;
+        PendingRestart tracker = session;
+        if (tracker == null) return edited;
+        synchronized (tracker) {
+            return (edited || tracker.saved.contains(key))
+                    && !Objects.equals(String.valueOf(tracker.started.get(key)), String.valueOf(draftValue));
+        }
+    }
+
     static void noteSaved(Set<SonicConfiguration> keys) {
         PendingRestart tracker = session;
         if (tracker == null) return;

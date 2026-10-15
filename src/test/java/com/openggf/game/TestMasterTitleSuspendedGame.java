@@ -35,6 +35,82 @@ class TestMasterTitleSuspendedGame {
         return screen;
     }
 
+    @Test void zoomStartsAtTheGameFrameAndBlocksInputUntilItReachesTheCard() {
+        for (int width : new int[] {320, 426}) {
+            var screen = screenWithSuspendedGame();
+            screen.setViewportWidth(width);
+            screen.setSuspendedGame(SONIC_2_EHZ, width, 224, new byte[width * 224 * 4]);
+            screen.animateSuspendedGame();
+            var start = screen.suspendZoomLayout();
+            assertEquals(width, start.width());
+            assertEquals(224, start.height());
+            assertEquals(0, start.x());
+            assertEquals(0, start.y());
+            var input = new com.openggf.control.InputHandler();
+            input.handleKeyEvent(GLFW_KEY_ENTER, GLFW_PRESS);
+            for (int n = 0; n < MasterTitleScreen.SUSPEND_ZOOM_TICKS - 1; n++) screen.update(input);
+            assertFalse(screen.consumeResumeRequest(), "Confirm cannot accidentally resume during the zoom");
+            var almost = screen.suspendZoomLayout();
+            assertTrue(almost.width() < start.width());
+            var thumbnail = MasterTitleScreen.fitThumbnail(
+                    new MasterTitleRomPreview.Image(width, 224, new byte[width * 224 * 4]), 126, 78);
+            assertEquals(thumbnail.width(), almost.width(), 1);
+            assertEquals(thumbnail.height(), almost.height(), 1);
+            assertTrue(almost.height() < start.height());
+            screen.update(input);
+            input.handleKeyEvent(GLFW_KEY_ENTER, GLFW_RELEASE);
+            screen.update(input);
+            press(screen, GLFW_KEY_ENTER);
+            finishResumeZoom(screen);
+            assertTrue(screen.consumeResumeRequest());
+        }
+    }
+
+    private static void finishResumeZoom(MasterTitleScreen screen) {
+        var input = new com.openggf.control.InputHandler();
+        for (int i = 0; i <= MasterTitleScreen.SUSPEND_ZOOM_TICKS; i++) screen.update(input);
+    }
+
+    @Test void resumeReversesTheZoomAndHandsOffOnlyAfterTheFullSizeFrame() {
+        for (int width : new int[] {320, 426}) {
+            var screen = screenWithSuspendedGame();
+            screen.setViewportWidth(width);
+            screen.setSuspendedGame(SONIC_2_EHZ, width, 224, new byte[width * 224 * 4]);
+            screen.animateSuspendedGame();
+            var input = new com.openggf.control.InputHandler();
+            for (int i = 0; i < MasterTitleScreen.SUSPEND_ZOOM_TICKS; i++) screen.update(input);
+            screen.update(input); // The menu becomes active after entry.
+            var card = screen.suspendZoomLayout();
+            input.handleKeyEvent(GLFW_KEY_ENTER, GLFW_PRESS);
+            screen.update(input);
+            assertEquals(card, screen.suspendZoomLayout());
+            input.handleKeyEvent(GLFW_KEY_ENTER, GLFW_RELEASE);
+            input.update();
+            for (int i = 0; i < MasterTitleScreen.SUSPEND_ZOOM_TICKS; i++) {
+                assertFalse(screen.consumeResumeRequest());
+                screen.update(input);
+            }
+            var full = screen.suspendZoomLayout();
+            assertEquals(width, full.width());
+            assertEquals(224, full.height());
+            assertEquals(0, full.x());
+            assertEquals(0, full.y());
+            assertFalse(screen.consumeResumeRequest(), "the full-size frame must be rendered first");
+            screen.update(input);
+            assertTrue(screen.consumeResumeRequest());
+            assertFalse(screen.consumeResumeRequest());
+            screen.update(input);
+            assertFalse(screen.consumeResumeRequest(), "the handoff is emitted only once");
+        }
+    }
+
+    @Test void resumeWithoutAPictureStillWorks() {
+        var screen = screenWithSuspendedGame();
+        screen.setSuspendedGame(SONIC_2_EHZ, 0, 0, null);
+        press(screen, GLFW_KEY_ENTER);
+        assertTrue(screen.consumeResumeRequest());
+    }
+
     @Test void theSuspendedGameSitsFirstAndSelectedAlongsideTheStockGames() {
         var screen = screenWithSuspendedGame();
 
@@ -50,7 +126,8 @@ class TestMasterTitleSuspendedGame {
         var screen = screenWithSuspendedGame();
 
         press(screen, GLFW_KEY_ENTER);
-
+        assertFalse(screen.consumeResumeRequest(), "gameplay stays parked during the zoom");
+        finishResumeZoom(screen);
         assertTrue(screen.consumeResumeRequest());
         assertFalse(screen.consumeResumeRequest(), "the host sees the request once");
         assertFalse(screen.isGameSelected(), "resuming is not a launch");

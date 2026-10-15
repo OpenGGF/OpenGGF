@@ -211,16 +211,21 @@ class TestEngineSettingsScreen {
     }
 
     @Test
-    void settingsThatNeedARestartSayItOnTheRowAndInTheHelp() {
+    void onlyChangedRestartSettingsSayItOnTheRowAndInTheHelp() {
         Fixture f = new Fixture(); // Display: aspect ratio first, frame rate further down
         List<String> aspect = f.descriptionLines();
         assertTrue(aspect.stream().noneMatch(line -> line.startsWith("Needs a restart")),
                 "a game-start setting keeps both description lines");
-        assertTrue(f.texts().contains("RESTART"), "restart-only rows on the page carry a tag");
+        assertFalse(f.texts().contains("RESTART"), "unchanged settings need no restart badge");
 
         int fpsRow = new EngineSettingsDraft(f.config).keys(EngineSettingsDraft.Category.DISPLAY).indexOf(FPS);
         f.press(GLFW_KEY_DOWN, fpsRow);
+        assertFalse(f.descriptionLines().contains("Needs a restart: close and reopen OpenGGF."));
+        f.press(GLFW_KEY_RIGHT);
+        assertTrue(f.texts().contains("RESTART"));
         assertTrue(f.descriptionLines().contains("Needs a restart: close and reopen OpenGGF."));
+        f.press(GLFW_KEY_LEFT);
+        assertFalse(f.texts().contains("RESTART"), "returning to the running value clears the badge");
         assertTrue(EngineSettingsScreen.effect(FPS).contains("Restart"));
         assertEquals(com.openggf.configuration.SettingTiming.RESTART, com.openggf.configuration.SettingTiming.of(FPS));
     }

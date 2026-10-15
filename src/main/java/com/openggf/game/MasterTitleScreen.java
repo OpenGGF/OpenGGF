@@ -246,6 +246,12 @@ public class MasterTitleScreen {
     private MasterTitleEntry.Suspended suspended;
     private MasterTitleRomPreview.Image suspendedImage;
     private int suspendedTextureId;
+    private MasterTitleRomPreview.Image suspendFrame;
+    private int suspendFrameTextureId;
+    static final int SUSPEND_ZOOM_TICKS = 32;
+    private int suspendZoomTicks = SUSPEND_ZOOM_TICKS;
+    private boolean resumeZooming;
+    private boolean resumeZoomFinished;
     private Runnable suspendedGameEndHandler = () -> { };
     private boolean resumeRequested;
     /** Asks before anything that would end the suspended game; {@link #endPromptThen} runs after. */
@@ -376,6 +382,21 @@ public class MasterTitleScreen {
         frameCounter++;
         advancePreviewAnimationFrame();
         advanceHubAnimation();
+        if (resumeZooming) {
+            if (suspendZoomTicks > 0) suspendZoomTicks--;
+            else if (!resumeZoomFinished) {
+                // Hold the full-size picture for a rendered frame before handing back control.
+                resumeZoomFinished = true;
+                resumeRequested = true;
+            }
+            return;
+        }
+        if (suspendZoomTicks < SUSPEND_ZOOM_TICKS) {
+            suspendZoomTicks++;
+            childInputPending = true;
+            if (suspendZoomTicks == SUSPEND_ZOOM_TICKS) releaseSuspendTexture();
+            return;
+        }
 
         // Update cloud animation
         for (CloudSprite cloud : clouds) {
@@ -1124,6 +1145,7 @@ public class MasterTitleScreen {
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
         drawContent();
+        drawSuspendZoom();
     }
 
     /**
@@ -2071,12 +2093,61 @@ public class MasterTitleScreen {
      */
     public void setSuspendedGame(MasterTitleEntry.Suspended card, int width, int height, byte[] rgba) {
         suspended = Objects.requireNonNull(card, "card");
-        suspendedImage = rgba == null ? null
-                : fitThumbnail(new MasterTitleRomPreview.Image(width, height, rgba), CARD_W - 6, CARD_H - 6);
+        releaseSuspendFrame();
+        suspendFrame = rgba == null ? null : new MasterTitleRomPreview.Image(width, height, rgba);
+        suspendedImage = suspendFrame == null ? null : fitThumbnail(suspendFrame, CARD_W - 6, CARD_H - 6);
         deleteSuspendedTexture();
         entries = withSuspendedFirst(entries);
         selectedIndex = 0;
         navigation.focus(TitleHubNavigation.Zone.CARD);
+    }
+
+    /** Called only on entry from gameplay; reopening the hub must not replay the zoom. */
+    public void animateSuspendedGame() {
+        if (suspendFrame == null) return;
+        suspendZoomTicks = 0;
+        childInputPending = true;
+    }
+
+    PreviewLayout suspendZoomLayout() {
+        PreviewLayout start = cardLogoLayout(suspendFrame.width(), suspendFrame.height(),
+                0, 0, viewportWidth, SCREEN_H);
+        Rect card = hubLayout().cards().stream().filter(slot -> slot.offset() == 0).findFirst().orElseThrow().rect();
+        PreviewLayout end = cardLogoLayout(suspendedImage.width(), suspendedImage.height(),
+                card.x() + 3, card.y() + 3, card.w() - 6, card.h() - 6);
+        float t = suspendZoomTicks / (float) SUSPEND_ZOOM_TICKS;
+        float eased = t * t * (3 - 2 * t);
+        return new PreviewLayout(Math.round(start.width() + (end.width() - start.width()) * eased),
+                Math.round(start.height() + (end.height() - start.height()) * eased),
+                start.x() + (end.x() - start.x()) * eased, start.y() + (end.y() - start.y()) * eased);
+    }
+
+    private void drawSuspendZoom() {
+        if ((!resumeZooming && suspendZoomTicks >= SUSPEND_ZOOM_TICKS) || suspendFrame == null) return;
+        if (suspendFrameTextureId == 0) {
+            suspendFrameTextureId = MasterTitleRomPreview.uploadTexture(suspendFrame);
+            glBindTexture(GL_TEXTURE_2D, suspendFrameTextureId);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+            org.lwjgl.opengl.GL30.glGenerateMipmap(GL_TEXTURE_2D);
+            glBindTexture(GL_TEXTURE_2D, 0);
+        }
+        float t = suspendZoomTicks / (float) SUSPEND_ZOOM_TICKS;
+        renderer.drawTexture(solidWhiteTextureId, 0, 0, viewportWidth, SCREEN_H, 0, 0, 0, 1 - t);
+        PreviewLayout r = suspendZoomLayout();
+        renderer.drawTexture(suspendFrameTextureId, r.x(), r.y(), r.width(), r.height());
+    }
+
+    private void releaseSuspendTexture() {
+        if (suspendFrameTextureId != 0) PngTextureLoader.deleteTexture(suspendFrameTextureId);
+        suspendFrameTextureId = 0;
+    }
+
+    private void releaseSuspendFrame() {
+        releaseSuspendTexture();
+        suspendFrame = null;
+        suspendZoomTicks = SUSPEND_ZOOM_TICKS;
+        resumeZooming = false;
+        resumeZoomFinished = false;
     }
 
     /** Ends the suspended game in the host; the card is then removed. */
@@ -2088,7 +2159,7 @@ public class MasterTitleScreen {
         return suspended != null;
     }
 
-    /** True once after Resume; the host fades the title out and brings the game back. */
+    /** True once after the resume zoom finishes; the host restores gameplay between frames. */
     public boolean consumeResumeRequest() {
         boolean requested = resumeRequested;
         resumeRequested = false;
@@ -2096,7 +2167,12 @@ public class MasterTitleScreen {
     }
 
     private void requestResume() {
-        resumeRequested = true;
+        if (suspendFrame == null) resumeRequested = true;
+        else {
+            suspendZoomTicks = SUSPEND_ZOOM_TICKS;
+            resumeZooming = true;
+            resumeZoomFinished = false;
+        }
         state = State.CONFIRMING;
         playConfirmSound();
     }
@@ -2150,6 +2226,7 @@ public class MasterTitleScreen {
         MasterTitleEntry.Stock game = suspended.game();
         boolean wasSelected = selectedEntry() instanceof MasterTitleEntry.Suspended;
         suspended = null;
+        releaseSuspendFrame();
         suspendedImage = null;
         deleteSuspendedTexture();
         entries = entries.stream().filter(entry -> !(entry instanceof MasterTitleEntry.Suspended)).toList();
@@ -2370,6 +2447,7 @@ public class MasterTitleScreen {
         PngTextureLoader.deleteTexture(cloudSmallTextureId);
         romPreviews.values().forEach(preview -> PngTextureLoader.deleteTexture(preview.textureId));
         deleteSuspendedTexture();
+        releaseSuspendFrame();
         if (renderer != null) renderer.cleanup();
         userRecordingMenu = null;
         settingsScreen = null;

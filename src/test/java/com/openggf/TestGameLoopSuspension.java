@@ -23,6 +23,7 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE;
 import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
 import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * A real Sonic 2 level held with Escape: it parks behind the master title, hub frames do not
@@ -65,7 +66,10 @@ class TestGameLoopSuspension {
         input.handleKeyEvent(right, GLFW_PRESS);
         steps(90);
         input.handleKeyEvent(GLFW_KEY_ESCAPE, GLFW_PRESS);
-        for (int n = 0; n < 600 && loop.getCurrentGameMode() != GameMode.MASTER_TITLE_SCREEN; n++) loop.step();
+        for (int n = 0; n < 600 && loop.getCurrentGameMode() != GameMode.MASTER_TITLE_SCREEN; n++) {
+            loop.step();
+            loop.suspension.completePreparedSuspend(); // renderer has captured this frame
+        }
         input.handleKeyEvent(GLFW_KEY_ESCAPE, GLFW_RELEASE);
         input.handleKeyEvent(right, GLFW_RELEASE);
 
@@ -86,7 +90,9 @@ class TestGameLoopSuspension {
         input.handleKeyEvent(right, GLFW_RELEASE);
         assertEquals(parked, snapshot(), "hub frames leave the parked level exactly as it was");
 
-        loop.suspension.unpark(parkedFrom);
+        when(hub.consumeResumeRequest()).thenReturn(true, false);
+        loop.suspension.routeResume(hub); // Engine's between-frame handoff after the zoom.
+        assertFalse(loop.resolveFadeManager().isActive(), "resume does not start another fade");
         assertEquals(GameMode.LEVEL, loop.getCurrentGameMode());
         assertSame(gameplay, loop.resolveGameplayModeContext());
         assertEquals(parked, snapshot(), "resuming itself changes nothing");
@@ -94,6 +100,23 @@ class TestGameLoopSuspension {
         steps(30);
         assertTrue(gameplay.getLevelManager().getLevelGamestate().getTimerFrames() > timer,
                 "the resumed level runs again");
+    }
+
+    @Test
+    void waitingForTheFinalPictureFreezesGameplayWithoutAFade() {
+        steps(30);
+        loop.suspension.leave();
+        assertTrue(loop.suspension.preparing());
+        assertFalse(loop.resolveFadeManager().isActive());
+        List<Object> frozen = snapshot();
+        steps(60);
+        assertEquals(frozen, snapshot(), "rendering must not allow further gameplay steps");
+        assertEquals(0, suspends.get(), "park only after capturing the picture");
+        loop.suspension.completePreparedSuspend();
+        loop.suspension.completePreparedSuspend();
+        assertEquals(1, suspends.get());
+        assertEquals(GameMode.MASTER_TITLE_SCREEN, loop.getCurrentGameMode());
+        assertEquals(frozen, snapshot());
     }
 
     @Test

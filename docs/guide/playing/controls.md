@@ -205,12 +205,14 @@ the north controller button. Numeric values use a numeric keypad; Up from a path
 field opens the file browser. Mods requires explicit Apply to save drafts.
 
 During a game, tap **Escape** to see the *Hold to return to games* toast at the top
-of the screen; hold it for one second to fade back to the master title. At the
+of the screen; hold it for one second to return to the master title. At the
 master title Escape is Back: it returns to the game card, then opens **Quit OpenGGF?**.
 
 Sonic 1, Sonic 2 and Sonic 3 & Knuckles games are paused rather than closed: the game
-waits as a **Paused** card, showing the moment you left, first on the game shelf.
-**Resume** (or Enter on the card) carries on from exactly that moment, music included;
+freezes and smoothly shrinks into a **Paused** card, showing the moment you left,
+first on the game shelf.
+**Resume** (or Enter on the card) zooms the picture back to full size, then carries
+on from exactly that moment, music included;
 **End game** closes it. Starting another game, watching a recording, changing mods or
 opening an extra, trace replays, editor projects or content import asks before ending
 the paused game, and **Keep it paused** is the default.
@@ -224,6 +226,11 @@ frame rate) is part of how the game was started and applies the next time you st
 it. Each row's description says which applies: *Your paused game takes this when it
 resumes* or *Applies when you next start a game*. Rewind switched on mid-game records
 from the moment you resume, so you can rewind back to there but not further.
+Settings show an amber **RESTART** badge only beside values changed from what
+OpenGGF is running with. Saved changes keep their badge until you restart OpenGGF
+or restore the running value. Game Setup changes take effect on resume or the next
+game, as described in each row.
+
 Recordings, trace replays,
 editor playtests, mod scenes and standalone mod games still close when you hold Escape.
 
