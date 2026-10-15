@@ -397,14 +397,16 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
 
     /**
      * sub_5B18E scrolls Camera_Y_pos to $1CA0 over Plane A, a 32-row name table the VDP
-     * wraps every 256 lines; {@link #foregroundDescriptorAt} repeats it the same way. Past
-     * the SSZ2/D01 layout height the tile pass must wrap instead of discarding rows.
+     * wraps every 256 lines; {@link #foregroundDescriptorAt} repeats it the same way. The
+     * tile pass must wrap that ring, not the SSZ2/D01 layout: SSZ2's 19-chunk (304-row)
+     * layout is not a whole number of rings, which put part two 16 rows (128px) off.
      */
-    @Override public boolean foregroundDescriptorsWrapVertically() {
-        if(!GameServices.hasRuntime())return false;
+    @Override public int foregroundDescriptorRingRows() {
+        if(!GameServices.hasRuntime())return 0;
         var ending = com.openggf.game.sonic3k.ending.S3kEndingCoordinator
                 .current(GameServices.zoneRuntimeRegistry()).orElse(null);
-        return ending != null && ending.credits().active() && !ending.flag(3);
+        return ending != null && ending.credits().active() && !ending.flag(3)
+                ? com.openggf.game.sonic3k.ending.S3kCreditsState.PLANE_ROWS : 0;
     }
 
     @Override public int foregroundDescriptorAt(int sourceX, int sourceY) {
