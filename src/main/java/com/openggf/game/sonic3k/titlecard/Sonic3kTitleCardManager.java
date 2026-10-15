@@ -17,7 +17,6 @@ import com.openggf.game.titlecard.TitleCardMappings;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
-import com.openggf.graphics.PaletteFadePresentation;
 import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.graphics.TitleCardSpriteRenderer;
 import com.openggf.level.Pattern;
@@ -64,12 +63,6 @@ public class Sonic3kTitleCardManager
     // at lines 7897-7900, synchronizing the hold with Palette_fade_timer.
     private static final int DISPLAY_HOLD_FRAMES = 90;
     private static final int FRESH_LEVEL_TRANSITION_HOLD_FRAMES = 22;
-
-    // ROM palette fade duration: 22 frames (sonic3k.asm line 7877, Palette_fade_timer = $16).
-    // In the ROM, the title card is already visible for many frames during level loading
-    // before the Level routine overwrites the hold timer to 22. Our engine loads levels
-    // synchronously, so we use the full 90-frame hold but run the fade in the last 22.
-    private static final int BONUS_BG_FADE_FRAMES = 22;
 
     /** Native game width (320-pixel frame everything is authored for). */
     private static final int SCREEN_WIDTH = 320;
@@ -149,7 +142,6 @@ public class Sonic3kTitleCardManager
     private boolean releasePreloadedActCameraOnComplete;
     private boolean preloadedActCompletionPrepared;
     private boolean bonusMode;  // 2-element "BONUS STAGE" layout
-    private float bonusFadeProgress; // 0.0→1.0 over BONUS_DISPLAY_HOLD_FRAMES during DISPLAY
 
     // Bonus mode element definitions (ObjArray_TtlCardBonus, sonic3k.asm line 62482)
     // VDP coords converted to screen coords (subtract 128)
@@ -196,9 +188,6 @@ public class Sonic3kTitleCardManager
     private boolean freshLevelChildMovementObserved;
     private boolean freshLevelTitleReady;
     private boolean freshLevelTerrainStarted;
-    // Whether this owner last published the LevelLoop palette fade to the
-    // GraphicsManager; derived from captured state, so rewind re-applies it.
-    private boolean levelPaletteFadePresented;
 
     /**
      * Immutable live-title snapshot. Array accessors clone their payload so a
@@ -228,7 +217,6 @@ public class Sonic3kTitleCardManager
             boolean releasePreloadedActCameraOnComplete,
             boolean preloadedActCompletionPrepared,
             boolean bonusMode,
-            float bonusFadeProgress,
             int currentZone,
             int currentAct,
             int[] elemX,
@@ -301,7 +289,7 @@ public class Sonic3kTitleCardManager
                 retainedControlPollFollowsTitleCompletion,
                 inLevelArtAdmissionPollObserved,
                 releasePreloadedActCameraOnComplete, preloadedActCompletionPrepared,
-                bonusMode, bonusFadeProgress, currentZone, currentAct,
+                bonusMode, currentZone, currentAct,
                 elemX, elemY, elemFrame, elemAtTarget, elemExiting,
                 elemOutsideViewport, elemExited, actNumberVisible,
                 combinedPatterns, artLoaded, artCached, lastLoadedZone,
@@ -350,7 +338,6 @@ public class Sonic3kTitleCardManager
                 snapshot.releasePreloadedActCameraOnComplete();
         preloadedActCompletionPrepared = snapshot.preloadedActCompletionPrepared();
         bonusMode = snapshot.bonusMode();
-        bonusFadeProgress = snapshot.bonusFadeProgress();
         currentZone = snapshot.currentZone();
         currentAct = snapshot.currentAct();
         copy(snapshot.elemX(), elemX);
@@ -393,7 +380,6 @@ public class Sonic3kTitleCardManager
         } else {
             artQueue = null;
         }
-        applyLevelPaletteFade();
     }
 
     @Override
@@ -483,9 +469,6 @@ public class Sonic3kTitleCardManager
         stateTimer = 0;
         freshLevelTransitionMode = false;
         freshLevelTitleOwnerReplacedAtAssembly = false;
-        // The same loc_64DC block ran Pal_FillBlack on lines 1-3 before
-        // LevelLoop's first VBlank, so the released frame already shows them black.
-        applyLevelPaletteFade();
     }
 
     /**
@@ -850,7 +833,6 @@ public class Sonic3kTitleCardManager
     @Override
     public void initializeBonus() {
         this.bonusMode = true;
-        this.bonusFadeProgress = 0f;
         this.inLevelMode = false;
         this.freshLevelTransitionMode = false;
         freshLevelChildMovementObserved = false;
@@ -952,7 +934,6 @@ public class Sonic3kTitleCardManager
         // The overlay remains renderable, but its real retained SST owns the
         // only child dispatch. An earlier generic overlay tick must not run it.
         if (!inLevelGameplayOwnedExternally) updateOwnedChildren();
-        applyLevelPaletteFade();
     }
 
     /**
@@ -961,59 +942,12 @@ public class Sonic3kTitleCardManager
      * {@code Palette_fade_info = $202F}, then {@code Palette_fade_timer} and
      * this owner's {@code $2E} both set to {@code $16}. Only the fresh title
      * owner's handoff installs that hold; in-level and bonus cards never pass
-     * through the Level routine.
+     * through the Level routine. The lines 1-3 fade itself belongs to that
+     * routine ({@code Sonic3kLevelAnimationManager}'s {@code Animate_Palette}).
      */
     private boolean levelLoopHoldArmed() {
         return displayHoldFrames == FRESH_LEVEL_TRANSITION_HOLD_FRAMES
                 && !inLevelMode && !bonusMode;
-    }
-
-    /**
-     * {@code Pal_FromBlack} passes applied to lines 1-3 on this frame, or -1
-     * when the level palette is not fading. {@code Animate_Palette}
-     * (sonic3k.asm:5018-5028) spends one pass per LevelLoop frame while
-     * {@code Palette_fade_timer} counts down, and {@code Obj_TitleCardWait2}
-     * (62249-62254) counts this owner's {@code $2E} down on the same frames,
-     * so the hold frame is the pass count. Native HPZ (campaign-visual native
-     * hpz-entry dumps): Normal_palette lines 1-3 hold k passes at
-     * Level_frame_counter k and are complete at 21, one frame before the card
-     * starts its exit; line 0 (players, HUD, card) is never faded.
-     */
-    static int levelPaletteFadeStepsAt(
-            Sonic3kTitleCardState state, int stateTimer, boolean levelLoopHoldArmed) {
-        if (!levelLoopHoldArmed || state != Sonic3kTitleCardState.DISPLAY
-                || stateTimer >= PaletteFadePresentation.COLOR_STEPS) {
-            return -1;
-        }
-        return Math.max(0, stateTimer);
-    }
-
-    private void applyLevelPaletteFade() {
-        int steps = levelPaletteFadeStepsAt(state, stateTimer, levelLoopHoldArmed());
-        if (steps < 0 && !levelPaletteFadePresented) {
-            return;
-        }
-        GraphicsManager graphics = graphicsOrNull();
-        if (graphics == null) {
-            return;
-        }
-        if (steps < 0) {
-            graphics.clearPaletteFadePresentation();
-            levelPaletteFadePresented = false;
-            return;
-        }
-        graphics.setPaletteFadePresentation(PaletteFadePresentation.Mode.FROM_BLACK, steps,
-                PaletteFadePresentation.LINES_1_TO_3);
-        levelPaletteFadePresented = true;
-    }
-
-    private static GraphicsManager graphicsOrNull() {
-        try {
-            return GameServices.graphics();
-        } catch (RuntimeException ignored) {
-            // Focused tests drive the state machine without an engine session.
-            return null;
-        }
     }
 
     private void updateOwnedChildren() {
@@ -1209,9 +1143,9 @@ public class Sonic3kTitleCardManager
     /**
      * Whether {@link #draw} paints the opaque black field behind the card:
      * native lines 1-3 stay black through the locked title loop. Once loc_64DC
-     * hands the hold to LevelLoop those lines fade in through the palette
-     * instead, and line 0 (players, HUD) shows at full colour behind the card,
-     * so the field would hide what the ROM displays.
+     * hands the hold to LevelLoop those lines fade in through the level's
+     * {@code Animate_Palette} instead, and line 0 (players, HUD) shows at full
+     * colour behind the card, so the field would hide what the ROM displays.
      */
     public boolean drawsOpaqueLevelBackdrop() {
         return !inLevelMode && !levelLoopHoldArmed()
@@ -1225,37 +1159,18 @@ public class Sonic3kTitleCardManager
         GraphicsManager gm = GameServices.graphics();
         if (gm == null) return;
 
-        // Black background during SLIDE_IN and DISPLAY (not in-level mode).
-        // Normal mode: opaque black rect throughout.
-        // Bonus mode: fully opaque during SLIDE_IN, then per-channel fade during DISPLAY
-        // (B→G→R subtractive, 22 frames, synchronized with hold timer).
-        // ROM: Pal_FadeFromBlack runs simultaneously with the title card wait.
+        // Black background during the locked SLIDE_IN/DISPLAY (not in-level mode).
+        // The bonus card is the same Obj_TitleCard: its stage fades in through the
+        // level's Animate_Palette once LevelLoop runs, not through the card.
         if (drawsOpaqueLevelBackdrop()) {
             // Span the full viewport so no level bleeds through on wider screens.
             // viewportWidth()==SCREEN_WIDTH at native 320 — byte-identical.
             int vw = viewportWidth();
-            if (bonusMode && state == Sonic3kTitleCardState.DISPLAY && bonusFadeProgress > 0f) {
-                // Per-channel subtractive fade matching FadeManager.updateFadeFromBlack()
-                // B fades first (0→1/3), then G (1/3→2/3), then R (2/3→1)
-                float p = bonusFadeProgress;
-                float third = 1f / 3f;
-                float darkB = Math.max(0f, 1f - Math.min(1f, p / third));
-                float darkG = Math.max(0f, 1f - Math.min(1f, (p - third) / third));
-                float darkR = Math.max(0f, 1f - Math.min(1f, (p - 2f * third) / third));
-                if (darkR > 0f || darkG > 0f || darkB > 0f) {
-                    gm.registerCommand(new GLCommand(
-                            GLCommand.CommandType.RECTI, -1, GLCommand.BlendType.SUBTRACTIVE,
-                            darkR, darkG, darkB, 1.0f,
-                            0, 0, vw, SCREEN_HEIGHT
-                    ));
-                }
-            } else {
-                gm.registerCommand(new GLCommand(
-                        GLCommand.CommandType.RECTI, -1,
-                        0.0f, 0.0f, 0.0f,
-                        0, 0, vw, SCREEN_HEIGHT
-                ));
-            }
+            gm.registerCommand(new GLCommand(
+                    GLCommand.CommandType.RECTI, -1,
+                    0.0f, 0.0f, 0.0f,
+                    0, 0, vw, SCREEN_HEIGHT
+            ));
         }
 
         gm.beginPatternBatch();
@@ -1279,8 +1194,6 @@ public class Sonic3kTitleCardManager
     public void reset() {
         state = Sonic3kTitleCardState.COMPLETE;
         stateTimer = 0;
-        // COMPLETE: release a fade this owner published (e.g. a reload mid-fade).
-        applyLevelPaletteFade();
         phaseCounter = 0;
         exitChildrenGone = false;
         inLevelMode = false;
@@ -1297,7 +1210,6 @@ public class Sonic3kTitleCardManager
         preloadedActCompletionPrepared = false;
         inLevelPlayerControlLockOwned = false;
         bonusMode = false;
-        bonusFadeProgress = 0f;
         currentZone = 0;
         currentAct = 0;
         actNumberVisible = false;
@@ -1390,18 +1302,6 @@ public class Sonic3kTitleCardManager
 
     private void updateDisplay() {
         stateTimer++;
-        // In bonus mode, run the per-channel fade during the last 22 frames of the hold.
-        // ROM: Palette_fade_timer runs after level loading completes, but the title card
-        // has already been visible for many frames. Our level loads synchronously, so we
-        // use the full 90-frame hold and fade at the end.
-        if (bonusMode) {
-            int fadeStart = displayHoldFrames - BONUS_BG_FADE_FRAMES;
-            if (stateTimer > fadeStart) {
-                bonusFadeProgress = Math.min(1f,
-                        (float) (stateTimer - fadeStart) / BONUS_BG_FADE_FRAMES);
-            }
-        }
-
         if (!inLevelGameplayOwnedExternally && stateTimer >= displayHoldFrames) {
             state = Sonic3kTitleCardState.EXIT;
             phaseCounter = 0;

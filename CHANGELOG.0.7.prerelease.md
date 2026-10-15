@@ -37,10 +37,13 @@ Unreleased. The earlier development themes remain in
 - **S3K special stage results:** The results card sits on the locked-on game's
   grey backdrop instead of white, matching native frames of won and failed stages.
 
-- **S3K zone title cards:** After a zone change (for example Lava Reef into Hidden
-  Palace), the level fades in from black behind the holding title card over 22
-  frames, with the player, HUD and card already at full colour, instead of staying
-  black and appearing at full brightness as the card leaves.
+- **S3K zone title cards:** Every level entry that passes through the game's level
+  routine fades the level in from black over its first 21 frames, with the player,
+  HUD and card already at full colour. This covers zone changes, new games from the
+  data select, restarts, special and bonus stage returns, and loads without a card.
+  Previously the level stayed black and then appeared at full brightness. The data
+  select no longer fades the whole screen, card included, back in on top. Seamless
+  act changes still do not fade, as in the original.
 
 - **S3K objects and bosses:** The Angel Island end boss starts its defeat at the
   native hit check of whichever phase it is in. When the object table is full,

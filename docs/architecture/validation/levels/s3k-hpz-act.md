@@ -381,3 +381,51 @@ the same LevelLoop frames (measured for the headless data-select load). Those pa
 recorded as a capture limit until the host reveal is retired for S3K. Separately observed,
 not fixed: native draws the HUD digits over the card's red banner, while the engine draws the
 card over them.
+
+**Level-owned fade on every `Level` entry (titlefade2 lane, 2026-10-15).** The limits above
+are resolved. The lines 1-3 fade now belongs to `Sonic3kLevelAnimationManager`, the engine's
+`Animate_Palette` (sonic3k.asm:5018-5028). It presents `Pal_FromBlack` with `$16 -
+Palette_fade_timer` passes, which `Level/loc_64DC` (7874-7878) arms with `Pal_FillBlack` on
+`Palette_fade_info = $202F`. It covers $D01 and $1701, which take `Pal_FromWhite` (5023-5026).
+The ending already owns its white reveal, and the `$1701` arena has no engine white
+presentation, so neither shows the black fade (limit). The card no longer presents the fade,
+and the bonus card's subtractive stand-in fade is gone. The S3K data-select launch no longer
+runs the host's whole-screen `FadeManager` reveal while the launched level fades its own
+palette. That reveal had been fading the card in during its slide-in.
+`GameLoopPlcLifecycle.revealDataSelectLaunch` uses `LevelPaletteFadeOwner`. Native
+evidence: the save screen's `Pal_FadeToBlack` leaves the screen black, then
+`LoadPalette_Immediate` sets line 0 (7666) and the card slides in at full colour.
+
+Measured per route with a temporary probe: per-frame `Palette_fade_timer`, presentation,
+host fade state and lines 1-3 sums including the host overlay. In every route the timer counts
+22 to 0 in step with `Level_frame_counter`. Seamless reloads never arm it.
+
+| Route (probe) | Before: lines 1-3 at LFC 0 / 5 / 10 / 21 | After |
+|---|---|---|
+| Fresh zone request, HPZ Knuckles (A) | 0 / 72·72·71 / 128·116·119 / 170·152·162 | unchanged (now level-owned) |
+| Data-select new game, Knuckles AIZ1, card shown (B) | host reveal over the card's slide-in, then full 161·133·162 from LFC 0 | 0 / 70·68·72 / 125·112·123 / 161·133·162, no host reveal |
+| Data-select, card omitted (B) | not captured before (probe session limit) | same fade as card shown |
+| Direct boot, card shown, HPZ (D) | full 170·152·162 from the card's EXIT | 0 / 72·72·71 / 128·116·119 / 170·152·162 |
+| Card-skipping fixture / omitted capture, HPZ (C, D) | full from LFC 0 | as the direct boot |
+| Special-stage return, AIZ (F) | fresh card fade 0 / 66·65·75 / 107·105·138 / 143·126·209 | unchanged |
+| Bonus entry, Pachinko (G) | full 146·199·162 at EXIT; the card's subtractive overlay had faded line 0 too | 0 / 71·75·66 / 118·146·119 / 146·199·162 |
+| Death restart, LRZ1 (H) | full 146·136·120 at the card's EXIT | 0 / 68·70·68 / 113·112·100 / 146·136·120 |
+| Seamless reload, AIZ (E) | no fade | no fade (timer stays 0) |
+
+The HPZ rows equal the native CRAM sums: `hpz-entry` seq 131+k shows k passes, giving
+15/15/15, 30/30/30, …, 170/152/162 at k = 21. The per-frame gameplay columns (mode, card state,
+counter, timer, player x/y) are identical before and after on all 11 probed routes. Pictures
+(LIMITED/RAW_RGB): `titlefade2-v1/{before,after}`. The AIZ data-select frames climb through
+dark greens and reds because `Pal_AddColor` raises blue, then green, then red, and AIZ's
+palette has little blue. Red first: `TestS3kLevelFadeInRoutes` failed all three routes
+before the fix. Covered by `TestS3kLevelFadeInRoutes` (data select, direct boot with and
+without the card) and `TestS3kLevelPaletteFadeOwner` (pass table, card-skipping fixture,
+seamless, special-stage return, bonus entry, death restart, rewind capture/restore and
+forward replay).
+
+Remaining limits: the direct-boot, data-select, bonus and death-restart routes still use the
+engine's 90-frame non-fresh card. Its locked hold covers the screen and LevelLoop only starts
+at the card's exit, so the fade plays while the card leaves; natively it plays during the
+card's 22-frame hold. The death-restart reveal is still the host's blocking whole-screen fade
+over the card's slide-in, because removing it would change native-blocking-fade timing. Line 0
+is never faded natively, so the card fades in there instead of appearing at full colour.

@@ -3,10 +3,12 @@ package com.openggf;
 import com.openggf.game.EndingProvider;
 import com.openggf.game.GameModule;
 import com.openggf.game.internal.LevelEntryPresentation;
+import com.openggf.game.internal.LevelPaletteFadeOwner;
 import com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame;
 import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.graphics.FadeManager;
+import com.openggf.level.LevelManager;
 
 /** Bridges GameLoop-owned modes and fades to the session PLC lifecycle. */
 final class GameLoopPlcLifecycle {
@@ -60,6 +62,26 @@ final class GameLoopPlcLifecycle {
 
     static void startFromBlack(GameplayModeContext context, FadeManager fade, Runnable completion) {
         fade.startFadeFromBlack(wrap(context, completion));
+    }
+
+    /**
+     * Reveals the screen after a data-select launch. When the launched level fades
+     * its own palette in, the host adds no whole-screen fade over it: S3K's save
+     * screen has already faded to black, {@code Level} loads line 0 with
+     * {@code LoadPalette_Immediate} (docs/skdisasm/sonic3k.asm:7666) and
+     * {@code loc_64DC}'s {@code Pal_FromBlack} reveals lines 1-3 inside LevelLoop
+     * (7874-7878, 5018-5028).
+     *
+     * @param launched the launched level, or {@code null} when the launch failed
+     *        and the data select itself is returning
+     */
+    static void revealDataSelectLaunch(FadeManager fade, LevelManager launched, int terminalNoOpFrames) {
+        if (launched != null && launched.getAnimatedPatternManager() instanceof LevelPaletteFadeOwner owner
+                && owner.presentsLevelFadeFromBlack()) {
+            fade.clearOverlayForImmediatePaletteLoad();
+            return;
+        }
+        fade.startFadeFromBlack(null, terminalNoOpFrames);
     }
 
     static void startToWhite(GameplayModeContext context, FadeManager fade, Runnable completion) {
