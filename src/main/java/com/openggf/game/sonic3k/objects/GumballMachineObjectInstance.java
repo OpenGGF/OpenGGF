@@ -443,26 +443,12 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
         // Initialize drift state on first update (separated from child spawning
         // so tests can exercise drift logic without requiring services()).
         if (!driftInitialized) {
-            // ROM: Obj_GumballMachine seeds RNG_seed from V_int_run_count at init
-            // (move.l (V_int_run_count).w,(RNG_seed).w, sonic3k.asm:127412). The
-            // intent is to fold run-history entropy (VBlanks since power-on: menu
-            // time, prior acts, etc.) into the bonus-stage RNG so the ball-subtype
-            // roll (sub_612A8, sonic3k.asm:127988-128008) varies run-to-run.
-            //
-            // The engine's shared RNG ALREADY carries that run-history entropy when
-            // the machine spawns: it has been advanced by all prior gameplay in live
-            // play, and in trace replay the bootstrap has already primed it to the
-            // recorded run's exact seed (V_int_run_count for that recording;
-            // TraceReplaySessionBootstrap.applyInitialRngSeedForReplay, uniform for
-            // every trace carrying metadata.rng_seed). So the ROM invariant
-            // "RNG_seed == V_int_run_count" is already satisfied by the RNG's own
-            // established state on this tick, and modeling the reseed here is a
-            // read of that same value -- i.e. a no-op.
-            //
-            // The update parameter is now named vIntRunCount because it represents this
-            // ROM clock. This terminology-only refactor deliberately does not change the
-            // established shared-RNG ownership or add a reseed here; that behavior needs
-            // separate ROM-parity validation before it can change safely.
+            // Obj_GumballMachine, sonic3k.asm:127412: move.l
+            // (V_int_run_count).w,(RNG_seed).w. This replaces prior gameplay
+            // entropy with the full native long on the first object pass only.
+            // Rewind captures driftInitialized, so restoring an initialized
+            // machine preserves the captured evolving seed instead of reseeding.
+            services().rng().setSeed(Integer.toUnsignedLong(vIntRunCount));
             initDrift();
         }
 
