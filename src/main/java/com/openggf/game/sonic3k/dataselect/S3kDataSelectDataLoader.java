@@ -154,6 +154,19 @@ public final class S3kDataSelectDataLoader implements S3kDataSelectAssetSource {
     }
 
     @Override
+    public void publishNativePatterns() {
+        var residency=com.openggf.game.sonic3k.resources.S3kFrontendPatternResidency.currentOrNull();
+        if(residency==null)return; // This ROM frontend is also a donated S1/S2 presentation.
+        if(!loaded)throw new IllegalStateException("SaveScreen art was not prepared");
+        // SaveScreen loc_C56E..C710: D000 pattern fill, Nem font, three KosArt_To_VDP uploads.
+        residency.clearRange(0xD000,0x1000);
+        residency.upload(Sonic3kConstants.ARTTILE_SAVE_TEXT,textPatterns);
+        residency.upload(Sonic3kConstants.ARTTILE_S3_MENU_BG,menuBackgroundPatterns);
+        residency.upload(Sonic3kConstants.ARTTILE_SAVE_MISC,miscPatterns);
+        residency.upload(Sonic3kConstants.ARTTILE_SAVE_EXTRA,extraPatterns);
+    }
+
+    @Override
     public boolean isLoaded() {
         return loaded;
     }

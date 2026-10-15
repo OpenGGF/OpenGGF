@@ -87,3 +87,23 @@ job and a captured automatic claim. Preflight logical and physical capacity
 before mutation, and bind the resident DMA target. Timing-only terrain/title/
 fire-overlay jobs that own no physical journal entry must not be guessed into
 this pairing. Origin: 2026-10-14 ending Master publication, base69e4f51.
+
+
+**Decoded frontend sheets are not physical pattern residency.** A frontend can
+render a virtual sheet correctly while the following level decoder replaces
+its unwritten native pattern gaps with zero. S3K's initial Master span at
+VRAM $A5C0 was exactly 2,176 bytes of title-banner ROM $35026C+$5C0, not new
+Master art. Retain only admitted frontend CPU uploads at their literal native
+destinations, seeded from the current stock Level's bounded physical patterns;
+never copy virtual atlases or comparison VRAM. Overlay writes of zero still
+overwrite retained bytes, and retained extent must not move the append cursor.
+
+Freeze immutable bytes and resource-owner generation before an async build;
+validate that owner is still installed before GPU publication. Equal bytes and
+generation in a detached owner are insufficient. A menu's world replacement
+may transfer these bytes only through a capture-created token binding the
+exact reused data source and supported owner type. Consume the seed at real
+resource installation, preserve it over ordinary title reset, and clear it on
+a fresh context/hardware lifetime. Newer admitted SaveScreen uploads supersede
+title art. This does not model untouched name tables, SAT or every level-to-level
+gap (2026-10-14 ending ingress; d0fabc3ef candidate4d401bcc).

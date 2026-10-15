@@ -533,6 +533,19 @@ public class Sonic3kTitleScreenDataLoader {
      *
      * @return sprite patterns array, or null if not loaded
      */
+    /** TitleSonic_LoadFrame's admitted DMA destination is physical tile0. */
+    void publishNativeAnimationFrame(int frame) {
+        var residency=com.openggf.game.sonic3k.resources.S3kFrontendPatternResidency.currentOrNull();
+        if(residency!=null&&dataLoaded&&frame>=1&&frame<=FRAME_COUNT)
+            residency.upload(0,animPatterns[frame-1]);
+    }
+
+    /** loc_4140: four Nemesis uploads at physical400/4C0/500/680, retaining gaps. */
+    void publishNativeFinalSprites() {
+        var residency=com.openggf.game.sonic3k.resources.S3kFrontendPatternResidency.currentOrNull();
+        if(residency!=null&&dataLoaded)residency.upload(0x400,spritePatterns);
+    }
+
     public Pattern[] getSpritePatterns() {
         return spritePatterns;
     }

@@ -51,8 +51,12 @@ public final class SwScrlEnding extends AbstractZoneScrollHandler implements Scr
     private void fillScroll(int[] output,int cameraX,int cameraY,int frame,int act,boolean rebuild){
         if(!(GameServices.zoneRuntimeRegistry().current() instanceof EndingZoneRuntimeState ending))return;
         var tables = bands(); // Fail before native RAM/output changes, including pure post-restore rebuild.
-        var ram=ending.screen();foregroundY=ram.foregroundRoutine>=16&&ram.foregroundRoutine<=36?cameraY:
-                ram.foregroundRoutine>=56?cameraY:ram.foregroundY;
+        // ScreenEvents ends with V_scroll_value=Camera_Y_pos_copy, the copy taken before the
+        // event handlers (sonic3k.asm:102233-102253); credits loc_5B204 advances Camera_Y_pos
+        // afterwards, so its new position is first published by the following frame's copy.
+        int copyY=GameServices.camera().getYCopy();
+        var ram=ending.screen();foregroundY=ram.foregroundRoutine>=16&&ram.foregroundRoutine<=36?copyY:
+                ram.foregroundRoutine>=56?copyY:ram.foregroundY;
         if(ram.backgroundRoutine>=8&&ram.backgroundRoutine<=16){
             var activeBands=aizBands(); // Validate before the first native bank write.
             if(!rebuild&&ram.aizDeformationFrame!=frame){
