@@ -2,7 +2,10 @@ package com.openggf.level;
 
 import com.openggf.game.GameServices;
 import com.openggf.game.RuntimeArtAdmissionPolicy;
+import com.openggf.game.ShieldType;
+import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindRegistry;
+import com.openggf.game.rewind.RewindSnapshotDiff;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.SharedLevel;
@@ -56,5 +59,68 @@ class TestS3kFixedSstTransitionRewind {
         assertEquals(1, manager.getActiveObjects().stream()
                 .filter(original.getClass()::isInstance).count());
         assertDoesNotThrow(registry::capture);
+    }
+
+    /**
+     * Shield and Invincibility_stars are fixed Level_object_RAM slots
+     * (sonic3k.constants.asm:318-321). MHZ1_BackgroundEvent's Load_Level reload
+     * (sonic3k.asm:112274-112292) never clears them, so a shield gained in act 1 keeps
+     * running in act 2. The persistent-only carry must not drop those owners while the
+     * player keeps the shield status, or registry restore re-spawns an object the live
+     * world no longer had (fresh 320px MHZ route, act-two release at frame 9257).
+     */
+    @ParameterizedTest
+    @CsvSource({"FIRE,false", "LIGHTNING,false", "BUBBLE,true"})
+    void playerBoundPowerUpsSurviveThePersistentExactSstCarry(ShieldType type, boolean invincible)
+            throws Exception {
+        var fixture = HeadlessTestFixture.builder()
+                .withSharedLevel(SharedLevel.load(SonicGame.SONIC_3K, 7, 0)).build();
+        var level = GameServices.level();
+        var player = fixture.sprite();
+        player.giveShield(type);
+        if (invincible) player.giveInvincibility();
+        fixture.stepFrame(false, false, false, false, false);
+        var shield = player.getShieldObject();
+        var stars = player.getInvincibilityObject();
+        assertNotNull(shield);
+        assertEquals(invincible, stars != null);
+        int shieldSlot = ((AbstractObjectInstance) shield).getSlotIndex();
+
+        level.executeActTransition(SeamlessLevelTransitionRequest.builder(
+                        SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
+                .targetZoneAct(7, 1)
+                .runtimeArtAdmissionPolicy(RuntimeArtAdmissionPolicy.TITLE_OWNER)
+                .objectSurvivalPolicy(SeamlessLevelTransitionRequest.ObjectSurvivalPolicy.PERSISTENT_EXACT_SST)
+                .preserveLevelGamestate(true)
+                .build());
+        fixture.stepFrame(false, false, false, false, false);
+
+        var manager = level.getObjectManager();
+        assertTrue(player.hasShield());
+        assertSame(shield, player.getShieldObject());
+        assertEquals(1, manager.getActiveObjects().stream().filter(o -> o == shield).count(),
+                "the act-two manager must run the act-one shield owner once");
+        assertEquals(shieldSlot, ((AbstractObjectInstance) shield).getSlotIndex());
+        if (invincible) {
+            assertEquals(1, manager.getActiveObjects().stream().filter(o -> o == stars).count(),
+                    "the act-two manager must run the act-one invincibility stars once");
+        }
+
+        RewindRegistry registry = fixture.gameplayMode().getRewindRegistry();
+        CompositeSnapshot saved = registry.capture();
+        for (int frame = 0; frame < 8; frame++) fixture.stepFrame(false, false, false, false, false);
+        CompositeSnapshot expected = registry.capture();
+        registry.restore(saved);
+        same(saved, registry.capture(), "restore");
+        for (int frame = 0; frame < 8; frame++) fixture.stepFrame(false, false, false, false, false);
+        same(expected, registry.capture(), "replay");
+    }
+
+    private static void same(CompositeSnapshot expected, CompositeSnapshot actual, String label) {
+        assertEquals(expected.entries().keySet(), actual.entries().keySet(), label);
+        for (String key : expected.entries().keySet()) {
+            var differences = RewindSnapshotDiff.diffKey(key, expected.get(key), actual.get(key));
+            assertTrue(differences.isEmpty(), () -> label + " " + key + ": " + differences);
+        }
     }
 }

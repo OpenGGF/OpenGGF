@@ -602,6 +602,33 @@ references after the source SST was deleted. `loc_7E916`/`loc_7E972` fragments a
 `CreateBossExp00`/`CreateBossExp06` bursts use copied coordinates, not
 `Obj_WaitForParent`; omit their live parent dependency. Preserve actual follower
 references. Test both pre-deletion replay and a fresh post-deletion capture/replay.
+MHZ's Mushmeanie shell has the same shape: `loc_8DC42` reads the parent once at launch
+and `loc_8DC62` never again, so the body's second hit can delete it mid-flight. Drop the
+link at launch and recreate from the captured spawn with the parent relinked by id, not
+by proximity to a live body (800px MHZ1 route, 2026-10-15).
+
+**Exact-SST act carries keep the fixed power-up slots.** `Shield` and
+`Invincibility_stars` are fixed `Level_object_RAM` slots (`sonic3k.constants.asm:318-321`)
+that a `Load_Level` act reload never clears. `PERSISTENT_EXACT_SST` carries only
+persistent dynamic occupants, yet the manager rebuild skipped power-up registration for
+every exact-SST policy as if the carry had imported them (only `ALL_LIVE_SST` does). A
+fire shield gained in MHZ1 left the act-2 manager while the player kept the status; a later
+registry restore re-spawned it, so the route's restore check failed although restore was
+right. Register owners the carry did not retain, and compare the live manager with the
+player's power-up state across the transition, not just capture against restore.
+
+**Identity-keyed player collections need an explicit policy.** A final
+`Map<AbstractPlayableSprite, ...>` or player `Set` is not captured by the default object
+scalar path, and the coverage guard does not flag it. The MHZ mushroom cap's per-player
+last airborne `y_vel` (`$30/$32(a0)`) and standing set were silently dropped, so a rider
+restored on the cap bounced at -$680 instead of -$780; the curled vine's `$36/$37` segment
+map (a restored rider took the landing frame's -1 snap), the catapult's riders (launched
+by the next update) and the dropping platform's riders had the same gap. Add `CAPTURED`
+entries (as for the swing bars), drop entries for sprites that left the player slots
+(the MHZ1 carry-in Tails), and replay through the consuming update from a capture taken
+on every frame of the ride; a capture far from that update passes. A dense route sweep
+(capture every ten frames, replay thirty, compare rows and whole snapshots) found these
+after targeted spot checks had passed.
 
 **ROM sprite priority buckets are SAT order.** Lower priority buckets and earlier object
 slots appear in front; painter rendering reverses both orders. Folded boss parts

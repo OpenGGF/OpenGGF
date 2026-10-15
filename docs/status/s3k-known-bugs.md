@@ -139,6 +139,7 @@ Entries should include:
 47. [Non-Fresh Title Card Holds 90 Locked Frames (OPEN)](#non-fresh-title-card-holds-90-locked-frames-open)
 48. [AIZ2 First-Tree and HCZ1 Zero-Offset Animated Tile Uploads (OPEN)](#aiz2-first-tree-and-hcz1-zero-offset-animated-tile-uploads-open)
 49. [Knuckles Credits and Terminal Residuals (OPEN)](#knuckles-credits-and-terminal-residuals-open)
+50. [MHZ Rewind Snapshot Identity Gaps (OPEN)](#mhz-rewind-snapshot-identity-gaps-open)
 
 ---
 
@@ -6557,3 +6558,28 @@ Evidence and the measured spots are in the
 ### Removal condition
 Each gap is attributed to a ROM owner and modelled with a focused red-first test, or shown
 equal to a native capture of the same state.
+
+---
+
+## MHZ Rewind Snapshot Identity Gaps (OPEN)
+
+After the MHZ rider/shell/shield restore fixes (`902ba8a10`), dense
+`RewindFidelitySweep` runs over the solo Sonic MHZ routes show no player drift, but two
+restores are not snapshot-exact (no gameplay effect observed):
+- The MHZ1 carry-in Tails (`SpawnLevelMainSprites` `loc_68C2`/`loc_68D8`) is recreated as a
+  new sprite by restores during its first ~100 frames. Solid-contact headroom snapshots and
+  plane-switcher player sides hold direct player references, so the replaced instance stays
+  keyed there and each further restore in that window adds an entry.
+- MHZ2's Knuckles cutscene leaf particles (`CutsceneKnucklesMhz2Instance`) restore with a
+  zero spawn record (x/y/velocity restore correctly).
+
+Outside MHZ, these per-player identity collections have no rewind policy and were not
+checked: `CorkFloorObjectInstance.standingRiders`,
+`LbzMovingPlatformObjectInstance.standingPlayers`, `SinkingMudObjectInstance` player maps.
+Evidence and sweep commands are in the
+[MHZ act 1 matrix](../architecture/validation/levels/s3k-mhz-act1.md#rewind-fidelity-fixes-2026-10-16-902ba8a10).
+
+### Removal condition
+A `RewindFidelitySweep` over the MHZ1 opening and the MHZ2 cutscene reports no
+restore-identity or end-of-replay differences, and each listed collection either has a
+policy with a capture/restore/forward-replay test or is shown to be re-derived.

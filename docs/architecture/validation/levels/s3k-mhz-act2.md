@@ -602,7 +602,7 @@ the tracking method. Act 2 continues the same time-aligned tracking from the act
 | Movie | Old SHA-256 | New SHA-256 | Frames | Milestones (new; old) | Status |
 |---|---|---|---|---|---|
 | `mhz2-sonic-incoming-320.bk2` | `df0f52d4d34620022ff027059a2cc90911a3e1b039feb884d1bf8597d63a351f` | `314c73520a71585c41cd96fbc618f95da367e38043d902ca66cd850d9c945bd4` | 23944 | MHZ2 8617, release 9148, end boss 19835…20992 (19671…21156), ship 22264/23548, FBZ load 23666 (23497) | green |
-| `mhz2-sonic-incoming-800.bk2` | `15e386e9fec403ad411702f1f95c1c2f33e3202fa31d15d20af7e3038b324067` | unchanged | 29744 | act 1 re-authored (identical milestones to old, as the cold-complete 800 movie); MHZ2 not completed | stopped: limit below |
+| `mhz2-sonic-incoming-800.bk2` | `15e386e9fec403ad411702f1f95c1c2f33e3202fa31d15d20af7e3038b324067` | `0cf35c45b0d7c899140b2066856fcdefa98b2919903b50253d63b31a110295cf` | 29433 | act 1 identical to old; MHZ2 9260, release 9832; object ride 11410…12040 (11313…11940); end boss 23040…24387 (23450…24797); FBZ load 28681 (old test constant 28981); ends 201,1219 in FBZ (same) | green (re-authored 2026-10-16, below) |
 
 `TestS3kMhzAct2AuthoredRoute` takes the Sonic case's new input count (23944); the Tails and
 team movies are unchanged. Incoming 800 stopped under the three-failed-searches rule: six
@@ -616,3 +616,26 @@ last search lost the old path at 15100 (P1 13012,1905, VInt 15100, timer 5809, R
 Validation on 923399354 (run `v-mhz`, Maven Finished 21:07:07Z): `TestS3kMhzAct2AuthoredRoute`
 3/0/0/0 (Sonic re-authored; Tails and team unchanged); `TestMhzWideColdRouteCapture` 1 failure
 (`expected: <4> but was: <7>` at 29700, unchanged incoming 800 movie).
+
+### Incoming 800 re-authored under the fixed rewind (2026-10-16)
+
+The 2026-10-15 stop above rested on restore drift; `902ba8a10` fixed it (MHZ act 1 record,
+D1-D4) and the earlier drift sites replay identically. Four bounded searches from the act-2
+release, each accepted only by an uninterrupted cold replay (temporary authoring helper, deleted):
+
+| Search | Method | Result |
+|---|---|---|
+| r1 | time-aligned follow of the old route (offset −54) | cold-verified, lost at 12023: missed the old 11313-11940 object ride |
+| r2 | from 11200: time-aligned follow with auto offset and with 8px tolerance; progress-based follow (`ReferencePathInputAuthor`) | both time-aligned runs lost at 12020; the progress-based run rode the object (11410-12040) and stuck at old progress 13842 (P1 8501,1315) |
+| r3 | from 13300: time-aligned auto offset; progress-based with wider search | lost at 13900; stuck at 13844 — the old route waits at 7889,1455, 8165,1452 and 8270,1457 before a timed spindash climb, and the new route arrived ~450 inputs earlier |
+| r4-r6 | stand at the old 7889,1455 rest (new 13036), search 0-400 neutral inputs, then the old inputs: 54 inputs re-align object phases (offset +410, 3.7px mean error over 400 inputs); time-aligned follow with +410 to the end boss; neutral through the ship to the FBZ load; then the old post-load inputs | complete: all nine end-boss hits exactly 410 inputs ahead of the old route; the ship sequence runs 99 later; FBZ load 28681 |
+
+`TestMhzWideColdRouteCapture` takes the measured counts (29433 inputs, FBZ check at 29400, load
+28681, replay clamp 28680); its spots, health and named-spot obligations are unchanged. No
+runtime behaviour changed in this step.
+
+Validation: run `p13` on the tree of this commit (focused selectors via `maven_queue.py`, normal
+lane, S3K/S1/S2 ROMs, Maven Finished 23:37:15Z, 11 tests, 0 failures/errors/skips):
+`TestMhzWideColdRouteCapture` 1/0 (25 named whole-world replay spots, two restore cycles each),
+`TestS3kMhzAuthoredRoute` 1/0, `TestS3kMhzWideAuthoredRoute` 1/0, `TestS3kMhzAct2AuthoredRoute` 3/0,
+`TestMhzKnucklesColdRouteCapture` 2/0, `TestMhzRewindFidelitySweep` 3/0.
