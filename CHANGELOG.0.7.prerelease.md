@@ -43,7 +43,8 @@ Unreleased. The earlier development themes remain in
   data select, restarts, special and bonus stage returns, and loads without a card.
   Previously the level stayed black and then appeared at full brightness. The data
   select no longer fades the whole screen, card included, back in on top. Seamless
-  act changes still do not fade, as in the original.
+  act changes still do not fade, as in the original. The score, time and ring
+  counters are drawn over the card's red banner, as on hardware.
 
 - **S3K objects and bosses:** The Angel Island end boss starts its defeat at the
   native hit check of whichever phase it is in. When the object table is full,

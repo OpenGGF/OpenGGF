@@ -429,3 +429,17 @@ at the card's exit, so the fade plays while the card leaves; natively it plays d
 card's 22-frame hold. The death-restart reveal is still the host's blocking whole-screen fade
 over the card's slide-in, because removing it would change native-blocking-fade timing. Line 0
 is never faded natively, so the card fades in there instead of appearing at full colour.
+
+**HUD over the title card (titlefade2 lane, 2026-10-15).** S3K `Render_Sprites` emits
+`Render_HUD` and `Render_Rings` before walking the object priority buckets once
+`Level_started_flag` is set (sonic3k.asm:36326-36329). Earlier sprite-table entries are drawn
+in front, so the HUD covers the card's pieces while the card holds over the running level. The
+native `hpz-entry` frames (seq141, seq152) show the score, time and ring digits over the red
+banner. The engine painted the card over the finished frame. While the S3K card no longer
+draws its locked-loop black field, it now reports `TitleCardBeneathLevelHud`. The window
+(`Engine`) and capture hosts then paint it through `LevelHudUnderlay`, at the start of
+`LevelRenderer`'s HUD pass. Other games and the locked loop keep the old order. Red first:
+`TestS3kHudOverTitleCard` found the banner rows solid red before the change. Pictures:
+`titlefade2-v1/after-hud` (LFC 10, 22) against `after/A-cap-hpz-*`. Limit: rings are still
+drawn under the card. Natively they are above it, but the engine's ring pass sits inside the
+sprite pass, before the card.

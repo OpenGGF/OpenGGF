@@ -51,6 +51,7 @@ import java.util.logging.Logger;
 public class Sonic3kTitleCardManager
         implements TitleCardProvider,
         com.openggf.game.internal.FreshLevelTitleBoundaryPublication,
+        com.openggf.game.internal.TitleCardBeneathLevelHud,
         RewindSnapshottable<Sonic3kTitleCardManager.Snapshot> {
     private static final Logger LOG = Logger.getLogger(Sonic3kTitleCardManager.class.getName());
     public static final String REWIND_KEY = "s3k-title-card";
@@ -1150,6 +1151,21 @@ public class Sonic3kTitleCardManager
     public boolean drawsOpaqueLevelBackdrop() {
         return !inLevelMode && !levelLoopHoldArmed()
                 && (state == Sonic3kTitleCardState.SLIDE_IN || state == Sonic3kTitleCardState.DISPLAY);
+    }
+
+    /**
+     * {@code Render_Sprites} emits {@code Render_HUD} (and the rings) ahead of
+     * every object priority bucket once {@code Level_started_flag} is set
+     * (sonic3k.asm:36326-36329), and earlier sprite-table entries are drawn in
+     * front, so the HUD covers the card's pieces while it holds over the running
+     * level. The native Knuckles HPZ entry (campaign-visual {@code hpz-entry}
+     * seq131-152) shows the score, time and ring digits over the red banner.
+     * While the card paints the locked loop's black field the level has not
+     * started and the card covers the screen.
+     */
+    @Override
+    public boolean drawsBeneathLevelHud() {
+        return isOverlayActive() && !drawsOpaqueLevelBackdrop();
     }
 
     @Override
