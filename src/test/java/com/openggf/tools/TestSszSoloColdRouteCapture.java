@@ -101,7 +101,7 @@ class TestSszSoloColdRouteCapture {
     void coldSoloSonicDefeatsMechaAndLoadsDezWithIsolatedHistory() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/ssz1-sonic-solo-cold-complete-320.bk2"));
-        assertEquals(17600, movie.getFrameCount());
+        assertEquals(17611, movie.getFrameCount());
         int historyStart = movie.getFrameCount() - 120;
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "", "off", null, null, null);
         var spots = Set.of(11200, 11334, 11850, 11911, 11971, 12031, 12061,

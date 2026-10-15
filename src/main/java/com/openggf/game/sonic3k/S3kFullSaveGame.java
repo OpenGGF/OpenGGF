@@ -6,6 +6,13 @@ import com.openggf.level.objects.ObjectServices;
 
 /** Runtime semantics of the ROM's full SaveGame, distinct from persistence-only requests. */
 public final class S3kFullSaveGame {
+    /**
+     * Marks the synchronous capture of a request made by {@link #complete}. Only SaveGame
+     * stores {@code SaveGame_NextLevel[Current_zone_and_act]} (sonic3k.asm:15860-15872);
+     * the engine's persistence-only progression requests keep the current location.
+     */
+    private static final ScopedValue<Boolean> SAVE_GAME = ScopedValue.newInstance();
+
     private S3kFullSaveGame() { }
 
     /**
@@ -18,6 +25,12 @@ public final class S3kFullSaveGame {
      */
     public static void complete(ObjectServices services) {
         NativeGameStateOps.clearSpecialRingCollection(services.gameState());
-        services.requestSessionSave(SaveReason.PROGRESSION_SAVE);
+        ScopedValue.where(SAVE_GAME, Boolean.TRUE)
+                .run(() -> services.requestSessionSave(SaveReason.PROGRESSION_SAVE));
+    }
+
+    /** True while the save provider captures the request made by {@link #complete}. */
+    public static boolean isCapturingSaveGame() {
+        return SAVE_GAME.isBound();
     }
 }

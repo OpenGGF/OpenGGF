@@ -39,8 +39,8 @@ class TestLrzActTwoColdRouteCapture {
                 39031, 39180, 39426, 39486, 39577, 39830, 39910, 40030, 40140, 40365,
                 40432, 40625, 40667, 40757, 40822, 40942, 41580, 41640, 41862,
                 41982, 42100, 42190, 42360, 42540, 42750, 42870, 43020, 43150,
-                43260, 43350, 43440, 43500, 43680, 43710);
-        runRoute("boss-act-arrival", spots, 43761, 22, 0, 296, 1196, 6);
+                43260, 43350, 43440, 43500, 43691, 43721);
+        runRoute("boss-act-arrival", spots, 43772, 22, 0, 296, 1196, 6);
     }
 
     private void runRoute(String route, Set<Integer> spots, int frameCount,
@@ -79,14 +79,14 @@ class TestLrzActTwoColdRouteCapture {
                     assertTrue(session.player().isObjectControlled(), "the boulder owns the drop");
                     assertEquals(5, session.player().getRingCount());
                 }
-                if (frame == 43570) {
+                if (frame == 43581) {
                     assertEquals(22, GameServices.level().getCurrentZone());
                     assertEquals(0, GameServices.level().getCurrentAct());
                     assertEquals(5, session.player().getRingCount(), "StartNewLevel retains carried rings");
                 }
                 if (!spots.contains(frame)) continue;
-                assertEquals(frame < 43570 ? 9 : 22, GameServices.level().getCurrentZone());
-                assertEquals(frame < 43570 ? 1 : 0, GameServices.level().getCurrentAct());
+                assertEquals(frame < 43581 ? 9 : 22, GameServices.level().getCurrentZone());
+                assertEquals(frame < 43581 ? 1 : 0, GameServices.level().getCurrentAct());
                 checked.add(frame);
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
                 drawing.checkpoint(session);

@@ -138,6 +138,63 @@ final class S3kSaveProgressions {
         };
     }
 
+    /**
+     * {@code SaveGame_NextLevel} (sonic3k.asm:15824-15850), indexed by
+     * {@code Current_zone_and_act} as {@code zone*2 + act} (sonic3k.asm:15860-15862).
+     */
+    private static final int[] SAVE_GAME_NEXT_LEVEL = {
+            1, 1,       // $00 AIZ
+            2, 2,       // $01 HCZ
+            3, 3,       // $02 MGZ
+            4, 4,       // $03 CNZ
+            8, 8,       // $04 FBZ
+            5, 5,       // $05 ICZ
+            6, 6,       // $06 LBZ
+            7, 7,       // $07 MHZ
+            9, 9,       // $08 SOZ
+            0xA, 0xA,   // $09 LRZ
+            0xC, 0xC,   // $0A SSZ
+            0xD, 0xD,   // $0B DEZ
+            0xE, 0xE,   // $0C DDZ
+            0, 0,       // $0D
+            0, 0,       // $0E
+            0, 0,       // $0F
+            0, 0,       // $10
+            0, 0,       // $11
+            0, 0,       // $12
+            0, 0,       // $13
+            0, 0,       // $14
+            0, 0,       // $15
+            0xA, 0xB,   // $16 LRZ boss act, HPZ
+            0xD, 0      // $17 DEZ boss arena, $1701
+    };
+
+    /** {@code LevelList_DA6E} (sonic3k.asm:17499-17513): level code to zone/act word. */
+    private static final int[] LEVEL_LIST = {
+            0x000, 0x100, 0x200, 0x300, 0x500, 0x600, 0x700, 0x400, 0x800, 0x900, 0x1601, 0xA00, 0xB00, 0xC00
+    };
+
+    /**
+     * Load destination SaveGame stores at {@code Current_zone_and_act}: the code from
+     * {@code SaveGame_NextLevel}, loaded through data select {@code sub_DA4E}
+     * (sonic3k.asm:17480-17496), which turns code {@code $B} into {@code $A01} for
+     * Player_mode 3 only. Empty when the table has no destination: code 0 belongs only to
+     * rows no SaveGame caller occupies, and code {@code $E} (Doomsday) is always written as a
+     * completed file, whose loads use the clear-restart list instead of this code.
+     */
+    static java.util.Optional<DataSelectDestination> saveGameNextLevel(int zone, int act, SelectedTeam team) {
+        int index = zone * 2 + (act & 1);
+        if (zone < 0 || index >= SAVE_GAME_NEXT_LEVEL.length) {
+            return java.util.Optional.empty();
+        }
+        int code = SAVE_GAME_NEXT_LEVEL[index];
+        if (code == 0 || code >= LEVEL_LIST.length) {
+            return java.util.Optional.empty();
+        }
+        int word = isKnuckles(team) && code == 0xB ? 0xA01 : LEVEL_LIST[code];
+        return java.util.Optional.of(new DataSelectDestination(word >>> 8, word & 0xFF));
+    }
+
     private static boolean isKnuckles(SelectedTeam team) {
         return team != null && "knuckles".equalsIgnoreCase(team.mainCharacter());
     }
