@@ -184,7 +184,11 @@ class TestRemainingRewindTailInventory {
         // S3kAuthoredGoalInstance adds one isolated pass. Its triggered scalar and
         // tagged placement also restore/replay through the real ObjectManager in
         // TestHostObjectKeys.goalRewindPreservesTaggedPlacementAndPreventsDuplicateNativeFinishGraphs.
-        return new TailInventory(1321, 1078, 243, 0, buckets);
+        // The 2026-10-14/15 S3K parity composition adds six classes that each pass the
+        // real isolated round-trip: AizMinibossSpecialExplosionOwner, the fresh title-card
+        // owner/element and in-level title-card element SST owners, and the MonkeyDude arm
+        // and explosion children. No bucket grows.
+        return new TailInventory(1327, 1084, 243, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {
