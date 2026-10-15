@@ -137,6 +137,89 @@ class TestS3kPostCredits {
         for(int i=0;i<240;i++)owner.update(i,fixture.sprite());assertTrue(owner.stopsSparks());
         spark.update(2,fixture.sprite());assertTrue(spark.isDestroyed(),"loc_5F7D8 sets native parent $38 bit6");
     }
+    /**
+     * off_5EFB6 (sonic3k.asm:125511) gives locked-on Knuckles loc_5F0A6 at progress 0 and +2:
+     * its loc_5F20A keeps the cleared subtype 0, so sub_5FF1C (sonic3k.asm:126931) reads
+     * word_5F260[0] = ($120,$B0). Only progress -2 takes loc_5F0C4 (subtype 8, ($120,$F0)).
+     * The native Knuckles complete run (_unkFA88 2) holds the logo SST at ($120,$B0) from
+     * input 432728.
+     */
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"7,7,176","7,0,176","0,0,240"})
+    void knucklesBannerUsesTheWord5F260RowOfTheSelectedInitializer(int chaos,int superEmeralds,int y){
+        var fixture=boot();var owner=start(fixture,chaos,superEmeralds);
+        assertEquals(0x120,owner.getX());assertEquals(y,owner.getY());
+    }
+    /** Every locked-on off_5EFB6 row: loc_5F05C (Sonic, team, Tails) writes subtype 4. */
+    @Test void lockedOnInitializersSelectTheirWord5F260RowAndPose() throws Exception {
+        boot();var rom=TestEnvironment.objectServices().romReader();
+        for(var character:com.openggf.game.PlayerCharacter.values())for(int progress=-2;progress<=2;progress+=2){
+            var dispatch=S3kPostCreditsData.resolve(rom,character,progress);
+            boolean knux=character==com.openggf.game.PlayerCharacter.KNUCKLES;
+            int[] expected=!knux?new int[]{0xD0,0xB8}:progress<0?new int[]{0x120,0xF0}:new int[]{0x120,0xB0};
+            assertArrayEquals(expected,new int[]{S3kPostCreditsData.bannerX(rom,dispatch),S3kPostCreditsData.bannerY(rom,dispatch)},
+                    character+"/"+progress);
+            assertEquals(knux&&progress>=0,dispatch.knucklesPose(),character+"/"+progress);
+        }
+    }
+    /**
+     * loc_5F480 (sonic3k.asm:125947) allocates loc_5FBA0 (sonic3k.asm:126562) only for a
+     * positive _unkFA88. Native credits-done RAM (inputs 432728..433088, every 20 inputs)
+     * dates Obj_5EF68's init to input 432709 ($2E = $1EC at 432728) and holds the flash's
+     * $3A below. Colours 2/3 come from the longword, colour 5 from move.w 4(a1,d0.w),2(a2);
+     * colour 4 keeps Pal_KnuxEndPose's $0080 (native CRAM agrees).
+     */
+    @Test void superKnucklesBannerCyclesPoseColoursLikeTheNativeRunAndReplays() throws Exception {
+        var fixture=boot();var owner=start(fixture,7,7); // pass 0 = native input 432709
+        var rom=TestEnvironment.objectServices().romReader();
+        int[] native3A={0x2A,0,0x24,0,0x24,0,0x1E,0,0x18,0,0x18,0,0x12,0,0x0C,0x36,0x0C,0x30,0x06};
+        int pass=0;
+        for(int seq=1;seq<=native3A.length;seq++) {
+            while(pass<20*seq-1)owner.update(++pass,fixture.sprite());
+            int entry=0x5FBE2+native3A[seq-1]; // Pal_KnuxEndPoseSuper
+            assertArrayEquals(new int[]{rom.readU16BE(entry),rom.readU16BE(entry+2),0x0080,rom.readU16BE(entry+4)},
+                    new int[]{paletteWord(0,2),paletteWord(0,3),paletteWord(0,4),paletteWord(0,5)},"native seq"+seq);
+        }
+        var registry=TestEnvironment.activeGameplayMode().getRewindRegistry();var saved=registry.capture();
+        int[] expected=new int[60];
+        for(int i=0;i<60;i++){owner.update(++pass,fixture.sprite());expected[i]=paletteWord(0,2)<<16|paletteWord(0,5);}
+        registry.restore(saved);pass-=60;
+        owner=GameServices.level().getObjectManager().activeObjectsOfType(S3kPostCreditsObjectInstance.class).getFirst();
+        for(int i=0;i<60;i++){owner.update(++pass,fixture.sprite());
+            assertEquals(expected[i],paletteWord(0,2)<<16|paletteWord(0,5),"replay pass "+pass);}
+        // loc_5F15A sets Palette_cycle_counters+0 before slot 8 runs: the flash deletes unwritten.
+        // Any later flash write would survive the object fade.
+        while(owner.phase()==1)owner.update(++pass,fixture.sprite());
+        while(owner.phase()==2)owner.update(++pass,fixture.sprite());
+        assertArrayEquals(new int[]{0,0,0},new int[]{paletteWord(0,2),paletteWord(0,3),paletteWord(0,5)});
+    }
+    /**
+     * sub_5FF1C (sonic3k.asm:126931) allocates loc_5FF62 after the logo, so its first step
+     * falls in the init pass. Every fourth pass sub_85EB4 raises all 16 line-1 colours one
+     * level toward $EEE (eight steps); loc_5FF94 then falls into loc_5FFA6's countdown and
+     * sub_85F2A lowers them toward Target_palette_line_2 (eight steps). Native RAM: input
+     * 432728 (pass 19) holds $0AAA throughout, 432748 (pass 39) the values below, 432768 the target.
+     */
+    @Test void bannerLogoFadesThroughWhiteLikeTheNativeRun() throws Exception {
+        var fixture=boot();var owner=start(fixture,7,7);
+        var rom=TestEnvironment.objectServices().romReader();
+        int pass=0;
+        while(pass<19)owner.update(++pass,fixture.sprite());
+        for(int c=0;c<16;c++)assertEquals(0x0AAA,paletteWord(1,c),"pass 19 colour "+c);
+        while(pass<39)owner.update(++pass,fixture.sprite());
+        int[] native39={0x0888,0x0EEE,0x08EE,0x08CE,0x0888,0x088E,0x0E88,0x0888,
+                0x0888,0x0888,0x088E,0x088E,0x088A,0x088C,0x0888,0x0888};
+        for(int c=0;c<16;c++)assertEquals(native39[c],paletteWord(1,c),"pass 39 colour "+c);
+        while(pass<59)owner.update(++pass,fixture.sprite());
+        for(int c=0;c<16;c++)
+            assertEquals(rom.readU16BE(S3kEndingResources.PAL_S3K_LOGO+c*2),paletteWord(1,c),"pass 59 colour "+c);
+    }
+    @Test void chaosKnucklesBannerKeepsThePosePalette(){
+        var fixture=boot();var owner=start(fixture,7,0);
+        for(int i=1;i<100;i++)owner.update(i,fixture.sprite());
+        assertArrayEquals(new int[]{0x0206,0x020C,0x0080,0x064E},
+                new int[]{paletteWord(0,2),paletteWord(0,3),paletteWord(0,4),paletteWord(0,5)},"no loc_5FBA0 at _unkFA88 0");
+    }
     private int paletteWord(int line,int color){
         return com.openggf.game.palette.PaletteWriteSupport.segaWordFromColor(
                 TestEnvironment.objectServices().currentLevel().getPalette(line).getColor(color));

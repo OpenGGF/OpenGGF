@@ -37,6 +37,10 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
     private int childFrame;
     private int childTimer;
     private int childStage;
+    // loc_5FBA0's own SST: alive flag, anim_frame_timer byte and $3A table offset.
+    private boolean poseFlash;
+    private int poseFlashTimer;
+    private int poseFlashOffset;
     private final S3kRawAnimation.State animation = new S3kRawAnimation.State();
     private final S3kRawAnimation.State childAnimation = new S3kRawAnimation.State();
     private final S3kRawAnimation.State tailsAnimation = new S3kRawAnimation.State();
@@ -56,6 +60,7 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
     private record Extra(int phase, int timer, int afterBanner, int bannerInitializer, int fadeWait,
                          int fadeSteps, int fadeAddress, int frame, int screenX, int screenY,
                          int motionY, int motionVelocity, int childFrame, int childTimer, int childStage,
+                         boolean poseFlash, int poseFlashTimer, int poseFlashOffset,
                          S3kRawAnimation.State.Value animation, S3kRawAnimation.State.Value childAnimation,
                          S3kRawAnimation.State.Value tailsAnimation, S3kRawAnimation.State.Value knucklesAnimation,
                          SszMechaPalette.Value mechaPalette)
@@ -64,6 +69,7 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
         return super.captureRewindState(context).withObjectSubclassExtra(new Extra(phase, timer, afterBanner,
                 bannerInitializer, fadeWait, fadeSteps, fadeAddress, frame, screenX, screenY,
                 motionY, motionVelocity, childFrame, childTimer, childStage,
+                poseFlash, poseFlashTimer, poseFlashOffset,
                 animation.captureRewindStateValue(), childAnimation.captureRewindStateValue(),
                 tailsAnimation.captureRewindStateValue(),knucklesAnimation.captureRewindStateValue(),mechaPalette.captureRewindStateValue()));
     }
@@ -74,6 +80,7 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
             fadeWait=e.fadeWait(); fadeSteps=e.fadeSteps(); fadeAddress=e.fadeAddress(); frame=e.frame();
             screenX=e.screenX(); screenY=e.screenY(); motionY=e.motionY(); motionVelocity=e.motionVelocity();
             childFrame=e.childFrame(); childTimer=e.childTimer(); childStage=e.childStage();
+            poseFlash=e.poseFlash(); poseFlashTimer=e.poseFlashTimer(); poseFlashOffset=e.poseFlashOffset();
             animation.restoreRewindStateValue(e.animation()); childAnimation.restoreRewindStateValue(e.childAnimation());
             tailsAnimation.restoreRewindStateValue(e.tailsAnimation());knucklesAnimation.restoreRewindStateValue(e.knucklesAnimation());
             mechaPalette.restoreRewindStateValue(e.mechaPalette());
@@ -88,6 +95,7 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
                 timer = (short) (timer - 1);
                 if (timer == 0x40) ending().setFlag(2); // loc_5F144
                 if (timer < 0) { phase=2; fadeWait=0; fadeSteps=7; rotationDisabled(true); }
+                stepPoseFlash(); // slot 8 runs after slot 4's loc_5F15A
             }
             case 2 -> {
                 if (--fadeWait < 0) {
@@ -114,28 +122,62 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
     }
     private void initializeBanner() {
         try {
-            var dispatch=S3kPostCreditsData.resolve(services().romReader(),character(),ending().progress());
+            var rom=services().romReader();
+            var dispatch=S3kPostCreditsData.resolve(rom,character(),ending().progress());
             bannerInitializer=dispatch.bannerInitializer();afterBanner=dispatch.afterBanner();
-            boolean tails=character()==PlayerCharacter.TAILS_ALONE, knux=character()==PlayerCharacter.KNUCKLES;
-            screenX=tails?0xD0:0x120; screenY=knux?0xF0:tails?0xB8:0xB0;
+            // sub_5FF1C: loc_5F20A's subtype selects its word_5F260 position.
+            screenX=S3kPostCreditsData.bannerX(rom,dispatch); screenY=S3kPostCreditsData.bannerY(rom,dispatch);
             fadeAddress=S3kEndingResources.PAL_S3K_LOGO;
             ending().art().queueModule(services(), S3kEndingResources.S3_BANNER, 0x415);
             S3kEndingPalette.targetLine(services(),1,fadeAddress); S3kEndingPalette.blackLine(services(),1);
-            if (knux && ending().progress()>=0) {
+            if (dispatch.knucklesPose()) {
                 ending().art().loadRaw(services(),S3kEndingResources.KNUCKLES_POSE,0x2C1);
                 S3kEndingPalette.loadLine(services(),0,S3kEndingResources.PAL_KNUCKLES_POSE);
                 S3kRawAnimation.set(animation, 0x602CA);
+                // loc_5F480 (sonic3k.asm:125947): tst.b (_unkFA88).w; beq/bmi skip, so only
+                // +2 allocates loc_5FBA0. That slot follows the pose and runs this pass.
+                poseFlash=ending().progress()>0; poseFlashTimer=0; poseFlashOffset=0;
             }
-            timer=0x1FF; fadeWait=0; fadeSteps=7; phase=1;
+            timer=0x1FF; fadeWait=0; fadeSteps=15; phase=1;
+            stepPoseFlash(); stepBannerFade();
         } catch(IOException failure) { throw new UncheckedIOException(failure); }
     }
+    /**
+     * loc_5FF62 (sonic3k.asm:126958), allocated by sub_5FF1C after the logo: every fourth
+     * pass, from the allocating one, sub_85EB4 raises the 16 line-1 colours a level toward
+     * $EEE, eight times. loc_5FF94 then resets $2E to 3 and falls into loc_5FFA6's subq,
+     * and sub_85F2A lowers them toward Target_palette_line_2, eight more times.
+     */
     private void stepBannerFade() {
-        if (fadeSteps>=0 && --fadeWait<0) {
-            fadeWait=3; S3kEndingPalette.towardsTarget(services(),1,fadeAddress); fadeSteps--;
+        if (fadeSteps<0 || (fadeWait=(short)(fadeWait-1))>=0) return;
+        fadeWait=3;
+        if (fadeSteps>=8) {
+            S3kEndingPalette.towardsWhite(services(),1);
+            if (--fadeSteps==7) fadeWait=2;
+        } else {
+            S3kEndingPalette.downTowardsActualTarget(services(),1);
+            fadeSteps--;
         }
     }
+    /**
+     * loc_5FBA0 (sonic3k.asm:126562): deleted once Palette_cycle_counters+0 is set; otherwise
+     * every third pass ($E after the wrap) it steps $3A by 6 through Pal_KnuxEndPoseSuper.
+     * move.l (a1,d0.w),(a2)+ writes colours 2-3 and move.w 4(a1,d0.w),2(a2) lands on
+     * colour 5, so colour 4 keeps Pal_KnuxEndPose.
+     */
+    private void stepPoseFlash() {
+        if (!poseFlash) return;
+        var registry=services().paletteOwnershipRegistryOrNull();
+        if (registry!=null && registry.isPaletteRotationDisabled()) { poseFlash=false; return; }
+        if ((poseFlashTimer=(byte)(poseFlashTimer-1))>=0) return;
+        poseFlashTimer=2;
+        poseFlashOffset+=6;
+        if (poseFlashOffset>=0x3C) { poseFlashOffset=0; poseFlashTimer=0xE; }
+        S3kEndingPalette.loadColors(services(),0,S3kEndingResources.PAL_KNUCKLES_POSE_SUPER+poseFlashOffset,2,3,5);
+    }
+    private boolean knucklesPose() { return new S3kPostCreditsData.Dispatch(bannerInitializer,afterBanner).knucklesPose(); }
     private void stepKnucklesPose() {
-        if (character()==PlayerCharacter.KNUCKLES && ending().progress()>=0) {
+        if (knucklesPose()) {
             // loc_5F4E4 uses Animate_Raw (one delay, then frame bytes),
             // and its jump updates the stored $30 script pointer.
             scripts().animateNoSst(animation,animation.script, () -> { });
@@ -294,9 +336,13 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
     @Override public void appendRenderCommands(List<GLCommand> commands) {
         if(isDestroyed() || phase==0 || phase==8) return;
         if(phase<=2) {
+            // Each initializer returns before Draw_Sprite; the logo, pose and
+            // Child_Draw_Sprite children first draw on the next pass.
+            if(phase==1&&timer==0x1FF)return;
             draw(S3kEndingArt.S3_BANNER,0,screenX,screenY,false,-1);
             draw(S3kEndingArt.AND_KNUCKLES,0,screenX,screenY+0x14,false,-1);
-            if(character()==PlayerCharacter.KNUCKLES && ending().progress()>=0)
+            drawTrademark(2);
+            if(knucklesPose())
                 draw(S3kEndingArt.KNUCKLES_POSE,frame,0x120,0x108,false,-1);
         } else if(phase==4) draw(S3kEndingArt.EGGMAN,frame,screenX,screenY,false,-1);
         else if(phase==5) {
@@ -305,11 +351,25 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
         } else if(phase==6) {
             draw(S3kEndingArt.S3_GRAPHICS,0,screenX,screenY,false,-1);
             draw(S3kEndingArt.AND_KNUCKLES,1,screenX,screenY+0x48,false,-1);
+            drawTrademark(4);
             boolean tails=character()==PlayerCharacter.TAILS_ALONE,knux=character()==PlayerCharacter.KNUCKLES;
             draw(S3kEndingArt.S3_GRAPHICS,childFrame,screenX+(tails||knux?-0x1C:0),screenY+(tails||knux?0x2C:0x40),false,0);
             draw(S3kEndingArt.S3_GRAPHICS,tailsAnimation.mappingFrame,screenX+(tails?8:0x24),screenY+(tails?0x40:0x2C),false,0);
             draw(S3kEndingArt.EYECATCH_KNUCKLES,knucklesAnimation.mappingFrame,screenX+(knux?0:tails?0x1C:-0x1C),screenY+(knux?0x40:0x2C),false,2);
         } else if(phase==7) draw(Sonic3kObjectArtKeys.MECHA_SONIC,frame,screenX,screenY,false,-1);
+    }
+    /**
+     * loc_5F4FA (sonic3k.asm:125982): ObjDat3_60130's TM, mapping frame 2, placed by
+     * loc_5FFD4 at byte_5F520[subtype] from its parent. loc_5F20A passes subtype 2 and
+     * loc_5F26C subtype 4. Its Graphics_flags bit-7 gate deletes it on Japanese
+     * hardware; like the title screen's TM, the engine models overseas hardware.
+     */
+    private void drawTrademark(int subtype) {
+        try {
+            var rom=services().romReader();
+            int offset=S3kEndingResources.TM_OFFSETS+subtype;
+            draw(S3kEndingArt.AND_KNUCKLES,2,screenX+(byte)rom.readU8(offset),screenY+(byte)rom.readU8(offset+1),false,-1);
+        } catch(IOException failure) { throw new UncheckedIOException(failure); }
     }
     private void draw(String key,int mappingFrame,int x,int y,boolean flip,int palette) {
         var renderer=getRenderer(key); if(renderer==null||!renderer.isReady())return;

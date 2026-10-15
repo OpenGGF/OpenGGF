@@ -191,7 +191,11 @@ Unreleased. The earlier development themes remain in
   where the original draws it. The credits start on the frame the original
   starts them, and with every emerald the second part lifts the island away and
   stops new clouds where the original does. The island then scrolls out of the
-  background and the original's starfield and rolling sea replace it.
+  background and the original's starfield and rolling sea replace it. The credit
+  names now scroll in step with the clouds, as the original's picture does. After the
+  credits the closing logo takes the original's place for each ending, with its
+  trademark: above Knuckles rather than across him. It fades in through white, and with
+  every Super Emerald Knuckles flashes pink as he does in the original.
 
 - **Capture and controller tools:** Input branches reject checkpoints whose pending
   fresh assembly or transition callback cannot be restored by gameplay rewind.
