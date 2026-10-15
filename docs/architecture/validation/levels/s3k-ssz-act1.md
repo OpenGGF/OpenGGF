@@ -1678,3 +1678,21 @@ load (14 live frames before the native 22-frame fade-out). Rows still red there 
 not fade timing and are owned elsewhere: the Knuckles act-2 restore at 37130 and the
 LRZ boss sidekick overlap parity at 47471 (rewind-snapshot rows) and solo Tails' SSZ1
 opening camera (behaviour row). No skips.
+
+## Cold LRZ→HPZ→SSZ1→DEZ1 pair continuation: stopped (2026-10-15)
+
+Attempted on ef61a560f from the fade-retimed joined pair chain
+(`lrz-sonic-tails-cold-hpz-ssz1-320.bk2`, `0ac8acb508ba16f4f579f2566554237ccf0d55636a612497a847c5cbc2be1607`,
+SSZ1 control release 67211) with the direct `ssz1-sonic-tails-cold-complete-320.bk2` as the
+candidate continuation. At release both runs share P1 (256,3085), camera, rings, the
+sidekick and the RNG seed (`cfcd80f3`); only V_int differs (67142 vs 174). Three bounded
+splices failed in the same traversal region: the plain splice died at direct input 6143,
+and controller idles of 104 and 616 frames at the release spot (V_int mod 256/1024
+alignment) died at 6045 and 6039 (the release spot is not a standing spot; P1 falls
+3085→3148 while idling). A divergence probe located the cause: Tails' CPU sidekick differs
+by one pixel from direct input 190 and the RNG from 192 (roaming clouds), and P1 first
+differs at direct input 1366 on the Knuckles button cutscene bridge, where the spliced run
+drops through while the direct run is still grounded. Making the pair continuation needs
+traversal re-authoring of SSZ1 from that bridge onward plus a Mecha encounter search; this
+lane stopped there. Solo Tails (needs an HPZ Knuckles-fight author for Tails plus the same
+SSZ1 traversal) and solo Sonic (no Sonic-alone LRZ/HPZ cold movie exists) are not started.
