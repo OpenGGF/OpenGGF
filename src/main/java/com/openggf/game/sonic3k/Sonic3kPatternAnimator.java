@@ -273,7 +273,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
     private int frameCounter;
 
     // Gumball bonus stage: direct DMA of uncompressed art based on BG scroll
-    // ROM: AnimateTiles_Gumball (sonic3k.asm:55266)
+    // ROM: AnimateTiles_Gumball (sonic3k.asm:55271)
     // ROM Add_To_DMA_Queue params:
     //   d1 = source address (ArtUnc_AniGumball)
     //   d2 = VRAM BYTE destination = tiles_to_bytes($054) = 0xA80 → VRAM tile $54
@@ -285,7 +285,6 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
     private static final int GUMBALL_DMA_SIZE = GUMBALL_TILE_COUNT * Pattern.PATTERN_SIZE_IN_ROM;
     private final byte[] gumballAniData;
     private int lastGumballIndex = -1;
-    private int gumballFrameCounter;
 
     Sonic3kPatternAnimator(RomByteReader reader, Level level,
                            int zoneIndex, int actIndex, boolean isSkipIntro) {
@@ -2097,53 +2096,23 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         if (gumballAniData == null) {
             return;
         }
-        // ROM: d1 = (Events_bg+$10) - Camera_Y_pos_BG_copy
-        // For the bonus stage, Events_bg+$10 is the BG event Y offset.
-        // The camera is locked in the gumball bonus stage, so we drive the
-        // animation from a per-frame counter instead of camera Y. This
-        // produces constant vertical scrolling of the BG tile art.
-        gumballFrameCounter = (gumballFrameCounter + 1) & 0x1F;
-        int index = gumballFrameCounter;
-
+        // AnimateTiles_Gumball (sonic3k.asm:55271-55288):
+        // d1 = ((Events_bg+$10) - Camera_Y_pos_BG_copy) & $1F, which Gumball_Deform sets this
+        // iteration to camY asr 2 and camY asr 1 (S3 half, Screen Events.asm:1700-1707).
+        int bgY = (short) getCameraY() >> 1;
+        int index = ((bgY >> 1) - bgY) & 0x1F;
         if (index == lastGumballIndex) {
-            return; // No change — skip DMA
+            return; // cmp.b 1(a3),d1 / beq: no DMA
         }
         lastGumballIndex = index;
-
-        // ROM: d1 = d1 * 4; source = ArtUnc_AniGumball + d1
-        // Each scroll step shifts the source offset by 4 bytes = 1 tile row (8 pixels wide,
-        // 4bpp = 4 bytes/row). Source data is 256 bytes and wraps cyclically to create a
-        // scrolling stripes animation. We read `i * PATTERN_SIZE_IN_ROM` into the data,
-        // wrapping on overflow so the tile pattern loops.
+        // ArtUnc_AniGumball + d1*4, $40 words to tile $054 through Add_To_DMA_Queue.
         int sourceByteOffset = index * 4;
-
-        // Copy 4 tiles from source offset to level patterns at tile 0x54, wrapping the
-        // source data on overflow.
         level.ensurePatternCapacity(GUMBALL_DEST_TILE + GUMBALL_TILE_COUNT);
-        GraphicsManager graphicsManager = GameServices.graphics();
-        boolean canUpdateTextures = graphicsManager.isGlInitialized();
-        byte[] tileData = rawTileScratchBytes;
-        graphicsManager.beginPatternAtlasBatch();
-        try {
-            for (int i = 0; i < GUMBALL_TILE_COUNT; i++) {
-                int baseOffset = (sourceByteOffset + i * Pattern.PATTERN_SIZE_IN_ROM) % GUMBALL_SOURCE_SIZE;
-                int destIndex = GUMBALL_DEST_TILE + i;
-                if (destIndex >= level.getPatternCount()) {
-                    break;
-                }
-                // Read one tile worth of bytes with wrap-around on source data.
-                for (int b = 0; b < Pattern.PATTERN_SIZE_IN_ROM; b++) {
-                    tileData[b] = gumballAniData[(baseOffset + b) % GUMBALL_SOURCE_SIZE];
-                }
-                Pattern dest = level.getPattern(destIndex);
-                dest.fromSegaFormat(tileData);
-                if (canUpdateTextures) {
-                    graphicsManager.updatePatternTexture(dest, destIndex);
-                }
-            }
-        } finally {
-            graphicsManager.endPatternAtlasBatch();
+        byte[] payload = new byte[GUMBALL_DMA_SIZE];
+        for (int b = 0; b < GUMBALL_DMA_SIZE; b++) {
+            payload[b] = gumballAniData[(sourceByteOffset + b) % GUMBALL_SOURCE_SIZE];
         }
+        aniPlcPublications.submit(GUMBALL_DEST_TILE, payload);
     }
 
     private void updatePachinko() {
@@ -2163,8 +2132,10 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
                 if (pachinkoSourceOffset >= PACHINKO_LOW_SOURCE_BYTES) {
                     pachinkoSourceOffset = 0;
                 }
-                applyRawPatternSliceToLevel(pachinkoScratch, 0, PACHINKO_BG_DMA_BYTES,
-                        PACHINKO_BG_DEST_TILE);
+                // loc_28610: Add_To_DMA_Queue, drained by the next VInt like AniPLC.
+                level.ensurePatternCapacity(PACHINKO_BG_DEST_TILE + PACHINKO_BG_DMA_BYTES / Pattern.PATTERN_SIZE_IN_ROM);
+                aniPlcPublications.submit(PACHINKO_BG_DEST_TILE,
+                        java.util.Arrays.copyOf(pachinkoScratch, PACHINKO_BG_DMA_BYTES));
             }
         }
     }
@@ -2459,7 +2430,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         buf.putInt(pachinkoStripeOffset);
         buf.putInt(frameCounter);
         buf.putInt(lastGumballIndex);
-        buf.putInt(gumballFrameCounter);
+        buf.putInt(0); // retired slot: the Gumball art index now derives from the camera
         buf.putInt(lastLrzBg1Phase);
         buf.putInt(lastLrzBg2Phase);
         buf.put(publicationState);
@@ -2496,7 +2467,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             pachinkoStripeOffset     = buf.getInt();
             frameCounter             = buf.getInt();
             lastGumballIndex         = buf.getInt();
-            gumballFrameCounter      = buf.getInt();
+            buf.getInt(); // retired Gumball frame-counter slot
             int scalarEnd = 53;
             if (extra.length >= SCALAR_BLOB_BYTES) {
                 lastLrzBg1Phase   = buf.getInt();
