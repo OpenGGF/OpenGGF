@@ -25,7 +25,8 @@ import java.util.Set;
  *
  * <p>Method: replay the movie from a fresh boot with the production harness and find the first
  * not-yet-retimed frozen fade window (FadeManager active and the object-manager VInt counter
- * unchanged across the step). Its native length {@code n} is measured, never taken from a
+ * unchanged across the step, on frames where the loop owns the gameplay fade lifecycle: the
+ * old driver added its second advance only there). Its native length {@code n} is measured, never taken from a
  * fixture frame number. The authored movie spent {@code ceil(n / authoredFadeAdvances)} inputs
  * there; the difference is inserted as repeats of the last authored window input, so the edge
  * history at the first live frame is unchanged. The edited movie is replayed again from boot
@@ -41,6 +42,9 @@ import java.util.Set;
  * route reds to 8179ccd80. This is fixture authoring; it never changes runtime behavior.
  */
 public final class FadeWindowRetimeTool {
+    /** Frames a window still open at the movie's end may be followed to measure its length. */
+    private static final int MAX_TAIL_MEASURE = 600;
+
     private FadeWindowRetimeTool() { }
 
     /** A frozen fade window: its start in the edited movie, native length and inserted repeats. */
@@ -147,11 +151,17 @@ public final class FadeWindowRetimeTool {
             Object level = GameServices.level().getCurrentLevel();
             int vint = vint();
             int start = -1, length = 0, death = -1, frame = 0;
-            for (; frame < frames.size(); frame++) {
-                session.step(indexed(frames.get(frame), frame));
+            // A movie that ends inside an unretimed window is measured past its end with the last
+            // input held (those probe frames are never recorded); the insertion stays inside it.
+            for (; frame < frames.size() || (length > 0 && !processed.contains(start)
+                    && frame < frames.size() + MAX_TAIL_MEASURE); frame++) {
+                // The old driver added its second fade advance only while the loop owned the
+                // gameplay fade lifecycle; frames outside that ownership kept native timing.
+                boolean doubledByOldDriver = session.loop().ownsGameplayFadeLifecycle();
+                session.step(indexed(frames.get(Math.min(frame, frames.size() - 1)), frame));
                 int now = vint();
                 var fade = GameServices.fadeOrNull();
-                boolean frozen = fade != null && fade.isActive() && now == vint;
+                boolean frozen = doubledByOldDriver && fade != null && fade.isActive() && now == vint;
                 vint = now;
                 Object current = GameServices.levelOrNull() == null ? null : GameServices.level().getCurrentLevel();
                 if (current != level) {
@@ -176,7 +186,7 @@ public final class FadeWindowRetimeTool {
             }
             var player = session.player();
             var levelManager = GameServices.level();
-            return new Pass(null, windows, loads, death, frame, player.getCentreX(), player.getCentreY(),
+            return new Pass(null, windows, loads, death, Math.min(frame, frames.size()), player.getCentreX(), player.getCentreY(),
                     player.getRingCount(), levelManager.getCurrentZone(), levelManager.getCurrentAct(),
                     session.loop().getCurrentGameMode());
         }
