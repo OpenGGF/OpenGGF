@@ -955,6 +955,15 @@ public class SpriteManager implements PlayableSstDispatcher {
 	}
 
 	private void initializeInitialAssemblyPlayableSlot(AbstractPlayableSprite playable) {
+		// A custom-physics playable is a dedicated player object, not
+		// Obj_Sonic/Tails/Knuckles: the Slot stage's Obj_Sonic_RotatingSlotBonus
+		// spawn routine loc_4B9CE (sonic3k.asm:98710-98742) never reaches
+		// Sonic_Init, and its runtime already models that spawn pass. Applying
+		// Sonic_Init's prev_anim write here re-ran Animate's change branch on
+		// the first LevelLoop pass, putting every roll step one frame late.
+		if (playable instanceof CustomPlayablePhysics) {
+			return;
+		}
 		if (!playable.isCpuControlled()) {
 			// Sonic_Init temporarily applies the Player_2 spawn offset, calls
 			// Reset_Player_Position_Array, then restores Player_1
