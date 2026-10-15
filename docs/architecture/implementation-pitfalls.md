@@ -534,6 +534,19 @@ Capture before consumption and replay both the armed and occupied-rearm cases;
 a mid-count snapshot does not cover them. The cold Tails DEZ2 pad at input46581
 exposed an 8px change on the first replayed frame where ordinary play stayed put.
 
+**Slot-encoded identity sets must not hold dead objects.** Touch-overlap sets and
+instance-keyed solid latches are captured as slot numbers because Java identity
+does not survive a restore. A member that has since been deleted keeps its old
+slot, so restore either drops it or binds whichever object now occupies that
+slot (SOZ Rockn shells, LRZ flames). Dynamic deletion therefore evicts
+instance-keyed latches as `removeActiveObject` already did for layout objects
+(`Delete_Current_Sprite` zeroes the slot's status bits), deletion also drops the
+object from the touch-overlap buffers, touch capture records only live members
+as the restore-view guard, and restore resolves a captured slot before its spawn: a
+child that shares its parent's spawn otherwise rebinds to the parent. Physical
+double-buffer parity is not state; capture the logical contents. These gaps were
+latent until `da27f4f3d` made the restore comparator inspect these channels.
+
 **Subsystem SST reservations must follow object restore.** Attracted rings own
 slots outside the object manager's captured occupant set. Re-register the ring
 adapter after the object adapter when level adapters move, including seamless

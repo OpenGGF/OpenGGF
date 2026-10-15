@@ -115,6 +115,16 @@ final class ObjectTouchResponseController {
         currentFrameCounter = 0;
     }
 
+    /** Drops a deleted object from both halves of every overlap buffer. */
+    void forgetRemovedObject(ObjectInstance object) {
+        bufferA.remove(object);
+        bufferB.remove(object);
+        for (OverlapBufferPair pair : sidekickOverlaps.values()) {
+            pair.bufferA.remove(object);
+            pair.bufferB.remove(object);
+        }
+    }
+
     boolean hadSpecialTouchThisFrame(PlayableEntity player) {
         return player != null
                 && lastSpecialTouchFrame.getOrDefault(player, Integer.MIN_VALUE) == currentFrameCounter;
@@ -187,15 +197,27 @@ final class ObjectTouchResponseController {
     /**
      * Captures the double-buffer overlap state for rewind. Encodes set
      * content as slot indices (object Java refs change identity on
-     * restore) and the buffer-swap parity as a boolean. See
+     * restore). See
      * {@link com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.TouchResponseOverlapState}
      * for the cross-frame-state rationale.
+     *
+     * <p>The capture is canonical: it records the LOGICAL overlapping and
+     * building contents and always reports parity {@code false}. Which
+     * physical buffer currently plays which role carries no behaviour --
+     * update/updateSidekick only read {@code overlapping} and clear
+     * {@code building} before filling it -- but it flips every frame, and an
+     * empty sidekick pair (omitted from the capture) is recreated at default
+     * parity, so a physical parity bit made equal state compare unequal.
+     * Members no longer live in the object manager are omitted for the same
+     * reason: their identity can never match a touch candidate again, while
+     * their retained slot number would make restore bind whichever object
+     * later reuses that slot.
      */
     com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.TouchResponseOverlapState
             captureRewindState() {
-        int[] mainOver = collectSlotIndices(overlapping);
-        int[] mainBuild = collectSlotIndices(building);
-        boolean mainSwapped = (overlapping == bufferB);
+        Set<ObjectInstance> live = liveObjects();
+        int[] mainOver = collectSlotIndices(overlapping, live);
+        int[] mainBuild = collectSlotIndices(building, live);
         List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.SidekickOverlapEntry>
                 sidekickEntries = new ArrayList<>(sidekickOverlaps.size());
         for (var entry : sidekickOverlaps.entrySet()) {
@@ -203,8 +225,8 @@ final class ObjectTouchResponseController {
             OverlapBufferPair pair = entry.getValue();
             String code = sk instanceof com.openggf.sprites.Sprite s ? s.getCode() : null;
             if (code == null) continue;
-            int[] overlappingSlots = collectSlotIndices(pair.overlapping);
-            int[] buildingSlots = collectSlotIndices(pair.building);
+            int[] overlappingSlots = collectSlotIndices(pair.overlapping, live);
+            int[] buildingSlots = collectSlotIndices(pair.building, live);
             if (overlappingSlots.length == 0 && buildingSlots.length == 0) {
                 continue;
             }
@@ -213,7 +235,7 @@ final class ObjectTouchResponseController {
                             code,
                             overlappingSlots,
                             buildingSlots,
-                            pair.overlapping == pair.bufferB));
+                            false));
         }
         // The identity-keyed map and sets iterate in identity-hash/probe order,
         // which differs after a restore re-inserts the same members. Emit a
@@ -221,7 +243,7 @@ final class ObjectTouchResponseController {
         sidekickEntries.sort(java.util.Comparator.comparing(
                 com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.SidekickOverlapEntry::sidekickCode));
         return new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.TouchResponseOverlapState(
-                mainOver, mainBuild, mainSwapped, sidekickEntries);
+                mainOver, mainBuild, false, sidekickEntries);
     }
 
     /**
@@ -263,11 +285,20 @@ final class ObjectTouchResponseController {
         }
     }
 
-    private int[] collectSlotIndices(Set<ObjectInstance> set) {
+    private Set<ObjectInstance> liveObjects() {
+        Set<ObjectInstance> live = Collections.newSetFromMap(new IdentityHashMap<>());
+        if (objectManager != null) {
+            live.addAll(objectManager.getActiveObjects());
+        }
+        return live;
+    }
+
+    private int[] collectSlotIndices(Set<ObjectInstance> set, Set<ObjectInstance> live) {
         int[] result = new int[set.size()];
         int n = 0;
         for (ObjectInstance inst : set) {
-            if (inst instanceof AbstractObjectInstance aoi
+            // Restore resolves slots through the same active-objects view.
+            if (live.contains(inst) && inst instanceof AbstractObjectInstance aoi
                     && objectCallbacks.call(inst, aoi::getSlotIndex) >= 0) {
                 result[n++] = objectCallbacks.call(inst, aoi::getSlotIndex);
             }

@@ -1980,6 +1980,14 @@ public class ObjectManager {
     private boolean removeDynamicObjectInstance(ObjectInstance object) {
         boolean removed = dynamicObjects.remove(object);
         if (removed) {
+            // Every delete routine zeroes the whole SST slot, status(a0) latch
+            // bits included -- S3K Delete_Current_Sprite/Delete_Referenced_Sprite
+            // (docs/skdisasm/sonic3k.asm:36108-36125), S2 DeleteObject
+            // (docs/s2disasm/s2.asm:30329-30345). Layout removals release theirs
+            // in removeActiveObject; a dynamic solid's instance-keyed latch must
+            // not outlive it either (hasObjectPushingBit would report a dead
+            // owner, and rewind capture would record its freed slot).
+            solidContacts.evictLatchForDestroyedInstance(object);
             dynamicOwnership.remove(object);
             rewindObjectIds.remove(object);
             notifyObjectManagerRemoval(object);
@@ -1987,7 +1995,13 @@ public class ObjectManager {
         return removed;
     }
 
-    private static void notifyObjectManagerRemoval(ObjectInstance object) {
+    private void notifyObjectManagerRemoval(ObjectInstance object) {
+        // The deleted SST slot carries nothing into later touch passes: S3K
+        // Delete_Current_Sprite zeroes it (docs/skdisasm/sonic3k.asm:36108-36125)
+        // and Collision_response_list is rebuilt by every ExecuteObjects pass.
+        if (touchResponses != null) {
+            touchResponses.forgetRemovedObject(object);
+        }
         if (object instanceof AbstractObjectInstance instance) {
             instance.onRemovedFromObjectManager();
         }
@@ -4789,6 +4803,14 @@ public class ObjectManager {
     }
 
     ObjectInstance findRestoredRidingObject(ObjectSpawn spawn, int slotIndex) {
+        // A captured slot names the exact SST occupant. Spawn lookup alone is
+        // ambiguous: children such as the Rockn shell keep their parent's layout
+        // spawn, so activeObjects.get(spawn) would answer the parent instead.
+        ObjectInstance occupant = restoredOccupantOfSlot(slotIndex);
+        if (occupant != null && (spawn == null
+                || spawn.equals(objectCallbacks.call(occupant, occupant::getSpawn)))) {
+            return occupant;
+        }
         if (spawn != null) {
             ObjectInstance active = activeObjects.get(spawn);
             if (active != null) {
@@ -4804,6 +4826,25 @@ public class ObjectManager {
             int execIdx = execIndexForSlot(slotIndex);
             if (execIdx >= 0 && execIdx < execOrder.length) {
                 return execOrder[execIdx];
+            }
+        }
+        return null;
+    }
+
+    private ObjectInstance restoredOccupantOfSlot(int slotIndex) {
+        if (slotIndex < 0) {
+            return null;
+        }
+        for (ObjectInstance active : activeObjects.values()) {
+            if (active instanceof AbstractObjectInstance aoi
+                    && objectCallbacks.call(active, aoi::getSlotIndex) == slotIndex) {
+                return active;
+            }
+        }
+        for (ObjectInstance dynamic : dynamicObjects) {
+            if (dynamic instanceof AbstractObjectInstance aoi
+                    && objectCallbacks.call(dynamic, aoi::getSlotIndex) == slotIndex) {
+                return dynamic;
             }
         }
         return null;
