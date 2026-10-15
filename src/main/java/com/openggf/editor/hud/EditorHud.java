@@ -94,6 +94,7 @@ public final class EditorHud {
     // Painting
     private PadStroke stroke;
     private int paintedCell = -1;
+    private EditorHierarchyDepth lastDepth;
     private float cursorRemainderX;
     private float cursorRemainderY;
     boolean contentChanged;
@@ -121,6 +122,7 @@ public final class EditorHud {
         if (level == null) return false;
         seedHotbars(level);
         syncHotbarFromController();
+        settleDepth();
         LibraryKind kind = kind();
         // Entering a block or chunk without a brush adopts the hotbar's highlighted entry.
         if (kind != LibraryKind.NONE && currentBrush(kind) < 0) applyBrush(kind, hotbar.value(kind));
@@ -144,6 +146,13 @@ public final class EditorHud {
         stroke = null;
         paintedCell = -1;
         if (finishing != null) finishing.commit(controller);
+    }
+
+    /** The HUD owns the editor again after a project menu, import screen or playtest. */
+    void reactivated() {
+        pad.resync();
+        lastPointerX = pointerX;
+        lastPointerY = pointerY;
     }
 
     // ------------------------------------------------------------------ canvas
@@ -176,6 +185,12 @@ public final class EditorHud {
                 }
             }
         }
+        // The in-game panes are not drawn under the HUD, so focus never rests on them.
+        if (controller.depth() == EditorHierarchyDepth.WORLD) {
+            if (controller.focusRegion() != EditorFocusRegion.WORLD_CANVAS) controller.focusRegion(EditorFocusRegion.WORLD_CANVAS);
+        } else {
+            focusWorkbench();
+        }
         if (!pad.connected()) return false;
         if (pad.pressed(MENU)) { finishPendingEdits(); openMenu(); return true; }
         if (pad.pressed(NORTH)) { finishPendingEdits(); openLibrary(); return true; }
@@ -186,14 +201,14 @@ public final class EditorHud {
         if (pad.pressed(LT) || pad.pressed(EAST)) act(Action.ASCEND);
         if (pad.pressed(L3)) act(Action.TOGGLE_LAYER);
         if (pad.pressed(R3)) act(Action.TOGGLE_COLLISION_OVERLAY);
+        // A South held through a zoom must not paint the new view's first cell.
+        if (settleDepth()) return false;
         if (controller.depth() == EditorHierarchyDepth.WORLD) updateWorldPad(level);
         else updateWorkbenchPad();
         return false;
     }
 
     private void updateWorldPad(MutableLevel level) {
-        // Changing focus commits pending edits, so only change it when it differs.
-        if (controller.focusRegion() != EditorFocusRegion.WORLD_CANVAS) controller.focusRegion(EditorFocusRegion.WORLD_CANVAS);
         float[] left = pad.leftStick(), right = pad.rightStick();
         float speed = CURSOR_SPEED * curve(left);
         float fast = FAST_CURSOR_SPEED * curve(right);
@@ -236,7 +251,8 @@ public final class EditorHud {
                 stroke = null;
             } else {
                 EditorCursorState cursor = controller.worldCursor();
-                stroke.paint(cursor.x() / level.getBlockPixelSize(), cursor.y() / level.getBlockPixelSize(), brush);
+                int size = level.getBlockPixelSize();
+                stroke.paint(Math.floorDiv(cursor.x(), size), Math.floorDiv(cursor.y(), size), brush);
             }
         }
         if (stroke != null && !pad.held(SOUTH)) {
@@ -246,7 +262,6 @@ public final class EditorHud {
     }
 
     private void updateWorkbenchPad() {
-        focusWorkbench();
         int dx = pad.navX(), dy = pad.navY();
         if (dx != 0 || dy != 0) controller.moveActiveSelection(dx, dy);
         int cell = controller.depth() == EditorHierarchyDepth.BLOCK
@@ -270,10 +285,33 @@ public final class EditorHud {
         act(Action.DESCEND);
     }
 
+    /** Changing focus commits pending edits, so it is only set when it differs. */
     private void focusWorkbench() {
         EditorFocusRegion region = controller.depth() == EditorHierarchyDepth.BLOCK
                 ? EditorFocusRegion.BLOCK_PANE : EditorFocusRegion.CHUNK_PANE;
         if (controller.focusRegion() != region) controller.focusRegion(region);
+    }
+
+    /** Swallows held pad controls when the hierarchy depth changed; true if it did. */
+    private boolean settleDepth() {
+        EditorHierarchyDepth depth = controller.depth();
+        if (depth == lastDepth) return false;
+        lastDepth = depth;
+        paintedCell = -1;
+        pad.consumeHeld();
+        return true;
+    }
+
+    /** Leaves a sheet, wheel or menu; whatever closed it stays swallowed until released. */
+    private void closeModal() {
+        modal = Modal.NONE;
+        pad.consumeHeld();
+    }
+
+    /** Ignores where the pointer already rests when a sheet, wheel or menu opens. */
+    private void notePointer() {
+        lastPointerX = pointerX;
+        lastPointerY = pointerY;
     }
 
     private static float curve(float[] stick) {
@@ -292,12 +330,13 @@ public final class EditorHud {
         libraryKind = kind;
         int current = currentBrush(kind);
         libraryCursor = Math.max(0, Math.min(libraryCount(kind) - 1, current < 0 ? 0 : current));
+        notePointer();
         modal = Modal.LIBRARY;
     }
 
     private void updateLibrary(InputHandler input, boolean click) {
         int count = libraryCount(libraryKind);
-        if (count == 0) { modal = Modal.NONE; return; }
+        if (count == 0) { closeModal(); return; }
         int dx = pad.navX(), dy = pad.navY();
         if (MenuInput.left(input)) dx--;
         if (MenuInput.right(input)) dx++;
@@ -310,16 +349,17 @@ public final class EditorHud {
         if (move != 0) libraryCursor = Math.max(0, Math.min(count - 1, libraryCursor + move));
         Hit hit = hitAt(Modal.LIBRARY);
         if (hit != null && hit.kind() == HIT_LIBRARY && pointerMoved()) libraryCursor = hit.index();
+        if (click && hit != null && hit.kind() == HIT_LIBRARY) libraryCursor = hit.index();
         boolean choose = pad.pressed(SOUTH) || MenuInput.accept(input) || (click && hit != null && hit.kind() == HIT_LIBRARY);
         if (choose) {
             hotbar.put(libraryKind, libraryCursor);
             applyBrush(libraryKind, libraryCursor);
-            modal = Modal.NONE;
+            closeModal();
             return;
         }
         if (pad.pressed(EAST) || pad.pressed(NORTH) || MenuInput.back(input) || input.isKeyPressed(GLFW_KEY_TAB)
                 || (click && hit == null)) {
-            modal = Modal.NONE;
+            closeModal();
         }
     }
 
@@ -330,7 +370,7 @@ public final class EditorHud {
             case BLOCK -> Math.min(256, level.getBlockCount());
             case CHUNK -> Math.min(1024, level.getChunkCount());
             case PATTERN -> Math.min(0x800, level.getPatternCount());
-            case OBJECT -> controller.objectPalette() == null ? 0 : controller.objectPalette().entries().size();
+            case OBJECT -> controller.objectPaletteOrNull() == null ? 0 : controller.objectPaletteOrNull().entries().size();
             case NONE -> 0;
         };
     }
@@ -339,7 +379,9 @@ public final class EditorHud {
 
     void openWheel(boolean byHold) {
         wheelItems = wheelItems();
-        wheelSlot = 0;
+        // Nothing is chosen until the stick, arrows or pointer pick a tool, so a stray tap is harmless.
+        wheelSlot = -1;
+        notePointer();
         wheelChosenByStick = false;
         wheelOpenedByHold = byHold;
         modal = Modal.WHEEL;
@@ -359,21 +401,22 @@ public final class EditorHud {
         if (pad.repeated(DPAD_RIGHT) || MenuInput.right(input)) rotate++;
         if (pad.pressed(DPAD_UP) || MenuInput.up(input)) wheelSlot = 0;
         if (pad.pressed(DPAD_DOWN) || MenuInput.down(input)) wheelSlot = count / 2;
-        if (rotate != 0) wheelSlot = Math.floorMod(wheelSlot + rotate, count);
+        if (rotate != 0) wheelSlot = wheelSlot < 0 ? (rotate > 0 ? 0 : count - 1) : Math.floorMod(wheelSlot + rotate, count);
         Hit hit = hitAt(Modal.WHEEL);
-        if (hit != null && hit.kind() == HIT_WHEEL && pointerMoved()) wheelSlot = hit.index();
+        if (hit != null && hit.kind() == HIT_WHEEL && (pointerMoved() || click)) wheelSlot = hit.index();
         boolean released = pad.released(VIEW) && wheelOpenedByHold && wheelChosenByStick;
         if (pad.released(VIEW) && !wheelChosenByStick) wheelOpenedByHold = false;
-        if (pad.pressed(SOUTH) || MenuInput.accept(input) || released
-                || (click && hit != null && hit.kind() == HIT_WHEEL)) {
-            modal = Modal.NONE;
-            if (wheelSlot >= 0 && wheelSlot < count) wheelItems.get(wheelSlot).action().run();
+        boolean chosen = wheelSlot >= 0 && wheelSlot < count;
+        if (chosen && (pad.pressed(SOUTH) || MenuInput.accept(input) || released
+                || (click && hit != null && hit.kind() == HIT_WHEEL))) {
+            closeModal();
+            wheelItems.get(wheelSlot).action().run();
             contentChanged = true;
             return;
         }
         if (pad.pressed(EAST) || pad.pressed(VIEW) || MenuInput.back(input) || input.isKeyPressed(GLFW_KEY_Q)
                 || (click && hit == null)) {
-            modal = Modal.NONE;
+            closeModal();
         }
     }
 
@@ -458,13 +501,14 @@ public final class EditorHud {
         });
         items.add(new MenuItem("Export level", "Ctrl+Shift+E", () -> act(Action.EXPORT)));
         items.add(new MenuItem("Every command", "", null));
-        for (EditorCommandPalette.HostCommand command
-                : EditorCommandPalette.forController(controller).actionCommands(this::act)) {
+        for (EditorCommandPalette.HostCommand command : EditorCommandPalette.forController(controller)
+                .actionCommands(this::act, action -> !EditorCommandPalette.drivesInGamePanes(action))) {
             items.add(new MenuItem(command.label(), "", command.action()));
         }
         menuItems = List.copyOf(items);
         menuIndex = 1;
         menuScroll = 0;
+        notePointer();
         modal = Modal.MENU;
     }
 
@@ -479,16 +523,19 @@ public final class EditorHud {
         if (hit != null && hit.kind() == HIT_MENU && pointerMoved() && !menuItems.get(hit.index()).header()) {
             menuIndex = hit.index();
         }
-        if (pad.pressed(SOUTH) || MenuInput.accept(input) || (click && hit != null && hit.kind() == HIT_MENU)) {
+        boolean clicked = click && hit != null && hit.kind() == HIT_MENU;
+        if (clicked && menuItems.get(hit.index()).header()) return;
+        if (clicked) menuIndex = hit.index();
+        if (pad.pressed(SOUTH) || MenuInput.accept(input) || clicked) {
             MenuItem item = menuItems.get(menuIndex);
-            modal = Modal.NONE;
+            closeModal();
             if (!item.header()) item.action().run();
             contentChanged = true;
             return;
         }
         if (pad.pressed(EAST) || pad.pressed(MENU) || MenuInput.back(input) || input.isKeyPressed(GLFW_KEY_F1)
                 || (click && hit == null)) {
-            modal = Modal.NONE;
+            closeModal();
         }
     }
 
@@ -511,7 +558,7 @@ public final class EditorHud {
         if (controller.depth() == EditorHierarchyDepth.BLOCK) return LibraryKind.CHUNK;
         if (controller.depth() == EditorHierarchyDepth.CHUNK) return LibraryKind.PATTERN;
         if (controller.spawnEditMode() == EditorSpawnEditMode.OBJECTS)
-            return controller.objectPalette() == null ? LibraryKind.NONE : LibraryKind.OBJECT;
+            return controller.objectPaletteOrNull() == null ? LibraryKind.NONE : LibraryKind.OBJECT;
         if (controller.spawnEditMode() == EditorSpawnEditMode.RINGS) return LibraryKind.NONE;
         return LibraryKind.BLOCK;
     }
@@ -522,7 +569,7 @@ public final class EditorHud {
             case BLOCK -> controller.selectedBlockIndex() == null ? -1 : controller.selectedBlockIndex();
             case CHUNK -> controller.chunkBrushIndex() == null ? -1 : controller.chunkBrushIndex();
             case PATTERN -> controller.selectedPatternRaw() == null ? -1 : controller.selectedPatternRaw() & 0x7FF;
-            case OBJECT -> objectIndex(controller.objectPalette());
+            case OBJECT -> objectIndex(controller.objectPaletteOrNull());
             case NONE -> -1;
         };
     }
@@ -603,7 +650,7 @@ public final class EditorHud {
                     if (pattern >= 0 && pattern < patterns) patternUse[pattern]++;
                 }
         hotbar.seed(LibraryKind.PATTERN, ranked(patternUse));
-        EditorStockObjectPalette palette = controller.objectPalette();
+        EditorStockObjectPalette palette = controller.objectPaletteOrNull();
         if (palette != null) {
             int[] objectUse = new int[palette.entries().size()];
             for (ObjectSpawn spawn : level.getObjects()) {
@@ -613,9 +660,13 @@ public final class EditorHud {
             }
             hotbar.seed(LibraryKind.OBJECT, ranked(objectUse));
         }
+        // The brush already in hand stays highlighted without pushing out a most-used entry.
+        for (LibraryKind kind : LibraryKind.values()) {
+            if (kind != LibraryKind.NONE) hotbar.adopt(kind, currentBrush(kind));
+        }
     }
 
-    /** Indices by descending use; index 0 (usually empty art) only when used, then unused ones from 1. */
+    /** Used indices by descending use, then unused ones; index 0 (the empty entry) is never offered. */
     static int[] ranked(int[] use) {
         Integer[] order = new Integer[use.length];
         for (int i = 0; i < use.length; i++) order[i] = i;
@@ -725,6 +776,7 @@ public final class EditorHud {
         void paint(int x, int y, int block) {
             var map = level.getMap();
             if (x < 0 || y < 0 || x >= map.getWidth() || y >= map.getHeight()) return;
+            if (block < 0 || block >= Math.min(256, level.getBlockCount())) return;
             int key = y * map.getWidth() + x;
             if (deltas.containsKey(key)) return;
             int before = Byte.toUnsignedInt(map.getValue(layer, x, y));

@@ -37,6 +37,8 @@ public final class EditorHudRuntime implements EditorWindowChrome {
     public boolean setActive(boolean editorFrame) {
         boolean next = editorFrame && isAvailable();
         if (active && !next) hud.finishPendingEdits();
+        // The pads were read by menus or gameplay meanwhile; buttons still held belong to them.
+        if (!active && next) hud.reactivated();
         active = next;
         return active;
     }

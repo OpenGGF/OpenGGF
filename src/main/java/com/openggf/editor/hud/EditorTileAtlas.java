@@ -18,7 +18,7 @@ import static org.lwjgl.opengl.GL12.GL_CLAMP_TO_EDGE;
  * RGBA thumbnails of the loaded level library for the editor HUD: every block, chunk and
  * pattern decoded on the CPU from the same descriptors, patterns and palettes the renderer
  * uses, then uploaded as three GL textures. Index 0 is transparent so the panel chooses the
- * backdrop. Rebuilt lazily when a cheap content fingerprint changes.
+ * backdrop. Checked against per-entry content hashes; edits redraw only the cells they touch.
  */
 final class EditorTileAtlas implements AutoCloseable {
     enum Kind { BLOCK, CHUNK, PATTERN }
@@ -34,25 +34,65 @@ final class EditorTileAtlas implements AutoCloseable {
     private final Sheet chunks = new Sheet();
     private final Sheet patterns = new Sheet();
     private Level level;
-    private long fingerprint = Long.MIN_VALUE;
+    private int blockCount = -1;
+    private int chunkCount = -1;
+    private int patternCount = -1;
+    /** Pattern pixels and palettes: when they change every thumbnail changes. */
+    private long artHash;
+    private long[] chunkHashes = new long[0];
+    private long[] blockHashes = new long[0];
+    private int[][] palettes = new int[1][16];
+    private int[][] chunkPixels = new int[0][];
+    private int blockStep = 1;
     private int patternPaletteLine = -1;
     private int framesUntilCheck;
 
-    /** Rebuilds textures when the level or its content changed. Requires a current GL context. */
+    /**
+     * Brings the textures up to date with the level. Requires a current GL context. A composition
+     * edit redraws only the chunks and blocks it touched; new art, palettes or a different level
+     * rebuild everything.
+     */
     void refresh(Level current, int paletteLineForPatterns) {
         if (current == null) return;
         boolean levelChanged = current != level;
         if (!levelChanged && paletteLineForPatterns == patternPaletteLine && framesUntilCheck-- > 0) return;
         framesUntilCheck = 20;
-        long latest = fingerprint(current);
-        if (!levelChanged && latest == fingerprint && paletteLineForPatterns == patternPaletteLine) return;
-        level = current;
-        fingerprint = latest;
-        patternPaletteLine = paletteLineForPatterns;
-        rebuild(current, paletteLineForPatterns);
+        long art = artHash(current);
+        long[] chunkNow = chunkHashes(current);
+        long[] blockNow = blockHashes(current);
+        if (levelChanged || art != artHash || current.getBlockCount() != blockCount
+                || current.getChunkCount() != chunkCount || current.getPatternCount() != patternCount) {
+            level = current;
+            artHash = art;
+            chunkHashes = chunkNow;
+            blockHashes = blockNow;
+            patternPaletteLine = paletteLineForPatterns;
+            rebuild(current, paletteLineForPatterns);
+            return;
+        }
+        if (paletteLineForPatterns != patternPaletteLine) {
+            patternPaletteLine = paletteLineForPatterns;
+            uploadPatterns(current, paletteLineForPatterns);
+        }
+        boolean[] changedChunks = new boolean[chunkCount];
+        boolean anyChunk = false;
+        for (int i = 0; i < chunkCount; i++) {
+            if (chunkNow[i] == chunkHashes[i]) continue;
+            changedChunks[i] = anyChunk = true;
+            chunkPixels[i] = chunkPixels(current, current.getChunk(i), palettes);
+            int[] pixels = chunkPixels[i];
+            chunks.update(i, (index, x, y) -> pixels[y * CHUNK_PX + x]);
+        }
+        for (int i = 0; i < blockCount; i++) {
+            if (blockNow[i] != blockHashes[i] || anyChunk && shows(current.getBlock(i), changedChunks)) {
+                blocks.update(i, (index, x, y) -> blockPixel(current, index, x, y));
+            }
+        }
+        chunkHashes = chunkNow;
+        blockHashes = blockNow;
     }
 
-    /** Compare the content fingerprint on the next refresh, e.g. straight after an edit. */
+    /** Compare the content hashes on the next refresh, e.g. straight after an edit. */
     void requestCheck() { framesUntilCheck = 0; }
 
     int count(Kind kind) { return sheet(kind).count; }
@@ -77,38 +117,56 @@ final class EditorTileAtlas implements AutoCloseable {
     }
 
     private void rebuild(Level source, int patternLine) {
-        int[][] palettes = palettes(source);
-        int chunkCount = source.getChunkCount();
-        int[][] chunkPixels = new int[chunkCount][];
+        blockCount = source.getBlockCount();
+        chunkCount = source.getChunkCount();
+        patternCount = source.getPatternCount();
+        palettes = palettes(source);
+        chunkPixels = new int[chunkCount][];
         for (int i = 0; i < chunkCount; i++) chunkPixels[i] = chunkPixels(source, source.getChunk(i), palettes);
 
         chunks.upload(chunkCount, CHUNK_PX, 64, (index, x, y) -> chunkPixels[index][y * CHUNK_PX + x]);
 
-        int blockCount = source.getBlockCount();
         int side = blockCount > 0 ? source.getBlock(0).getGridSide() : 8;
         int blockPx = side * CHUNK_PX;
         int thumb = Math.min(blockPx, MAX_BLOCK_THUMB);
-        int step = Math.max(1, blockPx / thumb);
-        blocks.upload(blockCount, thumb, Math.max(1, 2048 / thumb), (index, x, y) -> {
-            Block block = source.getBlock(index);
-            int bx = x * step, by = y * step;
-            int gs = block.getGridSide();
-            int cx = bx / CHUNK_PX, cy = by / CHUNK_PX;
-            if (cx >= gs || cy >= gs) return 0;
-            ChunkDesc desc = block.getChunkDesc(cx, cy);
-            int chunkIndex = desc.getChunkIndex();
-            if (chunkIndex < 0 || chunkIndex >= chunkCount) return 0;
-            int lx = bx % CHUNK_PX, ly = by % CHUNK_PX;
-            if (desc.getHFlip()) lx = CHUNK_PX - 1 - lx;
-            if (desc.getVFlip()) ly = CHUNK_PX - 1 - ly;
-            return chunkPixels[chunkIndex][ly * CHUNK_PX + lx];
-        });
+        blockStep = Math.max(1, blockPx / thumb);
+        blocks.upload(blockCount, thumb, Math.max(1, 2048 / thumb), (index, x, y) -> blockPixel(source, index, x, y));
 
+        uploadPatterns(source, patternLine);
+    }
+
+    private int blockPixel(Level source, int index, int x, int y) {
+        Block block = source.getBlock(index);
+        int bx = x * blockStep, by = y * blockStep;
+        int gs = block.getGridSide();
+        int cx = bx / CHUNK_PX, cy = by / CHUNK_PX;
+        if (cx >= gs || cy >= gs) return 0;
+        ChunkDesc desc = block.getChunkDesc(cx, cy);
+        int chunkIndex = desc.getChunkIndex();
+        if (chunkIndex < 0 || chunkIndex >= chunkPixels.length) return 0;
+        int lx = bx % CHUNK_PX, ly = by % CHUNK_PX;
+        if (desc.getHFlip()) lx = CHUNK_PX - 1 - lx;
+        if (desc.getVFlip()) ly = CHUNK_PX - 1 - ly;
+        return chunkPixels[chunkIndex][ly * CHUNK_PX + lx];
+    }
+
+    private void uploadPatterns(Level source, int patternLine) {
         int line = Math.floorMod(patternLine, Math.max(1, palettes.length));
         patterns.upload(Math.min(source.getPatternCount(), 0x800), PATTERN_PX, 64, (index, x, y) -> {
             int value = source.getPattern(index).getPixel(x, y) & 0x0F;
             return value == 0 ? 0 : palettes[line][value];
         });
+    }
+
+    private static boolean shows(Block block, boolean[] chunks) {
+        int side = block.getGridSide();
+        for (int y = 0; y < side; y++) {
+            for (int x = 0; x < side; x++) {
+                int chunk = block.getChunkDesc(x, y).getChunkIndex();
+                if (chunk >= 0 && chunk < chunks.length && chunks[chunk]) return true;
+            }
+        }
+        return false;
     }
 
     private static int[] chunkPixels(Level source, Chunk chunk, int[][] palettes) {
@@ -158,20 +216,31 @@ final class EditorTileAtlas implements AutoCloseable {
         return (color.r & 255) << 16 | (color.g & 255) << 8 | (color.b & 255);
     }
 
-    private static long fingerprint(Level source) {
-        long hash = 1469598103934665603L;
-        hash = mix(hash, source.getBlockCount());
-        hash = mix(hash, source.getChunkCount());
-        hash = mix(hash, source.getPatternCount());
-        for (int i = 0; i < source.getBlockCount(); i++) {
+    private static long[] chunkHashes(Level source) {
+        long[] hashes = new long[source.getChunkCount()];
+        for (int i = 0; i < hashes.length; i++) {
+            Chunk chunk = source.getChunk(i);
+            long hash = 1469598103934665603L;
+            for (int y = 0; y < 2; y++) for (int x = 0; x < 2; x++) hash = mix(hash, chunk.getPatternDesc(x, y).get());
+            hashes[i] = hash;
+        }
+        return hashes;
+    }
+
+    private static long[] blockHashes(Level source) {
+        long[] hashes = new long[source.getBlockCount()];
+        for (int i = 0; i < hashes.length; i++) {
             Block block = source.getBlock(i);
             int side = block.getGridSide();
+            long hash = 1469598103934665603L;
             for (int y = 0; y < side; y++) for (int x = 0; x < side; x++) hash = mix(hash, block.getChunkDesc(x, y).get());
+            hashes[i] = hash;
         }
-        for (int i = 0; i < source.getChunkCount(); i++) {
-            Chunk chunk = source.getChunk(i);
-            for (int y = 0; y < 2; y++) for (int x = 0; x < 2; x++) hash = mix(hash, chunk.getPatternDesc(x, y).get());
-        }
+        return hashes;
+    }
+
+    private static long artHash(Level source) {
+        long hash = 1469598103934665603L;
         for (int i = 0; i < Math.min(source.getPatternCount(), 0x800); i++) {
             Pattern pattern = source.getPattern(i);
             for (int y = 0; y < PATTERN_PX; y++) {
@@ -236,6 +305,23 @@ final class EditorTileAtlas implements AutoCloseable {
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
                 glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+                glBindTexture(GL_TEXTURE_2D, 0);
+            } finally {
+                MemoryUtil.memFree(pixels);
+            }
+        }
+
+        /** Redraws one cell in place. */
+        void update(int index, PixelSource source) {
+            if (texture == 0 || index < 0 || index >= count) return;
+            ByteBuffer pixels = MemoryUtil.memAlloc(cell * cell * 4);
+            try {
+                var ints = pixels.asIntBuffer();
+                for (int y = 0; y < cell; y++) for (int x = 0; x < cell; x++) ints.put(y * cell + x, source.pixel(index, x, y));
+                glBindTexture(GL_TEXTURE_2D, texture);
+                glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+                glTexSubImage2D(GL_TEXTURE_2D, 0, (index % columns) * cell, (index / columns) * cell, cell, cell,
+                        GL_RGBA, GL_UNSIGNED_BYTE, pixels);
                 glBindTexture(GL_TEXTURE_2D, 0);
             } finally {
                 MemoryUtil.memFree(pixels);

@@ -28,6 +28,11 @@ final class EditorHudPad {
 
     private final boolean[] held = new boolean[Button.values().length];
     private final boolean[] previous = new boolean[held.length];
+    /** Held through a context change; reads as up until physically released. */
+    private final boolean[] consumed = new boolean[held.length];
+    private boolean consumeOnNextSample;
+    private boolean leftLatched;
+    private boolean rightLatched;
     private final MenuRepeat repeat = new MenuRepeat();
     private long frame;
     private float leftX;
@@ -45,7 +50,10 @@ final class EditorHudPad {
         leftX = leftY = rightX = rightY = 0;
         connected = pads != null && !pads.isEmpty();
         activity = false;
-        if (!connected) return;
+        if (!connected) {
+            settle();
+            return;
+        }
         for (PhysicalGamepad pad : pads) {
             boolean any = false;
             any |= press(Button.SOUTH, pad.buttonDown(PhysicalGamepad.BUTTON_A));
@@ -77,7 +85,31 @@ final class EditorHudPad {
         held[Button.STICK_DOWN.ordinal()] = leftY > (previous[Button.STICK_DOWN.ordinal()] ? NAV_OFF : NAV_ON);
         held[Button.STICK_LEFT.ordinal()] = leftX < -(previous[Button.STICK_LEFT.ordinal()] ? NAV_OFF : NAV_ON);
         held[Button.STICK_RIGHT.ordinal()] = leftX > (previous[Button.STICK_RIGHT.ordinal()] ? NAV_OFF : NAV_ON);
+        settle();
     }
+
+    private void settle() {
+        for (int i = 0; i < held.length; i++) if (!held[i]) consumed[i] = false;
+        leftLatched &= Math.hypot(leftX, leftY) >= STICK_DEADZONE;
+        rightLatched &= Math.hypot(rightX, rightY) >= STICK_DEADZONE;
+        if (consumeOnNextSample) {
+            consumeOnNextSample = false;
+            consumeHeld();
+        }
+    }
+
+    /**
+     * Swallows every control still held, e.g. the South that chose a library entry or the stick
+     * that steered the wheel, so it cannot act again in the next context until released.
+     */
+    void consumeHeld() {
+        for (int i = 0; i < held.length; i++) consumed[i] |= held[i];
+        leftLatched = Math.hypot(leftX, leftY) >= STICK_DEADZONE;
+        rightLatched = Math.hypot(rightX, rightY) >= STICK_DEADZONE;
+    }
+
+    /** Swallows whatever is held at the next sample: the pad was read elsewhere meanwhile. */
+    void resync() { consumeOnNextSample = true; }
 
     private boolean press(Button button, boolean down) {
         if (down) held[button.ordinal()] = true;
@@ -96,9 +128,9 @@ final class EditorHudPad {
 
     String deviceName() { return deviceName; }
 
-    boolean held(Button button) { return held[button.ordinal()]; }
+    boolean held(Button button) { return held[button.ordinal()] && !consumed[button.ordinal()]; }
 
-    boolean pressed(Button button) { return held[button.ordinal()] && !previous[button.ordinal()]; }
+    boolean pressed(Button button) { return held(button) && !previous[button.ordinal()]; }
 
     boolean released(Button button) { return !held[button.ordinal()] && previous[button.ordinal()]; }
 
@@ -123,9 +155,9 @@ final class EditorHudPad {
     }
 
     /** Left stick with a radial deadzone, rescaled to 0..1 magnitude. */
-    float[] leftStick() { return deadzone(leftX, leftY); }
+    float[] leftStick() { return leftLatched ? new float[] {0, 0} : deadzone(leftX, leftY); }
 
-    float[] rightStick() { return deadzone(rightX, rightY); }
+    float[] rightStick() { return rightLatched ? new float[] {0, 0} : deadzone(rightX, rightY); }
 
     private static float[] deadzone(float x, float y) {
         float magnitude = (float) Math.hypot(x, y);

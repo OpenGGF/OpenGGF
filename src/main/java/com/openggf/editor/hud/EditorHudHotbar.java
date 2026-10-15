@@ -78,6 +78,24 @@ final class EditorHudHotbar {
         bar[selected(kind)] = value;
     }
 
+    /**
+     * Selects the slot holding {@code value}, or files it in the first empty slot (else the last,
+     * least-used one) without evicting the most-used entries, e.g. for the brush already active
+     * when the bar is seeded.
+     */
+    void adopt(EditorHud.LibraryKind kind, int value) {
+        if (value < 0) return;
+        int[] bar = slots(kind);
+        int slot = indexOf(bar, value);
+        if (slot < 0) {
+            slot = indexOf(bar, -1);
+            if (slot < 0) slot = SLOTS - 1;
+            bar[slot] = value;
+            slots.put(kind, bar);
+        }
+        select(kind, slot);
+    }
+
     private static int indexOf(int[] bar, int value) {
         for (int i = 0; i < bar.length; i++) if (bar[i] == value) return i;
         return -1;

@@ -78,6 +78,39 @@ Lessons recorded while building it:
   set in capitals and mixed-case text uses the compact 6x8 face, which has descenders.
 - The controller enters a chunk only with a chunk selected; RT adopts the hotbar's chunk.
 
+## Review fixes
+
+An independent static review of `179fb8e79..613007950` found two major defects and several
+minor ones; the picture test's one-tick presses could not see the pad ones. Seam-side fixes are
+in the chrome seam note.
+
+- **Held controls carried into the next context.** A South still held after it chose a library
+  entry, wheel tool or menu item painted the selected Block/Chunk cell on the next tick (and
+  overwrote what Flip/Palette/Priority had just toggled); a button held from the projects menu
+  read as a fresh press when the HUD returned. `EditorHudPad.consumeHeld` now swallows every
+  control still held when a modal closes or the depth changes, until it is released;
+  `resync` does the same on reactivation; the stick that steered the wheel stays latched until
+  it returns to centre.
+- Not adopted: the review also noted that an exception from the HUD ends the engine. Containing
+  it was rejected; the HUD is engine code and a bug in it should fail like any other engine bug.
+- The wheel opened on Undo, so tapping View then South undid; it now opens with nothing chosen.
+- Clicks ran the pad's highlighted entry, and a pointer resting where a sheet opened moved the
+  highlight; clicks now choose what they land on and opening a modal ignores the resting pointer.
+  Hit areas are trimmed to the visible rows.
+- Focus could rest on the undrawn in-game panes (and "Every command" offered pane navigation);
+  the HUD now keeps focus on its canvas even without a pad, and the menu leaves those out.
+- The tile atlas rebuilt every block, chunk and pattern sheet after each composition edit
+  (a 2048x2048 block sheet for S2); it now redraws only changed chunks and the blocks that
+  show them, and a palette-line change redraws only patterns.
+- Smaller: blend factors and the scissor box are restored separately, the brush already in hand
+  no longer evicts the most-used hotbar entry when bars are seeded, world strokes use the same
+  floor division as the cursor, and spawn-palette null checks use `objectPaletteOrNull`.
+
+`TestEditorHudControls` covers these without a ROM or GL by holding controls over several
+ticks; one of its checks first shows the carried-over press acting, so it is not vacuous.
+Left as is: the painter reads the editor camera through `SessionManager`, as
+`EditorWorldOverlayRenderer` does.
+
 ## Rejected
 
 - **Dear ImGui in the engine** (`d2b331a4c`): readable, but a mouse-first desktop editor and a

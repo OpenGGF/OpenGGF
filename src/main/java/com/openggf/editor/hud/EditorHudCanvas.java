@@ -17,8 +17,11 @@ import java.util.Arrays;
 
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL12.GL_CLAMP_TO_EDGE;
+import static org.lwjgl.opengl.GL14.GL_BLEND_DST_ALPHA;
 import static org.lwjgl.opengl.GL14.GL_BLEND_DST_RGB;
+import static org.lwjgl.opengl.GL14.GL_BLEND_SRC_ALPHA;
 import static org.lwjgl.opengl.GL14.GL_BLEND_SRC_RGB;
+import static org.lwjgl.opengl.GL14.glBlendFuncSeparate;
 
 /**
  * Immediate-mode drawing for the editor HUD at window resolution. Coordinates are top-left UI
@@ -54,9 +57,12 @@ final class EditorHudCanvas implements AutoCloseable {
     private int framebufferHeight;
     private final float[] projection = new float[16];
     private final int[] savedViewport = new int[4];
+    private final int[] savedScissorBox = new int[4];
     private boolean savedBlend;
-    private int savedBlendSrc;
-    private int savedBlendDst;
+    private int savedBlendSrcRgb;
+    private int savedBlendDstRgb;
+    private int savedBlendSrcAlpha;
+    private int savedBlendDstAlpha;
     private boolean savedScissor;
     private boolean savedDepth;
 
@@ -81,10 +87,15 @@ final class EditorHudCanvas implements AutoCloseable {
             IntBuffer viewport = stack.mallocInt(4);
             glGetIntegerv(GL_VIEWPORT, viewport);
             viewport.get(savedViewport);
+            IntBuffer scissor = stack.mallocInt(4);
+            glGetIntegerv(GL_SCISSOR_BOX, scissor);
+            scissor.get(savedScissorBox);
         }
         savedBlend = glIsEnabled(GL_BLEND);
-        savedBlendSrc = glGetInteger(GL_BLEND_SRC_RGB);
-        savedBlendDst = glGetInteger(GL_BLEND_DST_RGB);
+        savedBlendSrcRgb = glGetInteger(GL_BLEND_SRC_RGB);
+        savedBlendDstRgb = glGetInteger(GL_BLEND_DST_RGB);
+        savedBlendSrcAlpha = glGetInteger(GL_BLEND_SRC_ALPHA);
+        savedBlendDstAlpha = glGetInteger(GL_BLEND_DST_ALPHA);
         savedScissor = glIsEnabled(GL_SCISSOR_TEST);
         savedDepth = glIsEnabled(GL_DEPTH_TEST);
         glViewport(0, 0, framebufferWidth, framebufferHeight);
@@ -99,7 +110,8 @@ final class EditorHudCanvas implements AutoCloseable {
         flush();
         glDisable(GL_SCISSOR_TEST);
         glViewport(savedViewport[0], savedViewport[1], savedViewport[2], savedViewport[3]);
-        glBlendFunc(savedBlendSrc, savedBlendDst);
+        glBlendFuncSeparate(savedBlendSrcRgb, savedBlendDstRgb, savedBlendSrcAlpha, savedBlendDstAlpha);
+        glScissor(savedScissorBox[0], savedScissorBox[1], savedScissorBox[2], savedScissorBox[3]);
         if (!savedBlend) glDisable(GL_BLEND);
         if (savedScissor) glEnable(GL_SCISSOR_TEST);
         if (savedDepth) glEnable(GL_DEPTH_TEST);

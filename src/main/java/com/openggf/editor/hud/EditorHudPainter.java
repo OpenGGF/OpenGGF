@@ -230,7 +230,7 @@ final class EditorHudPainter implements AutoCloseable {
             return;
         }
         // Objects: the stock id as a badge; names are shown beside the selection.
-        EditorStockObjectPalette palette = controller.objectPalette();
+        EditorStockObjectPalette palette = controller.objectPaletteOrNull();
         if (palette == null || value >= palette.entries().size()) return;
         EditorStockObjectPalette.Entry entry = palette.entries().get(value);
         String badge = entry.stockObjectId() != null ? "%02X".formatted(entry.stockObjectId()) : "MOD";
@@ -608,7 +608,7 @@ final class EditorHudPainter implements AutoCloseable {
                 float x = offsetX + column * cellW, y = grid.y() + (row - hud.libraryScroll) * cellH;
                 if (index == hud.libraryCursor) { focusX = x; focusY = y; focusVisible = true; continue; }
                 libraryTile(c, kind, index, x + 2, y + 2, cellW - 4, cellH - 4, hud.controller(), contains(bar, index));
-                hits.add(new Hit(new Rect(x, y, cellW, cellH), Modal.LIBRARY, EditorHud.HIT_LIBRARY, index));
+                hit(new Rect(x, y, cellW, cellH), grid, Modal.LIBRARY, EditorHud.HIT_LIBRARY, index);
             }
         }
         if (focusVisible) {
@@ -618,7 +618,7 @@ final class EditorHudPainter implements AutoCloseable {
                     cellH + 2 * grow - 4, hud.controller(), contains(bar, hud.libraryCursor));
             float pulse = .75f + .25f * (float) Math.sin(hud.tick * .12);
             c.frame(focusX - grow, focusY - grow, cellW + 2 * grow, cellH + 2 * grow, 2, GOLD, pulse);
-            hits.add(new Hit(new Rect(focusX, focusY, cellW, cellH), Modal.LIBRARY, EditorHud.HIT_LIBRARY, hud.libraryCursor));
+            hit(new Rect(focusX, focusY, cellW, cellH), grid, Modal.LIBRARY, EditorHud.HIT_LIBRARY, hud.libraryCursor);
         }
         c.unclip();
         if (totalRows > rows) {
@@ -787,12 +787,19 @@ final class EditorHudPainter implements AutoCloseable {
                 c.text(item.detail(), list.right() - 6 - EditorHudCanvas.textWidth(item.detail(), Size.SMALL), ry + 4,
                         Size.SMALL, TEXT_DIM, 1);
             }
-            hits.add(new Hit(new Rect(list.x(), ry, list.w(), rowH), Modal.MENU, EditorHud.HIT_MENU, i));
+            hit(new Rect(list.x(), ry, list.w(), rowH), list, Modal.MENU, EditorHud.HIT_MENU, i);
         }
         c.unclip();
     }
 
     // ------------------------------------------------------------------ helpers
+
+    /** Records a pointer target, trimmed to the visible part of a scrolled list or grid. */
+    private void hit(Rect area, Rect visible, Modal modal, int kind, int index) {
+        float left = Math.max(area.x(), visible.x()), top = Math.max(area.y(), visible.y());
+        float right = Math.min(area.right(), visible.right()), bottom = Math.min(area.y() + area.h(), visible.y() + visible.h());
+        if (right > left && bottom > top) hits.add(new Hit(new Rect(left, top, right - left, bottom - top), modal, kind, index));
+    }
 
     private static void dim(EditorHudCanvas c, EditorHudLayout layout, float alpha) {
         c.rect(0, EditorHudLayout.TOP_BAR, layout.width(), layout.height() - EditorHudLayout.TOP_BAR - EditorHudLayout.PROMPT_BAR,
@@ -815,8 +822,8 @@ final class EditorHudPainter implements AutoCloseable {
             case BLOCK -> "Block " + hex(value);
             case CHUNK -> "Chunk " + hex(value);
             case PATTERN -> "Pattern " + hex(value);
-            case OBJECT -> controller.objectPalette() == null || value >= controller.objectPalette().entries().size()
-                    ? "Object" : controller.objectPalette().entries().get(value).label();
+            case OBJECT -> controller.objectPaletteOrNull() == null || value >= controller.objectPaletteOrNull().entries().size()
+                    ? "Object" : controller.objectPaletteOrNull().entries().get(value).label();
             case NONE -> "";
         };
     }
@@ -828,8 +835,8 @@ final class EditorHudPainter implements AutoCloseable {
                 Integer raw = controller.selectedPatternRaw();
                 yield raw == null ? "" : "Palette line " + ((raw >>> 13) & 3);
             }
-            case OBJECT -> controller.objectPalette() == null ? ""
-                    : "Subtype " + "%02X".formatted(controller.objectPalette().selectedSubtype());
+            case OBJECT -> controller.objectPaletteOrNull() == null ? ""
+                    : "Subtype " + "%02X".formatted(controller.objectPaletteOrNull().selectedSubtype());
             default -> "";
         };
     }
