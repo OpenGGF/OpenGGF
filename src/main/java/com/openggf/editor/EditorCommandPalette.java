@@ -107,6 +107,40 @@ public final class EditorCommandPalette {
         return List.copyOf(lines);
     }
 
+    /** Host and workflow commands only (projects, playtest, import), for hosts that draw their own menus. */
+    public List<HostCommand> extraCommands() {
+        return extraCommands.stream().map(command -> new HostCommand(command.label(), command.action())).toList();
+    }
+
+    /** Every editor action with its palette label, dispatched through {@code dispatch}. */
+    public List<HostCommand> actionCommands(Consumer<EditorInputHandler.Action> dispatch) {
+        return actionCommands(dispatch, action -> true);
+    }
+
+    /** The editor actions {@code include} accepts, e.g. without the in-game panes a chrome replaces. */
+    public List<HostCommand> actionCommands(Consumer<EditorInputHandler.Action> dispatch,
+                                            java.util.function.Predicate<EditorInputHandler.Action> include) {
+        java.util.Objects.requireNonNull(dispatch, "dispatch");
+        java.util.Objects.requireNonNull(include, "include");
+        List<HostCommand> commands = new ArrayList<>(ACTIONS.length);
+        for (var action : ACTIONS) {
+            if (include.test(action)) commands.add(new HostCommand(label(action), () -> dispatch.accept(action)));
+        }
+        return List.copyOf(commands);
+    }
+
+    /**
+     * True for actions that only steer the in-game focus panes and library browser; a chrome that
+     * draws its own library and has no focus panes leaves them out of its menus.
+     */
+    public static boolean drivesInGamePanes(EditorInputHandler.Action action) {
+        return switch (action) {
+            case CYCLE_FOCUS_REGION, BROWSE_LIBRARY_NEXT, BROWSE_LIBRARY_PREVIOUS, BROWSE_LIBRARY_ROW_NEXT,
+                 BROWSE_LIBRARY_ROW_PREVIOUS, BROWSE_LIBRARY_PAGE_NEXT, BROWSE_LIBRARY_PAGE_PREVIOUS -> true;
+            default -> false;
+        };
+    }
+
     private int commandCount() {
         return ACTIONS.length + extraCommands.size();
     }

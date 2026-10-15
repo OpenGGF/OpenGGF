@@ -640,3 +640,26 @@ event path. Earlier host outcomes remain valid for the exercised path and fault
 boundary, but do not qualify the native Knuckles encounter. Native admission, camera,
 exact-one-root, lifecycle/rewind and affected host checks remain pending. Current
 compiled/API/artifact evidence above remains attributed to its pre-correction source.
+
+
+### Private checkpoint and updated destination composition
+
+Normal-hooked private checkpoint2c940397393371857b53d93145e8ee1a3100285a preserves
+all118 accounted staged paths, seven policy trailers and the four contributing model
+coauthors (parsed before commit). The imported AIZ plan's machine-local ROM path was
+normalized while retaining its original filename/hash. No main integration or push.
+
+Privately merge actual develop1259b0016cb37f41194647eb7da9cd19921de9a5 after that
+clean checkpoint. The merge is conflict-free. Before this evidence paragraph, all118
+paths changed only by the task exactly match the task parent; all32 upstream-only
+paths exactly match1259. The only shared path, CHANGELOG.0.7.prerelease.md, retains
+both Second Strike and the incoming editor HUD entry. No main tracked/index/foreign
+working paths were edited by this private merge.
+
+Incoming editor HUD/window chrome includes Engine/input executable changes, six new
+test classes and associated docs/resources, not just prose. Original task validation
+remains attributed to its760-based tested inputs. New destination-focused editor/input
+checks will combine with the pending native MGZ correction and host-test migration;
+no duplicate unchanged smoke/baseline run is requested. Genuine API surface/artifact
+reverification after the coherent source is required. The task's pinned pre-task
+integration base remains760 for eventual change-based smoke selection.
