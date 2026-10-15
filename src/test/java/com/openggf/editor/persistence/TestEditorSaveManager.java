@@ -4,12 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.openggf.game.GameId;
 import com.openggf.editor.LevelEditorController;
-import com.openggf.editor.render.EditorTextRenderer;
-import com.openggf.editor.render.EditorToolbarRenderer;
 import com.openggf.game.common.CommonObjectPlacementEncoding;
 import com.openggf.game.sonic1.Sonic1ObjectPlacementEncoding;
-import com.openggf.graphics.GraphicsManager;
-import com.openggf.graphics.PixelFontTextRenderer;
 import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.level.AbstractLevel;
 import com.openggf.level.Block;
@@ -642,7 +638,7 @@ class TestEditorSaveManager {
     }
 
     @Test
-    void savingS3kKeepsUnsupportedStatusVisibleInToolbar() throws Exception {
+    void savingS3kKeepsUnsupportedStatusAvailableToEditorHosts() throws Exception {
         EditorSaveManager manager = new EditorSaveManager(tempDir);
         EditorSaveManager.SaveResult save = manager.save(GameId.S3K, new CommonObjectPlacementEncoding(), 1, 0, createMutableLevel());
         LevelEditorController controller = new LevelEditorController();
@@ -650,15 +646,11 @@ class TestEditorSaveManager {
         controller.setPersistenceStatus(save.persistenceStatus());
 
         assertEquals(EditorSaveManager.ApplyResult.UNSUPPORTED, save.persistenceStatus());
-        EditorTextRenderer.TextCommand command = new InspectableToolbar(controller).commands().getFirst();
-        String prefix = "S3K SAVE UNSUPPORTED | ";
-        assertTrue(command.text().startsWith(prefix));
-        assertTrue(command.x() + new PixelFontTextRenderer().measureWidth(prefix) <= 316,
-                "unsupported-save indicator must fit inside the visible toolbar before variable state text");
+        assertEquals(EditorSaveManager.ApplyResult.UNSUPPORTED, controller.persistenceStatus());
     }
 
     @Test
-    void unsupportedPersistedS3kStatusIsControllerVisibleInToolbar() throws Exception {
+    void unsupportedPersistedS3kStatusIsControllerVisible() throws Exception {
         EditorSaveManager manager = new EditorSaveManager(tempDir);
         manager.save(GameId.S3K, new CommonObjectPlacementEncoding(), 1, 0, createMutableLevel());
         EditorSaveManager.ApplyResult result = manager.tryApplyEdits(
@@ -668,15 +660,7 @@ class TestEditorSaveManager {
         controller.setPersistenceStatus(result);
 
         assertEquals(EditorSaveManager.ApplyResult.UNSUPPORTED, result);
-        assertTrue(new InspectableToolbar(controller).lines().getFirst().startsWith("S3K SAVE UNSUPPORTED | "));
-    }
-
-    private static final class InspectableToolbar extends EditorToolbarRenderer {
-        InspectableToolbar(LevelEditorController controller) {
-            super(controller, GraphicsManager.getInstance());
-        }
-        List<String> lines() { return buildStateLines(); }
-        List<EditorTextRenderer.TextCommand> commands() { return buildToolbarTextCommands(); }
+        assertEquals(EditorSaveManager.ApplyResult.UNSUPPORTED, controller.persistenceStatus());
     }
 
     private static String sha256(String value) throws Exception {

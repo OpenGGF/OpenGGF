@@ -110,7 +110,7 @@ public final class EditorHud {
 
     /**
      * Runs one editor tick. Returns true when the HUD owned the whole frame (a sheet, wheel or menu
-     * is open, or it consumed a shortcut), so the classic keyboard handler must not also act on it.
+     * is open, or it consumed a shortcut), so the world editing input handler must not also act on it.
      */
     public boolean update(InputHandler input, Consumer<Action> dispatch) {
         this.dispatch = dispatch;
@@ -174,18 +174,16 @@ public final class EditorHud {
             }
         }
         boolean shift = input.isKeyDown(GLFW_KEY_LEFT_SHIFT) || input.isKeyDown(GLFW_KEY_RIGHT_SHIFT);
-        if (!controller.isLibraryFilterInputActive()) {
-            if (input.isKeyPressed(GLFW_KEY_TAB) && !shift) { openLibrary(); return true; }
-            if (input.isKeyPressed(GLFW_KEY_F1)) { openMenu(); return true; }
-            if (input.isKeyPressed(GLFW_KEY_Q)) { openWheel(false); return true; }
-            for (int slot = 0; slot < EditorHudHotbar.SLOTS; slot++) {
-                if (input.isKeyPressed(slot == 9 ? GLFW_KEY_0 : GLFW_KEY_1 + slot)) {
-                    hotbar.select(kind(), slot);
-                    applyBrush(kind(), hotbar.value(kind()));
-                }
+        if (input.isKeyPressed(GLFW_KEY_TAB) && !shift) { openLibrary(); return true; }
+        if (input.isKeyPressed(GLFW_KEY_F1)) { openMenu(); return true; }
+        if (input.isKeyPressed(GLFW_KEY_Q)) { openWheel(false); return true; }
+        for (int slot = 0; slot < EditorHudHotbar.SLOTS; slot++) {
+            if (input.isKeyPressed(slot == 9 ? GLFW_KEY_0 : GLFW_KEY_1 + slot)) {
+                hotbar.select(kind(), slot);
+                applyBrush(kind(), hotbar.value(kind()));
             }
         }
-        // The in-game panes are not drawn under the HUD, so focus never rests on them.
+        // Target the editing canvas for the current composition depth.
         if (controller.depth() == EditorHierarchyDepth.WORLD) {
             if (controller.focusRegion() != EditorFocusRegion.WORLD_CANVAS) controller.focusRegion(EditorFocusRegion.WORLD_CANVAS);
         } else {
@@ -502,7 +500,7 @@ public final class EditorHud {
         items.add(new MenuItem("Export level", "Ctrl+Shift+E", () -> act(Action.EXPORT)));
         items.add(new MenuItem("Every command", "", null));
         for (EditorCommandPalette.HostCommand command : EditorCommandPalette.forController(controller)
-                .actionCommands(this::act, action -> !EditorCommandPalette.drivesInGamePanes(action))) {
+                .actionCommands(this::act)) {
             items.add(new MenuItem(command.label(), "", command.action()));
         }
         menuItems = List.copyOf(items);

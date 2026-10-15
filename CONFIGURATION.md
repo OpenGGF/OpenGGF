@@ -773,18 +773,15 @@ playtest. Editor key/mouse shortcuts are hardcoded and are not configurable in
 |-------|--------|
 | `Shift+Tab` | Switch between the editor document and its playtest |
 | `F5` | Start a fresh current-project playtest at the authored start; does not save |
-| `F1` / north controller button | Open the command palette, including project commands |
-| Arrows / gamepad menu directions | Move the cursor or browse the focused library; object-library Up/Down changes brush subtype |
-| `Page Up` / `Page Down` | Move by one library page |
-| `Tab` | Cycle focused region |
-| `Space` / Confirm in a library | Select the hovered brush |
-| `Insert` | Enter/leave library filter capture; text suppresses editing shortcuts |
-| `Backspace` / `Ctrl+Backspace` while filtering | Remove one character / clear the filter |
-| `O` / gamepad Start | Cycle terrain, objects, and rings |
+| `F1` / controller Menu | Open the editor menu, including project commands |
+| Arrows / gamepad menu directions | Move the cursor or selection in an open library |
+| `Tab` / north controller button | Open the library for the current brush kind |
+| `Page Up` / `Page Down` | Move through pages in an open library |
+| `Enter` / South in a library | Select the highlighted brush |
+| `O` | Cycle terrain, objects, and rings |
 | `Space` / left click | Place or apply the brush |
 | `E` / right click | Pick nearby terrain or a spawn |
 | `Delete` | Erase terrain or delete a spawn |
-| Gamepad A / B / C in spawn mode | Place / pick / delete |
 | `M` | Move the selected spawn to the world cursor |
 | `L` | Toggle FG / BG |
 | `Enter` / `Escape` | Descend / ascend the hierarchy |
@@ -800,15 +797,15 @@ playtest. Editor key/mouse shortcuts are hardcoded and are not configurable in
 | Left drag in World | Paint terrain as one undoable stroke |
 
 Bindings live in `EditorInputHandler` and are independent of gameplay Key
-Bindings. Filter input, project forms, and the command palette own their input
-while open. Pane/chrome clicks cannot paint through to the world.
+Bindings. Library sheets, project forms, and the editor menu own their input
+while open. HUD clicks cannot paint through to the world.
 
 The editor draws a controller-first HUD at window resolution around the
 integer-scaled level: a top bar, a ten-slot brush hotbar and live button
 prompts for the pad family in use (Xbox, PlayStation or keyboard). While it is
 shown it owns the gamepad, so Genesis mappings, debug and rewind buttons do not
-fire in the editor. Launch with `-Dopenggf.editor.ui=classic` to keep the earlier
-in-game chrome instead; it is also used automatically if the HUD cannot start.
+fire in the editor. The HUD is the only built-in editor UI; initialisation
+failures propagate as engine errors.
 A separate desktop editor, [OpenGGF-Editor](https://github.com/OpenGGF/OpenGGF-Editor),
 replaces the HUD when its jar is on the class path; the engine finds it through the
 `EditorWindowChrome` service.
