@@ -87,6 +87,9 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
 
     private final SszEndingPlaneState endingPlane = new SszEndingPlaneState();
     public SszEndingPlaneState endingPlane() { return endingPlane; }
+    private final com.openggf.game.sonic3k.ending.S3kEndingState ending =
+            new com.openggf.game.sonic3k.ending.S3kEndingState();
+    public com.openggf.game.sonic3k.ending.S3kEndingState ending() { return ending; }
 
     private final SszLaunchState launch = new SszLaunchState();
     public SszLaunchState launch() { return launch; }
@@ -373,7 +376,7 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
 
     @Override
     public byte[] captureBytes() {
-        ByteBuffer buffer = ByteBuffer.allocate(CAPTURE_BYTES);
+        ByteBuffer buffer = ByteBuffer.allocate(CAPTURE_BYTES + ending.snapshotBytes());
         buffer.put(eventsBg);
         buffer.putShort(eventsFg4);
         buffer.putShort(eventsRoutineFg);
@@ -408,6 +411,7 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
         endingPlane.capture(buffer);
         launch.capture(buffer);
         for (short word : act2ScrollTable) buffer.putShort(word);
+        ending.captureTo(buffer);
         return buffer.array();
     }
 
@@ -451,5 +455,6 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
         endingPlane.restore(buffer);
         launch.restore(buffer);
         for (int i = 0; i < act2ScrollTable.length; i++) act2ScrollTable[i] = buffer.getShort();
+        ending.restoreFrom(buffer);
     }
 }

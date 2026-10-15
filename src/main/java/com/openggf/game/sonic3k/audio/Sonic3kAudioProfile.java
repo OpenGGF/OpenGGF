@@ -30,7 +30,18 @@ import java.util.Map;
  *   <li>DAC samples use DPCM compression with bank switching.</li>
  * </ul>
  */
-public class Sonic3kAudioProfile extends AbstractAudioProfile {
+public class Sonic3kAudioProfile extends AbstractAudioProfile implements com.openggf.audio.NativeAudioEffectCues {
+    @Override public boolean permitsTemporaryMusic(int musicId) {
+        // The locked-on driver table's first 23 entries are ordinary zone music, not priority jingles.
+        return musicId >= Sonic3kMusic.AIZ1.id && musicId <= Sonic3kMusic.DEZ2.id;
+    }
+    @Override public boolean permitsLandingCue(int sfxId) { return sfxId == Sonic3kSfx.THUMP.id; }
+    @Override public boolean isWarningCue(int sfxId) {
+        return sfxId == Sonic3kSfx.AIR_DING.id || sfxId == Sonic3kSfx.ALARM.id
+                || sfxId == Sonic3kSfx.ROBOTNIK_SIREN.id || sfxId == Sonic3kSfx.DEATH.id
+                || sfxId == Sonic3kSfx.SPIKE_HIT.id || sfxId == Sonic3kSfx.DROWN.id
+                || sfxId == Sonic3kSfx.RING_LOSS.id;
+    }
     @Override
     public String presentationGameId() {
         return "s3k";

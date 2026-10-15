@@ -257,6 +257,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     private CollisionSystem collisionSystem;
     WaterSystem waterSystem;
     private GameStateManager gameState;
+
+    /** The retained level/editor renderer reads its injected owner, even while gameplay is parked. */
+    GameStateManager boundaryGameState() { return gameState; }
     SonicConfigurationService configService;
     DebugOverlayManager overlayManager;
     LevelDebugRenderer debugRenderer;
@@ -1126,6 +1129,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                         advancedRenderModeController, getFeatureZoneId(), getFeatureActId());
             }
         }
+        // Zone registries are cleared on every load; restore the world-owned local fluid
+        // presentation here, after native zone effects, rather than only at manager creation.
+        LevelManagerInitializationSupport.registerWorldRenderEffects(worldSession, specialRenderEffectRegistry);
     }
 
     /**
@@ -2038,7 +2044,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     public void recomputeParallaxAfterRewindRestore() {
-        frameRuntimeUpdater.refreshParallaxState();
+        frameRuntimeUpdater.recomputeParallaxAfterRewindRestore();
     }
 
     /** Prepares the demo scene before Level_Delay / PalFadeIn_Alt. */
@@ -2906,6 +2912,10 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         return ringManager != null && ringManager.areAllCollected();
     }
 
+    public WorldSession getWorldSession() { return worldSession; }
+    int observedViewportWidth() { return camera==null?320:camera.getWidth(); }
+    int observedViewportHeight() { return camera==null?224:camera.getHeight(); }
+
     public ObjectManager getObjectManager() {
         return objectManager;
     }
@@ -3413,6 +3423,13 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         if (!transitions.consumeTitleCardRequest()) {
             return false;
         }
+        // A fresh title loop holds the destination's already-decoded players
+        // and initial Process_Sprites pass in a deferred boundary. Omitting
+        // that presentation must publish its assembly before the skipped
+        // presentation's animation/PLC tail runs, just as the visible owner
+        // reaches loc_6468 before LevelLoop. Otherwise ordinary frames run
+        // against the temporary zeroed player slots indefinitely.
+        freshLevelTransitionBoundary.complete(this);
         // A consumed request already ran the owner's init through the
         // presentation path, so this boundary queues no entry art.
         completeSkippedInitialTitleCardPresentation(false);
@@ -3463,62 +3480,11 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         // physics live, so replaying them here would advance the animation and
         // the persistent last-loaded-DPLC byte a second time.
         if (initialPresentationOmitted) {
-            replaySkippedPresentationPlayerAnimation(
+            playableArtInitializer.replaySkippedPresentationPlayerAnimation(
                     profile.skippedPresentationPlayableFrames(),
                     profile.skippedPresentationPlayableFramesBeforeFirstVBlank());
         }
         initialPresentationPlcsCompleted = true;
-    }
-
-    /**
-     * Establishes the ROM's persistent last-loaded-DPLC residency before the
-     * first ordinary level iteration.
-     *
-     * <p>{@code InitPlayers} creates the player objects at
-     * docs/s2disasm/s2.asm:4945, i.e. before the title-card leave loop at
-     * docs/s2disasm/s2.asm:5060-5066 (WaitForVint / RunObjects / BuildSprites /
-     * RunPLC_RAM). That loop therefore runs {@code Sonic_Animate} and
-     * {@code LoadSonicDynPLC} with the players loaded, so
-     * {@code Sonic_LastLoadedDPLC} (docs/s2disasm/s2.asm:38829-38840) and
-     * {@code Tails_LastLoadedDPLC} (docs/s2disasm/s2.asm:41659-41690) already
-     * hold the displayed mapping frame when {@code Level_MainLoop} starts; they
-     * are cleared to -1 only on a character swap (docs/s2disasm/s2.asm:26039-26041).
-     * A headless load omits that presentation, so the first gameplay animation
-     * tick saw "no previous frame" and submitted a DMA transfer the ROM had
-     * already retired. Replaying the loop's own animation ticks, at the ROM's
-     * VBlank-then-RunObjects order (queue at s2.asm:1713, drain at s2.asm:1769),
-     * makes gameplay frame 0 submit exactly when the mapping frame really
-     * changed across the loop. S1 (docs/s1disasm/_incObj/01 Sonic.asm:2391-2398)
-     * and S3K (docs/skdisasm/sonic3k.asm:25216-25218) use the same predicate;
-     * they contribute no iterations unless their own init profile declares one.
-     */
-    private void replaySkippedPresentationPlayerAnimation(
-            int iterations, int passesBeforeFirstVBlank) {
-        if (iterations <= 0 || spriteManager == null) {
-            return;
-        }
-        List<AbstractPlayableSprite> playables = new ArrayList<>();
-        AbstractPlayableSprite main = spriteManager.getMainPlayable();
-        if (main != null) {
-            playables.add(main);
-        }
-        playables.addAll(spriteManager.getSidekicks());
-        if (playables.isEmpty()) {
-            return;
-        }
-        var dynamicArt = GameServices.dynamicArtLifecycleOrNull();
-        for (int frame = 0; frame < iterations; frame++) {
-            // The leading object passes the profile declares run outside the
-            // omitted presentation's wait loop, so no V-blank precedes them;
-            // the loop's first WaitForVint drains the queue they built.
-            if (frame >= passesBeforeFirstVBlank
-                    && dynamicArt != null && dynamicArt.isRunActive()) {
-                dynamicArt.serviceProductionVBlank();
-            }
-            for (AbstractPlayableSprite playable : playables) {
-                playable.getAnimationManager().update(frame);
-            }
-        }
     }
 
     /**

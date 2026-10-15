@@ -131,6 +131,55 @@ class TestTimeAttackSettings {
         assertTrue(view.consumeCloseRequested());
     }
     @Test
+    void failedSettingsPageEditShowsPendingUntilConfirmedRetry() {
+        MemoryModStorage storage = new MemoryModStorage();
+        TimeAttackSettings settings = new TimeAttackSettings();
+        assertTrue(settings.save(storage));
+        SettingsView view = new SettingsView(settings, () -> settings.save(storage), cue -> {});
+        FakeViewInput input = new FakeViewInput();
+        for (int i = 0; i < 4; i++) input.tapDown(view::update);
+        storage.failures = 1;
+        input.tapEnter(view::update);
+        assertFalse(settings.minimap());
+        RecordingSceneCanvas pending = new RecordingSceneCanvas(320); view.draw(pending);
+        assertTrue(pending.joined().contains("save pending"));
+        assertFalse(pending.joined().contains("Saved"));
+        for (int i = 0; i < 60; i++) settings.retryPending(storage);
+        RecordingSceneCanvas saved = new RecordingSceneCanvas(320); view.draw(saved);
+        assertTrue(saved.joined().contains("Saved"));
+        assertFalse(TimeAttackSettings.load(storage).minimap());
+    }
+
+    @Test
+    void refusedFirstDefaultPublicationHasNoInventedConfirmedSnapshot() {
+        MemoryModStorage storage = new MemoryModStorage();
+        TimeAttackSettings settings = TimeAttackSettings.load(storage);
+        storage.failures = 1;
+        assertFalse(settings.save(storage));
+        assertTrue(settings.pendingPublication());
+        assertTrue(settings.flushPending(storage));
+        assertTrue(storage.read(TimeAttackSettings.FILE_NAME).isPresent());
+        assertEquals(2, storage.writes);
+    }
+
+    @Test
+    void revertingToConfirmedSettingsCancelsObsoletePublicationAndRepeatedFailuresStayBounded() {
+        MemoryModStorage storage = new MemoryModStorage();
+        storage.texts.put(TimeAttackSettings.FILE_NAME, "displayName=Original\n");
+        TimeAttackSettings settings = TimeAttackSettings.load(storage);
+        settings.setDisplayName("Pending"); storage.failures = 100;
+        assertFalse(settings.save(storage));
+        assertTrue(settings.pendingPublication());
+        for (int i = 0; i < 120; i++) settings.retryPending(storage);
+        assertEquals(3, storage.writes);
+        settings.setDisplayName("Original");
+        assertFalse(settings.pendingPublication());
+        assertEquals("", settings.publicationNotice());
+        assertTrue(settings.flushPending(storage));
+        assertEquals(3, storage.writes, "exit cannot publish an obsolete failed snapshot after a revert");
+    }
+
+    @Test
     void retryKeyCaptureSavesAndEscapeCancelsWithoutLosingTheCurrentBinding() {
         TimeAttackSettings settings = new TimeAttackSettings();
         AtomicInteger saves = new AtomicInteger();

@@ -15,6 +15,7 @@ import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -221,11 +222,34 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean preservesObjectManagedRideWhileNotSolidFor(PlayableEntity player) {
+        // SolidObjectFull2_1P consumes an existing standing bit before the
+        // signed-control check in MvSonicOnPtfm. That check skips repositioning,
+        // without clearing the grounded rider or its standing owner
+        // (sonic3k.asm:41070-41096,41672-41686). New contacts still take the
+        // separate SolidObject_cont signed-control rejection above.
+        return !cutsceneOverride && isSolidFor(player) && player.isOnObject()
+                && player instanceof AbstractPlayableSprite sprite
+                && sprite.isObjectControlled() && !sprite.isObjectControlAllowsCpu();
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity player) {
-        // ROM loc_2B2E8 still falls through to SolidObjectFull2 while the
-        // collapse delay counts down. Player support ends only when loc_2B45E
-        // ejects the standing players and deletes the parent object.
+        // Keep the existing support owner until loc_2B45E ejects it. The
+        // manual dispatch below stops calling SolidObjectFull2 during collapse.
         return settled && !isDestroyed();
+    }
+
+    @Override
+    public SolidExecutionMode solidExecutionMode() {
+        return SolidExecutionMode.MANUAL_CHECKPOINT;
+    }
+
+    @Override
+    public boolean defersAirborneRiderUnseatThisFrame(PlayableEntity player) {
+        // loc_2B452 only decrements $34 and returns. Its parent standing bits
+        // survive player jumps until loc_2B45E/loc_2B478 consume them.
+        return collapseStarted && !isDestroyed();
     }
 
     @Override
@@ -280,16 +304,27 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
         if (collapseStarted) {
             if (collapseTimer > 0) {
                 collapseTimer--;
-                // ROM keeps the standing bits alongside the newly-set air/roll
-                // state until the delayed parent deletion ejects both players.
-                for (PlayableEntity standingPlayer : standingPlayers) {
-                    standingPlayer.setOnObject(true);
-                }
             } else {
                 ejectStandingPlayers();
                 ObjectLifetimeOps.deleteNoRespawn(this);
             }
+            return;
         }
+        // AIZDrawBridge_Solid owns the contact pass in the normal routines;
+        // the collapse trigger and countdown return without reaching it.
+        var checkpoint = services().solidExecution().resolveSolidNowAll();
+        // Manual checkpoints return contacts without compatibility listener
+        // callbacks. Mirror this SST's standing bits from the normal solid
+        // pass, then leave them untouched during the countdown-only routine.
+        checkpoint.perPlayer().forEach((player, contact) -> {
+            if (contact.standingNow()) {
+                if (!standingPlayers.contains(player)) {
+                    standingPlayers.add(player);
+                }
+            } else {
+                standingPlayers.remove(player);
+            }
+        });
     }
 
     private void updateBridgePieces() {

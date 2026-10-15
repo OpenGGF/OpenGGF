@@ -189,6 +189,7 @@ public final class CourseController extends AbstractObjectInstance implements Mo
     }
     @Override public void update(int vIntRunCount, PlayableEntity player) {
         if (player == null || exitRequested) return;
+        if (Math.floorMod(vIntRunCount, 120) == 0) services().gameService(Leaderboard.class).flush();
         services().levelGamestate().pauseTimer();
         services().levelManager().setForceHudSuppressed(true);
         showRunAtCourseSpeed(player);

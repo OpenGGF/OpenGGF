@@ -344,9 +344,17 @@ longest unlimited survival; every upgrade with its unlock milestone; the twelve 
 (discovered ones named, every recipe shown); and a bestiary of badniks defeated per species.
 
 Progress is saved in `saves/mods/sonic-survivors/profile.txt` under the engine's save root.
-The file is plain `key=value` lines; new records are added keys, so older saves load unchanged.
-When the canonical file is absent, the owner-storage service can read the legacy
-`saves/sonic-survivors/profile.txt`; subsequent writes use the canonical path.
+The file is plain `key=value` lines. Unversioned profiles migrate to format 1 on the next
+successful write, keeping their bank, shop and lifetime records. When the canonical file is
+absent, the owner-storage service can read the legacy `saves/sonic-survivors/profile.txt`;
+subsequent writes use the canonical path.
+
+Each run has a captured identity. Starting it counts once, and its death, retirement or victory
+settles once: rewinding and playing the same run again cannot add another lifetime award.
+The profile stays outside world rollback. Settlement and its awards publish in one atomic
+profile write; a failed write leaves the previous file intact and retries while the arena is
+open. A new run advances the captured lineage, while reloading camp or replaying TRY AGAIN
+retains the same command identity.
 
 ## Build and run
 
@@ -357,7 +365,7 @@ python3 examples/sonic-survivors/build.py --run  # ... then launch the engine wi
 
 Install the jar through the Mod Manager like any trusted code mod. Native builds cannot load
 code mods. The mod plays at 16:9 and hides the stock level select. Version 0.5.0 requires the engine
-build containing `LevelInputOverlay`; rebuild this checkout when updating an older engine. Existing
+build containing `GameplayFrameDisposition`; rebuild the matching engine/SDK artifacts when updating an older candidate. Existing
 profile saves remain compatible.
 
 Film it headlessly with the gameplay capture tool's `--mod` option, for example:
@@ -383,14 +391,25 @@ seconds and `sonic-survivors.bossHp=N` sets every boss's hitpoints.
   `FloorSegmentSurveyProbe` and checked in captures), the zone line-ups and the boss art.
 - `Stage` is the arena controller: camera and boundary, phases, waves, weapons and moves (in
   growable projectile arrays and a bounded cosmetic-effect pool so mod-object rewind capture restores them), the combo, level-up cards
-  and menus. `Hud` draws everything with a code-drawn font.
+  and menus. The captured `FrameControl` admits menus before world stepping and resolves the
+  current Stage on each row, including after rewind recreation. Modal rows hold native timers,
+  power-up duration, physics, animation and object lifetimes; active rows retain normal player
+  input. Menu reveal/input clocks advance separately. `Hud` draws everything with a code-drawn font.
 - `Enemy` (one class, seven AI archetypes over `Species`), `Boss`, `Shot` and `Pickup` are mod
   objects drawn with the ROM art the zone already loads; frames were picked with the
   `ObjectArtContactSheetProbe`. `Guard` turns hits into ring tolls.
+  Their live floor queries use injected `ObjectServices` with explicit primary foreground
+  collision and the same bounded native probe cadence. The shared deferred-animal recipe
+  keeps S2 explosion/respawn/slot order while suppressing the animal's deferred points child.
 - `SurvivorsMod` registers a `GameServiceBundle` factory: each patch application receives its own
   `RunState` (captured for rewind) and loaded `Profile`. The profile reads and writes owner-scoped
-  `ModStorage`; it persists between runs and stays outside world rollback. `Module` reads these
-  services from its backing bundle.
+  `ModStorage`; it persists between runs and stays outside world rollback. Its compact settlement
+  intervals retain unpaid gaps for older seeks. A replacement service graph closes prior IDs;
+  its new RunState rejects foreign-graph captures. Level loads retain the same services and
+  ledger. `Module` reads these services from its backing bundle.
+- `Definitions` prepares the species traits and ordered encounter/boss line-ups once per owner
+  graph. Its lists are immutable; exposed animation arrays are copies. Enemy trait caches are
+  derived from the captured spawn subtype and rebuilt after object recreation.
 - `Difficulty` is the single pressure curve; `Upgrades` holds the catalogue, evolution pairs and
   unlock milestones; `Rules` holds Eggman's Rules.
 
@@ -400,7 +419,14 @@ emerald and route choice, the Death Egg finale, death and banking, the shop, rin
 rewind round trip, plus the forfeit and retire payouts, the spin-dash rule, chests and evolutions,
 unlocks, rules, character perks, zone events and warden squads. Coverage includes both leaders across all 19 acts, the ARZ ceiling, forced solo
 teams, jump rejection/Enter confirmation through the host game loop, and lost-ring provenance
-through rewind.
+through rewind. Speed Shoes entry/long holds, Sonic/Tails native-state preservation and modal
+RNG/touch/lifetime rewind checks cover the frame controller, along with real TRY AGAIN/route
+fade loads and held Start-button release.
+
+`DefinitionsTest` is portable creator-kit coverage for every authored trait and line-up, wrapped
+species lookup, immutable frame arrays and repeated owner-scoped lookup. In an exported kit, run
+`python3 tools/build_project.py examples/sonic-survivors --test --testkit mod-testkit.jar`.
+These tests qualify catalogue behavior; native routes and rewind remain covered by the engine test above.
 
 `TestSonicSurvivors#balanceProbe` is an opt-in diagnostic: a scripted bot (jumps at the nearest
 badnik, takes weapons until it holds three, then ranks owned upgrades) plays whole runs and writes
@@ -419,3 +445,11 @@ python3 examples/build_example.py sonic-survivors --engine /absolute/engine.jar 
 ```
 
 Use `--s1`, `--s2`, or `--s3k` for the games this example consumes. Explicit paths create isolated development configuration and saves; no ROM is copied or linked. The creator kit exports this example with a portable POM and `tools/build_project.py`; it needs no engine source checkout. Only production sources/resources enter the validated mod jar. Read [recipient installation](../../docs/modding/installing-mods.md) before sharing.
+
+The current residual ledger records 13 `NON_API_ENGINE_REFERENCE` warnings from
+the clean `175531f6d` package checkpoint. Native object priority/touch callbacks and
+soundtrack bridges remain outside the compatibility promise. Prefer public
+framework helpers where they cover the operation; review each retained bridge's
+owner and reopening conditions in the
+[residual reference ledger](../../docs/architecture/validation/2026-10-12-mod-audit-remediation.md#final-residual-findings-actual-class-call-and-purpose)
+when rebuilding against matching engine/SDK artifacts.

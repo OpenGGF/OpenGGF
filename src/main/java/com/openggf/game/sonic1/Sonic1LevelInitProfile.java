@@ -115,7 +115,7 @@ public class Sonic1LevelInitProfile extends AbstractLevelInitProfile {
     }
 
     private void queueInitialPlcs(LevelLoadContext ctx) {
-        if (ctx.getLevel() == null) {
+        if (ctx.getLevel() == null || !com.openggf.game.resources.NativeLevelPlcPolicy.allows(ctx)) {
             return;
         }
         Sonic1PlcService plcService = GameServices.module().getGameService(Sonic1PlcService.class);
@@ -135,6 +135,7 @@ public class Sonic1LevelInitProfile extends AbstractLevelInitProfile {
 
     @Override
     public void completeInitialPresentationPlcs() {
+        if (!com.openggf.game.resources.NativeLevelPlcPolicy.allowsCurrent()) return;
         Sonic1PlcService plcService =
                 GameServices.module().getGameService(Sonic1PlcService.class);
         var levelManager = GameServices.levelOrNull();

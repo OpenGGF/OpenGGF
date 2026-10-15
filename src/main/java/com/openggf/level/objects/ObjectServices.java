@@ -70,6 +70,17 @@ public interface ObjectServices {
     }
     ObjectRenderManager renderManager();
 
+    /** Draws an attached visual under the enclosing object identity/body transform, without head scaling. */
+    default void renderAttachedEffect(Runnable producer) {
+        java.util.Objects.requireNonNull(producer, "producer");
+        GraphicsManager graphics = graphicsManager();
+        var subject = com.openggf.graphics.SpritePresentation.subject(graphics);
+        com.openggf.graphics.SpritePresentation.withSubject(graphics,
+                new com.openggf.graphics.SpritePresentation.Subject(subject.id(),
+                        com.openggf.graphics.SpritePresentation.Part.ATTACHED_EFFECT, subject.suppressed(),
+                        100, null, subject.body(), subject.paletteReplay()), producer);
+    }
+
     // Level state
     LevelState levelGamestate();
     RespawnState checkpointState();
@@ -83,6 +94,20 @@ public interface ObjectServices {
         return BackgroundPlaneCollisionProvider.FOREGROUND_ONLY;
     }
     default boolean useSecondaryTerrainCollisionPath() { return false; }
+    /** Native floor sensor in the selected layer's pixel coordinates; angle includes native flips. */
+    default TerrainSurface floorSurface(int x,int y,TerrainSurface.Layer layer,TerrainSurface.Path path) {
+        return TerrainSurfaceQueries.floor(this,x,y,layer,path);
+    }
+    /**
+     * First floor accepted by native 16px probes from y-above through y+below.
+     * Bounds are probe origins (0..256 above, 0..512 below); a candidate may lie
+     * 16px above or 15px below its origin. At most 49 origins are checked.
+     * Returned distance is relative to y. No result retains a live query handle.
+     */
+    default TerrainSurface findFloorSurface(int x,int y,int above,int below,
+            TerrainSurface.Layer layer,TerrainSurface.Path path) {
+        return TerrainSurfaceQueries.search(this,x,y,above,below,layer,path);
+    }
     Level currentLevel();
     int romZoneId();
     int currentAct();
@@ -171,6 +196,26 @@ public interface ObjectServices {
 
     default ObjectSolidExecutionContext solidExecution() {
         return solidExecutionRegistry().currentObject();
+    }
+
+    /**
+     * Release the player from this engine-admitted object's current solid checkpoint for a launch.
+     * Missing, foreign or inactive participants return false; no caller-reported object/owner is accepted.
+     */
+    default boolean detachCurrentSolidContact(PlayableEntity player) {
+        java.util.Objects.requireNonNull(player, "player");
+        ObjectSolidExecutionContext current=solidExecution();
+        if(current==null||current.isInert())return false;
+        ObjectInstance object=current.object();
+        var batch=current.lastCheckpoint();
+        var contact=batch.perPlayer().get(player);
+        if(object==null||batch.object()!=object||contact==null
+                ||contact.kind()==com.openggf.game.solid.ContactKind.NONE)return false;
+        ObjectManager manager=objectManager();
+        if(manager==null)return false;
+        manager.solidContacts().releaseObjectPushLatch(player,object);
+        manager.clearRidingObjectForJump(player);player.setPushing(false);
+        return true;
     }
 
     // Context-specific managers

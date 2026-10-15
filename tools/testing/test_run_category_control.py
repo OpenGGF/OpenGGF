@@ -43,7 +43,7 @@ class ControlTests(unittest.TestCase):
         self.assertEqual(1, process.call_count)
 
     def test_cli_prerequisite_failure_never_calls_runner(self):
-        with patch.object(runner, 'maven_slot', return_value=nullcontext(None)), patch.object(runner, 'preflight', side_effect=ValueError('missing tool')), patch.object(runner, 'run_plan') as run, patch('sys.stdout', new_callable=io.StringIO), patch('sys.stderr', new_callable=io.StringIO):
+        with patch.object(runner, 'worktree_build_slot', return_value=nullcontext(None)), patch.object(runner, 'preflight', side_effect=ValueError('missing tool')), patch.object(runner, 'run_plan') as run, patch('sys.stdout', new_callable=io.StringIO), patch('sys.stderr', new_callable=io.StringIO):
             self.assertEqual(2, runner.main(['--category', 'all', '--run']))
         run.assert_not_called()
 
@@ -66,46 +66,67 @@ class ControlTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             summary = dict(reports=1, tests=1, failures=0, errors=0, skipped=0)
-            with patch.object(runner, 'tree_state', return_value='state'), patch.object(runner, 'rom_args', return_value=[]), patch.object(runner, 'summarize', side_effect=lambda _: dict(summary)), patch.object(runner, 'run_logged', return_value=0) as process, patch.object(runner.time, 'monotonic', side_effect=[0, 10, 20, 30, 40]):
+            with patch.object(runner, 'tree_state', return_value='state'), patch.object(runner, 'rom_args', return_value=[]), patch.object(runner, 'summarize', side_effect=lambda _: dict(summary)), patch.object(runner, 'run_logged', return_value=0) as process, patch.object(runner.time, 'monotonic', side_effect=[0, 10, 20, 40]):
                 self.assertEqual(0, runner.run_plan(root, self.plan(), max_minutes=1))
-            self.assertEqual([50, 30], [c.kwargs['timeout'] for c in process.call_args_list])
+            self.assertEqual([60, 50], [c.kwargs['timeout'] for c in process.call_args_list])
 
 
 class QueueCliTests(unittest.TestCase):
-    def test_cli_replans_after_waiting_without_task_or_retry_flags(self):
+    def test_cli_replans_after_worktree_wait_and_passes_retained_fd(self):
         from contextlib import contextmanager
         events = []
         plans = [dict(full=False, tests=['old'], guards=False),
                  dict(full=False, tests=['new'], guards=False)]
 
         @contextmanager
-        def slot(root, *, exclusive=False, estimate=900, kind='maven'):
-            self.assertEqual(30, estimate)
-            self.assertEqual('category', kind)
-            events.append('acquired')
+        def tree_slot(root):
+            events.append('tree acquired')
             yield 12
-            events.append('released')
+            events.append('tree released')
+
+        @contextmanager
+        def slot(root, *, exclusive=False, estimate=900, kind='maven', tree_fd=None):
+            self.assertEqual(30, estimate)
+            self.assertEqual('category-batch', kind)
+            self.assertEqual(12, tree_fd)
+            events.append('shared acquired')
+            yield 13
+            events.append('shared released')
 
         def plan(*args):
             events.append('plan')
             return plans.pop(0)
 
-        with patch.object(runner, 'maven_slot', slot), patch.object(runner, 'make_plan', side_effect=plan), patch.object(runner, 'preflight'), patch.object(runner, 'run_plan', return_value=7) as run, patch('sys.stdout', new_callable=io.StringIO):
-            self.assertEqual(7, runner.main(['--category', 'physics', '--run', '--max-minutes', '90']))
-        self.assertEqual(['plan', 'acquired', 'plan', 'released'], events)
-        self.assertEqual(['new'], run.call_args.args[1]['tests'])
-        self.assertEqual(90, run.call_args.args[2])
-        self.assertEqual(12, run.call_args.kwargs['queue_fd'])
+        def execute(root, current, *args, admission, **kwargs):
+            self.assertEqual(['new'], current['tests'])
+            with admission(current, 'ordinary') as fd:
+                self.assertEqual(13, fd)
+            return 7
 
-    def test_two_worker_cli_requests_exclusive_queue(self):
-        plan = dict(full=False, tests=['test'], guards=False)
-        with patch.object(runner, 'maven_slot') as slot, \
+        with patch.object(runner, 'worktree_build_slot', tree_slot), patch.object(runner, 'maven_slot', slot), patch.object(runner, 'make_plan', side_effect=plan), patch.object(runner, 'preflight') as prerequisites, patch.object(runner, 'run_plan', side_effect=execute) as run, patch('sys.stdout', new_callable=io.StringIO):
+            self.assertEqual(7, runner.main(['--category', 'physics', '--run', '--max-minutes', '90']))
+        self.assertEqual(['plan', 'tree acquired', 'plan', 'shared acquired', 'shared released', 'tree released'], events)
+        self.assertEqual(90, run.call_args.args[2])
+        prerequisites.assert_called_once()
+
+    def test_two_worker_cli_requests_exclusive_only_for_ordinary(self):
+        plan = dict(full=False, tests=['test'], guards=True)
+
+        def execute(root, current, *args, admission, **kwargs):
+            for lane in ('ordinary', 'guards'):
+                with admission(current, lane):
+                    pass
+            return 0
+
+        with patch.object(runner, 'worktree_build_slot', return_value=nullcontext(12)), \
+                patch.object(runner, 'maven_slot', return_value=nullcontext(13)) as slot, \
+                patch.object(runner, 'needs_exclusive', return_value=False), \
                 patch.object(runner, 'make_plan', return_value=plan), \
                 patch.object(runner, 'preflight'), \
-                patch.object(runner, 'run_plan', return_value=0), \
+                patch.object(runner, 'run_plan', side_effect=execute), \
                 patch('sys.stdout', new_callable=io.StringIO):
             self.assertEqual(0, runner.main(['--category', 'physics', '--workers', '2', '--run']))
-        self.assertTrue(slot.call_args.kwargs['exclusive'])
+        self.assertEqual([True, False], [call.kwargs['exclusive'] for call in slot.call_args_list])
 
 
 if __name__ == '__main__':

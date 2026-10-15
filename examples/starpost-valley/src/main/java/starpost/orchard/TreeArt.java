@@ -10,6 +10,9 @@ import starpost.art.Art;
 import starpost.art.ItemIcons;
 import starpost.art.Tone;
 import starpost.core.Item;
+import starpost.art.AssetFailures;
+import com.openggf.mods.scene.art.SceneArtCache;
+import java.util.List;
 
 /**
  * The trees' and sneakers' pictures, from the ROMs:
@@ -28,6 +31,9 @@ import starpost.core.Item;
  */
 public final class TreeArt {
     private final Art art;
+    private final AssetFailures failures;
+    private final SceneArtCache sprites;
+    public List<AssetFailures.Failure> failures() { return failures.failures(); }
     private SceneImage clump;
     private SceneImage bark;
     private SceneImage palmCrown;
@@ -35,12 +41,13 @@ public final class TreeArt {
     private SceneImage palmSprout;
     private boolean built;
     private com.openggf.mods.scene.SceneSpriteSet splash;
-    private boolean splashTried;
     private final Map<String, SceneImage> pictures = new HashMap<>();
     private final Map<String, SceneImage> icons = new HashMap<>();
 
     TreeArt(Art art) {
         this.art = art;
+        art.requireOpen(); failures = new AssetFailures(art.owner(), art::ticks);
+        sprites = new SceneArtCache(art.s1, 4);
     }
 
     public static String name(String kind) {
@@ -52,35 +59,37 @@ public final class TreeArt {
     }
 
     private void build() {
-        if (built) {
-            return;
+        art.requireOpen();
+        if (!built) {
+            SceneImage ghz = art.kit.blockImage(1);
+            SceneImage crown = ghz.crop(96, 0, 76, 46);
+            SceneImage trunk = ghz.crop(126, 46, 12, 8);
+            SceneImage sprout = trim(ghz.crop(62, 102, 34, 25));
+            palmCrown = crown; palmTrunk = trunk; palmSprout = sprout; built = true;
         }
-        built = true;
-        SceneImage ghz = art.kit.blockImage(1);
-        palmCrown = ghz.crop(96, 0, 76, 46);
-        palmTrunk = ghz.crop(126, 46, 12, 8);
-        palmSprout = trim(ghz.crop(62, 102, 34, 25));
-        try {
-            SceneLevelKit mhz = art.s3k.levelKit(7, 0);              // Mushroom Hill act 1
-            if (mhz != null) {
-                clump = mhz.blockImage(135).crop(0, 61, 64, 56);
-                bark = mhz.blockImage(37).crop(80, 72, 32, 56);
-            }
-        } catch (RuntimeException e) {
-            clump = null;
+        if (clump == null || bark == null) {
+            TreePieces candidate = failures.load("trees:mushroom-hill", () -> {
+                SceneLevelKit mhz = art.s3k.levelKit(7, 0); // Mushroom Hill act 1
+                return mhz == null ? null : new TreePieces(mhz.blockImage(135).crop(0, 61, 64, 56),
+                        mhz.blockImage(37).crop(80, 72, 32, 56));
+            });
+            if (candidate != null) { clump = candidate.clump(); bark = candidate.bark(); }
         }
     }
+    private record TreePieces(SceneImage clump, SceneImage bark) {}
 
     // ------------------------------------------------------------------ the pictures
 
     /** A tree's picture at a growth stage, in a season's colours. */
     public SceneImage picture(String kind, int stage, Tone tone) {
+        art.requireOpen();
         String key = kind + ":" + stage + ":" + tone.season();
         SceneImage image = pictures.get(key);
         if (image == null) {
             build();
             image = tone.apply(raw(kind, stage));
-            pictures.put(key, image);
+            // The authored palm fallback remains visible, but cannot shadow a repaired MHZ kit.
+            if (kind.equals(Orchard.PALM) || clump != null && bark != null) pictures.put(key, image);
         }
         return image;
     }
@@ -260,11 +269,17 @@ public final class TreeArt {
 
     /** Icons for the orchard's items (saplings, the cherry, the sneaker tiers); null for others. */
     public SceneImage icon(Item item) {
+        art.requireOpen();
         String id = item.id();
         if (!Orchard.isTree(id) && !id.equals(Orchard.CHERRY) && !id.endsWith("sneakers") && !id.equals("speed_shoes")) {
             return null;
         }
-        return icons.computeIfAbsent(id, k -> buildIcon(k));
+        SceneImage cached = icons.get(id);
+        if (cached != null) return cached;
+        SceneImage image = buildIcon(id);
+        if (Orchard.isTree(id) && !id.equals(Orchard.PALM) && (clump == null || bark == null)) return null;
+        if (!Orchard.isTree(id) || id.equals(Orchard.PALM) || clump != null && bark != null) icons.put(id, image);
+        return image;
     }
 
     private SceneImage buildIcon(String id) {
@@ -384,16 +399,14 @@ public final class TreeArt {
      * the spray at a Chaos Sneakers farmer's feet on the pond; null when it cannot be decoded.
      */
     public com.openggf.mods.scene.SceneSpriteSet splash() {
-        if (splash == null && !splashTried) {
-            splashTried = true;
-            try {
+        art.requireOpen();
+        if (splash == null) {
+            splash = failures.load("trees:splash", () -> {
                 int[] palette = art.ghzPalette.clone();
                 System.arraycopy(art.s1.palette(0x2400, 48), 0, palette, 16, 48);   // Pal_LZ: lines 2-4
-                splash = art.s1.sprites(com.openggf.mods.scene.RomSpriteRequest.of(0x3040A,
+                return sprites.sprites(com.openggf.mods.scene.RomSpriteRequest.of(0x3040A,
                         com.openggf.mods.scene.RomSpriteRequest.Compression.NEMESIS, 0x14D34, 2), palette);
-            } catch (RuntimeException e) {
-                splash = null;
-            }
+            });
         }
         return splash;
     }

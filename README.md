@@ -14,7 +14,9 @@ disassemblies of titles in the Sonic the Hedgehog series. No copyrighted assets 
 this repository; a legally obtained ROM is required to run the engine.
 
 The engine also aims to provide modern tooling such as a level editor and an open framework for
-modding and customisation. The editor is an experimental, config-gated prototype. The `develop`
+modding and customisation. The experimental [level editor](docs/guide/creating/level-editor.md)
+authors playable levels for all three games with safe projects, isolated playtests
+and host-validated exports. Open it from title Tools; gameplay entry uses the editor debug flag. The `develop`
 branch carries the unpublished Mod API candidate promoted from `next`, documented in the
 [creator handbook](docs/modding/index.md); it is outside the 0.6 release scope.
 
@@ -92,8 +94,11 @@ can both open level select and toggle ring bounds while debug overlays are enabl
 
 | Key | Action |
 |-----|--------|
-| Shift+Tab | Toggle between gameplay and the experimental editor overlay (`debug.flags.editor` must be `true`) |
-| F5 | Restart the playtest from editor mode |
+| Shift+Tab | Enter from stock gameplay with `debug.flags.editor=true`, or return from an editor playtest |
+| F5 | Start a fresh playtest from the project's authored start while editing |
+
+Title **Tools → Editor projects** provides New/Open/Import. See the
+[level editor guide](docs/guide/creating/level-editor.md) for editing, saving and exporting.
 
 ## FAQ
 
@@ -125,7 +130,7 @@ sound driver.
 |------|--------|
 | Sonic the Hedgehog (S1) | Broadest end-to-end coverage: all zones, bosses, special stages, title screen, ending, credits, and demo playback. |
 | Sonic the Hedgehog 2 (S2) | Most complete module by object coverage (122/122 checklist objects) and trace parity. Includes all zones, bosses, special stages, Tails AI, ending, and credits. |
-| Sonic 3 & Knuckles (S3K) | Work in progress. AIZ through LBZ have substantial route coverage, including shipped-ROM collision handling for the AIZ2 end boss, but this is not full parity: route/trace validation remains outstanding for the AIZ miniboss napalm FallingShot and AIZ2 end-boss splash children, while Knuckles' LBZ Big Arm handoff remains inert. |
+| Sonic 3 & Knuckles (S3K) | Work in progress. AIZ through LBZ have substantial route coverage, including shipped-ROM collision handling for the AIZ2 end boss, but this is not full parity: route/trace validation remains outstanding for the AIZ miniboss napalm FallingShot and AIZ2 end-boss splash children, Knuckles' placed Launch Base boss entry, Big Arm carrier handoff and native ending are implemented, while cold Launch Base traversal and broader native presentation remain unqualified. |
 
 Work is ongoing across all three games. See `CHANGELOG.md` for detailed, per-merge history.
 
@@ -239,11 +244,13 @@ next to the launcher.
 
 `develop` now carries the post-0.6 work previously staged on `next`, including
 widescreen presentation, further S3K campaign coverage, and existing modding,
-racing, editor, loading, and audio foundations. The Mod API is still an
+racing, loading and audio foundations. The editor supports all-game project
+authoring, safe saves, isolated playtesting and usable export, with a
+controller-first interface drawn around the level. The Mod API is still an
 unpublished candidate. [0.7's roadmap](docs/project/v0.7-roadmap.md) prioritizes
 complete campaigns before the feature/API publication gates in 0.8.
 
-See the [0.7 changelog](CHANGELOG.0.7.md),
+See the [0.7 changelog](CHANGELOG.0.7.prerelease.md),
 [development summary](docs/changelog/v0.7-release-summary.md), and
 [trace scope](docs/status/trace-scope-release-7.md).
 `next` is now `0.8.prerelease`; the published 0.6 snapshot is retained on
@@ -308,7 +315,7 @@ in [the 0.6 changelog](CHANGELOG.0.6.md).
   presentation pipeline and can emit DNxHR SQ video with lossless 24-bit PCM
   for DaVinci Resolve on Linux.
 
-- **Development and validation tools:** level-editor foundations, ROM offset
+- **Development and validation tools:** all-game level projects and native playtesting, ROM offset
   and compression tools, headless gameplay tests, trace replay, visual/audio
   regression checks, and release/architecture guards. Trace recording, probing
   and publication live in [`OpenGGF/TraceChaser`](https://github.com/OpenGGF/TraceChaser),
@@ -340,14 +347,11 @@ Angel Island Act 1 no longer fails to load when its intro tilemap pre-build
 cannot read the ROM; the pre-build is a cache warm the terrain-swap frame
 already knows how to do without.
 
-Continuous integration has been cut back to a fast per-push check. A push runs
-only the `smoke` profile -- the ordinary suite minus ten exhaustive oracle
-sweeps that were most of its runtime -- so it finishes in minutes instead of
-half an hour. The full suite, the structural guards and the trace replay
-fixtures now run on pull requests and on demand, with no scheduled run, so a
-regression in the guards or the excluded sweeps is caught by a contributor
-running them locally rather than by CI. Release validation is unchanged and
-still runs everything. Known-red Sonic 2 CPZ2 and
+Routine development and CI use the bounded `smoke` suite, excluding exhaustive
+oracle sweeps. Plain Maven and local category runs use it by default; pull requests
+and manual CI pair it with separate structural guards. Integration pushes retain
+the 30-minute quiet period. The full suite is reserved for preparing new public
+releases and is selected explicitly by the Release workflow. Known-red Sonic 2 CPZ2 and
 Sonic 3 & Knuckles trace/run-chain frontiers are documented 0.6 limitations;
 finishing those parity campaigns is deferred to the next release. A frontier
 still returns to the 0.6 fix queue when it exposes a confirmed release-impacting

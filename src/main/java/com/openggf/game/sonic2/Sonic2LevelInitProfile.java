@@ -210,7 +210,7 @@ public class Sonic2LevelInitProfile extends AbstractLevelInitProfile {
     }
 
     private void queueInitialPlcs(LevelLoadContext ctx) {
-        if (ctx.getLevel() == null) {
+        if (ctx.getLevel() == null || !com.openggf.game.resources.NativeLevelPlcPolicy.allows(ctx)) {
             return;
         }
         Sonic2PlcService plcService = GameServices.module().getGameService(Sonic2PlcService.class);
@@ -246,6 +246,7 @@ public class Sonic2LevelInitProfile extends AbstractLevelInitProfile {
 
     @Override
     public void completeInitialPresentationPlcs() {
+        if (!com.openggf.game.resources.NativeLevelPlcPolicy.allowsCurrent()) return;
         Sonic2PlcService plcService =
                 GameServices.module().getGameService(Sonic2PlcService.class);
         if (plcService != null

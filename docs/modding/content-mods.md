@@ -5,7 +5,7 @@ the [handbook index](index.md), which orders the six quickstarts by effort and l
 the format, trust, identity, troubleshooting, and sample references.
 
 OpenGGF Mod API 0.7 supports title-loaded music packs, code-backed objects,
-baked art, complete Sonic 2 and Sonic 3&K zones, playable characters, and no-ROM
+baked art, flat Sonic 1 levels, Sonic 2 and bounded Sonic 3&K zones, playable characters, and no-ROM
 standalone games. Mods are discovered from the
 process `mods/` directory at boot and when Apply is chosen at the title; executable mods must be enabled and granted
 trust in the Mod Manager before they run.
@@ -108,6 +108,26 @@ The generated badnik demonstrates the minimum runtime contracts:
   (the older `RewindRecreatable` expert contract remains available); and
 - keep mutable gameplay state in instance fields that the rewind schema can capture.
 
+For live terrain, `services().floorSurface(x, y, layer, path)` delegates to the native
+floor sensor on an explicit foreground/background collision layer and primary/secondary
+path. Coordinates belong to the selected layer; this query does not apply a combined
+background-plane transform. `findFloorSurface` accepts bounded probe-origin ranges
+(0–256 pixels above, 0–512 below), checking at most 49 origins at the native 16-pixel
+cadence. Test `foundSurface()` before using the immutable result's surface Y, signed
+distance or flip-adjusted angle. It retains no live level/query authority.
+
+`DestructionConfig` keeps its legacy six-argument constructor. `withSound(SoundCue)`
+selects a namespaced or semantic cue and explicit `BEFORE_LATCH`/`AFTER_EFFECTS` order.
+`deferredAnimalWithoutPopup` uses the existing shared animal owner with no deferred
+points factory; S1's separate ExplosionItem recipe retains its own animal semantics.
+The common sequence still owns score, respawn policy and replacement-slot transfer.
+
+`SpringBounceHelper` handles bounded authored proximity and native launch state.
+A custom native object can call `services().detachCurrentSolidContact(player)` to
+release this callback's admitted object/player checkpoint before a launch. Foreign,
+missing or inactive participants are rejected; the object comes from the engine
+execution context. Stock spring subclasses keep their own ROM geometry and choreography.
+
 Do not add mutable static gameplay state, uncaptured object references, or immutable
 `final` scalar state whose runtime value changes. `ggfmod validate` checks compiled
 classes for these object, service, and rewind rules before the engine creates an
@@ -204,13 +224,29 @@ Once materialized, the sheet is served through the normal object-art path: call
 `getRenderer("<mod-id>:bird")` from object code exactly as you would for
 `registerObjectArt`.
 
+## Add a flat Sonic 1 level
+
+Use the [level editor project workflow](../guide/creating/level-editor.md) to
+create a blank ROM-derived library, clone a supported layout, or import an export.
+Save the editable source as `.ogfproject`, then export `ModLevelDefinition` v1
+with `blockGridSide: 16`. The same registration/conversion ownership rules below
+apply; the selected S1 host reconstructs native object flags and object-backed
+rings from canonical entries.
+
+The S1 adapter validates independently usable stock objects and requires matching
+primary/secondary collision-profile assignments. It supplies flat scroll without
+stock zone events. Native loop collision remaps and factories that depend on a
+real stock zone fail explicitly; use a blank library or an owned object factory
+instead. See the [format reference](formats/level-definition.md) for the portable
+contract.
+
 ## Add a Sonic 2 zone
 
-The format-v1 additive-zone path is intentionally Sonic 2 only; S3K uses format v2
-as described in the next section. In the editor, start from a level, make the desired
-changes, and use the full-level export into the mod project's source tree. A full
-export is different from the editor's sidecar/delta save: the
-export directory must contain these required files:
+Sonic 2 uses format v1 with 8×8 blocks; the S1 flat host also uses v1 with
+16×16 blocks. S3K uses format v2 as described below. In the editor, keep a complete
+`.ogfproject` as the editable source and export a checked directory into the mod
+project's source tree. A full export is distinct from a project save and legacy
+sidecars. The v1 export directory contains these required files:
 
 ```text
 level.json
@@ -421,15 +457,21 @@ For streamed stock-music replacement metadata, see [Music packs](music-packs.md)
 
 Return a stable `GameplayFrameController` from a patch's module and register that
 same controller through `rewindAdapters()` if its mode state is rewindable.
-The host invokes `beforeTick(CourseControl, LogicalInputSnapshot)` once per mode
-row: `false` holds course physics, objects, clocks, animation and PLC work; `true`
-admits one native step with neutral player input. `afterTick` receives whether
-that step ran. Keep aim, menus and feedback in the controller; keep physics in
+The host invokes `beforeFrame(CourseControl, LogicalInputSnapshot)` once per mode
+row. Return `ADVANCE_NATIVE_INPUT` for the ordinary native step with supplied P1/P2
+logical input and the existing gameplay policy filters, `ADVANCE_CONTROLLED` for a
+native step with neutral input, or `HOLD` to freeze world physics, objects, clocks,
+animation and ordinary PLC work. The result must be non-null. The default maps the
+existing `beforeTick` result (`true`/`false`) to controlled advance/hold, so existing
+controllers, including Golf, keep their neutral-input behavior. `afterTick` receives
+whether a world step ran. Keep aim, menus and feedback in the controller; keep physics in
 native gameplay. Stock modules return no controller and retain their normal path.
 Initial setup rows are excluded from movie/history input; subsequent HOLD rows
 are included. Released native title-card text continues its presentation exit,
 including its normal control-lock ownership, on controlled rows. Pending entry
-music also retains its native presentation countdown. `presentationReady()`
+music also retains its native presentation countdown. Native destination fades remain
+host-owned presentation work while the source world is held. Modal `LevelInputOverlay`
+input is dispatched before configured host pause. `presentationReady()`
 waits for the entry fade and title overlay to finish; capture the first reusable
 course checkpoint after that boundary so rollback cannot bring an entry card back.
 `advanceEntryPresentation()` returns whether it serviced an active fade on this
@@ -527,6 +569,12 @@ so a shot's ledger can survive course rollback; creator key prefixes do not gran
 exemption. Full debug rewind restores the controller too. Course replacement
 invalidates speculative future history and preserves past; actual act loads reset
 history. Checkpoints are in-process handles, not a network format.
+
+`CourseControl.objectServices()` supplies the current level's injected services during
+this callback row. Resolve current objects through it on each row rather than retaining
+an object across rewind recreation. Its handle is revoked after `afterTick`, callback
+failure, level replacement or session teardown. Creator object creation retains the
+verified callback owner; creator-supplied identifiers never establish authority.
 
 `CourseControl.playerState()` returns centre coordinates, native 8.8 speeds,
 registered character identity and support/camera observations. `launchRolling`
@@ -676,8 +724,9 @@ dependency, ignore absent/disabled neighbours, and do not disable optional
 neighbours when a callback fails. Actual dependencies still determine eligibility
 and dependent fault closure. Self references, duplicates, unknown fields and
 unbounded declarations are rejected. Ordering cycles block their participants;
-explicit conflicts block both enabled participants. Diagnostics sort participants
-so scan order does not change the reason.
+explicit conflicts warn both enabled participants with `MOD_DECLARED_CONFLICT`.
+Author declarations are suspected incompatibilities, not proof that play fails.
+Diagnostics sort participants so scan order does not change the reason.
 
 The default singular policies use the later application for a startup scene,
 required display width, stock art key, stock music id or fresh-game destination,
@@ -689,8 +738,9 @@ Zone runtime facilities replace only that owner's selected act lifetime.
 An exclusive claim is accepted only when that owner's successful transaction
 actually publishes the named target. Unused claims fail the transaction. When a
 successfully contributed singular target has multiple owners and any claims
-exclusivity, all conflicting participants and their required dependents are
-rejected, instead of choosing a winner. Exclusive keys currently cover
+exclusivity, `MOD_EXCLUSIVE_OVERLAP` warns the participants while the ordinary
+later-wins policy remains in effect. Valid overlap alone does not reject the
+participants or their required dependents. Exclusive keys currently cover
 `startup-scene`, `display-width`, `game-start`, `art:<stock-key>` and
 `audio:<nonnegative-stock-id>`; unknown kinds are rejected. The engine's immutable
 registration report lists scoped winners, shadowed owners, additive targets and
@@ -700,8 +750,13 @@ until their lifetime factories run, rather than inventing service contracts.
 Audio is reported separately by `PreparedModMusic.overrideReport()` after actual
 decoding and publication, with winner and shadowed track identities. Failed audio
 preparation excludes that owner's tracks and retains the previous healthy override.
-Exclusive stock data collisions are rejected in catalog eligibility before audio
-preparation; compiled claims are checked before registration publication.
+Stock data claim validity is checked in catalog eligibility before audio preparation;
+compiled claim validity is checked before registration publication. The Mod Manager
+combines declaration warnings with published contribution overlap, attributed
+callback evidence and verified preparation blockers. Blockers separately identify
+the content that cannot be prepared and other participants supplying context.
+See [compatibility evidence](installing-mods.md#compatibility-evidence) for the
+player-facing levels and their observation limits.
 
 ## Advanced module session controls
 

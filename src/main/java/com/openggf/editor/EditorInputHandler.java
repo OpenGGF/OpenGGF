@@ -46,6 +46,18 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_Z;
 import static org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT;
 import static org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT;
 public final class EditorInputHandler {
+    /**
+     * A host front end that sees each editor tick first, such as an {@link EditorWindowChrome}.
+     * {@link #update} returns true when it owned the whole tick.
+     */
+    public interface FrontEnd {
+        boolean update(InputHandler input);
+        void finishPendingEdits();
+    }
+
+    private FrontEnd frontEnd;
+    private boolean externalChrome;
+
     public enum Action {
         DESCEND,
         ASCEND,
@@ -74,7 +86,18 @@ public final class EditorInputHandler {
         BROWSE_LIBRARY_ROW_NEXT,
         BROWSE_LIBRARY_ROW_PREVIOUS,
         BROWSE_LIBRARY_PAGE_NEXT,
-        BROWSE_LIBRARY_PAGE_PREVIOUS
+        BROWSE_LIBRARY_PAGE_PREVIOUS,
+        ERASE_SELECTION,
+        TOGGLE_H_FLIP,
+        TOGGLE_V_FLIP,
+        CYCLE_PATTERN_PALETTE,
+        TOGGLE_PATTERN_PRIORITY,
+        INCREMENT_SELECTED_SUBTYPE,
+        DECREMENT_SELECTED_SUBTYPE,
+        TOGGLE_SELECTED_RESPAWN,
+        TOGGLE_BRUSH_H_FLIP,
+        TOGGLE_BRUSH_V_FLIP,
+        TOGGLE_BRUSH_RESPAWN
     }
 
     private static final int WORLD_MOVE_SPEED = 3;
@@ -85,6 +108,8 @@ public final class EditorInputHandler {
     private final Runnable saveAction;
     private final Runnable exportAction;
     private DragStroke activeStroke;
+    private double previousMouseX = Double.NaN;
+    private double previousMouseY = Double.NaN;
 
     public EditorInputHandler(LevelEditorController controller) {
         this(controller, () -> null, () -> null, () -> {});
@@ -113,10 +138,16 @@ public final class EditorInputHandler {
         this.graphicsSupplier = Objects.requireNonNull(graphicsSupplier, "graphicsSupplier");
         this.saveAction = Objects.requireNonNull(saveAction, "saveAction");
         this.exportAction = Objects.requireNonNull(exportAction, "exportAction");
+        controller.setPendingEditsFinisher(this::finishPendingEdits);
     }
 
     public void update(InputHandler inputHandler) {
         Objects.requireNonNull(inputHandler, "inputHandler");
+        if (frontEnd != null && frontEnd.update(inputHandler)) {
+            finishActiveStroke();
+            return;
+        }
+        if (EditorCommandPalette.forController(controller).isOpen()) finishPendingEdits();
         if (EditorCommandPalette.forController(controller).update(inputHandler, this::handleAction)) {
             finishActiveStroke();
             return;
@@ -208,9 +239,14 @@ public final class EditorInputHandler {
         if (rawModeCycle || logical.menuStart()) {
             handleAction(Action.CYCLE_SPAWN_EDIT_MODE);
         }
-        if (rawDelete && !controller.isSpawnEditing()) {
-            handleAction(Action.DELETE_SPAWN);
-        }
+        if (rawDelete && !controller.isSpawnEditing()) handleAction(Action.ERASE_SELECTION);
+        if(inputHandler.isKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_H))handleAction(Action.TOGGLE_H_FLIP);
+        if(inputHandler.isKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_J))handleAction(Action.TOGGLE_V_FLIP);
+        if(inputHandler.isKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_G))handleAction(Action.CYCLE_PATTERN_PALETTE);
+        if(inputHandler.isKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_T))handleAction(Action.TOGGLE_PATTERN_PRIORITY);
+        if(inputHandler.isKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_EQUAL))handleAction(Action.INCREMENT_SELECTED_SUBTYPE);
+        if(inputHandler.isKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_MINUS))handleAction(Action.DECREMENT_SELECTED_SUBTYPE);
+        if(inputHandler.isKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_R))handleAction(Action.TOGGLE_SELECTED_RESPAWN);
         if (!capturesText&&inputHandler.isKeyPressed(GLFW_KEY_M)) {
             handleAction(Action.MOVE_SELECTED_SPAWN_TO_CURSOR);
         }
@@ -262,6 +298,8 @@ public final class EditorInputHandler {
 
     public void handleAction(Action action) {
         Objects.requireNonNull(action, "action");
+        finishPendingEdits();
+        try {
         switch (action) {
             case DESCEND -> controller.descend();
             case ASCEND -> controller.ascend();
@@ -292,8 +330,35 @@ public final class EditorInputHandler {
             case BROWSE_LIBRARY_ROW_PREVIOUS -> controller.libraryBrowser().move2d(0, -1);
             case BROWSE_LIBRARY_PAGE_NEXT -> controller.libraryBrowser().page(1);
             case BROWSE_LIBRARY_PAGE_PREVIOUS -> controller.libraryBrowser().page(-1);
+            case ERASE_SELECTION -> controller.eraseSelection();
+            case TOGGLE_H_FLIP -> {if(controller.isSpawnEditing())controller.toggleSelectedSpawnFlag(1);else controller.toggleDescriptorHFlip();}
+            case TOGGLE_V_FLIP -> {if(controller.isSpawnEditing())controller.toggleSelectedSpawnFlag(2);else controller.toggleDescriptorVFlip();}
+            case CYCLE_PATTERN_PALETTE -> controller.cyclePatternPalette();
+            case TOGGLE_PATTERN_PRIORITY -> controller.togglePatternPriority();
+            case INCREMENT_SELECTED_SUBTYPE -> controller.adjustSelectedSpawnSubtype(1);
+            case DECREMENT_SELECTED_SUBTYPE -> controller.adjustSelectedSpawnSubtype(-1);
+            case TOGGLE_SELECTED_RESPAWN -> controller.toggleSelectedSpawnRespawn();
+            case TOGGLE_BRUSH_H_FLIP -> controller.objectPalette().toggleRenderFlag(1);
+            case TOGGLE_BRUSH_V_FLIP -> controller.objectPalette().toggleRenderFlag(2);
+            case TOGGLE_BRUSH_RESPAWN -> controller.objectPalette().toggleRespawnTracked();
+        }
+        } catch (IllegalArgumentException | IllegalStateException failure) {
+            controller.setStatus(failure.getMessage()==null?failure.getClass().getSimpleName():failure.getMessage());
         }
     }
+
+    public void finishPendingEdits() {
+        finishActiveStroke();
+        if (frontEnd != null) frontEnd.finishPendingEdits();
+    }
+
+    public void setFrontEnd(FrontEnd frontEnd) { this.frontEnd = frontEnd; }
+
+    /**
+     * True while window-resolution chrome draws the panels: the logical-pixel toolbar, library
+     * and focused-pane hit regions are then absent, so the whole viewport is world canvas.
+     */
+    public void setExternalChrome(boolean externalChrome) { this.externalChrome = externalChrome; }
 
     public void finishActiveStroke() {
         if (activeStroke == null) {
@@ -317,65 +382,87 @@ public final class EditorInputHandler {
     }
 
     private void handleMouseInput(InputHandler inputHandler) {
-        if (!inputHandler.hasMouseInputSeen()) {
-            return;
-        }
+        boolean leftDown = inputHandler.isMouseButtonDown(GLFW_MOUSE_BUTTON_LEFT);
+        if (!leftDown) finishActiveStroke();
+        if (!inputHandler.hasMouseInputSeen()) return;
         MutableLevel level = controller.currentLevel();
         Camera camera = cameraSupplier.get();
         GraphicsManager graphics = graphicsSupplier.get();
-        if (level == null || camera == null || graphics == null) {
+        if (level == null || camera == null || graphics == null) return;
+        double mouseX = inputHandler.getMouseX(), mouseY = inputHandler.getMouseY();
+        boolean moved = mouseX != previousMouseX || mouseY != previousMouseY;
+        previousMouseX = mouseX; previousMouseY = mouseY;
+        EditorMouseTransform.Result hover = EditorMouseTransform.toWorldTile(inputHandler,camera,graphics,level);
+        if (!hover.inViewport()) return;
+        var layout = new com.openggf.editor.render.EditorUiLayout(graphics.getProjectionWidth(),
+                Math.max(224,(int)graphics.getScreenHeight()));
+        int[] point=EditorMouseTransform.logicalPoint(inputHandler,graphics);
+        int x=point[0],y=point[1];
+        EditorFocusRegion hit = externalChrome ? EditorFocusRegion.WORLD_CANVAS : layout.hit(controller,x,y);
+        boolean click = inputHandler.isMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT);
+        boolean pick = inputHandler.isMouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT);
+        if (hit == EditorFocusRegion.TOOLBAR || hit == EditorFocusRegion.COMMAND_STRIP) {
+            if (click) EditorCommandPalette.forController(controller).open();
             return;
         }
-
-        EditorMouseTransform.Result hover = EditorMouseTransform.toWorldTile(inputHandler, camera, graphics, level);
-        if (hover.inViewport()) {
-            controller.setWorldCursor(new com.openggf.game.session.EditorCursorState(hover.worldX(), hover.worldY()));
-        }
-
-        if (inputHandler.isMouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT) && hover.inViewport()) {
-            controller.performEyedrop();
-        }
-
-        if (controller.isSpawnEditing()) {
-            if (inputHandler.isMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT) && hover.inViewport()) {
-                controller.placeSpawnAtCursor();
+        if (controller.isLibraryBrowserFocused() && hit == layout.libraryRegion(controller)) {
+            if (click && layout.libraryGrid().bounds().contains(x,y)) {
+                var grid = layout.libraryGrid();
+                int pageStart = controller.libraryBrowser().cursor()/9*9;
+                controller.libraryBrowser().selectCursor(pageStart+grid.cellY(y)*3+grid.cellX(x));
+                controller.selectLibraryEntry();
             }
             return;
         }
-
-        boolean leftDown = inputHandler.isMouseButtonDown(GLFW_MOUSE_BUTTON_LEFT);
-        if (leftDown && activeStroke == null && hover.inViewport()) {
-            activeStroke = new DragStroke(controller.activeLayer());
+        if (controller.depth() != EditorHierarchyDepth.WORLD) {
+            if (externalChrome) return;
+            var grid=layout.focusedGrid(controller.depth(),controller.depth()==EditorHierarchyDepth.BLOCK
+                    ? controller.blockGridSide():controller.chunkGridSide());
+            if ((click || pick) && grid.bounds().contains(x,y)) {
+                controller.focusRegion(controller.depth()==EditorHierarchyDepth.BLOCK
+                        ? EditorFocusRegion.BLOCK_PANE:EditorFocusRegion.CHUNK_PANE);
+                controller.selectActiveCell(grid.cellX(x),grid.cellY(y));
+                if (pick) controller.performEyedrop(); else handleAction(Action.APPLY_PRIMARY_ACTION);
+            }
+            return;
         }
-        if (leftDown && activeStroke != null && hover.inViewport()) {
-            activeStroke.record(level, hover.tileX(), hover.tileY(), controller.selectedBlockIndex());
+        if (moved || click || pick || activeStroke != null)
+            controller.setPointerWorldCursor(new com.openggf.game.session.EditorCursorState(hover.worldX(),hover.worldY()));
+        if ((click || pick)&&controller.focusRegion()!=EditorFocusRegion.WORLD_CANVAS) controller.focusRegion(EditorFocusRegion.WORLD_CANVAS);
+        if (pick) controller.performEyedrop();
+        if (controller.isSpawnEditing()) {
+            if (click) handleAction(Action.APPLY_PRIMARY_ACTION);
+            return;
         }
-        if (!leftDown && activeStroke != null) {
-            finishActiveStroke();
-        }
+        if (click && activeStroke == null) activeStroke = new DragStroke(level,controller.activeLayer());
+        if (leftDown && activeStroke != null)
+            activeStroke.record(level,hover.tileX(),hover.tileY(),controller.selectedBlockIndex());
     }
 
     private static final class DragStroke {
         private final int layer;
         private final Map<CellKey, StrokeCommand.CellDelta> deltas = new LinkedHashMap<>();
 
-        private DragStroke(int layer) {
+        private final MutableLevel owner;
+
+        private DragStroke(MutableLevel owner, int layer) {
+            this.owner = owner;
             this.layer = layer;
         }
 
         private void record(MutableLevel level, int x, int y, Integer selectedBlock) {
-            if (selectedBlock == null) {
+            if (level != owner || selectedBlock == null) {
                 return;
             }
             CellKey key = new CellKey(layer, x, y);
             deltas.computeIfAbsent(key, ignored -> {
                 int before = Byte.toUnsignedInt(level.getMap().getValue(layer, x, y));
-                return new StrokeCommand.CellDelta(layer, x, y, before, selectedBlock);
+                return before == selectedBlock ? null : new StrokeCommand.CellDelta(layer, x, y, before, selectedBlock);
             });
         }
 
         private StrokeCommand toCommand(MutableLevel level) {
-            return new StrokeCommand(level, java.util.List.copyOf(deltas.values()));
+            return new StrokeCommand(owner, java.util.List.copyOf(deltas.values()));
         }
     }
 

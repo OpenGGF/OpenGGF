@@ -3,10 +3,13 @@ package com.openggf.game.sonic3k.specialstage;
 import com.openggf.audio.GameMusic;
 import com.openggf.audio.GameSound;
 import com.openggf.game.GameServices;
+import com.openggf.game.sonic3k.difficulty.BlueSphereLayoutPolicy;
+import com.openggf.game.sonic3k.difficulty.S3kDifficultyRules;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.EmeraldRewardKind;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.SpecialStageViewport;
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
 import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
@@ -360,6 +363,15 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
             if (offset + stageData.length <= skCompressed.length) {
                 System.arraycopy(skCompressed, offset, stageData, 0, stageData.length);
             }
+        }
+        // Creator layout services belong to the admitted world, not bootstrap state.
+        var world = SessionManager.getCurrentWorldSession();
+        var module = world == null ? null : world.getGameModule();
+        BlueSphereLayoutPolicy layoutPolicy = module == null ? null
+                : module.getGameService(BlueSphereLayoutPolicy.class);
+        if (layoutPolicy != null) {
+            stageData = S3kDifficultyRules.blueSphereLayout(stageData,
+                    layoutPolicy.transformLayout(currentStage, stageData.clone()));
         }
         int[] params = grid.loadFromLayoutData(stageData);
         player.initialize(params[0], params[1], params[2], false);

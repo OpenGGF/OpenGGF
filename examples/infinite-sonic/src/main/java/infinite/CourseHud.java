@@ -163,6 +163,8 @@ public final class CourseHud {
         int height = 26 + Leaderboard.SIZE * 12;
         canvas(services).fill(left, y, width, height, colour(0.04f, 0.06f, 0.2f, 0.7f * alpha));
         glyphs(services, "TOP 10 SCORES", left + 8, y + 6, 2, 1f, 0.82f, 0.19f, alpha);
+        String notice = services.gameService(Leaderboard.class).persistenceNotice();
+        if (notice != null) text(services, notice, 8, services.camera().getHeight() - 12, true, 1);
         for (int i = 0; i < Leaderboard.SIZE; i++) {
             String line = boardLine(i + 1, i < top.size() ? top.get(i) : null);
             glyphs(services, line, left + 8, y + 22 + i * 12, 2, 1f, 1f, 1f, alpha);

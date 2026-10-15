@@ -175,7 +175,16 @@ class TestRemainingRewindTailInventory {
         // Final emerald probes independently; palette cursors are captured by each zone runtime.
         // Final escape scenery adds one scalar/parent-captured recreate owner.
         // SSZ background camera tracker adds one spawn-recreatable scalar owner.
-        return new TailInventory(1316, 1073, 243, 0, buckets);
+        // ICZ's detached swinging-chain link passes the real isolated manager
+        // round-trip; its moving/deferred-delete state also has forward-replay
+        // coverage in TestS3kBadnikChildGraphRewind for both launch directions.
+        // NativeBreakableWallObjectInstance, NativeGhostEncounterObjectInstance and
+        // NativeGustObjectInstance each pass the real isolated ObjectManager round-trip;
+        // their spawn recreation and owned scalar state add three passes, with no bucket growth.
+        // S3kAuthoredGoalInstance adds one isolated pass. Its triggered scalar and
+        // tagged placement also restore/replay through the real ObjectManager in
+        // TestHostObjectKeys.goalRewindPreservesTaggedPlacementAndPreventsDuplicateNativeFinishGraphs.
+        return new TailInventory(1321, 1078, 243, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {

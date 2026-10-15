@@ -69,7 +69,7 @@ public final class JournalMode implements Mode {
             Entry e = planets.get(planetRow);
             Planet current = g.planet();
             survey = current != null && current.key.equals(e.key) ? current : new Planet(e.spec, e.system,
-                    g.art.rom(e.spec.biome.game()).levelKit(e.spec.biome.zone(), e.spec.biome.act()), g.art, false);
+                    g.art.rom(e.spec.biome.game()).levelKit(e.spec.biome.zone(), e.spec.biome.act()), g.art, false, g.generationKey(e.system, e.spec));
             row = 0;
             kind = 0;
         }

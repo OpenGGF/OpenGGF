@@ -577,11 +577,13 @@ class TestSonic3kTitleCardKosQueue {
             return;
         }
         var constructor = field.getType().getDeclaredConstructor(
-                short.class, short.class, List.class,
+                short.class, short.class, int.class, List.class,
                 com.openggf.game.InitialProcessSpritesLifecycle.class);
         constructor.setAccessible(true);
+        var levelState = GameServices.level().getLevelGamestate();
+        int destinationRings = levelState == null ? 0 : levelState.getRings();
         field.set(controller, constructor.newInstance(
-                (short) 0, (short) 0, List.of(),
+                (short) 0, (short) 0, destinationRings, List.of(),
                 com.openggf.game.InitialProcessSpritesLifecycle.NONE));
     }
 

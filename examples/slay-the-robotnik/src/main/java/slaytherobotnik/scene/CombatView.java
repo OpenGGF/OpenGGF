@@ -77,7 +77,7 @@ final class CombatView implements RunScreen.RoomView {
     private final Map<Creature, Integer> lunge = new IdentityHashMap<>();
     private final Map<Creature, Integer> hurt = new IdentityHashMap<>();
     private final List<Popup> popups = new ArrayList<>();
-    private final Map<Enemy, EnemyVisuals.Box> boxes = new IdentityHashMap<>();
+    private CombatLayout layout;
     private String banner;
     private int bannerTicks;
     private String message;
@@ -197,6 +197,7 @@ final class CombatView implements RunScreen.RoomView {
         snapshotStart();
         bossFight = combat.roomType().equals("Boss");
         entranceLength = enemiesInAt() + (bossFight ? BOSS_NAME_TICKS : 0);
+        prepareLayout(shell);
     }
 
     /** The frame of the entrance by which every enemy has arrived. */
@@ -294,6 +295,15 @@ final class CombatView implements RunScreen.RoomView {
 
     @Override
     public void update(Shell shell, RunScreen screen) {
+        try {
+            updateState(shell, screen);
+        } finally {
+            prepareLayout(shell);
+        }
+    }
+
+    private void updateState(Shell shell, RunScreen screen) {
+        prepareLayout(shell);
         animateReadouts();
         tickEffects();
         easeHand(shell.width());
@@ -332,6 +342,7 @@ final class CombatView implements RunScreen.RoomView {
             return;
         }
         sync();
+        prepareLayout(shell);
         if (combat.hasPendingChoice()) {
             updateChoice(shell);
             return;
@@ -618,7 +629,7 @@ final class CombatView implements RunScreen.RoomView {
      * goes up in a chain of boss explosions instead.
      */
     private void explode(Shell shell, Enemy enemy) {
-        EnemyVisuals.Box box = boxes.get(enemy);
+        EnemyVisuals.Box box = layout.box(enemy);
         float cx = box != null ? box.centerX() : enemyX(Math.max(0, shown.indexOf(enemy)));
         float cy = box != null ? box.y() + box.h() / 2f : feet(Math.round(cx)) - 20;
         boolean boss = combat.roomType().equals("Boss") && enemy.maxHp() >= 250;
@@ -663,7 +674,7 @@ final class CombatView implements RunScreen.RoomView {
         if (c.isPlayer()) {
             return new float[] {PLAYER_X, feet(PLAYER_X) - 48};
         }
-        EnemyVisuals.Box box = boxes.get(c);
+        EnemyVisuals.Box box = c instanceof Enemy enemy ? layout.box(enemy) : null;
         if (box == null) {
             int i = shown.indexOf(c);
             return new float[] {enemyX(i < 0 ? 0 : i), feet(enemyX(i < 0 ? 0 : i)) - 40};
@@ -693,7 +704,7 @@ final class CombatView implements RunScreen.RoomView {
         if (selected != null || targetingPotion >= 0) {
             for (int i = 0; i < shown.size(); i++) {
                 Enemy e = shown.get(i);
-                EnemyVisuals.Box box = boxes.get(e);
+                EnemyVisuals.Box box = layout.box(e);
                 if (e.isActive() && box != null) {
                     spots.add("enemy" + i, box.x(), box.y(), box.w(), box.h());
                 }
@@ -933,11 +944,10 @@ final class CombatView implements RunScreen.RoomView {
         int w = shell.width();
         int h = shell.height();
         int shake = shell.shakeOffset();
-        stage = LevelStages.draw(shell, c, GROUND);
+        LevelStages.draw(shell, c, layout.stage());
         // Shade the ground behind the hand so the cards and counters read over the level.
         Gfx.gradient(c, 0, HAND_Y - 20, w, h - HAND_Y + 20, 0x00000010, 0xA0000010);
         drawPlayer(shell, screen, c, shake);
-        boxes.clear();
         for (int i = 0; i < shown.size(); i++) {
             drawEnemy(shell, screen, c, shown.get(i), i, shake);
         }
@@ -1056,22 +1066,10 @@ final class CombatView implements RunScreen.RoomView {
             f = 1f;
         }
         int ground = feet(enemyX(index));
-        float in = arrival(index);
-        if (in < 1f) {
-            // Arriving: a boss falls in from above, gathering speed until it lands; everything
-            // else slides in from the right, slowing to its place.
-            if (bossFight) {
-                float fall = 1f - (0.35f * in + 0.65f * in * in); // moving at once, faster as it lands
-                EnemyVisuals.draw(shell, c, enemy, x, Math.round(ground - fall * (ground + 40)), shell.ticks, 0f, 1f);
-            } else {
-                float rest = 1f - Ease.outCubic(in);
-                EnemyVisuals.draw(shell, c, enemy, x + Math.round(rest * (shell.width() + 60 - x)), ground,
-                        shell.ticks + index * 17L, 0f, 1f);
-            }
-            return;
-        }
-        EnemyVisuals.Box box = EnemyVisuals.draw(shell, c, enemy, x, ground, shell.ticks + index * 17L, f, alpha);
-        boxes.put(enemy, box);
+        EnemyVisuals.Pose pose = layout.poses().get(enemy);
+        if (pose == null) return;
+        EnemyVisuals.Box box = EnemyVisuals.draw(shell, c, pose);
+        if (arrival(index) < 1f) return;
         if (deathTicks != null) {
             return;
         }
@@ -1178,8 +1176,6 @@ final class CombatView implements RunScreen.RoomView {
     }
 
     private RunScreen tooltipScreen;
-    /** Where this fight stands in the act's level, from the last draw; null before it or without ROM art. */
-    private LevelStages.Placement stage;
 
     /** The energy the emerald last showed, and its pulse when that changed (grows on a gain, dips on a spend). */
     private static final int ENERGY_PULSE = 12;
@@ -1226,7 +1222,40 @@ final class CombatView implements RunScreen.RoomView {
 
     /** The screen row a creature at {@code screenX} stands on. */
     private int feet(int screenX) {
-        return LevelStages.feet(stage, screenX, GROUND);
+        return LevelStages.feet(layout.stage(), screenX, GROUND);
+    }
+
+    /** Prepares picture and hit geometry in logic, including entry, lunge and shake motion. */
+    private void prepareLayout(Shell shell) {
+        LevelStages.Placement stage = LevelStages.place(shell, GROUND);
+        Map<Enemy, EnemyVisuals.Pose> poses = new IdentityHashMap<>();
+        for (int index = 0; index < shown.size(); index++) {
+            Enemy enemy = shown.get(index);
+            Integer death = dying.get(enemy);
+            float alpha = death == null ? 1f : Math.max(0f, 1f - death / 18f);
+            if (alpha <= 0f) continue;
+            int lunging = lunge.getOrDefault(enemy, 0);
+            float offset = lunging > 0 ? -(float) Math.sin((14 - lunging) / 14f * Math.PI) * 30 : 0;
+            int x = enemyX(index) + Math.round(offset) + shell.shakeOffset();
+            int ground = LevelStages.feet(stage, enemyX(index), GROUND);
+            float flashValue = death == null ? flash.getOrDefault(enemy, 0) / 6f : 1f;
+            long ticks = shell.ticks + index * 17L;
+            float arriving = arrival(index);
+            if (arriving < 1f) {
+                flashValue = 0f;
+                alpha = 1f;
+                if (bossFight) {
+                    float fall = 1f - (0.35f * arriving + 0.65f * arriving * arriving);
+                    ground = Math.round(ground - fall * (ground + 40));
+                    ticks = shell.ticks;
+                } else {
+                    float rest = 1f - Ease.outCubic(arriving);
+                    x += Math.round(rest * (shell.width() + 60 - x));
+                }
+            }
+            poses.put(enemy, EnemyVisuals.prepare(shell, enemy, x, ground, ticks, flashValue, alpha));
+        }
+        layout = new CombatLayout(stage, poses);
     }
 
     private void tooltipPower(Shell shell, Power power, int x, int y) {

@@ -8,6 +8,8 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.difficulty.AizMinibossAttackPolicy;
+import com.openggf.game.sonic3k.difficulty.S3kDifficultyRules;
 import com.openggf.game.sonic3k.events.S3kAizEventWriteSupport;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager;
@@ -119,6 +121,8 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
     private boolean levelEndUnlockStarted;
     private boolean levelEndSizeChangeStarted;
     private boolean levelEndControlPollDeferred;
+    /** Captured with this boss; a new spawn/respawn owns no preceding attack. */
+    private int difficultyFollowupTimer = -1;
 
     /** Stagger explosion controller for boss defeat (ROM: Child6_CreateBossExplosion subtype 0). */
     private S3kBossExplosionController defeatExplosionController;
@@ -163,6 +167,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
         levelEndUnlockStarted = false;
         levelEndSizeChangeStarted = false;
         defeatExplosionController = null;
+        difficultyFollowupTimer = -1;
     }
 
     @Override
@@ -235,6 +240,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
 
         if (state.hitCount <= 0) {
             state.hitCount = 0;
+            difficultyFollowupTimer = -1;
             // ROM loc_68F62 enters the defeat branch from the boss object's
             // own collision_property poll after the fatal touch response has
             // cleared collision_flags. The parent remains live for the
@@ -253,6 +259,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
 
     @Override
     protected void onDefeatStarted() {
+        difficultyFollowupTimer = -1;
         state.routine = ROUTINE_DEFEATED;
         state.xVel = 0;
         state.yVel = 0;
@@ -296,6 +303,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
     @Override
     protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        updateDifficultyFollowup();
         captureRetainedResultsOwnerSlot();
         maintainArenaCameraLock();
         if (pendingDefeatTimer >= 0) {
@@ -559,6 +567,9 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
      * second pass moves down → restart attack cycle.
      */
     private void onBreathCycleComplete() {
+        if (state.routine == ROUTINE_BREATH) {
+            prepareDifficultyFollowup();
+        }
         // ROM: loc_68B34 — routine=6, wait=$5F, toggle bit 2 of $38
         state.routine = ROUTINE_DESCEND;
         int bits = getCustomFlag(FLAG_PARENT_BITS) ^ PARENT_BIT_ALT_VERTICAL;
@@ -773,6 +784,40 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
         }
     }
 
+    private void prepareDifficultyFollowup() {
+        var module = services().gameModule();
+        AizMinibossAttackPolicy policy = module == null ? null
+                : module.getGameService(AizMinibossAttackPolicy.class);
+        if (policy == null || state.hitCount <= 0 || state.defeated || isDestroyed()) {
+            return;
+        }
+        int delay = S3kDifficultyRules.followupDelayTicks(policy.followupDelayTicks(state.hitCount));
+        if (delay < 0) {
+            return;
+        }
+        difficultyFollowupTimer = delay;
+        // The opted-in cue includes its same-pass child birth and holds the final
+        // ROM pose for the admitted delay. Ordinary barrel flares are unchanged.
+        int warnedBarrels = 0;
+        for (var child : childComponents) {
+            if (child instanceof AizMinibossFlameBarrelChild barrel && !barrel.isDestroyed()
+                    && warnedBarrels++ < 3) {
+                spawnChild(() -> AizMinibossBarrelShotFlareChild.warning(barrel, delay));
+            }
+        }
+        services().playSfx(Sonic3kSfx.FLAMETHROWER_QUIET.id);
+    }
+
+    private void updateDifficultyFollowup() {
+        if (state.hitCount <= 0 || state.defeated || isDestroyed()) {
+            difficultyFollowupTimer = -1;
+        } else if (difficultyFollowupTimer > 0 && --difficultyFollowupTimer == 0) {
+            difficultyFollowupTimer = -1;
+            services().playSfx(Sonic3kSfx.FLAMETHROWER_QUIET.id);
+            spawnBreathFlames();
+        }
+    }
+
     /**
      * Destroy all in-flight attack objects spawned by this boss.
      * ROM: barrel children enter defeat animation; existing shots/flames check parent
@@ -887,6 +932,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
      */
     @Override
     public void onCarriedAcrossSeamlessTransition(int offsetX, int offsetY) {
+        difficultyFollowupTimer = -1;
         for (var child : childComponents) {
             ObjectLifetimeOps.destroyBossChildLatched(child);
         }

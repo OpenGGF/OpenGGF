@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.game.mutators.PlayerFluidContextAccess;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -556,7 +557,7 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
 
         String code = player.getCode();
         if ("tails".equals(code)) {
-            return player.getDoubleJumpFlag() != 0 && !player.isInWater();
+            return player.getDoubleJumpFlag() != 0 && !PlayerFluidContextAccess.movementUnderwater(player);
         }
         if ("knuckles".equals(code)) {
             int flag = player.getDoubleJumpFlag();

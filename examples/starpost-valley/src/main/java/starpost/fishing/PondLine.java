@@ -277,7 +277,7 @@ final class PondLine implements Actor {
 
     private void drawSplash(Shell shell, SceneCanvas canvas, int cx) {
         long age = shell.ticks - splashAt;
-        SceneSpriteSet set = sys.art.splash;
+        SceneSpriteSet set = sys.art.splash();
         if (age < 18 && set != null && set.frameCount() > 0) {
             int frame = Math.min(set.frameCount() - 1, (int) (age / 6));
             canvas.draw(set.frame(age < 6 ? 0 : frame), splashX - cx, splashY + 2, SceneDraw.plain());

@@ -142,6 +142,43 @@ class TestStarpostValleyScene {
         }
     }
 
+    @Test
+    void refusedRealStoragePublishesTheOriginalBedtimeDuringOwnerExit() throws Exception {
+        level = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
+        try (ExampleModHarness harness = ExampleModHarness.build(PROJECT, work.resolve("build"))) {
+            Path saves = work.resolve("saves");
+            harness.open(harness.apply(GameServices.module()), saves, 400, 224);
+            assertTrue(harness.debugJump("new sonic"), "Sonic 1 must be supplied");
+            assertTrue(harness.debugJump("close"));
+            // An owned empty directory prevents atomic file publication without changing host APIs.
+            Path primary = saves.resolve("mods/starpost-valley/valley.sav");
+            java.nio.file.Files.createDirectories(primary);
+            assertTrue(harness.debugJump("sleep"));
+            for (int i = 0; i < 40 && !screen(harness).equals("DayEndScreen"); i++) harness.tick();
+            assertEquals("DayEndScreen", screen(harness));
+            Object shell = shell(harness), game = member(shell, "game");
+            assertTrue((boolean) shell.getClass().getMethod("farmSavePending").invoke(shell));
+            assertTrue(java.nio.file.Files.isDirectory(primary), "the real storage writer refused the checkpoint");
+            var codec = game.getClass().getClassLoader().loadClass("starpost.core.SaveCodec");
+            String accepted = (String) codec.getMethod("encode", game.getClass()).invoke(null, game);
+            Object calendar = member(game, "calendar"), rng = member(game, "rng");
+            Object day = calendar.getClass().getMethod("dayNumber").invoke(calendar);
+            Object random = rng.getClass().getMethod("snapshot").invoke(rng);
+            game.getClass().getField("rings").setInt(game, (int) member(game, "rings") + 7);
+            java.nio.file.Files.delete(primary); // Recover only this fixture's empty directory.
+            harness.host().close();
+            assertTrue(accepted.equals(java.nio.file.Files.readString(primary)), "exit publishes the retained bytes, not mutable daytime state");
+            assertEquals(day, calendar.getClass().getMethod("dayNumber").invoke(calendar));
+            assertEquals(random, rng.getClass().getMethod("snapshot").invoke(rng));
+            assertFalse((boolean) shell.getClass().getMethod("farmSavePending").invoke(shell));
+            Object music = member(shell, "music");
+            var closed = org.junit.jupiter.api.Assertions.assertThrows(java.lang.reflect.InvocationTargetException.class,
+                    () -> music.getClass().getMethod("update").invoke(music));
+            org.junit.jupiter.api.Assertions.assertInstanceOf(IllegalStateException.class, closed.getCause());
+            assertEquals(Map.of(), harness.findings(), "publication failure and exit cleanup stay inside the verified owner");
+        }
+    }
+
     private static Object prepareFarm(ExampleModHarness harness, String farmer, int x, boolean left) throws Exception {
         step(harness, "new " + farmer, 1);
         step(harness, "close", 1);

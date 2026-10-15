@@ -97,6 +97,8 @@ public class IczSwingingPlatformObjectInstance extends AbstractObjectInstance
     private int slideAcceleration;
     private int xSub;
     private int ySub;
+    private boolean chainDetached;
+    private boolean chainVisible = true;
 
     public IczSwingingPlatformObjectInstance(ObjectSpawn spawn) {
         super(spawn, "ICZSwingingPlatform");
@@ -121,6 +123,12 @@ public class IczSwingingPlatformObjectInstance extends AbstractObjectInstance
         if (isDestroyed()) {
             return;
         }
+        if (chainDetached) {
+            // The chain's Go_Delete_Sprite_2 dispatch still falls through
+            // Child_Draw_Sprite2. Its installed Delete_Current_Sprite runs on
+            // this following pass, when the falling links begin moving.
+            chainVisible = false;
+        }
 
         switch (phase) {
             case SWING_PENDING -> phase = Phase.SWINGING;
@@ -137,8 +145,10 @@ public class IczSwingingPlatformObjectInstance extends AbstractObjectInstance
         if (xFlip) {
             swingVelocity = sign16(swingVelocity + SWING_ACCEL);
             angleAccumulator = sign16(angleAccumulator + swingVelocity);
-            if (releaseOnSwing && angleAccumulator <= -RELEASE_LIMIT
-                    && Math.abs(swingVelocity) >= RELEASE_MIN_SPEED) {
+            // loc_8ADE6 uses unsigned word comparisons, including on the
+            // negative velocity: bhs does not compare its absolute magnitude.
+            if (releaseOnSwing && (angleAccumulator & 0xFFFF) <= (-RELEASE_LIMIT & 0xFFFF)
+                    && (swingVelocity & 0xFFFF) >= RELEASE_MIN_SPEED) {
                 releaseFromChain();
                 return;
             }
@@ -155,8 +165,10 @@ public class IczSwingingPlatformObjectInstance extends AbstractObjectInstance
 
         swingVelocity = sign16(swingVelocity - SWING_ACCEL);
         angleAccumulator = sign16(angleAccumulator + swingVelocity);
-        if (releaseOnSwing && angleAccumulator >= RELEASE_LIMIT
-                && swingVelocity >= RELEASE_MIN_SPEED) {
+        // loc_8AD5C has the same unsigned velocity test. A positive low-speed
+        // outbound swing can detach when its velocity first turns negative.
+        if (releaseOnSwing && (angleAccumulator & 0xFFFF) >= RELEASE_LIMIT
+                && (swingVelocity & 0xFFFF) >= RELEASE_MIN_SPEED) {
             releaseFromChain();
             return;
         }
@@ -194,6 +206,20 @@ public class IczSwingingPlatformObjectInstance extends AbstractObjectInstance
         phase = Phase.FALLING;
         xVel = xFlip ? -RELEASE_X_VELOCITY : RELEASE_X_VELOCITY;
         yVel = RELEASE_Y_VELOCITY;
+        // loc_8AD9C sets parent bit 2. The later chain-slot sub_8B114 replaces
+        // the suspended multisprite with ChildObjDat_8B178's falling links.
+        chainDetached = true;
+        for (int ordinal = 0; ordinal < 8; ordinal++) {
+            int linkOrdinal = ordinal;
+            // byte_8AF96 starts with sub9_x_pos, outside the seven initialized
+            // sub2..sub8 links. FixBugs=0 leaves that source at zero. The
+            // remaining children read the seven links after sub_8AFA2's final
+            // position refresh; the anchor itself disappears with the parent.
+            int linkX = ordinal == 0 ? 0 : chainX[ordinal - 1];
+            int linkY = ordinal == 0 ? 0 : chainY[ordinal - 1];
+            spawnChild(() -> new IczSwingingPlatformChainLinkInstance(
+                    linkX, linkY, linkOrdinal, xFlip));
+        }
     }
 
     private void updateFalling() {
@@ -380,9 +406,11 @@ public class IczSwingingPlatformObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        renderer.drawFrameIndex(FRAME_CHAIN_LINK, anchorX, anchorY, xFlip, false, PALETTE_CHAIN);
-        for (int i = 0; i < CHAIN_LINK_COUNT; i++) {
-            renderer.drawFrameIndex(FRAME_CHAIN_LINK, chainX[i], chainY[i], xFlip, false, PALETTE_CHAIN);
+        if (chainVisible) {
+            renderer.drawFrameIndex(FRAME_CHAIN_LINK, anchorX, anchorY, xFlip, false, PALETTE_CHAIN);
+            for (int i = 0; i < CHAIN_LINK_COUNT; i++) {
+                renderer.drawFrameIndex(FRAME_CHAIN_LINK, chainX[i], chainY[i], xFlip, false, PALETTE_CHAIN);
+            }
         }
         renderer.drawFrameIndex(FRAME_PLATFORM, x, y, xFlip, false, PALETTE_PLATFORM);
         renderer.drawFrameIndex(FRAME_SOLID_CAP, getPieceX(PIECE_LOWER_TRIGGER), getPieceY(PIECE_LOWER_TRIGGER),

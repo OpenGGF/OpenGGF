@@ -717,7 +717,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         TallyResult result = performTallyStep();
 
         if (result.totalIncrement() > 0) {
-            services().gameState().addScore(result.totalIncrement());
+            // HUD_AddToScore uses tens of points; the engine HUD uses points.
+            services().gameState().addScore(result.totalIncrement() * 10);
             // ROM tests the amount removed on this dispatch, not whether any
             // counter remains. The final decrement can therefore still tick.
             if ((this.frameCounter & 3) == 0) {
@@ -1598,7 +1599,9 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private void renderBonusDigits(int worldX, int worldY, int value) {
         int x = worldX + DIGIT_OFFSET_X;
         boolean hasNonZero = false;
-        int remaining = value;
+        // LevResults_DisplayScore rotates the six-digit BCD word through a
+        // seventh zero nibble, displaying the native bonus word times ten.
+        int remaining = value * 10;
 
         for (int i = 0; i < DIGIT_COUNT; i++) {
             int digit = remaining / DIVISORS[i];

@@ -78,6 +78,110 @@ class-loading or deoptimization costs to a workload counter. Warm the actual
 measured query loop and read per-thread counters directly around it; retain the
 zero-byte assertion and verify it rejects a deliberate escaping allocation.
 The isolated pass alone does not establish the cause of the CI-only bytes.
+Offscreen editor captures can leak pointer projection into later tests
+(2026-10-14, editor guide pictures). `GraphicsManager.cleanup()` and its test
+reset retain viewport/projection overrides. A 426px capture followed by a
+320px mouse-stroke test mapped the pointer into a different cell and made
+focus-loss commit appear broken. Save and restore viewport coordinates/dimensions,
+projection width/buffer and batching state in the capture's `finally`, including
+failed captures. The later focus-loss case passed after that restoration was
+added, even while the capture still exposed a separate editor-context error.
+
+A performance-only flock does not isolate shared-worktree test jobs
+(2026-10-13, P5 CPU audit). Another task's queued Maven run overlapped a
+negative timing pair; its result was excluded and a preliminary rejection
+withdrawn. Hold the existing test admission lease exclusively throughout fresh
+process timings, audit completed-job intervals, and reject bypassing build/test
+overlap. Never remove queue locks or stop unrelated work to force isolation.
+A batched runner now retains its worktree while awaiting another admission.
+Acquire linked-worktree build leases before exclusive test admission, in a
+consistent order, then lend the held current-tree descriptor to the queue.
+Holding exclusive admission while waiting for that retained worktree deadlocks
+its next batch. The real OS-lease regression fails before this ordering fix.
+
+A live recording can still be finalizing after the gameplay loop stops
+(2026-10-13, runtime performance controls). Engine cleanup has a shorter recorder
+abort limit than the long handoff capture needs. A partial or deleted file is
+not pixel/PCM evidence. Request stop after the last intended presentation,
+wait with a bounded deadline for INACTIVE, and reject any lastFailure before
+cleanup or decoding. Keep recording/CSV runs separate from acceptance timings.
+
+Enabled audio is not proof of a working runtime audio device (2026-10-12,
+runtime performance qualification): forcing an unavailable OpenAL backend
+continued with SMPS synthesis but a no-device speaker fallback. Reject that run
+as complete-runtime audio evidence. Inspect the actual sink, sample format and
+process-owned output stream. A task-owned private output can retain the mixer
+without audible desktop playback; verify its destination and leave the user's
+fallback device unchanged. Pin it before acceptance measurements.
+
+A locked desktop can stall live presentation before or during rendering
+(2026-10-12, runtime performance qualification): Java 25 reached XWayland's
+`glfwShowWindow` and waited in `XCheckTypedWindowEvent`; a minimal window
+reproduced it. Native Wayland opened the same-sized window, then the full engine
+waited at `glfwSwapBuffers`. The desktop's read-only ScreenSaver `GetActive`
+reported true. Stop the owned stalled process. Qualify a visible desktop or an
+owned private virtual display with the actual hardware renderer and normal swap
+path; reject software-renderer substitution. Do not bypass show/swap, disable rendering, or count offscreen
+helper work as the full-runtime baseline. This does not prove a Java-version
+regression; the earlier successful Java 21 run had different desktop visibility.
+
+A live Engine still loads classes lazily (2026-10-12, runtime qualification).
+Recompiling its worktree can remove target/classes before a late object or cleanup
+owner first loads, invalidating the run with ClassNotFoundException. Isolate all
+builds from live correctness runs as well as timing; separate Java input-plan
+compilation that only reads an already-built classpath from Maven rebuilding it.
+
+Prebuilt captures still need execution admission (2026-10-14, Chaos reel): a
+GameplayCaptureTool Java child read an immutable target/ while an exclusive S1
+allocator diagnostic held all worktree build locks. The diagnostic correctly
+stopped before launch; a built classpath alone provided no CPU isolation.
+Input authoring, gameplay captures, direct javac and SDK packagers must retain
+shared scheduler execution leases when coordinated measurements require them.
+Pass lease descriptors to child processes, release admission between bounded
+clips, and record each child's PID and actual UTC interval. Do not infer an
+exited PID's owning shot solely from adjacent log timestamps.
+
+Smoke is a selection, not a short-runtime guarantee (2026-10-13, queue contention):
+a ROM-backed smoke run executed 26,690 ordinary cases in about 59 minutes, then
+spent five more minutes on guards. Report candidate count and actual environment,
+not a ROM-free CI duration. The headless graphics flag in JDK_JAVA_OPTIONS also
+made the old wrapper take an exclusive lease despite an otherwise shared profile;
+inspect the OS lock and launch environment, not just a profile/telemetry label.
+Bounded category batches now yield shared admission while retaining target/
+ownership. This creates opportunities for short jobs, not a per-batch time bound.
+See [queue evidence](../architecture/research/2026-10-13-maven-queue-contention.md).
+
+Fork options and child-launcher output (2026-10-14, S3K composition): an admitted
+headless flag does not prove propagation into a test fork. With the current
+Maven3.9.16/Surefire3.2.5 POM, `MAVEN_OPTS` supplies parent JVM properties;
+CLI `-D` or inherited `JDK_JAVA_OPTIONS` reaches tests. Inherited
+`JAVA_TOOL_OPTIONS` also reaches tests and child JVMs. Both launcher environment
+variables add a Java notice before child stderr, so a first-byte diagnostic assertion can fail
+while its correct exit status and empty stdout pass. Confirm the actual fork's
+graphics setting and attribute the exact assertion/source/environment; tool
+preflight alone does not prove pixel coverage. Preserve required graphics when
+reporting a known launcher-prefix failure. See the
+[S3K composed record](../architecture/plans/2026-10-13-s3k-playable-completion.md#inherited-child-launcher-prefix-and-preserved-graphics).
+
+Reused test JVMs can lose inherited graphics properties (2026-10-14, editor smoke):
+`TestSurfacelessEglContext` clears `openggf.headless.gl` in its existing teardown.
+The later TraceCaptureBootDimensions cases then take the default GLFW path and
+fail before gameplay boot. Standalone baseline/current pairs pass; the ordered
+selection-plus-dimensions pair reproduces both errors on both commits. Check actual
+fork properties and predecessor cleanup before blaming engine changes or EGL.
+See the [editor evidence](../architecture/designs/2026-10-14-editor-completion.md#combined-validation-and-baseline-attribution).
+
+A released port is a global resource, not a socket-close oracle (2026-10-12,
+mod audit delivery): Golf's audio-fault teardown test received `BindException`
+while trying to bind the former host port. Both unchanged baseline/current cases
+passed in matched focused runs. A deterministic owned contender acquired the
+released port after the original socket closed and reproduced that exception.
+Capture the actual socket before fault injection, verify its live binding, then
+assert that same handle is closed. Keep separate transport rebind/worker tests.
+Do not infer a leak or TIME_WAIT cause from port availability: the tested Java 25
+constructor's observed default reuse was true on this host, and the controlled
+TIME_WAIT check permitted the original rebind.
+The actual full-run contender remained unobserved.
 
 A headless palette owner check needs the renderer's resolution boundary
 (2026-10-10, Starpost seasonal acts): HeadlessTestRunner queues palette writes
@@ -88,12 +192,13 @@ unresolved registry; do not replace ownership writes with direct palette mutatio
 
 Compare the full assertion, not its bounded summary (2026-10-12, Java 25
 migration): a 2,915-character rewind assertion was truncated at 2,048 in the
-runner's `message`; its complete assertion remained in `detail`. Across JVMs,
-incidental `RewindObjectStateBlob@...` identity strings differed while frame,
-slots, object kinds and serialized-state differences matched. Normalize only
-those exact nonsemantic tokens when justified; never strip arbitrary hexadecimal
-values, addresses or gameplay fields to manufacture equality. Retain the
-normalization rule and compare failure identities and exception types as well.
+runner's `message`; its complete assertion remained in `detail`. Check the owning
+`hashCode()` before treating a `ClassName@...` suffix as incidental identity:
+`RewindObjectStateBlob` mixes class identity with schema and serialized-state hashes.
+A differing suffix requires a bounded semantic snapshot comparison before failure
+attribution. Never strip such tokens, arbitrary hexadecimal values, addresses or
+gameplay fields merely to manufacture equality. Compare failure identities and
+exception types as well, and retain the actual comparison rule and evidence.
 
 Native stage measurements have multiple caller boundaries (2026-10-09, Mutator
 Lab expansion): `GameLoop.step()` and the movie renderer do not certify
@@ -493,6 +598,17 @@ spawn-derived latch key, so querying every active object falsely labels the
 chain display as a second physical support. The separate riding owner is the
 actual carrier; shared latch-key observations alone do not establish contact.
 
+SOZ fixed-input repair (2026-10-13, GitHub issue #188): native Hurt gravity
+continues after object control takes the player. Its first integer-position
+difference can reconverge while later contacts still change. Read the owning
+solid routine through its narrow-width and forced-top branches; a permissive
+vertical catch alone does not prove landing. Preserve X/Y fractions, actual
+riding ownership and button-edge history in engine-owned authoring snapshots.
+Directional input prevents the native roll entry, so Down plus Right is not a
+roll instruction. Freeze successful controller choices into ordinary input,
+then verify them in a fresh cold session with the unchanged replay/load checks.
+See [the issue audit](../architecture/validation/2026-10-13-github-issues.md).
+
 Live rewind recording versus route-driver snapshots (2026-09-27): enabling
 LIVE_REWIND_ENABLED in a RecordingFrameDriver/HeadlessTestFixture route does not
 exercise GameLoop's history recorder. A new MHZ paired load-boundary test had
@@ -810,6 +926,18 @@ cold route handoffs and fade snapshot assertions. Preserve the default driver un
 its consumers are migrated and validated together. Its CSV keeps input last;
 appending host observation columns silently broke a prefix comparator that strips
 the final field. Extended host columns are explicit in the title-first mode.
+
+Title-first capture is not the complete Engine UI graph (2026-10-13 Second
+Strike). `HeadlessGameBoot` creates a bare loop without Engine's data-select
+launch callback; a valid native confirmation can therefore consume its action,
+reset the provider and remain in `DATA_SELECT`. The capture renderer also falls
+through to level drawing for that mode, producing blank output without a level.
+Inspect wiring and native provider drawing before calling either symptom a game
+defect. A callback recorder proves native menu admission only; actual launch,
+patch re-resolution and save ownership require the real Engine seams. Keep the
+native listing's relative `saves` directory and Engine's save root in the same
+owned private profile. Never repair a probe by forcing level mode or bypassing
+save/patch resolution.
 
 Exact window ownership does not isolate desktop input (2026-10-09 Mutator Lab
 polish): the helper validated its own Engine PID but repeatedly focused that

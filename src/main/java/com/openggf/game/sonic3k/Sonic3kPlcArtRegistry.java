@@ -340,6 +340,15 @@ public final class Sonic3kPlcArtRegistry {
         List<LevelArtEntry> levelArt = new ArrayList<>(SHARED_LEVEL_ART);
 
         addZoneEntries(zoneIndex, actIndex, standalone, levelArt);
+        if ((zoneIndex == 0x0D || zoneIndex == 0x0A) && actIndex == 1) {
+            standalone.addAll(com.openggf.game.sonic3k.ending.S3kEndingArt.terminalEntries());
+        }
+        if (zoneIndex == 0x0D && actIndex == 1) {
+            // loc_5DB76 uploads IslandLift at tile2FF; its late subtype41..47
+            // sprites remain resident, rather than creating a standalone art job.
+            levelArt.add(new LevelArtEntry("s3k_ending_island_lift",
+                    com.openggf.game.sonic3k.ending.S3kEndingResources.MAP_ISLAND_LIFT,0x2FF,3,null));
+        }
 
         return new ZoneArtPlan(
                 Collections.unmodifiableList(standalone),

@@ -67,7 +67,8 @@ final class Run {
     final long seed;
     final int firstGate;
     final boolean practice;
-    final Course course = new Course();
+    private final Zone.Tour tour;
+    final Course course;
     final Flight flight = new Flight();
     private final List<Spill> spills = new ArrayList<>();
     private final List<Event> events = new ArrayList<>();
@@ -89,6 +90,12 @@ final class Run {
     private String crashCause = "";
 
     Run(Mode mode, long seed, int firstGate, boolean practice) {
+        this(mode, seed, firstGate, practice, new Zone.Tour());
+    }
+
+    Run(Mode mode, long seed, int firstGate, boolean practice, Zone.Tour tour) {
+        this.tour = java.util.Objects.requireNonNull(tour);
+        course = new Course(tour);
         this.mode = mode;
         this.seed = seed;
         this.firstGate = firstGate;
@@ -416,12 +423,12 @@ final class Run {
     double sceneryX() { return scenery / 256.0; }
     int lap() { return Zone.lap(Math.max(firstGate, nextGateNumber() - 1)); }
 
-    Zone zoneShown() { return Zone.tour().get(tourIndex); }
+    Zone zoneShown() { return tour.zones().get(tourIndex); }
 
     /** The zone of the next gate to pass, with its lap's pace. */
     Zone zoneAhead() {
         int n = nextGateNumber();
-        return Zone.at(n).forLap(Zone.lap(n));
+        return tour.at(n);
     }
 
     int nextGateNumber() {

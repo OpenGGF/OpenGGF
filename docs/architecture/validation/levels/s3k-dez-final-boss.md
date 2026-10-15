@@ -1,5 +1,12 @@
 # S3K Death Egg final boss arena coverage matrix
 
+**Current selected ending composition (2026-10-13):** the unchanged cold
+ordinary320 team/Sonic/Tails and800 Sonic routes pass from their actual bosses
+through native D01 rescue, credits and terminal Start/title; the three incoming
+DDZ scenarios also pass continuous composed endings. Exact commands, partial
+failures and owning corrections are recorded below. Other donor/team/viewport
+and native pixel coverage remains open; this is not whole-act certification.
+
 **Current floor and route revalidation (2026-09-25, `c479eea6a` plus the floor fix):**
 native comparison exposed pre-movement proximity grounding above the real floor.
 The override is removed;24 floor/entry checks and164 broader focused checks pass.
@@ -16,16 +23,21 @@ ROM `Current_zone_and_act = $1700`. **Not Sonic 2's Death Egg**, and not the
 `$1701` Super Emerald sanctuary, which has its own
 [matrix](s3k-hpz-sanctuary.md). Owning plan:
 [S3K DEZ bring-up](../../plans/2026-09-17-s3k-dez-bring-up.md).
-Status: hands, core, escape and DDZ handoff are implemented, with positioned
-DEZ2-incoming continuity through complete DDZ at320/800 and whole-registry replay
-evidence. Cold native320 ordinary Sonic+Tails now clears both main acts and all
-final phases, reaching the ordinary ending in54692 controller frames without death
-or transformation. The final sequence adds31 full-registry replay spots; DEZ2 entry
-has real full-load history isolation. Native scene matching, remaining roster/donor
-breadth and outgoing ending-history isolation remain open. A second cold native320
-team movie, with emeralds declared only at DEZ1 boot, now continues through both
-DDZ boss phases and its ending request in64648 inputs; see the
-[DDZ follow-up](s3k-ddz.md#2026-09-25--full-cold-dez1-through-incoming-ddz-completion).
+Status: hands, core, escape and DDZ handoff are implemented. The selected cold
+native320 ordinary Sonic+Tails, solo Sonic and solo Tails routes, and800 solo
+Sonic route, continue from their actual bosses through native D01 rescue,
+both credit parts, post-credits and controller Start/title. All original hit/world
+checkpoints and actual outgoing load/history retirement are retained. Three
+incoming DDZ scenarios also complete that composition, including the cold
+native emerald-team DEZ1 chain and positioned Hyper incoming routes at320/800.
+Exact source-specific commands and corrections are in the October13 record
+below; earlier movie lengths and request-only stop lines remain historical.
+Native whole-scene matching and remaining viewport/donor/roster, deliberate
+load/respawn and lifecycle breadth remain open. All seven actual incoming
+DEZ/DDZ ending scenarios pass in smoke on composed `aaff73747`, with no
+failures/errors/skips. The bounded [composed-source qualification](../../plans/2026-10-13-s3k-playable-completion.md#completed-composed-source-qualification)
+records the completed ordinary/guard result and separately attributed inherited
+CLI assertion. Develop source delivery and owned-worktree cleanup are complete.
 Nothing below certifies the act.
 
 LevelSizes (sonic3k.asm:38143): x `0`-`$6000`, y `$20`-`$20`. Level art
@@ -38,6 +50,9 @@ Incoming: the act 2 boss exit (`loc_7F310` saves `Act3_ring_count`, `Act3_timer`
 `Saved2_status_secondary`, then `StartNewLevel $1700`). The ROM level select lists
 `$1700` as "DDZ act 2" (sonic3k.asm:10161); the engine now exposes the distinct final-boss level-select entry.
 Outgoing: `loc_803D6` → `$C00`, `$D01` or `Game_mode 0`.
+The2026-10-13 request adds native `$D01` continuation, tracked in
+[the ending matrix](s3k-ending.md); historical arrival coordinates describe the
+old placeholder, while the rescue writes its own native screen coordinates.
 
 ## Baseline behaviour without a resource profile (measured 2026-09-17, `035e48a58`)
 
@@ -53,7 +68,7 @@ level and dies at frame 98. No title card is drawn. Capture:
 | Claim | State |
 | --- | --- |
 | Implemented | Production entry, background stages, captured retained planes, floor/laser/art owners, final root/children, chase and escape dispatch are connected. Widescreen support and planet composition are corrected; exposed boss-body margins use ROM layout outside the preserved native view. |
-| Cold-reachable | Direct final-arena load reaches hands; a controller-only solo 320px route destroys all six fingers, defeats core and ship, and loads DDZ. Positioned incoming DEZ2 continuity passes at320/800. Cold ordinary Sonic+Tails now clears DEZ1, DEZ2 and every final phase through the real ending load in54692 frames; route breadth remains open. |
+| Cold-reachable | Selected cold ordinary native320 Sonic+Tails, solo Sonic and solo Tails, plus800 solo Sonic, continue from their actual final fights through native D01 rescue, both credit parts, post-credits and controller Start/title. Ordinary team/native320 Sonic/800 Sonic movie prefixes contain49448/60920/60298 inputs respectively; these are not terminal totals. The cold native320 emerald team and positioned320/800 incoming Hyper routes also complete continuous DDZ endings. Remaining supported viewport/donor/team, lifecycle and native-pixel breadth stays open. |
 | Rewind-verified | Component graphs, retained planes and production entry replay at 320/352/400/528/800 pass. Positioned incoming-route spots pass at320/800. The cold ordinary team adds31 full-registry capture/restore and45-frame replay spots across final phases; lifecycle/route breadth remains open. |
 | Native behaviour matched | ROM routine-backed components; native movie screenshots/VRAM collected. Strict trace rows below are historical and remain red/unrerun. |
 | Visually matched | Native and 800px entry captures inspected; retained boss and moving floor present. Wide planet extension inspected; full phase matching remains open. |
@@ -624,3 +639,163 @@ state/pixel controls and their limits are described in the
 [headless testing guide](../../../guide/contributing/headless-testing.md).
 This performance change supplies no new native reference, full-route visual
 certification or missing viewport/donor/character coverage; inherited gaps remain.
+
+### 2026-10-13 — ending ownership and incoming DDZ requalification
+
+The finish lane keeps positioned DEZ2 starts separate from cold DEZ1 routes.
+The current DDZ authoring outputs are rejected pending the shared fresh-entry
+counter correction: the outgoing DEZ ring counter must not become extra DDZ
+energy before native `loc_8160A` adds50. See the
+[DDZ dependency evidence](s3k-ddz.md#2026-10-13-incoming-suffix-dependency).
+No controller fixture is qualified from that surplus-energy execution.
+
+The four ordinary cold routes (native320 Sonic team, Sonic solo320/800,
+and solo Tails320) still need qualification against the coherent native ending
+implementation. Their hands/core/ship hit counts, route restore/replay windows
+and existing load/history boundaries remain required. The previous endpoint
+`(96,300)` is an unclaimed header-entry position, not the native rescue owner:
+`Obj_5D8BC` claims raw P1 coordinates `($100,$E0)`, full object control and
+clears `Player_2`. The load-producing tick can legitimately leave assembly
+pending until the next ordinary capture step consumes `loc_6468`; no same-tick
+position fitting is appropriate. The destination checks will require live
+main/camera identity, released fresh/title ownership, native rescue ownership,
+typed no-emerald progress, follower removal and the Tornado release/catch with
+bounded forward execution and full-registry replay. This is the current
+verification obligation, not a completed ending-route result or native pixel
+acceptance.
+
+Provisional uninterrupted full-drawing prefix probes on the reviewed counter
+candidate independently preserve every original movie button and add only
+a120-input neutral observation budget after it. Native800 solo Sonic remains
+alive through60298 original inputs: actual D01 parks P1 at`(0,0)` on60297 and
+the next ordinary input60298 releases header`(96,300)` with0 rings. Native320
+solo Tails does the same on68265/68266 after68266 original inputs. With the
+old placeholder ending still in this compiled snapshot, neutral continuation
+falls to floorY1196/1200; this is not native rescue acceptance. No movie edit
+or gameplay seed is used. The same unchanged-prefix probe also reaches D01 alive for native320 Sonic
+team49447/49448 and solo Sonic60919/60920. Native ending qualification remains
+pending; these four observations use the old placeholder snapshot.
+
+The final source checkpoint is intentionally outside the rewind contract.
+Two independent cold native800 Sonic sessions replay the same60297-input
+prefix (through60296) and capture equal `FadeManagerSnapshot` values:
+`FADING_TO_BLACK`, frameCount20, RGB`(1,1,0.85714287)`, alpha0, BLACK,
+holdDuration0/holdFrame0, FPC7, increment0.14285715, duration21,
+exactToFadeDuration=false and hadPendingCompletion=true. Both are source
+zone23/act0, request13/1, levelFrame9914, P1`(13181,131)` with15 rings,
+fresh/title=false and inactive/rewindBlocked/poisoned=true.
+
+Uninterrupted input60297 loads zone13/act1, levelFrame0, parks P1`(0,0)`
+with fresh/title=true and retains15 borrowed presentation rings;60298
+releases assembly, enters levelFrame1/header`(96,300)`, clears rings and
+releases inactivity/rewind blocking. A raw restore of the identical source
+checkpoint deliberately clears its transient callback:60297 only advances
+to HOLD_BLACK/frame21/holdDuration1/holdFrame0;60298 reaches NONE/holdFrame1.
+Through60300 the source remains zone23/levelFrame9914/request13, inactive
+and rewind-blocked. It does not restart the fade or deliver the lost load.
+
+`GameLoop.isRewindBlocked` already excludes pending completion callbacks and
+fresh assembly; `FadeManagerSnapshot.isPoisoned` and callback-clearing restore
+express the same contract. `GameplayInputBranchTool` formerly checked only
+LEVEL mode before raw restore. Its new checkpoint guard rejects either
+poisoned fade or parked fresh assembly before any branches or restore. The
+focused guard cases remain queued with the ordinary routes. Use a released
+destination checkpoint or a pre-fade source checkpoint; callback serialization,
+route-input extension and native timing changes are not justified.
+
+The seven existing incoming scenarios now continue from their actual boss
+load through native rescue, reunion, credits and the terminal post object,
+then issue controller Start and require the production title handoff. The
+three Super-emerald DDZ scenarios additionally require the actual AIZ return.
+The four ordinary cold scenarios retain hands/core/ship hit counts and every
+existing world replay spot; the DDZ scenarios retain their eleven semantic
+spots and add source/destination live-history isolation. Native plane release,
+plane catch, credits and terminal readiness each receive a45-frame complete
+registry restore/forward replay outside callback-bearing fades. Their bounded
+semantic continuation performs no scene, timer or progression seeding.
+
+Current `test-compile` completes successfully at16:52:31 BST (67 seconds),
+including the coherent ending source and its read-only terminal readiness API.
+The unchanged focused requests for these seven scenarios remain queued; no
+continuous ending or title-return result is claimed yet.
+
+The corrected production `GameplayInputBranchTool` also cold-replays the
+unchanged native800 Sonic prefix through60296 on the coherent ending/counter
+candidate. At the same checkpoint it exits1 with the explicit callback-bearing
+fade error before creating any candidate products or invoking raw restore
+(16:56:08 BST). The coherent ending source correctly requests fade-to-white;
+the earlier exact two-arm witness above used the old fade-to-black placeholder.
+This production exploration validates the tool rejection, not a JUnit pass
+or completion of the still-queued continuous route.
+
+
+### 2026-10-13 ordinary composition gate
+
+The unique request37588 completes at17:52:06 BST on local`f831748bb` plus
+coherent ending delta`93da7b51` and owned route/helper checks. Selector
+`-Dtest=TestDezIncomingFinalRouteCapture#coldOrdinary*,TestGameplayInputBranchTool,TestGameplayInputBranchToolHeadless`
+executes9 cases with the absolute supported ROM property:4 checkpoint-tool
+cases and2 headless branch cases pass, while all3 selected ordinary cold
+routes fail their retained immediate zone13 endpoint assertion with actual
+zone23. All earlier hands/core/ship hit counts and world replay spots complete.
+There are3 failures,0 errors and0 skips. `coldWideOrdinarySoloSonic...` does
+not match this selector and remains independently unqualified.
+
+The current test continuation uses its existing64-neutral native transition
+budget before requiring actual D01 ownership, coordinates, roster, typed
+progress and continuous terminal Start/title. An unreleased input endpoint
+must retain the actual source request13/1 and callback-bearing fade; raw
+world checkpoints must have nonpoisoned fades. Neither an arbitrary endpoint
+coordinate nor altered movie inputs are accepted. The exact submitted-input
+fade state and changed four-route qualification remain pending; no runtime
+correction is inferred from these endpoint-only failures.
+
+
+The current combined source includes coherent ending projectiondelta`92baba50`
+(all11 before/after hashes verified) and final owner/native-clear delta
+`f115d262` (11 prior-file guards and5 before/after hashes verified). Foreign
+ending files remain outside this lane's staged work. Combined `test-compile`
+passes18:15:23 BST in73 seconds. The new actual ending owner gate includes
+immediate native dynamic-object clear and a pure routine0 render offset reset,
+so earlier composed world results are not silently reused as current evidence.
+The corrected ordinary selector explicitly includes all four methods:
+`-Dtest=TestDezIncomingFinalRouteCapture#coldOrdinary*+coldWideOrdinary*`.
+That unique request58747 remains queued; actual continuation results and
+exact pending-input endpoint phase will be recorded after it runs.
+
+
+The explicit four-method request58747 executes18:24:16 BST in62.69 test
+seconds:4 cases,1 failure,0 errors/skips. Native320 Sonic team, solo Sonic
+and solo Tails all pass the actual cold boss→rescue→reunion→credits→terminal
+Start/title composition, including every original hit/world checkpoint and
+the four semantic ending replays. Their unchanged input endpoint is still
+source23/act0: `HOLD_WHITE`, frame21, RGB`(1,1,1)`, holdDuration1/holdFrame0,
+hadPendingCompletion=true. The remaining native white hold owns the load; the
+bounded ordinary continuation correctly consumes it without any input or
+runtime fit.
+
+The800 solo also clears every original hit/world checkpoint and both incoming
+load/history checks, then fails its retained fixed `endingLoad == 60297`
+assertion with actual−1 because the submitted movie ends before that white
+hold completes. This is the same invalid host-dispatch assumption, before
+its actual ending helper. The corrected check requires the live native white
+owner and exact13/1 source request, then actual bounded D01 load/history
+isolation and continuous terminal handoff. Only that failed wide method needs
+a fresh rerun. The three native320 results are bounded composed-route passes,
+not every-width/donor/team certification or native pixel acceptance.
+
+
+The isolated failed800 method rerun20699 passes18:28:21 BST:1 test,0 failures,
+errors or skips,31.43 test seconds. Exact selector:
+`-Dtest=TestDezIncomingFinalRouteCapture#coldWideOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding`.
+The white hold remains exact at the unchanged movie endpoint; the common
+helper consumes its actual callback and requires the native D01 destination,
+recorded source-timeline retirement, live P1/camera/follower/progression
+ownership and complete rescue→credits→terminal controller Start/title.
+Together with the three320 cases that passed in58747, all four selected
+ordinary cold scenarios now have continuous actual ending qualification.
+The changed three incoming DDZ scenarios also pass3/0/0/0 in27637 at18:27:24.
+This is bounded seven-scenario composition from actual incoming bosses, not
+joined direct-ending boots or complete donor/team/viewport/pixel certification.
+The unchanged branch tool guard4 and its headless controls2 passed in37588;
+short native DDZ entry/restore and inherited flight cases pass4/0/0/0 in8998.

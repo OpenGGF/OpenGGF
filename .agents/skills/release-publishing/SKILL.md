@@ -18,6 +18,9 @@ promoting versions.
   requested. Follow the rollover guide to synchronize release fixes and promote
   development branches; do not push the unchanged released version to `master`
   as part of branch housekeeping.
+- Full ordinary validation is public-release-only: use explicit `-Pfull-suite`
+  for release preparation. Plain Maven, category runs, PRs and routine manual CI
+  use smoke. The Release workflow explicitly opts into the full suite.
 - Read the POM version and check its remote `v<version>` tag before pushing.
   The workflow creates the tag at the validated `github.sha` and rejects an
   existing tag. Do not pre-create, delete, or move tags to make a retry pass.

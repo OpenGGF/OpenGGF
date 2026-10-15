@@ -288,7 +288,7 @@ public final class Terrain {
         return px;
     }
 
-    /** How many cells have been carved (saved per planet). */
+    /** Cells edited in this Planet instance; carving is not part of the expedition save. */
     public int carvedCells() {
         return carvedMasks.size();
     }

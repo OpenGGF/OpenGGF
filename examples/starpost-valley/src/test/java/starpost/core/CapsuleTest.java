@@ -63,6 +63,23 @@ class CapsuleTest {
     }
 
     @Test
+    void knownDeliveredCountsCannotExceedTheirOwnBundleTarget() {
+        for (var chamber : new Capsule().chambers(catalog)) {
+            for (var bundle : chamber.bundles()) {
+                Map<String, Integer> targets = bundle.rings() > 0 ? Map.of("rings", bundle.rings()) : bundle.wants();
+                for (var target : targets.entrySet()) {
+                    String key = bundle.id() + "." + target.getKey();
+                    Capsule exact = new Capsule();
+                    exact.load(Map.of(key, Integer.toString(target.getValue())), catalog);
+                    assertEquals(target.getValue(), exact.delivered(bundle, target.getKey()));
+                    assertThrows(IllegalArgumentException.class,
+                            () -> new Capsule().load(Map.of(key, Integer.toString(target.getValue() + 1)), catalog), key);
+                }
+            }
+        }
+    }
+
+    @Test
     void gardenCropsIgnoreTheSeason() {
         Game game = new Game(catalog, 1);
         game.flags.add("capsule_garden");
@@ -89,11 +106,11 @@ class CapsuleTest {
         capsule.save(out);
         out.put("spring_crops.emerald_melon", "5");
         out.put("nonsense", "5");
-        out.put("vault1.rings", "99999999");
         Capsule loaded = new Capsule();
         loaded.load(out, catalog);
         assertEquals(1, loaded.delivered(pantry.bundles().get(0), "ring_radish"));
         assertEquals(0, loaded.delivered(pantry.bundles().get(0), "emerald_melon"), "not one of the bundle's wants");
-        assertEquals(0, loaded.delivered(chamber(loaded, "vault").bundles().get(0), "rings"), "out of range");
+        assertThrows(IllegalArgumentException.class, () -> loaded.load(Map.of("vault1.rings", "99999999"), catalog));
+        assertEquals(1, loaded.delivered(pantry.bundles().get(0), "ring_radish"), "failed section validation retains the prior section");
     }
 }

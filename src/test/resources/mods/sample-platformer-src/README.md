@@ -49,7 +49,7 @@ verifies:
   `hit` SFX on destruction, all resolved through the engine's `registerObjectArt`-decorated
   `ObjectArtProvider`;
 - `SpringPad` proximity-launch physics, its namespaced `spring` SFX, and its 8-frame
-  extended pose;
+  extended pose and the existing native 15-frame spring control lock;
 - `recreateForRewind` for both `ZapBug` and `SpringPad`;
 - namespaced `zone-theme` streamed music plus `jump2`/`hit`/`spring` one-shot SFX, each
   decoding nonzero PCM through the bounded pool;

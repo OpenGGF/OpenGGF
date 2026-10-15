@@ -56,8 +56,8 @@ import java.util.List;
  *       rising.</li>
  *   <li>{@code Check_LRControllerShake} (sonic3k.asm:179881-179900): {@code $3C(a0)} is reloaded
  *       to 5 and {@code $3D(a0)} to 60 whenever the 60-frame window lapses, and each frame the
- *       held left/right bits ({@code andi.w #$C}) differ from the stored ones costs one of the
- *       five. Spending all five frees the player.</li>
+ *       nonzero held left/right bits ({@code andi.w #$C}) differ from the stored ones decrements
+ *       that counter. Release needs six changed states: the branch is below zero, not zero.</li>
  *   <li>{@code sub_881FE} takes one ring every 60 frames and, at zero rings, kills the
  *       player.</li>
  *   <li>{@code sub_8FFE0} is the slow-down, every frame: an eighth off {@code x_vel}, and an

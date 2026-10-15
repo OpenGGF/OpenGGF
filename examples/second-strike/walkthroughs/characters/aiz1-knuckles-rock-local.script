@@ -1,0 +1,17 @@
+# Second Strike character opportunity capture, 2026-10-13.
+# Supplementary positioned forest AIZ1 local setup: solo Knuckles at
+# ROM centre ($2120,$0360), left of native rock #69 ($2170,$0394),
+# subtype $24. Native side break accepts Knuckles without the ordinary
+# roll-animation/speed gate. No ability, ring, reward, health, clock,
+# or terrain state is supplied. Allow floor collision to settle, walk
+# into the rock, then jump, release, and jump again for native glide.
+# Up requests native climbing only if a wall grab is actually admitted.
+# Observed: walk-side break on frame 73 while unrolled; fragments on 84;
+# glide mapping $C0 from 115; native enemy-contact death 193. Climb unproved.
+30 -
+60 R
+24 R+A
+1 R
+45 R+A
+60 U
+60 -

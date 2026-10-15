@@ -4,7 +4,6 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.*;
-import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import java.util.List;
 
@@ -254,12 +253,10 @@ public final class Boss extends AbstractObjectInstance
     }
 
     private int floorAt(int fx, int feetY) {
-        var levelManager = services().levelManager();
-        for (int probe = feetY - 24; probe <= feetY + 200; probe += 16) {
-            var r = ObjectTerrainUtils.checkFloorDist(levelManager, fx, probe);
-            if (r.foundSurface() && r.distance() >= -16 && r.distance() < 16) return probe + r.distance();
-        }
-        return Integer.MIN_VALUE;
+        var floor = services().findFloorSurface(fx, feetY, 24, 200,
+                com.openggf.level.objects.TerrainSurface.Layer.FOREGROUND,
+                com.openggf.level.objects.TerrainSurface.Path.PRIMARY);
+        return floor.foundSurface() ? floor.surfaceY() : Integer.MIN_VALUE;
     }
 
     /** Silver Sonic: walk at Sonic, crouch, then spin-dash wall to wall; leap when enraged. */
@@ -452,10 +449,10 @@ public final class Boss extends AbstractObjectInstance
      */
     private void drawCore() {
         var s = services();
-        int[] air = Stages.air(stage());
-        var guard = air.length == 0 ? null : getRenderer(Species.of(air[0]).artKey());
+        var air = services().gameService(Definitions.class).stage(stage()).air();
+        var guard = air.size() == 0 ? null : getRenderer(services().gameService(Definitions.class).species(air.get(0)).artKey());
         if (guard != null) {
-            var traits = Species.of(air[0]);
+            var traits = services().gameService(Definitions.class).species(air.get(0));
             for (int i = 0; i < 4; i++) {
                 double a = ticks * 0.05 + i * Math.PI / 2;
                 guard.drawFrameIndex(traits.frame(ticks), x + (int) (Math.cos(a) * 30), y + (int) (Math.sin(a) * 30),
@@ -479,7 +476,7 @@ public final class Boss extends AbstractObjectInstance
         if (state == SWOOP && timer <= 24 && !tank()) {
             Draw.labelWorld(services(), "DIVE!", x - 14, y - 48, Draw.RED);
         }
-        int[] frames = Stages.bossFrames(stage);
+        var frames = services().gameService(Definitions.class).stage(stage).bossFrames();
         var renderer = getRenderer(Stages.bossKey(stage));
         if (state == DEFEATED) {
             var boom = getRenderer("boss_explosion");
@@ -497,7 +494,7 @@ public final class Boss extends AbstractObjectInstance
         }
         // Two zone champions break up the Eggman vehicle fights, using complete native badnik frames.
         if (stage == Stages.ARZ || stage == Stages.WFZ) {
-            var champion = Species.of(stage == Stages.ARZ ? Species.WHISP : Species.BALKIRY);
+            var champion = services().gameService(Definitions.class).species(stage == Stages.ARZ ? Species.WHISP : Species.BALKIRY);
             Draw.scaledSprite(services(), champion.artKey(), champion.frame(ticks), x, y,
                     champion.artFacesRight() == facingLeft, 2f);
             return;
@@ -516,7 +513,7 @@ public final class Boss extends AbstractObjectInstance
             };
             if (state == DEFEATED) frame = 5;
         } else {
-            frame = state == DEFEATED || flash > 0 ? frames[2] : laugh > 0 ? frames[1] : frames[0];
+            frame = state == DEFEATED || flash > 0 ? frames.get(2) : laugh > 0 ? frames.get(1) : frames.get(0);
         }
         // The stock bosses compose vehicle and face mappings separately. A face alone is not a boss.
         // Component indices/order follow Sonic2*BossInstance.appendRenderCommands and their children.

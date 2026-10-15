@@ -1,6 +1,7 @@
 package starfall;
 
 import com.openggf.mods.scene.*;
+import com.openggf.mods.scene.art.StockSceneArt;
 import static com.openggf.mods.scene.RomSpriteRequest.Compression.*;
 
 /** ROM-owned AIZ presentation; only the creator's geometry and material overlays are authored here. */
@@ -56,19 +57,19 @@ public final class AngelIslandArt {
         if(grassSample==null||soilSample==null)throw new IllegalStateException("AIZ material samples unavailable");
         grass=grassSample;soil=soilSample;
         if(backdrop==null||ground==null)throw new IllegalStateException("AIZ scenery unavailable");
-        blooms=rom.sprites(RomSpriteRequest.of(0x367DCA,KOSINSKI_MODULED,0x3616C0,1),palette);
-        monkeys=rom.sprites(RomSpriteRequest.of(0x36800C,KOSINSKI_MODULED,0x361776,1),palette);
+        blooms=rom.sprites(StockSceneArt.S3K_BLOOMINATOR.request(rom),palette);
+        monkeys=rom.sprites(StockSceneArt.S3K_MONKEY_DUDE.request(rom),palette);
         rhinobot=rom.sprites(RomSpriteRequest.streamed(0x36732A,0xAA0,0x3615A8,0x36156E,
                 RomSpriteRequest.DplcLayout.OBJECT,1),palette);
-        rock=rom.sprites(RomSpriteRequest.of(0x38DC90,NEMESIS,0x21DCDC,1),palette);
+        rock=rom.sprites(StockSceneArt.S3K_AIZ_ROCK.request(rom),palette);
         SceneImage rockImage=rock.frame(0).image();
         stone=rockImage.crop((rockImage.width()-16)/2,(rockImage.height()-16)/2,16,16);
-        monitor=rom.sprites(RomSpriteRequest.of(0x190F4A,NEMESIS,0x01DBA2,0),palette);
+        monitor=rom.sprites(StockSceneArt.S3K_MONITOR.request(rom),palette);
         starpost=rom.sprites(RomSpriteRequest.of(0x35D8A2,NEMESIS,0x02D348,0),palette);
         emerald=rom.sprites(RomSpriteRequest.of(0x387CA6,KOSINSKI_MODULED,0x364562,0),
                 rom.palette(0x067AAA,64));
-        ring=rom.sprites(RomSpriteRequest.of(0x192AEE,NEMESIS,0x01A99A,1),palette);
-        ship=rom.sprites(RomSpriteRequest.of(0x0D771E,NEMESIS,0x06820C,0),palette);
+        ring=rom.sprites(StockSceneArt.S3K_RING.request(rom),palette);
+        ship=rom.sprites(StockSceneArt.S3K_ROBOTNIK_SHIP.request(rom),palette);
     }
     public void sprite(SceneCanvas c,SceneSpriteSet set,int frame,float x,float feet,float scale,boolean flip) {
         SceneSprite s=set.frame(frame);

@@ -60,6 +60,11 @@ public final class SuperTailsFlickyFlockObjectInstance extends AbstractObjectIns
                 0, 0, 0, false, 0), owner);
     }
 
+    /** Generic rewind constructs a probe before restoring the captured player reference. */
+    private SuperTailsFlickyFlockObjectInstance(ObjectSpawn spawn) {
+        this(spawn, null);
+    }
+
     private SuperTailsFlickyFlockObjectInstance(ObjectSpawn spawn, AbstractPlayableSprite owner) {
         super(spawn, "SuperTailsFlickies");
         this.owner = owner;

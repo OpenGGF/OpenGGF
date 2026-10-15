@@ -65,12 +65,16 @@ public class BackgroundRenderer {
     private com.openggf.game.internal.BackgroundColumnRemap.Columns uploadedColumns;
     private com.openggf.game.internal.BackgroundColumnRemap.Columns preparedColumns;
     private int remapEnabledLocation, remapXLocation, remapYLocation, remapEndYLocation;
+    private int priorityMetadataLocation, priorityMaskLocation;
     private ParallaxShaderProgram parallaxShader;
     private final QuadRenderer quadRenderer = new QuadRenderer();
     private final GraphicsManager graphicsManager;
 
     private boolean initialized = false;
     private final int[] savedViewport = new int[4];
+    private int savedTilePassDrawFbo;
+    private int savedTilePassReadFbo;
+    private boolean savedTilePassBlending;
     private float backdropR = 0.0f;
     private float backdropG = 0.0f;
     private float backdropB = 0.0f;
@@ -79,6 +83,31 @@ public class BackgroundRenderer {
     private int shimmerFrameCounter = 0;
     private int shimmerStyle = 0;
     private float shimmerWaterlineScreenY = 9999.0f;
+    private boolean priorityMetadata;
+    private boolean priorityMask;
+    private boolean priorityReplayReady;
+    private int[] priorityHScroll = new int[224];
+    private short[] priorityLineVScroll = new short[224];
+    private short[] priorityColumnVScroll = new short[0];
+    private int priorityHScrollLength, priorityLineVScrollLength, priorityColumnVScrollLength;
+    private int priorityMidpoint, priorityExtraBuffer, priorityVScroll;
+    private int priorityShimmerFrame, priorityShimmerStyle;
+    private float priorityShimmerWaterline;
+    private boolean priorityNoHScroll;
+    private final int[] priorityViewport = new int[4];
+    private com.openggf.game.internal.BackgroundColumnRemap.Columns priorityColumns;
+    private final IntIndexedView priorityHScrollView = new IntIndexedView() {
+        @Override public int size() { return priorityHScrollLength; }
+        @Override public int get(int index) { return priorityHScroll[index]; }
+    };
+    private final ShortIndexedView priorityLineVScrollView = new ShortIndexedView() {
+        @Override public int size() { return priorityLineVScrollLength; }
+        @Override public short get(int index) { return priorityLineVScroll[index]; }
+    };
+    private final ShortIndexedView priorityColumnVScrollView = new ShortIndexedView() {
+        @Override public int size() { return priorityColumnVScrollLength; }
+        @Override public short get(int index) { return priorityColumnVScroll[index]; }
+    };
 
     public BackgroundRenderer() {
         this(GameServices.graphics());
@@ -114,6 +143,8 @@ public class BackgroundRenderer {
         remapXLocation = org.lwjgl.opengl.GL20.glGetUniformLocation(parallaxShader.getProgramId(), "ColumnRemapX");
         remapYLocation = org.lwjgl.opengl.GL20.glGetUniformLocation(parallaxShader.getProgramId(), "ColumnRemapY");
         remapEndYLocation = org.lwjgl.opengl.GL20.glGetUniformLocation(parallaxShader.getProgramId(), "ColumnRemapEndY");
+        priorityMetadataLocation = org.lwjgl.opengl.GL20.glGetUniformLocation(parallaxShader.getProgramId(), "PriorityMetadata");
+        priorityMaskLocation = org.lwjgl.opengl.GL20.glGetUniformLocation(parallaxShader.getProgramId(), "PriorityMaskOutput");
         quadRenderer.init();
 
         // Create FBO for background tile rendering.
@@ -162,7 +193,8 @@ public class BackgroundRenderer {
     }
 
     /**
-     * Begin the tile rendering pass - binds FBO and clears it.
+     * Begin the tile rendering pass - binds FBO, clears it, and disables blending
+     * so descriptor alpha is retained exactly.
      * After calling this, render background tiles using GPU tilemap.
      *
      * @param width      The rendering viewport width (may be smaller than FBO allocation)
@@ -176,12 +208,17 @@ public class BackgroundRenderer {
         this.renderWidth = width;
         this.renderHeight = height;
 
-        // Save current viewport to restore later
-        GraphicsManager gm = this.graphicsManager;
-        savedViewport[0] = gm.getViewportX();
-        savedViewport[1] = gm.getViewportY();
-        savedViewport[2] = gm.getViewportWidth();
-        savedViewport[3] = gm.getViewportHeight();
+        // A scene-picture pass may own distinct draw/read FBOs and a viewport
+        // that differs from the manager's cached display viewport.
+        savedTilePassDrawFbo = glGetInteger(GL_DRAW_FRAMEBUFFER_BINDING);
+        savedTilePassReadFbo = glGetInteger(GL_READ_FRAMEBUFFER_BINDING);
+        glGetIntegerv(GL_VIEWPORT, savedViewport);
+
+        // Tile alpha stores descriptor metadata, so preserve its bytes without
+        // blending. Keep GL state in this initialized pass owner; recording
+        // renderers can override begin/end without requiring a native context.
+        savedTilePassBlending = glIsEnabled(GL_BLEND);
+        glDisable(GL_BLEND);
 
         glBindFramebuffer(GL_FRAMEBUFFER, fboId);
         glViewport(0, 0, renderWidth, renderHeight);
@@ -196,16 +233,21 @@ public class BackgroundRenderer {
     }
 
     /**
-     * End the tile rendering pass - unbinds FBO.
+     * End the tile rendering pass - restores the caller's FBOs, viewport and blend state.
      */
     public void endTilePass() {
         if (!initialized)
             return;
 
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        restoreFramebufferBindings(savedTilePassDrawFbo, savedTilePassReadFbo);
 
         // Restore viewport
         glViewport(savedViewport[0], savedViewport[1], savedViewport[2], savedViewport[3]);
+        if (savedTilePassBlending) {
+            glEnable(GL_BLEND);
+        } else {
+            glDisable(GL_BLEND);
+        }
     }
 
     /**
@@ -306,6 +348,63 @@ public class BackgroundRenderer {
                 vScrollPerLine != null, vScrollPerColumn != null);
     }
 
+    void renderWithPriorityMetadata(IntIndexedView hScroll, ShortIndexedView lineVScroll,
+            ShortIndexedView columnVScroll, int midpoint, int extraBuffer, int vScroll, boolean noHScroll) {
+        if (!initialized) return;
+        priorityHScrollLength = hScroll.size();
+        if (priorityHScroll.length < priorityHScrollLength) priorityHScroll = new int[priorityHScrollLength];
+        for (int i = 0; i < priorityHScrollLength; i++) priorityHScroll[i] = hScroll.get(i);
+        priorityLineVScrollLength = lineVScroll == null ? 0 : lineVScroll.size();
+        if (priorityLineVScroll.length < priorityLineVScrollLength) priorityLineVScroll = new short[priorityLineVScrollLength];
+        for (int i = 0; i < priorityLineVScrollLength; i++) priorityLineVScroll[i] = lineVScroll.get(i);
+        priorityColumnVScrollLength = columnVScroll == null ? 0 : columnVScroll.size();
+        if (priorityColumnVScroll.length < priorityColumnVScrollLength) priorityColumnVScroll = new short[priorityColumnVScrollLength];
+        for (int i = 0; i < priorityColumnVScrollLength; i++) priorityColumnVScroll[i] = columnVScroll.get(i);
+        priorityMidpoint = midpoint;
+        priorityExtraBuffer = extraBuffer;
+        priorityVScroll = vScroll;
+        priorityNoHScroll = noHScroll;
+        priorityColumns = preparedColumns;
+        priorityShimmerFrame = shimmerFrameCounter;
+        priorityShimmerStyle = shimmerStyle;
+        priorityShimmerWaterline = shimmerWaterlineScreenY;
+        priorityReplayReady = false;
+        priorityMetadata = true;
+        try {
+            renderWithScrollWide(hScroll, lineVScroll, columnVScroll, midpoint, extraBuffer, vScroll, noHScroll);
+            priorityReplayReady = true;
+        } finally {
+            priorityMetadata = false;
+        }
+    }
+
+    void renderPriorityMask() {
+        if (!initialized || !priorityReplayReady) return;
+        var savedColumns = preparedColumns;
+        int savedShimmerFrame = shimmerFrameCounter;
+        int savedShimmerStyle = shimmerStyle;
+        float savedShimmerWaterline = shimmerWaterlineScreenY;
+        preparedColumns = priorityColumns;
+        shimmerFrameCounter = priorityShimmerFrame;
+        shimmerStyle = priorityShimmerStyle;
+        shimmerWaterlineScreenY = priorityShimmerWaterline;
+        priorityMetadata = true;
+        priorityMask = true;
+        try {
+            renderWithScrollWide(priorityHScrollView,
+                    priorityLineVScrollLength == 0 ? null : priorityLineVScrollView,
+                    priorityColumnVScrollLength == 0 ? null : priorityColumnVScrollView,
+                    priorityMidpoint, priorityExtraBuffer, priorityVScroll, priorityNoHScroll);
+        } finally {
+            priorityMetadata = false;
+            priorityMask = false;
+            preparedColumns = savedColumns;
+            shimmerFrameCounter = savedShimmerFrame;
+            shimmerStyle = savedShimmerStyle;
+            shimmerWaterlineScreenY = savedShimmerWaterline;
+        }
+    }
+
     private void renderUploadedScroll(int scrollMidpoint, int extraBuffer, int fboVScroll,
             boolean noHScroll, boolean usePerLineVScroll, boolean usePerColumnVScroll) {
 
@@ -341,6 +440,8 @@ public class BackgroundRenderer {
 
         // Bind shader and set uniforms
         parallaxShader.use();
+        org.lwjgl.opengl.GL20.glUniform1i(priorityMetadataLocation, priorityMetadata ? 1 : 0);
+        org.lwjgl.opengl.GL20.glUniform1i(priorityMaskLocation, priorityMask ? 1 : 0);
         org.lwjgl.opengl.GL20.glUniform1i(remapEnabledLocation, columns != null ? 1 : 0);
         org.lwjgl.opengl.GL20.glUniform1i(remapXLocation, 4);
         org.lwjgl.opengl.GL20.glUniform1i(remapYLocation, 5);
@@ -360,6 +461,16 @@ public class BackgroundRenderer {
         float viewportY = gm.getViewportY();
         float realWidth = gm.getViewportWidth();
         float realHeight = gm.getViewportHeight();
+        if (priorityMask) {
+            // The mask framebuffer uses logical display pixels even when the
+            // output window is scaled/letterboxed. Its own viewport is the
+            // coordinate system consumed later by the sprite-priority shader.
+            glGetIntegerv(GL_VIEWPORT, priorityViewport);
+            viewportX = priorityViewport[0];
+            viewportY = priorityViewport[1];
+            realWidth = priorityViewport[2];
+            realHeight = priorityViewport[3];
+        }
 
         // Set dimensions and scroll
         // BGTextureWidth = renderWidth (wrap period), FBOAllocationWidth = fboAllocWidth (UV mapping)
@@ -425,21 +536,30 @@ public class BackgroundRenderer {
      * avoiding mid-frame GPU reallocation hitches.
      */
     public void ensureCapacity(int width, int height) {
-        if (width <= fboAllocWidth && height <= fboAllocHeight) {
+        if (!initialized || width <= fboAllocWidth && height <= fboAllocHeight) {
             return;
         }
 
         int newWidth = Math.max(width, fboAllocWidth);
         int newHeight = Math.max(height, fboAllocHeight);
+        int drawFbo = glGetInteger(GL_DRAW_FRAMEBUFFER_BINDING);
+        int readFbo = glGetInteger(GL_READ_FRAMEBUFFER_BINDING);
 
-        // Delete old FBO resources
-        FboHelper.destroy(fboHandle);
+        try {
+            // Delete old FBO resources
+            FboHelper.destroy(fboHandle);
+            fboAllocWidth = newWidth;
+            fboAllocHeight = newHeight;
+            createFBO(newWidth, newHeight);
+            LOGGER.info("BackgroundRenderer FBO grown to " + newWidth + "x" + newHeight);
+        } finally {
+            restoreFramebufferBindings(drawFbo, readFbo);
+        }
+    }
 
-        fboAllocWidth = newWidth;
-        fboAllocHeight = newHeight;
-        createFBO(newWidth, newHeight);
-
-        LOGGER.info("BackgroundRenderer FBO grown to " + newWidth + "x" + newHeight);
+    private static void restoreFramebufferBindings(int drawFbo, int readFbo) {
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, drawFbo);
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, readFbo);
     }
 
     /**
@@ -468,6 +588,8 @@ public class BackgroundRenderer {
      */
     public void cleanup() {
         preparedColumns = null;
+        priorityColumns = null;
+        priorityReplayReady = false;
         if (remapXBuffer != null) {
             remapXBuffer.cleanup(); remapYBuffer.cleanup();
             remapXBuffer = null; remapYBuffer = null; uploadedColumns = null;

@@ -16,19 +16,33 @@ public final class AtlasFont {
     private final SceneImage atlas;
     private final Map<Character, int[]> glyphs;
     private final int height;
-    private AtlasFont(SceneImage atlas, Map<Character, int[]> glyphs, int height) {
-        this.atlas = atlas; this.glyphs = Map.copyOf(glyphs); this.height = height;
+    private final GlyphCase glyphCase;
+    private final char fallback;
+
+    /** Header normalization and lookup policy; the existing default is uppercase. */
+    @com.openggf.game.ModApi
+    public enum GlyphCase { UPPERCASE, EXACT_FIRST }
+    private AtlasFont(SceneImage atlas, Map<Character, int[]> glyphs, int height, GlyphCase glyphCase, char fallback) {
+        this.atlas = atlas; this.glyphs = Map.copyOf(glyphs); this.height = height; this.glyphCase = glyphCase; this.fallback = fallback;
     }
     /** UTF-8 blocks headed {@code = A}, followed by rows of {@code #} and {@code .}; blank lines separate glyphs. */
     public static AtlasFont parse(byte[] text, int height) {
-        Objects.requireNonNull(text, "font text");
+        return parse(text, height, GlyphCase.UPPERCASE, '\0');
+    }
+    /**
+     * Exact-first keeps case-distinct headers and falls back to the uppercase glyph for a missing
+     * lowercase character. A nonzero {@code fallbackGlyph} must exist and draws unknown characters;
+     * zero retains the default blank advance. Spaces always retain their four-pixel advance.
+     */
+    public static AtlasFont parse(byte[] text, int height, GlyphCase glyphCase, char fallbackGlyph) {
+        Objects.requireNonNull(text, "font text"); Objects.requireNonNull(glyphCase, "glyph case");
         if (text.length > 1_048_576 || height < 1 || height > 64) throw new IllegalArgumentException("Font limits exceeded");
         Map<Character, List<String>> rows = new LinkedHashMap<>();
         Character current = null;
         for (String raw : new String(text, StandardCharsets.UTF_8).split("\n")) {
             String line = raw.strip();
             if (line.startsWith("= ") && line.length() == 3) {
-                current = Character.toUpperCase(line.charAt(2));
+                current = glyphCase == GlyphCase.UPPERCASE ? Character.toUpperCase(line.charAt(2)) : line.charAt(2);
                 if (rows.putIfAbsent(current, new ArrayList<>()) != null) throw new IllegalArgumentException("Duplicate glyph: " + current);
             } else if (line.isEmpty()) current = null;
             else if (current != null) rows.get(current).add(line);
@@ -57,16 +71,24 @@ public final class AtlasFont {
             glyphs.put(entry.getKey(), new int[]{x, w});
             x += w + 1;
         }
-        return new AtlasFont(new SceneImage(width, height, pixels), glyphs, height);
+        char fallback = glyphCase == GlyphCase.UPPERCASE ? Character.toUpperCase(fallbackGlyph) : fallbackGlyph;
+        if (fallback != '\0' && !glyphs.containsKey(fallback)) throw new IllegalArgumentException("Fallback glyph is absent: " + fallback);
+        return new AtlasFont(new SceneImage(width, height, pixels), glyphs, height, glyphCase, fallback);
     }
     public int height() { return height; }
-    /** Unknown characters and spaces advance four pixels without drawing; there is no trailing gap. */
+    private int[] glyph(char character) {
+        if (character == ' ') return null;
+        int[] glyph = glyphCase == GlyphCase.EXACT_FIRST ? glyphs.get(character) : null;
+        if (glyph == null) glyph = glyphs.get(Character.toUpperCase(character));
+        return glyph == null && fallback != '\0' ? glyphs.get(fallback) : glyph;
+    }
+    /** Spaces and characters without a configured fallback advance four pixels; there is no trailing gap. */
     public int width(String text) {
         Objects.requireNonNull(text, "text");
         int width = 0;
         for (int i = 0; i < text.length(); i++) {
-            int[] glyph = glyphs.get(Character.toUpperCase(text.charAt(i)));
-            width = Math.addExact(width, (glyph == null || text.charAt(i) == ' ' ? 3 : glyph[1]) + 1);
+            int[] glyph = glyph(text.charAt(i));
+            width = Math.addExact(width, (glyph == null ? 3 : glyph[1]) + 1);
         }
         return Math.max(0, width - 1);
     }
@@ -76,7 +98,7 @@ public final class AtlasFont {
         SceneDraw style = SceneDraw.plain().withTint(argb);
         int cx = x;
         for (int i = 0; i < text.length(); i++) {
-            int[] glyph = text.charAt(i) == ' ' ? null : glyphs.get(Character.toUpperCase(text.charAt(i)));
+            int[] glyph = glyph(text.charAt(i));
             if (glyph != null) canvas.drawRegion(atlas, glyph[0], 0, glyph[1], height,
                     cx, y, glyph[1] * scale, height * scale, style);
             cx += (glyph == null ? 4 : glyph[1] + 1) * scale;

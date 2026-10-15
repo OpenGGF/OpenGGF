@@ -22,6 +22,14 @@ runner.stepIdleFrames(5);                       // several idle frames
 Tests are JUnit 5 / Jupiter only — no JUnit 4 tests, rules, runners, or `org.junit.*`
 imports.
 
+## Offscreen rendering prerequisites
+
+Mandatory Linux background rendering tests create a Mesa surfaceless EGL context
+and render into an owned pbuffer without connecting to X11 or Wayland. Ubuntu needs `libegl1`,
+`libegl-mesa0`, `libgl1` and `libgl1-mesa-dri`; CI installs these explicitly for
+push, pull-request/manual and release test jobs. Context creation failures in
+mandatory rendering tests fail the run rather than silently dropping pixel coverage.
+
 ## Preferred setup
 
 Use `@ExtendWith(SingletonResetExtension.class)` or the `@FullReset` annotation for

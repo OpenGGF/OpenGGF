@@ -2,6 +2,10 @@ package starpost.scene;
 
 import com.openggf.mods.scene.SceneCanvas;
 import com.openggf.mods.scene.SceneContext;
+import com.openggf.mods.state.ModSaveCodec;
+import com.openggf.mods.state.ModSaveLoadResult;
+import com.openggf.mods.state.ModSaveSlot;
+import com.openggf.mods.state.ModSaveWriteResult;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import starpost.art.Art;
@@ -29,6 +33,11 @@ public final class Shell {
     public final Music music;
     final Settings settings;
     public Game game;
+    private final ModSaveSlot<String> farmSlot;
+    private ModSaveLoadResult.Status farmStatus;
+    private String pendingCheckpoint;
+    private String farmNotice;
+    private long farmNoticeAt;
     java.util.function.Consumer<PlayScreen> townAct;
     java.util.function.BiConsumer<PlayScreen,Integer> ruinsAct;
     public boolean startRuinsAct(PlayScreen play,int number) {
@@ -68,6 +77,29 @@ public final class Shell {
         this.catalog = catalog;
         this.music = new Music(ctx);
         this.settings = Settings.load(ctx.storage());
+        this.farmSlot = new ModSaveSlot<>(ctx.storage(), SaveCodec.FILE, new ModSaveCodec<>() {
+            public String encode(String text) { return text; }
+            public ModSaveLoadResult<String> decode(String text) {
+                for (String line : text.split("\n")) {
+                    int equals = line.indexOf('=');
+                    if (equals < 0) continue;
+                    String key = line.substring(0, equals).trim();
+                    if (key.equals("version") || key.startsWith("s.") && key.endsWith(".version")) {
+                        try {
+                            if (Integer.parseInt(line.substring(equals + 1).trim()) != SaveCodec.VERSION)
+                                return ModSaveLoadResult.rejected(ModSaveLoadResult.Status.INCOMPATIBLE);
+                        } catch (NumberFormatException invalid) {
+                            return ModSaveLoadResult.rejected(ModSaveLoadResult.Status.CORRUPT);
+                        }
+                    }
+                }
+                return SaveCodec.decode(catalog, text, Systems.sections(Shell.this)) == null
+                        ? ModSaveLoadResult.rejected(ModSaveLoadResult.Status.CORRUPT)
+                        : ModSaveLoadResult.valid(text);
+            }
+        });
+        farmStatus = farmSlot.load().status();
+        if (!farmSlot.writable()) farmNotice = "FARM PRESERVED - NEW GAME TO REPLACE";
         apply();
     }
 
@@ -146,19 +178,70 @@ public final class Shell {
     /** The act exit uses the same day-end screen as scene free play. */
     public void endActDay(boolean fainted) { go(new DayEndScreen(fainted)); }
 
-    public void save() {
-        if (game != null) {
-            ctx.storage().write(SaveCodec.FILE, SaveCodec.encode(game));
-        }
+    /** Captures one accepted bedtime; failed publication retains these exact immutable bytes. */
+    public boolean save() {
+        if (game == null) return true;
+        String checkpoint = SaveCodec.encode(game);
+        ModSaveWriteResult result = farmSlot.save(checkpoint);
+        if (farmSlot.pending() && result != ModSaveWriteResult.REPLACEMENT_REQUIRED
+                && result != ModSaveWriteResult.TOO_LARGE) pendingCheckpoint = checkpoint;
+        return farmOutcome(result);
     }
 
+    private boolean farmOutcome(ModSaveWriteResult result) {
+        farmNoticeAt = ticks;
+        if (result.saved()) {
+            farmStatus = ModSaveLoadResult.Status.VALID;
+            pendingCheckpoint = null;
+            farmNotice = "FARM SAVED";
+        } else {
+            farmNotice = switch (result) {
+                case REPLACEMENT_REQUIRED -> "FARM PRESERVED - NEW GAME TO REPLACE";
+                case TOO_LARGE -> "FARM TOO LARGE - SAVE NOT CONFIRMED";
+                default -> "FARM SAVE PENDING - RETRYING";
+            };
+        }
+        return result.saved();
+    }
+
+    /** Owner resume/exit flush; never repeats sleep, encodes mutable daytime state or advances RNG. */
+    public boolean flushPendingSaves() {
+        boolean farmSaved = !farmSlot.pending() || farmOutcome(farmSlot.retry());
+        return settings.flush() && farmSaved;
+    }
+
+    public boolean hasStoredFarm() {
+        return farmStatus != ModSaveLoadResult.Status.ABSENT || farmSlot.pending();
+    }
+
+    public boolean farmSavePending() { return farmSlot.pending(); }
+
     public Game load() {
-        Game loaded = ctx.storage().read(SaveCodec.FILE).map(t -> SaveCodec.decode(catalog, t, Systems.sections(this))).orElse(null);
+        String text;
+        if (farmSlot.pending() && pendingCheckpoint != null) {
+            // Continue a refused bedtime from memory rather than rolling back to its old primary.
+            text = pendingCheckpoint;
+        } else {
+            var result = farmSlot.load();
+            farmStatus = result.status();
+            if (!farmSlot.writable()) farmNotice = "FARM PRESERVED - NEW GAME TO REPLACE";
+            text = result.value().orElse(null);
+        }
+        Game loaded = text == null ? null : SaveCodec.decode(catalog, text, Systems.sections(this));
         if (loaded != null) {
             loaded.calendar.setDayMinutes(settings.dayMinutes);
             loaded.stamina = settings.stamina;
         }
         return loaded;
+    }
+
+    /** Called only by the player's final New Game/farmer confirmation, never by a model factory. */
+    void beginNewGame(long seed, String farmer) {
+        Game fresh = newGame(seed, farmer);
+        farmSlot.allowReplacement();
+        pendingCheckpoint = null;
+        farmNotice = null;
+        game = fresh;
     }
 
     /** A brand-new game with every system installed. */
@@ -172,6 +255,7 @@ public final class Shell {
 
     void update() {
         ticks++;
+        if (ticks % 60 == 0) flushPendingSaves();
         in.read(ctx);
         music.update();
         if (fadeOut > 0) {
@@ -207,6 +291,13 @@ public final class Shell {
             int w = canvas.textWidth(toast) + 16, y = overlays.isEmpty() ? 36 : 1;
             Text.panel(canvas, (width() - w) / 2, y, w, 18);
             Text.centred(canvas, toast, y + 5, Text.WHITE);
+        }
+        if (farmNotice != null && (!farmSlot.writable() || farmSlot.pending() || ticks - farmNoticeAt < 120)) {
+            Text.centred(canvas, Text.fit(canvas, farmNotice, width() - 20), height() - 24, Text.YELLOW);
+        }
+        String optionsNotice = settings.notice(ticks);
+        if (!optionsNotice.isEmpty()) {
+            Text.centred(canvas, Text.fit(canvas, optionsNotice, width() - 20), height() - 12, Text.YELLOW);
         }
         int fade = fadeOut > 0 ? (FADE_TICKS - fadeOut) * 255 / FADE_TICKS : fadeIn * 255 / FADE_TICKS;
         if (fade > 0) {

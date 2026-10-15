@@ -58,6 +58,14 @@ public final class ObjectTerrainUtils {
         return checkFloorDistAtPoint(levelManager, provider, secondaryCollisionPath, x, y, false);
     }
 
+    /** Injected explicit-layer adapter; the existing native height-map state machine remains authoritative. */
+    public static TerrainCheckResult checkFloorDistOnLayer(LevelManager levelManager,int x,int y,
+            byte layer,boolean secondaryCollisionPath,boolean flipAwareAngle) {
+        if(layer!=0&&layer!=1)throw new IllegalArgumentException("Collision layer must be foreground or background");
+        if(levelManager==null)return TerrainCheckResult.noCollision();
+        return checkFloorDistAtPoint(levelManager,layer,x,y,flipAwareAngle,secondaryCollisionPath);
+    }
+
     /**
      * Check floor distance against an explicit level layout layer. ROM helpers
      * such as S3K {@code Ring_FindFloor} run the same height-map state machine

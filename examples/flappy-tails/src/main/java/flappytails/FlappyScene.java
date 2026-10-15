@@ -58,7 +58,9 @@ public final class FlappyScene implements ModScene, DebuggableScene {
     private Screen screen = Screen.TITLE;
     private long ticks;
     private long screenTick;
+    private final Zone.Tour tourDefinition = new Zone.Tour();
     private Records records = new Records();
+    private String saveNotice = "";
     private Run run;
     private Run demo;
     private final Autopilot pilot = new Autopilot();
@@ -98,7 +100,7 @@ public final class FlappyScene implements ModScene, DebuggableScene {
             font = CardFont.load(rom);
         }
         hud = new Hud(rom, base, ring);
-        java.util.List<Zone> tour = Zone.tour();
+        java.util.List<Zone> tour = tourDefinition.zones();
         for (int i = 0; i < tour.size(); i++) {
             Zone zone = tour.get(i);
             zones[i] = ZoneArt.load(rom, zone);
@@ -107,6 +109,7 @@ public final class FlappyScene implements ModScene, DebuggableScene {
             }
         }
         records = Records.load(ctx.storage());
+        saveNotice = records.saveEligible() ? "" : "EXISTING RECORDS PRESERVED";
         openTitle(ctx);
     }
 
@@ -134,6 +137,7 @@ public final class FlappyScene implements ModScene, DebuggableScene {
         ticks++;
         screenTick++;
         effects.update();
+        if (records.dirty() && records.saveEligible() && ticks % 60 == 0) saveRecords(ctx);
         switch (screen) {
             case TITLE -> updateTitle(ctx);
             case PLAY -> updatePlay(ctx);
@@ -153,7 +157,7 @@ public final class FlappyScene implements ModScene, DebuggableScene {
         show(Screen.TITLE);
         paused = false;
         effects.clear();
-        demo = new Run(Mode.CLASSIC, nextSeed(), 0, true);
+        demo = new Run(Mode.CLASSIC, nextSeed(), 0, true, tourDefinition);
         demoPilot.reseed(demo.seed);
         demoPilot.setDaring(35);
         ctx.audio().playMusic(Sounds.MUS_TITLE);
@@ -166,7 +170,7 @@ public final class FlappyScene implements ModScene, DebuggableScene {
             if (event.type() == Run.Type.RING) effects.sparkle(ring, event.x(), event.y(), demo.speed() / 256f);
         }
         if (demo.phase() == Run.Phase.OVER) {
-            demo = new Run(Mode.CLASSIC, nextSeed(), 0, true);
+            demo = new Run(Mode.CLASSIC, nextSeed(), 0, true, tourDefinition);
             demoPilot.reseed(demo.seed);
         }
         if (screenTick < 30) return;    // let the logo arrive before the menu takes input
@@ -201,7 +205,7 @@ public final class FlappyScene implements ModScene, DebuggableScene {
     private void choose(SceneContext ctx) {
         switch (cursor) {
             case ITEM_PLAY -> startRun(ctx, 0, false);
-            case ITEM_PRACTICE -> startRun(ctx, practiceZone * Zone.GATES, practiceZone > 0);
+            case ITEM_PRACTICE -> startRun(ctx, practiceZone * Zone.GATES, true);
             case ITEM_RECORDS -> {
                 ctx.audio().playSfx(Sounds.SFX_SWITCH);
                 show(Screen.RECORDS);
@@ -214,7 +218,7 @@ public final class FlappyScene implements ModScene, DebuggableScene {
 
     private void startRun(SceneContext ctx, int firstGate, boolean practice) {
         long seed = pendingSeed != null ? Long.decode(pendingSeed) : nextSeed();
-        run = new Run(mode, seed, firstGate, practice);
+        run = new Run(mode, seed, firstGate, practice, tourDefinition);
         pilot.reseed(seed);
         effects.clear();
         paused = false;
@@ -301,11 +305,16 @@ public final class FlappyScene implements ModScene, DebuggableScene {
 
     private void finishRun(SceneContext ctx) {
         newBest = records.finish(run);
-        records.save(ctx.storage());
+        saveRecords(ctx);
         resultMedal = run.practice ? 0 : Hud.medal(run.score());
         shownScore = 0;
         show(Screen.RESULTS);
         ctx.audio().playMusic(Sounds.MUS_GAME_OVER);
+    }
+
+    private void saveRecords(SceneContext ctx) {
+        if (!records.saveEligible()) saveNotice = "EXISTING RECORDS PRESERVED / THIS VISIT ONLY";
+        else saveNotice = records.save(ctx.storage()) ? "" : "RECORDS NOT SAVED - RETRYING";
     }
 
     // ---- results ----
@@ -347,7 +356,7 @@ public final class FlappyScene implements ModScene, DebuggableScene {
 
     private void updateRecords(SceneContext ctx) {
         demo.tick(demoPilot.decide(demo));
-        if (demo.phase() == Run.Phase.OVER) demo = new Run(Mode.CLASSIC, nextSeed(), 0, true);
+        if (demo.phase() == Run.Phase.OVER) demo = new Run(Mode.CLASSIC, nextSeed(), 0, true, tourDefinition);
         if (screenTick > 10 && (ctx.input().menuBack() || ctx.input().menuAccept()
                 || ctx.keyPressed(SceneKeys.BACKSPACE) || ctx.mouse().leftPressed())) {
             ctx.audio().playSfx(Sounds.SFX_SWITCH);
@@ -373,6 +382,7 @@ public final class FlappyScene implements ModScene, DebuggableScene {
             case RECORDS -> drawRecords(ctx, canvas);
         }
         effects.drawFlash(canvas);
+        if (!saveNotice.isEmpty()) Hud.centred(canvas, saveNotice, 195, 1, Hud.WHITE);
     }
 
     /** The course, Tails and everything in the air: shared by the flight, the title and the results. */
@@ -655,7 +665,7 @@ public final class FlappyScene implements ModScene, DebuggableScene {
     private String menuLabel(int item) {
         return switch (item) {
             case ITEM_PLAY -> "PLAY   < " + mode.label + " >";
-            case ITEM_PRACTICE -> "PRACTICE   < " + Zone.tour().get(practiceZone).name()
+            case ITEM_PRACTICE -> "PRACTICE   < " + tourDefinition.zones().get(practiceZone).name()
                     + (practiceZone == 1 ? " 2" : "") + " >";
             case ITEM_RECORDS -> "RECORDS";
             default -> "EXIT";
@@ -753,7 +763,7 @@ public final class FlappyScene implements ModScene, DebuggableScene {
         String best = run.practice ? "-" : Integer.toString(records.best(run.mode));
         Hud.outlined(canvas, best, px + 170 - Hud.width(best, 2) / 2, py + 42, 2, 0xFFFFFFFF);
         Hud.outlined(canvas, "RINGS " + run.ringsTaken(), px + 96, py + 70, 1, 0xFFFFFFFF);
-        Zone reached = Zone.at(Math.max(0, run.firstGate + run.score()));
+        Zone reached = tourDefinition.zones().get(Zone.tourIndex(Math.max(0, run.firstGate + run.score())));
         Hud.outlined(canvas, "FELL IN " + reached.name() + (reached.act() == 1 ? " 2" : ""), px + 96, py + 82, 1, 0xFFC0C8E0);
         Hud.outlined(canvas, "HIT " + run.crashCause(), px + 96, py + 94, 1, 0xFFC0C8E0);
         // The medal, stamped once the tally is done.
@@ -791,7 +801,7 @@ public final class FlappyScene implements ModScene, DebuggableScene {
             Hud.outlined(canvas, "BEST " + best + "   " + Hud.medalName(tier), px + 48, row + 14, 1, 0xFFFFFFFF);
             row += 34;
         }
-        Zone furthest = Zone.tour().get(records.furthestZone());
+        Zone furthest = tourDefinition.zones().get(records.furthestZone());
         Hud.outlined(canvas, "FURTHEST  " + furthest.name() + (furthest.act() == 1 ? " 2" : ""), px + 20, row + 2, 1, 0xFFFFFFFF);
         Hud.outlined(canvas, "FLIGHTS " + records.flights() + "   GATES " + records.gates() + "   RINGS " + records.rings(),
                 px + 20, row + 16, 1, 0xFFFFFFFF);
@@ -803,6 +813,7 @@ public final class FlappyScene implements ModScene, DebuggableScene {
 
     @Override
     public void exit(SceneContext ctx) {
+        saveRecords(ctx);
         ctx.audio().stopMusic();
         if (cache != null) cache.close();
     }

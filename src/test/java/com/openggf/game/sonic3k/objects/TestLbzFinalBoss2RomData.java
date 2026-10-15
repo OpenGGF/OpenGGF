@@ -62,8 +62,8 @@ class TestLbzFinalBoss2RomData {
         assertArrayEquals(new int[]{0x44F0, 0x0390}, data.escapeExplosionPosition(15));
         assertArrayEquals(new int[]{0x0F, 0, 1, 0xFC}, data.eggRoboHeadAnimation());
         assertArrayEquals(new int[]{0x05, 0, 1, 0xFC}, data.robotnikHeadAnimation());
-        assertEquals(0, data.escapeMinimumY(),
-                "word_72FEA[0] is copied to _unkFAB0 for Knuckles' LBZ route");
+        assertEquals(0x328, data.escapeMinimumY(),
+                "sub_85D6A copies word_72FEA's second record to _unkFAB0 after the admission rectangle");
         assertArrayEquals(new int[]{0, -0x24}, data.childOffset(
                 Sonic3kConstants.BOSS_EXPLOSION_HITBOX_CHILD_TABLE_ADDR, 0));
         assertArrayEquals(new int[]{-4, -4}, data.childOffset(

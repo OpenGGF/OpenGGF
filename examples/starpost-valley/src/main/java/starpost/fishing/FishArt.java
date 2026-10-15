@@ -3,7 +3,6 @@ package starpost.fishing;
 import com.openggf.mods.scene.RomSpriteRequest;
 import com.openggf.mods.scene.RomSpriteRequest.Compression;
 import com.openggf.mods.scene.SceneImage;
-import com.openggf.mods.scene.SceneRomArt;
 import com.openggf.mods.scene.SceneSprite;
 import com.openggf.mods.scene.SceneSpriteSet;
 import java.util.HashMap;
@@ -12,6 +11,10 @@ import starpost.art.Art;
 import starpost.art.ItemIcons;
 import starpost.art.Tone;
 import starpost.core.Item;
+import starpost.art.AssetFailures;
+import com.openggf.mods.scene.art.SceneArtCache;
+import java.util.List;
+import java.util.function.LongSupplier;
 
 /**
  * Fishing's pictures. The badniks, the air bubbles and the countdown digits are the ROMs' own:
@@ -20,7 +23,8 @@ import starpost.core.Item;
  * (Pal_LZWater); Labyrinth's splash (Nem_Splash, Map_Splash) in Pal_LZ; and S3K's Jawz and
  * Blastoid (ArtKosM_Jawz/Map_Jawz, ArtKosM_Blastoid/Map_Blastoid, line 1) under Hydrocity's
  * (Pal_HCZ1_Water). The fish themselves are original, the one kind of creature the design lets
- * us draw: small pictures in Mega Drive colours. Built when fishing is installed, never in draw.
+ * us draw: small pictures in Mega Drive colours. Banks are prepared when fishing is installed;
+ * expected failures retry on later facade requests at the owner logic deadline.
  */
 public final class FishArt {
     /** Map_Bub: bubbles growing (0-6, 6 the full 32-pixel bubble), bursting (7-8), digits 5..1 (14-18). */
@@ -31,82 +35,101 @@ public final class FishArt {
     private static final int PAL_LZ_WATER = 0x2460;      // Pal_LZWater (sonic.lst)
     private static final int PAL_HCZ1_WATER = 0x0A8E5C;  // Pal_HCZ1_Water (sonic3k.lst)
 
-    public final SceneSpriteSet chopper;
-    public final SceneSpriteSet jaws;
-    public final SceneSpriteSet jawz;
-    public final SceneSpriteSet blastoid;
-    public final SceneSpriteSet bubbles;
+    public SceneSpriteSet chopper;
+    public SceneSpriteSet jaws;
+    public SceneSpriteSet jawz;
+    public SceneSpriteSet blastoid;
+    public SceneSpriteSet bubbles;
     /** Labyrinth's water splash (Nem_Splash, Map_Splash, palette line 2): 0 small, 1-2 big. */
-    public final SceneSpriteSet splash;
+    public SceneSpriteSet splash;
+    private final Art art;
+    private final AssetFailures failures;
+    private final SceneArtCache s1Banks, s3kBanks;
+    public List<AssetFailures.Failure> failures() { return failures.failures(); }
     /** The Red Chopper: the Chopper's frames in deeper reds (drawn at twice the size). */
     private final SceneImage[] redChopper = new SceneImage[2];
     private final Map<String, SceneImage> pictures = new HashMap<>();
     private final Map<String, SceneImage> icons = new HashMap<>();
 
     public FishArt(Art art) {
-        chopper = load(art.s1, RomSpriteRequest.of(0x37016, Compression.NEMESIS, 0xB254, 0), art.ghzPalette);
-        int[] lzWater = palette(art.s1, PAL_LZ_WATER, art.ghzPalette);
-        jaws = load(art.s1, RomSpriteRequest.of(0x3727E, Compression.NEMESIS, 0xB2FA, 1), lzWater);
-        bubbles = load(art.s1, RomSpriteRequest.of(0x30EE8, Compression.NEMESIS, 0x130A0, 0), lzWater);
-        int[] lz = art.ghzPalette.clone();
-        try {
-            System.arraycopy(art.s1.palette(PAL_LZ, 48), 0, lz, 16, 48);
-        } catch (RuntimeException e) {
-            // keep Green Hill's colours
-        }
-        splash = load(art.s1, RomSpriteRequest.of(0x3040A, Compression.NEMESIS, 0x14D34, 2), lz);
-        int[] hczWater = palette(art.s3k, PAL_HCZ1_WATER, art.aizPalette);
-        jawz = load(art.s3k, RomSpriteRequest.of(0x36A552, Compression.KOSINSKI_MODULED, 0x361364, 1), hczWater);
-        blastoid = load(art.s3k, RomSpriteRequest.of(0x36A7C6, Compression.KOSINSKI_MODULED, 0x360DD0, 1), hczWater);
-        for (int i = 0; i < redChopper.length; i++) {
-            redChopper[i] = chopper != null && i < chopper.frameCount() ? crimson(chopper.frame(i).image()) : null;
-        }
+        this(art, art::ticks);
+    }
+    public FishArt(Art art, LongSupplier clock) {
+        this.art = art; art.requireOpen();
+        failures = new AssetFailures(art.owner(), clock);
+        s1Banks = new SceneArtCache(art.s1, 8); s3kBanks = new SceneArtCache(art.s3k, 4);
+        prepare();
         for (String id : new String[] {"spring_minnow", "checker_perch", "bubble_bass", "ring_carp", "green_sunfish",
                 "drizzle_trout", "snow_smelt", "scrap_sucker", "emerald_koi", "loop_pike", "spindash_shad",
                 "marble_catfish", "starlight_eel", "ice_cap_char", "labyrinth_gar", "aurora_angelfish"}) {
             pictures.put(id, fish(id));
         }
         pictures.put(Fishing.HAT, ItemIcons.picture(hat(), 0xFFDB2400, 0xFF6D0000));
-        for (String key : new String[] {"chopper", "jaws", "jawz", "blastoid", "red_chopper"}) {
-            SceneImage frame = badnikFrame(key, 0);
-            if (frame != null) {
-                icons.put(key, fit(frame));
-            }
-        }
     }
 
-    private static int[] palette(SceneRomArt rom, int address, int[] fallback) {
-        try {
-            return rom.palette(address, 64);
-        } catch (RuntimeException e) {
-            return fallback;
+    /** Successes retain their original sets; missing banks are retried at the owner's deadline. */
+    private void prepare() {
+        art.requireOpen();
+        if (chopper == null) chopper = failures.load("fish:chopper", () -> s1Banks.sprites(RomSpriteRequest.of(0x37016, Compression.NEMESIS, 0xB254, 0), art.ghzPalette));
+        if (jaws == null || bubbles == null) {
+            Banks banks = failures.load("fish:lz-water", () -> {
+                int[] palette = art.s1.palette(PAL_LZ_WATER, 64);
+                SceneSpriteSet j = s1Banks.sprites(RomSpriteRequest.of(0x3727E, Compression.NEMESIS, 0xB2FA, 1), palette);
+                SceneSpriteSet b = s1Banks.sprites(RomSpriteRequest.of(0x30EE8, Compression.NEMESIS, 0x130A0, 0), palette);
+                return j == null || b == null ? null : new Banks(j, b);
+            });
+            if (banks != null) { jaws = banks.first(); bubbles = banks.second(); }
+        }
+        if (splash == null) splash = failures.load("fish:splash", () -> {
+            int[] palette = art.ghzPalette.clone();
+            System.arraycopy(art.s1.palette(PAL_LZ, 48), 0, palette, 16, 48);
+            return s1Banks.sprites(RomSpriteRequest.of(0x3040A, Compression.NEMESIS, 0x14D34, 2), palette);
+        });
+        if (jawz == null || blastoid == null) {
+            Banks banks = failures.load("fish:hcz-water", () -> {
+                int[] palette = art.s3k.palette(PAL_HCZ1_WATER, 64);
+                SceneSpriteSet j = s3kBanks.sprites(RomSpriteRequest.of(0x36A552, Compression.KOSINSKI_MODULED, 0x361364, 1), palette);
+                SceneSpriteSet b = s3kBanks.sprites(RomSpriteRequest.of(0x36A7C6, Compression.KOSINSKI_MODULED, 0x360DD0, 1), palette);
+                return j == null || b == null ? null : new Banks(j, b);
+            });
+            if (banks != null) { jawz = banks.first(); blastoid = banks.second(); }
+        }
+        if (chopper != null && redChopper[0] == null) {
+            SceneImage[] candidate = failures.load("fish:red-chopper", () -> {
+                SceneImage[] frames = new SceneImage[2];
+                for (int i = 0; i < frames.length; i++) {
+                    if (i >= chopper.frameCount()) return null;
+                    SceneSprite frame = chopper.frame(i);
+                    if (frame == null) return null;
+                    frames[i] = crimson(frame.image());
+                }
+                return frames;
+            });
+            if (candidate != null) System.arraycopy(candidate, 0, redChopper, 0, candidate.length);
         }
     }
-
-    private static SceneSpriteSet load(SceneRomArt rom, RomSpriteRequest request, int[] palette) {
-        try {
-            return rom.sprites(request, palette);
-        } catch (RuntimeException e) {
-            return null;
-        }
-    }
+    private record Banks(SceneSpriteSet first, SceneSpriteSet second) {}
+    public SceneSpriteSet splash() { prepare(); return splash; }
 
     /** The icon source for fishing's items (null for items it does not own). */
     public SceneImage icon(Item item, FishTable table) {
+        prepare();
         FishDef def = table.get(item.id());
         if (def != null && def.isBadnik()) {
-            return icons.get(def.badnik());
+            return icons.computeIfAbsent(def.badnik(), key -> { SceneImage frame = badnikFrame(key, 0); return frame == null ? null : fit(frame); });
         }
         return pictures.get(item.id());
     }
 
     /** A fish's picture (also the catch shown in the Bubble Bar and held up after landing). */
     public SceneImage picture(String id) {
+        art.requireOpen();
         return pictures.get(id);
     }
 
     /** A badnik's animation frame image, or null when its art is missing. */
     public SceneImage badnikFrame(String key, int frame) {
+        prepare();
         if (key.equals("red_chopper")) {
             return redChopper[frame % 2];
         }
@@ -119,7 +142,10 @@ public final class FishArt {
         if (set == null || set.frameCount() == 0) {
             return null;
         }
-        return set.frame(frame % set.frameCount()).image();
+        return failures.load("fish:frame:" + key + ":" + frame % set.frameCount(), () -> {
+            SceneSprite sprite = set.frame(frame % set.frameCount());
+            return sprite == null ? null : sprite.image();
+        });
     }
 
     /** The badnik's frames to loop: Ani_Chop's fast mouth, Ani_Jaws's four, Jawz's two, the Blastoid's firing frame. */
@@ -133,7 +159,9 @@ public final class FishArt {
     }
 
     public SceneSprite bubble(int frame) {
-        return bubbles == null || frame >= bubbles.frameCount() ? null : bubbles.frame(frame);
+        prepare();
+        return bubbles == null || frame >= bubbles.frameCount() ? null
+                : failures.load("fish:bubble:" + frame, () -> bubbles.frame(frame));
     }
 
     /** The Chopper drawn in crimson: every coloured pixel turned to a darker, deeper red. */

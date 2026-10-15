@@ -28,4 +28,9 @@ public final class ModMusicResolver {
     public Optional<PreparedTrack> resolve(TrackKey key) {
         return Optional.ofNullable(music.resolve(Objects.requireNonNull(key, "key")));
     }
+
+    /** Metadata of actual prepared publication; obtaining it never starts playback. */
+    public java.util.List<PreparedModMusic.OverrideTarget> overrideReport() {
+        return music.overrideReport();
+    }
 }

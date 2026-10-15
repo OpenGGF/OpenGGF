@@ -4,7 +4,9 @@ The smallest use of the [title entry and gameplay run](../../docs/modding/guides
 seams. It adds **Act Practice** to the OpenGGF master title. Pick a game, press Start, and play
 its first act exactly as the shipped game plays it. A timer runs from your first input to the
 signpost or capsule, **R** retries, and every retry races a ghost of your previous attempt.
-Your best time per game is saved.
+Your best time per game is saved. A failed write keeps the best in memory and shows an unsaved
+notice, with retries during the run and when it ends. Returning to the menu retries too. Rejected
+best-time files remain untouched; storage retry does not require a faster attempt.
 
 ```
 src/main/resources/META-INF/openggf-mod.yaml   baseGame: any, entry point

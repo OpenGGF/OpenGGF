@@ -6,6 +6,7 @@ import com.openggf.mods.ModCatalogEntry;
 import com.openggf.mods.ModFinding;
 import com.openggf.mods.ModFindingSeverity;
 import com.openggf.mods.ModRuntimeFindingStore;
+import com.openggf.mods.ModCompatibilityReporter;
 import com.openggf.mods.ModAudioPreparer;
 import com.openggf.mods.ModTrackRegistry;
 import com.openggf.mods.PendingModStateEditor;
@@ -50,6 +51,8 @@ public final class ModSubsystem implements AutoCloseable {
 
     private final ModCatalog processCatalog;
     private final ModRuntimeFindingStore runtimeFindings;
+    private final ModCompatibilityReporter compatibilityReporter;
+    private volatile String compatibilityGameCode = "";
     private final SessionViewFactory sessionFactory;
     private final PendingModStateEditor pendingEditor;
     private final Set<String> trustedCodeOwners;
@@ -111,6 +114,16 @@ public final class ModSubsystem implements AutoCloseable {
         this.trustedCodeOwners = Set.copyOf(Objects.requireNonNull(
                 trustedCodeOwners, "trustedCodeOwners"));
         this.startupModState = Objects.requireNonNull(startupModState, "startupModState");
+        // An editor supplies a real startup selection even when no mod is enabled.
+        // Legacy fixed-catalog constructors may omit that selection entirely.
+        ModState activeSelection = pendingEditor == null ? startupModState : pendingEditor.pendingState();
+        Set<String> requestedOwners = pendingEditor == null && startupModState.entries().isEmpty()
+                ? null : activeSelection.entries().stream()
+                .filter(ModState.Entry::enabled).map(ModState.Entry::id)
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+        this.compatibilityReporter = new ModCompatibilityReporter(processCatalog, requestedOwners);
+        runtimeFindings.beginCompatibilityContext(compatibilityReporter.contextFingerprint());
+        runtimeFindings.replaceCompatibility("catalog", compatibilityReporter.catalogDiagnostics());
     }
 
     public static ModSubsystem current() { return PROCESS.get(); }
@@ -234,18 +247,29 @@ public final class ModSubsystem implements AutoCloseable {
     public synchronized com.openggf.mods.code.ModFaultBoundary createFaultBoundary(
             com.openggf.mods.code.ModRuntime runtime) {
         Objects.requireNonNull(runtime, "runtime");
+        runtimeFindings.replaceCompatibility("runtime-load", compatibilityReporter.runtimeRejections(runtime.rejectedOwners()));
+        // Immutable reports project into the independent store. This observer runs
+        // under the runtime monitor and must not acquire this subsystem's monitor.
+        runtime.installPreparationObserver((report, failures) -> {
+            runtimeFindings.replaceCompatibility("registration", compatibilityReporter.preparedContributions(report));
+            runtimeFindings.replaceCompatibility("registration-blockers", compatibilityReporter.registrationFailures(failures));
+        });
         com.openggf.mods.ModAudioPreparer.FailureStateSink sink = owners -> {
             if (pendingEditor == null) return new com.openggf.mods.ModStateSaveResult.Saved();
             pendingEditor.setEnabledCascade(owners, false);
             return pendingEditor.save();
         };
         return new com.openggf.mods.code.ModFaultBoundary(runtime.ownerDependencies(),
-                runtimeFindings, sink, runtime::disableOwnersForProcess);
+                runtimeFindings, sink, runtime::disableOwnersForProcess,
+                (owner, failure) -> runtimeFindings.upsertCompatibility("callbacks",
+                        compatibilityReporter.callbackFailure(owner, failure,
+                                runtime.registrationPlans().keySet(), compatibilityGameCode)));
     }
 
     /** Publishes one launch-preparation failure batch and pending-disables its owners. */
     public synchronized void recordRegistrationFailures(Map<String, Throwable> failures) {
         Objects.requireNonNull(failures, "failures");
+        runtimeFindings.replaceCompatibility("registration-blockers", compatibilityReporter.registrationFailures(failures));
         failures.forEach((owner, failure) -> {
             java.util.logging.Logger.getLogger(ModSubsystem.class.getName()).log(
                     java.util.logging.Level.SEVERE, "Compiled-mod registration failed for " + owner,
@@ -278,6 +302,8 @@ public final class ModSubsystem implements AutoCloseable {
         Set<String> affected = Set.copyOf(Objects.requireNonNull(owners, "owners"));
         Objects.requireNonNull(failure, "failure");
         Objects.requireNonNull(findingCode, "findingCode");
+        if (!affected.isEmpty()) runtimeFindings.upsertCompatibility("patch-failures",
+                compatibilityReporter.ownerFailure(affected, failure, findingCode));
         java.util.logging.Logger.getLogger(ModSubsystem.class.getName()).log(
                 java.util.logging.Level.SEVERE, "Compiled-mod owner failure: " + affected, failure);
         affected.forEach(owner -> runtimeFindings.replaceOwner(owner, List.of(
@@ -335,6 +361,8 @@ public final class ModSubsystem implements AutoCloseable {
             try {
                 replacement.transferTo(audioBoundary);
                 sessionView = replacement;
+                compatibilityGameCode = gameCode;
+                publishAudioCompatibility(replacement.musicResolver(), gameCode);
                 policy = new ExternalContentPolicy(ExternalContentMode.NORMAL);
             } catch (RuntimeException error) {
                 replacement.close();
@@ -345,15 +373,29 @@ public final class ModSubsystem implements AutoCloseable {
 
     public synchronized void disableForDeterministicSession() {
         sessionEpoch++;
+        compatibilityGameCode = "";
+        runtimeFindings.replaceCompatibility("audio", List.of());
         SessionExternalContentView previous = sessionView;
         sessionView = SessionExternalContentView.EMPTY;
         policy = new ExternalContentPolicy(ExternalContentMode.SESSION_DETERMINISTIC);
         previous.close();
     }
 
+    private void publishAudioCompatibility(com.openggf.mods.ModMusicResolver resolver, String gameCode) {
+        try {
+            runtimeFindings.replaceCompatibility("audio", compatibilityReporter.audioOverrides(resolver.overrideReport(), gameCode));
+        } catch (RuntimeException diagnosticFailure) {
+            runtimeFindings.replaceCompatibility("audio", List.of());
+            java.util.logging.Logger.getLogger(ModSubsystem.class.getName()).log(
+                    java.util.logging.Level.WARNING, "Unable to publish audio compatibility evidence", diagnosticFailure);
+        }
+    }
+
     /** Return-to-title retires leases; Apply can then replace the catalog. */
     public synchronized void returnToTitle() {
         sessionEpoch++;
+        compatibilityGameCode = "";
+        runtimeFindings.replaceCompatibility("audio", List.of());
         SessionExternalContentView previous = sessionView;
         sessionView = SessionExternalContentView.EMPTY;
         if (policy.mode() == ExternalContentMode.SESSION_DETERMINISTIC) {
@@ -364,6 +406,8 @@ public final class ModSubsystem implements AutoCloseable {
 
     /** Retires presentation resources without changing the selected session policy. */
     public synchronized void invalidateSessionPresentation() {
+        compatibilityGameCode = "";
+        runtimeFindings.replaceCompatibility("audio", List.of());
         sessionEpoch++;
         SessionExternalContentView previous = sessionView;
         sessionView = SessionExternalContentView.EMPTY;

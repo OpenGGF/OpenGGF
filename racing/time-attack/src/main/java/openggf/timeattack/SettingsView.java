@@ -11,7 +11,7 @@ import java.util.function.Consumer;
 
 /**
  * The Time Attack settings page: multiplayer display name, host port, master server URL, the
- * development-only master TLS switch and the multiplayer minimap. Every change is saved at once.
+ * development-only master TLS switch and the multiplayer minimap. Every change attempts immediate checked publication; failed saves remain active and retry.
  */
 public final class SettingsView {
     private static final int BACKGROUND = 0x101830;
@@ -158,8 +158,8 @@ public final class SettingsView {
     }
 
     private void changed() {
-        status = "Saved";
         changed.run();
+        status = "Changed";
         cues.accept(MenuCue.CONFIRM);
     }
 
@@ -208,9 +208,10 @@ public final class SettingsView {
         int backY = FIRST_ROW_Y + Row.BACK.ordinal() * ROW_HEIGHT;
         if (focus == Row.BACK) canvas.fill(8, backY - 3, width - 16, 16, FOCUS);
         canvas.text("BACK", 14, backY, VALUE);
-        if (!status.isEmpty()) {
-            canvas.text(status, 10, 190, TITLE);
-        }
+        String outcome = settings.publicationNotice();
+        // Validation feedback takes precedence; publication feedback survives navigation and retry.
+        String message = status.startsWith("Port ") || outcome.isEmpty() ? status : outcome;
+        if (!message.isEmpty()) canvas.text(message, 10, 190, TITLE);
         canvas.text(TextLayout.ellipsis("Up/Down select  Enter edit  B back", width - 20, canvas::textWidth),
                 10, 208, HINT);
     }

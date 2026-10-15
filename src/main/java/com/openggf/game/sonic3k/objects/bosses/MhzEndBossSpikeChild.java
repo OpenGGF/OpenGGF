@@ -1,14 +1,12 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
@@ -34,8 +32,7 @@ public final class MhzEndBossSpikeChild extends AbstractObjectInstance
     private static final int RENDER_HALF_HEIGHT = 0x10;
     private static final int SHIELD_REACTION_FIRE = 0x10;
 
-    @RewindTransient(reason = "Structural parent link; live position and collision derive from parent state.")
-    private final MhzEndBossInstance parent;
+    private MhzEndBossInstance parent;
     private int subtype;
     private int xOffset;
     private int yOffset;
@@ -44,21 +41,21 @@ public final class MhzEndBossSpikeChild extends AbstractObjectInstance
     private int collisionFlags;
 
     private MhzEndBossSpikeChild() {
-        this(placeholderParentForRewindProbe(), 0, 0, 0);
+        this(new ObjectSpawn(0, 0, Sonic3kObjectIds.MHZ_END_BOSS, 0, 0, false, 0));
+    }
+
+    /** Pure recreation shell; native parent3 resolves through its captured ObjectRefId. */
+    private MhzEndBossSpikeChild(ObjectSpawn spawn) {
+        super(spawn, "MHZEndBossSpike");
+        subtype = spawn.subtype();
+        x = spawn.x();
+        y = spawn.y();
     }
 
     public MhzEndBossSpikeChild(MhzEndBossInstance parent, int subtype, int xOffset, int yOffset) {
-        super(new ObjectSpawn(
-                        parent.getX() + xOffset,
-                        parent.getY() + yOffset,
-                        Sonic3kObjectIds.MHZ_END_BOSS,
-                        subtype,
-                        0,
-                        false,
-                        0),
-                "MHZEndBossSpike");
+        this(new ObjectSpawn(parent.getX() + xOffset, parent.getY() + yOffset,
+                Sonic3kObjectIds.MHZ_END_BOSS, subtype, 0, false, 0));
         this.parent = parent;
-        this.subtype = subtype;
         this.xOffset = xOffset;
         this.yOffset = yOffset;
         refreshFromParent();
@@ -66,24 +63,7 @@ public final class MhzEndBossSpikeChild extends AbstractObjectInstance
 
     @Override
     public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        MhzEndBossInstance liveParent = RewindRecreateObjectLinks.nearestLiveObject(
-                ctx, MhzEndBossInstance.class);
-        // Captured fields restore motion offsets, but the immutable spawn also
-        // owns the native spike subtype. Recreating every spike as subtype0
-        // changed the next snapshot even when its live collision fields matched.
-        return liveParent != null
-                ? new MhzEndBossSpikeChild(liveParent, ctx.spawn().subtype(), 0, 0) : null;
-    }
-
-    private static MhzEndBossInstance placeholderParentForRewindProbe() {
-        return new MhzEndBossInstance(new ObjectSpawn(
-                -0xC0,
-                0,
-                Sonic3kObjectIds.MHZ_END_BOSS,
-                0,
-                0,
-                false,
-                0));
+        return new MhzEndBossSpikeChild(ctx.spawn());
     }
 
     @Override
@@ -95,7 +75,12 @@ public final class MhzEndBossSpikeChild extends AbstractObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
-        if (parent.isDestroyed()) {
+        if (parent == null) {
+            return; // An unhydrated recreation shell cannot consume owner state.
+        }
+        // loc_76674 consumes the same native parent status bit7 as the hit
+        // proxy; loc_76164 retires these children while the body stays live.
+        if (parent.hasRetiredTouchChildren() || parent.isDestroyed()) {
             setDestroyed(true);
             return;
         }
@@ -140,7 +125,7 @@ public final class MhzEndBossSpikeChild extends AbstractObjectInstance
 
     @Override
     public int getCollisionFlags() {
-        return collisionFlags;
+        return parent == null ? 0 : collisionFlags;
     }
 
     @Override

@@ -39,7 +39,9 @@
         <surefire.forkCount>1</surefire.forkCount>
         <surefire.reuseForks>true</surefire.reuseForks>
         <surefire.runOrder>alphabetical</surefire.runOrder>
-        <surefire.excludedGroups>tracechaser-integration,audio-reference,audio-stress,audio-local-wave,fbz-route</surefire.excludedGroups>
+        <!-- Routine test/package runs use the bounded smoke suite. Exhaustive
+             ordinary validation is explicit and reserved for public releases. -->
+        <surefire.excludedGroups>tracechaser-integration,performance-measurement,slow-suite,audio-reference,audio-stress,audio-local-wave,fbz-route</surefire.excludedGroups>
         <!-- Escape hatch for the validate-phase build-JDK check; see the antrun
              verify-build-jdk execution. -->
         <openggf.jdk.check.skip>false</openggf.jdk.check.skip>
@@ -178,9 +180,10 @@
              signal, so excluding them leaves roughly two minutes of tests that
              still cover every other class in the tree.
 
-             This is a subset, never a replacement. The full default suite still
-             selects the tagged classes and is what release validation, pull
-             requests and a manually dispatched CI run execute. Tag a class @Tag("slow-suite")
+             This is the default for local development, category checks, pull
+             requests and manually dispatched CI. The explicit full-suite profile
+             restores exhaustive ordinary validation only for public release
+             preparation and the Release workflow. Tag a class @Tag("slow-suite")
              only when it is minutes long AND a wider fixture sweep of behaviour
              some other test already covers.
 
@@ -190,6 +193,15 @@
             <id>smoke</id>
             <properties>
                 <surefire.excludedGroups>tracechaser-integration,performance-measurement,slow-suite,audio-reference,audio-stress,audio-local-wave,fbz-route</surefire.excludedGroups>
+            </properties>
+        </profile>
+
+        <!-- Public release validation only. Preserve the former complete
+             ordinary suite; ROM/trace/audio/route lanes remain separate. -->
+        <profile>
+            <id>full-suite</id>
+            <properties>
+                <surefire.excludedGroups>tracechaser-integration,audio-reference,audio-stress,audio-local-wave,fbz-route</surefire.excludedGroups>
             </properties>
         </profile>
 

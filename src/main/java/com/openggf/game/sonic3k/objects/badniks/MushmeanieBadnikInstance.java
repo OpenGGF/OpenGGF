@@ -28,6 +28,8 @@ import java.util.List;
 public final class MushmeanieBadnikInstance extends AbstractS3kBadnikInstance
         implements SpawnRewindRecreatable {
 
+    @Override public boolean supportsGroundedFieldMotion() { return true; }
+
     private static final int COLLISION_FLAGS = 0xD7;
     private static final int COLLISION_SIZE_INDEX = COLLISION_FLAGS & 0x3F;
     private static final int INITIAL_MAPPING_FRAME = 1;
@@ -106,6 +108,8 @@ public final class MushmeanieBadnikInstance extends AbstractS3kBadnikInstance
         }
         shellReleased = true;
     }
+
+    @Override protected boolean independentPresentationBody() { return true; }
 
     @Override
     protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {

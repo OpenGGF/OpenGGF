@@ -200,6 +200,7 @@ class TestLevelEditorController {
     @Test
     void controller_performEyedropInBlockDepthSelectsChunkFromActiveBlockCell() {
         MutableLevel level = createMutableLevelWithChunkCount(2, 2, 2, 3, 12);
+        level.setBlockInMap(0,0,0,1);
         level.setChunkInBlock(1, 0, 0, new ChunkDesc(4));
         level.setChunkInBlock(1, 1, 1, new ChunkDesc(7));
         LevelEditorController controller = new LevelEditorController();
@@ -229,6 +230,7 @@ class TestLevelEditorController {
         controller.setWorldCursor(new EditorCursorState(80, 96));
         controller.selectBlock(0);
         controller.descend();
+        controller.selectBlock(0);
         controller.selectChunk(11);
         controller.moveActiveSelection(1, 1);
         controller.applyPrimaryAction();
@@ -308,11 +310,13 @@ class TestLevelEditorController {
         controller.selectChunk(3);
         controller.descend();
         controller.performEyedrop();
+        controller.moveActiveSelection(1,1);
         controller.applyPrimaryAction();
 
         assertEquals(2, Byte.toUnsignedInt(level.getMap().getValue(0, 0, 0)));
         assertEquals(derivedChunkRaw, level.getBlock(2).getChunkDesc(0, 0).get());
         assertEquals(sourceChunkRaw, level.getBlock(1).getChunkDesc(0, 0).get());
+        assertEquals(31,level.getChunk(4).getPatternDesc(1,1).get());
     }
 
     @Test
@@ -361,6 +365,7 @@ class TestLevelEditorController {
         controller.setWorldCursor(new EditorCursorState(80, 96));
         controller.selectBlock(0);
         controller.descend();
+        controller.selectBlock(0);
         controller.selectChunk(3);
         controller.descend();
         controller.performEyedrop();
@@ -371,7 +376,7 @@ class TestLevelEditorController {
         assertEquals(3, level.getBlock(1).getChunkDesc(0, 0).getChunkIndex());
         assertEquals(44, level.getChunk(4).getPatternDesc(1, 1).get());
         assertEquals(0, controller.selection().selectedBlock());
-        assertEquals(3, controller.selection().selectedChunk());
+        assertEquals(0, controller.selection().selectedChunk());
     }
 
     @Test
@@ -391,6 +396,7 @@ class TestLevelEditorController {
         controller.descend();
         controller.selectChunk(4);
         controller.descend();
+        controller.selectChunk(4);
         controller.performEyedrop();
         controller.moveActiveSelection(1, 1);
         controller.applyPrimaryAction();
@@ -416,11 +422,11 @@ class TestLevelEditorController {
         controller.selectChunk(4);
 
         controller.undo();
-        assertEquals(0, controller.selection().selectedBlock());
+        assertEquals(1, controller.selection().selectedBlock());
         assertEquals(4, controller.selection().selectedChunk());
 
         controller.redo();
-        assertEquals(0, controller.selection().selectedBlock());
+        assertEquals(1, controller.selection().selectedBlock());
         assertEquals(4, controller.selection().selectedChunk());
     }
 
@@ -660,7 +666,18 @@ class TestLevelEditorController {
                         EditorInputHandler.Action.BROWSE_LIBRARY_ROW_NEXT,
                         EditorInputHandler.Action.BROWSE_LIBRARY_ROW_PREVIOUS,
                         EditorInputHandler.Action.BROWSE_LIBRARY_PAGE_NEXT,
-                        EditorInputHandler.Action.BROWSE_LIBRARY_PAGE_PREVIOUS
+                        EditorInputHandler.Action.BROWSE_LIBRARY_PAGE_PREVIOUS,
+                        EditorInputHandler.Action.ERASE_SELECTION,
+                        EditorInputHandler.Action.TOGGLE_H_FLIP,
+                        EditorInputHandler.Action.TOGGLE_V_FLIP,
+                        EditorInputHandler.Action.CYCLE_PATTERN_PALETTE,
+                        EditorInputHandler.Action.TOGGLE_PATTERN_PRIORITY,
+                        EditorInputHandler.Action.INCREMENT_SELECTED_SUBTYPE,
+                        EditorInputHandler.Action.DECREMENT_SELECTED_SUBTYPE,
+                        EditorInputHandler.Action.TOGGLE_SELECTED_RESPAWN,
+                        EditorInputHandler.Action.TOGGLE_BRUSH_H_FLIP,
+                        EditorInputHandler.Action.TOGGLE_BRUSH_V_FLIP,
+                        EditorInputHandler.Action.TOGGLE_BRUSH_RESPAWN
                 },
                 EditorInputHandler.Action.values());
     }

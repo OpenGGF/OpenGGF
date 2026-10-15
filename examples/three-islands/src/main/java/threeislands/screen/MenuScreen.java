@@ -108,9 +108,9 @@ public final class MenuScreen implements Screen {
                         case "Save", "Save (at Starposts)" -> {
                             if (onMap) {
                                 game.progress.setResume(null, 0);
-                                game.save();
+                                boolean saved = game.save();
                                 game.audio.sfx(Audio.SFX_STARPOST);
-                                say(game, "Game saved.");
+                                say(game, saved ? "Game saved." : "Could not save. Progress kept in memory.");
                             } else {
                                 say(game, "Interact with a Starpost to rest and save.");
                             }

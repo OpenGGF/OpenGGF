@@ -1,5 +1,8 @@
 package com.openggf.game;
 
+import com.openggf.tests.TestEnvironment;
+import com.openggf.game.session.SessionManager;
+
 import com.openggf.game.rules.GameRules;
 
 import com.openggf.game.sonic1.Sonic1GameModule;
@@ -25,17 +28,18 @@ public class TestGroundSpeedCapping {
 
     @BeforeEach
     public void setUp() {
-        GameModuleRegistry.setCurrent(new Sonic2GameModule());
+        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
     }
 
     @AfterEach
     public void tearDown() {
+        SessionManager.clear();
         GameModuleRegistry.reset();
     }
 
     @Test
     public void testSonic1_inputAlwaysCapsGroundSpeed_isTrue() {
-        GameModuleRegistry.setCurrent(new Sonic1GameModule());
+        TestEnvironment.configureGameModuleFixture(new Sonic1GameModule());
         TestableSprite sprite = new TestableSprite("test", (short) 100, (short) 100);
 
         GameRules fs = sprite.getGameRules();
@@ -45,7 +49,7 @@ public class TestGroundSpeedCapping {
 
     @Test
     public void testSonic2_inputAlwaysCapsGroundSpeed_isFalse() {
-        GameModuleRegistry.setCurrent(new Sonic2GameModule());
+        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
         TestableSprite sprite = new TestableSprite("test", (short) 100, (short) 100);
 
         GameRules fs = sprite.getGameRules();
@@ -55,7 +59,7 @@ public class TestGroundSpeedCapping {
 
     @Test
     public void testSonic1_highSpeedCappedWhenPressingDirection() {
-        GameModuleRegistry.setCurrent(new Sonic1GameModule());
+        TestEnvironment.configureGameModuleFixture(new Sonic1GameModule());
         TestableSprite sprite = new TestableSprite("test", (short) 100, (short) 100);
 
         // Simulate Sonic at high speed (above max 0x600) from a spring
@@ -80,7 +84,7 @@ public class TestGroundSpeedCapping {
 
     @Test
     public void testSonic2_highSpeedPreservedWhenPressingDirection() {
-        GameModuleRegistry.setCurrent(new Sonic2GameModule());
+        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
         TestableSprite sprite = new TestableSprite("test", (short) 100, (short) 100);
 
         // Simulate Sonic at high speed (above max 0x600) from a spring

@@ -2,6 +2,9 @@
 
 OpenGGF's documentation is organized by audience and purpose.
 
+Level authors can start with the [level editor guide](guide/creating/level-editor.md)
+for project creation, safe saves, playtesting, and all-game exports.
+
 Level implementation and validation: [zone and act test standard](guide/contributing/level-test-standard.md),
 [coverage backlog](status/level-test-coverage.md), and
 [standardisation plan](architecture/plans/2026-09-13-level-test-standardisation.md).
@@ -16,7 +19,7 @@ Maintainers publishing a release should start with
   dated engineering artifacts.
 - [Assets](assets/) contains presentation and documentation assets.
 - [Changelog](changelog/) contains detailed release history.
-- [Guide](guide/) contains player, contributor, and ROM cross-referencing
+- [Guide](guide/) contains player, level-author, contributor, and ROM cross-referencing
   documentation.
 - [Project](project/) contains project history, roadmaps, and process
   direction.

@@ -5,8 +5,9 @@ import java.util.TreeMap;
 
 /**
  * The save file: one {@code key=value} per line, written at bedtime. Reading builds a fresh
- * {@link Game}; anything unknown or out of range is dropped rather than trusted, so an edited or
- * damaged file can never put the game in an impossible state.
+ * {@link Game}; core fields and fresh sections validate their own data before it is accepted.
+ * Unreadable core data or a rejected section rejects the checkpoint. The scene's save slot
+ * preserves rejected primary bytes until the player explicitly elects replacement.
  */
 public final class SaveCodec {
     public static final int VERSION = 1;

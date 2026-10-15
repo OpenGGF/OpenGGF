@@ -313,7 +313,8 @@ public PlatformerModule(String owner, Level level) {
             .physics(PhysicsProvider.fixed(BoltCharacter.physicsSpec().profile(),
                     PhysicsModifiers.STANDARD, GameRules.SONIC_2))
             .touchResponses((byte) 0, (byte) 0, (byte) 8, (byte) 8)
-            .objects(PlatformerRegistry::new).build());
+            .object(owner + ":zapbug", (spawn, registry) -> new ZapBug(spawn))
+            .object(owner + ":springpad", (spawn, registry) -> new SpringPad(spawn)).build());
 }
 ```
 
@@ -338,11 +339,12 @@ Its constructor passes that spec to the playable base:
 ```java
 public BoltCharacter(String code, int x, int y) {
     super(code, (short) x, (short) y, physicsSpec());
-    key = CharacterKey.parsePersisted(code.replaceFirst("_p\\d+$", ""));
 }
 ```
 
-The instance spec owns the active speeds, dimensions and terrain sensors. The
+The host binds `characterKey()` from the registered definition; Bolt does not
+parse a runtime sprite name. The instance spec owns the active speeds, dimensions
+and terrain sensors. The
 module uses the same authored tuning for profile queries and supplies game-wide
 rules and modifiers. Bolt needs no duplicated `defineSpeeds()`, sensor creation or
 width/height overrides. `CharacterPhysicsSpec` defaults to `PlayableSensorSpec.standard()`;
@@ -404,10 +406,7 @@ Drawing only submits the current pose:
 
 ```java
 @Override public void draw() {
-    if (!isHidden() && getSpriteRenderer() != null) {
-        getSpriteRenderer().drawFrame(getMappingFrame(), getRenderCentreX(), getRenderCentreY(),
-                getRenderHFlip(), getRenderVFlip());
-    }
+    drawStandardArt();
 }
 ```
 
@@ -497,10 +496,11 @@ bounds each call sidesteps the whole problem rather than working around it.
 
 `ZapBug` implements the other three required badnik hooks minimally —
 `getCollisionSizeIndex()` returns a fixed index, `getDestructionConfig()` returns a
-config with no animal/points/explosion factories (a bare hit-and-vanish), and
-`onPlayerAttack` fires a namespaced `hit` SFX exactly once (only if not already
-destroyed) before delegating to the base class's standard explosion/score/slot
-sequence — and `recreateForRewind` simply rebuilds itself from the spawn, the same
+config with no animal/points/custom-explosion factories, and a typed
+`SoundCue.namespaced(new SfxRef(OWNER, "hit"), SoundOrder.BEFORE_LATCH)`. The
+badnik owner emits the cue once before latching destruction and transferring
+its slot; shared effects then create the standard explosion and award score.
+No attack override is needed. `recreateForRewind` rebuilds itself from the spawn, the same
 minimal constructor pattern. Both objects implement `ModRewindRecreatable` and
 receive a creator-facing `ObjectReconstructionContext`:
 
@@ -515,19 +515,17 @@ provides captured payloads, object queries and injected services when reconstruc
 needs them; simple objects need only the spawn. The older `RewindRecreatable` expert
 contract remains available.
 
-**`SpringPad`** cannot use the stock spring pipeline at all. Mod API 0.7 does not
-publish a solid-object marker interface (`SolidObjectProvider` and friends are
-engine-internal), so `SpringPad` does simple proximity + velocity detection every
-frame instead of riding `SolidObject`/checkpoint contact:
+**`SpringPad`** owns an authored rectangular proximity contact. It uses the public
+spring helper for the player's native upward velocity, airborne/detached state and
+control lock. Stock springs continue to own their checkpoint geometry, position
+corrections and ROM animation; the sample retains its 32×16 rectangle and eight-frame pose.
 
 ```java
 @Override public void update(int frameCounter, PlayableEntity player) {
     PlayableEntity contact = services().playerQuery().mainPlayerOrNull();
-    if (contact != null && contact.getYSpeed() > 0 && isWithinPad(contact)) {
-        // STRENGTH_YELLOW is already negative (= upward); do not negate it.
-        contact.setYSpeed((short) SpringBounceHelper.STRENGTH_YELLOW);
-        contact.setAir(true);
-        contact.setOnObject(false);
+    if (contact != null && SpringBounceHelper.tryLaunchUp(contact, spawn.x(), spawn.y(),
+            HALF_WIDTH, HALF_HEIGHT, SpringBounceHelper.STRENGTH_YELLOW,
+            SpringBounceHelper.CONTROL_LOCK_FRAMES)) {
         services().playSfx(new SfxRef(OWNER, "spring"));
         extendedFramesRemaining = EXTENDED_FRAMES;
     } else if (extendedFramesRemaining > 0) {
@@ -536,14 +534,11 @@ frame instead of riding `SolidObject`/checkpoint contact:
 }
 ```
 
-`SpringBounceHelper.STRENGTH_YELLOW` is `-0x0A00` — already negative (upward), so it
-must not be negated again. `SpringBounceHelper.CONTROL_LOCK_FRAMES` (the stock
-15-frame post-launch input lock) **cannot be mirrored**: the setter that would apply
-it (`AbstractPlayableSprite#setSpringing`) is not part of the published
-`PlayableEntity` surface, so this gimmick launches the player without locking their
-input afterward — a known, documented gap versus a ROM-accurate spring, not an
-oversight. `extendedFramesRemaining` is a plain non-final counter, rewind-safe the
-same way `ZapBug`'s fields are.
+`STRENGTH_YELLOW` is `-0x0A00`, already upward. The helper delegates the 15-frame
+control lock to the existing `AbstractPlayableSprite.setSpringing` owner rather than
+adding another input-lock state. Invalid bounds/strength/lock values reject before
+mutation; rising, dead or out-of-rectangle participants cannot trigger the proximity
+launch. `extendedFramesRemaining` remains a non-final rewind-safe counter.
 
 ## 7. Music and SFX
 
@@ -590,7 +585,7 @@ build does not do this for you, and the WAV must never ship as the actual music
 track.
 
 `jump2`, `hit`, and `spring` are ordinary one-shot WAV SFX, played through the
-injected service path — `services().playSfx(new SfxRef(OWNER, "hit"))` in `ZapBug`,
+injected service path — the typed destruction cue in `ZapBug`,
 the equivalent in `SpringPad`, and `currentAudioManager().playNamespacedSfx(...)` in
 `BoltCharacter`'s double-jump hook. Standalone one-shots use a bounded **16-voice
 pool**, are presentation-only, never enter the SMPS command timeline, and are

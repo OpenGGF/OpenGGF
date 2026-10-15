@@ -29,6 +29,11 @@ final class FreshLevelTransitionBoundaryController {
             return;
         }
 
+        // The profile has already performed the destination's counter setup.
+        // Rings live in LevelState, not in the playable snapshots below. Keep
+        // that value while the pre-title boundary borrows the source HUD count.
+        int destinationRings = level.levelGamestate != null ? level.levelGamestate.getRings() : 0;
+
         List<PlayableState> playableStates = new ArrayList<>();
         for (Sprite sprite : level.spriteManager.getAllSprites()) {
             if (sprite instanceof AbstractPlayableSprite playable) {
@@ -75,13 +80,17 @@ final class FreshLevelTransitionBoundaryController {
         }
         var initialPass = level.capturePendingInitialProcessSpritesLifecycleForRewind();
         level.discardPendingInitialProcessSpritesForStateRestoration();
-        pending = new Boundary(destinationCameraX, destinationCameraY, playableStates, initialPass);
+        pending = new Boundary(destinationCameraX, destinationCameraY, destinationRings,
+                playableStates, initialPass);
         initialPublished = false;
     }
 
     void complete(LevelManager level) {
         if (pending == null) {
             return;
+        }
+        if (!initialPublished) {
+            publishDestinationRings(level);
         }
         restorePlayables(level);
         applyDestinationCamera(level);
@@ -98,6 +107,7 @@ final class FreshLevelTransitionBoundaryController {
         if (pending == null || initialPublished) {
             return;
         }
+        publishDestinationRings(level);
         restorePlayables(level);
         AbstractPlayableSprite player = mainPlayable(level);
         if (player != null) {
@@ -169,6 +179,16 @@ final class FreshLevelTransitionBoundaryController {
         level.camera.setY(pending.destinationCameraY());
     }
 
+    private void publishDestinationRings(LevelManager level) {
+        if (level.levelGamestate != null) {
+            // S3K loc_63B4 clears Ring_count after the locked title loop.
+            // Publish the profile's actual value once, rather than imposing a
+            // reset: checkpoint and other semantic load owners choose it.
+            level.levelGamestate.setRings(com.openggf.game.mutators.LevelMutatorPolicyAccess
+                    .mainLevelRingRestore(level, pending.destinationRings()));
+        }
+    }
+
     private static AbstractPlayableSprite mainPlayable(LevelManager level) {
         Sprite player = level.spriteManager.getSprite(level.transitionMainCharacterCode());
         return player instanceof AbstractPlayableSprite playable ? playable : null;
@@ -177,6 +197,7 @@ final class FreshLevelTransitionBoundaryController {
     private record Boundary(
             short destinationCameraX,
             short destinationCameraY,
+            int destinationRings,
             List<PlayableState> playableStates,
             com.openggf.game.InitialProcessSpritesLifecycle initialPass) {
         private Boundary {

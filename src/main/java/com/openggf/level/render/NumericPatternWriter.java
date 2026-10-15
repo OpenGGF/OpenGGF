@@ -14,13 +14,29 @@ public final class NumericPatternWriter {
      */
     public static void writeBonus(Pattern[] dest, int startIndex, int value,
                                   Pattern[] digits, Pattern blank) {
+        writeBonus(dest, startIndex, value, digits, blank, true);
+    }
+
+    /**
+     * Writes four variable tens-of-points digits for a mapping that already
+     * appends a fixed zero. At zero all four variable columns become blank.
+     * S1/S2 Hud_TimeRingBonus use this layout; the default writer's standalone
+     * ones digit remains available to other consumers.
+     */
+    public static void writeBonusWithFixedZero(Pattern[] dest, int startIndex, int value,
+                                             Pattern[] digits, Pattern blank) {
+        writeBonus(dest, startIndex, value, digits, blank, false);
+    }
+
+    private static void writeBonus(Pattern[] dest, int startIndex, int value,
+                                   Pattern[] digits, Pattern blank, boolean retainOnesDigit) {
         int divisor = 1000;
         boolean hasDigit = false;
         for (int i = 0; i < 4; i++) {
             int digit = value / divisor;
             value %= divisor;
             int tileIndex = startIndex + i * 2;
-            if (digit != 0 || hasDigit || i == 3) {
+            if (digit != 0 || hasDigit || (retainOnesDigit && i == 3)) {
                 hasDigit = true;
                 copyDigit(dest, tileIndex, digit, digits);
             } else {

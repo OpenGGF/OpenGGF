@@ -139,4 +139,9 @@ final class RecordingCanvas implements SceneCanvas {
     public void unclip() {
         clip = null;
     }
+
+    @Override public java.util.Optional<com.openggf.mods.scene.SceneClip> clipBounds() {
+        return clip == null ? java.util.Optional.empty() : java.util.Optional.of(
+                new com.openggf.mods.scene.SceneClip(clip[0], clip[1], clip[2], clip[3]));
+    }
 }

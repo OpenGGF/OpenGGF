@@ -14,6 +14,7 @@ public final class CourseControl {
     private final GameplayModeContext context;
     private final com.openggf.control.InputHandler input;
     private final boolean rewindHeld;
+    private boolean frameClosed;
     CourseControl(GameplayModeContext context) { this(context, null); }
     CourseControl(GameplayModeContext context, com.openggf.control.InputHandler input) {
         this.context = context; this.input = input; this.rewindHeld = input != null && input.isRewindHeld();
@@ -22,6 +23,30 @@ public final class CourseControl {
     /** Current configured rewind key/primary-pad bumper, independent of developer rewind enablement.
      * Controllers own edge detection. Movie inputs should use their controller menu command instead. */
     public boolean rewindHeld() { return rewindHeld; }
+
+    /** Injected services for this row's current level visit. Resolve objects anew after rewind or load.
+     * The handle is revoked after afterTick, on callback failure, on level replacement or session teardown.
+     * Object creation retains the callback's verified owner through the existing injected service path. */
+    public com.openggf.level.objects.ObjectServices objectServices() {
+        requireFrame();
+        var manager = context.getLevelManager().getObjectManager();
+        var delegate = manager.getObjectServices();
+        return (com.openggf.level.objects.ObjectServices) java.lang.reflect.Proxy.newProxyInstance(
+                CourseControl.class.getClassLoader(), new Class<?>[]{com.openggf.level.objects.ObjectServices.class},
+                (proxy, method, args) -> {
+                    requireFrame();
+                    if (context.getLevelManager().getObjectManager() != manager)
+                        throw new IllegalStateException("Controlled services belong to a replaced level visit");
+                    try { return method.invoke(delegate, args); }
+                    catch (java.lang.reflect.InvocationTargetException failure) { throw failure.getCause(); }
+                });
+    }
+
+    private void requireFrame() {
+        if (frameClosed || !context.isGameplayRuntimeReady())
+            throw new IllegalStateException("Controlled frame capability is closed");
+    }
+    void closeFrame() { frameClosed = true; }
 
     /** Records final presented PCM for a bounded reverse view (1..120 seconds; at most four live
      * recordings per session). Start immediately before its first forward row and close on

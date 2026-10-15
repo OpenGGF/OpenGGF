@@ -150,6 +150,16 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
         };
     }
 
+    @Override
+    public void onUnload() {
+        // Sprite_CheckDeleteTouch -> loc_85094 sets status bit 7 before
+        // Delete_Current_Sprite. Publish the manager-owned offscreen exit so
+        // Child_Draw_Sprite cannot keep following an unregistered Java body.
+        if (!isDestroyed()) {
+            ObjectLifetimeOps.destroyRespawnableOffscreen(this);
+        }
+    }
+
     /**
      * {@code SetUp_ObjAttributes} is the only thing that writes {@code collision_flags}, and of the
      * three {@code ObjDat3} rows this object loads only {@code ObjDat3_919A6} carries one
@@ -242,6 +252,10 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
         spawnChildrenOnce();
         mappingFrame = hoverFrame(vIntRunCount);
         if (state == State.HOVER_SHOOTING) {
+            if (!com.openggf.game.mutators.NativeObjectPolicyAccess.permitsFiring(services(), x)) {
+                gunArmed = false;
+                state = State.HOVER;
+            }
             if (!gunArmed) {
                 state = State.HOVER;
             }
@@ -254,12 +268,12 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
         y = (y + (yVelocity >> 8)) & 0xFFFF;
         // jsr (Find_OtherObject) / (Change_FlipX): the robot turns to face Player 1 and arms the
         // gun once it is within eight pixels vertically.
-        if (!(player instanceof AbstractPlayableSprite sprite)) {
+        if (!com.openggf.game.mutators.NativeObjectPolicyAccess.permitsTargeting(services()) || !(player instanceof AbstractPlayableSprite sprite)) {
             return;
         }
         facingLeft = (sprite.getCentreX() & 0xFFFF) < x;
         int dy = Math.abs((short) (((sprite.getCentreY() & 0xFFFF) - y) & 0xFFFF));
-        if (dy <= GUN_ARM_Y_WINDOW) {
+        if (dy <= GUN_ARM_Y_WINDOW && com.openggf.game.mutators.NativeObjectPolicyAccess.permitsFiring(services(), x)) {
             state = State.HOVER_SHOOTING;
             gunArmed = true;
         }

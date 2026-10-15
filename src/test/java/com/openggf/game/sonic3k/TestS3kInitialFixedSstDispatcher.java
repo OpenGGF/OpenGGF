@@ -60,6 +60,36 @@ class TestS3kInitialFixedSstDispatcher {
     }
 
     @Test
+    void authoredModuleRetainsNativeFixedPlayableAndPowerUpDispatch() {
+        var manager = mock(com.openggf.level.LevelManager.class);
+        var authored = mock(Sonic3kLevel.class);
+        when(manager.getCurrentLevel()).thenReturn(authored);
+        when(authored.hasStockRomZoneIdentity()).thenReturn(false);
+        SpriteManager sprites = mock(SpriteManager.class);
+        ObjectManager objects = mock(ObjectManager.class);
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        ObjectInstance shield = powerUpObject();
+        ObjectInstance stars = powerUpObject();
+        when(sprites.getMainPlayable()).thenReturn(player);
+        when(sprites.getRegisteredSidekicks()).thenReturn(List.of());
+        when(player.getShieldObject()).thenReturn((PowerUpObject) shield);
+        when(player.getInvincibilityObject()).thenReturn((PowerUpObject) stars);
+        var module = new Sonic3kGameModule();
+        try (var services = org.mockito.Mockito.mockStatic(com.openggf.game.GameServices.class)) {
+            services.when(com.openggf.game.GameServices::levelOrNull).thenReturn(manager);
+            var dispatcher = module.createInitialFixedSstDispatcher(sprites, objects, null);
+            org.junit.jupiter.api.Assertions.assertInstanceOf(S3kInitialFixedSstDispatcher.class, dispatcher);
+            dispatcher.onInitialScopeAcquired();
+            dispatcher.processPostDynamicFixedSlots(new ProcessSpritesEpoch(0, 1, false));
+        }
+        verify(sprites).processInitialTailsFixedSlot();
+        verify(sprites).processInitialDustFixedSlot(0);
+        verify(sprites).processInitialDustFixedSlot(1);
+        verify(objects).processInitialFixedDispatchObject(shield);
+        verify(objects).processInitialFixedDispatchObject(stars);
+    }
+
+    @Test
     void explicitEmptyWaveSlotDoesNotInvokeUnregisteredOwner() {
         Sonic3kLevelEventManager events = mock(Sonic3kLevelEventManager.class);
         SpriteManager sprites = mock(SpriteManager.class);

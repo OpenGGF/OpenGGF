@@ -18,10 +18,12 @@ public final class InfiniteSonicMod implements GgfMod {
         context.registerObject("burst", (spawn, registry) -> new CourseBurst(spawn));
         context.registerObject("monitor", (spawn, registry) -> new CourseMonitor(spawn));
         context.registerObject("hazard", (spawn, registry) -> new CourseHazard(spawn));
-        context.registerGamePatch(new Patch());
+        context.registerGamePatch(new Patch(context.storage()));
     }
 
     public static final class Patch implements GamePatch {
+        private final com.openggf.mods.ModStorage storage;
+        public Patch(com.openggf.mods.ModStorage storage) { this.storage = java.util.Objects.requireNonNull(storage); }
         @Override public String id() { return "infinite-sonic:terrain"; }
         @Override public String displayName() { return "Infinite Sonic"; }
         @Override public String baseGameId() { return "s1"; }
@@ -31,7 +33,7 @@ public final class InfiniteSonicMod implements GgfMod {
         }
         @Override public Set<LogicalRom> romPrerequisites() { return Set.of(LogicalRom.S1); }
         @Override public List<String> providedMainCharacters() { return List.of(); }
-        @Override public GameModule apply(GameModule base, PatchContext context) { return new Module(base); }
+        @Override public GameModule apply(GameModule base, PatchContext context) { return new Module(base, storage); }
     }
 
     /** Set to pin every course to one seed (decimal or 0x hex), for tests and reproducing a course. */
@@ -80,14 +82,14 @@ public final class InfiniteSonicMod implements GgfMod {
         private final ChallengeClock clock = new ChallengeClock();
         private final CourseSession session = new CourseSession();
         private final CourseRewind rewind = new CourseRewind(this::courseController);
+        private final com.openggf.mods.ModStorage storage;
         private Leaderboard leaderboard;
         // Identifies the current level load's run on the leaderboard.
         private CourseRun run = new CourseRun(0);
         /** The saved per-zone top scores, read on first use. */
         private Leaderboard leaderboard() {
             if (leaderboard == null) {
-                leaderboard = new Leaderboard(com.openggf.game.save.SavePaths.root()
-                        .resolve("infinite-sonic").resolve("leaderboard.txt"));
+                leaderboard = new Leaderboard(storage);
             }
             return leaderboard;
         }
@@ -96,7 +98,9 @@ public final class InfiniteSonicMod implements GgfMod {
             @Override public void update() { }
         };
         private com.openggf.level.objects.ObjectRegistry stockObjects;
-        public Module(GameModule base) { super(base, "infinite-sonic:terrain"); }
+        public Module(GameModule base, com.openggf.mods.ModStorage storage) {
+            super(base, "infinite-sonic:terrain"); this.storage = storage;
+        }
         /** The session's object registry, which the course uses to spawn stock platforms. */
         private com.openggf.level.objects.ObjectRegistry stockObjects() {
             if (stockObjects == null) stockObjects = createObjectRegistry();

@@ -58,7 +58,12 @@ public class SpeedShoesTimer extends AbstractTimer implements DisplayPhaseTimer 
     private final int decimation;
 
     public SpeedShoesTimer(String code, AbstractPlayableSprite sprite) {
-        super(code, durationTicks(sprite));
+        this(code, sprite, ROM_DURATION_FRAMES);
+    }
+
+    /** Bounded native-frame grant; retains the game's display-phase decrement cadence. */
+    public SpeedShoesTimer(String code, AbstractPlayableSprite sprite, int durationFrames) {
+        super(code, durationTicks(sprite, durationFrames));
         this.sprite = sprite;
         this.decimation = decimationFor(sprite);
     }
@@ -71,8 +76,12 @@ public class SpeedShoesTimer extends AbstractTimer implements DisplayPhaseTimer 
         return d < 1 ? 1 : d;
     }
 
-    private static int durationTicks(AbstractPlayableSprite sprite) {
-        return ROM_DURATION_FRAMES / decimationFor(sprite);
+    private static int durationTicks(AbstractPlayableSprite sprite, int durationFrames) {
+        if (durationFrames < 8 || durationFrames > 3600) {
+            throw new IllegalArgumentException("Speed shoes duration must be 8..3600 native frames");
+        }
+        int cadence = decimationFor(sprite);
+        return (durationFrames + cadence - 1) / cadence;
     }
 
     @Override

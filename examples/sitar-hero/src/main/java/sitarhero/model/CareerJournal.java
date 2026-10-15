@@ -17,6 +17,7 @@ public final class CareerJournal {
     private final List<CareerTour> tours = CareerTours.all();
     private final Set<String> knownSongs = new HashSet<>();
     private final Set<String> knownScenes = new HashSet<>();
+    private LoadDisposition disposition = LoadDisposition.ABSENT;
     private final Set<String> clears = new TreeSet<>();
     private final Set<String> seenScenes = new TreeSet<>();
 
@@ -90,25 +91,32 @@ public final class CareerJournal {
      * current journal. Only the 79 authored song IDs and 38 scene IDs are accepted;
      * duplicates, unknown fields/IDs, blank rows and text beyond the explicit bounds reject.
      */
-    public void read(String text) {
-        if (text == null || text.length() > MAX_TEXT) return;
+    public boolean read(String text) {
+        disposition = LoadDisposition.rejected(text, "sitar-career", HEADER);
+        if (text == null || text.length() > MAX_TEXT) return false;
         var lines = text.lines().limit(MAX_LINES + 1L).toList();
-        if (lines.isEmpty() || lines.size() > MAX_LINES || !lines.getFirst().equals(HEADER)) return;
+        if (lines.isEmpty() || lines.size() > MAX_LINES || !lines.getFirst().equals(HEADER)) return false;
         var parsedClears = new TreeSet<String>(); var parsedScenes = new TreeSet<String>();
         for (int i = 1; i < lines.size(); i++) {
             String line = lines.get(i);
-            if (line.length() > MAX_LINE) return;
+            if (line.length() > MAX_LINE) return false;
             if (line.startsWith("clear=")) {
                 String id = line.substring(6);
-                if (!knownSongs.contains(id) || !parsedClears.add(id)) return;
+                if (!knownSongs.contains(id) || !parsedClears.add(id)) return false;
             } else if (line.startsWith("seen=")) {
                 String id = line.substring(5);
-                if (!knownScenes.contains(id) || !parsedScenes.add(id)) return;
-            } else return;
+                if (!knownScenes.contains(id) || !parsedScenes.add(id)) return false;
+            } else return false;
         }
         clears.clear(); clears.addAll(parsedClears);
         seenScenes.clear(); seenScenes.addAll(parsedScenes);
+        disposition = LoadDisposition.VALID;
+        return true;
     }
+
+
+    public boolean saveEligible() { return disposition.saveEligible(); }
+    public LoadDisposition loadDisposition() { return disposition; }
 
     private boolean knownWorld(CareerWorld world) {
         return world != null && tours.stream().anyMatch(tour -> tour.worlds().contains(world));

@@ -13,7 +13,6 @@ import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.events.S3kAizEventWriteSupport;
 import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
-import com.openggf.game.sonic3k.runtime.AizZoneRuntimeState;
 import com.openggf.game.timing.HardwareWorkHandle;
 import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.graphics.GLCommand;
@@ -204,6 +203,11 @@ public class AizEndBossInstance extends AbstractBossInstance
     // Defeat sequence
     private S3kBossExplosionController defeatExplosionController;
     private boolean defeatRenderComplete;
+    private boolean postDefeatSequenceActive;
+    // AIZEndBoss_StartCapsuleSequence changes this owner's routine pointer;
+    // it does not allocate another SST. Keep continuation state under this
+    // boss's rewind lifetime while its existing children still refer to it.
+    private final PostDefeatSequence postDefeatSequence = new PostDefeatSequence();
 
     // Children references
     private AizEndBossShipChild shipChild;
@@ -340,6 +344,10 @@ public class AizEndBossInstance extends AbstractBossInstance
 
     @Override
     protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
+        if (postDefeatSequenceActive) {
+            postDefeatSequence.update(services(), getSlotIndex(), vIntRunCount, playerEntity);
+            return;
+        }
         if (state.routine != ROUTINE_INIT) {
             serviceBossArtQueue();
         }
@@ -433,9 +441,8 @@ public class AizEndBossInstance extends AbstractBossInstance
         services().camera().setMinX((short) cameraLockX);
         services().camera().setMaxX((short) cameraLockX);
         // ROM: AIZEndBoss_StartArenaLock falls through to LoadEnemyArt at the
-        // activation boundary. Do not submit this one-shot owner while a
-        // layout entry is still waiting in routine 0; that entry can be
-        // unloaded and recreated several times before the arena is reached.
+        // activation boundary. A layout owner waiting in routine 0 remains
+        // inert until the camera reaches that boundary.
         serviceBossArtQueue();
 
         // Set Boss_flag to lock screen (ROM: st (Boss_flag).w)
@@ -822,6 +829,10 @@ public class AizEndBossInstance extends AbstractBossInstance
      * (sonic3k.asm:179661-179669, 138240-138247).
      */
     private void startDefeat() {
+        // AIZEndBoss_StartDefeat writes _unkFAA3 before entering the capsule
+        // wait (sonic3k.asm:138240-138245). The ROM-loaded bridge owns its
+        // opening motion; capsule creation must not restart this flag.
+        Aiz2BossEndSequenceState.triggerBridgeDrop();
         waitTimer = FADE_TO_LEVEL_MUSIC_WAIT;
         waitCallback = WaitCallback.START_CAPSULE_SEQUENCE;
     }
@@ -872,38 +883,15 @@ public class AizEndBossInstance extends AbstractBossInstance
         }
 
         if (getPlayerCharacter() != PlayerCharacter.KNUCKLES) {
-            Aiz2BossEndSequenceState.reset();
-            AizZoneRuntimeState aizState = aizRuntimeStateOrNull();
-            if (aizState != null) {
-                aizState.resetBossEndSequenceDispatchState();
-            }
-            // ROM loc_694AA creates the route-8 capsule through
-            // CreateChild6_Simple, which allocates after the current boss
-            // slot (sonic3k.asm:138247-138255, 177114-177129).
+            // Boss_LoadEggCapsuleAndAnimals uses CreateChild6_Simple, while
+            // AIZEndBoss_StartCapsuleSequence retains this boss's SST for
+            // AIZEndBoss_StartPostDefeatCutscene (sonic3k.asm:138247-138276).
+            // Keep Obj_Load's button and drawbridge rather than replacing
+            // their native allocation/execution order with synthetic owners.
             spawnChild(() -> Aiz2EndEggCapsuleInstance.createForCamera(
                     services().camera().getX(), services().camera().getY()));
-            Aiz2BossEndSequenceState.activateCutsceneOverrideObjects();
-            // These two replacements stand in for AIZ2 layout objects, so they
-            // must reproduce the layout's relative SST order. The AIZ2 (zone 0,
-            // act 2) sprite list read from the user-supplied ROM through
-            // Sonic3kObjectPlacement holds Obj_CutsceneButton (id $83) at
-            // x=$4B18 immediately BEFORE Obj_AIZDrawBridge (id $32) at x=$4B48,
-            // and Obj_Load allocates ascending free slots in that order. The
-            // button therefore always occupies the lower slot and is reached
-            // first in every object scan, which is why the bridge's
-            // AIZDrawBridge_WaitCollapseTrigger observes the button's
-            // st (_unkFAA9).w on the same frame the button sets it
-            // (sonic3k.asm:59622-59628, 133936-133953).
-            S3kCutsceneButtonObjectInstance cutsceneButton = spawnFreeChild(
-                    S3kCutsceneButtonObjectInstance::createCutsceneOverride);
-            AizDrawBridgeObjectInstance cutsceneBridge = spawnFreeChild(
-                    AizDrawBridgeObjectInstance::createCutsceneOverride);
-            if (aizState != null) {
-                aizState.setButtonBeforeBridgeDispatch(
-                        cutsceneButton != null && cutsceneBridge != null
-                                && cutsceneButton.getSlotIndex() < cutsceneBridge.getSlotIndex());
-            }
-            spawnFreeChild(() -> new Aiz2BossEndSequenceController(targetMaxX, yBase));
+            postDefeatSequence.configureArena(targetMaxX, yBase);
+            postDefeatSequenceActive = true;
         } else {
             int newMaxX = targetMaxX + 0x158;
             services().camera().setMaxX((short) newMaxX);
@@ -921,6 +909,33 @@ public class AizEndBossInstance extends AbstractBossInstance
             int x = state.x + AizEndBossDebrisChild.DEBRIS_OFFSETS[debrisIndex][0];
             int y = state.y + AizEndBossDebrisChild.DEBRIS_OFFSETS[debrisIndex][1];
             spawnFreeChild(() -> new AizEndBossDebrisChild(x, y, debrisIndex));
+        }
+    }
+
+    private static final class PostDefeatSequence implements
+            com.openggf.game.rewind.RewindStateful<Aiz2BossEndSequenceController.SequenceSnapshot> {
+        private final Aiz2BossEndSequenceController controller =
+                new Aiz2BossEndSequenceController(0, 0);
+
+        void configureArena(int arenaMaxX, int arenaBaseY) {
+            controller.configureArena(arenaMaxX, arenaBaseY);
+        }
+
+        void update(com.openggf.level.objects.ObjectServices services, int ownerSlot,
+                    int vIntRunCount, PlayableEntity player) {
+            controller.setServices(services);
+            controller.setSlotIndex(ownerSlot);
+            controller.update(vIntRunCount, player);
+        }
+
+        @Override
+        public Aiz2BossEndSequenceController.SequenceSnapshot captureRewindStateValue() {
+            return controller.captureSequenceState();
+        }
+
+        @Override
+        public void restoreRewindStateValue(Aiz2BossEndSequenceController.SequenceSnapshot snapshot) {
+            controller.restoreSequenceState(snapshot);
         }
     }
 
@@ -1151,19 +1166,15 @@ public class AizEndBossInstance extends AbstractBossInstance
     }
 
     /**
-     * ROM parity: boss objects do not call the {@code out_of_range} macro
-     * once activated. However, the AIZ2 layout contains TWO 0x92 entries —
-     * one for Sonic's arena ($48A0,$1C0) and one for Knuckles' ($4120,$640).
-     * Only one is valid per playthrough. The wrong-character boss must be
-     * allowed to expire via normal out-of-range while still in ROUTINE_INIT
-     * (waiting for the camera to reach the arena). Once activated, the boss
-     * becomes persistent to survive camera wrapping during the fight.
+     * Obj_AIZEndBossWait returns while the camera is before the arena; it has
+     * no range-delete tail (sonic3k.asm:138016-138023). Retain Obj_Load's
+     * allocation through camera backtracking, before as well as after arena
+     * activation. Recreating it later changes the allocation/dispatch order of
+     * the post-defeat results and cutscene children.
      */
     @Override
     public boolean isPersistent() {
-        // Only persist after activation — ROUTINE_INIT bosses at the wrong
-        // character's position will be cleaned up by out-of-range naturally.
-        return state.routine != ROUTINE_INIT;
+        return !isDestroyed();
     }
 
     // ===== Accessors for children =====
@@ -1240,9 +1251,4 @@ public class AizEndBossInstance extends AbstractBossInstance
                 services().configuration());
     }
 
-    private AizZoneRuntimeState aizRuntimeStateOrNull() {
-        var registry = services().zoneRuntimeRegistry();
-        return registry == null ? null
-                : registry.currentAs(AizZoneRuntimeState.class).orElse(null);
-    }
 }

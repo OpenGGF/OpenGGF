@@ -36,21 +36,32 @@ final class LevelStages {
      * (no ROM art for the zone), the zone's backdrop alone, returning null.
      */
     static Placement draw(Shell shell, SceneCanvas c, int groundRow) {
+        Placement placement = place(shell, groundRow);
+        draw(shell, c, placement);
+        return placement;
+    }
+
+    /** Selects floor placement without emitting pixels. */
+    static Placement place(Shell shell, int groundRow) {
+        SceneLevelStage stage = pick(shell, shell.run.act().zone(), shell.run.act().zoneAct());
+        return stage == null ? null : new Placement(stage, stage.floorY() - groundRow);
+    }
+
+    static void draw(Shell shell, SceneCanvas c, Placement placement) {
         int zone = shell.run.act().zone();
         int act = shell.run.act().zoneAct();
-        SceneLevelStage stage = pick(shell, zone, act);
-        if (stage == null) {
+        if (placement == null) {
             Backdrops.zone(shell, c, zone, act, shell.ticks / 6);
-            return null;
+            return;
         }
-        int top = stage.floorY() - groundRow;
+        SceneLevelStage stage = placement.stage();
+        int top = placement.top();
         // The backdrop scrolls as it would with the camera here; its drifting bands still drift.
         Backdrops.zone(shell, c, zone, act, stage.x());
         SceneImage front = shell.art.levelForeground(zone, act, stage.x(), top, shell.width(), shell.height());
         if (front != null) {
             c.draw(front, 0, 0);
         }
-        return new Placement(stage, top);
     }
 
     /**

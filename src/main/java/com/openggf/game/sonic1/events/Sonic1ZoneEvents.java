@@ -47,6 +47,10 @@ abstract class Sonic1ZoneEvents {
         return GameServices.gameState();
     }
 
+    static boolean isScreenLocked() {
+        return GameServices.gameState().isScreenLocked();
+    }
+
     protected ZoneLayoutMutationPipeline mutationPipeline() {
         return GameServices.zoneLayoutMutationPipeline();
     }

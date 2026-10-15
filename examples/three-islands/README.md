@@ -6,6 +6,7 @@ borrows from all three of your Sonic ROMs: Sonic 1 for South Island, Sonic 2 for
 Island and Sonic 3 & Knuckles for Angel Island and the Death Egg. Java 25 and the matching
 development JVM build are required; code mods do not load in native builds.
 
+
 > Three islands, cut off by Eggman's machines.
 
 The title frames all three island vistas together, with their heroes, drifting ROM
@@ -268,6 +269,15 @@ Battle and exploration share this renderer. Sonic the Hedgehog is a trademark of
 | `audio/Audio` | Driver songs and effects, live Sonic 1/2 ROM music with native intros/loops and deliberate battle/story cues. |
 | `screen/`, `view/` | Field, in-place battle and dialogue, travelling shop, party menu, loading, title, game over and ending; shared windows and controls. |
 
+Expected art failures are inspectable through `game.art.failures()`: at most 64 entries
+distinguish missing optional ROMs, unsupported art and invalid data, with bounded
+request/cause text and the actual scene owner. Failed requests retry after 120 game
+logic ticks. Successful palettes and sprite banks are reused; a missing level kit's
+zero palette is only a presentation fallback and never becomes decoded sprite data.
+Programming faults reach the engine's owner fault boundary. Scene teardown clears
+the facade's references while the host retains ownership of images and GPU resources.
+
+
 The old act route finder is retained for ROM loading/diagnostics only. Exploration
 uses its own two-dimensional coordinates; its terrain and encounter collision do not depend
 on the stock Sonic physics or the act's original horizontal route.
@@ -321,3 +331,14 @@ java --enable-native-access=ALL-UNNAMED -cp target/test-classes:target/classes:$
 - Other ROM fragments are the initial level-kit art; stock animated tiles and palette cycles beyond Green Hill field water are not simulated.
 - Sound effects are silent in Sonic 1 and Sonic 2 fields while their ROM theme plays
   (see Audio).
+
+The shared `ModSaveSlot` validates primary/recovery generations before use. A future
+primary remains preserved instead of silently loading an older backup. Failed required
+backup publication aborts the primary write; failed writes retain the exact checkpoint
+for retry and show a notice. New Game's overwrite interaction permits replacement.
+Individual files are atomically replaced; the two-file sequence is not a crash transaction.
+
+Art retries distinguish decode arguments, unsupported requests, absent ROM and direct
+ROM I/O failures. Generic provider state/closed-handle errors propagate to the owner
+boundary; they are never cached as invalid art. Successful images retain their formats
+and host ownership.

@@ -85,14 +85,19 @@ def choose(requests, now, fits):
     Maven jobs are never preempted and external resource pressure may persist.
     """
     busy_trees = set()
+    retained_trees = {request.get('tree', request['id']) for request in requests
+                      if request.get('retained_tree', False)}
     for request in ordered(requests, now):
         tree = request.get('tree', request['id'])
-        if tree in busy_trees:
+        if tree in busy_trees and not request.get('retained_tree', False):
             continue
         result = fits(request)
-        if result is WORKTREE_BUSY and request['auto']:
+        if result is WORKTREE_BUSY and (request['auto'] or tree in retained_trees):
             # Pausing other trees cannot release this tree's target/. Keep its
             # oldest request first on the next scan, including a release race.
+            # A retained category holder must resume to release target/. Its
+            # blocked same-tree waiters cannot deadlock that continuation;
+            # unrelated aged capacity requests still keep their priority.
             busy_trees.add(tree)
             continue
         if result is not WORKTREE_BUSY and result:
@@ -161,6 +166,7 @@ class WaitingRequest:
         valid_tree = (tree.name == 'maven-worktree.lock' and
                       (tree.parent == common or tree.parent.parent == common / 'worktrees'))
         if (record['id'] != path.stem or not valid_tree or type(record['auto']) is not bool
+                or type(record.get('retained_tree', False)) is not bool
                 or not all(type(record[k]) in (int, float) and math.isfinite(record[k])
                            for k in ('enqueued', 'estimate')) or record['estimate'] <= 0):
             raise ValueError('Invalid Maven waiting request')

@@ -4,6 +4,21 @@ OpenGGF Mod API 0.7 (`0.7.0`) is the unpublished, mutable compiled-mod candidate
 carried by `develop` and `next` after the 0.6 release rollover. No Mod API baseline
 has been published yet. The runtime-visible, type-only `com.openggf.game.ModApi`
 annotation marks its roots.
+
+Second Strike extends the candidate with explicit native decoded-placement
+bindings and original-ring retention, preserving concrete level identity for
+native transition consumers. Three S3K service policies admit bounded late-boss,
+Blue Sphere layout and Gumball spring variants inside the canonical owner boundary.
+Invalid values are creator faults; offered arrays and admitted returns are isolated.
+Small candidate roots also cover Caterkiller recipes/factories, Eggman monitor
+contents, shield radial motion, native combat-policy queries and semantic powered
+attack/field callbacks. Title overlays and attached-effect rendering retain host
+presentation ownership, including deferred palette replay. The Caterkiller preset,
+S3K monitor factory and destruction config belong to the native game package;
+the shared destruction pipeline consumes factories rather than native classes.
+Native AI implementations remain internal.
+The normalized mutable `0.7` pin is regenerated from the compiled inventory; the
+descriptor remains unpublished candidate `0.7.0`, with no published pin edited.
 Every engine type reachable through those roots' public or protected
 constructors, methods, fields, generic bounds, annotations, nested types,
 supertypes, interfaces, record components, and sealed permits clauses belongs to
@@ -36,6 +51,13 @@ Creator manifests should declare the maintained candidate range:
 ```yaml
 engineApiRange: ">=0.7.0 <0.8.0"
 ```
+
+`PlayerLandingRules.hurtLandingClearsObjectControl` selects the shipped S2/S3K
+hurt-landing release; S1 leaves that byte intact. The five-argument constructor
+sets this gate explicitly, while the existing four-argument constructor retains
+the former behavior. Its accessor, component and constructor extend the mutable
+`0.7` signature pin. The descriptor and runtime description remain aligned at
+unpublished candidate `0.7.0`.
 
 Manifest `formatVersion: 1` is a separate wire-format version. It does not mean
 Mod API 1.x and must not be used to infer compiled-code compatibility.
@@ -121,6 +143,27 @@ into place like text, and reads return a fresh copy. `SceneStorage` inherits bot
 methods, so creator test doubles implementing it must add them. These are additions
 to the unpublished `0.7.0` candidate; the runtime description and normalized pin are
 updated together and the descriptor is unchanged.
+
+The Chaos Mode additions expose captured gameplay observers, callback-scoped
+transient mutator leases, typed motion/input/native encounter/presentation/audio
+policies, bounded native ROM art and terminal outcomes. Native object presentation
+metadata qualifies post-SAT transforms, and private trail atlas ranges retain
+historical poses. The source timing contract admits one instantaneous action per
+zero-duration lease and bounded positive timed bundles. These extend the mutable
+`0.7` signature pin and runtime candidate description; `0.7.0` remains unpublished
+and the release descriptor and published baselines are unchanged. Rebuild compiled
+mods against the current candidate. See the [mutator guide](../modding/guides/mutators.md)
+and [Chaos implementation](plans/2026-10-13-sonic3k-chaos-mode-implementation.md).
+
+The runtime intentionally consumes exact detached Mod API policy records, support
+contracts, `TemporaryMutators`, `PixelCanvas` and `SceneImage`. The architecture
+ratchet enumerates these targets rather than allowing a general dependency on
+mod host implementations. Verified observer snapshots and prepared-policy presence
+cross game-owned service projections; save-launch error translation stays in the
+outer host, and ROM mapping pixels use the shared level rasterizer. Graphics accepts
+resolved palette/flip/priority values and the renderer receives already resolved
+input intent. Caller provenance uses the existing stateless internal utility.
+
 
 ## What the 0.7 candidate includes
 
@@ -436,7 +479,7 @@ Mod scenes add the `com.openggf.mods.scene` package to the candidate surface:
 `GameMode.MOD_SCENE`. The mouse wheel stays off the pinned `InputHandler`: the engine-internal
 `control.MouseWheel` (one per input handler, `MouseWheel.of(input)`) collects scroll movement
 for whichever screen reads the mouse, the master title or a scene. The engine finds the registered scene as the effective module's
-`getGameService(OwnedSceneFactory.class)`, so the `game` package never depends on mod types.
+`getGameService(OwnedSceneFactory.class)`, so native scene discovery does not depend on mod host implementation types.
 `mods.code.OwnedSceneFactory` is engine-internal and only that package can construct it, so a
 patch cannot forge a scene's owner or run one outside the owner's fault boundary; a
 `ModSceneFactory` served under its own type is ignored. The creator package holds only the API;
@@ -741,3 +784,35 @@ The mutable `mod-api-signatures-0.7.txt` pin is regenerated against next's compl
 surface, including its existing scene art/audio capabilities. `ModApiVersion` describes
 the additions; the policy descriptor remains unpublished candidate `0.7.0` and published
 baselines remain untouched.
+
+### Mod audit text-slot and presentation helpers (2026-10-12)
+
+The unpublished `0.7.0` candidate adds owner-handle text `ModSaveSlot`, explicit
+load/write results and a creator codec. Incompatible primary bytes never select an
+older writable recovery generation; incompatible backups also require explicit
+replacement, and unreadable/failed required backups block publication.
+Retries retain encoded checkpoints. This is per-file atomic replacement, not a
+multi-file transaction. Codec/programming and revoked-handle failures remain faults.
+Three Islands and Slay profile formats demonstrate independent consumer adoption.
+If a corrupt primary arrives after an absent load, publication still requires explicit
+replacement unless the slot holds a genuinely validated recovery generation and
+has a configured backup that can preserve it. A no-backup slot also protects corrupt
+bytes that arrive after an earlier successful publication.
+
+`SpriteComposition` shares ordered pure sprite placement/bounds while boss recipes
+remain local. `SceneCanvasTransform` provides per-draw nested translation/opacity
+and restores the prior clip on close. `SceneCanvas.clipBounds` supplies the host clip
+state; custom canvases must expose it to use the scope. The mutable `0.7` pin is
+regenerated; descriptor version/status and published baselines remain unchanged.
+Closing an outer transform revokes all descendant views. Their later close cannot
+reintroduce a retired clip; ordinary nested try-with-resources also restores each scope
+after a creator fault.
+
+`TitleCardPresentation` supplies pure provider-piece positions; callers retain
+their clock, loading hold, release/hurry/completion and missing-piece policies.
+`AtlasFont.GlyphCase.EXACT_FIRST` with an explicit fallback retains distinct
+upper/lowercase glyphs while existing calls keep uppercase lookup and blank
+unknown-character advances. The descriptor was reviewed and retains `0.7.0`
+candidate with no published baselines; its strict key/value schema does not carry
+surface prose. `ModApiVersion`, curated roots and the exact mutable pin describe
+the additions together.

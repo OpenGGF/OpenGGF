@@ -78,7 +78,7 @@ class TestStarpostRealValley {
     static void packageMod() throws Exception {
         repository = Files.createDirectories(temp.resolve("mods"));
         Path classes = Files.createDirectories(temp.resolve("classes"));
-        List<String> args = new ArrayList<>(List.of("--release", "21", "-nowarn", "-cp",
+        List<String> args = new ArrayList<>(List.of("--release", "25", "-nowarn", "-cp",
                 System.getProperty("java.class.path"), "-d", classes.toString()));
         try (Stream<Path> files = Files.walk(PROJECT.resolve("src/main/java"))) {
             files.filter(p -> p.toString().endsWith(".java")).sorted().forEach(p -> args.add(p.toString()));

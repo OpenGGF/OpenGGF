@@ -1,10 +1,13 @@
 package sitarhero.controls;
 
+import sitarhero.model.LoadDisposition;
+
 /** Two independently remappable ten-action profiles, with keyboard and pad alternatives. */
 public final class ControlSettings {
     public static final int STRUM_UP = 5, STRUM_DOWN = 6, WHAMMY = 7, POWER = 8, PAUSE = 9;
     private final PhysicalBinding[][] keyboard = new PhysicalBinding[2][10];
     private final PhysicalBinding[][] gamepad = new PhysicalBinding[2][10];
+    private LoadDisposition disposition = LoadDisposition.ABSENT;
     private int inputOffsetMs;
     private int displayOffsetMs;
     private boolean lefty;
@@ -68,23 +71,49 @@ public final class ControlSettings {
         }
         return text.toString();
     }
-    public void read(String text) {
-        for (String line : text.split("\n")) {
-            int separator = line.indexOf('='); if (separator < 0) continue;
-            String key = line.substring(0, separator), value = line.substring(separator + 1);
-            try {
-                if (key.equals("input")) inputOffsetMs(Integer.parseInt(value));
-                else if (key.equals("display")) displayOffsetMs(Integer.parseInt(value));
-                else if (key.equals("lefty")) lefty(Boolean.parseBoolean(value));
-                else if (key.equals("flashes")) reducedFlashes(Boolean.parseBoolean(value));
-                else if (key.equals("scroll")) scrollSpeed(Integer.parseInt(value));
+    /** V1 settings publish atomically; malformed/future files retain defaults and their original bytes. */
+    public boolean read(String text) {
+        disposition = LoadDisposition.rejected(text, "sitar-settings", "sitar-settings=1");
+        if (text == null || text.length() > 65_536) return false;
+        var lines = text.lines().limit(129).toList();
+        if (lines.isEmpty() || lines.size() > 128 || !lines.getFirst().equals("sitar-settings=1")) return false;
+        ControlSettings candidate = new ControlSettings(playerIndex);
+        var keys = new java.util.HashSet<String>(); keys.add("sitar-settings");
+        try {
+            for (int i = 1; i < lines.size(); i++) {
+                String line = lines.get(i);
+                int separator = line.indexOf('=');
+                if (separator <= 0 || line.length() > 512) return false;
+                String key = line.substring(0, separator), value = line.substring(separator + 1);
+                if (!keys.add(key)) return false;
+                if (key.equals("input")) candidate.inputOffsetMs(Integer.parseInt(value));
+                else if (key.equals("display")) candidate.displayOffsetMs(Integer.parseInt(value));
+                else if (key.equals("lefty")) candidate.lefty(flag(value));
+                else if (key.equals("flashes")) candidate.reducedFlashes(flag(value));
+                else if (key.equals("scroll")) candidate.scrollSpeed(Integer.parseInt(value));
                 else if (key.matches("[kp][01]\\.[0-9]")) {
                     int profile = key.charAt(1) - '0', action = key.charAt(3) - '0';
-                    (key.charAt(0) == 'k' ? keyboard : gamepad)[profile][action] = PhysicalBinding.decode(value);
+                    (key.charAt(0) == 'k' ? candidate.keyboard : candidate.gamepad)[profile][action] = PhysicalBinding.decode(value);
                 }
-            } catch (IllegalArgumentException ignored) { /* retain defaults for a malformed setting */ }
+                // Bounded unknown metadata is compatible with the current schema.
+            }
+        } catch (IllegalArgumentException malformed) { return false; }
+        for (int profile = 0; profile < 2; profile++) {
+            System.arraycopy(candidate.keyboard[profile], 0, keyboard[profile], 0, 10);
+            System.arraycopy(candidate.gamepad[profile], 0, gamepad[profile], 0, 10);
         }
+        inputOffsetMs = candidate.inputOffsetMs; displayOffsetMs = candidate.displayOffsetMs;
+        lefty = candidate.lefty; reducedFlashes = candidate.reducedFlashes; scrollSpeed = candidate.scrollSpeed;
+        disposition = LoadDisposition.VALID;
+        return true;
     }
+    public boolean saveEligible() { return disposition.saveEligible(); }
+    public LoadDisposition loadDisposition() { return disposition; }
+    private static boolean flag(String value) {
+        if (!value.equals("true") && !value.equals("false")) throw new IllegalArgumentException("Boolean setting");
+        return value.equals("true");
+    }
+
     public String actionName(int action, boolean drums) {
         if (action < 5) return drums ? (action == 4 ? "KICK PEDAL" : "PAD " + (action + 1)) : "FRET " + (action + 1);
         return switch (action) {

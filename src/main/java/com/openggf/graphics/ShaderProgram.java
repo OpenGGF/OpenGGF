@@ -20,6 +20,7 @@ public class ShaderProgram {
     private int totalPaletteLinesLocation = -1;
     private int ghostModeLocation = -1;
     private int ghostAlphaLocation = -1;
+    private int presentationHueLocation=-1,presentationOpacityLocation=-1;
     protected boolean uniformsCached = false;
 
     public int getProgramId() {
@@ -46,6 +47,8 @@ public class ShaderProgram {
         totalPaletteLinesLocation = glGetUniformLocation(programId, "TotalPaletteLines");
         ghostModeLocation = glGetUniformLocation(programId, "GhostMode");
         ghostAlphaLocation = glGetUniformLocation(programId, "GhostAlpha");
+        presentationHueLocation=glGetUniformLocation(programId,"PresentationHue");
+        presentationOpacityLocation=glGetUniformLocation(programId,"PresentationOpacity");
         uniformsCached = true;
     }
 
@@ -86,6 +89,11 @@ public class ShaderProgram {
         if (ghostAlphaLocation >= 0) {
             glUniform1f(ghostAlphaLocation, Math.max(0.0f, Math.min(1.0f, alpha)));
         }
+    }
+
+    void setPresentationColor(float hue,float opacity) {
+        if(presentationHueLocation>=0) glUniform1f(presentationHueLocation,hue);
+        if(presentationOpacityLocation>=0) glUniform1f(presentationOpacityLocation,opacity);
     }
 
     /**

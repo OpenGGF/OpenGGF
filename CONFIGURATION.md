@@ -714,7 +714,7 @@ before BK2 playback can be controlled from the keyboard.
 | Key | YAML path | Type | Default | Description |
 |-----|-----------|------|---------|-------------|
 | `DEBUG_VIEW_ENABLED` | `debug.flags.debugView` | bool | `false` | Eagerly initialise the debug overlay subsystem. Required for any runtime debug keys to function. Does not show anything on-screen until debug mode is activated. |
-| `EDITOR_ENABLED` | `debug.flags.editor` | bool | `false` | Allow the experimental in-engine editor overlay to be entered from gameplay with `Shift+Tab`. |
+| `EDITOR_ENABLED` | `debug.flags.editor` | bool | `false` | Allow gameplay entry into the experimental level editor with `Shift+Tab`; project authoring is also available from title Tools. |
 | `LIVE_REWIND_ENABLED` | `rewind.liveEnabled` | bool | `false` | Enable held-key rewind during ordinary live level play. Uses gameplay rewind snapshots, records live input while enabled, and presents reverse audio/fade state while held. |
 | `LIVE_REWIND_DETERMINISM_AUDIT` | `debug.rewind.determinismAudit` | bool | `false` | Audit live-rewind determinism: re-simulates each completed rewind keyframe segment during live play and logs the first state divergence, pinpointing state that is missing from rewind capture. Disarms after the first divergence because replayed out-of-snapshot state cannot be rolled back. |
 | `LIVE_REWIND_TAPE_COAST_ENABLED` | `rewind.tapeCoastEnabled` | bool | `false` | Enable experimental live-rewind coast after releasing the rewind key. Disabled by default, so held rewind remains one step per visual frame. When enabled, reverse audio playback is resampled to match the current rewind speed (>1.0 pitches up, <1.0 plays slow-motion). |
@@ -758,65 +758,116 @@ Trace playback retains its configured checkpoint interval.
 
 ### Level Editor (experimental)
 
-The in-engine level editor (see `EDITOR_ENABLED` / `debug.flags.editor`) uses **hardcoded**
-key/mouse bindings — not configurable in `config.yaml`. While playing with `EDITOR_ENABLED` true,
-press `Shift+Tab` to toggle gameplay (playtest) ↔ editor.
+Open **Tools → Editor projects** at the master title to create, open, or import
+levels. Choose **New blank level**, then a game and ROM asset source. Entering from
+a supported gameplay layout adopts it as a project; **Clone this layout** makes
+a copy of an open document. Native collision remaps such as S1 loops cannot be
+cloned into a flat authored level. The [level editor guide](docs/guide/creating/level-editor.md)
+covers the complete workflow and supported scope.
+
+`EDITOR_ENABLED` / `debug.flags.editor` allows `Shift+Tab` entry from ordinary
+gameplay. While editing a project, the same shortcut switches to/from its
+playtest. Editor key/mouse shortcuts are hardcoded and are not configurable in
+`config.yaml`.
 
 | Input | Action |
 |-------|--------|
-| `Shift+Tab` | Toggle editor / playtest mode |
-| `F5` | Leave the editor and restart the playtest from the level start (does not save the sidecar) |
-| Arrows / gamepad menu directions | Move the world cursor, or browse the focused block/chunk/object library in two dimensions |
-| `Page Up` / `Page Down` | Move by one page in the focused library |
+| `Shift+Tab` | Switch between the editor document and its playtest |
+| `F5` | Start a fresh current-project playtest at the authored start; does not save |
+| `F1` / north controller button | Open the command palette, including project commands |
+| Arrows / gamepad menu directions | Move the cursor or browse the focused library; object-library Up/Down changes brush subtype |
+| `Page Up` / `Page Down` | Move by one library page |
 | `Tab` | Cycle focused region |
-| `Space` while a library is focused | Confirm the hovered block, chunk, or object as the active brush |
-| `Insert` | Enter/leave library filter capture; while active, typed text filters the library and other editor shortcuts are suppressed |
-| `Backspace` / `Ctrl+Backspace` while filtering | Remove one filter character / clear the filter |
-| `O` / gamepad Start | Cycle spawn editing mode: terrain → objects → rings |
-| `Space` | Apply the primary action when no library browser is focused |
-| Gamepad A | Place the selected object or ring while spawn editing is active |
-| `E` | Eyedrop the block or spawn under the cursor |
-| Gamepad B | Eyedrop the spawn under the cursor while spawn editing is active |
-| `Delete` / gamepad C | Delete the spawn at the cursor while editing objects or rings |
-| `M` | Move the selected object/ring spawn to the world cursor |
-| `L` | Toggle active layer (FG / BG) |
+| `Space` / Confirm in a library | Select the hovered brush |
+| `Insert` | Enter/leave library filter capture; text suppresses editing shortcuts |
+| `Backspace` / `Ctrl+Backspace` while filtering | Remove one character / clear the filter |
+| `O` / gamepad Start | Cycle terrain, objects, and rings |
+| `Space` / left click | Place or apply the brush |
+| `E` / right click | Pick nearby terrain or a spawn |
+| `Delete` | Erase terrain or delete a spawn |
+| Gamepad A / B / C in spawn mode | Place / pick / delete |
+| `M` | Move the selected spawn to the world cursor |
+| `L` | Toggle FG / BG |
 | `Enter` / `Escape` | Descend / ascend the hierarchy |
-| `Ctrl+Z` / `Ctrl+Y` / `Ctrl+S` | Undo / Redo / Save |
-| `Ctrl+Shift+E` | Export the complete level to its deterministic local mod-project directory |
-| `C` | Toggle the collision overlay |
-| `P` | Toggle the collision path (primary / secondary) |
-| `V` | Cycle the selected block cell's collision mode |
-| `[` / `]` | Decrement / increment the selected chunk's solid-tile index |
-| Left mouse (drag) | Paint the selected block as one undoable stroke; in object/ring mode, place a spawn at the cursor |
-| Right mouse | Eyedrop the hovered block or spawn |
+| `H` / `J` | Flip a selected block/chunk cell or object horizontally / vertically |
+| `G` / `T` in Chunk view | Cycle pattern palette / toggle priority |
+| `=` / `-` with an object selected | Increase / decrease that object's subtype |
+| `R` with an object selected | Toggle respawn tracking |
+| `Ctrl+Z` / `Ctrl+Y` / `Ctrl+S` | Undo / redo / save the project |
+| `Ctrl+Shift+E` | Export to a new chosen directory |
+| `C` / `P` | Toggle collision overlay / select collision path |
+| `V` in Block view | Cycle the selected cell's collision mode |
+| `[` / `]` | Decrease / increase the selected chunk's collision-profile index |
+| Left drag in World | Paint terrain as one undoable stroke |
 
-Bindings live in `EditorInputHandler` and are not affected by the Key Bindings entries above.
+Bindings live in `EditorInputHandler` and are independent of gameplay Key
+Bindings. Filter input, project forms, and the command palette own their input
+while open. Pane/chrome clicks cannot paint through to the world.
 
-#### Complete level export
+The editor draws a controller-first HUD at window resolution around the
+integer-scaled level: a top bar, a ten-slot brush hotbar and live button
+prompts for the pad family in use (Xbox, PlayStation or keyboard). While it is
+shown it owns the gamepad, so Genesis mappings, debug and rewind buttons do not
+fire in the editor. Launch with `-Dopenggf.editor.ui=classic` to keep the earlier
+in-game chrome instead; it is also used automatically if the HUD cannot start.
+A separate desktop editor, [OpenGGF-Editor](https://github.com/OpenGGF/OpenGGF-Editor),
+replaces the HUD when its jar is on the class path; the engine finds it through the
+`EditorWindowChrome` service.
+With the HUD, `Tab` opens the library sheet, `F1` the editor menu, `Q` the tools
+wheel and `1`–`0` choose a hotbar slot; the other keys above are unchanged.
 
-`Ctrl+Shift+E` writes a complete `ModLevelDefinition` v1 directory beneath
-`exports/editor/<game-code>/zone_<zone>_act_<act>`, relative to the process working directory. The
-directory is deterministic for the active game, zone, and act. Export is deliberately
-non-overwriting: if that directory already exists, the action fails without changing it. Move,
-rename, or remove an earlier export before exporting the same level again.
+| Controller | Action |
+|------------|--------|
+| Left stick / D-pad | Move the cursor (D-pad steps whole blocks) or the cell in Block/Chunk view |
+| Right stick | Move the cursor quickly |
+| South (A / Cross) | Paint or place; hold and steer to paint one undoable stroke |
+| West (X / Square) | Pick what is under the cursor |
+| North (Y / Triangle) | Open the library for the current brush kind |
+| LB / RB | Previous / next hotbar brush; page the library or menu |
+| RT / LT | Edit the block or chunk under the cursor / go back up |
+| East (B / Circle) | Back: close a sheet or return to the parent view |
+| View (hold) | Tools wheel; steer and release, or use the D-pad and South |
+| Menu | Save, playtest, export, project commands and every editor command |
+| L3 / R3 | Toggle FG/BG layer / collision overlay |
 
-The exporter snapshots the active editor level and uses explicit runtime metadata for the export:
+#### Projects, playtests, and export
 
-- the displayed name is `<stock zone name> EDITOR EXPORT`;
-- the authored zone id is `0x40 + stock zone index`;
-- the authored level id is `0x400 + (stock zone index * 16) + act`;
-- the start position and music reference come from the active game's zone registry; and
-- installed keyed objects retain their fully qualified `owner:key` identity. Objects used only as
-  backing records for expanded ring placements are omitted; their individual rings are exported.
+**Save project as** creates a complete `.ogfproject`; `Ctrl+S` saves to that path.
+Projects retain art, palettes, collision profiles, both layouts, placements and ring
+groups, game/source identity, and launch properties. They are independent of
+stock gameplay saves and legacy sidecars. Failed saves preserve the preceding
+project. Missing object keys remain in the document and block playtest until
+resolved, rather than disappearing on the next save.
 
-Before publishing, every asset and reference is checked for an exact, lossless v1 representation,
-and the staged directory is read back through the strict mod-level parser. Publication then renames
-the complete staged directory into place, so a failed export does not leave a partial target.
+**Level properties** edits name, start, bounds, music, and the S3K object family.
+**Resize level** uses block cells (256 pixels for S1, 128 for S2/S3K), preserves
+overlap, adds empty terrain, and requires explicit crop authorization when shrinking.
+The start is clamped into the resized bounds. Resize and bounds changes establish
+new editing checkpoints. **Close project** offers Continue editing / Save and
+continue / Discard changes and continue for an unsaved document. Music accepts
+`stock:<decimal id>` or `owner:key`.
 
-The directory contains data decoded from the user's supplied game ROM as well as editor-authored
-changes. OpenGGF does not grant rights to redistribute Sega assets. Treat exports as local mod
-development material unless you independently have permission to distribute every included asset;
-prefer distributing original replacement assets and mod metadata rather than extracted ROM data.
+**Playtest from level start**, **Playtest from cursor**, and `F5` construct fresh
+runtime snapshots of the current project. Returning restores authored data, selection,
+and history. Playtest changes do not alter the document, trigger destructive
+auto-save, or write stock gameplay saves.
+
+**Export level** uses the project properties and chooses a new destination each
+time; an existing directory is never replaced. S1/S2 use `ModLevelDefinition` v1 with
+16×16/8×8 blocks respectively. S3K uses v2 with explicit `S3KL`/`SKL` object-family
+metadata and sparse palette claims. S3K's engine-provided
+`openggf:authored-goal` object supplies an authored finish without repurposing a
+numeric stock ID.
+
+The exporter validates complete references, exact Genesis colors, and destination
+host capabilities, then reads back the staged directory before publication.
+Projects preserve exact RGB and larger native libraries; a project save does not
+certify a portable export. Unsupported native stock objects/events or host-owned
+palette cells produce actionable errors and leave the project intact.
+
+Exports contain ROM-derived data as well as authored changes. OpenGGF does not
+grant redistribution rights to Sega assets. Treat them as local development
+material unless you have permission to distribute every included asset.
 
 ---
 
@@ -1004,6 +1055,26 @@ These keys are only active while a Special Stage is running.
 | `SPECIAL_STAGE_PLANE_DEBUG_KEY` | `debug.keys.specialStagePlaneDebug` | `292` | F3 | Cycle Special Stage plane visibility debug modes. |
 
 ---
+
+## Sonic3K Chaos Mode example
+
+The [Chaos Mode mod](examples/sonic3k-chaos-mode/README.md) stores its own settings
+through owner-local mod storage, separately from `config.yaml`. Its title and pause
+menus provide Available/Selected effect lists and apply settings only after a
+successful save. The interval is 5–120 seconds (default 30); effect duration is
+0.25–3× in quarter steps (default 1×). Individual effects retain their own bounded
+base duration. Five optional sidegames and five demanding context effects start
+unselected; an empty selected pool is valid.
+
+The versioned `settings.txt` and `settings-backup.txt` contain `interval`,
+`durationQuarters`, stable selected effect IDs, `enabled` and `seed`. A seed of zero
+picks a fresh seed for each run; a nonzero seed starts every run from the same random
+state. Unrecoverable corrupt or incompatible
+preferences remain preserved until explicit Reset defaults; a valid backup can be
+recovered automatically. Gameplay rewind
+restores the admitted scheduler and effects, while saved player preferences remain
+the latest successful publication. The development launcher uses
+`target/sonic3k-chaos-mode/player-settings`, or an explicit `--save-root`.
 
 ## Install location and bundled mods
 

@@ -101,4 +101,12 @@ public interface SceneCanvas extends com.openggf.mods.ui.PixelCanvas {
 
     /** Drawing covers the whole screen again. */
     void unclip();
+
+    /**
+     * Current clip, or empty for the full viewport. The engine canvas supports this;
+     * custom canvases must implement it to use scoped canvas transforms.
+     */
+    default java.util.Optional<SceneClip> clipBounds() {
+        throw new UnsupportedOperationException("This canvas does not expose its clip state");
+    }
 }

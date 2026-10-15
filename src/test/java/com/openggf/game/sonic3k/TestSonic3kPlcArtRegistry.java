@@ -39,7 +39,10 @@ public class TestSonic3kPlcArtRegistry {
             // RomOffsetFinder resolves these labels only from the Sonic 3 half.
             reviewedS3SideReference(Sonic3kObjectArtKeys.CUTSCENE_KNUCKLES, "artAddr", 0x382DC6),
             reviewedS3SideReference(Sonic3kObjectArtKeys.CUTSCENE_KNUCKLES, "mappingAddr", 0x364016),
-            reviewedS3SideReference(Sonic3kObjectArtKeys.CUTSCENE_KNUCKLES, "dplcAddr", 0x36430E)
+            reviewedS3SideReference(Sonic3kObjectArtKeys.CUTSCENE_KNUCKLES, "dplcAddr", 0x36430E),
+            // PLC_S3EndingGraphics genuinely points into the locked-on Sonic 3 half.
+            reviewedS3SideReference("s3k_ending_s3_graphics", "artAddr", 0x241960),
+            reviewedS3SideReference("s3k_ending_s3_graphics", "mappingAddr", 0x24178A)
     );
     private static final Set<String> REVIEWED_HARDCODED_MAPPING_DEBT = Set.of(
             "standalone:" + Sonic3kObjectArtKeys.MGZ_ENDBOSS_SCALED + ":mappingAddr<=0",
