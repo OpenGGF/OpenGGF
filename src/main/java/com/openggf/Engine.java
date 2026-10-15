@@ -1694,7 +1694,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			catch (RuntimeException failure) { reportEditorProjectFailure(failure); }
 			return;
 		}
-		editorInputHandler.finishActiveStroke();
+		editorInputHandler.finishPendingEdits();
 		if (!saveCurrentEditorLevel()) {
 			return;
 		}

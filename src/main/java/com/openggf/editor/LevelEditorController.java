@@ -203,6 +203,8 @@ public final class LevelEditorController {
         if (objectPalette == null) throw new IllegalStateException("Spawn editing is not configured");
         return objectPalette;
     }
+    /** The object palette, or null before spawn editing is configured. */
+    public EditorStockObjectPalette objectPaletteOrNull() { return objectPalette; }
 
     public void cycleSpawnEditMode() {
         setSpawnEditMode(switch (spawnEditMode) {

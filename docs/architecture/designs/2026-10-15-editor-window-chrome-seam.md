@@ -25,6 +25,23 @@ repository supplies `META-INF/services/com.openggf.editor.EditorWindowChrome` an
 that calls `Engine.main`. A controller-first in-engine HUD (`feature/ai-editor-controller-ui`)
 is expected to implement the same seam as the built-in default.
 
+## Review
+
+An independent review of `179fb8e79` led to three changes:
+
+- Shift+Tab playtest committed only the mouse stroke before saving; it now finishes the front
+  end's pending edit as well, as F5 and project playtest already did.
+- Host calls belong in `update`. The ImGui editor ran Playtest, Save and project commands while
+  drawing, i.e. after the frame's final display pass; it now queues them for its next tick.
+- `LevelEditorController.objectPaletteOrNull` and `EditorCommandPalette.actionCommands(dispatch,
+  include)` with `drivesInGamePanes`, so chromes test for spawn editing without catching and can
+  leave out commands for the in-game panes they do not draw.
+
+Rejected: wrapping every per-frame chrome call to catch exceptions and fall back to the in-game
+chrome. Nothing was known to throw; the built-in HUD is engine code and an external editor is an
+explicit install, so a bug in either should fail like any other engine bug
+(`Engine.runFrameWithModAbort` deliberately rethrows non-mod failures).
+
 ## Open
 
 - The seam is engine-internal host API, not Mod API, and is not covered by the signature pin.

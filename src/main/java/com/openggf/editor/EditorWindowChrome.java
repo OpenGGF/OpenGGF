@@ -15,7 +15,9 @@ import java.util.List;
  * the final display pass; {@link #close} at shutdown. Window input passes through the filters
  * before the engine sees it, and each editor tick reaches {@link #update} before the classic
  * keyboard and mouse handler. All edits go through {@link Host#dispatch} or the controller, so
- * undo, persistence and validation are the engine's.
+ * undo, persistence and validation are the engine's. Call the host from {@link #update}, not
+ * {@link #render}: commands such as playtest switch game modes and load levels, which belongs in
+ * the editor tick rather than after the frame's final display pass.
  */
 public interface EditorWindowChrome extends AutoCloseable {
     /** What the engine offers a chrome. */

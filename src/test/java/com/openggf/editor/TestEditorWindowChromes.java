@@ -30,6 +30,16 @@ class TestEditorWindowChromes {
     }
 
     @Test
+    void actionCommandsCanLeaveOutTheInGamePanes() {
+        var palette = new EditorCommandPalette();
+        int all = palette.actionCommands(action -> { }).size();
+        var withoutPanes = palette.actionCommands(action -> { }, action -> !EditorCommandPalette.drivesInGamePanes(action));
+        assertTrue(all == EditorInputHandler.Action.values().length);
+        assertTrue(withoutPanes.size() == all - 7, "Focus cycling and six library-browse actions are left out");
+        assertFalse(withoutPanes.stream().anyMatch(command -> command.label().toLowerCase().contains("browse")));
+    }
+
+    @Test
     void chromeDefaultsPassInputThroughAndLeaveThePadsAlone() {
         EditorWindowChrome chrome = new EditorWindowChrome() {
             public void init(Host host, float framebufferScale) { }
