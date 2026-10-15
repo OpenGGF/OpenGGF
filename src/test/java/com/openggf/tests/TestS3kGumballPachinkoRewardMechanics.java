@@ -11,6 +11,8 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.Sonic3kBonusStageCoordinator;
 import com.openggf.game.sonic3k.objects.GumballItemObjectInstance;
 import com.openggf.game.sonic3k.objects.GumballMachineObjectInstance;
+import com.openggf.game.sonic3k.objects.GumballTriangleBumperObjectInstance;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.game.sonic3k.objects.PachinkoItemOrbObjectInstance;
 import com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance;
 import com.openggf.level.objects.ObjectManager;
@@ -22,6 +24,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.Arguments;
 
 import java.util.EnumMap;
 
@@ -34,7 +38,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestS3kGumballPachinkoRewardMechanics {
-    enum Mechanism { GUMBALL_EJECTION, PACHINKO_REWARD, PACHINKO_TRAP }
+    enum Mechanism { GUMBALL_EJECTION, GUMBALL_SPRING_CHAIN, GUMBALL_BUMPER, PACHINKO_REWARD, PACHINKO_TRAP }
     private final EnumMap<SonicConfiguration, Object> saved = new EnumMap<>(SonicConfiguration.class);
     private static final Bk2FrameInput NEUTRAL = new Bk2FrameInput(0, 0, 0, false, "bonus contact fixture");
 
@@ -57,6 +61,33 @@ class TestS3kGumballPachinkoRewardMechanics {
         check(new CanonicalEntryMatrixSupport.Row("sonic", WidescreenAspect.NATIVE_4_3, "off", ""), mechanism);
     }
 
+    static java.util.stream.Stream<Arguments> representativeProducts() {
+        return java.util.stream.Stream.of(
+                new CanonicalEntryMatrixSupport.Row("knuckles", WidescreenAspect.WIDE_16_10, "off", "tails,sonic"),
+                new CanonicalEntryMatrixSupport.Row("tails", WidescreenAspect.SUPER_32_9, "s2", "sonic,sonic"),
+                new CanonicalEntryMatrixSupport.Row("sonic", WidescreenAspect.ULTRA_21_9, "s1", "sonic,sonic,sonic,sonic,sonic,sonic,sonic"))
+                .flatMap(row -> java.util.Arrays.stream(Mechanism.values()).map(mechanism -> Arguments.of(row, mechanism)));
+    }
+
+    @ParameterizedTest(name = "representative actual bonus mechanism {0}/{1}")
+    @MethodSource("representativeProducts")
+    void actualRepresentativeProductsReplayEveryMechanism(CanonicalEntryMatrixSupport.Row row,
+            Mechanism mechanism) throws Exception {
+        check(row, mechanism);
+    }
+
+    static java.util.stream.Stream<Arguments> finiteProducts() {
+        return CanonicalEntryMatrixSupport.configurations().flatMap(row ->
+                java.util.Arrays.stream(Mechanism.values()).map(mechanism -> Arguments.of(row, mechanism)));
+    }
+
+    @ParameterizedTest(name = "finite actual bonus mechanism {0}/{1}")
+    @MethodSource("finiteProducts")
+    void actualFiniteSupportedProductsReplayEveryMechanism(CanonicalEntryMatrixSupport.Row row,
+            Mechanism mechanism) throws Exception {
+        check(row, mechanism);
+    }
+
     private void check(CanonicalEntryMatrixSupport.Row row, Mechanism mechanism) throws Exception {
         var donorRom = row.donor().equals("off") ? null : (row.donor().equals("s1")
                 ? RomTestUtils.ensureSonic1RomAvailable() : RomTestUtils.ensureSonic2RomAvailable()).toPath();
@@ -66,7 +97,7 @@ class TestS3kGumballPachinkoRewardMechanics {
             GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, true);
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 8, 0, settings);
             for (int frame = 0; frame < 60; frame++) step(session, GameMode.LEVEL, null);
-            BonusStageType type = mechanism == Mechanism.GUMBALL_EJECTION
+            BonusStageType type = mechanism.name().startsWith("GUMBALL_")
                     ? BonusStageType.GUMBALL : BonusStageType.GLOWING_SPHERE;
             GameServices.level().requestBonusStageEntry(type);
             for (int frame = 0; frame < 600; frame++) {
@@ -81,12 +112,39 @@ class TestS3kGumballPachinkoRewardMechanics {
             var objects = GameServices.level().getObjectManager();
             assertEquals(row.aspect().pixelWidth(), GameServices.camera().getWidth() & 0xFFFF);
             assertEquals(row.main(), GameServices.sprites().getMainPlayable().characterKey().persisted());
+            assertRoster(row);
             switch (mechanism) {
                 case GUMBALL_EJECTION -> gumballEjection(session, objects, coordinator);
+                case GUMBALL_SPRING_CHAIN -> gumballSpringChain(session, objects);
+                case GUMBALL_BUMPER -> gumballBumper(session, objects);
                 case PACHINKO_REWARD -> pachinkoReward(session, objects, coordinator);
                 case PACHINKO_TRAP -> pachinkoTrap(session, objects);
             }
+            assertRoster(row);
+            SozAcceptanceConfigurations.assertDisplay(row.aspect());
         }
+    }
+
+    private static void assertRoster(CanonicalEntryMatrixSupport.Row row) {
+        var main = GameServices.sprites().getMainPlayable();
+        assertEquals(row.main(), main.characterKey().persisted());
+        assertSame(main, GameServices.camera().getFocusedSprite());
+        String[] expected = row.followers().isEmpty() ? new String[0] : row.followers().split(",");
+        var actual = GameServices.sprites().getRegisteredSidekicks();
+        assertEquals(expected.length, actual.size(), "all configured bonus participants remain admitted");
+        var identities = java.util.Collections.newSetFromMap(
+                new java.util.IdentityHashMap<com.openggf.sprites.playable.AbstractPlayableSprite, Boolean>());
+        identities.add(main);
+        var previous = main;
+        for (int index = 0; index < expected.length; index++) {
+            var follower = actual.get(index);
+            assertEquals(expected[index], follower.characterKey().persisted());
+            assertTrue(identities.add(follower), "duplicate keys keep independent actors");
+            assertTrue(follower.isCpuControlled());assertNotNull(follower.getCpuController());
+            assertSame(previous, follower.getCpuController().getLeader(), "configured CPU leader order");
+            previous = follower;
+        }
+        SozAcceptanceConfigurations.assertUsableTeam(row.donor());
     }
 
     private static void gumballEjection(GameplayCaptureSession session, ObjectManager objects,
@@ -144,6 +202,64 @@ class TestS3kGumballPachinkoRewardMechanics {
             } catch (Exception e) { throw new AssertionError(e); }
         };
         replayTwice(live, collectAndExpire, "actual ejected reward expiry/recreation");
+    }
+
+    private static java.util.List<AbstractObjectInstance> children(ObjectManager objects, String name) {
+        return objects.getActiveObjects().stream().filter(object -> object.getClass().getSimpleName().equals(name))
+                .map(AbstractObjectInstance.class::cast).toList();
+    }
+
+    private static void gumballSpringChain(GameplayCaptureSession session, ObjectManager objects) throws Exception {
+        var springs = children(objects, "GumballSpringChild");
+        assertEquals(4, springs.size(), "actual native dispenser owns four placed springs");
+        assertEquals(1, children(objects, "DispenserChild").size());
+        int firstSlot = springs.getFirst().getSlotIndex();
+        var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+        var idle = registry.capture();
+        Runnable contactAndExpire = () -> {
+            try {
+                var current = children(objects, "GumballSpringChild");
+                var spring = current.stream().filter(object -> object.getSlotIndex() == firstSlot).findFirst().orElseThrow();
+                place(spring.getX(), spring.getY() - 40);
+                for (int frame = 0; frame < 30 && !(boolean) field(spring, "triggered"); frame++)
+                    step(session, GameMode.BONUS_STAGE, objects);
+                assertTrue((boolean) field(spring, "triggered"), "actual SolidObjectFull2 contact triggers P1 crumble");
+                assertTrue(GameServices.sprites().getMainPlayable().getYSpeed() < 0, "native spring bounce is upward");
+                place(0x180, 0x260);
+                for (int frame = 0; frame < 24 && !children(objects, "DispenserChild").isEmpty(); frame++)
+                    step(session, GameMode.BONUS_STAGE, objects);
+                assertTrue(children(objects, "DispenserChild").isEmpty(), "native spring bit retires the dispenser");
+                for (var sibling : current) assertTrue((boolean) field(sibling, "falling"),
+                        "native dispenser deletion starts every sibling's natural fall");
+                assertFalse(children(objects, "EjectionEffectChild").isEmpty(), "actual dispenser delete owns its debris graph");
+                step(session, GameMode.BONUS_STAGE, objects);
+            } catch (Exception e) { throw new AssertionError(e); }
+        };
+        replayTwice(idle, contactAndExpire, "actual spring/dispenser deletion and sibling-fall recreation");
+    }
+
+    private static void gumballBumper(GameplayCaptureSession session, ObjectManager objects) throws Exception {
+        var bumper = objects.activeObjectsOfType(GumballTriangleBumperObjectInstance.class).getFirst();
+        assertFalse((boolean) field(bumper, "consumed"));
+        int slot = bumper.getSlotIndex();
+        var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+        var idle = registry.capture();
+        Runnable contactAndRetire = () -> {
+            try {
+                var current = objects.activeObjectsOfType(GumballTriangleBumperObjectInstance.class).stream()
+                        .filter(object -> object.getSlotIndex() == slot).findFirst().orElseThrow();
+                place(current.getX(), current.getY() - 40);
+                for (int frame = 0; frame < 30 && !(boolean) field(current, "consumed"); frame++)
+                    step(session, GameMode.BONUS_STAGE, objects);
+                assertTrue((boolean) field(current, "consumed"), "actual solid contact owns native bumper dispatch");
+                assertTrue(GameServices.sprites().getMainPlayable().getYSpeed() < 0);
+                for (int frame = 0; frame < 3 && !current.isDestroyed(); frame++)
+                    step(session, GameMode.BONUS_STAGE, objects);
+                assertTrue(current.isDestroyed(), "loc_60F64/loc_60F80 clears the contacted native bumper SST");
+                step(session, GameMode.BONUS_STAGE, objects);
+            } catch (Exception e) { throw new AssertionError(e); }
+        };
+        replayTwice(idle, contactAndRetire, "actual triangular bumper contact/deletion/recreation");
     }
 
     private static GumballItemObjectInstance ejectedItem(ObjectManager objects) throws Exception {
