@@ -337,3 +337,25 @@ card covered (chat now sits in a narrow left column below the card zone); generi
 lease states as prompt cards; a 260-pixel card text cap that wrapped short
 taglines. List scrolling is adjusted only by input; drawing derives the visible
 window without changing menu state.
+
+Verification on the committed sources (`fbb656c96`), Java 25 and the verified
+locked-on S3K ROM:
+
+```sh
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestSonic3kChaosModeExampleModels,TestSonic3kChaosModeExampleArt' \
+  "-Ds3k.rom.path=$OPENGGF_ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+18 tests passed, zero failures/errors/skips. New checks cover glyph-safe copy,
+filtered Add shown through real menu input at 320/400 widths, the HUD's
+setup-screen gate, one announcement and named receipt across rewind replay, a
+native task prompt, and the title modal drawn once. An earlier run of the same
+class failed SDK packaging with ten `STATIC_STATE_UNSUPPORTED` findings (static
+arrays, a regex `Pattern` and a lambda); those became literal constants and
+inline parsing. The SDK-packaged jar (`3dec3542…14d3ad`, zero findings) drove
+owned offscreen surfaceless-EGL `GameplayCaptureTool` captures with interactive
+pacing: the title tour through native data select into AIZ1, HUD/banner/prompt/chat
+at 400, the pause menu at 320, Monitor Stack and a Start-cancelled Ring Snake.
+Effect activation timing is unchanged; a five-second interval still fires at
+presentation 600. No smoke run, desktop window or Windows bundle is claimed here.
