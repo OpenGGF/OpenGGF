@@ -1679,7 +1679,7 @@ not fade timing and are owned elsewhere: the Knuckles act-2 restore at 37130 and
 LRZ boss sidekick overlap parity at 47471 (rewind-snapshot rows) and solo Tails' SSZ1
 opening camera (behaviour row). No skips.
 
-## Cold LRZ→HPZ→SSZ1→DEZ1 pair continuation: stopped (2026-10-15)
+## Cold LRZ→HPZ→SSZ1→DEZ1 pair continuation: first attempt stopped (2026-10-15)
 
 Attempted on ef61a560f from the fade-retimed joined pair chain
 (`lrz-sonic-tails-cold-hpz-ssz1-320.bk2`, `0ac8acb508ba16f4f579f2566554237ccf0d55636a612497a847c5cbc2be1607`,
@@ -1696,3 +1696,138 @@ drops through while the direct run is still grounded. Making the pair continuati
 traversal re-authoring of SSZ1 from that bridge onward plus a Mecha encounter search; this
 lane stopped there. Solo Tails (needs an HPZ Knuckles-fight author for Tails plus the same
 SSZ1 traversal) and solo Sonic (no Sonic-alone LRZ/HPZ cold movie exists) are not started.
+
+## Cold LRZ→HPZ→SSZ1→DEZ1 pair campaign (2026-10-15)
+
+`TestS3kLrzHpzSszColdCampaign#pairColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory`
+replays one uninterrupted controller-only native320 Sonic+Tails movie from the declared
+`boot(9,0)` LRZ1 inlet (no position, clock, emerald or RNG seeds): LRZ1→LRZ3, HPZ
+`loc_45D8A` (`$A00`), the SSZ1 arrival, the GHZ and MTZ replicas, the clouds and
+vertical-wrap section, Mecha Sonic, the act-1 results SaveGame (`loc_2DCA0` takes the zone
+`$A` branch for act 0, sonic3k.asm:62668-62679) and the launch into DEZ1 (`$B00`) through
+`loc_44A26`'s intro run to control release.
+
+| Movie | SHA-256 | Inputs | Source |
+|---|---|---|---|
+| `lrz-sonic-tails-cold-hpz-ssz1-dez1-320.bk2` | `8930f7c924ca6f55b831a75316ac4c3a136eca8ce2cb7ffc5f25cccbe4ca32be` | 85544 | inputs 0–67211 equal `lrz-sonic-tails-cold-hpz-ssz1-320.bk2` (`0ac8acb508ba16f4f579f2566554237ccf0d55636a612497a847c5cbc2be1607`) through the SSZ1 control release |
+
+Authoring (base 7cfefb6af for cold2's part, then Root 19b7d70a6 merged; the prefix was
+re-confirmed after the merge: the saved 79707-input candidate reaches the identical state,
+P1 (3353,3939), V_int 79637, RNG `c97fadd8`). Cold2: the direct SSZ1 movie followed with
+time-shift resyncs from the joined release; GHZ authored with `SszBossInputAuthorTool`
+(defeat after input 71823), followed again, MTZ authored (76536), followed into the cloud
+section, where time-shift resync stopped working (P1 caught by `Obj_SSZRotatingPlatform`,
+RNG-phased bouncy clouds and collapsing columns; errors 213–452 px). Cold3: a
+progress search along the direct movie's P1 path (the algorithm committed as
+`ReferencePathInputAuthor`; P was authored by the identical search in a temporary batch
+helper) crossed the
+cloud/wrap section (direct indices 12171→12910, no hurt) and, after a stuck rule that
+abandoned a slowly rising transport pad was relaxed, the rest of act 1 to the Mecha arena
+pad (12900→17463, 86 decisions, 38 s); `SszBossInputAuthorTool` MECHA then defeated Mecha
+Sonic (hp 0 after input 82834; Sonic lost rings 18→1 in the fight, no death or life
+loss), and neutral input carried the results, the launch (DEZ1 load after input 85143)
+and the DEZ intro. The movie's script expands byte-identically to its BK2 input log.
+
+Fresh replay (run `p-verify2`, Maven Finished 16:20:18Z, admitted after the host memory stall): 1/0/0/0 in 52.2 s;
+HPZ load 52947, SSZ1 load 67037, GHZ defeat 71823, MTZ defeat 76536, Mecha defeat 82834,
+results tally-to-wait (the SaveGame dispatch) 83452, DEZ1 load/assembly 85143/85144 with P1
+(48,2476), 0 rings, one registered Tails, `loc_44A26`'s control lock and
+`LevelIntroPlayerRunInstance`, intro release 85226. SSZ's live history (armed 36 inputs
+before the DEZ load) is retired by the DEZ timeline. Every input is drawn; 45-input two-cycle
+whole-world replays at the GHZ, MTZ and Mecha defeats, the results save and the DEZ release.
+
+Engine pictures (320 px) in
+`$HOME/Videos/OGGF/s3k-parity-coverage-2026-10-14/spot-checks/cold-campaign-v1/p/` were
+inspected: cloud/wrap entry (79707), the lower transport pad (80167), the Mecha arena pad
+(81907, P1 hidden by the pad as it rises), Mecha seated after defeat (82835) and Sonic and
+Tails released in DEZ1 at 0:06 (85544). The hidden player on the rising pad is flagged for
+native comparison. Native windows: `runs/s3k-sonic-tails-complete-emeralds` SSZ1 from
+448920 and DEZ from 468982 (that run carries emeralds).
+
+Limits: the boot inlet has no save session, so the results SaveGame is observed as the
+results owner's tally-to-wait transition (with `Collected_special_ring_array` clear), and
+its persisted next level is covered by the save-site tests; widescreen/donor breadth of
+the campaign remains open.
+
+## Cold LRZ→HPZ→SSZ1→DEZ1 Tails campaign (2026-10-15)
+
+`TestS3kLrzHpzSszColdCampaign#tailsColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory`
+replays one uninterrupted controller-only native320 Tails-alone movie from the declared
+`boot(9,0)` LRZ1 inlet: the qualified cold Tails LRZ chain into HPZ, HPZ's Knuckles fight,
+theft, collapse and altar (the single-player helper timers) to `loc_45D8A` (`$A00`), Tails'
+SSZ1 arrival, the Knuckles-button bridge, both replicas, the clouds, Mecha Sonic, the results
+SaveGame and the launch into DEZ1 through the intro run's release. The shared verifier (also
+used by the pair test) additionally arms HPZ live history 120 inputs before the SSZ1 load and
+asserts its retirement and the SSZ1 assembly (P1 X `$100`, Camera Y + `$65`, 0 rings).
+
+| Movie | SHA-256 | Inputs | Source |
+|---|---|---|---|
+| `lrz-tails-cold-hpz-ssz1-dez1-320.bk2` | `54d25084b828db637068a3ba158954e3f64d5d859d49c686e5d6ddcb0b2282ff` | 86090 | inputs 0–62545 equal `lrz-tails-cold-hpz-320.bk2` (`229c5036eb936aacb38603fd2195e76baa0c150c36deae900f1fc37e9ec0ec94`, all of it) |
+
+Authoring on Root 19b7d70a6 (two finite batches, ts1 and ts2): the reference-path search
+followed the joined pair chain's HPZ P1 path to the lower teleporter (pair index 62475); the
+HPZ fight policy (`HpzJoinedControllerAuthor`'s FightBot, which reads only P1 and the live
+Knuckles owner) carried Tails through the fight, theft, collapse and altar to the SSZ1 load
+(input 69861; rings 12→1, no death); neutral input to the arrival release (input 70036, P1
+(256,3085), RNG `cfcd80f3`, the direct pair movie's release seed). In SSZ1 the search first
+stopped at the Knuckles-button bridge: P1 stood at the camera-bounded edge (max X 512) while
+`CutsceneKnux_SSZ` was still on its way to the button, so the search could not progress;
+1076 neutral inputs later `Obj_SSZCutsceneBridge` had retracted and `loc_44FBA` opened the
+act bounds. The search then followed the direct pair movie's P1 path (Tails flies where it
+helps), `SszBossInputAuthorTool` defeated GHZ (after 72972), MTZ (76304) and Mecha (83380;
+rings 52→0, no death, lives 3), and neutral input carried the results, launch and DEZ intro.
+The script expands byte-identically to the BK2 input log.
+
+Fresh replay (run `v3`, Maven Finished 17:18:46Z): 2/0/0/0 with the pair method. Tails: HPZ
+62424, SSZ1 69861/69862, GHZ 72972, MTZ 76304, Mecha 83380, results save 83998, DEZ1
+85689/85690 (Tails feet at `$9AC+$13`, centre Y 2480, no sidekick), release 85772; HPZ and
+SSZ histories retired at their loads; 45-input two-cycle replays at the three defeats, the
+results save and the DEZ release. The pair run in the same JVM matches its committed
+numbers (52947, 67037/67038, 71823, 76536, 82834, 83452, 85143/85144, 85226).
+
+Engine pictures (320 px) in
+`$HOME/Videos/OGGF/s3k-parity-coverage-2026-10-14/spot-checks/cold-campaign-v1/t/` were
+inspected: Tails in the HPZ lower teleporter (64546), the SSZ1 load and arrival with
+cutscene Knuckles beaming in over Tails' arrival spot (69862/70036), the opened bridge
+(71252), the GHZ replica's defeat (72973), MTZ (76305), the Mecha arena pad (81965), Mecha's
+defeat (83381; Tails off-screen above) and Tails released in DEZ1 at 0:06 (86090). Native
+windows: `runs/s3k-tails-full-chain-all-emeralds` HPZ from 419298, SSZ1 423903, DEZ 444059.
+
+Limits: as for the pair, the boot inlet has no save session; widescreen/donor breadth
+remains open.
+
+## Cold LRZ→HPZ→SSZ1 solo Sonic campaign: open (2026-10-15)
+
+No solo Sonic LRZ/HPZ cold movie exists, so lane cold3 authored one from the declared
+`boot(9,0)` inlet along the joined pair chain's P1 path (`ReferencePathInputAuthor`; the
+reference only scores positions) in finite batches on Root 19b7d70a6. It reached:
+
+- LRZ1: a spin dash through the rock wall the pair breaks (spin-dash candidates were added
+  for this); the door at (2800,1688) opened from its horizontal button (2618,1779), which
+  position progress had skipped; the dash elevator (4768,1976) by replaying the pair's
+  D+A taps (a stuck recovery that steers to where the reference stood 60–650 indices
+  earlier and replays its inputs); `Obj_LRZMiniboss` defeated with `SszBossInputAuthorTool`
+  `lrz1` (hits 0 after input 13030, no death).
+- LRZ2 (load after input 13370): the door at (10160,1576) opened from `Obj_Button` (9816,1652);
+  a search trial that touched giant ring s9 broke a restore (the special stage registers
+  its own rewind subsystem), after which both searches treat a giant-ring flash like a death.
+- LRZ3 (load ≈ input 21445): the end-boss arena (camera locked at `$A00`, 77 rings) at input
+  24204.
+
+It stopped there by the kill condition: three bounded searches failed in the same
+`Obj_LRZEndBoss` phase, routine 4 (the shot phase, callback 0), each time after the shots
+had taken all of Sonic's rings. The boss takes every hit from its own drifting mines, so
+the player only has to survive about 5500 inputs (the pair needed 46900→52500).
+
+| Attempt | Failure | Boss routine/timer/shots/interval/hits | V_int | RNG |
+|---|---|---|---|---|
+| s9 (search state from s8) | arena entry already doomed at 24669 | 4 / 31 / 2 / `$6F` / 14 | 24645 | `7c8be79b` |
+| s11 `lrz3` boss-policy search | death at 24873 | 4 / 5 / 0 / `$4F` / 13 | 24848 | `0f0d7083` |
+| s12 survival chase near (2720,1500) | no candidate survives 120 inputs at 25724 (neutral death 25809) | 4 / 27 / 1 / `$5F` / 11 (flipped side) | 25700 | `512a4c93` |
+
+Lava drift clock at those states: 208, 410, 308 (stream `$FFFF`, `$FFFF`, `1`). The partial
+inputs (miniboss defeat at 13031, arena entry at 24204, the last survival state) and the
+finite batch lists are preserved with SHA-256 sums in the task directory
+(`cold3-continuation/`). A next attempt needs a survival author for the shot phase that
+keeps rings (dodging the boss's projectiles over the lava platforms) rather than chasing
+the boss or a fixed spot; HPZ and the SSZ1 arrival for solo Sonic were not reached.

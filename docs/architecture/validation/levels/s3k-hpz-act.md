@@ -443,3 +443,14 @@ draws its locked-loop black field, it now reports `TitleCardBeneathLevelHud`. Th
 `titlefade2-v1/after-hud` (LFC 10, 22) against `after/A-cap-hpz-*`. Limit: rings are still
 drawn under the card. Natively they are above it, but the engine's ring pass sits inside the
 sprite pass, before the card.
+
+## Cold Tails HPZ campaign leg (2026-10-15)
+
+The cold Tails-alone campaign (`TestS3kLrzHpzSszColdCampaign#tailsColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory`,
+SSZ1 matrix) is the first cold Tails replay through HPZ's Knuckles fight, theft, collapse and
+altar with the single-player helper timers to `loc_45D8A` (`$A00`): HPZ load 62424, SSZ1
+load 69861 with HPZ's live history retired at the SSZ1 assembly. It continues to DEZ1. The
+solo Sonic LRZ→HPZ→SSZ1 campaign remains open: its cold attempt stopped at the LRZ3 end boss
+(kill condition, three bounded searches in `Obj_LRZEndBoss` routine 4) and never reached HPZ
+(SSZ1 matrix).
+
