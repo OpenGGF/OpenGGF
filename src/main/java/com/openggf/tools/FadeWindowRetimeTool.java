@@ -37,7 +37,15 @@ import java.util.Set;
  *
  * <p>Inputs: ROM, game, zone, one-based act, width, main, sidekick ({@code none} for solo),
  * input BK2/log, output BK2 (a {@code .script} is written beside it), optional
- * {@code --emeralds DDDDDDD} and {@code --authored-fade-advances N} (default 2; 1 is a no-op).
+ * {@code --emeralds DDDDDDD}, {@code --authored-fade-advances N} (default 2; 1 is a no-op) and
+ * {@code --keep-intros} for routes whose test driver boots with {@code S3K_SKIP_INTROS} off
+ * (the capture session skips them by default).
+ * <p>Limits: an odd native window may have been authored as {@code floor} rather than
+ * {@code ceil(n / advances)} inputs depending on the fade phase (SOZ1 Knuckles' 21-frame bonus entry
+ * needed +11, not +10), and a fade-out that runs with live VInt (the bonus-stage exit) is not
+ * detected as frozen although the old driver doubled it too. Compare an old-harness state dump
+ * with the retimed one when the verification replay dies.
+ *
  * Origin: S3K cold LRZ→HPZ→SSZ campaign lane, 2026-10-15, after bisecting the LRZ/HPZ cold
  * route reds to 8179ccd80. This is fixture authoring; it never changes runtime behavior.
  */
@@ -60,23 +68,25 @@ public final class FadeWindowRetimeTool {
         List<String> positional = new ArrayList<>();
         String emeralds = null;
         int advances = 2;
+        boolean keepIntros = false;
         for (int i = 0; i < args.length; i++) {
             switch (args[i]) {
                 case "--emeralds" -> emeralds = args[++i];
                 case "--authored-fade-advances" -> advances = Integer.parseInt(args[++i]);
+                case "--keep-intros" -> keepIntros = true;
                 default -> positional.add(args[i]);
             }
         }
         if (positional.size() != 9) {
             throw new IllegalArgumentException("Usage: FadeWindowRetimeTool ROM GAME ZONE ACT WIDTH MAIN SIDEKICK "
-                    + "INPUT OUTPUT.bk2 [--emeralds DDDDDDD] [--authored-fade-advances N]");
+                    + "INPUT OUTPUT.bk2 [--emeralds DDDDDDD] [--authored-fade-advances N] [--keep-intros]");
         }
         String game = positional.get(1);
         var settings = new GameplayCaptureSession.Settings(Integer.parseInt(positional.get(4)), positional.get(5),
                 "none".equalsIgnoreCase(positional.get(6)) ? "" : positional.get(6), "off", null, null, null,
                 emeralds, false, false);
         var result = run(Path.of(positional.get(0)), game, positional.get(2), Integer.parseInt(positional.get(3)),
-                settings, Path.of(positional.get(7)), Path.of(positional.get(8)), advances);
+                settings, Path.of(positional.get(7)), Path.of(positional.get(8)), advances, keepIntros);
         System.out.println(report(result));
         var verification = result.verification();
         if (verification.deathFrame() >= 0 || verification.frames() != result.frames().size()) {
@@ -88,8 +98,16 @@ public final class FadeWindowRetimeTool {
     public static Result run(Path rom, String game, String zone, int oneBasedAct,
                              GameplayCaptureSession.Settings settings, Path input, Path output,
                              int advances) throws Exception {
+        return run(rom, game, zone, oneBasedAct, settings, input, output, advances, false);
+    }
+
+    /** As {@link #run(Path, String, String, int, GameplayCaptureSession.Settings, Path, Path, int)},
+     *  optionally keeping the S3K intros the route's own driver plays. */
+    public static Result run(Path rom, String game, String zone, int oneBasedAct,
+                             GameplayCaptureSession.Settings settings, Path input, Path output,
+                             int advances, boolean keepIntros) throws Exception {
         var result = retime(rom, GameplayCaptureTool.ZoneIds.resolve(game, zone), oneBasedAct - 1, settings,
-                frames(input), advances);
+                frames(input), advances, keepIntros);
         String header = "# Retimed by FadeWindowRetimeTool from " + input.getFileName() + " (authored fade advances "
                 + advances + "); windows start:native->+inserted " + describe(result.retimed()) + "\n";
         // Keep the source script's provenance comments when the movie has one beside it.
@@ -111,12 +129,18 @@ public final class FadeWindowRetimeTool {
 
     public static Result retime(Path rom, int zone, int act, GameplayCaptureSession.Settings settings,
                                 List<Bk2FrameInput> original, int authoredFadeAdvances) throws Exception {
+        return retime(rom, zone, act, settings, original, authoredFadeAdvances, false);
+    }
+
+    public static Result retime(Path rom, int zone, int act, GameplayCaptureSession.Settings settings,
+                                List<Bk2FrameInput> original, int authoredFadeAdvances,
+                                boolean keepIntros) throws Exception {
         if (authoredFadeAdvances < 1) throw new IllegalArgumentException("authored fade advances must be positive");
         List<Bk2FrameInput> frames = new ArrayList<>(original);
         List<Window> retimed = new ArrayList<>();
         Set<Integer> processed = new HashSet<>();
         while (true) {
-            Pass pass = replay(rom, zone, act, settings, frames, processed);
+            Pass pass = replay(rom, zone, act, settings, frames, processed, keepIntros);
             Window found = pass.firstNewWindow();
             if (found == null) return new Result(List.copyOf(frames), List.copyOf(retimed), pass);
             processed.add(found.start());
@@ -143,10 +167,14 @@ public final class FadeWindowRetimeTool {
      * {@code processed}, otherwise runs every frame and reports the verification state.
      */
     static Pass replay(Path rom, int zone, int act, GameplayCaptureSession.Settings settings,
-                       List<Bk2FrameInput> frames, Set<Integer> processed) throws Exception {
+                       List<Bk2FrameInput> frames, Set<Integer> processed, boolean keepIntros) throws Exception {
         List<Window> windows = new ArrayList<>();
         List<Integer> loads = new ArrayList<>();
         try (var session = new GameplayCaptureSession(settings)) {
+            // The session constructor sets S3K_SKIP_INTROS; a route driver that plays the
+            // intros (e.g. TestSozColdRouteCapture) clears it again before boot.
+            if (keepIntros) GameServices.configuration().setSessionOverride(
+                    com.openggf.configuration.SonicConfiguration.S3K_SKIP_INTROS, false);
             session.boot(rom, zone, act, settings);
             Object level = GameServices.level().getCurrentLevel();
             int vint = vint();

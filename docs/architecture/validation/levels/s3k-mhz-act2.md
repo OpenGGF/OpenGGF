@@ -576,3 +576,20 @@ gate. Together with the distinct315 preceding MHZ death products, the current
 qualified lifecycle floor is360 (Act1=200,Act2=160), not a single pristine360
 invocation. Further rosters, mechanics, cold-route and native visual/audio
 breadth remain explicit obligations.
+
+
+### Knuckles complete movie retimed (2026-10-15)
+
+Surfaced after the rewind-snapshot rows cleared on Root 2adfa37a7: the movie was
+authored under the pre-8179ccd80 double fade advance, so its full load landed 11
+frames early. `FadeWindowRetimeTool` measured the owned frozen fade-out window in
+the production harness, inserted the native remainder and verified one
+uninterrupted replay with no death. Test frame constants move by 11 at and after
+the old load. No runtime behaviour changed.
+
+| Movie | Old SHA-256 | New SHA-256 | Windows `start:native→+inserted` | Frames | New full loads | Verified end |
+|---|---|---|---|---|---|---|
+| `mhz2-knuckles-cold-complete-320.bk2` | `d9b4728bd380b3c87abc4070975a791987a3d5e2ba36f23074c4aa817d7a0b84` | `6e4cd1409bcb7e3d1889cf014dbb363e0a687bcea395073003008e063156676a` | 66042:22→+11 (Act1 prefix unchanged) | 66282 | 29044, 66064 | 779,1388, 7 rings, zone 4/0 |
+
+Validation: run `probe-v1` (focused queued selectors, S3K ROM, branch
+bugfix/ai-s3k-route-behaviour-regressions on 2adfa37a7) passed the owning test, 0 skips.
