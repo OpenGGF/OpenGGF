@@ -176,7 +176,9 @@ Unreleased. The earlier development themes remain in
   defeat rumble, so the island and its mask settle where the original puts
   them and no black line crosses the credits. The second credits part shows its
   names again instead of an empty sky, each entering at the bottom of the screen
-  where the original draws it.
+  where the original draws it. The credits start on the frame the original
+  starts them, and with every emerald the second part lifts the island away and
+  stops new clouds where the original does.
 
 - **Capture and controller tools:** Input branches reject checkpoints whose pending
   fresh assembly or transition callback cannot be restored by gameplay rewind.

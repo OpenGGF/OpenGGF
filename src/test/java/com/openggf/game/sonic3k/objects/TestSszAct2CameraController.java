@@ -185,4 +185,84 @@ class TestSszAct2CameraController {
         }
     }
 
+    /**
+     * loc_58B7C (sonic3k.asm:117827-117839) has no branch after its addq.w #4: the pass that
+     * finishes the bottom-up redraw falls into loc_58B9E and runs sub_5B18E's loc_5B1A2 init.
+     * The native Knuckles complete run holds Events_routine_fg $10 and _unkFA86 2 in the same
+     * frame (input 422608); a one-pass delay started every credit line one frame late.
+     */
+    @Test
+    void finishedRedrawEntersTheCreditsOwnerInTheSamePass() {
+        var config = com.openggf.configuration.SonicConfigurationService.getInstance();
+        config.setSessionOverride(com.openggf.configuration.SonicConfiguration.MAIN_CHARACTER_CODE, "knuckles");
+        config.setSessionOverride(com.openggf.configuration.SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+        try {
+            var fixture = boot(); fixture.stepIdleFrames(300);
+            for (int i = 0; i < 7; i++) TestEnvironment.objectServices().gameState().markEmeraldCollected(i);
+            // Declared ending entry: loc_5E70E's sub_5FE82 progress plus the flight's negative signal.
+            com.openggf.game.sonic3k.ending.S3kEndingCoordinator.initializeProgress(TestEnvironment.objectServices());
+            state().setEndingRunning(true);
+            state().setForegroundRoutine(8);
+            state().setEventsFg4(0xFF00);
+            state().setSpecialVIntRoutine(4);
+            fixture.camera().setScrollLocked(true);
+            int passes = 0;
+            while (state().foregroundRoutine() != 0x10 && passes++ < 5000) fixture.stepIdleFrames(1);
+            assertEquals(0x10, state().foregroundRoutine());
+            assertEquals(2, state().ending().credits().routine(),
+                    "loc_58B9E runs sub_5B18E's init on the pass that finishes the redraw");
+        } finally {
+            config.clearSessionOverrides();
+        }
+    }
+
+    /**
+     * loc_58BBC (sonic3k.asm:117846-117875) tests _unkFAAE (credits part two), not completion:
+     * on the pass where the locked-on Camera_Y_pos equals $1660 it clears _unkFAB9 (no new
+     * clouds), lifts Camera_Y_pos_BG_copy by $100, loads Pal_Ending2 and starts BG routine 4.
+     * The native Knuckles complete run holds Events_routine_bg 4 and _unkFAB9 0 at the credits'
+     * end (input 432708); Camera_Y_pos ends at $1CA0, so a completion gate never fires.
+     */
+    @Test
+    void partTwoLiftsTheIslandAndStopsCloudsAtCameraY1660() throws Exception {
+        var config = com.openggf.configuration.SonicConfigurationService.getInstance();
+        config.setSessionOverride(com.openggf.configuration.SonicConfiguration.MAIN_CHARACTER_CODE, "knuckles");
+        config.setSessionOverride(com.openggf.configuration.SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+        try {
+            var fixture = boot(); fixture.stepIdleFrames(300);
+            var services = TestEnvironment.objectServices();
+            for (int i = 0; i < 7; i++) services.gameState().markEmeraldCollected(i);
+            com.openggf.game.sonic3k.ending.S3kEndingCoordinator.initializeProgress(services);
+            state().setEndingRunning(true);
+            state().setForegroundRoutine(8);
+            state().setEventsFg4(0xFF00);
+            state().setSpecialVIntRoutine(4);
+            fixture.camera().setScrollLocked(true);
+            int passes = 0;
+            while (state().foregroundRoutine() != 0x10 && passes++ < 5000) fixture.stepIdleFrames(1);
+            assertEquals(0x10, state().foregroundRoutine());
+            // Declared: loc_5EA30's cloud configuration, then sub_5B18E advanced to just
+            // before $1660 (the per-pass ScreenEvent gate is what is under test).
+            var credits = state().ending().credits();
+            if (!credits.active()) fixture.stepIdleFrames(1); // independent of the loc_58B9E hand-off pass
+            assertTrue(credits.active());
+            state().ending().clouds().configure(0x3F, 0, 0x80);
+            for (int i = 0; i < 20000 && (credits.scroll() >> 16) < 0x1650; i++) credits.step(services.romReader());
+            assertEquals(4, credits.partIndex(), "Camera_Y_pos $1650 is in credits part two");
+            int backgroundY = state().backgroundCameraY();
+            passes = 0;
+            while ((fixture.camera().getY() & 0xFFFF) < 0x1660 && passes++ < 100) {
+                assertEquals(0, state().backgroundRoutine(), "nothing changes before $1660");
+                fixture.stepIdleFrames(1);
+            }
+            assertEquals(0x1660, fixture.camera().getY() & 0xFFFF);
+            assertEquals(4, state().backgroundRoutine(), "addq.w #4,(Events_routine_bg).w");
+            assertEquals(backgroundY + 0x100, state().backgroundCameraY(), "Camera_Y_pos_BG_copy+$100");
+            assertEquals(0, state().ending().clouds().mask(), "clr.b (_unkFAB9).w");
+            assertEquals(0x80, state().ending().clouds().yVelocity(), "_unkFAC4 is not touched");
+        } finally {
+            config.clearSessionOverrides();
+        }
+    }
+
 }
