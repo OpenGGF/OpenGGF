@@ -175,6 +175,11 @@ public final class SszCutsceneBridgeObjectInstance extends AbstractObjectInstanc
         // SolidObjectTop keeps its relative y_pos += d0+3 write, before TouchFloor.
         return false;
     }
+    @Override public boolean suppressesObjectEdgeBalance() {
+        // Obj_SSZCutsceneBridge bset #7,status. Tails loc_14A16 and the
+        // other native standing branches retain Wait for this negative header.
+        return true;
+    }
     @Override public boolean isTopSolidOnly() { return true; }
     @Override public int getPriorityBucket() { return PRIORITY_BUCKET; }
     /** Obj_SSZCutsceneBridge: make_art_tile(ArtTile_SSZMisc+$20,2,1). */

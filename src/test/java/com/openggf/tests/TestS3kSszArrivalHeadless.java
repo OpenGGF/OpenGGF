@@ -59,6 +59,37 @@ class TestS3kSszArrivalHeadless {
         SessionManager.clear();
     }
 
+    @Test
+    void stationaryTailsUsesTheCutsceneBridgeNativeNoBalanceHeader() throws Exception {
+        var settings=new com.openggf.tools.GameplayCaptureSession.Settings(320,"sonic","tails","off",null,null,null);
+        var movie=new com.openggf.debug.playback.Bk2MovieLoader().loadMovieOrInputLog(java.nio.file.Path.of(
+                "src/test/resources/traces/s3k/runs/s3k-sonic-tails-complete-emeralds/s3k-sonic-tails-complete-emeralds.bk2"));
+        try(var session=new com.openggf.tools.GameplayCaptureSession(settings)) {
+            GameServices.configuration().setSessionOverride(SonicConfiguration.S3K_SKIP_INTROS,false);
+            session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(),Sonic3kZoneIds.ZONE_SSZ,0,settings);
+            session.step(new com.openggf.debug.playback.Bk2FrameInput(0,0,0,false,"native initial ProcessSprites"));session.renderFrame();
+            int witnesses=0;
+            for(int frame=0;frame<1431;frame++) {
+                var before=GameServices.sprites().getRegisteredSidekicks().getFirst();
+                boolean standingAtDispatch=!before.getAir()&&before.getGSpeed()==0&&!before.getRolling();
+                session.step(movie.getFrame(448920+frame));session.renderFrame();
+                var tails=GameServices.sprites().getRegisteredSidekicks().getFirst();
+                var ride=GameServices.level().getObjectManager().getRidingObject(tails);
+                if(ride instanceof com.openggf.game.sonic3k.objects.SszCutsceneBridgeObjectInstance
+                        &&standingAtDispatch&&!tails.getAir()&&tails.getGSpeed()==0&&!tails.getRolling()) {
+                    witnesses++;
+                    // Obj_SSZCutsceneBridge bset #7,status; Tails loc_14A16
+                    // writes Wait before testing that negative object header.
+                    assertEquals(5,tails.getAnimationId(),"stationary native bridge rider at input "+frame);
+                    assertEquals(0,tails.getBalanceState());
+                    assertEquals(1,tails.getTailsTailsController().captureRewindState().currentAnim(),
+                            "Wait selects the separate Swish owner, not a blank balance appendage");
+                }
+            }
+            assertTrue(witnesses>0,"the real cold controller route must reach the native standing branch");
+        }
+    }
+
     @ParameterizedTest
     @ValueSource(ints = {320, 800})
     void screenInitForcesTheArrivalCameraBoundsAndControlLock(int width) {

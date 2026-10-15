@@ -1525,10 +1525,19 @@ fallback to slot33. The local settle inlet is explicitly declared; it proves
 
 Passive original AD40 recapture25248 is terminal0 at20:12:52 UTC, using the
 unchanged production runtime and original1431 ordinary input polls after its
-one-shot initial ProcessSprites. All1432 rows now match native P1 and P2 X/Y,
-velocities, ground speed, mapping frame, both camera coordinates/copies, level
-clock and rings. The former one-X/74-Y P2 deficit is gone. Eight earlier native
+one-shot initial ProcessSprites. All1432 rows now match the recorded native P1 X/Y,
+X/Y velocities, ground speed and mapping frame, P2 X/Y, both camera
+coordinates/copies, level clock and rings. P2 velocities and body/tail animation
+are not present in that CSV; later selected RAM observations are separate. The former one-X/74-Y P2 deficit is gone. Eight earlier native
 observer controls remain byte-identical; no gameplay values are imported.
+
+Cutscene-bridge rider pose (2026-10-15 UTC): `Obj_SSZCutsceneBridge` sets its own
+status bit 7, so Tails' `loc_14A16` standing branch keeps Wait (anim5) instead of
+Balance. The bridge now advertises that negative header to the shared edge-balance
+check. `TestS3kSszArrivalHeadless#stationaryTailsUsesTheCutsceneBridgeNativeNoBalanceHeader`
+passed (1/0/0/0, request79598, 00:33:37) after the old Balance6 negative at input
+1338. It asserts anim5/no balance/tail anim1; the native map `$AD`/tail map `$22`
+and their 4,3,2 timers at inputs 1341-1343 are not asserted by it.
 
 Viewed native and engine gameplay pictures remain bounded spot evidence,
 not whole-scene original-RGB acceptance. Native input0 still publishes its
