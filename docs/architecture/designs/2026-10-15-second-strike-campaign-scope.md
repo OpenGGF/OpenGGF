@@ -117,9 +117,12 @@ Implementation must re-resolve the original ROM inventory and test traversal.
 
 **Platform correction:** ordinary native collapsing platforms already start a
 seven-update collapse delay. Replacing that with ten is not automatically harder.
-The fire log bridge above normally uses subtype base plus `$30` (56 updates for
-the inspected subtype), so a ten-update **brittle log** is a meaningful variant.
-Judge the complete support/breakup behaviour, not the nominal timer alone.
+The log bridge's subtype base plus `$30` is its aggregate collapse timer (56 for
+the inspected subtype), not every rider's support time: segment release depends
+on the rider's position, with the first segment potentially releasing after eight
+updates. A ten-update **brittle log** must demonstrate its actual support/release
+pattern at the authored landing. Judge complete rider and fragment behaviour;
+neither nominal timer alone establishes a harder or fairer crossing.
 
 Start with object placement and supported native variants. Permit up to three
 small, reviewed collision/terrain-edit clusters per act where they add a genuine

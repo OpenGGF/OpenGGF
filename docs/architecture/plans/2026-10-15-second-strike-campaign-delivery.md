@@ -139,6 +139,58 @@ branches, preserving user config/ROM/save targets, useful captures and histories
 
 - Both leads received the sibling's live coordination identity and shared-file
   boundaries. Reviewers are dispatched only when concrete batches are ready.
-- Reviews and implementation validation: not yet started.
+- Campaign C1 lead reports active Sol west ownership of HCZ/MGZ in
+  `.worktrees/ai-second-strike-c1-west`, and Sonnet east ownership of CNZ/ICZ/LBZ
+  in `.worktrees/ai-second-strike-c1-east` (child request
+  `second-strike-c1-east-sonnet-20261015-r1`). Child creation used the normal main
+  lease and hooks. This is an implementation-start report, not test evidence.
+- Accepted registration boundary:
+  `public static void secondstrike.campaign.SecondStrikeCampaign.register(ModContext)`.
+  Campaign supplies the real provider; AIZ owns the registration patch. Compose
+  both before the call is compiled; no reflection, empty stub or duplicate registry.
+- C1 native decoded admission rejects raw edit/move/remove operations. Preserve
+  that validation; sequence exact bounded semantic-owner opt-ins before their
+  creator consumers, with no unsupported-native-reference workaround.
+- Initial native contract batch approved: exact-original star-post invitation;
+  AIZ native log recipe; finite C1 bridge/enemy/boss factory presets. These are
+  authorizations to implement, not verified API/route results. Invitation skips
+  only opted-in ring thresholds and retains the native entry gates. C1 bridge
+  `STOCK/BRITTLE` supersedes the broad numeric-delay proposal and preserves native
+  trigger/STOMP modes. Boss facades return admitted `AbstractObjectInstance`,
+  without exposing the unannotated native boss base.
+- AIZ owns `ModApiSurfaceInventory` for the accepted new factory roots and native
+  enum services; campaign supplies exact types and stable source packets. Root
+  owns the actual composed export/pin and bounded service/compiler admission.
+  Direct immutable native enum services replace unnecessary preset callbacks.
+- AIZ lead reports invitation focus66645 and native worker67643 pending with
+  source freezes retained. Combat92555 was cancelled before admission to repair
+  an invalid camera fixture; exact replacement27230 is pending. A separate
+  lead-only AIZ content tree advances disjoint routes without editing frozen
+  native sources or increasing the two-worker team.
+- Campaign reports board-policy65039 and C2 SOZ native/rewind65149 pending.
+  SOZ's finite recipe uses actual600/900-update light intervals (reload599/899),
+  native endpoint palettes and bounded committed hops; no proof of real pit
+  progress or complete traversal is inferred from these source constants.
+- Initial C1 explicit roots are `mods.objects.CollapsingBridgeFactory`,
+  `mods.objects.HydrocityFactory` and `mods.objects.MarbleGardenFactory` (all
+  prefixed `com.openggf`). Their five native difficulty recipe enums are
+  transitively admitted; service-used `MarbleGardenBossRecipe` is also explicit.
+  The Spiker detection-only preset shares `LANDING_GUARD`. No new HCZ/MGZ callback
+  policies or native boss-base export is authorized.
+- AIZ event-created boss/bombing variants use explicit immutable enum service
+  roots `game.sonic3k.difficulty.AizEndBossRecipe` and `AizBombingRunRecipe`;
+  C2's `SandopolisChallengeRecipe` enters a later contract batch. Actual native
+  entry/withdrawal/quarantine and compiler/SDK composition remain root gates.
+- The native bonus request is void and may decline admission; publication alone
+  does not prove accepted entry. AIZ is investigating pending/rejected producer
+  semantics before any new acknowledged transition-owner seam is sequenced.
+- A12 wheeled chaser is explicitly rejected after the AIZ source/loop/art spike;
+  the team proceeds with a finite native bombing-run pattern. A5 tree-release
+  lookout has a source/terrain feasibility gate because no suitable original
+  enemy record follows the hollow tree. Neither is complete route evidence.
+- Corrected the proposal's log timer claim:56 is aggregate breakup, not uniform
+  standing support; the first inspected segment may release after8. New variants
+  require actual rider support/release and native breakup checks.
+- Astra/Opus reviews: not yet started; implementation checks are pending above.
 - No main publication hold or timing pause is in force. Preserve foreign jobs and
   immutable performance sources; normal admission applies.
