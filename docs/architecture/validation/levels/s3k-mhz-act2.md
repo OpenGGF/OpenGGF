@@ -593,3 +593,26 @@ the old load. No runtime behaviour changed.
 
 Validation: run `probe-v1` (focused queued selectors, S3K ROM, branch
 bugfix/ai-s3k-route-behaviour-regressions on 2adfa37a7) passed the owning test, 0 skips.
+
+### Sonic incoming movies re-authored for the native MHZ1 carry-in (2026-10-15)
+
+See the MHZ act 1 record for the cause (aedc137a1, `loc_68C2`→`loc_68D8`), the opening and
+the tracking method. Act 2 continues the same time-aligned tracking from the act-2 release.
+
+| Movie | Old SHA-256 | New SHA-256 | Frames | Milestones (new; old) | Status |
+|---|---|---|---|---|---|
+| `mhz2-sonic-incoming-320.bk2` | `df0f52d4d34620022ff027059a2cc90911a3e1b039feb884d1bf8597d63a351f` | `314c73520a71585c41cd96fbc618f95da367e38043d902ca66cd850d9c945bd4` | 23944 | MHZ2 8617, release 9148, end boss 19835…20992 (19671…21156), ship 22264/23548, FBZ load 23666 (23497) | green |
+| `mhz2-sonic-incoming-800.bk2` | `15e386e9fec403ad411702f1f95c1c2f33e3202fa31d15d20af7e3038b324067` | unchanged | 29744 | act 1 re-authored (identical milestones to old, as the cold-complete 800 movie); MHZ2 not completed | stopped: limit below |
+
+`TestS3kMhzAct2AuthoredRoute` takes the Sonic case's new input count (23944); the Tails and
+team movies are unchanged. Incoming 800 stopped under the three-failed-searches rule: six
+bounded tracking searches from the act-2 release (offsets auto/−54, mushroom-cap state
+carry, no-restore windows) all failed in the MHZ2 traversal before the end boss — cold
+replays drift from restored trials at 11320 (P1 3911,1645, VInt 11320, level timer 2029,
+RNG `e1f02cdb`) and 14132 (P1 8954,1102, VInt 14132, timer 4841, RNG `9bb599f3`), and the
+last search lost the old path at 15100 (P1 13012,1905, VInt 15100, timer 5809, RNG
+`87c386cb`). The old movie stays in place; its test remains red (carry-in opening).
+
+Validation on 923399354 (run `v-mhz`, Maven Finished 21:07:07Z): `TestS3kMhzAct2AuthoredRoute`
+3/0/0/0 (Sonic re-authored; Tails and team unchanged); `TestMhzWideColdRouteCapture` 1 failure
+(`expected: <4> but was: <7>` at 29700, unchanged incoming 800 movie).
