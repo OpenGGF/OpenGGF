@@ -408,3 +408,10 @@ inputs; owned by the rewind lane, not changed here):
 4. Unidentified 1-7px y restore drift in MHZ2 at 800px among mushroom caps and pollen
    (first at 11320, P1 3911,1645, VInt 11320, timer 2029, RNG `e1f02cdb`; again 14132,
    P1 8954,1102, VInt 14132, timer 4841, RNG `9bb599f3`).
+
+Validation on 923399354 (focused selectors through `tools/testing/maven_queue.py`, normal lane,
+S3K/S1/S2 ROMs, run `v-mhz`, Maven Finished 21:07:07Z, 6 tests, no errors or skips):
+`TestS3kMhzWideAuthoredRoute` 1/0, `TestS3kMhzAct2AuthoredRoute` 3/0;
+`TestS3kMhzAuthoredRoute` 1 failure (`restore act-two-released at 9257`, the FireShield
+restore defect above); `TestMhzWideColdRouteCapture` 1 failure (zone 7 at 29700 with the
+unchanged incoming 800 movie; stopped, see the MHZ act 2 record).

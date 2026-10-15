@@ -612,3 +612,7 @@ replays drift from restored trials at 11320 (P1 3911,1645, VInt 11320, level tim
 RNG `e1f02cdb`) and 14132 (P1 8954,1102, VInt 14132, timer 4841, RNG `9bb599f3`), and the
 last search lost the old path at 15100 (P1 13012,1905, VInt 15100, timer 5809, RNG
 `87c386cb`). The old movie stays in place; its test remains red (carry-in opening).
+
+Validation on 923399354 (run `v-mhz`, Maven Finished 21:07:07Z): `TestS3kMhzAct2AuthoredRoute`
+3/0/0/0 (Sonic re-authored; Tails and team unchanged); `TestMhzWideColdRouteCapture` 1 failure
+(`expected: <4> but was: <7>` at 29700, unchanged incoming 800 movie).
