@@ -272,6 +272,236 @@ class TestS3kLrzHpzSszColdCampaign {
         assertSavedNextLevel(new DataSelectDestination(Sonic3kZoneIds.ZONE_HPZ, 1), "knuckles", lives);
     }
 
+    // ------------------------------------------------------------------ long cold continuations
+
+    /**
+     * K: one uninterrupted controller-only Knuckles run from the declared {@code boot(9,0)}
+     * inlet through LRZ2's {@code Obj_StartNewLevel}, HPZ's {@code loc_45B94}, the SSZ2 crane,
+     * both Mecha fights, {@code loc_7BCB0}'s final defeat, the flight, both credit parts and the
+     * post-credits owner to the title. Cold Knuckles has earned no emeralds (ending progress -2).
+     * Inputs through the crane release are the qualified joined chain; the fight was authored
+     * from that cold prefix with {@link SszBossInputAuthorTool} (MECHA2), and the tail is
+     * neutral then Start once the post-credits owner reaches phase 4 after both credit parts.
+     */
+    @Test
+    void knucklesColdCampaignClearsSkySanctuaryTwoThroughTheEndingAndTitle() throws Exception {
+        var loader = new Bk2MovieLoader();
+        var movie = loader.loadMovieOrInputLog(route("lrz-knuckles-cold-hpz-ssz2-ending-320.bk2"));
+        var joined = loader.loadMovieOrInputLog(route("lrz-knuckles-cold-hpz-ssz2-320.bk2"));
+        final int craneRelease = 51586; // TestS3kHpzJoinedColdRouteCapture's qualified release
+        for (int f = 0; f <= craneRelease; f++) {
+            assertEquals(joined.getFrame(f), movie.getFrame(f), "qualified joined input " + f);
+        }
+        var settings = new GameplayCaptureSession.Settings(320, "knuckles", "", "off", null, null, null);
+        var checked = new java.util.LinkedHashSet<String>();
+        int hpzLoad = -1, sszLoad = -1, released = -1, finalDefeat = -1, flight = -1, title = -1;
+        int health = 8, phaseHits = 0, phase = 1;
+        boolean creditsComplete = false, postSeen = false;
+        try (var session = new GameplayCaptureSession(settings)) {
+            session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 9, 0, settings);
+            int lives = GameServices.gameState().getLives();
+            for (int frame = 0; frame < movie.getFrameCount(); frame++) {
+                // Draw every input, as the joined chain and the fight author did.
+                session.step(movie.getFrame(frame)); session.renderFrame();
+                if (session.loop().getCurrentGameMode() == GameMode.TITLE_SCREEN) {
+                    title = frame;
+                    break;
+                }
+                assertEquals(GameMode.LEVEL, session.loop().getCurrentGameMode(), "input " + frame);
+                assertFalse(session.player().getDead(), "cold death " + frame);
+                assertTrue(GameServices.gameState().getLives() >= lives, "hidden respawn " + frame);
+                lives = GameServices.gameState().getLives();
+                assertInstanceOf(com.openggf.sprites.playable.Knuckles.class, session.player());
+                assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
+                assertEquals(320, GameServices.camera().getWidth());
+                var level = GameServices.level();
+                int zone = level.getCurrentZone(), act = level.getCurrentAct();
+                if (zone == 22 && act == 1 && hpzLoad < 0) hpzLoad = frame;
+                if (zone == 10 && sszLoad < 0) {
+                    sszLoad = frame;
+                    assertEquals(1, act, "loc_45B94 StartNewLevel #$A01");
+                }
+                if (zone != 10) continue;
+                var ssz = (com.openggf.game.sonic3k.runtime.SszZoneRuntimeState) GameServices.zoneRuntimeState();
+                if (released < 0 && ssz.cutsceneFlag(5) && !session.player().isObjectControlled()
+                        && !session.player().isControlLocked()) released = frame;
+                String spot = null;
+                var bosses = level.getObjectManager().activeObjectsOfType(
+                        com.openggf.game.sonic3k.objects.bosses.SszMechaSonicObjectInstance.class);
+                if (finalDefeat < 0 && !bosses.isEmpty()) {
+                    var mecha = bosses.getFirst();
+                    int hp = mecha.getCollisionProperty();
+                    if (hp < health) {
+                        assertEquals(health - 1, hp, "each collision deals one hit at " + frame);
+                        phaseHits++;
+                        if (phaseHits == 1) spot = "phase" + phase + "-first-hit";
+                        if (hp == 2) spot = "phase" + phase + "-low-health";
+                        if (hp == 0) spot = phase == 1 ? "first-defeat" : null;
+                    } else if (hp > health) {
+                        assertEquals(1, phase, "only loc_7BBE0 restores Mecha's health");
+                        assertEquals(8, phaseHits, "first fight takes eight hits");
+                        assertEquals(8, hp, "loc_7BBE0 returns with eight Super-phase hits");
+                        phase = 2;
+                        phaseHits = 0;
+                    }
+                    if (phase == 2 && checked.add("super-entry")) {
+                        assertEquals(2, mecha.routineForTest(), "Super phase routine");
+                        spot = "super-entry";
+                    }
+                    health = hp;
+                }
+                if (finalDefeat < 0 && ssz.act2EndingActive()) {
+                    finalDefeat = frame;
+                    assertEquals(2, phase, "loc_7BCB0 follows the Super phase");
+                    assertEquals(8, phaseHits, "Super phase takes eight hits");
+                    spot = "final-defeat";
+                }
+                if (ssz.ending().initialized()) {
+                    creditsComplete |= ssz.ending().credits().complete();
+                    assertEquals(-2, ssz.ending().progress(), "cold Knuckles earned no emeralds");
+                }
+                var flightOwner = level.getObjectManager().activeObjectsOfType(
+                        com.openggf.game.sonic3k.ending.EndingKnucklesFlightObjectInstance.class).stream()
+                        .findFirst().orElse(null);
+                if (flightOwner != null) {
+                    if (flight < 0) flight = frame;
+                    if (flightOwner.routine() == 4) spot = "flight-jump";
+                    if (flightOwner.routine() == 10) spot = "plane-turn";
+                    if (flightOwner.routine() == 12) spot = "small-plane";
+                }
+                var credits = ssz.ending().credits();
+                if (credits.routine() == 4 && credits.rowIndex() > 0) {
+                    spot = credits.partIndex() == 0 ? "credits-one" : "credits-two";
+                }
+                var post = level.getObjectManager().activeObjectsOfType(
+                        com.openggf.game.sonic3k.ending.S3kPostCreditsObjectInstance.class).stream()
+                        .findFirst().orElse(null);
+                if (post != null) {
+                    postSeen = true;
+                    if (post.phase() == 1) spot = "banner";
+                    if (post.phase() == 7 && !level.getObjectManager().activeObjectsOfType(
+                            com.openggf.game.sonic3k.ending.EndingMechaChargeObjectInstance.class).isEmpty()) {
+                        spot = "mecha-charge";
+                    }
+                }
+                if (spot != null && (spot.equals("super-entry") || checked.add(spot))) {
+                    replayWindow(session, movie, frame, finalDefeat < 0 ? 45 : 30, spot);
+                }
+            }
+        }
+        System.out.println("K cold campaign: HPZ " + hpzLoad + ", SSZ2 " + sszLoad + ", release " + released
+                + ", final defeat " + finalDefeat + ", flight " + flight + ", title " + title + ", spots " + checked);
+        assertEquals(49297, hpzLoad);
+        assertEquals(50160, sszLoad);
+        assertEquals(craneRelease, released);
+        assertTrue(finalDefeat > released && flight > finalDefeat, "fight, then the actual flight");
+        assertTrue(creditsComplete, "both native credit parts");
+        assertTrue(postSeen, "actual post-credits owner");
+        assertTrue(title > flight, "controller Start reaches the title");
+        assertEquals(java.util.Set.of("phase1-first-hit", "phase1-low-health", "first-defeat", "super-entry",
+                "phase2-first-hit", "phase2-low-health", "final-defeat", "flight-jump", "plane-turn",
+                "small-plane", "credits-one", "credits-two", "banner", "mecha-charge"), checked);
+    }
+
+    /**
+     * G: the LRZ2 giant ring s9 at ($2640,$640), entered by cold Tails with the 12-input L+A hold
+     * recorded in s3k-lrz-act2.md, then the return to LRZ2 at Saved2. No emeralds are declared:
+     * {@code SSEntryFlash_GoSS} starts Blue Sphere, which neutral input fails. The seven-Chaos
+     * $1701 branch is not covered: HPZSSEntryControl's exit gate refuses to leave while any emerald
+     * awaits a pedestal stage, so a return needs a won Super stage, and with all seven Super the
+     * ring pays rings instead of opening a stage.
+     */
+    @ParameterizedTest(name = "giant ring s9 emeralds {0}")
+    @CsvSource({"0000000,lrz-tails-cold-giant-ring-s9-320"})
+    void tailsGiantRingGatewayReturnsToLrzTwo(String emeralds, String name) throws Exception {
+        var loader = new Bk2MovieLoader();
+        var movie = loader.loadMovieOrInputLog(route(name + ".bk2"));
+        var source = loader.loadMovieOrInputLog(route("lrz-tails-cold-hpz-320.bk2"));
+        for (int f = 0; f < 49073; f++) assertEquals(source.getFrame(f), movie.getFrame(f), "qualified Tails input " + f);
+        boolean sanctuary = emeralds.equals("3333333");
+        var settings = new GameplayCaptureSession.Settings(320, "tails", "", "off", null, null, null, emeralds,
+                false, false);
+        int entry = -1, results = -1, returned = -1, ringsBefore = -1;
+        Object outgoingObjects = null;
+        com.openggf.level.BigRingReturnState saved = null;
+        try (var session = new GameplayCaptureSession(settings)) {
+            session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 9, 0, settings);
+            for (int frame = 0; frame < movie.getFrameCount(); frame++) {
+                var level = GameServices.level();
+                if (entry < 0) {
+                    ringsBefore = session.player().getRingCount();
+                    outgoingObjects = level.getObjectManager();
+                }
+                session.step(movie.getFrame(frame)); session.renderFrame();
+                var mode = session.loop().getCurrentGameMode();
+                if (mode == GameMode.LEVEL) assertFalse(session.player().getDead(), "death " + frame);
+                boolean inStage = mode == GameMode.SPECIAL_STAGE
+                        || (mode == GameMode.LEVEL && level.getCurrentZone() == 0x17 && level.getCurrentAct() == 1);
+                if (entry < 0 && inStage) {
+                    entry = frame;
+                    assertEquals(sanctuary ? GameMode.LEVEL : GameMode.SPECIAL_STAGE, mode,
+                            "SSEntryFlash_GoSS: zone >= 7 with seven Chaos loads $1701, otherwise Blue Sphere");
+                    assertEquals(0x200, GameServices.gameState().capture().collectedSpecialRings() & 0x200,
+                            "Collected_special_ring_array bit = subtype 9");
+                    assertTrue(level.hasBigRingReturn(), "Save_Level_Data2 recorded the origin");
+                    saved = level.getBigRingReturn();
+                }
+                if (mode == GameMode.SPECIAL_STAGE_RESULTS && results < 0) results = frame;
+                if (entry >= 0 && returned < 0 && mode == GameMode.LEVEL && level.getCurrentZone() == 9
+                        && level.getCurrentAct() == 1 && !level.hasPendingFreshLevelTransitionBoundary()
+                        && !level.getTransitions().isTitleCardRequested() && !session.player().isControlLocked()) {
+                    returned = frame;
+                    assertNotSame(outgoingObjects, level.getObjectManager(), "the return is a real LRZ2 load");
+                    assertEquals(saved.playerX(), session.player().getCentreX(), "Saved2 X");
+                    assertEquals(ringsBefore, session.player().getRingCount(), "Saved2 rings");
+                    assertTrue(level.getObjectManager().activeObjectsOfType(
+                            com.openggf.game.sonic3k.objects.Sonic3kSSEntryRingObjectInstance.class).stream()
+                            .noneMatch(ring -> ring.getSpawn() != null && ring.getSpawn().subtype() == 9),
+                            "the collected giant ring is not respawned");
+                    assertEquals(sanctuary ? java.util.List.of(3, 3, 3, 3, 3, 3, 3) : java.util.List.of(0, 0, 0, 0, 0, 0, 0),
+                            GameServices.gameState().getS3kEmeraldStates(), "no emerald changes on a failed/exit path");
+                }
+                if (returned >= 0 && (frame == returned + 60 || frame == returned + 200)) {
+                    replayWindow(session, movie, frame, 45, "LRZ2 return +" + (frame - returned));
+                }
+            }
+        }
+        System.out.println("G " + emeralds + ": entry " + entry + ", results " + results + ", return " + returned
+                + ", Saved2 " + saved);
+        assertTrue(entry > 49073, "giant ring entered after the hold");
+        assertEquals(!sanctuary, results > entry, "Blue Sphere results only on the stage path");
+        assertTrue(returned > entry && returned + 245 < movie.getFrameCount(), "released LRZ2 return with replays");
+    }
+
+    /** Two-cycle whole-world replay of {@code window} inputs inside the current world. */
+    private static void replayWindow(GameplayCaptureSession session, Bk2Movie movie, int frame, int window,
+                                     String label) {
+        var level = GameServices.level();
+        var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+        var world = level.getCurrentLevel();
+        assertTrue(frame + window < movie.getFrameCount(), label);
+        var saved = registry.capture();
+        GameplayInputBranchTool.requireRestorableCheckpoint(saved, level.hasPendingFreshLevelTransitionBoundary());
+        for (int n = 1; n <= window; n++) {
+            session.step(movie.getFrame(frame + n)); session.renderFrame();
+            assertSame(world, level.getCurrentLevel(), label);
+        }
+        var expected = registry.capture();
+        for (int cycle = 0; cycle < 2; cycle++) {
+            registry.restore(saved);
+            same(saved, registry.capture(), label + " restore " + cycle);
+            session.restoreInputHistory(movie.getFrame(frame));
+            for (int n = 1; n <= window; n++) {
+                session.step(movie.getFrame(frame + n)); session.renderFrame();
+                assertSame(world, level.getCurrentLevel(), label);
+                assertFalse(session.player().getDead(), label + " replay death " + (frame + n));
+            }
+            same(expected, registry.capture(), label + " replay " + cycle);
+        }
+        registry.restore(saved);
+        session.restoreInputHistory(movie.getFrame(frame));
+    }
+
     // ------------------------------------------------------------------ helpers
 
     private HeadlessTestFixture slotFixture(SelectedTeam team, int zone, int act, Integer x, Integer y) {
