@@ -32,6 +32,8 @@ public final class S3kSlotStageState {
     private int lastSlotWallLayoutIndex = -1;
     private boolean slotWallContactActive;
     private boolean paletteCycleEnabled;
+    /** The Palette_cycle_counters+0 mode AnPal_Slots reads this iteration (before Process_Sprites). */
+    private int animatePaletteMode;
     private int optionCycleState;
     private int optionCycleCountdown;
     private int optionCycleActiveReelIndex;
@@ -305,6 +307,14 @@ public final class S3kSlotStageState {
 
     void setPaletteCycleEnabled(boolean paletteCycleEnabled) {
         this.paletteCycleEnabled = paletteCycleEnabled;
+    }
+
+    int animatePaletteMode() {
+        return animatePaletteMode;
+    }
+
+    void setAnimatePaletteMode(int mode) {
+        animatePaletteMode = mode;
     }
 
     public int optionCycleState() {

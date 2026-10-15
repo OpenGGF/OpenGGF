@@ -456,7 +456,7 @@ class TestS3kSlotBonusStageRuntime {
     }
 
     @Test
-    void goalExitReportsCompletedProviderFadeAfterRomExitFadeCompletes() {
+    void goalExitLeavesTheRemainingFadeToLevelPalFadeToBlack() {
         TestEnvironment.activeGameplayMode();
         SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "tails");
 
@@ -468,14 +468,15 @@ class TestS3kSlotBonusStageRuntime {
         runtime.bootstrap();
         runtime.startGoalExitForTest();
 
-        assertFalse(runtime.hasCompletedExitFadeToBlack());
-
         for (int frame = 0; frame < 155; frame++) {
             runtime.update(frame);
         }
 
-        assertTrue(runtime.hasCompletedExitFadeToBlack());
+        // loc_4BC54's $38 countdown sets Restart_level_flag; Level: runs Pal_FadeToBlack, so the
+        // provider never reports a completed fade and GameLoop starts the ordinary exit fade.
         assertTrue(runtime.isExitTriggered());
+        assertFalse(new com.openggf.game.sonic3k.Sonic3kBonusStageCoordinator().hasCompletedExitFadeToBlack());
+        assertEquals(-1, runtime.paletteCycleMode(), "the goal's st Palette_cycle_counters stops AnPal_Slots");
     }
 
     @Test

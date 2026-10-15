@@ -224,47 +224,18 @@ public class HudRenderManager {
         graphicsManager.beginPatternBatch();
         boolean batchOpen = true;
         try {
-            if (bonusStageHudLayout) {
-                drawBonusStageHud(levelGamestate);
-                graphicsManager.flushPatternBatch();
-                batchOpen = false;
-                return;
-            }
-
-            int hudOrigin = nativeOrigin();
-
             boolean debugMode = player != null && player.isDebugMode();
-            List<HudRow> rows = debugMode
-                    ? HudProfile.stock().rows() : profile.rows();
-
-            for (int index = 0; index < rows.size(); index++) {
-                HudRow row = rows.get(index);
-                if (row.visible() && !isLivesRow(row)) {
-                    int id = index;
-                    HudProfileAccess.withReadout(graphicsManager, id, () ->
-                            drawStaticFrame(selectLabelFrame(row, levelGamestate, debugMode),
-                                    row.labelX(), row.labelY(), hudOrigin));
-                }
-            }
-
-            if (debugMode) {
-                int hexStartX = 48;
-                int playerX = player.getCentreX() & 0xFFFF;
-                int playerY = player.getCentreY() & 0xFFFF;
-                int camX = camera.getX() & 0xFFFF;
-                int camY = camera.getY() & 0xFFFF;
-                HudProfileAccess.withReadout(graphicsManager, 0, () -> {
-                    drawSmallHexCoordinates(hexStartX, 8, playerX, playerY, hudOrigin);
-                    drawSmallHexCoordinates(hexStartX, 16, camX, camY, hudOrigin);
-                });
-            }
-            for (int index = 0; index < rows.size(); index++) {
-                HudRow row = rows.get(index);
-                if (row.visible() && !isLivesRow(row)
-                        && !(debugMode && row.metric() == HudMetric.SCORE)) {
-                    int id = index;
-                    HudProfileAccess.withReadout(graphicsManager, id, () -> drawMetric(row, levelGamestate, hudOrigin));
-                }
+            int hudOrigin;
+            List<HudRow> rows;
+            if (bonusStageHudLayout) {
+                // RINGS only; the lives rows below are shared with the ordinary layout.
+                drawBonusStageHud(levelGamestate);
+                hudOrigin = 0;
+                rows = bonusStageRows();
+            } else {
+                hudOrigin = nativeOrigin();
+                rows = debugMode ? HudProfile.stock().rows() : profile.rows();
+                drawOrdinaryRows(rows, levelGamestate, player, debugMode, hudOrigin);
             }
 
             boolean hasLivesRow = hasVisibleLivesRow(rows);
@@ -300,6 +271,55 @@ public class HudRenderManager {
         }
     }
 
+    private void drawOrdinaryRows(List<HudRow> rows, LevelState levelGamestate, PlayableEntity player,
+                                  boolean debugMode, int hudOrigin) {
+        for (int index = 0; index < rows.size(); index++) {
+            HudRow row = rows.get(index);
+            if (row.visible() && !isLivesRow(row)) {
+                int id = index;
+                HudProfileAccess.withReadout(graphicsManager, id, () ->
+                        drawStaticFrame(selectLabelFrame(row, levelGamestate, debugMode),
+                                row.labelX(), row.labelY(), hudOrigin));
+            }
+        }
+
+        if (debugMode) {
+            int hexStartX = 48;
+            int playerX = player.getCentreX() & 0xFFFF;
+            int playerY = player.getCentreY() & 0xFFFF;
+            int camX = camera.getX() & 0xFFFF;
+            int camY = camera.getY() & 0xFFFF;
+            HudProfileAccess.withReadout(graphicsManager, 0, () -> {
+                drawSmallHexCoordinates(hexStartX, 8, playerX, playerY, hudOrigin);
+                drawSmallHexCoordinates(hexStartX, 16, camX, camY, hudOrigin);
+            });
+        }
+        for (int index = 0; index < rows.size(); index++) {
+            HudRow row = rows.get(index);
+            if (row.visible() && !isLivesRow(row)
+                    && !(debugMode && row.metric() == HudMetric.SCORE)) {
+                int id = index;
+                HudProfileAccess.withReadout(graphicsManager, id, () -> drawMetric(row, levelGamestate, hudOrigin));
+            }
+        }
+    }
+
+    /**
+     * Render_HUD (sonic3k.asm:17580-17592) selects Map_HUD frame 4/5 (word_DC96 / word_DCB6)
+     * in zones $13-$15: the RINGS label plus the two lives-icon pieces at y +$40, the same
+     * lives row the ordinary frames carry; HUD_Lives keeps the digits current.
+     */
+    private List<HudRow> bonusStageRows() {
+        var rows = new java.util.ArrayList<HudRow>(2);
+        rows.add(new HudRow(true, HudLabel.RINGS, HudMetric.RINGS, 16, 8, 64, 8, 3, HudWarningPolicy.ZERO_FLASH));
+        for (HudRow row : profile.rows()) {
+            if (row.visible() && isLivesRow(row)) {
+                rows.add(row);
+            }
+        }
+        return rows;
+    }
+
     private static boolean isLivesRow(HudRow row) {
         return row.label() == HudLabel.LIVES || row.metric() == HudMetric.LIVES;
     }
@@ -307,8 +327,7 @@ public class HudRenderManager {
     List<com.openggf.game.mutators.HudPresentationRuntime.Readout> presentationReadouts() {
         var player = camera.getFocusedSprite();
         boolean debug = player != null && player.isDebugMode();
-        List<HudRow> rows = bonusStageHudLayout ? List.of(new HudRow(true, HudLabel.RINGS, HudMetric.RINGS,
-                16, 8, 64, 8, 3, HudWarningPolicy.ZERO_FLASH)) : debug ? HudProfile.stock().rows() : profile.rows();
+        List<HudRow> rows = bonusStageHudLayout ? bonusStageRows() : debug ? HudProfile.stock().rows() : profile.rows();
         var readouts = new java.util.ArrayList<com.openggf.game.mutators.HudPresentationRuntime.Readout>();
         for (int index = 0; index < rows.size(); index++) {
             var row = rows.get(index); if (!row.visible()) continue;

@@ -158,11 +158,6 @@ public class Sonic3kBonusStageCoordinator extends AbstractBonusStageCoordinator
     }
 
     @Override
-    public boolean hasCompletedExitFadeToBlack() {
-        return slotRuntime != null && slotRuntime.hasCompletedExitFadeToBlack();
-    }
-
-    @Override
     public void onExit() {
         if (slotRuntime != null) {
             slotRuntime.shutdown();

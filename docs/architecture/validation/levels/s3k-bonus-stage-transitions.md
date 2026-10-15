@@ -451,3 +451,69 @@ structural.
 No engine visual defect was established from these pairs. The HUD/priority
 gap is confined to trace-segment captures and is recorded for the shared
 bonus lifecycle owner.
+
+## Bonus presentation against native stills — 2026-10-15 (slotpres lane)
+
+Native: the `slot-native-v1` (Knuckles `bonus_slots` rows 300, 930, 971-974,
+1012-1031 fade, 1029-1036 frozen) and `route-bonus-v1` stills. Engine:
+`TraceCaptureTool` (Limited + Raw RGB, 320 × 1, no ghosts) on lane merge
+`0acadf134` (Root `2adfa37a7` + the three lane commits) into
+`${OGGF_VIDEOS}/s3k-parity-coverage-2026-10-14/spot-checks/route-bonus-engine-slotpres-0acadf134-v3/`.
+Counts are directly differing original-RGB pixels against the engine row
+with the same trace frame index; the "before" captures are Root's
+`ef61a560f` Slot and `7b30ce222` Gumball/Pachinko captures.
+
+Defects found and fixed (red-first tests in `TestS3kSlotPresentationParity`,
+`TestS3kSlotsPaletteCycling`, `TestS3kBonusAnimateTilesPublication`,
+`TestTraceReplayDriveBonusLifecycle`):
+
+- `Slots_RenderLayout` (sonic3k.asm:98158) continues `Sprite_table` after
+  `Render_Sprites` (LevelLoop sonic3k.asm:7911-7915). The engine drew the
+  layout live after the published table, a frame ahead and in front of the
+  player; it now joins the prepared table behind every Render_Sprites entry.
+- The goal tile (`loc_4BED0`, sonic3k.asm:99247) only advances `routine(a0)`;
+  the engine also ran `loc_4BC1E` in the goal iteration. A temporary probe
+  showed engine `Stat_table` $D2C0 at LFC 929 where native RAM has it at 930.
+- `loc_4BC54` runs `Pal_ToBlack` on `Normal_palette` every third iteration
+  (20 passes, red then green then blue); `Level:`'s `Pal_FadeToBlack`
+  (sonic3k.asm:7504, 7523, 5042) fades the rest. The engine used a 60-frame
+  overlay that finished early and then showed the bright stage. AnPal_Slots
+  stops after the trigger's `st (Palette_cycle_counters)`.
+- `AnPal_PalSlots_2` is at $3660 in the shipped ROM (the engine read $3658,
+  whose first group happens to equal the real first group), and AnPal_Slots
+  sees the cage/goal mode one iteration later because `Animate_Palette`
+  precedes `Process_Sprites`. Native row 300 CRAM line 2 entry 14 ($EAC)
+  exposed both.
+- `Render_HUD` (sonic3k.asm:17580) selects `Map_HUD` frame 4/5 in zones
+  $13-$15, which keep the lives icon; the engine bonus HUD omitted it.
+- `AnimateTiles_Gumball`/`_Pachinko` use `Add_To_DMA_Queue`; the engine
+  uploaded immediately (Pachinko background one frame early) and drove
+  Gumball from a fabricated frame counter instead of
+  `(Events_bg+$10 − Camera_Y_pos_BG_copy) & $1F` from `Gumball_Deform`.
+  Both now use the AniPLC VBlank queue. A temporary renderer probe showed the
+  Pachinko background scroll itself is latched correctly.
+- Capture/benchmark drives skipped `BonusStageFrameLifecycle`, so Gumball
+  captures drew Knuckles behind the glass; comparison replays are unchanged.
+
+| Still | Before (N) | After (N) |
+|---|---|---|
+| Slot 300 | 21324 | 1418 |
+| Slot 930 | 35270 | 15889 |
+| Slot 971-974 | 70389-70971 | 16338-22842 |
+| Slot fade 1012-1028 | 5807-71578 | 2461-6103 |
+| Slot 1029-1036 | 69076-71680 | 2297-3396 |
+| Gumball 250 | 12028 | 11092 |
+| Pachinko 226 / 350 | 29831 / 26848 | 180 / 42 |
+| Pachinko 1316 / 1325 | 681 / 2015 | 257 / 1591 |
+
+Remaining, attributed but not fixed: native Slot 930-974 show a vertically
+wrapped copy of the machine plane (machine at y ≈ 360 mod 256) that the engine
+does not draw (plane wrap frontier, `Slots_ScreenEvent`/`Refresh_PlaneDirect`);
+the trace capture never runs `Level:`'s `Pal_FadeToBlack`, so post-exit rows
+stay dim instead of black; lives read ×3 because segment bootstrap does not
+carry lives; Gumball's background blocks differ in content (not a uniform
+shift; ±128 px X tested and rejected; `Gumball_Deform` sets
+`Camera_X_pos_BG_copy = $FFE0`); Gumball row 0 is the known missing title card.
+The `SonicAndTails` Slot trace is red with 71 errors (first frame 5
+`player_mapping_frame` $97/$96) identically on Root `2adfa37a7`, so it is not
+caused by this lane.
