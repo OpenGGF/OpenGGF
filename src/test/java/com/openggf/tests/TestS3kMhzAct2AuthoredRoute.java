@@ -33,7 +33,7 @@ class TestS3kMhzAct2AuthoredRoute {
     }
 
     @ParameterizedTest
-    @CsvSource({"sonic,23775", "tails,35815", "team,44004"})
+    @CsvSource({"sonic,23944", "tails,35815", "team,44004"})
     void incomingRoutesCompleteActTwoWithLiveRewindBoundaries(String route, int inputCount)
             throws Exception {
         boolean pair = route.equals("team");

@@ -41,7 +41,7 @@ class TestS3kMhzAuthoredRoute {
         assertTrue(GameServices.level().consumePendingInitialProcessSpritesPass());
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/mhz1-sonic-fresh-320.bk2"));
-        assertEquals(9301, movie.getFrameCount());
+        assertEquals(9471, movie.getFrameCount());
         fixture.runner().primeInputState(movie.getFrame(0));
         var checked = new HashSet<String>();
         int firstActTwoX = -1;

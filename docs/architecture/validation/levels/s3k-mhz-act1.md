@@ -360,3 +360,51 @@ gate. Together with the distinct315 preceding MHZ death products, the current
 qualified lifecycle floor is360 (Act1=200,Act2=160), not a single pristine360
 invocation. Further rosters, mechanics, cold-route and native visual/audio
 breadth remain explicit obligations.
+
+## Solo Sonic movies re-authored for the native carry-in Tails (2026-10-15)
+
+aedc137a1 installs the ROM's temporary carry-in Tails for locked-on solo Sonic
+(`SpawnLevelMainSprites` `loc_68C2`→`loc_68D8`, sonic3k.asm:8180-8197). The old movies
+started on the ground; under the carrier they miss both opening rings and reach the
+Knuckles clamp (`Obj_MHZ1CutsceneKnuckles` `loc_62CF8`, x=$389) 39 frames early. The
+carry-in also changes the RNG from frame 0, so no opening can restore the old run exactly:
+every opening that lands the cutscene on the old frame 232 has the same new RNG, and none of
+1596 (320px) / 1126 (800px) distinct such openings (300 replayed each) keeps the old
+remainder working past the pulley and sticky vine. No runtime behaviour changed.
+
+Re-author, controller-only from a cold boot: jump off the carrier (`20 R; 1 R+A; 37 R;
+1 R+A; 28-40 R`), collect both rings, stop in the tunnel and walk into the clamp on frame
+231 so the cutscene lands on 232 and releases on 863 exactly as before. The remainder
+tracks the old route's trajectory frame by frame (reference: the current engine with the
+carry-in sprite removed before the first frame, which reproduces the behaviour lane's old
+CSV exactly to 23485): the old input for the same frame while P1 stays within 4px of the
+reference, otherwise a 60-frame trajectory-cost search from rewind marks; every committed
+movie is accepted only from an uninterrupted cold replay. Restore gaps found on the way
+(below) were bridged in the temporary authoring helper only (carrying the mushroom cap's
+player maps across marks, replaying old inputs straight through repeated divergences).
+
+| Movie | Old SHA-256 | New SHA-256 | Frames | Milestones (new; old) | Status |
+|---|---|---|---|---|---|
+| `mhz1-sonic-cold-complete-800.bk2` | `04a103e0e06bb48bdbf9757bdd0892ee3bcbbc8fbd234b642b5b150d1e0f4723` | `1fd85032cbfb152ab158419f9a0dc3b78c4615d0df5cb6943ed19c37ef323757` | 10330 | pulley 3671, sticky vine 4870, miniboss 8182…defeat 8829, MHZ2 9260 — all identical to old; old MHZ2 tail unchanged | green (frame-keyed spots unchanged) |
+| `mhz1-sonic-fresh-320.bk2` | `b56e810e5759a89964efd501cf77e34f16a48700caab6d0b1e856ee513114a89` | `e7e16005f91fc38f8c9dd4afcd9a9788196a9b47a56aeb7c229f2732a4bac2a5` | 9471 | pulley 3518 (3518), sticky vine 5410 (5410), miniboss 7241…defeat 8114 (7948); hold right to the act end, MHZ2 8617 at x=448 (8469, 448); release 9148 (8979); leaf-blower grab 9340 (9176) | red: engine rewind defect below |
+
+The fresh movie is the first 9471 inputs of the re-authored incoming 320 movie (MHZ act 2
+record). `TestS3kMhzAuthoredRoute` reaches pulley, sticky vine and all six miniboss hits,
+then fails its own `restore act-two-released at 9257` check: after `registry.restore` the
+active objects gain a `FireShieldObjectInstance:fixed` that did not exist at capture (P1
+701,1906, VInt 9257, level timer 603, RNG `6a65b7fb`). The old route reached the same
+position (704,1905) without a shield; the new act-1 history differs. This is a rewind
+fidelity defect, not an authoring or gameplay one; the row stays red until it is fixed.
+
+Rewind fidelity findings from this authoring (cold replay vs. restored replay of the same
+inputs; owned by the rewind lane, not changed here):
+1. `MhzMushroomCapObjectInstance` keeps `previousYVelocities`, `lastLaunchFrames` and
+   `standingPlayers` in identity maps keyed by player sprites; restore does not recover
+   them, so a restored player standing on a cap bounces at −$680 instead of the live −$780
+   (`launchStandingPlayerOnSpringFrame`; 320px route frame 3903).
+2. Registry capture refuses some frames with `Invalid rewind reference at
+   MushmeanieBadnikInstance$ShellChild#parent` (800px, frames ~6790-6861).
+3. The resurrected `FireShieldObjectInstance` above.
+4. Unidentified 1-7px y restore drift in MHZ2 at 800px among mushroom caps and pollen
+   (first at 11320, P1 3911,1645, VInt 11320, timer 2029, RNG `e1f02cdb`; again 14132,
+   P1 8954,1102, VInt 14132, timer 4841, RNG `9bb599f3`).
