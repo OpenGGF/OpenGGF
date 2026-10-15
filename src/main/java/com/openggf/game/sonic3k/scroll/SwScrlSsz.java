@@ -181,10 +181,17 @@ public class SwScrlSsz extends SwScrlS3kDefault {
         }
     }
 
+    /**
+     * ScreenEvents (sonic3k.asm:102253) writes V_scroll_value from Camera_Y_pos_copy after both
+     * event passes, and SSZ2_ScreenEvent (sonic3k.asm:117750-117751) has already added
+     * Screen_shake_offset to that copy, as Sonic3kSSZEvents does to the render copy. Event
+     * routines that move Camera_Y_pos afterwards (the credits' loc_5B204) move Plane A on the
+     * next pass, together with the sprite table.
+     */
     @Override public short getVscrollFactorFG() {
         var state = state();
         if (state != null && state.actIndex() == 1 && state.screenInitApplied())
-            return (short) (GameServices.camera().getY() + state.appliedScreenShakeOffset());
+            return GameServices.camera().getYCopy();
         return super.getVscrollFactorFG();
     }
 
