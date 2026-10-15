@@ -91,6 +91,52 @@ class TestPlacedChildSlotReservations {
         assertTrue(f.reserve(f.first, f.first.getSlotIndex(), 6) >= 0);
     }
 
+    @Test void higherFoldedSlotRemainsReservedUntilItsOwnPositionInTheActualManagerWalk() {
+        var f = new Fixture();
+        int[] prefix = f.prefix(f.first, 6);
+        f.prefix(f.second, 0);
+        int childSlot = f.reserve(f.first, f.first.getSlotIndex(), 6);
+        var later = new Probe(new ObjectSpawn(0x140, 0x100, 1, 0, 0, false, 0));
+        f.manager.addDynamicObjectAtSlot(later, childSlot + 8);
+        int[] observed = {-1, -1};
+        f.first.onUpdate = () -> {
+            assertTrue(NativeChildSlotReservations.release(f.manager, f.first, childSlot, 6));
+            assertFalse(NativeChildSlotReservations.release(f.manager, f.first, childSlot, 6));
+        };
+        f.second.onUpdate = () -> observed[0] = f.reserve(f.second, childSlot - 1, 0);
+        later.onUpdate = () -> observed[1] = f.reserve(f.first, childSlot - 1, 6);
+        f.manager.update(0, null, List.of(), 0, false);
+        assertEquals(childSlot + 1, observed[0], "an intervening SST must not steal the future child's slot");
+        assertEquals(childSlot, observed[1], "the slot becomes available after its native execution position");
+        assertArrayEquals(prefix, Arrays.copyOf(f.slots(f.first), 6));
+        assertEquals(childSlot, f.slots(f.first)[6]);
+        assertEquals(childSlot + 1, f.slots(f.second)[0]);
+        var completedPass = f.snapshot();
+        f.first.onUpdate = null; f.second.onUpdate = null; later.onUpdate = null;
+        f.manager.setRewindInPlaceRestoreEnabledForTest(false);
+        f.manager.rewindSnapshottable().restore(completedPass);
+        assertArrayEquals(completedPass.usedSlotsBits(), f.snapshot().usedSlotsBits());
+        assertArrayEquals(completedPass.childSpawns().getFirst().reservedSlots(),
+                f.snapshot().childSpawns().getFirst().reservedSlots());
+    }
+
+    @Test void alreadyVisitedFoldedSlotReleasesImmediatelyDuringALaterObjectsUpdate() {
+        var f = new Fixture();
+        f.prefix(f.first, 0);
+        int childSlot = f.reserve(f.first, f.first.getSlotIndex(), 0);
+        var later = new Probe(new ObjectSpawn(0x140, 0x100, 1, 0, 0, false, 0));
+        f.manager.addDynamicObjectAtSlot(later, childSlot + 8);
+        int[] reused = {-1};
+        later.onUpdate = () -> {
+            assertTrue(NativeChildSlotReservations.release(f.manager, f.first, childSlot, 0));
+            assertFalse(NativeChildSlotReservations.release(f.manager, f.first, childSlot, 0));
+            reused[0] = f.reserve(f.first, childSlot - 1, 0);
+        };
+        f.manager.update(0, null, List.of(), 0, false);
+        assertEquals(childSlot, reused[0]);
+        assertArrayEquals(new int[]{childSlot}, f.slots(f.first));
+    }
+
     @Test void ordinaryParentRemovalReleasesOnlyItsReservations() {
         var f = new Fixture();
         f.prefix(f.first, 6); f.prefix(f.second, 2);
@@ -139,8 +185,10 @@ class TestPlacedChildSlotReservations {
     }
 
     public static final class Probe extends AbstractObjectInstance implements SpawnRewindRecreatable {
+        @com.openggf.game.rewind.RewindTransient(reason = "Test-only actual manager dispatch action, never snapshot state")
+        private Runnable onUpdate;
         public Probe(ObjectSpawn spawn) { super(spawn, "placed-reservation-probe"); }
-        @Override public void update(int frame, PlayableEntity player) { }
+        @Override public void update(int frame, PlayableEntity player) { if (onUpdate != null) onUpdate.run(); }
         @Override public void appendRenderCommands(List<GLCommand> commands) { }
     }
 }

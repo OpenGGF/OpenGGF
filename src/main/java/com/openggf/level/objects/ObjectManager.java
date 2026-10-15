@@ -2726,7 +2726,9 @@ public class ObjectManager {
         for (int index = protectedPrefix; index < slots.length; index++) {
             if (slots[index] == reservedSlot) {
                 slots[index] = -1;
-                releaseDynamicSlot(reservedSlot);
+                // A folded child retires when the ascending native walk reaches its SST,
+                // not early at its parent's slot. Already-visited/outside-pass slots free now.
+                releaseChildSlotAtItsOwnExecPosition(reservedSlot);
                 return true;
             }
         }
