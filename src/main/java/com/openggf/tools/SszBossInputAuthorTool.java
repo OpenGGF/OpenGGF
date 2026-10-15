@@ -24,6 +24,8 @@ import java.util.Locale;
  * The cold LRZ→HPZ→SSZ campaign lane (2026-10-15) added {@code --boot ZONE:ACT} (one-based act)
  * so the prefix may cross real level loads before the authored encounter, and {@code mecha2}:
  * Knuckles' two-phase Sky Sanctuary act 2 fight, complete when loc_7BCB0 publishes the ending.
+ * The same lane added {@code lrz1} and {@code lrz3} (Lava Reef's miniboss and end boss) for the solo
+ * Sonic campaign; the encounter search draws each input without reading pixels back.
  */
 public final class SszBossInputAuthorTool {
     private static final int HORIZON = 180;
@@ -39,7 +41,10 @@ public final class SszBossInputAuthorTool {
 
     enum Encounter {
         // MECHA2's centre is the middle of its 320-pixel arena (camera X 256), an authoring target.
-        GHZ(512), MTZ(5920), MECHA(6720), MECHA2(416);
+        // LRZ1 is Obj_LRZMiniboss, whose arena locks the camera at X $2C00 (ARENA_LOCK_X; centre $2CA0).
+        // LRZ3 is Obj_LRZEndBoss, rising at X $A30 or $B10; its own drifting mines deal every hit,
+        // so the search mainly keeps the player alive between them (centre between both sides).
+        GHZ(512), MTZ(5920), MECHA(6720), MECHA2(416), LRZ1(0x2CA0), LRZ3(0xAA0);
 
         final int centre;
         Encounter(int centre) { this.centre = centre; }
@@ -53,6 +58,19 @@ public final class SszBossInputAuthorTool {
                         .findFirst().map(b -> new Boss(b.getX(), b.hitsRemainingForTest())).orElse(null);
                 case MECHA, MECHA2 -> objects.activeObjectsOfType(SszMechaSonicObjectInstance.class).stream()
                         .findFirst().map(b -> new Boss(b.getX(), b.getCollisionProperty())).orElse(null);
+                case LRZ1 -> objects.activeObjectsOfType(com.openggf.game.sonic3k.objects.bosses.LrzMinibossInstance.class)
+                        .stream().findFirst().map(b -> new Boss(b.getX(), b.getCollisionProperty())).orElse(null);
+                case LRZ3 -> objects.activeObjectsOfType(com.openggf.game.sonic3k.objects.LrzEndBossObjectInstance.class)
+                        .stream().findFirst().map(b -> {
+                            // Obj_LRZEndBoss sets its 14 hits only when it first rises (routine 0), so
+                            // before that and after the defeat both read zero; the defeat is the one that
+                            // also requests the background exit.
+                            boolean defeated = com.openggf.game.sonic3k.runtime.S3kRuntimeStates
+                                    .currentLrz(GameServices.zoneRuntimeRegistry())
+                                    .map(lrz -> lrz.bossAct().backgroundExitRequested()).orElse(false);
+                            int hits = b.getCollisionProperty();
+                            return new Boss(b.getX(), hits > 0 ? hits : defeated ? 0 : 14);
+                        }).orElse(null);
             };
         }
     }
@@ -67,7 +85,7 @@ public final class SszBossInputAuthorTool {
         }
         if (args.length < 8 || args.length > 9) {
             throw new IllegalArgumentException("Usage: SszBossInputAuthorTool [--boot ZONE:ACT] ROM WIDTH MAIN "
-                    + "SIDEKICK INPUT PREFIX ghz|mtz|mecha|mecha2 OUT_DIR [MAX_NEW_INPUTS]");
+                    + "SIDEKICK INPUT PREFIX ghz|mtz|mecha|mecha2|lrz1|lrz3 OUT_DIR [MAX_NEW_INPUTS]");
         }
         var settings = new GameplayCaptureSession.Settings(Integer.parseInt(args[1]), args[2],
                 "none".equalsIgnoreCase(args[3]) ? "" : args[3], "off", null, null, null);
@@ -148,7 +166,7 @@ public final class SszBossInputAuthorTool {
                 for (int n = 0; n < HORIZON; n++) {
                     trialInput = buttons(session, encounter, frame + n, policy, trialInput);
                     session.step(trialInput);
-                    session.render();
+                    session.renderFrame();
                     requireSameLevel(level); // Never restore an outgoing snapshot into a new load.
                     if (session.player().getDead() || defeated(encounter)) break;
                 }
@@ -165,7 +183,7 @@ public final class SszBossInputAuthorTool {
             for (int n = 0; n < COMMIT_INPUTS && frame < end; n++) {
                 previous = buttons(session, encounter, frame, chosen, previous);
                 session.step(previous);
-                session.render();
+                session.renderFrame();
                 requireSameLevel(level);
                 sink.accept(previous);
                 rows.append(session.stateLine(frame++, previous)).append('\n');

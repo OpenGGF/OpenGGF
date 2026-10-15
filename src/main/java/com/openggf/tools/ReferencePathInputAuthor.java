@@ -28,7 +28,7 @@ import java.util.function.BooleanSupplier;
  * reference index at the horizon end), with penalties for hurt, ring loss and getting lost;
  * it commits the first {@code commit} inputs of the best and repeats. A rising predicted reach
  * counts as progress so slow lifts are not abandoned. Restores never cross a real load; the
- * search stops at one, and dies are never committed.
+ * search stops at one; deaths and touched giant rings are never committed.
  *
  * <p>Origin: cold LRZ→HPZ→SSZ campaign, lane cold3 (2026-10-15), where it carried the cold
  * pair through Sky Sanctuary act 1's cloud/vertical-wrap section to the Mecha arena after
@@ -398,7 +398,16 @@ public final class ReferencePathInputAuthor {
         session.step(copy);
         if (draw) session.renderFrame(); else GameServices.graphics().runPendingRenderThreadTasks();
         inputs.add(copy);
-        return !session.player().getDead() && !levelChanged(level);
+        return !session.player().getDead() && !levelChanged(level) && !enteringBonus();
+    }
+
+    /**
+     * A touched giant ring starts its flash before the special stage registers its own rewind
+     * subsystem; a route search treats that like a death (never committed, never restored past).
+     */
+    private static boolean enteringBonus() {
+        return !GameServices.level().getObjectManager().activeObjectsOfType(
+                com.openggf.game.sonic3k.objects.Sonic3kSSEntryFlashObjectInstance.class).isEmpty();
     }
 
     private static boolean levelChanged(Object level) {
