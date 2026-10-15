@@ -234,9 +234,13 @@ opportunities and consumed cursors for 30/30; all 113 services returned to `$651
 24 jobs resumed after VInt interruption (83 busy calls) with unchanged original
 descriptors. Seven missing reunion module rows were appended to `s3k-fast-v1.json`
 (output SHA-256 `fc894e33…a47a15b9`): `1CFB46`, `1D02B6`, `1D0C56` = 4, `1D14B6`,
-`160D8E` = 2, `163B6A`, `1630E6` = 1. The two direct `$1BEE` jobs (`1D17A6` = 4,
-`1CF2D4` = 3) were exact in the same capture but remain unpublished pending a
-separate top-level review. The existing initial-nose rows `16341A`/`162916` are
+`160D8E` = 2, `163B6A`, `1630E6` = 1. A second, separately audited supplement
+(output SHA-256 `c9a0e04c…2fbcf06`) appends the two top-level direct jobs that
+precede the module chain in the same FIFO: `1D17A6` = 4 and `1CF2D4` = 3. Their
+separate proof is the opt-in `$1BEE` enqueue with a non-`$1B46` return (genuinely
+top-level), exact precision and writer/oracle agreement. Without them FAST fell
+back to the estimator (`ceil(shortCopyCommands/133)` = 2 and 4), opening the
+reunion `loc_5AE0A` `Kos_modules_left` gate one frame early. The existing initial-nose rows `16341A`/`162916` are
 preserved although the same run measured them at 5/6 at scene entry and 4/4 at the
 reunion; the context dependence is recorded, not averaged in.
 

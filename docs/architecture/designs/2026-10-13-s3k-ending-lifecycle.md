@@ -1975,3 +1975,65 @@ lifecycle method (NTSC and PAL) at `team initial pass forward replay
 level-sprite-presentation.preparedScroll`. A matched baseline of the same class with
 the HEAD manifest bytes fails the identical six with identical snapshot hashes, so
 they are inherited by `2b9eb431d`, not caused by this publication.
+
+#### Late reunion gate, credits fall-throughs and the finite products (2026-10-15)
+
+The C publication did not close the Tails 5119/6143 negative: a v9 jar of
+`be2a3f6d3` still showed 122/140 3-bit-level pixels on ocean lines 196–199 and
+212–215. Native VRAM HScroll there is exactly +1 versus the engine, and native
+`HScroll_table+0` (the `sub_5B0A8` cloud accumulator) is one `$800` step behind
+(`$14F000` versus `$14F800`), so the engine ran one extra cloud step. The read-only
+native transition ledger (`B/native-cloud-transition-tails-super-320-v1`) dates
+the native `loc_5AE0A` `Kos_modules_left` gate at Level_frame_counter 4444; the
+engine opened it at 4443. ROM order makes the gate depend only on FIFO costs
+(`Process_Kos_Module_Queue` runs after ScreenEvents, sonic3k.asm:7884-7908), and
+the two top-level direct jobs ahead of the module chain had no FAST rows, so the
+estimator gave `1D17A6`=2 and `1CF2D4`=4 against native 4 and 3. Publishing their
+exact rows (separate `$1BEE` proof in the same capture) makes the engine gate,
+delayed-row completion and cloud transition native-exact (4444/4451/4458/4459).
+
+That correction exposed two masked ScreenEvents defects. `loc_5AE90` and
+`loc_5AEA8` have no `rts`: the first `Pal_FromBlack`/`subq` runs on the 48→52
+frame and the expiring `subq` falls into `loc_5AED4`, running `sub_5B18E`'s
+`loc_5B1A2` credits init on the 52→56 frame. The engine waited a frame at each.
+Native RAM confirms the corrected timing independently: Tails `Camera_Y_pos`
+`$1FFB300` at LF5120 is exactly 639 `$CD00` steps (first scroll LF4482), and
+Sonic `_unkF660`=355 at LF4096 with the ROM delay 660 dates its init at LF3791.
+Finally `loc_5B204` writes only `Camera_Y_pos`; ScreenEvents copies the camera
+before the handlers and publishes `V_scroll_value=Camera_Y_pos_copy`
+(sonic3k.asm:102233-102253). `updateCredits` used `Camera.setY`, which also
+rewrites the copy, and `SwScrlEnding` published the live position; both now keep
+the ROM copy (`setYAfterRenderCopy`, copy-based FG VScroll). Each step was
+measured against native before the next (engine products v10–v13 in B); the v12
+copy-only variant changed nothing until the `setY` overwrite was removed.
+
+Products (declared NTSC 320, native poll p ↔ engine outer p+1, 11 checkpoints,
+immutable v13 jar; native v1 references untouched): Tails/Super and Sonic/Chaos
+both have zero 3-bit-level mismatches at all 22 checkpoints and identical SST
+slot/x/y/mapping inventories, including the full 20-slot loc_5DB76/loc_5DD6A
+IslandLift table at poll 3071. Raw RGB differs everywhere by construction: GPGX
+emits 34×level (max 238), the engine `(level×255+3)/7` (max 255). No image was
+normalized and no original-RGB acceptance is claimed; the level comparison is
+attribution only. All 22 whole frames were viewed side by side.
+
+Rejected/negative evidence retained in B: v10 (direct rows only) made gate timing
+native-exact but showed Tails 1967/1257 and Sonic 17/17/18 level pixels (credits
+one frame late); v11 (plus fall-throughs) left Sonic 1769/1294 (FG VScroll one
+frame fresh); v12 (copy read only) was byte-identical to v11. Native probe
+variants v2–v4 for a Sonic transition ledger stopped at their initial fence
+(the hard-coded Tails `Player_mode` check, then an unexplained `Player_mode`=$76
+read in that probe variant); they were not needed once native RAM dated the
+credits init, and are kept only as negatives.
+
+Focused selection on the final tree (one queued invocation, 23 classes, all three
+original ROMs): 206 run, 168 pass, 38 fail, 0 skipped. Every failure reproduces
+identically on both `be2a3f6d3` and the pre-task `2b9eb431d` manifest bytes with the
+same messages and snapshot hashes, so none is introduced here: 30
+`TestS3kEndingRescue.nativeEntryRetiresConfiguredFollowersAndReplaysTheRosterBoundary`
+(`level-sprite-presentation.publishedScroll` replay), the six team
+`TestS3kEndingLifecycleCapture` cases (`preparedScroll` replay) and two
+`TestS3kEndingPresentationCapture.wrappedNativeParticleYRemainsVisibleAfterTheCameraCopyThreshold`
+(`native IslandLift missing/displaced: 0/398`). The new
+`TestS3kEndingReunionFadeFallThrough` passes, as do Knuckles ending, children,
+lifecycle (9), terminal pixels, credits state (16) and post-credits, which share
+`updateCredits`.

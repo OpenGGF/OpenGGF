@@ -2671,6 +2671,34 @@
       "fixtureIndexes": [
         7
       ]
+    },
+    {
+      "kind": "kos_decompression_queue",
+      "submissionFingerprint": "sha256:013cd491cc6553768220821aa2c8e7c211249199b820bcafac5ee71e0480b881",
+      "serviceFrames": 3,
+      "eligibleBoundaries": [
+        "pre_main_loop"
+      ],
+      "sampleCount": 1,
+      "minFrames": 3,
+      "maxFrames": 3,
+      "fixtureIndexes": [
+        7
+      ]
+    },
+    {
+      "kind": "kos_decompression_queue",
+      "submissionFingerprint": "sha256:5b4280f6fbe1de79558386df9153a4f16e91d1abfc34b719c02a9f57292bcde3",
+      "serviceFrames": 4,
+      "eligibleBoundaries": [
+        "pre_main_loop"
+      ],
+      "sampleCount": 1,
+      "minFrames": 4,
+      "maxFrames": 4,
+      "fixtureIndexes": [
+        7
+      ]
     }
   ]
 }

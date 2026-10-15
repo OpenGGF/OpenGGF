@@ -180,7 +180,8 @@ pilots from43234. Core7093 separately passes11/0/0/0 (08:38:14 UTC,26.058s).
 The fixed plane8/Master48 and Knuckles-only groups are excluded as impossible
 SST93 continuation victims by native placement/Player_mode3 gates. Actual
 full-table loc5DB76/loc5DD6A trigger dispatch and downstream scene composition
-remain separately unqualified. See the [real-child pressure evidence](../../designs/2026-10-13-s3k-ending-lifecycle.md#actual-managed-ending-graph-under-continuation-pressure-2026-10-14).
+remained separately unqualified here; the [2026-10-15 native products](#native-declared-products-and-remaining-obligations--2026-10-15)
+qualify them for the declared Tails/+2 and Sonic/0 scenes. See the [real-child pressure evidence](../../designs/2026-10-13-s3k-ending-lifecycle.md#actual-managed-ending-graph-under-continuation-pressure-2026-10-14).
 Whole-scene native composition, NTSC/PAL branch breadth, donor incomplete
 progress and rendered audio remain pending in the broader follow-up.
 
@@ -263,3 +264,30 @@ No initial-ingress, whole-scene RGB, PAL50, PCM or SAT-overflow acceptance is
 claimed. A separately discovered private-record comparison defect requires
 helper-corrected composed replay before full-registry equality credit; receipt,
 DMA-byte and published-pixel observations are independent evidence.
+
+## Native declared products and remaining obligations — 2026-10-15
+
+Two finite NTSC 320 products now match independently captured native references
+at all eleven declared checkpoints (native poll p ↔ engine outer p+1, untouched
+`declared-native-spots-*-320-v1`): Tails/Super and Sonic/Chaos each have zero
+3-bit-level pixel mismatches and identical SST slot/x/y/mapping inventories. The
+closing repairs are exact FIFO costs for the reunion jobs, the `loc_5AE90` →
+`loc_5AEA8` → `loc_5AED4` fall-throughs and `loc_5B204` writing only
+`Camera_Y_pos`; native RAM independently dates both credits starts. Details,
+rejected intermediates and baselines are in the
+[ending lifecycle design](../../designs/2026-10-13-s3k-ending-lifecycle.md#late-reunion-gate-credits-fall-throughs-and-the-finite-products-2026-10-15).
+Raw RGB differs by construction (native GPGX 34×level, max 238; engine
+`(level×255+3)/7`, max 255); no image is normalized and no original-RGB
+acceptance is claimed.
+
+| Obligation | Disposition | Proven | Not proven |
+| --- | --- | --- | --- |
+| `loc_5DB76`/`loc_5DD6A` full-table dispatch and downstream composition | Qualified for the two declared products | Native poll 3071 holds all 20 IslandLift SSTs (2 `$42` from `word_5DBB6`, 18 from the six `word_5DDD2`…`word_5DE12` tables) with engine-identical slot, x, y and mapping in both products; whole-SST and 3-bit pixel agreement at every checkpoint. `TestS3kEndingIslandLift` (22) and the continuation-pressure cases pass | `Player_mode` 3 and negative-progress skips are unit-covered only; no native Knuckles or progress -2 product |
+| Tails/+2 and Sonic/0 declared products | Qualified as declared scenes | 22/22 checkpoints, zero level mismatches, whole frames viewed | Cold campaign identity, original-RGB bytes |
+| Remaining seven D01 products (Sonic -2/+2, Tails -2/0, Sonic+Tails -2/0/+2) | Open | Lifecycle tests reach credits and title for all nine | No native/engine pixel or SST comparison yet |
+| Knuckles products (SSZ2 `$0A01`) | Open | Lifecycle 9 and terminal pixels pass; shares the corrected `updateCredits` | No native product; `loc_5B1A2` there clears only `Camera_Y_pos` and is not separately compared |
+| Team retirement / full-frame replay | Inherited red | — | `TestS3kEndingLifecycleCapture` team cases (6) and `TestS3kEndingRescue` roster replay (30) fail identically on `2b9eb431d`: `level-sprite-presentation` prepared/published scroll differs after restore and replay. The COMPLETE LIFECYCLE row above therefore no longer holds for team entries |
+| Wrapped particle presentation | Inherited red | — | `TestS3kEndingPresentationCapture` wrapped-particle cases (2) fail identically on `2b9eb431d` (`native IslandLift missing/displaced: 0/398`) |
+| PAL | Open | Literal PAL tables and REGION=PAL lifecycles (earlier sections) | No PAL native product or 50 Hz capture |
+| PCM / audio | Open | Mailbox/request-level audio tests only | No rendered PCM comparison |
+| SAT overflow / original RGB | Open | — | Native 20-sprite/320-dot overflow still needs a real witness; byte-RGB acceptance awaits the LIMITED colour profile |
