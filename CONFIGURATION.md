@@ -803,10 +803,31 @@ Bindings live in `EditorInputHandler` and are independent of gameplay Key
 Bindings. Filter input, project forms, and the command palette own their input
 while open. Pane/chrome clicks cannot paint through to the world.
 
+The editor draws a controller-first HUD at window resolution around the
+integer-scaled level: a top bar, a ten-slot brush hotbar and live button
+prompts for the pad family in use (Xbox, PlayStation or keyboard). While it is
+shown it owns the gamepad, so Genesis mappings, debug and rewind buttons do not
+fire in the editor. Launch with `-Dopenggf.editor.ui=classic` to keep the earlier
+in-game chrome instead; it is also used automatically if the HUD cannot start.
 A separate desktop editor, [OpenGGF-Editor](https://github.com/OpenGGF/OpenGGF-Editor),
-can draw window-resolution editor panels around the level when its jar is on the class
-path; the engine finds it through the `EditorWindowChrome` service. Launch with
-`-Dopenggf.editor.ui=classic` to keep the in-game chrome even then.
+replaces the HUD when its jar is on the class path; the engine finds it through the
+`EditorWindowChrome` service.
+With the HUD, `Tab` opens the library sheet, `F1` the editor menu, `Q` the tools
+wheel and `1`–`0` choose a hotbar slot; the other keys above are unchanged.
+
+| Controller | Action |
+|------------|--------|
+| Left stick / D-pad | Move the cursor (D-pad steps whole blocks) or the cell in Block/Chunk view |
+| Right stick | Move the cursor quickly |
+| South (A / Cross) | Paint or place; hold and steer to paint one undoable stroke |
+| West (X / Square) | Pick what is under the cursor |
+| North (Y / Triangle) | Open the library for the current brush kind |
+| LB / RB | Previous / next hotbar brush; page the library or menu |
+| RT / LT | Edit the block or chunk under the cursor / go back up |
+| East (B / Circle) | Back: close a sheet or return to the parent view |
+| View (hold) | Tools wheel; steer and release, or use the D-pad and South |
+| Menu | Save, playtest, export, project commands and every editor command |
+| L3 / R3 | Toggle FG/BG layer / collision overlay |
 
 #### Projects, playtests, and export
 

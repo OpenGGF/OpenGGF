@@ -153,8 +153,12 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	private EditorSaveManager editorSaveManager;
 	private final EditorInputHandler editorInputHandler;
 	private final EditorOverlayRenderer editorOverlayRenderer;
-	/** Window-resolution editor UI from a separate editor build, or null for the in-game chrome. */
-	private com.openggf.editor.EditorWindowChrome editorChrome = com.openggf.editor.EditorWindowChromes.discover();
+	/**
+	 * Window-resolution editor UI: a separate editor build if present, else the built-in
+	 * controller-first HUD; null for the in-game chrome.
+	 */
+	private com.openggf.editor.EditorWindowChrome editorChrome = com.openggf.editor.EditorWindowChromes.select(
+			com.openggf.editor.hud.EditorHudRuntime::new);
 	private boolean editorChromeActive;
 	private final EditorProjectWorkspace editorProjects;
 	private final EditorProjectMenuRenderer editorProjectMenuRenderer = new EditorProjectMenuRenderer();

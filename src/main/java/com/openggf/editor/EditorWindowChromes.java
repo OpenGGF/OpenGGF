@@ -15,6 +15,16 @@ public final class EditorWindowChromes {
         return "classic".equalsIgnoreCase(System.getProperty("openggf.editor.ui", ""));
     }
 
+    /**
+     * An external provider if one loads, otherwise {@code builtIn}; null only when the classic
+     * in-game chrome was requested.
+     */
+    public static EditorWindowChrome select(java.util.function.Supplier<EditorWindowChrome> builtIn) {
+        if (classicRequested()) return null;
+        EditorWindowChrome external = discover();
+        return external != null ? external : builtIn.get();
+    }
+
     /** The first provider that loads, or null; a broken provider is logged and skipped. */
     public static EditorWindowChrome discover() {
         if (classicRequested()) return null;

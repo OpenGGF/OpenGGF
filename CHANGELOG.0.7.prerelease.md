@@ -14,7 +14,10 @@ Unreleased. The earlier development themes remain in
   S1/S2 v1 and S3K v2, including a native results goal for S3K. Title Tools and
   the editor command palette expose creation, import, properties, resizing and
   Save As; pattern browsing, descriptor controls, local collision edits, erase
-  and spawn inspection complete layout authoring.
+  and spawn inspection complete layout authoring. A controller-first HUD drawn at
+  window resolution frames the level with a brush hotbar, a full-screen library
+  of ROM-art thumbnails, a tools wheel, block and chunk workbenches and button
+  prompts for the pad in use.
 
 - **S3K level entry:** Captures that omit the title presentation complete the
   destination's deferred player assembly before its animation and art-loading

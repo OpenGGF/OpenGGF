@@ -1055,6 +1055,11 @@ public final class LevelEditorController {
     }
     public Integer selectedPatternRaw() { return selectedPatternRaw; }
 
+    /** Chunk index of the block-composition brush, or null before one is chosen. */
+    public Integer chunkBrushIndex() {
+        return chunkBrushRaw == null ? null : chunkBrushRaw & CHUNK_INDEX_MASK;
+    }
+
     public Integer selectedBlockIndex() {
         return blockBrushIndex;
     }

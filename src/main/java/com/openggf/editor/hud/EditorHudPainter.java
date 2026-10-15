@@ -1,0 +1,800 @@
+package com.openggf.editor.hud;
+
+import com.openggf.control.ControllerPromptStyle;
+import com.openggf.editor.EditorHierarchyDepth;
+import com.openggf.editor.EditorSpawnEditMode;
+import com.openggf.editor.EditorStockObjectPalette;
+import com.openggf.editor.LevelEditorController;
+import com.openggf.editor.hud.EditorHud.Glyph;
+import com.openggf.editor.hud.EditorHud.Hit;
+import com.openggf.editor.hud.EditorHud.LibraryKind;
+import com.openggf.editor.hud.EditorHud.Modal;
+import com.openggf.editor.hud.EditorHudCanvas.Size;
+import com.openggf.editor.hud.EditorHudLayout.Rect;
+import com.openggf.level.Block;
+import com.openggf.level.Chunk;
+import com.openggf.level.ChunkDesc;
+import com.openggf.level.MutableLevel;
+import com.openggf.level.PatternDesc;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+
+import static com.openggf.editor.hud.EditorHudTheme.*;
+
+/** Draws the editor HUD for one frame and records pointer targets for the next update. */
+final class EditorHudPainter implements AutoCloseable {
+    private static final int SLOT = 40;
+    private static final int SLOT_GAP = 4;
+    private final EditorTileAtlas atlas = new EditorTileAtlas();
+    private List<Hit> hits;
+    private long usageKey = Long.MIN_VALUE;
+    private int usage;
+
+    void draw(EditorHudCanvas c, EditorHudLayout layout, EditorHud hud) {
+        hits = new ArrayList<>();
+        LevelEditorController controller = hud.controller();
+        MutableLevel level = controller.currentLevel();
+        if (hud.contentChanged) {
+            atlas.requestCheck();
+            hud.contentChanged = false;
+        }
+        Integer patternRaw = controller.selectedPatternRaw();
+        atlas.refresh(level, patternRaw == null ? 0 : (patternRaw >>> 13) & 3);
+        backdrop(c, layout);
+        canvasFrame(c, layout.game(), hud.tick);
+        topBar(c, layout, controller);
+        if (layout.workbench() != null && level != null) workbench(c, layout.workbench(), hud, controller, level);
+        dock(c, layout, hud, controller, level);
+        toast(c, layout, hud);
+        promptBar(c, layout, hud);
+        switch (hud.modal) {
+            case LIBRARY -> library(c, layout, hud, level);
+            case WHEEL -> wheel(c, layout, hud);
+            case MENU -> menu(c, layout, hud);
+            case NONE -> { }
+        }
+        hud.hits = List.copyOf(hits);
+    }
+
+    // ------------------------------------------------------------------ frame
+
+    private static void backdrop(EditorHudCanvas c, EditorHudLayout layout) {
+        Rect g = layout.game();
+        float w = layout.width(), h = layout.height();
+        c.rect(0, 0, w, g.y(), BACKDROP, 1);
+        c.rect(0, g.bottom(), w, h - g.bottom(), BACKDROP, 1);
+        c.rect(0, g.y(), g.x(), g.h(), BACKDROP, 1);
+        c.rect(g.right(), g.y(), w - g.right(), g.h(), BACKDROP, 1);
+        // A faint dotted grid, echoing a cutting mat, keeps the empty stage from reading as a void.
+        Rect stage = layout.stage();
+        for (float y = stage.y() + 8; y < stage.bottom(); y += 16) {
+            for (float x = stage.x() + 8; x < stage.right(); x += 16) {
+                if (!g.inset(-6).contains(x, y)) c.rect(x, y, 1, 1, LINE, .55f);
+            }
+        }
+    }
+
+    private static void canvasFrame(EditorHudCanvas c, Rect g, long tick) {
+        c.frame(g.x() - 2, g.y() - 2, g.w() + 4, g.h() + 4, 2, SHADOW, .8f);
+        c.frame(g.x() - 3, g.y() - 3, g.w() + 6, g.h() + 6, 1, LINE, 1);
+        float len = 10;
+        for (int corner = 0; corner < 4; corner++) {
+            float x = (corner & 1) == 0 ? g.x() - 5 : g.right() + 3;
+            float y = (corner & 2) == 0 ? g.y() - 5 : g.bottom() + 3;
+            float hx = (corner & 1) == 0 ? x : x + 2 - len;
+            float vy = (corner & 2) == 0 ? y : y + 2 - len;
+            c.rect(hx, y, len, 2, ACCENT, 1);
+            c.rect(x, vy, 2, len, ACCENT, 1);
+        }
+    }
+
+    private static void topBar(EditorHudCanvas c, EditorHudLayout layout, LevelEditorController controller) {
+        Rect bar = layout.topBar();
+        c.rect(0, 0, bar.w(), bar.h(), PANEL, 1);
+        c.rect(0, bar.h() - 1, bar.w(), 1, LINE, 1);
+        float x = 6;
+        List<String> crumbs = new ArrayList<>();
+        crumbs.add("World");
+        if (controller.depth() != EditorHierarchyDepth.WORLD) crumbs.add("Block " + hex(controller.selection().selectedBlock()));
+        if (controller.depth() == EditorHierarchyDepth.CHUNK) crumbs.add("Chunk " + hex(controller.selection().selectedChunk()));
+        for (int i = 0; i < crumbs.size(); i++) {
+            boolean current = i == crumbs.size() - 1;
+            String text = crumbs.get(i);
+            float w = EditorHudCanvas.textWidth(text, Size.BODY) + 12;
+            c.pill(x, 4, w, 14, current ? ACCENT : PANEL_RAISED, 1);
+            c.text(text, x + 6, 6, Size.BODY, current ? 0xFFFFFF : TEXT_DIM, 1);
+            x += w + 3;
+            if (!current) {
+                c.text("»", x, 6, Size.BODY, TEXT_FAINT, 1);
+                x += 12;
+            }
+        }
+        float right = bar.w() - 6;
+        boolean modified = controller.isModified();
+        right = chip(c, right, modified ? "Unsaved" : "Saved", modified ? GOLD : GOOD, true);
+        right = chip(c, right, controller.activeLayer() == 0 ? "FG" : "BG", TEXT, false);
+        if (controller.isCollisionOverlayEnabled()) {
+            right = chip(c, right, controller.collisionPath().name().startsWith("P") ? "Solid A" : "Solid B", ACCENT, false);
+        }
+        String mode = switch (controller.spawnEditMode()) {
+            case OBJECTS -> "Objects";
+            case RINGS -> "Rings";
+            default -> "Terrain";
+        };
+        right = chip(c, right, mode, TEXT, false);
+        var cursor = controller.worldCursor();
+        String position = "X " + cursor.x() + "  Y " + cursor.y();
+        c.text(position, right - EditorHudCanvas.textWidth(position, Size.SMALL) - 4, 8, Size.SMALL, TEXT_DIM, 1);
+    }
+
+    /** Right-aligned chip ending at {@code right}; returns the next free right edge. */
+    private static float chip(EditorHudCanvas c, float right, String text, int colour, boolean dot) {
+        float w = EditorHudCanvas.textWidth(text, Size.BODY) + 12 + (dot ? 8 : 0);
+        float x = right - w;
+        c.pill(x, 4, w, 14, PANEL_RAISED, 1);
+        float tx = x + 6;
+        if (dot) {
+            c.rect(tx, 9, 4, 4, colour, 1);
+            tx += 8;
+        }
+        c.text(text, tx, 6, Size.BODY, dot ? TEXT : colour, 1);
+        return x - 4;
+    }
+
+    // ------------------------------------------------------------------ dock
+
+    private void dock(EditorHudCanvas c, EditorHudLayout layout, EditorHud hud, LevelEditorController controller,
+                      MutableLevel level) {
+        Rect dock = layout.dock();
+        c.rect(0, dock.y(), dock.w(), dock.h(), PANEL, .97f);
+        c.rect(0, dock.y(), dock.w(), 1, LINE, 1);
+        LibraryKind kind = hud.kind();
+        float barW = EditorHudHotbar.SLOTS * SLOT + (EditorHudHotbar.SLOTS - 1) * SLOT_GAP;
+        float x0 = (dock.w() - barW) / 2f;
+        float y0 = dock.y() + 16;
+        if (kind == LibraryKind.NONE) {
+            String text = "Rings mode: " + (hud.controllerPrompts ? "South" : "Space") + " places a ring at the cursor";
+            c.text(text, (dock.w() - EditorHudCanvas.textWidth(text, Size.BODY)) / 2f, dock.y() + 25, Size.BODY, TEXT_DIM, 1);
+            return;
+        }
+        int[] slots = hud.hotbar.slots(kind);
+        int selected = hud.hotbar.selected(kind);
+        for (int i = 0; i < slots.length; i++) {
+            if (i == selected) continue;
+            float x = x0 + i * (SLOT + SLOT_GAP);
+            slot(c, kind, slots[i], x, y0, SLOT, false, hud.tick, controller);
+            c.text(Integer.toString((i + 1) % 10), x + 2, y0 + SLOT - 9, Size.SMALL, TEXT_FAINT, 1);
+            hits.add(new Hit(new Rect(x, y0, SLOT, SLOT), Modal.NONE, EditorHud.HIT_HOTBAR, i));
+        }
+        float sx = x0 + selected * (SLOT + SLOT_GAP);
+        slot(c, kind, slots[selected], sx - 2, y0 - 3, SLOT + 4, true, hud.tick, controller);
+        hits.add(new Hit(new Rect(sx, y0, SLOT, SLOT), Modal.NONE, EditorHud.HIT_HOTBAR, selected));
+        String name = entryName(kind, slots[selected], controller);
+        float nw = EditorHudCanvas.textWidth(name, Size.SMALL) + 8;
+        float nx = Math.max(4, Math.min(dock.w() - nw - 4, sx + SLOT / 2f - nw / 2f));
+        c.pill(nx, dock.y() + 2, nw, 10, GOLD, 1);
+        c.text(name, nx + 4, dock.y() + 3, Size.SMALL, 0x1A1300, 1);
+        if (hud.controllerPrompts) {
+            glyph(c, Glyph.LB, x0 - 31, y0 + SLOT / 2f, hud);
+            glyph(c, Glyph.RB, x0 + barW + 8, y0 + SLOT / 2f, hud);
+        }
+        // Left: what the brush is; right: what is under the cursor.
+        float sideW = x0 - 44;
+        if (sideW > 60) {
+            c.text(kindTitle(kind).toUpperCase(Locale.ROOT), 10, dock.y() + 14, Size.SMALL, TEXT_FAINT, 1);
+            c.fittedText(name, 10, dock.y() + 25, sideW - 10, Size.BODY, TEXT, 1);
+            c.fittedText(brushDetail(kind, controller), 10, dock.y() + 39, sideW - 10, Size.SMALL, TEXT_DIM, 1);
+            float rx = x0 + barW + 40;
+            c.text("UNDER CURSOR", rx, dock.y() + 14, Size.SMALL, TEXT_FAINT, 1);
+            c.fittedText(underCursor(controller, level), rx, dock.y() + 25, dock.w() - rx - 8, Size.BODY, TEXT, 1);
+        }
+    }
+
+    private void slot(EditorHudCanvas c, LibraryKind kind, int value, float x, float y, float size, boolean selected,
+                      long tick, LevelEditorController controller) {
+        if (selected) c.rect(x + 2, y + 3, size, size, SHADOW, .45f);
+        c.rect(x, y, size, size, TILE, 1);
+        if (value >= 0) thumbnail(c, kind, value, x + 2, y + 2, size - 4, controller);
+        if (selected) {
+            float pulse = .75f + .25f * (float) Math.sin(tick * .12);
+            c.frame(x - 1, y - 1, size + 2, size + 2, 2, GOLD, pulse);
+        } else {
+            c.frame(x, y, size, size, 1, LINE, 1);
+        }
+    }
+
+    private void thumbnail(EditorHudCanvas c, LibraryKind kind, int value, float x, float y, float size,
+                           LevelEditorController controller) {
+        EditorTileAtlas.Kind atlasKind = switch (kind) {
+            case BLOCK -> EditorTileAtlas.Kind.BLOCK;
+            case CHUNK -> EditorTileAtlas.Kind.CHUNK;
+            case PATTERN -> EditorTileAtlas.Kind.PATTERN;
+            default -> null;
+        };
+        if (atlasKind != null) {
+            EditorTileAtlas.Cell cell = atlas.cell(atlasKind, value);
+            if (cell != null) c.image(cell.texture(), x, y, size, size, cell.u0(), cell.v0(), cell.u1(), cell.v1(), 1);
+            return;
+        }
+        // Objects: the stock id as a badge; names are shown beside the selection.
+        EditorStockObjectPalette palette = controller.objectPalette();
+        if (palette == null || value >= palette.entries().size()) return;
+        EditorStockObjectPalette.Entry entry = palette.entries().get(value);
+        String badge = entry.stockObjectId() != null ? "%02X".formatted(entry.stockObjectId()) : "MOD";
+        c.rect(x, y, size, size, ACCENT_DARK, 1);
+        c.text(badge, x + (size - EditorHudCanvas.textWidth(badge, Size.BODY)) / 2f, y + size / 2f - 5, Size.BODY, TEXT, 1);
+    }
+
+    private static void toast(EditorHudCanvas c, EditorHudLayout layout, EditorHud hud) {
+        if (hud.toastFrames <= 0 || hud.toast == null || hud.modal != Modal.NONE) return;
+        float alpha = Math.min(1f, hud.toastFrames / 30f);
+        String text = EditorHudCanvas.fit(hud.toast, layout.width() - 80, Size.BODY);
+        float w = EditorHudCanvas.textWidth(text, Size.BODY) + 26;
+        float x = (layout.width() - w) / 2f, y = layout.dock().y() - 24;
+        c.panel(x, y, w, 18, PANEL_RAISED, alpha);
+        c.rect(x + 8, y + 7, 4, 4, ACCENT, alpha);
+        c.text(text, x + 18, y + 4, Size.BODY, TEXT, alpha);
+    }
+
+    private static void promptBar(EditorHudCanvas c, EditorHudLayout layout, EditorHud hud) {
+        Rect bar = layout.promptBar();
+        c.rect(0, bar.y(), bar.w(), bar.h(), BACKDROP, 1);
+        c.rect(0, bar.y(), bar.w(), 1, LINE, 1);
+        List<EditorHud.Prompt> prompts = hud.prompts();
+        float total = 0;
+        for (EditorHud.Prompt prompt : prompts) total += promptWidth(prompt, hud) + 14;
+        float x = Math.max(6, (bar.w() - total) / 2f);
+        float centre = bar.y() + bar.h() / 2f;
+        for (EditorHud.Prompt prompt : prompts) {
+            float gw = hud.controllerPrompts ? glyph(c, prompt.glyph(), x, centre, hud) : keycap(c, prompt.key(), x, centre);
+            c.text(prompt.label(), x + gw + 4, centre - 5, Size.BODY, TEXT_DIM, 1);
+            x += promptWidth(prompt, hud) + 14;
+        }
+    }
+
+    private static float promptWidth(EditorHud.Prompt prompt, EditorHud hud) {
+        float glyph = hud.controllerPrompts ? glyphWidth(prompt.glyph()) : EditorHudCanvas.textWidth(prompt.key(), Size.SMALL) + 8;
+        return glyph + 4 + EditorHudCanvas.textWidth(prompt.label(), Size.BODY);
+    }
+
+    // ------------------------------------------------------------------ glyphs
+
+    private enum Family { XBOX, PLAYSTATION }
+
+    private static Family family(EditorHud hud) {
+        return "Cross".equals(ControllerPromptStyle.forName(hud.pad.deviceName()).confirm())
+                ? Family.PLAYSTATION : Family.XBOX;
+    }
+
+    private static float glyphWidth(Glyph glyph) {
+        return switch (glyph) {
+            case SOUTH, EAST, WEST, NORTH, DPAD, LSTICK -> 15;
+            case LB, RB, VIEW, MENU -> 23;
+            case LT, RT -> 19;
+            case BUMPERS -> 48;
+        };
+    }
+
+    /** Draws a pad glyph vertically centred on {@code centre}; returns its width. */
+    static float glyph(EditorHudCanvas c, Glyph glyph, float x, float centre, EditorHud hud) {
+        Family family = family(hud);
+        int dark = 0x39466F;
+        switch (glyph) {
+            case SOUTH, EAST, WEST, NORTH -> {
+                float y = centre - 7.5f;
+                if (family == Family.PLAYSTATION) {
+                    c.mask(EditorHudGlyphs.DISC, x, y, 0x232A42, 1);
+                    EditorHudGlyphs.Mask shape = switch (glyph) {
+                        case SOUTH -> EditorHudGlyphs.CROSS;
+                        case EAST -> EditorHudGlyphs.CIRCLE;
+                        case NORTH -> EditorHudGlyphs.TRIANGLE;
+                        default -> EditorHudGlyphs.SQUARE;
+                    };
+                    int tint = switch (glyph) {
+                        case SOUTH -> 0x8DB4FF;
+                        case EAST -> 0xFF7A7A;
+                        case NORTH -> 0x63D99A;
+                        default -> 0xFF9BDD;
+                    };
+                    c.mask(shape, x + 3, y + 3, tint, 1);
+                } else {
+                    int tint = switch (glyph) {
+                        case SOUTH -> 0x4CB050;
+                        case EAST -> 0xE0464E;
+                        case NORTH -> 0xF0B92A;
+                        default -> 0x3E86F0;
+                    };
+                    c.mask(EditorHudGlyphs.DISC, x, y, tint, 1);
+                    String letter = switch (glyph) {
+                        case SOUTH -> "A";
+                        case EAST -> "B";
+                        case NORTH -> "Y";
+                        default -> "X";
+                    };
+                    c.text(letter, x + 3, y + 3, Size.BODY, glyph == Glyph.NORTH ? 0x231A00 : 0xFFFFFF, 1);
+                }
+                return 15;
+            }
+            case LB, RB -> {
+                float y = centre - 5.5f;
+                c.mask(EditorHudGlyphs.BUMPER, x, y, dark, 1);
+                String label = family == Family.PLAYSTATION ? (glyph == Glyph.LB ? "L1" : "R1") : (glyph == Glyph.LB ? "LB" : "RB");
+                c.text(label, x + 6, y + 2, Size.SMALL, TEXT, 1);
+                return 23;
+            }
+            case LT, RT -> {
+                float y = centre - 6.5f;
+                c.mask(EditorHudGlyphs.TRIGGER, x, y, dark, 1);
+                String label = family == Family.PLAYSTATION ? (glyph == Glyph.LT ? "L2" : "R2") : (glyph == Glyph.LT ? "LT" : "RT");
+                c.text(label, x + 4, y + 3, Size.SMALL, TEXT, 1);
+                return 19;
+            }
+            case BUMPERS -> {
+                glyph(c, Glyph.LB, x, centre, hud);
+                glyph(c, Glyph.RB, x + 25, centre, hud);
+                return 48;
+            }
+            case VIEW, MENU -> {
+                float y = centre - 6.5f;
+                c.mask(EditorHudGlyphs.PILL, x, y, dark, 1);
+                if (glyph == Glyph.VIEW) c.mask(EditorHudGlyphs.VIEW, x + 7, y + 2, TEXT, 1);
+                else c.mask(EditorHudGlyphs.MENU, x + 7, y + 3, TEXT, 1);
+                return 23;
+            }
+            case DPAD -> {
+                c.mask(EditorHudGlyphs.PLUS, x, centre - 7.5f, dark, 1);
+                c.rect(x + 6, centre - 1.5f, 3, 3, TEXT_DIM, 1);
+                return 15;
+            }
+            case LSTICK -> {
+                c.mask(EditorHudGlyphs.DISC, x, centre - 7.5f, dark, 1);
+                c.mask(EditorHudGlyphs.RING, x, centre - 7.5f, TEXT_DIM, 1);
+                c.text("L", x + 4, centre - 5, Size.BODY, TEXT, 1);
+                return 15;
+            }
+        }
+        return 0;
+    }
+
+    private static float keycap(EditorHudCanvas c, String key, float x, float centre) {
+        float w = EditorHudCanvas.textWidth(key, Size.SMALL) + 8;
+        float y = centre - 6.5f;
+        c.rect(x, y + 1, w, 13, SHADOW, .8f);
+        c.pill(x, y, w, 12, PANEL_HIGHLIGHT, 1);
+        c.text(key, x + 4, y + 2, Size.SMALL, TEXT, 1);
+        return w;
+    }
+
+    // ------------------------------------------------------------------ workbench
+
+    private void workbench(EditorHudCanvas c, Rect bench, EditorHud hud, LevelEditorController controller, MutableLevel level) {
+        c.panel(bench.x(), bench.y(), bench.w(), bench.h(), PANEL, .98f);
+        boolean blockDepth = controller.depth() == EditorHierarchyDepth.BLOCK;
+        Integer blockIndex = controller.selection().selectedBlock();
+        Integer chunkIndex = controller.selection().selectedChunk();
+        String title = blockDepth ? "Block " + hex(blockIndex) : "Chunk " + hex(chunkIndex);
+        c.text(title, bench.x() + 10, bench.y() + 8, Size.LARGE, TEXT, 1);
+        String subtitle = blockDepth
+                ? controller.blockGridSide() + "x" + controller.blockGridSide() + " chunks, " + level.getBlockPixelSize() + " px"
+                : "2x2 patterns, 16 px";
+        c.text(subtitle, bench.x() + 12 + EditorHudCanvas.textWidth(title, Size.LARGE), bench.y() + 16, Size.SMALL, TEXT_DIM, 1);
+        int side = blockDepth ? controller.blockGridSide() : 2;
+        float top = bench.y() + 36;
+        float infoW = 128;
+        int cell = (int) Math.min((bench.h() - 46) / side, (bench.w() - 30 - infoW) / side);
+        cell = Math.max(8, Math.min(blockDepth ? 40 : 96, cell));
+        float gx = bench.x() + 10, gy = top;
+        c.rect(gx - 2, gy - 2, side * cell + 4, side * cell + 4, SHADOW, .7f);
+        c.rect(gx, gy, side * cell, side * cell, TILE, 1);
+        int selX = blockDepth ? controller.selectedBlockCellX() : controller.selectedChunkCellX();
+        int selY = blockDepth ? controller.selectedBlockCellY() : controller.selectedChunkCellY();
+        Integer brushChunk = controller.chunkBrushIndex();
+        if (blockDepth && blockIndex != null && blockIndex >= 0 && blockIndex < level.getBlockCount()) {
+            Block block = level.getBlock(blockIndex);
+            for (int y = 0; y < side; y++) for (int x = 0; x < side; x++) {
+                ChunkDesc desc = block.getChunkDesc(x, y);
+                EditorTileAtlas.Cell art = atlas.cell(EditorTileAtlas.Kind.CHUNK, desc.getChunkIndex());
+                float px = gx + x * cell, py = gy + y * cell;
+                if (art != null) {
+                    float u0 = desc.getHFlip() ? art.u1() : art.u0(), u1 = desc.getHFlip() ? art.u0() : art.u1();
+                    float v0 = desc.getVFlip() ? art.v1() : art.v0(), v1 = desc.getVFlip() ? art.v0() : art.v1();
+                    c.image(art.texture(), px, py, cell, cell, u0, v0, u1, v1, 1);
+                }
+                if (brushChunk != null && desc.getChunkIndex() == brushChunk) c.frame(px + 1, py + 1, cell - 2, cell - 2, 1, ACCENT, .7f);
+                hits.add(new Hit(new Rect(px, py, cell, cell), Modal.NONE, EditorHud.HIT_CELL, y << 8 | x));
+            }
+        } else if (!blockDepth && chunkIndex != null) {
+            EditorTileAtlas.Cell art = atlas.cell(EditorTileAtlas.Kind.CHUNK, chunkIndex);
+            for (int y = 0; y < 2; y++) for (int x = 0; x < 2; x++) {
+                float px = gx + x * cell, py = gy + y * cell;
+                if (art != null) {
+                    float du = (art.u1() - art.u0()) / 2, dv = (art.v1() - art.v0()) / 2;
+                    c.image(art.texture(), px, py, cell, cell, art.u0() + x * du, art.v0() + y * dv,
+                            art.u0() + (x + 1) * du, art.v0() + (y + 1) * dv, 1);
+                }
+                hits.add(new Hit(new Rect(px, py, cell, cell), Modal.NONE, EditorHud.HIT_CELL, y << 8 | x));
+            }
+        }
+        for (int i = 1; i < side; i++) {
+            c.rect(gx + i * cell, gy, 1, side * cell, SHADOW, .45f);
+            c.rect(gx, gy + i * cell, side * cell, 1, SHADOW, .45f);
+        }
+        float pulse = .7f + .3f * (float) Math.sin(hud.tick * .12);
+        c.frame(gx + selX * cell - 2, gy + selY * cell - 2, cell + 4, cell + 4, 2, GOLD, pulse);
+        // Details of the selected cell.
+        float ix = gx + side * cell + 14, iy = top;
+        float iw = bench.right() - ix - 8;
+        if (blockDepth && blockIndex != null && blockIndex < level.getBlockCount()) {
+            ChunkDesc desc = level.getBlock(blockIndex).getChunkDesc(selX, selY);
+            iy = label(c, "CELL", selX + ", " + selY, ix, iy, iw);
+            iy = label(c, "CHUNK", hex(desc.getChunkIndex()), ix, iy, iw);
+            EditorTileAtlas.Cell art = atlas.cell(EditorTileAtlas.Kind.CHUNK, desc.getChunkIndex());
+            if (art != null) {
+                c.rect(ix, iy, 36, 36, TILE, 1);
+                c.image(art.texture(), ix + 2, iy + 2, 32, 32, art.u0(), art.v0(), art.u1(), art.v1(), 1);
+                iy += 42;
+            }
+            iy = flags(c, ix, iy, new String[] {"Flip H", "Flip V"}, new boolean[] {desc.getHFlip(), desc.getVFlip()});
+            iy = label(c, "SOLID A", solidity(desc.get() >> 12), ix, iy, iw);
+            iy = label(c, "SOLID B", solidity(desc.get() >> 14), ix, iy, iw);
+            if (desc.getChunkIndex() < level.getChunkCount()) {
+                Chunk chunk = level.getChunk(desc.getChunkIndex());
+                label(c, "SHAPE", hex(chunk.getSolidTileIndex()) + " / " + hex(chunk.getSolidTileAltIndex()), ix, iy, iw);
+            }
+        } else if (!blockDepth && chunkIndex != null && chunkIndex < level.getChunkCount()) {
+            PatternDesc desc = level.getChunk(chunkIndex).getPatternDesc(selX, selY);
+            iy = label(c, "CELL", selX + ", " + selY, ix, iy, iw);
+            iy = label(c, "PATTERN", hex(desc.getPatternIndex()), ix, iy, iw);
+            iy = flags(c, ix, iy, new String[] {"Flip H", "Flip V", "High"},
+                    new boolean[] {desc.getHFlip(), desc.getVFlip(), desc.getPriority()});
+            c.text("PALETTE LINE " + desc.getPaletteIndex(), ix, iy, Size.SMALL, TEXT_FAINT, 1);
+            iy += 11;
+            for (int i = 0; i < 16; i++) {
+                float sx = ix + (i % 8) * 11, sy = iy + (i / 8) * 11;
+                c.rect(sx, sy, 10, 10, SHADOW, 1);
+                c.rect(sx + 1, sy + 1, 8, 8, EditorTileAtlas.paletteColor(level, desc.getPaletteIndex(), i), 1);
+            }
+        }
+    }
+
+    private static float label(EditorHudCanvas c, String title, String value, float x, float y, float w) {
+        c.text(title, x, y, Size.SMALL, TEXT_FAINT, 1);
+        c.fittedText(value, x, y + 10, w, Size.BODY, TEXT, 1);
+        return y + 26;
+    }
+
+    private static float flags(EditorHudCanvas c, float x, float y, String[] names, boolean[] on) {
+        float cx = x;
+        for (int i = 0; i < names.length; i++) {
+            float w = EditorHudCanvas.textWidth(names[i], Size.SMALL) + 8;
+            c.pill(cx, y, w, 11, on[i] ? ACCENT : PANEL_RAISED, 1);
+            c.text(names[i], cx + 4, y + 2, Size.SMALL, on[i] ? 0xFFFFFF : TEXT_FAINT, 1);
+            cx += w + 3;
+        }
+        return y + 18;
+    }
+
+    private static String solidity(int bits) {
+        return switch (bits & 3) {
+            case 1 -> "Top only";
+            case 2 -> "Sides and bottom";
+            case 3 -> "All sides";
+            default -> "None";
+        };
+    }
+
+    // ------------------------------------------------------------------ library sheet
+
+    private void library(EditorHudCanvas c, EditorHudLayout layout, EditorHud hud, MutableLevel level) {
+        dim(c, layout, .6f);
+        Rect sheet = layout.sheet();
+        c.panel(sheet.x(), sheet.y(), sheet.w(), sheet.h(), PANEL, .99f);
+        LibraryKind kind = hud.libraryKind;
+        int count = hud.libraryCount(kind);
+        c.text(kindTitle(kind), sheet.x() + 12, sheet.y() + 8, Size.LARGE, TEXT, 1);
+        String countText = count + " in this level's library";
+        c.text(countText, sheet.x() + 18 + EditorHudCanvas.textWidth(kindTitle(kind), Size.LARGE), sheet.y() + 16,
+                Size.SMALL, TEXT_DIM, 1);
+        float detailW = Math.min(170, sheet.w() * .3f);
+        Rect detail = new Rect(sheet.right() - detailW - 10, sheet.y() + 36, detailW, sheet.h() - 46);
+        Rect grid = new Rect(sheet.x() + 10, sheet.y() + 36, detail.x() - sheet.x() - 26, sheet.h() - 46);
+        boolean objects = kind == LibraryKind.OBJECT;
+        float cellW = switch (kind) {
+            case BLOCK -> 52;
+            case CHUNK -> 40;
+            case PATTERN -> 32;
+            default -> 150;
+        };
+        float cellH = objects ? 24 : cellW;
+        int columns = Math.max(1, (int) (grid.w() / cellW));
+        int rows = Math.max(1, (int) (grid.h() / cellH));
+        hud.libraryColumns = columns;
+        hud.libraryVisibleRows = rows;
+        int totalRows = (count + columns - 1) / columns;
+        int cursorRow = hud.libraryCursor / columns;
+        float target = hud.libraryScroll;
+        if (cursorRow < target + 1) target = cursorRow - 1;
+        if (cursorRow > target + rows - 2) target = cursorRow - rows + 2;
+        target = Math.max(0, Math.min(Math.max(0, totalRows - rows), target));
+        hud.libraryScroll += (target - hud.libraryScroll) * .35f;
+        if (Math.abs(target - hud.libraryScroll) < .01f) hud.libraryScroll = target;
+        float offsetX = grid.x() + (grid.w() - columns * cellW) / 2f;
+        c.clip(grid);
+        int firstRow = Math.max(0, (int) Math.floor(hud.libraryScroll));
+        int lastRow = Math.min(totalRows - 1, (int) Math.ceil(hud.libraryScroll + rows));
+        float focusX = 0, focusY = 0;
+        boolean focusVisible = false;
+        int[] bar = hud.hotbar.slots(kind);
+        for (int row = firstRow; row <= lastRow; row++) {
+            for (int column = 0; column < columns; column++) {
+                int index = row * columns + column;
+                if (index >= count) break;
+                float x = offsetX + column * cellW, y = grid.y() + (row - hud.libraryScroll) * cellH;
+                if (index == hud.libraryCursor) { focusX = x; focusY = y; focusVisible = true; continue; }
+                libraryTile(c, kind, index, x + 2, y + 2, cellW - 4, cellH - 4, hud.controller(), contains(bar, index));
+                hits.add(new Hit(new Rect(x, y, cellW, cellH), Modal.LIBRARY, EditorHud.HIT_LIBRARY, index));
+            }
+        }
+        if (focusVisible) {
+            float grow = 3;
+            c.rect(focusX - grow + 3, focusY - grow + 4, cellW + 2 * grow - 4, cellH + 2 * grow - 4, SHADOW, .5f);
+            libraryTile(c, kind, hud.libraryCursor, focusX - grow + 2, focusY - grow + 2, cellW + 2 * grow - 4,
+                    cellH + 2 * grow - 4, hud.controller(), contains(bar, hud.libraryCursor));
+            float pulse = .75f + .25f * (float) Math.sin(hud.tick * .12);
+            c.frame(focusX - grow, focusY - grow, cellW + 2 * grow, cellH + 2 * grow, 2, GOLD, pulse);
+            hits.add(new Hit(new Rect(focusX, focusY, cellW, cellH), Modal.LIBRARY, EditorHud.HIT_LIBRARY, hud.libraryCursor));
+        }
+        c.unclip();
+        if (totalRows > rows) {
+            float trackX = grid.right() + 6;
+            c.rect(trackX, grid.y(), 3, grid.h(), LINE, .6f);
+            float thumbH = Math.max(12, grid.h() * rows / totalRows);
+            float thumbY = grid.y() + (grid.h() - thumbH) * (hud.libraryScroll / Math.max(1, totalRows - rows));
+            c.rect(trackX, thumbY, 3, thumbH, ACCENT, 1);
+        }
+        libraryDetail(c, detail, kind, hud, level);
+    }
+
+    private void libraryTile(EditorHudCanvas c, LibraryKind kind, int index, float x, float y, float w, float h,
+                             LevelEditorController controller, boolean onHotbar) {
+        c.rect(x, y, w, h, TILE, 1);
+        if (kind == LibraryKind.OBJECT) {
+            EditorStockObjectPalette.Entry entry = controller.objectPalette().entries().get(index);
+            c.fittedText(entry.label(), x + 5, y + (h - 8) / 2f, w - 10, Size.SMALL, TEXT, 1);
+        } else {
+            thumbnail(c, kind, index, x + 1, y + 1, w - 2, controller);
+            String label = hex(index);
+            float lw = EditorHudCanvas.textWidth(label, Size.SMALL) + 3;
+            c.rect(x, y + h - 9, lw, 9, SHADOW, .6f);
+            c.text(label, x + 1, y + h - 8, Size.SMALL, TEXT, 1);
+        }
+        c.frame(x, y, w, h, 1, LINE, .8f);
+        if (onHotbar) c.rect(x + w - 6, y + 2, 4, 4, ACCENT, 1);
+    }
+
+    private void libraryDetail(EditorHudCanvas c, Rect detail, LibraryKind kind, EditorHud hud, MutableLevel level) {
+        c.rect(detail.x(), detail.y(), detail.w(), detail.h(), PANEL_RAISED, 1);
+        int index = hud.libraryCursor;
+        float preview = Math.min(detail.w() - 20, 132);
+        float px = detail.x() + (detail.w() - preview) / 2f, py = detail.y() + 10;
+        c.rect(px - 2, py - 2, preview + 4, preview + 4, SHADOW, .7f);
+        c.rect(px, py, preview, preview, TILE, 1);
+        thumbnail(c, kind, index, px, py, preview, hud.controller());
+        float y = py + preview + 10;
+        String name = entryName(kind, index, hud.controller());
+        c.fittedText(name, detail.x() + 10, y, detail.w() - 20, Size.BODY, TEXT, 1);
+        y += 14;
+        if (level != null && kind != LibraryKind.OBJECT) {
+            int uses = usage(kind, index, level);
+            String usageText = uses == 0 ? "Not used yet" : "Used " + uses + (uses == 1 ? " time" : " times");
+            c.text(usageText, detail.x() + 10, y, Size.SMALL, TEXT_DIM, 1);
+            y += 11;
+        }
+        int[] bar = hud.hotbar.slots(kind);
+        int slot = -1;
+        for (int i = 0; i < bar.length; i++) if (bar[i] == index) slot = i;
+        c.text(slot >= 0 ? "On the hotbar, slot " + ((slot + 1) % 10) : "Replaces the highlighted slot",
+                detail.x() + 10, y, Size.SMALL, slot >= 0 ? ACCENT : TEXT_FAINT, 1);
+    }
+
+    private int usage(LibraryKind kind, int index, MutableLevel level) {
+        long key = (long) kind.ordinal() << 32 | index;
+        if (key == usageKey) return usage;
+        int uses = 0;
+        if (kind == LibraryKind.BLOCK) {
+            var map = level.getMap();
+            for (int layer = 0; layer < map.getLayerCount(); layer++)
+                for (int y = 0; y < map.getHeight(); y++)
+                    for (int x = 0; x < map.getWidth(); x++)
+                        if (Byte.toUnsignedInt(map.getValue(layer, x, y)) == index) uses++;
+        } else if (kind == LibraryKind.CHUNK) {
+            for (int i = 0; i < Math.min(256, level.getBlockCount()); i++) {
+                Block block = level.getBlock(i);
+                for (int y = 0; y < block.getGridSide(); y++)
+                    for (int x = 0; x < block.getGridSide(); x++)
+                        if (block.getChunkDesc(x, y).getChunkIndex() == index) uses++;
+            }
+        } else if (kind == LibraryKind.PATTERN) {
+            for (int i = 0; i < Math.min(1024, level.getChunkCount()); i++)
+                for (int y = 0; y < 2; y++)
+                    for (int x = 0; x < 2; x++)
+                        if (level.getChunk(i).getPatternDesc(x, y).getPatternIndex() == index) uses++;
+        }
+        usageKey = key;
+        usage = uses;
+        return uses;
+    }
+
+    // ------------------------------------------------------------------ wheel
+
+    private void wheel(EditorHudCanvas c, EditorHudLayout layout, EditorHud hud) {
+        dim(c, layout, .45f);
+        Rect g = layout.game();
+        float cx = g.x() + g.w() / 2f, cy = g.y() + g.h() / 2f;
+        List<EditorHud.WheelItem> items = hud.wheelItems;
+        int count = items.size();
+        float radius = Math.min(96, g.h() / 2f - 6);
+        float tileW = 62, tileH = 30;
+        // Spokes from the hub to the highlighted tool.
+        if (hud.wheelSlot >= 0) {
+            double angle = hud.wheelSlot * 2 * Math.PI / count;
+            for (int i = 1; i <= 5; i++) {
+                float d = radius * i / 7f;
+                c.rect(cx + (float) Math.sin(angle) * d - 1.5f, cy - (float) Math.cos(angle) * d - 1.5f, 3, 3, GOLD, .9f);
+            }
+        }
+        for (int i = 0; i < count; i++) {
+            double angle = i * 2 * Math.PI / count;
+            float tx = cx + (float) Math.sin(angle) * radius - tileW / 2f;
+            float ty = cy - (float) Math.cos(angle) * radius - tileH / 2f;
+            boolean selected = i == hud.wheelSlot;
+            float grow = selected ? 3 : 0;
+            c.panel(tx - grow, ty - grow, tileW + 2 * grow, tileH + 2 * grow, selected ? ACCENT : PANEL_RAISED, 1);
+            EditorHud.WheelItem item = items.get(i);
+            c.text(item.label(), tx + (tileW - EditorHudCanvas.textWidth(item.label(), Size.BODY)) / 2f, ty + 5,
+                    Size.BODY, selected ? 0xFFFFFF : TEXT, 1);
+            String detail = EditorHudCanvas.fit(item.detail(), tileW - 4, Size.SMALL);
+            c.text(detail, tx + (tileW - EditorHudCanvas.textWidth(detail, Size.SMALL)) / 2f, ty + 18,
+                    Size.SMALL, selected ? 0xDDE8FF : TEXT_DIM, 1);
+            if (selected) c.frame(tx - grow - 1, ty - grow - 1, tileW + 2 * grow + 2, tileH + 2 * grow + 2, 2, GOLD, 1);
+            hits.add(new Hit(new Rect(tx, ty, tileW, tileH), Modal.WHEEL, EditorHud.HIT_WHEEL, i));
+        }
+        float hubW = 74, hubH = 30;
+        c.panel(cx - hubW / 2f, cy - hubH / 2f, hubW, hubH, PANEL, 1);
+        c.text("TOOLS", cx - EditorHudCanvas.textWidth("TOOLS", Size.SMALL) / 2f, cy - 11, Size.SMALL, TEXT_FAINT, 1);
+        if (hud.wheelSlot >= 0 && hud.wheelSlot < count) {
+            String name = items.get(hud.wheelSlot).label();
+            c.text(name, cx - EditorHudCanvas.textWidth(name, Size.BODY) / 2f, cy + 1, Size.BODY, GOLD, 1);
+        }
+    }
+
+    // ------------------------------------------------------------------ menu
+
+    private void menu(EditorHudCanvas c, EditorHudLayout layout, EditorHud hud) {
+        dim(c, layout, .6f);
+        float rowH = 15;
+        float w = Math.min(320, layout.width() - 40);
+        float maxH = layout.height() - EditorHudLayout.TOP_BAR - EditorHudLayout.PROMPT_BAR - 24;
+        int visible = Math.max(4, (int) ((maxH - 44) / rowH));
+        List<EditorHud.MenuItem> items = hud.menuItems;
+        int shown = Math.min(visible, items.size());
+        float h = 44 + shown * rowH;
+        float x = (layout.width() - w) / 2f, y = EditorHudLayout.TOP_BAR + 12 + (maxH - h) / 2f;
+        c.panel(x, y, w, h, PANEL, .99f);
+        c.text("MENU", x + 12, y + 8, Size.LARGE, TEXT, 1);
+        float target = hud.menuScroll;
+        if (hud.menuIndex < target + 1) target = hud.menuIndex - 1;
+        if (hud.menuIndex > target + shown - 2) target = hud.menuIndex - shown + 2;
+        target = Math.max(0, Math.min(items.size() - shown, target));
+        hud.menuScroll += (target - hud.menuScroll) * .35f;
+        if (Math.abs(target - hud.menuScroll) < .01f) hud.menuScroll = target;
+        Rect list = new Rect(x + 6, y + 36, w - 12, shown * rowH);
+        c.clip(list);
+        for (int i = Math.max(0, (int) hud.menuScroll); i < Math.min(items.size(), (int) hud.menuScroll + shown + 1); i++) {
+            EditorHud.MenuItem item = items.get(i);
+            float ry = list.y() + (i - hud.menuScroll) * rowH;
+            if (item.header()) {
+                c.text(item.label().toUpperCase(Locale.ROOT), list.x() + 6, ry + 5, Size.SMALL, TEXT_FAINT, 1);
+                float lx = list.x() + 12 + EditorHudCanvas.textWidth(item.label(), Size.SMALL);
+                c.rect(lx, ry + 8, list.right() - lx - 6, 1, LINE, 1);
+                continue;
+            }
+            boolean selected = i == hud.menuIndex;
+            if (selected) {
+                c.rect(list.x(), ry, list.w(), rowH - 1, ACCENT_DARK, 1);
+                c.rect(list.x(), ry, 3, rowH - 1, GOLD, 1);
+            }
+            c.fittedText(item.label(), list.x() + 10, ry + 3, list.w() - 90, Size.BODY, selected ? 0xFFFFFF : TEXT, 1);
+            if (!item.detail().isEmpty()) {
+                c.text(item.detail(), list.right() - 6 - EditorHudCanvas.textWidth(item.detail(), Size.SMALL), ry + 4,
+                        Size.SMALL, TEXT_DIM, 1);
+            }
+            hits.add(new Hit(new Rect(list.x(), ry, list.w(), rowH), Modal.MENU, EditorHud.HIT_MENU, i));
+        }
+        c.unclip();
+    }
+
+    // ------------------------------------------------------------------ helpers
+
+    private static void dim(EditorHudCanvas c, EditorHudLayout layout, float alpha) {
+        c.rect(0, EditorHudLayout.TOP_BAR, layout.width(), layout.height() - EditorHudLayout.TOP_BAR - EditorHudLayout.PROMPT_BAR,
+                SHADOW, alpha);
+    }
+
+    private static String kindTitle(LibraryKind kind) {
+        return switch (kind) {
+            case BLOCK -> "Blocks";
+            case CHUNK -> "Chunks";
+            case PATTERN -> "Patterns";
+            case OBJECT -> "Objects";
+            case NONE -> "";
+        };
+    }
+
+    static String entryName(LibraryKind kind, int value, LevelEditorController controller) {
+        if (value < 0) return "Empty slot";
+        return switch (kind) {
+            case BLOCK -> "Block " + hex(value);
+            case CHUNK -> "Chunk " + hex(value);
+            case PATTERN -> "Pattern " + hex(value);
+            case OBJECT -> controller.objectPalette() == null || value >= controller.objectPalette().entries().size()
+                    ? "Object" : controller.objectPalette().entries().get(value).label();
+            case NONE -> "";
+        };
+    }
+
+    private static String brushDetail(LibraryKind kind, LevelEditorController controller) {
+        return switch (kind) {
+            case BLOCK -> "Layer " + (controller.activeLayer() == 0 ? "FG" : "BG");
+            case PATTERN -> {
+                Integer raw = controller.selectedPatternRaw();
+                yield raw == null ? "" : "Palette line " + ((raw >>> 13) & 3);
+            }
+            case OBJECT -> controller.objectPalette() == null ? ""
+                    : "Subtype " + "%02X".formatted(controller.objectPalette().selectedSubtype());
+            default -> "";
+        };
+    }
+
+    private static String underCursor(LevelEditorController controller, MutableLevel level) {
+        if (level == null) return "";
+        if (controller.depth() == EditorHierarchyDepth.BLOCK) {
+            Integer block = controller.selection().selectedBlock();
+            if (block == null || block >= level.getBlockCount()) return "";
+            return "Chunk " + hex(level.getBlock(block).getChunkDesc(controller.selectedBlockCellX(),
+                    controller.selectedBlockCellY()).getChunkIndex());
+        }
+        if (controller.depth() == EditorHierarchyDepth.CHUNK) {
+            Integer chunk = controller.selection().selectedChunk();
+            if (chunk == null || chunk >= level.getChunkCount()) return "";
+            return "Pattern " + hex(level.getChunk(chunk).getPatternDesc(controller.selectedChunkCellX(),
+                    controller.selectedChunkCellY()).getPatternIndex());
+        }
+        if (controller.spawnEditMode() != EditorSpawnEditMode.TILES) {
+            var selected = controller.selectedObjectSpawn();
+            return selected == null ? "Nothing selected" : "Object " + "%02X".formatted(selected.objectId());
+        }
+        var cursor = controller.worldCursor();
+        var map = level.getMap();
+        int size = level.getBlockPixelSize();
+        int mx = Math.max(0, Math.min(map.getWidth() - 1, cursor.x() / size));
+        int my = Math.max(0, Math.min(map.getHeight() - 1, cursor.y() / size));
+        return "Block " + hex(Byte.toUnsignedInt(map.getValue(controller.activeLayer(), mx, my)));
+    }
+
+    private static boolean contains(int[] values, int value) {
+        for (int v : values) if (v == value) return true;
+        return false;
+    }
+
+    static String hex(Integer value) {
+        return value == null ? "-" : "$" + Integer.toHexString(value).toUpperCase(Locale.ROOT);
+    }
+
+    @Override
+    public void close() {
+        atlas.close();
+    }
+}
