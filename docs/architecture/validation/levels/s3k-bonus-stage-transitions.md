@@ -517,3 +517,94 @@ shift; ±128 px X tested and rejected; `Gumball_Deform` sets
 The `SonicAndTails` Slot trace is red with 71 errors (first frame 5
 `player_mapping_frame` $97/$96) identically on Root `2adfa37a7`, so it is not
 caused by this lane.
+
+## Custom AnimateTiles phase and the open bonus items — 2026-10-15 (bonuspres2 lane)
+
+Continues the section above on Root `3ef45fbb3`.
+
+**Custom zone AnimateTiles.** Every custom `Offs_AniFunc` routine
+(`AnimateTiles_HCZ1` sonic3k.asm:53974, `_HCZ2` :54163, `_CNZ` :54373, `_ICZ`
+:54439, `_LBZ1` :54544, `_LBZ2` :54639, `_MHZ` :54820, `_SOZ1` :54944,
+`_SOZ2` :55002, `_LRZ1/2/3` :55039-55051) sends its art through
+`Add_To_DMA_Queue` (:1673); none writes VRAM directly. `LevelLoop` (:7884)
+calls `Animate_Tiles` (:7906) after `DeformBgLayer`/`ScreenEvents`, and
+`VInt_8_Cont` drains the queue with `Process_DMA_Queue` (:764) together with
+that iteration's scroll and SAT. The engine presents the scroll/SAT published
+at the top of the following iteration, so the animator's direct pattern
+writes appeared one frame early. They now use the AniPLC publication queue
+(`Sonic3kPatternAnimator.queueRawPatternDma`/`queuePatternsDma`), whose
+snapshot also restores the presented custom ranges and pending transfers on
+rewind (previously a restore kept later tiles when the cached phase matched).
+`TestS3kZoneAnimateTilesPublication` was red 10/10 on `3ef45fbb3` with
+"art presented in its own iteration" for HCZ1, HCZ2, CNZ1, MHZ1, LRZ1, SOZ1,
+ICZ1 and LBZ1, SOZ2's torch art visible before VInt, and the rewind case.
+Not changed: `AnimateTiles_AIZ2`'s first-tree transfer (:53964-53967) is also
+queued in the ROM and is still written immediately (AIZ→HCZ stability); the
+HCZ1 setup strips written while the animator is constructed precede display.
+Observed, not changed: at `Events_bg+$10 == 0` `AnimateTiles_HCZ1` stores 1
+in `Anim_Counters+4` and falls through `AniHCZ_FixLowerBG` into
+`AniHCZ_FixUpperBG` (:53993, :54071-54091), returning before
+`AnimateTiles_DoAniPLC`; the engine uploads only the lower fix strips there.
+
+**Pachinko composition buffer.** `AnimateTiles_Pachinko` composes its
+background in `Chunk_table+$7000` over four passes before `loc_28610` queues
+it (:55291-55384). The animator snapshot omitted that buffer, so a restore in
+mid-cycle blended later contents. `938aef1f6` exposed this by capturing the
+presented $0E9 range: `TestS3kGumballPachinkoRewardMechanics` failed 144/723
+on Root `3ef45fbb3` with identical identities and `pattern-animator.extra[74..77]`
+live-rewind divergences in this tree, and passed 723/723 with the animator
+from before `938aef1f6`. The snapshot now carries the buffer
+(`TestS3kBonusAnimateTilesPublication#pachinkoRewindMidComposition...`, red
+first). The old Gumball snapshot test assumed the retired frame counter and
+had no camera; it now runs against a loaded Gumball level.
+
+**Slot machine plane at rows 930-974.** This is not a plane wrap. Native RAM
+at row 930 has `Events_bg+$00/$02` = ($5EE,$492), equal to the cage in SST
+slot 4 (`loc_4BF9A`), and `_unkEE98`/`_unkEE9C` = ($2E4,$38C), which is
+`Slots_ScreenEvent`'s step toward $400 − Events_bg + camera (:119061-119133).
+That places the machine's hexagon at screen x ≈ 284, as in the still. The
+cage rotates ($460,$430) about Player_1 by `Stat_table & $FC` every
+`Process_Sprites` pass (:99324-99348); at rows 971 and 974 it reads ($460,$430)
+and ($4D4,$1EB) while the camera stays at ($4D2,$2C8), so the machine orbits
+the player during the goal spin. `S3kSlotBonusStageRuntime.update` returned
+early in the goal exit without ticking the cage, freezing `Events_bg`. The
+cage now runs after the player's wind-down step on every exit iteration
+(`TestS3kSlotPresentationParity#goalWindDownKeepsTheCageOrbitingThePlayerForTheMachinePlane`).
+
+**Gumball row 250 background.** Decoding native plane B from the row-250 VRAM
+dump and sampling it at the BG pixels of each frame (plane A transparent)
+matches the engine only at plane X offset $60 (= camera X) and V offset $45;
+native uses H-scroll $0020 (`Gumball_Deform` pins `Camera_X_pos_BG_copy` at
+$FFE0, `s3.asm` 76172) with the same V offset. Plane B repeats every 256 px,
+so the 128-px error reads as changed block content, and a whole-frame ±128
+shift is rejected because the FG girders then misalign. `SwScrlGumball` now
+writes the pinned BG H-scroll (`SwScrlGumballTest`).
+
+**Captures.** Same tool and settings as above on lane commit `b726ca90f`
+(`${OGGF_VIDEOS}/s3k-parity-coverage-2026-10-14/spot-checks/route-bonus-engine-bonuspres2-b726ca90f-v1/`,
+Slot frames 900-1035, Gumball 240-260); differing original-RGB pixels against
+the native still at the same row. The PNGs show the machine at rows 930/971
+where native has it and the Gumball background matching.
+
+| Still | slotpres `0acadf134` | `b726ca90f` |
+|---|---|---|
+| Gumball 250 | 11092 | 23 |
+| Slot 930 | 15889 | 995 |
+| Slot 971-974 | 16338-22842 | 1437-4309 |
+| Slot fade 1012-1028 | 2461-6103 | 416-5239 |
+| Slot 1029-1030 | 2297 | 647 |
+| Slot 1031-1035 | 3396 | 4318 (post-exit fade limit below) |
+
+Focused validation on the final lane source (34 selectors: the custom-zone
+and bonus AnimateTiles, per-zone pattern-animation, rewind, Slot, Gumball and
+the four S3K guard classes) ran 1104 tests with no failures, errors or skips;
+red-first runs are listed in the lane status record. Not run: trace replays
+and the lead-owned smoke/guards.
+
+**Recorded limits.**
+- Post-exit frames: production starts `Level:`'s `Pal_FadeToBlack` in
+  `GameLoop.exitBonusStage` (`GameLoopPlcLifecycle.startToBlack`); the trace
+  capture drive has no equivalent, so rows 1029-1035 keep 3396 non-black
+  pixels (max channel 34) where native row 1029 has 4411 and row 1031 is black.
+- Lives ×3 vs native ×4: `TraceMetadata` and the `bonus_slots` metadata declare
+  no lives entry, so there is no contract field to seed it; fixture limit.

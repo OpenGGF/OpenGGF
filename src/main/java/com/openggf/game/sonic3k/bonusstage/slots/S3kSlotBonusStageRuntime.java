@@ -175,6 +175,11 @@ public final class S3kSlotBonusStageRuntime {
         goalTouchedThisIteration = false;
         if (slotPlayerRuntime != null && slotPlayerRuntime.isExiting() && !goalIteration) {
             slotPlayerRuntime.tickExitFrame(slotPlayer);
+            // Obj_SlotBonus (loc_4BF9A, sonic3k.asm:99324-99348) is an ordinary SST object that
+            // Process_Sprites still runs after the player's loc_4BC1E/loc_4BC54 rotation step, so
+            // the cage keeps orbiting the player and writing Events_bg+$00/$02 for
+            // Slots_ScreenEvent's machine plane throughout the goal wind-down and fade.
+            tickCage(frameCounter);
             // ROM loc_4BC1E (sonic3k.asm:98964-98972): when the goal-exit
             // rotation wind-down reaches SStage_scalar_index_1 == $1800, the
             // trigger runs `move.w #60,$38(a0)` (sonic3k.asm:98971). $38 is the
@@ -235,11 +240,7 @@ public final class S3kSlotBonusStageRuntime {
         }
 
         // Cage object
-        if (slotCage != null && slotPlayer != null) {
-            slotCage.tickSlotRuntime(frameCounter, slotPlayer,
-                    currentPlayerOriginX(), currentPlayerOriginY());
-            slotStageState.setEventsBg(slotCage.getCurrentX(), slotCage.getCurrentY());
-        }
+        tickCage(frameCounter);
 
         // Reward objects
         updateRewards(frameCounter);
@@ -763,6 +764,14 @@ public final class S3kSlotBonusStageRuntime {
         }
         bootstrapGameplayMode.getCamera().setX((short) camX);
         bootstrapGameplayMode.getCamera().setY((short) camY);
+    }
+
+    private void tickCage(int frameCounter) {
+        if (slotCage != null && slotPlayer != null) {
+            slotCage.tickSlotRuntime(frameCounter, slotPlayer,
+                    currentPlayerOriginX(), currentPlayerOriginY());
+            slotStageState.setEventsBg(slotCage.getCurrentX(), slotCage.getCurrentY());
+        }
     }
 
     private int currentPlayerOriginX() {

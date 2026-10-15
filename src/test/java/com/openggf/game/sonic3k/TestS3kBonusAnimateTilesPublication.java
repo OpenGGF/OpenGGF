@@ -70,6 +70,67 @@ class TestS3kBonusAnimateTilesPublication {
         assertTrue(sawStep, "the fourth AnimateTiles_Pachinko pass submitted the background art");
     }
 
+    @Test
+    void gumballArtFollowsTheCameraThroughTheIndexWrapAndRewind() throws Exception {
+        HeadlessTestFixture.builder().withZoneAndAct(Sonic3kZoneIds.ZONE_GUMBALL, 0).build();
+        Sonic3kPatternAnimator animator = animator();
+        byte[] art = RomByteReader.fromRom(GameServices.rom().getRom())
+                .slice(Sonic3kConstants.GUMBALL_ANI_TILES_ADDR, 0x100);
+        GameServices.camera().setY((short) 0xC0);
+        animator.update();
+        animator.publishAniPlcAtVBlank();
+        var initial = animator.capture();
+        byte[] initialTiles = tiles(GUMBALL_DEST_TILE, 4);
+        assertArrayEquals(gumballArt(art, 0xC0), initialTiles);
+        for (int cameraY = 0xBD; cameraY >= 0; cameraY -= 3) {
+            GameServices.camera().setY((short) cameraY);
+            animator.update();
+            animator.publishAniPlcAtVBlank();
+            assertArrayEquals(gumballArt(art, cameraY), tiles(GUMBALL_DEST_TILE, 4), "camera " + cameraY);
+        }
+        animator.restore(initial);
+        assertArrayEquals(initialTiles, tiles(GUMBALL_DEST_TILE, 4), "restore presents the captured VRAM");
+        GameServices.camera().setY((short) 0x45);
+        animator.update();
+        animator.publishAniPlcAtVBlank();
+        assertArrayEquals(gumballArt(art, 0x45), tiles(GUMBALL_DEST_TILE, 4), "after restore");
+    }
+
+    /** Gumball_Deform BG Y = camY asr 1, Events_bg+$10 = asr 2; ArtUnc_AniGumball + index*4. */
+    private static byte[] gumballArt(byte[] art, int cameraY) {
+        int bgY = (short) cameraY >> 1;
+        int index = ((bgY >> 1) - bgY) & 0x1F;
+        return Arrays.copyOfRange(art, index * 4, index * 4 + 0x80);
+    }
+
+    @Test
+    void pachinkoRewindMidCompositionReplaysTheSameBackgroundArt() throws Exception {
+        HeadlessTestFixture.builder().withZoneAndAct(Sonic3kZoneIds.ZONE_GLOWING_SPHERE, 0).build();
+        Sonic3kPatternAnimator animator = animator();
+        // AnimateTiles_Pachinko builds the background in a RAM buffer over four passes (rebuild,
+        // then three blends) before loc_28610 queues it; the buffer is state like any other RAM.
+        for (int start = 1; start <= 3; start++) {
+            for (int i = 0; i < 4 + start; i++) {
+                animator.update();
+                animator.publishAniPlcAtVBlank();
+            }
+            var snapshot = animator.capture();
+            byte[][] forward = new byte[8][];
+            for (int i = 0; i < forward.length; i++) {
+                animator.update();
+                animator.publishAniPlcAtVBlank();
+                forward[i] = tiles(PACHINKO_DEST_TILE, 0x780 / 32);
+            }
+            animator.restore(snapshot);
+            for (int i = 0; i < forward.length; i++) {
+                animator.update();
+                animator.publishAniPlcAtVBlank();
+                assertArrayEquals(forward[i], tiles(PACHINKO_DEST_TILE, 0x780 / 32),
+                        "replayed pass " + i + " after a restore " + start + " passes into the cycle");
+            }
+        }
+    }
+
     private static Sonic3kPatternAnimator animator() throws Exception {
         var manager = GameServices.level().getAnimatedPatternManager();
         assertTrue(manager instanceof Sonic3kLevelAnimationManager, "S3K level animation manager");

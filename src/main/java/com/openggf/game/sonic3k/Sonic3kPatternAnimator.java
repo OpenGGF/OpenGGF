@@ -244,7 +244,6 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
     // harmless, since every consuming site overwrites before reading.
     // Note: beginPatternAtlasBatch is not re-entrant; do not call the apply*
     // methods from within an already-active atlas batch (no such path today).
-    private final Pattern rawTileScratchPattern = new Pattern();
     private final byte[] rawTileScratchBytes = new byte[Pattern.PATTERN_SIZE_IN_ROM];
     private final byte[] hcz1StripComposeScratch = new byte[0x300];
     private final byte[] lbz2WaterlineComposeScratch = new byte[0x200];
@@ -815,7 +814,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         var state = S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry()).orElse(null);
         if (state == null || state.actIndex() != 1) return;
         int frame = state.lighting().tickTorch();
-        if (frame >= 0) applyRawPatternSliceToLevel(soz2BgData, frame * 0xC0, 0xC0, 0x330);
+        if (frame >= 0) queueRawPatternSliceDma(soz2BgData, frame * 0xC0, 0xC0, 0x330);
     }
 
     boolean shouldRunSoz1CustomChannels() {
@@ -895,14 +894,21 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
     }
 
     void publishAniPlcAtVBlank() {
-        aniPlcPublications.publish(this::publishAniPlcPayload);
+        GraphicsManager graphics = GameServices.graphics();
+        if (graphics != null) graphics.beginPatternAtlasBatch();
+        try {
+            aniPlcPublications.publish(this::publishAniPlcPayload);
+        } finally {
+            if (graphics != null) graphics.endPatternAtlasBatch();
+        }
     }
 
     private void publishAniPlcPayload(int destination, byte[] payload) {
         GraphicsManager graphics = GameServices.graphics();
         for (int tile = 0; tile < payload.length / 32; tile++) {
             Pattern pattern = level.getPattern(destination + tile);
-            pattern.fromSegaFormat(java.util.Arrays.copyOfRange(payload, tile * 32, (tile + 1) * 32));
+            System.arraycopy(payload, tile * 32, rawTileScratchBytes, 0, 32);
+            pattern.fromSegaFormat(rawTileScratchBytes);
             if (graphics != null && graphics.isGlInitialized()) graphics.updatePatternTexture(pattern, destination + tile);
         }
         Sonic3kPlcLoader.refreshAffectedRenderers(List.of(new Sonic3kPlcLoader.TileRange(
@@ -910,12 +916,15 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
     }
 
     private byte[] presentedAniPlcPattern(int tile) {
-        Pattern pattern = level.getPattern(tile);
         byte[] packed = new byte[32];
-        for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x += 2)
-            packed[y * 4 + x / 2] = (byte) ((pattern.getPixel(x, y) & 15) << 4
-                    | pattern.getPixel(x + 1, y) & 15);
+        packSegaPattern(level.getPattern(tile), packed, 0);
         return packed;
+    }
+
+    private static void packSegaPattern(Pattern pattern, byte[] out, int offset) {
+        for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x += 2)
+            out[offset + y * 4 + x / 2] = (byte) ((pattern.getPixel(x, y) & 15) << 4
+                    | pattern.getPixel(x + 1, y) & 15);
     }
 
     boolean requiresObjectRendererRefresh(AniPlcScriptState script) {
@@ -975,7 +984,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             return;
         }
         int phase = computeLbzSharedPhase(channelFrameCounter);
-        applyRawPatternSliceToLevel(lbzSharedData, ror16(phase, 7), 0x200, 0x160);
+        queueRawPatternSliceDma(lbzSharedData, ror16(phase, 7), 0x200, 0x160);
     }
 
     void updateLbz1ScrollTilesForGraph() {
@@ -1016,8 +1025,8 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         lastHcz1WaterlineDelta = waterlineDelta;
 
         if (waterlineDelta == 0) {
-            applyPatternsToLevel(hcz1LowerBg1Patterns, 0x2F4);
-            applyPatternsToLevel(hcz1LowerBg2Patterns, 0x300);
+            queuePatternsDma(hcz1LowerBg1Patterns, 0x2F4);
+            queuePatternsDma(hcz1LowerBg2Patterns, 0x300);
             return;
         }
 
@@ -1025,21 +1034,21 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             if (waterlineDelta > -HCZ1_WATERLINE_VISIBLE) {
                 applyDynamicHcz1Strip(0x000, (waterlineDelta + HCZ1_WATERLINE_VISIBLE) * 0x60, 0x2DC);
             } else {
-                applyPatternsToLevel(hcz1WaterlineBelow1Patterns, 0x2DC);
-                applyPatternsToLevel(hcz1WaterlineBelow2Patterns, 0x2E8);
+                queuePatternsDma(hcz1WaterlineBelow1Patterns, 0x2DC);
+                queuePatternsDma(hcz1WaterlineBelow2Patterns, 0x2E8);
             }
-            applyPatternsToLevel(hcz1LowerBg1Patterns, 0x2F4);
-            applyPatternsToLevel(hcz1LowerBg2Patterns, 0x300);
+            queuePatternsDma(hcz1LowerBg1Patterns, 0x2F4);
+            queuePatternsDma(hcz1LowerBg2Patterns, 0x300);
             return;
         }
 
-        applyPatternsToLevel(hcz1UpperBg1Patterns, 0x2DC);
-        applyPatternsToLevel(hcz1UpperBg2Patterns, 0x2E8);
+        queuePatternsDma(hcz1UpperBg1Patterns, 0x2DC);
+        queuePatternsDma(hcz1UpperBg2Patterns, 0x2E8);
         if (waterlineDelta < HCZ1_WATERLINE_VISIBLE) {
             applyDynamicHcz1Strip(0x300, (HCZ1_WATERLINE_VISIBLE - waterlineDelta) * 0x60, 0x2F4);
         } else {
-            applyPatternsToLevel(hcz1WaterlineAbove1Patterns, 0x2F4);
-            applyPatternsToLevel(hcz1WaterlineAbove2Patterns, 0x300);
+            queuePatternsDma(hcz1WaterlineAbove1Patterns, 0x2F4);
+            queuePatternsDma(hcz1WaterlineAbove2Patterns, 0x300);
         }
     }
 
@@ -1098,9 +1107,9 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         int wordCount2 = wordCounts[pairIndex + 1];
         int destTile2 = destTile + ((wordCount1 << 1) / Pattern.PATTERN_SIZE_IN_ROM);
 
-        applyRawPatternSliceToLevel(sourceData, baseOffset + bankOffset, wordCount1 << 1, destTile);
+        queueRawPatternSliceDma(sourceData, baseOffset + bankOffset, wordCount1 << 1, destTile);
         if (wordCount2 != 0) {
-            applyRawPatternSliceToLevel(sourceData, secondChunkOffset, wordCount2 << 1, destTile2);
+            queueRawPatternSliceDma(sourceData, secondChunkOffset, wordCount2 << 1, destTile2);
         }
     }
 
@@ -1130,9 +1139,9 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         int wordCount2 = HCZ2_ART4_WORD_COUNTS[pairIndex + 1];
         int destTile2 = 0x2EE + ((wordCount1 << 1) / Pattern.PATTERN_SIZE_IN_ROM);
 
-        applyRawPatternSliceToLevel(hcz2Art4Data, d1, wordCount1 << 1, 0x2EE);
+        queueRawPatternSliceDma(hcz2Art4Data, d1, wordCount1 << 1, 0x2EE);
         if (wordCount2 != 0) {
-            applyRawPatternSliceToLevel(hcz2Art4Data, sourceOffset2, wordCount2 << 1, destTile2);
+            queueRawPatternSliceDma(hcz2Art4Data, sourceOffset2, wordCount2 << 1, destTile2);
         }
     }
 
@@ -1158,49 +1167,47 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             System.arraycopy(hcz1DynamicBlockData, sourceIndexA, composed, i << 2, 4);
             System.arraycopy(hcz1DynamicBlockData, sourceIndexB, composed, 0x180 + (i << 2), 4);
         }
-        applyRawPatternBytesToLevel(composed, destTile);
+        queueRawPatternDma(composed, destTile);
     }
 
-    private void applyRawPatternBytesToLevel(byte[] data, int destTile) {
-        applyRawPatternBytesToLevel(data, 0, data.length, destTile);
+    private void queueRawPatternDma(byte[] data, int destTile) {
+        queueRawPatternDma(data, 0, data.length, destTile);
     }
 
     /**
-     * Decodes {@code length} bytes of Sega-format tile data starting at
-     * {@code offset} directly into the level patterns, batching the atlas
-     * uploads (dirty-slot path: one texture bind for the whole burst) and
-     * reusing the per-instance scratch pattern/byte buffers instead of
-     * allocating per tile.
+     * Submits {@code length} bytes of Sega-format tile data starting at {@code offset} as one
+     * Add_To_DMA_Queue transfer. Every custom AnimateTiles_* routine sends its art through
+     * Add_To_DMA_Queue (sonic3k.asm:1673) from LevelLoop's Animate_Tiles (sonic3k.asm:7906);
+     * VInt_8_Cont drains the queue with Process_DMA_Queue (sonic3k.asm:764), so the art is
+     * presented with the scroll and SAT of the iteration that computed it, not one frame earlier.
      */
-    private void applyRawPatternBytesToLevel(byte[] data, int offset, int length, int destTile) {
+    private void queueRawPatternDma(byte[] data, int offset, int length, int destTile) {
         if (length <= 0 || (length % Pattern.PATTERN_SIZE_IN_ROM) != 0
                 || offset < 0 || offset + length > data.length) {
             return;
         }
-
-        int tileCount = length / Pattern.PATTERN_SIZE_IN_ROM;
-        int maxPatterns = level.getPatternCount();
-        GraphicsManager graphicsManager = GameServices.graphics();
-        boolean canUpdateTextures = graphicsManager.isGlInitialized();
-        graphicsManager.beginPatternAtlasBatch();
-        try {
-            for (int i = 0; i < tileCount; i++) {
-                int destIndex = destTile + i;
-                if (destIndex >= maxPatterns) {
-                    break;
-                }
-                System.arraycopy(data, offset + i * Pattern.PATTERN_SIZE_IN_ROM,
-                        rawTileScratchBytes, 0, Pattern.PATTERN_SIZE_IN_ROM);
-                rawTileScratchPattern.fromSegaFormat(rawTileScratchBytes);
-                Pattern dest = level.getPattern(destIndex);
-                dest.copyFrom(rawTileScratchPattern);
-                if (canUpdateTextures) {
-                    graphicsManager.updatePatternTexture(dest, destIndex);
-                }
-            }
-        } finally {
-            graphicsManager.endPatternAtlasBatch();
+        int tileCount = Math.min(length / Pattern.PATTERN_SIZE_IN_ROM, level.getPatternCount() - destTile);
+        if (tileCount <= 0) {
+            return;
         }
+        aniPlcPublications.submit(destTile, java.util.Arrays.copyOfRange(
+                data, offset, offset + tileCount * Pattern.PATTERN_SIZE_IN_ROM));
+    }
+
+    /** {@link #queueRawPatternDma} for ROM art the animator already holds decoded. */
+    private void queuePatternsDma(Pattern[] sourcePatterns, int destTile) {
+        if (sourcePatterns == null || sourcePatterns.length == 0) {
+            return;
+        }
+        int tileCount = Math.min(sourcePatterns.length, level.getPatternCount() - destTile);
+        if (tileCount <= 0) {
+            return;
+        }
+        byte[] payload = new byte[tileCount * Pattern.PATTERN_SIZE_IN_ROM];
+        for (int i = 0; i < tileCount; i++) {
+            packSegaPattern(sourcePatterns[i], payload, i * Pattern.PATTERN_SIZE_IN_ROM);
+        }
+        aniPlcPublications.submit(destTile, payload);
     }
 
     private void applyPatternSliceToLevel(Pattern[] sourcePatterns, int sourceByteOffset,
@@ -1237,7 +1244,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         }
     }
 
-    private void applyRawPatternSliceToLevel(byte[] sourceData, int sourceByteOffset,
+    private void queueRawPatternSliceDma(byte[] sourceData, int sourceByteOffset,
                                              int byteLength, int destTile) {
         if (sourceData == null || byteLength <= 0) {
             return;
@@ -1245,17 +1252,22 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         if ((sourceByteOffset % Pattern.PATTERN_SIZE_IN_ROM) != 0) {
             return;
         }
-        applyRawPatternBytesToLevel(sourceData, sourceByteOffset, byteLength, destTile);
+        queueRawPatternDma(sourceData, sourceByteOffset, byteLength, destTile);
     }
 
-    private void applyRawPatternSliceAllowingRowOffset(byte[] sourceData, int sourceByteOffset,
+    private void queueRawPatternSliceAllowingRowOffsetDma(byte[] sourceData, int sourceByteOffset,
                                                        int byteLength, int destTile) {
         if (sourceData == null || byteLength <= 0) {
             return;
         }
-        applyRawPatternBytesToLevel(sourceData, sourceByteOffset, byteLength, destTile);
+        queueRawPatternDma(sourceData, sourceByteOffset, byteLength, destTile);
     }
 
+    /**
+     * Immediate write, used for load-time setup and for AnimateTiles_AIZ2's first-tree
+     * transfer. The latter is also an Add_To_DMA_Queue call (sonic3k.asm:53964-53967) and
+     * remains one frame early; it was left outside the 2026-10-15 custom-zone phase change.
+     */
     private void applyPatternsToLevel(Pattern[] sourcePatterns, int destTile) {
         if (sourcePatterns == null || sourcePatterns.length == 0) {
             return;
@@ -1417,10 +1429,10 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         int firstWordCount = ICZ_HORIZONTAL_DMA_WORD_COUNTS[pairIndex];
         int secondWordCount = ICZ_HORIZONTAL_DMA_WORD_COUNTS[pairIndex + 1];
 
-        applyRawPatternSliceToLevel(iczArt1Data, primarySourceOffset, firstWordCount << 1, 0x10E);
+        queueRawPatternSliceDma(iczArt1Data, primarySourceOffset, firstWordCount << 1, 0x10E);
         if (secondWordCount != 0) {
             int secondDestTile = 0x10E + ((firstWordCount << 1) / Pattern.PATTERN_SIZE_IN_ROM);
-            applyRawPatternSliceToLevel(iczArt1Data, baseOffset, secondWordCount << 1, secondDestTile);
+            queueRawPatternSliceDma(iczArt1Data, baseOffset, secondWordCount << 1, secondDestTile);
         }
     }
 
@@ -1437,18 +1449,18 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         int eventsBg12 = asrWordValue(bgCameraY, 1);
 
         int phase2 = (-(bgCameraY - eventsBg12)) & 0x3F;
-        applyRawPatternSliceAllowingRowOffset(iczArt2Data, phase2 << 2, 0x100, 0x122);
+        queueRawPatternSliceAllowingRowOffsetDma(iczArt2Data, phase2 << 2, 0x100, 0x122);
 
         int halfEvents = asrWordValue(eventsBg12, 1);
         int quarterEvents = asrWordValue(halfEvents, 1);
         int phase3 = (-(bgCameraY - halfEvents - quarterEvents)) & 0x1F;
-        applyRawPatternSliceAllowingRowOffset(iczArt3Data, phase3 << 2, 0x080, 0x12A);
+        queueRawPatternSliceAllowingRowOffsetDma(iczArt3Data, phase3 << 2, 0x080, 0x12A);
 
         int phase4 = (-(bgCameraY - halfEvents)) & 0x0F;
-        applyRawPatternSliceAllowingRowOffset(iczArt4Data, phase4 << 2, 0x040, 0x12E);
+        queueRawPatternSliceAllowingRowOffsetDma(iczArt4Data, phase4 << 2, 0x040, 0x12E);
 
         int phase5 = (-(bgCameraY - asrWordValue(eventsBg12, 2))) & 0x07;
-        applyRawPatternSliceAllowingRowOffset(iczArt5Data, phase5 << 2, 0x020, 0x130);
+        queueRawPatternSliceAllowingRowOffsetDma(iczArt5Data, phase5 << 2, 0x020, 0x130);
     }
 
     /**
@@ -1544,13 +1556,13 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         int secondWordCount = LBZ1_SCROLL_WORD_COUNTS[pairIndex + 1];
 
         int destTile = 0x350;
-        applyRawPatternSliceToLevel(lbz1ScrollData, primarySourceOffset, firstWordCount << 1, destTile);
+        queueRawPatternSliceDma(lbz1ScrollData, primarySourceOffset, firstWordCount << 1, destTile);
         destTile += (firstWordCount << 1) / Pattern.PATTERN_SIZE_IN_ROM;
         if (secondWordCount != 0) {
-            applyRawPatternSliceToLevel(lbz1ScrollData, secondOffset, secondWordCount << 1, destTile);
+            queueRawPatternSliceDma(lbz1ScrollData, secondOffset, secondWordCount << 1, destTile);
             destTile += (secondWordCount << 1) / Pattern.PATTERN_SIZE_IN_ROM;
         }
-        applyRawPatternSliceToLevel(lbz1ScrollCapData, lowPhase << 5, 0x20, destTile);
+        queueRawPatternSliceDma(lbz1ScrollCapData, lowPhase << 5, 0x20, destTile);
     }
 
     private void updateLbz2ScrollTiles() {
@@ -1558,7 +1570,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             return;
         }
         int phase = computeLbz2ScrollPhase();
-        applyRawPatternSliceToLevel(lbz2ScrollData, phase << 6, 0x40, 0x2E3);
+        queueRawPatternSliceDma(lbz2ScrollData, phase << 6, 0x40, 0x2E3);
     }
 
     private void updateLbz2WaterlineTiles() {
@@ -1568,8 +1580,8 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
 
         int delta = computeLbz2WaterlineDelta();
         if (delta == 0) {
-            applyRawPatternSliceToLevel(lbz2LowerBgData, 0, 0x200, 0x2C3);
-            applyRawPatternSliceToLevel(lbz2UpperBgData, 0, 0x200, 0x2D3);
+            queueRawPatternSliceDma(lbz2LowerBgData, 0, 0x200, 0x2C3);
+            queueRawPatternSliceDma(lbz2UpperBgData, 0, 0x200, 0x2D3);
             return;
         }
 
@@ -1577,17 +1589,17 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             if (delta > -0x40) {
                 applyLbz2DynamicWaterline(lbz2WaterlineBelowSourceData, (delta + 0x40) << 6, 0x2C3);
             } else {
-                applyRawPatternSliceToLevel(lbz2WaterlineBelowData, 0, 0x200, 0x2C3);
+                queueRawPatternSliceDma(lbz2WaterlineBelowData, 0, 0x200, 0x2C3);
             }
-            applyRawPatternSliceToLevel(lbz2UpperBgData, 0, 0x200, 0x2D3);
+            queueRawPatternSliceDma(lbz2UpperBgData, 0, 0x200, 0x2D3);
             return;
         }
 
-        applyRawPatternSliceToLevel(lbz2LowerBgData, 0, 0x200, 0x2C3);
+        queueRawPatternSliceDma(lbz2LowerBgData, 0, 0x200, 0x2C3);
         if (delta < 0x40) {
             applyLbz2DynamicWaterline(lbz2WaterlineAboveSourceData, (-delta + 0x40) << 6, 0x2D3);
         } else {
-            applyRawPatternSliceToLevel(lbz2WaterlineAboveData, 0, 0x200, 0x2D3);
+            queueRawPatternSliceDma(lbz2WaterlineAboveData, 0, 0x200, 0x2D3);
         }
     }
 
@@ -1608,7 +1620,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             System.arraycopy(sourceData, sourceIndexA, composed, i << 2, 4);
             System.arraycopy(sourceData, sourceIndexB, composed, 0x100 + (i << 2), 4);
         }
-        applyRawPatternBytesToLevel(composed, destTile);
+        queueRawPatternDma(composed, destTile);
     }
 
     private int computeLbz2WaterlineDelta() {
@@ -1831,10 +1843,10 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
                                          int secondSourceOffset, int firstWordCount,
                                          int secondWordCount, int destTile) {
         int firstByteCount = firstWordCount << 1;
-        applyRawPatternSliceToLevel(sourceData, primarySourceOffset, firstByteCount, destTile);
+        queueRawPatternSliceDma(sourceData, primarySourceOffset, firstByteCount, destTile);
         if (secondWordCount != 0) {
             int secondDestTile = destTile + (firstByteCount / Pattern.PATTERN_SIZE_IN_ROM);
-            applyRawPatternSliceToLevel(sourceData, secondSourceOffset, secondWordCount << 1, secondDestTile);
+            queueRawPatternSliceDma(sourceData, secondSourceOffset, secondWordCount << 1, secondDestTile);
         }
     }
 
@@ -1845,8 +1857,8 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
      * {@code phase & $38} to select one of eight split layouts from
      * {@code word_27C9C}, and then DMA-copies one or two word-count segments
      * from {@code ArtUnc_AniCNZ__6} into VRAM tile {@code $308+}. The engine
-     * mirrors that by copying raw pattern slices into the level pattern buffer
-     * so the graph can own CNZ's direct-DMA destination range.
+     * queues those raw pattern slices for the next VBlank publication so the
+     * graph can own CNZ's direct-DMA destination range.
      */
     private void updateCnzBackgroundTiles() {
         if (cnzBgData == null) {
@@ -1861,10 +1873,10 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         int firstWordCount = CNZ_DMA_WORD_COUNTS[pairIndex];
         int secondWordCount = CNZ_DMA_WORD_COUNTS[pairIndex + 1];
 
-        applyRawPatternSliceToLevel(cnzBgData, primarySourceOffset, firstWordCount << 1, 0x308);
+        queueRawPatternSliceDma(cnzBgData, primarySourceOffset, firstWordCount << 1, 0x308);
         if (secondWordCount != 0) {
             int secondDestTile = 0x308 + ((firstWordCount << 1) / Pattern.PATTERN_SIZE_IN_ROM);
-            applyRawPatternSliceToLevel(cnzBgData, baseSourceOffset, secondWordCount << 1, secondDestTile);
+            queueRawPatternSliceDma(cnzBgData, baseSourceOffset, secondWordCount << 1, secondDestTile);
         }
     }
 
@@ -1882,13 +1894,13 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         int firstWordCount = SOZ1_SPLIT_WORD_COUNTS[splitIndex];
         int secondWordCount = SOZ1_SPLIT_WORD_COUNTS[splitIndex + 1];
 
-        applyRawPatternSliceToLevel(soz1BgData, mainOffset, firstWordCount << 1, 0x330);
+        queueRawPatternSliceDma(soz1BgData, mainOffset, firstWordCount << 1, 0x330);
         if (secondWordCount != 0) {
             int secondDestTile = 0x330 + ((firstWordCount << 1) / Pattern.PATTERN_SIZE_IN_ROM);
-            applyRawPatternSliceToLevel(soz1BgData, baseOffset, secondWordCount << 1, secondDestTile);
+            queueRawPatternSliceDma(soz1BgData, baseOffset, secondWordCount << 1, secondDestTile);
         }
 
-        applyRawPatternSliceToLevel(soz1Bg2Data, phase * 0x0C0, 0x0C0, 0x33C);
+        queueRawPatternSliceDma(soz1Bg2Data, phase * 0x0C0, 0x0C0, 0x33C);
     }
 
     private void ensureHczPatternCapacity() {
@@ -2416,7 +2428,11 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         }
         // Scalar state packed into extra blob (53 bytes: 1 bool + 13 ints)
         byte[] publicationState = aniPlcPublications.capture(this::presentedAniPlcPattern);
-        java.nio.ByteBuffer buf = java.nio.ByteBuffer.allocate(SCALAR_BLOB_BYTES + publicationState.length);
+        // AnimateTiles_Pachinko composes the background in Chunk_table+$7000 over four passes
+        // before loc_28610 queues it (sonic3k.asm:55291-55384); that RAM is part of the state.
+        int pachinkoBytes = pachinkoScratch != null ? pachinkoScratch.length : 0;
+        java.nio.ByteBuffer buf = java.nio.ByteBuffer.allocate(
+                SCALAR_BLOB_BYTES + 4 + pachinkoBytes + publicationState.length);
         buf.put((byte) (firstTreeApplied ? 1 : 0));
         buf.putInt(lastHcz1WaterlineDelta);
         buf.putInt(lastHcz2SmallBgLineValue);
@@ -2433,6 +2449,10 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         buf.putInt(0); // retired slot: the Gumball art index now derives from the camera
         buf.putInt(lastLrzBg1Phase);
         buf.putInt(lastLrzBg2Phase);
+        buf.putInt(pachinkoBytes);
+        if (pachinkoBytes > 0) {
+            buf.put(pachinkoScratch);
+        }
         buf.put(publicationState);
         return new com.openggf.game.rewind.snapshot.PatternAnimatorSnapshot(
                 sc,
@@ -2475,8 +2495,15 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
                 scalarEnd = SCALAR_BLOB_BYTES;
             }
             if (extra.length > scalarEnd) {
+                int pachinkoBytes = buf.getInt();
+                if (pachinkoBytes != (pachinkoScratch != null ? pachinkoScratch.length : 0)) {
+                    throw new IllegalStateException("Pachinko composition buffer size mismatch");
+                }
+                if (pachinkoBytes > 0) {
+                    buf.get(pachinkoScratch);
+                }
                 aniPlcPublications.restore(
-                        java.util.Arrays.copyOfRange(extra, scalarEnd, extra.length),
+                        java.util.Arrays.copyOfRange(extra, buf.position(), extra.length),
                         this::publishAniPlcPayload);
             } else {
                 aniPlcPublications.clear();

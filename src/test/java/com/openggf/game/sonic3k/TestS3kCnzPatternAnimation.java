@@ -103,11 +103,13 @@ class TestS3kCnzPatternAnimation {
 
         state.publishDeformOutputs(0x00, 0x00);
         animator.updateCnzBackgroundTilesForGraph();
+        animator.publishAniPlcAtVBlank();
         byte[] phaseZero = snapshotRange(level, 0x308, 0x327);
 
         for (int phase = 1; phase < 0x40; phase++) {
             state.publishDeformOutputs(phase, 0x00);
             animator.updateCnzBackgroundTilesForGraph();
+            animator.publishAniPlcAtVBlank();
             byte[] shifted = snapshotRange(level, 0x308, 0x327);
             if (!Arrays.equals(phaseZero, shifted)) {
                 return;

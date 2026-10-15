@@ -152,12 +152,14 @@ class TestS3kLbzPatternAnimation {
         assertNotNull(level, "Level must be loaded");
 
         animator.update();
+        publishQueuedPatternsAtOrdinaryVBlank();
         TileRange scrollTiles = new TileRange(0x2E3, 0x2E4);
         byte[] phaseZero = snapshotRange(level, scrollTiles.startTile(), scrollTiles.endTileInclusive());
 
         fixture.camera().setX((short) 0x20);
         state.setLbz2RideAnimatedTileGateActive(true);
         animator.update();
+        publishQueuedPatternsAtOrdinaryVBlank();
 
         assertTrue(state.isLbz2RideAnimatedTileGateActive(),
                 "Anim_Counters+$F stays set after Obj_LBZ2RobotnikShip starts the ride");
@@ -166,6 +168,7 @@ class TestS3kLbzPatternAnimation {
                 "Anim_Counters+$F skips the LBZ2 scroll-tile upload while the gate remains set");
 
         animator.update();
+        publishQueuedPatternsAtOrdinaryVBlank();
         assertArrayEquals(phaseZero,
                 snapshotRange(level, scrollTiles.startTile(), scrollTiles.endTileInclusive()),
                 "the LBZ2 scroll-tile upload stays gated on later frames while Anim_Counters+$F is set");
@@ -173,6 +176,7 @@ class TestS3kLbzPatternAnimation {
         state.setLbz2RideAnimatedTileGateActive(false);
         state.publishLbz2DeformOutputs(0, 0x000F, 0);
         animator.update();
+        publishQueuedPatternsAtOrdinaryVBlank();
 
         byte[] afterUngatedFrame = snapshotRange(level, scrollTiles.startTile(), scrollTiles.endTileInclusive());
         if (Arrays.equals(phaseZero, afterUngatedFrame)) {
@@ -194,6 +198,7 @@ class TestS3kLbzPatternAnimation {
 
         state.publishLbz2DeformOutputs(1, 0, 0);
         animator.update();
+        publishQueuedPatternsAtOrdinaryVBlank();
 
         byte[] waterlineAbove = getByteArrayField(animator, "lbz2WaterlineAboveData");
         byte[] upperBg = getByteArrayField(animator, "lbz2UpperBgData");
@@ -243,6 +248,7 @@ class TestS3kLbzPatternAnimation {
 
         for (int i = 0; i < maxFrames; i++) {
             animator.update();
+            publishQueuedPatternsAtOrdinaryVBlank();
             for (int rangeIndex = 0; rangeIndex < ranges.length; rangeIndex++) {
                 if (changed[rangeIndex]) {
                     continue;

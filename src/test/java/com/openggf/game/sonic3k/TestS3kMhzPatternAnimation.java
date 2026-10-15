@@ -186,12 +186,14 @@ class TestS3kMhzPatternAnimation {
         state.publishDeformOutputs(0x0000, 0x0000, 0x0000);
         animator.updateMhzBackgroundLayer1ForGraph();
         animator.updateMhzBackgroundLayer2ForGraph();
+        animator.publishAniPlcAtVBlank();
         byte[] phaseZero = snapshotRange(level, 0x1B8, 0x1F4);
 
         for (int phase = 1; phase < 0x40; phase++) {
             state.publishDeformOutputs(0x0000, phase, phase);
             animator.updateMhzBackgroundLayer1ForGraph();
             animator.updateMhzBackgroundLayer2ForGraph();
+            animator.publishAniPlcAtVBlank();
             byte[] shifted = snapshotRange(level, 0x1B8, 0x1F4);
             if (!Arrays.equals(phaseZero, shifted)) {
                 return;

@@ -189,47 +189,6 @@ class TestSonic3kPatternAnimatorRewindSnapshot {
         assertEquals(1024, restored[9]);
     }
 
-    @Test
-    void gumballTilesMatchRomThroughWrapAndRewindWithReusedScratch() throws Exception {
-        RomByteReader reader = RomByteReader.fromRom(
-                com.openggf.tests.TestEnvironment.currentRom());
-        TestLevel level = new TestLevel(1024);
-        Sonic3kPatternAnimator anim = new Sonic3kPatternAnimator(
-                reader, level, Sonic3kZoneIds.ZONE_GUMBALL, 0, true);
-        PatternAnimatorSnapshot initial = anim.capture();
-        Field sourceField = Sonic3kPatternAnimator.class.getDeclaredField("gumballAniData");
-        sourceField.setAccessible(true);
-        byte[] source = (byte[]) sourceField.get(anim);
-        Field scratchField = Sonic3kPatternAnimator.class.getDeclaredField("rawTileScratchBytes");
-        scratchField.setAccessible(true);
-        byte[] scratch = (byte[]) scratchField.get(anim);
-
-        for (int frame = 1; frame <= 33; frame++) {
-            Arrays.fill(scratch, (byte) 0xFF);
-            anim.update();
-            assertGumballPixels(level, source, frame & 0x1F);
-            assertSame(scratch, scratchField.get(anim));
-        }
-        anim.restore(initial);
-        Arrays.fill(scratch, (byte) 0xA5);
-        anim.update();
-        assertGumballPixels(level, source, 1);
-    }
-
-    private static void assertGumballPixels(TestLevel level, byte[] source, int phase) {
-        for (int tile = 0; tile < 4; tile++) {
-            Pattern pattern = level.getPattern(0x54 + tile);
-            for (int y = 0; y < 8; y++) {
-                for (int x = 0; x < 8; x++) {
-                    int packed = source[(phase * 4 + tile * 32 + y * 4 + x / 2) % 256] & 0xFF;
-                    int expected = (x & 1) == 0 ? packed >>> 4 : packed & 0xF;
-                    assertEquals(expected, pattern.getPixel(x, y),
-                            "phase=" + phase + " tile=" + tile + " x=" + x + " y=" + y);
-                }
-            }
-        }
-    }
-
     // ===== Helpers =====
 
     private static Sonic3kPatternAnimator buildAnimator(int zone, int act) throws IOException {

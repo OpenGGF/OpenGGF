@@ -181,6 +181,40 @@ class TestS3kSlotPresentationParity {
                 "Level: still runs Pal_FadeToBlack (sonic3k.asm:7504, 7523, 5042-5051) after the 20 goal passes");
     }
 
+    @Test
+    void goalWindDownKeepsTheCageOrbitingThePlayerForTheMachinePlane() {
+        HeadlessTestFixture fixture = enterSlots();
+        S3kSlotBonusStageRuntime runtime = activeRuntime();
+        fixture.stepIdleFrames(4);
+        // A goal far from the stage centre, as in the 2026-10-15 native still (player $572,$338).
+        AbstractPlayableSprite player = GameServices.camera().getFocusedSprite();
+        player.setCentreX((short) 0x572);
+        player.setCentreY((short) 0x338);
+        runtime.slotPlayerRuntimeForTest().resetSlotOrigin(player);
+        runtime.startGoalExitForTest();
+        var controller = runtime.stageController();
+        var playerRuntime = runtime.slotPlayerRuntimeForTest();
+        for (int iteration = 1; iteration <= 40; iteration++) {
+            fixture.stepIdleFrames(1);
+            // Obj_SlotBonus loc_4BF9A (sonic3k.asm:99324-99348) runs in every Process_Sprites
+            // pass after the player's loc_4BC1E rotation step: it rotates ($460,$430) about
+            // Player_1 by Stat_table&$FC and writes Events_bg+$00/$02, which Slots_ScreenEvent
+            // (sonic3k.asm:119061-119133) follows with the machine plane.
+            int angle = controller.angle() & 0xFC;
+            int px = playerRuntime.slotOriginX() >> 16;
+            int py = playerRuntime.slotOriginY() >> 16;
+            int dx = 0x460 - px;
+            int dy = 0x430 - py;
+            int sin = com.openggf.physics.TrigLookupTable.sinHex(angle);
+            int cos = com.openggf.physics.TrigLookupTable.cosHex(angle);
+            var visual = runtime.slotVisualState();
+            assertEquals((short) ((((dx * cos) - (dy * sin)) >> 8) + px), (short) visual.eventsBgX(),
+                    "Events_bg+$00 at wind-down iteration " + iteration);
+            assertEquals((short) ((((dx * sin) + (dy * cos)) >> 8) + py), (short) visual.eventsBgY(),
+                    "Events_bg+$02 at wind-down iteration " + iteration);
+        }
+    }
+
     private static int[][] snapshot(Level level) {
         int[][] words = new int[4][16];
         for (int line = 0; line < 4; line++) {

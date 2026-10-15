@@ -179,12 +179,14 @@ class TestS3kLrzPatternAnimation {
         lrzState().publishDeformationWords(0, 0, 0, 1);
         assertEquals(0, animator.computeLrzBackgroundLayer1Phase());
         animator.updateLrzBackgroundLayer1ForGraph();
+        animator.publishAniPlcAtVBlank();
         assertArrayEquals(before, tileBytes(level, 0x320, 0x24),
                 "a cleared Anim_Counters+1 matches phase 0, so nothing is uploaded");
 
         lrzState().publishDeformationWords(0, 0, 0, 2);
         assertEquals(1, animator.computeLrzBackgroundLayer1Phase());
         animator.updateLrzBackgroundLayer1ForGraph();
+        animator.publishAniPlcAtVBlank();
         assertFalse(java.util.Arrays.equals(before, tileBytes(level, 0x320, 0x24)),
                 "the next differing phase does upload");
     }
@@ -218,6 +220,7 @@ class TestS3kLrzPatternAnimation {
             fixture.camera().setYCopy((short) 0x0320);
             handler.update(lines, cameraX, 0x0320, step, act);
             animator.update();
+            animator.publishAniPlcAtVBlank(); // loc_282D0's Add_To_DMA_Queue drains at the next VInt
 
             byte[] channel0 = tileBytes(level, 0x320, 0x24);
             byte[] channel1 = tileBytes(level, 0x344, 0x0C);
@@ -250,10 +253,12 @@ class TestS3kLrzPatternAnimation {
                 state.publishDeformationWords(0, 0, 0, phase + 1);
                 assertEquals(phase, animator.computeLrzBackgroundLayer1Phase());
                 animator.updateLrzBackgroundLayer1ForGraph();
+                animator.publishAniPlcAtVBlank();
             } else {
                 state.publishDeformationWords(0, 0, phase, 0);
                 assertEquals(phase, animator.computeLrzBackgroundLayer2Phase());
                 animator.updateLrzBackgroundLayer2ForGraph();
+                animator.publishAniPlcAtVBlank();
             }
 
             int frameOffset = (phase & 7) * frameBytes;

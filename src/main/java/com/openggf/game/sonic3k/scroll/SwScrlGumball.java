@@ -44,6 +44,9 @@ public class SwScrlGumball extends AbstractZoneScrollHandler {
     /** ROM H40 display: 40 cells wide, column pairs of 16px each (20 entries). */
     private static final int COLUMN_COUNT = 20;
 
+    /** ROM Gumball_Deform: {@code move.w #$FFE0,(Camera_X_pos_BG_copy).w}. */
+    private static final int BG_CAMERA_X = (short) 0xFFE0;
+
     /** ROM Gumball_SetUpVScroll: d1 = cameraY + $C8 - machineY_saved. */
     private static final int Y_BASE_OFFSET = 0xC8;
 
@@ -91,10 +94,12 @@ public class SwScrlGumball extends AbstractZoneScrollHandler {
         resetScrollTracking();
         composer.reset();
 
-        // Standard flat deformation: FG tied to camera, BG at 1/2 vertical speed
-        // (ROM Gumball_Deform at s3.asm:76172 sets Camera_Y_pos_BG_copy = cameraY/2).
+        // Flat deformation: FG tied to camera; Gumball_Deform (s3.asm:76172) pins
+        // Camera_X_pos_BG_copy at $FFE0 and sets Camera_Y_pos_BG_copy = cameraY/2, and
+        // PlainDeformation writes the negated BG copy to every line (native plane-B
+        // H-scroll $0020 at camera X $60, 2026-10-15 gumball row 250 still).
         short fgScroll = negWord(cameraX);
-        short bgScroll = negWord(cameraX);
+        short bgScroll = negWord(BG_CAMERA_X);
         composer.setVscrollFactorBG(asrWord(cameraY, 1));
         vscrollFactorFG = (short) cameraY;
 
