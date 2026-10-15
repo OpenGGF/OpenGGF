@@ -17,6 +17,8 @@ public final class ChaosTitle implements TitleScreenProvider {
         else stock.update(input);
     }
     @Override public void draw() {stock.draw();}
+    /** The title owns its modal; this path draws whether or not a gameplay world exists behind the title. */
+    @Override public void drawOverlay(com.openggf.mods.ui.PixelCanvas canvas) {if(offered && menu.title())menu.draw(canvas);}
     @Override public void setClearColor() {stock.setClearColor();}
     @Override public void reset() {stock.reset();menu.leaveTitle();offered=exiting=false;}
     @Override public State getState() {return exiting?State.EXITING:offered?State.ACTIVE:stock.getState();}

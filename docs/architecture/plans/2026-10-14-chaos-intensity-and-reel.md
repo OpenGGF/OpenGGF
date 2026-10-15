@@ -290,3 +290,121 @@ repair preserves the colours rather than relabelling or regenerating footage.
 No trace frontier moved, and no timing optimization or measurement acceptance
 is claimed. Required S3K route/load checks passed on the composed tree; complete
 act-route breadth and rebuilt native-image bundles remain separate obligations.
+
+## 2026-10-15 player-facing polish
+
+Base `7277cef4040af3ae95d86a794bce7f75a16cc483` on `develop`, worktree
+`feature/ai-sonic3k-chaos-polish`. The user asked for an Opus polish pass on the
+mod itself while a separate creative lead rebuilt the promo. Effect identities,
+numbers, names, severities, durations, defaults, rarity tickets and the settings
+format are unchanged; all 105 entries stay visible and configurable.
+
+Audit of the shipped UI (earlier reel captures and code) found: typographic
+dashes and curly apostrophes rendering as `?` (CompactFont has no such glyphs);
+engineering-intent descriptions truncated to one line; the Chaos countdown drawn
+over native data select, because the observer keeps its last observation there;
+host lease states `Active`/`Pending native service` printed as raw text; the
+GameSound `ERROR` cue silent in S3K (no table entry); and the title modal drawn
+only by the gameplay-world overlay pass, not by the title provider.
+
+Changes, all in `examples/sonic3k-chaos-mode`:
+
+- Player-facing copy for all 105 descriptions (the design intent stays in the
+  [shortlist](../research/2026-10-13-chaos-effect-shortlist.md)); a model check
+  limits copy to CompactFont glyphs and two detail-card lines at 320 pixels.
+- Configuration: framed lists with position counters, scroll bars and severity
+  pips, a detail card with category/severity/duration and wrapped description,
+  value arrows, a search caret, filtered **Add/Remove shown**, Left/Right cycling
+  settings→Available→Selected, and hints from `MenuInput` labels. Pause home shows
+  the next draw and active effects. Art not yet prepared is no longer reported as
+  "unavailable"; only a missing or rejected decode is.
+- HUD: a top bar fills towards the next draw (genre convention), the panel shows
+  per-effect remaining bars, an activation card names the effect with its first
+  description sentence, live `Task:` prompts show progress, and receipts name their
+  effect (captured `Launch` history). The HUD requires an ACTIVE presentation in
+  the current visit. The Starpost cue marks activation; Skid replaces silent ERROR.
+- Sidegames: framed boards with titles, scores, draining timers and controls,
+  a Monitor Stack landing ghost, and score/breather or quit receipts.
+
+Card timing reads the captured Chaos clock (`announcedAt`, `noticeUntil`), so
+pause, rewind and skipped draws agree; menu animation uses a menu-input age.
+Captured `Snapshot` gains `noticeEffect`, `announced`, `announcedAt` and a
+16-entry `launches` history; boundary and missing-snapshot reset clear them.
+Packaged mods may hold only literal static constants, so lists are split strings.
+
+Rejected after captures: a chat box under the native HUD, which every activation
+card covered (chat now sits in a narrow left column below the card zone); generic
+lease states as prompt cards; a 260-pixel card text cap that wrapped short
+taglines. List scrolling is adjusted only by input; drawing derives the visible
+window without changing menu state.
+
+Verification on the committed sources (`fbb656c96`), Java 25 and the verified
+locked-on S3K ROM:
+
+```sh
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestSonic3kChaosModeExampleModels,TestSonic3kChaosModeExampleArt' \
+  "-Ds3k.rom.path=$OPENGGF_ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+18 tests passed, zero failures/errors/skips. New checks cover glyph-safe copy,
+filtered Add shown through real menu input at 320/400 widths, the HUD's
+setup-screen gate, one announcement and named receipt across rewind replay, a
+native task prompt, and the title modal drawn once. An earlier run of the same
+class failed SDK packaging with ten `STATIC_STATE_UNSUPPORTED` findings (static
+arrays, a regex `Pattern` and a lambda); those became literal constants and
+inline parsing. The SDK-packaged jar (`3dec3542…14d3ad`, zero findings) drove
+owned offscreen surfaceless-EGL `GameplayCaptureTool` captures with interactive
+pacing: the title tour through native data select into AIZ1, HUD/banner/prompt/chat
+at 400, the pause menu at 320, Monitor Stack and a Start-cancelled Ring Snake.
+Effect activation timing is unchanged; a five-second interval still fires at
+presentation 600. No smoke run, desktop window or Windows bundle is claimed here.
+
+### Repair round after static review
+
+Root review found the configuration search editor ending on gameplay-mapped input
+(inherited from the base menu). A new real-`InputHandler` check with the shipped
+bindings reproduced all three cases on `48fbf77b3`: Space (P1 A) appended a space and
+finished typing (`'ice '`), a held Backspace (Start) deleted once and finished
+(`'ice'`), and letters rebound to C/B finished then reopened the editor without typing.
+The editor now uses the existing `MenuInput.textBack`/`textAccept` (Esc, Enter, keypad
+Enter, physical pad), so typed keys stay text and Backspace repeats; mapped confirm/back
+outside the editor and pad controls are unchanged, and entering configuration clears a
+stale editing flag. Logical replay input cannot finish a search edit, as with the
+engine's own text editors; the browser recipe never enters the editor.
+
+Empty lists now say "All selected" or "Nothing selected" when every match sits in
+the other list, and "No matches" only when the search/filter matches nothing; before,
+a VISUAL filter with every visual effect selected read "No matches". The detail card
+follows the same distinction.
+
+Validation scope (root, `run_categories.py --base 7277cef40` at `48fbf77b3`): the
+change-based plan selects 3,287 smoke classes plus guards only because example and
+prose paths are unclassified; no engine production, Mod API, build or runtime source
+changed. Proportionate validation therefore uses the Chaos example model and ROM art
+checks, the targeted search/empty-list regressions, zero SDK packaging findings and
+offscreen title/menu/HUD/receipt captures, not the broad smoke selection or full suite.
+`TestMenuInput` is not rerun: `MenuInput` is unchanged and only consumed.
+
+Verification on the repaired sources, Java 25 and the verified locked-on S3K ROM:
+
+```sh
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestSonic3kChaosModeExampleModels,TestSonic3kChaosModeExampleArt' \
+  "-Ds3k.rom.path=$OPENGGF_ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+20 tests passed (19 model, 1 ROM art), zero failures/errors/skips; the reproduction
+run of the new search check alone failed on the unfixed menu with the three cases above.
+
+Final package and browser take on `5a611d677` (clean tree), each step under one
+exclusive shared-queue slot whose children inherit the leases: Maven `compile
+dependency:build-classpath`, `javac --release 25` over the example sources, and
+`GgfModCli package --warnings error` (0 findings), giving `sonic3k-chaos-mode.jar`
+SHA-256 `ccff0b00987f63c48d8bb3d5f55a3bb707aeb016fa27662c592c95daee168ec9`. The
+browser-final take reuses the browser recipe unchanged (all 105 selected, VISUAL
+filter, pad-only input, 400x224, 1300 frames, surfaceless EGL, interactive pacing)
+in a new namespace; the earlier take and its jar (`3dec3542…`) are preserved. Against
+the earlier take only the Available empty label (from frame 750) and the detail card
+(from about frame 1210) differ; other sampled frames and the audio are identical.
+Frames 750–1290 remain the intended browser window.

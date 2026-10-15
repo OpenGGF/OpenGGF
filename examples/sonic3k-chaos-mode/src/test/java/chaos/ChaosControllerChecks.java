@@ -1,12 +1,16 @@
 package chaos;
 
+import com.openggf.InputBindingFactory;
 import com.openggf.audio.GameSound;
+import com.openggf.configuration.SonicConfiguration;
+import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.*;
 import com.openggf.game.*;
 import com.openggf.mods.ModStorage;
 import com.openggf.mods.mutators.*;
 import com.openggf.mods.state.SnapshotRandom;
 import java.util.*;
+import static org.lwjgl.glfw.GLFW.*;
 
 /** Exercises controller callbacks against a strict detached lease port, never a substitute world. */
 public final class ChaosControllerChecks {
@@ -173,6 +177,9 @@ public final class ChaosControllerChecks {
         input.setLogicalOverride(LogicalInputSnapshot.ofPlayers(PlayerInputState.of(0,0,1,1,false,false),PlayerInputState.neutral()));
         memory.writable=false;title.update(input);
         check(!title.isExiting() && !preferences.saved().enabled() && !memory.files.containsKey("settings.txt"),"Failed save launched or changed admitted preferences");
+        var modal=new Canvas(320,224);title.drawOverlay(modal);
+        var observer=new Canvas(320,224);controller.drawOverlay(observer,observe(1,1,GameplayObservation.Phase.ACTIVE));
+        check(modal.draws>100 && observer.draws==0,"Title modal must be drawn once, by the title provider");
         memory.writable=true;title.update(input);
         check(title.isExiting() && preferences.saved().enabled() && memory.files.containsKey("settings.txt"),"Choice did not save before exit");
         check(title.consumeExitAction()==TitleScreenProvider.TitleScreenAction.ONE_PLAYER,"Launch bypasses stock data-select route");
@@ -250,6 +257,152 @@ public final class ChaosControllerChecks {
         check(controller.capture().quietUntil()==899,"Active terminal status lost receipt deduplication");
         controller.onBoundary(observe(612,612,GameplayObservation.Phase.TRANSITION),port);
         check(controller.capture().terminalSeen().isEmpty() && controller.capture().quietUntil()==0,"Boundary retained terminal outcome history");
+    }
+    /** CPU canvas that rejects any rectangle outside the logical viewport. */
+    private static final class Canvas implements com.openggf.mods.ui.PixelCanvas {
+        final int width,height;int draws;final int[] pixels;
+        Canvas(int width,int height) {this.width=width;this.height=height;pixels=new int[width*height];}
+        @Override public int width() {return width;}
+        @Override public int height() {return height;}
+        @Override public void fill(int x,int y,int w,int h,int argb) {
+            draws++;check(x>=0 && y>=0 && w>0 && h>0 && x+w<=width && y+h<=height,"UI draw escaped "+width+"x"+height+": "+x+","+y+" "+w+"x"+h);
+            for(int row=y;row<y+h;row++)Arrays.fill(pixels,row*width+x,row*width+x+w,argb);
+        }
+    }
+    private static void press(ChaosMenu menu,InputHandler input,int direction,int action) {
+        input.setLogicalOverride(LogicalInputSnapshot.ofPlayers(PlayerInputState.of(direction,direction,action,action,false,false),PlayerInputState.neutral()));
+        menu.handleInput(input);input.update();
+        input.setLogicalOverride(LogicalInputSnapshot.neutral());menu.handleInput(input);input.update();
+    }
+    public static void menuAddsOnlyShownEffectsAndDrawsInsideViewports() {
+        var catalogue=new ChaosCatalog();var controller=controller(catalogue,"bobble-head");var menu=controller.menu();var input=new InputHandler();
+        input.setLogicalOverride(LogicalInputSnapshot.ofPlayers(PlayerInputState.of(0,0,0,0,true,true),PlayerInputState.neutral()));
+        check(menu.handleInput(input) && menu.open() && menu.pausesGameplay(),"Start did not open the Chaos pause menu");input.update();
+        for(int width:new int[]{320,400})menu.draw(new Canvas(width,224));
+        press(menu,input,2,0);press(menu,input,0,1);
+        for(int n=0;n<3;n++)press(menu,input,2,0);
+        press(menu,input,8,0);press(menu,input,2,0);press(menu,input,0,1);
+        for(int width:new int[]{320,400}) {var canvas=new Canvas(width,224);menu.draw(canvas);check(canvas.draws>200,"Configuration lists were not drawn");}
+        press(menu,input,2,0);press(menu,input,2,0);press(menu,input,0,1);
+        press(menu,input,1,0);press(menu,input,0,1);
+        check(menu.consumeCommand()==com.openggf.game.LevelInputOverlay.Command.RESUME,"Resume did not request the host command");
+        var expected=new HashSet<String>(Set.of("bobble-head"));
+        catalogue.effects().stream().filter(e->e.category()==ChaosCatalog.Category.VISUAL).forEach(e->expected.add(e.id()));
+        check(controller.capture().schedule().settings().selected().equals(Set.of("bobble-head")),"Menu draft changed admitted settings before an observation callback");
+        var port=new Port(catalogue);controller.onPresentation(observe(1,1,GameplayObservation.Phase.PAUSED),port);
+        check(controller.capture().schedule().settings().selected().equals(expected),"Filtered add selected hidden effects or missed shown ones");
+    }
+    /** One live frame: the host refreshes physical input, the menu reads it, then the frame ends. */
+    private static void frame(ChaosMenu menu,InputHandler input) {input.refreshLogicalSnapshot();menu.handleInput(input);input.update();}
+    private static void tap(ChaosMenu menu,InputHandler input,int key,int codepoint) {
+        input.handleKeyEvent(key,GLFW_PRESS);if(codepoint!=0)MenuInput.handleCharEvent(input,codepoint);
+        frame(menu,input);input.handleKeyEvent(key,GLFW_RELEASE);frame(menu,input);
+    }
+    private static void type(ChaosMenu menu,InputHandler input,String text) {
+        for(char c:text.toCharArray())tap(menu,input,c==' '?GLFW_KEY_SPACE:GLFW_KEY_A+(c-'a'),c);
+    }
+    private static void button(ChaosMenu menu,InputHandler input,boolean[] pad,int button) {
+        pad[button]=true;frame(menu,input);pad[button]=false;frame(menu,input);
+    }
+    public static void searchEditorTypesFreelyAndKeepsMenuControls() {
+        var menu=controller(new ChaosCatalog(),"bobble-head").menu();
+        var config=SonicConfigurationService.createStandalone();var pad=new boolean[GLFW_GAMEPAD_BUTTON_LAST+1];
+        // The shipped gameplay bindings, pinned: Space is P1 A and Backspace is Start.
+        config.setConfigValue(SonicConfiguration.P1_A,GLFW_KEY_SPACE);config.setConfigValue(SonicConfiguration.START,GLFW_KEY_BACKSPACE);
+        config.setConfigValue(SonicConfiguration.CONTROLLER_ENABLED,true);config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER1,"auto");
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER2,"none");
+        var input=new InputHandler(InputBindingFactory.supplier(config),()->List.of(GamepadStateSource.DeviceState.connected(0,"Xbox test pad",pad,0,0)));
+        frame(menu,input);
+        tap(menu,input,GLFW_KEY_BACKSPACE,0);check(menu.open(),"Start did not open the Chaos pause menu");
+        tap(menu,input,GLFW_KEY_DOWN,0);tap(menu,input,GLFW_KEY_ENTER,0);
+        tap(menu,input,GLFW_KEY_DOWN,0);tap(menu,input,GLFW_KEY_DOWN,0);tap(menu,input,GLFW_KEY_ENTER,0);
+        check(menu.typing() && menu.query().isEmpty(),"Enter on Search did not start typing");
+        var failures=new ArrayList<String>();
+        type(menu,input,"ice cap");
+        if(!menu.typing() || !menu.query().equals("ice cap"))failures.add("Space ended a multiword search: '"+menu.query()+"' typing="+menu.typing());
+        if(!menu.typing())tap(menu,input,GLFW_KEY_ENTER,0);
+        String before=menu.query();
+        input.handleKeyEvent(GLFW_KEY_BACKSPACE,GLFW_PRESS);
+        for(int n=0;n<30;n++)frame(menu,input);
+        input.handleKeyEvent(GLFW_KEY_BACKSPACE,GLFW_RELEASE);frame(menu,input);
+        // Text repeat deletes on frames 0, 24 and 28 of the 30-frame hold.
+        String expected=before.substring(0,Math.max(0,before.length()-3));
+        if(!menu.typing() || !menu.query().equals(expected))failures.add("Held Backspace did not repeat delete: '"+menu.query()+"' typing="+menu.typing());
+        if(!menu.typing())tap(menu,input,GLFW_KEY_ENTER,0);
+        config.setConfigValue(SonicConfiguration.P1_B,GLFW_KEY_O);config.setConfigValue(SonicConfiguration.P1_C,GLFW_KEY_D);
+        before=menu.query();type(menu,input,"do");
+        if(!menu.typing() || !menu.query().equals(before+"do"))failures.add("Letters bound to B/C ended typing: '"+menu.query()+"' typing="+menu.typing());
+        check(failures.isEmpty(),String.join("; ",failures));
+        String query=menu.query();
+        tap(menu,input,GLFW_KEY_ENTER,0);check(!menu.typing() && menu.query().equals(query),"Enter did not finish typing");
+        tap(menu,input,GLFW_KEY_X,'x');check(menu.query().equals(query),"Text reached a finished search");
+        tap(menu,input,GLFW_KEY_SPACE,' ');check(menu.typing() && menu.query().equals(query),"Mapped A no longer opens Search, or its space was typed");
+        tap(menu,input,GLFW_KEY_ESCAPE,0);check(!menu.typing() && menu.open(),"Esc did not just finish typing");
+        button(menu,input,pad,GLFW_GAMEPAD_BUTTON_A);check(menu.typing(),"Pad A did not reopen Search after Esc");
+        button(menu,input,pad,GLFW_GAMEPAD_BUTTON_A);check(!menu.typing() && menu.query().equals(query),"Pad A did not finish typing");
+        button(menu,input,pad,GLFW_GAMEPAD_BUTTON_A);button(menu,input,pad,GLFW_GAMEPAD_BUTTON_B);
+        check(!menu.typing() && menu.open() && menu.query().equals(query),"Pad B did not just finish typing");
+        button(menu,input,pad,GLFW_GAMEPAD_BUTTON_A);tap(menu,input,GLFW_KEY_KP_ENTER,0);
+        check(!menu.typing() && menu.query().equals(query),"Keypad Enter did not finish typing");
+    }
+    public static void emptyListsSayAllSelectedOrNoMatches() {
+        var menu=controller(new ChaosCatalog(),"bobble-head").menu();var input=new InputHandler();
+        input.setLogicalOverride(LogicalInputSnapshot.ofPlayers(PlayerInputState.of(0,0,0,0,true,true),PlayerInputState.neutral()));
+        menu.handleInput(input);input.update();
+        press(menu,input,2,0);press(menu,input,0,1);
+        for(int n=0;n<3;n++)press(menu,input,2,0);
+        press(menu,input,8,0);press(menu,input,2,0);press(menu,input,0,1);
+        check(menu.emptyLabel(false).equals("All selected") && menu.emptyLabel(true).isEmpty(),
+                "Every VISUAL effect selected, but Available said '"+menu.emptyLabel(false)+"'");
+        press(menu,input,2,0);press(menu,input,0,1);
+        check(menu.emptyLabel(true).equals("Nothing selected") && menu.emptyLabel(false).isEmpty(),
+                "Every VISUAL effect removed, but Selected said '"+menu.emptyLabel(true)+"'");
+        for(int n=0;n<3;n++)press(menu,input,1,0);
+        press(menu,input,0,1);check(menu.typing(),"Search did not start typing");
+        for(char c:"zzzz".toCharArray())MenuInput.handleCharEvent(input,c);
+        menu.handleInput(input);input.update();
+        input.handleKeyEvent(GLFW_KEY_ENTER,GLFW_PRESS);menu.handleInput(input);input.update();input.handleKeyEvent(GLFW_KEY_ENTER,GLFW_RELEASE);
+        check(!menu.typing() && menu.query().equals("zzzz") && menu.emptyLabel(false).equals("No matches") && menu.emptyLabel(true).equals("No matches"),
+                "A search matching nothing did not say so in both lists");
+        press(menu,input,8,0);
+        for(int width:new int[]{320,400})menu.draw(new Canvas(width,224));
+    }
+    public static void hudWaitsForGameplayAndAnnouncesActivationOnce() {
+        var catalogue=new ChaosCatalog();var controller=controller(catalogue,"bobble-head");var port=new Port(catalogue);
+        controller.onPresentation(observe(0,0,GameplayObservation.Phase.SETUP),port);
+        var setup=new Canvas(320,224);controller.drawOverlay(setup,observe(0,0,GameplayObservation.Phase.ACTIVE));
+        check(setup.draws==0,"Chaos HUD drew over a setup screen before gameplay");
+        for(int n=1;n<600;n++)controller.onPresentation(observe(n,n,GameplayObservation.Phase.ACTIVE),port);
+        var waiting=new Canvas(320,224);controller.drawOverlay(waiting,observe(599,599,GameplayObservation.Phase.ACTIVE));
+        check(waiting.draws>0 && controller.capture().announced().isEmpty(),"HUD missing before the first effect");
+        int cues=port.cues;controller.onPresentation(observe(600,600,GameplayObservation.Phase.ACTIVE),port);
+        var announced=controller.capture();
+        check(announced.announced().equals("bobble-head") && announced.announcedAt()==600 && port.cues==cues+1
+                && announced.launches().equals(List.of(new ChaosController.Launch(1,"bobble-head"))),"Activation was not announced once");
+        for(int width:new int[]{320,400}) {
+            var banner=new Canvas(width,224);controller.drawOverlay(banner,observe(600,600,GameplayObservation.Phase.ACTIVE));
+            check(banner.draws>waiting.draws,"Activation banner did not draw");
+        }
+        for(int n=601;n<=610;n++)controller.onPresentation(observe(n,n,GameplayObservation.Phase.ACTIVE),port);
+        check(controller.capture().announcedAt()==600 && port.cues==cues+1,"Retained activation repeated its announcement");
+        port.results.put(1L,new TemporaryMutators.ActivationOutcome(1,"head","Failed: No qualified head art"));
+        controller.onPresentation(observe(611,611,GameplayObservation.Phase.ACTIVE),port);
+        var receipt=controller.capture();
+        check(receipt.notice().equals("Failed: No qualified head art") && receipt.noticeEffect().equals("bobble-head"),"Receipt lost its effect name");
+        controller.restore(announced);port.results.remove(1L);
+        for(int n=601;n<=610;n++)controller.onPresentation(observe(n,n,GameplayObservation.Phase.ACTIVE),port);
+        port.results.put(1L,new TemporaryMutators.ActivationOutcome(1,"head","Failed: No qualified head art"));
+        controller.onPresentation(observe(611,611,GameplayObservation.Phase.ACTIVE),port);
+        check(receipt.equals(controller.capture()) && port.cues==cues+1,"Rewind replay changed the announcement or receipt");
+        var drawn=new Canvas(320,224);controller.drawOverlay(drawn,observe(611,611,GameplayObservation.Phase.ACTIVE));
+        port.leases.put(1L,new TemporaryMutators.ActiveActivation(1,"head",Map.of(),0,30,false,"Task: Keep moving for two seconds (37/120)"));
+        controller.onPresentation(observe(612,612,GameplayObservation.Phase.ACTIVE),port);
+        var prompt=new Canvas(320,224);controller.drawOverlay(prompt,observe(612,612,GameplayObservation.Phase.ACTIVE));
+        check(prompt.draws>drawn.draws,"Native task prompt was not drawn above the receipt");
+        controller.drawOverlay(new Canvas(400,224),observe(612,612,GameplayObservation.Phase.ACTIVE));
+        controller.onBoundary(observe(613,613,GameplayObservation.Phase.TRANSITION),port);
+        var cleared=controller.capture();
+        check(cleared.announced().isEmpty() && cleared.launches().isEmpty() && cleared.noticeEffect().isEmpty(),"Boundary retained presentation history");
     }
     public static void sceneryUsesPreparedDonorsAndExcludesNativeZone() {
         var catalogue=new ChaosCatalog();var allowed=Set.of(0,1,6,11);
