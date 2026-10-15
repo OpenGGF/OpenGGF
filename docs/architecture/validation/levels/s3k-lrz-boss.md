@@ -549,3 +549,20 @@ load (14 live frames before the native 22-frame fade-out). Rows still red there 
 not fade timing and are owned elsewhere: the Knuckles act-2 restore at 37130 and the
 LRZ boss sidekick overlap parity at 47471 (rewind-snapshot rows) and solo Tails' SSZ1
 opening camera (behaviour row). No skips.
+
+### Wide boss movie retimed (2026-10-15)
+
+The 800px sibling was missed by the first retiming pass and still died at input
+42769 under the single fade owner. `FadeWindowRetimeTool` (same method, base Root
+ce571151d) found two owned frozen windows and verified one uninterrupted replay
+with no death. Test frame constants move by 11 at and after old 41116 and by 22 at
+and after old 50527 (the second window's start in the original movie).
+
+| Movie | Old SHA-256 | New SHA-256 | Windows `start:native→+inserted` | Frames | New full loads | Verified end |
+|---|---|---|---|---|---|---|
+| `lrz-boss-sonic-tails-cold-hpz-800.bk2` | `b269c788d6e8229fa6afed76bc031759d77f777bdbcb3d4ecd77a335bb90d3b1` | `5e99307ba7098dc7029a37ffca208641c400579b50ae9c0002b34cbbfb53782d` | 41116:23→+11 50538:22→+11 | 50681 | 24349, 41138, 50560 | 388,2796, 3 rings, zone 22/1 |
+
+`TestLrzWideBossColdRouteCapture` on the retimed movie (run `probe-new`, focused
+queued selector, S3K ROM, 0 skips) no longer dies; it stops at the first rewind
+window that diverges, input 42011 (old 42000), `touchResponseOverlap.sidekickEntries[0].paritySwapped`
+— the same rewind-snapshot row as the 320 sibling's 47471, owned by the rewind lane.

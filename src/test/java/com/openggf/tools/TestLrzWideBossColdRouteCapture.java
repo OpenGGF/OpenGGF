@@ -27,15 +27,15 @@ class TestLrzWideBossColdRouteCapture {
     void coldWideTeamClearsBossAndReleasesHiddenPalaceWithRepeatableWorld() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/lrz-boss-sonic-tails-cold-hpz-800.bk2"));
-        assertEquals(50659, movie.getFrameCount());
+        assertEquals(50681, movie.getFrameCount());
         var settings = new GameplayCaptureSession.Settings(800, "sonic", "tails", "off", null,
                 null, null, null, false, false, null, null, false, null, false);
         var spots = new TreeSet<Integer>();
-        for (int frame = 41400; frame <= 50200; frame += 200) spots.add(frame);
-        spots.addAll(Set.of(41370, 42200, 42250, 42540, 42960, 43880, 43920,
-                44020, 44080, 44600, 44670, 44840, 44860, 45240, 45340,
-                45430, 49060, 49160, 49190, 49300, 49340, 49540, 50040,
-                50340, 50420, 50480, 50550, 50600));
+        for (int frame = 41411; frame <= 50211; frame += 200) spots.add(frame);
+        spots.addAll(Set.of(41381, 42211, 42261, 42551, 42971, 43891, 43931,
+                44031, 44091, 44611, 44681, 44851, 44871, 45251, 45351,
+                45441, 49071, 49171, 49201, 49311, 49351, 49551, 50051,
+                50351, 50431, 50491, 50572, 50622));
         var checked = new HashSet<Integer>();
         boolean sawBoss = false, sawCapsule = false, sawResults = false, sawDefeat = false;
         long outgoingHistory = 0;
@@ -44,34 +44,34 @@ class TestLrzWideBossColdRouteCapture {
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 9, 0, settings);
             for (int frame = 0; frame < movie.getFrameCount(); frame++) {
-                if (frame == 50100) GameServices.configuration().setSessionOverride(
+                if (frame == 50111) GameServices.configuration().setSessionOverride(
                         SonicConfiguration.LIVE_REWIND_ENABLED, true);
                 session.step(movie.getFrame(frame)); drawing.afterStep(session);
                 assertFalse(session.player().getDead(), "death at input " + frame);
-                if (frame < 41370) continue;
+                if (frame < 41381) continue;
                 assertEquals(800, GameServices.camera().getWidth());
                 assertEquals(1, GameServices.sprites().getRegisteredSidekicks().size());
                 assertEquals(22, GameServices.level().getCurrentZone());
-                assertEquals(frame < 50538 ? 0 : 1, GameServices.level().getCurrentAct());
+                assertEquals(frame < 50560 ? 0 : 1, GameServices.level().getCurrentAct());
                 var manager = GameServices.level().getObjectManager();
                 var bosses = manager.activeObjectsOfType(LrzEndBossObjectInstance.class);
                 sawBoss |= !bosses.isEmpty();
                 sawCapsule |= !manager.activeObjectsOfType(LrzEndBossEggCapsule.class).isEmpty();
                 sawResults |= !manager.activeObjectsOfType(LrzEndBossEggCapsule.Results.class).isEmpty();
-                if (frame == 44853) assertEquals(14, bosses.getFirst().getCollisionProperty());
-                if (frame == 49177) {
+                if (frame == 44864) assertEquals(14, bosses.getFirst().getCollisionProperty());
+                if (frame == 49188) {
                     assertEquals(0, bosses.getFirst().getCollisionProperty());
                     sawDefeat = true;
                 }
-                if (frame == 44686) {
+                if (frame == 44697) {
                     assertEquals(ShieldType.FIRE, session.player().getShieldType(), "placed monitor supplies shield");
                     assertEquals(30, session.player().getRingCount());
                 }
-                if (frame >= 44686 && frame < 50538) {
+                if (frame >= 44697 && frame < 50560) {
                     assertFalse(session.player().isHurt(), "hurt in encounter/exit at " + frame);
                     assertEquals(ShieldType.FIRE, session.player().getShieldType());
                 }
-                if (frame >= 50100 && frame < 50538) outgoingHistory = Math.max(outgoingHistory,
+                if (frame >= 50111 && frame < 50560) outgoingHistory = Math.max(outgoingHistory,
                         SessionManager.getCurrentGameplayMode().getRewindController().currentFrame());
                 if (GameServices.level().getCurrentAct() == 1 && hpzLoad < 0) hpzLoad = frame;
                 if (!spots.contains(frame)) continue;
@@ -96,7 +96,7 @@ class TestLrzWideBossColdRouteCapture {
             drawing.checkpoint(session);
             assertEquals(spots, checked);
             assertTrue(sawBoss && sawDefeat && sawCapsule && sawResults, "real encounter publication chain");
-            assertEquals(50538, hpzLoad);
+            assertEquals(50560, hpzLoad);
             assertFalse(session.player().isObjectControlled());
             assertTrue(session.player().getCentreX() > 100, "ordinary movement after HPZ load");
             assertEquals(2796, session.player().getCentreY());

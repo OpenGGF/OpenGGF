@@ -1,6 +1,7 @@
 # Cold LRZ1 -> LRZ2 -> final boss -> playable HPZ, 800px native Sonic+Tails.
 # Origin: S&K bring-up 2026-09-28. Ordinary controller inputs; no gameplay seeds.
 # 50659 inputs; boss defeat49177, HPZ full load50538, final388/2796.
+# Retimed by FadeWindowRetimeTool from lrz-boss-sonic-tails-cold-hpz-800.bk2 (authored fade advances 2); windows start:native->+inserted [41116:23->+11 50538:22->+11]
 25 - / -
 63 D / -
 61 - / -
@@ -1528,7 +1529,7 @@
 30 R+A / -
 45 R / -
 7 R+A / -
-518 R / -
+529 R / -
 30 R+A / -
 45 R / -
 30 R+A / -
@@ -3127,5 +3128,4 @@
 7 R+A / -
 19 R / -
 8 R+A / -
-70 R / -
-120 R
+201 R / -
