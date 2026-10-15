@@ -396,3 +396,15 @@ LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off \
 
 20 tests passed (19 model, 1 ROM art), zero failures/errors/skips; the reproduction
 run of the new search check alone failed on the unfixed menu with the three cases above.
+
+Final package and browser take on `5a611d677` (clean tree), each step under one
+exclusive shared-queue slot whose children inherit the leases: Maven `compile
+dependency:build-classpath`, `javac --release 25` over the example sources, and
+`GgfModCli package --warnings error` (0 findings), giving `sonic3k-chaos-mode.jar`
+SHA-256 `ccff0b00987f63c48d8bb3d5f55a3bb707aeb016fa27662c592c95daee168ec9`. The
+browser-final take reuses the browser recipe unchanged (all 105 selected, VISUAL
+filter, pad-only input, 400x224, 1300 frames, surfaceless EGL, interactive pacing)
+in a new namespace; the earlier take and its jar (`3dec3542…`) are preserved. Against
+the earlier take only the Available empty label (from frame 750) and the detail card
+(from about frame 1210) differ; other sampled frames and the audio are identical.
+Frames 750–1290 remain the intended browser window.
