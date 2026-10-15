@@ -92,6 +92,46 @@ class TestSuspendedSettings {
     }
 
     @Test
+    void savedGlobalAspectReachesTheFirstResumeAndPerGameOverrideWins() throws Exception {
+        var config = SonicConfigurationService.createStandalone(directory);
+        var paused = SuspendedSettings.suspend(config);
+        save(config, SonicConfiguration.DISPLAY_ASPECT, "WIDE_16_9");
+        paused.resume(config, SONIC_2, true);
+        assertEquals(400, config.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
+        var again = SuspendedSettings.suspend(config);
+        new LaunchProfileStore(config).save(SONIC_2,
+                LaunchProfile.stockFor(SONIC_2).withNext(LaunchProfile.Row.WIDESCREEN, SONIC_2));
+        again.resume(config, SONIC_2, true);
+        assertEquals(320, config.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS),
+                "an explicit per-game aspect overrides the all-games preference on the first resume");
+    }
+
+    @Test
+    void resumeDoesNotRestoreOldGameSetupPreferencesOverASavedProfile() {
+        var config = launchedAt("NATIVE_4_3");
+        var paused = SuspendedSettings.suspend(config);
+        var store = new LaunchProfileStore(config);
+        var wide = store.load(SONIC_2).withNext(LaunchProfile.Row.WIDESCREEN, SONIC_2);
+        store.save(SONIC_2, wide);
+        paused.resume(config, SONIC_2, true);
+        assertEquals(wide, store.load(SONIC_2), "the saved profile must remain visible after resume");
+        assertFalse(config.hasSessionOverride(SonicConfiguration.LAUNCH_S2_ASPECT));
+    }
+
+    @Test
+    void returningGameSetupToDefaultReleasesTheOldLiveOverride() {
+        var config = launchedAt("NATIVE_4_3");
+        var paused = SuspendedSettings.suspend(config);
+        new LaunchProfileStore(config).save(SONIC_2, LaunchProfile.stockFor(SONIC_2));
+        paused.resume(config, SONIC_2, true);
+        assertFalse(config.hasSessionOverride(SonicConfiguration.DISPLAY_ASPECT),
+                "Default follows the saved preference instead of retaining an inherited override");
+        config.setConfigValue(SonicConfiguration.DISPLAY_ASPECT, "WIDE_16_9");
+        config.resolveDisplayAspect();
+        assertEquals(400, config.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
+    }
+
+    @Test
     void charactersStayAsTheGameWasStartedEvenWhenGameSetupChanged() {
         SonicConfigurationService config = SonicConfigurationService.createStandalone(directory);
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "knuckles");

@@ -7,7 +7,9 @@ Unreleased. The earlier development themes remain in
 
 - **Main menu:** Holding Escape freezes a stock game and smoothly shrinks its
   picture into the paused-game card; Resume expands it back to full size before
-  gameplay continues. Settings show **RESTART** only for changed
+  gameplay continues. Saved Game Setup preferences remain current on resume,
+  and returning live options to Default releases the earlier per-game overrides.
+  Settings show **RESTART** only for changed
   values awaiting a restart, clearing it when restored to the running value.
 
 - **Level authoring:** Named projects create, edit and reopen complete authored

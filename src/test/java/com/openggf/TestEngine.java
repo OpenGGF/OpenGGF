@@ -402,6 +402,74 @@ class TestEngine {
     }
 
     @Test
+    void firstResumeUsesTheSavedAspectWithoutAnotherMenuVisit() throws Exception {
+        var config = SonicConfigurationService.createStandalone(tempDir);
+        config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
+        config.resolveDisplayAspect();
+        var graphics = new GraphicsManager();
+        var engine = newTestEngine(config, graphics);
+        var pausedSettings = com.openggf.game.launch.SuspendedSettings.suspend(config);
+        engine.getGameLoop().suspension.park();
+        var draft = new com.openggf.configuration.EngineSettingsDraft(config);
+        draft.set(SonicConfiguration.DISPLAY_ASPECT, "WIDE_16_9");
+        draft.apply();
+        var card = new com.openggf.game.MasterTitleEntry.Suspended(
+                new com.openggf.game.MasterTitleEntry.Stock(
+                        com.openggf.game.MasterTitleScreen.GameEntry.SONIC_2), "Emerald Hill", true);
+        setPrivateField(engine, "suspendedGame", new SuspendedGame(GameMode.LEVEL,
+                new SuspendedGame.Pending(null, card), null, pausedSettings, null));
+        invokePrivateMethod(engine, "resumeSuspendedGame", new Class<?>[]{});
+        assertEquals(400, config.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
+        assertEquals(400.0, getPrivateField(engine, "projectionWidth"));
+        assertEquals(400, graphics.getProjectionWidth());
+        assertEquals(GameMode.LEVEL, engine.getCurrentGameMode());
+    }
+
+    @Test
+    void pausedGameSetupAspectReachesTheFirstResumeThroughTheMenu() throws Exception {
+        var config = SonicConfigurationService.createStandalone(tempDir);
+        config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
+        var entry = com.openggf.game.MasterTitleScreen.GameEntry.SONIC_2;
+        var store = new com.openggf.game.launch.LaunchProfileStore(config);
+        var nativeProfile = com.openggf.game.launch.LaunchProfile.stockFor(entry)
+                .withNext(com.openggf.game.launch.LaunchProfile.Row.WIDESCREEN, entry);
+        store.save(entry, nativeProfile);
+        new com.openggf.game.launch.LaunchProfileApplier(config).apply(nativeProfile, entry);
+        config.resolveDisplayAspect();
+        var graphics = new GraphicsManager();
+        var engine = newTestEngine(config, graphics);
+        var settings = com.openggf.game.launch.SuspendedSettings.suspend(config);
+        engine.getGameLoop().suspension.park();
+        var card = new com.openggf.game.MasterTitleEntry.Suspended(
+                new com.openggf.game.MasterTitleEntry.Stock(entry), "Emerald Hill", true);
+        var screen = new com.openggf.game.MasterTitleScreen(config);
+        screen.setStateForTest(com.openggf.game.MasterTitleScreen.State.ACTIVE);
+        screen.setSuspendedGame(card, 320, 224, new byte[320 * 224 * 4]);
+        setPrivateField(engine, "masterTitleScreen", screen);
+        setPrivateField(engine, "suspendedGame", new SuspendedGame(GameMode.LEVEL,
+                new SuspendedGame.Pending(null, card), null, settings, null));
+        var input = new com.openggf.control.InputHandler();
+        for (int key : new int[] {org.lwjgl.glfw.GLFW.GLFW_KEY_TAB,
+                org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN, org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN,
+                org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT, org.lwjgl.glfw.GLFW.GLFW_KEY_TAB,
+                org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER}) {
+            input.handleKeyEvent(key, org.lwjgl.glfw.GLFW.GLFW_PRESS);
+            screen.update(input);
+            input.handleKeyEvent(key, org.lwjgl.glfw.GLFW.GLFW_RELEASE);
+            input.update();
+            screen.update(input);
+        }
+        assertEquals("WIDE_16_10", store.load(entry).aspect(), "Game Setup saved the new aspect");
+        for (int i = 0; i < 40; i++) screen.update(input);
+        engine.getGameLoop().suspension.routeResume(screen);
+        assertEquals(GameMode.LEVEL, engine.getCurrentGameMode());
+        assertEquals("WIDE_16_10", store.load(entry).aspect(), "resume must not mask the saved Game Setup profile");
+        assertEquals("WIDE_16_10", config.getString(SonicConfiguration.DISPLAY_ASPECT));
+        assertEquals((double) com.openggf.configuration.WidescreenAspect.WIDE_16_10.pixelWidth(),
+                getPrivateField(engine, "projectionWidth"));
+    }
+
+    @Test
     void applyResolvedDisplayDimensionsPreservesCurrentWindowDuringModeTransitions() throws Exception {
         SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
         GraphicsManager graphics = new GraphicsManager();

@@ -1,5 +1,6 @@
 package com.openggf.game.launch;
 
+import com.openggf.configuration.ConfigCatalog;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.MasterTitleScreen;
@@ -15,7 +16,8 @@ import java.util.Set;
  * player's saved preferences, as it does after a normal return. On resume the settings in
  * {@link LiveSettings} take their new values, exactly as a fresh launch of the game would set
  * them (saved preferences plus the game's own Game Setup profile); every other value the paused
- * game read is pinned, so those changes wait for the next launch.
+ * game read is pinned, so those changes wait for the next launch. The editable launch.*
+ * profiles are menu preferences, not running-game state, and are never pinned.
  *
  * <p>Built from the public configuration surface only, so the Mod API surface of
  * {@link SonicConfigurationService} is unchanged.
@@ -29,6 +31,11 @@ public final class SuspendedSettings {
     private static final Set<SonicConfiguration> NOT_PINNED = Set.of(
             SonicConfiguration.SCREEN_WIDTH, SonicConfiguration.SCREEN_HEIGHT,
             SonicConfiguration.SCREEN_WIDTH_PIXELS, SonicConfiguration.SCREEN_HEIGHT_PIXELS);
+
+    /** Live runtime overrides supplied by Game Setup; Default releases their previous values. */
+    private static final Set<SonicConfiguration> LIVE_PROFILE_OVERRIDES = Set.of(
+            SonicConfiguration.DISPLAY_ASPECT, SonicConfiguration.LIVE_REWIND_ENABLED,
+            SonicConfiguration.DEBUG_VIEW_ENABLED);
 
     private final Map<SonicConfiguration, Object> overrides;
     private final Map<SonicConfiguration, Object> effective;
@@ -45,13 +52,20 @@ public final class SuspendedSettings {
         Map<SonicConfiguration, Object> effective = new EnumMap<>(SonicConfiguration.class);
         for (SonicConfiguration key : SonicConfiguration.values()) {
             Object value = config.getConfigValue(key);
-            if (value == null) continue;
+            // Keep the recipe editable independently of the effective settings it produced.
+            // Restoring launch.* would hide a profile saved in Game Setup until the next suspend.
+            if (value == null || isLaunchPreference(key)) continue;
             if (config.hasSessionOverride(key)) overrides.put(key, value);
             if (!NOT_PINNED.contains(key)) effective.put(key, value);
         }
         config.clearSessionOverrides();
         config.resolveDisplayAspect();
         return new SuspendedSettings(overrides, effective);
+    }
+
+    private static boolean isLaunchPreference(SonicConfiguration key) {
+        String section = ConfigCatalog.meta(key).section();
+        return section != null && section.startsWith("launch.");
     }
 
     /**
@@ -65,7 +79,13 @@ public final class SuspendedSettings {
         Objects.requireNonNull(game, "game");
         Map<SonicConfiguration, Object> fresh = freshLaunchValues(config, game, inLevel);
         config.clearSessionOverrides();
-        overrides.forEach(config::setSessionOverride);
+        overrides.forEach((key, value) -> {
+            // Default releases an old live Game Setup override even if its value now matches
+            // the saved preference. Preserve overrides owned elsewhere (e.g. capture output).
+            if (!LIVE_PROFILE_OVERRIDES.contains(key) || !LiveSettings.appliesOnResume(key, inLevel)) {
+                config.setSessionOverride(key, value);
+            }
+        });
         effective.forEach((key, value) -> {
             if (fresh.containsKey(key)) return;
             if (!Objects.equals(config.getConfigValue(key), value)) config.setSessionOverride(key, value);
