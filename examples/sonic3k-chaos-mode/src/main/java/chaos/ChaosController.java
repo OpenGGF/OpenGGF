@@ -262,9 +262,10 @@ public final class ChaosController implements GameplayObserver,RewindSnapshottab
         int colour=countdown<=180?ChaosUi.mix(ChaosUi.GOLD,ChaosUi.WHITE,ChaosUi.pulse(clock,20)):ChaosUi.GOLD;
         ChaosUi.bar(canvas,0,0,width,3,Math.max(0,interval-countdown),interval,0x90000000,colour);
     }
+    private static int panelWidth(PixelCanvas canvas) {return Math.min(canvas.width()-8,168);}
     private void drawActive(PixelCanvas canvas,long clock) {
         var active=schedule.active();
-        int width=Math.min(canvas.width()-8,168),left=canvas.width()-width-4,top=6;
+        int width=panelWidth(canvas),left=canvas.width()-width-4,top=6;
         ChaosUi.panel(canvas,left,top,width,15+active.size()*13,0xD80C1A33,ChaosUi.EDGE);
         ChaosUi.text(canvas,"CHAOS",left+5,top+4,1,ChaosUi.GOLD);
         if(schedule.settings().selected().isEmpty())ChaosUi.right(canvas,"NO EFFECTS",left+width-5,top+4,1,ChaosUi.DIM);
@@ -292,28 +293,36 @@ public final class ChaosController implements GameplayObserver,RewindSnapshottab
         }
         return description;
     }
-    /** Activation card driven by the captured Chaos clock, so pause, rewind and skipped frames agree. */
+    /**
+     * Activation card driven by the captured Chaos clock, so pause, rewind and skipped frames agree. It opens over the
+     * Chaos panel in the top band: right of the native score/time/rings column and ending above screen row 69, where the
+     * camera holds the player (y 96) on the ground. Opaque once shown; the panel shows through only while it fades.
+     */
     private void drawBanner(PixelCanvas canvas,long clock) {
         long since=clock-announcedAt;
         if(announced.isEmpty() || since<0 || since>=BANNER)return;
         var effect=catalogue.effect(announced);int width=canvas.width();
+        // S3K centres its 320-pixel HUD in wider views; the score column ends 112 pixels in.
+        int right=width-4,room=right-((width-320)/2+116),inner=room-20;
         String name=ChaosUi.safe(effect.name()).toUpperCase(Locale.ROOT);
-        int scale=ChaosUi.width(name,2)<=width-48?2:1;
-        var lines=ChaosUi.wrap(tagline(effect.description()),width-48,2);
+        int scale=ChaosUi.width(name,2)<=inner?2:1;
+        name=ChaosUi.fit(name,inner,scale);
+        var lines=ChaosUi.wrap(tagline(effect.description()),inner,3);
         int text=ChaosUi.width(name,scale);
         for(String line:lines)text=Math.max(text,ChaosUi.width(line,1));
-        int panelWidth=Math.min(width-16,Math.max(150,text+28)),height=15+7*scale+5+lines.size()*10+3;
-        double in=Math.min(1,since/10.0),amount=Math.min(in,Math.min(1,(BANNER-since)/24.0));
-        int left=(width-panelWidth)/2,top=58-(int)Math.round((1-in)*14);
+        // Never narrower than the panel it covers; at most three summary lines keep the bottom edge at row 66.
+        int cardWidth=Math.min(room,Math.max(panelWidth(canvas),text+20)),height=18+7*scale+lines.size()*9+2;
+        double amount=Math.min(Math.min(1,since/10.0),Math.min(1,(BANNER-since)/24.0));
+        int left=right-cardWidth,top=6;
         int severity=ChaosUi.severity(effect.severity());
-        ChaosUi.panel(canvas,left,top,panelWidth,height,ChaosUi.fade(0xF00C1A33,amount),ChaosUi.fade(ChaosUi.GOLD,amount));
+        ChaosUi.panel(canvas,left,top,cardWidth,height,ChaosUi.fade(ChaosUi.alpha(ChaosUi.NAVY_DEEP,255),amount),ChaosUi.fade(ChaosUi.GOLD,amount));
         canvas.fill(left+3,top+3,3,height-6,ChaosUi.fade(severity,amount));
         String kicker=switch(effect.severity()) {case ORDINARY->"CHAOS!";case DISRUPTIVE->"UH-OH...";case MAJOR->"HOLD ON TIGHT!";};
-        ChaosUi.text(canvas,kicker,left+12,top+5,1,ChaosUi.fade(severity,amount));
+        ChaosUi.text(canvas,kicker,left+12,top+4,1,ChaosUi.fade(severity,amount));
         ChaosUi.right(canvas,effect.instant()?"NOW":ChaosUi.seconds(effect.duration(schedule.settings().durationQuarters())),
-                left+panelWidth-8,top+5,1,ChaosUi.fade(ChaosUi.TEXT,amount));
-        ChaosUi.text(canvas,name,left+12,top+15,scale,ChaosUi.fade(ChaosUi.GOLD,amount));
-        for(int i=0;i<lines.size();i++)ChaosUi.text(canvas,lines.get(i),left+12,top+20+7*scale+i*10,1,ChaosUi.fade(ChaosUi.WHITE,amount));
+                right-8,top+4,1,ChaosUi.fade(ChaosUi.TEXT,amount));
+        ChaosUi.text(canvas,name,left+12,top+14,scale,ChaosUi.fade(ChaosUi.GOLD,amount));
+        for(int i=0;i<lines.size();i++)ChaosUi.text(canvas,lines.get(i),left+12,top+18+7*scale+i*9,1,ChaosUi.fade(ChaosUi.WHITE,amount));
     }
     /** Bottom-centre cards stack upward: latest receipt lowest, live native prompts above. Chat sits left. */
     private void drawPrompts(PixelCanvas canvas,long clock) {
@@ -357,7 +366,7 @@ public final class ChaosController implements GameplayObserver,RewindSnapshottab
             y-=goal>1?32:28;
         }
         if(!chat.isEmpty()) {
-            // A narrow column behind the player, below the activation card and above the receipt cards.
+            // A narrow left column below the native HUD and above the receipt cards.
             int split=chat.indexOf(": "),width=Math.min(canvas.width()/2-40,120),left=6,top=118;
             String user=split<0?"VIEWER:":chat.substring(0,split+1),line=split<0?chat:chat.substring(split+2);
             ChaosUi.panel(canvas,left,top,width,36,0xD0140A28,0xFF9146FF);

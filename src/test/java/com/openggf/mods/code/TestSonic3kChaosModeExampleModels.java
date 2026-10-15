@@ -61,6 +61,7 @@ class TestSonic3kChaosModeExampleModels {
     @Test void searchEditorKeepsTextKeysAndMenuControls() throws Exception {check("ChaosControllerChecks","searchEditorTypesFreelyAndKeepsMenuControls");}
     @Test void emptyListsDistinguishAllSelectedFromNoMatches() throws Exception {check("ChaosControllerChecks","emptyListsSayAllSelectedOrNoMatches");}
     @Test void hudSkipsSetupScreensAndAnnouncesOnceAcrossRewind() throws Exception {check("ChaosControllerChecks","hudWaitsForGameplayAndAnnouncesActivationOnce");}
+    @Test void activationCardLeavesPlayerAndNativeHudVisible() throws Exception {check("ChaosControllerChecks","activationCardLeavesPlayerAndNativeHudVisible");}
     @Test void creatorPackageValidatesAndRegistersDormantFamilies() throws Exception {
         var manifest=classes.resolve("META-INF/openggf-mod.yaml");Files.createDirectories(manifest.getParent());
         Files.copy(Path.of("examples/sonic3k-chaos-mode/src/main/resources/META-INF/openggf-mod.yaml"),manifest);

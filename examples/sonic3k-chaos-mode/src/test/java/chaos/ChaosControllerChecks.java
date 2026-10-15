@@ -404,6 +404,54 @@ public final class ChaosControllerChecks {
         var cleared=controller.capture();
         check(cleared.announced().isEmpty() && cleared.launches().isEmpty() && cleared.noticeEffect().isEmpty(),"Boundary retained presentation history");
     }
+    private static ChaosController.Snapshot announcing(ChaosController.Snapshot s,String effect,long at) {
+        return new ChaosController.Snapshot(s.schedule(),s.world(),s.visit(),s.lastPresentation(),s.sidegameActivation(),s.sidegame(),
+                s.quietUntil(),s.terminalSeen(),s.chat(),s.wasAirborne(),s.oldRings(),s.notice(),s.noticeUntil(),s.noticeEffect(),effect,at,s.launches());
+    }
+    /**
+     * Activation feedback must leave the player and the native HUD visible at every supported width. On level ground
+     * the S3K camera holds the leader at screen y 96, at or just left of the viewport centre; the HCZ2/LRZ2 takes showed
+     * the old centre card hiding Sonic's body over rows 69..120 at 400 pixels. The native score/time/rings column and
+     * lives counter keep their 320-pixel layout, centred in wider views. Each card is compared with the same overlay
+     * without an announcement, so only pixels the card changes are judged.
+     */
+    public static void activationCardLeavesPlayerAndNativeHudVisible() {
+        var catalogue=new ChaosCatalog();var controller=controller(catalogue,"bobble-head");var port=new Port(catalogue);
+        for(int n=1;n<=600;n++)controller.onPresentation(observe(n,n,GameplayObservation.Phase.ACTIVE),port);
+        var base=controller.capture();
+        check(base.announced().equals("bobble-head") && base.announcedAt()==600,"Fixture did not reach its first activation");
+        var view=observe(600,600,GameplayObservation.Phase.ACTIVE);var failures=new ArrayList<String>();
+        for(int width:new int[]{320,352,400,528,800}) {
+            int centre=width/2,hud=(width-320)/2;
+            java.util.function.BiFunction<Integer,Integer,String> covered=(x,y)->
+                    x>=centre-48 && x<centre+48 && y>=69 && y<121?"player":
+                    x>=hud+16 && x<hud+112 && y>=8 && y<56?"native HUD":
+                    x>=hud+16 && x<hud+64 && y>=196 && y<216?"native lives":null;
+            controller.restore(announcing(base,"",0));
+            var plain=new Canvas(width,224);controller.drawOverlay(plain,view);
+            for(int i=0;i<plain.pixels.length;i++)if(plain.pixels[i]!=0 && covered.apply(i%width,i/width)!=null) {
+                failures.add(width+": one-effect HUD covers the "+covered.apply(i%width,i/width)+" at "+i%width+","+i/width);break;
+            }
+            for(var effect:catalogue.effects()) {
+                if(effect.sidegame())continue; // Sidegames open their own board instead of a card.
+                for(int since:new int[]{0,4,10,40,75,126,149}) {
+                    controller.restore(announcing(base,effect.id(),600-since));
+                    var card=new Canvas(width,224);controller.drawOverlay(card,view);
+                    int changed=0,gold=0;String hit=null;
+                    for(int i=0;i<card.pixels.length;i++) {
+                        if(card.pixels[i]==plain.pixels[i])continue;
+                        changed++;if(card.pixels[i]==ChaosUi.GOLD)gold++;
+                        if(hit==null && covered.apply(i%width,i/width)!=null)hit=covered.apply(i%width,i/width)+" at "+i%width+","+i/width;
+                    }
+                    if(hit!=null)failures.add(width+" "+effect.id()+" +"+since+": card covers the "+hit);
+                    if(changed==0)failures.add(width+" "+effect.id()+" +"+since+": no card");
+                    // Fully faded in, the gold frame and effect name must actually show.
+                    if(since==40 && gold<300)failures.add(width+" "+effect.id()+": only "+gold+" gold card pixels");
+                }
+            }
+        }
+        check(failures.isEmpty(),failures.size()+" activation-card failures: "+String.join("; ",failures.subList(0,Math.min(8,failures.size()))));
+    }
     public static void sceneryUsesPreparedDonorsAndExcludesNativeZone() {
         var catalogue=new ChaosCatalog();var allowed=Set.of(0,1,6,11);
         var jukebox=catalogue.effect(94);

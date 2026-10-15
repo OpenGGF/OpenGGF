@@ -408,3 +408,44 @@ in a new namespace; the earlier take and its jar (`3dec3542…`) are preserved. 
 the earlier take only the Available empty label (from frame 750) and the detail card
 (from about frame 1210) differ; other sampled frames and the audio are identical.
 Frames 750–1290 remain the intended browser window.
+
+### Player-clear activation card
+
+Root review of the polished take-1 gameplay sources found the activation card hiding
+the player, not just crowding an editorial crop. In the native 400x224 PNGs at frame
+678 the opaque centre card (rows 58–110) covered Sonic in ordinary HCZ2 (x 405,
+y 2092, camera 205/1996: screen 200,96, only the feet showed) and LRZ2 (x 2728,
+y 1867, camera 2528/1798: body hidden over roughly rows 69–105), with no hurt or death.
+On level ground the S3K camera holds the leader at screen y 96, so any centred card in
+that band covers the player. Rescaling reel panels could not fix it.
+
+The card now opens over the Chaos panel in the top band: right-anchored with the panel,
+never narrower than it, starting right of the native score/time/rings column (S3K
+centres its 320-pixel HUD; the score column ends 112 pixels in) and ending by row 66.
+The name stays at scale 2 when it fits; the first description sentence wraps to at most
+three 9-pixel lines (16 of 105 need three at 320 pixels). It is opaque once faded in,
+so the panel shows through only during the fade, and timing, the Starpost cue and
+captured state are unchanged.
+
+Rejected: keeping the card centred but higher (it then covers the native HUD or a
+jumping player); a bottom-centre card (it pushes task prompts and receipts up into the
+player's band; a task effect shows its own prompt as it activates); pushing the panel
+down under the card (at 320 the panel overlaps the centre column); and positioning by
+the player. `GameplayObservation` has world player coordinates and the viewport size
+but no camera, and the mod does not project world coordinates itself.
+
+A new check draws every non-sidegame card at seven fade ages and widths 320, 352,
+400, 528 and 800 and diffs it against the same overlay without an announcement: no
+changed pixel may fall in the player band (viewport centre ±48, rows 69–120), the
+native score/time/rings column or the lives counter, and the faded-in card must show
+its gold frame and name. Against the previous card it reported 3,500 failures (player
+band from fade age 10, native HUD during the slide-in); the one-effect HUD alone stays
+clear. Remaining limits: the card can still overlap a player who is high in the frame
+(airborne, looking up or with Chaos camera effects), and existing bottom cards and
+the chat column are unchanged; with three or more stacked cards, or the chat column at
+320 pixels, they reach the edge of that band.
+
+Focused verification of these sources (Java 25, `LUA_BIN=/usr/bin/lua5.4`, the verified
+locked-on S3K ROM), with the command shown above: 21 tests passed (20 model including
+the new card check, 1 ROM art), zero failures, errors or skips. No broad smoke run or
+full suite: no engine production, Mod API, build or runtime source changed.

@@ -34,8 +34,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Menus use framed lists with scroll position, severity colours, filtered add/remove,
   player-facing effect descriptions and controller-aware hints; search keeps Space,
   Backspace and letters bound to game buttons as text. A top bar counts down
-  to each draw, new effects announce themselves with a short card and Starpost cue,
-  native challenge prompts show progress, receipts name their effect and sidegame
+  to each draw, new effects announce themselves with a Starpost cue and a short card
+  over the Chaos panel, clear of the player, native challenge prompts show progress, receipts name their effect and sidegame
   boards show their title, score, timer and controls. The HUD no longer appears over
   native save selection. Stream voting remains a future extension.
 
