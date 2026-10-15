@@ -2,6 +2,7 @@ package com.openggf.game.rewind;
 
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.game.GameStateManager;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.game.rewind.schema.CompactFieldCapturer;
@@ -99,6 +100,76 @@ class TestS3kAizEndBossGraphRewind {
         assertAllReferencesPointAtRestoredGraph(restored);
         assertRestoredObjectsAreFresh(before, restored);
         assertImportantScalarsRestored(before, restored);
+    }
+
+    @Test
+    void pendingKillingHitRestoresAcrossNativeCheckHitAdmissionTwice() {
+        GameStateManager gameState = new GameStateManager();
+        Harness harness = Harness.createWithBoss(gameState);
+        ObjectManager objectManager = harness.objectManager();
+        AizEndBossInstance boss = only(objectManager, AizEndBossInstance.class);
+        invokeNoArg(boss, "beginHover");
+        boss.getState().hitCount = 1;
+        boss.onPlayerAttack(null, null);
+        assertTrue(readBooleanField(boss, "defeatCheckPending"),
+                "fixture must capture the Touch_Enemy -> CheckHit pending boundary");
+
+        RewindRegistry rewindRegistry = new RewindRegistry();
+        rewindRegistry.register(objectManager.rewindSnapshottable());
+        rewindRegistry.register(gameState);
+        CompositeSnapshot pending = rewindRegistry.capture();
+        List<String> reference = advanceBossTimeline(objectManager, gameState, 3);
+        assertEquals("routine=6 wait=31 pending=true score=0", reference.get(0));
+        assertEquals("routine=16 wait=63 pending=false score=1000", reference.get(1),
+                "Hover's CheckHit tail admits the defeat after its own Obj_Wait");
+        assertEquals("routine=16 wait=62 pending=false score=1000", reference.get(2));
+
+        CompositeSnapshot admitted = null;
+        for (int cycle = 0; cycle < 2; cycle++) {
+            rewindRegistry.restore(pending);
+            AizEndBossInstance restored = only(objectManager, AizEndBossInstance.class);
+            assertNotSame(boss, restored, "restore must recreate the boss owner");
+            assertEquals(reference.get(0), describe(restored, gameState),
+                    "cycle " + cycle + " must restore the retained old Hover owner and pending hit");
+            List<String> replay = new java.util.ArrayList<>(List.of(reference.get(0)));
+            restored.update(1, null);
+            replay.add(describe(restored, gameState));
+            if (admitted == null) {
+                admitted = rewindRegistry.capture();
+            }
+            restored.update(2, null);
+            replay.add(describe(restored, gameState));
+            assertEquals(reference, replay, "cycle " + cycle + " forward replay must match");
+        }
+
+        for (int cycle = 0; cycle < 2; cycle++) {
+            rewindRegistry.restore(admitted);
+            AizEndBossInstance restored = only(objectManager, AizEndBossInstance.class);
+            assertEquals(reference.get(1), describe(restored, gameState),
+                    "admitted defeat must restore without re-running CheckHit or rescoring");
+            restored.update(2, null);
+            assertEquals(reference.get(2), describe(restored, gameState),
+                    "cycle " + cycle + " Wait_FadeToLevelMusic forward tick must match");
+        }
+    }
+
+    private static List<String> advanceBossTimeline(ObjectManager objectManager,
+            GameStateManager gameState, int states) {
+        List<String> timeline = new java.util.ArrayList<>();
+        AizEndBossInstance boss = only(objectManager, AizEndBossInstance.class);
+        timeline.add(describe(boss, gameState));
+        for (int frame = 1; frame < states; frame++) {
+            boss.update(frame, null);
+            timeline.add(describe(boss, gameState));
+        }
+        return timeline;
+    }
+
+    private static String describe(AizEndBossInstance boss, GameStateManager gameState) {
+        return "routine=" + boss.getState().routine
+                + " wait=" + readIntField(boss, "waitTimer")
+                + " pending=" + readBooleanField(boss, "defeatCheckPending")
+                + " score=" + gameState.getScore();
     }
 
     @Test
@@ -378,12 +449,17 @@ class TestS3kAizEndBossGraphRewind {
 
     private record Harness(ObjectManager objectManager) {
         static Harness createWithBoss() {
+            return createWithBoss(null);
+        }
+
+        static Harness createWithBoss(GameStateManager gameState) {
             ObjectManager[] holder = new ObjectManager[1];
             Camera camera = mockCameraAtOrigin();
             ObjectServices services = new StubObjectServices() {
                 @Override public ObjectManager objectManager() { return holder[0]; }
                 @Override public Camera camera() { return camera; }
                 @Override public SonicConfigurationService configuration() { return DEFAULT_CONFIGURATION; }
+                @Override public GameStateManager gameState() { return gameState; }
             };
             ObjectManager objectManager = new ObjectManager(
                     List.of(BOSS_SPAWN),

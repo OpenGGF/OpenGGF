@@ -1360,6 +1360,109 @@ strict AIZ5/returned-HCZ and alternate frontiers are still open.
 Exact conversion production SHA-256: `5dabe3ee8f2445df6c12251cacdcf572d9e5a2021f91b10e4a014374291532d2`.
 
 
+## Prepared next owner: boss dispatch and returned HCZ — 2026-10-15
+
+Read-only/source preparation during the 23:30–00:30 UTC measurement window;
+no production modification, build, test, native probe or capture is launched.
+The qualified source remains b8f3da8a1. Two unrun negatives in existing
+TestAizEndBossInstance have source SHA256
+9fac134eec2d99ad6b3f9c8f4121cf47b63f992ad66544f52c6271e3c08578fd.
+They distinguish Hover's retained movement/CheckHit tail from AttackWait's
+CheckHit-first/Obj_Wait fallthrough. This is a literal local phase contract,
+not a controller-triggered route witness or a red result yet.
+
+Native Touch_Enemy clears collision_flags, decrements HP and publishes status7
+on zero; it does not change the boss code/routine or score (asm20912–20928).
+Obj_AIZEndBossMain selects its dispatcher once (138047–138066). Revealed runs
+raw animation then CheckHit (138124–138127). Hover runs Swing, MoveSprite2 and
+Obj_Wait before CheckHit (138144–138148). AttackWait runs CheckHit then Obj_Wait
+(138187–138190). The defeat callback installs Wait_FadeToLevelMusic and $34,
+then BossDefeated_StopTimer falls through to $2E=$3F and scoring. A uniform
+one-pass deferral would therefore break AttackWait's legitimate new-timer tick.
+Actual retained aiz_5 aux slot7 is6923E/routine06/status00 through5486 and
+85668/routine06/status80 from5487. Current engine capsule birth remains5670
+and its button source is P1; native recorded capsule birth is5671 and the
+historical independent observation identifies P2 at6006. The old discarded
+one-frame probe is historical attribution, never an implementation constant.
+
+Proposed smallest repair after an observed negative: captured local pending
+terminal admission, preserving Touch_Enemy HP/status/collision publication and
+old movement until the actual CheckHit call. Admit the defeat callback after
+Revealed/Hover tails and before AttackWait's existing wait; score after the
+native timer-stop owner. Keep generic BossHitHandler, clocks, allocator and
+fixtures untouched. Qualify the pending/callback boundary through two-way full
+registered-world recreation and forward replay, then existing AIZ end-boss graph
+and end-sequence consumers. Initial short command after Root resumes:
+--lean -Dmse=off -Dtest=TestAizEndBossInstance#hoveredKillingHitRetainsOldDispatchUntilItsNativeCheckHitTail+attackWaitKillingHitFallsThroughItsExistingObjWaitAfterNativeCheckHit test.
+Affected command uses the normal lane with exact ROM and selectors
+TestAizEndBossInstance,TestS3kAizEndBossGraphRewind,TestAiz2BossEndSequenceObjects,
+TestAizEndBossDebrisWidescreen plus any new actual-world case. Changed owner must
+then rerun the canonical five and alternate one selectors already recorded;
+no unchanged broad run. Nonfatal hit-flash ordering is a distinct inherited
+contract to inspect rather than silently conflate with this terminal slice.
+
+Returned HCZ11's retained report is incomplete82067=69393physics+12674animation,
+50 lag rows, bootstrap0; first physics1510 Y07D6/07DF, earlier recorded mapping
+1507 63/95. At original input68801 its LEVEL identity is loadGeneration9/zone1/
+act0, which the coordinator rejects before source closure. Ownership compares
+actual level generations; ordinary/death/interior loads are not licensed by an
+in-level advance. The retained record lacks the last load cause and P1 death
+boundary, so that stop alone does not establish a bootstrap/coordinator bug.
+Native row5725 still has P1 alive/routine02 at3716/06D3; engine occupancy remains
+near old9896 conveyors. Earlier rows1506–1510 keep native control03, X advances3,
+velocities/ground speed zero, and conveyor mapping/Y move before the later stop.
+Native fan10/13 and conveyor91/92 are present in the same geometry as engine
+fans7/9 and conveyor91/92. The first animation/Y change is the existing fan
+controlled-player ground_vel=1 → conveyor pose-byte progression/table contract.
+No current engine phase/oscillation/last-writer record proves its cause yet.
+The next bounded observer should record those existing owner values and the
+actual load receipt/death state; it must not alter shared bootstrap or hydrate
+comparison data. No HCZ runtime repair is inferred from current retained data.
+
+### Boss CheckHit outcome — 2026-10-15 (Opus frontier lane)
+
+Both prepared negatives were red before production changed. The lean exact
+selector gave 2 tests and 2 failures: routine 16 at touch, where 6 and 8 were
+expected (01:48:14 BST).
+
+`AizEndBossInstance` now keeps Touch_Enemy's publication (HP, invulnerability,
+collision and `state.defeated`) and arms a captured `defeatCheckPending` flag.
+`admitPendingDefeat()` runs only at the native CheckHit positions:
+
+- after Revealed's raw animation;
+- after Hover's Swing, MoveSprite2 and Obj_Wait;
+- before AttackWait's existing countdown, so the newly published $3F ticks to
+  $3E in the same pass.
+
+It calls the existing defeat-start path, which stops the timer before the
+score is added (BossDefeated_StopTimer, then BossDefeated). Nothing else moved:
+generic BossHitHandler, allocator, clocks and fixtures are untouched; nonfatal
+flash/SFX ordering is unchanged and remains the separate inherited contract.
+
+The generic field capturer holds the flag. A new registered-world test
+captures ObjectManager and GameStateManager at the pending boundary and after
+admission. It restores each snapshot twice, then replays forward and compares
+routine, wait timer, pending flag and score.
+
+The existing capsule-wait test previously hit the boss in its INIT routine.
+That is not native-reachable: collision is clear until Revealed
+(sonic3k.asm:138109-138114). The test now hits in Hover and asserts the CheckHit
+pass publishes $3F. Its 0x40 + 0x78 wait contract is unchanged.
+
+Qualification:
+
+- **Affected classes, same 31-class run as the colour commit:**
+  TestS3kAizEndBossGraphRewind 6/0, TestAiz2BossEndSequenceObjects 58/0,
+  TestAizEndBossDebrisWidescreen 10/0, and the four mandatory S3K classes.
+- **Fixed fixture, lean rerun:** TestAizEndBossInstance 18/0/0/0.
+- **Canonical selection:** 5 tests, 1 failure, 0 errors, 0 skips.
+  - AIZ5 raw errors fell from 1765 to 1692 (physics 1686 to 1613).
+  - Its first error moved from 6000 (P2 X) to 6111 (sidekick_x_speed, ROM
+    0024 versus engine 0000).
+  - Returned HCZ11 and the alternate slice are unchanged; exact figures are
+    in the frontier log.
+
+
 ## Prepared independent colour-expansion feature — 2026-10-15
 
 The user requested a saved Full/Limited display setting during the measurement

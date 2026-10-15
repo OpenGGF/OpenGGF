@@ -112725,3 +112725,23 @@ one-case selector) retains60 grouped25physics/35animation, first25589 animation
 13/05, firstphysics25590 TailsSub7800/6C00 at00:20:50 (35.879s/87s).
 This supersedes the physical-label ambiguity, not the remaining strict fronts.
 No hydration, fitted wait, shared clock/allocator or broad/full sweep.
+
+### 2026-10-15 — AIZ end-boss killing hit admitted at native CheckHit
+
+Owned bugfix/ai-s3k-parity-trace over colour commit 8e82d7a1b;
+[native order, negatives and evidence](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#prepared-next-owner-boss-dispatch-and-returned-hcz--2026-10-15).
+Touch_Enemy now publishes only HP/status/collision. A captured pending flag is
+admitted at the routine's own AIZEndBoss_CheckHitOrDefeat call (Revealed and
+Hover tails, AttackWait head), then timer stop and score follow. The two lean
+negatives were red first (2/2 failures, routine16 at touch, 01:48:14 BST).
+
+Canonical (-Ptrace-replay, forkCount1, alphabetical, unchanged four-class
+selector, Java25/EGL/original absolute ROM) completes 5/1 failure/0 errors/0
+skips at 02:40:36 BST (1:34 Maven). Original AIZ, initial HCZ and both prefixes
+pass. Chain segment8 AIZ5 improves from raw 1765 (1686 physics + 79 animation,
+first 6000 P2X) to raw 1692 (1613 physics + 79 animation), first 6111
+sidekick_x_speed ROM 0024/engine 0000. Returned HCZ11 is unchanged: 82067
+(69393 + 12674), first 1510 Y 07D6/07DF, walk-stop input 68801/loadgen9.
+Alternate (-Ptrace-segments, unchanged selector) is unchanged: 60 errors, first
+25589 animation 13/05, at 02:47:17 BST (35s). Strict fronts remain open. No
+hydration, uniform delay or shared BossHitHandler/clock/allocator change.
