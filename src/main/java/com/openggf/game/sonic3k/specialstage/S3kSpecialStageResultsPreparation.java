@@ -69,4 +69,7 @@ final class S3kSpecialStageResultsPreparation
     @Override public void prepareLevelBackdropDraw() {
         if (screen instanceof LevelBackdropResultsScreen backdrop) backdrop.prepareLevelBackdropDraw();
     }
+    @Override public com.openggf.level.Palette.Color resultsBackdropColor() {
+        return screen instanceof LevelBackdropResultsScreen backdrop ? backdrop.resultsBackdropColor() : null;
+    }
 }

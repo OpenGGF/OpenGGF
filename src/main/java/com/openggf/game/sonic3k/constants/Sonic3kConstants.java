@@ -1371,7 +1371,10 @@ public class Sonic3kConstants {
     public static final int ART_KOSM_RESULTS_KNUCKLES_ADDR = 0x0D67F0;   // "KNUCKLES" name art
 
     // ===== Results Screen Palette & Mappings =====
-    public static final int PAL_RESULTS_ADDR = 0x22D39E;                 // 128 bytes, full palette
+    // Locked-on SpecialStage_Results (game mode $48) loads the S&K half's Pal_Results
+    // (sonic3k.asm:63115/63128 -> 63279), colour 0 $CCC on every line. The S3 half's copy
+    // at 0x22D39E (s3.asm:53897) differs only in that backdrop word ($EEE).
+    public static final int PAL_RESULTS_ADDR = 0x2E318;                  // 128 bytes, full palette
     public static final int MAP_RESULTS_ADDR = 0x0002F26A;               // Mapping frames (59 entries)
 
     // ===== Results Screen VRAM Layout =====

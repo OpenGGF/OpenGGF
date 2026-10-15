@@ -3361,8 +3361,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void applySpecialStageResultsClearColor() {
-		// The results backdrop is CRAM white, so it takes the display profile/expansion.
-		com.openggf.graphics.color.PaletteDisplayColor.glClear(SPECIAL_STAGE_RESULTS_BACKDROP, graphicsManager);
+		// A CRAM backdrop, so it takes the display profile/expansion: the screen's own
+		// (S3K Pal_Results colour 0, $CCC) when it names one, else white.
+		com.openggf.graphics.color.PaletteDisplayColor.glClear(com.openggf.game.LevelBackdropResultsScreen
+				.resultsBackdropOr(gameLoop.getResultsScreen(), SPECIAL_STAGE_RESULTS_BACKDROP), graphicsManager);
 	}
 
 	private static final com.openggf.level.Palette.Color SPECIAL_STAGE_RESULTS_BACKDROP =

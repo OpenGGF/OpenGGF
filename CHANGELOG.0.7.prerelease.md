@@ -34,6 +34,9 @@ Unreleased. The earlier development themes remain in
   on return). Pachinko orb rewards follow the level frame counter. All three bonus
   traces now replay without errors.
 
+- **S3K special stage results:** The results card sits on the locked-on game's
+  grey backdrop instead of white, matching native frames of won and failed stages.
+
 - **S3K objects and bosses:** The Angel Island end boss starts its defeat at the
   native hit check of whichever phase it is in. When the object table is full,
   pending placements wait for the next camera block crossing, which restores the
