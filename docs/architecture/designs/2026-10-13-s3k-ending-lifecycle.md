@@ -2052,3 +2052,41 @@ baseline left their mtimes older than the baseline classes, so the jar carried
 pre-fix classes. The v15 launcher asserts no class is older than its source.
 Records: `B/ending-declared-products-v13-comparison.json` and
 `B/ending-declared-products-plan2-v15-comparison.json`.
+
+#### Wrapped particle premise and the Hyper Sonic Kos residual (2026-10-15, Opus islandlift lane)
+
+The two `wrappedNativeParticleYRemainsVisibleAfterTheCameraCopyThreshold` cases
+failed on Root `e0a136b83` with `0/398`. A first-parent bisect of
+`5b2ff8e78..da27f4f3d` (one queued selector per step) marked `0832aed8b` and
+`af1a3443d` good and `90897f41d`, `5e5e07371`, `ba05e3ecb`, `60df9efd7` and
+`da27f4f3d` bad. The first bad commit is `90897f41d`, the merge of `9a7070930`,
+which composed the native Plane B high-priority sea. Subtype `$41` is a
+low-priority sprite (`loc_5EDFE` clears art_tile bit 15). The synthetic vector
+put its wrapped footprint at screen 224–255 × 188–203. A new Sonic/0 native
+spot run with the unchanged adapter (snapshot ordinals 1023, 1279, 1398–1401
+and 1535 only; `B/declared-native-spots-sonic-chaos-320-islandlift-v1`) shows
+all 512 Plane B pixels under that box are high-priority and opaque from poll
+1279 onward. The sky box at 40–71 × 40–55 is low priority. The VDP therefore
+hides the old vector, and the engine's 0/398 result is correct. Removing the
+`EndingBackgroundPriorityEffect` overlay alone still gave 0/398 because the
+ordinary rear-composite priority already covers the sprite, so that ablation
+was rejected as an explanation. A diagnostic run of the same threshold vector
+in the sky matched 398/398. The test now keeps the threshold and wrap
+(`Y=$FEB0`) in the sky. A new covered case asserts zero particle pixels at the
+old position. Production is unchanged.
+
+The Hyper Sonic residual now has a native per-frame ledger
+(`NativeCloudTransitionProbe-v5`). That probe fixes v4's shadowed `mode`, which
+had written the game-mode byte into `Player_option`, and adds
+`Kos_decomp_queue_count`, `Kos_module_source` and `Queue_Kos_Module` A1 rows.
+Tails/+2 reproduces the v1 control exactly: the gate opens at LF 4444.
+Sonic/+2 and team/+2 queue the same entries on the same frames, and their gate
+opens at LF 4443. The only difference is the FIFO head, `$1D17A6`. Its
+decompression is busy for polls LF 4403–4405 on Tails and 4403–4404 on
+Sonic/team. Every later step is the same sequence, one frame earlier.
+`Process_Kos_Queue` runs in main-loop idle time and resumes from its VInt
+bookmark, so the duration depends on how much CPU time each route's frame
+leaves. The FAST row stores one cost for this fingerprint (4), which matches
+seven of the nine D01 products. A per-route or per-character cost would be fitted
+and was not added. Closing this residual needs a cycle-budget model for the Kos
+queue.
