@@ -809,6 +809,23 @@ final class DefaultObjectRewindPolicies {
             // rider halfway through the curve; capture stable player identities.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzTwistedVineObjectInstance", "activePlayers"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzStickyVineObjectInstance", "capturedPlayer"), RewindFieldPolicy.CAPTURED),
+            // Obj_MHZMushroomCap keeps each character's last airborne y_vel at $30/$32(a0)
+            // and its standing bits in status(a0) (MHZMushroomCap_BounceCharacter,
+            // sonic3k.asm:82282-82316). Neither can be re-derived once a rider stands on the cap;
+            // the restored cap otherwise re-records the landed y_vel and bounces at -$680.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzMushroomCapObjectInstance", "previousYVelocities"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzMushroomCapObjectInstance", "standingPlayers"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzMushroomCapObjectInstance", "lastLaunchFrames"), RewindFieldPolicy.CAPTURED),
+            // Obj_MHZCurledVine keeps the P1/P2 curl segment at $36/$37 beside the standing bits
+            // (loc_3E8A2, sonic3k.asm:82803-82812); sub_3E9C6's continued ride contours without
+            // loc_1E45A's landing -1 (sonic3k.asm:82941-82977).
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzCurledVineObjectInstance", "standingSegmentIndices"), RewindFieldPolicy.CAPTURED),
+            // The catapult's riders mirror the standing bits that the next update's launch tests
+            // (sub_3FA26/sub_3FA5A, sonic3k.asm:84311-84353), so they cross the snapshot boundary;
+            // the dropping platform releases its standing riders when it moves.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzMushroomCatapultObjectInstance", "parentRiders"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzMushroomCatapultObjectInstance", "childRiders"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzMushroomPlatformObjectInstance", "standingPlayers"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzMinibossFlameInstance", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzMinibossEscapeShardInstance", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzSwingBarHorizontalObjectInstance", "hangStates"), RewindFieldPolicy.CAPTURED),

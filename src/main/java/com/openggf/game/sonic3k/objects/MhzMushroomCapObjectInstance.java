@@ -172,15 +172,19 @@ public final class MhzMushroomCapObjectInstance extends AbstractObjectInstance
     public void update(int vIntRunCount, PlayableEntity player) {
         recordPreviousYVelocity(player);
         ObjectServices services = tryServices();
-        if (services != null) {
-            for (PlayableEntity sidekick : services.playerQuery().playersFor(
-                    ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
-                if (sidekick == player) {
-                    continue;
-                }
-                recordPreviousYVelocity(sidekick);
+        List<PlayableEntity> participants = services != null
+                ? services.playerQuery().playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)
+                : List.of();
+        for (PlayableEntity sidekick : participants) {
+            if (sidekick == player) {
+                continue;
             }
+            recordPreviousYVelocity(sidekick);
         }
+        // MHZMushroomCap_BounceCharacter rewrites $30/$32 from the Player_1/Player_2 slots
+        // every frame (sonic3k.asm:82282-82286). A sprite that has left those slots (MHZ1's
+        // carry-in Tails) has no SST record, so keep none for it either.
+        previousYVelocities.keySet().removeIf(rider -> rider != player && !participants.contains(rider));
         if (!standingPlayers.isEmpty()) {
             animationState.setAnimId(ANIM_BOUNCE);
         }
