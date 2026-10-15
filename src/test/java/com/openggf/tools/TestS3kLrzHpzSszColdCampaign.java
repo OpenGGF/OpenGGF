@@ -404,6 +404,153 @@ class TestS3kLrzHpzSszColdCampaign {
     }
 
     /**
+     * P: one uninterrupted controller-only Sonic and Tails run from the declared {@code boot(9,0)}
+     * inlet through LRZ3, HPZ's {@code loc_45D8A} ({@code $A00}), Sky Sanctuary act 1's GHZ and MTZ
+     * replicas and Mecha Sonic, the act-1 results SaveGame and the launch into DEZ1 ({@code $B00}).
+     * {@code Obj_LevelResults} saves at {@code loc_2DCA0} when the act is non-zero or the zone is
+     * {@code $A} (sonic3k.asm:62668-62679); Sky Sanctuary act 1 takes the zone branch. DEZ1 opens
+     * with {@code loc_44A26}'s control lock and the intro run; its fresh timeline retires SSZ's.
+     * Inputs through the SSZ1 control release are the qualified joined chain. The continuation
+     * was authored from that cold prefix: the direct SSZ1 movie followed with time-shift resyncs,
+     * a progress search along the direct SSZ1 path where the RNG-phased clouds and columns
+     * differ, {@link SszBossInputAuthorTool} for the three encounters, then neutral input
+     * through the defeat, results, launch and DEZ intro.
+     */
+    @Test
+    void pairColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory() throws Exception {
+        var loader = new Bk2MovieLoader();
+        var movie = loader.loadMovieOrInputLog(route("lrz-sonic-tails-cold-hpz-ssz1-dez1-320.bk2"));
+        var joined = loader.loadMovieOrInputLog(route("lrz-sonic-tails-cold-hpz-ssz1-320.bk2"));
+        final int sszRelease = 67211; // TestS3kHpzJoinedColdRouteCapture's qualified pair release
+        for (int f = 0; f <= sszRelease; f++) {
+            assertEquals(joined.getFrame(f), movie.getFrame(f), "qualified joined input " + f);
+        }
+        // Measured on the authored movie; one uninterrupted replay must reproduce each exactly.
+        final int ghzDefeatInput = 71823, mtzDefeatInput = 76536, mechaDefeatInput = 82834, dezLoadInput = 85143;
+        var settings = new GameplayCaptureSession.Settings(320, "sonic", "tails", "off", null, null, null);
+        var resultsState = com.openggf.level.objects.AbstractResultsScreen.class.getDeclaredField("state");
+        resultsState.setAccessible(true);
+        var checked = new java.util.LinkedHashSet<String>();
+        int hpzLoad = -1, sszLoad = -1, ghzDefeat = -1, mtzDefeat = -1, mechaDefeat = -1, resultsSave = -1;
+        int dezLoad = -1, dezAssembly = -1, dezReleased = -1;
+        long sszHistory = 0;
+        boolean dezIsolated = false;
+        Object sszManager = null, sszRuntime = null;
+        try (var session = new GameplayCaptureSession(settings)) {
+            session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 9, 0, settings);
+            int lives = GameServices.gameState().getLives();
+            for (int frame = 0; frame < movie.getFrameCount(); frame++) {
+                // A short live-history tail before the launch: 14 live frames ahead of the frozen
+                // 22-frame native fade-out, after every SSZ replay window.
+                if (frame == dezLoadInput - 36) {
+                    GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, true);
+                }
+                // Draw every input, as the joined chain and the continuation author did.
+                session.step(movie.getFrame(frame)); session.renderFrame();
+                assertEquals(GameMode.LEVEL, session.loop().getCurrentGameMode(), "input " + frame);
+                assertFalse(session.player().getDead(), "cold death " + frame);
+                assertTrue(GameServices.gameState().getLives() >= lives, "hidden respawn " + frame);
+                lives = GameServices.gameState().getLives();
+                assertInstanceOf(com.openggf.sprites.playable.Sonic.class, session.player());
+                assertSame(GameServices.sprites().getMainPlayable(), session.player());
+                var followers = GameServices.sprites().getRegisteredSidekicks();
+                assertEquals(1, followers.size(), "one registered sidekick at " + frame);
+                assertInstanceOf(com.openggf.sprites.playable.Tails.class, followers.getFirst());
+                assertEquals(320, GameServices.camera().getWidth());
+                var level = GameServices.level();
+                var manager = level.getObjectManager();
+                var rewind = SessionManager.getCurrentGameplayMode().getRewindController();
+                int zone = level.getCurrentZone(), act = level.getCurrentAct();
+                if (zone == 22 && act == 1 && hpzLoad < 0) hpzLoad = frame;
+                if (zone == 10 && sszLoad < 0) {
+                    sszLoad = frame;
+                    assertEquals(0, act, "loc_45D8A StartNewLevel #$A00");
+                }
+                String spot = null;
+                if (zone == 10) {
+                    sszManager = manager;
+                    sszRuntime = GameServices.zoneRuntimeState();
+                    if (frame >= dezLoadInput - 36 && rewind != null) sszHistory = Math.max(sszHistory, rewind.currentFrame());
+                    if (ghzDefeat < 0 && manager.activeObjectsOfType(
+                            com.openggf.game.sonic3k.objects.bosses.SszGhzBossObjectInstance.class).stream()
+                            .anyMatch(boss -> boss.hitsRemainingForTest() == 0)) {
+                        ghzDefeat = frame; spot = "ghz-defeat";
+                    }
+                    if (mtzDefeat < 0 && manager.activeObjectsOfType(
+                            com.openggf.game.sonic3k.objects.bosses.SszMtzBossObjectInstance.class).stream()
+                            .anyMatch(boss -> boss.hitsRemainingForTest() == 0)) {
+                        mtzDefeat = frame; spot = "mtz-defeat";
+                    }
+                    if (mechaDefeat < 0 && manager.activeObjectsOfType(
+                            com.openggf.game.sonic3k.objects.bosses.SszMechaSonicObjectInstance.class).stream()
+                            .anyMatch(boss -> boss.getCollisionProperty() == 0)) {
+                        mechaDefeat = frame; spot = "mecha-defeat";
+                    }
+                    for (var results : manager.activeObjectsOfType(
+                            com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance.class)) {
+                        // STATE_WAIT follows the tally dispatch that called S3kFullSaveGame.complete.
+                        if (resultsSave < 0 && resultsState.getInt(results) == 3) {
+                            resultsSave = frame; spot = "results-save";
+                            assertTrue(mechaDefeat >= 0, "results follow the Mecha defeat");
+                            assertEquals(0, act, "loc_2DCA0: act 0 saves through the zone $A branch");
+                            assertEquals(0, GameServices.gameState().capture().collectedSpecialRings(),
+                                    "loc_C4CC clears Collected_special_ring_array");
+                        }
+                    }
+                }
+                if (zone == 11) {
+                    assertEquals(0, act, "SSZ1 launches into DEZ1 ($B00)");
+                    if (dezLoad < 0) {
+                        dezLoad = frame;
+                        assertTrue(sszHistory > 10, "nonempty outgoing SSZ history");
+                    }
+                    if (dezAssembly < 0 && !level.hasPendingFreshLevelTransitionBoundary()
+                            && !level.getTransitions().isTitleCardRequested()) {
+                        dezAssembly = frame;
+                        assertNotSame(sszManager, manager, "DEZ is a real load");
+                        assertNotSame(sszRuntime, GameServices.zoneRuntimeState());
+                        assertSame(session.player(), GameServices.camera().getFocusedSprite());
+                        assertFalse(session.player().isObjectControlled());
+                        assertTrue(session.player().isControlLocked(), "loc_44A26 owns the DEZ entrance");
+                        assertEquals(0, session.player().getRingCount(), "fresh DEZ rings");
+                        assertEquals(48, session.player().getCentreX());
+                        assertEquals(2476, session.player().getCentreY());
+                        assertFalse(manager.activeObjectsOfType(
+                                com.openggf.game.sonic3k.objects.LevelIntroPlayerRunInstance.class).isEmpty(),
+                                "the DEZ intro run owns P1");
+                    }
+                    if (dezAssembly >= 0 && !dezIsolated && rewind != null) {
+                        assertTrue(rewind.currentFrame() < sszHistory, "DEZ retires the outgoing SSZ timeline");
+                        dezIsolated = true;
+                        GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, false);
+                    }
+                    if (dezAssembly >= 0 && dezReleased < 0 && !session.player().isControlLocked()
+                            && manager.activeObjectsOfType(
+                                    com.openggf.game.sonic3k.objects.LevelIntroPlayerRunInstance.class).isEmpty()) {
+                        dezReleased = frame; spot = "dez-released";
+                    }
+                }
+                if (spot != null && checked.add(spot)) replayWindow(session, movie, frame, 45, spot);
+            }
+        }
+        System.out.println("P cold campaign: HPZ " + hpzLoad + ", SSZ1 " + sszLoad + ", GHZ " + ghzDefeat
+                + ", MTZ " + mtzDefeat + ", Mecha " + mechaDefeat + ", results save " + resultsSave
+                + ", DEZ " + dezLoad + "/" + dezAssembly + ", released " + dezReleased + ", spots " + checked);
+        assertEquals(52947, hpzLoad);
+        assertEquals(67037, sszLoad);
+        assertEquals(ghzDefeatInput, ghzDefeat);
+        assertEquals(mtzDefeatInput, mtzDefeat);
+        assertEquals(mechaDefeatInput, mechaDefeat);
+        assertTrue(resultsSave > mechaDefeat && dezLoad > resultsSave, "results save, then the launch");
+        assertEquals(dezLoadInput, dezLoad);
+        assertEquals(dezLoad + 1, dezAssembly);
+        assertTrue(dezIsolated, "DEZ retires the SSZ timeline");
+        assertTrue(dezReleased > dezAssembly, "the intro run releases control");
+        assertEquals(java.util.Set.of("ghz-defeat", "mtz-defeat", "mecha-defeat", "results-save", "dez-released"),
+                checked);
+    }
+
+    /**
      * G: the LRZ2 giant ring s9 at ($2640,$640), entered by cold Tails with the 12-input L+A hold
      * recorded in s3k-lrz-act2.md, then the return to LRZ2 at Saved2. No emeralds are declared:
      * {@code SSEntryFlash_GoSS} starts Blue Sphere, which neutral input fails. The seven-Chaos
