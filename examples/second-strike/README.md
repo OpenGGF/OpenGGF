@@ -70,6 +70,9 @@ root; use a separate profile for this difficulty mode.
 
 ## Prototype boundary
 
+The [continued AIZ scope and full-campaign roadmap](../../docs/architecture/designs/2026-10-15-second-strike-campaign-scope.md)
+is a future design proposal, separate from the implemented scope below.
+
 The authored slice is the forest opening and early fire continuation of Act 1.
 Later physical Act 2 content continues normally. Other zones' levels, other special
 boards and other bonus-stage families remain stock; the first-board and Gumball

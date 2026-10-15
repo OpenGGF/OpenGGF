@@ -1,5 +1,9 @@
 # Second Strike — normal-campaign difficulty prototype
 
+Future content is scoped in the [complete AIZ prototype and S3&K campaign
+roadmap](../designs/2026-10-15-second-strike-campaign-scope.md). That document is
+a design proposal; the outcomes below remain the record of implemented work.
+
 Integration base: `develop` `13add5b0b918a1f7ff7e343c8ccc858ad4527d85`.
 The user authorized implementation of all brainstormed difficulty concepts.
 Post Two Ambush remains a separate useful encounter concept; its trial flow is
