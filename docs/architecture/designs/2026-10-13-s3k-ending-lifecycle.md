@@ -2037,3 +2037,18 @@ same messages and snapshot hashes, so none is introduced here: 30
 `TestS3kEndingReunionFadeFallThrough` passes, as do Knuckles ending, children,
 lifecycle (9), terminal pixels, credits state (16) and post-credits, which share
 `updateCredits`.
+
+The seven remaining D01 declared products were then captured natively with the
+unchanged v1 adapter (22.5–22.8 s each) and compared with engine `6ace9000f`
+(v15 jar; its `Sonic3kEndingEvents` class equals the v13 product's). Sonic -2,
+Tails -2, Tails 0 and Sonic+Tails -2/0 have zero 3-bit-level mismatches at all
+eleven checkpoints; all seven have identical SST inventories everywhere. Sonic +2
+and Sonic+Tails +2 keep 171/194 level pixels at 5119/6143: on the Hyper Sonic route
+native runs one more cloud step (`$14F800`) and one more credits step than both the
+engine and native Tails/+2, so its reunion gate opens a frame earlier upstream of
+fg 40; that route still needs its own native per-frame ledger. A v14 engine run of
+these products is rejected: restoring my sources with `cp -p` after the matched
+baseline left their mtimes older than the baseline classes, so the jar carried
+pre-fix classes. The v15 launcher asserts no class is older than its source.
+Records: `B/ending-declared-products-v13-comparison.json` and
+`B/ending-declared-products-plan2-v15-comparison.json`.

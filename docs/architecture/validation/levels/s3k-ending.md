@@ -267,10 +267,11 @@ DMA-byte and published-pixel observations are independent evidence.
 
 ## Native declared products and remaining obligations — 2026-10-15
 
-Two finite NTSC 320 products now match independently captured native references
-at all eleven declared checkpoints (native poll p ↔ engine outer p+1, untouched
-`declared-native-spots-*-320-v1`): Tails/Super and Sonic/Chaos each have zero
-3-bit-level pixel mismatches and identical SST slot/x/y/mapping inventories. The
+Seven of the nine D01 finite NTSC 320 products now match independently captured
+native references at all eleven declared checkpoints (native poll p ↔ engine
+outer p+1, `declared-native-spots-*-320-v1`): zero 3-bit-level pixel mismatches
+and identical SST slot/x/y/mapping inventories. The Tails/Super and Sonic/Chaos
+pair drove the repairs; the two Hyper Sonic products keep one attributed residual. The
 closing repairs are exact FIFO costs for the reunion jobs, the `loc_5AE90` →
 `loc_5AEA8` → `loc_5AED4` fall-throughs and `loc_5B204` writing only
 `Camera_Y_pos`; native RAM independently dates both credits starts. Details,
@@ -283,8 +284,9 @@ acceptance is claimed.
 | Obligation | Disposition | Proven | Not proven |
 | --- | --- | --- | --- |
 | `loc_5DB76`/`loc_5DD6A` full-table dispatch and downstream composition | Qualified for the two declared products | Native poll 3071 holds all 20 IslandLift SSTs (2 `$42` from `word_5DBB6`, 18 from the six `word_5DDD2`…`word_5DE12` tables) with engine-identical slot, x, y and mapping in both products; whole-SST and 3-bit pixel agreement at every checkpoint. `TestS3kEndingIslandLift` (22) and the continuation-pressure cases pass | `Player_mode` 3 and negative-progress skips are unit-covered only; no native Knuckles or progress -2 product |
-| Tails/+2 and Sonic/0 declared products | Qualified as declared scenes | 22/22 checkpoints, zero level mismatches, whole frames viewed | Cold campaign identity, original-RGB bytes |
-| Remaining seven D01 products (Sonic -2/+2, Tails -2/0, Sonic+Tails -2/0/+2) | Open | Lifecycle tests reach credits and title for all nine | No native/engine pixel or SST comparison yet |
+| Tails/+2 and Sonic/0 declared products | Qualified as declared scenes | 22/22 checkpoints, zero level mismatches, all whole frames viewed | Cold campaign identity, original-RGB bytes |
+| Sonic -2, Tails -2, Tails 0, Sonic+Tails -2/0 declared products | Qualified as declared scenes | Newly captured native references (unchanged v1 adapter, immutable host); engine `6ace9000f`: zero 3-bit-level mismatches and identical SST inventories at all 11 checkpoints each | Cold campaign identity, original-RGB bytes |
+| Sonic +2 and Sonic+Tails +2 (Hyper Sonic route) | Open, attributed | Checkpoints 1–4095 match exactly; SST identical at all 11 | 171/194 level pixels at 5119/6143: native `HScroll_table+0` is `$14F800` and `Camera_Y_pos` 517/1345 against engine `$14F000` and 516/1344, so native opens the reunion `Kos_modules_left` gate one frame earlier on this route than on Tails/+2 while the engine schedules both identically. The owner lies upstream of fg routine 40 on the Hyper Sonic AIZ-return route and needs a native per-frame ledger for that route |
 | Knuckles products (SSZ2 `$0A01`) | Open | Lifecycle 9 and terminal pixels pass; shares the corrected `updateCredits` | No native product; `loc_5B1A2` there clears only `Camera_Y_pos` and is not separately compared |
 | Team retirement / full-frame replay | Inherited red | — | `TestS3kEndingLifecycleCapture` team cases (6) and `TestS3kEndingRescue` roster replay (30) fail identically on `2b9eb431d`: `level-sprite-presentation` prepared/published scroll differs after restore and replay. The COMPLETE LIFECYCLE row above therefore no longer holds for team entries |
 | Wrapped particle presentation | Inherited red | — | `TestS3kEndingPresentationCapture` wrapped-particle cases (2) fail identically on `2b9eb431d` (`native IslandLift missing/displaced: 0/398`) |
