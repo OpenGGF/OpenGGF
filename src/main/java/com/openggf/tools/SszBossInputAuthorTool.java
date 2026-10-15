@@ -21,6 +21,9 @@ import java.util.Locale;
  * pads; the authored tail controls P1 with P2 neutral. Every selected route needs a separate
  * uninterrupted GameplayCaptureTool replay. Exploratory restore is not native parity evidence.
  * Search horizons, steering gains and scores below belong to the author, never gameplay rules.
+ * The cold LRZ→HPZ→SSZ campaign lane (2026-10-15) added {@code --boot ZONE:ACT} (one-based act)
+ * so the prefix may cross real level loads before the authored encounter, and {@code mecha2}:
+ * Knuckles' two-phase Sky Sanctuary act 2 fight, complete when loc_7BCB0 publishes the ending.
  */
 public final class SszBossInputAuthorTool {
     private static final int HORIZON = 180;
@@ -35,7 +38,8 @@ public final class SszBossInputAuthorTool {
     record Boss(int x, int health) { }
 
     enum Encounter {
-        GHZ(512), MTZ(5920), MECHA(6720);
+        // MECHA2's centre is the middle of its 320-pixel arena (camera X 256), an authoring target.
+        GHZ(512), MTZ(5920), MECHA(6720), MECHA2(416);
 
         final int centre;
         Encounter(int centre) { this.centre = centre; }
@@ -47,20 +51,27 @@ public final class SszBossInputAuthorTool {
                         .findFirst().map(b -> new Boss(b.getX(), b.hitsRemainingForTest())).orElse(null);
                 case MTZ -> objects.activeObjectsOfType(SszMtzBossObjectInstance.class).stream()
                         .findFirst().map(b -> new Boss(b.getX(), b.hitsRemainingForTest())).orElse(null);
-                case MECHA -> objects.activeObjectsOfType(SszMechaSonicObjectInstance.class).stream()
+                case MECHA, MECHA2 -> objects.activeObjectsOfType(SszMechaSonicObjectInstance.class).stream()
                         .findFirst().map(b -> new Boss(b.getX(), b.getCollisionProperty())).orElse(null);
             };
         }
     }
 
     public static void main(String[] args) throws Exception {
+        int bootZone = 10, bootAct = 0;
+        if (args.length >= 2 && args[0].equals("--boot")) {
+            String[] boot = args[1].split(":");
+            bootZone = Integer.decode(boot[0]);
+            bootAct = Integer.parseInt(boot[1]) - 1;
+            args = java.util.Arrays.copyOfRange(args, 2, args.length);
+        }
         if (args.length < 8 || args.length > 9) {
-            throw new IllegalArgumentException("Usage: SszBossInputAuthorTool ROM WIDTH MAIN SIDEKICK "
-                    + "INPUT PREFIX ghz|mtz|mecha OUT_DIR [MAX_NEW_INPUTS]");
+            throw new IllegalArgumentException("Usage: SszBossInputAuthorTool [--boot ZONE:ACT] ROM WIDTH MAIN "
+                    + "SIDEKICK INPUT PREFIX ghz|mtz|mecha|mecha2 OUT_DIR [MAX_NEW_INPUTS]");
         }
         var settings = new GameplayCaptureSession.Settings(Integer.parseInt(args[1]), args[2],
                 "none".equalsIgnoreCase(args[3]) ? "" : args[3], "off", null, null, null);
-        var result = run(Path.of(args[0]), settings, Path.of(args[4]), Integer.parseInt(args[5]),
+        var result = run(Path.of(args[0]), settings, bootZone, bootAct, Path.of(args[4]), Integer.parseInt(args[5]),
                 Encounter.valueOf(args[6].toUpperCase(Locale.ROOT)), Path.of(args[7]),
                 args.length == 9 ? Integer.parseInt(args[8]) : 3000);
         System.out.println("Stop: " + result.stop() + "; complete input frames: " + result.frames());
@@ -68,6 +79,11 @@ public final class SszBossInputAuthorTool {
 
     static Result run(Path rom, GameplayCaptureSession.Settings settings, Path input, int prefix,
                       Encounter encounter, Path output, int maxInputs) throws Exception {
+        return run(rom, settings, 10, 0, input, prefix, encounter, output, maxInputs);
+    }
+
+    static Result run(Path rom, GameplayCaptureSession.Settings settings, int bootZone, int bootAct, Path input,
+                      int prefix, Encounter encounter, Path output, int maxInputs) throws Exception {
         if (maxInputs <= 0) throw new IllegalArgumentException("MAX_NEW_INPUTS must be positive");
         if (settings.startX() != null || settings.startY() != null || !"off".equals(settings.donor())) {
             throw new IllegalArgumentException("Author requires a cold native entry");
@@ -82,7 +98,7 @@ public final class SszBossInputAuthorTool {
         }
         Result result;
         try (var session = new GameplayCaptureSession(settings)) {
-            session.boot(rom, 10, 0, settings);
+            session.boot(rom, bootZone, bootAct, settings);
             var level = GameServices.level().getCurrentLevel();
             Bk2FrameInput previous = null;
             int frame = 0;
@@ -90,10 +106,12 @@ public final class SszBossInputAuthorTool {
                 previous = movie.getFrame(frame);
                 session.step(previous);
                 session.render();
-                requireSameLevel(level);
+                // A cold prefix may cross real loads; authoring restores only inside the last world.
+                if (bootZone == 10 && bootAct == 0) requireSameLevel(level);
                 rows.append(session.stateLine(frame, previous)).append('\n');
                 if (session.player().getDead()) throw new IllegalStateException("Prefix died at " + frame);
             }
+            level = GameServices.level().getCurrentLevel();
             while (frame < end && !session.player().getDead() && !defeated(encounter)) {
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
                 var saved = registry.capture();
@@ -157,6 +175,11 @@ public final class SszBossInputAuthorTool {
     }
 
     private static boolean defeated(Encounter encounter) {
+        if (encounter == Encounter.MECHA2) {
+            // loc_7BCB0 publishes the ending only after the Super phase's final hit.
+            return com.openggf.game.sonic3k.runtime.S3kRuntimeStates.currentSsz(GameServices.zoneRuntimeRegistry())
+                    .map(state -> state.act2EndingActive()).orElse(false);
+        }
         var boss = encounter.observe();
         return boss != null && boss.health() == 0;
     }

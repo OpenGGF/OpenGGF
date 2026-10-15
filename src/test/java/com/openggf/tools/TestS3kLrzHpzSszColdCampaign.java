@@ -272,6 +272,166 @@ class TestS3kLrzHpzSszColdCampaign {
         assertSavedNextLevel(new DataSelectDestination(Sonic3kZoneIds.ZONE_HPZ, 1), "knuckles", lives);
     }
 
+    // ------------------------------------------------------------------ long cold continuations
+
+    /**
+     * K: one uninterrupted controller-only Knuckles run from the declared {@code boot(9,0)}
+     * inlet through LRZ2's {@code Obj_StartNewLevel}, HPZ's {@code loc_45B94}, the SSZ2 crane,
+     * both Mecha fights, {@code loc_7BCB0}'s final defeat, the flight, both credit parts and the
+     * post-credits owner to the title. Cold Knuckles has earned no emeralds (ending progress -2).
+     * Inputs through the crane release are the qualified joined chain; the fight was authored
+     * from that cold prefix with {@link SszBossInputAuthorTool} (MECHA2), and the tail is
+     * neutral then Start once the post-credits owner reaches phase 4 after both credit parts.
+     */
+    @Test
+    void knucklesColdCampaignClearsSkySanctuaryTwoThroughTheEndingAndTitle() throws Exception {
+        var loader = new Bk2MovieLoader();
+        var movie = loader.loadMovieOrInputLog(route("lrz-knuckles-cold-hpz-ssz2-ending-320.bk2"));
+        var joined = loader.loadMovieOrInputLog(route("lrz-knuckles-cold-hpz-ssz2-320.bk2"));
+        final int craneRelease = 51586; // TestS3kHpzJoinedColdRouteCapture's qualified release
+        for (int f = 0; f <= craneRelease; f++) {
+            assertEquals(joined.getFrame(f), movie.getFrame(f), "qualified joined input " + f);
+        }
+        var settings = new GameplayCaptureSession.Settings(320, "knuckles", "", "off", null, null, null);
+        var checked = new java.util.LinkedHashSet<String>();
+        int hpzLoad = -1, sszLoad = -1, released = -1, finalDefeat = -1, flight = -1, title = -1;
+        int health = 8, phaseHits = 0, phase = 1;
+        boolean creditsComplete = false, postSeen = false;
+        try (var session = new GameplayCaptureSession(settings)) {
+            session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 9, 0, settings);
+            int lives = GameServices.gameState().getLives();
+            for (int frame = 0; frame < movie.getFrameCount(); frame++) {
+                // Draw every input, as the joined chain and the fight author did.
+                session.step(movie.getFrame(frame)); session.renderFrame();
+                if (session.loop().getCurrentGameMode() == GameMode.TITLE_SCREEN) {
+                    title = frame;
+                    break;
+                }
+                assertEquals(GameMode.LEVEL, session.loop().getCurrentGameMode(), "input " + frame);
+                assertFalse(session.player().getDead(), "cold death " + frame);
+                assertTrue(GameServices.gameState().getLives() >= lives, "hidden respawn " + frame);
+                lives = GameServices.gameState().getLives();
+                assertInstanceOf(com.openggf.sprites.playable.Knuckles.class, session.player());
+                assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
+                assertEquals(320, GameServices.camera().getWidth());
+                var level = GameServices.level();
+                int zone = level.getCurrentZone(), act = level.getCurrentAct();
+                if (zone == 22 && act == 1 && hpzLoad < 0) hpzLoad = frame;
+                if (zone == 10 && sszLoad < 0) {
+                    sszLoad = frame;
+                    assertEquals(1, act, "loc_45B94 StartNewLevel #$A01");
+                }
+                if (zone != 10) continue;
+                var ssz = (com.openggf.game.sonic3k.runtime.SszZoneRuntimeState) GameServices.zoneRuntimeState();
+                if (released < 0 && ssz.cutsceneFlag(5) && !session.player().isObjectControlled()
+                        && !session.player().isControlLocked()) released = frame;
+                String spot = null;
+                var bosses = level.getObjectManager().activeObjectsOfType(
+                        com.openggf.game.sonic3k.objects.bosses.SszMechaSonicObjectInstance.class);
+                if (finalDefeat < 0 && !bosses.isEmpty()) {
+                    var mecha = bosses.getFirst();
+                    int hp = mecha.getCollisionProperty();
+                    if (hp < health) {
+                        assertEquals(health - 1, hp, "each collision deals one hit at " + frame);
+                        phaseHits++;
+                        if (phaseHits == 1) spot = "phase" + phase + "-first-hit";
+                        if (hp == 2) spot = "phase" + phase + "-low-health";
+                        if (hp == 0) spot = phase == 1 ? "first-defeat" : null;
+                    } else if (hp > health) {
+                        assertEquals(1, phase, "only loc_7BBE0 restores Mecha's health");
+                        assertEquals(8, phaseHits, "first fight takes eight hits");
+                        assertEquals(8, hp, "loc_7BBE0 returns with eight Super-phase hits");
+                        phase = 2;
+                        phaseHits = 0;
+                    }
+                    if (phase == 2 && checked.add("super-entry")) {
+                        assertEquals(2, mecha.routineForTest(), "Super phase routine");
+                        spot = "super-entry";
+                    }
+                    health = hp;
+                }
+                if (finalDefeat < 0 && ssz.act2EndingActive()) {
+                    finalDefeat = frame;
+                    assertEquals(2, phase, "loc_7BCB0 follows the Super phase");
+                    assertEquals(8, phaseHits, "Super phase takes eight hits");
+                    spot = "final-defeat";
+                }
+                if (ssz.ending().initialized()) {
+                    creditsComplete |= ssz.ending().credits().complete();
+                    assertEquals(-2, ssz.ending().progress(), "cold Knuckles earned no emeralds");
+                }
+                var flightOwner = level.getObjectManager().activeObjectsOfType(
+                        com.openggf.game.sonic3k.ending.EndingKnucklesFlightObjectInstance.class).stream()
+                        .findFirst().orElse(null);
+                if (flightOwner != null) {
+                    if (flight < 0) flight = frame;
+                    if (flightOwner.routine() == 4) spot = "flight-jump";
+                    if (flightOwner.routine() == 10) spot = "plane-turn";
+                    if (flightOwner.routine() == 12) spot = "small-plane";
+                }
+                var credits = ssz.ending().credits();
+                if (credits.routine() == 4 && credits.rowIndex() > 0) {
+                    spot = credits.partIndex() == 0 ? "credits-one" : "credits-two";
+                }
+                var post = level.getObjectManager().activeObjectsOfType(
+                        com.openggf.game.sonic3k.ending.S3kPostCreditsObjectInstance.class).stream()
+                        .findFirst().orElse(null);
+                if (post != null) {
+                    postSeen = true;
+                    if (post.phase() == 1) spot = "banner";
+                    if (post.phase() == 7 && !level.getObjectManager().activeObjectsOfType(
+                            com.openggf.game.sonic3k.ending.EndingMechaChargeObjectInstance.class).isEmpty()) {
+                        spot = "mecha-charge";
+                    }
+                }
+                if (spot != null && (spot.equals("super-entry") || checked.add(spot))) {
+                    replayWindow(session, movie, frame, finalDefeat < 0 ? 45 : 30, spot);
+                }
+            }
+        }
+        System.out.println("K cold campaign: HPZ " + hpzLoad + ", SSZ2 " + sszLoad + ", release " + released
+                + ", final defeat " + finalDefeat + ", flight " + flight + ", title " + title + ", spots " + checked);
+        assertEquals(49297, hpzLoad);
+        assertEquals(50160, sszLoad);
+        assertEquals(craneRelease, released);
+        assertTrue(finalDefeat > released && flight > finalDefeat, "fight, then the actual flight");
+        assertTrue(creditsComplete, "both native credit parts");
+        assertTrue(postSeen, "actual post-credits owner");
+        assertTrue(title > flight, "controller Start reaches the title");
+        assertEquals(java.util.Set.of("phase1-first-hit", "phase1-low-health", "first-defeat", "super-entry",
+                "phase2-first-hit", "phase2-low-health", "final-defeat", "flight-jump", "plane-turn",
+                "small-plane", "credits-one", "credits-two", "banner", "mecha-charge"), checked);
+    }
+
+    /** Two-cycle whole-world replay of {@code window} inputs inside the current world. */
+    private static void replayWindow(GameplayCaptureSession session, Bk2Movie movie, int frame, int window,
+                                     String label) {
+        var level = GameServices.level();
+        var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+        var world = level.getCurrentLevel();
+        assertTrue(frame + window < movie.getFrameCount(), label);
+        var saved = registry.capture();
+        GameplayInputBranchTool.requireRestorableCheckpoint(saved, level.hasPendingFreshLevelTransitionBoundary());
+        for (int n = 1; n <= window; n++) {
+            session.step(movie.getFrame(frame + n)); session.renderFrame();
+            assertSame(world, level.getCurrentLevel(), label);
+        }
+        var expected = registry.capture();
+        for (int cycle = 0; cycle < 2; cycle++) {
+            registry.restore(saved);
+            same(saved, registry.capture(), label + " restore " + cycle);
+            session.restoreInputHistory(movie.getFrame(frame));
+            for (int n = 1; n <= window; n++) {
+                session.step(movie.getFrame(frame + n)); session.renderFrame();
+                assertSame(world, level.getCurrentLevel(), label);
+                assertFalse(session.player().getDead(), label + " replay death " + (frame + n));
+            }
+            same(expected, registry.capture(), label + " replay " + cycle);
+        }
+        registry.restore(saved);
+        session.restoreInputHistory(movie.getFrame(frame));
+    }
+
     // ------------------------------------------------------------------ helpers
 
     private HeadlessTestFixture slotFixture(SelectedTeam team, int zone, int act, Integer x, Integer y) {
