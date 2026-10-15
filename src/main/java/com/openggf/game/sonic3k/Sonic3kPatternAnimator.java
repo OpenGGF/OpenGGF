@@ -2428,7 +2428,11 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         }
         // Scalar state packed into extra blob (53 bytes: 1 bool + 13 ints)
         byte[] publicationState = aniPlcPublications.capture(this::presentedAniPlcPattern);
-        java.nio.ByteBuffer buf = java.nio.ByteBuffer.allocate(SCALAR_BLOB_BYTES + publicationState.length);
+        // AnimateTiles_Pachinko composes the background in Chunk_table+$7000 over four passes
+        // before loc_28610 queues it (sonic3k.asm:55291-55384); that RAM is part of the state.
+        int pachinkoBytes = pachinkoScratch != null ? pachinkoScratch.length : 0;
+        java.nio.ByteBuffer buf = java.nio.ByteBuffer.allocate(
+                SCALAR_BLOB_BYTES + 4 + pachinkoBytes + publicationState.length);
         buf.put((byte) (firstTreeApplied ? 1 : 0));
         buf.putInt(lastHcz1WaterlineDelta);
         buf.putInt(lastHcz2SmallBgLineValue);
@@ -2445,6 +2449,10 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         buf.putInt(0); // retired slot: the Gumball art index now derives from the camera
         buf.putInt(lastLrzBg1Phase);
         buf.putInt(lastLrzBg2Phase);
+        buf.putInt(pachinkoBytes);
+        if (pachinkoBytes > 0) {
+            buf.put(pachinkoScratch);
+        }
         buf.put(publicationState);
         return new com.openggf.game.rewind.snapshot.PatternAnimatorSnapshot(
                 sc,
@@ -2487,8 +2495,15 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
                 scalarEnd = SCALAR_BLOB_BYTES;
             }
             if (extra.length > scalarEnd) {
+                int pachinkoBytes = buf.getInt();
+                if (pachinkoBytes != (pachinkoScratch != null ? pachinkoScratch.length : 0)) {
+                    throw new IllegalStateException("Pachinko composition buffer size mismatch");
+                }
+                if (pachinkoBytes > 0) {
+                    buf.get(pachinkoScratch);
+                }
                 aniPlcPublications.restore(
-                        java.util.Arrays.copyOfRange(extra, scalarEnd, extra.length),
+                        java.util.Arrays.copyOfRange(extra, buf.position(), extra.length),
                         this::publishAniPlcPayload);
             } else {
                 aniPlcPublications.clear();
