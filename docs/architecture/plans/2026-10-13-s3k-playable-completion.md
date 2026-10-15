@@ -2172,3 +2172,34 @@ distinguishes the Tails/Knuckles goal frame, so it is recorded rather than chang
 The stale Slot rewind entries in the general discrepancy file and S3K known-bug #27
 are retired, and the eight finite-restart act matrices are now linked from the
 coverage backlog.
+
+### Composed route-movie regressions and capture parity (2026-10-15)
+
+A sweep of all 43 route-movie test classes on composed Root `54c24da2f`
+(1042 run / 84 failures / 1 error / 2 opt-in skips, finished 02:58:06 UTC)
+exposed delivery-introduced regressions: the same pre-existing classes pass
+85/0/0/0 at develop base `5b2ff8e78`. Matched controls attributed them:
+- 17 (later 20) are the fade-owner class: `8179ccd80` correctly stopped
+  direct-level captures servicing the fade twice, so each full-load fade-out
+  now lasts 22 frames with gameplay and VInt frozen. Movies authored under the
+  doubled fade were retimed by the new `FadeWindowRetimeTool` (verified by
+  uninterrupted replay, old/new hashes in each owning matrix), not by restoring
+  the harness defect. All retimed rows pass.
+- 51 are registry restore/replay comparison mismatches (touch-overlap buffer
+  parity, solid pushing-bit keys, a destroyed object left in the overlap
+  buffer, presentation replay) owned by a rewind-determinism lane.
+- The remainder are route behaviour changes owned by a behaviour lane, which
+  bisects each signature and either fixes an engine regression or re-authors
+  controller input after a ROM-cited correct change.
+`b6fc90c77` (native object-loader parking) is not implicated by those controls.
+
+`TraceCaptureTool` and `TraceBenchmarkTool` never applied the bonus-stage entry
+bootstrap, so bonus trace captures were plain level loads; `7b30ce222` fixes
+that, explaining the earlier Gumball HUD/priority and Pachinko 1316 capture
+mismatches (Pachinko 1316 now differs by 681 px). Direct Limited/Raw-RGB
+comparisons against native stills then showed real Slot/Gumball/Pachinko
+presentation gaps (one-frame-early layout/background publication relative to
+palette, a missing bonus HUD lives row, Gumball player priority in LEVEL-mode
+captures and an early Slot goal fade), assigned to a presentation-parity lane.
+SSZ arrival spots at 118/119/330/680/1341-1343/1430 match native exactly after
+`f950a720c`; 0 and 120 are attributed declared-inlet limits.
