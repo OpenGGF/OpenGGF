@@ -42,7 +42,7 @@ class TestS3kEndingPresentationCapture {
                         var sample=sample(visible.orElseThrow());
                         // VInt publishes the preceding loop's prepared SAT/CRAM;
                         // compare that producer generation, not the new CPU object.
-                        session.step(null);input++;var picture=session.render();assertPixels(picture,sample,width);pixels=true;
+                        session.step(null);input++;var picture=session.render();assertPixels(picture,sample,width,true);pixels=true;
                     }
                 }
                 if(!later&&graph.size()==20){later=true;
@@ -57,16 +57,28 @@ class TestS3kEndingPresentationCapture {
             fail("native IslandLift phases not completed: early="+early+" pixels="+pixels+" late="+later);
         }
     }
+    /* Subtype $41 is low priority (loc_5EDFE: bclr #7,art_tile). In this Sonic/0
+     * declared scene, native polls 1279-1535 (engine input 1400 is poll 1399) hold
+     * Plane B high-priority opaque sea on screen lines 160-223 and low-priority sky
+     * above, so the VDP shows the wrapped particle only above the sea. */
     @ParameterizedTest @ValueSource(ints={320,800})
     void wrappedNativeParticleYRemainsVisibleAfterTheCameraCopyThreshold(int width) throws Exception {
+        wrappedParticleScene(width,0x1F8,0x40,0xB8,0xFEB0,true);
+    }
+    @ParameterizedTest @ValueSource(ints={320,800})
+    void wrappedLowPriorityParticleIsCoveredByTheHighPrioritySea(int width) throws Exception {
+        wrappedParticleScene(width,0x2B0,0xD4,0x170,0xFF44,false);
+    }
+    private void wrappedParticleScene(int width,int baseX,int baseY,int screenX,int screenY,boolean visible) throws Exception {
         var settings=new GameplayCaptureSession.Settings(width,"sonic","","off",null,null,null,"1111111",false,false);
         try(var session=new GameplayCaptureSession(settings)){
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(),13,1,settings);
             for(int i=0;i<1400;i++){session.step(null);if(i%4==0)session.renderFrame();}
             var camera=GameServices.camera();assertEquals(width,camera.getWidth());camera.setXCopy((short)0x1C0);camera.setYCopy((short)0x200);
-            var manager=GameServices.level().getObjectManager();var particle=manager.createDynamicObject(()->new EndingIslandLiftObjectInstance(0x41,0,0x2B0,0xD4));
+            var manager=GameServices.level().getObjectManager();var particle=manager.createDynamicObject(()->new EndingIslandLiftObjectInstance(0x41,0,baseX,baseY));
             particle.update(2,session.player());camera.setYCopy((short)0x210);particle.update(4,session.player());
-            assertFalse(particle.worldCoordinates());assertEquals(0x170,particle.getX());assertEquals(0xFF44,particle.getY());
+            assertFalse(particle.worldCoordinates());assertEquals(screenX,particle.getX());assertEquals(screenY,particle.getY());
+            assertFalse(particle.isHighPriority());
             assertEquals(1,particle.mappingFrame());assertTrue(particle.drawAdmitted());
             // Declared threshold vector after the production loc_5DB76 module upload;
             // this is independent of the full rescue scene pixel composition.
@@ -75,7 +87,7 @@ class TestS3kEndingPresentationCapture {
             for(int attempt=0;attempt<4;attempt++){
                 session.step(null);
                 if(!particle.drawAdmitted())continue;
-                var sample=sample(particle);session.step(null);var picture=session.render();assertPixels(picture,sample,width);return;
+                var sample=sample(particle);session.step(null);var picture=session.render();assertPixels(picture,sample,width,visible);return;
             }
             fail("native even-VInt particle table was not prepared");
         }
@@ -121,7 +133,7 @@ class TestS3kEndingPresentationCapture {
         }
         return new Sample(owner.getX(),owner.getY(),owner.mappingFrame(),colors);
     }
-    private void assertPixels(com.openggf.graphics.RgbaImage picture,Sample owner,int width) throws Exception {
+    private void assertPixels(com.openggf.graphics.RgbaImage picture,Sample owner,int width,boolean visible) throws Exception {
         var level=GameServices.level().getCurrentLevel();var patterns=com.openggf.util.PatternDecompressor.kosinskiModuled(GameServices.rom().getRom(),S3kEndingResources.ISLAND_LIFT);
         var frame=S3kSpriteDataLoader.loadMappingFrames(com.openggf.data.RomByteReader.fromRom(GameServices.rom().getRom()),S3kEndingResources.MAP_ISLAND_LIFT).get(owner.frame());
         assertEquals(1,frame.pieces().size());var piece=frame.pieces().getFirst();
@@ -140,7 +152,9 @@ class TestS3kEndingPresentationCapture {
                 samples++;if((picture.argb(px,py)&0xFFFFFF)==rgb)matches++;
             }
         }
-        assertTrue(samples>8,"the actual ROM IslandLift frame has a visible footprint");assertTrue(matches>samples/2,"native IslandLift missing/displaced: "+matches+"/"+samples);
+        assertTrue(samples>8,"the actual ROM IslandLift frame has a visible footprint");
+        if(visible)assertTrue(matches>samples/2,"native IslandLift missing/displaced: "+matches+"/"+samples);
+        else assertEquals(0,matches,"low-priority IslandLift must stay behind opaque Plane B high-priority pixels");
     }
     private void same(com.openggf.game.rewind.CompositeSnapshot a,com.openggf.game.rewind.CompositeSnapshot b){assertEquals(a.entries().keySet(),b.entries().keySet());
         for(String key:a.entries().keySet())assertTrue(RewindSnapshotDiff.diffKey(key,a.get(key),b.get(key)).isEmpty(),key);}
