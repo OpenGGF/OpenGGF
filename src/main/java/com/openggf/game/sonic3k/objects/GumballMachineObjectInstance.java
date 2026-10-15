@@ -1397,17 +1397,14 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
         // ROM: red spring uses strength -$1000
         private static final int BOUNCE_STRENGTH = -0x1000;
 
-        // ROM: short bounce animation before crumbling.
-        // Ani_Spring anim 1 is `dc.b 0, 1, 0, 0, 2, 2, 2, 2, 2, 2, $FD, 0` — 10 animation entries.
-        private static final int CRUMBLE_DELAY_FRAMES = 10;
-
         // ROM: Map_Spring frames — frame 0 idle, frame 1 compressed (played on bounce)
         private static final int IDLE_FRAME = 0;
         private static final int COMPRESSED_FRAME = 1;
         private GumballMachineObjectInstance parent;
         private DispenserChild dispenser;
         private boolean triggered;
-        private int crumbleTimer;
+        // loc_60E36 ran after this pass's solid calls; MoveChkDel starts next pass.
+        private boolean fallPending;
         private boolean signaledDispenser;
         private boolean falling;    // MoveChkDel state: falling with gravity
         private int fallY;          // current Y during fall
@@ -1460,6 +1457,10 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
 
         @Override
         public void update(int vIntRunCount, PlayableEntity playerEntity) {
+            if (fallPending) {
+                fallPending = false;
+                startFalling();
+            }
             // Falling state: apply gravity until off-screen, then destroy.
             if (falling) {
                 fallYVel += FALL_GRAVITY;
@@ -1481,16 +1482,6 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
                 return;
             }
 
-            if (triggered) {
-                crumbleTimer--;
-                if (crumbleTimer <= 0) {
-                    if (!signaledDispenser && dispenser != null) {
-                        dispenser.setSpringBit();
-                        signaledDispenser = true;
-                    }
-                    startFalling();
-                }
-            }
         }
 
         /** ROM: move.l #MoveChkDel,(a0) — transition to gravity-fall + off-screen delete. */
@@ -1507,7 +1498,19 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
 
         @Override
         public boolean isTopSolidOnly() {
-            // ROM: SolidObjectFull2_1P — solid from above only
+            // ROM loc_60DAC: SolidObjectFull2_1P falls through to the full
+            // SolidObject_cont for a non-standing player, including its side
+            // branch (loc_1E042/loc_1E06E: sub.w d0,x_pos(a1)). Adjacent springs
+            // are 32 px apart with $1B half-widths, so a falling player inside
+            // both is side-pushed by the lower slot before landing on the next.
+            return false;
+        }
+
+        @Override
+        public boolean bypassesOffscreenSolidGate() {
+            // SolidObjectFull2_1P never tests render_flags bit 7 (only
+            // SolidObjectFull_1P does), so an off-screen CPU sidekick still
+            // collides with these springs.
             return true;
         }
 
@@ -1528,12 +1531,16 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
 
         @Override
         public boolean isSolidFor(PlayableEntity playerEntity) {
-            return !triggered && !falling;
+            // loc_60DAC tests the parent's bit 1 before SolidObjectFull2_1P, so a
+            // spring later in the same pass than the triggering one is no longer
+            // solid. The triggering spring itself still runs its Player_2 call.
+            return !falling && (fallPending
+                    || dispenser == null || !(dispenser.isSpringBitSet() || dispenser.isDestroyed()));
         }
 
         @Override
         public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
-            if (triggered || falling || !contact.standing()) {
+            if (falling || !contact.standing()) {
                 return;
             }
             if (!(playerEntity instanceof AbstractPlayableSprite player)) {
@@ -1578,10 +1585,15 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
             // Player_2 (sidekick) bounces but does NOT trigger crumble.
             // isCpuControlled() identifies the AI-driven sidekick.
             if (!player.isCpuControlled()) {
+                // bset #5,$38(a0); sub_22F98 sets anim 1, so Animate_Sprite's
+                // prev_anim is already 1 and loc_60E36 runs in this same pass:
+                // MoveChkDel and the parent's bit 1 (sonic3k.asm:127514-127556).
                 triggered = true;
-                crumbleTimer = CRUMBLE_DELAY_FRAMES;
-                LOGGER.fine("GumballSpring: triggered by P1, will crumble in "
-                        + CRUMBLE_DELAY_FRAMES + " frames");
+                fallPending = true;
+                if (!signaledDispenser && dispenser != null) {
+                    dispenser.setSpringBit();
+                    signaledDispenser = true;
+                }
             } else {
                 LOGGER.fine("GumballSpring: sidekick bounced (no crumble)");
             }
