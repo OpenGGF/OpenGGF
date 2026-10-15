@@ -275,13 +275,111 @@ The Pachinko trace still advertises nine missing aux schemas (cage, velocity/
 position writes, recorded positions, Tails CPU step, sidekick interaction, CNZ
 cylinder); its pass is bounded to the recorded fields.
 
-### Pending in this lane
+### Status after this section
 
-* The finite `actualFiniteSupportedProductsReplayEveryMechanism` selection
-  (140 `CanonicalEntryMatrixSupport.configurations()` rows × five mechanisms =
-  700) has not executed at this commit. Its result is recorded below when run.
-* The inherited Gumball trace errors remain open trace-parity obligations.
-* Every naturally selected reward subtype, spring expiry beyond the safe local
-  window, other cage/flipper/magnet mechanisms, cold traversal, outgoing exit
-  callback/live history (Root's shared owner), native pictures and PCM remain
-  separate obligations. Current combined smoke remains pending (Root).
+The finite products, the inherited Gumball trace errors and the remaining
+scope dispositions are resolved or dispositioned in the next section.
+
+
+## Gumball trace parity and finite mechanism products — 2026-10-15 (later)
+
+### Finite 700 on c907cefa2 (slice A only)
+
+The prepared `actualFiniteSupportedProductsReplayEveryMechanism` selection
+(140 `CanonicalEntryMatrixSupport.configurations()` rows × five mechanisms)
+ran once in the normal lane on c907cefa2: **700 tests, 1 failure, 0 errors,
+0 skips** (223.1 s class, 65 s queue wait; 2026-10-15 00:52 UTC). It is not
+accepted as a pass. The failure, case 124 (Sonic / off / fifth aspect / seven
+followers × `PACHINKO_REWARD`), was a false rewind divergence:
+`object-manager.touchResponseOverlap.sidekickEntries` listed `sonic_p7` and
+`tails_p2` in swapped order after restore. `ObjectTouchResponseController`
+keys per-sidekick overlap buffers by identity, so capture emitted identity-hash
+order. 955986595 sorts entries by sidekick code and slot indices ascending
+(restore is set-based); negative `TestObjectTouchResponseRewindCapture` failed
+2 / 1 before the source change.
+
+### Final qualification on f00355e1d
+
+One normal-lane r7 single-fork invocation at 2026-10-15 02:30 UTC (173 s
+admission wait) on the source of f00355e1d except the new P2 test's 90-step
+CPU settle, which was added after this run and qualified separately:
+**796 tests, 3 failures, 0 errors, 0 skips**. The three failures were the new
+`actualExitTriggerDeletesOnlyNativePlayer2AndReturnRestoresCompanions` cases,
+whose declared Player_2 placement was overwritten by the leader-locked CPU
+entry state (P2 snapped back to $E0,$124). Every other case passed, including
+**all 700 finite products** (`actualFiniteSupportedProductsReplayEveryMechanism`,
+723-case class, 236.6 s), the 20 native/representative mechanism cases, all
+three bonus traces (Gumball 0/1277, paired Gumball 0/590, Pachinko 0/2900
+compared rows; 0 warnings, 0 bootstrap errors) and 70 pure/seam neighbours
+(RNG 6+4, snapshot diff 12, Gumball item 5+5, drift 5, exit 3, RNG init 3,
+bumper 2, Pachinko orb 10, touch capture 2, SpriteManager rewind 11, initial
+setup 2). With the settle added the P2 regression passes 3/0/0/0; with the
+`loc_61050` source reverted it fails 3/3 (P2 in range at $100,$370 never retired).
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay-r7 -Dsurefire.forkCount=1 \
+  '-Dtest=TestS3kGumballPachinkoRewardMechanics,TestSpriteManagerRewindCapture,TestObjectTouchResponseRewindCapture,TestRewindSnapshotDiffDynamicIdentity,TestPachinkoItemOrbObjectInstance,TestS3kBonusTraceInitialSetup,TestGumballMachineRngInitialization,TestGameRngGoldenSequence,TestGameRngRewindSnapshot,TestGumballTriangleBumperObjectInstance,TestGumballMachineDrift,TestGumballMachineExitTrigger,TestGumballItemBoundaries,TestGumballItemPriority,TestS3kGumballBonusTraceReplay,TestS3kSonicTailsGumballBonusTraceReplay,TestS3kPachinkoBonusTraceReplay' \
+  "-Ds3k.rom.path=${ROM_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dsonic1.rom.path=${ROM_ROOT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${ROM_ROOT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  -Dopenggf.headless.gl=surfaceless-egl test
+```
+
+
+### Gumball trace attribution
+
+| Commit | Owning ROM routine | Engine defect | Trace effect |
+|---|---|---|---|
+| 5b9b8eaea | `loc_60E5C` → `CreateChild6_Simple` → `AllocateObjectAfterCurrent` with a0 = container | Ball allocated after the machine's (lower) slot, so it skipped its birth pass and fell one frame (2 px) behind; `sub_61176` then computed the push angle one unit low | Canonical 122 errors (row 380 `x_speed` −$0395/−$03E2) → **0 / 1277 rows** |
+| 2e18f3098 | `loc_60DAC` → `SolidObjectFull2_1P` → full `SolidObject_cont` (side branch `loc_1E042`/`loc_1E06E`, no `render_flags` gate); `loc_60E36` same-pass crumble | Spring was top-solid only with the on-screen gate; P1 bounce delayed the crumble 10 frames and siblings stayed solid | Paired 78 errors (row 209 `tails_x` $010B/$0109) → 68 (row 323) |
+| d80a6d53c | `Check_PlayerInRange` (P2 high word, P1 low) + `loc_6115C` pushes P1 then P2 | Ejected-ball poll tested only the main player | Paired 68 → 1 error (row 483 `tails_present`) |
+| f00355e1d (+ Root seam e63e4ccb3) | `loc_61050`: P1 out of `word_610AE`, P2 in → `Delete_Referenced_Sprite` on Player_2 | No Player_2 deletion | Paired 1 → **0 / 590 rows** |
+
+Rejected along the way: making the spring full-solid without the off-screen
+bypass let Tails fall through an off-screen spring (paired 121 errors from row
+64); full-solid without the same-pass crumble made spring 48 side-push
+Knuckles −6 at canonical row 895 (55 errors). Native rows 895/896 show slots
+47/48 becoming `MoveChkDel` in the bounce pass and 45/46 one pass later.
+
+Only the native Player_2 (the first registered follower) is eligible, once
+per stage: `Check_PlayerInRange` reads only the Player_1/Player_2 SSTs, so
+engine-only later followers have no Player_2 identity and keep running.
+
+### Remaining bonus scope dispositions
+
+| Obligation | Disposition | Evidence |
+|---|---|---|
+| Every natural Gumball reward subtype | Observed, trace-bounded | Native ball subtypes observed near the player in the canonical trace (0 errors / 1277 rows): 1,2,3,4,6,7; in the paired trace (0 errors / 590 rows, observed through row 482): 0,2,4,5,6. All eight natural subtypes occur across two green traces; collection versus bottom expiry is not separated per subtype. Finite products observe only the naturally selected subtype per product. |
+| Spring expiry beyond the safe local window | Trace-bounded | Canonical trace covers P1 spring bounce, same-pass crumble of slots 47/48, sibling crumble, dispenser deletion and debris through row 1277 at 0 errors. The finite spring window still stops at dispenser deletion; per-spring physical fall/deletion is not separately asserted. |
+| Pachinko flipper / magnet / platform / bumper interactions | Trace-bounded | Canonical Pachinko (0 errors / 2900 rows): P1 interacts with `Obj_PachinkoFlipper` (1167 rows), `Obj_PachinkoMagnetOrb` (502), `Obj_PachinkoInvisibleUnknown` platform (598) and the `loc_32EEA` bumper (204). The nine advertised-but-missing aux schemas (including cage/cylinder state) bound what is compared. |
+| Cage/cylinder aux | Not observed | `cage_state`/`cage_execution`/`cnz_cylinder_*` are advertised recorder schemas with no rows in this fixture; nothing about them is compared or claimed. |
+| Gumball P2 exit deletion | Closed | f00355e1d; real-ROM regression across native, multi-follower and S1-donor rosters; paired trace 0 errors. |
+| Cold portal traversal | Owned elsewhere | Dedicated cold-campaign lane. |
+| Native pixels / PCM | Spot pairs below; PCM not attempted | |
+
+### Native screenshot spot pairs (route-bonus-v1)
+
+Native: owned `RouteSpotProbe` (derived from Frontier's verified adapter)
+on the pinned bf3c539 headless host, original `s3-knux-multibonus-ss.bk2`,
+read-only, exact zone/`Level_frame_counter`/P1 selectors from the trace rows.
+Engine: maintained `TraceCaptureTool` single-segment captures (declared
+segment bootstrap, not a cold route) at 320 × 1, no ghosts, on d80a6d53c.
+Output and provenance:
+the external task capture directory `${OGGF_VIDEOS}/s3k-parity-coverage-2026-10-14/spot-checks/route-bonus-v1/`.
+The native image published at row N carries producer N−1
+(`published_producer = producer − 1` for every snapshot), so native row N is
+compared with engine row N−1. Native channels peak at 238 and the engine at
+255 (Frontier's Limited expansion is not on this branch); comparison is
+structural.
+
+| Spot | Native | Engine | Verdict |
+|---|---|---|---|
+| Gumball 0 | `BONUS STAGE` title card over black, LFC 1 | Fully drawn stage, no card | Capture artifact: the trace segment bootstrap has no title card/fade; production entry runs them (finite products cover the actual title/fade release, not its pixels) |
+| Gumball 250 | Machine, balls, bumpers; Knuckles drawn in front of the glass; HUD `RINGS 59`, lives 4 | Same scene; Knuckles hidden behind the glass; HUD SCORE/TIME/`RINGS 0`, lives 3 | Capture artifact: `applyBonusStageEntry` skips `setBonusStageHudLayout(true)` and player high priority as render-only (`TraceReplaySessionBootstrap`); production `prepareBonusStageForTitleCard` (`GameLoop`) applies both. Lives are not carried by the segment bootstrap. Production pixels not verified here |
+| Pachinko 226 | Knuckles as the smooth-ball roll frame $98, orb glow | Engine row 225: same frame and glow | Match (engine row 226 shows the next roll frame: publication latency) apart from the HUD artifact |
+| Pachinko 350 | Two energy orbs, wall, Knuckles behind orb | Same | Match apart from the HUD artifact |
+| Pachinko 1316 / 1325 | Wall left, Knuckles centred | Different camera (wall right) | Unattributed capture-harness divergence: the 1310-row fast-forward clip disagrees with the comparison replay, which is 0 errors at these rows on the same commit. Not a gameplay finding; capture-tool investigation handed to the lead |
+
+No engine visual defect was established from these pairs. The HUD/priority
+gap is confined to trace-segment captures and is recorded for the shared
+bonus lifecycle owner.
