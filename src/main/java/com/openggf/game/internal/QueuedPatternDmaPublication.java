@@ -7,5 +7,8 @@ import com.openggf.game.resources.PlcLifecyclePhase;
  * reference values and does not add a hardware boundary or a public Mod API.
  */
 public interface QueuedPatternDmaPublication {
-    void serviceQueuedPatternDma(PlcLifecyclePhase phase, boolean explicitDmaService);
+    /** The frame's own runtime art coordinator and level, not ambient session globals. */
+    void serviceQueuedPatternDma(PlcLifecyclePhase phase, boolean explicitDmaService,
+            com.openggf.game.RuntimeArtCoordinator runtimeArtCoordinator,
+            com.openggf.level.LevelManager levelManager);
 }

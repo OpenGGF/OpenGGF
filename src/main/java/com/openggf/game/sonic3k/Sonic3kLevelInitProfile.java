@@ -66,7 +66,9 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
 
     @Override
     public void serviceQueuedPatternDma(com.openggf.game.resources.PlcLifecyclePhase phase,
-                                         boolean explicitDmaService) {
+                                         boolean explicitDmaService,
+                                         com.openggf.game.RuntimeArtCoordinator runtimeArtCoordinator,
+                                         com.openggf.level.LevelManager levelManager) {
         // ROM: ordinary/credits LevelLoop arms VInt8 (7886 -> 701 -> 764),
         // title card loc_62CC arms C (7738 -> 797 -> 836), normal pause arms
         // 10 -> 8 (1551 -> 697). Fade12 and special1C reach DMA indirectly via
@@ -81,10 +83,11 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
         };
         if (!explicitDmaService && !nativeHandler) return;
         // The caller's existing token guard guarantees exactly-once dispatch.
-        if (GameServices.level().getAnimatedPatternManager() instanceof Sonic3kLevelAnimationManager animator) {
+        if (levelManager != null
+                && levelManager.getAnimatedPatternManager() instanceof Sonic3kLevelAnimationManager animator) {
             animator.publishAniPlcAtVBlank();
         }
-        S3kRuntimeArtCoordinator.from(GameServices.runtimeArtCoordinator()).publishPatternModuleDma();
+        S3kRuntimeArtCoordinator.from(runtimeArtCoordinator).publishPatternModuleDma();
     }
 
     @Override

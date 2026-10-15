@@ -642,7 +642,8 @@ public final class LevelFrameStep {
                 }
                 profile.serviceLevelLoadVBlank();
                 if (profile instanceof com.openggf.game.internal.QueuedPatternDmaPublication publication) {
-                    publication.serviceQueuedPatternDma(frame.ownerPhase(), frame.hasExplicitDmaQueueService());
+                    publication.serviceQueuedPatternDma(frame.ownerPhase(), frame.hasExplicitDmaQueueService(),
+                            context.runtimeArtCoordinator(), context.levelManager());
                 }
             }
         });
