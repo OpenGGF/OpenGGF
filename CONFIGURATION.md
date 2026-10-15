@@ -1120,7 +1120,8 @@ unselected; an empty selected pool is valid.
 
 The versioned `settings.txt` and `settings-backup.txt` contain `interval`,
 `durationQuarters`, stable selected effect IDs, `enabled` and `seed`. A seed of zero
-uses the mod's fixed deterministic initial seed. Unrecoverable corrupt or incompatible
+picks a fresh seed for each run; a nonzero seed starts every run from the same random
+state. Unrecoverable corrupt or incompatible
 preferences remain preserved until explicit Reset defaults; a valid backup can be
 recovered automatically. Gameplay rewind
 restores the admitted scheduler and effects, while saved player preferences remain

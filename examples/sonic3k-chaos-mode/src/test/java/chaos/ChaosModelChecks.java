@@ -68,6 +68,15 @@ public final class ChaosModelChecks {
         store.files.put("settings.txt",original+"interval=5\n");
         check(!new ChaosPreferences(store,c).save(wanted),"Ambiguous duplicate fields were accepted and overwritten");
     }
+    /** Every catalogue string uses CompactFont glyphs, and each description fits two 320-wide card lines. */
+    public static void catalogueCopyIsGlyphSafeAndFitsTheDetailCard() {
+        String allowed="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .:-_/+=><!?%[]()*,'&;";
+        for(var effect:new ChaosCatalog().effects()) {
+            for(String text:List.of(effect.name(),effect.description()))
+                for(char c:text.toUpperCase(Locale.ROOT).toCharArray())check(allowed.indexOf(c)>=0,"Missing glyph '"+c+"' in "+effect.id());
+            check(ChaosUi.wrap(effect.description(),300,3).size()<=2,"Description overflows the detail card: "+effect.id());
+        }
+    }
     public static void allSidegamesCaptureInputAndHaveBoundedCancellation() {
         var neutral=new ChaosSidegame.Input(false,false,false,false,0,false);
         for(var kind:ChaosSidegame.Kind.values()) {
