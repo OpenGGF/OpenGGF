@@ -386,7 +386,7 @@ player maps across marks, replaying old inputs straight through repeated diverge
 | Movie | Old SHA-256 | New SHA-256 | Frames | Milestones (new; old) | Status |
 |---|---|---|---|---|---|
 | `mhz1-sonic-cold-complete-800.bk2` | `04a103e0e06bb48bdbf9757bdd0892ee3bcbbc8fbd234b642b5b150d1e0f4723` | `1fd85032cbfb152ab158419f9a0dc3b78c4615d0df5cb6943ed19c37ef323757` | 10330 | pulley 3671, sticky vine 4870, miniboss 8182…defeat 8829, MHZ2 9260 — all identical to old; old MHZ2 tail unchanged | green (frame-keyed spots unchanged) |
-| `mhz1-sonic-fresh-320.bk2` | `b56e810e5759a89964efd501cf77e34f16a48700caab6d0b1e856ee513114a89` | `e7e16005f91fc38f8c9dd4afcd9a9788196a9b47a56aeb7c229f2732a4bac2a5` | 9471 | pulley 3518 (3518), sticky vine 5410 (5410), miniboss 7241…defeat 8114 (7948); hold right to the act end, MHZ2 8617 at x=448 (8469, 448); release 9148 (8979); leaf-blower grab 9340 (9176) | red: engine rewind defect below |
+| `mhz1-sonic-fresh-320.bk2` | `b56e810e5759a89964efd501cf77e34f16a48700caab6d0b1e856ee513114a89` | `e7e16005f91fc38f8c9dd4afcd9a9788196a9b47a56aeb7c229f2732a4bac2a5` | 9471 | pulley 3518 (3518), sticky vine 5410 (5410), miniboss 7241…defeat 8114 (7948); hold right to the act end, MHZ2 8617 at x=448 (8469, 448); release 9148 (8979); leaf-blower grab 9340 (9176) | green after the rewind fixes below (movie unchanged) |
 
 The fresh movie is the first 9471 inputs of the re-authored incoming 320 movie (MHZ act 2
 record). `TestS3kMhzAuthoredRoute` reaches pulley, sticky vine and all six miniboss hits,
@@ -397,7 +397,7 @@ position (704,1905) without a shield; the new act-1 history differs. This is a r
 fidelity defect, not an authoring or gameplay one; the row stays red until it is fixed.
 
 Rewind fidelity findings from this authoring (cold replay vs. restored replay of the same
-inputs; owned by the rewind lane, not changed here):
+inputs; fixed afterwards, see the next section):
 1. `MhzMushroomCapObjectInstance` keeps `previousYVelocities`, `lastLaunchFrames` and
    `standingPlayers` in identity maps keyed by player sprites; restore does not recover
    them, so a restored player standing on a cap bounces at −$680 instead of the live −$780
@@ -415,3 +415,40 @@ S3K/S1/S2 ROMs, run `v-mhz`, Maven Finished 21:07:07Z, 6 tests, no errors or ski
 `TestS3kMhzAuthoredRoute` 1 failure (`restore act-two-released at 9257`, the FireShield
 restore defect above); `TestMhzWideColdRouteCapture` 1 failure (zone 7 at 29700 with the
 unchanged incoming 800 movie; stopped, see the MHZ act 2 record).
+
+### Rewind fidelity fixes (2026-10-16, `902ba8a10`)
+
+A dense sweep (capture every 10 inputs, play 30, restore, replay and compare P1 rows plus every
+registry key; never across act, fresh-load, mode or fade boundaries; now the `RewindFidelitySweep`
+tool, with `TestMhzRewindFidelitySweep` pinning the fixed MHZ1 sites) over
+`mhz1-sonic-fresh-320`, `mhz1-sonic-cold-complete-800`, the incoming-800 candidate and
+`mhz2-sonic-incoming-320` located each defect; red-first focused tests cover them.
+
+| # | Defect | Cause | Fix | Test |
+|---|---|---|---|---|
+| D1 | restored bounce −$680 vs live −$780 | `Obj_MHZMushroomCap` `$30/$32` y_vel and standing set held in uncaptured identity collections | `CAPTURED` policies; drop records of sprites that left the player slots (carry-in Tails) | `TestS3kMhzMushroomCapRewind` |
+| D2 | capture refused at `ShellChild#parent` (800px 6827-6860) | launched shell kept a Java link to the body its second hit deleted | drop the link at launch (`loc_8DC42` is the last parent read); spawn-based recreation, parent relinked by id | `TestS3kMushmeanieShellRewind` |
+| D3 | `FireShieldObjectInstance` "resurrected" at 9257 | live bug: `PERSISTENT_EXACT_SST` transitions dropped the player's shield/stars owners (the fire shield from 6721 left the manager at MHZ2 8617 while the player kept it); restore re-spawned it correctly | register owners the carry did not retain (`Shield`/`Invincibility_stars` are fixed `Level_object_RAM` slots) | `TestS3kFixedSstTransitionRewind#playerBoundPowerUpsSurviveThePersistentExactSstCarry` |
+| D4 | 1-5px y drift after restore (800px MHZ1 6860-6880; 320px 5550, 5790) | `Obj_MHZCurledVine` `$36/$37` segment map, catapult riders and dropping-platform riders uncaptured | `CAPTURED` policies | `TestS3kMhzRiderCollectionRewind` (the platform case also passes without its policy; the 320px sweep at 5550 is its evidence) |
+
+The reported MHZ2 800px drift sites (11320, 14132) replay identically after the fixes; they were
+the same rider/cap family (the authoring helper's cap carry keyed on a moving spawn). Sweeps on
+the fixed tree: fresh-320 0-9470, complete-800 0-10329 and the incoming-800 candidate 0-15100
+show no P1 drift; incoming-320 MHZ2 9471-23906 none before the FBZ load. The restore refusal
+during the FBZ fade is policy, not a gap: live rewind is rejected and its history cleared while
+a fade with a completion callback is pending (`LiveRewindManager` `rewindBlocked`), and
+`PlcFrameLifecycleCoordinator.beginNativeBlockingFade` refuses a second fade when a raw
+registry restore crosses one.
+
+Remaining snapshot-only inequalities (no P1/gameplay effect, outside the route tests' spots):
+the MHZ1 carry-in Tails is recreated by restores in its first ~100 frames and solid-contact
+headroom/plane-switcher snapshots keep direct references to the replaced instance; MHZ2's
+Knuckles-cutscene leaf particles recreate with a zero spawn record. Outside MHZ, unverified
+per-player identity collections without a policy: `CorkFloorObjectInstance.standingRiders`,
+`LbzMovingPlatformObjectInstance.standingPlayers`, `SinkingMudObjectInstance` maps.
+
+Validation (focused selectors via `maven_queue.py`, normal lane, S3K/S1/S2 ROMs): run `p6`
+(Maven EXIT 22:33:17Z) 139 tests, 0 failures/errors/skips, including `TestS3kMhzAuthoredRoute`,
+`TestS3kMhzWideAuthoredRoute`, `TestS3kMhzAct2AuthoredRoute`, `TestMhzKnucklesColdRouteCapture`
+and the MHZ object/rewind classes; run `p7` (22:47:20Z) 624 tests, 0 failures/errors/skips,
+including policy/transition tests and the four S3K guards.
