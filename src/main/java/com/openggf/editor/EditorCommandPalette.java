@@ -107,6 +107,19 @@ public final class EditorCommandPalette {
         return List.copyOf(lines);
     }
 
+    /** Host and workflow commands only (projects, playtest, import), for hosts that draw their own menus. */
+    public List<HostCommand> extraCommands() {
+        return extraCommands.stream().map(command -> new HostCommand(command.label(), command.action())).toList();
+    }
+
+    /** Every editor action with its palette label, dispatched through {@code dispatch}. */
+    public List<HostCommand> actionCommands(Consumer<EditorInputHandler.Action> dispatch) {
+        java.util.Objects.requireNonNull(dispatch, "dispatch");
+        List<HostCommand> commands = new ArrayList<>(ACTIONS.length);
+        for (var action : ACTIONS) commands.add(new HostCommand(label(action), () -> dispatch.accept(action)));
+        return List.copyOf(commands);
+    }
+
     private int commandCount() {
         return ACTIONS.length + extraCommands.size();
     }

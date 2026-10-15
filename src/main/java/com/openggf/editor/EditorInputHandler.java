@@ -46,6 +46,18 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_Z;
 import static org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT;
 import static org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT;
 public final class EditorInputHandler {
+    /**
+     * A host front end that sees each editor tick first, such as an {@link EditorWindowChrome}.
+     * {@link #update} returns true when it owned the whole tick.
+     */
+    public interface FrontEnd {
+        boolean update(InputHandler input);
+        void finishPendingEdits();
+    }
+
+    private FrontEnd frontEnd;
+    private boolean externalChrome;
+
     public enum Action {
         DESCEND,
         ASCEND,
@@ -131,6 +143,10 @@ public final class EditorInputHandler {
 
     public void update(InputHandler inputHandler) {
         Objects.requireNonNull(inputHandler, "inputHandler");
+        if (frontEnd != null && frontEnd.update(inputHandler)) {
+            finishActiveStroke();
+            return;
+        }
         if (EditorCommandPalette.forController(controller).isOpen()) finishPendingEdits();
         if (EditorCommandPalette.forController(controller).update(inputHandler, this::handleAction)) {
             finishActiveStroke();
@@ -331,7 +347,18 @@ public final class EditorInputHandler {
         }
     }
 
-    public void finishPendingEdits() { finishActiveStroke(); }
+    public void finishPendingEdits() {
+        finishActiveStroke();
+        if (frontEnd != null) frontEnd.finishPendingEdits();
+    }
+
+    public void setFrontEnd(FrontEnd frontEnd) { this.frontEnd = frontEnd; }
+
+    /**
+     * True while window-resolution chrome draws the panels: the logical-pixel toolbar, library
+     * and focused-pane hit regions are then absent, so the whole viewport is world canvas.
+     */
+    public void setExternalChrome(boolean externalChrome) { this.externalChrome = externalChrome; }
 
     public void finishActiveStroke() {
         if (activeStroke == null) {
@@ -371,7 +398,7 @@ public final class EditorInputHandler {
                 Math.max(224,(int)graphics.getScreenHeight()));
         int[] point=EditorMouseTransform.logicalPoint(inputHandler,graphics);
         int x=point[0],y=point[1];
-        EditorFocusRegion hit = layout.hit(controller,x,y);
+        EditorFocusRegion hit = externalChrome ? EditorFocusRegion.WORLD_CANVAS : layout.hit(controller,x,y);
         boolean click = inputHandler.isMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT);
         boolean pick = inputHandler.isMouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT);
         if (hit == EditorFocusRegion.TOOLBAR || hit == EditorFocusRegion.COMMAND_STRIP) {
@@ -388,6 +415,7 @@ public final class EditorInputHandler {
             return;
         }
         if (controller.depth() != EditorHierarchyDepth.WORLD) {
+            if (externalChrome) return;
             var grid=layout.focusedGrid(controller.depth(),controller.depth()==EditorHierarchyDepth.BLOCK
                     ? controller.blockGridSide():controller.chunkGridSide());
             if ((click || pick) && grid.bounds().contains(x,y)) {

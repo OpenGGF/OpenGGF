@@ -803,6 +803,11 @@ Bindings live in `EditorInputHandler` and are independent of gameplay Key
 Bindings. Filter input, project forms, and the command palette own their input
 while open. Pane/chrome clicks cannot paint through to the world.
 
+A separate desktop editor, [OpenGGF-Editor](https://github.com/OpenGGF/OpenGGF-Editor),
+can draw window-resolution editor panels around the level when its jar is on the class
+path; the engine finds it through the `EditorWindowChrome` service. Launch with
+`-Dopenggf.editor.ui=classic` to keep the in-game chrome even then.
+
 #### Projects, playtests, and export
 
 **Save project as** creates a complete `.ogfproject`; `Ctrl+S` saves to that path.
