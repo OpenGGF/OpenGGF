@@ -38,6 +38,20 @@ class TestS3kKnucklesEnding {
         var owner=GameServices.level().getObjectManager().createDynamicObject(EndingKnucklesFlightObjectInstance::new);
         owner.update(0,fixture.sprite());return owner;
     }
+    /**
+     * loc_5E70E clears Screen_shake_flag, ending the continuous rumble loc_8642E started at
+     * Mecha's final defeat (loc_7B916). Native complete-run RAM: $EECC drops from $FF00 to 0
+     * on the frame the flight owner replaces Mecha; otherwise SSZ2_ScreenEvent keeps shaking
+     * Camera_Y_pos_copy and loc_58E6E freezes Camera_Y_pos_BG_copy up to three lines low.
+     */
+    @Test void flightInitStopsTheMechaDefeatRumbleShake() {
+        var fixture = boot();
+        var shake = ((SszZoneRuntimeState) GameServices.zoneRuntimeState()).screenShake();
+        shake.writeFlag(0xFF00);
+        start(fixture);
+        assertEquals(0, shake.flag());
+    }
+
     /** loc_5E80A calls Play_SFX_Continuous ($85E52) before Animate_RawMultiDelay. */
     @Test void quietWindUsesOnlyTheNativeVIntLowNibbleDuringTheWait() {
         var fixture = boot();

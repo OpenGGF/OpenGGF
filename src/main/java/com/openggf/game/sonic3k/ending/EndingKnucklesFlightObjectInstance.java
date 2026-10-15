@@ -178,7 +178,10 @@ public final class EndingKnucklesFlightObjectInstance extends AbstractObjectInst
         setX(nativeCameraX(false)+0xC0);setY((services().camera().getY()&0xFFFF)+0x110);
         makeChild(EndingKnucklesFlightChildObjectInstance.TORNADO,0,-0x20,0x2B);
         services().camera().setScrollLocked(true);state().setEndingRunning(true);
-        services().camera().setLevelStarted(false);services().levelGamestate().setTimerFrames(0);
+        services().camera().setLevelStarted(false);
+        // loc_5E70E: clr.w (Screen_shake_flag).w ends loc_8642E's final-defeat rumble.
+        state().screenShake().writeFlag(0);
+        services().levelGamestate().setTimerFrames(0);
         services().levelGamestate().pauseTimer();
         var player=services().playerQuery().mainPlayerOrNull();
         if(player instanceof AbstractPlayableSprite p1) {

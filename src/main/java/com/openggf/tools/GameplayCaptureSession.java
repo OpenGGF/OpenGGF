@@ -424,9 +424,12 @@ public final class GameplayCaptureSession implements AutoCloseable {
 
     /** Engine.drawSpecialStageResults: optional level backdrop, then the results sprites. */
     private void renderSpecialStageResults(GraphicsManager graphics, LevelManager level) {
-        org.lwjgl.opengl.GL11.glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         ResultsScreen results = loop.getResultsScreen();
+        // Engine.applySpecialStageResultsClearColor: the screen's CRAM backdrop, else white.
+        com.openggf.graphics.color.PaletteDisplayColor.glClear(com.openggf.game.LevelBackdropResultsScreen
+                .resultsBackdropOr(results, new com.openggf.level.Palette.Color((byte) 255, (byte) 255, (byte) 255)),
+                graphics);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         if (results != null) {
             if (results instanceof LevelBackdropResultsScreen backdrop && backdrop.drawsLevelBackdrop()) {
                 backdrop.prepareLevelBackdropDraw();

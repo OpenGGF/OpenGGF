@@ -395,6 +395,18 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
         return 0;
     }
 
+    /**
+     * sub_5B18E scrolls Camera_Y_pos to $1CA0 over Plane A, a 32-row name table the VDP
+     * wraps every 256 lines; {@link #foregroundDescriptorAt} repeats it the same way. Past
+     * the SSZ2/D01 layout height the tile pass must wrap instead of discarding rows.
+     */
+    @Override public boolean foregroundDescriptorsWrapVertically() {
+        if(!GameServices.hasRuntime())return false;
+        var ending = com.openggf.game.sonic3k.ending.S3kEndingCoordinator
+                .current(GameServices.zoneRuntimeRegistry()).orElse(null);
+        return ending != null && ending.credits().active() && !ending.flag(3);
+    }
+
     @Override public int foregroundDescriptorAt(int sourceX, int sourceY) {
         if(!GameServices.hasRuntime())return 0;
         var ending = com.openggf.game.sonic3k.ending.S3kEndingCoordinator

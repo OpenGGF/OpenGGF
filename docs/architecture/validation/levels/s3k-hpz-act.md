@@ -331,3 +331,20 @@ load (14 live frames before the native 22-frame fade-out). Rows still red there 
 not fade timing and are owned elsewhere: the Knuckles act-2 restore at 37130 and the
 LRZ boss sidekick overlap parity at 47471 (rewind-snapshot rows) and solo Tails' SSZ1
 opening camera (behaviour row). No skips.
+
+**Native comparison of the Knuckles `$1601` entry (campaign-visual lane, 2026-10-15).**
+The cold campaign's engine pictures at load 49297 and first release 49298 were flagged for
+"no HUD or player". Native frames of `runs/s3k-knuckles-complete-superemeralds`, selected at
+the first `Current_zone_and_act = $1601` (input 411365) and the following 260 published
+frames, show the LRZ fade-out, the title card over black, the title card leaving while the
+level fades in from black (about 22 gameplay frames) and the HUD from the first visible
+gameplay frame. Knuckles starts at X `$10` with the camera at `$20`, so he is off screen
+until he walks in: the missing player is native. The single HUD-less engine frame comes from
+the capture omitting the title-card presentation loop; a direct `$1601` boot with the card
+shown (`campaign-visual-v1/engine-hpz-titlecard`) draws the HUD on the first level frame.
+Open, not fixed here: engine captures show the level at full brightness on the first frame
+after the card in both that boot and a direct LRZ1 boot (`engine-lrz1-titlecard`), where
+native fades in; `Sonic3kTitleCardManager` models the `loc_64DC` `Palette_fade_timer` reveal,
+so whether production or only the capture path skips it is unattributed. The load frame
+49297 itself (full-brightness partially decoded art) is the omitted-presentation capture's
+own frame; native shows the title card over black there.

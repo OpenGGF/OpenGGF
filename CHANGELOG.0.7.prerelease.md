@@ -34,6 +34,9 @@ Unreleased. The earlier development themes remain in
   on return). Pachinko orb rewards follow the level frame counter. All three bonus
   traces now replay without errors.
 
+- **S3K special stage results:** The results card sits on the locked-on game's
+  grey backdrop instead of white, matching native frames of won and failed stages.
+
 - **S3K objects and bosses:** The Angel Island end boss starts its defeat at the
   native hit check of whichever phase it is in. When the object table is full,
   pending placements wait for the next camera block crossing, which restores the
@@ -164,7 +167,10 @@ Unreleased. The earlier development themes remain in
   Native ending bindings restore each controller's own RAM after rebinding
   and preserve incoming physics before the scene's powered writers run. Doomsday retires
   registered followers at its native entry and rebuilds restored scroll output
-  without advancing the screen event.
+  without advancing the screen event. Knuckles' flight stops Mecha Sonic's
+  defeat rumble, so the island and its mask settle where the original puts
+  them and no black line crosses the credits. The second credits part shows its
+  names again instead of an empty sky.
 
 - **Capture and controller tools:** Input branches reject checkpoints whose pending
   fresh assembly or transition callback cannot be restored by gameplay rewind.

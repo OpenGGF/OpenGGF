@@ -43,8 +43,14 @@ class TestS3kCreditsPlanePresentation {
         assertEquals(0xA34A,provider.foregroundDescriptorAt(0x240+24,240));
         assertEquals(0,provider.foregroundDescriptorAt(0x238,240));
         assertEquals(0,provider.foregroundDescriptorAt(0x240+320,240));
+        // sub_5B18E scrolls Camera_Y_pos to $1CA0 while Plane A is a 32-row ring: the VDP
+        // wraps V-scroll at 256 lines, so part two (Camera_Y_pos >= $F60) reads the same
+        // cells. The tile pass must wrap them rather than discard rows past the SSZ2 layout.
+        assertEquals(provider.foregroundDescriptorAt(0x240+24,240),provider.foregroundDescriptorAt(0x240+24,240+0x1000));
+        assertTrue(provider.foregroundDescriptorsWrapVertically(),"credits Plane A is a wrapped VDP ring");
         long visibleRevision=provider.foregroundDescriptorRevision();runtime.ending().setFlag(3);
         assertEquals(0,provider.foregroundDescriptorAt(0x240+24,240));
         assertNotEquals(visibleRevision,provider.foregroundDescriptorRevision(),"native bit3 must invalidate the text plane");
+        assertFalse(provider.foregroundDescriptorsWrapVertically(),"bit3 returns Plane A to the finite SSZ2 layout");
     }
 }

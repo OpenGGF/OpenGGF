@@ -1349,7 +1349,14 @@ other giant rings remain open.
 Engine pictures (320 px) in `$HOME/Videos/OGGF/s3k-parity-coverage-2026-10-14/spot-checks/cold-campaign-v1/g/`
 were inspected: ring approach (49080), Tails taken by the ring (49150), Blue Sphere (49400),
 results (50100) and the released LRZ2 return with the saved timer and ring (50620). The results
-card draws blue spike glyphs over its SCORE/RING BONUS/PERFECT labels; native comparison is open.
+card draws blue spike glyphs over its SCORE/RING BONUS/PERFECT labels. Native comparison
+(campaign-visual lane, 2026-10-15; Tails complete run, every `Game_mode $48` results card,
+won and failed): the glyphs are native, present on every card at the same places. The card's
+backdrop was not: native is `$CCC` grey from the locked-on `Pal_Results` ($2E318), the engine
+drew white from the S3-half copy and a hard-coded clear. Fixed in `a34473db8`
+(`TestS3kSpecialStageResultsBackdrop`, red first). Pictures and provenance:
+`$HOME/Videos/OGGF/s3k-parity-coverage-2026-10-14/spot-checks/campaign-visual-v1/`
+(`native-tails`, `native-tails-2`, `engine-g`, `engine-g-fixed`).
 
 ### Wide boss-act arrival movie retimed (2026-10-15)
 

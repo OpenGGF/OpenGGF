@@ -505,11 +505,25 @@ Engine pictures (320 px) at script-owned moments are in
 `$HOME/Videos/OGGF/s3k-parity-coverage-2026-10-14/spot-checks/cold-campaign-v1/k/` and were
 inspected: HPZ pad rise, SSZ2 arrival swing, crane release (Mecha in the crane, 3 rings),
 Master Emerald Super entry, final white fade, island flight, credits text, banner and title
-are coherent scenes. Open for native comparison: the HPZ assembly frame 49298 shows no
-HUD or player, Mecha appears blue rather than gold on the phase-2 first-hit frame (possibly
-the hit flash) and a one-pixel black line crosses both credit parts. Corresponding native
-windows: `runs/s3k-knuckles-complete-superemeralds` HPZ `$1601` from 411496 and SSZ2 from
-412501 (that run carries Super emeralds, so its ending differs in progress).
+are coherent scenes. Three items were flagged for native comparison; the
+campaign-visual lane (2026-10-15) compared them against native frames of
+`runs/s3k-knuckles-complete-superemeralds` selected by RAM state only, not frame offsets
+(owned read-only adapter, savestate near each window; pictures, RAM/VRAM/CRAM/SST dumps and
+`provenance.json` in `$HOME/Videos/OGGF/s3k-parity-coverage-2026-10-14/spot-checks/campaign-visual-v1/`).
+Engine windows were re-rendered from the same cold movie with `DISPLAY_COLOR_EXPANSION=LIMITED`
+and `RAW_RGB`; native frames are 348×240 with the active 320×224 at (14,8).
+
+| Flag | Native (selector) | Engine | Verdict |
+| --- | --- | --- | --- |
+| HPZ frame 49298: no HUD, no player | `$1601` edge at input 411365: title card over black, then the HUD from the first visible gameplay frame (LFC 1); Knuckles starts at X `$10` behind camera `$20` and walks in | capture omits the title-card presentation; LFC 1 has no HUD, LFC 2 onward has it; Knuckles at X 16, camera 24→32 | No player: native. Missing HUD on one frame: the capture's omitted title loop (a direct `$1601` boot with the card shown draws the HUD on the first level frame). See the [HPZ matrix](s3k-hpz-act.md) for the fade-in difference this exposed |
+| Mecha blue on phase-2 first hit | SST code `$7BD4C` (`Obj_SSZ2_Boss`) `collision_property` 8→7 edge at 416445: CRAM line 2 `$08/$14/$16/$18/$1C` = `8,A24,624,422,20`; next frame the `FixBugs=0` flash row `20,888,666,888,AAA`, alternating | same sequence | Native: `sub_7D3BE` writes the ordinary Mecha colours over the Super palette on every even flash frame |
+| One-pixel black line across both credit parts | `$FA86=4`, `$FA84>2`, `$FAAE` 0/4 edges (422795, 428089): no line; island box and `Map_KnuxEndingIslandMask` both at line 48, BG copy `$D0.4000`, mask `y_pos $F0` | box at 46 (BG copy `$D2`), mask jittering 46–49 | Engine defects, fixed in `13e2e9025` (`loc_5E70E` clears `Screen_shake_flag`; mask projected with the render copy). Re-rendered credits: BG copy `$D0`, no line in any captured frame |
+
+The same comparison found two further engine differences: the special-stage results backdrop
+(fixed in `a34473db8`, recorded in the [LRZ act 2 matrix](s3k-lrz-act2.md)) and blank credits
+part two (`d10afbcdc`, recorded in the [ending matrix](s3k-ending.md)). The native run carries
+Super emeralds, so its post-credits terminal is the S3 eyecatch; the cold movie's banner/Mecha
+terminal has no native counterpart here.
 
 Limits: the boot inlet has no save session, so the final full save is covered by the
 save-site tests (`TestS3kLrzHpzSszColdCampaign`) rather than read back here; ending
