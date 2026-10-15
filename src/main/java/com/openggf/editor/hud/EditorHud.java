@@ -182,7 +182,7 @@ public final class EditorHud {
         if (pad.pressed(VIEW)) { finishPendingEdits(); openWheel(true); return true; }
         if (pad.pressed(LB)) cycleBrush(-1);
         if (pad.pressed(RB)) cycleBrush(1);
-        if (pad.pressed(RT)) act(Action.DESCEND);
+        if (pad.pressed(RT)) descend();
         if (pad.pressed(LT) || pad.pressed(EAST)) act(Action.ASCEND);
         if (pad.pressed(L3)) act(Action.TOGGLE_LAYER);
         if (pad.pressed(R3)) act(Action.TOGGLE_COLLISION_OVERLAY);
@@ -192,7 +192,8 @@ public final class EditorHud {
     }
 
     private void updateWorldPad(MutableLevel level) {
-        controller.focusRegion(EditorFocusRegion.WORLD_CANVAS);
+        // Changing focus commits pending edits, so only change it when it differs.
+        if (controller.focusRegion() != EditorFocusRegion.WORLD_CANVAS) controller.focusRegion(EditorFocusRegion.WORLD_CANVAS);
         float[] left = pad.leftStick(), right = pad.rightStick();
         float speed = CURSOR_SPEED * curve(left);
         float fast = FAST_CURSOR_SPEED * curve(right);
@@ -259,9 +260,20 @@ public final class EditorHud {
         if (pad.pressed(WEST)) act(Action.PERFORM_EYEDROP);
     }
 
+    /** Edits the block or chunk under the cursor. */
+    private void descend() {
+        // The controller enters a chunk only with a chunk selected; the hotbar's brush counts.
+        if (controller.depth() == EditorHierarchyDepth.BLOCK && controller.selection().selectedChunk() == null
+                && currentBrush(LibraryKind.CHUNK) >= 0) {
+            applyBrush(LibraryKind.CHUNK, currentBrush(LibraryKind.CHUNK));
+        }
+        act(Action.DESCEND);
+    }
+
     private void focusWorkbench() {
-        controller.focusRegion(controller.depth() == EditorHierarchyDepth.BLOCK
-                ? EditorFocusRegion.BLOCK_PANE : EditorFocusRegion.CHUNK_PANE);
+        EditorFocusRegion region = controller.depth() == EditorHierarchyDepth.BLOCK
+                ? EditorFocusRegion.BLOCK_PANE : EditorFocusRegion.CHUNK_PANE;
+        if (controller.focusRegion() != region) controller.focusRegion(region);
     }
 
     private static float curve(float[] stick) {

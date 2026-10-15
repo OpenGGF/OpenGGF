@@ -152,7 +152,17 @@ class TestEditorHudPictures {
                     // As in the engine: while the HUD owns the editor, pad mappings see a neutral pad.
                     InputHandlerInternalAccess.suppressGamepad(pads, true);
                     var overlay = new EditorOverlayRenderer(controller, graphics);
-                    var shot = new Shot(graphics, hud, overlay, editor, projection, pads, dispatcher);
+                    // Each tick follows the cursor with the editor camera, as the engine's editor frame does.
+                    int levelWidth = level.getMap().getWidth() * size, levelHeight = level.getMap().getHeight() * size;
+                    var shot = new Shot(graphics, hud, overlay, editor, projection, pads, dispatcher, () -> {
+                        engine.syncEditorState();
+                        if (controller.depth() == EditorHierarchyDepth.WORLD) {
+                            var cursor = controller.worldCursor();
+                            camera.setX((short) Math.clamp(cursor.x() - LOGICAL_WIDTH / 2, 0, Math.max(0, levelWidth - LOGICAL_WIDTH)));
+                            camera.setY((short) Math.clamp(cursor.y() - LOGICAL_HEIGHT / 2, 0, Math.max(0, levelHeight - LOGICAL_HEIGHT)));
+                        }
+                        camera.captureRenderCopy();
+                    });
 
                     // A first pad press switches every prompt to pad glyphs; RB then LB returns to slot one.
                     shot.press(BUTTON_RB);
@@ -282,9 +292,10 @@ class TestEditorHudPictures {
         private final float[] projection;
         private final InputHandler pads;
         private final EditorInputHandler dispatcher;
+        private final Runnable followCursor;
 
         Shot(GraphicsManager graphics, EditorHudRuntime hud, EditorOverlayRenderer overlay, EditorModeContext editor,
-             float[] projection, InputHandler pads, EditorInputHandler dispatcher) {
+             float[] projection, InputHandler pads, EditorInputHandler dispatcher, Runnable followCursor) {
             this.graphics = graphics;
             this.hud = hud;
             this.overlay = overlay;
@@ -292,6 +303,7 @@ class TestEditorHudPictures {
             this.projection = projection;
             this.pads = pads;
             this.dispatcher = dispatcher;
+            this.followCursor = followCursor;
         }
 
         /** One editor tick with the synthetic pad state, then one rendered frame. */
@@ -300,6 +312,7 @@ class TestEditorHudPictures {
             pads.refreshLogicalSnapshot();
             dispatcher.update(pads);
             pads.update();
+            followCursor.run();
             frame();
         }
 

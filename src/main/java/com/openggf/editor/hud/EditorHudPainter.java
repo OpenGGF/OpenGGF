@@ -29,6 +29,9 @@ final class EditorHudPainter implements AutoCloseable {
     private static final int SLOT_GAP = 4;
     private final EditorTileAtlas atlas = new EditorTileAtlas();
     private List<Hit> hits;
+    // Free span of the top bar between the breadcrumb and the chips, for status messages.
+    private float topBarFreeLeft;
+    private float topBarFreeRight;
     private long usageKey = Long.MIN_VALUE;
     private int usage;
 
@@ -44,8 +47,12 @@ final class EditorHudPainter implements AutoCloseable {
         atlas.refresh(level, patternRaw == null ? 0 : (patternRaw >>> 13) & 3);
         backdrop(c, layout);
         canvasFrame(c, layout.game(), hud.tick);
+        if (layout.workbench() == null && level != null && hud.modal != Modal.MENU) worldCursor(c, layout, controller, level, hud.tick);
         topBar(c, layout, controller);
-        if (layout.workbench() != null && level != null) workbench(c, layout.workbench(), hud, controller, level);
+        if (layout.workbench() != null && level != null) {
+            highlightEditedBlock(c, layout, controller, level);
+            workbench(c, layout.workbench(), hud, controller, level);
+        }
         dock(c, layout, hud, controller, level);
         toast(c, layout, hud);
         promptBar(c, layout, hud);
@@ -90,7 +97,7 @@ final class EditorHudPainter implements AutoCloseable {
         }
     }
 
-    private static void topBar(EditorHudCanvas c, EditorHudLayout layout, LevelEditorController controller) {
+    private void topBar(EditorHudCanvas c, EditorHudLayout layout, LevelEditorController controller) {
         Rect bar = layout.topBar();
         c.rect(0, 0, bar.w(), bar.h(), PANEL, 1);
         c.rect(0, bar.h() - 1, bar.w(), 1, LINE, 1);
@@ -111,6 +118,7 @@ final class EditorHudPainter implements AutoCloseable {
                 x += 12;
             }
         }
+        topBarFreeLeft = x + 6;
         float right = bar.w() - 6;
         boolean modified = controller.isModified();
         right = chip(c, right, modified ? "Unsaved" : "Saved", modified ? GOLD : GOOD, true);
@@ -126,7 +134,9 @@ final class EditorHudPainter implements AutoCloseable {
         right = chip(c, right, mode, TEXT, false);
         var cursor = controller.worldCursor();
         String position = "X " + cursor.x() + "  Y " + cursor.y();
-        c.text(position, right - EditorHudCanvas.textWidth(position, Size.SMALL) - 4, 8, Size.SMALL, TEXT_DIM, 1);
+        float positionX = right - EditorHudCanvas.textWidth(position, Size.SMALL) - 4;
+        c.text(position, positionX, 8, Size.SMALL, TEXT_DIM, 1);
+        topBarFreeRight = positionX - 8;
     }
 
     /** Right-aligned chip ending at {@code right}; returns the next free right edge. */
@@ -165,7 +175,8 @@ final class EditorHudPainter implements AutoCloseable {
             if (i == selected) continue;
             float x = x0 + i * (SLOT + SLOT_GAP);
             slot(c, kind, slots[i], x, y0, SLOT, false, hud.tick, controller);
-            c.text(Integer.toString((i + 1) % 10), x + 2, y0 + SLOT - 9, Size.SMALL, TEXT_FAINT, 1);
+            c.rect(x + 1, y0 + SLOT - 10, 8, 9, SHADOW, .7f);
+            c.text(Integer.toString((i + 1) % 10), x + 2, y0 + SLOT - 9, Size.SMALL, TEXT_DIM, 1);
             hits.add(new Hit(new Rect(x, y0, SLOT, SLOT), Modal.NONE, EditorHud.HIT_HOTBAR, i));
         }
         float sx = x0 + selected * (SLOT + SLOT_GAP);
@@ -227,15 +238,18 @@ final class EditorHudPainter implements AutoCloseable {
         c.text(badge, x + (size - EditorHudCanvas.textWidth(badge, Size.BODY)) / 2f, y + size / 2f - 5, Size.BODY, TEXT, 1);
     }
 
-    private static void toast(EditorHudCanvas c, EditorHudLayout layout, EditorHud hud) {
+    private void toast(EditorHudCanvas c, EditorHudLayout layout, EditorHud hud) {
         if (hud.toastFrames <= 0 || hud.toast == null || hud.modal != Modal.NONE) return;
         float alpha = Math.min(1f, hud.toastFrames / 30f);
-        String text = EditorHudCanvas.fit(hud.toast, layout.width() - 80, Size.BODY);
-        float w = EditorHudCanvas.textWidth(text, Size.BODY) + 26;
-        float x = (layout.width() - w) / 2f, y = layout.dock().y() - 24;
-        c.panel(x, y, w, 18, PANEL_RAISED, alpha);
-        c.rect(x + 8, y + 7, 4, 4, ACCENT, alpha);
-        c.text(text, x + 18, y + 4, Size.BODY, TEXT, alpha);
+        // Status sits in the top bar's free span, never over the level or the chips.
+        float span = topBarFreeRight - topBarFreeLeft;
+        if (span < 60) return;
+        String text = EditorHudCanvas.fit(hud.toast, span - 26, Size.SMALL);
+        float w = EditorHudCanvas.textWidth(text, Size.SMALL) + 26;
+        float x = topBarFreeLeft + (span - w) / 2f, y = 3;
+        c.pill(x, y, w, 16, ACCENT_DARK, alpha);
+        c.rect(x + 8, y + 6, 4, 4, GOLD, alpha);
+        c.text(text, x + 18, y + 4, Size.SMALL, TEXT, alpha);
     }
 
     private static void promptBar(EditorHudCanvas c, EditorHudLayout layout, EditorHud hud) {
@@ -367,7 +381,65 @@ final class EditorHudPainter implements AutoCloseable {
         return w;
     }
 
+    /** A window-resolution cursor over the game: the target block in terrain mode and a crosshair. */
+    private static void worldCursor(EditorHudCanvas c, EditorHudLayout layout, LevelEditorController controller,
+                                    MutableLevel level, long tick) {
+        var editor = com.openggf.game.session.SessionManager.getCurrentEditorMode();
+        if (editor == null || editor.getCamera() == null) return;
+        Rect g = layout.game();
+        float unitsPerPixel = layout.gameViewport()[4] / (float) layout.uiScale();
+        var cursor = controller.worldCursor();
+        float cx = g.x() + (cursor.x() - editor.getCamera().getXCopy()) * unitsPerPixel;
+        float cy = g.y() + (cursor.y() - editor.getCamera().getYCopy()) * unitsPerPixel;
+        float pulse = .7f + .3f * (float) Math.sin(tick * .12);
+        c.clip(g);
+        if (!controller.isSpawnEditing()) {
+            int size = level.getBlockPixelSize();
+            float bx = g.x() + (Math.floorDiv(cursor.x(), size) * size - editor.getCamera().getXCopy()) * unitsPerPixel;
+            float by = g.y() + (Math.floorDiv(cursor.y(), size) * size - editor.getCamera().getYCopy()) * unitsPerPixel;
+            float bs = size * unitsPerPixel;
+            c.frame(bx - 1, by - 1, bs + 2, bs + 2, 1, SHADOW, .8f);
+            c.frame(bx, by, bs, bs, 2, GOLD, pulse);
+        }
+        c.rect(cx - 7, cy - 1, 5, 2, SHADOW, .8f);
+        c.rect(cx + 2, cy - 1, 5, 2, SHADOW, .8f);
+        c.rect(cx - 1, cy - 7, 2, 5, SHADOW, .8f);
+        c.rect(cx - 1, cy + 2, 2, 5, SHADOW, .8f);
+        c.rect(cx - 6, cy - .5f, 4, 1, 0xFFFFFF, 1);
+        c.rect(cx + 2, cy - .5f, 4, 1, 0xFFFFFF, 1);
+        c.rect(cx - .5f, cy - 6, 1, 4, 0xFFFFFF, 1);
+        c.rect(cx - .5f, cy + 2, 1, 4, 0xFFFFFF, 1);
+        c.unclip();
+    }
+
     // ------------------------------------------------------------------ workbench
+
+    /** In Block/Chunk view, dims the world except the block being edited and outlines it. */
+    private static void highlightEditedBlock(EditorHudCanvas c, EditorHudLayout layout, LevelEditorController controller,
+                                             MutableLevel level) {
+        var editor = com.openggf.game.session.SessionManager.getCurrentEditorMode();
+        if (editor == null || editor.getCamera() == null) return;
+        Rect g = layout.game();
+        int[] viewport = layout.gameViewport();
+        float unitsPerPixel = viewport[4] / (float) layout.uiScale();
+        int size = level.getBlockPixelSize();
+        var cursor = controller.worldCursor();
+        float bx = g.x() + (Math.floorDiv(cursor.x(), size) * size - editor.getCamera().getXCopy()) * unitsPerPixel;
+        float by = g.y() + (Math.floorDiv(cursor.y(), size) * size - editor.getCamera().getYCopy()) * unitsPerPixel;
+        float bs = size * unitsPerPixel;
+        c.clip(g);
+        c.rect(g.x(), g.y(), g.w(), by - g.y(), SHADOW, .45f);
+        c.rect(g.x(), by + bs, g.w(), g.bottom() - by - bs, SHADOW, .45f);
+        c.rect(g.x(), by, bx - g.x(), bs, SHADOW, .45f);
+        c.rect(bx + bs, by, g.right() - bx - bs, bs, SHADOW, .45f);
+        c.frame(bx - 1, by - 1, bs + 2, bs + 2, 2, GOLD, 1);
+        if (controller.depth() == EditorHierarchyDepth.CHUNK) {
+            float cell = bs / controller.blockGridSide();
+            c.frame(bx + controller.selectedBlockCellX() * cell, by + controller.selectedBlockCellY() * cell,
+                    cell, cell, 1, ACCENT, 1);
+        }
+        c.unclip();
+    }
 
     private void workbench(EditorHudCanvas c, Rect bench, EditorHud hud, LevelEditorController controller, MutableLevel level) {
         c.panel(bench.x(), bench.y(), bench.w(), bench.h(), PANEL, .98f);
@@ -379,11 +451,11 @@ final class EditorHudPainter implements AutoCloseable {
         String subtitle = blockDepth
                 ? controller.blockGridSide() + "x" + controller.blockGridSide() + " chunks, " + level.getBlockPixelSize() + " px"
                 : "2x2 patterns, 16 px";
-        c.text(subtitle, bench.x() + 12 + EditorHudCanvas.textWidth(title, Size.LARGE), bench.y() + 16, Size.SMALL, TEXT_DIM, 1);
+        c.text(subtitle, bench.x() + 11, bench.y() + 31, Size.SMALL, TEXT_DIM, 1);
         int side = blockDepth ? controller.blockGridSide() : 2;
-        float top = bench.y() + 36;
+        float top = bench.y() + 46;
         float infoW = 128;
-        int cell = (int) Math.min((bench.h() - 46) / side, (bench.w() - 30 - infoW) / side);
+        int cell = (int) Math.min((bench.h() - 56) / side, (bench.w() - 30 - infoW) / side);
         cell = Math.max(8, Math.min(blockDepth ? 40 : 96, cell));
         float gx = bench.x() + 10, gy = top;
         c.rect(gx - 2, gy - 2, side * cell + 4, side * cell + 4, SHADOW, .7f);
@@ -422,7 +494,9 @@ final class EditorHudPainter implements AutoCloseable {
             c.rect(gx, gy + i * cell, side * cell, 1, SHADOW, .45f);
         }
         float pulse = .7f + .3f * (float) Math.sin(hud.tick * .12);
+        c.frame(gx + selX * cell - 3, gy + selY * cell - 3, cell + 6, cell + 6, 1, SHADOW, .9f);
         c.frame(gx + selX * cell - 2, gy + selY * cell - 2, cell + 4, cell + 4, 2, GOLD, pulse);
+        c.frame(gx + selX * cell, gy + selY * cell, cell, cell, 1, SHADOW, .6f);
         // Details of the selected cell.
         float ix = gx + side * cell + 14, iy = top;
         float iw = bench.right() - ix - 8;
@@ -635,20 +709,22 @@ final class EditorHudPainter implements AutoCloseable {
         float cx = g.x() + g.w() / 2f, cy = g.y() + g.h() / 2f;
         List<EditorHud.WheelItem> items = hud.wheelItems;
         int count = items.size();
-        float radius = Math.min(96, g.h() / 2f - 6);
-        float tileW = 62, tileH = 30;
+        float tileW = 84, tileH = 30;
+        float radiusY = Math.min(100, g.h() / 2f - tileH / 2f - 6);
+        float radiusX = Math.min(radiusY * 1.6f, g.w() / 2f - tileW / 2f - 6);
         // Spokes from the hub to the highlighted tool.
         if (hud.wheelSlot >= 0) {
             double angle = hud.wheelSlot * 2 * Math.PI / count;
-            for (int i = 1; i <= 5; i++) {
-                float d = radius * i / 7f;
-                c.rect(cx + (float) Math.sin(angle) * d - 1.5f, cy - (float) Math.cos(angle) * d - 1.5f, 3, 3, GOLD, .9f);
+            for (int i = 2; i <= 5; i++) {
+                float t = i / 7f;
+                c.rect(cx + (float) Math.sin(angle) * radiusX * t - 1.5f, cy - (float) Math.cos(angle) * radiusY * t - 1.5f,
+                        3, 3, GOLD, .9f);
             }
         }
         for (int i = 0; i < count; i++) {
             double angle = i * 2 * Math.PI / count;
-            float tx = cx + (float) Math.sin(angle) * radius - tileW / 2f;
-            float ty = cy - (float) Math.cos(angle) * radius - tileH / 2f;
+            float tx = cx + (float) Math.sin(angle) * radiusX - tileW / 2f;
+            float ty = cy - (float) Math.cos(angle) * radiusY - tileH / 2f;
             boolean selected = i == hud.wheelSlot;
             float grow = selected ? 3 : 0;
             c.panel(tx - grow, ty - grow, tileW + 2 * grow, tileH + 2 * grow, selected ? ACCENT : PANEL_RAISED, 1);
@@ -661,7 +737,7 @@ final class EditorHudPainter implements AutoCloseable {
             if (selected) c.frame(tx - grow - 1, ty - grow - 1, tileW + 2 * grow + 2, tileH + 2 * grow + 2, 2, GOLD, 1);
             hits.add(new Hit(new Rect(tx, ty, tileW, tileH), Modal.WHEEL, EditorHud.HIT_WHEEL, i));
         }
-        float hubW = 74, hubH = 30;
+        float hubW = 84, hubH = 30;
         c.panel(cx - hubW / 2f, cy - hubH / 2f, hubW, hubH, PANEL, 1);
         c.text("TOOLS", cx - EditorHudCanvas.textWidth("TOOLS", Size.SMALL) / 2f, cy - 11, Size.SMALL, TEXT_FAINT, 1);
         if (hud.wheelSlot >= 0 && hud.wheelSlot < count) {
@@ -774,7 +850,7 @@ final class EditorHudPainter implements AutoCloseable {
         }
         if (controller.spawnEditMode() != EditorSpawnEditMode.TILES) {
             var selected = controller.selectedObjectSpawn();
-            return selected == null ? "Nothing selected" : "Object " + "%02X".formatted(selected.objectId());
+            return selected == null ? "None" : "Object " + "%02X".formatted(selected.objectId());
         }
         var cursor = controller.worldCursor();
         var map = level.getMap();

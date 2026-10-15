@@ -1,8 +1,9 @@
 # Controller-first editor HUD on the engine's own UI (prototype)
 
 Date: 2026-10-15. Branch: `feature/ai-editor-controller-ui` (base `7277cef40`).
-Status: prototype for review beside the Dear ImGui spike (`feature/ai-editor-imgui-spike`,
-`d2b331a4c`); not integrated. `-Dopenggf.editor.ui=classic` keeps the in-game chrome.
+Status: prototype for review; not integrated. It is the engine's built-in
+`EditorWindowChrome` (see `2026-10-15-editor-window-chrome-seam.md`); a desktop editor on the
+class path replaces it and `-Dopenggf.editor.ui=classic` keeps the in-game chrome.
 
 ## Why a second prototype
 
@@ -44,10 +45,10 @@ gamepad channel (`InputHandler.capturePhysicalInput`).
 | `editor.hud.EditorHud` | Modes (canvas, library, wheel, menu), hotbar, stroke, prompts |
 | `editor.hud.EditorHudPainter` | Draws the frame and records pointer targets |
 | `editor.hud.EditorTileAtlas` | ROM-decoded thumbnails of every block/chunk/pattern (from the spike) |
-| `editor.hud.EditorHudRuntime` | Engine seam: activation, viewport, render, `EditorInputHandler.FrontEnd` |
+| `editor.hud.EditorHudRuntime` | The built-in `EditorWindowChrome`: activation, viewport, render, editor tick, owns the pads |
 
-Input ownership: the runtime is the `EditorInputHandler` front end and sees each editor tick
-first. While it is active the engine sets `InputHandlerInternalAccess.suppressGamepad`, so
+Input ownership: as the window chrome the runtime sees each editor tick first. It reports
+`ownsGamepads()`, so while it is active the engine sets `InputHandlerInternalAccess.suppressGamepad`, so
 Genesis mappings, menu mappings, the debug/frame-step buttons and the rewind bumper see a
 neutral pad; physical state and prompt-family tracking continue. Keyboard and mouse keep
 their existing bindings; the HUD adds Tab, Q, F1 and 1-0 and owns the keyboard only while a
@@ -55,12 +56,40 @@ sheet, wheel or menu is open.
 
 ## Evidence
 
-Pending the first build and offscreen run.
+`TestEditorHudPictures` drives the HUD with a synthetic Xbox pad, then a DualSense, then the
+keyboard, over a ROM-backed S2 project at 1600x900 under surfaceless EGL, and asserts:
+
+- RB/LB move between hotbar slots and change the controller's block brush.
+- A held South steered with the D-pad paints three blocks; one undo reverts all three.
+- North opens the library; D-pad moves; South chooses a different block.
+- Holding View, steering right and releasing toggles the layer.
+- RT enters the block under the cursor, RT again its chunk; East climbs back to the world.
+
+It writes 13 pictures (world, painted stroke, library, wheel, menu, block, block library,
+chunk, objects, object library, PlayStation glyphs, keyboard prompts).
+
+Lessons recorded while building it:
+
+- `LevelEditorController.focusRegion` commits pending edits, so the HUD only sets focus when it
+  changes; setting it every tick split a held stroke into one undo entry per cell.
+- The classic handler committed pending edits on every mouse-up tick; with a front end that
+  also ends its stroke. Mouse release now finishes only the mouse stroke (`179fb8e79`).
+- The 9x10 menu face has no descender room (p, g, y lose their tails), so BODY/LARGE text is
+  set in capitals and mixed-case text uses the compact 6x8 face, which has descenders.
+- The controller enters a chunk only with a chunk selected; RT adopts the hotbar's chunk.
+
+## Rejected
+
+- **Dear ImGui in the engine** (`d2b331a4c`): readable, but a mouse-first desktop editor and a
+  new native dependency. It continues as the separate GPL-3.0 project
+  [OpenGGF-Editor](https://github.com/OpenGGF/OpenGGF-Editor) through `EditorWindowChrome`.
 
 ## Open before integration
 
 - Real-window check with a physical pad (no isolated display on the prototype machine).
 - Persist hotbars per project; a "recent" row in the library; library filtering by usage.
 - Object thumbnails from object art rather than id badges.
-- Zoom and pan of the canvas, which both prototypes still lack.
+- Zoom and pan of the canvas.
+- The editor projects menu (Tools > Editor projects) and project forms still use the classic
+  logical-pixel renderer.
 - Retire `EditorUiLayout` and the logical-pixel chrome once one window UI is chosen.

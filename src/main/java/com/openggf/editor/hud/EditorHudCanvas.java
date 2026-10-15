@@ -151,8 +151,13 @@ final class EditorHudCanvas implements AutoCloseable {
         quad(glyphs, x, y, mask.w(), mask.h(), u0, v0, u1, v1, rgb, alpha);
     }
 
+    /**
+     * Draws text. The 9x10 face has no room for lowercase descenders (p, g, y would lose their
+     * tails), so BODY and LARGE text is set in capitals; the compact face keeps mixed case.
+     */
     void text(String text, float x, float y, Size size, int rgb, float alpha) {
         if (text == null || text.isEmpty() || alpha <= 0) return;
+        if (size != Size.SMALL) text = text.toUpperCase(java.util.Locale.ROOT);
         flush();
         font.drawText(text, x, y, size.scale, ((rgb >> 16) & 255) / 255f, ((rgb >> 8) & 255) / 255f,
                 (rgb & 255) / 255f, alpha);
