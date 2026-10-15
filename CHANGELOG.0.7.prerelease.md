@@ -159,7 +159,9 @@ Unreleased. The earlier development themes remain in
   Native ending bindings restore each controller's own RAM after rebinding
   and preserve incoming physics before the scene's powered writers run. Doomsday retires
   registered followers at its native entry and rebuilds restored scroll output
-  without advancing the screen event.
+  without advancing the screen event. Knuckles' flight stops Mecha Sonic's
+  defeat rumble, so the island and its mask settle where the original puts
+  them and no black line crosses the credits.
 
 - **Capture and controller tools:** Input branches reject checkpoints whose pending
   fresh assembly or transition callback cannot be restored by gameplay rewind.
