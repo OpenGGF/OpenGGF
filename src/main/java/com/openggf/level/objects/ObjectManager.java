@@ -3491,8 +3491,20 @@ public class ObjectManager {
             if (previousYCoarse == Integer.MIN_VALUE) {
                 previousYCoarse = currentYCoarse;
             }
-            for (ObjectSpawn spawn : placement.pendingCursorLoadSpawns()) {
-                changed |= tryLoadPlacementSpawn(spawn, allowVerticalLoadBypassForS2);
+            // loc_1B864 runs the X loop only on a coarse-X change (or level
+            // init). loc_1B8D2 first needs a free SST, and loc_1B8E8 exits when
+            // CreateNewSprite4 finds no further slot, parking
+            // Object_load_addr_front on the next entry until the next coarse
+            // change (sonic3k.asm loc_1B8D2-loc_1B8F2, CreateNewSprite4).
+            if (placement.consumeCursorLoadPass() && hasFreeDynamicSlot()) {
+                for (ObjectSpawn spawn : placement.pendingCursorLoadSpawns()) {
+                    boolean loaded = tryLoadPlacementSpawn(spawn, allowVerticalLoadBypassForS2);
+                    changed |= loaded;
+                    if (placement.isPendingCursorLoad(spawn)
+                            || (loaded && !hasFreeDynamicSlot())) {
+                        break;
+                    }
+                }
             }
             placement.finishPendingCursorLoadBatch();
             if (currentYCoarse != previousYCoarse) {

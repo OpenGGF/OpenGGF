@@ -112725,3 +112725,44 @@ one-case selector) retains60 grouped25physics/35animation, first25589 animation
 13/05, firstphysics25590 TailsSub7800/6C00 at00:20:50 (35.879s/87s).
 This supersedes the physical-label ambiguity, not the remaining strict fronts.
 No hydration, fitted wait, shared clock/allocator or broad/full sweep.
+
+### 2026-10-15 — AIZ end-boss killing hit admitted at native CheckHit
+
+Owned bugfix/ai-s3k-parity-trace over colour commit 8e82d7a1b;
+[native order, negatives and evidence](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#prepared-next-owner-boss-dispatch-and-returned-hcz--2026-10-15).
+Touch_Enemy now publishes only HP/status/collision. A captured pending flag is
+admitted at the routine's own AIZEndBoss_CheckHitOrDefeat call (Revealed and
+Hover tails, AttackWait head), then timer stop and score follow. The two lean
+negatives were red first (2/2 failures, routine16 at touch, 01:48:14 BST).
+
+Canonical (-Ptrace-replay, forkCount1, alphabetical, unchanged four-class
+selector, Java25/EGL/original absolute ROM) completes 5/1 failure/0 errors/0
+skips at 02:40:36 BST (1:34 Maven). Original AIZ, initial HCZ and both prefixes
+pass. Chain segment8 AIZ5 improves from raw 1765 (1686 physics + 79 animation,
+first 6000 P2X) to raw 1692 (1613 physics + 79 animation), first 6111
+sidekick_x_speed ROM 0024/engine 0000. Returned HCZ11 is unchanged: 82067
+(69393 + 12674), first 1510 Y 07D6/07DF, walk-stop input 68801/loadgen9.
+Alternate (-Ptrace-segments, unchanged selector) is unchanged: 60 errors, first
+25589 animation 13/05, at 02:47:17 BST (35s). Strict fronts remain open. No
+hydration, uniform delay or shared BossHitHandler/clock/allocator change.
+
+### 2026-10-15 — returned HCZ fan waits for the parked S3K X cursor
+
+Owned bugfix/ai-s3k-parity-trace over 9cdec0b75;
+[native slot_dump, loader routine and evidence](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#returned-hcz-fan-load-waits-for-the-parked-s3k-x-cursor--2026-10-15).
+Native SST is full at the trace-1160 coarse-X crossing, so Load_Sprites parks
+Object_load_addr_front on the $2250 fan until the next coarse change (1246).
+The engine retried pending cursor entries every pass and created the fan at
+1161, so its pulse was idle when native pushed the belt rider at 1505. Pending
+S3K X-cursor entries now load only on a coarse-X/reset loader pass, stopping
+on allocation failure or after the last free slot (loc_1B8D2-loc_1B8F2).
+
+Focused placement/S3K selection passes 150/0/0/0 (02:55:34 BST). Canonical
+(unchanged selector, -Ptrace-replay forkCount1 alphabetical) completes 5/1
+failure/0 errors/0 skips at 02:59:42 BST (1:37). Returned HCZ11 moves from
+first 1510 Y to first 1768 Y (ROM 0870, engine 0871); raw 82067 -> 81981
+(69334 physics + 12647 animation). The walk-stop is unchanged at input
+68801/loadgen9. AIZ5 is unchanged at 1692 (first 6111 sidekick_x_speed), and
+other segments stay at 0. Alternate is unchanged: 60, first 25589 (03:00:34
+BST). The engine bubble mass-removal at the old fans' retirement (89 -> 16 used
+slots) is recorded but not attributed, and is unchanged.

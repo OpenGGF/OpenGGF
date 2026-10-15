@@ -300,15 +300,74 @@ class TestAizEndBossInstance {
     }
 
     @Test
+    void hoveredKillingHitRetainsOldDispatchUntilItsNativeCheckHitTail() throws Exception {
+        RecordingServices services = new RecordingServices();
+        services.withCamera(camera);
+        services.withGameState(new GameStateManager());
+        AizEndBossInstance boss = buildBoss(services);
+        invokeNoArg(boss, "beginHover");
+        boss.getState().hitCount = 1;
+        int beforeY = boss.getState().yFixed;
+
+        boss.onPlayerAttack(null, null);
+
+        assertEquals(6, boss.getState().routine,
+                "Touch_Enemy changes HP/status, not the hovering code owner or its routine");
+        assertEquals(0, services.gameState().getScore(),
+                "BossDefeated_StopTimer publishes score only at AIZEndBoss_CheckHitOrDefeat");
+        boss.update(0, null);
+        assertEquals(beforeY + 0xB000, boss.getState().yFixed,
+                "AIZEndBoss_Hover performs Swing $C0-$10 and MoveSprite2 before its CheckHit tail");
+        assertEquals(0x3F, readInt(boss, "waitTimer"),
+                "Hover's tail starts Wait_FadeToLevelMusic without dispatching that new owner");
+        assertEquals(1000, services.gameState().getScore());
+        boss.update(1, null);
+        assertEquals(0x3E, readInt(boss, "waitTimer"),
+                "the following Wait_FadeToLevelMusic dispatch performs the first predecrement");
+    }
+
+    @Test
+    void attackWaitKillingHitFallsThroughItsExistingObjWaitAfterNativeCheckHit() throws Exception {
+        RecordingServices services = new RecordingServices();
+        services.withCamera(camera);
+        services.withGameState(new GameStateManager());
+        AizEndBossInstance boss = buildBoss(services);
+        invokeNoArg(boss, "beginHover");
+        // AIZEndBoss_StartAttackWait changes routine to8 and $2E to$3F.
+        boss.getState().routine = 8;
+        Field wait = AizEndBossInstance.class.getDeclaredField("waitTimer");
+        wait.setAccessible(true);
+        wait.setInt(boss, 0x3F);
+        boss.getState().hitCount = 1;
+
+        boss.onPlayerAttack(null, null);
+
+        assertEquals(8, boss.getState().routine,
+                "Touch_Enemy retains the AttackWait dispatcher until its native hit check");
+        boss.update(0, null);
+        assertEquals(0x3E, readInt(boss, "waitTimer"),
+                "AIZEndBoss_AttackWait checks hit, then tail-jumps Obj_Wait after code replacement");
+        assertEquals(1000, services.gameState().getScore());
+        boss.update(1, null);
+        assertEquals(0x3D, readInt(boss, "waitTimer"));
+    }
+
+    @Test
     void defeatCapsuleHandoffWaitUsesObjWaitPredecrementSemantics() throws Exception {
         RecordingServices services = new RecordingServices();
         services.withCamera(camera);
         services.withGameState(new GameStateManager());
 
         AizEndBossInstance boss = buildBoss(services);
+        // Collision is clear until AIZEndBoss_Revealed, so a killing hit is
+        // native-reachable only in Revealed/Hover/AttackWait (sonic3k.asm:138109-138114).
+        invokeNoArg(boss, "beginHover");
         boss.getState().hitCount = 1;
 
         boss.onPlayerAttack(null, null);
+        boss.update(0, null);
+        assertEquals(0x3F, readInt(boss, "waitTimer"),
+                "Hover's CheckHit tail installs Wait_FadeToLevelMusic with $2E=$3F before any defeat tick");
 
         for (int frame = 0; frame < 0x38; frame++) {
             boss.update(frame, null);
@@ -477,6 +536,12 @@ class TestAizEndBossInstance {
         Method method = target.getClass().getDeclaredMethod(methodName);
         method.setAccessible(true);
         method.invoke(target);
+    }
+
+    private static int readInt(Object target, String fieldName) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.getInt(target);
     }
 
     private static boolean readBoolean(Object target, String fieldName) throws Exception {
