@@ -203,6 +203,8 @@ public final class LevelEditorController {
         if (objectPalette == null) throw new IllegalStateException("Spawn editing is not configured");
         return objectPalette;
     }
+    /** The object palette, or null before spawn editing is configured. */
+    public EditorStockObjectPalette objectPaletteOrNull() { return objectPalette; }
 
     public void cycleSpawnEditMode() {
         setSpawnEditMode(switch (spawnEditMode) {
@@ -1052,6 +1054,11 @@ public final class LevelEditorController {
         selectedPatternRaw=(selectedPatternRaw==null?0:selectedPatternRaw&~0x7FF)|index;
     }
     public Integer selectedPatternRaw() { return selectedPatternRaw; }
+
+    /** Chunk index of the block-composition brush, or null before one is chosen. */
+    public Integer chunkBrushIndex() {
+        return chunkBrushRaw == null ? null : chunkBrushRaw & CHUNK_INDEX_MASK;
+    }
 
     public Integer selectedBlockIndex() {
         return blockBrushIndex;
