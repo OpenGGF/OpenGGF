@@ -2090,3 +2090,125 @@ leaves. The FAST row stores one cost for this fingerprint (4), which matches
 seven of the nine D01 products. A per-route or per-character cost would be fitted
 and was not added. Closing this residual needs a cycle-budget model for the Kos
 queue.
+
+#### Kos idle-budget measurement of the Hyper Sonic residual (2026-10-15, Opus kos-budget lane)
+
+This section records native, read-only measurements of the `$1D17A6` 4-versus-3
+service boundary. It changes no production timing or profile rows. All outputs
+are in the external evidence directory
+`ending-native-reference-prerequisites/` (abbreviated `B/`).
+
+**Probes.**
+- `NativeCloudTransitionProbe-v6` is the v5 probe unchanged, plus read-only hooks. It
+  hooks `Process_Kos_Queue` `$1C1A`, `Set_Kos_Bookmark` `$1BF0` (the stacked `rte`
+  PC at `$42(sp)`), `Process_Kos_Queue_EndReached` `$1CD2`, the
+  `Backup_Kos_Registers` `rts` `$1D16`, and the `LevelLoop` points `$651C`/`$6520`
+  (sonic3k.asm 2819–2967, 7884–7889). It reads `$FF0E`–`$FF5F`
+  (constants.asm 896–903) and counts executions of every instruction in
+  `$1C1A`–`$1D22`.
+- `-v7` adds an all-address execute histogram, the DMA queue at
+  `Process_DMA_Queue` `$1588`, and an in-memory Europe region option.
+- `-v7p` splits the terminal fence and makes it region-aware. `Graphics_flags`
+  bit 6 means PAL (constants.asm 971), so v7's NTSC-only check rejected PAL by
+  design.
+- `-v7c` takes the observation-window start as an argument.
+
+All runs use the unchanged movie, host (`71b949a6…`), spec and fence, through
+queued `exec:exec`. The NTSC v6 and v7 `branches.csv` files equal v5 byte for byte, and the v7
+Kos files equal v6. So neither the hooks nor the histogram perturb emulation.
+
+Cycles are **derived**: measured per-instruction counts multiplied by the
+standard MC68000 timings, accurate to ±1 instruction of interrupt latency.
+BizHawk 2.11 GPGX `IDebuggable.TotalExecutedCycles` throws
+`NotImplementedException` (checked in the Cores.dll IL), so native cycle stamps
+would need a core patch. The derivation checks itself: a job's total
+decompressor cycles agree across every product and region to within ±4.
+
+| Job | Decompressor cycles (`$1C26`–`$1CF9`) | Services per product |
+|---|---|---|
+| `$1D17A6` | 211,058–211,062 | NTSC: Tails/+2 4, Sonic/+2 3 (team/+2 byte-identical), Sonic/0 4, Sonic/−2 4. PAL: Tails/+2 3, Sonic/+2 3 |
+| `$1CF2D4` | 240,500 | 3 everywhere |
+| `$1CFB46` | 287,682–287,688 | 4 everywhere |
+| `$1D02B6` | 320,468–320,472 | 4 where complete |
+
+**Per-service progress on `$1D17A6`, NTSC (bytes out / cycles available before VInt).**
+
+| Product | Window 1 | Window 2 | Window 3 | Window 4 |
+|---|---|---|---|---|
+| Tails/+2 (LF 4402–4405) | 706 / 38,612 | 1499 / 85,912 | 1459 / 84,974, stopping at `$FFFF0E50`, 48 bytes short | 48, retired |
+| Sonic/+2 (LF 4402–4404) | 709 / 38,782 | 1538 / 87,428 | 1465, retired with 59 idle-loop iterations (≈1.3k cycles) spare | — |
+
+Window budgets before VInt (cycles), Sonic/+2 minus Tails/+2:
+
+| LF 4400 | LF 4401 | LF 4402 | LF 4403 | LF 4404 |
+|---|---|---|---|---|
+| +154 | +132 | +170 | +1,516 | +1,580 |
+
+Tails' three windows give 209,136 decompressor cycles against the 211,060
+needed, so it is short by 1,924 cycles (0.9%). The non-Hyper Sonic products are
+nowhere near the boundary:
+- Sonic/0 submits at LF 3713; its windows are 32.3k / 70.8k / 82.1k.
+- Sonic/−2 submits at LF 3302; its windows are 36.5k / 76.0k / 86.1k.
+
+Every interrupted service was bookmarked inside `$1C26`–`$1CFA`, so there is no
+interrupt or bookmark anomaly. `Hyper_Sonic_flash_timer` stayed 0 throughout, so
+the `VInt_8` CPU CRAM writes did not run.
+
+**Attribution (instruction histogram, NTSC, Tails/+2 against Sonic/+2).**
+- Each frame, Tails executes about 12 more non-Kos instructions (`Obj_Tails`
+  and `Tails_*` against `Obj_Sonic` and `Sonic_*`). That accounts for the
+  ≈150-cycle steady gap.
+- In LF 4403 Tails executes 120 more. These come from `Obj_Tails_Tail`,
+  `Animate_Tails_Part2`, `Tails_Tail_Load_PLC`, `Add_To_DMA_Queue` and
+  `Process_DMA_Queue`, plus `Render_Sprites` piece-loop differences. The tail
+  DPLC queues one 96-word DMA, which runs in VInt 4403.
+- In LF 4404 Tails executes 83 more.
+- Neither Sonic route has a DMA-queue entry anywhere in LF 4400–4406.
+
+**PAL control.**
+- PAL windows are about 3.3k cycles larger (Tails LF 4400: 91,016 against
+  87,738).
+- Tails/+2 then retires `$1D17A6` in 3 services, with 478 idle-loop iterations
+  to spare.
+- Region therefore changes a published NTSC count. The FAST rows are NTSC-only
+  measurements.
+
+**Verdict.**
+- The idle-budget hypothesis is **supported**: per-service progress differs,
+  while job cost is identical.
+- A production semantic budget model is **not supported at the required
+  precision**:
+  - The Tails/+2 to Sonic/+2 boundary is a band of about 3.2k cycles over
+    ≈211k cumulative, roughly ±0.7%.
+  - Per-window budgets move by ±10% with scene state (70.6k–92.5k NTSC).
+  - The deciding difference is per-object 68k code-path cost (player object,
+    tail object, DPLC, sprite pieces), not a coarse engine-modelled quantity.
+- This meets the research report's M3 rejection condition.
+
+**Proposal for the lead; no change made here.**
+1. Keep the `s3k-kos-v1` exact rows (`$1D17A6`=4).
+2. Record the Sonic/+2 and team/+2 one-frame reunion gate as an explicit known
+   gap in `docs/status/s3k-known-bugs.md`. It is a CPU-time effect of per-object 68k cost,
+   not a fitted row.
+3. Optionally add the ROM-derived `decompressorCycles` work feature (research
+   report seam 1) as an estimator input for unmeasured rows. Use the four totals
+   above as unit vectors, together with the region term.
+4. Any later budget model must reproduce all six measured counts above (NTSC and
+   PAL) without route keys, and must also reproduce the 46 multi-valued corpus
+   fingerprints.
+
+Rejected:
+- a per-route `$1D17A6` row;
+- a global or Hyper-keyed ±1 shift;
+- the corpus-mean budget;
+- feature proxies calibrated on these windows, because they would be fitted to
+  this boundary.
+
+Evidence:
+- `B/native-kos-budget-*-v6`, `-v7`, `-v7p` and `-v7c`;
+- `B/native-kos-budget-v6-analysis`, `-v7-ntsc-routine-diff`,
+  `-v7p-pal-analysis` and `-v7c-nonhyper-analysis`;
+- `B/native-kos-budget-v7-job-cycles.txt`;
+- the scripts `B/compile_kos_budget_probe_v{6,7,7p,7c}.py`,
+  `B/run_kos_budget_probe_v{6,7,7b,7p,7c}.py` and
+  `B/analyze_kos_budget_v{6,7}.py`.
