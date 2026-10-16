@@ -485,22 +485,24 @@ gives the card at release, then the hold and exit.
 | Special-stage return, AIZ | 122 locked, then the hold | unchanged |
 
 Pictures (LIMITED/RAW_RGB, 320 wide) are in `spot-checks/round2-titlecard/` with provenance.md.
-Native pairing comes from the native dumps alone. RAM `Level_frame_counter` is k at seq 130+k.
-`Normal_palette` in the seq N RAM equals the seq N+1 CRAM, so the picture of counter k is
-published at seq 131+k. The direct HPZ boot at counters 0, 1, 5, 10, 21, 22, 23 and 30 differs
-from those native frames by 357-584 of 71680 pixels in exact RGB. The card pieces, the fade on
-lines 1-3 and the level are identical on every frame, and at counter 23 the banner is leaving
-in both. Only the HUD differs. The score and lives digits differ because the native run
-carries its score and lives. The last locked title step equals native seq 130 exactly. At
-counter 0 the native frame also shows the HUD digits, black over the banner: `Level` runs
-`Process_Sprites` and `Render_Sprites` at loc_6468 (sonic3k.asm:7853-7854) before loc_64DC,
-and LevelLoop's first `VInt_8` runs `UpdateHUD`. The engine shows them from counter 1.
-Further probe pictures (`hud-phase/`) attribute this to a one-frame lag of the whole HUD
-layer. The playfield, palette and card match seq 131+k on every frame, but the TIME digit
-ticks at counter 60 against native 59. At counters 24 and 56 the RINGS flash still shows the
-phase native left one frame earlier. The owner is the HUD's counter and flash presentation,
-not the card release, and it stays open. Counter 2 alone also swaps two palette entries,
-`(0,34,34)` and `(0,0,68)`, over 5,564 playfield pixels; this is not explained. The LRZ1
+Native pairing (corrected 2026-10-16 from independent producer boundaries, superseding the
+seq 131+k pairing first recorded here): RAM `Level_frame_counter` and `Timer` frames are both k
+at seq 130+k, and `Normal_palette` in the seq N RAM equals the seq N+1 CRAM. Native seq N shows
+the `VInt_8` publication at the start of that hardware frame (SAT, scroll and CRAM built by the
+logic of seq N-1, plus `UpdateHUD`). The engine picture after step k shows the V-int published
+at the start of step k: every S3K sprite and the HUD come from `spriteTables.published()`, and
+the terrain scroll is the generation paired with it (`LevelRenderer.scrollForDraw`). So the
+published layers of engine counter k pair with native seq 130+k. The earlier 131+k pairing
+matched the fade because the level fade was applied on the frame its logic requested it, one
+V-int early, while the HUD (correctly published) appeared to lag. With the fade published at
+its V-int (`GraphicsManager` displayed/requested fade, 2026-10-16) the direct HPZ boot at
+counters 0, 1, 2, 3, 21 and 22 differs from seq 130+k by 256-486 of 71680 pixels in exact RGB,
+all in the score and lives boxes, which carry the native run's own values. The earlier
+`hud-phase/` measurements (TIME ticks at counter 60, RINGS flash at 24/56) already match seq
+130+k, and counter 2's former two-entry palette swap is gone. The card is
+the remaining exception: it is drawn from the current step's state, so its exit (counters
+23-36) matches seq 131+k (401 px, the same score/lives boxes) and is one frame early against
+the published layers. The LRZ1
 death restart shows the card sliding in at full colour over black and the same hold; there
 is no native picture of it.
 
@@ -514,8 +516,8 @@ The re-timed `soz1-cold-knuckles` movie is recorded in the [SOZ1 matrix](s3k-soz
 Limits: `known-bugs` "Level-Entry Title Card Residuals". Loads without the fresh-art
 admission skip the `LoadLevelLoadBlock` terrain wait, so the direct HPZ boot locks for 60
 frames against the native routine's 107. `Level`'s KosM queue clear is not modelled. The
-card reaches COMPLETE one frame late (counter 36 against native 35). The HUD layer lags one
-frame, so the release step draws no HUD digits. Rings draw under the card, and
+card reaches COMPLETE one frame late (counter 36 against native 35). The card is drawn from the
+current step's state, one frame ahead of the V-int publication. Rings draw under the card, and
 `Pal_FromWhite` is not presented.
 
 ## Cold Tails HPZ campaign leg (2026-10-15)

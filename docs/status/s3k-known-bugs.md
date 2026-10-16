@@ -6585,15 +6585,12 @@ Still open:
   the previous level across the reload.
 - The card leaves one frame late. It reaches COMPLETE, the `LoadEnemyArt` handoff, at counter
   36; the native card is deleted at counter 35.
-- The release step draws no HUD digits. `Level` runs `Process_Sprites` and `Render_Sprites`
-  at loc_6468 (sonic3k.asm:7853-7854) before loc_64DC, and LevelLoop's first `VInt_8` runs
-  `UpdateHUD`. The native picture of counter 0 therefore already shows the digits over the
-  banner. The engine publishes HUD counters only on its ordinary-level VBlank, which reaches
-  the picture one frame later. The same one-frame lag affects the whole HUD layer in
-  LevelLoop, while the playfield, palette and card match native: the TIME digit ticks at
-  counter 60 against native 59. At counters 24 and 56, where native toggles the zero-ring
-  RINGS flash, the engine still shows the previous phase. The owner is the HUD's counter and
-  flash presentation phase, not the card release. It is not fixed.
+- The title card is drawn from the current step's state (`titleCard.draw()`), not with the
+  V-int publication that carries the sprite table, scroll, HUD and palette. On the direct HPZ
+  boot the card's exit (counters 23-36) matches native seq 131+k while every published layer
+  matches seq 130+k, so the card moves one frame early. Fixed 2026-10-16: the fade-in was
+  shown one V-int early in the same way (the "one-frame HUD lag" recorded earlier was this
+  palette, not the HUD; see the HPZ matrix).
 - Rings draw under the card, where the original draws them above it (`Render_Sprites` emits
   `Render_Rings` before the object buckets, 36326-36329).
 - The `$D01`/`$1701` `Pal_FromWhite` reveal is not presented.

@@ -37,7 +37,8 @@ public final class LevelSpritePresentation {
     static final class Tables implements RewindSnapshottable<Tables.State> {
         record State(SpritePresentation.Frame prepared, SpritePresentation.Frame published,
                      SpritePresentation.Frame counters, LevelScrollPresentation preparedScroll,
-                     LevelScrollPresentation publishedScroll) { }
+                     LevelScrollPresentation publishedScroll,
+                     PaletteUploadPresentation.DisplayedFade displayedFade) { }
         private SpritePresentation.Frame prepared = SpritePresentation.Frame.empty();
         private SpritePresentation.Frame published = SpritePresentation.Frame.empty();
         private SpritePresentation.Frame counters = SpritePresentation.Frame.empty();
@@ -72,12 +73,22 @@ public final class LevelSpritePresentation {
             publishedScroll = null;
         }
         @Override public String key() { return "level-sprite-presentation"; }
-        @Override public State capture() { return new State(prepared, published, counters, preparedScroll, publishedScroll); }
+        @Override public State capture() {
+            // The displayed CRAM fade belongs to the same V-int publication as the SAT and scroll.
+            var graphics = com.openggf.game.GameServices.hasRuntime() ? com.openggf.game.GameServices.graphics() : null;
+            return new State(prepared, published, counters, preparedScroll, publishedScroll,
+                    PaletteUploadPresentation.captureDisplayedFade(graphics));
+        }
         @Override public void restore(State state) {
             // A restore redraws without a V-int publication: upload any latched palette
             // lines now; the next ordinary publication resumes latching.
             if (com.openggf.game.GameServices.hasRuntime()) {
-                PaletteUploadPresentation.release(com.openggf.game.GameServices.graphics());
+                var graphics = com.openggf.game.GameServices.graphics();
+                PaletteUploadPresentation.release(graphics);
+                // Lines redraw from their restored owners at once, but the fade CRAM displayed
+                // with this restored publication is the captured generation, not the restored
+                // owners' newer request (which reaches CRAM at the next V-int).
+                PaletteUploadPresentation.restoreDisplayedFade(graphics, state.displayedFade());
             }
             prepared = state.prepared();
             published = state.published();

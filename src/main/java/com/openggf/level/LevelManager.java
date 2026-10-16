@@ -4669,7 +4669,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         if (graphicsManager == null) {
             return backdrop;
         }
-        PaletteFadePresentation fade = graphicsManager.getPaletteFadePresentation();
+        // The backdrop is CRAM colour 0 of its line: use the fade CRAM displays, which trails
+        // the requested fade by one V-int publication while palette uploads are latched.
+        PaletteFadePresentation fade = com.openggf.graphics.PaletteUploadPresentation.displayedFade(graphicsManager);
         if (!fade.affects(level.getBackdropPaletteLine())) {
             return backdrop;
         }
