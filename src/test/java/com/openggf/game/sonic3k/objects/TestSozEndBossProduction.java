@@ -154,11 +154,12 @@ class TestSozEndBossProduction {
         input.setLogicalOverride(com.openggf.debug.playback.RecordedInputSnapshots.fromBk2(neutral,neutral));
         var loop=new com.openggf.GameLoop(input);loop.setGameplayMode(f.gameplayMode());
         loop.setGameMode(com.openggf.game.GameMode.LEVEL);
+        // GameLoop's PLC logical iteration services the fade once per step; no test-side FadeManager.update().
+        assertTrue(loop.ownsGameplayFadeLifecycle(),"production loop owns the gameplay fade");
         int largestOldFrame=0;boolean loaded=false;
         try {
             for(int i=0;i<1500;i++) {
-                f.gameplayMode().getFadeManager().update();
-                loop.step();
+                loop.step();GameServices.graphics().runPendingRenderThreadTasks();
                 var controller=f.gameplayMode().getRewindController();
                 if(GameServices.level().getCurrentZone()==9) {
                     assertEquals(0,GameServices.level().getCurrentAct());
@@ -177,11 +178,13 @@ class TestSozEndBossProduction {
             // Let the destination's real title owner retire; do not raw-consume its request.
             boolean destinationReady=false;
             for(int i=0;i<500;i++) {
-                f.gameplayMode().getFadeManager().update();loop.step();
+                loop.step();GameServices.graphics().runPendingRenderThreadTasks();
                 var title=GameServices.module().getTitleCardProvider();
                 if(loop.getCurrentGameMode()==com.openggf.game.GameMode.LEVEL
                         && (title==null || title.isComplete())
                         && !f.gameplayMode().getFadeManager().isActive()
+                        && !f.gameplayMode().getFadeManager().hasPendingCompletion()
+                        && !GameServices.level().hasPendingFreshLevelTransitionBoundary()
                         && !GameServices.camera().getFocusedSprite().isControlLocked()) {
                     destinationReady=true;break;
                 }
@@ -190,6 +193,12 @@ class TestSozEndBossProduction {
             assertEquals(com.openggf.game.GameMode.LEVEL,loop.getCurrentGameMode());
             assertEquals(9,GameServices.level().getCurrentZone());assertEquals(0,GameServices.level().getCurrentAct());
             assertFalse(GameServices.camera().getFocusedSprite().getDead());
+            // Released LRZ1 incoming world: two forward/reverse 45-input full-registry cycles; no raw branch crosses the load.
+            int checkpoint=GameServices.level().getCheckpointState().getLastCheckpointIndex();
+            CheckpointIncomingReplay.verify(f,loop,input,checkpoint,()->{
+                assertEquals(9,GameServices.level().getCurrentZone());assertEquals(0,GameServices.level().getCurrentAct());
+                assertFalse(GameServices.camera().getFocusedSprite().getDead());
+            });
         } finally {loop.closePresence();}
 
     }
