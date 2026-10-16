@@ -6548,6 +6548,14 @@ The engine's `s3k-kos-v1` profile keys service counts on the stable job
 fingerprint, so it publishes four services on every route. The engine therefore
 reaches the Sonic/+2 and team/+2 reunion gate one frame after native.
 
+PAL makes the same gap larger and earlier. On the native 50 Hz Sonic/+2 product
+(2026-10-16), the AIZ1 jobs that `loc_5AC12` queues finish at LF 3777 instead of 3781.
+`loc_5AC70` therefore opens four frames before the region-independent engine; this is the
+first PAL divergence. Native NTSC and PAL agree before it at every compared spot and
+ledger field. A PAL frame has 313 lines instead of 262, less VInt's 17,942-cycle PAL
+`dbf` (sonic3k.asm:529-532). Evidence is in the
+[ending matrix PAL section](../architecture/validation/levels/s3k-ending.md#native-pal-50-hz-sonic2-product-ending-pal-lane-2026-10-16).
+
 ### Why it stays open
 - A route- or character-keyed row, a Hyper-keyed shift, or a corpus-mean budget
   would be fitted to this boundary. The runtime invariants reject all three.
@@ -6655,8 +6663,20 @@ logo fade, and the credits' Plane A phase against the native complete run. The
   and 2 through their own `loc_5FF62` instances (up toward `$EEE`, then down to the
   target, every fourth pass from each allocation). The engine's S3 eyecatch
   (`S3kPostCreditsObjectInstance.initializeS3Eyecatch`) uses a six-pass from-black fade.
-  No native picture of that terminal exists. The owner is the three allocations' pass
-  order and parameters (`$30`, `$32`, `$3A`).
+  The owner is the three allocations' pass order and parameters (`$30`, `$32`, `$3A`).
+  The 2026-10-16 native PAL Sonic/+2 capture is the first native picture of this
+  terminal. It reached the eyecatch hundreds of frames earlier, so the comparison is
+  steady state.
+  - **Line 0.** Native is back to `Pal_SonicTails` (`E66 C42 822`). The engine keeps
+    the Hyper white `EEE`, because `S3kEndingPalette.towardsTarget` only raises
+    components.
+  - **Line 3.** Native is black, and `Palette_cycle_counters+0` is still `$FF` from
+    `loc_5F15A` (sonic3k.asm:125665). The engine resumes colours 13–15 after releasing
+    its rotation flag at `loc_5F18A`, which clears nothing natively.
+
+  Together these give 478 pixels at poll 13311
+  ([ending matrix](../architecture/validation/levels/s3k-ending.md#native-pal-50-hz-sonic2-product-ending-pal-lane-2026-10-16)).
+  Transitional frames have no native picture.
 
 Evidence and the measured spots are in the
 [ending matrix](../architecture/validation/levels/s3k-ending.md#knuckles-credits-v-int-inlet-teleporter-pad-and-zero-copy-pass-presentation-lane-2026-10-16).
