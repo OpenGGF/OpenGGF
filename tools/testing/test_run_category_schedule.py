@@ -93,6 +93,14 @@ class SchedulingTests(unittest.TestCase):
         requests = [self.request('full', 900), self.request('single', 30, 10)]
         self.assertEqual(['single', 'full'], [r['id'] for r in schedule.ordered(requests, 20)])
 
+    def test_tooling_revision_never_changes_priority_or_eligibility(self):
+        for revision in (None, 1, 2**31, 'unknown'):
+            older = dict(self.request('older', 900), auto=False, toolingRevision=revision)
+            newer = dict(self.request('newer', 30, 10), auto=True, toolingRevision=1)
+            self.assertEqual('newer', schedule.choose([older, newer], 20, lambda r: True)['id'])
+            self.assertEqual('older', schedule.choose([older, newer], 350, lambda r: True)['id'])
+            self.assertIsNone(schedule.choose([older, newer], 350, lambda r: r['id'] != 'older'))
+
     def test_aged_requests_win_in_arrival_order(self):
         requests = [self.request('full', 900), self.request('medium', 180, 1),
                     self.request('new-single', 30, 301)]
@@ -130,6 +138,86 @@ class SchedulingTests(unittest.TestCase):
                     return schedule.WORKTREE_GONE if request['id'] == 'gone' else True
                 self.assertEqual('valid', schedule.choose(requests, 350, fits)['id'])
                 self.assertEqual(['gone', 'valid'], visited)
+
+    def test_small_backfill_requires_bounded_opt_in_and_resource_block(self):
+        from types import SimpleNamespace
+        head = dict(self.request('head', 900), auto=True, tree='head')
+        small = dict(self.request('small', 30, 301), auto=True, tree='small',
+                     small_job=True, reservation=[4 * 1024 ** 3, 4])
+        allowance = SimpleNamespace(available=lambda _id: True)
+        for reason in ('memory', 'cpu'):
+            chosen = schedule.select([head, small], 350, lambda r: r is small,
+                backfill=allowance, reasons={'head': dict(reason=reason)})
+            self.assertIs(chosen.request, small)
+            self.assertEqual('head', chosen.backfill_for)
+        for changed in (dict(small_job=False), dict(estimate=61), dict(auto=False),
+                        dict(reservation=[5 * 1024 ** 3, 4]), dict(reservation=[4 * 1024 ** 3, 5]),
+                        dict(tree='head')):
+            with self.subTest(changed=changed):
+                candidate = dict(small, **changed)
+                self.assertIsNone(schedule.select([head, candidate], 350, lambda r: r is candidate,
+                    backfill=allowance, reasons={'head': dict(reason='memory')}).request)
+        for reason in ('unknown', 'exclusive', 'slots', 'worktree'):
+            self.assertIsNone(schedule.select([head, small], 350, lambda r: r is small,
+                backfill=allowance, reasons={'head': dict(reason=reason)}).request)
+        head['auto'] = False
+        self.assertIsNone(schedule.select([head, small], 350, lambda r: r is small,
+            backfill=allowance, reasons={'head': dict(reason='memory')}).request)
+
+    def test_speculative_backfill_does_not_spend_allowance_and_continues_after_nonfit(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            common = Path(temporary)
+            head = dict(self.request('a' * 32, 900), auto=True, tree='head')
+            first = dict(self.request('b' * 32, 30, 301), auto=True, tree='first',
+                         small_job=True, reservation=[4 * 1024 ** 3, 4])
+            second = dict(first, id='c' * 32, tree='second', estimate=31)
+            requests = [head, first, second]
+            ledger = schedule.BackfillLedger(common, requests)
+            for _ in range(3):
+                decision = schedule.select(requests, 350, lambda r: r is second,
+                    backfill=ledger, reasons={head['id']: dict(reason='memory')})
+                self.assertIs(second, decision.request)
+                self.assertTrue(ledger.available(head['id']))
+                self.assertFalse(ledger.path.exists())
+            self.assertTrue(ledger.consume(decision.backfill_for))
+            # Admission survives the completed small request's disappearance.
+            ledger = schedule.BackfillLedger(common, [head, first])
+            self.assertFalse(ledger.available(head['id']))
+            self.assertIsNone(schedule.select([head, first], 350, lambda r: r is first,
+                backfill=ledger, reasons={head['id']: dict(reason='memory')}).request)
+            self.assertIs(head, schedule.select([head, first], 350, lambda r: True,
+                backfill=ledger).request)
+            ledger = schedule.BackfillLedger(common, [first])
+            self.assertEqual([], json.loads(ledger.path.read_text())['used'])
+
+    def test_aged_exclusive_request_after_head_blocks_backfill(self):
+        from types import SimpleNamespace
+        requests = [dict(self.request('head', 900), auto=True),
+                    dict(self.request('serial', 900, 1), auto=False),
+                    dict(self.request('small', 30, 301), auto=True, small_job=True,
+                         reservation=[4 * 1024 ** 3, 4])]
+        chosen = schedule.select(requests, 350, lambda r: r['id'] == 'small',
+            backfill=SimpleNamespace(available=lambda _id: True),
+            reasons={'head': dict(reason='memory')})
+        self.assertIsNone(chosen.request)
+
+    def test_bad_ledger_disables_only_extra_overtaking(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            common = Path(temporary)
+            path = common / 'maven-backfill.json'
+            for contents in ('broken', '[]', '{"version": 2, "used": []}',
+                             '{"version": 1, "used": ["invalid"]}', ' ' * 131073):
+                path.write_text(contents)
+                ledger = schedule.BackfillLedger(common, [])
+                self.assertFalse(ledger.available('a' * 32))
+                self.assertFalse(ledger.consume('a' * 32))
+                self.assertEqual(contents, path.read_text())
+            path.unlink()
+            target = common / 'notes'
+            target.write_text('{"version": 1, "used": []}')
+            path.symlink_to(target)
+            self.assertFalse(schedule.BackfillLedger(common, []).available('a' * 32))
+            self.assertEqual('{"version": 1, "used": []}', target.read_text())
 
     def test_maven_estimates_distinguish_exact_tests_patterns_and_suites(self):
         self.assertEqual(30, schedule.maven_estimate(['-Dtest=TestCollisionLogic', 'test']))

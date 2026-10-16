@@ -53,6 +53,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   stage policies validate isolated data.
   Bounded creator helpers preserve native destruction, shields, monitor contents
   and presentation; exact lifetime links survive rewind and colocated placements.
+  The tree-exit lookout retires its native arm chain in object-slot order before
+  its parent slot can be reused, while already launched coconuts keep their own lifetime.
   Game-owned recipes keep native construction out of shared effects.
   Field and powered callbacks retain the receiving creator's fault boundary,
   aborting a failed frame without blaming another mod that invoked the receiver.
@@ -1440,15 +1442,20 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Linux admission can overlap up to three test runs
   when conservative memory/CPU reservations fit, crediting each running job's measured
   usage instead of counting it twice, while keeping each worktree exclusive and
-  preserving a serial override. Single-fork trace and audio profiles no longer force
-  exclusive runs, and a bounded log (`maven_queue.py --stats`) records queue waits, holds
+  preserving a serial override. Single-fork trace and audio profiles, including
+  explicit default fork settings, no longer force exclusive runs. Isolated benchmarks
+  drain actual build/test execution without locking idle worktrees or repeatedly
+  abandoning admission. A bounded log (`maven_queue.py --stats`) records queue waits, holds
   and peak memory. A lightweight local browser dashboard shows running jobs,
   waiting priority, resource usage and recent completions across worktrees,
-  refreshing automatically without changing queue state. Waiting requests favour
-  short checks, with aging and
-  bounded backfilling to protect large runs from starvation. An opt-in lean lane
-  bounds both JVM heaps for small focused checks and accounts for their smaller
-  reservations alongside normal runs. A busy worktree's aged request retains its
+  refreshing automatically without changing queue state and explaining admission
+  blockers when known. It names blocking requests, shows reported tooling revisions
+  across worktrees and labels scheduling estimates as coarse ordering hints.
+  Waiting requests favour short checks, with aging and one
+  qualified small backfill before an older capacity-blocked request drains the queue.
+  Reviewed small focused checks and ordinary batches automatically use 1 GiB JVM
+  heaps with 4 GiB reservations; other checks retain normal budgets, with explicit
+  lean and normal overrides for focused iteration. A busy worktree's aged request retains its
   place without blocking unrelated trees. A waiter whose worktree metadata vanished
   no longer aborts another worktree's admission scan; active lock authority is retained.
   Optional profilers measure process-tree RSS/CPU

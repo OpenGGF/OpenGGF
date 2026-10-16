@@ -119,6 +119,8 @@ The following `com.openggf.tools` CLIs. Maven examples quote each `-D...` proper
 
 ## Test harness helpers
 
+- [`TestSecondStrikeHczAirRecovery`](../../src/test/java/com/openggf/tools/TestSecondStrikeHczAirRecovery.java) preserves the fixed, positioned HCZ1 maker114 oxygen hop/return and natural child-recreation/full-world suffix replay. Supply an actual paired jar with `-Dsecondstrike.hcz.air.mod=...`, the original S3K ROM and isolated EGL through the normal test queue; an outer owned-process deadline is separate from JUnit's limit (Second Strike, 2026-10-16).
+
 - `tools/modding/native-linux/build_linux.py` uses a pinned rootless Ubuntu/CE
   toolchain for the experimental Linux ZIP, preserving the isolated Windows
   feature. Its native gameplay probe uses production loaders, real OpenGL,
@@ -278,7 +280,7 @@ Run `AgentWorkflowTool` for a preflight, read the matching runbook, scaffold wit
 [`runbooks/runbook-jvm-benchmark.md`](runbooks/runbook-jvm-benchmark.md) rather
 than the benchmark CLIs directly — the numbers are easy to misread.
 
-Local Maven tests: [`tools/testing/maven_queue.py`](../../tools/testing/maven_queue.py) waits automatically for a shared execution slot across linked worktrees; category runs use it too; `--stats` summarises test wait/hold/memory telemetry. Recognized build-only commands bypass shared admission and hold only their own worktree's build/test lock. Direct Maven builds are allowed when that worktree is otherwise idle; see the [build and test guide](../../tools/testing/README.md#build-only-maven-execution-and-queued-tests).
+Local Maven tests: [`tools/testing/maven_queue.py`](../../tools/testing/maven_queue.py) waits automatically for a shared execution slot across linked worktrees; category runs use it too; `--stats` summarises test wait/hold/memory telemetry. Recognized build-only commands bypass shared test admission, protect their own worktree, and hold an activity lease that permits isolated measurements to drain builds. Direct Maven builds are allowed when that worktree is otherwise idle; see the [build and test guide](../../tools/testing/README.md#build-only-maven-execution-and-queued-tests).
 
 ## Test harness helpers
 
@@ -344,6 +346,6 @@ Local Maven tests: [`tools/testing/maven_queue.py`](../../tools/testing/maven_qu
 
 - `com.openggf.tools.RuntimeEngineVisualControl`: lossless production-presented framebuffer and PCM qualification with compiled controller plans; separate from runtime acceptance timing (2026-10-12 performance series).
 
-- `tools/performance/run_isolated.py`: OS-leased exclusion of linked-worktree builds/tests plus a bypass-process guard for prebuilt measurements; writes an isolation audit (2026-10-13 P5 timing correction). Acquire build leases before shared admission so retained category batches can finish.
+- `tools/performance/run_isolated.py`: OS-leased exclusion of linked-worktree builds/tests plus a bypass-process guard for prebuilt measurements; writes an isolation audit (2026-10-13 P5 timing correction). Exclusive test admission precedes a separate active-build lease; idle retained category worktrees do not block it (2026-10-16 queue liveness correction).
 
 - [Native published-video diagnostic port](../../tools/tracechaser/bizhawk-headless/README.md#diagnostic-rendered-frames): opt-in rendered GPGX frames with owned pixels/VDP domains and stale-generation guards; explicit ROM/movie/scene inputs, no canonical fixture publication (2026-10-14 S3K visual parity task).

@@ -66,6 +66,8 @@
   .queue-table td:nth-child(2) { min-width:210px; }
   .row-title { font-size:12px; font-weight:600; overflow-wrap:anywhere; }
   .row-detail { font-size:10px; color:var(--muted); margin-top:3px; }
+  .admission { font-size:11px; margin-top:5px; color:var(--amber); overflow-wrap:anywhere; }
+  .admission.observed,.admission.unknown { color:var(--muted); }
   .number { white-space:nowrap; font-variant-numeric:tabular-nums; }
   .search { border:1px solid var(--line); border-radius:6px; padding:7px 10px; min-width:200px; background:#fff; font-size:12px; color:var(--ink); }
   .empty { border:1px dashed #d3ddd0; border-radius:8px; padding:24px; text-align:center; color:var(--muted); font-size:12px; background:#ffffff80; grid-column:1/-1; }
@@ -117,8 +119,8 @@
   </section>
   <section aria-labelledby="waiting-heading">
     <div class="section-heading"><h2 id="waiting-heading">Waiting <span class="count" id="waiting-count">—</span></h2><input class="search" id="filter" type="search" placeholder="Filter worktrees…" aria-label="Filter waiting worktrees"></div>
-    <div class="table-wrap"><table class="queue-table"><thead><tr><th scope="col">#</th><th scope="col">Worktree / job</th><th scope="col">Priority</th><th scope="col">Actual wait</th><th scope="col">Scheduling age</th><th scope="col">Run estimate</th><th scope="col">Mode</th></tr></thead><tbody id="waiting"><tr class="table-empty"><td colspan="7">Reading waiting jobs…</td></tr></tbody></table></div>
-    <p class="section-note">Priority order can change as capacity becomes available. Estimates are job durations, not start times. “Unknown” means an older wrapper did not publish that measurement.</p>
+    <div class="table-wrap"><table class="queue-table"><thead><tr><th scope="col">#</th><th scope="col">Worktree / job</th><th scope="col">Priority</th><th scope="col">Actual wait</th><th scope="col">Scheduling age</th><th scope="col">Scheduling estimate</th><th scope="col">Mode</th></tr></thead><tbody id="waiting"><tr class="table-empty"><td colspan="7">Reading waiting jobs…</td></tr></tbody></table></div>
+    <p class="section-note">Priority order can change as capacity becomes available. Estimates are coarse ordering hints, often based on class counts, not measured runtimes or start-time predictions. Unknown timings were not reported or could not be read. Tooling revisions are self-reported; unknown may include versions from before revision reporting. Observed resource checks use the current snapshot; only fresh wrapper reports explain scheduling decisions.</p>
   </section>
   <section id="unverified-section" hidden aria-labelledby="unverified-heading">
     <div class="section-heading"><h2 id="unverified-heading">Unverified records</h2><span class="section-note">Liveness could not be established; excluded from active counts</span></div>
@@ -156,6 +158,27 @@
   }
   function mode(value) { return value === 'resource-aware' ? 'Shared' : value === 'serial' ? 'Exclusive' : 'Unknown'; }
   function kind(value) { return value || 'Older wrapper'; }
+  function toolingLabel(tooling) {
+    if (!tooling || tooling.status === 'unknown') return 'Tooling revision unknown';
+    const label = 'Tooling r' + tooling.revision;
+    return label + (tooling.status === 'older' ? ' · older than dashboard' : tooling.status === 'newer' ? ' · newer than dashboard' : '');
+  }
+  function admissionLabel(report) {
+    if (!report) return 'Waiting reason unavailable';
+    const labels = {
+      memory:'Waiting for memory', cpu:'Waiting for CPU capacity', slots:'All shared slots occupied',
+      exclusive:'Exclusive execution blocks admission', worktree:'Worktree is busy',
+      priority:'Waiting for an earlier job', draining:'Draining for an aged job',
+      ready:'Capacity available · awaiting admission', unknown:'Waiting reason unavailable'
+    };
+    let text = labels[report.reason] || labels.unknown;
+    if (report.reason === 'memory' && finite(report.memoryShortfallBytes) && report.memoryShortfallBytes > 0)
+      text += ' · ' + memory(report.memoryShortfallBytes) + ' short';
+    if (report.reason === 'cpu' && finite(report.cpuShortfallCores) && report.cpuShortfallCores > 0)
+      text += ' · ' + number(report.cpuShortfallCores) + ' cores short';
+    if (report.source === 'observation') text = 'Observed resource check: ' + text[0].toLowerCase() + text.slice(1);
+    return text;
+  }
   function connection(state, label) {
     byId('connection').dataset.state = state;
     byId('connection-label').textContent = label;
@@ -170,6 +193,7 @@
     const top = element('div', 'job-top');
     top.append(element('span', 'badge', mode(job.mode)), element('span', 'pid mono', job.pid ? 'PID ' + job.pid : 'PID unknown'));
     identity.append(top, element('div', 'job-title', job.worktree || 'Unknown worktree'), element('div', 'job-type', kind(job.kind)));
+    identity.append(element('div', 'row-detail', toolingLabel(job.tooling)));
     const metrics = element('div', 'job-metrics');
     const values = [['Execution', duration(job.runSeconds)], ['RSS', job.usageFresh ? memory(job.rssBytes) : 'Stale'], ['CPU cores', job.usageFresh ? number(job.cpuCores) : 'Stale']];
     for (const [label, value] of values) {
@@ -191,6 +215,12 @@
       row.append(element('td', 'mono', job.position));
       const title = element('td');
       title.append(element('div', 'row-title', job.worktree || 'Unknown worktree'), element('div', 'row-detail', kind(job.kind) + (job.retainedTree ? ' · retains worktree' : '')));
+      title.append(element('div', 'row-detail', (job.pid ? 'PID ' + job.pid : 'PID unknown') + ' · ' + toolingLabel(job.tooling)));
+      const report = job.admission;
+      const reason = element('div', 'admission' + (!report || report.reason === 'unknown' ? ' unknown' : report.source === 'observation' ? ' observed' : ''), admissionLabel(report));
+      const blocker = snapshot.waiting.find(candidate => candidate.id === report?.blockedBy);
+      if (blocker) reason.append(document.createTextNode(' · behind ' + (blocker.worktree || 'Unknown worktree')));
+      title.append(reason);
       const priority = element('td'); priority.append(element('span', 'badge ' + (job.aged ? 'aged' : 'neutral'), job.aged ? 'Aged' : 'Short-job order'));
       row.append(title, priority, element('td', 'number', duration(job.waitSeconds)), element('td', 'number', duration(job.schedulingAgeSeconds)), element('td', 'number quiet', duration(job.estimateSeconds)), element('td', '', mode(job.mode)));
       return row;

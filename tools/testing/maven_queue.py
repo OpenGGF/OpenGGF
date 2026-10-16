@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
-"""Queue local Maven tests across linked worktrees; builds use only a worktree lock.
+"""Queue local Maven tests; builds bypass admission but honor measurement isolation.
 
 Usage: python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestExample test
 Build without shared admission: python3 tools/testing/maven_queue.py -DskipTests package
-Focused low-memory lane: add --lean before the Maven arguments (1 GiB JVM heaps).
+Qualified focused checks use 1 GiB JVM heaps automatically. Use --normal to opt out.
+Explicit low-memory lane: add --lean before the Maven arguments.
 The OS owns execution and waiting leases. Short estimated runs are preferred;
 five-minute aging protects larger waiters. Origin: 2026-09-14 testing queue cleanup.
 `maven_queue.py --stats` summarises recorded wait/hold/memory telemetry.
 `maven_queue.py --dashboard [--port 8766]` serves a read-only local browser view.
 """
-from contextlib import contextmanager, ExitStack
+from contextlib import contextmanager, ExitStack, nullcontext
 import errno
 import math
 import os
@@ -114,13 +115,15 @@ def worktree_metadata_slot(root):
         yield
 
 
-def _execution_leases(stack, common, request, config, tree_fd=None):
+def _execution_leases(stack, common, request, config, tree_fd=None, observation=None):
     """Probe capacity under the admission lock; retain leases in stack on success."""
     from maven_schedule import WORKTREE_BUSY
 
+    observation = {} if observation is None else observation
     if tree_fd is None:
         tree = _open_lock(stack, Path(request['tree']))
         if not _acquire(tree):
+            observation['reason'] = 'worktree'
             return WORKTREE_BUSY
         stack.callback(_unlock, tree)
     else:
@@ -131,21 +134,25 @@ def _execution_leases(stack, common, request, config, tree_fd=None):
         if os.name == 'posix' and not _acquire(tree):
             # A matching inode alone is not permission to bypass a foreign
             # holder. flock on our retained open-file description is idempotent.
+            observation['reason'] = 'worktree'
             return WORKTREE_BUSY
-    shared = _shared_execution_leases(stack, common, request, config)
+    shared = _shared_execution_leases(stack, common, request, config, observation)
     return (tree, *shared) if shared is not None else None
 
 
-def _shared_execution_leases(stack, common, request, config):
+def _shared_execution_leases(stack, common, request, config, observation=None):
     """Probe shared capacity without granting worktree ownership."""
-    from maven_resources import GIB, snapshot, admits
+    from maven_resources import GIB, snapshot, admission_reason
     from maven_running import live_load
 
+    observation = {} if observation is None else observation
     legacy = _open_lock(stack, common / 'maven-queue.lock')
     if not _acquire(legacy, shared=request['auto']):
+        observation['reason'] = 'exclusive'
         return None
     stack.callback(_unlock, legacy)
     if not request['auto']:
+        observation['reason'] = 'ready'
         return (legacy,)
     # Fixed namespace still sees live slots if maxRuns was lowered.
     slots = [_open_lock(stack, common / f'maven-slot-{i}.lock') for i in range(64)]
@@ -158,8 +165,12 @@ def _shared_execution_leases(stack, common, request, config):
         active = len(slots) - len(free)
         normal = (config['memoryGiB'] * GIB, config['cpuCores'])
         credit, reserved = live_load(common, _acquire, active, normal)
-        if resources is not None and free and admits(resources, config, active, credit,
-                reservation=request.get('reservation', normal), reserved=reserved):
+        observation.update(admission_reason(resources, config, active, credit,
+                reservation=request.get('reservation', normal), reserved=reserved)
+                if resources is not None else dict(reason='unknown'))
+        if not free:
+            observation['reason'] = 'slots'
+        if observation['reason'] == 'ready':
             selected = free.pop(0)
             stack.callback(_unlock, selected)
             return legacy, selected
@@ -171,12 +182,12 @@ def _shared_execution_leases(stack, common, request, config):
 
 @contextmanager
 def maven_slot(root, *, exclusive=False, estimate=900, kind='maven', reservation=None,
-               tree_fd=None, service_credit=None):
+               tree_fd=None, service_credit=None, small_job=False):
     """Automatically schedule waiters, then retain OS-owned execution leases.
 
     Short estimates win until five-minute aging promotes arrival order. Blocked
-    unaged requests allow backfilling; an aged head needing shared capacity stops
-    new admissions so active jobs can drain. Busy trees retain local priority.
+    unaged requests allow backfilling. An aged head permits one bounded small
+    request when memory/CPU blocks it, then drains. Busy trees retain local priority.
     Older clients retain lock compatibility but not priority.
     While running, a usage lease lets later admissions credit this job's realised
     RSS/CPU; the finished job appends one telemetry line.
@@ -186,11 +197,16 @@ def maven_slot(root, *, exclusive=False, estimate=900, kind='maven', reservation
     the end of a batch. Other waiters still probe the locked tree normally.
     ``service_credit`` carries bounded waiting priority across this invocation's
     batches. Only its virtual arrival affects ordering; telemetry uses real time.
+    ``small_job`` marks a caller-enforced bounded execution shape. It permits
+    one backfill only with <=4 GiB/4 cores and an estimate <=60s, not a timeout.
     """
     from maven_resources import GIB, policy, snapshot
     from maven_running import RunningLease, UsageSampler, append_log, trim_log
-    from maven_schedule import WaitingRequest, choose, aged, WORKTREE_BUSY, WORKTREE_GONE
+    from maven_schedule import (WaitingRequest, select, BackfillLedger, aged,
+                                WORKTREE_BUSY, WORKTREE_GONE, TOOLING_REVISION)
 
+    if type(small_job) is not bool:
+        raise ValueError('Small-job eligibility must be boolean')
     if not isinstance(estimate, (int, float)) or not math.isfinite(estimate) or estimate <= 0:
         raise ValueError('Maven duration estimate must be finite and positive')
     if reservation is not None and (not isinstance(reservation, (tuple, list)) or len(reservation) != 2
@@ -226,6 +242,7 @@ def maven_slot(root, *, exclusive=False, estimate=900, kind='maven', reservation
         leases = None
         running = sampler = None
         admitted = None
+        next_status = 0
         outcome = 'cancelled-waiting'
         try:
             while leases is None:
@@ -234,18 +251,22 @@ def maven_slot(root, *, exclusive=False, estimate=900, kind='maven', reservation
                         if request is None:
                             request = WaitingRequest(common, dict(
                                 tree=str(git_dir / 'maven-worktree.lock'), auto=auto,
-                                retained_tree=tree_fd is not None,
+                                retained_tree=tree_fd is not None, small_job=small_job,
                                 estimate=estimate, enqueued=enqueued, reservation=reservation,
                                 submitted=started, kind=str(kind)[:160], pid=os.getpid(),
-                                worktree=root.name[:160]), _acquire)
+                                worktree=root.name[:160], toolingRevision=TOOLING_REVISION), _acquire)
+
+                        reasons = {}
 
                         def fits(record):
                             nonlocal execution, leases
                             candidate = ExitStack()
+                            observation = reasons.setdefault(record['id'], {})
                             try:
                                 try:
                                     found = _execution_leases(candidate, common, record, config,
-                                        tree_fd=tree_fd if record['id'] == request.record['id'] else None)
+                                        tree_fd=tree_fd if record['id'] == request.record['id'] else None,
+                                        observation=observation)
                                 except FileNotFoundError as error:
                                     # Another worktree can disappear after its live
                                     # waiting record was read. Skip only that exact
@@ -267,7 +288,7 @@ def maven_slot(root, *, exclusive=False, estimate=900, kind='maven', reservation
                                         # capacity so another process cannot bypass
                                         # that continuation's scheduling priority.
                                         return _shared_execution_leases(
-                                            candidate, common, record, config) is not None
+                                            candidate, common, record, config, observation) is not None
                                     return found
                                 if found and record['id'] == request.record['id']:
                                     execution, leases = candidate, found
@@ -277,7 +298,34 @@ def maven_slot(root, *, exclusive=False, estimate=900, kind='maven', reservation
                                 if candidate is not execution:
                                     candidate.close()
 
-                        choose(request.pending(_acquire), time.monotonic(), fits)
+                        pending = request.pending(_acquire)
+                        backfill = BackfillLedger(common, pending)
+                        decision = select(pending, time.monotonic(), fits,
+                                          backfill=backfill, reasons=reasons)
+                        if (leases is not None and decision.backfill_for is not None
+                                and not backfill.consume(decision.backfill_for)):
+                            execution.close()
+                            execution = leases = None
+                            reasons[request.record['id']] = dict(reason='draining')
+                        if leases is None:
+                            status = reasons.get(request.record['id'])
+                            if status is None:
+                                status = dict(reason='draining' if decision.draining else 'priority')
+                            blocker = decision.blocked_by or (decision.request or {}).get('id')
+                            status = dict(
+                                memoryShortfallBytes=None, cpuShortfallCores=None,
+                                blockedBy=blocker if blocker != request.record['id'] else None,
+                                backfillAvailable=(backfill.available(request.record['id'])
+                                    if status.get('reason') in ('memory', 'cpu')
+                                    and aged(request.record, time.monotonic()) and auto else None),
+                            ) | status
+                            previous = request.record.get('admission', {})
+                            if (time.monotonic() >= next_status
+                                    or any(previous.get(key) != status[key]
+                                           for key in ('reason', 'blockedBy', 'backfillAvailable'))):
+                                request.record['admission'] = dict(status, updated=time.time())
+                                request.publish()
+                                next_status = time.monotonic() + 2
                         if leases is not None:
                             admitted = time.monotonic()
                             request.remove()
@@ -285,7 +333,8 @@ def maven_slot(root, *, exclusive=False, estimate=900, kind='maven', reservation
                                 running = RunningLease(common, reservation, _acquire, display=dict(
                                     worktree=root.name[:160], kind=str(kind)[:160], pid=os.getpid(),
                                     submitted=started, admitted=admitted,
-                                    mode='resource-aware' if auto else 'serial'))
+                                    mode='resource-aware' if auto else 'serial',
+                                    toolingRevision=TOOLING_REVISION))
                             except (OSError, RuntimeError):
                                 running = None  # No lease only forfeits credit; admission stays valid.
                     finally:
@@ -338,11 +387,12 @@ def maven_slot(root, *, exclusive=False, estimate=900, kind='maven', reservation
                 pass  # Telemetry never changes the job's result.
 
 
-def inherited_slot(fd):
+def inherited_slot(fd, extra=()):
     # Retain all leases in Maven if the Python parent is killed unexpectedly.
-    if os.name != 'posix' or fd is None:
+    descriptors = (fd if isinstance(fd, tuple) else () if fd is None else (fd,)) + extra
+    if os.name != 'posix' or not descriptors:
         return {}
-    return {'pass_fds': fd if isinstance(fd, tuple) else (fd,)}
+    return {'pass_fds': descriptors}
 
 
 @contextmanager
@@ -442,8 +492,11 @@ def _jvm_environment_requires_exclusive():
 def needs_exclusive(args):
     """Unmeasured fork/heap/profile overrides retain the serial contract."""
     from maven_schedule import profiles_of
+    # An explicit spelling of the measured POM default changes no resource shape.
+    defaults = {'-Dsurefire.forkCount=1', '-Dsurefire.reuseForks=true'}
     if any(arg.startswith(('-T', '--threads'))
-           or any(key in arg for key in ('argLine', 'forkCount', '-Xmx', '-Xms')) for arg in args):
+           or any(key in arg for key in ('argLine', 'forkCount', 'reuseForks', '-Xmx', '-Xms'))
+           for arg in args if arg not in defaults):
         return True
     profiles, following_profile = profiles_of(args)
     return (following_profile or bool(set(profiles) - SHARED_PROFILES)
@@ -453,7 +506,8 @@ def needs_exclusive(args):
 def lean_command(args):
     """Bound both JVM heaps for explicit focused tests, preserving test agents.
 
-    This is opt-in: memory-heavy tests use the normal lane. Never silently retry
+    Automatic callers qualify classes separately; memory-heavy tests use the
+    normal lane. Never silently retry
     an OOM as a passing lean run. Unknown shapes cannot borrow its smaller budget.
     """
     from maven_schedule import profiles_of, maven_estimate, FULL_SECONDS
@@ -499,9 +553,13 @@ def main(argv=None):
         return 0
     if args[0] == '--':
         args.pop(0)
-    lean = bool(args and args[0] == '--lean')
-    if lean:
-        args.pop(0)
+    lean = normal = False
+    while args and args[0] in ('--lean', '--normal'):
+        flag = args.pop(0)
+        lean = lean or flag == '--lean'
+        normal = normal or flag == '--normal'
+    if lean and normal:
+        raise ValueError('--lean and --normal are mutually exclusive')
     if not args:
         raise ValueError('Supply Maven arguments after --')
     # Use the caller's worktree, including when this script lives in another one.
@@ -510,17 +568,28 @@ def main(argv=None):
     reservation = None
     kind = maven_kind(args, exclusive)
     estimate = maven_estimate(args)
-    if lean:
-        args, environment = lean_command(args)
+    automatic = None
+    if not normal and not build_only(args):
+        from maven_small import automatic_lean
+        automatic = automatic_lean(args, root=Path.cwd())
+    if lean or automatic is not None:
+        args, environment = lean_command(args) if lean else automatic
         from maven_resources import GIB
         reservation = (4 * GIB, 4)
-        kind = 'focused-lean'
-    slot = (worktree_build_slot(Path.cwd()) if not lean and build_only(args) else
+        kind = 'focused-lean' if lean else 'focused-auto-lean'
+        if automatic is not None:
+            print('Qualified small job: 1 GiB JVM heaps; 4 GiB/4-core reservation. '
+                  'Use --normal if this check needs the larger heap.', flush=True)
+    building = not lean and build_only(args)
+    slot = (worktree_build_slot(Path.cwd()) if building else
             maven_slot(Path.cwd(), exclusive=exclusive, estimate=estimate,
-                       kind=kind, reservation=reservation))
-    with slot as fd:
+                       kind=kind, reservation=reservation,
+                       small_job=automatic is not None))
+    from maven_activity import build_activity_slot
+    activity = build_activity_slot(Path.cwd()) if building else nullcontext(())
+    with slot as fd, activity as activity_fds:
         with subprocess.Popen(['mvn', *args], start_new_session=(os.name == 'posix'),
-                              env=environment, **inherited_slot(fd)) as process:
+                              env=environment, **inherited_slot(fd, activity_fds)) as process:
             try:
                 return process.wait()
             finally:

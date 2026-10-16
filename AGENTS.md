@@ -145,7 +145,14 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
   `package` without a skip), use
   `python3 tools/testing/maven_queue.py <maven arguments>` from the intended worktree.
   Build-only commands such as `compile`, `test-compile` and `package -DskipTests` bypass
-  shared admission automatically; they hold only the current worktree's build/test lock.
+  shared admission automatically; they hold the current worktree's build/test lock.
+  Wrapped builds also hold a shared activity lease during execution. Isolated
+  performance measurements first acquire their own worktree outside the queue,
+  acquire exclusive test admission, then drain active
+  builds and block new builds with an exclusive activity lease. Idle retained
+  category worktrees do not block measurements; never sweep foreign worktree locks
+  or request test admission while holding a build activity lease. Direct/older
+  wrappers do not honor activity isolation; use current tooling for measurements.
   Direct `mvn` builds are also allowed, provided nothing else is writing that worktree's
   `target/`. Prefer the wrapper when builds and tests may share a worktree. Unknown plugin
   goals, alternate POMs/profiles and custom Maven launch arguments remain queued conservatively;
@@ -157,33 +164,52 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
   remain conservative. Do not clear required graphics flags to get a slot.
   Submit the command even if another agent is testing: it waits, reports status and
   starts automatically. Waiting requires no permission or manual lock cleanup.
-  For small focused tests with known bounded memory needs, prefer `--lean`: it caps
+  Qualified exact focused checks with `-Dmse=off` automatically use the lean lane
+  on Linux; the explicit reviewed registry is in `maven_small.py`. At most 50
+  registered classes qualify, with source/shape checks and no custom overrides.
+  Use `--normal` to retain the larger heap. Ordinary one-worker category batches
+  also qualify when every candidate is registered, without changing selection;
+  guards and mixed/heavy batches keep their existing budget.
+  For other small focused tests with known bounded memory needs, use `--lean`: it caps
   Maven and the test JVM at 1 GiB each and reserves 4 GiB / 4 cores, so these checks
   can overlap where normal 7 GiB / 8-core budgets cannot. It requires exact `-Dtest`
   selectors without profiles or custom JVM/build overrides. A lean OOM is a failed
-  run; report it and rerun in the normal lane. Keep release-only full suites and memory-heavy,
+  run; report it and rerun with `--normal`. Keep release-only full suites and memory-heavy,
   trace/native test or required domain checks in their existing lanes. Older worktrees
   can invoke the updated main-workspace wrapper by absolute path while keeping
   their own cwd and `target/`; update their tooling for the new scheduling rules.
   Linux admission allows different worktrees to overlap when conservative memory/CPU
   reservations fit (three runs by default, crediting each running job's measured usage);
-  one worktree remains exclusive. Single-fork trace/audio profiles share the queue; see
+  one worktree remains exclusive. Single-fork trace/audio profiles share the queue,
+  including exact default flags `-Dsurefire.forkCount=1` and
+  `-Dsurefire.reuseForks=true`; other fork/reuse/heap overrides remain exclusive. See
   the guide for exclusive shapes. Other platforms retain serialization. Waiting requests favour short estimates; after five minutes,
   aged requests take priority in arrival order. An aged request needing shared capacity
-  pauses new admissions so existing jobs can drain; an aged resource-aware request
-  waiting only on its own busy worktree permits unrelated trees to proceed while
+  drains existing jobs, with one exception: a memory/CPU-blocked resource-aware
+  head allows one qualified small job (at most 4 GiB / 4 cores, estimate <=60s)
+  in another tree to backfill. The allowance stays spent until the head leaves
+  the queue, even after the small job finishes. Explicit `--lean` alone does not
+  grant eligibility. Serial heads, full slots and unknown state drain immediately.
+  This bounds overtaking, not elapsed delay; running jobs are never preempted.
+  An aged resource-aware request waiting only on its own busy worktree permits unrelated trees to proceed while
   retaining priority in its tree. Category continuations retain at most five minutes
   of accumulated waiting credit, then spend it by their actual execution time;
   preparation and gaps earn no credit. This preserves progress across batches
-  without granting permanent aged priority. Running jobs are never preempted. Temporary
+  without granting permanent aged priority. Temporary
   OS-leased waiting records are automatic and pruned after cancellation/death;
   older wrappers retain lock safety but cannot honour priority. See the testing guide.
   Set `OPENGGF_MAVEN_QUEUE=serial` for exclusive execution; shared
   Git policy settings and profiling are documented in `tools/testing/README.md`;
   `maven_queue.py --stats` summarises recorded queue waits, holds and peak memory.
   `maven_queue.py --dashboard` opens a local server at `http://127.0.0.1:8766`
-  for a read-only live view; stop it with Ctrl-C. Scheduling age includes waiting
-  credit and is separate from actual wait; older jobs can have unknown timings.
+  for a read-only live view; stop it with Ctrl-C. Waiting rows explain memory/CPU,
+  slot, worktree, exclusive, priority and draining blockers when known. Fresh
+  scheduler reports are distinguished from inferred legacy observations.
+  Scheduling age includes waiting credit and is separate from actual wait; older
+  jobs can have unknown timings.
+  Tooling revisions are self-reported and advisory; unknown does not prove outdated
+  code. Updating main does not update an already-running wrapper. Scheduling
+  estimates are coarse ordering hints, not measured runtimes.
   For per-test memory investigation, use `tools/testing/profile_test_memory.py`
   with exact expensive class selectors; it queues an isolated repeated JVM and
   records allocation, sampled peaks and post-GC retention candidates. See the

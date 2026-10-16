@@ -14,14 +14,18 @@ copied AI or creator imports of native internals are admitted.
 
 ## Wave ownership and acceptance
 
+The 2026-10-16 continuation uses Sol for new development and Sonnet for review
+only. The table retains original C1 authorship; those private workers are stopped.
+
 | Wave | Implementer / owned tree | Bounded outcome |
 | --- | --- | --- |
 | C1 west | Sol `/root/c1_west`; `ai-second-strike-c1-west` | HCZ/MGZ recipes, specific native owner changes and focused tests |
-| C1 east | Sonnet 5.5; `ai-second-strike-c1-east` | CNZ/ICZ/LBZ recipes, specific native owner changes and focused tests |
-| C2 | Lead plus next bounded Sol/Sonnet slices | MHZ → FBZ → SOZ → LRZ, character-specific traversal and native completion |
+| C1 east | Historical Sonnet 5.5; `ai-second-strike-c1-east` | CNZ/ICZ/LBZ recipes, specific native owner changes and focused tests |
+| C2 | Sol lead plus bounded Sol slices | MHZ → FBZ → SOZ → LRZ, character-specific traversal and native completion |
 | C3 | Lead plus next bounded slices | HPZ/SSZ/DEZ/eligible Doomsday; fourteen boards and three bonus families |
 
-Each stable wave receives a fresh Opus delegated batch review. No broad suite is
+New coherent batches receive Sonnet review; historical Opus reviews below retain
+their original source attribution. No broad suite is
 submitted by this team; root owns composed change-selected smoke and guards.
 Workers queue focused tests in their own trees, preserve live requests and
 report fresh assertions/skips. Source presence and positioned witnesses do not
@@ -40,12 +44,12 @@ shapes and do not qualify those production presets.
 
 | Zone / scene | Acts and character boundaries | Native identity / work | Actual implementation | Route / checkpoint / rewind / capture evidence |
 | --- | --- | --- | --- | --- |
-| HCZ | 1/2; separate Knuckles water/arena | Defended junctions, reliable air, wall chase, punishable boss follow-up | Finite native bridge/enemy/boss presets and actual creator recipes in immutable west110659; provider023a7ec handed root | Initial67 focused identities plus R1 fifteen pass0skip. Creator converts all22/21 ordinary monitors, including six bubble shields; native makers remain. Terrain33051/diagnostic94142 identify floor083F/shared conveyor markers;31538 qualifies actual99/100 owners then stops at a fixture global-idle guard, and43267 fails proxy lookup at setup. Corrected77730 on42171/cb2 qualifies one positioned Sonic320/zero-ring maker114 hop/intake/air25→29/35 native lock decrements/supported return424; all rows unharmed. HCZ2 sole maker221 has source inventory only. Whole-act air sufficiency, bubble-monitor balance and cold/catch/character routes remain OPEN |
+| HCZ | 1/2; separate Knuckles water/arena | Defended junctions, reliable air, wall chase, punishable boss follow-up | Finite native bridge/enemy/boss presets and actual creator recipes in immutable west110659; provider023a7ec handed root | Initial67 focused identities plus R1 fifteen pass0skip. Creator converts all22/21 ordinary monitors, including six bubble shields; native makers remain. Terrain33051/diagnostic94142 identify floor083F/shared conveyor markers;31538 qualifies actual99/100 owners then stops at a fixture global-idle guard, and43267 fails proxy lookup at setup. Corrected77730 on42171/cb2 qualifies one positioned Sonic320/zero-ring maker114 hop/intake/air25→29/35 native lock decrements/supported return424; all rows unharmed. Current3fa TestSecondStrikeHczAirRecovery adds one passing zero-ring refill/return, natural child recreation and whole-world suffix replay case with no skips; still one positioned Sonic320 window. HCZ2 sole maker221 has source inventory only. Whole-act air sufficiency, bubble-monitor balance and cold/catch/character routes remain OPEN |
 | MGZ | 1/2; assisted Sonic/Tails and Knuckles | Cracked support/catch, guarded top landing, native attackable boss pass | Lower A1 event; placed A2 dormant/staging/active owner correction source-ready7a488e; Spiker initial-only96/open64 | R1 fifteen pass; Sonic positioned trailing-jump punish pass; placed-A2 33714 native22pass and root50133 host6pass; Knux43072 two full drop pairs/cue/blink measured but one short jump missed;24233 ordinary held-jump HP8->7/native bounce passes using earned invulnerability; 76734 actual53676 packaged creator hit796/glide798/supported recovery835/full136+160 pair, all924 inputs no hurt/invulnerability/ring loss/death; actual349 pickup leaves1ring, so zero-ring arena entry/damaged cadence/cold remain OPEN |
 | CNZ | 1/2; Knuckles late act/exit | Staggered rhythm, waiting-pocket pressure, unchanged barrels | Finite Clamer cadence/stagger and creator recipes east9982, no static collections | R1 pure55pass0skip; P14 real strict creator tell79 observed;P15 fixed B0ring/nohurt/nativeSpring pass, A unbraked contact death; unchangedB451287 captured first projectile126 and completed60 forward frames, but restore aborted on a missing owned Spring identity before comparisons; root then measured the development-loader resolver negative against a real-runtime control and repaired the capture-local resolver; unchanged B now passes immediate identity/tuple and60-frame full replay with zero snapshot differences at0rings. Actual platform rhythm/boss/Knux/cold/checkpoint/route value OPEN |
 | ICZ | 1/2; snowboard / Tails skip / Knuckles teleporter | Warned shelter, recoverable lower lane, native friction | WARNED stalactites and carried/true ring split east9982; carried BC2prime separately green; true BD inactive; native frost/structural rewind prerequisites qualified by P12 plus fail-closed P13 | Pure R1 fifty-five pass; separate BC592pass0skip, not initial C1; actual19448-pair28579 neutral fall/landing plus84-update replay and97772 zero-ring jump onto authentic165/retreat to terrain plus73-update registered replay pass. Same STOCK policy shares pads through147, then remains airborne and dies149; this does not prove hardness. Partly clipped tip visibly present from6 in sampled stills. Wider/character approaches, under-body/lower-route shelter, full cue readability, true BD/checkpoint/cold routes remain OPEN |
 | LBZ | 1/2; Knuckles corridor/presentation | Bounded alarm reinforcement, sentry lane, native launch/boss control | BOUNDED per-allocated-instance escort; native sequence-only retirement; creator recipes east9982 | R1 fifty-five pass0skip; OpusR2 blocked-alarm real touch-order5pass, H expectation16pass; LBZ2/boss/Knux/cold/route OPEN |
-| MHZ | 1/2; Knuckles opening, seasons | Committed wind, mushroom/pulley exit, seasonal arrangements/chase | Stable PULSED native5d354; exact original34 creator ingredientf0d1eb9b remains unwired | 34unique plus same strengthenedP2; creator2+corrected1 pass across94540/78037;37721 wrong lower band/backside;31133 read-only native floor053F x0600..06B8 + genuine34 binding; 44377 stopped before live-owner prerequisite;82072 eight-call read-only diagnostic proves authenticated34 vertically deferred under native camera settling, art ready/FIFO empty; 19540 reaches readiness59 then fixed approach stalls0647 before0649/totalprefix120, no wind/DOWN; these Settings probes unintentionally request fallback Sonic sidekick via none token, so no solo-route credit; season/chase/boss/cold OPEN |
+| MHZ | 1/2; Knuckles opening, seasons | Committed wind, mushroom/pulley exit, seasonal arrangements/chase | Stable PULSED native5d354; exact original34 creator ingredientf0d1eb9b remains unwired | 34 native identities plus strengthened P2; creator2+corrected1 across94540/78037. Current63503 pair/strict e123 proof10411 observes one frontal first-pressure pass: neutral -9px, Duck8 0px, both grounded/unhurt/0rings. Earlier wrong-band, camera/solid and unintended-team histories stay below. Full pulse, harder gameplay, replay, season/chase/boss/cold OPEN |
 | FBZ | 1/2; all native characters | Taught tube/grabber transfers and recoverable missed grabs | Stable staged EXTRA_BEAT accepted-birth packet99ee348f; explicit inherited Knux weapon-bit correction; no support removal | Measured10/11waves352/384updates,512/256rotation,97-update native overlap30peak; birth/withdrawal/replay pass; real host/catch/cold/route OPEN |
 | SOZ | 1/2; native routes | Non-stalemate golem, readable fading lights, native ghost count/size | STOCK golem restored byteexact760 in0d57; TOMB600 light/ghost accepted; both authored golem variants REJECTED |34903 actual matched passive DEATH/attack identical Stock vs research after launch-index fix; no hardness/selfwin exclusion; Stock units78847 fourteen pass0skip, pixels/cold/fullzone OPEN |
 | LRZ | 1/2 plus boss sublevel; Knuckles transport | Crusher/lava/collapse cadence, switches and HPZ handoff | Stable ECHO_JET native335f23; exact original0 creator687c8e27 remains unwired | 16native pass0skip; creator54546 three pass0skip and paired strict jar65bf077d; native cue/pixels/zero-ring safe-pocket/cold-route OPEN |
@@ -80,14 +84,27 @@ and Slots table rows retain their separately observed positive bounded evidence.
 Campaign workers remain stopped with unmerged trees/indices/packets retained as
 cleanup_pending; no campaign calibration or deletion is authorized by this checkpoint.
 
-Root refreshes the current matched pair after upstream ownership/API changes on
-04ac46c04: enginee5a879d7/SDKd9e56f4a, actual20737-line pin7d18feb8, package61564
-successful. Actual24-source creator and a typed C2/C3 consumer package with zero
-strict findings; focus14330 passes188 cases across17 concrete classes without
-failures/errors/skips. Exact commands/hashes and coverage limits are in the
-[current artifact checkpoint](2026-10-15-second-strike-campaign-delivery.md#current-artifact-refresh-after-upstream4a26).
+Root refreshes the matched pair on 3fa0730c after pulling the process-cleanup fix:
+engine22102f1b/SDK387b82db, actual20763-line pin a3a3495d and successful package63503.
+The actual24-source creator packages with zero strict findings. Focus44662 passes
+250 cases across24 concrete classes without failures/errors/skips. New
+`TestSecondStrikeHczAirRecovery` also passes one zero-ring maker114 refill/return,
+natural child recreation and whole-world suffix replay case without skips on
+current compiled classes/cb2; it does not qualify a whole-act air budget. Exact
+commands, hashes and limits are in the
+[current artifact checkpoint](2026-10-15-second-strike-campaign-delivery.md#current-artifact-refresh-after-process-cleanup-repair).
 No historical53676/19448/42171 gameplay proof is relabelled as current, and no
 inactive ingredient is wired by this artifact qualification.
+
+The current MHZ first-wind witness 10411 now completes one neutral and one DOWN
+cell on the immutable 63503 pair with strict proof e123a7a0. Each fresh solo JVM
+uses 60 readiness, 20 approach and 80 breathing inputs. The first native wind
+pass moves neutral Sonic -9 pixels during authentic Cluckoid slot 24, while
+Duck8 has zero slot-envelope displacement. Both stay grounded, unhurt and at
+zero rings; root reads CSVs before the native stills. Production MHZ remains
+unwired. This is one first-pressure response, not full pulse/cooldown, harder
+gameplay, replay, seasons/chase/bosses or cold qualification. Older wrong-band,
+camera/solid and unintended-team outcomes above remain historical negatives.
 
 - Lead HEAD e0efcb372f9131ce959c5f2487d2acca0cdd977e/pinned760 and actual staged
   C3 tree56b06 remain unchanged. Working DDZ/Slots source and current plan are

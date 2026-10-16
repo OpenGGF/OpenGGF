@@ -143,6 +143,7 @@ Entries should include:
 54. [AIZ2 First-Tree and HCZ1 Zero-Offset Animated Tile Uploads (OPEN)](#aiz2-first-tree-and-hcz1-zero-offset-animated-tile-uploads-open)
 55. [Knuckles Credits and Terminal Residuals (OPEN)](#knuckles-credits-and-terminal-residuals-open)
 56. [MHZ Rewind Snapshot Identity Gaps (OPEN)](#mhz-rewind-snapshot-identity-gaps-open)
+57. [Authored AIZ Lookout Clears a Physical Parent Before Its Arms (FIXED)](#authored-aiz-lookout-clears-a-physical-parent-before-its-arms-fixed)
 
 ---
 
@@ -164,6 +165,30 @@ the15784-input native prefix and matches all51 registered keys after restore and
 semantic snapshot equality, not unrestricted byte equality or general rewind
 certification. Integration follows the normal delivery flow. The [delivery record](../architecture/plans/2026-10-15-second-strike-campaign-delivery.md#aiz-completed-history-restore-repair--2026-10-16)
 keeps the synthetic unit scope, semantic comparison limits and remaining route gates.
+
+## Authored AIZ Lookout Clears a Physical Parent Before Its Arms (FIXED)
+
+**Location:** `AizHollowTreeObjectInstance.onUnload` and native MonkeyDude body/arms.
+Current native-entry Second Strike prefix34784 aborts on input10584 when an orphan
+arm reads SST4 after skid dust reuses it. Earlier rows show tree25 unloading after
+body4/arms5,6,8,9,10 have run. Immediate authored body destruction bypasses the native
+status7 publication that `Child_Draw_Sprite` needs before parent deletion.
+
+The bounded correction captures a withdrawal request and consumes it only at the
+body's own dispatch. The body stays allocated and pending while higher arms mark
+themselves, then all clear on their next own dispatch. Detached coconuts retain
+their independent native lifetime. The unknown physical-owner projection still
+fails closed; this does not implement arbitrary native replacement-field reads.
+
+95 focused outcomes pass in75404; two new cases stop at a fixture's reveal-control
+slot prerequisite. Corrected two-method29965 passes actual dust reuse and
+requested/published destructive-world restore/replay, with no errors or skips.
+That is local lifecycle coverage across two runs, not a whole-route pass. The
+same-input current-prefix40328 then completes16524 ordinary inputs without the
+original abort or death, with the graph absent by10531. Recovery/full routes
+remain open. Exact sources, source review,
+negative history and artifact limits are in the
+[delivery record](../architecture/plans/2026-10-15-second-strike-campaign-delivery.md#a5-owned-graph-retirement--current-source-continuation).
 
 ## MHZ Cluckoid Visual Child After Explicit Parent Removal (OPEN)
 

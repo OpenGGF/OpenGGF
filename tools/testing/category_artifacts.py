@@ -75,20 +75,26 @@ def stop_process_tree(process):
             pass
 
 
-def run_logged(command, cwd, log_path, temporary=None, timeout=None, idle_timeout=None, queue_fd=None):
+def run_logged(command, cwd, log_path, temporary=None, timeout=None, idle_timeout=None, queue_fd=None,
+               environment=None, timings=None):
+    from contextlib import nullcontext
     from maven_queue import inherited_slot
+    from maven_activity import build_activity_slot
 
     if timeout is not None and timeout <= 0:
         raise TimeoutError('Invocation timeout exhausted before launch')
     log = RollingLog(log_path)
-    environment = None if temporary is None else {
-        **os.environ, **{name: str(temporary) for name in ('TMPDIR', 'TMP', 'TEMP')}}
+    if temporary is not None:
+        environment = {**(os.environ if environment is None else environment),
+                       **{name: str(temporary) for name in ('TMPDIR', 'TMP', 'TEMP')}}
+    activity = (build_activity_slot(cwd, timings=timings)
+                if Path(command[0]).name in ('mvn', 'mvnw', 'mvn.cmd') else nullcontext(()))
     try:
-        with subprocess.Popen(command, cwd=cwd, stdout=subprocess.PIPE,
+        with activity as activity_fds, subprocess.Popen(command, cwd=cwd, stdout=subprocess.PIPE,
                               stderr=subprocess.STDOUT,
                               env=environment,
                               start_new_session=(os.name == 'posix'),
-                              **inherited_slot(queue_fd)) as process:
+                              **inherited_slot(queue_fd, activity_fds)) as process:
             started = last_output = time.monotonic()
             done = threading.Event()
             expired = []

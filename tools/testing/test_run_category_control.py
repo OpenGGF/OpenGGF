@@ -85,9 +85,12 @@ class QueueCliTests(unittest.TestCase):
             events.append('tree released')
 
         @contextmanager
-        def slot(root, *, exclusive=False, estimate=900, kind='maven', tree_fd=None, service_credit=None):
+        def slot(root, *, exclusive=False, estimate=900, kind='maven', tree_fd=None,
+                 service_credit=None, reservation=None, small_job=False):
             self.assertEqual(30, estimate)
             self.assertEqual('category-batch', kind)
+            self.assertIsNone(reservation)
+            self.assertFalse(small_job)
             self.assertEqual(12, tree_fd)
             self.assertIsInstance(service_credit, runner.ServiceCredit)
             events.append('shared acquired')

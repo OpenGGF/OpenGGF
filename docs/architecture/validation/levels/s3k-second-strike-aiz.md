@@ -12,7 +12,7 @@ All positions/record IDs were re-resolved from the original locked-on World ROM 
 | A2 Flame Under Vines | Guard28/54, split artillery40, spotter44/60; original giant vines42/49 | Swing/retreat lane and committed dash braking; no new player physics | Both landings and all-participant attack separation |
 | A3 Crown or Cover | Artillery82 and spotter98; native Monkey Dude100 remains a visual reference; rings35/74 | Native flight/glide/lower route remain useful | Solo/team/character branch traversal and viewport edge |
 | A4 Rotten Timber | Original falling log90 and native seven-update crumblers88/91 retained; approach defender107 | Damaged support lesson with a stable exit; no slower ten-update generic crumble | Actual upper/lower traversal and native solid/rewind |
-| A5 Exit Interview | Finite original-tree150 EXIT_LOOKOUT: completed P1 ride, real landing/control clear, fixed native Monkey Dude at tree(+E0,-B0) | Native lookout wait/AI; one admission attempt skips occupied engine participants or missing art/terrain | Actual ride/landing/pre-birth replay for four reference character/team fixtures, progressed-born graph replay, native delayed-facing47/48/49 boundaries and actual SST exhaustion/one-free-slot pass at bounded mechanism scope; host and full rendered/cold-route evidence remain open |
+| A5 Exit Interview | Finite original-tree150 EXIT_LOOKOUT: completed P1 ride, real landing/control clear, fixed native Monkey Dude at tree(+E0,-B0) | Native lookout wait/AI; one admission attempt skips occupied engine participants or missing art/terrain | Actual ride/landing/pre-birth replay for four reference character/team fixtures, progressed-born graph replay, native47/48/49 admission boundaries and ordinary P2 overlap controls and actual SST exhaustion/one-free-slot pass at bounded mechanism scope; host and full rendered/cold-route evidence remain open |
 | A6 Ten Ticks | Exact log66 brittle support10, native geometry/gravity; nearby catch route retained | Commit or recover below, with a cue before landing | Positioned normal-loop320px precontact cue and actual release10 pass, with native managed rider/child graph replay separately covered; real zero-ring catch-route execution remains open |
 | A7 Living Floor | Twelve-body native chains82/100/119; split plant95, wide plant138 | Head window, body bypass and committed fan/reload | Full chain bends/edges, live fan gap and checkpoint retry |
 | A8 Burnt Fork | Log243 brittle10; guard238, chain244, split plant247; native giant vine251 | Exposed upper vine or defended lower crossing; no evasive-platform stretch | Momentum loss, characters and both fork solutions |
@@ -22,6 +22,20 @@ All positions/record IDs were re-resolved from the original locked-on World ROM 
 | A12 Character finale | Sonic/Tails finite native STAGGERED_PORTS bombing script; Knuckles lower approach split plant704/guard716 and native distinct boss arena | Read committed ports, native recovery rows; Knuckles skips bombing-run state machine | Complete native wraps/exit/boss branches and playable HCZ |
 
 The wheeled Cluckoid experiment is explicitly rejected for this slice: its stationary SKL owner, MHZ particle/art lifetimes and child graph do not participate in AIZ atomic wraps. This is source feasibility evidence, not a failed runtime readability measurement. A12 retains authored native bombing, not an omitted finale.
+
+Current-source A5 withdrawal adds a captured request consumed at the lookout's
+own SST dispatch. Its arms observe native pending retirement before the parent
+slot is freed. The original current-prefix abort at input 10584 remains in the
+[delivery record](../../plans/2026-10-15-second-strike-campaign-delivery.md#a5-owned-graph-retirement--current-source-continuation).
+Focus 75404 passes the 17 existing A5 identities and related native/startup checks;
+two new tests initially stop at a fixture slot prerequisite. Successor 29965
+passes only those two corrected methods: late tree-25/body-4 closure before real
+skid-dust reuse, plus requested/published destructive registered-world replay
+and detached-coconut survival. No guard, physics, native timing or resource rule
+changes. Fresh replay40328 completes the same16524 ordinary inputs on the new pair and
+closes the original orphan-arm abort. Reverse slot order, the old recovery
+response and complete cold routes remain separate obligations; these results
+do not qualify the complete A5 encounter.
 
 ## Resource and progression ownership
 
@@ -33,7 +47,7 @@ Forest post102 offers Gumball after its authored traversal; true Act2 post476 of
 
 | Axis | Required | Current evidence / limitation |
 | --- | --- | --- |
-| Cold route | Sonic solo; Sonic+CPU Tails; Tails solo; Knuckles, native intro through playable HCZ | All four remain incomplete through HCZ. Fresh Sonic-solo320 native-entry run11708 reproduces fixed ordinary inputs, defeats Fire Breath14217, reaches RESULTS14556/apparentAct2 15033, starts its ordinary tail15035 and proves60 released-control frames plus32px movement15120, then dies16089. Waterfall/HCZ are not reached. Sonic+CPU stalls in fire, Tails dies at A7 and Knuckles stalls in the forest. Earlier rewind pad research only authored the fixed recipe; the later fresh no-search run supplies the first-boss evidence |
+| Cold route | Sonic solo; Sonic+CPU Tails; Tails solo; Knuckles, native intro through playable HCZ | All four remain incomplete through HCZ. Current40328 replays the fixed16524 ordinary-input Sonic-solo320 prefix through first boss/results/true Act2, ending airborne/rolling at8717/1361 with0rings/alive/nohurt; no recovery response is executed. Earlier fresh Sonic-solo320 native-entry run11708 reproduces fixed ordinary inputs, defeats Fire Breath14217, reaches RESULTS14556/apparentAct2 15033, starts its ordinary tail15035 and proves60 released-control frames plus32px movement15120, then dies16089. Waterfall/HCZ are not reached. Sonic+CPU stalls in fire, Tails dies at A7 and Knuckles stalls in the forest. Earlier rewind pad research only authored the fixed recipe; the later fresh no-search run supplies the first-boss evidence |
 | Checkpoints | Every retained post, zero rings and stopped momentum, repeated native restart | Positioned Sonic320 posts697 and physical-fire26 pass native activation/death/new-manager zero-ring stopped respawn/ordinary spindash escape on the declared older native composition. Invitation476's original FIFO overflow and subsequent zero-star failure are preserved as negatives. Root22786 passes the unchanged physical-death/reload/zero-star/ordinary-escape witness on composed producer admission plus checkpoint restoration; bonus-return/revisit lifetime is separate. Other posts, repeats and character breadth remain open |
 | Mechanism rewind | Alarm/tell/committed shots; log standing/breakup; tree release/lookout; boss graph/warnings/hits/defeat; bombing wrap; invitations | Progressed native graph/rider, four-character pre-birth lookout replay, one progressed born-lookout reference/whole-graph replay, invitation recipe/relink, committed fan and P3/P4 contact/recreation have bounded passing evidence. Root's actual host/native fault/restore checks pass at their producer scope; cold progression/all required phase spots/breadth remain separate |
 | Viewport | Production/capture presets320/352/400/528/800 | Actual camera/player configuration, hidden/visible guard activation and first dash have five-width native evidence. Cue pixels and broader culling remain pending. The inherited standard's512/640 research overrides are distinct and do not substitute for352/528. |

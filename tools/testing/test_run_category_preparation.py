@@ -26,6 +26,7 @@ class PreparationTests(unittest.TestCase):
         self.commands = []
         self.preparation_error = None
         self.preparation_code = 0
+        self.preparation_wait = 0
         self.change_during_preparation = False
         for mock in (patch.object(runner, 'tree_state', side_effect=lambda _: self.state),
                      patch.object(runner, 'rom_args', return_value=['-Dsonic1.rom.path=/roms/s1.gen']),
@@ -53,7 +54,8 @@ class PreparationTests(unittest.TestCase):
             self.assertEqual(['mvn', '-Dmse=off', 'test-compile', '-B'], command)
             self.assertFalse(self.active)
             self.assertEqual(12, kwargs['queue_fd'])
-            self.clock += 8
+            self.clock += 8 + self.preparation_wait
+            kwargs['timings']['build_wait_seconds'] = self.preparation_wait
             log.write_text('preparation diagnostic\n')
             if self.preparation_error:
                 raise self.preparation_error
@@ -109,6 +111,13 @@ class PreparationTests(unittest.TestCase):
         self.assertEqual([3, 1], [lane['tests'] for lane in self.summary('results.json')])
         self.assertEqual('passed', self.summary('status.json')['status'])
         self.assertFalse((self.diagnostics() / 'preparation.log').exists())
+
+    def test_waiting_for_measurement_does_not_consume_invocation_budget(self):
+        self.preparation_wait = 3600
+        self.assertEqual(0, self.execute(max_minutes=1))
+        self.assertEqual(8, self.summary('preparation.json')['elapsed_seconds'])
+        self.assertEqual(3600, self.summary('preparation.json')['build_wait_seconds'])
+        self.assertEqual('passed', self.summary('status.json')['status'])
 
     def test_failed_preparation_retains_diagnostics_and_leaves_validation_incomplete(self):
         self.preparation_code = 17

@@ -279,3 +279,224 @@ which occur at most every 30 seconds. It is not a general overhead guarantee.
 No extra process-memory sampler or history ledger was added. The dashboard
 cannot show build-only work, reconstruct missing legacy timings, guarantee
 admission order or infer test success from a completed execution record.
+
+## Qualified small jobs and one aged-head backfill
+
+This follow-up started from dashboard merge `e8b9a0db2` and incorporated
+`1fb1f4ce4` (the process-cleanup safety fix) before final validation. The earlier
+interruptions produced no completed qualification result. They are not counted
+as test failures or completed runs. The safety fix merged without conflicts and
+preserves the new category subprocess environment handling.
+
+The queue's bounded history supported keeping different execution budgets:
+617 of 629 recorded ordinary batches peaked below 4 GiB, but the maximum was
+4.855 GiB and guards reached 6.736 GiB. All 36 recorded focused lean invocations
+were below 2.692 GiB. These sampled process-tree measurements can miss peaks and
+count shared pages twice. They do not establish a universal 4 GiB ceiling.
+
+The implementation therefore qualifies an explicit registry of 55 small classes,
+with at most 50 exact classes/method selectors per command. Source resolution
+rejects ambiguity, inherited fixtures, expensive annotations and unknown command
+shapes. Both Maven and Surefire use 1 GiB heaps and reserve 4 GiB / 4 cores. The
+normal lane, guards and unknown tests retain existing reservations. A category
+batch qualifies only when every candidate is registered and one worker is used;
+its includes, order, smoke profile and assertions are unchanged. `--normal`
+opts focused commands out. Explicit `--lean` still supports caller-reviewed
+checks but does not by itself grant backfill eligibility.
+
+An aged resource-aware request blocked on memory or CPU permits one qualified
+small request from another tree to use spare capacity. The gate-protected ledger
+consumes this allowance only on actual admission and retains it until the aged
+request leaves the waiting set. A completed small job does not replenish it.
+Afterward the queue drains for the head. Serial requests, full slots and unknown
+capacity retain draining behavior. This limits overtaking by count, not execution
+time; there is no new timeout or preemption. Existing worktree/slot locks remain
+the execution authority, including with older wrappers.
+
+Opus 5.5 contributed design and review. A proposed negative-keyword classifier
+was rejected: absence of ROM or native keywords does not establish bounded
+allocations through helpers. The explicit registry requires fixture review and
+actual lean execution before expansion. Review also caught two unsafe admission
+assumptions, now covered by regressions: explicit lean must not automatically
+receive backfill rights, and automatic qualification requires one unambiguous
+`-Dmse=off` so selectors and heap flags survive the Maven extension.
+
+Waiting records now publish admission reasons and resource shortfalls. Dashboard
+rows distinguish fresh scheduler reports from conservative resource observations
+for legacy clients. Unknown/stale data stays unknown. The observer acquires no
+queue locks, changes no policy and does not forecast start times.
+
+Validation used the development tree at `1fb1f4ce4` plus this patch:
+
+- `python3 -m unittest discover -v -s tools/testing -p 'test_run_categor*.py'`
+  exercised 240 checks in 31.960s. One stale CLI test double rejected the new
+  `reservation` keyword; its signature and normal-budget assertions were updated.
+  `PYTHONPATH=tools/testing python3 -m unittest -v test_run_category_control
+  test_run_category_queue.QueueTests.test_normal_cli_opt_out_and_auto_lean_share_the_expected_budget_contract`
+  then passed all nine affected checks, including explicit unqualified lean.
+  Process tests cover racing backfill owners, one consumed allowance after exit,
+  failed ledger writes, aged-head progress and old-client lock compatibility.
+- `LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base
+  1fb1f4ce4 --preflight` passed actual Java 25, Lua 5.4 and PowerShell checks.
+- The first 50 sorted `maven_small.QUALIFIED_CLASSES` were passed unchanged as
+  `-Dtest=<comma-separated classes>` to `python3 tools/testing/maven_queue.py
+  -Dmse=off -B -Dtest=... -Dopenggf.surefire.reports=<worktree>/target/short-job-validation/focused-reports test`.
+  Automatic lean passed 50 reports / 307 tests with zero failures, errors or skips.
+  Queue telemetry recorded 0.0s wait, 27.0s execution and 1.734 GiB sampled peak
+  process-tree RSS, while two unrelated category runs were active. Maven reported
+  26.397s including compilation. This is one qualification run, not a speedup benchmark.
+- The remaining five sorted classes (four utilities and `TestBuildIdentity`)
+  exercised `run_plan` with an exact focused qualification plan, one ordinary
+  batch, no guards, the real preparation contract, retained worktree lock and
+  `maven_slot` callback with 4 GiB / 4 cores. Preparation took 23.04s; the unchanged
+  includes batch passed 5 reports / 28 tests in 1.76s, without failures, errors or
+  skips. Its command retained `-Psmoke`, ROM properties and includes-file selection
+  while adding the 1 GiB Surefire shape. This is tool integration qualification,
+  not a narrowed substitute for broad smoke coverage.
+- The live browser endpoint refreshed successfully. Display-only fixtures covered
+  memory shortfall and draining rows, blocker labels and literal HTML-like worktree
+  names. At 1280px and 390px there was no page overflow; the narrow table scrolls.
+  Python tests cover stale/unknown reasons and observation provenance.
+
+The change-based plan selects broad smoke because shared tooling is involved.
+Focused Python safety coverage plus actual execution of every newly qualified
+class addresses this bounded admission/heap change; no POM, Java, tag, selection
+manifest, workflow or hook changed. No broad engine or release-full-suite claim
+is made. Consumed category diagnostics and focused reports are deleted before
+delivery. Existing running commands retain the code they loaded; new invocations
+must use the updated tooling, including by absolute path from older worktrees.
+
+## Active execution versus retained worktree ownership
+
+The follow-up starts at `3fa0730c6` after the qualified-small-job delivery. A live
+snapshot showed two normal batches with 7 GiB reservations, three focused waiters,
+and two exclusive requests. The focused selectors were expensive ROM/campaign
+checks, not qualified registry entries. Their 31–39 second scheduling estimates
+were class-count hints, not measured completion forecasts. Available host RAM did
+not establish capacity after reserving growth for the running jobs and headroom.
+
+Opus 5.5 traced a larger problem to the benchmark's copy of `run_isolated.py` at
+`da6330ae6`: it acquired exclusive admission, tried every linked worktree lock,
+then released admission and requeued if any tree was busy. Category runners retain
+their tree between batches, so an idle tree repeatedly caused a complete queue
+drain with no measurement. The bounded queue log contained 91 completed benchmark
+records with `holdSeconds: 0.0`, consistent with that loop. Rounded telemetry alone
+does not prove that each attempt ran no command. Summed waits are not elapsed
+delivery time. The develop version from `7d12e4c2c` instead blocked while acquiring
+all tree locks before admission, retaining a partial lock set and stalling other
+work. Neither ordering models the actual timing conflict.
+
+The replacement distinguishes active build execution from output ownership.
+Wrapped builds and category preparation hold a shared repository activity lease
+only while executing. A benchmark keeps one queue request, takes exclusive test
+admission, then drains active builds through an exclusive activity lease. An intent
+mutex blocks new builds during draining and measurement. Idle foreign category
+trees no longer matter; the benchmark protects its own tree before joining the
+test queue. Opus review caught that submitting before this own-tree acquisition
+could age a busy-tree measurement into a queue-wide drain. A real-process test
+reproduced that regression before the correction, then passed with no waiting
+record published until the own tree was available. Descriptors
+are inherited by the launched process. Activity holders must never acquire test
+admission. No foreign tree-lock sweep or retry/requeue loop remains.
+
+A separate false-exclusive case was the explicit POM default
+`-Dsurefire.forkCount=1`. This and `-Dsurefire.reuseForks=true` now retain normal
+shared admission; mixed unsafe options, other counts/reuse settings, heap overrides
+and unknown profiles remain conservative. Both normal and lean budgets are
+unchanged. Reducing normal reservations without first capping/qualifying the Maven
+parent was deferred. Estimate-derived benchmark kill deadlines were also rejected:
+a priority hint is not an execution-time contract. No running job was restarted.
+
+The benchmark returns its child's exit code after contexts close, so a successful
+command is no longer logged as interrupted by an internal `SystemExit(0)`.
+Completed queue telemetry still does not mean command success; the audit and
+process status retain nonzero exits. Queue hold time includes active-build draining,
+whereas audit timestamps cover the launched measurement. Category preparation
+records build-isolation waiting separately and excludes it from its timeout budget.
+
+Validation on `feature/ai-ready-admission` at `3fa0730c6` plus this patch:
+
+- `python3 -m unittest discover -v -s tools/testing -p 'test_run_categor*.py'`
+  passed 247 checks in 33.140s. After broadening the activity hook to all logged
+  Maven commands and hardening owned fixture cleanup,
+  `PYTHONPATH=tools/testing python3 -m unittest -v test_run_category_activity
+  test_run_category_preparation test_run_category_resources` passed all 35 affected
+  checks in 1.634s. Actual private-process checks cover overlapping builds, draining,
+  preventing new-build overtaking, cancellation, descriptor inheritance after
+  wrapper death, and preparation waiting longer than its execution timeout.
+- `PYTHONPATH=tools/testing python3 -m unittest discover -v -s tools/performance
+  -p 'test_run_isolated.py'` passed six checks in 1.830s after adding nonzero-exit
+  coverage and the review regression for own-tree readiness. A real linked-worktree fixture holds a foreign category tree idle while
+  two independent measurement invocations finish with exits 0 and 7, each with
+  one completed, nonzero-hold queue record. No host Maven or engine work is launched.
+- `LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base
+  3fa0730c628cd27c6da80a692fdc0ac048d36b98 --preflight` passed Java 25, Lua 5.4
+  and PowerShell prerequisites. The change-based plan selects 3,447 smoke candidates
+  because shared tooling changed. Focused Python/process safety checks exercise the
+  changed lock and command-classification contract directly; no POM, Java, test
+  selection, workflow or hooks changed, so broad engine validation is disproportionate.
+  This is not a smoke or full-suite pass.
+
+Migration matters: running Python processes keep their loaded code. Use updated
+wrappers throughout linked worktrees or invoke the main wrapper by absolute path
+from the intended cwd. Older wrappers/direct Maven/IDE builds bypass the activity
+lease; existing 0.5-second process sampling rejects observed interference but can
+miss short overlaps. Different clones and arbitrary host load are not excluded.
+
+## Rollout across existing worktrees
+
+After `d07c7da6f` landed, the live queue still had idle capacity because processes
+were executing older wrappers. The AIZ5 lane at `6405313ce` classified its explicit
+`-Dsurefire.forkCount=1` command as exclusive; the identical arguments classified
+shared under main. The runtime measurement still used the `da6330ae6` retry loop.
+New source on main did not change either process's loaded scheduling code.
+
+The owners migrated only their unfinished waiting requests. Runtime owner
+confirmed old PID 128003 had no measurement child/audit, cancelled owned session
+38694 with exit 130, verified owned clients gone, then submitted one replacement
+through main's updated isolator in session 26774, PID 328549. Its five completed
+comparisons, pinned engine artifacts, inputs and flags were preserved. Its audit
+consumer accepts the new activity-lease evidence and retains historical tree-lock
+evidence for old completed measurements. AIZ5 owner verified no Maven child for
+PID 309044, cancelled that owned waiting request, confirmed exit, then submitted
+once through main's wrapper as PID 352270 with unchanged arguments/environment.
+The earlier PID 259924 had completed normally, not been cancelled for migration.
+The throughput thread independently observed the old isolator absent and AIZ5
+running shared beside launcher-startup at 18:28 UTC. Queue counts moved from one
+running/seven waiting at 18:23 to two running/two waiting at 18:28. These are live
+observations amid other completions, not a controlled throughput benchmark.
+
+Opus 5.5 recommended a small detection-only safeguard. The wrapper now stamps
+waiting and running records with `TOOLING_REVISION`. The dashboard reports current,
+older, newer and unknown relative to its loaded tooling. Missing/malformed metadata
+stays unknown; calling every unstamped client outdated was rejected because even
+the corrected `d07c7da6f` wrapper predates reporting. The stamp never changes
+validation, ordering, admission or reservations. Visible blocker names and waiting
+PIDs make owner coordination practical. The former "Run estimate" label now says
+"Scheduling estimate" and explains the class-count heuristic. Independent Opus
+review approved compatibility and advisory scope; its notes clarified that stamps
+are self-reported and restored the separate explanations for unknown timings and
+changing priority order.
+
+Shared Git aliases, forwarding to main, hot-patching imports and editing leased
+requests were rejected: they do not safely update a live process and can silently
+change tooling used by a pinned worktree. No global resource limits were changed.
+Owner coordination addressed the live blocker before adding detection.
+
+Validation at base `d07c7da6f` plus this follow-up uses only Python/process checks
+and browser inspection. `PYTHONPATH=tools/testing python3 -m unittest -v
+test_run_category_queue test_run_category_dashboard test_run_category_schedule
+test_run_category_running` exercised 111 checks in 24.734s. One added test had its
+constant imported in the wrong test method; after correcting that fixture,
+`test_run_category_queue.QueueTests.test_published_wait_reason_is_owner_authored_and_preserves_foreign_record`
+passed in 0.015s. The other 110 checks passed, including real leased records,
+mixed/future/invalid revisions and revision-independent scheduling.
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base
+d07c7da6f802d4186ac87f8c09d5c3f9f7da2d09 --preflight` passed prerequisites.
+This advisory metadata/UI change leaves Maven arguments, test selection and
+execution semantics unchanged; no engine suite was run or claimed.
+Browser checks used the live endpoint and display-only fixtures for unknown,
+older, current and newer reported revisions. Blocking worktree names containing
+HTML-like text rendered literally. Desktop 1280px and narrow 390px layouts had no
+page overflow; the narrow table retained its own horizontal scroll. The live view
+was restored after fixture inspection. No scheduler state was modified by the view.

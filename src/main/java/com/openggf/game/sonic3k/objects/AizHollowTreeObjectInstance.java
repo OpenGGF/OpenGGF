@@ -4,7 +4,6 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.difficulty.AizTreeExitRecipe;
 import com.openggf.game.sonic3k.objects.badniks.MonkeyDudeBadnikInstance;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
-import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.TerrainSurface;
 import com.openggf.game.rewind.RewindStateful;
 import com.openggf.camera.Camera;
@@ -173,7 +172,10 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance implemen
 
     @Override
     public void onUnload() {
-        if (exitLookout != null && !exitLookout.isDestroyed()) ObjectLifetimeOps.destroyLatched(exitLookout);
+        // The tree can occupy a later SST than its free-slot lookout/arms.
+        // Let that body publish native status7 at its next own dispatch rather
+        // than clearing its physical parent record before the arms observe it.
+        if (exitLookout != null) exitLookout.requestOwnedRetirement();
         releaseOwnedPlayer(mainOwner, nativeRideStates[PLAYER_SLOT_MAIN]);
         releaseOwnedPlayer(nativeP2Owner, nativeRideStates[PLAYER_SLOT_SIDEKICK]);
         for (Map.Entry<AbstractPlayableSprite, RideState> entry

@@ -27,6 +27,14 @@ Executed qualification and remaining campaign/rewind frontiers belong in the
 [dated stock audit](architecture/audits/2026-10-07-stock-parity-gap-verification.md#continued-swarm-from-the-delivered-base)
 and [known-bug record](status/s3k-known-bugs.md), rather than new intentional entries.
 
+**Authored AIZ lookout withdrawal (2026-10-16):** a local correction preserves
+native status7/own-dispatch deletion before parent-slot reuse can strand linked arms.
+The [known-bug record](status/s3k-known-bugs.md#authored-aiz-lookout-clears-a-physical-parent-before-its-arms-fixed)
+and [delivery evidence](architecture/plans/2026-10-15-second-strike-campaign-delivery.md#a5-owned-graph-retirement--current-source-continuation)
+separate focused lifecycle/replay and the completed fixed-input prefix from
+whole-route obligations. No accepted ROM deviation or default unknown-slot fields
+are introduced.
+
 **Ending presentation scope, 2026-10-13:** the three effects omitted from
 playable feature `c2103d5f7` are now implemented and locally qualified: IslandLift
 sprites/art, rescue/AIZ Master Emerald palette cycling and AIZ return-hold AnPal.
