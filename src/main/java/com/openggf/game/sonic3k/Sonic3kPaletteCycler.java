@@ -39,6 +39,8 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
     private final boolean localPaletteRegistry;
     private final Palette[] explicitUnderwaterPalettes;
     private final List<PaletteCycle> cycles;
+    /** The shared AnPal RAM bank; see {@link Sonic3kGlobalAnimationState}. */
+    private final Sonic3kGlobalAnimationState anPalRam;
     private Palette[] cachedLevelPalettes;
 
     static int resolveSlotsModeForTest(S3kSlotBonusStageRuntime runtime) {
@@ -56,6 +58,15 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
     Sonic3kPaletteCycler(RomByteReader reader, Level level, int zoneIndex, int actIndex,
                          PaletteOwnershipRegistry paletteRegistry,
                          Palette[] explicitUnderwaterPalettes) {
+        this(reader, level, zoneIndex, actIndex, paletteRegistry, explicitUnderwaterPalettes,
+                new Sonic3kGlobalAnimationState());
+    }
+
+    Sonic3kPaletteCycler(RomByteReader reader, Level level, int zoneIndex, int actIndex,
+                         PaletteOwnershipRegistry paletteRegistry,
+                         Palette[] explicitUnderwaterPalettes,
+                         Sonic3kGlobalAnimationState anPalRam) {
+        this.anPalRam = anPalRam;
         this.level = level;
         this.zoneIndex = zoneIndex;
         this.actIndex = actIndex;
@@ -226,7 +237,7 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
                 && secondaryData.length >= Sonic3kConstants.ANPAL_AIZ1_2_SIZE
                 && introData1.length >= Sonic3kConstants.ANPAL_AIZ1_3_SIZE
                 && introData2.length >= Sonic3kConstants.ANPAL_AIZ1_4_SIZE) {
-            list.add(new Aiz1Cycle(waterfallData, secondaryData, introData1, introData2));
+            list.add(new Aiz1Cycle(anPalRam, waterfallData, secondaryData, introData1, introData2));
         }
     }
 
@@ -240,11 +251,11 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
         if (waterData.length >= Sonic3kConstants.ANPAL_AIZ2_1_SIZE
                 && tricklePreData.length >= Sonic3kConstants.ANPAL_AIZ2_2_SIZE
                 && tricklePostData.length >= Sonic3kConstants.ANPAL_AIZ2_3_SIZE) {
-            list.add(new Aiz2WaterCycle(waterData, tricklePreData, tricklePostData));
+            list.add(new Aiz2WaterCycle(anPalRam, waterData, tricklePreData, tricklePostData));
         }
         if (torchPreData.length >= Sonic3kConstants.ANPAL_AIZ2_4_SIZE
                 && torchPostData.length >= Sonic3kConstants.ANPAL_AIZ2_5_SIZE) {
-            list.add(new Aiz2TorchCycle(torchPreData, torchPostData));
+            list.add(new Aiz2TorchCycle(anPalRam, torchPreData, torchPostData));
         }
     }
 
@@ -508,7 +519,8 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
     //   PalAIZ1_1 → palette 2 colors 11-14 (4 frames, counter0 & 0x18)
     //   PalAIZ1_2 → palette 3 colors 12-14 (8 frames, wraps at 0x30, gated by isLevelStarted)
     //
-    // Timers are shared across both modes (ROM uses same counter1/counter0/counters+$02).
+    // Timers are shared across both modes (ROM uses same counter1/counter0/counters+$02),
+    // and with AnPal_AIZ2 after the seamless act reload: they live in the shared AnPal bank.
     private static class Aiz1Cycle extends PaletteCycle {
         // Gameplay mode data
         private final byte[] waterfallData;  // PalAIZ1_1: 32 bytes (4 frames × 8 bytes)
@@ -517,10 +529,8 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
         private final byte[] introData1;     // PalAIZ1_3: 80 bytes (10 frames × 8 bytes)
         private final byte[] introData2;     // PalAIZ1_4: 60 bytes (10 frames × 6 bytes)
 
-        // Shared timer/counter state (persists through mode transitions)
-        private int timer;    // Palette_cycle_counter1
-        private int counter0; // Palette_cycle_counter0
-        private int counter2; // Palette_cycle_counters+$02
+        // Palette_cycle_counter1 / counter0 / counters+$02
+        private final Sonic3kGlobalAnimationState ram;
         private boolean dirty2;
         private boolean dirty3;
 
@@ -528,7 +538,9 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
         // Starts true (intro), cleared permanently once Camera X >= 0x1000.
         private boolean introFlag = true;
 
-        Aiz1Cycle(byte[] waterfallData, byte[] secondaryData, byte[] introData1, byte[] introData2) {
+        Aiz1Cycle(Sonic3kGlobalAnimationState ram, byte[] waterfallData, byte[] secondaryData,
+                  byte[] introData1, byte[] introData2) {
+            this.ram = ram;
             this.waterfallData = waterfallData;
             this.secondaryData = secondaryData;
             this.introData1 = introData1;
@@ -544,9 +556,9 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
                 introFlag = false;
             }
 
-            if (timer > 0) {
-                timer--;
-            } else {
+            // Both branches open with subq.w #1,(Palette_cycle_counter1) / bpl.s and
+            // reload 9 (fire) or 7 (normal) when it expires (sonic3k.asm:3208-3210, 3235-3237).
+            if (ram.expirePaletteCycleCounter1(introFlag ? 9 : 7)) {
                 if (introFlag) {
                     tickIntro(level, registry, gm);
                 } else {
@@ -565,14 +577,13 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
         }
 
         private void tickIntro(Level level, PaletteOwnershipRegistry registry, GraphicsManager gm) {
-            timer = 9;
-
             // PalAIZ1_3 → palette 3, colors 2-5
-            int d0 = counter0;
-            counter0 += 8;
+            int d0 = ram.paletteCycleCounter0();
+            int counter0 = (d0 + 8) & 0xFFFF;
             if (counter0 >= 0x50) {
                 counter0 = 0;
             }
+            ram.setPaletteCycleCounter0(counter0);
             S3kPaletteWriteSupport.applyContiguousPatch(
                     registry,
                     level,
@@ -584,11 +595,12 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
                     slice(introData1, d0, 8));
 
             // PalAIZ1_4 → palette 3, colors 13-15
-            int d1 = counter2;
-            counter2 += 6;
+            int d1 = ram.paletteCycleWord(2);
+            int counter2 = (d1 + 6) & 0xFFFF;
             if (counter2 >= 0x3C) {
                 counter2 = 0;
             }
+            ram.setPaletteCycleWord(2, counter2);
             S3kPaletteWriteSupport.applyContiguousPatch(
                     registry,
                     level,
@@ -603,13 +615,11 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
         }
 
         private void tickGameplay(Level level, PaletteOwnershipRegistry registry, GraphicsManager gm) {
-            timer = 7;
-
             // PalAIZ1_1 → palette 2, colors 11-14
-            // ROM uses byte-width counter (wraps at 256); mask & 0x18 cycles
+            // ROM: word counter, never wrapped; mask & 0x18 cycles
             // through 0,8,16,24 for waterfallData indexing.
-            int d0 = counter0 & 0x18;
-            counter0 = (counter0 + 8) & 0xFF;
+            int d0 = ram.paletteCycleCounter0() & 0x18;
+            ram.setPaletteCycleCounter0(ram.paletteCycleCounter0() + 8);
             S3kPaletteWriteSupport.applyContiguousPatch(
                     registry,
                     level,
@@ -628,6 +638,8 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
             if (GameServices.camera().isLevelStarted()) {
                 // counter2 may carry a value from intro mode (wraps at 0x3C)
                 // that exceeds secondaryData bounds (0x30). Re-wrap first.
+                // Engine-only: the ROM reads the carried value (sonic3k.asm:3219-3223).
+                int counter2 = ram.paletteCycleWord(2);
                 if (counter2 >= 0x30) {
                     counter2 = 0;
                 }
@@ -636,6 +648,7 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
                 if (counter2 >= 0x30) {
                     counter2 = 0;
                 }
+                ram.setPaletteCycleWord(2, counter2);
                 S3kPaletteWriteSupport.applyContiguousPatch(
                         registry,
                         level,
@@ -660,13 +673,15 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
         private final byte[] waterData;       // 32 bytes: 4 frames × 8 bytes
         private final byte[] tricklePreData;  // 48 bytes: 8 frames × 6 bytes
         private final byte[] tricklePostData; // 48 bytes: 8 frames × 6 bytes
-        private int timer;
-        private int counter0;
-        private int counter2;
+        // Palette_cycle_counter1 / counter0 / counters+$02, inherited from AnPal_AIZ1
+        // across the seamless act reload (the bank is cleared only at Level loc_60DE).
+        private final Sonic3kGlobalAnimationState ram;
         private boolean dirty2;
         private boolean dirty3;
 
-        Aiz2WaterCycle(byte[] waterData, byte[] tricklePreData, byte[] tricklePostData) {
+        Aiz2WaterCycle(Sonic3kGlobalAnimationState ram, byte[] waterData, byte[] tricklePreData,
+                       byte[] tricklePostData) {
+            this.ram = ram;
             this.waterData = waterData;
             this.tricklePreData = tricklePreData;
             this.tricklePostData = tricklePostData;
@@ -675,15 +690,13 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
         @Override
         void tick(Level level, PaletteOwnershipRegistry registry) {
             GraphicsManager gm = GameServices.graphics();
-            if (timer > 0) {
-                timer--;
-            } else {
-                timer = 5;
+            // AnPal_AIZ2: subq.w #1,(Palette_cycle_counter1) / bpl.s / reload 5 (sonic3k.asm:3264-3266)
+            if (ram.expirePaletteCycleCounter1(5)) {
                 int cameraX = GameServices.camera().getX() & 0xFFFF;
 
                 // Cycle A: water → palette 3, colors 12-15
-                int d0 = counter0 & 0x18;
-                counter0 += 8;
+                int d0 = ram.paletteCycleCounter0() & 0x18;
+                ram.setPaletteCycleCounter0(ram.paletteCycleCounter0() + 8);
                 S3kPaletteWriteSupport.applyContiguousPatch(
                         registry,
                         level,
@@ -696,11 +709,12 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
                 dirty3 = true;
 
                 // Cycle B: trickle → pal 2 colors 4,8 + pal 3 color 11
-                int d1 = counter2;
-                counter2 += 6;
+                int d1 = ram.paletteCycleWord(2);
+                int counter2 = (d1 + 6) & 0xFFFF;
                 if (counter2 >= 0x30) {
                     counter2 = 0;
                 }
+                ram.setPaletteCycleWord(2, counter2);
                 byte[] trickleData = (cameraX >= 0x3800) ? tricklePostData : tricklePreData;
                 S3kPaletteWriteSupport.applyColors(
                         registry,
@@ -753,11 +767,12 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
     private static class Aiz2TorchCycle extends PaletteCycle {
         private final byte[] torchPreData;   // 52 bytes: 26 frames × 2 bytes
         private final byte[] torchPostData;  // 52 bytes: 26 frames × 2 bytes
-        private int timer;
-        private int counter;
+        // Palette_cycle_counters+$08 (timer) / +$04 (counter) in the shared AnPal bank.
+        private final Sonic3kGlobalAnimationState ram;
         private boolean dirty;
 
-        Aiz2TorchCycle(byte[] torchPreData, byte[] torchPostData) {
+        Aiz2TorchCycle(Sonic3kGlobalAnimationState ram, byte[] torchPreData, byte[] torchPostData) {
+            this.ram = ram;
             this.torchPreData = torchPreData;
             this.torchPostData = torchPostData;
         }
@@ -765,17 +780,16 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
         @Override
         void tick(Level level, PaletteOwnershipRegistry registry) {
             GraphicsManager gm = GameServices.graphics();
-            if (timer > 0) {
-                timer--;
-            } else {
-                timer = 1;
+            // loc_22F6: subq.w #1,(Palette_cycle_counters+$08) / bpl.s / reload 1 (sonic3k.asm:3295-3297)
+            if (ram.expirePaletteCycleWord(8, 1)) {
                 int cameraX = GameServices.camera().getX() & 0xFFFF;
 
-                int d0 = counter;
-                counter += 2;
+                int d0 = ram.paletteCycleWord(4);
+                int counter = (d0 + 2) & 0xFFFF;
                 if (counter >= 0x34) {
                     counter = 0;
                 }
+                ram.setPaletteCycleWord(4, counter);
 
                 byte[] torchData = (cameraX >= 0x3800) ? torchPostData : torchPreData;
                 S3kPaletteWriteSupport.applyContiguousPatch(

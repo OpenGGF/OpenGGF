@@ -103,6 +103,11 @@ final class LevelActTransitionExecutor {
     private void executeClaimed(
             SeamlessLevelTransitionRequest request,
             ClaimedTransitionHandoff claimed) throws IOException {
+        // The outgoing act's palette animation for this main-loop iteration
+        // precedes the event work that reloads the act.
+        if (levelManager.animatedPatternManager instanceof SeamlessTransitionAnimationClock outgoing) {
+            outgoing.completePaletteAnimationBeforeSeamlessReload();
+        }
         SeamlessTransitionResourceHandoff handoff = claimed.handoff;
         DeferredLevelResourceTracker deferredResources =
                 handoff != null

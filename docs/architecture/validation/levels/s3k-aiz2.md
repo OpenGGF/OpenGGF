@@ -56,3 +56,55 @@ This is the independently executed native 320/Sonic restart floor, not the remai
 After each title/fade/fresh-assembly release, the complete registered world is captured, advanced for 45 neutral logical ticks, restored immediately and replayed twice. Each forward tick checks P1 survival, unchanged lives and actual configured owners. Intrinsic intro control remains native-owned; this is not a forced unlock or a raw restore across the load. Physical pit traversal, physical post capture/respawn, completion edges and later mechanic lifetimes remain separate.
 
 One coherent focused invocation qualified all eight acts: command session54147 on runtime `e57236d519a861c9fbc43ba867230793dbd6fb0d` plus this commit's nine test-only deltas, 1120 tests / 0 failures / 0 errors / 0 skips (each act 140/0/0/0), actual terminal exit0 at 13:42:47 BST (12:42:47 UTC), Maven 3m05s. Exact selection: `TestS3kAiz2EntryMatrix`, `TestS3kHcz2EntryMatrix`, `TestS3kMgz1EntryMatrix`, `TestS3kMgz2EntryMatrix`, `TestS3kCnz1EntryMatrix`, `TestS3kCnz2EntryMatrix`, `TestS3kIcz1EntryMatrix`, `TestS3kIcz2EntryMatrix`, each restricted with `#actualDeathReloadPreservesTheSupportedProductAndReplaysEachIncomingWorldTwice` in the comma-separated `-Dtest` selector. Command prefix: `env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null python3 tools/testing/maven_queue.py --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl`; original absolute S1/S2/S3K ROM properties were supplied, followed by `test`. Entry rows were not rerun merely to repeat their unchanged evidence. This is finite lifecycle qualification, not complete act, native-pixel, strict-trace or arbitrary roster certification; combined smoke/integration/push remain lead-owned.
+
+## AnPal bank carry across the AIZ1 reload — 2026-10-16
+
+AnPal_AIZ1 and AnPal_AIZ2 share `Palette_cycle_counter0`, `Palette_cycle_counter1` and
+`Palette_cycle_counters` (sonic3k.constants.asm:580-596). Level's loc_60DE clears them
+(sonic3k.asm:7652), but the seamless reload in AIZ1BGE_Finish does not reach it. The
+engine used to rebuild the AIZ2 cycles with private counters starting at zero. On the
+reload row it also ticked the new AIZ2 cycler: engine observation `palobs1` at row 6300
+shows timer 5, counter0 8, counter2 6. The native `aiz_completerun` RAM instead carries
+counter1 4, counter0 `$1620` and counters+$02 `$2A` into AIZ2. Native row 6300 is still
+AnPal_AIZ1's call, 6301 is a lag frame, and the first AIZ2 call is 6302, where channel B
+starts. Channel A first runs at 6306 and reads entry 7. LevelLoop calls Animate_Palette
+(7923) before DeformBgLayer/ScreenEvents (7929-7930), so the reload iteration belongs
+to the outgoing act.
+
+The bank now lives at ROM width in `Sonic3kGlobalAnimationState`. The module owns that
+state, so it outlives the per-act animators. The fresh-Level step clears it, it rides
+the animator's rewind snapshot, and the AIZ cycles read and write it. At the start of
+a reload, the outgoing S3K animator runs that iteration's Animate_Palette if it has not
+yet run, and the incoming animator skips its AnPal call for that one iteration. A reload
+consumed at the frame top runs before the frame counter advances, so it is unchanged.
+
+`TestS3kAizAnPalBankCarry` derives every expectation from the ROM routines and tables
+and observes only the level palette:
+- AIZ1 history: runs 6 and 7 with their table entries, after the fresh-Level fade.
+- Seamless carry: no channel-A write until the inherited counter1 expires. Channel B
+  starts on the first AIZ2 call, and channel A then shows trickle entry 7 and water
+  entry 3.
+- A reload inside a LevelLoop iteration: that iteration runs AnPal_AIZ1, with no AIZ2
+  write.
+- A full load into AIZ2 clears the bank: entry 0 on the first call.
+- Two restore and forward-replay cycles over a carried window.
+
+Results:
+
+| Run (queued, focused, S3K ROM) | Source | Result |
+|---|---|---|
+| green3 | candidate | 4 run, 0 failed, 0 errors, 0 skipped (Maven 23:08:12+01:00) |
+| redold | `src/main` of `73d296f12` | 3 failed at the intended assertions: an immediate channel-A write at the first AIZ2 call or on the reload iteration, and the window phase. The full-load guard passed (Maven 23:11:28+01:00) |
+| redcarry | candidate with the reload hook disabled | 1 failed: the torch wrote on the reload iteration (Maven 23:18:45+01:00) |
+
+The engine witness (LIMITED/RAW_RGB `TraceCaptureTool` clips, compared without
+normalisation at the native pixels of the unique trickle and torch colours) is in
+`spot-checks/aiz-palette-bank/` with provenance.md. Across the handoff, the fire
+curtain hides the trickle until about row 6316. From 6317, and over rows 22800-22834,
+the engine's channel-A changes fall on the same rows as native (22802, 22808, 22820,
+22826, 22832); before the change they came one row late. The displayed entry is a
+constant native + 4, where it was native + 2. Torch colours share CRAM values, so no
+claim is made from the torch. The engine's AIZ1 counters+$02 was already 18 against
+native `$2A` at row 6297, and AIZ2 inherits it. That AIZ1 phase is open in known-bugs
+"AnPal Shared Bank: AIZ1 Phase and Remaining Owners", together with the other zones'
+private cycles.
