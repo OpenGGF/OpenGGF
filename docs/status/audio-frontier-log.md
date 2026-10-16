@@ -27,6 +27,23 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-10-17 - S3K title start: level entry keeps the sound device; Title_Screen's cmd_FadeOut supplies the Z80 PSG silence
+
+- **Commit / worktree:** lane `pcm-output`, 3c30e7352 plus the re-install guard and the
+  `Sonic3kTitleScreenManager.initialize` request (committed together on the same branch).
+- **Command:** as the 2026-10-16 title-start entry (`GameplayCaptureTool --game s3k --zone aiz --act 1
+  --title-screen --main sonic --sidekick tails --input <emeralds.bk2> --input-start 0 --frames 600 --audio
+  --native-pcm --no-video`), then `compare_native_pcm_window.py --start-row 0` against the same native rows
+  0-2399 capture, and the startup writes against the native partial v2 ledger (ticks 0-1).
+- **Result, device carry:** one native-compatible stage session for all 600 presentations (was 1 to 3 at
+  frame 208); 323,081 stereo frames drained, blip_buf's count for the frames crossed.
+- **Result, startup writes:** the engine's 89 startup writes equal native's 89 Z80 writes of rows 14-15 in
+  order: `zStopAllSound` (84), `zPlayDigitalAudio`'s `2Bh = 0`, then `cmd_FadeOut`'s `zPSGSilenceAll`
+  (`9Fh BFh DFh FFh`). Native's 4 68k writes (`Init_InputPSG`, cold power-on) remain unmatched and open.
+- **Result, PCM:** unchanged first difference at stereo frame 11, native (773, 773) against engine
+  (774, 774), inside the power-on transient; unattributed. Timing (engine frame 0 against rows 14-15;
+  SEGA PCM at engine frame 16 against row 63) is unchanged. No shift, wait or hydrated state.
+
 ## 2026-10-16 - S3K production title start from row 0: first startup divergence and exact SEGA PCM cadence
 
 - **Commit / worktree:** lane `pcm-output`, 650a823ea (capture), then the transport fix on the same branch.

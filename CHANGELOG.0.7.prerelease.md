@@ -290,6 +290,13 @@ Unreleased. The earlier development themes remain in
   console, while staying in step with gameplay frames. PAL is unchanged. The SEGA
   chant's sample bytes follow the exact Z80 loop cadence on that budget instead of
   a rate rounded to whole hertz.
+- **Sound hardware across level entry:** A level load that re-installs the same ROM
+  and audio profile no longer resets the sound chips. The ROM's sound driver keeps
+  running into the level, and the engine now keeps the chips with it; Sonic 3 &
+  Knuckles' Data Select hand-off used to rebuild them twice. A different ROM or
+  game, or a reset, still installs fresh hardware, and rewind restores the kept
+  chips exactly. The Sonic 3 & Knuckles title screen now opens with the ROM's
+  music fade-out request, which silences the PSG on entry as the console does.
 
 Rewind verification compares private records and complete captured opaque arrays
 by content, with explicit failures when snapshot inspection cannot complete. It also

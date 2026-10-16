@@ -843,6 +843,9 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     public synchronized void setAudioProfile(GameAudioProfile audioProfile) {
+        if (reinstallsInstalledSource(audioProfile, baseAudioSource.rom())) {
+            return;
+        }
         beginSourceMutation();
         try {
             BaseAudioSource previous = baseAudioSource;
@@ -903,6 +906,9 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     public synchronized void setRom(Rom rom) {
+        if (reinstallsInstalledSource(baseAudioSource.profile(), rom)) {
+            return;
+        }
         beginSourceMutation();
         try {
             BaseAudioSource previous = baseAudioSource;
@@ -922,6 +928,23 @@ public class AudioManager implements MusicRestoreSink {
         } finally {
             endSourceMutation();
         }
+    }
+
+    /**
+     * Whether installing {@code profile} with {@code rom} would reinstall the
+     * very source already installed: the same profile and ROM instances, with
+     * its loader built. That is a same-game level entry
+     * ({@code LevelManager.configureAudio} on every load), not a source change.
+     * The ROM's Z80 driver keeps running into the level, so the presentation
+     * device (chip, filter, PSG and buffer state, the running session) is kept.
+     * A new ROM or profile instance, a reset, or a donor or mod source still
+     * goes through the full replacement.
+     */
+    private boolean reinstallsInstalledSource(GameAudioProfile profile, Object rom) {
+        BaseAudioSource installed = baseAudioSource;
+        return profile != null && rom != null
+                && profile == installed.profile() && rom == installed.rom()
+                && installed.loader() != null;
     }
 
     private static DacData loadDac(SmpsLoader loader) {

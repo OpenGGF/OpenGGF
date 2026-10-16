@@ -105,6 +105,76 @@ class TestNativePcmCaptureLive {
         assertEquals(44 + (long) presentations * 800 * 4, Files.size(outDir.resolve("audio.wav")));
     }
 
+    /**
+     * Same-game level entry must not reset the sound hardware (round-2 lane pcm-output, 2026-10-16). From the
+     * production title start, the emeralds movie leaves DATA_SELECT for AIZ1 at frame 208
+     * ({@code NativeDataSelectLaunchFlow.launch} -> fresh level load -> {@code LevelManager.configureAudio}), which
+     * re-installs the same ROM and the same audio profile. The ROM's Z80 driver keeps running into the level, so
+     * the presentation device (chip, filter, PSG and buffer state) must survive: one stage session, one hardware
+     * frame per presentation, across the handoff.
+     */
+    @Test
+    void dataSelectLevelEntryKeepsThePresentationDevice() throws Exception {
+        Path rom = RomTestUtils.ensureSonic3kRomAvailable().toPath();
+        Path outDir = TestSessionOutputPaths.diagnostics("native-pcm-data-select-entry");
+        int presentations = 230;
+        GameplayCaptureTool.Arguments arguments = GameplayCaptureTool.Arguments.parse(new String[] {
+                "--game", "s3k", "--rom", rom.toString(), "--zone", "aiz", "--act", "1", "--title-screen",
+                "--sidekick", "tails", "--input", EMERALDS.toString(), "--input-start", "0",
+                "--frames", Integer.toString(presentations), "--audio", "--native-pcm", "--no-video",
+                "--stop-on-death", "false", "--out-dir", outDir.toString()});
+        try {
+            GameplayCaptureTool.run(arguments);
+        } catch (IllegalStateException | UnsatisfiedLinkError glUnavailable) {
+            assumeTrue(false, "offscreen GL unavailable: " + glUnavailable.getMessage());
+            return;
+        }
+        List<String> rows = Files.readAllLines(outDir.resolve("native-pcm-frames.tsv"), StandardCharsets.UTF_8);
+        assertEquals(presentations + 1, rows.size());
+        for (String row : rows.subList(1, rows.size())) {
+            assertEquals("1", row.split("\t")[3], "presentation session rebuilt at frame " + row.split("\t")[0]);
+        }
+        long cumulative = Long.parseLong(rows.get(presentations).split("\t")[2]);
+        assertEquals(blipSamplesForFrames(presentations), cumulative,
+                "the device kept one hardware frame per presentation across the level entry");
+    }
+
+    /**
+     * Title_Screen's first request is {@code cmd_FadeOut} (sonic3k.asm:5393-5394). The Z80 driver's first service
+     * after {@code zInitAudioDriver} runs it through {@code zFadeOutMusic} -> {@code zHaltDACPSG} ->
+     * {@code zPSGSilenceAll} (Sound/Z80 Sound Driver.asm:2307-2325, 2587-2597), so the four PSG silence writes
+     * follow the DAC idle loop's 2Bh = 0, as in the native startup ledger. The 68000's earlier power-on PSG
+     * writes ({@code Init_InputPSG}, sonic3k.asm:177-180) have no engine owner and are not asserted here.
+     */
+    @Test
+    void titleStartServicesTitleScreensFadeOutAfterTheDriverInit() throws Exception {
+        Path rom = RomTestUtils.ensureSonic3kRomAvailable().toPath();
+        Path outDir = TestSessionOutputPaths.diagnostics("native-pcm-title-fade");
+        GameplayCaptureTool.Arguments arguments = GameplayCaptureTool.Arguments.parse(new String[] {
+                "--game", "s3k", "--rom", rom.toString(), "--zone", "aiz", "--act", "1", "--title-screen",
+                "--sidekick", "tails", "--input", EMERALDS.toString(), "--input-start", "0",
+                "--frames", "2", "--audio", "--native-pcm", "--no-video",
+                "--stop-on-death", "false", "--out-dir", outDir.toString()});
+        try {
+            GameplayCaptureTool.run(arguments);
+        } catch (IllegalStateException | UnsatisfiedLinkError glUnavailable) {
+            assumeTrue(false, "offscreen GL unavailable: " + glUnavailable.getMessage());
+            return;
+        }
+        StringBuilder writes = new StringBuilder();
+        for (String line : Files.readAllLines(outDir.resolve("chip-writes.jsonl"), StandardCharsets.UTF_8)) {
+            if (line.startsWith("{\"frame\":-1,") || line.startsWith("{\"frame\":0,")) {
+                writes.append(line, line.indexOf("\"writes\":[") + 10, line.lastIndexOf("]}")).append(',');
+            }
+        }
+        String startup = writes.toString();
+        int init = startup.indexOf("[\"ym\",0,39,0]");
+        assertTrue(init >= 0, "zStopAllSound's closing 27h = 0 is recorded: " + startup);
+        assertTrue(startup.startsWith("[\"ym\",0,43,0],[\"psg\",159],[\"psg\",191],[\"psg\",223],[\"psg\",255],",
+                        init + "[\"ym\",0,39,0],".length()),
+                "the idle loop's 2Bh = 0, then cmd_FadeOut's zPSGSilenceAll, follow the driver init: " + startup);
+    }
+
     @Test
     void mameCoreMovieIsRefusedBeforeBoot() {
         Path rom = RomTestUtils.ensureSonic3kRomAvailable().toPath();

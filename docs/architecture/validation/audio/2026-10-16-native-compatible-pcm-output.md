@@ -225,10 +225,28 @@ capture of rows 0-2399 with no realignment:
     frame 0 holds 85 writes. They equal native row 14's 84 Z80 writes and row 15's
     first write, in identical order. The earlier ledger missed them because its
     observer was attached after boot.
-  - The remaining init differences are timing (engine frame 0 against native rows
-    14-15) and 8 PSG silence writes the engine does not emit: the 68k-side 4 at row 14
+  - The remaining init differences were timing (engine frame 0 against native rows
+    14-15) and 8 PSG silence writes the engine did not emit: the 68k-side 4 at row 14
     and 4 Z80 writes at row 15.
-  - Native row 15 is the first `vint` service, which writes `2Bh = 0`.
+  - Native row 15's `2Bh = 0` is `zPlayDigitalAudio`'s entry write (Z80 driver
+    :4258-4262), which the recorder files with the first `vint` service.
+  - The Z80-side 4 (2026-10-17, fixed) come from ROM `Title_Screen`'s first request,
+    `Play_Music(cmd_FadeOut)` (sonic3k.asm:5393-5394, written straight into
+    `zMusicNumber`, :1471-1475). The first VInt services it: `zFadeOutMusic` arms the
+    fade counters and falls through `zHaltDACPSG` into `zPSGSilenceAll` (Z80 driver
+    :2307-2325, :2587-2597), so the PSG writes `9Fh BFh DFh FFh` with no song playing.
+    `Sonic3kTitleScreenManager.initialize`, which every engine entry to the title game
+    mode calls, now issues that request; the engine's S3K fade policy already armed
+    the counters and wrote `zPSGSilenceAll` without a song. A title-start capture's
+    startup writes are now the 84 init writes, `2Bh = 0`, then the four PSG writes, in
+    native order (`TestNativePcmCaptureLive.titleStartServicesTitleScreensFadeOutAfterTheDriverInit`,
+    red before the fix).
+  - The 68k-side 4 stay open. They are `EntryPoint`'s `Init_InputPSG`, which writes
+    `PSGInitValues` (`9Fh BFh DFh FFh`, sonic3k.asm:177-180, :266-267) only on a cold
+    power-on; a soft reset branches to `Init_SkipPowerOn`. The engine models no 68k
+    power-on. The S3K physical policy's `boot()` is not that owner: it is the Z80
+    driver's `zInitAudioDriver` program and also runs on in-engine `HardReset`
+    boundaries, which are not power-ons. No write was injected.
   - The native SEGA PCM starts in the service at row 63. The engine's SEGA bytes start
     at frame 16.
 - Earliest unmatched owners:
@@ -248,17 +266,28 @@ capture of rows 0-2399 with no realignment:
      - Red first, production path (22:07:41Z):
        `TestNativePcmCaptureLive.dataSelectLevelEntryKeepsThePresentationDevice`
        reported "session rebuilt at frame 208, expected 1 but was 3".
-     - The attempted semantic fix keeps the session when the identical ROM and
-       profile instances are re-installed; new instances and resets still replace
-       it. It passed that test and two re-install cycles.
-     - It broke `TestS3kEndingAudioRequestLedger` 3/3 ("mus_SSZ ticks before the
-       fade"). That harness steps the title for hundreds of frames without
-       presenting audio, so the title's SEGA and music commands stay queued. The
-       rebuild used to discard that backlog; a retained session plays it into the
-       ending.
-     - The fix is not landed. The diff and its controls are kept with the lane's
-       scratch evidence. The next owner must reconcile that harness, for example by
-       presenting audio during its title steps, before retaining the session.
+     - Fixed (2026-10-17). `AudioManager.setRom`/`setAudioProfile` keep the
+       presentation when they would re-install the very source already installed:
+       the same profile and ROM instances, with its loader built. A new ROM or
+       profile instance, a reset, or a donor change still goes through the full
+       replacement (`TestAudioManagerRuntimeInstallation`: two identity cycles, ROM,
+       profile and reset replacements; the donor control is unchanged). The witness
+       now passes: one stage session and blip_buf's exact count for 230
+       presentations across the frame-208 entry.
+     - The first attempt broke `TestS3kEndingAudioRequestLedger` 3/3 ("mus_SSZ
+       ticks before the fade"), because that harness stepped the title for hundreds
+       of frames without presenting audio. The rebuild had been discarding the
+       resulting command backlog. The harness was wrong, not the queue: production
+       (`Engine.display`, `GameplayCaptureTool`) presents one outer audio frame after
+       every simulation step. The harness now opens its capture lease before the
+       title and presents and drains every title step in the tool's order (step,
+       `presentOuterFrame`, drain). A new control asserts `mus_Title` is serviced on
+       the title's presented frames, still at its own cadence when the title ends.
+       All three products pass unchanged, including the `mus_SSZ` control.
+     - Rewind of the kept device: `TestS3kLevelEntryAudioDeviceRestore` (S3K ROM,
+       accurate core, ThreeBand stage) takes a snapshot before a same-source
+       re-install, presents 90 frames, restores, and replays the stage output byte
+       for byte; a window shifted by one hardware frame must differ.
 - Waveform equality from row 0 therefore cannot hold past the startup boundary. No
   offset was fitted and no chip state was hydrated.
 
@@ -351,6 +380,9 @@ are unchanged.
   any waveform-equality claim.
 - [SCHEDULE] PSG write timing: engine PSG bytes land at the next YM clock after
   a service; native bytes land at Z80/68k bus times.
+- [POWER-ON] The 68k `Init_InputPSG` cold power-on writes (no engine owner), and the
+  startup timing: engine frame 0 against native rows 14-15, SEGA PCM at engine frame
+  16 against native row 63.
 - [CORE] A MAME YM2612 output path for the Knuckles movie; Nuked is never
   substituted.
 - PAL, DAC timing, carry state at an ending window, and every ending product.

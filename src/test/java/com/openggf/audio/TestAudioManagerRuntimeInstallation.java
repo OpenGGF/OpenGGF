@@ -219,6 +219,52 @@ class TestAudioManagerRuntimeInstallation {
                 "donor catalog changes retain the base-owned session");
     }
 
+    /**
+     * A same-game level entry re-installs the installed profile and ROM instances
+     * ({@code LevelManager.configureAudio}); the running session, and the chip in it,
+     * must survive two such cycles, while a new instance still replaces it.
+     */
+    @Test
+    void reinstallingTheInstalledProfileAndRomKeepsTheSession() throws Exception {
+        AudioManager audio = AudioManager.getInstance();
+        audio.resetState();
+        audio.setBackend(new FixedRateNullBackend(48_000));
+        var profile = musicProfile();
+        Rom rom = new Rom();
+        audio.setAudioProfile(profile);
+        audio.setRom(rom);
+        audio.presentFrame(PresentationMode.SILENT);
+        SmpsDriverSession running = shadowSession(audio);
+
+        for (int cycle = 0; cycle < 2; cycle++) {
+            audio.setRom(rom);
+            audio.setAudioProfile(profile);
+            assertSame(running, shadowSession(audio), "re-install cycle " + cycle + " keeps the running session");
+            running.captureSnapshot();
+            audio.presentFrame(PresentationMode.SILENT);
+            assertSame(running, shadowSession(audio));
+        }
+
+        Rom otherRom = new Rom();
+        audio.setRom(otherRom);
+        SmpsDriverSession replaced = shadowSession(audio);
+        assertNotSame(running, replaced, "a different ROM instance still replaces the session");
+        assertThrows(IllegalStateException.class, running::captureSnapshot,
+                "the replaced session is closed");
+        var otherProfile = musicProfile();
+        audio.setAudioProfile(otherProfile);
+        SmpsDriverSession afterProfile = shadowSession(audio);
+        assertNotSame(replaced, afterProfile, "a different profile instance still replaces the session");
+
+        // A reset forgets the installed source: the same instances then install afresh.
+        audio.resetState();
+        audio.setBackend(new FixedRateNullBackend(48_000));
+        audio.setAudioProfile(otherProfile);
+        audio.setRom(otherRom);
+        audio.presentFrame(PresentationMode.SILENT);
+        assertNotSame(afterProfile, shadowSession(audio), "after a reset the same instances build a new session");
+    }
+
     @Test
     void resetStateReinstallsBackendSinkWithoutReplacingTheBackend()
             throws Exception {
