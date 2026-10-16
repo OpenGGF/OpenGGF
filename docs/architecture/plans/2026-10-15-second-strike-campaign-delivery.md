@@ -141,6 +141,17 @@ pads, admits native Down-only roll and survives four inputs; its conservative
 ahead-floor guard stops before accepting the clearance endpoint.
 Post-clear81356 admits an ordinary rolling jump, then stops at negative native
 velocity on a right-wall landing; alive/nohurt is not a qualified recovery.
+Successor49520 admits a fresh native Sonic re-press and air steering, then stops
+at its horizontal log-body clearance guard after another steep landing. All67
+response inputs remain alive/nohurt at zero rings; the normal recovery endpoint
+is still unqualified, and the guard does not establish a damaging contact.
+R9/45291 passes the former horizontal-only stop, then rejects one native foot
+distance15 while the other is1. It remains alive/nohurt, with recovery unqualified.
+HCZ98142 observes supported floor083F, native water0680 and a rising bubble, but
+stops its11-call readiness bound before approach or hop. Diagnostic94142 identifies
+only the live116/117 count gates as false; all other clauses pass at11. Those are
+conveyor logic, not spinning columns. Native ownership attribution and actual
+oxygen/refill/escape remain open.
 ICZ28579 qualifies the declared zero-ring neutral WARNED fall/landing and84-update
 registered replay. Successor97772 lands on the stone, retreats unharmed to real
 terrain and matches73 registered return/replay updates. Its STOCK arm follows
@@ -1815,6 +1826,60 @@ the momentum/mode/sensor-phase interpretation remain source questions, not groun
 to change physics or tune a test to green. No search, restore or state write is
 used. The complete16,582 admitted input rows remain external.
 
+Native re-press49520 uses source8d6e0380/class420a727e/runnerb363e6bc and the same
+42171 pair. With zero queue, its child executes06:56:20.564Z..06:56:27.003Z;
+the process group is reaped and all13,365 repository inputs remain unchanged.
+All16,524 prefix rows match81356 literally across25 native columns. One fresh
+Right+A at16524 clears rolling-jump air-control suppression, sets native
+doubleJump1 and activates the existing managed P1 InstaShield slot100 with its
+ROM renderer. Velocity72/-480 follows native water acceleration/drag/gravity;
+no movement impulse, ring cost, item invincibility or hurt timer is injected.
+The native attack retires to idle16537. Its temporary attack-touch defense is
+separate from item/hurt invulnerability and is not blanket hazard protection.
+
+Fixed Right then reaches another native RIGHTWALL landing and rolls back. The
+driver stops16590 at8722/1355, velocity-454/+501, gSpeed-679, modeRIGHTWALL/angle222,
+normal9x19 radii, no current object rider, alive/nohurt/zero rings. All67 response
+inputs retain those health/resource conditions. Its declared horizontal body
+band fails at42px from log344's child centre; the native solid and harmful-touch
+horizontal bands are already clear. This is a conservative author-guard stop,
+not an instrumented native contact or accepted normal-ground endpoint. Supported
+recovery remains unresolved. Source audit281100a8 separates the boxes:
+the rotated native-radius envelope startsY1346 and the inferred engine container
+starts1345, below the log mapping7/8/9 draw union's1344 bottom. Native touch is an
+unrotated16x32 box and is also X-separated; the parent's combined35px solid X
+gate rejects current/prior centres. These are source/box observations, not an
+opaque-player-silhouette claim: actual player render flips/offsets were unlogged.
+CSV precedes the three native PNG inspections; the consumed raw log and known
+Engine-generated config example are removed. No further input branch or native
+change follows from treating the stopped witness as green.
+
+Geometry-only successor45291 keeps that prefix and the same one-press/fixed-Right
+96-input response limit. Source31826c03/class7757a2fa/runner0b4a1840 replace only
+per-step horizontal rejection with observed current/prior two-dimensional player
+container, original-ROM log draw, native normal-touch and combined-solid checks.
+Actual Sonic mapping/flips/origin are logged separately from body/touch geometry.
+The original three horizontal checks and73px supported endpoint remain required.
+No contact flag or temporary attack grants a safety exemption.
+
+The fresh child has zero queue,07:22:05.375Z admission to07:22:11.788Z termination;
+all16,591 common rows match49520 literally across26 fields. It clears the former
+16590 guard, then stops16591 at8721/1356, RIGHTWALL/222, velocity-427/+471,
+gSpeed-767, native moveLock30. Both actual current feet point RIGHT: distances
+15/1, angles214/222. The author's per-step requirement that **both** distances
+be within14 rejects this state. Current/prior geometry remains clear, and all68
+response inputs are zero-ring/alive/nohurt. No native support-loss or collision
+defect follows. Source audit08a0350d resolves selection: native Player_Angle and
+Player_WalkVertR choose the nearer signed foot distance1, within the actual
+positive threshold5 from abs(yVel>>8)+4. The farther15 is not required to attach.
+Native SlopeRepel also explains lock30/gSpeed-767: prior-679, slope-24 and Right
+deceleration64 produce-639, below the0x280 slip threshold; the native branch
+subtracts128 and sets lock30 without making the player airborne. No physics fix
+is proposed. The original96-input cap has only28 left; it is not extended to wait
+out that30-update lock or manufacture a released-control endpoint.
+CSV precedes all three PNG inspections, the group is reaped, source/index remain
+unchanged and the consumed raw log/generated config example are removed.
+
 ### HCZ oxygen authority — source-only prerequisite
 
 The current actual creator converts all22 HCZ1 and21 HCZ2 ordinary monitors to
@@ -1844,6 +1909,68 @@ standing082C from radius19; it does not prove body clearance or current support.
 Original114 is authenticated and unbound, remote/live count0 as expected; the
 actual start still has water0500, BUBBLER art ready and empty native queues.
 All51 registered keys remain semantically equal and scalar/clock observations
-are unchanged before/after; the group is reaped and raw log consumed. Actual
-positioned streaming/water0680, ordinary supported entry, mature-bubble refill,
-breathing lock and escape are still unexecuted.
+are unchanged before/after; the group is reaped and raw log consumed. At that
+terrain-only boundary, positioned streaming/water0680, ordinary supported entry,
+mature-bubble refill, breathing lock and escape remain unexecuted.
+
+Positioned oxygen attempt98142 on the same42171/cb2 pair uses source93ff6b40,
+classc41a6a03 and rootrunner592659a9. Root source review first replaces a caching
+background-state adapter read with published state, qualifies actual feet/current
+manager support, separates completed native updates from calls, and counts the
+issued hop at its actual input boundary. The sole declared seed is12A8/082C;
+no later position/resource/phase/queue write is permitted. The proposed fixed
+approach, one tap, natural breath and return policy is not reached.
+
+Admission has zero queue at07:09:49.207Z; child execution0.936s, group reaped and
+all13,365 repository inputs unchanged. All11,944 conservative decoded body,
+travel and hop-headroom point checks are clear. Eleven neutral calls contain one
+zero-clock-advance call and10 completed Level/ObjectVInt passes. By call8 the
+player has naturally landed12A8/082C on two active native DOWN results, modeGROUND,
+angle0, no current manager rider/standing bits, no movement/control lock, native
+water0680/in-water, air29, zero rings, alive/nohurt. Camera remains1208/07CC,
+native queues are empty and the eligible-origin child observer sees one rising
+bubble. These are observed predicates, not complete readiness.
+
+The combined ready conjunction stays false through its derived11-call bound;
+the remaining live-owner/art/supplemental-foot/camera conditions are not separately
+logged, so the specific blocker is unattributed. OutcomeSTOP/exit3 is retained;
+no approach, A tap, mature-bubble intake, breath lock or return endpoint executes.
+There is no PNG because the normal readiness gate is unmet. CSV precedes log
+inspection; the consumed raw log and known generated config example are removed.
+No longer wait, actor forcing, queue processing or relaxed predicate is inferred
+from this failure. Oxygen sufficiency and the full HCZ route remain open.
+
+Attribution94142 runs a new pure predicate observer over the unchanged r2 helper:
+source88dbb711/classd84b3b3f/rootrunnera0a914e2, exact42171/cb2, same sole seed and
+exactly11 neutral calls. It reports1s queue and0.888s child execution ending
+07:22:14.928Z; group reaped/source unchanged. Diagnostic exit0 means telemetry
+completed, not an oxygen endpoint. All predicates and their decomposition agree
+with the original readiness conjunction. At call11, only live116/117 counts fail
+(both0);109/114/115 each have one genuine managed actor. Current feet and both
+supplemental rays, camera started/target equality, native water, all four art keys,
+player mapping/bank, DPLC and physical queues pass. Thus more camera/art waiting
+is not justified by this evidence. No approach or A/refill is executed; inspected
+logs/generated config are consumed normally, with no PNG added.
+
+The earlier source-only description of116/117 as stationary spinning columns is
+withdrawn: authentic ID3E records are non-rendered HCZConveyorBeltObjectInstance
+logic, distinct from spinning-column68. That incorrect class's dimensions/motion
+must not justify clearance. The actual conveyor placement/lifetime state behind
+the zero live counts needs owning-source attribution before changing the gate;
+neither a native defect nor permission to remove it is inferred from its failure.
+Source/ROM audit08706e3d then identifies them as duplicate end-loader markers for
+the same belts as originals99/100: pairs{99,116} subtype04 and{100,117} subtype14
+share11A8..12D8 bounds and their respective Y. Native loading is one owner per
+full subtype, so requiring each duplicate record to remain live is invalid.
+R3 does not log99/100; their actual ownership must still be positively observed,
+not inferred from the missing duplicate. A load-array byte alone is also not a
+live-identity proof. Any corrected attempt retains the fixed policy and requires
+genuine managed semantic owners from those exact canonical pairs before moving.
+
+Corrected attempt31538 is queued at this checkpoint, not executed/qualified:
+source1db286e4/classeeef3350/prepare15dffc93/rootrunner8eca4739 on the same42171/cb2
+pair. It composes the unchanged r2 step/input/health methods and replaces only
+the invalid per-marker requirement with full canonical-placement and positive
+initialized-owner/class/metadata/slot/bounds/Y/orientation checks for04 and14.
+The original readiness/600-call/one-hop policy and90s actual process deadline
+remain; no native actor, queue, breath, input timing, capacity or API is changed.

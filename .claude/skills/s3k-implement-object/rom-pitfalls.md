@@ -5346,6 +5346,13 @@ can also change groundMode after the current scans, so the last sensor direction
 can still describe the preceding mode. Preserve the observation phase instead of
 forcing a rescan or declaring native support invalid from a newer mode alone.
 
+Do not require both scan distances to satisfy the native selected-foot bound.
+Player_Angle chooses the nearer signed result. AIZ45291's RIGHTWALL pair15/1
+selects1 within its positive threshold5 (`abs(yVel>>8)+4`); the farther15 is not
+lost support. A stronger two-foot recovery-endpoint check can remain separate.
+Native slope slip may also rearm moveLock without settingAir; preserve that
+control state rather than changing physics or lengthening a failed witness.
+
 S3K can clear Status_OnObj while preserving the last interact address. An input
 author must use current OnObject and the manager's actual rider/standing relation
 before deciding that a platform supports the player; a non-null historical Java
@@ -5359,3 +5366,15 @@ not this rule. Crouch animation does not shrink the S3K touch box; Down+Right
 cannot initiate that roll, and Down+jump can jump first. Observe the actual
 rolling state and native radii7/14 before treating a response as acquired.
 Source availability and geometric clearance are not executed survival evidence.
+
+## A horizontal clearance guard is not a two-dimensional contact
+
+An author's body-X guard can reject two vertically separated bodies. AIZ49520 stopped
+at8722/1355 in RIGHTWALL mode because its rotated body startedX8703 while the
+log's draw extent ended8704. The radius envelope startedY1346 and the inferred
+engine container1345, below the original mapping's1344 bottom; native solid and
+hurt-touch X gates were separately clear. Preserve that failed author witness,
+but do not report its guard as a native hit. Rotated radii, engine width/height,
+ROM mapping-piece bounds and opaque rendered pixels are different measurements.
+Use current/prior native geometry and both axes for contact attribution, keep
+actual health/support observations, and qualify the recovery endpoint separately.
