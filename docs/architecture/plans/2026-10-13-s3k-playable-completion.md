@@ -1862,7 +1862,8 @@ The ending matrix's stale blanket pressure statement is corrected to existing
 17 real-child cases (19591 plus two unchanged43234 pilots) and separate11-core7093,
 with impossible fixed8/48 and Knuckles-only victims excluded by native owners.
 Actual loc5DB76/5DD6A full-table dispatch and downstream scene composition are
-separate remaining qualification. Consumed root redirects are deleted after this
+separate remaining qualification (director-owned dispatch and its progress/Player_mode 3
+gates are now covered headlessly; see the ending matrix's 2026-10-17 continuation section). Consumed root redirects are deleted after this
 account; combined smoke/guards and integrated delivery remain pending.
 
 

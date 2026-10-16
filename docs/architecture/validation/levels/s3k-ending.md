@@ -284,7 +284,7 @@ acceptance is claimed.
 
 | Obligation | Disposition | Proven | Not proven |
 | --- | --- | --- | --- |
-| `loc_5DB76`/`loc_5DD6A` full-table dispatch and downstream composition | Qualified for the two declared products | Native poll 3071 holds all 20 IslandLift SSTs (2 `$42` from `word_5DBB6`, 18 from the six `word_5DDD2`…`word_5DE12` tables) with engine-identical slot, x, y and mapping in both products; whole-SST and 3-bit pixel agreement at every checkpoint. `TestS3kEndingIslandLift` (22) and the continuation-pressure cases pass | `Player_mode` 3 and negative-progress skips are unit-covered only; no native Knuckles or progress -2 product |
+| `loc_5DB76`/`loc_5DD6A` full-table dispatch and downstream composition | Qualified for the two declared products | Native poll 3071 holds all 20 IslandLift SSTs (2 `$42` from `word_5DBB6`, 18 from the six `word_5DDD2`…`word_5DE12` tables) with engine-identical slot, x, y and mapping in both products; whole-SST and 3-bit pixel agreement at every checkpoint. `TestS3kEndingIslandLift` (22) and the continuation-pressure cases pass | No native Knuckles or progress -2 product. The director-owned dispatch is covered by headless tests over declared IslandLift pressure (below), not by a cold-campaign occupancy |
 | Tails/+2 and Sonic/0 declared products | Qualified as declared scenes | 22/22 checkpoints, zero level mismatches, all whole frames viewed | Cold campaign identity, original-RGB bytes |
 | Sonic -2, Tails -2, Tails 0, Sonic+Tails -2/0 declared products | Qualified as declared scenes | Newly captured native references (unchanged v1 adapter, immutable host); engine `6ace9000f`: zero 3-bit-level mismatches and identical SST inventories at all 11 checkpoints each | Cold campaign identity, original-RGB bytes |
 | Sonic +2 and Sonic+Tails +2 (Hyper Sonic route) | Open, attributed to native CPU time | Checkpoints 1–4095 match exactly; SST identical at all 11. Native v5 ledgers (`B/native-cloud-transition-{tails,sonic,team}-super-320-v5`, Tails/+2 reproducing the v1 control) queue the same three Kos entries at LF 4402 and the module chain at 4403 on all three routes; only the FIFO head `$1D17A6` (fingerprint `5b4280f6…`) finishes in 3 polls on the Sonic and team routes (`Kos_decomp_queue_count` 3→2 at LF 4405) against 4 on Tails/+2 (LF 4406). Every later service step is identical, one frame earlier, so the `loc_5AE0A` gate opens at LF 4443 instead of 4444 | 171/194 level pixels at 5119/6143 (`HScroll_table+0` `$14F800`, `Camera_Y_pos` 517/1345 against engine `$14F000`, 516/1344). `Process_Kos_Queue` runs in main-loop idle time and resumes from a VInt bookmark (sonic3k.asm:2840), so the same job's duration depends on how much of those frames the route's objects consume. The FAST manifest holds one cost per fingerprint (4, measured on Tails/+2, which also matches Sonic/0 and the other five products); a route- or character-keyed cost would be a fitted constant (runtime invariant 3) and was not added. Closing it needs a CPU-cycle budget model for the Kos queue. The 2026-10-15 native measurement ([lifecycle design](../../designs/2026-10-13-s3k-ending-lifecycle.md#kos-idle-budget-measurement-of-the-hyper-sonic-residual-2026-10-15-opus-kos-budget-lane)) confirms the per-object idle-budget cause and rules out a route-free model; tracked in [S3K known bugs](../../../status/s3k-known-bugs.md#ending-reunion-kos-service-count--per-object-cpu-budget-open) |
@@ -803,3 +803,38 @@ Pictures and provenance:
 PCM, request dates (A8), or whole-run original-RGB acceptance beyond poll 3071. The
 title-side `Demo_timer` PAL values (044fa46 sonic3k.asm:5553, 6526) were not compared. The native
 run went on through the attract demo before its post-exit `$3FB2` display enable.
+
+### Full-table continuation from the director's own routines (ending-pal lane, 2026-10-17)
+
+`TestS3kEndingDirectorContinuationDispatch` drives the real rescue director rather than
+calling `EndingIslandLiftObjectInstance.createGroup`. The aiz5-slots lane drafted it,
+pinned to `e94f6c4e7`; the ending-pal lane added the negative gates and ran it on
+`038468817`. Line numbers are 044fa46 `sonic3k.asm`.
+
+- **`loc_5DB76`** (123878-123895): the routine `$C` expiry writes `word_5DBB6`'s two `$42`
+  entries. The second overwrites the live catcher at SST93 in the same pass. The test
+  checks the oracle-matched five fields, retained identity, no deletion, `loc_5EE18`'s
+  same-pass init over the catcher residue, and two-cycle restore/replay.
+- **`loc_5DD6A`** (124031-124066): for Sonic and for Tails, the routine `$1C` expiry
+  fills every native hole in table order and overflows into SST93 over the live small
+  propeller. The final `$47` has `$2D`=4; the test checks `loc_5EE86`'s inherited
+  residue, the displaced owner no longer being dispatched, and restore/replay.
+- **Negative gates:** Sonic at progress -2, and Knuckles (`Player_mode` 3) booted at D01
+  with all Super Emeralds. Each still advances to routine `$1E` but writes no table entry,
+  and passes restore/replay.
+
+Command: `TestS3kEndingDirectorContinuationDispatch,TestS3kEndingContinuationPressure,`
+`TestS3kEndingNativeGraphPressure` at 33/0/0/0, finished 22:59:50 UTC (34.1 s Maven), with
+no production change.
+
+**Mutation check:** removing the director's
+`!knucklesMode()&&progress()>=0` gate made both negative cases fail (2 → 20 IslandLift
+owners), and the source was then restored.
+
+**Limits:**
+- IslandLift fillers are declared allocation pressure.
+- The Knuckles D01 boot exercises the `Player_mode` 3 branch, but shipped Knuckles never
+  reaches D01.
+- The `$47`-over-Tornado animation window (frames ≥4 outside the engine script window)
+  has no reachable case.
+- No native full-table occupancy is compared.
