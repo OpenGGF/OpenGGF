@@ -30,6 +30,9 @@ import com.openggf.sprites.playable.ObjectControlState;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.util.Objects;
 
 public final class S3kSlotBonusStageRuntime {
     private static final int TILE_SIZE = 8;
@@ -71,6 +74,21 @@ public final class S3kSlotBonusStageRuntime {
     // V_int_run_count at the end of the previous update: see previousIterationVIntRunCount().
     private Integer lastIterationVIntRunCount;
     public void bootstrap() {
+        final S3kSlotLayoutData data;
+        try {
+            // sub_4B6AA reads both entry words and all 32 rows before play.
+            // Resolve the whole user-ROM source before changing this runtime.
+            data = S3kSlotRomData.loadLayout(RomByteReader.fromRom(GameServices.rom().getRom()));
+        } catch (IOException failure) {
+            throw new UncheckedIOException("Cannot load Slots entry/layout from the user ROM", failure);
+        }
+        bootstrap(data);
+    }
+
+    /** Explicit data injection for native component fixtures; production always uses the ROM overload. */
+    void bootstrap(S3kSlotLayoutData data) {
+        Objects.requireNonNull(data, "data");
+        S3kSlotRenderBuffers buffers = S3kSlotRenderBuffers.fromLayout(data);
         initialized = false;
         originalPlayer = null;
         slotPlayer = null;
@@ -86,7 +104,7 @@ public final class S3kSlotBonusStageRuntime {
         suppressedSidekicks.clear();
         lastIterationVIntRunCount = null;
         slotStageState = S3kSlotStageState.bootstrap();
-        slotRenderBuffers = S3kSlotRenderBuffers.fromRomData();
+        slotRenderBuffers = buffers;
         optionCycleSystem.bootstrap(slotStageState);
         slotCollisionSystem = new S3kSlotCollisionSystem(slotRenderBuffers, slotStageState);
         slotPlayerRuntime = new S3kSlotPlayerRuntime(slotStageState, slotCollisionSystem);
@@ -111,8 +129,8 @@ public final class S3kSlotBonusStageRuntime {
         String mainCode = ActiveGameplayTeamResolver.resolveMainCharacterCode(GameServices.configuration());
         if (bootstrapGameplayMode.getSpriteManager().getSprite(mainCode) instanceof AbstractPlayableSprite mainPlayer) {
             originalPlayer = mainPlayer;
-            short slotStartX = S3kSlotRomData.SLOT_BONUS_PLAYER_START_X;
-            short slotStartY = S3kSlotRomData.SLOT_BONUS_PLAYER_START_Y;
+            short slotStartX = data.startX();
+            short slotStartY = data.startY();
             short centerX = S3kSlotRomData.SLOT_BONUS_CAGE_CENTER_X;
             short centerY = S3kSlotRomData.SLOT_BONUS_CAGE_CENTER_Y;
             slotPlayer = S3kSlotBonusPlayer.create(mainCode, slotStartX, slotStartY, slotPlayerRuntime);

@@ -41,6 +41,7 @@ public class AizMinibossBarrelShotFlareChild extends AbstractObjectInstance impl
     // pose until their bounded release. Ordinary ROM flares keep their sequence.
     private boolean warningCreationUpdatePending;
     private int warningHoldTicks;
+    private boolean difficultyWarning;
 
     public AizMinibossBarrelShotFlareChild(AbstractObjectInstance anchor) {
         super(new ObjectSpawn(
@@ -62,6 +63,7 @@ public class AizMinibossBarrelShotFlareChild extends AbstractObjectInstance impl
         if (delayTicks < 16 || delayTicks > 60) throw new IllegalArgumentException("Warning delay must be 16..60 updates");
         var flare = new AizMinibossBarrelShotFlareChild(anchor);
         flare.warningCreationUpdatePending = true;
+        flare.difficultyWarning = true;
         flare.warningHoldTicks = delayTicks - 16; // byte_6913F native sequence totals 16 updates.
         return flare;
     }
@@ -84,7 +86,9 @@ public class AizMinibossBarrelShotFlareChild extends AbstractObjectInstance impl
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        if (anchor == null || anchor.isDestroyed()) {
+        var module = difficultyWarning ? services().gameModule() : null;
+        if (anchor == null || anchor.isDestroyed() || difficultyWarning && (module == null
+                || module.getGameService(com.openggf.game.sonic3k.difficulty.AizMinibossAttackPolicy.class) == null)) {
             setDestroyed(true);
             return;
         }

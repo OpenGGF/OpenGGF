@@ -175,12 +175,6 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
      * @return A new skid dust object, or null if renderer is not available
      */
     public static SkidDustObjectInstance create(PlayableEntity player) {
-        var objectManager = staticObjectManager();
-        var levelManager = staticLevelManager();
-        if (levelManager == null || objectManager == null) {
-            return null;
-        }
-
         // Get the dust/splash renderer from the player's dust manager
         // Escape hatch: getSpindashDustController() returns sprites.managers type,
         // not exposed on PlayableEntity to avoid game -> sprites.managers dependency.
@@ -205,7 +199,8 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
         // S3K loc_18D14 negates the complete foot offset after Tails's
         // four-pixel adjustment. The spawned puff stays at that world position;
         // later gravity changes must not move an already detached effect.
-        var gameState = aps.currentGameStateOrNull();
+        ObjectServices owner = constructionContext();
+        var gameState = owner != null ? owner.gameState() : aps.currentGameStateOrNull();
         if (gameState != null && gameState.isReverseGravityActive()) {
             dustOffset = -dustOffset;
         }
@@ -222,12 +217,18 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
      * @param player The player sprite that started skidding
      */
     public static void spawn(PlayableEntity player) {
-        SkidDustObjectInstance dust = create(player);
-        if (dust != null) {
-            ObjectManager objectManager = staticObjectManager();
-            if (objectManager != null) {
-                objectManager.addDynamicObject(dust);
-            }
+        if (ObjectConstructionContext.isProbeConstruction()) return;
+        ObjectServices owner = constructionContext();
+        // Ordinary fixed player dust runs outside an object callback. Its
+        // existing player-runtime level is the explicit bootstrap in that path.
+        var level = owner == null && player instanceof AbstractPlayableSprite sprite
+                ? sprite.currentLevelManagerIfAvailable() : null;
+        ObjectManager manager = owner != null ? owner.objectManager()
+                : level != null ? level.getObjectManager() : null;
+        if (manager != null) {
+            SkidDustObjectInstance dust = ObjectConstructionContext.construct(
+                    manager.getObjectServices(), () -> create(player));
+            if (dust != null) manager.addDynamicObject(dust);
         }
     }
 

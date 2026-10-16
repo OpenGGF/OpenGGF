@@ -1,5 +1,23 @@
 # Level test coverage backlog
 
+AIZ1/HCZ1 executable pilot (2026-10-15, candidate):
+[`check_route_obligations.py`](../../tools/testing/check_route_obligations.py)
+joins an explicit [26-case inventory](../../tools/testing/aiz-hcz-route-obligations.json)
+to exact Surefire identities for six independent native Sonic + CPU Tails route,
+rewind and act-reload classes. Its explicit `--run` mode verifies the original
+S3&K SHA-1 and required fixtures before queued execution, rejects missing,
+skipped, duplicate, unexpected or failed selected cases, and removes consumed
+reports. Other classes' reports do not satisfy or invalidate this lane. Source
+class/method checks reject stale inventory references before launch. Canonical
+prerequisite preflight and 24 Python safety checks pass on the remediation
+candidate; its explicit run passed all 26 exact cases with no skips at base
+`1f612ff7271d175ea17eb775e786845d5b2ee12a` (see the
+[validation record](../architecture/plans/2026-10-15-architecture-debt-remediation.md#runtime-validation-handoff-2026-10-16)). This is not a joined
+continuous AIZ-to-HCZ campaign or general level-standard enforcement. Remaining
+character/team, donor, lifecycle and presentation breadth stays in the
+[AIZ1](../architecture/validation/levels/s3k-aiz1-sonic.md) and
+[HCZ1](../architecture/validation/levels/s3k-hcz1-sonic.md) matrices.
+
 S3K playable completion (2026-10-13, delivery in progress): the [native ending matrix](../architecture/validation/levels/s3k-ending.md)
 records Sonic/Tails `$0D01`, Knuckles SSZ2 and all native emerald-progress branches.
 Bounded native lifecycle, roster, donor and whole-world replay checks pass; seven
@@ -226,8 +244,8 @@ completion record for commands, commit limits and unexecuted obligations.
 | LTS-01 | Publish standard, matrix template and implementation entrypoint links | Documented | Standard and mirrored guidance; [documentation validation](../architecture/validation/2026-09-13-level-test-standard.md) |
 | LTS-02 | Resolve registry slots, aliases, routes and non-registry gameplay paths; map existing assertions | In progress | [Initial 26-zone source inventory and estimates](../architecture/audits/2026-09-13-level-test-coverage-inventory.md); per-act matrices and remaining dispositions pending |
 | LTS-03 | FBZ/AIZ/HCZ reference matrices, plus S1 GHZ3 and S2 CPZ2 pilots | In progress | [Partial AIZ1 matrix](../architecture/validation/levels/s3k-aiz1-sonic.md), [HCZ1 partial matrix](../architecture/validation/levels/s3k-hcz1-sonic.md); Breadth, rewind boundaries, defect sensitivity and measured cost |
-| LTS-04 | Minimal shared case/rewind helpers and coverage report | Pending | Required-to-executed identity joins and tooling acceptance scenarios. Route steering/diagnostic primitives landed separately in `com.openggf.tests.route` (commit 610464952) and cover only the failure-diagnostics part |
-| LTS-05 | Enforce explicit-lane prerequisites and missing/skipped case inventory | Pending | Negative prerequisite/selection tests and wired commands |
+| LTS-04 | Minimal shared case/rewind helpers and coverage report | In progress | Bounded AIZ1/HCZ1 explicit identity pilot passed; general joins and shared helper/report adoption remain pending. Route steering/diagnostic primitives landed separately in `com.openggf.tests.route` (commit 610464952) and cover only the failure-diagnostics part |
+| LTS-05 | Enforce explicit-lane prerequisites and missing/skipped case inventory | In progress | AIZ1/HCZ1 standalone pilot verified prerequisites, exact executed identities and negative tooling cases; other lanes and CI wiring remain pending |
 | LTS-06 | Remaining implemented S3K acts/routes | Pending | Conformant matrices; known gaps stay open |
 | LTS-07 | Remaining implemented S1/S2 acts/routes | Pending | Conformant matrices; all supported width/donor axes executed |
 | LTS-08 | Auxiliary arenas, scenes, competition/bonus/special-stage dispositions | Pending | Applicable contracts and timeline policies, including paths outside registries |
@@ -305,8 +323,8 @@ matrices; never collapse skipped or unrun into pass.
 | S2 | `SKY_CHASE` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
 | S2 | `WING_FORTRESS` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
 | S2 | `DEATH_EGG` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
-| S3K | `S3K_ANGEL_ISLAND_1` | [Partial Sonic-route matrix](../architecture/validation/levels/s3k-aiz1-sonic.md); other main routes and full conformance pending |
-| S3K | `S3K_ANGEL_ISLAND_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-3--knuckles--mhz-delivered-scope-others-conditional); dedicated Act 2 matrix pending; the MHZ2 matrix does not describe AIZ2 |
+| S3K | `S3K_ANGEL_ISLAND_1` | [Second Strike hard-mode prototype matrix (incomplete)](../architecture/validation/levels/s3k-second-strike-aiz.md); [Partial Sonic-route matrix](../architecture/validation/levels/s3k-aiz1-sonic.md); other main routes and full conformance pending |
+| S3K | `S3K_ANGEL_ISLAND_2` | [Second Strike hard-mode obligations (incomplete)](../architecture/validation/levels/s3k-second-strike-aiz.md); [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-3--knuckles--mhz-delivered-scope-others-conditional); dedicated Act 2 matrix pending; the MHZ2 matrix does not describe AIZ2 |
 | S3K | `S3K_HYDROCITY_1` | [Local boss obligations and inherited gaps](../architecture/audits/2026-09-13-hcz1-miniboss-parity.md#hcz1-affected-route-matrix); [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-3--knuckles--mhz-delivered-scope-others-conditional); matrix pending |
 | S3K | `S3K_HYDROCITY_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-3--knuckles--mhz-delivered-scope-others-conditional); matrix pending |
 | S3K | `S3K_MARBLE_GARDEN_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-3--knuckles--mhz-delivered-scope-others-conditional); matrix pending |

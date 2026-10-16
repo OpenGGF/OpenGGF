@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic3k.difficulty.DeathEggGuardRecipe;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
@@ -71,6 +72,8 @@ public final class SpikebonkerBadnikInstance extends AbstractS3kBadnikInstance
     /** Body routine index {@code Spikebonker_Index} (:198901-198903). */
     private enum Routine { INIT, PATROL, BONKING }
 
+    // Nonfinal native enum is restored by the existing scalar capture/recreate contract.
+    private DeathEggGuardRecipe guardRecipe;
     private Routine routine = Routine.INIT;
     /** {@code $2E(a0)}: the {@code Obj_Wait} countdown to the next turn. */
     private int walkTimer;
@@ -88,9 +91,24 @@ public final class SpikebonkerBadnikInstance extends AbstractS3kBadnikInstance
     private SpikebonkerMace mace;
 
     public SpikebonkerBadnikInstance(ObjectSpawn spawn) {
+        this(spawn, DeathEggGuardRecipe.STOCK);
+    }
+
+    public SpikebonkerBadnikInstance(ObjectSpawn spawn, DeathEggGuardRecipe recipe) {
         super(spawn, "Spikebonker", Sonic3kObjectArtKeys.SPIKEBONKER,
                 COLLISION_SIZE_INDEX, PRIORITY_BUCKET);
+        guardRecipe = java.util.Objects.requireNonNull(recipe, "recipe");
         mappingFrame = 0;
+    }
+
+    @Override
+    public void onUnload() {
+        // Sprite_CheckDeleteTouch -> loc_85094 marks the native parent retired;
+        // Child_CheckParent then deletes its child. The manager unloads this
+        // Java body without setting destroyed, so retire only its owned mace.
+        if (mace != null) {
+            ObjectLifetimeOps.deleteNoRespawn(mace);
+        }
     }
 
     @Override
@@ -170,7 +188,8 @@ public final class SpikebonkerBadnikInstance extends AbstractS3kBadnikInstance
      */
     private boolean shouldBonk(PlayableEntity target) {
         int distance = Math.abs((currentX & 0xFFFF) - (target.getCentreX() & 0xFFFF));
-        if (distance >= DETECT_RANGE) {
+        int range = guardRecipe == DeathEggGuardRecipe.ALERT ? 0x80 : DETECT_RANGE;
+        if (distance >= range) {
             return false;
         }
         boolean playerIsLeft = (currentX & 0xFFFF) >= (target.getCentreX() & 0xFFFF);
@@ -443,7 +462,9 @@ public final class SpikebonkerBadnikInstance extends AbstractS3kBadnikInstance
 
         @Override
         public int getCollisionFlags() {
-            return body == null || body.isDestroyed() ? 0 : COLLISION_FLAGS;
+            // A preceding native collision list may still contain this child
+            // after parent-owned unload retirement; that pointer reads live flags.
+            return isDestroyed() || body == null || body.isDestroyed() ? 0 : COLLISION_FLAGS;
         }
 
         /**

@@ -6,6 +6,7 @@ import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.objects.AizMinibossInstance;
+import com.openggf.game.sonic3k.objects.AizEndBossInstance;
 import com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kStarPostBonusStarChild;
 import com.openggf.graphics.ScreenshotCapture;
@@ -41,9 +42,15 @@ public final class TestSecondStrikeRoutesColdInput {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(args[1]));
         int inputStart = Integer.parseInt(args[3]);
         int frames = Integer.parseInt(args[4]);
-        var settings = new GameplayCaptureSession.Settings(320,
+        String donor = System.getProperty("secondstrike.route.donor", "off");
+        String donorPath = donor.equals("off") ? null : System.getProperty(donor.equals("s1") ? "sonic1.rom.path" : "sonic2.rom.path");
+        var settings = new GameplayCaptureSession.Settings(Integer.getInteger("secondstrike.route.width", 320),
                 System.getProperty("secondstrike.route.main", "sonic"),
-                System.getProperty("secondstrike.route.sidekick", "tails"), "off", null, null, null);
+                System.getProperty("secondstrike.route.sidekick", "tails"), donor,
+                donorPath == null ? null : Path.of(donorPath), null, null);
+        boolean wholeAiz = Boolean.getBoolean("secondstrike.route.whole_aiz");
+        boolean firstActDone = false, waterfallSeen = false, waterfallDefeated = false, secondResults = false;
+        int hczControlFrames = 0, hczControlStartX = -1;
         boolean inputStarted = false, fireSeen = false, bossSeen = false, defeated = false, results = false;
         int held = 0, cursor = inputStart;
         String previousBoss = "";
@@ -67,6 +74,8 @@ public final class TestSecondStrikeRoutesColdInput {
             if (args.length == 6) session.applyMod(Path.of(args[5]));
             if (video) session.enableAudio();
             session.boot(Path.of(args[0]), 0, 0, settings);
+            if (GameServices.camera().getWidth() != settings.width())
+                throw new IllegalStateException("Resolved camera width differs from the selected supported viewport");
             String graphics = "backend=surfaceless-egl vendor="
                     + org.lwjgl.opengl.GL11.glGetString(org.lwjgl.opengl.GL11.GL_VENDOR)
                     + " renderer=" + org.lwjgl.opengl.GL11.glGetString(org.lwjgl.opengl.GL11.GL_RENDERER)
@@ -74,7 +83,8 @@ public final class TestSecondStrikeRoutesColdInput {
             System.out.println("COLD gpu " + graphics);
             Files.writeString(output.resolve("graphics.txt"), graphics + "\n");
             state.write(GameplayCaptureSession.stateHeader() + ",actual_act,apparent_act,boss,results,checkpoint,bonus_stars,followup_timer,flares,breath_flames,enemies\n");
-            authored.write("# Ordinary AIZ1 native intro through first-act boss/results and playable Act2\n");
+            authored.write(wholeAiz ? "# Ordinary native AIZ entry through both bosses/results and playable HCZ\n"
+                    : "# Ordinary AIZ1 native intro through first-act boss/results and playable Act2\n");
             authored.write("# Source pad rows: " + Path.of(args[1]).getFileName() + ", input-start=" + inputStart + "\n");
             try (var film = video ? new NativeFilm(output, settings.width()) : null) {
                 for (int frame = 0; frame < frames; frame++) {
@@ -108,7 +118,15 @@ public final class TestSecondStrikeRoutesColdInput {
                     }
                     var boss = objects.stream().filter(AizMinibossInstance.class::isInstance)
                             .map(AizMinibossInstance.class::cast).findFirst().orElse(null);
+                    var waterfall = objects.stream().filter(AizEndBossInstance.class::isInstance)
+                            .map(AizEndBossInstance.class::cast).findFirst().orElse(null);
+                    if (waterfall != null) {
+                        waterfallSeen = true;
+                        if (waterfall.getState().hitCount == 0) waterfallDefeated = true;
+                    }
                     boolean resultNow = objects.stream().anyMatch(S3kResultsScreenObjectInstance.class::isInstance);
+                    if (waterfallDefeated && resultNow && manager.getCurrentZone() == 0
+                            && manager.getApparentAct() == 1) secondResults = true;
                     int checkpoint = manager.getCheckpointState().getStarPostActivationMark();
                     long bonusStars = objects.stream().filter(Sonic3kStarPostBonusStarChild.class::isInstance).count();
                     if (checkpoint != previousCheckpoint) {
@@ -170,22 +188,44 @@ public final class TestSecondStrikeRoutesColdInput {
                         System.out.println("COLD STOP death frame=" + frame + " movie=" + cursor);
                         break;
                     }
-                    if (fireSeen && bossSeen && defeated && results && manager.getCurrentAct() == 1
+                    if (!firstActDone && fireSeen && bossSeen && defeated && results
+                            && manager.getCurrentZone() == 0 && manager.getCurrentAct() == 1
                             && manager.getApparentAct() == 1 && session.loop().getCurrentGameMode() == GameMode.LEVEL
                             && !session.player().isObjectControlled() && !session.player().isControlLocked()
                             && session.player().getCentreX() > 0x18A0) {
+                        firstActDone = true;
                         ScreenshotCapture.savePNG(session.render(), output.resolve("next-act.png"));
-                        System.out.println("COLD SUCCESS frame=" + frame + " movie=" + cursor + " introHeld=" + held
+                        System.out.println("COLD MILESTONE frame=" + frame + " movie=" + cursor + " introHeld=" + held
                                 + " nativeAct2Playable=true");
-                        if (film != null) film.finish();
-                        return;
+                        if (!wholeAiz) {
+                            if (film != null) film.finish();
+                            return;
+                        }
+                    }
+                    if (wholeAiz && manager.getCurrentZone() == 1 && manager.getCurrentAct() == 0
+                            && session.loop().getCurrentGameMode() == GameMode.LEVEL
+                            && !session.player().isObjectControlled() && !session.player().isControlLocked()) {
+                        if (hczControlStartX < 0) hczControlStartX = session.player().getCentreX();
+                        hczControlFrames++;
+                        if (firstActDone && waterfallSeen && waterfallDefeated && secondResults
+                                && hczControlFrames >= 60 && Math.abs(session.player().getCentreX() - hczControlStartX) >= 32) {
+                            ScreenshotCapture.savePNG(session.render(), output.resolve("hcz-playable.png"));
+                            System.out.println("COLD SUCCESS frame=" + frame + " movie=" + cursor
+                                    + " fullAiz=true nativeHczPlayable=true main=" + settings.mainCharacter()
+                                    + " sidekick=" + settings.sidekickCharacter() + " width=" + settings.width()
+                                    + " donor=" + settings.donor());
+                            if (film != null) film.finish();
+                            return;
+                        }
                     }
                 }
                 ScreenshotCapture.savePNG(session.render(), output.resolve("terminal.png"));
                 System.out.println("COLD INCOMPLETE cursor=" + cursor + " held=" + held + " fire=" + fireSeen
                         + " boss=" + bossSeen + " defeated=" + defeated + " results=" + results);
                 if (film != null) film.finish();
-                throw new IllegalStateException("Cold input did not demonstrate the complete advertised first-act boundary");
+                throw new IllegalStateException("Cold input incomplete: firstAct=" + firstActDone
+                        + " waterfallSeen=" + waterfallSeen + " waterfallDefeated=" + waterfallDefeated
+                        + " secondResults=" + secondResults + " hczControlFrames=" + hczControlFrames);
             }
         }
     }

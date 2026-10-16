@@ -3,6 +3,14 @@ package com.openggf.tests;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
+import com.openggf.game.sonic3k.Sonic3kGameModule;
+import com.openggf.game.patch.DelegatingGameModule;
+import com.openggf.game.sonic3k.difficulty.HiddenPalaceDuelRecipe;
+import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
+import com.openggf.level.objects.ObjectRegistry;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.mods.objects.HiddenPalaceFactory;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindSnapshotDiff;
 import com.openggf.game.session.SessionManager;
@@ -25,6 +33,8 @@ import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -188,11 +198,37 @@ class TestS3kHpzKnucklesFightHeadless {
         }
     }
 
-    @Test
-    void theftCollapseAndTeleporterEndingRunToSkySanctuary() {
+    @ParameterizedTest
+    @EnumSource(HiddenPalaceDuelRecipe.class)
+    void theftCollapseAndTeleporterEndingRunToSkySanctuary(HiddenPalaceDuelRecipe recipe) {
+        // This is native integration through a test module, not creator-context
+        // placement-admission/publication proof. Select only the verified HPZ
+        // original record; sanctuary and the Master Emerald use stock factories.
+        int[] actualFeintBindings = {0};
+        if (recipe == HiddenPalaceDuelRecipe.FEINT) {
+            SessionManager.clear();
+            var nativeModule = new Sonic3kGameModule();
+            var module = new DelegatingGameModule(nativeModule, "test:hpz-feint-native-story") {
+                @Override public ObjectRegistry createObjectRegistry() {
+                    return new Sonic3kObjectRegistry() {
+                        @Override public ObjectInstance create(ObjectSpawn spawn) {
+                            if (spawn.objectId() == 0x82 && spawn.subtype() == 0x28) {
+                                assertEquals(new ObjectSpawn(0x11F0,0x42C,0x82,0x28,0,false,0x42C,31),spawn,
+                                        "canonical playable HPZ index31/all native fields");
+                                actualFeintBindings[0]++;
+                                return HiddenPalaceFactory.duel(spawn, recipe);
+                            }
+                            return super.create(spawn);
+                        }
+                    };
+                }
+            };
+            SessionManager.openGameplaySession(nativeModule,module,null);
+            TestEnvironment.activeGameplayMode();
+        }
         HeadlessTestFixture fixture = boot("", 0x1080, 0x42C);
         var registry = fixture.gameplayMode().getRewindRegistry();
-        FightBot bot = new FightBot();
+        FightBot bot = new FightBot(recipe == HiddenPalaceDuelRecipe.FEINT);
         Level level = GameServices.level().getCurrentLevel();
         int cameraReadyFrame = -1;
         int releaseFrame = -1;
@@ -203,6 +239,8 @@ class TestS3kHpzKnucklesFightHeadless {
         int fragments = 0;
         boolean tiredSeen = false;
         boolean holdSeen = false;
+        int tiredFrame = -1;
+        int holdFrame = -1;
         int beamReadyKnucklesX = -1;
         int beamReadyKnucklesY = -1;
         CompositeSnapshot endingHold = null;
@@ -216,7 +254,17 @@ class TestS3kHpzKnucklesFightHeadless {
                 new RewindWindow("altar beam", () -> active(com.openggf.game.sonic3k.objects.TeleporterBeamObjectInstance.class).isPresent()
                         && knuckles().isPresent()));
         int exitFrame = -1;
-        for (int frame = 0; frame < 5200; frame++) {
+        boolean feintSeen = false;
+        boolean realDashSeen = false;
+        var fightRoutines = new java.util.TreeSet<Integer>();
+        var observedRecipes = new java.util.HashSet<Object>();
+        int routeFrameLimit = 5200;
+        // The FEINT observation fight reaches native hold at5178, leaving only22
+        // updates in the old global bound. Once hold is actually reached, budget
+        // the native two60-update gates,160-update countdown,104px pad walk and
+        // at most120-update exit;64 covers landing/setup. Entry still has5200.
+        final int endingTickBudget = 2 * 60 + 0xA0 + (0x1628 - 0x15C0) + 2 * 60 + 64;
+        for (int frame = 0; frame < routeFrameLimit; frame++) {
             Optional<HpzZoneRuntimeState> state = S3kRuntimeStates.currentHpz(GameServices.zoneRuntimeRegistry());
             if (state.isEmpty()) {
                 exitFrame = frame;
@@ -236,7 +284,19 @@ class TestS3kHpzKnucklesFightHeadless {
             for (RewindWindow window : windows) {
                 window.beforeStep(registry, input);
             }
+            int previousRoutine = knuckles().map(CutsceneKnucklesHpzInstance::routineForTest).orElse(-1);
+            fightRoutines.add(previousRoutine);
+            knuckles().ifPresent(actor -> {
+                try {
+                    var field = CutsceneKnucklesHpzInstance.class.getDeclaredField("duelRecipe");
+                    field.setAccessible(true);observedRecipes.add(field.get(actor));
+                } catch (ReflectiveOperationException e) { throw new AssertionError(e); }
+            });
             step(fixture, input);
+            int nextRoutine = knuckles().map(CutsceneKnucklesHpzInstance::routineForTest).orElse(-1);
+            feintSeen |= previousRoutine == 0x12 && nextRoutine == 0x02;
+            realDashSeen |= previousRoutine == 0x12 && nextRoutine == 0x14;
+            bot.committedAttacksObserved = feintSeen && realDashSeen;
             for (RewindWindow window : windows) {
                 window.afterStep(fixture, registry);
             }
@@ -276,18 +336,26 @@ class TestS3kHpzKnucklesFightHeadless {
             var k = knuckles();
             if (!tiredSeen && k.map(kk -> kk.routineForTest() == 0x56).orElse(false)) {
                 tiredSeen = true;
+                tiredFrame = frame;
                 assertEquals(0x161C, k.get().getX());
                 assertEquals(0x62C, k.get().getY());
                 assertEquals(4, k.get().mappingSetForTest(), "Map_SSZKnucklesTired");
             }
             if (!holdSeen && helper.isPresent() && helper.get().stageForTest(0) >= 1) {
                 holdSeen = true;
+                holdFrame = frame;
+                if (recipe == HiddenPalaceDuelRecipe.FEINT) routeFrameLimit = frame + endingTickBudget;
                 assertEquals(0x1628, sonic.getCentreX() & 0xFFFF, "sub_45C8E holds Player 1 at $1628");
             }
             if (beamReadyKnucklesX < 0 && hpz.knucklesCutsceneFlag(7) && k.isPresent()) {
                 beamReadyKnucklesX = k.get().getX();
                 beamReadyKnucklesY = k.get().getY();
             }
+        }
+        if (recipe == HiddenPalaceDuelRecipe.FEINT) {
+            assertTrue(feintSeen, "a committed native charge must actually choose the guarded feint; bindings="
+                    +actualFeintBindings[0]+" recipes="+observedRecipes+" routines="+fightRoutines);
+            assertTrue(realDashSeen, "the next committed charge must still release the real dash");
         }
         assertTrue(cameraReadyFrame > 0 && releaseFrame > 0);
         // ROM: camera reaches $1580 on $2F2E; Knuckles releases the player on $3054 (294 frames).
@@ -299,8 +367,25 @@ class TestS3kHpzKnucklesFightHeadless {
         // ChildObjDat_6664A asks for $20 pieces; CreateChild6_Simple stops at the first
         // AllocateObjectAfterCurrent failure, so the block's slot bounds the count.
         assertEquals(30, fragments, "ChildObjDat_6664A fragments");
-        assertTrue(tiredSeen && holdSeen);
-        assertEquals(0x15C0, beamReadyKnucklesX, "loc_64BC6 lands Knuckles on the pad");
+        assertTrue(tiredSeen && holdSeen, "ending diagnostic: tired="+tiredSeen+" hold="+holdSeen
+                +" exitFrame="+exitFrame+" routines="+fightRoutines
+                +" actor="+knuckles().map(k->Integer.toHexString(k.routineForTest())+"@"
+                        +Integer.toHexString(k.getX())+","+Integer.toHexString(k.getY())).orElse("absent")
+                +" player="+Integer.toHexString(fixture.sprite().getCentreX()&0xFFFF)+","
+                        +Integer.toHexString(fixture.sprite().getCentreY()&0xFFFF)
+                +" helper="+active(HpzTeleporterRouteHelperObjectInstance.class).map(h->h.stageForTest(0)).orElse(-1)
+                +" feint="+feintSeen+" real="+realDashSeen);
+        assertEquals(0x15C0, beamReadyKnucklesX, "loc_64BC6 lands Knuckles on the pad; tiredFrame="
+                +tiredFrame+" holdFrame="+holdFrame+" exitFrame="+exitFrame
+                +" endingReplayInputs="+endingInputs.size()+" endingAfter="+(endingAfter!=null)
+                +" actor="+knuckles().map(k->Integer.toHexString(k.routineForTest())+"@"
+                        +Integer.toHexString(k.getX())+","+Integer.toHexString(k.getY())).orElse("absent")
+                +" hpzFlags="+S3kRuntimeStates.currentHpz(GameServices.zoneRuntimeRegistry())
+                        .map(HpzZoneRuntimeState::knucklesCutsceneFlags).orElse(-1)
+                +" helper="+active(HpzTeleporterRouteHelperObjectInstance.class).map(h->h.stageForTest(0)).orElse(-1)
+                +" player="+Integer.toHexString(fixture.sprite().getCentreX()&0xFFFF)+","
+                        +Integer.toHexString(fixture.sprite().getCentreY()&0xFFFF)
+                +" air="+fixture.sprite().getAir()+" speed="+fixture.sprite().getXSpeed()+","+fixture.sprite().getYSpeed());
         assertEquals(0x600, beamReadyKnucklesY);
         assertTrue(endingAfter != null, "the ending hold was rewound and replayed");
         for (RewindWindow window : windows) {
@@ -383,6 +468,11 @@ class TestS3kHpzKnucklesFightHeadless {
      */
     private static final class FightBot {
         private boolean jumpHeld;
+        private final boolean observeBeforeAttacking;
+        private boolean committedAttacksObserved;
+
+        FightBot() { this(false); }
+        FightBot(boolean observeBeforeAttacking) { this.observeBeforeAttacking = observeBeforeAttacking; }
 
         boolean[] input(AbstractPlayableSprite sonic, CutsceneKnucklesHpzInstance knuckles,
                         HpzZoneRuntimeState hpz, int frame) {
@@ -395,6 +485,22 @@ class TestS3kHpzKnucklesFightHeadless {
             boolean grounded = !sonic.getAir();
             if (knuckles != null && r < 0x18 && (flags & 1) == 0) {
                 right = px < 0x1120;
+            } else if (knuckles != null && r < 0x18
+                    && observeBeforeAttacking && !committedAttacksObserved) {
+                // The original aggressive bot repeatedly entered guard/jump/glide and
+                // killed FEINT before any charge. Stay outside the native idle proximity
+                // guard trigger so its two idle animation loops may commit the charge.
+                // This is controller input only: no actor state, HP or timing is edited.
+                int cameraX = GameServices.camera().getX() & 0xFFFF;
+                int target = knuckles.getX() > cameraX + 0xA0 ? cameraX + 0x30 : cameraX + 0x110;
+                if (r != 0x0C && Math.abs(target - px) > 8) {
+                    right = target > px;
+                    left = target < px;
+                }
+                if (r == 0x14) {
+                    int distance = Math.abs(knuckles.getX() - px);
+                    jump = grounded && distance < 0x60 && distance > 0x20;
+                }
             } else if (knuckles != null && r < 0x18) {
                 int dx = knuckles.getX() - px;
                 int adx = Math.abs(dx);
@@ -444,7 +550,14 @@ class TestS3kHpzKnucklesFightHeadless {
                 // the collapse and the punch
             } else if (hpz != null) {
                 left = px > 0x1600;
-                jump = px > 0x1690 && px < 0x16D8 && (grounded ? (frame % 20) == 0 : jumpHeld);
+                // The longer observation fight reaches this ledge on a different
+                // input phase: the old narrow periodic jump parked at $1695,$616
+                // before the helper's native $1628 hold. Jump from the approach,
+                // releasing for one grounded update between attempts; no phase,
+                // player position, speed or native ending state is written.
+                jump = observeBeforeAttacking
+                        ? px > 0x1670 && px < 0x16F0 && (grounded ? !jumpHeld : jumpHeld)
+                        : px > 0x1690 && px < 0x16D8 && (grounded ? (frame % 20) == 0 : jumpHeld);
             }
             jumpHeld = jump;
             return new boolean[]{false, false, left, right, jump};

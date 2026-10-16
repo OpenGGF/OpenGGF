@@ -1,0 +1,277 @@
+{
+  "schema": 1,
+  "lane": "aiz-hcz-native-route-pilot",
+  "scope": "Independent native Sonic+Tails AIZ1/HCZ1 routes, selected rewind spots and outgoing act reloads. Not a joined continuous AIZ-to-HCZ campaign or full act/configuration certification.",
+  "roms": [
+    "s3k"
+  ],
+  "fixtures": [
+    "src/test/resources/traces/s3k/aiz1_to_hcz_fullrun/metadata.json",
+    "src/test/resources/traces/s3k/aiz1_to_hcz_fullrun/physics.csv.gz",
+    "src/test/resources/traces/s3k/aiz1_to_hcz_fullrun/aux_state.jsonl.gz",
+    "src/test/resources/traces/s3k/aiz1_to_hcz_fullrun/hardware_timing.jsonl",
+    "src/test/resources/traces/s3k/hcz_completerun/metadata.json",
+    "src/test/resources/traces/s3k/hcz_completerun/physics.csv.gz",
+    "src/test/resources/traces/s3k/hcz_completerun/aux_state.jsonl.gz",
+    "src/test/resources/traces/s3k/hcz_completerun/hardware_timing.jsonl",
+    "src/test/resources/traces/s3k/aiz1_to_hcz_fullrun/s3-aiz1-2-sonictails.bk2",
+    "src/test/resources/traces/s3k/_movies/s3k-complete-sonic-tails.bk2"
+  ],
+  "cases": [
+    {
+      "class": "com.openggf.game.sonic3k.objects.TestS3kAiz1RoutePilot",
+      "name": "act1RouteReachesTheAct2Reload",
+      "method": "act1RouteReachesTheAct2Reload",
+      "obligations": [
+        "AIZ1.native320.sonic-tails.route"
+      ]
+    },
+    {
+      "class": "com.openggf.game.sonic3k.objects.TestS3kAiz1RouteRewind",
+      "name": "liveSpotRestoresAndReplaysTwice(Spot)[1]",
+      "method": "liveSpotRestoresAndReplaysTwice",
+      "obligations": [
+        "AIZ1.native320.sonic-tails.rewind.INTRO_HANDOFF"
+      ]
+    },
+    {
+      "class": "com.openggf.game.sonic3k.objects.TestS3kAiz1RouteRewind",
+      "name": "liveSpotRestoresAndReplaysTwice(Spot)[2]",
+      "method": "liveSpotRestoresAndReplaysTwice",
+      "obligations": [
+        "AIZ1.native320.sonic-tails.rewind.KNUCKLES_WAIT"
+      ]
+    },
+    {
+      "class": "com.openggf.game.sonic3k.objects.TestS3kAiz1RouteRewind",
+      "name": "liveSpotRestoresAndReplaysTwice(Spot)[3]",
+      "method": "liveSpotRestoresAndReplaysTwice",
+      "obligations": [
+        "AIZ1.native320.sonic-tails.rewind.KNUCKLES_ACTIVE"
+      ]
+    },
+    {
+      "class": "com.openggf.game.sonic3k.objects.TestS3kAiz1RouteRewind",
+      "name": "liveSpotRestoresAndReplaysTwice(Spot)[4]",
+      "method": "liveSpotRestoresAndReplaysTwice",
+      "obligations": [
+        "AIZ1.native320.sonic-tails.rewind.INTRO_COMPLETE"
+      ]
+    },
+    {
+      "class": "com.openggf.game.sonic3k.objects.TestS3kAiz1RouteRewind",
+      "name": "liveSpotRestoresAndReplaysTwice(Spot)[5]",
+      "method": "liveSpotRestoresAndReplaysTwice",
+      "obligations": [
+        "AIZ1.native320.sonic-tails.rewind.TREE_APPROACH"
+      ]
+    },
+    {
+      "class": "com.openggf.game.sonic3k.objects.TestS3kAiz1RouteRewind",
+      "name": "liveSpotRestoresAndReplaysTwice(Spot)[6]",
+      "method": "liveSpotRestoresAndReplaysTwice",
+      "obligations": [
+        "AIZ1.native320.sonic-tails.rewind.TREE_LOCK"
+      ]
+    },
+    {
+      "class": "com.openggf.game.sonic3k.objects.TestS3kAiz1RouteRewind",
+      "name": "liveSpotRestoresAndReplaysTwice(Spot)[7]",
+      "method": "liveSpotRestoresAndReplaysTwice",
+      "obligations": [
+        "AIZ1.native320.sonic-tails.rewind.TREE_RELEASE"
+      ]
+    },
+    {
+      "class": "com.openggf.game.sonic3k.objects.TestS3kAiz1ReloadRewind",
+      "name": "seamlessReloadIsolatesHistoryAndNewActReplays",
+      "method": "seamlessReloadIsolatesHistoryAndNewActReplays",
+      "obligations": [
+        "AIZ1.to-AIZ2.timeline-isolation"
+      ]
+    },
+    {
+      "class": "com.openggf.game.sonic3k.objects.TestS3kHcz1RoutePilot",
+      "name": "recordedOpeningAndLiveRouteReachTheAct2Reload",
+      "method": "recordedOpeningAndLiveRouteReachTheAct2Reload",
+      "obligations": [
+        "HCZ1.native320.sonic-tails.route"
+      ]
+    },
+    {
+      "class": "com.openggf.game.sonic3k.objects.TestS3kHcz1RouteRewind",
+      "name": "liveSpotRestoresAndReplaysTwice(Spot)[1]",
+      "method": "liveSpotRestoresAndReplaysTwice",
+      "obligations": [
+        "HCZ1.native320.sonic-tails.rewind.WATER_ENTRY"
+      ]
+    },
+    {
+      "class": "com.openggf.game.sonic3k.objects.TestS3kHcz1RouteRewind",
+      "name": "liveSpotRestoresAndReplaysTwice(Spot)[2]",
+      "method": "liveSpotRestoresAndReplaysTwice",
+      "obligations": [
+        "HCZ1.native320.sonic-tails.rewind.BUBBLE_SHIELD"
+      ]
+    },
+    {
+      "class": "com.openggf.game.sonic3k.objects.TestS3kHcz1RouteRewind",
+      "name": "liveSpotRestoresAndReplaysTwice(Spot)[3]",
+      "method": "liveSpotRestoresAndReplaysTwice",
+      "obligations": [
+        "HCZ1.native320.sonic-tails.rewind.FIRST_BRIDGE"
+      ]
+    },
+    {
+      "class": "com.openggf.game.sonic3k.objects.TestS3kHcz1RouteRewind",
+      "name": "liveSpotRestoresAndReplaysTwice(Spot)[4]",
+      "method": "liveSpotRestoresAndReplaysTwice",
+      "obligations": [
+        "HCZ1.native320.sonic-tails.rewind.SECOND_BRIDGE"
+      ]
+    },
+    {
+      "class": "com.openggf.game.sonic3k.objects.TestS3kHcz1RouteRewind",
+      "name": "liveSpotRestoresAndReplaysTwice(Spot)[5]",
+      "method": "liveSpotRestoresAndReplaysTwice",
+      "obligations": [
+        "HCZ1.native320.sonic-tails.rewind.FAN_LIFT"
+      ]
+    },
+    {
+      "class": "com.openggf.game.sonic3k.objects.TestS3kHcz1RouteRewind",
+      "name": "liveSpotRestoresAndReplaysTwice(Spot)[6]",
+      "method": "liveSpotRestoresAndReplaysTwice",
+      "obligations": [
+        "HCZ1.native320.sonic-tails.rewind.CONVEYOR_RIDE"
+      ]
+    },
+    {
+      "class": "com.openggf.game.sonic3k.objects.TestS3kHcz1RouteRewind",
+      "name": "liveSpotRestoresAndReplaysTwice(Spot)[7]",
+      "method": "liveSpotRestoresAndReplaysTwice",
+      "obligations": [
+        "HCZ1.native320.sonic-tails.rewind.SPRING_ASCENT"
+      ]
+    },
+    {
+      "class": "com.openggf.game.sonic3k.objects.TestS3kHcz1RouteRewind",
+      "name": "liveSpotRestoresAndReplaysTwice(Spot)[8]",
+      "method": "liveSpotRestoresAndReplaysTwice",
+      "obligations": [
+        "HCZ1.native320.sonic-tails.rewind.BOSS_ACTIVE"
+      ]
+    },
+    {
+      "class": "com.openggf.game.sonic3k.objects.TestS3kHcz1RouteRewind",
+      "name": "liveSpotRestoresAndReplaysTwice(Spot)[9]",
+      "method": "liveSpotRestoresAndReplaysTwice",
+      "obligations": [
+        "HCZ1.native320.sonic-tails.rewind.BOSS_HIT"
+      ]
+    },
+    {
+      "class": "com.openggf.game.sonic3k.objects.TestS3kHcz1RouteRewind",
+      "name": "liveSpotRestoresAndReplaysTwice(Spot)[10]",
+      "method": "liveSpotRestoresAndReplaysTwice",
+      "obligations": [
+        "HCZ1.native320.sonic-tails.rewind.BOSS_DEFEATED"
+      ]
+    },
+    {
+      "class": "com.openggf.game.sonic3k.objects.TestS3kHcz1RouteRewind",
+      "name": "horizontalArenaAdmissionRestoresAndReplaysTwice(int)[1]",
+      "method": "horizontalArenaAdmissionRestoresAndReplaysTwice",
+      "obligations": [
+        "HCZ1.width320.native.sonic-tails.arena-admission-rewind"
+      ]
+    },
+    {
+      "class": "com.openggf.game.sonic3k.objects.TestS3kHcz1RouteRewind",
+      "name": "horizontalArenaAdmissionRestoresAndReplaysTwice(int)[2]",
+      "method": "horizontalArenaAdmissionRestoresAndReplaysTwice",
+      "obligations": [
+        "HCZ1.width400.native.sonic-tails.arena-admission-rewind"
+      ]
+    },
+    {
+      "class": "com.openggf.game.sonic3k.objects.TestS3kHcz1RouteRewind",
+      "name": "horizontalArenaAdmissionRestoresAndReplaysTwice(int)[3]",
+      "method": "horizontalArenaAdmissionRestoresAndReplaysTwice",
+      "obligations": [
+        "HCZ1.width512.native.sonic-tails.arena-admission-rewind"
+      ]
+    },
+    {
+      "class": "com.openggf.game.sonic3k.objects.TestS3kHcz1RouteRewind",
+      "name": "horizontalArenaAdmissionRestoresAndReplaysTwice(int)[4]",
+      "method": "horizontalArenaAdmissionRestoresAndReplaysTwice",
+      "obligations": [
+        "HCZ1.width640.native.sonic-tails.arena-admission-rewind"
+      ]
+    },
+    {
+      "class": "com.openggf.game.sonic3k.objects.TestS3kHcz1RouteRewind",
+      "name": "horizontalArenaAdmissionRestoresAndReplaysTwice(int)[5]",
+      "method": "horizontalArenaAdmissionRestoresAndReplaysTwice",
+      "obligations": [
+        "HCZ1.width800.native.sonic-tails.arena-admission-rewind"
+      ]
+    },
+    {
+      "class": "com.openggf.game.sonic3k.objects.TestS3kHcz1ReloadRewind",
+      "name": "seamlessReloadIsolatesHistoryAndNewActReplays",
+      "method": "seamlessReloadIsolatesHistoryAndNewActReplays",
+      "obligations": [
+        "HCZ1.to-HCZ2.timeline-isolation"
+      ]
+    }
+  ],
+  "parameter_sources": [
+    {
+      "class": "com.openggf.game.sonic3k.objects.TestS3kAiz1RouteRewind",
+      "method": "liveSpotRestoresAndReplaysTwice",
+      "kind": "enum",
+      "type": "Spot",
+      "values": [
+        "INTRO_HANDOFF",
+        "KNUCKLES_WAIT",
+        "KNUCKLES_ACTIVE",
+        "INTRO_COMPLETE",
+        "TREE_APPROACH",
+        "TREE_LOCK",
+        "TREE_RELEASE"
+      ]
+    },
+    {
+      "class": "com.openggf.game.sonic3k.objects.TestS3kHcz1RouteRewind",
+      "method": "liveSpotRestoresAndReplaysTwice",
+      "kind": "enum",
+      "type": "Spot",
+      "values": [
+        "WATER_ENTRY",
+        "BUBBLE_SHIELD",
+        "FIRST_BRIDGE",
+        "SECOND_BRIDGE",
+        "FAN_LIFT",
+        "CONVEYOR_RIDE",
+        "SPRING_ASCENT",
+        "BOSS_ACTIVE",
+        "BOSS_HIT",
+        "BOSS_DEFEATED"
+      ]
+    },
+    {
+      "class": "com.openggf.game.sonic3k.objects.TestS3kHcz1RouteRewind",
+      "method": "horizontalArenaAdmissionRestoresAndReplaysTwice",
+      "kind": "ints",
+      "values": [
+        320,
+        400,
+        512,
+        640,
+        800
+      ]
+    }
+  ]
+}

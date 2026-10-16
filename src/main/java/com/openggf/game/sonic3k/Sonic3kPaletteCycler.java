@@ -6,6 +6,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.palette.PaletteWrite;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.difficulty.SandopolisChallengeRecipe;
 import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotBonusStageRuntime;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.game.sonic3k.runtime.FbzZoneRuntimeState;
@@ -1198,7 +1199,8 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
             if (!GameServices.hasRuntime()) return;
             var state = S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry()).orElse(null);
             if (state == null || state.actIndex() != 1 || state.eventPaletteFadeHeld()) return;
-            var update = state.lighting().tickPalette();
+            var recipe = GameServices.module().getGameService(SandopolisChallengeRecipe.class);
+            var update = state.lighting().tickPalette(recipe == SandopolisChallengeRecipe.TOMB ? 600 : 900);
             GraphicsManager gm = GameServices.graphics();
             if (update.lightOffset() >= 0) {
                 S3kPaletteWriteSupport.applyContiguousPatch(registry, level, gm,

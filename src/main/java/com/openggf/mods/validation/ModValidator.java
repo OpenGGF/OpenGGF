@@ -41,6 +41,8 @@ public final class ModValidator {
     private static final String RECREATE_CONTEXT = "com/openggf/level/objects/RewindRecreateContext";
     private static final String MOD_RECREATE_CONTEXT = "com/openggf/level/objects/ObjectReconstructionContext";
     private static final String OBJECT_REF_ID = "Lcom/openggf/game/rewind/identity/ObjectRefId;";
+    // Retain legacy linkage admission. Raw authored reconstruction signatures
+    // receive a targeted compatibility warning rather than a blanket rejection.
     private static final Set<String> BUILTIN_API = Set.of(GGF_MOD, OBJECT_BASE, RECREATABLE,
             OBJECT_INSTANCE, RECREATE_CONTEXT, "com/openggf/level/objects/ObjectServices");
     private static final String MOD_API_DESCRIPTOR = "Lcom/openggf/game/ModApi;";
@@ -299,6 +301,9 @@ public final class ModValidator {
                 if (name.equals("<init>") && descriptor.equals("()V") && (access & Opcodes.ACC_PUBLIC) != 0) {
                     info.publicNoArgConstructor = true;
                 }
+                if (name.equals("recreateForRewind") && descriptor.startsWith("(L" + RECREATE_CONTEXT + ";)")) {
+                    info.rawRecreateSignature = true;
+                }
                 if (name.equals("recreateForRewind")
                         && descriptor.equals("(L" + RECREATE_CONTEXT + ";)L" + OBJECT_BASE + ";")
                         && (access & (Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_ABSTRACT)) == Opcodes.ACC_PUBLIC) {
@@ -393,6 +398,12 @@ public final class ModValidator {
 
     private static void validateObject(ClassInfo info, Map<String, ClassInfo> classes,
                                        List<ModValidationFinding> findings) {
+        if (info.rawRecreateSignature && !overridesNativeReconstruction(info, classes)) {
+            findings.add(warning("RAW_REWIND_RECONSTRUCTION", info.name, "recreateForRewind",
+                    "RewindRecreateContext is engine reconstruction plumbing. Prefer ModRewindRecreatable "
+                            + "with ObjectReconstructionContext for creator objects; the raw signature remains "
+                            + "accepted for compatibility and native-subclass expert overrides."));
+        }
         if ((info.access & Opcodes.ACC_ABSTRACT) == 0
                 && (!isAssignable(info.name, RECREATABLE, classes) || !hasRecreateMethod(info, classes))) {
             findings.add(error("OBJECT_RECREATE_PATH_MISSING", info.name, "",
@@ -458,6 +469,27 @@ public final class ModValidator {
         if (info.validModRecreateMethod && isAssignable(info.name, MOD_RECREATABLE, classes)) return true;
         ClassInfo parent = classes.get(info.superName);
         return parent != null && hasRecreateMethod(parent, classes);
+    }
+
+    private static boolean overridesNativeReconstruction(ClassInfo info, Map<String, ClassInfo> classes) {
+        if (!info.validRecreateMethod) return false;
+        String parent = info.superName;
+        Set<String> visited = new HashSet<>();
+        while (parent != null && visited.add(parent)) {
+            ClassInfo authored = classes.get(parent);
+            if (authored != null) {
+                parent = authored.superName;
+                continue;
+            }
+            // Inspect only engine-owned resource bytes, never define or initialize
+            // creator classes. Authored class names and reported owners confer no trust.
+            EngineClassInfo nativeBase = engineClass(parent);
+            return nativeBase != MISSING_ENGINE_CLASS
+                    && (nativeBase.access & Opcodes.ACC_ABSTRACT) == 0
+                    && isAssignable(parent, OBJECT_BASE, Map.of())
+                    && isAssignable(parent, RECREATABLE, Map.of());
+        }
+        return false;
     }
 
     private static boolean ignoredForRewind(FieldInfo field) {
@@ -552,7 +584,8 @@ public final class ModValidator {
     private static final class ClassInfo {
         CompilerConstantStatics.Shape constantShape;
         String name; String superName; int access; boolean publicNoArgConstructor;
-        boolean constructorServices; boolean validRecreateMethod; boolean validModRecreateMethod; boolean classInitializer;
+        boolean constructorServices; boolean validRecreateMethod; boolean validModRecreateMethod; boolean rawRecreateSignature;
+        boolean classInitializer;
         final List<String> interfaces = new ArrayList<>();
         final List<FieldInfo> fields = new ArrayList<>();
         final Set<String> engineReferences = new HashSet<>();

@@ -229,7 +229,7 @@ class TestS3kSlotStageController {
     private static S3kSlotPlayerRuntime newRuntime() {
         S3kSlotStageState state = S3kSlotStageState.bootstrap();
         S3kSlotCollisionSystem collisionSystem = new S3kSlotCollisionSystem(
-                S3kSlotRenderBuffers.fromRomData(), state);
+                S3kSlotLayoutFixture.buffers(), state);
         return new S3kSlotPlayerRuntime(state, collisionSystem);
     }
 

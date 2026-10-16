@@ -3,6 +3,8 @@ package com.openggf.mods.code;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.data.Rom;
+import com.openggf.data.RomManager;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.GameModule;
 import com.openggf.game.patch.DelegatingGameModule;
@@ -15,6 +17,8 @@ import com.openggf.game.sonic3k.objects.AizMinibossInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -64,7 +68,7 @@ class TestSecondStrikeBoss {
         assertFalse(harness.gameState.isEndOfLevelFlag());
     }
 
-    @Test void managerDispatchKeepsNativeSixteenTickCuePendingWaveReplayAndFatalCancellation() throws Exception {
+    @Test void managerDispatchKeepsNativeSixteenTickCueAndPendingWaveReplay() throws Exception {
         var harness = new Harness(policy, 3);
         startWarningAtNativePeak(harness);
         for (int i=0;i<7;i++) {
@@ -80,8 +84,25 @@ class TestSecondStrikeBoss {
         harness.objects.rewindSnapshottable().restore(saved); harness.tick=8;
         harness.boss = harness.objects.activeObjectsOfType(AizMinibossInstance.class).getFirst(); harness.managerTick(9);
         assertEquals(expected.dynamicObjects(), harness.objects.rewindSnapshottable().capture().dynamicObjects());
+    }
+
+    @Test
+    @RequiresRom(SonicGame.SONIC_3K)
+    void managerDispatchFatalHitCancelsRestoredPendingWaveAndWarning() throws Exception {
+        // Unlike warning/replay alone, full fatal dispatch executes explosion children,
+        // whose raw animation reads AniRaw_BossExplosion from the verified S3K ROM.
+        var harness = new Harness(policy, 3, RomManager.getInstance().getRom());
+        startWarningAtNativePeak(harness);
+        harness.managerTick(7);
+        harness.assertWarningPresentation(3);
+        assertTrue(harness.flames().isEmpty());
+        var saved = harness.objects.rewindSnapshottable().capture();
+        harness.managerTick(9);
+        assertEquals(4, harness.flames().size());
         harness.objects.rewindSnapshottable().restore(saved); harness.tick=8;
         harness.boss = harness.objects.activeObjectsOfType(AizMinibossInstance.class).getFirst();
+        harness.assertWarningPresentation(3);
+        assertTrue(harness.flames().isEmpty());
         harness.boss.getState().hitCount=1; harness.boss.onPlayerAttack(null,null); harness.managerTick(20);
         assertTrue(harness.flames().isEmpty()); assertTrue(harness.boss.getState().defeated);
         assertEquals(0, liveFlares(harness));
@@ -244,6 +265,11 @@ class TestSecondStrikeBoss {
     }
 
     private static void breathComplete(AizMinibossInstance boss) throws Exception {
+        // A follow-up requires the real native three-barrel warning graph;
+        // calling only the boundary on a never-initialized root is invisible.
+        Method initialize = AizMinibossInstance.class.getDeclaredMethod("onInitialDelayComplete");
+        initialize.setAccessible(true);
+        initialize.invoke(boss);
         boss.getState().routine = 10; // native breath half-cycle expiry
         invokeBreathBoundary(boss);
     }
@@ -264,6 +290,10 @@ class TestSecondStrikeBoss {
         int tick;
 
         Harness(AizMinibossAttackPolicy attackPolicy, int remainingHits) {
+            this(attackPolicy, remainingHits, null);
+        }
+
+        Harness(AizMinibossAttackPolicy attackPolicy, int remainingHits, Rom rom) {
             SonicConfigurationService config = SonicConfigurationService.createStandalone();
             config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
             Camera camera = new Camera(config);
@@ -284,6 +314,7 @@ class TestSecondStrikeBoss {
                 @Override public Camera camera() { return camera; }
                 @Override public SonicConfigurationService configuration() { return config; }
                 @Override public GameModule gameModule() { return module; }
+                @Override public Rom rom() { return rom != null ? rom : super.rom(); }
             };
             objects = new ObjectManager(List.of(), module.createObjectRegistry(), 0, null, null, null, camera, services);
             holder[0] = objects;

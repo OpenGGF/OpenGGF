@@ -20,6 +20,7 @@ import com.openggf.level.objects.GravityDebrisChild;
 import com.openggf.level.objects.MultiBucketRenderable;
 import com.openggf.level.objects.MultiPieceSolidProvider;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.NativeChildSlotReservations;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidObjectParams;
@@ -132,6 +133,8 @@ public final class IczEndBossInstance extends AbstractBossInstance
             {0, 0x2D, 2, BOTTOM_CHILD_SHIFT_TIME}
     };
     private static final int FOLDED_NATIVE_CHILD_SST_COUNT = 6;
+    /** The six folded structural SSTs at the front of the placed parent's reserved-child ledger. */
+    private static final int STRUCTURAL_PREFIX = FOLDED_NATIVE_CHILD_SST_COUNT;
     // ChildObjDat_7233E creates the middle, bottom-solid, and bottom-hurt
     // children in slots 2, 3, and 5 of the folded six-slot group. They delete
     // themselves when the parent enters its damaged rise; the ship, top body,
@@ -194,7 +197,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
     private boolean arenaGateComplete;
     private S3kSharedBossCameraGate arenaCameraGate;
     private WaitCallback waitCallback;
-    private StructuralChild[] structuralChildren;
+    private StructuralChildElement[] structuralChildren;
     private int structuralBottomChildSlot;
     private List<EffectChild> effectChildren;
     private int defeatTimer;
@@ -575,11 +578,11 @@ public final class IczEndBossInstance extends AbstractBossInstance
         waitCallback = WaitCallback.CLEAR_FROST_PUFF;
     }
 
-    private StructuralChild[] createStructuralChildren() {
-        StructuralChild[] children = new StructuralChild[STRUCTURAL_CHILD_SPECS.length];
+    private StructuralChildElement[] createStructuralChildren() {
+        StructuralChildElement[] children = new StructuralChildElement[STRUCTURAL_CHILD_SPECS.length];
         for (int i = 0; i < STRUCTURAL_CHILD_SPECS.length; i++) {
             int[] spec = STRUCTURAL_CHILD_SPECS[i];
-            children[i] = new StructuralChild(spec[0], spec[1], spec[2], spec[3]);
+            children[i] = new StructuralChildElement(spec[0], spec[1], spec[2], spec[3]);
         }
         return children;
     }
@@ -624,15 +627,15 @@ public final class IczEndBossInstance extends AbstractBossInstance
                         ? structuralChildSlots[1] : getSlotIndex();
         for (int i = 0; i < offsets.length; i++) {
             int[][] script = frostScriptForSubtype(selector, i);
-            int nativeSlot = services().objectManager() == null
-                    ? -1
-                    : ObjectLifetimeOps.reserveFindNextFreeChildSlot(
-                            services().objectManager(), predecessorSlot);
+            boolean[] ledger = new boolean[1];
+            int nativeSlot = reserveEffectSlot(predecessorSlot, ledger);
             if (nativeSlot >= 0) {
                 predecessorSlot = nativeSlot;
             }
-            effectChildren.add(new EffectChild(offsets[i][0], offsets[i][1], script, anchor,
-                    frostInitialTimerForSubtype(selector, i), nativeSlot));
+            EffectChild puff = new EffectChild(offsets[i][0], offsets[i][1], script, anchor,
+                    frostInitialTimerForSubtype(selector, i), nativeSlot);
+            puff.ledgerReserved = ledger[0] && nativeSlot >= 0;
+            effectChildren.add(puff);
         }
     }
 
@@ -677,7 +680,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
         int previousBottomY = structuralChildren[BOTTOM_CHILD_INDEX].y;
         boolean flipped = (state.renderFlags & 1) != 0;
         boolean sideToggle = (parentFlags & PARENT_FLAG_SIDE_TOGGLE) != 0;
-        for (StructuralChild child : structuralChildren) {
+        for (StructuralChildElement child : structuralChildren) {
             if (child.detached) {
                 child.updateDetached();
                 continue;
@@ -763,7 +766,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
             return new AnchorPoint(state.x, state.y, (state.renderFlags & 1) != 0,
                     (state.renderFlags & 2) != 0);
         }
-        StructuralChild child = structuralChildren[index];
+        StructuralChildElement child = structuralChildren[index];
         return new AnchorPoint(child.x, child.y, child.flipX, false);
     }
 
@@ -1058,10 +1061,48 @@ public final class IczEndBossInstance extends AbstractBossInstance
         }
     }
 
+    /**
+     * Reserves one frost child's native SST after its predecessor (the same raw FindNextFreeObj
+     * chain as before). For the genuine placed boss the slot is recorded in the parent's
+     * reserved-child ledger beyond the six folded structural SSTs, so a restore keeps it held;
+     * a placed record whose owner is stale/unmanaged/ambiguous fails closed (-1, no allocator
+     * mutation); only a non-placed (layoutIndex < 0) fixture keeps the legacy raw reservation.
+     */
+    private int reserveEffectSlot(int predecessorSlot, boolean[] ledger) {
+        var manager = services().objectManager();
+        if (manager == null) {
+            return -1;
+        }
+        if (spawn.layoutIndex() >= 0) {
+            // A placed record: the genuine-owner ledger is the only reservation path. A stale,
+            // removed, unmanaged or ambiguous owner is rejected before any mutation and is a
+            // native allocation failure (-1); it must never fall back to a raw reservation.
+            try {
+                int slot = NativeChildSlotReservations.reserveAfter(
+                        manager, this, predecessorSlot, STRUCTURAL_PREFIX);
+                ledger[0] = true;
+                return slot;
+            } catch (IllegalArgumentException notTheCurrentPlacedOwner) {
+                return -1;
+            }
+        }
+        // Non-placed (layoutIndex < 0) dynamic/component fixtures keep the legacy raw chain.
+        return ObjectLifetimeOps.reserveFindNextFreeChildSlot(manager, predecessorSlot);
+    }
+
     private void releaseEffectSlot(EffectChild child) {
-        if (child.nativeSlot >= 0 && services().objectManager() != null) {
-            services().objectManager().releaseDynamicSlot(child.nativeSlot);
+        var manager = services().objectManager();
+        if (child.nativeSlot >= 0 && manager != null) {
+            if (child.ledgerReserved) {
+                // Ledger slots release exactly once through the current genuine owner; a false
+                // result (stale parent / already released) never falls back to a raw release.
+                NativeChildSlotReservations.release(
+                        manager, this, child.nativeSlot, STRUCTURAL_PREFIX);
+            } else {
+                manager.releaseDynamicSlot(child.nativeSlot);
+            }
             child.nativeSlot = -1;
+            child.ledgerReserved = false;
         }
     }
 
@@ -1194,7 +1235,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
     }
 
     private void releaseStructuralChildIfGone(
-            int reservedIndex, StructuralChild child, int cameraX, int cameraY) {
+            int reservedIndex, StructuralChildElement child, int cameraX, int cameraY) {
         if (child.detached && child.isOutsideNativeFlickerBounds(cameraX, cameraY)) {
             freeStructuralReservation(reservedIndex);
         }
@@ -1462,7 +1503,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
 
     @Override
     public int getPieceFreshContactY(int pieceIndex, PlayableEntity player) {
-        StructuralChild bottom = structuralChildren[BOTTOM_CHILD_INDEX];
+        StructuralChildElement bottom = structuralChildren[BOTTOM_CHILD_INDEX];
         return getPreUpdateY() + bottom.baseDy + bottom.localYOffset;
     }
 
@@ -1474,7 +1515,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
         // Sonic's first contact reaches loc_71F30 curled; the later
         // ResetOnFloor radius restoration exposes the folded child's one-pixel
         // entry phase. Standing Tails lands directly on the ordinary surface.
-        StructuralChild bottom = structuralChildren == null
+        StructuralChildElement bottom = structuralChildren == null
                 ? null
                 : structuralChildren[BOTTOM_CHILD_INDEX];
         boolean childShiftRoutineActive = bottom != null
@@ -1720,7 +1761,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
         if (index < 0 || structuralChildren == null || index >= structuralChildren.length) {
             return;
         }
-        StructuralChild child = structuralChildren[index];
+        StructuralChildElement child = structuralChildren[index];
         renderer.drawFrameIndexWithPaletteBase(child.frame, child.x, child.y, child.flipX, false,
                 BODY_PALETTE_BASE);
     }
@@ -1927,7 +1968,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
         if (structuralChildren == null || structuralChildren.length <= BOTTOM_CHILD_INDEX) {
             return state.x;
         }
-        StructuralChild child = structuralChildren[BOTTOM_CHILD_INDEX];
+        StructuralChildElement child = structuralChildren[BOTTOM_CHILD_INDEX];
         return child.x == 0 ? state.x + child.baseDx : child.x;
     }
 
@@ -1935,7 +1976,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
         if (structuralChildren == null || structuralChildren.length <= BOTTOM_CHILD_INDEX) {
             return state.y + BOTTOM_CHILD_DY;
         }
-        StructuralChild child = structuralChildren[BOTTOM_CHILD_INDEX];
+        StructuralChildElement child = structuralChildren[BOTTOM_CHILD_INDEX];
         return child.y == 0 ? state.y + child.baseDy + child.localYOffset : child.y;
     }
 
@@ -2080,7 +2121,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
         }
     }
 
-    private static final class StructuralChild {
+    private static final class StructuralChildElement {
         private static final int DETACHED_GRAVITY = 0x38;
 
         private final int baseDx;
@@ -2100,7 +2141,14 @@ public final class IczEndBossInstance extends AbstractBossInstance
         private int shiftTimer;
         private int shiftVelocity;
 
-        private StructuralChild(int baseDx, int baseDy, int frame, int shiftDuration) {
+        /** Restore-only holder for the generic array codec; every field is overwritten on restore. */
+        private StructuralChildElement() {
+            this.baseDx = 0;
+            this.baseDy = 0;
+            this.shiftDuration = 0;
+        }
+
+        private StructuralChildElement(int baseDx, int baseDy, int frame, int shiftDuration) {
             this.baseDx = baseDx;
             this.baseDy = baseDy;
             this.frame = frame;
@@ -2155,17 +2203,34 @@ public final class IczEndBossInstance extends AbstractBossInstance
         }
     }
 
-    private static final class EffectChild {
-        private final int baseDx;
-        private final int baseDy;
-        private final int[][] script;
-        private final EffectAnchor anchor;
-        private final int captureMinX;
-        private final int captureMaxX;
-        private final int captureMinY;
-        private final int captureMaxY;
-        private final boolean adjustedPosition;
-        private final boolean romRawMultiDelay;
+    /**
+     * One live frost puff. Non-final constructor-fixed fields and a declared no-arg
+     * constructor let the generic list codec rebuild a committed puff graph on restore:
+     * the record carries every field, with the shared script table as an id so
+     * {@code script == FROST_SCRIPT_TOP} (capture box) re-derives exactly. The reserved
+     * native SST is carried as {@code nativeSlot}; restore never allocates.
+     */
+    private static final class EffectChild
+            implements com.openggf.game.rewind.RewindStateful<EffectChild.RewindState> {
+        private static final EffectAnchor[] ANCHORS = EffectAnchor.values();
+
+        private record RewindState(int baseDx, int baseDy, int scriptId, int anchorOrdinal,
+                boolean romRawMultiDelay, int x, int y, int frame, int scriptIndex,
+                int rawAnimationOffset, int frameTimer, boolean waitingToStart,
+                boolean waitJustCreated, boolean visible, boolean flipX, boolean flipY,
+                boolean finished, boolean captureWasActiveBeforeUpdate, int nativeSlot,
+                boolean ledgerReserved) { }
+
+        private int baseDx;
+        private int baseDy;
+        private int[][] script;
+        private EffectAnchor anchor;
+        private int captureMinX;
+        private int captureMaxX;
+        private int captureMinY;
+        private int captureMaxY;
+        private boolean adjustedPosition;
+        private boolean romRawMultiDelay;
         private int x;
         private int y;
         private int frame;
@@ -2180,6 +2245,75 @@ public final class IczEndBossInstance extends AbstractBossInstance
         private boolean finished;
         private boolean captureWasActiveBeforeUpdate;
         private int nativeSlot;
+        /** True when {@link #nativeSlot} lives in the placed parent's reserved-child ledger. */
+        private boolean ledgerReserved;
+
+        /** Restore-only holder; every field is overwritten by {@link #restoreRewindStateValue}. */
+        private EffectChild() {
+            this.script = FROST_SCRIPT_SMALL;
+            this.anchor = EffectAnchor.PARENT;
+            this.nativeSlot = -1;
+        }
+
+        private static int scriptIdOf(int[][] script) {
+            if (script == FROST_SCRIPT_SMALL) {
+                return 0;
+            }
+            if (script == FROST_SCRIPT_LARGE) {
+                return 1;
+            }
+            if (script == FROST_SCRIPT_TOP) {
+                return 2;
+            }
+            throw new IllegalStateException("Unknown frost script table");
+        }
+
+        private static int[][] scriptForId(int id) {
+            return switch (id) {
+                case 0 -> FROST_SCRIPT_SMALL;
+                case 1 -> FROST_SCRIPT_LARGE;
+                case 2 -> FROST_SCRIPT_TOP;
+                default -> throw new IllegalStateException("Unknown frost script id " + id);
+            };
+        }
+
+        @Override
+        public RewindState captureRewindStateValue() {
+            return new RewindState(baseDx, baseDy, scriptIdOf(script), anchor.ordinal(),
+                    romRawMultiDelay, x, y, frame, scriptIndex, rawAnimationOffset, frameTimer,
+                    waitingToStart, waitJustCreated, visible, flipX, flipY, finished,
+                    captureWasActiveBeforeUpdate, nativeSlot, ledgerReserved);
+        }
+
+        @Override
+        public void restoreRewindStateValue(RewindState state) {
+            this.baseDx = state.baseDx();
+            this.baseDy = state.baseDy();
+            this.script = scriptForId(state.scriptId());
+            this.anchor = ANCHORS[state.anchorOrdinal()];
+            boolean topCapture = script == FROST_SCRIPT_TOP;
+            this.captureMinX = topCapture ? FROST_CAPTURE_TOP_MIN_X : FROST_CAPTURE_NORMAL_MIN_X;
+            this.captureMaxX = topCapture ? FROST_CAPTURE_TOP_MAX_X : FROST_CAPTURE_NORMAL_MAX_X;
+            this.captureMinY = topCapture ? FROST_CAPTURE_TOP_MIN_Y : FROST_CAPTURE_NORMAL_MIN_Y;
+            this.captureMaxY = topCapture ? FROST_CAPTURE_TOP_MAX_Y : FROST_CAPTURE_NORMAL_MAX_Y;
+            this.adjustedPosition = topCapture;
+            this.romRawMultiDelay = state.romRawMultiDelay();
+            this.x = state.x();
+            this.y = state.y();
+            this.frame = state.frame();
+            this.scriptIndex = state.scriptIndex();
+            this.rawAnimationOffset = state.rawAnimationOffset();
+            this.frameTimer = state.frameTimer();
+            this.waitingToStart = state.waitingToStart();
+            this.waitJustCreated = state.waitJustCreated();
+            this.visible = state.visible();
+            this.flipX = state.flipX();
+            this.flipY = state.flipY();
+            this.finished = state.finished();
+            this.captureWasActiveBeforeUpdate = state.captureWasActiveBeforeUpdate();
+            this.nativeSlot = state.nativeSlot();
+            this.ledgerReserved = state.ledgerReserved();
+        }
 
         private EffectChild(int baseDx, int baseDy, int[][] script, EffectAnchor anchor) {
             this.baseDx = baseDx;

@@ -6,15 +6,15 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractBadnikInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.ObjectReconstructionContext;
+import com.openggf.level.objects.ModRewindRecreatable;
 import com.openggf.level.objects.DestructionEffects.DestructionConfig;
 import com.openggf.level.objects.PatrolMovementHelper;
 import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 
 /** Minimal namespaced badnik shell. Replace its patrol with game-accurate behavior. */
-public final class SampleBadnik extends AbstractBadnikInstance implements RewindRecreatable {
+public final class SampleBadnik extends AbstractBadnikInstance implements ModRewindRecreatable {
     private int xSub;
     public SampleBadnik(ObjectSpawn spawn) { super(spawn, "phase2-sample:sample-badnik"); }
 
@@ -43,7 +43,7 @@ public final class SampleBadnik extends AbstractBadnikInstance implements Rewind
         if (renderer != null) renderer.drawFrameIndex(0, currentX, currentY, facingLeft, false);
     }
 
-    @Override public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {
+    @Override public AbstractObjectInstance recreateForRewind(ObjectReconstructionContext context) {
         return new SampleBadnik(context.spawn());
     }
 }

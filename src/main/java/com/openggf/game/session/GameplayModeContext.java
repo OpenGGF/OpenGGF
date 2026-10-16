@@ -1227,126 +1227,87 @@ public final class GameplayModeContext implements ModeContext {
     }
 
     /**
-     * Tears down all attached managers in reverse construction order.
-     * Idempotent: each manager's reset is a no-op when its field is null
-     * (e.g., when destroy is invoked during a partial setup).
+     * Tears down each independent owner in the existing lifecycle order. A
+     * failed step does not strand later owners; references are always cleared.
+     * Reentrant or repeated teardown is a no-op, including after failure.
      */
     public void tearDownManagers() {
-        if (managersTornDown) {
-            return;
-        }
+        if (managersTornDown) return;
         managersTornDown = true;
         scheduledPlaybackInputPublisher = null;
-        // Hand the session's final V-int count back to the power-on carrier.
-        EngineServices.current().vIntRunCounter().unbindObjectClock();
-        installGameplayInputFilter(GameplayInputFilter.IDENTITY);
-        RuntimeException replayCloseFailure = null;
-        // Host resources are released directly even when creator callbacks are quarantined.
-        WorldSessionPolicyAccess.closeScreens(worldSession);
+        var cleanup = new GameplayCleanup();
+        try {
+            // Hand the session's final V-int count back to the power-on carrier.
+            cleanup.run(() -> EngineServices.current().vIntRunCounter().unbindObjectClock());
+            cleanup.run(() -> installGameplayInputFilter(GameplayInputFilter.IDENTITY));
+            cleanup.run(() -> WorldSessionPolicyAccess.closeScreens(worldSession));
+            cleanup.run(this::closeInputOverlay);
+            cleanup.run(this::closeFrameController);
+            // Creator failure or quarantine must not strand host-owned PCM leases.
+            for (var replay : audioReplays) cleanup.run(replay::close);
+            audioReplays.clear();
+            Runnable replayClose = hardwareTimingReplayCloseHook;
+            hardwareTimingReplayCloseHook = null;
+            if (replayClose != null) cleanup.run(replayClose);
+            if (rewindRegistry != null) {
+                cleanup.run(() -> rewindRegistry.deregister(HardwareTimingService.REWIND_KEY));
+                cleanup.run(() -> rewindRegistry.deregister(DynamicArtLifecycleService.REWIND_KEY));
+                cleanup.run(() -> runtimeArtCoordinator.deregisterRewindAdapters(rewindRegistry));
+                cleanup.run(() -> rewindRegistry.deregister(seamlessTransitionResourceHandoffs.key()));
+            }
+            cleanup.run(hardwareTiming::resetForMissingSnapshot);
+            cleanup.run(() -> {
+                if (dynamicArtLifecycle.isRunActive()) dynamicArtLifecycle.finishRun();
+            });
+            cleanup.run(dynamicArtLifecycle::resetForMissingSnapshot);
+            cleanup.run(runtimeArtCoordinator::resetForMissingSnapshot);
+            cleanup.run(plcFrameLifecycle::reset);
+            cleanup.run(seamlessTransitionResourceHandoffs::resetForMissingSnapshot);
+            hardwareTimingBoundaryObserver = HardwareTimingBoundaryObserver.NO_OP;
+            cleanup.whenPresent(zoneLayoutMutationPipeline, ZoneLayoutMutationPipeline::clear);
+            cleanup.run(kosinskiModuleQueue::clear);
+            cleanup.whenPresent(solidExecutionRegistry, SolidExecutionRegistry::clearTransientState);
+            cleanup.whenPresent(animatedTileChannelGraph, AnimatedTileChannelGraph::clear);
+            cleanup.whenPresent(specialRenderEffectRegistry, SpecialRenderEffectRegistry::clear);
+            cleanup.whenPresent(advancedRenderModeController, AdvancedRenderModeController::clear);
+            cleanup.whenPresent(paletteOwnershipRegistry, PaletteOwnershipRegistry::clear);
+            cleanup.whenPresent(zoneRuntimeRegistry, ZoneRuntimeRegistry::clear);
+            cleanup.whenPresent(levelManager, LevelManager::resetGameplayState);
+            cleanup.whenPresent(spriteManager, SpriteManager::resetState);
+            cleanup.whenPresent(collisionSystem, CollisionSystem::resetState);
+            cleanup.whenPresent(terrainCollisionManager, TerrainCollisionManager::resetState);
+            cleanup.whenPresent(parallaxManager, ParallaxManager::resetState);
+            cleanup.whenPresent(waterSystem, WaterSystem::reset);
+            cleanup.whenPresent(fadeManager, FadeManager::cancel);
+            cleanup.whenPresent(gameStateManager, GameStateManager::resetState);
+            cleanup.whenPresent(timerManager, TimerManager::resetState);
+            cleanup.whenPresent(camera, Camera::resetState);
+        } finally {
+            cleanup.run(() -> GroundSensor.setLevelManager(null));
+            clearManagerReferences();
+        }
+        cleanup.throwIfFailed();
+    }
+
+    private void closeInputOverlay() {
         try {
             var overlay = worldSession.getGameModule().getGameService(com.openggf.game.LevelInputOverlay.class);
             if (overlay != null) overlay.close();
         } catch (com.openggf.level.objects.ObjectCallbackAbortException quarantined) {
-            java.util.logging.Logger.getLogger(getClass().getName()).warning("Overlay owner unavailable during cleanup; host resources released");
-        } catch (RuntimeException failure) { replayCloseFailure = failure; }
+            LOG.warning("Overlay owner unavailable during cleanup; host resources released");
+        }
+    }
+
+    private void closeFrameController() {
         try {
             var frameController = worldSession.getGameModule().gameplayFrameController();
             if (frameController != null) frameController.close();
         } catch (com.openggf.level.objects.ObjectCallbackAbortException quarantined) {
-            java.util.logging.Logger.getLogger(getClass().getName()).warning("Frame controller owner unavailable during cleanup");
-        } catch (RuntimeException failure) {
-            if (replayCloseFailure == null) replayCloseFailure = failure;
-            else replayCloseFailure.addSuppressed(failure);
+            LOG.warning("Frame controller owner unavailable during cleanup");
         }
-        // Creator cleanup may fail or omit a resource. The host still releases every PCM lease
-        // before tearing down its audio/session owners.
-        for (var replay : audioReplays) {
-            try { replay.close(); }
-            catch (RuntimeException failure) {
-                if (replayCloseFailure == null) replayCloseFailure = failure;
-                else replayCloseFailure.addSuppressed(failure);
-            }
-        }
-        audioReplays.clear();
-        Runnable replayClose = hardwareTimingReplayCloseHook;
-        hardwareTimingReplayCloseHook = null;
-        if (replayClose != null) {
-            try {
-                replayClose.run();
-            } catch (RuntimeException failure) {
-                if (replayCloseFailure == null) replayCloseFailure = failure;
-                else replayCloseFailure.addSuppressed(failure);
-            }
-        }
-        if (rewindRegistry != null) {
-            rewindRegistry.deregister(HardwareTimingService.REWIND_KEY);
-            rewindRegistry.deregister(DynamicArtLifecycleService.REWIND_KEY);
-            runtimeArtCoordinator.deregisterRewindAdapters(rewindRegistry);
-            rewindRegistry.deregister(
-                    seamlessTransitionResourceHandoffs.key());
-        }
-        hardwareTiming.resetForMissingSnapshot();
-        if (dynamicArtLifecycle.isRunActive()) {
-            dynamicArtLifecycle.finishRun();
-        }
-        dynamicArtLifecycle.resetForMissingSnapshot();
-        runtimeArtCoordinator.resetForMissingSnapshot();
-        plcFrameLifecycle.reset();
-        seamlessTransitionResourceHandoffs.resetForMissingSnapshot();
-        hardwareTimingBoundaryObserver = HardwareTimingBoundaryObserver.NO_OP;
-        if (zoneLayoutMutationPipeline != null) {
-            zoneLayoutMutationPipeline.clear();
-        }
-        kosinskiModuleQueue.clear();
-        if (solidExecutionRegistry != null) {
-            solidExecutionRegistry.clearTransientState();
-        }
-        if (animatedTileChannelGraph != null) {
-            animatedTileChannelGraph.clear();
-        }
-        if (specialRenderEffectRegistry != null) {
-            specialRenderEffectRegistry.clear();
-        }
-        if (advancedRenderModeController != null) {
-            advancedRenderModeController.clear();
-        }
-        if (paletteOwnershipRegistry != null) {
-            paletteOwnershipRegistry.clear();
-        }
-        if (zoneRuntimeRegistry != null) {
-            zoneRuntimeRegistry.clear();
-        }
-        if (levelManager != null) {
-            levelManager.resetGameplayState();
-        }
-        if (spriteManager != null) {
-            spriteManager.resetState();
-        }
-        if (collisionSystem != null) {
-            collisionSystem.resetState();
-        }
-        if (terrainCollisionManager != null) {
-            terrainCollisionManager.resetState();
-        }
-        if (parallaxManager != null) {
-            parallaxManager.resetState();
-        }
-        if (waterSystem != null) {
-            waterSystem.reset();
-        }
-        if (fadeManager != null) {
-            fadeManager.cancel();
-        }
-        if (gameStateManager != null) {
-            gameStateManager.resetState();
-        }
-        if (timerManager != null) {
-            timerManager.resetState();
-        }
-        if (camera != null) {
-            camera.resetState();
-        }
-        GroundSensor.setLevelManager(null);
+    }
+
+    private void clearManagerReferences() {
         zoneLayoutMutationPipeline = null;
         advancedRenderModeController = null;
         specialRenderEffectRegistry = null;
@@ -1374,9 +1335,6 @@ public final class GameplayModeContext implements ModeContext {
         levelEventExtraRewindKeys.clear();
         contributedZoneRewindKeys.clear();
         rewindRegistry = null;
-        if (replayCloseFailure != null) {
-            throw replayCloseFailure;
-        }
     }
 
     /**

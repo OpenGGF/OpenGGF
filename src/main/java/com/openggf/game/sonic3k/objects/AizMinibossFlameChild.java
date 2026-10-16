@@ -69,6 +69,7 @@ public class AizMinibossFlameChild extends AbstractObjectInstance implements Tou
 
     private int worldX;
     private int worldY;
+    private boolean difficultyAttack;
 
     public AizMinibossFlameChild(AbstractBossInstance parent, int xOffset, int yOffset, int subtype) {
         super(new ObjectSpawn(
@@ -104,6 +105,17 @@ public class AizMinibossFlameChild extends AbstractObjectInstance implements Tou
         this(parent, xOffset, yOffset, subtype);
     }
 
+    AizMinibossFlameChild(AbstractBossInstance parent, int xOffset, int yOffset, int subtype,
+                         boolean difficultyAttack) {
+        this(parent, xOffset, yOffset, subtype);
+        this.difficultyAttack = difficultyAttack;
+    }
+
+    private boolean difficultyAttackRetired() {
+        return difficultyAttack && (!(parent instanceof AizMinibossInstance boss)
+                || !boss.difficultyAttackIsLive());
+    }
+
     @Override
     public AizMinibossFlameChild recreateForRewind(RewindRecreateContext ctx) {
         AizMinibossInstance boss = AizMinibossRewindLinks.nearestBoss(ctx);
@@ -113,7 +125,7 @@ public class AizMinibossFlameChild extends AbstractObjectInstance implements Tou
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        if (parent != null && parent.getState().defeated) {
+        if (parent != null && parent.getState().defeated || difficultyAttackRetired()) {
             setDestroyed(true);
             return;
         }
@@ -212,7 +224,7 @@ public class AizMinibossFlameChild extends AbstractObjectInstance implements Tou
 
     @Override
     public int getCollisionFlags() {
-        if (phase != Phase.FLAME || isDestroyed()) {
+        if (phase != Phase.FLAME || isDestroyed() || difficultyAttackRetired()) {
             return 0;
         }
         return COLLISION_FLAGS;

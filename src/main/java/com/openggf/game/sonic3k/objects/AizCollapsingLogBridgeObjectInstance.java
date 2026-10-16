@@ -93,6 +93,10 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
     private boolean segmentsSpawned;
     private boolean collapseArmedByStanding;
     private boolean fireCollapseSolidFrame;
+    // Zero preserves Obj_AIZCollapsingLogBridge's per-segment native timing.
+    // Authored support is a whole-bridge lifetime, not the ROM's final timer.
+    private int brittleSupportTicks;
+    private int brittleWarningTick;
     private final List<PlayableEntity> standingPlayers = new ArrayList<>(2);
     private final Set<PlayableEntity> ejectedPlayers = new HashSet<>(2);
 
@@ -120,6 +124,14 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
             this.artKey = Sonic3kObjectArtKeys.AIZ_COLLAPSING_LOG_BRIDGE;
             initSegments(NORMAL_FIRST_OFFSET, NORMAL_SEGMENT_SPACING);
         }
+    }
+
+    public AizCollapsingLogBridgeObjectInstance(ObjectSpawn spawn, int supportTicks) {
+        this(spawn);
+        if (supportTicks < 8 || supportTicks > 24 || isFireBridge) {
+            throw new IllegalArgumentException("Brittle support requires an ordinary log and 8..24 updates");
+        }
+        brittleSupportTicks = supportTicks;
     }
 
     @Override
@@ -204,6 +216,9 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        if (brittleSupportTicks != 0 && state == STATE_IDLE) {
+            brittleWarningTick = (brittleWarningTick + 1) & 0x0F;
+        }
         fireCollapseSolidFrame = false;
         boolean collapseStartedThisFrame = false;
         if (state == STATE_IDLE && !isFireBridge && collapseArmedByStanding) {
@@ -300,7 +315,7 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
         segmentsSpawned = true;
         collapseArmedByStanding = false;
         state = STATE_COLLAPSING;
-        collapseTimer = totalTimer;
+        collapseTimer = brittleSupportTicks != 0 ? brittleSupportTicks : totalTimer;
         if (isFireBridge) {
             drawBridgeBurnActive = false;
         }
@@ -308,12 +323,15 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
         var objManager = services().objectManager();
         ObjectLifetimeOps.markSpawnRemembered(objManager, spawn);
 
-        int delay = subtypeBase;
+        int delay = brittleSupportTicks != 0 ? brittleSupportTicks : subtypeBase;
         for (int i = 0; i < SEGMENT_COUNT; i++) {
             CollapsingLogSegment segment = new CollapsingLogSegment(
                     segmentX[i], y, segmentFrame[i], delay, artKey, isFireBridge);
+            segment.brittleWarning = brittleSupportTicks != 0;
             spawnDynamicObject(segment);
-            delay += COLLAPSE_DELAY_INCREMENT;
+            if (brittleSupportTicks == 0) {
+                delay += COLLAPSE_DELAY_INCREMENT;
+            }
         }
 
         services().playSfx(Sonic3kSfx.COLLAPSE.id);
@@ -345,6 +363,13 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
         int relativeX = player.getCentreX() - x + halfWidth;
         if (relativeX < 0 || relativeX >= fullWidth) {
             knockOff(player);
+            return;
+        }
+
+        if (brittleSupportTicks != 0) {
+            if (collapseTimer <= 0) {
+                knockOff(player);
+            }
             return;
         }
 
@@ -396,7 +421,17 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
         }
 
         for (int i = 0; i < SEGMENT_COUNT; i++) {
-            renderer.drawFrameIndex(segmentFrame[i], segmentX[i], y, hFlip, false);
+            int warningOffset = 0;
+            if (brittleSupportTicks != 0 && i > 0 && i < SEGMENT_COUNT - 1) {
+                // Before contact, loose middle logs sag and briefly tremble in
+                // turn using their own ROM frames. End anchors and all solid
+                // coordinates stay fixed; the presentation phase rewinds.
+                warningOffset = 2;
+                if ((brittleWarningTick >> 2) == i - 1 && (brittleWarningTick & 3) < 2) {
+                    warningOffset = 0;
+                }
+            }
+            renderer.drawFrameIndex(segmentFrame[i], segmentX[i], y + warningOffset, hFlip, false);
         }
     }
 
@@ -469,6 +504,7 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
         private int delayTimer;
         private final SubpixelMotion.State motion;
         private int animFrameTimer = FIRE_ANIM_FRAME_DELAY;
+        private boolean brittleWarning;
 
         public CollapsingLogSegment(ObjectSpawn spawn) {
             this(spawn.x(), spawn.y(), 0, 0, artKeyForSpawn(spawn), isFireVariantSpawn(spawn));
@@ -553,7 +589,9 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
             if (renderer == null) {
                 return;
             }
-            renderer.drawFrameIndex(mappingFrame, fixedX, motion.y, false, false);
+            // Only the authored warning shakes the art. Solid/rider positions stay native.
+            int warningOffset = brittleWarning && delayTimer > 0 ? (delayTimer & 1) : 0;
+            renderer.drawFrameIndex(mappingFrame, fixedX, motion.y + warningOffset, false, false);
         }
 
         @Override

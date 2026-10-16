@@ -74,38 +74,58 @@ class TestSecondStrikeCampaign {
             rings = new Sonic3kRingPlacement(rom).load(zone, act);
         }
         void addRing(RingSpawn ring) { rings = java.util.stream.Stream.concat(rings.stream(), java.util.stream.Stream.of(ring)).toList(); }
+        void replaceRecord(com.openggf.level.objects.ObjectSpawn replacement) {
+            objects = objects.stream().map(spawn -> spawn.layoutIndex() == replacement.layoutIndex()
+                    ? replacement : spawn).toList();
+        }
     }
 
-    @Test void registrationPatchesBothNativeBanksWithoutTouchingLaterEnemyRoutes() throws Exception {
+    @Test void treeFactorySelectionPreservesAnExistingForeignOwner() throws Exception {
+        var forest = new NativeInventory(0, 0);
+        var original = forest.getObjects().get(150);
+        var foreign = new com.openggf.level.objects.ObjectSpawn(original.x(), original.y(), original.objectId(),
+                original.subtype(), original.renderFlags(), original.respawnTracked(), original.rawYWord(),
+                original.layoutIndex(), "another-mod", "another-mod:tree");
+        forest.replaceRecord(foreign);
+        var module = services(registration());
+        module.transformDecodedLevel(forest);
+        assertSame(foreign, forest.getObjects().get(150));
+        module.transformDecodedLevel(forest);
+        assertSame(foreign, forest.getObjects().get(150), "repeat admission cannot reclaim a foreign tree");
+    }
+
+    @Test void registrationAuthorsBothApparentActsAndPreservesOriginalRecordData() throws Exception {
         var plan = registration();
-        assertEquals(6, plan.objectFactories().size());
-        assertEquals(2, plan.decodedLevelPatches().size());
         assertEquals(1, plan.explicitPatches().size());
         var module = services(plan);
         var forest = new NativeInventory(0, 0);
         var shoes = forest.getObjects().stream().filter(s -> s.objectId() == 1 && (s.subtype() & 15) == 4).toList();
         assertSame(forest, module.transformDecodedLevel(forest));
         assertEquals(3, forest.getRings().size());
-        assertEquals(20, forest.getObjects().stream().filter(s -> s.ownerModId() != null).count());
+        assertEquals(21, forest.getObjects().stream().filter(s -> s.ownerModId() != null).count());
         assertEquals(shoes, forest.getObjects().stream().filter(s -> s.objectId() == 1 && (s.subtype() & 15) == 4).toList());
         assertSame(shoes.getFirst(), forest.getObjects().get(shoes.getFirst().layoutIndex()));
         assertEquals(10, forest.getObjects().stream().filter(s -> "second-strike:robotnik-monitor".equals(s.objectKey())).count());
         assertEquals(List.of(1, 35, 74), forest.getRings().stream().map(RingSpawn::placementId).toList());
+        assertEquals(List.of(40), forest.getObjects().stream()
+                .filter(s -> "second-strike:artillery-split".equals(s.objectKey())).map(s -> s.layoutIndex()).toList());
         var forestObjects = forest.getObjects(); var forestRings = forest.getRings();
         assertSame(forest, module.transformDecodedLevel(forest));
         assertEquals(forestObjects, forest.getObjects()); assertEquals(forestRings, forest.getRings());
         var fire = new NativeInventory(0, 1);
-        var nativeCaterkillers = fire.getObjects().stream().filter(s -> s.objectId() == 0x8f && s.x() < 0x1000).toList();
-        assertEquals(List.of(82, 100, 119), nativeCaterkillers.stream().map(s -> s.layoutIndex()).toList());
-        var later = fire.getObjects().stream().filter(s -> s.x() >= 0x1000).toList();
+        var nativeCaterkillers = fire.getObjects().stream().filter(s -> s.objectId() == 0x8f && java.util.Set.of(82, 100, 119, 244, 625).contains(s.layoutIndex())).toList();
+        assertEquals(List.of(82, 100, 119, 244, 625), nativeCaterkillers.stream().map(s -> s.layoutIndex()).toList());
+        var nativeStructures = fire.getObjects().stream().filter(s -> s.objectId() < 0x8c && s.objectId() != 1).toList();
         assertSame(fire, module.transformDecodedLevel(fire));
-        assertEquals(11, fire.getObjects().stream().filter(s -> s.ownerModId() != null).count());
+        assertEquals(42, fire.getObjects().stream().filter(s -> s.ownerModId() != null).count());
         assertEquals(2, fire.getRings().stream().filter(r -> r.x() < 0x1000).count());
         assertEquals(List.of(12, 68), fire.getRings().stream().filter(r -> r.x() < 0x1000).map(RingSpawn::placementId).toList());
         assertEquals(5, forest.getRings().size() + fire.getRings().stream().filter(r -> r.x() < 0x1000).count());
-        assertEquals(5, fire.getObjects().stream().filter(s -> "second-strike:robotnik-monitor".equals(s.objectKey())).count());
+        assertEquals(22, fire.getObjects().stream().filter(s -> "second-strike:robotnik-monitor".equals(s.objectKey())).count());
+        assertEquals(List.of(95, 247, 296, 518, 704), fire.getObjects().stream()
+                .filter(s -> "second-strike:artillery-split".equals(s.objectKey())).map(s -> s.layoutIndex()).toList());
         var longer = fire.getObjects().stream().filter(s -> "second-strike:caterkiller".equals(s.objectKey())).toList();
-        assertEquals(3, longer.size());
+        assertEquals(5, longer.size());
         for (int i = 0; i < longer.size(); i++) {
             var original = nativeCaterkillers.get(i); var bound = longer.get(i);
             assertEquals(original.objectId(), bound.objectId()); assertEquals(original.layoutIndex(), bound.layoutIndex());
@@ -117,9 +137,53 @@ class TestSecondStrikeCampaign {
         }
         assertTrue(forest.getRings().size() + fire.getRings().stream().filter(r -> r.x() < 0x1000).count() < 20,
                 "Placed rings and converted ordinary monitors cannot qualify a native bonus post; stage prizes are separate");
-        assertEquals(later, fire.getObjects().stream().filter(s -> s.x() >= 0x1000).toList());
+        assertEquals(nativeStructures, fire.getObjects().stream().filter(s -> s.objectId() < 0x8c && s.objectId() != 1)
+                .map(s -> new com.openggf.level.objects.ObjectSpawn(s.x(), s.y(), s.objectId(), s.subtype(),
+                        s.renderFlags(), s.respawnTracked(), s.rawYWord(), s.layoutIndex())).toList());
         assertSame(fire, module.transformDecodedLevel(fire));
-        assertEquals(11, fire.getObjects().stream().filter(s -> s.ownerModId() != null).count(), "idempotent reload");
+        assertEquals(42, fire.getObjects().stream().filter(s -> s.ownerModId() != null).count(), "idempotent reload");
+    }
+
+    @Test void realCampaignEntryAdmitsFiveNativeZoneInventoriesWithoutChangingTheirRecords() throws Exception {
+        var plan = registration();
+        assertEquals(26, plan.objectFactories().size());
+        assertEquals(12, plan.decodedLevelPatches().size());
+        var module = services(plan);
+        // Native zone indices skip Flying Battery (4), whose campaign follows Mushroom Hill.
+        for (int zone : new int[]{1, 2, 3, 5, 6}) {
+            for (int act : new int[]{0, 1}) {
+                String scene = "zone " + zone + " physical act " + act;
+                var source = new NativeInventory(zone, act);
+                var originals = source.getObjects();
+                var originalRings = source.getRings();
+                assertSame(source, module.transformDecodedLevel(source), scene);
+                assertEquals(originals.size(), source.getObjects().size(), scene);
+                int bindings = 0;
+                for (int index = 0; index < originals.size(); index++) {
+                    var original = originals.get(index);
+                    var actual = source.getObjects().get(index);
+                    assertEquals(original, new com.openggf.level.objects.ObjectSpawn(
+                            actual.x(), actual.y(), actual.objectId(), actual.subtype(), actual.renderFlags(),
+                            actual.respawnTracked(), actual.rawYWord(), actual.layoutIndex()),
+                            scene + " original record " + original.layoutIndex());
+                    if (actual.ownerModId() != null) {
+                        assertEquals("second-strike", actual.ownerModId(), scene);
+                        assertTrue(plan.objectFactories().containsKey(actual.objectKey()), scene + " " + actual.objectKey());
+                        bindings++;
+                    }
+                }
+                // ICZ2/LBZ2 currently author resource budgets only; their encounter work remains open.
+                assertTrue(bindings > 0 || source.getRings().size() < originalRings.size(),
+                        scene + " must use its registered bindings or original-ring retention");
+                assertTrue(source.getRings().size() >= 1 && source.getRings().size() <= 5, scene);
+                assertTrue(originalRings.containsAll(source.getRings()), scene + " retains only original rings");
+                var admittedObjects = source.getObjects();
+                var admittedRings = source.getRings();
+                assertSame(source, module.transformDecodedLevel(source), scene);
+                assertEquals(admittedObjects, source.getObjects(), scene + " repeated objects");
+                assertEquals(admittedRings, source.getRings(), scene + " repeated rings");
+            }
+        }
     }
 
     @Test void everyNonShoeMonitorUsesActualNativeRobotnikContentsWithoutChangingItsPlacement() throws Exception {
@@ -151,17 +215,18 @@ class TestSecondStrikeCampaign {
                 converted++;
             }
         }
-        assertEquals(15, converted, "All first-act reward boxes except the exact original shoe monitor are hostile");
+        assertEquals(32, converted, "Every ordinary AIZ box except original shoes is truthfully hostile");
     }
 
-    @Test void addedOpeningRecordsCannotEvadeScarcityAndLaterPhysicalRingsRemainExact() throws Exception {
+    @Test void extraRecordsCannotEvadeEitherApparentActBudget() throws Exception {
         var module = services(registration()); var forest = new NativeInventory(0, 0);
         forest.addRing(new RingSpawn(0x2000, 0x220, 1000)); module.transformDecodedLevel(forest);
         assertEquals(3, forest.getRings().size());
-        var fire = new NativeInventory(0, 1); var later = fire.getRings().stream().filter(r -> r.x() >= 0x1000).toList();
-        fire.addRing(new RingSpawn(0x800, 0x220, 1000)); module.transformDecodedLevel(fire);
+        var fire = new NativeInventory(0, 1);
+        fire.addRing(new RingSpawn(0x800, 0x220, 1000)); fire.addRing(new RingSpawn(0x3000, 0x220, 1001)); module.transformDecodedLevel(fire);
         assertEquals(2, fire.getRings().stream().filter(r -> r.x() < 0x1000).count());
-        assertEquals(later, fire.getRings().stream().filter(r -> r.x() >= 0x1000).toList());
+        assertEquals(List.of(105, 126, 210, 250, 253), fire.getRings().stream().filter(r -> r.x() >= 0x1800).map(RingSpawn::placementId).toList());
+        assertEquals(7, fire.getRings().size());
         assertThrows(UnsupportedOperationException.class, () -> forest.getRings().clear());
     }
 
@@ -187,6 +252,41 @@ class TestSecondStrikeCampaign {
         verify(title).initialize(); verify(title).setExitToLevelHandler(any()); verify(title).reset();
     }
 
+    @Test void publishedCampaignBoardProviderAdmitsAllFourteenOriginalBoards() throws Exception {
+        var module = services(registration());
+        var policy = module.getGameService(BlueSphereLayoutPolicy.class);
+        assertNotNull(policy, "the real creator entry must publish its single board provider");
+        assertArrayEquals(new int[]{-32, 0, 32},
+                module.getGameService(GumballSpringPolicy.class).springOffsets());
+        var nativeRom = new com.openggf.data.Rom();
+        assertTrue(nativeRom.open(System.getProperty("s3k.rom.path")));
+        try {
+            byte[] superBoards = new com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageDataLoader(nativeRom)
+                    .getCompressedLayoutSet(0);
+            int authored = 0;
+            for (int stage = 0; stage < 16; stage++) {
+                byte[] original = stage < 8
+                        ? nativeRom.readBytes(com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageRomOffsets
+                                .LAYOUT_S3_STAGE_1 + stage * 0x408L, 0x408)
+                        : java.util.Arrays.copyOfRange(superBoards, (stage - 8) * 0x408, (stage - 7) * 0x408);
+                byte[] unchanged = original.clone();
+                byte[] actual = policy.transformLayout(stage, original);
+                assertArrayEquals(unchanged, original, "published provider input " + stage);
+                assertArrayEquals(actual, com.openggf.game.sonic3k.difficulty.S3kDifficultyRules
+                        .blueSphereLayout(original, actual), "published provider native admission " + stage);
+                if (stage == 7 || stage == 15) {
+                    assertArrayEquals(original, actual, "native non-campaign slot " + stage);
+                } else {
+                    assertFalse(java.util.Arrays.equals(original, actual), "authored campaign board " + stage);
+                    authored++;
+                }
+            }
+            assertEquals(14, authored);
+        } finally {
+            nativeRom.close();
+        }
+    }
+
     @Test void resolvedSecondStrikeWorldKeepsNativePolicyAssemblyWithoutAnOptInMutatorGraph() throws Exception {
         var plan = registration();
         var nativeModule = new Sonic3kGameModule();
@@ -202,8 +302,8 @@ class TestSecondStrikeCampaign {
         assertEquals(16, world.getGameModule().getGameService(AizMinibossAttackPolicy.class).followupDelayTicks(3));
     }
 
-    @Test void otherZonesKeepTheirExactNativeTables() throws Exception {
-        var source = new NativeInventory(1, 0);
+    @Test void zonesOutsideTheAizAndC1BatchKeepTheirExactNativeTables() throws Exception {
+        var source = new NativeInventory(7, 0);
         var objects = source.getObjects(); var rings = source.getRings();
         assertSame(source, services(registration()).transformDecodedLevel(source));
         assertSame(objects, source.getObjects()); assertSame(rings, source.getRings());

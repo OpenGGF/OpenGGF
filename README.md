@@ -245,7 +245,8 @@ next to the launcher.
 `develop` now carries the post-0.6 work previously staged on `next`, including
 widescreen presentation, further S3K campaign coverage, and existing modding,
 racing, loading and audio foundations. The editor supports all-game project
-authoring, safe saves, isolated playtesting and usable export. The Mod API is still an
+authoring, safe saves, isolated playtesting and usable export, with a
+controller-first interface drawn around the level. The Mod API is still an
 unpublished candidate. [0.7's roadmap](docs/project/v0.7-roadmap.md) prioritizes
 complete campaigns before the feature/API publication gates in 0.8.
 

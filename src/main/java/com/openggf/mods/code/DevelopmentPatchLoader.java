@@ -66,7 +66,8 @@ public final class DevelopmentPatchLoader {
         private final ModManifest manifest;
         private final URLClassLoader loader;
         private final Class<? extends GgfMod> entrypoint;
-        private boolean closed;
+        private volatile boolean closed;
+        private volatile boolean accepted;
 
         private PreparedDecorator(Path jar, ModManifest manifest, URLClassLoader loader,
                                   Class<? extends GgfMod> entrypoint) {
@@ -75,6 +76,28 @@ public final class DevelopmentPatchLoader {
             this.loader = loader;
             this.entrypoint = entrypoint;
         }
+
+        private final com.openggf.level.objects.RewindClassResolver rewindResolver =
+                new com.openggf.level.objects.RewindClassResolver() {
+                    @Override public java.util.Optional<Class<?>> resolve(String owner, String name) {
+                        java.util.Objects.requireNonNull(name, "name");
+                        if (owner == null) return ENGINE_ONLY.resolve(null, name);
+                        if (closed || !accepted || !manifest.id().equals(owner)) return java.util.Optional.empty();
+                        try {
+                            return java.util.Optional.of(Class.forName(name, false, loader));
+                        } catch (ClassNotFoundException missing) {
+                            return java.util.Optional.empty();
+                        }
+                    }
+                    @Override public java.util.Optional<String> ownerOf(Class<?> type) {
+                        java.util.Objects.requireNonNull(type, "type");
+                        return !closed && accepted && type.getClassLoader() == loader
+                                ? java.util.Optional.of(manifest.id()) : java.util.Optional.empty();
+                    }
+                };
+
+        /** Exact accepted development owner and loader, valid only until this capture closes. */
+        public com.openggf.level.objects.RewindClassResolver rewindClassResolver() { return rewindResolver; }
 
         @Override public GameModule apply(GameModule base) {
             return apply(base, GameplayLaunchRequest.fromConfig(GameServices.configuration(), base.getGameId().code()));
@@ -113,6 +136,7 @@ public final class DevelopmentPatchLoader {
                 if (game.equals(owned.baseGameId()) && owned.activatesFor(request))
                     effective = owned.apply(effective, patchContext);
             }
+            accepted = true;
             return effective;
         }
 

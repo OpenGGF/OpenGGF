@@ -52,7 +52,9 @@ public final class Flybot767BadnikInstance extends AbstractS3kBadnikInstance imp
         ATTACK_WINDUP,
         DIVE,
         REBOUND,
-        WAIT_RETURN
+        WAIT_RETURN,
+        /** Bounded alarm escort only: rises off screen after its one attack. */
+        EXIT
     }
 
     private State state = State.INIT;
@@ -64,11 +66,25 @@ public final class Flybot767BadnikInstance extends AbstractS3kBadnikInstance imp
     private boolean waitingForOnscreen = true;
     private boolean placeholderRenderedOnscreen;
     private boolean publishedTouchResponseListEntryThisFrame;
+    /**
+     * Creator-selected {@code LbzAlarmRecipe.BOUNDED} escort. Stock Flybots never
+     * set this: they chase forever. An escort makes one native attack cycle, then
+     * rises off screen, and also leaves when a native LBZ scripted sequence begins.
+     */
+    private boolean boundedEscort;
 
     public Flybot767BadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Flybot767",
                 Sonic3kObjectArtKeys.FLYBOT_767, COLLISION_SIZE_INDEX, PRIORITY_BUCKET);
     }
+
+    /** Marks this Flybot as a one-attack alarm escort (see {@code LbzAlarmRecipe.BOUNDED}). */
+    public Flybot767BadnikInstance asBoundedEscort() {
+        boundedEscort = true;
+        return this;
+    }
+
+    public boolean isBoundedEscort() { return boundedEscort; }
 
     @Override
     protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
@@ -99,6 +115,9 @@ public final class Flybot767BadnikInstance extends AbstractS3kBadnikInstance imp
         }
 
         PlayableEntity player1 = playerEntity;
+        if (boundedEscort && state != State.EXIT && state != State.INIT && scriptedControlBegun()) {
+            enterExit();
+        }
         switch (state) {
             case INIT -> initialize();
             case CHASE -> updateChase(player1, false);
@@ -106,6 +125,7 @@ public final class Flybot767BadnikInstance extends AbstractS3kBadnikInstance imp
             case DIVE -> updateDive(player1);
             case REBOUND -> updateRebound(player1);
             case WAIT_RETURN -> updateChase(player1, true);
+            case EXIT -> updateExit();
         }
         updateDynamicSpawn(currentX, currentY);
         // Sprite_CheckDeleteTouchSlotted runs the object's restored routine
@@ -215,12 +235,49 @@ public final class Flybot767BadnikInstance extends AbstractS3kBadnikInstance imp
     }
 
     private void enterWaitReturn() {
+        if (boundedEscort) {
+            // The rebound has completed one native attack cycle: leave instead of
+            // returning to the unbounded chase loop.
+            enterExit();
+            return;
+        }
         state = State.WAIT_RETURN;
         xVelocity = 0;
         yVelocity = 0;
         waitTimer = RETURN_WAIT;
         mappingFrame = 0;
         resetAnimation();
+    }
+
+    private void enterExit() {
+        state = State.EXIT;
+        xVelocity = 0;
+        yVelocity = -ATTACK_Y_SPEED;
+        mappingFrame = 0;
+        resetAnimation();
+    }
+
+    private void updateExit() {
+        moveWithVelocity();
+        animateLoop(IDLE_FRAMES, 4);
+        // Silent retirement: an escort that leaves the screen awards nothing.
+        if (!isOnScreen(WAIT_OFFSCREEN_MARGIN)) {
+            com.openggf.level.objects.ObjectLifetimeOps.expireDynamic(this);
+        }
+    }
+
+    /** An LBZ scripted-sequence owner (Robotnik intro, launch, Knuckles cutscene lock) is active. */
+    private boolean scriptedControlBegun() {
+        // Only verified native LBZ sequence owners retire an escort. A generic
+        // object-controlled player (spring, tube, grabber) is ordinary play.
+        var registry = services().zoneRuntimeRegistry();
+        if (registry == null) {
+            return false;
+        }
+        return com.openggf.game.sonic3k.runtime.S3kRuntimeStates.currentLbz(registry)
+                .map(lbz -> lbz.isRobotnikIntroActive() || lbz.isLaunchActive()
+                        || lbz.isLbz1KnucklesCutsceneControlLocked())
+                .orElse(false);
     }
 
     private boolean shouldEnterAttack(PlayableEntity player) {

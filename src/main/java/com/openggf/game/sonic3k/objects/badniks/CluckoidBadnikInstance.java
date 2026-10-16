@@ -4,12 +4,14 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.difficulty.MushroomHillWindRecipe;
 import com.openggf.game.sonic3k.runtime.MhzZoneRuntimeState;
 import com.openggf.game.sonic3k.objects.CluckoidWindPressure;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
@@ -22,6 +24,7 @@ import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * S3K SKL Obj $90 - Cluckoid.
@@ -91,11 +94,31 @@ public final class CluckoidBadnikInstance extends AbstractS3kBadnikInstance impl
     private int breathProjectileCount;
     private boolean waitingForOnscreen = true;
     private boolean initialized;
+    // Generic native object capture restores both the recipe and its committed
+    // phase after spawn-based reconstruction (whose constructor defaults STOCK).
+    private MushroomHillWindRecipe windRecipe;
+    private int windPulseUpdates;
 
     public CluckoidBadnikInstance(ObjectSpawn spawn) {
+        this(spawn, MushroomHillWindRecipe.STOCK);
+    }
+
+    public CluckoidBadnikInstance(ObjectSpawn spawn, MushroomHillWindRecipe recipe) {
         super(spawn, "Cluckoid", Sonic3kObjectArtKeys.CLUCKOID,
                 COLLISION_SIZE_INDEX, PRIORITY_BUCKET, true);
+        windRecipe = Objects.requireNonNull(recipe, "recipe");
         mappingFrame = 0;
+    }
+
+    @Override
+    public void onUnload() {
+        if (windRecipe == MushroomHillWindRecipe.PULSED) {
+            // Retire future pressure/emissions; detached native leaves keep
+            // their own motion/offscreen lifetime. Host fault teardown is
+            // independently responsible for its owned actor population.
+            windActive = false;
+            ObjectLifetimeOps.deleteNoRespawn(this);
+        }
     }
 
     @Override
@@ -146,6 +169,7 @@ public final class CluckoidBadnikInstance extends AbstractS3kBadnikInstance impl
     private void updateIdle(PlayableEntity playerEntity) {
         mappingFrame = 0;
         windActive = false;
+        windPulseUpdates = 0;
         resetBreathAnimation();
         PlayableEntity target = com.openggf.game.mutators.NativeObjectPolicyAccess.permitsTargeting(services()) ? closestNativePlayerByHorizontalDistance(playerEntity) : null;
         if (target == null) {
@@ -167,14 +191,21 @@ public final class CluckoidBadnikInstance extends AbstractS3kBadnikInstance impl
                 services().playSfx(Sonic3kSfx.ENEMY_BREATH.id);
             }
             windActive = true;
-            applyWindPressure(playerEntity);
-            PlayableEntity sidekick = tryServices() != null ? tryServices().playerQuery().nativeP2OrNull() : null;
-            applyWindPressure(sidekick);
-            // sub_8E2D4: move.b (V_int_run_count+3).w,d0 / andi.b #7,d0. The +3 addresses the
-            // longword's low byte, so debris spawns whenever the count is a multiple of 8.
-            if ((vIntRunCount & 0x07) == 0) {
-                spawnBreathDebris();
-                breathProjectileCount++;
+            // Keep the native sound latch above set across pulse gaps. Only
+            // pressure and existing debris are gated, never the animation or
+            // the native wind-up/cooldown. First wind update commits phase 0.
+            boolean pressureActive = windRecipe == MushroomHillWindRecipe.STOCK
+                    || (windPulseUpdates++ & 0x1F) < 20;
+            if (pressureActive) {
+                applyWindPressure(playerEntity);
+                PlayableEntity sidekick = tryServices() != null ? tryServices().playerQuery().nativeP2OrNull() : null;
+                applyWindPressure(sidekick);
+                // sub_8E2D4 reads the low three V_int_run_count bits. Pulse
+                // gaps do not reset that clock or retry failed emissions.
+                if ((vIntRunCount & 0x07) == 0) {
+                    spawnBreathDebris();
+                    breathProjectileCount++;
+                }
             }
         }
 

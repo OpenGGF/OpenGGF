@@ -156,6 +156,13 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	private EditorSaveManager editorSaveManager;
 	private final EditorInputHandler editorInputHandler;
 	private final EditorOverlayRenderer editorOverlayRenderer;
+	/**
+	 * Window-resolution editor UI: a separate editor build if present, else the built-in
+	 * controller-first HUD; null for the in-game chrome.
+	 */
+	private com.openggf.editor.EditorWindowChrome editorChrome = com.openggf.editor.EditorWindowChromes.select(
+			com.openggf.editor.hud.EditorHudRuntime::new);
+	private boolean editorChromeActive;
 	private final EditorProjectWorkspace editorProjects;
 	private final EditorProjectMenuRenderer editorProjectMenuRenderer = new EditorProjectMenuRenderer();
 	private final ContentImportScreen contentImportScreen;
@@ -415,6 +422,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		this.editorInputHandler = new EditorInputHandler(
 				levelEditorController, () -> camera, () -> graphicsManager, this::saveCurrentEditorLevel,
 				this::exportCurrentEditorLevel);
+		editorInputHandler.setFrontEnd(new EditorInputHandler.FrontEnd() {
+			public boolean update(InputHandler input) { return editorChromeActive && editorChrome.update(input); }
+			public void finishPendingEdits() { if (editorChrome != null) editorChrome.finishPendingEdits(); }
+		});
 		this.editorProjects = new EditorProjectWorkspace(new EditorProjectWorkspace.Host() {
 			public GameModule selectGame(GameId game) throws IOException { return selectEditorProjectGame(game); }
 			public GameModule currentModule() { return editorProjectBaseModule != null ? editorProjectBaseModule : GameServices.module(); }
@@ -479,12 +490,9 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		var editorCommands = new ArrayList<>(editorProjects.commands());
 		editorCommands.add(new com.openggf.editor.EditorCommandPalette.HostCommand("Import content", this::openContentImport));
 		com.openggf.editor.EditorCommandPalette.forController(levelEditorController).setHostCommands(editorCommands);
-        com.openggf.editor.EditorCommandPalette.forController(levelEditorController)
-                .setFeedback(cue -> audioManager.playSfx(MasterTitleScreen.AudioCue.valueOf(cue.name()).sfxName()));
 
 		// Set up game mode change listener to update projection width
 		gameLoop.setGameModeChangeListener((oldMode, newMode) -> {
-            com.openggf.editor.EditorCommandPalette.forController(levelEditorController).close();
 			if (newMode == GameMode.LEVEL && GameServices.hasRuntime())
                 applyRequiredDisplayAspect(GameServices.module());
             // Resolve module-selected dimensions before the title hands off.
@@ -494,12 +502,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		gameLoop.setEditorProjectInputHandler(input -> contentImportScreen.isOpen()
 				? contentImportScreen.update(input) : editorProjects.update(input));
 		gameLoop.setEditorProjectPlaytestSupplier(() -> editorProjectPlaytestActive);
-		gameLoop.setEditorPlaytestToggleHandler(() -> {
-            if (!com.openggf.editor.EditorCommandPalette.forController(levelEditorController).isOpen()) toggleEditorPlaytestMode();
-        });
-		gameLoop.setEditorFreshStartHandler(() -> {
-            if (!com.openggf.editor.EditorCommandPalette.forController(levelEditorController).isOpen()) startGameplayFromBeginning();
-        });
+		gameLoop.setEditorPlaytestToggleHandler(this::toggleEditorPlaytestMode);
+		gameLoop.setEditorFreshStartHandler(this::startGameplayFromBeginning);
 
 		instance = this;
 	}
@@ -614,7 +618,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 		// Setup key callback
 		glfwSetKeyCallback(window, (windowHandle, key, scancode, action, mods) -> {
-			if (inputHandler != null) {
+			if (inputHandler != null && (editorChrome == null || editorChrome.key(key, action, mods))) {
 				inputHandler.handleKeyEvent(key, action);
 			}
 		});
@@ -626,17 +630,17 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			contentImportWindow.receive(paths);
 		});
 		glfwSetCursorPosCallback(window, (windowHandle, x, y) -> {
-			if (inputHandler != null) {
+			if (inputHandler != null && (editorChrome == null || editorChrome.mouseMove(x, y))) {
 				inputHandler.handleMouseMove(x, y);
 			}
 		});
 		glfwSetMouseButtonCallback(window, (windowHandle, button, action, mods) -> {
-			if (inputHandler != null) {
+			if (inputHandler != null && (editorChrome == null || editorChrome.mouseButton(button, action))) {
 				inputHandler.handleMouseButton(button, action);
 			}
 		});
 		org.lwjgl.glfw.GLFW.glfwSetScrollCallback(window, (windowHandle, xOffset, yOffset) -> {
-			if (inputHandler != null) {
+			if (inputHandler != null && (editorChrome == null || editorChrome.scroll(xOffset, yOffset))) {
 				com.openggf.control.MouseWheel.of(inputHandler).scroll(yOffset);
 			}
 		});
@@ -659,8 +663,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		});
 
 		// Setup window focus callback
-		glfwSetWindowFocusCallback(window, (windowHandle, focused) ->
-				paused = applyWindowActivation(focused, inputHandler, gameLoop::pause, gameLoop::resume));
+		glfwSetWindowFocusCallback(window, (windowHandle, focused) -> {
+			if (editorChrome != null) editorChrome.focus(focused);
+			paused = applyWindowActivation(focused, inputHandler, gameLoop::pause, gameLoop::resume);
+		});
 
 		// Setup window iconify callback
 		glfwSetWindowIconifyCallback(window, (windowHandle, iconified) ->
@@ -706,6 +712,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
+		initializeEditorChrome();
 
 		// Create input handler and set it
 		inputHandler = InputHandler.live(InputBindingFactory.supplier(configService));
@@ -743,10 +750,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 	private void installEditorTextInputCallback() {
 		glfwSetCharCallback(window, (windowHandle, codepoint) -> {
+			if (editorChrome != null && !editorChrome.character(codepoint)) return;
 			com.openggf.control.MenuInput.handleCharEvent(inputHandler, codepoint);
-			if (getCurrentGameMode() == GameMode.EDITOR && !editorProjects.menu().isOpen() && !contentImportScreen.isOpen()) {
-				editorInputHandler.handleTextInputCodepoint(codepoint);
-			}
 		});
 	}
 
@@ -1789,7 +1794,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			catch (RuntimeException failure) { reportEditorProjectFailure(failure); }
 			return;
 		}
-		editorInputHandler.finishActiveStroke();
+		editorInputHandler.finishPendingEdits();
 		if (!saveCurrentEditorLevel()) {
 			return;
 		}
@@ -1986,7 +1991,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			names = id -> nativeRegistry.getPrimaryName(id, family);
 		}
 		levelEditorController.configureSpawnEditing(registry, editorProjectBaseModule.getObjectPlacementEncoding(),
-				editorProjectBaseModule.getObjectArtProvider(), names);
+				names);
 	}
 
 	private void startEditorProjectPlaytest(EditorProjectDocument document, boolean fromCursor) throws IOException {
@@ -2659,8 +2664,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		levelEditorController.setPersistenceStatus(editorSaveManager.lastApplyResult());
 		GameModule editorModule = GameServices.module();
 		levelEditorController.configureSpawnEditing(
-				editorModule.createObjectRegistry(), editorModule.getObjectPlacementEncoding(),
-				editorModule.getObjectArtProvider());
+				editorModule.createObjectRegistry(), editorModule.getObjectPlacementEncoding());
 	}
 
 	private void primeEditorSelection(int playerX, int playerY) {
@@ -2678,10 +2682,6 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		levelEditorController.selectChunk(0);
 	}
 
-	private void synchronizeEditorOverlayDepth() {
-		editorOverlayRenderer.setHierarchyDepth(levelEditorController.depth());
-	}
-
 	public LevelEditorController getLevelEditorController() {
 		return levelEditorController;
 	}
@@ -2694,7 +2694,6 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 		EditorCursorState cursor = levelEditorController.worldCursor();
 		editorMode.setCursor(cursor);
-		synchronizeEditorOverlayDepth();
 
 		if (levelEditorController.consumeCameraNavigationRequest()
 				&& levelEditorController.depth() == EditorHierarchyDepth.WORLD && camera != null) {
@@ -2931,6 +2930,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				isNativeImage()));
 		profiler.beginFrame();
 
+		syncEditorChromeViewport();
 		// Clear the entire window to black first (for letterbox/pillarbox bars)
 		glViewport(0, 0, windowWidth, windowHeight);
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -3129,6 +3129,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 		renderDisplayShaderPickerOverlay();
 		applyDisplayShaderPhase(ShaderPhase.FINAL);
+		renderEditorChrome();
 		// F12 screenshot capture (after all rendering is complete) is the middle
 		// callback: capture pixels first, then screenshot, then window-only REC.
 		LiveCapturePresentationState presentationState = resolveLiveCapturePresentationState(
@@ -3982,8 +3983,68 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			contentImportRenderer.render(contentImportScreen, getProjectionMatrixBuffer(), (int) realWidth);
 		else if (editorProjects.menu().isOpen())
 			editorProjectMenuRenderer.render(editorProjects.menu(), getProjectionMatrixBuffer(), (int) realWidth);
-		else editorOverlayRenderer.renderScreenSpaceOverlay();
 		graphicsManager.flushScreenSpace();
+	}
+
+	private void initializeEditorChrome() {
+		if (editorChrome == null) return;
+		try (MemoryStack stack = stackPush()) {
+			IntBuffer windowW = stack.mallocInt(1), windowH = stack.mallocInt(1);
+			IntBuffer framebufferW = stack.mallocInt(1), framebufferH = stack.mallocInt(1);
+			glfwGetWindowSize(window, windowW, windowH);
+			glfwGetFramebufferSize(window, framebufferW, framebufferH);
+			editorChrome.init(new com.openggf.editor.EditorWindowChrome.Host() {
+				public LevelEditorController controller() { return levelEditorController; }
+				public void dispatch(EditorInputHandler.Action action) { editorInputHandler.handleAction(action); }
+				public java.util.List<com.openggf.editor.EditorCommandPalette.HostCommand> commands() {
+					return com.openggf.editor.EditorCommandPalette.forController(levelEditorController).extraCommands();
+				}
+			}, windowW.get(0) > 0 ? framebufferW.get(0) / (float) windowW.get(0) : 1f);
+		} catch (Exception failure) {
+			throw new IllegalStateException("Editor window chrome failed to initialise", failure);
+		}
+	}
+
+	/** Places the game inside the chrome's canvas while the window chrome owns the editor frame. */
+	private void syncEditorChromeViewport() {
+		boolean editorFrame = getCurrentGameMode() == GameMode.EDITOR && !contentImportScreen.isOpen()
+				&& !editorProjects.menu().isOpen() && levelEditorController.currentLevel() != null;
+		editorChromeActive = editorChrome != null && editorChrome.setActive(editorFrame);
+		com.openggf.control.InputHandlerInternalAccess.suppressGamepad(inputHandler,
+				editorChromeActive && editorChrome.ownsGamepads());
+		if (editorChrome == null || window == NULL) return;
+		try (MemoryStack stack = stackPush()) {
+			IntBuffer windowW = stack.mallocInt(1), windowH = stack.mallocInt(1);
+			glfwGetWindowSize(window, windowW, windowH);
+			int[] viewport = editorChrome.gameViewport(windowW.get(0), windowH.get(0), windowWidth, windowHeight,
+					(int) projectionWidth, (int) realHeight);
+			if (viewport == null) return;
+			if (viewport.length == 0) {
+				reshape(windowWidth, windowHeight);
+				return;
+			}
+			viewportX = viewport[0];
+			viewportY = viewport[1];
+			viewportWidth = viewport[2];
+			viewportHeight = viewport[3];
+			graphicsManager.setViewport(viewportX, viewportY, viewportWidth, viewportHeight);
+		}
+	}
+
+	private void renderEditorChrome() {
+		if (!editorChromeActive || window == NULL) return;
+		try (MemoryStack stack = stackPush()) {
+			IntBuffer windowW = stack.mallocInt(1), windowH = stack.mallocInt(1);
+			glfwGetWindowSize(window, windowW, windowH);
+			editorChrome.render(windowW.get(0), windowH.get(0), windowWidth, windowHeight);
+		}
+	}
+
+	private void closeEditorChrome() {
+		var chrome = editorChrome;
+		editorChrome = null;
+		editorChromeActive = false;
+		if (chrome != null) chrome.close();
 	}
 
 	private void drawSpecialStage() {
@@ -4230,6 +4291,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				rewindVhsEffectPass = null;
 			}
 		});
+		cleanupStep("editor window chrome", this::closeEditorChrome);
 		cleanupStep("graphics manager", graphicsManager::cleanup);
 		cleanupStep("presence", gameLoop::closePresence);
 		cleanupStep("compiled mod resolver", () -> ModSubsystem.current().installRewindClassResolver(

@@ -1164,10 +1164,15 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   retire the run before returning to the title. Build-pinned bundled jars use the
   ordinary mod validation and trust flow; private binary storage supports ghost data.
   Shared client, room and protocol contracts are available to other mods.
+  Ambiguous broker timeouts retire the connection, fail pending operations and
+  require a fresh connection before retrying, keeping late replies out of later requests.
 
 - **Unpublished Mod API candidate:** mod loading, creator tooling, characters,
   standalone games, and custom-zone work are now available on the development
-  line. Explicit development-directory launches show their active mod, details,
+  line. Added zones preserve inherited native title lifecycle callbacks; object
+  helpers follow their injected owner. Creator reconstruction uses the bounded
+  context, while host snapshot and restore-queue shapes remain internal.
+  Explicit development-directory launches show their active mod, details,
   and notices in a read-only Mod Manager without changing installed-mod settings.
   The installed-mod manager applies saved enablement, order, and code trust at the
   master title by rescanning jars and rebuilding the mod runtime and launch choices;
@@ -1334,6 +1339,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   presentation and donated preview capture use shared implementations. Sidekick
   diagnostic construction is separated from CPU decisions. Results bonus digits
   use one ROM-pattern writer while retaining each game's score and tally policy.
+  Session teardown attempts every independent owner and clears references even
+  when an earlier cleanup step fails. Grounded hurt recovery has one owner while
+  retaining its native movement and animation order.
   Monitor contents share icon drawing while keeping their visibility and lifetime rules.
   Deferred lost-ring spawns retain their queue across rewind and release reserved
   slots when the owning level is reset or rebuilt. Released solid contacts retain
@@ -1412,7 +1420,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 - **Local test categories:** select related subsystem checks from changed paths, with
   common tests and structural guards retained, broad fallback for shared changes,
-  and bounded diagnostics and automatic temporary-file cleanup. Tool prerequisites
+  and bounded diagnostics and automatic temporary-file cleanup. An explicit
+  AIZ1/HCZ1 obligation lane rejects missing or skipped required
+  cases. Rewind coverage protects individual object identities and distinguishes
+  unavailable ROM prerequisites from executed round trips. Tool prerequisites
   are checked before testing; category runs and a focused Maven wrapper wait automatically
   for shared test execution slots across worktrees. Build-only Maven commands bypass
   the test queue while retaining exclusion against builds/tests in their own worktree.
@@ -1425,7 +1436,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   bounded backfilling to protect large runs from starvation. An opt-in lean lane
   bounds both JVM heaps for small focused checks and accounts for their smaller
   reservations alongside normal runs. A busy worktree's aged request retains its
-  place without blocking unrelated trees. Optional profilers measure process-tree RSS/CPU
+  place without blocking unrelated trees. A waiter whose worktree metadata vanished
+  no longer aborts another worktree's admission scan; active lock authority is retained.
+  Optional profilers measure process-tree RSS/CPU
   for ordinary/guard runs and per-test allocation, sampled peaks and repeated post-GC
   retention for explicitly selected tests. An ordinary-suite observer measures actual
   Surefire class floors, native evidence and the Maven parent's separate memory cost.

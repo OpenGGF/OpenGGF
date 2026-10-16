@@ -30,6 +30,16 @@ public final class MgzEndBossRenderChild extends AbstractBossChild implements Re
         this.role = role;
     }
 
+    /**
+     * Existing generic rewind probe shape. Construction only records structural
+     * parent/role data; it queues no art, allocates no actor and samples no service.
+     * The captured role/priority are restored after recreateForRewind relinks A2.
+     */
+    MgzEndBossRenderChild(com.openggf.level.objects.ObjectSpawn ignored,
+                         MgzDrillingRobotnikInstance boss, int role) {
+        this(boss, role);
+    }
+
     private static int priorityFor(int role) {
         return switch (role) {
             case ROLE_STATIC_BACK -> 7; // word_6D77C: $380

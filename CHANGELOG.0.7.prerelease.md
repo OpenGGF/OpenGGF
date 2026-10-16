@@ -23,6 +23,16 @@ Unreleased. The earlier development themes remain in
   first-run discovery can locate one ROM or scan a folder for all three games,
   retaining partial discoveries at scan limits and explaining file-access errors.
 
+- **Second Strike hard-mode prototype:** Native brittle supports, earned zero-ring
+  bonus invitations, finite badnik/boss patterns and original-ring retention keep
+  player physics unchanged. Authored AIZ and first-five-zone campaign ingredients
+  are being developed, with native MHZ wind pulses, LRZ echo jets and an FBZ
+  extra attack beat available as finite ingredients. Native finale ingredients
+  cover HPZ feints, an SSZ returning-boss extra pair, DEZ guard detection and a
+  delayed Doomsday tail missile; these remain unactivated pending qualification.
+  Cold routes, character
+  breadth, full later-zone authoring and visual verification remain in progress.
+
 - **Level authoring:** Named projects create, edit and reopen complete authored
   levels for Sonic 1, Sonic 2 and Sonic 3&K using ROM-derived asset libraries.
   Atomic saves retain placements and missing dependency records; close and quit
@@ -30,15 +40,27 @@ Unreleased. The earlier development themes remain in
   playtests use fresh native runtime snapshots and return to the authored
   document with selection and undo history. Host-validated exports support
   S1/S2 v1 and S3K v2, including a native results goal for S3K. Title Tools and
-  the editor command palette expose creation, import, properties, resizing and
+  the editor menu expose creation, import, properties, resizing and
   Save As; pattern browsing, descriptor controls, local collision edits, erase
-  and spawn inspection complete layout authoring.
+  and spawn inspection complete layout authoring. A controller-first HUD drawn at
+  window resolution frames the level with a brush hotbar, a full-screen library
+  of ROM-art thumbnails, a tools wheel, block and chunk workbenches and button
+  prompts for the pad in use. It is the sole built-in editor UI, with world-space
+  editing guides underneath; a separate OpenGGF-Editor provider can replace it
+  through the window-chrome extension.
 
 - **S3K level entry:** Captures that omit the title presentation complete the
   destination's deferred player assembly before its animation and art-loading
   tail, allowing ordinary movement after a fresh zone handoff. Publication also
   restores the destination ring count after the title boundary temporarily
-  retains the source count, including rewind across that boundary.
+  retains the source count, including rewind across that boundary. Ordinary
+  checkpoint reloads restore post activation before the first object pass.
+  Opted-in checkpoint invitations defer shared art until native queue admission
+  and reuse that work for their marker and bonus stars. The Slots bonus stage
+  reads its original board and entry position from the supplied ROM. Development
+  mod captures retain the accepted loader when restoring creator-owned child graphs.
+  AIZ rewind preserves completed miniboss spawn history after the native results
+  owner retires.
 
 - **S3K Knuckles routes:** Locked-on Mushroom Hill deletes the standalone S&K
   intro before it can freeze the camera and take player control. Its native

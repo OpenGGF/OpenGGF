@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k;
 
+import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotLayoutFixture;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.BonusStageState;
@@ -68,7 +69,7 @@ class TestS3kSlotBonusStageRuntime {
     void bootstrapStagesRomShapedStateAndRenderBuffers() {
         S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
 
-        runtime.bootstrap();
+        com.openggf.game.sonic3k.bonusstage.slots.S3kSlotLayoutFixture.bootstrap(runtime);
 
         S3kSlotStageState state = runtime.stageStateForTest();
         S3kSlotRenderBuffers buffers = runtime.renderBuffersForTest();

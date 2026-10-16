@@ -372,7 +372,7 @@ class TestEditorProjectWorkspace {
             shown = document;
             controller.attachLevel(document.level());
             controller.configureSpawnEditing(fixture.module.createObjectRegistry(),
-                    fixture.module.getObjectPlacementEncoding(), fixture.module.getObjectArtProvider());
+                    fixture.module.getObjectPlacementEncoding());
             controller.setWorldCursor(new EditorCursorState(document.metadata().startX(), document.metadata().startY()));
         }
         @Override public void playtest(EditorProjectDocument document, boolean fromCursor) throws IOException {

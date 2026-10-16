@@ -8,6 +8,9 @@ import com.openggf.game.rewind.identity.*;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic3k.S3kSpriteDataLoader;
 import com.openggf.game.sonic3k.runtime.SozZoneRuntimeState;
+import com.openggf.game.sonic3k.Sonic3kGameModule;
+import com.openggf.game.sonic3k.difficulty.SandopolisChallengeRecipe;
+import com.openggf.game.patch.DelegatingGameModule;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.*;
 import com.openggf.physics.*;
@@ -26,12 +29,14 @@ class TestSozLightAndGhosts {
     private Rom rom;private SozZoneRuntimeState state;private StubObjectServices services;
     private TestablePlayableSprite player;private RespawnState checkpoint;private Camera camera;private ObjectManager manager;
     private final List<AbstractObjectInstance> children=new ArrayList<>();
+    private GameModule module;
     @BeforeEach void setup() throws Exception {
         rom=new Rom();assertTrue(rom.open(RomTestUtils.ensureSonic3kRomAvailable().getAbsolutePath()));
         state=new SozZoneRuntimeState(1,PlayerCharacter.SONIC_AND_TAILS);checkpoint=mock(RespawnState.class);
         camera=mock(Camera.class);manager=mock(ObjectManager.class);var level=mock(LevelManager.class);
         var rng=new GameRng(GameRng.Flavour.S3K);
         services=new StubObjectServices(){
+            @Override public GameModule gameModule(){return module;}
             @Override public Rom rom(){return rom;}@Override public SozZoneRuntimeState zoneRuntimeState(){return state;}
             @Override public RespawnState checkpointState(){return checkpoint;}@Override public Camera camera(){return camera;}
             @Override public ObjectManager objectManager(){return manager;}@Override public LevelManager levelManager(){return level;}
@@ -53,6 +58,88 @@ class TestSozLightAndGhosts {
     private static Object get(Object o,String name){try{Field f=o.getClass().getDeclaredField(name);f.setAccessible(true);return f.get(o);}catch(Exception e){throw new AssertionError(e);}}
     private static int value(Object o,String name){return (Integer)get(o,name);}
     private static RewindCaptureContext context(AbstractObjectInstance...objects){var t=new RewindIdentityTable();for(int i=0;i<objects.length;i++)t.registerObject(objects[i],ObjectRefId.dynamic(i,0,i));return RewindCaptureContext.withIdentityTable(t);}
+    private void tomb(){
+        module=new DelegatingGameModule(new Sonic3kGameModule(),"test:tomb"){
+            @Override public <T> T getGameService(Class<T> type){
+                return type==SandopolisChallengeRecipe.class?type.cast(SandopolisChallengeRecipe.TOMB):super.getGameService(type);
+            }
+        };
+    }
+    @Test void tombSwitchUsesSixHundredActualUpdatesAndRetainsNativePullRelease(){
+        tomb();state.lighting().initializeSeamlessDarkness();var l=light(4);l.update(0,player);
+        for(int i=0;i<16;i++)l.update(i,player);
+        assertEquals(0,state.lighting().darknessLevel());assertEquals(599,state.lighting().masterTimer());
+        for(int i=0;i<599;i++)state.lighting().tickPalette(600);
+        assertEquals(0,state.lighting().darknessLevel());state.lighting().tickPalette(600);assertEquals(1,state.lighting().darknessLevel());
+        player.setLogicalInputState(false,false,false,false,true,true);l.update(17,player);
+        assertFalse(l.isPlayerHeld(player));assertEquals(-0x380,player.getYSpeed());
+    }
+    @Test void tombLightOneGhostAttacksAtNativeSmallSizeAndFullLightRetiresIt(){
+        tomb();when(checkpoint.getLastCheckpointIndex()).thenReturn(1);dark(1);var c=controller();c.update(0,player);
+        assertEquals(1,c.ghostCount());var ghost=assertInstanceOf(SozHyudoroBodyObjectInstance.class,children.getFirst());
+        for(int i=0;i<500&&ghost.getCollisionFlags()==0;i++)ghost.update(i,player);
+        assertEquals(16,value(ghost,"routine"));assertEquals(1,value(ghost,"darkness"));
+        assertEquals(0x100,Math.abs(value(ghost,"xVelocity")),"light still owns native small-ghost velocity");
+        var ctx=context(c,ghost);var snap=ghost.captureRewindState(ctx);
+        for(int i=0;i<20;i++)ghost.update(i,player);int x=ghost.getX(),y=ghost.getY();
+        ghost.restoreRewindState(snap,ctx);for(int i=0;i<20;i++)ghost.update(i,player);assertEquals(x,ghost.getX());assertEquals(y,ghost.getY());
+        state.lighting().resetLight(600);ghost.update(0,player);assertEquals(0,ghost.getCollisionFlags());
+        for(int i=0;i<40&&!ghost.isDestroyed();i++)ghost.update(i,player);
+        assertTrue(ghost.isDestroyed());assertEquals(0,c.ghostCount());
+    }
+    @Test void withdrawnTombRetiresItsExtraChargeAndNextGhostUsesStockPatrol(){
+        tomb();when(checkpoint.getLastCheckpointIndex()).thenReturn(1);dark(1);var c=controller();c.update(0,player);
+        var ghost=assertInstanceOf(SozHyudoroBodyObjectInstance.class,children.getFirst());
+        for(int i=0;i<500&&ghost.getCollisionFlags()==0;i++)ghost.update(i,player);
+        assertEquals(0xD7,ghost.getCollisionFlags());
+        // The host separately proves fault-driven enum withdrawal. Here the
+        // native consumer receives absence at its ordinary service boundary.
+        module=null;ghost.update(0,player);assertEquals(0,ghost.getCollisionFlags());assertTrue((Boolean)get(ghost,"fading"));
+        for(int i=0;i<40&&!ghost.isDestroyed();i++)ghost.update(i,player);
+        assertTrue(ghost.isDestroyed());assertEquals(0,c.ghostCount());
+        c.update(1,player);var stock=assertInstanceOf(SozHyudoroBodyObjectInstance.class,children.getLast());
+        assertNotSame(ghost,stock);for(int i=0;i<80;i++)stock.update(i,player);
+        assertEquals(4,value(stock,"routine"));assertEquals(0,stock.getCollisionFlags());assertEquals(1,c.ghostCount());
+    }
+    @Test void nativeDarkFiveNewChargeIsNotAnExtraChargeWhenTombWithdrawsAndReplays(){
+        tomb();when(checkpoint.getLastCheckpointIndex()).thenReturn(1);dark(4);var c=controller();c.update(0,player);
+        var ghost=assertInstanceOf(SozHyudoroBodyObjectInstance.class,children.getFirst());
+        for(int tick=0;tick<500&&value(ghost,"routine")!=12;tick++)ghost.update(tick,player);
+        assertEquals(12,value(ghost,"routine"));assertTrue((Boolean)get(ghost,"challengeCharge"));
+        dark(5);ghost.update(501,player);
+        // The old low-light charge has ended in the native size-change path.
+        // Do not relabel an in-flight attack merely because ambient light changed.
+        assertFalse((Boolean)get(ghost,"challengeCharge"));
+        for(int tick=0;tick<500&&!(value(ghost,"routine")==12&&value(ghost,"darkness")==5);tick++)ghost.update(502+tick,player);
+        assertEquals(12,value(ghost,"routine"));assertEquals(5,value(ghost,"darkness"));
+        assertFalse((Boolean)get(ghost,"challengeCharge"),"actual stock-dark5 charge commitment owns this lifetime");
+        var ctx=context(c,ghost);var before=ghost.captureRewindState(ctx);
+        module=null;
+        // At most the native 256px screen band / 2px dark5 speed, then its
+        // 60-update attack wait. The old arbitrary100 stopped before commitment.
+        int steps=0,limit=(0x1A0-0xA0)/2+60+2;
+        while(value(ghost,"routine")!=16&&steps<limit){ghost.update(1100+steps++,player);assertFalse((Boolean)get(ghost,"fading"));}
+        assertEquals(16,value(ghost,"routine"),"native dark5 charge reaches the world after its actual cross/wait");
+        assertFalse((Boolean)get(ghost,"fading"));assertEquals(0xD7,ghost.getCollisionFlags());
+        int x=ghost.getX(),y=ghost.getY(),routine=value(ghost,"routine"),frame=value(ghost,"frame");
+        ghost.restoreRewindState(before,ctx);
+        for(int tick=0;tick<steps;tick++)ghost.update(1100+tick,player);
+        assertEquals(x,ghost.getX());assertEquals(y,ghost.getY());assertEquals(routine,value(ghost,"routine"));
+        assertEquals(frame,value(ghost,"frame"));assertFalse((Boolean)get(ghost,"challengeCharge"));
+        assertFalse((Boolean)get(ghost,"fading"));assertEquals(0xD7,ghost.getCollisionFlags());
+    }
+    @Test void withdrawalDuringNativeMorphDoesNotMistakeItForTheRetiredExtraCharge(){
+        tomb();when(checkpoint.getLastCheckpointIndex()).thenReturn(1);dark(4);var c=controller();c.update(0,player);
+        var ghost=assertInstanceOf(SozHyudoroBodyObjectInstance.class,children.getFirst());
+        for(int tick=0;tick<500&&value(ghost,"routine")!=12;tick++)ghost.update(tick,player);
+        assertEquals(12,value(ghost,"routine"));assertTrue((Boolean)get(ghost,"challengeCharge"));
+        state.lighting().resetLight();dark(2);ghost.update(501,player);
+        assertFalse((Boolean)get(ghost,"challengeCharge"));
+        module=null;
+        for(int tick=0;tick<300;tick++)ghost.update(502+tick,player);
+        assertFalse((Boolean)get(ghost,"fading"));assertEquals(4,value(ghost,"routine"));
+        assertEquals(0,ghost.getCollisionFlags());assertEquals(2,value(ghost,"darkness"));
+    }
     @Test void owningMappingAndDplcPointersMatchLockedOnRom() throws Exception {
         assertArrayEquals(new byte[]{0x21,0x7C,0,4,0x10,(byte)0x90},rom.readBytes(0x40E7A,6));
         assertEquals(0x1872B6,rom.read32BitAddr(0x8F624));assertEquals(0x16B4BC,rom.read32BitAddr(0x8F67A));assertEquals(0x8F6DC,rom.read32BitAddr(0x8F67E));

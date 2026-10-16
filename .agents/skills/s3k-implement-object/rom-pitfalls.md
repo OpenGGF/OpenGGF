@@ -5290,3 +5290,102 @@ with an owner-scoped private palette projection. Retained SAT records must keep
 native palette bits and semantic donor ownership, never a leased GPU row number;
 restore may allocate banks in a different order. Check actual ROM-backed pixels
 at native/wide viewports and unchanged ordinary actors, not only loaded art.
+
+## Historical spawn guards survive legitimate owner retirement
+
+A captured one-shot guard can mean that an event already happened, rather than
+that its actor must remain live forever. AIZ's `AIZMiniboss_SpawnEndSign` reuses
+its owner as `Obj_EndSignControl` (`sonic3k.asm:137395–137398`); after the native
+results/title handoff, `Obj_EndSignControlDoStart` calls `Change_Act2Sizes` and
+`Delete_Current_Sprite` (`:180420–180424`). Clearing `minibossSpawned` merely
+because that actor is absent corrupts valid completed history on rewind.
+
+Distinguish such history from an active sequence that still requires a live
+driver, such as a camera auto-scroll lock. Preserve the captured history; retain
+separate liveness recovery only for an invariant that actually requires it.
+Test completed/no-owner, uncommitted and active/recreated states independently,
+then compare the actual reached prefix and its ordinary forward replay. Compare
+all registered keys with the existing semantic diff, and name any normalization
+rather than advertising unrestricted byte equality. Origin: Second Strike
+continuation19119 and focused red86205/green42171, 2026-10-16.
+
+## Fixed teams can still register native ability objects
+
+Sonic's first ordinary status update can register its existing persistent
+InstaShieldObjectInstance. A solo roster therefore does not imply an unchanged
+ObjectManager population. The owner can legitimately have no ObjectSpawn:
+log class, slot and ObjectRefId before asking for spatial coordinates. Keep it
+in complete tuples, slot multisets and rewind comparisons. If a fixture admits
+this initialization, identify the exact pending handle and assert that it is the
+only population delta, rather than excluding a class from the comparison.
+Second Strike ICZ92726 exposed the bad gate;28579 measured the same registration
+in WARNED and STOCK (slot100/dynamicId8), 2026-10-16.
+
+Standing entry also needs both native feet, not just the centre column. In that
+ICZ lane, centreY1EF gives opposite-foot distances1/-1; centre1EE gives2/0 and
+remains still through ordinary updates. Count setup-only calls separately from
+Level/V-int advances. A correct floor query or an unlocked boot is not proof
+that the first ordinary object pass has completed.
+
+Rewinding the world does not rewind an external observer's previous population
+or phase memo. ICZ97772's first replay event line reported roster/phase changes
+from its future memo while complete tuples and every registered key matched.
+Restore the observer memo separately or label that restoration event; do not
+exclude real objects or snapshot entries to suppress it. The same fixed input
+policy can also emit different pads after native outcomes diverge: WARNED landed
+on call147 and selected braking on148, while STOCK remained airborne/neutral.
+Compare actual pad masks before claiming identical-input control coverage.
+
+## Historical interaction pointers do not prove current support
+
+Native terrain attachment uses two current, rotated foot results. An arbitrary
+future point queried world-DOWN is not a prediction of the next native state on
+a curve (AIZ29024/81356). Native angle rounding is asymmetric and includes exact
+`$20/$E0` ground boundaries; a narrower author guard is not a ROM rule. Landing
+can also change groundMode after the current scans, so the last sensor direction
+can still describe the preceding mode. Preserve the observation phase instead of
+forcing a rescan or declaring native support invalid from a newer mode alone.
+
+Do not require both scan distances to satisfy the native selected-foot bound.
+Player_Angle chooses the nearer signed result. AIZ45291's RIGHTWALL pair15/1
+selects1 within its positive threshold5 (`abs(yVel>>8)+4`); the farther15 is not
+lost support. A stronger two-foot recovery-endpoint check can remain separate.
+Native slope slip may also rearm moveLock without settingAir; preserve that
+control state rather than changing physics or lengthening a failed witness.
+
+S3K can clear Status_OnObj while preserving the last interact address. An input
+author must use current OnObject and the manager's actual rider/standing relation
+before deciding that a platform supports the player; a non-null historical Java
+latch alone must not suppress terrain probes. Do not clear native history to
+repair the observer. Second Strike AIZ29449 retained a prior platform pointer
+while walking on terrain, 2026-10-16.
+
+When authoring a normal S3K roll, SonicKnux_Roll requires held Down, neither
+Left nor Right, and abs ground speed>=0x100. The generic Sonic threshold0x80 is
+not this rule. Crouch animation does not shrink the S3K touch box; Down+Right
+cannot initiate that roll, and Down+jump can jump first. Observe the actual
+rolling state and native radii7/14 before treating a response as acquired.
+Source availability and geometric clearance are not executed survival evidence.
+
+## A horizontal clearance guard is not a two-dimensional contact
+
+An author's body-X guard can reject two vertically separated bodies. AIZ49520 stopped
+at8722/1355 in RIGHTWALL mode because its rotated body startedX8703 while the
+log's draw extent ended8704. The radius envelope startedY1346 and the inferred
+engine container1345, below the original mapping's1344 bottom; native solid and
+hurt-touch X gates were separately clear. Preserve that failed author witness,
+but do not report its guard as a native hit. Rotated radii, engine width/height,
+ROM mapping-piece bounds and opaque rendered pixels are different measurements.
+Use current/prior native geometry and both axes for contact attribution, keep
+actual health/support observations, and qualify the recovery endpoint separately.
+
+## HCZ conveyor end markers do not each own a live actor
+
+HCZ1 originals99/116 are two loading markers for one subtype04 belt, and100/117
+likewise share subtype14. Obj_HCZConveyorBelt deduplicates by the full subtype;
+04 and14 remain distinct owners. Require the genuine initialized representative
+with canonical marker metadata, current bounds/Y and a managed slot, rather than
+one live actor per marker.31538 observed99/100 while116/117 were absent. Its
+shared load bytes were false, so those bytes alone are not an actor-identity
+proof. Native ID3E is non-rendered conveyor logic; ID68 spinning-column art or
+dimensions cannot establish its body, motion or clearance.

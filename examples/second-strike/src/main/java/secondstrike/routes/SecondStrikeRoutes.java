@@ -1,6 +1,7 @@
 package secondstrike.routes;
 
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.game.BonusStageType;
 import com.openggf.level.rings.RingSpawn;
 
 import java.util.ArrayList;
@@ -10,7 +11,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Authored AIZ opening and fire-continuation economy over native ROM placements.
+ * Authored AIZ encounters and both apparent acts over original ROM placements.
  *
  * <p>The host installs these lists before creating its native ring/object
  * managers. This class never wraps the native level: AIZ's fire handoff needs
@@ -58,6 +59,15 @@ public final class SecondStrikeRoutes {
                 group("fire-boss-approach", "One final native slope ring protects the miniboss approach", 68));
     }
 
+    private static List<RingGroup> actTwoGroups() {
+        return List.of(
+                group("burnt-fork", "One original upper-fork ring rewards the exposed crossing", 105),
+                group("orchard-catch", "One lower orchard ring protects the recoverable drop route", 126),
+                group("false-floor", "One ring rewards crossing the bridge rhythm without camping", 210),
+                group("ladder-upper", "One final upper-branch ring requires the committed climb", 250),
+                group("ladder-lower", "The lower crossing retains its own final protection choice", 253));
+    }
+
     private static Set<Integer> identities(List<RingGroup> groups) {
         return groups.stream().flatMap(group -> group.ringIds().stream()).collect(Collectors.toUnmodifiableSet());
     }
@@ -78,8 +88,8 @@ public final class SecondStrikeRoutes {
 
     /**
      * Keeps five original ring records across the advertised first act: three
-     * forest and two physical-fire records. Later physical Act 2 rings pass
-     * through unchanged. Extra opening identities cannot bypass this budget.
+     * forest and two physical-fire records. True Act 2 has a separate five
+     * original-record budget. Extra records cannot bypass either budget.
      * Applying the plan twice is harmless; native stage prizes are separate.
      */
     public static List<RingSpawn> rings(List<RingSpawn> source, List<ObjectSpawn> objects) {
@@ -88,8 +98,7 @@ public final class SecondStrikeRoutes {
         Set<Integer> keep = identities(groups(selected));
         return switch (selected) {
             case FOREST -> source.stream().filter(ring -> keep.contains(ring.placementId())).toList();
-            case FIRE_CONTINUATION -> source.stream().filter(ring -> ring.x() >= 0x1000
-                    || keep.contains(ring.placementId())).toList();
+            case FIRE_CONTINUATION -> source.stream().filter(ring -> keep.contains(ring.placementId())).toList();
             case UNCHANGED -> List.copyOf(source);
         };
     }
@@ -97,25 +106,100 @@ public final class SecondStrikeRoutes {
     public static List<RingGroup> groups(Bank bank) {
         return switch (Objects.requireNonNull(bank)) {
             case FOREST -> forestGroups();
-            case FIRE_CONTINUATION -> fireGroups();
+            case FIRE_CONTINUATION -> java.util.stream.Stream.concat(fireGroups().stream(), actTwoGroups().stream()).toList();
             case UNCHANGED -> List.of();
         };
     }
 
     public static boolean inOpening(Bank bank, ObjectSpawn spawn) {
-        return bank != Bank.UNCHANGED && spawn.ownerModId() == null
-                && (bank == Bank.FOREST || spawn.x() < 0x1000);
+        return bank != Bank.UNCHANGED && spawn.ownerModId() == null;
     }
+    private record Binding(int objectId, int x, int y, String factory) {
+        boolean matches(ObjectSpawn spawn) {
+            return spawn.objectId() == objectId && spawn.x() == x && spawn.y() == y;
+        }
+    }
+    private static Binding enemy(int id, int x, int y, String factory) {
+        return new Binding(id, x, y, factory);
+    }
+    // Original ROM record identity plus data prevents injected or moved records
+    // from accidentally joining an authored group. One ordinary Monkey Dude
+    // remains as the visual reference near the crown.
+    // Invocation-local recipes obey creator static-state admission and avoid a
+    // retained mutable graph. The literal record switches are the authored data.
+    private static Binding forestEnemy(int record) {
+        return switch (record) {
+            case 7 -> enemy(0x8E, 0x1838, 0x410, "spotter");
+            case 28 -> enemy(0x8D, 0x1C40, 0x3C0, "guard");
+            case 40 -> enemy(0x8C, 0x1DC0, 0x27C, "artillery");
+            case 44 -> enemy(0x8E, 0x1E58, 0x490, "spotter");
+            case 54 -> enemy(0x8D, 0x1FC8, 0x240, "guard");
+            case 60 -> enemy(0x8E, 0x2058, 0x204, "spotter");
+            case 82 -> enemy(0x8C, 0x2370, 0x37C, "artillery");
+            case 98 -> enemy(0x8E, 0x26D8, 0x308, "spotter");
+            case 107 -> enemy(0x8D, 0x2820, 0x320, "guard");
+            default -> null;
+        };
+    }
+    private static Binding fireEnemy(int record) {
+        return switch (record) {
+            case 78 -> enemy(0x8D, 0x0810, 0x4A0, "guard");
+            case 82 -> enemy(0x8F, 0x0850, 0x328, "caterkiller");
+            case 95 -> enemy(0x8C, 0x09F0, 0x3FC, "artillery");
+            case 100 -> enemy(0x8F, 0x0AE0, 0x560, "caterkiller");
+            case 119 -> enemy(0x8F, 0x0C90, 0x620, "caterkiller");
+            case 138 -> enemy(0x8C, 0x0E10, 0x33C, "artillery");
+            case 238 -> enemy(0x8D, 0x1AAC, 0x760, "guard");
+            case 244 -> enemy(0x8F, 0x1B00, 0x580, "caterkiller");
+            case 247 -> enemy(0x8C, 0x1B40, 0x1FB, "artillery");
+            case 296 -> enemy(0x8C, 0x1E58, 0x6D8, "artillery");
+            case 518 -> enemy(0x8C, 0x2D88, 0x31B, "artillery");
+            case 625 -> enemy(0x8F, 0x33B0, 0x5A0, "caterkiller");
+            case 631 -> enemy(0x8D, 0x3440, 0x1FF, "guard");
+            case 634 -> enemy(0x8D, 0x3480, 0x5C0, "guard");
+            case 704 -> enemy(0x8C, 0x3890, 0x6BC, "artillery");
+            case 716 -> enemy(0x8D, 0x3B30, 0x65F, "guard");
+            default -> null;
+        };
+    }
+
     /** One selector owns the actual registered decoded enemy bindings. */
     public static String enemyFactory(Bank bank, ObjectSpawn spawn) {
         if (!inOpening(bank, spawn)) return null;
-        return switch (spawn.objectId()) {
-            case 0x8C -> "artillery";
-            case 0x8D -> "guard";
-            case 0x8E -> "spotter";
-            case 0x8F -> "caterkiller";
-            default -> null;
+        Binding binding = switch (bank) {
+            case FOREST -> forestEnemy(spawn.layoutIndex());
+            case FIRE_CONTINUATION -> fireEnemy(spawn.layoutIndex());
+            case UNCHANGED -> null;
         };
+        return binding != null && binding.matches(spawn) ? binding.factory() : null;
+    }
+
+    /** Reaching these marked posts earns an opportunity, not an all-enemies-killed claim. */
+    public static BonusStageType invitation(Bank bank, ObjectSpawn spawn) {
+        if (spawn.ownerModId() != null || spawn.objectId() != 0x34) return BonusStageType.NONE;
+        if (bank == Bank.FOREST && spawn.layoutIndex() == 102 && spawn.x() == 0x2778 && spawn.y() == 0x25C)
+            return BonusStageType.GUMBALL;
+        if (bank == Bank.FIRE_CONTINUATION && spawn.layoutIndex() == 476 && spawn.x() == 0x2A80 && spawn.y() == 0x57A)
+            return BonusStageType.GLOWING_SPHERE;
+        return BonusStageType.NONE;
+    }
+
+    /** Keep the upper ladder and final crown log stable; only the lower crossing commits. */
+    public static boolean brittleLog(Bank bank, ObjectSpawn spawn) {
+        if (bank != Bank.FIRE_CONTINUATION || spawn.ownerModId() != null || spawn.objectId() != 0x2C) return false;
+        return switch (spawn.layoutIndex()) {
+            case 66 -> spawn.x() == 0x06E6 && spawn.y() == 0x4F8;
+            case 243 -> spawn.x() == 0x1AE5 && spawn.y() == 0x4F8;
+            case 608 -> spawn.x() == 0x32E6 && spawn.y() == 0x758;
+            default -> false;
+        };
+    }
+
+    /** Authored gap fan locations; the remaining plants teach the wide fan. */
+    public static boolean splitFan(Bank bank, ObjectSpawn spawn) {
+        return "artillery".equals(enemyFactory(bank, spawn))
+                && (bank == Bank.FOREST && spawn.layoutIndex() == 40
+                    || bank == Bank.FIRE_CONTINUATION && java.util.Set.of(95, 247, 296, 518, 704).contains(spawn.layoutIndex()));
     }
 
     /** These are native capability opportunities, not assertions of certified route coverage. */
@@ -126,6 +210,6 @@ public final class SecondStrikeRoutes {
                 new Opportunity("tails", "Native upper ledges and crown at $2754–$279C",
                         "One crown protection ring", "Flight avoids lower hazards but exposes the landing to upper defenders and native Robotnik boxes"),
                 new Opportunity("knuckles", "Native rock interactions and lower fire-continuation route",
-                        "Existing breakable passages and giant rings remain", "Lower detours preserve Knuckles' separate native boss arena; only two placed rings remain in the fire continuation"));
+                        "Existing breakable passages and giant rings remain", "Lower detours preserve Knuckles' separate native boss arena and lower final-ring decision"));
     }
 }

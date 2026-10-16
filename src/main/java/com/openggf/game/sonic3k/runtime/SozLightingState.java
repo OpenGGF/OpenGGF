@@ -27,8 +27,14 @@ public final class SozLightingState {
 
     /** Obj_SOZLightSwitch: reverse the fade from its current step, including mid-fade. */
     public void resetLight() {
+        resetLight(900);
+    }
+
+    /** Native interval length, including the signed-expiry update. */
+    public void resetLight(int intervalTicks) {
+        validateInterval(intervalTicks);
         darknessLevel = 0;
-        masterTimer = 899;
+        masterTimer = intervalTicks - 1;
         fadeRemaining = (byte) -fadeStep;
         fadeTimer = 0;
     }
@@ -49,10 +55,16 @@ public final class SozLightingState {
     public record PaletteUpdate(int lightOffset, int sandOffset) { }
 
     public PaletteUpdate tickPalette() {
+        return tickPalette(900);
+    }
+
+    /** TOMB changes the interval, never fade steps, palette endpoints or torch art. */
+    public PaletteUpdate tickPalette(int intervalTicks) {
+        validateInterval(intervalTicks);
         // AnPal_SOZ2 ($2598): all word decrements and the fade byte use signed expiry.
         masterTimer = (short) (masterTimer - 1);
         if (masterTimer < 0) {
-            masterTimer = 899;
+            masterTimer = intervalTicks - 1;
             if (darknessLevel < 5 && (++darknessLevel & 1) == 0) {
                 fadeRemaining = 2;
                 fadeTimer = 0;
@@ -80,6 +92,12 @@ public final class SozLightingState {
         }
         // loc_261A forces this write on a fade step even before the sand timer expires.
         return new PaletteUpdate(lightWrite, (fadeStep << 5) + sandWrite);
+    }
+
+    private static void validateInterval(int intervalTicks) {
+        if (intervalTicks != 600 && intervalTicks != 900) {
+            throw new IllegalArgumentException("SOZ light interval must be the stock 900 or TOMB 600 updates");
+        }
     }
 
     /** AnimateTiles_SOZ2: return the six-tile source frame, or -1 between uploads. */

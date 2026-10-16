@@ -147,15 +147,15 @@ class TestS3kSlotBonusPlayer {
 
     @Test
     void startPositionMatchesCageCapture() {
-        assertEquals((short) 0x0460, S3kSlotRomData.SLOT_BONUS_PLAYER_START_X);
-        assertEquals((short) 0x0360, S3kSlotRomData.SLOT_BONUS_PLAYER_START_Y);
+        assertEquals((short) 0x0460, S3kSlotLayoutFixture.START_X);
+        assertEquals((short) 0x0360, S3kSlotLayoutFixture.START_Y);
         assertEquals((short) 0x0460, S3kSlotRomData.SLOT_BONUS_CAGE_CENTER_X);
         assertEquals((short) 0x0430, S3kSlotRomData.SLOT_BONUS_CAGE_CENTER_Y);
     }
 
     private static S3kSlotPlayerRuntime newEmptyRuntime() {
         S3kSlotStageState state = S3kSlotStageState.bootstrap();
-        S3kSlotRenderBuffers buffers = S3kSlotRenderBuffers.fromRomData();
+        S3kSlotRenderBuffers buffers = S3kSlotLayoutFixture.buffers();
         java.util.Arrays.fill(buffers.layout(), (byte) 0);
         java.util.Arrays.fill(buffers.expandedLayout(), (byte) 0);
         return new S3kSlotPlayerRuntime(state, new S3kSlotCollisionSystem(buffers, state));

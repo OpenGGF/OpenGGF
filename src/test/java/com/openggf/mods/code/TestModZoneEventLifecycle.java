@@ -24,6 +24,8 @@ class TestModZoneEventLifecycle {
         void check(String name) { if (name.equals(fail)) throw new IllegalStateException(name); }
         public void initLevel(int zone, int act) { value = act + 1; }
         public void update() { value++; }
+        public void onTitleCardOwnerRetired() { check("title-retirement"); value += 10; }
+        public void applyZonePlayerStateAfterTitleCard() { check("title-release"); value += 100; }
         public Integer capture() { check("capture"); return value; }
         public void restore(Integer snapshot) { check("restore"); value = snapshot; }
         public void resetForMissingSnapshot() { check("reset"); value = 0; }
@@ -70,6 +72,34 @@ class TestModZoneEventLifecycle {
         f.registry.restore(new CompositeSnapshot(Map.of()));
         assertEquals(0, events.value);
         assertEquals(2, events.reconciles);
+    }
+
+    @Test void titleCallbacksReachOnlyTheEffectiveProviderAndKeepItsFaultOwner() {
+        for (String callback : List.of("title-retirement", "title-release")) {
+            var stock = new Events();
+            var contributed = new Events();
+            var boundary = new ModFaultBoundary(Map.of("dependent", Set.of("owner")),
+                    new ModRuntimeFindingStore(), ignored -> new ModStateSaveResult.Saved(), ignored -> { });
+            var zone = new PreparedModZone("owner", "zone", null, null, () -> contributed,
+                    "ZONE", 0x400, 0x40, 0, 0);
+            var provider = new ModZoneEventProvider(stock, 3, List.of(zone), boundary);
+            provider.initLevel(0, 0);
+            provider.onTitleCardOwnerRetired();
+            provider.applyZonePlayerStateAfterTitleCard();
+            assertEquals(111, stock.value);
+
+            provider.initLevel(3, 0);
+            Runnable publish = callback.equals("title-retirement")
+                    ? provider::onTitleCardOwnerRetired : provider::applyZonePlayerStateAfterTitleCard;
+            publish.run();
+            assertEquals(callback.equals("title-retirement") ? 11 : 101, contributed.value);
+            assertEquals(111, stock.value, "a contributed zone must not publish to the inherited provider");
+            contributed.fail = callback;
+
+            var failure = assertThrows(ModFaultBoundary.CallbackAborted.class, publish::run);
+            assertEquals("owner", failure.owner());
+            assertEquals(Set.of("owner", "dependent"), failure.disabledOwners());
+        }
     }
     @Test void loadAndRespawnRecreateHandlersButKeepTheEngineOwnedAdapter() {
         Fixture f = fixture();

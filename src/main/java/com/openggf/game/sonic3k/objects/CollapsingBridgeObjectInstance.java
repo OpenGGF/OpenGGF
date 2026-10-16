@@ -18,6 +18,7 @@ import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.objects.RewindRecreateContext;
@@ -295,7 +296,7 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
             {MGZ_FBZ_DELAYS, MGZ_FBZ_DELAYS_FLIP}  // Same as type 0
     };
 
-    // ===== Instance configuration (set once during construction via init methods) =====
+    // ===== Instance configuration (set once on managed service injection) =====
 
     private String artKey;
     private int halfWidth;
@@ -347,12 +348,33 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
 
     // ===== Constructor =====
 
+    private boolean brittleSupport;
+
     public CollapsingBridgeObjectInstance(ObjectSpawn spawn) {
+        this(spawn, false);
+    }
+
+    /** Internal preset: only ordinary standing supports change; trigger/stomp owners stay native. */
+    public CollapsingBridgeObjectInstance(ObjectSpawn spawn, boolean brittleSupport) {
         super(spawn, "CollapsingBridge");
         this.x = spawn.x();
         this.y = spawn.y();
         this.hFlip = (spawn.renderFlags() & 0x01) != 0;
-        resolveZoneConfig(spawn.subtype() & 0xFF);
+        this.brittleSupport = brittleSupport;
+    }
+
+    @Override
+    public void setServices(ObjectServices services) {
+        super.setServices(services);
+        // Every zone initializer sets mode. Resolve only at the first real
+        // injection, before ObjectManager can query geometry or dispatch this
+        // object. Rewind restores captured mode/timer/recipe fields after this
+        // boundary; reinjecting a live/restored instance must not restart them.
+        if (services != null && mode == null) {
+            resolveZoneConfig(spawn.subtype() & 0xFF);
+            brittleSupport = brittleSupport && mode == CollapseMode.STANDARD;
+            if (brittleSupport) collapseTimer = Math.min(collapseTimer, 16);
+        }
     }
 
     /**
@@ -1139,7 +1161,10 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
             renderer.drawFramePieceByIndex(fragmentFrameIndex, 0, x, y, hFlip, false);
         } else {
             // Intact bridge
-            renderer.drawFrameIndex(initialMappingFrame, x, y, hFlip, false);
+            // A visible tremor warns during the committed countdown. Collision stays
+            // at the native center; only the intact art moves by one pixel.
+            int warningX = brittleSupport && state == 1 ? ((collapseTimer & 2) == 0 ? -1 : 1) : 0;
+            renderer.drawFrameIndex(initialMappingFrame, x + warningX, y, hFlip, false);
         }
     }
 

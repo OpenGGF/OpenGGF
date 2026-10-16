@@ -4,9 +4,21 @@ import com.openggf.camera.Camera;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.rewind.identity.ObjectRefId;
+import com.openggf.game.rewind.identity.PlayerRefId;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.game.solid.ContactKind;
+import com.openggf.game.solid.PlayerSolidContactResult;
+import com.openggf.level.objects.ObjectPlayerQuery;
+import com.openggf.game.PlayableEntity;
+import com.openggf.tests.TestablePlayableSprite;
+import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.rules.SonicGame;
+import com.openggf.game.session.EngineServices;
+import com.openggf.game.session.GameplaySessionFactory;
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
@@ -20,6 +32,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
@@ -36,6 +49,8 @@ class TestAizCollapsingLogBridgeGraphRewind {
 
     @BeforeEach
     void initHeadless() {
+        TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_3K);
+        GameplaySessionFactory.attachManagers(TestEnvironment.activeGameplayMode(), EngineServices.current(), mockCamera());
         GraphicsManager.getInstance().initHeadless();
         AbstractObjectInstance.updateCameraBounds(0, 0, 0x800, 0x500, 0);
     }
@@ -45,6 +60,7 @@ class TestAizCollapsingLogBridgeGraphRewind {
         AizCollapsingLogBridgeObjectInstance.setDrawBridgeBurnActive(false);
         AbstractObjectInstance.resetCameraBoundsForTests();
         GraphicsManager.getInstance().resetState();
+        SessionManager.clear();
     }
 
     @Test
@@ -119,6 +135,88 @@ class TestAizCollapsingLogBridgeGraphRewind {
     }
 
     @Test
+    void brittleSupportAndWarningRestoreFreshAndReplayToTheSameBreakup() throws Exception {
+        var sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        var tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        ObjectManager manager = Harness.create(sonic, tails).objectManager();
+        manager.setRewindInPlaceRestoreEnabledForTest(false);
+        var parent = manager.createDynamicObject(() -> new AizCollapsingLogBridgeObjectInstance(
+                new ObjectSpawn(0x180, 0x200, 0x2C, 8, 0, true, 19), 10));
+        setIntField(parent, "brittleWarningTick", 9);
+        var start = AizCollapsingLogBridgeObjectInstance.class.getDeclaredMethod("startCollapse");
+        start.setAccessible(true);
+        start.invoke(parent);
+        var standing = new PlayerSolidContactResult(ContactKind.TOP, true, false, false, false, null, null, 0);
+        for (var player : List.of(sonic, tails)) {
+            player.setCentreX((short) (0x180 + (player == sonic ? -48 : 48)));
+            player.setCentreY((short) 0x1E0);
+            player.setAir(false);
+            player.setOnObject(true);
+            parent.recordStandingPlayer(player, standing);
+        }
+        for (int tick = 1; tick <= 5; tick++) manager.update(0, sonic, List.of(tails), tick, false);
+        var sourceSegments = liveObjects(manager, AizCollapsingLogBridgeObjectInstance.CollapsingLogSegment.class);
+        assertEquals(6, sourceSegments.size());
+        for (var segment : sourceSegments) assertEquals(5, readIntField(segment, "delayTimer"));
+        assertTrue(sonic.isOnObject()); assertTrue(tails.isOnObject());
+        RewindRegistry registry = registryFor(manager);
+        CompositeSnapshot snapshot = registry.capture();
+        var sonicState = sonic.captureRewindState();
+        var tailsState = tails.captureRewindState();
+        assertEquals(PlayerRefId.mainPlayer(), manager.captureIdentityContext().requireIdentityTable().encodePlayer(sonic));
+        assertEquals(PlayerRefId.sidekick(0), manager.captureIdentityContext().requireIdentityTable().encodePlayer(tails));
+        ObjectRefId id = objectId(manager, parent);
+        var segmentIds = sourceSegments.stream().map(segment -> objectId(manager, segment)).toList();
+        var expected = new ArrayList<BrittleFrame>();
+        for (int tick = 6; tick <= 140; tick++) {
+            manager.update(0, sonic, List.of(tails), tick, false);
+            expected.add(brittleFrame(manager, sonic, tails));
+            if (tick == 9) { assertTrue(sonic.isOnObject()); assertTrue(tails.isOnObject()); }
+            if (tick == 10) { assertTrue(sonic.getAir()); assertTrue(tails.getAir()); }
+        }
+        assertTrue(liveObjects(manager, AizCollapsingLogBridgeObjectInstance.class).isEmpty());
+        assertTrue(liveObjects(manager, AizCollapsingLogBridgeObjectInstance.CollapsingLogSegment.class).isEmpty());
+        List.copyOf(manager.getActiveObjects()).forEach(manager::removeDynamicObject);
+        sonic.restoreRewindState(sonicState);
+        tails.restoreRewindState(tailsState);
+        registry.restore(snapshot);
+        assertEquals(PlayerRefId.mainPlayer(), manager.captureIdentityContext().requireIdentityTable().encodePlayer(sonic));
+        assertEquals(PlayerRefId.sidekick(0), manager.captureIdentityContext().requireIdentityTable().encodePlayer(tails));
+        var restored = objectById(manager, AizCollapsingLogBridgeObjectInstance.class, id);
+        assertNotSame(parent, restored);
+        assertEquals(10, readIntField(restored, "brittleSupportTicks"));
+        assertEquals(9, readIntField(restored, "brittleWarningTick"));
+        var restoredSegments = liveObjects(manager, AizCollapsingLogBridgeObjectInstance.CollapsingLogSegment.class);
+        assertEquals(segmentIds, restoredSegments.stream().map(segment -> objectId(manager, segment)).toList());
+        for (int i = 0; i < restoredSegments.size(); i++) {
+            assertNotSame(sourceSegments.get(i), restoredSegments.get(i));
+            assertTrue(readBooleanField(restoredSegments.get(i), "brittleWarning"));
+            assertEquals(5, readIntField(restoredSegments.get(i), "delayTimer"));
+        }
+        for (int tick = 6; tick <= 140; tick++) {
+            manager.update(0, sonic, List.of(tails), tick, false);
+            assertEquals(expected.get(tick - 6), brittleFrame(manager, sonic, tails), "complete graph replay update " + tick);
+        }
+    }
+
+    private record BrittleFrame(List<DynamicObjectEntry> graph, List<List<Integer>> positions,
+                                List<Integer> sonic, List<Integer> tails) { }
+
+    private static BrittleFrame brittleFrame(ObjectManager manager, TestablePlayableSprite sonic,
+                                            TestablePlayableSprite tails) {
+        return new BrittleFrame(manager.rewindSnapshottable().capture().dynamicObjects(),
+                manager.getActiveObjects().stream().filter(object -> !object.isDestroyed())
+                        .map(object -> List.of(((AbstractObjectInstance) object).getSlotIndex(), object.getX(), object.getY())).toList(),
+                riderState(sonic), riderState(tails));
+    }
+
+    private static List<Integer> riderState(TestablePlayableSprite player) {
+        return List.of(player.getAir() ? 1 : 0, player.isOnObject() ? 1 : 0, player.getPushing() ? 1 : 0,
+                (int) player.getCentreX(), (int) player.getCentreY(),
+                player.getAnimationManager().captureRewindState().lastAnimationId());
+    }
+
+    @Test
     void collapsingLogBridgeFamilyUsesRewindRecreatableWithoutExplicitCodec() {
         assertTrue(RewindRecreatable.class.isAssignableFrom(AizCollapsingLogBridgeObjectInstance.class),
                 "AizCollapsingLogBridgeObjectInstance must restore through generic recreate");
@@ -129,12 +227,28 @@ class TestAizCollapsingLogBridgeGraphRewind {
 
     private record Harness(ObjectManager objectManager) {
         static Harness create() {
+            return create(null, null);
+        }
+        static Harness create(TestablePlayableSprite main, TestablePlayableSprite side) {
             ObjectManager[] holder = new ObjectManager[1];
-            Camera camera = mockCamera();
+            var gameplay = TestEnvironment.activeGameplayMode();
+            Camera camera = gameplay.getCamera();
+            if (main != null) {
+                gameplay.getSpriteManager().addSprite(main);
+                camera.setFocusedSprite(main);
+            }
+            if (side != null) {
+                side.setCpuControlled(true);
+                gameplay.getSpriteManager().addSprite(side, "tails");
+            }
             ObjectServices services = new StubObjectServices() {
                 @Override public ObjectManager objectManager() { return holder[0]; }
                 @Override public Camera camera() { return camera; }
                 @Override public GraphicsManager graphicsManager() { return GraphicsManager.getInstance(); }
+                @Override public List<PlayableEntity> sidekicks() { return side == null ? List.of() : List.of(side); }
+                @Override public ObjectPlayerQuery playerQuery() {
+                    return new ObjectPlayerQuery(() -> main, () -> side == null ? List.of() : List.of(side));
+                }
             };
             ObjectManager objectManager = new ObjectManager(
                     List.of(),

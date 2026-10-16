@@ -444,23 +444,6 @@ CF-ANNOTATION TYPE com.openggf.game.rewind.snapshot.GenericObjectSnapshot visibl
 CF-ANNOTATION TYPE com.openggf.game.rewind.snapshot.LevelSnapshot visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.rewind.snapshot.LevelTilemapSnapshot visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.rewind.snapshot.MutationPipelineSnapshot visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.game.rewind.snapshot.ObjectManagerSnapshot visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$ChildSpawnEntry visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PerSlotEntry visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherEntry visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherPlayerSideEntry visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherSnapshot visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SidekickOverlapEntry visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactHeadroomSnapshotEntry visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactLatchEntry visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactLatchKey visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactRidingEntry visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactStandingSnapshotEntry visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactState visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SpawnCounterEntry visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$TouchResponseOverlapState visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.rewind.snapshot.PaletteOwnershipSnapshot visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.rewind.snapshot.ParallaxSnapshot visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.rewind.snapshot.RingSnapshot visible @com.openggf.game.ModApi
@@ -514,13 +497,34 @@ CF-ANNOTATION TYPE com.openggf.game.solid.PostContactState visible @com.openggf.
 CF-ANNOTATION TYPE com.openggf.game.solid.PreContactState visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.solid.SolidCheckpointBatch visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.solid.SolidExecutionRegistry visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.AizBombingRunRecipe visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.AizEndBossRecipe visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.AizLogBridgeRecipe visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.AizMinibossAttackPolicy visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.AizMinibossAttackPolicy visible @java.lang.FunctionalInterface
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.AizTreeExitRecipe visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.BlueSphereLayoutPolicy visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.BlueSphereLayoutPolicy visible @java.lang.FunctionalInterface
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.ClamerRecipe visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.CollapsingBridgeRecipe visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.DeathEggGuardRecipe visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.DoomsdayMissileRecipe visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.FlyingBatteryBossRecipe visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.GumballSpringPolicy visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.GumballSpringPolicy visible @java.lang.FunctionalInterface
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.HiddenPalaceDuelRecipe visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.HydrocityBossRecipe visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.HydrocityEnemyRecipe visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.IczStalagtiteRecipe visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.LavaReefHazardRecipe visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.LbzAlarmRecipe visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.MarbleGardenBossRecipe visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.MarbleGardenEnemyRecipe visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.MushroomHillWindRecipe visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.SandopolisChallengeRecipe visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.SkySanctuaryMetropolisRecipe visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.sonic3k.objects.Sonic3kMonitorFactory visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.objects.Sonic3kStarPostFactory visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.sonic3k.objects.badniks.Sonic3kBadnikConfig visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.startup.DonatedDataSelectWarmupTask visible @com.openggf.game.ModApi
@@ -703,7 +707,6 @@ CF-ANNOTATION TYPE com.openggf.level.objects.PoweredAttackSurface visible @com.o
 CF-ANNOTATION TYPE com.openggf.level.objects.PoweredScreenAttackable visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.RewindClassResolver visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.RewindRecreatable visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.level.objects.RewindRecreateContext visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.RingObjectPlacementMapping visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.RomObjectSnapshot visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.ShieldObjectInstance visible @com.openggf.game.ModApi
@@ -873,7 +876,20 @@ CF-ANNOTATION TYPE com.openggf.mods.mutators.TemporaryMutators$ActiveActivation 
 CF-ANNOTATION TYPE com.openggf.mods.mutators.TemporaryMutators$Availability visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.TransportPolicy visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.TransportPolicy$Kind visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.objects.AizHollowTreeFactory visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.objects.AizLogBridgeFactory visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.objects.CarnivalNightFactory visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.objects.CaterkillerJrFactory visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.objects.CollapsingBridgeFactory visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.objects.DeathEggFactory visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.objects.DoomsdayFactory visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.objects.HiddenPalaceFactory visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.objects.HydrocityFactory visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.objects.IceCapFactory visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.objects.LaunchBaseFactory visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.objects.LavaReefFactory visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.objects.MarbleGardenFactory visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.objects.MushroomHillFactory visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.run.GhostPose visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.run.PlayerPose visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.run.RunEndReason visible @com.openggf.game.ModApi
@@ -1413,35 +1429,6 @@ CONSTRUCTOR com.openggf.game.rewind.snapshot.LevelSnapshot public  <init>(long,c
 CONSTRUCTOR com.openggf.game.rewind.snapshot.LevelSnapshot public  <init>(long,com.openggf.level.Block[],com.openggf.level.Chunk[],byte[],int,boolean,int,long,boolean,boolean,com.openggf.game.CheckpointState$RewindState)
 CONSTRUCTOR com.openggf.game.rewind.snapshot.LevelTilemapSnapshot public  <init>(byte[],int,int,int,int,boolean)
 CONSTRUCTOR com.openggf.game.rewind.snapshot.MutationPipelineSnapshot public  <init>(java.util.List<com.openggf.game.mutation.LayoutMutationIntent>)
-CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot public  <init>(long[],java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PerSlotEntry>,int,int,int,int,boolean,java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$ChildSpawnEntry>,java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry>,com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot)
-CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot public  <init>(long[],java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PerSlotEntry>,int,int,int,int,boolean,java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$ChildSpawnEntry>,java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry>,com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot,java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactRidingEntry>)
-CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot public  <init>(long[],java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PerSlotEntry>,int,int,int,int,boolean,java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$ChildSpawnEntry>,java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry>,com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot,java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactRidingEntry>,com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactState,com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherSnapshot,com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$TouchResponseOverlapState)
-CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot public  <init>(long[],java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PerSlotEntry>,int,int,int,int,boolean,java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$ChildSpawnEntry>,java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry>,com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot,java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactRidingEntry>,com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactState,com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherSnapshot,com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$TouchResponseOverlapState,int)
-CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot public  <init>(long[],java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PerSlotEntry>,int,int,int,int,boolean,java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$ChildSpawnEntry>,java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry>,com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot,java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactRidingEntry>,com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactState,com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherSnapshot,com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$TouchResponseOverlapState,int,com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$CollisionResponseState)
-CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$ChildSpawnEntry public  <init>(com.openggf.level.objects.ObjectSpawn,int[])
-CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry public  <init>(java.lang.String,com.openggf.level.objects.ObjectSpawn,int,com.openggf.level.objects.PerObjectRewindSnapshot)
-CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry public  <init>(java.lang.String,com.openggf.level.objects.ObjectSpawn,int,com.openggf.level.objects.PerObjectRewindSnapshot,com.openggf.game.PlayableEntity)
-CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry public  <init>(java.lang.String,com.openggf.level.objects.ObjectSpawn,int,com.openggf.level.objects.PerObjectRewindSnapshot,com.openggf.game.PlayableEntity,com.openggf.game.rewind.identity.ObjectRefId)
-CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry public  <init>(java.lang.String,com.openggf.level.objects.ObjectSpawn,int,com.openggf.level.objects.PerObjectRewindSnapshot,com.openggf.game.PlayableEntity,com.openggf.game.rewind.identity.ObjectRefId,boolean)
-CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry public  <init>(java.lang.String,com.openggf.level.objects.ObjectSpawn,int,com.openggf.level.objects.PerObjectRewindSnapshot,com.openggf.game.PlayableEntity,com.openggf.game.rewind.identity.ObjectRefId,java.lang.String)
-CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry public  <init>(java.lang.String,com.openggf.level.objects.ObjectSpawn,int,com.openggf.level.objects.PerObjectRewindSnapshot,com.openggf.game.PlayableEntity,com.openggf.game.rewind.identity.ObjectRefId,java.lang.String,boolean)
-CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PerSlotEntry public  <init>(int,com.openggf.level.objects.ObjectSpawn,com.openggf.level.objects.PerObjectRewindSnapshot)
-CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PerSlotEntry public  <init>(int,com.openggf.level.objects.ObjectSpawn,java.lang.String,com.openggf.level.objects.PerObjectRewindSnapshot)
-CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PerSlotEntry public  <init>(int,com.openggf.level.objects.ObjectSpawn,java.lang.String,com.openggf.level.objects.PerObjectRewindSnapshot,com.openggf.game.rewind.identity.ObjectRefId)
-CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot public  <init>(int[],long[],long[],long[],long[],int,int,int,boolean,boolean,boolean,int,boolean,int,int,int,byte[],java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SpawnCounterEntry>)
-CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot public  <init>(int[],long[],long[],long[],long[],int,int,int,boolean,boolean,boolean,int,boolean,int,int,int,byte[],java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SpawnCounterEntry>,long[],int[],long[],int,int)
-CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherEntry public  <init>(com.openggf.level.objects.ObjectSpawn,int,boolean,java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherPlayerSideEntry>)
-CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherPlayerSideEntry public  <init>(com.openggf.game.PlayableEntity,int)
-CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherSnapshot public  <init>(java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherEntry>)
-CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SidekickOverlapEntry public  <init>(java.lang.String,int[],int[],boolean)
-CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactHeadroomSnapshotEntry public  <init>(com.openggf.game.PlayableEntity,int,int)
-CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactLatchEntry public  <init>(com.openggf.game.PlayableEntity,java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactLatchKey>)
-CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactLatchKey public  <init>(com.openggf.level.objects.ObjectSpawn,int,boolean)
-CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactRidingEntry public  <init>(com.openggf.game.PlayableEntity,com.openggf.level.objects.ObjectSpawn,int,int,int,int)
-CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactStandingSnapshotEntry public  <init>(com.openggf.game.PlayableEntity,com.openggf.game.solid.ContactKind,boolean,boolean)
-CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactState public  <init>(int,java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactRidingEntry>,java.util.List<com.openggf.game.PlayableEntity>,java.util.List<com.openggf.game.PlayableEntity>,java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactStandingSnapshotEntry>,java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactHeadroomSnapshotEntry>,java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactLatchEntry>,java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactLatchEntry>,java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactLatchEntry>)
-CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SpawnCounterEntry public  <init>(int,int)
-CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$TouchResponseOverlapState public  <init>(int[],int[],boolean,java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SidekickOverlapEntry>)
 CONSTRUCTOR com.openggf.game.rewind.snapshot.PaletteOwnershipSnapshot public  <init>(byte[],java.lang.String[],boolean)
 CONSTRUCTOR com.openggf.game.rewind.snapshot.PaletteOwnershipSnapshot public  <init>(byte[],java.lang.String[],boolean,byte[],byte[],java.lang.String[])
 CONSTRUCTOR com.openggf.game.rewind.snapshot.PaletteOwnershipSnapshot public  <init>(java.lang.String[])
@@ -1511,6 +1498,7 @@ CONSTRUCTOR com.openggf.game.solid.PreContactState public  <init>(short,short,bo
 CONSTRUCTOR com.openggf.game.solid.PreContactState public  <init>(short,short,boolean,boolean,int,boolean)
 CONSTRUCTOR com.openggf.game.solid.PreContactState public  <init>(short,short,boolean,int)
 CONSTRUCTOR com.openggf.game.solid.SolidCheckpointBatch public  <init>(com.openggf.level.objects.ObjectInstance,java.util.Map<com.openggf.game.PlayableEntity,com.openggf.game.solid.PlayerSolidContactResult>)
+CONSTRUCTOR com.openggf.game.sonic3k.difficulty.AizLogBridgeRecipe public  <init>(int)
 CONSTRUCTOR com.openggf.game.zone.ZoneRuntimeRegistry public  <init>()
 CONSTRUCTOR com.openggf.graphics.FadeManager public  <init>()
 CONSTRUCTOR com.openggf.graphics.FadeManagerSnapshot public  <init>(com.openggf.graphics.FadeManager$FadeState,int,float,float,float,float,com.openggf.graphics.FadeManager$FadeType,int,int,int,float,int,boolean,boolean)
@@ -1637,9 +1625,6 @@ CONSTRUCTOR com.openggf.level.objects.PlayableSheetReader$DplcRun public  <init>
 CONSTRUCTOR com.openggf.level.objects.PlayableSheetReader$Frame public  <init>(int,int,int,int,java.util.List<com.openggf.level.objects.PlayableSheetReader$DplcRun>)
 CONSTRUCTOR com.openggf.level.objects.PlayableSheetReader$Meta public  <init>(int,int,int)
 CONSTRUCTOR com.openggf.level.objects.PlayableSheetReader$PlayableSheet public  <init>(byte[],com.openggf.level.objects.PlayableSheetReader$Meta,java.util.List<com.openggf.level.objects.PlayableSheetReader$Frame>,java.util.Map<java.lang.String,com.openggf.level.objects.PlayableSheetReader$Animation>,java.util.Map<java.lang.String,java.util.List<java.lang.Integer>>)
-CONSTRUCTOR com.openggf.level.objects.RewindRecreateContext public  <init>(com.openggf.level.objects.ObjectSpawn,com.openggf.level.objects.PerObjectRewindSnapshot,com.openggf.level.objects.ObjectServices)
-CONSTRUCTOR com.openggf.level.objects.RewindRecreateContext public  <init>(com.openggf.level.objects.ObjectSpawn,com.openggf.level.objects.PerObjectRewindSnapshot,com.openggf.level.objects.ObjectServices,com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry)
-CONSTRUCTOR com.openggf.level.objects.RewindRecreateContext public  <init>(com.openggf.level.objects.ObjectSpawn,com.openggf.level.objects.PerObjectRewindSnapshot,com.openggf.level.objects.ObjectServices,com.openggf.level.objects.ObjectManager,com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry)
 CONSTRUCTOR com.openggf.level.objects.RomObjectSnapshot public  <init>(java.util.Map<java.lang.Integer,java.lang.Integer>,java.util.Map<java.lang.Integer,java.lang.Integer>)
 CONSTRUCTOR com.openggf.level.objects.ShieldObjectInstance public  <init>(com.openggf.game.PlayableEntity)
 CONSTRUCTOR com.openggf.level.objects.ShieldProjectileMotion$Velocity public  <init>(int,int)
@@ -2740,6 +2725,45 @@ FIELD com.openggf.game.solid.ContactKind public,static,final com.openggf.game.so
 FIELD com.openggf.game.solid.PlayerStandingState public,static,final com.openggf.game.solid.PlayerStandingState NONE
 FIELD com.openggf.game.solid.PostContactState public,static,final com.openggf.game.solid.PostContactState ZERO
 FIELD com.openggf.game.solid.PreContactState public,static,final com.openggf.game.solid.PreContactState ZERO
+FIELD com.openggf.game.sonic3k.difficulty.AizBombingRunRecipe public,static,final com.openggf.game.sonic3k.difficulty.AizBombingRunRecipe STAGGERED_PORTS
+FIELD com.openggf.game.sonic3k.difficulty.AizBombingRunRecipe public,static,final com.openggf.game.sonic3k.difficulty.AizBombingRunRecipe STOCK
+FIELD com.openggf.game.sonic3k.difficulty.AizEndBossRecipe public,static,final com.openggf.game.sonic3k.difficulty.AizEndBossRecipe ALTERNATING_ARMS
+FIELD com.openggf.game.sonic3k.difficulty.AizEndBossRecipe public,static,final com.openggf.game.sonic3k.difficulty.AizEndBossRecipe STOCK
+FIELD com.openggf.game.sonic3k.difficulty.AizTreeExitRecipe public,static,final com.openggf.game.sonic3k.difficulty.AizTreeExitRecipe EXIT_LOOKOUT
+FIELD com.openggf.game.sonic3k.difficulty.AizTreeExitRecipe public,static,final com.openggf.game.sonic3k.difficulty.AizTreeExitRecipe STOCK
+FIELD com.openggf.game.sonic3k.difficulty.ClamerRecipe public,static,final com.openggf.game.sonic3k.difficulty.ClamerRecipe CADENCE
+FIELD com.openggf.game.sonic3k.difficulty.ClamerRecipe public,static,final com.openggf.game.sonic3k.difficulty.ClamerRecipe STAGGERED_CADENCE
+FIELD com.openggf.game.sonic3k.difficulty.ClamerRecipe public,static,final com.openggf.game.sonic3k.difficulty.ClamerRecipe STOCK
+FIELD com.openggf.game.sonic3k.difficulty.CollapsingBridgeRecipe public,static,final com.openggf.game.sonic3k.difficulty.CollapsingBridgeRecipe BRITTLE
+FIELD com.openggf.game.sonic3k.difficulty.CollapsingBridgeRecipe public,static,final com.openggf.game.sonic3k.difficulty.CollapsingBridgeRecipe STOCK
+FIELD com.openggf.game.sonic3k.difficulty.DeathEggGuardRecipe public,static,final com.openggf.game.sonic3k.difficulty.DeathEggGuardRecipe ALERT
+FIELD com.openggf.game.sonic3k.difficulty.DeathEggGuardRecipe public,static,final com.openggf.game.sonic3k.difficulty.DeathEggGuardRecipe STOCK
+FIELD com.openggf.game.sonic3k.difficulty.DoomsdayMissileRecipe public,static,final com.openggf.game.sonic3k.difficulty.DoomsdayMissileRecipe STOCK
+FIELD com.openggf.game.sonic3k.difficulty.DoomsdayMissileRecipe public,static,final com.openggf.game.sonic3k.difficulty.DoomsdayMissileRecipe TAIL_ECHO
+FIELD com.openggf.game.sonic3k.difficulty.FlyingBatteryBossRecipe public,static,final com.openggf.game.sonic3k.difficulty.FlyingBatteryBossRecipe EXTRA_BEAT
+FIELD com.openggf.game.sonic3k.difficulty.FlyingBatteryBossRecipe public,static,final com.openggf.game.sonic3k.difficulty.FlyingBatteryBossRecipe STOCK
+FIELD com.openggf.game.sonic3k.difficulty.HiddenPalaceDuelRecipe public,static,final com.openggf.game.sonic3k.difficulty.HiddenPalaceDuelRecipe FEINT
+FIELD com.openggf.game.sonic3k.difficulty.HiddenPalaceDuelRecipe public,static,final com.openggf.game.sonic3k.difficulty.HiddenPalaceDuelRecipe STOCK
+FIELD com.openggf.game.sonic3k.difficulty.HydrocityBossRecipe public,static,final com.openggf.game.sonic3k.difficulty.HydrocityBossRecipe COUNTER_CADENCE
+FIELD com.openggf.game.sonic3k.difficulty.HydrocityBossRecipe public,static,final com.openggf.game.sonic3k.difficulty.HydrocityBossRecipe STOCK
+FIELD com.openggf.game.sonic3k.difficulty.HydrocityEnemyRecipe public,static,final com.openggf.game.sonic3k.difficulty.HydrocityEnemyRecipe ALERT
+FIELD com.openggf.game.sonic3k.difficulty.HydrocityEnemyRecipe public,static,final com.openggf.game.sonic3k.difficulty.HydrocityEnemyRecipe STOCK
+FIELD com.openggf.game.sonic3k.difficulty.IczStalagtiteRecipe public,static,final com.openggf.game.sonic3k.difficulty.IczStalagtiteRecipe STOCK
+FIELD com.openggf.game.sonic3k.difficulty.IczStalagtiteRecipe public,static,final com.openggf.game.sonic3k.difficulty.IczStalagtiteRecipe WARNED
+FIELD com.openggf.game.sonic3k.difficulty.LavaReefHazardRecipe public,static,final com.openggf.game.sonic3k.difficulty.LavaReefHazardRecipe ECHO_JET
+FIELD com.openggf.game.sonic3k.difficulty.LavaReefHazardRecipe public,static,final com.openggf.game.sonic3k.difficulty.LavaReefHazardRecipe STOCK
+FIELD com.openggf.game.sonic3k.difficulty.LbzAlarmRecipe public,static,final com.openggf.game.sonic3k.difficulty.LbzAlarmRecipe BOUNDED
+FIELD com.openggf.game.sonic3k.difficulty.LbzAlarmRecipe public,static,final com.openggf.game.sonic3k.difficulty.LbzAlarmRecipe STOCK
+FIELD com.openggf.game.sonic3k.difficulty.MarbleGardenBossRecipe public,static,final com.openggf.game.sonic3k.difficulty.MarbleGardenBossRecipe COUNTER_CADENCE
+FIELD com.openggf.game.sonic3k.difficulty.MarbleGardenBossRecipe public,static,final com.openggf.game.sonic3k.difficulty.MarbleGardenBossRecipe STOCK
+FIELD com.openggf.game.sonic3k.difficulty.MarbleGardenEnemyRecipe public,static,final com.openggf.game.sonic3k.difficulty.MarbleGardenEnemyRecipe LANDING_GUARD
+FIELD com.openggf.game.sonic3k.difficulty.MarbleGardenEnemyRecipe public,static,final com.openggf.game.sonic3k.difficulty.MarbleGardenEnemyRecipe STOCK
+FIELD com.openggf.game.sonic3k.difficulty.MushroomHillWindRecipe public,static,final com.openggf.game.sonic3k.difficulty.MushroomHillWindRecipe PULSED
+FIELD com.openggf.game.sonic3k.difficulty.MushroomHillWindRecipe public,static,final com.openggf.game.sonic3k.difficulty.MushroomHillWindRecipe STOCK
+FIELD com.openggf.game.sonic3k.difficulty.SandopolisChallengeRecipe public,static,final com.openggf.game.sonic3k.difficulty.SandopolisChallengeRecipe STOCK
+FIELD com.openggf.game.sonic3k.difficulty.SandopolisChallengeRecipe public,static,final com.openggf.game.sonic3k.difficulty.SandopolisChallengeRecipe TOMB
+FIELD com.openggf.game.sonic3k.difficulty.SkySanctuaryMetropolisRecipe public,static,final com.openggf.game.sonic3k.difficulty.SkySanctuaryMetropolisRecipe FOURTH_PAIR
+FIELD com.openggf.game.sonic3k.difficulty.SkySanctuaryMetropolisRecipe public,static,final com.openggf.game.sonic3k.difficulty.SkySanctuaryMetropolisRecipe STOCK
 FIELD com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe public,static,final com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe DOUBLE_LENGTH
 FIELD com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe public,static,final com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe STOCK
 FIELD com.openggf.graphics.FadeManager$FadeState public,static,final com.openggf.graphics.FadeManager$FadeState FADING_FROM_BLACK
@@ -5788,7 +5812,9 @@ METHOD com.openggf.game.LevelEventProvider public  boolean ownsFixedDrowningBubb
 METHOD com.openggf.game.LevelEventProvider public  boolean shouldEnterSidekickDormantMarker(com.openggf.sprites.playable.AbstractPlayableSprite)
 METHOD com.openggf.game.LevelEventProvider public  boolean usesSidekickRomVisibleCatchUpMarkerFrameCounterBridge(com.openggf.sprites.playable.AbstractPlayableSprite)
 METHOD com.openggf.game.LevelEventProvider public  void advanceVblankOnlyState()
+METHOD com.openggf.game.LevelEventProvider public  void applyZonePlayerStateAfterTitleCard()
 METHOD com.openggf.game.LevelEventProvider public  void onPlayableLandingAnimationWrite(com.openggf.sprites.playable.AbstractPlayableSprite)
+METHOD com.openggf.game.LevelEventProvider public  void onTitleCardOwnerRetired()
 METHOD com.openggf.game.LevelEventProvider public  void restoreEventOwnedObjectsAfterPlacementReset()
 METHOD com.openggf.game.LevelEventProvider public  void updateAfterCameraBoundaryEasing()
 METHOD com.openggf.game.LevelEventProvider public  void updateAfterObjectsBeforeCamera()
@@ -7527,159 +7553,6 @@ METHOD com.openggf.game.rewind.snapshot.MutationPipelineSnapshot public  java.ut
 METHOD com.openggf.game.rewind.snapshot.MutationPipelineSnapshot public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.game.rewind.snapshot.MutationPipelineSnapshot public,final  int hashCode()
 METHOD com.openggf.game.rewind.snapshot.MutationPipelineSnapshot public,final  java.lang.String toString()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot public  boolean bucketsDirty()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot public  com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$CollisionResponseState collisionResponseState()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot public  com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot placement()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot public  com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherSnapshot planeSwitchers()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot public  com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactState solidContactState()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot public  com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$TouchResponseOverlapState touchResponseOverlap()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot public  int currentExecSlot()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot public  int dynamicObjectIdCounter()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot public  int frameCounter()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot public  int peakSlotCount()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot public  int vblaCounter()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot public  java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$ChildSpawnEntry> childSpawns()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot public  java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry> dynamicObjects()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot public  java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PerSlotEntry> slots()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot public  java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactRidingEntry> solidContactRiding()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot public  long[] usedSlotsBits()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot public,final  boolean equals(java.lang.Object)
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot public,final  int hashCode()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot public,final  java.lang.String toString()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$ChildSpawnEntry public  com.openggf.level.objects.ObjectSpawn parentSpawn()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$ChildSpawnEntry public  int[] reservedSlots()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$ChildSpawnEntry public,final  boolean equals(java.lang.Object)
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$ChildSpawnEntry public,final  int hashCode()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$ChildSpawnEntry public,final  java.lang.String toString()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry public  boolean rewindableAuxiliary()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry public  com.openggf.game.PlayableEntity playerOwner()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry public  com.openggf.game.rewind.identity.ObjectRefId objectId()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry public  com.openggf.level.objects.ObjectSpawn spawn()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry public  com.openggf.level.objects.PerObjectRewindSnapshot state()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry public  int slotIndex()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry public  java.lang.String className()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry public  java.lang.String ownerModId()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry public,final  boolean equals(java.lang.Object)
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry public,final  int hashCode()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry public,final  java.lang.String toString()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PerSlotEntry public  com.openggf.game.rewind.identity.ObjectRefId objectId()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PerSlotEntry public  com.openggf.level.objects.ObjectSpawn spawn()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PerSlotEntry public  com.openggf.level.objects.PerObjectRewindSnapshot state()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PerSlotEntry public  int slotIndex()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PerSlotEntry public  java.lang.String className()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PerSlotEntry public,final  boolean equals(java.lang.Object)
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PerSlotEntry public,final  int hashCode()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PerSlotEntry public,final  java.lang.String toString()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot public  boolean counterBasedRespawn()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot public  boolean execThenLoadPlacement()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot public  boolean lastScrollBackward()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot public  boolean permanentDestroyLatch()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot public  byte[] objState()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot public  int bwdCounter()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot public  int cursorIndex()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot public  int fwdCounter()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot public  int lastCameraChunk()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot public  int lastCameraX()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot public  int leftCursorIndex()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot public  int maxDynamicSlots()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot public  int s2LatchedCameraX()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot public  int twoAxisCameraYCoarse()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot public  int[] activeSpawnIndices()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot public  int[] pendingCursorLoadOrder()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot public  java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SpawnCounterEntry> spawnCounters()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot public  long[] deferredVerticalLoadBits()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot public  long[] destroyedInWindowBits()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot public  long[] dormantBits()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot public  long[] pendingCursorLoadBits()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot public  long[] rememberedBits()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot public  long[] stayActiveBits()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot public,final  boolean equals(java.lang.Object)
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot public,final  int hashCode()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot public,final  java.lang.String toString()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherEntry public  boolean hasLastSideState()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherEntry public  com.openggf.level.objects.ObjectSpawn spawn()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherEntry public  int lastSideState()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherEntry public  java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherPlayerSideEntry> playerSides()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherEntry public,final  boolean equals(java.lang.Object)
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherEntry public,final  int hashCode()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherEntry public,final  java.lang.String toString()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherPlayerSideEntry public  com.openggf.game.PlayableEntity player()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherPlayerSideEntry public  int sideState()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherPlayerSideEntry public,final  boolean equals(java.lang.Object)
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherPlayerSideEntry public,final  int hashCode()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherPlayerSideEntry public,final  java.lang.String toString()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherSnapshot public  java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherEntry> entries()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherSnapshot public,final  boolean equals(java.lang.Object)
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherSnapshot public,final  int hashCode()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherSnapshot public,final  java.lang.String toString()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherSnapshot public,static  com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherSnapshot empty()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SidekickOverlapEntry public  boolean paritySwapped()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SidekickOverlapEntry public  int[] buildingSlotIndices()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SidekickOverlapEntry public  int[] overlappingSlotIndices()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SidekickOverlapEntry public  java.lang.String sidekickCode()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SidekickOverlapEntry public,final  boolean equals(java.lang.Object)
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SidekickOverlapEntry public,final  int hashCode()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SidekickOverlapEntry public,final  java.lang.String toString()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactHeadroomSnapshotEntry public  com.openggf.game.PlayableEntity player()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactHeadroomSnapshotEntry public  int distance()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactHeadroomSnapshotEntry public  int hexAngle()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactHeadroomSnapshotEntry public,final  boolean equals(java.lang.Object)
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactHeadroomSnapshotEntry public,final  int hashCode()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactHeadroomSnapshotEntry public,final  java.lang.String toString()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactLatchEntry public  com.openggf.game.PlayableEntity player()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactLatchEntry public  java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactLatchKey> keys()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactLatchEntry public,final  boolean equals(java.lang.Object)
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactLatchEntry public,final  int hashCode()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactLatchEntry public,final  java.lang.String toString()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactLatchKey public  boolean instanceKey()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactLatchKey public  com.openggf.level.objects.ObjectSpawn spawn()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactLatchKey public  int slotIndex()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactLatchKey public,final  boolean equals(java.lang.Object)
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactLatchKey public,final  int hashCode()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactLatchKey public,final  java.lang.String toString()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactRidingEntry public  com.openggf.game.PlayableEntity player()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactRidingEntry public  com.openggf.level.objects.ObjectSpawn objectSpawn()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactRidingEntry public  int objectSlotIndex()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactRidingEntry public  int pieceIndex()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactRidingEntry public  int x()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactRidingEntry public  int y()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactRidingEntry public,final  boolean equals(java.lang.Object)
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactRidingEntry public,final  int hashCode()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactRidingEntry public,final  java.lang.String toString()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactStandingSnapshotEntry public  boolean pushing()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactStandingSnapshotEntry public  boolean standing()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactStandingSnapshotEntry public  com.openggf.game.PlayableEntity player()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactStandingSnapshotEntry public  com.openggf.game.solid.ContactKind kind()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactStandingSnapshotEntry public,final  boolean equals(java.lang.Object)
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactStandingSnapshotEntry public,final  int hashCode()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactStandingSnapshotEntry public,final  java.lang.String toString()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactState public  int frameCounter()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactState public  java.util.List<com.openggf.game.PlayableEntity> forceAirOnStaleSupportLoss()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactState public  java.util.List<com.openggf.game.PlayableEntity> inlineSupportedPlayers()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactState public  java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactHeadroomSnapshotEntry> headroomSnapshots()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactState public  java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactLatchEntry> pushingBits()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactState public  java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactLatchEntry> standingBitSnapshots()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactState public  java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactLatchEntry> standingBits()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactState public  java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactRidingEntry> riding()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactState public  java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactStandingSnapshotEntry> standingSnapshots()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactState public,final  boolean equals(java.lang.Object)
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactState public,final  int hashCode()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactState public,final  java.lang.String toString()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactState public,static  com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactState empty()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactState public,static  com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactState fromRiding(java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactRidingEntry>)
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SpawnCounterEntry public  int counter()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SpawnCounterEntry public  int spawnIndex()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SpawnCounterEntry public,final  boolean equals(java.lang.Object)
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SpawnCounterEntry public,final  int hashCode()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SpawnCounterEntry public,final  java.lang.String toString()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$TouchResponseOverlapState public  boolean mainParitySwapped()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$TouchResponseOverlapState public  int[] mainBuildingSlotIndices()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$TouchResponseOverlapState public  int[] mainOverlappingSlotIndices()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$TouchResponseOverlapState public  java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SidekickOverlapEntry> sidekickEntries()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$TouchResponseOverlapState public,final  boolean equals(java.lang.Object)
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$TouchResponseOverlapState public,final  int hashCode()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$TouchResponseOverlapState public,final  java.lang.String toString()
-METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$TouchResponseOverlapState public,static  com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$TouchResponseOverlapState empty()
 METHOD com.openggf.game.rewind.snapshot.PaletteOwnershipSnapshot public  boolean paletteRotationDisabled()
 METHOD com.openggf.game.rewind.snapshot.PaletteOwnershipSnapshot public  byte[] ownerIds()
 METHOD com.openggf.game.rewind.snapshot.PaletteOwnershipSnapshot public  byte[] targetOwnerIds()
@@ -8165,10 +8038,57 @@ METHOD com.openggf.game.solid.SolidExecutionRegistry public,abstract  void endOb
 METHOD com.openggf.game.solid.SolidExecutionRegistry public,abstract  void finishFrame()
 METHOD com.openggf.game.solid.SolidExecutionRegistry public,abstract  void publishCheckpoint(com.openggf.game.solid.SolidCheckpointBatch)
 METHOD com.openggf.game.solid.SolidExecutionRegistry public,static  com.openggf.game.solid.SolidExecutionRegistry inert()
+METHOD com.openggf.game.sonic3k.difficulty.AizBombingRunRecipe public,static  com.openggf.game.sonic3k.difficulty.AizBombingRunRecipe valueOf(java.lang.String)
+METHOD com.openggf.game.sonic3k.difficulty.AizBombingRunRecipe public,static  com.openggf.game.sonic3k.difficulty.AizBombingRunRecipe[] values()
+METHOD com.openggf.game.sonic3k.difficulty.AizEndBossRecipe public,static  com.openggf.game.sonic3k.difficulty.AizEndBossRecipe valueOf(java.lang.String)
+METHOD com.openggf.game.sonic3k.difficulty.AizEndBossRecipe public,static  com.openggf.game.sonic3k.difficulty.AizEndBossRecipe[] values()
+METHOD com.openggf.game.sonic3k.difficulty.AizLogBridgeRecipe public  int supportTicks()
+METHOD com.openggf.game.sonic3k.difficulty.AizLogBridgeRecipe public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.sonic3k.difficulty.AizLogBridgeRecipe public,final  int hashCode()
+METHOD com.openggf.game.sonic3k.difficulty.AizLogBridgeRecipe public,final  java.lang.String toString()
 METHOD com.openggf.game.sonic3k.difficulty.AizMinibossAttackPolicy public,abstract  int followupDelayTicks(int)
+METHOD com.openggf.game.sonic3k.difficulty.AizTreeExitRecipe public,static  com.openggf.game.sonic3k.difficulty.AizTreeExitRecipe valueOf(java.lang.String)
+METHOD com.openggf.game.sonic3k.difficulty.AizTreeExitRecipe public,static  com.openggf.game.sonic3k.difficulty.AizTreeExitRecipe[] values()
 METHOD com.openggf.game.sonic3k.difficulty.BlueSphereLayoutPolicy public,abstract  byte[] transformLayout(int,byte[])
+METHOD com.openggf.game.sonic3k.difficulty.ClamerRecipe public  int autoCloseRange()
+METHOD com.openggf.game.sonic3k.difficulty.ClamerRecipe public  int tellHold()
+METHOD com.openggf.game.sonic3k.difficulty.ClamerRecipe public,static  com.openggf.game.sonic3k.difficulty.ClamerRecipe valueOf(java.lang.String)
+METHOD com.openggf.game.sonic3k.difficulty.ClamerRecipe public,static  com.openggf.game.sonic3k.difficulty.ClamerRecipe[] values()
+METHOD com.openggf.game.sonic3k.difficulty.CollapsingBridgeRecipe public,static  com.openggf.game.sonic3k.difficulty.CollapsingBridgeRecipe valueOf(java.lang.String)
+METHOD com.openggf.game.sonic3k.difficulty.CollapsingBridgeRecipe public,static  com.openggf.game.sonic3k.difficulty.CollapsingBridgeRecipe[] values()
+METHOD com.openggf.game.sonic3k.difficulty.DeathEggGuardRecipe public,static  com.openggf.game.sonic3k.difficulty.DeathEggGuardRecipe valueOf(java.lang.String)
+METHOD com.openggf.game.sonic3k.difficulty.DeathEggGuardRecipe public,static  com.openggf.game.sonic3k.difficulty.DeathEggGuardRecipe[] values()
+METHOD com.openggf.game.sonic3k.difficulty.DoomsdayMissileRecipe public,static  com.openggf.game.sonic3k.difficulty.DoomsdayMissileRecipe valueOf(java.lang.String)
+METHOD com.openggf.game.sonic3k.difficulty.DoomsdayMissileRecipe public,static  com.openggf.game.sonic3k.difficulty.DoomsdayMissileRecipe[] values()
+METHOD com.openggf.game.sonic3k.difficulty.FlyingBatteryBossRecipe public,static  com.openggf.game.sonic3k.difficulty.FlyingBatteryBossRecipe valueOf(java.lang.String)
+METHOD com.openggf.game.sonic3k.difficulty.FlyingBatteryBossRecipe public,static  com.openggf.game.sonic3k.difficulty.FlyingBatteryBossRecipe[] values()
 METHOD com.openggf.game.sonic3k.difficulty.GumballSpringPolicy public,abstract  int[] springOffsets()
+METHOD com.openggf.game.sonic3k.difficulty.HiddenPalaceDuelRecipe public,static  com.openggf.game.sonic3k.difficulty.HiddenPalaceDuelRecipe valueOf(java.lang.String)
+METHOD com.openggf.game.sonic3k.difficulty.HiddenPalaceDuelRecipe public,static  com.openggf.game.sonic3k.difficulty.HiddenPalaceDuelRecipe[] values()
+METHOD com.openggf.game.sonic3k.difficulty.HydrocityBossRecipe public,static  com.openggf.game.sonic3k.difficulty.HydrocityBossRecipe valueOf(java.lang.String)
+METHOD com.openggf.game.sonic3k.difficulty.HydrocityBossRecipe public,static  com.openggf.game.sonic3k.difficulty.HydrocityBossRecipe[] values()
+METHOD com.openggf.game.sonic3k.difficulty.HydrocityEnemyRecipe public,static  com.openggf.game.sonic3k.difficulty.HydrocityEnemyRecipe valueOf(java.lang.String)
+METHOD com.openggf.game.sonic3k.difficulty.HydrocityEnemyRecipe public,static  com.openggf.game.sonic3k.difficulty.HydrocityEnemyRecipe[] values()
+METHOD com.openggf.game.sonic3k.difficulty.IczStalagtiteRecipe public  int shakeTimerStart()
+METHOD com.openggf.game.sonic3k.difficulty.IczStalagtiteRecipe public  int triggerRange()
+METHOD com.openggf.game.sonic3k.difficulty.IczStalagtiteRecipe public,static  com.openggf.game.sonic3k.difficulty.IczStalagtiteRecipe valueOf(java.lang.String)
+METHOD com.openggf.game.sonic3k.difficulty.IczStalagtiteRecipe public,static  com.openggf.game.sonic3k.difficulty.IczStalagtiteRecipe[] values()
+METHOD com.openggf.game.sonic3k.difficulty.LavaReefHazardRecipe public,static  com.openggf.game.sonic3k.difficulty.LavaReefHazardRecipe valueOf(java.lang.String)
+METHOD com.openggf.game.sonic3k.difficulty.LavaReefHazardRecipe public,static  com.openggf.game.sonic3k.difficulty.LavaReefHazardRecipe[] values()
+METHOD com.openggf.game.sonic3k.difficulty.LbzAlarmRecipe public,static  com.openggf.game.sonic3k.difficulty.LbzAlarmRecipe valueOf(java.lang.String)
+METHOD com.openggf.game.sonic3k.difficulty.LbzAlarmRecipe public,static  com.openggf.game.sonic3k.difficulty.LbzAlarmRecipe[] values()
+METHOD com.openggf.game.sonic3k.difficulty.MarbleGardenBossRecipe public,static  com.openggf.game.sonic3k.difficulty.MarbleGardenBossRecipe valueOf(java.lang.String)
+METHOD com.openggf.game.sonic3k.difficulty.MarbleGardenBossRecipe public,static  com.openggf.game.sonic3k.difficulty.MarbleGardenBossRecipe[] values()
+METHOD com.openggf.game.sonic3k.difficulty.MarbleGardenEnemyRecipe public,static  com.openggf.game.sonic3k.difficulty.MarbleGardenEnemyRecipe valueOf(java.lang.String)
+METHOD com.openggf.game.sonic3k.difficulty.MarbleGardenEnemyRecipe public,static  com.openggf.game.sonic3k.difficulty.MarbleGardenEnemyRecipe[] values()
+METHOD com.openggf.game.sonic3k.difficulty.MushroomHillWindRecipe public,static  com.openggf.game.sonic3k.difficulty.MushroomHillWindRecipe valueOf(java.lang.String)
+METHOD com.openggf.game.sonic3k.difficulty.MushroomHillWindRecipe public,static  com.openggf.game.sonic3k.difficulty.MushroomHillWindRecipe[] values()
+METHOD com.openggf.game.sonic3k.difficulty.SandopolisChallengeRecipe public,static  com.openggf.game.sonic3k.difficulty.SandopolisChallengeRecipe valueOf(java.lang.String)
+METHOD com.openggf.game.sonic3k.difficulty.SandopolisChallengeRecipe public,static  com.openggf.game.sonic3k.difficulty.SandopolisChallengeRecipe[] values()
+METHOD com.openggf.game.sonic3k.difficulty.SkySanctuaryMetropolisRecipe public,static  com.openggf.game.sonic3k.difficulty.SkySanctuaryMetropolisRecipe valueOf(java.lang.String)
+METHOD com.openggf.game.sonic3k.difficulty.SkySanctuaryMetropolisRecipe public,static  com.openggf.game.sonic3k.difficulty.SkySanctuaryMetropolisRecipe[] values()
 METHOD com.openggf.game.sonic3k.objects.Sonic3kMonitorFactory public,static  com.openggf.level.objects.AbstractObjectInstance eggman(com.openggf.level.objects.ObjectSpawn)
+METHOD com.openggf.game.sonic3k.objects.Sonic3kStarPostFactory public,static  com.openggf.level.objects.AbstractObjectInstance invitation(com.openggf.level.objects.ObjectSpawn,com.openggf.game.BonusStageType)
 METHOD com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe public,static  com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe valueOf(java.lang.String)
 METHOD com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe public,static  com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe[] values()
 METHOD com.openggf.game.sonic3k.objects.badniks.Sonic3kBadnikConfig public,static  com.openggf.level.objects.DestructionEffects$DestructionConfig destruction()
@@ -10101,8 +10021,6 @@ METHOD com.openggf.level.objects.ObjectManager public  boolean usesCounterBasedR
 METHOD com.openggf.level.objects.ObjectManager public  boolean usesTwoAxisCursorPlacement()
 METHOD com.openggf.level.objects.ObjectManager public  com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot> rewindSnapshottable()
 METHOD com.openggf.level.objects.ObjectManager public  com.openggf.game.rewind.schema.RewindCaptureContext captureIdentityContext()
-METHOD com.openggf.level.objects.ObjectManager public  com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry consumePendingPlayerBoundEntry(java.lang.Class<?>)
-METHOD com.openggf.level.objects.ObjectManager public  com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry consumePendingPlayerBoundEntry(java.lang.Class<?>,java.util.function.Predicate<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry>)
 METHOD com.openggf.level.objects.ObjectManager public  com.openggf.level.objects.InitialObjectDispatchScope beginInitialProcessSprites(int,com.openggf.game.PlayableEntity,java.util.List<? extends com.openggf.game.PlayableEntity>)
 METHOD com.openggf.level.objects.ObjectManager public  com.openggf.level.objects.ObjectInstance getActiveObjectForRewind(com.openggf.level.objects.ObjectSpawn)
 METHOD com.openggf.level.objects.ObjectManager public  com.openggf.level.objects.ObjectInstance getRidingObject(com.openggf.game.PlayableEntity)
@@ -10213,7 +10131,6 @@ METHOD com.openggf.level.objects.ObjectManager public  void refreshRenderBuckets
 METHOD com.openggf.level.objects.ObjectManager public  void refreshRidingTrackingPosition(com.openggf.level.objects.ObjectInstance)
 METHOD com.openggf.level.objects.ObjectManager public  void registerInitialFixedDispatchObject(com.openggf.level.objects.ObjectInstance)
 METHOD com.openggf.level.objects.ObjectManager public  void registerRewindReconstructionChild(com.openggf.level.objects.AbstractObjectInstance)
-METHOD com.openggf.level.objects.ObjectManager public  void registerRewindReconstructionObject(com.openggf.level.objects.AbstractObjectInstance)
 METHOD com.openggf.level.objects.ObjectManager public  void releaseDynamicSlot(int)
 METHOD com.openggf.level.objects.ObjectManager public  void releaseParentSlot(com.openggf.level.objects.AbstractObjectInstance)
 METHOD com.openggf.level.objects.ObjectManager public  void releaseRidingObject(com.openggf.game.PlayableEntity,com.openggf.level.objects.ObjectInstance)
@@ -10934,15 +10851,6 @@ METHOD com.openggf.level.objects.PoweredScreenAttackable public,abstract  void o
 METHOD com.openggf.level.objects.RewindClassResolver public,abstract  java.util.Optional<java.lang.Class<?>> resolve(java.lang.String,java.lang.String)
 METHOD com.openggf.level.objects.RewindClassResolver public,abstract  java.util.Optional<java.lang.String> ownerOf(java.lang.Class<?>)
 METHOD com.openggf.level.objects.RewindRecreatable public,abstract  com.openggf.level.objects.AbstractObjectInstance recreateForRewind(com.openggf.level.objects.RewindRecreateContext)
-METHOD com.openggf.level.objects.RewindRecreateContext public  com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry dynamicEntry()
-METHOD com.openggf.level.objects.RewindRecreateContext public  com.openggf.level.objects.ObjectManager objectManager()
-METHOD com.openggf.level.objects.RewindRecreateContext public  com.openggf.level.objects.ObjectServices objectServices()
-METHOD com.openggf.level.objects.RewindRecreateContext public  com.openggf.level.objects.ObjectSpawn spawn()
-METHOD com.openggf.level.objects.RewindRecreateContext public  com.openggf.level.objects.PerObjectRewindSnapshot state()
-METHOD com.openggf.level.objects.RewindRecreateContext public  void enqueuePendingPlayerBoundEntry(java.lang.Class<?>)
-METHOD com.openggf.level.objects.RewindRecreateContext public,final  boolean equals(java.lang.Object)
-METHOD com.openggf.level.objects.RewindRecreateContext public,final  int hashCode()
-METHOD com.openggf.level.objects.RewindRecreateContext public,final  java.lang.String toString()
 METHOD com.openggf.level.objects.RingObjectPlacementMapping public,abstract  java.util.Map<com.openggf.level.objects.ObjectSpawn,java.util.List<com.openggf.level.rings.RingSpawn>> ringObjectPlacementMapping()
 METHOD com.openggf.level.objects.RomObjectSnapshot public  boolean isEmpty()
 METHOD com.openggf.level.objects.RomObjectSnapshot public  int angle()
@@ -12191,7 +12099,24 @@ METHOD com.openggf.mods.mutators.TransportPolicy public,final  int hashCode()
 METHOD com.openggf.mods.mutators.TransportPolicy public,final  java.lang.String toString()
 METHOD com.openggf.mods.mutators.TransportPolicy$Kind public,static  com.openggf.mods.mutators.TransportPolicy$Kind valueOf(java.lang.String)
 METHOD com.openggf.mods.mutators.TransportPolicy$Kind public,static  com.openggf.mods.mutators.TransportPolicy$Kind[] values()
+METHOD com.openggf.mods.objects.AizHollowTreeFactory public,static  com.openggf.level.objects.AbstractObjectInstance create(com.openggf.level.objects.ObjectSpawn,com.openggf.game.sonic3k.difficulty.AizTreeExitRecipe)
+METHOD com.openggf.mods.objects.AizLogBridgeFactory public,static  com.openggf.level.objects.AbstractObjectInstance create(com.openggf.level.objects.ObjectSpawn,com.openggf.game.sonic3k.difficulty.AizLogBridgeRecipe)
+METHOD com.openggf.mods.objects.CarnivalNightFactory public,static  com.openggf.level.objects.AbstractObjectInstance clamer(com.openggf.level.objects.ObjectSpawn,com.openggf.game.sonic3k.difficulty.ClamerRecipe)
 METHOD com.openggf.mods.objects.CaterkillerJrFactory public,static  com.openggf.level.objects.AbstractBadnikInstance create(com.openggf.level.objects.ObjectSpawn,com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe)
+METHOD com.openggf.mods.objects.CollapsingBridgeFactory public,static  com.openggf.level.objects.AbstractObjectInstance create(com.openggf.level.objects.ObjectSpawn,com.openggf.game.sonic3k.difficulty.CollapsingBridgeRecipe)
+METHOD com.openggf.mods.objects.DeathEggFactory public,static  com.openggf.level.objects.AbstractBadnikInstance spikebonker(com.openggf.level.objects.ObjectSpawn,com.openggf.game.sonic3k.difficulty.DeathEggGuardRecipe)
+METHOD com.openggf.mods.objects.DoomsdayFactory public,static  com.openggf.level.objects.AbstractObjectInstance endBoss(com.openggf.level.objects.ObjectSpawn,com.openggf.game.sonic3k.difficulty.DoomsdayMissileRecipe)
+METHOD com.openggf.mods.objects.HiddenPalaceFactory public,static  com.openggf.level.objects.AbstractObjectInstance duel(com.openggf.level.objects.ObjectSpawn,com.openggf.game.sonic3k.difficulty.HiddenPalaceDuelRecipe)
+METHOD com.openggf.mods.objects.HydrocityFactory public,static  com.openggf.level.objects.AbstractBadnikInstance turboSpiker(com.openggf.level.objects.ObjectSpawn,com.openggf.game.sonic3k.difficulty.HydrocityEnemyRecipe)
+METHOD com.openggf.mods.objects.HydrocityFactory public,static  com.openggf.level.objects.AbstractObjectInstance endBoss(com.openggf.level.objects.ObjectSpawn,com.openggf.game.sonic3k.difficulty.HydrocityBossRecipe)
+METHOD com.openggf.mods.objects.HydrocityFactory public,static  com.openggf.level.objects.AbstractObjectInstance miniboss(com.openggf.level.objects.ObjectSpawn,com.openggf.game.sonic3k.difficulty.HydrocityBossRecipe)
+METHOD com.openggf.mods.objects.IceCapFactory public,static  com.openggf.level.objects.AbstractObjectInstance stalactite(com.openggf.level.objects.ObjectSpawn,com.openggf.game.sonic3k.difficulty.IczStalagtiteRecipe)
+METHOD com.openggf.mods.objects.LaunchBaseFactory public,static  com.openggf.level.objects.AbstractObjectInstance alarm(com.openggf.level.objects.ObjectSpawn,com.openggf.game.sonic3k.difficulty.LbzAlarmRecipe)
+METHOD com.openggf.mods.objects.LavaReefFactory public,static  com.openggf.level.objects.AbstractObjectInstance flameThrower(com.openggf.level.objects.ObjectSpawn,com.openggf.game.sonic3k.difficulty.LavaReefHazardRecipe)
+METHOD com.openggf.mods.objects.MarbleGardenFactory public,static  com.openggf.level.objects.AbstractBadnikInstance mantis(com.openggf.level.objects.ObjectSpawn,com.openggf.game.sonic3k.difficulty.MarbleGardenEnemyRecipe)
+METHOD com.openggf.mods.objects.MarbleGardenFactory public,static  com.openggf.level.objects.AbstractBadnikInstance spiker(com.openggf.level.objects.ObjectSpawn,com.openggf.game.sonic3k.difficulty.MarbleGardenEnemyRecipe)
+METHOD com.openggf.mods.objects.MarbleGardenFactory public,static  com.openggf.level.objects.AbstractObjectInstance miniboss(com.openggf.level.objects.ObjectSpawn,com.openggf.game.sonic3k.difficulty.MarbleGardenBossRecipe)
+METHOD com.openggf.mods.objects.MushroomHillFactory public,static  com.openggf.level.objects.AbstractBadnikInstance cluckoid(com.openggf.level.objects.ObjectSpawn,com.openggf.game.sonic3k.difficulty.MushroomHillWindRecipe)
 METHOD com.openggf.mods.run.GhostPose public  com.openggf.mods.run.PlayerPose pose()
 METHOD com.openggf.mods.run.GhostPose public  float opacity()
 METHOD com.openggf.mods.run.GhostPose public  java.lang.String characterCode()
@@ -15338,24 +15263,6 @@ NESTED com.openggf.game.presentation.SceneReplay com.openggf.game.presentation.S
 NESTED com.openggf.game.render.AdvancedRenderFrameState com.openggf.game.render.AdvancedRenderFrameState$Builder
 NESTED com.openggf.game.rewind.snapshot.AdvancedRenderModeSnapshot com.openggf.game.rewind.snapshot.AdvancedRenderModeSnapshot$ModeState
 NESTED com.openggf.game.rewind.snapshot.AnimatedTileChannelSnapshot com.openggf.game.rewind.snapshot.AnimatedTileChannelSnapshot$Layout
-NESTED com.openggf.game.rewind.snapshot.ObjectManagerSnapshot com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$ChildSpawnEntry
-NESTED com.openggf.game.rewind.snapshot.ObjectManagerSnapshot com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$CollisionBuildStage
-NESTED com.openggf.game.rewind.snapshot.ObjectManagerSnapshot com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$CollisionResponseState
-NESTED com.openggf.game.rewind.snapshot.ObjectManagerSnapshot com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry
-NESTED com.openggf.game.rewind.snapshot.ObjectManagerSnapshot com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PerSlotEntry
-NESTED com.openggf.game.rewind.snapshot.ObjectManagerSnapshot com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot
-NESTED com.openggf.game.rewind.snapshot.ObjectManagerSnapshot com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherEntry
-NESTED com.openggf.game.rewind.snapshot.ObjectManagerSnapshot com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherPlayerSideEntry
-NESTED com.openggf.game.rewind.snapshot.ObjectManagerSnapshot com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherSnapshot
-NESTED com.openggf.game.rewind.snapshot.ObjectManagerSnapshot com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SidekickOverlapEntry
-NESTED com.openggf.game.rewind.snapshot.ObjectManagerSnapshot com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactHeadroomSnapshotEntry
-NESTED com.openggf.game.rewind.snapshot.ObjectManagerSnapshot com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactLatchEntry
-NESTED com.openggf.game.rewind.snapshot.ObjectManagerSnapshot com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactLatchKey
-NESTED com.openggf.game.rewind.snapshot.ObjectManagerSnapshot com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactRidingEntry
-NESTED com.openggf.game.rewind.snapshot.ObjectManagerSnapshot com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactStandingSnapshotEntry
-NESTED com.openggf.game.rewind.snapshot.ObjectManagerSnapshot com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactState
-NESTED com.openggf.game.rewind.snapshot.ObjectManagerSnapshot com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SpawnCounterEntry
-NESTED com.openggf.game.rewind.snapshot.ObjectManagerSnapshot com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$TouchResponseOverlapState
 NESTED com.openggf.game.rewind.snapshot.RingSnapshot com.openggf.game.rewind.snapshot.RingSnapshot$AttractedRingEntry
 NESTED com.openggf.game.rewind.snapshot.RingSnapshot com.openggf.game.rewind.snapshot.RingSnapshot$LostRingEntry
 NESTED com.openggf.game.rewind.snapshot.RingSnapshot com.openggf.game.rewind.snapshot.RingSnapshot$SparkleEntry
@@ -16464,104 +16371,6 @@ RECORD-COMPONENT com.openggf.game.rewind.snapshot.LevelTilemapSnapshot descripto
 RECORD-COMPONENT com.openggf.game.rewind.snapshot.LevelTilemapSnapshot originXTiles int
 RECORD-COMPONENT com.openggf.game.rewind.snapshot.LevelTilemapSnapshot originYTiles int
 RECORD-COMPONENT com.openggf.game.rewind.snapshot.MutationPipelineSnapshot queued java.util.List<com.openggf.game.mutation.LayoutMutationIntent>
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot bucketsDirty boolean
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot childSpawns java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$ChildSpawnEntry>
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot collisionResponseState com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$CollisionResponseState
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot currentExecSlot int
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot dynamicObjectIdCounter int
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot dynamicObjects java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry>
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot frameCounter int
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot peakSlotCount int
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot placement com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot planeSwitchers com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherSnapshot
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot slots java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PerSlotEntry>
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot solidContactRiding java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactRidingEntry>
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot solidContactState com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactState
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot touchResponseOverlap com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$TouchResponseOverlapState
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot usedSlotsBits long[]
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot vblaCounter int
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$ChildSpawnEntry parentSpawn com.openggf.level.objects.ObjectSpawn
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$ChildSpawnEntry reservedSlots int[]
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry className java.lang.String
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry objectId com.openggf.game.rewind.identity.ObjectRefId
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry ownerModId java.lang.String
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry playerOwner com.openggf.game.PlayableEntity
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry rewindableAuxiliary boolean
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry slotIndex int
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry spawn com.openggf.level.objects.ObjectSpawn
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry state com.openggf.level.objects.PerObjectRewindSnapshot
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PerSlotEntry className java.lang.String
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PerSlotEntry objectId com.openggf.game.rewind.identity.ObjectRefId
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PerSlotEntry slotIndex int
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PerSlotEntry spawn com.openggf.level.objects.ObjectSpawn
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PerSlotEntry state com.openggf.level.objects.PerObjectRewindSnapshot
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot activeSpawnIndices int[]
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot bwdCounter int
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot counterBasedRespawn boolean
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot cursorIndex int
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot deferredVerticalLoadBits long[]
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot destroyedInWindowBits long[]
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot dormantBits long[]
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot execThenLoadPlacement boolean
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot fwdCounter int
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot lastCameraChunk int
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot lastCameraX int
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot lastScrollBackward boolean
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot leftCursorIndex int
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot maxDynamicSlots int
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot objState byte[]
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot pendingCursorLoadBits long[]
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot pendingCursorLoadOrder int[]
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot permanentDestroyLatch boolean
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot rememberedBits long[]
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot s2LatchedCameraX int
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot spawnCounters java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SpawnCounterEntry>
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot stayActiveBits long[]
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot twoAxisCameraYCoarse int
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherEntry hasLastSideState boolean
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherEntry lastSideState int
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherEntry playerSides java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherPlayerSideEntry>
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherEntry spawn com.openggf.level.objects.ObjectSpawn
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherPlayerSideEntry player com.openggf.game.PlayableEntity
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherPlayerSideEntry sideState int
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherSnapshot entries java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherEntry>
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SidekickOverlapEntry buildingSlotIndices int[]
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SidekickOverlapEntry overlappingSlotIndices int[]
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SidekickOverlapEntry paritySwapped boolean
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SidekickOverlapEntry sidekickCode java.lang.String
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactHeadroomSnapshotEntry distance int
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactHeadroomSnapshotEntry hexAngle int
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactHeadroomSnapshotEntry player com.openggf.game.PlayableEntity
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactLatchEntry keys java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactLatchKey>
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactLatchEntry player com.openggf.game.PlayableEntity
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactLatchKey instanceKey boolean
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactLatchKey slotIndex int
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactLatchKey spawn com.openggf.level.objects.ObjectSpawn
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactRidingEntry objectSlotIndex int
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactRidingEntry objectSpawn com.openggf.level.objects.ObjectSpawn
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactRidingEntry pieceIndex int
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactRidingEntry player com.openggf.game.PlayableEntity
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactRidingEntry x int
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactRidingEntry y int
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactStandingSnapshotEntry kind com.openggf.game.solid.ContactKind
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactStandingSnapshotEntry player com.openggf.game.PlayableEntity
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactStandingSnapshotEntry pushing boolean
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactStandingSnapshotEntry standing boolean
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactState forceAirOnStaleSupportLoss java.util.List<com.openggf.game.PlayableEntity>
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactState frameCounter int
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactState headroomSnapshots java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactHeadroomSnapshotEntry>
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactState inlineSupportedPlayers java.util.List<com.openggf.game.PlayableEntity>
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactState pushingBits java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactLatchEntry>
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactState riding java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactRidingEntry>
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactState standingBitSnapshots java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactLatchEntry>
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactState standingBits java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactLatchEntry>
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactState standingSnapshots java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactStandingSnapshotEntry>
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SpawnCounterEntry counter int
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SpawnCounterEntry spawnIndex int
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$TouchResponseOverlapState mainBuildingSlotIndices int[]
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$TouchResponseOverlapState mainOverlappingSlotIndices int[]
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$TouchResponseOverlapState mainParitySwapped boolean
-RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$TouchResponseOverlapState sidekickEntries java.util.List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SidekickOverlapEntry>
 RECORD-COMPONENT com.openggf.game.rewind.snapshot.PaletteOwnershipSnapshot ownerIds byte[]
 RECORD-COMPONENT com.openggf.game.rewind.snapshot.PaletteOwnershipSnapshot ownerTable java.lang.String[]
 RECORD-COMPONENT com.openggf.game.rewind.snapshot.PaletteOwnershipSnapshot paletteRotationDisabled boolean
@@ -16823,6 +16632,7 @@ RECORD-COMPONENT com.openggf.game.solid.PreContactState xSpeed short
 RECORD-COMPONENT com.openggf.game.solid.PreContactState ySpeed short
 RECORD-COMPONENT com.openggf.game.solid.SolidCheckpointBatch object com.openggf.level.objects.ObjectInstance
 RECORD-COMPONENT com.openggf.game.solid.SolidCheckpointBatch perPlayer java.util.Map<com.openggf.game.PlayableEntity,com.openggf.game.solid.PlayerSolidContactResult>
+RECORD-COMPONENT com.openggf.game.sonic3k.difficulty.AizLogBridgeRecipe supportTicks int
 RECORD-COMPONENT com.openggf.graphics.FadeManagerSnapshot effectiveDuration int
 RECORD-COMPONENT com.openggf.graphics.FadeManagerSnapshot effectiveFPC int
 RECORD-COMPONENT com.openggf.graphics.FadeManagerSnapshot effectiveIncrement float
@@ -17331,11 +17141,6 @@ RECORD-COMPONENT com.openggf.level.objects.PlayableSheetReader$PlayableSheet app
 RECORD-COMPONENT com.openggf.level.objects.PlayableSheetReader$PlayableSheet baseSheetV1 byte[]
 RECORD-COMPONENT com.openggf.level.objects.PlayableSheetReader$PlayableSheet frames java.util.List<com.openggf.level.objects.PlayableSheetReader$Frame>
 RECORD-COMPONENT com.openggf.level.objects.PlayableSheetReader$PlayableSheet meta com.openggf.level.objects.PlayableSheetReader$Meta
-RECORD-COMPONENT com.openggf.level.objects.RewindRecreateContext dynamicEntry com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry
-RECORD-COMPONENT com.openggf.level.objects.RewindRecreateContext objectManager com.openggf.level.objects.ObjectManager
-RECORD-COMPONENT com.openggf.level.objects.RewindRecreateContext objectServices com.openggf.level.objects.ObjectServices
-RECORD-COMPONENT com.openggf.level.objects.RewindRecreateContext spawn com.openggf.level.objects.ObjectSpawn
-RECORD-COMPONENT com.openggf.level.objects.RewindRecreateContext state com.openggf.level.objects.PerObjectRewindSnapshot
 RECORD-COMPONENT com.openggf.level.objects.ShieldProjectileMotion$Velocity x int
 RECORD-COMPONENT com.openggf.level.objects.ShieldProjectileMotion$Velocity y int
 RECORD-COMPONENT com.openggf.level.objects.SolidContact movingInto boolean
@@ -18755,6 +18560,7 @@ TYPE class public,final com.openggf.game.session.EngineContext SUPER java.lang.O
 TYPE class public,final com.openggf.game.session.WorldSession SUPER java.lang.Object
 TYPE class public,final com.openggf.game.solid.ObjectSolidExecutionContext SUPER java.lang.Object
 TYPE class public,final com.openggf.game.sonic3k.objects.Sonic3kMonitorFactory SUPER java.lang.Object
+TYPE class public,final com.openggf.game.sonic3k.objects.Sonic3kStarPostFactory SUPER java.lang.Object
 TYPE class public,final com.openggf.game.sonic3k.objects.badniks.Sonic3kBadnikConfig SUPER java.lang.Object
 TYPE class public,final com.openggf.game.zone.ZoneRuntimeRegistry SUPER java.lang.Object
 TYPE class public,final com.openggf.graphics.PaletteFadePresentation SUPER java.lang.Object
@@ -18786,7 +18592,20 @@ TYPE class public,final com.openggf.mods.code.ModContext SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.code.ModLevelDefinition SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.code.StandaloneLevelLoader SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.mutators.MutatorConfigurationScreen SUPER java.lang.Object
+TYPE class public,final com.openggf.mods.objects.AizHollowTreeFactory SUPER java.lang.Object
+TYPE class public,final com.openggf.mods.objects.AizLogBridgeFactory SUPER java.lang.Object
+TYPE class public,final com.openggf.mods.objects.CarnivalNightFactory SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.objects.CaterkillerJrFactory SUPER java.lang.Object
+TYPE class public,final com.openggf.mods.objects.CollapsingBridgeFactory SUPER java.lang.Object
+TYPE class public,final com.openggf.mods.objects.DeathEggFactory SUPER java.lang.Object
+TYPE class public,final com.openggf.mods.objects.DoomsdayFactory SUPER java.lang.Object
+TYPE class public,final com.openggf.mods.objects.HiddenPalaceFactory SUPER java.lang.Object
+TYPE class public,final com.openggf.mods.objects.HydrocityFactory SUPER java.lang.Object
+TYPE class public,final com.openggf.mods.objects.IceCapFactory SUPER java.lang.Object
+TYPE class public,final com.openggf.mods.objects.LaunchBaseFactory SUPER java.lang.Object
+TYPE class public,final com.openggf.mods.objects.LavaReefFactory SUPER java.lang.Object
+TYPE class public,final com.openggf.mods.objects.MarbleGardenFactory SUPER java.lang.Object
+TYPE class public,final com.openggf.mods.objects.MushroomHillFactory SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.scene.SceneButtons SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.scene.SceneDraw SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.scene.SceneImage SUPER java.lang.Object
@@ -18899,6 +18718,25 @@ TYPE enum public,final com.openggf.game.rewind.identity.ObjectRefKind SUPER java
 TYPE enum public,final com.openggf.game.save.SaveReason SUPER java.lang.Enum<com.openggf.game.save.SaveReason>
 TYPE enum public,final com.openggf.game.save.SaveSlotState SUPER java.lang.Enum<com.openggf.game.save.SaveSlotState>
 TYPE enum public,final com.openggf.game.solid.ContactKind SUPER java.lang.Enum<com.openggf.game.solid.ContactKind>
+TYPE enum public,final com.openggf.game.sonic3k.difficulty.AizBombingRunRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.difficulty.AizBombingRunRecipe>
+TYPE enum public,final com.openggf.game.sonic3k.difficulty.AizEndBossRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.difficulty.AizEndBossRecipe>
+TYPE enum public,final com.openggf.game.sonic3k.difficulty.AizTreeExitRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.difficulty.AizTreeExitRecipe>
+TYPE enum public,final com.openggf.game.sonic3k.difficulty.ClamerRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.difficulty.ClamerRecipe>
+TYPE enum public,final com.openggf.game.sonic3k.difficulty.CollapsingBridgeRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.difficulty.CollapsingBridgeRecipe>
+TYPE enum public,final com.openggf.game.sonic3k.difficulty.DeathEggGuardRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.difficulty.DeathEggGuardRecipe>
+TYPE enum public,final com.openggf.game.sonic3k.difficulty.DoomsdayMissileRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.difficulty.DoomsdayMissileRecipe>
+TYPE enum public,final com.openggf.game.sonic3k.difficulty.FlyingBatteryBossRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.difficulty.FlyingBatteryBossRecipe>
+TYPE enum public,final com.openggf.game.sonic3k.difficulty.HiddenPalaceDuelRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.difficulty.HiddenPalaceDuelRecipe>
+TYPE enum public,final com.openggf.game.sonic3k.difficulty.HydrocityBossRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.difficulty.HydrocityBossRecipe>
+TYPE enum public,final com.openggf.game.sonic3k.difficulty.HydrocityEnemyRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.difficulty.HydrocityEnemyRecipe>
+TYPE enum public,final com.openggf.game.sonic3k.difficulty.IczStalagtiteRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.difficulty.IczStalagtiteRecipe>
+TYPE enum public,final com.openggf.game.sonic3k.difficulty.LavaReefHazardRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.difficulty.LavaReefHazardRecipe>
+TYPE enum public,final com.openggf.game.sonic3k.difficulty.LbzAlarmRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.difficulty.LbzAlarmRecipe>
+TYPE enum public,final com.openggf.game.sonic3k.difficulty.MarbleGardenBossRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.difficulty.MarbleGardenBossRecipe>
+TYPE enum public,final com.openggf.game.sonic3k.difficulty.MarbleGardenEnemyRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.difficulty.MarbleGardenEnemyRecipe>
+TYPE enum public,final com.openggf.game.sonic3k.difficulty.MushroomHillWindRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.difficulty.MushroomHillWindRecipe>
+TYPE enum public,final com.openggf.game.sonic3k.difficulty.SandopolisChallengeRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.difficulty.SandopolisChallengeRecipe>
+TYPE enum public,final com.openggf.game.sonic3k.difficulty.SkySanctuaryMetropolisRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.difficulty.SkySanctuaryMetropolisRecipe>
 TYPE enum public,final com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe>
 TYPE enum public,final com.openggf.graphics.PatternAtlasRange SUPER java.lang.Enum<com.openggf.graphics.PatternAtlasRange>
 TYPE enum public,final com.openggf.graphics.SpriteMaskReplayRole SUPER java.lang.Enum<com.openggf.graphics.SpriteMaskReplayRole>
@@ -19317,7 +19155,6 @@ TYPE record public,final com.openggf.game.rewind.snapshot.GenericObjectSnapshot 
 TYPE record public,final com.openggf.game.rewind.snapshot.LevelSnapshot SUPER java.lang.Record
 TYPE record public,final com.openggf.game.rewind.snapshot.LevelTilemapSnapshot SUPER java.lang.Record
 TYPE record public,final com.openggf.game.rewind.snapshot.MutationPipelineSnapshot SUPER java.lang.Record
-TYPE record public,final com.openggf.game.rewind.snapshot.ObjectManagerSnapshot SUPER java.lang.Record
 TYPE record public,final com.openggf.game.rewind.snapshot.PaletteOwnershipSnapshot SUPER java.lang.Record
 TYPE record public,final com.openggf.game.rewind.snapshot.ParallaxSnapshot SUPER java.lang.Record
 TYPE record public,final com.openggf.game.rewind.snapshot.RingSnapshot SUPER java.lang.Record
@@ -19349,6 +19186,7 @@ TYPE record public,final com.openggf.game.solid.PlayerStandingState SUPER java.l
 TYPE record public,final com.openggf.game.solid.PostContactState SUPER java.lang.Record
 TYPE record public,final com.openggf.game.solid.PreContactState SUPER java.lang.Record
 TYPE record public,final com.openggf.game.solid.SolidCheckpointBatch SUPER java.lang.Record
+TYPE record public,final com.openggf.game.sonic3k.difficulty.AizLogBridgeRecipe SUPER java.lang.Record
 TYPE record public,final com.openggf.graphics.FadeManagerSnapshot SUPER java.lang.Record
 TYPE record public,final com.openggf.graphics.ForegroundWindow SUPER java.lang.Record
 TYPE record public,final com.openggf.graphics.pipeline.RenderCommand SUPER java.lang.Record
@@ -19368,7 +19206,6 @@ TYPE record public,final com.openggf.level.objects.ObjectSlotLayout SUPER java.l
 TYPE record public,final com.openggf.level.objects.ObjectSpawn SUPER java.lang.Record
 TYPE record public,final com.openggf.level.objects.PerObjectRewindSnapshot SUPER java.lang.Record
 TYPE record public,final com.openggf.level.objects.PersistentRespawnState SUPER java.lang.Record
-TYPE record public,final com.openggf.level.objects.RewindRecreateContext SUPER java.lang.Record
 TYPE record public,final com.openggf.level.objects.SolidContact SUPER java.lang.Record
 TYPE record public,final com.openggf.level.objects.SolidObjectParams SUPER java.lang.Record
 TYPE record public,final com.openggf.level.objects.SolidRoutineAdapter SUPER java.lang.Record
@@ -19510,22 +19347,6 @@ TYPE record public,static,final com.openggf.game.presentation.ScenePresentationF
 TYPE record public,static,final com.openggf.game.presentation.SceneReplay$Sample SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.presentation.SceneReplay$State SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.rewind.snapshot.AdvancedRenderModeSnapshot$ModeState SUPER java.lang.Record
-TYPE record public,static,final com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$ChildSpawnEntry SUPER java.lang.Record
-TYPE record public,static,final com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry SUPER java.lang.Record
-TYPE record public,static,final com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PerSlotEntry SUPER java.lang.Record
-TYPE record public,static,final com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot SUPER java.lang.Record
-TYPE record public,static,final com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherEntry SUPER java.lang.Record
-TYPE record public,static,final com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherPlayerSideEntry SUPER java.lang.Record
-TYPE record public,static,final com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherSnapshot SUPER java.lang.Record
-TYPE record public,static,final com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SidekickOverlapEntry SUPER java.lang.Record
-TYPE record public,static,final com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactHeadroomSnapshotEntry SUPER java.lang.Record
-TYPE record public,static,final com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactLatchEntry SUPER java.lang.Record
-TYPE record public,static,final com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactLatchKey SUPER java.lang.Record
-TYPE record public,static,final com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactRidingEntry SUPER java.lang.Record
-TYPE record public,static,final com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactStandingSnapshotEntry SUPER java.lang.Record
-TYPE record public,static,final com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactState SUPER java.lang.Record
-TYPE record public,static,final com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SpawnCounterEntry SUPER java.lang.Record
-TYPE record public,static,final com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$TouchResponseOverlapState SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.rewind.snapshot.RingSnapshot$AttractedRingEntry SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.rewind.snapshot.RingSnapshot$LostRingEntry SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.rewind.snapshot.RingSnapshot$SparkleEntry SUPER java.lang.Record
@@ -20167,23 +19988,6 @@ TYPE-ANNOTATION com.openggf.game.rewind.snapshot.GenericObjectSnapshot @com.open
 TYPE-ANNOTATION com.openggf.game.rewind.snapshot.LevelSnapshot @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.rewind.snapshot.LevelTilemapSnapshot @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.rewind.snapshot.MutationPipelineSnapshot @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.game.rewind.snapshot.ObjectManagerSnapshot @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$ChildSpawnEntry @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PerSlotEntry @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlacementSnapshot @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherEntry @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherPlayerSideEntry @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PlaneSwitcherSnapshot @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SidekickOverlapEntry @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactHeadroomSnapshotEntry @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactLatchEntry @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactLatchKey @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactRidingEntry @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactStandingSnapshotEntry @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SolidContactState @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$SpawnCounterEntry @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$TouchResponseOverlapState @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.rewind.snapshot.PaletteOwnershipSnapshot @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.rewind.snapshot.ParallaxSnapshot @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.rewind.snapshot.RingSnapshot @com.openggf.game.ModApi
@@ -20237,13 +20041,34 @@ TYPE-ANNOTATION com.openggf.game.solid.PostContactState @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.solid.PreContactState @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.solid.SolidCheckpointBatch @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.solid.SolidExecutionRegistry @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.AizBombingRunRecipe @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.AizEndBossRecipe @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.AizLogBridgeRecipe @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.AizMinibossAttackPolicy @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.AizMinibossAttackPolicy @java.lang.FunctionalInterface
+TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.AizTreeExitRecipe @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.BlueSphereLayoutPolicy @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.BlueSphereLayoutPolicy @java.lang.FunctionalInterface
+TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.ClamerRecipe @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.CollapsingBridgeRecipe @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.DeathEggGuardRecipe @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.DoomsdayMissileRecipe @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.FlyingBatteryBossRecipe @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.GumballSpringPolicy @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.GumballSpringPolicy @java.lang.FunctionalInterface
+TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.HiddenPalaceDuelRecipe @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.HydrocityBossRecipe @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.HydrocityEnemyRecipe @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.IczStalagtiteRecipe @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.LavaReefHazardRecipe @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.LbzAlarmRecipe @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.MarbleGardenBossRecipe @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.MarbleGardenEnemyRecipe @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.MushroomHillWindRecipe @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.SandopolisChallengeRecipe @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.SkySanctuaryMetropolisRecipe @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.sonic3k.objects.Sonic3kMonitorFactory @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.sonic3k.objects.Sonic3kStarPostFactory @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.sonic3k.objects.badniks.Sonic3kBadnikConfig @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.startup.DonatedDataSelectWarmupTask @com.openggf.game.ModApi
@@ -20426,7 +20251,6 @@ TYPE-ANNOTATION com.openggf.level.objects.PoweredAttackSurface @com.openggf.game
 TYPE-ANNOTATION com.openggf.level.objects.PoweredScreenAttackable @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.RewindClassResolver @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.RewindRecreatable @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.level.objects.RewindRecreateContext @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.RingObjectPlacementMapping @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.RomObjectSnapshot @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.ShieldObjectInstance @com.openggf.game.ModApi
@@ -20596,7 +20420,20 @@ TYPE-ANNOTATION com.openggf.mods.mutators.TemporaryMutators$ActiveActivation @co
 TYPE-ANNOTATION com.openggf.mods.mutators.TemporaryMutators$Availability @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.mutators.TransportPolicy @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.mutators.TransportPolicy$Kind @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.objects.AizHollowTreeFactory @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.objects.AizLogBridgeFactory @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.objects.CarnivalNightFactory @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.objects.CaterkillerJrFactory @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.objects.CollapsingBridgeFactory @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.objects.DeathEggFactory @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.objects.DoomsdayFactory @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.objects.HiddenPalaceFactory @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.objects.HydrocityFactory @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.objects.IceCapFactory @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.objects.LaunchBaseFactory @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.objects.LavaReefFactory @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.objects.MarbleGardenFactory @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.objects.MushroomHillFactory @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.run.GhostPose @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.run.PlayerPose @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.run.RunEndReason @com.openggf.game.ModApi

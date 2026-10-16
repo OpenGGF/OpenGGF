@@ -36,10 +36,10 @@ public final class GuardBadnik extends SecondStrikeBadnik {
     }
     @Override protected boolean hasLiveLifetimeOwner() {
         if (!companion) return true;
-        if (!activeOnScreen()) return false;
+        if (!inLifetimeViewRange()) return false;
         if (parentDefeated) return true;
         var parent = services().objectQuery().resolve(parentIdentity).orElse(null);
-        return parent instanceof ArtilleryBadnik artillery && !artillery.isDestroyed() && artillery.activeOnScreen();
+        return parent instanceof ArtilleryBadnik artillery && !artillery.isDestroyed() && artillery.inLifetimeViewRange();
     }
 
     public GuardBadnik(ObjectSpawn spawn) { super(spawn, "Second Strike guard", 3); }

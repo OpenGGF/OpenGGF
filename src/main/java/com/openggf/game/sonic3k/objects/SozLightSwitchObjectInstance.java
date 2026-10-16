@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.difficulty.SandopolisChallengeRecipe;
 import com.openggf.game.sonic3k.runtime.SozZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.*;
@@ -23,7 +24,11 @@ public final class SozLightSwitchObjectInstance extends AbstractObjectInstance i
         int limit=(spawn.subtype()&0x7F)<<3;
         if(held && extension!=limit) {
             extension=(extension+2)&0xFFFF;
-            if(extension==limit && services().zoneRuntimeState() instanceof SozZoneRuntimeState state)state.lighting().resetLight();
+            if(extension==limit && services().zoneRuntimeState() instanceof SozZoneRuntimeState state){
+                var module=services().gameModule();
+                var recipe=module==null?null:module.getGameService(SandopolisChallengeRecipe.class);
+                state.lighting().resetLight(recipe==SandopolisChallengeRecipe.TOMB?600:900);
+            }
         } else if(!held && extension!=0) extension=(extension-2)&0xFFFF;
         if(leader instanceof AbstractPlayableSprite p)updatePlayer(p);
         for(var participant:services().playerQuery().playersFor(ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED))
