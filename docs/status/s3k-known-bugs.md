@@ -6565,11 +6565,13 @@ equal to a native capture of the same state.
 
 After the MHZ rider/shell/shield restore fixes (`902ba8a10`), dense
 `RewindFidelitySweep` runs over the solo Sonic MHZ routes show no player drift, but two
-restores are not snapshot-exact (no gameplay effect observed):
-- The MHZ1 carry-in Tails (`SpawnLevelMainSprites` `loc_68C2`/`loc_68D8`) is recreated as a
-  new sprite by restores during its first ~100 frames. Solid-contact headroom snapshots and
-  plane-switcher player sides hold direct player references, so the replaced instance stays
-  keyed there and each further restore in that window adds an entry.
+restores were not snapshot-exact (no gameplay effect observed):
+- Resolved 2026-10-16 (`f07a25bf9`): the MHZ1 carry-in Tails (`SpawnLevelMainSprites`
+  `loc_68C2`/`loc_68D8`) was recreated as a new sprite by restores after its natural
+  deletion. Solid-contact headroom snapshots and plane-switcher player sides hold direct
+  player references, so stale entries for the old instance accumulated. Restores now
+  re-admit the departed instance; `TestS3kScriptedIntroCarryAdmission` (MHZ1) and the
+  widest CNZ1 rows of `TestS3kCanonicalEntryLifecycle` replay it exactly.
 - MHZ2's Knuckles cutscene leaf particles (`CutsceneKnucklesMhz2Instance`) restore with a
   zero spawn record (x/y/velocity restore correctly).
 

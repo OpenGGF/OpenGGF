@@ -1682,6 +1682,23 @@ Sonic again; every gameplay key still matched and only the sprite table lost
 his 16-19 Player_1 tiles. Make the guard flag Java `transient` with the cache
 it describes, or derive it from the cache reference (2026-10-16).
 
+### Re-admit a departed sprite instead of rebuilding it
+
+The `loc_68D8` carry-in Obj_Tails deletes itself after its flyoff. A restore into
+its carry window rebuilt it through a factory, but solid-contact headroom and
+standing latches and plane-switcher sides capture players by reference, so the
+new carrier replayed beside stale entries for the old one (`headroomSnapshots`
+9 vs 10 in MHZ1). Re-admit the departed instance with its structural links and
+clear only uncaptured deletion markers on restore (2026-10-16, `f07a25bf9`).
+
+### A recreated effect must keep the owner its spawner supplied
+
+`SkidDustObjectInstance` received its owner's dust renderer from its spawner;
+rewind recreation from the spawn record had none and borrowed P1's. A follower's
+puff then drew from P1's dust bank, although `loc_18D1C` copies the owning dust
+object's `art_tile` (sonic3k.asm:34126). Capture the owner's identity and
+resolve its resource on restore (2026-10-16, `0ea15a057`).
+
 
 ### Fixed native bounds must not inherit engine smoothing targets
 
