@@ -6585,12 +6585,10 @@ Still open:
   the previous level across the reload.
 - The card leaves one frame late. It reaches COMPLETE, the `LoadEnemyArt` handoff, at counter
   36; the native card is deleted at counter 35.
-- The title card is drawn from the current step's state (`titleCard.draw()`), not with the
-  V-int publication that carries the sprite table, scroll, HUD and palette. On the direct HPZ
-  boot the card's exit (counters 23-36) matches native seq 131+k while every published layer
-  matches seq 130+k, so the card moves one frame early. Fixed 2026-10-16: the fade-in was
-  shown one V-int early in the same way (the "one-frame HUD lag" recorded earlier was this
-  palette, not the HUD; see the HPZ matrix).
+- On the direct HPZ boot Knuckles' animation runs one frame ahead of native after the card
+  release. At counters 33-38 his body (x 0-29, y 56-92) equals native seq 131+k while the
+  card, HUD, palette and level equal seq 130+k. The owner is the player's animation phase, not
+  the V-int publication; it is not attributed.
 - Rings draw under the card, where the original draws them above it (`Render_Sprites` emits
   `Render_Rings` before the object buckets, 36326-36329).
 - The `$D01`/`$1701` `Pal_FromWhite` reveal is not presented.
