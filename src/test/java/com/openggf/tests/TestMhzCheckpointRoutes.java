@@ -82,6 +82,8 @@ class TestMhzCheckpointRoutes {
             // Admit the initial gameplay frame before taking a rewind sample:
             // boot's setup-only state is not a live history point.
             fixture.stepIdleFrames(1);
+            assertEquals(team.main(), GameServices.sprites().getMainPlayable().getCode(),
+                    "the configured leader performs the physical approach");
             var state = assertInstanceOf(CheckpointState.class, GameServices.level().getCheckpointState());
             assertFalse(state.isActive());
             var registry = fixture.gameplayMode().getRewindRegistry();
