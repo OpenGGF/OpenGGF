@@ -2055,6 +2055,17 @@ public class AudioManager implements MusicRestoreSink {
         }
         // Without the request service there is no mailbox to model, so the
         // fallback presentation plays the sound the driver would have reached.
+        // A profile rule names the music a driver reaches for a request id
+        // outside its music range; the request keeps its raw observed identity.
+        if (source.profile() instanceof NativeMailboxMusicRoutes routes) {
+            int musicId = routes.musicForNativeRequest(nativeRequestId);
+            if (musicId >= 0) {
+                requestObserver.onRequested(sfxRequestClass(nativeRequestId),
+                        nativeRequestId);
+                admitMusicWithoutRequestService(source, musicId);
+                return;
+            }
+        }
         playSfx(nativeRequestId);
     }
 
@@ -2076,6 +2087,12 @@ public class AudioManager implements MusicRestoreSink {
                 return;
             }
         }
+        admitMusicWithoutRequestService(source, musicId);
+    }
+
+    /** {@link #playMusic(int)} after its request observation, without a request service. */
+    private void admitMusicWithoutRequestService(BaseAudioSource source, int musicId) {
+        GameAudioProfile profile = source.profile();
         if (profile != null) {
             if (profile.handleSystemCommand(musicId, this)) {
                 return;

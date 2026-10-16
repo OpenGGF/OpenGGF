@@ -291,7 +291,7 @@ acceptance is claimed.
 | Team retirement / full-frame replay | Passing on Root `e0a136b83` | `TestS3kEndingRescue` 36/36 and `TestS3kEndingLifecycleCapture` 18/18 (0 skipped), one queued focused run on 2026-10-15 05:58–06:01 UTC, Root plus the test-only wrapped-particle correction | The 30 roster and 6 team replay failures recorded on `be2a3f6d3`/`2b9eb431d` do not reproduce. Which composed commit cleared them was not bisected |
 | Wrapped particle presentation | Resolved: test premise corrected | Bisect (first-parent `5b2ff8e78..da27f4f3d`) puts the 0/398 failure at `90897f41d`, the merge of `9a7070930`, which added native Plane B high-priority sea composition. Subtype `$41` is low priority (`loc_5EDFE` clears art_tile bit 15). Native Sonic/0 spots at polls 1279, 1398–1401 and 1535 (`B/declared-native-spots-sonic-chaos-320-islandlift-v1`; engine input 1400 is poll 1399) hold 512/512 B-high opaque sea pixels under the old particle box (screen 224–255 × 188–203) and B-low sky at 40–71 × 40–55, so the VDP hides the old vector. The visible wrapped-Y cases now use the same threshold vector in the sky (Y `$FEB0`), and new `wrappedLowPriorityParticleIsCoveredByTheHighPrioritySea` (320/800) asserts that the old vector shows no particle pixels. No production change | The engine's B-high composition between native spot checkpoints is covered by the declared-product comparisons, not by this vector |
 | PAL | Open | Literal PAL tables and REGION=PAL lifecycles (earlier sections) | No PAL native product or 50 Hz capture |
-| PCM / audio | Open | Mailbox/request-level audio tests only | No rendered PCM comparison |
+| PCM / audio | Open (rendered PCM) | Request tier on all nine declared NTSC products: fade and credits requests on native-anchored frames; the credits request now loads and advances song `$32` ([ending audio request ledger](#ending-audio-request-ledger-and-credits-admission-ending-audio-lane-2026-10-16)) | No rendered PCM comparison; no native audio observation; Knuckles and PAL request dates |
 | SAT overflow / original RGB | Open | — | Native 20-sprite/320-dot overflow still needs a real witness; byte-RGB acceptance awaits the LIMITED colour profile |
 
 ### Knuckles credits against native frames (campaign-visual lane, 2026-10-15)
@@ -611,3 +611,86 @@ keep-green set, `TestS3kSszMechaSpawnHeadless`, `TestS3kZoneAnimateTilesPublicat
 four S3K guards. They ran 296 with none failed (15:19:26Z). Not covered: credits part two
 and credits-done (the driver captured part one only); S2 trace replays with a backward
 camera jump into the first chunk were not run.
+
+### Ending audio request ledger and credits admission (ending-audio lane, 2026-10-16)
+
+This is request-tier interim evidence for the nine declared NTSC 320 D01 products.
+Rendered PCM remains open, and nothing here compares PCM.
+
+**Request ledger.** A scratch probe adds observation-only hooks to the v16-limited
+declared protocol: `AudioRequestObserver`, `musicFadeOutCount()` and
+`commandTimeline()` deltas, and the rescue director's routine. The ledgers, scripts and
+`provenance.json` are in
+`B/engine-audio-ledger-v1/` (`B` = `ending-native-reference-prerequisites`).
+
+On base `6405313ce` all nine products pass every assertion:
+
+- **A1** (`loc_5DE36`/`loc_5DE46`, sonic3k.asm:124064-124075): one fade, on the first
+  gate-true frame. That is Level_frame_counter 3281 for −2 and 3692 for 0/+2. The
+  gate's `foregroundY` equals the published camera Y copy on every gate frame.
+- **A2** (`Obj_5DFEE`, :124232-124246): `$DC` only for +2, at 3714.
+- **A3** (`Obj_Ending` `loc_5E1C2`, :124375-124385): `$DC` at 3303 for −2 and 3714 for
+  0. It is absent for +2, although `Obj_Ending` still first runs there at 4403.
+- No other credits or fade request occurs in the 6144 inputs.
+
+The expected frames are native-anchored routine dates, not native audio observations:
+
+- They come from `Events_routine_fg` 8→12 and from the first `Queue_Kos_Module` calls of
+  `Obj_5DFEE` and `Obj_Ending`.
+- The Sonic −2/0/+2, Tails +2 and Sonic+Tails +2 frames come directly from native
+  `branches.csv` ledgers. The cloud-transition v5 ledgers agree.
+- The other four products are derived from the declared ledgers' camera writes. That
+  derivation was checked against the five direct products.
+- The Hyper Kos residual (#46) does not reach any of these dates.
+
+Red-first checks:
+
+- Expecting `$DC` on a +2 product fails.
+- Moving the fade one frame fails.
+- A ledger with its observations removed fails in all nine products.
+- Audio-disabled runs are not empty: the request seam sits upstream of
+  `AUDIO_ENABLED`. Their ledgers are identical, and `ledger.csv` is byte-identical
+  across audio enabled, audio disabled and the v16-limited run.
+
+The `$0D01` load issues `mus_SSZ` (`$15`) from `LevelMusic_Playlist`
+(:7676-7701). The ROM's non-demo `Level` entry also sends `cmd_FadeOut` through
+`Play_SFX` (:7504-7509). The declared engine ingress records no request for it, which
+is noted here and not asserted. Whether the ordinary mode transition issues it was not
+checked.
+
+**Credits admission (fixed in `f640e7929`).** On `6405313ce` every `$DC` request
+reached the seam on its native frame, but none was admitted:
+
+- No command or sequencer followed in any of the nine products, while the load
+  `PlayMusic` and the A1 fade, used as positive controls, were recorded.
+- S3K had no request service, so `playMusicMailboxNativeRequest` fell back to
+  `playSfx($DC)`, which found no SFX.
+
+The fix follows the driver:
+
+- `zPlaySoundByIndex` tests `mus_CreditsK` first. `zPlayMusicCredits` then loads music
+  table entry `$32` as ordinary music (Sound/Z80 Sound Driver.asm:1641-1644,
+  1709-1712).
+- The S3K profile declares that route through the non-API `NativeMailboxMusicRoutes`
+  capability.
+- The observer still records the raw `$DC` once, on the same frame.
+
+Checks:
+
+- `TestS3kEndingAudioRequestLedger` covers Sonic −2/0/+2. The audio presentation is
+  pulled as `GameplayCaptureTool --audio` does.
+- It asserts the request frames above, the `mus_SSZ` positive control, and that song
+  `$32` is serviced with advancing track positions after `$DC`.
+- It was red 3/3 on the unchanged source (19:44:56+01:00) and 3/0/0/0 after the fix.
+- After the fix, the nine-product rerun produced byte-identical request ledgers, and
+  every `$DC` was followed by `PlayMusic` id `$33` on its frame.
+- Focused neighbours passed 348/0/0/0 across 32 classes. They cover audio admission
+  and rewind, the S2 request service and monitors, the S1 monitor, the ending rescue,
+  lifecycle and ledger, the three audio boundary guards and the required S3K four.
+
+Not covered:
+
+- Knuckles' `Obj_Song_Fade_Transition` already plays engine music `$33`, so its request
+  seam shows `$33` rather than `$DC`.
+- Knuckles, wind and post-credits requests (A4-A6) and PAL (A8) have no request dates.
+- Rendered PCM is not compared.

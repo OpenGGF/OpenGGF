@@ -257,7 +257,8 @@ Unreleased. The earlier development themes remain in
   Palace teleporter pad no longer reappears under the island during Knuckles' credits:
   as in Sonic 2 and 3&K, a camera jump back into a level's first block reloads nothing
   behind the object cursor. The first scrolling pass keeps the names on the original's
-  line.
+  line. Sonic's and Tails' endings now start the credits music where the original
+  requests it, instead of staying silent after the rescue fade.
 
 - **S3K cold campaign coverage:** Sonic alone now has one uninterrupted
   replay from Lava Reef act 1 through the Lava Reef boss, Hidden Palace and Sky
