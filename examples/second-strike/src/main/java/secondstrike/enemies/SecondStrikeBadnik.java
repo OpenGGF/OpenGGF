@@ -16,6 +16,7 @@ import com.openggf.level.objects.ObjectCombatRules;
 import com.openggf.level.objects.ObjectPresentationMetadata;
 import com.openggf.game.mutators.NativeObjectFieldTarget;
 import com.openggf.level.objects.SubpixelMotion;
+import com.openggf.game.rewind.identity.ObjectRefId;
 
 import java.util.List;
 
@@ -33,7 +34,15 @@ abstract class SecondStrikeBadnik extends AbstractBadnikInstance
     protected int yFraction;
     protected int remainingHits;
     private int hitCooldown;
-    private boolean awaitingSeparation;
+    // Keep exact attackers, not roster ordinals: a reorder or replacement must
+    // never transfer held contact to a different follower. The existing player
+    // reference-array rewind codec binds these through the restored world roster.
+    private PlayableEntity[] heldAttackers = new PlayableEntity[0];
+    private int contactHalfWidth = 24;
+    private int contactHalfHeight = 32;
+    private ObjectRefId lastCallerIdentity;
+    private int lastCallerSequence;
+    private int alertAcknowledgementUpdates;
 
     protected SecondStrikeBadnik(ObjectSpawn spawn, String name, int hits) {
         super(spawn, name);
@@ -50,16 +59,60 @@ abstract class SecondStrikeBadnik extends AbstractBadnikInstance
             return false;
         }
         if (hitCooldown > 0) hitCooldown--;
-        if (awaitingSeparation) {
-            boolean near = inRange(player, 48, 64);
-            for (PlayableEntity participant : services().playerQuery()
-                    .playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
-                near |= inRange(participant, 48, 64);
+        if (heldAttackers.length != 0) {
+            var players = services().playerQuery().playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS);
+            boolean stillHeld = false;
+            for (int index = 0; index < heldAttackers.length; index++) {
+                PlayableEntity attacker = heldAttackers[index];
+                if (attacker == null) continue;
+                if (!containsIdentity(players, attacker) || !sameBodyContact(attacker)) heldAttackers[index] = null;
+                else stillHeld = true;
             }
-            if (!near) awaitingSeparation = false;
+            if (!stillHeld) heldAttackers = new PlayableEntity[0];
         }
+        if (alertAcknowledgementUpdates > 0) alertAcknowledgementUpdates--;
         return true;
     }
+
+    private static boolean containsIdentity(List<PlayableEntity> players, PlayableEntity player) {
+        for (PlayableEntity candidate : players) if (candidate == player) return true;
+        return false;
+    }
+
+    private boolean heldContact(PlayableEntity player) {
+        if (player == null) return false;
+        for (PlayableEntity attacker : heldAttackers) if (attacker == player) return true;
+        return false;
+    }
+
+    private boolean sameBodyContact(PlayableEntity player) {
+        // TouchResponseResult supplies the ROM object's actual touch radii.
+        // Normal native player touch uses an 8px X half-width and y_radius-3.
+        // This continuity guard owns only repeated body hits, never player motion
+        // or the enemy's collision byte. Discrete screen attacks remain separate.
+        return player != null && !player.getDead()
+                && Math.abs(player.getCentreX() - currentX) <= contactHalfWidth + 8
+                && Math.abs(player.getCentreY() - currentY) <= contactHalfHeight + Math.max(1, player.getYRadius() - 3);
+    }
+
+    private void blockBodyContact(PlayableEntity player, TouchResponseResult result) {
+        if (player != null) {
+            int index = 0;
+            while (index < heldAttackers.length && heldAttackers[index] != null) index++;
+            if (index == heldAttackers.length) {
+                var expanded = new PlayableEntity[index + 1];
+                for (int previous = 0; previous < index; previous++) expanded[previous] = heldAttackers[previous];
+                heldAttackers = expanded;
+            }
+            heldAttackers[index] = player;
+        }
+        if (result != null) {
+            contactHalfWidth = result.widthRadius();
+            contactHalfHeight = result.heightRadius();
+        }
+    }
+
+    public final boolean acknowledgingAlert() { return alertAcknowledgementUpdates > 0; }
 
     protected boolean hasLiveLifetimeOwner() { return true; }
     /** Runs before native reward/slot transfer can retire this exact identity. */
@@ -78,7 +131,7 @@ abstract class SecondStrikeBadnik extends AbstractBadnikInstance
     protected void onNonfatalHit() { }
     private boolean acceptsHit() {
         return !isDestroyed() && hasLiveLifetimeOwner() && !damageImmune()
-                && hitCooldown == 0 && !awaitingSeparation;
+                && hitCooldown == 0;
     }
 
     @Override public int getCollisionProperty() {
@@ -87,15 +140,14 @@ abstract class SecondStrikeBadnik extends AbstractBadnikInstance
     }
 
     @Override public final void onPlayerAttack(PlayableEntity player, TouchResponseResult result) {
-        if (!acceptsHit()) return;
-        if (remainingHits > 1) nonfatalHit();
+        if (!acceptsHit() || heldContact(player)) return;
+        if (remainingHits > 1) { blockBodyContact(player, result); nonfatalHit(); }
         else { remainingHits = 0; onFinalDefeat(); DestructionEffects.defeatBadnik(this, player, false); }
     }
 
     private void nonfatalHit() {
         remainingHits--;
         hitCooldown = HIT_COOLDOWN;
-        awaitingSeparation = true;
         onNonfatalHit();
         services().playSfx(0x6e); // Native S3K sfx_BossHit; no explosion/animal/score until final hit.
     }
@@ -120,7 +172,11 @@ abstract class SecondStrikeBadnik extends AbstractBadnikInstance
         for (SpotterBadnik spotter : services().objectQuery().activeObjectsOfType(SpotterBadnik.class)) {
             if (!spotter.isDestroyed() && spotter.isCalling() && spotter.activeOnScreen()
                     && Math.abs(spotter.getX() - currentX) <= 240
-                    && Math.abs(spotter.getY() - currentY) <= 128) return spotter;
+                    && Math.abs(spotter.getY() - currentY) <= 128) {
+                var identity = services().objectQuery().identityOf(spotter).orElse(null);
+                if (identity != null && (!identity.equals(lastCallerIdentity)
+                        || spotter.alertSequence() != lastCallerSequence)) return spotter;
+            }
         }
         return null;
     }
@@ -134,6 +190,9 @@ abstract class SecondStrikeBadnik extends AbstractBadnikInstance
         }
         SpotterBadnik caller = caller();
         if (caller == null) return false;
+        lastCallerIdentity = services().objectQuery().identityOf(caller).orElseThrow();
+        lastCallerSequence = caller.alertSequence();
+        alertAcknowledgementUpdates = 12;
         targetX = caller.targetX;
         facingLeft = targetX < currentX;
         return true;
@@ -156,16 +215,22 @@ abstract class SecondStrikeBadnik extends AbstractBadnikInstance
     }
 
     protected final boolean activeOnScreen() {
-        // Dormant ahead of the viewport; normal ObjectManager range unloading owns respawn.
-        return isOnScreen(32);
+        // A caller cannot start an unseen defender's tell. Normal ObjectManager
+        // range unloading still owns respawn; this gate owns authored activation.
+        return isOnScreen(0);
     }
 
+    /** Preserve the companion graph's existing retirement margin independently of attack admission. */
+    protected final boolean inLifetimeViewRange() { return isOnScreen(32); }
+
     @Override public int getCollisionFlags() {
-        return isDestroyed() || !hasLiveLifetimeOwner() || hitCooldown > 0 || awaitingSeparation
+        return isDestroyed() || !hasLiveLifetimeOwner() || hitCooldown > 0
                 ? 0 : super.getCollisionFlags();
     }
 
     @Override public void onPoweredScreenAttack(PlayableEntity player) {
+        // The native screen dispatcher owns eligibility. A discrete screen
+        // attack obeys hit flash, independently of a held body-contact latch.
         if (!acceptsHit()) return;
         if (remainingHits > 1) { nonfatalHit(); return; }
         remainingHits = 0;
@@ -184,7 +249,15 @@ abstract class SecondStrikeBadnik extends AbstractBadnikInstance
     }
 
     @Override public final void appendRenderCommands(List<GLCommand> commands) {
-        if (!isDestroyed() && hasLiveLifetimeOwner() && (hitCooldown == 0 || (hitCooldown & 2) == 0)) drawBody();
+        if (!isDestroyed() && hasLiveLifetimeOwner() && (hitCooldown == 0 || (hitCooldown & 2) == 0)) {
+            drawBody();
+            if (acknowledgingAlert()) {
+                // One short, silent acknowledgement per heard alert. ROM seed
+                // art keeps the raised response readable above the normal body.
+                draw(SecondStrikeEnemies.GUNNER_ART, 4, currentX - 8, currentY - 36);
+                draw(SecondStrikeEnemies.GUNNER_ART, 4, currentX + 8, currentY - 36);
+            }
+        }
     }
 
     protected abstract void drawBody();

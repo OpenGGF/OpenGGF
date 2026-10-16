@@ -159,17 +159,103 @@ public final class ChaosSidegame {
         random.restore(snapshot.random());age=snapshot.age();score=snapshot.score();finished=snapshot.finished();cancelled=snapshot.cancelled();
         state=snapshot.state();board=snapshot.board();
     }
+    private String title() {
+        return switch(kind) {case PONG->"RING PONG";case SNAKE->"RING SNAKE";case STACK->"MONITOR STACK";case RHYTHM->"SHIELD BEAT";case DEFENCE->"BADNIK DEFENCE";};
+    }
+    private String unit(int value) {
+        return switch(kind) {
+            case PONG -> value==1?"return":"returns";
+            case SNAKE -> value==1?"ring eaten":"rings eaten";
+            case STACK -> value==1?"line cleared":"lines cleared";
+            case RHYTHM -> value==1?"beat hit":"beats hit";
+            case DEFENCE -> value==1?"badnik stopped":"badniks stopped";
+        };
+    }
+    /** Receipt for a finished, non-winning or non-Pong game; a Pong win reports its own reward. */
+    public String resultText() {
+        if(cancelled) return "Failed: Cancelled. No reward this time.";
+        if(score==0) return "Failed: No score this time. Back to the chaos!";
+        String breather=quietSeconds()+" second Chaos breather.";
+        if(kind==Kind.PONG) return "Failed: "+score+" "+unit(score)+", so no rings. "+breather;
+        return "Complete: "+score+" "+unit(score)+". "+breather;
+    }
+    private String hint() {
+        return switch(kind) {
+            case PONG -> "UP/DOWN: MOVE PADDLE";
+            case SNAKE -> "D-PAD: STEER, EAT RINGS";
+            case STACK -> "L/R MOVE  UP TURN  A DROP";
+            case RHYTHM -> "PRESS A B C ON THE BEAT";
+            case DEFENCE -> "A B C: LAUNCH SPRINGS";
+        };
+    }
+    private static int piece(int type) {
+        return switch(type) {case 0->0xFF2D6CDF;case 1->0xFFE0C030;case 2->0xFFB040D0;case 3->0xFF40C060;case 4->0xFFE04848;case 5->0xFFE08830;default->0xFF40C8E0;};
+    }
+    /** Pure board drawing; framed playfield, readable title, score, timer and controls. */
     public void draw(PixelCanvas canvas,int left,int top,ChaosArt art) {
-        canvas.fill(left-4,top-4,204,156,0xEF08172C);
-        CompactFont.draw(canvas,kind.name()+"  "+score+(kind==Kind.PONG?"/3":""),left,top,1,0xFFFFFF80);
-        CompactFont.draw(canvas,"TIME "+((1200-age+59)/60)+" START/ESC CANCEL",left,top+140,1,0xFFB4D8ED);
-        int y=top+10;
+        ChaosUi.panel(canvas,left-6,top-16,208,188,0xF00A1730,ChaosUi.GOLD);
+        UiPrimitives.gradient(canvas,left-5,top-15,206,12,0xF0183A78,0xF00A1730);
+        ChaosUi.text(canvas,title(),left,top-13,1,ChaosUi.GOLD);
+        String scoreText=switch(kind) {
+            case PONG -> "RETURNS "+score+"/3";
+            case SNAKE -> "RINGS "+score;
+            case STACK -> "LINES "+score;
+            case RHYTHM -> "BEATS "+score;
+            case DEFENCE -> "STOPPED "+score+"  SPRINGS "+state[0];
+        };
+        ChaosUi.right(canvas,scoreText,left+196,top-13,1,ChaosUi.WHITE);
+        int y=top+2;
         switch(kind) {
-            case PONG -> {art.draw(canvas,ChaosArt.Motif.SONIC,left,y+state[0],16,24);art.draw(canvas,ChaosArt.Motif.TAILS,left+180,y+state[1],16,24);art.draw(canvas,ChaosArt.Motif.RING,left+(state[2]>>8)-2,y+(state[3]>>8)-2,8,8);}
-            case SNAKE -> {for(int i=0;i<state[0];i++)art.draw(canvas,ChaosArt.Motif.ROLL,left+board[i]%24*8,y+board[i]/24*8,8,8);art.draw(canvas,ChaosArt.Motif.RING,left+state[2]%24*8,y+state[2]/24*8,8,8);}
-            case STACK -> {for(int i=0;i<160;i++)if(board[i]>0)art.draw(canvas,ChaosArt.Motif.MONITOR,left+48+i%10*8,y+i/10*8,8,8);for(var p:shape(state[2],state[3])) {int py=state[1]+p[1];if(py>=0)art.draw(canvas,ChaosArt.Motif.MONITOR,left+48+(state[0]+p[0])*8,y+py*8,8,8);}}
-            case RHYTHM -> {for(int lane=0;lane<3;lane++) {canvas.fill(left+lane*64+16,y,32,120,0xFF12344F);CompactFont.draw(canvas,"ABC".substring(lane,lane+1),left+lane*64+28,y+110,1,0xFFFFFFFF);}int py=100-(state[1]-age)*2;art.draw(canvas,ChaosArt.Motif.values()[ChaosArt.Motif.FIRE.ordinal()+state[0]],left+state[0]*64+24,y+Math.clamp(py,0,94),16,16);}
-            case DEFENCE -> {for(int lane=0;lane<3;lane++) {canvas.fill(left,y+lane*40+4,192,1,0xFF305875);if(state[lane+1]>0)art.draw(canvas,ChaosArt.Motif.SPRING,left+2,y+lane*40+10,16,16);for(int i=0;i<8;i++)if(board[lane*8+i]>0)art.draw(canvas,ChaosArt.Motif.BADNIK,left+board[lane*8+i],y+lane*40+10,16,16);}}
+            case PONG -> {
+                canvas.fill(left-2,y-2,200,140,0xC0050C1C);UiPrimitives.frame(canvas,left-3,y-3,202,142,0xFF35587E);
+                for(int dash=0;dash<17;dash++)canvas.fill(left+97,y+dash*8,2,4,0x6075DFFE);
+                art.draw(canvas,ChaosArt.Motif.SONIC,left,y+state[0],16,24);art.draw(canvas,ChaosArt.Motif.TAILS,left+180,y+state[1],16,24);
+                art.draw(canvas,ChaosArt.Motif.RING,left+(state[2]>>8)-2,y+(state[3]>>8)-2,8,8);
+            }
+            case SNAKE -> {
+                canvas.fill(left,y,192,112,0xC0050C1C);UiPrimitives.frame(canvas,left-2,y-2,196,116,0xFF35587E);
+                for(int i=0;i<state[0];i++)art.draw(canvas,ChaosArt.Motif.ROLL,left+board[i]%24*8,y+board[i]/24*8,8,8);
+                art.draw(canvas,ChaosArt.Motif.RING,left+state[2]%24*8,y+state[2]/24*8,8,8);
+            }
+            case STACK -> {
+                int well=left+58;
+                canvas.fill(well,y,80,128,0xC0050C1C);UiPrimitives.frame(canvas,well-2,y-2,84,132,0xFF35587E);
+                for(int i=0;i<160;i++)if(board[i]>0) {
+                    canvas.fill(well+i%10*8,y+i/10*8,8,8,ChaosUi.alpha(piece(board[i]-1),150));
+                    art.draw(canvas,ChaosArt.Motif.MONITOR,well+i%10*8,y+i/10*8,8,8);
+                }
+                int landing=state[1];
+                while(stackFits(state[0],landing+1,state[3]))landing++;
+                for(var p:shape(state[2],state[3])) {
+                    int py=landing+p[1];if(py>=0 && landing!=state[1])UiPrimitives.frame(canvas,well+(state[0]+p[0])*8,y+py*8,8,8,ChaosUi.alpha(piece(state[2]),170));
+                }
+                for(var p:shape(state[2],state[3])) {
+                    int py=state[1]+p[1];
+                    if(py>=0) {canvas.fill(well+(state[0]+p[0])*8,y+py*8,8,8,ChaosUi.alpha(piece(state[2]),190));art.draw(canvas,ChaosArt.Motif.MONITOR,well+(state[0]+p[0])*8,y+py*8,8,8);}
+                }
+            }
+            case RHYTHM -> {
+                for(int lane=0;lane<3;lane++) {
+                    canvas.fill(left+lane*64+16,y,32,124,0xC012344F);
+                    ChaosUi.centred(canvas,"ABC".substring(lane,lane+1),left+lane*64+32,y+126,1,ChaosUi.WHITE);
+                }
+                canvas.fill(left+12,y+100,172,2,ChaosUi.GOLD);canvas.fill(left+12,y+116,172,1,0x80FFC94A);
+                int py=100-(state[1]-age)*2;
+                art.draw(canvas,ChaosArt.Motif.values()[ChaosArt.Motif.FIRE.ordinal()+state[0]],left+state[0]*64+24,y+Math.clamp(py,0,94),16,16);
+            }
+            case DEFENCE -> {
+                for(int lane=0;lane<3;lane++) {
+                    int row=y+lane*44;
+                    canvas.fill(left,row+4,196,36,0xC0050C1C);canvas.fill(left,row+4,2,36,ChaosUi.BAD);
+                    ChaosUi.text(canvas,"ABC".substring(lane,lane+1),left+5,row+18,1,ChaosUi.DIM);
+                    if(state[lane+1]>0)art.draw(canvas,ChaosArt.Motif.SPRING,left+12,row+14,16,16);
+                    for(int i=0;i<8;i++)if(board[lane*8+i]>0)art.draw(canvas,ChaosArt.Motif.BADNIK,left+board[lane*8+i],row+14,16,16);
+                }
+            }
         }
+        ChaosUi.bar(canvas,left,top+142,196,2,1200-age,1200,0x60FFFFFF,1200-age<=180?ChaosUi.WARN:ChaosUi.CYAN);
+        ChaosUi.text(canvas,hint(),left,top+148,1,ChaosUi.TEXT);
+        ChaosUi.right(canvas,ChaosUi.seconds(1200-age),left+196,top+148,1,ChaosUi.WHITE);
+        ChaosUi.centred(canvas,"START OR ESC: QUIT (NO PENALTY)",left+98,top+159,1,ChaosUi.DIM);
     }
 }

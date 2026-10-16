@@ -1,7 +1,11 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.difficulty.AizBombingRunRecipe;
+import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.game.sonic3k.events.S3kAizEventWriteSupport;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -147,10 +151,18 @@ public class AizBattleshipInstance extends AbstractObjectInstance implements Spa
 
         // ROM: Translate_Camera2ObjPosition/Translate_Camera2ObjX.
         int bombScriptX = BOMB_SCRIPT[currentScriptIndex][1];
+        boolean staggered = admitStaggeredPorts();
+        if (staggered && nextDelay == 0x20) {
+            // Finite authored preset at the native script-entry commitment.
+            // Keep all 21 ROM entries and the $38/$40 recovery rows; shorter
+            // waits cannot push the final release beyond the native ship exit.
+            nextDelay -= 8;
+            bombScriptX += (currentScriptIndex & 1) == 0 ? 8 : -8;
+        }
         int screenX = bombScriptX - shipX;
         int worldY = services().camera().getY() + (BOMB_SOURCE_Y - effectiveSecondaryY);
 
-        spawnBomb(screenX, worldY, bombScriptX);
+        spawnBomb(screenX, worldY, bombScriptX, staggered);
         scriptIndex = currentScriptIndex + 1;
         delayTimer = nextDelay;
     }
@@ -159,7 +171,22 @@ public class AizBattleshipInstance extends AbstractObjectInstance implements Spa
         return --delayTimer < 0;
     }
 
-    private void spawnBomb(int screenX, int worldY, int bombScriptX) {
+    private boolean admitStaggeredPorts() {
+        if (!difficultyBombsAreLive()) return false;
+        if (S3kRuntimeStates.resolvePlayerCharacter(services().zoneRuntimeRegistry(),
+                services().configuration()) == PlayerCharacter.KNUCKLES) return false;
+        var manager = services().renderManager();
+        var renderer = manager == null ? null : manager.getRenderer(Sonic3kObjectArtKeys.AIZ2_BOMB_EXPLODE);
+        return renderer != null && renderer.isReady();
+    }
+
+    boolean difficultyBombsAreLive() {
+        var module = services().gameModule();
+        return getSlotIndex() >= 0 && !isDestroyed() && module != null
+                && module.getGameService(AizBombingRunRecipe.class) == AizBombingRunRecipe.STAGGERED_PORTS;
+    }
+
+    private void spawnBomb(int screenX, int worldY, int bombScriptX, boolean difficultyAttack) {
         // Spawn with the translated world position for bookkeeping; the bomb itself
         // continues translating from the ship's live secondary-camera coordinates.
         int cameraX = services().camera().getX();
@@ -167,7 +194,7 @@ public class AizBattleshipInstance extends AbstractObjectInstance implements Spa
         // (sonic3k.asm:105315), so bomb slots must follow the ship's slot.
         spawnChild(() -> new AizShipBombInstance(
                 new ObjectSpawn(cameraX + screenX, worldY, 0, 0, 0, false, 0),
-                this, bombScriptX, worldY));
+                this, bombScriptX, worldY, difficultyAttack));
     }
 
     private void updateSecondaryCameraY(int shipX) {

@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.events;
 
 import com.openggf.camera.Camera;
+import com.openggf.game.sonic3k.difficulty.SkySanctuaryMetropolisRecipe;
 import com.openggf.game.sonic3k.objects.bosses.SszGhzBossObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.SszMtzBossObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
@@ -599,6 +600,17 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
             // jsr (AllocateObject).l / bne.s loc_7777C: a failed allocation writes no flags.
             return;
         }
+        SkySanctuaryMetropolisRecipe recipe = SkySanctuaryMetropolisRecipe.STOCK;
+        var gameModule = module();
+        if (gameModule != null) {
+            // A newly faulting provider must escape to Engine's frame abort and
+            // full gameplay teardown. Only a successful absent lookup is STOCK.
+            var selected = gameModule.getGameService(SkySanctuaryMetropolisRecipe.class);
+            if (selected != null) {
+                recipe = selected;
+            }
+        }
+        boss.commitEncounterRecipe(recipe);
         state.setEventsBgByte(EV_EVENT_OWNS_BOUNDS, 0xFF);
         state.setEventsBgWord(EV_MTZ_BOSS, MTZ_BOSS_FIGHTING_WORD);
     }

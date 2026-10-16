@@ -1,6 +1,8 @@
 package secondstrike;
 
 import com.openggf.game.GameModule;
+import com.openggf.game.BonusStageType;
+import com.openggf.game.sonic3k.objects.Sonic3kStarPostFactory;
 import com.openggf.game.GameServiceBundle;
 import com.openggf.game.TitleScreenProvider;
 import com.openggf.game.patch.DelegatingGameModule;
@@ -9,12 +11,18 @@ import com.openggf.game.patch.GameplayLaunchRequest;
 import com.openggf.game.patch.LogicalRom;
 import com.openggf.game.patch.PatchContext;
 import com.openggf.game.sonic3k.difficulty.AizMinibossAttackPolicy;
-import com.openggf.game.sonic3k.difficulty.BlueSphereLayoutPolicy;
+import com.openggf.game.sonic3k.difficulty.AizLogBridgeRecipe;
+import com.openggf.game.sonic3k.difficulty.AizEndBossRecipe;
+import com.openggf.game.sonic3k.difficulty.AizBombingRunRecipe;
+import com.openggf.game.sonic3k.difficulty.AizTreeExitRecipe;
+import com.openggf.mods.objects.AizLogBridgeFactory;
+import com.openggf.mods.objects.AizHollowTreeFactory;
 import com.openggf.game.sonic3k.difficulty.GumballSpringPolicy;
 import com.openggf.level.LevelPatch;
 import com.openggf.mods.code.GgfMod;
 import com.openggf.mods.code.ModContext;
 import secondstrike.boss.SecondStrikeBosses;
+import secondstrike.campaign.SecondStrikeCampaign;
 import secondstrike.enemies.SecondStrikeEnemies;
 import secondstrike.enemies.SecondStrikeCaterkiller;
 import secondstrike.monitors.SecondStrikeMonitors;
@@ -30,13 +38,23 @@ public final class SecondStrikeMod implements GgfMod {
         SecondStrikeEnemies.register(context);
         SecondStrikeCaterkiller.register(context);
         SecondStrikeMonitors.register(context);
+        SecondStrikeCampaign.register(context);
+        context.registerObject("gumball-post", (spawn, registry) ->
+                Sonic3kStarPostFactory.invitation(spawn, BonusStageType.GUMBALL));
+        context.registerObject("sphere-post", (spawn, registry) ->
+                Sonic3kStarPostFactory.invitation(spawn, BonusStageType.GLOWING_SPHERE));
+        context.registerObject("brittle-log", (spawn, registry) ->
+                AizLogBridgeFactory.create(spawn, new AizLogBridgeRecipe(10)));
+        context.registerObject("exit-lookout-tree", (spawn, registry) ->
+                AizHollowTreeFactory.create(spawn, AizTreeExitRecipe.EXIT_LOOKOUT));
         context.decodedLevelPatch("forest", nativeOpening(SecondStrikeRoutes.Bank.FOREST));
         context.decodedLevelPatch("fire", nativeOpening(SecondStrikeRoutes.Bank.FIRE_CONTINUATION));
         context.registerServiceBundle("difficulty", () -> {
             SecondStrikeStages stages = new SecondStrikeStages();
             return GameServiceBundle.builder()
                     .service(AizMinibossAttackPolicy.class, new SecondStrikeBosses())
-                    .service(BlueSphereLayoutPolicy.class, stages)
+                    .service(AizEndBossRecipe.class, AizEndBossRecipe.ALTERNATING_ARMS)
+                    .service(AizBombingRunRecipe.class, AizBombingRunRecipe.STAGGERED_PORTS)
                     .service(GumballSpringPolicy.class, stages).build();
         });
         context.registerGamePatch(new Patch());
@@ -46,8 +64,14 @@ public final class SecondStrikeMod implements GgfMod {
     private static LevelPatch nativeOpening(SecondStrikeRoutes.Bank bank) {
         return LevelPatch.empty().nativePlacements().forZone(0)
                 .whenInventory(objects -> SecondStrikeRoutes.bank(objects) == bank)
+                .select(spawn -> SecondStrikeRoutes.invitation(bank, spawn) == BonusStageType.GUMBALL).bind("gumball-post")
+                .select(spawn -> SecondStrikeRoutes.invitation(bank, spawn) == BonusStageType.GLOWING_SPHERE).bind("sphere-post")
+                .select(spawn -> SecondStrikeRoutes.brittleLog(bank, spawn)).bind("brittle-log")
+                .select(spawn -> spawn.ownerModId() == null && bank == SecondStrikeRoutes.Bank.FOREST && spawn.layoutIndex() == 150
+                        && spawn.objectId() == 3 && spawn.x() == 0x2D00 && spawn.y() == 0x3CC).bind("exit-lookout-tree")
                 .select(spawn -> "spotter".equals(SecondStrikeRoutes.enemyFactory(bank, spawn))).bind("spotter")
                 .select(spawn -> "guard".equals(SecondStrikeRoutes.enemyFactory(bank, spawn))).bind("guard")
+                .select(spawn -> SecondStrikeRoutes.splitFan(bank, spawn)).bind("artillery-split")
                 .select(spawn -> "artillery".equals(SecondStrikeRoutes.enemyFactory(bank, spawn))).bind("artillery")
                 .select(spawn -> "caterkiller".equals(SecondStrikeRoutes.enemyFactory(bank, spawn))).bind("caterkiller")
                 .select(spawn -> SecondStrikeRoutes.inOpening(bank, spawn) && SecondStrikeMonitors.replaces(spawn)).bind("robotnik-monitor")

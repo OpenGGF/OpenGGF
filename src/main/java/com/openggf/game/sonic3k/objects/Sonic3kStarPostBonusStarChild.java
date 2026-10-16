@@ -145,7 +145,8 @@ public class Sonic3kStarPostBonusStarChild extends AbstractObjectInstance implem
         if (collisionEnabled && player != null && touchesPlayer(player)) {
             // ROM: loc_2D47E — S3K lampposts enter bonus stages via Restart_level_flag.
             // Engine: request bonus stage entry through LevelTransitionCoordinator.
-            if (player.getRingCount() >= RING_THRESHOLD) {
+            if (player.getRingCount() >= RING_THRESHOLD
+                    || parentStarPost != null && parentStarPost.hasEarnedInvitation()) {
                 LOGGER.info("Requesting bonus stage entry: " + variant.bonusStageType
                         + " (variant=" + variant + ", rings=" + player.getRingCount() + ")");
                 long permit = com.openggf.game.mutators.LevelMutatorPolicyAccess.admit(services(), com.openggf.game.mutators.StageEntryKind.BONUS);

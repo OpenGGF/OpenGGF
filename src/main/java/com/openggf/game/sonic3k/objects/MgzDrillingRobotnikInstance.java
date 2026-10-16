@@ -394,9 +394,17 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         this(spawn, false);
     }
 
+    protected boolean counterCadence;
+
     public MgzDrillingRobotnikInstance(ObjectSpawn spawn, boolean flipX) {
+        this(spawn, flipX, false);
+    }
+
+    /** Internal native boss preset; drilling cutscenes never opt in. */
+    protected MgzDrillingRobotnikInstance(ObjectSpawn spawn, boolean flipX, boolean counterCadence) {
         super(spawn, "MGZ2DrillingRobotnik");
         this.flipX = flipX;
+        this.counterCadence = counterCadence;
     }
 
     @Override
@@ -569,7 +577,12 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     /** Shared art/palette and child-SST setup used by both native MGZ end-boss variants. */
     protected final void prepareSharedBossPresentation() {
         ensureCompositeRenderChildren();
-        queueInitialAssetsIfNeeded();
+        queueInitialAssetsIfNeeded(true);
+    }
+
+    /** Obj_MGZEndBossKnux queues art after sub_85D6A, before any fight children. */
+    protected final void prepareSharedBossAssetsAfterNativeFade() {
+        queueInitialAssetsIfNeeded(false);
     }
 
     private void ensureCompositeRenderChildren() {
@@ -909,7 +922,10 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
 
     private void enterAirAttackWait() {
         services().playSfx(Sonic3kSfx.BOSS_ZOOM.id);
-        waitTimer = 0x9F;
+        // loc_6CFF4 retains the visible zoom cue. Tighten only alternating
+        // damaged approaches; leave the native attackable movement untouched.
+        waitTimer = counterCadence && state.hitCount <= 4 && (airAttackPatternCounter & 1) == 0
+                ? 0x5F : 0x9F;
         airAttackPhase = 0;
         airAttackPatternOffset = AIR_ATTACK_PATTERN_SEQUENCE[airAttackPatternCounter];
         airAttackPatternCounter = (airAttackPatternCounter + 1) & 7;
@@ -1229,12 +1245,12 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
      * queue MGZ end-boss art, load PLC #$6D (shared Robotnik ship art), and
      * load Pal_MGZEndBoss into palette line 1.
      */
-    private void queueInitialAssetsIfNeeded() {
+    private void queueInitialAssetsIfNeeded(boolean fadeMusic) {
         serviceBossArtQueue();
         if (artQueued) {
             return;
         }
-        services().fadeOutMusic();
+        if (fadeMusic) services().fadeOutMusic();
         ensureArtLoaded();
         loadBossPalette();
         artQueued = true;

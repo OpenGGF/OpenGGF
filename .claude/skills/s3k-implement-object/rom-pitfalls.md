@@ -5791,3 +5791,21 @@ addReplacementAtTransferredSlot. Prove the old handle is detached, the new
 physical owner remains unique after cleanup, and the next allocation skips its
 occupied slot; capture/restore both sides and replay the full registered world.
 Do not conceal duplicate physical owners by selecting a convenient list entry.
+
+## Historical spawn guards survive legitimate owner retirement
+
+A captured one-shot guard can mean that an event already happened, rather than
+that its actor must remain live forever. AIZ's `AIZMiniboss_SpawnEndSign` reuses
+its owner as `Obj_EndSignControl` (`sonic3k.asm:137395–137398`); after the native
+results/title handoff, `Obj_EndSignControlDoStart` calls `Change_Act2Sizes` and
+`Delete_Current_Sprite` (`:180420–180424`). Clearing `minibossSpawned` merely
+because that actor is absent corrupts valid completed history on rewind.
+
+Distinguish such history from an active sequence that still requires a live
+driver, such as a camera auto-scroll lock. Preserve the captured history; retain
+separate liveness recovery only for an invariant that actually requires it.
+Test completed/no-owner, uncommitted and active/recreated states independently,
+then compare the actual reached prefix and its ordinary forward replay. Compare
+all registered keys with the existing semantic diff, and name any normalization
+rather than advertising unrestricted byte equality. Origin: Second Strike
+continuation19119 and focused red86205/green42171, 2026-10-16.

@@ -2,7 +2,6 @@ package com.openggf.editor;
 
 import com.openggf.camera.Camera;
 import com.openggf.control.InputHandler;
-import com.openggf.control.MenuInput;
 import com.openggf.control.InputActionMasks;
 import com.openggf.editor.commands.StrokeCommand;
 import com.openggf.graphics.GraphicsManager;
@@ -15,29 +14,24 @@ import java.util.Objects;
 import java.util.function.Supplier;
 
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_BACKSPACE;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_DELETE;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_C;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_E;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_INSERT;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_CONTROL;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_L;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_M;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_O;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_P;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_PAGE_DOWN;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_PAGE_UP;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_CONTROL;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_SHIFT;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_S;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_UP;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_TAB;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_V;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_BRACKET;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_BRACKET;
@@ -46,10 +40,20 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_Z;
 import static org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT;
 import static org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT;
 public final class EditorInputHandler {
+    /**
+     * A host front end that sees each editor tick first, such as an {@link EditorWindowChrome}.
+     * {@link #update} returns true when it owned the whole tick.
+     */
+    public interface FrontEnd {
+        boolean update(InputHandler input);
+        void finishPendingEdits();
+    }
+
+    private FrontEnd frontEnd;
+
     public enum Action {
         DESCEND,
         ASCEND,
-        CYCLE_FOCUS_REGION,
         APPLY_PRIMARY_ACTION,
         PERFORM_EYEDROP,
         TOGGLE_LAYER,
@@ -69,12 +73,6 @@ public final class EditorInputHandler {
         CYCLE_COLLISION_MODE,
         INCREMENT_SOLID_TILE_INDEX,
         DECREMENT_SOLID_TILE_INDEX,
-        BROWSE_LIBRARY_NEXT,
-        BROWSE_LIBRARY_PREVIOUS,
-        BROWSE_LIBRARY_ROW_NEXT,
-        BROWSE_LIBRARY_ROW_PREVIOUS,
-        BROWSE_LIBRARY_PAGE_NEXT,
-        BROWSE_LIBRARY_PAGE_PREVIOUS,
         ERASE_SELECTION,
         TOGGLE_H_FLIP,
         TOGGLE_V_FLIP,
@@ -131,49 +129,19 @@ public final class EditorInputHandler {
 
     public void update(InputHandler inputHandler) {
         Objects.requireNonNull(inputHandler, "inputHandler");
-        if (EditorCommandPalette.forController(controller).isOpen()) finishPendingEdits();
-        if (EditorCommandPalette.forController(controller).update(inputHandler, this::handleAction)) {
+        if (frontEnd != null && frontEnd.update(inputHandler)) {
             finishActiveStroke();
             return;
         }
-        boolean capturesText = controller.isLibraryFilterInputActive();
-        if(!capturesText)handleMouseInput(inputHandler);
+        handleMouseInput(inputHandler);
         var logical = inputHandler.logical();
         int logicalActions = logical.player1().actionPressedMask();
         int dx = 0;
         int dy = 0;
-        if (controller.isLibraryBrowserFocused()) {
-            if (controller.focusRegion() == EditorFocusRegion.SPAWN_PALETTE) {
-                if (capturesText ? MenuInput.textLeft(inputHandler) : MenuInput.left(inputHandler))
-                    handleAction(Action.BROWSE_LIBRARY_PREVIOUS);
-                if (capturesText ? MenuInput.textRight(inputHandler) : MenuInput.right(inputHandler))
-                    handleAction(Action.BROWSE_LIBRARY_NEXT);
-                if (capturesText ? MenuInput.textUp(inputHandler) : MenuInput.up(inputHandler))
-                    handleAction(capturesText?Action.BROWSE_LIBRARY_ROW_PREVIOUS:Action.INCREMENT_SUBTYPE);
-                if (capturesText ? MenuInput.textDown(inputHandler) : MenuInput.down(inputHandler))
-                    handleAction(capturesText?Action.BROWSE_LIBRARY_ROW_NEXT:Action.DECREMENT_SUBTYPE);
-            } else {
-                if (capturesText ? MenuInput.textLeft(inputHandler) : MenuInput.left(inputHandler))
-                    handleAction(Action.BROWSE_LIBRARY_PREVIOUS);
-                if (capturesText ? MenuInput.textRight(inputHandler) : MenuInput.right(inputHandler))
-                    handleAction(Action.BROWSE_LIBRARY_NEXT);
-                if (capturesText ? MenuInput.textUp(inputHandler) : MenuInput.up(inputHandler))
-                    handleAction(Action.BROWSE_LIBRARY_ROW_PREVIOUS);
-                if (capturesText ? MenuInput.textDown(inputHandler) : MenuInput.down(inputHandler))
-                    handleAction(Action.BROWSE_LIBRARY_ROW_NEXT);
-            }
-        } else if (controller.focusRegion() == EditorFocusRegion.SPAWN_PALETTE
-                && controller.spawnEditMode() == EditorSpawnEditMode.OBJECTS) {
-            if (capturesText ? MenuInput.textLeft(inputHandler) : MenuInput.left(inputHandler)) handleAction(Action.PREVIOUS_OBJECT);
-            if (capturesText ? MenuInput.textRight(inputHandler) : MenuInput.right(inputHandler)) handleAction(Action.NEXT_OBJECT);
-            if (capturesText ? MenuInput.textUp(inputHandler) : MenuInput.up(inputHandler)) handleAction(Action.INCREMENT_SUBTYPE);
-            if (capturesText ? MenuInput.textDown(inputHandler) : MenuInput.down(inputHandler)) handleAction(Action.DECREMENT_SUBTYPE);
-        } else {
-            if (inputHandler.isDirectionHeld(GLFW_KEY_LEFT, AbstractPlayableSprite.INPUT_LEFT)) dx -= 1;
-            if (inputHandler.isDirectionHeld(GLFW_KEY_RIGHT, AbstractPlayableSprite.INPUT_RIGHT)) dx += 1;
-            if (inputHandler.isDirectionHeld(GLFW_KEY_UP, AbstractPlayableSprite.INPUT_UP)) dy -= 1;
-            if (inputHandler.isDirectionHeld(GLFW_KEY_DOWN, AbstractPlayableSprite.INPUT_DOWN)) dy += 1;
-        }
+        if (inputHandler.isDirectionHeld(GLFW_KEY_LEFT, AbstractPlayableSprite.INPUT_LEFT)) dx -= 1;
+        if (inputHandler.isDirectionHeld(GLFW_KEY_RIGHT, AbstractPlayableSprite.INPUT_RIGHT)) dx += 1;
+        if (inputHandler.isDirectionHeld(GLFW_KEY_UP, AbstractPlayableSprite.INPUT_UP)) dy -= 1;
+        if (inputHandler.isDirectionHeld(GLFW_KEY_DOWN, AbstractPlayableSprite.INPUT_DOWN)) dy += 1;
         if ((dx != 0 || dy != 0) && activeStroke == null) {
             if (controller.depth() == EditorHierarchyDepth.WORLD) {
                 controller.moveWorldCursor(dx * WORLD_MOVE_SPEED, dy * WORLD_MOVE_SPEED);
@@ -181,35 +149,14 @@ public final class EditorInputHandler {
                 controller.moveActiveSelection(dx, dy);
             }
         }
-        if (controller.isLibraryBrowserFocused() && inputHandler.isKeyPressed(GLFW_KEY_INSERT)) {
-            controller.toggleLibraryFilterInput();
-        }
-        if (controller.isLibraryBrowserFocused() && inputHandler.isKeyPressed(GLFW_KEY_PAGE_DOWN)) {
-            handleAction(Action.BROWSE_LIBRARY_PAGE_NEXT);
-        }
-        if (controller.isLibraryBrowserFocused() && inputHandler.isKeyPressed(GLFW_KEY_PAGE_UP)) {
-            handleAction(Action.BROWSE_LIBRARY_PAGE_PREVIOUS);
-        }
         boolean controlDown = inputHandler.isKeyDown(GLFW_KEY_LEFT_CONTROL)
                 || inputHandler.isKeyDown(GLFW_KEY_RIGHT_CONTROL);
-        if (controller.isLibraryBrowserFocused() && MenuInput.textKeyRepeated(inputHandler, GLFW_KEY_BACKSPACE)) {
-            if (controlDown) controller.setLibraryFilter(""); else controller.backspaceLibraryFilter();
-        }
-        capturesText=controller.isLibraryFilterInputActive();
-        if(capturesText && MenuInput.textBack(inputHandler)) {
-            controller.endLibraryFilterInput();
-            return;
-        }
-        if(capturesText)return;
         boolean shiftDown = inputHandler.isKeyDown(GLFW_KEY_LEFT_SHIFT)
                 || inputHandler.isKeyDown(GLFW_KEY_RIGHT_SHIFT);
-        if (inputHandler.isKeyPressed(GLFW_KEY_TAB) && !shiftDown) {
-            handleAction(Action.CYCLE_FOCUS_REGION);
-        }
         boolean exportChord = controlDown && shiftDown && inputHandler.isKeyPressed(GLFW_KEY_E);
-        boolean rawPrimary = !capturesText&&inputHandler.isKeyPressed(GLFW_KEY_SPACE);
-        boolean rawEyedrop = !capturesText&&!exportChord && inputHandler.isKeyPressed(GLFW_KEY_E);
-        boolean rawModeCycle = !capturesText&&inputHandler.isKeyPressed(GLFW_KEY_O);
+        boolean rawPrimary = inputHandler.isKeyPressed(GLFW_KEY_SPACE);
+        boolean rawEyedrop = !exportChord && inputHandler.isKeyPressed(GLFW_KEY_E);
+        boolean rawModeCycle = inputHandler.isKeyPressed(GLFW_KEY_O);
         boolean rawDelete = inputHandler.isKeyPressed(GLFW_KEY_DELETE);
         if (rawPrimary && !controller.isSpawnEditing()) {
             handleAction(Action.APPLY_PRIMARY_ACTION);
@@ -217,7 +164,7 @@ public final class EditorInputHandler {
         if (rawEyedrop && !controller.isSpawnEditing()) {
             handleAction(Action.PERFORM_EYEDROP);
         }
-        if (!capturesText&&inputHandler.isKeyPressed(GLFW_KEY_L)) {
+        if (inputHandler.isKeyPressed(GLFW_KEY_L)) {
             handleAction(Action.TOGGLE_LAYER);
         }
         if (rawModeCycle || logical.menuStart()) {
@@ -231,16 +178,16 @@ public final class EditorInputHandler {
         if(inputHandler.isKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_EQUAL))handleAction(Action.INCREMENT_SELECTED_SUBTYPE);
         if(inputHandler.isKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_MINUS))handleAction(Action.DECREMENT_SELECTED_SUBTYPE);
         if(inputHandler.isKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_R))handleAction(Action.TOGGLE_SELECTED_RESPAWN);
-        if (!capturesText&&inputHandler.isKeyPressed(GLFW_KEY_M)) {
+        if (inputHandler.isKeyPressed(GLFW_KEY_M)) {
             handleAction(Action.MOVE_SELECTED_SPAWN_TO_CURSOR);
         }
-        if (!capturesText&&inputHandler.isKeyPressed(GLFW_KEY_C)) {
+        if (inputHandler.isKeyPressed(GLFW_KEY_C)) {
             handleAction(Action.TOGGLE_COLLISION_OVERLAY);
         }
-        if (!capturesText&&inputHandler.isKeyPressed(GLFW_KEY_P)) {
+        if (inputHandler.isKeyPressed(GLFW_KEY_P)) {
             handleAction(Action.TOGGLE_COLLISION_PATH);
         }
-        if (!capturesText&&inputHandler.isKeyPressed(GLFW_KEY_V)) {
+        if (inputHandler.isKeyPressed(GLFW_KEY_V)) {
             handleAction(Action.CYCLE_COLLISION_MODE);
         }
         if (inputHandler.isKeyPressed(GLFW_KEY_RIGHT_BRACKET)) {
@@ -263,7 +210,7 @@ public final class EditorInputHandler {
         if (controlDown && inputHandler.isKeyPressed(GLFW_KEY_Z)) {
             handleAction(Action.UNDO);
         }
-        if (!capturesText&&controlDown && inputHandler.isKeyPressed(GLFW_KEY_S)) {
+        if (controlDown && inputHandler.isKeyPressed(GLFW_KEY_S)) {
             handleAction(Action.SAVE);
         }
         if (exportChord) {
@@ -276,7 +223,7 @@ public final class EditorInputHandler {
             handleAction(Action.DESCEND);
         }
         if (inputHandler.isKeyPressed(GLFW_KEY_ESCAPE)) {
-            if(capturesText)controller.endLibraryFilterInput(); else handleAction(Action.ASCEND);
+            handleAction(Action.ASCEND);
         }
     }
 
@@ -287,7 +234,6 @@ public final class EditorInputHandler {
         switch (action) {
             case DESCEND -> controller.descend();
             case ASCEND -> controller.ascend();
-            case CYCLE_FOCUS_REGION -> controller.cycleFocusRegion();
             case APPLY_PRIMARY_ACTION -> controller.applyPrimaryAction();
             case PERFORM_EYEDROP -> controller.performEyedrop();
             case TOGGLE_LAYER -> controller.toggleActiveLayer();
@@ -308,12 +254,6 @@ public final class EditorInputHandler {
             case CYCLE_COLLISION_MODE -> controller.cycleSelectedCellCollisionMode();
             case INCREMENT_SOLID_TILE_INDEX -> controller.adjustSelectedChunkSolidTileIndex(1);
             case DECREMENT_SOLID_TILE_INDEX -> controller.adjustSelectedChunkSolidTileIndex(-1);
-            case BROWSE_LIBRARY_NEXT -> controller.browseLibrary(1);
-            case BROWSE_LIBRARY_PREVIOUS -> controller.browseLibrary(-1);
-            case BROWSE_LIBRARY_ROW_NEXT -> controller.libraryBrowser().move2d(0, 1);
-            case BROWSE_LIBRARY_ROW_PREVIOUS -> controller.libraryBrowser().move2d(0, -1);
-            case BROWSE_LIBRARY_PAGE_NEXT -> controller.libraryBrowser().page(1);
-            case BROWSE_LIBRARY_PAGE_PREVIOUS -> controller.libraryBrowser().page(-1);
             case ERASE_SELECTION -> controller.eraseSelection();
             case TOGGLE_H_FLIP -> {if(controller.isSpawnEditing())controller.toggleSelectedSpawnFlag(1);else controller.toggleDescriptorHFlip();}
             case TOGGLE_V_FLIP -> {if(controller.isSpawnEditing())controller.toggleSelectedSpawnFlag(2);else controller.toggleDescriptorVFlip();}
@@ -331,7 +271,12 @@ public final class EditorInputHandler {
         }
     }
 
-    public void finishPendingEdits() { finishActiveStroke(); }
+    public void finishPendingEdits() {
+        finishActiveStroke();
+        if (frontEnd != null) frontEnd.finishPendingEdits();
+    }
+
+    public void setFrontEnd(FrontEnd frontEnd) { this.frontEnd = frontEnd; }
 
     public void finishActiveStroke() {
         if (activeStroke == null) {
@@ -345,18 +290,9 @@ public final class EditorInputHandler {
         }
     }
 
-    /** GLFW character-input callback seam; filtering is active only while a library pane owns focus. */
-    public void handleTextInputCodepoint(int codepoint) {
-        if (EditorCommandPalette.forController(controller).isOpen()
-                || !controller.isLibraryBrowserFocused() || !controller.isLibraryFilterInputActive()
-                || !Character.isValidCodePoint(codepoint)
-                || Character.isISOControl(codepoint)) return;
-        controller.appendLibraryFilterText(new String(Character.toChars(codepoint)));
-    }
-
     private void handleMouseInput(InputHandler inputHandler) {
         boolean leftDown = inputHandler.isMouseButtonDown(GLFW_MOUSE_BUTTON_LEFT);
-        if (!leftDown) finishPendingEdits();
+        if (!leftDown) finishActiveStroke();
         if (!inputHandler.hasMouseInputSeen()) return;
         MutableLevel level = controller.currentLevel();
         Camera camera = cameraSupplier.get();
@@ -367,37 +303,10 @@ public final class EditorInputHandler {
         previousMouseX = mouseX; previousMouseY = mouseY;
         EditorMouseTransform.Result hover = EditorMouseTransform.toWorldTile(inputHandler,camera,graphics,level);
         if (!hover.inViewport()) return;
-        var layout = new com.openggf.editor.render.EditorUiLayout(graphics.getProjectionWidth(),
-                Math.max(224,(int)graphics.getScreenHeight()));
-        int[] point=EditorMouseTransform.logicalPoint(inputHandler,graphics);
-        int x=point[0],y=point[1];
-        EditorFocusRegion hit = layout.hit(controller,x,y);
+        // Composition cells belong to the HUD or desktop workbench, outside the game canvas.
+        if (controller.depth() != EditorHierarchyDepth.WORLD) return;
         boolean click = inputHandler.isMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT);
         boolean pick = inputHandler.isMouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT);
-        if (hit == EditorFocusRegion.TOOLBAR || hit == EditorFocusRegion.COMMAND_STRIP) {
-            if (click) EditorCommandPalette.forController(controller).open();
-            return;
-        }
-        if (controller.isLibraryBrowserFocused() && hit == layout.libraryRegion(controller)) {
-            if (click && layout.libraryGrid().bounds().contains(x,y)) {
-                var grid = layout.libraryGrid();
-                int pageStart = controller.libraryBrowser().cursor()/9*9;
-                controller.libraryBrowser().selectCursor(pageStart+grid.cellY(y)*3+grid.cellX(x));
-                controller.selectLibraryEntry();
-            }
-            return;
-        }
-        if (controller.depth() != EditorHierarchyDepth.WORLD) {
-            var grid=layout.focusedGrid(controller.depth(),controller.depth()==EditorHierarchyDepth.BLOCK
-                    ? controller.blockGridSide():controller.chunkGridSide());
-            if ((click || pick) && grid.bounds().contains(x,y)) {
-                controller.focusRegion(controller.depth()==EditorHierarchyDepth.BLOCK
-                        ? EditorFocusRegion.BLOCK_PANE:EditorFocusRegion.CHUNK_PANE);
-                controller.selectActiveCell(grid.cellX(x),grid.cellY(y));
-                if (pick) controller.performEyedrop(); else handleAction(Action.APPLY_PRIMARY_ACTION);
-            }
-            return;
-        }
         if (moved || click || pick || activeStroke != null)
             controller.setPointerWorldCursor(new com.openggf.game.session.EditorCursorState(hover.worldX(),hover.worldY()));
         if ((click || pick)&&controller.focusRegion()!=EditorFocusRegion.WORLD_CANVAS) controller.focusRegion(EditorFocusRegion.WORLD_CANVAS);

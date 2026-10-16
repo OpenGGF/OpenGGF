@@ -136,8 +136,16 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
     private DrillArmChild leftArm;
     private DrillArmChild rightArm;
 
+    private boolean counterCadence;
+
     public MgzMinibossInstance(ObjectSpawn spawn) {
+        this(spawn, false);
+    }
+
+    /** Internal finite encounter preset; the stock factory remains unchanged. */
+    public MgzMinibossInstance(ObjectSpawn spawn, boolean counterCadence) {
         super(spawn, "MGZMiniboss");
+        this.counterCadence = counterCadence;
     }
 
     @Override
@@ -267,7 +275,10 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
         if (--routineTimer < 0) {
             clearScreenShake();
             state.routine = ROUTINE_WAIT;
-            routineTimer = WAIT_TIME;
+            // TunnelbotMiniboss_RumbleWait keeps its entire rumble warning.
+            // A damaged remix leaves the ceiling sooner, with the full native
+            // second drop warning and all attackable fall/return movement intact.
+            routineTimer = counterCadence && state.hitCount <= 4 ? 0x1F : WAIT_TIME;
         }
     }
 

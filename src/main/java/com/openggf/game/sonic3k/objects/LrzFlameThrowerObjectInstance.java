@@ -121,6 +121,9 @@ public final class LrzFlameThrowerObjectInstance extends AbstractObjectInstance
     private int flameFrameTimer;
     /** ROM {@code $25(a0)}, the flame's starting {@code mapping_frame}. */
     private int flameStartFrame;
+    private boolean echoJet;
+    private boolean echoFiring;
+    private int echoWarningTicks;
 
     public LrzFlameThrowerObjectInstance(ObjectSpawn spawn, Axis axis) {
         super(spawn, axis == Axis.VERTICAL ? "LRZFlameThrowerVertical" : "LRZFlameThrowerHorizontal");
@@ -143,6 +146,12 @@ public final class LrzFlameThrowerObjectInstance extends AbstractObjectInstance
         this(spawn, spawn != null && (spawn.subtype() & 0x80) != 0 ? Axis.VERTICAL : Axis.HORIZONTAL);
     }
 
+    /** Native finite opt-in; subtype/axis and the first burst remain unchanged. */
+    public LrzFlameThrowerObjectInstance(ObjectSpawn spawn, boolean echoJet) {
+        this(spawn);
+        this.echoJet = echoJet;
+    }
+
     /**
      * {@code Obj_LRZFlameThrower} sits at ROM {@code $00043D68} (sonic3k.lst); its whole code
      * block lies in one bank, so the high word {@code sub_13EFC} latches is {@code $0004}.
@@ -162,6 +171,22 @@ public final class LrzFlameThrowerObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        if (isDestroyed()) return;
+        if (echoWarningTicks > 0) {
+            // No unseen countdown: losing the nozzle or its prepared art abandons
+            // this extra burst and gives the full native idle instead.
+            if (!canPresentEchoWarning()) {
+                echoWarningTicks = 0;
+                phaseTimer = idleFrames;
+                return;
+            }
+            if (--echoWarningTicks == 0) {
+                echoFiring = true;
+                idle = false;
+                phaseTimer = 24;
+            }
+            return;
+        }
         // loc_43DDC / loc_43F12: tst.b $2F(a0) picks the phase, and only the firing phase's
         // fall-through reaches the emission section on this frame.
         boolean emitting;
@@ -170,6 +195,14 @@ public final class LrzFlameThrowerObjectInstance extends AbstractObjectInstance
             if (phaseTimer >= 0) {
                 emitting = true;
             } else {
+                if (echoJet && !echoFiring && canPresentEchoWarning()) {
+                    idle = true;
+                    phaseTimer = idleFrames;
+                    echoWarningTicks = 32;
+                    services().playSfx(com.openggf.game.sonic3k.audio.Sonic3kSfx.FLAMETHROWER_QUIET.id);
+                    return;
+                }
+                echoFiring = false;
                 // move.w $32(a0),$30(a0) / move.b #1,$2F(a0) / bra loc_43EF6: solid only.
                 phaseTimer = idleFrames;
                 idle = true;
@@ -191,6 +224,22 @@ public final class LrzFlameThrowerObjectInstance extends AbstractObjectInstance
             return;
         }
         advanceFiringFrame(levelFrameCounterOrFallback(vIntRunCount));
+    }
+
+    @Override
+    public void onUnload() {
+        if (echoJet) {
+            // A retired opt-in nozzle cannot finish a queued echo on a stale
+            // reference. Committed flame actors retain their native lifetime;
+            // the level owner retires the whole graph on world teardown.
+            echoWarningTicks = 0;
+            echoFiring = false;
+            com.openggf.level.objects.ObjectLifetimeOps.deleteNoRespawn(this);
+        }
+    }
+
+    private boolean canPresentEchoWarning() {
+        return isWithinSolidContactBounds() && getRenderer(Sonic3kObjectArtKeys.LRZ2_FLAME_THROWER) != null;
     }
 
     /** {@code loc_43E14} / {@code loc_43F4A} (sonic3k.asm:89275-89320, :89366-89427). */
@@ -362,7 +411,16 @@ public final class LrzFlameThrowerObjectInstance extends AbstractObjectInstance
             return;
         }
         int frame = axis == Axis.VERTICAL ? FRAME_VERTICAL : FRAME_HORIZONTAL;
-        renderer.drawFrameIndex(frame, getX(), getY(), mirrored,
-                axis == Axis.VERTICAL && mirrored);
+        if (echoWarningTicks > 0) {
+            // Heat-pulse the stationary ROM nozzle itself, never draw a harmless
+            // damage-shaped flame. Both palette banks already belong to LRZ2;
+            // this per-sprite selection writes no shared palette or collision.
+            int palette = (echoWarningTicks & 4) == 0 ? 2 : 1;
+            renderer.drawFrameIndex(frame, getX(), getY(), mirrored,
+                    axis == Axis.VERTICAL && mirrored, palette);
+        } else {
+            renderer.drawFrameIndex(frame, getX(), getY(), mirrored,
+                    axis == Axis.VERTICAL && mirrored);
+        }
     }
 }

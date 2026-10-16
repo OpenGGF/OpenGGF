@@ -87,6 +87,15 @@ final class SecondStrikeBarrageFixture {
         return object;
     }
     AbstractObjectInstance gunner() throws Exception { return enemy("ArtilleryBadnik", "artillery", 400, 300); }
+    AbstractObjectInstance splitGunner() throws Exception {
+        var type = creator.loadClass("secondstrike.enemies.ArtilleryBadnik");
+        var pattern = creator.loadClass("secondstrike.enemies.ArtilleryBadnik$FanPattern");
+        var object = (AbstractObjectInstance) type.getConstructor(ObjectSpawn.class, pattern)
+                .newInstance(spawn("artillery", 400, 300), pattern.getField("SPLIT").get(null));
+        manager.addDynamicObject(object);
+        assertTrue(object.getSlotIndex() >= 0 && !object.isDestroyed());
+        return object;
+    }
     List<AbstractObjectInstance> shots() {
         return manager.getActiveObjects().stream().filter(o -> o.getClass().getSimpleName().equals("CommittedShot"))
                 .map(AbstractObjectInstance.class::cast).filter(o -> !o.isDestroyed()).toList();

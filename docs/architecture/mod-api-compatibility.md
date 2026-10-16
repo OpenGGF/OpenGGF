@@ -7,7 +7,7 @@ annotation marks its roots.
 
 Second Strike extends the candidate with explicit native decoded-placement
 bindings and original-ring retention, preserving concrete level identity for
-native transition consumers. Three S3K service policies admit bounded late-boss,
+native transition consumers. Native-owned S3K policies admit bounded late-boss,
 Blue Sphere layout and Gumball spring variants inside the canonical owner boundary.
 Invalid values are creator faults; offered arrays and admitted returns are isolated.
 Small candidate roots also cover Caterkiller recipes/factories, Eggman monitor
@@ -16,7 +16,21 @@ attack/field callbacks. Title overlays and attached-effect rendering retain host
 presentation ownership, including deferred palette replay. The Caterkiller preset,
 S3K monitor factory and destruction config belong to the native game package;
 the shared destruction pipeline consumes factories rather than native classes.
-Native AI implementations remain internal.
+Native AI implementations remain internal. Typed factories expose finite AIZ log/tree
+and HCZ/MGZ/CNZ/ICZ/LBZ object presets, selecting authentic original records while
+native owners retain AI, art, collision, child allocation, defeat and rewind.
+An immutable MGZ recipe also selects the native event-created boss; it does not
+expose an arbitrary schedule or a second original-placement Knuckles boss factory.
+These roots do not imply admission of later campaign proposals.
+
+Fresh enum and AIZ miniboss-policy lookups withdraw after owner quarantine; cached
+values and direct/cached callbacks retain their established semantics. A successful
+native boss birth may capture its immutable preset for native lifetime and rewind.
+An absent or already-withdrawn optional recipe uses stock behavior. A new creator
+provider fault must propagate to the engine's frame-abort recovery, which discards
+that frame and tears down the world; quarantine alone does not retire the assembled
+callback graph. AIZ authored live attack descendants additionally recheck their
+current owner service and retire when it withdraws.
 The normalized mutable `0.7` pin is regenerated from the compiled inventory; the
 descriptor remains unpublished candidate `0.7.0`, with no published pin edited.
 Every engine type reachable through those roots' public or protected

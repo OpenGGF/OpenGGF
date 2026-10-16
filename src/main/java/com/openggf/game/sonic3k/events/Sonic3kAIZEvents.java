@@ -2171,26 +2171,21 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
      * {@code endBossSpawned}) and the auto-scroll camera lock are reflectively captured
      * by the AIZ event sidecar, but the dynamic objects they gate are recreated by the
      * object-manager rewind restore path. If a sequence-driving object failed to be recreated,
-     * a restore can leave an impossible state: a guard marked spawned with no live object,
-     * or {@code battleshipAutoScrollActive} true with no battleship/small-boss left to
+     * a restore can leave {@code battleshipAutoScrollActive} true with no battleship/small-boss left to
      * call {@link #onBattleshipComplete()}/{@link #onBossSmallComplete()} — which would
      * force-lock the camera every frame forever (softlock).
      *
-     * <p>This is a live-object predicate, not a zone/frame/route carve-out: with the
-     * restore paths in place the driver objects are present and nothing here fires. It is a
-     * defense-in-depth backstop guaranteeing the camera lock is never left orphaned.
+     * <p>The miniboss one-shot guard records history, not live presence: its native
+     * retained EndSignControl owner retires after results/title completion. Preserve
+     * that captured history. The active ship-driver check below is a defense-in-depth
+     * backstop guaranteeing its camera lock is never left orphaned.
      */
     public void reconcileSequenceAfterRewindRestore() {
-        // End-boss/miniboss latches: clear when their instance is gone so the normal
+        // End-boss latch: clear when its instance is gone so the normal
         // spawn path can re-fire (updateAiz2EndBossSpawn already re-checks live presence).
         if (endBossSpawned && !hasLiveAizEndBoss()) {
             endBossSpawned = false;
         }
-        if (minibossSpawned
-                && !anyLiveObject(o -> o instanceof AizMinibossInstance b && !b.isDestroyed())) {
-            minibossSpawned = false;
-        }
-
         // Battleship auto-scroll loop: ended only by the battleship (pre-bombing) or the
         // small boss craft (post-bombing). If that driver is gone, the loop can never end,
         // so release it the same way onBossSmallComplete() does (unlock camera bounds).

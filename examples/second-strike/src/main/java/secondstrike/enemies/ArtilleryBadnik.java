@@ -9,6 +9,8 @@ import com.openggf.level.objects.ObjectCombatRules;
 
 /** Bloominator gunner: two committed bilateral seed fans, then a long vulnerable reload. */
 public final class ArtilleryBadnik extends SecondStrikeBadnik {
+    /** Authored attack families; the native object/contact owners stay unchanged. */
+    public enum FanPattern { WIDE, SPLIT }
     private static final int WATCH = 0, WINDUP = 1, VOLLEY = 2, RELOAD = 3;
     private static final int MAX_LIVE_SEEDS = 20;
     private static final int TELL_UPDATES = 36, RELEASE_GAP_UPDATES = 12, RELOAD_UPDATES = 108;
@@ -18,7 +20,13 @@ public final class ArtilleryBadnik extends SecondStrikeBadnik {
     private record SeedRecipe(int muzzleYOffset, int horizontalSpeed, int verticalSpeed) { }
     private static final int FAN_LANES = 5;
 
-    private static SeedRecipe fanRecipe(int lane) {
+    private FanPattern fanPattern;
+
+    private SeedRecipe fanRecipe(int lane) {
+        // Omit the middle arc on both sides, including its warning marker.
+        // The two learned low/high groups leave a deliberate traversal lane;
+        // this smaller recipe never expands the twenty-seed producer budget.
+        if (fanPattern == FanPattern.SPLIT && lane == 2) return null;
         return switch (lane) {
             case 0 -> new SeedRecipe(-16, 0x380, -0x080);
             case 1 -> new SeedRecipe(-20, 0x340, -0x180);
@@ -32,7 +40,12 @@ public final class ArtilleryBadnik extends SecondStrikeBadnik {
     private ObjectRefId lifetimeIdentity;
     private boolean companionAttempted;
 
-    public ArtilleryBadnik(ObjectSpawn spawn) { super(spawn, "Second Strike artillery", 2); }
+    public ArtilleryBadnik(ObjectSpawn spawn) { this(spawn, FanPattern.WIDE); }
+
+    public ArtilleryBadnik(ObjectSpawn spawn, FanPattern pattern) {
+        super(spawn, "Second Strike artillery", 2);
+        fanPattern = java.util.Objects.requireNonNull(pattern);
+    }
 
     @Override protected void updateMovement(int vIntRunCount, PlayableEntity updatePlayer) {
         if (!updateHitAndLifetime(updatePlayer)) return;
@@ -103,6 +116,7 @@ public final class ArtilleryBadnik extends SecondStrikeBadnik {
         release:
         for (int lane = 0; lane < FAN_LANES; lane++) {
             SeedRecipe recipe = fanRecipe(lane);
+            if (recipe == null) continue;
             for (int side : new int[]{preferredSide, -preferredSide}) {
                 if (available == 0 || !ObjectCombatRules.permitsFiring(services(), currentX)) break release;
                 var shotSpawn = SecondStrikeEnemies.ownedSpawn(SecondStrikeEnemies.SHOT,
@@ -158,6 +172,7 @@ public final class ArtilleryBadnik extends SecondStrikeBadnik {
         // The native seed frame sketches the widening fan during all 36 committed tell updates.
         if (phase == WINDUP) {
             for (int lane = 0; lane < FAN_LANES; lane++) {
+                if (fanRecipe(lane) == null) continue;
                 draw(SecondStrikeEnemies.GUNNER_ART, 4, currentX - 16 - lane * 6, currentY - 20 - lane * 5);
                 draw(SecondStrikeEnemies.GUNNER_ART, 4, currentX + 16 + lane * 6, currentY - 20 - lane * 5);
             }
@@ -168,6 +183,6 @@ public final class ArtilleryBadnik extends SecondStrikeBadnik {
     }
 
     @Override public AbstractObjectInstance recreateForRewind(ObjectReconstructionContext context) {
-        return new ArtilleryBadnik(context.spawn());
+        return new ArtilleryBadnik(context.spawn(), fanPattern);
     }
 }

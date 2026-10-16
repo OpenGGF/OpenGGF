@@ -1,6 +1,11 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic3k.difficulty.AizTreeExitRecipe;
+import com.openggf.game.sonic3k.objects.badniks.MonkeyDudeBadnikInstance;
+import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.TerrainSurface;
 import com.openggf.game.rewind.RewindStateful;
 import com.openggf.camera.Camera;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
@@ -61,6 +66,21 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance implemen
     private boolean nativeP2UsesExtensionState;
 
     private int cameraLockTimer;
+    private AizTreeExitRecipe exitRecipe = AizTreeExitRecipe.STOCK;
+    private boolean exitReleaseSeen;
+    private boolean exitLookoutAttempted;
+    private MonkeyDudeBadnikInstance exitLookout;
+
+    /** Internal finite factory bridge; no actor/coordinate editor is exposed. */
+    public static AizHollowTreeObjectInstance withExitRecipe(ObjectSpawn spawn, AizTreeExitRecipe recipe) {
+        java.util.Objects.requireNonNull(spawn, "spawn");
+        if (spawn.objectId() != Sonic3kObjectIds.AIZ_HOLLOW_TREE) {
+            throw new IllegalArgumentException("Exit lookout requires the original native hollow tree");
+        }
+        var tree = new AizHollowTreeObjectInstance(spawn);
+        tree.exitRecipe = java.util.Objects.requireNonNull(recipe, "recipe");
+        return tree;
+    }
 
     public AizHollowTreeObjectInstance(ObjectSpawn spawn) {
         super(spawn, "AIZHollowTree");
@@ -84,7 +104,9 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance implemen
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         bindMainPlayer(player);
-        updatePlayer(player, nativeRideStates[PLAYER_SLOT_MAIN], PLAYER_SLOT_MAIN, true);
+        var mainRide = nativeRideStates[PLAYER_SLOT_MAIN];
+        updatePlayer(player, mainRide, PLAYER_SLOT_MAIN, true);
+        updateExitLookout(player);
         AbstractPlayableSprite sidekick = firstTrackedSidekick();
         bindNativeP2(sidekick);
         if (sidekick != null) {
@@ -112,8 +134,46 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance implemen
         updateCameraLock(player);
     }
 
+    private void updateExitLookout(AbstractPlayableSprite player) {
+        if (exitRecipe != AizTreeExitRecipe.EXIT_LOOKOUT || exitLookoutAttempted || !exitReleaseSeen
+                || player == null || player.getDead() || player.isObjectControlled()
+                || player.isControlLocked() || player.getAir()) return;
+        // The native exit lands above the tree at y=$33A before the $2F78
+        // horizontal spring/cutscene. Wait for that real landing and control
+        // release. Early falls, bypasses and scripted holds never arm this actor.
+        int dx = player.getCentreX() - treeX;
+        if (dx < 0x70 || dx >= 0x200) return;
+        exitLookoutAttempted = true;
+        int lookoutX = treeX + 0xE0, lookoutY = treeY - 0xB0;
+        // One semantic landing opportunity, one admission attempt. Skip rather
+        // than spawning a collidable body on either native participant, following
+        // a moving player or retrying unpredictably after a crowded release.
+        for (PlayableEntity participant : services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (participant != null && !participant.getDead()
+                    && Math.abs(participant.getCentreX() - lookoutX) <= 48
+                    && Math.abs(participant.getCentreY() - lookoutY) <= 64) return;
+        }
+        if (Math.abs(player.getCentreX() - lookoutX) <= 48
+                && Math.abs(player.getCentreY() - lookoutY) <= 64) return;
+        var renderManager = services().renderManager();
+        var renderer = renderManager == null ? null : renderManager.getRenderer(Sonic3kObjectArtKeys.MONKEY_DUDE);
+        if (renderer == null || !renderer.isReady()) return;
+        TerrainSurface landing = services().floorSurface(lookoutX, treeY - 0x80,
+                TerrainSurface.Layer.FOREGROUND, TerrainSurface.Path.PRIMARY);
+        if (!landing.foundSurface() || landing.distance() < -16 || landing.distance() > 16) return;
+        // Authoring anchor on the inspected ROM exit ledge, relative to the
+        // original tree. Native Monkey Dude keeps its own visible wait, body,
+        // coconut, contact, destruction and art; it is not the mod alarm role.
+        ObjectSpawn lookout = new ObjectSpawn(lookoutX, lookoutY,
+                Sonic3kObjectIds.MONKEY_DUDE, 0x10, 0, false, (treeY - 0xB0) & 0xFFF);
+        exitLookout = spawnFreeChild(() -> new MonkeyDudeBadnikInstance(lookout));
+        if (exitLookout.getSlotIndex() < 0 || exitLookout.isDestroyed()) exitLookout = null;
+    }
+
     @Override
     public void onUnload() {
+        if (exitLookout != null && !exitLookout.isDestroyed()) ObjectLifetimeOps.destroyLatched(exitLookout);
         releaseOwnedPlayer(mainOwner, nativeRideStates[PLAYER_SLOT_MAIN]);
         releaseOwnedPlayer(nativeP2Owner, nativeRideStates[PLAYER_SLOT_SIDEKICK]);
         for (Map.Entry<AbstractPlayableSprite, RideState> entry
@@ -174,6 +234,11 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance implemen
             int check = dy + 0x90;
             if (check < 0 || check > 0x130) {
                 setLastDecision(slot, "fall-y-range");
+                // Obj_AIZHollowTree's upper negative-Y exit is the completed
+                // stunt. A late low-speed/air fall is not this outcome.
+                if (mainPlayer && check < 0 && progressWord(state.progress) >= 0x400) {
+                    exitReleaseSeen = true;
+                }
                 fallOffTree(player, state);
                 return;
             }

@@ -22,7 +22,7 @@ class TestSonic3kChaosModeExampleArt {
     @Test void allSidegameMotifsDecodeAndBoardsDrawNativePixels() throws Exception {
         Path classes=Files.createDirectory(temp.resolve("classes"));
         var args=new ArrayList<>(List.of("--release","25","-classpath",System.getProperty("java.class.path"),"-d",classes.toString()));
-        for(String source:List.of("ChaosArt","ChaosSidegame"))args.add("examples/sonic3k-chaos-mode/src/main/java/chaos/"+source+".java");
+        for(String source:List.of("ChaosArt","ChaosSidegame","ChaosUi","ChaosCatalog"))args.add("examples/sonic3k-chaos-mode/src/main/java/chaos/"+source+".java");
         assertEquals(0,ToolProvider.getSystemJavaCompiler().run(null,null,null,args.toArray(String[]::new)));
         try(var loader=new URLClassLoader(new java.net.URL[]{classes.toUri().toURL()},getClass().getClassLoader())) {
             var rom=SceneRomArtFactory.forModule(new com.openggf.game.sonic3k.Sonic3kGameModule(),com.openggf.game.GameServices.rom().getRom());

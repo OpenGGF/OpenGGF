@@ -912,6 +912,22 @@ prune it with history, and reroot it at load boundaries. Test internal/external
 step changes, branching, and consecutive death reloads with live rewind enabled.
 Origin: SOZ mixed/duplicate-team checkpoint validation, 2026-09-15.
 
+**Programmatic capture settings are not CLI arguments.** `GameplayCaptureTool`
+normalizes `--sidekick none` to an empty string; `GameplayCaptureSession.Settings`
+expects that normalized character-code value. Passing the literal `"none"` to
+Settings requests an unknown sidekick, which can fall back to a second Sonic.
+Verify the actual registered team and rendered players before claiming solo
+route evidence. Second Strike MHZ probes 44377/82072/19540 (2026-10-16) exposed
+this caller error; their manager/terrain observations were retained with the
+unintended-team limit, and their incomplete wind comparison was not certified.
+
+**Terrain probes do not include live object solids.** Native floor data can be
+correct while a monitor blocks the proposed approach. MHZ original monitor28
+at `$0660,$0530`, with native solid width `$19`, matches the fixed probe's stop
+at `$0647` before its `$0649` target. Inventory object solids alongside terrain;
+do not remove the blocker or extend a controller search to manufacture a route.
+This was a source/trajectory attribution, not a recorded collision callback.
+
 **AniPLC submission is not presentation.** S3K `AnimateTiles_DoAniPLC` changes
 counters and queues immutable ROM art; `Process_DMA_Queue` publishes it during a
 later eligible VInt. Keep Level patterns, the level atlas and aliased object
@@ -1760,6 +1776,23 @@ world-session construction and pinned data: two separate `new Sonic2GameModule`
 objects describe different lifetimes even when their names match. The native
 publication regression covers direct and hidden creator method references,
 foreign roots, bundle retagging, and both real ROM-backed PLC lifecycles.
+
+### Creator quarantine does not replace frame-abort recovery
+
+Fresh service withdrawal prevents a quarantined creator from supplying another
+recipe. It does not remove already assembled world actors, cached callback proxies
+or controllers. A first dynamic optional-recipe failure must propagate its typed
+abort to `Engine.runFrameWithModAbort`, which discards the failed frame and initiates
+world/title recovery. Catching that abort and selecting a native STOCK preset can
+let retained callbacks run later in the same frame. Missing or already-withdrawn
+services may still select STOCK; a newly failing provider is a different boundary.
+
+Second Strike’s 2026-10-15 real ModContext regression reproduced continued execution
+for all three tested MGZ character configurations before removing the catch. The
+Knuckles fixture originally used an inherited synthetic event admission and needs
+migration to the actual placed A2 owner; that limitation does not alter the shared
+fault-recovery finding. Keep cached/direct callback semantics and VM-fatal propagation
+unchanged, and test the native producer with the real frame-abort boundary.
 
 **Finite audio tails own the complete presentation.** A cue mixed after a song's
 end taper can remain audible beyond finite EOF even though the song clock has

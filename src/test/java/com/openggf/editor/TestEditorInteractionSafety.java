@@ -39,14 +39,14 @@ class TestEditorInteractionSafety {
         editor.update(input);
         assertEquals(120,controller.worldCursor().x());
     }
-    @Test void toolbarClickNeverPaintsThroughChrome(){
+    @Test void entireGameViewportIsPaintableWithoutLogicalChrome(){
         MutableLevel level=level();LevelEditorController controller=new LevelEditorController();controller.attachLevel(level);controller.selectBlock(1);
         Camera camera=new Camera(SonicConfigurationService.getInstance());camera.setX((short)0);camera.setY((short)0);
         EditorInputHandler editor=mouse(controller,camera);InputHandler input=new InputHandler();
         input.handleMouseMove(40,10);input.handleMouseButton(GLFW_MOUSE_BUTTON_LEFT,GLFW_PRESS);editor.update(input);
         input.handleMouseButton(GLFW_MOUSE_BUTTON_LEFT,GLFW_RELEASE);editor.update(input);
-        assertEquals(0,Byte.toUnsignedInt(level.getMap().getValue(0,1,0)));
-        assertFalse(controller.hasUndoHistory());
+        assertEquals(1,Byte.toUnsignedInt(level.getMap().getValue(0,1,0)));
+        assertTrue(controller.hasUndoHistory());
     }
     @Test void saveIncludesPendingStrokeBeforeCallingHost(){
         MutableLevel level=level();LevelEditorController controller=new LevelEditorController();controller.attachLevel(level);controller.selectBlock(1);
@@ -70,10 +70,9 @@ class TestEditorInteractionSafety {
         assertEquals(CollisionMode.NO_COLLISION,level.getBlock(0).getChunkDesc(0,0).getPrimaryCollisionMode());
         controller.undo();assertEquals(0,Byte.toUnsignedInt(level.getMap().getValue(0,0,0)));
     }
-    @Test void patternBrowserSelectsAnyLoadedPatternAndAppliesItLocally(){
+    @Test void patternSelectionAppliesAnyLoadedPatternLocally(){
         MutableLevel level=level();LevelEditorController c=new LevelEditorController();c.attachLevel(level);c.selectBlock(0);c.selectChunk(0);
-        c.descend();c.descend();c.cycleFocusRegion();
-        assertTrue(c.isLibraryBrowserFocused());c.browseLibrary(3);c.applyPrimaryAction();
+        c.descend();c.descend();c.selectPattern(3);
         assertEquals(3,c.selectedPatternRaw()&0x7FF);c.focusRegion(EditorFocusRegion.CHUNK_PANE);c.applyPrimaryAction();
         int b=Byte.toUnsignedInt(level.getMap().getValue(0,0,0)),ch=level.getBlock(b).getChunkDesc(0,0).getChunkIndex();
         assertEquals(3,level.getChunk(ch).getPatternDesc(0,0).getPatternIndex());
@@ -111,62 +110,23 @@ class TestEditorInteractionSafety {
         c.setPointerWorldCursor(new EditorCursorState(90,80));assertFalse(c.consumeCameraNavigationRequest());
         c.moveWorldCursor(3,0);assertTrue(c.consumeCameraNavigationRequest());assertFalse(c.consumeCameraNavigationRequest());
     }
-    @Test void nativeAndWideLayoutsReserveChromeAndFitPreviewGeometry(){
-        for(int width:new int[]{320,426}) {
-            var l=new com.openggf.editor.render.EditorUiLayout(width,224);
-            var g=l.focusedGrid(EditorHierarchyDepth.BLOCK,8);var p=l.focused(EditorHierarchyDepth.BLOCK);
-            assertTrue(p.contains(g.x(),g.y()));assertTrue(p.contains(g.bounds().right()-1,g.bounds().bottom()-1));
-            var chunkGrid=l.focusedGrid(EditorHierarchyDepth.CHUNK,2);var chunkPane=l.focused(EditorHierarchyDepth.CHUNK);
-            assertEquals(32,chunkGrid.cellSize());assertEquals(64,chunkGrid.bounds().width());
-            assertTrue(chunkPane.contains(chunkGrid.x(),chunkGrid.y()));
-            assertTrue(chunkPane.contains(chunkGrid.bounds().right()-1,chunkGrid.bounds().bottom()-1));
-            assertTrue(l.library().contains(l.libraryGrid().bounds().right()-1,l.libraryGrid().bounds().bottom()-1));
-            LevelEditorController c=new LevelEditorController();c.attachLevel(level());
-            assertEquals(EditorFocusRegion.TOOLBAR,l.hit(c,40,10));
-        }
-    }
 
-    @Test void pointerLibrarySelectionNeverPaintsAndFocusedClicksEditOnlyAnchoredCell(){
-        MutableLevel level=level();LevelEditorController c=new LevelEditorController();c.attachLevel(level);c.selectBlock(0);
-        Camera camera=new Camera(SonicConfigurationService.getInstance());camera.setX((short)0);camera.setY((short)0);
-        EditorInputHandler editor=mouse(c,camera);InputHandler input=new InputHandler();
-        c.cycleFocusRegion();input.handleMouseMove(68,90);input.handleMouseButton(GLFW_MOUSE_BUTTON_LEFT,GLFW_PRESS);editor.update(input);
-        assertEquals(1,c.selectedBlockIndex());assertFalse(c.hasUndoHistory());
-        input.handleMouseButton(GLFW_MOUSE_BUTTON_LEFT,GLFW_RELEASE);input.update();editor.update(input);
-        c.descend();c.selectChunk(1);EditorCursorState anchor=c.worldCursor();
-        var grid=new com.openggf.editor.render.EditorUiLayout(320,224).focusedGrid(EditorHierarchyDepth.BLOCK,2);
-        input.handleMouseMove(grid.x()+1,grid.y()+1);input.handleMouseButton(GLFW_MOUSE_BUTTON_LEFT,GLFW_PRESS);editor.update(input);
-        assertEquals(anchor,c.worldCursor());int b=Byte.toUnsignedInt(level.getMap().getValue(0,0,0));
-        assertEquals(1,level.getBlock(b).getChunkDesc(0,0).getChunkIndex());
-        assertEquals(0,Byte.toUnsignedInt(level.getMap().getValue(0,grid.x()/32,grid.y()/32)));
-    }
-    @Test void enlargedChunkPointerHitsAllPatternCellsAndUndoPreservesOtherPlacements(){
-        for(int width:new int[]{320,426}) {
-            MutableLevel level=level();LevelEditorController c=new LevelEditorController();c.attachLevel(level);
-            c.selectBlock(0);c.selectChunk(0);c.descend();c.descend();c.selectPattern(3);
-            c.focusRegion(EditorFocusRegion.CHUNK_PANE);EditorCursorState anchor=c.worldCursor();
-            Camera camera=new Camera(SonicConfigurationService.getInstance());camera.setX((short)0);camera.setY((short)0);
-            GraphicsManager graphics=GraphicsManager.getInstance();graphics.setViewport(0,0,width,224);graphics.setProjectionWidth(width);
-            EditorInputHandler editor=new EditorInputHandler(c,()->camera,()->graphics);InputHandler input=new InputHandler();
-            var grid=new com.openggf.editor.render.EditorUiLayout(width,224).focusedGrid(EditorHierarchyDepth.CHUNK,2);
-            // Each pattern is now 32px; these points exercise the enlarged area outside the former 16px whole chunk.
-            for(int y=0;y<2;y++)for(int x=0;x<2;x++) {
-                input.handleMouseMove(grid.x()+x*32+24,grid.y()+y*32+24);
-                input.handleMouseButton(GLFW_MOUSE_BUTTON_LEFT,GLFW_PRESS);editor.update(input);
-                input.handleMouseButton(GLFW_MOUSE_BUTTON_LEFT,GLFW_RELEASE);input.update();editor.update(input);
-                assertEquals(x,c.selectedChunkCellX());assertEquals(y,c.selectedChunkCellY());assertEquals(anchor,c.worldCursor());
-            }
-            int block=Byte.toUnsignedInt(level.getMap().getValue(0,0,0));
-            int chunk=level.getBlock(block).getChunkDesc(0,0).getChunkIndex();
-            for(int y=0;y<2;y++)for(int x=0;x<2;x++) {
-                assertEquals(3,level.getChunk(chunk).getPatternDesc(x,y).getPatternIndex());
-                assertEquals(0,level.getChunk(0).getPatternDesc(x,y).getPatternIndex());
-            }
-            assertEquals(0,Byte.toUnsignedInt(level.getMap().getValue(0,1,0)));
-            for(int i=0;i<4;i++)c.undo();
-            assertEquals(0,Byte.toUnsignedInt(level.getMap().getValue(0,0,0)));assertFalse(c.hasUndoHistory());
+    @Test void everyCompositionCellEditsLocallyWithoutMovingTheWorldAnchor(){
+        MutableLevel level=level();LevelEditorController c=new LevelEditorController();c.attachLevel(level);
+        c.selectBlock(0);c.selectChunk(0);c.descend();c.descend();c.selectPattern(3);
+        EditorCursorState anchor=c.worldCursor();
+        for(int y=0;y<2;y++)for(int x=0;x<2;x++) {
+            c.selectActiveCell(x,y);c.applyPrimaryAction();assertEquals(anchor,c.worldCursor());
         }
-        GraphicsManager.getInstance().setViewport(0,0,320,224);GraphicsManager.getInstance().setProjectionWidth(320);
+        int block=Byte.toUnsignedInt(level.getMap().getValue(0,0,0));
+        int chunk=level.getBlock(block).getChunkDesc(0,0).getChunkIndex();
+        for(int y=0;y<2;y++)for(int x=0;x<2;x++) {
+            assertEquals(3,level.getChunk(chunk).getPatternDesc(x,y).getPatternIndex());
+            assertEquals(0,level.getChunk(0).getPatternDesc(x,y).getPatternIndex());
+        }
+        assertEquals(0,Byte.toUnsignedInt(level.getMap().getValue(0,1,0)));
+        for(int i=0;i<4;i++)c.undo();
+        assertEquals(0,Byte.toUnsignedInt(level.getMap().getValue(0,0,0)));assertFalse(c.hasUndoHistory());
     }
     @Test void exhaustedDefinitionBankFailsVisiblyWithoutMutatingAnotherPlacement(){
         MutableLevel level=level();for(int i=0;i<5;i++)level.setBlockInMap(0,i,0,i);
@@ -185,7 +145,7 @@ class TestEditorInteractionSafety {
         for(EditorInputHandler.Action action:new EditorInputHandler.Action[]{EditorInputHandler.Action.SAVE,
                 EditorInputHandler.Action.EXPORT,EditorInputHandler.Action.UNDO,EditorInputHandler.Action.REDO,
                 EditorInputHandler.Action.TOGGLE_LAYER,EditorInputHandler.Action.CYCLE_SPAWN_EDIT_MODE,
-                EditorInputHandler.Action.CYCLE_FOCUS_REGION,EditorInputHandler.Action.DESCEND}) {
+                EditorInputHandler.Action.DESCEND}) {
             MutableLevel level=level();LevelEditorController c=new LevelEditorController();c.attachLevel(level);c.selectBlock(1);
             Camera camera=new Camera(SonicConfigurationService.getInstance());camera.setX((short)0);camera.setY((short)0);
             EditorInputHandler editor=mouse(c,camera);InputHandler input=new InputHandler();
@@ -194,16 +154,6 @@ class TestEditorInteractionSafety {
             else {assertEquals(1,Byte.toUnsignedInt(level.getMap().getValue(0,3,3)));c.undo();}
             assertFalse(c.hasUndoHistory(),action.name());
         }
-    }
-    @Test void focusedPreviewHonorsChunkFlipsWithoutChangingLibraryDescriptors(){
-        MutableLevel level=level();level.setPatternDescInChunk(0,0,0,new PatternDesc(1));level.setPatternDescInChunk(0,1,0,new PatternDesc(2));
-        level.setChunkInBlock(0,0,0,new ChunkDesc(0x400));LevelEditorController c=new LevelEditorController();c.attachLevel(level);c.selectBlock(0);
-        class Preview extends com.openggf.editor.render.FocusedEditorPaneRenderer {
-            Preview(){super(c,GraphicsManager.getInstance());}
-            java.util.List<PreviewPlacement> placements(){return buildBlockPreviewPlacements();}
-        }
-        var preview=new Preview().placements();assertEquals(2,preview.getFirst().descriptor().getPatternIndex());
-        assertTrue(preview.getFirst().descriptor().getHFlip());assertFalse(level.getChunk(0).getPatternDesc(1,0).getHFlip());
     }
     @Test void fittedTextHasReadableScaleAndStaysInsideNativeAndWideChrome(){
         for(int width:new int[]{320,528}) {
@@ -232,15 +182,6 @@ class TestEditorInteractionSafety {
         int chunk=level.getBlock(b).getChunkDesc(0,0).getChunkIndex();
         assertEquals(1,level.getChunk(chunk).getPatternDesc(0,0).getPatternIndex());
         assertEquals(0,level.getChunk(0).getPatternDesc(0,0).getPatternIndex());
-    }
-    @Test void newDescriptorAndPropertyShortcutsAreSuppressedDuringFilterCapture(){
-        MutableLevel level=level();LevelEditorController c=new LevelEditorController();c.attachLevel(level);c.selectBlock(0);c.selectChunk(0);c.descend();c.descend();c.cycleFocusRegion();c.toggleLibraryFilterInput();
-        EditorInputHandler editor=new EditorInputHandler(c);InputHandler input=new InputHandler();
-        for(int key:new int[]{GLFW_KEY_H,GLFW_KEY_J,GLFW_KEY_G,GLFW_KEY_T,GLFW_KEY_R,GLFW_KEY_EQUAL,GLFW_KEY_MINUS}) {
-            input.handleKeyEvent(key,GLFW_PRESS);editor.update(input);input.update();input.handleKeyEvent(key,GLFW_RELEASE);editor.update(input);input.update();
-        }
-        assertFalse(c.hasUndoHistory());assertEquals(0,Byte.toUnsignedInt(level.getMap().getValue(0,0,0)));
-        assertEquals("Ready",c.statusText());
     }
 
     @Test void worldCursorUsesSignedCameraDomainAcrossNativeCoordinateBoundary(){

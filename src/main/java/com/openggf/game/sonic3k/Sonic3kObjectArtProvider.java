@@ -1560,6 +1560,33 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     }
 
     /**
+     * Admits one authored invitation's shared marker/child art intent without
+     * publishing or flushing the title owner's native enemy batch. The post
+     * remembers admission; this provider owns the handle and eventual claim.
+     * A true result means submitted, never prepared, ready or completed.
+     */
+    public boolean tryQueueStarPostInvitationArt(int sourceAddress) {
+        if (sourceAddress != Sonic3kConstants.ART_KOSM_STARPOST_STARS1_ADDR
+                && sourceAddress != Sonic3kConstants.ART_KOSM_STARPOST_STARS2_ADDR
+                && sourceAddress != Sonic3kConstants.ART_KOSM_STARPOST_STARS3_ADDR) {
+            throw new IllegalArgumentException("unsupported StarPost invitation-art source: 0x"
+                    + Integer.toHexString(sourceAddress));
+        }
+        if (!pendingEnemyKosEntries.isEmpty()) return false;
+        S3kKosModuleQueue queue = S3kRuntimeArtCoordinator.current().moduleQueue();
+        if (!queue.hasCapacityFor(1)) return false;
+        try {
+            HardwareWorkHandle handle = queue.queue(GameServices.rom().getRom(), sourceAddress,
+                    Sonic3kConstants.ARTTILE_STARPOST + 8);
+            enemyKosQueue = queue;
+            enemyKosHandles.add(handle);
+            return true;
+        } catch (IOException e) {
+            throw new IllegalStateException("Unable to queue S3K invitation art", e);
+        }
+    }
+
+    /**
      * Mirrors {@code sub_2D3C8}'s runtime {@code Queue_Kos_Module} request
      * after a StarPost creates its four bonus stars.
      *

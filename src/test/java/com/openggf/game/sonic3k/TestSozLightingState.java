@@ -7,6 +7,50 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestSozLightingState {
+    @Test void tombIntervalExpiresOnExactlySixHundredUpdatesAndKeepsNativeEndpoints() {
+        var tomb = new SozLightingState();
+        tomb.initializeSeamlessDarkness();
+        tomb.resetLight(600);
+        for (int level = 0; level < 5; level++) {
+            for (int tick = 0; tick < 599; tick++) {
+                tomb.tickPalette(600);
+                assertEquals(level, tomb.darknessLevel());
+            }
+            tomb.tickPalette(600);
+            assertEquals(level + 1, tomb.darknessLevel());
+        }
+        for (int tick = 0; tick < 8; tick++) tomb.tickPalette(600);
+        assertEquals(4, tomb.fadeStep());
+        assertEquals(0xD0, tomb.fadeOffset());
+        tomb.enterBossLight();
+        for (int tick = 0; tick < 1200; tick++) {
+            tomb.holdBossTimers();
+            tomb.tickPalette(600);
+            assertEquals(0, tomb.darknessLevel());
+        }
+        assertEquals(0, tomb.fadeStep());
+        assertEquals(0, tomb.fadeOffset());
+        assertThrows(IllegalArgumentException.class, () -> tomb.tickPalette(599));
+    }
+
+    @Test void tombFadeAndTorchRewindTogetherAcrossARealExpiry() {
+        var runtime = new SozZoneRuntimeState(1, PlayerCharacter.KNUCKLES);
+        var light = runtime.lighting();
+        light.resetLight(600);
+        for (int i = 0; i < 1195; i++) { light.tickPalette(600); light.tickTorch(); }
+        byte[] before = runtime.captureBytes();
+        var updates = new SozLightingState.PaletteUpdate[30];
+        int[] torches = new int[30];
+        for (int i = 0; i < 30; i++) { updates[i] = light.tickPalette(600); torches[i] = light.tickTorch(); }
+        byte[] expected = runtime.captureBytes();
+        runtime.restoreBytes(before);
+        for (int i = 0; i < 30; i++) {
+            assertEquals(updates[i], light.tickPalette(600));
+            assertEquals(torches[i], light.tickTorch());
+        }
+        assertArrayEquals(expected, runtime.captureBytes());
+    }
+
     @Test void coldLoadAndSeamlessEntryUseDifferentNativeInitialStates() {
         var cold = new SozLightingState();
         assertEquals(0, cold.darknessLevel());

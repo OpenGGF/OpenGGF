@@ -465,37 +465,6 @@ class TestEditorCommands {
         assertThrows(IllegalStateException.class, allocator::nextRingId);
     }
 
-    @Test
-    void logicalGamepadEdgesHoverThenConfirmPaletteBeforePlacement() {
-        MutableLevel level = MutableLevel.snapshot(new SyntheticLevel());
-        LevelEditorController controller = new LevelEditorController();
-        controller.attachLevel(level);
-        controller.configureSpawnEditing(new TestRegistry(), new CommonObjectPlacementEncoding());
-        controller.setSpawnEditMode(EditorSpawnEditMode.OBJECTS);
-        controller.cycleFocusRegion();
-        EditorInputHandler editorInput = new EditorInputHandler(controller);
-        InputHandler input = new InputHandler();
-        input.setLogicalOverride(LogicalInputSnapshot.ofPlayers(
-                PlayerInputState.of(0, com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_RIGHT,
-                        0, 0, false, false), PlayerInputState.neutral()));
-        editorInput.update(input);
-        assertEquals(0, controller.objectPalette().selectedObjectId(), "hover must not mutate the brush");
-        assertEquals(1, controller.libraryBrowser().selected().stockObjectId());
-
-        input.setLogicalOverride(LogicalInputSnapshot.ofPlayers(
-                PlayerInputState.of(0, 0, 0, InputActionMasks.ACTION_A, false, false),
-                PlayerInputState.neutral()));
-        editorInput.update(input);
-        assertEquals(1, controller.objectPalette().selectedObjectId());
-        assertEquals(0, level.getObjects().size());
-        controller.cycleFocusRegion(); controller.cycleFocusRegion(); controller.cycleFocusRegion();
-        input.setLogicalOverride(LogicalInputSnapshot.ofPlayers(
-                PlayerInputState.of(0, 0, 0, InputActionMasks.ACTION_A, false, false),
-                PlayerInputState.neutral()));
-        editorInput.update(input);
-        assertEquals(1, level.getObjects().size());
-        assertEquals(1, level.getObjects().get(0).objectId());
-    }
 
     @Test
     void rawSpaceAndLogicalActionAProduceOneSpawnAndOneHistoryEntry() {

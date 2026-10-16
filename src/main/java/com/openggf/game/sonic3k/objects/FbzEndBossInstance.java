@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic3k.difficulty.FlyingBatteryBossRecipe;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
@@ -102,7 +103,20 @@ public final class FbzEndBossInstance extends AbstractBossInstance
     private final List<FbzEndBossJointChild> joints = new ArrayList<>();
     private final List<FbzEndBossChainLinkChild> chainLinks = new ArrayList<>();
 
+    // Committed only after native allocation succeeds. Recreate remains STOCK;
+    // captured native fields restore the lifetime without another service lookup.
+    private FlyingBatteryBossRecipe encounterRecipe = FlyingBatteryBossRecipe.STOCK;
+    private boolean encounterRecipeCommitted;
+
     public FbzEndBossInstance(ObjectSpawn spawn) { super(spawn, "FBZEndBoss"); }
+
+    void commitEncounterRecipe(FlyingBatteryBossRecipe recipe) {
+        if (getSlotIndex() < 0 || nativeStarted || encounterRecipeCommitted) {
+            throw new IllegalStateException("FBZ encounter recipe requires a fresh accepted native boss");
+        }
+        encounterRecipe = recipe == null ? FlyingBatteryBossRecipe.STOCK : recipe;
+        encounterRecipeCommitted = true;
+    }
 
     public static int attackRounds() { return 9; }
     public static int rotationTimer(PlayerCharacter character) {
@@ -125,6 +139,11 @@ public final class FbzEndBossInstance extends AbstractBossInstance
         return new Fixed8(fixed >> 8, fixed & 0xFF);
     }
     public static int nativeSteadyObjectCount() { return 16; }
+    /**
+     * Single-volley footprint: 16 steady nodes plus nine flame children.
+     * This is not a global maximum: measured overlapping Knuckles volleys reach
+     * 30 live nodes. The historical helper name and single-volley value remain.
+     */
     public static int nativePeakObjectCount() { return 25; }
     public static int nativeInitialDescentVelocity() { return 0; }
     public static int nativeDescentGravity() { return 0x38; }
@@ -283,7 +302,11 @@ public final class FbzEndBossInstance extends AbstractBossInstance
         // until the proximity branch at loc_70736 succeeds.
         armTrigger = true;
         attackLatch = false;
-        timer = 0x3F; attackRoundsLeft = attackRounds(); phaseOrdinal = Phase.ATTACK.ordinal();
+        // loc_70700 commits one finite cycle. Keep the public stock helper at9:
+        // the immediate wave is separate from the decrement-before-test budget.
+        timer = 0x3F;
+        attackRoundsLeft = encounterRecipe == FlyingBatteryBossRecipe.EXTRA_BEAT ? 10 : attackRounds();
+        phaseOrdinal = Phase.ATTACK.ordinal();
     }
 
     private void updateAttack(PlayableEntity player) {
@@ -313,6 +336,9 @@ public final class FbzEndBossInstance extends AbstractBossInstance
     }
 
     private void updateRotation() {
+        // loc_707BC sets bit1 throughout Knuckles' rotation; Sonic/Tails
+        // take loc_707CA without that write. The weapon child owns the volley.
+        if (resolveCharacter() == PlayerCharacter.KNUCKLES) weaponTrigger = true;
         playRotationTickIfNativeBoundary();
         angle = (angle + 2) & 0xFF;
         updateCircularPosition();

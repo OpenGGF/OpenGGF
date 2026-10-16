@@ -867,32 +867,21 @@ class TestSonic3kMgz2EndBossEvents {
     }
 
     @Test
-    void mgz2BossArenaSpawnsDedicatedKnucklesBossWithoutSonicTransitionPath() throws Exception {
+    void mgz2UpperCameraBandDoesNotAllocateTheLayoutOwnedKnucklesBoss() throws Exception {
         GameServices.configuration().setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "knuckles");
         ObjectManager objectManager = installObjectManager();
         Sonic3kMGZEvents events = new Sonic3kMGZEvents();
         events.init(1);
         Camera camera = GameServices.camera();
-        camera.setX((short) 0x3A00);
-        camera.setY((short) 0x0000);
+        camera.setX((short) 0x3A00); camera.setY((short) 0);
         events.update(1, 0);
-        camera.setX((short) 0x3C80);
-
-        events.update(1, 1);
-
-        assertEquals(Sonic3kObjectIds.MGZ_END_BOSS_KNUX, GameServices.gameState().getCurrentBossId());
-        assertEquals(1, objectManager.getActiveObjects().stream()
-                .filter(MgzEndBossKnuxInstance.class::isInstance).count());
-        MgzEndBossKnuxInstance boss = objectManager.getActiveObjects().stream()
-                .filter(MgzEndBossKnuxInstance.class::isInstance)
-                .map(MgzEndBossKnuxInstance.class::cast)
-                .findFirst().orElseThrow();
-        assertEquals(0x0068, boss.getSpawn().y());
-        assertEquals(0x00A0, camera.getMinY() & 0xFFFF);
-        assertFalse(events.isBossTransitionDeathPlaneDisabled(),
-                "Knuckles' grounded boss path must not enter Sonic's rescue/death-plane transition");
-        assertEquals(0, GameServices.sprites().getSidekicks().size(),
-                "Knuckles' boss path must not donate the Sonic-route rescue Tails");
+        camera.setX((short) 0x3C80); events.update(1, 1);
+        assertEquals(0, GameServices.gameState().getCurrentBossId());
+        assertTrue(objectManager.getActiveObjects().isEmpty(),
+                "MGZ2_Resize has only the lower A1 path; original placed A2 owns upper admission");
+        assertFalse(events.isBossSpawned());
+        assertFalse(events.isBossTransitionDeathPlaneDisabled());
+        assertEquals(0, GameServices.sprites().getSidekicks().size());
     }
 
     @Test

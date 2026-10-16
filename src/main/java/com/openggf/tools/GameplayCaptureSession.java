@@ -103,6 +103,7 @@ public final class GameplayCaptureSession implements AutoCloseable {
 
     private boolean startAtTitle;
     private com.openggf.mods.code.DevelopmentPatchLoader.PreparedDecorator developmentMod;
+    private final DevelopmentResolverScope developmentResolver = new DevelopmentResolverScope();
     /** Capture production title initialization and its ordinary GameLoop launch transition. */
     public void startAtTitle() { startAtTitle = true; boot.setBootToTitle(true); }
     /** Enable the existing ROM-backed SMPS presentation producer before boot. */
@@ -117,7 +118,8 @@ public final class GameplayCaptureSession implements AutoCloseable {
         var next = com.openggf.mods.code.DevelopmentPatchLoader.openJar(modJar);
         if (developmentMod != null) developmentMod.close();
         developmentMod = next;
-        boot.setLaunchModuleDecorator(developmentMod::apply);
+        boot.setLaunchModuleDecorator((module, request) ->
+                developmentResolver.decorate(developmentMod, module, request));
     }
 
     /** Boots the level, consumes the title card, and optionally teleports the leader. */
@@ -570,6 +572,7 @@ public final class GameplayCaptureSession implements AutoCloseable {
                 boot.close();
             } finally {
                 try {
+                    developmentResolver.close();
                     if (developmentMod != null) developmentMod.close();
                 } catch (IOException failure) {
                     throw new java.io.UncheckedIOException("Failed to close capture mod loader", failure);
@@ -578,6 +581,37 @@ public final class GameplayCaptureSession implements AutoCloseable {
                     GameServices.configuration().clearSessionOverrides();
                 }
             }
+        }
+    }
+
+    /** Capture-local publication after deterministic disable and successful registration, before managers. */
+    static final class DevelopmentResolverScope implements AutoCloseable {
+        private com.openggf.ModSubsystem subsystem;
+        private com.openggf.level.objects.RewindClassResolver previous;
+        private com.openggf.level.objects.RewindClassResolver installed;
+
+        com.openggf.game.GameModule decorate(
+                com.openggf.mods.code.DevelopmentPatchLoader.PreparedDecorator prepared,
+                com.openggf.game.GameModule base, com.openggf.game.patch.GameplayLaunchRequest request) {
+            var effective = prepared.apply(base, request);
+            var current = com.openggf.ModSubsystem.current();
+            if (subsystem != current) {
+                close();
+                subsystem = current;
+                previous = current.rewindClassResolver();
+            }
+            installed = prepared.rewindClassResolver();
+            current.installRewindClassResolver(installed);
+            return effective;
+        }
+
+        @Override public void close() {
+            if (subsystem != null && subsystem.rewindClassResolver() == installed) {
+                subsystem.installRewindClassResolver(previous);
+            }
+            subsystem = null;
+            previous = null;
+            installed = null;
         }
     }
 

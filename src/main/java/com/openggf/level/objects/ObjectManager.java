@@ -147,6 +147,7 @@ public class ObjectManager {
     private final ObjectServices objectServices;
     private final ObjectCallbackRouter objectCallbacks;
     private final ObjectManagerPopulationView populationView;
+    private final NativeChildReservationLedger childReservationLedger;
     private RewindClassResolver rewindClassResolver = RewindClassResolver.ENGINE_ONLY;
     public void setRewindClassResolver(RewindClassResolver resolver) { rewindClassResolver = java.util.Objects.requireNonNull(resolver, "resolver"); }
 
@@ -278,6 +279,10 @@ public class ObjectManager {
         this.populationView = new ObjectManagerPopulationView(objectCallbacks, slotLayout,
                 slotAllocator, reservedChildSlots, activeObjects, dynamicObjects,
                 postPlayerHooksScratch);
+        this.childReservationLedger = new NativeChildReservationLedger(objectCallbacks, slotLayout,
+                reservedChildSlots, instanceToSpawn, activeObjects, dynamicObjects,
+                rewindObjectIds::containsKey, this::managedSpawn, this::allocateSlotAfter,
+                this::releaseChildSlotAtItsOwnExecPosition);
         this.fixedSstObjects = new FixedSstObjectInstaller(
                 registry, objectServices, slotLayout, slotAllocator,
                 this::addDynamicObject, this::releaseSlot);
@@ -2695,16 +2700,25 @@ public class ObjectManager {
      * @return the allocated slot indices (may contain -1 for failed allocations)
      */
     public int[] allocateChildSlotsAfter(ObjectSpawn spawn, int childCount, int parentSlot) {
-        int[] childSlots = new int[childCount];
-        int lastSlot = parentSlot;
-        for (int c = 0; c < childCount; c++) {
-            childSlots[c] = allocateSlotAfter(lastSlot);
-            if (childSlots[c] >= 0) {
-                lastSlot = childSlots[c]; // Next child starts after this one
-            }
-        }
-        reservedChildSlots.put(spawn, childSlots);
-        return childSlots;
+        return childReservationLedger.reserveFixedAfter(spawn, childCount, parentSlot);
+    }
+
+    /**
+     * Reserves one folded native child's SST after its predecessor for a current placed parent.
+     * The fixed prefix must already exist; only released tail cells are reused. Dynamic parents
+     * are unsupported because their changing spawn identity cannot use this snapshot mapping.
+     * Engine-only: exposed across packages by {@link NativeChildSlotReservations}, not Mod API.
+     */
+    int reservePlacedChildSlotAfter(ObjectInstance parent, int predecessorSlot, int protectedPrefix) {
+        return childReservationLedger.reserveAfter(parent, predecessorSlot, protectedPrefix);
+    }
+
+    /**
+     * Releases a folded tail reservation only for its current placed parent. The native caller
+     * must clear its saved slot after release; a numeric slot is not a same-owner generation token.
+     */
+    boolean releasePlacedChildSlot(ObjectInstance parent, int reservedSlot, int protectedPrefix) {
+        return childReservationLedger.release(parent, reservedSlot, protectedPrefix);
     }
 
     /**

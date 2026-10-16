@@ -668,15 +668,13 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         Camera camera = camera();
         int cameraX = camera.getX() & 0xFFFF;
         int cameraY = camera.getY() & 0xFFFF;
-        boolean knucklesArena = resolveBossTransitionPlayerCharacter() == PlayerCharacter.KNUCKLES;
-        int arenaBandBaseY = knucklesArena ? 0 : 0x0600;
         switch (bossArenaRoutine) {
             case 0 -> {
-                if (cameraY < arenaBandBaseY || cameraY >= arenaBandBaseY + 0x0100
+                if (cameraY < 0x0600 || cameraY >= 0x0700
                         || cameraX < 0x3A00) {
                     return;
                 }
-                lockBossApproachCamera(camera, arenaBandBaseY + 0x00A0);
+                lockBossApproachCamera(camera, 0x06A0);
                 bossArenaRoutine = 2;
             }
             case 2 -> {
@@ -722,17 +720,17 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         }
         bossSpawned = true;
         setGenericBossFlag(true);
-        if (resolveBossTransitionPlayerCharacter() == PlayerCharacter.KNUCKLES) {
-            gameState().setCurrentBossId(Sonic3kObjectIds.MGZ_END_BOSS_KNUX);
-            audio().playMusic(Sonic3kMusic.MINIBOSS.id);
-            spawnObject(() -> new MgzEndBossKnuxInstance(
-                    new ObjectSpawn(0x3D20, 0x0068, Sonic3kObjectIds.MGZ_END_BOSS_KNUX,
-                            0, 0, false, 0)));
-            return;
-        }
+        // The immutable admitted preset is sampled once at the native arena
+        // spawn boundary. Absent service preserves the shipped encounter.
+        var ownerModule = module();
+        var recipe = ownerModule == null ? null : ownerModule.getGameService(
+                com.openggf.game.sonic3k.difficulty.MarbleGardenBossRecipe.class);
+        // A newly faulting provider aborts this frame to the host teardown.
+        // Only an absent/already-withdrawn service takes the native STOCK path.
+        boolean counterCadence = recipe == com.openggf.game.sonic3k.difficulty.MarbleGardenBossRecipe.COUNTER_CADENCE;
         gameState().setCurrentBossId(Sonic3kObjectIds.MGZ_END_BOSS);
         spawnObject(() -> new MgzEndBossInstance(
-                new ObjectSpawn(0x3D20, 0x0668, Sonic3kObjectIds.MGZ_END_BOSS, 0, 0, false, 0)));
+                new ObjectSpawn(0x3D20, 0x0668, Sonic3kObjectIds.MGZ_END_BOSS, 0, 0, false, 0), counterCadence));
     }
 
     // ========================================================================

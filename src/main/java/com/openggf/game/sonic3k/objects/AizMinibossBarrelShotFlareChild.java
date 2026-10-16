@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.difficulty.AizMinibossAttackPolicy;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.NativeSstSlotAccess;
@@ -69,7 +70,9 @@ public class AizMinibossBarrelShotFlareChild extends AbstractObjectInstance impl
             ObjectLifetimeOps.deleteNoRespawn(this);
             return;
         }
-        if (policyWarning && NativeSstSlotAccess.currentOwner(services().objectManager(), parentSlot) == null) {
+        if (policyWarning && (NativeSstSlotAccess.currentOwner(services().objectManager(), parentSlot) == null
+                || !attackPolicyAdmitted())) {
+            // A withdrawn (faulted/quarantined) opt-in policy retires its own warning; stock flares never consult it.
             ObjectLifetimeOps.deleteNoRespawn(this);
             return;
         }
@@ -97,6 +100,11 @@ public class AizMinibossBarrelShotFlareChild extends AbstractObjectInstance impl
         }
         // F4 runs Go_Delete_Sprite; the wrapper still reaches Draw_Sprite on this dispatch.
         animator.animateMultiDelay(animation, () -> pendingDelete = true);
+    }
+
+    private boolean attackPolicyAdmitted() {
+        var module = services().gameModule();
+        return module != null && module.getGameService(AizMinibossAttackPolicy.class) != null;
     }
 
     private record Header(int x, int y, int flags) { }

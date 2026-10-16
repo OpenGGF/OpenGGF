@@ -245,6 +245,11 @@ class TestSecondStrikeBoss {
     }
 
     private static void breathComplete(AizMinibossInstance boss) throws Exception {
+        // A follow-up requires the real native three-barrel warning graph;
+        // calling only the boundary on a never-initialized root is invisible.
+        Method initialize = AizMinibossInstance.class.getDeclaredMethod("onInitialDelayComplete");
+        initialize.setAccessible(true);
+        initialize.invoke(boss);
         boss.getState().routine = 10; // native breath half-cycle expiry
         invokeBreathBoundary(boss);
     }

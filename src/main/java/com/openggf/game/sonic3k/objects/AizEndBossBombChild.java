@@ -82,6 +82,7 @@ public class AizEndBossBombChild extends AbstractObjectInstance
     private int frameCounter;
     private boolean hitFloor;
     private boolean faceRight;
+    private boolean difficultyAttack;
 
     public AizEndBossBombChild(AizEndBossInstance boss, int startX, int startY, int angle) {
         super(buildSpawnAt(startX, startY, boss), "AIZEndBossBomb");
@@ -105,6 +106,12 @@ public class AizEndBossBombChild extends AbstractObjectInstance
         this.mappingFrame = vertical ? 0x16 : 0x26;
     }
 
+    AizEndBossBombChild(AizEndBossInstance boss, int startX, int startY, int angle,
+                        boolean difficultyAttack) {
+        this(boss, startX, startY, angle);
+        this.difficultyAttack = difficultyAttack;
+    }
+
     @Override
     public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         AizEndBossInstance restoredBoss = AizEndBossRewindLinks.nearestBoss(ctx);
@@ -119,6 +126,10 @@ public class AizEndBossBombChild extends AbstractObjectInstance
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
         if (isDestroyed()) return;
+        if (difficultyAttack && !boss.difficultyAttackIsLive()) {
+            com.openggf.level.objects.ObjectLifetimeOps.expireDynamic(this);
+            return;
+        }
 
         // Play SFX on first frame (deferred from constructor since services aren't injected yet)
         this.frameCounter++;
@@ -203,12 +214,12 @@ public class AizEndBossBombChild extends AbstractObjectInstance
         if (services().objectManager() == null) return;
 
         spawnFreeChild(() -> new AizEndBossSmokeChild(
-                boss, currentX, currentY, xVel != 0));
+                boss, currentX, currentY, xVel != 0, difficultyAttack));
     }
 
     @Override
     public int getCollisionFlags() {
-        return COLLISION_FLAGS;
+        return difficultyAttack && !boss.difficultyAttackIsLive() ? 0 : COLLISION_FLAGS;
     }
 
     @Override

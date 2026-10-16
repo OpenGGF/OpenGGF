@@ -56,6 +56,12 @@ class TestSonic3kChaosModeExampleModels {
     @Test void nativeArtGateAndActualPongWinSubmitOneBoundedReward() throws Exception {check("ChaosControllerChecks","missingNativeArtExcludesGamesAndPongWinSubmitsOneDeclaredReward");}
     @Test void terminalReceiptsSurviveAcknowledgementAndExpiryWithoutRepeatedRewards() throws Exception {check("ChaosControllerChecks","terminalResultsSurviveLeaseRemovalAndRewardOnceAcrossReplay");}
     @Test void scenerySamplesPreparedDonorsAndExcludesNativeZone() throws Exception {check("ChaosControllerChecks","sceneryUsesPreparedDonorsAndExcludesNativeZone");}
+    @Test void catalogueCopyRendersWithAvailableGlyphs() throws Exception {check("catalogueCopyIsGlyphSafeAndFitsTheDetailCard");}
+    @Test void filteredMenuAddAndLayoutStayInsideViewports() throws Exception {check("ChaosControllerChecks","menuAddsOnlyShownEffectsAndDrawsInsideViewports");}
+    @Test void searchEditorKeepsTextKeysAndMenuControls() throws Exception {check("ChaosControllerChecks","searchEditorTypesFreelyAndKeepsMenuControls");}
+    @Test void emptyListsDistinguishAllSelectedFromNoMatches() throws Exception {check("ChaosControllerChecks","emptyListsSayAllSelectedOrNoMatches");}
+    @Test void hudSkipsSetupScreensAndAnnouncesOnceAcrossRewind() throws Exception {check("ChaosControllerChecks","hudWaitsForGameplayAndAnnouncesActivationOnce");}
+    @Test void activationCardLeavesPlayerAndNativeHudVisible() throws Exception {check("ChaosControllerChecks","activationCardLeavesPlayerAndNativeHudVisible");}
     @Test void creatorPackageValidatesAndRegistersDormantFamilies() throws Exception {
         var manifest=classes.resolve("META-INF/openggf-mod.yaml");Files.createDirectories(manifest.getParent());
         Files.copy(Path.of("examples/sonic3k-chaos-mode/src/main/resources/META-INF/openggf-mod.yaml"),manifest);
