@@ -10,33 +10,39 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Isolated
 class TestEditorWindowChromes {
     @Test
-    void engineBuildAloneHasNoWindowChrome() {
+    void engineBuildAloneHasNoExternalWindowChrome() {
         assertNull(EditorWindowChromes.discover(), "Only a separate editor build supplies window chrome");
     }
 
     @Test
-    void classicPropertyKeepsTheInGameChrome() {
-        String previous = System.getProperty("openggf.editor.ui");
-        try {
-            System.setProperty("openggf.editor.ui", "classic");
-            assertTrue(EditorWindowChromes.classicRequested());
-            assertNull(EditorWindowChromes.discover());
-            System.setProperty("openggf.editor.ui", "window");
-            assertFalse(EditorWindowChromes.classicRequested());
-        } finally {
-            if (previous == null) System.clearProperty("openggf.editor.ui");
-            else System.setProperty("openggf.editor.ui", previous);
-        }
+    void engineSelectsBuiltInHudWithoutAnExternalProvider() {
+        var hud = new com.openggf.editor.hud.EditorHudRuntime();
+        org.junit.jupiter.api.Assertions.assertSame(hud, EditorWindowChromes.select(() -> hud));
     }
 
     @Test
-    void actionCommandsCanLeaveOutTheInGamePanes() {
-        var palette = new EditorCommandPalette();
-        int all = palette.actionCommands(action -> { }).size();
-        var withoutPanes = palette.actionCommands(action -> { }, action -> !EditorCommandPalette.drivesInGamePanes(action));
-        assertTrue(all == EditorInputHandler.Action.values().length);
-        assertTrue(withoutPanes.size() == all - 7, "Focus cycling and six library-browse actions are left out");
-        assertFalse(withoutPanes.stream().anyMatch(command -> command.label().toLowerCase().contains("browse")));
+    void externalServiceProviderReplacesTheHud(@org.junit.jupiter.api.io.TempDir java.nio.file.Path root) throws Exception {
+        var service = root.resolve("META-INF/services/" + EditorWindowChrome.class.getName());
+        java.nio.file.Files.createDirectories(service.getParent());
+        java.nio.file.Files.writeString(service, ExternalChrome.class.getName());
+        var thread = Thread.currentThread();
+        var previous = thread.getContextClassLoader();
+        try (var loader = new java.net.URLClassLoader(new java.net.URL[] {root.toUri().toURL()}, previous)) {
+            thread.setContextClassLoader(loader);
+            org.junit.jupiter.api.Assertions.assertInstanceOf(ExternalChrome.class,
+                    EditorWindowChromes.select(() -> { throw new AssertionError("External chrome must replace the HUD"); }));
+        } finally {
+            thread.setContextClassLoader(previous);
+        }
+    }
+
+    public static final class ExternalChrome implements EditorWindowChrome {
+        public void init(Host host, float framebufferScale) { }
+        public boolean setActive(boolean editorFrame) { return editorFrame; }
+        public boolean isActive() { return false; }
+        public int[] gameViewport(int ww, int wh, int fw, int fh, int lw, int lh) { return null; }
+        public void render(int ww, int wh, int fw, int fh) { }
+        public void close() { }
     }
 
     @Test

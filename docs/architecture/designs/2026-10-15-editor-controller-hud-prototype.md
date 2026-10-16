@@ -1,9 +1,9 @@
 # Controller-first editor HUD on the engine's own UI (prototype)
 
 Date: 2026-10-15. Branch: `feature/ai-editor-controller-ui` (base `7277cef40`).
-Status: prototype for review; not integrated. It is the engine's built-in
+Status: integrated on develop at `1259b0016`. It is the engine's built-in
 `EditorWindowChrome` (see `2026-10-15-editor-window-chrome-seam.md`); a desktop editor on the
-class path replaces it and `-Dopenggf.editor.ui=classic` keeps the in-game chrome.
+class path replaces it. The classic logical-pixel editor chrome has been retired.
 
 ## Why a second prototype
 
@@ -125,4 +125,85 @@ Left as is: the painter reads the editor camera through `SessionManager`, as
 - Zoom and pan of the canvas.
 - The editor projects menu (Tools > Editor projects) and project forms still use the classic
   logical-pixel renderer.
-- Retire `EditorUiLayout` and the logical-pixel chrome once one window UI is chosen.
+
+## Classic chrome retirement
+
+The HUD is the sole built-in editing UI. Removed the logical-pixel toolbar,
+command strip, library browser, focused-pane rendering and hit layout, along with
+their navigation state and the palette's modal UI. `EditorCommandPalette` remains
+the shared action/workflow catalogue for the HUD and desktop host. World overlays,
+editing actions and the block/chunk canvas focus used by both modern workbenches
+remain. Project forms and content import retain their existing renderers.
+
+The classic option and engine initialisation fallback are gone: a window-chrome
+initialisation error propagates. External `EditorWindowChrome` providers still
+replace the HUD through `ServiceLoader`. The desktop consumer now lists actions
+directly because no classic pane actions remain to filter, and owns its palette
+open/close state and F1 handling. Host commands still queue for the editor tick. Guide pictures come
+from the ROM-backed HUD capture rather than the removed classic picture test.
+
+### Retirement validation
+
+The retirement is based on develop `1259b0016`. The task source passed production/test
+compilation, 191 focused editor/input tests, the ROM-backed HUD picture capture (one
+test), and 681 guards, all without failures, errors or skips. The three guide images
+are the reviewed 1600×900 `TestEditorHudPictures` World/Block/Chunk outputs.
+
+The tooling category completed all nine batches: 2,982 tests, one failure, zero
+errors and three skips. `openggf.racing.e2e.TestDirectConnectEndToEnd` invocation
+`fullRoundWithLatencyProxiedGuest(RaceHostImpl, Path)[1]` failed at line 151 with
+`latency-proxied guest never rendered host ghost`. No racing/network files were
+changed. Its standalone baseline/current pair passed two tests each. An identical
+50-class ordering context passed 383 tests on each source. This does **not**
+reproduce or conclusively attribute the original failure; it remains unattributed.
+A final baseline command passed two tests, but nine repeated `surefire:test` goals
+were deduplicated and supplied no additional coverage. No unrelated networking
+fix was attempted. The tooling diagnostics were inspected and acknowledged.
+
+Tooling skipped the opt-in HUD picture refresh, surfaceless project-form pictures,
+and native slots-glass rendering. The first two were exercised successfully by
+the separate capture and focused runs; native slots-glass rendering is outside
+this editor retirement's coverage.
+
+Baseline comparisons used only this task worktree: save the complete binary diff,
+verify its hash, reverse-apply it, verify tracked source equals `1259b0016`, run the
+bounded check, and restore/hash-check/remove the temporary patch. No branch switch,
+stash, main-checkout change or extra worktree was needed. The final package starts
+with a clean build to remove any baseline-only compiled classes. The desktop
+provider owns its palette lifecycle and consumes canvas input while it is open;
+its ROM-free input tests cover F1, releases and editor deactivation.
+
+Required commands (all engine Maven invocations used the desktop project's private
+repository via `-Dmaven.repo.local` or inherited `MAVEN_ARGS`, keeping `~/.m2` intact):
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off test-compile
+# Focused run: unset DISPLAY/WAYLAND_DISPLAY, select surfaceless EGL and the absolute S2 ROM.
+python3 tools/testing/maven_queue.py --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestEditorHudControls,TestEditorHudLayout,TestEditorWindowChromes,TestEditorInputHandlerFrontEnd,TestInputHandlerGamepadSuppression,TestLevelEditorController,TestEditorCommandPalette,TestEditorCommands,TestEditorExportInput,TestEditorInteractionSafety,TestEditorRenderingSmoke,TestEditorSaveManager,TestEditorProjectPresentation,TestEditorProjectWorkspace' test
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --category tooling --rom-directory "$OPENGGF_ROM_DIRECTORY" --run
+# Display-free HUD capture with the absolute S2 ROM property:
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dopenggf.editor.hudPictures=true "-Dsonic2.rom.path=$SONIC2_ROM" -Dtest=TestEditorHudPictures test
+# The standalone baseline/current networking pair:
+python3 tools/testing/maven_queue.py -Dmse=off -Dtest=openggf.racing.e2e.TestDirectConnectEndToEnd test
+```
+
+The retirement implementation is `f2c3cf2ca`; its executable source matches the
+focused, picture and guard runs above. The desktop compatibility change is local
+commit `1686a71` in OpenGGF-Editor and is not pushed. The admitted clean engine
+package/install and desktop package succeeded; all seven desktop tests passed
+with zero failures, errors or skips, including service discovery and palette
+input ownership. The clean engine jar contains the HUD, window-chrome seam and
+world overlay, none of the six retired renderer/layout/browser classes, and
+matches the engine jar installed in the desktop's private repository. The desktop
+jar retains its `EditorWindowChrome` service registration. This verifies package
+compatibility and headless behavior; a physical-pad or desktop-window runtime
+check was not performed.
+
+The desktop build uses the private Maven repository and shared admission:
+
+```bash
+# From OpenGGF-Editor; MAVEN_ARGS points at its .m2/repository.
+# OPENGGF_WORKTREE is the exported absolute task worktree path.
+python3 ~/.cache/openggf-imgui-spike/bin/admitted.py --root="$OPENGGF_WORKTREE" --kind=editor-desktop-build --estimate=420 -- bash -c 'set -e; (cd "$OPENGGF_WORKTREE" && mvn -q -Dmse=off clean); scripts/install-engine.sh "$OPENGGF_WORKTREE"; mvn -q -Dmse=off package'
+```

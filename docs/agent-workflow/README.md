@@ -28,8 +28,7 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 ## Tools
 
-- [Editor guide pictures](../../src/test/java/com/openggf/editor/project/TestEditorGuidePictures.java): refresh the current ROM-backed editor examples with `-Dtest=TestEditorGuidePictures -Dopenggf.editor.guidePictures=true -Dopenggf.headless.gl=surfaceless-egl -Dsonic2.rom.path=<absolute S2 REV01 ROM>` through the Maven queue; review `target/editor-guide/` before copying pictures to the guide.
-- [Editor HUD pictures](../../src/test/java/com/openggf/editor/project/TestEditorHudPictures.java): drive the controller-first editor HUD with a synthetic gamepad over ROM-backed frames at 1600x900 with `-Dtest=TestEditorHudPictures -Dopenggf.editor.hudPictures=true -Dopenggf.headless.gl=surfaceless-egl -Dsonic2.rom.path=<absolute S2 REV01 ROM>` through the Maven queue; it asserts hotbar, stroke-undo, library, wheel and hierarchy behaviour and writes `target/editor-hud/`.
+- [Editor HUD pictures](../../src/test/java/com/openggf/editor/project/TestEditorHudPictures.java): drive the controller-first editor HUD with a synthetic gamepad over ROM-backed frames at 1600x900 with `-Dtest=TestEditorHudPictures -Dopenggf.editor.hudPictures=true -Dopenggf.headless.gl=surfaceless-egl -Dsonic2.rom.path=<absolute S2 REV01 ROM>` through the Maven queue; it asserts hotbar, stroke-undo, library, wheel and hierarchy behaviour and writes `target/editor-hud/`; review `world.png`, `block.png` and `chunk.png` there before copying them to `docs/guide/creating/images/level-editor/`.
 
 - [Category negative-case comparison](../../tools/testing/compare_category_outcomes.py): compares completed bounded runner failures and causal skips with an explicit source/run baseline, rejecting incomplete evidence and requiring opt-in for verified SSZ blob hashes (2026-10-08 Mutator Lab expansion); [limits and usage](../../tools/testing/README.md#bounded-category-result-comparison).
 

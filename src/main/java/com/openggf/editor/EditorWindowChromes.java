@@ -10,24 +10,14 @@ public final class EditorWindowChromes {
 
     private EditorWindowChromes() { }
 
-    /** True when {@code -Dopenggf.editor.ui=classic} asks for the in-game chrome only. */
-    public static boolean classicRequested() {
-        return "classic".equalsIgnoreCase(System.getProperty("openggf.editor.ui", ""));
-    }
-
-    /**
-     * An external provider if one loads, otherwise {@code builtIn}; null only when the classic
-     * in-game chrome was requested.
-     */
+    /** An external provider if one loads, otherwise the engine's built-in HUD. */
     public static EditorWindowChrome select(java.util.function.Supplier<EditorWindowChrome> builtIn) {
-        if (classicRequested()) return null;
         EditorWindowChrome external = discover();
         return external != null ? external : builtIn.get();
     }
 
     /** The first provider that loads, or null; a broken provider is logged and skipped. */
     public static EditorWindowChrome discover() {
-        if (classicRequested()) return null;
         try {
             for (ServiceLoader.Provider<EditorWindowChrome> provider
                     : ServiceLoader.load(EditorWindowChrome.class).stream().toList()) {

@@ -6,7 +6,7 @@ and background layouts, block/chunk composition, collision assignments,
 object/ring placement, launch properties, project saves, and playtesting.
 
 Start at **Advanced → Editor projects** on the master title. The same project
-commands are available from the editor command palette. The editor remains
+commands are available from the editor menu. The editor remains
 experimental; pixel-art painting, collision-profile shape drawing, native stock
 cutscenes/boss scripts, and campaign packaging are separate workflows.
 
@@ -59,7 +59,7 @@ Finish the current dialog or return from gameplay before dropping content.
 ![The shared Import content landing page with a drop area for a level, project, mod or mutator and a Browse files action.](images/level-editor/import-content.png)
 
 *Open **Advanced → Import content** at the master title, or **Import content** in the
-editor command palette. Drop one project, level folder/ZIP, or mod/mutator package
+editor menu. Drop one project, level folder/ZIP, or mod/mutator package
 onto the window, or use **Browse files**. Review the detected content before
 applying it.*
 
@@ -94,17 +94,14 @@ tools for the current view, and press Menu (or `F1`) for save, playtest, export,
 project commands and every editor command.*
 
 The full pad table is in the [configuration guide](../../../CONFIGURATION.md#level-editor-experimental). The
-keyboard shortcuts below still apply, except that `Tab`, `F1`, `Q` and `1`–`0`
-belong to the HUD. The screenshots in the rest of this section show the earlier
-in-game chrome, which `-Dopenggf.editor.ui=classic` keeps; the hierarchy, brushes
-and edits are the same in both.
+keyboard shortcuts below apply to the HUD and world editing canvas.
 
-![The Emerald Practice sample course in World view, with the Emerald Hill block library on the left and the selected terrain cell outlined in the world.](images/level-editor/world.png)
+![The Emerald Practice course in World view, framed by the HUD hotbar and controller prompts.](images/level-editor/world.png)
 
-*World view of a blank Sonic 2 project with a sample floor assembled from decoded
-Emerald Hill art. The left pane browses ROM-backed block thumbnails. Choose the
-brush there, then focus the world to place it. These screenshots use a 426×224
-viewport enlarged exactly 2×.*
+*World view of a Sonic 2 project with a sample floor assembled from decoded
+Emerald Hill art. Choose a block from the hotbar or open the library with North
+or Tab, then paint on the world canvas. These pictures show the full 1600×900
+window with the game scaled by an integer factor.*
 
 Erase chooses actual transparent terrain with no collision; it does not assume
 library entry zero is empty. If the library lacks an appropriate empty definition,
@@ -119,29 +116,29 @@ of changing every placement that shares a block or chunk. The editor reports
 capacity exhaustion when it cannot allocate a free definition. Undo the change,
 reuse an existing definition, or start from a library with spare capacity.
 
-![Block view with the Emerald Hill chunk library on the left and the sample floor block composition on the right, including the highlighted chunk cell.](images/level-editor/block.png)
+![Block view with the HUD chunk hotbar and workbench, including the highlighted chunk cell.](images/level-editor/block.png)
 
-*Press Enter from World to edit a block. Its 8×8 chunk cells appear in the right
-pane; the left library supplies the 16×16 chunks used to compose it.*
+*Press Enter from World to edit a block. Its 8×8 chunk cells appear in the
+workbench; the hotbar and library supply the 16×16 chunks used to compose it.*
 
-![Chunk view with the pattern library on the left and an enlarged four-pattern terrain chunk on the right, including the highlighted pattern cell.](images/level-editor/chunk.png)
+![Chunk view with the HUD pattern hotbar and enlarged four-pattern workbench.](images/level-editor/chunk.png)
 
 *Press Enter again to edit a chunk's four 8×8 patterns. Use G for its palette,
 H/J for flips, and T for priority. Escape returns to Block, then World.*
 
 | Input | Action |
 |---|---|
-| Arrows / menu directions | Move the canvas cursor or browse the focused library |
-| `Tab` | Open the library sheet (classic chrome: cycle editor focus) |
-| `Page Up` / `Page Down` | Move through library pages |
-| `Space` / Confirm in a library | Select the hovered brush |
+| Arrows / menu directions | Move the canvas cursor or selection in an open library |
+| `Tab` | Open the library sheet |
+| `Page Up` / `Page Down` | Move through pages in an open library |
+| `Enter` / South in a library | Select the highlighted brush |
 | `Space` / left click | Place or apply the brush |
 | Left drag in World | Paint terrain as one undoable stroke |
 | `E` / right click | Pick content near the cursor |
 | `Delete` | Erase terrain at the selected cell or delete the selected spawn |
 | `L` | Switch FG / BG |
 | `Enter` / `Escape` | Descend / ascend the hierarchy |
-| `O` / gamepad Start | Cycle terrain, objects, and rings |
+| `O` | Cycle terrain, objects, and rings |
 | `H` / `J` | Toggle horizontal / vertical flip on a selected block/chunk cell or object |
 | `G` in Chunk view | Cycle the selected pattern descriptor's palette line |
 | `T` in Chunk view | Toggle the selected pattern descriptor's priority |
@@ -152,19 +149,16 @@ H/J for flips, and T for priority. Escape returns to Block, then World.*
 | `R` with an object selected | Toggle its respawn tracking |
 | `M` with a spawn selected | Move it to the world cursor |
 | `Ctrl+Z` / `Ctrl+Y` | Undo / redo |
-| `Insert` | Start or end library filter text input |
-| `Backspace` / `Ctrl+Backspace` while filtering | Remove one filter character / clear the filter |
-| `F1` | Open the editor menu (classic chrome: the command palette) |
+| `F1` | Open the editor menu |
 
-Object-library Left/Right chooses the brush object; Up/Down changes the brush
-subtype. Picking an existing object lets you edit its subtype, flips, and respawn
+Picking an existing object lets you edit its subtype, flips, and respawn
 tracking without changing the brush for future placements. In spawn mode the HUD
-places with South, picks with West and deletes from the tools wheel; the classic
-chrome uses gamepad A, B and C. The visible prompts adapt to the controller family.
+places with South, picks with West and deletes from the tools wheel. The visible
+prompts adapt to the controller family.
 
-Pointer clicks on editor panes belong to those panes and do not paint through
-menus or chrome. Filter text and modal forms suppress underlying editing
-shortcuts. Save, export, history, layer/focus changes, and playtest boundaries
+Pointer clicks on the HUD belong to its controls and do not paint through
+menus or chrome. Library sheets and modal forms suppress underlying editing
+shortcuts. Save, export, history, layer changes, and playtest boundaries
 finish the current edit transaction.
 
 Sonic 1 has one collision-profile path. Its primary and secondary assignments

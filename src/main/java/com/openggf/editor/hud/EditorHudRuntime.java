@@ -7,7 +7,7 @@ import com.openggf.editor.EditorWindowChrome;
 /**
  * The engine's built-in {@link EditorWindowChrome}: the controller-first editor HUD. Each
  * displayed frame lays out the HUD around the integer-scaled game and draws it after the final
- * display pass; each editor tick runs the HUD before the classic keyboard handler. It reads the
+ * display pass; each editor tick runs the HUD before the world editing input handler. It reads the
  * pads itself, so the engine's pad mappings go neutral while it is active. A separate desktop
  * editor on the class path replaces it.
  */

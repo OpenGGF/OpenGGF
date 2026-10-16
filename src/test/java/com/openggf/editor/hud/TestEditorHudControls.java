@@ -37,7 +37,7 @@ import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
 
 /**
  * ROM-free pad behaviour of the controller HUD, driven tick by tick as the engine drives it:
- * the classic editor handler with the HUD as its front end and the engine's pad mappings
+ * the world editing input handler with the HUD as its front end and the engine's pad mappings
  * suppressed. Each test holds controls across several ticks, which one-tick presses cannot see.
  */
 class TestEditorHudControls {
@@ -62,7 +62,6 @@ class TestEditorHudControls {
             public boolean update(InputHandler in) { return hud.update(in, dispatcher::handleAction); }
             public void finishPendingEdits() { hud.finishPendingEdits(); }
         });
-        dispatcher.setExternalChrome(true);
         GamepadStateSource source = () -> padConnected
                 ? List.of(GamepadStateSource.DeviceState.connected(0, "Xbox Controller", buttons, axes))
                 : List.of();
@@ -96,6 +95,35 @@ class TestEditorHudControls {
         tick();
         press(BUTTON_A);
         assertEquals(chosen, editedChunk(), "A fresh South paints");
+    }
+
+    @Test
+    void objectLibraryHoverAndConfirmDoNotPlaceUntilAFreshSouthPress() {
+        controller.configureSpawnEditing(new com.openggf.level.objects.ObjectRegistry() {
+            public com.openggf.level.objects.ObjectInstance create(ObjectSpawn spawn) { return null; }
+            public void reportCoverage(List<ObjectSpawn> spawns) { }
+            public String getPrimaryName(int id) { return "Object " + id; }
+        }, new com.openggf.game.common.CommonObjectPlacementEncoding());
+        controller.setSpawnEditMode(com.openggf.editor.EditorSpawnEditMode.OBJECTS);
+        tick();
+        int before = controller.objectPalette().selectedObjectId();
+        press(BUTTON_Y);
+        assertEquals(EditorHud.Modal.LIBRARY, hud.modal);
+        press(BUTTON_DPAD_RIGHT);
+        assertEquals(before, controller.objectPalette().selectedObjectId(), "Hover leaves the brush unchanged");
+        buttons[BUTTON_A] = true;
+        tick();
+        int chosen = controller.objectPalette().selectedObjectId();
+        assertNotEquals(before, chosen);
+        tick();
+        assertTrue(level.getObjects().isEmpty(), "Choosing a brush cannot place through the library");
+        buttons[BUTTON_A] = false;
+        tick();
+        press(BUTTON_A);
+        assertEquals(1, level.getObjects().size());
+        assertEquals(chosen, level.getObjects().getFirst().objectId());
+        dispatcher.handleAction(EditorInputHandler.Action.UNDO);
+        assertTrue(level.getObjects().isEmpty());
     }
 
     @Test
@@ -198,7 +226,7 @@ class TestEditorHudControls {
     @Test
     void focusReturnsToTheCanvasWithoutAPad() {
         padConnected = false;
-        controller.cycleFocusRegion();
+        controller.focusRegion(EditorFocusRegion.BLOCK_PANE);
         assertNotEquals(EditorFocusRegion.WORLD_CANVAS, controller.focusRegion());
         tick();
         assertEquals(EditorFocusRegion.WORLD_CANVAS, controller.focusRegion());

@@ -164,6 +164,13 @@ selection-plus-dimensions pair reproduces both errors on both commits. Check act
 fork properties and predecessor cleanup before blaming engine changes or EGL.
 See the [editor evidence](../architecture/designs/2026-10-14-editor-completion.md#combined-validation-and-baseline-attribution).
 
+Repeated Surefire goals do not imply independent test executions (2026-10-15,
+classic editor retirement). `test` followed by nine `surefire:test` goals ran the
+two networking cases once; Surefire skipped the other goals as an already-run
+configuration. Count completed test reports and inspect skip messages rather than
+counting requested goals. Independent repetitions need separate admitted
+invocations; duplicate goals are not failure-attribution evidence.
+
 A released port is a global resource, not a socket-close oracle (2026-10-12,
 mod audit delivery): Golf's audio-fault teardown test received `BindException`
 while trying to bind the former host port. Both unchanged baseline/current cases
