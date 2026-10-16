@@ -80,6 +80,15 @@ and Slots table rows retain their separately observed positive bounded evidence.
 Campaign workers remain stopped with unmerged trees/indices/packets retained as
 cleanup_pending; no campaign calibration or deletion is authorized by this checkpoint.
 
+Root refreshes the current matched pair after upstream ownership/API changes on
+04ac46c04: enginee5a879d7/SDKd9e56f4a, actual20737-line pin7d18feb8, package61564
+successful. Actual24-source creator and a typed C2/C3 consumer package with zero
+strict findings; focus14330 passes188 cases across17 concrete classes without
+failures/errors/skips. Exact commands/hashes and coverage limits are in the
+[current artifact checkpoint](2026-10-15-second-strike-campaign-delivery.md#current-artifact-refresh-after-upstream4a26).
+No historical53676/19448/42171 gameplay proof is relabelled as current, and no
+inactive ingredient is wired by this artifact qualification.
+
 - Lead HEAD e0efcb372f9131ce959c5f2487d2acca0cdd977e/pinned760 and actual staged
   C3 tree56b06 remain unchanged. Working DDZ/Slots source and current plan are
   owned uncommitted inputs; immutable packets are accounted by root.
