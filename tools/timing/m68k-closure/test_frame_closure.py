@@ -196,6 +196,30 @@ class ClosureCli(unittest.TestCase):
         self.assertEqual(r.returncode, 2, r.stdout)
         self.assertIn('unsupported', r.stdout)
 
+    def with_shift_before_rts(self):
+        """Insert lsl.l d1,d0 (E3A8, 8 + 2n cycles, n = d1 mod 64 not observed) before the rts, moved to $08."""
+        with open(self.rom, 'rb') as f:
+            rom = bytearray(f.read())
+        rom[6:10] = bytes([0xE3, 0xA8, 0x4E, 0x75])
+        write(self.rom, rom)
+        self.write_case(extra_pc=0x08)
+
+    def test_operand_interval_wider_than_tolerance_is_incomplete(self):
+        # Residual interval [-64, 62] overlaps the +-12 tolerance but is not inside it: some shift count
+        # would close, so closure within tolerance is not proved (review finding against 4f7cbbb26).
+        self.with_shift_before_rts()
+        r = self.run_tool('check', self.write_spec(), self.write_counters(z80_delta=-72 * 7))
+        self.assertEqual(r.returncode, 2, r.stdout)
+        self.assertIn('wider than the tolerance', r.stdout)
+        self.assertNotIn('STATUS: PASS', r.stdout)
+
+    def test_operand_interval_excluding_tolerance_still_fails(self):
+        # The same unresolved shift cannot close a residual whose whole interval lies above the tolerance.
+        self.with_shift_before_rts()
+        r = self.run_tool('check', self.write_spec(), self.write_counters(z80_delta=-300 * 7))
+        self.assertEqual(r.returncode, 1, r.stdout)
+        self.assertIn('unexplained residual', r.stdout)
+
     def test_identity_mismatch_is_error(self):
         self.write_case()
         r = self.run_tool('check', self.write_spec(rom_sha1='0' * 40), self.write_counters())

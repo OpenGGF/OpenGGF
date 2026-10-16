@@ -11,7 +11,8 @@ endpoint difference. Native data is comparison input only; nothing here is a run
 
 Commands:
   report  write the full JSON analysis; exit 0 unless an identity or usage error occurs (exit 3).
-  check   fail closed: exit 0 PASS only when every window closes within tolerance with no unknown term;
+  check   fail closed: exit 0 PASS only when every window's whole residual interval lies within tolerance with no
+          unknown term (an interval that only overlaps the tolerance is INCOMPLETE);
           exit 1 FAIL when a window cannot close (over-prediction beyond tolerance, a residual that excludes zero
           with every term known, or an observed counter outside the model's bound); exit 2 INCOMPLETE when any
           term is unknown (unsupported instruction, missing stall counters or endpoint stamps, unverifiable
@@ -303,6 +304,12 @@ def close_window(case, a, b, terms, counters, plat, tol):
     elif resid[0] > tol:
         failures.append('unexplained residual of at least %.1f cycles' % (resid[0] - tol))
         out['status'] = FAIL
+    elif resid[0] < -tol or resid[1] > tol:
+        # Every term is known but operand-dependent times or unforced branch outcomes leave an interval that
+        # only overlaps the tolerance: some unobserved value would close, which does not prove closure.
+        unknown.append('residual interval [%.1f, %.1f] is wider than the tolerance +-%s (unresolved operand or '
+                       'branch-outcome cycles)' % (resid[0], resid[1], tol))
+        out['status'] = INCOMPLETE
     else:
         out['status'] = PASS
     return out

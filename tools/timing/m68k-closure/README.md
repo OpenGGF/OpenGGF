@@ -12,7 +12,7 @@ only; nothing here supplies runtime costs, gameplay state or timing authority.
 | `m68k_timing.py` | Decodes instructions from ROM bytes. Motorola MC68000 section 8 times as exact values or explicit operand intervals. Unsupported encodings raise. |
 | `gpgx_cycles.py` | Reads `m68ki_cycles.h` from an explicit Genesis-Plus-GX repository at a pinned commit and blob id, and applies GPGX's dynamic cycle rules. |
 | `frame_closure.py` | `report` and `check` commands. |
-| `stall_counters.py` | Converts native stall-counter stamps (GPGX stall ABI v1, read at VInt `$584`, `Process_Kos_Queue` `$1C1A` and the `Level_frame_counter` increment `$6520`) into `--counters` JSON lines. Fails closed on missing, duplicated or regressing stamps. |
+| `stall_counters.py` | Converts native stall-counter stamps (GPGX stall ABI v1, read at VInt `$584`, `Process_Kos_Queue` `$1C1A` and the `Level_frame_counter` increment `$6520`) into `--counters` JSON lines. Fails closed on missing, duplicated or regressing stamps, and when no complete bucket is present. |
 | `specs/s3k-ending-kos46-v1.json` | Exact case/window spec: ROM SHA-1, GPGX commit/blob, capture names with SHA-256, regions, windows, cited platform constants. |
 | `test_frame_closure.py`, `test_stall_counters.py` | Decoder vectors, synthetic PASS/FAIL/INCOMPLETE/ERROR CLI cases and stamp-conversion cases. |
 
@@ -32,9 +32,9 @@ python3 -m unittest discover -s tools/timing/m68k-closure -p 'test_*.py'
 
 | Code | Status | Meaning |
 |---|---|---|
-| 0 | PASS | Every window closes within the spec tolerance and every term is known. |
+| 0 | PASS | Every term is known and every window's whole residual interval lies within the spec tolerance. |
 | 1 | FAIL | Closure is impossible: the model over-predicts, a fully known residual excludes zero, or an observed counter falls outside the model's bound. |
-| 2 | INCOMPLETE | A term is unknown: an unsupported instruction, missing or partial stall counters, an endpoint VInt that did not provably arrive in the idle loop, or violated flow assumptions. |
+| 2 | INCOMPLETE | A term is unknown: an unsupported instruction, missing or partial stall counters, an endpoint VInt that did not provably arrive in the idle loop, or violated flow assumptions. Also when every term is known but operand-dependent times or unforced branch outcomes leave a residual interval that only overlaps the tolerance. |
 | 3 | ERROR | Identity or usage failure: ROM, capture or GPGX source differs from the spec. |
 
 `report` prints the full JSON (per-bucket terms, window residuals, solver evidence) and does not judge.

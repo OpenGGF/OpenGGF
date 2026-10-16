@@ -10,7 +10,7 @@ bucket that ends there), `vint` at the VInt handler's first ROM instruction $584
 Counter fields are cumulative since enable. Output: one JSON line per complete bucket N with the counter deltas between
 the increment stamps of N-1 and N, `vint_to_increment_mclk` (VInt N handler entry to increment N) and
 `kos_to_vint_mclk` (Process_Kos_Queue N entry to VInt N, the Kos service window), all in MCLK.
-Fails closed (exit 2) on a missing or duplicated stamp, more than one VInt between increments, a non-monotonic clock or
+Fails closed (exit 2) on a missing or duplicated stamp, no complete bucket, more than one VInt between increments, a non-monotonic clock or
 counter, or a frame-ordinal regression; there are no default values.
 Origin: OpenGGF S3K ending Kos CPU-budget research, 2026-10-16. The probe itself is a separate native task.
 """
@@ -61,6 +61,8 @@ def convert(rows, case):
         row['vint_to_increment_mclk'] = cur[2] - vints[0][2]
         row['kos_to_vint_mclk'] = vints[0][2] - koses[0][2]
         out.append(row)
+    if not out:
+        raise StampError('no complete bucket: %d increment stamp(s), two consecutive ones are needed' % len(incs))
     return out
 
 

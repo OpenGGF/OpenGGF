@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Tests for stall_counters.py with hand-written cumulative stamps (expected deltas computed by hand)."""
+import contextlib
+import io
 import os
 import sys
+import tempfile
 import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -42,6 +45,20 @@ class StallCounters(unittest.TestCase):
         bad[3]['refresh_events'] = '1'
         with self.assertRaises(sc.StampError):
             sc.convert(bad, 'c')
+
+    def test_no_complete_bucket_fails_closed(self):
+        for partial in ([], [GOOD[0]], GOOD[:3]):
+            with self.assertRaises(sc.StampError):
+                sc.convert(partial, 'c')
+
+    def test_header_only_stamp_file_is_incomplete(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, 'stamps.csv')
+            with open(path, 'w') as f:
+                f.write(','.join(COLS) + '\n')
+            with contextlib.redirect_stderr(io.StringIO()) as err:
+                self.assertEqual(sc.main(['stall_counters.py', 'c', path]), 2)
+            self.assertIn('STATUS: INCOMPLETE', err.getvalue())
 
 
 if __name__ == '__main__':
