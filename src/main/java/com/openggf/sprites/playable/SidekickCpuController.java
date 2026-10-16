@@ -4479,7 +4479,8 @@ public class SidekickCpuController {
      */
     private void completeCarryFlyoffDespawn() {
         transientFlyoffDespawned = true;
-        leader = null;
+        // The leader link is structural (not captured): keep it, so history that
+        // still contains this carrier re-admits the same sprite with its chain.
         // The owning SpriteManager observes this flag after running the
         // controller and removes the throwaway carrier from its temporary
         // sidekick roster (see SpriteManager.update). The controller does not
@@ -5963,6 +5964,10 @@ public class SidekickCpuController {
 
     void restoreRewindScalars(SidekickCpuRewindExtra snapshot) {
         manualInputAppliedThisTick = false;
+        // Not captured: SpriteManager sweeps a carrier in the update that sets this
+        // loc_140AC deletion marker, so a captured carrier is still live. Re-admitting
+        // the departed sprite must not inherit the marker and be swept again.
+        transientFlyoffDespawned = false;
         state = snapshot.state();
         deadFallingRomCpuRoutine = snapshot.deadFallingRomCpuRoutine();
         despawnCounter = snapshot.despawnCounter();

@@ -84,6 +84,15 @@ public class SpriteManager implements PlayableSstDispatcher {
 	private final Map<String, java.util.function.Supplier<AbstractPlayableSprite>>
 			temporarySidekickRecreators = new java.util.HashMap<>();
 
+	/**
+	 * Last removed instance of each rewind-recreatable temporary sidekick, by code.
+	 * History captured while it was alive holds direct references to that sprite
+	 * (solid-contact headroom/standing latches, plane-switcher sides). Re-admitting
+	 * the identical sprite keeps them live; a factory-built replacement left every
+	 * such entry keyed to the departed instance, so replay diverged.
+	 */
+	private final Map<String, RewindRetiredSidekick> removedRecreatableTemporaries = new java.util.HashMap<>();
+
 	private final Map<String, RewindRetiredSidekick> rewindRetiredSidekicks = new java.util.LinkedHashMap<>();
 	/** Live and script-retired followers in their original update order. */
 	private final List<AbstractPlayableSprite> retiredRosterOrder = new ArrayList<>();
@@ -214,6 +223,10 @@ public class SpriteManager implements PlayableSstDispatcher {
 		var retired = rewindRetiredSidekicks.get(sprite.getCode());
 		if (retired != null && retired.sprite() != sprite) {
 			rewindRetiredSidekicks.remove(sprite.getCode());
+		}
+		var removedTemporary = removedRecreatableTemporaries.get(sprite.getCode());
+		if (removedTemporary != null && removedTemporary.sprite() != sprite) {
+			removedRecreatableTemporaries.remove(sprite.getCode());
 		}
 		Sprite previous = sprites.put(sprite.getCode(), sprite);
 		boolean replaced = previous != null;
@@ -396,6 +409,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 		temporarySidekicks.clear();
 		nativeScriptedArtSidekicks.clear();
 		temporarySidekickRecreators.clear();
+		removedRecreatableTemporaries.clear();
 		rewindRetiredSidekicks.clear();
 		retiredRosterOrder.clear();
 		bucketsDirty = true;
@@ -1712,6 +1726,10 @@ public class SpriteManager implements PlayableSstDispatcher {
 		if (sprite instanceof AbstractPlayableSprite playable) {
 			com.openggf.sprites.playable.PlayableSpriteInternalAccess.bindMutatorPolicies(playable, null);
 			if (playable.getMovementManager() instanceof PlayableSpriteMovement movement) movement.motionMutators = null;
+			if (temporarySidekicks.contains(playable) && temporarySidekickRecreators.containsKey(playable.getCode())) {
+				removedRecreatableTemporaries.put(playable.getCode(), new RewindRetiredSidekick(playable,
+						sidekickCharacterNames.get(playable), true, nativeScriptedArtSidekicks.contains(playable)));
+			}
 			sidekicks.remove(playable);
 			sidekickCharacterNames.remove(playable);
 			temporarySidekicks.remove(playable);
@@ -2341,9 +2359,15 @@ public class SpriteManager implements PlayableSstDispatcher {
 				// flew off). Without this, rewinding back into the carry intro would
 				// leave the leader object-controlled with no carrier present. The
 				// factory fully wires and registers the sprite; its per-sprite state
-				// is reapplied by the restore loop below.
+				// is reapplied by the restore loop below. The departed instance is
+				// preferred so captured references to it resolve to the live sprite.
 				for (com.openggf.game.rewind.snapshot.SpriteManagerSnapshot.SpriteEntry entry : s.sprites()) {
 					if (getSprite(entry.code()) == null) {
+						var removed = removedRecreatableTemporaries.get(entry.code());
+						if (removed != null) {
+							readmitRetiredSidekick(removed);
+							continue;
+						}
 						java.util.function.Supplier<AbstractPlayableSprite> recreator =
 								temporarySidekickRecreators.get(entry.code());
 						if (recreator != null) {
