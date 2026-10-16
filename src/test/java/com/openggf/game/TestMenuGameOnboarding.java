@@ -30,9 +30,29 @@ class TestMenuGameOnboarding {
         Files.write(three, bytes);
         Files.writeString(directory.resolve("unrelated.txt"), "not a game");
         assertEquals(java.util.Map.of(RomGame.S1, one, RomGame.S2, two, RomGame.S3K, three),
-                MenuGameOnboarding.discover(directory, true));
-        assertEquals(java.util.Map.of(RomGame.S1, one), MenuGameOnboarding.discover(one, false));
-        assertTrue(MenuGameOnboarding.discover(directory.resolve("unrelated.txt"), false).isEmpty());
+                MenuGameOnboarding.discover(directory, true).games());
+        assertEquals(java.util.Map.of(RomGame.S1, one), MenuGameOnboarding.discover(one, false).games());
+        assertTrue(MenuGameOnboarding.discover(directory.resolve("unrelated.txt"), false).games().isEmpty());
+    }
+
+    @Test void boundedScanPreservesGamesAndReportsIncompleteCoverage() throws Exception {
+        // Every file is recognized, so traversal order cannot affect the partial result.
+        for (int i = 0; i < 3; i++) image(directory, "one" + i, 0x80000, "SONIC THE HEDGEHOG");
+        var result = MenuGameOnboarding.discover(directory, true, 2);
+        assertEquals(java.util.Set.of(RomGame.S1), result.games().keySet());
+        assertTrue(result.limitReached());
+        assertFalse(result.unreadable());
+        assertTrue(result.notice().contains("Scan limit reached"));
+    }
+
+    @Test void depthLimitIsReportedAndMissingFileIsAnAccessFailure() throws Exception {
+        Path nested = directory;
+        for (int i = 0; i < 9; i++) nested = Files.createDirectory(nested.resolve("nested"));
+        image(nested, "one", 0x80000, "SONIC THE HEDGEHOG");
+        var result = MenuGameOnboarding.discover(directory, true);
+        assertTrue(result.limitReached());
+        assertTrue(result.games().isEmpty());
+        assertThrows(IOException.class, () -> MenuGameOnboarding.discover(directory.resolve("missing"), false));
     }
 
     @Test void scanSavesRecognizedGamesAndContinuesOnlyAfterAcknowledgement() throws IOException {

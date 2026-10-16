@@ -381,6 +381,7 @@ public class MasterTitleScreen {
     public void update(InputHandler inputHandler) {
         MenuFeedback.withSink(cue -> audioSink.play(AudioCue.valueOf(cue.name())),
                 () -> updateMenu(inputHandler));
+        hubProgress.update();
     }
 
     private void updateMenu(InputHandler inputHandler) {
@@ -900,6 +901,7 @@ public class MasterTitleScreen {
     private void confirmQuitPrompt() {
         quitPrompt = false;
         if (quitSelected) {
+            hubProgress.flush();
             quitRequested = true;
             state = State.EXITING;
             playConfirmSound();
@@ -1098,6 +1100,7 @@ public class MasterTitleScreen {
 
     private void confirmLaunch(MasterTitleEntry.Launch launch, boolean programmatic) {
         if (!programmatic) hubProgress.rememberGame(launch.entry().gameId());
+        hubProgress.flush();
         selectedLaunch = launch;
         state = State.CONFIRMING;
         if (!programmatic) playConfirmSound();
@@ -2190,6 +2193,7 @@ public class MasterTitleScreen {
     }
 
     private void requestResume() {
+        hubProgress.flush();
         if (suspendFrame == null) resumeRequested = true;
         else {
             suspendZoomTicks = SUSPEND_ZOOM_TICKS;
@@ -2456,6 +2460,8 @@ public class MasterTitleScreen {
     }
 
     public void cleanup() {
+        if (settingsScreen != null) settingsScreen.cancelDisplayTrial();
+        hubProgress.flush();
         cancelCatalogLoad();
         if (font != null) font.cleanup();
         // pickerFont is only non-null AND distinct from font when the

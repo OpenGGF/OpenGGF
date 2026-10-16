@@ -11,15 +11,17 @@ Unreleased. The earlier development themes remain in
   and returning live options to Default releases the earlier per-game overrides.
   Display settings offer windowed, borderless and fullscreen modes, with integer
   or aspect-preserving fit scaling. Maximising and resizing retain the requested
-  window bounds, including on high-DPI screens.
+  window bounds, including on high-DPI screens. Window-mode changes preview for
+  15 seconds and revert unless confirmed.
   Settings show **RESTART** only for changed
   values awaiting a restart, clearing it when restored to the running value.
-  The hub remembers the last game, with idle ROM terrain previews and optional
+  The hub remembers the last game after navigation settles, with optional
   quiet title music. Controller hints
   follow the last device used. Compact Controls, Advanced and ROM browsing pages,
   player binding groups, conflict warnings, confirmed tab resets and save summaries
   make setup easier to review. Expert loading and rewind tuning live in Advanced;
-  first-run discovery can locate one ROM or scan a folder for all three games.
+  first-run discovery can locate one ROM or scan a folder for all three games,
+  retaining partial discoveries at scan limits and explaining file-access errors.
 
 - **Level authoring:** Named projects create, edit and reopen complete authored
   levels for Sonic 1, Sonic 2 and Sonic 3&K using ROM-derived asset libraries.

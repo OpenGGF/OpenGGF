@@ -94,7 +94,7 @@ The `config.yaml` is organized into the following top-level sections:
 | `DISPLAY_COLOR_PROFILE` | `display.colorProfile` | string | `"RAW_RGB"` | Palette presentation profile. `"RAW_RGB"` keeps the current direct 8-bit expansion, `"MD_ANALOG"` applies a darker Mega Drive-style analog ramp, and `"NTSC_SOFT"` applies the analog ramp plus mild desaturation. |
 | `DISPLAY_COLOR_PROFILE_TOGGLE_KEY` | `display.colorProfileToggleKey` | key | `V` | Runtime key used to cycle display color profiles. The selected profile is saved to `config.yaml` and shown briefly in the bottom-left corner. |
 | `DISPLAY_ASPECT` | `display.aspect` | string | `"NATIVE_4_3"` | Display aspect preset. Controls the logical pixel width used by the renderer. Accepted values: `"NATIVE_4_3"` (320 px, exact native behavior), `"WIDE_16_10"` (352 px, supported), `"WIDE_16_9"` (400 px, primary supported widescreen target), `"ULTRA_21_9"` (528 px, best-effort smoke tier), and `"SUPER_32_9"` (800 px, exploratory). Wider presentation does not widen ROM world boundaries or trace-comparison authority. A game module (such as a mod) may pin a preset for its session; the setting itself is unchanged and returns at the master title. |
-| `DISPLAY_WINDOW_MODE` | `display.windowMode` | enum | `"WINDOWED"` | `"WINDOWED"` allows normal resizing and maximising; `"BORDERLESS"` covers the current monitor without window borders; `"FULLSCREEN"` uses exclusive fullscreen at the monitor's current resolution. Changes apply when saved. Returning to windowed mode restores the previous window placement. |
+| `DISPLAY_WINDOW_MODE` | `display.windowMode` | enum | `"WINDOWED"` | `"WINDOWED"` allows normal resizing and maximising; `"BORDERLESS"` covers the current monitor without window borders; `"FULLSCREEN"` uses exclusive fullscreen at the monitor's current resolution. Saving a changed mode previews it for 15 seconds; Keep changes persists it, while Revert, Back or timeout restores the previous mode. Returning to windowed mode restores the previous window placement. |
 | `DISPLAY_SCALING` | `display.scaling` | enum | `"INTEGER"` | `"INTEGER"` uses the largest whole-number scale that fits, preserving equal-sized square pixels. `"FIT"` uses the largest proportional fit, allowing fractional scaling. Both preserve the game image's proportions and centre it with bars where necessary. Changes apply when saved. |
 | `DISPLAY_WINDOW_AUTOSIZE` | `display.windowAutosize` | bool | `true` | When `true` and a widescreen preset is active, the OS window is derived from the preset at 2x baseline (e.g. `WIDE_16_9` → 800×448). When a launch changes the aspect (a launch profile, or a module's required aspect such as a mod laid out for 16:9), a windowed, non-maximised window is refitted: it keeps its whole-number height scale and takes the new aspect's width, within the monitor, rather than letterboxing. When `false`, `SCREEN_WIDTH`/`SCREEN_HEIGHT` are used verbatim so a custom window size is preserved, and launches never resize the window. At startup it has no effect when `DISPLAY_ASPECT` is `"NATIVE_4_3"`. |
 | `DISPLAY_SHADER_LIBRARY_ROOT` | `display.shaderLibraryRoot` | string | `"shaders"` | Root directory scanned for user display shaders, resolved relative to the working directory. |
@@ -355,7 +355,11 @@ cross-game keys live in **Advanced > Advanced settings**, alongside the shader
 library folder, shader rendering phase, game speed, debug viewer scale, ROM
 loading policy and Tape coast tuning. Rewind remains one Gameplay row. Display
 keeps everyday screen, shader selection and colour options. Its **Window mode**
-and **Scaling** rows apply when saved, including from a paused game. Maximising a
+and **Scaling** rows apply from the menu, including from a paused game. Saving a
+changed window mode opens a 15-second confirmation: **Keep changes** saves the
+whole draft; **Revert display**, Back or timeout restores the old mode and keeps
+the draft editable. The preview is never written to disk before confirmation.
+Scaling applies when saved. Maximising a
 window fills the desktop work area; the game image remains proportional, with
 square pixels and centred bars where needed. Choose **Integer** scaling for
 whole-number pixel multiples or **Fit** for the largest proportional image.

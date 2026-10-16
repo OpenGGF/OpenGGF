@@ -41,6 +41,9 @@ public class SonicConfigurationService {
 	private final Path configDirectoryOverride;
 	private final ConfigFileReader yamlReader;
 	private final Map<String, Object> sessionOverrides = new HashMap<>();
+	private final DisplaySettingsTrial displaySettingsTrial = new DisplaySettingsTrial(this);
+
+	DisplaySettingsTrial displaySettingsTrial() { return displaySettingsTrial; }
 	// Derived (non-persisted) display values; read before `config`, never saved.
 	private final Map<String, Object> transientResolved = new HashMap<>();
 	private final Map<SonicConfiguration, Integer> intCache = new EnumMap<>(SonicConfiguration.class);

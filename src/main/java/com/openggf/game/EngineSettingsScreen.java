@@ -111,12 +111,21 @@ public final class EngineSettingsScreen {
         pausedGameTakes = appliesOnResume;
     }
 
+    private boolean displayPrompt;
+    private boolean keepDisplay;
+
+    public void cancelDisplayTrial() {
+        com.openggf.configuration.DisplaySettingsTrial.forConfig(config).cancel();
+        displayPrompt = false;
+    }
+
     public void update(InputHandler input) {
         if (input == null || closeRequested) return;
         ticks++;
         focusTicks++;
         if (messageTicks > 0 && --messageTicks == 0) message = null;
         lastInput = input;
+        if (displayPrompt) { updateDisplayPrompt(input); return; }
         if (details != null) { if (details.update(input)) details = null; return; }
         MenuInput.Pointer pointer = MenuInput.pointer(input, viewportWidth, 224);
         if (resetPrompt) { updateResetPrompt(input, pointer); return; }
@@ -218,19 +227,19 @@ public final class EngineSettingsScreen {
         } else openTextEditor();
     }
 
-    private boolean updatePointer(MenuInput.Pointer pointer) {
+    boolean updatePointer(MenuInput.Pointer pointer) {
         if (!pointer.inside()) return false;
 
         boolean moved = pointer.x() != lastPointerX || pointer.y() != lastPointerY;
         lastPointerX = pointer.x();
         lastPointerY = pointer.y();
         if (draft.dirty() && pointer.over(viewportWidth - 112, 8, 104, 17)) {
-            if (moved || pointer.leftPressed()) { saveFocused = true; tabsFocused = false; }
+            if (moved || pointer.leftPressed()) { saveFocused = true; tabsFocused = false; resetFocused = false; groupsFocused = false; }
             if (pointer.leftPressed() && apply()) closeRequested = true;
             return pointer.leftPressed();
         }
         if (pointer.over(viewportWidth - resetButtonWidth() - 8, 155, resetButtonWidth(), 12)) {
-            if (moved || pointer.leftPressed()) { resetFocused = true; tabsFocused = false; saveFocused = false; }
+            if (moved || pointer.leftPressed()) { resetFocused = true; tabsFocused = false; saveFocused = false; groupsFocused = false; }
             if (pointer.leftPressed()) openResetPrompt();
             return pointer.leftPressed();
         }
@@ -418,6 +427,67 @@ public final class EngineSettingsScreen {
     }
 
     private boolean apply() {
+        if (draft.changed(SonicConfiguration.DISPLAY_WINDOW_MODE)) {
+            com.openggf.configuration.DisplaySettingsTrial.forConfig(config).begin(draft.text(SonicConfiguration.DISPLAY_WINDOW_MODE));
+            displayPrompt = true;
+            keepDisplay = false;
+            MenuFeedback.emit(CONFIRM);
+            return false;
+        }
+        return saveDraft();
+    }
+
+    private void updateDisplayPrompt(InputHandler input) {
+        var trial = com.openggf.configuration.DisplaySettingsTrial.forConfig(config);
+        var pointer = MenuInput.pointer(input, viewportWidth, 224);
+        if (!trial.active() || MenuInput.back(input) || pointer.rightPressed()) {
+            cancelDisplayTrial();
+            flash("Display restored; changes not saved");
+            MenuFeedback.emit(CANCEL);
+            return;
+        }
+        if (MenuInput.left(input) || MenuInput.right(input) || MenuInput.up(input) || MenuInput.down(input))
+            keepDisplay = !keepDisplay;
+        boolean accept = MenuInput.accept(input);
+        boolean moved = pointer.x() != lastPointerX || pointer.y() != lastPointerY;
+        lastPointerX = pointer.x();
+        lastPointerY = pointer.y();
+        for (int i = 0; i < 2; i++) {
+            if (pointer.over(30, 120 + i * 28, viewportWidth - 60, 22)) {
+                if (moved || pointer.leftPressed()) keepDisplay = i == 0;
+                accept |= pointer.leftPressed();
+            }
+        }
+        if (!accept) return;
+        if (keepDisplay) {
+            // Persistence is atomic. A failed save restores the display and leaves the draft editable.
+            boolean saved = saveDraft();
+            cancelDisplayTrial();
+            if (saved) closeRequested = true;
+        } else {
+            cancelDisplayTrial();
+            flash("Display restored; changes not saved");
+            MenuFeedback.emit(CANCEL);
+        }
+    }
+
+    private void renderDisplayPrompt(int width) {
+        MenuChrome.background(font, width);
+        MenuChrome.header(font, width, "KEEP DISPLAY SETTINGS?", null);
+        MenuChrome.compact(font, "Reverting in " + com.openggf.configuration.DisplaySettingsTrial.forConfig(config).secondsRemaining() + " seconds", 20, 65, MenuChrome.TEXT);
+        MenuChrome.compact(font, "Keep saves all your pending changes.", 20, 85, MenuChrome.MUTED);
+        String[] labels = {"Keep changes", "Revert display"};
+        for (int i = 0; i < 2; i++) {
+            int y = 120 + i * 28;
+            if (keepDisplay == (i == 0)) MenuChrome.focus(font, 30, y, width - 60, 22, ticks);
+            else MenuChrome.panel(font, 30, y, width - 60, 22);
+            MenuChrome.compact(font, labels[i], 40, y + 7, MenuChrome.TEXT);
+        }
+        MenuChrome.footer(font, width, null, List.of(MenuChrome.hint(MenuChrome.confirmKey(lastInput), "CHOOSE"),
+                MenuChrome.hint(MenuChrome.backKey(lastInput), "REVERT")), MenuChrome.controller(lastInput));
+    }
+
+    private boolean saveDraft() {
         try {
             boolean changed = draft.dirty();
             draft.apply();
@@ -620,6 +690,7 @@ public final class EngineSettingsScreen {
             MenuChrome.footer(font, width, status, hints, MenuChrome.controller(lastInput));
             if (prompt) renderPrompt(width);
             if (resetPrompt) renderResetPrompt(width);
+            if (displayPrompt) renderDisplayPrompt(width);
         } finally {
             font.endMegaBatch();
         }

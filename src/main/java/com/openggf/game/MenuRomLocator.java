@@ -23,6 +23,7 @@ public final class MenuRomLocator {
     private Path validated;
     private String lastPath;
     private String error;
+    private boolean incompatible;
     private boolean completed;
     private boolean cancelled;
     private MasterTitlePointer pointer;
@@ -77,7 +78,10 @@ public final class MenuRomLocator {
                 draft.set(game.romConfigKey, validated.toString());
                 save();
             } catch (Exception e) {
-                error = "This file does not contain " + game.menuLabel + ".";
+                Throwable failure = e instanceof java.util.concurrent.ExecutionException ? e.getCause() : e;
+                incompatible = failure instanceof IncompatibleImageException;
+                error = incompatible ? "This file does not contain " + game.menuLabel + "."
+                        : "Could not read this ROM file.";
                 MenuFeedback.emit(MenuFeedback.Cue.CANCEL);
             }
             validation = null;
@@ -108,8 +112,12 @@ public final class MenuRomLocator {
         if (!Files.isRegularFile(path)) throw new IOException("Choose a ROM file");
         var identity = RomGame.valueOf(game.gameId.toUpperCase(java.util.Locale.ROOT)).identity();
         if (RomImageClassifier.windowOf(PhysicalImage.probe(path), identity).isEmpty())
-            throw new IOException("Image does not contain " + game.menuLabel);
+            throw new IncompatibleImageException(game.menuLabel);
         return path;
+    }
+
+    static final class IncompatibleImageException extends IOException {
+        IncompatibleImageException(String game) { super("Image does not contain " + game); }
     }
 
     /** Stop all reads when the owning menu closes; unsaved draft changes are discarded. */
@@ -131,7 +139,7 @@ public final class MenuRomLocator {
         MenuStyle.text(font, error == null ? "Checking ROM..." : error, 10, 76,
                 this.width - 20, 1, .85f, .55f);
         if (error != null) {
-            MenuStyle.text(font, validated == null ? "Choose a compatible ROM image." : "Check settings-file access, then retry.",
+            MenuStyle.text(font, validated == null ? (incompatible ? "Choose a compatible ROM image." : "Check file access or choose another file.") : "Check settings-file access, then retry.",
                     10, 98, this.width - 20, .8f, .85f, 1);
             MenuStyle.focusLabel(font, 10, 130, this.width - 20, 24);
             MenuStyle.label(font, validated == null ? "Choose another file" : "Retry saving", 16, 134,

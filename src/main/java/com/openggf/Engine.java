@@ -694,7 +694,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 		// Apply the saved desktop mode before showing the window.
 		displayWindowController = new DisplayWindowController(window);
-		displayWindowController.apply(configService.getString(SonicConfiguration.DISPLAY_WINDOW_MODE));
+		displayWindowController.apply(com.openggf.configuration.DisplaySettingsTrial.forConfig(configService).windowMode());
 		glfwShowWindow(window);
 
 		// This line is critical for LWJGL's interoperation with GLFW's
@@ -2849,7 +2849,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			inputHandler.pollPhysicalGamepads();
 
 			boolean modeChanged = displayWindowController.apply(
-					configService.getString(SonicConfiguration.DISPLAY_WINDOW_MODE));
+					com.openggf.configuration.DisplaySettingsTrial.forConfig(configService).windowMode());
 			if (modeChanged || !java.util.Objects.equals(displayScaling,
 					configService.getString(SonicConfiguration.DISPLAY_SCALING))) {
 				FramebufferDimensions framebuffer = readCurrentFramebufferDimensions();

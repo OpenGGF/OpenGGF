@@ -38,7 +38,9 @@ class TestMenuRomLocator {
     void identifiesContentRegardlessOfFilenameAndRejectsWrongGameAndFolders() throws IOException {
         Path image = image("my cartridge.backup", 0x80000, "SONIC THE HEDGEHOG");
         assertEquals(image, MenuRomLocator.validate(MasterTitleScreen.GameEntry.SONIC_1, image));
-        assertThrows(IOException.class, () -> MenuRomLocator.validate(MasterTitleScreen.GameEntry.SONIC_2, image));
+        assertThrows(MenuRomLocator.IncompatibleImageException.class, () -> MenuRomLocator.validate(MasterTitleScreen.GameEntry.SONIC_2, image));
+        var missing = assertThrows(IOException.class, () -> MenuRomLocator.validate(MasterTitleScreen.GameEntry.SONIC_1, directory.resolve("missing")));
+        assertFalse(missing instanceof MenuRomLocator.IncompatibleImageException);
         assertThrows(IOException.class, () -> MenuRomLocator.validate(MasterTitleScreen.GameEntry.SONIC_1, directory));
     }
 

@@ -605,3 +605,46 @@ the obsolete idle-fade test in `TestHubHistory`; it was removed before the
 completed passing run. The change-based plan selected 3,301 smoke classes through
 the unclassified-file fallback; focused menu checks replace that disproportionate
 selection for this bounded removal. No full engine-suite or desktop visual claim.
+
+### 2026-10-16: menu review follow-up
+
+Based on `fe7ef5df16` in the current `feature/ai-master-title-redesign` checkout.
+Mixed pointer/keyboard Settings focus now clears competing Reset and control-group
+flags when Save takes focus. Hub selection remains immediate in memory; history
+writes coalesce after 750 ms without another selection, and flush on launch,
+resume, quit and cleanup. Writes remain on the owning menu thread to avoid races
+with atomic Settings updates; failures retain the selection and throttle retries.
+
+Window-mode saves use a separate transient `DisplaySettingsTrial`, not the saved
+configuration or gameplay session overrides. The engine queries it on each event
+loop iteration, including while focus loss suspends gameplay/menu updates. After
+15 seconds it resolves to the original saved mode. Keep atomically saves the
+whole draft; Back, Revert, expiry, failed persistence and menu cleanup cancel the
+preview. The draft remains editable after rollback. Persist-first-and-undo was
+rejected because a crash or an unrelated history save could retain an unconfirmed
+mode. Changing global session overrides was also unnecessary and would entangle
+the preview with suspended-game settings. The commit policy caught an initially
+public configuration accessor; access now goes through the internal preview
+helper, preserving the existing Mod API surface. This visibility-only follow-up
+was not recompiled after the shared-output failure.
+
+ROM location distinguishes an incompatible image from an unreadable file. Folder
+scans retain partial discoveries at entry/depth limits and surface access errors
+and incomplete scanning alongside their results. Runtime ROM classification is
+unchanged.
+
+Validation: source changes above include focused regression tests.
+The focused Java 25 job completed main compilation but failed test compilation
+with 100 missing-symbol errors for `LevelManager` (no tests executed). IntelliJ
+and its build process were active; the class reappeared after failure, consistent
+with the documented shared-output hazard. The user requested commit and push
+after this limitation was reported; tests were not rerun and no test pass is claimed. The change-based planner
+selects 3,306 smoke classes through shared/unclassified owners. Focused menu,
+configuration and window-controller checks replace that disproportionate selection;
+no gameplay/ROM-parser change or broad suite claim. No desktop input is automated.
+
+Focused command (Java 25):
+
+```bash
+python3 tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestDisplaySettingsTrial,TestDisplayWindowController,TestEngineSettingsDisplayConfirmation,TestEngineSettingsScreen,TestEngineSettingsDraft,TestHubProgressStore,TestHubHistory,TestMenuRomLocator,TestMenuGameOnboarding,TestMasterTitleHub,TestMasterTitleSuspendedGame,TestSparseUserConfig' test -B
+```

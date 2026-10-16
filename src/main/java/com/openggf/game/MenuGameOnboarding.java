@@ -25,7 +25,7 @@ import java.util.Map;
 public final class MenuGameOnboarding {
     private final SonicConfigurationService config;
     private MenuPathBrowser browser;
-    private MenuLoadTask<Map<RomGame, Path>> discovery;
+    private MenuLoadTask<DiscoveryResult> discovery;
     private MasterTitlePointer pointer;
     private InputHandler menuInput;
     private int width = 320;
@@ -34,6 +34,7 @@ public final class MenuGameOnboarding {
     private boolean completed;
     private boolean cancelled;
     private String message;
+    private String scanNotice;
     private Map<RomGame, Path> found = Map.of();
 
     public MenuGameOnboarding(SonicConfigurationService config) { this.config = config; }
@@ -65,18 +66,27 @@ public final class MenuGameOnboarding {
         if (discovery != null) {
             if (!discovery.done()) return;
             try {
-                found = discovery.result();
-                if (found.isEmpty()) message = "No supported games found. Try another folder.";
+                DiscoveryResult result = discovery.result();
+                found = result.games();
+                scanNotice = result.notice();
+                if (found.isEmpty()) message = scanning ? "No supported games found." : "Not a supported ROM image.";
                 else {
                     EngineSettingsDraft draft = new EngineSettingsDraft(config);
                     for (var entry : found.entrySet()) draft.set(entry.getKey().configurationKey(), entry.getValue().toString());
                     Path first = found.values().iterator().next();
                     draft.set(SonicConfiguration.ROMS_DIRECTORY, first.getParent().toString());
-                    draft.apply();
+                    try { draft.apply(); }
+                    catch (IOException | IllegalArgumentException e) {
+                        found = Map.of();
+                        message = "Could not save. Check settings-file access.";
+                        discovery = null;
+                        return;
+                    }
                     message = found.size() + (found.size() == 1 ? " game added" : " games added");
                     MenuFeedback.emit(MenuFeedback.Cue.CONFIRM);
                 }
-            } catch (Exception e) { found = Map.of(); message = "Could not add games. Try another folder."; }
+            } catch (Exception e) { found = Map.of(); scanNotice = "Check access or choose another location.";
+                message = scanning ? "Could not read this folder." : "Could not read this file."; }
             discovery = null;
             return;
         }
@@ -97,23 +107,43 @@ public final class MenuGameOnboarding {
             browser = scanning ? MenuPathBrowser.folder(initial, "SCAN FOLDER", "Choose a folder containing your games")
                     : new MenuPathBrowser(initial, true, "LOCATE GAME", "Choose a ROM file (any filename)");
             message = null;
+            scanNotice = null;
             MenuFeedback.emit(MenuFeedback.Cue.CONFIRM);
         }
     }
 
     /** Uses the runtime classifier, including logical games within lock-on images; extensions never gate identity. */
-    static Map<RomGame, Path> discover(Path selection, boolean folder) throws IOException, InterruptedException {
+    record DiscoveryResult(Map<RomGame, Path> games, boolean limitReached, boolean unreadable) {
+        DiscoveryResult { games = java.util.Collections.unmodifiableMap(new EnumMap<>(games)); }
+        String notice() {
+            if (limitReached && unreadable) return "Scan limited; some paths unreadable.";
+            if (limitReached) return "Scan limit reached. Try a smaller folder.";
+            return unreadable ? "Some paths unreadable. Check access." : null;
+        }
+    }
+
+    static DiscoveryResult discover(Path selection, boolean folder) throws IOException, InterruptedException {
+        return discover(selection, folder, 20000);
+    }
+
+    static DiscoveryResult discover(Path selection, boolean folder, int maxEntries) throws IOException {
         Map<RomGame, Path> result = new EnumMap<>(RomGame.class);
-        if (!folder) { identify(selection, result); return result; }
+        if (!folder) { identify(selection, result); return new DiscoveryResult(result, false, false); }
         if (!Files.isDirectory(selection)) throw new IOException("Choose a folder");
-        // Do not follow directory symlinks. A denied subtree must not discard games already found.
+        // No directory symlinks. Limits and denied subtrees preserve discoveries already made.
+        boolean[] limited = {false};
+        boolean[] unreadable = {false};
         Files.walkFileTree(selection, EnumSet.noneOf(java.nio.file.FileVisitOption.class), 8,
                 new SimpleFileVisitor<>() {
                     private int visited;
                     private FileVisitResult boundary() throws IOException {
                         if (Thread.currentThread().isInterrupted()) throw new java.io.InterruptedIOException("Scan cancelled");
-                        if (++visited > 20000) throw new IOException("Folder scan limit reached; choose a smaller folder");
-                        return result.size() == RomGame.values().length ? FileVisitResult.TERMINATE : FileVisitResult.CONTINUE;
+                        if (result.size() == RomGame.values().length) return FileVisitResult.TERMINATE;
+                        if (++visited > maxEntries) {
+                            limited[0] = true;
+                            return FileVisitResult.TERMINATE;
+                        }
+                        return FileVisitResult.CONTINUE;
                     }
                     @Override public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
                         return boundary();
@@ -121,16 +151,27 @@ public final class MenuGameOnboarding {
                     @Override public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) throws IOException {
                         FileVisitResult next = boundary();
                         if (next == FileVisitResult.TERMINATE) return next;
+                        if (attrs.isDirectory()) limited[0] = true; // Maximum walk depth reached.
                         if (attrs.isRegularFile()) {
-                            try { identify(path, result); } catch (IOException | SecurityException ignored) { /* Ignore unreadable files. */ }
+                            try { identify(path, result); }
+                            catch (IOException | SecurityException failure) { unreadable[0] = true; }
                         }
                         return result.size() == RomGame.values().length ? FileVisitResult.TERMINATE : FileVisitResult.CONTINUE;
                     }
                     @Override public FileVisitResult visitFileFailed(Path file, IOException failure) throws IOException {
+                        if (file.equals(selection)) throw failure;
+                        unreadable[0] = true;
                         return boundary();
                     }
+                    @Override public FileVisitResult postVisitDirectory(Path dir, IOException failure) throws IOException {
+                        if (failure != null) {
+                            if (dir.equals(selection) && result.isEmpty()) throw failure;
+                            unreadable[0] = true;
+                        }
+                        return FileVisitResult.CONTINUE;
+                    }
                 });
-        return result;
+        return new DiscoveryResult(result, limited[0], unreadable[0]);
     }
 
     private static void identify(Path path, Map<RomGame, Path> result) throws IOException {
@@ -163,6 +204,7 @@ public final class MenuGameOnboarding {
             text(font, message, 48, MenuChrome.GOLD);
             int y = 75;
             for (RomGame game : found.keySet()) { text(font, gameLabel(game), y, MenuChrome.TEXT); y += 21; }
+            if (scanNotice != null) text(font, scanNotice, 140, MenuChrome.AMBER);
             MenuChrome.focus(font, 30, 159, this.width - 60, 25, 0);
             text(font, "Continue", 167, MenuChrome.WHITE);
         } else {
@@ -176,7 +218,8 @@ public final class MenuGameOnboarding {
                 else MenuChrome.panel(font, 30, y, this.width - 60, 26);
                 text(font, labels[i], y + 9, MenuChrome.TEXT);
             }
-            if (message != null) text(font, message, 182, MenuChrome.AMBER);
+            if (message != null) text(font, message, 178, MenuChrome.AMBER);
+            if (scanNotice != null) text(font, scanNotice, 190, MenuChrome.AMBER);
         }
         List<MenuChrome.Hint> hints = discovery != null
                 ? List.of(MenuChrome.hint(MenuChrome.backKey(menuInput), "CANCEL"))

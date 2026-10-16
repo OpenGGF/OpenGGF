@@ -19,11 +19,14 @@ class TestHubHistory {
         var config = SonicConfigurationService.createStandalone(root);
         var screen = new MasterTitleScreen(config);
         screen.setSelectedIndexForTest(2);
+        screen.cleanup();
         var fresh = SonicConfigurationService.createStandalone(root);
         assertEquals("s3k", new MasterTitleScreen(fresh).getSelectedGameId());
         fresh.setConfigValue(SonicConfiguration.HUB_LAST_GAME, "removed-game");
         assertEquals("s2", new MasterTitleScreen(fresh).getSelectedGameId());
-        new HubProgressStore(fresh).rememberGame("custom-game");
+        var history = new HubProgressStore(fresh);
+        history.rememberGame("custom-game");
+        history.flush();
         var entries = List.<MasterTitleEntry>of(new MasterTitleEntry.Stock(MasterTitleScreen.GameEntry.SONIC_2),
                 new MasterTitleEntry.Standalone("custom-game", "Custom Game", false));
         assertEquals("custom-game", new MasterTitleScreen(fresh, new LaunchProfileStore(fresh), entries).getSelectedGameId());

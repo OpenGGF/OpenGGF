@@ -97,6 +97,20 @@ class TestEngineSettingsScreen {
     }
 
     @Test
+    void hoveringSaveAfterResetMakesKeyboardConfirmSave() {
+        Fixture f = new Fixture();
+        f.tab(SOUND);
+        boolean original = f.config.getBoolean(AUDIO_ENABLED);
+        f.press(GLFW_KEY_RIGHT);
+        f.screen.updatePointer(new MenuInput.Pointer(310, 160, true, false, false));
+        f.screen.updatePointer(new MenuInput.Pointer(250, 12, true, false, false));
+        f.press(GLFW_KEY_ENTER);
+        assertTrue(f.screen.consumeApplied());
+        assertTrue(f.screen.consumeCloseRequested());
+        assertEquals(!original, SonicConfigurationService.createStandalone(directory).getBoolean(AUDIO_ENABLED));
+    }
+
+    @Test
     void controllerCanReachSaveAndReturnToEditing() {
         Fixture f = new Fixture();
         f.padPress(GLFW_GAMEPAD_BUTTON_DPAD_RIGHT);
