@@ -93,6 +93,14 @@ class SchedulingTests(unittest.TestCase):
         requests = [self.request('full', 900), self.request('single', 30, 10)]
         self.assertEqual(['single', 'full'], [r['id'] for r in schedule.ordered(requests, 20)])
 
+    def test_tooling_revision_never_changes_priority_or_eligibility(self):
+        for revision in (None, 1, 2**31, 'unknown'):
+            older = dict(self.request('older', 900), auto=False, toolingRevision=revision)
+            newer = dict(self.request('newer', 30, 10), auto=True, toolingRevision=1)
+            self.assertEqual('newer', schedule.choose([older, newer], 20, lambda r: True)['id'])
+            self.assertEqual('older', schedule.choose([older, newer], 350, lambda r: True)['id'])
+            self.assertIsNone(schedule.choose([older, newer], 350, lambda r: r['id'] != 'older'))
+
     def test_aged_requests_win_in_arrival_order(self):
         requests = [self.request('full', 900), self.request('medium', 180, 1),
                     self.request('new-single', 30, 301)]
