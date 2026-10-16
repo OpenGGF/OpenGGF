@@ -261,6 +261,12 @@ public class Ym2612Chip implements FmChip {
     private int dacSampleEndPending;
     /** Diagnostic-only clock; it deliberately does not participate in snapshots. */
     private long physicalCycle;
+    /**
+     * Opt-in capture/diagnostic output stage fed with this chip's own pin
+     * sums; {@code null} (the default) leaves every path unchanged. Its state
+     * is carried by both the snapshot and the mutation-backup paths.
+     */
+    private NativeCompatiblePcmOutput nativeOutput;
 
     /** Constructs a reset chip at {@link #getDefaultOutputRate()}; nothing global is touched. */
     public Ym2612Chip() {
@@ -326,6 +332,30 @@ public class Ym2612Chip implements FmChip {
     @Override
     public DacData liveDacDataReference() {
         return dacData;
+    }
+
+    /**
+     * Attaches the opt-in native-compatible output stage (see
+     * {@link NativeCompatiblePcmOutput}). Its master-clock origin is the
+     * current chip clock, which must be a slot-sweep boundary; enabling it
+     * at construction makes the origin the chip's power-on. It can be
+     * enabled once and never replaces the ordinary output.
+     */
+    public void enableNativeCompatibleOutput(NativeCompatiblePcmOutput.Config config) {
+        Objects.requireNonNull(config, "config");
+        if (nativeOutput != null) {
+            throw new IllegalStateException("native-compatible output is already enabled");
+        }
+        if (state.cycles != 0) {
+            throw new IllegalStateException(
+                    "native-compatible output must start on a slot-sweep boundary, chip cycle " + state.cycles);
+        }
+        nativeOutput = new NativeCompatiblePcmOutput(config);
+    }
+
+    /** The attached native-compatible output stage, or {@code null}. */
+    public NativeCompatiblePcmOutput nativeCompatibleOutput() {
+        return nativeOutput;
     }
 
     @Override
@@ -579,8 +609,14 @@ public class Ym2612Chip implements FmChip {
         }
         if (state.cycles == 0) {
             emitFrame(frameSumLeft << OUTPUT_SHIFT, frameSumRight << OUTPUT_SHIFT);
+            if (nativeOutput != null) {
+                nativeOutput.latchFmFrame(frameSumLeft, frameSumRight);
+            }
             frameSumLeft = 0;
             frameSumRight = 0;
+        }
+        if (nativeOutput != null) {
+            nativeOutput.clockFm();
         }
         physicalCycle++;
     }
@@ -864,6 +900,8 @@ public class Ym2612Chip implements FmChip {
         private final NukedOpn2State core = new NukedOpn2State();
         private final BlipResampler.MutationBackup resampler = new BlipResampler.MutationBackup();
         private int[] direct = new int[0], ops = new int[0];
+        /** Lazily created copy of the native-compatible output stage, when one is attached. */
+        private NativeCompatiblePcmOutput nativeOutput;
     }
 
     @Override
@@ -915,11 +953,20 @@ public class Ym2612Chip implements FmChip {
         if (backup.ops.length < opSize) backup.ops = new int[opSize];
         System.arraycopy(pendingOps, 0, backup.ops, 0, opSize);
         resampler.captureMutation(backup.resampler);
+        if (nativeOutput != null) {
+            if (backup.nativeOutput == null) {
+                backup.nativeOutput = new NativeCompatiblePcmOutput(nativeOutput.config());
+            }
+            backup.nativeOutput.copyFrom(nativeOutput);
+        } else {
+            backup.nativeOutput = null;
+        }
     }
 
     @Override
     public void restoreMutation(FmChip.MutationBackup candidate) {
         MutationBackup backup = own(candidate);
+        requireNativeOutputCompatible(backup.nativeOutput == null ? null : backup.nativeOutput.config());
         chipType = backup.chipType;
         frameSumLeft = backup.frameSumLeft;
         frameSumRight = backup.frameSumRight;
@@ -952,6 +999,7 @@ public class Ym2612Chip implements FmChip {
                 ? ChipWriteObserver.PhysicalWriteOrigin.EXTERNAL_BUS
                 : ChipWriteObserver.PhysicalWriteOrigin.RESTORED_UNKNOWN;
         resampler.restoreMutation(backup.resampler);
+        restoreNativeOutput(null, backup.nativeOutput);
         emitPhysicalBoundary(ChipWriteObserver.PhysicalTimelineBoundary.SNAPSHOT_RESTORE);
     }
 
@@ -986,7 +1034,37 @@ public class Ym2612Chip implements FmChip {
                 dacSampleEndPending,
                 dacInterpolate,
                 mutes,
-                resampler.captureSnapshot());
+                resampler.captureSnapshot(),
+                nativeOutput == null ? null : nativeOutput.captureSnapshot());
+    }
+
+    /**
+     * Checked before any field is restored. Presence and configuration must
+     * agree: a chip with the stage cannot continue from state that lacks it,
+     * and a chip without it cannot adopt one.
+     */
+    private void requireNativeOutputCompatible(NativeCompatiblePcmOutput.Config captured) {
+        if ((nativeOutput != null) != (captured != null)) {
+            throw new IllegalArgumentException(nativeOutput != null
+                    ? "state was captured without the native-compatible output stage"
+                    : "state carries a native-compatible output stage this chip does not have");
+        }
+        if (nativeOutput != null && !nativeOutput.config().equals(captured)) {
+            throw new IllegalArgumentException("native-compatible output configurations differ");
+        }
+    }
+
+    /** Restores the stage from a backup copy or a snapshot; presence was checked first. */
+    private void restoreNativeOutput(NativeCompatiblePcmOutput.Snapshot snapshot,
+            NativeCompatiblePcmOutput copy) {
+        if (nativeOutput == null) {
+            return;
+        }
+        if (copy != null) {
+            nativeOutput.copyFrom(copy);
+        } else {
+            nativeOutput.restoreSnapshot(snapshot);
+        }
     }
 
     /** Total and authoritative: the chip continues bit-exactly from the snapshot. */
@@ -996,6 +1074,7 @@ public class Ym2612Chip implements FmChip {
             throw new IllegalArgumentException(
                     "snapshot was captured by a different FM core: " + candidate.getClass().getSimpleName());
         }
+        requireNativeOutputCompatible(snapshot.nativeOutput() == null ? null : snapshot.nativeOutput().config());
         applyChipType(snapshot.chipType());
         outputRate = snapshot.outputRate();
         state.copyFrom(snapshot.coreRef());
@@ -1031,6 +1110,7 @@ public class Ym2612Chip implements FmChip {
         dacInterpolate = snapshot.dacInterpolate();
         System.arraycopy(snapshot.mutesRef(), 0, mutes, 0, mutes.length);
         resampler.restoreSnapshot(snapshot.resampler());
+        restoreNativeOutput(snapshot.nativeOutput(), null);
         emitPhysicalBoundary(
                 ChipWriteObserver.PhysicalTimelineBoundary.SNAPSHOT_RESTORE);
     }
@@ -1106,7 +1186,8 @@ public class Ym2612Chip implements FmChip {
             int dacSampleEndPending,
             boolean dacInterpolate,
             boolean[] mutes,
-            BlipResampler.Snapshot resampler) implements FmChip.Snapshot {
+            BlipResampler.Snapshot resampler,
+            NativeCompatiblePcmOutput.Snapshot nativeOutput) implements FmChip.Snapshot {
         public Snapshot {
             core = core.copy();
             directFrames = Arrays.copyOf(directFrames, directFrames.length);
@@ -1173,7 +1254,8 @@ public class Ym2612Chip implements FmChip {
                     && dacSampleEndPending == other.dacSampleEndPending
                     && dacInterpolate == other.dacInterpolate
                     && Arrays.equals(mutes, other.mutes)
-                    && Objects.equals(resampler, other.resampler);
+                    && Objects.equals(resampler, other.resampler)
+                    && Objects.equals(nativeOutput, other.nativeOutput);
         }
 
         @Override
@@ -1183,7 +1265,7 @@ public class Ym2612Chip implements FmChip {
                     currentDacSampleId, dacPeriod, dacIndex, dacAccumulator,
                     dacPos, dacPreviousValue, dacPendingValue, dacWritePhase,
                     dacWriteValue, dacSampleEndPending, dacInterpolate,
-                    resampler);
+                    resampler, nativeOutput);
             result = 31 * result + Arrays.hashCode(directFrames);
             result = 31 * result + Arrays.hashCode(pendingOps);
             return 31 * result + Arrays.hashCode(mutes);

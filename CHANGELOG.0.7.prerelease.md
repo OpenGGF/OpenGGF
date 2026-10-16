@@ -271,6 +271,13 @@ Unreleased. The earlier development themes remain in
   fresh assembly or transition callback cannot be restored by gameplay rewind.
   An individual trace segment resolves its validated containing run's declared
   movie, preserving shared-movie priority and rejecting unsafe source aliases.
+- **Native-compatible PCM output (diagnostics):** An opt-in audio session setting
+  feeds the accurate FM chip's own pin sums through a Java port of blip_buf. It
+  uses BizHawk's Nuked YM2612 scale and the movie's filter, which is None,
+  LowPass or ThreeBand with musl's `sin`. It produces 44.1 kHz PCM for comparison
+  against BizHawk. On an identical strobe schedule it matches Genesis Plus GX
+  source vectors byte for byte. PSG, the MAME YM2612 core and real game windows
+  are not covered. Ordinary sound and the 48 kHz presentation are unchanged.
 
 Rewind verification compares private records and complete captured opaque arrays
 by content, with explicit failures when snapshot inspection cannot complete. It also

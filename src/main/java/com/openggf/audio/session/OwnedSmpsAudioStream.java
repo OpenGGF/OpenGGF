@@ -71,6 +71,16 @@ public final class OwnedSmpsAudioStream
         session.advanceDacIdleLoop(target, stereoFrames);
     }
 
+    /** See {@link SmpsDriverSession#drainNativeCompatiblePcm(short[], int, int)}. */
+    public int drainNativeCompatiblePcm(short[] target, int offsetSamples, int maxFrames) {
+        return session.drainNativeCompatiblePcm(target, offsetSamples, maxFrames);
+    }
+
+    /** See {@link SmpsDriverSession#nativeCompatibleFramesEnded()}. */
+    public long nativeCompatibleFramesEnded() {
+        return session.nativeCompatibleFramesEnded();
+    }
+
     public void setChipWriteObserver(ChipWriteObserver observer) {
         session.setChipWriteObserver(observer);
     }
