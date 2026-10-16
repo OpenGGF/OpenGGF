@@ -155,8 +155,10 @@ Unreleased. The earlier development themes remain in
   carried through an act change that keeps the object table (Hydrocity, Carnival
   Night, Launch Base, Mushroom Hill and Marble Garden) stay on screen with the
   player instead of vanishing while the status remained. Rewinding in Mushroom
-  Hill restores mushroom-cap bounces, curled vines, catapults, dropping platforms
-  and launched Mushmeanie shells exactly.
+  Hill restores mushroom-cap bounces, curled vines, catapults, dropping platforms,
+  launched Mushmeanie shells and the act 2 Knuckles cutscene's player lift
+  exactly. Launch Base falling platforms keep their riders and Marble Garden
+  sinking mud keeps each player's sink depth through rewind.
 
 - **S3K underwater objects:** Large-bubble pickup follows persistent character
   identity for leaders and followers. Sonic clears the rolling state; Tails

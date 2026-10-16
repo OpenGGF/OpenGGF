@@ -867,6 +867,16 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kSlotRingRewardObjectInstance", "controller"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kSlotSpikeRewardObjectInstance", "controller"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SinkingMudObjectInstance", "trackedPlayers"), RewindFieldPolicy.TRANSIENT),
+            // Obj_SinkingMud keeps each character's surface depth and standing bit in its own
+            // RAM between frames (sonic3k.asm:68500-68661); a restore that drops them resets a
+            // sinking player to the full $30 surface. killedThisFrame is cleared at the top of
+            // every update before it is read, so it is re-derived.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SinkingMudObjectInstance", "rawSurfaceByPlayer"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SinkingMudObjectInstance", "standingNextUpdate"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SinkingMudObjectInstance", "killedThisFrame"), RewindFieldPolicy.TRANSIENT),
+            // The LBZ falling platform releases the riders recorded by the solid pass when its
+            // fall timer expires in a later update; the standing set crosses the snapshot boundary.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.LbzMovingPlatformObjectInstance", "standingPlayers"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kInvincibilityStarsObjectInstance", "player"), RewindFieldPolicy.TRANSIENT),
             // Super Tails Flickies are recreated as a live dynamic effect; preserve the
             // owning player while their target reservations remain stable ObjectRefIds.
