@@ -169,7 +169,10 @@ Unreleased. The earlier development themes remain in
   Hill restores mushroom-cap bounces, curled vines, catapults, dropping platforms,
   launched Mushmeanie shells and the act 2 Knuckles cutscene's player lift
   exactly. Launch Base falling platforms keep their riders and Marble Garden
-  sinking mud keeps each player's sink depth through rewind.
+  sinking mud keeps each player's sink depth through rewind. Rewinding to the first
+  frame of a Lava Reef load replays its background setup: act 2 no longer refills
+  its background or adds a second Death Egg, and Knuckles keeps act 1's background
+  chunk.
 
 - **S3K underwater objects:** Large-bubble pickup follows persistent character
   identity for leaders and followers. Sonic clears the rolling state; Tails

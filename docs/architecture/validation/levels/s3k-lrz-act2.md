@@ -1339,12 +1339,14 @@ at the Saved2 X with the saved ring count, the collected ring is not respawned a
 emerald states stay zero. Two-cycle 45-input whole-world replays run at +60 and +200 after
 release. Every input is drawn.
 
-Not covered: the seven-Chaos `$1701` branch. A probe with declared `1111111` reached the
-sanctuary at 49188 and released control at 50080, but `HPZSSEntryControl.exitEligible`
-refuses the exit band while any emerald awaits a pedestal stage, so returning needs a won
-Super stage (out of this bounded authoring scope). With all seven declared Super the ring
-pays out rings instead of opening a stage. Blue Sphere winning inputs and the LRZ1/LRZ2
-other giant rings remain open.
+Not covered by this cold route: the seven-Chaos `$1701` branch. A probe with declared
+`1111111` reached the sanctuary at 49188 and released control at 50080.
+`HPZSSEntryControl.exitEligible` refuses the exit band while any emerald awaits a pedestal
+stage. This note originally concluded that returning needs a won Super stage; that is wrong
+(see the seven-Chaos section below). A failed pedestal stage also returns to LRZ2 at Saved2,
+and only the band is closed. With all seven declared Super the ring pays out rings instead
+of opening a stage. Blue Sphere winning inputs and the LRZ1/LRZ2 other giant rings remain
+open.
 
 Engine pictures (320 px) in `$HOME/Videos/OGGF/s3k-parity-coverage-2026-10-14/spot-checks/cold-campaign-v1/g/`
 were inspected: ring approach (49080), Tails taken by the ring (49150), Blue Sphere (49400),
@@ -1373,3 +1375,78 @@ the old load. No runtime behaviour changed.
 
 Validation: run `probe-v1` (focused queued selectors, S3K ROM, branch
 bugfix/ai-s3k-route-behaviour-regressions on 2adfa37a7) passed the owning test, 0 skips.
+
+## Seven-Chaos giant ring s9 gateway and load-frame rewind repair (2026-10-16)
+
+This is a short positioned proof, not a cold route.
+`TestS3kLrz2SevenChaosGiantRingGateway` covers native320 solo Tails and Sonic without a
+donor, on integration `73d296f12` plus this slice.
+
+**Declared boundaries:**
+
+- Persistent progress is declared before the first dispatch: `1111111` (seven Chaos), or
+  `3333333` for the payout control.
+- The approach to s9 is a declared local placement: one horizontal move, `<= $80`
+  vertical steps for `Load_Sprites`' Y pass, then a contact placement.
+- The pedestal uses `TestS3kSanctuaryPedestalLifecycle`'s falling-contact stimulus.
+- Everything else is production. The Super stage fails under ordinary neutral input; the
+  END/DEL outcome stimulus is not used.
+
+**Seven Chaos (sonic3k.asm):**
+
+- The ring is the Super Emerald ring (`Obj_SSEntryRing` :128291-128309).
+- `SSEntryFlash_GoSS`/`loc_618AC` (:128438-128477) record Saved2 at the ring and restart
+  into `$1701`, not Blue Sphere. They set ring bit 9 and clear `Last_star_post_hit`, and
+  the `$1701` load retires the LRZ2 history.
+- `Obj_HPZSSEntryControl` (:197949-197987) converts every Chaos Emerald to gray
+  (`2222222`, `Emeralds_converted_flag`). Ordinary right/left input across the band and pad
+  then leaves the hub in place, because `loc_90C58` needs `$38` bit 5 (:198136-198154).
+- A gray pedestal selects the stage (`loc_90926` :197827-197841), with selection and
+  Super-stage replays. Neutral input fails the stage.
+- The results return to LRZ2 at Saved2 (:12709-12712, :7571-7582) with:
+  - the saved X and ring count;
+  - the ring not respawned and the emeralds still gray;
+  - `Last_star_post_hit|$80` set and the pre-ring star-post mark restored;
+  - the timer running and Saved2 consumed;
+  - a two-cycle 45-frame whole-world replay.
+
+**Seven Super:** `loc_61794` pays 50 rings with no load, no flash and no Saved2, and the
+same replay passes.
+
+**Repair.** The first execution failed only at that final LRZ2 replay.
+`LrzZoneRuntimeState.delayedRowcount` was 0 on the first pass and -1 after the replay.
+
+- **Measured cause:** the capture lands on the first frame after the reload, before LRZ's
+  first background event. The engine runs `LRZ2_BackgroundInit` (:115655-115668), which
+  the native level setup runs before frame one, at that first dispatch. Its one-shot mark
+  lived on `Sonic3kLRZEvents`, outside every rewind snapshot. After a restore the replay
+  therefore took `loc_5700C`'s stage-0 refresh and allocated a second Death Egg
+  background. The `LRZ1_BackgroundInit` mark had the same defect: Knuckles lost the
+  `$F6` Plane B chunk after a load-frame rewind.
+- **Fix:** both marks now live in `LrzZoneRuntimeState`, which is captured. The seamless
+  act change marks act 2's new state after its synchronous reload.
+- **Red/green:** `TestS3kLrzBackgroundInitRewind` (direct LRZ2 Tails, direct LRZ1 Knuckles)
+  was red 2/2 on the unpatched source (22:30:27+01:00): `[8,0,1]` vs `[8,-1,1]`, and `$F6`
+  lost (`$EB`).
+
+**Checks after the fix:** 29 focused selectors ran, 2231/0/0/0 (Finished 22:44:27+01:00):
+
+- the two new classes;
+- the LRZ neighbours, including `TestS3kLrzSeamlessActChangeHeadless`;
+- both sanctuary lifecycles;
+- `TestS3kLrzHpzSszColdCampaign#tailsGiantRingGatewayReturnsToLrzTwo`;
+- the four required S3K checks.
+
+**Recorded, not changed:** an immediate restore of a direct-boot LRZ load-frame snapshot
+republishes the derived background camera words before any scroll pass. Act 2's X goes
+0 to 1 and act 1's Y goes 0 to -23. The regression therefore compares the initializer's
+output and the whole world after replay, not restore idempotence. The Saved2-return
+capture does not show this.
+
+**Still open:**
+
+- the cold seven-Chaos continuation;
+- Knuckles, wide presets and donors on this branch;
+- a won Super stage from an ordinary ring;
+- the other LRZ1/LRZ2 giant rings.
+
