@@ -109,7 +109,11 @@ public final class LevelSpritePresentation {
             level.spritePresentationRenderer().boundsMask.advance(LevelScrollPresentation.captureArenaMask(level),
                     level.camera.getXWithShake(), level.camera.getWidth());
         }
-        if (enabled(level)) level.spritePresentationRenderer().prepareSpritePresentation(sprites);
+        if (enabled(level)) {
+            level.spritePresentationRenderer().prepareSpritePresentation(sprites);
+            // Render_Sprites also places sprite-object title-card pieces in this table.
+            com.openggf.game.internal.TitleCardVintPublication.prepare(level.gameModule.getTitleCardProvider());
+        }
     }
 
     public static void publish(LevelManager level, PlcLifecyclePhase phase) {
@@ -117,6 +121,8 @@ public final class LevelSpritePresentation {
                 .publishesSpriteTable(phase)) {
             var profile = (SpriteTablePublication) level.gameModule.getLevelInitProfile();
             level.spritePresentationRenderer().spriteTables.publish();
+            // Sprite-object title cards reach the screen through the same SAT upload.
+            com.openggf.game.internal.TitleCardVintPublication.publish(level.gameModule.getTitleCardProvider());
             PaletteUploadPresentation.publishAndLatch(level.graphicsManager);
             if (profile.updatesHudCounters(phase)) {
                 if (!level.isHudSuppressed()) {
