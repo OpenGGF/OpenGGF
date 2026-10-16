@@ -540,6 +540,9 @@ public class AudioManager implements MusicRestoreSink {
             throw new IllegalStateException("native-compatible PCM capture must be set before the presentation exists");
         }
         nativeCompatiblePcmCapture = config;
+        if (config != null) {
+            nativeCompatiblePcmSessions = 0; // count this capture's sessions only
+        }
     }
 
     /** Moves completed native-compatible stereo frames; zero without the stage or a session. */

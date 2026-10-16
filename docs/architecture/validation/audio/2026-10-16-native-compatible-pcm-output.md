@@ -215,10 +215,19 @@ capture of rows 0-2399 with no realignment:
      which is bit-identical to `eq.c` and to the Java port.
 - Write ledger (native partial v2 ledger, frames 14-63; the producer faults later at
   frame 146):
-  - Native row 14 is the Z80 driver's `driver_init` service with 88 writes: PSG
-    silence `9F/BF/DF/FF`, then YM key-off, TL `7Fh` and RR `FFh` on every operator.
-    Engine frame 14 has no writes. The engine session issues no driver-initialisation
-    program, which is the first ledger divergence.
+  - Native row 14 is the `driver_init` service with 88 writes: 4 PSG silence writes
+    from the 68k side, then the Z80's `zStopAllSound` (84 writes: YM release, TL `7Fh`,
+    key-off and SSG-EG clear per channel, PSG silence, `2Bh = 0`, `27h = 0`).
+  - Correction (fresh 230-frame capture whose ledger records boot writes): the engine
+    does run the ROM driver initialisation. `SmpsDriverSession.install` applies the S3K
+    policy's boot program (`zStopAllSound`) and then the DAC idle-loop entry
+    `2Bh = 0`. On the title path that happens at the first presentation, so engine
+    frame 0 holds 85 writes. They equal native row 14's 84 Z80 writes and row 15's
+    first write, in identical order. The earlier ledger missed them because its
+    observer was attached after boot.
+  - The remaining init differences are timing (engine frame 0 against native rows
+    14-15) and 8 PSG silence writes the engine does not emit: the 68k-side 4 at row 14
+    and 4 Z80 writes at row 15.
   - Native row 15 is the first `vint` service, which writes `2Bh = 0`.
   - The native SEGA PCM starts in the service at row 63. The engine's SEGA bytes start
     at frame 16.
@@ -230,10 +239,26 @@ capture of rows 0-2399 with no realignment:
      `Pal_FadeToBlack`, the logo `Kos_Decomp`/`Eni_Decomp`, the plane map and
      `Pal_FadeFromBlack`. The engine runs a fixed 16-frame `SEGA_FADE_IN`
      (`SEGA_FADE_DURATION`) and issues `CMD_SEGA` at frame 16.
-  3. At engine frame 208 the title hands off to DATA_SELECT, the game module
-     re-initialises, and `AudioManager.replaceShadowPresentationForBaseMutation`
-     rebuilds the presentation session. The stage session counter goes 1 to 3, so
-     the production chip restarts from reset while native's chip continues.
+  3. At engine frame 208 the movie leaves DATA_SELECT for AIZ1
+     (`NativeDataSelectLaunchFlow.launch` -> `loadZoneAndActForFreshRuntime` ->
+     `LevelManager.configureAudio`). That call re-installs the same ROM and audio
+     profile instances, and each call rebuilds the presentation through
+     `replaceShadowPresentationForBaseMutation`. The stage session counter goes 1 to
+     3, so the production chip restarts from reset while native's chip continues.
+     - Red first, production path (22:07:41Z):
+       `TestNativePcmCaptureLive.dataSelectLevelEntryKeepsThePresentationDevice`
+       reported "session rebuilt at frame 208, expected 1 but was 3".
+     - The attempted semantic fix keeps the session when the identical ROM and
+       profile instances are re-installed; new instances and resets still replace
+       it. It passed that test and two re-install cycles.
+     - It broke `TestS3kEndingAudioRequestLedger` 3/3 ("mus_SSZ ticks before the
+       fade"). That harness steps the title for hundreds of frames without
+       presenting audio, so the title's SEGA and music commands stay queued. The
+       rebuild used to discard that backlog; a retained session plays it into the
+       ending.
+     - The fix is not landed. The diff and its controls are kept with the lane's
+       scratch evidence. The next owner must reconcile that harness, for example by
+       presenting audio during its title steps, before retaining the session.
 - Waveform equality from row 0 therefore cannot hold past the startup boundary. No
   offset was fitted and no chip state was hydrated.
 

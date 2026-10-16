@@ -32,7 +32,10 @@ import java.util.zip.ZipFile;
  * frames in the order the stage completes them), {@code native-pcm-frames.tsv}
  * (presented frame, stereo frames drained after it, cumulative, presentation
  * sessions built with the stage) and {@code chip-writes.jsonl} (per presented
- * frame, the logical YM/PSG writes in order). Originating task: round-2 lane
+ * frame, the logical YM/PSG writes in order; frame {@code -1} holds the writes
+ * made during boot, such as the session's driver-initialisation program). The
+ * write observer is held through the manager's diagnostic observer lease, which
+ * a reset during boot preserves. Originating task: round-2 lane
  * pcm-output, 2026-10-16.
  */
 final class NativePcmCapture implements AutoCloseable {
@@ -42,6 +45,8 @@ final class NativePcmCapture implements AutoCloseable {
     private static final int NUKED_YM2612 = 3;
 
     private final AudioManager audio;
+    private final AudioManager.DiagnosticObserverHandle observerLease;
+    private boolean closed;
     private final OutputStream pcm;
     private final BufferedWriter frames;
     private final BufferedWriter writes;
@@ -55,7 +60,9 @@ final class NativePcmCapture implements AutoCloseable {
         frames = Files.newBufferedWriter(outDir.resolve("native-pcm-frames.tsv"), StandardCharsets.UTF_8);
         writes = Files.newBufferedWriter(outDir.resolve("chip-writes.jsonl"), StandardCharsets.UTF_8);
         frames.write("frame\tstereo_frames\tcumulative_stereo_frames\tsessions\n");
-        audio.setChipWriteObserver(new ChipWriteObserver() {
+        observerLease = audio.acquireDiagnosticObservers(new AudioManager.DiagnosticObserverSet(
+                com.openggf.audio.AudioRequestObserver.NONE, com.openggf.audio.AudioAdmissionObserver.NONE,
+                com.openggf.audio.driver.SmpsDriverServiceObserver.NONE, new ChipWriteObserver() {
             @Override
             public void onYm2612Write(int port, int register, int value) {
                 separate();
@@ -68,13 +75,19 @@ final class NativePcmCapture implements AutoCloseable {
                 separate();
                 frameWrites.append("[\"psg\",").append(value).append(']');
             }
-        });
+        }, com.openggf.audio.driver.SfxContentionObserver.NONE));
     }
 
     private void separate() {
         if (!frameWrites.isEmpty()) {
             frameWrites.append(',');
         }
+    }
+
+    /** Closes the boot record: writes made before the first presented frame, as frame {@code -1}. */
+    void endBoot() throws IOException {
+        writes.write("{\"frame\":-1,\"writes\":[" + frameWrites + "]}\n");
+        frameWrites.setLength(0);
     }
 
     /** Drains every completed native-compatible frame after presented frame {@code frame}. */
@@ -96,7 +109,11 @@ final class NativePcmCapture implements AutoCloseable {
 
     @Override
     public void close() throws IOException {
-        audio.setChipWriteObserver(null);
+        if (closed) {
+            return;
+        }
+        closed = true;
+        observerLease.close();
         // Later presentation sessions in this process return to the default of no stage.
         AudioNativePcmCaptureAccess.enable(audio, null);
         try (pcm; frames; writes) {

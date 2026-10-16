@@ -59,7 +59,11 @@ class TestNativePcmCaptureLive {
         }
         assertTrue(framesEnded >= FRAMES - 2 && framesEnded <= FRAMES,
                 "drained " + cumulative + " stereo frames is not blip_buf's count for a whole number of NTSC frames");
-        assertEquals(FRAMES, Files.readAllLines(outDir.resolve("chip-writes.jsonl"), StandardCharsets.UTF_8).size());
+        List<String> ledger = Files.readAllLines(outDir.resolve("chip-writes.jsonl"), StandardCharsets.UTF_8);
+        assertEquals(FRAMES + 1, ledger.size(), "boot record plus one line per presented frame");
+        assertTrue(ledger.get(0).startsWith("{\"frame\":-1,\"writes\":[[")
+                        && ledger.get(0).contains("[\"ym\",0,43,0]"),
+                "the session's driver-initialisation program (ending in its 2Bh = 0) is recorded at boot");
         assertTrue(Files.size(outDir.resolve("audio.wav")) > 44, "ordinary 48 kHz capture still written");
     }
 

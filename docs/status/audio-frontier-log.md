@@ -35,8 +35,12 @@ defined by `com.openggf.tools.audio.parity`.
   then `compare_native_pcm_window.py --start-row 0` against the native rows 0-2399 capture.
 - **Result, PCM:** the first different stereo frame is 11, native (773, 773) against engine
   (774, 774). Both carry the power-on DC transient. The difference is unattributed.
-- **Result, write ledger:** the first divergence is native row 14, the Z80 `driver_init`
-  service with 88 writes, where the engine has none. The native SEGA PCM starts at row 63,
+- **Result, write ledger (corrected the same day):** the engine runs the ROM driver
+  initialisation (`zStopAllSound` plus the DAC idle entry) at session install, which is
+  engine frame 0 on the title path. Those 85 writes equal native row 14's 84 Z80 writes
+  and row 15's first write. The engine lacks 8 PSG silence writes: the 68k-side 4 at row
+  14 and 4 Z80 writes at row 15. The earlier "engine has none" came from a ledger
+  observer attached after boot. The native SEGA PCM starts at row 63,
   the engine's at frame 16. Native rows 0-12 are power-on lag rows the engine does not
   model. ROM `Title_Screen` (sonic3k.asm:5392-5485) fades to black and decompresses the
   logo before `cmd_SEGA`, while the engine runs a 16-frame `SEGA_FADE_IN`. At engine frame
