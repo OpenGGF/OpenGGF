@@ -87,9 +87,14 @@ public final class GameplayCaptureTool {
             if (arguments.mod() != null) session.applyMod(arguments.mod());
             if (arguments.titleScreen()) session.startAtTitle();
             if (arguments.audio()) session.enableAudio();
-            if (arguments.nativePcm())
+            if (arguments.nativePcm()) {
+                // The stage taps the accurate (Nuked) chip's pins; this diagnostic capture selects that
+                // production core explicitly for its own session instead of failing inside level load.
+                GameServices.configuration().setSessionOverride(com.openggf.configuration.SonicConfiguration.AUDIO_FM_CORE,
+                        com.openggf.audio.synth.FmCoreSelection.ACCURATE.configValue());
                 com.openggf.audio.AudioNativePcmCaptureAccess.enable(GameServices.audio(), NativePcmCapture.configFromBk2(arguments.input(),
                         romPath, GameServices.configuration().getString(com.openggf.configuration.SonicConfiguration.REGION)));
+            }
             session.boot(romPath, zone, act, settings);
             var audio = GameServices.audio();
             int sampleRate = arguments.audio() ? audio.outputSampleRate() : 0;
@@ -154,6 +159,9 @@ public final class GameplayCaptureTool {
                 }
                 Files.delete(raw);
             }
+        } finally {
+            // The opt-in only applies to this capture's presentation sessions, even when boot fails.
+            if (arguments.nativePcm()) com.openggf.audio.AudioNativePcmCaptureAccess.enable(GameServices.audio(), null);
         }
         Path video = null;
         String videoNote = "video skipped (--no-video)";

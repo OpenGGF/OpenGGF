@@ -17,7 +17,11 @@ vectors and the engine run share one input.
 
 ## Native-source generator (outside the repository)
 
-Sources are not committed; their hashes are recorded here.
+These sources are not committed, and their hashes are recorded here.
+`gpgx_fm_vectors.c` mirrors the YM/filter loops of GPGX `sound.c`/`system.c`,
+whose non-commercial licence keeps that text out of this GPL repository. The
+harness can be rebuilt in minutes from the pinned BizHawk source and this
+description.
 
 - Genesis Plus GX files from BizHawk `427556b5ef3ac437eba754d90c5e7e9096c9a8df`
   (`waterbox/gpgx/Genesis-Plus-GX/core/sound/`): `ym3438.c` `519d005b...7241b`,
@@ -58,9 +62,10 @@ the TraceChaser source-lock "stock" core. Its ELF decompresses to sha256
 not stripped. Its inlined `init_3band_state`, in `audio_reset`, calls musl's
 `sin` at `0x36f00004e14`.
 
-`stock_core_sin.c` (sha256
-`827b9393721c83821c5a23710fdaf263208e0ddbc9e768fe94bd2252e47735b8`) maps that
-ELF's load segments at their fixed addresses. It executes the core's own
+`tools/audio/native-pcm/stock_core_sin.c` maps that ELF's load segments at
+their fixed addresses. The scratch original that produced the pinned dump had
+sha256 `827b9393721c83821c5a23710fdaf263208e0ddbc9e768fe94bd2252e47735b8`;
+the promoted copy differs only in its header comment. It executes the core's own
 `sin` for every 16-bit cutoff at 44.1 kHz. The test pins the dump hash
 `c2cc5844...cceeb8`, and `MuslSin` reproduces all 65,536 values.
 `StrictMath.sin` differs on 792 of them. Host glibc gives a different

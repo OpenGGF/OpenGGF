@@ -156,12 +156,16 @@ for 600 frames: one stage session, 440,832 stereo frames. Maven finished
 
 **[CARRY / INGRESS] — exploratory, not attributable.** The engine capture
 boots AIZ1 directly and replays inputs from row 577. Native ran rows 0-576
-first (SEGA, title, menus), so chip, driver, blip and EQ history differ.
+first (SEGA, title, menus), so chip, driver, blip and EQ history differ. The
+capture session also forces `S3K_SKIP_INTROS`
+(`GameplayCaptureSession`), so the engine does not play the AIZ intro route
+that native plays from row 577.
 `compare_native_pcm_window.py` reports DIFFERENT at stereo frame 0: native
 (792, 1002) against engine (0, 0). The earliest unmatched ingress owner is
 the capture entry itself: `GameplayCaptureSession.boot(zone, act)` creates a
 fresh presentation session at level boot, with no power-on, title or menu
-audio history. Waveform equality and musical first-cause attribution need an
+audio history. The engine has no S3K power-on/SEGA-screen production entry,
+and its title-screen entry starts after native's SEGA prefix. Waveform equality and musical first-cause attribution need an
 authentic production entry from power-on or title matched to native rows,
 and that does not exist yet.
 
@@ -179,6 +183,13 @@ and that does not exist yet.
 **[STROBE CLOCK] — not measured.** No reviewed observer gives native
 per-strobe master-clock times, so per-strobe timing is unmeasured. That does
 not block the PCM and cadence tiers above.
+
+**Core selection.** `--native-pcm` sets the accurate (Nuked) FM core as a
+session override for its own capture. The stage taps that chip's pins.
+The shipped default is `audio.fmCore=fast`. Without the override, that FAST
+core was refused inside level load (`TestNativePcmCaptureLive`, first run).
+The exploratory capture above logged `FM core: accurate` from its own JVM
+configuration.
 
 **Region.** The stage is NTSC-only. `--native-pcm` refuses a PAL engine
 region and a BK2 `Region` that GPGX resolves to PAL. Autodetect follows

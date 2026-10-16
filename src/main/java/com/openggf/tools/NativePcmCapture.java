@@ -97,6 +97,8 @@ final class NativePcmCapture implements AutoCloseable {
     @Override
     public void close() throws IOException {
         audio.setChipWriteObserver(null);
+        // Later presentation sessions in this process return to the default of no stage.
+        AudioNativePcmCaptureAccess.enable(audio, null);
         try (pcm; frames; writes) {
             pcm.flush();
         }

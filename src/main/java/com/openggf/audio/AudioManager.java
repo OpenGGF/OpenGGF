@@ -528,14 +528,15 @@ public class AudioManager implements MusicRestoreSink {
      * Opts new presentation sessions into the capture/diagnostic
      * native-compatible PCM stage (see
      * {@link com.openggf.audio.synth.NativeCompatiblePcmOutput}); {@code null}
-     * restores the default of none. Ordinary output is unchanged. Set it before
-     * the presentation exists: an existing session keeps its configuration.
+     * restores the default of none for sessions built later. Ordinary output is
+     * unchanged. Enable it before the presentation exists: an existing session
+     * keeps its configuration.
      * Package-private: tools reach it through {@link AudioNativePcmCaptureAccess},
      * outside the creator-facing API.
      */
     synchronized void setNativeCompatiblePcmCapture(
             com.openggf.audio.synth.NativeCompatiblePcmOutput.Config config) {
-        if (shadowSmpsSession != null) {
+        if (config != null && shadowSmpsSession != null) {
             throw new IllegalStateException("native-compatible PCM capture must be set before the presentation exists");
         }
         nativeCompatiblePcmCapture = config;
