@@ -130,6 +130,19 @@ branches, preserving user config/ROM/save targets, useful captures and histories
 
 ## Compact execution checkpoint
 
+Current main and origin/develop are `e278398aeb28842312dc7f60763e20fdfbb0b3ab`;
+the verified foundation below is integrated. Delivery now holds an uncommitted,
+two-file AIZ historical-latch repair: event blob `656c2e2662ed73f614e77c2aa1be38a7d9adda03`
+and test blob `a023c67772d907aca2ef5d28894ad95eb67473bb`. Focus42171 passes8 cases
+without skips; Astra R1 has no blocking finding. Actual89496 reached-prefix restore
+and64-input replay pass on the new42171 artifact pair; integration is next. The independent
+fresh24954 right-only spring answer clears the former Rhinobot death, but is input
+research, not a completed AIZ route. Its independent continuation dies16262 before
+waterfall/HCZ. Sonnet's ICZ entry diagnostic R4 is terminal: native reload clears
+the lock, but both single calls were setup-only, so ordinary readiness remains open.
+Its prior shelter attempt stopped before measurement. No full AIZ-to-HCZ axis or
+M4–M6 acceptance is closed. The following paragraphs retain foundation history.
+
 Root private branch is `feature/ai-second-strike-campaign-delivery`, HEAD
 `b3d307daffa7de2a63f373fb2913e4a30a03e30b`, including the committed bounded repairs.
 Main has fast-forwarded from1259 to `b07c52dfd601ff78cd00d89a24e7fe57320acd65`
@@ -1455,3 +1468,147 @@ Original work continues with two bounded assignments after the foundation push:
 Neither assignment authorizes another MHZ calibration or changes the inactive
 MHZ/LRZ/HPZ provider state. No M4–M6, all-route, harder-gameplay or complete-delivery
 claim follows from this foundation checkpoint.
+
+### AIZ completed-history restore repair — 2026-10-16
+
+Fresh19119 uses actual19448 engine/SDK and the unchanged cb2c4cb4 creator. All22
+common native-entry physics/camera/mode/act fields match its15784-pad prefix.
+At15783 Sonic is free, grounded and rolling at6648/1313 with zero rings. Immediate
+registered restore then changes `level-event.extra[216]` from1 to0. The request
+stops before its64-input replay or any candidate. Queue516seconds; admitted
+compile/execution approximately5.4seconds. Source comparison establishes that
+the responsible event/schema code is unchanged from760 to e278; it is not a
+matched baseline runtime result.
+
+`minibossSpawned` is captured one-shot history. Native `AIZMiniboss_SpawnEndSign`
+hands the retained actor to `Obj_EndSignControl`; results changes apparent act,
+and the retained owner calls `Change_Act2Sizes` then deletes itself
+(`sonic3k.asm:137395–137398,62713–62724,180420–180424`). Its later absence is
+valid. Both native engine spawn cases advance the resize routine immediately;
+clearing this latch alone cannot recover a lost active actor. The fix removes
+only that presence-based inference. Initialization, end-boss reconciliation and
+the distinct active ship-camera missing-driver backstop are unchanged.
+
+RED86205 runs the new class against unchanged e278:3 cases, one expected
+`level-event.extra[216]: A=1 B=0` failure, zero errors/skips, queue211seconds and
+Maven24.778seconds. GREEN42171 on event656c2e266/testa023c677 runs:
+
+```text
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS LUA_BIN=/usr/bin/lua5.4
+python3 tools/testing/maven_queue.py -Dmse=off
+  -Dopenggf.headless.gl=surfaceless-egl -Ds3k.rom.path=<original-absolute-ROM>
+  -Dtest=TestAizMinibossHistoryRewind,TestAiz2ShipLoopRewindRoundTrip,TestS3kAizMinibossGraphRewind test
+```
+
+Three fresh XML suites contain8 passing cases without failures/errors/skips:
+history3, ship1, miniboss graph4. Admission110seconds; Maven approximately70seconds,
+04:35:34BST. The completed-history unit fixture is explicitly synthetic; the
+active control uses actual native event spawn dispatch and destructive recreation.
+All registered keys are compared with existing `RewindSnapshotDiff` semantics,
+which normalize object ordering and omit some restore bookkeeping. The correct
+claim is **all-key semantic snapshot equality**, not unrestricted byte equality.
+The event bytes are not excluded. The unchanged ship test proves successful
+driver recreation, not the missing-driver fallback branch.
+
+Fresh delegated Astra R1 `second-strike-aiz-miniboss-history-astra-review-20261016-r1`
+reviews exactly these two blobs, read-only, and finds no blocker. Actual fresh
+15784-prefix restore and64 ordinary-input replay remain mandatory. No extra broad
+smoke, unchanged SDK suite or full-route qualification follows from the eight tests.
+
+Build-only98231 (`-DskipTests verify`) succeeds in38.714seconds at04:39:32BST.
+The actual fatjar exports21107 lines byte-equal to the unchanged aba80f03 candidate
+pin; the new engine/SDK strictly validates the unchanged cb2 creator with zero
+findings. Immutable individual artifacts are in external
+`second-strike-campaign/artifacts/42171-e278-history-656c2e2662ed`:
+
+| Artifact | Bytes | SHA256 |
+| --- | ---: | --- |
+| Engine | 26673043 | `9aa469752d4c4923bbee2b8791556e135103175386512a653829acf0e414134c` |
+| SDK | 249942 | `9e7a0610bbd92c18a8704c875e08609e4a3b5a1a37126c70c9db7a780363131a` |
+| Unchanged Second Strike sidecar | 67252 | `cb2c4cb4a505163739e68edcac000b62eb694ac543dbda9fb631b30d6e935eac` |
+
+Build source is e278 plus the two recorded blobs;19448 remains immutable. The
+default embedded bundle is still Time Attack; Second Strike remains a sidecar.
+
+Independent research24954 runs four fixed alternatives in separate fresh native
+JVMs, without capture/restore:301seconds queue/20.56seconds admitted execution.
+Selected0 uses ordinary right after the spring, passes native Rhinobot266 above,
+and reaches16113 at7585/966 with16 grounded safe updates, zero rings and no hurt,
+death or ability press. Its16114-pad BK2 is c67d53e5 and input script6c51e3fe.
+Alternative1 stops because the spring clears jumping, so the proposed insta-shield
+is unavailable; no action is substituted. Alternative2 reaches its900-input cap
+alive, and alternative3 incurs organic pickup/hurt and stalls. None is a complete
+cold route or a rewind qualification.
+
+The next bounded orchestration uses the new pair: one fresh JVM for the actual
+reached-prefix restore/64-input replay, then an independent fresh JVM for the
+selected16114 fixed pads plus one ordinary-input author. Its cached platform
+intent now retires stale/unmanaged, missed, out-of-reach and departed targets;
+retired layout identities cannot reacquire in the same world. An unsuccessful
+target stops before its601st selected pad. These are author research stopping
+rules, never native timers. Earlier unbounded platform steering already trapped
+a cold attempt. A successful authored continuation would still need a separate
+full fixed-pad native-entry replay.
+
+Session89496 is terminal, one observer and unchanged frozen source/inputs. A driver hash
+bbf7e6aa and B1bce2b2f use runner072cedd2 and the new42171 pair. A captures the
+natural prefix, runs64 pads forward without restore, then restores the original
+prefix and compares immediate all-key semantic state before replaying those same
+64 pads (neutral first, external previous-input history restored). B is a separate
+fresh JVM. Queue899seconds, admitted compile/two-JVM execution18.56seconds;
+overall exit1 combines A exit0 and B exit1 and is not a failed rewind result.
+Compiled A19a8e37a/B68c2bbee match their frozen sources. A's15784-row prefix CSV
+is byte-identical to historical19119 (SHA7107660e); all51 registered snapshot keys
+match immediately after restore and after64 identical ordinary inputs. All64
+scalar state rows also match literally between natural and restored passes.
+This closes that reached-prefix repair gate, not general rewind qualification.
+
+B independently reproduces the fixed16114 native-entry prefix, actual first-boss
+HP0/results and the60-free-control-frame/32px Act2 milestone. Its one author adds149
+pads, then native death at16262/8238,1349 with zero rings. No waterfall, second
+results or HCZ is reached. No platform target was acquired. The exact damaging
+owner is not instrumented, so neither a native/content defect nor a safe response
+is inferred. All three child process groups and the wrapper are reaped; owned
+temporary target logs were inspected/consumed. Original19119/24954/19448 evidence,
+external useful inputs/state/stills and the private unmerged tree remain retained.
+
+### ICZ positioned entry attribution — 2026-10-16
+
+Sonnet's r2 WARNED shelter fixture stops before measurement: the first setup-only
+call follows an already-created ICZ intro owner, and an observer dereferences a
+null-spawn object's default coordinate getter. No committed capture/replay or
+STOCK comparison ran. Preserve nonspatial objects in observations; absent spawn
+does not authorize filtering their identity/state out of a world comparison.
+
+Read-only r3 traces the entry ordering: the ordinary boot loads ICZ with no saved
+checkpoint, so native zone initialization creates its intro. The capture helper
+applies `Settings.starPost` only afterward, then resets event references while the
+existing intro actor remains managed. Its next initialization matches the observed
+800/280 velocity and rolling/control state. This is source attribution; the exact
+writer was not instrumented. It is not a measured stalactite or native ICZ defect.
+The earlier row210 floor probe also returns−9, so the declared standing entry has
+not yet been qualified; a possible missed previous-row surface remains attribution.
+
+Fresh r4 `second-strike-c1-icz-entry-diagnostic-20261016-r4` is terminal: two fresh
+JVMs compare the original late-starpost setup with an explicitly declared native
+checkpoint/full-reload fixture, keeping the original seed unchanged. It observes
+one call per arm, every object's identity including null-spawn owners, exact floor
+queries/radii and actual setup/completed counters. No actor retirement, field,
+queue, camera, physics or production helper change is authorized by this diagnostic.
+Its two measured calls are SETUP_ONLY: Level/V-int deltas0 and stable LEVEL, not
+completed gameplay updates. Arm A already has800/280, rolling radii7/14 and locks
+at boot, yet no intro appears in its observed live-object lists. That falsifies
+r3's specific pre-call live-intro prediction; no measured writer identity replaces
+it. Arm B's explicit checkpoint/full reload creates a new Level/ObjectManager,
+retains camera/player identity and leaves zero speeds, standing radii9/19 and no
+lock before/after its setup-only call. It does not prove ordinary object-pass
+readiness. No null-spawn object appears; r2 also rendered, so that crash's exact
+object remains unattributed. No new helper/native fix or retry follows.
+
+The offline correction uses the collision-index word stride. At55D0/55D8/55DF
+on both paths, query20B returns−9 and210 returns−14: first solid row203, contact
+row202, standing centre1EF with radius13 (1F4 with rolling radiusE). R3's prior207
+surface interpretation used the wrong query row. The unchanged1FD seed is not a
+qualified standing entry. The actual shelter/tell/landing/hardness witness and
+the exact entry-owner source attribution remain pending. Both child JVMs were
+reaped; execution1.7seconds, queue approximately1037seconds from runner timestamps.

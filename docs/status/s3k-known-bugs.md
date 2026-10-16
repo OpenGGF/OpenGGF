@@ -87,6 +87,7 @@ Entries should include:
 
 ## Table of Contents
 
+0. [AIZ Completed Miniboss History on Rewind (FIXED)](#aiz-completed-miniboss-history-on-rewind-fixed)
 0. [MHZ Cluckoid Visual Child After Explicit Parent Removal (OPEN)](#mhz-cluckoid-visual-child-after-explicit-parent-removal-open)
 0. [ICZ2 Folded Boss Children and Reserved Slots on Rewind (OPEN)](#icz2-folded-boss-children-and-reserved-slots-on-rewind-open)
 0. [Native Ending Presentation Gaps (RESOLVED)](#native-ending-presentation-gaps-resolved)
@@ -140,6 +141,25 @@ Entries should include:
 46. [Object Art and Clock Reads Found by the Slay the Robotnik Sprite Research (SUSPECTED)](#object-art-and-clock-reads-found-by-the-slay-the-robotnik-sprite-research-suspected)
 
 ---
+
+## AIZ Completed Miniboss History on Rewind (FIXED)
+
+**Location:** `Sonic3kAIZEvents.reconcileSequenceAfterRewindRestore`.
+Fresh Second Strike native-entry prefix19119 reaches true Act2, then immediate
+registered restore clears captured `minibossSpawned` (`level-event.extra[216]`1→0)
+because no miniboss remains. The native retained EndSignControl owner legitimately
+retires after results/title handoff; absence is not evidence that its historical
+one-shot spawn failed. The responsible source is unchanged from760 to e278,
+although a matched baseline runtime was not executed.
+
+The two-file repair removes only that inference. Eight focused cases in42171
+pass without skips; Astra source review has no blocker. The active ship missing-driver
+camera defense remains unchanged. Actual89496 on the new42171 engine reproduces
+the15784-input native prefix and matches all51 registered keys after restore and
+64 identical ordinary inputs against an untouched forward reference. This is
+semantic snapshot equality, not unrestricted byte equality or general rewind
+certification. Integration follows the normal delivery flow. The [delivery record](../architecture/plans/2026-10-15-second-strike-campaign-delivery.md#aiz-completed-history-restore-repair--2026-10-16)
+keeps the synthetic unit scope, semantic comparison limits and remaining route gates.
 
 ## MHZ Cluckoid Visual Child After Explicit Parent Removal (OPEN)
 

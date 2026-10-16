@@ -44,3 +44,26 @@ Forest post102 offers Gumball after its authored traversal; true Act2 post476 of
 | Packaging | Zero unsupported references, genuine compiled candidate pins, matching engine+SDK+test-kit consumers | Actual composed gate50133 passed37 focused host/API/pin/Javadoc/SDK cases with zero skips and packaged/verified the matched artifacts. Actual paired six-C2-root consumer javac/package and bundle validation passed strict zero-findings. Combined smoke24453 is consumed; affected ordinary83-pass/one expected-skip and guard62-pass follow-ups resolve owned failures, while the unchanged audio CLI assertion is baseline-attributed. Build-only30455 verifies actual engine/SDK/Javadoc/test-kit artifacts. Upstream-reconciled19448 startup/capture/editor checks pass88 cases without skips; the actual packaged API matches the21107-line pin and the engine+SDK typed consumer and separate Second Strike sidecar validate strictly. The verified native foundation is integrated/pushed as develop606330ef7; older physical witnesses keep their artifact provenance, and the full four-route/campaign scope remains incomplete |
 
 New findings and exact command/commit/skips belong in the implementation plan. This file is not a pass cache or certification generated from test counts.
+
+## Post-foundation continuation — 2026-10-16
+
+On the immutable19448 engine and matching creator, fresh19119 reproduces the
+15784-pad native-entry prefix, then immediate full-registry restore changes
+`level-event.extra[216]` from1 to0: completed miniboss spawn history is cleared
+after its retained results owner has legitimately retired. No replay or candidate
+trial was accepted through that mismatch. The narrow native repair passes8
+focused cases in42171 and has Astra's source acceptance. Actual89496 on the new
+42171 pair reproduces that prefix, restores all51 registered keys semantically,
+and matches the never-restored forward reference after64 identical ordinary inputs.
+Comparisons use all-key **semantic snapshot equality**, including the event bytes,
+under the existing diff helper; they do not claim unrestricted byte equality.
+
+Separate fresh-native-entry JVM research24954 uses no restore. Its selected
+ordinary-right continuation passes above original Rhinobot266 and reaches
+frame16113 at7585/966, grounded with zero rings and no hurt/death. The full16114-pad
+input prefix is preserved. Waterfall, results and HCZ remain unexecuted; a selected
+whole-route recipe still requires an independent uninterrupted fixed-input replay.
+The independent89496 continuation reproduces those16114 fixed inputs and the native
+first-boss/results/Act2-control milestones, then dies16262 at8238/1349 after149
+authored inputs. Its exact damage owner is unattributed; no platform target was
+acquired. Waterfall and HCZ remain open, with no production or content defect inferred.

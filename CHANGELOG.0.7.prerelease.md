@@ -41,6 +41,8 @@ Unreleased. The earlier development themes remain in
   and reuse that work for their marker and bonus stars. The Slots bonus stage
   reads its original board and entry position from the supplied ROM. Development
   mod captures retain the accepted loader when restoring creator-owned child graphs.
+  AIZ rewind preserves completed miniboss spawn history after the native results
+  owner retires.
 
 - **S3K Knuckles routes:** Locked-on Mushroom Hill deletes the standalone S&K
   intro before it can freeze the camera and take player control. Its native
