@@ -147,6 +147,7 @@ public class ObjectManager {
     private final ObjectServices objectServices;
     private final ObjectCallbackRouter objectCallbacks;
     private final ObjectManagerPopulationView populationView;
+    private final NativeChildReservationLedger childReservationLedger;
     private RewindClassResolver rewindClassResolver = RewindClassResolver.ENGINE_ONLY;
     public void setRewindClassResolver(RewindClassResolver resolver) { rewindClassResolver = java.util.Objects.requireNonNull(resolver, "resolver"); }
 
@@ -278,6 +279,10 @@ public class ObjectManager {
         this.populationView = new ObjectManagerPopulationView(objectCallbacks, slotLayout,
                 slotAllocator, reservedChildSlots, activeObjects, dynamicObjects,
                 postPlayerHooksScratch);
+        this.childReservationLedger = new NativeChildReservationLedger(objectCallbacks, slotLayout,
+                reservedChildSlots, instanceToSpawn, activeObjects, dynamicObjects,
+                rewindObjectIds::containsKey, this::managedSpawn, this::allocateSlotAfter,
+                this::releaseChildSlotAtItsOwnExecPosition);
         this.fixedSstObjects = new FixedSstObjectInstaller(
                 registry, objectServices, slotLayout, slotAllocator,
                 this::addDynamicObject, this::releaseSlot);
@@ -2675,16 +2680,7 @@ public class ObjectManager {
      * @return the allocated slot indices (may contain -1 for failed allocations)
      */
     public int[] allocateChildSlotsAfter(ObjectSpawn spawn, int childCount, int parentSlot) {
-        int[] childSlots = new int[childCount];
-        int lastSlot = parentSlot;
-        for (int c = 0; c < childCount; c++) {
-            childSlots[c] = allocateSlotAfter(lastSlot);
-            if (childSlots[c] >= 0) {
-                lastSlot = childSlots[c]; // Next child starts after this one
-            }
-        }
-        reservedChildSlots.put(spawn, childSlots);
-        return childSlots;
+        return childReservationLedger.reserveFixedAfter(spawn, childCount, parentSlot);
     }
 
     /**
@@ -2694,24 +2690,7 @@ public class ObjectManager {
      * Engine-only: exposed across packages by {@link NativeChildSlotReservations}, not Mod API.
      */
     int reservePlacedChildSlotAfter(ObjectInstance parent, int predecessorSlot, int protectedPrefix) {
-        ObjectSpawn parentSpawn = placedReservationOwner(parent);
-        int[] slots = parentSpawn == null ? null : reservedChildSlots.get(parentSpawn);
-        if (protectedPrefix < 0 || slots == null || slots.length < protectedPrefix) {
-            throw new IllegalArgumentException("A current unambiguous placed parent and existing fixed prefix are required");
-        }
-        if (predecessorSlot < 0) return -1;
-        int slot = allocateSlotAfter(predecessorSlot);
-        if (slot < 0) return -1;
-        for (int index = protectedPrefix; index < slots.length; index++) {
-            if (slots[index] < 0) {
-                slots[index] = slot;
-                return slot;
-            }
-        }
-        int[] extended = Arrays.copyOf(slots, slots.length + 1);
-        extended[slots.length] = slot;
-        reservedChildSlots.put(parentSpawn, extended);
-        return slot;
+        return childReservationLedger.reserveAfter(parent, predecessorSlot, protectedPrefix);
     }
 
     /**
@@ -2719,39 +2698,7 @@ public class ObjectManager {
      * must clear its saved slot after release; a numeric slot is not a same-owner generation token.
      */
     boolean releasePlacedChildSlot(ObjectInstance parent, int reservedSlot, int protectedPrefix) {
-        ObjectSpawn parentSpawn = placedReservationOwner(parent);
-        int[] slots = parentSpawn == null ? null : reservedChildSlots.get(parentSpawn);
-        if (protectedPrefix < 0 || slots == null || slots.length < protectedPrefix
-                || !isManagedDynamicSlot(reservedSlot)) return false;
-        for (int index = protectedPrefix; index < slots.length; index++) {
-            if (slots[index] == reservedSlot) {
-                slots[index] = -1;
-                // A folded child retires when the ascending native walk reaches its SST,
-                // not early at its parent's slot. Already-visited/outside-pass slots free now.
-                releaseChildSlotAtItsOwnExecPosition(reservedSlot);
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private ObjectSpawn placedReservationOwner(ObjectInstance parent) {
-        ObjectSpawn parentSpawn = instanceToSpawn.get(parent);
-        if (parentSpawn == null || activeObjects.get(parentSpawn) != parent
-                || !rewindObjectIds.containsKey(parent)
-                || !(parent instanceof AbstractObjectInstance object)
-                || !isManagedDynamicSlot(objectCallbacks.call(parent, object::getSlotIndex))
-                || objectCallbacks.call(parent, parent::isDestroyed)) return null;
-        // Identity, not record equality: this is the exact registered native placement.
-        // Reject aliases before allocation/release so a second live actor cannot share its ledger.
-        for (ObjectInstance candidate : dynamicObjects) {
-            if (candidate != parent && candidate instanceof AbstractObjectInstance other
-                    && (other.spawn == parentSpawn || managedSpawn(candidate) == parentSpawn)) return null;
-        }
-        for (var entry : instanceToSpawn.entrySet()) {
-            if (entry.getKey() != parent && entry.getValue() == parentSpawn) return null;
-        }
-        return parentSpawn;
+        return childReservationLedger.release(parent, reservedSlot, protectedPrefix);
     }
 
     /**
