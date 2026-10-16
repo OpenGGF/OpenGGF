@@ -5,6 +5,7 @@ REM target\ so each worktree keeps its own Maven output.
 pushd "%~dp0"
 if errorlevel 1 goto :directory_failed
 
+echo Preparing OpenGGF: building the engine and bundled mods...
 call mvn -Dmse=off -DskipTests package -q
 if errorlevel 1 goto :package_failed
 
@@ -20,6 +21,7 @@ if not exist "%JAR%" goto :jar_missing
 
 set "OPENGGF_JAVA=java"
 if defined JAVA_HOME set "OPENGGF_JAVA=%JAVA_HOME%\bin\java.exe"
+echo Starting OpenGGF...
 "%OPENGGF_JAVA%" --enable-native-access=ALL-UNNAMED --add-exports java.base/java.lang=ALL-UNNAMED --add-exports java.desktop/sun.awt=ALL-UNNAMED --add-exports java.desktop/sun.java2d=ALL-UNNAMED -XX:+UseG1GC -XX:MaxGCPauseMillis=5 -jar "%JAR%"
 set "STATUS=%ERRORLEVEL%"
 popd

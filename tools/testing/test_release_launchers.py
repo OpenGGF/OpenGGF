@@ -27,6 +27,7 @@ class LauncherTests(unittest.TestCase):
             """#!/bin/sh
 set -eu
 printf '%s\\n' "$*" >> "$MAVEN_ARGS"
+echo "packaging output"
 case " $* " in
   *' package '*)
     if [ "${WRITE_MANIFEST:-1}" = 1 ]; then
@@ -88,6 +89,16 @@ exit "${JAVA_STATUS:-0}"
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(self._java_jar_argument(), str(self.target / current))
         self.assertNotIn("help:evaluate", self.maven_args.read_text(encoding="utf-8"))
+
+    def test_announces_build_before_packaging_output_and_launch_afterwards(self):
+        current = "OpenGGF-0.6.prerelease-jar-with-dependencies.jar"
+        result = self._run(artifacts=(current,))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.splitlines(), [
+            "Preparing OpenGGF: building the engine and bundled mods...",
+            "packaging output",
+            "Starting OpenGGF...",
+        ])
 
     def test_honors_custom_final_name_and_quotes_project_path(self):
         current = "OpenGGF local build-jar-with-dependencies.jar"

@@ -1492,7 +1492,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   bugfix pushes no longer start CI, and the ROM-fixture jobs are manual opt-ins again.
 - **Release-line integration:** preserve hosted release builds, snapshot policy
   checks, current launcher artifact selection, Linux packaging, and automatic
-  publication on master pushes from the 0.6 release branch.
+  publication on master pushes from the 0.6 release branch. Local launchers explain
+  build and launch progress; updated LWJGL uses Java 25 native interop without
+  deprecated Unsafe or unsupported JNI warnings.
 - **Rollover-safe tooling:** SDK scaffold dependencies and the complete-audio
   launcher derive artifact versions from build metadata. Keep the unpublished
   API candidate independent from the engine branch version.

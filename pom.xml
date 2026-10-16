@@ -12,7 +12,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <maven.compiler.release>25</maven.compiler.release>
-        <lwjgl.version>3.3.3</lwjgl.version>
+        <lwjgl.version>3.4.1</lwjgl.version>
         <joml.version>1.10.5</joml.version>
         <mockito.version>5.20.0</mockito.version>
         <slf4j.version>2.0.17</slf4j.version>
@@ -1242,6 +1242,8 @@
                         </manifest>
                         <manifestEntries>
                             <Enable-Native-Access>ALL-UNNAMED</Enable-Native-Access>
+                            <!-- Preserve LWJGL's Java 25 FFM backend in the fat jar. -->
+                            <Multi-Release>true</Multi-Release>
                         </manifestEntries>
                     </archive>
 
