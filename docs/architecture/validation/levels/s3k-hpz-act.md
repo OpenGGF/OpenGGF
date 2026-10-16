@@ -444,6 +444,80 @@ draws its locked-loop black field, it now reports `TitleCardBeneathLevelHud`. Th
 drawn under the card. Natively they are above it, but the engine's ring pass sits inside the
 sprite pass, before the card.
 
+**Native title-card hold on every `Level` entry (titlecard-r2 lane, 2026-10-16).** Native
+timeline from the `hpz-entry` RAM dumps (card SST at `$B250`; inputs 411365-411624). The
+fade-out runs from seq 0 to 22. The card is installed at seq 23 with `Level_frame_counter` 0.
+`Obj_TitleCardCreate` waits for its KosM archives over seq 24-32. The slide-in runs from seq
+33 to 57; `Obj_TitleCardWait` clears `$34` at 57 and `$48` at 58. loc_62CC keeps looping on
+`Nem_decomp_queue` over seq 59-83, with `Process_Sprites` still running, so `Wait2` counts
+`$2E` from 90 down to 65. `LoadLevelLoadBlock` and `LevelSetup` run over seq 84-129 with no
+`Process_Sprites`; three of those frames have no V-int. `loc_64DC` and `LevelLoop` start at
+seq 130 with the counter at 0 and `Palette_fade_timer = $2E = 22`. `$2E` reaches 0 at counter
+22, the children start leaving at 23 (`$32` = 1), and the card is deleted at counter 35. From
+card install to `LevelLoop` is 107 frames. The S3K disassembly sends every `Level:` entry
+through this routine (7504-7878): death restarts via `Restart_level_flag`, data-select
+launches, bonus entries and returns, and special-stage returns. Only `$1701`, `Act3_flag`
+and demos skip the card. The native multibonus trace shows 84 frames at counter 0 between
+AIZ and the gumball stage's `LevelLoop`.
+
+Before this change, only the fresh zone request (`initializeFreshLevelTransition`) ran that
+timeline. `Sonic3kTitleCardManager.initialize` covered direct boots with the card shown, the
+windowed data select, death restarts (presented even headless through `levelRoutineReentry`)
+and the bonus return. `initializeBonus` covered bonus entry. Both held DISPLAY for 90 locked
+frames and released at EXIT. Now every one of them shares the Level-routine timeline: the
+archives are re-queued, the `Wait` passes run, `Sonic3kLevelTitlePlcService` holds on the
+Nemesis queue, the terrain gate applies where the load owns fresh art, and the `$16` hold is
+armed at release. A released card no longer publishes a later load's terrain handoff. The
+death restart and bonus return no longer run a host reveal over the slide-in
+(`GameLoopPlcLifecycle.revealLevelRoutineEntry`).
+
+Measured with a temporary per-step probe. "Locked" counts title-loop steps; each column
+gives the card at release, then the hold and exit.
+
+| Route | Before | After |
+|---|---|---|
+| Fresh request, HPZ Knuckles | 102 locked, release DISPLAY/0, hold LFC 0-21, EXIT 22-35, COMPLETE 36 | unchanged |
+| Direct boot, card shown, HPZ | 32 slide + 90 locked, release at EXIT | 60 locked, then the native hold |
+| Direct boot, card shown, LRZ1 | 36 + 90, release at EXIT | 67 locked, then the hold |
+| Data select, AIZ1 (owns fresh art, so the terrain wait applies) | 36 + 90, release at EXIT | 120 locked, then the hold |
+| Bonus entry (Pachinko) | 17 + 90, release at EXIT into BONUS_STAGE | 101 locked, then the hold in BONUS_STAGE |
+| Death restart, LRZ1 Knuckles | host fade-from-black over the slide-in, 36 + 90, release at EXIT | no host reveal, 67 locked, then the hold |
+| Special-stage return, AIZ | 122 locked, then the hold | unchanged |
+
+Pictures (LIMITED/RAW_RGB, 320 wide) are in `spot-checks/round2-titlecard/` with provenance.md.
+Native pairing comes from the native dumps alone. RAM `Level_frame_counter` is k at seq 130+k.
+`Normal_palette` in the seq N RAM equals the seq N+1 CRAM, so the picture of counter k is
+published at seq 131+k. The direct HPZ boot at counters 0, 1, 5, 10, 21, 22, 23 and 30 differs
+from those native frames by 357-584 of 71680 pixels in exact RGB. The card pieces, the fade on
+lines 1-3 and the level are identical on every frame, and at counter 23 the banner is leaving
+in both. Only the HUD differs. The score and lives digits differ because the native run
+carries its score and lives. The last locked title step equals native seq 130 exactly. At
+counter 0 the native frame also shows the HUD digits, black over the banner: `Level` runs
+`Process_Sprites` and `Render_Sprites` at loc_6468 (sonic3k.asm:7853-7854) before loc_64DC,
+and LevelLoop's first `VInt_8` runs `UpdateHUD`. The engine shows them from counter 1.
+Further probe pictures (`hud-phase/`) attribute this to a one-frame lag of the whole HUD
+layer. The playfield, palette and card match seq 131+k on every frame, but the TIME digit
+ticks at counter 60 against native 59. At counters 24 and 56 the RINGS flash still shows the
+phase native left one frame earlier. The owner is the HUD's counter and flash presentation,
+not the card release, and it stays open. Counter 2 alone also swaps two palette entries,
+`(0,34,34)` and `(0,0,68)`, over 5,564 playfield pixels; this is not explained. The LRZ1
+death restart shows the card sliding in at full colour over black and the same hold; there
+is no native picture of it.
+
+Red first, `TestS3kTitleCardHoldRoutes` failed 4/4 on baseline `d3fb0625e`: direct boot,
+data select and bonus released at `EXIT/90`, and the death restart showed
+`FADING_FROM_BLACK` over the slide-in. It covers direct boot, data select, death restart,
+bonus entry and return. It also covers rewind inside the hold: capture at counter 5, run 29
+frames to counter 34 with the card leaving, restore, and replay them to an equal snapshot.
+The re-timed `soz1-cold-knuckles` movie is recorded in the [SOZ1 matrix](s3k-soz-act1.md).
+
+Limits: `known-bugs` "Level-Entry Title Card Residuals". Loads without the fresh-art
+admission skip the `LoadLevelLoadBlock` terrain wait, so the direct HPZ boot locks for 60
+frames against the native routine's 107. `Level`'s KosM queue clear is not modelled. The
+card reaches COMPLETE one frame late (counter 36 against native 35). The HUD layer lags one
+frame, so the release step draws no HUD digits. Rings draw under the card, and
+`Pal_FromWhite` is not presented.
+
 ## Cold Tails HPZ campaign leg (2026-10-15)
 
 The cold Tails-alone campaign (`TestS3kLrzHpzSszColdCampaign#tailsColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory`,

@@ -91,7 +91,11 @@ Unreleased. The earlier development themes remain in
   Previously the level stayed black and then appeared at full brightness. The data
   select no longer fades the whole screen, card included, back in on top. Seamless
   act changes still do not fade, as in the original. The score, time and ring
-  counters are drawn over the card's red banner, as on hardware.
+  counters are drawn over the card's red banner, as on hardware. Direct boots, new
+  games, restarts and bonus stage entries and returns now hand control over with
+  the card still holding for its last 22 frames, as zone changes already did, instead
+  of keeping the player frozen for 90 frames. Restarts and bonus returns no longer
+  fade the card in from black.
 
 - **S3K objects and bosses:** The Angel Island end boss starts its defeat at the
   native hit check of whichever phase it is in. When the object table is full,

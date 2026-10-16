@@ -661,3 +661,21 @@ native picture of the AIZ2 first tree or of the HCZ1 equilibrium exists among th
 campaign spot checks. The publication tests derive their expectations from ROM art and
 the routine. The physics trace replays do not compare VRAM; they show only that
 gameplay is unchanged.
+
+## Bonus entry and return title-card hold — 2026-10-16 (round-2 titlecard lane)
+
+A bonus entry and a bonus return both run the native `Level` routine, so both cards now take
+the loc_62CC gates and release `LevelLoop` into the `$16` hold at `Level/loc_64DC`
+(sonic3k.asm:7874-7878). Before, they held a locked 90-frame DISPLAY and released at the
+card's exit. The bonus return no longer runs a host fade from black over its card. The bonus
+card's Nemesis gate uses the loaded bonus zone's PLC. Per-route numbers are in the
+[HPZ matrix](s3k-hpz-act.md): the Pachinko entry now locks for 101 frames (was 107), against
+84 in the native multibonus trace (open in known-bugs "Level-Entry Title Card Residuals").
+The re-timed `soz1-cold-knuckles` movie, which crosses an entry and a return, is in the
+[SOZ1 matrix](s3k-soz-act1.md).
+
+| Check (queued, focused, exact selectors, S3K ROM; base `6405313ce` + the change) | Result |
+| --- | --- |
+| `TestS3kTitleCardHoldRoutes` (bonus entry and return among its 5 cases); `TestSonic3kBonusTitleCard`; `TestPachinkoTitleCardIntegration`; `TestS3kBonusStageHeadlessBoot` | 5, 6, 2 and 3 run, 0 failed, 0 errors, 0 skipped (Maven finished 2026-10-16T19:14:59+01:00, 18:26:52+01:00 and 18:31:58+01:00) |
+| `TestS3kBonusPortalMechanismProducts`, `TestS3kBonusStageReturnProducts`, `TestS3kGumballPachinkoRewardMechanics` | 568, 425 and 723 run, 0 failed, 0 errors, 0 skipped (Maven finished 2026-10-16T18:51:47+01:00) |
+| `TestSecondStrikeInvitationGameplay` (opt-in candidate jar `1f6bfedd…`) | gumball case passes. The glowing-spheres case fails at line 300 ("ordinary bonus play must earn a positive native award before exit"). It fails with the same assertion on the pre-task `d3fb0625e` sources and on `6405313ce`, so the failure is inherited, not caused by this change |

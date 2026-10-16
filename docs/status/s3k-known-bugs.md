@@ -139,7 +139,7 @@ Entries should include:
 50. [S3K Special-Property Sidekick Behaviour: Corrected Diagnosis](#s3k-special-property-sidekick-behaviour-corrected-diagnosis)
 51. [Object Art and Clock Reads Found by the Slay the Robotnik Sprite Research (SUSPECTED)](#object-art-and-clock-reads-found-by-the-slay-the-robotnik-sprite-research-suspected)
 52. [Ending Reunion Kos Service Count — Per-Object CPU Budget (OPEN)](#ending-reunion-kos-service-count--per-object-cpu-budget-open)
-53. [Non-Fresh Title Card Holds 90 Locked Frames (OPEN)](#non-fresh-title-card-holds-90-locked-frames-open)
+53. [Level-Entry Title Card Residuals (OPEN)](#level-entry-title-card-residuals-open)
 54. [AIZ2 First-Tree and HCZ1 Zero-Offset Animated Tile Uploads (FIXED)](#aiz2-first-tree-and-hcz1-zero-offset-animated-tile-uploads-fixed)
 55. [Knuckles Credits and Terminal Residuals (OPEN)](#knuckles-credits-and-terminal-residuals-open)
 56. [MHZ Rewind Snapshot Identity Gaps (RESOLVED)](#mhz-rewind-snapshot-identity-gaps-resolved)
@@ -6561,22 +6561,45 @@ candidates are in the [ending lifecycle design](../architecture/designs/2026-10-
 
 ---
 
-## Non-Fresh Title Card Holds 90 Locked Frames (OPEN)
+## Level-Entry Title Card Residuals (OPEN)
 
-Native `Level` arms a 22-frame title-card hold at `loc_64DC` (sonic3k.asm:7874-7878)
-while `LevelLoop` already runs, and the card exits when that hold ends. Only the fresh
-zone-request route models this. Direct boots with the card shown, data-select launches,
-bonus-stage entry and death restarts use the engine's 90-frame non-fresh card, which
-locks the loop until it exits. The level's lines 1-3 fade therefore plays while that card
-leaves rather than during a native 22-frame hold. The death restart also keeps the host's
-blocking whole-screen reveal over the card's slide-in. Rings draw under the card, where
-the original draws them above it, and the `$1701` arena's `Pal_FromWhite` reveal is not
-presented. Per-route measurements are in the
+Every S3K `Level` entry now uses the native title-card hold. Covered entries are direct
+boots with the card shown, data-select launches, bonus-stage entries and returns, and death
+restarts. The card waits through loc_62CC, and `Level/loc_64DC` (sonic3k.asm:7874-7878)
+releases `LevelLoop` with the card's `$2E` and `Palette_fade_timer` at `$16`. The card then
+holds while the level fades in, and leaves from `Level_frame_counter` 23. A death restart or
+bonus return no longer runs a whole-screen host reveal over the card's slide-in. The fixed
+90-frame locked hold is gone. Measurements and pictures are in the
 [HPZ matrix](../architecture/validation/levels/s3k-hpz-act.md).
 
+Still open:
+- Death restarts, bonus entries and returns, and direct boots do not own the fresh runtime-art
+  admission. Their title loop therefore omits `LoadLevelLoadBlock`'s terrain KosM wait, and
+  `LevelLoop` starts earlier than a full native `Level` routine would. A direct HPZ boot locks
+  for 60 frames. The engine's fresh request locks for 102, and the native HPZ entry spends
+  107 frames from card install to `LevelLoop`. A bonus entry locks for 101 frames, while the
+  native multibonus trace shows 84 frames at counter 0 before the gumball stage's `LevelLoop`;
+  that difference is not reconciled.
+- `Level` clears the KosM module and decompression queues on entry (`clearRAM
+  Kos_decomp_stored_registers,$6C`, sonic3k.asm:7512-7513). The engine keeps pending jobs from
+  the previous level across the reload.
+- The card leaves one frame late. It reaches COMPLETE, the `LoadEnemyArt` handoff, at counter
+  36; the native card is deleted at counter 35.
+- The release step draws no HUD digits. `Level` runs `Process_Sprites` and `Render_Sprites`
+  at loc_6468 (sonic3k.asm:7853-7854) before loc_64DC, and LevelLoop's first `VInt_8` runs
+  `UpdateHUD`. The native picture of counter 0 therefore already shows the digits over the
+  banner. The engine publishes HUD counters only on its ordinary-level VBlank, which reaches
+  the picture one frame later. The same one-frame lag affects the whole HUD layer in
+  LevelLoop, while the playfield, palette and card match native: the TIME digit ticks at
+  counter 60 against native 59. At counters 24 and 56, where native toggles the zero-ring
+  RINGS flash, the engine still shows the previous phase. The owner is the HUD's counter and
+  flash presentation phase, not the card release. It is not fixed.
+- Rings draw under the card, where the original draws them above it (`Render_Sprites` emits
+  `Render_Rings` before the object buckets, 36326-36329).
+- The `$D01`/`$1701` `Pal_FromWhite` reveal is not presented.
+
 ### Removal condition
-Every `Level` entry uses the native card hold and releases `LevelLoop` with it. Recorded
-route movies that cross these entries are re-timed by measurement in the same change.
+Each item above matches the native measurement on its route, with a focused test.
 
 ---
 

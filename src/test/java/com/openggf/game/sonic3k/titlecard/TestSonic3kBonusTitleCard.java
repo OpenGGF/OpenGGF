@@ -50,13 +50,10 @@ public class TestSonic3kBonusTitleCard {
         manager.initializeBonus();
 
         // Advance through SLIDE_IN (elements slide from right to target)
-        // Max distance is 360-168=192 at 16px/frame = 12 frames
-        for (int i = 0; i < 20; i++) {
-            manager.update();
-        }
-        // Advance through DISPLAY hold (90 frames, fade runs in last 22)
-        for (int i = 0; i < 90; i++) {
-            manager.update();
+        // Max distance is 360-168=192 at 16px/frame = 12 frames, then the
+        // Level routine's loc_64DC hold of $16 LevelLoop frames.
+        for (int i = 0; i < 20 + 0x16; i++) {
+            dispatch();
         }
         // Should now be in EXIT phase â€” control released
         assertTrue(manager.shouldReleaseControl(), "Should release control during exit");
@@ -66,9 +63,9 @@ public class TestSonic3kBonusTitleCard {
     public void bonusModeCompletesAfterFullAnimation() {
         manager.initializeBonus();
         // Run enough frames for full animation cycle:
-        // SLIDE_IN (~12 frames) + DISPLAY (90 frames) + EXIT (~10 frames)
+        // SLIDE_IN (~12 frames) + loc_64DC hold ($16 frames) + EXIT (~10 frames)
         for (int i = 0; i < 150; i++) {
-            manager.update();
+            dispatch();
         }
         assertTrue(manager.isComplete(), "Should be complete after full animation");
     }
@@ -78,7 +75,7 @@ public class TestSonic3kBonusTitleCard {
         // First run bonus mode
         manager.initializeBonus();
         for (int i = 0; i < 150; i++) {
-            manager.update();
+            dispatch();
         }
         assertTrue(manager.isComplete());
 
@@ -106,6 +103,18 @@ public class TestSonic3kBonusTitleCard {
         assertEquals(13, manager.getExitPhaseCounter(),
                 "native render bounds remove the last title child on phase 12 and the parent observes it on 13");
         assertFalse(manager.isComplete(), "the parent completion dispatch remains one manager tick later");
+    }
+
+    /**
+     * One title-loop dispatch. Once loc_62CC's gates have opened the host's Level
+     * routine hands the owner to LevelLoop with its $16 hold (loc_64DC), which
+     * GameLoopTitleCardLifecycle performs in production.
+     */
+    private void dispatch() {
+        manager.update();
+        if (manager.shouldCompleteFreshLevelTransitionBoundary()) {
+            manager.completeFreshLevelRuntimeArtHandoff();
+        }
     }
 
     private static final class LeaseOnlyObjectArtProvider
