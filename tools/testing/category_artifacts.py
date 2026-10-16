@@ -42,22 +42,25 @@ class RollingLog:
 
 
 def stop_process_tree(process):
+    pid = process.pid
+    if type(pid) is not int or pid <= 1:
+        raise ValueError('Process cleanup requires an integer PID greater than 1')
     # Keep the runner's lock until its Maven process has been reaped. On Unix,
     # the separate process group also contains Surefire's JVM and test children.
     if os.name == 'posix':
         try:
-            os.killpg(process.pid, signal.SIGTERM)
+            os.killpg(pid, signal.SIGTERM)
         except ProcessLookupError:
             pass
     else:
-        subprocess.run(['taskkill', '/PID', str(process.pid), '/T', '/F'],
+        subprocess.run(['taskkill', '/PID', str(pid), '/T', '/F'],
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
         process.wait(timeout=10)
     except subprocess.TimeoutExpired:
         if os.name == 'posix':
             try:
-                os.killpg(process.pid, signal.SIGKILL)
+                os.killpg(pid, signal.SIGKILL)
             except ProcessLookupError:
                 pass
         else:
@@ -67,7 +70,7 @@ def stop_process_tree(process):
         # A test grandchild can outlive a terminated Maven parent. It still
         # belongs to this runner's process group, so do not leave it running.
         try:
-            os.killpg(process.pid, signal.SIGKILL)
+            os.killpg(pid, signal.SIGKILL)
         except ProcessLookupError:
             pass
 

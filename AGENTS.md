@@ -181,6 +181,9 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
   Set `OPENGGF_MAVEN_QUEUE=serial` for exclusive execution; shared
   Git policy settings and profiling are documented in `tools/testing/README.md`;
   `maven_queue.py --stats` summarises recorded queue waits, holds and peak memory.
+  `maven_queue.py --dashboard` opens a local server at `http://127.0.0.1:8766`
+  for a read-only live view; stop it with Ctrl-C. Scheduling age includes waiting
+  credit and is separate from actual wait; older jobs can have unknown timings.
   For per-test memory investigation, use `tools/testing/profile_test_memory.py`
   with exact expensive class selectors; it queues an isolated repeated JVM and
   records allocation, sampled peaks and post-GC retention candidates. See the

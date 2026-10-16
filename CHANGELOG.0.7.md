@@ -1428,7 +1428,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 - **Local test categories:** select related subsystem checks from changed paths, with
   common tests and structural guards retained, broad fallback for shared changes,
-  and bounded diagnostics and automatic temporary-file cleanup. An explicit
+  and bounded diagnostics and automatic temporary-file cleanup. Process cleanup
+  rejects invalid PIDs before signalling, so test doubles
+  cannot broadcast termination to the user's desktop session. An explicit
   AIZ1/HCZ1 obligation lane rejects missing or skipped required
   cases. Rewind coverage protects individual object identities and distinguishes
   unavailable ROM prerequisites from executed round trips. Tool prerequisites
@@ -1440,7 +1442,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   usage instead of counting it twice, while keeping each worktree exclusive and
   preserving a serial override. Single-fork trace and audio profiles no longer force
   exclusive runs, and a bounded log (`maven_queue.py --stats`) records queue waits, holds
-  and peak memory. Waiting requests favour short checks, with aging and
+  and peak memory. A lightweight local browser dashboard shows running jobs,
+  waiting priority, resource usage and recent completions across worktrees,
+  refreshing automatically without changing queue state. Waiting requests favour
+  short checks, with aging and
   bounded backfilling to protect large runs from starvation. An opt-in lean lane
   bounds both JVM heaps for small focused checks and accounts for their smaller
   reservations alongside normal runs. A busy worktree's aged request retains its

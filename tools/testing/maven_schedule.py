@@ -1,7 +1,7 @@
 """Short-job priority with bounded backfilling for the shared Maven queue.
 
 Inputs: invocation shape and automatically leased waiting records. Records contain
-no Maven arguments or PIDs and never authorize execution: OS locks do that.
+no Maven arguments and never authorize execution: OS locks do that.
 Origin: 2026-09-15 short-run priority follow-up to Maven resource profiling.
 """
 from dataclasses import dataclass

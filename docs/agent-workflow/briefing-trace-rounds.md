@@ -71,6 +71,15 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Mocked subprocesses must not reach real process cleanup (2026-10-16, test queue).
+An unset `MagicMock.pid` converts to `1`; on Linux, `killpg(1, signal)` calls
+`kill(-1, signal)` and broadcasts to processes the caller can signal. A queue
+test did this with `SIGTERM` and `SIGKILL`, terminating the desktop session.
+Mock cleanup when the subprocess is fake. `stop_process_tree` rejects PIDs that
+are not built-in integers greater than one before calling the OS. Intercept
+signal calls before reproducing this failure, and separately test real cleanup
+with owned child process groups.
+
 An IDE build can bypass the Maven worktree lock (2026-10-15, menu polish).
 Main compilation succeeded but test compilation lost `MasterTitleScreen` and
 other class files while IntelliJ's compiler was active. Closing the project

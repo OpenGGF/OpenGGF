@@ -232,3 +232,50 @@ Inspect future broad-run queue wait, preparation, per-batch execution and sample
 memory separately. The service-credit simulation must not be presented as a
 whole-suite elapsed-time forecast. Report actual completed coverage and skips
 before consuming diagnostics.
+
+## Live queue dashboard follow-up
+
+The user selected a local browser dashboard after throughput delivery
+`c4f78fa1f2ad9bd6fbe99013aafe8864f4b3639d`. The implementation in
+`feature/ai-test-queue-view` uses a standard-library loopback server and a static
+page polling every two seconds. It reads existing waiting leases, running usage
+samples and bounded completion telemetry. Additive job metadata supplies actual
+submission/admission times and worktree labels for new clients; old clients stay
+compatible, with unavailable timings shown as unknown. Scheduling age includes
+carried credit and is never presented as elapsed waiting or a start-time forecast.
+
+Lock probing was rejected for this observer: it must not acquire admission or
+worktree locks, prune files or change scheduling. Linux `/proc/locks` provides
+liveness. On this host its overlay device ID differed from `stat` for the same
+held file. Matching only device/inode therefore hid real jobs; matching only inode
+would risk false ownership. The observer resolves an alias through the owner's
+actual file descriptor and matching `fdinfo` lock record. Unverifiable owners
+remain separate from active counts. Review also caught Windows' exclusive lock
+on byte zero: payload reads now start at byte one, like existing queue readers.
+Other platforms display unverified records when OS lease observation is unavailable.
+
+Validation from the task worktree:
+
+```bash
+python3 -m unittest discover -s tools/testing -p 'test_run_categor*.py'
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py \
+  --base c4f78fa1f2ad9bd6fbe99013aafe8864f4b3639d --preflight
+python3 -m unittest discover -s tools/testing -p 'test_run_category_dashboard.py'
+```
+
+The combined Python safety run passed 210 checks. After review's two portability
+fixes, all 21 dashboard checks passed, including a simulated unreadable locked
+byte and unknown-platform handling; this is not native Windows/macOS execution.
+Actual Java 25, Lua 5.4 and PowerShell preflight passed. JavaScript syntax and
+agent-document mirrors passed. Browser checks against the real queue verified
+automatic updates, pause/resume, manual refresh while paused, worktree filtering
+and layouts at 1280px and 390px without page overflow. No Maven tests were needed
+for this observational tooling change; there is no engine-suite claim.
+
+Ten local snapshot collections with policy already loaded took a median 1.81ms
+(range 1.77–10.60ms), observing one running job and four waiters at the final
+sample. This small diagnostic excludes HTTP/browser work and policy reloads,
+which occur at most every 30 seconds. It is not a general overhead guarantee.
+No extra process-memory sampler or history ledger was added. The dashboard
+cannot show build-only work, reconstruct missing legacy timings, guarantee
+admission order or infer test success from a completed execution record.
