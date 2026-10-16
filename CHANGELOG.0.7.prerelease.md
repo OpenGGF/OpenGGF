@@ -234,6 +234,11 @@ Rewind verification compares private records and complete captured opaque arrays
 by content, with explicit failures when snapshot inspection cannot complete. It also
 checks all captured ObjectManager gameplay cursors and contact buffers. Palette
 copies retain complete raw RGB comparison.
+Typed level and object-manager snapshot comparisons also accept equal untyped
+content. Rewinding to a point before a level's first object-load pass reloads its
+objects again (Flying Battery's act-one boss included), the Angel Island intro keeps
+drawing Sonic after it is recreated, a departing scripted carry-in Tails is restored
+as the same sprite, and a recreated skid-dust puff keeps its owner's art.
 
 The AIZ fire handoff retains its native scene slots and delayed retirement
 markers. Its transition floor preserves the native solid tail and prevents
