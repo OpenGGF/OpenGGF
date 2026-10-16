@@ -333,6 +333,10 @@ public class VirtualSynthesizer implements SmpsLogicalWriteTarget {
     @Override
     public void writePsg(Object source, int val) {
         psg.write(val);
+        if (ym instanceof Ym2612Chip accurate) {
+            // The native-compatible stage (when enabled) mixes this byte the way GPGX's PSG does.
+            accurate.nativeCompatiblePsgWrite(val);
+        }
     }
 
     @Override

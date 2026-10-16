@@ -353,6 +353,17 @@ public class Ym2612Chip implements FmChip {
         nativeOutput = new NativeCompatiblePcmOutput(config);
     }
 
+    /**
+     * One PSG data-bus byte for the native-compatible stage, at the master-clock
+     * time this chip has reached (the PSG write lands before the next FM clock).
+     * No effect without the stage; the ordinary PSG path is separate.
+     */
+    public void nativeCompatiblePsgWrite(int value) {
+        if (nativeOutput != null) {
+            nativeOutput.psgWrite(value);
+        }
+    }
+
     /** The attached native-compatible output stage, or {@code null}. */
     public NativeCompatiblePcmOutput nativeCompatibleOutput() {
         return nativeOutput;

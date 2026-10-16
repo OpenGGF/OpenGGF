@@ -45,10 +45,12 @@ import java.util.Objects;
  *       ({@code system.c:184-186}).</li>
  * </ul>
  *
- * <p><b>What it does not model (explicit exclusions).</b> PSG: Genesis Plus GX
- * adds its PSG deltas ({@code psg_preamp 150}, {@code hq_psg}) into the same
- * buffer; this stage carries no PSG contribution, so its output equals the
- * native output only while the PSG is silent. The MAME YM2612 core (BizHawk
+ * <p>PSG: the session's PSG data-bus bytes enter {@link NativeCompatiblePsgOutput}
+ * at the master-clock time of the chip's next YM clock and add their deltas to
+ * the same buffer, as GPGX's {@code psg.c} does ({@code psg_preamp 150},
+ * {@code hq_psg 1}). PSG write times are the production session's own.
+ *
+ * <p><b>What it does not model (explicit exclusions).</b> The MAME YM2612 core (BizHawk
  * {@code GenesisFMSoundChip 0}, the Knuckles complete movie) is not
  * available: this stage is Nuked-only and never stands in for it. PAL timing
  * and mono mixing are not modelled. Write scheduling and the DAC are the
@@ -61,7 +63,8 @@ import java.util.Objects;
  *
  * <p><b>Rewind.</b> Every mutable field (buffer offset and factor, both
  * integrators, both sample buffers, held FM level and previous delta level,
- * master-clock frame position, low-pass carries, equaliser histories and the
+ * master-clock frame position, PSG generator state, low-pass carries,
+ * equaliser histories and the
  * pending output queue) is carried by {@link Snapshot} and by
  * {@link #copyFrom(NativeCompatiblePcmOutput)}; {@link Ym2612Chip} includes
  * the stage in both its snapshot and its mutation-backup paths.
@@ -131,6 +134,8 @@ public final class NativeCompatiblePcmOutput {
 
     private final Config config;
     private final BlipBuf blip = new BlipBuf(BUFFER_SIZE);
+    /** GPGX-equivalent PSG contribution into the same buffer ({@link NativeCompatiblePsgOutput}). */
+    private final NativeCompatiblePsgOutput psg = new NativeCompatiblePsgOutput();
     /** Master-clock time of the next YM internal clock inside the open frame ({@code fm_cycles_start}). */
     private int fmTime;
     /** Pin sum of the last complete slot sweep, per side ({@code ym3438_sample}). */
@@ -184,7 +189,22 @@ public final class NativeCompatiblePcmOutput {
         fmTime += YM_CLOCK_RATIO;
     }
 
+    /**
+     * One PSG data-bus byte at the master-clock time of the next YM clock: the
+     * session presents PSG bytes between chip clocks, where GPGX's
+     * {@code psg_write} receives the CPU's cycle count.
+     */
+    void psgWrite(int value) {
+        if (fmTime >= FRAME_MCYCLES) {
+            endFrame();
+            fmTime -= FRAME_MCYCLES;
+        }
+        psg.write(blip, fmTime, value & 0xFF);
+    }
+
     private void endFrame() {
+        // sound_update: the PSG runs to the frame end before the buffer frame ends (sound.c:377-381).
+        psg.endFrame(blip, FRAME_MCYCLES);
         blip.endFrame(FRAME_MCYCLES);
         int size = blip.samplesAvail();
         blip.readSamples(frameScratch, 0, size);
@@ -236,6 +256,11 @@ public final class NativeCompatiblePcmOutput {
         }
     }
 
+    /** Absolute master-clock time of the next YM clock since the stage's origin (vector generation). */
+    long masterClock() {
+        return framesEnded * FRAME_MCYCLES + fmTime;
+    }
+
     /** Completed NTSC frames whose samples have been read into the queue. */
     public long framesEnded() {
         return framesEnded;
@@ -264,12 +289,14 @@ public final class NativeCompatiblePcmOutput {
     /** Complete immutable stage state. */
     public record Snapshot(Config config, BlipBuf.State blip, int fmTime, int heldLeft, int heldRight,
             int lastLeft, int lastRight, long framesEnded, short lowPassLeft, short lowPassRight,
-            ThreeBandEq.State eqLeft, ThreeBandEq.State eqRight, short[] pending) {
+            ThreeBandEq.State eqLeft, ThreeBandEq.State eqRight, short[] pending,
+            NativeCompatiblePsgOutput.State psg) {
         public Snapshot {
             Objects.requireNonNull(config, "config");
             Objects.requireNonNull(blip, "blip");
             Objects.requireNonNull(eqLeft, "eqLeft");
             Objects.requireNonNull(eqRight, "eqRight");
+            Objects.requireNonNull(psg, "psg");
             pending = pending.clone();
         }
 
@@ -293,13 +320,14 @@ public final class NativeCompatiblePcmOutput {
                     && lowPassRight == other.lowPassRight
                     && eqLeft.equals(other.eqLeft)
                     && eqRight.equals(other.eqRight)
-                    && Arrays.equals(pending, other.pending);
+                    && Arrays.equals(pending, other.pending)
+                    && psg.equals(other.psg);
         }
 
         @Override
         public int hashCode() {
             int result = Objects.hash(config, blip, fmTime, heldLeft, heldRight, lastLeft, lastRight,
-                    framesEnded, lowPassLeft, lowPassRight, eqLeft, eqRight);
+                    framesEnded, lowPassLeft, lowPassRight, eqLeft, eqRight, psg);
             return 31 * result + Arrays.hashCode(pending);
         }
     }
@@ -307,7 +335,7 @@ public final class NativeCompatiblePcmOutput {
     public Snapshot captureSnapshot() {
         return new Snapshot(config, blip.captureState(), fmTime, heldLeft, heldRight, lastLeft, lastRight,
                 framesEnded, lowPassLeft, lowPassRight, eqLeft.captureState(), eqRight.captureState(),
-                Arrays.copyOf(pending, pendingFrames * 2));
+                Arrays.copyOf(pending, pendingFrames * 2), psg.captureState());
     }
 
     public void restoreSnapshot(Snapshot snapshot) {
@@ -326,6 +354,7 @@ public final class NativeCompatiblePcmOutput {
         lowPassRight = snapshot.lowPassRight();
         eqLeft.restoreState(snapshot.eqLeft());
         eqRight.restoreState(snapshot.eqRight());
+        psg.restoreState(snapshot.psg());
         short[] queued = snapshot.pending;
         ensureCapacity(queued.length);
         System.arraycopy(queued, 0, pending, 0, queued.length);
@@ -354,6 +383,7 @@ public final class NativeCompatiblePcmOutput {
         lowPassRight = source.lowPassRight;
         eqLeft.copyFrom(source.eqLeft);
         eqRight.copyFrom(source.eqRight);
+        psg.copyFrom(source.psg);
         ensureCapacity(source.pendingFrames * 2);
         System.arraycopy(source.pending, 0, pending, 0, source.pendingFrames * 2);
         pendingFrames = source.pendingFrames;

@@ -41,6 +41,13 @@ final class NativeCompatiblePcmVectors {
     private NativeCompatiblePcmVectors() {
     }
 
+    /** A PSG data-bus byte at absolute master clock {@code masterClock} of the stage's timeline. */
+    record PsgWrite(long masterClock, int value) {
+    }
+
+    /** When non-null, receives every PSG write made on a chip with a stage, in order (vector input). */
+    static List<PsgWrite> psgRecorder;
+
     /** A raw YM bus strobe presented before clock {@code cycle}; {@code busPort} is the Nuked port 0..3. */
     record Strobe(long cycle, int busPort, int value) {
     }
@@ -103,17 +110,19 @@ final class NativeCompatiblePcmVectors {
     private static final int[] EVENT_FRAMES = buildEventFrames();
 
     private static int[] buildEventFrames() {
-        List<Integer> frames = new ArrayList<>(List.of(0, 10, 300, 1500, 3000, 3500));
+        List<Integer> frames = new ArrayList<>(List.of(0, 10, 100, 300, 800, 1500, 1600, 2400, 3000, 3200,
+                3500, 4200, 4800, 5600));
         for (int i = 0; i < 20; i++) {
             frames.add(3520 + i * 50);
         }
         frames.addAll(List.of(5000, 6000));
-        return frames.stream().mapToInt(Integer::intValue).toArray();
+        return frames.stream().mapToInt(Integer::intValue).sorted().distinct().toArray();
     }
 
     private static void applyEvent(Ym2612Chip chip, int event) {
         switch (event) {
             case 0 -> {
+                psg(chip, 0x9F, 0xBF, 0xDF, 0xFF);
                 chip.write(0, 0x22, 0x00);
                 chip.write(0, 0x27, 0x00);
                 chip.write(0, 0x28, 0x00);
@@ -130,6 +139,14 @@ final class NativeCompatiblePcmVectors {
                 chip.write(0, 0xA1, 0x0F);
             }
             case 10 -> chip.write(0, 0x28, 0xF0);
+            case 100 -> psg(chip, 0x8E, 0x0F, 0x92);
+            case 800 -> psg(chip, 0xA5, 0x0A, 0xB4);
+            case 1600 -> psg(chip, 0xE4, 0xF3);
+            case 2400 -> psg(chip, 0xC9, 0x05, 0xE3);
+            case 3200 -> psg(chip, 0x98, 0xF6);
+            case 4200 -> psg(chip, 0x9F, 0xC2, 0x3F);
+            case 4800 -> psg(chip, 0xFF, 0xE6, 0xF1);
+            case 5600 -> psg(chip, 0xBF, 0xFF);
             case 300 -> chip.write(0, 0x28, 0xF1);
             case 1500 -> {
                 chip.write(0, 0xA4, 0x2A);
@@ -147,6 +164,25 @@ final class NativeCompatiblePcmVectors {
                 chip.write(0, 0x2A, (0x80 + (step % 2 == 0 ? 1 : -1) * (step * 6 + 9)) & 0xFF);
             }
         }
+    }
+
+    /** PSG bytes through the production chip's native-compatible tap, recorded with their master clock. */
+    private static void psg(Ym2612Chip chip, int... values) {
+        for (int value : values) {
+            NativeCompatiblePcmOutput stage = chip.nativeCompatibleOutput();
+            if (stage != null && psgRecorder != null) {
+                psgRecorder.add(new PsgWrite(stage.masterClock(), value));
+            }
+            chip.nativeCompatiblePsgWrite(value);
+        }
+    }
+
+    static String psgWritesCsv(List<PsgWrite> writes) {
+        StringBuilder csv = new StringBuilder("master_clock,value\n");
+        for (PsgWrite write : writes) {
+            csv.append(write.masterClock()).append(',').append(write.value()).append('\n');
+        }
+        return csv.toString();
     }
 
     private static void render(Ym2612Chip chip, int from, int to, int[] left, int[] right) {

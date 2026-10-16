@@ -4,7 +4,7 @@
 capture and diagnostic output. It does not close production rendered-audio
 parity on its own. The byte-exact results below cover one tier: the output
 stage on an identical strobe schedule. Every declared ending product,
-contiguous transitions, PAL, the Knuckles/MAME core, PSG and DAC timing each
+contiguous transitions, PAL, the Knuckles/MAME core, PSG/DAC write timing each
 still need their own evidence.
 
 Source: lane `pcm-output`, branch `feature/ai-s3k-r2-pcm-native-output`, based
@@ -196,8 +196,37 @@ region and a BK2 `Region` that GPGX resolves to PAL. Autodetect follows
 `get_region`'s USA > Japan > Europe order on the ROM header; the locked-on
 S3K header reads `JUE`, which resolves to USA.
 
-PSG remains excluded from the stage. Native output mixes PSG into the same
-buffer, so the stage cannot match native PCM while the PSG sounds.
+The exploratory capture ran before the stage's PSG half existed, so its
+engine stream is FM and DAC only.
+
+## PSG half (component tier, 2026-10-16)
+
+`NativeCompatiblePsgOutput` models GPGX `psg.c`'s documented behaviour; no
+text is copied. It takes the session's PSG data-bus bytes at the master-clock
+time of the chip's next YM clock and adds band-limited deltas at 240-master-
+clock generator steps to the same buffer.
+- Integrated part: 15-bit noise, feedback mask `0x9`, a zero period acts as 1.
+- Levels: `2800 * 10^(-2k/20)` truncated, times preamp 150.
+- Writes: a volume change made while a channel is high lands at the next
+  240-cycle boundary. A noise-control write resets the shift register.
+
+The vector stream adds 25 PSG bytes: tone frequency latch/data pairs,
+attenuation changes, white noise, tone-3-driven periodic noise and silencing.
+GPGX's own `psg.c` was linked into the harness against a stub `shared.h`. All
+four vectors (None, ThreeBand unity, LowPass `0x6666`, ThreeBand 150/50/200)
+remain byte-identical (5,887 stereo samples) with PSG mixed in. FM strobes
+are unchanged.
+- Perturbations: one flipped PSG data bit, and a level write moved a quarter
+  NTSC frame later, each break the None vector. Fine-scale PSG timing is not
+  proven by these vectors. A one-YM-clock move of a frequency write and a
+  960-clock move of the level write were both invisible, because GPGX
+  applies PSG effects on 240-clock steps and a low channel's level change
+  waits for its next flip.
+- Rewind: the PSG generator state rides in both the snapshot and the
+  mutation-backup paths, and omitting it changes the replay.
+- Scope: this proves the PSG output stage on an identical write schedule
+  only. Production PSG write timing is the session's own, and it lands
+  between frames.
 
 ## Remaining open items
 
@@ -207,7 +236,8 @@ buffer, so the stage cannot match native PCM while the PSG sounds.
   59.92/49.70 Hz hardware frame.
 - [CARRY] An authentic production entry with native-matched history before
   any waveform-equality claim.
-- [OUTPUT] A GPGX-equivalent PSG contribution (`psg_preamp` 150, `hq_psg`).
+- [SCHEDULE] PSG write timing: engine PSG bytes land at the next YM clock after
+  a service; native bytes land at Z80/68k bus times.
 - [CORE] A MAME YM2612 output path for the Knuckles movie; Nuked is never
   substituted.
 - PAL, DAC timing, carry state at an ending window, and every ending product.

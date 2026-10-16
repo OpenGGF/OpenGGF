@@ -34,9 +34,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * native-source vectors from Genesis Plus GX's own {@code ym3438.c},
  * {@code blip_buf.c} and {@code eq.c} (generator and hashes in
  * {@code src/test/resources/audio/native-compatible-pcm/v1/README.md}).
- * Every equality has a perturbation that must break it. Passing proves the
- * output stage on an identical strobe schedule only: not PSG, not the MAME
- * core, not production write scheduling, and not any game window.
+ * The PSG half is compared with GPGX's own {@code psg.c} on the same
+ * stream's PSG bytes. Every equality has a perturbation that must break it.
+ * Passing proves the output stage on an identical write schedule only: not
+ * the MAME core, not production write scheduling, and not any game window.
  */
 class TestNativeCompatiblePcmOutput {
 
@@ -57,10 +58,19 @@ class TestNativeCompatiblePcmOutput {
     void productionChipStrobeScheduleIsTheVectorInput() {
         NativeCompatiblePcmVectors.StrobeRecorder recorder = new NativeCompatiblePcmVectors.StrobeRecorder();
         Ym2612Chip chip = NativeCompatiblePcmVectors.newChip(NONE, recorder);
-        NativeCompatiblePcmVectors.drive(chip, 0, CHIP_FRAMES, null, null);
+        List<NativeCompatiblePcmVectors.PsgWrite> psgWrites = new ArrayList<>();
+        NativeCompatiblePcmVectors.psgRecorder = psgWrites;
+        try {
+            NativeCompatiblePcmVectors.drive(chip, 0, CHIP_FRAMES, null, null);
+        } finally {
+            NativeCompatiblePcmVectors.psgRecorder = null;
+        }
         assertEquals(NativeCompatiblePcmVectors.resourceText("strobes.csv"),
                 NativeCompatiblePcmVectors.strobesCsv(recorder.strobes),
                 "the vectors were generated from this exact production strobe schedule");
+        assertEquals(NativeCompatiblePcmVectors.resourceText("psg_writes.csv"),
+                NativeCompatiblePcmVectors.psgWritesCsv(psgWrites),
+                "and from these PSG bytes at these master clocks");
     }
 
     @ParameterizedTest(name = "{0}")
@@ -76,15 +86,35 @@ class TestNativeCompatiblePcmOutput {
     }
 
     @Test
+    void perturbedPsgByteBreaksTheNoneVector() {
+        short[] expected = NativeCompatiblePcmVectors.s16(NativeCompatiblePcmVectors.resource("native-none.s16"));
+        int[][] sums = productionPinSums();
+        List<long[]> psg = psgWrites();
+        List<long[]> changed = new ArrayList<>(psg);
+        long[] tone = changed.get(5);
+        changed.set(5, new long[] {tone[0], tone[1] ^ 0x01});
+        assertFalse(Arrays.equals(expected, feedStandalone(NONE, sums, changed, 0)), "one PSG data bit must be visible");
+        // Write 6 is tone 0's first attenuation (0x92). Small moves can be invisible: GPGX applies PSG effects on
+        // 240-master-clock steps and a level change on a low channel waits for the next flip. A quarter-frame
+        // move spans several flips of the new tone and must change the output.
+        List<long[]> late = new ArrayList<>(psg);
+        long[] write = late.get(6);
+        assertEquals(0x92, write[1]);
+        late.set(6, new long[] {write[0] + NativeCompatiblePcmOutput.FRAME_MCYCLES / 4, write[1]});
+        assertFalse(Arrays.equals(expected, feedStandalone(NONE, sums, late, 0)), "a PSG level write a quarter frame later");
+    }
+
+    @Test
     void perturbedPinSumOrClockOriginBreaksTheNoneVector() {
         short[] expected = NativeCompatiblePcmVectors.s16(NativeCompatiblePcmVectors.resource("native-none.s16"));
         int[][] sums = productionPinSums();
-        assertArrayEquals(expected, feedStandalone(NONE, sums, 0), "standalone feed reproduces the chip tap");
+        List<long[]> psg = psgWrites();
+        assertArrayEquals(expected, feedStandalone(NONE, sums, psg, 0), "standalone feed reproduces the chip tap");
 
         int[][] perturbed = {sums[0].clone(), sums[1].clone()};
         perturbed[0][2000] += 1;
-        assertFalse(Arrays.equals(expected, feedStandalone(NONE, perturbed, 0)), "one pin-sum unit must be visible");
-        assertFalse(Arrays.equals(expected, feedStandalone(NONE, sums, 1)), "one YM clock (42 M-cycles) must be visible");
+        assertFalse(Arrays.equals(expected, feedStandalone(NONE, perturbed, psg, 0)), "one pin-sum unit must be visible");
+        assertFalse(Arrays.equals(expected, feedStandalone(NONE, sums, psg, 1)), "one YM clock (42 M-cycles) must be visible");
     }
 
     @Test
@@ -283,7 +313,10 @@ class TestNativeCompatiblePcmOutput {
                         b.eqLeft(), b.eqRight(), b.pending())),
                 new StageField("pending samples", (b, d) -> copy(b, b.fmTime(), b.heldLeft(), b.heldRight(),
                         b.lastLeft(), b.lastRight(), b.framesEnded(), b.lowPassLeft(), b.lowPassRight(),
-                        b.eqLeft(), b.eqRight(), d.pending()))));
+                        b.eqLeft(), b.eqRight(), d.pending())),
+                new StageField("psg generator state", (b, d) -> new Snapshot(b.config(), b.blip(), b.fmTime(),
+                        b.heldLeft(), b.heldRight(), b.lastLeft(), b.lastRight(), b.framesEnded(), b.lowPassLeft(),
+                        b.lowPassRight(), b.eqLeft(), b.eqRight(), b.pending(), d.psg()))));
         if (config.filter() == Filter.THREE_BAND) {
             fields.add(new StageField("eq history left", (b, d) -> copy(b, b.fmTime(), b.heldLeft(),
                     b.heldRight(), b.lastLeft(), b.lastRight(), b.framesEnded(), b.lowPassLeft(),
@@ -306,14 +339,14 @@ class TestNativeCompatiblePcmOutput {
     private static StageField blipField(String name, BiFunction<BlipBuf.State, BlipBuf.State, BlipBuf.State> mixer) {
         return new StageField(name, (b, d) -> new Snapshot(b.config(), mixer.apply(b.blip(), d.blip()), b.fmTime(),
                 b.heldLeft(), b.heldRight(), b.lastLeft(), b.lastRight(), b.framesEnded(), b.lowPassLeft(),
-                b.lowPassRight(), b.eqLeft(), b.eqRight(), b.pending()));
+                b.lowPassRight(), b.eqLeft(), b.eqRight(), b.pending(), b.psg()));
     }
 
     private static Snapshot copy(Snapshot b, int fmTime, int heldLeft, int heldRight, int lastLeft, int lastRight,
             long framesEnded, short lowPassLeft, short lowPassRight, NativeCompatiblePcmOutput.ThreeBandEq.State eqLeft,
             NativeCompatiblePcmOutput.ThreeBandEq.State eqRight, short[] pending) {
         return new Snapshot(b.config(), b.blip(), fmTime, heldLeft, heldRight, lastLeft, lastRight, framesEnded,
-                lowPassLeft, lowPassRight, eqLeft, eqRight, pending);
+                lowPassLeft, lowPassRight, eqLeft, eqRight, pending, b.psg());
     }
 
     // ------------------------------------------------------------- wiring
@@ -390,6 +423,19 @@ class TestNativeCompatiblePcmOutput {
         return out;
     }
 
+    /** The committed PSG vector input as {@code {masterClock, value}} pairs. */
+    private static List<long[]> psgWrites() {
+        List<long[]> writes = new ArrayList<>();
+        for (String line : NativeCompatiblePcmVectors.resourceText("psg_writes.csv").split("\n")) {
+            if (line.isBlank() || line.startsWith("master_clock")) {
+                continue;
+            }
+            String[] parts = line.split(",");
+            writes.add(new long[] {Long.parseLong(parts[0]), Long.parseLong(parts[1])});
+        }
+        return writes;
+    }
+
     /** The production chip's 24-cycle pin sums for the fixed stream (frame value >> OUTPUT_SHIFT, lossless). */
     private static int[][] productionPinSums() {
         int[] left = new int[CHIP_FRAMES];
@@ -409,17 +455,24 @@ class TestNativeCompatiblePcmOutput {
      * sweep's sum is latched on its 24th clock. {@code leadingClocks} shifts
      * the master-clock origin.
      */
-    private static short[] feedStandalone(Config config, int[][] sums, int leadingClocks) {
+    private static short[] feedStandalone(Config config, int[][] sums, List<long[]> psg, int leadingClocks) {
         NativeCompatiblePcmOutput stage = new NativeCompatiblePcmOutput(config);
-        for (int i = 0; i < leadingClocks; i++) {
+        int[] next = {0};
+        Runnable clock = () -> {
+            while (next[0] < psg.size() && psg.get(next[0])[0] <= stage.masterClock()) {
+                stage.psgWrite((int) psg.get(next[0]++)[1]);
+            }
             stage.clockFm();
+        };
+        for (int i = 0; i < leadingClocks; i++) {
+            clock.run();
         }
         for (int frame = 0; frame < sums[0].length && stage.framesEnded() < NTSC_FRAMES; frame++) {
-            for (int clock = 0; clock < 23; clock++) {
-                stage.clockFm();
+            for (int c = 0; c < 23; c++) {
+                clock.run();
             }
             stage.latchFmFrame(sums[0][frame], sums[1][frame]);
-            stage.clockFm();
+            clock.run();
         }
         short[] all = drainAll(stage);
         short[] expectedLength = NativeCompatiblePcmVectors.s16(NativeCompatiblePcmVectors.resource("native-none.s16"));
