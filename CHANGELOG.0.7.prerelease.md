@@ -88,7 +88,10 @@ Unreleased. The earlier development themes remain in
   routine fades the level in from black over its first 21 frames, with the player,
   HUD and card already at full colour. This covers zone changes, new games from the
   data select, restarts, special and bonus stage returns, and loads without a card.
-  Previously the level stayed black and then appeared at full brightness. The data
+  Previously the level stayed black and then appeared at full brightness. Each fade
+  step reaches the screen with the same frame's sprites and HUD, one frame after it is
+  computed, as the original's palette upload does, and a rewind shows the step that
+  was on screen. The data
   select no longer fades the whole screen, card included, back in on top. Seamless
   act changes still do not fade, as in the original. The score, time and ring
   counters are drawn over the card's red banner, as on hardware. Direct boots, new
