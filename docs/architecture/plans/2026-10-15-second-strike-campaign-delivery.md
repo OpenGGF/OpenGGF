@@ -159,8 +159,9 @@ version remains unpublished0.7.0; the21107-line candidate pin is unchanged. Exis
 No current-artifact route or harder-gameplay claim is inferred from compiler support.
 Campaign workers are stopped and their unmerged trees remain cleanup_pending.
 
-Next: perform normal main integration/push of this verified foundation and account
-for cleanup while retaining the campaign teams' unmerged inputs. Original M0–M6 delivery is still
+The verified foundation is integrated and pushed on develop606330ef7; remote hash
+was checked and main's eight unrelated changes remain intact. Its runtime/build
+source is byte-identical to the tested b3d307daf tree. Original M0–M6 delivery is still
 incomplete: all four full AIZ-to-HCZ cold routes and substantial later-act/character,
 bonus/ending, counterplay and hardness gates remain open. The separate development
 reel is delivered; it does not close those gates. Historical batch handoffs and
@@ -1415,3 +1416,42 @@ These supersede older pairs for new work, without relabelling any53676/1f6/AAC
 physical witness. Inactive MHZ/LRZ/HPZ ingredients remain unwired; the rejected SOZ
 golem is STOCK. Neither packaging nor88 startup checks closes the remaining cold
 routes, whole-zone counterplay/hardness, bonus-family or ending/resource gates.
+
+### Integrated foundation and bounded continuation
+
+Main develop and origin/develop both resolve to
+`606330ef70f1af905639cd296048d11d9f09517c` after fast-forward integration/push.
+The post-integration source comparison against tested b3d307daf is empty for
+`src`, `examples`, `racing`, POM and API policy; only the verification prose was
+added. No unchanged broad smoke or artifact suite is repeated for that identical
+runtime source. Main's three dirty disassemblies and five untracked user files
+remain byte/status-preserved by the integration operation.
+
+The clean lifetime helper at1bff1b90 is fully merged and retired under the main
+worktree lease; its local branch is deleted and stale worktree metadata pruned.
+Its accepted patches, plans and external physical evidence remain accounted.
+Delivery and campaign trees remain for active work; the campaign lead, west/east,
+AIZ content/combat/native and later-zone trees contain useful unmerged or staged
+inputs and remain cleanup_pending. No unknown source, ROM, config or save files
+are deleted. Main branch never switched; no feature branch was pushed.
+
+Original work continues with two bounded assignments after the foundation push:
+
+- Existing root Sol helper `second_strike_enemy_boss_scope` is reused for AIZ
+  input-authoring in the existing AIZ completion tree. First outcome is a
+  source-grounded ordinary-input plan past the known true-Act2 spring/Rhinobot266
+  death from11708; no production edit, new worker or engine request before that
+  plan is handed root. It receives the actual19448 pair/creator hashes. Complete
+  native entry remains required for a selected research recipe to qualify a cold
+  route, and all four reference axes remain open.
+- Sonnet5.5 source-only ICZ shelter plan, task
+  `second-strike-c1-icz-shelter-source-plan-20261016-r1`, owns authentic ICZ1 WARNED
+  stalactite geometry/ordinary counterplay planning in the existing east tree.
+  No engine request or API/native/creator edit in that bounded turn. This is new
+  physical-counterplay scope, not a repeat of the repaired CNZ B replay or624 ICZ
+  list/ledger checks. Root sequences any implementation/actual capture and fresh
+  coherent Opus review later.
+
+Neither assignment authorizes another MHZ calibration or changes the inactive
+MHZ/LRZ/HPZ provider state. No M4–M6, all-route, harder-gameplay or complete-delivery
+claim follows from this foundation checkpoint.
