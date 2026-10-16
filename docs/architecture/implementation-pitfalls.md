@@ -123,6 +123,15 @@ against a disassembly trace without converting. Y increases downward (Mega Drive
 convention). VDP coordinates in the disassembly are offset by +128; the engine uses direct
 screen coordinates.
 
+**Missing terrain is not a grounding signal.** S3K horizontal spring
+`sub_2326C` rejects `Status_InAir`. Its engine ordering compensation may accept
+actual negative paired-foot terrain distance, but `ObjectTerrainUtils.noCollision`
+also describes real empty terrain, not just absent test services. Never substitute
+`player centreY >= springY` when both probes miss. Supply actual collision tiles
+in isolated landing fixtures and use the object's injected level/collision context;
+zero distance remains airborne on this pass. This removes the test-only exception
+left by `50a45804f` after the ICZ early-launch correction.
+
 **Replacing a player is not initializing a camera.** `Camera.setFocusedSprite`
 also resets live and render-copy coordinates to the sprite's top-left. During
 held gameplay, preserve and restore the camera snapshot around roster replacement;
