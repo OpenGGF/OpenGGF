@@ -276,7 +276,10 @@ Unreleased. The earlier development themes remain in
   uses BizHawk's Nuked YM2612 scale and the movie's filter, which is None,
   LowPass or ThreeBand with musl's `sin`. It produces 44.1 kHz PCM for comparison
   against BizHawk. On an identical strobe schedule it matches Genesis Plus GX
-  source vectors byte for byte. PSG, the MAME YM2612 core and real game windows
+  source vectors byte for byte. `GameplayCaptureTool --native-pcm` records it from
+  live gameplay using a BK2's own settings; only NTSC Nuked movies are accepted.
+  A first real window measured the presentation clock running 1.29 per mille
+  short of the ROM's hardware frame. PSG, the MAME YM2612 core and waveform parity
   are not covered. Ordinary sound and the 48 kHz presentation are unchanged.
 
 Rewind verification compares private records and complete captured opaque arrays

@@ -114,44 +114,88 @@ The actual native core links musl. Evidence:
 The stock core's inlined per-sample EQ code has not been audited at machine
 level; only its source `eq.c` has.
 
-## Step 3 (first real window): not executed — blockers
+## First real window (2026-10-16): measured tiers
 
-No real gameplay window was compared, and the PCM-equality tier is unmeasured.
+The tiers below are kept separate. None of them is waveform parity.
 
-1. **Engine side: live presentation is not wired.** Production gameplay audio
-   builds its session `Settings` inside `AudioManager`, which the ending-audio
-   lane owns. Enabling the stage there, and draining it in
-   `GameplayCaptureTool --audio`, needs a coordinated `AudioManager` change. It
-   was not made.
-2. **Native side: no strobe schedule or per-frame PCM producer exists.**
-   - The pinned v2 oracle partitions YM/PSG writes per zVInt service without
-     master-clock timestamps. No reviewed observer emits per-strobe M-cycle
-     times.
-   - `GpgxHost.DrainDiagnosticAudio` can supply final PCM, but no runner for
-     the Sonic/Tails movie exists.
-3. **Structural [SCHEDULE] divergence, known in advance.** The live
-   presentation renders 800 samples per frame (48 kHz at 60 frames). That
-   advances the chip by 800 * 53,267.03 / 48,000 * 24 ≈ 21,306.8 YM clocks per
-   frame; native frames are 896,040 / 42 ≈ 21,334.3.
-   - The wiring test drained 2,943 stereo samples (four NTSC frames) after
-     four 800-sample frames, because the resampler's look-ahead clocks past
-     the fourth boundary. That look-ahead is a fixed offset; over a window the
-     rate gap of about 27.5 clocks per frame dominates.
-   - Engine writes queue during the service and are applied with bus pacing at
-     the next render. Native writes land at Z80 bus times inside the frame.
-   - So once a native per-strobe schedule exists, the first schedule
-     divergence is expected at or near the first strobe. Its value is
-     unmeasured until then.
+**[NATIVE OBSERVATION]** TraceChaser `--final-pcm-window` (`feaf6fb0c`, local)
+ran `s3k-sonic-tails-complete-emeralds.bk2` (sha256 `ad40fb0b...`) on the
+stock BizHawk 2.11 core (`c4231296...`) under the movie's own settings:
+`Nuked_YM2612`, ThreeBand 880/5000 Hz, gains 100. Rows 0-2399 produced
+1,766,274 stereo frames (735.9475 per row, 228 lag rows), pcm sha256
+`6fc81f48...aaa2`, in 2 s.
 
-PSG is excluded from the stage. Native output mixes PSG into the same buffer,
-so even a matching FM schedule cannot match native PCM while the PSG sounds.
+**[ENGINE LIVE PATH]** `GameplayCaptureTool --audio --native-pcm` enables
+the stage through
+`AudioManager.setNativeCompatiblePcmCapture` (default `null`) and drains it
+after every presented frame. The capture booted AIZ1 with Sonic and Tails and
+replayed the same movie from row 577, the `aiz` segment's `bk2_frame_offset`,
+for 600 frames: one stage session, 440,832 stereo frames. Maven finished
+20:15:41Z after a 1,261 s queue wait.
+
+**[CADENCE] — a structural schedule defect, measured.**
+- Native: rows 577-1176 hold 441,569 stereo frames, one 3420 x 262 =
+  896,040-master-clock NTSC frame per row. No row in that range is a lag
+  row, and lag rows also run a full hardware frame.
+- Engine: 600 presentations completed exactly blip_buf's sample count for
+  599 NTSC frames (440,832), and one presentation drained nothing. The live
+  presentation clock (`AudioPresentationProducer`'s `AudioFrameClock`) takes
+  `sampleRate / FrameRateResolver.effective()`, which is 48,000 / 60 = 800
+  samples per presentation. That advances the production chip by
+  800 * 24 * 53,267.03 / 48,000 = 21,306.8 YM clocks, or 894,886.2 master
+  clocks per presentation. The ROM's frame is 896,040, so each presentation
+  is 1,153.8 master clocks (1.29 per mille) short.
+- The initial fractional phase is accounted for. Both blip buffers start at
+  `factor / 2`, and the engine's chip look-ahead ended NTSC frame 0 inside
+  presentation 0. 600 * 894,886.2 / 896,040 = 599.23 frames, consistent
+  with 599 frames ending.
+- The owner is the presentation clock (`AudioFrameClock` from
+  `FrameRateResolver`: configured FPS 60 for NTSC, 50 for PAL against the
+  ROM's 49.70 Hz). It is not the stage. A fix changes ordinary presentation
+  pacing, so it needs a lead/user decision and is not made here.
+
+**[CARRY / INGRESS] — exploratory, not attributable.** The engine capture
+boots AIZ1 directly and replays inputs from row 577. Native ran rows 0-576
+first (SEGA, title, menus), so chip, driver, blip and EQ history differ.
+`compare_native_pcm_window.py` reports DIFFERENT at stereo frame 0: native
+(792, 1002) against engine (0, 0). The earliest unmatched ingress owner is
+the capture entry itself: `GameplayCaptureSession.boot(zone, act)` creates a
+fresh presentation session at level boot, with no power-on, title or menu
+audio history. Waveform equality and musical first-cause attribution need an
+authentic production entry from power-on or title matched to native rows,
+and that does not exist yet.
+
+**[PER-SERVICE LEDGER] — unavailable for this window.**
+- The existing per-service oracle (`s3k-aiz1-intro-reference-v2`) is a
+  different movie, `s3k-complete-sonic-tails.bk2`, recorded with MAME_YM2612
+  and no filter. Its inputs diverge from the emeralds movie at row 113.
+- The existing v2 producer (`S3kAudioOracleReferenceCaptureV2`, lock-matching
+  observer core `25ee305d...`) faults on the emeralds movie: EndFrame -3 at
+  frame 146, reason 5, 68k PC `$108A`. That PC is inside HInt2's
+  palette-transfer `move.l` (sonic3k.lst:5068).
+- The engine's per-frame logical chip writes are recorded
+  (`chip-writes.jsonl`) for a later comparison.
+
+**[STROBE CLOCK] — not measured.** No reviewed observer gives native
+per-strobe master-clock times, so per-strobe timing is unmeasured. That does
+not block the PCM and cadence tiers above.
+
+**Region.** The stage is NTSC-only. `--native-pcm` refuses a PAL engine
+region and a BK2 `Region` that GPGX resolves to PAL. Autodetect follows
+`get_region`'s USA > Japan > Europe order on the ROM header; the locked-on
+S3K header reads `JUE`, which resolves to USA.
+
+PSG remains excluded from the stage. Native output mixes PSG into the same
+buffer, so the stage cannot match native PCM while the PSG sounds.
 
 ## Remaining open items
 
-- [SCHEDULE] A native per-strobe master-clock observer and a Sonic/Tails PCM
-  runner.
-- [SCHEDULE] Live-path wiring (owned by `AudioManager`) and a first-divergence
-  report.
+- [SCHEDULE] A native per-strobe master-clock observer, and a per-service
+  producer that runs the emeralds movie.
+- [CADENCE] A decision on the 60/50 Hz presentation clock against the ROM's
+  59.92/49.70 Hz hardware frame.
+- [CARRY] An authentic production entry with native-matched history before
+  any waveform-equality claim.
 - [OUTPUT] A GPGX-equivalent PSG contribution (`psg_preamp` 150, `hq_psg`).
 - [CORE] A MAME YM2612 output path for the Knuckles movie; Nuked is never
   substituted.

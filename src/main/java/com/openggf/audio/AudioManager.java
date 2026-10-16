@@ -248,6 +248,10 @@ public class AudioManager implements MusicRestoreSink {
     private AudioVoiceRegistry shadowRegistry;
     private AudioPresentationProducer shadowProducer;
     private SmpsDriverSession shadowSmpsSession;
+    /** Opt-in capture/diagnostic native-compatible PCM stage for new presentation sessions; null by default. */
+    private com.openggf.audio.synth.NativeCompatiblePcmOutput.Config nativeCompatiblePcmCapture;
+    /** Presentation sessions built with the stage; a rebuild restarts the stage's clock origin. */
+    private int nativeCompatiblePcmSessions;
     private AudioRequestService shadowRequestService;
     /**
      * Frame rate the live {@link #shadowProducer} was constructed with. The
@@ -518,6 +522,34 @@ public class AudioManager implements MusicRestoreSink {
     /** Speaker starvation transitions in the current flushed source coordinate. */
     public long presentationUnderrunCount() {
         return presentationSink instanceof OpenAlPcmSink sink ? sink.underrunCount() : 0;
+    }
+
+    /**
+     * Opts new presentation sessions into the capture/diagnostic
+     * native-compatible PCM stage (see
+     * {@link com.openggf.audio.synth.NativeCompatiblePcmOutput}); {@code null}
+     * restores the default of none. Ordinary output is unchanged. Set it before
+     * the presentation exists: an existing session keeps its configuration.
+     * Package-private: tools reach it through {@link AudioNativePcmCaptureAccess},
+     * outside the creator-facing API.
+     */
+    synchronized void setNativeCompatiblePcmCapture(
+            com.openggf.audio.synth.NativeCompatiblePcmOutput.Config config) {
+        if (shadowSmpsSession != null) {
+            throw new IllegalStateException("native-compatible PCM capture must be set before the presentation exists");
+        }
+        nativeCompatiblePcmCapture = config;
+    }
+
+    /** Moves completed native-compatible stereo frames; zero without the stage or a session. */
+    synchronized int drainNativeCompatiblePcm(short[] target, int offsetSamples, int maxFrames) {
+        return shadowSmpsSession == null ? 0
+                : shadowSmpsSession.drainNativeCompatiblePcm(target, offsetSamples, maxFrames);
+    }
+
+    /** Presentation sessions built with the stage so far; more than one means its clock origin restarted. */
+    synchronized int nativeCompatiblePcmSessions() {
+        return nativeCompatiblePcmSessions;
     }
 
     public synchronized LiveCaptureAudioHandle beginLiveCaptureAudio(int frameRate) {
@@ -3714,7 +3746,11 @@ public class AudioManager implements MusicRestoreSink {
                         fmCoreConfig != null
                                 ? com.openggf.audio.synth.FmCoreSelection.fromConfig(
                                         fmCoreConfig.getString(SonicConfiguration.AUDIO_FM_CORE))
-                                : com.openggf.audio.synth.FmCoreSelection.ACCURATE);
+                                : com.openggf.audio.synth.FmCoreSelection.ACCURATE,
+                        nativeCompatiblePcmCapture);
+        if (nativeCompatiblePcmCapture != null) {
+            nativeCompatiblePcmSessions++;
+        }
         SmpsDriverSessionConfiguration sessionConfiguration =
                 new SmpsDriverSessionConfiguration(base.profile() != null
                         ? base.profile().smpsStatefulCommandPolicy()
