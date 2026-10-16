@@ -130,6 +130,16 @@ branches, preserving user config/ROM/save targets, useful captures and histories
 
 ## Compact execution checkpoint
 
+Current upstream-reconciled source is `04ac46c048a12f3ddcff5a0f89e7660499b76611`,
+integrated/pushed on develop with remote hash verified and all eight unrelated
+main paths preserved. Fresh package61564 and focus14330 qualify its matched
+engine/SDK and affected ownership/API/startup contracts:188 cases, no failures,
+errors or skips. The actual packaged surface now matches the upstream20737-line
+pin. Actual Second Strike and typed C2/C3 roots compile/package strictly with zero
+findings. See [current artifact refresh](#current-artifact-refresh-after-upstream4a26).
+This supersedes old pairs for new-current work without promoting any historical
+gameplay witness; no new cold route or campaign-completion claim is made.
+
 The foundation and bounded AIZ historical-latch repair are integrated and pushed
 as `f813672d0599f9debc0cf9a32148999fb3cc61a6`.
 Focus42171 passes8 cases without skips; Astra R1 has no blocker; actual89496
@@ -195,7 +205,8 @@ complete packaging on the upstream-reconciled source.
 C3 native ingredients, STOCK golem, placed A2/capsule, corrected reservation seam,
 ICZ fail-closed consumer, checkpoint high-water restoration, pending-art admission,
 Slots ROM authority and inactive MHZ/LRZ/HPZ creator files are composed. Public
-version remains unpublished0.7.0; the21107-line candidate pin is unchanged. Existing
+version remains unpublished0.7.0; at that source checkpoint the21107-line candidate
+pin was unchanged. Existing
 53676 artifacts remain immutable and keep their historical witness attribution.
 No current-artifact route or harder-gameplay claim is inferred from compiler support.
 Campaign workers are stopped and their unmerged trees remain cleanup_pending.
@@ -2119,3 +2130,66 @@ Native air is phased by qualifying owner dispatches: absent exits/refills/holds,
 airA and counterc imply `(c+1)+60*A` passes until underflow, not a universal wall
 time. A local future221 witness cannot qualify every submerged segment. No
 HCZ2 floor/seed/input recipe or new execution is authorized by this inventory.
+
+### Current artifact refresh after upstream4a26
+
+Root integrates its documentation with upstream4a26 as04ac46c04 and verifies the
+remote develop hash after push. Its executable source is byte-identical to4a26:
+the owned delta is four documentation files. This merge needs no repeated smoke
+ceremony. New upstream ownership/cleanup and signature changes do require fresh
+paired artifacts and affected qualification before further current-runtime work.
+
+Build61564 runs in the delivery worktree on clean04ac46c04 using Java25:
+`python3 tools/testing/maven_queue.py -Dmse=off -DskipTests verify`.
+DISPLAY/WAYLAND and Java override variables are unset; Lua5.4 remains explicit.
+It finishes successfully in1m26s, including actual engine/SDK/Javadoc/test-kit,
+default Time Attack bundle and the packaged-artifact verifier. No tests run in
+this build. Individual artifacts, not a copied build tree, are retained under
+`${TASK_ARTIFACTS}/artifacts/61564-04ac46c048a1`:
+
+| Artifact | Bytes | SHA256 |
+| --- | ---: | --- |
+| Engine fatjar | 26680021 | `e5a879d7cfce75a18a3c5d105dab0c3ed7940483a2a261e98bbe260db63aa84d` |
+| SDK | 249962 | `d9e56f4a1d87dc59f7c558625c506a424c0e50d2cf09d55e56c5cc74a30c4987` |
+| SDK Javadoc | 1329291 | `8cd5ee5e7f2bfd54d2c1defb3dc2bdf6dc867ca9ede35b3b9d147333aeb18f65` |
+| Test-kit | 30755 | `25871d0faffff58c813dbc611a931af30cfdf0661dcf2331fe3a28edf05de363` |
+| Separate Second Strike | 67252 | `cb2c4cb4a505163739e68edcac000b62eb694ac543dbda9fb631b30d6e935eac` |
+
+`ModApiSignatureSurface --snapshot` from the fatjar is byte-equal to the new
+20737-line candidate pin, SHA256
+`7d18feb8d76dbcc00587c0b1a2273d0d56c364c74a478bb801a8add935946809`.
+Public version remains unpublished0.7.0; root does not rewrite upstream's pin.
+All24 actual Second Strike Java sources compile with `javac --release 25` against
+this engine+SDK pair and publish through `GgfModCli package --warnings error` with
+zero findings. The creator jar remains byte-identical cb2c4cb4. A separate typed
+consumer of MHZ/LRZ/HPZ/DEZ/DDZ factories and FBZ/SOZ/SSZ enum services also
+compiles/packages with zero findings; it is compile-only and is never activated.
+
+Focused14330 uses the normal intended-tree queue, exact EGL property,
+unset DISPLAY/WAYLAND/Java overrides, Lua5.4 and all three original absolute,
+hash-verified ROM paths. Its `-Dtest` selection is:
+
+```text
+TestObjectHelperServiceOwnership,TestGameplayModeTeardownFailures,
+TestGameplayModeContextRewindRegistry,TestInheritedZoneTitleLifecycle,
+TestModZoneEventLifecycle,TestNativeRewindAdapterPublication,
+TestModApiSignatureSurface,TestModApiPinPolicy,TestModValidator,
+TestSecondStrikeBoss,TestWestCampaignNativeRecipes,
+TestSecondStrikeEastCnzClamerCommittedReplay,TestS3kAiz1SkipHeadless,
+TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+```
+
+It finishes at10:05:52BST:15s queued,34.983s Maven execution,188 tests with
+0 failures/errors/skips. Root reads all17 selected fresh XML reports (the loading
+basename intentionally matches two classes); stale unselected XML is excluded.
+This covers injected object-helper ownership, failure-safe cleanup and registry
+lifetime, inherited HCZ title callbacks, the narrower public contract and its
+validator, representative campaign child/rewind consumers, and the four required
+S3K startup checks. No broad smoke, guards, exhaustive trace or SDK tooling sweep
+is repeated. The earlier smoke remains bounded by its recorded failures/skips.
+
+No Engine/capture/test request survives this checkpoint. Native helpers remain
+stopped; private unmerged/staged trees remain cleanup_pending. Old19448/42171 and
+53676 evidence retains its original source/artifact attribution. AIZ R9 recovery,
+all four full AIZ-to-HCZ axes and the outstanding M4-M6 route, resource, character,
+rewind, counterplay and hardness gates remain open.
