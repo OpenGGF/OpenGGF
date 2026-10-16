@@ -28,6 +28,13 @@ final class Sonic3kGlobalAnimationState {
     private int paletteCycleCounter0;
     private int paletteCycleCounter1;
     private final byte[] paletteCycleCounters = new byte[PALETTE_CYCLE_COUNTERS_BYTES];
+    /**
+     * Byte writes objects made to {@code Palette_cycle_counters} this frame: offset in the
+     * high byte, value in the low byte. ROM objects run in Process_Sprites (sonic3k.asm:7926),
+     * after Animate_Palette (7923); the engine's palette call runs after its object pass, so
+     * these land after that call, as the ROM's land after AnPal.
+     */
+    private final java.util.ArrayList<Integer> objectPhaseCounterBytes = new java.util.ArrayList<>();
     /** {@code Level_frame_counter} of a LevelLoop iteration whose Animate_Palette ran before its reload. */
     private int animatePaletteBeforeReloadFrame = NO_FRAME;
     private static final int NO_FRAME = Integer.MIN_VALUE;
@@ -89,6 +96,24 @@ final class Sonic3kGlobalAnimationState {
         return ((paletteCycleCounters[offset] & 0xFF) << 8) | (paletteCycleCounters[offset + 1] & 0xFF);
     }
 
+    /** Byte at {@code Palette_cycle_counters+offset}. */
+    int paletteCycleByte(int offset) {
+        return paletteCycleCounters[offset] & 0xFF;
+    }
+
+    /** An object's byte write to {@code Palette_cycle_counters+offset}, applied after this frame's AnPal. */
+    void queueObjectPhasePaletteCycleByte(int offset, int value) {
+        java.util.Objects.checkIndex(offset, PALETTE_CYCLE_COUNTERS_BYTES);
+        objectPhaseCounterBytes.add((offset << 8) | (value & 0xFF));
+    }
+
+    void applyObjectPhasePaletteCycleBytes() {
+        for (int write : objectPhaseCounterBytes) {
+            paletteCycleCounters[write >> 8] = (byte) write;
+        }
+        objectPhaseCounterBytes.clear();
+    }
+
     void setPaletteCycleWord(int offset, int value) {
         paletteCycleCounters[offset] = (byte) (value >> 8);
         paletteCycleCounters[offset + 1] = (byte) value;
@@ -130,6 +155,7 @@ final class Sonic3kGlobalAnimationState {
 
     /** Level loc_60DE clears {@code Lag_frame_count} up to {@code Nem_decomp_queue} (sonic3k.asm:7652). */
     void resetFreshLevelPaletteCycles() {
+        objectPhaseCounterBytes.clear();
         paletteCycleCounter0 = 0;
         paletteCycleCounter1 = 0;
         java.util.Arrays.fill(paletteCycleCounters, (byte) 0);
@@ -141,6 +167,8 @@ final class Sonic3kGlobalAnimationState {
     }
 
     void restorePaletteCycles(java.nio.ByteBuffer buffer) {
+        // Object-phase writes never survive past the frame's palette call.
+        objectPhaseCounterBytes.clear();
         paletteCycleCounter0 = buffer.getShort() & 0xFFFF;
         paletteCycleCounter1 = buffer.getShort() & 0xFFFF;
         buffer.get(paletteCycleCounters);

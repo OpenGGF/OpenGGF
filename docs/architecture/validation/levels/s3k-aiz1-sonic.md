@@ -923,3 +923,21 @@ those same identities and passes 24 Python safety checks plus canonical
 preflight. See the [task record](../../plans/2026-10-15-architecture-debt-remediation.md#runtime-validation-handoff-2026-10-16)
 for commands and limits. This is bounded pilot evidence; remaining matrix
 obligations and general enforcement stay open.
+
+## AnPal_AIZ1 gate, carried read and branch order — 2026-10-17
+
+AnPal_AIZ1's counters+$02 cycle (the water colours on line 4, 12-14) now follows the
+ROM's `Palette_cycle_counters+$00` gate (3217) instead of `Level_started_flag`. The plane
+intro sets the gate at Sonic's x `$13D0` (loc_67712), and the AIZ1 Knuckles cutscene clears
+it on exit (loc_61F22). Both writes take effect after that frame's palette call. A carried
+fire-branch value is read before it wraps (3219-3223), and the fire/normal choice uses
+AIZ1_Resize's decision from the previous frame (loc_1C46E). The counters belong to the
+shared AnPal bank, so AIZ2 inherits the corrected phase. Tests:
+- `TestS3kAiz1AnPalBoundaries`: old-source red 2/2.
+- `TestS3kAiz1AnPalGateWrites`: object phase, two restore/forward-replay cycles and the
+  fresh-load clear.
+
+Native trickle equality across the act change is recorded in the
+[AIZ2 matrix](s3k-aiz2.md#aiz1-boundaries-behind-the-inherited-phase--2026-10-17). The
+Knuckles AIZ1 start has no plane intro, so its gate stays clear; that route was
+previously gated by `Level_started_flag`, and has no native witness here.

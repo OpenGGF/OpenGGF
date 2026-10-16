@@ -97,14 +97,49 @@ Results:
 | redold | `src/main` of `73d296f12` | 3 failed at the intended assertions: an immediate channel-A write at the first AIZ2 call or on the reload iteration, and the window phase. The full-load guard passed (Maven 23:11:28+01:00) |
 | redcarry | candidate with the reload hook disabled | 1 failed: the torch wrote on the reload iteration (Maven 23:18:45+01:00) |
 
-The engine witness (LIMITED/RAW_RGB `TraceCaptureTool` clips, compared without
-normalisation at the native pixels of the unique trickle and torch colours) is in
-`spot-checks/aiz-palette-bank/` with provenance.md. Across the handoff, the fire
-curtain hides the trickle until about row 6316. From 6317, and over rows 22800-22834,
-the engine's channel-A changes fall on the same rows as native (22802, 22808, 22820,
-22826, 22832); before the change they came one row late. The displayed entry is a
-constant native + 4, where it was native + 2. Torch colours share CRAM values, so no
-claim is made from the torch. The engine's AIZ1 counters+$02 was already 18 against
-native `$2A` at row 6297, and AIZ2 inherits it. That AIZ1 phase is open in known-bugs
-"AnPal Shared Bank: AIZ1 Phase and Remaining Owners", together with the other zones'
-private cycles.
+The first engine witness (LIMITED/RAW_RGB `TraceCaptureTool` clips at the bank-only
+commit `8d51c342a`) is in `spot-checks/aiz-palette-bank/`. The witness compares without
+normalisation at the native pixels of the unique trickle and torch colours. The engine's
+channel-A changes fell on native's rows, but the entry was a constant native + 4. The
+engine's AIZ1 counters+$02 was 18 at row 6297, where native has `$2A`.
+
+### AIZ1 boundaries behind the inherited phase — 2026-10-17
+
+Three AnPal_AIZ1 boundaries differed from the ROM:
+- The counters+$02 cycle used `Camera.isLevelStarted()` as its gate. The ROM tests
+  `Palette_cycle_counters+$00` (3217). Obj_AIZPlaneIntro sets it at Sonic's x `$13D0`
+  (loc_67712, 135755-135756), and Obj_CutsceneKnuckles clears it as Knuckles leaves
+  (loc_61F22, 128795-128796).
+- A fire-branch counters+$02 of `$30`/`$36` was re-wrapped to 0 before the read. The ROM
+  reads it (3219-3223), past the 48-byte table.
+- The fire/normal choice tested the current camera inside the call. The ROM uses
+  `AIZ1_palette_cycle_flag` as AIZ1_Resize (loc_1C46E, 38913-38917) left it in the
+  previous frame's DeformBgLayer (38343-38356). Level's own DeformBgLayer (7792) sets it
+  before the first call.
+
+The two writers now call `S3kPaletteCycleCounterWriter` on the animator. The byte lands
+after that frame's palette call, as Process_Sprites (7926) follows Animate_Palette
+(7923).
+
+| Run (queued, focused, S3K ROM) | Source | Result |
+|---|---|---|
+| g2green1: `TestS3kAiz1AnPalBoundaries`, `TestS3kAiz1AnPalGateWrites`, `TestS3kAizAnPalBankCarry` | candidate | 9 run, 0 failed, 0 errors, 0 skipped (Maven 2026-10-17T00:10:47+01:00) |
+| g2redold: `TestS3kAiz1AnPalBoundaries` | `src/main` of `8d51c342a` | 2 failed at the intended assertions: run 2 held while `Level_started_flag` was clear, and the carried `$30` read as entry 0 (00:15:59+01:00) |
+
+The second witness was captured at the same source and moments, in
+`spot-checks/aiz-palette-bank-v2/` (provenance.md). The tally counts rows where both
+sides resolve to a table-entry set; equal means the sets match.
+
+| Window | L3c4 | L3c8 | Torch L4c1 |
+|---|---|---|---|
+| Handoff 6294-6330, before (`8d51c342a`) | 4/5 | 0/2 | 0/5 |
+| Handoff 6294-6330, after | 14/15 | 6/6 | 0/5 |
+| AIZ2 22800-22880, before (rows 22800-22834) | 29/35 | 0/18 | 6/12 |
+| AIZ2 22800-22880, after | 81/81 | 42/42 | 10/27 |
+
+The one handoff miss is row 6316. There the fire curtain's edge leaves an engine colour
+that is in no table entry. The trickle entry and its row now equal native from the
+engine's own counters. Torch colours are shared and partly covered by the flame sprites.
+Their sets agree on some rows and differ on others with no constant entry offset, so the
+pixel method does not resolve channel B. It needs a palette-word observation and remains
+open in known-bugs "AnPal Shared Bank: Remaining Owners".

@@ -1050,6 +1050,12 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
         }
 
         if (checkX >= EXPLOSION_TRIGGER_X) {
+            // ROM loc_67712: st (Palette_cycle_counters+$00).w (sonic3k.asm:135756) holds
+            // AnPal_AIZ1's counters+$02 cycle while the emeralds use its colours.
+            if (services().levelManager().getAnimatedPatternManager()
+                    instanceof com.openggf.game.sonic3k.S3kPaletteCycleCounterWriter writer) {
+                writer.writePaletteCycleCountersByte(0, 0xFF);
+            }
             // ROM routine 0x1A latches hurt state immediately, then Go_Delete_Sprite.
             // Sonic has already updated for this frame, so the new velocities only
             // affect movement on the next frame, but the end-of-frame trace already

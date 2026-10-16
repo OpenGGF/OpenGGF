@@ -24,7 +24,7 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
         RewindSnapshottable<PatternAnimatorSnapshot>, AizVineAngleProvider,
         SeamlessTransitionAnimationClock, InitialLevelAnimationPass,
         com.openggf.level.animation.StageRingAnimationFrameProvider,
-        com.openggf.game.internal.LevelPaletteFadeOwner {
+        com.openggf.game.internal.LevelPaletteFadeOwner, S3kPaletteCycleCounterWriter {
 
     /** See {@code Sonic2LevelAnimationManager.COMBINED_EXTRA_MAGIC} for rationale. */
     private static final byte COMBINED_EXTRA_MAGIC = (byte) 0xC3;
@@ -226,6 +226,16 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
         } catch (RuntimeException ignored) {
             return Integer.MIN_VALUE;
         }
+    }
+
+    /** The module-owned state this animator shares with the next act's animator. */
+    Sonic3kGlobalAnimationState globalAnimationState() {
+        return globalAnimationState;
+    }
+
+    @Override
+    public void writePaletteCycleCountersByte(int offset, int value) {
+        globalAnimationState.queueObjectPhasePaletteCycleByte(offset, value);
     }
 
     /** D01's source-ordered Animate_Palette call, using the existing captured global timer. */

@@ -143,7 +143,7 @@ Entries should include:
 54. [AIZ2 First-Tree and HCZ1 Zero-Offset Animated Tile Uploads (FIXED)](#aiz2-first-tree-and-hcz1-zero-offset-animated-tile-uploads-fixed)
 55. [Knuckles Credits and Terminal Residuals (OPEN)](#knuckles-credits-and-terminal-residuals-open)
 56. [MHZ Rewind Snapshot Identity Gaps (RESOLVED)](#mhz-rewind-snapshot-identity-gaps-resolved)
-57. [AnPal Shared Bank: AIZ1 Phase and Remaining Owners (OPEN)](#anpal-shared-bank-aiz1-phase-and-remaining-owners-open)
+57. [AnPal Shared Bank: Remaining Owners (OPEN)](#anpal-shared-bank-remaining-owners-open)
 
 ---
 
@@ -6717,7 +6717,7 @@ second frame diverged). Matrix:
 
 ---
 
-## AnPal Shared Bank: AIZ1 Phase and Remaining Owners (OPEN)
+## AnPal Shared Bank: Remaining Owners (OPEN)
 
 Every `AnPal_*` routine reads and writes one RAM bank: `Palette_cycle_counter0`,
 `Palette_cycle_counter1` and `Palette_cycle_counters` (sonic3k.constants.asm:580-596).
@@ -6726,23 +6726,28 @@ Level's loc_60DE clears it (sonic3k.asm:7652), and a seamless act reload does no
 clears it, and it rides the animator's rewind snapshot. The AIZ1 and AIZ2 cycles read
 it, so AnPal_AIZ2 continues from AnPal_AIZ1's counters. The iteration that performs the
 reload runs AnPal_AIZ1: LevelLoop calls Animate_Palette (7923) before the
-DeformBgLayer/ScreenEvents work that reloads (7929-7930). The engine observation
-`palobs1` showed the old behaviour: the new AIZ2 cycler ticked from zero on the reload
-row 6300. Native `aiz_completerun` RAM instead carries counter1 4, counter0 `$1620` and
-counters+$02 `$2A`, and its first AIZ2 call is row 6302. Covered by
-`TestS3kAizAnPalBankCarry`.
+DeformBgLayer/ScreenEvents work that reloads (7929-7930).
+
+AnPal_AIZ1 now matches its ROM boundaries:
+- Its counters+$02 cycle is gated by `Palette_cycle_counters+$00` (3217), not by
+  `Level_started_flag`. Obj_AIZPlaneIntro sets the byte at Sonic's x `$13D0`
+  (loc_67712, 135755-135756), and Obj_CutsceneKnuckles clears it when Knuckles leaves
+  (loc_61F22, 128795-128796). Both writes land after that frame's palette call, as
+  Process_Sprites (7926) follows Animate_Palette.
+- It reads a carried counters+$02 before wrapping it (3219-3223), including the ROM bytes
+  after AnPal_PalAIZ1_2 for a fire-branch `$30`/`$36`.
+- Its fire/normal branch uses `AIZ1_palette_cycle_flag` as AIZ1_Resize left it
+  (loc_1C46E, 38913-38917, run from DeformBgLayer after Animate_Palette).
+
+The `aiz_completerun` handoff and the AIZ2 window now show native's trickle entry on
+native's rows. Covered by `TestS3kAizAnPalBankCarry`, `TestS3kAiz1AnPalBoundaries` and
+`TestS3kAiz1AnPalGateWrites`; evidence is in the
+[AIZ2 matrix](../architecture/validation/levels/s3k-aiz2.md).
 
 Still open:
-- At row 6297 the engine's AIZ1 counters+$02 is 18, where native has `$2A`; counter1 and
-  the low byte of counter0 match. AnPal_AIZ1 advances counters+$02 only while
-  `Palette_cycle_counters+$00` is clear (sonic3k.asm:3217); the engine uses
-  `Camera.isLevelStarted()` for that gate, and fire-mode wraps (3248-3252) feed the
-  same word. AIZ2 inherits the engine's value, so its trickle entry still differs from
-  native until this phase is matched.
-- AIZ1's normal branch re-wraps a carried counters+$02 of `$30` or more before reading
-  it. The ROM reads the carried value (3219-3223).
 - The other zones' cycles keep private copies of the bank, so their seamless reloads
-  still restart those counters. Each needs its own native witness before it moves.
+  still restart those counters, and their `counters+$00` writers are not modelled
+  through the bank. Each needs its own native witness before it moves.
 - A reload consumed at the next frame top (`LevelSeamlessTransitionExecutor`) runs no
   palette call on its transition row. Natively that iteration's Animate_Palette ran for
   the outgoing act. Not measured.
