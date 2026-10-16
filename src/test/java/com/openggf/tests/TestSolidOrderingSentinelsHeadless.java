@@ -131,7 +131,33 @@ class TestSolidOrderingSentinelsHeadless {
     }
 
     @Test
-    void flipperRestoresPreExistingPinballFlagOnSameFrameNoContactResult() throws Exception {
+    void flipperRideKeepsRollingWithoutNativePinballAndLaunchesNormally() {
+        HeadlessTestFixture localFixture = HeadlessTestFixture.builder()
+                .withSharedLevel(sharedLevel).build();
+        AbstractPlayableSprite localPlayer = localFixture.sprite();
+        spawnFlipper(0x0120, 0x0100);
+        localPlayer.setCentreX((short) 0x0120);
+        localPlayer.setCentreY((short) 0x00F4);
+        localPlayer.setAir(false);
+        localFixture.camera().updatePosition(true);
+        for (int frame = 0; frame < 4; frame++) {
+            localFixture.stepFrame(false, false, false, false, false);
+            assertTrue(localPlayer.getRolling());
+            assertTrue(localPlayer.isObjectControlSuppressesMovement());
+            assertFalse(localPlayer.getPinballMode(), "a flipper ride must not enable native pinball consumers");
+            assertFalse(localPlayer.getSpindash());
+        }
+        localFixture.stepFrame(false, false, false, false, true);
+        assertFalse(localPlayer.isObjectControlSuppressesMovement());
+        assertTrue(localPlayer.getAir());
+        assertTrue(localPlayer.getYSpeed() < 0);
+        assertTrue(localPlayer.getRolling());
+        assertFalse(localPlayer.getPinballMode());
+        assertFalse(localPlayer.getSpindash());
+    }
+
+    @Test
+    void flipperLeavesNativePinballStateUntouchedOnSameFrameNoContactResult() throws Exception {
         HeadlessTestFixture localFixture = HeadlessTestFixture.builder()
                 .withSharedLevel(sharedLevel)
                 .build();
@@ -159,7 +185,7 @@ class TestSolidOrderingSentinelsHeadless {
         assertFalse(localPlayer.isObjectControlSuppressesMovement(),
                 "Vertical flipper should clear movement suppression on the same no-contact frame");
         assertTrue(localPlayer.getPinballMode(),
-                "Obj86 release clears its own temporary pinball state without erasing Obj84's pre-existing flag");
+                "Obj86 release leaves Obj84's native pinball flag untouched");
     }
 
     @Test

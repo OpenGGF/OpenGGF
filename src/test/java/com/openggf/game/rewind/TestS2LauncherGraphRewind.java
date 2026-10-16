@@ -120,8 +120,8 @@ class TestS2LauncherGraphRewind {
         Map<?, ?> states = readMap(restored, "playerStates");
         assertFalse(states.containsKey(capturedMain), "restored map must not retain stale main-player key");
         assertFalse(states.containsKey(capturedSidekick), "restored map must not retain stale sidekick key");
-        assertSpringState(states.get(restoredMain), 1, 7, true);
-        assertSpringState(states.get(restoredSidekick), 2, 11, false);
+        assertSpringState(states.get(restoredMain), 1, 7);
+        assertSpringState(states.get(restoredSidekick), 2, 11);
     }
 
     @Test
@@ -232,30 +232,27 @@ class TestS2LauncherGraphRewind {
         writeInt(spring, "compressionFrameCounter", 2);
         writeInt(spring, "currentSpriteX", 0x1304);
         writeInt(spring, "currentSpriteY", 0x0418);
-        mapPut(spring, "playerStates", main, springState(1, 7, true));
-        mapPut(spring, "playerStates", sidekick, springState(2, 11, false));
+        mapPut(spring, "playerStates", main, springState(1, 7));
+        mapPut(spring, "playerStates", sidekick, springState(2, 11));
     }
 
-    private static Object springState(int state, int cooldown, boolean pinballBeforeCapture) throws Exception {
+    private static Object springState(int state, int cooldown) throws Exception {
         Class<?> type = Class.forName(LauncherSpringObjectInstance.class.getName() + "$PlayerState");
         Constructor<?> ctor = type.getDeclaredConstructor();
         ctor.setAccessible(true);
         Object value = ctor.newInstance();
         writeInt(value, "state", state);
         writeInt(value, "launchCooldown", cooldown);
-        writeBoolean(value, "pinballBeforeCapture", pinballBeforeCapture);
         return value;
     }
 
     private static void assertSpringState(
             Object value,
             int state,
-            int cooldown,
-            boolean pinballBeforeCapture) {
+            int cooldown) {
         assertNotNull(value, "restored launcher-spring player state must exist");
         assertEquals(state, readInt(value, "state"));
         assertEquals(cooldown, readInt(value, "launchCooldown"));
-        assertEquals(pinballBeforeCapture, readBoolean(value, "pinballBeforeCapture"));
     }
 
     private static void seedOozLauncher(

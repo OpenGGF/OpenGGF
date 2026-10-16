@@ -121,8 +121,6 @@ public class FlipperObjectInstance extends BoxObjectInstance
     // (objoff_36 / objoff_37 are independent).
     private final IdentityHashMap<AbstractPlayableSprite, Boolean> lockedPlayerPrevSuppressed =
             new IdentityHashMap<>();
-    private final IdentityHashMap<AbstractPlayableSprite, Boolean> lockedPlayerPrevPinballMode =
-            new IdentityHashMap<>();
 
     public FlipperObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name, 8, 8, 0.8f, 0.4f, 0.2f, false);
@@ -172,9 +170,10 @@ public class FlipperObjectInstance extends BoxObjectInstance
                 if (playerFlipperState.getOrDefault(player, 0) == 0) {
                     applySkippedRideObjectRollClear(player, result);
                     // First frame standing: enter rolling state (loc_2B20A)
-                    // We use pinball_mode to prevent rolling from being cleared
+                    // loc_2B20A owns the roll through movement suppression;
+                    // it never writes $39 (pinball_mode/spindash_flag). Do not
+                    // borrow native pinball state or restore a stale value later.
                     player.clearObjectPreservedRollingHandoff();
-                    player.setPinballMode(true);
                     // ROM: bset #status.player.rolling / bne.s loc_2B238 / addq.w #5,y_pos
                     // (s2.asm:58323-58325): on the first stand frame the flipper
                     // sets the rolling bit and, ONLY if rolling was not already
@@ -580,18 +579,15 @@ public class FlipperObjectInstance extends BoxObjectInstance
      */
     private void releaseLockedPlayer(AbstractPlayableSprite player) {
         Boolean prevSuppressed = lockedPlayerPrevSuppressed.remove(player);
-        Boolean prevPinballMode = lockedPlayerPrevPinballMode.remove(player);
         if (prevSuppressed != null) {
             ObjectControlState.setMovementSuppressionPreservingOwnership(
                     player, prevSuppressed);
-            player.setPinballMode(Boolean.TRUE.equals(prevPinballMode));
         }
     }
 
     private void suppressMovementForLockedPlayer(AbstractPlayableSprite player) {
         if (!lockedPlayerPrevSuppressed.containsKey(player)) {
             lockedPlayerPrevSuppressed.put(player, player.isObjectControlSuppressesMovement());
-            lockedPlayerPrevPinballMode.put(player, player.getPinballMode());
         }
         ObjectControlState.setMovementSuppressionPreservingOwnership(player, true);
     }

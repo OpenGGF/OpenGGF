@@ -78,7 +78,6 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
     private static class PlayerState {
         int state = STATE_EMPTY;
         int launchCooldown = 0;
-        boolean pinballBeforeCapture = false;
     }
 
     // Per-player state map (ROM: objoff_36 for P1, objoff_37 for P2)
@@ -235,8 +234,10 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         // - Bit 7 (0x80): Skips ALL movement/physics (objectControlled)
         player.setControlLocked(true);
         ObjectControlState.nativeBit7FullControl().applyTo(player);
-        ps.pinballBeforeCapture = player.getPinballMode();
-        player.setPinballMode(true);
+        // Obj85 loc_2AD26/loc_2AF2E owns the roll through obj_control=$81.
+        // It never writes pinball_mode ($39, aliased to spindash_flag). Keeping
+        // that byte native avoids jump/air/CPU/animation side effects and stale
+        // restoration over another object's later Obj84 write.
 
         // Snap player to center of spring (use setCentreX/Y for ROM-compatible center coords)
         if (isDiagonal()) {
@@ -518,10 +519,9 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
                 player.setAir(false);
                 // ROM: move.b #-$20,angle(a1) - angle 0xE0 (ALWAYS, regardless of H-flip)
                 player.setAngle((byte) 0xE0);
-                // Keep pinballMode active so rolling is preserved even if physics
-                // briefly loses ground contact during the high-speed diagonal launch.
-                // This mimics ROM behavior where rolling state persists through the launch.
-                player.setPinballMode(true);
+                // loc_2B068 releases into ordinary rolling physics, with no $39
+                // write. Ground loss and subsequent landing use the normal ROM
+                // roll rules, rather than a persistent synthetic pinball boost.
                 // Note: stickToConvex is NOT set here. The flag is unused in original
                 // Sonic 2 ROM (s2.constants.asm:63 documents it as "unused in Sonic 2").
                 // Setting it caused players to get stuck on ceilings with gSpeed=0.
@@ -560,9 +560,7 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         ps.launchCooldown = 16;
 
         // Release player controls
-        // For slope-mode launches, pass flag to preserve pinballMode
-        boolean preservePinball = isDiagonal() && (spawn.subtype() & SUBTYPE_SLOPE_MODE_FLAG) != 0;
-        releasePlayer(player, ps, preservePinball);
+        releasePlayer(player, ps);
     }
 
     /**
@@ -570,14 +568,11 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
      *
      * @param player         The player to release
      * @param ps             The player state to reset
-     * @param preservePinball If true, keeps pinballMode active (for slope-mode launches)
      */
-    private void releasePlayer(AbstractPlayableSprite player, PlayerState ps, boolean preservePinball) {
+    private void releasePlayer(AbstractPlayableSprite player, PlayerState ps) {
         // ROM: move.b #0,obj_control(a1) clears all control bits
         player.setControlLocked(false);
         ObjectControlState.none().applyTo(player);
-        boolean keepPinball = preservePinball || ps.pinballBeforeCapture;
-        player.setPinballMode(keepPinball);
         if (!isDiagonal() && isTails(player)) {
             // Vertical Obj85 leaves the player curled after loc_2AE0C launch
             // without making the airborne CPU path behave like Obj84 pinball
@@ -590,14 +585,6 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
     }
 
     /**
-     * Releases player controls and resets per-player spring state.
-     * Clears pinballMode by default.
-     */
-    private void releasePlayer(AbstractPlayableSprite player, PlayerState ps) {
-        releasePlayer(player, ps, false);
-    }
-
-    /**
      * Resets per-player state without modifying player or shared spring state.
      * Used when player enters debug mode, goes off-screen, or otherwise leaves unexpectedly.
      * Note: Compression is NOT zeroed here - it decays gradually in update().
@@ -605,7 +592,6 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
      */
     private void resetPlayerState(PlayerState ps) {
         ps.state = STATE_EMPTY;
-        ps.pinballBeforeCapture = false;
         // Note: compression is shared and decays in update() when no players are on spring
     }
 
