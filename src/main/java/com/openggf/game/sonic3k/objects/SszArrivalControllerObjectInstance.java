@@ -13,6 +13,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.NativeSstSlotAccess;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSlotLayout;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.RewindRecreateContext;
@@ -236,7 +237,7 @@ public final class SszArrivalControllerObjectInstance extends AbstractObjectInst
                 var helper = ObjectConstructionContext.with(services(), targetSlot,
                         () -> new SszTailsArrivalHelperObjectInstance(
                                 new ObjectSpawn(x, releaseBaseY, 0, 0x0C, 0, false, 0)));
-                manager.addDynamicObjectAtSlot(helper, targetSlot);
+                ObjectLifetimeOps.addDynamicAtReservedSlot(manager, helper, targetSlot);
             } catch (RuntimeException | Error failure) {
                 if (managed) manager.releaseDynamicSlot(targetSlot);
                 throw failure;
