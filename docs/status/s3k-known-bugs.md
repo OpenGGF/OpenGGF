@@ -142,7 +142,7 @@ Entries should include:
 53. [Non-Fresh Title Card Holds 90 Locked Frames (OPEN)](#non-fresh-title-card-holds-90-locked-frames-open)
 54. [AIZ2 First-Tree and HCZ1 Zero-Offset Animated Tile Uploads (OPEN)](#aiz2-first-tree-and-hcz1-zero-offset-animated-tile-uploads-open)
 55. [Knuckles Credits and Terminal Residuals (OPEN)](#knuckles-credits-and-terminal-residuals-open)
-56. [MHZ Rewind Snapshot Identity Gaps (OPEN)](#mhz-rewind-snapshot-identity-gaps-open)
+56. [MHZ Rewind Snapshot Identity Gaps (RESOLVED)](#mhz-rewind-snapshot-identity-gaps-resolved)
 
 ---
 
@@ -6630,27 +6630,31 @@ equal to a native capture of the same state.
 
 ---
 
-## MHZ Rewind Snapshot Identity Gaps (OPEN)
+## MHZ Rewind Snapshot Identity Gaps (RESOLVED)
 
 After the MHZ rider/shell/shield restore fixes (`902ba8a10`), dense
-`RewindFidelitySweep` runs over the solo Sonic MHZ routes show no player drift, but two
-restores were not snapshot-exact (no gameplay effect observed):
-- Resolved 2026-10-16 (`f07a25bf9`): the MHZ1 carry-in Tails (`SpawnLevelMainSprites`
+`RewindFidelitySweep` runs over the solo Sonic MHZ routes showed no player drift, but some
+restores were not snapshot-exact. All are resolved:
+- 2026-10-16 (`f07a25bf9`): the MHZ1 carry-in Tails (`SpawnLevelMainSprites`
   `loc_68C2`/`loc_68D8`) was recreated as a new sprite by restores after its natural
-  deletion. Solid-contact headroom snapshots and plane-switcher player sides hold direct
-  player references, so stale entries for the old instance accumulated. Restores now
-  re-admit the departed instance; `TestS3kScriptedIntroCarryAdmission` (MHZ1) and the
-  widest CNZ1 rows of `TestS3kCanonicalEntryLifecycle` replay it exactly.
-- MHZ2's Knuckles cutscene leaf particles (`CutsceneKnucklesMhz2Instance`) restore with a
-  zero spawn record (x/y/velocity restore correctly).
+  deletion, leaving stale direct player references in solid-contact headroom snapshots and
+  plane-switcher sides. Restores now re-admit the departed instance.
+- 2026-10-16 (round 2): the MHZ2 object restored with a zero spawn record was not a leaf
+  particle, as first reported, but the Knuckles cutscene's player lift carrier
+  (`Mhz2KnucklesLiftChild`, `loc_6338E`, object `$82` subtype `$20`). Its
+  `recreateForRewind` copied the spawn of the placeholder probe a restore constructs instead
+  of the captured spawn. It now recreates from the restore context's spawn
+  (`SpawnRewindRecreatable`). The leaf particles already did.
+- 2026-10-16 (round 2): `LbzMovingPlatformObjectInstance.standingPlayers` (riders released by
+  the falling type's later update) and `SinkingMudObjectInstance`'s per-player depth and
+  standing maps (`Obj_SinkingMud`, sonic3k.asm:68500-68661) were not captured; restores
+  dropped a pending release or reset a sinking player to the full surface. Both are
+  `CAPTURED`; `killedThisFrame` is cleared before every read and stays transient.
+  `CorkFloorObjectInstance.standingRiders` is a per-update local, re-derived every frame.
 
-Outside MHZ, these per-player identity collections have no rewind policy and were not
-checked: `CorkFloorObjectInstance.standingRiders`,
-`LbzMovingPlatformObjectInstance.standingPlayers`, `SinkingMudObjectInstance` player maps.
-Evidence and sweep commands are in the
-[MHZ act 1 matrix](../architecture/validation/levels/s3k-mhz-act1.md#rewind-fidelity-fixes-2026-10-16-902ba8a10).
-
-### Removal condition
-A `RewindFidelitySweep` over the MHZ1 opening and the MHZ2 cutscene reports no
-restore-identity or end-of-replay differences, and each listed collection either has a
-policy with a capture/restore/forward-replay test or is shown to be re-derived.
+Evidence: `TestMhzRewindFidelitySweep#identityWindowsRestoreSnapshotExactly` (MHZ1 opening
+0-240 and the MHZ2 cutscene 9640-9760 of `mhz2-sonic-incoming-320`; red first at checkpoint
+9674 with the lift's spawn A=1155,2028 B=0,0) and `TestS3kPlayerIdentityCollectionRewind`
+(every-frame restore and forward replay; red first: the LBZ release frame 64 and the mud's
+second frame diverged). Matrix:
+[MHZ act 1](../architecture/validation/levels/s3k-mhz-act1.md#rewind-fidelity-fixes-2026-10-16-902ba8a10).

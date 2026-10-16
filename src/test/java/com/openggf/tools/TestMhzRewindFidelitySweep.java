@@ -40,4 +40,19 @@ class TestMhzRewindFidelitySweep {
             assertTrue(report.clean(), report::toString);
         }
     }
+
+    /**
+     * Known-bug removal windows: the MHZ1 opening, where restores used to recreate the native
+     * carry-in Tails ({@code SpawnLevelMainSprites} {@code loc_68C2}/{@code loc_68D8}), and the
+     * MHZ2 Knuckles leaf-blower cutscene, whose leaf particles are spawned every few frames.
+     * Both must restore snapshot-exactly, not only without P1 drift.
+     */
+    @ParameterizedTest
+    @CsvSource({
+            "mhz1-sonic-fresh-320,320,0,240",
+            "mhz2-sonic-incoming-320,320,9640,9760"
+    })
+    void identityWindowsRestoreSnapshotExactly(String name, int width, int from, int to) throws Exception {
+        restoresReplayTheLiveRouteExactly(name, width, from, to);
+    }
 }

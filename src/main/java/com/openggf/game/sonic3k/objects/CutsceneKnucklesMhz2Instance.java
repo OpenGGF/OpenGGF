@@ -626,8 +626,13 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
         }
     }
 
+    // loc_6338E stores only the player slot, so a restore rebuilds the carrier from its own
+    // captured spawn (the player's position at allocation) and its captured player reference.
+    // Knuckles may already have retired while this carrier is in flight; no live parent is
+    // needed. The probe instance a restore constructs has a placeholder spawn, so the spawn
+    // must come from the restore context, never from getSpawn().
     private static final class Mhz2KnucklesLiftChild extends AbstractObjectInstance
-            implements RewindRecreatable {
+            implements SpawnRewindRecreatable {
         private AbstractPlayableSprite player;
         private boolean initialized;
         private boolean initializationDispatchPending;
@@ -643,13 +648,6 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
 
         private Mhz2KnucklesLiftChild(ObjectSpawn spawn) {
             super(spawn, "MHZ2KnucklesLift");
-        }
-
-        @Override
-        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-            // loc_6338E stores only the player slot. Knuckles may already have
-            // retired while this carrier is in flight; no live parent is needed.
-            return new Mhz2KnucklesLiftChild(getSpawn());
         }
 
         @Override
