@@ -407,7 +407,7 @@ def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, keep_diagnostics=False, qu
         try:
             preparation['exit_code'] = run_logged(command, root, run / 'preparation.log', temporary,
                                                    timeout=max_minutes * 60,
-                                                   idle_timeout=IDLE_SECONDS, queue_fd=tree_fd)
+                                                   idle_timeout=IDLE_SECONDS, queue_fd=tree_fd, timings=preparation)
             if tree_state(root) != initial_state:
                 raise ValueError('Working tree changed during preparation; no test batches launched')
             if preparation['exit_code']:
@@ -418,7 +418,7 @@ def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, keep_diagnostics=False, qu
             preparation['reason'] = str(error) or type(error).__name__
             raise
         finally:
-            elapsed += time.monotonic() - started
+            elapsed += max(0, time.monotonic() - started - preparation.get('build_wait_seconds', 0))
             preparation['elapsed_seconds'] = round(elapsed, 2)
             preparation_path.write_text(json.dumps(preparation, indent=2) + '\n')
             shutil.rmtree(temporary)

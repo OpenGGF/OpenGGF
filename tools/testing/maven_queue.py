@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Queue local Maven tests across linked worktrees; builds use only a worktree lock.
+"""Queue local Maven tests; builds bypass admission but honor measurement isolation.
 
 Usage: python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestExample test
 Build without shared admission: python3 tools/testing/maven_queue.py -DskipTests package
@@ -10,7 +10,7 @@ five-minute aging protects larger waiters. Origin: 2026-09-14 testing queue clea
 `maven_queue.py --stats` summarises recorded wait/hold/memory telemetry.
 `maven_queue.py --dashboard [--port 8766]` serves a read-only local browser view.
 """
-from contextlib import contextmanager, ExitStack
+from contextlib import contextmanager, ExitStack, nullcontext
 import errno
 import math
 import os
@@ -386,11 +386,12 @@ def maven_slot(root, *, exclusive=False, estimate=900, kind='maven', reservation
                 pass  # Telemetry never changes the job's result.
 
 
-def inherited_slot(fd):
+def inherited_slot(fd, extra=()):
     # Retain all leases in Maven if the Python parent is killed unexpectedly.
-    if os.name != 'posix' or fd is None:
+    descriptors = (fd if isinstance(fd, tuple) else () if fd is None else (fd,)) + extra
+    if os.name != 'posix' or not descriptors:
         return {}
-    return {'pass_fds': fd if isinstance(fd, tuple) else (fd,)}
+    return {'pass_fds': descriptors}
 
 
 @contextmanager
@@ -490,8 +491,11 @@ def _jvm_environment_requires_exclusive():
 def needs_exclusive(args):
     """Unmeasured fork/heap/profile overrides retain the serial contract."""
     from maven_schedule import profiles_of
+    # An explicit spelling of the measured POM default changes no resource shape.
+    defaults = {'-Dsurefire.forkCount=1', '-Dsurefire.reuseForks=true'}
     if any(arg.startswith(('-T', '--threads'))
-           or any(key in arg for key in ('argLine', 'forkCount', '-Xmx', '-Xms')) for arg in args):
+           or any(key in arg for key in ('argLine', 'forkCount', 'reuseForks', '-Xmx', '-Xms'))
+           for arg in args if arg not in defaults):
         return True
     profiles, following_profile = profiles_of(args)
     return (following_profile or bool(set(profiles) - SHARED_PROFILES)
@@ -575,13 +579,16 @@ def main(argv=None):
         if automatic is not None:
             print('Qualified small job: 1 GiB JVM heaps; 4 GiB/4-core reservation. '
                   'Use --normal if this check needs the larger heap.', flush=True)
-    slot = (worktree_build_slot(Path.cwd()) if not lean and build_only(args) else
+    building = not lean and build_only(args)
+    slot = (worktree_build_slot(Path.cwd()) if building else
             maven_slot(Path.cwd(), exclusive=exclusive, estimate=estimate,
                        kind=kind, reservation=reservation,
                        small_job=automatic is not None))
-    with slot as fd:
+    from maven_activity import build_activity_slot
+    activity = build_activity_slot(Path.cwd()) if building else nullcontext(())
+    with slot as fd, activity as activity_fds:
         with subprocess.Popen(['mvn', *args], start_new_session=(os.name == 'posix'),
-                              env=environment, **inherited_slot(fd)) as process:
+                              env=environment, **inherited_slot(fd, activity_fds)) as process:
             try:
                 return process.wait()
             finally:
