@@ -84,7 +84,6 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
     @Override
     public List<InitStep> levelLoadSteps(LevelLoadContext ctx) {
         List<InitStep> steps = buildCoreSteps(ctx);
-        // Post-load assembly: only when requested
         if (ctx.isIncludePostLoadAssembly()) {
             steps.add(restoreCheckpointStep(ctx));
             steps.add(spawnPlayerStep(ctx));

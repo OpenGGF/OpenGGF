@@ -41,7 +41,6 @@ public class TestCollisionLogic {
             collisionArray[i] = Byte.toUnsignedInt(collisionBuffer[i]);
         }
 
-        // Verify decompressed data is non-empty and contains valid collision indices
         assertTrue(collisionBuffer.length > 0, "Decompressed collision buffer should not be empty");
         assertTrue(collisionArray.length > 0, "Collision array should have entries");
 
@@ -55,7 +54,6 @@ public class TestCollisionLogic {
         }
         assertTrue(hasNonZero, "Collision array should contain non-zero entries");
 
-        // All values should be valid unsigned byte range (0-255)
         for (int i = 0; i < collisionBuffer.length; i++) {
             assertTrue(collisionArray[i] >= 0 && collisionArray[i] <= 255, "Collision value at index " + i + " should be in range 0-255");
         }

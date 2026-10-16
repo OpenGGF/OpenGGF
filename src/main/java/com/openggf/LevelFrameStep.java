@@ -57,7 +57,6 @@ public final class LevelFrameStep {
     public static final StepWrapper DIRECT_WRAPPER = DIRECT;
 
     private LevelFrameStep() {
-        // Utility class
     }
 
     private static void runNativeFixedObjectsBeforeDynamic(LevelFrameContext context, StepWrapper wrapper) {
@@ -79,15 +78,6 @@ public final class LevelFrameStep {
         return new FrameAdmission(LevelFrameResult.GAMEPLAY_FRAME);
     }
 
-    /**
-     * Executes one frame of level-mode updates in the canonical production order,
-     * without any step wrapping.
-     *
-     * @param levelManager the level manager
-     * @param camera       the camera
-     * @param spriteUpdate callback that runs the sprite/player physics update
-     *                     (e.g. {@code SpriteManager.update()} or headless equivalent)
-     */
     /**
      * Executes one frame of level-mode updates, applying ROM in-game pause first.
      * <p>
