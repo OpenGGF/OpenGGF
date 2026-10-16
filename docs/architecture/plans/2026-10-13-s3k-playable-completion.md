@@ -1124,6 +1124,32 @@ and locked-on S3K paths as applicable. No runtime source changed in this slice;
 combined follow-up validation and integration remain pending. Consumed local
 redirects are removed after this summary.
 
+**Native 50 Hz follow-up (ending-pal lane, 2026-10-16).** This adds one declared
+native PAL product: Sonic/+2, D01 at 320, from the scene through credits and terminal to
+`Title_Screen`.
+
+Native is GPGX with only `Region=Europe` changed; native-reference setup is otherwise as
+before. The engine runs at `REGION=PAL`, 50 Hz, with LIMITED + RAW_RGB output. Both
+queued runs started from the lane worktree:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Dexec.executable=python3 '-Dexec.args=<lane>/run_native_pal.py' exec:exec -B
+python3 tools/testing/maven_queue.py -Dmse=off -Dexec.executable=python3 '-Dexec.args=<lane>/run_engine_pal.py <head> %classpath' exec:exec -B
+```
+
+Native finished 20:24:07 UTC (1:10 Maven) and the engine on `e94f6c4e7` finished
+20:30:58 UTC (10.9 s).
+
+Results:
+- Raw RGB matches at polls 1–3071.
+- Level frame, V-int and RNG are equal for 13,888 frames.
+- Credits durations are equal (7,415 frames).
+- First divergence: LF 3778, where native PAL finishes the AIZ1 Kos modules four
+  frames earlier. That gap belongs to the Kos CPU-budget model.
+
+The other eight PAL products remain open. Details are in the
+[ending matrix](../validation/levels/s3k-ending.md#native-pal-50-hz-sonic2-product-ending-pal-lane-2026-10-16).
+
 ### Ordinary S2 RAM and matching-controller binding qualification
 
 The inherited ordinary S2 controller returned a null RAM snapshot. On unchanged
