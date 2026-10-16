@@ -105,7 +105,15 @@ request contract). Do not add a rule just to avoid an inconvenient failing test.
 
 Ordinary candidates are partitioned deterministically into batches of at most **50
 source classes**, preserving the entire selected inventory and existing smoke tag
-exclusions. Each batch queues independently; change-based runs (`--base`) and
+exclusions. The runner prepares compiled classes and resources once with
+`test-compile` under its retained worktree lock, outside shared test admission.
+Each batch then queues an independent `surefire:test` invocation against those
+prepared artifacts. Batch membership, ordering, profiles and ROM arguments stay
+the same. A POM contract check rejects lifecycle bindings or lane-profile changes
+that this split cannot preserve; source changes during preparation or between
+batches invalidate the run. Keep external IDE builds out of the worktree during
+validation: they do not honor Maven's lock, and batches now reuse prepared output.
+Change-based runs (`--base`) and
 `--category all` queue the separate `guards` invocation after ordinary batches. Focused category runs omit guards to avoid repeating them during
 iteration; add `--guards` to request them explicitly. Trace
 replay, native graphics, diagnostics, performance profiles and TraceChaser integration retain
@@ -134,7 +142,10 @@ skips; a successful exit alone does not establish ROM-backed coverage.
 
 Each run starts in `target/category-tests/<run-id>/`. The plan retains the tested head,
 working-tree fingerprint, ordinary worker count and selected source classes; command arrays record the exact Maven
-arguments for every batch. `results.json` aggregates each lane's worker count, totals,
+arguments for preparation and every batch. `preparation.json` records build status,
+elapsed time and the source fingerprint separately from JUnit coverage. A failed,
+interrupted or timed-out preparation launches no batches and leaves the run
+incomplete. `results.json` aggregates each lane's worker count, totals,
 completed/planned batch counts, skipped cases and failure details, and `status.json`
 distinguishes passed, failed and incomplete runs. Diagnostic lists are capped at 1,000 records
 per kind with explicit omitted counts; messages/stacks are bounded excerpts. Inspect skips,
@@ -158,7 +169,7 @@ All-category selections and selections of at least 500 candidate classes print a
 These are bounded smoke selections, not exhaustive release validation.
 The September normalization run measured about 24 minutes ordinary and 10 minutes guards;
 this measured the former full ordinary suite, not today's smoke default. Category `--max-minutes` defaults to
-**40 minutes per invocation across Maven lanes**, including compilation, and can be
+**40 minutes per invocation across preparation and Maven test lanes**, including compilation, and can be
 adjusted for the intended checks. There is also a **10-minute no-output timeout**.
 Both terminate the Maven process tree and report incomplete validation. Queue waiting
 is excluded. Tool probes have separate 20-second limits.
@@ -280,6 +291,8 @@ Peak RSS sums shared pages and two-second sampling misses short peaks; see the
 [2026-09-15 profiling](../../docs/architecture/research/2026-09-15-maven-resource-admission.md).
 The [2026-10-07 focused-throughput investigation](../../docs/architecture/research/2026-10-07-maven-focused-throughput.md)
 records the lean lane's design, evidence and coverage limits.
+The [2026-10-16 category-throughput investigation](../../docs/architecture/research/2026-10-16-test-throughput.md)
+records preparation reuse and bounded continuation credit.
 
 #### Waiting order
 
@@ -288,6 +301,17 @@ a request enters an aged group ordered by arrival time, ahead of all unaged requ
 This protects larger runs from a continuous stream of new short checks. Five minutes
 is a priority threshold, not a start-time guarantee: running Maven commands are never
 preempted, and external resource pressure can still delay admission.
+
+A category invocation carries bounded waiting credit across its ordinary batches
+and guards. On each admission it caps accumulated credit plus actual queue wait at
+five minutes, then subtracts the time spent holding the execution slot. For example,
+a 3,600-second wait followed by 40 seconds of execution leaves 260 seconds of credit;
+the next batch needs another 40 seconds of waiting to become aged. This prevents
+each batch from losing all earlier waiting without allowing a long wait to buy
+priority for the rest of the suite. Preparation and gaps between admissions earn
+no credit. The balance lives only in that runner process; standalone Maven requests
+keep their existing ordering. Queue telemetry always reports actual wait and hold
+times, not this scheduling credit.
 
 An unaged request blocked by its worktree, an exclusive run or resource limits can be
 bypassed by another request that fits (backfilling). Once the oldest aged request
@@ -300,6 +324,8 @@ A category continuation retains its worktree lease: same-tree requests cannot
 prevent that holder from resuming to finish and release `target/`. This also applies
 to an aged serial waiter on that held tree; unrelated aged capacity requests keep
 their normal priority. Execution locks, not the continuation marker, authorize work.
+Foreign schedulers probe shared capacity for a retained-tree continuation so its
+own worktree lease does not make it appear blocked and forfeit its priority.
 Already-running backfill can still delay an older request.
 If another live waiter's worktree metadata disappears, admission ignores only
 that foreign missing-lock/missing-parent combination, including an aged serial

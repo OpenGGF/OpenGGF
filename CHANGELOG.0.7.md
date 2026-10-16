@@ -1452,7 +1452,11 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   queue waiting. Category runs explicitly use the bounded smoke suite; even the
   broad fallback excludes exhaustive oracles. Ordinary coverage queues in batches
   that release shared admission between jobs while retaining worktree ownership;
-  guards queue separately. Supported headless graphics flags no longer force
+  guards queue separately. Compiled tests and resources are prepared once per
+  category invocation, with lifecycle and source checks protecting reuse across
+  batches. Bounded wait credit carries between batches and is spent by execution,
+  allowing a long-waiting suite to progress without monopolizing later admissions.
+  Supported headless graphics flags no longer force
   exclusive admission, while unmeasured JVM overrides remain conservative.
   Full ordinary validation is reserved
   for preparing new public releases through the explicit `full-suite` profile.

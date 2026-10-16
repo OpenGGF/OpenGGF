@@ -115,8 +115,6 @@ def worktree_metadata_slot(root):
 
 def _execution_leases(stack, common, request, config, tree_fd=None):
     """Probe capacity under the admission lock; retain leases in stack on success."""
-    from maven_resources import GIB, snapshot, admits
-    from maven_running import live_load
     from maven_schedule import WORKTREE_BUSY
 
     if tree_fd is None:
@@ -133,12 +131,21 @@ def _execution_leases(stack, common, request, config, tree_fd=None):
             # A matching inode alone is not permission to bypass a foreign
             # holder. flock on our retained open-file description is idempotent.
             return WORKTREE_BUSY
+    shared = _shared_execution_leases(stack, common, request, config)
+    return (tree, *shared) if shared is not None else None
+
+
+def _shared_execution_leases(stack, common, request, config):
+    """Probe shared capacity without granting worktree ownership."""
+    from maven_resources import GIB, snapshot, admits
+    from maven_running import live_load
+
     legacy = _open_lock(stack, common / 'maven-queue.lock')
     if not _acquire(legacy, shared=request['auto']):
         return None
     stack.callback(_unlock, legacy)
     if not request['auto']:
-        return tree, legacy
+        return (legacy,)
     # Fixed namespace still sees live slots if maxRuns was lowered.
     slots = [_open_lock(stack, common / f'maven-slot-{i}.lock') for i in range(64)]
     free = []
@@ -154,7 +161,7 @@ def _execution_leases(stack, common, request, config, tree_fd=None):
                 reservation=request.get('reservation', normal), reserved=reserved):
             selected = free.pop(0)
             stack.callback(_unlock, selected)
-            return tree, legacy, selected
+            return legacy, selected
         return None
     finally:
         for slot in free:
@@ -162,7 +169,8 @@ def _execution_leases(stack, common, request, config, tree_fd=None):
 
 
 @contextmanager
-def maven_slot(root, *, exclusive=False, estimate=900, kind='maven', reservation=None, tree_fd=None):
+def maven_slot(root, *, exclusive=False, estimate=900, kind='maven', reservation=None,
+               tree_fd=None, service_credit=None):
     """Automatically schedule waiters, then retain OS-owned execution leases.
 
     Short estimates win until five-minute aging promotes arrival order. Blocked
@@ -175,6 +183,8 @@ def maven_slot(root, *, exclusive=False, estimate=900, kind='maven', reservation
     ``tree_fd`` is an already-held worktree_build_slot lease. Validate its inode
     against this root, retain it for Maven, and release only shared admission at
     the end of a batch. Other waiters still probe the locked tree normally.
+    ``service_credit`` carries bounded waiting priority across this invocation's
+    batches. Only its virtual arrival affects ordering; telemetry uses real time.
     """
     from maven_resources import GIB, policy, snapshot
     from maven_running import RunningLease, UsageSampler, append_log, trim_log
@@ -209,6 +219,7 @@ def maven_slot(root, *, exclusive=False, estimate=900, kind='maven', reservation
     with ExitStack() as stack:
         gate = _open_lock(stack, common / 'maven-admission.lock')
         started = next_notice = time.monotonic()
+        enqueued = service_credit.enqueued(started) if service_credit is not None else started
         request = None
         execution = None
         leases = None
@@ -223,7 +234,7 @@ def maven_slot(root, *, exclusive=False, estimate=900, kind='maven', reservation
                             request = WaitingRequest(common, dict(
                                 tree=str(git_dir / 'maven-worktree.lock'), auto=auto,
                                 retained_tree=tree_fd is not None,
-                                estimate=estimate, enqueued=started, reservation=reservation), _acquire)
+                                estimate=estimate, enqueued=enqueued, reservation=reservation), _acquire)
 
                         def fits(record):
                             nonlocal execution, leases
@@ -247,6 +258,13 @@ def maven_slot(root, *, exclusive=False, estimate=900, kind='maven', reservation
                                         return WORKTREE_GONE
                                     raise
                                 if found is WORKTREE_BUSY:
+                                    if (record['id'] != request.record['id']
+                                            and record.get('retained_tree', False)):
+                                        # Its owner can reuse target/. Probe shared
+                                        # capacity so another process cannot bypass
+                                        # that continuation's scheduling priority.
+                                        return _shared_execution_leases(
+                                            candidate, common, record, config) is not None
                                     return found
                                 if found and record['id'] == request.record['id']:
                                     execution, leases = candidate, found
@@ -301,6 +319,8 @@ def maven_slot(root, *, exclusive=False, estimate=900, kind='maven', reservation
                     finally:
                         _unlock(gate)
             ended = time.monotonic()
+            if admitted is not None and service_credit is not None:
+                service_credit.account(waited=admitted - started, held=ended - admitted)
             try:
                 append_log(common, dict(
                     kind=kind, tree=root.name, mode='resource-aware' if auto else 'serial',
