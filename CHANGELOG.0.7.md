@@ -1444,7 +1444,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   and peak memory. A lightweight local browser dashboard shows running jobs,
   waiting priority, resource usage and recent completions across worktrees,
   refreshing automatically without changing queue state and explaining admission
-  blockers when known. Waiting requests favour short checks, with aging and one
+  blockers when known. It names blocking requests, shows reported tooling revisions
+  across worktrees and labels scheduling estimates as coarse ordering hints.
+  Waiting requests favour short checks, with aging and one
   qualified small backfill before an older capacity-blocked request drains the queue.
   Reviewed small focused checks and ordinary batches automatically use 1 GiB JVM
   heaps with 4 GiB reservations; other checks retain normal budgets, with explicit

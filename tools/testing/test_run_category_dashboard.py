@@ -50,11 +50,12 @@ class DashboardTests(unittest.TestCase):
     def test_live_records_have_actual_timings_and_reading_changes_no_files(self):
         self.now = time.time() + .1
         lease = self.running(worktree='feature-a', kind='focused', mode='resource-aware',
-            submitted=self.monotonic - 80, admitted=self.monotonic - 20)
+            submitted=self.monotonic - 80, admitted=self.monotonic - 20,
+            toolingRevision=dashboard.TOOLING_REVISION)
         lease.publish(1024 ** 3, 1.25)
         self.waiting(worktree='feature-b', kind='batch-2', submitted=self.monotonic - 5,
                      enqueued=self.monotonic - 305, retained_tree=True,
-                     reservation=[4 * 1024 ** 3, 4])
+                     reservation=[4 * 1024 ** 3, 4], toolingRevision=dashboard.TOOLING_REVISION)
         before = {p: p.read_bytes() for p in self.common.rglob('*') if p.is_file()}
         view = self.collect()
         self.assertEqual('verified', view['liveness'])
@@ -63,6 +64,8 @@ class DashboardTests(unittest.TestCase):
             (running['worktree'], running['waitSeconds'], running['runSeconds'], running['rssBytes'], running['cpuCores']))
         self.assertEqual((5, 305, True, 1),
             (waiting['waitSeconds'], waiting['schedulingAgeSeconds'], waiting['aged'], waiting['position']))
+        self.assertEqual(dict(revision=dashboard.TOOLING_REVISION, status='current'), running['tooling'])
+        self.assertEqual(running['tooling'], waiting['tooling'])
         self.assertEqual(before, {p: p.read_bytes() for p in self.common.rglob('*') if p.is_file()})
 
     @unittest.skipUnless(sys.platform == 'linux', 'Requires Linux lease observation')
@@ -76,7 +79,33 @@ class DashboardTests(unittest.TestCase):
         self.assertIsNone(view['running'][0]['waitSeconds'])
         self.assertIsNone(view['waiting'][0]['waitSeconds'])
         self.assertEqual(10, view['waiting'][0]['schedulingAgeSeconds'])
+        self.assertEqual(dict(revision=None, status='unknown'), view['waiting'][0]['tooling'])
+        self.assertEqual(view['waiting'][0]['tooling'], view['running'][0]['tooling'])
         self.assertTrue(any('Older clients' in item for item in view['warnings']))
+        self.assertTrue(any('usable queue tooling revision' in item for item in view['warnings']))
+
+    def test_tooling_metadata_distinguishes_missing_older_and_future_revisions(self):
+        with patch.object(dashboard, 'TOOLING_REVISION', 3):
+            for value in (None, True, '3', 0, -1, 2.5, 2**63, [], {}):
+                with self.subTest(value=value):
+                    self.assertEqual(dict(revision=None, status='unknown'),
+                                     dashboard._tooling(dict(toolingRevision=value)))
+            for value, status in ((1, 'older'), (3, 'current'), (4, 'newer')):
+                self.assertEqual(dict(revision=value, status=status),
+                                 dashboard._tooling(dict(toolingRevision=value)))
+
+    @unittest.skipUnless(sys.platform == 'linux', 'Requires Linux lease observation')
+    def test_mixed_tooling_is_advisory_and_keeps_every_live_waiter(self):
+        with patch.object(dashboard, 'TOOLING_REVISION', 3):
+            for value in (None, 1, 3, 4):
+                self.waiting(toolingRevision=value)
+            before = {p: p.read_bytes() for p in self.common.rglob('*') if p.is_file()}
+            view = self.collect()
+            self.assertEqual(4, len(view['waiting']))
+            self.assertEqual({'unknown', 'older', 'current', 'newer'},
+                             {job['tooling']['status'] for job in view['waiting']})
+            self.assertTrue(any('older queue tooling' in item for item in view['warnings']))
+            self.assertEqual(before, {p: p.read_bytes() for p in self.common.rglob('*') if p.is_file()})
 
     @unittest.skipUnless(sys.platform == 'linux', 'Requires Linux lease observation')
     def test_fresh_authored_reasons_preserve_provenance_and_validated_details(self):

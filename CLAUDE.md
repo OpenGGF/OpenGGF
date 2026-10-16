@@ -207,6 +207,9 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
   scheduler reports are distinguished from inferred legacy observations.
   Scheduling age includes waiting credit and is separate from actual wait; older
   jobs can have unknown timings.
+  Tooling revisions are self-reported and advisory; unknown does not prove outdated
+  code. Updating main does not update an already-running wrapper. Scheduling
+  estimates are coarse ordering hints, not measured runtimes.
   For per-test memory investigation, use `tools/testing/profile_test_memory.py`
   with exact expensive class selectors; it queues an isolated repeated JVM and
   records allocation, sampled peaks and post-GC retention candidates. See the

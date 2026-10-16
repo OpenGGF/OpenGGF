@@ -19,7 +19,7 @@ import time
 
 from maven_resources import GIB, admission_reason, policy, snapshot
 from maven_running import FRESH_SECONDS, LEASE_NAME, LOG_NAME
-from maven_schedule import AGING_SECONDS, REQUEST_NAME, ordered
+from maven_schedule import AGING_SECONDS, REQUEST_NAME, TOOLING_REVISION, ordered
 
 DEFAULT_PORT = 8766
 REFRESH_SECONDS = 2
@@ -227,7 +227,16 @@ def _job(identifier, record, pid, proc, liveness):
                 waitSeconds=None, runSeconds=None, schedulingAgeSeconds=None,
                 estimateSeconds=None, aged=None, retainedTree=None, rssBytes=None,
                 cpuCores=None, budgetMemoryBytes=None, budgetCpuCores=None,
-                usageFresh=False, position=None, admission=None, liveness=liveness)
+                usageFresh=False, position=None, admission=None, liveness=liveness,
+                tooling=_tooling(record))
+
+
+def _tooling(record):
+    revision = record.get('toolingRevision')
+    if type(revision) is not int or not 0 < revision <= 2147483647:
+        return dict(revision=None, status='unknown')
+    return dict(revision=revision, status='current' if revision == TOOLING_REVISION
+                else 'older' if revision < TOOLING_REVISION else 'newer')
 
 
 def _reported_admission(record, now):
@@ -395,8 +404,14 @@ def collect_snapshot(root, *, common, policy_config=None, now=None, monotonic=No
         _observe_admission(waiting, running, reservations, held_slots, exclusive_held, resources, policy_config, now)
     if any(job['runSeconds'] is None for job in running) or any(job['waitSeconds'] is None for job in waiting):
         warnings.append('Older clients do not publish actual start times. Scheduling age is not elapsed waiting.')
+    statuses = {job['tooling']['status'] for job in running + waiting}
+    if 'older' in statuses:
+        warnings.append('Some jobs report older queue tooling. Their owners should use the updated main-workspace wrapper for future invocations.')
+    if 'unknown' in statuses:
+        warnings.append('Some jobs do not report a usable queue tooling revision. Check their wrapper before assuming they have recent admission fixes; running jobs keep their loaded code.')
     return dict(version=1, capturedAt=datetime.fromtimestamp(now, timezone.utc).isoformat(timespec='seconds'),
                 refreshSeconds=REFRESH_SECONDS, root=str(root), liveness=liveness, host=host,
+                toolingRevision=TOOLING_REVISION,
                 policy=policy_config, heldSlots=held_slots, exclusiveHeld=exclusive_held,
                 running=running, waiting=waiting, unverified=unverified,
                 recent=_recent(common, warnings), warnings=list(dict.fromkeys(warnings)))
