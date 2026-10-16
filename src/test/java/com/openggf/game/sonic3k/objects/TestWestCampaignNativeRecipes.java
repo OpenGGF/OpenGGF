@@ -37,6 +37,8 @@ class TestWestCampaignNativeRecipes {
             var svc = services(zone);
             var stock = ObjectConstructionContext.construct(svc, () -> new CollapsingBridgeObjectInstance(spawn(15, 0x12)));
             var brittle = ObjectConstructionContext.construct(svc, () -> new CollapsingBridgeObjectInstance(spawn(15, 0x12), true));
+            stock.setServices(svc);
+            brittle.setServices(svc);
             assertEquals(40, field(stock, "collapseTimer"));
             assertEquals(16, field(brittle, "collapseTimer"));
             assertEquals(stock.getSolidParams(), brittle.getSolidParams());
@@ -46,8 +48,12 @@ class TestWestCampaignNativeRecipes {
             assertEquals(1, field(brittle, "collapseTimer"));
             assertEquals(1000, brittle.getX(), "visible warning must not displace the collision center");
         }
-        var trigger = ObjectConstructionContext.construct(services(1), () -> new CollapsingBridgeObjectInstance(spawn(15, 0x81), true));
-        var stomp = ObjectConstructionContext.construct(services(2), () -> new CollapsingBridgeObjectInstance(spawn(15, 0x22), true));
+        var triggerServices = services(1);
+        var trigger = ObjectConstructionContext.construct(triggerServices, () -> new CollapsingBridgeObjectInstance(spawn(15, 0x81), true));
+        trigger.setServices(triggerServices);
+        var stompServices = services(2);
+        var stomp = ObjectConstructionContext.construct(stompServices, () -> new CollapsingBridgeObjectInstance(spawn(15, 0x22), true));
+        stomp.setServices(stompServices);
         assertEquals(8, field(trigger, "collapseTimer"));
         assertEquals(false, field(trigger, "brittleSupport"));
         assertTrue(stomp.isMgzStompMode());

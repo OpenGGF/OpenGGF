@@ -3586,9 +3586,8 @@ public class GameLoop {
 
             // Re-apply zone-specific player state (airborne intros like HCZ1, MGZ1)
             LevelEventProvider levelEvents = GameServices.module().getLevelEventProvider();
-            if (!levelManager.hasPendingFreshLevelTransitionBoundary()
-                    && levelEvents instanceof com.openggf.game.sonic3k.Sonic3kLevelEventManager s3kEvents) {
-                s3kEvents.applyZonePlayerStateAfterTitleCard();
+            if (!levelManager.hasPendingFreshLevelTransitionBoundary() && levelEvents != null) {
+                levelEvents.applyZonePlayerStateAfterTitleCard();
             }
             LOGGER.info("Exited Title Card, starting level");
         }

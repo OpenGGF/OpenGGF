@@ -279,3 +279,41 @@ the ordinary title graph. This is a bounded native entry/graph contract; it does
 not qualify the older route width inventory above or rendered pixels/audio.
 The [audit](../../audits/trace/2026-10-14-s3k-fresh-title-sst.md) records commands,
 negative evidence and the unchanged original AIZ/initial HCZ controls.
+
+## Explicit JUnit obligation pilot (2026-10-15, candidate)
+
+The standalone [pilot](../../../../tools/testing/check_route_obligations.py)
+binds the existing AIZ1 and HCZ1 representative route, selected two-cycle rewind
+and outgoing act-reload checks to an [exact expected inventory](../../../../tools/testing/aiz-hcz-route-obligations.json).
+The 26 cases are independent AIZ1/HCZ1 checks, including HCZ horizontal-admission
+rewind at the five widths already named by that test; they do not constitute a
+continuous AIZ-to-HCZ route or certify the remaining act/configuration products.
+
+```sh
+python3 tools/testing/check_route_obligations.py --preflight --rom s3k=/absolute/path/to/existing/s3k-ROM.gen
+python3 tools/testing/check_route_obligations.py --run --rom s3k=/absolute/path/to/existing/s3k-ROM.gen
+```
+
+The first command checks the canonical original-ROM SHA-1, committed input
+fixtures and current source class/method references without executing tests.
+The second also checks Java 25, queues exactly the six inventoried classes,
+removes only their required `slow-suite` exclusion, verifies fresh XML case
+identities and removes the temporary reports even on failure. No opt-in breadth
+properties are needed by these six classes. A missing, skipped, failed,
+duplicate or unexpected selected identity fails the lane. Existing reports can
+be inspected with `--reports DIR`; the caller must supply fresh reports from
+the exact tested build, command and fixtures. The tool does not infer their
+build identity or freshness. Enum inventory bindings accept plain constants
+only; constructor arguments, bodies and other unsupported declarations fail
+closed before Maven. Integer sources bind to the selected method's own annotation,
+ignore comments/literals and reject unsupported expressions. Ordinary developer skips and unrelated report identities remain
+unchanged. The general LTS-04/LTS-05 migration remains open.
+
+Observed on the remediation candidate at base `1f612ff7271d175ea17eb775e786845d5b2ee12a`:
+all **26 exact pilot cases passed**, with zero failures, errors or skips
+(Maven execution 93 seconds; queue wait is recorded separately). This qualified
+the parameterized XML identities. The later annotation-binding hardening retains
+those same identities and passes 24 Python safety checks plus canonical
+preflight. See the [task record](../../plans/2026-10-15-architecture-debt-remediation.md#runtime-validation-handoff-2026-10-16)
+for commands and limits. This is bounded pilot evidence; remaining matrix
+obligations and general enforcement stay open.

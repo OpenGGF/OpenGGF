@@ -3,6 +3,8 @@ package com.openggf.mods.code;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.data.Rom;
+import com.openggf.data.RomManager;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.GameModule;
 import com.openggf.game.patch.DelegatingGameModule;
@@ -15,6 +17,8 @@ import com.openggf.game.sonic3k.objects.AizMinibossInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -64,7 +68,7 @@ class TestSecondStrikeBoss {
         assertFalse(harness.gameState.isEndOfLevelFlag());
     }
 
-    @Test void managerDispatchKeepsNativeSixteenTickCuePendingWaveReplayAndFatalCancellation() throws Exception {
+    @Test void managerDispatchKeepsNativeSixteenTickCueAndPendingWaveReplay() throws Exception {
         var harness = new Harness(policy, 3);
         startWarningAtNativePeak(harness);
         for (int i=0;i<7;i++) {
@@ -80,8 +84,25 @@ class TestSecondStrikeBoss {
         harness.objects.rewindSnapshottable().restore(saved); harness.tick=8;
         harness.boss = harness.objects.activeObjectsOfType(AizMinibossInstance.class).getFirst(); harness.managerTick(9);
         assertEquals(expected.dynamicObjects(), harness.objects.rewindSnapshottable().capture().dynamicObjects());
+    }
+
+    @Test
+    @RequiresRom(SonicGame.SONIC_3K)
+    void managerDispatchFatalHitCancelsRestoredPendingWaveAndWarning() throws Exception {
+        // Unlike warning/replay alone, full fatal dispatch executes explosion children,
+        // whose raw animation reads AniRaw_BossExplosion from the verified S3K ROM.
+        var harness = new Harness(policy, 3, RomManager.getInstance().getRom());
+        startWarningAtNativePeak(harness);
+        harness.managerTick(7);
+        harness.assertWarningPresentation(3);
+        assertTrue(harness.flames().isEmpty());
+        var saved = harness.objects.rewindSnapshottable().capture();
+        harness.managerTick(9);
+        assertEquals(4, harness.flames().size());
         harness.objects.rewindSnapshottable().restore(saved); harness.tick=8;
         harness.boss = harness.objects.activeObjectsOfType(AizMinibossInstance.class).getFirst();
+        harness.assertWarningPresentation(3);
+        assertTrue(harness.flames().isEmpty());
         harness.boss.getState().hitCount=1; harness.boss.onPlayerAttack(null,null); harness.managerTick(20);
         assertTrue(harness.flames().isEmpty()); assertTrue(harness.boss.getState().defeated);
         assertEquals(0, liveFlares(harness));
@@ -270,6 +291,10 @@ class TestSecondStrikeBoss {
         int tick;
 
         Harness(AizMinibossAttackPolicy attackPolicy, int remainingHits) {
+            this(attackPolicy, remainingHits, null);
+        }
+
+        Harness(AizMinibossAttackPolicy attackPolicy, int remainingHits, Rom rom) {
             SonicConfigurationService config = SonicConfigurationService.createStandalone();
             config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
             Camera camera = new Camera(config);
@@ -281,19 +306,20 @@ class TestSecondStrikeBoss {
             when(renderer.isReady()).thenReturn(true);
             var renderManager = mock(com.openggf.level.objects.ObjectRenderManager.class);
             when(renderManager.getRenderer(com.openggf.game.sonic3k.Sonic3kObjectArtKeys.AIZ_MINIBOSS)).thenReturn(renderer);
-            var rom = mock(com.openggf.data.RomByteReader.class);
+            var romReader = mock(com.openggf.data.RomByteReader.class);
             // Independent byte_6913F fixture; production reads through its ROM service.
-            when(rom.slice(0x6913F, 13)).thenReturn(new byte[]{7,1,7,1,8,1,9,3,10,3,11,3,(byte)0xF4});
+            when(romReader.slice(0x6913F, 13)).thenReturn(new byte[]{7,1,7,1,8,1,9,3,10,3,11,3,(byte)0xF4});
             ObjectManager[] holder = new ObjectManager[1];
             camera.setX((short)0x1100); camera.setY((short)0x290);
             StubObjectServices services = new StubObjectServices() {
                 @Override public com.openggf.level.objects.ObjectRenderManager renderManager() { return renderManager; }
                 @Override public ObjectManager objectManager() { return holder[0]; }
                 @Override public GameStateManager gameState() { return gameState; }
-                @Override public com.openggf.data.RomByteReader romReader() { return rom; }
+                @Override public com.openggf.data.RomByteReader romReader() { return romReader; }
                 @Override public Camera camera() { return camera; }
                 @Override public SonicConfigurationService configuration() { return config; }
                 @Override public GameModule gameModule() { return module; }
+                @Override public Rom rom() { return rom != null ? rom : super.rom(); }
             };
             objects = new ObjectManager(List.of(), module.createObjectRegistry(), 0, null, null, null, camera, services);
             holder[0] = objects;

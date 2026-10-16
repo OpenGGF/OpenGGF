@@ -101,6 +101,17 @@ the complete comparator. Rejecting them by type made the fail-closed check
 report "no inspectable difference" for content-equal snapshots (2026-10-16).
 That old fail-open walker had also hidden a real AIZ intro presentation loss.
 
+A live queue waiter can outlast Git worktree metadata (2026-10-16, architecture
+debt validation). An admission scan completed 33 smoke batches, then failed while
+probing another live waiter's vanished `maven-worktree.lock` parent. A live waiting
+lease proves the requester still exists, not that its target metadata remains.
+Distinguish that exact foreign missing-parent race from an own-worktree failure,
+a busy lock or a permission error; retain the waiting owner's lease and normal
+resource/fairness policy. A deterministic leased-waiter regression reproduced the
+crash, with own-missing, existing-parent I/O and busy-lock controls. An interrupted
+run is incomplete even when all reported JUnit cases passed; consumed diagnostics
+are not a resumable pass cache.
+
 A performance-only flock does not isolate shared-worktree test jobs
 (2026-10-13, P5 CPU audit). Another task's queued Maven run overlapped a
 negative timing pair; its result was excluded and a preliminary rejection

@@ -5,6 +5,20 @@ carried by `develop` and `next` after the 0.6 release rollover. No Mod API basel
 has been published yet. The runtime-visible, type-only `com.openggf.game.ModApi`
 annotation marks its roots.
 
+Creator dynamic objects implement `ModRewindRecreatable` and receive
+`ObjectReconstructionContext`: captured spawn and typed payload, restore-time
+services, read-only object/player queries and deferred player-bound admission.
+The low-level `RewindRecreateContext` and the complete `ObjectManagerSnapshot`
+family are explicitly reviewed engine-internal terminals. Their allocation,
+restore-queue and whole-world bookkeeping shapes carry no creator compatibility
+promise. The legacy low-level hook remains available to native subclasses. The validator
+warns on raw reconstruction signatures authored outside an existing native
+reconstruction hierarchy; it keeps them loadable for compatibility. Native expert
+overrides remain admitted without that migration warning. Maintained standalone creator fixtures and the SDK starter use the bounded
+facade. Public `ObjectManager` methods no longer expose consumption of pending
+player-bound entries or direct reconstruction-object registration. The mutable
+candidate remains 0.7.0; its normalized and engine-internal pins change together.
+
 Second Strike extends the candidate with explicit native decoded-placement
 bindings and original-ring retention, preserving concrete level identity for
 native transition consumers. Native-owned S3K policies admit bounded late-boss,

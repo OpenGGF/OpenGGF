@@ -1120,6 +1120,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
      * the title owner's children have retired. This also runs on saved-player
      * reloads: their intro suppression does not suppress the native controller.
      */
+    @Override
     public void onTitleCardOwnerRetired() {
         var objectManager = GameServices.level().getObjectManager();
         if (objectManager == null) {
@@ -1142,6 +1143,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
     }
 
+    @Override
     public void applyZonePlayerStateAfterTitleCard() {
         if (!hasSavedPlayerReturnState() && currentZone == Sonic3kZoneIds.ZONE_SOZ
                 && currentAct == 0 && !bootstrap.isSkipIntro()) spawnSozFallingIntro(true);

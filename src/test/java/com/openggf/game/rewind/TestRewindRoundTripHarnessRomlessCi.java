@@ -8,6 +8,10 @@ import com.openggf.game.rewind.RewindRoundTripHarness.RoundTripSweepResult;
 import com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,6 +22,7 @@ import java.util.logging.Logger;
 
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 class TestRewindRoundTripHarnessRomlessCi {
     private static final String FORCE_ROMLESS_CI_PROPERTY =
@@ -60,12 +65,37 @@ class TestRewindRoundTripHarnessRomlessCi {
             RoundTripSweepResult result = RewindRoundTripHarness.probeClass(
                     S3kResultsScreenObjectInstance.class.getName());
 
-            assertInstanceOf(RoundTripSweepResult.Passed.class, result);
+            assertInstanceOf(RoundTripSweepResult.Unprobed.class, result,
+                    "a missing prerequisite must never count as an executed round-trip");
             assertTrue(records.stream().noneMatch(TestRewindRoundTripHarnessRomlessCi::isRomOpenFailure),
                     "romless CI surrogate must not attempt to open absent copyrighted ROM assets");
         } finally {
             romLogger.removeHandler(handler);
         }
+    }
+
+    @Test
+    void configuredAbsoluteRomPathIsNotMistakenForRomlessCi(@TempDir Path temporary) throws Exception {
+        // This check tests path resolution only, and never opens these non-ROM bytes.
+        Path configuredFile = Files.writeString(temporary.resolve("configured-asset.bin"), "path fixture");
+        String previousRom = System.getProperty("s3k.rom.path");
+        String previousDirectory = System.getProperty("user.dir");
+        try {
+            System.setProperty("s3k.rom.path", configuredFile.toString());
+            System.setProperty("user.dir", temporary.toString());
+            var lookup = RewindRoundTripHarness.class.getDeclaredMethod("defaultRomFilesUnavailable");
+            lookup.setAccessible(true);
+            assertFalse((boolean) lookup.invoke(null),
+                    "the harness must use configured ROM paths, not root filenames alone");
+        } finally {
+            restoreProperty("s3k.rom.path", previousRom);
+            restoreProperty("user.dir", previousDirectory);
+        }
+    }
+
+    private static void restoreProperty(String key, String previous) {
+        if (previous == null) System.clearProperty(key);
+        else System.setProperty(key, previous);
     }
 
     private static boolean isRomOpenFailure(LogRecord record) {

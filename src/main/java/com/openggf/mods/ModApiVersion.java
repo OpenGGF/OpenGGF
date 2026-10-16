@@ -96,6 +96,8 @@ public final class ModApiVersion {
      * ownership and whole-picture transforms without exposing implementation classes.
      * Display colour expansion independently selects Full or Limited palette RGB output
      * while retaining colour profile semantics and native palette ownership.
+     * Creator reconstruction uses ObjectReconstructionContext; host dynamic-entry
+     * queues and whole-object-manager snapshot shapes remain engine internals.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);

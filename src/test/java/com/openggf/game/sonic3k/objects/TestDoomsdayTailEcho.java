@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.data.RomByteReader;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.rewind.CompositeSnapshot;
@@ -16,7 +17,10 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.mods.objects.DoomsdayFactory;
 import com.openggf.sprites.managers.SpriteManager;
+import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.TestablePlayableSprite;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -118,9 +122,14 @@ class TestDoomsdayTailEcho {
     }
 
     @ParameterizedTest @ValueSource(ints = {0, 20, 52})
+    @RequiresRom(SonicGame.SONIC_3K)
     void destructiveManagerRecreationRelinksPresetAndReplaysBeforeInitDuringRideAndAfterRelease(int advance)
             throws Exception {
-        World world = new World(DoomsdayMissileRecipe.TAIL_ECHO); world.fire();
+        World world = new World(DoomsdayMissileRecipe.TAIL_ECHO);
+        // The long replay dispatches missile puffs, whose native animation script is ROM-backed.
+        var rom = TestEnvironment.currentRom();
+        world.services.withRom(rom).withRomReader(new RomByteReader(rom.readAllBytes()));
+        world.fire();
         for (int tick = 0; tick < advance; tick++) world.projectileTick(tick + 1);
         var saved = world.rewind.capture();
         var originalBoss = world.boss;

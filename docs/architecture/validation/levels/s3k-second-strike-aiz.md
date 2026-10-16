@@ -75,5 +75,26 @@ under the native log at16256 and survives the former16262 death, then dies16518
 at8710/1360 with zero rings. All26 common columns through16255 equal the prior
 run literally. Native log344 is a source/geometry candidate, not an instrumented
 damage winner. No platform target was acquired. Down-only native roll is a
-source-supported successor proposal, not an executed safe answer. Waterfall,
-second results, HCZ and all four complete cold-route axes remain open.
+source-supported successor proposal, not an executed safe answer. Successor75430
+enables a previously skipped terrain-edge probe and changes input at16139, then
+dies16637/8702,1299 without any Down-only roll request. Its later jump-rolling
+trajectory does not test that proposal. Isolated29024 replays the exact16518
+prefatal R4 pads, admits native Down-only rolling7x14 and survives four inputs
+past the old death. Its ahead-floor proof guard then stops before accepting the
+endpoint; local ability is observed, complete clearance/recovery remains unqualified. Waterfall,
+second results, HCZ and all four complete cold-route axes remain open. Post-clear
+81356 reproduces all16,522 prior inputs and admits one ordinary rolling jump,
+then stops16581 at negative native velocity on a right-wall landing. All60 response
+inputs retain zero rings/nohurt/alive; no supported recovery endpoint is accepted.
+Fresh re-press49520 preserves the exact16,524-input prefix, admits native Sonic
+air steering and the existing InstaShield, then stops16590 after67 fixed response
+inputs at a horizontal log-body clearance guard during steep-slope rollback.
+The response stays zero-ring/alive/nohurt and the native attack retires normally;
+no full two-dimensional harmful contact or normal recovery endpoint is proved.
+Geometry-only45291 keeps all inputs and the96-response cap, passes that former
+stop, then rejects a native foot pair15/1 at16591 under its both-within14 guard.
+All68 response inputs stay alive/nohurt at zero rings and both-dimensional log
+envelopes remain clear. Native selection legitimately chooses the nearer signed
+distance1 within its positive threshold5; the far foot does not establish support
+loss. The30-update native slope lock exceeds the28 inputs left in that cap, which
+is not extended; released-control recovery remains unproved.

@@ -90,6 +90,25 @@ class TestModApiSignatureSurface {
     }
 
     @Test
+    void creatorReconstructionKeepsHostSnapshotQueuesOutsideTheContract() {
+        Set<Class<?>> surface = ModApiSignatureSurface.recursiveTypes();
+        assertTrue(surface.contains(com.openggf.level.objects.ObjectReconstructionContext.class),
+                "Creators retain the bounded reconstruction facade");
+        assertTrue(surface.contains(com.openggf.level.objects.ModRewindRecreatable.class));
+        assertFalse(surface.contains(com.openggf.level.objects.RewindRecreateContext.class),
+                "The host context carries restore queues and captured dynamic entries");
+        assertFalse(surface.contains(com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.class),
+                "Whole-manager capture and allocation state is host reconstruction machinery");
+        assertFalse(surface.contains(
+                com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry.class));
+        assertFalse(ModApiSignatureSurface.snapshotLines().stream().anyMatch(line ->
+                        line.startsWith("METHOD com.openggf.level.objects.ObjectManager ")
+                                && (line.contains(" consumePendingPlayerBoundEntry(")
+                                || line.contains(" registerRewindReconstructionObject("))),
+                "Creator code must not mutate the host's pending reconstruction queues");
+    }
+
+    @Test
     void annotatedClasspathInventoryExactlyMatchesRecursiveSurface() {
         Set<String> annotated = new ClassFileImporter()
                 .importPath(TestSessionOutputPaths.compiledClasses())

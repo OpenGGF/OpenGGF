@@ -4,13 +4,13 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreatable;
-import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.ModRewindRecreatable;
+import com.openggf.level.objects.ObjectReconstructionContext;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import java.util.List;
 
 /** Original act-two ring tally. Native S2 signposts intentionally retire in later acts. */
-public final class TideCircuitGoal extends AbstractObjectInstance implements RewindRecreatable {
+public final class TideCircuitGoal extends AbstractObjectInstance implements ModRewindRecreatable {
     private boolean activated;
     private boolean departed;
     private int remainingBonus;
@@ -54,7 +54,7 @@ public final class TideCircuitGoal extends AbstractObjectInstance implements Rew
             renderer.drawFrameIndex(activated?3:2,getSpawn().x(),getSpawn().y(),false,false);
     }
 
-    @Override public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {
+    @Override public AbstractObjectInstance recreateForRewind(ObjectReconstructionContext context) {
         return new TideCircuitGoal(context.spawn());
     }
 }

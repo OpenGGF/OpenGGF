@@ -1468,9 +1468,9 @@ public class Sonic3kTitleCardManager
 
     private void publishTitleOwnerRetirement() {
         // $44(a0) suppresses this allocation for bonus/special title owners.
-        if (!bonusMode && GameServices.module().getLevelEventProvider()
-                instanceof com.openggf.game.sonic3k.Sonic3kLevelEventManager events) {
-            events.onTitleCardOwnerRetired();
+        if (!bonusMode) {
+            var events = GameServices.module().getLevelEventProvider();
+            if (events != null) events.onTitleCardOwnerRetired();
         }
     }
 

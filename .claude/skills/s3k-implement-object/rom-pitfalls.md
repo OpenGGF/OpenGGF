@@ -5828,7 +5828,31 @@ remains still through ordinary updates. Count setup-only calls separately from
 Level/V-int advances. A correct floor query or an unlocked boot is not proof
 that the first ordinary object pass has completed.
 
+Rewinding the world does not rewind an external observer's previous population
+or phase memo. ICZ97772's first replay event line reported roster/phase changes
+from its future memo while complete tuples and every registered key matched.
+Restore the observer memo separately or label that restoration event; do not
+exclude real objects or snapshot entries to suppress it. The same fixed input
+policy can also emit different pads after native outcomes diverge: WARNED landed
+on call147 and selected braking on148, while STOCK remained airborne/neutral.
+Compare actual pad masks before claiming identical-input control coverage.
+
 ## Historical interaction pointers do not prove current support
+
+Native terrain attachment uses two current, rotated foot results. An arbitrary
+future point queried world-DOWN is not a prediction of the next native state on
+a curve (AIZ29024/81356). Native angle rounding is asymmetric and includes exact
+`$20/$E0` ground boundaries; a narrower author guard is not a ROM rule. Landing
+can also change groundMode after the current scans, so the last sensor direction
+can still describe the preceding mode. Preserve the observation phase instead of
+forcing a rescan or declaring native support invalid from a newer mode alone.
+
+Do not require both scan distances to satisfy the native selected-foot bound.
+Player_Angle chooses the nearer signed result. AIZ45291's RIGHTWALL pair15/1
+selects1 within its positive threshold5 (`abs(yVel>>8)+4`); the farther15 is not
+lost support. A stronger two-foot recovery-endpoint check can remain separate.
+Native slope slip may also rearm moveLock without settingAir; preserve that
+control state rather than changing physics or lengthening a failed witness.
 
 S3K can clear Status_OnObj while preserving the last interact address. An input
 author must use current OnObject and the manager's actual rider/standing relation
@@ -5843,3 +5867,26 @@ not this rule. Crouch animation does not shrink the S3K touch box; Down+Right
 cannot initiate that roll, and Down+jump can jump first. Observe the actual
 rolling state and native radii7/14 before treating a response as acquired.
 Source availability and geometric clearance are not executed survival evidence.
+
+## A horizontal clearance guard is not a two-dimensional contact
+
+An author's body-X guard can reject two vertically separated bodies. AIZ49520 stopped
+at8722/1355 in RIGHTWALL mode because its rotated body startedX8703 while the
+log's draw extent ended8704. The radius envelope startedY1346 and the inferred
+engine container1345, below the original mapping's1344 bottom; native solid and
+hurt-touch X gates were separately clear. Preserve that failed author witness,
+but do not report its guard as a native hit. Rotated radii, engine width/height,
+ROM mapping-piece bounds and opaque rendered pixels are different measurements.
+Use current/prior native geometry and both axes for contact attribution, keep
+actual health/support observations, and qualify the recovery endpoint separately.
+
+## HCZ conveyor end markers do not each own a live actor
+
+HCZ1 originals99/116 are two loading markers for one subtype04 belt, and100/117
+likewise share subtype14. Obj_HCZConveyorBelt deduplicates by the full subtype;
+04 and14 remain distinct owners. Require the genuine initialized representative
+with canonical marker metadata, current bounds/Y and a managed slot, rather than
+one live actor per marker.31538 observed99/100 while116/117 were absent. Its
+shared load bytes were false, so those bytes alone are not an actor-identity
+proof. Native ID3E is non-rendered conveyor logic; ID68 spinning-column art or
+dimensions cannot establish its body, motion or clearance.
