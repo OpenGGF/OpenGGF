@@ -138,6 +138,17 @@ class ResourceTests(unittest.TestCase):
             with patch.dict(resources.os.environ, {'MAVEN_OPTS': '-Xmx8g'}):
                 self.assertTrue(needs_exclusive(['test']))
 
+    def test_explicit_single_fork_default_stays_shared_but_other_shapes_are_exclusive(self):
+        from maven_queue import needs_exclusive
+        with patch.dict(resources.os.environ, {}, clear=True):
+            safe = ['-Ptrace-replay', '-Dsurefire.forkCount=1', '-Dsurefire.reuseForks=true', 'test']
+            self.assertFalse(needs_exclusive(safe))
+            for flag in ('-Dsurefire.forkCount=2', '-Dsurefire.forkCount=1C',
+                         '-Dsurefire.forkCount=0', '-Dsurefire.reuseForks=false',
+                         '-Dsurefire.argLine=-Xmx8g', '-Pbenchmarks'):
+                self.assertTrue(needs_exclusive([*safe, flag]), flag)
+                self.assertTrue(needs_exclusive([flag, *safe]), flag)
+
     def test_headless_graphics_environment_does_not_make_tests_exclusive(self):
         from maven_queue import needs_exclusive, lean_command
         graphics = '-Dopenggf.headless.gl=surfaceless-egl'

@@ -365,3 +365,80 @@ manifest, workflow or hook changed. No broad engine or release-full-suite claim
 is made. Consumed category diagnostics and focused reports are deleted before
 delivery. Existing running commands retain the code they loaded; new invocations
 must use the updated tooling, including by absolute path from older worktrees.
+
+## Active execution versus retained worktree ownership
+
+The follow-up starts at `3fa0730c6` after the qualified-small-job delivery. A live
+snapshot showed two normal batches with 7 GiB reservations, three focused waiters,
+and two exclusive requests. The focused selectors were expensive ROM/campaign
+checks, not qualified registry entries. Their 31–39 second scheduling estimates
+were class-count hints, not measured completion forecasts. Available host RAM did
+not establish capacity after reserving growth for the running jobs and headroom.
+
+Opus 5.5 traced a larger problem to the benchmark's copy of `run_isolated.py` at
+`da6330ae6`: it acquired exclusive admission, tried every linked worktree lock,
+then released admission and requeued if any tree was busy. Category runners retain
+their tree between batches, so an idle tree repeatedly caused a complete queue
+drain with no measurement. The bounded queue log contained 91 completed benchmark
+records with `holdSeconds: 0.0`, consistent with that loop. Rounded telemetry alone
+does not prove that each attempt ran no command. Summed waits are not elapsed
+delivery time. The develop version from `7d12e4c2c` instead blocked while acquiring
+all tree locks before admission, retaining a partial lock set and stalling other
+work. Neither ordering models the actual timing conflict.
+
+The replacement distinguishes active build execution from output ownership.
+Wrapped builds and category preparation hold a shared repository activity lease
+only while executing. A benchmark keeps one queue request, takes exclusive test
+admission, then drains active builds through an exclusive activity lease. An intent
+mutex blocks new builds during draining and measurement. Idle foreign category
+trees no longer matter; the benchmark protects its own tree before joining the
+test queue. Opus review caught that submitting before this own-tree acquisition
+could age a busy-tree measurement into a queue-wide drain. A real-process test
+reproduced that regression before the correction, then passed with no waiting
+record published until the own tree was available. Descriptors
+are inherited by the launched process. Activity holders must never acquire test
+admission. No foreign tree-lock sweep or retry/requeue loop remains.
+
+A separate false-exclusive case was the explicit POM default
+`-Dsurefire.forkCount=1`. This and `-Dsurefire.reuseForks=true` now retain normal
+shared admission; mixed unsafe options, other counts/reuse settings, heap overrides
+and unknown profiles remain conservative. Both normal and lean budgets are
+unchanged. Reducing normal reservations without first capping/qualifying the Maven
+parent was deferred. Estimate-derived benchmark kill deadlines were also rejected:
+a priority hint is not an execution-time contract. No running job was restarted.
+
+The benchmark returns its child's exit code after contexts close, so a successful
+command is no longer logged as interrupted by an internal `SystemExit(0)`.
+Completed queue telemetry still does not mean command success; the audit and
+process status retain nonzero exits. Queue hold time includes active-build draining,
+whereas audit timestamps cover the launched measurement. Category preparation
+records build-isolation waiting separately and excludes it from its timeout budget.
+
+Validation on `feature/ai-ready-admission` at `3fa0730c6` plus this patch:
+
+- `python3 -m unittest discover -v -s tools/testing -p 'test_run_categor*.py'`
+  passed 247 checks in 33.140s. After broadening the activity hook to all logged
+  Maven commands and hardening owned fixture cleanup,
+  `PYTHONPATH=tools/testing python3 -m unittest -v test_run_category_activity
+  test_run_category_preparation test_run_category_resources` passed all 35 affected
+  checks in 1.634s. Actual private-process checks cover overlapping builds, draining,
+  preventing new-build overtaking, cancellation, descriptor inheritance after
+  wrapper death, and preparation waiting longer than its execution timeout.
+- `PYTHONPATH=tools/testing python3 -m unittest discover -v -s tools/performance
+  -p 'test_run_isolated.py'` passed six checks in 1.830s after adding nonzero-exit
+  coverage and the review regression for own-tree readiness. A real linked-worktree fixture holds a foreign category tree idle while
+  two independent measurement invocations finish with exits 0 and 7, each with
+  one completed, nonzero-hold queue record. No host Maven or engine work is launched.
+- `LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base
+  3fa0730c628cd27c6da80a692fdc0ac048d36b98 --preflight` passed Java 25, Lua 5.4
+  and PowerShell prerequisites. The change-based plan selects 3,447 smoke candidates
+  because shared tooling changed. Focused Python/process safety checks exercise the
+  changed lock and command-classification contract directly; no POM, Java, test
+  selection, workflow or hooks changed, so broad engine validation is disproportionate.
+  This is not a smoke or full-suite pass.
+
+Migration matters: running Python processes keep their loaded code. Use updated
+wrappers throughout linked worktrees or invoke the main wrapper by absolute path
+from the intended cwd. Older wrappers/direct Maven/IDE builds bypass the activity
+lease; existing 0.5-second process sampling rejects observed interference but can
+miss short overlaps. Different clones and arbitrary host load are not excluded.

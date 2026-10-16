@@ -144,11 +144,18 @@ negative timing pair; its result was excluded and a preliminary rejection
 withdrawn. Hold the existing test admission lease exclusively throughout fresh
 process timings, audit completed-job intervals, and reject bypassing build/test
 overlap. Never remove queue locks or stop unrelated work to force isolation.
-A batched runner now retains its worktree while awaiting another admission.
-Acquire linked-worktree build leases before exclusive test admission, in a
-consistent order, then lend the held current-tree descriptor to the queue.
-Holding exclusive admission while waiting for that retained worktree deadlocks
-its next batch. The real OS-lease regression fails before this ordering fix.
+A batched runner retains its worktree while awaiting another admission. Sweeping
+all worktree locks confuses idle output ownership with active execution: blocking
+before admission stalls unrelated work, while releasing/requeuing after an
+unsuccessful sweep repeatedly drains the queue without measuring (2026-10-16).
+Holding exclusive admission while waiting for a foreign retained tree deadlocks
+its next batch. Instead queue once exclusively, then drain a separate activity
+lease held only during wrapped build execution. An intent mutex prevents new builds
+overtaking that drain; activity holders never wait for test admission. Real process
+regressions cover idle retained trees, active build exclusion, cancellation and
+inherited leases. Old wrappers/direct builds bypass this protocol; process sampling
+rejects observed interference but can miss short overlaps. Queue hold time includes
+build draining and must not be reported as measurement execution time.
 
 A live recording can still be finalizing after the gameplay loop stops
 (2026-10-13, runtime performance controls). Engine cleanup has a shorter recorder

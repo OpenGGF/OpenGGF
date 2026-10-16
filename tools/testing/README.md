@@ -203,9 +203,11 @@ python3 tools/testing/maven_queue.py -Dmse=off -DskipTests package
 python3 tools/testing/maven_queue.py -Dmse=off -DskipTests compile dependency:build-classpath -Dmdep.outputFile=target/examples-classpath.txt
 ```
 
-They hold only the current worktree's `maven-worktree.lock`, preventing concurrent
-writes to its `target/` by another wrapped build or test. A test in another worktree
-cannot delay them. They publish no shared waiting/running records or queue telemetry.
+They hold the current worktree's `maven-worktree.lock`, preventing concurrent
+writes to its `target/` by another wrapped build or test. Ordinary tests in other
+worktrees do not delay them. On POSIX they also hold a shared repository activity
+lease during execution; isolated performance measurements can temporarily pause
+builds as described below. Builds publish no shared waiting/running records or queue telemetry.
 Direct `mvn compile` and `mvn -DskipTests package` are also allowed when nothing else
 is writing this worktree's `target/`; use the wrapper when that exclusion matters.
 
@@ -223,6 +225,26 @@ goal as build-only. Custom settings or Maven extensions may also change lifecycl
 bindings; inspect those before relying on automatic recognition. A native-image build
 with tests skipped bypasses admission too; its CPU/memory cost is not the Java-build
 estimate. Build CPU/RAM is visible as ordinary host load when later tests seek admission.
+
+`tools/performance/run_isolated.py` accepts only prebuilt measurement commands.
+It first waits for its own worktree outside the test queue, then queues once for
+exclusive test admission and takes the repository build
+activity lease exclusively. Existing active builds finish; an intent mutex blocks
+new builds while they drain and throughout measurement. Retained but idle category
+worktrees do not delay it. Its own worktree remains locked to protect the measured
+artifacts. Never request test admission or launch a build inside an activity lease.
+The runner does not sweep other worktree locks, release admission and requeue, or
+preempt running jobs. Queue hold time includes active-build draining; the measurement
+audit's start/end timestamps cover the launched command instead. Category preparation
+records activity waiting separately and excludes it from the execution timeout.
+
+Use the updated wrappers in all participating worktrees, or invoke the main
+workspace's wrapper by absolute path from the intended cwd. Running Python wrappers
+retain their loaded code. Direct Maven/IDE builds and older wrappers do not honor
+the activity lease; the measurement runner rejects observed bypassing build/test
+processes through its existing 0.5-second `/proc` sampling, which can miss short
+overlaps. The lease is scoped to linked worktrees, not other clones or arbitrary
+host activity. No timing estimate is a hard runtime deadline.
 
 On this Linux host (32 logical CPUs, Java 21.0.12.1, Maven 3.9.16), clean builds
 of `607e97d54` measured on 2026-10-09 with the existing local dependency cache were:
@@ -285,6 +307,11 @@ The same worktree always remains exclusive. Unsupported resource probes/platform
 and CPU allocations smaller than two per-run reservations retain serial execution.
 There is no background service, task owner or approval step. Participating waiters
 use short-run priority with aging; different clones have separate queues. Each command still uses its own worktree and `target/` directory.
+
+Exact POM defaults `-Dsurefire.forkCount=1` and `-Dsurefire.reuseForks=true`
+retain shared admission, including for trace/audio profiles. Other fork counts,
+reuse settings, heap overrides or unknown profiles remain exclusive. A safe flag
+does not neutralize an unsafe flag elsewhere in the command.
 
 #### Queue telemetry
 

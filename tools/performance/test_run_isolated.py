@@ -2,11 +2,9 @@
 import importlib.util
 from pathlib import Path
 import signal
-import os
+import selectors
 import sys
 import tempfile
-import selectors
-import time
 import subprocess
 import unittest
 from unittest.mock import Mock, patch
@@ -17,6 +15,46 @@ spec.loader.exec_module(module)
 
 
 class TestMeasurementIsolation(unittest.TestCase):
+    @unittest.skipUnless(sys.platform.startswith('linux'), 'Linux OS lease regression')
+    def test_busy_own_tree_waits_outside_shared_queue(self):
+        from maven_queue import worktree_build_slot
+        with tempfile.TemporaryDirectory(prefix='ggf-isolation-own-') as temporary:
+            root = Path(temporary)
+            subprocess.run(['git', 'init', '-q', str(root)], check=True)
+            source = Path(__file__).with_name('run_isolated.py').resolve()
+            code = f"""
+import sys
+sys.path.insert(0, {str(source.parent)!r})
+import run_isolated as runner
+runner.interfering_processes = lambda: []
+sys.argv = ['run_isolated', '--worktree', {str(root)!r}, '--cwd', {str(root)!r},
+            '--audit-report', {str(root/'audit.json')!r}, '--', sys.executable, '-c', 'pass']
+raise SystemExit(runner.main())
+"""
+            process = None
+            try:
+                with worktree_build_slot(root):
+                    process = subprocess.Popen([sys.executable, '-u', '-c', code],
+                                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                               text=True)
+                    with selectors.DefaultSelector() as reader:
+                        reader.register(process.stdout, selectors.EVENT_READ)
+                        self.assertTrue(reader.select(timeout=5), 'Owned child did not reach lock wait')
+                        self.assertIn("Waiting for this worktree's build/test lock", process.stdout.readline())
+                    self.assertIsNone(process.poll())
+                    self.assertFalse((root/'.git/maven-waiters').exists())
+                output, _ = process.communicate(timeout=5)
+                self.assertEqual(0, process.returncode, output)
+            finally:
+                if process is not None:
+                    if process.poll() is None:
+                        process.terminate()
+                    try:
+                        process.communicate(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        process.kill()
+                        process.communicate(timeout=5)
+
     def test_benchmark_classpath_is_not_a_maven_launcher(self):
         self.assertFalse(module.interfering_command([
             '/usr/bin/java', '-cp', '/tmp/org.codehaus.plexus.classworlds.launcher.Launcher.jar',
@@ -51,8 +89,9 @@ class TestMeasurementIsolation(unittest.TestCase):
 
 
     @unittest.skipUnless(sys.platform.startswith('linux'), 'Linux OS lease regression')
-    def test_retained_worktree_can_resume_before_measurement_admission(self):
-        import fcntl
+    def test_measurement_runs_once_while_foreign_category_retains_idle_tree(self):
+        from maven_queue import worktree_build_slot
+        import json
         with tempfile.TemporaryDirectory(prefix='ggf-isolation-') as temporary:
             root = Path(temporary) / 'repo'
             root.mkdir()
@@ -61,75 +100,36 @@ class TestMeasurementIsolation(unittest.TestCase):
                                stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
             git('init', '-b', 'main')
             git('-c', 'user.name=OpenGGF test fixture', '-c', 'user.email=noreply@openai.com',
-                'commit', '--allow-empty', '-m',
-                'test: create isolated lease fixture\n\nCo-authored-by: OpenAI Codex GPT-6.1-Sol <noreply@openai.com>')
+                'commit', '--allow-empty', '-m', 'test: isolated lease fixture')
             peer = root / '.worktrees' / 'peer'
             git('worktree', 'add', '--detach', str(peer), 'HEAD')
             audit = root / 'audit.json'
             source = Path(__file__).with_name('run_isolated.py').resolve()
             code = f"""
 import sys
-from pathlib import Path
-from contextlib import contextmanager
 sys.path.insert(0, {str(source.parent)!r})
 import run_isolated as runner
-original = runner.worktree_build_slot
-@contextmanager
-def observed(tree):
-    if Path(tree) == Path({str(peer)!r}):
-        print('WAITING_FOR_PEER', flush=True)
-    with original(tree) as fd:
-        yield fd
-runner.worktree_build_slot = observed
-# This private lock fixture launches no compiler/game and does not inspect
-# unrelated host workloads. The separate classifier tests cover that guard.
 runner.interfering_processes = lambda: []
 sys.argv = ['run_isolated', '--worktree', {str(root)!r}, '--cwd', {str(root)!r},
             '--audit-report', {str(audit)!r}, '--', sys.executable, '-c', 'pass']
-runner.main()
+raise SystemExit(runner.main())
 """
-            process = None
-            try:
-                with module.worktree_build_slot(peer):
-                    process = subprocess.Popen([sys.executable, '-u', '-c', code],
-                                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                               text=True)
-                    with selectors.DefaultSelector() as selector:
-                        selector.register(process.stdout, selectors.EVENT_READ)
-                        deadline = time.monotonic() + 10
-                        observed_output = b''
-                        while time.monotonic() < deadline:
-                            if selector.select(.2):
-                                observed_output += os.read(process.stdout.fileno(), 4096)
-                                if b'WAITING_FOR_PEER\n' in observed_output:
-                                    break
-                            if process.poll() is not None:
-                                self.fail('isolation process exited before the retained-peer boundary')
-                        else:
-                            self.fail('isolation process never reached the retained-peer boundary')
-                    # A category holder retains peer/target while requesting its
-                    # next batch. It must be able to acquire shared admission and
-                    # finish before the measurement takes exclusive admission.
-                    with (root / '.git' / 'maven-queue.lock').open('a+b') as shared:
-                        try:
-                            fcntl.flock(shared, fcntl.LOCK_SH | fcntl.LOCK_NB)
-                        except BlockingIOError:
-                            self.fail('measurement blocks admission while waiting for a retained worktree')
-                        fcntl.flock(shared, fcntl.LOCK_UN)
-                output, _ = process.communicate(timeout=10)
-                self.assertEqual(0, process.returncode, output[-2000:])
-                import json
-                self.assertEqual(0, json.loads(audit.read_text())['exit_code'])
-            finally:
-                if process is not None:
-                    if process.poll() is None:
-                        process.terminate()
-                        try:
-                            process.wait(timeout=5)
-                        except subprocess.TimeoutExpired:
-                            process.kill()
-                            process.wait(timeout=5)
-                    process.stdout.close()
+            with worktree_build_slot(peer):
+                for exit_code in (0, 7):
+                    with self.subTest(exit_code=exit_code):
+                        command = code.replace("'-c', 'pass'", f"'-c', 'raise SystemExit({exit_code})'")
+                        result = subprocess.run([sys.executable, '-u', '-c', command],
+                                                capture_output=True, text=True, timeout=10)
+                        self.assertEqual(exit_code, result.returncode, result.stdout + result.stderr)
+                        report = json.loads(audit.read_text())
+                        self.assertEqual(exit_code, report['exit_code'])
+                        self.assertTrue(report['exclusive_test_lease'])
+                        self.assertTrue(report['exclusive_build_activity_lease'])
+            records = [json.loads(line) for line in (root / '.git/maven-queue-log.jsonl').read_text().splitlines()]
+            self.assertEqual(2, len(records))
+            for record in records:
+                self.assertEqual('completed', record['outcome'])
+                self.assertGreater(record['holdSeconds'], 0)
 
 
 if __name__ == '__main__':

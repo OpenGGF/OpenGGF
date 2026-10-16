@@ -1437,8 +1437,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Linux admission can overlap up to three test runs
   when conservative memory/CPU reservations fit, crediting each running job's measured
   usage instead of counting it twice, while keeping each worktree exclusive and
-  preserving a serial override. Single-fork trace and audio profiles no longer force
-  exclusive runs, and a bounded log (`maven_queue.py --stats`) records queue waits, holds
+  preserving a serial override. Single-fork trace and audio profiles, including
+  explicit default fork settings, no longer force exclusive runs. Isolated benchmarks
+  drain actual build/test execution without locking idle worktrees or repeatedly
+  abandoning admission. A bounded log (`maven_queue.py --stats`) records queue waits, holds
   and peak memory. A lightweight local browser dashboard shows running jobs,
   waiting priority, resource usage and recent completions across worktrees,
   refreshing automatically without changing queue state and explaining admission

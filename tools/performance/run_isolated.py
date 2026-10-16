@@ -3,14 +3,15 @@
 Inputs: repository worktree, working directory, audit report, and a prebuilt
 measurement command. Origin: 2026-10-12 runtime performance series; P5 audit
 (c08d7a658) found that test admission alone does not block build-only commands.
-Never invoke a build/test command inside this lease. Linux bypass detection is
-sampled every 0.5 seconds; wrapped worktree builds are excluded by OS leases.
+Never invoke a build/test command inside this lease. Active wrapped builds are
+excluded by a repository-wide OS lease; idle category worktrees can retain their
+output ownership. Linux bypass detection is sampled every 0.5 seconds.
 """
 from pathlib import Path
 import sys, subprocess
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]/'testing'))
 from maven_queue import maven_slot, worktree_build_slot, inherited_slot, handle_termination
-from contextlib import ExitStack
+from maven_activity import build_activity_slot
 import argparse
 
 import os, signal, time, json
@@ -68,23 +69,21 @@ def main():
     if not Path('/proc').is_dir():parser.error('Linux /proc is required for bypass detection')
     root=Path(subprocess.check_output(['git','rev-parse','--show-toplevel'],
                                      cwd=a.worktree, text=True).strip()).resolve()
-    # Category runners retain their worktree while waiting for another batch.
-    # Acquire all build leases before exclusive admission, so those holders can
-    # finish their queued batches rather than waiting on our shared queue lock.
-    with handle_termination(), ExitStack() as build_leases:
-        inventory=subprocess.check_output(['git','worktree','list','--porcelain'], cwd=root, text=True)
-        trees=sorted({Path(line[9:]).resolve() for line in inventory.splitlines() if line.startswith('worktree ')})
-        tree_fds={tree: build_leases.enter_context(worktree_build_slot(tree))
-                  for tree in trees if tree.exists()}
-        with maven_slot(root, exclusive=True, estimate=a.estimate_seconds,
-                        kind='runtime-performance-measurement', tree_fd=tree_fds[root]) as fd:
-            build_fds=[value for tree,value in tree_fds.items() if tree!=root]
-            fd=(fd if isinstance(fd,tuple) else (fd,))+tuple(build_fds)
-            print('Linked worktree build leases held:',len(build_fds), flush=True)
+    # Wait for our own artifacts before joining the queue, then exclude actual
+    # execution elsewhere. Never wait on retained foreign worktree ownership.
+    # A build activity holder must not wait for test admission.
+    with (handle_termination(), worktree_build_slot(root) as tree_fd,
+          maven_slot(root, exclusive=True, estimate=a.estimate_seconds,
+                     kind='runtime-performance-measurement', tree_fd=tree_fd) as fd):
+        with build_activity_slot(root, exclusive=True) as build_fds:
+            fd=(fd if isinstance(fd,tuple) else (fd,))+build_fds
+            print('Exclusive test and build activity leases held', flush=True)
             bad=interfering_processes()
             if bad: raise SystemExit('Unexpected build/test/profiler before batch: '+str(bad))
             p=subprocess.Popen(command, cwd=a.cwd, start_new_session=True, **inherited_slot(fd))
-            audit={'started_utc_epoch':time.time(),'guard_interval_seconds':0.5,'exclusive_test_lease':True,'batch_pid':p.pid,'build_locked_worktrees':[str(t) for t in tree_fds]}
+            audit={'started_utc_epoch':time.time(),'guard_interval_seconds':0.5,
+                   'exclusive_test_lease':True,'exclusive_build_activity_lease':True,
+                   'batch_pid':p.pid}
             try:
                 while p.poll() is None:
                     bad=interfering_processes()
@@ -100,8 +99,8 @@ def main():
                 audit['ended_utc_epoch']=time.time()
                 a.audit_report.parent.mkdir(parents=True, exist_ok=True)
                 a.audit_report.write_text(json.dumps(audit,indent=2)+'\n')
-            raise SystemExit(p.returncode)
+            return p.returncode
 
 
 if __name__ == '__main__':
-    main()
+    raise SystemExit(main())
