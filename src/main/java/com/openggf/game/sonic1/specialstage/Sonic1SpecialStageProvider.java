@@ -108,7 +108,7 @@ public final class Sonic1SpecialStageProvider implements SpecialStageProvider, c
     public void setClearColor() {
         Palette.Color backdrop = manager.getBackdropColor();
         if (backdrop != null) {
-            com.openggf.graphics.color.PaletteDisplayColor.glClear(backdrop, com.openggf.game.GameServices.graphics());
+            com.openggf.level.PaletteDisplayColor.glClear(backdrop, com.openggf.game.GameServices.graphics());
         } else {
             glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         }

@@ -541,7 +541,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
             // Read color 0 from palette line 0 (first 2 bytes, big-endian)
             // Mega Drive format: 0x0BGR where B,G,R are nibbles (0-E, 8 levels)
             backdropColor.fromSegaFormat(palData, 0);
-            com.openggf.graphics.color.PaletteDisplayColor.glClear(backdropColor, GameServices.graphics());
+            com.openggf.level.PaletteDisplayColor.glClear(backdropColor, GameServices.graphics());
         } else {
             glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         }

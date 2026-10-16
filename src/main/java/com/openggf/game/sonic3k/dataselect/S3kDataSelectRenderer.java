@@ -234,7 +234,7 @@ public class S3kDataSelectRenderer {
             return;
         }
         Palette.Color color = backdrop.getColor(0);
-        com.openggf.graphics.color.PaletteDisplayColor.glClear(color, com.openggf.game.GameServices.graphics());
+        com.openggf.level.PaletteDisplayColor.glClear(color, com.openggf.game.GameServices.graphics());
     }
 
     /**

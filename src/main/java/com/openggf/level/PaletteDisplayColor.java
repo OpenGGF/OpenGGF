@@ -1,7 +1,7 @@
-package com.openggf.graphics.color;
+package com.openggf.level;
 
 import com.openggf.graphics.GraphicsManager;
-import com.openggf.level.Palette;
+import com.openggf.graphics.color.DisplayColorConverter;
 
 import static org.lwjgl.opengl.GL11.glClearColor;
 
