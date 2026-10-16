@@ -3746,7 +3746,7 @@ public class AudioManager implements MusicRestoreSink {
                 fmCoreConfig.getString(SonicConfiguration.REGION));
         SmpsPhysicalDevice.Settings physicalSettings =
                 new SmpsPhysicalDevice.Settings(
-                        com.openggf.audio.session.SmpsHardwareFrameBudget.synthesisRate(
+                        com.openggf.audio.session.SmpsHardwareFrameBudget.exactSynthesisRate(
                                 sampleRate, frameRate, palRegion),
                         tuning.dacInterpolate(),
                         fmCoreConfig != null

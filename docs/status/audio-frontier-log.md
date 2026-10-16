@@ -27,6 +27,23 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-10-16 - S3K production title start from row 0: first startup divergence and exact SEGA PCM cadence
+
+- **Commit / worktree:** lane `pcm-output`, 650a823ea (capture), then the transport fix on the same branch.
+- **Command:** `GameplayCaptureTool --game s3k --zone aiz --act 1 --title-screen --main sonic
+  --sidekick tails --input <emeralds.bk2> --input-start 0 --frames 600 --audio --native-pcm`,
+  then `compare_native_pcm_window.py --start-row 0` against the native rows 0-2399 capture.
+- **Result, PCM:** the first different stereo frame is 11, native (773, 773) against engine
+  (774, 774). Both carry the power-on DC transient. The difference is unattributed.
+- **Result, write ledger:** the first divergence is native row 14, the Z80 `driver_init`
+  service with 88 writes, where the engine has none. The native SEGA PCM starts at row 63,
+  the engine's at frame 16. Native rows 0-12 are power-on lag rows the engine does not
+  model. ROM `Title_Screen` (sonic3k.asm:5392-5485) fades to black and decompresses the
+  logo before `cmd_SEGA`, while the engine runs a 16-frame `SEGA_FADE_IN`. At engine frame
+  208 the DATA_SELECT handoff rebuilds the presentation session, which resets the chip.
+- **SEGA PCM transport:** whole-hertz rounding put 3,892 of 24,000 bytes one sample early
+  (first at byte 221). The transport now counts the exact rational rate.
+
 ## 2026-10-16 - Presentation cadence corrected: one NTSC hardware frame per presentation
 
 - **Commit / worktree:** lane `pcm-output`, branch `feature/ai-s3k-r2-pcm-native-output`.

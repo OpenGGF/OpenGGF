@@ -172,9 +172,7 @@ from the NTSC line and frame constants, not fitted.
   frame.
 - PAL is unchanged: the engine's chips use NTSC clocks, so a PAL budget
   needs PAL chip clocks. That remains open.
-- The SEGA PCM transport still rounds the device rate to whole hertz for its
-  Z80 byte cadence, a 4 ppm difference at 47,938.19 Hz. That is recorded,
-  not corrected.
+- The SEGA PCM transport's whole-hertz rounding is corrected; see [TRANSPORT] below.
 
 **[CARRY / INGRESS] — exploratory, not attributable.** The engine capture
 boots AIZ1 directly and replays inputs from row 577. Native ran rows 0-576
@@ -186,10 +184,69 @@ that native plays from row 577.
 (792, 1002) against engine (0, 0). The earliest unmatched ingress owner is
 the capture entry itself: `GameplayCaptureSession.boot(zone, act)` creates a
 fresh presentation session at level boot, with no power-on, title or menu
-audio history. The engine has no S3K power-on/SEGA-screen production entry,
-and its title-screen entry starts after native's SEGA prefix. Waveform equality and musical first-cause attribution need an
+audio history. A production S3K SEGA/title entry does exist:
+`GameplayCaptureTool --title-screen` (`GameplayCaptureSession.startAtTitle`)
+enters `Sonic3kTitleScreenManager` at `Phase.SEGA_FADE_IN`, and its SEGA hold
+issues the SEGA chant and stop commands. `S3K_SKIP_INTROS` is an AIZ level
+flag only. What may be unmodelled is Genesis CPU power-on equivalence, the
+native frames before the SEGA screen. The startup comparison below measures
+that boundary. Waveform equality and musical first-cause attribution need an
 authentic production entry from power-on or title matched to native rows,
 and that does not exist yet.
+
+**[STARTUP] — the production title-start window from row 0 (2026-10-16).**
+`GameplayCaptureTool --title-screen --input-start 0 --frames 600 --audio --native-pcm`
+replayed the original emeralds BK2 (sha256 `ad40fb0b...`; SyncSettings Nuked_YM2612,
+ThreeBand 880/5000 Hz, gains 1.0, Region 0, which autodetects to USA from the header
+`JUE`). The stage was attached before boot. The engine ran at 650a823ea plus the
+docs-only edit; Maven finished 21:24:47Z. It was compared with the preserved native
+capture of rows 0-2399 with no realignment:
+- PCM: identical to stereo frame 10. The first difference is stereo frame 11, native
+  (773, 773) against engine (774, 774), inside the power-on DC transient both sides
+  start at sample 3. That one-LSB difference is unattributed.
+- Write ledger (native partial v2 ledger, frames 14-63; the producer faults later at
+  frame 146):
+  - Native row 14 is the Z80 driver's `driver_init` service with 88 writes: PSG
+    silence `9F/BF/DF/FF`, then YM key-off, TL `7Fh` and RR `FFh` on every operator.
+    Engine frame 14 has no writes. The engine session issues no driver-initialisation
+    program, which is the first ledger divergence.
+  - Native row 15 is the first `vint` service, which writes `2Bh = 0`.
+  - The native SEGA PCM starts in the service at row 63. The engine's SEGA bytes start
+    at frame 16.
+- Earliest unmatched owners:
+  1. Native rows 0-12 are power-on lag rows (68k init and Z80 driver load), and the
+     engine starts at `Sonic3kTitleScreenManager` `Phase.SEGA_FADE_IN` with no
+     equivalent. Genesis CPU power-on is not modelled.
+  2. Before `cmd_SEGA`, ROM `Title_Screen` (sonic3k.asm:5392-5485) runs `cmd_FadeOut`,
+     `Pal_FadeToBlack`, the logo `Kos_Decomp`/`Eni_Decomp`, the plane map and
+     `Pal_FadeFromBlack`. The engine runs a fixed 16-frame `SEGA_FADE_IN`
+     (`SEGA_FADE_DURATION`) and issues `CMD_SEGA` at frame 16.
+  3. At engine frame 208 the title hands off to DATA_SELECT, the game module
+     re-initialises, and `AudioManager.replaceShadowPresentationForBaseMutation`
+     rebuilds the presentation session. The stage session counter goes 1 to 3, so
+     the production chip restarts from reset while native's chip continues.
+- Waveform equality from row 0 therefore cannot hold past the startup boundary. No
+  offset was fitted and no chip state was hydrated.
+
+**[TRANSPORT] — SEGA PCM byte cadence is exact (2026-10-16).** The SEGA PCM bytes are
+ordinary YM `2Ah` writes into the production chip, so the native-compatible stage
+already carries them. Their cadence was wrong: `segaPcmByteCost` rounded the device
+rate to whole hertz.
+- On the live hardware-frame budget (47,938.19 Hz), a pre-fix scratch probe with
+  24,000 bytes put 3,892 of them one sample early. The first was byte 221, at render
+  734 instead of 735 (21:25:15Z).
+- Fix: the device settings now carry the rate as an exact rational,
+  357,954,500 / 7,467 Hz, through `SmpsHardwareFrameBudget.Rate`. The transport counts
+  Z80 cycles times the numerator, so a byte costs `248 * n` and an output frame adds
+  `3,579,545 * d`.
+- `TestSmpsSegaPcmTransportCadence` checks:
+  - every byte's render index against `ceil(k * 248 * 800 / 59,736)`, where 59,736 is
+    the Z80 cycles in one NTSC hardware frame;
+  - a whole-hertz control that misplaces bytes;
+  - the phase across a session snapshot restore;
+  - that the transport is audible in the stage at one hardware frame per presentation.
+- Rates given only as a double keep whole-hertz rounding, which is exact for integer
+  rates.
 
 **[PER-SERVICE LEDGER] — unavailable for this window.**
 - The existing per-service oracle (`s3k-aiz1-intro-reference-v2`) is a

@@ -287,7 +287,9 @@ Unreleased. The earlier development themes remain in
   time. Previously 600 frames completed only 599 hardware frames. The
   presentation still delivers 800 samples per frame at 48 kHz, so at 60 Hz music
   and effects sound about 1.29 per mille higher and faster than a 59.92 Hz
-  console, while staying in step with gameplay frames. PAL is unchanged.
+  console, while staying in step with gameplay frames. PAL is unchanged. The SEGA
+  chant's sample bytes follow the exact Z80 loop cadence on that budget instead of
+  a rate rounded to whole hertz.
 
 Rewind verification compares private records and complete captured opaque arrays
 by content, with explicit failures when snapshot inspection cannot complete. It also
