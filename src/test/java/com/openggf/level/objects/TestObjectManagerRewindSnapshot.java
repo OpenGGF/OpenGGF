@@ -189,7 +189,7 @@ class TestObjectManagerRewindSnapshot {
     private static final class RangeTailPublisher extends AbstractObjectInstance implements TouchResponseProvider {
         int updates;
         RangeTailPublisher() {super(spawn(100, 200), "RangeTailPublisher");}
-        @Override public void update(int frame, PlayableEntity player) {updates++;}
+        @Override public void update(int vIntRunCount, PlayableEntity player) {updates++;}
         @Override public boolean usesCustomOutOfRangeCheck() {return true;}
         @Override public boolean isCustomOutOfRange(int cameraX) {return true;}
         @Override public int getCollisionFlags() {return 0x47;}

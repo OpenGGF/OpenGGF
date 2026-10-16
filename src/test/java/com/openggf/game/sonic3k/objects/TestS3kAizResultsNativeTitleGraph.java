@@ -232,7 +232,7 @@ class TestS3kAizResultsNativeTitleGraph {
         @Override public boolean isPersistent() { return true; }
         @Override public boolean usesCustomOutOfRangeCheck() { return true; }
         @Override public boolean isCustomOutOfRange(int cameraX) { return false; }
-        @Override public void update(int clock,com.openggf.game.PlayableEntity leader) { }
+        @Override public void update(int vIntRunCount,com.openggf.game.PlayableEntity leader) { }
         @Override public void appendRenderCommands(java.util.List<com.openggf.graphics.GLCommand> commands) { }
     }
 

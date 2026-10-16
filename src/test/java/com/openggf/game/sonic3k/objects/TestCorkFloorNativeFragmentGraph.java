@@ -202,7 +202,7 @@ class TestCorkFloorNativeFragmentGraph {
     }
     static final class Blocker extends AbstractObjectInstance implements RewindRecreatable {
         Blocker(ObjectSpawn spawn){super(spawn,"Blocker");}
-        @Override public void update(int clock,PlayableEntity main){}
+        @Override public void update(int vIntRunCount,PlayableEntity main){}
         @Override public void appendRenderCommands(List<GLCommand> commands){}
         @Override public boolean isPersistent(){return !isDestroyed();}
         @Override public Blocker recreateForRewind(RewindRecreateContext ctx){return new Blocker(ctx.spawn());}
