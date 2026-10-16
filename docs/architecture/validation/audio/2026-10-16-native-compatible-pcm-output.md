@@ -203,7 +203,16 @@ docs-only edit; Maven finished 21:24:47Z. It was compared with the preserved nat
 capture of rows 0-2399 with no realignment:
 - PCM: identical to stereo frame 10. The first difference is stereo frame 11, native
   (773, 773) against engine (774, 774), inside the power-on DC transient both sides
-  start at sample 3. That one-LSB difference is unattributed.
+  start at sample 3. The differences are isolated ±1 values: 47 per side over rows
+  0-4, none from row 5. Neither side has a write before row 14. The cause is
+  unattributed, and three hypotheses were killed:
+  1. A YM power-on clock-phase offset: no first-sweep phase from -23 to +96 clocks
+     reproduces native rows 0-12, while phase 0 reproduces the engine exactly.
+  2. FMA contraction: the stock core contains no FMA instructions.
+  3. Equaliser operation order: the core's vectorised inlined `do_3band`
+     (`gpgx_advance`, near `0x36f001bd660`) evaluates
+     `f1p0 += lf*(s-f1p0)+vsa` and `(l+m)+h` with commutative reordering only,
+     which is bit-identical to `eq.c` and to the Java port.
 - Write ledger (native partial v2 ledger, frames 14-63; the producer faults later at
   frame 146):
   - Native row 14 is the Z80 driver's `driver_init` service with 88 writes: PSG
