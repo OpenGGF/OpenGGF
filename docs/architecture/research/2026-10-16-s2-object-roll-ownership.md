@@ -108,7 +108,7 @@ and candidate; the earlier latency-proxy ghost failure did not recur and remains
 an observed broad-run failure, not a claimed deterministic baseline match.
 
 Baseline guards at `090d08104`, using `-Pguards` and selector
-`TestProductionSingletonClosureGuard,TestArchUnitRules`, execute 346 tests with
+`TestProductionSingletonClosureGuard,TestArchUnitRules`, execute 73 tests with
 four failures and no errors/skips. Their complete assertion messages match the
 candidate: two singleton findings in `MenuAudioProbeTool`, and two architecture
 rules concerning concrete audio profiles in `HubMusicController`. These unrelated
@@ -120,3 +120,22 @@ The initial broad invocation was interrupted after a mocked cleanup PID killed
 processes. The retry includes upstream safeguard `a9e53f5fc`; the interrupted run
 is not counted as completed coverage. Completion hooks replaced active polling.
 Consumed category diagnostics are acknowledged before delivery, not archived.
+
+Final reconciliation retains upstream `885eef216` (LWJGL 3.4.1 and native
+multi-release packaging) in candidate `7574f9a89`. The final queued normal-lane
+selection covered launcher, flipper, Point Pokey, participant ownership, spring,
+movement, launcher/flipper/cage/traversal rewind, ROM-backed solid ordering/CNZ,
+and all four required S3K stability classes. It completed 375 tests with zero
+failures, errors or skips using absolute verified original S2 and S3K ROM paths.
+The selector was:
+
+```text
+TestLauncherSpringObjectInstance,TestFlipperRollOwnership,TestPointPokeyObjectInstance,TestSonic2TriggerParticipation,TestSonic3kSpringObjectInstance,TestPlayableSpriteMovement,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestSolidOrderingSentinelsHeadless,TestCNZObjectBugs,TestS2LauncherGraphRewind,TestS2FlipperGraphRewind,TestS2PointPokeyRewind,TestS2TraversalRiderRewind
+```
+
+This affected check addresses the reconciled native dependency without repeating
+unchanged broad smoke coverage. The complete smoke run remains red for the
+explicitly attributed inherited failures and the non-reproduced network case;
+no full-suite or whole-act green claim is made. Matched baseline guard counts
+include only the two requested classes (42 singleton checks and 31 architecture
+checks); stale reports from earlier worker runs are excluded.
