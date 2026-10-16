@@ -1,11 +1,67 @@
 from pathlib import Path
 import sys
 import os
+import signal
+import subprocess
 import time
 import tempfile
 import unittest
+from unittest import mock
 
 import category_artifacts as artifacts
+
+
+class ProcessCleanupTests(unittest.TestCase):
+    def test_rejects_unsafe_pid_without_side_effects(self):
+        class IndexPid:
+            def __index__(self):
+                raise AssertionError('A PID must not be coerced')
+
+        class IntPid(int):
+            pass
+
+        invalid_pids = (None, False, True, -100, -1, 0, 1, '42', 42.0,
+                        mock.MagicMock(), IndexPid(), IntPid(42))
+        for platform in ('posix', 'nt'):
+            for pid in invalid_pids:
+                with self.subTest(platform=platform, pid=pid):
+                    process = mock.Mock(pid=pid)
+                    with mock.patch.object(artifacts.os, 'name', platform), \
+                            mock.patch.object(artifacts.os, 'killpg', create=True) as killpg, \
+                            mock.patch.object(artifacts.os, 'kill') as kill, \
+                            mock.patch.object(artifacts.subprocess, 'run') as run:
+                        with self.assertRaisesRegex(ValueError, 'PID'):
+                            artifacts.stop_process_tree(process)
+                    killpg.assert_not_called()
+                    kill.assert_not_called()
+                    run.assert_not_called()
+                    process.wait.assert_not_called()
+                    process.kill.assert_not_called()
+
+    def test_escalation_uses_only_the_validated_pid(self):
+        process = mock.Mock()
+        pid = mock.PropertyMock(side_effect=[4242, 1, 1])
+        type(process).pid = pid
+        process.wait.side_effect = [subprocess.TimeoutExpired('owned-child', 10), 0]
+        with mock.patch.object(artifacts.os, 'name', 'posix'), \
+                mock.patch.object(artifacts.os, 'killpg', create=True) as killpg:
+            artifacts.stop_process_tree(process)
+        self.assertEqual([mock.call(4242, signal.SIGTERM),
+                          mock.call(4242, signal.SIGKILL),
+                          mock.call(4242, signal.SIGKILL)], killpg.call_args_list)
+        pid.assert_called_once_with()
+        self.assertEqual([mock.call(timeout=10), mock.call()], process.wait.call_args_list)
+
+    def test_windows_cleanup_uses_validated_pid_and_reaps_child(self):
+        process = mock.Mock(pid=4242)
+        process.wait.side_effect = [subprocess.TimeoutExpired('owned-child', 10), 0]
+        with mock.patch.object(artifacts.os, 'name', 'nt'), \
+                mock.patch.object(artifacts.subprocess, 'run') as run:
+            artifacts.stop_process_tree(process)
+        run.assert_called_once_with(['taskkill', '/PID', '4242', '/T', '/F'],
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        process.kill.assert_called_once_with()
+        self.assertEqual([mock.call(timeout=10), mock.call()], process.wait.call_args_list)
 
 
 class ArtifactRetentionTests(unittest.TestCase):
@@ -119,6 +175,24 @@ class ArtifactRetentionTests(unittest.TestCase):
             self.assertIn('spawned', (root / 'ordinary.log').read_text())
             time.sleep(1)
             self.assertFalse(marker.exists(), 'test grandchild survived the runner timeout')
+
+    @unittest.skipUnless(os.name == 'posix', 'Unix process-group contract')
+    def test_timeout_stops_term_ignoring_grandchild_after_parent_exits(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            marker = root / 'survived'
+            child = (f'import signal, time; from pathlib import Path; '
+                     f'signal.signal(signal.SIGTERM, signal.SIG_IGN); '
+                     f'print("ready", flush=True); time.sleep(1); '
+                     f'Path({str(marker)!r}).touch()')
+            parent = (f'import subprocess, sys; '
+                      f'subprocess.Popen([sys.executable, "-c", {child!r}])')
+            with self.assertRaises(TimeoutError):
+                artifacts.run_logged([sys.executable, '-c', parent],
+                                     root, root / 'ordinary.log', timeout=.3)
+            self.assertIn('ready', (root / 'ordinary.log').read_text())
+            time.sleep(1)
+            self.assertFalse(marker.exists(), 'orphaned test grandchild survived cleanup')
 
     def test_expired_timeout_does_not_launch_process(self):
         with tempfile.TemporaryDirectory() as tmp:
