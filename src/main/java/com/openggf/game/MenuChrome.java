@@ -30,7 +30,7 @@ public final class MenuChrome {
     public static final float[] EDGE = {.17f, .31f, .62f};
     public static final float[] FOCUS_FILL = {.11f, .29f, .66f};
     public static final float[] GOLD = {1f, .84f, .3f};
-    /** Deep navy text for gold buttons; distinct from the font's black drop shadow. */
+    /** Deep navy text keeps plain menu lettering legible on gold buttons. */
     public static final float[] GOLD_INK = {.06f, .14f, .45f};
     public static final float[] CYAN = {.5f, .91f, 1f};
     public static final float[] AMBER = {1f, .72f, .25f};

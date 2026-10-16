@@ -5,8 +5,10 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
-- **Main menu:** Holding Escape freezes a stock game and smoothly shrinks its
-  picture into the paused-game card; Resume expands it back to full size before
+- **Main menu:** Compact and bold lettering now share one pixel-font family,
+  with clear navy lettering on gold launch buttons. Holding Escape freezes a
+  stock game and smoothly shrinks its picture into the paused-game card; Resume
+  expands it back to full size before
   gameplay continues. Saved Game Setup preferences remain current on resume,
   and returning live options to Default releases the earlier per-game overrides.
   Display settings offer windowed, borderless and fullscreen modes, with integer

@@ -1641,8 +1641,8 @@ public class MasterTitleScreen {
                 MenuChrome.fill(font, r.x() + (focused ? 2 : 0), r.y() + r.h() - (focused ? 3 : 1),
                         r.w() - (focused ? 4 : 0), 1, new float[] {.6f, .42f, .05f});
                 if (available) drawShimmer(r);
-                if (compactActions()) MenuChrome.compact(font, actionLabel(action), r.x() + 6, r.y() + 6, MenuChrome.WHITE);
-                else MenuChrome.label(font, actionLabel(action), r.x() + 8, r.y() + 5, MenuChrome.WHITE);
+                if (compactActions()) MenuChrome.compact(font, actionLabel(action), r.x() + 6, r.y() + 6, MenuChrome.GOLD_INK);
+                else MenuChrome.label(font, actionLabel(action), r.x() + 8, r.y() + 5, MenuChrome.GOLD_INK);
             } else {
                 if (focused) MenuChrome.focus(font, r.x(), r.y(), r.w(), r.h(), frameCounter);
                 else MenuChrome.panel(font, r.x(), r.y(), r.w(), r.h());
