@@ -2,7 +2,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0">
   <modelVersion>4.0.0</modelVersion>
   <groupId>example.platformer</groupId><artifactId>sample-platformer</artifactId><version>1.0.0</version>
-  <properties><maven.compiler.release>25</maven.compiler.release><lwjgl.version>3.3.3</lwjgl.version></properties>
+  <properties><maven.compiler.release>25</maven.compiler.release><lwjgl.version>3.4.1</lwjgl.version></properties>
   <profiles>
     <profile><id>published-openggf</id><dependencies>
       <dependency><groupId>com.openggf</groupId><artifactId>OpenGGF</artifactId><version>0.7.prerelease</version><scope>provided</scope></dependency>
