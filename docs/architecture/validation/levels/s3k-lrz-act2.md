@@ -1443,10 +1443,47 @@ republishes the derived background camera words before any scroll pass. Act 2's 
 output and the whole world after replay, not restore idempotence. The Saved2-return
 capture does not show this.
 
+**Cold continuation.**
+`TestS3kLrzHpzSszColdCampaign#tailsSevenChaosGiantRingFailsAPedestalStageAndReturnsToLrzTwo`
+replays one uninterrupted, controller-only native320 solo Tails movie from the declared LRZ1
+boot. The only declared state is `1111111` at boot.
+
+| Movie | SHA-256 | Inputs | Source |
+|---|---|---|---|
+| `lrz-tails-cold-seven-chaos-s9-320.bk2` | `75b8f5d6f2cd4e150db402ae867f069797a19c7ece36ed635ac5581a207f34fe` | 53192 | inputs 0–50099 equal `lrz-tails-cold-giant-ring-s9-320.bk2`; then the authored `45 R;46 -;1 A;3000 -` (script sha256 `4a06c445…`) |
+
+Authoring used `GameplayInputBranchTool`, restoring from a 50100-input prefix. That is a
+measured candidate search, not a fitted position:
+
+- Approaching pedestal 2 from the left always lands on its left edge.
+  `SolidObjectTop` (`loc_1E42E` :41987-42013) admits the first frame with
+  `x_pos(a1)-x_pos(a0)+$1B >= 0`, which leaves 0 px of margin.
+- The chosen tail coasts to a stop under the pedestal and jumps straight up through the
+  top-only solid. It lands on the descent at x 5805, `d0=40` inside `[0,$36)`, with
+  3 px to spare in the `-16..0` height window.
+
+On `10fdf6ab4` plus this route (Finished 23:32:36+01:00) the test passed 1/0/0/0, and the
+existing s9 Blue Sphere method in the same run was unchanged (49165/49912/50546).
+
+- The ring restarts into `$1701` at 49188, with Saved2, bit 9 and `Last_star_post_hit`
+  cleared.
+- The conversion releases at 50080 with `2222222` and `Emeralds_converted_flag`.
+- Real input stands on pedestal 2 at 50210, and Super stage 2 loads at 50227.
+- Neutral input fails it, with results at 50718.
+- The LRZ2 Saved2 release at 51352 has the Saved2 X and rings, the ring not respawned,
+  gray emeralds, `Last_star_post_hit|$80` and the restored star-post mark.
+- Two-cycle 45-input whole-world replays pass at hub release +10 and LRZ2 return +60/+200.
+- Pictures from the authoring run are in
+  `$HOME/scratch/agent-tmp/codex/s3k-parity-coverage-20261014/seven-chaos-gateway-authoring/branch4/`,
+  including the landing (`variant-0-50220.png`, Tails centred on pedestal 2). They are
+  engine output only: there is no native corroboration of this route.
+
 **Still open:**
 
-- the cold seven-Chaos continuation;
-- Knuckles, wide presets and donors on this branch;
-- a won Super stage from an ordinary ring;
-- the other LRZ1/LRZ2 giant rings.
+- The exit band is exercised only by the short test, not by the cold route.
+- History retirement across the loads is asserted only by the short test.
+- Knuckles, wide presets and donors on this branch.
+- A won Super stage from an ordinary ring.
+- The other LRZ1/LRZ2 giant rings.
+- Native corroboration of the seven-Chaos route.
 
