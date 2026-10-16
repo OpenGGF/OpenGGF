@@ -482,6 +482,49 @@ public class TestPlayableSpriteMovement {
                                 "release-frame AnglePos clears Secondary_Angle on Status_OnObj");
         }
 
+        @Test
+        public void spindashChargeAndReleaseFramesEaseTheCameraBiasLikeTheStandingPath() throws Exception {
+                // loc_11D5E (sonic3k.asm:23816-23823): every charge frame and the release frame
+                // (bra.s loc_11D5E) run addq.l #4,sp then step Distance_from_top toward $60 by 2.
+                // The start frame returns through addq.l #4,sp before reaching it.
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                CollisionSystem collisionSystem = new CollisionSystem(new TerrainCollisionManager());
+                installRuntimeCollisionSystem(collisionSystem);
+                Sonic sonic = new Sonic("sonic", (short) 0, (short) 0);
+                setGameRulesForTest(sonic, GameRules.SONIC_3K);
+                sonic.setGroundSensors(rightEdgeFloorSensors(sonic));
+                sonic.setAir(false);
+                sonic.setGroundMode(GroundMode.GROUND);
+                sonic.setAnimationProfile(new ScriptedVelocityAnimationProfile()
+                                .setDuckAnimId(8)
+                                .setSpindashAnimId(9)
+                                .setRollAnimId(2));
+                sonic.setAnimationId(8);
+                sonic.setCrouching(true);
+                Camera camera = sonic.currentCamera();
+                camera.setYPosBias((short) 0xB8);
+                PlayableSpriteMovement movement = new PlayableSpriteMovement(
+                                sonic, collisionSystem, GameServices.gameState());
+
+                sonic.setJumpInputPressed(true, true);
+                movement.handleMovement(false, true, false, false, true, false, false, false);
+                assertTrue(sonic.getSpindash(), "Down plus a fresh jump press starts the spindash");
+                assertEquals(0xB8, camera.getYPosBias(), "the start frame leaves before the bias step");
+
+                sonic.setJumpInputPressed(false, false);
+                movement.handleMovement(false, true, false, false, false, false, false, false);
+                assertEquals(0xB6, camera.getYPosBias(), "a held charge frame steps the bias toward $60");
+
+                sonic.setJumpInputPressed(true, true);
+                movement.handleMovement(false, true, false, false, true, false, false, false);
+                assertEquals(0xB4, camera.getYPosBias(), "a revving charge frame steps the bias too");
+
+                sonic.setJumpInputPressed(false, false);
+                movement.handleMovement(false, false, false, false, false, false, false, false);
+                assertFalse(sonic.getSpindash(), "releasing Down takes the release path");
+                assertEquals(0xB2, camera.getYPosBias(), "the release frame branches to the same bias step");
+        }
+
         private static Sensor fixedSensor(AbstractPlayableSprite sprite, Direction direction,
                                           byte angle, byte distance) {
                 return fixedSensor(sprite, direction, angle, distance, 1);
