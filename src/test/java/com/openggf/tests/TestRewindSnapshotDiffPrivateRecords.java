@@ -47,6 +47,23 @@ class TestRewindSnapshotDiffPrivateRecords {
         assertThrows(RuntimeException.class,()->RewindSnapshotDiff.keyEquals("closed",new Unreadable(1),new Unreadable(2)));
         assertThrows(RuntimeException.class,()->RewindSnapshotDiff.diffKey("closed",new Unreadable(1),new Unreadable(2)));
     }
+    @Test void typedKeysCompareUntypedContentWithTheWalkersRule() {
+        // Canonicalised maps and per-object states arrive under the typed keys;
+        // equality must agree with the walker instead of rejecting the type.
+        for(String key:List.of("level","object-manager")) {
+            var a=new java.util.LinkedHashMap<String,Object>();a.put("frameCounter",3);a.put("bits",new long[]{5});
+            var same=new java.util.LinkedHashMap<String,Object>();same.put("frameCounter",3);same.put("bits",new long[]{5});
+            var changed=new java.util.LinkedHashMap<String,Object>();changed.put("frameCounter",4);changed.put("bits",new long[]{5});
+            assertTrue(RewindSnapshotDiff.keyEquals(key,a,same),key);
+            assertTrue(RewindSnapshotDiff.diffKey(key,a,same).isEmpty(),key);
+            assertFalse(RewindSnapshotDiff.keyEquals(key,a,changed),key);
+            var diff=RewindSnapshotDiff.diffKey(key,a,changed);
+            assertTrue(diff.stream().anyMatch(value->value.contains(".frameCounter")),diff.toString());
+            assertFalse(RewindSnapshotDiff.keyEquals(key,new Counter(1),new Counter(2)),key);
+            assertTrue(RewindSnapshotDiff.diffKey(key,new Counter(1),new Counter(2)).stream()
+                    .anyMatch(value->value.contains(".value")),key);
+        }
+    }
     private static RewindObjectStateBlob blob(Object opaque) {
         return new RewindObjectStateBlob(1,Counter.class,new byte[]{4,5},new Object[]{opaque});
     }

@@ -494,7 +494,10 @@ public final class RewindSnapshotDiff {
 
     private static boolean compareLevel(Object a, Object b) {
         if (!(a instanceof LevelSnapshot la) || !(b instanceof LevelSnapshot lb)) {
-            return false;
+            // Callers may pass canonicalised content (maps/lists) under this key.
+            // Without the typed record no exclusion applies: compare everything,
+            // exactly as the diagnostic walker does, so equality and diffs agree.
+            return fieldContentEqual(a, b);
         }
         // Epoch is a restore-side copy-on-write generation counter. Multiple
         // seeks can legitimately advance it beyond the original forward run
@@ -541,7 +544,9 @@ public final class RewindSnapshotDiff {
     private static boolean compareObjectManager(Object a, Object b) {
         if (!(a instanceof ObjectManagerSnapshot oa)
                 || !(b instanceof ObjectManagerSnapshot ob)) {
-            return false;
+            // Per-object state or canonicalised content: no slot-order exclusion
+            // applies, and collectObjectManagerDiffs walks it with the same rule.
+            return fieldContentEqual(a, b);
         }
         if (!Arrays.equals(oa.usedSlotsBits(), ob.usedSlotsBits())) return false;
         if (oa.frameCounter() != ob.frameCounter()) return false;

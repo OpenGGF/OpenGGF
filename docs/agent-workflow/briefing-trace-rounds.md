@@ -95,6 +95,11 @@ references, including counters beyond Java's small-integer cache. A concrete
 Palette leaf is copied defensively by native-stage capture/restore: compare all
 sixteen raw RGB triples through its dataEquals contract, including low bits.
 Neither Java copy identity nor a normalized 3-bit color word is that contract.
+The typed `level`/`object-manager` comparators apply only to their snapshot
+records; canonicalised maps or per-object states passed under those keys use
+the complete comparator. Rejecting them by type made the fail-closed check
+report "no inspectable difference" for content-equal snapshots (2026-10-16).
+That old fail-open walker had also hidden a real AIZ intro presentation loss.
 
 A performance-only flock does not isolate shared-worktree test jobs
 (2026-10-13, P5 CPU audit). Another task's queued Maven run overlapped a
