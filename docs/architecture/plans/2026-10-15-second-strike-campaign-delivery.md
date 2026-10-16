@@ -1,7 +1,8 @@
 # Second Strike — two-team campaign delivery
 
-Status: implementation authorized on 2026-10-15; both Sol team leads running. No new
-gameplay is claimed by this checkpoint. The binding content scope is the
+Status: implementation authorized on 2026-10-15; native foundations are verified
+for integration, while the full campaign remains in progress. Current team state
+and bounded evidence are in the compact checkpoint below. The binding content scope is the
 [complete AIZ prototype and S3&K campaign proposal](../designs/2026-10-15-second-strike-campaign-scope.md).
 
 Pinned pre-task destination: `develop`
@@ -130,11 +131,12 @@ branches, preserving user config/ROM/save targets, useful captures and histories
 ## Compact execution checkpoint
 
 Root private branch is `feature/ai-second-strike-campaign-delivery`, HEAD
-`1bff1b90f9133c1e2f2e237bf1f303934ba73c24` plus the bounded repairs below.
+`b3d307daffa7de2a63f373fb2913e4a30a03e30b`, including the committed bounded repairs.
 Main has fast-forwarded from1259 to `b07c52dfd601ff78cd00d89a24e7fe57320acd65`
 (editor-chrome retirement); the three dirty disassemblies and five untracked user
-files remain preserved. That upstream change is not yet merged into this private
-source. The immutable pre-task comparison base remains
+files remain preserved. That upstream change merged cleanly into this private
+source, preserving both changelog and workflow-catalogue entries. The immutable
+pre-task comparison base remains
 `76022570e8233823e1e36419666a0f29c768f4b6`.
 
 Combined smoke24453 on247fd is terminal and its diagnostics were inspected and
@@ -145,8 +147,9 @@ passes62 with no skips. Their exact identities/source/timings are recorded in
 [bounded repairs](#bounded-repairs-after-the-combined-run). Build-only30455
 `-DskipTests verify` succeeds in42.368seconds at03:26:50BST, including actual
 engine/SDK/Javadoc/test-kit packaging and the artifact verifier. This build's
-configured publisher is the default Time Attack bundle; Second Strike's separate
-maintained builder and actual paired signature/consumer checks are still required.
+configured publisher is the default Time Attack bundle. The later19448 verification,
+maintained Second Strike builder and actual paired signature/consumer checks below
+complete packaging on the upstream-reconciled source.
 
 C3 native ingredients, STOCK golem, placed A2/capsule, corrected reservation seam,
 ICZ fail-closed consumer, checkpoint high-water restoration, pending-art admission,
@@ -156,9 +159,8 @@ version remains unpublished0.7.0; the21107-line candidate pin is unchanged. Exis
 No current-artifact route or harder-gameplay claim is inferred from compiler support.
 Campaign workers are stopped and their unmerged trees remain cleanup_pending.
 
-Next: reconcile the new upstream editor source by intent, verify the affected
-capture/startup boundary and actual final paired artifacts, then perform normal
-main integration/push and account for cleanup. Original M0–M6 delivery is still
+Next: perform normal main integration/push of this verified foundation and account
+for cleanup while retaining the campaign teams' unmerged inputs. Original M0–M6 delivery is still
 incomplete: all four full AIZ-to-HCZ cold routes and substantial later-act/character,
 bonus/ending, counterplay and hardness gates remain open. The separate development
 reel is delivered; it does not close those gates. Historical batch handoffs and
@@ -1359,3 +1361,57 @@ ordinary regressions are resolved by19399; the unchanged audio failure is attrib
 by15920 as above. This is bounded follow-up to the consumed combined smoke run,
 not a second broad smoke pass or whole-campaign certification. Actual final
 engine/SDK/bundle packaging and compiled signature comparison remain next.
+
+### Upstream-reconciled source and actual paired artifacts
+
+Normal-hook repair commit78a4f085f and merge b3d307daf retain upstream develop
+b07c52dfd's editor-chrome retirement without source conflicts. Upstream's own191
+editor checks and681 guards are historical evidence for that separate change;
+root does not repeat its whole tooling category. Root19448 instead verifies the
+affected startup/capture/editor boundary on clean b3d307daf:56seconds admission
+wait/89seconds Maven,03:32:18BST. Nine fresh XML suites contain88 cases, all passing
+with zero failures/errors/skips. Selection was:
+
+```text
+TestGameplayCaptureDataSelectLaunch,
+TestDevelopmentPatchRewindResolver,
+TestS3kAiz1SkipHeadless,
+TestSonic3kLevelLoading,
+TestSonic3kBootstrapResolver,
+TestSonic3kDecodingUtils,
+TestEditorInteractionSafety,
+TestEditorWindowChromes
+```
+
+The two distinct packages named TestSonic3kLevelLoading both execute (36 and7
+cases); other counts are capture3, resolver4, AIZ-skip8, bootstrap6, decoding3,
+editor safety17 and chrome4. Command uses the normal queue, original absolute S3K
+ROM, explicit surfaceless-EGL property and unset DISPLAY/WAYLAND/JAVA_TOOL_OPTIONS,
+ending in `verify`. Its post-test lifecycle also packages the real engine, SDK,
+Javadoc/test-kit and default Time Attack bundle and passes the artifact verifier.
+
+The maintained `python3 examples/second-strike/build.py` then compiles the actual
+creator source and publishes its separate jar with strict zero findings. An
+intended-tree build lease exports the API from the packaged fatjar:21107 lines,
+byte-equal to the unchanged candidate pin SHA256
+`aba80f0313e248e9984431a8cdd8b0ab29dce5e2c86a943aa21391b590ef5aec`.
+Actual engine+SDK javac25 compiles a temporary typed consumer of MHZ/LRZ/HPZ/DEZ/DDZ
+factories and FBZ/SOZ/SSZ enum services; strict CLI packaging passes zero findings.
+Its first temporary-manifest attempt omitted required author/description metadata
+and failed packaging after javac; only that fixture metadata was corrected. No
+production/source/pin/validator change or new runtime acceptance is inferred.
+
+Immutable individual artifacts (no copied build tree) are retained externally in
+`second-strike-campaign/artifacts/19448-b3d307daffa7`, source b3d307daf:
+
+| Artifact | Bytes | SHA256 |
+| --- | ---: | --- |
+| Engine fatjar | 26673119 | `486afc9b090d5c3344b770f97a6248aa6204ef6c4dfe76cc4488db616c9c7b7f` |
+| SDK | 249944 | `61d6adc0fedd324cd6c7a55238a85d9bdd3cc284c9dc8d45083b03bbed411586` |
+| SDK Javadoc | 1348915 | `43e0bd4214d5e1475cb126ae35ecd601bb10eaae8cfa083faf43473ac6d61dba` |
+| Second Strike sidecar | 67252 | `cb2c4cb4a505163739e68edcac000b62eb694ac543dbda9fb631b30d6e935eac` |
+
+These supersede older pairs for new work, without relabelling any53676/1f6/AAC
+physical witness. Inactive MHZ/LRZ/HPZ ingredients remain unwired; the rejected SOZ
+golem is STOCK. Neither packaging nor88 startup checks closes the remaining cold
+routes, whole-zone counterplay/hardness, bonus-family or ending/resource gates.
