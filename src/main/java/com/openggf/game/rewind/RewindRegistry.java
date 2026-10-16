@@ -11,10 +11,12 @@ import java.util.Objects;
  * Holds the list of {@link RewindSnapshottable} subsystems for the
  * current gameplay session. Owned by {@code GameplayModeContext}.
  *
- * <p>Capture and restore are atomic per frame: no subsystem is mid-step
- * during these operations, so registration order does not affect
- * correctness. Order is preserved for predictable diffing during
- * debugging.
+ * <p>Capture and restore run at a frame boundary, with no subsystem mid-step.
+ * Adapters restore in registration order, which is part of the composition
+ * contract: reconstruction owners must precede adapters that relink or reserve
+ * their resources. The shared RNG restores after reconstruction, and all
+ * post-restore callbacks run after that final RNG restore. Registration order
+ * must therefore be preserved when refreshing dependent adapters.
  *
  * <p>Restore is tolerant of unknown keys (a subsystem that was
  * registered when a snapshot was captured may have been deregistered

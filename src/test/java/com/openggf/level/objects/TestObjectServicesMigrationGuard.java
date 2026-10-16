@@ -93,6 +93,9 @@ class TestObjectServicesMigrationGuard {
             approved("com.openggf.level.objects.AbstractObjectRegistry", "GameServices.",
                     "GameServices.levelOrNull()",
                     "registry placement bootstrap fallback"),
+            approved("com.openggf.game.sonic1.objects.bosses.Sonic1BossBlockInstance", "staticObjectManager(",
+                    "var objectManager = staticObjectManager();",
+                    "SYZ level-event bootstrap creates the initial boss blocks outside an object callback"),
             approved("com.openggf.level.objects.BootstrapObjectServices", "EngineServices.",
                     "EngineServices.current()",
                     "ObjectServices composition boundary"),
@@ -167,6 +170,28 @@ class TestObjectServicesMigrationGuard {
         assertTrue(violations.stream().anyMatch(v -> v.contains("SharedFixtureObjectInstance")
                         && v.contains("LevelManager.getInstance(")),
                 () -> "Expected shared object singleton access to be reported, got: " + violations);
+    }
+
+    @Test
+    void consolidatedGlobalAccessScan_rejectsLeafManagerBridgeCalls(@TempDir Path tempDir) throws IOException {
+        Path srcMain = tempDir.resolve("src/main/java");
+        Path source = srcMain.resolve("com/openggf/level/objects/SharedFixtureObjectInstance.java");
+        Files.createDirectories(source.getParent());
+        Files.writeString(source, """
+                package com.openggf.level.objects;
+                final class SharedFixtureObjectInstance {
+                    void update() {
+                        staticObjectManager();
+                        staticLevelManager();
+                        staticRingManager();
+                    }
+                }
+                """);
+        List<String> violations = collectForbiddenGlobalAccessViolations(srcMain);
+        for (String bridge : List.of("staticObjectManager(", "staticLevelManager(", "staticRingManager(")) {
+            assertTrue(violations.stream().anyMatch(line -> line.contains(bridge)),
+                    () -> "Expected leaf manager bridge to be reported: " + bridge + " / " + violations);
+        }
     }
 
     @Test
@@ -616,6 +641,10 @@ class TestObjectServicesMigrationGuard {
 
             SourceText source = ObjectGuardSourceScanner.sourceWithoutCommentOnlyLines(Files.readAllLines(sourceFile));
             for (String pattern : forbiddenGlobalAccessPatterns()) {
+                // The base owns these construction-first compatibility bridges.
+                // Leaf consumers must use injected services or an explicit bootstrap exception.
+                if (className.equals("com.openggf.level.objects.AbstractObjectInstance")
+                        && MANAGER_BRIDGE_PATTERNS.contains(pattern)) continue;
                 int searchFrom = 0;
                 while (true) {
                     int match = source.text().indexOf(pattern, searchFrom);
@@ -640,6 +669,7 @@ class TestObjectServicesMigrationGuard {
 
     private static List<String> forbiddenGlobalAccessPatterns() {
         List<String> patterns = new ArrayList<>();
+        patterns.addAll(MANAGER_BRIDGE_PATTERNS);
         patterns.add("GameServices.");
         patterns.add("EngineServices.");
         patterns.add("SessionManager.");
@@ -651,6 +681,9 @@ class TestObjectServicesMigrationGuard {
         }
         return patterns;
     }
+
+    private static final List<String> MANAGER_BRIDGE_PATTERNS = List.of(
+            "staticObjectManager(", "staticLevelManager(", "staticRingManager(");
 
     private static boolean isApprovedGlobalAccess(GlobalRuntimeAccess access) {
         return APPROVED_GLOBAL_RUNTIME_ACCESSES.stream().anyMatch(approved -> approved.matches(access));

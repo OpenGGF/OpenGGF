@@ -94,6 +94,8 @@ public final class ModApiVersion {
      * finite AIZ and HCZ/MGZ boss attacks, and CNZ/ICZ/LBZ object recipes through native factories.
      * Host-supplied title canvases and attached-effect rendering preserve native
      * ownership and whole-picture transforms without exposing implementation classes.
+     * Creator reconstruction uses ObjectReconstructionContext; host dynamic-entry
+     * queues and whole-object-manager snapshot shapes remain engine internals.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);

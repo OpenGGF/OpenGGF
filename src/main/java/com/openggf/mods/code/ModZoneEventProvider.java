@@ -87,6 +87,8 @@ final class ModZoneEventProvider implements LevelEventProvider, LevelEventRewind
         return staged != null && boundary.call(contribution.ownerModId(),
                 () -> staged.defersInitialObjectPlacementUntilAfterLevelEvents(zone, act));
     }
+    @Override public void onTitleCardOwnerRetired() { invoke(LevelEventProvider::onTitleCardOwnerRetired); }
+    @Override public void applyZonePlayerStateAfterTitleCard() { invoke(LevelEventProvider::applyZonePlayerStateAfterTitleCard); }
     @Override public void restoreEventOwnedObjectsAfterPlacementReset() { invoke(LevelEventProvider::restoreEventOwnedObjectsAfterPlacementReset); }
     @Override public void advanceVblankOnlyState() { invoke(LevelEventProvider::advanceVblankOnlyState); }
     @Override public void updateAfterObjectsBeforeCamera() { invoke(LevelEventProvider::updateAfterObjectsBeforeCamera); }

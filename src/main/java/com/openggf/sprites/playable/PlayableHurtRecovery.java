@@ -1,8 +1,19 @@
 package com.openggf.sprites.playable;
 
 /** Native HurtStop writes shared by terrain and explicit object landing recovery. */
-final class PlayableHurtRecovery {
+public final class PlayableHurtRecovery {
     private PlayableHurtRecovery() { }
+
+    /** Completes the grounded hurt dispatch after its final recoil movement. */
+    public static void completeGroundedLanding(AbstractPlayableSprite sprite) {
+        sprite.completeHurtLandingRecovery();
+        // Shipped-ROM HurtStop writes Walk after zeroing velocity: S1 01 Sonic.asm:1949,
+        // S2 s2.asm:38223. Keep this write on this dispatch's recovery boundary.
+        int walk = sprite.resolveAnimationId(com.openggf.game.CanonicalAnimation.WALK);
+        if (walk >= 0) {
+            sprite.setAnimationId(walk);
+        }
+    }
 
     static void clearObjectControlAfterLanding(AbstractPlayableSprite sprite) {
         // Sonic_HurtStop/Tails_HurtStop clear obj_control in S2 (s2.asm:38223,41110)

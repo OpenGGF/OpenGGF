@@ -41,6 +41,18 @@ class SchedulingTests(unittest.TestCase):
         requests[0]['auto'] = False
         self.assertIsNone(schedule.choose(requests, 350, fits))
 
+    def test_vanished_foreign_worktree_does_not_admit_or_age_block_in_either_mode(self):
+        for auto in (False, True):
+            with self.subTest(auto=auto):
+                requests = [dict(self.request('gone', 30), tree='gone', auto=auto),
+                            dict(self.request('valid', 900, 301), tree='valid', auto=auto)]
+                visited = []
+                def fits(request):
+                    visited.append(request['id'])
+                    return schedule.WORKTREE_GONE if request['id'] == 'gone' else True
+                self.assertEqual('valid', schedule.choose(requests, 350, fits)['id'])
+                self.assertEqual(['gone', 'valid'], visited)
+
     def test_maven_estimates_distinguish_exact_tests_patterns_and_suites(self):
         self.assertEqual(30, schedule.maven_estimate(['-Dtest=TestCollisionLogic', 'test']))
         self.assertEqual(30.3, schedule.maven_estimate(['-Dtest=One,Two', 'test']))

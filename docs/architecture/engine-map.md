@@ -349,6 +349,25 @@ and coverage audits: `RewindRegistry` / `RewindController` / `PlaybackController
 spans core managers plus player, sidekick, object, ring, level, palette, parallax,
 mutation, render-mode, and PLC progress state.
 
+Restore order is part of the ownership contract. Normal adapters restore in
+registration order, except that the shared RNG restores after reconstruction and
+before post-restore callbacks. Objects rebuild their slot ownership before rings
+reserve attracted-ring slots. Level-event state restores before the title owner,
+then event extras; post-restore reconciliation runs after the entire graph. A
+seamless-transition rebind moves only the replaced object and ring adapters.
+Keep these dependencies at the composition root and covered by the registry and
+gameplay-context ordering checks when changing registration choreography.
+
+Movement also has explicit state boundaries: the playable-frame start captures
+cross-player status, movement dispatch resets its per-tick latches, and grounded
+movement retains the inertia values observed before friction and slope repel for
+later animation decisions. These are ROM-visible reads of different intra-frame
+states, so replacing them with a final-state read changes behavior. Keep reset,
+producer and consumer together when extracting an owner; do not move writes
+between phases to satisfy a class-size budget. Grounded hurt recovery belongs to
+the existing `PlayableHurtRecovery` owner while its call stays after the final
+recoil movement.
+
 Automatic capture uses `GenericFieldCapturer`, `GenericRewindEligibility`,
 `@RewindTransient` / `@RewindDeferred`, stable identity ids in
 `com.openggf.game.rewind.identity`, and compact schema codecs/policies in

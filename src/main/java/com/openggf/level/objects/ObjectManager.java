@@ -4642,7 +4642,7 @@ public class ObjectManager {
      * (animation cursor, timers, visibility flags, etc.) reapplied via
      * {@link AbstractObjectInstance#restoreRewindState}.
      */
-    public com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry
+    com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry
             consumePendingPlayerBoundEntry(Class<?> baseType) {
         return consumePendingPlayerBoundEntry(baseType, entry -> true);
     }
@@ -4653,7 +4653,7 @@ public class ObjectManager {
      * concrete class instead of consuming another player's pending same-type
      * shield from the FIFO queue.
      */
-    public com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry
+    com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry
             consumePendingPlayerBoundEntry(Class<?> baseType,
                     Predicate<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry> matcher) {
         java.util.ArrayDeque<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry>
@@ -4720,7 +4720,7 @@ public class ObjectManager {
      * parent still receives this instance as its back-reference, so adopting it in place keeps
      * the parent's child references valid while giving the child its exact captured state.
      */
-    public void registerRewindReconstructionObject(AbstractObjectInstance object) {
+    void registerRewindReconstructionObject(AbstractObjectInstance object) {
         if (object != null && rewindReconstructionChildCapture) {
             registerInheritedCallbackOwner(object);
             rewindReconstructionChildren.add(object);
