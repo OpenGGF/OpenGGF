@@ -2212,3 +2212,126 @@ Evidence:
 - the scripts `B/compile_kos_budget_probe_v{6,7,7p,7c}.py`,
   `B/run_kos_budget_probe_v{6,7,7b,7p,7c}.py` and
   `B/analyze_kos_budget_v{6,7}.py`.
+
+#### Resumable Kos service consumer (2026-10-16, kos-cycle-consumer lane)
+
+This slice adds the pure consumer that research slice 1 called for: a model of the
+shipped `Process_Kos_Queue` service that, given the instruction cycles available
+before a V-int, reports how far the job gets and what state it leaves. It is not
+registered anywhere. The `s3k-kos-v1` rows, the hardware profile and fingerprint,
+the fallback, any ledger and the runtime are unchanged, so no published count moves.
+
+**Source.** `S3kKosServiceModel` (`game/sonic3k/timing`) executes the routine's own
+instructions, `Process_Kos_Queue` `$1C1A` through `Restore_Kos_Bookmark` `$1D0A`, on
+its own state: d0-d6/a0-a2, the CCR and the 68000 RAM image the routine touches
+(`Kos_decomp_queue_count` `$FF0E` through the queue at `$FF40`, plus destination
+buffers). All 88 instruction words, plus the three `Backup_Kos_Registers` words
+(`$1D0C`-`$1D16`), are pinned to the ROM. Each is charged its 68000 cycles. The
+table equals GPGX 051d430d `m68ki_cycles` and the Motorola MC68000 UM row for row
+(audited per instruction, including Bcc.s 10/8, Bcc.w 10/12 and DBF 10/14). The
+research prototype `kos_service.py` (`f594432f…`) and the uncompiled draft
+(`f452580d…`) were ported, not merged. Changes made during review:
+- `cmpi.b #1,d1` and `subq.w #1,(Kos_decomp_queue_count).w` now set V, C and X as
+  the 68000 does. The draft cleared or kept them; no later instruction reads them,
+  but they are saved in a bookmark.
+- Absolute-short addresses sign-extend: `a2` holds `$FFFFFF3E`, as stored natively.
+- `move sr,d6` and the stored SR carry the `$23` system byte. Every caller enters
+  after `Wait_VSync`'s `move #$2300,sr` (ROM `$1D18`), and under `$2700` no V-int
+  could interrupt the routine.
+- Output bytes are counted at the two writing instructions (`$1C58`, `$1CBA`), not
+  from cursor bookkeeping.
+
+**ROM semantics settled (a prototype limit removed).** The prototype threw when
+the budget ended outside `Process_Kos_Queue_Main`..`Done`. The ROM decides it:
+- `Set_Kos_Bookmark` is the tail (`jmp`) of VInt_8, VInt_A_C, VInt_10 (which reaches
+  VInt_8 or VInt_1C), VInt_14, VInt_16, VInt_1A, VInt_1C and VInt_1E. VInt_0 (lag),
+  VInt_2, VInt_4, VInt_6, VInt_E, VInt_12 and VInt_18 return without it.
+  `Wait_TitleS3K` calls `Process_Kos_Queue` under VInt_4, so a job serviced there
+  never bookmarks.
+- `Set_Kos_Bookmark` bookmarks only with `Kos_decomp_queue_count` bit 15 set and
+  the stacked PC in `[Process_Kos_Queue_Main, Process_Kos_Queue_Done)`.
+- Otherwise the V-int `rte`s to the interrupted instruction and the same call keeps
+  running. Its entry cleared `V_int_routine` (`move.b #VInt_ID_0,(V_int_routine).w`),
+  so every later V-int in that call takes `VInt_0_Main`. That path saves and
+  restores d0-a6, writes no Kos RAM and never reaches `Set_Kos_Bookmark`, so the
+  rest of the call completes to its `rts` whatever the later frame timing is. The
+  caller's `Wait_VSync` then returns at once.
+- The model reports this as `INTERRUPTED_LIVE`; `finishInterruptedCall` runs the
+  remainder. Cases: the entry prefix `$1C1A`-`$1C26` (busy bit not yet set, so a whole
+  job can finish across lag frames), `Restore_Kos_Bookmark`, and the retiring tail
+  after `andi.w #$7FFF` cleared the busy bit (`$1CE0`-`$1CFA`).
+- `Backup_Kos_Registers` runs after a bookmarking V-int and costs 124 cycles
+  (`move sr` 16, `movem.l` 92, `rts` 16). It is reported as `postVIntCycles`, for the
+  next frame's ledger, not charged to the window.
+- `Process_Kos_Queue_EndReached` retires one job, shifts the queue and returns; the
+  successor starts in the next call.
+
+**Validation** (`TestS3kKosServiceModel`, ROM-backed):
+- Hand-assembled streams with written-out output: literals, inline 2-bit copy,
+  separate 3-bit copy, extended count with no-op, end, and the descriptor refill on
+  the 16th flag before that flag's byte. The engine's `KosinskiReader` agrees on each.
+- The four ending jobs `$1D17A6`, `$1CF2D4`, `$1CFB46` and `$1D02B6` decode to
+  `KosinskiReader`'s bytes in one call and under five bookmark budgets. Each extra
+  window adds exactly 190 cycles: the resumed entry plus `Restore_Kos_Bookmark`.
+- Capture and restore: three windows (two restores) replay to equal results and
+  equal state from either capture. The bookmark RAM holds the stacked PC, SR and
+  live registers. The job's 3,712 bytes equal native Tails/+2's 706+1499+1459+48.
+- Exhaustion: for every budget 1-3,999 the stop satisfies
+  `cycles >= budget > cycles - last instruction`.
+- No successor starts in a retiring window; the queue shifts and the next call
+  starts it.
+- Live interruption: VInt_4-style, at the entry prefix, at `Done` and after the
+  busy bit clears.
+- Native comparison: `src/test/resources/timing/s3k-kos-native-windows-v1.tsv` holds
+  63 retained windows (Tails/+2 and Sonic/+2 NTSC v6, both PAL v7p, Sonic/0 and
+  Sonic/−2 NTSC v7c; three FIFO jobs each). Its budgets are the native per-PC counts
+  costed with GPGX through the research decoder; its expected fields are native
+  observations. For every window the Java model matches the queue count at entry,
+  the outcome, bytes out, the interrupted PC, every per-PC execution count, and
+  cycles equal to the budget. That last check compares the Java table with the
+  GPGX-costed counts. The fixture is comparison-only, never runtime input.
+- Break on purpose: changing only the `$1CB6` cost from 14 to 16 in the production
+  table turned exactly the native-window test red (Tails/+2 LF 4402: 690 bytes
+  against 706). Every other check stayed green, because the bytes do not depend on
+  costs. The first mutation run also exposed a test flaw: one split budget legitimately
+  landed in the retiring tail (`INTERRUPTED_LIVE`), and the split loop did not finish
+  that call. The loop now follows the ROM path.
+
+**Still not modelled (ledger terms, deliberately outside this consumer).** The
+budget is 68000 instruction cycles. Converting frame time into it needs:
+- DRAM refresh;
+- Z80 68k-bus waits and H-int time inside the window;
+- V-int acceptance (GPGX 50-59 cycles) and the V-int body, including
+  `Set_Kos_Bookmark`.
+
+The routine only reads ROM/RAM and writes RAM (the model throws otherwise), so no
+VDP FIFO wait or 68k DMA freeze can fall inside a window. No defer rule was added.
+The six measured counts and the 46 multi-valued contexts remain open: this is a
+necessary component, not the removal condition.
+
+**Next: first per-owner ledger input and its state proof.** `LevelLoop`
+(sonic3k.asm `LevelLoop`) calls `Process_Kos_Queue` immediately before `Wait_VSync`,
+so a window's budget is the frame period less the previous V-int and the whole
+frame body. The first owner should have a closed-form ROM path from state the
+engine already owns. `Pal_ToBlack` qualifies (ROM `$3C04`, `Pal_DecColor` `$3C32`-`$3C66`;
+27% of a steady ending frame in research E4):
+- Its path is a pure function of `Palette_fade_info`, `Palette_fade_count` and the
+  `Normal_palette` and `Water_palette` words. It makes 128 `Pal_DecColor` calls per
+  frame, and each colour takes the zero, blue, green or red branch.
+- It touches only RAM, so no stall term arises.
+- The retained v7 histograms already show its per-PC counts. For example, Tails/+2
+  NTSC LF 4400 has 124 zero-colour paths and 4 single-component steps; LF 4402 has
+  all 128 zero.
+
+Proposed slice:
+- A pinned pure `S3kPalToBlackCost.cost(normalPalette, waterPalette, fadeInfo,
+  fadeCount)` returning cycles and per-PC counts, in the same style as this model.
+- A ROM-backed state proof. The engine's palette owner images, sampled at the ending
+  frames LF 4400-4416 on every captured product, must predict the native histogram's
+  `$3C04`-`$3C66` counts exactly. That proves the input state, `Water_palette`
+  included, not only the cost.
+- If the engine cannot produce the `Water_palette` image for that scene, record it as
+  the missing state and stop.
+
+The ledger API (`FrameCpuLedger.charge/markOwnerExecuted/isComplete`) is added only
+when this first owner is proven. The ending scene driver belongs to the ending-runtime lane.

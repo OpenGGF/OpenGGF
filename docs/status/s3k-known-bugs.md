@@ -6584,6 +6584,15 @@ A budget model without route keys that reproduces all six measured native counts
 (NTSC and PAL) and the 46 multi-valued corpus fingerprints. Evidence and rejected
 candidates are in the [ending lifecycle design](../architecture/designs/2026-10-13-s3k-ending-lifecycle.md#kos-idle-budget-measurement-of-the-hyper-sonic-residual-2026-10-15-opus-kos-budget-lane).
 
+### Progress
+- 2026-10-16: `S3kKosServiceModel` reproduces the shipped `Process_Kos_Queue` service
+  from ROM instructions and costs. It matches all 63 retained native windows (bytes,
+  bookmark or retirement, per-instruction counts) when it is given their measured
+  budgets. It is not registered: the budget still needs a per-frame CPU ledger (refresh,
+  Z80-bus/H-int waits, V-int, and every owner's frame-body cost), so the published
+  counts are unchanged. See the
+  [design record](../architecture/designs/2026-10-13-s3k-ending-lifecycle.md#resumable-kos-service-consumer-2026-10-16-kos-cycle-consumer-lane).
+
 ---
 
 ## Non-Fresh Title Card Holds 90 Locked Frames (OPEN)
