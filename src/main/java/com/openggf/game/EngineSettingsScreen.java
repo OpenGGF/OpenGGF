@@ -537,6 +537,7 @@ public final class EngineSettingsScreen {
                     P2_UP, P2_DOWN, P2_LEFT, P2_RIGHT, P2_A, P2_B, P2_C, P2_START,
                     CONTROLLER_ENABLED, CONTROLLER_DEADZONE, CONTROLLER_PLAYER1, CONTROLLER_PLAYER2,
                     DEBUG_MODE_KEY, LIVE_REWIND_KEY, FRAME_STEP_KEY -> "Takes effect immediately after saving.";
+            case DISPLAY_COLOR_EXPANSION -> "Takes effect immediately after saving, including cached palette colours.";
             // MasterTitleScreen refreshes ROM previews on consumeApplied; load resolves saved ROM paths.
             case SONIC_1_ROM, SONIC_2_ROM, SONIC_3K_ROM, ROMS_DIRECTORY, ROMS_PREFER_COMPOSITE ->
                     "After saving: the ROM catalogue rescans and previews refresh; used for the next game load.";

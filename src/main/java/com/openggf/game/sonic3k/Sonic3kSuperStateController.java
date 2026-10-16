@@ -107,6 +107,10 @@ public class Sonic3kSuperStateController extends SuperStateController {
     private static final int ENDING_FORM_SNAPSHOT_BIT = 0x200;
     private static final int ENDING_REUNION_SNAPSHOT_BIT = 0x400;
     private static final int ENDING_REVERT_MAPPINGS_SNAPSHOT_BIT = 0x800;
+    // S3K's existing transformation word owns flags8..11 and otherwise has no
+    // countdown. Retain companion Palette_timer's high nibble in unused12..15;
+    // ordinary0..15 snapshots keep their exact previous representation.
+    private static final int COMPANION_TIMER_HIGH_SNAPSHOT_SHIFT = 12;
     private final HyperKnucklesWallQuake wallQuake = new HyperKnucklesWallQuake();
     private int hyperFlashFrames;
     private boolean hyperFlashRestorePending;
@@ -271,6 +275,11 @@ public class Sonic3kSuperStateController extends SuperStateController {
         superTailsCompanionPaletteFrame = 0;
     }
 
+    /** Obj_5D86A wrapper / loc_5E4E2: hold Sonic/Flicky Palette_timer, not Tails' body timer. */
+    public void holdEndingTailsCompanionPaletteTimer() {
+        superTailsCompanionPaletteTimer = 0x7F;
+    }
+
     /** {@code loc_5E70E}: powered Knuckles flight keeps its cursor and writes timer $F. */
     public void initializeEndingKnucklesFlight() {
         int previousFrame = paletteFrame;
@@ -394,6 +403,17 @@ public class Sonic3kSuperStateController extends SuperStateController {
     }
 
     private void updateEndingForm() {
+        if(!endingPaletteUsesAnPalClock())advanceEndingPaletteAtAnPal();
+        if (endingReunionForm && isSuperTailsFormActive()) {
+            var level = player.currentLevelManagerIfAvailable();
+            ensureSuperTailsFlickies(level != null ? level.getObjectManager() : null);
+        }
+        // P1 retains its ending auxiliary/form owners; AnPal owns the palette dispatch.
+    }
+
+    /** Native ending palettes/transformation release at AnPal_Load, before Process_Sprites. */
+    public void advanceEndingPaletteAtAnPal() {
+        if(!endingSceneForm)return;
         if (getState() == SuperState.TRANSFORMING) {
             boolean finished;
             if (player instanceof Tails) {
@@ -425,12 +445,14 @@ public class Sonic3kSuperStateController extends SuperStateController {
             updateSuperPalette();
             updateEndingRevertPalette();
         }
-        if (endingReunionForm && isSuperTailsFormActive()) {
-            var level = player.currentLevelManagerIfAvailable();
-            ensureSuperTailsFlickies(level != null ? level.getObjectManager() : null);
-        }
-        // The ending script owns control, life and ring timing. Only the native
-        // palette/transformation owner runs here, once through ordinary update().
+    }
+
+    private boolean endingPaletteUsesAnPalClock() {
+        var level=player.currentLevelManagerIfAvailable();
+        if(level==null||!(level.getAnimatedPatternManager() instanceof Sonic3kLevelAnimationManager))return false;
+        var registry=GameServices.zoneRuntimeRegistryOrNull();
+        return registry!=null && com.openggf.game.sonic3k.ending.S3kEndingCoordinator.current(registry)
+                .map(com.openggf.game.sonic3k.ending.S3kEndingState::initialized).orElse(false);
     }
 
     private void updateEndingRevertPalette() {
@@ -490,7 +512,8 @@ public class Sonic3kSuperStateController extends SuperStateController {
                 (doomsdayForm ? DOOMSDAY_FORM_SNAPSHOT_BIT : 0)
                         | (endingSceneForm ? ENDING_FORM_SNAPSHOT_BIT : 0)
                         | (endingReunionForm ? ENDING_REUNION_SNAPSHOT_BIT : 0)
-                        | (endingRescueRevertMappingsPending ? ENDING_REVERT_MAPPINGS_SNAPSHOT_BIT : 0),
+                        | (endingRescueRevertMappingsPending ? ENDING_REVERT_MAPPINGS_SNAPSHOT_BIT : 0)
+                        | (((superTailsCompanionPaletteTimer >>> 4) & 0xF) << COMPANION_TIMER_HIGH_SNAPSHOT_SHIFT),
                 activeFormTier.ordinal()
                         | (wallQuake.capture().framesRemaining() << 8)
                         | ((hyperFlashFrames | (hyperFlashRestorePending ? 0x80 : 0)) << 16)
@@ -523,7 +546,8 @@ public class Sonic3kSuperStateController extends SuperStateController {
         int companionState = (rewindState.presentationTier() >>> 24) & 0xFF;
         superTailsCompanionPaletteFrame =
                 (companionState & 0xF) * BYTES_PER_FRAME;
-        superTailsCompanionPaletteTimer = (companionState >>> 4) & 0xF;
+        superTailsCompanionPaletteTimer = ((companionState >>> 4) & 0xF)
+                | (((rewindState.transformFramesRemaining() >>> COMPANION_TIMER_HIGH_SNAPSHOT_SHIFT) & 0xF) << 4);
         transformationPaletteAdvancedThisFrame = false;
         configurePaletteForActiveTier();
         paletteFrame = rewindState.paletteFrame();
@@ -1111,10 +1135,13 @@ public class Sonic3kSuperStateController extends SuperStateController {
         }
     }
 
+    /** A bound scene owns presentation before its first powered-flag writer runs. */
+    protected boolean preservesScenePhysicsDuringRewind() { return false; }
+
     private void reconcileRewindPresentation(SuperState restoredState) {
-        if (endingSceneForm) {
-            // Player rewind already restored its captured physics profile. The
-            // rescue flag writers never replace those values or release control.
+        if (endingSceneForm || preservesScenePhysicsDuringRewind()) {
+            // Player rewind already restored its captured physics scalars. The
+            // scene binding and rescue flag writers never replace those values or release control.
             if (restoredState == SuperState.SUPER || restoredState == SuperState.TRANSFORMING
                     || endingRescueRevertMappingsPending) installPoweredMappingPresentation();
             else restoreNormalMappingPresentation();

@@ -101,7 +101,7 @@ class TestGameLoopNativeStageMutatorPacing {
         provider.onEnter(BonusStageType.SLOT_MACHINE, savedState());
         provider.onDeferredSetupComplete();
         assertNotNull(provider.activeSlotRuntime()); assertTrue(provider.updateDuringLevelFrame());
-        assertFalse(provider.supportsRewind(), "This change does not add unsupported Slots rewind");
+        assertTrue(provider.supportsRewind(), "the Slot runtime now supports complete within-stage rewind");
         admitNativeSetup(actualContext);
         var ticks = new AtomicInteger(); var pacing = new GameplayMutatorPacing(() -> policy(400));
         var world = countingWorld(pacing, ticks); var pumpContext = mock(GameplayModeContext.class);

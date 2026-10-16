@@ -68,6 +68,7 @@ final class LiveRewindStepper implements RewindSeekAwareEngineStepper {
             InputHandler liveInput,
             PlcLifecycleFrame lifecycleFrame) {
         LevelFrameContext context = frameContextSupplier.get();
+        com.openggf.game.internal.BonusStageFrameLifecycle.beforeReplayFrame(gameplayModeSupplier.get());
         var admission = LevelFrameStep.admit(
                 context, level, input.p1StartPressed());
         if (admission.result() == LevelFrameResult.PAUSED) {
@@ -91,6 +92,7 @@ final class LiveRewindStepper implements RewindSeekAwareEngineStepper {
                     context, lifecycleFrame, PlcLifecyclePhase.ORDINARY_LEVEL,
                     level, camera, () -> sprites.update(liveInput),
                     LevelFrameStep.DIRECT_WRAPPER);
+            com.openggf.game.internal.BonusStageFrameLifecycle.afterReplayFrame(gameplayMode);
             if (metadata != null) metadata.restoreAfterTick(gameplayMode, null);
             return result;
         } finally {

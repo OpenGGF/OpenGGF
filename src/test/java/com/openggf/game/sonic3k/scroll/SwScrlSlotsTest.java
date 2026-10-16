@@ -1,6 +1,5 @@
 package com.openggf.game.sonic3k.scroll;
 
-import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotLayoutFixture;
 import com.openggf.data.Rom;
 import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotBonusStageRuntime;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
@@ -17,6 +16,70 @@ import static com.openggf.level.scroll.M68KMath.unpackBG;
 import static com.openggf.level.scroll.M68KMath.unpackFG;
 
 public class SwScrlSlotsTest {
+    @Test
+    public void restoredScrollRebuildDoesNotAdvanceNativeBackgroundOrPlaneUpdates() {
+        var scroll=new SwScrlSlots(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources());var output=new int[224];
+        scroll.updateForTest(null,output,0x300,0x200,0);
+        for(int frame=1;frame<=11;frame++)scroll.updateForTest(null,output,0x300,0x200,frame);
+        assertEquals(1,scroll.getVscrollFactorBG()&255);
+        var before=scroll.captureRewindState();var expected=output.clone();
+        var beforeUpdates=List.copyOf(scroll.lastBgPlaneRowUpdatesForTest());
+        scroll.updateForTest(null,output,0x300,0x200,12);
+        var after=scroll.captureRewindState();var afterOutput=output.clone();
+        for(int cycle=0;cycle<2;cycle++) {
+            scroll.restoreRewindState(before);
+            scroll.rebuildOutput(output,0x300,0x200,11,0);
+            org.junit.jupiter.api.Assertions.assertArrayEquals(expected,output);
+            assertEquals(1,scroll.getVscrollFactorBG()&255);
+            assertEquals(beforeUpdates,scroll.lastBgPlaneRowUpdatesForTest());
+            org.junit.jupiter.api.Assertions.assertTrue(com.openggf.game.rewind.RewindSnapshotDiff.keyEquals("slot-scroll",before,scroll.captureRewindState()));
+            scroll.updateForTest(null,output,0x300,0x200,12);
+            org.junit.jupiter.api.Assertions.assertArrayEquals(afterOutput,output);
+            org.junit.jupiter.api.Assertions.assertTrue(com.openggf.game.rewind.RewindSnapshotDiff.keyEquals("slot-scroll",after,scroll.captureRewindState()));
+            scroll.restoreRewindState(before);scroll.restoreRewindState(after);
+            scroll.rebuildOutput(output,0x300,0x200,12,0);
+            org.junit.jupiter.api.Assertions.assertArrayEquals(afterOutput,output);
+        }
+    }
+
+
+    @Test
+    public void alteredRomBandWordsDriveSignedArithmeticPlaneRequestsAndDeformation() {
+        var bytes=com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.image();
+        putWord(bytes,0x599BE,0x60);
+        putWord(bytes,0x599DE,0x18);
+        putWord(bytes,0x599E0,0xFFFF);putWord(bytes,0x599E2,0);
+        putWord(bytes,0x599E8,0xE020);putWord(bytes,0x599EA,-4);
+        putWord(bytes,0x599EC,0);putWord(bytes,0x599EE,0x1230);putWord(bytes,0x599F0,7);
+        var bank=com.openggf.game.sonic3k.bonusstage.slots.S3kSlotResources.fromRom(
+                com.openggf.data.RomByteReader.fromBytes(bytes));
+        assertEquals(-0x10000,bank.backgroundBands().getFirst().deltaLong());
+        var scroll=new SwScrlSlots(bank);var output=new int[224];
+        scroll.updateForTest(null,output,0x300,0x200,0);
+        scroll.updateForTest(null,output,0x300,0x200,1);
+        assertEquals(25,unpackBG(output[0]));assertEquals(25,unpackBG(output[95]));
+        assertEquals(0,unpackBG(output[96]),"the declared height selects the next ROM band");
+        assertEquals(List.of(new SwScrlSlots.BgPlaneRowUpdate(0x18,0x1230,0xE01C,7)),
+                scroll.lastBgPlaneRowUpdatesForTest());
+        scroll.updateForTest(null,output,0x300,0x200,2);
+        assertEquals(2,unpackBG(output[0]),"unsigned 32-bit carry precedes the native word-sized step");
+    }
+
+    @Test
+    public void malformedBackgroundTablesFailBeforeScrollChanges() {
+        var bytes=com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.image();
+        putWord(bytes,0x599BE,0);var zeroHeight=bytes;
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,()->
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotResources.fromRom(com.openggf.data.RomByteReader.fromBytes(zeroHeight)));
+        bytes=com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.image();
+        putWord(bytes,0x599BE+30,32);var missingSentinel=bytes;
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,()->
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotResources.fromRom(com.openggf.data.RomByteReader.fromBytes(missingSentinel)));
+    }
+
+    private static void putWord(byte[] bytes,int address,int value) {
+        bytes[address]=(byte)(value>>>8);bytes[address+1]=(byte)value;
+    }
 
     @Test
     public void providerRoutesSlotsToDedicatedHandler() throws Exception {
@@ -31,9 +94,9 @@ public class SwScrlSlotsTest {
 
     @Test
     public void slotScrollUsesRuntimeAnchorsInsteadOfCameraOnlyApproximation() {
-        SwScrlSlots scroll = new SwScrlSlots();
-        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
-        com.openggf.game.sonic3k.bonusstage.slots.S3kSlotLayoutFixture.bootstrap(runtime);
+        SwScrlSlots scroll = new SwScrlSlots(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources());
+        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources());
+        runtime.bootstrap();
         var visual = runtime.slotVisualState();
 
         scroll.updateForTest(runtime, 0x300, 0x200, 12);
@@ -50,9 +113,9 @@ public class SwScrlSlotsTest {
 
     @Test
     public void slotBackgroundInitClearsDeformationBeforeEventTick() {
-        SwScrlSlots scroll = new SwScrlSlots();
-        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
-        com.openggf.game.sonic3k.bonusstage.slots.S3kSlotLayoutFixture.bootstrap(runtime);
+        SwScrlSlots scroll = new SwScrlSlots(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources());
+        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources());
+        runtime.bootstrap();
         int[] horizScrollBuf = new int[224];
 
         scroll.updateForTest(runtime, horizScrollBuf, 0x300, 0x200, 0);
@@ -66,9 +129,9 @@ public class SwScrlSlotsTest {
 
     @Test
     public void slotBackgroundUsesAccumulatorHighWordPlusBaseScroll() {
-        SwScrlSlots scroll = new SwScrlSlots();
-        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
-        com.openggf.game.sonic3k.bonusstage.slots.S3kSlotLayoutFixture.bootstrap(runtime);
+        SwScrlSlots scroll = new SwScrlSlots(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources());
+        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources());
+        runtime.bootstrap();
         int[] horizScrollBuf = new int[224];
 
         scroll.updateForTest(runtime, horizScrollBuf, 0x300, 0x200, 0); // Slots_BackgroundInit
@@ -87,9 +150,9 @@ public class SwScrlSlotsTest {
 
     @Test
     public void slotBackgroundVScrollUsesRomFixedPointAccumulatorHighWord() {
-        SwScrlSlots scroll = new SwScrlSlots();
-        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
-        com.openggf.game.sonic3k.bonusstage.slots.S3kSlotLayoutFixture.bootstrap(runtime);
+        SwScrlSlots scroll = new SwScrlSlots(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources());
+        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources());
+        runtime.bootstrap();
         int[] horizScrollBuf = new int[224];
 
         scroll.updateForTest(runtime, horizScrollBuf, 0x300, 0x200, 0); // Slots_BackgroundInit
@@ -103,9 +166,9 @@ public class SwScrlSlotsTest {
 
     @Test
     public void slotBackgroundQueuesRomPlaneRowRefreshesWhenBandsAdvance() {
-        SwScrlSlots scroll = new SwScrlSlots();
-        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
-        com.openggf.game.sonic3k.bonusstage.slots.S3kSlotLayoutFixture.bootstrap(runtime);
+        SwScrlSlots scroll = new SwScrlSlots(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources());
+        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources());
+        runtime.bootstrap();
         int[] horizScrollBuf = new int[224];
 
         scroll.updateForTest(runtime, horizScrollBuf, 0x300, 0x200, 0); // Slots_BackgroundInit
@@ -127,9 +190,9 @@ public class SwScrlSlotsTest {
 
     @Test
     public void slotScrollOwnsBackgroundAccumulatorAndRespondsToScalarDirectionChanges() {
-        SwScrlSlots scroll = new SwScrlSlots();
-        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
-        com.openggf.game.sonic3k.bonusstage.slots.S3kSlotLayoutFixture.bootstrap(runtime);
+        SwScrlSlots scroll = new SwScrlSlots(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources());
+        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources());
+        runtime.bootstrap();
 
         for (int i = 0; i < 40; i++) {
             scroll.updateForTest(runtime, 0x300, 0x200, i);
@@ -154,9 +217,9 @@ public class SwScrlSlotsTest {
 
     @Test
     public void slotBackgroundFreezesWhenDebugForcesRotationScalarToZero() {
-        SwScrlSlots scroll = new SwScrlSlots();
-        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
-        com.openggf.game.sonic3k.bonusstage.slots.S3kSlotLayoutFixture.bootstrap(runtime);
+        SwScrlSlots scroll = new SwScrlSlots(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources());
+        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources());
+        runtime.bootstrap();
 
         for (int frame = 0; frame < 20; frame++) {
             scroll.updateForTest(runtime, 0x300, 0x200, frame);
@@ -176,9 +239,9 @@ public class SwScrlSlotsTest {
 
     @Test
     public void slotScrollProducesStablePackedBufferWithoutBandCorruption() {
-        SwScrlSlots scroll = new SwScrlSlots();
-        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
-        com.openggf.game.sonic3k.bonusstage.slots.S3kSlotLayoutFixture.bootstrap(runtime);
+        SwScrlSlots scroll = new SwScrlSlots(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources());
+        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources());
+        runtime.bootstrap();
         int[] horizScrollBuf = new int[224];
 
         scroll.updateForTest(runtime, horizScrollBuf, 0x300, 0x200, 12);

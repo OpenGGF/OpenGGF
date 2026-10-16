@@ -1,6 +1,7 @@
 # Ordinary cold MHZ1 Knuckles -> native terminal-HP1 -> released FBZ.
 # Finish S3K input assist; runtime b143f272ec3e0d46a119bce2b47ef1fc9996e8ce.
 # Exact prefix of fixed01; terminal proof guard is separate and not included.
+# Retimed by FadeWindowRetimeTool from mhz2-knuckles-cold-complete-320.bk2 (authored fade advances 2); windows start:native->+inserted [66042:22->+11]
 20 R+A / -
 20 R / -
 20 R+A / -
@@ -1871,7 +1872,7 @@
 24 R+A / -
 70 R / -
 24 R+A / -
-70 R / -
+81 R / -
 24 R+A / -
 70 R / -
 24 R+A / -

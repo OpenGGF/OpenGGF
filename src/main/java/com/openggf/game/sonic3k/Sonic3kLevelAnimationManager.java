@@ -4,6 +4,9 @@ import com.openggf.data.RomByteReader;
 import com.openggf.game.GameServices;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.snapshot.PatternAnimatorSnapshot;
+import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.PaletteFadePresentation;
 import com.openggf.level.Level;
 import com.openggf.level.animation.AnimatedPaletteManager;
 import com.openggf.level.animation.AnimatedPatternManager;
@@ -20,7 +23,8 @@ import java.nio.ByteBuffer;
 public final class Sonic3kLevelAnimationManager implements AnimatedPatternManager, AnimatedPaletteManager,
         RewindSnapshottable<PatternAnimatorSnapshot>, AizVineAngleProvider,
         SeamlessTransitionAnimationClock, InitialLevelAnimationPass,
-        com.openggf.level.animation.StageRingAnimationFrameProvider {
+        com.openggf.level.animation.StageRingAnimationFrameProvider,
+        com.openggf.game.internal.LevelPaletteFadeOwner {
 
     /** See {@code Sonic2LevelAnimationManager.COMBINED_EXTRA_MAGIC} for rationale. */
     private static final byte COMBINED_EXTRA_MAGIC = (byte) 0xC3;
@@ -31,6 +35,18 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
     private final Sonic3kPatternAnimator patternAnimator;
     private final Sonic3kPaletteCycler paletteCycler;
     private final Sonic3kGlobalAnimationState globalAnimationState;
+    private final boolean endingScene;
+    /**
+     * Animate_Palette branches to Pal_FromWhite instead of Pal_FromBlack for
+     * $D01 and $1701 (sonic3k.asm:5023-5026), as loc_64DC's Pal_FillBlack does
+     * to Pal_FillWhite (4992-4995). The ending owns its own white reveal; the
+     * engine has no white presentation for the $1701 arena, so neither shows
+     * the black fade.
+     */
+    private final boolean whiteLevelFade;
+    // Whether this owner last published the level fade to the GraphicsManager;
+    // derived from the captured timer, so rewind re-applies it.
+    private boolean levelFadePresented;
 
     public Sonic3kLevelAnimationManager(RomByteReader reader, Level level,
                                         int zoneIndex, int actIndex, boolean isSkipIntro) {
@@ -41,6 +57,9 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
     Sonic3kLevelAnimationManager(RomByteReader reader, Level level,
                                  int zoneIndex, int actIndex, boolean isSkipIntro,
                                  Sonic3kGlobalAnimationState globalAnimationState) {
+        this.endingScene=zoneIndex==0x0D&&actIndex==1;
+        this.whiteLevelFade = endingScene
+                || (zoneIndex == Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA && actIndex == 1);
         this.patternAnimator = new Sonic3kPatternAnimator(reader, level,
                 zoneIndex, actIndex, isSkipIntro);
         // Resolve the palette ownership registry from the active gameplay mode
@@ -69,24 +88,124 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
 
     /** ROM {@code Palette_fade_timer} is still counting down the fresh-level fade. */
     public boolean paletteFadeTimerRunning() {
-        return globalAnimationState.paletteFadeTimer() > 0;
+        return globalAnimationState.paletteFadeTimer() != 0;
     }
 
     void resetFreshLevelRingAnimation() {
         globalAnimationState.resetFreshLevelRingAnimation();
         globalAnimationState.armFreshLevelPaletteFade();
+        // The same loc_64DC block ran Pal_FillBlack on lines 1-3, so the level
+        // shows them black before LevelLoop's first Animate_Palette pass.
+        presentLevelFade(false);
+    }
+
+    /**
+     * {@code Pal_FromBlack} passes lines 1-3 hold at this {@code Palette_fade_timer},
+     * or -1 when the level palette is not fading. {@code Level/loc_64DC}
+     * (sonic3k.asm:7874-7878) sets {@code Palette_fade_info = $202F} (lines 1-3),
+     * runs {@code Pal_FillBlack} and arms the timer with {@code $16};
+     * {@code Animate_Palette} (5018-5028) then spends one pass per LevelLoop frame
+     * while it decrements the timer, so {@code $16 - timer} passes have run. Line 0
+     * (players, HUD, title card) is never faded. A negative timer is an event's
+     * {@code ST} block (the {@code BMI} at 5019), which runs neither fade nor AnPal.
+     */
+    static int levelFadePassesAt(int paletteFadeTimer) {
+        if (paletteFadeTimer <= 0
+                || paletteFadeTimer > Sonic3kGlobalAnimationState.FRESH_LEVEL_PALETTE_FADE_FRAMES) {
+            return -1;
+        }
+        int passes = Sonic3kGlobalAnimationState.FRESH_LEVEL_PALETTE_FADE_FRAMES - paletteFadeTimer;
+        // Seven levels per channel, three channels: every colour has arrived after 21.
+        return passes < PaletteFadePresentation.COLOR_STEPS ? passes : -1;
+    }
+
+    /**
+     * Publishes the level's {@code Pal_FromBlack} state on lines 1-3. The fade
+     * belongs to the Level routine, not to the title card: it runs whether or not a
+     * card is presented, and a seamless reload never reaches loc_64DC to arm it.
+     *
+     * @param releaseRestored also release a level fade left by an earlier owner,
+     *        for a rewind restore that may replace this animator's history
+     */
+    private void presentLevelFade(boolean releaseRestored) {
+        int passes = whiteLevelFade ? -1 : levelFadePassesAt(globalAnimationState.paletteFadeTimer());
+        if (passes < 0 && !levelFadePresented && !releaseRestored) {
+            return;
+        }
+        GraphicsManager graphics = graphicsOrNull();
+        if (graphics == null) {
+            return;
+        }
+        if (passes >= 0) {
+            graphics.setPaletteFadePresentation(PaletteFadePresentation.Mode.FROM_BLACK, passes,
+                    PaletteFadePresentation.LINES_1_TO_3);
+            levelFadePresented = true;
+            return;
+        }
+        PaletteFadePresentation current = graphics.getPaletteFadePresentation();
+        if (levelFadePresented || (current.mode() == PaletteFadePresentation.Mode.FROM_BLACK
+                && current.lineMask() == PaletteFadePresentation.LINES_1_TO_3)) {
+            graphics.clearPaletteFadePresentation();
+        }
+        levelFadePresented = false;
+    }
+
+    @Override
+    public boolean presentsLevelFadeFromBlack() {
+        return !whiteLevelFade && levelFadePassesAt(globalAnimationState.paletteFadeTimer()) >= 0;
+    }
+
+    private static GraphicsManager graphicsOrNull() {
+        try {
+            return GameServices.graphics();
+        } catch (RuntimeException ignored) {
+            // Focused tests drive the animators without an engine session.
+            return null;
+        }
     }
 
     @Override
     public void update() {
         patternAnimator.update();
-        paletteCycler.update(!globalAnimationState.consumePaletteFadeFrame());
+        // D01 Animate_Palette belongs before Process_Sprites. Its AnPal entry
+        // is empty; retain late object writes here without consuming the timer twice.
+        paletteCycler.update(!endingScene&&!globalAnimationState.consumePaletteFadeFrame());
+        presentLevelFade(false);
         applyPoweredFormPaletteUploadVInt();
         // LevelLoop runs Process_Sprites before ChangeRingFrame
         // (sonic3k.asm:7888-7910). LevelFrameRuntimeUpdater calls this combined
         // manager after the object pass, so this is the runtime owner for the
         // independent AIZ_vine_angle word advanced at sonic3k.asm:9680-9694.
         globalAnimationState.advanceChangeRingFrame();
+    }
+
+    /** D01's source-ordered Animate_Palette call, using the existing captured global timer. */
+    public void advanceEndingInitialPalette(com.openggf.level.objects.ObjectServices services) {
+        if(!endingScene)throw new IllegalStateException("Ending palette operation on an ordinary animator");
+        if(globalAnimationState.paletteFadeTimer()<0)return; // Animate_Palette BMI: event ST writes $FF00.
+        if(globalAnimationState.consumePaletteFadeFrame()) {
+            com.openggf.game.sonic3k.ending.S3kEndingPalette.advanceInitialSceneFromWhite(services);
+            return;
+        }
+        advanceEndingPoweredPaletteAtAnPal(services);
+    }
+
+    /** ScreenEvents ST/CLR of the existing Palette_fade_timer word, captured by this animator. */
+    public void setEndingScreenPaletteFadeBlocked(boolean blocked) {
+        if(!endingScene)throw new IllegalStateException("Ending fade flag on an ordinary animator");
+        globalAnimationState.restorePaletteFadeTimer(blocked?0xFF00:0);
+    }
+
+    /** The SSZ ending shares AnPal_Load without owning D01's fresh white fade. */
+    public void advanceEndingPoweredPaletteAtAnPal(com.openggf.level.objects.ObjectServices services) {
+        if(globalAnimationState.paletteFadeTimer()!=0)return;
+        if(services.playerQuery().mainPlayerOrNull() instanceof com.openggf.sprites.playable.AbstractPlayableSprite player
+                && player.getSuperStateController() instanceof Sonic3kSuperStateController controller){
+            controller.advanceEndingPaletteAtAnPal();
+            // Native Normal_palette changes precede object reads and later writes.
+            S3kPaletteWriteSupport.resolvePendingWritesNow(services.paletteOwnershipRegistryOrNull(),
+                    services.currentLevel(),services.graphicsManager());
+        }
     }
 
     private static void applyPoweredFormPaletteUploadVInt() {
@@ -203,5 +322,6 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
         if (hasRingClock && buf.remaining() >= 2) {
             globalAnimationState.restorePaletteFadeTimer(buf.getShort());
         }
+        presentLevelFade(true);
     }
 }

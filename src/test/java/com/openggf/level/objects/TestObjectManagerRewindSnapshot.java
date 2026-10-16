@@ -88,6 +88,28 @@ class TestObjectManagerRewindSnapshot {
         @Override public void appendRenderCommands(List<GLCommand> commands) { }
     }
 
+    /** Child solid that shares its parent's layout spawn and keys its latches by instance (Rockn shell). */
+    private static final class InstanceKeyedChildSolid extends AbstractObjectInstance
+            implements SolidObjectProvider, SpawnRewindRecreatable {
+        static final int OFFSET_X = 200;
+
+        InstanceKeyedChildSolid(ObjectSpawn spawn) {
+            super(spawn, "InstanceKeyedChildSolid");
+        }
+
+        // Like the shell, the child keeps its parent's spawn record and sits elsewhere.
+        @Override public int getX() { return getSpawn().x() + OFFSET_X; }
+        @Override public int getY() { return getSpawn().y(); }
+
+        @Override public SolidObjectParams getSolidParams() {
+            return new SolidObjectParams(16, 8, 8);
+        }
+
+        @Override public boolean usesInstanceSolidStateLatchKey() { return true; }
+
+        @Override public void appendRenderCommands(List<GLCommand> commands) { }
+    }
+
     private static final class NullSpawnRewindable extends AbstractObjectInstance
             implements RewindRecreatable {
         NullSpawnRewindable() {
@@ -163,6 +185,62 @@ class TestObjectManagerRewindSnapshot {
     // ------------------------------------------------------------------
     // Tests
     // ------------------------------------------------------------------
+
+    private static final class RangeTailPublisher extends AbstractObjectInstance implements TouchResponseProvider {
+        int updates;
+        RangeTailPublisher() {super(spawn(100, 200), "RangeTailPublisher");}
+        @Override public void update(int vIntRunCount, PlayableEntity player) {updates++;}
+        @Override public boolean usesCustomOutOfRangeCheck() {return true;}
+        @Override public boolean isCustomOutOfRange(int cameraX) {return true;}
+        @Override public int getCollisionFlags() {return 0x47;}
+        @Override public int getCollisionProperty() {return 0;}
+        @Override public void appendRenderCommands(List<GLCommand> commands) { }
+    }
+
+    @Test
+    void initialDispatchDoesNotPublishAResponderDeletedByItsRangeTail() {
+        ObjectManager manager = makeManager(List.of(), new TrackingRegistry());
+        RangeTailPublisher publisher = new RangeTailPublisher();
+        manager.addDynamicObject(publisher);
+        try (var scope = manager.beginInitialProcessSprites(0, null, List.of())) {
+            manager.processInitialDynamicSlots(scope);
+            manager.finishInitialProcessSprites(scope);
+        }
+        assertEquals(1, publisher.updates, "the routine executes before its range tail");
+        assertTrue(manager.objectQuery().identityOf(publisher).isEmpty());
+        var snapshot = assertDoesNotThrow(() -> manager.rewindSnapshottable().capture());
+        var collision = snapshot.collisionResponseState();
+        assertTrue(collision.previousCollisionObjectIds().isEmpty());
+        assertTrue(collision.currentCollisionBuildObjectIds().isEmpty());
+        assertEquals(0, collision.currentCollisionBuildCursor());
+    }
+
+    @Test
+    void fullResetRetiresBothCollisionBuffersBeforeReusingSlots() {
+        ObjectManager manager = makeManager(List.of(), new TrackingRegistry());
+        ReservedTouchPublisher publisher = new ReservedTouchPublisher(spawn(100, 200));
+        manager.addDynamicObject(publisher);
+        var list = manager.initialCollisionResponseList();
+        list.captureCompletedBuild(List.of(publisher));
+        list.resetCurrentBuild();
+        list.addToCurrentBuild(publisher);
+        var before = manager.rewindSnapshottable().capture().collisionResponseState();
+        assertEquals(1, before.previousCollisionObjectIds().size());
+        assertEquals(1, before.currentCollisionBuildObjectIds().size());
+
+        manager.reset(0);
+        var empty = assertDoesNotThrow(() -> manager.rewindSnapshottable().capture());
+        assertEquals(ObjectManagerSnapshot.CollisionResponseState.empty(), empty.collisionResponseState());
+        assertTrue(list.playerReadView().isEmpty());
+        assertTrue(list.currentBuildView().isEmpty());
+        ReservedTouchPublisher replacement = new ReservedTouchPublisher(spawn(120, 200));
+        manager.addDynamicObject(replacement);
+        list.addToCurrentBuild(replacement);
+        var replaced = manager.rewindSnapshottable().capture().collisionResponseState();
+        assertTrue(replaced.previousCollisionObjectIds().isEmpty());
+        assertEquals(List.of(manager.objectQuery().identityOf(replacement).orElseThrow()),
+                replaced.currentCollisionBuildObjectIds());
+    }
 
     @Test
     void reservedChildTouchPublisherHasIdentityWhenCollisionListIsCaptured() {
@@ -427,6 +505,94 @@ class TestObjectManagerRewindSnapshot {
                     "restored dynamic must execute exactly once through its captured slot");
             previous = restored;
         }
+    }
+
+    @Test
+    void instanceLatchOfChildSharingItsParentSpawnRestoresToTheChildInItsSlot() {
+        ObjectSpawn parentSpawn = spawn(100, 100);
+        TrackingRegistry registry = new TrackingRegistry();
+        ObjectManager manager = makeManager(List.of(parentSpawn), registry);
+        manager.reset(0);
+        manager.update(0, null, null, 1);
+        assertNotNull(registry.instances.get(parentSpawn), "precondition: parent is a live layout object");
+        InstanceKeyedChildSolid child = new InstanceKeyedChildSolid(parentSpawn);
+        manager.addDynamicObject(child);
+        manager.update(0, null, null, 2);
+        int childSlot = child.getSlotIndex();
+        assertTrue(childSlot >= 0, "precondition: child owns a managed slot");
+
+        Sonic player = landOn(manager, child);
+        RewindSnapshottable<ObjectManagerSnapshot> adapter = manager.rewindSnapshottable();
+        ObjectManagerSnapshot captured = adapter.capture();
+        var key = captured.solidContactState().standingBits().getFirst().keys().getFirst();
+        assertTrue(key.instanceKey(), "precondition: the child latches by instance");
+        assertEquals(childSlot, key.slotIndex());
+
+        adapter.restore(captured);
+
+        // activeObjects.get(spawn) answers the parent, whose latch is spawn-keyed;
+        // the captured slot identifies the child that actually owned the bit.
+        var restored = manager.rewindSnapshottable().capture();
+        assertEquals(List.of(), com.openggf.game.rewind.RewindSnapshotDiff.diffKey(
+                "object-manager", captured, restored));
+        InstanceKeyedChildSolid restoredChild = manager.activeObjectsOfType(InstanceKeyedChildSolid.class)
+                .stream().findFirst().orElseThrow();
+        assertTrue(manager.hasObjectStandingBit(player, restoredChild));
+    }
+
+    @Test
+    void deletingAnInstanceLatchedDynamicSolidClearsItsObjectSideLatches() {
+        ObjectManager manager = makeManager(List.of(), new TrackingRegistry());
+        manager.reset(0);
+        InstanceKeyedChildSolid solid = new InstanceKeyedChildSolid(spawn(100, 100));
+        manager.addDynamicObject(solid);
+        manager.update(0, null, null, 1);
+        Sonic player = landOn(manager, solid);
+        assertTrue(manager.hasObjectStandingBit(player, solid), "precondition: standing latch set");
+
+        manager.removeDynamicObject(solid);
+
+        // Delete_Current_Sprite (docs/skdisasm/sonic3k.asm:36108-36125) zeroes the
+        // whole SST slot, status(a0) latch bits included. A retained instance key
+        // can never match again, yet capture would record its freed slot and a
+        // restore would bind whichever object reuses that slot.
+        var state = manager.rewindSnapshottable().capture().solidContactState();
+        assertTrue(state.standingBits().isEmpty(), "deleted solid must not keep a standing latch");
+        assertTrue(state.pushingBits().isEmpty(), "deleted solid must not keep a pushing latch");
+    }
+
+    @Test
+    void deletingAnOverlappedTouchObjectRemovesItFromTheOverlapBuffers() throws Exception {
+        var table = new TouchResponseTable(new com.openggf.data.RomByteReader(new byte[0x80]), 0, 0x40);
+        ObjectManager manager = new ObjectManager(List.of(), new TrackingRegistry(), 0, null, table);
+        manager.reset(0);
+        ReservedTouchPublisher publisher = new ReservedTouchPublisher(spawn(100, 200));
+        manager.addDynamicObject(publisher);
+        java.lang.reflect.Field controllerField = ObjectManager.class.getDeclaredField("touchResponses");
+        controllerField.setAccessible(true);
+        Object controller = controllerField.get(manager);
+        java.lang.reflect.Field overlappingField = controller.getClass().getDeclaredField("overlapping");
+        overlappingField.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        var overlapping = (java.util.Set<ObjectInstance>) overlappingField.get(controller);
+        overlapping.add(publisher);
+
+        manager.removeDynamicObject(publisher);
+
+        assertFalse(overlapping.contains(publisher),
+                "a deleted SST slot carries no overlap into later touch passes");
+    }
+
+    private static Sonic landOn(ObjectManager manager, AbstractObjectInstance solid) {
+        Sonic player = new Sonic("sonic", (short) 0, (short) 0);
+        player.setCentreX((short) solid.getX());
+        int maxTop = ((SolidObjectProvider) solid).getSolidParams().groundHalfHeight() + player.getYRadius();
+        player.setCentreY((short) (solid.getY() - 4 - maxTop + 8));
+        player.setAir(true);
+        player.setYSpeed((short) 0x100);
+        manager.updateSolidContacts(player);
+        assertTrue(manager.isRidingObject(player, solid), "precondition: player landed on the solid");
+        return player;
     }
 
 }

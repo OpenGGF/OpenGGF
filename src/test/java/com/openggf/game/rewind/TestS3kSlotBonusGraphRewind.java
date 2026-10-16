@@ -1,6 +1,5 @@
 package com.openggf.game.rewind;
 
-import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotLayoutFixture;
 import com.openggf.game.BonusStageProvider;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
@@ -150,8 +149,8 @@ class TestS3kSlotBonusGraphRewind {
 
         static Harness withSlotRuntime() {
             Sonic3kBonusStageCoordinator coordinator = new Sonic3kBonusStageCoordinator();
-            S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
-            com.openggf.game.sonic3k.bonusstage.slots.S3kSlotLayoutFixture.bootstrap(runtime);
+            S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources());
+            runtime.bootstrap();
             installSlotRuntime(coordinator, runtime);
             return create(coordinator, runtime.stageController());
         }

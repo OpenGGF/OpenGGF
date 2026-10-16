@@ -1668,3 +1668,56 @@ state/pixel controls and their limits are described in the
 [headless testing guide](../../../guide/contributing/headless-testing.md).
 This performance change supplies no new native reference, full-route visual
 certification or missing viewport/donor/character coverage; inherited gaps remain.
+
+
+## Physical checkpoint products and incoming replay (2026-10-14)
+
+All six ROM posts (indices1..6) receive360 products:180 supported solo and
+180 explicit-roster cases. Post5 uses an ordinary right-side approach outside
+the8px touch box: its actual left-side wall invalidates a universal left
+setup; the physical contact, not a preseeded post, is required.
+
+Each product approaches the literal ROM-placed star post through ordinary
+movement, captures the full registered world on both sides of contact, and
+replays and reverses it twice. It then invokes the production pit-death owner
+twice, waits for actual GameLoop reload/title/fade/control release, and verifies
+one lost life, saved coordinates/index, fresh runtime/object manager, retained
+ordered roster/CPU leader identities, donor art and retired outgoing history.
+Each incoming world independently captures and replays a45-input neutral window
+twice in both restore directions, without hiding a second death or life loss.
+All comparisons retain every registry key; no incoming raw restore crosses a
+load. The configured rosters include duplicate names and seven followers;
+these are finite examples of the uncapped API, not proof of every possible team.
+
+The five cases per configuration use the actual320/352/400/528/800 presets.
+Supported solo pairs are off×{Sonic,Tails,Knuckles}, S1×Sonic and
+S2×{Sonic,Tails}, where the act has that character route. Six explicit configured
+rosters cover native mixed/duplicate/large teams, S1 duplicate Sonic, and S2
+mixed/large teams. The common test is `TestLrzSszCheckpointRoutes`; independent
+census, layout witnesses and an S2 Tails/seven-follower800 witness run before
+the long product method. The combined class passes888 tests, zero failures,
+errors or skips, on `a8c9f892e855855f96c7ecad368e127880c9af3e` plus the final
+class (SHA256`3ed4c7346c79cd06d694e7fc17cf625aaa941d4951db606702734d631115f818`),
+request99024, completed2026-10-14 12:40:30 UTC. Exact commands, prerequisites,
+rejected setups and the distinction from earlier qualification are recorded in
+[the completion plan](../../plans/2026-10-13-s3k-playable-completion.md#checkpoint-product-qualification-2026-10-14).
+
+This qualifies local physical contact and reload/replay products. It supplies
+no cold route for every configuration, native whole-scene/audio acceptance or
+combined smoke/guard/integration claim. Other matrix obligations stay open.
+
+## Post-title-card fade-in (2026-10-15)
+
+A fresh LRZ1 entry (`requestZoneAndAct` through the fresh title boundary, Sonic, card
+presented) now fades lines 1-3 in from black over the card's 22-frame LevelLoop hold, which
+is the `Level/loc_64DC` / `Animate_Palette` reveal. Before the fix the card's black field
+covered the level until the card exited, and the level then appeared at full colour (lines
+1-3 sums 146/136/120). Covered by `TestS3kFreshTitleCardLevelFadeIn`. The ROM evidence,
+native comparison and remaining direct-boot and omitted-presentation capture limits are
+recorded in [the HPZ act matrix](s3k-hpz-act.md).
+
+The same fade now belongs to the level (`Sonic3kLevelAnimationManager`'s `Animate_Palette`),
+so every LRZ1 entry that passes through `Level` fades lines 1-3 in, with or without the card.
+A death restart measured 0, 68/70/68, 113/112/100 and 146/136/120 at counters 0, 5, 10 and 21;
+before the change it showed full colour as the card left. See `TestS3kLevelPaletteFadeOwner`
+and the 2026-10-15 level-owned fade entry in [the HPZ act matrix](s3k-hpz-act.md).

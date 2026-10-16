@@ -1070,9 +1070,8 @@ public class GameLoop {
     }
 
     /**
-     * True while the current bonus stage supports held rewind (Gumball /
-     * Pachinko). The Slot Machine's provider reports supportsRewind()==false,
-     * so its rewind hooks are never driven and it keeps its no-rewind behavior.
+     * True while the current bonus stage supports held rewind. The provider's
+     * capability includes captured ordinary interiors and native runtime owners.
      */
     private boolean isBonusStageRewindable() {
         return currentGameMode == GameMode.BONUS_STAGE
@@ -2097,10 +2096,7 @@ public class GameLoop {
     private void updateBonusStageMode(boolean doFrameStep) {
         // Continue updating title card overlay during bonus stage
         // (EXIT phase: elements slide off screen after exitTitleCard transitioned here)
-        TitleCardProvider bonusTcp = getTitleCardProviderLazy();
-        if (bonusTcp != null && bonusTcp.isOverlayActive()) {
-            bonusTcp.update();
-        }
+        com.openggf.game.internal.BonusStageFrameLifecycle.updateOverlay(getTitleCardProviderLazy());
 
         if (levelManager.getRomZoneId() == Sonic3kZoneIds.ZONE_GLOWING_SPHERE) {
             ensureBonusStageBootstrapObjectPresent(BonusStageType.GLOWING_SPHERE);
@@ -2134,15 +2130,12 @@ public class GameLoop {
                 forcePlayerHighPriorityInBonusStage();
 
                 // Notify coordinator of frame tick
-                if (activeBonusStageProvider != null && !activeBonusStageProvider.updateDuringLevelFrame()) {
-                    activeBonusStageProvider.onFrameUpdate();
-                }
+                com.openggf.game.internal.BonusStageFrameLifecycle.updateProvider(activeBonusStageProvider);
 
                 // Record a rewind keyframe/step for rewind-supported bonus stages
-                // (Gumball/Pachinko). Placed before the completion check so the
-                // exit frame — which sets bonusStageTransitionPending — is not
-                // recorded. The LEVEL path is unchanged; the Slot Machine is
-                // excluded via supportsRewind().
+                // whose providers capture their interior state. Placed before
+                // the completion check so the transition boundary can retire
+                // the interior history independently of ordinary LEVEL history.
                 if (isBonusStageRewindable() && TraceSessionLauncher.active() == null) {
                     liveRewindManager.recordExternalFrame(
                             currentGameMode, bonusStageTransitionPending, inputHandler);
@@ -2744,25 +2737,7 @@ public class GameLoop {
      * display bucket, which remains governed by the normal priority model.
      */
     private void forcePlayerHighPriorityInBonusStage() {
-        if (activeBonusStageProvider instanceof BonusStagePlayerPriorityPolicy policy
-                && !policy.shouldForcePlayerHighPriority()) {
-            return;
-        }
-        boolean changed = false;
-        for (var sprite : spriteManager.getAllSprites()) {
-            if (sprite instanceof AbstractPlayableSprite playable) {
-                // Preserve object-specific render ordering overrides such as the
-                // Pachinko magnet orb's "behind the orb" phase.
-                if (playable.getPriorityBucket() == com.openggf.graphics.RenderPriority.PLAYER_DEFAULT
-                        && !playable.isHighPriority()) {
-                    playable.setHighPriority(true);
-                    changed = true;
-                }
-            }
-        }
-        if (changed) {
-            spriteManager.invalidateRenderBuckets();
-        }
+        com.openggf.game.internal.BonusStageFrameLifecycle.restorePlayerPriority(activeBonusStageProvider, spriteManager);
     }
 
     private void prepareBonusStageForTitleCard(BonusStageType type, BonusStageState savedState) {
@@ -4140,8 +4115,8 @@ public class GameLoop {
                 } catch (RuntimeException e) {
                     restoreDataSelectAfterLaunchFailure(dataSelect, pendingAction, e);
                 }
-                resolveFadeManager().startFadeFromBlack(
-                        null, transition.revealTerminalNoOpFrames());
+                GameLoopPlcLifecycle.revealDataSelectLaunch(resolveFadeManager(), currentGameMode
+                        == GameMode.DATA_SELECT ? null : GameServices.levelOrNull(), transition.revealTerminalNoOpFrames());
             });
             return;
         }

@@ -8,7 +8,8 @@ import java.util.logging.Logger;
  * Subclasses provide game-specific zone/music mapping.
  * Methods are non-final to allow overrides (e.g., Slots player sprite swap).
  */
-public abstract class AbstractBonusStageCoordinator implements BonusStageProvider, com.openggf.game.internal.NativeBonusStagePacing {
+public abstract class AbstractBonusStageCoordinator implements BonusStageProvider, com.openggf.game.internal.NativeBonusStagePacing,
+        com.openggf.game.internal.NativeBonusRuntimeRewindOwner {
 
     private static final Logger LOGGER = Logger.getLogger(AbstractBonusStageCoordinator.class.getName());
 
@@ -46,6 +47,13 @@ public abstract class AbstractBonusStageCoordinator implements BonusStageProvide
     @Override
     public void onExit() {
         pacingEntryEpoch++;
+        // An interior may delete a follower's object (Gumball loc_61050 clears
+        // Player_2); the origin reload recreates Player_2, so configured
+        // companions rejoin before the return load positions them.
+        var sprites = GameServices.spritesOrNull();
+        if (sprites != null) {
+            com.openggf.sprites.managers.SpriteManagerInternalAccess.restoreRetiredSidekicksForReturn(sprites);
+        }
         LOGGER.info("Exiting bonus stage: " + activeType
                 + " (rings collected: " + ringsCollected + ")");
         activeType = BonusStageType.NONE;
@@ -116,6 +124,38 @@ public abstract class AbstractBonusStageCoordinator implements BonusStageProvide
      * in lockstep with the item objects' own restored state.
      */
     public record BonusStageAccumulatorSnapshot(int rings, int lives, ShieldType shield) {}
+
+    private record RuntimeState(long entryEpoch, BonusStageType type, boolean exitRequested,
+                                Object stageState) { }
+
+    @Override
+    public final com.openggf.game.rewind.RewindSnapshottable<?> bonusRuntimeRewindAdapter() {
+        return new com.openggf.game.rewind.RewindSnapshottable<RuntimeState>() {
+            @Override public String key() { return com.openggf.game.internal.BonusStageRuntimeRewindAccess.KEY; }
+            @Override public RuntimeState capture() {
+                return new RuntimeState(pacingEntryEpoch, activeType, exitRequested, captureBonusRuntimeState());
+            }
+            @Override public void restore(RuntimeState state) {
+                // Full loads retire their history. A manually retained snapshot cannot
+                // restore another entry's RAM or revive a completed bonus visit.
+                if (state.entryEpoch() != pacingEntryEpoch || state.type() != activeType)
+                    throw new IllegalStateException("Bonus runtime snapshot belongs to a different entry");
+                restoreBonusRuntimeState(state.stageState());
+                exitRequested = state.exitRequested();
+            }
+            @Override public void resetForMissingSnapshot() {
+                resetBonusRuntimeStateForMissingSnapshot();
+                exitRequested = false;
+            }
+        };
+    }
+
+    protected Object captureBonusRuntimeState() { return null; }
+    protected void restoreBonusRuntimeState(Object state) {
+        if (state != null) throw new IllegalArgumentException("Unexpected bonus runtime state");
+    }
+    protected void resetBonusRuntimeStateForMissingSnapshot() { }
+    @Override public void afterBonusRuntimeRewindRestore() { }
 
     /** Snapshots the live reward accumulators for rewind capture. */
     public BonusStageAccumulatorSnapshot captureAccumulators() {

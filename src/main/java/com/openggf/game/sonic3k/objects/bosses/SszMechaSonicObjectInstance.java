@@ -1106,6 +1106,9 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
             case 3 -> {
                 updateFinalDefeatSound();
                 if (finalFade == null || !finalFade.nativeFadeCompleted()) return;
+                // The completed fade deletes itself; stage 4 never reads it again, and a
+                // retained reference to the deleted child cannot be captured for rewind.
+                finalFade = null;
                 finalDefeatStage = 4; timer = 119;
                 sszState().setAct2EndingActive(true); sszState().setEventsFg4Low(0xFF);
                 if (services().playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite p1) {

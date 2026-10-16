@@ -4,7 +4,6 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
@@ -319,31 +318,6 @@ public final class MushmeanieBadnikInstance extends AbstractS3kBadnikInstance
         return getCollisionSizeIndex();
     }
 
-    private static MushmeanieBadnikInstance findLiveMushmeanieParentForRewind(RewindRecreateContext ctx) {
-        if (ctx == null || ctx.objectServices() == null || ctx.objectServices().objectManager() == null) {
-            return null;
-        }
-        ObjectSpawn spawn = ctx.spawn();
-        MushmeanieBadnikInstance nearest = null;
-        int nearestDistance = Integer.MAX_VALUE;
-        for (ObjectInstance instance : ctx.objectServices().objectManager().getActiveObjects()) {
-            if (!(instance instanceof MushmeanieBadnikInstance mushmeanie) || mushmeanie.isDestroyed()) {
-                continue;
-            }
-            ObjectSpawn candidateSpawn = mushmeanie.getSpawn();
-            if (spawn.layoutIndex() >= 0 && candidateSpawn.layoutIndex() == spawn.layoutIndex()) {
-                return mushmeanie;
-            }
-            int distance = Math.abs(candidateSpawn.x() - spawn.x())
-                    + Math.abs(candidateSpawn.y() - spawn.y());
-            if (distance < nearestDistance) {
-                nearest = mushmeanie;
-                nearestDistance = distance;
-            }
-        }
-        return nearest;
-    }
-
     public static final class ShellChild extends AbstractObjectInstance implements RewindRecreatable {
         private static final int RENDER_HALF_WIDTH = 0x0C;
         private static final int RENDER_HALF_HEIGHT = 0x08;
@@ -366,10 +340,16 @@ public final class MushmeanieBadnikInstance extends AbstractS3kBadnikInstance
             this.y = parent.currentY;
         }
 
+        /** Rewind recreation: the captured parent3 link (or none, once launched) is relinked by id. */
+        private ShellChild(ObjectSpawn spawn) {
+            super(spawn, "MushmeanieShell");
+            this.x = spawn.x();
+            this.y = spawn.y();
+        }
+
         @Override
         public ShellChild recreateForRewind(RewindRecreateContext ctx) {
-            MushmeanieBadnikInstance liveParent = findLiveMushmeanieParentForRewind(ctx);
-            return liveParent == null ? null : new ShellChild(liveParent);
+            return new ShellChild(ctx.spawn());
         }
 
         @Override
@@ -400,6 +380,12 @@ public final class MushmeanieBadnikInstance extends AbstractS3kBadnikInstance
                 xVelocity = -xVelocity;
             }
             yVelocity = SHELL_LAUNCH_Y_VELOCITY;
+            // loc_8DC42 is the last parent read; loc_8DC62 only runs MoveSprite_LightGravity
+            // and Sprite_CheckDeleteXY (sonic3k.asm:193654-193669). The body's second hit can
+            // delete it while this shell flies, so drop the Java link rather than keep a
+            // reference to a deleted SST that rewind capture cannot encode.
+            detachFromParent();
+            parent = null;
         }
 
         private void moveWithLightGravity() {

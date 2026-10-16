@@ -377,8 +377,7 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
                     |(ending.flag(3)?1L<<31:0)|(origin&0xFFFFL);
         }
         if (GameServices.zoneRuntimeState() instanceof com.openggf.game.sonic3k.runtime.EndingZoneRuntimeState endingZone
-                && endingZone.ending().scene().foreground().revision() != 0
-                && endingZone.ending().scene().foreground().remaining() >= 0)
+                && endingZone.ending().scene().foreground().revision() != 0)
             return endingZone.ending().scene().foreground().revision();
         if (GameServices.hasRuntime() && GameServices.zoneRuntimeState() instanceof
                 com.openggf.game.sonic3k.runtime.SszZoneRuntimeState ssz && ssz.actIndex() == 1)
@@ -394,6 +393,20 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
                     | ((long) state.displayedWindowBase() << 16) | tileBoundary;
         }
         return 0;
+    }
+
+    /**
+     * sub_5B18E scrolls Camera_Y_pos to $1CA0 over Plane A, a 32-row name table the VDP
+     * wraps every 256 lines; {@link #foregroundDescriptorAt} repeats it the same way. The
+     * tile pass must wrap that ring, not the SSZ2/D01 layout: SSZ2's 19-chunk (304-row)
+     * layout is not a whole number of rings, which put part two 16 rows (128px) off.
+     */
+    @Override public int foregroundDescriptorRingRows() {
+        if(!GameServices.hasRuntime())return 0;
+        var ending = com.openggf.game.sonic3k.ending.S3kEndingCoordinator
+                .current(GameServices.zoneRuntimeRegistry()).orElse(null);
+        return ending != null && ending.credits().active() && !ending.flag(3)
+                ? com.openggf.game.sonic3k.ending.S3kCreditsState.PLANE_ROWS : 0;
     }
 
     @Override public int foregroundDescriptorAt(int sourceX, int sourceY) {
@@ -443,9 +456,13 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
                 .current(GameServices.zoneRuntimeRegistry()).orElse(null);
         if (ending != null && ending.postCreditsStarted() && ending.flag(3)) return Long.MIN_VALUE;
         if (GameServices.zoneRuntimeState() instanceof com.openggf.game.sonic3k.runtime.EndingZoneRuntimeState endingZone
-                && endingZone.ending().scene().background().revision() != 0
-                && endingZone.ending().scene().background().remaining() >= 0)
+                && endingZone.ending().scene().background().revision() != 0)
             return endingZone.ending().scene().background().revision();
+        if (GameServices.zoneRuntimeState() instanceof com.openggf.game.sonic3k.runtime.SszZoneRuntimeState ssz
+                && ssz.actIndex() == 1 && ssz.endingBackgroundPlane().revision() != 0) {
+            return ((long) ssz.endingBackgroundPlane().revision() << 32) | (1L << 31)
+                    | GameServices.camera().getWidth();
+        }
         if (GameServices.hasRuntime() && GameServices.zoneRuntimeState() instanceof
                 com.openggf.game.sonic3k.runtime.SszZoneRuntimeState ssz
                 && ssz.actIndex() == 1 && ssz.endingPlane().revision() != 0
@@ -476,19 +493,22 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
         if (ending != null && ending.postCreditsStarted() && ending.flag(3)) return 0;
         if (GameServices.zoneRuntimeState() instanceof com.openggf.game.sonic3k.runtime.EndingZoneRuntimeState endingZone)
             return endingZone.ending().scene().background().descriptor(sourceX, sourceY);
+        if (GameServices.zoneRuntimeState() instanceof com.openggf.game.sonic3k.runtime.SszZoneRuntimeState ssz
+                && ssz.actIndex() == 1 && ssz.endingBackgroundPlane().revision() != 0) {
+            // Background routine 4: each 16-line slot of the 256-line ring shows either
+            // the island row it held at loc_58BBC or the Level_layout_main row that
+            // Draw_TileRow (d1=0, d6=$20) last wrote there, across the 64-cell plane.
+            var plane = ssz.endingBackgroundPlane();
+            int y = plane.sourceY(sourceY);
+            return plane.foregroundRow(sourceY)
+                    ? GameServices.level().getForegroundTileDescriptorAtWorld(sourceX & 0x1FF, y)
+                    : sszIslandBackgroundDescriptor(ssz, sourceX, y);
+        }
         if (GameServices.hasRuntime() && GameServices.zoneRuntimeState() instanceof
                 com.openggf.game.sonic3k.runtime.SszZoneRuntimeState ssz
                 && ssz.actIndex() == 1 && ssz.endingPlane().revision() != 0
                 && GameServices.camera().getWidth() > 320) {
-            // SSZ2_BackgroundEvent draws a 512px Plane B, displayed through the
-            // ROM's 320px viewport. The island presentation never shows layout
-            // columns beyond that right edge; widening our full-layout sampler
-            // exposes unrelated cloud strips. Extend the last visible sky tile
-            // column instead. Native columns (including the partly visible last
-            // tile), vertical sampling and the island's priority bits stay intact.
-            int edgeTileX = (ssz.backgroundCameraX() + 319) & ~7;
-            return GameServices.level().getBackgroundTileDescriptorAtWorld(
-                    Math.min(sourceX, edgeTileX), sourceY);
+            return sszIslandBackgroundDescriptor(ssz, sourceX, sourceY);
         }
         if (GameServices.hasRuntime() && GameServices.zoneRuntimeState() instanceof
                 com.openggf.game.sonic3k.runtime.DezFinalBossZoneRuntimeState state)
@@ -518,6 +538,21 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
         }
         return state != null && state.events().postBossPlane().revision() != 0
                 ? state.events().postBossPlane().descriptor(sourceX, sourceY) : 0;
+    }
+
+    /**
+     * The SSZ2 island Plane B. SSZ2_BackgroundEvent draws a 512px Plane B, displayed through
+     * the ROM's 320px viewport. The island presentation never shows layout columns beyond
+     * that right edge; widening our full-layout sampler exposes unrelated cloud strips.
+     * Extend the last visible sky tile column instead. Native columns (including the partly
+     * visible last tile), vertical sampling and the island's priority bits stay intact.
+     */
+    private static int sszIslandBackgroundDescriptor(com.openggf.game.sonic3k.runtime.SszZoneRuntimeState ssz,
+                                                     int sourceX, int sourceY) {
+        if (GameServices.camera().getWidth() <= 320)
+            return GameServices.level().getBackgroundTileDescriptorAtWorld(sourceX, sourceY);
+        int edgeTileX = (ssz.backgroundCameraX() + 319) & ~7;
+        return GameServices.level().getBackgroundTileDescriptorAtWorld(Math.min(sourceX, edgeTileX), sourceY);
     }
 
     private boolean extendedDezInterior() {
@@ -693,10 +728,14 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
     /**
      * {@code Render_Sprites_NextLevel} (sonic3k.asm:36386-36390) appends the Lava Reef rocks while
      * the sprite-table pointer is still on priority level 0, so they sit behind everything already
-     * in that level and in front of every later one.
+     * in that level and in front of every later one. The Slot Machine layout follows the last
+     * level instead ({@link #appendSlotLayoutSprites}).
      */
     @Override
     public void appendSpritesAfterPriorityBucket(int bucket) {
+        if (bucket == com.openggf.graphics.RenderPriority.MAX && GameServices.hasRuntime()) {
+            appendSlotLayoutSprites();
+        }
         if (bucket == 6 && GameServices.hasRuntime() && getFeatureZoneId() == Sonic3kZoneIds.ZONE_SSZ) {
             com.openggf.game.sonic3k.render.SszMasterEmeraldPreview.draw(GameServices.camera().getWidth(),
                     S3kRuntimeStates.currentSsz(GameServices.zoneRuntimeRegistry()).orElse(null),
@@ -968,7 +1007,25 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
         if (slotMachinePanelAnimator != null && slotMachinePanelAnimator.isInitialized()) {
             coordinator.activeSlotRuntime().syncSlotMachinePanel(slotMachinePanelAnimator);
         }
-        coordinator.activeSlotRuntime().renderSlotLayout(camera);
+        // The rotated layout is not drawn here: it belongs to the sprite table
+        // (see appendSpritesAfterPriorityBucket) and is displayed with its iteration.
+    }
+
+    /**
+     * Slots_RenderLayout (sonic3k.asm:98158-98269) runs after Render_Sprites in LevelLoop
+     * (sonic3k.asm:7911-7915) and continues the same {@code Sprite_table} from
+     * {@code Sprites_drawn}, so the layout pieces follow every Render_Sprites entry
+     * (behind them) and the next VBlank publishes them with that iteration's player and
+     * objects.
+     */
+    private void appendSlotLayoutSprites() {
+        var levelManager = GameServices.levelOrNull();
+        if (levelManager == null || levelManager.getCurrentZone() != Sonic3kZoneIds.ZONE_SLOT_MACHINE
+                || !(GameServices.module().getBonusStageProvider() instanceof Sonic3kBonusStageCoordinator coordinator)
+                || coordinator.activeSlotRuntime() == null) {
+            return;
+        }
+        coordinator.activeSlotRuntime().renderSlotLayout(GameServices.camera());
     }
 
     @Override
@@ -1038,6 +1095,8 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
                 registry.register(aizBattleshipRenderFeature);
             }
         }
+        if(zoneIndex==0x0D&&actIndex==1)
+            registry.register(new com.openggf.game.sonic3k.render.EndingBackgroundPriorityEffect());
         if (zoneIndex == Sonic3kZoneIds.ZONE_SOZ) {
             registry.register(new com.openggf.game.sonic3k.render.SozBgHighPriorityForegroundOverlayEffect());
             registry.register(com.openggf.game.sonic3k.render.SozBgHighPriorityForegroundOverlayEffect.spritePriorityMask());
@@ -1134,6 +1193,9 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
 
     @Override
     public boolean shouldSuppressHud(int zoneIndex, int actIndex) {
+        // Level loc_6460 clears Level_started_flag for this scene;
+        // Render_Sprites skips Render_HUD at loc_1AD4A (sonic3k.asm:36326).
+        if (Sonic3kLevelResourceProfile.isHpzSanctuary(zoneIndex, actIndex)) return true;
         if(zoneIndex==0x0D&&actIndex==1)return true; // Level loc_6460 disables the native HUD timer.
         var ending = com.openggf.game.sonic3k.ending.S3kEndingCoordinator
                 .current(GameServices.zoneRuntimeRegistryOrNull()).orElse(null);

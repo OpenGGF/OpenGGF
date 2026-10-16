@@ -26,7 +26,7 @@ class TestLrzWideActTwoColdRouteCapture {
     void coldTeamCompletesWideActTwoWithRepeatableWorldAndIsolatedBossHistory() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/lrz2-sonic-tails-cold-boss-act-arrival-800.bk2"));
-        assertEquals(41348, movie.getFrameCount());
+        assertEquals(41359, movie.getFrameCount());
         var settings = new GameplayCaptureSession.Settings(800, "sonic", "tails", "off", null,
                 null, null, null, false, false, null, null, false, null, false);
         // Periodic traversal plus mechanism admission/release, both doors, ceiling
@@ -40,7 +40,7 @@ class TestLrzWideActTwoColdRouteCapture {
                 34800, 35020, 35310, 35570, 35760, 35820, 36010, 36220, 36550,
                 36850, 36960, 37070, 37110, 37220, 37260, 37400, 37520, 37580,
                 37660, 37780, 37950, 38000, 38110, 38500, 38700, 38890, 39050,
-                39120, 39260, 39880, 40650, 40720, 40900, 41070, 41200, 41270));
+                39120, 39260, 39880, 40650, 40720, 40900, 41070, 41211, 41281));
         var checked = new HashSet<Integer>();
         long outgoingHistory = 0;
         int loadFrame = -1;
@@ -57,11 +57,11 @@ class TestLrzWideActTwoColdRouteCapture {
                 assertInstanceOf(Sonic.class, session.player());
                 assertEquals(800, GameServices.camera().getWidth());
                 assertEquals(1, GameServices.sprites().getRegisteredSidekicks().size());
-                assertEquals(frame < 41127 ? 9 : 22, GameServices.level().getCurrentZone());
-                if (frame >= 25600 && frame < 41127) {
+                assertEquals(frame < 41138 ? 9 : 22, GameServices.level().getCurrentZone());
+                if (frame >= 25600 && frame < 41138) {
                     assertEquals(1, GameServices.level().getCurrentAct());
                 }
-                if (frame >= 40700 && frame < 41127) {
+                if (frame >= 40700 && frame < 41138) {
                     outgoingHistory = Math.max(outgoingHistory,
                             SessionManager.getCurrentGameplayMode().getRewindController().currentFrame());
                 }
@@ -79,7 +79,7 @@ class TestLrzWideActTwoColdRouteCapture {
                 }
                 // loc_59B1C consumes the continuation bank at the destination
                 // screen-event boundary, after the raw fresh-player load frame.
-                if (frame == 41128) assertEquals(9, session.player().getRingCount());
+                if (frame == 41139) assertEquals(9, session.player().getRingCount());
                 if (!spots.contains(frame)) continue;
                 checked.add(frame);
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
@@ -103,7 +103,7 @@ class TestLrzWideActTwoColdRouteCapture {
             }
             drawing.checkpoint(session);
             assertEquals(spots, checked);
-            assertEquals(41127, loadFrame);
+            assertEquals(41138, loadFrame);
             assertEquals(0, GameServices.level().getCurrentAct());
             assertEquals(296, session.player().getCentreX());
             assertEquals(1196, session.player().getCentreY());

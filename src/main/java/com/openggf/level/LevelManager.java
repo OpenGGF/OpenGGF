@@ -1928,6 +1928,13 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         return actualEnd;
     }
 
+    /** Whether the foreground tile pass wraps vertically (layout wrap or a retained VDP-plane ring). */
+    boolean foregroundPlaneWrapsVertically() {
+        return verticalWrapEnabled
+                || (zoneFeatureProvider instanceof com.openggf.game.internal.ForegroundDescriptorOverride owner
+                    && owner.foregroundDescriptorRevision() != 0 && owner.foregroundDescriptorRingRows() > 0);
+    }
+
     boolean isHudSuppressed() {
         return transitions.isForceHudSuppressed()
                 || (zoneFeatureProvider != null
@@ -4148,13 +4155,21 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             gameplayMode.registerRingAdapter(ringManager);
         }
 
-        // Rebind every player to the replacement manager. Legacy transitions
-        // recreate their retained power-up entries; exact-SST policies restore
-        // captured identities at their native slots below and must not allocate
-        // or register them twice first.
-        rebindPlayerDynamicObjects(cam.getFocusedSprite(), !exactSstCarry);
+        // Rebind every player to the replacement manager and keep its power-up
+        // owners: Shield and Invincibility_stars are fixed Level_object_RAM slots
+        // (sonic3k.constants.asm:318-321) that a Load_Level reload never clears
+        // (e.g. MHZ1_BackgroundEvent, sonic3k.asm:112274-112292). Exact-SST
+        // policies restore carried identities at their native slots below and
+        // must not register those twice first; an owner the persistent-only
+        // carry did not retain is registered here like the legacy policy does.
+        java.util.Set<ObjectInstance> carriedOwners = exactSstCarry && persistentDynamicObjects != null
+                ? persistentDynamicObjects.stream().map(TransitionSstOccupant::identity)
+                        .collect(java.util.stream.Collectors.toCollection(
+                                () -> java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>())))
+                : java.util.Set.of();
+        rebindPlayerDynamicObjects(cam.getFocusedSprite(), carriedOwners);
         for (AbstractPlayableSprite sidekick : spriteManager.getSidekicks()) {
-            rebindPlayerDynamicObjects(sidekick, !exactSstCarry);
+            rebindPlayerDynamicObjects(sidekick, carriedOwners);
         }
         if (persistentDynamicObjects != null) {
             for (TransitionSstOccupant occupant : persistentDynamicObjects) {
@@ -4190,24 +4205,21 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     private void reregisterPlayerDynamicObjects(Sprite sprite) {
-        rebindPlayerDynamicObjects(sprite, true);
+        rebindPlayerDynamicObjects(sprite, java.util.Set.of());
     }
 
-    private void rebindPlayerDynamicObjects(Sprite sprite, boolean registerPowerUps) {
+    private void rebindPlayerDynamicObjects(Sprite sprite, java.util.Set<ObjectInstance> carriedOwners) {
         if (!(sprite instanceof AbstractPlayableSprite playable)) {
             return;
         }
         // Re-inject spawner since ObjectManager was rebuilt
         playable.setPowerUpSpawner(new DefaultPowerUpSpawner(objectManager));
-        if (!registerPowerUps) {
-            return;
-        }
         PowerUpObject shield = playable.getShieldObject();
-        if (shield != null && !shield.isDestroyed()) {
+        if (shield != null && !shield.isDestroyed() && !carriedOwners.contains(shield)) {
             playable.getPowerUpSpawner().registerObject(shield);
         }
         PowerUpObject invincibility = playable.getInvincibilityObject();
-        if (invincibility != null && !invincibility.isDestroyed()) {
+        if (invincibility != null && !invincibility.isDestroyed() && !carriedOwners.contains(invincibility)) {
             playable.getPowerUpSpawner().registerObject(invincibility);
         }
     }
@@ -4637,7 +4649,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             return;
         }
         Palette.Color backdrop = resolveLevelBackdropColor();
-        glClearColor(backdrop.rFloat(), backdrop.gFloat(), backdrop.bFloat(), 1.0f);
+        com.openggf.level.PaletteDisplayColor.glClear(backdrop, graphicsManager);
     }
 
     /**

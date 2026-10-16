@@ -333,11 +333,13 @@ public class TestS3kHczPatternAnimation {
         AnimatedPatternManager apm = GameServices.level().getAnimatedPatternManager();
         assertNotNull(apm, "AnimatedPatternManager must be present");
         apm.update();
+        ((Sonic3kLevelAnimationManager) apm).publishAniPlcAtVBlank();
     }
 
     private void advanceAnimationFrame(AnimatedPatternManager apm) {
         fixture.stepIdleFrames(1);
         apm.update();
+        ((Sonic3kLevelAnimationManager) apm).publishAniPlcAtVBlank();
     }
 
     private static byte[] snapshot(Pattern pattern) {

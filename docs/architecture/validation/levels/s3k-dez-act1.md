@@ -517,3 +517,28 @@ state/pixel controls and their limits are described in the
 [headless testing guide](../../../guide/contributing/headless-testing.md).
 This performance change supplies no new native reference, full-route visual
 certification or missing viewport/donor/character coverage; inherited gaps remain.
+
+
+## Released checkpoint-world replay follow-up (2026-10-14)
+
+The existing physical-post death driver now uses only the production GameLoop
+fade owner and services pending render work after each tick. It checks exactly
+one life lost at fresh assembly and after actual title/fade/control release,
+then captures and replays the complete registered incoming world twice in both
+restore directions after EACH of two real deaths. Every45-input branch requires
+an alive leader, unchanged lives/post, retained roster/donor/viewport and the
+same current runtime/object manager; a raw restore never crosses a load.
+Short independent native320/S2-Tails800 witnesses precede the product methods.
+
+This act contributes138 products over all its authored posts and all five
+production presets, using four native standard teams, supported S1/S2 standard teams, S1 duplicate Sonic and native800 trio. The composed
+`262e9bbb10bb317d183dbf289dcfa8568fa0258c` plus final test changes passes the
+12 short witnesses in request93678 at12:58:56 UTC, then all1077 affected
+products in63733 at13:13:31 UTC, zero failures/errors/skips (3:32 Maven,
+queue wait separate). DEZ2 post5 still reaches its placed gravity writer through
+ordinary movement and verifies the real inverted death and native cleared
+gravity after reload. This adds incoming-world replay to the previously
+qualified physical contact/death scope; other unchanged checks were not repeated.
+[Exact selectors and source hashes](../../plans/2026-10-13-s3k-playable-completion.md#existing-checkpoint-driver-qualification-2026-10-14)
+are in the completion plan. Final boss-act and further mechanic/cold-route products remain open. No native pixel/audio, overall act
+certification, full-suite or combined delivery claim follows.

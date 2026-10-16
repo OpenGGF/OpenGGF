@@ -39,7 +39,7 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
     public static final int EVENTS_BG_BYTES = 0x10;
 
     private static final int CLOUD_SCROLL_WORDS = 32;
-    private static final int CAPTURE_BYTES = 1 + CLOUD_SCROLL_WORDS * Short.BYTES + EVENTS_BG_BYTES + 14 * Short.BYTES + 5 * Integer.BYTES + 8 + 5 * Short.BYTES + SszLaunchState.CAPTURE_BYTES + 0x198 + SszEndingPlaneState.CAPTURE_BYTES;
+    private static final int CAPTURE_BYTES = 1 + CLOUD_SCROLL_WORDS * Short.BYTES + EVENTS_BG_BYTES + 14 * Short.BYTES + 5 * Integer.BYTES + 8 + 5 * Short.BYTES + SszLaunchState.CAPTURE_BYTES + 0x198 + SszEndingPlaneState.CAPTURE_BYTES + SszEndingBackgroundPlaneState.CAPTURE_BYTES;
 
 
     private boolean centerNativeArenaCamera;
@@ -87,6 +87,8 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
 
     private final SszEndingPlaneState endingPlane = new SszEndingPlaneState();
     public SszEndingPlaneState endingPlane() { return endingPlane; }
+    private final SszEndingBackgroundPlaneState endingBackgroundPlane = new SszEndingBackgroundPlaneState();
+    public SszEndingBackgroundPlaneState endingBackgroundPlane() { return endingBackgroundPlane; }
     private final com.openggf.game.sonic3k.ending.S3kEndingState ending =
             new com.openggf.game.sonic3k.ending.S3kEndingState();
     public com.openggf.game.sonic3k.ending.S3kEndingState ending() { return ending; }
@@ -409,6 +411,7 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
         buffer.put((byte) (centerNativeArenaCamera ? 1 : 0));
         for (short x : act2AttackPositions) buffer.putShort(x);
         endingPlane.capture(buffer);
+        endingBackgroundPlane.capture(buffer);
         launch.capture(buffer);
         for (short word : act2ScrollTable) buffer.putShort(word);
         ending.captureTo(buffer);
@@ -453,6 +456,7 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
         centerNativeArenaCamera = buffer.get() != 0;
         for (int i = 0; i < act2AttackPositions.length; i++) act2AttackPositions[i] = buffer.getShort();
         endingPlane.restore(buffer);
+        endingBackgroundPlane.restore(buffer);
         launch.restore(buffer);
         for (int i = 0; i < act2ScrollTable.length; i++) act2ScrollTable[i] = buffer.getShort();
         ending.restoreFrom(buffer);

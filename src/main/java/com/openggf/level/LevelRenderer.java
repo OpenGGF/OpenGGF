@@ -656,7 +656,7 @@ public final class LevelRenderer {
             bools[3] = r.pendingFgUseUnderwater_high;
             bools[4] = r.pendingBgTilePassHasWater;
             bools[5] = r.pendingBgTilePassPerLineScroll;
-            bools[6] = r.lm.verticalWrapEnabled;
+            bools[6] = r.lm.foregroundPlaneWrapsVertically();
             bools[7] = r.pendingFboSuppressFrontScenery;
             refs[0] = r.pendingFgAtlasId_low;
             refs[1] = r.pendingFgPaletteId_low;
@@ -920,6 +920,8 @@ public final class LevelRenderer {
     final LevelBoundsMaskTransition boundsMask = new LevelBoundsMaskTransition();
     private boolean preparingSpritePresentation;
     private LevelScrollPresentation currentScrollPresentation;
+    /** One draw's {@link LevelHudUnderlay}; cleared once painted. */
+    Runnable hudUnderlay;
 
     /** Capture the same full player/object/ring pass used for gameplay, before any GPU submission.
      * This deliberately excludes HUD and never resolves deformation/camera-follow/world events.
@@ -939,6 +941,19 @@ public final class LevelRenderer {
     /** Select the VDP scroll generation paired with the displayed sprite table. */
     private LevelScrollPresentation scrollForDraw() {
         return LevelSpritePresentation.enabled(lm) ? spriteTables.publishedScroll() : null;
+    }
+
+    LevelSpritePresentation.BackgroundScroll backgroundScrollForDraw() {
+        var displayed = currentScrollPresentation == null ? scrollForDraw() : currentScrollPresentation;
+        if (displayed != null) {
+            return new LevelSpritePresentation.BackgroundScroll(displayed.horizontal(),
+                    backgroundVScroll(displayed.renderMode(), displayed.registers().backgroundY()),
+                    displayed.backgroundColumns(), displayed.registers().backgroundPeriod());
+        }
+        if (lm.parallaxManager == null || lm.parallaxManager.getHScrollForShader() == null) return null;
+        return new LevelSpritePresentation.BackgroundScroll(lm.parallaxManager.getHScrollForShader(),
+                backgroundVScroll(currentAdvancedRenderFrameState, lm.parallaxManager.getVscrollFactorBG()),
+                lm.parallaxManager.getVScrollPerColumnBGForShader(), lm.parallaxManager.getBgPeriodWidth());
     }
 
     private int presentationCameraX() {
@@ -1193,6 +1208,11 @@ public final class LevelRenderer {
         }
         PerformanceProfiler profiler = lm.profiler;
         DebugOverlayManager overlayManager = lm.overlayManager;
+        if (options.includeHud() && hudUnderlay != null) {
+            Runnable underlay = hudUnderlay;
+            hudUnderlay = null;
+            underlay.run();
+        }
         profiler.beginSection("render.hud");
         if (options.includeHud() && lm.hudRenderManager != null
                 && (LevelSpritePresentation.enabled(lm) || !lm.isHudSuppressed())
@@ -1432,10 +1452,11 @@ public final class LevelRenderer {
             return;
 
         Palette.Color backdropColor = lm.resolveLevelBackdropColor();
+        int displayedBackdrop = com.openggf.level.PaletteDisplayColor.packed(backdropColor, lm.graphicsManager);
         bgRenderer.setBackdropColor(
-                backdropColor.rFloat(),
-                backdropColor.gFloat(),
-                backdropColor.bFloat());
+                com.openggf.level.PaletteDisplayColor.red(displayedBackdrop),
+                com.openggf.level.PaletteDisplayColor.green(displayedBackdrop),
+                com.openggf.level.PaletteDisplayColor.blue(displayedBackdrop));
 
         int[] hScrollData = presentationHScroll();
         short[] vScrollData = currentScrollPresentation == null

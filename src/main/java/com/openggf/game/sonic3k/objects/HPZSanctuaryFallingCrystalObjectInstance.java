@@ -49,6 +49,7 @@ public final class HPZSanctuaryFallingCrystalObjectInstance extends AbstractObje
     private int rawAnimationIndex;
     private int mappingFrame = 8;
     private int lastFrameCounter;
+    private boolean initialized;
     private boolean midpointPublished;
     private boolean published;
 
@@ -56,7 +57,7 @@ public final class HPZSanctuaryFallingCrystalObjectInstance extends AbstractObje
             ObjectRefId parentId, int subtype, int x, int y, int landingTimer,
             int rawAnimationTimer, int rawAnimationIndex, int mappingFrame,
             int lastFrameCounter,
-            boolean midpointPublished, boolean published)
+            boolean initialized, boolean midpointPublished, boolean published)
             implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
 
     public HPZSanctuaryFallingCrystalObjectInstance(
@@ -89,7 +90,19 @@ public final class HPZSanctuaryFallingCrystalObjectInstance extends AbstractObje
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
         lastFrameCounter = vIntRunCount;
-        if (published || parentRef == null) return;
+        if (published) {
+            // loc_90D5E tail-calls Go_Delete_Sprite, which only installs the
+            // delete operation/status marker. Its next dispatch clears the SST.
+            ObjectLifetimeOps.expireDynamic(this);
+            return;
+        }
+        if (parentRef == null) return;
+        // loc_90CA2 sets attributes/coordinates and returns. loc_90CF4's
+        // first +$10 belongs to the following native object dispatch.
+        if (!initialized) {
+            initialized = true;
+            return;
+        }
         if (rawAnimationTimer >= 0) {
             if (rawAnimationIndex < RAW_LANDING_FRAMES.length) {
                 mappingFrame = RAW_LANDING_FRAMES[rawAnimationIndex++];
@@ -97,14 +110,16 @@ public final class HPZSanctuaryFallingCrystalObjectInstance extends AbstractObje
             } else {
                 published = true;
                 parentRef.onFallingCrystalAnimationComplete(subtype);
-                ObjectLifetimeOps.expireDynamic(this);
+                // loc_90D52 still falls through parity Draw_Sprite after the
+                // $F4 callback. Keep this occupied marker until the next tick.
             }
             return;
         }
         if (landingTimer < 0) {
-            y += 0x10;
+            // loc_90CF4 stores the word sum before its unsigned target
+            // comparison. Targets ending in8 retain the eight-pixel overshoot.
+            y = (y + 0x10) & 0xFFFF;
             if (y >= TARGET_Y[subtype]) {
-                y = TARGET_Y[subtype];
                 landingTimer = 0x3F;
                 writeLandingScreenShakeFlag();
                 if (tryServices() != null) {
@@ -118,9 +133,14 @@ public final class HPZSanctuaryFallingCrystalObjectInstance extends AbstractObje
             midpointPublished = true;
             parentRef.onFallingCrystalMidpoint(subtype);
         }
-        if (landingTimer < 0) {
-            rawAnimationTimer = RAW_LANDING_FRAMES.length;
-            rawAnimationIndex = 0;
+        // Shipped loc_90D30 falls through loc_90D42 after the $20
+        // midpoint call. It arms raw animation immediately, not after the
+        // remaining 33 timer decrements (sonic3k.asm:198104-198116).
+        if (landingTimer < 0 || landingTimer == 0x20) {
+            // Cleared-slot anim_frame=0 is incremented before Animate_RawNoSST
+            // reads 1(a1,d0), so the first byte_90FF6 mapping published is $1F.
+            rawAnimationTimer = RAW_LANDING_FRAMES.length - 1;
+            rawAnimationIndex = 1;
         }
     }
 
@@ -146,7 +166,7 @@ public final class HPZSanctuaryFallingCrystalObjectInstance extends AbstractObje
         return super.captureRewindState(context).withObjectSubclassExtra(new RewindExtra(
                 parentId, subtype, x, y, landingTimer, rawAnimationTimer,
                 rawAnimationIndex, mappingFrame,
-                lastFrameCounter, midpointPublished, published));
+                lastFrameCounter, initialized, midpointPublished, published));
     }
 
     @Override
@@ -165,6 +185,7 @@ public final class HPZSanctuaryFallingCrystalObjectInstance extends AbstractObje
             rawAnimationIndex = extra.rawAnimationIndex();
             mappingFrame = extra.mappingFrame();
             lastFrameCounter = extra.lastFrameCounter();
+            initialized = extra.initialized();
             midpointPublished = extra.midpointPublished();
             published = extra.published();
         }
@@ -187,7 +208,7 @@ public final class HPZSanctuaryFallingCrystalObjectInstance extends AbstractObje
     }
 
     boolean shouldDrawForTest(int frameCounter) {
-        return !published && (frameCounter & 1) == 0;
+        return !isDestroyed() && (frameCounter & 1) == 0;
     }
 
     int renderPaletteLineForTest() {

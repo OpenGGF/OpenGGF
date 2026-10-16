@@ -33,3 +33,12 @@ src/main/java/com/openggf/level/objects/SpawnRenderFlipRewindRecreatable.java=1
 src/main/java/com/openggf/level/objects/SpawnServicesDefaultArgsRewindRecreatable.java=1
 src/main/java/com/openggf/level/objects/SpawnTrailingZeroIntsRewindRecreatable.java=1
 src/main/java/com/openggf/level/objects/ZeroScalarArgsRewindRecreatable.java=1
+
+# CATEGORY 3, self-captured selector rather than a reflective constructor (2026-10-16).
+# TeleporterBeamObjectInstance's own captureRewindState always attaches the RewindExtra
+# carrying its art selector; the recreate probe's parent-null constructor selects HPZ art,
+# not Obj_57C1E's SSZ make_art_tile(ArtTile_SSZMisc+$88,3,1). A snapshot without that extra
+# is a capture-path wiring fault, never a destroyed link target, so the recreate fails
+# closed instead of guessing (s3k-implement-object rom-pitfalls: "Recreation probes do not
+# supply structural art selectors"; TestTeleporterBeamRendering proves the negative).
+src/main/java/com/openggf/game/sonic3k/objects/TeleporterBeamObjectInstance.java=1

@@ -1110,7 +1110,9 @@ public class TestScalarOnlyCodecDeletion {
                             "bodyBusy"),
                     new MutableFieldCoverageCandidate(
                             "com.openggf.game.sonic3k.objects.badniks.MonkeyDudeBadnikInstance",
-                            "activeStepCount", "firstStepCount", "initialFacingLeft", "treeAnchorX"),
+                            // Obj_MonkeyDude preserves literal placement X; the removed
+                            // synthetic treeAnchorX is not native captured state.
+                            "activeStepCount", "firstStepCount", "initialFacingLeft"),
                     new MutableFieldCoverageCandidate(
                             "com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesLeafParticle",
                             "yVelocity"));

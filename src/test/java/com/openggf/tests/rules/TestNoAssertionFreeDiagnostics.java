@@ -13,6 +13,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -96,6 +97,25 @@ class TestNoAssertionFreeDiagnostics {
                         + String.join(System.lineSeparator(), violations));
     }
 
+    @Test
+    void annotatedOracleDelegateCountsAndAnnotatedEmptyDelegateStillFails() {
+        String source = String.join("\n",
+                "class Sample {",
+                "    @Order(1) @ParameterizedTest @MethodSource(\"cases\")",
+                "    void shortWrapper(int act) { full(act); }",
+                "    @Order(20) @ParameterizedTest(name = \"{0}\") @MethodSource(\"cases\")",
+                "    void full(int act) { assertEquals(1, act); }",
+                "    @Order(2) @ParameterizedTest @MethodSource(\"cases\")",
+                "    void printingWrapper(int act) { print(act); }",
+                "    @Order(30) @MethodSource(\"cases\")",
+                "    private void print(int act) { System.out.println(act); }",
+                "}");
+        List<String> violations = new ArrayList<>();
+        scanSource("Sample", "Sample.java", source, violations);
+        assertEquals(List.of("  Sample#printingWrapper has no assertion/verify/fail oracle (Sample.java)"),
+                violations);
+    }
+
     private void scanFile(Path path, List<String> violations) {
         String fileName = path.getFileName().toString();
         String className = fileName.endsWith(".java")
@@ -110,6 +130,10 @@ class TestNoAssertionFreeDiagnostics {
         } catch (IOException e) {
             throw new RuntimeException("Failed to read " + path, e);
         }
+        scanSource(className, path.toString(), raw, violations);
+    }
+
+    private void scanSource(String className, String path, String raw, List<String> violations) {
         if (hasClassLevelDisabled(raw)) {
             return;
         }
@@ -159,10 +183,18 @@ class TestNoAssertionFreeDiagnostics {
         return false;
     }
 
-    /** Names of methods in this file whose own body contains a direct oracle token. */
+    /**
+     * Names of methods in this file whose own body contains a direct oracle token.
+     *
+     * <p>The parameter list may not contain bare parentheses (one nested level is
+     * allowed for parameter annotations). Stripping empties string literals, so an
+     * unbounded list let {@code @Order(1) @MethodSource("cases") void helper(...) {}}
+     * match as {@code Order(...) {}} and register the annotation, not the helper.
+     */
     private Set<String> collectOracleHelperNames(String stripped) {
         Set<String> names = new HashSet<>();
-        Pattern decl = Pattern.compile("\\b(\\w+)\\s*\\([^;{}]*\\)\\s*(?:throws[\\w,.\\s]+)?\\{");
+        Pattern decl = Pattern.compile(
+                "\\b(\\w+)\\s*\\((?:[^;{}()]++|\\([^;{}()]*+\\))*+\\)\\s*(?:throws[\\w,.\\s]+)?\\{");
         Matcher m = decl.matcher(stripped);
         while (m.find()) {
             String name = m.group(1);

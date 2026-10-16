@@ -87,58 +87,62 @@ Entries should include:
 
 ## Table of Contents
 
-0. [AIZ Completed Miniboss History on Rewind (FIXED)](#aiz-completed-miniboss-history-on-rewind-fixed)
-0. [MHZ Cluckoid Visual Child After Explicit Parent Removal (OPEN)](#mhz-cluckoid-visual-child-after-explicit-parent-removal-open)
-0. [ICZ2 Folded Boss Children and Reserved Slots on Rewind (OPEN)](#icz2-folded-boss-children-and-reserved-slots-on-rewind-open)
-0. [Native Ending Presentation Gaps (RESOLVED)](#native-ending-presentation-gaps-resolved)
-0. [AIZ1 Ledge — Ground Sensors and `checkFloorDist` Disagree About Solidity (OPEN — question, not yet a diagnosis)](#aiz1-ledge--ground-sensors-and-checkfloordist-disagree-about-solidity-open--question-not-yet-a-diagnosis)
-0. [Reverse Gravity — Native Route Qualification Remains Open](#reverse-gravity--native-route-qualification-remains-open)
-1. [Knuckles LBZ Big Arm — ROM Port (IMPLEMENTED; TRACE BOUNDARY OPEN)](#knuckles-lbz-big-arm--rom-port-implemented-trace-boundary-open)
-2. [CNZ1 Miniboss Arena Entry — Music Play-In Missing](#cnz1-miniboss-arena-entry--music-play-in-missing)
-3. [AIZ1 Trace F4679 — Sidekick Despawn Velocity & Position Semantic Gap (FIXED)](#aiz1-trace-f4679--sidekick-despawn-velocity--position-semantic-gap-fixed)
-4. [CNZ1 Trace F1685 — Tails CPU Spurious Despawn on Barber-Pole→Wire-Cage Object Switch (FIXED)](#cnz1-trace-f1685--tails-cpu-spurious-despawn-on-barber-polewire-cage-object-switch-fixed)
-5. [CNZ1 Trace F1740 — Wire Cage restoreObjectLatchIfTerrainClearedIt Overrode Slope-Repel Slip (FIXED)](#cnz1-trace-f1740--wire-cage-restoreobjectlatchifterrainclearedit-overrode-slope-repel-slip-fixed)
-6. [CNZ1 Trace F1758 — Wire Cage Airborne-Capture object_control Bit 0 Missing (FIXED)](#cnz1-trace-f1758--wire-cage-airborne-capture-object_control-bit-0-missing-fixed)
-7. [CNZ1 Trace F1791 — Tails CPU Auto-Jump Trigger Bit-7 Object Control Gate (FIXED)](#cnz1-trace-f1791--tails-cpu-auto-jump-trigger-bit-7-object-control-gate-fixed)
-8. [AIZ1 Trace F2590 — Tails CATCH_UP_FLIGHT Trigger Path Mismatch](#aiz1-trace-f2590--tails-catch_up_flight-trigger-path-mismatch)
-9. [AIZ1 Trace F2202 -- Phantom MonkeyDude Respawn Triggers Spurious Sidekick Bounce (FIXED)](#aiz1-trace-f2202----phantom-monkeydude-respawn-triggers-spurious-sidekick-bounce-fixed)
-10. [AIZ1 Trace F5497 — Sidekick CPU Bound Override Stale After Act Transition (FIXED)](#aiz1-trace-f5497--sidekick-cpu-bound-override-stale-after-act-transition-fixed)
-11. [AIZ Trace F5736 — Level_frame_counter Skips Tick on Seamless Act Reload (FIXED)](#aiz-trace-f5736--level_frame_counter-skips-tick-on-seamless-act-reload-fixed)
-12. [AIZ Trace F6066 — CaterKillerJr Missed Obj_WaitOffscreen Gate (FIXED)](#aiz-trace-f6066--caterkillerjr-missed-obj_waitoffscreen-gate-fixed)
-13. [CNZ1 Trace F2222 — Wire Cage Sidekick JUMP_RELEASE Spurious Fire (OPEN — needs ROM-aligned `Ctrl_2_pressed_logical` model)](#cnz1-trace-f2222--wire-cage-sidekick-jump_release-spurious-fire-open--needs-rom-aligned-ctrl_2_pressed_logical-model)
-14. [AIZ Trace F6255 — Tails CPU Freed-Slot Despawn (RESOLVED)](#aiz-trace-f6255--tails-cpu-freed-slot-despawn-resolved)
-15. [CNZ1 Trace F3649 — Tails Air-to-Ground Spring Boost Missed (RESOLVED)](#cnz1-trace-f3649--tails-air-to-ground-spring-boost-missed-resolved)
-16. [CNZ1 Trace F6304 — Tails Misses CNZ Door Re-Land While Following Fast Leader (RESOLVED)](#cnz1-trace-f6304--tails-misses-cnz-door-re-land-while-following-fast-leader)
-17. [CNZ1 Trace F7614 — Tails Spring Bounce Top-Landing 2-Pixel Drift (OPEN — next trace blocker)](#cnz1-trace-f7614--tails-spring-bounce-top-landing-2-pixel-drift)
-18. [AIZ2 Trace F7127 — Tails Phantom Landing While Falling (RESOLVED)](#aiz2-trace-f7127--tails-phantom-landing-while-falling)
-19. [AIZ2 Trace F7171 — Tails Killed Mid-Run vs. Engine Continuing Follow-Steering (OPEN — next AIZ blocker)](#aiz2-trace-f7171--tails-killed-mid-run-vs-engine-continuing-follow-steering)
-20. [AIZ2 Trace F7381 — Engine `Ctrl_1_logical` Not Latched While ROM `Ctrl_1_locked=1` (OPEN — next AIZ blocker)](#aiz2-trace-f7381--engine-ctrl_1_logical-not-latched-while-rom-ctrl_1_locked1-open--next-aiz-blocker)
-21. [CNZ1 Trace F7919 — Tails Triplicate `-0x0800` Velocity Write While Sonic Lands From Rising Platform (OPEN)](#cnz1-trace-f7919--tails-triplicate--0x0800-velocity-write-while-sonic-lands-from-rising-platform-open)
-22. [CNZ F=621 Clamer re-fire — ROM dispatch path narrowing (diagnosis only, round 2)](#cnz-f621-clamer-re-fire--rom-dispatch-path-narrowing-diagnosis-only-round-2)
-23. [CNZ F=621 Clamer re-fire — recorder gap closed; ROM mechanism localised (diagnosis only, round 3)](#cnz-f621-clamer-re-fire--recorder-gap-closed-rom-mechanism-localised-diagnosis-only-round-3)
-24. [CNZ F=621 Clamer re-fire — Touch_Special cprop latch landed (round 4, fixed)](#cnz-f621-clamer-re-fire--touch_special-cprop-latch-landed-round-4-fixed)
-25. [AIZ Trace F8927 — Sonic Air-Roll x_speed Not Cleared by Wall Collision (OPEN — diagnosis only)](#aiz-trace-f8927--sonic-air-roll-x_speed-not-cleared-by-wall-collision-open--diagnosis-only)
-26. [Blue Sphere FM Pickup Onset — Automated Parity Complete, Listening Gate Open](#blue-sphere-fm-pickup-onset--automated-parity-complete-listening-gate-open)
-27. [Slot Machine Bonus Stage Is Not Rewindable](#slot-machine-bonus-stage-is-not-rewindable)
-28. [AIZ2 Fire Terrain Swap Uses an Invented Decompression Span](#aiz2-fire-terrain-swap-uses-an-invented-decompression-span)
-29. [MGZ Swinging Platform Endpoint: Inherited `d1` High Word Not Modelled](#mgz-swinging-platform-endpoint-inherited-d1-high-word-not-modelled)
-30. [Segment Trace Replays Start With an Empty Save-Game Inventory](#segment-trace-replays-start-with-an-empty-save-game-inventory)
-31. [S3K Sound Driver: PSG Stale-IX Writes and Mailbox Items Still Open](#s3k-sound-driver-psg-stale-ix-writes-and-mailbox-items-still-open)
-32. [SOZ Act 2 Pushable Rock Puzzle Reachability Unverified](#soz-act-2-pushable-rock-puzzle-reachability-unverified)
-33. [SOZ Recording: Presentation Certification](#soz-recording-presentation-certification)
-34. [S3K Cheat Flags Have No Consumers Yet](#s3k-cheat-flags-have-no-consumers-yet)
-35. [Gumball Exit: Title-Card Loop and Load Span Not Row-Matched](#gumball-exit-title-card-loop-and-load-span-not-row-matched)
-36. [S3K Mega Run Chain: Duplicate VINT_SERVICE Boundary in Segment 0](#s3k-mega-run-chain-duplicate-vint_service-boundary-in-segment-0)
-37. [Doomsday: Presentation Gaps and Unseeded Entry](#doomsday-presentation-gaps-and-unseeded-entry)
-38. [Ring Window Floor Admits a Leading `(0,0)` Ring Record the ROM Always Skips](#ring-window-floor-admits-a-leading-00-ring-record-the-rom-always-skips)
-39. [Sky Sanctuary Act 1 Cutscene: Death Egg Palette, Children and Knuckles' Resting Position](#sky-sanctuary-act-1-cutscene-death-egg-palette-children-and-knuckles-resting-position)
-40. [Sky Sanctuary Background Mode Switch Completes a Frame Early](#sky-sanctuary-background-mode-switch-completes-a-frame-early)
-41. [Sky Sanctuary Plain-Mode Background Below `Camera_Y $800` Renders Flat Sky](#sky-sanctuary-plain-mode-background-below-camera_y-800-renders-flat-sky)
-42. [Sky Sanctuary Mecha Sonic Hit-Window Phase and Slot-Reuse Fidelity](#sky-sanctuary-mecha-sonic-hit-window-phase-and-slot-reuse-fidelity)
-43. [Sky Sanctuary Explosion Controller Replacement-Slot Stop Bit](#sky-sanctuary-explosion-controller-replacement-slot-stop-bit)
-44. [Sky Sanctuary Metropolis Orb Reads After a Freed Parent Slot Remain Unmodelled](#sky-sanctuary-metropolis-orb-reads-after-a-freed-parent-slot-remain-unmodelled)
-45. [S3K Special-Property Sidekick Behaviour: Corrected Diagnosis](#s3k-special-property-sidekick-behaviour-corrected-diagnosis)
-46. [Object Art and Clock Reads Found by the Slay the Robotnik Sprite Research (SUSPECTED)](#object-art-and-clock-reads-found-by-the-slay-the-robotnik-sprite-research-suspected)
+1. [AIZ Completed Miniboss History on Rewind (FIXED)](#aiz-completed-miniboss-history-on-rewind-fixed)
+2. [MHZ Cluckoid Visual Child After Explicit Parent Removal (OPEN)](#mhz-cluckoid-visual-child-after-explicit-parent-removal-open)
+3. [ICZ2 Folded Boss Children and Reserved Slots on Rewind (OPEN)](#icz2-folded-boss-children-and-reserved-slots-on-rewind-open)
+4. [Native Ending Presentation Gaps (RESOLVED)](#native-ending-presentation-gaps-resolved)
+5. [AIZ1 Ledge — Ground Sensors and `checkFloorDist` Disagree About Solidity (OPEN — question, not yet a diagnosis)](#aiz1-ledge--ground-sensors-and-checkfloordist-disagree-about-solidity-open--question-not-yet-a-diagnosis)
+6. [Reverse Gravity — Native Route Qualification Remains Open](#reverse-gravity--native-route-qualification-remains-open)
+7. [Knuckles LBZ Big Arm — ROM Port (IMPLEMENTED; TRACE BOUNDARY OPEN)](#knuckles-lbz-big-arm--rom-port-implemented-trace-boundary-open)
+8. [CNZ1 Miniboss Arena Entry — Music Play-In Missing](#cnz1-miniboss-arena-entry--music-play-in-missing)
+9. [AIZ1 Trace F4679 — Sidekick Despawn Velocity & Position Semantic Gap (FIXED)](#aiz1-trace-f4679--sidekick-despawn-velocity--position-semantic-gap-fixed)
+10. [CNZ1 Trace F1685 — Tails CPU Spurious Despawn on Barber-Pole→Wire-Cage Object Switch (FIXED)](#cnz1-trace-f1685--tails-cpu-spurious-despawn-on-barber-polewire-cage-object-switch-fixed)
+11. [CNZ1 Trace F1740 — Wire Cage restoreObjectLatchIfTerrainClearedIt Overrode Slope-Repel Slip (FIXED)](#cnz1-trace-f1740--wire-cage-restoreobjectlatchifterrainclearedit-overrode-slope-repel-slip-fixed)
+12. [CNZ1 Trace F1758 — Wire Cage Airborne-Capture object_control Bit 0 Missing (FIXED)](#cnz1-trace-f1758--wire-cage-airborne-capture-object_control-bit-0-missing-fixed)
+13. [CNZ1 Trace F1791 — Tails CPU Auto-Jump Trigger Bit-7 Object Control Gate (FIXED)](#cnz1-trace-f1791--tails-cpu-auto-jump-trigger-bit-7-object-control-gate-fixed)
+14. [AIZ1 Trace F2590 — Tails CATCH_UP_FLIGHT Trigger Path Mismatch](#aiz1-trace-f2590--tails-catch_up_flight-trigger-path-mismatch)
+15. [AIZ1 Trace F2202 -- Phantom MonkeyDude Respawn Triggers Spurious Sidekick Bounce (FIXED)](#aiz1-trace-f2202----phantom-monkeydude-respawn-triggers-spurious-sidekick-bounce-fixed)
+16. [AIZ1 Trace F5497 — Sidekick CPU Bound Override Stale After Act Transition (FIXED)](#aiz1-trace-f5497--sidekick-cpu-bound-override-stale-after-act-transition-fixed)
+17. [AIZ Trace F5736 — Level_frame_counter Skips Tick on Seamless Act Reload (FIXED)](#aiz-trace-f5736--level_frame_counter-skips-tick-on-seamless-act-reload-fixed)
+18. [AIZ Trace F6066 — CaterKillerJr Missed Obj_WaitOffscreen Gate (FIXED)](#aiz-trace-f6066--caterkillerjr-missed-obj_waitoffscreen-gate-fixed)
+19. [CNZ1 Trace F2222 — Wire Cage Sidekick JUMP_RELEASE Spurious Fire (OPEN — needs ROM-aligned `Ctrl_2_pressed_logical` model)](#cnz1-trace-f2222--wire-cage-sidekick-jump_release-spurious-fire-open--needs-rom-aligned-ctrl_2_pressed_logical-model)
+20. [AIZ Trace F6255 — Tails CPU Freed-Slot Despawn (RESOLVED)](#aiz-trace-f6255--tails-cpu-freed-slot-despawn-resolved)
+21. [CNZ1 Trace F3649 — Tails Air-to-Ground Spring Boost Missed (RESOLVED)](#cnz1-trace-f3649--tails-air-to-ground-spring-boost-missed-resolved)
+22. [CNZ1 Trace F6304 — Tails Misses CNZ Door Re-Land While Following Fast Leader (RESOLVED)](#cnz1-trace-f6304--tails-misses-cnz-door-re-land-while-following-fast-leader)
+23. [CNZ1 Trace F7614 — Tails Spring Bounce Top-Landing 2-Pixel Drift (OPEN — next trace blocker)](#cnz1-trace-f7614--tails-spring-bounce-top-landing-2-pixel-drift)
+24. [AIZ2 Trace F7127 — Tails Phantom Landing While Falling (RESOLVED)](#aiz2-trace-f7127--tails-phantom-landing-while-falling)
+25. [AIZ2 Trace F7171 — Tails Killed Mid-Run vs. Engine Continuing Follow-Steering (OPEN — next AIZ blocker)](#aiz2-trace-f7171--tails-killed-mid-run-vs-engine-continuing-follow-steering)
+26. [AIZ2 Trace F7381 — Engine `Ctrl_1_logical` Not Latched While ROM `Ctrl_1_locked=1` (OPEN — next AIZ blocker)](#aiz2-trace-f7381--engine-ctrl_1_logical-not-latched-while-rom-ctrl_1_locked1-open--next-aiz-blocker)
+27. [CNZ1 Trace F7919 — Tails Triplicate `-0x0800` Velocity Write While Sonic Lands From Rising Platform (OPEN)](#cnz1-trace-f7919--tails-triplicate--0x0800-velocity-write-while-sonic-lands-from-rising-platform-open)
+28. [CNZ F=621 Clamer re-fire — ROM dispatch path narrowing (diagnosis only, round 2)](#cnz-f621-clamer-re-fire--rom-dispatch-path-narrowing-diagnosis-only-round-2)
+29. [CNZ F=621 Clamer re-fire — recorder gap closed; ROM mechanism localised (diagnosis only, round 3)](#cnz-f621-clamer-re-fire--recorder-gap-closed-rom-mechanism-localised-diagnosis-only-round-3)
+30. [CNZ F=621 Clamer re-fire — Touch_Special cprop latch landed (round 4, fixed)](#cnz-f621-clamer-re-fire--touch_special-cprop-latch-landed-round-4-fixed)
+31. [AIZ Trace F8927 — Sonic Air-Roll x_speed Not Cleared by Wall Collision (OPEN — diagnosis only)](#aiz-trace-f8927--sonic-air-roll-x_speed-not-cleared-by-wall-collision-open--diagnosis-only)
+32. [Blue Sphere FM Pickup Onset — Automated Parity Complete, Listening Gate Open](#blue-sphere-fm-pickup-onset--automated-parity-complete-listening-gate-open)
+33. [AIZ2 Fire Terrain Swap Uses an Invented Decompression Span](#aiz2-fire-terrain-swap-uses-an-invented-decompression-span)
+34. [MGZ Swinging Platform Endpoint: Inherited `d1` High Word Not Modelled](#mgz-swinging-platform-endpoint-inherited-d1-high-word-not-modelled)
+35. [Segment Trace Replays Start With an Empty Save-Game Inventory](#segment-trace-replays-start-with-an-empty-save-game-inventory)
+36. [S3K Sound Driver: PSG Stale-IX Writes and Mailbox Items Still Open](#s3k-sound-driver-psg-stale-ix-writes-and-mailbox-items-still-open)
+37. [SOZ Act 2 Pushable Rock Puzzle Reachability Unverified](#soz-act-2-pushable-rock-puzzle-reachability-unverified)
+38. [SOZ Recording: Presentation Certification](#soz-recording-presentation-certification)
+39. [S3K Cheat Flags Have No Consumers Yet](#s3k-cheat-flags-have-no-consumers-yet)
+40. [Gumball Exit: Title-Card Loop and Load Span Not Row-Matched](#gumball-exit-title-card-loop-and-load-span-not-row-matched)
+41. [S3K Mega Run Chain: Duplicate VINT_SERVICE Boundary in Segment 0](#s3k-mega-run-chain-duplicate-vint_service-boundary-in-segment-0)
+42. [Doomsday: Presentation Gaps and Unseeded Entry](#doomsday-presentation-gaps-and-unseeded-entry)
+43. [Ring Window Floor Admits a Leading `(0,0)` Ring Record the ROM Always Skips](#ring-window-floor-admits-a-leading-00-ring-record-the-rom-always-skips)
+44. [Sky Sanctuary Act 1 Cutscene: Death Egg Palette, Children and Knuckles' Resting Position](#sky-sanctuary-act-1-cutscene-death-egg-palette-children-and-knuckles-resting-position)
+45. [Sky Sanctuary Background Mode Switch Completes a Frame Early](#sky-sanctuary-background-mode-switch-completes-a-frame-early)
+46. [Sky Sanctuary Plain-Mode Background Below `Camera_Y $800` Renders Flat Sky](#sky-sanctuary-plain-mode-background-below-camera_y-800-renders-flat-sky)
+47. [Sky Sanctuary Mecha Sonic Hit-Window Phase and Slot-Reuse Fidelity](#sky-sanctuary-mecha-sonic-hit-window-phase-and-slot-reuse-fidelity)
+48. [Sky Sanctuary Explosion Controller Replacement-Slot Stop Bit](#sky-sanctuary-explosion-controller-replacement-slot-stop-bit)
+49. [Sky Sanctuary Metropolis Orb Reads After a Freed Parent Slot Remain Unmodelled](#sky-sanctuary-metropolis-orb-reads-after-a-freed-parent-slot-remain-unmodelled)
+50. [S3K Special-Property Sidekick Behaviour: Corrected Diagnosis](#s3k-special-property-sidekick-behaviour-corrected-diagnosis)
+51. [Object Art and Clock Reads Found by the Slay the Robotnik Sprite Research (SUSPECTED)](#object-art-and-clock-reads-found-by-the-slay-the-robotnik-sprite-research-suspected)
+52. [Ending Reunion Kos Service Count — Per-Object CPU Budget (OPEN)](#ending-reunion-kos-service-count--per-object-cpu-budget-open)
+53. [Non-Fresh Title Card Holds 90 Locked Frames (OPEN)](#non-fresh-title-card-holds-90-locked-frames-open)
+54. [AIZ2 First-Tree and HCZ1 Zero-Offset Animated Tile Uploads (OPEN)](#aiz2-first-tree-and-hcz1-zero-offset-animated-tile-uploads-open)
+55. [Knuckles Credits and Terminal Residuals (OPEN)](#knuckles-credits-and-terminal-residuals-open)
+56. [MHZ Rewind Snapshot Identity Gaps (OPEN)](#mhz-rewind-snapshot-identity-gaps-open)
 
 ---
 
@@ -228,6 +232,27 @@ not an accepted intentional discrepancy or a claim of whole-scene native pixel
 parity. Combined integration remains coordinator-owned. The original audit and
 rejected pixel premises are retained in the [ending design](../architecture/designs/2026-10-13-s3k-ending-lifecycle.md#native-presentation-repair--2026-10-13)
 and [ending matrix](../architecture/validation/levels/s3k-ending.md#repaired-native-presentation-owners--2026-10-13).
+
+## Ending Parity Follow-up — 2026-10-14
+
+The Knuckles flight wait's missing native quiet-wind request is repaired and
+qualified by16 affected object tests, including three independently red/green
+clock, expiry-order and restore/replay checks. `loc_5E80A` calls
+`Play_SFX_Continuous` before animation and timer expiry; native `$CE` admission
+uses `V_int_run_count & $F`. The [ending matrix](../architecture/validation/levels/s3k-ending.md#remaining-parity-follow-up--2026-10-14)
+records exact scope and commands. Request timing is not PCM acceptance.
+
+The rescue-plane groups from `loc_5DC2C`/`loc_5DD0E` and the fixed Tornado's
+pilot now have native managed slots and rewindable lifetimes. Parent lookup
+follows physical SST reuse; delayed deletion preserves native status/control
+bytes until the next dispatch. The global catcher pointer survives both sprite
+RAM clears.77 distinct focused graph/boundary cases qualify these changes;
+the independent continuation core qualifies41 distinct cases of retained-byte
+SST93 overwrite, identity and execution order. Complete composed child pressure,
+whole-scene native rendering/audio and supported matrix breadth remain open.
+No accepted deviation was added.
+
+---
 
 ## Blue Sphere FM Pickup Onset — Automated Parity Complete, Listening Gate Open
 
@@ -6055,23 +6080,6 @@ against `sub_32F56` (sonic3k.asm:68950-68992) and Obj_Bumper
 
 ---
 
-## Slot Machine Bonus Stage Is Not Rewindable
-
-**2026-10-15 source-authority candidate:** the original two entry words and1024
-layout cells now load from the bounded user-ROM source at1E4080 before runtime
-mutation. The former literal layout/start oracle exists only in test fixtures;
-canonical bytes were equal, so this is a source-authority repair rather than a
-stock-layout mismatch. The existing live-rewind capability gate below remains
-unchanged. Loader/codec/component graph tests do not qualify that runtime or an
-authored Slots challenge/reward/return.
-
-- **Location** — `S3kSlotBonusStageRuntime`, `S3kSlotStageState`, `S3kSlotPlayerRuntime`, `S3kSlotRenderBuffers`, `S3kSlotRewindSupport`, `AbstractBonusStageCoordinator.supportsRewind`, `GameLoop.isBonusStageRewindable`
-- **Symptom** — Holding rewind during the S3K Slot Machine bonus stage is a no-op and no keyframes are recorded for it; Gumball and Pachinko rewind normally.
-- **Suspected cause** — The slots runtime keeps its state outside the object/level snapshot model: `S3kSlotStageState` (about 35 scalars, six `int[3]`, two `Deque<int[]>` reward queues), runtime bookkeeping (`continueAwarded`, `exitFadeStarted`, `exitTriggered`, `lastFrameCounter`, `slotFrameCounter`), a swapped-in `slotPlayer` with its own `slotPlayerRuntime`, parallel reward-object lists needing re-resolution, and mutable render buffers. Because its `updateDuringLevelFrame()` is true, held-rewind re-simulation would drive it, so a complete snapshot is mandatory. Sonic 1's Special Stage has the same shape.
-- **Removal condition** — A self-contained runtime snapshot (state object, bookkeeping, swapped player runtime, reward-object re-resolution, render-buffer rebuild) registered for rewind, `supportsRewind()` true for slots, and a capture/restore/re-simulate test. Design it once for slots and the S1 Special Stage.
-
----
-
 ## AIZ2 Fire Terrain Swap Uses an Invented Decompression Span
 
 - **Location** — `Sonic3kAIZEvents.FIRE_TERRAIN_DECOMPRESS_FRAMES = 20` (marked `KNOWN INVENTED CONSTANT` in code)
@@ -6525,3 +6533,124 @@ needs its own ROM check and focused test before changing.
 - **Removal condition** — EggRobo models the entry passes for all three subtypes, with
   rewind capture for the new state and a focused test of the first release, fly-by and
   fighter pass.
+
+---
+
+## Ending Reunion Kos Service Count — Per-Object CPU Budget (OPEN)
+
+Native completes the ending reunion's paired art job `$1D17A6` in four
+`Process_Kos_Queue` services on Tails/+2, but in three on Sonic/+2 and team/+2
+(NTSC) and on PAL Tails/+2. The job itself costs the same everywhere
+(211,058–211,062 decompressor cycles). What differs is the idle-loop budget left
+before each VInt after that frame's object code: on the third service Tails' player
+code and its tail's `Tails_Tail_Load_PLC` DMA leave it 1,924 cycles (0.9%) short.
+The engine's `s3k-kos-v1` profile keys service counts on the stable job
+fingerprint, so it publishes four services on every route. The engine therefore
+reaches the Sonic/+2 and team/+2 reunion gate one frame after native.
+
+### Why it stays open
+- A route- or character-keyed row, a Hyper-keyed shift, or a corpus-mean budget
+  would be fitted to this boundary. The runtime invariants reject all three.
+- A semantic budget model would need about ±0.7% precision. Per-frame budgets move
+  by about ±10% with scene state, and the deciding cost is per-object 68k code.
+
+### Removal condition
+A budget model without route keys that reproduces all six measured native counts
+(NTSC and PAL) and the 46 multi-valued corpus fingerprints. Evidence and rejected
+candidates are in the [ending lifecycle design](../architecture/designs/2026-10-13-s3k-ending-lifecycle.md#kos-idle-budget-measurement-of-the-hyper-sonic-residual-2026-10-15-opus-kos-budget-lane).
+
+---
+
+## Non-Fresh Title Card Holds 90 Locked Frames (OPEN)
+
+Native `Level` arms a 22-frame title-card hold at `loc_64DC` (sonic3k.asm:7874-7878)
+while `LevelLoop` already runs, and the card exits when that hold ends. Only the fresh
+zone-request route models this. Direct boots with the card shown, data-select launches,
+bonus-stage entry and death restarts use the engine's 90-frame non-fresh card, which
+locks the loop until it exits. The level's lines 1-3 fade therefore plays while that card
+leaves rather than during a native 22-frame hold. The death restart also keeps the host's
+blocking whole-screen reveal over the card's slide-in. Rings draw under the card, where
+the original draws them above it, and the `$1701` arena's `Pal_FromWhite` reveal is not
+presented. Per-route measurements are in the
+[HPZ matrix](../architecture/validation/levels/s3k-hpz-act.md).
+
+### Removal condition
+Every `Level` entry uses the native card hold and releases `LevelLoop` with it. Recorded
+route movies that cross these entries are re-timed by measurement in the same change.
+
+---
+
+## AIZ2 First-Tree and HCZ1 Zero-Offset Animated Tile Uploads (OPEN)
+
+Custom zone `AnimateTiles` routines queue their art through `Add_To_DMA_Queue`
+(sonic3k.asm:1673), drained at VBlank. Two cases still differ:
+- `AnimateTiles_AIZ2`'s first-tree upload still writes immediately, one frame early. It was
+  left unchanged to keep the AIZ to HCZ route stable.
+- When `Events_bg+$10` is 0, `AnimateTiles_HCZ1` falls through `AniHCZ_FixLowerBG` into
+  `AniHCZ_FixUpperBG` (sonic3k.asm:53993, 54071-54091) and skips its normal tile animations.
+  The engine uploads only the lower strips.
+
+Evidence is in the
+[bonus-stage transitions matrix](../architecture/validation/levels/s3k-bonus-stage-transitions.md).
+
+### Removal condition
+Both cases follow the ROM routine, with a focused publication test and an unchanged S3K
+canonical trace result.
+
+---
+
+## Knuckles Credits and Terminal Residuals (OPEN)
+
+The 2026-10-15 kterminal lane matched the Knuckles terminal banner, its pose flash and
+logo fade, and the credits' Plane A phase against the native complete run. Four gaps remain:
+
+- **Credits start one V-int late.** With the native inlets declared, the cold movie now
+  reaches credits part one with `V_int_run_count` `$66CC6`; native and the `9b0c85dd0`
+  render hold `$66CC5` at the same engine frame, with an identical flight log. The ending
+  clouds seed from `V_int_run_count` (`loc_5F94C`) and emit on its low bits (`loc_5F986`),
+  so every cloud differs. Unattributed; it arrived between `9b0c85dd0` and `516ca64f1`.
+- **A glyph fragment in credits part one.** At the credits-one spans 9 and 10 a white,
+  glyph-like fragment (screen x 128-191) scrolls with the planes. It is in every engine
+  render since `9b0c85dd0` and never in native. Unattributed.
+- **One zero-copy credits pass.** `ParallaxManager` reads a handler's zero FG V-scroll as
+  "use the camera", and `ZoneScrollHandler` is Mod API. On the pass where
+  `Camera_Y_pos_copy` is still 0 and `Camera_Y_pos` has reached 1, SSZ2's Plane A is prepared
+  one line low. No native picture covers that pass; its visibility was not measured.
+- **S3 eyecatch fades.** `loc_5F26C`, `loc_5F31C` and `loc_5F410` fade lines 1, 0 and 2
+  through `loc_5FF62` (up toward `$EEE`, then down to the target, every fourth pass). The
+  engine's S3 eyecatch uses a six-pass from-black fade. No native picture of that terminal
+  exists.
+
+Evidence and the measured spots are in the
+[ending matrix](../architecture/validation/levels/s3k-ending.md#knuckles-terminal-banner-pose-flash-and-the-credits-plane-a-phase-kterminal-lane-2026-10-15).
+
+### Removal condition
+Each gap is attributed to a ROM owner and modelled with a focused red-first test, or shown
+equal to a native capture of the same state.
+
+---
+
+## MHZ Rewind Snapshot Identity Gaps (OPEN)
+
+After the MHZ rider/shell/shield restore fixes (`902ba8a10`), dense
+`RewindFidelitySweep` runs over the solo Sonic MHZ routes show no player drift, but two
+restores were not snapshot-exact (no gameplay effect observed):
+- Resolved 2026-10-16 (`f07a25bf9`): the MHZ1 carry-in Tails (`SpawnLevelMainSprites`
+  `loc_68C2`/`loc_68D8`) was recreated as a new sprite by restores after its natural
+  deletion. Solid-contact headroom snapshots and plane-switcher player sides hold direct
+  player references, so stale entries for the old instance accumulated. Restores now
+  re-admit the departed instance; `TestS3kScriptedIntroCarryAdmission` (MHZ1) and the
+  widest CNZ1 rows of `TestS3kCanonicalEntryLifecycle` replay it exactly.
+- MHZ2's Knuckles cutscene leaf particles (`CutsceneKnucklesMhz2Instance`) restore with a
+  zero spawn record (x/y/velocity restore correctly).
+
+Outside MHZ, these per-player identity collections have no rewind policy and were not
+checked: `CorkFloorObjectInstance.standingRiders`,
+`LbzMovingPlatformObjectInstance.standingPlayers`, `SinkingMudObjectInstance` player maps.
+Evidence and sweep commands are in the
+[MHZ act 1 matrix](../architecture/validation/levels/s3k-mhz-act1.md#rewind-fidelity-fixes-2026-10-16-902ba8a10).
+
+### Removal condition
+A `RewindFidelitySweep` over the MHZ1 opening and the MHZ2 cutscene reports no
+restore-identity or end-of-replay differences, and each listed collection either has a
+policy with a capture/restore/forward-replay test or is shown to be re-derived.

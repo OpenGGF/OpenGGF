@@ -213,7 +213,12 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
     private int lastFrameCounter;
     private PlayerSpriteRenderer sonicRenderer;
     private PlayerSpriteRenderer superSonicRenderer;
-    private boolean renderersLoaded;
+    /**
+     * Cache flag for the two ROM-art renderers above, which rewind never
+     * captures. It must not be captured either: a rewind-recreated instance
+     * would inherit "loaded" with null renderers and stop drawing intro Sonic.
+     */
+    private transient boolean renderersLoaded;
     private S3kKosModuleQueue introSpriteArtQueue;
     private HardwareWorkHandle planeArtHandle;
     private HardwareWorkHandle emeraldArtHandle;

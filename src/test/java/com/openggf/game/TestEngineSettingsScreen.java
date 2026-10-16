@@ -25,6 +25,29 @@ class TestEngineSettingsScreen {
     private static final int DISPLAY = 0, SOUND = 1, CONTROLS = 2, GAMEPLAY = 3, FILES = 4, CAPTURE = 5;
 
     @Test
+    void colourExpansionOffersFullAndLimitedAndSavesFromTheDisplayPage() {
+        Fixture f = new Fixture();
+        String profile = f.config.getString(DISPLAY_COLOR_PROFILE);
+        assertEquals(EngineSettingsDraft.Category.DISPLAY, EngineSettingsDraft.category(DISPLAY_COLOR_EXPANSION));
+        int row = new EngineSettingsDraft(f.config).keys(EngineSettingsDraft.Category.DISPLAY)
+                .indexOf(DISPLAY_COLOR_EXPANSION);
+        assertTrue(row >= 0);
+        f.press(GLFW_KEY_DOWN, row);
+        assertTrue(f.texts().contains("Colour expansion"));
+        assertTrue(f.texts().contains("Full"));
+        f.press(GLFW_KEY_RIGHT); // Full -> Limited in the draft only
+        assertTrue(f.texts().contains("Limited"));
+        assertTrue(f.texts().contains("1 UNSAVED"));
+        assertEquals("FULL", f.config.getString(DISPLAY_COLOR_EXPANSION), "edits stay in the draft");
+        f.press(GLFW_KEY_ESCAPE);
+        assertTrue(f.texts().contains("SAVE SETTINGS?"));
+        f.press(GLFW_KEY_ENTER); // Save is the default choice.
+        assertTrue(f.screen.consumeApplied());
+        assertEquals("LIMITED", SonicConfigurationService.createStandalone(directory).getString(DISPLAY_COLOR_EXPANSION));
+        assertEquals(profile, f.config.getString(DISPLAY_COLOR_PROFILE), "the colour profile is independent");
+    }
+
+    @Test
     void backWithACleanDraftClosesOnce() {
         Fixture f = new Fixture();
         f.press(GLFW_KEY_ESCAPE);

@@ -1,6 +1,5 @@
 package com.openggf.game.sonic3k.objects;
 
-import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotLayoutFixture;
 import com.openggf.game.BonusStageProvider;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.sonic3k.Sonic3kBonusStageCoordinator;
@@ -50,8 +49,8 @@ class TestRewindFixS3KSlotCodecs {
         GraphicsManager.getInstance().initHeadless();
 
         Sonic3kBonusStageCoordinator coordinator = new Sonic3kBonusStageCoordinator();
-        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
-        com.openggf.game.sonic3k.bonusstage.slots.S3kSlotLayoutFixture.bootstrap(runtime);
+        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources());
+        runtime.bootstrap();
         installSlotRuntime(coordinator, runtime);
         controller = runtime.stageController();
         assertNotNull(controller, "slot runtime bootstrap must create the stage controller");

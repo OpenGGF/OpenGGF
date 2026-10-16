@@ -63,7 +63,7 @@ public final class TeleporterBeamObjectInstance extends AbstractObjectInstance i
     private final int[] childY = new int[MAX_SEGMENTS];
     private final int[] childFrame = new int[MAX_SEGMENTS];
 
-    private record RewindExtra(int y, int phase, int progress, int timer, int segmentCount,
+    private record RewindExtra(String artKey, int y, int phase, int progress, int timer, int segmentCount,
                                boolean contracting, boolean visibleThisFrame,
                                int[] childX, int[] childY, int[] childFrame, ObjectRefId parentId)
             implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
@@ -104,9 +104,19 @@ public final class TeleporterBeamObjectInstance extends AbstractObjectInstance i
                 Sonic3kObjectArtKeys.SSZ_TELEPORTER, true);
     }
 
+    /** Obj_TeleporterBeam's SSZ art word, with the ordinary stacking entry. */
+    static TeleporterBeamObjectInstance sszTransportBeam(ObjectSpawn spawn, TeleporterBeamOwner parent) {
+        return new TeleporterBeamObjectInstance(spawn, parent, Sonic3kObjectArtKeys.SSZ_TELEPORTER, false);
+    }
+
     @Override
     public TeleporterBeamObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new TeleporterBeamObjectInstance(ctx.spawn(), null, artKey, false);
+        if (ctx.state() == null || !(ctx.state().objectSubclassExtra() instanceof RewindExtra extra)) {
+            throw new IllegalStateException("Teleporter beam recreation requires its captured art selector");
+        }
+        // The generic parent-null probe selects HPZ art. Its constructor value is
+        // not the captured Obj_57C1E/SSZ art word and must never select restored art.
+        return new TeleporterBeamObjectInstance(ctx.spawn(), null, extra.artKey(), false);
     }
 
     @Override
@@ -114,7 +124,7 @@ public final class TeleporterBeamObjectInstance extends AbstractObjectInstance i
         ObjectRefId parentId = context.identityTable()
                 .map(table -> table.encodeObject(parent)).orElse(null);
         return super.captureRewindState(context).withObjectSubclassExtra(new RewindExtra(
-                y, phase, progress, timer, segmentCount, contracting, visibleThisFrame,
+                artKey, y, phase, progress, timer, segmentCount, contracting, visibleThisFrame,
                 childX.clone(), childY.clone(), childFrame.clone(), parentId));
     }
 
@@ -246,6 +256,9 @@ public final class TeleporterBeamObjectInstance extends AbstractObjectInstance i
     @Override public boolean isPersistent() { return true; }
     /** {@code priority = $80}. */
     @Override public int getPriorityBucket() { return 1; }
+    // Obj_TeleporterBeam/Obj_57C1E: SSZ make_art_tile(...,3,1).
+    // loc_45908 replaces the HPZ word with make_art_tile(...,3,0).
+    @Override public boolean isHighPriority() { return Sonic3kObjectArtKeys.SSZ_TELEPORTER.equals(artKey); }
 
     int spawnYForTest() { return spawnY; }
     int segmentCountForTest() { return segmentCount; }

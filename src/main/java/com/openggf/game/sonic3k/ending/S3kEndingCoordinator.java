@@ -65,7 +65,9 @@ public final class S3kEndingCoordinator {
             boolean completed = state.credits().step(services.romReader());
             if(previousRoutine==2&&state.credits().routine()==4)
                 state.art().queueModule(services,S3kEndingResources.AND_KNUCKLES,0x3EF); // sub_5B42A
-            services.camera().setY((short) (state.credits().scroll() >> 16));
+            // loc_5B204 writes Camera_Y_pos only (sonic3k.asm:121522-121528); ScreenEvents
+            // already published this frame's Camera_Y_pos_copy before the event handler.
+            services.camera().setYAfterRenderCopy((short) (state.credits().scroll() >> 16));
             if(completed)services.levelGamestate().setTimerFrames(0);
             if(completed&&services.zoneRuntimeState() instanceof EndingZoneRuntimeState ending)
                 ending.screen().foregroundSignal=true; // loc_5B29E, shared Events_fg_4

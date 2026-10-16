@@ -64,7 +64,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         TITLE_CARD_WAIT,
         TITLE_CARD_WAIT2,
         DONE,
-        TITLE_CARD_INIT
+        TITLE_CARD_INIT,
+        TITLE_CARD_CREATE
     }
     private static final Logger LOG = Logger.getLogger(S3kResultsScreenObjectInstance.class.getName());
 
@@ -159,6 +160,10 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private boolean titleCardInitialized;
     private boolean pendingPreloadedTitleHandoff;
     private boolean pendingAizTitleHandoff;
+    private boolean nativeTitleChildrenOwned;
+    private boolean nativeTitleMovementLatch;
+    private int nativeTitleChildrenLeft;
+    private int nativeTitleStagger;
     private boolean pendingRetainedReloadTitleHandoff;
     private boolean postControlHandoffPending;
     private boolean postResultsEventHandoffPending;
@@ -338,7 +343,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
 
     private void enqueueRequiredKosArchive(Rom rom, int sourceAddress, int destinationVramBytes) {
         try {
-            if (!services().kosinskiModuleQueue().enqueue(rom, sourceAddress, destinationVramBytes)) {
+            if (!com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.queueGlobalPatternModule(
+                    services(), sourceAddress, destinationVramBytes)) {
                 throw new IllegalStateException("S3K KosM queue capacity exhausted while queuing results art");
             }
         } catch (java.io.IOException e) {
@@ -793,6 +799,10 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     @Override
     protected void onExitReady() {
         if (exitPublicationComplete) {
+            if (titleInitializationPending && nativeTitleChildrenOwned) {
+                updateCarriedTitleCard();
+                return;
+            }
             if (titleInitializationPending) {
                 // loc_2DD06 only replaces the routine pointer and returns.
                 // Obj_TitleCardInit submits art on this next owner dispatch,
@@ -942,7 +952,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                 pendingPreloadedTitleHandoff = preloadedNextActHandoff;
                 pendingAizTitleHandoff = aizAct1MinibossTitleHandoff;
                 pendingRetainedReloadTitleHandoff = retainedReloadState;
-                if (fbzCarriedTitleOwner) {
+                if (fbzCarriedTitleOwner || aizAct1MinibossTitleHandoff) {
+                    nativeTitleChildrenOwned = aizAct1MinibossTitleHandoff;
                     // loc_2DD06 only replaces this SST's code pointer. The
                     // following Process_Sprites pass runs Obj_TitleCardInit.
                     carriedTitlePhase = CarriedTitlePhase.TITLE_CARD_INIT;
@@ -1011,7 +1022,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         if (titleCardProvider instanceof Sonic3kTitleCardManager s3kTitleCard) {
             boolean retainedSstTitleOwner = carriedTitlePhase == CarriedTitlePhase.TITLE_CARD_INIT;
             if (retainedSstTitleOwner) {
-                s3kTitleCard.useExternalInLevelGameplayOwner();
+                if (nativeTitleChildrenOwned) s3kTitleCard.useNativeInLevelSstChildren();
+                else s3kTitleCard.useExternalInLevelGameplayOwner();
             }
             if (pendingPreloadedTitleHandoff && !retainedSstTitleOwner) {
                 int releaseDispatches = carriedPreloadedActCameraReleaseDispatches;
@@ -1229,9 +1241,31 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                 initializePublishedTitleCard();
                 titleInitializationPending = false;
                 titleCardInitialized = true;
-                carriedTitlePhase = CarriedTitlePhase.TITLE_CARD_WAIT;
+                carriedTitleWaitTimer = 90; // Obj_TitleCardInit seeds $2E, not Wait.
+                carriedTitlePhase = nativeTitleChildrenOwned
+                        ? CarriedTitlePhase.TITLE_CARD_CREATE : CarriedTitlePhase.TITLE_CARD_WAIT;
+            }
+            case TITLE_CARD_CREATE -> {
+                // Obj_TitleCardCreate polls the global Kos_modules_left on every retry.
+                if (S3kRuntimeArtCoordinator.from(services()).moduleQueue().hasPendingPhysicalModules()) return;
+                if (!(services().titleCardProvider() instanceof Sonic3kTitleCardManager title)
+                        || !title.prepareNativeInLevelTitleArt()) return;
+                for (int index=0;index<4;index++) {
+                    int element=index;
+                    var child=spawnChild(() -> S3kInLevelTitleCardElementObjectInstance.create(this,element));
+                    if (child==null || child.isDestroyed()) {
+                        if (index==0) return; // First checked allocation retries; a partial prefix proceeds.
+                        break;
+                    }
+                    nativeTitleChildrenLeft++;
+                }
+                carriedTitlePhase=CarriedTitlePhase.TITLE_CARD_WAIT;
             }
             case TITLE_CARD_WAIT -> {
+                if (nativeTitleChildrenOwned) {
+                    // Lower-slot owner consumes the preceding higher-slot children's $34 writes.
+                    if (nativeTitleMovementLatch) { nativeTitleMovementLatch=false; return; }
+                } else
                 if (services().titleCardProvider() instanceof Sonic3kTitleCardManager title
                         && !title.isExternalInLevelWaitReady()) {
                     title.updateExternalInLevelChildren();
@@ -1256,9 +1290,15 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                 }
                 carriedTitleWaitTimer = 90;
                 carriedTitlePhase = CarriedTitlePhase.TITLE_CARD_WAIT2;
-                advanceExternalTitleChildren();
+                if (nativeTitleChildrenOwned && services().titleCardProvider() instanceof Sonic3kTitleCardManager title)
+                    title.publishNativeInLevelTitleHold(carriedTitleWaitTimer);
+                else advanceExternalTitleChildren();
             }
             case TITLE_CARD_WAIT2 -> {
+                if (nativeTitleChildrenOwned) {
+                    updateNativeTitleWait2();
+                    return;
+                }
                 if (carriedTitleWaitTimer > 0) {
                     carriedTitleWaitTimer--;
                     advanceExternalTitleChildren();
@@ -1286,6 +1326,30 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             }
         }
     }
+
+    private void updateNativeTitleWait2() {
+        var title=(Sonic3kTitleCardManager) services().titleCardProvider();
+        if (carriedTitleWaitTimer!=0) {
+            carriedTitleWaitTimer=(carriedTitleWaitTimer-1)&0xFFFF;
+            title.publishNativeInLevelTitleHold(carriedTitleWaitTimer);
+            return;
+        }
+        if (nativeTitleChildrenLeft!=0) {
+            nativeTitleStagger=(nativeTitleStagger+1)&0xFFFF;
+            title.publishNativeInLevelTitleExit(nativeTitleStagger);
+            return;
+        }
+        // loc_2D86E runs after the final child has decremented $30 on the preceding scan.
+        title.completeExternalInLevelTitle();
+        services().gameState().setEndOfLevelFlag(true);
+        carriedTitlePhase=CarriedTitlePhase.DONE;
+        complete=true;
+        ObjectLifetimeOps.deleteNoRespawn(this);
+    }
+
+    void nativeTitleChildMoved() { nativeTitleMovementLatch=true; }
+    void nativeTitleChildRetired() { nativeTitleChildrenLeft=(nativeTitleChildrenLeft-1)&0xFFFF; }
+    int nativeTitleStagger() { return nativeTitleStagger; }
 
     private void advanceExternalTitleChildren() {
         if (services().titleCardProvider() instanceof Sonic3kTitleCardManager title) {

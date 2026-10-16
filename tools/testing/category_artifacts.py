@@ -131,7 +131,7 @@ def size_bytes(directory):
 
 def compact_run(directory, failed):
     """Call only after JVM exit and after extracting counts/skips/failures to JSON."""
-    for lane in ('ordinary', 'guards'):
+    for lane in ('preparation', 'ordinary', 'guards'):
         for suffix in ('reports', 'tmp'):
             path = directory / f'{lane}-{suffix}'
             if path.is_symlink():

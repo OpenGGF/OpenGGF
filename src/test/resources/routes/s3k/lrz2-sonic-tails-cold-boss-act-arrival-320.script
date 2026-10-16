@@ -1,6 +1,7 @@
 # Ordinary cold LRZ1 clear, full LRZ2 traversal, boulder cutscene and boss-act arrival.
 # Controller input only; no initial position, shield, rings or emerald writes.
 # 2026-10-13: controller repair only; the first36318 inputs remain unchanged.
+# Retimed by FadeWindowRetimeTool from lrz2-sonic-tails-cold-boss-act-arrival-320.bk2 (authored fade advances 2); windows start:native->+inserted [43555:23->+11]
 25 - / -
 63 D / -
 61 - / -
@@ -1838,7 +1839,7 @@
 30 R+A / -
 45 R / -
 30 R+A / -
-595 R / -
+606 R / -
 30 R+A / -
 45 R / -
 6 R+A / -

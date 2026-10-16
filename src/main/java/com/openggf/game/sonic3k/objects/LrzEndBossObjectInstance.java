@@ -208,8 +208,8 @@ public final class LrzEndBossObjectInstance extends AbstractObjectInstance
             var queue=services().kosinskiModuleQueue(); if(queue==null) return -1;
             Sonic3kPlcLoader.bindRuntimePatternDmaTarget(queue,services());
             queue.enqueue(services().rom(),address,tile*32);
-            return com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.from(services()).moduleQueue()
-                    .queue(services().rom(),address,tile).ordinal();
+            return com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.bindPatternModule(services(), com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.from(services()).moduleQueue()
+                    .queue(services().rom(),address,tile)).ordinal();
         } catch(IOException failure) { throw new UncheckedIOException(failure); }
     }
     private long claimReadyArt(long ordinal) {

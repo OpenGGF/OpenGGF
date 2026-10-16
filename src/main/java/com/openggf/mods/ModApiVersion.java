@@ -96,6 +96,8 @@ public final class ModApiVersion {
      * finite AIZ and HCZ/MGZ boss attacks, and CNZ/ICZ/LBZ object recipes through native factories.
      * Host-supplied title canvases and attached-effect rendering preserve native
      * ownership and whole-picture transforms without exposing implementation classes.
+     * Display colour expansion independently selects Full or Limited palette RGB output
+     * while retaining colour profile semantics and native palette ownership.
      * Creator reconstruction uses ObjectReconstructionContext; host dynamic-entry
      * queues and whole-object-manager snapshot shapes remain engine internals.
      */

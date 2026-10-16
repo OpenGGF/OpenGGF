@@ -17,7 +17,9 @@ public final class S3kSlotPlayerRuntime {
     private static final int POSITION_SHIFT = 16;
     private static final int SPEED_TO_POSITION_SHIFT = 8;
 
+    @com.openggf.game.rewind.RewindTransient(reason="Stage RAM is captured independently by the enclosing Slot runtime")
     private final S3kSlotStageState stageState;
+    @com.openggf.game.rewind.RewindTransient(reason="Structural collision owner binds the retained stage and layout buffers")
     private final S3kSlotCollisionSystem collisionSystem;
     private int slotOriginX;
     private int slotOriginY;
@@ -40,8 +42,21 @@ public final class S3kSlotPlayerRuntime {
     // splice its ring/tile-dispatch work in at that exact point (between
     // applyAirMotionWithCollision and applyVelocityStep) so the launch velocity is
     // applied to position this frame rather than lagging into the next one.
+    @com.openggf.game.rewind.RewindTransient(reason="Structural movement callback always binds the current enclosing runtime")
     private Runnable preMoveInteractionHook;
+    @com.openggf.game.rewind.RewindTransient(reason="Nullable exit phase is captured explicitly beside movement state")
     private S3kSlotExitSequence exitSequence;
+    record RewindState(com.openggf.game.rewind.schema.RewindObjectStateBlob movement, com.openggf.game.rewind.schema.RewindObjectStateBlob exit) { }
+    RewindState captureSlotRewindState() {
+        return new RewindState(com.openggf.game.rewind.schema.CompactFieldCapturer.capture(this),
+                exitSequence == null ? null : com.openggf.game.rewind.schema.CompactFieldCapturer.capture(exitSequence));
+    }
+    void restoreSlotRewindState(RewindState state, S3kSlotStageController controller) {
+        com.openggf.game.rewind.schema.CompactFieldCapturer.restore(this, state.movement());
+        exitSequence = state.exit() == null ? null : new S3kSlotExitSequence(controller);
+        if (exitSequence != null) com.openggf.game.rewind.schema.CompactFieldCapturer.restore(exitSequence, state.exit());
+    }
+
     private boolean debugActive;
     private int debugSavedStatTable;
     private int debugSavedScalarIndex1;

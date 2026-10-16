@@ -5,7 +5,10 @@ package com.openggf.game.sonic3k.bonusstage.slots;
  */
 public final class S3kSlotPrizeCalculator {
 
-    private S3kSlotPrizeCalculator() {
+    private final short[] rewardValues;
+
+    private S3kSlotPrizeCalculator(S3kSlotResources romData) {
+        rewardValues = romData.rewardValues();
     }
 
     /**
@@ -16,6 +19,14 @@ public final class S3kSlotPrizeCalculator {
      * @return ring reward (positive), spike indicator (negative from symbol 4), or 0
      */
     public static int calculate(int reelA, byte packedBC) {
+        return calculate(S3kSlotResources.fromActiveRom(), reelA, packedBC);
+    }
+
+    public static int calculate(S3kSlotResources romData, int reelA, byte packedBC) {
+        return new S3kSlotPrizeCalculator(romData).calculatePrize(reelA, packedBC);
+    }
+
+    private int calculatePrize(int reelA, byte packedBC) {
         int reelB = (packedBC & 0xF0) >>> 4;
         int reelC = packedBC & 0x0F;
 
@@ -34,7 +45,7 @@ public final class S3kSlotPrizeCalculator {
 
     // ROM loc_4C7E0 and loc_4C80E:
     // matched symbol zero pays the odd symbol x4; odd symbol zero pays the matched symbol x2.
-    private static int handleTwoMatch(int matchedSymbol, int matchedDuplicate, int oddOneOut) {
+    private int handleTwoMatch(int matchedSymbol, int matchedDuplicate, int oddOneOut) {
         if (matchedSymbol == 0) {
             return lookupReward(oddOneOut) * 4;
         }
@@ -46,7 +57,7 @@ public final class S3kSlotPrizeCalculator {
 
     // ROM loc_4C838:
     // If B == C and A is zero, B/C pays x2. If B == C == zero, A pays x4.
-    private static int handleNoAMatch(int reelA, int reelB, int reelC) {
+    private int handleNoAMatch(int reelA, int reelB, int reelC) {
         if (reelB == reelC) {
             if (reelA == 0) {
                 return lookupReward(reelB) * 2;
@@ -67,8 +78,8 @@ public final class S3kSlotPrizeCalculator {
         return bonus;
     }
 
-    private static int lookupReward(int symbol) {
-        if (symbol < 0 || symbol >= S3kSlotRomData.REWARD_VALUES.length) return 0;
-        return S3kSlotRomData.REWARD_VALUES[symbol];
+    private int lookupReward(int symbol) {
+        if (symbol < 0 || symbol >= rewardValues.length) return 0;
+        return rewardValues[symbol];
     }
 }

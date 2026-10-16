@@ -6,6 +6,7 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
 import com.openggf.graphics.color.DisplayColorConverter;
 import com.openggf.graphics.color.DisplayColorProfile;
+import com.openggf.graphics.color.DisplayColorExpansion;
 import com.openggf.graphics.pipeline.UiRenderPipeline;
 import com.openggf.graphics.shaderlib.DisplayShaderPipeline;
 import com.openggf.level.Palette;
@@ -78,6 +79,7 @@ public class GraphicsManager {
 	private Integer combinedPaletteTextureId;
 	private int currentPaletteTextureHeight = 0;
 	private DisplayColorProfile displayColorProfile = DisplayColorProfile.RAW_RGB;
+	private DisplayColorExpansion displayColorExpansion = DisplayColorExpansion.FULL;
 	private PatternAtlas patternAtlas;
 	private com.openggf.debug.PerformanceProfiler profiler;
 	// Lazily allocated to avoid LWJGL native library loading in headless tests
@@ -581,8 +583,22 @@ public class GraphicsManager {
 		return displayColorProfile;
 	}
 
+	/** Changes only uploaded RGB; native palette bytes, fades and pending V-int writes retain ownership. */
+	public void setDisplayColorExpansion(DisplayColorExpansion expansion) {
+		DisplayColorExpansion next = expansion == null ? DisplayColorExpansion.FULL : expansion;
+		if (displayColorExpansion == next) return;
+		displayColorExpansion = next;
+		for (int line = 0; line < lastCachedPaletteLines.length; line++) {
+			if (lastCachedPaletteLines[line] != null) cacheLatchablePaletteTexture(lastCachedPaletteLines[line], line);
+		}
+		scopedUnderwaterDirty = true;
+		PatternRenderCommand.resetFrameState();
+	}
+
+	public DisplayColorExpansion getDisplayColorExpansion() { return displayColorExpansion; }
+
 	void writePaletteColor(ByteBuffer buffer, int r, int g, int b, int colorIndex) {
-		DisplayColorConverter.writeRgbBytes(r, g, b, displayColorProfile, buffer);
+		DisplayColorConverter.writeRgbBytes(r, g, b, displayColorProfile, displayColorExpansion, buffer);
 		buffer.put((byte) (colorIndex == 0 ? 0 : 255));
 	}
 
@@ -1693,6 +1709,7 @@ public class GraphicsManager {
 		underwaterPaletteContentKeyChanged = !underwaterPaletteContentKeyValid;
 		writeUnderwaterContentKeyInt(totalLines);
 		writeUnderwaterContentKeyInt(displayColorProfile.ordinal());
+		writeUnderwaterContentKeyInt(displayColorExpansion.ordinal());
 		int sourceCount = totalLines + (hasDerivedDonorRow ? 2 : 0);
 		for (int sourceIndex = 0; sourceIndex < sourceCount; sourceIndex++) {
 			byte sourceTag = sourceIndex < totalLines
@@ -1857,12 +1874,13 @@ public class GraphicsManager {
 	private boolean underwaterDerivedRowKeyMatches(int row, int donorOffset,
 			int normalOffset, int shiftedOffset) {
 		byte[] key = underwaterDerivedRowKeys[row];
-		if (key == null || key[0] != (byte) displayColorProfile.ordinal()) {
+		if (key == null || key[0] != (byte) displayColorProfile.ordinal()
+				|| key[1] != (byte) displayColorExpansion.ordinal()) {
 			return false;
 		}
-		return underwaterDerivedRowKeyRangeMatches(key, 1, donorOffset)
-				&& underwaterDerivedRowKeyRangeMatches(key, 1 + 16 * 3, normalOffset)
-				&& underwaterDerivedRowKeyRangeMatches(key, 1 + 2 * 16 * 3, shiftedOffset);
+		return underwaterDerivedRowKeyRangeMatches(key, 2, donorOffset)
+				&& underwaterDerivedRowKeyRangeMatches(key, 2 + 16 * 3, normalOffset)
+				&& underwaterDerivedRowKeyRangeMatches(key, 2 + 2 * 16 * 3, shiftedOffset);
 	}
 
 	private boolean underwaterDerivedRowKeyRangeMatches(byte[] key, int keyOffset, int sourceOffset) {
@@ -1878,14 +1896,15 @@ public class GraphicsManager {
 			int normalOffset, int shiftedOffset, int ratioR, int ratioG, int ratioB) {
 		byte[] key = underwaterDerivedRowKeys[row];
 		if (key == null) {
-			key = new byte[1 + 3 * 16 * 3];
+			key = new byte[2 + 3 * 16 * 3];
 			underwaterDerivedRowKeys[row] = key;
 			underwaterDerivedRowRgba[row] = new int[16 * 4];
 		}
 		key[0] = (byte) displayColorProfile.ordinal();
-		System.arraycopy(underwaterPaletteSourceRgb, donorOffset, key, 1, 16 * 3);
-		System.arraycopy(underwaterPaletteSourceRgb, normalOffset, key, 1 + 16 * 3, 16 * 3);
-		System.arraycopy(underwaterPaletteSourceRgb, shiftedOffset, key, 1 + 2 * 16 * 3, 16 * 3);
+		key[1] = (byte) displayColorExpansion.ordinal();
+		System.arraycopy(underwaterPaletteSourceRgb, donorOffset, key, 2, 16 * 3);
+		System.arraycopy(underwaterPaletteSourceRgb, normalOffset, key, 2 + 16 * 3, 16 * 3);
+		System.arraycopy(underwaterPaletteSourceRgb, shiftedOffset, key, 2 + 2 * 16 * 3, 16 * 3);
 
 		int[] rgba = underwaterDerivedRowRgba[row];
 		for (int colorIndex = 0; colorIndex < 16; colorIndex++) {
@@ -1894,7 +1913,7 @@ public class GraphicsManager {
 			int g = Math.min(255, Byte.toUnsignedInt(underwaterPaletteSourceRgb[colorOffset + 1]) * ratioG / 256);
 			int b = Math.min(255, Byte.toUnsignedInt(underwaterPaletteSourceRgb[colorOffset + 2]) * ratioB / 256);
 			int rgbaOffset = colorIndex * 4;
-			DisplayColorConverter.writeRgbBytes(r, g, b, displayColorProfile, rgba, rgbaOffset);
+			DisplayColorConverter.writeRgbBytes(r, g, b, displayColorProfile, displayColorExpansion, rgba, rgbaOffset);
 			rgba[rgbaOffset + 3] = colorIndex == 0 ? 0 : 255;
 		}
 		underwaterDerivedRowRecomputeCount++;

@@ -399,7 +399,7 @@ public class Sonic1LevelSelectManager implements LevelSelectProvider {
         Palette pal0 = dataLoader.getPalette(0);
         if (pal0 != null) {
             Palette.Color backdrop = pal0.getColor(0);
-            glClearColor(backdrop.rFloat(), backdrop.gFloat(), backdrop.bFloat(), 1.0f);
+            com.openggf.level.PaletteDisplayColor.glClear(backdrop, com.openggf.game.GameServices.graphics());
         } else {
             // Fallback: black
             glClearColor(0.0f, 0.0f, 0.0f, 1.0f);

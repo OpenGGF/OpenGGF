@@ -30,16 +30,25 @@ import com.openggf.sprites.playable.ObjectControlState;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.util.Objects;
 
 public final class S3kSlotBonusStageRuntime {
     private static final int TILE_SIZE = 8;
     private static final int GLASS_PRIORITY_HALF_EXTENT_X = 0x30;
     private static final int GLASS_PRIORITY_HALF_EXTENT_Y = 0x30;
     private static final int PRIORITY_BIT = 0x8000;
+    private static final String SLOT_GOAL_FADE_OWNER = "s3k.slots.goalFade";
 
+    private final S3kSlotResources suppliedResources;
+
+    public S3kSlotBonusStageRuntime() { this(null); }
+
+    public S3kSlotBonusStageRuntime(S3kSlotResources resources) {
+        suppliedResources = resources;
+    }
+
+    private SpriteAnimationSet baseSlotAnimations;
+    private SpriteAnimationSet goalFadeAnimations;
+    private RuntimeRewindState pendingRewindObjectBindings;
     private boolean initialized;
     private GameplayModeContext bootstrapGameplayMode;
     private AbstractPlayableSprite originalPlayer;
@@ -47,6 +56,7 @@ public final class S3kSlotBonusStageRuntime {
     private S3kSlotRenderBuffers slotRenderBuffers;
     private final S3kSlotOptionCycleSystem optionCycleSystem = new S3kSlotOptionCycleSystem();
     private S3kSlotPlayerRuntime slotPlayerRuntime;
+    private S3kSlotPlayerArt slotArt;
     private S3kSlotCollisionSystem slotCollisionSystem;
     private S3kSlotStageController slotStageController;
     private final S3kSlotLayoutRenderer slotLayoutRenderer = new S3kSlotLayoutRenderer();
@@ -55,7 +65,6 @@ public final class S3kSlotBonusStageRuntime {
     private AbstractPlayableSprite slotPlayer;
     private S3kSlotBonusCageObjectInstance slotCage;
     private boolean continueAwarded;
-    private boolean exitFadeStarted;
     // ROM loc_4BC1E's goal-fade trigger executes `move.w #60,$38(a0)`
     // (sonic3k.asm:98971). $38 is the character_id offset
     // (sonic3k.constants.asm:66), so the high byte of 60 (=$003C) overwrites
@@ -65,6 +74,9 @@ public final class S3kSlotBonusStageRuntime {
     // roll animation switches from AniKnux02/AniTails02 to AniSonic02. Latched
     // once when the fade begins.
     private boolean goalFadeRollOverrideApplied;
+    // Set and consumed within one LevelLoop iteration (movement hook -> update), so it
+    // is never live at a rewind capture boundary.
+    private boolean goalTouchedThisIteration;
     private final List<S3kSlotRingRewardObjectInstance> slotRingRewards = new ArrayList<>();
     private final List<S3kSlotSpikeRewardObjectInstance> slotSpikeRewards = new ArrayList<>();
     private short[] pointGrid;
@@ -74,28 +86,17 @@ public final class S3kSlotBonusStageRuntime {
     // V_int_run_count at the end of the previous update: see previousIterationVIntRunCount().
     private Integer lastIterationVIntRunCount;
     public void bootstrap() {
-        final S3kSlotLayoutData data;
-        try {
-            // sub_4B6AA reads both entry words and all 32 rows before play.
-            // Resolve the whole user-ROM source before changing this runtime.
-            data = S3kSlotRomData.loadLayout(RomByteReader.fromRom(GameServices.rom().getRom()));
-        } catch (IOException failure) {
-            throw new UncheckedIOException("Cannot load Slots entry/layout from the user ROM", failure);
-        }
-        bootstrap(data);
-    }
-
-    /** Explicit data injection for native component fixtures; production always uses the ROM overload. */
-    void bootstrap(S3kSlotLayoutData data) {
-        Objects.requireNonNull(data, "data");
-        S3kSlotRenderBuffers buffers = S3kSlotRenderBuffers.fromLayout(data);
+        S3kSlotResources romData = suppliedResources != null ? suppliedResources : S3kSlotResources.fromActiveRom();
         initialized = false;
         originalPlayer = null;
         slotPlayer = null;
+        slotArt = null;
         slotCage = null;
         continueAwarded = false;
-        exitFadeStarted = false;
         goalFadeRollOverrideApplied = false;
+        baseSlotAnimations = null;
+        goalFadeAnimations = null;
+        pendingRewindObjectBindings = null;
         slotRingRewards.clear();
         slotSpikeRewards.clear();
         pointGrid = null;
@@ -103,8 +104,8 @@ public final class S3kSlotBonusStageRuntime {
         lastFrameCounter = -1;
         suppressedSidekicks.clear();
         lastIterationVIntRunCount = null;
-        slotStageState = S3kSlotStageState.bootstrap();
-        slotRenderBuffers = buffers;
+        slotStageState = S3kSlotStageState.bootstrap(romData);
+        slotRenderBuffers = S3kSlotRenderBuffers.fromRomData(romData);
         optionCycleSystem.bootstrap(slotStageState);
         slotCollisionSystem = new S3kSlotCollisionSystem(slotRenderBuffers, slotStageState);
         slotPlayerRuntime = new S3kSlotPlayerRuntime(slotStageState, slotCollisionSystem);
@@ -129,14 +130,21 @@ public final class S3kSlotBonusStageRuntime {
         String mainCode = ActiveGameplayTeamResolver.resolveMainCharacterCode(GameServices.configuration());
         if (bootstrapGameplayMode.getSpriteManager().getSprite(mainCode) instanceof AbstractPlayableSprite mainPlayer) {
             originalPlayer = mainPlayer;
-            short slotStartX = data.startX();
-            short slotStartY = data.startY();
+            short slotStartX = romData.playerStartX();
+            short slotStartY = romData.playerStartY();
             short centerX = S3kSlotRomData.SLOT_BONUS_CAGE_CENTER_X;
             short centerY = S3kSlotRomData.SLOT_BONUS_CAGE_CENTER_Y;
             slotPlayer = S3kSlotBonusPlayer.create(mainCode, slotStartX, slotStartY, slotPlayerRuntime);
             copyLivePlayerState(mainPlayer, slotPlayer);
+            // A rendered participant gets the host sprite resources of loc_4B9E8.
+            // Presentation-less logic fixtures have no renderer to replace.
+            if (mainPlayer.getSpriteRenderer() != null) {
+                slotArt = S3kSlotPlayerArt.load(S3kSlotPlayerArt.characterIdFor(slotPlayer), slotPlayer);
+                slotArt.bind(slotPlayer);
+            }
             slotPlayer.setCentreX(slotStartX);
             slotPlayer.setCentreY(slotStartY);
+            baseSlotAnimations = slotPlayer.getAnimationSet();
             slotPlayerRuntime.initialize(slotPlayer);
             slotPlayerRuntime.resetSlotOrigin(slotPlayer);
             bootstrapGameplayMode.getSpriteManager().addSprite(slotPlayer);
@@ -158,9 +166,20 @@ public final class S3kSlotBonusStageRuntime {
 
     public void update(int frameCounter) {
         lastFrameCounter = frameCounter;
+        latchAnimatePaletteMode();
 
-        if (slotPlayerRuntime != null && slotPlayerRuntime.isExiting()) {
+        // The goal tile is dispatched by this iteration's movement (sub_4BE3A ->
+        // loc_4BED0, sonic3k.asm:99247-99253), which only advances routine(a0): the
+        // rest of the goal iteration is ordinary, and loc_4BC1E first runs next iteration.
+        boolean goalIteration = goalTouchedThisIteration;
+        goalTouchedThisIteration = false;
+        if (slotPlayerRuntime != null && slotPlayerRuntime.isExiting() && !goalIteration) {
             slotPlayerRuntime.tickExitFrame(slotPlayer);
+            // Obj_SlotBonus (loc_4BF9A, sonic3k.asm:99324-99348) is an ordinary SST object that
+            // Process_Sprites still runs after the player's loc_4BC1E/loc_4BC54 rotation step, so
+            // the cage keeps orbiting the player and writing Events_bg+$00/$02 for
+            // Slots_ScreenEvent's machine plane throughout the goal wind-down and fade.
+            tickCage(frameCounter);
             // ROM loc_4BC1E (sonic3k.asm:98964-98972): when the goal-exit
             // rotation wind-down reaches SStage_scalar_index_1 == $1800, the
             // trigger runs `move.w #60,$38(a0)` (sonic3k.asm:98971). $38 is the
@@ -172,13 +191,15 @@ public final class S3kSlotBonusStageRuntime {
             // the same frame the fade begins.
             if (slotPlayerRuntime.isExitFading() && !goalFadeRollOverrideApplied) {
                 applyGoalFadeSonicRollOverride();
+                if (slotArt != null) slotArt.writeGoalCharacterId();
                 goalFadeRollOverrideApplied = true;
             }
-            var fade = GameServices.fadeOrNull();
-            if (slotPlayerRuntime.isExitFading() && !exitFadeStarted && fade != null) {
-                fade.startFadeToBlack(null, 0, S3kSlotExitSequence.FADE_FRAMES);
-                exitFadeStarted = true;
+            S3kSlotExitSequence exit = slotPlayerRuntime.activeExitSequence();
+            if (exit != null && exit.palToBlackThisTick()) {
+                palToBlack();
             }
+            // $38 reaching zero sets Restart_level_flag; Level: then runs the ordinary
+            // Pal_FadeToBlack (sonic3k.asm:7504, 7523, 5042-5051) over the 20 passes above.
             if (slotPlayerRuntime.isExitComplete()) {
                 exitTriggered = true;
             }
@@ -193,6 +214,7 @@ public final class S3kSlotBonusStageRuntime {
             // numerically stable, since the player's position is frozen too) value
             // (TestS3kSlotsBonusTraceReplay frame 868: expected camera=(04D2,02C8)
             // vs the engine's stale (04D3,02C9) held from frame 867).
+            performPlayerDplc();
             updateCamera();
             updateVisuals();
             latchIterationVIntRunCount();
@@ -218,11 +240,7 @@ public final class S3kSlotBonusStageRuntime {
         }
 
         // Cage object
-        if (slotCage != null && slotPlayer != null) {
-            slotCage.tickSlotRuntime(frameCounter, slotPlayer,
-                    currentPlayerOriginX(), currentPlayerOriginY());
-            slotStageState.setEventsBg(slotCage.getCurrentX(), slotCage.getCurrentY());
-        }
+        tickCage(frameCounter);
 
         // Reward objects
         updateRewards(frameCounter);
@@ -243,6 +261,7 @@ public final class S3kSlotBonusStageRuntime {
             slotStageState.clearSlotWallContact();
         }
 
+        performPlayerDplc();
         // ROM sub_4BBF4: custom camera tracking centered on player
         updateCamera();
 
@@ -272,14 +291,18 @@ public final class S3kSlotBonusStageRuntime {
             if (originalPlayer != null) {
                 bootstrapGameplayMode.getSpriteManager().addSprite(originalPlayer);
                 bootstrapGameplayMode.getCamera().setFocusedSprite(originalPlayer);
+                if (slotArt != null) refreshReturnedPlayerTextures(originalPlayer);
             }
         }
         restoreSuppressedSidekicks();
         slotPlayer = null;
+        slotArt = null;
         slotCage = null;
         continueAwarded = false;
-        exitFadeStarted = false;
         goalFadeRollOverrideApplied = false;
+        baseSlotAnimations = null;
+        goalFadeAnimations = null;
+        pendingRewindObjectBindings = null;
         slotRingRewards.clear();
         slotSpikeRewards.clear();
         pointGrid = null;
@@ -294,6 +317,74 @@ public final class S3kSlotBonusStageRuntime {
         originalPlayer = null;
         bootstrapGameplayMode = null;
         initialized = false;
+    }
+
+    private record RuntimeRewindState(S3kSlotStageState.RewindState stage, S3kSlotRenderBuffers.RewindState buffers,
+            S3kSlotPlayerRuntime.RewindState player, com.openggf.game.rewind.schema.RewindObjectStateBlob layoutRenderer,
+            java.util.List<com.openggf.game.rewind.schema.RewindObjectStateBlob> legacyAnimations, boolean exitTriggered,
+            boolean continueAwarded, boolean goalRollOverride,
+            int lastFrame, Integer lastVInt, short[] points, int visibleFrame, S3kSlotPlayerArt.RewindState art,
+            com.openggf.game.rewind.identity.ObjectRefId cage,
+            java.util.List<com.openggf.game.rewind.identity.ObjectRefId> ringRewards,
+            java.util.List<com.openggf.game.rewind.identity.ObjectRefId> spikeRewards) {
+        RuntimeRewindState { points=points==null?null:points.clone(); }
+        @Override public short[] points() { return points==null?null:points.clone(); }
+    }
+    public Object captureSlotRewindState() {
+        if (!initialized) return null;
+        var identities=bootstrapGameplayMode.getLevelManager().getObjectManager()
+                .captureIdentityContext().requireIdentityTable();
+        var rings=new java.util.ArrayList<com.openggf.game.rewind.identity.ObjectRefId>();
+        for (var reward:slotRingRewards) rings.add(requireRuntimeObjectId(identities,reward));
+        var spikes=new java.util.ArrayList<com.openggf.game.rewind.identity.ObjectRefId>();
+        for (var reward:slotSpikeRewards) spikes.add(requireRuntimeObjectId(identities,reward));
+        return new RuntimeRewindState(slotStageState.captureSlotRewindState(),
+                slotRenderBuffers.captureSlotRewindState(),slotPlayerRuntime.captureSlotRewindState(),
+                com.openggf.game.rewind.schema.CompactFieldCapturer.capture(slotLayoutRenderer),layoutAnimator.captureSlotRewindState(),
+                exitTriggered,continueAwarded,goalFadeRollOverrideApplied,lastFrameCounter,
+                lastIterationVIntRunCount,pointGrid,slotRenderBuffers.visibleFrameIndex(visibleCells),
+                slotArt==null?null:slotArt.capture(),requireRuntimeObjectId(identities,slotCage),java.util.List.copyOf(rings),java.util.List.copyOf(spikes));
+    }
+    private static com.openggf.game.rewind.identity.ObjectRefId requireRuntimeObjectId(
+            com.openggf.game.rewind.identity.RewindIdentityTable identities,
+            com.openggf.level.objects.ObjectInstance object) {
+        if (object==null) return null;
+        var id=identities.encodeObject(object);
+        if (id==null) throw new IllegalStateException("Slot runtime retains an unregistered object");
+        return id;
+    }
+    public void restoreSlotRewindState(Object captured) {
+        if (!initialized || !(captured instanceof RuntimeRewindState state))
+            throw new IllegalArgumentException("Slot runtime requires its completed captured state");
+        slotStageState.restoreSlotRewindState(state.stage());
+        slotRenderBuffers.restoreSlotRewindState(state.buffers());
+        slotPlayerRuntime.restoreSlotRewindState(state.player(),slotStageController);
+        com.openggf.game.rewind.schema.CompactFieldCapturer.restore(slotLayoutRenderer,state.layoutRenderer());
+        layoutAnimator.restoreSlotRewindState(state.legacyAnimations());
+        exitTriggered=state.exitTriggered(); continueAwarded=state.continueAwarded();
+        goalFadeRollOverrideApplied=state.goalRollOverride();
+        lastFrameCounter=state.lastFrame(); lastIterationVIntRunCount=state.lastVInt();
+        pointGrid=state.points(); visibleCells=slotRenderBuffers.visibleFrame(state.visibleFrame());
+        // The goal's native character-id write selects another immutable script
+        // bank. Rewind selects its captured version without advancing animation.
+        if (goalFadeRollOverrideApplied) applyGoalFadeSonicRollOverride();
+        else slotPlayer.setAnimationSet(baseSlotAnimations);
+        // Resident VRAM and both previous-frame bytes return exactly; restore
+        // neither animates nor submits cues.
+        if (slotArt != null) slotArt.restore(state.art());
+        pendingRewindObjectBindings=state;
+    }
+    public void rebindRuntimeRewindObjects() {
+        var state=pendingRewindObjectBindings;
+        if (state==null) return;
+        var identities=bootstrapGameplayMode.getLevelManager().getObjectManager()
+                .captureIdentityContext().requireIdentityTable();
+        slotCage=(S3kSlotBonusCageObjectInstance)identities.resolveObject(state.cage(),true);
+        slotRingRewards.clear();
+        for (var id:state.ringRewards()) slotRingRewards.add((S3kSlotRingRewardObjectInstance)identities.resolveObject(id,true));
+        slotSpikeRewards.clear();
+        for (var id:state.spikeRewards()) slotSpikeRewards.add((S3kSlotSpikeRewardObjectInstance)identities.resolveObject(id,true));
+        pendingRewindObjectBindings=null;
     }
 
     public boolean isInitialized() {
@@ -318,7 +409,28 @@ public final class S3kSlotBonusStageRuntime {
     }
 
     public int paletteCycleMode() {
-        return slotStageState != null && slotStageState.paletteCycleEnabled() ? 1 : 0;
+        return slotStageState != null ? slotStageState.animatePaletteMode() : 0;
+    }
+
+    /**
+     * LevelLoop runs Animate_Palette (sonic3k.asm:7891) before Process_Sprites, so AnPal_Slots
+     * reads the Palette_cycle_counters+0 byte the previous iteration's cage/goal left
+     * (sonic3k.asm:3845-3847: bmi stops, bne selects the capture cycle). The engine's palette
+     * cycler runs after this runtime, so the mode is latched before this iteration's writes.
+     */
+    private void latchAnimatePaletteMode() {
+        if (slotStageState == null) {
+            return;
+        }
+        S3kSlotExitSequence exit = slotPlayerRuntime != null ? slotPlayerRuntime.activeExitSequence() : null;
+        // loc_4BC1E: st (Palette_cycle_counters+$00).w
+        int mode = exit != null && exit.stopsPaletteCycle() ? -1
+                : slotStageState.paletteCycleEnabled() ? 1 : 0;
+        slotStageState.setAnimatePaletteMode(mode);
+    }
+
+    public void latchAnimatePaletteModeForTest() {
+        latchAnimatePaletteMode();
     }
 
     public void setPaletteCycleEnabledForTest(boolean enabled) {
@@ -384,10 +496,6 @@ public final class S3kSlotBonusStageRuntime {
 
     public boolean isExitTriggered() {
         return exitTriggered;
-    }
-
-    public boolean hasCompletedExitFadeToBlack() {
-        return exitFadeStarted && slotPlayerRuntime != null && slotPlayerRuntime.isExitComplete();
     }
 
     public S3kSlotLayoutAnimator activeLayoutAnimatorForTest() {
@@ -613,7 +721,7 @@ public final class S3kSlotBonusStageRuntime {
             case GOAL_EXIT -> {
                 if (GameServices.audio() != null) GameServices.audio().playSfx(Sonic3kSfx.GOAL.id);
                 slotPlayerRuntime.startGoalExit(slotPlayer);
-                exitFadeStarted = false;
+                goalTouchedThisIteration = true;
                 goalFadeRollOverrideApplied = false;
             }
             case SPIKE_REVERSAL -> {
@@ -656,6 +764,14 @@ public final class S3kSlotBonusStageRuntime {
         }
         bootstrapGameplayMode.getCamera().setX((short) camX);
         bootstrapGameplayMode.getCamera().setY((short) camY);
+    }
+
+    private void tickCage(int frameCounter) {
+        if (slotCage != null && slotPlayer != null) {
+            slotCage.tickSlotRuntime(frameCounter, slotPlayer,
+                    currentPlayerOriginX(), currentPlayerOriginY());
+            slotStageState.setEventsBg(slotCage.getCurrentX(), slotCage.getCurrentY());
+        }
     }
 
     private int currentPlayerOriginX() {
@@ -901,9 +1017,16 @@ public final class S3kSlotBonusStageRuntime {
         target.setAnimationId(source.getAnimationId());
         target.setAnimationFrameIndex(source.getAnimationFrameIndex());
         target.setAnimationTick(source.getAnimationTick());
-        target.setSpindashDustController(source.getSpindashDustController());
-        target.setTailsTailsController(source.getTailsTailsController());
-        target.setSuperStateController(source.getSuperStateController());
+        // Native loc_6B76 bypasses ordinary player/dust creation. These
+        // controllers retain their original sprite and do not belong to Slot.
+        target.setSpindashDustController(null);
+        // loc_4B9E8 allocates a fresh Obj_Tails_Tail whose $30 is the Slot
+        // sprite; reusing the level controller would keep reading its retired
+        // parent. Rendered participants replace this art with host art below.
+        var originalTail = source.getTailsTailsController();
+        target.setTailsTailsController(originalTail == null ? null
+                : new com.openggf.sprites.managers.TailsTailsController(target, originalTail.getRenderer(), true));
+        target.setSuperStateController(null);
         target.setPowerUpSpawner(source.getPowerUpSpawner());
         target.setDirection(source.getDirection());
         // ROM Obj_Sonic_RotatingSlotBonus uses make_art_tile(...,0,0);
@@ -936,7 +1059,11 @@ public final class S3kSlotBonusStageRuntime {
         if (slotPlayer == null) {
             return;
         }
-        SpriteAnimationSet currentSet = slotPlayer.getAnimationSet();
+        if (goalFadeAnimations != null) {
+            slotPlayer.setAnimationSet(goalFadeAnimations);
+            return;
+        }
+        SpriteAnimationSet currentSet = baseSlotAnimations;
         if (currentSet == null) {
             return;
         }
@@ -957,10 +1084,62 @@ public final class S3kSlotBonusStageRuntime {
             }
             overriddenSet.addScript(rollId, sonicRoll);
             overriddenSet.addScript(roll2Id, sonicRoll2);
+            goalFadeAnimations = overriddenSet;
             slotPlayer.setAnimationSet(overriddenSet);
         } catch (Exception ignored) {
             // ROM unavailable in some harnesses: leave the character's own roll.
         }
+    }
+
+    /**
+     * Pal_ToBlack (sonic3k.asm:5059-5083) over Palette_fade_info $003F, set by loc_4BC1E:
+     * all 64 Normal_palette colours (Slots has no water palette in use). Pal_DecColor
+     * (sonic3k.asm:5085-5113) lowers red, else green, else blue by one 2-step. The RAM
+     * write is published by the following VBlank like any other palette owner.
+     */
+    private void palToBlack() {
+        LevelManager levelManager = GameServices.levelOrNull();
+        var level = levelManager != null ? levelManager.getCurrentLevel() : null;
+        if (level == null) {
+            return;
+        }
+        var registry = GameServices.paletteOwnershipRegistryOrNull();
+        for (int line = 0; line < Math.min(4, level.getPaletteCount()); line++) {
+            var palette = level.getPalette(line);
+            byte[] data = new byte[palette.getColorCount() * 2];
+            for (int i = 0; i < palette.getColorCount(); i++) {
+                int word = com.openggf.game.palette.PaletteWriteSupport.segaWordFromColor(palette.getColor(i));
+                if ((word & 0x00E) != 0) {
+                    word -= 0x002;
+                } else if ((word & 0x0E0) != 0) {
+                    word -= 0x020;
+                } else if ((word & 0xE00) != 0) {
+                    word -= 0x200;
+                }
+                data[i * 2] = (byte) (word >>> 8);
+                data[i * 2 + 1] = (byte) word;
+            }
+            com.openggf.game.sonic3k.S3kPaletteWriteSupport.applyLine(registry, level, GameServices.graphics(),
+                    SLOT_GOAL_FADE_OWNER, com.openggf.game.sonic3k.S3kPaletteOwners.PRIORITY_CUTSCENE_OVERRIDE,
+                    line, data, true);
+        }
+    }
+
+    /** Perform_Player_DPLC after this frame's Animate (loc_4B97C). */
+    private void performPlayerDplc() {
+        if (slotArt != null && slotPlayer != null) slotArt.performPlayerDplc(slotPlayer.getMappingFrame());
+    }
+
+    /**
+     * The Slot body/tail shared these atlas indices; the returned player's own
+     * resident tiles were never written, so re-publish them unchanged.
+     */
+    private static void refreshReturnedPlayerTextures(AbstractPlayableSprite player) {
+        if (player.getSpriteRenderer() != null)
+            com.openggf.sprites.render.PlayerResidentBanks.refreshTextures(player.getSpriteRenderer());
+        var tail = player.getTailsTailsController();
+        if (tail != null && tail.getRenderer() != null)
+            com.openggf.sprites.render.PlayerResidentBanks.refreshTextures(tail.getRenderer());
     }
 
     private void suppressCpuSidekicks() {

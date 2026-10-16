@@ -236,8 +236,26 @@ audio:
 
 ## How do I make colors less bright?
 
-The default display profile is the raw RGB expansion of Mega Drive palette values. You can
-select a darker analog-style presentation, or a slightly softer NTSC-style presentation:
+In **Settings → Display**, choose **Colour expansion → Limited** to cap palette RGB
+channels at 238. **Full** is the default and preserves the current output up to 255.
+Apply saves the choice and refreshes resident normal and underwater palettes and the
+backdrop colour without changing native palette bytes or gameplay. Headless gameplay
+captures render with the same saved setting. You can also set it in `config.yaml`:
+
+```yaml
+display:
+  colorExpansion: "LIMITED"
+```
+
+Expansion is separate from **Colour profile**. Limited applies a rounded 238/255
+output gain after palette fades and the selected profile, including arbitrary
+creator palette colours. With Raw RGB, the eight ROM channel levels become
+0, 34, 68, 102, 136, 170, 204 and 238, matching GPGX normal digital output.
+It does not emulate shadow/highlight or a 16–235 video range. Shader effects and
+UI colours drawn outside the palette pipeline retain their own colour contracts.
+
+The default colour profile is Raw RGB. You can independently select a darker
+analogue-style presentation or a softer NTSC-style presentation:
 
 ```yaml
 display:

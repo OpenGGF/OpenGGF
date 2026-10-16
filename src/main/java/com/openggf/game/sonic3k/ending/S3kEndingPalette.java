@@ -21,6 +21,76 @@ public final class S3kEndingPalette {
         catch (IOException failure) { throw new UncheckedIOException(failure); }
     }
     public static void blackLine(ObjectServices services, int line) { writeLine(services, line, new byte[32]); }
+    /** Copies consecutive ROM words into the listed colours of one line; the others keep their values. */
+    public static void loadColors(ObjectServices services, int line, int address, int... colors) {
+        try {
+            byte[] source = services.rom().readBytes(address, colors.length * 2), bytes = new byte[32];
+            for (int color = 0; color < 16; color++) {
+                int current = word(services, line, color);
+                bytes[color * 2] = (byte) (current >>> 8); bytes[color * 2 + 1] = (byte) current;
+            }
+            for (int i = 0; i < colors.length; i++) {
+                bytes[colors[i] * 2] = source[i * 2]; bytes[colors[i] * 2 + 1] = source[i * 2 + 1];
+            }
+            writeLine(services, line, bytes);
+        } catch (IOException failure) { throw new UncheckedIOException(failure); }
+    }
+    /** Level loc_64DC: Pal_FillBlack selects Pal_FillWhite for D01, offset20/count2F. */
+    public static void fillInitialSceneWhite(ObjectServices services) {
+        byte[] white=new byte[32];
+        for(int color=0;color<16;color++){white[color*2]=0xE;white[color*2+1]=(byte)0xEE;}
+        for(int line=1;line<4;line++)writeLine(services,line,white);
+    }
+    /** Animate_Palette/Pal_FromWhite, before Process_Sprites; FACE was cleared by Level. */
+    public static void advanceInitialSceneFromWhite(ObjectServices services) {
+        var ram=((com.openggf.game.sonic3k.runtime.EndingZoneRuntimeState)services.zoneRuntimeState()).screen();
+        ram.initialPaletteDelay=(short)(ram.initialPaletteDelay-1);
+        if(ram.initialPaletteDelay>=0)return;
+        ram.initialPaletteDelay=2;
+        for(int line=1;line<4;line++) {
+            byte[] bytes=services.paletteOwnershipRegistryOrNull().targetSegaData(line,0,16);
+            for(int color=0;color<16;color++) {
+                int target=(bytes[color*2]&255)<<8|(bytes[color*2+1]&255);
+                int next=fromWhiteWord(word(services,line,color),target);
+                bytes[color*2]=(byte)(next>>>8);bytes[color*2+1]=(byte)next;
+            }
+            writeLine(services,line,bytes);
+        }
+    }
+    /** sub_85EB4 (sonic3k.asm:180701): each component of the line rises one level, up to $E. */
+    public static void towardsWhite(ObjectServices services, int line) {
+        byte[] bytes = new byte[32];
+        for (int color = 0; color < 16; color++) {
+            int current = word(services, line, color);
+            int blue = (current >>> 8) & 0xE, green = current & 0xE0, red = current & 0xE;
+            if (blue < 0xE) blue += 2;
+            if (green < 0xE0) green += 0x20;
+            if (red < 0xE) red += 2;
+            int next = blue << 8 | green | red;
+            bytes[color * 2] = (byte) (next >>> 8); bytes[color * 2 + 1] = (byte) next;
+        }
+        writeLine(services, line, bytes);
+    }
+    /** sub_85F2A (sonic3k.asm:180757): components above Target_palette fall one level. */
+    public static void downTowardsActualTarget(ObjectServices services, int line) {
+        byte[] bytes = services.paletteOwnershipRegistryOrNull().targetSegaData(line, 0, 16);
+        for (int color = 0; color < 16; color++) {
+            int target = (bytes[color * 2] & 255) << 8 | (bytes[color * 2 + 1] & 255);
+            int next = fromWhiteWord(word(services, line, color), target);
+            bytes[color * 2] = (byte) (next >>> 8); bytes[color * 2 + 1] = (byte) next;
+        }
+        writeLine(services, line, bytes);
+    }
+    /** Pal_DecColor2 masks each component and skips decrements at/below target (BLS). */
+    static int fromWhiteWord(int current,int target) {
+        int blue=(current>>>8)&0xE;
+        if(blue>((target>>>8)&0xE))blue-=2;
+        int green=current&0xE0,red=current&0xE;
+        if(green>(target&0xE0))green-=0x20;
+        if(red>(target&0xE))red-=2;
+        return blue<<8|green|red;
+    }
+
     /** Pal_ToBlack / Pal_DecColor consume red, then green, then blue on separate passes. */
     public static void toBlackAll(ObjectServices services) {
         for (int line=0;line<4;line++) {

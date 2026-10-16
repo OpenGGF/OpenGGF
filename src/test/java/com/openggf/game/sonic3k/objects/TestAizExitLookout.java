@@ -132,7 +132,7 @@ class TestAizExitLookout {
 
     @ParameterizedTest
     @CsvSource({"47,0", "48,0", "49,1"})
-    void delayedRightFacingNativeBodyRespectsTheConservativeP2BirthBoundary(int offset, int expected) throws java.io.IOException {
+    void nativeBodyRespectsTheConservativeP2BirthBoundary(int offset, int expected) throws java.io.IOException {
         var fixture = boot("sonic", "tails");
         var player = fixture.sprite();
         var objects = GameServices.level().getObjectManager();
@@ -150,8 +150,8 @@ class TestAizExitLookout {
                 com.openggf.game.sonic3k.constants.Sonic3kConstants.TOUCH_SIZES_COUNT);
         assertEquals(8, touch.getWidthRadius(0x0B));
         assertEquals(8, touch.getHeightRadius(0x0B));
-        // Normal native player half-width8 + body half-width8 + a possible
-        // delayed32px facing origin makes48 a conservative admission span.
+        // Normal native player half-width8 + body half-width8 is well inside
+        // the 48px admission span; the body never turns or shifts its origin.
         // Positioning this boundary is a local mechanism witness, not a route.
         tree.update(240, player);
         assertEquals(expected, lookouts());
@@ -165,31 +165,38 @@ class TestAizExitLookout {
                 .map(MonkeyDudeBadnikInstance.class::cast).filter(o -> o.getSpawn().layoutIndex() == -1)
                 .findFirst().orElseThrow();
         assertEquals(0x2DE0, lookout.getCollisionX(), "construction retains the original left-facing origin");
-        boolean shifted = false;
+        // MonkeyDude_Wait (loc_85652: Animate_Raw/Obj_Wait) and MonkeyDude_Active
+        // (sonic3k.asm:182734-182789) never write body x_pos or render_flags; only
+        // the arm root targets P1. The body keeps its placement origin while P1 is
+        // to the right, so 48 remains a conservative, not a tight, P2 birth span.
+        boolean published = false;
         for (int tick = 241; tick <= 246; tick++) {
             objects.snapshotTouchResponseState();
             objects.runTouchResponsesForPlayer(p2, tick, true);
             assertFalse(p2.isHurt(), "P2 must be separated in the native player-slot touch pass");
             objects.update(GameServices.camera().getX(), player, java.util.List.of(p2), tick, false);
             objects.runTouchResponsesForPlayer(p2, tick, false);
-            assertFalse(p2.isHurt(), "P2 must also be separated after native body-facing publication");
-            shifted |= lookout.getCollisionX() == 0x2E00 && lookout.getCollisionFlags() == 0x0B;
+            assertFalse(p2.isHurt(), "P2 must also be separated after native body publication");
+            assertEquals(0x2DE0, lookout.getCollisionX(), "the native body never turns toward P1");
+            published |= lookout.getCollisionFlags() == 0x0B;
         }
-        assertTrue(shifted, "real release/init/wait dispatches must publish the delayed right-facing body");
+        assertTrue(published, "real release/init/wait dispatches must publish the native body collision");
         assertEquals(0x2DE0 + 49, p2.getCentreX());
         assertEquals(0x31C, p2.getCentreY());
-        assertEquals(0x2E00, lookout.getCollisionX());
+        assertEquals(0x2DE0, lookout.getCollisionX());
         assertTrue(lookout.isOnScreenForTouch(), "the harmless49px result must not come from offscreen culling");
         assertFalse(lookout.isDestroyed());
     }
 
-    @Test void ordinaryNativeBodyAtFortySevenPixelsActuallyHurtsP2AfterTheSameFacingDispatch() {
+    @ParameterizedTest
+    @CsvSource({"47,false", "0,true"})
+    void ordinaryNativeBodyKeepsItsPlacementOriginAndHurtsOnlyAnOverlappingP2(int offset, boolean hurt) {
         var fixture = boot("sonic", "tails");
         var player = fixture.sprite();
         var objects = GameServices.level().getObjectManager();
         var p2 = assertInstanceOf(AbstractPlayableSprite.class,
                 objects.getObjectServices().playerQuery().nativeP2OrNull());
-        prepareBoundaryLanding(player, p2, 47);
+        prepareBoundaryLanding(player, p2, offset);
         var body = new MonkeyDudeBadnikInstance(new ObjectSpawn(0x2DE0, 0x31C,
                 com.openggf.game.sonic3k.constants.Sonic3kObjectIds.MONKEY_DUDE, 0x10, 0, false, 0x31C));
         objects.addDynamicObject(body);
@@ -197,8 +204,9 @@ class TestAizExitLookout {
             objects.update(GameServices.camera().getX(), player, java.util.List.of(p2), tick, false);
             objects.runTouchResponsesForPlayer(p2, tick, false);
         }
-        assertEquals(0x2E00, body.getCollisionX());
-        assertTrue(p2.isHurt(), "native body contact is harmful during its AI wait; the birth guard supplies safety");
+        // MonkeyDude_Wait/MonkeyDude_Active never write x_pos or render_flags.
+        assertEquals(0x2DE0, body.getCollisionX(), "the native body keeps its placement origin");
+        assertEquals(hurt, p2.isHurt(), "native body contact is harmful during its AI wait only on real overlap");
         assertFalse(body.isDestroyed(), "non-attacking P2 must hurt rather than defeat the native body");
     }
 
@@ -207,8 +215,8 @@ class TestAizExitLookout {
         player.setControlLocked(false); player.setRolling(false);
         // The cold native rider stands at x=$2E40 on its real exit ledge.
         // Query that sloped surface instead of assuming the old $33A Y.
-        // P1 must remain to the right: native body facing follows P1, while
-        // the separate P2 supplies the delayed-origin contact boundary.
+        // P1 remains to the right, where the arm root targets it; the body
+        // keeps its placement origin and P2 supplies the contact boundary.
         player.setCentreX((short) 0x2E40);
         var services = GameServices.level().getObjectManager().getObjectServices();
         var landing = services.findFloorSurface(0x2E40, 0x350, 32, 32,

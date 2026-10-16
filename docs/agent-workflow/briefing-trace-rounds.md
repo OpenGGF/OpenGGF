@@ -89,6 +89,27 @@ projection width/buffer and batching state in the capture's `finally`, including
 failed captures. The later focus-loss case passed after that restoration was
 added, even while the capture still exposed a separate editor-context error.
 
+Snapshot equality and its diagnostic walker must inspect the same captured
+content (2026-10-14, AIZ retained-scene qualification). Cross-package private
+record access was silently skipped by the walker, while top-level arrays and
+opaque state blobs could compare fresh equal arrays by Java identity. A known
+mismatch could therefore return an empty diff; equal native state could fail a
+world replay. Use the complete content comparator, make private access explicit,
+and fail closed on inspection failure. Never remove a registry key to get a pass. The object-manager comparator must also retain captured execution/identity
+cursors and every contact, plane-crossing and double-buffered touch channel.
+Its only local omissions are the render-bucket dirty cache (restore invalidates
+it deliberately) and allocator peak telemetry (allocation reads occupancy, not
+that peak). A scalar diagnostic must compare values before reporting boxed
+references, including counters beyond Java's small-integer cache. A concrete
+Palette leaf is copied defensively by native-stage capture/restore: compare all
+sixteen raw RGB triples through its dataEquals contract, including low bits.
+Neither Java copy identity nor a normalized 3-bit color word is that contract.
+The typed `level`/`object-manager` comparators apply only to their snapshot
+records; canonicalised maps or per-object states passed under those keys use
+the complete comparator. Rejecting them by type made the fail-closed check
+report "no inspectable difference" for content-equal snapshots (2026-10-16).
+That old fail-open walker had also hidden a real AIZ intro presentation loss.
+
 A live queue waiter can outlast Git worktree metadata (2026-10-16, architecture
 debt validation). An admission scan completed 33 smoke batches, then failed while
 probing another live waiter's vanished `maven-worktree.lock` parent. A live waiting
@@ -202,6 +223,18 @@ Do not infer a leak or TIME_WAIT cause from port availability: the tested Java 2
 constructor's observed default reuse was true on this host, and the controlled
 TIME_WAIT check permitted the original rebind.
 The actual full-run contender remained unobserved.
+
+
+A rendered ending frame has producer and published generations (2026-10-14).
+Sample SAT geometry, CRAM and plane scroll from the same completed producer;
+the later CPU Normal_palette and deformation can already describe the next
+frame. Actual GPU palette bytes, published tiles and the selected draw-scroll
+bridge distinguished that boundary in jar55d2131f/sourcebc5f53dc. Do not fit a
+per-frame offset or hide mismatch pixels. Infer the setup/no-poll boundary from
+RecordingFrameDriver and native Process_Sprites/controller-poll callers. An
+opaque player mask must come from independently reconstructed earlier native
+SAT pieces; the reunion wing covered20 of619 player pixels in both native and
+engine. Logical3-bit comparison is a diagnostic, never original byte-RGB parity.
 
 A headless palette owner check needs the renderer's resolution boundary
 (2026-10-10, Starpost seasonal acts): HeadlessTestRunner queues palette writes

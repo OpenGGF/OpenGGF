@@ -50,7 +50,7 @@ D01 registry windows cover rescue flight, AIZ return where applicable, reunion, 
 
 Supported presets are **320, 352, 400, 528 and 800**. Short donor, flight, credits and roster checks assert the actual camera width. The configured seven-follower scenario is a large roster, not a claimed parser maximum. Complete ending lifecycles cover all three progress values for native Sonic, Tails and Sonic+Tails, and the maintained Knuckles final fight at320/800. These checks do not claim a complete cold campaign for every donor/width/team combination.
 
-The donor30 pass predates the final type-independent unclaimed-origin restore correction. Native Rescue36/D01 nine qualify that correction; the completed change-based smoke includes the donor class on composed `aaff73747`. Existing ordinary S2 powered-controller RAM snapshot support is an inherited gap outside the native scene binding. Continuous incoming DEZ/DDZ coverage is tracked in the [final DEZ matrix](s3k-dez-final-boss.md) and [DDZ matrix](s3k-ddz.md), with SSZ continuity in [SSZ2](s3k-ssz-act2.md). The [completed composed-source qualification](../../plans/2026-10-13-s3k-playable-completion.md#completed-composed-source-qualification) records the bounded smoke/guard result and inherited CLI assertion; develop source delivery and owned-worktree cleanup are complete.
+The donor30 pass predates the final type-independent unclaimed-origin restore correction. Native Rescue36/D01 nine qualify that correction; the completed change-based smoke includes the donor class on composed `aaff73747`. The inherited ordinary S2 powered-controller RAM gap is closed by the [matching-owner follow-up](#ordinary-s2-controller-and-native-binding-rewind-follow-up--2026-10-14), with local controller/world and binding replay evidence. Continuous incoming DEZ/DDZ coverage is tracked in the [final DEZ matrix](s3k-dez-final-boss.md) and [DDZ matrix](s3k-ddz.md), with SSZ continuity in [SSZ2](s3k-ssz-act2.md). The [completed composed-source qualification](../../plans/2026-10-13-s3k-playable-completion.md#completed-composed-source-qualification) records the bounded smoke/guard result and inherited CLI assertion; develop source delivery and owned-worktree cleanup are complete.
 
 Native art/maps/palettes and moving output are verified at specific producer boundaries, not by whole-scene BizHawk pixel parity. Literal controller tests cover audio request absence; the retained films are silent and do not qualify rendered audio. No trace parity sweep or release-only full suite was run for this feature.
 
@@ -153,3 +153,396 @@ claiming an uninterrupted cold campaign, whole-scene native pixel parity or
 latest-integrated pixel parity. Portable reconstruction uses the final pushed
 develop head recorded in the live `ending-capture-index.json`; historical
 source commands and hashes remain available beside that recipe.
+
+
+## Remaining-parity follow-up — 2026-10-14
+
+Knuckles' routine2 quiet-wind omission is repaired: `loc_5E80A` requests `$CE`
+before animation and timer expiry when `Play_SFX_Continuous` admits the native
+VInt low nibble. Three independent new request-clock, expiry/adjacent-routine
+and owner restore/replay cases fail on unchanged production and pass after the
+repair. The complete affected class passes16/0/0/0 at08:15:18 BST; exact
+commands and source context are in the [follow-up record](../../plans/2026-10-13-s3k-playable-completion.md#quiet-wind-repair-qualification).
+This does not qualify rendered PCM.
+
+The rescue/return flame, propeller, passenger, Master Emerald and fixed-plane
+pilot are now managed native SST owners. Birth dispatches, native screen/world
+coordinates, physical parent-slot reuse, small-plane flags and delayed delete
+owners participate in rewind. The composed ending graph qualifies77 distinct
+focused cases across the source-frozen75-case invocation and bounded corrections;
+there is no claimed single pristine77-case invocation. Both native sprite-clear
+boundaries retain the global catcher pointer, including two complete registry
+restore/replay cycles. Exact commands and corrected premises are in the follow-up
+record. The independent continuation core qualifies41 distinct cases, preserving
+SST93 residue/identity and execution cursor without unload. Managed ending graph continuation pressure qualifies17 distinct real-child
+cases: corrected15-case19591 (08:35:55 UTC,31.519s Maven) plus two unchanged
+pilots from43234. Core7093 separately passes11/0/0/0 (08:38:14 UTC,26.058s).
+The fixed plane8/Master48 and Knuckles-only groups are excluded as impossible
+SST93 continuation victims by native placement/Player_mode3 gates. Actual
+full-table loc5DB76/loc5DD6A trigger dispatch and downstream scene composition
+remained separately unqualified here; the [2026-10-15 native products](#native-declared-products-and-remaining-obligations--2026-10-15)
+qualify them for the declared Tails/+2 and Sonic/0 scenes. See the [real-child pressure evidence](../../designs/2026-10-13-s3k-ending-lifecycle.md#actual-managed-ending-graph-under-continuation-pressure-2026-10-14).
+Whole-scene native composition, NTSC/PAL branch breadth, donor incomplete
+progress and rendered audio remain pending in the broader follow-up.
+
+## Production presets and PAL lifecycle follow-up — 2026-10-14
+
+On `1c8cfbe33` plus test-only follow-up, donor entry now has45 passing cases:
+S1 Sonic, S2 Sonic and S2 Tails at progress -2/0/+2 across all actual presets
+320/352/400/528/800. The production aspect resolver, camera, usable native scene
+body/tail banks, progress-specific transformation, both binding restore
+directions and fresh-load donor restoration are asserted. Hyper Sonic/Tails
+AIZ return has ten passing actual-preset handoff/replay cases. This replaces
+raw-width setup as the preset evidence, while retaining its historical scope.
+
+Nine literal PAL table/delay/two-part/two-cycle cases pass. Twelve separate
+REGION=PAL lifecycle cases pass through production credit selection and actual
+title return: nine declared D01 Sonic/Tails/team entries and three Knuckles
+final-fight continuations. The latter retains its historical410766 declared
+clock. All76 focused cases have zero failures/errors/skips; the
+[exact commands and limits](../../plans/2026-10-13-s3k-playable-completion.md#production-presets-incomplete-donors-and-pal-credits-qualification)
+record completion times, source and queue waits. No native framebuffer, PCM,
+50Hz wall-clock or additional cold-campaign certification follows from these
+local cases. The ordinary S2 controller RAM obligation is qualified separately below.
+
+## Ordinary S2 controller and native binding rewind follow-up — 2026-10-14
+
+`Sonic2SuperStateController` now captures its core state, drain countdown and
+palette state/frame/timer, preserving shipped signed cadence and the `$F8`
+residual palette byte. Revert resolves current world-owned stars rather than a
+stale Java reference. Immutable ordinary animation scripts survive revert and
+are reconciled silently on restore. The existing public snapshot shape is
+unchanged.
+
+The native binding reapplies each matching controller's RAM after attachment or
+detachment. Its scene controller preserves captured player physics before any
+powered writer runs, rejects the ordinary owner's unset tier, and returns to
+its own fresh-construction RAM when re-entering from an inactive snapshot.
+Active snapshots retain their actual progressed RAM. Constructor RAM is a
+derived resource baseline, never comparison data or a copied future scene.
+
+A coherent64-case focused run passes with zero failures/errors/skips: ordinary
+S2 world/replay3; donor/native binding48 (the45 preset/progress rows plus
+TRANSFORMING, actual SUPER and actual progressed-scene→fresh-entry vectors);
+native ending-controller11; ordinary jump trigger1 and debug grant1. All new
+world/binding cases use two complete registry cycles and real forward frames.
+The SUPER entry vector declares an incoming running HUD timer before native
+dispatch; it is an owner-boundary test, not a cold donor campaign.
+
+Completed09:26:06 UTC (10:26:06 BST), Maven32.626s, no queue wait, on `99bfb689d`
+plus this repair. Existing KiS2/default/spindash neighbors also passed in a
+separate bounded24-case run. Exact commands, failed candidate causes and
+coverage limits are in the [dated record](../../plans/2026-10-13-s3k-playable-completion.md#ordinary-s2-ram-and-matching-controller-binding-qualification).
+This is rewind/binding qualification, not stock S2 route, full native
+framebuffer/PCM or cross-product cold-campaign certification.
+
+## Paired KosM child and VInt publication qualification — 2026-10-14
+
+Qualified transfer `df8a26e936e54ae5503078e12d0ff9589846c92d` waits for
+the actual submitted direct-child FIFO receipts, then queues physical pattern
+DMA for the next supported VInt. Equal source/destination descriptors retain
+their admitted native FIFO position through copied restore; a preceding
+unpaired entry cannot borrow a later receipt. Claimed parent payloads, pending
+DMA and presented memory have distinct captured owners. Public queue snapshot
+and DMA interfaces retain their shapes. All paired production consumers use
+that owner; raw and synchronous unpaired operations retain their contracts.
+
+Worker56679 passes18 checks, including actual320/800 world/GPU boundaries.
+The final affected consumer selection qualifies289 distinct checks across
+248 unchanged passes in4922 and41 corrected cases in69069, not a single
+289-case green invocation. The earlier38 missing S1/S2 ROM prerequisites and
+three physical-camera fixture assumptions were corrected without runtime
+changes; final69069 passes60/0/0/0 with all three verified original ROMs.
+Initial archive-readiness and duplicate-FIFO negatives are preserved in the
+[owning design](../../designs/2026-10-13-s3k-ending-lifecycle.md).
+
+The native/engine v7 spots independently confirm actual child completion and
+VInt publication: old Master art persists through outer3 and the new payload
+publishes at4. Initial retained native VRAM differs from direct engine scene
+entry, and late Tails scroll/pixel differences remain under investigation.
+No initial-ingress, whole-scene RGB, PAL50, PCM or SAT-overflow acceptance is
+claimed. A separately discovered private-record comparison defect requires
+helper-corrected composed replay before full-registry equality credit; receipt,
+DMA-byte and published-pixel observations are independent evidence.
+
+## Native declared products and remaining obligations — 2026-10-15
+
+Seven of the nine D01 finite NTSC 320 products now match independently captured
+native references at all eleven declared checkpoints (native poll p ↔ engine
+outer p+1, `declared-native-spots-*-320-v1`): zero 3-bit-level pixel mismatches
+and identical SST slot/x/y/mapping inventories. The Tails/Super and Sonic/Chaos
+pair drove the repairs; the two Hyper Sonic products keep one attributed residual. The
+closing repairs are exact FIFO costs for the reunion jobs, the `loc_5AE90` →
+`loc_5AEA8` → `loc_5AED4` fall-throughs and `loc_5B204` writing only
+`Camera_Y_pos`; native RAM independently dates both credits starts. Details,
+rejected intermediates and baselines are in the
+[ending lifecycle design](../../designs/2026-10-13-s3k-ending-lifecycle.md#late-reunion-gate-credits-fall-throughs-and-the-finite-products-2026-10-15).
+Raw RGB differs by construction (native GPGX 34×level, max 238; engine
+`(level×255+3)/7`, max 255); no image is normalized and no original-RGB
+acceptance is claimed.
+
+| Obligation | Disposition | Proven | Not proven |
+| --- | --- | --- | --- |
+| `loc_5DB76`/`loc_5DD6A` full-table dispatch and downstream composition | Qualified for the two declared products | Native poll 3071 holds all 20 IslandLift SSTs (2 `$42` from `word_5DBB6`, 18 from the six `word_5DDD2`…`word_5DE12` tables) with engine-identical slot, x, y and mapping in both products; whole-SST and 3-bit pixel agreement at every checkpoint. `TestS3kEndingIslandLift` (22) and the continuation-pressure cases pass | `Player_mode` 3 and negative-progress skips are unit-covered only; no native Knuckles or progress -2 product |
+| Tails/+2 and Sonic/0 declared products | Qualified as declared scenes | 22/22 checkpoints, zero level mismatches, all whole frames viewed | Cold campaign identity, original-RGB bytes |
+| Sonic -2, Tails -2, Tails 0, Sonic+Tails -2/0 declared products | Qualified as declared scenes | Newly captured native references (unchanged v1 adapter, immutable host); engine `6ace9000f`: zero 3-bit-level mismatches and identical SST inventories at all 11 checkpoints each | Cold campaign identity, original-RGB bytes |
+| Sonic +2 and Sonic+Tails +2 (Hyper Sonic route) | Open, attributed to native CPU time | Checkpoints 1–4095 match exactly; SST identical at all 11. Native v5 ledgers (`B/native-cloud-transition-{tails,sonic,team}-super-320-v5`, Tails/+2 reproducing the v1 control) queue the same three Kos entries at LF 4402 and the module chain at 4403 on all three routes; only the FIFO head `$1D17A6` (fingerprint `5b4280f6…`) finishes in 3 polls on the Sonic and team routes (`Kos_decomp_queue_count` 3→2 at LF 4405) against 4 on Tails/+2 (LF 4406). Every later service step is identical, one frame earlier, so the `loc_5AE0A` gate opens at LF 4443 instead of 4444 | 171/194 level pixels at 5119/6143 (`HScroll_table+0` `$14F800`, `Camera_Y_pos` 517/1345 against engine `$14F000`, 516/1344). `Process_Kos_Queue` runs in main-loop idle time and resumes from a VInt bookmark (sonic3k.asm:2840), so the same job's duration depends on how much of those frames the route's objects consume. The FAST manifest holds one cost per fingerprint (4, measured on Tails/+2, which also matches Sonic/0 and the other five products); a route- or character-keyed cost would be a fitted constant (runtime invariant 3) and was not added. Closing it needs a CPU-cycle budget model for the Kos queue. The 2026-10-15 native measurement ([lifecycle design](../../designs/2026-10-13-s3k-ending-lifecycle.md#kos-idle-budget-measurement-of-the-hyper-sonic-residual-2026-10-15-opus-kos-budget-lane)) confirms the per-object idle-budget cause and rules out a route-free model; tracked in [S3K known bugs](../../../status/s3k-known-bugs.md#ending-reunion-kos-service-count--per-object-cpu-budget-open) |
+| Knuckles products (SSZ2 `$0A01`) | Open | Lifecycle 9 and terminal pixels pass. Credits against the native complete run (below): with the native inlet declared, `Camera_Y_pos`, all 32 Plane A rows and every cloud SST equal native at all 52 state-anchored spots (32 during the text, 20 after it); `8f602642c`, `9b0c85dd0`. Background routine 4's starfield and sea Plane B (`516ca64f1`). The terminal banner's `word_5F260` row and TM, `loc_5FBA0`'s pink flash, `loc_5FF62`'s logo fade and SSZ2's Plane A V-scroll from `Camera_Y_pos_copy` (kterminal lane): all 20 credits-done spots are pixel-identical with the native `HScroll_table` longword declared, and the credit text sits where native shows it at all 32 text spots | Whole text frames differ in cloud pixels: this tree reaches the credits one V-int later than native (unattributed, [known bugs](../../../status/s3k-known-bugs.md#knuckles-credits-and-terminal-residuals-open)), which also lists a glyph fragment at credits-one spans 9-10, one zero-copy Plane A pass and the S3 eyecatch fades; no declared native product; `loc_5B1A2` there clears only `Camera_Y_pos` and is not separately compared |
+| Team retirement / full-frame replay | Passing on Root `e0a136b83` | `TestS3kEndingRescue` 36/36 and `TestS3kEndingLifecycleCapture` 18/18 (0 skipped), one queued focused run on 2026-10-15 05:58–06:01 UTC, Root plus the test-only wrapped-particle correction | The 30 roster and 6 team replay failures recorded on `be2a3f6d3`/`2b9eb431d` do not reproduce. Which composed commit cleared them was not bisected |
+| Wrapped particle presentation | Resolved: test premise corrected | Bisect (first-parent `5b2ff8e78..da27f4f3d`) puts the 0/398 failure at `90897f41d`, the merge of `9a7070930`, which added native Plane B high-priority sea composition. Subtype `$41` is low priority (`loc_5EDFE` clears art_tile bit 15). Native Sonic/0 spots at polls 1279, 1398–1401 and 1535 (`B/declared-native-spots-sonic-chaos-320-islandlift-v1`; engine input 1400 is poll 1399) hold 512/512 B-high opaque sea pixels under the old particle box (screen 224–255 × 188–203) and B-low sky at 40–71 × 40–55, so the VDP hides the old vector. The visible wrapped-Y cases now use the same threshold vector in the sky (Y `$FEB0`), and new `wrappedLowPriorityParticleIsCoveredByTheHighPrioritySea` (320/800) asserts that the old vector shows no particle pixels. No production change | The engine's B-high composition between native spot checkpoints is covered by the declared-product comparisons, not by this vector |
+| PAL | Open | Literal PAL tables and REGION=PAL lifecycles (earlier sections) | No PAL native product or 50 Hz capture |
+| PCM / audio | Open | Mailbox/request-level audio tests only | No rendered PCM comparison |
+| SAT overflow / original RGB | Open | — | Native 20-sprite/320-dot overflow still needs a real witness; byte-RGB acceptance awaits the LIMITED colour profile |
+
+### Knuckles credits against native frames (campaign-visual lane, 2026-10-15)
+
+The cold Knuckles campaign's credits (`lrz-knuckles-cold-hpz-ssz2-ending-320.bk2`) were
+compared with native frames of `runs/s3k-knuckles-complete-superemeralds` selected by
+`$FA86=4`, `$FA84>2` and `$FAAE` 0/4 (inputs 422795 and 428089) plus 150-frame spans;
+engine frames use `LIMITED`/`RAW_RGB`. Pictures, RAM/VRAM/CRAM/SST dumps and provenance are in
+`$HOME/Videos/OGGF/s3k-parity-coverage-2026-10-14/spot-checks/campaign-visual-v1/`.
+
+- **Black line across both parts (engine).** Natively the Plane B island box (transparent,
+  256×128) and `loc_591D6`'s `Map_KnuxEndingIslandMask` squares both start at line 48
+  (`Camera_Y_pos_BG_copy $D0.4000`, mask `y_pos $F0`). The engine froze the BG copy at `$D2`
+  because the flight init omitted `loc_5E70E`'s `clr.w (Screen_shake_flag).w` (native `$EECC`
+  drops from `$FF00` at input 419848), and projected the screen-space mask with the physical
+  camera instead of the render copy. Fixed in `13e2e9025`.
+- **Blank part two (engine).** Native shows every part-two name; the engine showed none.
+  `sub_5B18E` scrolls `Camera_Y_pos` to `$1CA0` over a 32-row Plane A ring that the VDP wraps
+  every 256 lines, but the engine tile pass discarded rows past the SSZ2 layout height.
+  The credits descriptor owner now makes the foreground pass wrap
+  (`d10afbcdc`).
+- Matching after `13e2e9025`: part-one text, island rows 63–199 in both, cloud sprites.
+  Part-two text after `d10afbcdc` is measured in the credits-lane follow-up below. The native run's Super-emerald progress ends in the S3 eyecatch; the cold movie's
+  banner and Mecha terminal have no native counterpart in this comparison.
+
+### Knuckles credits text, plane ring and clouds (credits lane, 2026-10-15)
+
+Same native spots as above, re-measured by credits state from the RAM, VRAM and SST dumps
+rather than by eye. The ROM owner is `sub_5B18E`: `loc_5B204` (sonic3k.asm:121520–121580)
+adds `_unkFAC8` to `Camera_Y_pos` every frame. On each 16px crossing it clears the row pair
+at `(Camera_Y_pos+$E0)` mod 256 in the 32-row Plane A and writes at most one line whose
+descriptor high byte matches that position. `sub_5B514` takes the speed from
+`CreditsText_ScrollSpeed` and the start delay from `CreditsText_ScrollDelay`, keyed by
+`_unkFA88`. `sub_5FE82` sets that byte to 2 when all seven Super Emeralds are held.
+
+- **Scroll speed (capture inlet).** Native `_unkFAC8` is `$BC00` (`_unkFA88`=2, all
+  `Collected_emeralds_array` bytes 3). The cold movie collects no emeralds, so the engine
+  correctly took the `$C8` column. That is the whole part-one drift: 23px at span 3, 77px
+  at span 11. The capture driver now declares the native emerald state after Mecha's defeat,
+  before Knuckles' flight runs `sub_5FE82`.
+- **Plane ring (engine, `8f602642c`).** The foreground pass wrapped the retained credits
+  plane at the SSZ2 layout height: 19 chunks, 304 rows, and 304 mod 32 = 16. So lines at
+  world Y `$980`–`$12FF` and from `$1C80` showed rows 128px from native. That is the
+  part-two "same block wraps back in" report. The override now reports a 32-row ring and
+  the pass builds exactly that.
+- **Credits start (engine, `9b0c85dd0`).** `loc_58B7C` (sonic3k.asm:117827–117839) falls
+  into `loc_58B9E` and runs `sub_5B18E` on the pass that finishes the redraw. Native shows
+  `Events_routine_fg` `$10` with `_unkFA86` 2 at input 422608. The engine started a pass
+  later, which moved every credit line and the credits-relative cloud picture by a frame.
+- **Clouds and the part-two island (engine, `9b0c85dd0`).** `loc_58BBC` (sonic3k.asm:117846–117875)
+  tests `_unkFAAE`, not completion. When `Camera_Y_pos` reaches `$1660` it clears `_unkFAB9`,
+  lifts `Camera_Y_pos_BG_copy` by `$100` and loads `Pal_Ending2`. The engine waited for
+  completion at `$1CA0`, so this never fired. At credits-done native holds BG routine 4,
+  `_unkFAB9` 0 and BG Y `$80.C000`; after the fix the engine holds routine 4, no clouds and
+  BG Y `$80`.
+- **Flight-to-credits timing (capture inlet).** From flight init (native input 419847,
+  `V_int_run_count` `$66141`) to FG routine C the engine took 2672 frames and native 2753.
+  Every flight leg matched to within the 25-frame native snapshots. The gap is the
+  `loc_5908E` hand-off: the second swing zero crossing after the negative `Events_fg_4`
+  comes at native +1513 and engine +1426. Replaying `Gradual_SwingOffset($2000,$4A)` and
+  the controller gate (the engine's own model) from the native SST at +1150/+1175/+1200
+  predicts +1513 exactly. So the swing phase and `_unkEE9C` are inherited from the route's
+  SSZ2 fight, which the cold movie does not share. For verification only, the driver
+  declares that controller state and the counter at flight init. The engine then matches
+  native `Camera_Y_pos` on all 1420 per-frame native log rows (+1352…+2771), and the
+  hand-off, `$2A0`, FG `$C`/`$10` and the credits anchors (`V_int_run_count` `$66CC5`).
+
+Before is the lead's render on `4657a7266` with the cold inlet. After is `9b0c85dd0` with
+the declared native inlet (super emeralds, swing/`_unkEE9C`/counter at flight init), in
+`engine-k-credits-fix2-aligned/`. Plane A rows compare columns 0–39, the 40 that
+`sub_5B2D6` clears, and treat pattern 0 (the blank VRAM tile) as empty. Cloud SSTs compare
+x, y and mapping frame of every `loc_5FA8C` slot. Pixels compare the 320×224 playfield.
+
+| Spot | Native input | Native `Camera_Y_pos` | Before: Δ px | Before: yellow IoU | Before: frame px equal | After: Δ px | After: Plane A rows | After: cloud SSTs | After: frame px equal | Native VSRAM = copy |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| one 0 | 422795 | $30 | +0 | 1.00 | 96.3% | 0 | 32/32 | 7/7 | 100.0% | yes |
+| one-span 1 | 422945 | $9E | +7 | 0.18 | 91.0% | 0 | 32/32 | 6/6 | 100.0% | yes |
+| one-span 2 | 423095 | $10C | +14 | n/a | 94.6% | 0 | 32/32 | 5/5 | 99.4% | no |
+| one-span 3 | 423245 | $17A | +22 | 0.00 | 86.1% | 0 | 32/32 | 6/6 | 97.5% | no |
+| one-span 4 | 423395 | $1E9 | +28 | 0.00 | 83.4% | 0 | 32/32 | 6/6 | 97.2% | no |
+| one-span 5 | 423545 | $257 | +35 | 0.00 | 93.4% | 0 | 32/32 | 6/6 | 99.5% | no |
+| one-span 6 | 423695 | $2C5 | +42 | 0.00 | 94.3% | 0 | 32/32 | 6/6 | 99.2% | no |
+| one-span 7 | 423845 | $333 | +49 | 0.00 | 93.0% | 0 | 32/32 | 6/6 | 100.0% | yes |
+| one-span 8 | 423995 | $3A1 | +56 | 0.00 | 92.9% | 0 | 32/32 | 5/5 | 100.0% | yes |
+| one-span 9 | 424145 | $40F | +64 | 0.00 | 90.9% | 0 | 32/32 | 6/6 | 98.1% | no |
+| one-span 10 | 424295 | $47E | +70 | 0.00 | 90.6% | 0 | 32/32 | 6/6 | 98.1% | no |
+| one-span 11 | 424445 | $4EC | +77 | 0.00 | 88.9% | 0 | 32/32 | 6/6 | 98.2% | no |
+| two 0 | 428089 | $F60 | +0 | 0.00 | 92.9% | 0 | 32/32 | 5/5 | 99.2% | no |
+| two-span 1 | 428239 | $FCE | +7 | 0.00 | 78.2% | 0 | 32/32 | 6/6 | 95.0% | no |
+| two-span 2 | 428389 | $103C | +15 | n/a | 78.0% | 0 | 32/32 | 6/6 | 100.0% | yes |
+| two-span 3 | 428539 | $10AA | +22 | 0.00 | 91.5% | 0 | 32/32 | 5/5 | 100.0% | yes |
+| two-span 4 | 428689 | $1118 | +29 | 0.00 | 83.4% | 0 | 32/32 | 7/7 | 98.0% | no |
+| two-span 5 | 428839 | $1187 | +35 | 0.00 | 76.7% | 0 | 32/32 | 6/6 | 94.9% | no |
+| two-span 6 | 428989 | $11F5 | +42 | n/a | 80.9% | 0 | 32/32 | 6/6 | 96.7% | no |
+| two-span 7 | 429139 | $1263 | +50 | 0.00 | 87.8% | 0 | 32/32 | 6/6 | 99.2% | no |
+| two-span 8 | 429289 | $12D1 | +57 | 0.00 | 88.8% | 0 | 32/32 | 5/5 | 100.0% | yes |
+| two-span 9 | 429439 | $133F | +64 | 0.00 | 93.9% | 0 | 32/32 | 5/5 | 100.0% | yes |
+| two-span 10 | 429589 | $13AD | +71 | 0.00 | 84.5% | 0 | 32/32 | 6/6 | 97.8% | no |
+| two-span 11 | 429739 | $141B | +78 | 0.00 | 83.2% | 0 | 32/32 | 5/5 | 97.2% | no |
+
+All 20 credits-done spots also hold no clouds (`_unkFAB9` 0) in both. Limits:
+
+- **One pixel of credit text (fixed by the kterminal lane).** At the 11 of 32 text spots
+  where native VSRAM equals `Camera_Y_pos_copy` the frames were pixel-identical. At the
+  other 21 the engine's text sat 1px above native. The native picture is one pass behind
+  RAM, and the engine models that by publishing the sprite table and scroll at VInt; the
+  text led because SSZ2's Plane A V-scroll followed the camera the credits had just moved.
+  See the kterminal section below.
+- **Post-credits Plane B.** Fixed in `516ca64f1`; see the post-credits section below.
+- **Part two after `$1660`.** The native spans stop at `$141B`. The lift itself is
+  RAM-checked at credits-done but has no mid-transition native picture.
+- `Special_V_int_routine`: native runs `$04`→`$08` (`SpecialVInt_VScrollOn`/`VScrollCopy`)
+  and `$0C` clears itself (`SpecialVInt_VScrollOff`). The engine holds `$04`, then `$0C`.
+  No visual effect was measured (island window 96–100% at dy 0); recorded, not changed.
+
+### Knuckles post-credits Plane B and the credit-text phase (postcredits lane, 2026-10-15)
+
+**Post-credits Plane B (engine, `516ca64f1`).** `SSZ2_BackgroundEvent` routine 4
+(sonic3k.asm:117996) is a single `lea (Level_layout_main).w,a3` before `loc_58D1E`.
+`ScreenEvents` hands background events `Level_layout_main+2`, the background row pointers
+(sonic3k.asm:102239-102246), so routine 4 makes `Draw_TileRow` (d1=0, d6=$20: layout X
+0-$1FF) refill Plane B from foreground rows. `loc_59208` lowers `Camera_Y_pos_BG_copy` by
+`$6000` per pass from the lifted `$1D0` and stops when the word reads `$80`, at `$80.C000`.
+Each 16-line crossing replaces one ring row. The lift re-rounds `Camera_Y_pos_BG_rounded`
+with the lifted copy, so the ring keeps its island rows until each is overwritten.
+`sub_58D3E` takes `loc_58D44`: the `HScroll_table` longword gains `$8000`, and its old
+integer seeds eight words, each an eighth lower, under a fixed `$5E`. `sub_58FBC` then
+runs `ApplyDeformation` with `SSZ2_BGDeformArray` (`$58CDE`). The engine sampled the
+background layout (the island) and kept the plain deformation.
+
+Native credits-done (input 432708) holds routine 4, BG Y `$80.C000`, foreground rows 1-2
+(chunks `$0C` starfield, `$0A`/`$0B` sea) and `HScroll_table+4..+$18` =
+`0,$3DE,v/8..v,$5E`. Its lines 0-159 scroll 0 and its sea bands start at line 160.
+`SszEndingBackgroundPlaneState` records, for each 16-line slot, the layout row
+`Draw_TileRow` last wrote and its source. The SSZ runtime capture carries it for rewind.
+The new `TestSszAct2CameraController` case covers the lift, the descent, the plane cells
+at 320/800, the band words and a restore/replay. It was red 12/2 before the change.
+
+Re-rendered from the cold Knuckles movie with the credits lane's declared inlet
+(`engine-k-postcredits-v1/`), credits-done went from about 16% to 87-95% of pixels equal.
+Seq000 has an identical starfield and differs only in the sea rows. The engine reached
+credits-done after the same 2180 routine-4 passes as native. The sea difference is
+inherited: `loc_58D6E` adds `$1000` per pass from the SSZ2 arrival, so the `HScroll_table`
+longword depends on the route (engine `$06E7D000` against native `$08192160`). Declaring
+native `$032B2160` at flight init as well (`engine-k-postcredits-v2-hsaligned/`) gives the
+native longword at every credits-done spot. Seq000 is then 100.0% pixel-identical. Seq001
+to seq019 are 92.9-93.6% equal, all in rows 28-159: the terminal banner. There the
+engine's logo sits at y 94-133 against native 29-69, and native Knuckles flashes pink.
+That offset is identical before this change, so it belongs to the terminal objects; the
+kterminal lane below fixed both. `HScroll_table+6` stays `$3E0` against native `$3DE`, because the
+engine's flight camera X is `$240` against native `$1CF`. Both are inherited from the
+fight. It shifts the eight horizon lines of the second band (160-167) by 2px; they are
+uniform, so no pixel differs.
+`bg-descent-*` frames show the island scrolling down out of Plane B, then the chunk `$03`
+sky, then the sea and the stars. No native picture exists between `$141B` and
+credits-done.
+
+**The native picture is one pass behind RAM.** `VInt` writes VSRAM from
+`V_scroll_value` (sonic3k.asm:528) and `VInt_8` DMAs `Sprite_table` (sonic3k.asm:761) in
+the same interrupt. `ScreenEvents` sets `V_scroll_value` from `Camera_Y_pos_copy`
+(sonic3k.asm:102253), before `sub_5B18E` advances `Camera_Y_pos`. At that interrupt both
+hold the pass that just finished, latched together. In the 8 consecutive native frames (credits-one
+422795-422798, credits-two 428089-428092), the dumped VSRAM and the dumped SAT always
+equal the previous dump's RAM `V_scroll_value` and `Sprite_table`. The picture is drawn
+from that VRAM:
+
+- the cloud in SAT entry 4 is 8 lines tall;
+- RAM moves it from y 46 to 48 between 422797 and 422798, but the dumped SAT moves it from
+  45 to 46;
+- the native picture shows rows 45-51, then 46-52, which no RAM position can produce.
+
+So the native picture is one pass behind the RAM that selects the spot, for planes and
+sprites alike. The engine models that latch, so its clouds were already right and its text
+was a pass early. The kterminal lane below attributed and fixed it.
+
+Native flight-window capture: `native-knux-credits-flight/` (CampVisualProbe exe
+`516847eb…`, resumed from the campaign lane's `native-knux-2` savestate at input 412501;
+112 snapshots every 25 inputs plus 1420 per-frame log rows; provenance alongside).
+
+### Knuckles terminal banner, pose flash and the credits Plane A phase (kterminal lane, 2026-10-15)
+
+Same native spots (`native-knux`, credits-done inputs 432708-433088 every 20, with RAM,
+CRAM, VRAM and SST). Engine renders `engine-k-kterminal-v1/` and `-v2/` use the cold
+Knuckles movie with the postcredits lane's declared inlets: Super Emeralds after Mecha's
+defeat; `V_int_run_count` `$66142`, the swing/`_unkEE9C` state and `HScroll_table`
+`$032B2160` at flight init.
+
+- **Banner position (engine).** `Obj_5EF68` (sonic3k.asm:125476) indexes `off_5EFB6` by
+  `Player_mode`, `SK_alone_flag` and `_unkFA88`. Locked-on Knuckles at progress 0 or +2
+  takes `loc_5F0A6`: the end pose (`loc_5F480`) and `loc_5F20A` with the subtype that
+  `AllocateObject` cleared. `sub_5FF1C` (sonic3k.asm:126931) then reads `word_5F260[0]`,
+  (`$120`,`$B0`). Progress -2 takes `loc_5F0C4` (subtype 8, (`$120`,`$F0`)), and every
+  Sonic and Tails row takes `loc_5F05C` (subtype 4, (`$D0`,`$B8`)). The engine hard-coded
+  (`$120`,`$F0`) for Knuckles and (`$120`,`$B0`) for Sonic. Native holds the logo SST at
+  (`$120`,`$B0`) from input 432728. Sonic's and Tails' rows now follow the same table; no
+  native picture of those terminals exists.
+- **Trademark (engine).** `loc_5F20A` also allocates `loc_5F4FA` (sonic3k.asm:125982)
+  with subtype 2: `ObjDat3_60130`'s TM, mapping frame 2, at `byte_5F520[2]` (+`$34`,
+  -`$10`). Native slot 11 holds it at (`$154`,`$A0`). `loc_5F26C` passes subtype 4 for the
+  S3 eyecatch. The child deletes itself when `Graphics_flags` bit 7 is clear (Japanese
+  hardware); like the engine's title screen, the ending models overseas hardware. No
+  initializer draws in its own pass, so the banner first draws one pass after
+  `Obj_5EF68`'s init.
+- **Pink flash (engine).** `loc_5F480` allocates `loc_5FBA0` (sonic3k.asm:126562) only
+  when `_unkFA88` is positive. Until `Palette_cycle_counters+0` is set, it steps `$3A` by 6
+  through `Pal_KnuxEndPoseSuper` every third pass, waiting `$E` passes after the wrap at
+  `$3C`. `move.l (a1,d0.w),(a2)+` writes colours 2-3 of line 0 and
+  `move.w 4(a1,d0.w),2(a2)` writes colour 5, so colour 4 keeps `Pal_KnuxEndPose`'s
+  `$0080`; native CRAM agrees. Native RAM dates `Obj_5EF68`'s init to input 432709 (`$2E`
+  `$1EC` at 432728), with the first flash write in that pass. The engine reproduces the
+  native `$3A` colours at all 19 later spots.
+- **Logo fade (engine).** `sub_5FF1C` allocates `loc_5FF62` (sonic3k.asm:126958) after
+  the logo. From that pass, every fourth pass `sub_85EB4` raises the 16 line-1 colours a
+  level toward `$EEE`, eight times. `loc_5FF94` then falls into `loc_5FFA6`'s countdown,
+  and `sub_85F2A` lowers them toward `Target_palette_line_2` eight times (passes 31-59).
+  Native RAM holds `$0AAA` throughout at pass 19, and the target raised to at least `$888`
+  at pass 39. The engine stepped from black straight to the target.
+- **Credits Plane A phase (engine).** The engine prepares the sprite table and scroll
+  registers at the loop tail and publishes them at the next VInt (`LevelSpritePresentation`).
+  That is the native picture's one-pass latch. In SSZ2, `SwScrlSsz.getVscrollFactorFG()`
+  returned the physical camera plus shake. `ScreenEvents` (sonic3k.asm:102253) writes
+  `V_scroll_value` from `Camera_Y_pos_copy`, after `SSZ2_ScreenEvent` has added
+  `Screen_shake_offset` to the copy (sonic3k.asm:117750-117751). `loc_5B204` moves only
+  `Camera_Y_pos`, so Plane A led the published sprites by one pass. A temporary instrumented
+  render showed each cloud drawn inside the step (`LevelFrameStep` →
+  `LevelSpritePresentation.prepare`), never in the render pass. Plane A now takes the copy.
+
+Rejected: a render-camera offset (projection against subtraction camera). Slot 8's cloud
+stepped 1, 1, 2 lines while `Camera_Y_pos` stepped 1, 0, 1, so only a whole-pass SST lag
+fits. Also rejected: the earlier "capture limit, nothing modelled" reading of the text,
+which assumed the engine draws everything at the current pass.
+
+| Spots (3-bit levels, native cropped at 14,8) | Postcredits v2 | kterminal v1 | kterminal v2 |
+| --- | --- | --- | --- |
+| credits-done seq000 | 100.0% | 100.0% | 100.0% |
+| credits-done seq001-002 (logo fading in) | 92.9% | 96.3% | 100.0% |
+| credits-done seq003-019 | 92.9-93.6% | 100.0% | 100.0% |
+| credit text, 32 spots | 1px above native at 21 | dy 0 | dy 0 |
+
+At the 26 text spots with a yellow title, every title pixel matches native at dy 0. The
+text frames are 94.7-97.5% equal as wholes. At 30 of 32 spots every remaining pixel lies
+inside a cloud box: this tree reaches credits part one one V-int late, so the clouds
+differ. That and a glyph fragment at credits-one spans 9-10, both older than this lane,
+are recorded in [S3K known bugs](../../../status/s3k-known-bugs.md#knuckles-credits-and-terminal-residuals-open),
+with the zero-copy pass and the S3 eyecatch fades.
+
+Red first, all queued and focused with the ROM paths, 0 skipped: `TestS3kPostCredits` and
+`TestSszAct2CameraController` 23 run, 4 failed (banner y 240 at progress 0 and +2, flash
+colour, and the older 800 px case running at 320); `TestSszAct2CameraController` 13 run, 1
+failed (credits pass 123: Plane A 2 against copy 1); `TestS3kPostCredits` 13 run, 1 failed
+(logo colour `$0000` against native `$0AAA` at pass 19). The final run of the eleven
+keep-green classes, the four S3K guards, `TestS3kSszMechaSpawnHeadless` and the render ran
+215 tests with none failed or skipped.
+

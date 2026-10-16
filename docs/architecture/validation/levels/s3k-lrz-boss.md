@@ -480,3 +480,89 @@ state/pixel controls and their limits are described in the
 [headless testing guide](../../../guide/contributing/headless-testing.md).
 This performance change supplies no new native reference, full-route visual
 certification or missing viewport/donor/character coverage; inherited gaps remain.
+
+
+## Physical checkpoint products and incoming replay (2026-10-14)
+
+The ROM post1 at($9C0,$368) receives55 products:25 supported Sonic/Tails solo
+and30 explicit-roster cases. Knuckles exits Act2 directly to HPZ and does not
+own this boss-act route. Local incoming replay covers the fresh boss-act world;
+a whole boss fight for each configuration remains separate.
+
+Each product approaches the literal ROM-placed star post through ordinary
+movement, captures the full registered world on both sides of contact, and
+replays and reverses it twice. It then invokes the production pit-death owner
+twice, waits for actual GameLoop reload/title/fade/control release, and verifies
+one lost life, saved coordinates/index, fresh runtime/object manager, retained
+ordered roster/CPU leader identities, donor art and retired outgoing history.
+Each incoming world independently captures and replays a45-input neutral window
+twice in both restore directions, without hiding a second death or life loss.
+All comparisons retain every registry key; no incoming raw restore crosses a
+load. The configured rosters include duplicate names and seven followers;
+these are finite examples of the uncapped API, not proof of every possible team.
+
+The five cases per configuration use the actual320/352/400/528/800 presets.
+Supported solo pairs are off×{Sonic,Tails,Knuckles}, S1×Sonic and
+S2×{Sonic,Tails}, where the act has that character route. Six explicit configured
+rosters cover native mixed/duplicate/large teams, S1 duplicate Sonic, and S2
+mixed/large teams. The common test is `TestLrzSszCheckpointRoutes`; independent
+census, layout witnesses and an S2 Tails/seven-follower800 witness run before
+the long product method. The combined class passes888 tests, zero failures,
+errors or skips, on `a8c9f892e855855f96c7ecad368e127880c9af3e` plus the final
+class (SHA256`3ed4c7346c79cd06d694e7fc17cf625aaa941d4951db606702734d631115f818`),
+request99024, completed2026-10-14 12:40:30 UTC. Exact commands, prerequisites,
+rejected setups and the distinction from earlier qualification are recorded in
+[the completion plan](../../plans/2026-10-13-s3k-playable-completion.md#checkpoint-product-qualification-2026-10-14).
+
+This qualifies local physical contact and reload/replay products. It supplies
+no cold route for every configuration, native whole-scene/audio acceptance or
+combined smoke/guard/integration claim. Other matrix obligations stay open.
+
+## Native single-fade retiming (2026-10-15)
+
+8179ccd80 stopped `GameplayCaptureSession.step` from advancing a runtime-ready
+loop's FadeManager a second time. Movies authored before it budget half of each
+frozen fade-out (11 of the native 22 frames, during which gameplay and object
+VInt do not advance), so their later inputs landed early. `FadeWindowRetimeTool`
+(41405e073, 5333aece6) measured each owned frozen window in the production harness,
+inserted the native remainder as repeats of the held input and verified every
+movie by one uninterrupted replay with no death. On the LRZ Knuckles and Tails
+chains the retimed rows equal the 22d5e6ffc rows shifted by the inserted frames,
+VInt included (0 differing rows). Test frame constants move by 11 at and after each
+old load frame. Base: Root ef61a560f; no runtime behaviour changed.
+
+| Movie | Old SHA-256 | New SHA-256 | Windows `start:native→+inserted` | Frames | New full loads | Verified end |
+|---|---|---|---|---|---|---|
+| `lrz-boss-sonic-tails-cold-hpz-320.bk2` | `54160714c91d5b6568b9a74c1453ab26ce1facaaaca035674c9e05e45040f1a5` | `b0c9d21a5166f336e8bdd509da03c9f784d92ea84a4df2ee37189bde420a0bc9` | 43555:23→+11 52925:22→+11 | 53069 | 30285, 43577, 52947 | 393,2796, 3 rings, zone 22/1 |
+| `lrz-tails-cold-hpz-320.bk2` | `a492bba20249c59ed3d451ccc489bb19af10b9cd1da2e93a18be2cde89f0ffd6` | `229c5036eb936aacb38603fd2195e76baa0c150c36deae900f1fc37e9ec0ec94` | 53047:23→+11 62402:22→+11 | 62546 | 28507, 53069, 62424 | 393,2800, 3 rings, zone 22/1 |
+
+Validation on ef61a560f plus the retimed fixtures (`TestLrzBossColdRouteCapture`, `TestLrzTailsColdRouteCapture`), focused selectors through
+`tools/testing/maven_queue.py` with the S3K ROM: run `cold-fade-verify` (Maven
+Finished 04:15:51Z) passed `TestDezIncomingFinalRouteCapture` 7/0/0/0,
+`TestDezSoloActTwoColdRouteCapture` 4/0/0/0, `TestLrzActTwoColdRouteCapture` 2/0/0/0,
+`TestLrzTailsColdRouteCapture` 4/0/0/0 and the fade rows of `TestLrzKnucklesColdRouteCapture`
+and `TestSszSoloColdRouteCapture`; run `cold-joined-retimed` (Finished 04:21:19Z) passed
+`TestS3kHpzJoinedColdRouteCapture` 2/0/0/0 (pair 66 spots, HPZ 52947/52948, SSZ1
+67037/67038, release 67211; Knuckles 27 spots, HPZ 49297/49298, SSZ2 50160/50161,
+release 51586). That test's LRZ live-history tail now starts 36 frames before the HPZ
+load (14 live frames before the native 22-frame fade-out). Rows still red there are
+not fade timing and are owned elsewhere: the Knuckles act-2 restore at 37130 and the
+LRZ boss sidekick overlap parity at 47471 (rewind-snapshot rows) and solo Tails' SSZ1
+opening camera (behaviour row). No skips.
+
+### Wide boss movie retimed (2026-10-15)
+
+The 800px sibling was missed by the first retiming pass and still died at input
+42769 under the single fade owner. `FadeWindowRetimeTool` (same method, base Root
+ce571151d) found two owned frozen windows and verified one uninterrupted replay
+with no death. Test frame constants move by 11 at and after old 41116 and by 22 at
+and after old 50527 (the second window's start in the original movie).
+
+| Movie | Old SHA-256 | New SHA-256 | Windows `start:native→+inserted` | Frames | New full loads | Verified end |
+|---|---|---|---|---|---|---|
+| `lrz-boss-sonic-tails-cold-hpz-800.bk2` | `b269c788d6e8229fa6afed76bc031759d77f777bdbcb3d4ecd77a335bb90d3b1` | `5e99307ba7098dc7029a37ffca208641c400579b50ae9c0002b34cbbfb53782d` | 41116:23→+11 50538:22→+11 | 50681 | 24349, 41138, 50560 | 388,2796, 3 rings, zone 22/1 |
+
+`TestLrzWideBossColdRouteCapture` on the retimed movie (run `probe-new`, focused
+queued selector, S3K ROM, 0 skips) no longer dies; it stops at the first rewind
+window that diverges, input 42011 (old 42000), `touchResponseOverlap.sidekickEntries[0].paritySwapped`
+— the same rewind-snapshot row as the 320 sibling's 47471, owned by the rewind lane.

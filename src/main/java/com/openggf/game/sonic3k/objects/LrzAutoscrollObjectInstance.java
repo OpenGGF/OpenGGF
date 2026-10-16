@@ -458,9 +458,9 @@ public final class LrzAutoscrollObjectInstance extends AbstractObjectInstance
                 return -1;
             Sonic3kPlcLoader.bindRuntimePatternDmaTarget(queue, services());
             queue.enqueue(services().rom(), address, tile * 32);
-            return com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.from(services())
+            return com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.bindPatternModule(services(), com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.from(services())
                     .moduleQueue()
-                    .queue(services().rom(), address, tile)
+                    .queue(services().rom(), address, tile))
                     .ordinal();
         } catch (IOException failure) {
             throw new UncheckedIOException(failure);

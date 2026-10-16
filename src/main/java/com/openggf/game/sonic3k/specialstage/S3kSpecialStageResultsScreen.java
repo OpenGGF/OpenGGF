@@ -1453,6 +1453,16 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
         }
     }
 
+    /**
+     * SpecialStage_Results never writes VDP register 7, and every line of Pal_Results
+     * (including the copy loc_2E12C makes for a Super Emerald stage) starts with $CCC,
+     * so the card's backdrop is line 0 colour 0 of the palette it loaded.
+     */
+    @Override
+    public Palette.Color resultsBackdropColor() {
+        return paletteLoaded && resultsPalettes != null ? resultsPalettes[0].getColor(0) : null;
+    }
+
     /** Pal_Results plus the HPZ palettes {@code SpecialStage_Results} and loc_90998 read. */
     private void loadSanctuaryPalette(com.openggf.data.Rom rom, byte[] resultsData) throws Exception {
         int[][] results = S3kSanctuaryResultsPalette.linesFromSegaBytes(resultsData, 4);

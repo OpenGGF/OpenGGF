@@ -40,18 +40,36 @@ class TestS3kAiz1CompatibilityRoutes {
     }
 
     static void withConfiguration(int width, String donor, RouteCheck check) throws Exception {
+        withConfiguration(width, null, donor, check);
+    }
+
+    static void withConfiguration(WidescreenAspect aspect, String donor, RouteCheck check) throws Exception {
+        withConfiguration(aspect.pixelWidth(), aspect, donor, check);
+    }
+
+    private static void withConfiguration(int width, WidescreenAspect aspect, String donor,
+                                          RouteCheck check) throws Exception {
         var saved = TraceReplaySessionBootstrap.snapshotGameplayConfig();
         var config = GameServices.configuration();
         var provider = CrossGameFeatureProvider.getInstance();
         try {
             provider.resetState();
             var setup = TestS3kAiz1RoutePilot.prepareRoute(() -> {
-                config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT,
-                        (width == 320 ? WidescreenAspect.NATIVE_4_3 : WidescreenAspect.WIDE_16_9).name());
-                config.resolveDisplayAspect();
-                config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS, width);
-                config.setSessionOverride(SonicConfiguration.CROSS_GAME_SOURCE, donor);
-                config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, !donor.equals("off"));
+                if (aspect == null) {
+                    // Preserve historical raw-width route/custom-geometry fixtures separately.
+                    config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT,
+                            (width == 320 ? WidescreenAspect.NATIVE_4_3 : WidescreenAspect.WIDE_16_9).name());
+                    config.resolveDisplayAspect();
+                    config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS, width);
+                    config.setSessionOverride(SonicConfiguration.CROSS_GAME_SOURCE, donor);
+                    config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, !donor.equals("off"));
+                } else {
+                    new com.openggf.game.launch.LaunchProfileApplier(config).apply(
+                            new com.openggf.game.launch.LaunchProfile(false, donor, false, aspect.name(),
+                                    "sonic", donor.equals("s1") ? "sonic" : "tails"),
+                            com.openggf.game.MasterTitleScreen.GameEntry.SONIC_3K);
+                    config.resolveDisplayAspect();
+                }
                 if (!donor.equals("off")) {
                     String property = donor.equals("s1") ? "sonic1.rom.path" : "sonic2.rom.path";
                     String path = System.getProperty(property);
@@ -62,8 +80,12 @@ class TestS3kAiz1CompatibilityRoutes {
                 }
                 com.openggf.game.session.SessionManager.clear();
                 com.openggf.tests.TestEnvironment.activeGameplayMode();
-            });
+            }, aspect != null && donor.equals("s1") ? "sonic" : "tails", aspect != null);
             assertEquals(width, setup.fixture().camera().getWidth());
+            if (aspect != null) {
+                com.openggf.tests.SozAcceptanceConfigurations.assertDisplay(aspect);
+                com.openggf.tests.SozAcceptanceConfigurations.assertUsableTeam(donor);
+            }
             assertEquals(!donor.equals("off"), CrossGameFeatureProvider.isActive());
             if (!donor.equals("off")) {
                 assertNotSame(GameServices.module().getRules(), setup.fixture().sprite().getGameRules());

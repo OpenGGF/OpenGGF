@@ -103,6 +103,9 @@ final class DefaultObjectRewindPolicies {
     );
 
     private static final Map<FieldKey, RewindFieldPolicy> EXACT_FIELD_POLICIES = Map.ofEntries(
+            // Fresh title child parent2 is native graph identity, not a nearest owner hint.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kFreshTitleCardElementObjectInstance", "parent"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kInLevelTitleCardElementObjectInstance", "parent"), RewindFieldPolicy.CAPTURED),
             // SSZ constructor-only scalars are rebuilt from each immutable recreation spawn.
             // Keep their existing exclusion explicit here; live motion and graph links remain captured.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SszBouncyCloudObjectInstance", "baseY"), RewindFieldPolicy.TRANSIENT),
@@ -475,7 +478,6 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossGeyserCutscene", "artHandle"), RewindFieldPolicy.TRANSIENT),
             // The ship child rebinds to the nearest recreated live ship; its accumulator remains captured.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Lbz2RobotnikShipInstance$GradualCameraMaxXChild", "parent"), RewindFieldPolicy.TRANSIENT),
-            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossCutsceneInstance", "explosionController"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossInstance", "defeatExplosionController"), RewindFieldPolicy.DEFERRED),
             // Three live AIZ miniboss barrels make nearest-object reconstruction
             // ambiguous after FallingShot teleports to its camera-relative drop.
@@ -483,7 +485,13 @@ final class DefaultObjectRewindPolicies {
             // recreate hooks retain nearest-object lookup only as a phase-one seed.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossNapalmProjectile", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossNapalmProjectile", "barrel"), RewindFieldPolicy.CAPTURED),
-            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossBarrelShotFlareChild", "anchor"), RewindFieldPolicy.CAPTURED),
+            // Common/falling shots can belong to the cutscene or fight graph. Their
+            // camera-relative launch XY cannot identify the firing barrel/boss.
+            // A pure spawn shell binds these exact live ObjectRefs in phase two.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossDebrisChild", "parent"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossBarrelShotChild", "parent"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossBarrelShotChild", "barrel"), RewindFieldPolicy.CAPTURED),
+            // Barrel-shot flares capture numeric parent3: cleared/recycled SST headers remain readable.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance$FallingLogChild", "linkedSplash"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance$SplashChild", "linkedLog"), RewindFieldPolicy.CAPTURED),
             // Ride-vine link chains carry the rendered swing/deploy state of a ride mechanic.
@@ -801,6 +809,23 @@ final class DefaultObjectRewindPolicies {
             // rider halfway through the curve; capture stable player identities.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzTwistedVineObjectInstance", "activePlayers"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzStickyVineObjectInstance", "capturedPlayer"), RewindFieldPolicy.CAPTURED),
+            // Obj_MHZMushroomCap keeps each character's last airborne y_vel at $30/$32(a0)
+            // and its standing bits in status(a0) (MHZMushroomCap_BounceCharacter,
+            // sonic3k.asm:82282-82316). Neither can be re-derived once a rider stands on the cap;
+            // the restored cap otherwise re-records the landed y_vel and bounces at -$680.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzMushroomCapObjectInstance", "previousYVelocities"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzMushroomCapObjectInstance", "standingPlayers"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzMushroomCapObjectInstance", "lastLaunchFrames"), RewindFieldPolicy.CAPTURED),
+            // Obj_MHZCurledVine keeps the P1/P2 curl segment at $36/$37 beside the standing bits
+            // (loc_3E8A2, sonic3k.asm:82803-82812); sub_3E9C6's continued ride contours without
+            // loc_1E45A's landing -1 (sonic3k.asm:82941-82977).
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzCurledVineObjectInstance", "standingSegmentIndices"), RewindFieldPolicy.CAPTURED),
+            // The catapult's riders mirror the standing bits that the next update's launch tests
+            // (sub_3FA26/sub_3FA5A, sonic3k.asm:84311-84353), so they cross the snapshot boundary;
+            // the dropping platform releases its standing riders when it moves.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzMushroomCatapultObjectInstance", "parentRiders"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzMushroomCatapultObjectInstance", "childRiders"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzMushroomPlatformObjectInstance", "standingPlayers"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzMinibossFlameInstance", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzMinibossEscapeShardInstance", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzSwingBarHorizontalObjectInstance", "hangStates"), RewindFieldPolicy.CAPTURED),
@@ -824,7 +849,11 @@ final class DefaultObjectRewindPolicies {
             // byte per rider ($36(a0) for Player_1, $37(a0) for Player_2,
             // sonic3k.asm:96389-96397), so the engine carries one lock reference each.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.PachinkoFlipperObjectInstance", "lockedSidekick"), RewindFieldPolicy.CAPTURED),
-            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.PachinkoItemOrbObjectInstance", "rewardItem"), RewindFieldPolicy.DEFERRED),
+            // Native parent3 points to the actual container through item expiry/recreation.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.GumballItemObjectInstance", "parentRef"), RewindFieldPolicy.CAPTURED),
+            // Same-SST reward contents are owned by Pachinko's private RewardState,
+            // not an ObjectRef to a separately managed child. Other scalars remain compact.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.PachinkoItemOrbObjectInstance", "rewardItem"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.PachinkoMagnetOrbObjectInstance", "playerStates"), RewindFieldPolicy.CAPTURED),
             // Results children capture parentSlot and relink this structural SST pointer in
             // afterRewindRestoreSettled. The forced and in-place graph paths are covered by

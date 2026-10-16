@@ -157,6 +157,10 @@ public final class SszBouncyCloudPuffObjectInstance extends AbstractObjectInstan
 
     @Override public int getX() { return (subX >>> 16) & 0xFFFF; }
     @Override public int getY() { return (subY >>> 16) & 0xFFFF; }
+    // The native art word owns VDP bit15 independently of the SAT bucket:
+    // make_art_tile(ArtTile_SSZMisc+$102,3,1).
+    @Override public boolean isHighPriority() { return true; }
+
     @Override public int getPriorityBucket() { return PRIORITY_BUCKET; }
     @Override public int getOnScreenHalfWidth() { return 4; }
     @Override public int getOnScreenHalfHeight() { return 4; }

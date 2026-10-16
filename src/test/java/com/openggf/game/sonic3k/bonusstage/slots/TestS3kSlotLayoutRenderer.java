@@ -18,8 +18,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestS3kSlotLayoutRenderer {
-    private static final int BOOTSTRAP_CAMERA_X = S3kSlotLayoutFixture.START_X - 0xA0;
-    private static final int BOOTSTRAP_CAMERA_Y = S3kSlotLayoutFixture.START_Y - 0x70;
+    private static final int BOOTSTRAP_CAMERA_X = S3kSlotRomData.SLOT_BONUS_PLAYER_START_X - 0xA0;
+    private static final int BOOTSTRAP_CAMERA_Y = S3kSlotRomData.SLOT_BONUS_PLAYER_START_Y - 0x70;
 
     @Test
     void visibleCellsRetainExactRowMajorScanOrderAndValues() {
@@ -41,7 +41,7 @@ class TestS3kSlotLayoutRenderer {
     @Test
     void renderBuildsVisiblePiecesFromStagedExpandedBuffers() {
         S3kSlotLayoutRenderer renderer = new S3kSlotLayoutRenderer();
-        S3kSlotRenderBuffers buffers = S3kSlotLayoutFixture.buffers();
+        S3kSlotRenderBuffers buffers = S3kSlotRenderBuffers.fromRomData(S3kSlotRomTestData.resources());
 
         buffers.stageViewport(BOOTSTRAP_CAMERA_X, BOOTSTRAP_CAMERA_Y);
         buffers.stagePointGrid(renderer.buildPointGrid(0, BOOTSTRAP_CAMERA_X, BOOTSTRAP_CAMERA_Y));
@@ -55,7 +55,7 @@ class TestS3kSlotLayoutRenderer {
     }
 
     private static S3kSlotRenderBuffers stagedBootstrapBuffers(S3kSlotLayoutRenderer renderer) {
-        S3kSlotRenderBuffers buffers = S3kSlotLayoutFixture.buffers();
+        S3kSlotRenderBuffers buffers = S3kSlotRenderBuffers.fromRomData(S3kSlotRomTestData.resources());
         buffers.stageViewport(BOOTSTRAP_CAMERA_X, BOOTSTRAP_CAMERA_Y);
         buffers.stagePointGrid(renderer.buildPointGrid(0, BOOTSTRAP_CAMERA_X, BOOTSTRAP_CAMERA_Y));
         return buffers;
@@ -74,7 +74,7 @@ class TestS3kSlotLayoutRenderer {
     @Test
     void transientRingAnimationUsesRuntimeAnimationSlots() {
         S3kSlotLayoutRenderer renderer = new S3kSlotLayoutRenderer();
-        S3kSlotRenderBuffers buffers = S3kSlotLayoutFixture.buffers();
+        S3kSlotRenderBuffers buffers = S3kSlotRenderBuffers.fromRomData(S3kSlotRomTestData.resources());
 
         int expandedIndex = buffers.compactToExpandedIndex(0x21);
         int expandedRow = expandedIndex / buffers.layoutStrideBytes();
@@ -92,7 +92,7 @@ class TestS3kSlotLayoutRenderer {
     @Test
     void transientRingAnimationAdvancesAndFallsBackToExpandedLayoutTile() {
         S3kSlotLayoutRenderer renderer = new S3kSlotLayoutRenderer();
-        S3kSlotRenderBuffers buffers = S3kSlotLayoutFixture.buffers();
+        S3kSlotRenderBuffers buffers = S3kSlotRenderBuffers.fromRomData(S3kSlotRomTestData.resources());
         int expandedIndex = buffers.compactToExpandedIndex(0x21);
         int expandedRow = expandedIndex / buffers.layoutStrideBytes();
         int expandedCol = expandedIndex % buffers.layoutStrideBytes();
@@ -135,7 +135,7 @@ class TestS3kSlotLayoutRenderer {
     @Test
     void transientBumperAnimationUsesExactCompactLayoutIndex() {
         S3kSlotLayoutRenderer renderer = new S3kSlotLayoutRenderer();
-        S3kSlotRenderBuffers buffers = S3kSlotLayoutFixture.buffers();
+        S3kSlotRenderBuffers buffers = S3kSlotRenderBuffers.fromRomData(S3kSlotRomTestData.resources());
         int compactIndex = 0x22;
         int expandedIndex = buffers.compactToExpandedIndex(compactIndex);
         int expandedRow = expandedIndex / buffers.layoutStrideBytes();
@@ -201,7 +201,7 @@ class TestS3kSlotLayoutRenderer {
     @Test
     void visibleCellsIncludeSemanticSlotStagePieces() {
         S3kSlotLayoutRenderer renderer = new S3kSlotLayoutRenderer();
-        S3kSlotRenderBuffers buffers = S3kSlotLayoutFixture.buffers();
+        S3kSlotRenderBuffers buffers = S3kSlotRenderBuffers.fromRomData(S3kSlotRomTestData.resources());
 
         buffers.stageViewport(BOOTSTRAP_CAMERA_X, BOOTSTRAP_CAMERA_Y);
         buffers.stagePointGrid(renderer.buildPointGrid(0, BOOTSTRAP_CAMERA_X, BOOTSTRAP_CAMERA_Y));

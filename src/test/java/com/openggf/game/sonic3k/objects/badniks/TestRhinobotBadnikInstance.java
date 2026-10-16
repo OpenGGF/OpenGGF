@@ -17,21 +17,26 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestRhinobotBadnikInstance {
 
     @Test
-    void waitOffscreenUsesRomPlaceholderWidth() throws Exception {
+    void waitOffscreenUsesPriorRomPlaceholderWidth() throws Exception {
         TestPlayer sonic = player(0x03D0, 0x0200);
         try {
-            AbstractObjectInstance.updateCameraBounds(0, 0, 0x03DF, 0x0400, 0);
+            AbstractObjectInstance.updateCameraBounds(0, 0, 0x03E0, 0x0400, 0);
             RhinobotBadnikInstance outside = rhinobotWithPlayers(sonic, null);
             updateMovement(outside, sonic);
+            outside.refreshPostCameraRenderState();
+            updateMovement(outside, sonic);
             assertFalse(readBoolean(outside, "waitOffscreenReleased"),
-                    "One pixel beyond the $20 Obj_WaitOffscreen placeholder must remain dormant");
-            assertFalse(readBoolean(outside, "waitOffscreenReleased"));
+                    "Render_Sprites' right edge excludes the exact $20 placeholder boundary");
 
-            AbstractObjectInstance.updateCameraBounds(0, 0, 0x03E0, 0x0400, 0);
+            AbstractObjectInstance.updateCameraBounds(0, 0, 0x03E1, 0x0400, 0);
             RhinobotBadnikInstance atPlaceholderEdge = rhinobotWithPlayers(sonic, null);
             updateMovement(atPlaceholderEdge, sonic);
+            assertFalse(readBoolean(atPlaceholderEdge, "waitOffscreenReleased"),
+                    "a fresh Obj_WaitOffscreen dispatch cannot borrow unpublished camera visibility");
+            atPlaceholderEdge.refreshPostCameraRenderState();
+            updateMovement(atPlaceholderEdge, sonic);
             assertTrue(readBoolean(atPlaceholderEdge, "waitOffscreenReleased"),
-                    "The $20 placeholder edge must release Obj_WaitOffscreen's saved continuation");
+                    "the preceding $20 placeholder scan releases the saved continuation");
             assertTrue(stateName(atPlaceholderEdge).equals("PATROL"),
                     "loc_85B02 restores the continuation and returns without running Rhinobot");
             updateMovement(atPlaceholderEdge, sonic);
@@ -39,7 +44,7 @@ class TestRhinobotBadnikInstance {
                     "Rhinobot_Init consumes the first restored object dispatch");
             updateMovement(atPlaceholderEdge, sonic);
             assertTrue(stateName(atPlaceholderEdge).equals("CHARGE_PREP"),
-                    "Rhinobot patrol must run after the release and Init dispatches");
+                    "patrol starts only after the draw, release and Init dispatches");
         } finally {
             AbstractObjectInstance.resetCameraBoundsForTests();
         }

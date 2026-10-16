@@ -27,6 +27,8 @@ import static org.lwjgl.opengl.GL11.glClearColor;
  */
 interface S3kDataSelectAssetSource {
     void loadData() throws java.io.IOException;
+    /** Native initial upload owner; synthetic/donated asset-only sources omit physical residency. */
+    default void publishNativePatterns() { }
     boolean isLoaded();
     int getMusicId();
     int[] getLayoutWords();
@@ -232,7 +234,7 @@ public class S3kDataSelectRenderer {
             return;
         }
         Palette.Color color = backdrop.getColor(0);
-        glClearColor(color.rFloat(), color.gFloat(), color.bFloat(), 1.0f);
+        com.openggf.level.PaletteDisplayColor.glClear(color, com.openggf.game.GameServices.graphics());
     }
 
     /**

@@ -543,3 +543,52 @@ state/pixel controls and their limits are described in the
 [headless testing guide](../../../guide/contributing/headless-testing.md).
 This performance change supplies no new native reference, full-route visual
 certification or missing viewport/donor/character coverage; inherited gaps remain.
+
+
+## Production checkpoint fade and incoming-world replay (2026-10-14)
+
+The solo and team drivers now use only GameLoop's production fade owner and
+service pending render work after every tick. Solo contact restores/replays
+its complete registered world twice; every solo/team product then loses
+exactly one life through EACH of two actual deaths, installs a fresh object
+manager/runtime, isolates outgoing history, waits through title/fade/pending
+assembly/control release, and restores/replays all incoming keys twice over
+45 neutral ticks. Alive leader, unchanged lives/post, selected width, donor
+rules/art and live team chain remain required; no raw replay crosses a load.
+The explicit stale pushable-rock pointer resets under the actual team reload.
+
+Each act contributes150 solo and45 mixed/duplicate-team products. Four solo
+and four team independent witnesses pass in62555 at13:34:15 UTC. The full
+300 solo +90 team products pass in17992 at13:36:36 UTC (396 total including
+six corrected legacy Bubbler checks), zero failures/errors/skips,1:36 Maven
+with queue waiting separate. Source isd35fbaa41 plus the final test drafts
+and the independent Bubbler owner fix; production SOZ is unchanged. Exact
+selectors/hashes and command environment are recorded in the completion plan.
+This upgrades the prior physical-post lifecycle floor rather than inventing
+new cold traversal, every mechanism/team product or native pixel/audio credit.
+
+## Knuckles bonus route retimed for the native fade owner (2026-10-15)
+
+`soz1-cold-knuckles.bk2` was authored under the pre-8179ccd80 double fade advance
+and failed with the replay window at 3500 crossing a load. With that change held
+reverted locally, `TestSozColdRouteCapture` passed 5/5 solo cases, so the row is
+fade timing only. `FadeWindowRetimeTool --keep-intros` measured one owned frozen
+window (bonus entry 3191, 21 native frames) and inserted 10 inputs, but its replay
+still died at 11231: an old-harness/new-harness state dump showed the old driver
+spent 10 inputs (old load row 3201), so the entry needs 11, and the bonus-stage exit
+fade (player frozen at 473,3888, VInt live, so not a frozen window) returns at
+native 3581 instead of the old 3559. The committed movie inserts 11 held inputs at
+each (entry neutral, exit `L`); rows equal the old harness shifted by 11/22 through
+frame 12000 (positions identical; scattered-ring recollection after the 4005 hit
+differs by +2 because object VInt now runs 11 frames further through the exit fade).
+`soz1-cold-knuckles.script` now records the inputs and both insertions.
+
+| Movie | Old SHA-256 | New SHA-256 | Inserted | Frames | Loads |
+|---|---|---|---|---|---|
+| `soz1-cold-knuckles.bk2` | `663b69ce4cba87bb790a20224b39c2feb78e2ee4d381147dcbba7fda8e50cb62` | `1f470578c537eb075398b77b0614884efda6deaf8e099d4e243d0be5775f198e` | +11 at 3201 (bonus entry), +11 at 3570 (bonus exit) | 24074 | bonus 3212, return 3581 |
+
+The bonus-only rewind spots and live-history bounds move with the movie (3400/3500
++11, 3700/3800 +22); the old 3700 would otherwise sit inside the post-bonus title-card
+load. Validation: run `v-soz2` (focused queued `TestSozColdRouteCapture`, S3K ROM,
+branch bugfix/ai-s3k-route-behaviour-regressions on 2adfa37a7) 9/0/0/0, 0 skips;
+Knuckles solo ready=23872, 29 replay windows.

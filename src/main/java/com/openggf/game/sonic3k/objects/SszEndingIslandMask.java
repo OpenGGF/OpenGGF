@@ -81,7 +81,19 @@ public final class SszEndingIslandMask extends AbstractObjectInstance implements
         // any widescreen extension must follow the island's actual framing.
         for (int row = 0; row < 2; row++)
             for (int column = 0; column < 4; column++)
-                renderer.drawFrameIndex(0, camera.getX() + 0x22 + column * 0x40,
-                        camera.getY() + screenY - 0xC0 + row * 0x40, false, false);
+                renderer.drawFrameIndex(0, childWorldX(camera, column), childWorldY(camera, row), false, false);
+    }
+
+    // loc_591D6 leaves render_flags bit 2 clear, so loc_59232's words ($A2+$40n,
+    // y_pos-$40+$40m) are screen positions Render_Sprites never offsets by a camera.
+    // The sprite pass subtracts the render copy plus shake, not the physical camera
+    // the credits scroll (sub_5B18E) moves after ScreenEvents' copy; project with the
+    // same words so the squares stay on the island box's pixels.
+    int childWorldX(com.openggf.camera.Camera camera, int column) {
+        return camera.getXWithShake() - 0x80 + 0xA2 + column * 0x40;
+    }
+
+    int childWorldY(com.openggf.camera.Camera camera, int row) {
+        return camera.getYWithShake() - 0x80 + screenY - 0x40 + row * 0x40;
     }
 }

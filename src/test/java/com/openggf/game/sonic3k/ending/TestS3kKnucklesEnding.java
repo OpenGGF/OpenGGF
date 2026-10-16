@@ -1,5 +1,12 @@
 package com.openggf.game.sonic3k.ending;
 
+import com.openggf.audio.AudioAdmissionObserver;
+import com.openggf.audio.AudioManager;
+import com.openggf.audio.driver.SfxContentionObserver;
+import com.openggf.audio.driver.SmpsDriverServiceObserver;
+import com.openggf.audio.synth.ChipWriteObserver;
+import java.util.ArrayList;
+import java.util.List;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.CrossGameFeatureProvider;
@@ -30,6 +37,81 @@ class TestS3kKnucklesEnding {
     private EndingKnucklesFlightObjectInstance start(HeadlessTestFixture fixture){
         var owner=GameServices.level().getObjectManager().createDynamicObject(EndingKnucklesFlightObjectInstance::new);
         owner.update(0,fixture.sprite());return owner;
+    }
+    /**
+     * loc_5E70E clears Screen_shake_flag, ending the continuous rumble loc_8642E started at
+     * Mecha's final defeat (loc_7B916). Native complete-run RAM: $EECC drops from $FF00 to 0
+     * on the frame the flight owner replaces Mecha; otherwise SSZ2_ScreenEvent keeps shaking
+     * Camera_Y_pos_copy and loc_58E6E freezes Camera_Y_pos_BG_copy up to three lines low.
+     */
+    @Test void flightInitStopsTheMechaDefeatRumbleShake() {
+        var fixture = boot();
+        var shake = ((SszZoneRuntimeState) GameServices.zoneRuntimeState()).screenShake();
+        shake.writeFlag(0xFF00);
+        start(fixture);
+        assertEquals(0, shake.flag());
+    }
+
+    /** loc_5E80A calls Play_SFX_Continuous ($85E52) before Animate_RawMultiDelay. */
+    @Test void quietWindUsesOnlyTheNativeVIntLowNibbleDuringTheWait() {
+        var fixture = boot();
+        var requests = new ArrayList<String>();
+        try (var lease = GameServices.audio().acquireDiagnosticObservers(audioRequests(requests))) {
+            var owner = start(fixture);
+            assertTrue(requests.isEmpty(), "initialization does not call loc_5E80A");
+            int[] clocks = {0, 1, 15, 16, 255, 256, 0x1234FFF0, -16, 0x1234000F};
+            int[] admitted = {1, 1, 1, 2, 2, 3, 4, 5, 5};
+            for (int index = 0; index < clocks.length; index++) {
+                owner.update(clocks[index], fixture.sprite());
+                assertEquals(admitted[index], requests.size(), "native VInt " + clocks[index]);
+            }
+            assertEquals(List.of("SFX:206", "SFX:206", "SFX:206", "SFX:206", "SFX:206"), requests,
+                    "ROM sfx_WindQuiet is $CE, independent of the executed-pass ordinal");
+            assertEquals(2, owner.routine());
+        }
+    }
+    @Test void expiryDispatchRequestsWindBeforeRestoringMusicAndAdjacentJumpDoesNot() {
+        var fixture = boot();
+        var owner = start(fixture);
+        for (int clock = 1; clock <= 299; clock++) owner.update(clock, fixture.sprite());
+        assertEquals(2, owner.routine());
+        var requests = new ArrayList<String>();
+        int music = TestEnvironment.objectServices().getApparentLevelMusicId();
+        try (var lease = GameServices.audio().acquireDiagnosticObservers(audioRequests(requests))) {
+            owner.update(0, fixture.sprite());
+            assertEquals(List.of("SFX:206", "MUSIC:" + music), requests,
+                    "loc_5E80A admits continuous SFX before decrementing the expiring word timer");
+            assertEquals(4, owner.routine());
+            requests.clear();
+            owner.update(16, fixture.sprite());
+            assertTrue(requests.isEmpty(), "loc_5E832 has no continuous-wind request");
+        }
+    }
+    @Test void restoringTheWaitingOwnerReplaysTheSameNativeWindRequests() {
+        var fixture = boot();
+        var owner = start(fixture);
+        for (int clock = 1; clock <= 3; clock++) owner.update(clock, fixture.sprite());
+        var registry = TestEnvironment.activeGameplayMode().getRewindRegistry();
+        var saved = registry.capture();
+        var requests = new ArrayList<String>();
+        int[] clocks = {15, 16, 31, 32};
+        try (var lease = GameServices.audio().acquireDiagnosticObservers(audioRequests(requests))) {
+            for (int clock : clocks) owner.update(clock, fixture.sprite());
+            assertEquals(List.of("SFX:206", "SFX:206"), requests);
+            var expected = List.copyOf(requests);
+            registry.restore(saved);
+            owner = GameServices.level().getObjectManager()
+                    .activeObjectsOfType(EndingKnucklesFlightObjectInstance.class).getFirst();
+            requests.clear();
+            for (int clock : clocks) owner.update(clock, fixture.sprite());
+            assertEquals(expected, requests);
+            assertEquals(2, owner.routine());
+        }
+    }
+    private AudioManager.DiagnosticObserverSet audioRequests(List<String> requests) {
+        return new AudioManager.DiagnosticObserverSet(
+                (kind, id) -> requests.add(kind + ":" + id), AudioAdmissionObserver.NONE,
+                SmpsDriverServiceObserver.NONE, ChipWriteObserver.NONE, SfxContentionObserver.NONE);
     }
     @Test void nativeJumpWaitsThreeHundredPassesAndUsesLightGravityThenThreeSecondHover(){
         var fixture=boot();var owner=start(fixture);

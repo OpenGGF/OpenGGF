@@ -934,3 +934,1272 @@ snapshot. Retain the ed7dc650 historical runtime jar/classpath and presentation
 rebuild drafts. A rebuilt movie is new evidence; the retained mixed-source
 films do not become latest-integrated or whole-scene native pixel parity.
 Formal route breadth and strict trace frontiers stay open as recorded.
+
+
+## Remaining parity and coverage follow-up — 2026-10-14
+
+The follow-up request is to complete the remaining recorded S3K parity and
+coverage limits. It starts from delivered develop
+`5b2ff8e7851b99dd40998dfc41fbfd21c80031ef`; the prior bounded delivery and
+historical captures remain qualified within their recorded scope. Main's normal
+fetch/fast-forward waits for the admitted runtime-memory pair5 lease and then
+completes unchanged. The separately excluded swapped performance cohort has no
+parity or performance acceptance credit. Four new isolated worktrees own the
+coordinator, HPZ breadth, native continuation allocation and trace diagnosis.
+
+| Obligation | Current actionable owner | Planned evidence |
+| --- | --- | --- |
+| Native ending wait audio | `loc_5E80A` / Knuckles flight | Native VInt low-nibble request, expiry ordering, adjacent-routine negative and replay, then separate production PCM/native acceptance |
+| Full-table continuation writes | `Create_Continue_Sprite` / native SST projection and manager slot transfer | Independent partial-write mask; retained live state, slot93 ownership, execution cursor, no synthetic unload and both restore directions; all legal scene occupants |
+| Configuration and lifecycle | Production presets and each owning act matrix | Entry/reload/death products, meaningful interactions and two-cycle replay across supported donors/characters/team contracts; preserve existing coverage and unique custom-width checks |
+| Route continuity | LRZ→HPZ→SSZ and remaining materially distinct paths | Ordinary cold inputs, actual loads/control release and full-world replay/history isolation; positioned success does not close a cold route |
+| Strict trace frontiers | Original/alternate AIZ and initial/returned HCZ, then downstream canonical lanes | Pinned matched source/fixtures, exact first-error field/row, separate bootstrap limits, ROM-owned fixes and another BK2 without hydration |
+| Native presentation/audio | Ending and distinct per-act presentation owners | Independent synchronized native320 NTSC/PAL scene checkpoints and contiguous transitions, actual SAT/CRAM publication, complete waveforms/requests; wide extensions remain separately specified behavior |
+
+The recorded gaps include absent AIZ2/HCZ2/MGZ/CNZ/ICZ matrices, LRZ/SSZ
+physical checkpoint products, MHZ/FBZ/SOZ/DEZ/DDZ remaining supported products,
+sanctuary/auxiliary dispositions, rendered native acceptance and strict trace
+frontiers. Existing MHZ/FBZ/SOZ/DEZ physical-post products and completed native
+route cases are retained. Historical pending labels do not reopen completed
+checks. Actual menu presets replace obsolete512/640 mandatory rows; those raw
+custom widths retain separate useful regression intent. Uncapped team admission
+requires general ownership properties and concrete large-roster evidence, not
+a fabricated participant maximum.
+
+First red qualification on unchanged production5b2ff8e78 is three tests,
+three exact failures, zero errors/skips; Maven1:17, completed08:10:46 BST.
+Native wind request is absent at aligned VInt0, replay observes no `$CE`
+requests, and expiry emits only music21 instead of wind before music. These
+new diagnostic checks use original ROM data and literal source predicates; no
+trace values supply gameplay state. Full follow-up completion remains pending
+until every applicable recorded obligation has actual evidence.
+
+### Quiet-wind repair qualification
+
+`loc_5E80A` now requests native `sfx_WindQuiet` (`$CE`) before animation and
+word-timer expiry, through `Play_SFX_Continuous`'s received
+`V_int_run_count & $F == 0` admission. The entire affected
+`TestS3kKnucklesEnding` class passes16 tests, zero failures/errors/skips;
+Maven1:14, completed08:15:18 BST. The three red checks become green, and all13
+existing native flight, viewport, palette and replay cases remain passing.
+This is request/owner timing evidence, not complete PCM or native scene parity.
+
+Both runs use the local updated wrapper, lean bounded memory, original locked-on
+ROM and explicit EGL property (without launcher notices):
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JDK_JAVA_OPTIONS -u JAVA_TOOL_OPTIONS ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$MAIN_WORKSPACE/Sonic and Knuckles & Sonic 3 (W) [!].gen" '-Dtest=TestS3kKnucklesEnding#quietWindUsesOnlyTheNativeVIntLowNibbleDuringTheWait+expiryDispatchRequestsWindBeforeRestoringMusicAndAdjacentJumpDoesNot+restoringTheWaitingOwnerReplaysTheSameNativeWindRequests' test -B
+# After the native runtime correction:
+env -u DISPLAY -u WAYLAND_DISPLAY -u JDK_JAVA_OPTIONS -u JAVA_TOOL_OPTIONS ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$MAIN_WORKSPACE/Sonic and Knuckles & Sonic 3 (W) [!].gen" '-Dtest=TestS3kKnucklesEnding' test -B
+```
+
+The source audit also finds `loc_5DC2C`/`loc_5DD0E` rescue-plane child lists
+represented partly as inline drawing. Managed native flame, propeller, passenger
+and Master-child allocation/retirement is a new concrete parity obligation. It
+is coupled to legal full-table continuation residue and whole-scene SAT
+acceptance; selected earlier pixel tests do not establish this missing graph.
+The root owns that graph while the allocation worker owns live-SST projection
+and transfer. Source mutation uses normal worktree leases and waits for admitted
+controls; no foreign job is paused, restarted or preempted.
+
+#### Native D01 child-graph regression boundary (2026-10-14 follow-up)
+
+On `feature/ai-s3k-parity-coverage`, production bytes at `d34e4fc8c`, new
+`TestS3kRescueFlightChildren` was run through the local queued lean wrapper
+with Java25, explicit surfaceless EGL and the original absolute locked-on ROM.
+Session30523 completed exit1 at07:40:43UTC: three tests, three failures,
+zero errors/skips,1.761s test time and24.832s Maven. All three actual production
+RESCUE phase22 entries reached their own boundary; none had a managed child,
+against native groups of4 (Sonic incomplete) or5 (Sonic super/Tails hyper).
+Command: `env -u DISPLAY -u WAYLAND_DISPLAY -u JDK_JAVA_OPTIONS -u JAVA_TOOL_OPTIONS ALSOFT_DRIVERS=null LUA_BIN=lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Ds3k.rom.path=<repository-root>/Sonic and Knuckles & Sonic 3 (W) [!].gen' '-Dtest=TestS3kRescueFlightChildren' test -B`.
+
+Implementation follows `loc_5DC2C`'s independent CreateChild6/1 groups,
+`loc_5DD0E`'s small-plane group, `loc_5DD34`'s flag5 and palette helper, and
+`loc_5DE1A`'s flag1. Native `Child_Draw_Sprite2` schedules deletion for the
+following dispatch: the initial test's immediate-retirement premise was corrected
+from the helper body before qualification. Existing Knuckles child tests likewise
+now assert the pending status/code-owner pass before slot release.
+Native AIZ return uses the same two flames and propeller, without a passenger.
+All parent reads resolve the current physical SST code owner; no comparison RAM
+or old Java parent reference supplies gameplay. Qualification remains pending.
+
+#### Composed child graph and native lifetime qualification
+
+The coordinator merged independent core `ae632fe2a6eec9bece7cafb4f2643c74365565c3`
+into local `d34e4fc8c`, resolving the director projection by actual writers.
+The core's41 distinct passing cases and their overlaps are recorded in the
+existing ending lifecycle design. Native rendered/audio parity and complete
+composed pressure are not inferred from those tests.
+
+The source-frozen composed invocation (session51235,07:57:02UTC,90s Maven,24s
+queue wait) ran75 cases:72 passed, three Knuckles small-propeller retirements
+failed, zero errors/skips. Breakdown: continuation status1; Rescue36; Knuckles
+ending16; child graph6 (three failures); actual rescue/AIZ return16. The
+failed getter omitted `loc_5E9E2`'s flags38 bit1 and invented a D01-only bit5;
+pre-init render flags also now remain cleared. No gameplay timer or position
+was tuned. Exact affected three phase cases plus one full-registry changing-graph
+replay pass4/0/0/0 in session8687 (07:59:47UTC,73s Maven,0.660s tests).
+These are complementary completed checks, not one pristine75-case run.
+
+Independent palette-flash delayed-deletion regression fails1/1/0/0 in60405
+(08:04:00UTC,23.462s Maven): expected retained owner, actual immediate delete.
+Both sprite-clear regressions fail2/2/0/0 in68032 (08:06:56UTC,23.435s):
+expected retained global `_unkFAA4` slot93, actual reset−1.
+`loc_5FC78`/`Go_Delete_Sprite` now retain status7/code ownership for one dispatch;
+`loc_5ABC0`/`loc_5AD8E` clear only sprite RAM through Kos_decomp_buffer, preserving
+the global catcher address. The correction run55930 passes13/0/0/0
+(08:10:39UTC,81s Maven): palette1, clear2 (two full-registry replay cycles each),
+and all10 Sonic/Tails×production-preset actual hyper AIZ handoffs.
+The graph/boundary qualification totals77 distinct cases, with overlaps retained
+and not double counted. Root source guards pass3/0/0/0 in47749
+(08:20:10UTC,25.468s Maven): extracted facade budget, critical class budgets,
+and no concrete Sonic dependency in ObjectManager.
+
+All engine runs used the local `maven_queue.py --lean`, known bounded exact
+selectors, `-Dmse=off`, original absolute `-Ds3k.rom.path`, explicit
+`-Dopenggf.headless.gl=surfaceless-egl`, `ALSOFT_DRIVERS=null`, Lua5.4 and no
+ambient display or launcher-option variables. Completed diagnostics were
+consumed/deleted under the exclusive worktree lease. These checks are focused
+validation, not smoke or full-suite acceptance.
+
+Selectors (each with `test -B`):
+
+- 51235: `TestS3kRescueFlightChildren,TestS3kEndingRescue,TestS3kKnucklesEnding,TestS3kKnucklesEndingChildren,TestS3kEndingContinuationPressure#nativeDirectorStatusRetirementDoesNotInventControlBitOne`.
+- 8687: `TestS3kKnucklesEndingChildren#nativePhaseListsAreManagedAndRetireOnTheirOwningFlags+completeRegistryRestoresParentLinksAndReplaysTheChangingGraph`.
+- 60405: `TestS3kKnucklesEndingChildren#allocatedPaletteFlashPreservesColorZeroAndReplaysTheNativeHold`.
+- 68032: `TestS3kEndingNativeObjectClear`.
+- 55930: `TestS3kEndingNativeObjectClear,TestS3kKnucklesEndingChildren#allocatedPaletteFlashPreservesColorZeroAndReplaysTheNativeHold,TestS3kRescueFlightChildren#actualHyperSceneHandoffAllocatesOnlyTheNativeAizReturnGroups`.
+- 47749: `TestArchitecturalSourceGuard#releaseCriticalLargeClassesDoNotGrowWithoutExtraction+objectManagerFacadeStaysWithinExtractedCollaboratorBudget+objectManagerDoesNotGainConcreteSonicDependencies` (no ROM/EGL/audio requirement).
+
+Native reference prerequisites use the separately owned archive-pinned official
+BizHawk2.11 setup, qualified through normal admission in55641, not an assumed
+installed version. Independent future declared-scene comparisons use fixed
+VInt0/RNG0 before the first production object pass. Historical Knuckles fixture
+clock410766 is comparison-derived (2026-09-17 SSZ plan, native RAM observation)
+and is preserved with its historical declared-entry scope; it is not repurposed
+as an independent pixel setup. Natural cold full-chain comparisons remain
+separate. Historical ending media/index bytes are unchanged.
+
+### Production presets, incomplete donors and PAL credits qualification
+
+On source `1c8cfbe33` plus test-only follow-up, the actual production
+`DISPLAY_ASPECT` resolver is selected before donor entry and asserted again after
+the fresh load. The nine S1 Sonic / S2 Sonic / S2 Tails progress -2/0/+2
+combinations run at all five presets320/352/400/528/800:45 cases, including15 new
+incomplete-progress entries. Each verifies native body/tail ownership, the
+progress-specific transformation gate, whole-registry replay, both binding
+restore directions and ordinary fresh-load donor rebinding. These are declared
+reunion entries, not nine cold campaigns.
+
+The first focused command completed08:40:03 UTC (09:40:03 BST), session18273,
+Maven1:24 plus5s queue wait:64 tests, zero failures/errors/skips. It comprises
+donor45, actual-preset Hyper AIZ return10 and nine literal locked-on PAL credit
+tables. PAL tables cover signed delay expiry, both text parts, two replay cycles
+and a single completion edge. The revised AIZ return10 establishes production
+preset selection; the earlier matching raw-width checks remain historical
+geometry evidence.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kCreditsState#everyLockedOnPalTableReplaysDelayBothTextPartsAndSingleCompletion,TestS3kEndingDonorSceneEntry,TestS3kRescueFlightChildren#actualHyperSceneHandoffAllocatesOnlyTheNativeAizReturnGroups' "-Dsonic1.rom.path=$S1_TASK_ROM" "-Dsonic2.rom.path=$S2_TASK_ROM" "-Ds3k.rom.path=$S3K_TASK_ROM" test -B
+```
+
+A separate production-region lifecycle check completed08:44:17 UTC (09:44:17
+BST), session78089, Maven1:33 plus57s queue wait:12 tests, zero
+failures/errors/skips. Nine declared D01 Sonic/Tails/team progress entries and
+three actual SSZ2 Knuckles final-fight continuations select REGION=PAL before
+boot, assert the literal PAL speed through the production coordinator, replay
+real phases, complete both credit parts and reach their actual title-return
+boundary. Knuckles retains the existing declared410766 VInt/prefix; this does
+not promote that comparison-derived historical clock to an independent native
+reference. Audio is disabled in these GPU lifecycle checks. They establish
+PAL-table production selection and per-frame lifecycle behavior, not a 50Hz
+wall-clock, PCM or whole-scene BizHawk parity claim.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kEndingLifecycleCapture#palEndingCompletesBothCreditPartsAndReturnsToTitleWithPhaseReplay,TestS3kKnucklesEndingLifecycleCapture#palFinalFightDepartsThroughBothCreditPartsAndTheActualTerminalWithPhaseReplay' "-Ds3k.rom.path=$S3K_TASK_ROM" test -B
+```
+
+Both commands use the original, identity-verified absolute S1 REV01, S2 REV01
+and locked-on S3K paths as applicable. No runtime source changed in this slice;
+combined follow-up validation and integration remain pending. Consumed local
+redirects are removed after this summary.
+
+### Ordinary S2 RAM and matching-controller binding qualification
+
+The inherited ordinary S2 controller returned a null RAM snapshot. On unchanged
+`99bfb689d` runtime, three new MGZ-hosted S2 donor regressions fail only that
+assertion: session40516,3 failures/0 errors/skips,26.843s Maven, completed
+08:46:39 UTC. The repair captures existing core/drain/palette fields, keeps
+immutable normal scripts through revert, and resolves each current world-owned
+Obj7E on activation/revert. It replays no activation audio, allocation or ring
+writes while restoring. The shipped signed delay/drain and high-byte-only
+`Palette_frame` residual remain unchanged.
+
+The first controller/default/KiS2/spindash check passes24/0/0/0 (26357,
+08:49:54 UTC,1:17 Maven,4s wait). Affected binding check58625 has55 tests and
+five S2 Tails/+2 reverse-boundary failures (08:53:19,1:20,0s wait). Exact
+diff24604 isolates captured `playerExtra.jump`1664 (`$680`) becoming2048
+(`$800`):45 tests/5 failures/0 errors/skips,08:57:05,30.727s,99s wait. The
+currently attached S2 owner had decoded a tiered S3 scene snapshot before the
+scene adapter restored the actual binding. Matching-owner RAM must be reapplied
+after the resource swap in both directions, not merely to the previous live
+controller.
+
+The next60-case candidate73808 retains59 passes but its new transforming-owner
+entry detects the early scene's normal-physics overwrite: expected2048,
+actual1664 (09:07:03 UTC,1:21,16s wait). A default-false local S3 scene-physics
+hook now lets the private bound scene preserve captured physics even before
+its first powered-flag writer. Candidate43844 retains59 passes but the two new
+real-entry vectors encounter quake index254 (09:13:41,1:21,105s wait). The
+opposite interim crossing had decoded S2's unset presentation tier `-1` as
+packed S3 quake255; the subsequent binding restored the ordinary owner but left
+that cached scene resource poisoned. Both local owners now reject the other
+snapshot shape before the matching adapter reapplies its full RAM. The scene
+compares exactly `-1`, because legitimate packed S3 companion fields may be
+signed-negative. A duplicate scene override stopped22266 at compile
+(09:17:11,48.346s):zero tests, zero behavioral credit. It was folded into the
+existing render-context override.
+
+A further fresh-entry obligation restores before entry from an actually
+progressed17-frame native Super palette. Fresh ensure replays the scene's
+immutable constructor/load-ROM baseline after binding, while active restore
+replays captured progressed state. The source baseline is never a trace row,
+future scene or fitted clock. New boundary vectors43178 pass3/0/0/0
+(09:22:33 UTC,1:17,0s wait), covering actual SUPER with its allocated stars,
+TRANSFORMING, and progressed native→before→fresh-forward entry. The active
+ordinary context declares a running incoming HUD timer; these are local
+owner-boundary witnesses, not cold campaign continuations.
+
+Final coherent request61774 passes64/0/0/0 at09:26:06 UTC (10:26:06 BST),
+Maven32.626s, no wait, from `99bfb689d` plus the repair:
+ordinary S2 full-world3; native ending-controller11; donor binding48;
+ordinary jump1; debug-grant1. All six newly introduced world/binding cases
+exercise two complete forward/reverse registry cycles. The final donor48
+includes the45 production-preset/progress rows already qualified for its
+explicit local scene scope. Completed checks use the original identity-verified
+S1 REV01/S2 REV01/locked-on S3K absolute paths; early KiS2 neighbors also used
+the existing independently classified lock-on image. There are no ROM skips.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestSonic2DonorSuperStateRewind,TestS3kEndingDonorSceneEntry,TestSonic3kEndingSuperState,TestMutatorDebugRingGrant,TestPlayableSpriteMovement#s2JumpTriggerStillActivatesSuperSonic' "-Dsonic1.rom.path=$S1_TASK_ROM" "-Dsonic2.rom.path=$S2_TASK_ROM" "-Ds3k.rom.path=$S3K_TASK_ROM" test -B
+```
+
+The red command selected only `TestSonic2DonorSuperStateRewind`; initial green
+selected it plus `TestSuperStateController,TestCrossGameSuperSonic,TestKis2SuperStateController,TestSuperSpindashTable`.
+Affected58625 selected ordinary3, donor45, `TestSonic3kModSuperFormGate`, debug
+and jump;24604 selected donor45 for exact messages.73808/43844 selected
+ordinary3, donor and native ending11.43178 selected
+`TestS3kEndingDonorSceneEntry#ordinaryPoweredDonorRamRestoresAfterItsMatchingControllerIsRebound+progressedNativeSceneDoesNotSupplyRamToReplayedFreshEntry`;
+22266 selected only the former and failed compile. All use the same local
+queue/lean/EGL/unset-desktop/null-driver shape. No public snapshot/API shape or
+settings changed. Independent read-only review accepted matching-owner and
+constructor-baseline boundaries. No full native pixel, PCM, ordinary S2 cold
+route or additional cold donor-campaign claims follow. Consumed nine local
+redirects are removed; combined follow-up smoke/integration remain pending.
+
+### Initial collision publication and real checkpoint boundaries
+
+Root's `feature/ai-s3k-parity-coverage`, parent `9f6475aa0`, found a real
+LRZ2 checkpoint death/title-boundary capture error: erased horizontal spike
+balls from SST5..12 remained in both collision views; SST5 already held a
+star-post child and SST6..12 were empty. The capturing adapter belonged to the
+current manager. This was not a stale world or a missing recreation factory.
+The shared execution wrapper published before its caller's range deletion,
+whereas `Sprite_CheckDeleteTouch3` / `loc_1B666` checks range before AddList.
+Publication now follows the actual caller's deletion/range tail, preserving
+routine execution, solid completion, slot order and the list owner's native
+pending-delete eligibility. Fixed initial handlers publish after their wrapper.
+A separate full-reset regression proves that retaining collision buffers while
+clearing actor identities is also invalid; reset now retires both views. No
+public API, snapshot shape or slot encoding changes.
+
+Rejected diagnostics: 29060 (5 tests,1 failure,1 error),38099 (1 error),
+7748 (25 tests,1 failure,1 error;23 pure cases pass),72498 (2 tests,1 failure,
+1 error),20644 and34187 (each2 tests,1 failure,1 error) kept the LRZ missing-owner
+error or exposed invalid SSZ setup assumptions.64116 is the independent pure
+full-reset red (1 test,1 failure).68890 and22572 stopped at test compilation
+and ran zero cases. The reset-only candidate did not close the LRZ error.
+A diagnostic that checked only the previous list missed initial-build removals
+from the current list; all temporary instrumentation was removed.
+
+Corrected focused gate94957 completes90 tests with1 new SSZ opening assertion
+failure,0 errors/skips at10:39:13 UTC (31.502s Maven). Its89 passing cases are
+84 manager/collision/reference-closure and startup consumers, the independent
+15-placement census, and four local layout contact/two-death witnesses. The
+failed new opening assertion stopped at the arrival script's saved index1;
+this is not contact with the authored subtype2 post. Replacement9651 and
+47382 each run1 test with1 no-contact bound failure; the latter uses the
+already maintained cold-complete320 inputs and remains alive through6000.
+96786 uses the existing upper-walkway boundary7911 and passes1/0/0/0 at
+10:45:09 UTC (26.005s Maven), naturally saving literal post2 ($640,$5E8) in
+`GameplayCaptureSession` with no position or checkpoint writes. Thus90 distinct
+focused identities pass across retained89 plus corrected1; this is not one
+pristine90-case invocation. The harness now drains pending render tasks after
+each production step, matching the established route helper; this final harness
+contract will be included in the pending product qualification.
+
+All checks use normal queued Maven, Java25, explicit surfaceless EGL, unset
+DISPLAY/WAYLAND_DISPLAY, null OpenAL driver and original absolute identity-
+verified ROM paths. The gate selection is:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestObjectManagerRewindSnapshot,TestObjectCollisionResponseList,TestObjectManagerRewindReferenceClosure,TestLrzSszCheckpointRoutes#independentPlacementInventoryIncludesTheNoPostKnucklesFinalArena+firstPostOfEachLayoutHasARealContactAndDeathBoundary+ordinarySszOpeningPhysicallySavesTheFirstAuthoredPost,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' "-Dsonic1.rom.path=$S1_TASK_ROM" "-Dsonic2.rom.path=$S2_TASK_ROM" "-Ds3k.rom.path=$S3K_TASK_ROM" test -B
+```
+
+The corrected standalone selector is
+`TestLrzSszCheckpointRoutes#ordinarySszOpeningPhysicallySavesTheFirstAuthoredPost`.
+The separate local SSZ products declare saved index1 before initial dispatch to
+select the no-arrival branch. Their physical posts2..4 remain unseeded; this
+synthetic local bootstrap is not an authored post1 or a cold-route claim. Full
+880 products, composed source guards/traces, combined smoke, integration and
+push remain pending. User-requested emulator screenshot spot checks are added
+to this follow-up; unchanged verified native screenshots can be reused, while
+current engine pictures retain exact source/input and observation provenance.
+
+### Stable player-key association encoding
+
+The route worker's eight-act gate (1186 tests,1 failure,8 setup errors,0 skips)
+found AIZ2 production entry row140: S2-donor Tails at800 with seven Sonic
+followers. Immediately restoring its six-tick world snapshot swapped
+AutoSpin's serialized refs5/3 at scalar bytes26/61. The live associations were
+unchanged. Independent source review traced `RewindCodecs.MapCodec.capture`
+to `IdentityHashMap.entrySet()` bucket order; clear/reinsert and recreated Java
+identities can change that order. Root owns the shared repair; the worker owns
+the actual AIZ2 consumer and the separately corrected mock-art setup.
+
+On `eea476471`, a deterministic replacement-identity/bucket-order regression
+49321 fails1/1/0/0 at10:56:08 UTC, scalar byte4 expected1/actual0. Its prior
+69723 attempt stopped at a missing test import, zero behavioral credit. The
+fixture preserves two distinct players with the same character label, a null
+key, all three values, the final map instance and actual live iteration order.
+Capture now orders only player-keyed `IdentityHashMap` associations by their
+existing `PlayerRefId`; it changes neither the live map nor linked/sorted map
+ordering, public API or snapshot schema. An independent ordered-map negative
+retains sidekick-before-main order. Other map shapes remain unchanged.
+
+Coherent lean request29652 passes27/0/0/0 at10:59:18 UTC (1:23 Maven): player
+references5, collections8, object references4, helpers6, records2 and field
+scratch2. This is a pure serialization qualification, not yet the actual
+AIZ2 replacement or combined smoke. The command is:
+
+```bash
+python3 tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestRewindPlayerReferenceCodecs,TestRewindCollectionCodecs,TestRewindObjectReferenceCodecs,TestRewindHelperCodecs,TestRewindRecordCodecs,TestRewindCodecFieldScratchReuse' test -B
+```
+
+The actual affected consumer is
+`TestS3kAiz2EntryMatrix#normalEntryAppliesTheProductionPresetAndEveryDeclaredParticipantThenReplaysTwice`,
+parameter140 in the worker's recorded row inventory. Preserve full world
+comparisons and actor identities; new/worsened failures still block delivery.
+
+### Normal S2 Tails profile and checkpoint setup attribution
+
+On composed `c92dae73a`, the first full physical checkpoint gate16301 runs
+882 tests:155 failures,0 errors/skips,727 passes at11:09:42 UTC. The new
+880 products expose95 S2-donor Tails replay differences (camera/body/balance)
+and60 LRZ1 post5 setup contacts. Neither is labeled an inherited failure.
+The derived S2 normal controller profile was always Sonic: native Obj02_Init
+/loc_1B8D8 retains Tails' $0F radius, single-facing balance and its object-balance
+shift. Captured live radius fields alone concealed the wrong derived profile
+until forward replay. Matching normal profile dispatch now follows the existing
+Sonic2PhysicsProvider character rule; KiS2 has its independent controller/profile.
+
+Independent red43014 completes5/5/0/0 at11:20:43 UTC. Its direct normal
+S2-donor Tails owner restore changes the entire literal profile from Tails to
+Sonic; the four recorded product failure kinds retain their comparisons.
+The repaired focused62698 completes92 tests,5 failures,0 errors/skips at
+11:37:20 UTC (1:16 Maven; queue waiting excluded). All84 controller/ending
+consumers pass: ordinary S2 owner4, shared super7, cross-game3, KiS2 3,
+spindash8, native ending11 and donor binding48. Three physical-product
+witnesses also pass, but5 stop before replay because the attempted universal
+64px approach leaves the intended ledge or behind terrain. That setup change
+is rejected. These87 passing identities are not a green92-case invocation,
+and the full880 corrected products remain pending. Independent read-only review
+confirms character/profile dispatch and the direct regression's narrow scope.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestLrzSszCheckpointRoutes#firstRecordedFailureOfEachKind+firstPostOfEachLayoutHasARealContactAndDeathBoundary,TestSonic2DonorSuperStateRewind,TestSuperStateController,TestCrossGameSuperSonic,TestKis2SuperStateController,TestSuperSpindashTable,TestS3kEndingDonorSceneEntry,TestSonic3kEndingSuperState' "-Dsonic1.rom.path=$S1_TASK_ROM" "-Dsonic2.rom.path=$S2_TASK_ROM" "-Ds3k.rom.path=$S3K_TASK_ROM" test -B
+```
+
+Original identity-verified absolute S1/S2/S3K paths execute without ROM skips.
+Only the normal S2 controller and its direct regression are committed in this
+repair; the physical matrix and its corrected production fade driver remain
+separate qualification work. No public API or snapshot shape changes.
+
+### Single fade ownership in captures and actual death drivers
+
+A read-only peer review found that GameplayCaptureSession.step explicitly
+retained the older direct-level UI fade tick even though HeadlessGameBoot
+attaches a runtime-ready context and GameLoop's PLC lifecycle owns the same
+manager. Live Engine already guards its UI fallback with
+`!loop.ownsGameplayFadeLifecycle()`. Root's actual-session59550 red confirms
+frameCount2 after one presentation of an independently started90-frame fade,
+expected1. The request completes9 tests,2 failures,0 errors/skips at
+11:40:56 UTC (25.826s Maven): the other failure is the invalid LRZ1 post5
+left-wall approach; seven contact/two-death witnesses pass with the corrected
+loop-only death driver. No tests or runtime values are supplied by native rows.
+
+The direct capture now uses Engine's existing ownership predicate for every
+launch. Title-first behavior is unchanged; pre-runtime UI fallback remains.
+A separate local post5 setup approaches from the open right ledge, preserving
+the literal8px horizontal activation window, untouched-post assertion and
+actual contact. Universal64px and post5-left32px approaches were rejected as
+terrain setup failures, not repaired in gameplay.
+
+On `be23fffb5` (qualified Route79630ebd entry/early-donor composition),49253
+passes48/0/0/0 at11:45:57 UTC (1:23 Maven): open-right post5 real contact and
+two deaths1; actual direct fade owner1; deferred destination1; native S1/S2
+omitted-title movement2; fully drawn title/data-select/results consumers8;
+data-select launch3; configured donor entry28; S3K ending entry4. The command:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestLrzSszCheckpointRoutes#lrz1PostFiveHasARealContactAndDeathBoundary,TestGameplayCaptureFadeOwnership,TestGameplayCaptureFreshLoad,TestGameplayCaptureSkippedTitles,TestGameplayCaptureFrameRendering,TestGameplayCaptureDataSelectLaunch,TestGameplayCaptureDonorEntry,TestGameplayCaptureS3kEndingEntry' "-Dsonic1.rom.path=$S1_TASK_ROM" "-Dsonic2.rom.path=$S2_TASK_ROM" "-Ds3k.rom.path=$S3K_TASK_ROM" test -B
+```
+
+All three original absolute ROM paths execute, with no skips. Root separately
+composes the qualified camera guard4fd998fa9 as22d5e6ffc. Its final combined
+capture-boundary consumers, complete880 physical products and affected cold
+route timing remain pending. Short placement/contact checks run before the
+independent ordinary SSZ opening and the long product method. The four duplicate
+frontier diagnostic parameters are removed; the distinct post5 terrain witness
+remains. This source repair does not certify historical movies under the new
+driver or native whole-scene/PCM parity.
+
+
+### Checkpoint product qualification (2026-10-14)
+
+The final `TestLrzSszCheckpointRoutes` is test-only on composed
+`a8c9f892e855855f96c7ecad368e127880c9af3e`; test SHA256 is
+`3ed4c7346c79cd06d694e7fc17cf625aaa941d4951db606702734d631115f818`.
+Its15-post literal census contains six LRZ1, five LRZ2, one LRZ boss and three
+SSZ1 posts; SSZ2 Knuckles has zero.880 products comprise430 supported solo
+and450 six-roster examples across320/352/400/528/800. Every contact is ordinary
+movement from outside the native8px touch box. LRZ1 post5 approaches from its
+open right ledge; the rejected universal left64px setup misses five contacts,
+and its left32px variant misses this terrain-specific post. These are setup
+negatives, not a reason to enlarge collision or write the target checkpoint.
+SSZ local saved index1 selects the no-arrival branch before initial objects;
+physical posts2..4 stay unseeded. Its independent maintained cold opening
+saves post2 through ordinary input with no position or checkpoint writes.
+
+The previous composed565257d23 gate90158 passes931/0/0/0 at11:55:43 UTC:
+887 checkpoint cases plus28 donor,1 capture-fade,11 fresh-load and4 ending-entry
+consumers (4:01 Maven execution). That version does not yet capture/replay a
+released incoming world. Read-only review identifies that missing obligation
+rather than accepting graph existence as enough. The final helper checks one
+lost life at assembly and title release, then captures the full newly loaded
+world and runs two forward/reverse45-input cycles after EACH actual death,
+requiring an alive leader, unchanged lives/index and usable configured owners.
+It waits through actual LEVEL/title/fade/control and fresh-assembly gates;
+no snapshot-key filtering, retired-world restore or hidden restart is accepted.
+
+Six independent pilot cases pass6/0/0/0 in request4813 at12:30:40 UTC (1:16
+Maven). The complete final class request99024 passes888/0/0/0 at12:40:30 UTC,
+269.8s in class /4:54 Maven; queue waiting is separate. It includes the880
+products, census, four layout witnesses, distinct post5 witness, S2 Tails with
+seven followers at800 witness and independent cold SSZ post2 contact. The
+short witnesses are ordered before the cold route and large matrix.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestLrzSszCheckpointRoutes' "-Dsonic1.rom.path=$S1_TASK_ROM" "-Dsonic2.rom.path=$S2_TASK_ROM" "-Ds3k.rom.path=$S3K_TASK_ROM" test -B
+```
+
+Pilot selector is
+`TestLrzSszCheckpointRoutes#firstPostOfEachLayoutHasARealContactAndDeathBoundary+lrz1PostFiveHasARealContactAndDeathBoundary+s2TailsWithSevenFollowersReplaysAfterEachCheckpointDeath`.
+Both commands use Java25, normal queued admission, original absolute
+identity-verified ROMs from root AGENTS.md and no ambient desktop. Each process
+is observed terminal0 before source writes. This is focused local contact and
+load/replay qualification, not full-suite, per-product cold route, native
+visual/audio or overall parity acceptance. Remaining source fixes, strict
+frontiers, combined smoke/guards, integration/push and cleanup remain pending.
+Consumed redirects are removed after this durable account.
+
+
+### Existing checkpoint driver qualification (2026-10-14)
+
+Source `262e9bbb10bb317d183dbf289dcfa8568fa0258c` plus four test-only files
+removes manual FadeManager updates from MHZ/FBZ/DEZ's actual-death drivers.
+Each loop asserts production fade ownership, drains pending rendering, waits
+through title/fade/pending completion/fresh assembly/control release, and
+checks exactly one life at assembly and release. `CheckpointIncomingReplay`
+then compares all registry keys around two forward/reverse45-input cycles
+after EACH death, checking current manager/runtime, alive leader, unchanged
+lives/post and configured owners; no raw branch crosses a load.
+
+The short first-post native320/S2-Tails800 witnesses pass12/0/0/0 in93678,
+completed12:58:56 UTC (1:20 Maven). Complete changed consumers in63733 pass
+1077/0/0/0 at13:13:31 UTC (3:32 Maven): MHZ315, FBZ440, DEZ322. The latter
+includes280 standard products plus42 duplicate-S1/trio cases and the actual
+placed inverted-gravity post5 branch. Queue waiting is separate. Original
+ROMs, normal admission, Java25, surfaceless EGL, unset desktop and null OpenAL
+match the prior checkpoint command. All requests are observed terminal0 before
+source writes. Other unchanged physical/contact checks are not repeated.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestMhzCheckpointRoutes#physicalCheckpointSurvivesTwoRealDeathReloads+supportedDonorTeamsKeepTheirRulesAndArtAcrossPhysicalCheckpointDeaths,TestFbzCheckpointRoutes#physicalCheckpointSurvivesTwoRealDeathReloads+supportedDonorTeamsKeepTheirRulesAndArtAcrossPhysicalCheckpointDeaths,TestDezCheckpointRoutes#physicalCheckpointSurvivesTwoRealDeathReloads+supportedDonorTeamsKeepTheirRulesAndArtAcrossPhysicalCheckpointDeaths+extendedTeamsSurviveRepeatedCheckpointReloads' "-Dsonic1.rom.path=$S1_TASK_ROM" "-Dsonic2.rom.path=$S2_TASK_ROM" "-Ds3k.rom.path=$S3K_TASK_ROM" test -B
+```
+
+Pilot selector uses each of those three classes' method
+`firstPostOfEachActAndS2TailsReplaysTheIncomingWorld`.
+SHA256s of the qualified test files are MHZ
+`a6939b3c717f7bc97e1ff06e0be60a4d251906fd0c5f2aa7db451b9fbb99d3b5`,
+FBZ`59cd8fb315c99224254d7cb9a8956bc74d196d9a3f120ba810db249fb5211594`,
+DEZ`8d90eccc2f335e37face11948942cd4ed1951f8daa2d55a8331a5323748d2176`,
+shared helper`bfb5effb0f65b2fe20fc091a54cface69ebb0ff4f514296d66670bb6dfcfc8e7`.
+This adds real incoming-world replay, not per-product cold traversal or native
+visual/audio certification. Existing MHZ enumerates Sonic/Tails/pair; Knuckles
+and additional roster products are the next gap, not silently counted here.
+SOZ/DDZ's older manual fade drivers and other remaining obligations still need
+their affected follow-up. Combined smoke/guards/integration/push/cleanup remain
+pending. Consumed local redirects are removed after this account.
+
+
+### MHZ Knuckles checkpoint qualification (2026-10-14)
+
+Source64f419a3b plus final test draft keeps the existing315 Sonic/Tails/pair
+and donor selectors explicit and adds two independent Knuckles methods:
+`knucklesPhysicallyTouchesAndReplaysEveryPost` (nine actual contact/replay
+cases) and `knucklesPreservesItsRouteAcrossBothDeathsAndIncomingWorlds`
+(45 real two-death/released-world products across all posts and five presets).
+Request50826, Java25/normal queued admission/surfaceless EGL/original three
+absolute ROMs, selects these methods plus`TestBubblerCharacterIdentity`.
+Terminal1 at13:19:59 UTC: MHZ54/0/0/0 (10.55s class); the separate Bubbler
+five cases have two literal Sonic registration-alias rolling failures.
+The latter prove a remaining Obj_Sonic-identity branch defect; MHZ's qualified
+360 distinct lifecycle products span this run and63733, not a fabricated
+single360 pass. Act1=200 and Act2=160. No new cold traversal/native acceptance.
+The source freeze ended before the subsequent owner correction.
+
+
+### Bubbler persistent identity and literal radii (2026-10-14)
+
+Source64f419a3b plus five literal tests gives two genuine follower-Sonic
+rolling failures in50826 at13:19:59 UTC. Replacing registration-name authority
+with CharacterKey makes all five pass in14102 at13:28:25 UTC; its one legacy
+red is a Tails-named generic sprite that still declares Sonic identity.
+After explicitly declaring that fixture's identity, seven actual character
+vectors add Knuckles controls:59172 at13:30:17 UTC has two genuine native
+radius15/Java19 failures, while all six legacy and two recreation cases pass.
+Native`Obj_Bubbler`64719/`loc_2FC5A` owns both branches: Sonic clears Roll,
+9/19,Y−5; non-Sonic retains Roll,9/15,Y−1. No frame/fixture/gameplay-row fit.
+The object uses NativePositionOps for the non-Sonic word adjustment and keeps
+all eligibility, pickup ordering, clocks and consumed-state owners unchanged.
+
+Final production SHA256`3e7fa18a88a569edf34a078978a4d4dcccb9d43273bd20c4faf71b79b60c88b7`
+has seven typed vectors, two full object recreation cases and two ROM HCZ
+breathing consumers green in62555 at13:34:15 UTC. That35-case mixed pilot
+has one remaining legacy radius assertion copied from its generic standing
+default. Only that test premise changes:17992 at13:36:36 UTC passes all six
+legacy cases plus390 SOZ products,396/0/0/0. Queue waiting is separate;
+actual terminal results precede every source edit. These are focused scopes,
+not a fabricated green35 invocation, full suite or native whole-scene credit.
+Selectors are`TestBubblerCharacterIdentity,TestBubblerObjectInstance,
+TestS3kUtilityMotionRewind,TestS3kBreathingBubbles`; first two pure negative
+runs use --lean, actual ROM consumers normal queued admission/surfaceless EGL
+with original absolute ROMs, Java25, no desktop and null OpenAL. The source
+is unchanged between the final typed pass and corrected legacy pass.
+
+
+### SOZ and Doomsday actual reload qualification (2026-10-14)
+
+Final three test drafts on d35fbaa41 plus the independent Bubbler owner repair
+replace manual FadeManager service with the asserted GameLoop owner and
+pending-render drain. Eight independent SOZ witnesses and ten DDZ cases pass
+in62555 at13:34:15 UTC; its only red is the separately corrected legacy
+bubble radius assertion. DDZ now has two actual natural ring-out/fall/kill
+reloads at every preset, exact life loss and released-flight full-world replay
+after both loads; five declared ending-boundary cases retain progression-save
+and actual ending-load isolation. These are not preceding-fight certifications.
+
+17992 completes terminal0 at13:36:36 UTC,396/0/0/0 (1:36 Maven): all300
+SOZ solo products (10 physical posts × six supported character/donor pairs ×
+five presets) and90 finite Sonic-led mixed/duplicate team products, plus six
+corrected legacy Bubbler tests. All SOZ products now use two actual deaths,
+exact life loss at assembly/release, fresh runtime/manager, old-history isolation
+and two complete forward/reverse45-tick world cycles after EACH release.
+Solo physical-contact replay also compares all keys twice. The independent
+short witnesses are ordered before the large products. No setup calls a post's
+save/activation or imports native gameplay values. Stale team rock pointer is
+an explicitly declared outgoing stimulus; native reload must clear it.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestBubblerObjectInstance,TestSozTeamCheckpointResetProduction#mixedAndDuplicateTeamsSurviveTwoConsecutiveCheckpointReloads,TestSozCheckpointReloadProduction#touchCheckpointThenDeathReloadsItsNativePosition+otherPlacedPostsActivateAndReload' "-Dsonic1.rom.path=$S1_TASK_ROM" "-Dsonic2.rom.path=$S2_TASK_ROM" "-Ds3k.rom.path=$S3K_TASK_ROM" test -B
+```
+
+Pilot selector is`TestBubblerCharacterIdentity,TestBubblerObjectInstance,
+TestS3kUtilityMotionRewind,TestS3kBreathingBubbles,
+TestSozTeamCheckpointResetProduction#shortCheckpointTeamsReplayReleasedIncomingWorlds,
+TestSozCheckpointReloadProduction#shortSoloCheckpointsReplayReleasedIncomingWorlds,
+TestS3kDdzLifecycleProduction`. Same actual Java25, original absolute three
+ROMs, normal admission and no desktop. Exact SHA256s: solo
+`a3af5378c0d894d42fb86e6f7aa0fa9665405677f3e4a5ddd98c64320542bfc7`, team
+`3d3bcc58d544e63b32c87620358e546c34c61a459cf86aecdfaacb62d51f9098`, DDZ
+`7580299b9f92bcbae446c9226013e6b475afb113550dd4bdfcd789b6d695ec01`.
+Actual terminal is observed before writes; consumed redirects are removed after
+this account. Broader mechanism/donor/roster/cold/native/auxiliary products,
+strict frontiers, combined smoke/guards, integration/push/cleanup remain pending.
+
+
+## Native opening-bridge contact follow-up (2026-10-14)
+
+Independently fresh native320 Sonic+Tails and engine scenes consume original
+AD40 suffix448920 after a separate neutral initial ProcessSprites pass,
+polls0/LFC0. Losing that first ordinary row caused the earlier Death Egg X
+drift; it was a host-boundary issue. Native blue/gold circles are present in
+both captures; a player-row SAT count is not a circle-row overflow witness.
+Corrected P1 coordinates/camera agree through poll1341. At1342 the native
+bridge moves to894/3208 and acquires P1 at808/3179; engine had808/3192,
+airborne. Decision callbacks and full RAM identify the exact bridge standing
+bit, with no shared terrain landing. Updraft first moves P1 to3192; the native
+surface3208-9 gives d0=-16 and relative Y3179. The former d2=16 profile
+misses that contact. Existing provider flags now select d3, reject exact zero
+and preserve the relative snap before TouchFloor. Shared solver/clocks,
+allocator and fixture-directed runtime branches are unchanged.
+
+Literal `TestSszBridgeNativeTopContact` on656e21eb1 plus its test draft has
+10/6/0/0 in37975 at13:57:53 UTC. Final affected81009 is terminal0 at
+14:02:18 UTC,54/0/0/0 (1:26 Maven): ten controls, one original-controller
+contact/replay,13 profiles,25 bridge/death/reload capture products and five
+Knuckles bridge cases. The real original-input case compares every registry
+key twice around45 inputs, retaining current owners/lives and actual ride;
+no raw restore crosses a load. Normal queued admission, Java25, surfaceless
+EGL, original absolute ROMs, null OpenAL and no ambient desktop are used.
+
+Native/engine external task evidence: `native-ssz-contact-pair-ntsc-v1` and
+`ssz-contact-boundary-656e21eb1-e3b0c44298fc-v1` under the task spot-checks.
+Their provenance/command JSON pins exact argv, original ROM/BK2, immutable
+bf3c539 video host and passive decision instrumentation. Native762427 epochs
+1791985804.0648851–1791985816.9969594; Java762737/mainSszContactBoundaryProbe
+1791985817.4445887–1791985820.1126516, both0 (request8791 at13:50:20 UTC).
+Its C# adapter SHA256 is6c8bf0e09852af0ab0df216ff969a1a914c11841264e30f7b181fc6592c459c0.
+The callback CSV mislabeled06/07 as radii: those are visual height/width24.
+Actual9/19 is verified at1F/1E in unchanged raw RAM; no radius inference uses
+those mislabeled columns. OriginalRGB and prepared/published identities are
+retained. The prior14908 helper int/uint compile error is terminal1 at
+13:47:54 UTC, before emulator/engine-probe launch; engine compilation succeeds.
+Actual child intervals are relayed to the authorized performance coordinator.
+This is bounded owner/contact evidence, not whole-scene pixel/audio, every
+cold product, full suite or combined delivery. Maintained cold completions
+and corrected final engine spot captures follow. Consumed target redirects
+are removed after this durable account.
+
+
+## SSZ cold boundaries and bonus return pilots (2026-10-14)
+
+The corrected opening bridge is retained. Matched unchanged maintained route
+checks on pre-bridge656e21eb1 and candidate9c9c27f67 both fail the same two
+expectations: native320 lacks enough neutral tail for DEZ, and paired800 looks
+for its intro at an obsolete fixed input. This attributes neither failure to
+the bridge correction. Independent ordinary-loop observation on90897f41d
+shows both320 drawing policies load DEZ at20550, assemble20551 and release
+controls20633;800 loads20874, assembles20875 and releases20957. The actual
+launch fade takes21 color presentations plus black-completion publication.
+The previous local route assertions were baked into double-serviced fading;
+runtime clocks are not changed to fit those expectations.
+
+The320 author script now appends180 neutral rows. All20540 original rows are
+preserved byte-for-byte, total20720; InputLogAuthorTool compilation and BK2
+round-trip are checked. The tests observe the actual load and assembly, retain
+all native fight/health/ring predicates, and compare every registry key in two
+forward/reverse45-input cycles. Incoming assembly and released-world windows
+are independent; no raw restore crosses a full load. The native320 completion
+records50 windows and paired800 records44, including actual DEZ introduction
+and release. Older fixed-row expectations are superseded, not removed without
+an equivalent incoming-world obligation.
+
+Request12506 is terminal0 at2026-10-14 15:17:45 UTC,1:53 Maven:
+`TestSszColdRouteCapture,TestSszWidePairedColdRouteCapture,TestS3kBonusStageReturnProducts`
+passes8/0/0/0 on b930df4868e01a116f6e76578101080ef98791ca plus these drafts.
+The command uses normal queued admission, `-Dmse=off`,
+`-Dopenggf.headless.gl=surfaceless-egl`, the exact three-class `-Dtest` selector,
+`test -B`, original absolute S1/S2/S3K ROM properties, Java25,
+`LUA_BIN=/usr/bin/lua5.4`, null OpenAL and unset DISPLAY/WAYLAND_DISPLAY.
+Five bonus pilots cover logical production requests, actual stage load and
+return, fresh managers and retired history; they do not claim physical portal
+traversal, reward mechanisms or cold routes. Gumball and Pachinko have two
+18-tick full-world replay cycles; Slot advertises no whole-stage rewind and
+is checked by ordinary18 ticks. All five origins have two45-tick full-world
+cycles after real fade/title/control release. The [bonus matrix](../validation/levels/s3k-bonus-stage-transitions.md)
+records supported pilot axes and remaining obligations.
+
+The passive corrected9c engine scene1432 observations exactly matches native
+P1 X/Y, X/Y speed, ground speed, mapping, camera/copies, level counter and rings.
+P2 still differs at one X row119 and74 Y rows within119–209; this is an open
+arrival ownership/allocation issue, not accepted intentional divergence or
+whole-scene RGB/audio parity. Native/engine source domains and original images
+remain in the external task directory. Launch intervals have been relayed to
+the performance coordinator; compiler helpers retain the intended source
+worktree build lease, including external class output, and release before
+queued tests. No performance result is inferred from these checks.
+
+Qualified test hashes:
+- `src/test/java/com/openggf/tools/TestSszColdRouteCapture.java`: SHA256`d2c7be7a67708b0ab1ab9f54b9e604508f79df498d054b994c1bdb73cb7b946c`.
+- `src/test/java/com/openggf/tools/TestSszWidePairedColdRouteCapture.java`: SHA256`2d23891c38affa20014278c385d080700faae1bf455efb5975e399149bf2a5c7`.
+- `src/test/java/com/openggf/tests/TestS3kBonusStageReturnProducts.java`: SHA256`37ac77e5fbb8e44c720696317afc002fbf5c9d4ce6a9b280cdfbf191eeb7fefe`.
+
+
+## Finite bonus boundary qualification (2026-10-14)
+
+Coherent69e4f51d3 plus `TestS3kBonusStageReturnProducts` final draft passes
+425/0/0/0 in70993, terminal0 at19:17:41 UTC. Maven4:51, class218.0s,733s
+queue waiting is excluded. Five independent pilots run before the420 finite
+products (existing140 generator × three stages). All five viewports including
+528, all six admitted main/donor pairs and the finite solo/mixed/duplicate/
+seven-follower rosters now traverse real production loads and returns. Ordered
+CPU chains and distinct duplicate identities are checked before entry and
+after return, along with ROM-backed renderer/animation resources. Every returned
+world compares all registry keys in two45-tick cycles and both restore
+directions; interior rewind follows the advertised two-supported/Slot-unsupported
+contract. Per-case configuration and donor/session globals are restored.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kBonusStageReturnProducts' "-Dsonic1.rom.path=$S1_TASK_ROM" "-Dsonic2.rom.path=$S2_TASK_ROM" "-Ds3k.rom.path=$S3K_TASK_ROM" test -B
+```
+
+Final test SHA256`318a460ca946bdfe420eb31c95ad253360f56a68ceb01b8edaeb02d0821436be`. This closes the finite logical load/return
+product; physical portal contact, actual reward/exit mechanisms, matched native
+whole-interior pictures/audio and wider campaign obligations are still separate.
+Consumed Maven redirect is deleted after this durable summary; no validation
+receipt or archived test log is retained. This is focused qualification, not
+combined smoke/guards, full-suite or integrated delivery credit.
+
+
+## Qualified native video port integration (2026-10-14)
+
+TraceChaser diagnostic sourcebf3c5391c948dbf31018f8779e805437fd1621bf
+is integrated into origin/main as4fdf73880f93a3172d23bf9e157b15de3c78fc32
+and the exact remote SHA is verified. Integration uses a separate owned main
+worktree; the shared detached native checkout is preserved. The merged file
+tree is byte-identical to the qualified feature tip. Its13 native host cases
+and32 Python policy cases retain their prior scope; repository, reachable
+history and documentation scanners pass on the integration tree, including
+the new merge commit. Root independently reviews current-generation invalidation,
+owned array copies and strict domain lengths. No canonical fixture, generic
+callback port, recorder profile or ordinary Advance flags change. This is
+focused diagnostic-port qualification, not a full recorder/engine suite or
+ending pixel acceptance. The parent gitlink records the pushed integrated SHA.
+
+Additional passive SSZ observer72373 completes terminal0 at19:19:47 UTC
+(16.324s Maven execution). Native main `SszArrivalAllocationProbe` launches
+at1792005572.151551 /19:19:32.151558 UTC and ends1792005587.5887856 /
+19:19:47.588791 UTC. Its adapter SHA256 is
+`84adead99db9a42e4efb699220d22ea0d544c45fb5dc4e6e4fc1dcdbd633d3bf`.
+Same original ROM/AD40 movie, title/bootstrap setup and1431 ordinary polls
+as the retained contact pair; eight full state/VDP/image controls, including
+complete1432-row state.csv, are byte-identical. The observer adds read-only
+allocation registers and snapshots118/119/120, not gameplay writes.
+
+Atpoll/LFC109, loc57D18 has A0=B128(slot4), A1=B000(Player1),
+D0lowword20, byte38=FF,byte39=03,word3A=0020. Collision-reset slot2
+(code6C2C) is occupied; slot3 is empty. CreateNewSprite4 returnsB0DE(slot3)
+and D0low1D. Obj57DCC first executes atpoll/LFC110, the following object
+pass. These are literal native register/slot facts supporting a local
+continuation scan; they do not justify a fitted birth delay or shared allocator
+change. Root arrival light/cycle retirement remain the same owning routine's
+missing state. Engine repair and negative/green qualification follow separately.
+
+Output `native-ssz-arrival-allocation-ntsc-v1` remains under the explicit
+external task spot-check directory with exact argv/spec hashes/provenance.
+C# compilation additionally holds the native source/classes worktree lease
+and inherits its FD; normal Maven admission retains the baseline tree through
+all execution. Actual child bounds are relayed to the performance coordinator.
+No measurement credit, pause/preemption or foreign resource change is requested.
+
+
+## Native SSZ arrival owner qualification (2026-10-14)
+
+Candidate parent558e74833c2256688b4ef4bcb795006416056589.
+Native72373's literal registers establish the owning scan and missing light
+state. Production captures byte39/word3A, reads word_4670C from the ROM,
+uses the carried DBEQ budget through actual live/reserved owners, gates the
+helper on Sonic main/P2 and checks cycle zero before the settle light tail.
+Existing shared allocator, physics clocks and public snapshot shapes are unchanged.
+
+Matched pre-repair request38301 is terminal1 at19:32:10 UTC:21/21 failures,
+zero errors/skips, covering early higher-slot helper dispatch, absent light
+writes, erroneous Tails-led branch and immediate settle retirement. The three
+pressure cases were added later and receive no fabricated negative credit.
+Candidate79082 is terminal1 at19:54:33 UTC:143/6/0/0 (1:23 Maven,0s queue).
+All119 neighbor identities and18 new identities pass. Six new fixture failures
+are resolved without production changes: preloaded placement controller7/10
+must be behind helper3 rather than asserted at native cold slot4; settle must
+advance ordinary palette-ownership epochs instead of repeating direct updates.
+Corrected exact-class21831 is terminal0 at20:09:21 UTC,24/0/0/0,25.233s Maven,
+2.813s class execution,162s queue. All143 distinct affected identities are
+therefore green across two runs; this is not one green143-case invocation.
+An erroneously early unadmitted follow-up53114 is cancelled terminal130,
+verified zero children/no JVM; it supplies no evidence and no foreign request
+is changed. The retained writer5076 completes before21831 is submitted.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kSszArrivalContinuation,TestS3kSszArrivalHeadless,TestS3kSszKnucklesArrivalHeadless,TestS3kSszTeleporterPads,TestS3kHpzTeleporterHeadless,TestS3kHpzGraphRewind,TestObjectManagerFixedSstExecution,TestObjectManagerFixedSstInitialization,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' "-Dsonic1.rom.path=$S1_TASK_ROM" "-Dsonic2.rom.path=$S2_TASK_ROM" "-Ds3k.rom.path=$S3K_TASK_ROM" test -B
+# Corrected24 alone, after the actual fixture-writer completion:
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kSszArrivalContinuation' "-Dsonic1.rom.path=$S1_TASK_ROM" "-Dsonic2.rom.path=$S2_TASK_ROM" "-Ds3k.rom.path=$S3K_TASK_ROM" test -B
+```
+
+Passive recapture25248 terminal0 at20:12:52 UTC,3.242s Maven/170s queue:
+`-Dexec.executable=python3 '-Dexec.args=<task-scratch>/run_ssz_arrival_engine.py %classpath' exec:exec -B`
+through the same normal wrapper/cwd. Javac20:12:49.304367–20:12:49.669124 UTC
+(epoch1792008769.304361–1792008769.6691213), external output directory, retains
+the queued parent's source/classes worktree lease. Java main
+`SszArrivalBoundaryProbe`20:12:49.672490–20:12:52.240184 UTC
+(epoch1792008769.6724887–1792008772.2401783), JVM1647775 terminal0.
+Observer SHA2566016797a066d4a595a996c82efcf3d6d76899610d737e0ecace6b5d45732a2bf;
+production diff SHA2563f19b8b1d04c59c5174c2678f9af0016aad6a9cea0aaa5e3afa53cd9a649a976.
+Original ROM/AD40 hashes and exact complete argv are external capture provenance.
+No shadow runtime class, trace hydration or later input/gameplay write is used.
+
+Both complete1432-row arms match the recorded P1 X/Y, X/Y velocities,
+ground speed and mapping frame, P2 X/Y, cameras/copies, level clock and rings.
+That CSV does not record P2 velocity or body/tail animation. Prior P2
+one-X/74-Y deficits are removed. Pictures are inspected after reading state:
+title-card suppression differs at input0, and the native published-producer
+column is not sufficient to justify a global previous-row pixel shift.
+That rejected shift worsens differences. Native330/current-engine330 still
+has360 differing logical three-bit pixels; all71680 original-RGB pixels
+separately differ because the conversion ladders remain distinct. This is a
+bounded state/owner qualification, not full-scene pixel/audio, all campaign
+products, combined smoke/guards or integrated delivery credit. External output
+`ssz-arrival-boundary-558e74833-3f19b8b1d04c-v1` retains exact provenance.
+Consumed target redirects are deleted after this account, never archived.
+
+
+## Updated develop composition and conflict qualification (2026-10-14)
+
+Qualified AIZ FallingShot/common-shot tip1255286c3616a96ef36fce7efde5dd92e3b2263b
+is composed as774959d302c474d680c8b190e44e9787f93ad198. Both independently
+appended skill lessons are retained without replacing the root's earlier
+ending/SSZ lesson edits. Its worker707/0/0/0 and111/0/0/0 guards keep their
+recorded scope; strict four controls and unchanged chain/alternate deficits
+remain in the frontier audit. No unchanged broad check is repeated.
+
+The root then composes updated destination7277cef4040af3ae95d86a794bce7f75a16cc483.
+Five conflicts are resolved by owner intent: both S3K skill mirrors and both
+independent implementation-pitfall sections survive; the stock-ROM identity
+guard precedes the native HPZ timer/HUD initialization; the qualified raw/SST
+flare retains stock Init, F4 outer draw and next-pass clear. Only an opted-in
+warning has its captured bounded counter and absent-parent retirement. Its
+birth Init precedes the admitted16..60 delay and a longer warning retains the
+last raw pose, using ROM bytes rather than the old copied animation sequence.
+The old stock16-update assertion becomes the independently qualified18-retained/
+19th-clear native contract. Its mock fixture explicitly supplies byte_6913F.
+
+Two failed compilation launches69583/47327 are terminal1 with zero tests:
+wrong mock ROM-reader package, then an unnecessary checked exception handler.
+Neither receives test credit. After the verified test-only corrections,
+build-only23086 passes test-compile at20:37:45 UTC (24.596s, no tests).
+Corrected focused65772 is terminal0 at20:39:33 UTC:99/0/0/0,27.467s Maven,
+0s queue. Native flare19, SecondStrike policy12, profile8 and mandatory S3K
+startup/loading/bootstrap/decoder60 pass. Read-only frontier peer review
+confirms stock semantics, captured primitive warning state and both slot-order/
+post-F4 replay coverage. Composed smoke/guards and final integration are pending.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off test-compile -B
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestSecondStrikeBoss,TestAizMinibossFlareNativeGraph,TestSonic3kLevelInitProfile,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' "-Dsonic1.rom.path=$S1_TASK_ROM" "-Dsonic2.rom.path=$S2_TASK_ROM" "-Ds3k.rom.path=$S3K_TASK_ROM" test -B
+```
+
+Consumed root redirects are deleted after this account; no validation receipt
+or archived invocation log is retained. The original pre-task integration
+base5b2ff8e7851b99dd40998dfc41fbfd21c80031ef remains the combined validation base.
+
+
+## Bonus portal and mechanism qualification (2026-10-14)
+
+Source parente46f61820069f0d959e59220a46fba9a80aa4426; new test SHA256
+6f381f29976a71c2aa9b60f0a9736a9d937c83de0cb18f30851da2782b2814a0.
+Build-only13838 passes test-compile at20:44:54 UTC,22.906s,zero tests.
+Short2258 completes20:46:52 UTC,5/0/0/0,28.313s Maven/5.876s class/0s queue.
+Finite41801 completes20:54:42 UTC,420/0/0/0,5:06 Maven/280.8s class/69s queue.
+These are425 distinct physical-owner products across two invocations, not one
+single425 run; no unchanged logical products are rerun for this qualification.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off test-compile -B
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kBonusPortalMechanismProducts#shortPortalAndMechanismPilotsLoadAndReturnThroughRealBoundaries' "-Dsonic1.rom.path=$S1_TASK_ROM" "-Dsonic2.rom.path=$S2_TASK_ROM" "-Ds3k.rom.path=$S3K_TASK_ROM" test -B
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kBonusPortalMechanismProducts#finitePortalAndExitProductsRetainRosterAndBothLoadBoundaries' "-Dsonic1.rom.path=$S1_TASK_ROM" "-Dsonic2.rom.path=$S2_TASK_ROM" "-Ds3k.rom.path=$S3K_TASK_ROM" test -B
+```
+
+Real SOZ1 post1 activation and four-star orbit/lifetime precede actual portal
+overlap; only declared position/carried-ring inlets are seeded. Gumball exit
+range, Pachinko captured countdown and actual Slot goal-cell collision request
+their own exits; no logical entry/exit test hooks are used. Both actual loads,
+ordered roster/resources, all-key interior/returned replay and timeline floors
+are checked. Complete cold stage traversal, reward mechanisms, native pixels/
+audio and whole-Slot rewind are not credited. Its copied runtime board/reel/
+reward/animation tables expose an additional concrete ROM-pipeline obligation:
+matched original layout1024B at1E4084 (SHA256e5fbad9116c0febbfb792fad5ed0445291c1f49ebfd2bf04b81c187cb32dfe2d),
+start4B at1E4080, prize word4C8A4, target4C8B4, reels4C8CC/4C8D4/4C8DC,
+transient scripts4B5EC/4B622/4B656/4B688. Only addresses/hashes are inventoried;
+no disassembly asset is used as runtime fallback. These remain active work.
+
+The ending matrix's stale blanket pressure statement is corrected to existing
+17 real-child cases (19591 plus two unchanged43234 pilots) and separate11-core7093,
+with impossible fixed8/48 and Knuckles-only victims excluded by native owners.
+Actual loc5DB76/5DD6A full-table dispatch and downstream scene composition are
+separate remaining qualification. Consumed root redirects are deleted after this
+account; combined smoke/guards and integrated delivery remain pending.
+
+
+## Native carry and Saved2 corrective composition (2026-10-14)
+
+Qualified workeraedc137a173f48ecf71ae76253731b52ff7645cb is merged after
+root585540848's actual portal/exit checks release. The merge has no conflicts;
+source review confirms the updated develop stock-ROM script guard remains
+ahead of HPZ initialization while the native fresh/checkpoint/selected-Saved2
+eligibility is published before player assembly and survives bank consumption.
+The engine-internal carry port retains every configured participant/order and
+uses a capable native P2 or the existing intrinsic native-art Tails role for
+native CNZ/MHZ story ownership. Public snapshot/Mod API shapes remain unchanged.
+
+Worker2571 is terminal0 at20:51:39 UTC,399/0/0/0 (1:54 Maven): CNZ140 entry
+and140 real two-reload/incoming-world products; authority3; capture-host28;
+native story10, including incapable-first natural retirement/recreation and
+reverse absence; real Saved2 representatives8; pedestal representatives8;
+mandatory S3K neighbors60. Earlier72 matched/pure carry neighbors retain their
+separate source scope. Source-owned negative and fixture-writer attribution
+are recorded in the owning CNZ/HPZ matrices; no native ring/camera writer is
+suppressed. Root build-only70500 passes compile on the union at21:09:01 UTC,
+51.439s,zero tests. Actual finite hub/outcome/palette qualification continues;
+composed smoke/guards and main integration remain pending.
+
+A separately discovered private-record diagnostic access bug in
+RewindSnapshotDiff.collectDiffs can conceal diffKey paths; keyEquals comparison
+and direct native state/load/receipt/pixel assertions remain distinct evidence.
+A bounded fail-closed helper repair is owned by the frontier lane and affected
+world assertions must be checked with that helper before final delivery credit.
+No valid queued/running request is cancelled because of this discovery.
+Consumed root build redirect is removed after the durable account.
+
+## Paired pattern transfer composition (2026-10-14)
+
+After actual carry merge3e080ca11 releases, qualified workerdf8a26e936 is
+composed. Three documentation append conflicts preserve both independent
+lessons, including byte-identical object-skill mirrors. The profile retains
+the updated develop stock-ROM guard and Saved2 assembly contract; its VInt
+tail additionally publishes pending paired pattern DMA. Build-only29114
+passes on the composed tree at21:19:22 UTC,1:09 Maven,zero tests. The worker
+qualifies18 transfer/world checks and289 distinct affected consumers across
+the exact scoped runs documented in the ending matrix. No raw queue behavior
+or public snapshot signature is widened. Corrected helper replay, combined
+smoke/guards, destination integration and push remain pending. Consumed build
+redirect is removed after this account; durable native v7 media is external.
+
+## Captured-content comparator repair (2026-10-14)
+
+Qualified helperc3d2e75b41950961ec6300b38c30b02345a6143a is composed
+after paired transfer7cc10d369. Private record inspection is explicit and
+fail closed; top-level arrays and opaque state blobs compare their full nested
+content. Five independent failing vectors precede candidate77331, which
+passes14/0/0/0 at21:16:10 UTC,1:04 Maven,zero queue wait. No gameplay state
+is removed, hydrated or filtered. One measurement-hazard append conflict
+preserves both the unrelated editor projection lesson and the new comparator
+lesson. Six additionally omitted captured gameplay/identity manager fields
+are under a separate negative/regression repair; derived cache dirtiness and
+allocator telemetry require their own justified exclusion. Historical
+diffKey-only world equality remains provisional pending composed verification;
+independent direct lifecycle/state/DMA/pixel assertions retain their scope.
+
+## Slot asset ownership corrective qualification (2026-10-14)
+
+Root0a05aa118 is the composed base for the immutable Slot ROM bank. Runtime
+start/layout1E4080/1E4084, signed prize words4C8A4, target rows4C8B4,
+reels4C8CC/4C8D4/4C8DC and cell scripts4B5EC/4B622/4B656/4B688 come from
+the ROM pipeline. Byte identity and the native labels/routine pointers were
+checked against the original locked-on ROM; no reference bytes hydrate gameplay.
+Pure fixtures explicitly inject their separate synthetic bank. All consumed
+literal asset arrays are removed from production, including the older optional
+cell animator. Provider registration remains independent of unselected assets.
+
+Actual build23604 passes at21:26:54 UTC,1:09,zero tests. Focused5254 reports
+166/1/0/0 at21:27:47 UTC,28.461s,zero wait: the new immutable getters introduced
+a real warmed-draw allocation regression, detected by the existing oracle.
+The package read-only view repair yields27/0/0/0 in14603 at21:29:53 UTC,1:18.
+Actual bonus portals/exit owners plus mandatory60 and cell/resource neighbors
+pass75/0/0/0 in28066 at21:32:10 UTC,1:20. Complete first-zero termination
+checks pass13/0/0/0 in71315 at21:35:24 UTC,1:14. All queued waits are zero;
+all declared ROM tests execute, with zero skips. Exact selections are
+`TestS3kSlot*` named mechanics/objects plus `TestMutatorBonusRingProducers`
+for5254; allocation/resource/option/display for14603; resource/legacy animation,
+`TestS3kBonusPortalMechanismProducts#shortPortalAndMechanismPilotsLoadAndReturnThroughRealBoundaries`
+and the four mandatory S3K classes for28066; resource/render-buffer/legacy
+animation for71315. Commands use the local normal wrapper, EGL, null audio,
+unset ambient displays and absolute original-ROM properties; only bounded
+14603/71315 use lean. Overlapping run totals retain separate source scopes.
+
+Complete Slot rewind/recreation, other physical rewards, cold stage traversal,
+native images/audio and composed smoke/guards are still active obligations.
+Consumed target redirects are removed after inspection; no validation receipts
+or copied raw logs are retained.
+
+## Complete captured gameplay comparator composition (2026-10-14)
+
+Qualified six-fieldd8da363885 and Palette7001b1eef0 are composed onto the
+Slot-resource root0f95ee5bb without conflicts. Object-manager equality now
+includes captured solid contact, plane switchers, touch overlap, collision
+response, dynamic identity counter and the actual allocation/execution cursor.
+Only source-proven cache dirtiness and peak allocator telemetry retain cosmetic
+exclusions. Palette leaves compare all16 rawRGB triples and report the exact
+changed component; no palette normalization or private-state filtering occurs.
+Independent negative vectors and final72-case worker qualification precede
+Root55826, which passes72/0/0/0 on this composed source at21:42:41 UTC,1:13
+Maven. Its normal queue waiting is distinct from execution. This closes the
+comparison-contract defects, not the gameplay replay mismatches that stricter
+comparison can reveal. HPZ finite980 selector and140Saved2 worlds now pass in
+the worker’s1510-case run, while283 ceremony/preowner published-scroll failures
+remain active owner work. Native AIZ cutscene/transition qualification likewise
+remains uncommitted while strict traces identify the next ROM lifecycle owner.
+Combined Root smoke/guards and destination delivery remain pending. Consumed
+Root comparator redirect is removed after inspection.
+
+
+## Native SSZ cloud/HUD spot correction (2026-10-14)
+
+On complete-comparator da27f4f3d, original current-poll SAT and ROM mappings
+identify five missing local art-word high-priority bits and the dedicated
+RINGS R glyph. Column-only attribution did not fix330 and is explicitly
+rejected; the real native330 pair is roaming clouds at2D4+3C. Focused73
+passes with no failures/errors/skips in10369 at22:12:06 UTC. Final passive
+23561 matches diagnostic three-bit picture bins at330/680/1430;1342 retains
+475 Tails-area differences, and original RGB expansion remains unaccepted.
+The [SSZ matrix](../validation/levels/s3k-ssz-act1.md#native-cloud-priority-and-rings-glyph-2026-10-14)
+records negative controls, exact source/media hashes, commands and limits.
+Whole-world sky496→304 prepared-tile replay is independently reproduced on
+unchanged da27f4f3d and remains an active publication owner repair. No broader
+parity, combined validation or destination delivery is claimed.
+
+
+## Native sanctuary and initial-scroll composition (2026-10-14)
+
+Qualified route d726c82d4 is composed after cloud/HUD0b4b31967. One
+measurement-hazard append conflict preserves both editor projection and
+complete-comparator lessons. The S3K initialization profile keeps the develop
+authored/stock guard, native Saved2 flag, pending paired DMA publication and
+adds the admitted fresh stock-only initial deformation before Process_Sprites.
+Native slot8 title setup and crystal setup-only/overshoot are retained. The
+worker's1120 actual pedestal/Saved2 products pass with the complete comparator
+in its1510-case run; all283 initially failing ceremony/preowner-scroll cases
+plus99 affected setup neighbors pass382/0/0/0 in11111 at21:50:12 UTC,2:39.
+These are separately qualified selections, not one current green1510 run.
+Native d726 screenshots retain missing beams at850 and do not certify original
+whole-scene pixels. Root affected verification and existing sky publication
+repair follow this composition; combined smoke/guards and delivery are pending.
+
+
+## Captured SSZ beam art qualification (2026-10-14)
+
+The actual generic recreation probe supplied HPZ's constructor art selector
+to an SSZ beam. Native slot/motion data restored, but192 prepared beam tiles
+were absent. Capturing the structural selector and retaining its native local
+priority removes the inherited sky replay failure. Literal negative6748 and
+final22/0/0/0 affected97786 with all five viewport replay products are recorded
+in the [SSZ matrix](../validation/levels/s3k-ssz-act1.md#beam-structural-art-and-complete-sky-replay-2026-10-14).
+Two actual Slot portal negatives remain correctly red on missing complete
+interior rewind; the next owner repair covers stage RAM, object rebinding and
+lifecycle exit state. Whole-scene original RGB, Tails1342, composed broad checks
+and destination integration/push remain pending.
+
+
+## Complete Slot runtime candidate and native SSZ parent header (2026-10-14)
+
+On committed Root3d633ffe5 plus the source draft, real Slot entry now owns a
+complete stage/runtime snapshot: ordered position queues, in-place layout/cell
+buffers, both visible-buffer indices, legacy and live cell animators, native
+scroll accumulators/last output, movement/exit phases and stable reward/cage
+identities. Restore rebuilds actors before rebinding their owners and reproduces
+the completed scroll output without executing another native tick. The selected
+Slot bank reads background deformation599BE and eight background rows599DE
+from the actual ROM; unselected providers do not read those resources. The
+generic live-replay path now runs the same title overlay and coordinator hooks
+as ordinary gameplay. The real floor/held/seek negatives exposed that missing
+overlay owner; corrected request23100 passes both independent Slot pilots.
+
+Request58926 is terminal1 at23:25:57 UTC:319 tests, one failure, eight errors,
+zero skips,4:11 Maven execution. Its separately reported finite Slot method
+passes140/0/0/0 in225.1s, covering every admitted width/donor/main/ordered roster
+with real placed-post entry, title/fade, live held-backward/forward/seek replay,
+ring, bumper, spike, wall, cage/reel/payout actors, actual reward recreation,
+goal wind-down/fade and real origin return. Every registry key remains compared
+in both restore directions and two forward runs. Local free-movement inlets
+are declared; these are not cold whole-stage traversal or native pixel/audio
+acceptance. The other170 passing checks are a separate affected selection,
+not permission to call the whole invocation green. Six errors were synthetic
+coordinator fixtures lacking an explicit ROM bank; two were new null-context
+regressions in the shared replay helper. Both source repairs are prepared,
+not yet positively qualified.
+
+The one assertion failure is the native SSZ moving cutscene-bridge header.
+Original RAM at arrival inputs1341–1343 points P2's interacting-object word
+toB73A, code44FA2, native negative status90/98. Obj_SSZCutsceneBridge sets
+status bit7; Tails loc14A16 selects Wait5 and skips the object-edge Balance
+branch for that header. The engine produced Balance6 at the first genuine
+pre-dispatch stationary witness1338. The object-local no-balance flag is now
+prepared; its positive run and new passive capture remain pending. This owner
+is not the separate flat/diagonal bridge. Engine P2 observations at1342 read
+anim6/map9A and tail anim0/map0, while selected original RAM reads anim5/mapAD
+and tail anim1/map22. The earlier1432-row state comparison covered P2 X/Y,
+not those additional P2 fields.
+
+A source-only follow-up audit found that Slot copied the original Tails tail
+controller, whose final parent still points to the retired level sprite.
+Native loc4B9E8 creates Obj_Tails_Tail with the live Slot parent in$30. A new
+actual coordinator/late-tail-dispatch/render-coordinate regression is prepared;
+no new production tail correction or executed negative is credited yet. The
+suspected dynamic-art capability omission was rejected: S3K deliberately uses
+EVERY_CLAIM_WITHOUT_PLAYER_ART_AUDIT and supplies no such owner already.
+No Slot-specific dynamic-art capability is added. Goal-fade DPLC bank ownership
+is a separate unresolved native lead.
+
+Farrell's23:30–00:30 UTC M1 measurement window defers new heavy validation.
+Every existing Root/worker request completed normally before the window;
+the last worker56020 ended23:29:18 UTC and its two leases were observed free
+at23:30:28 UTC. Source-only fixture/header repairs retain the normal worktree
+lease. No queued work was cancelled, restarted or preempted. Positive focused
+checks, further finite products, composed smoke/guards and integration/push
+remain pending.
+
+
+### Slot presentation audit after the finite functional pass
+
+The140-product pass renders gameplay, but did not assert active mapping
+validity or retained body/tail bank bytes. S1 Sonic's configured renderer
+has88 mappings; it rejects the host fade script's literal96–9A indices and
+can draw no body. Native Slot init assigns Map_Sonic/Map_Tails/Map_Knuckles
+and selects the host animator. Scoped host-resource borrowing must preserve
+configured donation and restore its resources on return. A new short Knuckles
+pilot supplements the two original Slot pilots; source-only active-pose and
+raw body/tail-bank restore/replay assertions are prepared, not executed.
+
+The fade bank owner is source/ROM-proven: loc4BC1E's003C write changes
+character_id to0 while retaining mappings. Perform_Player_DPLC selects
+Sonic_Load_PLC2. Verified PLC_Sonic96–9A entriesFBA2/FBB2/FBC2/FBD2/FBE2 write
+16 tiles intoD000–D1FF. Knuckles shares that destination and Player_prev_frame
+with Sonic, so unchanged mappings initially suppress the transfer; the next
+changed mapping replaces its bank. Tails usesD400 and a separate previous-
+frame register; Sonic writes leave its last body bank unchanged while the
+tail continues atD600. The current renderer couples retained mappings to
+the old character DPLC/source. Prepared checks cover admission, selected
+Sonic bytes, retained Tails bytes and exact restoration without RGB conversion.
+Production correction remains pending. Mapping replacement, immediate blank
+banks, global donor disable and global player-art audit enablement are rejected.
+
+Copied dust and Super controllers retain the retired original player too.
+Their shared dispatch paths can run in Slot; normal entry leaves those effects
+inactive. Native loc6B76 bypasses ordinary player/dust creation, so Slot must
+not receive unsupported copied controllers. Original controller identities
+and state must survive shutdown unchanged; no new Slot effects are proposed.
+
+
+### Slot corrective execution chain before the M1 window
+
+All times below are UTC2026-10-14, converted from Maven's+01:00 timestamps.
+These are overlapping, source-specific development selections, not summed
+green coverage or a broad-suite result. The owning wrapper selection is the
+local normal queue with unset ambient displays, EGL, null audio and the three
+absolute original ROM paths; only known bounded pure selections use lean.
+
+| Scope | Terminal time | Tests/failures/errors/skips | Attribution |
+|---|---|---|---|
+| Initial Slot capture builds |22:32:39,22:33:48|No tests|Compile prerequisites repaired; no validation credit|
+| First complete-state pilot|22:36:19|6/0/2/0|Ordered position queues require explicit capture rather than unsupported collection reflection|
+| Ordered state +publication|22:41:44|9/2/0/0|Published sprite/scroll output differs after restore|
+| Scroll ownership diagnostic|22:45:14|2/2/0/0|Restore must reproduce completed output without ticking scroll/band RAM|
+| Scroll focused|22:50:21|19/0/8/0|Eight synthetic fixtures lack the selected ROM background bank|
+| ROM background focused|22:58:26|32/1/0/0|Unit fixture accidentally supplied a longer live animation; its independent first-zero premise expected the wrong tick|
+| Actual live controller +bank|23:00:59|7/2/0/0|Fresh-load controller is a placeholder; actual interior controller installs on the next ordinary host step|
+| Installed-controller diagnostic|23:02:38|2/2/0/0|Confirms actual installation boundary|
+| Installed live replay|23:03:35|2/2/0/0|Replay omitted the ordinary title-overlay update|
+| Overlay helper compile|23:05:40|No tests|Use the world session's module; no pass credit|
+| Shared overlay positive|23:07:30|2/0/0/0|Actual load floor, held backward/forward and seek replay qualify both original pilots|
+| Native Slot contacts|23:11:43|2/2/0/0|Cage inlet used the rotating rendered marker instead of native fixed460/430; earlier ring/bumper/spike/reel contacts reached their owners|
+| Payout +SSZ negative|23:15:07|3/1/0/0|Both complete Slot pilots pass; SSZ flat-bridge premise has no witness|
+| Physical SSZ rider negative|23:17:21|1/1/0/0|First post-step zero speed still entered dispatch moving; Walk0 is not yet the standing premise|
+| Finite Slot +affected selection|23:25:57|319/1/8/0|140 Slot products pass; genuine stationary SSZ Balance6 plus six ROM-fixture and two null-context errors remain red|
+
+The latest new visual assertions inspect actual resident body/tail pattern
+bytes through thirteen-tick wind/fade intervals and both restore directions;
+that prime-length window avoids mistaking a completed short animation cycle
+for bank restoration. They retain all registered-world keys and do not
+normalize pixels, choose gameplay values from observations or alter input
+rows. New ownership/pose/priority checks await execution after the window.
+Consumed Root slot/SSZ Maven redirects are removed after this scoped account;
+external capture provenance and original images remain at their documented
+task paths. No raw Maven log is archived.
+
+### User-requested colour expansion feature
+
+The user requests a separate end-user Full/Limited choice, with Full as the
+current default and Limited's maximum238. This supersedes the private native
+comparison-profile proposal. Forward scaling final RGB by238/255 maps every
+canonical ROM channel level0,36,73,109,146,182,219,255 exactly to0,34,68,102,
+136,170,204,238 and handles arbitrary palette RGB without reconstructing a
+CRAM word. The feature keeps display profiles and fades as independent
+operations, persists display.colorExpansion and invalidates direct/derived
+underwater palette uploads when the preference changes. Default Full preserves
+current output. Feature source/UI/config/API-pin drafts are worker-owned and
+unexecuted during the window; no private colour-word/rewind migration is
+needed for this range setting. Exact physical CRAM and shadow/highlight
+acceptance remain separate. Final feature tests and fresh Full/Limited SSZ
+spot captures are required before delivery.
+
+## Opus delivery takeover and native Slot banks (2026-10-15)
+
+The user moved remaining implementation to Opus 5.5 at about00:30 UTC. Root Codex
+became coordinator; an Opus delivery lead adopted this tree and assigned three
+Opus lanes through T3 to the released frontier (`ai-s3k-parity-trace`: colour
+expansion, AIZ end-boss CheckHit order, HCZ attribution), route
+(`ai-s3k-parity-hpz`: finite700, Gumball/Pachinko parity and native spot pairs)
+and ending (`ai-s3k-parity-allocation` plus the native TraceChaser tree: exact
+KosM v2 costs, full-table dispatch, Tails reunion spots) trees.
+
+The untested Root repairs passed first (00:47:46, 16/0/0/0). The resident-bank
+owner then followed the native command path rather than a clamp: a dedicated
+`S3kSlotPlayerArt` installs host mappings/scripts/banks and a fresh tail,
+performs `Perform_Player_DPLC` after Animate with the native previous-frame bytes
+and switches to Sonic cues at the goal `character_id` write; package-private
+renderer hooks reached through the unannotated `PlayerResidentBanks` bridge keep
+the `@ModApi` surface unchanged (the draft public `TailsTailsController.forNewParent`
+was dropped for that reason; the fresh tail uses the existing constructor).
+Results and the matched glass-test control are in the
+[bonus matrix](../validation/levels/s3k-bonus-stage-transitions.md#native-slot-sprite-banks-and-complete-rewind--2026-10-15).
+
+Rejected: enabling the global S3K player-art audit, routing direct DPLC through
+the ordinary Kos queue, reusing the borrowed donor renderer (S1's 88 frames cannot
+draw the fade's `$96`-`$9A`), and keying the bank on parent identity. Goal-frame
+Animate phase remains the existing engine order (the goal override applies after
+that frame's animation); Sonic mains are unaffected and no trace currently
+distinguishes the Tails/Knuckles goal frame, so it is recorded rather than changed.
+
+The stale Slot rewind entries in the general discrepancy file and S3K known-bug #27
+are retired, and the eight finite-restart act matrices are now linked from the
+coverage backlog.
+
+### Composed route-movie regressions and capture parity (2026-10-15)
+
+A sweep of all 43 route-movie test classes on composed Root `54c24da2f`
+(1042 run / 84 failures / 1 error / 2 opt-in skips, finished 02:58:06 UTC)
+exposed delivery-introduced regressions: the same pre-existing classes pass
+85/0/0/0 at develop base `5b2ff8e78`. Matched controls attributed them:
+- 17 (later 20) are the fade-owner class: `8179ccd80` correctly stopped
+  direct-level captures servicing the fade twice, so each full-load fade-out
+  now lasts 22 frames with gameplay and VInt frozen. Movies authored under the
+  doubled fade were retimed by the new `FadeWindowRetimeTool` (verified by
+  uninterrupted replay, old/new hashes in each owning matrix), not by restoring
+  the harness defect. All retimed rows pass.
+- 51 are registry restore/replay comparison mismatches (touch-overlap buffer
+  parity, solid pushing-bit keys, a destroyed object left in the overlap
+  buffer, presentation replay) owned by a rewind-determinism lane.
+- The remainder are route behaviour changes owned by a behaviour lane, which
+  bisects each signature and either fixes an engine regression or re-authors
+  controller input after a ROM-cited correct change.
+`b6fc90c77` (native object-loader parking) is not implicated by those controls.
+
+`TraceCaptureTool` and `TraceBenchmarkTool` never applied the bonus-stage entry
+bootstrap, so bonus trace captures were plain level loads; `7b30ce222` fixes
+that, explaining the earlier Gumball HUD/priority and Pachinko 1316 capture
+mismatches (Pachinko 1316 now differs by 681 px). Direct Limited/Raw-RGB
+comparisons against native stills then showed real Slot/Gumball/Pachinko
+presentation gaps (one-frame-early layout/background publication relative to
+palette, a missing bonus HUD lives row, Gumball player priority in LEVEL-mode
+captures and an early Slot goal fade), assigned to a presentation-parity lane.
+SSZ arrival spots at 118/119/330/680/1341-1343/1430 match native exactly after
+`f950a720c`; 0 and 120 are attributed declared-inlet limits.

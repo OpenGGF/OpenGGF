@@ -339,6 +339,7 @@ com.openggf.game.sonic3k.objects.AizMinibossDebrisChild
 com.openggf.game.sonic3k.objects.AizMinibossImpactFlameChild
 com.openggf.game.sonic3k.objects.AizMinibossInstance
 com.openggf.game.sonic3k.objects.AizMinibossNapalmExplosionChild
+com.openggf.game.sonic3k.objects.AizMinibossSpecialExplosionOwner
 com.openggf.game.sonic3k.objects.AizPlaneIntroInstance
 com.openggf.game.sonic3k.objects.AizRideVineObjectInstance
 com.openggf.game.sonic3k.objects.AizRockFragmentChild
@@ -797,8 +798,11 @@ com.openggf.game.sonic3k.objects.S3kDezTunnelLauncherObjectInstance
 com.openggf.game.sonic3k.objects.S3kDezTunnelLauncherObjectInstance$Controller
 com.openggf.game.sonic3k.objects.S3kDezTunnelLauncherObjectInstance$Ring
 com.openggf.game.sonic3k.objects.S3kDezTunnelLauncherObjectInstance$Spawner
+com.openggf.game.sonic3k.objects.S3kFreshTitleCardElementObjectInstance
+com.openggf.game.sonic3k.objects.S3kFreshTitleCardOwnerObjectInstance
 com.openggf.game.sonic3k.objects.S3kGameOverCardObjectInstance
 com.openggf.game.sonic3k.objects.S3kHiddenMonitorInstance
+com.openggf.game.sonic3k.objects.S3kInLevelTitleCardElementObjectInstance
 com.openggf.game.sonic3k.objects.S3kIncLevelEndXGradualInstance
 com.openggf.game.sonic3k.objects.S3kNativeP2LockInstance
 com.openggf.game.sonic3k.objects.S3kResultsElementObjectInstance
@@ -953,7 +957,9 @@ com.openggf.game.sonic3k.objects.badniks.MadmoleBadnikInstance$SideDrillChild
 com.openggf.game.sonic3k.objects.badniks.MantisBadnikInstance
 com.openggf.game.sonic3k.objects.badniks.MantisBadnikInstance$MantisChild
 com.openggf.game.sonic3k.objects.badniks.MegaChopperBadnikInstance
+com.openggf.game.sonic3k.objects.badniks.MonkeyDudeArmObjectInstance
 com.openggf.game.sonic3k.objects.badniks.MonkeyDudeBadnikInstance
+com.openggf.game.sonic3k.objects.badniks.MonkeyDudeExplosionObjectInstance
 com.openggf.game.sonic3k.objects.badniks.MushmeanieBadnikInstance
 com.openggf.game.sonic3k.objects.badniks.MushmeanieBadnikInstance$ShellChild
 com.openggf.game.sonic3k.objects.badniks.OrbinautBadnikInstance

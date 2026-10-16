@@ -30,9 +30,9 @@ final class DezEndBossArtState implements RewindStateful<DezEndBossArtState.Valu
                         Sonic3kConstants.ARTTILE_DEZ_END_BOSS * 32);
             }
             try {
-                ordinal = S3kRuntimeArtCoordinator.from(services).moduleQueue().queue(rom,
+                ordinal = com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.bindPatternModule(services, S3kRuntimeArtCoordinator.from(services).moduleQueue().queue(rom,
                         Sonic3kConstants.ART_KOSM_DEZ_END_BOSS_ADDR,
-                        Sonic3kConstants.ARTTILE_DEZ_END_BOSS).ordinal();
+                        Sonic3kConstants.ARTTILE_DEZ_END_BOSS)).ordinal();
             } catch (IllegalStateException unavailable) {
                 // Bare object fixtures have no timing coordinator. Production does.
                 if (!"runtime-art coordination is unavailable in these object services"

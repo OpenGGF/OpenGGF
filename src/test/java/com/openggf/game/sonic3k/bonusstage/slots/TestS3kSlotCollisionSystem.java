@@ -10,8 +10,8 @@ class TestS3kSlotCollisionSystem {
 
     @Test
     void collisionReadsExpandedStrideAndStoresCompactLayoutIndex() {
-        S3kSlotStageState state = S3kSlotStageState.bootstrap();
-        S3kSlotRenderBuffers buffers = S3kSlotLayoutFixture.buffers();
+        S3kSlotStageState state = S3kSlotStageState.bootstrap(S3kSlotRomTestData.resources());
+        S3kSlotRenderBuffers buffers = S3kSlotRenderBuffers.fromRomData(S3kSlotRomTestData.resources());
         int row = Math.floorDiv(0x2BC + S3kSlotCollisionSystem.COLLISION_Y_OFFSET, S3kSlotCollisionSystem.CELL_SIZE);
         int col = Math.floorDiv(0x2EC + S3kSlotCollisionSystem.COLLISION_X_OFFSET, S3kSlotCollisionSystem.CELL_SIZE);
         int expandedIndex = row * buffers.layoutStrideBytes() + col;
@@ -32,8 +32,8 @@ class TestS3kSlotCollisionSystem {
 
     @Test
     void ringPickupConsumesCompactAndExpandedLayoutViews() {
-        S3kSlotStageState state = S3kSlotStageState.bootstrap();
-        S3kSlotRenderBuffers buffers = S3kSlotLayoutFixture.buffers();
+        S3kSlotStageState state = S3kSlotStageState.bootstrap(S3kSlotRomTestData.resources());
+        S3kSlotRenderBuffers buffers = S3kSlotRenderBuffers.fromRomData(S3kSlotRomTestData.resources());
         int row = Math.floorDiv(0x2E0 + S3kSlotCollisionSystem.RING_Y_OFFSET, S3kSlotCollisionSystem.CELL_SIZE);
         int col = Math.floorDiv(0x2E0 + S3kSlotCollisionSystem.RING_X_OFFSET, S3kSlotCollisionSystem.CELL_SIZE);
         int expandedIndex = row * buffers.layoutStrideBytes() + col;
@@ -55,9 +55,9 @@ class TestS3kSlotCollisionSystem {
 
     @Test
     void spikeTileReversesScalarOnlyOncePerThrottleWindow() {
-        S3kSlotStageState state = S3kSlotStageState.bootstrap();
+        S3kSlotStageState state = S3kSlotStageState.bootstrap(S3kSlotRomTestData.resources());
         S3kSlotCollisionSystem system = new S3kSlotCollisionSystem(
-                S3kSlotLayoutFixture.buffers(), state);
+                S3kSlotRenderBuffers.fromRomData(S3kSlotRomTestData.resources()), state);
 
         S3kSlotCollisionSystem.TileResponse response = system.resolveTileResponse(
                 6, (short) 0, (short) 0, (short) 0, (short) 0);

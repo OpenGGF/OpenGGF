@@ -98,6 +98,18 @@ class TestUnderwaterPaletteRendering {
     }
 
     @Test
+    void sameFrameExpansionToggleReuploadsBothWaterConsumers() {
+        RenderHarness harness = renderHarness();
+        harness.executeFrame(30);
+        graphics.setDisplayColorExpansion(com.openggf.graphics.color.DisplayColorExpansion.LIMITED);
+        harness.executeFrame(30);
+        assertEquals(2, harness.uploads().uploadCount());
+        graphics.setDisplayColorExpansion(com.openggf.graphics.color.DisplayColorExpansion.FULL);
+        harness.executeFrame(30);
+        assertEquals(3, harness.uploads().uploadCount());
+    }
+
+    @Test
     void sameFrameDisplayProfileChangeStillValidatesAndUploads() {
         RenderHarness harness = renderHarness();
 

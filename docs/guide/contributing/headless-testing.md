@@ -75,6 +75,11 @@ Rendered route checks that discard pixels can use
 effects and GPU completion as `render()` without framebuffer readback. Keep
 `render()` for screenshots and pixel comparisons.
 
+A runtime-ready `GameLoop` owns fade advancement. Capture and death/reload drivers
+must not also call `FadeManager.update()` or `UiRenderPipeline.updateFade()`.
+Match `Engine`'s `ownsGameplayFadeLifecycle()` guard for the pre-runtime UI fallback;
+servicing both owners finishes fades and invokes load callbacks too early.
+
 Cold-route and checkpoint checks for SOZ, LRZ, SSZ, DEZ and the frozen
 FBZ routes can omit scene drawing during traversal between checkpoints. Every
 gameplay tick still executes; queued render-thread work is serviced every tick

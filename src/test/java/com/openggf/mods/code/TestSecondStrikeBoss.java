@@ -121,14 +121,15 @@ class TestSecondStrikeBoss {
         assertEquals(expected.dynamicObjects(), harness.objects.rewindSnapshottable().capture().dynamicObjects());
     }
 
-    @Test void ordinaryStockFlareKeepsItsSixteenUpdateSequence() throws Exception {
+    @Test void ordinaryStockFlareRetainsInitAndF4BeforeItsNextPhysicalClear() throws Exception {
         var harness = new Harness(null, 3);
         var initialize = AizMinibossInstance.class.getDeclaredMethod("onInitialDelayComplete"); initialize.setAccessible(true);
         initialize.invoke(harness.boss);
         var barrel = harness.objects.activeObjectsOfType(com.openggf.game.sonic3k.objects.AizMinibossFlameBarrelChild.class).getFirst();
         var flare = harness.objects.createDynamicObject(() -> new com.openggf.game.sonic3k.objects.AizMinibossBarrelShotFlareChild(barrel));
-        for (int i=0;i<15;i++) { flare.update(i,null); assertFalse(flare.isDestroyed()); }
-        flare.update(15,null); assertTrue(flare.isDestroyed());
+        // Native Init,16 animation updates, then F4's retained outer draw.
+        for (int i=0;i<18;i++) { flare.update(i,null); assertFalse(flare.isDestroyed()); }
+        flare.update(18,null); assertTrue(flare.isDestroyed());
     }
 
     @Test void disabledPolicyKeepsTheOrdinaryManagerGraphAndTiming() throws Exception {
@@ -305,12 +306,16 @@ class TestSecondStrikeBoss {
             when(renderer.isReady()).thenReturn(true);
             var renderManager = mock(com.openggf.level.objects.ObjectRenderManager.class);
             when(renderManager.getRenderer(com.openggf.game.sonic3k.Sonic3kObjectArtKeys.AIZ_MINIBOSS)).thenReturn(renderer);
+            var romReader = mock(com.openggf.data.RomByteReader.class);
+            // Independent byte_6913F fixture; production reads through its ROM service.
+            when(romReader.slice(0x6913F, 13)).thenReturn(new byte[]{7,1,7,1,8,1,9,3,10,3,11,3,(byte)0xF4});
             ObjectManager[] holder = new ObjectManager[1];
             camera.setX((short)0x1100); camera.setY((short)0x290);
             StubObjectServices services = new StubObjectServices() {
                 @Override public com.openggf.level.objects.ObjectRenderManager renderManager() { return renderManager; }
                 @Override public ObjectManager objectManager() { return holder[0]; }
                 @Override public GameStateManager gameState() { return gameState; }
+                @Override public com.openggf.data.RomByteReader romReader() { return romReader; }
                 @Override public Camera camera() { return camera; }
                 @Override public SonicConfigurationService configuration() { return config; }
                 @Override public GameModule gameModule() { return module; }

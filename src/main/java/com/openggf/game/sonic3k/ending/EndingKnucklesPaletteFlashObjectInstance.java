@@ -9,11 +9,13 @@ import com.openggf.level.objects.*;
 import java.util.List;
 
 /** loc_5FC1E: three white steps, a twenty-pass hold, then three target steps. */
-public final class EndingKnucklesPaletteFlashObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public final class EndingKnucklesPaletteFlashObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, NativeSstStateSource {
     private int phase,timer,steps=2;
+    private boolean deletePending;
     public EndingKnucklesPaletteFlashObjectInstance(){this(new ObjectSpawn(0,0,0,0,0,false,0));}
     public EndingKnucklesPaletteFlashObjectInstance(ObjectSpawn spawn){super(spawn,"KnucklesEndingPaletteFlash");}
     @Override public void update(int vIntRunCount,PlayableEntity player){
+        if(deletePending){ObjectLifetimeOps.deleteNoRespawn(this);return;}
         if((timer=(short)(timer-1))>=0)return;
         timer=phase==0?5:3;
         var registry=services().paletteOwnershipRegistryOrNull();
@@ -33,8 +35,14 @@ public final class EndingKnucklesPaletteFlashObjectInstance extends AbstractObje
         S3kPaletteWriteSupport.resolvePendingWritesNow(registry,services().currentLevel(),services().graphicsManager());
         if((steps=(byte)(steps-1))<0){
             if(phase==0){phase=1;steps=2;timer=0x13;}
-            else ObjectLifetimeOps.deleteNoRespawn(this);
+            // loc_5FC78 jumps to Go_Delete_Sprite: code/status change now,
+            // Delete_Current_Sprite clears and releases the SST on the next dispatch.
+            else deletePending=true;
         }
+    }
+    // loc5FC1E..5FC78 writes timer2E/steps39; Go_Delete_Sprite then retains status7.
+    @Override public NativeSstState nativeSstState(){
+        return deletePending?new NativeSstState(0,0,0,0,0,0,0,0x80,0,0):NativeSstState.CLEARED;
     }
     @Override public boolean isPersistent(){return true;}
     @Override public void appendRenderCommands(List<GLCommand> commands){ }

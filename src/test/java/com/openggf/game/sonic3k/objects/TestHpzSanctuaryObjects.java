@@ -367,7 +367,7 @@ class TestHpzSanctuaryObjects {
                 gsm, List.of(1, 1, 1, 1, 1, 1, 1), false);
         HPZSSEntryControlObjectInstance controller = controller(progression, false);
         AbstractPlayableSprite sonic = mock(AbstractPlayableSprite.class);
-        when(sonic.getCode()).thenReturn("sonic");
+        when(sonic.characterKey()).thenReturn(com.openggf.game.CharacterKey.SONIC);
         ObjectServices services = mock(ObjectServices.class);
         var players = mock(com.openggf.level.objects.ObjectPlayerQuery.class);
         when(services.playerQuery()).thenReturn(players);
@@ -409,6 +409,7 @@ class TestHpzSanctuaryObjects {
                 gsm, List.of(2, 2, 2, 2, 2, 2, 2), true);
         HPZSSEntryControlObjectInstance controller = controller(progression, false);
         AbstractPlayableSprite sonic = mock(AbstractPlayableSprite.class);
+        when(sonic.characterKey()).thenReturn(com.openggf.game.CharacterKey.SONIC);
         ObjectServices services = mock(ObjectServices.class);
         var players = mock(com.openggf.level.objects.ObjectPlayerQuery.class);
         when(services.playerQuery()).thenReturn(players);
@@ -476,7 +477,9 @@ class TestHpzSanctuaryObjects {
         ObjectServices services = mock(ObjectServices.class);
         var query = mock(com.openggf.level.objects.ObjectPlayerQuery.class);
         AbstractPlayableSprite tails = mock(AbstractPlayableSprite.class);
-        when(tails.getCode()).thenReturn("tails");
+        // Registration aliases do not select the native character_id table.
+        when(tails.getCode()).thenReturn("tails_p2");
+        when(tails.characterKey()).thenReturn(com.openggf.game.CharacterKey.TAILS);
         when(tails.getCentreY()).thenReturn((short) 0x300);
         when(services.playerQuery()).thenReturn(query);
         when(query.playersFor(any())).thenReturn(List.of(tails));
@@ -527,7 +530,60 @@ class TestHpzSanctuaryObjects {
     }
 
     @Test
-    void subtypeSevenFallingCrystalPublishesTheProductionIntroSignalAtNativeBoundary() {
+    void conversionCountdownUnderflowInstallsThePanWithoutMovingItInThatDispatch() throws Exception {
+        var state = new GameStateManager();
+        var parent = controller(S3kEmeraldProgression.restore(
+                state, List.of(1,0,0,0,0,0,0), false), false);
+        parent.beginConversionForTest();
+        var camera = mock(Camera.class);
+        when(camera.getX()).thenReturn((short) 0x1500);
+        var services = mock(ObjectServices.class);
+        when(services.camera()).thenReturn(camera);
+        when(services.playerQuery()).thenReturn(new com.openggf.level.objects.ObjectPlayerQuery(
+                () -> null, List::of));
+        parent.setServices(services);
+        var timer = parent.getClass().getDeclaredField("conversionTimer");
+        timer.setAccessible(true);timer.setInt(parent, 0);
+        var dispatch = parent.getClass().getDeclaredMethod("updateConversionChoreography");
+        dispatch.setAccessible(true);dispatch.invoke(parent);
+        verify(camera).setScrollLocked(true);
+        verify(camera, never()).getX();
+        verify(camera, never()).setX(anyShort());
+        dispatch.invoke(parent);
+        verify(camera).getX();
+        verify(camera).setX((short) 0x1510);
+    }
+
+    @Test
+    void fallingCrystalFirstDispatchSetsUpWithoutMoving() {
+        var state = new GameStateManager();
+        var parent = controller(S3kEmeraldProgression.restore(
+                state, List.of(0,0,0,0,0,0,0), false), false);
+        var crystal = new HPZSanctuaryFallingCrystalObjectInstance(parent, 4, 0x2A0);
+        crystal.update(0, null);
+        assertEquals(0x2A0, crystal.getY(), "loc_90CA2 setup ends in rts before loc_90CF4");
+        crystal.update(1, null);
+        assertEquals(0x2B0, crystal.getY(), "following dispatch owns first +$10");
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {1,2,3,4})
+    void fallingCrystalRetainsTheNativeWordOvershootOnLanding(int subtype) {
+        var state = new GameStateManager();
+        var parent = controller(S3kEmeraldProgression.restore(
+                state, List.of(0,0,0,0,0,0,0), false), false);
+        var crystal = new HPZSanctuaryFallingCrystalObjectInstance(parent, subtype, 0x2A0);
+        int target = subtype < 3 ? 0x328 : 0x2D8;
+        int moves = (target - 0x2A0 + 15) / 16;
+        crystal.update(0, null);
+        for (int frame = 1; frame <= moves; frame++) crystal.update(frame, null);
+        assertEquals(subtype < 3 ? 0x330 : 0x2E0, crystal.getY(),
+                "loc_90CF4 stores y+$10 before cmp; it never snaps to the target word");
+        assertEquals(0x3F, crystal.landingTimerForTest());
+    }
+
+    @Test
+    void subtypeSevenFallingCrystalPublishesTheProductionIntroSignalAtNativeBoundary() throws Exception {
         GameStateManager gsm = new GameStateManager();
         S3kEmeraldProgression progression = S3kEmeraldProgression.restore(
                 gsm, List.of(0, 0, 0, 0, 0, 0, 0), false);
@@ -541,15 +597,30 @@ class TestHpzSanctuaryObjects {
                 new HPZSanctuaryFallingCrystalObjectInstance(controller, 2)
                         .renderPaletteLineForTest());
 
-        for (int i = 0; i < 101; i++) {
+        // loc_90D30 falls through loc_90D42 immediately after the $20
+        // midpoint call. It does not wait another 33 decrements for negative.
+        for (int i = 0; i < 56; i++) {
             crystal.update(i, null);
             assertFalse(controller.introSignalReceivedForTest());
-            if (i == 54) {
-                assertTrue(crystal.midpointPublishedForTest());
-            }
         }
-        crystal.update(101, null);
+        assertTrue(crystal.midpointPublishedForTest());
+        // Cleared SST anim_frame starts0. Animate_RawNoSST increments
+        // before lookup, so byte90FF6's first1D is not republished.
+        assertEquals(12, crystal.rawAnimationTimerForTest(), "midpoint arms byte_90FF6");
+        var mapping = HPZSanctuaryFallingCrystalObjectInstance.class.getDeclaredField("mappingFrame");
+        mapping.setAccessible(true);
+        int[] nativeFrames = {0x1F,0x1D,0x20,0x1D,0x21,0x1D,0x22,0x1D,0x23,0x1D,0x24,0x1D};
+        for (int i = 0; i < nativeFrames.length; i++) {
+            crystal.update(56 + i, null);
+            assertEquals(nativeFrames[i], mapping.getInt(crystal));
+            assertFalse(controller.introSignalReceivedForTest());
+        }
+        crystal.update(68, null);
         assertTrue(controller.introSignalReceivedForTest());
+        assertFalse(crystal.isDestroyed(), "Go_Delete_Sprite leaves its marker occupied");
+        assertTrue(crystal.shouldDrawForTest(68), "callback still falls through parity Draw_Sprite");
+        crystal.update(69, null);
+        assertTrue(crystal.isDestroyed(), "following dispatch runs Delete_Current_Sprite");
     }
 
     @Test
@@ -574,9 +645,9 @@ class TestHpzSanctuaryObjects {
         registry.install(hpz);
         when(services.zoneRuntimeRegistry()).thenReturn(registry);
 
-        for (int i = 0; i < 23; i++) crystal.update(i, null);
+        for (int i = 0; i < 24; i++) crystal.update(i, null);
         assertEquals(0, hpz.screenShake().flag(), "no shake before the crystal lands");
-        crystal.update(23, null);
+        crystal.update(24, null);
         // loc_90CF4: move.w #8,(Screen_shake_flag).w (sonic3k.asm:198089).
         assertEquals(8, hpz.screenShake().flag());
         assertEquals(0, hpz.screenShake().offset(),

@@ -9,7 +9,8 @@
     "s3k-complete-sonic-tails.bk2",
     "s3k-mgz-sonic-tails.bk2",
     "legacy-hardware-capture:Sonic3kTitleScreenManager.ANIM_FRAME_DURATIONS@34482b194",
-    "estimator:s3k-kos-v1 (frame 7 art queued 24 iterations ahead at loc_4040; the ROM never stalls on it)"
+    "estimator:s3k-kos-v1 (frame 7 art queued 24 iterations ahead at loc_4040; the ROM never stalls on it)",
+    "tails-super-d01-measurement.bk2"
   ],
   "estimator": {
     "kind": "kos_decompression_queue",
@@ -2571,6 +2572,132 @@
       "maxFrames": 11,
       "fixtureIndexes": [
         6
+      ]
+    },
+    {
+      "kind": "kos_decompression_queue",
+      "submissionFingerprint": "sha256:07d2f06d9c691998af13513705529ed9d3a0cc7c6ff961291f844ff4d8584f58",
+      "serviceFrames": 1,
+      "eligibleBoundaries": [
+        "pre_main_loop"
+      ],
+      "sampleCount": 3,
+      "minFrames": 1,
+      "maxFrames": 1,
+      "fixtureIndexes": [
+        7
+      ]
+    },
+    {
+      "kind": "kos_decompression_queue",
+      "submissionFingerprint": "sha256:1cd9427a5db491d6060d907c0e3f358c23d5960811dcb867cbf47b1317fdb67c",
+      "serviceFrames": 1,
+      "eligibleBoundaries": [
+        "pre_main_loop"
+      ],
+      "sampleCount": 2,
+      "minFrames": 1,
+      "maxFrames": 1,
+      "fixtureIndexes": [
+        7
+      ]
+    },
+    {
+      "kind": "kos_decompression_queue",
+      "submissionFingerprint": "sha256:5f48258442fa2ce186aec4ec1c98b4c2551d7952d97b9500dc3fee21acfbd681",
+      "serviceFrames": 4,
+      "eligibleBoundaries": [
+        "pre_main_loop"
+      ],
+      "sampleCount": 1,
+      "minFrames": 4,
+      "maxFrames": 4,
+      "fixtureIndexes": [
+        7
+      ]
+    },
+    {
+      "kind": "kos_decompression_queue",
+      "submissionFingerprint": "sha256:68c44d3e7dc364c154903e1b3fb820b24c4ca994a5fb80f5cefc1516888bef7d",
+      "serviceFrames": 4,
+      "eligibleBoundaries": [
+        "pre_main_loop"
+      ],
+      "sampleCount": 1,
+      "minFrames": 4,
+      "maxFrames": 4,
+      "fixtureIndexes": [
+        7
+      ]
+    },
+    {
+      "kind": "kos_decompression_queue",
+      "submissionFingerprint": "sha256:b6dc495e782e7447874735d43b362fc43f35f004d18afe56d5ef893764d711b8",
+      "serviceFrames": 2,
+      "eligibleBoundaries": [
+        "pre_main_loop"
+      ],
+      "sampleCount": 1,
+      "minFrames": 2,
+      "maxFrames": 2,
+      "fixtureIndexes": [
+        7
+      ]
+    },
+    {
+      "kind": "kos_decompression_queue",
+      "submissionFingerprint": "sha256:c3a0f8302d87c1406be3c397241725af2e3d02651b94cc7e9d1353e3ddeeefdc",
+      "serviceFrames": 2,
+      "eligibleBoundaries": [
+        "pre_main_loop"
+      ],
+      "sampleCount": 1,
+      "minFrames": 2,
+      "maxFrames": 2,
+      "fixtureIndexes": [
+        7
+      ]
+    },
+    {
+      "kind": "kos_decompression_queue",
+      "submissionFingerprint": "sha256:e56bd0cfc2bfc32728102336cd4703f19f9f5b54dd431dbd355b011d8edf96a9",
+      "serviceFrames": 4,
+      "eligibleBoundaries": [
+        "pre_main_loop"
+      ],
+      "sampleCount": 1,
+      "minFrames": 4,
+      "maxFrames": 4,
+      "fixtureIndexes": [
+        7
+      ]
+    },
+    {
+      "kind": "kos_decompression_queue",
+      "submissionFingerprint": "sha256:013cd491cc6553768220821aa2c8e7c211249199b820bcafac5ee71e0480b881",
+      "serviceFrames": 3,
+      "eligibleBoundaries": [
+        "pre_main_loop"
+      ],
+      "sampleCount": 1,
+      "minFrames": 3,
+      "maxFrames": 3,
+      "fixtureIndexes": [
+        7
+      ]
+    },
+    {
+      "kind": "kos_decompression_queue",
+      "submissionFingerprint": "sha256:5b4280f6fbe1de79558386df9153a4f16e91d1abfc34b719c02a9f57292bcde3",
+      "serviceFrames": 4,
+      "eligibleBoundaries": [
+        "pre_main_loop"
+      ],
+      "sampleCount": 1,
+      "minFrames": 4,
+      "maxFrames": 4,
+      "fixtureIndexes": [
+        7
       ]
     }
   ]

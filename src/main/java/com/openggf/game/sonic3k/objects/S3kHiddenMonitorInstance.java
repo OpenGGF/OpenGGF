@@ -123,7 +123,10 @@ public class S3kHiddenMonitorInstance extends AbstractObjectInstance
             monitor.revealFromHidden();
             ObjectManager objectManager = services().objectManager();
             if (objectManager != null) {
-                ObjectLifetimeOps.addReplacementAtTransferredSlot(objectManager, monitor, getSlotIndex());
+                // loc_83760 changes the current SST code, not its occupancy. Detach
+                // the obsolete Java handle so its destroy tail cannot free the replacement.
+                int transferredSlot = ObjectLifetimeOps.detachSlotForTransfer(this);
+                ObjectLifetimeOps.addReplacementAtTransferredSlot(objectManager, monitor, transferredSlot);
             } else {
                 spawnDynamicObject(monitor);
             }

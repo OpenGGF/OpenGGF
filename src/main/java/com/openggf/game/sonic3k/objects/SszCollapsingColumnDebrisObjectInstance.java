@@ -125,6 +125,10 @@ public final class SszCollapsingColumnDebrisObjectInstance extends AbstractObjec
 
     @Override public int getX() { return x; }
     @Override public int getY() { return y; }
+    // Obj_SSZCollapsingColumn / loc_44BCC set art_tile bit15, independently
+    // of the sprite-table priority bucket: make_art_tile(ArtTile_SSZMisc+$10,3,1).
+    @Override public boolean isHighPriority() { return true; }
+
     @Override public int getPriorityBucket() { return PRIORITY_BUCKET; }
     @Override public int getOnScreenHalfWidth() { return 8; }
     @Override public int getOnScreenHalfHeight() { return 8; }

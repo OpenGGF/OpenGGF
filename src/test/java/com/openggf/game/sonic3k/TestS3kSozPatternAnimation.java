@@ -57,6 +57,7 @@ public class TestS3kSozPatternAnimation {
         camera.setX((short) 0);
         camera.setY((short) 0);
         animator.updateSoz1BackgroundTilesForGraph();
+        animator.publishAniPlcAtVBlank();
         byte[] phaseZero = snapshotTiles(level, 0x330, 0x333, 0x336, 0x339, 0x33C);
         int phaseZeroValue = animator.computeSoz1Phase();
 
@@ -71,6 +72,7 @@ public class TestS3kSozPatternAnimation {
                 continue;
             }
             animator.updateSoz1BackgroundTilesForGraph();
+            animator.publishAniPlcAtVBlank();
             byte[] shifted = snapshotTiles(level, 0x330, 0x333, 0x336, 0x339, 0x33C);
             if (!Arrays.equals(phaseZero, shifted)) {
                 return;
@@ -114,10 +116,12 @@ public class TestS3kSozPatternAnimation {
         Level level = GameServices.level().getCurrentLevel();
         Sonic3kPatternAnimator animator = resolvePatternAnimator();
         animator.updateSoz1BackgroundTilesForGraph();
+        animator.publishAniPlcAtVBlank();
         byte[] initial = snapshot(level.getPattern(0x330));
 
         for (int i = 0; i < 8; i++) {
             animator.updateSoz1BackgroundTilesForGraph();
+            animator.publishAniPlcAtVBlank();
         }
 
         assertTrue(Arrays.equals(initial, snapshot(level.getPattern(0x330))),
@@ -162,6 +166,7 @@ public class TestS3kSozPatternAnimation {
             fixture.camera().setX((short) (((32 - phase) & 31) * 32));
             assertEquals(phase, animator.computeSoz1Phase());
             animator.updateSoz1BackgroundTilesForGraph();
+            animator.publishAniPlcAtVBlank();
             byte[] source = GameServices.rom().getRom().readBytes(0xBE5C0 + phase * 192, 192);
             for (int pixel = 0; pixel < 384; pixel++) {
                 int packed = source[pixel / 2] & 255;

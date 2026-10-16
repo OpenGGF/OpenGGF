@@ -37,6 +37,12 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
     private static final int PRELOAD_DPLC_FRAME = 0x15;
 
     private PlayerSpriteRenderer renderer;
+    /**
+     * Code of the player whose dust object spawned this puff. S3K loc_18D1C copies
+     * the owning dust object's art_tile (sonic3k.asm:34126), so a follower's puff
+     * draws from that follower's dust bank; a recreated puff must keep its owner.
+     */
+    private String ownerCode;
     private int animTimer;
     private int frameIndex;
     private int deleteRoutineDelay = -1;
@@ -125,7 +131,7 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
     @Override
     public PerObjectRewindSnapshot captureRewindState() {
         return super.captureRewindState().withObjectSubclassExtra(
-                new SkidDustRewindExtra(animTimer, frameIndex, deleteRoutineDelay, dplcPreloaded));
+                new SkidDustRewindExtra(animTimer, frameIndex, deleteRoutineDelay, dplcPreloaded, ownerCode));
     }
 
     @Override
@@ -136,6 +142,11 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
             frameIndex = extra.frameIndex();
             deleteRoutineDelay = extra.deleteRoutineDelay();
             dplcPreloaded = extra.dplcPreloaded();
+            ownerCode = extra.ownerCode();
+            PlayerSpriteRenderer ownerRenderer = ownerDustRenderer(tryServices(), ownerCode);
+            if (ownerRenderer != null) {
+                renderer = ownerRenderer;
+            }
         }
     }
 
@@ -162,9 +173,22 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
 
     private PlayerSpriteRenderer resolveRenderer() {
         if (renderer == null) {
+            renderer = ownerDustRenderer(tryServices(), ownerCode);
+        }
+        if (renderer == null) {
             renderer = findRewindRenderer(tryServices());
         }
         return renderer;
+    }
+
+    private static PlayerSpriteRenderer ownerDustRenderer(ObjectServices services, String ownerCode) {
+        if (ownerCode == null || services == null || services.spriteManager() == null) {
+            return null;
+        }
+        return services.spriteManager().getSprite(ownerCode) instanceof AbstractPlayableSprite owner
+                && owner.getSpindashDustController() != null
+                ? owner.getSpindashDustController().getRenderer()
+                : null;
     }
 
     /**
@@ -207,7 +231,9 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
         int dustY = player.getCentreY() + dustOffset;
         boolean facingLeft = player.getDirection() == Direction.LEFT;
 
-        return new SkidDustObjectInstance(dustX, dustY, renderer, facingLeft);
+        SkidDustObjectInstance dust = new SkidDustObjectInstance(dustX, dustY, renderer, facingLeft);
+        dust.ownerCode = aps.getCode();
+        return dust;
     }
 
     /**
@@ -236,7 +262,8 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
             int animTimer,
             int frameIndex,
             int deleteRoutineDelay,
-            boolean dplcPreloaded
+            boolean dplcPreloaded,
+            String ownerCode
     ) implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {
     }
 

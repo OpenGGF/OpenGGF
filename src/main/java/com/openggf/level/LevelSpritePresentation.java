@@ -18,6 +18,22 @@ public final class LevelSpritePresentation {
         return renderer == null ? SpritePresentation.Frame.empty() : renderer.spriteTables.published();
     }
 
+    /** Immutable background registers/buffers selected by the active level draw. */
+    public record BackgroundScroll(int[] horizontal, float y, short[] columns, int period) {
+        public BackgroundScroll {
+            horizontal = horizontal.clone();
+            columns = columns == null ? null : columns.clone();
+        }
+        @Override public int[] horizontal() { return horizontal.clone(); }
+        @Override public short[] columns() { return columns == null ? null : columns.clone(); }
+    }
+
+    /** Internal effect bridge: overlays must replay the generation used by both tile passes. */
+    public static BackgroundScroll backgroundScrollForDraw(LevelManager level) {
+        var renderer = level == null ? null : level.spritePresentationRenderer();
+        return renderer == null ? null : renderer.backgroundScrollForDraw();
+    }
+
     static final class Tables implements RewindSnapshottable<Tables.State> {
         record State(SpritePresentation.Frame prepared, SpritePresentation.Frame published,
                      SpritePresentation.Frame counters, LevelScrollPresentation preparedScroll,

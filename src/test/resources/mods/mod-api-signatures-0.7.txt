@@ -559,6 +559,7 @@ CF-ANNOTATION TYPE com.openggf.graphics.TilemapGpuRenderer$BackgroundRenderState
 CF-ANNOTATION TYPE com.openggf.graphics.TilemapGpuRenderer$Layer visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.graphics.TilemapTexture visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.graphics.WaterShaderProgram visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.graphics.color.DisplayColorExpansion visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.graphics.color.DisplayColorProfile visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.graphics.pipeline.RenderCommand visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.graphics.pipeline.RenderOrderRecorder visible @com.openggf.game.ModApi
@@ -2199,6 +2200,7 @@ FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openg
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DISCORD_RICH_PRESENCE_SHOW_TIMER
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DISCORD_RICH_PRESENCE_SHOW_ZONE
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DISPLAY_ASPECT
+FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DISPLAY_COLOR_EXPANSION
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DISPLAY_COLOR_PROFILE
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DISPLAY_COLOR_PROFILE_TOGGLE_KEY
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DISPLAY_SCALING
@@ -2832,6 +2834,8 @@ FIELD com.openggf.graphics.SpriteMaskReplayRole public,static,final com.openggf.
 FIELD com.openggf.graphics.SpriteMaskReplayRole public,static,final com.openggf.graphics.SpriteMaskReplayRole PRE_MASK_FRONT
 FIELD com.openggf.graphics.TilemapGpuRenderer$Layer public,static,final com.openggf.graphics.TilemapGpuRenderer$Layer BACKGROUND
 FIELD com.openggf.graphics.TilemapGpuRenderer$Layer public,static,final com.openggf.graphics.TilemapGpuRenderer$Layer FOREGROUND
+FIELD com.openggf.graphics.color.DisplayColorExpansion public,static,final com.openggf.graphics.color.DisplayColorExpansion FULL
+FIELD com.openggf.graphics.color.DisplayColorExpansion public,static,final com.openggf.graphics.color.DisplayColorExpansion LIMITED
 FIELD com.openggf.graphics.color.DisplayColorProfile public,static,final com.openggf.graphics.color.DisplayColorProfile MD_ANALOG
 FIELD com.openggf.graphics.color.DisplayColorProfile public,static,final com.openggf.graphics.color.DisplayColorProfile NTSC_SOFT
 FIELD com.openggf.graphics.color.DisplayColorProfile public,static,final com.openggf.graphics.color.DisplayColorProfile RAW_RGB
@@ -8227,6 +8231,7 @@ METHOD com.openggf.graphics.GraphicsManager public  com.openggf.graphics.TilePri
 METHOD com.openggf.graphics.GraphicsManager public  com.openggf.graphics.TilemapGpuRenderer getTilemapGpuRenderer()
 METHOD com.openggf.graphics.GraphicsManager public  com.openggf.graphics.WaterShaderProgram getInstancedWaterShaderProgram()
 METHOD com.openggf.graphics.GraphicsManager public  com.openggf.graphics.WaterShaderProgram getWaterShaderProgram()
+METHOD com.openggf.graphics.GraphicsManager public  com.openggf.graphics.color.DisplayColorExpansion getDisplayColorExpansion()
 METHOD com.openggf.graphics.GraphicsManager public  com.openggf.graphics.color.DisplayColorProfile getDisplayColorProfile()
 METHOD com.openggf.graphics.GraphicsManager public  com.openggf.graphics.pipeline.UiRenderPipeline getUiRenderPipeline()
 METHOD com.openggf.graphics.GraphicsManager public  com.openggf.graphics.shaderlib.DisplayShaderPipeline getDisplayShaderPipeline()
@@ -8305,6 +8310,7 @@ METHOD com.openggf.graphics.GraphicsManager public  void setCurrentSpriteHighPri
 METHOD com.openggf.graphics.GraphicsManager public  void setCurrentSpriteSatBucket(int)
 METHOD com.openggf.graphics.GraphicsManager public  void setCurrentSpriteSatDebugSource(java.lang.String)
 METHOD com.openggf.graphics.GraphicsManager public  void setCurrentSpriteTileOcclusionPaletteMask(int)
+METHOD com.openggf.graphics.GraphicsManager public  void setDisplayColorExpansion(com.openggf.graphics.color.DisplayColorExpansion)
 METHOD com.openggf.graphics.GraphicsManager public  void setDisplayColorProfile(com.openggf.graphics.color.DisplayColorProfile)
 METHOD com.openggf.graphics.GraphicsManager public  void setGlInitialized(boolean)
 METHOD com.openggf.graphics.GraphicsManager public  void setHeadlessMode(boolean)
@@ -8533,6 +8539,10 @@ METHOD com.openggf.graphics.WaterShaderProgram public  void setShimmerStyle(int)
 METHOD com.openggf.graphics.WaterShaderProgram public  void setWaterlineScreenY(float)
 METHOD com.openggf.graphics.WaterShaderProgram public  void setWindowHeight(float)
 METHOD com.openggf.graphics.WaterShaderProgram public  void setWorldSpaceWater(float,float,boolean)
+METHOD com.openggf.graphics.color.DisplayColorExpansion public  java.lang.String label()
+METHOD com.openggf.graphics.color.DisplayColorExpansion public,static  com.openggf.graphics.color.DisplayColorExpansion parse(java.lang.String)
+METHOD com.openggf.graphics.color.DisplayColorExpansion public,static  com.openggf.graphics.color.DisplayColorExpansion valueOf(java.lang.String)
+METHOD com.openggf.graphics.color.DisplayColorExpansion public,static  com.openggf.graphics.color.DisplayColorExpansion[] values()
 METHOD com.openggf.graphics.color.DisplayColorProfile public  com.openggf.graphics.color.DisplayColorProfile next()
 METHOD com.openggf.graphics.color.DisplayColorProfile public  java.lang.String label()
 METHOD com.openggf.graphics.color.DisplayColorProfile public,static  com.openggf.graphics.color.DisplayColorProfile parse(java.lang.String)
@@ -18740,6 +18750,7 @@ TYPE enum public,final com.openggf.game.sonic3k.difficulty.SkySanctuaryMetropoli
 TYPE enum public,final com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe>
 TYPE enum public,final com.openggf.graphics.PatternAtlasRange SUPER java.lang.Enum<com.openggf.graphics.PatternAtlasRange>
 TYPE enum public,final com.openggf.graphics.SpriteMaskReplayRole SUPER java.lang.Enum<com.openggf.graphics.SpriteMaskReplayRole>
+TYPE enum public,final com.openggf.graphics.color.DisplayColorExpansion SUPER java.lang.Enum<com.openggf.graphics.color.DisplayColorExpansion>
 TYPE enum public,final com.openggf.graphics.color.DisplayColorProfile SUPER java.lang.Enum<com.openggf.graphics.color.DisplayColorProfile>
 TYPE enum public,final com.openggf.graphics.pipeline.RenderPhase SUPER java.lang.Enum<com.openggf.graphics.pipeline.RenderPhase>
 TYPE enum public,final com.openggf.graphics.shaderlib.GlslShape SUPER java.lang.Enum<com.openggf.graphics.shaderlib.GlslShape>
@@ -20103,6 +20114,7 @@ TYPE-ANNOTATION com.openggf.graphics.TilemapGpuRenderer$BackgroundRenderState @c
 TYPE-ANNOTATION com.openggf.graphics.TilemapGpuRenderer$Layer @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.graphics.TilemapTexture @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.graphics.WaterShaderProgram @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.graphics.color.DisplayColorExpansion @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.graphics.color.DisplayColorProfile @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.graphics.pipeline.RenderCommand @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.graphics.pipeline.RenderOrderRecorder @com.openggf.game.ModApi

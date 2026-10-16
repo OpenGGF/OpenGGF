@@ -529,3 +529,113 @@ One inspected conformance follow-up is spike`loc_76674` status-six hit-flash
 suppression and separate draw/touch admission: current Java still combines its
 draw gate with touch flags. This bounded terminal/parent repair does not certify
 that branch or full native parity, and adds no accepted discrepancy.
+
+
+## Released checkpoint-world replay follow-up (2026-10-14)
+
+The existing physical-post death driver now uses only the production GameLoop
+fade owner and services pending render work after each tick. It checks exactly
+one life lost at fresh assembly and after actual title/fade/control release,
+then captures and replays the complete registered incoming world twice in both
+restore directions after EACH of two real deaths. Every45-input branch requires
+an alive leader, unchanged lives/post, retained roster/donor/viewport and the
+same current runtime/object manager; a raw restore never crosses a load.
+Short independent native320/S2-Tails800 witnesses precede the product methods.
+
+This act contributes140 products over all its authored posts and all five
+production presets, using native Sonic, Tails and Sonic+Tails; S1 Sonic and S2 Sonic/Tails/pair. The composed
+`262e9bbb10bb317d183dbf289dcfa8568fa0258c` plus final test changes passes the
+12 short witnesses in request93678 at12:58:56 UTC, then all1077 affected
+products in63733 at13:13:31 UTC, zero failures/errors/skips (3:32 Maven,
+queue wait separate). DEZ2 post5 still reaches its placed gravity writer through
+ordinary movement and verifies the real inverted death and native cleared
+gravity after reload. This adds incoming-world replay to the previously
+qualified physical contact/death scope; other unchanged checks were not repeated.
+[Exact selectors and source hashes](../../plans/2026-10-13-s3k-playable-completion.md#existing-checkpoint-driver-qualification-2026-10-14)
+are in the completion plan. Further roster and mechanic/cold-route products remain open. No native pixel/audio, overall act
+certification, full-suite or combined delivery claim follows.
+
+
+### Knuckles physical checkpoint follow-up (2026-10-14)
+
+`TestMhzCheckpointRoutes.knucklesPhysicallyTouchesAndReplaysEveryPost` adds
+4 native Knuckles physical contacts in this act with two full-registry
+contact replay cycles. `knucklesPreservesItsRouteAcrossBothDeathsAndIncomingWorlds`
+adds20 products over every authored post and all five selectable widths.
+Each uses the qualified actual two-death driver, exact life loss, native character
+and retained route, fresh object manager, timeline isolation and two45-input
+forward/reverse full-world cycles after EACH released death. They are declared
+local approaches, not new cold traversals. Donor sanitization still excludes
+Knuckles from S1/S2 products.
+
+On source`64f419a3b3a0a9a81b9cfeeb26b55090114f2930` plus the final test draft,
+request50826 finishes at13:19:59 UTC: all54 added MHZ cases pass, zero errors
+or skips (10.55s class). Its separate five-case Bubbler identity regression
+contains two genuine failures; this mixed invocation is not a green delivery
+gate. Together with the distinct315 preceding MHZ death products, the current
+qualified lifecycle floor is360 (Act1=200,Act2=160), not a single pristine360
+invocation. Further rosters, mechanics, cold-route and native visual/audio
+breadth remain explicit obligations.
+
+
+### Knuckles complete movie retimed (2026-10-15)
+
+Surfaced after the rewind-snapshot rows cleared on Root 2adfa37a7: the movie was
+authored under the pre-8179ccd80 double fade advance, so its full load landed 11
+frames early. `FadeWindowRetimeTool` measured the owned frozen fade-out window in
+the production harness, inserted the native remainder and verified one
+uninterrupted replay with no death. Test frame constants move by 11 at and after
+the old load. No runtime behaviour changed.
+
+| Movie | Old SHA-256 | New SHA-256 | Windows `start:native→+inserted` | Frames | New full loads | Verified end |
+|---|---|---|---|---|---|---|
+| `mhz2-knuckles-cold-complete-320.bk2` | `d9b4728bd380b3c87abc4070975a791987a3d5e2ba36f23074c4aa817d7a0b84` | `6e4cd1409bcb7e3d1889cf014dbb363e0a687bcea395073003008e063156676a` | 66042:22→+11 (Act1 prefix unchanged) | 66282 | 29044, 66064 | 779,1388, 7 rings, zone 4/0 |
+
+Validation: run `probe-v1` (focused queued selectors, S3K ROM, branch
+bugfix/ai-s3k-route-behaviour-regressions on 2adfa37a7) passed the owning test, 0 skips.
+
+### Sonic incoming movies re-authored for the native MHZ1 carry-in (2026-10-15)
+
+See the MHZ act 1 record for the cause (aedc137a1, `loc_68C2`→`loc_68D8`), the opening and
+the tracking method. Act 2 continues the same time-aligned tracking from the act-2 release.
+
+| Movie | Old SHA-256 | New SHA-256 | Frames | Milestones (new; old) | Status |
+|---|---|---|---|---|---|
+| `mhz2-sonic-incoming-320.bk2` | `df0f52d4d34620022ff027059a2cc90911a3e1b039feb884d1bf8597d63a351f` | `314c73520a71585c41cd96fbc618f95da367e38043d902ca66cd850d9c945bd4` | 23944 | MHZ2 8617, release 9148, end boss 19835…20992 (19671…21156), ship 22264/23548, FBZ load 23666 (23497) | green |
+| `mhz2-sonic-incoming-800.bk2` | `15e386e9fec403ad411702f1f95c1c2f33e3202fa31d15d20af7e3038b324067` | `0cf35c45b0d7c899140b2066856fcdefa98b2919903b50253d63b31a110295cf` | 29433 | act 1 identical to old; MHZ2 9260, release 9832; object ride 11410…12040 (11313…11940); end boss 23040…24387 (23450…24797); FBZ load 28681 (old test constant 28981); ends 201,1219 in FBZ (same) | green (re-authored 2026-10-16, below) |
+
+`TestS3kMhzAct2AuthoredRoute` takes the Sonic case's new input count (23944); the Tails and
+team movies are unchanged. Incoming 800 stopped under the three-failed-searches rule: six
+bounded tracking searches from the act-2 release (offsets auto/−54, mushroom-cap state
+carry, no-restore windows) all failed in the MHZ2 traversal before the end boss — cold
+replays drift from restored trials at 11320 (P1 3911,1645, VInt 11320, level timer 2029,
+RNG `e1f02cdb`) and 14132 (P1 8954,1102, VInt 14132, timer 4841, RNG `9bb599f3`), and the
+last search lost the old path at 15100 (P1 13012,1905, VInt 15100, timer 5809, RNG
+`87c386cb`). The old movie stays in place; its test remains red (carry-in opening).
+
+Validation on 923399354 (run `v-mhz`, Maven Finished 21:07:07Z): `TestS3kMhzAct2AuthoredRoute`
+3/0/0/0 (Sonic re-authored; Tails and team unchanged); `TestMhzWideColdRouteCapture` 1 failure
+(`expected: <4> but was: <7>` at 29700, unchanged incoming 800 movie).
+
+### Incoming 800 re-authored under the fixed rewind (2026-10-16)
+
+The 2026-10-15 stop above rested on restore drift; `902ba8a10` fixed it (MHZ act 1 record,
+D1-D4) and the earlier drift sites replay identically. Four bounded searches from the act-2
+release, each accepted only by an uninterrupted cold replay (temporary authoring helper, deleted):
+
+| Search | Method | Result |
+|---|---|---|
+| r1 | time-aligned follow of the old route (offset −54) | cold-verified, lost at 12023: missed the old 11313-11940 object ride |
+| r2 | from 11200: time-aligned follow with auto offset and with 8px tolerance; progress-based follow (`ReferencePathInputAuthor`) | both time-aligned runs lost at 12020; the progress-based run rode the object (11410-12040) and stuck at old progress 13842 (P1 8501,1315) |
+| r3 | from 13300: time-aligned auto offset; progress-based with wider search | lost at 13900; stuck at 13844 — the old route waits at 7889,1455, 8165,1452 and 8270,1457 before a timed spindash climb, and the new route arrived ~450 inputs earlier |
+| r4-r6 | stand at the old 7889,1455 rest (new 13036), search 0-400 neutral inputs, then the old inputs: 54 inputs re-align object phases (offset +410, 3.7px mean error over 400 inputs); time-aligned follow with +410 to the end boss; neutral through the ship to the FBZ load; then the old post-load inputs | complete: all nine end-boss hits exactly 410 inputs ahead of the old route; the ship sequence runs 99 later; FBZ load 28681 |
+
+`TestMhzWideColdRouteCapture` takes the measured counts (29433 inputs, FBZ check at 29400, load
+28681, replay clamp 28680); its spots, health and named-spot obligations are unchanged. No
+runtime behaviour changed in this step.
+
+Validation: run `p13` on the tree of this commit (focused selectors via `maven_queue.py`, normal
+lane, S3K/S1/S2 ROMs, Maven Finished 23:37:15Z, 11 tests, 0 failures/errors/skips):
+`TestMhzWideColdRouteCapture` 1/0 (25 named whole-world replay spots, two restore cycles each),
+`TestS3kMhzAuthoredRoute` 1/0, `TestS3kMhzWideAuthoredRoute` 1/0, `TestS3kMhzAct2AuthoredRoute` 3/0,
+`TestMhzKnucklesColdRouteCapture` 2/0, `TestMhzRewindFidelitySweep` 3/0.

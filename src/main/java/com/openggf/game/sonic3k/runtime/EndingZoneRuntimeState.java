@@ -18,13 +18,15 @@ public final class EndingZoneRuntimeState implements S3kZoneRuntimeState {
         public int foregroundX = 0x200, foregroundY = 0x200;
         public int fadeTimer, redrawRows, aizBackgroundScrollFixed;
         public int backgroundRedrawRows, backgroundScrollFrame=Integer.MIN_VALUE, cloudDriftFixed, backgroundCameraY;
-        public int aizWaveOriginFrame=Integer.MIN_VALUE;
+        public int aizDeformationFrame=Integer.MIN_VALUE;
+        public int initialPaletteDelay; // Pal_fade_delay2 FACE; Level clearRAMFA80..FAFF initializes zero.
         public final short[] hScrollWords=new short[140];
         public boolean foregroundSignal, backgroundSignal, catcherReady, initialized;
+        public int catcherSlot=-1; // physical SST referenced by native _unkFAA4
         public int masterPaletteMode; // signed byte FAC1; survives native dynamic-sprite clear
         public final com.openggf.game.sonic3k.ending.S3kEndingAizPaletteState aizPalette =
                 new com.openggf.game.sonic3k.ending.S3kEndingAizPaletteState();
-        private static final int BYTES = 17 * Integer.BYTES + 5 + 140 * Short.BYTES
+        private static final int BYTES = 19 * Integer.BYTES + 5 + 140 * Short.BYTES
                 + com.openggf.game.sonic3k.ending.S3kEndingAizPaletteState.BYTES;
         private void captureTo(ByteBuffer b) {
             b.putInt(foregroundRoutine).putInt(backgroundRoutine).putInt(scrollXFixed).putInt(scrollYFixed)
@@ -34,9 +36,9 @@ public final class EndingZoneRuntimeState implements S3kZoneRuntimeState {
                     .put((byte)(backgroundSignal ? 1 : 0)).put((byte)(catcherReady ? 1 : 0))
                     .put((byte)(initialized ? 1 : 0));
             b.putInt(backgroundRedrawRows).putInt(backgroundScrollFrame).putInt(cloudDriftFixed).putInt(backgroundCameraY)
-                    .putInt(aizWaveOriginFrame);
+                    .putInt(aizDeformationFrame).putInt(initialPaletteDelay);
             for(short word:hScrollWords)b.putShort(word);
-            b.put((byte)masterPaletteMode);aizPalette.captureTo(b);
+            b.putInt(catcherSlot);b.put((byte)masterPaletteMode);aizPalette.captureTo(b);
         }
         private void restoreFrom(ByteBuffer b) {
             foregroundRoutine=b.getInt();backgroundRoutine=b.getInt();scrollXFixed=b.getInt();scrollYFixed=b.getInt();
@@ -45,9 +47,9 @@ public final class EndingZoneRuntimeState implements S3kZoneRuntimeState {
             aizBackgroundScrollFixed=b.getInt();foregroundSignal=b.get()!=0;backgroundSignal=b.get()!=0;
             catcherReady=b.get()!=0;initialized=b.get()!=0;
             backgroundRedrawRows=b.getInt();backgroundScrollFrame=b.getInt();cloudDriftFixed=b.getInt();backgroundCameraY=b.getInt();
-            aizWaveOriginFrame=b.getInt();
+            aizDeformationFrame=b.getInt();initialPaletteDelay=b.getInt();
             for(int i=0;i<hScrollWords.length;i++)hScrollWords[i]=b.getShort();
-            masterPaletteMode=b.get();aizPalette.restoreFrom(b);
+            catcherSlot=b.getInt();masterPaletteMode=b.get();aizPalette.restoreFrom(b);
         }
     }
 

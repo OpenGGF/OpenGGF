@@ -21,7 +21,7 @@ import xml.etree.ElementTree as ET
 from category_artifacts import compact_run, prune_runs, run_logged, acknowledge_run
 from category_control import DEFAULT_MINUTES, IDLE_SECONDS, preflight, is_broad
 from maven_queue import maven_slot, worktree_build_slot, handle_termination, needs_exclusive
-from maven_schedule import plan_estimate
+from maven_schedule import ServiceCredit, plan_estimate
 
 ROOT = Path(__file__).resolve().parents[2]
 TEST_ROOT = Path('src/test/java')
@@ -130,6 +130,48 @@ def inventory(root, data):
     return result
 
 
+def validate_preparation_contract(root):
+    """Reject lifecycle shapes that test-compile followed by surefire:test would omit.
+
+    This checks this repository's standalone POM, including every profile. Maven
+    still resolves OS/environment profiles in each invocation. Lane profiles may
+    only change Surefire, so preparation does not need a lane-specific rebuild.
+    """
+    pom = ET.parse(root / 'pom.xml')
+    if (pom.find('m:parent', NS) is not None
+            or pom.find('m:build/m:extensions', NS) is not None):
+        raise ValueError('Prepare-once validation requires a standalone POM without lifecycle extensions')
+    for plugin in pom.findall('.//m:plugin', NS):
+        artifact = plugin.findtext('m:artifactId', default='', namespaces=NS)
+        for execution in plugin.findall('m:executions/m:execution', NS):
+            name = execution.findtext('m:id', default='unnamed', namespaces=NS)
+            phase = execution.findtext('m:phase', default='', namespaces=NS).strip()
+            goals = execution.findall('m:goals/m:goal', NS)
+            if artifact == 'maven-surefire-plugin':
+                raise ValueError(f'Prepare-once validation does not support Surefire executions: {name}')
+            if phase in ('process-test-classes', 'test') or '${' in phase or (goals and not phase):
+                raise ValueError(f'Prepare-once validation cannot preserve execution {artifact}/{name} '
+                                 f'in phase {phase or "<implicit>"}')
+    for profile in pom.findall('m:profiles/m:profile', NS):
+        name = profile.findtext('m:id', default='', namespaces=NS)
+        if profile.findtext('m:activation/m:activeByDefault', namespaces=NS) == 'true':
+            raise ValueError('Prepare-once validation does not support activeByDefault profiles')
+        if name not in ('smoke', 'test-concurrent', 'guards'):
+            continue
+        for child in profile:
+            tag = child.tag.removeprefix('{' + NS['m'] + '}')
+            if tag in ('id', 'activation'):
+                continue
+            if tag == 'properties' and all(item.tag.split('}')[-1].startswith('surefire.')
+                                           for item in child):
+                continue
+            if tag == 'build' and all(item.tag == '{' + NS['m'] + '}plugins' for item in child):
+                if all(plugin.findtext('m:artifactId', namespaces=NS) == 'maven-surefire-plugin'
+                       for plugin in child.findall('m:plugins/m:plugin', NS)):
+                    continue
+            raise ValueError(f'Prepare-once validation requires the {name} profile to change only Surefire')
+
+
 def owners(path, data):
     relative = path.removeprefix(PACKAGE)
     found = set()
@@ -191,6 +233,7 @@ def select_changes(paths, data):
 def make_plan(root, data, base, requested, guards=False, workers=1):
     if workers not in (1, 2):
         raise ValueError('Ordinary workers must be 1 or 2')
+    validate_preparation_contract(root)
     tests = inventory(root, data)
     base_sha, paths = changed_files(root, base) if base else (None, [])
     selected, full, reasons = select_changes(paths, data) if base else ({'common'}, False, [])
@@ -312,11 +355,13 @@ def merge_summary(total, summary):
 
 
 def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, keep_diagnostics=False, queue_fd=None,
-             rom_directory=None, admission=None):
+             rom_directory=None, admission=None, tree_fd=None):
     """Run batches under a retained worktree lock, releasing shared admission between jobs.
 
     admission(batch_plan, lane) yields that job's shared queue descriptor. Direct
     callers may instead supply a trusted, already-held queue_fd as before.
+    The plan has passed validate_preparation_contract. Preparation inherits only
+    tree_fd, retaining local build ownership without requesting shared admission.
     """
     workers = plan.get('workers', 1)
     if workers not in (1, 2):
@@ -347,6 +392,38 @@ def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, keep_diagnostics=False, qu
         plan['max_minutes'] = max_minutes
         plan['ordinary_batch_classes'] = ORDINARY_BATCH_CLASSES
         (run / 'plan.json').write_text(json.dumps(plan, indent=2) + '\n')
+        (run / 'results.json').write_text('[]\n')
+        preparation = dict(status='incomplete', exit_code=None, elapsed_seconds=0.0,
+                           working_tree_fingerprint=initial_state)
+        preparation_path = run / 'preparation.json'
+        preparation_path.write_text(json.dumps(preparation, indent=2) + '\n')
+        command = ['mvn', '-Dmse=off', 'test-compile', '-B']
+        (run / 'preparation-command.json').write_text(json.dumps(command, indent=2) + '\n')
+        temporary = run / 'preparation-tmp'
+        temporary.mkdir()
+        print(f'Preparing compiled tests once; rolling output: {run / "preparation.log"}', flush=True)
+        started = time.monotonic()
+        try:
+            preparation['exit_code'] = run_logged(command, root, run / 'preparation.log', temporary,
+                                                   timeout=max_minutes * 60,
+                                                   idle_timeout=IDLE_SECONDS, queue_fd=tree_fd)
+            if tree_state(root) != initial_state:
+                raise ValueError('Working tree changed during preparation; no test batches launched')
+            if preparation['exit_code']:
+                preparation.update(status='failed', reason='Maven preparation failed; no test batches launched')
+            else:
+                preparation['status'] = 'passed'
+        except BaseException as error:
+            preparation['reason'] = str(error) or type(error).__name__
+            raise
+        finally:
+            elapsed += time.monotonic() - started
+            preparation['elapsed_seconds'] = round(elapsed, 2)
+            preparation_path.write_text(json.dumps(preparation, indent=2) + '\n')
+            shutil.rmtree(temporary)
+            print('Preparation: ' + json.dumps(preparation), flush=True)
+        if preparation['exit_code']:
+            return 1
         includes = run / 'includes.txt'
         failed = False
         for lane in (('ordinary', 'guards') if plan['guards'] else ('ordinary',)):
@@ -375,8 +452,9 @@ def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, keep_diagnostics=False, qu
                         raise ValueError('Working tree changed while waiting for validation admission')
                     if reports.exists():
                         shutil.rmtree(reports)
-                    temporary.mkdir()
-                    command = ['mvn', '-Dmse=off', 'test', '-B',
+                    for fork in (1, 2):
+                        (temporary / f'fork-{fork}').mkdir(parents=True)
+                    command = ['mvn', '-Dmse=off', 'surefire:test', '-B',
                                f'-Dopenggf.surefire.reports={reports}',
                                f'-Dopenggf.test.tmpdir={temporary}']
                     if lane == 'guards':
@@ -522,16 +600,18 @@ def main(argv=None):
                 if args.rom_directory is not None:
                     plan['rom_directory'] = str(args.rom_directory)
                 preflight(ROOT, plan)
+                service_credit = ServiceCredit()
 
                 def admission(batch_plan, lane):
                     return maven_slot(ROOT, tree_fd=tree_fd,
                                       exclusive=(lane == 'ordinary' and args.workers > 1)
                                       or needs_exclusive([]),
                                       estimate=plan_estimate(batch_plan),
-                                      kind='category-batch' if lane == 'ordinary' else 'category-guards')
+                                      kind='category-batch' if lane == 'ordinary' else 'category-guards',
+                                      service_credit=service_credit)
 
                 return run_plan(ROOT, plan, args.max_minutes, args.keep_diagnostics,
-                                rom_directory=args.rom_directory, admission=admission)
+                                rom_directory=args.rom_directory, admission=admission, tree_fd=tree_fd)
         display = plan if args.json else {
             **{k: v for k, v in plan.items() if k not in ('tests', 'reasons')},
             'selected_classes': len(plan['tests']), 'reasons': plan['reasons'][:50],

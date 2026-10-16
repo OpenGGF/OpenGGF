@@ -33,7 +33,7 @@ class TestS3kMhzAct2AuthoredRoute {
     }
 
     @ParameterizedTest
-    @CsvSource({"sonic,23775", "tails,35815", "team,44004"})
+    @CsvSource({"sonic,23944", "tails,35815", "team,44004"})
     void incomingRoutesCompleteActTwoWithLiveRewindBoundaries(String route, int inputCount)
             throws Exception {
         boolean pair = route.equals("team");
@@ -163,7 +163,11 @@ class TestS3kMhzAct2AuthoredRoute {
     private static void assertRoster(String character, boolean pair) {
         assertEquals(com.openggf.game.CharacterKey.parsePersisted(character),
                 GameServices.sprites().getMainPlayable().characterKey());
-        var followers = GameServices.sprites().getSidekicks();
+        var all = GameServices.sprites().getSidekicks();
+        long carriers = all.stream().filter(s -> nativeIntroCarrier(s)).count();
+        assertTrue(carriers <= (character.equals("sonic") && !pair ? 1 : 0),
+                "only solo Sonic receives the native MHZ1 carry-in Tails");
+        var followers = all.stream().filter(s -> !nativeIntroCarrier(s)).toList();
         assertEquals(pair ? 1 : 0, followers.size());
         if (pair) assertEquals(com.openggf.game.CharacterKey.TAILS, followers.getFirst().characterKey());
     }
@@ -188,5 +192,14 @@ class TestS3kMhzAct2AuthoredRoute {
                     ? " dynamic classes=" + objects.dynamicObjects().stream()
                             .map(entry -> entry.objectId() + "=" + entry.className()).toList() : ""));
         }
+    }
+
+    /**
+     * SpawnLevelMainSprites loc_68C2/loc_68D8 (sonic3k.asm:8180-8197): locked-on MHZ1
+     * (SK_alone_flag clear) gives solo Sonic (Player_mode 1) a temporary Obj_Tails carrier
+     * at Player_2, which flies off after the drop. It is not a configured follower.
+     */
+    private static boolean nativeIntroCarrier(com.openggf.sprites.playable.AbstractPlayableSprite sprite) {
+        return sprite.getCpuController() != null && sprite.getCpuController().isTransientCarrySidekick();
     }
 }

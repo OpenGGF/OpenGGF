@@ -26,10 +26,23 @@ public class Tails extends AbstractPlayableSprite {
 		if (isHidden()) {
 			return;
 		}
-		// ROM: Obj05 (Tails' tails) renders independently of invulnerability blink
-		if (getTailsTailsController() != null) {
-			getTailsTailsController().draw();
+		// ROM: Obj05 (Tails' tails) renders independently of invulnerability blink.
+		// Its SST (Tails_tails, sonic3k.constants.asm:315; S2 Tails_Tails) follows
+		// Player_2 and copies the parent's priority (Obj_Tails_Tail_Main,
+		// sonic3k.asm:30034), so the body's sprite-table entries precede and cover
+		// the tail. SAT collection submits front-first; painter rendering back-first.
+		var tail = getTailsTailsController();
+		boolean spriteTableOrder = graphicsManager != null && graphicsManager.isSpriteSatCollectionActive();
+		if (tail != null && !spriteTableOrder) {
+			tail.draw();
 		}
+		drawBody();
+		if (tail != null && spriteTableOrder) {
+			tail.draw();
+		}
+	}
+
+	private void drawBody() {
 		// ROM: During hurt bounce (routine 4), DisplaySprite is called directly
 		// (always visible). Flashing only occurs after landing (routine 2) via
 		// Tails_Display: lsr.w #3,d0 / bcc = visible when (timer & 0x04) != 0.

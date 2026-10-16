@@ -1845,7 +1845,10 @@ public class TestGameLoop {
         SessionManager.openGameplaySession(module, saveContext);
 
         com.openggf.level.LevelManager levelManager = mock(com.openggf.level.LevelManager.class);
-        com.openggf.sprites.managers.SpriteManager spriteManager = mock(com.openggf.sprites.managers.SpriteManager.class);
+        // Run the real constructor so final rewind-adapter owners exist; every
+        // method stays a mock default unless stubbed.
+        com.openggf.sprites.managers.SpriteManager spriteManager = mock(com.openggf.sprites.managers.SpriteManager.class,
+                org.mockito.Mockito.withSettings().useConstructor());
         SeamlessLevelTransitionRequest request = SeamlessLevelTransitionRequest
                 .builder(SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
                 .targetZoneAct(1, 0)
@@ -1886,7 +1889,8 @@ public class TestGameLoop {
         SessionManager.openGameplaySession(module, saveContext);
 
         com.openggf.level.LevelManager levelManager = mock(com.openggf.level.LevelManager.class);
-        com.openggf.sprites.managers.SpriteManager spriteManager = mock(com.openggf.sprites.managers.SpriteManager.class);
+        com.openggf.sprites.managers.SpriteManager spriteManager = mock(com.openggf.sprites.managers.SpriteManager.class,
+                org.mockito.Mockito.withSettings().useConstructor());
         FadeManager fadeManager = mock(FadeManager.class);
         when(levelManager.consumeSeamlessTransitionRequest()).thenReturn(null);
         when(levelManager.consumeInLevelTitleCardRequest()).thenReturn(false);

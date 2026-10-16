@@ -150,8 +150,15 @@ class TestHostObjectKeys {
         var registry=new ModDecoratedObjectRegistry(new Sonic3kObjectRegistry(),new ModObjectKeyRegistry(List.of()));
         var objects=new ObjectManager(List.of(hostSpawn()),registry,0,null,null,null,camera,bound);
         ref[0]=objects;
+        // LevelManager gives every non-UNIFIED host the load-then-exec order: S3K
+        // Load_Sprites runs before Process_Sprites (sonic3k.asm:7893-7894). Without
+        // it a bare manager advances placement after exec and loads next frame, a
+        // test-only order whose X-loop latch spans the captured frame boundary.
+        objects.enableExecThenLoadPlacement();
         objects.setRewindClassResolver(new ModClassResolver(org.mockito.Mockito.mock(ModRuntime.class),getClass().getClassLoader()));
         objects.update(0,player,List.of(),1);
+        assertEquals(1,objects.activeObjectsOfType(S3kAuthoredGoalInstance.class).size(),
+                "the first Load_Sprites pass materialises the tagged goal before Process_Sprites");
         var before=objects.rewindSnapshottable().capture();
         com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(player,64);
         objects.update(0,player,List.of(),2);

@@ -8,7 +8,9 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.List;
 
-/** loc_5E504 / loc_5E612: the five flickies and two rabbits in Obj_Ending. */
+/** loc_5E504 / loc_5E612: the five pelicans and two dolphins in Obj_Ending.
+ * The internal rabbit field retains its existing captured-schema name; native
+ * Map_EndingAnimals frames0/1 and the second creation group are dolphins. */
 public final class EndingAnimalObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
     private int routine,index,xFixed,yFixed,xVelocity,yVelocity,baseX,timer,mappingFrame;
     private int animFrame,animTimer;

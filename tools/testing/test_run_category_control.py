@@ -60,15 +60,15 @@ class ControlTests(unittest.TestCase):
             summary = dict(reports=1, tests=1, failures=0, errors=0, skipped=0)
             with patch.object(runner, 'tree_state', return_value='state'), patch.object(runner, 'rom_args', return_value=[]), patch.object(runner, 'summarize', side_effect=lambda _: dict(summary)), patch.object(runner, 'run_logged', return_value=0) as process:
                 self.assertEqual(0, runner.run_plan(root, self.plan()))
-                self.assertEqual(2, process.call_count)
+                self.assertEqual(3, process.call_count)
 
     def test_invocation_timeout_is_shared_between_lanes(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             summary = dict(reports=1, tests=1, failures=0, errors=0, skipped=0)
-            with patch.object(runner, 'tree_state', return_value='state'), patch.object(runner, 'rom_args', return_value=[]), patch.object(runner, 'summarize', side_effect=lambda _: dict(summary)), patch.object(runner, 'run_logged', return_value=0) as process, patch.object(runner.time, 'monotonic', side_effect=[0, 10, 20, 40]):
+            with patch.object(runner, 'tree_state', return_value='state'), patch.object(runner, 'rom_args', return_value=[]), patch.object(runner, 'summarize', side_effect=lambda _: dict(summary)), patch.object(runner, 'run_logged', return_value=0) as process, patch.object(runner.time, 'monotonic', side_effect=[0, 5, 10, 20, 30, 50]):
                 self.assertEqual(0, runner.run_plan(root, self.plan(), max_minutes=1))
-            self.assertEqual([60, 50], [c.kwargs['timeout'] for c in process.call_args_list])
+            self.assertEqual([60, 55, 45], [c.kwargs['timeout'] for c in process.call_args_list])
 
 
 class QueueCliTests(unittest.TestCase):
@@ -85,10 +85,11 @@ class QueueCliTests(unittest.TestCase):
             events.append('tree released')
 
         @contextmanager
-        def slot(root, *, exclusive=False, estimate=900, kind='maven', tree_fd=None):
+        def slot(root, *, exclusive=False, estimate=900, kind='maven', tree_fd=None, service_credit=None):
             self.assertEqual(30, estimate)
             self.assertEqual('category-batch', kind)
             self.assertEqual(12, tree_fd)
+            self.assertIsInstance(service_credit, runner.ServiceCredit)
             events.append('shared acquired')
             yield 13
             events.append('shared released')
@@ -99,6 +100,7 @@ class QueueCliTests(unittest.TestCase):
 
         def execute(root, current, *args, admission, **kwargs):
             self.assertEqual(['new'], current['tests'])
+            self.assertEqual(12, kwargs['tree_fd'])
             with admission(current, 'ordinary') as fd:
                 self.assertEqual(13, fd)
             return 7
@@ -127,6 +129,8 @@ class QueueCliTests(unittest.TestCase):
                 patch('sys.stdout', new_callable=io.StringIO):
             self.assertEqual(0, runner.main(['--category', 'physics', '--workers', '2', '--run']))
         self.assertEqual([True, False], [call.kwargs['exclusive'] for call in slot.call_args_list])
+        self.assertIs(slot.call_args_list[0].kwargs['service_credit'],
+                      slot.call_args_list[1].kwargs['service_credit'])
 
 
 if __name__ == '__main__':

@@ -1397,3 +1397,482 @@ records this combined-source command. Subsequent bounded
 completes on `aaff73747`, with the separately attributed inherited CLI assertion
 and 680 passing guard tests. Develop source delivery and owned-worktree cleanup are complete; the inherited
 breadth above remains open.
+
+
+## Physical checkpoint products and incoming replay (2026-10-14)
+
+All three placed posts2/3/4 receive165 products:75 supported Sonic/Tails solo
+and90 explicit-roster cases. Local approaches declare saved index1 before the
+initial dispatch solely to select the ROM no-arrival branch; posts2..4 remain
+untouched until physical contact. This is not a cold or physically authored
+post1 claim. A separate maintained controller-only cold opening, with no
+position/checkpoint writes, naturally touches post2 at($640,$5E8) before input
+7912. The independent placement census also proves the Knuckles final arena
+(SSZ Act2) has no authored star posts.
+
+Each product approaches the literal ROM-placed star post through ordinary
+movement, captures the full registered world on both sides of contact, and
+replays and reverses it twice. It then invokes the production pit-death owner
+twice, waits for actual GameLoop reload/title/fade/control release, and verifies
+one lost life, saved coordinates/index, fresh runtime/object manager, retained
+ordered roster/CPU leader identities, donor art and retired outgoing history.
+Each incoming world independently captures and replays a45-input neutral window
+twice in both restore directions, without hiding a second death or life loss.
+All comparisons retain every registry key; no incoming raw restore crosses a
+load. The configured rosters include duplicate names and seven followers;
+these are finite examples of the uncapped API, not proof of every possible team.
+
+The five cases per configuration use the actual320/352/400/528/800 presets.
+Supported solo pairs are off×{Sonic,Tails,Knuckles}, S1×Sonic and
+S2×{Sonic,Tails}, where the act has that character route. Six explicit configured
+rosters cover native mixed/duplicate/large teams, S1 duplicate Sonic, and S2
+mixed/large teams. The common test is `TestLrzSszCheckpointRoutes`; independent
+census, layout witnesses and an S2 Tails/seven-follower800 witness run before
+the long product method. The combined class passes888 tests, zero failures,
+errors or skips, on `a8c9f892e855855f96c7ecad368e127880c9af3e` plus the final
+class (SHA256`3ed4c7346c79cd06d694e7fc17cf625aaa941d4951db606702734d631115f818`),
+request99024, completed2026-10-14 12:40:30 UTC. Exact commands, prerequisites,
+rejected setups and the distinction from earlier qualification are recorded in
+[the completion plan](../../plans/2026-10-13-s3k-playable-completion.md#checkpoint-product-qualification-2026-10-14).
+
+This qualifies local physical contact and reload/replay products. It supplies
+no cold route for every configuration, native whole-scene/audio acceptance or
+combined smoke/guard/integration claim. Other matrix obligations stay open.
+
+
+## Native opening-bridge contact follow-up (2026-10-14)
+
+Independently fresh native320 Sonic+Tails and engine scenes consume original
+AD40 suffix448920 after a separate neutral initial ProcessSprites pass,
+polls0/LFC0. Losing that first ordinary row caused the earlier Death Egg X
+drift; it was a host-boundary issue. Native blue/gold circles are present in
+both captures; a player-row SAT count is not a circle-row overflow witness.
+Corrected P1 coordinates/camera agree through poll1341. At1342 the native
+bridge moves to894/3208 and acquires P1 at808/3179; engine had808/3192,
+airborne. Decision callbacks and full RAM identify the exact bridge standing
+bit, with no shared terrain landing. Updraft first moves P1 to3192; the native
+surface3208-9 gives d0=-16 and relative Y3179. The former d2=16 profile
+misses that contact. Existing provider flags now select d3, reject exact zero
+and preserve the relative snap before TouchFloor. Shared solver/clocks,
+allocator and fixture-directed runtime branches are unchanged.
+
+Literal `TestSszBridgeNativeTopContact` on656e21eb1 plus its test draft has
+10/6/0/0 in37975 at13:57:53 UTC. Final affected81009 is terminal0 at
+14:02:18 UTC,54/0/0/0 (1:26 Maven): ten controls, one original-controller
+contact/replay,13 profiles,25 bridge/death/reload capture products and five
+Knuckles bridge cases. The real original-input case compares every registry
+key twice around45 inputs, retaining current owners/lives and actual ride;
+no raw restore crosses a load. Normal queued admission, Java25, surfaceless
+EGL, original absolute ROMs, null OpenAL and no ambient desktop are used.
+
+Native/engine external task evidence: `native-ssz-contact-pair-ntsc-v1` and
+`ssz-contact-boundary-656e21eb1-e3b0c44298fc-v1` under the task spot-checks.
+Their provenance/command JSON pins exact argv, original ROM/BK2, immutable
+bf3c539 video host and passive decision instrumentation. Native762427 epochs
+1791985804.0648851–1791985816.9969594; Java762737/mainSszContactBoundaryProbe
+1791985817.4445887–1791985820.1126516, both0 (request8791 at13:50:20 UTC).
+Its C# adapter SHA256 is6c8bf0e09852af0ab0df216ff969a1a914c11841264e30f7b181fc6592c459c0.
+The callback CSV mislabeled06/07 as radii: those are visual height/width24.
+Actual9/19 is verified at1F/1E in unchanged raw RAM; no radius inference uses
+those mislabeled columns. OriginalRGB and prepared/published identities are
+retained. The prior14908 helper int/uint compile error is terminal1 at
+13:47:54 UTC, before emulator/engine-probe launch; engine compilation succeeds.
+Actual child intervals are relayed to the authorized performance coordinator.
+This is bounded owner/contact evidence, not whole-scene pixel/audio, every
+cold product, full suite or combined delivery. Maintained cold completions
+and corrected final engine spot captures follow. Consumed target redirects
+are removed after this durable account.
+
+
+## Corrected cold incoming-world qualification (2026-10-14)
+
+On b930df4868 plus the qualified route drafts, request12506 is terminal0 at
+15:17:45 UTC: native320 completion and upper route, paired800 completion,
+and five independent bonus pilots pass8/0/0/0. The native completion has50
+and paired800 has44 two-cycle45-input whole-registry windows, including actual
+DEZ assembly and released incoming worlds, with outgoing history retired.
+The320 movie preserves its original20540 rows and appends180 neutral rows.
+Actual load/assembly is20550/20551 at320 and20874/20875 at800; both fades
+take22 presentations. Semantic load predicates replace obsolete double-fade
+row assumptions. Exact matched negative attribution, source hashes and
+commands are in the [completion plan](../../plans/2026-10-13-s3k-playable-completion.md#ssz-cold-boundaries-and-bonus-return-pilots-2026-10-14).
+
+The corrected original-input contact capture matches1432 native P1/camera/
+counter/ring observations. The subsequent arrival-owner repair below removes the previously recorded
+one P2 X and74 P2 Y discrepancies in the arrival window119–209.
+These bounded routes/contact checks do not certify all viewport/character/
+donor/roster combinations, whole-scene original RGB/audio or entire campaign
+parity. Remaining matrix obligations retain their prior status.
+
+
+## Native arrival continuation and palette qualification (2026-10-14)
+
+On558e74833 plus the arrival candidate, request79082 executes143 cases:
+119 unchanged neighbors pass and18 of24 new cases pass. Its six failures
+are fixture premises: preloaded placements move the controller away from the
+independently cold native slot4, and direct update calls do not advance palette
+ownership epochs. The fixture retains helper3 behind its controller and uses
+ordinary frames for the settle check; production is unchanged. Corrected exact
+class request21831 completes20:09:21 UTC,24/0/0/0 (25.233s Maven;162s queue).
+Together these runs qualify143 distinct identities, not a single green143 run.
+
+Five widths verify helper3's next-pass start and twelve real dispatches,
+four-pass ROM light pairs, the Tails-main Player_mode branch and two all-key
+whole-world rewind/replay cycles. Three pressure cases cover live zero-ID
+occupants, the penultimate/last carried DBEQ probe and exhausted budget without
+fallback to slot33. The local settle inlet is explicitly declared; it proves
+24 final palette dispatches and next-pass retirement, not cold traversal.
+
+Passive original AD40 recapture25248 is terminal0 at20:12:52 UTC, using the
+unchanged production runtime and original1431 ordinary input polls after its
+one-shot initial ProcessSprites. All1432 rows now match the recorded native P1 X/Y,
+X/Y velocities, ground speed and mapping frame, P2 X/Y, both camera
+coordinates/copies, level clock and rings. P2 velocities and body/tail animation
+are not present in that CSV; later selected RAM observations are separate. The former one-X/74-Y P2 deficit is gone. Eight earlier native
+observer controls remain byte-identical; no gameplay values are imported.
+
+Cutscene-bridge rider pose (2026-10-15 UTC): `Obj_SSZCutsceneBridge` sets its own
+status bit 7, so Tails' `loc_14A16` standing branch keeps Wait (anim5) instead of
+Balance. The bridge now advertises that negative header to the shared edge-balance
+check. `TestS3kSszArrivalHeadless#stationaryTailsUsesTheCutsceneBridgeNativeNoBalanceHeader`
+passed (1/0/0/0, request79598, 00:33:37) after the old Balance6 negative at input
+1338. It asserts anim5/no balance/tail anim1; the native map `$AD`/tail map `$22`
+and their 4,3,2 timers at inputs 1341-1343 are now asserted too (below).
+
+Direct original-RGB spot comparison (2026-10-15 UTC, composed Root `d5bfcc1c0`
+with the saved Limited expansion and Raw RGB profile, unmodified production
+runtime, original AD40 suffix from 448920 after the one-shot initial
+ProcessSprites; native `native-ssz-arrival-allocation-ntsc-v1` PPMs; no
+normalization, quantization, shift or crop):
+
+| Input | Differing pixels | Attribution |
+|---|---:|---|
+| 118, 119, 330, 680, 1430 | 0 | Exact |
+| 1341, 1342, 1343 | 15/19/19 → 0 | Fixed: SAT-collected zones submitted Tails' tail before his body, putting the tail in front. `Tails_tails` follows `Player_2` with the parent's copied priority (`Obj_Tails_Tail_Main`, sonic3k.asm:30034), so native sprite-table order puts the body first (native SAT entries 22 Sonic, 24 body `$6A0`, 25 tail `$6B0`) |
+| 120 | 538 | Inlet limit: native P2 is mapping 0, anim2, `object_control` 1 in RAM, as is the engine. `Player_prev_frame_P2` was zeroed by Level's `clearRAM`, so mapping 0 issues no `Tails_Load_PLC2` DMA and the native draws D400 tiles retained from the HPZ teleporter. The declared direct SSZ boot has no prior VRAM. The joined cold route has not been compared |
+| 0 | 71382 | Inlet limit: the native frame still shows the SSZ title card; the declared direct boot shows gameplay. Frames from 118 match exactly |
+
+`TestS3kSszArrivalHeadless#stationaryTailsUsesTheCutsceneBridgeNativeNoBalanceHeader`
+now also pins P2 map `$AD`, tail map `$22`, both 4,3,2 timers and published
+body-over-tail order at 1341-1343; without the order fix it fails at 1341. The
+positive selection (`TestS3kSszArrivalHeadless`, `TestSpriteManagerRewindCapture`)
+passed 37/0/0/0 at 02:31:22 UTC. Captures:
+external task capture `spot-checks/ssz-arrival-boundary-d5bfcc1c0-373a1e1d6ee9-af8673d1d8-limited-v1/`
+(with `spot-review.json`).
+
+Viewed native and engine gameplay pictures remain bounded spot evidence,
+not whole-scene original-RGB acceptance. Native input0 still publishes its
+title-card presentation while the engine capture omits title cards. A global
+previous-row pixel shift is rejected: it worsens logical pixel differences
+rather than establishing a published VDP boundary. The native330/current-engine330
+pair retains360 logical three-bit pixel differences; original RGB expansion
+remains separately different. Full SAT/scroll/CRAM publication and other scene
+owners must explain those residuals before a pixel-parity claim.
+
+Exact commands, clocks and source/probe hashes are in the
+[completion plan](../../plans/2026-10-13-s3k-playable-completion.md#native-ssz-arrival-owner-qualification-2026-10-14).
+
+
+## Native cloud priority and RINGS glyph (2026-10-14)
+
+Original current-poll SAT330 entries13/14 carry art wordsE310/E320. Verified
+`ArtTile_SSZMisc=$2D4` plus `$3C` identifies roaming clouds, not columns.
+`loc_57BB2`, the bouncy-cloud/puff art word and both collapsing-column paths
+set VDP bit15 independently of their SAT buckets. Five local overrides now
+preserve those native high-priority bits. The initial column-only attribution
+is rejected: its360 diagnostic pixels at330 remain unchanged. The HUD
+`Map_HUD` RINGS row starts at text tile8, whereas SCORE uses a distinct R at6;
+using the native ROM glyph removes the remaining two HUD pixels. S1/S2 HUD
+mappings and shared render/colour policy are unchanged.
+
+On committed da27f4f3d plus this production draft, focused10369 completes
+22:12:06 UTC:73 tests, zero failures/errors/skips,1:14 Maven. Exact selection
+is `TestHudStaticArtLivesFrameMappings,TestS3kSszColumnSpritePriority,`
+`TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,`
+`TestSonic3kDecodingUtils`, using the local normal queued wrapper, EGL,
+absolute original S3K ROM, null audio and unset ambient displays. Independent
+negative priority66895 (3/2/0/0), cloud66640 (3/3/0/0), and HUD38028
+(1/1/0/0) precede the owning fixes; traversal79239 passes12/0/0/0.
+
+Unchanged passive observer23561 completes22:15:19.727238 UTC, exit0.
+External task directory `ssz-arrival-boundary-da27f4f3d-f4b6b8b25b36-v1`
+pins production diff SHA256
+`f4b6b8b25b36997f8e6a90a121bbf4b199a572c22bb58ca3b9636bff8739cbe1`,
+observer6016797a066d4a595a996c82efcf3d6d76899610d737e0ecace6b5d45732a2bf
+and original ROM/AD40 movie. Original native/current engine images were viewed
+at330 and1342;330,680,1430 now have zero diagnostic three-bit bin differences.
+1342 retains475 differences at x267–306/y161–191, including the visible Tails
+pose. All four original RGB pictures still differ in71680 pixels because the
+colour expansion is distinct. Diagnostic bins identify an owner; they do not
+certify original RGB, native colour policy, other frames or whole-scene parity.
+No frame shift, fitted scroll or gameplay hydration is used. Exact compiler
+and JVM bounds/argv are retained beside the media and relayed to coordination;
+the normal parent retains the source/classes worktree lease for both children.
+
+Stronger whole-world sky replay23335 fails one of21 tests at22:00:22 UTC:
+`theSkySurvivesACaptureRestoreAndForwardReplay` reports prepared sprite tile
+count496 versus304. Matched unchanged-da27 arm39050 at22:07:53 UTC reports
+the identical failure (1/1/0/0); all five priority candidate files are restored
+byte-identically after attribution. This inherited publication failure remains
+active owner work. Combined smoke/guards and integration/push remain pending.
+Consumed owned Maven redirects are removed after this durable account.
+
+
+## Beam structural art and complete sky replay (2026-10-14)
+
+The inherited prepared496→304 sky failure is repaired on17b47cb48 plus the
+beam draft. Passive table attribution67368 identifies192 missing SSZ beam
+tiles; unchanged motion/child fields concealed a constructor-only selector.
+Generic recreation's harmless parent-null probe chooses the HPZ art bank.
+The beam now captures its own native art selector and reconstructs from it,
+rejecting a missing selector. Ordinary SSZ transports likewise select the SSZ
+bank; native art-word bit15 remains1 there and0 in loc_45908's HPZ branch.
+Shared graphics policy, frame/scroll clocks and public snapshot shapes stay
+unchanged. Literal probe-art negative6748 fails1/1/0/0 at22:24:52 UTC.
+
+The corrected source's36057 at22:27:16 UTC completes11/2/0/0: all three beam
+cases and six original sky cases pass; the two separately authored actual
+Slot portal cases fail only the missing interior-rewind support obligation.
+The unmatched TestSszArrivalControllerNative selector contributes no tests.
+Final SSZ/HPZ affected97786 completes22:30:27 UTC,22/0/0/0,25.937s Maven:
+`TestTeleporterBeamRendering,TestS3kSszBackgroundClouds,TestS3kSszTeleporterPads,`
+`TestS3kHpzTeleporterHeadless`. All five actual viewport widths compare every
+registry key, both restoration directions and forward replay twice around
+120→121 ordinary frames. The captured motion, owning art bank and prepared
+picture survive together. Commands use the normal local queue, original
+absolute S3K ROM, EGL, null audio and no ambient desktop.
+
+Root composed load/deformation check65987 separately passes78 of79 tests
+at22:21:09 UTC (1:18); its one failure is the same now-repaired sky publication
+owner. Final22 is the bounded new repair gate; it is not a claimed green79
+rerun. The original RGB and1342 Tails pose limits above remain active.
+Consumed attribution/focused redirects are removed after this account.
+
+## Native single-fade retiming (2026-10-15)
+
+8179ccd80 stopped `GameplayCaptureSession.step` from advancing a runtime-ready
+loop's FadeManager a second time. Movies authored before it budget half of each
+frozen fade-out (11 of the native 22 frames, during which gameplay and object
+VInt do not advance), so their later inputs landed early. `FadeWindowRetimeTool`
+(41405e073, 5333aece6) measured each owned frozen window in the production harness,
+inserted the native remainder as repeats of the held input and verified every
+movie by one uninterrupted replay with no death. On the LRZ Knuckles and Tails
+chains the retimed rows equal the 22d5e6ffc rows shifted by the inserted frames,
+VInt included (0 differing rows). Test frame constants move by 11 at and after each
+old load frame. Base: Root ef61a560f; no runtime behaviour changed.
+
+| Movie | Old SHA-256 | New SHA-256 | Windows `start:native→+inserted` | Frames | New full loads | Verified end |
+|---|---|---|---|---|---|---|
+| `ssz1-sonic-solo-cold-complete-320.bk2` | `26e16d273bca81b1983028c89d683a3a7c616e104ec350900db431fe98401d10` | `6c7469ca579364cd9b0abb121b37f8eaaee0171e11a1a811ae82ae9095d4742b` |  | 17600 |  | 6899,294, 3 rings, zone 10/0 |
+
+Validation on ef61a560f plus the retimed fixtures (`TestSszSoloColdRouteCapture`), focused selectors through
+`tools/testing/maven_queue.py` with the S3K ROM: run `cold-fade-verify` (Maven
+Finished 04:15:51Z) passed `TestDezIncomingFinalRouteCapture` 7/0/0/0,
+`TestDezSoloActTwoColdRouteCapture` 4/0/0/0, `TestLrzActTwoColdRouteCapture` 2/0/0/0,
+`TestLrzTailsColdRouteCapture` 4/0/0/0 and the fade rows of `TestLrzKnucklesColdRouteCapture`
+and `TestSszSoloColdRouteCapture`; run `cold-joined-retimed` (Finished 04:21:19Z) passed
+`TestS3kHpzJoinedColdRouteCapture` 2/0/0/0 (pair 66 spots, HPZ 52947/52948, SSZ1
+67037/67038, release 67211; Knuckles 27 spots, HPZ 49297/49298, SSZ2 50160/50161,
+release 51586). That test's LRZ live-history tail now starts 36 frames before the HPZ
+load (14 live frames before the native 22-frame fade-out). Rows still red there are
+not fade timing and are owned elsewhere: the Knuckles act-2 restore at 37130 and the
+LRZ boss sidekick overlap parity at 47471 (rewind-snapshot rows) and solo Tails' SSZ1
+opening camera (behaviour row). No skips.
+
+## Cold LRZ→HPZ→SSZ1→DEZ1 pair continuation: first attempt stopped (2026-10-15)
+
+Attempted on ef61a560f from the fade-retimed joined pair chain
+(`lrz-sonic-tails-cold-hpz-ssz1-320.bk2`, `0ac8acb508ba16f4f579f2566554237ccf0d55636a612497a847c5cbc2be1607`,
+SSZ1 control release 67211) with the direct `ssz1-sonic-tails-cold-complete-320.bk2` as the
+candidate continuation. At release both runs share P1 (256,3085), camera, rings, the
+sidekick and the RNG seed (`cfcd80f3`); only V_int differs (67142 vs 174). Three bounded
+splices failed in the same traversal region: the plain splice died at direct input 6143,
+and controller idles of 104 and 616 frames at the release spot (V_int mod 256/1024
+alignment) died at 6045 and 6039 (the release spot is not a standing spot; P1 falls
+3085→3148 while idling). A divergence probe located the cause: Tails' CPU sidekick differs
+by one pixel from direct input 190 and the RNG from 192 (roaming clouds), and P1 first
+differs at direct input 1366 on the Knuckles button cutscene bridge, where the spliced run
+drops through while the direct run is still grounded. Making the pair continuation needs
+traversal re-authoring of SSZ1 from that bridge onward plus a Mecha encounter search; this
+lane stopped there. Solo Tails (needs an HPZ Knuckles-fight author for Tails plus the same
+SSZ1 traversal) and solo Sonic (no Sonic-alone LRZ/HPZ cold movie exists) are not started.
+
+## Cold LRZ→HPZ→SSZ1→DEZ1 pair campaign (2026-10-15)
+
+`TestS3kLrzHpzSszColdCampaign#pairColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory`
+replays one uninterrupted controller-only native320 Sonic+Tails movie from the declared
+`boot(9,0)` LRZ1 inlet (no position, clock, emerald or RNG seeds): LRZ1→LRZ3, HPZ
+`loc_45D8A` (`$A00`), the SSZ1 arrival, the GHZ and MTZ replicas, the clouds and
+vertical-wrap section, Mecha Sonic, the act-1 results SaveGame (`loc_2DCA0` takes the zone
+`$A` branch for act 0, sonic3k.asm:62668-62679) and the launch into DEZ1 (`$B00`) through
+`loc_44A26`'s intro run to control release.
+
+| Movie | SHA-256 | Inputs | Source |
+|---|---|---|---|
+| `lrz-sonic-tails-cold-hpz-ssz1-dez1-320.bk2` | `8930f7c924ca6f55b831a75316ac4c3a136eca8ce2cb7ffc5f25cccbe4ca32be` | 85544 | inputs 0–67211 equal `lrz-sonic-tails-cold-hpz-ssz1-320.bk2` (`0ac8acb508ba16f4f579f2566554237ccf0d55636a612497a847c5cbc2be1607`) through the SSZ1 control release |
+
+Authoring (base 7cfefb6af for cold2's part, then Root 19b7d70a6 merged; the prefix was
+re-confirmed after the merge: the saved 79707-input candidate reaches the identical state,
+P1 (3353,3939), V_int 79637, RNG `c97fadd8`). Cold2: the direct SSZ1 movie followed with
+time-shift resyncs from the joined release; GHZ authored with `SszBossInputAuthorTool`
+(defeat after input 71823), followed again, MTZ authored (76536), followed into the cloud
+section, where time-shift resync stopped working (P1 caught by `Obj_SSZRotatingPlatform`,
+RNG-phased bouncy clouds and collapsing columns; errors 213–452 px). Cold3: a
+progress search along the direct movie's P1 path (the algorithm committed as
+`ReferencePathInputAuthor`; P was authored by the identical search in a temporary batch
+helper) crossed the
+cloud/wrap section (direct indices 12171→12910, no hurt) and, after a stuck rule that
+abandoned a slowly rising transport pad was relaxed, the rest of act 1 to the Mecha arena
+pad (12900→17463, 86 decisions, 38 s); `SszBossInputAuthorTool` MECHA then defeated Mecha
+Sonic (hp 0 after input 82834; Sonic lost rings 18→1 in the fight, no death or life
+loss), and neutral input carried the results, the launch (DEZ1 load after input 85143)
+and the DEZ intro. The movie's script expands byte-identically to its BK2 input log.
+
+Fresh replay (run `p-verify2`, Maven Finished 16:20:18Z, admitted after the host memory stall): 1/0/0/0 in 52.2 s;
+HPZ load 52947, SSZ1 load 67037, GHZ defeat 71823, MTZ defeat 76536, Mecha defeat 82834,
+results tally-to-wait (the SaveGame dispatch) 83452, DEZ1 load/assembly 85143/85144 with P1
+(48,2476), 0 rings, one registered Tails, `loc_44A26`'s control lock and
+`LevelIntroPlayerRunInstance`, intro release 85226. SSZ's live history (armed 36 inputs
+before the DEZ load) is retired by the DEZ timeline. Every input is drawn; 45-input two-cycle
+whole-world replays at the GHZ, MTZ and Mecha defeats, the results save and the DEZ release.
+
+Engine pictures (320 px) in
+`$HOME/Videos/OGGF/s3k-parity-coverage-2026-10-14/spot-checks/cold-campaign-v1/p/` were
+inspected: cloud/wrap entry (79707), the lower transport pad (80167), the Mecha arena pad
+(81907, P1 hidden by the pad as it rises), Mecha seated after defeat (82835) and Sonic and
+Tails released in DEZ1 at 0:06 (85544). The hidden player on the rising pad is flagged for
+native comparison. Native windows: `runs/s3k-sonic-tails-complete-emeralds` SSZ1 from
+448920 and DEZ from 468982 (that run carries emeralds).
+
+Limits: the boot inlet has no save session, so the results SaveGame is observed as the
+results owner's tally-to-wait transition (with `Collected_special_ring_array` clear), and
+its persisted next level is covered by the save-site tests; widescreen/donor breadth of
+the campaign remains open.
+
+## Cold LRZ→HPZ→SSZ1→DEZ1 Tails campaign (2026-10-15)
+
+`TestS3kLrzHpzSszColdCampaign#tailsColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory`
+replays one uninterrupted controller-only native320 Tails-alone movie from the declared
+`boot(9,0)` LRZ1 inlet: the qualified cold Tails LRZ chain into HPZ, HPZ's Knuckles fight,
+theft, collapse and altar (the single-player helper timers) to `loc_45D8A` (`$A00`), Tails'
+SSZ1 arrival, the Knuckles-button bridge, both replicas, the clouds, Mecha Sonic, the results
+SaveGame and the launch into DEZ1 through the intro run's release. The shared verifier (also
+used by the pair test) additionally arms HPZ live history 120 inputs before the SSZ1 load and
+asserts its retirement and the SSZ1 assembly (P1 X `$100`, Camera Y + `$65`, 0 rings).
+
+| Movie | SHA-256 | Inputs | Source |
+|---|---|---|---|
+| `lrz-tails-cold-hpz-ssz1-dez1-320.bk2` | `54d25084b828db637068a3ba158954e3f64d5d859d49c686e5d6ddcb0b2282ff` | 86090 | inputs 0–62545 equal `lrz-tails-cold-hpz-320.bk2` (`229c5036eb936aacb38603fd2195e76baa0c150c36deae900f1fc37e9ec0ec94`, all of it) |
+
+Authoring on Root 19b7d70a6 (two finite batches, ts1 and ts2): the reference-path search
+followed the joined pair chain's HPZ P1 path to the lower teleporter (pair index 62475); the
+HPZ fight policy (`HpzJoinedControllerAuthor`'s FightBot, which reads only P1 and the live
+Knuckles owner) carried Tails through the fight, theft, collapse and altar to the SSZ1 load
+(input 69861; rings 12→1, no death); neutral input to the arrival release (input 70036, P1
+(256,3085), RNG `cfcd80f3`, the direct pair movie's release seed). In SSZ1 the search first
+stopped at the Knuckles-button bridge: P1 stood at the camera-bounded edge (max X 512) while
+`CutsceneKnux_SSZ` was still on its way to the button, so the search could not progress;
+1076 neutral inputs later `Obj_SSZCutsceneBridge` had retracted and `loc_44FBA` opened the
+act bounds. The search then followed the direct pair movie's P1 path (Tails flies where it
+helps), `SszBossInputAuthorTool` defeated GHZ (after 72972), MTZ (76304) and Mecha (83380;
+rings 52→0, no death, lives 3), and neutral input carried the results, launch and DEZ intro.
+The script expands byte-identically to the BK2 input log.
+
+Fresh replay (run `v3`, Maven Finished 17:18:46Z): 2/0/0/0 with the pair method. Tails: HPZ
+62424, SSZ1 69861/69862, GHZ 72972, MTZ 76304, Mecha 83380, results save 83998, DEZ1
+85689/85690 (Tails feet at `$9AC+$13`, centre Y 2480, no sidekick), release 85772; HPZ and
+SSZ histories retired at their loads; 45-input two-cycle replays at the three defeats, the
+results save and the DEZ release. The pair run in the same JVM matches its committed
+numbers (52947, 67037/67038, 71823, 76536, 82834, 83452, 85143/85144, 85226).
+
+Engine pictures (320 px) in
+`$HOME/Videos/OGGF/s3k-parity-coverage-2026-10-14/spot-checks/cold-campaign-v1/t/` were
+inspected: Tails in the HPZ lower teleporter (64546), the SSZ1 load and arrival with
+cutscene Knuckles beaming in over Tails' arrival spot (69862/70036), the opened bridge
+(71252), the GHZ replica's defeat (72973), MTZ (76305), the Mecha arena pad (81965), Mecha's
+defeat (83381; Tails off-screen above) and Tails released in DEZ1 at 0:06 (86090). Native
+windows: `runs/s3k-tails-full-chain-all-emeralds` HPZ from 419298, SSZ1 423903, DEZ 444059.
+
+Limits: as for the pair, the boot inlet has no save session; widescreen/donor breadth
+remains open.
+
+## Cold LRZ→HPZ→SSZ1 solo Sonic campaign: open (2026-10-15)
+
+No solo Sonic LRZ/HPZ cold movie exists, so lane cold3 authored one from the declared
+`boot(9,0)` inlet along the joined pair chain's P1 path (`ReferencePathInputAuthor`; the
+reference only scores positions) in finite batches on Root 19b7d70a6. It reached:
+
+- LRZ1: a spin dash through the rock wall the pair breaks (spin-dash candidates were added
+  for this); the door at (2800,1688) opened from its horizontal button (2618,1779), which
+  position progress had skipped; the dash elevator (4768,1976) by replaying the pair's
+  D+A taps (a stuck recovery that steers to where the reference stood 60–650 indices
+  earlier and replays its inputs); `Obj_LRZMiniboss` defeated with `SszBossInputAuthorTool`
+  `lrz1` (hits 0 after input 13030, no death).
+- LRZ2 (load after input 13370): the door at (10160,1576) opened from `Obj_Button` (9816,1652);
+  a search trial that touched giant ring s9 broke a restore (the special stage registers
+  its own rewind subsystem), after which both searches treat a giant-ring flash like a death.
+- LRZ3 (load ≈ input 21445): the end-boss arena (camera locked at `$A00`, 77 rings) at input
+  24204.
+
+It stopped there by the kill condition: three bounded searches failed in the same
+`Obj_LRZEndBoss` phase, routine 4 (the shot phase, callback 0), each time after the shots
+had taken all of Sonic's rings. The boss takes every hit from its own drifting mines, so
+the player only has to survive about 5500 inputs (the pair needed 46900→52500).
+
+| Attempt | Failure | Boss routine/timer/shots/interval/hits | V_int | RNG |
+|---|---|---|---|---|
+| s9 (search state from s8) | arena entry already doomed at 24669 | 4 / 31 / 2 / `$6F` / 14 | 24645 | `7c8be79b` |
+| s11 `lrz3` boss-policy search | death at 24873 | 4 / 5 / 0 / `$4F` / 13 | 24848 | `0f0d7083` |
+| s12 survival chase near (2720,1500) | no candidate survives 120 inputs at 25724 (neutral death 25809) | 4 / 27 / 1 / `$5F` / 11 (flipped side) | 25700 | `512a4c93` |
+
+Lava drift clock at those states: 208, 410, 308 (stream `$FFFF`, `$FFFF`, `1`). The partial
+inputs (miniboss defeat at 13031, arena entry at 24204, the last survival state) and the
+finite batch lists are preserved with SHA-256 sums in the task directory
+(`cold3-continuation/`). A next attempt needs a survival author for the shot phase that
+keeps rings (dodging the boss's projectiles over the lava platforms) rather than chasing
+the boss or a fixed spot; HPZ and the SSZ1 arrival for solo Sonic were not reached.
+
+## Solo Tails movies re-authored for the native opening bridge (2026-10-15)
+
+Two ROM-correct runtime changes invalidated the five solo Tails controller movies:
+82539953f (the opening bridge's top contact follows `sub_45026` → `SolidObjectTop`
+`loc_1E44C`/`loc_1E45A`, so a re-landing keeps its y subpixel) and 56615e135 (Tails
+keeps the Wait pose on the bridge, `loc_14A16`, so the held Down that used to stand
+in the Balance pose now ducks and `D+B` spindashes). Attribution and the
+old-emulation proof that these two changes alone made the rows red are in the
+behaviour lane's record; no runtime behaviour changed here.
+
+Re-authoring, all controller-only from a cold boot (no position, ring, clock or
+health seeds): inputs 1379-1382 drop the held Down (`1 -`, `3 B`), which reproduces
+the old run exactly to 1419; after that the native re-landings drift (3px at 2243,
+40px at 4142), but the old inputs still reach the GHZ replica. Each width's GHZ,
+MTZ and Mecha fights were authored by the committed `SszBossInputAuthorTool`
+(12 policies, 180-input horizon, 30-input commit) from prefixes 4460 (320) and 4476
+(800); the transits between them followed the old route's P1 path (a temporary
+reference-path follower: old inputs while within 6px, otherwise scored time-shifted
+old inputs, waits and steer/jump policies from rewind marks, the method of the
+cold-campaign `ReferencePathInputAuthor` candidate); the Death Egg lift ends on
+neutral input at the actual DEZ1 load. Replica movies are the complete-movie prefix
+to the MTZ pad release (320: 8001, 800: 8225) plus neutral input standing at the top.
+Rewind-spot frames up to 4460 are unchanged; later ones are the old spots mapped
+piecewise-linearly between matching landmarks (GHZ lock, pad rides, MTZ lock, Mecha
+spawner pad, Mecha lock, Death Egg lift, DEZ load) and land in the same phases.
+
+| Movie | Old SHA-256 | New SHA-256 | Frames | Landmarks (new) | Verified end |
+|---|---|---|---|---|---|
+| `ssz1-tails-solo-cold-flight-320.bk2` | `e6edf7fc12c54c6c44fd8c60b05b3be77e3aab089506d3b1abaf0380103e0537` | `4bc319486424dd52f0689b9a453fd5f39a464cf549144e7b511a368f59fe06ac` | 2556 | 2345: (1323,3006) flying, minY −$100 | (2091,2953), 3 rings (was 2085,2954) |
+| `ssz1-tails-solo-cold-replicas-320.bk2` | `2b06d0e42d9158e87ff6d0407386af1abb68e2d3c5d06ca29e3f988c8b4d87bc` | `7895138785a8f37ed8da9996dbf2b7a83a9518043eb9ad949a7427736c90eb01` | 8200 | GHZ 4452→hp0 4895; pad 5218-5476; MTZ 6819→hp0 7417; pad 7733-8000 | (5888,144), 3 rings |
+| `ssz1-tails-solo-cold-replicas-800.bk2` | `bb2455d0ce681e120bf7b5a31f04230174e1d0b7b67576503839e652f5ce18ac` | `e502d16c49912a95d4a4db276078c1af0d0ad0855426c9360266feaca1884c8a` | 8425 | GHZ 4468→hp0 4839; pad 5158-5416; MTZ 6779→hp0 7640; pad 7956-8224 | (5888,144), 0 rings |
+| `ssz1-tails-solo-cold-complete-320.bk2` | `ffdc452123aa06188a77879a8a018ae43fcd3ccb5c05027ccebd5cf11bd83a91` | `0e57c593403e4bf73019e6b7613da2c492c165534f15be70eac9696b619150cd` | 13667 | as replicas; Mecha pad 10450, hp8 10685→hp0 11348; lift 12228 | DEZ1 load 13666 |
+| `ssz1-tails-solo-cold-complete-800.bk2` | `bd285c6b5f033523fa96ef4bc35f9337001af9bb2f06fea5078909526f0bdba7` | `61a3d2fe1352340d50c977a04f84904e147bd82978895aaae625408a3d6c16f4` | 15132 | as replicas; Mecha pad 10680, hp8 10909→hp0 12814; lift 13693 | DEZ1 load 15131 |
+
+Test updates: `TestSszTailsColdRouteCapture` frame counts, per-width spot sets, Mecha
+entry windows (320: 10443/10645, 800: 10667/10819) and replica-end rings (3/0);
+`TestSszSoloColdRouteCapture` flight end (2091,2953); `TestSszBossInputAuthorTool`
+authors from 4829 (two GHZ hits left) within 240 inputs. The five-width GHZ
+approach case is unchanged (spawn 4452 at 320/352/400, 4453 at 528, 4468 at 800).
+
+Validation on 0b03f8705 (focused selectors through `tools/testing/maven_queue.py`, normal
+lane, S3K/S1/S2 ROMs, run `v-ssz`, Maven Finished 17:47:00Z):
+`TestSszTailsColdRouteCapture` 11/0/0/0, `TestSszBossInputAuthorTool` 2/0/0/0,
+`TestSszSoloColdRouteCapture` 3/0/0/0 — 16 tests, no failures, errors or skips.

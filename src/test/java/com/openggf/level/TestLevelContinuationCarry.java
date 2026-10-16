@@ -23,16 +23,21 @@ class TestLevelContinuationCarry {
     @Test void freshLoadSeparatesShieldAndScreenEventCounterRestore() {
         request(37, 12345);
         assertFalse(LevelContinuationCarry.bypassInitialPresentation(transitions));
+        assertFalse(LevelContinuationCarry.bypassesInitialPresentation(manager));
         LevelContinuationCarry.restoreCounters(manager);
         verifyNoInteractions(level);
         assertTrue(transitions.consumeZoneActRequest());
         LevelContinuationCarry.beginLoad(transitions, 22, 0);
         assertTrue(LevelContinuationCarry.bypassInitialPresentation(transitions));
+        var retained = transitions.continuationCarry;
+        assertTrue(LevelContinuationCarry.bypassesInitialPresentation(manager));
+        assertSame(retained, transitions.continuationCarry, "admission read cannot consume the bank");
         var player = mock(AbstractPlayableSprite.class);
         LevelContinuationCarry.restoreShield(transitions, player);
         verify(player).giveShield(ShieldType.FIRE);
         LevelContinuationCarry.finishLoad(transitions, true);
         assertFalse(LevelContinuationCarry.bypassInitialPresentation(transitions));
+        assertFalse(LevelContinuationCarry.bypassesInitialPresentation(manager));
         LevelContinuationCarry.restoreCounters(manager);
         LevelContinuationCarry.restoreCounters(manager);
         verify(level).setRings(37);

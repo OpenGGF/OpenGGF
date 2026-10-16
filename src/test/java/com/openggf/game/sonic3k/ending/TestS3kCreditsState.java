@@ -35,6 +35,42 @@ class TestS3kCreditsState {
         assertEquals(413, pal.delay()); assertEquals(0xF500, pal.speed());
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({
+            "SONIC_ALONE,-2,520,245", "SONIC_ALONE,0,413,245", "SONIC_ALONE,2,0,253",
+            "TAILS_ALONE,-2,520,245", "TAILS_ALONE,0,520,245", "TAILS_ALONE,2,0,251",
+            "KNUCKLES,-2,100,242", "KNUCKLES,0,150,226", "KNUCKLES,2,150,226"})
+    void everyLockedOnPalTableReplaysDelayBothTextPartsAndSingleCompletion(
+            PlayerCharacter character,int progress,int nativeDelay,int nativeSpeed) throws Exception {
+        // sub_5B514: SK_alone=0 adds24; Graphics_flags bit6 adds12.
+        // Literal shipped CreditsText_ScrollDelay/Speed PAL half, not fitted durations.
+        var state=new S3kCreditsState();state.initialize(rom(),character,progress,true);
+        assertEquals(nativeDelay,state.delay());assertEquals(nativeSpeed<<8,state.speed());
+        for(int n=0;n<nativeDelay;n++) {
+            assertFalse(state.step(rom()));assertEquals(2,state.routine());assertEquals(0,state.scroll());
+        }
+        var zero=ByteBuffer.allocate(state.snapshotBytes());state.captureTo(zero);
+        assertFalse(state.step(rom()));assertEquals(4,state.routine());assertEquals(0,state.scroll());
+        assertFalse(state.step(rom()));assertEquals(nativeSpeed<<8,state.scroll());
+        state.restoreFrom(ByteBuffer.wrap(zero.array()));
+        assertFalse(state.step(rom()));assertFalse(state.step(rom()));
+        assertEquals(nativeSpeed<<8,state.scroll());
+        for(int n=0;n<1100;n++)state.step(rom());
+        var middle=ByteBuffer.allocate(state.snapshotBytes());state.captureTo(middle);
+        for(int n=0;n<240;n++)state.step(rom());
+        var expected=ByteBuffer.allocate(state.snapshotBytes());state.captureTo(expected);
+        for(int cycle=0;cycle<2;cycle++) {
+            state.restoreFrom(ByteBuffer.wrap(middle.array()));
+            for(int n=0;n<240;n++)state.step(rom());
+            var actual=ByteBuffer.allocate(state.snapshotBytes());state.captureTo(actual);
+            assertArrayEquals(expected.array(),actual.array());
+        }
+        int edges=0;
+        for(int n=0;n<9000&&!state.complete();n++)if(state.step(rom()))edges++;
+        assertTrue(state.complete());assertEquals(4,state.partIndex());assertEquals(1,edges);
+        assertFalse(state.step(rom()),"native completion publishes once");
+    }
+
     @Test void delayIsSignedPredecrementAndDoesNotScrollOnItsCompletionPass() throws Exception {
         var state = new S3kCreditsState(); state.initialize(rom(), PlayerCharacter.SONIC_ALONE, 2, false);
         assertFalse(state.step(rom())); assertEquals(4, state.routine()); assertEquals(0, state.scroll());

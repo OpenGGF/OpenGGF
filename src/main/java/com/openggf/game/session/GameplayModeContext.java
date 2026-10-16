@@ -239,6 +239,8 @@ public final class GameplayModeContext implements ModeContext {
         this.runtimeArtCoordinator = Objects.requireNonNullElse(
                 worldSession.getGameModule().createRuntimeArtCoordinator(hardwareTiming),
                 RuntimeArtCoordinator.NONE);
+        if (runtimeArtCoordinator instanceof com.openggf.game.internal.PatternModuleQueueOwner owner)
+            owner.bindPatternModuleQueue(kosinskiModuleQueue);
         this.seamlessTransitionResourceHandoffs =
                 new SeamlessTransitionResourceHandoffRegistry();
         this.dynamicArtLifecycle = new DynamicArtLifecycleService();
@@ -406,6 +408,8 @@ public final class GameplayModeContext implements ModeContext {
             rewindRegistry.deregister("water");
             rewindRegistry.deregister("collision-system");
             rewindRegistry.deregister("sprites");
+            rewindRegistry.deregister("native-player-art-bindings");
+            rewindRegistry.deregisterPostRestoreCallback("native-player-art-bindings");
             rewindRegistry.deregister("palette-colors");
             rewindRegistry.deregisterPostRestoreCallback("parallax-derived-state");
             rewindRegistry.deregisterPostRestoreCallback("sprite-powerup-derived-state");
@@ -415,6 +419,9 @@ public final class GameplayModeContext implements ModeContext {
             rewindRegistry.register(waterSystem);
             rewindRegistry.register(collisionSystem);
             rewindRegistry.register(spriteManager.rewindSnapshottable());
+            rewindRegistry.register(com.openggf.sprites.managers.SpriteManagerInternalAccess.nativePlayerArtAdapter(spriteManager));
+            rewindRegistry.registerPostRestoreCallback("native-player-art-bindings",
+                    () -> com.openggf.sprites.managers.SpriteManagerInternalAccess.restoreNativePlayerArtAfterRoster(spriteManager));
             rewindRegistry.register(new PaletteColorStateAdapter(
                     () -> levelPalettesOrNull(levelManager),
                     () -> underwaterPalettesOrNull(waterSystem, levelManager),
@@ -1085,15 +1092,15 @@ public final class GameplayModeContext implements ModeContext {
 
     /**
      * Registers a rewind adapter capturing the active bonus-stage coordinator's
-     * reward accumulators, but only for a rewind-supported stage
-     * (Gumball/Pachinko). No-op for the Slot Machine or when rewind is
-     * unavailable. Idempotent -- deregisters any prior adapter first.
+     * reward accumulators and native lifecycle/runtime state for a supported
+     * interior. No-op when rewind is unavailable. Idempotent -- deregisters any prior adapter first.
      */
     public void registerBonusStageAdapter(BonusStageProvider provider) {
         if (rewindRegistry == null) {
             return;
         }
         rewindRegistry.deregister(BonusStageCoordinatorRewindAdapter.KEY);
+        com.openggf.game.internal.BonusStageRuntimeRewindAccess.register(rewindRegistry, provider);
         if (provider instanceof AbstractBonusStageCoordinator coordinator
                 && provider.supportsRewind()) {
             rewindRegistry.register(new BonusStageCoordinatorRewindAdapter(coordinator));
@@ -1104,6 +1111,7 @@ public final class GameplayModeContext implements ModeContext {
     public void deregisterBonusStageAdapter() {
         if (rewindRegistry != null) {
             rewindRegistry.deregister(BonusStageCoordinatorRewindAdapter.KEY);
+            com.openggf.game.internal.BonusStageRuntimeRewindAccess.unregister(rewindRegistry);
         }
     }
 

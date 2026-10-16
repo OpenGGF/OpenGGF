@@ -787,7 +787,8 @@ class TestEngine {
         config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
 
         Engine engine = new Engine();
-        SpriteManager spriteManager = mock(SpriteManager.class);
+        SpriteManager spriteManager = mock(SpriteManager.class,
+                org.mockito.Mockito.withSettings().useConstructor());
         Camera camera = mock(Camera.class);
         LevelManager levelManager = mock(LevelManager.class);
 
@@ -906,7 +907,8 @@ class TestEngine {
         TrackingS1ImageCacheManager cacheManager = suppliedCacheManager;
 
         Camera camera = new Camera();
-        SpriteManager spriteManager = mock(SpriteManager.class);
+        SpriteManager spriteManager = mock(SpriteManager.class,
+                org.mockito.Mockito.withSettings().useConstructor());
         LevelManager levelManager = mock(LevelManager.class);
         GameStateManager gameState = new GameStateManager();
         doReturn(false).when(spriteManager).addSprite(any());

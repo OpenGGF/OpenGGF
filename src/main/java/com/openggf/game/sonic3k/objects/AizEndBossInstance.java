@@ -194,6 +194,14 @@ public class AizEndBossInstance extends AbstractBossInstance
      * after that frame's engine touch-response pass has already run.
      */
     private boolean collisionEnablePending;
+    /**
+     * Killing hit accepted by Touch_Enemy but not yet admitted by the boss.
+     * Touch_Enemy only clears collision_flags, decrements collision_property
+     * and sets status bit 7 (sonic3k.asm:20912-20928); the old dispatcher and
+     * routine stay live until AIZEndBoss_CheckHitOrDefeat sees the zero hit
+     * count at its native call site (sonic3k.asm:138914-138919).
+     */
+    private boolean defeatCheckPending;
     private boolean highPriorityArt;
     private int mappingFrame;
 
@@ -245,6 +253,7 @@ public class AizEndBossInstance extends AbstractBossInstance
         eggCapsuleSignal = false;
         collisionEnabled = false;
         collisionEnablePending = false;
+        defeatCheckPending = false;
         highPriorityArt = false;
         mappingFrame = 0;
         renderActivated = false;
@@ -333,10 +342,29 @@ public class AizEndBossInstance extends AbstractBossInstance
 
         if (state.hitCount <= 0) {
             state.hitCount = 0;
+            // Touch_Enemy publishes only HP/status/collision here. The defeat
+            // owner, timer stop and score wait for admitPendingDefeat() at the
+            // routine's own AIZEndBoss_CheckHitOrDefeat call.
             state.defeated = true;
-            services().gameState().addScore(1000);
-            onDefeatStarted();
+            defeatCheckPending = true;
         }
+    }
+
+    /**
+     * ROM AIZEndBoss_CheckHitOrDefeat's zero-hit-count branch: StartDefeatCallback
+     * installs Wait_FadeToLevelMusic/$34 and tail-jumps BossDefeated_StopTimer,
+     * which clears Update_HUD_timer before BossDefeated sets $2E=$3F and adds
+     * score 100*10 (sonic3k.asm:138914-138919, 138945-138951, 180814-180826).
+     * Called only where the native routine calls CheckHit, so Hover keeps its
+     * pre-CheckHit motion and AttackWait still runs its Obj_Wait tail.
+     */
+    private void admitPendingDefeat() {
+        if (!defeatCheckPending) {
+            return;
+        }
+        defeatCheckPending = false;
+        onDefeatStarted();
+        services().gameState().addScore(1000);
     }
 
     @Override
@@ -609,6 +637,9 @@ public class AizEndBossInstance extends AbstractBossInstance
         } else {
             runWaitCallback();
         }
+        // ROM AIZEndBoss_Revealed: Animate_RawNoSSTMultiDelay, then
+        // bra AIZEndBoss_CheckHitOrDefeat (sonic3k.asm:138124-138127).
+        admitPendingDefeat();
     }
 
     /** ROM: loc_6933A — Set up hover oscillation. */
@@ -643,6 +674,9 @@ public class AizEndBossInstance extends AbstractBossInstance
             waitTimer = -1;
             runWaitCallback();
         }
+        // ROM AIZEndBoss_Hover: Swing_UpAndDown, MoveSprite2, Obj_Wait, then
+        // bra AIZEndBoss_CheckHitOrDefeat (sonic3k.asm:138144-138148).
+        admitPendingDefeat();
     }
 
     /** ROM: loc_6937E — Post-hover: signal propellers to fire or prepare for retreat. */
@@ -810,6 +844,10 @@ public class AizEndBossInstance extends AbstractBossInstance
 
     /** ROM: loc_693F0 — Generic wait state (countdown + hit check). */
     private void updateAttackWait() {
+        // ROM AIZEndBoss_AttackWait: bsr AIZEndBoss_CheckHitOrDefeat, then
+        // jmp Obj_Wait (sonic3k.asm:138187-138190). A defeat admitted here
+        // has just published $2E=$3F, which this same pass's Obj_Wait ticks.
+        admitPendingDefeat();
         if (waitTimer > 0) {
             waitTimer--;
         } else if (waitTimer == 0) {

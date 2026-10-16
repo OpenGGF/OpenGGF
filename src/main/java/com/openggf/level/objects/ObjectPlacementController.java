@@ -66,6 +66,14 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     /** Tracks spawns destroyed while in the window - prevents respawn until they leave the window. */
     private final BitSet destroyedInWindow = new BitSet();
     private final BitSet pendingCursorLoad = new BitSet();
+    /**
+     * S3K Load_Sprites runs its X-cursor loop only on a Camera_X_pos_coarse
+     * change (loc_1B864 {@code beq.w loc_1B91A}); level init loads the entry
+     * window. Set by those passes and consumed by the loader, so an entry left
+     * pending by FindFreeObj failure waits for the next coarse change exactly as
+     * the parked Object_load_addr_front does (sonic3k.asm loc_1B8D2-loc_1B8F2).
+     */
+    private boolean cursorLoadPassPending;
     private final ArrayList<Integer> pendingCursorLoadOrder = new ArrayList<>();
     /** Reused result buffer for {@link #pendingCursorLoadSpawns()}; see its contract. */
     private final ArrayList<ObjectSpawn> drainedCursorLoadScratch = new ArrayList<>();
@@ -600,6 +608,17 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
 
     int restoreRewindState(
             com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PlacementSnapshot snapshot) {
+        // Load_Sprites keeps no pass flag: loc_1B864 compares Camera_X_pos & $FF80
+        // with Camera_X_pos_coarse on every call (sonic3k.asm:37594-37600). In the
+        // load-then-exec order the latch therefore spans a frame boundary only
+        // between a placement reset and the first loader call: the native
+        // Object_load_routine 0 state, whose init writes Camera_X_pos_coarse = -1
+        // (loc_1B7D8, sonic3k.asm:37542-37545) so the same call's X loop runs.
+        // ObjectManager's captured Camera_Y_pos_coarse keeps its reset sentinel
+        // until that first loader pass, so it restores exactly that state. Forcing
+        // false here lost the initial window of zones whose ScreenInit defers the
+        // first Load_Sprites (FBZ) when rewind replayed from the load boundary.
+        cursorLoadPassPending = snapshot.twoAxisCameraYCoarse() == Integer.MIN_VALUE;
         active.clear();
         for (int index : snapshot.activeSpawnIndices()) {
             if (index >= 0 && index < spawns.size()) {
@@ -722,6 +741,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
             lastCameraChunk = toCoarseChunk(cameraX);
             refreshWindow(cameraX);
         }
+        cursorLoadPassPending = true;
     }
 
     /**
@@ -855,6 +875,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
                 spawnBackwardNonCounter(cameraX);
                 trimRightNonCounter(cameraX);
             }
+            cursorLoadPassPending = true;
             // ROM parity: bit 7 of Object_respawn_table (sonic3k.asm
             // Touch_EnemyNormal line 20945; S2/S1 RememberState in
             // sub RememberState.asm) is set by spawn (loc_1BA40 et al.)
@@ -1308,6 +1329,18 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         if (index >= 0) {
             pendingCursorLoad.clear(index);
         }
+    }
+
+    /** True once per X-cursor loader pass; see {@link #cursorLoadPassPending}. */
+    boolean consumeCursorLoadPass() {
+        boolean pass = cursorLoadPassPending;
+        cursorLoadPassPending = false;
+        return pass;
+    }
+
+    boolean isPendingCursorLoad(ObjectSpawn spawn) {
+        int index = getSpawnIndex(spawn);
+        return index >= 0 && pendingCursorLoad.get(index);
     }
 
     void finishPendingCursorLoadBatch() {

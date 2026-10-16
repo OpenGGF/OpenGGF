@@ -64,6 +64,8 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
     private final SonicConfigurationService configService = GameServices.configuration();
     private final Sonic3kTitleScreenDataLoader dataLoader = new Sonic3kTitleScreenDataLoader();
     private final PatternDesc reusableDesc = new PatternDesc();
+    /** Reused CRAM colour-0 decode target for the backdrop clear. */
+    private final Palette.Color backdropColor = new Palette.Color();
 
     private State state = State.INACTIVE;
 
@@ -538,11 +540,8 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         if (palData != null && palData.length >= 2) {
             // Read color 0 from palette line 0 (first 2 bytes, big-endian)
             // Mega Drive format: 0x0BGR where B,G,R are nibbles (0-E, 8 levels)
-            int color0 = ((palData[0] & 0xFF) << 8) | (palData[1] & 0xFF);
-            float r = ((color0 >> 1) & 0x7) / 7.0f;
-            float g = ((color0 >> 5) & 0x7) / 7.0f;
-            float b = ((color0 >> 9) & 0x7) / 7.0f;
-            glClearColor(r, g, b, 1.0f);
+            backdropColor.fromSegaFormat(palData, 0);
+            com.openggf.level.PaletteDisplayColor.glClear(backdropColor, GameServices.graphics());
         } else {
             glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         }
@@ -750,6 +749,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
 
     /** The decoded frame's art, mappings and palette reach VRAM together. */
     private void presentAnimationFrame(int frame) {
+        dataLoader.publishNativeAnimationFrame(frame);
         dataLoader.cacheAnimationFrame(frame);
         displayedAnimFrame = frame;
     }
@@ -1009,6 +1009,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         // Load final frame
         currentAnimFrame = FINAL_FRAME_INDEX;
         displayedAnimFrame = FINAL_FRAME_INDEX;
+        dataLoader.publishNativeAnimationFrame(FINAL_FRAME_INDEX);
         dataLoader.cacheFinalScene();
 
         // Play title music if not already playing
@@ -1027,6 +1028,8 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         // Load the final scene art (frame D with full 4-line palette)
         dataLoader.cacheFinalScene();
 
+        // Native loc_4140 loads sprite art only after the final background art.
+        dataLoader.publishNativeFinalSprites();
         // Initialize interactive sprites
         initInteractiveSprites();
 

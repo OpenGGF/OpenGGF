@@ -5,6 +5,8 @@ package com.openggf.game.sonic3k;
  */
 final class Sonic3kGlobalAnimationState {
     private static final int AIZ_VINE_ANGLE_STEP = 0x180;
+    /** {@code Level/loc_64DC}: {@code move.w #$16,(Palette_fade_timer).w} (sonic3k.asm:7877). */
+    static final int FRESH_LEVEL_PALETTE_FADE_FRAMES = 0x16;
 
     private int aizVineAngle;
     private int ringTimer;
@@ -40,7 +42,7 @@ final class Sonic3kGlobalAnimationState {
      * (sonic3k.asm:7877). Seamless reloads never reach it.
      */
     void armFreshLevelPaletteFade() {
-        paletteFadeTimer = 0x16;
+        paletteFadeTimer = FRESH_LEVEL_PALETTE_FADE_FRAMES;
     }
 
     /**
@@ -58,7 +60,7 @@ final class Sonic3kGlobalAnimationState {
     }
 
     int paletteFadeTimer() { return paletteFadeTimer; }
-    void restorePaletteFadeTimer(int value) { paletteFadeTimer = Math.max(0, value); }
+    void restorePaletteFadeTimer(int value) { paletteFadeTimer = (short)value; }
 
     int aizVineAngleWord() {
         return aizVineAngle;

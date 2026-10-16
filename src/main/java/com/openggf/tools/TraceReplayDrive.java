@@ -3,7 +3,9 @@ package com.openggf.tools;
 import com.openggf.LevelFrameResult;
 import com.openggf.debug.PerformanceProfiler;
 import com.openggf.game.GameServices;
+import com.openggf.game.internal.BonusStageFrameLifecycle;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
+import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.LevelManager;
@@ -96,6 +98,12 @@ final class TraceReplayDrive {
         if (phase == TraceExecutionPhase.FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD) {
             frameDriver.suppressFirstSidekickAnimationOnce();
         }
+        // Production bonus frames (GameLoop.updateBonusStageMode, LiveRewindStepper.step) wrap
+        // the level step in the shared bonus hooks: overlay before, player-priority restore and
+        // provider tick after physics. The trace bootstrap omits the render-only priority write,
+        // so without them a capture shows a bonus player behind tiles it natively covers.
+        var gameplayMode = SessionManager.getCurrentGameplayMode();
+        BonusStageFrameLifecycle.beforeReplayFrame(gameplayMode);
         if (TraceReplayBootstrap.shouldUsePreviousRecordingInputForTraceReplay(trace)) {
             frameDriver.stepFrameFromRecordingUsingPreviousInput(
                     TraceReplayDrive::beginPaletteFrame);
@@ -105,9 +113,17 @@ final class TraceReplayDrive {
         if (frameDriver.getLastFrameResult() == LevelFrameResult.SETUP_ONLY) {
             return DriveOutcome.RETRY;
         }
+        if (frameDriver.didLastFrameRunGameplay()) {
+            afterGameplayStep(gameplayMode);
+        }
         return frameDriver.didLastFrameRunGameplay()
                 ? DriveOutcome.CONSUMED_GAMEPLAY
                 : DriveOutcome.CONSUMED_WITHOUT_GAMEPLAY;
+    }
+
+    /** The production post-physics bonus hooks for one executed gameplay row. */
+    static void afterGameplayStep(GameplayModeContext gameplayMode) {
+        BonusStageFrameLifecycle.afterReplayFrame(gameplayMode);
     }
 
     private static void beginPaletteFrame() {

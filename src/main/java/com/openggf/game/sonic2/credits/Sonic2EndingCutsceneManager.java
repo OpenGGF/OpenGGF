@@ -646,7 +646,8 @@ public class Sonic2EndingCutsceneManager {
     public float[] getBackdropColorOverride() {
         if (displayPalettes != null && displayPalettes.length > 2 && displayPalettes[2] != null) {
             Palette.Color c = displayPalettes[2].getColor(0);
-            return new float[]{c.rFloat(), c.gFloat(), c.bFloat()};
+            int displayed = com.openggf.level.PaletteDisplayColor.packed(c, com.openggf.game.GameServices.graphics());
+            return new float[]{com.openggf.level.PaletteDisplayColor.red(displayed), com.openggf.level.PaletteDisplayColor.green(displayed), com.openggf.level.PaletteDisplayColor.blue(displayed)};
         }
         return null;
     }
@@ -660,7 +661,7 @@ public class Sonic2EndingCutsceneManager {
         // Prefer display palettes (starts white, fades toward target)
         if (displayPalettes != null && displayPalettes.length > 2 && displayPalettes[2] != null) {
             Palette.Color bgColor = displayPalettes[2].getColor(0);
-            org.lwjgl.opengl.GL11.glClearColor(bgColor.rFloat(), bgColor.gFloat(), bgColor.bFloat(), 1.0f);
+            com.openggf.level.PaletteDisplayColor.glClear(bgColor, com.openggf.game.GameServices.graphics());
             return;
         }
         // Fallback to target palettes
@@ -668,7 +669,7 @@ public class Sonic2EndingCutsceneManager {
             Palette[] palettes = endingArt.getEndingPalettes();
             if (palettes.length > 2 && palettes[2] != null) {
                 Palette.Color bgColor = palettes[2].getColor(0);
-                org.lwjgl.opengl.GL11.glClearColor(bgColor.rFloat(), bgColor.gFloat(), bgColor.bFloat(), 1.0f);
+                com.openggf.level.PaletteDisplayColor.glClear(bgColor, com.openggf.game.GameServices.graphics());
                 return;
             }
         }

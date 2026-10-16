@@ -17,6 +17,8 @@ import java.util.Map;
  * when null (e.g., fresh slot start), uses defaults (3 lives, 0 emeralds).
  */
 public final class S3kSaveSnapshotProvider implements SaveSnapshotProvider {
+    /** Captured at the request boundary: the request came from the ROM's full SaveGame. */
+    private static final String SAVE_GAME_FIELD = "s3k:save-game";
 
     @Override
     public boolean restoreProgress(
@@ -68,7 +70,8 @@ public final class S3kSaveSnapshotProvider implements SaveSnapshotProvider {
         boolean clear=zoneState instanceof com.openggf.game.sonic3k.runtime.SszZoneRuntimeState state
                 && state.actIndex() == 1 && state.playerCharacter() == com.openggf.game.PlayerCharacter.KNUCKLES
                 && state.act2EndingActive();
-        return Map.of("s3k:ending-clear",clear);
+        return Map.of("s3k:ending-clear",clear,
+                SAVE_GAME_FIELD,com.openggf.game.sonic3k.S3kFullSaveGame.isCapturingSaveGame());
     }
 
     @Override
@@ -86,6 +89,17 @@ public final class S3kSaveSnapshotProvider implements SaveSnapshotProvider {
         int zone = context.currentZone();
         int act = context.currentAct();
         ZoneKey zoneKey = context.zoneKey();
+        if (Boolean.TRUE.equals(context.capturedFields().get(SAVE_GAME_FIELD)) && zoneKey instanceof ZoneKey.Stock) {
+            // SaveGame writes SaveGame_NextLevel[Current_zone_and_act] as the slot's level
+            // (sonic3k.asm:15860-15872), so the file resumes where the exit leads, not where it
+            // was saved. Persistence-only requests keep the current location.
+            var next = S3kSaveProgressions.saveGameNextLevel(zone, act, context.selectedTeam());
+            if (next.isPresent()) {
+                zone = next.get().zone();
+                act = next.get().act();
+                zoneKey = ZoneKey.stock(zone);
+            }
+        }
         S3kSavedZone.write(payload, zoneKey);
         payload.put("act", act);
         payload.put("mainCharacter", context.selectedTeam().mainCharacter());

@@ -6,12 +6,14 @@ import com.openggf.game.mutators.LevelMutatorPolicy;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageController;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.LevelMutatorTestWorld;
 import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.*;
 
+import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -25,7 +27,8 @@ class TestMutatorBonusRingProducers {
     @Test void mainLevelSlotRewardRetiresWithoutGrantSparkleSoundOrPendingCount() {
         var services = new Services(BonusStageType.NONE);
         services.policy(NO_RINGS);
-        var controller = new S3kSlotStageController();
+        var controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         controller.bootstrap();
         controller.onRewardSpawned();
         var reward = new S3kSlotRingRewardObjectInstance(spawn(0),controller);
@@ -44,7 +47,8 @@ class TestMutatorBonusRingProducers {
     @Test void activeSlotInteriorPreservesNativeGrantAndPendingCountTiming() {
         var services = new Services(BonusStageType.SLOT_MACHINE);
         services.policy(NO_RINGS);
-        var controller = new S3kSlotStageController();
+        var controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         controller.bootstrap();
         controller.onRewardSpawned();
         var reward = new S3kSlotRingRewardObjectInstance(spawn(0),controller);
@@ -93,6 +97,9 @@ class TestMutatorBonusRingProducers {
         var item = new GumballItemObjectInstance(spawn(2),0,true);
         item.setServices(services);
         var player = player();
+        // Check_PlayerInRange reads Player_2 then Player_1 (sonic3k.asm:179994-180011);
+        // this solo route has no native Player_2.
+        services.withPlayerQuery(new ObjectPlayerQuery(()->player,List::of));
         item.update(0,player);
         assertNoGrant(services,player);
         services.policy(LevelMutatorPolicy.STOCK);

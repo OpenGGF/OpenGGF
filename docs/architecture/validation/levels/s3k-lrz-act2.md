@@ -1251,3 +1251,125 @@ state/pixel controls and their limits are described in the
 [headless testing guide](../../../guide/contributing/headless-testing.md).
 This performance change supplies no new native reference, full-route visual
 certification or missing viewport/donor/character coverage; inherited gaps remain.
+
+
+## Physical checkpoint products and incoming replay (2026-10-14)
+
+All five ROM posts (placement order4/1/5/2/3) receive300 products:150 supported
+solo and150 explicit-roster cases. Their actual saved position and reload are
+verified independently of the long cold Act1 route.
+
+Each product approaches the literal ROM-placed star post through ordinary
+movement, captures the full registered world on both sides of contact, and
+replays and reverses it twice. It then invokes the production pit-death owner
+twice, waits for actual GameLoop reload/title/fade/control release, and verifies
+one lost life, saved coordinates/index, fresh runtime/object manager, retained
+ordered roster/CPU leader identities, donor art and retired outgoing history.
+Each incoming world independently captures and replays a45-input neutral window
+twice in both restore directions, without hiding a second death or life loss.
+All comparisons retain every registry key; no incoming raw restore crosses a
+load. The configured rosters include duplicate names and seven followers;
+these are finite examples of the uncapped API, not proof of every possible team.
+
+The five cases per configuration use the actual320/352/400/528/800 presets.
+Supported solo pairs are off×{Sonic,Tails,Knuckles}, S1×Sonic and
+S2×{Sonic,Tails}, where the act has that character route. Six explicit configured
+rosters cover native mixed/duplicate/large teams, S1 duplicate Sonic, and S2
+mixed/large teams. The common test is `TestLrzSszCheckpointRoutes`; independent
+census, layout witnesses and an S2 Tails/seven-follower800 witness run before
+the long product method. The combined class passes888 tests, zero failures,
+errors or skips, on `a8c9f892e855855f96c7ecad368e127880c9af3e` plus the final
+class (SHA256`3ed4c7346c79cd06d694e7fc17cf625aaa941d4951db606702734d631115f818`),
+request99024, completed2026-10-14 12:40:30 UTC. Exact commands, prerequisites,
+rejected setups and the distinction from earlier qualification are recorded in
+[the completion plan](../../plans/2026-10-13-s3k-playable-completion.md#checkpoint-product-qualification-2026-10-14).
+
+This qualifies local physical contact and reload/replay products. It supplies
+no cold route for every configuration, native whole-scene/audio acceptance or
+combined smoke/guard/integration claim. Other matrix obligations stay open.
+
+## Native single-fade retiming (2026-10-15)
+
+8179ccd80 stopped `GameplayCaptureSession.step` from advancing a runtime-ready
+loop's FadeManager a second time. Movies authored before it budget half of each
+frozen fade-out (11 of the native 22 frames, during which gameplay and object
+VInt do not advance), so their later inputs landed early. `FadeWindowRetimeTool`
+(41405e073, 5333aece6) measured each owned frozen window in the production harness,
+inserted the native remainder as repeats of the held input and verified every
+movie by one uninterrupted replay with no death. On the LRZ Knuckles and Tails
+chains the retimed rows equal the 22d5e6ffc rows shifted by the inserted frames,
+VInt included (0 differing rows). Test frame constants move by 11 at and after each
+old load frame. Base: Root ef61a560f; no runtime behaviour changed.
+
+| Movie | Old SHA-256 | New SHA-256 | Windows `start:native→+inserted` | Frames | New full loads | Verified end |
+|---|---|---|---|---|---|---|
+| `lrz2-sonic-tails-cold-boss-act-arrival-320.bk2` | `fbd3b97798a93334edfbad508373fff31bad2c04075ed0e77cd2151452c5f3df` | `7f529386bbcf7520ad61f1069b0569a17b59aeba3610f635ce48c4386270b3c8` | 43555:23→+11 | 43772 | 30285, 43577 | 296,1196, 6 rings, zone 22/0 |
+| `lrz-knuckles-cold-hpz-320.bk2` | `9f6962af70fcb2cfe47e891e9ee402e5fe60825059c5794e8ff910dddad2d1f5` | `2852441ec293729845c6db4e435cac32a19121eaa2417204b3ffd98d98f35da8` | 49275:22→+11 | 49537 | 25112, 49297 | 1069,748, 0 rings, zone 22/1 |
+| `lrz-tails-cold-act2-clear-320.bk2` | `46ad76275ca5f5248825f8f0d63e806e6dbb9d950db351838af619f4c8b125af` | `b6109f6ff75e6e33c88396f221432c504a18757363c9f3f66fb83b9cfb6b68a1` | 53047:23→+11 | 53270 | 28507, 53069 | 296,1200, 1 rings, zone 22/0 |
+
+Validation on ef61a560f plus the retimed fixtures (`TestLrzActTwoColdRouteCapture`, `TestLrzKnucklesColdRouteCapture`, `TestLrzTailsColdRouteCapture`), focused selectors through
+`tools/testing/maven_queue.py` with the S3K ROM: run `cold-fade-verify` (Maven
+Finished 04:15:51Z) passed `TestDezIncomingFinalRouteCapture` 7/0/0/0,
+`TestDezSoloActTwoColdRouteCapture` 4/0/0/0, `TestLrzActTwoColdRouteCapture` 2/0/0/0,
+`TestLrzTailsColdRouteCapture` 4/0/0/0 and the fade rows of `TestLrzKnucklesColdRouteCapture`
+and `TestSszSoloColdRouteCapture`; run `cold-joined-retimed` (Finished 04:21:19Z) passed
+`TestS3kHpzJoinedColdRouteCapture` 2/0/0/0 (pair 66 spots, HPZ 52947/52948, SSZ1
+67037/67038, release 67211; Knuckles 27 spots, HPZ 49297/49298, SSZ2 50160/50161,
+release 51586). That test's LRZ live-history tail now starts 36 frames before the HPZ
+load (14 live frames before the native 22-frame fade-out). Rows still red there are
+not fade timing and are owned elsewhere: the Knuckles act-2 restore at 37130 and the
+LRZ boss sidekick overlap parity at 47471 (rewind-snapshot rows) and solo Tails' SSZ1
+opening camera (behaviour row). No skips.
+
+## Cold giant-ring s9 gateway and LRZ2 return (2026-10-15)
+
+`TestS3kLrzHpzSszColdCampaign#tailsGiantRingGatewayReturnsToLrzTwo` replays one
+uninterrupted controller-only native320 solo Tails movie from the declared LRZ1 boot into
+the LRZ2 giant ring s9 at ($2640,$640) and back to LRZ2. No emeralds are declared.
+
+| Movie | SHA-256 | Inputs | Source |
+|---|---|---|---|
+| `lrz-tails-cold-giant-ring-s9-320.bk2` | `d0e1af426f3107140446428f925eb46babf06df697634d54f88f72098fa33d93` | 50947 | inputs 0–49072 equal `lrz-tails-cold-hpz-320.bk2` (`229c5036eb936aacb38603fd2195e76baa0c150c36deae900f1fc37e9ec0ec94`, the fade-retimed `a492bba2…`; unchanged before its first retimed load at 53058); 49073–49084 are the 12-input L+A hold recorded above as entering the adjacent giant ring; then neutral |
+
+Base ef61a560f, run `cold-g-verify` (Maven Finished 05:42:07Z): 1/0/0/0. The ring is entered
+at input 49165 with `Collected_special_ring_array` bit 9 set and Saved2
+(9792,1600, 1 ring, timer 20232) recorded; `SSEntryFlash_GoSS` starts Blue Sphere, which
+neutral input fails; results begin at 49912; the real LRZ2 reload releases control at 50546
+at the Saved2 X with the saved ring count, the collected ring is not respawned and the
+emerald states stay zero. Two-cycle 45-input whole-world replays run at +60 and +200 after
+release. Every input is drawn.
+
+Not covered: the seven-Chaos `$1701` branch. A probe with declared `1111111` reached the
+sanctuary at 49188 and released control at 50080, but `HPZSSEntryControl.exitEligible`
+refuses the exit band while any emerald awaits a pedestal stage, so returning needs a won
+Super stage (out of this bounded authoring scope). With all seven declared Super the ring
+pays out rings instead of opening a stage. Blue Sphere winning inputs and the LRZ1/LRZ2
+other giant rings remain open.
+
+Engine pictures (320 px) in `$HOME/Videos/OGGF/s3k-parity-coverage-2026-10-14/spot-checks/cold-campaign-v1/g/`
+were inspected: ring approach (49080), Tails taken by the ring (49150), Blue Sphere (49400),
+results (50100) and the released LRZ2 return with the saved timer and ring (50620). The results
+card draws blue spike glyphs over its SCORE/RING BONUS/PERFECT labels. Native comparison
+(campaign-visual lane, 2026-10-15; Tails complete run, every `Game_mode $48` results card,
+won and failed): the glyphs are native, present on every card at the same places. The card's
+backdrop was not: native is `$CCC` grey from the locked-on `Pal_Results` ($2E318), the engine
+drew white from the S3-half copy and a hard-coded clear. Fixed in `a34473db8`
+(`TestS3kSpecialStageResultsBackdrop`, red first). Pictures and provenance:
+`$HOME/Videos/OGGF/s3k-parity-coverage-2026-10-14/spot-checks/campaign-visual-v1/`
+(`native-tails`, `native-tails-2`, `engine-g`, `engine-g-fixed`).
+
+### Wide boss-act arrival movie retimed (2026-10-15)
+
+Surfaced after the rewind-snapshot rows cleared on Root 2adfa37a7: the movie was
+authored under the pre-8179ccd80 double fade advance, so its full load landed 11
+frames early. `FadeWindowRetimeTool` measured the owned frozen fade-out window in
+the production harness, inserted the native remainder and verified one
+uninterrupted replay with no death. Test frame constants move by 11 at and after
+the old load. No runtime behaviour changed.
+
+| Movie | Old SHA-256 | New SHA-256 | Windows `start:native→+inserted` | Frames | New full loads | Verified end |
+|---|---|---|---|---|---|---|
+| `lrz2-sonic-tails-cold-boss-act-arrival-800.bk2` | `5d3810ec279fd3a09cdbdb1dfc4299a31250149476248dfca43a78780e809f0a` | `df925a0672a333560958767c13e44856bf6fbd36d44655cb7c303ee044be0991` | 41116:23→+11 | 41359 | 24349, 41138 | 296,1196, 10 rings, zone 22/0 |
+
+Validation: run `probe-v1` (focused queued selectors, S3K ROM, branch
+bugfix/ai-s3k-route-behaviour-regressions on 2adfa37a7) passed the owning test, 0 skips.

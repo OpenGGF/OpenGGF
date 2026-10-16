@@ -55,6 +55,31 @@ public class Sonic3kBonusStageCoordinator extends AbstractBonusStageCoordinator
     private S3kSlotBonusStageRuntime slotRuntime;
 
     @Override
+    public boolean supportsRewind() {
+        return getActiveType() == BonusStageType.SLOT_MACHINE || super.supportsRewind();
+    }
+
+    @Override protected Object captureBonusRuntimeState() {
+        return slotRuntime == null ? null : slotRuntime.captureSlotRewindState();
+    }
+    @Override protected void restoreBonusRuntimeState(Object state) {
+        if (state == null) {
+            if (slotRuntime != null && slotRuntime.isInitialized())
+                throw new IllegalStateException("Slot snapshot predates completed runtime assembly");
+        } else {
+            if (slotRuntime == null) throw new IllegalStateException("Slot runtime has retired");
+            slotRuntime.restoreSlotRewindState(state);
+        }
+    }
+    @Override protected void resetBonusRuntimeStateForMissingSnapshot() {
+        if (slotRuntime != null && slotRuntime.isInitialized())
+            throw new IllegalStateException("Active Slot runtime requires its captured state");
+    }
+    @Override public void afterBonusRuntimeRewindRestore() {
+        if (slotRuntime != null) slotRuntime.rebindRuntimeRewindObjects();
+    }
+
+    @Override
     public boolean shouldForcePlayerHighPriority() {
         // Obj_GumballMachine sets both players' art_tile priority bits. Slots
         // uses Obj_Sonic_RotatingSlotBonus / loc_4B9E8's make_art_tile(...,0,0)
@@ -130,11 +155,6 @@ public class Sonic3kBonusStageCoordinator extends AbstractBonusStageCoordinator
     @Override
     public boolean suppressesDefaultCameraStep() {
         return slotRuntime != null;
-    }
-
-    @Override
-    public boolean hasCompletedExitFadeToBlack() {
-        return slotRuntime != null && slotRuntime.hasCompletedExitFadeToBlack();
     }
 
     @Override

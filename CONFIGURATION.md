@@ -43,7 +43,7 @@ The `config.yaml` is organized into the following top-level sections:
 
 | Section | Contents |
 |---------|----------|
-| `display` | Aspect preset, window autosize, display shader library, deadzone mode, color profile, FPS |
+| `display` | Aspect preset, window autosize, display shader library, deadzone mode, color profile and expansion, FPS |
 | `gameplay` | Normal-play hardware load-time simulation |
 | `config` | Configuration-file persistence behavior |
 | `input` | `player1` / `player2` key bindings, `pause` key |
@@ -92,6 +92,7 @@ The `config.yaml` is organized into the following top-level sections:
 | `LOAD_TIME_SIMULATION` | `gameplay.loadTimeSimulation` | enum | `FAST` | Normal-play ROM-load timing: `NONE` completes as soon as production preparation allows; `PROFILED` uses the generator-owned measured profile data; `FAST` (default) uses the hand-tuned copy of that data (`load-time-profiles/s3k-fast-v1.json`, which also carries the S3K title-screen Sonic frame decodes taken from the original hardware capture), and warns then behaves as `NONE` for a game without a FAST manifest; `REALISTIC` is a retained reserved alias that warns when the profile is resolved and returns `PROFILED`. S1/S2 resolve through their default module factory to the supplied immediate profile; their ROM-derived PLC and dynamic-art/DPLC lifecycles remain game-owned and are not retimed by this setting. Trace replay uses its recorded hardware-timing policy and does not consume this setting; queue-state trace diagnostics are comparison-only and never alter this configuration. |
 | `CONFIG_PRESERVE_EXPLICIT_DEFAULTS` | `config.preserveExplicitDefaults` | bool | `false` | Developer override: retain explicitly listed recognized settings, including values equal to defaults, when converting an older full configuration to sparse format. |
 | `DISPLAY_COLOR_PROFILE` | `display.colorProfile` | string | `"RAW_RGB"` | Palette presentation profile. `"RAW_RGB"` keeps the current direct 8-bit expansion, `"MD_ANALOG"` applies a darker Mega Drive-style analog ramp, and `"NTSC_SOFT"` applies the analog ramp plus mild desaturation. |
+| `DISPLAY_COLOR_EXPANSION` | `display.colorExpansion` | string | `"FULL"` | Independent palette RGB output range, selectable as Full or Limited in Settings → Display. Full preserves current output (maximum 255); Limited applies rounded 238/255 gain after fades and the selected profile, including arbitrary creator palette RGB. The saved choice applies to cached normal and underwater palettes, the palette colour-0 backdrop and clear colour, and headless gameplay captures (applied at each capture boot through the same owner as the window). RAW_RGB + LIMITED matches GPGX normal digital ROM channel levels; this is not video 16–235 range or shadow/highlight emulation. |
 | `DISPLAY_COLOR_PROFILE_TOGGLE_KEY` | `display.colorProfileToggleKey` | key | `V` | Runtime key used to cycle display color profiles. The selected profile is saved to `config.yaml` and shown briefly in the bottom-left corner. |
 | `DISPLAY_ASPECT` | `display.aspect` | string | `"NATIVE_4_3"` | Display aspect preset. Controls the logical pixel width used by the renderer. Accepted values: `"NATIVE_4_3"` (320 px, exact native behavior), `"WIDE_16_10"` (352 px, supported), `"WIDE_16_9"` (400 px, primary supported widescreen target), `"ULTRA_21_9"` (528 px, best-effort smoke tier), and `"SUPER_32_9"` (800 px, exploratory). Wider presentation does not widen ROM world boundaries or trace-comparison authority. A game module (such as a mod) may pin a preset for its session; the setting itself is unchanged and returns at the master title. |
 | `DISPLAY_WINDOW_MODE` | `display.windowMode` | enum | `"WINDOWED"` | `"WINDOWED"` allows normal resizing and maximising; `"BORDERLESS"` covers the current monitor without window borders; `"FULLSCREEN"` uses exclusive fullscreen at the monitor's current resolution. Saving a changed mode previews it for 15 seconds; Keep changes persists it, while Revert, Back or timeout restores the previous mode. Returning to windowed mode restores the previous window placement. |
@@ -1220,6 +1221,7 @@ display:
   shaderDefaultPhase: PRESENTATION   # Fallback render phase for standalone display shaders
   deadzoneMode: "PROPORTIONAL"   # Camera horizontal deadzone behaviour on wide screens
   colorProfile: "RAW_RGB"   # Display-only color profile for Mega Drive palette presentation
+  colorExpansion: "FULL"   # Independent Full (255) or Limited (238) palette RGB output range
   colorProfileToggleKey: V   # Runtime key to cycle the display color profile
   fps: 60   # Frames per second to render (changes game speed)
 

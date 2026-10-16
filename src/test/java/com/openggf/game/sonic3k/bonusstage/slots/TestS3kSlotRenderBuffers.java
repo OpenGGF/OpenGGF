@@ -35,7 +35,7 @@ class TestS3kSlotRenderBuffers {
     @Test
     void visibleCellScansReuseTwoPrimitiveBackingBuffersAcross600FramesAndGrowSafely() {
         S3kSlotLayoutRenderer renderer = new S3kSlotLayoutRenderer();
-        S3kSlotRenderBuffers buffers = S3kSlotLayoutFixture.buffers();
+        S3kSlotRenderBuffers buffers = S3kSlotRenderBuffers.fromRomData(S3kSlotRomTestData.resources());
         buffers.stageViewport(0, 0);
         short[] points = new short[16 * 16 * 2];
         buffers.stagePointGrid(points);
@@ -80,7 +80,7 @@ class TestS3kSlotRenderBuffers {
 
     @Test
     void slotWallAnimationCommitsNextPermanentTileIntoCompactAndExpandedLayout() {
-        S3kSlotRenderBuffers buffers = S3kSlotLayoutFixture.buffers();
+        S3kSlotRenderBuffers buffers = S3kSlotRenderBuffers.fromRomData(S3kSlotRomTestData.resources());
         int layoutIndex = findFirstTile(buffers.layout(), 0x01);
         int expandedIndex = buffers.compactToExpandedIndex(layoutIndex);
 
@@ -98,7 +98,7 @@ class TestS3kSlotRenderBuffers {
         // of the remaining flash colours costs 2 passes, and the table's 0 terminator
         // -- one entry past the 24 colours -- is what restores the advanced tile.
         int period = S3kSlotRomData.SLOT_WALL_COLOR_DELAY + 1;
-        for (int i = 0; i < S3kSlotRomData.SLOT_WALL_COLOR_FRAMES.length * period; i++) {
+        for (int i = 0; i < S3kSlotRomTestData.SLOT_WALL_COLOR_FRAMES.length * period; i++) {
             buffers.tickTransientAnimations();
         }
 
@@ -115,11 +115,11 @@ class TestS3kSlotRenderBuffers {
         return -1;
     }
 
-    private static final int BOOTSTRAP_CAMERA_X = S3kSlotLayoutFixture.START_X - 0xA0;
-    private static final int BOOTSTRAP_CAMERA_Y = S3kSlotLayoutFixture.START_Y - 0x70;
+    private static final int BOOTSTRAP_CAMERA_X = S3kSlotRomData.SLOT_BONUS_PLAYER_START_X - 0xA0;
+    private static final int BOOTSTRAP_CAMERA_Y = S3kSlotRomData.SLOT_BONUS_PLAYER_START_Y - 0x70;
 
     private static S3kSlotRenderBuffers stagedBuffers(S3kSlotLayoutRenderer renderer) {
-        S3kSlotRenderBuffers buffers = S3kSlotLayoutFixture.buffers();
+        S3kSlotRenderBuffers buffers = S3kSlotRenderBuffers.fromRomData(S3kSlotRomTestData.resources());
         buffers.stageViewport(BOOTSTRAP_CAMERA_X, BOOTSTRAP_CAMERA_Y);
         buffers.stagePointGrid(renderer.buildPointGrid(0, BOOTSTRAP_CAMERA_X, BOOTSTRAP_CAMERA_Y));
         return buffers;

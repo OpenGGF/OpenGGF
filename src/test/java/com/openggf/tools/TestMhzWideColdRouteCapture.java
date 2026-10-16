@@ -25,7 +25,7 @@ class TestMhzWideColdRouteCapture {
                 800, "sonic", "", "off", null, null, null);
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/mhz2-sonic-incoming-800.bk2"));
-        assertEquals(29744, movie.getFrameCount());
+        assertEquals(29433, movie.getFrameCount());
         var spots = Set.of(11000, 12000, 13000, 13800, 14500, 15000, 16000,
                 17000, 18000, 18900, 19500, 20000, 21000, 21450, 22000, 22350);
         var checked = new HashSet<String>();
@@ -66,7 +66,7 @@ class TestMhzWideColdRouteCapture {
                     pending.add("weather-fade");
                 }
                 if (level.getCurrentZone() == 4 && reload < 0) reload = frame;
-                if (frame == 29700) {
+                if (frame == 29400) {
                     assertEquals(4, level.getCurrentZone());
                     pending.add("fbz-loaded");
                 }
@@ -79,7 +79,7 @@ class TestMhzWideColdRouteCapture {
                         movie.getFrameCount() - frame - 1);
                 // Keep registry replay on one side of the observed fresh load.
                 // This test does not substitute for live-history isolation checks.
-                if (frame < 28981) horizon = Math.min(horizon, 28980 - frame);
+                if (frame < 28681) horizon = Math.min(horizon, 28680 - frame);
                 assertTrue(horizon > 0, "independent replay interval for " + pending);
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
                 drawing.checkpoint(session);
@@ -116,7 +116,7 @@ class TestMhzWideColdRouteCapture {
             assertEquals(required, checked);
             assertEquals(Set.of(1, 2, 3, 4, 5, 6, 7, 8, 9), health,
                     "loc_767F6 starts escape at one; no ninth hit to zero");
-            assertEquals(28981, reload);
+            assertEquals(28681, reload);
             assertEquals(4, GameServices.level().getCurrentZone());
             assertEquals(0, GameServices.level().getCurrentAct());
             assertFalse(session.player().isObjectControlled());
@@ -129,7 +129,11 @@ class TestMhzWideColdRouteCapture {
     private static void assertRoster(String character, boolean pair) {
         assertEquals(com.openggf.game.CharacterKey.parsePersisted(character),
                 GameServices.sprites().getMainPlayable().characterKey());
-        var followers = GameServices.sprites().getSidekicks();
+        var all = GameServices.sprites().getSidekicks();
+        long carriers = all.stream().filter(s -> nativeIntroCarrier(s)).count();
+        assertTrue(carriers <= (character.equals("sonic") && !pair ? 1 : 0),
+                "only solo Sonic receives the native MHZ1 carry-in Tails");
+        var followers = all.stream().filter(s -> !nativeIntroCarrier(s)).toList();
         assertEquals(pair ? 1 : 0, followers.size());
         if (pair) assertEquals(com.openggf.game.CharacterKey.TAILS, followers.getFirst().characterKey());
     }
@@ -143,5 +147,14 @@ class TestMhzWideColdRouteCapture {
                     ? " dynamic classes=" + objects.dynamicObjects().stream()
                             .map(entry -> entry.objectId() + "=" + entry.className()).toList() : ""));
         }
+    }
+
+    /**
+     * SpawnLevelMainSprites loc_68C2/loc_68D8 (sonic3k.asm:8180-8197): locked-on MHZ1
+     * (SK_alone_flag clear) gives solo Sonic (Player_mode 1) a temporary Obj_Tails carrier
+     * at Player_2, which flies off after the drop. It is not a configured follower.
+     */
+    private static boolean nativeIntroCarrier(com.openggf.sprites.playable.AbstractPlayableSprite sprite) {
+        return sprite.getCpuController() != null && sprite.getCpuController().isTransientCarrySidekick();
     }
 }

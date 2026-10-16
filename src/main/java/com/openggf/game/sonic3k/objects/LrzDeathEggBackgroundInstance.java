@@ -41,8 +41,8 @@ public final class LrzDeathEggBackgroundInstance extends AbstractObjectInstance 
                     Sonic3kPlcLoader.bindRuntimePatternDmaTarget(physical, services());
                     physical.enqueue(services().rom(), 0x15A112, 0x39F * 32);
                 }
-                artOrdinal = S3kRuntimeArtCoordinator.from(services()).moduleQueue()
-                        .queue(services().rom(), 0x15A112, 0x39F).ordinal();
+                artOrdinal = com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.bindPatternModule(services(), S3kRuntimeArtCoordinator.from(services()).moduleQueue()
+                        .queue(services().rom(), 0x15A112, 0x39F)).ordinal();
                 artQueued = true; // st $2E(a0); the native routine does not wait to draw.
             } catch (IOException failure) { throw new UncheckedIOException(failure); }
         }

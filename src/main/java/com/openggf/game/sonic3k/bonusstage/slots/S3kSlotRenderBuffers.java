@@ -3,6 +3,8 @@ package com.openggf.game.sonic3k.bonusstage.slots;
 import java.util.Arrays;
 
 public final class S3kSlotRenderBuffers {
+    @com.openggf.game.rewind.RewindTransient(reason="Immutable ROM asset bank; layout and animation state are captured separately")
+    private final S3kSlotResources romData;
     private final byte[] layout;
     private final byte[] expandedLayout;
     private final int layoutStrideBytes;
@@ -15,8 +17,9 @@ public final class S3kSlotRenderBuffers {
     private final VisibleCells[] visibleCellFrames = {new VisibleCells(16), new VisibleCells(16)};
     private int nextVisibleCellFrame;
 
-    private S3kSlotRenderBuffers(byte[] layout, byte[] expandedLayout,
+    private S3kSlotRenderBuffers(S3kSlotResources romData, byte[] layout, byte[] expandedLayout,
                                  int layoutStrideBytes, int layoutRows, int layoutColumns) {
+        this.romData = java.util.Objects.requireNonNull(romData, "romData");
         this.layout = layout;
         this.expandedLayout = expandedLayout;
         this.layoutStrideBytes = layoutStrideBytes;
@@ -28,11 +31,14 @@ public final class S3kSlotRenderBuffers {
         }
     }
 
-    static S3kSlotRenderBuffers fromLayout(S3kSlotLayoutData data) {
-        byte[] layout = data.layout();
-        return new S3kSlotRenderBuffers(
-                layout,
-                S3kSlotRomData.buildExpandedLayoutBuffer(layout),
+    public static S3kSlotRenderBuffers fromRomData() {
+        return fromRomData(S3kSlotResources.fromActiveRom());
+    }
+
+    public static S3kSlotRenderBuffers fromRomData(S3kSlotResources romData) {
+        return new S3kSlotRenderBuffers(romData,
+                romData.layout(),
+                romData.expandedLayout(),
                 S3kSlotRomData.SLOT_EXPANDED_STRIDE,
                 S3kSlotRomData.SLOT_EXPANDED_STRIDE,
                 S3kSlotRomData.SLOT_EXPANDED_STRIDE);
@@ -88,28 +94,28 @@ public final class S3kSlotRenderBuffers {
 
     public boolean startRingAnimationAt(int layoutIndex) {
         return startTransientAnimation(layoutIndex,
-                S3kSlotRomData.RING_SPARKLE_FRAMES,
+                romData.ringFrames(),
                 S3kSlotRomData.RING_SPARKLE_DELAY,
                 (byte) 0x00);
     }
 
     public boolean startBumperAnimationAt(int layoutIndex) {
         return startTransientAnimation(layoutIndex,
-                S3kSlotRomData.BUMPER_BOUNCE_FRAMES,
+                romData.bumperFrames(),
                 S3kSlotRomData.BUMPER_BOUNCE_DELAY,
                 (byte) 0x05);
     }
 
     public boolean startSpikeAnimationAt(int layoutIndex) {
         return startTransientAnimation(layoutIndex,
-                S3kSlotRomData.SPIKE_ANIMATION_FRAMES,
+                romData.spikeFrames(),
                 S3kSlotRomData.SPIKE_ANIMATION_DELAY,
                 (byte) 0x06);
     }
 
     public boolean startSlotWallAnimationAt(int layoutIndex, int finalTileId) {
         return startTransientAnimation(layoutIndex,
-                S3kSlotRomData.SLOT_WALL_COLOR_FRAMES,
+                romData.wallFrames(),
                 S3kSlotRomData.SLOT_WALL_COLOR_DELAY,
                 (byte) finalTileId);
     }
@@ -190,6 +196,46 @@ public final class S3kSlotRenderBuffers {
             expandedLayout[expandedIndex] = tileId;
         }
     }
+
+    record RewindState(byte[] layout, byte[] expanded, short[] points, int cameraX, int cameraY,
+                       int nextFrame, java.util.List<com.openggf.game.rewind.schema.RewindObjectStateBlob> animations,
+                       java.util.List<com.openggf.game.rewind.schema.RewindObjectStateBlob> visibleFrames) {
+        RewindState {
+            layout=layout.clone(); expanded=expanded.clone(); points=points.clone();
+            animations=java.util.List.copyOf(animations); visibleFrames=java.util.List.copyOf(visibleFrames);
+        }
+        @Override public byte[] layout() { return layout.clone(); }
+        @Override public byte[] expanded() { return expanded.clone(); }
+        @Override public short[] points() { return points.clone(); }
+    }
+    RewindState captureSlotRewindState() {
+        var animations=new java.util.ArrayList<com.openggf.game.rewind.schema.RewindObjectStateBlob>(transientAnimationSlots.length);
+        for (var slot:transientAnimationSlots) animations.add(com.openggf.game.rewind.schema.CompactFieldCapturer.capture(slot));
+        var frames=new java.util.ArrayList<com.openggf.game.rewind.schema.RewindObjectStateBlob>(visibleCellFrames.length);
+        for (var frame:visibleCellFrames) frames.add(com.openggf.game.rewind.schema.CompactFieldCapturer.capture(frame));
+        return new RewindState(layout,expandedLayout,stagedPointGrid,stagedCameraX,stagedCameraY,
+                nextVisibleCellFrame,animations,frames);
+    }
+    void restoreSlotRewindState(RewindState state) {
+        if (state.layout().length != layout.length || state.expanded().length != expandedLayout.length
+                || state.animations().size() != transientAnimationSlots.length
+                || state.visibleFrames().size() != visibleCellFrames.length)
+            throw new IllegalArgumentException("Slot render snapshot belongs to different geometry");
+        System.arraycopy(state.layout(),0,layout,0,layout.length);
+        System.arraycopy(state.expanded(),0,expandedLayout,0,expandedLayout.length);
+        stagedPointGrid=state.points(); stagedCameraX=state.cameraX(); stagedCameraY=state.cameraY();
+        nextVisibleCellFrame=state.nextFrame();
+        for (int i=0;i<transientAnimationSlots.length;i++)
+            com.openggf.game.rewind.schema.CompactFieldCapturer.restore(transientAnimationSlots[i],state.animations().get(i));
+        for (int i=0;i<visibleCellFrames.length;i++)
+            com.openggf.game.rewind.schema.CompactFieldCapturer.restore(visibleCellFrames[i],state.visibleFrames().get(i));
+    }
+    int visibleFrameIndex(VisibleCells frame) {
+        if (frame==VisibleCells.empty()) return -1;
+        for (int i=0;i<visibleCellFrames.length;i++) if (visibleCellFrames[i]==frame) return i;
+        throw new IllegalStateException("Slot publication is not owned by its render buffers");
+    }
+    VisibleCells visibleFrame(int index) { return index<0 ? VisibleCells.empty() : visibleCellFrames[index]; }
 
     private static final class TransientAnimationSlot {
         private boolean active;

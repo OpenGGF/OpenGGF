@@ -82,3 +82,49 @@ Tornado at input600 had6845 nonzero pixels and a ready virtual base137948
 while remaining invisible: an identity-only cache missed the upload and the
 sheet lacked `levelArtTileRanges`. Use the existing range refresh owner, not
 a hash scan, extra art job or fitted delay (2026-10-13 ending lifecycle task).
+
+
+### Paired physical/timed module publication
+
+The native module tail polls the complete direct FIFO, not merely a renderer or
+a parent handle. `S3kKosModuleQueue` emits its actual direct-child start/claim
+receipts; `S3kPatternModuleTransfer` binds them to an already admitted physical
+FIFO entry and retains them after the parent claim. The physical completion
+queues immutable ROM bytes for the next supported VInt DMA drain. Repeated
+rendering and completed parent claims do not upload them. Explicit standalone
+queues retain their separate declared contract.
+
+Capture admitted FIFO position as well as the actual submitted handle and
+fingerprint. Identical source/destination predecessors cannot safely be matched
+by descriptor alone, and copied snapshots cannot preserve Java entry identity.
+Shift positions only when the physical archive actually retires; a module
+advance, failed admission or clear must not invent a shift. Snapshot pending
+DMA independently from presented pattern writes, so both restore directions
+retain publication. Real duplicate-predecessor, multi-module, full-capacity,
+claim-race and320/800 full-world pixel tests cover these boundaries.
+
+A global producer without a sprite-owned handle still needs one actual timed
+job and a captured automatic claim. Preflight logical and physical capacity
+before mutation, and bind the resident DMA target. Timing-only terrain/title/
+fire-overlay jobs that own no physical journal entry must not be guessed into
+this pairing. Origin: 2026-10-14 ending Master publication, base69e4f51.
+
+
+**Decoded frontend sheets are not physical pattern residency.** A frontend can
+render a virtual sheet correctly while the following level decoder replaces
+its unwritten native pattern gaps with zero. S3K's initial Master span at
+VRAM $A5C0 was exactly 2,176 bytes of title-banner ROM $35026C+$5C0, not new
+Master art. Retain only admitted frontend CPU uploads at their literal native
+destinations, seeded from the current stock Level's bounded physical patterns;
+never copy virtual atlases or comparison VRAM. Overlay writes of zero still
+overwrite retained bytes, and retained extent must not move the append cursor.
+
+Freeze immutable bytes and resource-owner generation before an async build;
+validate that owner is still installed before GPU publication. Equal bytes and
+generation in a detached owner are insufficient. A menu's world replacement
+may transfer these bytes only through a capture-created token binding the
+exact reused data source and supported owner type. Consume the seed at real
+resource installation, preserve it over ordinary title reset, and clear it on
+a fresh context/hardware lifetime. Newer admitted SaveScreen uploads supersede
+title art. This does not model untouched name tables, SAT or every level-to-level
+gap (2026-10-14 ending ingress; d0fabc3ef candidate4d401bcc).

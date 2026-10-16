@@ -161,7 +161,24 @@ public final class SszCutsceneBridgeObjectInstance extends AbstractObjectInstanc
     @Override public int getOutOfRangeReferenceX() { return baseX; }
     @Override public SolidObjectParams getSolidParams() { return SOLID; }
     @Override public SolidRoutineProfile getSolidRoutineProfile() {
-        return SolidRoutineProfile.topSolid(false);
+        return SolidRoutineProfile.fromProvider(this);
+    }
+    @Override public boolean usesGroundHalfHeightForTopSolidContact() {
+        // sub_45026 passes d3=$09; loc_1E44C subtracts d3 for a NEW ride too.
+        return true;
+    }
+    @Override public boolean rejectsZeroDistanceTopSolidLanding() {
+        // loc_1E45A's unsigned comparison accepts d0 in [-$10,-1], excluding zero.
+        return true;
+    }
+    @Override public boolean usesPlatformObjectLandingSnap() {
+        // SolidObjectTop keeps its relative y_pos += d0+3 write, before TouchFloor.
+        return false;
+    }
+    @Override public boolean suppressesObjectEdgeBalance() {
+        // Obj_SSZCutsceneBridge bset #7,status. Tails loc_14A16 and the
+        // other native standing branches retain Wait for this negative header.
+        return true;
     }
     @Override public boolean isTopSolidOnly() { return true; }
     @Override public int getPriorityBucket() { return PRIORITY_BUCKET; }

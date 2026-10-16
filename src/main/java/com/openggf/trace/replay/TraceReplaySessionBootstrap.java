@@ -745,14 +745,10 @@ public final class TraceReplaySessionBootstrap {
         if (rng != null) {
             rng.setSeed(meta.initialRngSeed());
         }
-        // NOTE: GumballMachineObjectInstance previously performed its own
-        // frame-0 reseed here (sonic3k.asm:127412) using the engine's local
-        // vblaCounter approximation of hardware V_int_run_count, which
-        // clobbered this bootstrap-applied trace seed. That reseed has been
-        // removed -- see docs/S3K_KNOWN_DISCREPANCIES.md, "Resolution (no
-        // longer a divergence)" -- so GumballMachineObjectInstance no longer
-        // calls services().rng().setSeed(...); RNG state after this point
-        // comes solely from native per-frame advancement.
+        // This declared entry seed is published after applyBootstrap consumes
+        // the real initial Process_Sprites pass. Native object initialization,
+        // including Gumball's V_int_run_count assignment, therefore precedes
+        // this post-setup state and cannot run again on the first driven row.
     }
 
     /** Maps the recorder's bonus_stage_type token to the engine enum. */
@@ -853,55 +849,16 @@ public final class TraceReplaySessionBootstrap {
                 PachinkoEnergyTrapObjectInstance trap =
                         new PachinkoEnergyTrapObjectInstance(bootstrapSpawn);
                 objectManager.addDynamicObject(trap);
-                // The ROM places this object in Dynamic_object_RAM slot 2 from
-                // SpawnLevelMainSprites_SpawnPlayers (sonic3k.asm:8090-8096), and
-                // loc_6468 then runs Load_Sprites/Process_Sprites ONCE before
-                // LevelLoop (sonic3k.asm:7849-7853 vs :7885-7894). So the trap's
-                // init body -- which falls straight through `move.l #loc_49F5C,(a0)`
-                // into loc_49F5C with no rts (sonic3k.asm:96602-96612) -- executes
-                // at Level_frame_counter == 0, one pass BEFORE the first recorded
-                // row, and consumes the first of the `move.b #4*60,$25(a0)`
-                // countdown ticks (ROM bytes 0x49F4C: 117C 00F0 0025).
-                //
-                // Creating the object here reconstructs only the placement, not
-                // that pass. Without it the trap's `subq.b #1,$25(a0) ... else
-                // subq.w #1,y_pos(a0)` rise (sonic3k.asm:96594-96601) begins one
-                // gameplay pass late for the object's whole life, and because
-                // sub_49FE4 writes `move.w y_pos(a0),y_pos(a1)` into every held
-                // player (:96660), a held sidekick reads one pixel low forever.
-                // Run the represented pass for the object this bootstrap created,
-                // the same "the discarded pass also left state nobody rebuilt"
-                // correction as the Collision_response_list publication below.
-                // The V-int the represented pass ran under is the one before the
-                // first recorded row.
-                trap.update(trace.initialVblankCounter() - 1,
-                        GameServices.sprites().getMainPlayable());
             }
         }
         provider.onDeferredSetupComplete();
-        // applyBonusStageEntry reconstructs the ROM state after Level's
-        // one-time Load_Sprites/Process_Sprites setup at loc_6468
-        // (sonic3k.asm:7849-7860). Do not let the fresh fixture's pending
-        // authority execute that represented pass again when the shared
-        // LevelFrameStep begins the bonus-stage interior.
-        GameServices.level().discardPendingInitialProcessSpritesForStateRestoration();
-        // ...but the discarded pass also published Collision_response_list, and
-        // that half was NOT reconstructed above. Every object Process_Sprites
-        // ran at loc_6468 tail-calls Add_SpriteToCollisionResponseList
-        // (sonic3k.asm:21199-21207), so the ROM's first LevelLoop pass reads a
-        // populated list in Touch_Response (sonic3k.asm:20656). S3K's touch pass
-        // consumes the PREVIOUS pass's list, so leaving it empty made every
-        // object touch-ineligible for the whole first pass: the Pachinko round
-        // bumper overlapping Player_2's SpawnLevelMainSprites offset
-        // (leader -$20/+4, sonic3k.asm:8205-8216) could not set
-        // collision_property, so sub_32F34's bounce fired one pass late and the
-        // sidekick's whole state ran a pass behind the recording from row 0 on.
-        // Publish the list the represented pass would have left, without
-        // re-dispatching any object.
-        if (GameServices.level().getObjectManager() != null) {
-            GameServices.level().getObjectManager()
-                    .publishRepresentedInitialCollisionResponseList();
-        }
+        // Preserve the load's admitted initial Process_Sprites token. The
+        // shared applyBootstrap consumes it through the production loc_6468
+        // owner before RNG metadata publication, without a controller row or
+        // logical frame tick. That one walk initializes placed owners as well
+        // as the injected trap and publishes the real collision-response list.
+        // A manual trap-only dispatch plus discarding the full pass left the
+        // Gumball machine uninitialized until the first compared row.
         // The object clock IS V_int_run_count during replay: applyBootstrap seeds
         // it to the pre-row-zero value (initialVblankCounter - 1) and the first
         // serviced V-blank advances it onto row zero's recorded counter, the

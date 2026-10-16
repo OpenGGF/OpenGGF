@@ -28,10 +28,11 @@ class TestSszBossInputAuthorTool {
         Path input = Path.of("src/test/resources/routes/s3k/ssz1-tails-solo-cold-complete-320.bk2");
         Path rom = RomTestUtils.ensureSonic3kRomAvailable().toPath();
         var settings = new GameplayCaptureSession.Settings(320, "tails", "", "off", null, null, null);
-        var result = SszBossInputAuthorTool.run(rom, settings, input, 5090,
+        // 4829: two GHZ hits remain in the 2026-10-15 re-authored cold movie.
+        var result = SszBossInputAuthorTool.run(rom, settings, input, 4829,
                 SszBossInputAuthorTool.Encounter.GHZ, output, 240);
         assertEquals(SszBossInputAuthorTool.Stop.DEFEATED, result.stop());
-        assertTrue(result.frames() > 5090 && result.frames() <= 5330);
+        assertTrue(result.frames() > 4829 && result.frames() <= 5069);
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(output.resolve("input.bk2"));
         var rows = Files.readAllLines(output.resolve("state.csv"));
         assertEquals(result.frames(), movie.getFrameCount());
@@ -50,7 +51,7 @@ class TestSszBossInputAuthorTool {
             assertEquals(0, SszBossInputAuthorTool.Encounter.GHZ.observe().health());
         }
         assertThrows(IllegalArgumentException.class, () -> SszBossInputAuthorTool.run(
-                rom, settings, input, 5090, SszBossInputAuthorTool.Encounter.GHZ, output, 240));
+                rom, settings, input, 4829, SszBossInputAuthorTool.Encounter.GHZ, output, 240));
         assertEquals(rows, Files.readAllLines(output.resolve("state.csv")), "existing evidence is preserved");
     }
 

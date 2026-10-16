@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** Physical SOZ starpost activation followed by the production death/reload loop. */
 @RequiresRom(SonicGame.SONIC_3K)
+@org.junit.jupiter.api.TestMethodOrder(org.junit.jupiter.api.MethodOrderer.OrderAnnotation.class)
 class TestSozCheckpointReloadProduction {
     @AfterEach void reset(){SonicConfigurationService.getInstance().clearSessionOverrides();SessionManager.clear();}
     static Stream<Arguments> scenarios() {
@@ -41,15 +42,29 @@ class TestSozCheckpointReloadProduction {
                     rows.add(Arguments.of(post[0],post[1],post[2],post[3],character,aspect,donor));
         return rows.stream();
     }
+    static Stream<Arguments> shortScenarios() {
+        return Stream.of(Arguments.of(0,1,0x1A30,0x428,"sonic",WidescreenAspect.NATIVE_4_3,"off"),
+                Arguments.of(1,2,0x860,0x5C8,"knuckles",WidescreenAspect.NATIVE_4_3,"off"),
+                Arguments.of(0,1,0x1A30,0x428,"sonic",WidescreenAspect.SUPER_32_9,"s1"),
+                Arguments.of(1,2,0x860,0x5C8,"tails",WidescreenAspect.SUPER_32_9,"s2"));
+    }
+    @org.junit.jupiter.api.Order(1)
+    @ParameterizedTest @MethodSource("shortScenarios")
+    void shortSoloCheckpointsReplayReleasedIncomingWorlds(int act,int index,int x,int y,String character,WidescreenAspect aspect,String donor) {
+        touchCheckpointThenDeathReloadsItsNativePosition(act,index,x,y,character,aspect,donor);
+    }
+    @org.junit.jupiter.api.Order(20)
     @ParameterizedTest @MethodSource("remainingPosts")
     void otherPlacedPostsActivateAndReload(int act,int index,int x,int y,String character,WidescreenAspect aspect,String donor) {
         assertAll(() -> touchCheckpointThenDeathReloadsItsNativePosition(act,index,x,y,character,aspect,donor));
     }
+    @org.junit.jupiter.api.Order(20)
     @ParameterizedTest @MethodSource("scenarios")
     void touchCheckpointThenDeathReloadsItsNativePosition(int act,int index,int x,int y,String character,
             WidescreenAspect aspect,String donor){
         var config=SonicConfigurationService.getInstance();config.clearSessionOverrides();
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE,character);
+        config.setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED,true);
         config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE,"");
         config.setSessionOverride(SonicConfiguration.DISCORD_RICH_PRESENCE_ENABLED,false);
         SozAcceptanceConfigurations.selectDisplay(aspect);
@@ -71,6 +86,7 @@ class TestSozCheckpointReloadProduction {
         assertEquals(!donor.equals("off"),CrossGameFeatureProvider.isActive());
         if(!donor.equals("off"))assertEquals(donor,CrossGameFeatureProvider.getInstance().getDonorGameId());
         assertEquals(!donor.equals("s1"),f.sprite().getGameRules().playerCapability().spindashEnabled());
+        f.stepIdleFrames(1);
         var manager=GameServices.level().getObjectManager();var p=f.sprite();
         assertFalse(GameServices.level().getCheckpointState().isActive());
         for(int i=0;i<60&&!GameServices.level().getCheckpointState().isActive();i++) {
@@ -78,37 +94,73 @@ class TestSozCheckpointReloadProduction {
             f.stepFrame(false,false,false,true,false);
             if(GameServices.level().getCheckpointState().isActive()) {
                 var after=registry.capture();manager.setRewindInPlaceRestoreEnabledForTest(false);
-                registry.restore(before);same(before,registry.capture());
-                f.stepFrame(false,false,false,true,false);same(after,registry.capture());
+                for(int cycle=0;cycle<2;cycle++) {
+                    registry.restore(before);same(before,registry.capture());
+                    f.runner().primeInputState(new com.openggf.debug.playback.Bk2FrameInput(0,0,0,false,""));
+                    f.stepFrame(false,false,false,true,false);same(after,registry.capture());
+                }
             }
         }
         assertEquals(index,GameServices.level().getCheckpointState().getLastCheckpointIndex(),
                 "walking into the real placed post must activate it");
         assertFalse(p.getDead());
-        assertTrue(p.applyPitDeath());
-        var loop=new GameLoop(new InputHandler());loop.setGameplayMode(f.gameplayMode());loop.setGameMode(GameMode.LEVEL);
+        var input=new InputHandler();
+        var neutral=new com.openggf.debug.playback.Bk2FrameInput(0,0,0,false,"");
+        input.setLogicalOverride(com.openggf.debug.playback.RecordedInputSnapshots.fromBk2(neutral,neutral));
+        var loop=new GameLoop(input);loop.setGameplayMode(f.gameplayMode());loop.setGameMode(GameMode.LEVEL);
+        assertTrue(loop.ownsGameplayFadeLifecycle());
         try {
-            boolean reloaded=false;
-            for(int i=0;i<1200;i++){
-                f.gameplayMode().getFadeManager().update();loop.step();
-                if(GameServices.level().getObjectManager()!=manager){
-                    reloaded=true;assertEquals(8,GameServices.level().getCurrentZone());assertEquals(act,GameServices.level().getCurrentAct());
-                    assertEquals(index,GameServices.level().getCheckpointState().getLastCheckpointIndex());
-                    assertEquals(x,GameServices.camera().getFocusedSprite().getCentreX()&65535);
-                    assertEquals(y,GameServices.camera().getFocusedSprite().getCentreY()&65535);
-                    assertFalse(GameServices.camera().getFocusedSprite().getDead());
-                    SozAcceptanceConfigurations.assertDisplay(aspect);
-                    assertEquals(!donor.equals("off"),CrossGameFeatureProvider.isActive());
-                    if(!donor.equals("off"))assertEquals(donor,CrossGameFeatureProvider.getInstance().getDonorGameId());
-                    SozAcceptanceConfigurations.assertUsableTeam(donor);
-                    assertEquals(character,GameServices.camera().getFocusedSprite().getCode());
-                    assertEquals(!donor.equals("s1"),GameServices.camera().getFocusedSprite()
-                            .getGameRules().playerCapability().spindashEnabled());
-                    break;
+            for(int cycle=0;cycle<2;cycle++) {
+                for(int frame=0;frame<30;frame++)step(loop);
+                var outgoingObjects=GameServices.level().getObjectManager();
+                var runtime=GameServices.zoneRuntimeRegistry().current();
+                int lives=GameServices.gameState().getLives();
+                assertTrue(GameServices.sprites().getMainPlayable().applyPitDeath());
+                boolean reloaded=false;int largestOutgoingFrame=0;
+                for(int i=0;i<1200;i++) {
+                    step(loop);
+                    var rewind=f.gameplayMode().getRewindController();
+                    if(GameServices.level().getObjectManager()!=outgoingObjects) {
+                        reloaded=true;assertEquals(8,GameServices.level().getCurrentZone());assertEquals(act,GameServices.level().getCurrentAct());
+                        assertEquals(index,GameServices.level().getCheckpointState().getLastCheckpointIndex());
+                        assertEquals(x,GameServices.camera().getFocusedSprite().getCentreX()&65535);
+                        assertEquals(y,GameServices.camera().getFocusedSprite().getCentreY()&65535);
+                        assertEquals(lives-1,GameServices.gameState().getLives(),"exact life loss at assembly");
+                        assertNotSame(runtime,GameServices.zoneRuntimeRegistry().current());
+                        assertTrue(largestOutgoingFrame>10,"actual outgoing history");
+                        assertTrue(rewind==null||rewind.currentFrame()<largestOutgoingFrame,"isolated incoming history");
+                        assertOwners(character,aspect,donor);break;
+                    }
+                    if(rewind!=null)largestOutgoingFrame=Math.max(largestOutgoingFrame,rewind.currentFrame());
                 }
+                assertTrue(reloaded,"native death countdown must reach GameLoop reload");
+                boolean released=false;
+                for(int frame=0;frame<500;frame++) {
+                    step(loop);var title=GameServices.module().getTitleCardProvider();
+                    if(loop.getCurrentGameMode()==GameMode.LEVEL&&(title==null||title.isComplete())
+                            &&!f.gameplayMode().getFadeManager().isActive()
+                            &&!f.gameplayMode().getFadeManager().hasPendingCompletion()
+                            &&!GameServices.level().hasPendingFreshLevelTransitionBoundary()
+                            &&!GameServices.sprites().getMainPlayable().isControlLocked()) {released=true;break;}
+                }
+                assertTrue(released,"actual title/fade/control release");
+                assertEquals(lives-1,GameServices.gameState().getLives(),"release hides no restart");
+                CheckpointIncomingReplay.verify(f,loop,input,index,()->assertOwners(character,aspect,donor));
             }
-            assertTrue(reloaded,"native death countdown must reach GameLoop reload");
         }finally{loop.closePresence();}
+    }
+    private static void step(GameLoop loop) {
+        loop.step();GameServices.graphics().runPendingRenderThreadTasks();
+    }
+    private static void assertOwners(String character,WidescreenAspect aspect,String donor) {
+        var player=GameServices.sprites().getMainPlayable();
+        assertSame(player,GameServices.camera().getFocusedSprite());assertFalse(player.getDead());
+        assertEquals(character,player.characterKey().persisted());
+        assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
+        SozAcceptanceConfigurations.assertDisplay(aspect);SozAcceptanceConfigurations.assertUsableTeam(donor);
+        assertEquals(!donor.equals("off"),CrossGameFeatureProvider.isActive());
+        if(!donor.equals("off"))assertEquals(donor,CrossGameFeatureProvider.getInstance().getDonorGameId());
+        assertEquals(!donor.equals("s1"),player.getGameRules().playerCapability().spindashEnabled());
     }
     private static void same(com.openggf.game.rewind.CompositeSnapshot expected,
             com.openggf.game.rewind.CompositeSnapshot actual) {

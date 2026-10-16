@@ -118,6 +118,35 @@ class TestLevelSpritePresentation {
         assertArrayEquals(new short[] {-3, 12}, snapshot.backgroundColumns());
     }
 
+    @Test void effectBridgeRetainsPublishedBuffersAcrossPendingPreparationRestoreAndReset() {
+        var level = org.mockito.Mockito.mock(LevelManager.class);
+        level.gameModule = org.mockito.Mockito.mock(com.openggf.game.GameModule.class);
+        org.mockito.Mockito.when(level.gameModule.getLevelInitProfile()).thenReturn(new Sonic3kLevelInitProfile(null));
+        level.parallaxManager = org.mockito.Mockito.mock(ParallaxManager.class);
+        org.mockito.Mockito.when(level.parallaxManager.getHScrollForShader()).thenReturn(new int[] {99});
+        org.mockito.Mockito.when(level.parallaxManager.getVscrollFactorBG()).thenReturn((short) 17);
+        org.mockito.Mockito.when(level.parallaxManager.getBgPeriodWidth()).thenReturn(1024);
+        var renderer = new LevelRenderer(level);
+        org.mockito.Mockito.when(level.spritePresentationRenderer()).thenReturn(renderer);
+        renderer.spriteTables.prepare(frame(1), scroll(-8, (short) 200));
+        renderer.spriteTables.publish();
+        renderer.spriteTables.prepare(frame(2), scroll(12, (short) 300));
+        var captured = renderer.spriteTables.capture();
+        var displayed = LevelSpritePresentation.backgroundScrollForDraw(level);
+        assertArrayEquals(new int[] {8 << 16}, displayed.horizontal());
+        assertEquals(-5f, displayed.y());assertEquals(512, displayed.period());
+        displayed.horizontal()[0] = 77;
+        assertArrayEquals(new int[] {8 << 16}, displayed.horizontal(), "readers cannot mutate the draw generation");
+        renderer.spriteTables.publish();
+        assertArrayEquals(new int[] {-12 << 16}, LevelSpritePresentation.backgroundScrollForDraw(level).horizontal());
+        renderer.spriteTables.restore(captured);
+        assertArrayEquals(new int[] {8 << 16}, LevelSpritePresentation.backgroundScrollForDraw(level).horizontal(),
+                "restore must select displayed output without another ordinary or deformation pass");
+        renderer.spriteTables.resetForMissingSnapshot();
+        var live = LevelSpritePresentation.backgroundScrollForDraw(level);
+        assertArrayEquals(new int[] {99}, live.horizontal());assertEquals(17f, live.y());assertEquals(1024, live.period());
+    }
+
     private static LevelScrollPresentation scroll(int x, short y) {
         return new LevelScrollPresentation(new LevelScrollPresentation.Registers(x, y, x - 3,
                 y, (short) -5, x / 2, 512, false, false, false,

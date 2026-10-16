@@ -28,6 +28,7 @@ final class EngineSettingLabels {
             case DISPLAY_SHADER_PICKER_KEY -> "Shader picker shortcut";
             case DISPLAY_SHADER_DEFAULT_PHASE -> "Shader rendering phase";
             case DISPLAY_COLOR_PROFILE -> "Colour profile";
+            case DISPLAY_COLOR_EXPANSION -> "Colour expansion";
             case DISPLAY_COLOR_PROFILE_TOGGLE_KEY -> "Colour profile shortcut";
             case WIDESCREEN_DEADZONE_MODE -> "Wide camera movement";
             case AUDIO_ENABLED -> "Music and sound effects";

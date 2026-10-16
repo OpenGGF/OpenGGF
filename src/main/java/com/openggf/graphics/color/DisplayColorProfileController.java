@@ -16,6 +16,13 @@ public final class DisplayColorProfileController {
     private final Consumer<DisplayColorProfile> applyProfile;
     private final Runnable refreshPalettes;
     private DisplayColorProfile currentProfile;
+    private SonicConfigurationService savedConfig;
+    private GraphicsManager graphics;
+    // Last raw saved strings consumed by synchronizeSavedSettings(); an unchanged
+    // configuration value is skipped without parsing, keeping the per-frame path
+    // allocation-free.
+    private String syncedProfileValue;
+    private String syncedExpansionValue;
     private String notificationText;
     private int notificationFramesRemaining;
 
@@ -46,11 +53,9 @@ public final class DisplayColorProfileController {
         Objects.requireNonNull(graphicsManager, "graphicsManager");
         Objects.requireNonNull(refreshPalettes, "refreshPalettes");
 
-        DisplayColorProfile profile = DisplayColorProfile.parse(
-                configService.getString(SonicConfiguration.DISPLAY_COLOR_PROFILE));
-        graphicsManager.setDisplayColorProfile(profile);
+        DisplayColorProfile profile = applySavedSettings(configService, graphicsManager);
 
-        return new DisplayColorProfileController(
+        DisplayColorProfileController controller = new DisplayColorProfileController(
                 profile,
                 configService.getInt(SonicConfiguration.DISPLAY_COLOR_PROFILE_TOGGLE_KEY),
                 nextProfile -> {
@@ -59,6 +64,48 @@ public final class DisplayColorProfileController {
                 },
                 graphicsManager::setDisplayColorProfile,
                 refreshPalettes);
+        controller.savedConfig = configService;
+        controller.graphics = graphicsManager;
+        controller.syncedProfileValue = configService.getString(SonicConfiguration.DISPLAY_COLOR_PROFILE);
+        controller.syncedExpansionValue = configService.getString(SonicConfiguration.DISPLAY_COLOR_EXPANSION);
+        return controller;
+    }
+
+    /**
+     * Applies the saved display profile and expansion to a renderer. The windowed
+     * engine and every headless/capture boot share this owner, so a saved Limited
+     * setting reaches captured frames exactly as it reaches the window.
+     */
+    public static DisplayColorProfile applySavedSettings(SonicConfigurationService configService,
+                                                         GraphicsManager graphicsManager) {
+        Objects.requireNonNull(configService, "configService");
+        Objects.requireNonNull(graphicsManager, "graphicsManager");
+        DisplayColorProfile profile = DisplayColorProfile.parse(
+                configService.getString(SonicConfiguration.DISPLAY_COLOR_PROFILE));
+        graphicsManager.setDisplayColorProfile(profile);
+        graphicsManager.setDisplayColorExpansion(DisplayColorExpansion.parse(
+                configService.getString(SonicConfiguration.DISPLAY_COLOR_EXPANSION)));
+        return profile;
+    }
+
+    /** Apply saved settings independently of shortcut ownership, including while the settings menu is open. */
+    public void synchronizeSavedSettings() {
+        if (savedConfig == null) return;
+        String profileValue = savedConfig.getString(SonicConfiguration.DISPLAY_COLOR_PROFILE);
+        if (!profileValue.equals(syncedProfileValue)) {
+            syncedProfileValue = profileValue;
+            DisplayColorProfile profile = DisplayColorProfile.parse(profileValue);
+            if (profile != currentProfile) {
+                currentProfile = profile;
+                applyProfile.accept(profile);
+                refreshPalettes.run();
+            }
+        }
+        String expansionValue = savedConfig.getString(SonicConfiguration.DISPLAY_COLOR_EXPANSION);
+        if (!expansionValue.equals(syncedExpansionValue)) {
+            syncedExpansionValue = expansionValue;
+            graphics.setDisplayColorExpansion(DisplayColorExpansion.parse(expansionValue));
+        }
     }
 
     public void update(InputHandler inputHandler) {

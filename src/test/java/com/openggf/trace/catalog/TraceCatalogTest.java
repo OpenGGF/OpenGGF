@@ -39,6 +39,62 @@ class TraceCatalogTest {
     }
 
     @Test
+    void directRunSegmentResolvesItsContainingManifestMovie(@TempDir Path root) throws Exception {
+        Path run = TraceV5RunFixture.writeS3kBonusRun(root.resolve("s3k/runs"));
+        Path movie = TraceV5RunFixture.writeMovie(run.resolve("synthetic.bk2"));
+        var entries = TraceCatalog.scan(run);
+        assertEquals(3, entries.size(), "ordinary segment discovery must reuse the containing run movie");
+        assertTrue(entries.stream().noneMatch(TraceEntry::isRun));
+        assertTrue(entries.stream().allMatch(entry -> entry.bk2Path().equals(movie)));
+    }
+
+    @Test
+    void directRunSegmentUsesTheSameSharedMoviePriorityAsTheRun(@TempDir Path root) throws Exception {
+        Path run = TraceV5RunFixture.writeS3kBonusRun(root.resolve("s3k/runs"));
+        TraceV5RunFixture.writeMovie(run.resolve("synthetic.bk2"));
+        Path shared = TraceV5RunFixture.writeMovie(root.resolve("s3k/_movies/synthetic.bk2"));
+        var entries = TraceCatalog.scan(run);
+        assertEquals(3, entries.size());
+        assertTrue(entries.stream().allMatch(entry -> entry.bk2Path().equals(shared)));
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"run_id", "source_bk2", "segment_index"})
+    void containingRunCannotLendItsMovieToAnUnmatchedSegmentHeader(String field, @TempDir Path root)
+            throws Exception {
+        Path run = TraceV5RunFixture.writeS3kBonusRun(root.resolve("s3k/runs"));
+        TraceV5RunFixture.writeMovie(run.resolve("synthetic.bk2"));
+        TraceV5RunFixture.writeMovie(run.resolve("other.bk2"));
+        Path segment = run.resolve("seg00_aiz");
+        Path metadata = segment.resolve("metadata.json");
+        String text = Files.readString(metadata);
+        text = switch (field) {
+            case "run_id" -> text.replace("\"run_id\":\"run_aiz_gumball_3seg\"", "\"run_id\":\"other\"");
+            case "source_bk2" -> text.replace("synthetic.bk2", "other.bk2");
+            default -> text.replace("\"segment_index\":0", "\"segment_index\":2");
+        };
+        Files.writeString(metadata, text);
+        assertTrue(TraceCatalog.scan(run).stream().noneMatch(entry -> entry.dir().equals(segment)));
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void directRunSegmentRejectsMovieTraversalAndAbsoluteAliases(boolean absolute, @TempDir Path root)
+            throws Exception {
+        Path run = TraceV5RunFixture.writeS3kBonusRun(root.resolve("s3k/runs"));
+        Path outside = TraceV5RunFixture.writeMovie(run.resolve("outside.bk2"));
+        Files.createDirectories(run.resolve("_movies"));
+        String alias = absolute ? outside.toAbsolutePath().toString() : "../outside.bk2";
+        Path manifest = run.resolve("run_manifest.json");
+        Files.writeString(manifest, Files.readString(manifest).replace("synthetic.bk2", alias));
+        for (String name : List.of("seg00_aiz", "seg01_gumball", "seg02_aiz")) {
+            Path metadata = run.resolve(name).resolve("metadata.json");
+            Files.writeString(metadata, Files.readString(metadata).replace("synthetic.bk2", alias));
+        }
+        assertTrue(TraceCatalog.scan(run).isEmpty(), "run movie resolution rejects unsafe source paths");
+    }
+
+    @Test
     void scanFiltersInvalidDirsAndSortsByGameZoneAct(@TempDir Path tmp) throws Exception {
         writeValidTrace(tmp.resolve("s3k/z_cnz"), "s3k", 11, 0);
         writeValidTrace(tmp.resolve("s1/ghz1"), "s1", 0, 0);

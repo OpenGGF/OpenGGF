@@ -313,3 +313,142 @@ presentation products are separate obligations.
 The command records normalize only machine-local paths: `S3K_TASK_QUEUE` is
 the updated main-workspace focused wrapper, and `S3K_TASK_ROM` is the absolute
 existing locked-on ROM path with the documented supported SHA-1.
+
+
+## Released checkpoint-world replay follow-up (2026-10-14)
+
+The existing physical-post death driver now uses only the production GameLoop
+fade owner and services pending render work after each tick. It checks exactly
+one life lost at fresh assembly and after actual title/fade/control release,
+then captures and replays the complete registered incoming world twice in both
+restore directions after EACH of two real deaths. Every45-input branch requires
+an alive leader, unchanged lives/post, retained roster/donor/viewport and the
+same current runtime/object manager; a raw restore never crosses a load.
+Short independent native320/S2-Tails800 witnesses precede the product methods.
+
+This act contributes175 products over all its authored posts and all five
+production presets, using native Sonic, Tails and Sonic+Tails; S1 Sonic and S2 Sonic/Tails/pair. The composed
+`262e9bbb10bb317d183dbf289dcfa8568fa0258c` plus final test changes passes the
+12 short witnesses in request93678 at12:58:56 UTC, then all1077 affected
+products in63733 at13:13:31 UTC, zero failures/errors/skips (3:32 Maven,
+queue wait separate). DEZ2 post5 still reaches its placed gravity writer through
+ordinary movement and verifies the real inverted death and native cleared
+gravity after reload. This adds incoming-world replay to the previously
+qualified physical contact/death scope; other unchanged checks were not repeated.
+[Exact selectors and source hashes](../../plans/2026-10-13-s3k-playable-completion.md#existing-checkpoint-driver-qualification-2026-10-14)
+are in the completion plan. Further roster and mechanic/cold-route products remain open. No native pixel/audio, overall act
+certification, full-suite or combined delivery claim follows.
+
+
+### Knuckles physical checkpoint follow-up (2026-10-14)
+
+`TestMhzCheckpointRoutes.knucklesPhysicallyTouchesAndReplaysEveryPost` adds
+5 native Knuckles physical contacts in this act with two full-registry
+contact replay cycles. `knucklesPreservesItsRouteAcrossBothDeathsAndIncomingWorlds`
+adds25 products over every authored post and all five selectable widths.
+Each uses the qualified actual two-death driver, exact life loss, native character
+and retained route, fresh object manager, timeline isolation and two45-input
+forward/reverse full-world cycles after EACH released death. They are declared
+local approaches, not new cold traversals. Donor sanitization still excludes
+Knuckles from S1/S2 products.
+
+On source`64f419a3b3a0a9a81b9cfeeb26b55090114f2930` plus the final test draft,
+request50826 finishes at13:19:59 UTC: all54 added MHZ cases pass, zero errors
+or skips (10.55s class). Its separate five-case Bubbler identity regression
+contains two genuine failures; this mixed invocation is not a green delivery
+gate. Together with the distinct315 preceding MHZ death products, the current
+qualified lifecycle floor is360 (Act1=200,Act2=160), not a single pristine360
+invocation. Further rosters, mechanics, cold-route and native visual/audio
+breadth remain explicit obligations.
+
+## Solo Sonic movies re-authored for the native carry-in Tails (2026-10-15)
+
+aedc137a1 installs the ROM's temporary carry-in Tails for locked-on solo Sonic
+(`SpawnLevelMainSprites` `loc_68C2`→`loc_68D8`, sonic3k.asm:8180-8197). The old movies
+started on the ground; under the carrier they miss both opening rings and reach the
+Knuckles clamp (`Obj_MHZ1CutsceneKnuckles` `loc_62CF8`, x=$389) 39 frames early. The
+carry-in also changes the RNG from frame 0, so no opening can restore the old run exactly:
+every opening that lands the cutscene on the old frame 232 has the same new RNG, and none of
+1596 (320px) / 1126 (800px) distinct such openings (300 replayed each) keeps the old
+remainder working past the pulley and sticky vine. No runtime behaviour changed.
+
+Re-author, controller-only from a cold boot: jump off the carrier (`20 R; 1 R+A; 37 R;
+1 R+A; 28-40 R`), collect both rings, stop in the tunnel and walk into the clamp on frame
+231 so the cutscene lands on 232 and releases on 863 exactly as before. The remainder
+tracks the old route's trajectory frame by frame (reference: the current engine with the
+carry-in sprite removed before the first frame, which reproduces the behaviour lane's old
+CSV exactly to 23485): the old input for the same frame while P1 stays within 4px of the
+reference, otherwise a 60-frame trajectory-cost search from rewind marks; every committed
+movie is accepted only from an uninterrupted cold replay. Restore gaps found on the way
+(below) were bridged in the temporary authoring helper only (carrying the mushroom cap's
+player maps across marks, replaying old inputs straight through repeated divergences).
+
+| Movie | Old SHA-256 | New SHA-256 | Frames | Milestones (new; old) | Status |
+|---|---|---|---|---|---|
+| `mhz1-sonic-cold-complete-800.bk2` | `04a103e0e06bb48bdbf9757bdd0892ee3bcbbc8fbd234b642b5b150d1e0f4723` | `1fd85032cbfb152ab158419f9a0dc3b78c4615d0df5cb6943ed19c37ef323757` | 10330 | pulley 3671, sticky vine 4870, miniboss 8182…defeat 8829, MHZ2 9260 — all identical to old; old MHZ2 tail unchanged | green (frame-keyed spots unchanged) |
+| `mhz1-sonic-fresh-320.bk2` | `b56e810e5759a89964efd501cf77e34f16a48700caab6d0b1e856ee513114a89` | `e7e16005f91fc38f8c9dd4afcd9a9788196a9b47a56aeb7c229f2732a4bac2a5` | 9471 | pulley 3518 (3518), sticky vine 5410 (5410), miniboss 7241…defeat 8114 (7948); hold right to the act end, MHZ2 8617 at x=448 (8469, 448); release 9148 (8979); leaf-blower grab 9340 (9176) | green after the rewind fixes below (movie unchanged) |
+
+The fresh movie is the first 9471 inputs of the re-authored incoming 320 movie (MHZ act 2
+record). `TestS3kMhzAuthoredRoute` reaches pulley, sticky vine and all six miniboss hits,
+then fails its own `restore act-two-released at 9257` check: after `registry.restore` the
+active objects gain a `FireShieldObjectInstance:fixed` that did not exist at capture (P1
+701,1906, VInt 9257, level timer 603, RNG `6a65b7fb`). The old route reached the same
+position (704,1905) without a shield; the new act-1 history differs. This is a rewind
+fidelity defect, not an authoring or gameplay one; the row stays red until it is fixed.
+
+Rewind fidelity findings from this authoring (cold replay vs. restored replay of the same
+inputs; fixed afterwards, see the next section):
+1. `MhzMushroomCapObjectInstance` keeps `previousYVelocities`, `lastLaunchFrames` and
+   `standingPlayers` in identity maps keyed by player sprites; restore does not recover
+   them, so a restored player standing on a cap bounces at −$680 instead of the live −$780
+   (`launchStandingPlayerOnSpringFrame`; 320px route frame 3903).
+2. Registry capture refuses some frames with `Invalid rewind reference at
+   MushmeanieBadnikInstance$ShellChild#parent` (800px, frames ~6790-6861).
+3. The resurrected `FireShieldObjectInstance` above.
+4. Unidentified 1-7px y restore drift in MHZ2 at 800px among mushroom caps and pollen
+   (first at 11320, P1 3911,1645, VInt 11320, timer 2029, RNG `e1f02cdb`; again 14132,
+   P1 8954,1102, VInt 14132, timer 4841, RNG `9bb599f3`).
+
+Validation on 923399354 (focused selectors through `tools/testing/maven_queue.py`, normal lane,
+S3K/S1/S2 ROMs, run `v-mhz`, Maven Finished 21:07:07Z, 6 tests, no errors or skips):
+`TestS3kMhzWideAuthoredRoute` 1/0, `TestS3kMhzAct2AuthoredRoute` 3/0;
+`TestS3kMhzAuthoredRoute` 1 failure (`restore act-two-released at 9257`, the FireShield
+restore defect above); `TestMhzWideColdRouteCapture` 1 failure (zone 7 at 29700 with the
+unchanged incoming 800 movie; stopped, see the MHZ act 2 record).
+
+### Rewind fidelity fixes (2026-10-16, `902ba8a10`)
+
+A dense sweep (capture every 10 inputs, play 30, restore, replay and compare P1 rows plus every
+registry key; never across act, fresh-load, mode or fade boundaries; now the `RewindFidelitySweep`
+tool, with `TestMhzRewindFidelitySweep` pinning the fixed MHZ1 sites) over
+`mhz1-sonic-fresh-320`, `mhz1-sonic-cold-complete-800`, the incoming-800 candidate and
+`mhz2-sonic-incoming-320` located each defect; red-first focused tests cover them.
+
+| # | Defect | Cause | Fix | Test |
+|---|---|---|---|---|
+| D1 | restored bounce −$680 vs live −$780 | `Obj_MHZMushroomCap` `$30/$32` y_vel and standing set held in uncaptured identity collections | `CAPTURED` policies; drop records of sprites that left the player slots (carry-in Tails) | `TestS3kMhzMushroomCapRewind` |
+| D2 | capture refused at `ShellChild#parent` (800px 6827-6860) | launched shell kept a Java link to the body its second hit deleted | drop the link at launch (`loc_8DC42` is the last parent read); spawn-based recreation, parent relinked by id | `TestS3kMushmeanieShellRewind` |
+| D3 | `FireShieldObjectInstance` "resurrected" at 9257 | live bug: `PERSISTENT_EXACT_SST` transitions dropped the player's shield/stars owners (the fire shield from 6721 left the manager at MHZ2 8617 while the player kept it); restore re-spawned it correctly | register owners the carry did not retain (`Shield`/`Invincibility_stars` are fixed `Level_object_RAM` slots) | `TestS3kFixedSstTransitionRewind#playerBoundPowerUpsSurviveThePersistentExactSstCarry` |
+| D4 | 1-5px y drift after restore (800px MHZ1 6860-6880; 320px 5550, 5790) | `Obj_MHZCurledVine` `$36/$37` segment map, catapult riders and dropping-platform riders uncaptured | `CAPTURED` policies | `TestS3kMhzRiderCollectionRewind` (the platform case also passes without its policy; the 320px sweep at 5550 is its evidence) |
+
+The reported MHZ2 800px drift sites (11320, 14132) replay identically after the fixes; they were
+the same rider/cap family (the authoring helper's cap carry keyed on a moving spawn). Sweeps on
+the fixed tree: fresh-320 0-9470, complete-800 0-10329 and the incoming-800 candidate 0-15100
+show no P1 drift; incoming-320 MHZ2 9471-23906 none before the FBZ load. The restore refusal
+during the FBZ fade is policy, not a gap: live rewind is rejected and its history cleared while
+a fade with a completion callback is pending (`LiveRewindManager` `rewindBlocked`), and
+`PlcFrameLifecycleCoordinator.beginNativeBlockingFade` refuses a second fade when a raw
+registry restore crosses one.
+
+Remaining snapshot-only inequalities (no P1/gameplay effect, outside the route tests' spots):
+the MHZ1 carry-in Tails is recreated by restores in its first ~100 frames and solid-contact
+headroom/plane-switcher snapshots keep direct references to the replaced instance; MHZ2's
+Knuckles-cutscene leaf particles recreate with a zero spawn record. Outside MHZ, unverified
+per-player identity collections without a policy: `CorkFloorObjectInstance.standingRiders`,
+`LbzMovingPlatformObjectInstance.standingPlayers`, `SinkingMudObjectInstance` maps.
+
+Validation (focused selectors via `maven_queue.py`, normal lane, S3K/S1/S2 ROMs): run `p6`
+(Maven EXIT 22:33:17Z) 139 tests, 0 failures/errors/skips, including `TestS3kMhzAuthoredRoute`,
+`TestS3kMhzWideAuthoredRoute`, `TestS3kMhzAct2AuthoredRoute`, `TestMhzKnucklesColdRouteCapture`
+and the MHZ object/rewind classes; run `p7` (22:47:20Z) 624 tests, 0 failures/errors/skips,
+including policy/transition tests and the four S3K guards.

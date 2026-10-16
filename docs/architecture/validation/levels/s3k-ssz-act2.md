@@ -466,3 +466,65 @@ for native ordering and scope, and [combined qualification](../../audits/2026-10
 for exact commands/frontiers. [Actual-main qualification](../../audits/2026-10-07-stock-parity-gap-verification.md#actual-main-delivery-qualification)
 retains 27 concrete inherited ordinary failures and 62 literal skips with zero
 errors; all 672 fresh guards pass. This preserves the route/breadth limits above.
+
+## Cold LRZ→HPZ→SSZ2 Knuckles campaign through the title (2026-10-15)
+
+`TestS3kLrzHpzSszColdCampaign#knucklesColdCampaignClearsSkySanctuaryTwoThroughTheEndingAndTitle`
+replays one uninterrupted controller-only movie from the declared `boot(9,0)` LRZ1 inlet
+(no emerald, position, clock or RNG seeds): LRZ2 `Obj_StartNewLevel`, HPZ `loc_45B94`,
+the SSZ2 crane, both Mecha fights, `loc_7BCB0`, the flight, both credit parts, the
+post-credits owner and controller Start to the title. Cold Knuckles has no emeralds, so
+the ending runs progress −2 (Mecha charge scene).
+
+| Movie | SHA-256 | Inputs | Source |
+|---|---|---|---|
+| `lrz-knuckles-cold-hpz-ssz2-ending-320.bk2` | `6408ae378f849a01615260c5cdec641b01d72a9b1d35dd8df56f18ecfcdf009a` | 72384 | inputs 0–51586 equal `lrz-knuckles-cold-hpz-ssz2-320.bk2` (`aef01eab70e802005b6ead7cdfdcc845e4d5f36f1c945bc10699ef456d4a737b`, the fade-retimed `c1ae1018…`) through the crane release |
+
+Authoring, base ef61a560f: A1 measured the direct `ssz2-final-defeat` release at input
+1335 and the joined release at 51586 with identical P1 (544,1196), camera (256,1024),
+3 rings and Mecha state; only V_int (412101 vs 51540) and the RNG seed differ. A2, the
+direct fight inputs spliced after the joined release, scored two hits and died at direct
+input 3447 because `loc_7B2DC` reseeds Mecha's RNG from V_int; it was rejected.
+A3, one bounded `SszBossInputAuthorTool --boot 9:1 … mecha2` search from the 51587-input
+cold prefix (262.6 s), reached `act2EndingActive` at input 58133 without a death. The tail
+is neutral, then Start held once the post-credits owner reaches phase 4 after both credit
+parts (the `TestS3kKnucklesEndingLifecycleCapture` policy), recorded into the movie.
+
+Fresh replay (run `cold-k-verify2`, Maven Finished 05:05:20Z): 1/0/0/0, HPZ load 49297,
+SSZ2 load 50160, crane release 51586, final defeat (`loc_7BCB0`) 58132, flight 58252,
+title 72383; eight plus eight single-hit decrements, `loc_7BBE0` Super entry with eight
+hits and routine 2; 45-input two-cycle whole-world replays at both phases' first hit and
+low health, the first defeat, Super entry and final defeat; 30-input replays at flight
+jump, plane turn, small plane, both credit parts, banner and Mecha charge. Every frame is
+drawn, as the joined chain and the author do. The run exposed Mecha retaining its deleted
+final-fade child through stage 4, which made any capture there fail; the reference is now
+cleared when `loc_7BCB0` advances (`TestS3kSszAct2ColdFight` 2/0/0/0,
+`TestS3kSszAct2FinalFight` 2/0/0/0, `TestS3kKnucklesEndingLifecycleCapture` 9/0/0/0).
+
+Engine pictures (320 px) at script-owned moments are in
+`$HOME/Videos/OGGF/s3k-parity-coverage-2026-10-14/spot-checks/cold-campaign-v1/k/` and were
+inspected: HPZ pad rise, SSZ2 arrival swing, crane release (Mecha in the crane, 3 rings),
+Master Emerald Super entry, final white fade, island flight, credits text, banner and title
+are coherent scenes. Three items were flagged for native comparison; the
+campaign-visual lane (2026-10-15) compared them against native frames of
+`runs/s3k-knuckles-complete-superemeralds` selected by RAM state only, not frame offsets
+(owned read-only adapter, savestate near each window; pictures, RAM/VRAM/CRAM/SST dumps and
+`provenance.json` in `$HOME/Videos/OGGF/s3k-parity-coverage-2026-10-14/spot-checks/campaign-visual-v1/`).
+Engine windows were re-rendered from the same cold movie with `DISPLAY_COLOR_EXPANSION=LIMITED`
+and `RAW_RGB`; native frames are 348×240 with the active 320×224 at (14,8).
+
+| Flag | Native (selector) | Engine | Verdict |
+| --- | --- | --- | --- |
+| HPZ frame 49298: no HUD, no player | `$1601` edge at input 411365: title card over black, then the HUD from the first visible gameplay frame (LFC 1); Knuckles starts at X `$10` behind camera `$20` and walks in | capture omits the title-card presentation; LFC 1 has no HUD, LFC 2 onward has it; Knuckles at X 16, camera 24→32 | No player: native. Missing HUD on one frame: the capture's omitted title loop (a direct `$1601` boot with the card shown draws the HUD on the first level frame). See the [HPZ matrix](s3k-hpz-act.md) for the fade-in difference this exposed |
+| Mecha blue on phase-2 first hit | SST code `$7BD4C` (`Obj_SSZ2_Boss`) `collision_property` 8→7 edge at 416445: CRAM line 2 `$08/$14/$16/$18/$1C` = `8,A24,624,422,20`; next frame the `FixBugs=0` flash row `20,888,666,888,AAA`, alternating | same sequence | Native: `sub_7D3BE` writes the ordinary Mecha colours over the Super palette on every even flash frame |
+| One-pixel black line across both credit parts | `$FA86=4`, `$FA84>2`, `$FAAE` 0/4 edges (422795, 428089): no line; island box and `Map_KnuxEndingIslandMask` both at line 48, BG copy `$D0.4000`, mask `y_pos $F0` | box at 46 (BG copy `$D2`), mask jittering 46–49 | Engine defects, fixed in `13e2e9025` (`loc_5E70E` clears `Screen_shake_flag`; mask projected with the render copy). Re-rendered credits: BG copy `$D0`, no line in any captured frame |
+
+The same comparison found two further engine differences: the special-stage results backdrop
+(fixed in `a34473db8`, recorded in the [LRZ act 2 matrix](s3k-lrz-act2.md)) and blank credits
+part two (`d10afbcdc`, recorded in the [ending matrix](s3k-ending.md)). The native run carries
+Super emeralds, so its post-credits terminal is the S3 eyecatch; the cold movie's banner/Mecha
+terminal has no native counterpart here.
+
+Limits: the boot inlet has no save session, so the final full save is covered by the
+save-site tests (`TestS3kLrzHpzSszColdCampaign`) rather than read back here; ending
+progress 0/2 and wide/PAL breadth remain with the direct-SSZ2 lifecycle tests.

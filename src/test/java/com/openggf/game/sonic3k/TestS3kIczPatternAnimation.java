@@ -70,12 +70,14 @@ class TestS3kIczPatternAnimation {
         camera.setX((short) 0x3940);
         camera.setY((short) 0x0700);
         animator.update();
+        ((Sonic3kLevelAnimationManager) animator).publishAniPlcAtVBlank();
         byte[] phaseA = snapshotTiles(level, 0x10E, 0x116, 0x122, 0x12A, 0x12E, 0x130);
 
         int[] candidateXs = {0x3960, 0x3980, 0x39C0, 0x3A00, 0x3A40, 0x3A80, 0x3AC0};
         for (int candidateX : candidateXs) {
             camera.setX((short) candidateX);
             animator.update();
+            ((Sonic3kLevelAnimationManager) animator).publishAniPlcAtVBlank();
             byte[] shifted = snapshotTiles(level, 0x10E, 0x116, 0x122, 0x12A, 0x12E, 0x130);
             if (!Arrays.equals(phaseA, shifted)) {
                 return;

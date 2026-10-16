@@ -2152,9 +2152,10 @@ public final class Sonic1SpecialStageManager implements com.openggf.game.interna
         Palette.Color backdrop = getBackdropColor();
         float bdR = 0, bdG = 0, bdB = 0;
         if (backdrop != null) {
-            bdR = backdrop.rFloat();
-            bdG = backdrop.gFloat();
-            bdB = backdrop.bFloat();
+            int displayed = com.openggf.level.PaletteDisplayColor.packed(backdrop, graphicsManager);
+            bdR = com.openggf.level.PaletteDisplayColor.red(displayed);
+            bdG = com.openggf.level.PaletteDisplayColor.green(displayed);
+            bdB = com.openggf.level.PaletteDisplayColor.blue(displayed);
         }
         renderer.setBackdropColor(bdR, bdG, bdB);
         if (bgRenderer != null) {

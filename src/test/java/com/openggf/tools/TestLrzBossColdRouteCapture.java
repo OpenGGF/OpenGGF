@@ -25,19 +25,19 @@ class TestLrzBossColdRouteCapture {
         // Flash, missiles, autoscroll changes, bridge/stair/platform contacts,
         // shield pickup, arena descent, mine cycles, defeat, capsule and results.
         // Independent HPZ spots follow the load; no replay window crosses it.
-        var spots = Set.of(43770, 43900, 44040, 44300, 44540, 44661, 44716,
-                44840, 45000, 45141, 45211, 45422, 45522, 45586, 45685, 45761,
-                45840, 46000, 46273, 46348, 46410, 46450, 46514, 46700, 46900,
-                47100, 47220, 47340, 47460, 47640, 47700, 47820, 47940, 48120,
-                48300, 48540, 48720, 48900, 49080, 49260, 49500, 49740, 49920,
-                50160, 50400, 50640, 50820, 51000, 51240, 51480, 51630, 51690,
-                51780, 51840, 51960, 52080, 52260, 52500, 52800, 52850, 52950, 52990);
+        var spots = Set.of(43781, 43911, 44051, 44311, 44551, 44672, 44727,
+                44851, 45011, 45152, 45222, 45433, 45533, 45597, 45696, 45772,
+                45851, 46011, 46284, 46359, 46421, 46461, 46525, 46711, 46911,
+                47111, 47231, 47351, 47471, 47651, 47711, 47831, 47951, 48131,
+                48311, 48551, 48731, 48911, 49091, 49271, 49511, 49751, 49931,
+                50171, 50411, 50651, 50831, 51011, 51251, 51491, 51641, 51701,
+                51791, 51851, 51971, 52091, 52271, 52511, 52811, 52861, 52972, 53012);
         var checked = new HashSet<Integer>();
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "tails", "off", null,
                 null, null, null, false, false, null, null, false, null, false);
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/lrz-boss-sonic-tails-cold-hpz-320.bk2"));
-        assertEquals(53047, movie.getFrameCount());
+        assertEquals(53069, movie.getFrameCount());
         boolean sawBoss = false, sawCapsule = false, sawResults = false;
         var drawing = new RouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
@@ -46,20 +46,20 @@ class TestLrzBossColdRouteCapture {
                 session.step(movie.getFrame(frame));
                 drawing.afterStep(session);
                 assertFalse(session.player().getDead(), "death at input " + frame);
-                if (frame < 43761) continue;
+                if (frame < 43772) continue;
                 var manager = GameServices.level().getObjectManager();
                 sawBoss |= !manager.activeObjectsOfType(LrzEndBossObjectInstance.class).isEmpty();
                 sawCapsule |= !manager.activeObjectsOfType(LrzEndBossEggCapsule.class).isEmpty();
                 sawResults |= !manager.activeObjectsOfType(LrzEndBossEggCapsule.Results.class).isEmpty();
-                if (frame == 43761) assertFalse(session.player().hasShield(), "cold carry has no shield");
-                if (frame == 46515) {
+                if (frame == 43772) assertFalse(session.player().hasShield(), "cold carry has no shield");
+                if (frame == 46526) {
                     assertEquals(ShieldType.FIRE, session.player().getShieldType(), "placed monitor supplies the shield");
                     assertEquals(28, session.player().getRingCount());
                 }
-                if (frame >= 46515) assertFalse(session.player().isHurt(), "hurt during encounter/exit at " + frame);
+                if (frame >= 46526) assertFalse(session.player().isHurt(), "hurt during encounter/exit at " + frame);
                 if (!spots.contains(frame)) continue;
                 assertEquals(22, GameServices.level().getCurrentZone());
-                assertEquals(frame < 52926 ? 0 : 1, GameServices.level().getCurrentAct());
+                assertEquals(frame < 52948 ? 0 : 1, GameServices.level().getCurrentAct());
                 checked.add(frame);
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
                 drawing.checkpoint(session);

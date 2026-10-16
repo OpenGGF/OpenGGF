@@ -18,7 +18,7 @@ import com.openggf.sprites.playable.SidekickCarryTrigger;
  * <p>Player_mode gating here matches how the trace-recorded BK2 was captured.
  * The ROM's zone check itself is Player_mode-agnostic (see design spec §5.7).
  */
-public final class Sonic3kCnzCarryTrigger implements SidekickCarryTrigger {
+public final class Sonic3kCnzCarryTrigger implements SidekickCarryTrigger, com.openggf.game.internal.ScriptedCarryAdmission {
 
     /** S3K canonical zone id for Carnival Night. */
     private static final int ZONE_CNZ = 3;
@@ -34,6 +34,16 @@ public final class Sonic3kCnzCarryTrigger implements SidekickCarryTrigger {
         return (zoneId == ZONE_CNZ || zoneId == ZONE_MHZ)
                 && actId == 0
                 && supportsCarryPlayerMode(playerMode);
+    }
+
+    @Override
+    public boolean admitsScriptedCarrier(AbstractPlayableSprite carrier, AbstractPlayableSprite leader) {
+        // loc_13A10 is Obj_Tails' sole native Player_2 routine. Extra configured
+        // followers keep their ordinary leader chain; an incapable first
+        // follower does not acquire this story writer by global Player_mode.
+        var sprites = carrier.currentSpriteManagerOrNull();
+        return sprites != null && leader == sprites.getMainPlayable()
+                && carrier == Sonic3kIntroCarryParticipants.storyCarrier(sprites);
     }
 
     private boolean supportsCarryPlayerMode(PlayerCharacter playerMode) {
@@ -75,6 +85,19 @@ public final class Sonic3kCnzCarryTrigger implements SidekickCarryTrigger {
         // ROM carry intros are one-shot level-start routines. If a focused test
         // has teleported Sonic away from both pickup regions, leave control with
         // the object under test.
+        // Tails_Init copies Last_star_post_hit to Tails_CPU_star_post_flag
+        // (sonic3k.asm:26155); loc_13A10's first branch bypasses BOTH carry
+        // inlets for a saved entry. Initial assembly publishes that existing
+        // captured semantic flag before GameLoop consumes Saved2, retaining
+        // the native CPU decision through the following ordinary pass.
+        var level = leader.currentLevelManagerIfAvailable();
+        if (level != null) {
+            var checkpoint = level.getCheckpointState();
+            if (checkpoint != null && checkpoint.isActive()) return false;
+            // The captured eligibility flag survives Saved2 consumption, as
+            // the native Tails_Init copy does until the next level assembly.
+            if (level.getTransitions().isLastStarPostHitSet()) return false;
+        }
         return isCnzIntroPosition(leader) || isMhzIntroPosition(leader);
     }
 

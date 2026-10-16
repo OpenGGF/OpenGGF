@@ -5,6 +5,7 @@ import com.openggf.game.rewind.snapshot.LevelSnapshot;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.rewind.schema.RewindObjectStateBlob;
 import com.openggf.level.Pattern;
+import com.openggf.level.Palette;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -43,9 +44,12 @@ public final class RewindSnapshotDiff {
         if (keyEquals(key, av, bv)) return diffs;
         if ("object-manager".equals(key)) {
             collectObjectManagerDiffs(key, av, bv, diffs);
-            return diffs;
+        } else {
+            collectDiffs(key, av, bv, diffs);
         }
-        collectDiffs(key, av, bv, diffs);
+        if (diffs.isEmpty()) {
+            throw new IllegalStateException("Snapshot mismatch had no inspectable difference: " + key);
+        }
         return diffs;
     }
 
@@ -157,6 +161,20 @@ public final class RewindSnapshotDiff {
             collectDiffs(path + ".solidContactRiding", oa.solidContactRiding(),
                     ob.solidContactRiding(), diffs);
         }
+        if (oa.currentExecSlot() != ob.currentExecSlot()) {
+            collectDiffs(path + ".currentExecSlot", oa.currentExecSlot(), ob.currentExecSlot(), diffs);
+        }
+        if (oa.dynamicObjectIdCounter() != ob.dynamicObjectIdCounter()) {
+            collectDiffs(path + ".dynamicObjectIdCounter", oa.dynamicObjectIdCounter(), ob.dynamicObjectIdCounter(), diffs);
+        }
+        if (!fieldContentEqual(oa.solidContactState(), ob.solidContactState()))
+            collectDiffs(path + ".solidContactState", oa.solidContactState(), ob.solidContactState(), diffs);
+        if (!fieldContentEqual(oa.planeSwitchers(), ob.planeSwitchers()))
+            collectDiffs(path + ".planeSwitchers", oa.planeSwitchers(), ob.planeSwitchers(), diffs);
+        if (!fieldContentEqual(oa.touchResponseOverlap(), ob.touchResponseOverlap()))
+            collectDiffs(path + ".touchResponseOverlap", oa.touchResponseOverlap(), ob.touchResponseOverlap(), diffs);
+        if (!fieldContentEqual(oa.collisionResponseState(), ob.collisionResponseState()))
+            collectDiffs(path + ".collisionResponseState", oa.collisionResponseState(), ob.collisionResponseState(), diffs);
     }
 
     /**
@@ -170,7 +188,7 @@ public final class RewindSnapshotDiff {
         return switch (key) {
             case "level" -> compareLevel(a, b);
             case "object-manager" -> compareObjectManager(a, b);
-            default -> recordsContentEqual(a, b);
+            default -> fieldContentEqual(a, b);
         };
     }
 
@@ -195,6 +213,10 @@ public final class RewindSnapshotDiff {
             collectDiffs(path + ".pixels", patternPixels(pa), patternPixels(pb), diffs);
             return;
         }
+        if (cls == Palette.class) {
+            collectPaletteDiffs(path, (Palette) av, (Palette) bv, diffs);
+            return;
+        }
         if (av instanceof GenericObjectSnapshot ga && bv instanceof GenericObjectSnapshot gb) {
             collectGenericObjectSnapshotDiffs(path, ga, gb, diffs);
             return;
@@ -206,12 +228,17 @@ public final class RewindSnapshotDiff {
         if (cls.isRecord()) {
             for (var c : cls.getRecordComponents()) {
                 try {
-                    Object aV = c.getAccessor().invoke(av);
-                    Object bV = c.getAccessor().invoke(bv);
+                    var accessor = c.getAccessor();
+                    accessor.setAccessible(true);
+                    Object aV = accessor.invoke(av);
+                    Object bV = accessor.invoke(bv);
                     if (!fieldContentEqual(aV, bV)) {
                         collectDiffs(path + "." + c.getName(), aV, bV, diffs);
                     }
-                } catch (ReflectiveOperationException ignored) {}
+                } catch (ReflectiveOperationException | RuntimeException failure) {
+                    throw new IllegalStateException("Cannot inspect snapshot component "
+                            + path + "." + c.getName(), failure);
+                }
             }
             return;
         }
@@ -358,6 +385,19 @@ public final class RewindSnapshotDiff {
         }
     }
 
+    private static void collectPaletteDiffs(String path, Palette a, Palette b, List<String> diffs) {
+        // Palette owns exactly sixteen RGB triples. Report raw bytes without
+        // quantizing them back to Genesis color words or comparing copy identity.
+        for (int i = 0; i < Palette.PALETTE_SIZE && diffs.size() < 20; i++) {
+            var ac = a.colors[i];
+            var bc = b.colors[i];
+            String color = path + ".colors[" + i + "]";
+            if (ac.r != bc.r) collectDiffs(color + ".r", ac.r, bc.r, diffs);
+            if (ac.g != bc.g) collectDiffs(color + ".g", ac.g, bc.g, diffs);
+            if (ac.b != bc.b) collectDiffs(color + ".b", ac.b, bc.b, diffs);
+        }
+    }
+
     private static String unsignedHex(byte value) {
         return String.format("0x%02X", value & 0xFF);
     }
@@ -395,8 +435,22 @@ public final class RewindSnapshotDiff {
         if (av instanceof Pattern pa && bv instanceof Pattern pb) {
             return Arrays.equals(patternPixels(pa), patternPixels(pb));
         }
+        if (av instanceof RewindObjectStateBlob a && bv instanceof RewindObjectStateBlob b) {
+            // Blob.equals preserves opaque Java identity. Verification instead
+            // compares every captured channel, matching the diagnostic walker.
+            return a.schemaId() == b.schemaId() && a.type() == b.type()
+                    && Arrays.equals(a.scalarData(), b.scalarData())
+                    && fieldContentEqual(a.opaqueValues(), b.opaqueValues());
+        }
+        // The concrete Palette snapshot leaf has no state beyond its RGB
+        // array. Subclasses are not admitted here: additional state must retain
+        // its own equality contract rather than inheriting this narrow leaf.
+        if (av.getClass() == Palette.class && bv.getClass() == Palette.class) {
+            return ((Palette) av).dataEquals((Palette) bv);
+        }
         Class<?> cls = av.getClass();
         if (cls.isArray()) {
+            if (cls != bv.getClass()) return false;
             Class<?> elem = cls.getComponentType();
             if (elem == byte.class)    return Arrays.equals((byte[]) av,    (byte[]) bv);
             if (elem == short.class)   return Arrays.equals((short[]) av,   (short[]) bv);
@@ -440,7 +494,10 @@ public final class RewindSnapshotDiff {
 
     private static boolean compareLevel(Object a, Object b) {
         if (!(a instanceof LevelSnapshot la) || !(b instanceof LevelSnapshot lb)) {
-            return false;
+            // Callers may pass canonicalised content (maps/lists) under this key.
+            // Without the typed record no exclusion applies: compare everything,
+            // exactly as the diagnostic walker does, so equality and diffs agree.
+            return fieldContentEqual(a, b);
         }
         // Epoch is a restore-side copy-on-write generation counter. Multiple
         // seeks can legitimately advance it beyond the original forward run
@@ -487,11 +544,18 @@ public final class RewindSnapshotDiff {
     private static boolean compareObjectManager(Object a, Object b) {
         if (!(a instanceof ObjectManagerSnapshot oa)
                 || !(b instanceof ObjectManagerSnapshot ob)) {
-            return false;
+            // Per-object state or canonicalised content: no slot-order exclusion
+            // applies, and collectObjectManagerDiffs walks it with the same rule.
+            return fieldContentEqual(a, b);
         }
         if (!Arrays.equals(oa.usedSlotsBits(), ob.usedSlotsBits())) return false;
         if (oa.frameCounter() != ob.frameCounter()) return false;
         if (oa.vblaCounter() != ob.vblaCounter()) return false;
+        // Restore invalidates render buckets intentionally; allocator peak is
+        // telemetry. Every captured gameplay cursor/contact/identity channel
+        // remains required by ObjectManager capture and restore.
+        if (oa.currentExecSlot() != ob.currentExecSlot()) return false;
+        if (oa.dynamicObjectIdCounter() != ob.dynamicObjectIdCounter()) return false;
         Map<Integer, ObjectManagerSnapshot.PerSlotEntry> aBySlot = new HashMap<>();
         for (var e : oa.slots()) aBySlot.put(e.slotIndex(), e);
         Map<Integer, ObjectManagerSnapshot.PerSlotEntry> bBySlot = new HashMap<>();
@@ -520,7 +584,11 @@ public final class RewindSnapshotDiff {
                 || bDyn.size() != ob.dynamicObjects().size()) return false;
         if (!fieldContentEqual(aDyn, bDyn)) return false;
         return fieldContentEqual(oa.placement(), ob.placement())
-                && fieldContentEqual(oa.solidContactRiding(), ob.solidContactRiding());
+                && fieldContentEqual(oa.solidContactRiding(), ob.solidContactRiding())
+                && fieldContentEqual(oa.solidContactState(), ob.solidContactState())
+                && fieldContentEqual(oa.planeSwitchers(), ob.planeSwitchers())
+                && fieldContentEqual(oa.touchResponseOverlap(), ob.touchResponseOverlap())
+                && fieldContentEqual(oa.collisionResponseState(), ob.collisionResponseState());
     }
 
     private static Map<Object, ObjectManagerSnapshot.DynamicObjectEntry> indexDynamicObjects(

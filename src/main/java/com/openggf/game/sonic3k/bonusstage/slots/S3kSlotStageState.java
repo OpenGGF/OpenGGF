@@ -8,6 +8,16 @@ public final class S3kSlotStageState {
     private static final int DEFAULT_EVENTS_BG_X = 0x10;
     private static final int DEFAULT_EVENTS_BG_Y = 0x2D;
 
+    // Immutable ROM asset bank: stage RAM below is captured independently.
+    @com.openggf.game.rewind.RewindTransient(reason="Immutable ROM asset bank; all changing stage RAM is captured")
+    private final S3kSlotResources romData;
+
+    private S3kSlotStageState(S3kSlotResources romData) {
+        this.romData = java.util.Objects.requireNonNull(romData, "romData");
+    }
+
+    S3kSlotResources romData() { return romData; }
+
     private int statTable;
     private int scalarIndex1;
     private int scalarIndex2;
@@ -22,6 +32,8 @@ public final class S3kSlotStageState {
     private int lastSlotWallLayoutIndex = -1;
     private boolean slotWallContactActive;
     private boolean paletteCycleEnabled;
+    /** The Palette_cycle_counters+0 mode AnPal_Slots reads this iteration (before Process_Sprites). */
+    private int animatePaletteMode;
     private int optionCycleState;
     private int optionCycleCountdown;
     private int optionCycleActiveReelIndex;
@@ -44,11 +56,17 @@ public final class S3kSlotStageState {
     private final int[] optionCycleDisplaySymbols = new int[3];
     private final int[] optionCycleOffsets = new int[3];
     private final int[] optionCycleReelWords = new int[3];
+    @com.openggf.game.rewind.RewindTransient(reason="Ordered reward positions are captured explicitly beside the scalar stage blob")
     private final Deque<int[]> pendingRingRewardPositions = new ArrayDeque<>();
+    @com.openggf.game.rewind.RewindTransient(reason="Ordered reward positions are captured explicitly beside the scalar stage blob")
     private final Deque<int[]> pendingSpikeRewardPositions = new ArrayDeque<>();
 
     public static S3kSlotStageState bootstrap() {
-        S3kSlotStageState state = new S3kSlotStageState();
+        return bootstrap(S3kSlotResources.fromActiveRom());
+    }
+
+    public static S3kSlotStageState bootstrap(S3kSlotResources romData) {
+        S3kSlotStageState state = new S3kSlotStageState(romData);
         state.scalarIndex1 = 0x40;
         state.eventsBgX = DEFAULT_EVENTS_BG_X;
         state.eventsBgY = DEFAULT_EVENTS_BG_Y;
@@ -291,6 +309,14 @@ public final class S3kSlotStageState {
         this.paletteCycleEnabled = paletteCycleEnabled;
     }
 
+    int animatePaletteMode() {
+        return animatePaletteMode;
+    }
+
+    void setAnimatePaletteMode(int mode) {
+        animatePaletteMode = mode;
+    }
+
     public int optionCycleState() {
         return optionCycleState;
     }
@@ -476,5 +502,23 @@ public final class S3kSlotStageState {
         rewardCounter = 0;
         pendingRingRewardPositions.clear();
         pendingSpikeRewardPositions.clear();
+    }
+    record RewindState(com.openggf.game.rewind.schema.RewindObjectStateBlob ram,
+                       java.util.List<int[]> rings, java.util.List<int[]> spikes) {
+        RewindState { rings=copyRewardPositions(rings);spikes=copyRewardPositions(spikes); }
+        @Override public java.util.List<int[]> rings() { return copyRewardPositions(rings); }
+        @Override public java.util.List<int[]> spikes() { return copyRewardPositions(spikes); }
+    }
+    private static java.util.List<int[]> copyRewardPositions(java.util.Collection<int[]> positions) {
+        return positions.stream().map(int[]::clone).toList();
+    }
+    RewindState captureSlotRewindState() {
+        return new RewindState(com.openggf.game.rewind.schema.CompactFieldCapturer.capture(this),
+                copyRewardPositions(pendingRingRewardPositions),copyRewardPositions(pendingSpikeRewardPositions));
+    }
+    void restoreSlotRewindState(RewindState state) {
+        com.openggf.game.rewind.schema.CompactFieldCapturer.restore(this,state.ram());
+        pendingRingRewardPositions.clear();pendingRingRewardPositions.addAll(state.rings());
+        pendingSpikeRewardPositions.clear();pendingSpikeRewardPositions.addAll(state.spikes());
     }
 }

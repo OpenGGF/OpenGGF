@@ -21,6 +21,11 @@ import java.util.Locale;
  * pads; the authored tail controls P1 with P2 neutral. Every selected route needs a separate
  * uninterrupted GameplayCaptureTool replay. Exploratory restore is not native parity evidence.
  * Search horizons, steering gains and scores below belong to the author, never gameplay rules.
+ * The cold LRZ→HPZ→SSZ campaign lane (2026-10-15) added {@code --boot ZONE:ACT} (one-based act)
+ * so the prefix may cross real level loads before the authored encounter, and {@code mecha2}:
+ * Knuckles' two-phase Sky Sanctuary act 2 fight, complete when loc_7BCB0 publishes the ending.
+ * The same lane added {@code lrz1} and {@code lrz3} (Lava Reef's miniboss and end boss) for the solo
+ * Sonic campaign; the encounter search draws each input without reading pixels back.
  */
 public final class SszBossInputAuthorTool {
     private static final int HORIZON = 180;
@@ -35,7 +40,11 @@ public final class SszBossInputAuthorTool {
     record Boss(int x, int health) { }
 
     enum Encounter {
-        GHZ(512), MTZ(5920), MECHA(6720);
+        // MECHA2's centre is the middle of its 320-pixel arena (camera X 256), an authoring target.
+        // LRZ1 is Obj_LRZMiniboss, whose arena locks the camera at X $2C00 (ARENA_LOCK_X; centre $2CA0).
+        // LRZ3 is Obj_LRZEndBoss, rising at X $A30 or $B10; its own drifting mines deal every hit,
+        // so the search mainly keeps the player alive between them (centre between both sides).
+        GHZ(512), MTZ(5920), MECHA(6720), MECHA2(416), LRZ1(0x2CA0), LRZ3(0xAA0);
 
         final int centre;
         Encounter(int centre) { this.centre = centre; }
@@ -47,20 +56,40 @@ public final class SszBossInputAuthorTool {
                         .findFirst().map(b -> new Boss(b.getX(), b.hitsRemainingForTest())).orElse(null);
                 case MTZ -> objects.activeObjectsOfType(SszMtzBossObjectInstance.class).stream()
                         .findFirst().map(b -> new Boss(b.getX(), b.hitsRemainingForTest())).orElse(null);
-                case MECHA -> objects.activeObjectsOfType(SszMechaSonicObjectInstance.class).stream()
+                case MECHA, MECHA2 -> objects.activeObjectsOfType(SszMechaSonicObjectInstance.class).stream()
                         .findFirst().map(b -> new Boss(b.getX(), b.getCollisionProperty())).orElse(null);
+                case LRZ1 -> objects.activeObjectsOfType(com.openggf.game.sonic3k.objects.bosses.LrzMinibossInstance.class)
+                        .stream().findFirst().map(b -> new Boss(b.getX(), b.getCollisionProperty())).orElse(null);
+                case LRZ3 -> objects.activeObjectsOfType(com.openggf.game.sonic3k.objects.LrzEndBossObjectInstance.class)
+                        .stream().findFirst().map(b -> {
+                            // Obj_LRZEndBoss sets its 14 hits only when it first rises (routine 0), so
+                            // before that and after the defeat both read zero; the defeat is the one that
+                            // also requests the background exit.
+                            boolean defeated = com.openggf.game.sonic3k.runtime.S3kRuntimeStates
+                                    .currentLrz(GameServices.zoneRuntimeRegistry())
+                                    .map(lrz -> lrz.bossAct().backgroundExitRequested()).orElse(false);
+                            int hits = b.getCollisionProperty();
+                            return new Boss(b.getX(), hits > 0 ? hits : defeated ? 0 : 14);
+                        }).orElse(null);
             };
         }
     }
 
     public static void main(String[] args) throws Exception {
+        int bootZone = 10, bootAct = 0;
+        if (args.length >= 2 && args[0].equals("--boot")) {
+            String[] boot = args[1].split(":");
+            bootZone = Integer.decode(boot[0]);
+            bootAct = Integer.parseInt(boot[1]) - 1;
+            args = java.util.Arrays.copyOfRange(args, 2, args.length);
+        }
         if (args.length < 8 || args.length > 9) {
-            throw new IllegalArgumentException("Usage: SszBossInputAuthorTool ROM WIDTH MAIN SIDEKICK "
-                    + "INPUT PREFIX ghz|mtz|mecha OUT_DIR [MAX_NEW_INPUTS]");
+            throw new IllegalArgumentException("Usage: SszBossInputAuthorTool [--boot ZONE:ACT] ROM WIDTH MAIN "
+                    + "SIDEKICK INPUT PREFIX ghz|mtz|mecha|mecha2|lrz1|lrz3 OUT_DIR [MAX_NEW_INPUTS]");
         }
         var settings = new GameplayCaptureSession.Settings(Integer.parseInt(args[1]), args[2],
                 "none".equalsIgnoreCase(args[3]) ? "" : args[3], "off", null, null, null);
-        var result = run(Path.of(args[0]), settings, Path.of(args[4]), Integer.parseInt(args[5]),
+        var result = run(Path.of(args[0]), settings, bootZone, bootAct, Path.of(args[4]), Integer.parseInt(args[5]),
                 Encounter.valueOf(args[6].toUpperCase(Locale.ROOT)), Path.of(args[7]),
                 args.length == 9 ? Integer.parseInt(args[8]) : 3000);
         System.out.println("Stop: " + result.stop() + "; complete input frames: " + result.frames());
@@ -68,6 +97,11 @@ public final class SszBossInputAuthorTool {
 
     static Result run(Path rom, GameplayCaptureSession.Settings settings, Path input, int prefix,
                       Encounter encounter, Path output, int maxInputs) throws Exception {
+        return run(rom, settings, 10, 0, input, prefix, encounter, output, maxInputs);
+    }
+
+    static Result run(Path rom, GameplayCaptureSession.Settings settings, int bootZone, int bootAct, Path input,
+                      int prefix, Encounter encounter, Path output, int maxInputs) throws Exception {
         if (maxInputs <= 0) throw new IllegalArgumentException("MAX_NEW_INPUTS must be positive");
         if (settings.startX() != null || settings.startY() != null || !"off".equals(settings.donor())) {
             throw new IllegalArgumentException("Author requires a cold native entry");
@@ -82,7 +116,7 @@ public final class SszBossInputAuthorTool {
         }
         Result result;
         try (var session = new GameplayCaptureSession(settings)) {
-            session.boot(rom, 10, 0, settings);
+            session.boot(rom, bootZone, bootAct, settings);
             var level = GameServices.level().getCurrentLevel();
             Bk2FrameInput previous = null;
             int frame = 0;
@@ -90,57 +124,13 @@ public final class SszBossInputAuthorTool {
                 previous = movie.getFrame(frame);
                 session.step(previous);
                 session.render();
-                requireSameLevel(level);
+                // A cold prefix may cross real loads; authoring restores only inside the last world.
+                if (bootZone == 10 && bootAct == 0) requireSameLevel(level);
                 rows.append(session.stateLine(frame, previous)).append('\n');
                 if (session.player().getDead()) throw new IllegalStateException("Prefix died at " + frame);
             }
-            while (frame < end && !session.player().getDead() && !defeated(encounter)) {
-                var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
-                var saved = registry.capture();
-                var oldInput = previous;
-                var before = encounter.observe();
-                int health = before == null ? 0 : before.health();
-                double best = -Double.MAX_VALUE;
-                int chosen = 0;
-                // Before allocation, a full-health spawn must not lose to avoiding the trigger.
-                int count = health > 0 ? POLICY_COUNT : 1;
-                for (int policy = 0; policy < count; policy++) {
-                    registry.restore(saved);
-                    session.restoreInputHistory(oldInput);
-                    var trialInput = oldInput;
-                    for (int n = 0; n < HORIZON; n++) {
-                        trialInput = buttons(session, encounter, frame + n, policy, trialInput);
-                        session.step(trialInput);
-                        session.render();
-                        requireSameLevel(level); // Never restore an outgoing snapshot into a new load.
-                        if (session.player().getDead() || defeated(encounter)) break;
-                    }
-                    var after = encounter.observe();
-                    double value = score(session.player().getDead(), health,
-                            after == null ? null : after.health(), session.player().getRingCount(),
-                            session.player().isHurt(), after == null ? 0
-                                    : Math.abs(after.x() - session.player().getCentreX()));
-                    if (value > best) { best = value; chosen = policy; }
-                }
-                registry.restore(saved);
-                session.restoreInputHistory(oldInput);
-                previous = oldInput;
-                for (int n = 0; n < COMMIT_INPUTS && frame < end; n++) {
-                    previous = buttons(session, encounter, frame, chosen, previous);
-                    session.step(previous);
-                    session.render();
-                    requireSameLevel(level);
-                    append(script, previous);
-                    rows.append(session.stateLine(frame++, previous)).append('\n');
-                    if (session.player().getDead() || defeated(encounter)) break;
-                }
-                var boss = encounter.observe();
-                System.out.printf("CHOICE frame=%d policy=%d score=%.2f hp=%d rings=%d%n",
-                        frame, chosen, best, boss == null ? -1 : boss.health(), session.player().getRingCount());
-                write(output, script, rows);
-            }
-            result = new Result(session.player().getDead() ? Stop.DEAD
-                    : defeated(encounter) ? Stop.DEFEATED : Stop.LIMIT_REACHED, frame);
+            result = authorEncounter(session, encounter, frame, end, previous, pad -> append(script, pad),
+                    rows, () -> write(output, script, rows));
         }
         write(output, script, rows);
         InputLogAuthorTool.author(script.toString(), output.resolve("input.bk2"), "s3k");
@@ -150,6 +140,67 @@ public final class SszBossInputAuthorTool {
         return result;
     }
 
+    /**
+     * Rolling search from the session's current state: score each policy over {@link #HORIZON}
+     * restored inputs, commit {@link #COMMIT_INPUTS} of the best, repeat until defeat, death or
+     * {@code end}. Restores never leave the current world. {@code committedPads} receives each committed pad.
+     */
+    static Result authorEncounter(GameplayCaptureSession session, Encounter encounter, int frame, int end,
+                                  Bk2FrameInput previous, java.util.function.Consumer<Bk2FrameInput> committedPads,
+                                  StringBuilder rows, IoAction checkpoint) throws Exception {
+        var level = GameServices.level().getCurrentLevel();
+        while (frame < end && !session.player().getDead() && !defeated(encounter)) {
+            var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+            var saved = registry.capture();
+            var oldInput = previous;
+            var before = encounter.observe();
+            int health = before == null ? 0 : before.health();
+            double best = -Double.MAX_VALUE;
+            int chosen = 0;
+            // Before allocation, a full-health spawn must not lose to avoiding the trigger.
+            int count = health > 0 ? POLICY_COUNT : 1;
+            for (int policy = 0; policy < count; policy++) {
+                registry.restore(saved);
+                session.restoreInputHistory(oldInput);
+                var trialInput = oldInput;
+                for (int n = 0; n < HORIZON; n++) {
+                    trialInput = buttons(session, encounter, frame + n, policy, trialInput);
+                    session.step(trialInput);
+                    session.renderFrame();
+                    requireSameLevel(level); // Never restore an outgoing snapshot into a new load.
+                    if (session.player().getDead() || defeated(encounter)) break;
+                }
+                var after = encounter.observe();
+                double value = score(session.player().getDead(), health,
+                        after == null ? null : after.health(), session.player().getRingCount(),
+                        session.player().isHurt(), after == null ? 0
+                                : Math.abs(after.x() - session.player().getCentreX()));
+                if (value > best) { best = value; chosen = policy; }
+            }
+            registry.restore(saved);
+            session.restoreInputHistory(oldInput);
+            previous = oldInput;
+            for (int n = 0; n < COMMIT_INPUTS && frame < end; n++) {
+                previous = buttons(session, encounter, frame, chosen, previous);
+                session.step(previous);
+                session.renderFrame();
+                requireSameLevel(level);
+                committedPads.accept(previous);
+                rows.append(session.stateLine(frame++, previous)).append('\n');
+                if (session.player().getDead() || defeated(encounter)) break;
+            }
+            var boss = encounter.observe();
+            System.out.printf("CHOICE frame=%d policy=%d score=%.2f hp=%d rings=%d%n",
+                    frame, chosen, best, boss == null ? -1 : boss.health(), session.player().getRingCount());
+            checkpoint.run();
+        }
+        return new Result(session.player().getDead() ? Stop.DEAD
+                : defeated(encounter) ? Stop.DEFEATED : Stop.LIMIT_REACHED, frame);
+    }
+
+    @FunctionalInterface
+    interface IoAction { void run() throws Exception; }
+
     private static void requireSameLevel(Object level) {
         if (GameServices.level().getCurrentLevel() != level) {
             throw new IllegalStateException("Author crossed a level load; use a fresh session");
@@ -157,6 +208,11 @@ public final class SszBossInputAuthorTool {
     }
 
     private static boolean defeated(Encounter encounter) {
+        if (encounter == Encounter.MECHA2) {
+            // loc_7BCB0 publishes the ending only after the Super phase's final hit.
+            return com.openggf.game.sonic3k.runtime.S3kRuntimeStates.currentSsz(GameServices.zoneRuntimeRegistry())
+                    .map(state -> state.act2EndingActive()).orElse(false);
+        }
         var boss = encounter.observe();
         return boss != null && boss.health() == 0;
     }

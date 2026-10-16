@@ -6,9 +6,14 @@ public final class S3kSlotRewardResolver {
     }
 
     public static int pickFixedRow(int rolledByte) {
+        return pickFixedRow(S3kSlotResources.fromActiveRom(), rolledByte);
+    }
+
+    public static int pickFixedRow(S3kSlotResources romData, int rolledByte) {
+        byte[] rows = romData.targetRows();
         int remaining = rolledByte & 0xFF;
-        for (int row = 0; row < S3kSlotRomData.TARGET_ROWS.length; row += 3) {
-            int threshold = S3kSlotRomData.TARGET_ROWS[row] & 0xFF;
+        for (int row = 0; row < rows.length; row += 3) {
+            int threshold = rows[row] & 0xFF;
             if (threshold == 0xFF) {
                 return -1;
             }

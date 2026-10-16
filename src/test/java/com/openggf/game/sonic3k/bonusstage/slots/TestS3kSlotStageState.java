@@ -12,7 +12,7 @@ class TestS3kSlotStageState {
 
     @Test
     void bootstrapUsesRomInitialState() {
-        S3kSlotStageState state = S3kSlotStageState.bootstrap();
+        S3kSlotStageState state = S3kSlotStageState.bootstrap(S3kSlotRomTestData.resources());
 
         assertEquals(0, state.statTable());
         assertEquals(0x40, state.scalarIndex1());
@@ -24,7 +24,7 @@ class TestS3kSlotStageState {
 
     @Test
     void angleUsesHighByteOfStatTable() {
-        S3kSlotStageState state = S3kSlotStageState.bootstrap();
+        S3kSlotStageState state = S3kSlotStageState.bootstrap(S3kSlotRomTestData.resources());
 
         state.setStatTable(0x0040);
         assertEquals(0x00, state.angle());
@@ -38,7 +38,7 @@ class TestS3kSlotStageState {
 
     @Test
     void renderBuffersUseExpandedLayoutStride() {
-        S3kSlotRenderBuffers buffers = S3kSlotLayoutFixture.buffers();
+        S3kSlotRenderBuffers buffers = S3kSlotRenderBuffers.fromRomData(S3kSlotRomTestData.resources());
 
         assertEquals(0x80, buffers.layoutStrideBytes());
         assertEquals(0x80, buffers.layoutRows());
@@ -47,7 +47,7 @@ class TestS3kSlotStageState {
 
     @Test
     void expandedLayoutCopiesRowsIntoRomWorldOffsetSlots() {
-        byte[] expandedLayout = S3kSlotLayoutFixture.expandedLayout();
+        byte[] expandedLayout = S3kSlotRomTestData.resources().expandedLayout();
 
         assertEquals(0x80 * 0x80, expandedLayout.length);
         int firstRow = (0x20 * 0x80) + 0x20;
@@ -62,7 +62,7 @@ class TestS3kSlotStageState {
 
     private static byte[] row(int rowIndex) {
         int start = rowIndex * 0x20;
-        return Arrays.copyOfRange(S3kSlotLayoutFixture.layout(), start, start + 0x20);
+        return Arrays.copyOfRange(S3kSlotRomTestData.SLOT_BONUS_LAYOUT, start, start + 0x20);
     }
 }
 

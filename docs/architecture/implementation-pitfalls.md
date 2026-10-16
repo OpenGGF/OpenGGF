@@ -9,10 +9,29 @@ copies plus shake, refresh derived playable offsets at the existing post-camera
 Render_Sprites boundary, and preserve both native words. See the
 [ending lifecycle evidence](designs/2026-10-13-s3k-ending-lifecycle.md).
 
+Capture boot must preserve an existing native camera binding. After ScreenInit
+sets `Scroll_lock`, even `Camera.setFocusedSprite` resets physical and render-copy
+coordinates; guarding only the following forced snap leaves that overwrite.
+Keep both operations inside the unfrozen entry path. Assert each scene at its
+actual initialization boundary: D01 during load, SSZ arrival before initial
+Process_Sprites. A first-row image can pass while terrain corruption moves into
+another column, so retain physical/copy and full-scene checks. See the
+[ending capture diagnosis](designs/2026-10-13-s3k-ending-lifecycle.md#capture-boot-preserves-a-native-camera-binding-2026-10-14).
+
 Read the relevant section when working on coordinates, objects, rendering, rewind,
 headless tests, or audio. S3K-specific routing is in [AGENTS_S3K.md](../../AGENTS_S3K.md).
 
 The things that cost the most time when missed.
+
+**Optional presentation does not erase native object ownership.** S3K `Level`
+writes the title owner at `Dynamic_object_RAM+5`, absolute SST8, and creates
+four higher-slot children before `Load_Sprites`. Omitting its visible loop still
+retains the `$16` wait, child retirement and next-pass owner teardown. Intro
+controllers at `Dynamic_object_RAM+2` use absolute SST5 instead. Capture the
+actual parent links and surviving graph; freeing these slots changes ordinary
+later allocation. A production `LevelLoadContext` may leave zone/act unset, so
+an entry owner must use the admitted destination rather than those unset values.
+See the [fresh-title audit](audits/trace/2026-10-14-s3k-fresh-title-sst.md).
 
 **Concurrent hub music must retain device ownership.** A PCM filter around an
 `OpenAlPcmSink` hides its concrete type from `AudioManager.update()`: retain and
@@ -542,6 +561,19 @@ Capture before consumption and replay both the armed and occupied-rearm cases;
 a mid-count snapshot does not cover them. The cold Tails DEZ2 pad at input46581
 exposed an 8px change on the first replayed frame where ordinary play stayed put.
 
+**Slot-encoded identity sets must not hold dead objects.** Touch-overlap sets and
+instance-keyed solid latches are captured as slot numbers because Java identity
+does not survive a restore. A member that has since been deleted keeps its old
+slot, so restore either drops it or binds whichever object now occupies that
+slot (SOZ Rockn shells, LRZ flames). Dynamic deletion therefore evicts
+instance-keyed latches as `removeActiveObject` already did for layout objects
+(`Delete_Current_Sprite` zeroes the slot's status bits), deletion also drops the
+object from the touch-overlap buffers, touch capture records only live members
+as the restore-view guard, and restore resolves a captured slot before its spawn: a
+child that shares its parent's spawn otherwise rebinds to the parent. Physical
+double-buffer parity is not state; capture the logical contents. These gaps were
+latent until `da27f4f3d` made the restore comparator inspect these channels.
+
 **Subsystem SST reservations must follow object restore.** Attracted rings own
 slots outside the object manager's captured occupant set. Re-register the ring
 adapter after the object adapter when level adapters move, including seamless
@@ -597,6 +629,33 @@ references after the source SST was deleted. `loc_7E916`/`loc_7E972` fragments a
 `CreateBossExp00`/`CreateBossExp06` bursts use copied coordinates, not
 `Obj_WaitForParent`; omit their live parent dependency. Preserve actual follower
 references. Test both pre-deletion replay and a fresh post-deletion capture/replay.
+MHZ's Mushmeanie shell has the same shape: `loc_8DC42` reads the parent once at launch
+and `loc_8DC62` never again, so the body's second hit can delete it mid-flight. Drop the
+link at launch and recreate from the captured spawn with the parent relinked by id, not
+by proximity to a live body (800px MHZ1 route, 2026-10-15).
+
+**Exact-SST act carries keep the fixed power-up slots.** `Shield` and
+`Invincibility_stars` are fixed `Level_object_RAM` slots (`sonic3k.constants.asm:318-321`)
+that a `Load_Level` act reload never clears. `PERSISTENT_EXACT_SST` carries only
+persistent dynamic occupants, yet the manager rebuild skipped power-up registration for
+every exact-SST policy as if the carry had imported them (only `ALL_LIVE_SST` does). A
+fire shield gained in MHZ1 left the act-2 manager while the player kept the status; a later
+registry restore re-spawned it, so the route's restore check failed although restore was
+right. Register owners the carry did not retain, and compare the live manager with the
+player's power-up state across the transition, not just capture against restore.
+
+**Identity-keyed player collections need an explicit policy.** A final
+`Map<AbstractPlayableSprite, ...>` or player `Set` is not captured by the default object
+scalar path, and the coverage guard does not flag it. The MHZ mushroom cap's per-player
+last airborne `y_vel` (`$30/$32(a0)`) and standing set were silently dropped, so a rider
+restored on the cap bounced at -$680 instead of -$780; the curled vine's `$36/$37` segment
+map (a restored rider took the landing frame's -1 snap), the catapult's riders (launched
+by the next update) and the dropping platform's riders had the same gap. Add `CAPTURED`
+entries (as for the swing bars), drop entries for sprites that left the player slots
+(the MHZ1 carry-in Tails), and replay through the consuming update from a capture taken
+on every frame of the ride; a capture far from that update passes. A dense route sweep
+(capture every ten frames, replay thirty, compare rows and whole snapshots) found these
+after targeted spot checks had passed.
 
 **ROM sprite priority buckets are SAT order.** Lower priority buckets and earlier object
 slots appear in front; painter rendering reverses both orders. Folded boss parts
@@ -1656,6 +1715,33 @@ panel owner. Restore the declared state exactly and let the next normal update
 clear the flag. Do not silently turn a captured flag into a derived cache in a
 custom hook. The original two-player bug remains preserved (2026-09-28).
 
+### A cache's loaded flag must be as transient as the cache
+
+`AizPlaneIntroInstance` draws intro Sonic through its own ROM-art
+`PlayerSpriteRenderer`s, which the rewind policy treats as transient, but its
+plain `renderersLoaded` boolean was captured. A restore that recreated the
+intro copied "loaded" onto an instance with null renderers, so it never drew
+Sonic again; every gameplay key still matched and only the sprite table lost
+his 16-19 Player_1 tiles. Make the guard flag Java `transient` with the cache
+it describes, or derive it from the cache reference (2026-10-16).
+
+### Re-admit a departed sprite instead of rebuilding it
+
+The `loc_68D8` carry-in Obj_Tails deletes itself after its flyoff. A restore into
+its carry window rebuilt it through a factory, but solid-contact headroom and
+standing latches and plane-switcher sides capture players by reference, so the
+new carrier replayed beside stale entries for the old one (`headroomSnapshots`
+9 vs 10 in MHZ1). Re-admit the departed instance with its structural links and
+clear only uncaptured deletion markers on restore (2026-10-16, `f07a25bf9`).
+
+### A recreated effect must keep the owner its spawner supplied
+
+`SkidDustObjectInstance` received its owner's dust renderer from its spawner;
+rewind recreation from the spawn record had none and borrowed P1's. A follower's
+puff then drew from P1's dust bank, although `loc_18D1C` copies the owning dust
+object's `art_tile` (sonic3k.asm:34126). Capture the owner's identity and
+resolve its resource on restore (2026-10-16, `0ea15a057`).
+
 
 ### Fixed native bounds must not inherit engine smoothing targets
 
@@ -1804,6 +1890,57 @@ before loading and assert the dimension, or create a fresh scenario context.
 Four wider S3K credit-plane vectors read shifted glyphs with a retained320 camera
 while the320 vector passed (2026-10-13). A width parameter is not width evidence.
 
+**Initial touch publication follows the native range tail.** An object routine can
+finish before its caller performs the native out-of-range deletion. Publish the
+initial collision response only after that caller keeps the actor. LRZ2
+`Sprite_CheckDeleteTouch3` / `loc_1B666` checks the anchor range before AddList;
+publishing inside the shared update wrapper retained erased spike-ball owners
+in both collision buffers after a real checkpoint death/title boundary
+(2026-10-14 S3K follow-up). A full SST reset must also retire both buffers before
+clearing identity tables and reusing slots. Do not hide missing identities,
+replace them with new slot occupants, or suppress every native pending-delete
+actor: the response-list eligibility owner retains its own native predicate.
+
+**Identity-map iteration is not captured gameplay order.** Recreated players have
+different Java identity hashes. Capturing an `IdentityHashMap` of player keys
+verbatim can swap serialized associations after restore even though every key
+resolves to the right participant. The AIZ2 S2-Tails/800/seven-Sonic entry
+exposed refs3/5 swapping in AutoSpin state (2026-10-14). Encode this unordered
+map in stable `PlayerRefId` order; preserve key/value pairs, null keys, the live
+identity map and explicitly ordered maps. A deterministic changed-bucket-order
+fixture checks replacement identities and duplicate character labels in both
+restore directions. Never filter snapshot bytes to hide this discrepancy.
+
+**A capture does not need a second fade owner.** The runtime-ready GameLoop's
+PLC lifecycle already services the FadeManager once per presentation, exactly
+as the live Engine. A direct GameplayCaptureSession formerly also called its
+UI pipeline, giving frameCount2 after one step of an actual90-frame fade
+(2026-10-14). Use the existing production ownership predicate for the UI
+fallback. The same rule applies to death/reload helpers: external manual fade
+ticks can trigger fresh assembly outside its logical iteration. Preserve input
+cadence and requalify affected cold routes after repairing a driver; do not fit
+runtime timing or silently retain the accelerated protocol for old inputs.
+Movies authored under the doubled fade spent 11 of the native 22 frozen fade-out
+frames before each full load; `FadeWindowRetimeTool` inserts only the held-input
+remainder there (gameplay and object VInt do not advance) and verifies the movie
+uninterruptedly. A fade that runs alongside live gameplay is not a retiming site.
+
+
+**Replay the displayed plane generation and the complete multipart order.**
+A B-high overlay must use the same immutable horizontal/vertical/column scroll
+buffers as the rear tile pass, including after rewind and lazy redraw. Reading
+current CPU deformation later in the frame shifts only the replayed high tiles.
+S3K ending overlap tests reproduced this at both320 and800 without changing
+native scroll values. Also reverse the entire native main/sub2/sub3 group for
+painter emission: reversing pieces inside each mapping alone lets a later
+propeller mapping overwrite an earlier main-body wheel. Keep SAT collection in
+native main-first order (`Render_Sprites` `$1AEE4/$1AF2A`). Independently reconstruct
+opaque ROM overlap and priority before excluding a covered player pixel; the
+native reunion's earlier wing legitimately covers20 of619 player pixels.
+Scripted status-facing does not imply render_flags-facing when object mappings
+bypass the ordinary playable mapper. See the
+[ending publication evidence](designs/2026-10-13-s3k-ending-lifecycle.md#source-owned-initial-and-published-ending-presentation-2026-10-14).
+
 **The first authored zone is not necessarily a scene mod's entry point.**
 Native friends qualification selected Starpost Valley's first owned zone, a
 festival, before opening its farm scene and hit the legitimate `Activity needs
@@ -1812,3 +1949,36 @@ from the backing game's initial zone, then let the scene own authored-act
 admission. A matched real-JAR control reproduces the old failure and renders the
 farm after the corrected bootstrap. Do not remove the mod's lifecycle guard or
 invent session state to make an arbitrary zone load.
+
+**KosM completion is a queued DMA, and equal descriptors are not FIFO identity.**
+Process_Kos_Module_Queue waits for the complete direct FIFO, then calls
+Add_To_DMA_Queue. The paired production pattern facade must wait for the actual
+submitted child receipts and publish only at a supported VInt. Keep receipts
+after parent claim and capture pending DMA separately from presented memory.
+Two identical source/destination entries need their admitted native FIFO
+position; Java identity is lost on copied snapshot restore and descriptor-only
+matching lets an unpaired predecessor borrow a later job's readiness. Shift
+only at actual archive retirement. Preflight both banks before admitting a
+global producer so failure cannot leave unpaired physical work. Preserve
+initial resident ingress separately: correct new upload timing does not prove
+retained pre-upload VRAM bytes. Origin: 2026-10-14 ending transfer69e4f51.
+
+
+**Decoded frontend sheets are not physical pattern residency.** A frontend can
+render a virtual sheet correctly while the following level decoder replaces
+its unwritten native pattern gaps with zero. S3K's initial Master span at
+VRAM $A5C0 was exactly 2,176 bytes of title-banner ROM $35026C+$5C0, not new
+Master art. Retain only admitted frontend CPU uploads at their literal native
+destinations, seeded from the current stock Level's bounded physical patterns;
+never copy virtual atlases or comparison VRAM. Overlay writes of zero still
+overwrite retained bytes, and retained extent must not move the append cursor.
+
+Freeze immutable bytes and resource-owner generation before an async build;
+validate that owner is still installed before GPU publication. Equal bytes and
+generation in a detached owner are insufficient. A menu's world replacement
+may transfer these bytes only through a capture-created token binding the
+exact reused data source and supported owner type. Consume the seed at real
+resource installation, preserve it over ordinary title reset, and clear it on
+a fresh context/hardware lifetime. Newer admitted SaveScreen uploads supersede
+title art. This does not model untouched name tables, SAT or every level-to-level
+gap (2026-10-14 ending ingress; d0fabc3ef candidate4d401bcc).

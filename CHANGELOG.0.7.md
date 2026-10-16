@@ -425,7 +425,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   or ramming costs speed. The end boss runs both phases: turrets, launchers, missiles that can
   be steered back into the ship, the chase with bombs, rockets and the Master Emerald, the
   level wrap that repeats the field, and the defeat, explosions and white fade before the
-  handover to the ending act ($D01, not yet implemented). S3K transformations now release the
+  handover to the playable rescue and credits in the ending act ($D01). S3K transformations now release the
   player on the ROM palette-fade schedule.
   S3K level palette changes now appear on the frame the matching sprites do, one frame after
   the game writes them, as the hardware shows them, so boss hit flashes are no longer a frame early. S3K palette cycles (such as
@@ -787,7 +787,12 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   coverage across MHZ's accepted rosters, supported donors and five viewport presets,
   plus cold Tails completion of both acts and native-pair Act 1 completion with
   rewind-verified boss and act/zone handoffs; LBZ Big Arm, Super Emerald sanctuary/progression, and powered
-  effects. Sandopolis now implements its four quicksand variants, including
+  effects. Sonic, Tails and Knuckles endings continue through their progress-dependent
+  credits, terminal scenes and title return. Knuckles' flight wait requests quiet
+  wind on the native cadence and preserves its order before music restoration.
+  Rescue and return plane attachments use rewindable native child slots;
+  full-table continuation retains the overwritten slot's native residue, and
+  delayed deletion follows the ROM's dispatch boundary. Sandopolis now implements its four quicksand variants, including
   per-player capture, jump release, sand-slide movement and rewindable cooldowns,
   plus spring vines with shared tension, deforming surfaces, native landing boundaries and directional launches,
   sand rocks that break under rolling landings and release their riders,
@@ -1450,7 +1455,11 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   queue waiting. Category runs explicitly use the bounded smoke suite; even the
   broad fallback excludes exhaustive oracles. Ordinary coverage queues in batches
   that release shared admission between jobs while retaining worktree ownership;
-  guards queue separately. Supported headless graphics flags no longer force
+  guards queue separately. Compiled tests and resources are prepared once per
+  category invocation, with lifecycle and source checks protecting reuse across
+  batches. Bounded wait credit carries between batches and is spent by execution,
+  allowing a long-waiting suite to progress without monopolizing later admissions.
+  Supported headless graphics flags no longer force
   exclusive admission, while unmeasured JVM overrides remain conservative.
   Full ordinary validation is reserved
   for preparing new public releases through the explicit `full-suite` profile.

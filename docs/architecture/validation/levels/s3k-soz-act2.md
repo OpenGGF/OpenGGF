@@ -856,3 +856,26 @@ not native-emulator trajectory/pixel parity, presentation on every intermediate
 frame, or certification of additional viewport/donor/character products.
 Exact issue-sweep attribution, rejected inputs and validation history are in the
 [dated issue artifact](../2026-10-13-github-issues.md#soz-recording-repair-and-merged-develop-checks).
+
+
+## Production checkpoint fade and incoming-world replay (2026-10-14)
+
+The solo and team drivers now use only GameLoop's production fade owner and
+service pending render work after every tick. Solo contact restores/replays
+its complete registered world twice; every solo/team product then loses
+exactly one life through EACH of two actual deaths, installs a fresh object
+manager/runtime, isolates outgoing history, waits through title/fade/pending
+assembly/control release, and restores/replays all incoming keys twice over
+45 neutral ticks. Alive leader, unchanged lives/post, selected width, donor
+rules/art and live team chain remain required; no raw replay crosses a load.
+The explicit stale pushable-rock pointer resets under the actual team reload.
+
+Each act contributes150 solo and45 mixed/duplicate-team products. Four solo
+and four team independent witnesses pass in62555 at13:34:15 UTC. The full
+300 solo +90 team products pass in17992 at13:36:36 UTC (396 total including
+six corrected legacy Bubbler checks), zero failures/errors/skips,1:36 Maven
+with queue waiting separate. Source isd35fbaa41 plus the final test drafts
+and the independent Bubbler owner fix; production SOZ is unchanged. Exact
+selectors/hashes and command environment are recorded in the completion plan.
+This upgrades the prior physical-post lifecycle floor rather than inventing
+new cold traversal, every mechanism/team product or native pixel/audio credit.

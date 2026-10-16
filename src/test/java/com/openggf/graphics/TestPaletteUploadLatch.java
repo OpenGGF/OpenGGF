@@ -39,6 +39,16 @@ class TestPaletteUploadLatch {
     }
 
     @Test
+    void rangeChangesDoNotPublishPendingNativeLinesBeforeVInt() throws Exception {
+        PaletteUploadPresentation.publishAndLatch(graphics);
+        PaletteUploadPresentation.cacheLevelPalette(graphics, new Palette(), 2);
+        graphics.setDisplayColorExpansion(com.openggf.graphics.color.DisplayColorExpansion.LIMITED);
+        assertFalse(uploaded(2), "a display preference must not bypass a pending native publication");
+        PaletteUploadPresentation.publishAndLatch(graphics);
+        assertTrue(uploaded(2));
+    }
+
+    @Test
     void latchedWritesReachTheGpuAtTheNextPublication() throws Exception {
         PaletteUploadPresentation.publishAndLatch(graphics);
         PaletteUploadPresentation.cacheLevelPalette(graphics, new Palette(), 2);

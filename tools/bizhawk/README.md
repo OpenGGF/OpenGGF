@@ -88,3 +88,26 @@ lua5.4 tools/bizhawk/test_fbz_boundary_fixture.lua tools/bizhawk/capture_fbz_bou
 The ordinary JUnit suite also invokes the shared host tests through
 `TestNativeReferenceCaptureTool`; `TestFbzVisualExporterGuard` exercises the
 existing Lua exporter and framebuffer guards.
+
+
+## Native headless rendered observations
+
+The optional pinned TraceChaser harness also exposes
+[`IGpgxVideoCaptureHost`](../tracechaser/bizhawk-headless/src/Core/IGpgxHost.cs)
+for owned headless diagnostics. Its [rendered-frame contract](../tracechaser/bizhawk-headless/README.md#diagnostic-rendered-frames)
+uses `AdvanceWithVideo()` followed by `CapturePublishedFrame()` to copy actual
+ARGB pixels and published VRAM/CRAM/VSRAM, with dimensions, frame/lag identity
+and domain endianness. Ordinary `Advance()` stays video-disabled. Ordinary,
+audio, failed advancement and same-frame state loading invalidate the previous
+rendered generation; stale pixels cannot be relabeled as current.
+
+This is an API for an explicit scene/input observer, not a new screenshot CLI
+or canonical fixture publisher. Supply and verify original ROM/movie/runtime
+inputs, declare setup writes before observation, preserve original pixels and
+CPU/prepared/published identities, and keep artifacts in an external task
+directory. Frame-end VDP memory does not prove every earlier scanline's data.
+Use normal shared admission and the intended source/classes build lease for
+compiler helpers, including external outputs; retain it through owned compiler
+children and release it before queued tests. Engine captures continue through
+GameplayCaptureTool. The Lua exporter host above remains available for its
+explicit isolated diagnostic workflow.

@@ -311,11 +311,105 @@ class TestObjectManagerVerticalPlacement {
 
         manager.removeDynamicObject(firstOccupant);
         manager.update(0x0080, null, List.of(), 2, false);
+        assertFalse(registry.instances.containsKey(late),
+                "loc_1B864 skips the X loop while Camera_X_pos_coarse is unchanged, so the "
+                        + "parked Object_load_addr_front entry waits even with a free SST");
+        assertArrayEquals(new int[] {0}, manager.rewindSnapshottable().capture()
+                        .placement().pendingCursorLoadOrder(),
+                "the parked entry keeps its ordered cursor ownership");
+
+        manager.update(0x0100, null, List.of(), 3, false);
 
         assertTrue(registry.instances.containsKey(late),
-                "cursor-owned work must retry after an SST slot becomes available");
+                "the next coarse-X loader pass resumes at the parked entry (loc_1B8D2-loc_1B8E8)");
         assertEquals(ObjectSlotLayout.SONIC_3K.firstDynamicSlot(),
                 registry.instances.get(late).getSlotIndex());
+    }
+
+    @Test
+    void s3kTwoAxisCursorParksAfterConsumingTheLastFreeSlot() {
+        Camera camera = new Camera(SonicConfigurationService.getInstance());
+        camera.setMinY((short) 0);
+        camera.setY((short) 0);
+
+        ObjectSpawn first = new ObjectSpawn(0x02C0, 0x0100, 0x41, 0, 0, false, 0x0100);
+        ObjectSpawn second = new ObjectSpawn(0x02D0, 0x0100, 0x42, 0, 0, false, 0x0100);
+        TrackingRegistry registry = new TrackingRegistry();
+        ObjectManager manager = new ObjectManager(
+                List.of(first, second),
+                registry,
+                -1,
+                null,
+                null,
+                null,
+                camera,
+                new StubObjectServices() {
+                    @Override
+                    public Camera camera() {
+                        return camera;
+                    }
+                });
+        manager.enableExecThenLoadPlacement();
+        manager.reset(0);
+
+        DummyObject lastOccupant = null;
+        for (int slot = ObjectSlotLayout.SONIC_3K.firstDynamicSlot() + 1;
+                slot < ObjectSlotLayout.SONIC_3K.lastDynamicSlotExclusive(); slot++) {
+            DummyObject occupant = new DummyObject(null);
+            manager.addDynamicObjectAtSlot(occupant, slot);
+            lastOccupant = occupant;
+        }
+
+        manager.update(0x0080, null, List.of(), 1, false);
+        assertTrue(registry.instances.containsKey(first), "the one free SST takes the first cursor entry");
+        assertFalse(registry.instances.containsKey(second),
+                "CreateNewSprite4 finds no further slot, so loc_1B8E8 exits before the next entry");
+
+        manager.removeDynamicObject(lastOccupant);
+        manager.update(0x0080, null, List.of(), 2, false);
+        assertFalse(registry.instances.containsKey(second), "unchanged coarse X keeps the cursor parked");
+        manager.update(0x0100, null, List.of(), 3, false);
+        assertTrue(registry.instances.containsKey(second), "the next coarse-X pass resumes the parked entry");
+    }
+
+    @Test
+    void s3kRestoredPreLoaderBoundaryStillRunsTheInitialXPass() {
+        Camera camera = new Camera(SonicConfigurationService.getInstance());
+        camera.setMinY((short) 0);
+        camera.setY((short) 0);
+
+        ObjectSpawn spawn = new ObjectSpawn(0x00C0, 0x0100, 0x41, 0, 0, false, 0x0100);
+        TrackingRegistry registry = new TrackingRegistry();
+        ObjectManager manager = new ObjectManager(
+                List.of(spawn),
+                registry,
+                -1,
+                null,
+                null,
+                null,
+                camera,
+                new StubObjectServices() {
+                    @Override
+                    public Camera camera() {
+                        return camera;
+                    }
+                });
+        manager.enableExecThenLoadPlacement();
+        // FBZ ScreenInit-style deferral: cursors are reset, but the first
+        // Load_Sprites pass (Object_load_routine 0) has not run yet.
+        manager.resetForSynchronousActTransition(0);
+        assertFalse(registry.instances.containsKey(spawn));
+        var preLoader = manager.rewindSnapshottable().capture();
+
+        manager.update(0, null, List.of(), 1, false);
+        assertTrue(registry.instances.containsKey(spawn), "the first loader pass runs the X loop");
+
+        manager.rewindSnapshottable().restore(preLoader);
+        registry.instances.clear();
+        manager.update(0, null, List.of(), 1, false);
+        assertTrue(registry.instances.containsKey(spawn),
+                "loc_1B7D8 writes Camera_X_pos_coarse = -1, so a replay from the restored "
+                        + "pre-loader boundary must run the same initial X loop");
     }
 
     @Test

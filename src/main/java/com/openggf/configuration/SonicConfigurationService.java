@@ -726,6 +726,7 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.EDITOR_ENABLED, false);
 		putDefault(SonicConfiguration.SKIP_MOD_ZONE_TITLE_CARDS, true);
 		putDefault(SonicConfiguration.DISPLAY_COLOR_PROFILE, "RAW_RGB");
+		putDefault(SonicConfiguration.DISPLAY_COLOR_EXPANSION, "FULL");
 		putDefaultKey(SonicConfiguration.DISPLAY_COLOR_PROFILE_TOGGLE_KEY, GLFW_KEY_V);
 		putDefault(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
 		putDefault(SonicConfiguration.WIDESCREEN_DEADZONE_MODE, "PROPORTIONAL");

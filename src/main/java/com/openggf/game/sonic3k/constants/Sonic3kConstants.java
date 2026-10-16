@@ -1371,7 +1371,10 @@ public class Sonic3kConstants {
     public static final int ART_KOSM_RESULTS_KNUCKLES_ADDR = 0x0D67F0;   // "KNUCKLES" name art
 
     // ===== Results Screen Palette & Mappings =====
-    public static final int PAL_RESULTS_ADDR = 0x22D39E;                 // 128 bytes, full palette
+    // Locked-on SpecialStage_Results (game mode $48) loads the S&K half's Pal_Results
+    // (sonic3k.asm:63115/63128 -> 63279), colour 0 $CCC on every line. The S3 half's copy
+    // at 0x22D39E (s3.asm:53897) differs only in that backdrop word ($EEE).
+    public static final int PAL_RESULTS_ADDR = 0x2E318;                  // 128 bytes, full palette
     public static final int MAP_RESULTS_ADDR = 0x0002F26A;               // Mapping frames (59 entries)
 
     // ===== Results Screen VRAM Layout =====
@@ -2206,6 +2209,8 @@ public class Sonic3kConstants {
     public static final int MAP_SSZ_FLOATING_PLATFORM_ADDR = 0x046900;
     /** {@code word_58C80}: SSZ2 encounter foreground deformation band heights. */
     public static final int SSZ2_FG_DEFORM_TABLE_ADDR = 0x058C80;
+    /** {@code SSZ2_BGDeformArray}: background band heights {@code sub_58FBC} uses once {@code Events_routine_bg} is set. */
+    public static final int SSZ2_BG_DEFORM_TABLE_ADDR = 0x058CDE;
 
     /**
      * {@code word_5853E} (sonic3k.lst:136479): the count word {@code $A-1} followed by ten
@@ -2832,7 +2837,8 @@ public class Sonic3kConstants {
     public static final int ART_UNC_SLOT_OPTIONS_SIZE = 0x1000;
     public static final int ANPAL_SLOTS_1_ADDR = 0x003620;
     public static final int ANPAL_SLOTS_1_SIZE = 0x40;
-    public static final int ANPAL_SLOTS_2_ADDR = 0x003658;
+    // sonic3k.lst: AnPal_PalSlots_2 at $3660 (directly after the $40-byte _1 table).
+    public static final int ANPAL_SLOTS_2_ADDR = 0x003660;
     public static final int ANPAL_SLOTS_2_SIZE = 0x80;
     public static final int ANPAL_SLOTS_3_ADDR = 0x0036E0;
     public static final int ANPAL_SLOTS_3_SIZE = 0x0C;

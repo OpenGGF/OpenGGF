@@ -1,12 +1,10 @@
 package com.openggf.game.sonic3k;
 
-import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotLayoutFixture;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.BonusStageState;
 import com.openggf.game.BonusStageType;
 import com.openggf.game.GameServices;
-import com.openggf.graphics.FadeManager;
 import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotBonusPlayer;
 import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotBonusStageRuntime;
 import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRenderBuffers;
@@ -69,7 +67,7 @@ class TestS3kSlotBonusStageRuntime {
     void bootstrapStagesRomShapedStateAndRenderBuffers() {
         S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
 
-        com.openggf.game.sonic3k.bonusstage.slots.S3kSlotLayoutFixture.bootstrap(runtime);
+        runtime.bootstrap();
 
         S3kSlotStageState state = runtime.stageStateForTest();
         S3kSlotRenderBuffers buffers = runtime.renderBuffersForTest();
@@ -194,7 +192,7 @@ class TestS3kSlotBonusStageRuntime {
     }
 
     @Test
-    void exitSequenceStartsFadeToBlackWhenFadePhaseBegins() {
+    void exitSequenceFadesThePaletteItselfWithoutAScreenOverlay() {
         SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, true);
         fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(0x15, 0)
@@ -214,8 +212,10 @@ class TestS3kSlotBonusStageRuntime {
             coordinator.onFrameUpdate();
         }
 
-        assertTrue(GameServices.fade().isActive());
-        assertEquals(FadeManager.FadeState.FADING_TO_BLACK, GameServices.fade().getState());
+        // loc_4BC54 runs Pal_ToBlack on Normal_palette (sonic3k.asm:98981-98987); there is
+        // no screen fade until Restart_level_flag reaches Level:'s Pal_FadeToBlack.
+        assertTrue(runtime.activeExitSequenceForTest().isFading());
+        assertFalse(GameServices.fade().isActive());
     }
 
     private static BonusStageState savedState() {

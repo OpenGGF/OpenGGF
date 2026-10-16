@@ -460,6 +460,9 @@ public class ObjectManager {
         frameCounter = 0;
         dynamicObjectIdCounter = 0;
         rewindObjectIds.clear();
+        // A full SST reset also retires both collision buffers. They cannot
+        // retain erased Java owners or alias replacement actors in reused slots.
+        collisionResponseList.restoreRewindState(null, ignored -> null);
         s2LatchedObjectManagerCameraX = cameraX;
         twoAxisCameraYCoarse = Integer.MIN_VALUE;
         placement.reset(cameraX, persistentRespawnState);
@@ -894,6 +897,8 @@ public class ObjectManager {
                 instance, player, sidekicks, solidPostMovement);
     }
 
+    // Initial dispatch callers publish only after their native delete/range tail.
+    // Sprite_CheckDeleteTouch3 (loc_1B666) rejects range before Add_SpriteToCollisionResponseList.
     void publishInitialCollisionResponse(ObjectInstance instance) {
         if (initialDispatch.isActive()) {
             collisionResponseList.addToCurrentBuild(instance);
@@ -1030,6 +1035,8 @@ public class ObjectManager {
                         removeDynamicObjectInstance(instance);
                     }
                     objectsRemoved = true;
+                } else {
+                    publishInitialCollisionResponse(instance);
                 }
             }
 
@@ -1057,6 +1064,8 @@ public class ObjectManager {
                     objectCallbacks.runAndUnregister(inst, inst::onUnload);
                     removeDynamicObjectInstance(inst);
                     objectsRemoved = true;
+                } else {
+                    publishInitialCollisionResponse(inst);
                 }
             }
             // Fallback: process active objects without valid slots
@@ -1091,6 +1100,8 @@ public class ObjectManager {
                     dispatchDestroyRemoveFromActive(inst, spawn);
                     removeActiveObject(spawn);
                     objectsRemoved = true;
+                } else {
+                    publishInitialCollisionResponse(inst);
                 }
             }
         } finally {
@@ -1216,6 +1227,8 @@ public class ObjectManager {
                         removeDynamicObjectInstance(instance);
                     }
                     objectsRemoved = true;
+                } else {
+                    publishInitialCollisionResponse(instance);
                 }
             }
 
@@ -1244,6 +1257,8 @@ public class ObjectManager {
                     objectCallbacks.runAndUnregister(inst, inst::onUnload);
                     removeDynamicObjectInstance(inst);
                     objectsRemoved = true;
+                } else {
+                    publishInitialCollisionResponse(inst);
                 }
             }
             populateActiveFallbackScratch();
@@ -1283,6 +1298,8 @@ public class ObjectManager {
                     dispatchDestroyRemoveFromActive(inst, spawn);
                     removeActiveObject(spawn);
                     objectsRemoved = true;
+                } else {
+                    publishInitialCollisionResponse(inst);
                 }
             }
         } finally {
@@ -1872,6 +1889,18 @@ public class ObjectManager {
         });
     }
 
+    AbstractObjectInstance currentNativeSstOwner(int slot) {
+        return ObjectNativeSstOverwrite.currentOwner(activeObjects.values(),dynamicObjects,objectCallbacks,slot);
+    }
+
+    AbstractObjectInstance createUncheckedDynamicObject(
+            java.util.function.Function<NativeSstState,AbstractObjectInstance> partialWriter) {
+        return ObjectNativeSstOverwrite.create(new ObjectNativeSstOverwrite.Surface(objectServices,
+                slotLayout,slotAllocator,activeObjects,instanceToSpawn,dynamicObjects,objectCallbacks,
+                dynamicOwnership,rewindObjectIds,deferredDynamicExecThisFrame,execOrder,this::execIndexForSlot,
+                updating,currentExecSlot,this::addDynamicObject,this::markRewindAdoptionDirty),partialWriter);
+    }
+
     public ObjectRewindDynamicCodecs.ExactAdoptionSurface exactRewindAdoptionSurface() {
         return new ObjectRewindDynamicCodecs.ExactAdoptionSurface(objectServices, slotLayout, slotAllocator, rewindObjectIds, dynamicObjects, dynamicOwnership.nonRewindableObjects(), execOrder, this::execIndexForSlot, slot -> objectIdInSlot(slot) >= 0, this::markRewindAdoptionDirty);
     }
@@ -1887,31 +1916,8 @@ public class ObjectManager {
      */
     public <T extends ObjectInstance> T createDynamicObjectAtSlot(
             Supplier<T> factory, int slotIndex) {
-        if (!isManagedDynamicSlot(slotIndex) || !slotAllocator.reserve(slotIndex)) {
-            return null;
-        }
-        return ObjectConstructionContext.construct(objectServices, () -> {
-            T object;
-            try {
-                object = factory.get();
-            } catch (RuntimeException | Error ex) {
-                releaseSlot(slotIndex);
-                throw ex;
-            }
-            if (object == null) {
-                releaseSlot(slotIndex);
-                return null;
-            }
-            if (!(object instanceof AbstractObjectInstance aoi)) {
-                releaseSlot(slotIndex);
-                throw new IllegalArgumentException(
-                        "Fixed-slot dynamic objects must extend AbstractObjectInstance");
-            }
-            registerInheritedCallbackOwner(object);
-            objectCallbacks.run(aoi, () -> aoi.setSlotIndex(slotIndex));
-            addDynamicObject(object);
-            return object;
-        });
+        return ObjectFixedSlotConstruction.create(objectServices,slotAllocator,this::isManagedDynamicSlot,
+                this::releaseSlot,objectCallbacks,this::registerInheritedCallbackOwner,this::addDynamicObject,factory,slotIndex);
     }
 
     /**
@@ -1979,6 +1985,14 @@ public class ObjectManager {
     private boolean removeDynamicObjectInstance(ObjectInstance object) {
         boolean removed = dynamicObjects.remove(object);
         if (removed) {
+            // Every delete routine zeroes the whole SST slot, status(a0) latch
+            // bits included -- S3K Delete_Current_Sprite/Delete_Referenced_Sprite
+            // (docs/skdisasm/sonic3k.asm:36108-36125), S2 DeleteObject
+            // (docs/s2disasm/s2.asm:30329-30345). Layout removals release theirs
+            // in removeActiveObject; a dynamic solid's instance-keyed latch must
+            // not outlive it either (hasObjectPushingBit would report a dead
+            // owner, and rewind capture would record its freed slot).
+            solidContacts.evictLatchForDestroyedInstance(object);
             dynamicOwnership.remove(object);
             rewindObjectIds.remove(object);
             notifyObjectManagerRemoval(object);
@@ -1986,7 +2000,13 @@ public class ObjectManager {
         return removed;
     }
 
-    private static void notifyObjectManagerRemoval(ObjectInstance object) {
+    private void notifyObjectManagerRemoval(ObjectInstance object) {
+        // The deleted SST slot carries nothing into later touch passes: S3K
+        // Delete_Current_Sprite zeroes it (docs/skdisasm/sonic3k.asm:36108-36125)
+        // and Collision_response_list is rebuilt by every ExecuteObjects pass.
+        if (touchResponses != null) {
+            touchResponses.forgetRemovedObject(object);
+        }
         if (object instanceof AbstractObjectInstance instance) {
             instance.onRemovedFromObjectManager();
         }
@@ -3499,8 +3519,20 @@ public class ObjectManager {
             if (previousYCoarse == Integer.MIN_VALUE) {
                 previousYCoarse = currentYCoarse;
             }
-            for (ObjectSpawn spawn : placement.pendingCursorLoadSpawns()) {
-                changed |= tryLoadPlacementSpawn(spawn, allowVerticalLoadBypassForS2);
+            // loc_1B864 runs the X loop only on a coarse-X change (or level
+            // init). loc_1B8D2 first needs a free SST, and loc_1B8E8 exits when
+            // CreateNewSprite4 finds no further slot, parking
+            // Object_load_addr_front on the next entry until the next coarse
+            // change (sonic3k.asm loc_1B8D2-loc_1B8F2, CreateNewSprite4).
+            if (placement.consumeCursorLoadPass() && hasFreeDynamicSlot()) {
+                for (ObjectSpawn spawn : placement.pendingCursorLoadSpawns()) {
+                    boolean loaded = tryLoadPlacementSpawn(spawn, allowVerticalLoadBypassForS2);
+                    changed |= loaded;
+                    if (placement.isPendingCursorLoad(spawn)
+                            || (loaded && !hasFreeDynamicSlot())) {
+                        break;
+                    }
+                }
             }
             placement.finishPendingCursorLoadBatch();
             if (currentYCoarse != previousYCoarse) {
@@ -4785,24 +4817,13 @@ public class ObjectManager {
     }
 
     ObjectInstance findRestoredRidingObject(ObjectSpawn spawn, int slotIndex) {
-        if (spawn != null) {
-            ObjectInstance active = activeObjects.get(spawn);
-            if (active != null) {
-                return active;
-            }
-            for (ObjectInstance dynamic : dynamicObjects) {
-                if (dynamic != null && objectCallbacks.call(dynamic, dynamic::getSpawn) == spawn) {
-                    return dynamic;
-                }
-            }
+        ObjectInstance occupant = ObjectSolidContactController.findRestoredRidingOccupant(
+                activeObjects, dynamicObjects, objectCallbacks, spawn, slotIndex);
+        if (occupant != null || !isProcessedSstSlot(slotIndex)) {
+            return occupant;
         }
-        if (isProcessedSstSlot(slotIndex)) {
-            int execIdx = execIndexForSlot(slotIndex);
-            if (execIdx >= 0 && execIdx < execOrder.length) {
-                return execOrder[execIdx];
-            }
-        }
-        return null;
+        int execIdx = execIndexForSlot(slotIndex);
+        return execIdx >= 0 && execIdx < execOrder.length ? execOrder[execIdx] : null;
     }
 
 

@@ -382,6 +382,8 @@ public final class FbzMinibossInstance extends AbstractObjectInstance
             if (!services().kosinskiModuleQueue().enqueue(rom,
                     Sonic3kConstants.ART_KOSM_FBZ_MINIBOSS_ADDR, 0x52E * 32)) {
                 Logger.getLogger(FbzMinibossInstance.class.getName()).warning("FBZ miniboss KosM queue is full");
+            } else {
+                com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.bindPatternModule(services(), minibossArtOrdinal);
             }
         } catch (IOException failure) {
             Logger.getLogger(FbzMinibossInstance.class.getName()).log(

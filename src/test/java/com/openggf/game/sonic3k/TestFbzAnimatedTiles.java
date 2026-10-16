@@ -50,10 +50,12 @@ class TestFbzAnimatedTiles {
         var profile = GameServices.module().getLevelInitProfile();
         assertTrue(level.consumePendingInitialProcessSpritesPass());
         ((com.openggf.game.internal.QueuedPatternDmaPublication) profile).serviceQueuedPatternDma(
-                com.openggf.game.resources.PlcLifecyclePhase.ORDINARY_LEVEL, false);
+                com.openggf.game.resources.PlcLifecyclePhase.ORDINARY_LEVEL, false,
+                GameServices.runtimeArtCoordinator(), level);
         byte[] first = patternBytes(level.getCurrentLevel().getPattern(0x200));
         for (int i = 0; i < 7; i++) { ((com.openggf.game.internal.QueuedPatternDmaPublication) profile).serviceQueuedPatternDma(
-                com.openggf.game.resources.PlcLifecyclePhase.ORDINARY_LEVEL, false); manager.update(); }
+                com.openggf.game.resources.PlcLifecyclePhase.ORDINARY_LEVEL, false,
+                GameServices.runtimeArtCoordinator(), level); manager.update(); }
         assertEquals(0, script.getTimer());
         manager.update();
         assertEquals(2, script.getFrameIndex(), "logical frame advances on expiry");
@@ -61,7 +63,8 @@ class TestFbzAnimatedTiles {
                 "submitted art cannot appear before VBlank");
         var pending = manager.capture();
         ((com.openggf.game.internal.QueuedPatternDmaPublication) profile).serviceQueuedPatternDma(
-                com.openggf.game.resources.PlcLifecyclePhase.ORDINARY_LEVEL, false);
+                com.openggf.game.resources.PlcLifecyclePhase.ORDINARY_LEVEL, false,
+                GameServices.runtimeArtCoordinator(), level);
         byte[] second = patternBytes(level.getCurrentLevel().getPattern(0x200));
         assertFalse(java.util.Arrays.equals(first, second), "ROM spike frames differ");
         manager.restore(pending);
@@ -69,7 +72,8 @@ class TestFbzAnimatedTiles {
                 "rewind restores presented art without consuming queued art");
         assertEquals(2, script.getFrameIndex());
         ((com.openggf.game.internal.QueuedPatternDmaPublication) profile).serviceQueuedPatternDma(
-                com.openggf.game.resources.PlcLifecyclePhase.ORDINARY_LEVEL, false);
+                com.openggf.game.resources.PlcLifecyclePhase.ORDINARY_LEVEL, false,
+                GameServices.runtimeArtCoordinator(), level);
         assertArrayEquals(second, patternBytes(level.getCurrentLevel().getPattern(0x200)));
         assertEquals(2, script.getFrameIndex(), "VBlank does not tick animation counters");
     }

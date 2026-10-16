@@ -13,7 +13,7 @@ import java.util.function.IntConsumer;
 public final class S3kDataSelectManager extends S3kDataSelectPresentation {
     public S3kDataSelectManager() {
         this(new DataSelectSessionController(new S3kDataSelectProfile()),
-                Path.of("saves"),
+                com.openggf.game.save.SavePaths.root(),
                 EngineServices.current().configuration());
     }
 
@@ -22,7 +22,7 @@ public final class S3kDataSelectManager extends S3kDataSelectPresentation {
     }
 
     public S3kDataSelectManager(DataSelectSessionController controller) {
-        this(controller, Path.of("saves"), EngineServices.current().configuration());
+        this(controller, com.openggf.game.save.SavePaths.root(), EngineServices.current().configuration());
     }
 
     /**

@@ -10,6 +10,7 @@ import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
 
 import java.util.List;
 import com.openggf.game.GameServices;
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
 
 /**
  * Sonic 3&K level initialization profile.
@@ -24,8 +25,12 @@ import com.openggf.game.GameServices;
  */
 public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
         implements com.openggf.game.internal.QueuedPatternDmaPublication,
-        com.openggf.game.internal.SpriteTablePublication {
+        com.openggf.game.internal.SpriteTablePublication,
+        com.openggf.game.internal.InitialLevelScrollPreparation {
     private final Sonic3kLevelEventManager levelEventManager;
+    private final Sonic3kFreshTitleCardSst freshTitleCardSst = new Sonic3kFreshTitleCardSst();
+
+    Sonic3kFreshTitleCardSst freshTitleCardSst() { return freshTitleCardSst; }
 
     public Sonic3kLevelInitProfile(Sonic3kLevelEventManager levelEventManager) {
         this.levelEventManager = levelEventManager;
@@ -61,7 +66,9 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
 
     @Override
     public void serviceQueuedPatternDma(com.openggf.game.resources.PlcLifecyclePhase phase,
-                                         boolean explicitDmaService) {
+                                         boolean explicitDmaService,
+                                         com.openggf.game.RuntimeArtCoordinator runtimeArtCoordinator,
+                                         com.openggf.level.LevelManager levelManager) {
         // ROM: ordinary/credits LevelLoop arms VInt8 (7886 -> 701 -> 764),
         // title card loc_62CC arms C (7738 -> 797 -> 836), normal pause arms
         // 10 -> 8 (1551 -> 697). Fade12 and special1C reach DMA indirectly via
@@ -76,15 +83,47 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
         };
         if (!explicitDmaService && !nativeHandler) return;
         // The caller's existing token guard guarantees exactly-once dispatch.
-        if (GameServices.level().getAnimatedPatternManager() instanceof Sonic3kLevelAnimationManager animator) {
+        if (levelManager != null
+                && levelManager.getAnimatedPatternManager() instanceof Sonic3kLevelAnimationManager animator) {
             animator.publishAniPlcAtVBlank();
         }
+        S3kRuntimeArtCoordinator.from(runtimeArtCoordinator).publishPatternModuleDma();
     }
 
     @Override
     public List<InitStep> levelLoadSteps(LevelLoadContext ctx) {
         List<InitStep> steps = buildCoreSteps(ctx);
+        steps.addFirst(new InitStep("PrepareFreshTitleCardSst",
+                "Level/loc_62B6: fixed title owner precedes layout placement",
+                () -> freshTitleCardSst.prepare(ctx)));
+        if (ctx.permitsInitialProcessSpritesRequest()) {
+            // Level/loc_60DE clears Lag_frame_count ($F62A), $58 bytes:
+            // RNG_seed at $F636 lies inside it, before any new sprite dispatch.
+            // This includes ending/stage-return loads, but not preview, pure
+            // decode/restoration or seamless in-place continuation.
+            steps.addFirst(new InitStep("ClearFreshLevelRng",
+                    "Level/loc_60DE: clearRAM Lag_frame_count,$58 includes RNG_seed",
+                    () -> GameServices.rng().setSeed(0)));
+        }
         if (ctx.isIncludePostLoadAssembly()) {
+            steps.add(new InitStep("PublishNativeCpuSavedEntryFlag",
+                    "Tails_Init/loc13A10: native fresh or saved entry eligibility",
+                    () -> {
+                        var level = GameServices.level();
+                        var saved = level.getBigRingReturn();
+                        boolean selectedSaved2 = saved != null
+                                && level.getTransitions().isLastStarPostHitSet()
+                                && saved.originZone() == level.getCurrentZone()
+                                && saved.originAct() == level.getCurrentAct();
+                        // Fresh/LevelSelect clears Last_star_post_hit (asm10039);
+                        // real checkpoint/Saved2 return publishes its nonzero
+                        // bank before Tails_Init copies it (asm26155). The
+                        // existing captured flag must outlive bank consumption
+                        // because the engine defers CPU routine zero until
+                        // the following ordinary player pass.
+                        if (ctx.hasCheckpoint() || selectedSaved2) level.setLastStarPostHit();
+                        else level.clearLastStarPostHit();
+                    }));
             steps.add(restoreCheckpointStep(ctx));
             steps.add(spawnPlayerStep(ctx));
             steps.add(resetPlayerStateStep(ctx));
@@ -97,6 +136,9 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
                 steps.add(requestTitleCardStep(ctx));
             }
         }
+        steps.add(new InitStep("FinishFreshTitleCardSstInstallation",
+                "End the load-only fixed-slot installation scope",
+                freshTitleCardSst::finishInstallation));
         return List.copyOf(steps);
     }
 
@@ -114,6 +156,14 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
                 // Current_zone_and_act word (sonic3k.asm:8143-8293). An authored
                 // host's logical zone index does not identify a ROM script.
                 if (!Sonic3kLevel.currentLevelHasStockRomZoneIdentity()) return;
+                // Level loc_6460 clears Update_HUD_timer and Level_started_flag
+                // before initial Process_Sprites for the $1701 hub. Existing
+                // level/camera snapshots already own both captured values.
+                if (Sonic3kLevelResourceProfile.isHpzSanctuary(
+                        GameServices.level().getCurrentZone(), GameServices.level().getCurrentAct())) {
+                    GameServices.level().getLevelGamestate().pauseTimer();
+                    GameServices.camera().setLevelStarted(false);
+                }
                 levelEventManager.applyZonePlayerStateForLoad(
                         ctx.hasCheckpoint()
                                 || GameServices.level().hasBigRingReturn()
@@ -126,6 +176,12 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
                 "S3K Get_LevelSizeStart / HPZ special-stage hub camera",
                 () -> {
                     GameServices.level().initCameraForLevel();
+                    // Level loc_6404 sets Level_started_flag=1 for each fresh
+                    // load, before scene initialization/loc_6460 can suppress
+                    // it. In particular, a Saved2 origin return must not retain
+                    // the sanctuary's zero. Later AIZ/ending scene owners and
+                    // InitZonePlayerState retain their native clear authority.
+                    GameServices.camera().setLevelStarted(true);
                     int zone = GameServices.level().getCurrentZone();
                     int act = GameServices.level().getCurrentAct();
                     Sonic3kLevelResourceProfile profile =
@@ -150,6 +206,21 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
 
     static int hpzReturnCameraX(int stageIndex) {
         return S3kSanctuaryRuntimeState.resultsCameraX(stageIndex);
+    }
+
+    @Override
+    public void prepareInitialLevelScroll() {
+        var level = GameServices.level();
+        // An authored host's logical index is not a native ROM script identity.
+        // Only Level: fresh stock assembly admitted the owning setup token;
+        // special/results/preview/restoration loops carry no such admission.
+        if (!(level.getCurrentLevel() instanceof Sonic3kLevel loaded)
+                || !loaded.hasStockRomZoneIdentity()) return;
+        // Level loc_6310 (asm:7759-7760) calls DeformBgLayer before LevelSetup and
+        // the initial Process_Sprites/Render_Sprites pair. Reproduce the real
+        // dispatch once so its first published scroll is already initialized;
+        // post-restore derived reconstruction then observes the same state.
+        level.recomputeParallaxOnlyForCurrentFrame();
     }
 
     @Override

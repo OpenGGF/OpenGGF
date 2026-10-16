@@ -68,6 +68,9 @@ public class SpriteManager implements PlayableSstDispatcher {
 	private final Map<AbstractPlayableSprite, String> sidekickCharacterNames = new IdentityHashMap<>();
 	private final Set<AbstractPlayableSprite> temporarySidekicks =
 			Collections.newSetFromMap(new IdentityHashMap<>());
+	// Immutable registration role: script-created actors own host ROM art, not launch donation.
+	private final Set<AbstractPlayableSprite> nativeScriptedArtSidekicks =
+			Collections.newSetFromMap(new IdentityHashMap<>());
 	/**
 	 * Re-creation factories for temporary sidekicks (e.g. the CNZ1 throwaway
 	 * carry-in Tails), keyed by sprite code. A temporary sidekick can be removed
@@ -81,7 +84,23 @@ public class SpriteManager implements PlayableSstDispatcher {
 	private final Map<String, java.util.function.Supplier<AbstractPlayableSprite>>
 			temporarySidekickRecreators = new java.util.HashMap<>();
 
+	/**
+	 * Last removed instance of each rewind-recreatable temporary sidekick, by code.
+	 * History captured while it was alive holds direct references to that sprite
+	 * (solid-contact headroom/standing latches, plane-switcher sides). Re-admitting
+	 * the identical sprite keeps them live; a factory-built replacement left every
+	 * such entry keyed to the departed instance, so replay diverged.
+	 */
+	private final Map<String, RewindRetiredSidekick> removedRecreatableTemporaries = new java.util.HashMap<>();
+
 	private final Map<String, RewindRetiredSidekick> rewindRetiredSidekicks = new java.util.LinkedHashMap<>();
+	/** Live and script-retired followers in their original update order. */
+	private final List<AbstractPlayableSprite> retiredRosterOrder = new ArrayList<>();
+	final NativePlayerArtBindings nativePlayerArtBindings = new NativePlayerArtBindings(this);
+
+    void forgetNativePlayerArt(AbstractPlayableSprite player) {
+        nativePlayerArtBindings.forget(player);
+    }
 
 	private static final SensorConfiguration[][] MOVEMENT_MAPPING_ARRAY = createMovementMappingArray();
 
@@ -205,6 +224,10 @@ public class SpriteManager implements PlayableSstDispatcher {
 		if (retired != null && retired.sprite() != sprite) {
 			rewindRetiredSidekicks.remove(sprite.getCode());
 		}
+		var removedTemporary = removedRecreatableTemporaries.get(sprite.getCode());
+		if (removedTemporary != null && removedTemporary.sprite() != sprite) {
+			removedRecreatableTemporaries.remove(sprite.getCode());
+		}
 		Sprite previous = sprites.put(sprite.getCode(), sprite);
 		boolean replaced = previous != null;
 		if (previous instanceof AbstractPlayableSprite previousPlayable) {
@@ -213,6 +236,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 			sidekicks.remove(previousPlayable);
 			sidekickCharacterNames.remove(previousPlayable);
 			temporarySidekicks.remove(previousPlayable);
+			nativeScriptedArtSidekicks.remove(previousPlayable);
 		}
 		if (sprite instanceof AbstractPlayableSprite playable && playable.isCpuControlled()) {
 			sidekicks.add(playable);
@@ -258,27 +282,77 @@ public class SpriteManager implements PlayableSstDispatcher {
 		}
 	}
 
+	void addNativeScriptedTemporarySidekick(AbstractPlayableSprite sprite, String characterName,
+			java.util.function.Supplier<AbstractPlayableSprite> recreator) {
+		addTemporarySidekick(sprite, characterName, recreator);
+		if (sprite.isCpuControlled()) nativeScriptedArtSidekicks.add(sprite);
+	}
+
+	boolean usesNativeScriptedArt(AbstractPlayableSprite sprite) {
+		return nativeScriptedArtSidekicks.contains(sprite);
+	}
+
 	/** A scene may erase its followers while its same-world history still contains them. */
 	void retireAllSidekicksForRewind() {
-		for (var sidekick : new ArrayList<>(sidekicks)) {
-			rewindRetiredSidekicks.put(sidekick.getCode(), new RewindRetiredSidekick(
-					sidekick, sidekickCharacterNames.get(sidekick), temporarySidekicks.contains(sidekick)));
-			removeSprite(sidekick);
-		}
+		for (var sidekick : new ArrayList<>(sidekicks)) retireSidekickForRewind(sidekick);
+	}
+
+	/**
+	 * A script deleted one follower's object (for example a bonus object's
+	 * {@code Delete_Referenced_Sprite} on {@code Player_2}). It stops updating,
+	 * drawing and colliding, while same-world history can still restore it.
+	 */
+	void retireSidekickForRewind(AbstractPlayableSprite sidekick) {
+		if (!sidekicks.contains(sidekick)) return;
+		for (var live : sidekicks) if (!retiredRosterOrder.contains(live)) retiredRosterOrder.add(live);
+		rewindRetiredSidekicks.put(sidekick.getCode(), new RewindRetiredSidekick(
+				sidekick, sidekickCharacterNames.get(sidekick), temporarySidekicks.contains(sidekick),
+				nativeScriptedArtSidekicks.contains(sidekick)));
+		removeSprite(sidekick);
 	}
 
 	private void restoreRetiredSidekickRoster(Set<String> snapshotCodes) {
-		// Linked insertion order preserves the original CPU leader chain, including
-		// duplicate characters. Reapply per-sprite RAM in the ordinary restore below.
-		for (var entry : rewindRetiredSidekicks.entrySet()) {
-			var retired = entry.getValue();
-			if (!snapshotCodes.contains(entry.getKey())) {
-				if (getSprite(entry.getKey()) == retired.sprite()) removeSprite(retired.sprite());
-			} else if (getSprite(entry.getKey()) == null) {
-				if (retired.temporary()) addTemporarySidekick(retired.sprite(), retired.characterName());
-				else addSprite(retired.sprite(), retired.characterName());
+		// Re-admit in original roster order, at the original positions, so the CPU
+		// leader chain and update order match, including duplicate characters.
+		// Reapply per-sprite RAM in the ordinary restore below.
+		for (var retired : rewindRetiredSidekicks.values()) {
+			String code = retired.sprite().getCode();
+			if (!snapshotCodes.contains(code)) {
+				if (getSprite(code) == retired.sprite()) removeSprite(retired.sprite());
+			} else if (getSprite(code) == null) {
+				readmitRetiredSidekick(retired);
 			}
 		}
+		restoreRetiredRosterOrder();
+	}
+
+	/**
+	 * Ordinary return from a scene that deleted followers: the destination load
+	 * recreates them, so the configured companions rejoin in their original order.
+	 */
+	void restoreRetiredSidekicksForReturn() {
+		for (var retired : rewindRetiredSidekicks.values()) {
+			if (getSprite(retired.sprite().getCode()) == null) readmitRetiredSidekick(retired);
+		}
+		restoreRetiredRosterOrder();
+		rewindRetiredSidekicks.clear();
+		retiredRosterOrder.clear();
+	}
+
+	private void readmitRetiredSidekick(RewindRetiredSidekick retired) {
+		if (retired.temporary()) addTemporarySidekick(retired.sprite(), retired.characterName());
+		else addSprite(retired.sprite(), retired.characterName());
+		if (retired.nativeScriptedArt()) nativeScriptedArtSidekicks.add(retired.sprite());
+	}
+
+	/** Stable: followers absent from the recorded order keep their relative order last. */
+	private void restoreRetiredRosterOrder() {
+		if (retiredRosterOrder.isEmpty()) return;
+		sidekicks.sort(java.util.Comparator.comparingInt(sidekick -> {
+			int index = retiredRosterOrder.indexOf(sidekick);
+			return index < 0 ? Integer.MAX_VALUE : index;
+		}));
+		bucketsDirty = true;
 	}
 
 	public void removeTemporarySidekicks() {
@@ -322,6 +396,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 	 * Useful for test cleanup to ensure a clean state.
 	 */
 	public void clearAllSprites() {
+		nativePlayerArtBindings.clear();
 		for (Sprite sprite : sprites.values()) {
 			if (sprite instanceof AbstractPlayableSprite playable) {
 				com.openggf.sprites.playable.PlayableSpriteInternalAccess.bindMutatorPolicies(playable, null);
@@ -332,8 +407,11 @@ public class SpriteManager implements PlayableSstDispatcher {
 		sidekicks.clear();
 		sidekickCharacterNames.clear();
 		temporarySidekicks.clear();
+		nativeScriptedArtSidekicks.clear();
 		temporarySidekickRecreators.clear();
+		removedRecreatableTemporaries.clear();
 		rewindRetiredSidekicks.clear();
+		retiredRosterOrder.clear();
 		bucketsDirty = true;
 	}
 
@@ -891,6 +969,15 @@ public class SpriteManager implements PlayableSstDispatcher {
 	}
 
 	private void initializeInitialAssemblyPlayableSlot(AbstractPlayableSprite playable) {
+		// A custom-physics playable is a dedicated player object, not
+		// Obj_Sonic/Tails/Knuckles: the Slot stage's Obj_Sonic_RotatingSlotBonus
+		// spawn routine loc_4B9CE (sonic3k.asm:98710-98742) never reaches
+		// Sonic_Init, and its runtime already models that spawn pass. Applying
+		// Sonic_Init's prev_anim write here re-ran Animate's change branch on
+		// the first LevelLoop pass, putting every roll step one frame late.
+		if (playable instanceof CustomPlayablePhysics) {
+			return;
+		}
 		if (!playable.isCpuControlled()) {
 			// Sonic_Init temporarily applies the Player_2 spawn offset, calls
 			// Reset_Player_Position_Array, then restores Player_1
@@ -1639,9 +1726,14 @@ public class SpriteManager implements PlayableSstDispatcher {
 		if (sprite instanceof AbstractPlayableSprite playable) {
 			com.openggf.sprites.playable.PlayableSpriteInternalAccess.bindMutatorPolicies(playable, null);
 			if (playable.getMovementManager() instanceof PlayableSpriteMovement movement) movement.motionMutators = null;
+			if (temporarySidekicks.contains(playable) && temporarySidekickRecreators.containsKey(playable.getCode())) {
+				removedRecreatableTemporaries.put(playable.getCode(), new RewindRetiredSidekick(playable,
+						sidekickCharacterNames.get(playable), true, nativeScriptedArtSidekicks.contains(playable)));
+			}
 			sidekicks.remove(playable);
 			sidekickCharacterNames.remove(playable);
 			temporarySidekicks.remove(playable);
+			nativeScriptedArtSidekicks.remove(playable);
 		}
 		return (sprites.remove(sprite.getCode()) != null);
 	}
@@ -2072,6 +2164,11 @@ public class SpriteManager implements PlayableSstDispatcher {
 	}
 
 	private static void applyScreenYWrapValueAfterControl(AbstractPlayableSprite playable) {
+		if (playable.getDead() && !playable.isCpuControlled()) {
+			// Main routine-6 owners use raw gravity primitives, not the control
+			// mask; preserve the same native dispatch as PlayableSpriteMovement.
+			return;
+		}
 		// ROM Obj02_Dead (docs/s2disasm/s2.asm:40736-40742) runs the dead CPU
 		// sidekick's fall through jsr (ObjectMoveAndFall).l directly and never
 		// applies the Screen_Y_wrap mask that the live control/hurt paths use, so
@@ -2262,9 +2359,15 @@ public class SpriteManager implements PlayableSstDispatcher {
 				// flew off). Without this, rewinding back into the carry intro would
 				// leave the leader object-controlled with no carrier present. The
 				// factory fully wires and registers the sprite; its per-sprite state
-				// is reapplied by the restore loop below.
+				// is reapplied by the restore loop below. The departed instance is
+				// preferred so captured references to it resolve to the live sprite.
 				for (com.openggf.game.rewind.snapshot.SpriteManagerSnapshot.SpriteEntry entry : s.sprites()) {
 					if (getSprite(entry.code()) == null) {
+						var removed = removedRecreatableTemporaries.get(entry.code());
+						if (removed != null) {
+							readmitRetiredSidekick(removed);
+							continue;
+						}
 						java.util.function.Supplier<AbstractPlayableSprite> recreator =
 								temporarySidekickRecreators.get(entry.code());
 						if (recreator != null) {

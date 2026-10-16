@@ -8,6 +8,15 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class TestLevelTransitionCoordinatorPeeks {
     @Test
+    void freshRamResetStartsWithNoNativeStarPostEligibility() {
+        var coordinator = new LevelTransitionCoordinator();
+        assertFalse(coordinator.isLastStarPostHitSet());
+        coordinator.setLastStarPostHit();
+        coordinator.resetState();
+        assertFalse(coordinator.isLastStarPostHitSet());
+    }
+
+    @Test
     void bonusPeekDoesNotConsume() {
         LevelTransitionCoordinator c = new LevelTransitionCoordinator();
         assertNull(c.peekBonusStageRequest());
@@ -56,7 +65,10 @@ class TestLevelTransitionCoordinatorPeeks {
                 "legacy overload retains progression-derived success semantics");
         assertSame(saved, c.getBigRingReturn());
 
+        c.clearLastStarPostHit(); // SSEntryFlash_GoSS's earlier hub-entry clear.
+        assertFalse(c.isLastStarPostHitSet());
         assertTrue(c.requestSanctuaryExit());
+        assertTrue(c.isLastStarPostHitSet(), "loc90C58 publishes Saved2 eligibility before Level assembly");
         assertFalse(c.requestSanctuaryExit(), "exit request is idempotent");
         assertEquals(7, c.getRequestedZone());
         assertEquals(1, c.getRequestedAct());

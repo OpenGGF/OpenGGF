@@ -111,11 +111,11 @@ public final class S3kSlotOptionCycleSystem {
         int seed = frameCounter & 0xFF;
         int rotated = ((seed >>> 3) | (seed << 5)) & 0xFF;
 
-        int fixedRow = S3kSlotRewardResolver.pickFixedRow(rotated);
+        int fixedRow = S3kSlotRewardResolver.pickFixedRow(state.romData(), rotated);
         if (fixedRow >= 0) {
             int rowBase = fixedRow * 3;
-            state.setOptionCycleTargetReelA(S3kSlotRomData.TARGET_ROWS[rowBase + 1] & 0xFF);
-            state.setOptionCycleTargetPackedBC(S3kSlotRomData.TARGET_ROWS[rowBase + 2] & 0xFF);
+            state.setOptionCycleTargetReelA(state.romData().targetRows()[rowBase + 1] & 0xFF);
+            state.setOptionCycleTargetPackedBC(state.romData().targetRows()[rowBase + 2] & 0xFF);
         } else {
             pickRandomTargets(state, frameCounter, rng);
         }
@@ -132,13 +132,13 @@ public final class S3kSlotOptionCycleSystem {
         rnd = rotateRight16(rnd, 4);
 
         int idxA = rnd & 7;
-        int targetA = S3kSlotRomData.REEL_SEQUENCE_A[idxA];
+        int targetA = state.romData().reel(0)[idxA];
 
         int idxB = (rnd >>> 3) & 7;
-        int targetB = S3kSlotRomData.REEL_SEQUENCE_B[idxB];
+        int targetB = state.romData().reel(1)[idxB];
 
         int idxC = (rnd >>> 6) & 7;
-        int targetC = S3kSlotRomData.REEL_SEQUENCE_C[idxC];
+        int targetC = state.romData().reel(2)[idxC];
 
         state.setOptionCycleTargetReelA(targetA);
         state.setOptionCycleTargetPackedBC((targetB << 4) | targetC);
@@ -220,7 +220,7 @@ public final class S3kSlotOptionCycleSystem {
         }
 
         int targetSymbol = desiredTargetSymbol(state);
-        int currentSymbol = sequenceForReelWordCentered(state.optionCycleReelWords()[reelIndex], sequenceForReel(reelIndex));
+        int currentSymbol = sequenceForReelWordCentered(state.optionCycleReelWords()[reelIndex], sequenceForReel(state, reelIndex));
         if (currentSymbol != targetSymbol) {
             return;
         }
@@ -232,7 +232,7 @@ public final class S3kSlotOptionCycleSystem {
         int targetSymbol = desiredTargetSymbol(state);
         int reelWord = state.optionCycleReelWords()[reelIndex];
         int[] reelVelocities = state.optionCycleReelVelocities();
-        if (sequenceForReelWordApproach(reelWord, sequenceForReel(reelIndex)) != targetSymbol) {
+        if (sequenceForReelWordApproach(reelWord, sequenceForReel(state, reelIndex)) != targetSymbol) {
             int speed = reelVelocities[reelIndex] & 0xFF;
             if (speed > 0x20) {
                 speed = (speed - 0x0C) & 0xFF;
@@ -251,7 +251,7 @@ public final class S3kSlotOptionCycleSystem {
         int adjustedWord = (reelWord + 0x80) & 0xFFFF;
         int snappedWord = (((adjustedWord & 0x0700) - 0x0010) & 0xFFFF);
         state.setOptionCycleReelWord(reelIndex, snappedWord);
-        int landedSymbol = sequenceForReel(reelIndex)[(adjustedWord >>> 8) & 0x07] & 0xFF;
+        int landedSymbol = sequenceForReel(state, reelIndex)[(adjustedWord >>> 8) & 0x07] & 0xFF;
         writeResolvedTargetSymbol(state, landedSymbol);
         state.setOptionCycleReelVelocity(reelIndex, 0xF8);
         state.setOptionCycleReelSubstate(reelIndex, 8);
@@ -275,7 +275,7 @@ public final class S3kSlotOptionCycleSystem {
         state.setOptionCycleLockProgress(3);
         state.setOptionCycleResolvedDisplayTimer(0x20);
         state.setOptionCycleCompletedCycles(state.optionCycleCompletedCycles() + 1);
-        state.setOptionCycleLastPrize(S3kSlotPrizeCalculator.calculate(
+        state.setOptionCycleLastPrize(S3kSlotPrizeCalculator.calculate(state.romData(),
                 state.optionCycleTargetReelA(),
                 (byte) state.optionCycleTargetPackedBC()));
         syncDisplayFromReelWords(state);
@@ -324,9 +324,9 @@ public final class S3kSlotOptionCycleSystem {
     private static void syncDisplayFromReelWords(S3kSlotStageState state) {
         int[] reelWords = state.optionCycleReelWords();
         state.setOptionCycleDisplaySymbols(
-                symbolForReelWord(reelWords[0], S3kSlotRomData.REEL_SEQUENCE_A),
-                symbolForReelWord(reelWords[1], S3kSlotRomData.REEL_SEQUENCE_B),
-                symbolForReelWord(reelWords[2], S3kSlotRomData.REEL_SEQUENCE_C));
+                symbolForReelWord(reelWords[0], state.romData().reel(0)),
+                symbolForReelWord(reelWords[1], state.romData().reel(1)),
+                symbolForReelWord(reelWords[2], state.romData().reel(2)));
         state.setOptionCycleOffsets(reelWords[0] & 0xFF, reelWords[1] & 0xFF, reelWords[2] & 0xFF);
     }
 
@@ -365,11 +365,11 @@ public final class S3kSlotOptionCycleSystem {
         return (byte) (value & 0xFF);
     }
 
-    private static byte[] sequenceForReel(int reelIndex) {
+    private static byte[] sequenceForReel(S3kSlotStageState state, int reelIndex) {
         return switch (reelIndex) {
-            case 0 -> S3kSlotRomData.REEL_SEQUENCE_A;
-            case 1 -> S3kSlotRomData.REEL_SEQUENCE_B;
-            default -> S3kSlotRomData.REEL_SEQUENCE_C;
+            case 0 -> state.romData().reel(0);
+            case 1 -> state.romData().reel(1);
+            default -> state.romData().reel(2);
         };
     }
 

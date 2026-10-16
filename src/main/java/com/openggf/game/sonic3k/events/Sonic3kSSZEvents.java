@@ -123,6 +123,11 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
             if (state.foregroundRoutine() == 0x18)
                 state.endingPlane().streamRows(camera().getYCopy(),
                         services.levelManager()::getForegroundTileDescriptorAtWorld);
+            // SSZ2_BackgroundEvent follows the screen event. Routine 4 (sonic3k.asm:117996)
+            // swaps in the foreground row pointers before loc_58D1E's Draw_TileRow, so Plane B
+            // fills from Level_layout_main as loc_59208 lowers Camera_Y_pos_BG_copy.
+            if (state.backgroundRoutine() != 0)
+                state.endingBackgroundPlane().drawTileRow(state.backgroundCameraY());
             state.advanceScreenShake(frameCounter,
                     services.playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite p && p.getDead());
             camera().setYCopy((short) (camera().getYCopy() + state.appliedScreenShakeOffset()));
@@ -159,6 +164,15 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
     /** SSZ2_ScreenEvent stage4, loc_58AE0; stage0 falls through on the same pass. */
     private static void updateAct2Foreground(com.openggf.level.objects.ObjectServices services,
                                              SszZoneRuntimeState state) {
+        if (state.foregroundRoutine() == 0xC) {
+            if (!state.endingPlane().advance(services.levelManager()::getForegroundTileDescriptorAtWorld)) return;
+            services.camera().setY((short) 0); services.camera().setYCopy((short) 0);
+            services.camera().setX((short) 0);
+            state.setCenterNativeArenaCamera(false); // arena projection ends with native plane/camera reset
+            // loc_58B7C (sonic3k.asm:117827-117839) has no branch after its addq.w #4: the
+            // finishing pass falls into loc_58B9E and calls sub_5B18E in the same frame.
+            state.setForegroundRoutine(0x10);
+        }
         if (state.foregroundRoutine() == 0x10) {
             // loc_58B9E calls the real shared credits owner before choosing
             // the good/bad island tail. Declared presentation-only seeds do
@@ -175,12 +189,18 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
                                 3, 11, services.rom().readBytes(0x5931A + offset, 4));
                     } catch (java.io.IOException failure) { throw new java.io.UncheckedIOException(failure); }
                 }
-                // loc_58BD6: locked-on credits settle at $1660. Only then
-                // switch Plane B to the lifted island's second palette.
-                if (state.ending().credits().complete()
+                // loc_58BBC/loc_58BD6 (sonic3k.asm:117846-117875) test _unkFAAE, credits part
+                // two, not completion: the pass where the locked-on Camera_Y_pos equals $1660
+                // ($14C0 is the S&K-alone value) stops new clouds, lifts Plane B by $100 and
+                // loads Pal_Ending2. The credits end at $1CA0, so a completion gate never fired.
+                if (state.ending().credits().partIndex() != 0
                         && (services.camera().getY() & 0xFFFF) == 0x1660
                         && state.backgroundRoutine() == 0) {
-                    state.setBackgroundCameraY(state.backgroundCameraY() + 0x100);
+                    var clouds = state.ending().clouds(); // clr.b (_unkFAB9).w; FAC2/FAC4 stay
+                    clouds.configure(0, clouds.xVelocity(), clouds.yVelocity());
+                    int liftedY = state.backgroundCameraY() + 0x100;
+                    state.endingBackgroundPlane().lift(state.backgroundCameraY(), liftedY);
+                    state.setBackgroundCameraY(liftedY);
                     for (int line = 1; line < 4; line++)
                         com.openggf.game.sonic3k.ending.S3kEndingPalette.loadLine(services,line,
                                 com.openggf.game.sonic3k.ending.S3kEndingResources.PAL_ENDING_GOOD_ISLAND+(line-1)*32);
@@ -220,16 +240,6 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
                     services.levelManager()::getForegroundTileDescriptorAtWorld);
             state.setForegroundRoutine(0xC);
             return; // loc_58B64 does not execute the first redraw until the next pass.
-        }
-        if (state.foregroundRoutine() == 0xC) {
-            if (state.endingPlane().advance(services.levelManager()::getForegroundTileDescriptorAtWorld)) {
-                services.camera().setY((short) 0); services.camera().setYCopy((short) 0);
-                services.camera().setX((short) 0);
-                state.setCenterNativeArenaCamera(false); // arena projection ends with native plane/camera reset
-                // Next native dispatch calls sub_5B18E, the separately scoped ending.
-                state.setForegroundRoutine(0x10);
-            }
-            return;
         }
         if (state.foregroundRoutine() != 4 || state.eventsFg4() == 0) return;
         var level = services.currentLevel();

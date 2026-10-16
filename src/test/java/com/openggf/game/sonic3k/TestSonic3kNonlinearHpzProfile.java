@@ -130,6 +130,16 @@ class TestSonic3kNonlinearHpzProfile {
     }
 
     @Test
+    void sanctuarySuppressesTheOrdinaryHudWithoutSuppressingAdjacentPlayableSlots() {
+        var features = new Sonic3kZoneFeatureProvider();
+        // Level loc_6460 clears Level_started_flag for $1701; Render_Sprites
+        // skips Render_HUD at loc_1AD4A while that flag is clear.
+        assertTrue(features.shouldSuppressHud(Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA, 1));
+        assertFalse(features.shouldSuppressHud(Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA, 0));
+        assertFalse(features.shouldSuppressHud(Sonic3kZoneIds.ZONE_HPZ, 1));
+    }
+
+    @Test
     void eventManagerSelectsHpzHandlersForTheHiddenPalaceAct() {
         Sonic3kLevelEventManager events = new Sonic3kLevelEventManager();
 

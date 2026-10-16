@@ -583,8 +583,9 @@ public final class SeamlessLevelTransitionRequest {
             return this;
         }
 
+        /** An empty range models a native branch that performs no object-coordinate scan. */
         public Builder romWorldObjectOffsetRange(int startSlot, int endSlotExclusive) {
-            if (startSlot < 0 || endSlotExclusive <= startSlot) {
+            if (startSlot < 0 || endSlotExclusive < startSlot) {
                 throw new IllegalArgumentException("Invalid ROM object-offset range");
             }
             this.objectOffsetPolicy = ObjectOffsetPolicy.ROM_WORLD_OFFSET_RANGE;

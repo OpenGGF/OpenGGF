@@ -70,6 +70,29 @@ class TestSszEndingIslandMask {
         assertEquals(6, level.getPattern(0x7FF).getPixel(7, 7));
     }
 
+    /**
+     * loc_591D6 sets render_flags $40 without bit 2, so loc_59232's child words are VDP
+     * screen coordinates: x $A2+$40n, y y_pos-$40+$40m. Render_Sprites never subtracts a
+     * camera from them. The engine projects sprites with the render copy, which the credits
+     * scroll (sub_5B18E writes Camera_Y_pos after ScreenEvents' copy) leaves behind the
+     * physical camera; the squares must still land on the same pixels.
+     */
+    @Test void childSquaresAreScreenSpaceWhileTheRenderCopyLagsTheCamera() {
+        HeadlessTestFixture.builder().withZoneAndAct(10, 1).build();
+        var mask = spawn();
+        mask.update(0, null);
+        var camera = GameServices.camera();
+        camera.setX((short) 0); camera.setY((short) 0x30);
+        camera.setYCopy((short) 0x32);
+        for (int row = 0; row < 2; row++)
+            assertEquals(0xF0 - 0x40 + row * 0x40 - 0x80, mask.childWorldY(camera, row) - camera.getYWithShake(),
+                    "row " + row);
+        camera.setXCopy((short) 3);
+        for (int column = 0; column < 4; column++)
+            assertEquals(0xA2 + column * 0x40 - 0x80, mask.childWorldX(camera, column) - camera.getXWithShake(),
+                    "column " + column);
+    }
+
     private static SszEndingIslandMask spawn() {
         var mask = new SszEndingIslandMask(new ObjectSpawn(0, 0, 0, 0, 0, false, 0));
         mask.setServices(TestEnvironment.objectServices());

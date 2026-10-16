@@ -2996,6 +2996,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				userRecordingSceneSuppressed);
 
 		profiler.beginSection("render");
+		if (displayColorProfileController != null) displayColorProfileController.synchronizeSavedSettings();
 		graphicsManager.runPendingRenderThreadTasks();
 		if (!userRecordingSceneSuppressed) {
 			draw();
@@ -3435,8 +3436,14 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void applySpecialStageResultsClearColor() {
-		glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+		// A CRAM backdrop, so it takes the display profile/expansion: the screen's own
+		// (S3K Pal_Results colour 0, $CCC) when it names one, else white.
+		com.openggf.level.PaletteDisplayColor.glClear(com.openggf.game.LevelBackdropResultsScreen
+				.resultsBackdropOr(gameLoop.getResultsScreen(), SPECIAL_STAGE_RESULTS_BACKDROP), graphicsManager);
 	}
+
+	private static final com.openggf.level.Palette.Color SPECIAL_STAGE_RESULTS_BACKDROP =
+			new com.openggf.level.Palette.Color((byte) 255, (byte) 255, (byte) 255);
 
 	private void applyTitleScreenClearColor() {
 		TitleScreenProvider titleScreen = gameLoop.getTitleScreenProvider();
@@ -4172,16 +4179,36 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void drawTitleCardMode() {
-		levelManager.drawWithSpritePriority(spriteManager);
+		TitleCardProvider titleCardProvider = gameLoop.getTitleCardProvider();
+		boolean titleCardDrawn = drawLevelWithTitleCard(titleCardProvider);
 
 		graphicsManager.flush();
 		graphicsManager.resetForFixedFunction();
 
-		TitleCardProvider titleCardProvider = gameLoop.getTitleCardProvider();
-		if (titleCardProvider != null) {
+		if (titleCardProvider != null && !titleCardDrawn) {
 			titleCardProvider.draw();
 			graphicsManager.flushScreenSpace();
 		}
+	}
+
+	/**
+	 * Draws the gameplay level. A title card its game orders beneath the level HUD
+	 * is painted inside the level's HUD pass.
+	 *
+	 * @return whether the title card was painted
+	 */
+	private boolean drawLevelWithTitleCard(TitleCardProvider titleCard) {
+		if (!com.openggf.game.internal.TitleCardBeneathLevelHud.appliesTo(titleCard)) {
+			levelManager.drawWithSpritePriority(spriteManager);
+			return false;
+		}
+		return com.openggf.level.LevelHudUnderlay.draw(levelManager,
+				() -> levelManager.drawWithSpritePriority(spriteManager), () -> {
+					graphicsManager.flush();
+					graphicsManager.resetForFixedFunction();
+					titleCard.draw();
+					graphicsManager.flushScreenSpace();
+				});
 	}
 
 	private void drawDebugPatterns() {
@@ -4197,13 +4224,15 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	private void drawLevel() {
 		var controller = com.openggf.game.mode.ControlledFrameRuntime.controller(
 				com.openggf.game.session.SessionManager.getCurrentGameplayMode());
-		if (controller == null || !controller.drawScene()) levelManager.drawWithSpritePriority(spriteManager);
+		TitleCardProvider titleCard = gameLoop.getTitleCardProvider();
+		boolean titleCardDrawn = (controller == null || !controller.drawScene())
+				&& drawLevelWithTitleCard(titleCard != null && titleCard.isOverlayActive() ? titleCard : null);
 		if (controller != null) {
 			graphicsManager.flush();
 			controller.drawOverlay();
 			graphicsManager.flushScreenSpace();
 		}
-		drawActiveLevelTitleCardOverlay();
+		if (!titleCardDrawn) drawActiveLevelTitleCardOverlay();
 		var overlay = GameLoopPauseInput.overlay(GameMode.LEVEL);
 		if (overlay != null) {
 			graphicsManager.flush();

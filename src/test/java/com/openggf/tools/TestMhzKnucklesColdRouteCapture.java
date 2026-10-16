@@ -125,7 +125,7 @@ class TestMhzKnucklesColdRouteCapture {
                 "src/test/resources/routes/s3k/mhz2-knuckles-cold-complete-320.bk2"));
         var actOne = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/mhz1-knuckles-cold-complete-320.bk2"));
-        assertEquals(66271, movie.getFrameCount());
+        assertEquals(66282, movie.getFrameCount());
         for (int frame = 0; frame < actOne.getFrameCount(); frame++) {
             assertEquals(actOne.getFrame(frame), movie.getFrame(frame),
                     "preserve qualified cold Act1 input " + frame);
@@ -216,7 +216,7 @@ class TestMhzKnucklesColdRouteCapture {
                 var savedLevel = level.getCurrentLevel();
                 int horizon = Math.min(pending.contains("weather-fade") ? 90 : 45,
                         movie.getFrameCount() - frame - 1);
-                if (frame < 66053) horizon = Math.min(horizon, 66053 - frame - 1);
+                if (frame < 66064) horizon = Math.min(horizon, 66064 - frame - 1);
                 assertTrue(horizon > 0, "same-world interval " + pending);
                 for (int n = 1; n <= horizon; n++) {
                     session.step(movie.getFrame(frame + n));
@@ -246,7 +246,7 @@ class TestMhzKnucklesColdRouteCapture {
             assertEquals(Set.of(1, 2, 3, 4, 5, 6, 7, 8, 9), health);
             assertTrue(escapedAtOne);
             assertTrue(isolatedHistory);
-            assertEquals(66053, reload);
+            assertEquals(66064, reload);
             assertEquals(4, GameServices.level().getCurrentZone());
             assertEquals(0, GameServices.level().getCurrentAct());
             assertFalse(session.player().isObjectControlled());

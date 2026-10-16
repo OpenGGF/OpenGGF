@@ -191,8 +191,8 @@ class TestS3kResultsScreenObjectInstance {
 
         assertEquals(List.of("0:1"), services.titleCard.calls,
                 "the mutated results owner initializes title art exactly one dispatch later");
-        assertTrue(results.isDestroyed(),
-                "title initialization hands ownership to the manager and retires the SST");
+        assertFalse(results.isDestroyed(),
+                "loc_2DD06 retains the SST through the title owner's actual child/latch lifetime");
     }
 
     @Test
@@ -342,6 +342,9 @@ class TestS3kResultsScreenObjectInstance {
         onExitReady.setAccessible(true);
         onExitReady.invoke(results);
         onExitReady.invoke(results);
+
+        assertFalse(results.isDestroyed(),
+                "loc_2DD06 retains this exact results SST as Obj_TitleCard; Init must not clear it");
 
         assertEquals(1, services.apparentAct,
                 "AIZ Act 1 miniboss results still updates Apparent_act for the in-level Act 2 title card "

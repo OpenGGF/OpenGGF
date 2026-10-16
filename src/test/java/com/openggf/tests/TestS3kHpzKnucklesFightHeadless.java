@@ -128,6 +128,45 @@ class TestS3kHpzKnucklesFightHeadless {
     }
 
     @Test
+    void expiredBossMusicChildIsRecreatedAndReplaysItsCameraLocks() {
+        var fixture = boot("", 0x1080, 0x42C);
+        fixture.stepIdleFrames(1);
+        var music = active(HpzKnucklesBossMusicObjectInstance.class).orElseThrow();
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        var savedWorld = registry.capture();
+        var inputs = new ArrayList<boolean[]>();
+        // loc_63D1A allocates the child with its native 120-frame wait. Ordinary
+        // Right input lets loc_85CA4 complete both camera locks and loc_63DD4 delete it.
+        for (int frame = 0; frame < 180; frame++) {
+            boolean[] input = {false, false, false,
+                    (fixture.sprite().getCentreX() & 0xFFFF) < 0x1180, false};
+            inputs.add(input);
+            step(fixture, input);
+        }
+        assertTrue(music.isDestroyed());
+        assertEquals(7, music.bitsForTest());
+        assertFalse(active(HpzKnucklesBossMusicObjectInstance.class).isPresent());
+        var expectedWorld = registry.capture();
+        for (int cycle = 0; cycle < 2; cycle++) {
+            registry.restore(savedWorld);
+            assertTrue(active(HpzKnucklesBossMusicObjectInstance.class).isPresent());
+            assertWholeWorldSnapshotsEqual(savedWorld, registry.capture(), "music restore " + cycle);
+            for (boolean[] input : inputs) step(fixture, input);
+            assertFalse(active(HpzKnucklesBossMusicObjectInstance.class).isPresent());
+            assertWholeWorldSnapshotsEqual(expectedWorld, registry.capture(), "music replay " + cycle);
+        }
+    }
+
+    private static void assertWholeWorldSnapshotsEqual(CompositeSnapshot expected,
+                                                        CompositeSnapshot actual, String where) {
+        assertEquals(expected.entries().keySet(), actual.entries().keySet(), where);
+        for (String key : expected.entries().keySet()) {
+            var differences = RewindSnapshotDiff.diffKey(key, expected.get(key), actual.get(key));
+            assertTrue(differences.isEmpty(), where + " " + key + ": " + differences);
+        }
+    }
+
+    @Test
     void eightHitsDefeatKnucklesAndStartTheRoomShake() {
         HeadlessTestFixture fixture = boot("", 0x1080, 0x42C);
         var sonic = fixture.sprite();

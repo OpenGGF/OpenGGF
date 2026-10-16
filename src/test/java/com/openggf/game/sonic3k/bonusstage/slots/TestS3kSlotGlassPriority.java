@@ -25,8 +25,8 @@ class TestS3kSlotGlassPriority {
                 .setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
         HeadlessTestFixture.builder()
                 .withZoneAndAct(0x15, 0)
-                .startPosition(S3kSlotLayoutFixture.START_X,
-                        S3kSlotLayoutFixture.START_Y)
+                .startPosition(S3kSlotRomData.SLOT_BONUS_PLAYER_START_X,
+                        S3kSlotRomData.SLOT_BONUS_PLAYER_START_Y)
                 .startPositionIsCentre()
                 .build();
 
@@ -34,8 +34,8 @@ class TestS3kSlotGlassPriority {
         assertFalse(hasAnyHighPriorityGlassTile(level, false),
                 "The loaded slot machine glass descriptors are low-priority in source level data");
 
-        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
-        com.openggf.game.sonic3k.bonusstage.slots.S3kSlotLayoutFixture.bootstrap(runtime);
+        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime(S3kSlotRomTestData.resources());
+        runtime.bootstrap();
 
         assertTrue(runtime.isInitialized());
         int liveHighPriorityCellsAfterBootstrap = countHighPriorityGlassTiles(level, true);

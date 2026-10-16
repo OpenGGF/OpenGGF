@@ -1382,3 +1382,78 @@ state/pixel controls and their limits are described in the
 [headless testing guide](../../../guide/contributing/headless-testing.md).
 This performance change supplies no new native reference, full-route visual
 certification or missing viewport/donor/character coverage; inherited gaps remain.
+
+
+## Released checkpoint-world replay follow-up (2026-10-14)
+
+The existing physical-post death driver now uses only the production GameLoop
+fade owner and services pending render work after each tick. It checks exactly
+one life lost at fresh assembly and after actual title/fade/control release,
+then captures and replays the complete registered incoming world twice in both
+restore directions after EACH of two real deaths. Every45-input branch requires
+an alive leader, unchanged lives/post, retained roster/donor/viewport and the
+same current runtime/object manager; a raw restore never crosses a load.
+Short independent native320/S2-Tails800 witnesses precede the product methods.
+
+This act contributes184 products over all its authored posts and all five
+production presets, using four native standard teams, supported S1/S2 standard teams, S1 duplicate Sonic and native800 trio. The composed
+`262e9bbb10bb317d183dbf289dcfa8568fa0258c` plus final test changes passes the
+12 short witnesses in request93678 at12:58:56 UTC, then all1077 affected
+products in63733 at13:13:31 UTC, zero failures/errors/skips (3:32 Maven,
+queue wait separate). DEZ2 post5 still reaches its placed gravity writer through
+ordinary movement and verifies the real inverted death and native cleared
+gravity after reload. This adds incoming-world replay to the previously
+qualified physical contact/death scope; other unchanged checks were not repeated.
+[Exact selectors and source hashes](../../plans/2026-10-13-s3k-playable-completion.md#existing-checkpoint-driver-qualification-2026-10-14)
+are in the completion plan. Final boss-act and further mechanic/cold-route products remain open. No native pixel/audio, overall act
+certification, full-suite or combined delivery claim follows.
+
+## Native single-fade retiming (2026-10-15)
+
+8179ccd80 stopped `GameplayCaptureSession.step` from advancing a runtime-ready
+loop's FadeManager a second time. Movies authored before it budget half of each
+frozen fade-out (11 of the native 22 frames, during which gameplay and object
+VInt do not advance), so their later inputs landed early. `FadeWindowRetimeTool`
+(41405e073, 5333aece6) measured each owned frozen window in the production harness,
+inserted the native remainder as repeats of the held input and verified every
+movie by one uninterrupted replay with no death. On the LRZ Knuckles and Tails
+chains the retimed rows equal the 22d5e6ffc rows shifted by the inserted frames,
+VInt included (0 differing rows). Test frame constants move by 11 at and after each
+old load frame. Base: Root ef61a560f; no runtime behaviour changed.
+
+| Movie | Old SHA-256 | New SHA-256 | Windows `start:native→+inserted` | Frames | New full loads | Verified end |
+|---|---|---|---|---|---|---|
+| `dez2-sonic-solo-incoming-clear-320.bk2` | `1e59594268af0c4f6d5badbced5e697278e7a1fe9a10f527f89cdc3dd09ee23e` | `a24795406bed98b4a9eac8f20825f1976a1be21854a85666ef6d3f6f688852f3` | 53710:23→+11 | 53853 | 22332, 53732 | 762,205, 12 rings, zone 23/0 |
+| `dez2-sonic-solo-incoming-clear-800.bk2` | `086a9e4f12a3645aa4817bf195089757e562b22955eb2d1b29d294e3484222f4` | `b9bb592bc0c00e57dd184ba0cc2de58f17d6dcfeb02e1c848928dc5d83ab7f6e` | 53432:23→+11 | 53575 | 19889, 53454 | 762,205, 15 rings, zone 23/0 |
+| `dez2-tails-solo-incoming-clear-320.bk2` | `a79f091d3970bc96c1a3bcde21ee129925329c20252af00fceff468a3c142f6a` | `3c0c3161a367410e907e1da22b3705befa8efcb699586324e804a8e5e89d73a4` | 62456:23→+11 | 62599 | 28320, 62478 | 762,209, 11 rings, zone 23/0 |
+
+Validation on ef61a560f plus the retimed fixtures (`TestDezSoloActTwoColdRouteCapture`), focused selectors through
+`tools/testing/maven_queue.py` with the S3K ROM: run `cold-fade-verify` (Maven
+Finished 04:15:51Z) passed `TestDezIncomingFinalRouteCapture` 7/0/0/0,
+`TestDezSoloActTwoColdRouteCapture` 4/0/0/0, `TestLrzActTwoColdRouteCapture` 2/0/0/0,
+`TestLrzTailsColdRouteCapture` 4/0/0/0 and the fade rows of `TestLrzKnucklesColdRouteCapture`
+and `TestSszSoloColdRouteCapture`; run `cold-joined-retimed` (Finished 04:21:19Z) passed
+`TestS3kHpzJoinedColdRouteCapture` 2/0/0/0 (pair 66 spots, HPZ 52947/52948, SSZ1
+67037/67038, release 67211; Knuckles 27 spots, HPZ 49297/49298, SSZ2 50160/50161,
+release 51586). That test's LRZ live-history tail now starts 36 frames before the HPZ
+load (14 live frames before the native 22-frame fade-out). Rows still red there are
+not fade timing and are owned elsewhere: the Knuckles act-2 restore at 37130 and the
+LRZ boss sidekick overlap parity at 47471 (rewind-snapshot rows) and solo Tails' SSZ1
+opening camera (behaviour row). No skips.
+
+
+### Sonic+Tails clear movie retimed (2026-10-15)
+
+Surfaced after the rewind-snapshot rows cleared on Root 2adfa37a7: the movie was
+authored under the pre-8179ccd80 double fade advance, so its full load landed 11
+frames early. `FadeWindowRetimeTool` measured the owned frozen fade-out window in
+the production harness, inserted the native remainder and verified one
+uninterrupted replay with no death. Test frame constants move by 11 at and after
+the old load. No runtime behaviour changed.
+
+| Movie | Old SHA-256 | New SHA-256 | Windows `start:native→+inserted` | Frames | New full loads | Verified end |
+|---|---|---|---|---|---|---|
+| `dez2-sonic-tails-incoming-clear-320.bk2` | `ab01a02930a2e676a39a510704484c1f12a6ca026a02de3964a5511471f8440b` | `cf332549b203c14a1f93a8cbde10c6833b9e50e45b01a003acba9d51a50e7e36` | 40304:23→+11 | 40327 | 14230, 40326 | 96,112, 0 rings, zone 23/0 |
+
+Validation: run `probe-v1` (focused queued selectors, S3K ROM, branch
+bugfix/ai-s3k-route-behaviour-regressions on 2adfa37a7) passed the owning test, 0 skips.

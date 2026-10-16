@@ -2123,6 +2123,14 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         }
     }
 
+    /** The actual fresh SST owner reaches loc_2D86E before deleting its slot. */
+    public boolean retireSkippedFreshTitleCardSstOwner() {
+        if (titleCardTeardown==null) return false;
+        consumeTitleCardTeardownLease();
+        titleCardTeardown=null;
+        return true;
+    }
+
     private void consumeTitleCardTeardownLease() {
         RuntimeArtAdmissionLease lease = rebindRuntimeArtAdmission(
                 titleCardTeardownLeaseId,

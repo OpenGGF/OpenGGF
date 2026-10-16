@@ -51,6 +51,7 @@ import java.util.logging.Logger;
 public class Sonic3kTitleCardManager
         implements TitleCardProvider,
         com.openggf.game.internal.FreshLevelTitleBoundaryPublication,
+        com.openggf.game.internal.TitleCardBeneathLevelHud,
         RewindSnapshottable<Sonic3kTitleCardManager.Snapshot> {
     private static final Logger LOG = Logger.getLogger(Sonic3kTitleCardManager.class.getName());
     public static final String REWIND_KEY = "s3k-title-card";
@@ -63,12 +64,6 @@ public class Sonic3kTitleCardManager
     // at lines 7897-7900, synchronizing the hold with Palette_fade_timer.
     private static final int DISPLAY_HOLD_FRAMES = 90;
     private static final int FRESH_LEVEL_TRANSITION_HOLD_FRAMES = 22;
-
-    // ROM palette fade duration: 22 frames (sonic3k.asm line 7877, Palette_fade_timer = $16).
-    // In the ROM, the title card is already visible for many frames during level loading
-    // before the Level routine overwrites the hold timer to 22. Our engine loads levels
-    // synchronously, so we use the full 90-frame hold but run the fade in the last 22.
-    private static final int BONUS_BG_FADE_FRAMES = 22;
 
     /** Native game width (320-pixel frame everything is authored for). */
     private static final int SCREEN_WIDTH = 320;
@@ -148,7 +143,6 @@ public class Sonic3kTitleCardManager
     private boolean releasePreloadedActCameraOnComplete;
     private boolean preloadedActCompletionPrepared;
     private boolean bonusMode;  // 2-element "BONUS STAGE" layout
-    private float bonusFadeProgress; // 0.0→1.0 over BONUS_DISPLAY_HOLD_FRAMES during DISPLAY
 
     // Bonus mode element definitions (ObjArray_TtlCardBonus, sonic3k.asm line 62482)
     // VDP coords converted to screen coords (subtract 128)
@@ -224,7 +218,6 @@ public class Sonic3kTitleCardManager
             boolean releasePreloadedActCameraOnComplete,
             boolean preloadedActCompletionPrepared,
             boolean bonusMode,
-            float bonusFadeProgress,
             int currentZone,
             int currentAct,
             int[] elemX,
@@ -297,7 +290,7 @@ public class Sonic3kTitleCardManager
                 retainedControlPollFollowsTitleCompletion,
                 inLevelArtAdmissionPollObserved,
                 releasePreloadedActCameraOnComplete, preloadedActCompletionPrepared,
-                bonusMode, bonusFadeProgress, currentZone, currentAct,
+                bonusMode, currentZone, currentAct,
                 elemX, elemY, elemFrame, elemAtTarget, elemExiting,
                 elemOutsideViewport, elemExited, actNumberVisible,
                 combinedPatterns, artLoaded, artCached, lastLoadedZone,
@@ -346,7 +339,6 @@ public class Sonic3kTitleCardManager
                 snapshot.releasePreloadedActCameraOnComplete();
         preloadedActCompletionPrepared = snapshot.preloadedActCompletionPrepared();
         bonusMode = snapshot.bonusMode();
-        bonusFadeProgress = snapshot.bonusFadeProgress();
         currentZone = snapshot.currentZone();
         currentAct = snapshot.currentAct();
         copy(snapshot.elemX(), elemX);
@@ -759,6 +751,35 @@ public class Sonic3kTitleCardManager
         }
     }
 
+    /** Actual in-level SST children own movement and retirement; this owner presents their words. */
+    public void useNativeInLevelSstChildren() {
+        useExternalInLevelGameplayOwner();
+        Arrays.fill(elemExited,true); // Unallocated/partial-prefix elements are not rendered.
+    }
+
+    /** Obj_TitleCardCreate claims prepared title art without advancing a visual child. */
+    public boolean prepareNativeInLevelTitleArt() {
+        return !artLoading || finishQueuedArtIfReady();
+    }
+
+    /** ObjArray_TtlCard order differs from the renderer's banner-first order. */
+    public void publishNativeInLevelTitleElement(int tableIndex,int x,int y,boolean retired) {
+        int index=tableIndex==3 ? ELEM_BANNER : tableIndex+1;
+        elemX[index]=(short)x-128;
+        elemY[index]=(short)y-128;
+        elemExited[index]=retired;
+    }
+
+    public void publishNativeInLevelTitleHold(int remainingWait) {
+        state=Sonic3kTitleCardState.DISPLAY;
+        stateTimer=90-remainingWait;
+    }
+
+    public void publishNativeInLevelTitleExit(int stagger) {
+        state=Sonic3kTitleCardState.EXIT;
+        phaseCounter=stagger;
+    }
+
     /** The retained SST consumes the preceding children's movement latch. */
     public boolean isExternalInLevelWaitReady() {
         // Last movement enters DISPLAY with timer zero. The next parent clears
@@ -813,7 +834,6 @@ public class Sonic3kTitleCardManager
     @Override
     public void initializeBonus() {
         this.bonusMode = true;
-        this.bonusFadeProgress = 0f;
         this.inLevelMode = false;
         this.freshLevelTransitionMode = false;
         freshLevelChildMovementObserved = false;
@@ -915,6 +935,20 @@ public class Sonic3kTitleCardManager
         // The overlay remains renderable, but its real retained SST owns the
         // only child dispatch. An earlier generic overlay tick must not run it.
         if (!inLevelGameplayOwnedExternally) updateOwnedChildren();
+    }
+
+    /**
+     * Whether the hold is the one {@code Level/loc_64DC} armed for LevelLoop
+     * (sonic3k.asm:7874-7878): {@code Pal_FillBlack} over
+     * {@code Palette_fade_info = $202F}, then {@code Palette_fade_timer} and
+     * this owner's {@code $2E} both set to {@code $16}. Only the fresh title
+     * owner's handoff installs that hold; in-level and bonus cards never pass
+     * through the Level routine. The lines 1-3 fade itself belongs to that
+     * routine ({@code Sonic3kLevelAnimationManager}'s {@code Animate_Palette}).
+     */
+    private boolean levelLoopHoldArmed() {
+        return displayHoldFrames == FRESH_LEVEL_TRANSITION_HOLD_FRAMES
+                && !inLevelMode && !bonusMode;
     }
 
     private void updateOwnedChildren() {
@@ -1107,6 +1141,33 @@ public class Sonic3kTitleCardManager
         return true;
     }
 
+    /**
+     * Whether {@link #draw} paints the opaque black field behind the card:
+     * native lines 1-3 stay black through the locked title loop. Once loc_64DC
+     * hands the hold to LevelLoop those lines fade in through the level's
+     * {@code Animate_Palette} instead, and line 0 (players, HUD) shows at full
+     * colour behind the card, so the field would hide what the ROM displays.
+     */
+    public boolean drawsOpaqueLevelBackdrop() {
+        return !inLevelMode && !levelLoopHoldArmed()
+                && (state == Sonic3kTitleCardState.SLIDE_IN || state == Sonic3kTitleCardState.DISPLAY);
+    }
+
+    /**
+     * {@code Render_Sprites} emits {@code Render_HUD} (and the rings) ahead of
+     * every object priority bucket once {@code Level_started_flag} is set
+     * (sonic3k.asm:36326-36329), and earlier sprite-table entries are drawn in
+     * front, so the HUD covers the card's pieces while it holds over the running
+     * level. The native Knuckles HPZ entry (campaign-visual {@code hpz-entry}
+     * seq131-152) shows the score, time and ring digits over the red banner.
+     * While the card paints the locked loop's black field the level has not
+     * started and the card covers the screen.
+     */
+    @Override
+    public boolean drawsBeneathLevelHud() {
+        return isOverlayActive() && !drawsOpaqueLevelBackdrop();
+    }
+
     @Override
     public void draw() {
         ensureArtCached();
@@ -1114,38 +1175,18 @@ public class Sonic3kTitleCardManager
         GraphicsManager gm = GameServices.graphics();
         if (gm == null) return;
 
-        // Black background during SLIDE_IN and DISPLAY (not in-level mode).
-        // Normal mode: opaque black rect throughout.
-        // Bonus mode: fully opaque during SLIDE_IN, then per-channel fade during DISPLAY
-        // (B→G→R subtractive, 22 frames, synchronized with hold timer).
-        // ROM: Pal_FadeFromBlack runs simultaneously with the title card wait.
-        if (!inLevelMode &&
-                (state == Sonic3kTitleCardState.SLIDE_IN || state == Sonic3kTitleCardState.DISPLAY)) {
+        // Black background during the locked SLIDE_IN/DISPLAY (not in-level mode).
+        // The bonus card is the same Obj_TitleCard: its stage fades in through the
+        // level's Animate_Palette once LevelLoop runs, not through the card.
+        if (drawsOpaqueLevelBackdrop()) {
             // Span the full viewport so no level bleeds through on wider screens.
             // viewportWidth()==SCREEN_WIDTH at native 320 — byte-identical.
             int vw = viewportWidth();
-            if (bonusMode && state == Sonic3kTitleCardState.DISPLAY && bonusFadeProgress > 0f) {
-                // Per-channel subtractive fade matching FadeManager.updateFadeFromBlack()
-                // B fades first (0→1/3), then G (1/3→2/3), then R (2/3→1)
-                float p = bonusFadeProgress;
-                float third = 1f / 3f;
-                float darkB = Math.max(0f, 1f - Math.min(1f, p / third));
-                float darkG = Math.max(0f, 1f - Math.min(1f, (p - third) / third));
-                float darkR = Math.max(0f, 1f - Math.min(1f, (p - 2f * third) / third));
-                if (darkR > 0f || darkG > 0f || darkB > 0f) {
-                    gm.registerCommand(new GLCommand(
-                            GLCommand.CommandType.RECTI, -1, GLCommand.BlendType.SUBTRACTIVE,
-                            darkR, darkG, darkB, 1.0f,
-                            0, 0, vw, SCREEN_HEIGHT
-                    ));
-                }
-            } else {
-                gm.registerCommand(new GLCommand(
-                        GLCommand.CommandType.RECTI, -1,
-                        0.0f, 0.0f, 0.0f,
-                        0, 0, vw, SCREEN_HEIGHT
-                ));
-            }
+            gm.registerCommand(new GLCommand(
+                    GLCommand.CommandType.RECTI, -1,
+                    0.0f, 0.0f, 0.0f,
+                    0, 0, vw, SCREEN_HEIGHT
+            ));
         }
 
         gm.beginPatternBatch();
@@ -1185,7 +1226,6 @@ public class Sonic3kTitleCardManager
         preloadedActCompletionPrepared = false;
         inLevelPlayerControlLockOwned = false;
         bonusMode = false;
-        bonusFadeProgress = 0f;
         currentZone = 0;
         currentAct = 0;
         actNumberVisible = false;
@@ -1278,18 +1318,6 @@ public class Sonic3kTitleCardManager
 
     private void updateDisplay() {
         stateTimer++;
-        // In bonus mode, run the per-channel fade during the last 22 frames of the hold.
-        // ROM: Palette_fade_timer runs after level loading completes, but the title card
-        // has already been visible for many frames. Our level loads synchronously, so we
-        // use the full 90-frame hold and fade at the end.
-        if (bonusMode) {
-            int fadeStart = displayHoldFrames - BONUS_BG_FADE_FRAMES;
-            if (stateTimer > fadeStart) {
-                bonusFadeProgress = Math.min(1f,
-                        (float) (stateTimer - fadeStart) / BONUS_BG_FADE_FRAMES);
-            }
-        }
-
         if (!inLevelGameplayOwnedExternally && stateTimer >= displayHoldFrames) {
             state = Sonic3kTitleCardState.EXIT;
             phaseCounter = 0;
@@ -1391,7 +1419,22 @@ public class Sonic3kTitleCardManager
         }
     }
 
+    /** Called only by the surviving fresh owner at its native SST dispatch. */
+    public void retireFreshTitleCardSstOwner() {
+        if (GameServices.module().getObjectArtProvider() instanceof Sonic3kObjectArtProvider art
+                && art.retireSkippedFreshTitleCardSstOwner()) return;
+        consumeRuntimeArtAdmissionIfNeeded(true);
+    }
+
     private void consumeRuntimeArtAdmissionIfNeeded() {
+        consumeRuntimeArtAdmissionIfNeeded(false);
+    }
+
+    private void consumeRuntimeArtAdmissionIfNeeded(boolean freshSstDispatch) {
+        if (!freshSstDispatch && !inLevelMode && GameServices.level().getObjectManager()!=null
+                && GameServices.level().getObjectManager().activeObjectsOfType(
+                        com.openggf.game.sonic3k.objects.S3kFreshTitleCardOwnerObjectInstance.class)
+                        .stream().anyMatch(owner -> !owner.isDestroyed())) return;
         if (bonusMode || runtimeArtAdmissionConsumed) {
             return;
         }
