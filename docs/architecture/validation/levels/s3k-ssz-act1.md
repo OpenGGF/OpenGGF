@@ -1796,7 +1796,11 @@ windows: `runs/s3k-tails-full-chain-all-emeralds` HPZ from 419298, SSZ1 423903, 
 Limits: as for the pair, the boot inlet has no save session; widescreen/donor breadth
 remains open.
 
-## Cold LRZ→HPZ→SSZ1 solo Sonic campaign: open (2026-10-15)
+## Cold LRZ→HPZ→SSZ1 solo Sonic campaign: first attempt stopped (2026-10-15)
+
+Superseded by the [2026-10-16 campaign](#cold-lrzhpzssz1dez1-solo-sonic-campaign-2026-10-16),
+which found the cause: the route had not taken LRZ3's fire shield. The next-attempt advice
+at the end of this section (a ring-keeping survival author) was not needed.
 
 No solo Sonic LRZ/HPZ cold movie exists, so lane cold3 authored one from the declared
 `boot(9,0)` inlet along the joined pair chain's P1 path (`ReferencePathInputAuthor`; the
@@ -1831,6 +1835,89 @@ finite batch lists are preserved with SHA-256 sums in the task directory
 (`cold3-continuation/`). A next attempt needs a survival author for the shot phase that
 keeps rings (dodging the boss's projectiles over the lava platforms) rather than chasing
 the boss or a fixed spot; HPZ and the SSZ1 arrival for solo Sonic were not reached.
+
+## Cold LRZ→HPZ→SSZ1→DEZ1 solo Sonic campaign (2026-10-16)
+
+`TestS3kLrzHpzSszColdCampaign#sonicColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory`
+replays one uninterrupted controller-only native320 Sonic-alone movie from the declared
+`boot(9,0)` LRZ1 inlet through LRZ1, LRZ2, LRZ3's fire-shield monitor and end boss, HPZ's
+Knuckles fight, theft, collapse and altar to `loc_45D8A` (`$A00`), the SSZ1 arrival, the
+Knuckles-button bridge, both replicas, the clouds, Mecha Sonic, the results SaveGame and the
+launch into DEZ1 through the intro run's release, with the same shared verifier, checkpoints
+and HPZ/SSZ isolation windows as the pair and Tails campaigns. No death, no seeds; lives never
+drop.
+
+| Movie | SHA-256 | Inputs | Source |
+|---|---|---|---|
+| `lrz-sonic-cold-hpz-ssz1-dez1-320.bk2` | `41cc9e73afc5a62a901a7ad3afaedc509b19ac68127673be09ca018054b5d9b5` | 52271 | inputs 0–23899 equal cold3's `s-10a` (task directory `cold3-continuation/`, SHA-256 `7f02648c…`); no qualified prefix movie exists for this roster |
+
+Boundary inputs (fresh replay): LRZ3 boss created 24033, activation (`loc_797FA`) 24425,
+defeat 28750 (activation + 4325, as natively), release 29767, HPZ load 30123, SSZ1 load
+39248/39249, GHZ 43233, MTZ 45735, Mecha 49728, results save 50375, DEZ1 load 52067/52068,
+release 52150.
+
+Why cold3 stopped and what changed. The 2026-10-15 attempt (section above) died in
+`Obj_LRZEndBoss`'s shot phase. Round 2 first compared the boss with the ROM
+([LRZ boss matrix](s3k-lrz-boss.md#solo-sonic-cold-fight-2026-10-16)): the engine's boss,
+mine, platform and lava routines match `sonic3k.asm`, and the engine and both native fixtures
+take the 14 mine hits at identical offsets from activation, so the fight is
+player-independent clockwork and no engine change was made. The difference was the shield:
+the pair's Sonic breaks LRZ3's placed fire-shield monitor (`Obj_Monitor` subtype 5 at
+`($AE8,$481)`) before the arena and keeps it, and `Obj_59FC4`'s `loc_5A0AC` spares Player 1
+with `Status_FireShield` from `sub_24280`'s lava hurt. The pair's path touches the sloped
+lava (first at activation + 160 on the entry platform's left edge); cold3's solo route had
+passed over the monitor without breaking it, so every such contact hurt.
+
+Authoring (finite `-Dsolo.maxSeconds` batches of a temporary helper, never committed,
+normal queue admission): from `s-10a` input 23900 a target chase broke the monitor (FIRE at
+23985); a neutral fall onto the lava at x 2576 put the camera at `($A00,max Y)`, so
+`loc_59C8C` created the boss (24033); a policy search boarded the entry platform and an
+exact tap scan parked Sonic at x 2692, where the pair's Sonic stands at activation. From
+activation the pair's P1 pads were replayed time-aligned with a per-input left/right
+correction of the 16.8 fixed-point X error against the pair's P1 (worst error 3.6 px, one recovery), through
+all 14 hits, the capsule and, aligned on `loc_799E0`'s `Restore_PlayerControl` (1017 inputs
+after the defeat here, 967 for the pair), the walk to `Obj_StartNewLevel` and HPZ. HPZ used
+`ReferencePathInputAuthor` along the pair's HPZ path to its lower teleporter (pair index 62490)
+and the HPZ fight policy to the SSZ1 load. In SSZ1 the direct solo Sonic SSZ1 movie
+(`ssz1-sonic-solo-cold-complete-320`, released at its input 174) was replayed time-aligned on
+the arrival release (input 39422, P1 (256,3085)) to the Knuckles-button bridge, 66 neutral
+inputs waited for `loc_44FBA` to open the bounds (max X 6560), then `ReferencePathInputAuthor`
+followed that movie's path to each arena and `SszBossInputAuthorTool` defeated GHZ, MTZ and Mecha
+(rings 16→0 there, no death); neutral input carried the results, launch and DEZ intro. The
+script expands byte-identically to the BK2 input log.
+
+Fresh replay (run `v2` on round-2 integration `6405313ce` plus this change, Maven Finished
+17:29:46Z): the solo Sonic, pair, Tails and Knuckles methods 4/0/0/0 (solo Sonic 30.6 s),
+`TestReferencePathInputAuthor` 1/0/0/0 and `TestSszBossInputAuthorTool` 2/0/0/0, no skips.
+Solo Sonic: HPZ 30123, SSZ1 39248/39249, GHZ 43233, MTZ 45735, Mecha 49728, results save
+50375, DEZ1 52067/52068, intro release 52150; 45-input two-cycle replays at the three
+defeats, the results save and the DEZ release. The pair, Tails and Knuckles runs in the same
+JVM reproduce their committed numbers. Red first: the same verifier on this movie truncated
+to 45000 inputs ran its per-input checks through HPZ, SSZ1 and the GHZ defeat and then
+failed `expected: <45735> but was: <-1>` (the missing MTZ defeat).
+
+Engine pictures (320 px, Limited over Raw RGB) and their provenance are in
+`$HOME/Videos/OGGF/s3k-parity-coverage-2026-10-14/spot-checks/round2-solo/`; all were
+inspected: the monitor break and FIRE shield (23940–23985), the parked entry platform
+(24195), activation (24426), a mine hit, a hit flash and the defeat (24836, 26000, 28751), the
+capsule, results card (ring bonus 7700) and release (29200–29768), HPZ (30125 black load
+frame, 34004 inside the lower teleporter, 36165), the SSZ1 arrival with cutscene Knuckles
+beaming in over the arrival spot as in the Tails pictures (39424), the bridge (40640), the GHZ,
+MTZ and Mecha defeats (43234, 45736, 49729), the launch ramp (P1 behind the tower at 51200)
+and DEZ1 (52151, 52271). No native solo Sonic run exists. Against the native pair run
+(`s3k-sonic-tails-complete-emeralds`, BizHawk frame 437200, about activation + 1663 by the
+`hpz22_2` segment offset 434069 + 1468): at activation + 1663 the engine's boss is at (2608,1525) with 8 hits left, its crest
+(`loc_79BF6`) at (2608,1507) and its pilot (`loc_79C1C`) at (2629,1526), exactly the native
+SST values, with the same platform layout. The visible differences are player-owned (native
+Tails at (2578,1489), Sonic's position, HUD totals) and the crest frame: its 1→2→3 loop
+(`byte_7A1C2`, 3 frames each) is phased from the boss's creation, not its activation, and the
+engine draws all three frames at the native position. SSZ1 frames at the native pair
+pictures' offsets from the load (+330, +680) are not the same state: the Knuckles cutscene
+and the Death Egg rise follow the players' route. A native replay of this movie was not
+attempted (it starts from the engine's declared `boot(9,0)` inlet).
+
+Limits: as for the pair and Tails, the boot inlet has no save session; widescreen/donor
+breadth remains open; the death-restart title-card timing is irrelevant (death-free movie).
 
 ## Solo Tails movies re-authored for the native opening bridge (2026-10-15)
 
