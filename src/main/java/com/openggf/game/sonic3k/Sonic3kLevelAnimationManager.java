@@ -226,6 +226,8 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
      */
     @Override
     public void runInitialLevelAnimationPass() {
+        // Animate_Init precedes loc_6468 (sonic3k.asm:7766, 7855) with no deform between them.
+        patternAnimator.runAnimateInitTransfers();
         // MHZ's runtime constructor already represents its pre-loop cap counter;
         // retain that existing ownership while initializing ROM-backed pattern DMA.
         patternAnimator.updatePatternsPreservingPreseededCounters();

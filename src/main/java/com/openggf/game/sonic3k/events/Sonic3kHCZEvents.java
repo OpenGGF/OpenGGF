@@ -1404,6 +1404,8 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
     // =========================================================================
 
     public int     getBgRoutine()                  { return bgRoutine; }
+    /** ROM: HCZ1BGE_Normal sets Events_bg+$16 as it advances to HCZ1BGE_DoTransition. */
+    public boolean isAct1TransitionArtQueued()     { return bgRoutine == BG_STAGE_DO_TRANSITION; }
     public void    setBgRoutine(int v)             { bgRoutine = v; }
     public boolean isTransitionRequested()         { return transitionRequested; }
     public void    setTransitionRequested(boolean v){ transitionRequested = v; }

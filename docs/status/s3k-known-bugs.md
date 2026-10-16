@@ -140,7 +140,7 @@ Entries should include:
 51. [Object Art and Clock Reads Found by the Slay the Robotnik Sprite Research (SUSPECTED)](#object-art-and-clock-reads-found-by-the-slay-the-robotnik-sprite-research-suspected)
 52. [Ending Reunion Kos Service Count — Per-Object CPU Budget (OPEN)](#ending-reunion-kos-service-count--per-object-cpu-budget-open)
 53. [Non-Fresh Title Card Holds 90 Locked Frames (OPEN)](#non-fresh-title-card-holds-90-locked-frames-open)
-54. [AIZ2 First-Tree and HCZ1 Zero-Offset Animated Tile Uploads (OPEN)](#aiz2-first-tree-and-hcz1-zero-offset-animated-tile-uploads-open)
+54. [AIZ2 First-Tree and HCZ1 Zero-Offset Animated Tile Uploads (FIXED)](#aiz2-first-tree-and-hcz1-zero-offset-animated-tile-uploads-fixed)
 55. [Knuckles Credits and Terminal Residuals (OPEN)](#knuckles-credits-and-terminal-residuals-open)
 56. [MHZ Rewind Snapshot Identity Gaps (OPEN)](#mhz-rewind-snapshot-identity-gaps-open)
 
@@ -6580,22 +6580,27 @@ route movies that cross these entries are re-timed by measurement in the same ch
 
 ---
 
-## AIZ2 First-Tree and HCZ1 Zero-Offset Animated Tile Uploads (OPEN)
+## AIZ2 First-Tree and HCZ1 Zero-Offset Animated Tile Uploads (FIXED)
 
-Custom zone `AnimateTiles` routines queue their art through `Add_To_DMA_Queue`
-(sonic3k.asm:1673), drained at VBlank. Two cases still differ:
-- `AnimateTiles_AIZ2`'s first-tree upload still writes immediately, one frame early. It was
-  left unchanged to keep the AIZ to HCZ route stable.
-- When `Events_bg+$10` is 0, `AnimateTiles_HCZ1` falls through `AniHCZ_FixLowerBG` into
-  `AniHCZ_FixUpperBG` (sonic3k.asm:53993, 54071-54091) and skips its normal tile animations.
-  The engine uploads only the lower strips.
+**Location:** `Sonic3kPatternAnimator` (`updateAiz2`, `updateHcz1BackgroundStrips`,
+`runAnimateInitTransfers`).
 
-Evidence is in the
-[bonus-stage transitions matrix](../architecture/validation/levels/s3k-bonus-stage-transitions.md).
+Both custom routines now follow the ROM, through the `Add_To_DMA_Queue` publication
+that VInt drains (sonic3k.asm:1673, 764):
+- `AnimateTiles_AIZ2` below `Camera_X_pos` `$1C0` (sonic3k.asm:53953-53967) queues the
+  first tree on every pass, after running only the first script, and its `clr.l (a3)`
+  zeroes the counters of scripts 1 and 2. The engine wrote the tree once, immediately.
+- `AnimateTiles_HCZ1` (sonic3k.asm:53974-54108) keeps `Anim_Counters+4`/`+6`. At
+  `Events_bg+$10 == 0` it stores 1, queues both fix routines and skips
+  `AnimateTiles_DoAniPLC` on every such pass. Past ±$60 it queues nothing. The fix
+  strips follow only side changes. `Events_bg+$16` stops the routine while the HCZ2 art
+  loads. Animate_Init's `sub_279D4` runs on fresh loads, with `HCZ1_BackgroundInit`'s
+  capped value. The engine had uploaded whole strips past ±$60 and only the lower fix
+  at the equilibrium.
 
-### Removal condition
-Both cases follow the ROM routine, with a focused publication test and an unchanged S3K
-canonical trace result.
+`TestS3kZoneAnimateTilesPublication` was red 16/5 before the change. Evidence and the
+trace results are in the
+[bonus-stage transitions matrix](../architecture/validation/levels/s3k-bonus-stage-transitions.md#aiz2-first-tree-and-hcz1-waterline--2026-10-16-round-2-presentation-lane).
 
 ---
 
