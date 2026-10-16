@@ -112854,3 +112854,35 @@ inherited. Tree slots match native at every sampled row. Engine tree screen X eq
 `x_pos` - 128 to row 22816 and is 3 px right from 22837 (the inherited Events_fg_1 model).
 Pairs 16/17 and 20/22 are swapped because the log-bridge child `$2AEB4` that holds slots 16
 and 20 natively at the allocating rows is absent (inherited).
+
+### 2026-10-16 — S3K chain segment 8 to the HCZ destination row; AIZ zone slice to its trailing row
+
+Three fixes on top of the tree maker (`d7c63f48e`), round-2 AIZ tree `t3-3b77f2e1`, same canonical and
+alternate commands as the entry above, with the comparison-only slot probe:
+
+- `11af51ca0` spin dash charge and release frames ease `Distance_from_top` toward $60 (`loc_11D5E`).
+  Native RAM (BK2 53332-53567, segment row r = BK2 r + 46432) shows the bias easing through the
+  charge at rows 6970-6976; the engine held $B8 for six frames, and its camera trailed native by
+  2 px from row 6989 until the bias reached $60.
+- `b96ef2c4d` the collapsing log bridge's display SST (`loc_2AEB4`), the first post-tree slot
+  divergence on `aiz_completerun` (row 22845).
+- `cdeb2dbc0` the end boss sets `$38` bit 4, the ship's escape signal, in `loc_69482` after the
+  `$3F` defeat wait instead of at the defeat.
+
+| Check | `d7c63f48e` | with the three fixes |
+|---|---|---|
+| Canonical, Maven finished | 20:57:58, 5 run / 1 F | 22:53:45, 5 run / 1 F |
+| Chain segment 8 | 35, first 6989 `camera_y` +2 | 4 (4 + 0), all on row 7126 |
+| Segment 11, walk stop, other segments | 81981 first 1768; BK2 68801; 0 | unchanged |
+| Alternate (`aiz_completerun`), Maven finished | 20:59:22, 9 (9 + 0), first 25038 Kos queue | 22:57:30, 1 (1 + 0), first 26179 `rings` |
+| `aiz_completerun` equal SST occupancy sets | 534 of 2172 samples (`a28c5ab47` probe) | 640 of 2172 |
+
+Row 7126 is the first row of the HCZ start position. During the HCZ load (`Game_Mode` $8C) native
+`Level` waits for the Nemesis PLC queue (`Nem_decomp_queue`, 10 entries from row 7054, six patterns
+per frame, the frame's remainder carried into the next entry) and writes the camera bounds and
+start position on the frame it empties, row 7126. The engine writes them one row later. The next
+finite observation is the engine's PLC queue progress over rows 7054-7127. Row 26179 (rings) is the
+alternate's trailing row and was present before. At the capsule's creation (row 24683) the engine
+capsule sits in slot 9 against native 10: native slot 9 still holds the child `loc_69482` creates
+(ChildObjDat_69D66, `$85B1E`), which the engine does not create; the results object now runs on the
+native pass anyway.
