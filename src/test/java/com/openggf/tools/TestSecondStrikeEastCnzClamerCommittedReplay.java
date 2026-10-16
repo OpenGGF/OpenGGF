@@ -14,6 +14,7 @@ import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import com.openggf.tools.modsdk.GgfModCli;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import javax.tools.ToolProvider;
 import java.io.BufferedWriter;
@@ -310,9 +311,9 @@ class TestSecondStrikeEastCnzClamerCommittedReplay {
         return script;
     }
 
-    @Test void committedClamerShotRestoresAndReplaysExactly() throws Exception {
+    @Test void committedClamerShotRestoresAndReplaysExactly(@TempDir Path work) throws Exception {
         Files.createDirectories(OUT);
-        Path jar = buildProbeJar(Files.createTempDirectory("c1east-probe-replay"));
+        Path jar = buildProbeJar(work);
         int startX = 0x17F8, startY = 0x42C;
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "", "off", null,
                 startX, startY, null, false, false, null, null, false, 0, false);

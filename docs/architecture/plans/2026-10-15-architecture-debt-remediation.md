@@ -19,7 +19,8 @@ The remaining audio CLI assertion reproduces identically on the pinned base
 under the preserved graphics environment. All 65 smoke skips remain explicit
 limits, including six native graphics cases, one CPZ interaction and one missing
 BizHawk reference. This is a local review candidate, not a fully green delivery.
-No merge, push or reconciliation with subsequent main-workspace commits occurred.
+At that checkpoint, no merge, push or reconciliation with subsequent
+main-workspace commits had occurred. The later PR phase is recorded below.
 
 The original review was static, at `e80a8f85e`. Revalidate each finding against
 the updated base, record any superseding upstream changes, and prove specific
@@ -962,3 +963,135 @@ candidate worktree and diagnostic regression worktree are retained with their
 changes accounted for. Main remains on `develop` and has advanced independently
 since the pinned base; no branch switch, rebase, merge or push was attempted.
 The next delivery action is the user's review of the local candidate.
+
+### PR 222: upstream reconciliation and first hosted CI result
+
+The user subsequently authorized raising a PR and watching until conflicts and
+test failures are resolved. This authorizes pushing the feature branch; the
+earlier requirement for user review before merging remains. The lead fetched
+`origin/develop` at `e55e831a29dbaa51589147adfd5c7d2e654363f7`, 35 commits beyond
+the original base, and rebased the local candidate. Its new head is
+`f38814eff870df1b0c608a1ecd376e337bd93375`. The sole textual conflict was the
+workflow tools index: preserve upstream's editor HUD entry and add the new
+obligation gate, rather than restoring the superseded editor-guide entry.
+Astra's bounded source/API overlap review found the upstream reservation-ledger
+and 207 added API signatures compatible with this task's narrowing. No API
+version or published baseline changed.
+
+[PR 222](https://github.com/OpenGGF/OpenGGF/pull/222) targets `develop`, is linked
+to the parent thread and uses T3's app-owned watcher. Initial GitHub state was
+`MERGEABLE`, with no comments or reviews. No local broad suite was duplicated
+after rebase: fresh hosted CI covers the composed source. The feature branch
+alone was pushed; the main-workspace branch was neither switched nor integrated.
+
+Completed hosted results for head `f38814eff`, CI run `38863992432`:
+
+- Policy passed. The separate candidate creator-kit run `38863992411` also passed.
+- [Ordinary smoke](https://github.com/OpenGGF/OpenGGF/actions/runs/38863992432/job/116852495192):
+  24,371 reported cases, two failures, four errors and 4,716 skips. Maven took
+  11 minutes 18 seconds. This hosted job is ROM-free and supplies neither
+  inherited launcher-option environment variable. The coverage-count assertion
+  did not run because Maven failed.
+- [Structural guards](https://github.com/OpenGGF/OpenGGF/actions/runs/38863992432/job/116852495078):
+  714 cases, one failure, no errors or skips; Maven took eight minutes 12 seconds.
+- The push-only smoke alias and manual-only trace replay jobs were intentionally
+  skipped. These are not missing PR smoke coverage: the `test` job ran smoke.
+
+The actual ROM-free rewind sweep passed 1,323 invocations with exactly three
+prerequisite skips; the separate ratchet passed and reported
+`isolated-executed=1075 graph-declared=243 prerequisite-unavailable=3`. This
+resolves the earlier uncertainty about the core sweep in a genuinely ROM-free
+hosted environment. It does not turn the red overall CI result green. The
+upstream overlap checks also passed: API signatures 11 cases, pin policy four,
+placed-child reservations seven. The 13 audio CLI cases passed without the local
+launcher-prefix environment; four teardown and eight lifecycle guard cases passed.
+
+The exact remaining failure paths and bounded test-only repairs are:
+
+1. `TestScalarOnlyCodecDeletion#batch44ClassesRoundTripPassedThroughObjectManagerSessionPath`,
+   line 6463: expected `Passed` for `S3kResultsScreenObjectInstance`, received
+   `Unprobed[reason=required original S3K ROM unavailable]`. The aggregate loop
+   contained two ROM-required result-owner FQNs, so its first failure prevented
+   reaching the second. Report each FQN independently, validate through the
+   existing identity/reason contract, and skip only its declared prerequisite.
+   Preserve the synthetic twelve-child graph test and other 508 cases.
+2. `TestDoomsdayTailEcho#destructiveManagerRecreationRelinksPresetAndReplaysBeforeInitDuringRideAndAfterRelease(int)`,
+   three invocations, lines 124/129: null reader in `S3kRawAnimation.load`, called
+   by missile-puff dispatch during the long replay. Gate only this method on the
+   original S3K ROM and explicitly inject its real ROM/reader. Preserve the replay
+   comparisons and the other 16 invocations.
+3. `TestSecondStrikeBoss#managerDispatchKeepsNativeSixteenTickCuePendingWaveReplayAndFatalCancellation`,
+   line 85: the final fatal branch dispatches `S3kBossExplosionChild.rawByte`, which
+   requires the verified ROM. Keep cue/pending-wave replay ROM-free and split the
+   restored fatal cancellation into its own ROM-gated method with explicit ROM
+   injection. Retain defeat, cancellation, no-flame and no-live-flare assertions.
+4. `TestWestCampaignNativeRecipes#brittleStandingSupportWarnsBeforeTheNativeWaveButTriggerAndStompStayStock`,
+   line 40: expected timer 40, observed zero. Upstream `78a4f085f` moved bridge
+   initialization to service injection. The fixture constructed with services
+   but never called `setServices`; inject those same owners before the unchanged
+   timer/trigger/stomp assertions. This failure is not a missing-ROM condition.
+5. `TestNoLeakedTemporaryFiles#testsDoNotCreateTemporaryFilesTheyNeverRemove`,
+   line 87: the Clamer committed-replay test created an unmanaged temporary probe
+   directory. Use method-injected `@TempDir`, alive through compilation and the
+   capture session, without changing the scanner or replay assertions.
+
+Three workers own disjoint test files; root owns all queued checks and delivery.
+No production code, synthetic runtime assets, ROM links, guard exemptions,
+coverage identity pins or published contracts changed. Astra statically reviewed
+only these five new test diffs and found no silent coverage weakening or blocker.
+Focused runtime outcomes and the next hosted head remain pending below; watching
+does not authorize merging.
+
+### PR 222: focused verification of the five fixture repairs
+
+The lead completed these three queued commands once from the implementation
+worktree. All used Java `25.0.4.1` and the explicit
+`-Dopenggf.headless.gl=surfaceless-egl` property; no inherited launcher-option
+environment variable was added. Only the five reviewed test files changed after
+head `f38814eff`; documentation records their evidence. No source changed while
+these requests were queued or running.
+
+```bash
+env LUA_BIN=lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestScalarOnlyCodecDeletion,TestDoomsdayTailEcho,TestWestCampaignNativeRecipes,TestSecondStrikeBoss,TestSecondStrikeEastCnzClamerCommittedReplay' -Dsonic1.rom.path="${OPENGGF_REPO_ROOT}/s1.gen" -Dsonic2.rom.path="${OPENGGF_REPO_ROOT}/s2.gen" -Ds3k.rom.path="${OPENGGF_REPO_ROOT}/s3k.gen" test -B
+env LUA_BIN=lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestScalarOnlyCodecDeletion#batch44ClassesRoundTripPassedThroughObjectManagerSessionPath+htzGroundFireRoundTripsPassed+s3kResultsGenericRecreateRestoresCapturedRootStateAndRealTwelveChildGraph,TestDoomsdayTailEcho#destructiveManagerRecreationRelinksPresetAndReplaysBeforeInitDuringRideAndAfterRelease,TestSecondStrikeBoss#managerDispatchFatalHitCancelsRestoredPendingWaveAndWarning' -Dopenggf.rewind.harness.forceRomless=true -Ds3k.rom.path="${OPENGGF_REPO_ROOT}/.worktrees/ai-architecture-debt-implementation/pom.xml" test -B
+env LUA_BIN=lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Pguards '-Dtest=TestNoLeakedTemporaryFiles' test -B
+```
+
+| Invocation | Exit | Cases | Failures/errors | Skips | Printed queue wait | Maven execution |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Five classes, verified original ROMs | 0 | 553 | 0/0 | 0 | 350 s | 70 s, rounded |
+| Unavailable-prerequisite controls, lean | 0 | 6 | 0/0 | 4 | 393 s | 26.062 s |
+| Temporary-file guard, fresh JVM | 0 | 1 | 0/0 | 0 | 419 s | 25.470 s |
+
+ROM-present class counts were 510 scalar-codec cases, 19 Doomsday cases, ten West
+recipe cases, 13 boss cases and the one actual committed Clamer replay. Every
+case executed; no skip was hidden in the 553 total. This checks preserved
+behavior, including fatal native explosion dispatch, the three long destructive
+replays, unchanged bridge timers and the managed temporary probe's full lifetime.
+It does not add a whole-route or pixel-certification claim beyond those tests.
+
+The unavailable control deliberately supplied the existing `pom.xml` as a
+non-ROM input to the existing detector: it was rejected before either gated
+native method could run. It did not modify, remove, copy or link any ROM, nor
+supply substitute runtime bytes. Combined with the existing harness force flag,
+the exact observed skips were:
+
+- `TestScalarOnlyCodecDeletion#batch44ClassesRoundTripPassedThroughObjectManagerSessionPath(String)[1]`:
+  `S3kResultsScreenObjectInstance: required original S3K ROM unavailable`.
+- The same method `[2]`: `Mgz2ResultsScreenObjectInstance: required original S3K ROM unavailable`.
+- `TestDoomsdayTailEcho#destructiveManagerRecreationRelinksPresetAndReplaysBeforeInitDuringRideAndAfterRelease(int)`:
+  `Sonic 3 & Knuckles ROM not available — skipping test`. JUnit disabled its
+  parameterized container, reporting one skip rather than three invocations.
+- `TestSecondStrikeBoss#managerDispatchFatalHitCancelsRestoredPendingWaveAndWarning`:
+  the same explicit ROM-unavailable reason.
+
+The ground-fire and synthetic twelve-child graph controls both executed and
+passed in that six-case selection. This is a deliberate prerequisite/gate
+simulation, not another genuinely ROM-free filesystem run. XML confirmed the
+Java version, graphics property and exact skip causes; the next hosted CI run
+must establish the updated complete ROM-free outcome. Its earlier completed red
+result is not relabelled green. Queue waits overlap and are not summed as elapsed
+time. All three sessions (`91289`, `40036`, `22707`) terminated and were reaped;
+consumed log/XML copies are removed after inspection. No additional broad local
+run is justified for these bounded fixture repairs. The same linked PR and
+app-owned watcher remain active; merging still requires user review.
