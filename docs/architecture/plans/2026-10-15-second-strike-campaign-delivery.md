@@ -130,6 +130,16 @@ branches, preserving user config/ROM/save targets, useful captures and histories
 
 ## Compact execution checkpoint
 
+Current upstream-reconciled source is `04ac46c048a12f3ddcff5a0f89e7660499b76611`,
+integrated/pushed on develop with remote hash verified and all eight unrelated
+main paths preserved. Fresh package61564 and focus14330 qualify its matched
+engine/SDK and affected ownership/API/startup contracts:188 cases, no failures,
+errors or skips. The actual packaged surface now matches the upstream20737-line
+pin. Actual Second Strike and typed C2/C3 roots compile/package strictly with zero
+findings. See [current artifact refresh](#current-artifact-refresh-after-upstream4a26).
+This supersedes old pairs for new-current work without promoting any historical
+gameplay witness; no new cold route or campaign-completion claim is made.
+
 The foundation and bounded AIZ historical-latch repair are integrated and pushed
 as `f813672d0599f9debc0cf9a32148999fb3cc61a6`.
 Focus42171 passes8 cases without skips; Astra R1 has no blocker; actual89496
@@ -147,11 +157,21 @@ response inputs remain alive/nohurt at zero rings; the normal recovery endpoint
 is still unqualified, and the guard does not establish a damaging contact.
 R9/45291 passes the former horizontal-only stop, then rejects one native foot
 distance15 while the other is1. It remains alive/nohurt, with recovery unqualified.
+Source confirms the nearer1 is valid within its actual threshold5; native slope
+slip rearms lock30 with28 of the original96 inputs left. No budget extension or
+AIZ successor is authorized by that attribution.
 HCZ98142 observes supported floor083F, native water0680 and a rising bubble, but
 stops its11-call readiness bound before approach or hop. Diagnostic94142 identifies
 only the live116/117 count gates as false; all other clauses pass at11. Those are
-conveyor logic, not spinning columns. Native ownership attribution and actual
-oxygen/refill/escape remain open.
+shared conveyor markers, not spinning columns.31538 qualifies genuine99/100 owners
+and entry at9 calls, then stops after27Right because a native enemy-art batch
+violates an unsupported continuing global-idle observer guard. Corrected observer
+43267 fails at setup on a null module-class CodeSource before issuing any pad.
+R6 preparation reuses the existing pure native proxy-lineage contract; no native
+change is made. Attempt77730 qualifies one positioned zero-ring maker114 refill
+and supported return: one A294, native intake302/air25→29,35 native lock decrements,
+stationary endpoint424. This uses immutable42171/cb2 only. Whole-act air budgets,
+cold routes and HCZ2 maker221's supported entry remain open.
 ICZ28579 qualifies the declared zero-ring neutral WARNED fall/landing and84-update
 registered replay. Successor97772 lands on the stone, retreats unharmed to real
 terrain and matches73 registered return/replay updates. Its STOCK arm follows
@@ -185,7 +205,8 @@ complete packaging on the upstream-reconciled source.
 C3 native ingredients, STOCK golem, placed A2/capsule, corrected reservation seam,
 ICZ fail-closed consumer, checkpoint high-water restoration, pending-art admission,
 Slots ROM authority and inactive MHZ/LRZ/HPZ creator files are composed. Public
-version remains unpublished0.7.0; the21107-line candidate pin is unchanged. Existing
+version remains unpublished0.7.0; at that source checkpoint the21107-line candidate
+pin was unchanged. Existing
 53676 artifacts remain immutable and keep their historical witness attribution.
 No current-artifact route or harder-gameplay claim is inferred from compiler support.
 Campaign workers are stopped and their unmerged trees remain cleanup_pending.
@@ -2003,13 +2024,102 @@ service/drain/queue/clock or native PLC fix is proposed.
 All37 CSV rows remain alive/nohurt/zero-ring with no issued A. CSV precedes PNG
 and log inspection; consumed log and the known generated config are removed.
 
-One versioned external R5 preparation is authorized after that source review,
-not a runtime result. It preserves the exact fixed seed/readiness/input/hop/
-breath/return and600-call/90s bounds, entry-idle and local art/DPLC checks, while
-replacing only continuing global idle with pure actual provider/handle ownership
-attribution. Unknown or mixed work stops. Old R2/R3/R4 sources/classes are
-immutable; no helper-field manipulation, forced service or native change is
-authorized. Root will inspect the versioned diff before one attempt.
+Versioned external R5 uses an explicit R2 core copy and R4 wrapper copy, with
+byte-equal approach/brake/hop/breath/return methods after class renaming. It
+preserves the fixed seed/readiness/600-call/90s bounds, entry-idle and local
+art/DPLC checks, replacing only continuing global idle with pure actual
+provider/handle ownership attribution. Unknown or mixed work stops. Root source
+review corrected two fixture assumptions before execution: the native consumed
+handoff clears its residual teardown lease ID, and the services decorator adds
+an outer module layer before the already-initialized art-provider cache. Reads
+use the existing final base getter and descriptor fields, never lazy art/queue
+accessors, processing, preparation, service, claim or payload snapshots.
+
+Preparation6676 fails only for a missing Map import after a console-observed
+240s lock wait; exact compiler-only duration is unknown. The failed source and
+output are retained. Import-only successor97016 passes into separate classes-r2
+after481.621s waiting; its3.438s lease-held interval includes verification,
+directory creation and javac, not isolated compiler timing. No Engine or test
+runs in either preparation. Completion HEAD/index/source content and target
+metadata match before/after. Final core baa69fda/wrapper a4f52039/observer71e03e0d,
+prepareef6aa13b and report3c79721c are immutable. The root-only runner5fe56fa8
+passes preflight and selects only the four hash-checked classes-r2 files.
+Old R2/R3/R4 inputs stay immutable; no helper-field manipulation or native change.
+
+Attempt43267 is terminal1:235s normal admission,0.836s child, ending
+08:29:40.237Z with the owned process group reaped and source unchanged. It boots
+the actual sidecar but stops before its first ordinary pad: the observer asks
+the selected module class's CodeSource for a location and receives null.
+CSV contains only its header; the pad file has no executable rows and no PNG
+exists. Final pure setup predicates are not ordinary-readiness or refill proof.
+The observer never authenticates a module head/lease and no approach, hop or
+breath executes. Raw loga6715ecc is inspected/consumed and the known generated
+config is removed.
+
+Source attribution identifies a missed explicit-patch boundary: the sidecar
+registers its title-provider Module through OwnerBoundGamePatch, which returns
+a JDK GameModule proxy. Such a class need not have a CodeSource. The failed
+lookup runs before logging the actual class, so this run does not directly
+identify its handler. The existing pure NativeRewindAdapterPublication.nativeRoot
+lineage walk already distinguishes immutable decorators and verified engine
+proxy handlers. A source-only follow-up assesses using that existing lineage
+contract before observing the initialized native provider. Root source review
+authorizes only a versioned R6 external preparation/paired compile at this
+checkpoint: reuse that read-only walk, stop on SecurityException/null/unknown
+lineage, require the exact immutable native module/provider, and log proxy/handler
+class identity without invoking proxy methods or assuming CodeSource exists.
+The selected outer module identity and every other native-owner/local-art/input
+check remain required. No new runtime or native helper/API change is authorized
+by that preparation; its diff and compiled hashes require root inspection first.
+
+R6 preparation50818 passes against the immutable42171 engine/SDK/cb2 sidecar:
+2.803s build-lock wait and1.653s lease-held verification/snapshot+javac interval,
+not isolated compiler timing. Core b878e751/wrapper482fcef5 retain the exact R5
+policy after mechanical renames; observer3aee09a8 uses the pure canonical lineage
+walk. Prepare75d3c30f/report321b4a4f and four class hashes are frozen; root runner
+489551d5 passes preflight. No native source, queue, physics, API or creator change.
+
+The sole root attempt77730 is terminal0 after43s normal admission and1.788s child,
+ending08:43:50.833Z; group reaped/source unchanged. Readiness qualifies at9 calls.
+It stops at12C7/082C by69, waits for the first eligible actual native subtype02
+bubble, and issues exactly one A at294. The native jump is accepted; the chosen
+slot24 child is consumed at302 with actual air25→29, native BUBBLE animation21
+and moveLock35. Fifty-eight neutral breath-phase calls include falling/landing;
+only326..360 decrement the lock, exactly35 native owner dispatches. At424 it
+returns stationary to12A5/082C on current DOWN feet0/0, no manager rider or
+standing-object relation, air27. All426 CSV rows are alive/nohurt/zero-ring;
+424 issued pads comprise423 completed ordinary passes and one held call. The
+endpoint row is an additional observation, not a425th input.
+
+All37 R4 prefix rows match59 common scalar/diagnostic fields exactly. The pure
+observer now measures the selected jdk.proxy2.$Proxy4, verified native
+OwnerBoundGamePatch.Handler and canonical Sonic3kGameModule. It authenticates
+all four native module parents and their four direct-child handles; the actual
+Blastoid head36A7C6→A720 at36 is no longer merely inferred **for this run**.
+Normal native submission/retirement proceeds without observer servicing; the
+provider batch is retired by46 and required local art/DPLC readiness stays valid.
+
+Root reads CSV4fb37bc7/script0441d7cc/observations e8b7b534 before viewing all four
+normal320px PNGs (entry, pre-hop, post-intake, endpoint). The native maker,
+collectible bubble, breath and supported return are visible. Raw logf0cc37d1 is
+inspected/consumed; generated config removed, no owned JVM survives. This closes
+one **positioned Sonic-solo320 HCZ1 maker114 oxygen/refill/return** ingredient on
+42171/cb2. It is not a whole-HCZ air budget, stock comparison, cold route,
+all-character/wide, rewind/save or current-upstream-runtime qualification.
+
+Upstream develop advances to4a26a651e through architecture-debt commitsf38814eff/
+ed8857f98 and merge222. Root fast-forwards main to that exact ref after a pull
+reports multiple merge heads; that failed pull changed no source, and the cause
+of its transient FETCH_HEAD state is unmeasured. Exact eight unrelated main
+paths remain preserved. Upstream tightens injected object-service ownership and
+session/rewind cleanup, normalizes the unpublished API to exclude engine-internal
+snapshot/queue shapes, adds native AIZ/HCZ route obligations and fixes a foreign
+worktree-disappearance admission race. Root's own continuation change is only
+documentation; no native conflict resolution or API-pin rewrite is intended.
+The old private760-based worker inputs and immutable19448/42171 artifact pairs
+stay retained. Fresh current engine/SDK packaging and affected qualification are
+required before attributing a later current-runtime result to this new base;
+77730 and earlier proofs are not silently promoted to it.
 
 Independent HCZ2 source auditf7fec727 authenticates the sole maker221,
 raw204008F85480 at1E6EBE; it has no conveyor duplicate-marker semantics. The
@@ -2020,3 +2130,66 @@ Native air is phased by qualifying owner dispatches: absent exits/refills/holds,
 airA and counterc imply `(c+1)+60*A` passes until underflow, not a universal wall
 time. A local future221 witness cannot qualify every submerged segment. No
 HCZ2 floor/seed/input recipe or new execution is authorized by this inventory.
+
+### Current artifact refresh after upstream4a26
+
+Root integrates its documentation with upstream4a26 as04ac46c04 and verifies the
+remote develop hash after push. Its executable source is byte-identical to4a26:
+the owned delta is four documentation files. This merge needs no repeated smoke
+ceremony. New upstream ownership/cleanup and signature changes do require fresh
+paired artifacts and affected qualification before further current-runtime work.
+
+Build61564 runs in the delivery worktree on clean04ac46c04 using Java25:
+`python3 tools/testing/maven_queue.py -Dmse=off -DskipTests verify`.
+DISPLAY/WAYLAND and Java override variables are unset; Lua5.4 remains explicit.
+It finishes successfully in1m26s, including actual engine/SDK/Javadoc/test-kit,
+default Time Attack bundle and the packaged-artifact verifier. No tests run in
+this build. Individual artifacts, not a copied build tree, are retained under
+`${TASK_ARTIFACTS}/artifacts/61564-04ac46c048a1`:
+
+| Artifact | Bytes | SHA256 |
+| --- | ---: | --- |
+| Engine fatjar | 26680021 | `e5a879d7cfce75a18a3c5d105dab0c3ed7940483a2a261e98bbe260db63aa84d` |
+| SDK | 249962 | `d9e56f4a1d87dc59f7c558625c506a424c0e50d2cf09d55e56c5cc74a30c4987` |
+| SDK Javadoc | 1329291 | `8cd5ee5e7f2bfd54d2c1defb3dc2bdf6dc867ca9ede35b3b9d147333aeb18f65` |
+| Test-kit | 30755 | `25871d0faffff58c813dbc611a931af30cfdf0661dcf2331fe3a28edf05de363` |
+| Separate Second Strike | 67252 | `cb2c4cb4a505163739e68edcac000b62eb694ac543dbda9fb631b30d6e935eac` |
+
+`ModApiSignatureSurface --snapshot` from the fatjar is byte-equal to the new
+20737-line candidate pin, SHA256
+`7d18feb8d76dbcc00587c0b1a2273d0d56c364c74a478bb801a8add935946809`.
+Public version remains unpublished0.7.0; root does not rewrite upstream's pin.
+All24 actual Second Strike Java sources compile with `javac --release 25` against
+this engine+SDK pair and publish through `GgfModCli package --warnings error` with
+zero findings. The creator jar remains byte-identical cb2c4cb4. A separate typed
+consumer of MHZ/LRZ/HPZ/DEZ/DDZ factories and FBZ/SOZ/SSZ enum services also
+compiles/packages with zero findings; it is compile-only and is never activated.
+
+Focused14330 uses the normal intended-tree queue, exact EGL property,
+unset DISPLAY/WAYLAND/Java overrides, Lua5.4 and all three original absolute,
+hash-verified ROM paths. Its `-Dtest` selection is:
+
+```text
+TestObjectHelperServiceOwnership,TestGameplayModeTeardownFailures,
+TestGameplayModeContextRewindRegistry,TestInheritedZoneTitleLifecycle,
+TestModZoneEventLifecycle,TestNativeRewindAdapterPublication,
+TestModApiSignatureSurface,TestModApiPinPolicy,TestModValidator,
+TestSecondStrikeBoss,TestWestCampaignNativeRecipes,
+TestSecondStrikeEastCnzClamerCommittedReplay,TestS3kAiz1SkipHeadless,
+TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+```
+
+It finishes at10:05:52BST:15s queued,34.983s Maven execution,188 tests with
+0 failures/errors/skips. Root reads all17 selected fresh XML reports (the loading
+basename intentionally matches two classes); stale unselected XML is excluded.
+This covers injected object-helper ownership, failure-safe cleanup and registry
+lifetime, inherited HCZ title callbacks, the narrower public contract and its
+validator, representative campaign child/rewind consumers, and the four required
+S3K startup checks. No broad smoke, guards, exhaustive trace or SDK tooling sweep
+is repeated. The earlier smoke remains bounded by its recorded failures/skips.
+
+No Engine/capture/test request survives this checkpoint. Native helpers remain
+stopped; private unmerged/staged trees remain cleanup_pending. Old19448/42171 and
+53676 evidence retains its original source/artifact attribution. AIZ R9 recovery,
+all four full AIZ-to-HCZ axes and the outstanding M4-M6 route, resource, character,
+rewind, counterplay and hardness gates remain open.

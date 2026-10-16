@@ -521,6 +521,19 @@ public class BackgroundRenderer {
     }
 
     /**
+     * Matches the per-column VScroll buffer to a new picture width. The renderer outlives game
+     * sessions, so a later launch or a resumed game at another aspect needs every visible column;
+     * the FBO already grows on demand in {@link #ensureCapacity}.
+     */
+    void applyResolvedDisplayWidth(int screenWidth) {
+        int columns = columnCount(Math.max(1, screenWidth));
+        if (vScrollColumnBuffer == null || vScrollColumnBuffer.getEntryCount() == columns) return;
+        vScrollColumnBuffer.cleanup();
+        vScrollColumnBuffer = new VScrollBuffer(columns);
+        vScrollColumnBuffer.init();
+    }
+
+    /**
      * Draw a fullscreen quad for the parallax pass.
      * Note: The parallax shader uses gl_FragCoord for positioning,
      * so no projection matrix is needed. The quad coordinates are

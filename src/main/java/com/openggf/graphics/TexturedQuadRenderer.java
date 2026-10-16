@@ -128,7 +128,9 @@ public class TexturedQuadRenderer {
             quadVertexBuffer = vertexBuffer;
         }
         writeQuadVertices(vertexBuffer, x, y, w, h, u0, v0, u1, v1);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, vertexBuffer);
+        // Replace storage rather than waiting for earlier draws to finish reading it.
+        // The VAO retains the buffer binding; queued draws retain their old storage.
+        glBufferData(GL_ARRAY_BUFFER, vertexBuffer, GL_STREAM_DRAW);
 
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
@@ -163,7 +165,7 @@ public class TexturedQuadRenderer {
         quadVertexBuffer.clear();
         quadVertexBuffer.put(vertexData, 0, floatCount);
         quadVertexBuffer.flip();
-        glBufferSubData(GL_ARRAY_BUFFER, 0, quadVertexBuffer);
+        glBufferData(GL_ARRAY_BUFFER, quadVertexBuffer, GL_STREAM_DRAW);
 
         glDrawArrays(GL_TRIANGLES, 0, quadCount * 6);
 
@@ -199,7 +201,7 @@ public class TexturedQuadRenderer {
         coloredVertexBuffer.clear();
         coloredVertexBuffer.put(vertexData, 0, floatCount);
         coloredVertexBuffer.flip();
-        glBufferSubData(GL_ARRAY_BUFFER, 0, coloredVertexBuffer);
+        glBufferData(GL_ARRAY_BUFFER, coloredVertexBuffer, GL_STREAM_DRAW);
 
         glDrawArrays(GL_TRIANGLES, 0, quadCount * 6);
 

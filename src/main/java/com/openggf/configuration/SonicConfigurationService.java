@@ -41,6 +41,9 @@ public class SonicConfigurationService {
 	private final Path configDirectoryOverride;
 	private final ConfigFileReader yamlReader;
 	private final Map<String, Object> sessionOverrides = new HashMap<>();
+	private final DisplaySettingsTrial displaySettingsTrial = new DisplaySettingsTrial(this);
+
+	DisplaySettingsTrial displaySettingsTrial() { return displaySettingsTrial; }
 	// Derived (non-persisted) display values; read before `config`, never saved.
 	private final Map<String, Object> transientResolved = new HashMap<>();
 	private final Map<SonicConfiguration, Integer> intCache = new EnumMap<>(SonicConfiguration.class);
@@ -137,6 +140,9 @@ public class SonicConfigurationService {
 			configChanged = true;
 		}
 		if (normalizeDisplayShaderSelection(config)) {
+			configChanged = true;
+		}
+		if (migrationService.migrateLaunchProfileToggles(config)) {
 			configChanged = true;
 		}
 
@@ -725,6 +731,8 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
 		putDefault(SonicConfiguration.WIDESCREEN_DEADZONE_MODE, "PROPORTIONAL");
 		putDefault(SonicConfiguration.DISPLAY_WINDOW_AUTOSIZE, true);
+		putDefault(SonicConfiguration.DISPLAY_WINDOW_MODE, "WINDOWED");
+		putDefault(SonicConfiguration.DISPLAY_SCALING, "INTEGER");
 		putDefault(SonicConfiguration.DISPLAY_SHADER_LIBRARY_ROOT, "shaders");
 		putDefault(SonicConfiguration.DISPLAY_SHADER_SELECTION, "OFF");
 		putDefaultKey(SonicConfiguration.DISPLAY_SHADER_NEXT_KEY, GLFW_KEY_RIGHT_BRACKET);
@@ -734,6 +742,18 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.DAC_INTERPOLATE, false);
 		putDefault(SonicConfiguration.FM6_DAC_OFF, true); // Default true for Sonic 2 parity
 		putDefault(SonicConfiguration.AUDIO_ENABLED, true);
+        putDefault(SonicConfiguration.AUDIO_HUB_MUSIC_ENABLED, false);
+        putDefault(SonicConfiguration.AUDIO_HUB_MUSIC_VOLUME, 20);
+        putDefault(SonicConfiguration.HUB_LAST_GAME, "s2");
+        putDefault(SonicConfiguration.HUB_CONTINUE_S1_CHARACTER, "");
+        putDefault(SonicConfiguration.HUB_CONTINUE_S1_ZONE, -1);
+        putDefault(SonicConfiguration.HUB_CONTINUE_S1_ACT, 0);
+        putDefault(SonicConfiguration.HUB_CONTINUE_S2_CHARACTER, "");
+        putDefault(SonicConfiguration.HUB_CONTINUE_S2_ZONE, -1);
+        putDefault(SonicConfiguration.HUB_CONTINUE_S2_ACT, 0);
+        putDefault(SonicConfiguration.HUB_CONTINUE_S3K_CHARACTER, "");
+        putDefault(SonicConfiguration.HUB_CONTINUE_S3K_ZONE, -1);
+        putDefault(SonicConfiguration.HUB_CONTINUE_S3K_ACT, 0);
 		putDefault(SonicConfiguration.AUDIO_INTERNAL_RATE_OUTPUT, false);
 		putDefault(SonicConfiguration.AUDIO_FM_CORE, "fast");
 		putDefault(SonicConfiguration.REGION, "NTSC");
@@ -850,21 +870,21 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.CROSS_GAME_S2_DATA_SELECT_IMAGE_GEN_OVERRIDE, false);
 		putDefaultKey(SonicConfiguration.CROSS_GAME_S1_DATA_SELECT_IMAGE_COORD_LOG_KEY, GLFW_KEY_APOSTROPHE);
 		putDefault(SonicConfiguration.CROSS_GAME_SOURCE, "s2");
-		putDefault(SonicConfiguration.LAUNCH_S1_REWIND, false);
+		putDefault(SonicConfiguration.LAUNCH_S1_REWIND, "global");
 		putDefault(SonicConfiguration.LAUNCH_S1_CROSS_GAME_SOURCE, "off");
-		putDefault(SonicConfiguration.LAUNCH_S1_DEBUG_TOOLS, false);
+		putDefault(SonicConfiguration.LAUNCH_S1_DEBUG_TOOLS, "global");
 		putDefault(SonicConfiguration.LAUNCH_S1_ASPECT, "global");
 		putDefault(SonicConfiguration.LAUNCH_S1_MAIN_CHARACTER, "sonic");
 		putDefault(SonicConfiguration.LAUNCH_S1_SIDEKICK, "none");
-		putDefault(SonicConfiguration.LAUNCH_S2_REWIND, false);
+		putDefault(SonicConfiguration.LAUNCH_S2_REWIND, "global");
 		putDefault(SonicConfiguration.LAUNCH_S2_CROSS_GAME_SOURCE, "off");
-		putDefault(SonicConfiguration.LAUNCH_S2_DEBUG_TOOLS, false);
+		putDefault(SonicConfiguration.LAUNCH_S2_DEBUG_TOOLS, "global");
 		putDefault(SonicConfiguration.LAUNCH_S2_ASPECT, "global");
 		putDefault(SonicConfiguration.LAUNCH_S2_MAIN_CHARACTER, "sonic");
 		putDefault(SonicConfiguration.LAUNCH_S2_SIDEKICK, "tails");
-		putDefault(SonicConfiguration.LAUNCH_S3K_REWIND, false);
+		putDefault(SonicConfiguration.LAUNCH_S3K_REWIND, "global");
 		putDefault(SonicConfiguration.LAUNCH_S3K_CROSS_GAME_SOURCE, "off");
-		putDefault(SonicConfiguration.LAUNCH_S3K_DEBUG_TOOLS, false);
+		putDefault(SonicConfiguration.LAUNCH_S3K_DEBUG_TOOLS, "global");
 		putDefault(SonicConfiguration.LAUNCH_S3K_ASPECT, "global");
 		putDefault(SonicConfiguration.LAUNCH_S3K_MAIN_CHARACTER, "sonic");
 		putDefault(SonicConfiguration.LAUNCH_S3K_SIDEKICK, "tails");

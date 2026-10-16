@@ -5,7 +5,12 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`next` / 0.8)
 
-No 0.8-only release entries yet. Work promoted from `next` is recorded in
+- Refined the game hub with quiet, bounded setup badges and direct ROM location;
+  removed the game browser. Settings and Game Setup have explicit Save changes
+  actions, clearer inherited values, calmer backgrounds and more readable text.
+  Technical display controls now live in Advanced settings.
+
+Work promoted from `next` is recorded in
 [CHANGELOG.0.7.prerelease.md](CHANGELOG.0.7.prerelease.md).
 
 ## Release files

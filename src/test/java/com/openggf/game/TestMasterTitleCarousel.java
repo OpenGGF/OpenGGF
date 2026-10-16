@@ -29,9 +29,8 @@ class TestMasterTitleCarousel {
             var screen = screen(games(count));
             press(screen, GLFW_KEY_LEFT);
             assertEquals("game-" + (count - 1), screen.getSelectedGameId());
-            press(screen, GLFW_KEY_DOWN);
             press(screen, GLFW_KEY_RIGHT);
-            assertEquals("game-0", screen.getSelectedGameId());
+            assertEquals("game-0", screen.getSelectedGameId(), "the card wraps in both directions");
             for (int i = 0; i < count; i++) press(screen, GLFW_KEY_RIGHT);
             assertEquals("game-0", screen.getSelectedGameId());
         }
@@ -58,7 +57,9 @@ class TestMasterTitleCarousel {
         press(screen, GLFW_KEY_ENTER);
         assertFalse(screen.isGameSelected());
         press(screen, GLFW_KEY_ESCAPE);
-        for (int i = 0; i < 7; i++) press(screen, GLFW_KEY_DOWN);
+        // Engine-wide tabs stay usable without games: Up to the tabs, then across to Quit.
+        for (int i = 0; i < 3; i++) press(screen, GLFW_KEY_UP);
+        for (int i = 0; i < 3; i++) press(screen, GLFW_KEY_RIGHT);
         press(screen, GLFW_KEY_ENTER);
         press(screen, GLFW_KEY_DOWN);
         press(screen, GLFW_KEY_ENTER);
@@ -82,12 +83,12 @@ class TestMasterTitleCarousel {
             public void suppressInputUntilNeutral() { }
             public boolean consumeCloseRequested() { return close; }
         });
-        press(screen, GLFW_KEY_DOWN);
-        for (int i = 0; i < 3; i++) press(screen, GLFW_KEY_DOWN);
+        press(screen, GLFW_KEY_UP); // Mods is the first header tab.
         press(screen, GLFW_KEY_ENTER);
         screen.update(new com.openggf.control.InputHandler());
         assertEquals(2, screen.entriesForTest().size());
         assertEquals("game-2", screen.getSelectedGameId());
+        press(screen, GLFW_KEY_ESCAPE); // Back from the tabs to the card.
         press(screen, GLFW_KEY_RIGHT);
         assertEquals("game-0", screen.getSelectedGameId());
     }

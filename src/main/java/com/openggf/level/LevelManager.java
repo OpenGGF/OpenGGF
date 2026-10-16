@@ -828,6 +828,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         // geometry must use the resolved presentation dimensions independently.
         cachedScreenWidth = configService.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS);
         cachedScreenHeight = configService.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS);
+        resizeBackgroundColumns();
         blockPixelSize = level.getBlockPixelSize();
         chunksPerBlockSide = level.getChunksPerBlockSide();
         debugRenderer = new LevelDebugRenderer(new LevelDebugContext(
@@ -835,6 +836,22 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 cachedScreenWidth, cachedScreenHeight));
         cacheLevelDimensions();
         tilemapManager = new LevelTilemapManager(buildGeometry(), graphicsManager, gameState);
+    }
+
+    /** Re-reads the picture size after the aspect changes mid-level; see {@link LevelDisplayWidth}. */
+    void refreshDisplayDimensions() {
+        cachedScreenWidth = configService.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS);
+        cachedScreenHeight = configService.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS);
+        if (parallaxManager != null) parallaxManager.resizeForDisplayWidth(cachedScreenWidth);
+        if (level != null) debugRenderer = new LevelDebugRenderer(new LevelDebugContext(
+                level, blockPixelSize, overlayManager, graphicsManager, cachedScreenWidth, cachedScreenHeight));
+        resizeBackgroundColumns();
+    }
+
+    /** The shared background renderer outlives sessions; match its column buffer to this width. */
+    private void resizeBackgroundColumns() {
+        var background = graphicsManager == null ? null : graphicsManager.getBackgroundRenderer();
+        if (background != null) com.openggf.level.render.BackgroundRendererWidth.apply(background, cachedScreenWidth);
     }
 
     /**

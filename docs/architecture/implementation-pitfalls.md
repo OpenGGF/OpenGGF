@@ -33,6 +33,24 @@ later allocation. A production `LevelLoadContext` may leave zone/act unset, so
 an entry owner must use the admitted destination rather than those unset values.
 See the [fresh-title audit](audits/trace/2026-10-14-s3k-fresh-title-sst.md).
 
+**Concurrent hub music must retain device ownership.** A PCM filter around an
+`OpenAlPcmSink` hides its concrete type from `AudioManager.update()`: retain and
+service the original device on its owning thread or queued audio never starts.
+A second process-global OpenAL context also steals a suspended game's context.
+The optional hub owner requires `ALC_EXT_thread_local_context`; unsupported
+isolation falls back to silence. The two-context regression uses OpenAL's null
+driver and checks that opening, pumping and closing the hub leaves gameplay's
+context and AL dispatch intact (October 15 menu polish).
+
+**Capture long filenames on a fresh menu font.** The immediate full-size
+`PixelFont` path's `ensureBatchCapacity` replaces its vertex array without copying
+already-added glyphs when it grows within a string. A fresh ROM-picker capture
+therefore showed only the end of a long configuration filename. Host menu pages
+can use the established `beginMegaBatch` / `endMegaBatch` path, whose growth
+preserves vertices; the path picker now does so with `finally` cleanup. A warm
+font or short labels can hide the problem. The shared immediate renderer was
+outside this menu-only fix (2026-10-15 master-title usability review).
+
 **Editor rendering uses editor-owned managers.** Once an authored document enters
 `EDITOR`, `GameServices.camera()`, `level()` and `sprites()` require a gameplay
 mode and reject the call. Offscreen editor examples use the active

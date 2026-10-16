@@ -30,6 +30,8 @@ public final class ConfigCatalog {
     private static final Map<String, String> SECTION_TITLES = new LinkedHashMap<>();
     private static final Set<String> LAUNCH_ASPECT_VALUES = Set.of(
             "global", "NATIVE_4_3", "WIDE_16_10", "WIDE_16_9", "ULTRA_21_9", "SUPER_32_9");
+    /** Per-game switches: {@code global} follows the all-games setting; on/off override it. */
+    private static final Set<String> LAUNCH_TOGGLE_VALUES = Set.of("global", "on", "off");
     private static final Set<String> LAUNCH_CROSS_GAME_VALUES = Set.of("off", "s1", "s2", "s3k");
     private static final Set<String> LAUNCH_MAIN_CHARACTER_VALUES = Set.of("sonic", "tails", "knuckles");
     private static final Set<String> LAUNCH_SIDEKICK_VALUES = Set.of("none", "sonic", "tails", "knuckles");
@@ -50,6 +52,12 @@ public final class ConfigCatalog {
         put(DISPLAY_ASPECT, ofEnum("display", "aspect",
                 "Display aspect preset; resolves screen pixel width, height stays 224",
                 Set.of("NATIVE_4_3", "WIDE_16_10", "WIDE_16_9", "ULTRA_21_9", "SUPER_32_9")));
+        put(DISPLAY_WINDOW_MODE, ofEnum("display", "windowMode",
+                "Window presentation: WINDOWED, desktop BORDERLESS, or exclusive FULLSCREEN",
+                Set.of("WINDOWED", "BORDERLESS", "FULLSCREEN")));
+        put(DISPLAY_SCALING, ofEnum("display", "scaling",
+                "Square-pixel scaling: INTEGER uses whole-number multiples; FIT fills the available area proportionally",
+                Set.of("INTEGER", "FIT")));
         put(DISPLAY_WINDOW_AUTOSIZE, of("display", "windowAutosize", BOOL,
                 "Derive the window size from the aspect preset at the 2x baseline"));
         put(DISPLAY_SHADER_LIBRARY_ROOT, of("display", "shaderLibraryRoot", STRING,
@@ -121,6 +129,10 @@ public final class ConfigCatalog {
 
         // audio
         put(AUDIO_ENABLED, of("audio", "enabled", BOOL, "Enable music and SFX"));
+        put(AUDIO_HUB_MUSIC_ENABLED, of("audio", "hubMusicEnabled", BOOL,
+                "Play the selected game's ROM title theme quietly in the hub"));
+        put(AUDIO_HUB_MUSIC_VOLUME, of("audio", "hubMusicVolume", INT,
+                "Hub music volume from 0 to 100 percent; dialogs duck the filtered theme"));
         put(REGION, ofEnum("audio", "region", "Region for audio timing", Set.of("NTSC", "PAL")));
         put(DAC_INTERPOLATE, of("audio", "dacInterpolate", BOOL, "DAC interpolation (optional smoothing; disabled for hardware parity)"));
         put(AUDIO_FM_CORE, ofEnum("audio", "fmCore",
@@ -130,6 +142,18 @@ public final class ConfigCatalog {
                 "Output audio at the internal YM2612 rate (~53kHz)"));
         put(FM6_DAC_OFF, of("audio", "fm6DacOff", BOOL,
                 "Mute FM6 when a note plays on it while DAC is enabled (SMPSPlay parity hack)"));
+
+        // hub history (owned by the hub, hidden from Settings)
+        put(HUB_LAST_GAME, of("hub", "lastGame", STRING, "Last selected game or standalone content ID"));
+        put(HUB_CONTINUE_S1_CHARACTER, of("hub", "continueS1Character", STRING, "Legacy hub progress (ignored)"));
+        put(HUB_CONTINUE_S1_ZONE, of("hub", "continueS1Zone", INT, "Legacy hub progress (ignored)"));
+        put(HUB_CONTINUE_S1_ACT, of("hub", "continueS1Act", INT, "Legacy hub progress (ignored)"));
+        put(HUB_CONTINUE_S2_CHARACTER, of("hub", "continueS2Character", STRING, "Legacy hub progress (ignored)"));
+        put(HUB_CONTINUE_S2_ZONE, of("hub", "continueS2Zone", INT, "Legacy hub progress (ignored)"));
+        put(HUB_CONTINUE_S2_ACT, of("hub", "continueS2Act", INT, "Legacy hub progress (ignored)"));
+        put(HUB_CONTINUE_S3K_CHARACTER, of("hub", "continueS3kCharacter", STRING, "Legacy hub progress (ignored)"));
+        put(HUB_CONTINUE_S3K_ZONE, of("hub", "continueS3kZone", INT, "Legacy hub progress (ignored)"));
+        put(HUB_CONTINUE_S3K_ACT, of("hub", "continueS3kAct", INT, "Legacy hub progress (ignored)"));
 
         // characters
         put(MAIN_CHARACTER_CODE, of("characters", "main", STRING, "Sprite code of the main playable character"));
@@ -199,12 +223,12 @@ public final class ConfigCatalog {
                 "Donor game for cross-game features", Set.of("s2", "s3k")));
 
         // launch (per-game master-title profile defaults)
-        put(LAUNCH_S1_REWIND, of("launch.s1", "rewind", BOOL,
-                "Default Sonic 1 launch profile: enable live rewind"));
+        put(LAUNCH_S1_REWIND, ofEnum("launch.s1", "rewind",
+                "Sonic 1 live rewind: global follows rewind.liveEnabled, or on/off", LAUNCH_TOGGLE_VALUES));
         put(LAUNCH_S1_CROSS_GAME_SOURCE, ofEnum("launch.s1", "crossGameSource",
                 "Default Sonic 1 launch profile: cross-game donor", LAUNCH_CROSS_GAME_VALUES));
-        put(LAUNCH_S1_DEBUG_TOOLS, of("launch.s1", "debugTools", BOOL,
-                "Default Sonic 1 launch profile: enable debug tools"));
+        put(LAUNCH_S1_DEBUG_TOOLS, ofEnum("launch.s1", "debugTools",
+                "Sonic 1 debug tools: global follows debug.flags.debugView, or on/off", LAUNCH_TOGGLE_VALUES));
         put(LAUNCH_S1_ASPECT, ofEnum("launch.s1", "aspect",
                 "Default Sonic 1 launch profile: display aspect override", LAUNCH_ASPECT_VALUES));
         put(LAUNCH_S1_MAIN_CHARACTER, ofEnum("launch.s1", "mainCharacter",
@@ -212,12 +236,12 @@ public final class ConfigCatalog {
         put(LAUNCH_S1_SIDEKICK, ofEnum("launch.s1", "sidekick",
                 "Default Sonic 1 launch profile: sidekick character", LAUNCH_SIDEKICK_VALUES));
 
-        put(LAUNCH_S2_REWIND, of("launch.s2", "rewind", BOOL,
-                "Default Sonic 2 launch profile: enable live rewind"));
+        put(LAUNCH_S2_REWIND, ofEnum("launch.s2", "rewind",
+                "Sonic 2 live rewind: global follows rewind.liveEnabled, or on/off", LAUNCH_TOGGLE_VALUES));
         put(LAUNCH_S2_CROSS_GAME_SOURCE, ofEnum("launch.s2", "crossGameSource",
                 "Default Sonic 2 launch profile: cross-game donor", LAUNCH_CROSS_GAME_VALUES));
-        put(LAUNCH_S2_DEBUG_TOOLS, of("launch.s2", "debugTools", BOOL,
-                "Default Sonic 2 launch profile: enable debug tools"));
+        put(LAUNCH_S2_DEBUG_TOOLS, ofEnum("launch.s2", "debugTools",
+                "Sonic 2 debug tools: global follows debug.flags.debugView, or on/off", LAUNCH_TOGGLE_VALUES));
         put(LAUNCH_S2_ASPECT, ofEnum("launch.s2", "aspect",
                 "Default Sonic 2 launch profile: display aspect override", LAUNCH_ASPECT_VALUES));
         put(LAUNCH_S2_MAIN_CHARACTER, ofEnum("launch.s2", "mainCharacter",
@@ -225,12 +249,12 @@ public final class ConfigCatalog {
         put(LAUNCH_S2_SIDEKICK, ofEnum("launch.s2", "sidekick",
                 "Default Sonic 2 launch profile: sidekick character", LAUNCH_SIDEKICK_VALUES));
 
-        put(LAUNCH_S3K_REWIND, of("launch.s3k", "rewind", BOOL,
-                "Default Sonic 3&K launch profile: enable live rewind"));
+        put(LAUNCH_S3K_REWIND, ofEnum("launch.s3k", "rewind",
+                "Sonic 3&K live rewind: global follows rewind.liveEnabled, or on/off", LAUNCH_TOGGLE_VALUES));
         put(LAUNCH_S3K_CROSS_GAME_SOURCE, ofEnum("launch.s3k", "crossGameSource",
                 "Default Sonic 3&K launch profile: cross-game donor", LAUNCH_CROSS_GAME_VALUES));
-        put(LAUNCH_S3K_DEBUG_TOOLS, of("launch.s3k", "debugTools", BOOL,
-                "Default Sonic 3&K launch profile: enable debug tools"));
+        put(LAUNCH_S3K_DEBUG_TOOLS, ofEnum("launch.s3k", "debugTools",
+                "Sonic 3&K debug tools: global follows debug.flags.debugView, or on/off", LAUNCH_TOGGLE_VALUES));
         put(LAUNCH_S3K_ASPECT, ofEnum("launch.s3k", "aspect",
                 "Default Sonic 3&K launch profile: display aspect override", LAUNCH_ASPECT_VALUES));
         put(LAUNCH_S3K_MAIN_CHARACTER, ofEnum("launch.s3k", "mainCharacter",
@@ -436,6 +460,7 @@ public final class ConfigCatalog {
         SECTION_TITLES.put("config", "Configuration");
         SECTION_TITLES.put("input", "Input");
         SECTION_TITLES.put("audio", "Audio");
+        SECTION_TITLES.put("hub", "Hub Navigation History");
         SECTION_TITLES.put("characters", "Characters");
         SECTION_TITLES.put("roms", "ROMs");
         SECTION_TITLES.put("startup", "Startup");

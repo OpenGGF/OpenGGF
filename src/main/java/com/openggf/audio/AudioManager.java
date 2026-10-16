@@ -1178,6 +1178,11 @@ public class AudioManager implements MusicRestoreSink {
                 () -> true, this::drainShadowCommandsAtOwnerBoundary);
     }
 
+    boolean standaloneMusicComplete() {
+        ensureStandalonePresentation();
+        return shadowSmpsSession != null && shadowSmpsSession.musicComplete();
+    }
+
     public void playStandaloneSfx(
             AbstractSmpsData data, DacData dac, float pitch) {
         ensureStandalonePresentation();

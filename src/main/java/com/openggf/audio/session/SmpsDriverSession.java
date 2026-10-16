@@ -1174,6 +1174,14 @@ public final class SmpsDriverSession implements AutoCloseable {
         pendingGlobalCommand = SmpsPendingGlobalCommand.NONE;
     }
 
+    /** Native music tracks ended, with no prepared music activation still awaiting service. */
+    public boolean musicComplete() {
+        requireActive();
+        if (driver == null || pendingService != null) return false;
+        SmpsSequencer music = driver.firstMusicSequencer();
+        return music == null || music.isComplete();
+    }
+
     /** Current retained tempo control for presentation metadata after host commands. */
     public boolean speedShoesEnabled() {
         requireActive();

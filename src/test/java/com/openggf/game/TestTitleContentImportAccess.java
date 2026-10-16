@@ -20,10 +20,12 @@ class TestTitleContentImportAccess {
         screen.setEditorProjectsOpenHandler(editors::incrementAndGet);
         TitleContentImportAccess.bind(screen, imports::incrementAndGet);
         var input = new InputHandler();
-        for (int i = 0; i < 6; i++) press(screen, input, GLFW_KEY_DOWN);
+        press(screen, input, GLFW_KEY_UP);
+        press(screen, input, GLFW_KEY_RIGHT);
+        press(screen, input, GLFW_KEY_RIGHT);
         assertTrue(TitleContentImportAccess.acceptsDrop(screen), "The ordinary action list can receive a drop");
         press(screen, input, GLFW_KEY_ENTER);
-        for (int i = 0; i < 3; i++) press(screen, input, GLFW_KEY_DOWN);
+        for (int i = 0; i < 4; i++) press(screen, input, GLFW_KEY_DOWN);
         input.handleKeyEvent(GLFW_KEY_ENTER, GLFW_PRESS);
         screen.update(input); screen.update(input);
         assertEquals(1, imports.get());
@@ -35,7 +37,8 @@ class TestTitleContentImportAccess {
         var screen = activeScreen();
         var input = new InputHandler();
         assertTrue(TitleContentImportAccess.acceptsDrop(screen));
-        for (int i = 0; i < 5; i++) press(screen, input, GLFW_KEY_DOWN);
+        press(screen, input, GLFW_KEY_UP);
+        press(screen, input, GLFW_KEY_RIGHT);
         press(screen, input, GLFW_KEY_ENTER);
         assertFalse(TitleContentImportAccess.acceptsDrop(screen));
         press(screen, input, GLFW_KEY_ESCAPE);

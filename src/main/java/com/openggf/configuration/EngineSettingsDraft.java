@@ -10,8 +10,11 @@ import java.util.Objects;
 /** Editable preferences. Cancel discards this object; only apply writes to the service. */
 public final class EngineSettingsDraft {
     public enum Category {
-        DISPLAY("Display"), AUDIO("Audio"), INPUT("Input"), GAMEPLAY("Gameplay"),
-        FILES("Files"), RECORDING("Recording"), LAUNCH("Launch"), ADVANCED("Advanced");
+        DISPLAY("Display"), AUDIO("Sound"), INPUT("Controls"), GAMEPLAY("Gameplay"),
+        FILES("Files"), RECORDING("Capture"),
+        /** Per-game launch profiles; edited in Game Setup, not on a Settings tab. */
+        LAUNCH("Launch"),
+        ADVANCED("Advanced");
         private final String label;
         Category(String label) { this.label = label; }
         public String label() { return label; }
@@ -20,7 +23,10 @@ public final class EngineSettingsDraft {
     private static final Map<Category, List<SonicConfiguration>> CATEGORY_KEYS = new EnumMap<>(Category.class);
     static {
         for (Category category : Category.values()) {
-            CATEGORY_KEYS.put(category, ConfigCatalog.emitOrder().stream().filter(k -> category(k) == category).toList());
+            // Stable sort: within Controls, player bindings come before engine shortcuts.
+            CATEGORY_KEYS.put(category, ConfigCatalog.emitOrder().stream().filter(k -> category(k) == category && !ConfigCatalog.meta(k).section().startsWith("hub"))
+                    .sorted(java.util.Comparator.comparingInt(k -> controlGroupOrder(k)))
+                    .toList());
         }
     }
     private final Map<SonicConfiguration, String> textCache = new EnumMap<>(SonicConfiguration.class);
@@ -43,19 +49,37 @@ public final class EngineSettingsDraft {
         return CATEGORY_KEYS.get(category);
     }
 
+    private static int controlGroupOrder(SonicConfiguration key) {
+        String section = ConfigCatalog.meta(key).section();
+        if (section.equals("input.player1")) return 0;
+        if (section.equals("input.player2")) return 1;
+        if (section.equals("input.controller")) return 2;
+        return 3;
+    }
+
     public static Category category(SonicConfiguration key) {
         ConfigKeyMeta meta = ConfigCatalog.meta(key);
         if (!meta.persisted()) throw new IllegalArgumentException("Derived setting");
         String section = meta.section();
-        if (section.startsWith("display") || section.equals("debug.window")) return Category.DISPLAY;
+        if (section.startsWith("launch")) return Category.LAUNCH;
+        // Every non-debug hotkey lives with the other controls, wherever its section is.
+        if (meta.type() == ConfigType.KEY && !section.startsWith("debug")) return Category.INPUT;
+        if (key == SonicConfiguration.LOAD_TIME_SIMULATION
+                || section.startsWith("rewind") && key != SonicConfiguration.LIVE_REWIND_ENABLED
+                || section.startsWith("hub")) return Category.ADVANCED;
+        if (key == SonicConfiguration.DEBUG_VIEW_ENABLED) return Category.GAMEPLAY;
+        if (key == SonicConfiguration.DISPLAY_SHADER_LIBRARY_ROOT
+                || key == SonicConfiguration.DISPLAY_SHADER_DEFAULT_PHASE
+                || key == SonicConfiguration.FPS || key == SonicConfiguration.SCALE) return Category.ADVANCED;
+        if (section.startsWith("display")) return Category.DISPLAY;
         if (section.startsWith("audio")) return Category.AUDIO;
         if (section.startsWith("input")) return Category.INPUT;
         if (section.startsWith("roms")) return Category.FILES;
         if (section.startsWith("capture")) return Category.RECORDING;
-        if (section.startsWith("launch")) return Category.LAUNCH;
+        // Global characters and cross-game donation only apply to direct launches: the
+        // hub's Game Setup owns them per game.
         if (section.startsWith("gameplay") || section.startsWith("startup")
-                || section.startsWith("characters") || section.startsWith("rewind")
-                || section.startsWith("crossGame")) return Category.GAMEPLAY;
+                || section.startsWith("rewind")) return Category.GAMEPLAY;
         return Category.ADVANCED;
     }
 
@@ -63,7 +87,9 @@ public final class EngineSettingsDraft {
     public long revision() { return revision; }
     public String text(SonicConfiguration key) { return textCache.getOrDefault(key, ""); }
     private String format(SonicConfiguration key) {
-        Object value = value(key);
+        return formatValue(key, value(key));
+    }
+    private static String formatValue(SonicConfiguration key, Object value) {
         if (ConfigCatalog.meta(key).type() == ConfigType.KEY && value instanceof Number) {
             int code = ((Number) value).intValue();
             return code == -1 ? "" : GlfwKeyNameResolver.nameOf(code);
@@ -77,7 +103,23 @@ public final class EngineSettingsDraft {
         return changedCache.getOrDefault(key, false);
     }
     public boolean dirty() { return changedCount > 0; }
+    public int changedCount() { return changedCount; }
     public void reset(SonicConfiguration key) { put(key, config.getDefaultValue(key)); }
+    public void reset(Category category) { keys(category).forEach(this::reset); }
+    public record Change(SonicConfiguration key, String before, String after) { }
+    public List<Change> changes() {
+        return ConfigCatalog.emitOrder().stream().filter(this::changed)
+                .map(key -> new Change(key, formatValue(key, initial.get(key)), text(key))).toList();
+    }
+    /** Duplicate chords warn but remain legal: games deliberately share some controls. */
+    public List<SonicConfiguration> bindingConflicts(SonicConfiguration key) {
+        if (ConfigCatalog.meta(key).type() != ConfigType.KEY) return List.of();
+        KeyChord chord = KeyChord.parse(value(key));
+        if (!chord.isBound()) return List.of();
+        return ConfigCatalog.emitOrder().stream().filter(other -> other != key
+                && ConfigCatalog.meta(other).type() == ConfigType.KEY
+                && chord.equals(KeyChord.parse(value(other)))).toList();
+    }
     private void put(SonicConfiguration key, Object next) {
         if (Objects.equals(values.get(key), next)) return;
         values.put(key, next);
@@ -132,6 +174,10 @@ public final class EngineSettingsDraft {
 
     public void step(SonicConfiguration key, int direction) {
         ConfigKeyMeta meta = ConfigCatalog.meta(key);
+        if (key == SonicConfiguration.AUDIO_HUB_MUSIC_VOLUME) {
+            set(key, Integer.toString(Math.clamp(Integer.parseInt(text(key)) + direction * 5, 0, 100)));
+            return;
+        }
         switch (meta.type()) {
             case BOOL -> set(key, Boolean.toString(!Boolean.parseBoolean(text(key))));
             case ENUM -> {
@@ -162,6 +208,7 @@ public final class EngineSettingsDraft {
                 || changes.containsKey(SonicConfiguration.LIVE_REWIND_TAPE_COAST_MAX_STEPS)) && min > max)
             throw new IllegalArgumentException("Rewind minimum exceeds maximum");
         config.applySettings(changes);
+        PendingRestart.noteSaved(changes.keySet());
         initial.putAll(changes);
         changes.keySet().forEach(this::refresh);
         revision++;
@@ -172,6 +219,9 @@ public final class EngineSettingsDraft {
         double n = number.doubleValue();
         if (!Double.isFinite(n)) throw new IllegalArgumentException("Use a finite number");
         switch (key) {
+            case AUDIO_HUB_MUSIC_VOLUME -> {
+                if (n < 0 || n > 100) throw new IllegalArgumentException("Volume: 0 to 100");
+            }
             case CONTROLLER_DEADZONE -> {
                 if (n < 0 || n >= 1) throw new IllegalArgumentException("Deadzone: 0 to below 1");
             }

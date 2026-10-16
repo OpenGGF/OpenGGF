@@ -15,7 +15,7 @@ public final class ModApiVersion {
      * Native HPZ feints, an SSZ Metropolis extra pair, DEZ alert guards and a
      * Doomsday delayed tail missile are finite unactivated campaign ingredients.
      * The 0.7 candidate also includes
-     * widescreen presentation, KiS2 movement/touch/checkpoint/menu handoff contracts,
+     * live window mode and display scaling preferences, widescreen presentation, KiS2 movement/touch/checkpoint/menu handoff contracts,
      * deferred SMPS header construction, explicit dynamic solid-contact rewind binding,
      * opt-in whole-game presentation pacing, modal level input ownership, controlled level admission and opaque
      * course checkpoints, semantic native impulses, logical menu pointers, and read-only
@@ -59,6 +59,8 @@ public final class ModApiVersion {
      * NativePositionOps and the solid-platform provider/params are candidate creator contracts:
      * act controllers can reset native positions and provide rewindable top-solid decks.
      * Camera framing can cap the visible right edge independently of native player walls.
+     * Hub preferences include optional title music, its volume, last focused game,
+     * and per-game last-act/leader history for zone-start Continue.
      * Shared network contracts include direct/relay room clients, JDK room hosting,
      * identity, bounded ghost transport and protocol messages/codecs. Operator servers
      * and verifier tools remain separate and outside the creator API.

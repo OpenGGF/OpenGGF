@@ -45,6 +45,19 @@ public final class ModManagerScreen {
     private static final float SCALE = 2f / 3f;
     private static final int LINE_HEIGHT = 11;
     private static final int MAX_RENDER_CHARS = 50;
+    /** Geometry shared by render and pointer hit tests. */
+    private static final int LIST_Y = 52;
+    private static final int ROW_HEIGHT = 14;
+    private static final int ACTION_Y = 178;
+    private static final int ACTION_HEIGHT = 16;
+    private static final int[] EDITABLE_ACTION_X = {8, 86, 146, 226};
+    private static final int[] EDITABLE_ACTION_W = {74, 56, 76, 86};
+    private static final int[] FIXED_ACTION_X = {8, 112, 216};
+    private static final int[] FIXED_ACTION_W = {96, 96, 96};
+    private static final int PROMPT_Y = 112;
+    private static final int PROMPT_HEIGHT = 22;
+    private static final int[] PROMPT_X = {33, 87, 168};
+    private static final int[] PROMPT_W = {46, 73, 118};
 
     private final ModCatalog catalog;
     private final PendingModStateEditor editor;
@@ -60,6 +73,7 @@ public final class ModManagerScreen {
     private final Set<Path> bundledSourcePaths;
 
     private List<Row> rows = List.of();
+    private String gameFilter;
     private int selectedIndex;
     private int scrollOffset;
     private int detailScrollOffset;
@@ -75,7 +89,10 @@ public final class ModManagerScreen {
     private boolean activationRequested;
     private boolean actionFocus;
     private boolean discardPrompt;
-    private boolean discardSelected;
+    /** Leave prompt choice, shared with Settings and Game Setup: 0 Save, 1 Discard, 2 Keep editing. */
+    private int promptChoice;
+    /** Save from the leave prompt closes once the reload has had a frame to report failure. */
+    private boolean closeAfterApply;
     private int selectedAction;
     private boolean detailsPage;
     private boolean noticesPage;
@@ -151,8 +168,9 @@ public final class ModManagerScreen {
         Objects.requireNonNull(input, "input");
         Objects.requireNonNull(feedback, "feedback");
         var before = feedbackState();
-        boolean back = (input.escape() && !previousEscape) || (input.menuBack() && !previousInput.menuBack());
-        boolean accept = input.menuAccept() && !previousInput.menuAccept();
+        boolean back = (input.escape() && !previousEscape) || (input.menuBack() && !previousInput.menuBack())
+                || input.pointerBack();
+        boolean accept = (input.menuAccept() && !previousInput.menuAccept()) || input.pointerClick();
         feedbackError = false;
         updateInput(input);
         if (feedbackError) feedback.accept(Feedback.ERROR);
@@ -161,7 +179,7 @@ public final class ModManagerScreen {
 
     private List<Object> feedbackState() {
         return List.of(selectedIndex, detailScrollOffset, actionFocus, selectedAction, detailsPage,
-                noticesPage, orderPage, pageOffset, closeRequested, discardPrompt, discardSelected, statusMessage, editor.pendingState(),
+                noticesPage, orderPage, pageOffset, closeRequested, discardPrompt, promptChoice, statusMessage, editor.pendingState(),
                 java.util.Optional.ofNullable(armedTrust), java.util.Optional.ofNullable(armedCascade));
     }
 
@@ -182,30 +200,60 @@ public final class ModManagerScreen {
         boolean left = input.menuLeft() && !previousInput.menuLeft();
         boolean right = input.menuRight() && !previousInput.menuRight();
         boolean accept = input.menuAccept() && !previousInput.menuAccept();
-        boolean back = input.menuBack() && !previousInput.menuBack();
+        boolean back = (input.menuBack() && !previousInput.menuBack()) || input.pointerBack();
         previousInput = input;
+        // Mouse: hovering a row, action or prompt button focuses it and clicking runs it;
+        // the wheel scrolls and the right button goes back.
+        boolean click = input.pointerClick();
+        boolean hover = click || input.pointerMoved();
+        int px = input.pointerX();
+        int py = input.pointerY();
+        int wheel = input.wheel();
 
+        if (closeAfterApply && !activationRequested) {
+            closeAfterApply = false;
+            if (reloadFailure == null && saveFailure == null) { closeRequested = true; return; }
+        }
         if (discardPrompt) {
-            if (left || right) discardSelected = !discardSelected;
+            for (int i = 0; hover && i < PROMPT_X.length; i++) {
+                if (!over(px, py, PROMPT_X[i], PROMPT_Y, PROMPT_W[i], PROMPT_HEIGHT)) continue;
+                promptChoice = i;
+                accept |= click;
+            }
+            if (left) promptChoice = Math.floorMod(promptChoice - 1, 3);
+            if (right) promptChoice = (promptChoice + 1) % 3;
             if (escapeEdge || back) discardPrompt = false;
             else if (accept) {
                 discardPrompt = false;
-                if (discardSelected) { editor.discardDraft(); closeRequested = true; }
+                switch (promptChoice) {
+                    case 0 -> {
+                        applyDraft();
+                        closeAfterApply = activationRequested;
+                    }
+                    case 1 -> { editor.discardDraft(); closeRequested = true; }
+                    default -> { }
+                }
             }
             return;
         }
         if (escapeEdge || back) {
             if (detailsPage || noticesPage || orderPage) { detailsPage = false; noticesPage = false; orderPage = false; return; }
-            if (actionFocus && !rows.isEmpty()) { actionFocus = false; return; }
+            // Keyboard Back steps from the buttons to the list; right-click goes straight back.
+            if (actionFocus && !rows.isEmpty() && !input.pointerBack()) { actionFocus = false; return; }
             handleBack();
             return;
         }
         if (orderPage) {
+            if (wheel != 0) { reorderSelected(wheel > 0 ? -1 : 1); return; }
+            accept |= click;
             if (up || down || left || right) reorderSelected(down || right ? 1 : -1);
             if (accept) orderPage = false;
             return;
         }
         if (detailsPage || noticesPage) {
+            // A click leaves a reading page; its keyboard-only actions stay on Enter.
+            if (click) { detailsPage = false; noticesPage = false; return; }
+            if (wheel != 0) { up = wheel > 0; down = wheel < 0; }
             if (detailsPage) {
                 if (accept && editor.editable() && selectedEnabledCodeNeedsTrust()) {
                     detailsPage = false;
@@ -221,6 +269,36 @@ public final class ModManagerScreen {
                 if (accept && (saveFailure != null || reloadFailure != null)) applyDraft();
             }
             return;
+        }
+        if (armedTrust != null || armedCascade != null) {
+            // A second click confirms, as a second Enter does; the wheel pages.
+            accept |= click;
+            if (wheel != 0) { left = wheel > 0; right = wheel < 0; }
+        } else {
+            int[] actionX = editor.editable() ? EDITABLE_ACTION_X : FIXED_ACTION_X;
+            int[] actionW = editor.editable() ? EDITABLE_ACTION_W : FIXED_ACTION_W;
+            for (int i = 0; hover && i < actionX.length; i++) {
+                if (!over(px, py, actionX[i], ACTION_Y, actionW[i], ACTION_HEIGHT)) continue;
+                actionFocus = true;
+                selectedAction = i;
+                accept |= click;
+            }
+            int end = Math.min(rows.size(), scrollOffset + MAX_VISIBLE_ROWS);
+            for (int index = scrollOffset; hover && index < end; index++) {
+                if (!over(px, py, 8, LIST_Y - 2 + (index - scrollOffset) * ROW_HEIGHT, 304, ROW_HEIGHT)) continue;
+                if (actionFocus || index != selectedIndex) {
+                    actionFocus = false;
+                    selectedIndex = index;
+                    detailScrollOffset = 0;
+                    statusMessage = "";
+                }
+                accept |= click;
+            }
+            if (wheel != 0 && !rows.isEmpty()) {
+                actionFocus = false;
+                moveSelection(-wheel);
+                return;
+            }
         }
         if ((armedTrust != null || armedCascade != null) && (left || right)) {
             pageOffset = Math.clamp(pageOffset + (right ? MAX_VISIBLE_DETAILS : -MAX_VISIBLE_DETAILS),
@@ -275,11 +353,13 @@ public final class ModManagerScreen {
         try {
             if (discardPrompt) {
                 text.page("MOD MANAGER", "UNSAVED CHANGES");
-                drawPrimary("Discard unsaved changes?", 24, 80, 1, 1, 1);
-                text.focus(discardSelected ? 178 : 20, 112, 122, 22);
-                drawPrimary("Keep editing", 25, 118, 1, 1, 1);
-                drawPrimary("Discard", 183, 118, 1, .73f, .25f);
-                text.footer("Left/Right Choose", confirmLabel + " Select  " + backLabel + " Back");
+                drawPrimary("Save mod changes?", 24, 80, 1, 1, 1);
+                // Same three choices, order and default as Settings and Game Setup.
+                text.focus(PROMPT_X[promptChoice], PROMPT_Y, PROMPT_W[promptChoice], PROMPT_HEIGHT);
+                drawPrimary("Save", PROMPT_X[0] + 5, 118, 1, 1, 1);
+                drawPrimary("Discard", PROMPT_X[1] + 5, 118, 1, .73f, .25f);
+                drawPrimary("Keep editing", PROMPT_X[2] + 5, 118, 1, 1, 1);
+                text.footer("Left/Right Choose", confirmLabel + " Select  " + backLabel + " Keep editing");
                 return;
             }
             if (armedTrust != null || armedCascade != null) {
@@ -315,22 +395,19 @@ public final class ModManagerScreen {
             }
             text.page("MOD MANAGER", patternBudgetLine());
             text.panel(6, 48, 308, 88);
-            int y = 52;
-            if (rows.isEmpty()) drawPrimary("No mods. Apply to rescan jars.", 12, y, 1f, 1f, 1f);
+            int y = LIST_Y;
+            if (rows.isEmpty()) draw(gameFilter == null ? "No mods. Apply to rescan jars."
+                    : "No mods apply to this game.", 12, y + 1, 1f, 1f, 1f);
             for (RowView row : visibleRows()) {
                 boolean selected = rows.get(selectedIndex).identity().equals(row.identity());
-                if (selected && !actionFocus) text.focus(8, y - 2, 304, 14);
+                if (selected && !actionFocus) text.focus(8, y - 2, 304, ROW_HEIGHT);
                 String enabled = (!row.valid() || row.notLoaded()) ? "[--] " : row.enabled() ? "[ON] " : "[OFF] ";
                 String badges = row.badges().isEmpty() ? "" : " [" + String.join(",", row.badges()) + "]";
                 float green = !row.valid() ? .4f : row.enabled() ? .75f : 1f;
                 float blue = !row.valid() ? .4f : row.enabled() ? .25f : 1f;
                 String rowText = enabled + row.gameLabel() + row.label() + badges;
-                if (rowText.length() > (320 - 12 - 6) / 9) {
-                    draw(rowText, 12, text.primaryTextY(y - 2, 14), 1f, green, blue);
-                } else {
-                    drawPrimary(rowText, 12, text.primaryTextY(y - 2, 14), 1f, green, blue);
-                }
-                y += 14;
+                draw(rowText, 12, y + 1, 1f, green, blue);
+                y += ROW_HEIGHT;
             }
             draw((rows.isEmpty() ? "0" : Integer.toString(selectedIndex + 1)) + " / " + rows.size()
                     + " mods; choose Details for full information", 9, 141, .7f, .8f, .95f);
@@ -343,13 +420,13 @@ public final class ModManagerScreen {
             if (!statusMessage.isBlank()) draw(statusMessage, 9, 165, 1f, .75f, .25f);
             String[] actions = editor.editable() ? new String[]{"Details", "Order", "Notices", "Apply"}
                     : new String[]{"Details", "Notices", "Back"};
-            int[] actionX = editor.editable() ? new int[]{8, 86, 146, 226} : new int[]{8, 112, 216};
-            int[] actionWidth = editor.editable() ? new int[]{74, 56, 76, 86} : new int[]{96, 96, 96};
+            int[] actionX = editor.editable() ? EDITABLE_ACTION_X : FIXED_ACTION_X;
+            int[] actionWidth = editor.editable() ? EDITABLE_ACTION_W : FIXED_ACTION_W;
             for (int i = 0; i < actions.length; i++) {
                 int x = actionX[i];
-                text.panel(x, 178, actionWidth[i], 16);
-                if (actionFocus && selectedAction == i) text.focus(x, 178, actionWidth[i], 16);
-                drawPrimary(actions[i], x + 4, text.primaryTextY(178, 16), 1f, 1f, 1f);
+                text.panel(x, ACTION_Y, actionWidth[i], ACTION_HEIGHT);
+                if (actionFocus && selectedAction == i) text.focus(x, ACTION_Y, actionWidth[i], ACTION_HEIGHT);
+                drawPrimary(actions[i], x + 4, text.primaryTextY(ACTION_Y, ACTION_HEIGHT), 1f, 1f, 1f);
             }
             text.footer(actionFocus ? confirmLabel + " Open  " + backLabel + (rows.isEmpty() ? " Back" : " List")
                             : confirmLabel + (editor.editable() ? " Toggle  Right Actions" : " Details  Right Actions"),
@@ -439,10 +516,7 @@ public final class ModManagerScreen {
                 banners.add("Repository error: " + finding.message());
             }
         }
-        java.util.Set<String> catalogOwners = rows.stream()
-                .filter(row -> row.descriptor() != null)
-                .map(row -> row.descriptor().manifest().id())
-                .collect(java.util.stream.Collectors.toSet());
+        Set<String> catalogOwners = descriptorsById.keySet();
         runtimeFindings.snapshot().forEach((owner, findings) -> {
             if (catalogOwners.contains(owner)) return;
             for (ModFinding finding : findings) {
@@ -505,6 +579,15 @@ public final class ModManagerScreen {
     public void suppressInputUntilNeutral() {
         suppressInputUntilNeutral = true;
         previousInput = MenuInput.NEUTRAL;
+    }
+
+    /** Filters presentation only; pending state and dependency operations retain the full catalog. */
+    public void setGameFilter(String gameId) {
+        gameFilter = gameId;
+        selectedIndex = 0;
+        scrollOffset = 0;
+        rebuildRows(null);
+        actionFocus = rows.isEmpty();
     }
 
     /** Selects a visible catalog row without changing pending state. */
@@ -787,7 +870,7 @@ public final class ModManagerScreen {
 
     private void handleBack() {
         if (armedTrust != null || armedCascade != null) cancelArmedConfirmation();
-        else if (editor.dirty()) { discardPrompt = true; discardSelected = false; }
+        else if (editor.dirty()) { discardPrompt = true; promptChoice = 0; }
         else closeRequested = true;
     }
 
@@ -814,12 +897,15 @@ public final class ModManagerScreen {
                 descriptor.manifest().id(), Integer.MAX_VALUE)));
         List<Row> rebuilt = new ArrayList<>(ordered.size() + invalidEntries.size());
         for (ModDescriptor descriptor : ordered) {
+            if (gameFilter != null && !gameFilter.equals(descriptor.manifest().baseGame())
+                    && !"any".equals(descriptor.manifest().baseGame())) continue;
             String id = descriptor.manifest().id();
             String identity = descriptorCounts.getOrDefault(id, 0) > 1
                     ? id + " (" + filename(descriptor.jarPath()) + ")" : id;
             rebuilt.add(new Row(descriptor, null, identity));
         }
         for (InvalidModEntry invalid : invalidEntries) {
+            if (gameFilter != null) continue;
             rebuilt.add(new Row(null, invalid, filename(invalid.jarPath())));
         }
         rows = List.copyOf(rebuilt);
@@ -1053,6 +1139,10 @@ public final class ModManagerScreen {
 
     private record ArmedTrust(String id, String sha256, Set<String> enableIds) { }
 
+    private static boolean over(int px, int py, int x, int y, int width, int height) {
+        return px >= x && py >= y && px < x + width && py < y + height;
+    }
+
     private static boolean isMenuNeutral(MenuInput input) {
         return !input.menuUp() && !input.menuDown() && !input.menuLeft() && !input.menuRight()
                 && !input.menuAccept() && !input.menuBack() && !input.startHeld() && !input.escape();
@@ -1090,6 +1180,15 @@ public final class ModManagerScreen {
         default String confirmLabel() { return "Enter"; }
         default String backLabel() { return "Esc"; }
         default String directionLabel() { return "Arrows"; }
+        /** Pointer in the 320x224 page; negative without a mouse. */
+        default int pointerX() { return -1; }
+        default int pointerY() { return -1; }
+        default boolean pointerMoved() { return false; }
+        /** Left and right button presses of this frame only. */
+        default boolean pointerClick() { return false; }
+        default boolean pointerBack() { return false; }
+        /** Wheel notches this frame, positive away from the user. */
+        default int wheel() { return 0; }
     }
 
     private void normalizeDependencyOrder() {

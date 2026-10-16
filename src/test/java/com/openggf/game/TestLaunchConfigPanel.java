@@ -7,6 +7,7 @@ import com.openggf.control.GamepadStateSource;
 import com.openggf.control.InputHandler;
 import com.openggf.game.launch.LaunchProfile;
 import com.openggf.game.launch.LaunchProfileStore;
+import com.openggf.game.launch.LaunchToggle;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -33,6 +34,7 @@ import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_LAST;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_A;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_BACKSPACE;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_D;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_S;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_TAB;
@@ -46,41 +48,53 @@ class TestLaunchConfigPanel {
     Path tempDir;
 
     @Test
-    void configuredUpDownMoveSelectedRowAndWrap() {
+    void upDownMoveThroughGroupedRowsAndWrap() {
         SonicConfigurationService config = configuredWasd();
         LaunchConfigPanel panel = panel(config, LaunchProfile.stockFor(SONIC_3K), new TrackingStore(config));
         InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
 
-        for (int i = 0; i < 4; i++) pressFrame(panel, input, GLFW_KEY_W);
-        assertEquals(SIDEKICK, panel.selectedRowForTest());
-
-        for (int i = 0; i < 4; i++) pressFrame(panel, input, GLFW_KEY_S);
-        assertEquals(REWIND, panel.selectedRowForTest());
+        assertEquals(MAIN_CHARACTER, panel.selectedRowForTest(), "Game Setup opens on Players");
+        pressFrame(panel, input, GLFW_KEY_W);
+        assertTrue(panel.isModsRowFocusedForTest(), "Up from the first row wraps to the Mods row");
+        pressFrame(panel, input, GLFW_KEY_S);
+        assertEquals(MAIN_CHARACTER, panel.selectedRowForTest());
+        for (int i = 0; i < 3; i++) pressFrame(panel, input, GLFW_KEY_S);
+        assertEquals(REWIND, panel.selectedRowForTest(), "Character, Sidekick, Aspect ratio, then Rewind");
     }
 
     @Test
-    void configuredLeftRightCycleSelectedRowAndWrap() {
+    void leftRightCycleSwitchesThroughDefaultOnAndOff() {
         SonicConfigurationService config = configuredWasd();
         LaunchConfigPanel panel = panel(config, LaunchProfile.stockFor(SONIC_3K), new TrackingStore(config));
         InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
+        panel.focus(REWIND);
 
-        pressFrame(panel, input, GLFW_KEY_A);
-        assertTrue(panel.currentProfileForTest().rewind());
-
+        assertEquals(LaunchToggle.DEFAULT, panel.currentProfileForTest().rewind());
         pressFrame(panel, input, GLFW_KEY_D);
-        assertFalse(panel.currentProfileForTest().rewind());
+        assertEquals(LaunchToggle.ON, panel.currentProfileForTest().rewind());
+        pressFrame(panel, input, GLFW_KEY_D);
+        assertEquals(LaunchToggle.OFF, panel.currentProfileForTest().rewind());
+        pressFrame(panel, input, GLFW_KEY_D);
+        assertEquals(LaunchToggle.DEFAULT, panel.currentProfileForTest().rewind());
+        pressFrame(panel, input, GLFW_KEY_A);
+        assertEquals(LaunchToggle.OFF, panel.currentProfileForTest().rewind());
     }
 
     @Test
-    void backspaceResetsAllRowsToStock() {
+    void backspaceResetsOnlyTheFocusedRow() {
         SonicConfigurationService config = configuredWasd();
-        LaunchProfile changed = new LaunchProfile(true, "s1", true, "WIDE_16_9", "tails", "none");
+        LaunchProfile changed = new LaunchProfile(true, "s1", true, "WIDE_16_9", "sonic", "none");
         LaunchConfigPanel panel = panel(config, changed, new TrackingStore(config));
         InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
+        panel.focus(REWIND);
 
         pressFrame(panel, input, GLFW_KEY_BACKSPACE);
 
-        assertEquals(LaunchProfile.stockFor(SONIC_3K), panel.currentProfileForTest());
+        LaunchProfile result = panel.currentProfileForTest();
+        assertEquals(LaunchToggle.DEFAULT, result.rewind(), "Backspace returns Rewind to the all-games value");
+        assertEquals(LaunchToggle.ON, result.debugTools(), "other rows keep their overrides");
+        assertEquals("WIDE_16_9", result.aspect());
+        assertEquals("s1", result.crossGameSource());
     }
 
     @Test
@@ -95,7 +109,7 @@ class TestLaunchConfigPanel {
     }
 
     @Test
-    void tabSavesAndEscapeCancels() {
+    void tabSavesAndEscapeLeavesAnUnchangedDraft() {
         SonicConfigurationService config = configuredWasd();
         LaunchConfigPanel tabPanel = panel(config, LaunchProfile.stockFor(SONIC_3K), new TrackingStore(config));
         InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
@@ -110,24 +124,94 @@ class TestLaunchConfigPanel {
     }
 
     @Test
-    void gamepadDpadUpDownMoveSelectedRow() {
+    void escapeWithUnsavedChangesAsksSaveDiscardOrKeepEditing() {
         SonicConfigurationService config = configuredWasd();
-        LaunchConfigPanel panel = panel(config, LaunchProfile.stockFor(SONIC_3K), new TrackingStore(config));
-        config.setConfigValue(SonicConfiguration.CONTROLLER_ENABLED, true);
-        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER1, "auto");
-        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER2, "none");
-        FakeGamepadStateSource source = new FakeGamepadStateSource();
-        InputHandler input = new InputHandler(InputBindingFactory.supplier(config), source);
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
 
-        for (int i = 0; i < 4; i++) pressGamepadFrame(panel, input, source, GLFW_GAMEPAD_BUTTON_DPAD_UP);
-        assertEquals(SIDEKICK, panel.selectedRowForTest());
+        LaunchConfigPanel save = panel(config, LaunchProfile.stockFor(SONIC_3K), new TrackingStore(config));
+        save.focus(REWIND);
+        pressFrame(save, input, GLFW_KEY_D);
+        assertEquals(1, save.unsavedCount());
+        pressFrame(save, input, GLFW_KEY_ESCAPE);
+        assertTrue(save.isPromptOpenForTest());
+        assertEquals(LaunchConfigPanel.Result.NONE, save.consumeResult());
+        pressFrame(save, input, GLFW_KEY_ENTER);
+        assertEquals(LaunchConfigPanel.Result.CLOSED, save.consumeResult(), "Save is the default choice");
+        assertEquals(LaunchToggle.ON, save.currentProfileForTest().rewind());
 
-        for (int i = 0; i < 4; i++) pressGamepadFrame(panel, input, source, GLFW_GAMEPAD_BUTTON_DPAD_DOWN);
-        assertEquals(REWIND, panel.selectedRowForTest());
+        LaunchConfigPanel discard = panel(config, LaunchProfile.stockFor(SONIC_3K), new TrackingStore(config));
+        discard.focus(REWIND);
+        pressFrame(discard, input, GLFW_KEY_D);
+        pressFrame(discard, input, GLFW_KEY_ESCAPE);
+        pressFrame(discard, input, GLFW_KEY_D);
+        pressFrame(discard, input, GLFW_KEY_ENTER);
+        assertEquals(LaunchConfigPanel.Result.CANCELLED, discard.consumeResult());
+        assertEquals(LaunchProfile.stockFor(SONIC_3K), discard.currentProfileForTest());
+
+        LaunchConfigPanel keep = panel(config, LaunchProfile.stockFor(SONIC_3K), new TrackingStore(config));
+        keep.focus(REWIND);
+        pressFrame(keep, input, GLFW_KEY_D);
+        pressFrame(keep, input, GLFW_KEY_ESCAPE);
+        pressFrame(keep, input, GLFW_KEY_ESCAPE);
+        assertFalse(keep.isPromptOpenForTest(), "Back from the prompt keeps editing");
+        assertEquals(LaunchConfigPanel.Result.NONE, keep.consumeResult());
+        assertEquals(LaunchToggle.ON, keep.currentProfileForTest().rewind());
     }
 
     @Test
-    void gamepadDpadLeftRightCycleSelectedValue() {
+    void dirtyDraftExposesSaveAfterModsAndCanRetryAFailedSave() {
+        SonicConfigurationService config = configuredWasd();
+        LaunchConfigPanel panel = panel(config, LaunchProfile.stockFor(SONIC_3K), new TrackingStore(config));
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
+        panel.focus(REWIND);
+        pressFrame(panel, input, GLFW_KEY_D);
+        panel.focusMods();
+        pressFrame(panel, input, GLFW_KEY_S);
+        assertTrue(panel.isSaveFocusedForTest());
+        pressFrame(panel, input, GLFW_KEY_ENTER);
+        assertEquals(LaunchConfigPanel.Result.CLOSED, panel.consumeResult());
+        assertFalse(panel.isPromptOpenForTest());
+        panel.saveFailed();
+        assertTrue(panel.isSaveFocusedForTest());
+        assertEquals(LaunchToggle.ON, panel.currentProfileForTest().rewind());
+        pressFrame(panel, input, GLFW_KEY_ENTER);
+        assertEquals(LaunchConfigPanel.Result.CLOSED, panel.consumeResult());
+    }
+
+    @Test
+    void revertingDraftRemovesSaveFromNavigation() {
+        SonicConfigurationService config = configuredWasd();
+        LaunchConfigPanel panel = panel(config, LaunchProfile.stockFor(SONIC_3K), new TrackingStore(config));
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
+        panel.focus(REWIND);
+        pressFrame(panel, input, GLFW_KEY_D);
+        pressFrame(panel, input, GLFW_KEY_BACKSPACE);
+        assertEquals(0, panel.unsavedCount());
+        panel.focusMods();
+        pressFrame(panel, input, GLFW_KEY_S);
+        assertEquals(MAIN_CHARACTER, panel.selectedRowForTest());
+    }
+
+    @Test
+    void gamepadCanReachAndActivateSaveChanges() {
+        SonicConfigurationService config = configuredWasd();
+        LaunchConfigPanel panel = panel(config, LaunchProfile.stockFor(SONIC_3K), new TrackingStore(config));
+        config.setConfigValue(SonicConfiguration.CONTROLLER_ENABLED, true);
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER1, "auto");
+        config.setConfigValue(SonicConfiguration.CONTROLLER_PLAYER2, "none");
+        FakeGamepadStateSource source = new FakeGamepadStateSource();
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config), source);
+        panel.focus(REWIND);
+        pressGamepadFrame(panel, input, source, GLFW_GAMEPAD_BUTTON_DPAD_RIGHT);
+        panel.focusMods();
+        pressGamepadFrame(panel, input, source, GLFW_GAMEPAD_BUTTON_DPAD_DOWN);
+        assertTrue(panel.isSaveFocusedForTest());
+        pressGamepadFrame(panel, input, source, org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_A);
+        assertEquals(LaunchConfigPanel.Result.CLOSED, panel.consumeResult());
+    }
+
+    @Test
+    void gamepadDpadMovesRowsAndCyclesValues() {
         SonicConfigurationService config = configuredWasd();
         LaunchConfigPanel panel = panel(config, LaunchProfile.stockFor(SONIC_3K), new TrackingStore(config));
         config.setConfigValue(SonicConfiguration.CONTROLLER_ENABLED, true);
@@ -136,11 +220,15 @@ class TestLaunchConfigPanel {
         FakeGamepadStateSource source = new FakeGamepadStateSource();
         InputHandler input = new InputHandler(InputBindingFactory.supplier(config), source);
 
-        pressGamepadFrame(panel, input, source, GLFW_GAMEPAD_BUTTON_DPAD_LEFT);
-        assertTrue(panel.currentProfileForTest().rewind());
-
+        for (int i = 0; i < 3; i++) pressGamepadFrame(panel, input, source, GLFW_GAMEPAD_BUTTON_DPAD_DOWN);
+        assertEquals(REWIND, panel.selectedRowForTest());
+        pressGamepadFrame(panel, input, source, GLFW_GAMEPAD_BUTTON_DPAD_UP);
+        assertEquals(WIDESCREEN, panel.selectedRowForTest());
+        pressGamepadFrame(panel, input, source, GLFW_GAMEPAD_BUTTON_DPAD_DOWN);
         pressGamepadFrame(panel, input, source, GLFW_GAMEPAD_BUTTON_DPAD_RIGHT);
-        assertFalse(panel.currentProfileForTest().rewind());
+        assertEquals(LaunchToggle.ON, panel.currentProfileForTest().rewind());
+        pressGamepadFrame(panel, input, source, GLFW_GAMEPAD_BUTTON_DPAD_LEFT);
+        assertEquals(LaunchToggle.DEFAULT, panel.currentProfileForTest().rewind());
     }
 
     @Test
@@ -161,167 +249,94 @@ class TestLaunchConfigPanel {
     }
 
     @Test
-    void closingSavesExactlyOnceThroughInjectedStore() {
+    void closingLeavesSavingToTheOwner() {
         SonicConfigurationService config = configuredWasd();
         TrackingStore store = new TrackingStore(config);
         LaunchConfigPanel panel = panel(config, LaunchProfile.stockFor(SONIC_3K), store);
         InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
 
         pressFrame(panel, input, GLFW_KEY_TAB);
-        input.handleKeyEvent(GLFW_KEY_TAB, GLFW_RELEASE);
-        input.update();
         pressFrame(panel, input, GLFW_KEY_ESCAPE);
 
         assertEquals(0, store.saved.size(), "panel update should not save; owner consumes CLOSED and saves");
     }
 
     @Test
-    void rowViewsExposeGlobalAspectPinnedAspectAndStandardMarkers() {
+    void rowViewsShowInheritedValuesAndExperimentalAspects() {
         SonicConfigurationService config = configuredWasd();
         config.setConfigValue(SonicConfiguration.DISPLAY_ASPECT, "WIDE_16_9");
-        LaunchProfile profile = new LaunchProfile(false, "off", false, "global", "tails", "none");
-        LaunchConfigPanel panel = panel(config, profile, new TrackingStore(config));
+        config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, true);
+        LaunchConfigPanel panel = panel(config, LaunchProfile.stockFor(SONIC_3K), new TrackingStore(config));
 
         List<LaunchConfigPanel.RowView> rows = panel.rowViews();
-
-        assertEquals("Global (16:9)", rows.get(WIDESCREEN.ordinal()).value());
-        assertFalse(rows.get(WIDESCREEN.ordinal()).nonStandard());
-        assertFalse(rows.get(MAIN_CHARACTER.ordinal()).stock());
-        assertFalse(rows.get(MAIN_CHARACTER.ordinal()).nonStandard());
-        assertFalse(rows.get(SIDEKICK.ordinal()).stock());
-        assertFalse(rows.get(SIDEKICK.ordinal()).nonStandard());
+        assertIterableEquals(List.of("Character", "Sidekick", "Aspect ratio", "Rewind", "Borrow from", "Debug tools"),
+                rows.stream().map(LaunchConfigPanel.RowView::label).toList());
+        assertEquals("USE GLOBAL (16:9)", rows.get(2).value());
+        assertEquals("USE GLOBAL (ON)", rows.get(3).value(), "Default shows the all-games value it follows");
+        assertEquals("OFF", rows.get(4).value());
+        assertEquals("USE GLOBAL (OFF)", rows.get(5).value());
 
         LaunchConfigPanel pinned = panel(config,
-                new LaunchProfile(false, "off", true, "ULTRA_21_9", "tails", "knuckles"),
+                new LaunchProfile(LaunchToggle.OFF, "s2", LaunchToggle.ON, "ULTRA_21_9", "sonic", "tails"),
                 new TrackingStore(config));
         List<LaunchConfigPanel.RowView> pinnedRows = pinned.rowViews();
-
-        assertEquals("21:9", pinnedRows.get(WIDESCREEN.ordinal()).value());
-        assertTrue(pinnedRows.get(WIDESCREEN.ordinal()).nonStandard());
-        assertTrue(pinnedRows.get(DEBUG_TOOLS.ordinal()).nonStandard());
-        assertTrue(pinnedRows.get(SIDEKICK.ordinal()).nonStandard());
+        assertEquals("21:9", pinnedRows.get(2).value());
+        assertTrue(pinnedRows.get(2).experimental());
+        assertEquals("OFF", pinnedRows.get(3).value());
+        assertEquals("SONIC 2", pinnedRows.get(4).value());
+        assertEquals("ON", pinnedRows.get(5).value());
     }
 
     @Test
-    void s3kDonationHidesCharacterRowsAndNavigationSkipsThem() {
+    void s3kSaveScreenReplacesCharacterRowsWithAFixedTeamRow() {
         SonicConfigurationService config = configuredWasd();
-        LaunchProfile profile = new LaunchProfile(false, "s3k", false, "global", "knuckles", "tails");
-        LaunchConfigPanel panel = panel(config, profile, new TrackingStore(config));
+        LaunchConfigPanel panel = new LaunchConfigPanel(MasterTitleScreen.GameEntry.SONIC_2,
+                new LaunchProfile(false, "s3k", false, "global", "knuckles", "tails"),
+                new TrackingStore(config), config, null, null);
         InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
 
-        assertIterableEquals(List.of(
-                        "Rewind",
-                        "Cross-game",
-                        "Debug tools",
-                        "Widescreen"),
+        assertIterableEquals(List.of("Aspect ratio", "Rewind", "Borrow from", "Debug tools"),
                 panel.rowViews().stream().map(LaunchConfigPanel.RowView::label).toList());
-
-        for (int i = 0; i < 4; i++) pressFrame(panel, input, GLFW_KEY_W);
-
-        assertEquals(WIDESCREEN, panel.selectedRowForTest());
+        assertEquals(WIDESCREEN, panel.selectedRowForTest(), "the team row is information, not a focus stop");
+        pressFrame(panel, input, GLFW_KEY_W);
+        assertTrue(panel.isModsRowFocusedForTest());
     }
 
     @Test
-    void primaryRowsAndSupportingTextKeepStableLeftAnchorsAtNativeAndWideWidths() {
-        SonicConfigurationService config = configuredWasd();
-        LaunchConfigPanel panel = panel(config, LaunchProfile.stockFor(SONIC_3K), new TrackingStore(config));
-
-        for (int viewportWidth : new int[] {320, 400}) {
-            List<LaunchConfigPanel.TextLineView> lines = panel.textLineViews(viewportWidth);
-            for (int i = 0; i < panel.rowViews().size(); i++) {
-                LaunchConfigPanel.TextLineView line = lines.get(i);
-                assertEquals(17, line.x(), "Primary rows share a fixed left anchor");
-                assertEquals(1f, line.scale(), "Primary labels retain full-size lettering");
-                assertFalse(line.text().startsWith(" "), "No invisible centering/cursor padding");
-                assertFalse(line.text().startsWith(">"), "The shared cyan frame identifies focus");
-            }
-            for (LaunchConfigPanel.TextLineView line : lines.subList(panel.rowViews().size(), lines.size())) {
-                assertEquals(9, line.x(), "Supporting text aligns with the page heading");
-            }
-        }
-    }
-
-    @Test
-    void movingFocusDoesNotReplaceStockAmberOrExperimentalColors() {
-        SonicConfigurationService config = configuredWasd();
-        LaunchConfigPanel panel = panel(config,
-                new LaunchProfile(true, "off", false, "ULTRA_21_9", "sonic", "tails"),
-                new TrackingStore(config));
-        InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
-        List<LaunchConfigPanel.TextLineView> before = panel.textLineViews(320);
-        for (int i = 0; i < 3; i++) pressFrame(panel, input, GLFW_KEY_S);
-        List<LaunchConfigPanel.TextLineView> after = panel.textLineViews(320);
-        for (int i = 0; i < panel.rowViews().size(); i++) {
-            assertEquals(before.get(i).r(), after.get(i).r());
-            assertEquals(before.get(i).g(), after.get(i).g());
-            assertEquals(before.get(i).b(), after.get(i).b());
-        }
-        assertEquals(.72f, before.get(REWIND.ordinal()).g());
-        assertEquals(1f, before.get(DEBUG_TOOLS.ordinal()).g());
-        assertEquals(.25f, before.get(WIDESCREEN.ordinal()).g());
-    }
-
-    @Test
-    void textLineViewsRenderNormalWideAsAmberNonStandard() {
-        SonicConfigurationService config = configuredWasd();
-        LaunchProfile profile = new LaunchProfile(false, "off", false, "WIDE_16_9", "sonic", "tails");
-        LaunchConfigPanel panel = new LaunchConfigPanel(SONIC_3K, profile, new TrackingStore(config),
-                config, new MeasuringFont(), null);
-
-        LaunchConfigPanel.TextLineView widescreen = lineContaining(panel.textLineViews(400), "Widescreen:");
-
-        assertTrue(widescreen.text().contains("*"), widescreen.text());
-        assertFalse(widescreen.text().contains("!"), widescreen.text());
-        assertEquals(1f, widescreen.r());
-        assertEquals(0.72f, widescreen.g());
-        assertEquals(0.25f, widescreen.b());
-    }
-
-    @Test
-    void textLineViewsRenderUltrawideAsRedExperimental() {
-        SonicConfigurationService config = configuredWasd();
-        LaunchProfile profile = new LaunchProfile(false, "off", false, "ULTRA_21_9", "sonic", "tails");
-        LaunchConfigPanel panel = new LaunchConfigPanel(SONIC_3K, profile, new TrackingStore(config),
-                config, new MeasuringFont(), null);
-
-        List<LaunchConfigPanel.TextLineView> lines = panel.textLineViews(400);
-        LaunchConfigPanel.TextLineView widescreen = lineContaining(lines, "Widescreen:");
-
-        assertTrue(widescreen.text().contains("!"), widescreen.text());
-        assertFalse(widescreen.text().contains("*"), widescreen.text());
-        assertEquals(1f, widescreen.r());
-        assertEquals(0.25f, widescreen.g());
-        assertEquals(0.25f, widescreen.b());
-        assertTrue(lines.stream().anyMatch(line -> line.text().contains("! experimental")));
-    }
-
-    @Test
-    void textLineViewsFitInsideNativeViewportWithRealGlyphMetrics() {
-        SonicConfigurationService config = configuredWasd();
-        LaunchProfile profile = new LaunchProfile(true, "s2", true, "SUPER_32_9", "knuckles", "tails");
-        LaunchConfigPanel panel = new LaunchConfigPanel(SONIC_3K, profile, new TrackingStore(config),
-                config, new MeasuringFont(), null);
-
-        for (LaunchConfigPanel.TextLineView line : panel.textLineViews(320)) {
-            assertTrue(line.x() >= 4, "line should not bleed left: " + line.text());
-            assertTrue(line.x() + line.measuredWidth() <= 316, "line should not bleed right: " + line.text());
-        }
-    }
-
-    @Test
-    void visibleStockAndSaveButtonsAreReachableWithoutShortcuts() {
+    void enterOnModsRowAsksTheOwnerToOpenTheModManagerAndResumes() {
         SonicConfigurationService config = configuredWasd();
         LaunchConfigPanel panel = panel(config, LaunchProfile.stockFor(SONIC_3K), new TrackingStore(config));
         InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
-        pressFrame(panel, input, GLFW_KEY_D);
-        assertTrue(panel.currentProfileForTest().rewind());
-        for (int i = 0; i < 6; i++) pressFrame(panel, input, GLFW_KEY_S);
-        pressFrame(panel, input, org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
-        assertEquals(LaunchProfile.stockFor(SONIC_3K), panel.currentProfileForTest());
-        assertEquals(LaunchConfigPanel.Result.NONE, panel.consumeResult());
+        panel.setEnabledMods(List.of("Widescreen+"));
+        panel.focusMods();
+        assertTrue(panel.isModsRowFocusedForTest());
+
+        pressFrame(panel, input, GLFW_KEY_ENTER);
+        assertEquals(LaunchConfigPanel.Result.OPEN_MODS, panel.consumeResult());
+        panel.resumeAfterMods();
         pressFrame(panel, input, GLFW_KEY_S);
-        pressFrame(panel, input, org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
-        assertEquals(LaunchConfigPanel.Result.CLOSED, panel.consumeResult());
+        assertEquals(MAIN_CHARACTER, panel.selectedRowForTest(), "the panel keeps working after the mod manager");
+    }
+
+    @Test
+    void focusOpensOnTheRowAChipNamed() {
+        SonicConfigurationService config = configuredWasd();
+        LaunchConfigPanel panel = panel(config, LaunchProfile.stockFor(SONIC_3K), new TrackingStore(config));
+        panel.focus(DEBUG_TOOLS);
+        assertEquals(DEBUG_TOOLS, panel.selectedRowForTest());
+        panel.focus(SIDEKICK);
+        assertEquals(SIDEKICK, panel.selectedRowForTest());
+    }
+
+    @Test
+    void enterOnAValueRowStepsItForward() {
+        SonicConfigurationService config = configuredWasd();
+        LaunchConfigPanel panel = panel(config, LaunchProfile.stockFor(SONIC_3K), new TrackingStore(config));
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
+        panel.focus(DEBUG_TOOLS);
+        pressFrame(panel, input, GLFW_KEY_ENTER);
+        assertEquals(LaunchToggle.ON, panel.currentProfileForTest().debugTools());
+        assertEquals(LaunchConfigPanel.Result.NONE, panel.consumeResult(), "Enter edits; it never closes Game Setup");
     }
 
     private SonicConfigurationService configuredWasd() {
@@ -333,13 +348,38 @@ class TestLaunchConfigPanel {
         return config;
     }
 
-    private static LaunchConfigPanel.TextLineView lineContaining(
-            List<LaunchConfigPanel.TextLineView> lines,
-            String text) {
-        return lines.stream()
-                .filter(line -> line.text().contains(text))
-                .findFirst()
-                .orElseThrow(() -> new AssertionError("Missing line containing: " + text));
+    @Test
+    void changingBorrowFromKeepsTheFocusOnBorrowFrom() {
+        SonicConfigurationService config = configuredWasd();
+        LaunchConfigPanel panel = new LaunchConfigPanel(MasterTitleScreen.GameEntry.SONIC_2,
+                LaunchProfile.stockFor(MasterTitleScreen.GameEntry.SONIC_2), new TrackingStore(config), config, null, null);
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
+        panel.focus(LaunchProfile.Row.CROSS_GAME);
+
+        boolean sawTeam = false;
+        for (int i = 0; i < 4; i++) {
+            pressFrame(panel, input, GLFW_KEY_D);
+            sawTeam |= panel.currentProfileForTest().usesS3kDataSelectCharacters();
+            assertEquals(LaunchProfile.Row.CROSS_GAME, panel.selectedRowForTest(),
+                    "donor " + panel.currentProfileForTest().crossGameSource() + " keeps the focus on Borrow from");
+        }
+        assertTrue(sawTeam, "the cycle reaches the S3K donor that swaps Character and Sidekick for Team");
+        pressFrame(panel, input, GLFW_KEY_S);
+        assertEquals(DEBUG_TOOLS, panel.selectedRowForTest(), "Down from Borrow from still reaches Debug tools");
+    }
+
+    @Test
+    void unsavedPromptNamesOldAndNewValuesForEachChangedRow() {
+        SonicConfigurationService config = configuredWasd();
+        LaunchConfigPanel panel = panel(config, LaunchProfile.stockFor(SONIC_3K), new TrackingStore(config));
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
+        panel.focus(REWIND);
+        pressFrame(panel, input, GLFW_KEY_D);
+        List<String> changes = panel.changeSummaryLines();
+        assertEquals("Rewind", changes.getFirst());
+        assertTrue(changes.stream().anyMatch(line -> line.contains(" -> ")), changes.toString());
+        pressFrame(panel, input, GLFW_KEY_D);
+        assertTrue(panel.changeSummaryLines().stream().anyMatch(line -> line.toLowerCase().contains("off")));
     }
 
     private static LaunchConfigPanel panel(SonicConfigurationService config,
@@ -403,17 +443,5 @@ class TestLaunchConfigPanel {
     }
 
     private record SavedProfile(MasterTitleScreen.GameEntry entry, LaunchProfile profile) {
-    }
-
-    private static final class MeasuringFont extends com.openggf.graphics.PixelFont {
-        @Override
-        public int measureWidth(String text) {
-            return measureWidth(text, 1.0f);
-        }
-
-        @Override
-        public int measureWidth(String text, float scale) {
-            return Math.round(text.length() * 9 * scale);
-        }
     }
 }

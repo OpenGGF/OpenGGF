@@ -117,8 +117,8 @@ class TestMasterTitleQuitFlow {
 
     @Test
     void visibleQuitActionIsReachableWithControllerAndUsesConfirmation() {
-        tap(GLFW_GAMEPAD_BUTTON_DPAD_DOWN); // Enter the action pane.
-        for (int row = 0; row < 7; row++) tap(GLFW_GAMEPAD_BUTTON_DPAD_DOWN);
+        tap(GLFW_GAMEPAD_BUTTON_DPAD_UP); // Up to the engine-wide tabs.
+        for (int tab = 0; tab < 3; tab++) tap(GLFW_GAMEPAD_BUTTON_DPAD_RIGHT); // Mods, Settings, Advanced, Quit.
         tap(GLFW_GAMEPAD_BUTTON_A); // Open Quit, leaving Return selected.
         assertFalse(fade.isActive());
         tap(GLFW_GAMEPAD_BUTTON_DPAD_DOWN);

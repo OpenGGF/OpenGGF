@@ -32,7 +32,7 @@ class TestMasterTitleMouse {
         config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
         var screen = new MasterTitleScreen(config);
         screen.setStateForTest(MasterTitleScreen.State.ACTIVE);
-        screen.setRomAvailableForTest(MasterTitleScreen.GameEntry.SONIC_2, true);
+        for (var game : MasterTitleScreen.GameEntry.values()) screen.setRomAvailableForTest(game, true);
         screen.setPointerMapperForTest((x, y) -> new int[] {x.intValue(), y.intValue(), 1});
         return screen;
     }
@@ -53,73 +53,121 @@ class TestMasterTitleMouse {
         input.update();
     }
 
-    /** Centre of hub action {@code index} (drawHub: x from the screen's middle, rows 20 apart from 39). */
-    private static int[] action(int index) {
-        return new int[] {160 + 60, 39 + index * 20 + 9};
+    private static int[] centre(MasterTitleScreen.Rect rect) {
+        return new int[] {rect.x() + rect.w() / 2, rect.y() + rect.h() / 2};
+    }
+
+    /** Centre of hub action {@code index}, from the same layout drawHub uses. */
+    private static int[] action(MasterTitleScreen screen, int index) {
+        return centre(screen.hubLayout().actions().get(index));
+    }
+
+    private static int[] card(MasterTitleScreen screen, int offset) {
+        return screen.hubLayout().cards().stream().filter(c -> c.offset() == offset)
+                .map(c -> centre(c.rect())).findFirst().orElseThrow();
+    }
+
+    private static void settle(MasterTitleScreen screen) {
+        for (int i = 0; i < 40; i++) screen.update(new InputHandler());
     }
 
     @Test
     void clickingAnActionRunsItAndHoveringFocusesIt() {
         var screen = screen();
-        int[] launch = action(1);
-        moveTo(screen, launch[0], launch[1]);
+        int[] setup = action(screen, 1);
+        moveTo(screen, setup[0], setup[1]);
+        assertEquals(TitleHubNavigation.Zone.ACTIONS, screen.hubZoneForTest(), "hovering focuses the button");
         assertFalse(screen.isLaunchConfigPanelOpenForTest(), "hovering alone does not open anything");
-        click(screen, launch[0], launch[1], GLFW_MOUSE_BUTTON_LEFT);
-        assertTrue(screen.isLaunchConfigPanelOpenForTest(), "Launch Options is the second action");
+        click(screen, setup[0], setup[1], GLFW_MOUSE_BUTTON_LEFT);
+        assertTrue(screen.isLaunchConfigPanelOpenForTest(), "Game Setup is the second action");
         assertFalse(screen.isGameSelected());
     }
 
     @Test
     void clickingStartLaunchesTheSelectedGame() {
         var screen = screen();
-        int[] start = action(0);
+        int[] start = action(screen, 0);
         click(screen, start[0], start[1], GLFW_MOUSE_BUTTON_LEFT);
         assertTrue(screen.isGameSelected());
         assertEquals("s2", screen.getSelectedGameId());
     }
 
     @Test
-    void carouselArrowsAndWheelChangeGameAndItsNameOpensTheBrowser() {
+    void sideCardsAndWheelChangeGameAndThePageDotsAreStatusOnly() {
         var screen = screen();
-        click(screen, 10, 166, GLFW_MOUSE_BUTTON_LEFT); // the "<" arrow
+        int[] left = card(screen, -1);
+        click(screen, left[0], left[1], GLFW_MOUSE_BUTTON_LEFT);
         assertEquals("s1", screen.getSelectedGameId());
-        click(screen, 8 + 144 - 4, 166, GLFW_MOUSE_BUTTON_LEFT); // the ">" arrow
+        assertFalse(screen.isGameSelected(), "a side card selects; it does not launch");
+        settle(screen);
+        int[] right = card(screen, 1);
+        click(screen, right[0], right[1], GLFW_MOUSE_BUTTON_LEFT);
         assertEquals("s2", screen.getSelectedGameId());
         com.openggf.control.MouseWheel.of(input).scroll(-1); // towards the user: next game
-        moveTo(screen, 200, 120);
+        moveTo(screen, 300, 200);
         assertEquals("s3k", screen.getSelectedGameId());
-        click(screen, 80, 166, GLFW_MOUSE_BUTTON_LEFT); // the game's name
-        assertTrue(screen.isGameBrowserOpenForTest());
-        click(screen, 100, 51 + 12, GLFW_MOUSE_BUTTON_LEFT); // first row: Sonic 1
-        assertFalse(screen.isGameBrowserOpenForTest());
-        assertEquals("s1", screen.getSelectedGameId());
-        assertFalse(screen.isGameSelected(), "the browser picks a game; it does not launch it");
+        int[] dots = centre(screen.hubLayout().dots());
+        click(screen, dots[0], dots[1], GLFW_MOUSE_BUTTON_LEFT);
+        assertEquals("s3k", screen.getSelectedGameId());
+        assertFalse(screen.isGameSelected(), "pagination is status only");
+    }
+
+    @Test
+    void missingRomOpensLocatorAndCancelKeepsSelectedCard() {
+        var screen = screen();
+        screen.setRomAvailableForTest(MasterTitleScreen.GameEntry.SONIC_2, false);
+        int[] start = centre(screen.hubLayout().actions().getFirst());
+        click(screen, start[0], start[1], GLFW_MOUSE_BUTTON_LEFT);
+        assertTrue(screen.isRomLocatorOpenForTest());
+        click(screen, 200, 100, GLFW_MOUSE_BUTTON_RIGHT);
+        assertFalse(screen.isRomLocatorOpenForTest());
+        assertEquals("s2", screen.getSelectedGameId());
+        assertFalse(screen.isGameSelected());
+    }
+
+    @Test
+    void clickingTheCentreCardStartsAndTheSetupChipsAreStatusOnly() {
+        var screen = screen();
+        for (var rect : screen.hubLayout().chips()) {
+            int[] chip = centre(rect);
+            click(screen, chip[0], chip[1], GLFW_MOUSE_BUTTON_LEFT);
+            assertFalse(screen.isLaunchConfigPanelOpenForTest(), "a chip click opens nothing");
+            assertFalse(screen.isGameSelected());
+            assertEquals(TitleHubNavigation.Zone.CARD, screen.hubZoneForTest(), "a chip never takes focus");
+        }
+
+        var other = screen();
+        int[] centre = card(other, 0);
+        click(other, centre[0], centre[1], GLFW_MOUSE_BUTTON_LEFT);
+        assertTrue(other.isGameSelected());
     }
 
     @Test
     void rightClickOpensTheQuitPromptAndItsRowsAnswerClicks() {
         var screen = screen();
         var exits = new AtomicInteger();
-        click(screen, 60, 60, GLFW_MOUSE_BUTTON_RIGHT); // over the game preview, not an action
+        click(screen, 10, 190, GLFW_MOUSE_BUTTON_RIGHT); // empty sky, not a control
         assertTrue(screen.isQuitPromptOpenForTest());
-        click(screen, 100, 82 + 11, GLFW_MOUSE_BUTTON_LEFT); // "Return to menu"
+        click(screen, 160, 92 + 10, GLFW_MOUSE_BUTTON_LEFT); // "Return to menu"
         assertFalse(screen.isQuitPromptOpenForTest());
         TitleInputOwnership.routeQuit(screen, exits::incrementAndGet);
         assertEquals(0, exits.get());
-        click(screen, 60, 60, GLFW_MOUSE_BUTTON_RIGHT); // over the game preview, not an action
-        click(screen, 100, 112 + 11, GLFW_MOUSE_BUTTON_LEFT); // "Quit"
+        click(screen, 10, 190, GLFW_MOUSE_BUTTON_RIGHT);
+        click(screen, 160, 118 + 10, GLFW_MOUSE_BUTTON_LEFT); // "Quit"
         TitleInputOwnership.routeQuit(screen, exits::incrementAndGet);
         assertEquals(1, exits.get());
     }
 
     @Test
-    void rightClickInTheActionListReturnsToTheGameCarousel() {
+    void rightClickAwayFromTheCardReturnsToTheCardFirst() {
         var screen = screen();
-        int[] settings = action(5);
-        moveTo(screen, settings[0], settings[1]);
-        click(screen, settings[0], settings[1], GLFW_MOUSE_BUTTON_RIGHT);
-        assertFalse(screen.isQuitPromptOpenForTest(), "back from the actions, not out of the menu");
-        click(screen, 60, 60, GLFW_MOUSE_BUTTON_RIGHT);
+        int[] settingsTab = centre(screen.hubLayout().tabs().get(1));
+        moveTo(screen, settingsTab[0], settingsTab[1]);
+        assertEquals(TitleHubNavigation.Zone.TABS, screen.hubZoneForTest());
+        click(screen, settingsTab[0], settingsTab[1], GLFW_MOUSE_BUTTON_RIGHT);
+        assertFalse(screen.isQuitPromptOpenForTest(), "back to the card, not out of the menu");
+        assertEquals(TitleHubNavigation.Zone.CARD, screen.hubZoneForTest());
+        click(screen, 10, 190, GLFW_MOUSE_BUTTON_RIGHT);
         assertTrue(screen.isQuitPromptOpenForTest());
     }
 
@@ -127,7 +175,7 @@ class TestMasterTitleMouse {
     void theLetterboxIgnoresTheMouse() {
         var screen = screen();
         screen.setPointerMapperForTest((x, y) -> new int[] {x.intValue(), y.intValue(), 0});
-        int[] start = action(0);
+        int[] start = action(screen, 0);
         click(screen, start[0], start[1], GLFW_MOUSE_BUTTON_LEFT);
         assertFalse(screen.isGameSelected());
     }

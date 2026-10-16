@@ -951,6 +951,54 @@ class TestModManagerScreen {
         assertTrue(ids.indexOf("pack-core") < ids.indexOf("pack-addon"));
     }
 
+    @Test
+    void mouseHoverClickWheelAndRightClickDriveTheManager() {
+        ModDescriptor one = descriptor("pack-one", "One", List.of(), List.of());
+        ModDescriptor two = descriptor("pack-two", "Two", List.of(), List.of());
+        ModState startup = state(false, false, "pack-one", "pack-two");
+        ModCatalog catalog = new EffectiveCatalogBuilder().build(List.of(one, two), startup);
+        RecordingFont font = new RecordingFont();
+        ModManagerScreen screen = screen(catalog, startup, new ModRuntimeFindingStore(), font,
+                temp.resolve("mouse"));
+
+        mouse(screen, 100, 66, false, false, 0);
+        assertEquals(1, screen.selectedIndex(), "hovering the second row selects it");
+        mouse(screen, 100, 66, true, false, 0);
+        assertTrue(enabled(screen, "pack-two"), "clicking a row toggles that mod");
+        assertFalse(enabled(screen, "pack-one"));
+
+        mouse(screen, 100, 66, false, false, 1);
+        assertEquals(0, screen.selectedIndex(), "the wheel moves through the list");
+
+        mouse(screen, 20, 185, true, false, 0);
+        font.drawn.clear();
+        screen.render();
+        assertTrue(font.drawn.contains("MOD DETAILS"), "clicking Details opens the details page");
+        mouse(screen, 20, 185, false, true, 0);
+        font.drawn.clear();
+        screen.render();
+        assertTrue(font.drawn.contains("MOD MANAGER"), "right-click leaves the details page");
+
+        mouse(screen, 200, 100, false, true, 0);
+        assertFalse(screen.closeRequested(), "unsaved changes ask before leaving");
+        mouse(screen, 100, 120, true, false, 0);
+        assertTrue(screen.closeRequested(), "clicking Discard leaves");
+        assertFalse(enabled(screen, "pack-two"), "Discard drops the pending toggle");
+    }
+
+    /** One frame of mouse input followed by a neutral frame, in the manager's 320x224 page. */
+    private static void mouse(ModManagerScreen screen, int x, int y, boolean click, boolean back, int wheel) {
+        screen.update(new ModManagerScreen.MenuInput() {
+            @Override public int pointerX() { return x; }
+            @Override public int pointerY() { return y; }
+            @Override public boolean pointerMoved() { return true; }
+            @Override public boolean pointerClick() { return click; }
+            @Override public boolean pointerBack() { return back; }
+            @Override public int wheel() { return wheel; }
+        });
+        screen.update(ModManagerScreen.MenuInput.NEUTRAL);
+    }
+
     private ModManagerScreen screen(ModCatalog catalog, ModState startup,
                                     ModRuntimeFindingStore runtime, PixelFont font, Path root) {
         PendingModStateEditor editor = new PendingModStateEditor(startup, catalog.scanned(),
@@ -1200,13 +1248,13 @@ class TestModManagerScreen {
     }
 
     @Test
-    void dirtyBackDefaultsToKeepAndExplicitDiscardRestoresLastSavedDraft() {
+    void dirtyBackOffersSaveDiscardOrKeepEditingAndDiscardRestoresLastSavedDraft() {
         var root = temp.resolve("discard");
         var screen = screen(catalog(List.of(descriptor("pack-one", "One", List.of(), List.of()))),
                 state(false, "pack-one"), new ModRuntimeFindingStore(), null, root);
         press(screen, Action.ACCEPT); // Enable draft.
         press(screen, Action.BACK);
-        press(screen, Action.ACCEPT); // Default Keep editing.
+        press(screen, Action.BACK); // Back from the prompt keeps editing.
         assertFalse(screen.closeRequested());
         assertTrue(enabled(screen, "pack-one"));
         assertFalse(Files.exists(root.resolve("modstate.json")));
@@ -1215,11 +1263,41 @@ class TestModManagerScreen {
         press(screen, Action.ACCEPT); // Disable a new unsaved draft.
         assertFalse(enabled(screen, "pack-one"));
         press(screen, Action.BACK);
-        press(screen, Action.RIGHT);
+        press(screen, Action.RIGHT); // Save -> Discard
         press(screen, Action.ACCEPT); // Explicit Discard.
         assertTrue(screen.closeRequested());
         assertTrue(enabled(screen, "pack-one"), "Discard restores saved enabled state, not startup");
         assertTrue(new ModStateStore(root.toAbsolutePath().normalize()).load().state().entries().getFirst().enabled());
+    }
+
+    @Test
+    void saveFromTheLeavePromptAppliesThenClosesAfterTheReload() {
+        var root = temp.resolve("prompt-save");
+        var screen = screen(catalog(List.of(descriptor("pack-one", "One", List.of(), List.of()))),
+                state(false, "pack-one"), new ModRuntimeFindingStore(), null, root);
+        press(screen, Action.ACCEPT); // Enable draft.
+        press(screen, Action.BACK);
+        press(screen, Action.ACCEPT); // Save is the default choice.
+        assertTrue(screen.consumeActivationRequested(), "Save applies like the Apply action");
+        assertFalse(screen.closeRequested(), "the reload reports failure before the screen closes");
+        assertTrue(new ModStateStore(root.toAbsolutePath().normalize()).load().state().entries().getFirst().enabled());
+        press(screen, Action.DOWN);
+        assertTrue(screen.closeRequested());
+    }
+
+    @Test
+    void saveFromTheLeavePromptStaysOpenWhenTheReloadFails() {
+        var root = temp.resolve("prompt-save-fail");
+        var screen = screen(catalog(List.of(descriptor("pack-one", "One", List.of(), List.of()))),
+                state(false, "pack-one"), new ModRuntimeFindingStore(), null, root);
+        press(screen, Action.ACCEPT);
+        press(screen, Action.BACK);
+        press(screen, Action.ACCEPT);
+        assertTrue(screen.consumeActivationRequested());
+        screen.activationFailed("broken jar");
+        press(screen, Action.DOWN);
+        assertFalse(screen.closeRequested(), "a failed reload keeps the manager open with its message");
+        assertTrue(screen.statusMessage().contains("broken jar"));
     }
 
     private static void applyFromList(ModManagerScreen screen) {
@@ -1246,7 +1324,50 @@ class TestModManagerScreen {
     }
 
     @Test
-    void sixPrimaryRowsKeepBalancedFocusPaddingInsideTheListPanel() {
+    void gameFilterIncludesMatchingAndSharedModsAndKeepsHiddenState() {
+        List<ModDescriptor> mods = new ArrayList<>();
+        for (String game : List.of("s1", "s2", "s3k", "any")) {
+            ModManifest manifest = new ModManifest(1, "pack-" + game, game,
+                    SemanticVersion.parse("1.2.3"), List.of("Alice"), "Game filter",
+                    VersionRange.parse(">=0.7.0 <0.8.0"), ModType.PATCH, game,
+                    "any".equals(game) ? "example.Shared" : null, List.of(), Map.of(),
+                    Map.of(), null, OptionalInt.empty());
+            mods.add(new ModDescriptor(Path.of(game + ".jar"), manifest, "a".repeat(64),
+                    "any".equals(game), List.of()));
+        }
+        ModManagerScreen screen = screen(catalog(mods),
+                state(new boolean[]{true, false, true, false}, "pack-s1", "pack-s2", "pack-s3k", "pack-any"),
+                new ModRuntimeFindingStore(), null, temp.resolve("filter"));
+        ModState before = screen.pendingState();
+        screen.setGameFilter("s2");
+        assertEquals(List.of("pack-s2", "pack-any"), screen.rows().stream()
+                .map(ModManagerScreen.RowView::identity).toList());
+        accept(screen);
+        assertTrue(enabled(screen, "pack-s2"));
+        assertEquals(before.entries().getFirst(), screen.pendingState().entries().getFirst());
+        screen.setGameFilter("s1");
+        assertEquals(List.of("pack-s1", "pack-any"), screen.rows().stream()
+                .map(ModManagerScreen.RowView::identity).toList());
+        screen.setGameFilter(null);
+        assertEquals(4, screen.rows().size());
+    }
+
+    @Test
+    void shortAndLongModEntriesUseTheSameCompactSize() {
+        List<ModDescriptor> mods = List.of(descriptor("short", "Short", List.of(), List.of()),
+                descriptor("long", "A much longer mod name that exceeds the primary text width", List.of(), List.of()));
+        RecordingFont font = new RecordingFont();
+        ModManagerScreen screen = screen(catalog(mods), state(new boolean[2], "short", "long"),
+                new ModRuntimeFindingStore(), font, temp.resolve("font-size"));
+        screen.render();
+        List<RenderedLine> rows = font.lines.stream()
+                .filter(line -> line.x() == 12 && line.value().startsWith("[OFF]")).toList();
+        assertEquals(2, rows.size());
+        assertTrue(rows.stream().allMatch(line -> line.scale() == 2f / 3f));
+    }
+
+    @Test
+    void sixCompactRowsKeepBalancedFocusPaddingInsideTheListPanel() {
         String[] ids = {"pack-a", "pack-b", "pack-c", "pack-d", "pack-e", "pack-f"};
         List<ModDescriptor> mods = java.util.Arrays.stream(ids)
                 .map(id -> descriptor(id, id, List.of(), List.of())).toList();
@@ -1258,12 +1379,12 @@ class TestModManagerScreen {
             font.focus.clear();
             screen.render();
             List<RenderedLine> rows = font.lines.stream()
-                    .filter(line -> line.x() == 12 && line.scale() == 1 && line.value().startsWith("[OFF]")).toList();
+                    .filter(line -> line.x() == 12 && line.scale() == 2f / 3f && line.value().startsWith("[OFF]")).toList();
             assertEquals(6, rows.size());
             FocusRect focus = font.focus.getFirst();
             RenderedLine selectedLine = rows.get(selected);
-            assertEquals(2, selectedLine.y() - focus.y());
-            assertEquals(2, focus.y() + focus.height() - selectedLine.y() - 10);
+            assertEquals(3, selectedLine.y() - focus.y());
+            assertEquals(3, focus.y() + focus.height() - selectedLine.y() - 8);
             assertTrue(focus.y() >= 48 && focus.y() + focus.height() <= 136);
             if (selected < 5) press(screen, Action.DOWN);
         }

@@ -37,6 +37,9 @@ import com.openggf.camera.Camera;
 import com.openggf.configuration.FrameRateResolver;
 import com.openggf.configuration.KeyChord;
 import com.openggf.configuration.SonicConfiguration;
+import com.openggf.game.GameId;
+import com.openggf.game.launch.SuspendedSettings;
+import com.openggf.graphics.ScreenshotCapture;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.configuration.WidescreenAspect;
 import com.openggf.debug.DebugOption;
@@ -179,6 +182,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		new PixelFontTextRenderer(PixelFontVariant.PIXEL_FONT_NO_SHADOW);
 	private final PixelFontTextRenderer pauseTextRenderer =
 		new PixelFontTextRenderer(PixelFontVariant.PIXEL_FONT_NO_SHADOW);
+	private final PixelFontTextRenderer menuOverlayTextRenderer = PixelFontTextRenderer.menu();
+	private static final int ESCAPE_TOAST_REST_Y = 6;
 	private final PixelFontTextRenderer liveCaptureTextRenderer =
 		new PixelFontTextRenderer(PixelFontVariant.PIXEL_FONT_NO_SHADOW);
 	private static final String USER_PAUSE_INDICATOR_TEXT = "PAUSED";
@@ -289,6 +294,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 	// Master title screen (game selection before ROM loading)
 	private MasterTitleScreen masterTitleScreen;
+	private SuspendedGame suspendedGame;
+	private SuspendedGame.Pending pendingSuspend;
+	private SuspendedGame.Thumbnail pendingSuspendThumbnail;
+	private boolean suspendThumbnailRequested;
 
 	// Legal disclaimer screen (pre-ROM disclaimer)
 	private LegalDisclaimerScreen legalDisclaimerScreen;
@@ -300,11 +309,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	private int viewportWidth = 0;
 	private int viewportHeight = 0;
 
-	// Window snap-to-integer-scale after resize
-	private long lastResizeTimeNanos = 0;
-	private boolean resizePendingSnap = false;
-	private boolean isSnappingWindowSize = false;
-	private int lastSnappedScale = 0;
+	private DisplayWindowController displayWindowController;
+	private String displayScaling;
 
 	// JOML matrices for projection - accessible for shader uniforms
 	private final org.joml.Matrix4f projectionMatrix = new org.joml.Matrix4f();
@@ -368,6 +374,11 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		this.gameLoop.setCharacterAvailabilitySupplier(() -> modRuntime.characterAvailability());
 		this.gameLoop.setEditorStateSyncHandler(this::syncEditorState);
 		this.gameLoop.setMasterTitleScreenSupplier(() -> masterTitleScreen);
+		this.gameLoop.suspension.setHost(new GameLoopSuspension.Host() {
+			@Override public boolean prepareSuspend(GameMode mode) { return Engine.this.prepareSuspend(mode); }
+			@Override public void suspend() { suspendToMasterTitle(); }
+			@Override public void resume() { resumeSuspendedGame(); }
+		});
 		this.gameLoop.setMasterTitleExitHandler(this::exitMasterTitleScreen);
 		this.gameLoop.setStandaloneMasterTitleExitHandler(this::exitStandaloneMasterTitle);
 		this.gameLoop.setLegalDisclaimerScreenSupplier(() -> legalDisclaimerScreen);
@@ -568,6 +579,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void init() {
+		com.openggf.configuration.PendingRestart.captureAtStart(configService);
 		initializeExternalContentAtBoot();
 		// === PHASE 1: Window, GL context, input (always runs) ===
 		// Setup an error callback
@@ -642,11 +654,6 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			if (graphicsManager.isGlInitialized()) {
 				reshape(width, height);
 			}
-			// Schedule a window snap once the user finishes resizing
-			if (!isSnappingWindowSize) {
-				resizePendingSnap = true;
-				lastResizeTimeNanos = System.nanoTime();
-			}
 		});
 
 		// Setup window focus callback
@@ -691,7 +698,9 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		// Enable v-sync
 		glfwSwapInterval(1);
 
-		// Make the window visible
+		// Apply the saved desktop mode before showing the window.
+		displayWindowController = new DisplayWindowController(window);
+		displayWindowController.apply(com.openggf.configuration.DisplaySettingsTrial.forConfig(configService).windowMode());
 		glfwShowWindow(window);
 
 		// This line is critical for LWJGL's interoperation with GLFW's
@@ -712,7 +721,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		// Set window handle for clipboard operations (GLFW-based, no AWT dependency)
 		debugOverlayManager.setWindowHandle(window);
 
-		// Initial reshape and snap to integer scale (handles DPI-scaled framebuffer)
+		// Initial viewport uses physical framebuffer pixels, including high-DPI displays.
 		try (MemoryStack stack = stackPush()) {
 			IntBuffer pWidth = stack.mallocInt(1);
 			IntBuffer pHeight = stack.mallocInt(1);
@@ -721,7 +730,6 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			this.windowHeight = pHeight.get(0);
 			reshape(windowWidth, windowHeight);
 		}
-		snapWindowToIntegerScale();
 
 		initializeConfiguredStartup();
 
@@ -1077,9 +1085,12 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		graphicsManager.applyResolvedDisplayWidth((int) projectionWidth);
         var camera = GameServices.cameraOrNull();
         if (camera != null) camera.refreshViewportDimensions(configService);
+        var level = GameServices.levelOrNull();
+        if (level != null) com.openggf.level.LevelDisplayWidth.refresh(level);
 
 		if (glfwInitialized && window != 0L) {
-			DisplayWindowFit.apply(window, configService.getBoolean(SonicConfiguration.DISPLAY_WINDOW_AUTOSIZE),
+			DisplayWindowFit.apply(window, (displayWindowController == null || displayWindowController.isWindowed())
+					&& configService.getBoolean(SonicConfiguration.DISPLAY_WINDOW_AUTOSIZE),
 					(int) realWidth, (int) realHeight);
 			FramebufferDimensions framebuffer = readCurrentFramebufferDimensions();
 			windowWidth = framebuffer.width();
@@ -1603,6 +1614,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void resetForGameplayFromMasterTitle() {
+		if (suspendedGame != null) {
+			suspendedGame = null;
+			gameLoop.suspension.discard();
+		}
 		if (editorProjectPlaytestActive) {
 			gameLoop.stopEditorHostedRun();
 			editorProjectPlaytestActive = false;
@@ -1622,6 +1637,97 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		RenderContext.reset();
 		graphicsManager.clearPaletteTextures();
 		gameLoop.resetModuleScopedProviders();
+	}
+
+	// ==================== Suspended game (hold Escape) ====================
+
+	/** Captures what resuming needs while the game's last frame and music are still intact. */
+	private boolean prepareSuspend(GameMode mode) {
+		var world = SessionManager.getCurrentWorldSession();
+		if (editorProjectPlaytestActive || suspendedGame != null || world == null) return false;
+		if (com.openggf.game.GameModuleRouting.isStandalone(world.getGameModule())) return false;
+		GameId game = world.getGameModule().getGameId();
+		com.openggf.audio.rewind.AudioLogicalSnapshot audio = null;
+		String zone = null;
+		try {
+			if (configService.getBoolean(SonicConfiguration.AUDIO_ENABLED)) audio = audioManager.captureLogicalSnapshot();
+			zone = world.getGameModule().getZoneRegistry().getZoneName(world.getCurrentZone());
+		} catch (RuntimeException failure) {
+			LOGGER.warning("Suspending without part of its state: " + failure.getMessage());
+		}
+		pendingSuspend = new SuspendedGame.Pending(audio,
+				SuspendedGame.card(game.code(), mode, SuspendedGame.location(mode, zone, world.getApparentAct() + 1)));
+		pendingSuspendThumbnail = null;
+		suspendThumbnailRequested = true;
+		audioManager.fadeOutMusic();
+		return true;
+	}
+
+	/** Reads this frame's game picture before the fade pass and post-fade overlays draw over it. */
+	private void captureSuspendThumbnailIfRequested() {
+		if (!suspendThumbnailRequested) return;
+		suspendThumbnailRequested = false;
+		try {
+			pendingSuspendThumbnail = SuspendedGame.thumbnail(ScreenshotCapture.captureFramebufferRegion(
+					viewportX, viewportY, viewportWidth, viewportHeight), (int) projectionWidth, (int) realHeight);
+		} catch (RuntimeException failure) {
+			LOGGER.warning("Suspended game has no picture: " + failure.getMessage());
+		}
+	}
+
+	/** After capturing the frozen frame: park its session and animate the picture into the hub. */
+	private void suspendToMasterTitle() {
+		SuspendedGame.Pending pending = pendingSuspend;
+		pendingSuspend = null;
+		if (pending == null) { gameLoop.returnToMasterTitle(); return; }
+		SuspendedSettings settings = SuspendedSettings.suspend(configService);
+		SuspendedGame.CameraPosition position = SuspendedGame.CameraPosition.of(camera);
+		suspendedGame = new SuspendedGame(gameLoop.suspension.park(), pending, pendingSuspendThumbnail,
+				settings, position);
+		pendingSuspendThumbnail = null;
+		refreshLaunchSessionCachedConfig();
+		applyResolvedDisplayDimensions();
+		if (masterTitleScreen != null) masterTitleScreen.cleanup();
+		masterTitleScreen = createMasterTitleScreen();
+		masterTitleScreen.initialize();
+		graphicsManager.getFadeManager().cancel();
+		masterTitleScreen.animateSuspendedGame();
+		LOGGER.info("Suspended " + pending.card().menuLabel() + " to the master title");
+	}
+
+	/**
+	 * After the picture has zoomed back in: restore the settings (live ones take their new values, see
+	 * {@code LiveSettings}), then the picture size, camera and music.
+	 */
+	private void resumeSuspendedGame() {
+		SuspendedGame game = suspendedGame;
+		if (game == null) return;
+		suspendedGame = null;
+		if (masterTitleScreen != null) {
+			masterTitleScreen.cleanup();
+			masterTitleScreen = null;
+		}
+		game.settings().resume(configService, game.card().game().game(), game.mode() == GameMode.LEVEL);
+		refreshLaunchSessionCachedConfig();
+		gameLoop.suspension.unpark(game.mode());
+		applyResolvedDisplayDimensions();
+		if (game.camera() != null) game.camera().restore(camera);
+		try {
+			if (game.audio() != null) audioManager.restoreLogicalSnapshot(game.audio());
+		} catch (RuntimeException failure) {
+			LOGGER.warning("Resumed without its music state: " + failure.getMessage());
+		}
+		gameLoop.resolveFadeManager().cancel();
+		LOGGER.info("Resumed " + game.card().menuLabel());
+	}
+
+	/** Ends a suspended game from the hub with the same teardown as a launch, keeping the hub up. */
+	private void discardSuspendedGame() {
+		if (suspendedGame == null) return;
+		resetForGameplayFromMasterTitle();
+		gameLoop.setGameplayMode(null);
+		gameplayMode = null;
+		ensureMasterTitleAudioBackend();
 	}
 
 	/**
@@ -1990,6 +2096,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 	/** Rebuilds the catalog and code owners while the title owns no gameplay session. */
 	private void reloadExternalContentAtTitle() {
+		discardSuspendedGame();
 		ModSubsystem candidate = ModSubsystem.normalBootLoader(
 				() -> Path.of("mods").toAbsolutePath().normalize(),
 				ModInputLimits.production(), StockMusicDomains::containsSupported,
@@ -2050,6 +2157,12 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				masterTitleEntries(),
 				cue -> audioManager.playSfx(cue.sfxName()));
 		screen.setEditorProjectsOpenHandler(editorProjects::openMenu);
+		if (suspendedGame != null) {
+			SuspendedGame.Thumbnail thumbnail = suspendedGame.thumbnail();
+			screen.setSuspendedGame(suspendedGame.card(), thumbnail == null ? 0 : thumbnail.width(),
+					thumbnail == null ? 0 : thumbnail.height(), thumbnail == null ? null : thumbnail.rgba());
+		}
+		screen.setSuspendedGameEndHandler(this::discardSuspendedGame);
 		if (ModSubsystem.current().policy().mayScanAtBoot())
 			TitleContentImportAccess.bind(screen, this::openContentImport);
 		screen.setEnabledModsByGame(enabledTitleModsByGame());
@@ -2675,16 +2788,12 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		int nativeW = (int) realWidth;   // 320
 		int nativeH = (int) realHeight;  // 224
 
-		// Find the largest integer scale that fits both dimensions
-		int scale = Math.max(1, Math.min(width / nativeW, height / nativeH));
-		viewportWidth = scale * nativeW;
-		viewportHeight = scale * nativeH;
-
-		// Center the integer-scaled viewport within the framebuffer
-		viewportX = (width - viewportWidth) / 2;
-		viewportY = (height - viewportHeight) / 2;
-
-		// Set the viewport to the integer-scaled area
+		displayScaling = configService.getString(SonicConfiguration.DISPLAY_SCALING);
+		var bounds = DisplayViewport.fit(width, height, nativeW, nativeH, !"FIT".equals(displayScaling));
+		viewportX = bounds.x();
+		viewportY = bounds.y();
+		viewportWidth = bounds.width();
+		viewportHeight = bounds.height();
 		glViewport(viewportX, viewportY, viewportWidth, viewportHeight);
 
 		// Cache viewport dimensions in GraphicsManager
@@ -2693,52 +2802,6 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		// Setup orthographic projection using JOML - stored for shader access
 		projectionMatrix.identity().ortho2D(0, (float) projectionWidth, 0, (float) realHeight);
 		projectionMatrix.get(matrixBuffer);
-	}
-
-	/**
-	 * Snaps the window size to the nearest integer multiple of the native resolution
-	 * so every game pixel maps to exactly NxN screen pixels with no fractional scaling.
-	 * Rounds UP when the window grew (e.g. DPI increase) and DOWN when it shrank,
-	 * preventing progressive shrinking across monitor moves.
-	 */
-	private void snapWindowToIntegerScale() {
-		int nativeW = (int) realWidth;
-		int nativeH = (int) realHeight;
-
-		// Get the current monitor's usable resolution as an upper bound
-		long monitor = glfwGetWindowMonitor(window);
-		if (monitor == NULL) {
-			monitor = glfwGetPrimaryMonitor();
-		}
-		if (monitor == NULL) {
-			return;
-		}
-		GLFWVidMode vidmode = glfwGetVideoMode(monitor);
-		Integer maxScale = computeIntegerScaleUpperBound(nativeW, nativeH, vidmode);
-		if (maxScale == null) {
-			return;
-		}
-
-		double currentScale = Math.min((double) windowWidth / nativeW, (double) windowHeight / nativeH);
-
-		int scale;
-		if (lastSnappedScale > 0 && currentScale > lastSnappedScale) {
-			// Window grew (DPI increase or manual resize up) - round up
-			scale = (int) Math.ceil(currentScale);
-		} else {
-			// Window shrank, unchanged, or initial load - round down
-			scale = (int) currentScale;
-		}
-		scale = Math.max(1, Math.min(scale, maxScale));
-
-		lastSnappedScale = scale;
-		int targetW = scale * nativeW;
-		int targetH = scale * nativeH;
-		if (targetW != windowWidth || targetH != windowHeight) {
-			isSnappingWindowSize = true;
-			glfwSetWindowSize(window, targetW, targetH);
-			isSnappingWindowSize = false;
-		}
 	}
 
 	static Integer computeIntegerScaleUpperBound(int nativeW, int nativeH, GLFWVidMode vidmode) {
@@ -2784,10 +2847,14 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			glfwPollEvents();
 			inputHandler.pollPhysicalGamepads();
 
-			// Snap window to nearest integer scale once resize drag ends (~200ms debounce)
-			if (resizePendingSnap && System.nanoTime() - lastResizeTimeNanos > 200_000_000L) {
-				resizePendingSnap = false;
-				snapWindowToIntegerScale();
+			boolean modeChanged = displayWindowController.apply(
+					com.openggf.configuration.DisplaySettingsTrial.forConfig(configService).windowMode());
+			if (modeChanged || !java.util.Objects.equals(displayScaling,
+					configService.getString(SonicConfiguration.DISPLAY_SCALING))) {
+				FramebufferDimensions framebuffer = readCurrentFramebufferDimensions();
+				windowWidth = framebuffer.width();
+				windowHeight = framebuffer.height();
+				reshape(windowWidth, windowHeight);
 			}
 
 			// Note: inputHandler.update() is called at the end of GameLoop.step()
@@ -2850,6 +2917,12 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void displayFrame() {
+		if (gameLoop.suspension.parked()) gameLoop.suspension.routeResume(masterTitleScreen);
+		// Complete between frames: no gameplay update may follow the captured picture, and
+		// the hub's dimensions/projection must be installed before this frame starts drawing.
+		if (gameLoop.suspension.preparing() && !suspendThumbnailRequested) {
+			gameLoop.suspension.completePreparedSuspend();
+		}
 		boolean performanceOverlayEnabled =
 				debugOverlayManager.isEnabled(DebugOverlayToggle.PERFORMANCE);
 		profiler.setEnabled(shouldEnablePerformanceProfiler(
@@ -2932,6 +3005,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		if (!userRecordingSceneSuppressed) {
 			applyDisplayShaderPhase(ShaderPhase.SCENE);
 		}
+		captureSuspendThumbnailIfRequested();
 		profiler.endSection("render");
 
 		// Render screen fade overlay via unified UI render pipeline
@@ -3587,24 +3661,25 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			return;
 		}
 		EscapeToMasterTitleController controller = gameLoop.getEscapeToMasterTitleController();
-		if (controller == null || !controller.visible()) {
+		if (controller == null || controller.presence() <= 0f) {
 			return;
 		}
 		if (postFadeRecorder != null) {
 			postFadeRecorder.recordPostFadeDiagnostic("EscapeToMasterTitlePrompt");
 		}
-		float scale = 1.0f;
-		int x = centeredDiagnosticX((int) projectionWidth, 4);
-		int y = 4;
-		traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
-		traceHudTextRenderer.drawShadowedText(controller.message(), x, y, DebugColor.WHITE, scale);
-		renderEscapeProgressBar(y + traceHudTextRenderer.lineHeight(scale) + 2, controller.progress());
+		menuOverlayTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
+		PixelFont font = menuOverlayTextRenderer.font();
+		font.beginMegaBatch();
+		MenuChrome.holdToast(font, (int) projectionWidth, escapeToastY(controller.presence()), "Esc",
+				controller.message(), (float) controller.progress(), controller.transitionStarted(),
+				controller.shownFrames());
+		font.endMegaBatch();
 	}
 
-	private void renderEscapeProgressBar(int y, double progress) {
-		for (GLCommand command : escapeProgressRectCommands((int) projectionWidth, y, progress)) {
-			command.execute(0, 0, 0, 0);
-		}
+	/** Slides the hold toast down from above the top edge to its resting row. */
+	static int escapeToastY(float presence) {
+		int hidden = -MenuChrome.HOLD_TOAST_H - 2;
+		return Math.round(hidden + (ESCAPE_TOAST_REST_Y - hidden) * Math.clamp(presence, 0f, 1f));
 	}
 
 	static int centeredDiagnosticOrigin(int logicalWidth) {
@@ -3613,48 +3688,6 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 	static int centeredDiagnosticX(int logicalWidth, int margin) {
 		return centeredDiagnosticOrigin(logicalWidth) + margin;
-	}
-
-	static List<GLCommand> escapeProgressRectCommands(int logicalWidth, int y, double progress) {
-		final int x = centeredDiagnosticX(logicalWidth, 4);
-		final int width = 144;
-		final int height = 6;
-		int fillWidth = (int) Math.round(Math.max(0.0, Math.min(1.0, progress)) * (width - 2));
-		List<GLCommand> commands = new ArrayList<>(6);
-
-		commands.add(escapeProgressRectCommand(x, y, x + width, y + height,
-				0.0f, 0.0f, 0.0f, 0.65f, GLCommand.BlendType.ONE_MINUS_SRC_ALPHA));
-		commands.add(escapeProgressRectCommand(x, y, x + width, y + 1,
-				1.0f, 1.0f, 1.0f, 1.0f, GLCommand.BlendType.SOLID));
-		commands.add(escapeProgressRectCommand(x, y + height - 1, x + width, y + height,
-				1.0f, 1.0f, 1.0f, 1.0f, GLCommand.BlendType.SOLID));
-		commands.add(escapeProgressRectCommand(x, y, x + 1, y + height,
-				1.0f, 1.0f, 1.0f, 1.0f, GLCommand.BlendType.SOLID));
-		commands.add(escapeProgressRectCommand(x + width - 1, y, x + width, y + height,
-				1.0f, 1.0f, 1.0f, 1.0f, GLCommand.BlendType.SOLID));
-		if (fillWidth > 0) {
-			commands.add(escapeProgressRectCommand(x + 1, y + 1, x + 1 + fillWidth, y + height - 1,
-					1.0f, 1.0f, 0.0f, 1.0f, GLCommand.BlendType.SOLID));
-		}
-		return commands;
-	}
-
-	private static GLCommand escapeProgressRectCommand(
-			int x1, int y1, int x2, int y2,
-			float red, float green, float blue, float alpha,
-			GLCommand.BlendType blendType) {
-		return new GLCommand(
-				GLCommand.CommandType.RECTI,
-				GL_TRIANGLE_FAN,
-				blendType,
-				red,
-				green,
-				blue,
-				alpha,
-				x1,
-				y1,
-				x2,
-				y2);
 	}
 
 	private boolean updateDisplayShaderInput() {

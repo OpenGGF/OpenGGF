@@ -40,7 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_A;
-import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_DPAD_DOWN;
+import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_DPAD_UP;
 import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_LAST;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_M;
@@ -91,7 +91,7 @@ class TestMasterTitleSecondaryActions {
 
         focusMods(screen, input);
         assertTrue(screen.isModsFocusedForTest());
-        assertFalse(screen.isGameSelected(), "down+accept must enter the row before handling accept");
+        assertFalse(screen.isGameSelected(), "moving to the tabs must not launch the selected game");
         assertEquals(0, opened.get());
 
         input.setLogicalOverride(LogicalInputSnapshot.neutral());
@@ -105,7 +105,7 @@ class TestMasterTitleSecondaryActions {
     }
 
     @Test
-    void masterTitleChangesGameWhilePreservingFocusedAction() {
+    void leftRightOnTheTabsMovesBetweenTabsWithoutChangingGame() {
         MasterTitleScreen screen = activeScreen(SonicConfigurationService.createStandalone(tempDir));
         InputHandler input = new InputHandler();
 
@@ -115,8 +115,8 @@ class TestMasterTitleSecondaryActions {
         input.setLogicalOverride(logical(AbstractPlayableSprite.INPUT_RIGHT, 0));
         screen.update(input);
 
-        assertEquals("s3k", screen.getSelectedGameId());
-        assertTrue(screen.isModsFocusedForTest());
+        assertEquals("s2", screen.getSelectedGameId());
+        assertFalse(screen.isModsFocusedForTest(), "right moved from Mods to Settings");
     }
 
     @Test
@@ -143,6 +143,40 @@ class TestMasterTitleSecondaryActions {
     }
 
     @Test
+    void gameShortcutFiltersManagerWhileHeaderTabShowsAllMods() {
+        MasterTitleScreen screen = activeScreen(SonicConfigurationService.createStandalone(tempDir));
+        screen.setSelectedIndexForTest(0);
+        ModManagerScreen manager = managerScreen(new RecordingFont());
+        screen.setModManagerScreenFactory(font -> new ModManagerScreenHost(manager));
+        InputHandler input = new InputHandler();
+        input.handleKeyEvent(GLFW_KEY_M, GLFW_PRESS);
+        screen.update(input);
+        // The selected card is Sonic 1; this fixture contains only a Sonic 2 mod.
+        assertTrue(manager.rows().isEmpty());
+
+        MasterTitleScreen header = activeScreen(SonicConfigurationService.createStandalone(tempDir));
+        header.setModManagerScreenFactory(font -> new ModManagerScreenHost(manager));
+        InputHandler headerInput = new InputHandler();
+        focusMods(header, headerInput);
+        headerInput.setLogicalOverride(logical(0, InputActionMasks.ACTION_A));
+        header.update(headerInput);
+        assertEquals(1, manager.rows().size());
+    }
+
+    @Test
+    void modsShortcutWithNoGameShowsFullCatalog() {
+        MasterTitleScreen screen = activeScreen(SonicConfigurationService.createStandalone(tempDir));
+        screen.replaceEntries(List.of());
+        ModManagerScreen manager = managerScreen(new RecordingFont());
+        screen.setModManagerScreenFactory(font -> new ModManagerScreenHost(manager));
+        InputHandler input = new InputHandler();
+        input.handleKeyEvent(GLFW_KEY_M, GLFW_PRESS);
+        screen.update(input);
+        assertTrue(screen.isModManagerOpenForTest());
+        assertEquals(1, manager.rows().size());
+    }
+
+    @Test
     void keyboardAndGamepadUseTheSameLogicalDownAndAcceptPath() {
         SonicConfigurationService keyboardConfig = SonicConfigurationService.createStandalone(tempDir.resolve("keyboard"));
         MasterTitleScreen keyboardScreen = activeScreen(keyboardConfig);
@@ -150,8 +184,7 @@ class TestMasterTitleSecondaryActions {
         keyboardScreen.setModManagerOpenHandler(keyboardOpened::incrementAndGet);
         InputHandler keyboard = new InputHandler(InputBindingFactory.supplier(keyboardConfig));
 
-        TestMasterTitleHub.press(keyboardScreen, org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
-        for (int i = 0; i < 3; i++) TestMasterTitleHub.press(keyboardScreen, org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
+        TestMasterTitleHub.press(keyboardScreen, org.lwjgl.glfw.GLFW.GLFW_KEY_UP);
         TestMasterTitleHub.press(keyboardScreen, org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
 
         SonicConfigurationService gamepadConfig = SonicConfigurationService.createStandalone(tempDir.resolve("gamepad"));
@@ -164,13 +197,9 @@ class TestMasterTitleSecondaryActions {
         FakeGamepadStateSource source = new FakeGamepadStateSource();
         InputHandler gamepad = new InputHandler(InputBindingFactory.supplier(gamepadConfig), source);
 
-        source.setButtons(GLFW_GAMEPAD_BUTTON_DPAD_DOWN);
+        source.setButtons(GLFW_GAMEPAD_BUTTON_DPAD_UP);
         gamepad.refreshLogicalSnapshot();
         gamepadScreen.update(gamepad);
-        for (int i = 0; i < 3; i++) {
-            source.setButtons(); gamepad.refreshLogicalSnapshot(); gamepadScreen.update(gamepad);
-            source.setButtons(GLFW_GAMEPAD_BUTTON_DPAD_DOWN); gamepad.refreshLogicalSnapshot(); gamepadScreen.update(gamepad);
-        }
         source.setButtons(); gamepad.refreshLogicalSnapshot(); gamepadScreen.update(gamepad);
         source.setButtons(GLFW_GAMEPAD_BUTTON_A); gamepad.refreshLogicalSnapshot(); gamepadScreen.update(gamepad);
 
@@ -262,13 +291,10 @@ class TestMasterTitleSecondaryActions {
         assertTrue(managerFont.drawn.stream().anyMatch(line -> line.startsWith("Save failed:")));
     }
 
+    /** Mods is the first engine-wide tab, one row above the game card. */
     private static void focusMods(MasterTitleScreen screen, InputHandler input) {
-        input.setLogicalOverride(logical(AbstractPlayableSprite.INPUT_DOWN, 0));
+        input.setLogicalOverride(logical(AbstractPlayableSprite.INPUT_UP, 0));
         screen.update(input);
-        for (int i = 0; i < 3; i++) {
-            input.setLogicalOverride(LogicalInputSnapshot.neutral()); screen.update(input);
-            input.setLogicalOverride(logical(AbstractPlayableSprite.INPUT_DOWN, 0)); screen.update(input);
-        }
         input.setLogicalOverride(LogicalInputSnapshot.neutral()); screen.update(input);
     }
 

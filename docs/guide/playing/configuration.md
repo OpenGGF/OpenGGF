@@ -37,6 +37,13 @@ debug:
 Do not change the derived logical pixel dimensions unless you understand the implications.
 They control the Mega Drive logical resolution, not the OS window size.
 
+## How do I change fullscreen mode?
+
+In **Settings > Display**, choose **Window mode**.
+When saving a changed **Window mode**, choose **Keep changes** within 15 seconds
+to save the settings. **Revert display**, Back or timeout restores the old mode
+and leaves your changes available to edit. Unconfirmed modes are not saved.
+
 ## How do I skip the title screen?
 
 To skip the master title screen (game picker) and boot directly into a game:
@@ -92,7 +99,8 @@ debug movement only.
 ## How do I enable cross-game features?
 
 Cross-game feature donation lets a donor game provide player sprites, spindash, and
-SFX while you play a different base game. For example, playing Sonic 1 with Sonic 2's
+SFX while you play a different base game. On the master title this is **Borrow from**
+in each game's **Game Setup**; the YAML below sets it for direct launches. For example, playing Sonic 1 with Sonic 2's
 sprites and spindash:
 
 ```yaml

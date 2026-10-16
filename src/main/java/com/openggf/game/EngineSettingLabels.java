@@ -13,7 +13,9 @@ final class EngineSettingLabels {
 
     static String label(SonicConfiguration key) {
         return switch (key) {
-            case DISPLAY_ASPECT -> "Screen shape";
+            case DISPLAY_ASPECT -> "Aspect ratio";
+            case DISPLAY_WINDOW_MODE -> "Window mode";
+            case DISPLAY_SCALING -> "Scaling";
             case DISPLAY_WINDOW_AUTOSIZE -> "Automatic window size";
             case SCREEN_WIDTH -> "Window width";
             case SCREEN_HEIGHT -> "Window height";
@@ -30,6 +32,8 @@ final class EngineSettingLabels {
             case DISPLAY_COLOR_PROFILE_TOGGLE_KEY -> "Colour profile shortcut";
             case WIDESCREEN_DEADZONE_MODE -> "Wide camera movement";
             case AUDIO_ENABLED -> "Music and sound effects";
+            case AUDIO_HUB_MUSIC_ENABLED -> "Hub music";
+            case AUDIO_HUB_MUSIC_VOLUME -> "Hub music volume";
             case AUDIO_FM_CORE -> "FM sound chip";
             case REGION -> "Audio region";
             case DAC_INTERPOLATE -> "Smooth sample playback";
@@ -46,14 +50,15 @@ final class EngineSettingLabels {
             case ROMS_DIRECTORY -> "ROM folder";
             case ROMS_PREFER_COMPOSITE -> "Prefer separate S3 + S&K images";
             case DEFAULT_ROM -> "Default game";
-            case MAIN_CHARACTER_CODE -> "Main character";
-            case SIDEKICK_CHARACTER_CODE -> "Companion character";
+            case MAIN_CHARACTER_CODE -> "Direct-launch character";
+            case SIDEKICK_CHARACTER_CODE -> "Direct-launch sidekick";
             case DATA_SELECT_EXTRA_PLAYER_COMBOS -> "Extra character teams";
             case MASTER_TITLE_SCREEN_ON_STARTUP -> "Start at the OpenGGF hub";
             case TITLE_SCREEN_ON_STARTUP -> "Show the original title screen";
             case SHOW_LEGAL_DISCLAIMER_ON_STARTUP -> "Show the startup disclaimer";
             case LEVEL_SELECT_ON_STARTUP -> "Start at level select";
-            case LIVE_REWIND_ENABLED -> "Enable live rewind";
+            case LIVE_REWIND_ENABLED -> "Rewind";
+            case DEBUG_VIEW_ENABLED -> "Debug tools";
             case LOAD_TIME_SIMULATION -> "ROM loading timing";
             case CONFIG_PRESERVE_EXPLICIT_DEFAULTS -> "Keep explicit default settings";
             case TEST_MODE_ENABLED -> "Start in trace replay mode";
@@ -63,6 +68,25 @@ final class EngineSettingLabels {
             case CAPTURE_FFMPEG_PASS1_ARGS -> "Encoder command arguments";
             case CAPTURE_FFMPEG_PASS2_ARGS -> "Audio mux command arguments";
             default -> contextualLabel(ConfigCatalog.meta(key));
+        };
+    }
+
+    /** Short player-facing help; Details retains the catalog's technical explanation. */
+    static String description(SonicConfiguration key) {
+        return switch (key) {
+            case DISPLAY_ASPECT -> "Choose the shape of the game screen.";
+            case DISPLAY_WINDOW_MODE -> "Choose windowed, borderless or exclusive fullscreen.";
+            case DISPLAY_SCALING -> "Use whole-number pixels or fit the screen while keeping its proportions.";
+            case DISPLAY_WINDOW_AUTOSIZE -> "Fit the window when the game screen shape changes.";
+            case SCREEN_WIDTH -> "Set the window width when automatic sizing is off.";
+            case SCREEN_HEIGHT -> "Set the window height when automatic sizing is off.";
+            case DISPLAY_SHADER_SELECTION -> "Choose a visual effect for the game screen.";
+            case DISPLAY_COLOR_PROFILE -> "Choose how the game's colours appear.";
+            case WIDESCREEN_DEADZONE_MODE -> "Choose how closely the camera follows you on wide screens.";
+            case AUDIO_ENABLED -> "Turn game music and sound effects on or off.";
+            case CONTROLLER_DEADZONE -> "Ignore small stick movements to prevent unwanted movement.";
+            case ROMS_DIRECTORY -> "Choose the folder containing your game ROM files.";
+            default -> ConfigCatalog.meta(key).description();
         };
     }
 
@@ -81,7 +105,9 @@ final class EngineSettingLabels {
         else if (section.startsWith("debug.trace")) prefix = "Trace: ";
         else if (section.startsWith("debug.crossGame")) prefix = "Cross-game: ";
         String words = words(meta.leaf());
-        if (meta.type() == ConfigType.KEY && !words.toLowerCase(Locale.ROOT).contains("key")) words += " shortcut";
+        // Player buttons read as "Player 1 Up"; engine hotkeys get "shortcut".
+        if (meta.type() == ConfigType.KEY && !section.startsWith("input.player")
+                && !words.toLowerCase(Locale.ROOT).contains("key")) words += " shortcut";
         return prefix + words;
     }
 

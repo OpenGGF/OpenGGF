@@ -698,44 +698,79 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   ring appearance in EHZ1 after the 0.7 branch rollover. Ring placement also
   sorts editor reloads correctly.
 
-- **Master title hub:** controller-first navigation uses left/right to change games
-  from either pane and up/down to enter and move through actions, with confirmation
-  on menu entry, distinct cancel feedback on back, and consistent sounds within
-  nested menu pages. Shared row geometry centers focus frames around their text. It keeps the existing
-  animated ROM logos, adds visible launch, time-attack, recordings, mods, settings,
-  advanced, and quit entries, and follows intentional input with keyboard/controller prompts.
-  Catalog-backed engine settings offer visible categories, onscreen value/path/key
-  editing, atomic Apply/Cancel, and amber non-default values. Shared text editors let
-  keyboard and controller users move focus between the field and onscreen keypad.
-  Launch options retain
-  white stock, amber changed, and red experimental status at native resolution.
-  Checkerboard pages retain full-size primary lettering and use an authored native
-  small font with lowercase descenders for metadata instead of fractional downscaling.
-  A wrapping game carousel shows the selected game, neighbors and catalog position,
-  supports arbitrary catalog sizes, and dims missing ROMs. Confirm from game selection
-  opens a full-width Browse Games list with availability and paging. The sky remains visible beside the action list,
-  unavailable games hide profile status, and missing-ROM hints have a dark backing.
-  Error pages retain accurate diagnostics until dismissed. Settings help shows
-  two lines at once; launch rows use the shared left-aligned focus style. Recordings, traces,
-  mods, time attack, room browsing, and lobbies have bounded pages and visible
-  actions; text entry works with keyboards or controllers without triggering global
-  shortcuts, and failed trace launches can be acknowledged and retried. Game logos render from
-  their original textures at window resolution, preserving detail as the window grows.
-  Held directions repeat consistently; controller prompts identify Xbox, PlayStation,
-  or physical button positions. Settings, chat and input errors have manual full-text
-  details. Numeric/address keypads and an asynchronous controller file browser share
-  the text editor; unsupported glyphs retain their Unicode identity without changing
-  stored values. Mods uses explicit Apply and draft discard, matching Settings.
-  Startup notices use crisp native fonts and controller navigation; native-mod notices
-  paginate all names. Room refreshes retain room identity and publish on the UI thread.
-  Checkerboard geometry is batched and cached, catalog scans run in cancellable
-  background tasks, unchanged ROM previews survive Apply, and settings presentation
-  caches follow draft revisions. The experimental editor exposes a controller command
-  palette for editing, saving, exporting and playtesting. **Import content** accepts
-  dropped editor projects, exported level folders or ZIPs, and mod/mutator packages;
-  authors review the detected content before opening or installing it. New mods
-  remain disabled until enabled through the mod manager. The level-editor guide
-  includes pictures of project creation, terrain libraries and focused composition.
+- **Master title hub:** a cartridge shelf of game cards shows each game's original
+  animated ROM logo, sliding between games, with missing ROMs named on their card.
+  Setup chips under the selected game say what Start will launch (players, aspect,
+  rewind, borrowed features, debug, mods); amber chips are set for that game only. Chips are
+  status only: they take no focus and are changed through Game Setup. Start, Game Setup and Recordings follow; Mods,
+  Settings, Extras, Advanced and Quit are engine-wide header tabs. Opening Mods from
+  a game filters the list to applicable mods; catalog entries use consistent compact
+  lettering regardless of name length. Footers show only
+  the keys that work on the focused row as key caps or controller buttons, with
+  status kept apart; a line under the buttons describes the focused item. Back
+  returns to the card before offering Quit, and Escape no longer also runs a hidden
+  hold-to-exit timer behind that dialog. In a game, the old "hold ESC 2sec" debug text
+  becomes a menu-styled toast that slides in at the top (an Esc key cap with *Hold to
+  return to games*), fills gold over a one-second hold and reads *Returning to games*
+  while the screen fades. Holding Escape in a Sonic 1, 2 or 3&K game now suspends it
+  instead of closing it: the game stays loaded behind a **Paused** card first on the
+  shelf, showing its last frame and where it was, with **Resume** and **End game**.
+  Resume returns to the same frame, camera and music position. Anything that would
+  replace the paused game (another game's Start, Recordings, Mods, Extras, trace
+  replays, editor projects, content import) asks first, defaulting to *Keep it paused*,
+  and Quit warns that the paused game will end. Settings and Game Setup stay
+  available, with a Game Setup button on the paused card: on resume the game takes
+  new rewind, debug tools, controls, wide camera movement, automatic window size and
+  capture settings, and, if paused in a level, a new aspect ratio (the camera, level,
+  parallax and background widths are refreshed in place; renders after a mid-level
+  switch match a native start pixel for pixel in GHZ, SBZ, EHZ, HTZ, CPZ, AIZ, HCZ and
+  MGZ). Settings and Game Setup rows say whether the paused game takes them; the rest
+  (characters, Borrow from, ROMs, sound, region, frame rate) apply to the next launch.
+  Fixed: the background renderer's per-column scroll buffer kept the width of the
+  first game played, so a later game at a wider aspect lost column scroll beyond it.
+  Recordings, traces, hosted runs, editor playtests, mod
+  scenes and standalone games keep the full return. In mod scenes and standalone mod
+  games a tap of Escape reaches the mod without the toast, which appears only after a
+  quarter-second hold. Mouse hover, click and wheel work across
+  the shelf, buttons and tabs, and in the Mod Manager's list, buttons and
+  prompts. Confirmation, cancel and error cues stay
+  host-owned with soft fades and moderate volume; compact text and shapes share
+  an atlas batch, and streamed quad buffers avoid GPU waits during drawing and
+  the launch flash to keep speaker playback fed. Start uses white lettering on
+  its gold button, and Time Attack arrives through Extras as a bundled mod.
+- **Game Setup:** replaces Launch Options with grouped Players, Screen and Extras
+  rows labelled THIS GAME ONLY. Rewind, debug tools and aspect ratio follow the
+  all-games Settings value ("Default (Off)") until a game overrides them, so turning
+  Rewind on in Settings now reaches every game that has not chosen otherwise;
+  existing boolean profiles migrate (`true` to on, the old stock `false` to default).
+  Cross-game donation is labelled **Borrow from**, and the S3K save screen's team is
+  shown rather than hidden; the focus stays on Borrow from when that swaps the
+  Character and Sidekick rows for Team. Backspace resets the focused row, and the description
+  box explains it.
+- **Settings:** categories become tabs (Display, Sound, Controls, Gameplay, Files,
+  Capture) labelled ALL GAMES, with eight full-width rows, a scrollbar, one type size
+  per page and a description box carrying the row's keys and default. Every non-debug
+  shortcut moves to Controls; debug, Discord, direct-launch characters and cross-game
+  keys move to Advanced > Advanced settings; launch profiles leave Settings for Game
+  Setup. Settings, Game Setup and Mods share one draft flow: the footer counts unsaved
+  changes and Back asks Save, Discard or Keep editing. Shared text editors keep
+  onscreen value/path/key editing, numeric/address keypads, an asynchronous
+  controller file browser and full-text details; unsupported glyphs retain their
+  Unicode identity without changing stored values. Recordings, traces, mods, room
+  browsing and lobbies keep bounded pages and visible actions. Startup notices use
+  crisp native fonts and controller navigation; catalog scans run in cancellable
+  background tasks and unchanged ROM previews survive saving. The experimental
+  editor exposes a controller command palette for editing, saving, exporting and
+  playtesting. Settings that only apply after a restart (frame rate, display shaders,
+  colour profile, the rewind VHS effect, Discord, start-up screens, test mode, window
+  size and turning sound off) carry an amber RESTART tag and say so in their help;
+  once one is saved with a new value, the Settings and game-shelf footers read
+  RESTART NEEDED until OpenGGF restarts, and Details for every setting says whether
+  it applies on save, at the next game start or after a restart. `MasterTitleCaptureTool` renders these menus offscreen for review. Advanced also offers
+  Editor Projects and Import Content for reviewing dropped editor projects, exported
+  level folders or ZIPs, and mod/mutator packages before opening or installing them.
+  Imported mods remain disabled until enabled through the mod manager. The
+  level-editor guide includes illustrated authoring examples.
 
 - **Widescreen presentation:** ordinary UI/HUD surfaces, titles, results, endings,
   diagnostics, all three special stages, scene effects, and trace-video capture.
@@ -1097,7 +1132,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   silenced before a song starts. The README now walks through the source in
   reading order with recipes.
 - `ggfmod run` of a patch mod now opens the mod's base game directly instead of the master title game picker (holding Escape still returns to it), so a creator's build-and-run loop lands in their mod; test mode keeps its configured startup. Slay the Robotnik's `play.sh` uses it to build and launch the example in one step.
-- The master title takes the mouse: hovering highlights actions and clicking opens them, the carousel's arrows, neighbouring names and the wheel change game, clicking the game's name browses the list, and right-click goes back; the game browser, quit prompt, tools and start choices answer clicks too. Pointer positions map through the letterboxed viewport with the same helper mod scenes use.
+- The master title takes the mouse: hovering highlights actions and clicking opens them, the carousel's arrows, neighbouring names and the wheel change game, clicking the game's name browses the list, and right-click goes back; the game browser, quit prompt, tools and start choices answer clicks too. Pointer positions map through the letterboxed viewport with the same helper mod scenes use. Game cards retain their ROM-decoded title artwork while idle, without switching to gameplay scenery.
 - The Sonic 1 title screen accepts an optional background override (`Sonic1TitleScreenManager.setBackgroundOverride`) that replaces its scrolling Green Hill plane and backdrop while keeping the emblem, sprites and fades.
 - Game modules can pin a display aspect for their session (`GameModule.requiredDisplayAspect()`, restored at the master title; trace test mode stays 4:3) and hide the level select (`GameModule.suppressesLevelSelect()`).
 - **Mod scenes:** a patch mod can register a full-screen startup scene (`ModContext.registerStartupScene`) that opens in place of the base game's title screen and can hand back to that title or to the master title. Scenes draw on a `SceneCanvas` (fills, images, built-in menu text, clipping; per-draw scale, mirror, tint and flash) with RGBA `SceneImage`s decoded from PNGs, built from pixels, or rasterised from the player's ROM: `SceneRomArt` reads sprite art (Nemesis, Kosinski, Kosinski Moduled or uncompressed, with or without either S3K DPLC layout) through the game's own mappings in any palette, plus character frames, their ROM animation scripts and Tails' tails. For Sonic 3 & Knuckles it also builds zone pictures without touching the running game: `SceneRomArt.zoneBackdrop` returns a zone's background as one opaque `SceneBackdrop` image with its parallax bands (speed and cloud drift taken from the zone's own deformation tables), and `SceneRomArt.levelOverview` returns a whole act as a box-averaged miniature of its foreground over its background, cropped to the playable area and sized to a height limit (Angel Island acts 1 and 2, Hydrocity act 1, Launch Base act 1 and Sky Sanctuary act 1, each in one documented presentation state; `SceneRomArt.hasZonePictures` says which). `SceneRomArt.titleCard` returns an act's stock title card as its four sliding elements, with the ROM's slide, hold and exit timings documented so a scene can play it. `SceneRomArt.levelStages` finds runs of an act's floor with clear headroom from its collision (a per-column floor profile in each `SceneLevelStage`), and `SceneRomArt.levelForeground` renders the foreground for any rectangle of the level at full size with transparent sky, so a scene can stand characters on the real level in front of the backdrop. Scenes read named pad buttons (`SceneButtons`, with the engine menus' key repeat) and keys (`SceneKeys`), with B as back as on the Genesis, decode raw ROM tiles (`SceneRomArt.tiles`), draw a parallax backdrop in one call (`SceneCanvas.drawBackdrop`), and also get merged keyboard/gamepad input, the mouse in game pixels (left and right button edges, whether it was the last input) with wheel notches, music and sound effects, and owner-scoped text storage under the save root. The mod validator accepts the static code javac itself generates for `assert` and for a `switch` over an enum. A mod can fix its session's display width without a game patch (`ModContext.requireDisplayWidth`), and scenes can offer tools a debug entry point (`DebuggableScene`). Every scene callback runs inside the mod fault boundary, and the mode reports itself as `GameMode.MOD_SCENE`.

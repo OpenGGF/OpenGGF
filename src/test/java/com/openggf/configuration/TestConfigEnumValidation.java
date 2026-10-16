@@ -14,6 +14,15 @@ class TestConfigEnumValidation {
     Path tempDir;
 
     @Test
+    void invalidDisplayPresentationValuesFallBackToSafeDefaults() throws Exception {
+        Files.writeString(tempDir.resolve("config.yaml"),
+                "display:\n  windowMode: UNKNOWN\n  scaling: STRETCH\n");
+        SonicConfigurationService svc = SonicConfigurationService.createStandalone(tempDir);
+        assertEquals("WINDOWED", svc.getString(SonicConfiguration.DISPLAY_WINDOW_MODE));
+        assertEquals("INTEGER", svc.getString(SonicConfiguration.DISPLAY_SCALING));
+    }
+
+    @Test
     void illegalEnumValueFallsBackToDefault() throws Exception {
         Files.writeString(tempDir.resolve("config.yaml"), "audio:\n  region: KLINGON\n");
         SonicConfigurationService svc = SonicConfigurationService.createStandalone(tempDir);

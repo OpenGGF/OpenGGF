@@ -43,16 +43,16 @@ class TestLaunchProfile {
     @Test
     void rowCyclingUsesPlanOrderAndWrapsBothDirections() {
         LaunchProfile s1 = LaunchProfile.stockFor(SONIC_1);
-        assertEquals(true, s1.withNext(REWIND, SONIC_1).rewind());
-        assertEquals(true, s1.withPrevious(REWIND, SONIC_1).rewind());
+        assertEquals(LaunchToggle.ON, s1.withNext(REWIND, SONIC_1).rewind(), "Default, On, Off, then Default");
+        assertEquals(LaunchToggle.OFF, s1.withPrevious(REWIND, SONIC_1).rewind());
 
         assertEquals("s2", s1.withNext(CROSS_GAME, SONIC_1).crossGameSource());
         assertEquals("s3k", s1.withPrevious(CROSS_GAME, SONIC_1).crossGameSource());
         assertEquals("s1", LaunchProfile.stockFor(SONIC_2).withNext(CROSS_GAME, SONIC_2).crossGameSource());
         assertEquals("s2", LaunchProfile.stockFor(SONIC_3K).withPrevious(CROSS_GAME, SONIC_3K).crossGameSource());
 
-        assertEquals(true, s1.withNext(DEBUG_TOOLS, SONIC_1).debugTools());
-        assertEquals(true, s1.withPrevious(DEBUG_TOOLS, SONIC_1).debugTools());
+        assertEquals(LaunchToggle.ON, s1.withNext(DEBUG_TOOLS, SONIC_1).debugTools());
+        assertEquals(LaunchToggle.OFF, s1.withPrevious(DEBUG_TOOLS, SONIC_1).debugTools());
 
         assertEquals("NATIVE_4_3", s1.withNext(WIDESCREEN, SONIC_1).aspect());
         assertEquals("SUPER_32_9", s1.withPrevious(WIDESCREEN, SONIC_1).aspect());

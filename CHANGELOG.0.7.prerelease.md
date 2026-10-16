@@ -11,6 +11,24 @@ Unreleased. The earlier development themes remain in
   creator colours, with live normal and underwater palette refresh. The palette
   backdrop and headless gameplay captures use the same saved setting.
 
+- **Main menu:** Holding Escape freezes a stock game and smoothly shrinks its
+  picture into the paused-game card; Resume expands it back to full size before
+  gameplay continues. Saved Game Setup preferences remain current on resume,
+  and returning live options to Default releases the earlier per-game overrides.
+  Display settings offer windowed, borderless and fullscreen modes, with integer
+  or aspect-preserving fit scaling. Maximising and resizing retain the requested
+  window bounds, including on high-DPI screens. Window-mode changes preview for
+  15 seconds and revert unless confirmed.
+  Settings show **RESTART** only for changed
+  values awaiting a restart, clearing it when restored to the running value.
+  The hub remembers the last game after navigation settles, with optional
+  quiet title music. Controller hints
+  follow the last device used. Compact Controls, Advanced and ROM browsing pages,
+  player binding groups, conflict warnings, confirmed tab resets and save summaries
+  make setup easier to review. Expert loading and rewind tuning live in Advanced;
+  first-run discovery can locate one ROM or scan a folder for all three games,
+  retaining partial discoveries at scan limits and explaining file-access errors.
+
 - **Second Strike hard-mode prototype:** Native brittle supports, earned zero-ring
   bonus invitations, finite badnik/boss patterns and original-ring retention keep
   player physics unchanged. Authored AIZ and first-five-zone campaign ingredients

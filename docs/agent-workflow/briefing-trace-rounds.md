@@ -71,6 +71,15 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+An IDE build can bypass the Maven worktree lock (2026-10-15, menu polish).
+Main compilation succeeded but test compilation lost `MasterTitleScreen` and
+other class files while IntelliJ's compiler was active. Closing the project
+removed the missing-class failures on the same stable sources. Queue admission
+coordinates participating Maven commands, not external IDE writers. Keep sources
+stable across compilation too: tests added after their production classes were
+read can otherwise see the prior API. Coordinate with the user before stopping
+an unrelated IDE build; a missing class during compilation is not a test failure.
+
 Offscreen editor captures can leak pointer projection into later tests
 (2026-10-14, editor guide pictures). `GraphicsManager.cleanup()` and its test
 reset retain viewport/projection overrides. A 426px capture followed by a
@@ -413,6 +422,12 @@ alone cost 5.3 ms due to repeated writes to an in-flight vertex buffer. Measure
 `ExampleModCapture --every 0` with no video never submits a frame; it cannot
 measure rendering throughput. Separate warm-up, update, submission and finish
 costs, and compare deterministic framebuffer output when changing uploads.
+The master-title follow-up to `2596fbc40` (2026-10-12) reproduced the same hazard:
+offline overlapping cue PCM was exact, while separate rectangle uploads made
+native hub drawing take about 27 ms and repeatedly starve the speaker queue.
+`MenuAudioProbeTool` checks the actual destination, nonzero cues and a physical
+speaker cursor, and reports warm-up underruns separately. PCM equality alone
+cannot certify continuous playback; slowing the cue envelope did not fix it.
 
 Test-boundary retained heap is not necessarily a leak (2026-10-07 test-throughput
 task): the positioned MHZ capture retained about 22 MiB after its callback while

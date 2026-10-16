@@ -174,6 +174,19 @@ public enum SonicConfiguration {
 	 * Whether to enable Audio (Music/SFX)
 	 */
 	AUDIO_ENABLED,
+    AUDIO_HUB_MUSIC_ENABLED,
+    AUDIO_HUB_MUSIC_VOLUME,
+    HUB_LAST_GAME,
+    // Legacy hub progress keys retained for configuration/API compatibility; ignored.
+    HUB_CONTINUE_S1_CHARACTER,
+    HUB_CONTINUE_S1_ZONE,
+    HUB_CONTINUE_S1_ACT,
+    HUB_CONTINUE_S2_CHARACTER,
+    HUB_CONTINUE_S2_ZONE,
+    HUB_CONTINUE_S2_ACT,
+    HUB_CONTINUE_S3K_CHARACTER,
+    HUB_CONTINUE_S3K_ZONE,
+    HUB_CONTINUE_S3K_ACT,
 
 	/**
 	 * Display-only color profile used when converting Mega Drive palette colors
@@ -195,6 +208,10 @@ public enum SonicConfiguration {
 	WIDESCREEN_DEADZONE_MODE,
 	/** When true, the display window is derived from DISPLAY_ASPECT at the 2x baseline; when false, SCREEN_WIDTH/SCREEN_HEIGHT are used verbatim. */
 	DISPLAY_WINDOW_AUTOSIZE,
+	/** Windowed, borderless desktop fullscreen, or exclusive fullscreen presentation. */
+	DISPLAY_WINDOW_MODE,
+	/** Square-pixel presentation: whole-number scaling or largest proportional fit. */
+	DISPLAY_SCALING,
 	/** Root directory scanned for user display shaders (relative to working dir). */
 	DISPLAY_SHADER_LIBRARY_ROOT,
 	/** Last selected display shader: "OFF" or a root-relative forward-slash path. */

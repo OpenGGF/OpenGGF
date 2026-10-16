@@ -25,34 +25,32 @@ class TestMasterTitleHubMessages {
     @TempDir Path directory;
     private final RecordingFont font = new RecordingFont();
 
-    @Test void unavailableStandaloneActionCannotLeakIntoTheNextMissingRomError() throws Exception {
+    @Test void unavailableStandaloneActionCannotLeakIntoRomLocation() throws Exception {
         var screen = screen(true);
         screen.setSelectedIndexForTest(3);
-        press(screen, GLFW_KEY_DOWN);
-        for (int i = 0; i < 2; i++) press(screen, GLFW_KEY_DOWN);
-        press(screen, GLFW_KEY_ENTER);
+        press(screen, GLFW_KEY_TAB); // Game Setup shortcut on a standalone game.
         for (int i = 0; i < 600; i++) screen.update(new InputHandler());
         draw(screen);
         assertTrue(font.has("ACTION UNAVAILABLE"), "error stays open until acknowledged");
-        assertTrue(font.allText().contains("Recordings is not available for standalone games"));
+        assertTrue(font.allText().contains("Game setup is not available for standalone games"));
         assertFalse(font.has("Check Files in Engine Settings"));
 
         press(screen, GLFW_KEY_ESCAPE);
         press(screen, GLFW_KEY_LEFT);
-        for (int i = 0; i < 3; i++) press(screen, GLFW_KEY_UP);
+        press(screen, GLFW_KEY_DOWN);
         press(screen, GLFW_KEY_ENTER);
         draw(screen);
-        assertTrue(font.has("ROM NOT FOUND"));
-        assertTrue(font.has("missing-s3k.gen"));
-        assertTrue(font.has("Check Files in Engine Settings"));
-        assertFalse(font.allText().contains("Recordings is not available for standalone games"));
+        assertTrue(screen.isRomLocatorOpenForTest());
+        assertTrue(font.has("LOCATE SONIC 3K"));
+        assertFalse(font.has("ROM NOT FOUND"));
+        assertFalse(font.allText().contains("is not available for standalone games"));
     }
 
     @ParameterizedTest @ValueSource(ints = {1, 2})
     void missingRomActionsExplainTheMissingFile(int action) throws Exception {
         var screen = screen(false);
-        press(screen, GLFW_KEY_DOWN);
-        for (int i = 0; i < action; i++) press(screen, GLFW_KEY_DOWN);
+        press(screen, GLFW_KEY_DOWN); // No chips without a ROM: straight to the actions.
+        for (int i = 0; i < action; i++) press(screen, GLFW_KEY_RIGHT);
         press(screen, GLFW_KEY_ENTER);
         draw(screen);
         assertTrue(font.has("ROM NOT FOUND"));
@@ -60,39 +58,42 @@ class TestMasterTitleHubMessages {
         assertFalse(font.has("ACTION UNAVAILABLE"));
     }
 
-    @Test void carouselShowsSelectionNeighborsAndMissingRomStatus() throws Exception {
+    @Test void shelfShowsTheSelectedGameNeighboursAndMissingRoms() throws Exception {
         var screen = screen(false);
         screen.setRomAvailableForTest(MasterTitleScreen.GameEntry.SONIC_2, true);
         for (int width : new int[] {320, 400, 528}) {
             screen.setViewportWidth(width);
             draw(screen);
-            assertTrue(font.has("Sonic 1"));
-            assertTrue(font.has("Sonic 2"));
-            assertTrue(font.has("Sonic 3K"));
-            assertTrue(font.red("Sonic 1") < font.red("Sonic 2"));
-            assertTrue(font.red("Sonic 3K") < font.red("Sonic 2"));
+            String name = "SONIC THE HEDGEHOG 2";
+            assertTrue(font.has(name));
+            assertEquals((width - name.length() * 9) / 2f, font.x(name), "the name is centred under the card");
+            assertTrue(font.has("ROM MISSING"), "neighbours without a ROM say so on their card");
+            assertTrue(font.has("SETTINGS"));
             assertTrue(font.has("ADVANCED"));
             assertTrue(font.has("QUIT"));
-            assertTrue(font.has("2 / 3"));
-            assertTrue(font.texts.stream().filter(t -> t.y == 181)
-                    .allMatch(t -> t.x >= 8 && t.x + t.text.length() * 6 <= width / 2));
+            assertTrue(font.has("START"));
+            assertTrue(font.has("GAME SETUP"));
+            assertTrue(font.has("RECORDINGS"));
         }
     }
 
-    @Test void profileStatusOnlyAppearsForAnAvailableGame() throws Exception {
+    @Test void setupChipsOnlyAppearForAnAvailableGame() throws Exception {
         var screen = screen(false);
         draw(screen);
-        assertTrue(font.has("ROM NOT FOUND"));
-        assertFalse(font.has("Stock profile"));
+        assertTrue(font.has("Choose your Sonic 2 ROM file to play"));
+        assertTrue(font.has("LOCATE ROM"));
+        assertFalse(font.has("SONIC & TAILS"));
         screen.setRomAvailableForTest(MasterTitleScreen.GameEntry.SONIC_2, true);
         draw(screen);
-        assertTrue(font.has("Stock profile"));
+        assertTrue(font.has("SONIC & TAILS"));
+        assertTrue(font.has("4:3"));
+        assertTrue(font.has("Game Setup changes players, screen and extras"));
         screen.setRomAvailableForTest(MasterTitleScreen.GameEntry.SONIC_2, false);
         draw(screen);
-        assertFalse(font.has("Stock profile"));
+        assertFalse(font.has("SONIC & TAILS"));
     }
 
-    @Test void enabledModNamesFollowTheSelectedGameBesideItsProfile() throws Exception {
+    @Test void enabledModsFollowTheSelectedGameAsAChip() throws Exception {
         var screen = screen(false);
         screen.setEnabledModsByGame(Map.of(
                 MasterTitleScreen.GameEntry.SONIC_1, List.of("Green Hill Remix"),
@@ -102,19 +103,24 @@ class TestMasterTitleHubMessages {
         screen.setRomAvailableForTest(MasterTitleScreen.GameEntry.SONIC_3K, true);
 
         draw(screen);
-        assertTrue(font.has("Mods 1/2: Tide Circuit"));
-        assertTrue(font.has("Stock profile"));
+        assertTrue(font.has("2 MODS"));
+        assertTrue(font.has("MODS 3"), "the Mods tab counts every enabled mod once");
         screen.setSelectedIndexForTest(0);
         draw(screen);
-        assertTrue(font.has("Mods: Green Hill Remix"));
+        assertTrue(font.has("1 MOD"));
         screen.setSelectedIndexForTest(2);
         draw(screen);
-        assertTrue(font.has("Mods: none"));
-        screen.setRomAvailableForTest(MasterTitleScreen.GameEntry.SONIC_3K, false);
+        assertFalse(font.allText().contains(" MOD"), "no mods chip when no mod changes the game");
+    }
+
+    @Test void optionalExtrasRetainBrandSpaceAtNativeWidth() throws Exception {
+        var screen = screen(false);
+        screen.setTitleEntries(List.of("Extra mode"), (games, index) -> { });
+        screen.setEnabledModsByGame(Map.of(MasterTitleScreen.GameEntry.SONIC_2, List.of("One", "Two")));
         draw(screen);
-        assertFalse(font.has("Mods: none"));
-        assertEquals("Mods 2/2: Music Pack",
-                MasterTitleScreen.enabledModsLine(List.of("Tide Circuit", "Music Pack"), 180));
+        assertTrue(screen.hubLayout().tabs().getFirst().x() >= 80);
+        assertTrue(font.has("MORE"));
+        assertTrue(font.has("EXTRAS"));
     }
 
     private MasterTitleScreen screen(boolean standalone) throws Exception {
@@ -151,6 +157,6 @@ class TestMasterTitleHubMessages {
                 float r, float g, float b, float a) { texts.add(new Text(text, x, y, r)); }
         boolean has(String text) { return texts.stream().anyMatch(t -> t.text.equals(text)); }
         String allText() { return texts.stream().map(Text::text).collect(java.util.stream.Collectors.joining()); }
-        float red(String text) { return texts.stream().filter(t -> t.text.equals(text)).findFirst().orElseThrow().red; }
+        float x(String text) { return texts.stream().filter(t -> t.text.equals(text)).findFirst().orElseThrow().x; }
     }
 }

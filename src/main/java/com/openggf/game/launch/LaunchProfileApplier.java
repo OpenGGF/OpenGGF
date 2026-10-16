@@ -29,7 +29,11 @@ public class LaunchProfileApplier {
     }
 
     private void applySanitized(LaunchProfile sanitized) {
-        configService.setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, sanitized.rewind());
+        // Default follows the all-games value: prepareExit cleared earlier session overrides.
+        if (!sanitized.rewind().isDefault()) {
+            configService.setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED,
+                    sanitized.rewind() == LaunchToggle.ON);
+        }
         if ("off".equals(sanitized.crossGameSource())) {
             configService.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
             configService.setSessionOverride(SonicConfiguration.CROSS_GAME_SOURCE,
@@ -38,7 +42,10 @@ public class LaunchProfileApplier {
             configService.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, true);
             configService.setSessionOverride(SonicConfiguration.CROSS_GAME_SOURCE, sanitized.crossGameSource());
         }
-        configService.setSessionOverride(SonicConfiguration.DEBUG_VIEW_ENABLED, sanitized.debugTools());
+        if (!sanitized.debugTools().isDefault()) {
+            configService.setSessionOverride(SonicConfiguration.DEBUG_VIEW_ENABLED,
+                    sanitized.debugTools() == LaunchToggle.ON);
+        }
         if (!sanitized.usesS3kDataSelectCharacters()) {
             configService.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, sanitized.mainCharacter());
             configService.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE,

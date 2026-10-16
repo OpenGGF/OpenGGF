@@ -64,7 +64,7 @@ spare lives and a zero score. **EXIT** fades out to the Sonic 1 title screen, wh
 picker can start another course. Press up/down to choose and **SPACE** (player 1 button A)
 to confirm. Dying with no spare lives shows the mod's own GAME OVER text over a
 **RESTART**/**EXIT** menu. During a run, a tap of **Escape** (or the gamepad Back button)
-also leaves for the Sonic 1 title; holding Escape for two seconds still reaches the
+also leaves for the Sonic 1 title; holding Escape still reaches the
 engine's own title as everywhere else.
 
 Every zone keeps a **top-10 leaderboard**, saved in owner-private `saves/mods/infinite-sonic/leaderboard.txt`

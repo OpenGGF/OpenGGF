@@ -9,9 +9,9 @@ import java.util.Locale;
 import java.util.Objects;
 
 public record LaunchProfile(
-        boolean rewind,
+        LaunchToggle rewind,
         String crossGameSource,
-        boolean debugTools,
+        LaunchToggle debugTools,
         String aspect,
         String mainCharacter,
         String sidekick) {
@@ -33,10 +33,19 @@ public record LaunchProfile(
     };
 
     public LaunchProfile {
+        rewind = rewind == null ? LaunchToggle.DEFAULT : rewind;
+        debugTools = debugTools == null ? LaunchToggle.DEFAULT : debugTools;
         crossGameSource = normalizeLower(crossGameSource, OFF);
         aspect = normalizeAspect(aspect);
         mainCharacter = normalizeLower(mainCharacter, SONIC);
         sidekick = normalizeLower(sidekick, NONE);
+    }
+
+    /** Legacy shape: {@code true} overrides the switch on; {@code false} follows the all-games value. */
+    public LaunchProfile(boolean rewind, String crossGameSource, boolean debugTools,
+                         String aspect, String mainCharacter, String sidekick) {
+        this(LaunchToggle.fromLegacy(rewind), crossGameSource, LaunchToggle.fromLegacy(debugTools),
+                aspect, mainCharacter, sidekick);
     }
 
     public enum Row {
@@ -51,7 +60,7 @@ public record LaunchProfile(
     public static LaunchProfile stockFor(MasterTitleScreen.GameEntry entry) {
         Objects.requireNonNull(entry, "entry");
         String stockSidekick = entry == MasterTitleScreen.GameEntry.SONIC_1 ? NONE : TAILS;
-        return new LaunchProfile(false, OFF, false, GLOBAL, SONIC, stockSidekick);
+        return new LaunchProfile(LaunchToggle.DEFAULT, OFF, LaunchToggle.DEFAULT, GLOBAL, SONIC, stockSidekick);
     }
 
     public int enabledCount(MasterTitleScreen.GameEntry entry) {
@@ -131,9 +140,9 @@ public record LaunchProfile(
     boolean isNonStandard(Row row, MasterTitleScreen.GameEntry entry,
             List<String> patchBackedMainCharacters) {
         return switch (row) {
-            case REWIND -> rewind;
+            case REWIND -> rewind == LaunchToggle.ON;
             case CROSS_GAME -> !OFF.equals(crossGameSource);
-            case DEBUG_TOOLS -> debugTools;
+            case DEBUG_TOOLS -> debugTools == LaunchToggle.ON;
             case WIDESCREEN -> !GLOBAL.equals(aspect) && !WidescreenAspect.NATIVE_4_3.name().equals(aspect);
             case MAIN_CHARACTER, SIDEKICK ->
                     !isCharacterPairStandard(entry, patchBackedMainCharacters);
@@ -170,9 +179,9 @@ public record LaunchProfile(
                         com.openggf.game.PlayableCharacterRegistry registry) {
         Objects.requireNonNull(registry, "registry");
         return switch (row) {
-            case REWIND -> onOff(rewind);
+            case REWIND -> toggleLabel(rewind);
             case CROSS_GAME -> gameLabel(crossGameSource);
-            case DEBUG_TOOLS -> onOff(debugTools);
+            case DEBUG_TOOLS -> toggleLabel(debugTools);
             case WIDESCREEN -> aspectLabel(aspect);
             case MAIN_CHARACTER -> characterLabel(mainCharacter, registry);
             case SIDEKICK -> characterLabel(sidekick, registry);
@@ -199,10 +208,12 @@ public record LaunchProfile(
         List<String> patchCharacters = List.copyOf(
                 Objects.requireNonNull(patchBackedMainCharacters, "patchBackedMainCharacters"));
         return switch (row) {
-            case REWIND -> new LaunchProfile(!rewind, crossGameSource, debugTools, aspect, mainCharacter, sidekick);
+            case REWIND -> new LaunchProfile(rewind.step(forward), crossGameSource, debugTools, aspect,
+                    mainCharacter, sidekick);
             case CROSS_GAME -> new LaunchProfile(rewind, cycle(crossGameValues(entry), crossGameSource, forward),
                     debugTools, aspect, mainCharacter, sidekick).sanitizedFor(entry, patchCharacters);
-            case DEBUG_TOOLS -> new LaunchProfile(rewind, crossGameSource, !debugTools, aspect, mainCharacter, sidekick);
+            case DEBUG_TOOLS -> new LaunchProfile(rewind, crossGameSource, debugTools.step(forward), aspect,
+                    mainCharacter, sidekick);
             case WIDESCREEN -> new LaunchProfile(rewind, crossGameSource, debugTools,
                     cycle(List.of(ASPECT_VALUES), aspect, forward), mainCharacter, sidekick);
             case MAIN_CHARACTER -> {
@@ -337,8 +348,12 @@ public record LaunchProfile(
         return GLOBAL;
     }
 
-    private static String onOff(boolean enabled) {
-        return enabled ? "On" : "Off";
+    private static String toggleLabel(LaunchToggle toggle) {
+        return switch (toggle) {
+            case DEFAULT -> "Default";
+            case ON -> "On";
+            case OFF -> "Off";
+        };
     }
 
     private static String gameLabel(String gameId) {

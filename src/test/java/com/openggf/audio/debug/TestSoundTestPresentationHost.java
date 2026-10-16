@@ -319,6 +319,45 @@ class TestSoundTestPresentationHost {
         }
     }
 
+    @Test
+    void decoratedDeviceIsServicedAfterPcmOnPresentationOwner() {
+        CountingSink sink = new CountingSink();
+        AudioManager manager = AudioManager.createStandalonePresentation("s3k", new Sonic3kAudioProfile(),
+                SonicConfigurationService.createStandalone(), null, sink,
+                new SmpsCoordFlagHandlerOwner(new SmpsCoordFlagRuntimeState()));
+        AtomicInteger pumps = new AtomicInteger();
+        Thread owner = Thread.currentThread();
+        try (StandaloneAudioPresentationHost host = StandaloneAudioPresentationHost.fromManagerForTesting(
+                "s3k", manager, () -> {
+                    assertSame(owner, Thread.currentThread());
+                    pumps.incrementAndGet();
+                })) {
+            host.presentFrame();
+            host.presentFrame();
+            assertEquals(2, pumps.get(), "A decorated speaker still receives every device service tick");
+        }
+    }
+
+    @Test
+    void nativeTrackEndSignalsCompletionAndReplayReactivatesTheTheme() {
+        HostFixture fixture = fixture();
+        try (StandaloneAudioPresentationHost host = fixture.host()) {
+            byte[] bytes = persistentS3kData(2);
+            bytes[0x101] = 4; // Four native duration units, then the ROM track-end flag.
+            bytes[0x102] = (byte) 0xF2;
+            Sonic3kSmpsData music = new Sonic3kSmpsData(bytes, 0);
+            music.setId(1);
+            host.playMusic(music, fixture.dac());
+            host.presentFrame();
+            assertFalse(host.isMusicComplete(), "A started native track remains active");
+            for (int guard = 0; guard < 120 && !host.isMusicComplete(); guard++) host.presentFrame();
+            assertTrue(host.isMusicComplete(), "The track's end flag, rather than a guessed duration, signals replay");
+            host.playMusic(music, fixture.dac());
+            host.presentFrame();
+            assertFalse(host.isMusicComplete(), "Requeued ROM data starts a fresh native track");
+        }
+    }
+
     private static HostFixture fixture() {
         CountingSink sink = new CountingSink();
         SmpsCoordFlagHandlerOwner owner = new SmpsCoordFlagHandlerOwner(

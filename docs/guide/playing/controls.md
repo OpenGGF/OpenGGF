@@ -56,11 +56,15 @@ The startup disclaimer, master title, and S3K-style data select accept
 controller input. On data select screens, east/C is Back; A, B, and Start
 confirm.
 
-The master title also takes the mouse: point at an action to highlight it and click to
-open it, click the carousel's arrows (or roll the wheel) to change game, click the game's
-name to browse the list, and right-click to go back. The game browser, quit prompt, tools
-and start choices answer clicks the same way. Settings, Launch Options and the Mod Manager
-remain keyboard and controller screens.
+The master title also takes the mouse: point at a tab or button to highlight it
+and click to open it (the setup chips are status only and do not respond), click a side card (or roll the wheel) to change game, click the
+centre card to start it, click the page dots to browse the list, and right-click to go
+back. The game browser, quit prompt, tools and start choices answer clicks the same way.
+Settings and Game Setup accept hover and click on their rows, tabs and prompt buttons.
+In the Mod Manager, hover a mod or button to highlight it and click to toggle the mod or
+open the button; the wheel moves through the list (or scrolls a details page), clicking a
+details or notices page closes it, a second click confirms a pending change, and
+right-click goes back.
 
 Additional gamepad bindings are hardcoded (not configurable) on the primary
 connected pad:
@@ -199,6 +203,41 @@ In the master-title game pane, Confirm opens Browse Games; Up/Down enters the ac
 list. Settings and text editors expose full manually scrollable Details with F1 or
 the north controller button. Numeric values use a numeric keypad; Up from a path
 field opens the file browser. Mods requires explicit Apply to save drafts.
+
+During a game, tap **Escape** to see the *Hold to return to games* toast at the top
+of the screen; hold it for one second to return to the master title. At the
+master title Escape is Back: it returns to the game card, then opens **Quit OpenGGF?**.
+
+Sonic 1, Sonic 2 and Sonic 3 & Knuckles games are paused rather than closed: the game
+freezes and smoothly shrinks into a **Paused** card, showing the moment you left,
+first on the game shelf.
+**Resume** (or Enter on the card) zooms the picture back to full size, then carries
+on from exactly that moment, music included;
+**End game** closes it. Starting another game, watching a recording, changing mods or
+opening an extra, trace replays, editor projects or content import asks before ending
+the paused game, and **Keep it paused** is the default.
+
+Settings and Game Setup stay open while a game is paused, and the paused card has its
+own **Game Setup** button. When you resume, the game takes your changes to **rewind**,
+**debug tools**, **controls** (key bindings and controller), **wide camera movement**,
+the window's **automatic size** and **capture** settings, and, if you paused in a level,
+the **aspect ratio**. Everything else (characters, Borrow from, ROMs, sound, region,
+frame rate) is part of how the game was started and applies the next time you start
+it. Each row's description says which applies: *Your paused game takes this when it
+resumes* or *Applies when you next start a game*. Rewind switched on mid-game records
+from the moment you resume, so you can rewind back to there but not further.
+Settings show an amber **RESTART** badge only beside values changed from what
+OpenGGF is running with. Saved changes keep their badge until you restart OpenGGF
+or restore the running value. Game Setup changes take effect on resume or the next
+game, as described in each row.
+
+Recordings, trace replays,
+editor playtests, mod scenes and standalone mod games still close when you hold Escape.
+
+Mod scenes and standalone mod games often use a tap of Escape themselves (for
+example, to open their own pause menu). While one is running, a tap reaches the mod
+and shows no toast; the toast appears once Escape has been held for a quarter of a
+second, and the full one-second hold still returns to the master title.
 
 The experimental level editor opens its command palette with F1 or the north
 controller button. Directions choose a command, Confirm executes it, and Back
