@@ -139,6 +139,8 @@ waterfall/HCZ. Successor75430 changes the earlier terrain-edge response and dies
 16637 without requesting a roll. Isolated29024 preserves29449's exact prefatal
 pads, admits native Down-only roll and survives four inputs; its conservative
 ahead-floor guard stops before accepting the clearance endpoint.
+Post-clear81356 admits an ordinary rolling jump, then stops at negative native
+velocity on a right-wall landing; alive/nohurt is not a qualified recovery.
 ICZ28579 qualifies the declared zero-ring neutral WARNED fall/landing and84-update
 registered replay. Successor97772 lands on the stone, retreats unharmed to real
 terrain and matches73 registered return/replay updates. Its STOCK arm follows
@@ -1792,6 +1794,27 @@ clearance, slope recovery, replay or AIZ/HCZ route. No native field, collision,
 timer, resource or physics change follows. Further source work must distinguish
 current native support from the future, direction-specific floor probe.
 
+Post-clear81356 uses source dde0105f/class93ab0227/runnerece97050 on the same42171
+pair. Admission is immediate (zero queue),06:26:21.536Z to child termination
+06:26:27.524Z; full13,365-file source/index remains unchanged and the group is
+reaped. All16,522 prefix rows compare literally across25 native columns against
+29024. In this matched reproduction the ahead world-DOWN query is found/-2 at
+angle222, outside the former declared author band; current actual feet/angle232
+still represent native ground. This observes the repeated query, not the missing
+29024 log value or a native attachment defect.
+
+One Right+A at16522 admits native rolling jump/air with9x19 radii and velocity
+63/-1118, followed only by Right. The fixed response stops after60 inputs at16581,
+8726/1350, zero rings/alive/nohurt, groundModeRIGHTWALL/angle222/gSpeed-432.
+The last foot scan is still DOWN, from the landing pass before that new mode.
+The declared negative-velocity guard rejects the endpoint before its support
+checks; no safe landing/recovery or full clearance is certified. CSV is read
+before native prefix/jump/terminal PNGs, and the inspected raw log is consumed.
+Rolling-jump admission is positive ability evidence; the continuing route and
+the momentum/mode/sensor-phase interpretation remain source questions, not grounds
+to change physics or tune a test to green. No search, restore or state write is
+used. The complete16,582 admitted input rows remain external.
+
 ### HCZ oxygen authority — source-only prerequisite
 
 The current actual creator converts all22 HCZ1 and21 HCZ2 ordinary monitors to
@@ -1811,3 +1834,16 @@ must observe both current feet/native solids, real water/control/art and maker
 identity before attempting a natural refill; no injected bubble, forced breath,
 camera reset or economics change is proposed. All-character/act air sufficiency,
 surface exits, bubble-monitor removal balance and cold HCZ gates remain open.
+
+Terrain-only33051 on exact42171/cb2 is terminal0: zero queue, actual child0.887s
+at06:24:48.874Z. From the ordinary HCZ1 native start it takes no gameplay/render
+steps or position seed, and performs37,700 remote plus4 start-foot queries.
+Both explicit foreground paths show a flat083F surface across both radius9 feet
+for centreX1280..12E6 (query0830 gives+15,0840 gives-1). This derives candidate
+standing082C from radius19; it does not prove body clearance or current support.
+Original114 is authenticated and unbound, remote/live count0 as expected; the
+actual start still has water0500, BUBBLER art ready and empty native queues.
+All51 registered keys remain semantically equal and scalar/clock observations
+are unchanged before/after; the group is reaped and raw log consumed. Actual
+positioned streaming/water0680, ordinary supported entry, mature-bubble refill,
+breathing lock and escape are still unexecuted.

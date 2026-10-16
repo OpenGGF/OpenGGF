@@ -5338,6 +5338,14 @@ Compare actual pad masks before claiming identical-input control coverage.
 
 ## Historical interaction pointers do not prove current support
 
+Native terrain attachment uses two current, rotated foot results. An arbitrary
+future point queried world-DOWN is not a prediction of the next native state on
+a curve (AIZ29024/81356). Native angle rounding is asymmetric and includes exact
+`$20/$E0` ground boundaries; a narrower author guard is not a ROM rule. Landing
+can also change groundMode after the current scans, so the last sensor direction
+can still describe the preceding mode. Preserve the observation phase instead of
+forcing a rescan or declaring native support invalid from a newer mode alone.
+
 S3K can clear Status_OnObj while preserving the last interact address. An input
 author must use current OnObject and the manager's actual rider/standing relation
 before deciding that a platform supports the player; a non-null historical Java

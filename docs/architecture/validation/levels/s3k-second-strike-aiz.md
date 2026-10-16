@@ -82,4 +82,7 @@ trajectory does not test that proposal. Isolated29024 replays the exact16518
 prefatal R4 pads, admits native Down-only rolling7x14 and survives four inputs
 past the old death. Its ahead-floor proof guard then stops before accepting the
 endpoint; local ability is observed, complete clearance/recovery remains unqualified. Waterfall,
-second results, HCZ and all four complete cold-route axes remain open.
+second results, HCZ and all four complete cold-route axes remain open. Post-clear
+81356 reproduces all16,522 prior inputs and admits one ordinary rolling jump,
+then stops16581 at negative native velocity on a right-wall landing. All60 response
+inputs retain zero rings/nohurt/alive; no supported recovery endpoint is accepted.
