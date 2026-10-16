@@ -60,7 +60,7 @@ public class Sonic3kBonusStageCoordinator extends AbstractBonusStageCoordinator
     }
 
     @Override protected Object captureBonusRuntimeState() {
-        return slotRuntime == null ? null : slotRuntime.captureRuntimeRewindState();
+        return slotRuntime == null ? null : slotRuntime.captureSlotRewindState();
     }
     @Override protected void restoreBonusRuntimeState(Object state) {
         if (state == null) {
@@ -68,7 +68,7 @@ public class Sonic3kBonusStageCoordinator extends AbstractBonusStageCoordinator
                 throw new IllegalStateException("Slot snapshot predates completed runtime assembly");
         } else {
             if (slotRuntime == null) throw new IllegalStateException("Slot runtime has retired");
-            slotRuntime.restoreRuntimeRewindState(state);
+            slotRuntime.restoreSlotRewindState(state);
         }
     }
     @Override protected void resetBonusRuntimeStateForMissingSnapshot() {

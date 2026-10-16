@@ -330,7 +330,7 @@ public final class S3kSlotBonusStageRuntime {
         RuntimeRewindState { points=points==null?null:points.clone(); }
         @Override public short[] points() { return points==null?null:points.clone(); }
     }
-    public Object captureRuntimeRewindState() {
+    public Object captureSlotRewindState() {
         if (!initialized) return null;
         var identities=bootstrapGameplayMode.getLevelManager().getObjectManager()
                 .captureIdentityContext().requireIdentityTable();
@@ -338,9 +338,9 @@ public final class S3kSlotBonusStageRuntime {
         for (var reward:slotRingRewards) rings.add(requireRuntimeObjectId(identities,reward));
         var spikes=new java.util.ArrayList<com.openggf.game.rewind.identity.ObjectRefId>();
         for (var reward:slotSpikeRewards) spikes.add(requireRuntimeObjectId(identities,reward));
-        return new RuntimeRewindState(slotStageState.captureRuntimeRewindState(),
-                slotRenderBuffers.captureRuntimeRewindState(),slotPlayerRuntime.captureRuntimeRewindState(),
-                com.openggf.game.rewind.schema.CompactFieldCapturer.capture(slotLayoutRenderer),layoutAnimator.captureRuntimeRewindState(),
+        return new RuntimeRewindState(slotStageState.captureSlotRewindState(),
+                slotRenderBuffers.captureSlotRewindState(),slotPlayerRuntime.captureSlotRewindState(),
+                com.openggf.game.rewind.schema.CompactFieldCapturer.capture(slotLayoutRenderer),layoutAnimator.captureSlotRewindState(),
                 exitTriggered,continueAwarded,goalFadeRollOverrideApplied,lastFrameCounter,
                 lastIterationVIntRunCount,pointGrid,slotRenderBuffers.visibleFrameIndex(visibleCells),
                 slotArt==null?null:slotArt.capture(),requireRuntimeObjectId(identities,slotCage),java.util.List.copyOf(rings),java.util.List.copyOf(spikes));
@@ -353,14 +353,14 @@ public final class S3kSlotBonusStageRuntime {
         if (id==null) throw new IllegalStateException("Slot runtime retains an unregistered object");
         return id;
     }
-    public void restoreRuntimeRewindState(Object captured) {
+    public void restoreSlotRewindState(Object captured) {
         if (!initialized || !(captured instanceof RuntimeRewindState state))
             throw new IllegalArgumentException("Slot runtime requires its completed captured state");
-        slotStageState.restoreRuntimeRewindState(state.stage());
-        slotRenderBuffers.restoreRuntimeRewindState(state.buffers());
-        slotPlayerRuntime.restoreRuntimeRewindState(state.player(),slotStageController);
+        slotStageState.restoreSlotRewindState(state.stage());
+        slotRenderBuffers.restoreSlotRewindState(state.buffers());
+        slotPlayerRuntime.restoreSlotRewindState(state.player(),slotStageController);
         com.openggf.game.rewind.schema.CompactFieldCapturer.restore(slotLayoutRenderer,state.layoutRenderer());
-        layoutAnimator.restoreRuntimeRewindState(state.legacyAnimations());
+        layoutAnimator.restoreSlotRewindState(state.legacyAnimations());
         exitTriggered=state.exitTriggered(); continueAwarded=state.continueAwarded();
         goalFadeRollOverrideApplied=state.goalRollOverride();
         lastFrameCounter=state.lastFrame(); lastIterationVIntRunCount=state.lastVInt();

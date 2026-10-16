@@ -87,12 +87,12 @@ public final class S3kSlotLayoutAnimator {
         return false; // all slots full
     }
 
-    java.util.List<com.openggf.game.rewind.schema.RewindObjectStateBlob> captureRuntimeRewindState() {
+    java.util.List<com.openggf.game.rewind.schema.RewindObjectStateBlob> captureSlotRewindState() {
         var result=new java.util.ArrayList<com.openggf.game.rewind.schema.RewindObjectStateBlob>(slots.length);
         for (var slot:slots) result.add(com.openggf.game.rewind.schema.CompactFieldCapturer.capture(slot));
         return java.util.List.copyOf(result);
     }
-    void restoreRuntimeRewindState(java.util.List<com.openggf.game.rewind.schema.RewindObjectStateBlob> states) {
+    void restoreSlotRewindState(java.util.List<com.openggf.game.rewind.schema.RewindObjectStateBlob> states) {
         if (states.size()!=slots.length) throw new IllegalArgumentException("Slot animation pool size changed");
         for (int i=0;i<slots.length;i++) com.openggf.game.rewind.schema.CompactFieldCapturer.restore(slots[i],states.get(i));
     }

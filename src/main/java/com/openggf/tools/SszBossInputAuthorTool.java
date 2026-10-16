@@ -143,10 +143,10 @@ public final class SszBossInputAuthorTool {
     /**
      * Rolling search from the session's current state: score each policy over {@link #HORIZON}
      * restored inputs, commit {@link #COMMIT_INPUTS} of the best, repeat until defeat, death or
-     * {@code end}. Restores never leave the current world. {@code sink} receives each committed pad.
+     * {@code end}. Restores never leave the current world. {@code committedPads} receives each committed pad.
      */
     static Result authorEncounter(GameplayCaptureSession session, Encounter encounter, int frame, int end,
-                                  Bk2FrameInput previous, java.util.function.Consumer<Bk2FrameInput> sink,
+                                  Bk2FrameInput previous, java.util.function.Consumer<Bk2FrameInput> committedPads,
                                   StringBuilder rows, IoAction checkpoint) throws Exception {
         var level = GameServices.level().getCurrentLevel();
         while (frame < end && !session.player().getDead() && !defeated(encounter)) {
@@ -185,7 +185,7 @@ public final class SszBossInputAuthorTool {
                 session.step(previous);
                 session.renderFrame();
                 requireSameLevel(level);
-                sink.accept(previous);
+                committedPads.accept(previous);
                 rows.append(session.stateLine(frame++, previous)).append('\n');
                 if (session.player().getDead() || defeated(encounter)) break;
             }
