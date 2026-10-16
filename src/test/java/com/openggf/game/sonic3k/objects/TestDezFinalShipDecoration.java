@@ -48,6 +48,10 @@ class TestDezFinalShipDecoration {
         var timing=new com.openggf.game.timing.HardwareTimingService();
         var coordinator=new com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator(timing);
         doReturn(timing).when(services).hardwareTiming(); doReturn(coordinator).when(services).runtimeArtCoordinator();
+        // One Process_Kos_Module_Queue owner per physical FIFO: the session queue is
+        // already bound to the session coordinator, so this isolated timing bank
+        // gets its own physical queue (as the DEZ boss resource tests do).
+        doReturn(new com.openggf.level.resources.KosinskiModuleQueue()).when(services).kosinskiModuleQueue();
         head.setServices(services); head.update(0,null); assertEquals(1,state.art().pendingCount());
         head.update(1,null); assertEquals(1,head.frame);
         for(int i=2;i<=16;i++) { head.update(i,null); assertEquals(1,head.frame); }
