@@ -135,11 +135,17 @@ as `f813672d0599f9debc0cf9a32148999fb3cc61a6`.
 Focus42171 passes8 cases without skips; Astra R1 has no blocker; actual89496
 reached-prefix restore and64-input replay pass on the new42171 artifact pair.
 Fresh input-only29449 clears the former16262 death, then dies16518 before
-waterfall/HCZ. Its source-derived Down-only roll proposal is unexecuted.
+waterfall/HCZ. Successor75430 changes the earlier terrain-edge response and dies
+16637 without requesting a roll. Isolated29024 preserves29449's exact prefatal
+pads, admits native Down-only roll and survives four inputs; its conservative
+ahead-floor guard stops before accepting the clearance endpoint.
 ICZ28579 qualifies the declared zero-ring neutral WARNED fall/landing and84-update
-registered replay against a separate STOCK arm. It does not qualify an approach,
-under-body shelter, readable cue or harder route. No full AIZ-to-HCZ axis or
-M4–M6 acceptance is closed. The following paragraphs retain foundation history.
+registered replay. Successor97772 lands on the stone, retreats unharmed to real
+terrain and matches73 registered return/replay updates. Its STOCK arm follows
+the same input policy, with identical pads through147, then dies149. Neither
+qualifies under-body/lower-route shelter, harder gameplay or a cold route. No full
+AIZ-to-HCZ axis or M4–M6 acceptance is closed. The following paragraphs retain
+foundation history.
 
 At the earlier foundation checkpoint, root private branch
 `feature/ai-second-strike-campaign-delivery` held HEAD
@@ -1664,6 +1670,56 @@ existing LWJGL/JNI warnings and deterministic estimates for two unmeasured Kos j
 they provide no measured hardware-timing parity. Inspected raw child logs are
 consumed; useful source, inputs/state, notes and native stills remain external.
 
+Source-only r7 then maps the real spike objects, the landed stone's higher solid
+top and the safe ledge. It finds no lower route beneath this slab. The proposed
+fixed jump/retreat is a hypothesis, not an executed safe answer. Root corrects
+the model's conflated stone-X/return-X precheck before preparation, and rejects
+pixel-count thresholds as cue-readability acceptance or publication attribution.
+Prepared W7 sourcefbcd9ef5/class14e7f3ee/runnere6667e2c retains the same19448 pair,
+declared entry and all33 original row checks through88. Normal request97772,
+submitted05:48:10Z, is terminal0. It permits one fixed WARNED attempt, one
+STOCK control and a changed-pose replay only after genuine supported endpoints.
+Negative gameplay endpoints deliberately exit0 as observations; wrapper success
+alone must not be reported as a crossing, counterplay or replay pass.
+
+Actual97772 waits482seconds; reported execution6.0seconds, WARNED child2.3 and
+STOCK1.2seconds, both fresh JVMs isolated/reaped. All88 neutral rows match the
+prior r5b authority. WARNED's ordinary jump89 lands147 at5650/1DE on actual
+record165/slot7, manager rider/standing/OnObject true, with no terrain-foot support.
+After braking, E1 at164 is5657/1DF; foot is exactly the stone top (initial touchdown
+was one pixel above it). Return jump165 lands on terrain221; E2 at237 is55EA/1ED,
+zero speed, no current rider/OnObject, real feet distances1/0, freezer idle.
+Every WARNED row, including the later replay, retains zero rings/three lives and
+no hurt, death or invulnerability. Native PNGs inspected after CSV visibly show
+the stone landing and safe-ledge recovery. This is a declared positioned encounter,
+not cold or physical-death entry, and does not supply a lower route.
+
+At E1, the registered-world capture restores immediately with complete tuples,
+class/slot multiset, actual target/rider identity and every registered key equal
+semantically. All73 recorded return inputs replay with per-update tuple/all-key
+equality. Root independently compares56 CSV state/support/input columns across
+all73 pairs: zero differences. External call/kind labels and the non-rewound
+observer event-history column are excluded from that literal CSV claim; the first
+replay event line reports restoration of its future memo, not a world-state mismatch.
+No objects or snapshot entries are excluded, and no fresh-Java-identity claim is made.
+
+The STOCK control uses identical actual pads through147. The first physical
+difference is landing at147: WARNED is supported, STOCK remains airborne while
+its later-triggered stone is FALLING. Their shared policy then selects different
+pads from148 (WARNED brakes left; STOCK remains neutral), and STOCK dies149 at
+5657/1ED. This is not an identical149-pad comparison or proof that optimal STOCK
+play is unsafe. It cannot establish increased difficulty; WARNED supplies a
+useful earlier support for this particular wait/jump/recovery response.
+
+Both arms' sampled tip boxes contain zero light pixels on calls4/5, then185 from
+6 through52; native6/30 PNGs positively show the partly clipped hanging tip. This
+disproves persistent absence across those shaking samples, but does not identify
+the initial publication/palette/occlusion cause or establish full cue readability.
+Published SAT remains unobserved. The prior84-update neutral replay is not repeated;
+the new73-update replay covers changed player pose/support. Source/index remain
+unchanged; inspected raw child logs are consumed. Wider/other-character approach,
+under-body/lower-route shelter, route value, hardness and cold gates stay open.
+
 ### AIZ under-log input research — 2026-10-16
 
 Fresh native-entry29449 uses immutable42171 engine9aa46975/SDK9e7a0610 and the
@@ -1685,3 +1741,73 @@ is proposed. A source-only successor identifies ordinary Down with no Left/Right
 as the native S3K roll input at speed>=256, with positive roll/radii admission
 still required. Crouch alone does not shrink the S3K touch box. That response and
 its calculated clearance are unexecuted, not a safety or route certificate.
+
+Successor75430 preserves that native source/artifact pair and all16114 fixed pads,
+but also corrects the author's current-support probe. Source5018ef56/class2881c179
+and runnerdccb48b4 are frozen; the full13365-file tree fingerprint8e7c5680 is
+unchanged before/after. Queue300seconds; admission05:34:58.869Z to child
+termination05:35:08.076Z (9.207seconds), wrapper terminal05:35:09.018Z. Its one
+fresh native-entry JVM exits1 at native death16637/8702,1299, zero rings,
+16638 total inputs. No waterfall, second results or HCZ is reached.
+
+Root reads CSV before the native terminal PNG. The first26 common columns match
+29449 through16138; at16139 the now-enabled current-support probe reports no
+forward terrain and selects an edge jump. That earlier path change prevents a
+matched test of the proposed roll response: all524 authored rows report
+not-requested, zero admissions. Airborne jump rolling is not Down-only ground-roll
+admission. The later death occurs while descending near log344's upper spike
+phase; current geometry is consistent with contact, but its actual damaging
+callback remains unobserved. Do not infer a roll failure, a safe answer, a native
+defect or route progress merely from the later death. The read-only source/CSV
+follow-up must isolate the response from the earlier edge-input change before
+another runtime proposal. Source/index remain intact, the child group is reaped,
+and its inspected raw target log is consumed. Useful input/state/stills and
+earlier rejected attempts remain external.
+
+Isolated29024 then uses the exact16518 prefatal R4 input pads, with no route
+author or snapshot search. Source448de4a9/classf4313f6c/runner0ac1c381, actual42171
+pair and unchanged8e7c fingerprint are retained. Queue162seconds; admitted
+06:03:25.801Z, child terminates06:03:32.708Z, wrapper06:03:33.642Z. All16518 prefix
+rows compare literally across25 native columns; only the input-provenance label
+is excluded, while actual BK2 held/action/start masks are checked independently.
+
+At the naturally reached8707/1362/gSpeed736, actual current rider/standing support
+is absent and the native344 child is down/9C. Four ordinary Down-only pads have
+logical mask2/no actions. The first, at16518, admits native rolling/radii7x14 with
+no spindash and survives the prior death point. At16521, Sonic remains grounded,
+free, alive, unhurt and zero-ring at8717/1363/gSpeed677; normal gravity, OnObject
+false, no current rider, log/child identities unchanged. The driver exits1 at its
+declared UNPROVEN_NATIVE_GROUND_OR_EDGE guard before accepting an endpoint.
+The logged centre-floor query passes (distance3/angle238), so the failure is in
+the next-step ahead query; which found/distance/angle subcondition failed was not
+logged. Do not invent it or relax the guard to report a green driver.
+
+The stopped position's recorded geometry is horizontally past all three bands:
+37px beyond the log centre exceeds native combined solid half-width35; visible
+body and touch left edges exceed log/child right edges. That observation is
+separate from the rejected floor-proof endpoint. Root reads CSV before the native
+prefix/admission/terminal PNGs and consumes the inspected raw log. This supplies
+positive native roll admission and four-input survival, not an accepted general
+clearance, slope recovery, replay or AIZ/HCZ route. No native field, collision,
+timer, resource or physics change follows. Further source work must distinguish
+current native support from the future, direction-specific floor probe.
+
+### HCZ oxygen authority — source-only prerequisite
+
+The current actual creator converts all22 HCZ1 and21 HCZ2 ordinary monitors to
+genuine Eggman contents; there are no original speed-shoes boxes excluded by its
+predicate. This includes all six placed bubble-shield grants (HCZ1 originals
+113/143/324; HCZ2 98/222/427). All nine HCZ1 and the sole HCZ2 maker221 remain
+native/unbound; breath cadence, inhalation overlap, native35-update breathing
+lock and water ownership are unchanged. This proves resource loss, not route
+infeasibility or a native defect. In particular, HCZ2 oxygen reachability and
+air budget remain actual-play gates.
+
+Original HCZ1 maker114, raw12C808385480 at12C8/0838 below native water0680, is a
+bounded mechanism candidate. Neither that placement nor nearby monitor109 proves
+floor0840/standing082D. No supported start/endpoint or fixed input recipe is
+established source-only. A later actual-artifact terrain/streaming prerequisite
+must observe both current feet/native solids, real water/control/art and maker
+identity before attempting a natural refill; no injected bubble, forced breath,
+camera reset or economics change is proposed. All-character/act air sufficiency,
+surface exits, bubble-monitor removal balance and cold HCZ gates remain open.

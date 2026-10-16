@@ -5327,6 +5327,15 @@ remains still through ordinary updates. Count setup-only calls separately from
 Level/V-int advances. A correct floor query or an unlocked boot is not proof
 that the first ordinary object pass has completed.
 
+Rewinding the world does not rewind an external observer's previous population
+or phase memo. ICZ97772's first replay event line reported roster/phase changes
+from its future memo while complete tuples and every registered key matched.
+Restore the observer memo separately or label that restoration event; do not
+exclude real objects or snapshot entries to suppress it. The same fixed input
+policy can also emit different pads after native outcomes diverge: WARNED landed
+on call147 and selected braking on148, while STOCK remained airborne/neutral.
+Compare actual pad masks before claiming identical-input control coverage.
+
 ## Historical interaction pointers do not prove current support
 
 S3K can clear Status_OnObj while preserving the last interact address. An input

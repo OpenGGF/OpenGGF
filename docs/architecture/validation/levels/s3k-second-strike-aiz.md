@@ -75,5 +75,11 @@ under the native log at16256 and survives the former16262 death, then dies16518
 at8710/1360 with zero rings. All26 common columns through16255 equal the prior
 run literally. Native log344 is a source/geometry candidate, not an instrumented
 damage winner. No platform target was acquired. Down-only native roll is a
-source-supported successor proposal, not an executed safe answer. Waterfall,
+source-supported successor proposal, not an executed safe answer. Successor75430
+enables a previously skipped terrain-edge probe and changes input at16139, then
+dies16637/8702,1299 without any Down-only roll request. Its later jump-rolling
+trajectory does not test that proposal. Isolated29024 replays the exact16518
+prefatal R4 pads, admits native Down-only rolling7x14 and survives four inputs
+past the old death. Its ahead-floor proof guard then stops before accepting the
+endpoint; local ability is observed, complete clearance/recovery remains unqualified. Waterfall,
 second results, HCZ and all four complete cold-route axes remain open.
