@@ -78,7 +78,7 @@ class TestPresentationSpritePixels {
     }
 
     private static void assertBackdropPixel(GraphicsManager graphics, Palette.Color colour, int[] expected) {
-        com.openggf.graphics.color.PaletteDisplayColor.glClear(colour, graphics);
+        com.openggf.level.PaletteDisplayColor.glClear(colour, graphics);
         glClear(GL_COLOR_BUFFER_BIT);
         glFinish();
         ByteBuffer pixel = MemoryUtil.memAlloc(4);

@@ -158,7 +158,7 @@ class TestMonkeyDudeNativeSstGraph {
 
     private static final class UnknownOwner extends AbstractObjectInstance {
         UnknownOwner(ObjectSpawn spawn) { super(spawn,"UnknownOwner"); }
-        @Override public void update(int clock,com.openggf.game.PlayableEntity main) { }
+        @Override public void update(int vIntRunCount,com.openggf.game.PlayableEntity main) { }
         @Override public void appendRenderCommands(java.util.List<com.openggf.graphics.GLCommand> commands) { }
     }
 

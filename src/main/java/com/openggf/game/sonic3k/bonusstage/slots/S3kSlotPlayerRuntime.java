@@ -47,11 +47,11 @@ public final class S3kSlotPlayerRuntime {
     @com.openggf.game.rewind.RewindTransient(reason="Nullable exit phase is captured explicitly beside movement state")
     private S3kSlotExitSequence exitSequence;
     record RewindState(com.openggf.game.rewind.schema.RewindObjectStateBlob movement, com.openggf.game.rewind.schema.RewindObjectStateBlob exit) { }
-    RewindState captureRuntimeRewindState() {
+    RewindState captureSlotRewindState() {
         return new RewindState(com.openggf.game.rewind.schema.CompactFieldCapturer.capture(this),
                 exitSequence == null ? null : com.openggf.game.rewind.schema.CompactFieldCapturer.capture(exitSequence));
     }
-    void restoreRuntimeRewindState(RewindState state, S3kSlotStageController controller) {
+    void restoreSlotRewindState(RewindState state, S3kSlotStageController controller) {
         com.openggf.game.rewind.schema.CompactFieldCapturer.restore(this, state.movement());
         exitSequence = state.exit() == null ? null : new S3kSlotExitSequence(controller);
         if (exitSequence != null) com.openggf.game.rewind.schema.CompactFieldCapturer.restore(exitSequence, state.exit());

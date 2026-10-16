@@ -1070,6 +1070,50 @@ public final class ObjectSolidContactController {
         }
     }
 
+    /**
+     * Resolves a restored riding or latch owner from the live placed and dynamic
+     * SST occupants. The manager adds only its processed-slot exec-order fallback.
+     */
+    static ObjectInstance findRestoredRidingOccupant(Map<ObjectSpawn, ObjectInstance> placed,
+            List<ObjectInstance> dynamic, ObjectCallbackRouter callbacks, ObjectSpawn spawn, int slotIndex) {
+        // A captured slot names the exact SST occupant. Spawn lookup alone is
+        // ambiguous: children such as the Rockn shell keep their parent's layout
+        // spawn, so placed.get(spawn) would answer the parent instead.
+        ObjectInstance occupant = restoredOccupantOfSlot(placed.values(), dynamic, callbacks, slotIndex);
+        if (occupant != null && (spawn == null
+                || spawn.equals(callbacks.call(occupant, occupant::getSpawn)))) {
+            return occupant;
+        }
+        if (spawn != null) {
+            ObjectInstance active = placed.get(spawn);
+            if (active != null) {
+                return active;
+            }
+            for (ObjectInstance candidate : dynamic) {
+                if (candidate != null && callbacks.call(candidate, candidate::getSpawn) == spawn) {
+                    return candidate;
+                }
+            }
+        }
+        return null;
+    }
+
+    private static ObjectInstance restoredOccupantOfSlot(Collection<ObjectInstance> placed,
+            List<ObjectInstance> dynamic, ObjectCallbackRouter callbacks, int slotIndex) {
+        if (slotIndex < 0) {
+            return null;
+        }
+        for (Collection<ObjectInstance> group : List.of(placed, dynamic)) {
+            for (ObjectInstance candidate : group) {
+                if (candidate instanceof AbstractObjectInstance aoi
+                        && callbacks.call(candidate, aoi::getSlotIndex) == slotIndex) {
+                    return candidate;
+                }
+            }
+        }
+        return null;
+    }
+
     private Object restoreLatchKey(ObjectManagerSnapshot.SolidContactLatchKey key) {
         if (key == null) {
             return null;

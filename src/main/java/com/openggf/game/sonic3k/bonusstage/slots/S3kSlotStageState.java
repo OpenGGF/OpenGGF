@@ -512,11 +512,11 @@ public final class S3kSlotStageState {
     private static java.util.List<int[]> copyRewardPositions(java.util.Collection<int[]> positions) {
         return positions.stream().map(int[]::clone).toList();
     }
-    RewindState captureRuntimeRewindState() {
+    RewindState captureSlotRewindState() {
         return new RewindState(com.openggf.game.rewind.schema.CompactFieldCapturer.capture(this),
                 copyRewardPositions(pendingRingRewardPositions),copyRewardPositions(pendingSpikeRewardPositions));
     }
-    void restoreRuntimeRewindState(RewindState state) {
+    void restoreSlotRewindState(RewindState state) {
         com.openggf.game.rewind.schema.CompactFieldCapturer.restore(this,state.ram());
         pendingRingRewardPositions.clear();pendingRingRewardPositions.addAll(state.rings());
         pendingSpikeRewardPositions.clear();pendingSpikeRewardPositions.addAll(state.spikes());

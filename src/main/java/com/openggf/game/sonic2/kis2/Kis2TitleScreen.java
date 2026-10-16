@@ -197,7 +197,7 @@ public final class Kis2TitleScreen implements TitleScreenProvider {
         if (state == State.SEGA_LOGO) boot.setClearColor();
         else if (data != null && !GameServices.graphics().isHeadlessMode()) {
             Palette.Color backdrop = palette(2).colors[0];
-            com.openggf.graphics.color.PaletteDisplayColor.glClear(backdrop, GameServices.graphics());
+            com.openggf.level.PaletteDisplayColor.glClear(backdrop, GameServices.graphics());
         }
     }
     @Override public void reset() { boot.reset(); state = State.INACTIVE; cached = false; }

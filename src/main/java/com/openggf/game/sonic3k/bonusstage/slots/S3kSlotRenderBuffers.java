@@ -208,7 +208,7 @@ public final class S3kSlotRenderBuffers {
         @Override public byte[] expanded() { return expanded.clone(); }
         @Override public short[] points() { return points.clone(); }
     }
-    RewindState captureRuntimeRewindState() {
+    RewindState captureSlotRewindState() {
         var animations=new java.util.ArrayList<com.openggf.game.rewind.schema.RewindObjectStateBlob>(transientAnimationSlots.length);
         for (var slot:transientAnimationSlots) animations.add(com.openggf.game.rewind.schema.CompactFieldCapturer.capture(slot));
         var frames=new java.util.ArrayList<com.openggf.game.rewind.schema.RewindObjectStateBlob>(visibleCellFrames.length);
@@ -216,7 +216,7 @@ public final class S3kSlotRenderBuffers {
         return new RewindState(layout,expandedLayout,stagedPointGrid,stagedCameraX,stagedCameraY,
                 nextVisibleCellFrame,animations,frames);
     }
-    void restoreRuntimeRewindState(RewindState state) {
+    void restoreSlotRewindState(RewindState state) {
         if (state.layout().length != layout.length || state.expanded().length != expandedLayout.length
                 || state.animations().size() != transientAnimationSlots.length
                 || state.visibleFrames().size() != visibleCellFrames.length)

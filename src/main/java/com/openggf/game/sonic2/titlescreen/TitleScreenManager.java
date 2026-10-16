@@ -1772,7 +1772,7 @@ public class TitleScreenManager implements TitleScreenProvider {
         Palette bgPal = dataLoader.getBackgroundPalette();
         if (bgPal != null) {
             Palette.Color backdrop = bgPal.getColor(0);
-            com.openggf.graphics.color.PaletteDisplayColor.glClear(backdrop, com.openggf.game.GameServices.graphics());
+            com.openggf.level.PaletteDisplayColor.glClear(backdrop, com.openggf.game.GameServices.graphics());
         } else {
             glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         }

@@ -242,7 +242,17 @@ class TestRewindArchitectureGuard {
             // own, so a lost link leaves the restored flame standing still while its segment swims
             // away (a one-pixel-per-frame drift after a restore, which is how this was found).
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/FirewormSegmentInstance.java#captureRewindState", 1),
-            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/FirewormSegmentInstance.java#restoreRewindState", 1)
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/FirewormSegmentInstance.java#restoreRewindState", 1),
+            // 2026-10-16 Pachinko item orb. loc_4A238 rewrites the orb's own SST into the
+            // loc_4A34C reward (move.l #loc_4A34C,(a0), sonic3k.asm:96803), so the reward is an
+            // unregistered Gumball delegate embedded in this slot, not a managed object. The
+            // generic ObjectReferenceCodec throws for an object with no identity-table id, and a
+            // RewindStateful holder has no RewindCaptureContext for the delegate's own capture;
+            // recreation also needs the pre-conversion spawn because getSpawn() then reports
+            // the reward. TestS3kGumballPachinkoRewardMechanics replays the armed orb through
+            // conversion and the converted reward through collection, each restored twice.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/PachinkoItemOrbObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/PachinkoItemOrbObjectInstance.java#restoreRewindState", 1)
     );
 
     private static final Map<String, Integer> OBJECT_REWIND_ANNOTATION_BASELINE = Map.ofEntries(
