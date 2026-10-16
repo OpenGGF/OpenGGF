@@ -1672,6 +1672,16 @@ panel owner. Restore the declared state exactly and let the next normal update
 clear the flag. Do not silently turn a captured flag into a derived cache in a
 custom hook. The original two-player bug remains preserved (2026-09-28).
 
+### A cache's loaded flag must be as transient as the cache
+
+`AizPlaneIntroInstance` draws intro Sonic through its own ROM-art
+`PlayerSpriteRenderer`s, which the rewind policy treats as transient, but its
+plain `renderersLoaded` boolean was captured. A restore that recreated the
+intro copied "loaded" onto an instance with null renderers, so it never drew
+Sonic again; every gameplay key still matched and only the sprite table lost
+his 16-19 Player_1 tiles. Make the guard flag Java `transient` with the cache
+it describes, or derive it from the cache reference (2026-10-16).
+
 
 ### Fixed native bounds must not inherit engine smoothing targets
 
