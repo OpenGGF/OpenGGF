@@ -597,10 +597,13 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
 
     /**
      * Static accessor for LevelManager's ObjectManager, usable from static factory methods.
-     * Keeps runtime lookups out of leaf-class bytecode.
+     * Construction ownership is authoritative, including an absent manager. The
+     * no-context fallback supports level-event bootstrap such as S1 SYZ boss blocks.
      */
     protected static ObjectManager staticObjectManager() {
-        LevelManager lm = GameServices.levelOrNull();
+        ObjectServices context = constructionContext();
+        if (context != null) return context.objectManager();
+        LevelManager lm = staticLevelManager();
         return lm != null ? lm.getObjectManager() : null;
     }
 
@@ -609,6 +612,8 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * invoked outside a live object-services context.
      */
     protected static LevelManager staticLevelManager() {
+        ObjectServices context = constructionContext();
+        if (context != null) return context.levelManager();
         return GameServices.levelOrNull();
     }
 
@@ -617,6 +622,8 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * keeping singleton access out of leaf-class bytecode.
      */
     protected static com.openggf.level.rings.RingManager staticRingManager() {
+        ObjectServices context = constructionContext();
+        if (context != null) return context.ringManager();
         LevelManager lm = staticLevelManager();
         return lm != null ? lm.getRingManager() : null;
     }
@@ -1177,36 +1184,18 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * @param object the already-constructed object instance to spawn
      */
     protected void spawnDynamicObject(AbstractObjectInstance object) {
-        try {
-            ObjectManager om = services().objectManager();
-            if (om != null) {
-                // A throwaway RewindRecreatable probe instance's construction must never leak a
-                // live or pooled side-effect object under its own (about-to-be-discarded)
-                // identity -- see ObjectConstructionContext.isProbeConstruction().
-                if (ObjectConstructionContext.isProbeConstruction()) {
-                    return;
-                }
-                // During an active-object rewind restore, route construction children to the
-                // reconstruction-child scratch so the step-4 reconciliation loop adopts them in
-                // place with exact captured state (no double-spawn, parent reference preserved).
-                // See spawnChild and ObjectManager.registerRewindReconstructionChild.
-                if (ObjectConstructionContext.isRewindActiveRestore()) {
-                    om.registerRewindReconstructionChild(object);
-                } else {
-                    om.addDynamicObjectAfterCurrent(object);
-                    notifyOwnedChild(object);
-                }
-            }
-        } catch (IllegalStateException e) {
-            // Fallback for test environments or objects not managed by ObjectManager
-            try {
-                LevelManager lm = staticLevelManager();
-                if (lm != null && lm.getObjectManager() != null) {
-                    lm.getObjectManager().addDynamicObjectAfterCurrent(object);
-                }
-            } catch (Exception ex) {
-                LOG.fine("Could not spawn dynamic object (test env?): " + ex.getMessage());
-            }
+        // Probing must not create live children, even on the direct-construction path.
+        if (ObjectConstructionContext.isProbeConstruction()) return;
+        ObjectServices owner = tryServices();
+        ObjectManager om = owner != null ? owner.objectManager() : staticObjectManager();
+        if (om == null) return;
+        // A managed callback failure belongs to that owner. It must not retry in
+        // an ambient session; only a truly unowned bootstrap uses the bridge.
+        if (ObjectConstructionContext.isRewindActiveRestore()) {
+            om.registerRewindReconstructionChild(object);
+        } else {
+            om.addDynamicObjectAfterCurrent(object);
+            if (owner != null) notifyOwnedChild(object);
         }
     }
 
@@ -1224,28 +1213,15 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * @param object the already-constructed object instance to spawn
      */
     protected void spawnDynamicObjectLowestFreeSlot(AbstractObjectInstance object) {
-        try {
-            ObjectManager om = services().objectManager();
-            if (om != null) {
-                if (ObjectConstructionContext.isProbeConstruction()) {
-                    return;
-                }
-                if (ObjectConstructionContext.isRewindActiveRestore()) {
-                    om.registerRewindReconstructionChild(object);
-                } else {
-                    om.addDynamicObject(object);
-                    notifyOwnedChild(object);
-                }
-            }
-        } catch (IllegalStateException e) {
-            try {
-                LevelManager lm = staticLevelManager();
-                if (lm != null && lm.getObjectManager() != null) {
-                    lm.getObjectManager().addDynamicObject(object);
-                }
-            } catch (Exception ex) {
-                LOG.fine("Could not spawn dynamic object (test env?): " + ex.getMessage());
-            }
+        if (ObjectConstructionContext.isProbeConstruction()) return;
+        ObjectServices owner = tryServices();
+        ObjectManager om = owner != null ? owner.objectManager() : staticObjectManager();
+        if (om == null) return;
+        if (ObjectConstructionContext.isRewindActiveRestore()) {
+            om.registerRewindReconstructionChild(object);
+        } else {
+            om.addDynamicObject(object);
+            if (owner != null) notifyOwnedChild(object);
         }
     }
 

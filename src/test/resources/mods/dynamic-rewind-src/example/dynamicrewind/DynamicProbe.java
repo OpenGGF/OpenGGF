@@ -3,15 +3,15 @@ package example.dynamicrewind;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreatable;
-import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.ModRewindRecreatable;
+import com.openggf.level.objects.ObjectReconstructionContext;
 import com.openggf.mods.code.GgfMod;
 import com.openggf.mods.code.ModContext;
 
 import java.util.List;
 
 /** Mod-classloader fixture used to prove independent dynamic-entry rewind recreation. */
-public final class DynamicProbe extends AbstractObjectInstance implements GgfMod, RewindRecreatable {
+public final class DynamicProbe extends AbstractObjectInstance implements GgfMod, ModRewindRecreatable {
     private int value;
 
     public DynamicProbe() {
@@ -37,8 +37,8 @@ public final class DynamicProbe extends AbstractObjectInstance implements GgfMod
     }
 
     @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {
-        return new DynamicProbe(context.dynamicEntry().spawn());
+    public AbstractObjectInstance recreateForRewind(ObjectReconstructionContext context) {
+        return new DynamicProbe(context.spawn());
     }
 
     @Override

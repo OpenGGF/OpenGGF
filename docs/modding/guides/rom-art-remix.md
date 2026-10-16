@@ -117,7 +117,7 @@ test seam.
 
 `TailsFlightArtObject` stores `animTick` as a non-final instance scalar. Each update
 increments it modulo eight and chooses frame `94 + animTick / 4`, yielding four
-ticks per flight pose. The object implements `RewindRecreatable`, so recreation
+ticks per flight pose. The object implements `ModRewindRecreatable`, so recreation
 uses the same mod classloader and object identity path as the live instance.
 
 The generic rewind machinery captures the non-final scalar. The real-ROM

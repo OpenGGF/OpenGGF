@@ -7,6 +7,8 @@ import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
  * a rewind restore. Exposes the captured spawn, the compact field-state blob, the
  * restore-time object services, the restoring object manager, and the captured dynamic
  * entry when the object was restored from the dynamic-object surface.
+ * This is engine reconstruction plumbing; creator implementations use
+ * {@link ModRewindRecreatable} and {@link ObjectReconstructionContext}.
  *
  * <p>Object-reference fields from the compact blob are <em>not</em> available here;
  * they are resolved after recreate returns. Implementations may inspect the
@@ -14,7 +16,6 @@ import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
  * structural relinks that are constructor-required, but must not attempt to decode
  * compact object-reference fields from this context.
  */
-@com.openggf.game.ModApi
 public record RewindRecreateContext(
         ObjectSpawn spawn,
         PerObjectRewindSnapshot state,

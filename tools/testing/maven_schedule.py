@@ -14,6 +14,7 @@ AGING_SECONDS = 300
 FULL_SECONDS = 900
 REQUEST_NAME = re.compile(r'[0-9a-f]{32}\.request')
 WORKTREE_BUSY = object()
+WORKTREE_GONE = object()
 
 
 def class_estimate(count):
@@ -92,6 +93,10 @@ def choose(requests, now, fits):
         if tree in busy_trees and not request.get('retained_tree', False):
             continue
         result = fits(request)
+        if result is WORKTREE_GONE:
+            # A live waiter may outlast its foreign worktree metadata. There
+            # is no target to admit or age-drain; leave its lease to its owner.
+            continue
         if result is WORKTREE_BUSY and (request['auto'] or tree in retained_trees):
             # Pausing other trees cannot release this tree's target/. Keep its
             # oldest request first on the next scan, including a release race.

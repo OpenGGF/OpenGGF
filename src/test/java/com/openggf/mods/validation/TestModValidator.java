@@ -137,6 +137,8 @@ class TestModValidator {
         var direct = new ModValidator().validate(jar(Map.of(
                 ENTRY, entrypoint(true, true), OBJECT, projected)), "example.Entry");
         assertTrue(direct.eligible(), direct.findings().toString());
+        assertTrue(direct.findings().stream().noneMatch(f -> f.code().equals("RAW_REWIND_RECONSTRUCTION")),
+                "the supported creator projection must not receive a legacy reconstruction warning");
 
         String parent = "example/ProjectedParent";
         var inherited = new ModValidator().validate(jar(Map.of(
@@ -144,6 +146,52 @@ class TestModValidator {
                 OBJECT, objectClassNamed(OBJECT, parent, false, ignored -> {}, false, false, null))),
                 "example.Entry");
         assertTrue(inherited.eligible(), inherited.findings().toString());
+        assertTrue(inherited.findings().stream().noneMatch(f -> f.code().equals("RAW_REWIND_RECONSTRUCTION")));
+    }
+
+    @Test
+    void warnsWithoutRejectingDirectRawReconstructionAndAuthoredBaseImplementations() throws Exception {
+        for (String parent : List.of(OBJECT_BASE, "example/AuthoredBase")) {
+            var classes = new LinkedHashMap<String, byte[]>();
+            classes.put(ENTRY, entrypoint(true, true));
+            if (!parent.equals(OBJECT_BASE)) {
+                classes.put(parent, objectClassNamed(parent, OBJECT_BASE, true,
+                        ignored -> { }, false, true, null));
+            }
+            classes.put(OBJECT, objectClassNamed(OBJECT, parent, true,
+                    ignored -> { }, false, true, null));
+
+            var report = new ModValidator().validate(jar(classes), "example.Entry");
+
+            assertTrue(report.eligible(), report.findings().toString());
+            assertTrue(report.findings().stream().anyMatch(f -> f.code().equals("RAW_REWIND_RECONSTRUCTION")
+                    && f.className().equals(OBJECT) && f.member().equals("recreateForRewind")
+                    && f.severity() == ModValidationFinding.Severity.WARNING), report.findings().toString());
+        }
+    }
+
+    @Test
+    void nativeSubclassExpertOverrideRemainsAvailableThroughAnAuthoredIntermediateBase() throws Exception {
+        var classes = compileConstants("""
+                class NativeSpring extends com.openggf.game.sonic2.objects.SpringObjectInstance {
+                    NativeSpring(com.openggf.level.objects.ObjectSpawn spawn) { super(spawn, "native-spring"); }
+                    @Override public NativeSpring recreateForRewind(com.openggf.level.objects.RewindRecreateContext context) {
+                        return new NativeSpring(context.spawn());
+                    }
+                }
+                class AuthoredSpring extends NativeSpring {
+                    AuthoredSpring(com.openggf.level.objects.ObjectSpawn spawn) { super(spawn); }
+                    @Override public AuthoredSpring recreateForRewind(com.openggf.level.objects.RewindRecreateContext context) {
+                        return new AuthoredSpring(context.spawn());
+                    }
+                }
+                """);
+
+        var report = new ModValidator().validate(jar(classes), "example.Entry");
+
+        assertTrue(report.eligible(), report.findings().toString());
+        assertTrue(report.findings().stream().noneMatch(f -> f.code().equals("RAW_REWIND_RECONSTRUCTION")),
+                "a real native superclass retains its expert reconstruction override: " + report.findings());
     }
 
     @Test

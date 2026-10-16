@@ -25,6 +25,25 @@ public interface LevelEventProvider {
     void initLevel(int zone, int act);
 
     /**
+     * Publishes the native title owner's retirement after its children have
+     * retired, including an omitted presentation. Event-owned allocations run
+     * while the title owner still occupies its slot, before its deletion.
+     * Bonus and special-stage title owners do not publish this level callback.
+     */
+    default void onTitleCardOwnerRetired() {
+        // Games without event-owned title teardown have nothing to publish.
+    }
+
+    /**
+     * Reapplies event-owned player state when an ordinary level title releases
+     * control. Fresh-load boundaries and saved special-stage returns retain
+     * their separate load/restore owners and do not invoke this callback.
+     */
+    default void applyZonePlayerStateAfterTitleCard() {
+        // Default no-op.
+    }
+
+    /**
      * Returns whether the level's initial object-placement window must remain
      * deferred until {@link #initLevel(int, int)} has run.
      *

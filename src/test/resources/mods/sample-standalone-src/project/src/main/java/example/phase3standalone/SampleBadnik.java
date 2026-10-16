@@ -7,13 +7,13 @@ import com.openggf.level.objects.AbstractBadnikInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.DestructionEffects.DestructionConfig;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.ObjectReconstructionContext;
+import com.openggf.level.objects.ModRewindRecreatable;
 import com.openggf.audio.StreamedMusicPort.SfxRef;
 
 import java.util.List;
 
-public final class SampleBadnik extends AbstractBadnikInstance implements RewindRecreatable {
+public final class SampleBadnik extends AbstractBadnikInstance implements ModRewindRecreatable {
     private int subpixel;
     private boolean announced;
 
@@ -37,7 +37,7 @@ public final class SampleBadnik extends AbstractBadnikInstance implements Rewind
         return new DestructionConfig(sound, null, false, null, null, false);
     }
     @Override public void appendRenderCommands(List<GLCommand> commands) { }
-    @Override public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {
+    @Override public AbstractObjectInstance recreateForRewind(ObjectReconstructionContext context) {
         return new SampleBadnik(context.spawn());
     }
 }
