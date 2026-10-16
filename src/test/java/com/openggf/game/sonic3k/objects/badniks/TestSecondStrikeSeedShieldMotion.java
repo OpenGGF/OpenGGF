@@ -29,12 +29,18 @@ class TestSecondStrikeSeedShieldMotion {
         AbstractObjectInstance.updateCameraBounds(0, 0, 1000, 800, 0);
         assertEquals(new ShieldProjectileMotion.Velocity(xVelocity, yVelocity),
                 ShieldProjectileMotion.awayFrom(500, 300, playerX, playerY));
-        var seed = new S3kBadnikProjectileInstance(new ObjectSpawn(500, 300, 0x8c, 0, 0, false, 300),
-                "", 4, 500, 300, 0x100, -0x200, 0x38, 0x18, 5, false);
+        var seed = new S3kBadnikProjectileInstance(new ObjectSpawn(499, 302, 0x8c, 0, 0, false, 302),
+                "", 4, 499, 302, 0x100, -0x200, 0x38, 0x18, 5, false);
         seed.setServices(new StubObjectServices());
         var player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
         com.openggf.sprites.NativePositionOps.writeXPosPreserveSubpixel(player, playerX);
         com.openggf.sprites.NativePositionOps.writeYPosPreserveSubpixel(player, playerY);
+        // S3KBadnikProjectile_Init enables ObjDat collision on the first
+        // dispatch and falls through MoveSprite_LightGravity: +$100/-$200
+        // lands the seed on (500,300) with zero subpixels before the deflect.
+        assertEquals(0, seed.getCollisionFlags());
+        seed.update(0, player);
+        assertEquals(500, seed.getX()); assertEquals(300, seed.getY());
         assertEquals(0x98, seed.getCollisionFlags());
         assertTrue(seed.onShieldDeflect(player));
         assertEquals(0, seed.getCollisionFlags());

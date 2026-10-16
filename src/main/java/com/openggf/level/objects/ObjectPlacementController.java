@@ -608,9 +608,17 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
 
     int restoreRewindState(
             com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PlacementSnapshot snapshot) {
-        // The loader-pass latch is intra-step (set by update/reset, consumed by the
-        // same step's Load_Sprites); a restored frame boundary never carries one.
-        cursorLoadPassPending = false;
+        // Load_Sprites keeps no pass flag: loc_1B864 compares Camera_X_pos & $FF80
+        // with Camera_X_pos_coarse on every call (sonic3k.asm:37594-37600). In the
+        // load-then-exec order the latch therefore spans a frame boundary only
+        // between a placement reset and the first loader call: the native
+        // Object_load_routine 0 state, whose init writes Camera_X_pos_coarse = -1
+        // (loc_1B7D8, sonic3k.asm:37542-37545) so the same call's X loop runs.
+        // ObjectManager's captured Camera_Y_pos_coarse keeps its reset sentinel
+        // until that first loader pass, so it restores exactly that state. Forcing
+        // false here lost the initial window of zones whose ScreenInit defers the
+        // first Load_Sprites (FBZ) when rewind replayed from the load boundary.
+        cursorLoadPassPending = snapshot.twoAxisCameraYCoarse() == Integer.MIN_VALUE;
         active.clear();
         for (int index : snapshot.activeSpawnIndices()) {
             if (index >= 0 && index < spawns.size()) {
