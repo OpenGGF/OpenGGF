@@ -1967,10 +1967,56 @@ not inferred from the missing duplicate. A load-array byte alone is also not a
 live-identity proof. Any corrected attempt retains the fixed policy and requires
 genuine managed semantic owners from those exact canonical pairs before moving.
 
-Corrected attempt31538 is queued at this checkpoint, not executed/qualified:
+Corrected attempt31538 is terminal3, with readiness qualified but no refill:
 source1db286e4/classeeef3350/prepare15dffc93/rootrunner8eca4739 on the same42171/cb2
 pair. It composes the unchanged r2 step/input/health methods and replaces only
 the invalid per-marker requirement with full canonical-placement and positive
 initialized-owner/class/metadata/slot/bounds/Y/orientation checks for04 and14.
 The original readiness/600-call/one-hop policy and90s actual process deadline
 remain; no native actor, queue, breath, input timing, capacity or API is changed.
+
+It waits143s in normal admission, then executes1.188s ending07:37:40.050Z;
+group reaped/source unchanged. Actual initialized original99/100 own the native
+04/14 belts in slots4/6 with the canonical metadata/bounds/orientation. Their
+load-array bytes are false, illustrating why those bytes alone do not qualify
+identity. All readiness clauses pass at9 calls (8 completed native updates),
+and the normal320px PNG shows Sonic, the floor and native maker114. Twenty-seven
+Right calls then reach12B0/082C, groundSpeed162, no rider/lock, air29/zero rings,
+alive/nohurt. No braking, hop, intake or return has yet executed.
+
+The fixture stops at36 calls because its ongoing globalFIFO-idle guard becomes
+false: a prepared S3K module job has remainingWork1 and three fingerprints;
+direct queue remains empty, required local art remains ready and player DPLC
+has no outstanding transfers. A newly submitted job is not itself proof that
+the local producer or player lost readiness. Source-only audite4135100 maps all
+three queued OQDF-v1 hashes exactly to the native HCZ1 LoadEnemyArt tail:
+TurboSpiker36A968→A000, MegaChopper36A6C4→A9A0 and Pointdexter36AD8A→AB20,
+each one module. The expected active Blastoid36A7C6→A720 remains source-inferred
+because that active descriptor is redacted in the retained projection.
+The ordinary title-owner residual lifetime releases that batch on provider
+tick35, consistent with the observed35 completed updates; its actual lease and
+active head were not captured. Entry idle describes the then-current physical
+queues, not retirement of every future native producer. Per-step global idle
+is therefore an unsupported continuing player invariant; local art/control and
+each explicit native owner's own queue waits remain required. No
+service/drain/queue/clock or native PLC fix is proposed.
+All37 CSV rows remain alive/nohurt/zero-ring with no issued A. CSV precedes PNG
+and log inspection; consumed log and the known generated config are removed.
+
+One versioned external R5 preparation is authorized after that source review,
+not a runtime result. It preserves the exact fixed seed/readiness/input/hop/
+breath/return and600-call/90s bounds, entry-idle and local art/DPLC checks, while
+replacing only continuing global idle with pure actual provider/handle ownership
+attribution. Unknown or mixed work stops. Old R2/R3/R4 sources/classes are
+immutable; no helper-field manipulation, forced service or native change is
+authorized. Root will inspect the versioned diff before one attempt.
+
+Independent HCZ2 source auditf7fec727 authenticates the sole maker221,
+raw204008F85480 at1E6EBE; it has no conveyor duplicate-marker semantics. The
+creator removes all21 ordinary monitor grants, including shields98/222/427,
+while retaining that one maker. The late removed shield427 at3670/0A30 has no
+nearby placed maker; actual surface/retry/air-budget alternatives remain open.
+Native air is phased by qualifying owner dispatches: absent exits/refills/holds,
+airA and counterc imply `(c+1)+60*A` passes until underflow, not a universal wall
+time. A local future221 witness cannot qualify every submerged segment. No
+HCZ2 floor/seed/input recipe or new execution is authorized by this inventory.

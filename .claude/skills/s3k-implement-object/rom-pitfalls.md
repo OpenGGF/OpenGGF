@@ -5378,3 +5378,14 @@ but do not report its guard as a native hit. Rotated radii, engine width/height,
 ROM mapping-piece bounds and opaque rendered pixels are different measurements.
 Use current/prior native geometry and both axes for contact attribution, keep
 actual health/support observations, and qualify the recovery endpoint separately.
+
+## HCZ conveyor end markers do not each own a live actor
+
+HCZ1 originals99/116 are two loading markers for one subtype04 belt, and100/117
+likewise share subtype14. Obj_HCZConveyorBelt deduplicates by the full subtype;
+04 and14 remain distinct owners. Require the genuine initialized representative
+with canonical marker metadata, current bounds/Y and a managed slot, rather than
+one live actor per marker.31538 observed99/100 while116/117 were absent. Its
+shared load bytes were false, so those bytes alone are not an actor-identity
+proof. Native ID3E is non-rendered conveyor logic; ID68 spinning-column art or
+dimensions cannot establish its body, motion or clearance.

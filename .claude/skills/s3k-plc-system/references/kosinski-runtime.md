@@ -31,6 +31,18 @@ readiness gate has opened.
   must use side-effect-free shells so queue restore is not followed by duplicate
   enqueues.
 
+### Entry readiness and later native submissions
+
+**An idle entry FIFO is not permanent art quiescence.** An omitted title-card
+presentation can leave its native owner alive. It may later submit LoadEnemyArt
+during ordinary player updates even though the physical queues were empty at
+the local entry boundary. HCZ31538 reached supported, locally art-ready entry,
+then stopped on a fixture's continuing global-idle guard when the genuine enemy
+batch arrived. Attribute actual handles, owner epoch and descriptors; preserve
+local art and control checks. Do not force service or pause the input policy to
+make the queue idle. This distinction does not remove explicit ROM owner waits:
+results creation still polls global Kos_modules_left as described below.
+
 ### Results-screen false-green checklist
 
 `Obj_LevelResults` queues General -> `$520`, apparent-act Num1/Num2 -> `$568`,
