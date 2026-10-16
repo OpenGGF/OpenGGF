@@ -75,14 +75,16 @@ def stop_process_tree(process):
             pass
 
 
-def run_logged(command, cwd, log_path, temporary=None, timeout=None, idle_timeout=None, queue_fd=None):
+def run_logged(command, cwd, log_path, temporary=None, timeout=None, idle_timeout=None, queue_fd=None,
+               environment=None):
     from maven_queue import inherited_slot
 
     if timeout is not None and timeout <= 0:
         raise TimeoutError('Invocation timeout exhausted before launch')
     log = RollingLog(log_path)
-    environment = None if temporary is None else {
-        **os.environ, **{name: str(temporary) for name in ('TMPDIR', 'TMP', 'TEMP')}}
+    if temporary is not None:
+        environment = {**(os.environ if environment is None else environment),
+                       **{name: str(temporary) for name in ('TMPDIR', 'TMP', 'TEMP')}}
     try:
         with subprocess.Popen(command, cwd=cwd, stdout=subprocess.PIPE,
                               stderr=subprocess.STDOUT,

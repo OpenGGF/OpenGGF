@@ -7,6 +7,7 @@ Origin: 2026-09-15 short-run priority follow-up to Maven resource profiling.
 from dataclasses import dataclass
 import json
 import math
+import os
 from pathlib import Path
 import re
 import uuid
@@ -16,6 +17,8 @@ FULL_SECONDS = 900
 REQUEST_NAME = re.compile(r'[0-9a-f]{32}\.request')
 WORKTREE_BUSY = object()
 WORKTREE_GONE = object()
+SHORT_SECONDS = 60
+SMALL_RESERVATION = (4 * 1024 ** 3, 4)
 
 
 @dataclass
@@ -98,37 +101,123 @@ def ordered(requests, now):
         r['enqueued'], r['id']))
 
 
-def choose(requests, now, fits):
-    """Backfill eligible work until an aged head needs capacity to drain.
+@dataclass
+class Selection:
+    request: dict | None = None
+    backfill_for: str | None = None
+    blocked_by: str | None = None
+    draining: bool = False
 
-    Five minutes is a priority promotion, not a start-time guarantee: running
-    Maven jobs are never preempted and external resource pressure may persist.
+
+def small_request(request):
+    reservation = request.get('reservation')
+    return (request.get('small_job') is True and request.get('auto') is True
+            and request['estimate'] <= SHORT_SECONDS and reservation is not None
+            and all(0 < value <= maximum for value, maximum in zip(reservation, SMALL_RESERVATION)))
+
+
+def select(requests, now, fits, *, backfill=None, reasons=None):
+    """Choose without consuming allowance; only the admitting owner commits it.
+
+    An aged head may permit one bounded small admission when memory or CPU is
+    blocking it. The allowance survives that small job's exit. Serial requests,
+    unknown state and exhausted allowances keep the established draining rule.
     """
+    reasons = {} if reasons is None else reasons
     busy_trees = set()
     retained_trees = {request.get('tree', request['id']) for request in requests
                       if request.get('retained_tree', False)}
-    for request in ordered(requests, now):
+    ranked = ordered(requests, now)
+    for index, request in enumerate(ranked):
         tree = request.get('tree', request['id'])
         if tree in busy_trees and not request.get('retained_tree', False):
             continue
         result = fits(request)
         if result is WORKTREE_GONE:
-            # A live waiter may outlast its foreign worktree metadata. There
-            # is no target to admit or age-drain; leave its lease to its owner.
             continue
         if result is WORKTREE_BUSY and (request['auto'] or tree in retained_trees):
-            # Pausing other trees cannot release this tree's target/. Keep its
-            # oldest request first on the next scan, including a release race.
-            # A retained category holder must resume to release target/. Its
-            # blocked same-tree waiters cannot deadlock that continuation;
-            # unrelated aged capacity requests still keep their priority.
             busy_trees.add(tree)
             continue
         if result is not WORKTREE_BUSY and result:
-            return request
-        if aged(request, now):
-            return None
-    return None
+            return Selection(request=request)
+        if not aged(request, now):
+            continue
+        if (request.get('auto') and backfill is not None and backfill.available(request['id'])
+                and reasons.get(request['id'], {}).get('reason') in ('memory', 'cpu')):
+            for candidate in ranked[index + 1:]:
+                # An exclusive aged request must drain the entire queue.
+                if aged(candidate, now) and not candidate.get('auto'):
+                    break
+                candidate_tree = candidate.get('tree', candidate['id'])
+                if candidate_tree == tree or candidate_tree in busy_trees or not small_request(candidate):
+                    continue
+                found = fits(candidate)
+                if found is not WORKTREE_BUSY and found is not WORKTREE_GONE and found:
+                    return Selection(candidate, request['id'], request['id'], True)
+        return Selection(blocked_by=request['id'], draining=True)
+    return Selection()
+
+
+def choose(requests, now, fits):
+    return select(requests, now, fits).request
+
+
+class BackfillLedger:
+    """Gate-protected consumed allowances, keyed by live waiting lease IDs.
+
+    This is scheduling fairness state, never an execution lease. Bad or unknown
+    files disable extra overtaking while normal admission remains available.
+    """
+    def __init__(self, common, requests):
+        self.path = common / 'maven-backfill.json'
+        self.used = None
+        live = {request['id'] for request in requests}
+        try:
+            if self.path.is_symlink() or (self.path.exists() and not self.path.is_file()):
+                return
+            try:
+                with self.path.open('rb') as stream:
+                    raw = stream.read(131073)
+                if len(raw) > 131072:
+                    return
+                data = json.loads(raw)
+            except FileNotFoundError:
+                data = dict(version=1, used=[])
+            if (len(data.get('used', [])) > 2048 or data.get('version') != 1
+                    or not isinstance(data.get('used'), list)
+                    or any(not isinstance(value, str) or not re.fullmatch(r'[0-9a-f]{32}', value)
+                           for value in data['used'])):
+                return
+            self.used = set(data['used']) & live
+            if self.used != set(data['used']):
+                self._save()
+        except (OSError, ValueError, TypeError, AttributeError, RecursionError):
+            self.used = None
+
+    def available(self, request_id):
+        return self.used is not None and request_id not in self.used and len(self.used) < 2048
+
+    def consume(self, request_id):
+        if not self.available(request_id):
+            return False
+        self.used.add(request_id)
+        try:
+            self._save()
+            return True
+        except OSError:
+            self.used = None
+            return False
+
+    def _save(self):
+        temporary = self.path.with_name(self.path.name + '.' + uuid.uuid4().hex + '.tmp')
+        try:
+            with temporary.open('xb') as stream:
+                stream.write(json.dumps(dict(version=1, used=sorted(self.used))).encode())
+                stream.flush()
+                os.fsync(stream.fileno())
+            os.replace(temporary, self.path)
+        finally:
+            temporary.unlink(missing_ok=True)
 
 
 class WaitingRequest:
@@ -156,6 +245,12 @@ class WaitingRequest:
             self.close()
             self.path.unlink()
             raise
+
+    def publish(self):
+        self.stream.seek(1)
+        self.stream.write(json.dumps(self.record).encode())
+        self.stream.truncate()
+        self.stream.flush()
 
     def pending(self, acquire):
         requests = []
@@ -191,6 +286,7 @@ class WaitingRequest:
                       (tree.parent == common or tree.parent.parent == common / 'worktrees'))
         if (record['id'] != path.stem or not valid_tree or type(record['auto']) is not bool
                 or type(record.get('retained_tree', False)) is not bool
+                or type(record.get('small_job', False)) is not bool
                 or not all(type(record[k]) in (int, float) and math.isfinite(record[k])
                            for k in ('enqueued', 'estimate')) or record['estimate'] <= 0):
             raise ValueError('Invalid Maven waiting request')

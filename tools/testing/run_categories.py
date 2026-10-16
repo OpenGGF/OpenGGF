@@ -22,6 +22,7 @@ from category_artifacts import compact_run, prune_runs, run_logged, acknowledge_
 from category_control import DEFAULT_MINUTES, IDLE_SECONDS, preflight, is_broad
 from maven_queue import maven_slot, worktree_build_slot, handle_termination, needs_exclusive
 from maven_schedule import ServiceCredit, plan_estimate
+from maven_small import batch_lean
 
 ROOT = Path(__file__).resolve().parents[2]
 TEST_ROOT = Path('src/test/java')
@@ -443,7 +444,9 @@ def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, keep_diagnostics=False, qu
                     total['reason'] = 'Invocation timeout exhausted before another batch'
                     (run / 'results.json').write_text(json.dumps(results, indent=2) + '\n')
                     raise TimeoutError(total['reason'])
-                batch_plan = dict(plan, full=False, tests=candidates, guards=(lane == 'guards'))
+                lean = batch_lean(candidates, root, workers=workers) if lane == 'ordinary' else None
+                batch_plan = dict(plan, full=False, tests=candidates, guards=(lane == 'guards'),
+                                  small_job=lean is not None)
                 slot = admission(batch_plan, lane) if admission else nullcontext(queue_fd)
                 with slot as fd:
                     # Edits made while waiting invalidate both the selection and any
@@ -466,6 +469,10 @@ def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, keep_diagnostics=False, qu
                         if workers == 2:
                             command.append('-Ptest-concurrent')
                     command.extend(rom_args(root, rom_directory))
+                    if lean is not None:
+                        # Keep the original includes selection and profile. Only
+                        # apply the bounded JVM shape from the qualified command.
+                        command.extend(lean[0][3:])
                     command_name = (f'ordinary-command-{index:03d}.json' if lane == 'ordinary'
                                     else 'guards-command.json')
                     (run / command_name).write_text(json.dumps(command, indent=2) + '\n')
@@ -474,9 +481,11 @@ def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, keep_diagnostics=False, qu
                     started = time.monotonic()
                     exit_code = None
                     try:
-                        exit_code = run_logged(command, root, run / f'{lane}.log', temporary,
-                                               timeout=max_minutes * 60 - elapsed,
-                                               idle_timeout=IDLE_SECONDS, queue_fd=fd)
+                        options = dict(timeout=max_minutes * 60 - elapsed,
+                                       idle_timeout=IDLE_SECONDS, queue_fd=fd)
+                        if lean is not None:
+                            options['environment'] = lean[1]
+                        exit_code = run_logged(command, root, run / f'{lane}.log', temporary, **options)
                     except TimeoutError as error:
                         total['reason'] = str(error)
                         raise
@@ -603,11 +612,16 @@ def main(argv=None):
                 service_credit = ServiceCredit()
 
                 def admission(batch_plan, lane):
+                    from maven_resources import GIB
+                    small = batch_plan.get('small_job', False)
                     return maven_slot(ROOT, tree_fd=tree_fd,
                                       exclusive=(lane == 'ordinary' and args.workers > 1)
                                       or needs_exclusive([]),
                                       estimate=plan_estimate(batch_plan),
-                                      kind='category-batch' if lane == 'ordinary' else 'category-guards',
+                                      kind=('category-batch-lean' if small else 'category-batch')
+                                      if lane == 'ordinary' else 'category-guards',
+                                      reservation=(4 * GIB, 4) if small else None,
+                                      small_job=small,
                                       service_credit=service_credit)
 
                 return run_plan(ROOT, plan, args.max_minutes, args.keep_diagnostics,
