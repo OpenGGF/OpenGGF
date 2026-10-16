@@ -145,7 +145,14 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
   `package` without a skip), use
   `python3 tools/testing/maven_queue.py <maven arguments>` from the intended worktree.
   Build-only commands such as `compile`, `test-compile` and `package -DskipTests` bypass
-  shared admission automatically; they hold only the current worktree's build/test lock.
+  shared admission automatically; they hold the current worktree's build/test lock.
+  Wrapped builds also hold a shared activity lease during execution. Isolated
+  performance measurements first acquire their own worktree outside the queue,
+  acquire exclusive test admission, then drain active
+  builds and block new builds with an exclusive activity lease. Idle retained
+  category worktrees do not block measurements; never sweep foreign worktree locks
+  or request test admission while holding a build activity lease. Direct/older
+  wrappers do not honor activity isolation; use current tooling for measurements.
   Direct `mvn` builds are also allowed, provided nothing else is writing that worktree's
   `target/`. Prefer the wrapper when builds and tests may share a worktree. Unknown plugin
   goals, alternate POMs/profiles and custom Maven launch arguments remain queued conservatively;
@@ -173,7 +180,9 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
   their own cwd and `target/`; update their tooling for the new scheduling rules.
   Linux admission allows different worktrees to overlap when conservative memory/CPU
   reservations fit (three runs by default, crediting each running job's measured usage);
-  one worktree remains exclusive. Single-fork trace/audio profiles share the queue; see
+  one worktree remains exclusive. Single-fork trace/audio profiles share the queue,
+  including exact default flags `-Dsurefire.forkCount=1` and
+  `-Dsurefire.reuseForks=true`; other fork/reuse/heap overrides remain exclusive. See
   the guide for exclusive shapes. Other platforms retain serialization. Waiting requests favour short estimates; after five minutes,
   aged requests take priority in arrival order. An aged request needing shared capacity
   drains existing jobs, with one exception: a memory/CPU-blocked resource-aware
