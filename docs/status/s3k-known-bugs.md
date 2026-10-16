@@ -140,7 +140,7 @@ Entries should include:
 51. [Object Art and Clock Reads Found by the Slay the Robotnik Sprite Research (SUSPECTED)](#object-art-and-clock-reads-found-by-the-slay-the-robotnik-sprite-research-suspected)
 52. [Ending Reunion Kos Service Count — Per-Object CPU Budget (OPEN)](#ending-reunion-kos-service-count--per-object-cpu-budget-open)
 53. [Non-Fresh Title Card Holds 90 Locked Frames (OPEN)](#non-fresh-title-card-holds-90-locked-frames-open)
-54. [AIZ2 First-Tree and HCZ1 Zero-Offset Animated Tile Uploads (OPEN)](#aiz2-first-tree-and-hcz1-zero-offset-animated-tile-uploads-open)
+54. [AIZ2 First-Tree and HCZ1 Zero-Offset Animated Tile Uploads (FIXED)](#aiz2-first-tree-and-hcz1-zero-offset-animated-tile-uploads-fixed)
 55. [Knuckles Credits and Terminal Residuals (OPEN)](#knuckles-credits-and-terminal-residuals-open)
 56. [MHZ Rewind Snapshot Identity Gaps (RESOLVED)](#mhz-rewind-snapshot-identity-gaps-resolved)
 
@@ -6580,53 +6580,70 @@ route movies that cross these entries are re-timed by measurement in the same ch
 
 ---
 
-## AIZ2 First-Tree and HCZ1 Zero-Offset Animated Tile Uploads (OPEN)
+## AIZ2 First-Tree and HCZ1 Zero-Offset Animated Tile Uploads (FIXED)
 
-Custom zone `AnimateTiles` routines queue their art through `Add_To_DMA_Queue`
-(sonic3k.asm:1673), drained at VBlank. Two cases still differ:
-- `AnimateTiles_AIZ2`'s first-tree upload still writes immediately, one frame early. It was
-  left unchanged to keep the AIZ to HCZ route stable.
-- When `Events_bg+$10` is 0, `AnimateTiles_HCZ1` falls through `AniHCZ_FixLowerBG` into
-  `AniHCZ_FixUpperBG` (sonic3k.asm:53993, 54071-54091) and skips its normal tile animations.
-  The engine uploads only the lower strips.
+**Location:** `Sonic3kPatternAnimator` (`updateAiz2`, `updateHcz1BackgroundStrips`,
+`runAnimateInitTransfers`).
 
-Evidence is in the
-[bonus-stage transitions matrix](../architecture/validation/levels/s3k-bonus-stage-transitions.md).
+Both custom routines now follow the ROM, through the `Add_To_DMA_Queue` publication
+that VInt drains (sonic3k.asm:1673, 764):
+- `AnimateTiles_AIZ2` below `Camera_X_pos` `$1C0` (sonic3k.asm:53953-53967) queues the
+  first tree on every pass, after running only the first script, and its `clr.l (a3)`
+  zeroes the counters of scripts 1 and 2. The engine wrote the tree once, immediately.
+- `AnimateTiles_HCZ1` (sonic3k.asm:53974-54108) keeps `Anim_Counters+4`/`+6`. At
+  `Events_bg+$10 == 0` it stores 1, queues both fix routines and skips
+  `AnimateTiles_DoAniPLC` on every such pass. Past ±$60 it queues nothing. The fix
+  strips follow only side changes. `Events_bg+$16` stops the routine while the HCZ2 art
+  loads. Animate_Init's `sub_279D4` runs on fresh loads, with `HCZ1_BackgroundInit`'s
+  capped value. The engine had uploaded whole strips past ±$60 and only the lower fix
+  at the equilibrium.
 
-### Removal condition
-Both cases follow the ROM routine, with a focused publication test and an unchanged S3K
-canonical trace result.
+`TestS3kZoneAnimateTilesPublication` was red 16/5 before the change. Evidence and the
+trace results are in the
+[bonus-stage transitions matrix](../architecture/validation/levels/s3k-bonus-stage-transitions.md#aiz2-first-tree-and-hcz1-waterline--2026-10-16-round-2-presentation-lane).
 
 ---
 
 ## Knuckles Credits and Terminal Residuals (OPEN)
 
 The 2026-10-15 kterminal lane matched the Knuckles terminal banner, its pose flash and
-logo fade, and the credits' Plane A phase against the native complete run. Four gaps remain:
+logo fade, and the credits' Plane A phase against the native complete run. The
+2026-10-16 presentation lane resolved three of its four residuals:
 
-- **Credits start one V-int late.** With the native inlets declared, the cold movie now
-  reaches credits part one with `V_int_run_count` `$66CC6`; native and the `9b0c85dd0`
-  render hold `$66CC5` at the same engine frame, with an identical flight log. The ending
-  clouds seed from `V_int_run_count` (`loc_5F94C`) and emit on its low bits (`loc_5F986`),
-  so every cloud differs. Unattributed; it arrived between `9b0c85dd0` and `516ca64f1`.
-- **A glyph fragment in credits part one.** At the credits-one spans 9 and 10 a white,
-  glyph-like fragment (screen x 128-191) scrolls with the planes. It is in every engine
-  render since `9b0c85dd0` and never in native. Unattributed.
-- **One zero-copy credits pass.** `ParallaxManager` reads a handler's zero FG V-scroll as
-  "use the camera", and `ZoneScrollHandler` is Mod API. On the pass where
-  `Camera_Y_pos_copy` is still 0 and `Camera_Y_pos` has reached 1, SSZ2's Plane A is prepared
-  one line low. No native picture covers that pass; its visibility was not measured.
-- **S3 eyecatch fades.** `loc_5F26C`, `loc_5F31C` and `loc_5F410` fade lines 1, 0 and 2
-  through `loc_5FF62` (up toward `$EEE`, then down to the target, every fourth pass). The
-  engine's S3 eyecatch uses a six-pass from-black fade. No native picture of that terminal
-  exists.
+- **Credits one V-int late: capture inlet, not engine.** Native observations put
+  `V_int_run_count` at `$66141` on the flight edge row (input 419847) and `$66CC5` at
+  credits part one (422795), 2948 frames later. The engine flight object first exists
+  at frame 58253 and the credits start at 61201, also 2948 frames later, and the engine
+  counts one V-int per frame. The renders that showed `$66CC6` had declared `$66142` at
+  flight init (the driver comment cited input 419848). With `$66141` declared, cloud SSTs
+  equal native at all 12 credits-one spans.
+- **Glyph fragment at spans 9-10 (fixed).** It was the HPZ teleporter pad
+  (`Obj_SSZHPZTeleporter`, `($A0,$4B0)`) drawn from tiles the credits font had replaced.
+  Native deletes it through `Sprite_OnScreen_Test` once the camera reaches `$240`. The
+  credits camera then jumps from `$1CF` to 0. `Load_Sprites`'s backward branch subtracts
+  `$80` from the new coarse X and skips the back cursor on the borrow
+  (sonic3k.asm:37604-37605; S2 `ObjectsManager_GoingBackward`, s2.asm:33051-33052), so
+  the pad never returns. The engine's backward pass handed it to the cursor again, and it
+  was live from span 7 (camera Y `$333`). `ObjectPlacementController` now skips that pass
+  too.
+- **Zero-copy credits pass (fixed).** `SwScrlSsz` now declares its foreground V-scroll
+  explicit through the internal `ExplicitForegroundVerticalScroll`, so `ParallaxManager`
+  uses a `Camera_Y_pos_copy` of 0 instead of the moved camera
+  (`TestSszAct2CameraController`, red first at credits pass 122). No Mod API declaration
+  changed.
+- **S3 eyecatch fades (open).** `loc_5F26C`, `loc_5F31C` and `loc_5F410` fade lines 1, 0
+  and 2 through their own `loc_5FF62` instances (up toward `$EEE`, then down to the
+  target, every fourth pass from each allocation). The engine's S3 eyecatch
+  (`S3kPostCreditsObjectInstance.initializeS3Eyecatch`) uses a six-pass from-black fade.
+  No native picture of that terminal exists. The owner is the three allocations' pass
+  order and parameters (`$30`, `$32`, `$3A`).
 
 Evidence and the measured spots are in the
-[ending matrix](../architecture/validation/levels/s3k-ending.md#knuckles-terminal-banner-pose-flash-and-the-credits-plane-a-phase-kterminal-lane-2026-10-15).
+[ending matrix](../architecture/validation/levels/s3k-ending.md#knuckles-credits-v-int-inlet-teleporter-pad-and-zero-copy-pass-presentation-lane-2026-10-16).
 
 ### Removal condition
-Each gap is attributed to a ROM owner and modelled with a focused red-first test, or shown
-equal to a native capture of the same state.
+The S3 eyecatch fades are modelled from `loc_5FF62` with a focused red-first test, or
+shown equal to a native capture of the same state.
 
 ---
 

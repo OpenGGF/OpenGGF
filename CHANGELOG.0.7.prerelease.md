@@ -72,10 +72,14 @@ Unreleased. The earlier development themes remain in
   the Gumball background stays pinned as in the original instead of scrolling
   with the camera, and Pachinko's background survives rewind.
 
-- **S3K animated scenery:** Hydrocity, Carnival Night, IceCap, Launch Base,
-  Mushroom Hill, Sandopolis and Lava Reef animated tiles change on the original
-  frame instead of one frame early, through the same once-per-frame upload as the
-  hardware's VBlank transfer queue, including through rewind.
+- **S3K animated scenery:** Angel Island, Hydrocity, Carnival Night, IceCap,
+  Launch Base, Mushroom Hill, Sandopolis and Lava Reef animated tiles change on
+  the original frame instead of one frame early, through the same once-per-frame
+  upload as the hardware's VBlank transfer queue, including through rewind. Angel
+  Island 2's first tree is restored on every frame before the scroll point, as in
+  the original. Hydrocity 1's background waterline follows the original routine:
+  at the waterline both repair strips load and the other animations pause, and far
+  from it the last drawn strip stays.
 
 - **S3K special stage results:** The results card sits on the locked-on game's
   grey backdrop instead of white, matching native frames of won and failed stages.
@@ -245,7 +249,11 @@ Unreleased. The earlier development themes remain in
   names now scroll in step with the clouds, as the original's picture does. After the
   credits the closing logo takes the original's place for each ending, with its
   trademark: above Knuckles rather than across him. It fades in through white, and with
-  every Super Emerald Knuckles flashes pink as he does in the original.
+  every Super Emerald Knuckles flashes pink as he does in the original. The Hidden
+  Palace teleporter pad no longer reappears under the island during Knuckles' credits:
+  as in Sonic 2 and 3&K, a camera jump back into a level's first block reloads nothing
+  behind the object cursor. The first scrolling pass keeps the names on the original's
+  line.
 
 - **Capture and controller tools:** Input branches reject checkpoints whose pending
   fresh assembly or transition callback cannot be restored by gameplay rewind.

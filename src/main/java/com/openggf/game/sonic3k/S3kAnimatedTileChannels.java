@@ -55,7 +55,7 @@ final class S3kAnimatedTileChannels {
             AniPlcScriptState script = scripts.get(i);
             channels.add(new AnimatedTileChannel(
                     "s3k.hcz.script." + i,
-                    owner::shouldRunScriptChannels,
+                    actIndex == 0 ? owner::shouldRunHcz1ScriptChannels : owner::shouldRunScriptChannels,
                     ctx -> ctx.frameCounter(),
                     scriptDestination(script),
                     AnimatedTileCachePolicy.ALWAYS,
@@ -64,12 +64,14 @@ final class S3kAnimatedTileChannels {
         }
 
         if (actIndex == 0) {
+            // AnimateTiles_HCZ1 compares Events_bg+$10 with Anim_Counters+4 itself; at the
+            // equilibrium it stores 1 and repeats the transfers on every pass.
             channels.add(new AnimatedTileChannel(
                     "s3k.hcz1.waterline",
                     owner::shouldRunHcz1CustomChannels,
                     ctx -> owner.computeHcz1WaterlineDelta(),
                     new DestinationPlan(0x2DC, 0x30B),
-                    AnimatedTileCachePolicy.ON_PHASE_CHANGE,
+                    AnimatedTileCachePolicy.ALWAYS,
                     new ComposedTransferApplyStrategy(owner::updateHcz1BackgroundStripsForGraph)
             ));
         } else {
