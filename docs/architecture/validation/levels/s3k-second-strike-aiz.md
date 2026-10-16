@@ -67,3 +67,13 @@ The independent89496 continuation reproduces those16114 fixed inputs and the nat
 first-boss/results/Act2-control milestones, then dies16262 at8238/1349 after149
 authored inputs. Its exact damage owner is unattributed; no platform target was
 acquired. Waterfall and HCZ remain open, with no production or content defect inferred.
+
+The narrow latch repair is integrated/pushed as `f813672d0`; its tested event and
+test blobs are unchanged. Fresh native-entry29449 on the42171 pair preserves the
+fixed16114 inputs. An input-only ground response suppresses the obstruction jump
+under the native log at16256 and survives the former16262 death, then dies16518
+at8710/1360 with zero rings. All26 common columns through16255 equal the prior
+run literally. Native log344 is a source/geometry candidate, not an instrumented
+damage winner. No platform target was acquired. Down-only native roll is a
+source-supported successor proposal, not an executed safe answer. Waterfall,
+second results, HCZ and all four complete cold-route axes remain open.

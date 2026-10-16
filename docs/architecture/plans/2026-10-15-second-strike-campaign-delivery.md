@@ -130,20 +130,19 @@ branches, preserving user config/ROM/save targets, useful captures and histories
 
 ## Compact execution checkpoint
 
-Current main and origin/develop are `e278398aeb28842312dc7f60763e20fdfbb0b3ab`;
-the verified foundation below is integrated. Delivery now holds an uncommitted,
-two-file AIZ historical-latch repair: event blob `656c2e2662ed73f614e77c2aa1be38a7d9adda03`
-and test blob `a023c67772d907aca2ef5d28894ad95eb67473bb`. Focus42171 passes8 cases
-without skips; Astra R1 has no blocking finding. Actual89496 reached-prefix restore
-and64-input replay pass on the new42171 artifact pair; integration is next. The independent
-fresh24954 right-only spring answer clears the former Rhinobot death, but is input
-research, not a completed AIZ route. Its independent continuation dies16262 before
-waterfall/HCZ. Sonnet's ICZ entry diagnostic R4 is terminal: native reload clears
-the lock, but both single calls were setup-only, so ordinary readiness remains open.
-Its prior shelter attempt stopped before measurement. No full AIZ-to-HCZ axis or
+The foundation and bounded AIZ historical-latch repair are integrated and pushed
+as `f813672d0599f9debc0cf9a32148999fb3cc61a6`.
+Focus42171 passes8 cases without skips; Astra R1 has no blocker; actual89496
+reached-prefix restore and64-input replay pass on the new42171 artifact pair.
+Fresh input-only29449 clears the former16262 death, then dies16518 before
+waterfall/HCZ. Its source-derived Down-only roll proposal is unexecuted.
+ICZ28579 qualifies the declared zero-ring neutral WARNED fall/landing and84-update
+registered replay against a separate STOCK arm. It does not qualify an approach,
+under-body shelter, readable cue or harder route. No full AIZ-to-HCZ axis or
 M4–M6 acceptance is closed. The following paragraphs retain foundation history.
 
-Root private branch is `feature/ai-second-strike-campaign-delivery`, HEAD
+At the earlier foundation checkpoint, root private branch
+`feature/ai-second-strike-campaign-delivery` held HEAD
 `b3d307daffa7de2a63f373fb2913e4a30a03e30b`, including the committed bounded repairs.
 Main has fast-forwarded from1259 to `b07c52dfd601ff78cd00d89a24e7fe57320acd65`
 (editor-chrome retirement); the three dirty disassemblies and five untracked user
@@ -1612,3 +1611,77 @@ surface interpretation used the wrong query row. The unchanged1FD seed is not a
 qualified standing entry. The actual shelter/tell/landing/hardness witness and
 the exact entry-owner source attribution remain pending. Both child JVMs were
 reaped; execution1.7seconds, queue approximately1037seconds from runner timestamps.
+
+### ICZ committed mechanism and STOCK control — 2026-10-16
+
+Corrected source-only r5/r6 resolves the two actual feet, not just the centre
+column: fixed centre55D8/1EE gives left/right distances2/0 with standing radii9/19
+on both collision paths. The native checkpoint/full reload is a declared fixture
+boundary, not physical death or a cold route. One subsequent call is setup-only;
+ordinary calls then reach OFFSCREEN, INITIALIZING and WAITING with no lock,
+movement, camera drift or neighbour commitment. The earlier proposed live-intro
+writer remains unmeasured. Source traces initial intro locking followed by distant
+unload without control release; it does not establish a native regression.
+
+Root92726 stops at the fixture's population gate on completed call1, before a
+commit or STOCK run. The gate incorrectly assumes a fixed character roster means
+an immutable object population. The r5b repair allows only the exact pending
+native insta-shield handle to become managed; all tuples, slot multisets and
+snapshot comparisons still include it. Root28579 measures that registration in
+both arms at call2: class InstaShieldObjectInstance, slot100/dynamicId8, null spawn.
+This explains the repaired gate, not the exact uninstrumented object in r2's crash.
+The old r2 loop already retained its capture row; no indexing defect was found.
+
+Exact external r5b source SHA7a05a382, compiled class4c413c38 and root runner11aea902
+use immutable19448 engine486afc9b/SDK61d6adc0/Second Strike cb2c4cb4 and the original
+ROM. Command: `env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u _JAVA_OPTIONS
+-u JDK_JAVA_OPTIONS LUA_BIN=/usr/bin/lua5.4 python3 -I run-root.py --execute`, from
+the retained east tree, through normal admission. Root28579 exits0 after593seconds
+queue and5.8seconds reported execution; the two fresh isolated child JVMs take2.0
+and1.0seconds and are reaped. East source/index/status remain unchanged. This is
+a capture witness, not a JUnit count or a repeated SDK suite.
+
+WARNED authentic record165 at5660/190, dx88hex, commits on ordinary call4
+(total call5), SHAKING/active/timer47. After capture,48 shake dispatches have net
+zero X displacement; the live-state/local-motion plus native ceiling query derives
+35 fall updates. It lands atY530 with12 debris, then executes one more update.
+Immediate registered restore compares all51 keys semantically before any update,
+plus complete object tuple and class/slot multiset. The same84 ordinary inputs
+repeat every tuple and all-key comparison. Root independently compares all84 CSV
+rows across31 native/state columns, excluding only external call/kind labels:
+zero differences. No explicit fresh-Java-identity assertion is inferred.
+
+The separate STOCK arm executes the same89 first-pass calls. It remains WAITING
+after initialization, without falling/debris; WARNED's89 player/camera rows equal
+STOCK's across14 columns. Both remain Sonic solo, standing at55D8/1EE, zero rings,
+three lives, no hurt, death or invulnerability. WARNED is non-solid while shaking
+and falling, solid after landing; STOCK is solid while waiting. CSV is read before
+native320px PNGs: the landed body and both replay landing images match; the hanging
+body is partly above the viewport, so this does not prove visible warning quality.
+No traversal, under-body shelter, recovered lower path, harder gameplay, wider view,
+other character, checkpoint or cold route is qualified. Runtime logs report the
+existing LWJGL/JNI warnings and deterministic estimates for two unmeasured Kos jobs;
+they provide no measured hardware-timing parity. Inspected raw child logs are
+consumed; useful source, inputs/state, notes and native stills remain external.
+
+### AIZ under-log input research — 2026-10-16
+
+Fresh native-entry29449 uses immutable42171 engine9aa46975/SDK9e7a0610 and the
+unchanged cb2 creator. Queue243seconds; admitted compile plus one JVM11.705seconds.
+The fixed16114 prefix is unchanged. One ordinary-input author exception suppresses
+only the obstruction jump beneath a live native overhead log when real ground
+support and the native24x4 half-size touch band permit it. The source's pure
+background-state observation avoids a cache-writing provider getter. No native
+physics, hazard, timer, actor or latch field changes.
+
+All26 common columns through16255 literally equal the prior continuation. The one
+override16256 stays on the lower terrain; former death16262 is survived. The author
+later dies16518 at8710/1360 with zero rings after405 new inputs. Native log344 and
+its down-phase child are source/geometry candidates; the actual touch/crush winner
+was not instrumented. No platform target is acquired, and waterfall/results2/HCZ
+remain unreached. A stale historical latched pointer must not suppress terrain
+queries when current OnObject/riding support is absent; no native pointer clear
+is proposed. A source-only successor identifies ordinary Down with no Left/Right
+as the native S3K roll input at speed>=256, with positive roll/radii admission
+still required. Crouch alone does not shrink the S3K touch box. That response and
+its calculated clearance are unexecuted, not a safety or route certificate.

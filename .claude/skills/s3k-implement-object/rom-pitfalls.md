@@ -5308,3 +5308,37 @@ then compare the actual reached prefix and its ordinary forward replay. Compare
 all registered keys with the existing semantic diff, and name any normalization
 rather than advertising unrestricted byte equality. Origin: Second Strike
 continuation19119 and focused red86205/green42171, 2026-10-16.
+
+## Fixed teams can still register native ability objects
+
+Sonic's first ordinary status update can register its existing persistent
+InstaShieldObjectInstance. A solo roster therefore does not imply an unchanged
+ObjectManager population. The owner can legitimately have no ObjectSpawn:
+log class, slot and ObjectRefId before asking for spatial coordinates. Keep it
+in complete tuples, slot multisets and rewind comparisons. If a fixture admits
+this initialization, identify the exact pending handle and assert that it is the
+only population delta, rather than excluding a class from the comparison.
+Second Strike ICZ92726 exposed the bad gate;28579 measured the same registration
+in WARNED and STOCK (slot100/dynamicId8), 2026-10-16.
+
+Standing entry also needs both native feet, not just the centre column. In that
+ICZ lane, centreY1EF gives opposite-foot distances1/-1; centre1EE gives2/0 and
+remains still through ordinary updates. Count setup-only calls separately from
+Level/V-int advances. A correct floor query or an unlocked boot is not proof
+that the first ordinary object pass has completed.
+
+## Historical interaction pointers do not prove current support
+
+S3K can clear Status_OnObj while preserving the last interact address. An input
+author must use current OnObject and the manager's actual rider/standing relation
+before deciding that a platform supports the player; a non-null historical Java
+latch alone must not suppress terrain probes. Do not clear native history to
+repair the observer. Second Strike AIZ29449 retained a prior platform pointer
+while walking on terrain, 2026-10-16.
+
+When authoring a normal S3K roll, SonicKnux_Roll requires held Down, neither
+Left nor Right, and abs ground speed>=0x100. The generic Sonic threshold0x80 is
+not this rule. Crouch animation does not shrink the S3K touch box; Down+Right
+cannot initiate that roll, and Down+jump can jump first. Observe the actual
+rolling state and native radii7/14 before treating a response as acquired.
+Source availability and geometric clearance are not executed survival evidence.
