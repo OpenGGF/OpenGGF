@@ -4803,51 +4803,13 @@ public class ObjectManager {
     }
 
     ObjectInstance findRestoredRidingObject(ObjectSpawn spawn, int slotIndex) {
-        // A captured slot names the exact SST occupant. Spawn lookup alone is
-        // ambiguous: children such as the Rockn shell keep their parent's layout
-        // spawn, so activeObjects.get(spawn) would answer the parent instead.
-        ObjectInstance occupant = restoredOccupantOfSlot(slotIndex);
-        if (occupant != null && (spawn == null
-                || spawn.equals(objectCallbacks.call(occupant, occupant::getSpawn)))) {
+        ObjectInstance occupant = ObjectSolidContactController.findRestoredRidingOccupant(
+                activeObjects, dynamicObjects, objectCallbacks, spawn, slotIndex);
+        if (occupant != null || !isProcessedSstSlot(slotIndex)) {
             return occupant;
         }
-        if (spawn != null) {
-            ObjectInstance active = activeObjects.get(spawn);
-            if (active != null) {
-                return active;
-            }
-            for (ObjectInstance dynamic : dynamicObjects) {
-                if (dynamic != null && objectCallbacks.call(dynamic, dynamic::getSpawn) == spawn) {
-                    return dynamic;
-                }
-            }
-        }
-        if (isProcessedSstSlot(slotIndex)) {
-            int execIdx = execIndexForSlot(slotIndex);
-            if (execIdx >= 0 && execIdx < execOrder.length) {
-                return execOrder[execIdx];
-            }
-        }
-        return null;
-    }
-
-    private ObjectInstance restoredOccupantOfSlot(int slotIndex) {
-        if (slotIndex < 0) {
-            return null;
-        }
-        for (ObjectInstance active : activeObjects.values()) {
-            if (active instanceof AbstractObjectInstance aoi
-                    && objectCallbacks.call(active, aoi::getSlotIndex) == slotIndex) {
-                return active;
-            }
-        }
-        for (ObjectInstance dynamic : dynamicObjects) {
-            if (dynamic instanceof AbstractObjectInstance aoi
-                    && objectCallbacks.call(dynamic, aoi::getSlotIndex) == slotIndex) {
-                return dynamic;
-            }
-        }
-        return null;
+        int execIdx = execIndexForSlot(slotIndex);
+        return execIdx >= 0 && execIdx < execOrder.length ? execOrder[execIdx] : null;
     }
 
 
