@@ -288,10 +288,10 @@ acceptance is claimed.
 | Tails/+2 and Sonic/0 declared products | Qualified as declared scenes | 22/22 checkpoints, zero level mismatches, all whole frames viewed | Cold campaign identity, original-RGB bytes |
 | Sonic -2, Tails -2, Tails 0, Sonic+Tails -2/0 declared products | Qualified as declared scenes | Newly captured native references (unchanged v1 adapter, immutable host); engine `6ace9000f`: zero 3-bit-level mismatches and identical SST inventories at all 11 checkpoints each | Cold campaign identity, original-RGB bytes |
 | Sonic +2 and Sonic+Tails +2 (Hyper Sonic route) | Open, attributed to native CPU time | Checkpoints 1–4095 match exactly; SST identical at all 11. Native v5 ledgers (`B/native-cloud-transition-{tails,sonic,team}-super-320-v5`, Tails/+2 reproducing the v1 control) queue the same three Kos entries at LF 4402 and the module chain at 4403 on all three routes; only the FIFO head `$1D17A6` (fingerprint `5b4280f6…`) finishes in 3 polls on the Sonic and team routes (`Kos_decomp_queue_count` 3→2 at LF 4405) against 4 on Tails/+2 (LF 4406). Every later service step is identical, one frame earlier, so the `loc_5AE0A` gate opens at LF 4443 instead of 4444 | 171/194 level pixels at 5119/6143 (`HScroll_table+0` `$14F800`, `Camera_Y_pos` 517/1345 against engine `$14F000`, 516/1344). `Process_Kos_Queue` runs in main-loop idle time and resumes from a VInt bookmark (sonic3k.asm:2840), so the same job's duration depends on how much of those frames the route's objects consume. The FAST manifest holds one cost per fingerprint (4, measured on Tails/+2, which also matches Sonic/0 and the other five products); a route- or character-keyed cost would be a fitted constant (runtime invariant 3) and was not added. Closing it needs a CPU-cycle budget model for the Kos queue. The 2026-10-15 native measurement ([lifecycle design](../../designs/2026-10-13-s3k-ending-lifecycle.md#kos-idle-budget-measurement-of-the-hyper-sonic-residual-2026-10-15-opus-kos-budget-lane)) confirms the per-object idle-budget cause and rules out a route-free model; tracked in [S3K known bugs](../../../status/s3k-known-bugs.md#ending-reunion-kos-service-count--per-object-cpu-budget-open) |
-| Knuckles products (SSZ2 `$0A01`) | Open | Lifecycle 9 and terminal pixels pass. Credits against the native complete run (below): with the native inlet declared, `Camera_Y_pos`, all 32 Plane A rows and every cloud SST equal native at all 52 state-anchored spots (32 during the text, 20 after it); `8f602642c`, `9b0c85dd0`. Background routine 4's starfield and sea Plane B (`516ca64f1`). The terminal banner's `word_5F260` row and TM, `loc_5FBA0`'s pink flash, `loc_5FF62`'s logo fade and SSZ2's Plane A V-scroll from `Camera_Y_pos_copy` (kterminal lane): all 20 credits-done spots are pixel-identical with the native `HScroll_table` longword declared, and the credit text sits where native shows it at all 32 text spots | With the native `V_int_run_count` `$66141` declared at the flight edge, all 12 credits-one spans are pixel-identical to native; the earlier "one V-int late" clouds came from a `$66142` declaration ([presentation section](#knuckles-credits-v-int-inlet-teleporter-pad-and-zero-copy-pass-presentation-lane-2026-10-16)). The S3 eyecatch fades remain open ([known bugs](../../../status/s3k-known-bugs.md#knuckles-credits-and-terminal-residuals-open)); no declared native product; `loc_5B1A2` there clears only `Camera_Y_pos` and is not separately compared |
+| Knuckles products (SSZ2 `$0A01`) | Open | Lifecycle 9 and terminal pixels pass. Credits against the native complete run (below): with the native inlet declared, `Camera_Y_pos`, all 32 Plane A rows and every cloud SST equal native at all 52 state-anchored spots (32 during the text, 20 after it); `8f602642c`, `9b0c85dd0`. Background routine 4's starfield and sea Plane B (`516ca64f1`). The terminal banner's `word_5F260` row and TM, `loc_5FBA0`'s pink flash, `loc_5FF62`'s logo fade and SSZ2's Plane A V-scroll from `Camera_Y_pos_copy` (kterminal lane): all 20 credits-done spots are pixel-identical with the native `HScroll_table` longword declared, and the credit text sits where native shows it at all 32 text spots | With the native `V_int_run_count` `$66141` declared at the flight edge, all 12 credits-one spans are pixel-identical to native; the earlier "one V-int late" clouds came from a `$66142` declaration ([presentation section](#knuckles-credits-v-int-inlet-teleporter-pad-and-zero-copy-pass-presentation-lane-2026-10-16)). The S3 eyecatch fades are fixed from `loc_5FF62` ([2026-10-16 terminal section](#native-pal-50-hz-sonic2-product-ending-pal-lane-2026-10-16); [known bugs](../../../status/s3k-known-bugs.md#knuckles-credits-and-terminal-residuals-resolved)); no declared native product; `loc_5B1A2` there clears only `Camera_Y_pos` and is not separately compared |
 | Team retirement / full-frame replay | Passing on Root `e0a136b83` | `TestS3kEndingRescue` 36/36 and `TestS3kEndingLifecycleCapture` 18/18 (0 skipped), one queued focused run on 2026-10-15 05:58–06:01 UTC, Root plus the test-only wrapped-particle correction | The 30 roster and 6 team replay failures recorded on `be2a3f6d3`/`2b9eb431d` do not reproduce. Which composed commit cleared them was not bisected |
 | Wrapped particle presentation | Resolved: test premise corrected | Bisect (first-parent `5b2ff8e78..da27f4f3d`) puts the 0/398 failure at `90897f41d`, the merge of `9a7070930`, which added native Plane B high-priority sea composition. Subtype `$41` is low priority (`loc_5EDFE` clears art_tile bit 15). Native Sonic/0 spots at polls 1279, 1398–1401 and 1535 (`B/declared-native-spots-sonic-chaos-320-islandlift-v1`; engine input 1400 is poll 1399) hold 512/512 B-high opaque sea pixels under the old particle box (screen 224–255 × 188–203) and B-low sky at 40–71 × 40–55, so the VDP hides the old vector. The visible wrapped-Y cases now use the same threshold vector in the sky (Y `$FEB0`), and new `wrappedLowPriorityParticleIsCoveredByTheHighPrioritySea` (320/800) asserts that the old vector shows no particle pixels. No production change | The engine's B-high composition between native spot checkpoints is covered by the declared-product comparisons, not by this vector |
-| PAL | Open; native tier for Sonic/+2 | Literal PAL tables and REGION=PAL lifecycles (earlier sections). [Native PAL Sonic/+2](#native-pal-50-hz-sonic2-product-ending-pal-lane-2026-10-16): raw RGB byte-identical at polls 1–3071; LF, V-int and RNG equal for 13,888 frames; native credits last 7,415 frames, as in the engine. First divergence at LF 3778: the AIZ1 Kos modules finish four frames earlier at PAL (`loc_5AC70`). Owned by the Kos CPU-budget model | Eight other Sonic/Tails PAL products, Knuckles at PAL, PCM and PAL pacing. Pixels from poll 4095 inherit the Kos phase. The S3 eyecatch palette (line 0, line 3) is attributed and open |
+| PAL | Open; native tier for Sonic/+2 | Literal PAL tables and REGION=PAL lifecycles (earlier sections). [Native PAL Sonic/+2](#native-pal-50-hz-sonic2-product-ending-pal-lane-2026-10-16): raw RGB byte-identical at polls 1–3071; LF, V-int and RNG equal for 13,888 frames; native credits last 7,415 frames, as in the engine. First divergence at LF 3778: the AIZ1 Kos modules finish four frames earlier at PAL (`loc_5AC70`). Owned by the Kos CPU-budget model | Eight other Sonic/Tails PAL products, Knuckles at PAL, PCM and PAL pacing. Pixels from poll 4095 inherit the Kos phase. The S3 eyecatch palette and tail are fixed: Tails/+2 NTSC is raw-RGB identical at every terminal spot |
 | PCM / audio | Open (rendered PCM) | Request tier on all nine declared NTSC products: fade and credits requests on native-anchored frames; the credits request now loads and advances song `$32` ([ending audio request ledger](#ending-audio-request-ledger-and-credits-admission-ending-audio-lane-2026-10-16)) | No rendered PCM comparison; no native audio observation; Knuckles and PAL request dates |
 | SAT overflow / original RGB | Open | — | Native 20-sprite/320-dot overflow still needs a real witness; byte-RGB acceptance awaits the LIMITED colour profile |
 
@@ -536,7 +536,7 @@ At the 26 text spots with a yellow title, every title pixel matches native at dy
 text frames are 94.7-97.5% equal as wholes. At 30 of 32 spots every remaining pixel lies
 inside a cloud box: this tree reaches credits part one one V-int late, so the clouds
 differ. That and a glyph fragment at credits-one spans 9-10, both older than this lane,
-are recorded in [S3K known bugs](../../../status/s3k-known-bugs.md#knuckles-credits-and-terminal-residuals-open),
+are recorded in [S3K known bugs](../../../status/s3k-known-bugs.md#knuckles-credits-and-terminal-residuals-resolved),
 with the zero-copy pass and the S3 eyecatch fades.
 
 Red first, all queued and focused with the ROM paths, 0 skipped: `TestS3kPostCredits` and
@@ -550,7 +550,7 @@ keep-green classes, the four S3K guards, `TestS3kSszMechaSpawnHeadless` and the 
 ### Knuckles credits V-int inlet, teleporter pad and zero-copy pass (presentation lane, 2026-10-16)
 
 Resolves three of the four residuals the kterminal section left in
-[S3K known bugs](../../../status/s3k-known-bugs.md#knuckles-credits-and-terminal-residuals-open).
+[S3K known bugs](../../../status/s3k-known-bugs.md#knuckles-credits-and-terminal-residuals-resolved).
 The source is the round-2 presentation branch over Root `d3fb0625e`.
 
 **"One V-int late" was the declared inlet.** Native `observations.csv`
@@ -708,7 +708,7 @@ The only change is GPGX `SyncSettings.Region=Europe`, set in memory. The movie f
 unchanged, and the fence requires `Graphics_flags` bit 6. The engine runs the v16-limited
 title-owner ingress with `REGION=PAL` before boot, `FrameRateResolver` at 50, and LIMITED +
 RAW_RGB output. Inputs are neutral after the startup Start, so the terminal times out
-(`loc_5F2F8`, `$4AF`). Pairing is native poll p ↔ engine outer p+1, with no offset. The
+(`loc_5F2F8`, 044fa46 sonic3k.asm:125848, `$4AF`). Pairing is native poll p ↔ engine outer p+1, with no offset. The
 plan, probes, hashes and sampled times are in
 `$HOME/Videos/OGGF/s3k-parity-coverage-2026-10-14/spot-checks/ending-pal-v1/provenance.md`.
 Native ran 20:22:56–20:24:07 UTC and the engine (`e94f6c4e7`) 20:30:49–20:30:58 UTC, both
@@ -726,8 +726,8 @@ under queued `exec:exec`.
 
 **First divergence: ordinal 3777, LF 3778.** Native `Events_routine_fg` goes 16→20 and the
 camera jumps to `($1EB8,$1E0)` four frames before the engine (LF 3782). `loc_5AC70`
-(sonic3k.asm:121010-121012) waits on `Kos_modules_left` for the AIZ1 jobs that `loc_5AC12`
-queued: three `Queue_Kos` and two `Queue_Kos_Module` (120990-121007). Native finishes
+(044fa46 sonic3k.asm:121051-121053) waits on `Kos_modules_left` for the AIZ1 jobs that `loc_5AC12`
+queued: three `Queue_Kos` and two `Queue_Kos_Module` (121031-121048). Native finishes
 them at LF 3777. The NTSC native reference (`declared-native-spots-sonic-super-320-v1`)
 and the engine finish at 3781.
 
@@ -735,8 +735,8 @@ The cause is idle CPU, not object state. Native NTSC and PAL pixels, VRAM and CR
 identical at every spot through poll 3071, and every ledger field matches until ordinal
 3777. RAM differs only in stack bytes, plus, at poll 1, a 274-byte in-progress block of
 `Kos_decomp_buffer` from `$FFD64E`. Only the service rate differs. `Process_Kos_Queue` runs in
-main-loop idle time (sonic3k.asm:2840). A PAL frame has 313 lines instead of 262, and VInt
-spends 17,942 cycles in its PAL `move.w #$700,d0 / dbf d0,*` (sonic3k.asm:529-532).
+main-loop idle time (044fa46 sonic3k.asm:2872). A PAL frame has 313 lines instead of 262, and VInt
+spends 17,942 cycles in its PAL `move.w #$700,d0 / dbf d0,*` (044fa46 sonic3k.asm:545-548).
 
 The engine's `s3k-kos-v1` service counts are NTSC measurements keyed by fingerprint, with
 no region term. A PAL table or region shift fitted to this route would break runtime
@@ -755,28 +755,51 @@ cannot yet explain.
 - Spots 4095–12287 show phase differences: cloud and Tornado positions, `Camera_Y_pos`
   during credits, and palette line 3 cycle phase.
 - The engine's `GameMode` changes 23 outer steps after its terminal ends. Native
-  `loc_5F314` sets `Game_mode` immediately, and `Title_Screen` then runs `Pal_FadeToBlack`
-  (sonic3k.asm:5392-5399). The engine fades before switching mode. This is unchanged by
+  `loc_5F314` (044fa46 sonic3k.asm:125858) sets `Game_mode` immediately, and `Title_Screen`
+  then runs `Pal_FadeToBlack` (5424-5431). The engine fades before switching mode. This is unchanged by
   region.
 
-**Terminal palette (attributed, open).** The S3 eyecatch has no PAL branch. Hundreds of
-frames after it starts, native `Normal_palette` line 0 is `Pal_SonicTails` (`E66 C42 822`
-in colours 2–4) and line 3 is black. Native `Palette_cycle_counters+0` is `$FF` from
-`loc_5F15A`'s `st` (sonic3k.asm:125665) and is never cleared. The engine instead keeps
-the Hyper white `EEE` in line 0 and cycles `EA4 EC8 EE2` in line 3 colours 13–15. That
-gives 478 pixels at poll 13311.
+**Terminal palette and tail (fixed; line numbers are 044fa46 `sonic3k.asm`).** The S3
+eyecatch has no PAL branch. The first picture (poll 13311) showed 478 differing pixels.
+A second native run per product (`EndingScenePalProbeV2`: per-frame `Normal_palette`
+and `Palette_cycle_counters+0`, every frame from `loc_5FD5A`) traced them to five owners:
+- `Obj_5EF68` clears `Super_palette_status` on its first pass (125517-125520). The engine
+  kept the Hyper cycle writing line 0 colours 2–4.
+- `loc_5F15A` sets `Palette_cycle_counters+0` (125704-125706) and nothing clears it.
+  `sub_5928C`, the water cycle that `Ending_BackgroundEvent` routine 4 calls every frame
+  (118597-118615), tests that byte first. The engine re-wrote line 3 colours 13–15
+  after the fade to black.
+- `Obj_FadeSelectedToBlack` (179589-179612) takes its first `DecColor_Obj` step on its
+  allocation pass, which is native poll 14256 on Tails/+2 NTSC. The engine stepped one
+  pass later; `loc_5F18A` still hands over on the pass after the eighth step.
+- `sub_5FF1C` (126972), `loc_5F31C` (125863) and `loc_5F410` (125949) each allocate a
+  `loc_5FF62` (126999). These fade lines 1, 0 and 2 up to white, then down to their
+  targets, with the first step on the eyecatch initialization pass (native slots 5, 11
+  and 13). The engine used a raise-only reveal.
+- `loc_5F3AA`'s `CreateChild1_Normal` (125913-125921) adds the tail `loc_5F3EA`/`loc_5F400`
+  (`AniRaw_6026F`) at (-$10,+8). It is the only eyecatch object drawn on its
+  initialization pass, and it sits behind Tails: the native SAT links Sonic, Tails,
+  Knuckles, then the tail. The engine had no tail.
 
-Two owners are responsible:
-- `S3kEndingPalette.towardsTarget` only raises components. It cannot replace
-  `loc_5F31C`'s `loc_5FF62` (`Normal_palette+2`, `$3A`=`$E`; up to `$EEE`, then down to
-  the target).
-- The engine releases its rotation flag at `loc_5F18A`, but native never clears
-  `Palette_cycle_counters+0`.
+Red first: `TestS3kEndingS3Eyecatch` (5 cases) and `TestS3kEndingS3EyecatchTail` each
+failed on the earlier source for the behaviour they pin. The 17 focused classes then pass
+200/0/0/0 (22:45:25 UTC, including the required S3K four, the PAL/NTSC lifecycle captures
+and the Knuckles terminal pixels).
 
-This is the first native picture of that terminal. It is recorded under the existing
-[S3 eyecatch item](../../../status/s3k-known-bugs.md#knuckles-credits-and-terminal-residuals-open).
+Paired pictures, native poll p against engine outer p+1 (LIMITED + RAW_RGB, no
+normalization, engine timeline unchanged):
+- **Tails/+2 NTSC:** raw RGB identical at all 165 spots. That covers the scene, credits,
+  banner, every eyecatch frame from 14299 to 14426, and every 64th poll to the exit.
+  Palette lines 0, 1 and 3 equal native on every frame.
+- **Sonic/+2 PAL:** poll 13311 is now 0 px, and so are 17 of the 19 steady spots. Polls
+  12912 and 13104 show 315 px in Sonic's eyecatch sprite. Here the eyecatch starts one
+  frame after native, inherited from the PAL Kos phase above; this is not separately
+  attributed.
+
+Pictures and provenance:
+`$HOME/Videos/OGGF/s3k-parity-coverage-2026-10-14/spot-checks/ending-terminal-palette-v1/`.
 
 **Not claimed.** Not claimed: other PAL products, Knuckles at PAL, PAL wall-clock pacing,
 PCM, request dates (A8), or whole-run original-RGB acceptance beyond poll 3071. The
-title-side `Demo_timer` PAL values (sonic3k.asm:5521, 6494) were not compared. The native
+title-side `Demo_timer` PAL values (044fa46 sonic3k.asm:5553, 6526) were not compared. The native
 run went on through the attract demo before its post-exit `$3FB2` display enable.

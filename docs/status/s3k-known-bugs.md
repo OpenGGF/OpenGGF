@@ -141,7 +141,7 @@ Entries should include:
 52. [Ending Reunion Kos Service Count — Per-Object CPU Budget (OPEN)](#ending-reunion-kos-service-count--per-object-cpu-budget-open)
 53. [Level-Entry Title Card Residuals (OPEN)](#level-entry-title-card-residuals-open)
 54. [AIZ2 First-Tree and HCZ1 Zero-Offset Animated Tile Uploads (FIXED)](#aiz2-first-tree-and-hcz1-zero-offset-animated-tile-uploads-fixed)
-55. [Knuckles Credits and Terminal Residuals (OPEN)](#knuckles-credits-and-terminal-residuals-open)
+55. [Knuckles Credits and Terminal Residuals (RESOLVED)](#knuckles-credits-and-terminal-residuals-resolved)
 56. [MHZ Rewind Snapshot Identity Gaps (RESOLVED)](#mhz-rewind-snapshot-identity-gaps-resolved)
 
 ---
@@ -6553,7 +6553,7 @@ PAL makes the same gap larger and earlier. On the native 50 Hz Sonic/+2 product
 `loc_5AC70` therefore opens four frames before the region-independent engine; this is the
 first PAL divergence. Native NTSC and PAL agree before it at every compared spot and
 ledger field. A PAL frame has 313 lines instead of 262, less VInt's 17,942-cycle PAL
-`dbf` (sonic3k.asm:529-532). Evidence is in the
+`dbf` (044fa46 sonic3k.asm:545-548). Evidence is in the
 [ending matrix PAL section](../architecture/validation/levels/s3k-ending.md#native-pal-50-hz-sonic2-product-ending-pal-lane-2026-10-16).
 
 ### Why it stays open
@@ -6632,7 +6632,7 @@ trace results are in the
 
 ---
 
-## Knuckles Credits and Terminal Residuals (OPEN)
+## Knuckles Credits and Terminal Residuals (RESOLVED)
 
 The 2026-10-15 kterminal lane matched the Knuckles terminal banner, its pose flash and
 logo fade, and the credits' Plane A phase against the native complete run. The
@@ -6659,24 +6659,23 @@ logo fade, and the credits' Plane A phase against the native complete run. The
   uses a `Camera_Y_pos_copy` of 0 instead of the moved camera
   (`TestSszAct2CameraController`, red first at credits pass 122). No Mod API declaration
   changed.
-- **S3 eyecatch fades (open).** `loc_5F26C`, `loc_5F31C` and `loc_5F410` fade lines 1, 0
-  and 2 through their own `loc_5FF62` instances (up toward `$EEE`, then down to the
-  target, every fourth pass from each allocation). The engine's S3 eyecatch
-  (`S3kPostCreditsObjectInstance.initializeS3Eyecatch`) uses a six-pass from-black fade.
-  The owner is the three allocations' pass order and parameters (`$30`, `$32`, `$3A`).
-  The 2026-10-16 native PAL Sonic/+2 capture is the first native picture of this
-  terminal. It reached the eyecatch hundreds of frames earlier, so the comparison is
-  steady state.
-  - **Line 0.** Native is back to `Pal_SonicTails` (`E66 C42 822`). The engine keeps
-    the Hyper white `EEE`, because `S3kEndingPalette.towardsTarget` only raises
-    components.
-  - **Line 3.** Native is black, and `Palette_cycle_counters+0` is still `$FF` from
-    `loc_5F15A` (sonic3k.asm:125665). The engine resumes colours 13–15 after releasing
-    its rotation flag at `loc_5F18A`, which clears nothing natively.
+- **S3 eyecatch fades (fixed 2026-10-16).** `sub_5FF1C`, `loc_5F31C` and `loc_5F410` each
+  allocate a `loc_5FF62` (044fa46 sonic3k.asm:126999). These fade lines 1, 0 and 2 up to
+  white, then down to their targets, every fourth pass from the eyecatch initialization
+  pass. `S3kPostCreditsObjectInstance` now runs that countdown in place of its old
+  raise-only reveal.
 
-  Together these give 478 pixels at poll 13311
-  ([ending matrix](../architecture/validation/levels/s3k-ending.md#native-pal-50-hz-sonic2-product-ending-pal-lane-2026-10-16)).
-  Transitional frames have no native picture.
+  The same slice fixed four related owners:
+  - `Obj_5EF68` clears `Super_palette_status` (125520).
+  - `loc_5F15A` sets `Palette_cycle_counters+0` (125706), so `sub_5928C` stays off.
+  - `Obj_FadeSelectedToBlack` takes its first step on its allocation pass.
+  - The Tails child's tail (`loc_5F3EA`/`loc_5F400`) now exists, behind Tails.
+
+  `TestS3kEndingS3Eyecatch` and `TestS3kEndingS3EyecatchTail` pin these behaviours
+  red-first. Native captures cover the Tails/+2 NTSC and Sonic/+2 PAL terminals.
+  Tails/+2 NTSC is raw-RGB identical at every spot, including each eyecatch frame. The
+  Sonic/+2 PAL residual comes only from the PAL Kos phase above. Knuckles/+2 shares the
+  code but has no native capture of its own eyecatch.
 
 Evidence and the measured spots are in the
 [ending matrix](../architecture/validation/levels/s3k-ending.md#knuckles-credits-v-int-inlet-teleporter-pad-and-zero-copy-pass-presentation-lane-2026-10-16).
