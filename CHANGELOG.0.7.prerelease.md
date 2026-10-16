@@ -295,3 +295,7 @@ the slots after the ship, turn at the original three-frame rate, and
 disappear when the ship's departure redraw begins. The departing ship hands
 its own slot to the small Eggman craft and starts the background-tree maker
 after it. The loop boundary moves only once that redraw completes.
+
+The AIZ2 background-tree maker now places all seventeen trees, one per frame,
+in the slots after itself. It retries when no slot is free and gives each tree
+its original drawing priority.

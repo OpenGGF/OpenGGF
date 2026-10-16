@@ -8,21 +8,26 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ZeroArgRewindRecreatable;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.logging.Logger;
 
 /**
  * Spawner for AIZ2 parallax background trees during the post-bombing transition.
  *
- * <p>ROM: Obj_AIZ2MakeTree (sonic3k.asm).
- * Waits until Camera_X_pos >= $44D0, then reads a script of 17 entries.
- * Each entry is a (scroll_threshold, x_position) pair. When the cumulative
- * scroll distance since activation exceeds the current entry's threshold,
- * a new {@link AizBgTreeInstance} is spawned.
- *
- * <p>The x_position from the script is passed to the tree but has no practical
- * effect because the parallax calculation overwrites the tree's screen X
- * each frame.
+ * <p>ROM: Obj_AIZ2MakeTree (docs/skdisasm/sonic3k.asm:105553-105583).
+ * It waits until Camera_X_pos >= $44D0, records Events_fg_1 ($2E) and the
+ * script start ($30), and falls into loc_50632 in the same pass. Every pass
+ * first tests the next AIZMakeTreeScript word: the $FFFF terminator deletes
+ * the maker, so it outlives its last tree by one pass (:105564-105568).
+ * Otherwise loc_50640 (:105571-105580) makes at most one allocation attempt.
+ * Once the unsigned 16-bit Events_fg_1 delta reaches the entry's threshold
+ * ({@code cmp.w (a2)+,d0 / blo}), AllocateObjectAfterCurrent places one
+ * {@link AizBgTreeInstance} after the maker. {@code move.w (a2)+,8(a1)}
+ * writes the entry's second word as the tree's sprite priority. A failed
+ * allocation ({@code bne.s locret_50662}) skips the $30 write, so the same
+ * entry is retried on the next pass.
  *
  * <p>Allocated after the leaving {@link AizBattleshipInstance} with
  * AllocateObjectAfterCurrent (Obj_AIZBattleshipMain, sonic3k.asm:105334-105337).
@@ -35,27 +40,24 @@ public class AizBgTreeSpawnerInstance extends AbstractObjectInstance
     private static final int ACTIVATION_CAMERA_X = 0x44D0;
 
     /**
-     * Tree spawn script from ROM (AIZMakeTreeScript).
-     * ROM has 17 entries, followed by $FFFF. The last two thresholds ($50C,
-     * $557) spawn after Sonic has effectively passed the visible forest mask;
-     * hardware priority masking hides them behind opaque foreground tiles.
-     * Until the renderer models that per-tile priority mask, only the 15 visible
-     * entries are spawned.
+     * AIZMakeTreeScript in the locked-on ROM (S3 half, Lockon S3/LockOn Pointers.asm:151
+     * {@code ds.b $46}): (Events_fg_1 delta threshold, sprite priority word) pairs closed by a
+     * negative word ($FFFF). Read through the ROM pipeline one entry per pass, as the routine
+     * walks its $30 pointer, rather than from a copied table.
      */
-    private static final int[][] TREE_SCRIPT = {
-            {0x000, 0x280}, {0x032, 0x380}, {0x08E, 0x280}, {0x103, 0x380},
-            {0x179, 0x280}, {0x1C6, 0x380}, {0x233, 0x280}, {0x2A0, 0x380},
-            {0x30A, 0x280}, {0x37C, 0x380}, {0x3C7, 0x280}, {0x401, 0x380},
-            {0x439, 0x280}, {0x46E, 0x380}, {0x4CA, 0x280},
-    };
+    private static final int MAKE_TREE_SCRIPT_ADDR = 0x23C13C;
+    private static final int SCRIPT_ENTRY_BYTES = 4;
 
     /** True once camera has reached the activation threshold. */
     private boolean activated;
 
-    /** Smooth scroll X at the moment of activation (baseline for script thresholds). */
+    /** ROM $2E: Events_fg_1 (engine smooth scroll X) recorded at activation. */
     private int activationSmoothScrollX;
 
-    /** Index into TREE_SCRIPT; when >= TREE_SCRIPT.length, all trees have been spawned. */
+    /**
+     * ROM $30 as an entry index. It advances only after a successful
+     * allocation; the entry it reaches after the last tree is the terminator.
+     */
     private int scriptIndex;
 
     public AizBgTreeSpawnerInstance() {
@@ -91,27 +93,31 @@ public class AizBgTreeSpawnerInstance extends AbstractObjectInstance
                     + ", smoothX=0x" + Integer.toHexString(activationSmoothScrollX));
         }
 
-        // Process script entries
-        int currentSmooth = state.getBattleshipSmoothScrollX();
-        int scrollDistance = currentSmooth - activationSmoothScrollX;
-
-        while (scriptIndex < TREE_SCRIPT.length) {
-            int threshold = TREE_SCRIPT[scriptIndex][0];
-            if (scrollDistance < threshold) {
-                break;
-            }
-
-            // Spawn a tree with the current smooth scroll X as its baseline
-            spawnFreeChild(() -> new AizBgTreeInstance(currentSmooth));
-
-            scriptIndex++;
-        }
-
-        // Self-destruct once all trees have been spawned
-        if (scriptIndex >= TREE_SCRIPT.length) {
-            LOG.info("AIZ2 tree spawner: all " + TREE_SCRIPT.length + " trees spawned, removing");
+        // loc_50632: tst.w (a2) / bpl -- a negative word ends the script and
+        // deletes the maker before any allocation attempt (:105564-105568).
+        int entry = scriptIndex * SCRIPT_ENTRY_BYTES;
+        int threshold = scriptWord(entry);
+        if ((threshold & 0x8000) != 0) {
+            LOG.info("AIZ2 tree spawner: script terminator reached, removing");
             setDestroyed(true);
+            return;
         }
+
+        // loc_50640: sub.w $2E(a0),d0 / cmp.w (a2)+,d0 / blo -- an unsigned
+        // word compare of the Events_fg_1 delta, one entry per pass.
+        int currentSmooth = state.getBattleshipSmoothScrollX();
+        int scrollDistance = (currentSmooth - activationSmoothScrollX) & 0xFFFF;
+        if (scrollDistance < threshold) {
+            return;
+        }
+
+        int priorityWord = scriptWord(entry + 2);
+        AizBgTreeInstance tree = spawnChild(() -> new AizBgTreeInstance(currentSmooth, priorityWord));
+        // AllocateObjectAfterCurrent failure (bne.s locret_50662) leaves $30 unchanged.
+        if (tree == null || tree.isDestroyed()) {
+            return;
+        }
+        scriptIndex++;
     }
 
     /**
@@ -130,6 +136,15 @@ public class AizBgTreeSpawnerInstance extends AbstractObjectInstance
     @Override
     public boolean isPersistent() {
         return true;
+    }
+
+    private int scriptWord(int byteOffset) {
+        try {
+            byte[] word = services().rom().readBytes(MAKE_TREE_SCRIPT_ADDR + byteOffset, 2);
+            return ((word[0] & 0xFF) << 8) | (word[1] & 0xFF);
+        } catch (IOException e) {
+            throw new UncheckedIOException("AIZMakeTreeScript read at entry offset " + byteOffset, e);
+        }
     }
 
     private AizZoneRuntimeState currentAizState() {

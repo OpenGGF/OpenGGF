@@ -1591,14 +1591,25 @@ public class TestSonic3kAIZEvents {
     }
 
     @Test
-    public void aiz2TreeSpawnerStopsBeforeRomEntriesHiddenByForestPriorityMask() throws Exception {
-        Field field = AizBgTreeSpawnerInstance.class.getDeclaredField("TREE_SCRIPT");
-        field.setAccessible(true);
-        int[][] script = (int[][]) field.get(null);
+    public void aiz2TreeSpawnerReadsAizMakeTreeScriptFromTheRom() throws Exception {
+        // AIZMakeTreeScript, S3 half (Lockon S3/LockOn Pointers.asm:151, ds.b $46),
+        // at locked-on ROM $23C13C: (threshold, priority word) pairs then $FFFF.
+        Field address = java.util.Arrays.stream(AizBgTreeSpawnerInstance.class.getDeclaredFields())
+                .filter(f -> f.getName().equals("MAKE_TREE_SCRIPT_ADDR")).findFirst().orElse(null);
+        assertTrue(address != null, "the maker must walk the ROM's own script, not a copied table");
+        address.setAccessible(true);
+        assertEquals(0x23C13C, address.getInt(null), "the maker walks the ROM's own script");
+        byte[] rom = GameServices.rom().getRom().readBytes(0x23C13C, 0x46);
+        int entries = 0;
+        while ((rom[entries * 4] & 0x80) == 0) {
+            entries++;
+        }
+        assertEquals(17, entries, "AIZMakeTreeScript holds 17 entries before its terminator");
+        assertEquals(0xFFFF, word(rom, entries * 4), "the terminator word is $FFFF");
+    }
 
-        assertEquals(15, script.length,
-                "Engine-visible AIZ2 tree script should omit the two ROM entries hidden past the forest mask");
-        assertEquals(0x4CA, script[14][0], "last visible tree threshold should match AIZMakeTreeScript entry 15");
+    private static int word(byte[] bytes, int offset) {
+        return ((bytes[offset] & 0xFF) << 8) | (bytes[offset + 1] & 0xFF);
     }
 
     @Test
