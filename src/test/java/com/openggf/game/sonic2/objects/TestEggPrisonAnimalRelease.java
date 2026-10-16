@@ -18,12 +18,17 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockingDetails;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -41,6 +46,10 @@ import static org.mockito.Mockito.when;
  * <p>The fix routes the spawn through {@code spawnFreeChild(...)} (which sets the
  * construction context, exactly like every other child spawn), so the animal's
  * constructor resolves the render manager.
+ *
+ * <p>Since 62299509f the animal resolves its renderer when drawing (rewind
+ * recreates it before services are injected). The guard therefore checks the
+ * behaviour itself: a released animal must reach the animal renderer and draw.
  */
 @ExtendWith(SingletonResetExtension.class)
 @FullReset
@@ -57,7 +66,7 @@ public class TestEggPrisonAnimalRelease {
     }
 
     @Test
-    public void releasedAnimalsCaptureAUsableRenderer() throws Exception {
+    public void releasedAnimalsCaptureAUsableRenderer() {
         ObjectManager[] holder = new ObjectManager[1];
         Camera camera = mock(Camera.class);
         when(camera.getX()).thenReturn((short) 0x100);
@@ -67,9 +76,10 @@ public class TestEggPrisonAnimalRelease {
         when(camera.isVerticalWrapEnabled()).thenReturn(false);
 
         // A render manager IS available at gameplay time — the animal just has to
-        // be able to reach it from its constructor.
+        // be able to reach it through its injected services.
         ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
         PatternSpriteRenderer animalRenderer = mock(PatternSpriteRenderer.class);
+        when(animalRenderer.isReady()).thenReturn(true);
         when(renderManager.getAnimalRenderer()).thenReturn(animalRenderer);
         when(renderManager.getAnimalTypeA()).thenReturn(0);
         when(renderManager.getAnimalTypeB()).thenReturn(1);
@@ -94,21 +104,26 @@ public class TestEggPrisonAnimalRelease {
         when(player.getY()).thenReturn((short) -10000);
 
         EggPrisonAnimalInstance animal = null;
-        for (int frame = 0; frame < 400 && animal == null; frame++) {
+        boolean drew = false;
+        for (int frame = 0; frame < 400 && !drew; frame++) {
             manager.update(0x100, player, List.of(), frame);
             animal = firstAnimal(manager);
+            if (animal != null) {
+                // Prison animals stay hidden only while waiting in the capsule
+                // (Obj28_Prison); every later draw must reach the animal renderer.
+                animal.appendRenderCommands(new ArrayList<>());
+                drew = mockingDetails(animalRenderer).getInvocations().stream()
+                        .anyMatch(invocation -> invocation.getMethod().getName().equals("drawFrameIndex"));
+            }
         }
 
         assertNotNull(animal, "the egg prison should spawn at least one animal");
-
-        Field rendererField = EggPrisonAnimalInstance.class.getDeclaredField("renderer");
-        rendererField.setAccessible(true);
-        Object captured = rendererField.get(animal);
-
-        assertNotNull(captured,
-                "Regression: released egg-prison animals captured a null renderer at construction "
-                        + "(getRenderManager() returned null because the spawn did not set the "
-                        + "construction context), so every animal was invisible.");
+        assertTrue(drew,
+                "Regression: released egg-prison animals could not reach a usable renderer "
+                        + "(getRenderManager() returned null because the spawn did not supply "
+                        + "services), so every animal was invisible.");
+        verify(animalRenderer, atLeastOnce())
+                .drawFrameIndex(anyInt(), anyInt(), anyInt(), anyBoolean(), anyBoolean());
     }
 
     private static EggPrisonAnimalInstance firstAnimal(ObjectManager manager) {
