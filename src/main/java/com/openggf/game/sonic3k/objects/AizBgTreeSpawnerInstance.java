@@ -24,7 +24,8 @@ import java.util.logging.Logger;
  * effect because the parallax calculation overwrites the tree's screen X
  * each frame.
  *
- * <p>Spawned by {@link Sonic3kAIZEvents#onBattleshipComplete()}.
+ * <p>Allocated after the leaving {@link AizBattleshipInstance} with
+ * AllocateObjectAfterCurrent (Obj_AIZBattleshipMain, sonic3k.asm:105334-105337).
  */
 public class AizBgTreeSpawnerInstance extends AbstractObjectInstance
         implements ZeroArgRewindRecreatable {

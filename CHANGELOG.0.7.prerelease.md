@@ -289,3 +289,9 @@ display hold and retirement through their native movement and visibility latches
 Hidden-monitor conversion retains the occupied native SST through replacement
 cleanup. Both special-stage return prefixes pass; broader complete-route parity
 remains separate from these scoped native-owner checks.
+
+The AIZ2 bombing ship's two propellers are now native objects. They take
+the slots after the ship, turn at the original three-frame rate, and
+disappear when the ship's departure redraw begins. The departing ship hands
+its own slot to the small Eggman craft and starts the background-tree maker
+after it. The loop boundary moves only once that redraw completes.
