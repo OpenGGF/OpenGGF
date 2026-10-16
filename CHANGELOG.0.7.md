@@ -53,6 +53,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   stage policies validate isolated data.
   Bounded creator helpers preserve native destruction, shields, monitor contents
   and presentation; exact lifetime links survive rewind and colocated placements.
+  The tree-exit lookout retires its native arm chain in object-slot order before
+  its parent slot can be reused, while already launched coconuts keep their own lifetime.
   Game-owned recipes keep native construction out of shared effects.
   Field and powered callbacks retain the receiving creator's fault boundary,
   aborting a failed frame without blaming another mod that invoked the receiver.

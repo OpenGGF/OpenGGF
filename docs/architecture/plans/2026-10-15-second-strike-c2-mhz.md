@@ -128,3 +128,33 @@ Next actual encounter requires source/native terrain and approach ownership
 before another declared entry, not camera/physics/phase edits or blind positions.
 Cold routes, seasons/chase/bosses, zero-ring checkpoint, pressure pixels, native
 committed replay and provider activation remain OPEN.
+
+## Current first-pressure ingredient — 2026-10-16
+
+Root's source-reviewed finite witness 10411 uses engine22102f1b/SDK387b82db and
+strict MHZ-only proof e123a7a0, with the unchanged exact original-34 ingredient.
+The main campaign provider remains unwired. The earlier lower-band/backside,
+camera-deferral, intact-monitor approach and unintended second-Sonic outcomes
+are preserved; this successor positively checks empty-string solo configuration
+and the actual live roster, native readiness, support, art and placement owner.
+
+Two fresh isolated JVMs complete 160 ordinary inputs each: 60 readiness calls,
+20 RIGHT approach calls, then 80 neutral or DOWN breathing calls. No reset,
+native field write, manual art/queue service, calibration or bound extension is
+used. At first wind, the actual Cluckoid execution slot 24 and next-slot sample
+bracket X1586 to1577 for neutral (-9 pixels), versus unchanged1586 for Duck8.
+Ground speed is zero; fractions stay unchanged; both remain grounded, zero-ring,
+unhurt and alive. The wind latch/pulse first change at call160. Movement/state/
+clock comparison first differs in X there. Root reads both CSVs before native
+ready/tell/first-wind stills, which show the native actor/arrow and actual crouch.
+
+Queue wait is 365s, actual child/cleanup 1.081s per cell, admitted interval3.943s;
+both owned groups are absent. This external witness is not a JUnit suite. Its
+slot-envelope reading and source formula establish engine self-consistency,
+not independent ROM constant parity. Phase0 also occurs in STOCK; no full
+20-on/12-off pulse, relative difficulty or complete native cycle is qualified.
+Duck's zero delta is one real exemption, not absence of wind. VRAM/PLC queue
+faithfulness, leaf hazards, safe routes, full tell/punish breadth, committed
+replay, season/chase/bosses, character/viewport coverage and cold acceptance
+remain open. Exact artifacts, source review and commands are in the
+[root checkpoint](2026-10-15-second-strike-campaign-delivery.md#mhz-first-wind-observation--inactive-ingredient).

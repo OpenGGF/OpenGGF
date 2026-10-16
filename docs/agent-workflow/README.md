@@ -119,6 +119,8 @@ The following `com.openggf.tools` CLIs. Maven examples quote each `-D...` proper
 
 ## Test harness helpers
 
+- [`TestSecondStrikeHczAirRecovery`](../../src/test/java/com/openggf/tools/TestSecondStrikeHczAirRecovery.java) preserves the fixed, positioned HCZ1 maker114 oxygen hop/return and natural child-recreation/full-world suffix replay. Supply an actual paired jar with `-Dsecondstrike.hcz.air.mod=...`, the original S3K ROM and isolated EGL through the normal test queue; an outer owned-process deadline is separate from JUnit's limit (Second Strike, 2026-10-16).
+
 - `tools/modding/native-linux/build_linux.py` uses a pinned rootless Ubuntu/CE
   toolchain for the experimental Linux ZIP, preserving the isolated Windows
   feature. Its native gameplay probe uses production loaders, real OpenGL,

@@ -2,11 +2,19 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.game.GameServices;
+import com.openggf.game.rewind.CompositeSnapshot;
+import com.openggf.game.rewind.RewindSnapshotDiff;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.difficulty.AizTreeExitRecipe;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.objects.badniks.MonkeyDudeBadnikInstance;
+import com.openggf.game.sonic3k.objects.badniks.MonkeyDudeArmObjectInstance;
+import com.openggf.game.sonic3k.objects.badniks.S3kBadnikProjectileInstance;
+import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.NativeSstSlotAccess;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SkidDustObjectInstance;
 import com.openggf.mods.objects.AizHollowTreeFactory;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -62,13 +70,14 @@ class TestAizExitLookout {
         // Retire the actual graph before restoring the registered world/player
         // state. Replay the same ordinary right input through real landing.
         objects.removeDynamicObject(tree);
-        assertEquals(0, lookouts());
+        finishRequestedRetirement(fixture);
         registry.restore(before);
         var restored = objects.getActiveObjects().stream().filter(AizHollowTreeObjectInstance.class::isInstance)
                 .map(AizHollowTreeObjectInstance.class::cast).filter(o -> !o.isDestroyed()).findFirst().orElseThrow();
         assertEquals(admissionFrames, advanceToLookout(fixture));
         assertEquals(1, lookouts());
         restored.onUnload();
+        finishRequestedRetirement(fixture);
         assertEquals(0, lookouts(), "native tree retirement retires its admitted lookout without rewards");
     }
 
@@ -268,8 +277,10 @@ class TestAizExitLookout {
             expected.add(bornFrame(fixture));
             assertEquals(1, lookouts(), "the native owner cannot birth a second lookout");
         }
+        int bornSlot = born.getSlotIndex();
         java.util.List.copyOf(objects.getActiveObjects()).forEach(objects::removeDynamicObject);
-        assertTrue(born.isDestroyed(), "retiring the original tree retires its actual born child");
+        assertNull(NativeSstSlotAccess.currentOwner(objects, bornSlot),
+                "this destructive restore setup removes the actual old physical owner");
         registry.restore(snapshot);
         var restored = objects.getActiveObjects().stream()
                 .filter(AizHollowTreeObjectInstance.class::isInstance)
@@ -291,6 +302,8 @@ class TestAizExitLookout {
             assertEquals(1, lookouts());
         }
         restored.onUnload();
+        assertFalse(restoredBorn.isDestroyed(), "withdrawal must first publish at the body's own dispatch");
+        finishRequestedRetirement(fixture);
         assertTrue(restoredBorn.isDestroyed());
         assertEquals(0, lookouts(), "restored owner retirement uses the rebound child reference");
     }
@@ -332,6 +345,7 @@ class TestAizExitLookout {
         var registry = fixture.gameplayMode().getRewindRegistry();
         var snapshot = registry.capture();
         objects.removeDynamicObject(tree);
+        finishRequestedRetirement(fixture);
         assertEquals(0, lookouts());
         registry.restore(snapshot);
         var restored = objects.getActiveObjects().stream()
@@ -346,10 +360,218 @@ class TestAizExitLookout {
         restored.update(242, player);
         assertEquals(freeSlots, lookouts());
         restored.onUnload();
+        finishRequestedRetirement(fixture);
         assertEquals(0, lookouts());
         assertEquals(0, player.getRingCount());
         assertEquals(score, GameServices.gameState().getScore());
         assertEquals(lives, GameServices.gameState().getLives());
+    }
+
+    @Test void laterTreeSlotClosesItsFiveArmsBeforeSkidDustReusesTheBodySlot() {
+        var scene = retirementScene(false);
+        var objects = GameServices.level().getObjectManager();
+        int score = GameServices.gameState().getScore(), lives = GameServices.gameState().getLives();
+        int rings = scene.fixture().sprite().getRingCount();
+        requestFromLaterTreeSlot(scene);
+        scene.tree().onUnload(); // repeated withdrawal must not advance native retirement
+        assertRequestedGraph(scene.body(), scene.arms());
+        stepObjects(scene.fixture(), scene.nextFrame() + 1);
+        assertPublishedGraph(scene.body(), scene.arms());
+        scene.tree().onUnload(); // a published body must not acquire a second request
+        assertEquals(Boolean.FALSE, readField(scene.body(), "ownedRetirementRequested"));
+        stepObjects(scene.fixture(), scene.nextFrame() + 2);
+        assertClosedGraph(objects, scene.body(), scene.arms());
+
+        // Use the real effect producer and normal allocator after the graph is
+        // closed. A stale physical parent3 link would see this actual dust owner.
+        SkidDustObjectInstance.spawn(scene.fixture().sprite());
+        assertInstanceOf(SkidDustObjectInstance.class, NativeSstSlotAccess.currentOwner(objects, 4));
+        assertDoesNotThrow(() -> stepObjects(scene.fixture(), scene.nextFrame() + 3));
+        assertTrue(lookoutArms(objects).isEmpty(), "no orphan routine may read the reused body slot");
+        assertEquals(score, GameServices.gameState().getScore());
+        assertEquals(lives, GameServices.gameState().getLives());
+        assertEquals(rings, scene.fixture().sprite().getRingCount());
+    }
+
+    @Test void requestedAndPublishedGraphRetirementRecreateAndReplayWithoutDeletingTheCoconut() {
+        var scene = retirementScene(true);
+        var fixture = scene.fixture();
+        var objects = GameServices.level().getObjectManager();
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        int coconutSlot = scene.coconut().getSlotIndex();
+        int coconutX = scene.coconut().getX();
+        requestFromLaterTreeSlot(scene);
+        var requested = registry.capture();
+        stepObjects(fixture, scene.nextFrame() + 1);
+        assertPublishedGraph(scene.body(), scene.arms());
+        var published = registry.capture();
+        stepObjects(fixture, scene.nextFrame() + 2);
+        assertClosedGraph(objects, scene.body(), scene.arms());
+        var coconut = assertInstanceOf(S3kBadnikProjectileInstance.class,
+                NativeSstSlotAccess.currentOwner(objects, coconutSlot));
+        assertFalse(coconut.isDestroyed(), "the detached native projectile has its own lifetime");
+        assertNotEquals(coconutX, coconut.getX(), "ordinary native projectile motion must continue");
+        var after = registry.capture();
+
+        // Recreate the complete registered world, including the request latch,
+        // physical arm links and already committed independent projectile.
+        java.util.List.copyOf(objects.getActiveObjects()).forEach(objects::removeDynamicObject);
+        registry.restore(requested);
+        sameWorld(requested, registry.capture());
+        var recreated = nativeLookout();
+        assertNotSame(scene.body(), recreated);
+        assertSame(recreated, NativeSstSlotAccess.currentOwner(objects, 4));
+        assertRequestedGraph(recreated, lookoutArms(objects));
+        stepObjects(fixture, scene.nextFrame() + 1);
+        sameWorld(published, registry.capture());
+        stepObjects(fixture, scene.nextFrame() + 2);
+        sameWorld(after, registry.capture());
+
+        java.util.List.copyOf(objects.getActiveObjects()).forEach(objects::removeDynamicObject);
+        registry.restore(published);
+        sameWorld(published, registry.capture());
+        assertPublishedGraph(nativeLookout(), lookoutArms(objects));
+        stepObjects(fixture, scene.nextFrame() + 2);
+        sameWorld(after, registry.capture());
+        assertInstanceOf(S3kBadnikProjectileInstance.class,
+                NativeSstSlotAccess.currentOwner(objects, coconutSlot));
+    }
+
+    private record RetirementScene(HeadlessTestFixture fixture, AizHollowTreeObjectInstance tree,
+                                   MonkeyDudeBadnikInstance body,
+                                   java.util.List<MonkeyDudeArmObjectInstance> arms,
+                                   S3kBadnikProjectileInstance coconut, int nextFrame) { }
+
+    private static RetirementScene retirementScene(boolean waitForCoconut) {
+        var fixture = boot("sonic", "");
+        var objects = GameServices.level().getObjectManager();
+        objects.setRewindInPlaceRestoreEnabledForTest(false);
+        // Isolate the local mechanism in the actual ROM-loaded world. Existing
+        // placed actors are retired before this declared component setup; this
+        // is not a cold-route or native-entry qualification.
+        for (var object : java.util.List.copyOf(objects.getActiveObjects())) {
+            if (object instanceof AbstractObjectInstance actor
+                    && actor.getSlotIndex() >= 4 && actor.getSlotIndex() < 98) actor.setDestroyed(true);
+        }
+        stepObjects(fixture, 0);
+        var tree = objects.createDynamicObjectAtSlot(
+                () -> (AizHollowTreeObjectInstance) AizHollowTreeFactory.create(TREE, AizTreeExitRecipe.EXIT_LOOKOUT), 25);
+        assertNotNull(tree);
+        completeRide(tree, fixture.sprite());
+        // The direct component ride creates its native reveal control at the
+        // first free slot before any normal manager pass. Exclude that exact
+        // fixture-owned control before admission, not an unknown later actor
+        // or an already admitted lookout; reveal animation is outside this
+        // local graph-retirement witness.
+        var reveal = assertInstanceOf(AizHollowTreeObjectInstance.AizTreeRevealControlObjectInstance.class,
+                NativeSstSlotAccess.currentOwner(objects, 4));
+        assertEquals(TREE.x(), reveal.getX());
+        assertEquals(TREE.y(), reveal.getY());
+        objects.removeDynamicObject(reveal);
+        assertNull(NativeSstSlotAccess.currentOwner(objects, 4), "admission must start with the declared free body slot");
+        advanceToLookout(fixture);
+        var body = nativeLookout();
+        var slot4 = NativeSstSlotAccess.currentOwner(objects, 4);
+        assertEquals(4, body.getSlotIndex(), () -> "the actual first-free allocation must remain below tree25; SST4="
+                + (slot4 == null ? "empty" : slot4.getClass().getName() + " spawn=" + slot4.getSpawn()));
+        assertEquals(25, tree.getSlotIndex());
+        GameServices.camera().setX((short) 0x2D80);
+        GameServices.camera().setY((short) 0x2C0);
+        int tick = 500;
+        for (int count = 0; count < 4 && lookoutArms(objects).size() < 5; count++) stepObjects(fixture, tick++);
+        var arms = lookoutArms(objects);
+        assertEquals(5, arms.size(), "native body INIT must create all five actual arm owners");
+        assertTrue(arms.stream().allMatch(arm -> arm.getSlotIndex() > 4 && arm.getSlotIndex() < 25));
+        S3kBadnikProjectileInstance coconut = null;
+        if (waitForCoconut) {
+            var root = arms.getFirst();
+            assertTrue(fixture.sprite().getCentreX() <= root.getX()
+                            && root.getX() - fixture.sprite().getCentreX() < 0x80,
+                    "ordinary native left-facing attack prerequisite");
+            for (int count = 0; count < 160 && coconut == null; count++) {
+                stepObjects(fixture, tick++);
+                coconut = objects.activeObjectsOfType(S3kBadnikProjectileInstance.class).stream()
+                        .filter(actor -> !actor.isDestroyed()).findFirst().orElse(null);
+            }
+            assertNotNull(coconut, "native arm/hand routines must commit the real detached coconut");
+        }
+        return new RetirementScene(fixture, tree, body, arms, coconut, tick);
+    }
+
+    private static void requestFromLaterTreeSlot(RetirementScene scene) {
+        // Coarse-back=$2D80: original tree $2D00 is out, but body $2DE0
+        // remains in its own native window. The actual manager executes body4
+        // and arms before retiring tree25 and invoking its onUnload callback.
+        GameServices.camera().setX((short) 0x2E00);
+        stepObjects(scene.fixture(), scene.nextFrame());
+        var objects = GameServices.level().getObjectManager();
+        assertTrue(objects.getActiveObjects().stream().noneMatch(actor -> actor == scene.tree()));
+        assertSame(scene.body(), NativeSstSlotAccess.currentOwner(objects, 4));
+        assertRequestedGraph(scene.body(), scene.arms());
+    }
+
+    private static void assertRequestedGraph(MonkeyDudeBadnikInstance body,
+                                             java.util.List<MonkeyDudeArmObjectInstance> arms) {
+        assertFalse(body.isDestroyed());
+        assertEquals(Boolean.TRUE, readField(body, "ownedRetirementRequested"));
+        assertEquals(Boolean.FALSE, readField(body, "nativeRetirementPending"));
+        assertEquals(5, arms.size());
+        assertTrue(arms.stream().noneMatch(AbstractObjectInstance::isDestroyed));
+        assertTrue(arms.stream().allMatch(arm -> Boolean.FALSE.equals(readField(arm, "nativeRetirementPending"))));
+    }
+
+    private static void assertPublishedGraph(MonkeyDudeBadnikInstance body,
+                                             java.util.List<MonkeyDudeArmObjectInstance> arms) {
+        assertFalse(body.isDestroyed(), "publish status7 for a whole own-slot pass before clearing");
+        assertEquals(Boolean.FALSE, readField(body, "ownedRetirementRequested"));
+        assertEquals(Boolean.TRUE, readField(body, "nativeRetirementPending"));
+        assertEquals(5, arms.size());
+        assertTrue(arms.stream().noneMatch(AbstractObjectInstance::isDestroyed));
+        assertTrue(arms.stream().allMatch(arm -> Boolean.TRUE.equals(readField(arm, "nativeRetirementPending"))));
+    }
+
+    private static void assertClosedGraph(ObjectManager objects, MonkeyDudeBadnikInstance body,
+                                          java.util.List<MonkeyDudeArmObjectInstance> arms) {
+        assertTrue(body.isDestroyed());
+        assertTrue(arms.stream().allMatch(AbstractObjectInstance::isDestroyed));
+        assertTrue(lookoutArms(objects).isEmpty());
+        assertNull(NativeSstSlotAccess.currentOwner(objects, 4));
+    }
+
+    private static java.util.List<MonkeyDudeArmObjectInstance> lookoutArms(ObjectManager objects) {
+        return objects.activeObjectsOfType(MonkeyDudeArmObjectInstance.class).stream()
+                .filter(actor -> !actor.isDestroyed() && actor.getSpawn().x() == 0x2DE0
+                        && actor.getSpawn().y() == 0x31C)
+                .sorted(java.util.Comparator.comparingInt(AbstractObjectInstance::getSlotIndex)).toList();
+    }
+
+    private static void stepObjects(HeadlessTestFixture fixture, int frame) {
+        var objects = GameServices.level().getObjectManager();
+        var nativeP2 = objects.getObjectServices().playerQuery().nativeP2OrNull();
+        objects.update(GameServices.camera().getX(), fixture.sprite(),
+                nativeP2 == null ? java.util.List.of() : java.util.List.of(nativeP2), frame, false);
+    }
+
+    private static void finishRequestedRetirement(HeadlessTestFixture fixture) {
+        if (lookouts() == 0) return;
+        var body = nativeLookout();
+        assertFalse(body.isDestroyed());
+        assertEquals(Boolean.TRUE, readField(body, "ownedRetirementRequested"));
+        stepObjects(fixture, 1000);
+        assertFalse(body.isDestroyed());
+        assertEquals(Boolean.TRUE, readField(body, "nativeRetirementPending"));
+        stepObjects(fixture, 1001);
+        assertTrue(body.isDestroyed());
+        assertEquals(0, lookouts());
+        assertTrue(lookoutArms(GameServices.level().getObjectManager()).isEmpty());
+    }
+
+    private static void sameWorld(CompositeSnapshot expected, CompositeSnapshot actual) {
+        assertEquals(expected.entries().keySet(), actual.entries().keySet());
+        for (String key : expected.entries().keySet()) {
+            var differences = RewindSnapshotDiff.diffKey(key, expected.get(key), actual.get(key));
+            assertTrue(differences.isEmpty(), () -> key + ": " + differences);
+        }
     }
 
     private static final class SlotFiller extends com.openggf.level.objects.AbstractObjectInstance {

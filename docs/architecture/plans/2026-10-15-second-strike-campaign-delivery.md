@@ -15,12 +15,12 @@ and five untracked user files remain outside this task.
 | Owner | Models and remit | Private branch / worktree |
 | --- | --- | --- |
 | Integration lead | Root Sol: shared-contract sequencing, composition, delivery-wide validation, normal develop integration/push and accounted cleanup. | `feature/ai-second-strike-campaign-delivery`; `.worktrees/ai-second-strike-campaign-delivery` |
-| AIZ team | Sol lead and Sol implementers; Astra reviews coherent change batches. Complete M0–M3, both apparent acts, native branches and HCZ handoff. | `feature/ai-second-strike-aiz-completion`; `.worktrees/ai-second-strike-aiz-completion` |
-| Remaining campaign team | Sol lead with Sol and Sonnet implementers; Opus reviews coherent campaign waves. Implement M4–M6 across every remaining zone, stage-family variants and ending/resource closure. | `feature/ai-second-strike-campaign-expansion`; `.worktrees/ai-second-strike-campaign-expansion` |
+| AIZ team | Sol lead and Sol implementers; Sonnet reviews coherent change batches. Complete M0–M3, both apparent acts, native branches and HCZ handoff. | `feature/ai-second-strike-aiz-completion`; `.worktrees/ai-second-strike-aiz-completion` |
+| Remaining campaign team | Sol lead and Sol implementers; Sonnet reviews coherent campaign waves. Implement M4–M6 across every remaining zone, stage-family variants and ending/resource closure. | `feature/ai-second-strike-campaign-expansion`; `.worktrees/ai-second-strike-campaign-expansion` |
 
-Live catalog selections: Sol `codex/gpt-6.1-sol`, Astra
-`codex/gpt-6-astra`, Sonnet `claudeAgent/claude-sonnet-5-5`, Opus
-`claudeAgent/claude-opus-5-5`. Discover availability before child dispatch; never
+Current user direction (2026-10-16): Sol `codex/gpt-6.1-sol` develops; Sonnet
+`claudeAgent/claude-sonnet-5-5` reviews only. Earlier Astra/Opus reviews and Sonnet
+implementation below retain their historical attribution. Discover availability before child dispatch; never
 silently substitute another model for a requested reviewer. Use saved app-owned
 delegated tasks, with bounded child outcomes and results retained in task history.
 
@@ -64,7 +64,7 @@ and batch state are recorded below as they become available.
    and admit/reject decision for A12, Knuckles' distinct finale, waterfall-boss
    branches, reward/bonus/rewind/save lifecycle and playable HCZ handoff.
 
-Astra reviews these as meaningful source batches, with precise findings and
+Sonnet reviews new meaningful source batches, with precise findings and
 evidence. Fix blockers in the owning team; subsequent review covers fixes and
 unresolved objections, not repeated unchanged code. Final handoff must distinguish
 implemented, runtime-observed and rejected/deferred stretch content.
@@ -86,10 +86,10 @@ parallel with AIZ; contract dependencies are coordinated, not guessed. Existing
 native route blockers are explicit prerequisites, not license to advertise an
 unexecuted hard route. Do not silently absorb unrelated parity repair.
 
-Opus reviews stable wave-sized changes, including route intent, counterplay,
-native/mod boundary, character differences, lifecycle and evidence limits. The
-team includes actual Sol and Sonnet implementation work; reviewers do not own
-the implementation or repeat full-suite validation.
+Sonnet reviews new stable wave changes, including route intent, counterplay,
+native/mod boundary, character differences, lifecycle and evidence limits. Sol
+owns new implementation; historical Sonnet implementation and Opus reviews stay
+attributed below. Reviewers do not implement or repeat broad validation.
 
 ## Verification and delivery
 
@@ -130,15 +130,17 @@ branches, preserving user config/ROM/save targets, useful captures and histories
 
 ## Compact execution checkpoint
 
-Current upstream-reconciled source is `04ac46c048a12f3ddcff5a0f89e7660499b76611`,
-integrated/pushed on develop with remote hash verified and all eight unrelated
-main paths preserved. Fresh package61564 and focus14330 qualify its matched
-engine/SDK and affected ownership/API/startup contracts:188 cases, no failures,
-errors or skips. The actual packaged surface now matches the upstream20737-line
-pin. Actual Second Strike and typed C2/C3 roots compile/package strictly with zero
-findings. See [current artifact refresh](#current-artifact-refresh-after-upstream4a26).
-This supersedes old pairs for new-current work without promoting any historical
-gameplay witness; no new cold route or campaign-completion claim is made.
+Latest paired qualification uses `3fa0730c628cd27c6da80a692fdc0ac048d36b98`:
+package63503, the actual20763-line API pin, strict24-source creator packaging and
+focus44662's250 cases without failures/errors/skips. A new positioned HCZ1
+zero-ring refill/return and destructive whole-world replay test also passes.
+The saved AIZ prefix stops on a new native MonkeyDude physical-slot owner error
+after10584 completed inputs, before the fire reload. See the
+[process-cleanup refresh](#current-artifact-refresh-after-process-cleanup-repair).
+Delivery subsequently fast-forwards to d07c7da6f's testing-only update; no Java
+runtime source changes in that increment. Main's nine unrelated paths remain
+preserved. Old artifact/gameplay results retain their original attribution;
+no full AIZ-to-HCZ route or M4-M6 completion is claimed.
 
 The foundation and bounded AIZ historical-latch repair are integrated and pushed
 as `f813672d0599f9debc0cf9a32148999fb3cc61a6`.
@@ -2193,3 +2195,280 @@ stopped; private unmerged/staged trees remain cleanup_pending. Old19448/42171 an
 53676 evidence retains its original source/artifact attribution. AIZ R9 recovery,
 all four full AIZ-to-HCZ axes and the outstanding M4-M6 route, resource, character,
 rewind, counterplay and hardness gates remain open.
+
+
+### Current artifact refresh after process-cleanup repair
+
+Continuation uses Sol for development and Sonnet for review only. Root pulls
+3fa0730c628c, including a9e53f5fc's process-cleanup guard: an unset mock PID must
+never coerce to1 and reach a real signal. Existing successful61564/14330 jobs were
+already terminal, so they are retained as historical evidence rather than retried
+as interrupted work. New upstream Java ownership, boot, native graph and public
+surface changes require the following fresh qualification.
+
+Build63503 executes `python3 tools/testing/maven_queue.py -Dmse=off -DskipTests verify`
+on clean3fa0730c628c. It passes in1m30s at17:59:50BST, including actual
+engine/SDK/Javadoc/test-kit, default Time Attack bundle and artifact verification;
+no tests run. Individual outputs, never a copied build tree, are retained in
+`${TASK_ARTIFACTS}/artifacts/63503-3fa0730c628c`:
+
+| Artifact | SHA256 |
+| --- | --- |
+| Engine fatjar | `22102f1b8a89b6cc56a6c83abe47c8a7dec17f241a32f023f4e021e90ca6fc35` |
+| SDK | `387b82dbda529572939d109079fb21d75481f9926120c3952f4c4e68467a33e6` |
+| SDK Javadoc | `bc134dc273c3dad4318dbed588bf1612cc0298742a4725251db06c70f885bd6d` |
+| Test-kit | `0c790592fb6d3bcae2ed5f2a5c6e97cc2cb271911efa38f587f69792124f63ec` |
+| Separate Second Strike | `cb2c4cb4a505163739e68edcac000b62eb694ac543dbda9fb631b30d6e935eac` |
+
+The packaged `ModApiSignatureSurface --snapshot` is byte-equal to the20763-line
+candidate pin, SHA256a3a3495dfcef6c856fc19c2ffe6ee0afc1b275c3216addc3b89eb7bb2d2d440c.
+Actual24-source Second Strike compiles with `javac --release 25` against this
+engine/SDK and packages through `GgfModCli package --warnings error` with zero
+findings; cb2's bytes remain unchanged. No API/version/pin change is made here.
+
+Focus44662 runs the normal intended-tree queue with original absolute S1/S2/S3K
+ROM paths, EGL, Lua5.4 and DISPLAY/WAYLAND/Java override variables unset. Selection:
+
+```text
+TestS3kFreshLevelRngState,TestS3kFreshTitleCardSstGraph,
+TestS3kFreshTitleCardCaptureLifecycle,TestGameplayCaptureFadeOwnership,
+TestGameplayCaptureFreshLoad,TestAizCutsceneNativeTransition,
+TestAizTransitionFloorObjectInstance,TestS3kAizResultsNativeTitleGraph,
+TestAizEndBossInstance,TestS3kAizEndBossGraphRewind,
+TestS3kAizMinibossGraphRewind,TestObjectTouchResponseRewindCapture,
+TestRewindPlayerReferenceCodecs,TestRewindSnapshotDiffPrivateRecords,
+TestRewindSnapshotDiffPalettes,TestGameplayCaptureSmoke,TestSecondStrikeBoss,
+TestModApiSignatureSurface,TestModApiPinPolicy,TestS3kAiz1SkipHeadless,
+TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+```
+
+Command prefix is `python3 tools/testing/maven_queue.py --normal -Dmse=off`,
+with that exact `-Dtest` selection and `test`. It finishes18:26:12BST after1281s
+queue/40.912s Maven:250 cases,0 failures/errors/skips in24 selected fresh XML
+reports. The loading basename intentionally selects two classes. Root inspects
+and consumes only those reports. This is affected boot/graph/capture/API/startup
+coverage, not a new broad smoke, guard or release-only suite.
+
+The promoted [HCZ air test](../../../src/test/java/com/openggf/tools/TestSecondStrikeHczAirRecovery.java)
+uses the actual cb2 sidecar through public `applyMod` and current compiled native
+classes. Build90337 compiles4109 test sources in22.876s without running tests.
+Sonnet5.5 review `second-strike-hcz-air-replay-test-sonnet-review-20261016-r1`
+finds no blocker. Sol moves the latest DPLC-ledger-idle observation to entry only,
+keeps local renderer/bank/bounds checks during movement and removes a redundant
+breath tally. The suggested99/100-only conveyor restriction is rejected on source:
+`getSpawn()` normalizes to leftBound11A8 while preserving original116/117 metadata.
+No native code is changed to fit this test.
+
+Invocation65441 selects only `TestSecondStrikeHczAirRecovery`, supplying
+`-Dsecondstrike.hcz.air.mod=${CURRENT_SECOND_STRIKE_JAR}` and the canonical S3K ROM,
+EGL and the same isolated environment. An official normal admission lease owns a
+real Maven process group with an outer180s execution deadline, separate from the
+method's90s JUnit limit. It waits1024s, then passes in22.979s Maven at18:54:36BST:
+1 named case,0 failures/errors/skips. Source SHAacc7b937 remains unchanged; the owned
+group is absent and fresh XML/logs are inspected/consumed. Assertions earn a genuine
+zero-ring maker114 refill and supported return, natural consumed-child retirement,
+distinct recreation at its captured slot/full spawn, immediate registered-world
+equality and exact ordinary suffix/player/breath/child/full-world replay. This is
+one positioned Sonic-solo320 episode, not whole-HCZ air sufficiency, HCZ2, pixels,
+cold/character/wide, save or hardship qualification. Missing the explicit artifact
+property remains an opt-in skip; this invocation supplies it and has no skips.
+
+AIZ prefix66745 stops after two executed pads, with one complete CSV row: its
+observer calls the default `getX()` on a native spawnless SST holder. The versioned
+observer repair logs identity/slot and explicitly unavailable coordinates instead.
+It changes no gameplay, input, clock, draw or continuation policy.
+
+Successor34784 uses the same immutable16524-pad R9 prefix, native AIZ entry,
+Sonic solo320/donor off and full ordinary drawing, with no search, restore or tail.
+It waits1126s and executes8.799s;10584 completed rows (0..10583) match historical R9
+across all34 compared movement/input/control/clock fields. Pad10584 then aborts
+partway through native execution: `MonkeyDudeArmObjectInstance.header` rejects
+SST4's current `SkidDustObjectInstance`, propagating through the actual mod fault
+boundary. Upstream8653f9232 introduced this physical-link owner reader. The last
+complete row is alive/nohurt with1 ring; the partial failed update is not another
+completed row. Terminal PNG shows the last completed draw, not the partially
+updated terminal world. Root reads CSV before PNG and preserves this negative;
+no fire reload, boss/results or R9 recovery is qualified. The native slot-reuse
+and retirement contract needs source-grounded attribution before any correction;
+there is no input retry, unknown-owner default or swallowed callback abort.
+
+Both groups are verified absent. Root then fast-forwards the delivery tree to
+upstreamd07c7da6f, whose delta is testing/activity isolation and prose only; no
+Java runtime or creator source changes. Future builds use the new activity policy.
+The old artifact pairs and all unmerged private trees remain retained and
+cleanup_pending. The original AIZ and M4-M6 scope remains active and incomplete.
+
+### A5 owned graph retirement — current-source continuation
+
+The 34784 population rows identify the authored tree at SST 25, its native
+lookout body at SST 4 and the arm root at SST 5. The tree's late `onUnload`
+immediately destroys the lower body while its arms have already dispatched.
+That clears the body before the next arm pass can observe native status bit 7.
+The ROM's `Child_Draw_Sprite` reads the physical predecessor's status bit;
+`loc_85094` and `Go_Delete_Sprite` publish that bit and a later deletion routine
+rather than immediately clearing the SST. Root corroborates these routines in
+the existing disassembly; no disassembly content becomes runtime data.
+
+Sol changes only the authored withdrawal path: the tree requests retirement;
+a captured body boolean is consumed at the body's own dispatch, publishing the
+existing native pending state for the higher arms. The following own dispatch
+clears the records. Repeated requests cannot rearm a pending or destroyed body.
+The stock path with no request, detached coconuts, 48x64 admission guard, native
+movement and timing remain unchanged. The arm's unknown-owner rejection is
+retained; the fix does not invent fields for skid dust or swallow a mod abort.
+
+Sonnet review `second-strike-a5-owned-retirement-sonnet-review-20261016-r1`
+finds no source blocker. It verifies Java dispatch ordering, pure scalar capture,
+idempotence, collision/render suppression while pending and no pinned API
+expansion. It does not independently read the ROM source or CSV. The reverse
+tree/body slot ordering is source-supported but not exercised by the new fixture;
+the authored publish pass skips the body's normal routine rather than running
+the ordinary offscreen tail. Neither is presented as new stock parity coverage.
+
+Build 2118 passes Java 25 `test-compile` in 1m09s without tests. Focus 75404
+uses normal admission, canonical S1/S2/S3K ROMs, EGL, null audio, Lua 5.4 and
+unset display/JVM injection variables, with an outer 180-second owned Maven
+process-group deadline. Its selection is:
+
+```text
+TestAizExitLookout,TestMonkeyDudeBadnikInstance,TestMonkeyDudeNativeSstGraph,
+TestS3kMonkeyDudePlacedGraph,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,
+TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+```
+
+After 522s queue it finishes in 26.810s Maven: 97 cases in nine fresh XML
+reports, 95 pass, two failures, no errors/skips. All 17 prior A5 cases, native
+and stock MonkeyDude controls, five actual placed-graph viewport cases and the
+required startup checks pass. Both new retirement tests stop at the same setup
+assertion: first-free lookout slot expected 4, actual 5, before withdrawal or
+replay. The intended body-slot/reuse assertions remain intact. Sol owns the
+fixture attribution and a two-method successor; no runtime retirement or current
+prefix closure is inferred from this red run. Source is unchanged during the
+run and the actual child group is verified absent.
+
+The setup mismatch is source-attributed: `completeRide` creates the native
+`AizTreeRevealControlObjectInstance` at capture. The declared direct component
+update occurs outside a manager walk, so its AfterCurrent helper allocates the
+first free SST after the earlier isolation step. The fixture-only successor
+positively verifies that controller at the original tree anchor and removes
+only that fixture-owned actor before first lookout admission. It still requires
+body 4, tree 25, all five higher arms and actual dust reuse; a different occupant
+is reported rather than accepted. Production hashes remain unchanged. Only the
+two failed methods need new execution; the 95 valid outcomes remain attributed
+to 75404.
+
+Successor 29965 selects only the two corrected new methods on the same production
+blobs. After 389s queue, Maven finishes in 22.830s: two cases, no failures,
+errors or skips. Root reads the fresh XML names and complete assertions. The
+tests now reach actual tree-25/body-4/five-arm retirement, idempotent requests,
+real skid-dust reuse and requested/published destructive registered-world replay;
+the already launched native coconut continues independently. Source remains
+unchanged and the owned child group is absent. The 95 earlier valid outcomes
+and these two successes cover 97 distinct identities across two invocations;
+there is no single 97-case passing batch. These are declared component setups,
+not a fresh native-entry prefix or complete encounter proof.
+
+Build 35276 runs `python3 tools/testing/maven_queue.py -Dmse=off -DskipTests verify`
+on d07 plus these native changes, completing in 34.367s without tests. Individual
+artifacts are retained in `${TASK_ARTIFACTS}/artifacts/35276-d07-a5`:
+
+| Artifact | SHA256 |
+| --- | --- |
+| Engine fatjar | `6ad7e8ae3570918beef2705627d4053b992b933abdc32393ec57d2a5dd450286` |
+| SDK | `9c7a81fbd34139612294eccc3c8043ac2e1fd816c270c73258fce9222a5f3d42` |
+| SDK Javadoc | `e01cd02338ba7d12f4331af294adfb045f5e2e095552338038e13c47c81fe4f1` |
+| Test-kit | `70cea269a59d763898108cc18052a9c7c48be304b06d85331e4a588398c385b7` |
+| Separate Second Strike | `cb2c4cb4a505163739e68edcac000b62eb694ac543dbda9fb631b30d6e935eac` |
+
+Root's first artifact-preparation check incorrectly expects a full SHA in
+`app.commit`; the actual manifest stores `d07c7da6f` with `app.dirty=true`.
+Preparation stops before any compiler, API scan or Engine. The correction resolves
+that recorded abbreviation through Git to the exact full d07 commit and reuses
+the unchanged copied jars. Engine/SDK/test-kit identities agree, the compiled
+20763-line API snapshot still equals pin a3a3495d, and all 24 creator sources
+compile against the new pair and package with zero strict findings. The saved
+16524-pad successor compiles against that pair; its Python preflight passes
+without Engine execution. Actual prefix replay is the remaining runtime check.
+
+The separate MHZ first-wind source review also finds no authority/measurement
+blocker. Its strict proof jar is built from the unchanged, inactive MHZ ingredient
+against the immutable 63503 pair; production registration remains unwired. A
+minor external observer revision will retain exception/phase/call details on
+failure. The fixed readiness/approach/breathing bounds stay 62/20/80; no runtime
+has been submitted. First phase 0 is shared with STOCK, and a DOWN zero-delta
+observation would establish that pass's Duck exemption, not full pulse gating,
+absence of wind, independent ROM constant parity or harder gameplay.
+
+Fresh replay 40328 then uses engine6ad7e8ae/SDK9c7a81fb and the newly strict-published
+unchanged cb2 sidecar. It waits 345s and executes 13.105s, completing exactly
+16524 saved ordinary pads and draws, with no continuation, search, restore,
+reflection or gameplay writes. The session closes successfully and its owned
+process group is absent. Root reads the CSV before native results/terminal PNGs.
+
+The actual graph has body4 and arms5,6,8,9,10: an earlier brief's contiguous
+5-9 shorthand was not a measured slot inventory. All are higher than the body
+and earlier than tree25. Body and arms remain through the requested/published
+boundary, then are absent at10531; no stale chain remains at the old10584 abort.
+All 71 stable comparable scalar columns across the prior current run's10584 rows
+are literally equal. Against historical R9, 64 of65 shared scalar columns match
+through all16524 inputs; the only difference is `apparent_act` at row15033
+(R9=1,current=0), with both1 by15034. Floor/foot diagnostic strings and the
+observer phase label use different encodings and are excluded explicitly, not
+normalized into a match. The one handoff-row difference remains recorded;
+whole-world/graph equality with R9 is not claimed.
+
+Current milestones are first native control release1097, physical fire-bank
+reload11293, native miniboss seen12928, native defeated latch observed14230,
+results owner seen14556 and apparentAct1/released control15034. The observer's
+`first-native-miniboss-zero-hp` label tests the defeated latch; it is not a direct
+measurement of the first zero-HP update. The terminal completed row16523 is
+8717/1361, airborne/rolling, zero rings, alive/nohurt. Earlier hurt is present in
+the prefix; no damage-free or all-zero-ring route is claimed. This qualifies
+removal of the original authored graph abort and reproduction of the fixed
+prefix, not the unexecuted R9 response, supported recovery, waterfall, HCZ,
+all-character cold routes or full campaign completion. Historical R9 stays red.
+
+The change-based plan against pinned760 selects3448 smoke classes because it
+includes the entire integrated upstream history (1006 additional changed paths),
+not just this continuation. No new broad run is launched. This delta changes
+two game-owned A5 classes and one captured primitive; it changes no shared
+manager/codec, physics/clock algorithm, creator surface or build policy. The
+95+2 focused outcomes, current same-input native prefix, earlier250 affected
+prerequisites, local HCZ test and compiled signature/strict publisher checks
+provide proportionate bounded validation. The earlier broad red run and its
+individual resolutions remain recorded above; these results are not a claim
+of a green broad smoke or release suite. New Markdown links, mirrors and policy
+checks accompany integration.
+
+### MHZ first-wind observation — inactive ingredient
+
+The external observer-only revision preserves the reviewed Cell implementation,
+inputs and all finite bounds. It records failures and cleanup before reporting
+success. Its actual paired driver compilation passes; the strict proof jar
+remains e123a7a0 from the unchanged authenticated MHZ2 original-34 ingredient.
+No production provider registration or native source changes are made.
+
+Invocation 10411 uses the immutable 63503 engine22102f1b/SDK387b82db, not the
+new A5 pair. After 365s normal admission, two isolated fresh JVMs finish in
+1.081s each; the admitted interval including supervision is 3.943s. Both exit 0,
+close native sessions, and have no surviving owned process-group members.
+This is an external finite witness, not a JUnit run or test-count claim.
+
+Each cell has 160 real input rows: readiness 60 calls, RIGHT approach 20, then
+80 BREATHING calls. The sidekick setting is an empty string; runtime rosters
+positively contain no sidekicks. Authentic original 34 is PULSED at slot 24,
+with unchanged metadata/owner/key, actual renderer readiness and native support.
+At call 160, the wind latch changes false to true and the pulse counter 0 to 1.
+The native slot-24/25 observations bracket a neutral player-X word change
+1586 to 1577 (-9 pixels), while Duck8 remains 1586 (0). Both have zero ground
+speed, unchanged fractional positions, zero rings, no hurt/death and real floor
+support. The compared movement/state/clock columns first differ at call 160's X.
+Root inspects both CSVs before ready/tell/first-wind PNGs: native Sonic solo,
+Cluckoid, arrow, monitor and terrain are visible; the DOWN frame is crouched.
+
+This closes one frontal first-pressure publication/response ingredient. Phase 0
+is also STOCK behavior, so it does not prove 20-on/12-off gating or harder play.
+The pressure expectation is engine source self-consistency rather than an
+independent ROM constant measurement. Duck's zero delta is that pass's exemption,
+not absence of wind. No VRAM/PLC queue, full pulse/cooldown, leaf hazard, replay,
+safe route, season/chase/boss, other roster/width or cold acceptance is inferred.

@@ -5890,3 +5890,22 @@ one live actor per marker.31538 observed99/100 while116/117 were absent. Its
 shared load bytes were false, so those bytes alone are not an actor-identity
 proof. Native ID3E is non-rendered conveyor logic; ID68 spinning-column art or
 dimensions cannot establish its body, motion or clearance.
+
+
+## A late owner callback cannot clear an earlier physical parent
+
+S3K `Child_Draw_Sprite` reads the physical parent SST's status bit7 after the
+child routine. `loc_85094` and `Go_Delete_Sprite` publish that bit plus a later
+`Delete_Current_Sprite` dispatch; they do not immediately clear the record.
+An authored owner can run after its lower-slot native body and higher linked
+arms. Immediate destruction then clears the parent before the arms observe it;
+setting the ordinary pending flag late is also too early, because the next
+body dispatch clears before the arms run. Capture a distinct withdrawal request,
+consume it at the body's own dispatch, retain native pending status for that
+whole pass, and clear on its following own dispatch. This is slot ordering,
+not an arbitrary frame delay. Prove requested/published restore and replay,
+all linked children, idempotence and actual reuse of the freed physical slot.
+Keep already launched independent projectiles on their own lifetime. Do not
+hide an orphan by inventing empty fields for an unsupported replacement owner.
+Origin: AIZ tree25/body4 with five higher arms, current-prefix34784 SkidDust slot4 abort;
+focused75404's setup failure and corrected29965 lifecycle cases, 2026-10-16.

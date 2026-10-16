@@ -11,9 +11,24 @@ Implementation authorized 2026-10-15. Binding scope: [campaign design](../design
 
 Lead owns existing route/registration/resource files, bonus invitation, authored encounter matrix and coordination. Sol combat worker owns common badnik/enemy implementations and focused enemy tests. Sol native worker owns AIZ bridges/boss owners and focused native tests. Shared public contracts/pins are sequenced with root before consumers. Campaign subtree and non-AIZ owners are foreign.
 
-Astra reviews stable A0/A1/A2 batches. No broad test submission by workers: root owns composed batched smoke and guards. Focused Maven uses intended-tree queue; build-only operations use intended-tree lease. Preserve each queued request/source freeze. Native ROMs/Java25/graphics prerequisites are explicit.
+For the current continuation, Sol develops and Sonnet reviews only. Historical Astra findings below remain attributed to their original batches. No broad test submission by workers: root owns composed batched smoke and guards. Focused Maven uses intended-tree queue; build-only operations use intended-tree lease. Preserve each queued request/source freeze. Native ROMs/Java25/graphics prerequisites are explicit.
 
 ## Checkpoint
+
+Current root continuation is recorded in the
+[delivery checkpoint](2026-10-15-second-strike-campaign-delivery.md#current-artifact-refresh-after-process-cleanup-repair).
+On the 3fa0730c artifact pair, the exact saved prefix matches 10584 completed
+historical rows, then the new MonkeyDude physical-slot reader rejects a skid-dust
+replacement during the next native update. No continuation input is added and
+the AIZ route remains incomplete. Sol's owned-retirement correction is source
+reviewed; focus 75404 passes 95 of 97 cases, with both new cases stopping at a
+first-free-slot fixture prerequisite before lifecycle assertions. Fixture-only
+successor 29965 passes those two methods, including actual skid-slot reuse and
+requested/published destructive-world replay with an independent coconut. These
+are results across two runs, not a new 97-case passing invocation. Fresh replay 40328 completes the unchanged 16524 inputs on the new pair without
+the original abort or death, reaching the native results owner and true Act2.
+The old recovery response and complete AIZ/HCZ routes remain unqualified. The
+initial team setup below is historical.
 
 - Base/current: `76022570e8233823e1e36419666a0f29c768f4b6`; initially clean.
 - Lead tree: `.worktrees/ai-second-strike-aiz-completion`, branch `feature/ai-second-strike-aiz-completion`; hooks installed.

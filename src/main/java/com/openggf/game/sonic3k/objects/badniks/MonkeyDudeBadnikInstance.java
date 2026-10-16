@@ -43,6 +43,7 @@ public final class MonkeyDudeBadnikInstance extends AbstractS3kBadnikInstance im
     private int firstStepCount;
     private boolean initialFacingLeft;
     private boolean nativeRetirementPending;
+    private boolean ownedRetirementRequested;
     private boolean armRootActivated;
     /**
      * routine 0. Obj_WaitOffscreen's release pass (loc_85B02) returns without
@@ -82,9 +83,18 @@ public final class MonkeyDudeBadnikInstance extends AbstractS3kBadnikInstance im
         // arm animation, and throw cadence must not advance until visible.
         if (isDestroyed()) return;
         if (nativeRetirementPending) {
-            // loc_85094 publishes status7 now; Delete_Current_Sprite clears
-            // the complete physical record on the following slot dispatch.
+            // loc_85094 published status7 on the preceding own dispatch;
+            // Delete_Current_Sprite now clears the complete physical record.
             ObjectLifetimeOps.destroyRespawnableOffscreen(this);
+            return;
+        }
+        if (ownedRetirementRequested) {
+            // An authored owner can withdraw after this lower body/arm chain
+            // has already run. Publish loc_85094's status7 only HERE, at the
+            // body's own slot, so every higher Child_Draw_Sprite sees it this
+            // pass before Delete_Current_Sprite clears the body next pass.
+            ownedRetirementRequested = false;
+            nativeRetirementPending = true;
             return;
         }
 
@@ -253,6 +263,15 @@ public final class MonkeyDudeBadnikInstance extends AbstractS3kBadnikInstance im
 
     int nativeMappingFrame() { return mappingFrame; }
     boolean nativeRetirementPending() { return nativeRetirementPending; }
+
+    /** Withdraws an authored native lookout without damage rewards or a slot transfer. */
+    public void requestOwnedRetirement() {
+        // Do not turn a late caller into a pending setter: the body must first
+        // publish that state in its own dispatch. A published/killed body must
+        // neither rearm nor affect a replacement in its former physical slot.
+        if (!isDestroyed() && !nativeRetirementPending) ownedRetirementRequested = true;
+    }
+
     @Override public boolean isPersistent() { return true; }
 
     private DestructionEffects.DestructionConfig linkedDestruction() {
