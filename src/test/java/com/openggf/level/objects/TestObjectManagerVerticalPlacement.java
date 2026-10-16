@@ -373,6 +373,46 @@ class TestObjectManagerVerticalPlacement {
     }
 
     @Test
+    void s3kRestoredPreLoaderBoundaryStillRunsTheInitialXPass() {
+        Camera camera = new Camera(SonicConfigurationService.getInstance());
+        camera.setMinY((short) 0);
+        camera.setY((short) 0);
+
+        ObjectSpawn spawn = new ObjectSpawn(0x00C0, 0x0100, 0x41, 0, 0, false, 0x0100);
+        TrackingRegistry registry = new TrackingRegistry();
+        ObjectManager manager = new ObjectManager(
+                List.of(spawn),
+                registry,
+                -1,
+                null,
+                null,
+                null,
+                camera,
+                new StubObjectServices() {
+                    @Override
+                    public Camera camera() {
+                        return camera;
+                    }
+                });
+        manager.enableExecThenLoadPlacement();
+        // FBZ ScreenInit-style deferral: cursors are reset, but the first
+        // Load_Sprites pass (Object_load_routine 0) has not run yet.
+        manager.resetForSynchronousActTransition(0);
+        assertFalse(registry.instances.containsKey(spawn));
+        var preLoader = manager.rewindSnapshottable().capture();
+
+        manager.update(0, null, List.of(), 1, false);
+        assertTrue(registry.instances.containsKey(spawn), "the first loader pass runs the X loop");
+
+        manager.rewindSnapshottable().restore(preLoader);
+        registry.instances.clear();
+        manager.update(0, null, List.of(), 1, false);
+        assertTrue(registry.instances.containsKey(spawn),
+                "loc_1B7D8 writes Camera_X_pos_coarse = -1, so a replay from the restored "
+                        + "pre-loader boundary must run the same initial X loop");
+    }
+
+    @Test
     void s3kReleasedPlacementRespawnsOnLaterCameraYPassWhileTransformedObjectLives() {
         Camera camera = new Camera(SonicConfigurationService.getInstance());
         camera.setMinY((short) 0);
