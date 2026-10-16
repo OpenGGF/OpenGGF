@@ -203,7 +203,7 @@ def maven_slot(root, *, exclusive=False, estimate=900, kind='maven', reservation
     from maven_resources import GIB, policy, snapshot
     from maven_running import RunningLease, UsageSampler, append_log, trim_log
     from maven_schedule import (WaitingRequest, select, BackfillLedger, aged,
-                                WORKTREE_BUSY, WORKTREE_GONE)
+                                WORKTREE_BUSY, WORKTREE_GONE, TOOLING_REVISION)
 
     if type(small_job) is not bool:
         raise ValueError('Small-job eligibility must be boolean')
@@ -254,7 +254,7 @@ def maven_slot(root, *, exclusive=False, estimate=900, kind='maven', reservation
                                 retained_tree=tree_fd is not None, small_job=small_job,
                                 estimate=estimate, enqueued=enqueued, reservation=reservation,
                                 submitted=started, kind=str(kind)[:160], pid=os.getpid(),
-                                worktree=root.name[:160]), _acquire)
+                                worktree=root.name[:160], toolingRevision=TOOLING_REVISION), _acquire)
 
                         reasons = {}
 
@@ -333,7 +333,8 @@ def maven_slot(root, *, exclusive=False, estimate=900, kind='maven', reservation
                                 running = RunningLease(common, reservation, _acquire, display=dict(
                                     worktree=root.name[:160], kind=str(kind)[:160], pid=os.getpid(),
                                     submitted=started, admitted=admitted,
-                                    mode='resource-aware' if auto else 'serial'))
+                                    mode='resource-aware' if auto else 'serial',
+                                    toolingRevision=TOOLING_REVISION))
                             except (OSError, RuntimeError):
                                 running = None  # No lease only forfeits credit; admission stays valid.
                     finally:
