@@ -435,8 +435,30 @@ class TestS3kLrzHpzSszColdCampaign {
     }
 
     /**
-     * Inputs through {@code prefixEnd} equal the qualified prefix movie; the boundary inputs are
-     * measured on the authored movie and an uninterrupted replay must reproduce each exactly.
+     * S: the same campaign for Sonic alone, which no qualified prefix covers, so the whole movie is
+     * the authored route (cold3's LRZ1/LRZ2 chain along the pair's P1 path to input 23900, then
+     * round 2). Before LRZ3's arena Sonic breaks the fire-shield monitor ({@code Obj_Monitor}
+     * subtype 5 at ({@code $AE8,$481})) that the pair also takes: {@code Obj_59FC4}'s
+     * {@code loc_5A0AC} spares Player 1 with {@code Status_FireShield} from {@code sub_24280}'s lava
+     * hurt, and the pair's path touches the lava. {@code Obj_LRZEndBoss} is player-independent
+     * clockwork (native and engine both take the 14 mine hits at the same offsets from
+     * {@code loc_797FA}), so the fight replays the pair's P1 pads aligned on the boss's activation
+     * with per-input position correction, and the walk to {@code Obj_StartNewLevel} aligned on
+     * {@code loc_799E0}'s {@code Restore_PlayerControl} (1017 inputs after the defeat here, 967 for
+     * the pair). HPZ follows the pair's HPZ path and the HPZ fight policy; SSZ1 follows the direct
+     * solo Sonic SSZ1 movie to the Knuckles-button bridge, waits for the act bounds, then searches
+     * along that movie's path, with {@link SszBossInputAuthorTool} for the three encounters.
+     */
+    @Test
+    void sonicColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory() throws Exception {
+        verifyDeathEggCampaign(new DeathEggCampaign("sonic", "", "lrz-sonic-cold-hpz-ssz1-dez1-320.bk2",
+                null, -1, 30123, 39248, 43233, 45735, 49728, 52067));
+    }
+
+    /**
+     * Inputs through {@code prefixEnd} equal the qualified prefix movie (none for solo Sonic); the
+     * boundary inputs are measured on the authored movie and an uninterrupted replay must reproduce
+     * each exactly.
      */
     private record DeathEggCampaign(String main, String sidekick, String movie, String prefixMovie, int prefixEnd,
                                     int hpzLoad, int sszLoad, int ghzDefeat, int mtzDefeat, int mechaDefeat,
@@ -454,9 +476,11 @@ class TestS3kLrzHpzSszColdCampaign {
     private void verifyDeathEggCampaign(DeathEggCampaign c) throws Exception {
         var loader = new Bk2MovieLoader();
         var movie = loader.loadMovieOrInputLog(route(c.movie()));
-        var prefix = loader.loadMovieOrInputLog(route(c.prefixMovie()));
-        for (int f = 0; f <= c.prefixEnd(); f++) {
-            assertEquals(prefix.getFrame(f), movie.getFrame(f), "qualified prefix input " + f);
+        if (c.prefixMovie() != null) {
+            var prefix = loader.loadMovieOrInputLog(route(c.prefixMovie()));
+            for (int f = 0; f <= c.prefixEnd(); f++) {
+                assertEquals(prefix.getFrame(f), movie.getFrame(f), "qualified prefix input " + f);
+            }
         }
         boolean pair = !c.sidekick().isEmpty();
         var settings = new GameplayCaptureSession.Settings(320, c.main(), c.sidekick(), "off", null, null, null);
@@ -482,8 +506,8 @@ class TestS3kLrzHpzSszColdCampaign {
                 assertFalse(session.player().getDead(), "cold death " + frame);
                 assertTrue(GameServices.gameState().getLives() >= lives, "hidden respawn " + frame);
                 lives = GameServices.gameState().getLives();
-                assertEquals(pair ? com.openggf.sprites.playable.Sonic.class : com.openggf.sprites.playable.Tails.class,
-                        session.player().getClass());
+                assertEquals(c.main().equals("sonic") ? com.openggf.sprites.playable.Sonic.class
+                        : com.openggf.sprites.playable.Tails.class, session.player().getClass());
                 assertSame(GameServices.sprites().getMainPlayable(), session.player());
                 var followers = GameServices.sprites().getRegisteredSidekicks();
                 assertEquals(pair ? 1 : 0, followers.size(), "registered sidekicks at " + frame);

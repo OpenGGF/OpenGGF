@@ -255,6 +255,13 @@ Unreleased. The earlier development themes remain in
   behind the object cursor. The first scrolling pass keeps the names on the original's
   line.
 
+- **S3K cold campaign coverage:** Sonic alone now has one uninterrupted
+  replay from Lava Reef act 1 through the Lava Reef boss, Hidden Palace and Sky
+  Sanctuary act 1 into Death Egg, beside the Sonic and Tails, Tails-alone and
+  Knuckles campaigns. Lava Reef's end boss needed no change: its mines run on
+  the original's fixed clock whoever plays, and the route takes the placed
+  fire shield that keeps the lava from hurting Sonic during the fight.
+
 - **Capture and controller tools:** Input branches reject checkpoints whose pending
   fresh assembly or transition callback cannot be restored by gameplay rewind.
   An individual trace segment resolves its validated containing run's declared

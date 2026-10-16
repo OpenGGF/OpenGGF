@@ -450,7 +450,15 @@ The cold Tails-alone campaign (`TestS3kLrzHpzSszColdCampaign#tailsColdCampaignLe
 SSZ1 matrix) is the first cold Tails replay through HPZ's Knuckles fight, theft, collapse and
 altar with the single-player helper timers to `loc_45D8A` (`$A00`): HPZ load 62424, SSZ1
 load 69861 with HPZ's live history retired at the SSZ1 assembly. It continues to DEZ1. The
-solo Sonic LRZ→HPZ→SSZ1 campaign remains open: its cold attempt stopped at the LRZ3 end boss
-(kill condition, three bounded searches in `Obj_LRZEndBoss` routine 4) and never reached HPZ
-(SSZ1 matrix).
+solo Sonic LRZ→HPZ→SSZ1 campaign was open here on 2026-10-15; it is now covered (next section).
 
+## Cold solo Sonic HPZ campaign leg (2026-10-16)
+
+The cold Sonic-alone campaign (`TestS3kLrzHpzSszColdCampaign#sonicColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory`,
+[SSZ1 matrix](s3k-ssz-act1.md#cold-lrzhpzssz1dez1-solo-sonic-campaign-2026-10-16)) is the
+first cold Sonic-alone replay through HPZ: it enters from LRZ3's end boss (taken with the
+placed fire shield, [LRZ boss matrix](s3k-lrz-boss.md#solo-sonic-cold-fight-2026-10-16)),
+follows the joined pair chain's HPZ path to the lower teleporter and crosses the Knuckles
+fight, theft, collapse and altar with the single-player helper timers to `loc_45D8A`
+(`$A00`): HPZ load 30123, SSZ1 load 39248 with HPZ's live history retired at the SSZ1
+assembly. It continues to DEZ1.
