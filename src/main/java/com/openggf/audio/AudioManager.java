@@ -3741,9 +3741,14 @@ public class AudioManager implements MusicRestoreSink {
                         "smpsPhysicalPolicy")
                 : LegacyCompatibilitySmpsPhysicalPolicy.INSTANCE;
         com.openggf.configuration.SonicConfigurationService fmCoreConfig = configuredServicesOrNull();
+        // One presentation is one ROM hardware frame of sound-chip time, not 1/frameRate s of wall time.
+        boolean palRegion = fmCoreConfig != null && "PAL".equalsIgnoreCase(
+                fmCoreConfig.getString(SonicConfiguration.REGION));
         SmpsPhysicalDevice.Settings physicalSettings =
                 new SmpsPhysicalDevice.Settings(
-                        sampleRate, tuning.dacInterpolate(),
+                        com.openggf.audio.session.SmpsHardwareFrameBudget.synthesisRate(
+                                sampleRate, frameRate, palRegion),
+                        tuning.dacInterpolate(),
                         fmCoreConfig != null
                                 ? com.openggf.audio.synth.FmCoreSelection.fromConfig(
                                         fmCoreConfig.getString(SonicConfiguration.AUDIO_FM_CORE))

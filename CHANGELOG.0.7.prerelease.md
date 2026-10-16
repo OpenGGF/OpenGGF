@@ -281,7 +281,13 @@ Unreleased. The earlier development themes remain in
   A first real window measured the presentation clock running 1.29 per mille
   short of the ROM's hardware frame. The PSG half follows GPGX's integrated
   PSG and also matches its source vectors. The MAME YM2612 core and waveform
-  parity are not covered. Ordinary sound and the 48 kHz presentation are unchanged.
+  parity are not covered.
+- **Audio cadence:** Each presented frame now advances the sound chips by exactly
+  one NTSC hardware frame (3420 x 262 master clocks) instead of 1/60 s of chip
+  time. Previously 600 frames completed only 599 hardware frames. The
+  presentation still delivers 800 samples per frame at 48 kHz, so at 60 Hz music
+  and effects sound about 1.29 per mille higher and faster than a 59.92 Hz
+  console, while staying in step with gameplay frames. PAL is unchanged.
 
 Rewind verification compares private records and complete captured opaque arrays
 by content, with explicit failures when snapshot inspection cannot complete. It also

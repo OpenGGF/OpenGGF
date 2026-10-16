@@ -151,8 +151,30 @@ for 600 frames: one stage session, 440,832 stereo frames. Maven finished
   with 599 frames ending.
 - The owner is the presentation clock (`AudioFrameClock` from
   `FrameRateResolver`: configured FPS 60 for NTSC, 50 for PAL against the
-  ROM's 49.70 Hz). It is not the stage. A fix changes ordinary presentation
-  pacing, so it needs a lead/user decision and is not made here.
+  ROM's 49.70 Hz). It is not the stage.
+
+**[CADENCE] — corrected at the owner (lead-directed, 2026-10-16).**
+`AudioManager.ensureShadowPresentation` now drives the live session's sound
+device at `SmpsHardwareFrameBudget.synthesisRate`. The rate is
+`sampleRate * 53,693,175 / (frameRate * 896,040)`, which is 47,938.19 Hz for
+48 kHz at 60 Hz. Each presentation's `sampleRate / frameRate` output samples
+then span exactly one NTSC hardware frame of chip time. The rate is derived
+from the NTSC line and frame constants, not fitted.
+- Red first: `TestNativePcmCaptureLive.everyPresentationAdvancesExactlyOneHardwareFrame`
+  ran 600 production presentations from the emeralds movie. It expected
+  441,568 stereo frames (600 NTSC frames) and got 440,832 (599), Maven
+  finished 20:58:51Z.
+- The regression also requires every presentation to cross exactly one
+  hardware-frame boundary (735 or 736 samples, never 0). A control requires
+  the ordinary 48 kHz capture to keep 800 samples per presentation.
+- Effect: at a 60 Hz presentation, ordinary sound is about 1.29 per mille
+  higher in pitch and tempo per wall-clock second, and the same per gameplay
+  frame.
+- PAL is unchanged: the engine's chips use NTSC clocks, so a PAL budget
+  needs PAL chip clocks. That remains open.
+- The SEGA PCM transport still rounds the device rate to whole hertz for its
+  Z80 byte cadence, a 4 ppm difference at 47,938.19 Hz. That is recorded,
+  not corrected.
 
 **[CARRY / INGRESS] — exploratory, not attributable.** The engine capture
 boots AIZ1 directly and replays inputs from row 577. Native ran rows 0-576

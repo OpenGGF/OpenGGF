@@ -256,8 +256,8 @@ public final class NativeCompatiblePcmOutput {
         }
     }
 
-    /** Absolute master-clock time of the next YM clock since the stage's origin (vector generation). */
-    long masterClock() {
+    /** Absolute master-clock time of the next YM clock since the stage's origin (chip time, for measurement). */
+    public long masterClock() {
         return framesEnded * FRAME_MCYCLES + fmTime;
     }
 

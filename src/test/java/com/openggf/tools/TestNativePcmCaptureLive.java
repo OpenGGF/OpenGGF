@@ -63,6 +63,44 @@ class TestNativePcmCaptureLive {
         assertTrue(Files.size(outDir.resolve("audio.wav")) > 44, "ordinary 48 kHz capture still written");
     }
 
+    /**
+     * Cadence regression (round-2 lane pcm-output, 2026-10-16): each production presentation must advance the
+     * sound hardware by exactly one ROM hardware frame, 3420 * 262 = 896,040 master clocks at 53,693,175 Hz.
+     * The first real window measured 600 presentations completing only 599 NTSC frames (800 samples at 48 kHz =
+     * 894,886.2 master clocks each). With the budget right, every presentation crosses exactly one hardware-frame
+     * boundary (the chip's fixed resampler look-ahead only sets the phase), the carry never drifts, and the
+     * ordinary 48 kHz presentation still delivers 800 samples per presentation.
+     */
+    @Test
+    void everyPresentationAdvancesExactlyOneHardwareFrame() throws Exception {
+        Path rom = RomTestUtils.ensureSonic3kRomAvailable().toPath();
+        Path outDir = TestSessionOutputPaths.diagnostics("native-pcm-cadence");
+        int presentations = 600;
+        GameplayCaptureTool.Arguments arguments = GameplayCaptureTool.Arguments.parse(new String[] {
+                "--game", "s3k", "--rom", rom.toString(), "--zone", "aiz", "--act", "1",
+                "--sidekick", "tails", "--input", EMERALDS.toString(), "--input-start", "577",
+                "--frames", Integer.toString(presentations), "--audio", "--native-pcm", "--no-video",
+                "--stop-on-death", "false", "--out-dir", outDir.toString()});
+        try {
+            GameplayCaptureTool.run(arguments);
+        } catch (IllegalStateException | UnsatisfiedLinkError glUnavailable) {
+            assumeTrue(false, "offscreen GL unavailable: " + glUnavailable.getMessage());
+            return;
+        }
+        List<String> rows = Files.readAllLines(outDir.resolve("native-pcm-frames.tsv"), StandardCharsets.UTF_8);
+        assertEquals(presentations + 1, rows.size());
+        long cumulative = Long.parseLong(rows.get(presentations).split("\t")[2]);
+        assertEquals(blipSamplesForFrames(presentations), cumulative,
+                "600 presentations must complete 600 NTSC hardware frames");
+        for (String row : rows.subList(1, rows.size())) {
+            int drained = Integer.parseInt(row.split("\t")[1]);
+            assertTrue(drained == 735 || drained == 736,
+                    "presentation " + row.split("\t")[0] + " crossed " + drained + " samples, not one hardware frame");
+        }
+        // Control: the ordinary presentation is still 800 stereo frames of 48 kHz per presentation.
+        assertEquals(44 + (long) presentations * 800 * 4, Files.size(outDir.resolve("audio.wav")));
+    }
+
     @Test
     void mameCoreMovieIsRefusedBeforeBoot() {
         Path rom = RomTestUtils.ensureSonic3kRomAvailable().toPath();

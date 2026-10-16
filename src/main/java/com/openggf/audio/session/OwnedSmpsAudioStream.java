@@ -76,6 +76,10 @@ public final class OwnedSmpsAudioStream
         return session.drainNativeCompatiblePcm(target, offsetSamples, maxFrames);
     }
 
+    long nativeCompatibleMasterClockForTesting() {
+        return session.nativeCompatibleMasterClockForTesting();
+    }
+
     /** See {@link SmpsDriverSession#nativeCompatibleFramesEnded()}. */
     public long nativeCompatibleFramesEnded() {
         return session.nativeCompatibleFramesEnded();

@@ -27,6 +27,21 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-10-16 - Presentation cadence corrected: one NTSC hardware frame per presentation
+
+- **Commit / worktree:** lane `pcm-output`, branch `feature/ai-s3k-r2-pcm-native-output`.
+- **Fixture:** none. The engine runs the production capture path, with the
+  `s3k-sonic-tails-complete-emeralds.bk2` inputs from row 577.
+- **Command:** focused `-Dtest=TestNativePcmCaptureLive` through the main queue
+  wrapper.
+- **Result before (red, 20:58:51Z):** 600 presentations completed 599 NTSC frames,
+  440,832 stereo frames against the expected 441,568.
+- **Change:** the live session's device now synthesizes at
+  `sampleRate * 53,693,175 / (frameRate * 896,040)` (NTSC; PAL unchanged), so each
+  presentation spans exactly one 896,040-master-clock hardware frame.
+- **Notes:** This is the cadence tier only. Waveform equality against native still
+  needs a matching power-on/title prefix, which the engine lacks for S3K.
+
 ## 2026-10-16 - S3K native-compatible PCM: first real window measures a presentation cadence defect
 
 - **Commit / worktree:** lane `pcm-output`, branch `feature/ai-s3k-r2-pcm-native-output`

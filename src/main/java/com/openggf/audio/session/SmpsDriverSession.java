@@ -851,6 +851,13 @@ public final class SmpsDriverSession implements AutoCloseable {
         return device.drainNativeCompatiblePcm(target, offsetSamples, maxFrames);
     }
 
+    /** The native-compatible stage's master clock (chip time), or -1 when it is not enabled. */
+    long nativeCompatibleMasterClockForTesting() {
+        requireInstalled();
+        var output = device.nativeCompatibleOutputForInspection();
+        return output == null ? -1 : output.masterClock();
+    }
+
     /** Completed NTSC frames the native-compatible stage has read, or -1 when it is not enabled. */
     public long nativeCompatibleFramesEnded() {
         requireInstalled();
