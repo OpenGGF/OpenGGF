@@ -657,20 +657,24 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         // Comparing y_pos to the spring's y_pos is too broad: a horizontal
         // spring can sit several pixels above nearby sloped terrain, so that
         // approximation launches a falling player before the ROM does.
+        var level = services().levelManager();
+        if (level == null) {
+            return false;
+        }
         var leftFloor = ObjectTerrainUtils.checkFloorDist(
+                level, services().backgroundPlaneCollisionProvider(),
+                services().useSecondaryTerrainCollisionPath(),
                 player.getCentreX() - player.getXRadius(),
                 player.getCentreY() + player.getYRadius());
         var rightFloor = ObjectTerrainUtils.checkFloorDist(
+                level, services().backgroundPlaneCollisionProvider(),
+                services().useSecondaryTerrainCollisionPath(),
                 player.getCentreX() + player.getXRadius(),
                 player.getCentreY() + player.getYRadius());
-        boolean leftHasTerrain = leftFloor != null && leftFloor.distance() != Short.MAX_VALUE;
-        boolean rightHasTerrain = rightFloor != null && rightFloor.distance() != Short.MAX_VALUE;
-        if (!leftHasTerrain && !rightHasTerrain) {
-            // Lightweight object tests do not install level collision data.
-            return (player.getCentreY() & 0xFFFF) >= (spawn.y() & 0xFFFF);
-        }
-        return (leftHasTerrain && leftFloor.distance() < 0)
-                || (rightHasTerrain && rightFloor.distance() < 0);
+        // sub_2326C requires Status_InAir clear. Empty terrain cannot provide
+        // that transition; zero distance likewise has not crossed the surface.
+        return (leftFloor.foundSurface() && leftFloor.distance() < 0)
+                || (rightFloor.foundSurface() && rightFloor.distance() < 0);
     }
 
     private int horizontalApproachSpeed(AbstractPlayableSprite player, boolean landingHandoff) {

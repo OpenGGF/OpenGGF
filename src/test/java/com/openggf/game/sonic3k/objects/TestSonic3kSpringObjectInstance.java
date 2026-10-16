@@ -13,6 +13,9 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.solid.ContactKind;
 import com.openggf.game.solid.DefaultSolidExecutionRegistry;
 import com.openggf.game.solid.PlayerSolidContactResult;
+import com.openggf.level.ChunkDesc;
+import com.openggf.level.LevelManager;
+import com.openggf.level.SolidTile;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
@@ -33,6 +36,7 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -41,6 +45,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class TestSonic3kSpringObjectInstance {
 
@@ -477,7 +486,7 @@ class TestSonic3kSpringObjectInstance {
         Sonic3kSpringObjectInstance spring = new Sonic3kSpringObjectInstance(
                 new ObjectSpawn(0x1D37, 0x08B0, Sonic3kObjectIds.SPRING, 0x12, 1, false, 0));
         spring.setServices(new TestObjectServices().withGameState(new GameStateManager())
-                .withIsolatedObjectManager());
+                .withLevelManager(landingTerrain((byte) 13, false)));
         invoke(spring, "ensureInitialized");
 
         TestableSprite tooEarly = new TestableSprite("tails_p2");
@@ -489,7 +498,7 @@ class TestSonic3kSpringObjectInstance {
 
         invoke(spring, "checkHorizontalApproach", new Class<?>[]{AbstractPlayableSprite.class}, tooEarly);
         assertEquals(0xFFB8, tooEarly.getXSpeed() & 0xFFFF,
-                "The landing handoff must not fire before the player reaches the spring's Y line");
+                "The foot probes must penetrate the terrain before the landing handoff");
 
         TestableSprite player = new TestableSprite("tails_p2");
         player.setCentreX((short) 0x1D21);
@@ -513,6 +522,53 @@ class TestSonic3kSpringObjectInstance {
                 "The same-frame landing handoff must mirror ROM's grounded mode before sub_2326C fires");
         assertFalse(player.getAir(),
                 "The handoff mirrors ROM's same-frame air->ground transition before the horizontal spring launch");
+    }
+
+    // Real ObjectTerrainUtils tile sampling, with only the level lookup supplied.
+    // At y=$8B0 the standing foot is $8C3: height 12 yields distance 0,
+    // height 13 yields -1. The slope leaves one foot above the surface.
+    private static LevelManager landingTerrain(byte height, boolean slope) {
+        LevelManager level = mock(LevelManager.class);
+        when(level.getObjectManager()).thenReturn(
+                new TestObjectServices().withIsolatedObjectManager().objectManager());
+        ChunkDesc desc = new ChunkDesc(7 | 0x1000);
+        byte[] heights = new byte[SolidTile.TILE_SIZE_IN_ROM];
+        Arrays.fill(heights, height);
+        if (slope) heights[8] = 10;
+        SolidTile tile = new SolidTile(7, heights,
+                new byte[SolidTile.TILE_SIZE_IN_ROM], (byte) (slope ? 0x20 : 0));
+        when(level.getChunkDescAt(eq((byte) 0), anyInt(), anyInt())).thenReturn(desc);
+        when(level.getSolidTileForChunkDesc(eq(desc), eq(0x0C), anyBoolean())).thenReturn(tile);
+        return level;
+    }
+
+    @Test
+    void horizontalLandingRequiresPenetrationAndRejectsMissingOrEmptyTerrain() throws Exception {
+        assertLandingHandoff(null, false, false);
+        assertLandingHandoff(mock(LevelManager.class), false, false);
+        assertLandingHandoff(landingTerrain((byte) 11, false), false, false);
+        assertLandingHandoff(landingTerrain((byte) 12, false), false, false);
+        assertLandingHandoff(landingTerrain((byte) 13, false), false, true);
+        assertLandingHandoff(landingTerrain((byte) 13, true), false, true);
+        assertLandingHandoff(landingTerrain((byte) 13, false), true, false);
+    }
+
+    private void assertLandingHandoff(LevelManager level, boolean underwater, boolean launches) throws Exception {
+        Sonic3kSpringObjectInstance spring = new Sonic3kSpringObjectInstance(
+                new ObjectSpawn(0x1D37, 0x08B0, Sonic3kObjectIds.SPRING, 0x12, 1, false, 0));
+        spring.setServices(new TestObjectServices().withGameState(new GameStateManager())
+                .withLevelManager(level).withIsolatedObjectManager());
+        invoke(spring, "ensureInitialized");
+        TestableSprite player = new TestableSprite("tails_p2");
+        player.setCentreX((short) 0x1D21);
+        player.setCentreY((short) 0x08B0);
+        player.setAir(true);
+        player.setInWater(underwater);
+        player.setXSpeed((short) -0x48);
+        player.setYSpeed((short) 0x150);
+        invoke(spring, "checkHorizontalApproach", new Class<?>[]{AbstractPlayableSprite.class}, player);
+        assertEquals(launches ? (short) -0xA00 : (short) -0x48, player.getXSpeed());
+        assertEquals(!launches, player.getAir());
     }
 
     @Test

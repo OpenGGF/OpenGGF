@@ -1,5 +1,14 @@
 # Level test coverage backlog
 
+S3K horizontal spring terrain gate (2026-10-16): focused object fixtures sample
+real collision tiles for positive/zero/negative foot distances and a slope with
+only one penetrating foot; absent services, empty terrain and underwater descent
+must retain airborne state. The CNZ landing-order fixture now supplies terrain.
+This local gate adds no persistent state and is independent of viewport width;
+full donor/roster, act-route and whole-world rewind breadth remain inherited gaps.
+ICZ complete-run trace qualification and combined S3K stability checks remain
+with the delivery lead; these isolated checks do not certify an act.
+
 AIZ1/HCZ1 executable pilot (2026-10-15, candidate):
 [`check_route_obligations.py`](../../tools/testing/check_route_obligations.py)
 joins an explicit [26-case inventory](../../tools/testing/aiz-hcz-route-obligations.json)
