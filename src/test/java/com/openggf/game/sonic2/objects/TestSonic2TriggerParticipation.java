@@ -896,7 +896,9 @@ class TestSonic2TriggerParticipation {
         flipper.update(0, main);
 
         assertTrue(tails.getRolling(), "Obj86 first stand curls the player");
-        assertTrue(tails.getPinballMode(), "Obj86 owns a temporary pinball-mode guard while standing");
+        assertFalse(tails.getPinballMode(), "Obj86 must leave native pinball state untouched");
+        assertTrue(tails.isObjectControlSuppressesMovement(),
+                "Obj86 owns the captured roll through object control");
         assertFalse(tails.shouldPreserveRollingOnNextRollStop(),
                 "Obj86's explicit roll ownership must clear stale Obj85 preserved-roll handoff state");
     }

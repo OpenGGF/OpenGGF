@@ -6,8 +6,11 @@ only one penetrating foot; absent services, empty terrain and underwater descent
 must retain airborne state. The CNZ landing-order fixture now supplies terrain.
 This local gate adds no persistent state and is independent of viewport width;
 full donor/roster, act-route and whole-world rewind breadth remain inherited gaps.
-ICZ complete-run trace qualification and combined S3K stability checks remain
-with the delivery lead; these isolated checks do not certify an act.
+The completed combined smoke selection includes the four required S3K stability
+classes. The ICZ zone-slice replay on candidate `5b8001ae0` and baseline
+`c4f78fa1f` has identical diagnostic content (2,430 inherited errors, first at
+row 11,989, field `x`); this removes no existing trace frontier or route gap.
+These bounded checks do not certify an act.
 
 Remaining S3K parity follow-up (2026-10-14, delivery in progress): native
 SSZ cloud priority and the RINGS ROM glyph have73 focused passing checks and

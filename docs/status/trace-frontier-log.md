@@ -112814,3 +112814,22 @@ never reaches `Sonic_Init`, and the Slot runtime already models that pass. The r
 `prev_anim` re-ran `Animate_Sonic`'s change branch on the first `LevelLoop` pass. Fix
 `37991405c` lets custom-physics playables own their spawn pass. Gumball and Pachinko
 have no custom-physics playable, so their initial walk is unchanged.
+
+
+## 2026-10-16 — Horizontal spring terrain fallback removed; ICZ frontier unchanged
+
+`d7eb5e239` removes the test-only centre-Y landing approximation left by
+`50a45804f` and uses injected paired-foot terrain probes. Candidate `5b8001ae0`
+in `.worktrees/ai-s3k-spring-terrain` and baseline `c4f78fa1f` were compared with:
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay '-Dtest=TestS3kIczZoneSliceTraceReplay' '-Ds3k.rom.path=<main-workspace>/Sonic and Knuckles & Sonic 3 (W) [!].gen' test -B
+```
+
+Both completed one replay with no skips, 25,245 compared frames and 2,430 error
+spans (2,199 physics, 231 animation), zero warnings. First error is row 11,989,
+`x`, expected `0x66A2`, actual `0x66A8`. The complete canonical JSON report content
+is identical (SHA-256 `7f2a202ef107b8c671150274aa8bc70f4b4ea05320ad322c653f8a1042b4611b`).
+This is an unchanged inherited frontier, not a passing trace or whole-route
+qualification. Isolated fixtures now supply real terrain and reject absent,
+empty and zero-distance floor probes; slope and underwater gates are retained.
