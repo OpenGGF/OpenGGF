@@ -43,6 +43,15 @@ local art and control checks. Do not force service or pause the input policy to
 make the queue idle. This distinction does not remove explicit ROM owner waits:
 results creation still polls global Kos_modules_left as described below.
 
+**A selected module can be an engine-owned JDK proxy.** Its class CodeSource
+may be null even when the invocation handler belongs to the verified engine.
+HCZ43267's observer dereferenced that location before logging its class and
+failed at setup, with no pad rows. A trusted host diagnostic can use the
+existing pure `NativeRewindAdapterPublication.nativeRoot` lineage contract;
+preserve outer world identity and stop on rejected or unknown ancestry. Read
+the initialized native provider field, not a lazy art getter. Adapter
+reserve/register operations are mutations and are not observation substitutes.
+
 ### Results-screen false-green checklist
 
 `Obj_LevelResults` queues General -> `$520`, apparent-act Num1/Num2 -> `$568`,

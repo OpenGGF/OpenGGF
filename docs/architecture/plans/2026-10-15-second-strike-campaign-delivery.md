@@ -147,11 +147,19 @@ response inputs remain alive/nohurt at zero rings; the normal recovery endpoint
 is still unqualified, and the guard does not establish a damaging contact.
 R9/45291 passes the former horizontal-only stop, then rejects one native foot
 distance15 while the other is1. It remains alive/nohurt, with recovery unqualified.
+Source confirms the nearer1 is valid within its actual threshold5; native slope
+slip rearms lock30 with28 of the original96 inputs left. No budget extension or
+AIZ successor is authorized by that attribution.
 HCZ98142 observes supported floor083F, native water0680 and a rising bubble, but
 stops its11-call readiness bound before approach or hop. Diagnostic94142 identifies
 only the live116/117 count gates as false; all other clauses pass at11. Those are
-conveyor logic, not spinning columns. Native ownership attribution and actual
-oxygen/refill/escape remain open.
+shared conveyor markers, not spinning columns.31538 qualifies genuine99/100 owners
+and entry at9 calls, then stops after27Right because a native enemy-art batch
+violates an unsupported continuing global-idle observer guard. Corrected observer
+43267 fails at setup on a null module-class CodeSource before issuing any pad.
+R6 preparation reuses the existing pure native proxy-lineage contract; no native
+change or new runtime result is implied. Actual oxygen/refill/escape remains
+open; independent HCZ2 maker221 inventory has no supported entry or route proof.
 ICZ28579 qualifies the declared zero-ring neutral WARNED fall/landing and84-update
 registered replay. Successor97772 lands on the stone, retreats unharmed to real
 terrain and matches73 registered return/replay updates. Its STOCK arm follows
@@ -2003,13 +2011,53 @@ service/drain/queue/clock or native PLC fix is proposed.
 All37 CSV rows remain alive/nohurt/zero-ring with no issued A. CSV precedes PNG
 and log inspection; consumed log and the known generated config are removed.
 
-One versioned external R5 preparation is authorized after that source review,
-not a runtime result. It preserves the exact fixed seed/readiness/input/hop/
-breath/return and600-call/90s bounds, entry-idle and local art/DPLC checks, while
-replacing only continuing global idle with pure actual provider/handle ownership
-attribution. Unknown or mixed work stops. Old R2/R3/R4 sources/classes are
-immutable; no helper-field manipulation, forced service or native change is
-authorized. Root will inspect the versioned diff before one attempt.
+Versioned external R5 uses an explicit R2 core copy and R4 wrapper copy, with
+byte-equal approach/brake/hop/breath/return methods after class renaming. It
+preserves the fixed seed/readiness/600-call/90s bounds, entry-idle and local
+art/DPLC checks, replacing only continuing global idle with pure actual
+provider/handle ownership attribution. Unknown or mixed work stops. Root source
+review corrected two fixture assumptions before execution: the native consumed
+handoff clears its residual teardown lease ID, and the services decorator adds
+an outer module layer before the already-initialized art-provider cache. Reads
+use the existing final base getter and descriptor fields, never lazy art/queue
+accessors, processing, preparation, service, claim or payload snapshots.
+
+Preparation6676 fails only for a missing Map import after a console-observed
+240s lock wait; exact compiler-only duration is unknown. The failed source and
+output are retained. Import-only successor97016 passes into separate classes-r2
+after481.621s waiting; its3.438s lease-held interval includes verification,
+directory creation and javac, not isolated compiler timing. No Engine or test
+runs in either preparation. Completion HEAD/index/source content and target
+metadata match before/after. Final core baa69fda/wrapper a4f52039/observer71e03e0d,
+prepareef6aa13b and report3c79721c are immutable. The root-only runner5fe56fa8
+passes preflight and selects only the four hash-checked classes-r2 files.
+Old R2/R3/R4 inputs stay immutable; no helper-field manipulation or native change.
+
+Attempt43267 is terminal1:235s normal admission,0.836s child, ending
+08:29:40.237Z with the owned process group reaped and source unchanged. It boots
+the actual sidecar but stops before its first ordinary pad: the observer asks
+the selected module class's CodeSource for a location and receives null.
+CSV contains only its header; the pad file has no executable rows and no PNG
+exists. Final pure setup predicates are not ordinary-readiness or refill proof.
+The observer never authenticates a module head/lease and no approach, hop or
+breath executes. Raw loga6715ecc is inspected/consumed and the known generated
+config is removed.
+
+Source attribution identifies a missed explicit-patch boundary: the sidecar
+registers its title-provider Module through OwnerBoundGamePatch, which returns
+a JDK GameModule proxy. Such a class need not have a CodeSource. The failed
+lookup runs before logging the actual class, so this run does not directly
+identify its handler. The existing pure NativeRewindAdapterPublication.nativeRoot
+lineage walk already distinguishes immutable decorators and verified engine
+proxy handlers. A source-only follow-up assesses using that existing lineage
+contract before observing the initialized native provider. Root source review
+authorizes only a versioned R6 external preparation/paired compile at this
+checkpoint: reuse that read-only walk, stop on SecurityException/null/unknown
+lineage, require the exact immutable native module/provider, and log proxy/handler
+class identity without invoking proxy methods or assuming CodeSource exists.
+The selected outer module identity and every other native-owner/local-art/input
+check remain required. No new runtime or native helper/API change is authorized
+by that preparation; its diff and compiled hashes require root inspection first.
 
 Independent HCZ2 source auditf7fec727 authenticates the sole maker221,
 raw204008F85480 at1E6EBE; it has no conveyor duplicate-marker semantics. The
