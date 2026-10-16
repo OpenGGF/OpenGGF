@@ -101,7 +101,8 @@ Unreleased. The earlier development themes remain in
   native hit check of whichever phase it is in. When the object table is full,
   pending placements wait for the next camera block crossing, which restores the
   Hydrocity fan timing. Ending reunion loads use measured native decompression
-  costs, and the credits start on the original frame.
+  costs, and the credits start on the original frame. Robotnik's ship stays with
+  the beaten boss through its defeat pause before flying off, as in the original.
 
 - **Spin dash camera:** While a spin dash charges, and on its release frame, the
   camera eases back toward its normal height as it does when standing, as Sonic 2

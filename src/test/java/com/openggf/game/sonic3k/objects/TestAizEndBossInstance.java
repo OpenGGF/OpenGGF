@@ -419,6 +419,31 @@ class TestAizEndBossInstance {
     }
 
     @Test
+    void shipEscapeSignalWaitsForStartDefeatAfterTheFadeToLevelMusicWait() throws Exception {
+        // loc_69C36 (pinned 044fa46 sonic3k.asm:139005-139011) installs Wait_FadeToLevelMusic with
+        // $34 = loc_69482 and only clears $38 bit 6. Bit 4, which Obj_RobotnikShip's routine 4
+        // (loc_67DD8) waits for before its escape, is set by loc_69482 (:138300-138305) when the
+        // $3F countdown underflows.
+        RecordingServices services = new RecordingServices();
+        services.withCamera(camera);
+        services.withGameState(new GameStateManager());
+        AizEndBossInstance boss = buildBoss(services);
+        invokeNoArg(boss, "beginHover");
+        boss.getState().hitCount = 1;
+        boss.onPlayerAttack(null, null);
+        boss.update(0, null);
+        assertEquals(0x3F, readInt(boss, "waitTimer"), "precondition: Wait_FadeToLevelMusic armed with $2E=$3F");
+        assertFalse(boss.isDefeatStarted(), "the defeat callback does not set $38 bit 4");
+
+        for (int pass = 0; pass < 0x3F; pass++) {
+            boss.update(pass, null);
+            assertFalse(boss.isDefeatStarted(), "bit 4 stays clear while $2E counts down, pass " + pass);
+        }
+        boss.update(0x3F, null);
+        assertTrue(boss.isDefeatStarted(), "the pass where $2E underflows runs loc_69482: bset #4,$38(a0)");
+    }
+
+    @Test
     void startDefeatArmsTheRomDrawBridgeOwner() throws Exception {
         RecordingServices services = new RecordingServices();
         services.withCamera(camera);

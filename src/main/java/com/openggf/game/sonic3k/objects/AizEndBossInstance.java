@@ -869,7 +869,8 @@ public class AizEndBossInstance extends AbstractBossInstance
         // sets $2E to $3F (sonic3k.asm:138945-138951, 180814-180821).
         waitTimer = BOSS_DEFEATED_WAIT;
         waitCallback = WaitCallback.START_DEFEAT;
-        flags38 |= FLAG_DEFEAT_STARTED;
+        // loc_69C36 only clears $38 bit 6 here (pinned 044fa46 sonic3k.asm:139005-139011).
+        // Bit 4, the ship's escape signal, waits for AIZEndBoss_StartDefeat below.
         // ROM: loc_47A74 — bset #7,art_tile hides the boss machine body.
         // The Robotnik ship child (AizEndBossShipChild) keeps rendering independently.
         flags38 |= FLAG_HIDDEN;
@@ -907,6 +908,9 @@ public class AizEndBossInstance extends AbstractBossInstance
         // wait (sonic3k.asm:138240-138245). The ROM-loaded bridge owns its
         // opening motion; capsule creation must not restart this flag.
         Aiz2BossEndSequenceState.triggerBridgeDrop();
+        // loc_69482: bset #4,$38(a0) (pinned 044fa46 sonic3k.asm:138300-138305). Obj_RobotnikShip's
+        // routine 4 (loc_67DD8) starts its 128-pass escape from this bit.
+        flags38 |= FLAG_DEFEAT_STARTED;
         waitTimer = FADE_TO_LEVEL_MUSIC_WAIT;
         waitCallback = WaitCallback.START_CAPSULE_SEQUENCE;
     }
