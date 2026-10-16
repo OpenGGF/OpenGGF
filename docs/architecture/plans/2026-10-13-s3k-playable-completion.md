@@ -2203,3 +2203,20 @@ palette, a missing bonus HUD lives row, Gumball player priority in LEVEL-mode
 captures and an early Slot goal fade), assigned to a presentation-parity lane.
 SSZ arrival spots at 118/119/330/680/1341-1343/1430 match native exactly after
 `f950a720c`; 0 and 120 are attributed declared-inlet limits.
+
+## Exact Kos observer native publication and pin (2026-10-16)
+
+TraceChaser observer `de43cf78c25478b5d23d69cf7bd541faa9923745` (read-only
+schema-2 occupied-head Kos FIFO service observer) is integrated into TraceChaser
+main as `33c05c1623c2e7c2ebb7664e111a4ed3c0505e9d`, a fast-forward from the
+previous pin `4fdf73880f93a3172d23bf9e157b15de3c78fc32`; the merge tree is
+byte-identical to the qualified observer commit. It is published on the GitHub
+origin named by `.gitmodules`; the read-only Gitea mirror rejected the push and
+is not a pin prerequisite. Source-only CI run 38949410410 on that exact SHA
+passed (Python 3.12, 185 source-contract tests with no failures, errors or
+skips; 5 Lua behaviour tests; repository, history, shell-syntax, v5 conformance
+and documentation policy). Its optional native-integration job was skipped.
+Native evidence keeps its recorded scope: ExactKosMeasurement 11/0/0,
+HardwareTiming 70/0/0 and the actual v2 run's 30/30 agreement with an
+independent head oracle. The parent gitlink now records that SHA. This is a
+pin and source-contract qualification, not a full native gate or engine suite.

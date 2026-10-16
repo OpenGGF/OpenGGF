@@ -4194,7 +4194,7 @@ class TestBuildToolingGuard {
         assertTrue(modules.contains("url = https://github.com/OpenGGF/TraceChaser.git"));
         assertFalse(modules.substring(modules.indexOf("[submodule \"tools/tracechaser\"]"))
                 .contains("branch ="), "TraceChaser must never float on a branch");
-        assertEquals("160000 4fdf73880f93a3172d23bf9e157b15de3c78fc32 0\ttools/tracechaser",
+        assertEquals("160000 33c05c1623c2e7c2ebb7664e111a4ed3c0505e9d 0\ttools/tracechaser",
                 gitOutput(Path.of("."), "ls-files", "-s", "--", "tools/tracechaser").strip());
 
         String pom = Files.readString(Path.of("pom.xml"));
