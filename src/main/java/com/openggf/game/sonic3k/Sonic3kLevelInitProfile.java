@@ -105,7 +105,6 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
                     "Level/loc_60DE: clearRAM Lag_frame_count,$58 includes RNG_seed",
                     () -> GameServices.rng().setSeed(0)));
         }
-        // Post-load assembly: only when requested
         if (ctx.isIncludePostLoadAssembly()) {
             steps.add(new InitStep("PublishNativeCpuSavedEntryFlag",
                     "Tails_Init/loc13A10: native fresh or saved entry eligibility",

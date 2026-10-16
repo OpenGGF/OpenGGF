@@ -164,8 +164,8 @@ final class EditorHudCanvas implements AutoCloseable {
     }
 
     /**
-     * Draws text. The 9x10 face has no room for lowercase descenders (p, g, y would lose their
-     * tails), so BODY and LARGE text is set in capitals; the compact face keeps mixed case.
+     * Draws text. BODY and LARGE retain capitalized HUD labels; compact labels keep mixed case.
+     * Both native menu-font weights support lowercase descenders.
      */
     void text(String text, float x, float y, Size size, int rgb, float alpha) {
         if (text == null || text.isEmpty() || alpha <= 0) return;

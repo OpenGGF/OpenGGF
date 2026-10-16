@@ -672,3 +672,73 @@ shared/unclassified owners. Focused checks close the outstanding menu-follow-up
 gap; earlier validation above remains bounded to its documented coverage. No
 broad smoke, full-suite, new ROM/trace sweep or desktop-input validation is
 claimed for this integration.
+
+
+### 2026-10-16: carry the coherent menu font into develop
+
+The user selected the matching light/bold font from the local menu test rather
+than merging that older branch wholesale. This port starts at develop
+`ceef7429660458daf041c1e7550a08350260ed1e` and extracts only the typography
+implementation and its regression tests from local `40757a0e2` (original local
+refinement `08c3fac4b`). Develop's navigation, Mod Manager pointer routing, settings,
+suspend/resume and discovery behavior remain in place.
+
+Both weights derive from `MenuGlyphs`: the existing 6x8 compact cells and a 9x10
+bold atlas with spread source columns and thickened strokes. Spreading before
+thickening retains the counters in `MmWw`; descenders and all printable ASCII
+paths/punctuation are supported in both weights. Native advances, line heights,
+integer scaling and ordered text/shape batching remain stable. The gold launch
+and Resume buttons use navy text because the generated lettering has no black
+outline or shadow. Gameplay/overlay `PixelFont`, its PNG resources and shadow
+options are unchanged. Other host-menu consumers, including notices, import and
+editor UI, receive the same family. The editor HUD keeps its uppercase styling;
+only its obsolete descender comment changes.
+
+A regression was first run against unchanged develop production classes:
+`python3 tools/testing/maven_queue.py --lean -Dmse=off -q '-Dtest=TestMenuPixelFont#fullAndCompactLetteringUseTheSameCharacterCellsWithStableNativeMetrics' test`.
+It failed at the family cell assertion (expected `0.0625`, actual `0.016826924`),
+confirming that full-size lettering still used the separate PNG atlas. With the
+port applied, the focused run below passed **455 tests in 56 classes, zero
+failures/errors/skips**. It covers the font's real submission path, native glyph
+metrics and derived artwork, punctuation/descenders, buffer growth, submission
+order and cleanup, plus menu/layout, notices, import, editor HUD, recordings,
+trace pickers and Mod API boundary consumers. Queue admission waited 335 seconds;
+that is separate from execution time.
+
+Java 25, Lua 5.4 and PowerShell preflight passed with
+`LUA_BIN=/usr/bin/lua5.4`. The change-based plan selects 3,362 smoke classes because
+of the unclassified title host. Focused validation replaces that disproportionate
+selection for this bounded typography change: the shared gameplay `PixelFont`,
+shaders, gameplay state, timing, configuration and public API are unchanged.
+No broad smoke, full-suite or full-guard pass is claimed.
+
+```bash
+MENU_FONT_CLASSES='TestChildMenuFeedback,TestContentImportScreen,TestContentImportService,TestContentImportWindowBridge,TestEditorHudControls,TestEditorHudLayout,TestEditorProjectMenu,TestEngineSettingsDisplayConfirmation,TestEngineSettingsDraft,TestEngineSettingsScreen,TestHubSetupChips,TestLaunchConfigPanel,TestLegalDisclaimerControllerInput,TestLegalDisclaimerHandoff,TestLegalDisclaimerState,TestLegalDisclaimerTextWrap,TestLegalDisclaimerWidescreenLayout,TestMasterTitleCarousel,TestMasterTitleCatalogLoading,TestMasterTitleExitCoordinator,TestMasterTitleHub,TestMasterTitleHubMessages,TestMasterTitleMouse,TestMasterTitlePreviewInvalidation,TestMasterTitleQuitFlow,TestMasterTitleRomPreview,TestMasterTitleScreenAudio,TestMasterTitleScreenLayout,TestMasterTitleSecondaryActions,TestMasterTitleStandaloneEntries,TestMasterTitleSuspendedGame,TestMasterTitleTraceRetry,TestMenuGameOnboarding,TestMenuInput,TestMenuLoadTask,TestMenuPathBrowser,TestMenuPixelFont,TestMenuRenderAlignment,TestMenuRepeat,TestMenuRomLocator,TestMenuScreenModeController,TestMenuTextEditor,TestModApiSignatureSurface,TestModManagerScreen,TestModManagerScreenHost,TestModManagerScreenNativeGuard,TestModeTracePickerLaunchStatus,TestModeTracePickerRunFailureStatus,TestModeTracePickerTest,TestNativeModNoticeLines,TestNativeModNoticePaging,TestPixelFont,TestPixelFontTextRenderer,TestTexturedQuadRenderer,TestTitleContentImportAccess,TestUserRecordingMenu'
+MENU_ROM_DIRECTORY="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py --lean \
+  -Dmse=off -q -Dopenggf.headless.gl=surfaceless-egl "-Dtest=$MENU_FONT_CLASSES" \
+  "-Dsonic1.rom.path=$MENU_ROM_DIRECTORY/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$MENU_ROM_DIRECTORY/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$MENU_ROM_DIRECTORY/Sonic and Knuckles & Sonic 3 (W) [!].gen" test
+```
+
+
+`MasterTitleCaptureTool` completed 33 scenes at each of 320 and 400 logical
+pixels, scale 3, both before and after the change (**132 PNGs**). Baseline
+production classes were compiled from `ceef74296` before the implementation port;
+post-change captures used the production classes from the passing focused run.
+Each capture phase held the existing scheduler execution/worktree leases, ran
+surfaceless EGL with DISPLAY/WAYLAND_DISPLAY removed, and used per-scene owned
+temporary configuration directories. No shared-desktop input was automated.
+The command inside that lease was:
+`java --enable-native-access=ALL-UNNAMED -Dopenggf.headless.gl=surfaceless-egl -Djava.io.tmpdir=<owned-temp-dir> -cp <production-classes-and-dependencies> com.openggf.tools.MasterTitleCaptureTool <task-artifacts>/<phase>/<width> <width> 3`.
+
+Reviewed native hub, Settings and wide Game Setup captures show the same family
+across headers/body labels and legible navy Start text on gold, with existing
+layout retained. This is a visual review rather than a byte-identical screenshot
+comparison: animated clouds are not seeded. No paused-frame PNG was supplied,
+so fresh suspended-game pictures are not claimed; Resume uses the same gold
+first-action drawing path, covered by the suspended-menu tests. The images live
+outside the repository in the explicit `menu-font-family-ceef74296` task folder.
+The temporary capture helper/configuration state and consumed Surefire reports
+are removed after inspection. The older local menu test worktree is retained.

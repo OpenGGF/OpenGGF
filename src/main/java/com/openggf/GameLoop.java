@@ -4618,7 +4618,7 @@ public class GameLoop {
     // ==================== Ending / Credits Sequence Methods ====================
 
     /**
-     * Starts the fade-to-black transition to enter the ending sequence.
+     * Starts the fade-to-white transition to enter the ending sequence.
      * Called when the level requests credits (e.g., after final boss defeat).
      */
     private void startEndingFade() {
@@ -4633,14 +4633,13 @@ public class GameLoop {
     }
 
     /**
-     * Actually enters the ending sequence after fade-to-black completes.
+     * Actually enters the ending sequence after fade-to-white completes.
      * Initializes the EndingProvider from the current GameModule.
      */
     private void doEnterEnding() {
         endingProvider = GameServices.module().getEndingProvider();
         if (endingProvider == null) {
             endingTransitionPending = false;
-            // No ending provider for this game — return to title screen
             LOGGER.warning("No EndingProvider available, returning to title screen");
             setGameMode(GameMode.TITLE_SCREEN);
             TitleScreenProvider titleScreen = getTitleScreenProviderLazy();

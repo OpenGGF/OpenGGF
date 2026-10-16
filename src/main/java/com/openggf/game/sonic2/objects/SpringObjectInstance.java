@@ -182,13 +182,6 @@ public class SpringObjectInstance extends BoxObjectInstance
      * - move.w objoff_30(a0),y_vel(a1) [negative = up]
      * - bset #status.player.in_air
      */
-    /**
-     * ROM: Obj41_Up (loc_189CA)
-     * - addq.w #8,y_pos(a1) -> In ROM, Y increases downward, so this pushes player
-     * down
-     * - In our engine, Y increases upward, so we SUBTRACT to push down (away from
-     * spring face)
-     */
     protected void applyUpSpring(AbstractPlayableSprite player) {
         // ROM: addq.w #8,y_pos(a1) — push player down 8px (away from spring face)
         // before launching. y_pos is center coordinate.

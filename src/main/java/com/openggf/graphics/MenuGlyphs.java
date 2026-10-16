@@ -10,14 +10,19 @@ package com.openggf.graphics;
 final class MenuGlyphs {
     static final int ADVANCE = 6;
     static final int HEIGHT = 8;
+    static final int FULL_ADVANCE = 9;
+    static final int FULL_HEIGHT = 10;
     static final int COLUMNS = 16;
     static final int ATLAS_WIDTH = COLUMNS * ADVANCE;
     static final int ATLAS_HEIGHT = 6 * HEIGHT;
+    static final int FULL_ATLAS_WIDTH = COLUMNS * FULL_ADVANCE;
+    static final int FULL_ATLAS_HEIGHT = 6 * FULL_HEIGHT;
     // The final atlas cell is unused by the 95 printable glyphs.
     static final int SOLID_X = ATLAS_WIDTH - ADVANCE;
     static final int SOLID_Y = ATLAS_HEIGHT - HEIGHT;
     static final float SOLID_U = (SOLID_X + .5f) / ATLAS_WIDTH;
     static final float SOLID_V = 1f - (SOLID_Y + .5f) / ATLAS_HEIGHT;
+    private static final int[] FULL_COLUMN_POSITIONS = {0, 1, 3, 5, 6};
     private static final byte[][] ROWS = new byte[95][];
 
     static {
@@ -149,22 +154,58 @@ final class MenuGlyphs {
         return ROWS[normalized(character) - 32][row];
     }
 
+    /**
+     * Bold lettering keeps the authored rows, spreads the five source columns
+     * across seven native positions, and adds one ink pixel to their right.
+     * The extra space between inner stems keeps M/m/W/w readable as weight is
+     * added. Ink occupies columns zero through seven; column eight is spacing.
+     * One top row is inset, and row eight retains lowercase descenders. No
+     * interpolation, independently drawn glyphs, outline or shadow is used.
+     */
+    static int fullRow(char character, int y) {
+        if (y == 0 || y == FULL_HEIGHT - 1) return 0;
+        int source = row(character, y - 1);
+        int expanded = 0;
+        for (int x = 0; x < FULL_COLUMN_POSITIONS.length; x++) {
+            if ((source & (1 << (4 - x))) != 0)
+                expanded |= 3 << (FULL_ADVANCE - 2 - FULL_COLUMN_POSITIONS[x]);
+        }
+        return expanded;
+    }
+
     /** Bottom-left-origin, opaque white glyphs on transparent cells for GL upload. */
     static byte[] atlasRgba() {
-        byte[] rgba = new byte[ATLAS_WIDTH * ATLAS_HEIGHT * 4];
+        byte[] rgba = atlasRgba(ADVANCE, HEIGHT, false);
+        int solidOffset = ((ATLAS_HEIGHT - 1 - SOLID_Y) * ATLAS_WIDTH + SOLID_X) * 4;
+        whitePixel(rgba, solidOffset);
+        return rgba;
+    }
+
+    static byte[] fullAtlasRgba() {
+        return atlasRgba(FULL_ADVANCE, FULL_HEIGHT, true);
+    }
+
+    private static byte[] atlasRgba(int advance, int height, boolean full) {
+        int width = COLUMNS * advance;
+        int atlasHeight = 6 * height;
+        int inkColumns = full ? FULL_ADVANCE : 5;
+        byte[] rgba = new byte[width * atlasHeight * 4];
         for (int index = 0; index < ROWS.length; index++) {
-            int originX = (index % COLUMNS) * ADVANCE;
-            int originY = (index / COLUMNS) * HEIGHT;
-            for (int y = 0; y < HEIGHT; y++) {
-                for (int x = 0; x < 5; x++) {
-                    if ((ROWS[index][y] & (1 << (4 - x))) == 0) continue;
-                    int offset = ((ATLAS_HEIGHT - 1 - originY - y) * ATLAS_WIDTH + originX + x) * 4;
-                    for (int channel = 0; channel < 4; channel++) rgba[offset + channel] = (byte) 255;
+            int originX = (index % COLUMNS) * advance;
+            int originY = (index / COLUMNS) * height;
+            for (int y = 0; y < height; y++) {
+                int mask = full ? fullRow((char) (index + 32), y) : ROWS[index][y];
+                for (int x = 0; x < inkColumns; x++) {
+                    if ((mask & (1 << (inkColumns - 1 - x))) == 0) continue;
+                    int offset = ((atlasHeight - 1 - originY - y) * width + originX + x) * 4;
+                    whitePixel(rgba, offset);
                 }
             }
         }
-        int solidOffset = ((ATLAS_HEIGHT - 1 - SOLID_Y) * ATLAS_WIDTH + SOLID_X) * 4;
-        for (int channel = 0; channel < 4; channel++) rgba[solidOffset + channel] = (byte) 255;
         return rgba;
+    }
+
+    private static void whitePixel(byte[] rgba, int offset) {
+        for (int channel = 0; channel < 4; channel++) rgba[offset + channel] = (byte) 255;
     }
 }

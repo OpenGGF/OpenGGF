@@ -11,28 +11,31 @@ import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL12.GL_CLAMP_TO_EDGE;
 
 /**
- * Menu typography with two native pixel sizes: authored compact lettering with
- * lowercase descenders in 6x8 cells, and the existing 9x10 font at integer multiples. Fractional caller
- * scales select the compact font; they never resample either font's artwork.
+ * Menu typography with two native pixel sizes: one authored family in light 6x8 cells and
+ * a derived bold weight in 9x10 cells, with lowercase descenders in both.
+ * Fractional caller scales select light lettering; full sizes use integer multiples.
+ * Neither path resamples glyph artwork or adds an outline or shadow.
  */
 public final class MenuPixelFont extends PixelFont {
     private enum Batch { NONE, COMPACT, FULL }
     private TexturedQuadRenderer menuRenderer;
     private int compactTexture;
-    private boolean initialized;
+    private int fullTexture;
     private boolean batching;
     private Batch activeBatch = Batch.NONE;
-    private float[] compactVertices = new float[TexturedQuadRenderer.COLORED_QUAD_FLOATS * 64];
-    private int compactQuads;
+    private float[] vertices = new float[TexturedQuadRenderer.COLORED_QUAD_FLOATS * 64];
+    private int quads;
 
     @Override
     public void init(String fontPngPath, TexturedQuadRenderer renderer) throws IOException {
-        if (initialized) cleanup();
+        cleanup();
         menuRenderer = Objects.requireNonNull(renderer, "renderer");
-        super.init(fontPngPath, renderer);
-        initialized = true;
+        // Keep the inherited signature for existing menu callers. Both native
+        // weights come from MenuGlyphs; the gameplay PNG resource is independent.
         try {
             compactTexture = upload(MenuGlyphs.ATLAS_WIDTH, MenuGlyphs.ATLAS_HEIGHT, MenuGlyphs.atlasRgba());
+            fullTexture = upload(MenuGlyphs.FULL_ATLAS_WIDTH, MenuGlyphs.FULL_ATLAS_HEIGHT,
+                    MenuGlyphs.fullAtlasRgba());
         } catch (RuntimeException | Error failure) {
             cleanup();
             throw failure;
@@ -41,12 +44,12 @@ public final class MenuPixelFont extends PixelFont {
 
     /** Actual advance of the selected native font, in projection pixels. */
     public static int glyphAdvance(float scale) {
-        return scale < 1 ? MenuGlyphs.ADVANCE : PixelFont.glyphWidth() * integerScale(scale);
+        return scale < 1 ? MenuGlyphs.ADVANCE : MenuGlyphs.FULL_ADVANCE * integerScale(scale);
     }
 
     /** Actual cell height of the selected native font, in projection pixels. */
     public static int glyphLineHeight(float scale) {
-        return scale < 1 ? MenuGlyphs.HEIGHT : PixelFont.glyphHeight() * integerScale(scale);
+        return scale < 1 ? MenuGlyphs.HEIGHT : MenuGlyphs.FULL_HEIGHT * integerScale(scale);
     }
 
     private static int integerScale(float scale) {
@@ -78,31 +81,30 @@ public final class MenuPixelFont extends PixelFont {
         if (menuRenderer == null || text.isEmpty()) return;
         int originX = Math.round(x);
         int originY = Math.round(y);
-        if (scale >= 1) {
-            selectBatch(Batch.FULL);
-            // ASCII quotes have curly counterparts in the existing full-size atlas.
-            String fullText = text.replace('\'', '\u2019').replace('"', '\u201c');
-            super.drawText(fullText, (float) originX, (float) originY, integerScale(scale), r, g, b, a);
-            return;
-        }
-        selectBatch(Batch.COMPACT);
+        boolean full = scale >= 1;
+        int cellWidth = full ? MenuGlyphs.FULL_ADVANCE : MenuGlyphs.ADVANCE;
+        int cellHeight = full ? MenuGlyphs.FULL_HEIGHT : MenuGlyphs.HEIGHT;
+        int atlasWidth = full ? MenuGlyphs.FULL_ATLAS_WIDTH : MenuGlyphs.ATLAS_WIDTH;
+        int atlasHeight = full ? MenuGlyphs.FULL_ATLAS_HEIGHT : MenuGlyphs.ATLAS_HEIGHT;
+        int multiplier = full ? integerScale(scale) : 1;
+        selectBatch(full ? Batch.FULL : Batch.COMPACT);
         for (int i = 0; i < text.length(); i++) {
             char character = MenuGlyphs.normalized(text.charAt(i));
             if (character == ' ') continue;
             int index = character - 32;
-            int sourceX = (index % MenuGlyphs.COLUMNS) * MenuGlyphs.ADVANCE;
-            int sourceY = (index / MenuGlyphs.COLUMNS) * MenuGlyphs.HEIGHT;
-            ensureCompactCapacity(compactQuads + 1);
-            TexturedQuadRenderer.writeColoredQuadVerticesAtOffset(compactVertices,
-                    compactQuads * TexturedQuadRenderer.COLORED_QUAD_FLOATS,
-                    originX + i * MenuGlyphs.ADVANCE, 224 - originY - MenuGlyphs.HEIGHT,
-                    MenuGlyphs.ADVANCE, MenuGlyphs.HEIGHT,
-                    (float) sourceX / MenuGlyphs.ATLAS_WIDTH,
-                    1f - (float) (sourceY + MenuGlyphs.HEIGHT) / MenuGlyphs.ATLAS_HEIGHT,
-                    (float) (sourceX + MenuGlyphs.ADVANCE) / MenuGlyphs.ATLAS_WIDTH,
-                    1f - (float) sourceY / MenuGlyphs.ATLAS_HEIGHT,
+            int sourceX = (index % MenuGlyphs.COLUMNS) * cellWidth;
+            int sourceY = (index / MenuGlyphs.COLUMNS) * cellHeight;
+            ensureCapacity(quads + 1);
+            TexturedQuadRenderer.writeColoredQuadVerticesAtOffset(vertices,
+                    quads * TexturedQuadRenderer.COLORED_QUAD_FLOATS,
+                    originX + i * cellWidth * multiplier, 224 - originY - cellHeight * multiplier,
+                    cellWidth * multiplier, cellHeight * multiplier,
+                    (float) sourceX / atlasWidth,
+                    1f - (float) (sourceY + cellHeight) / atlasHeight,
+                    (float) (sourceX + cellWidth) / atlasWidth,
+                    1f - (float) sourceY / atlasHeight,
                     r, g, b, a);
-            compactQuads++;
+            quads++;
         }
         if (!batching) flushActiveBatch();
     }
@@ -126,9 +128,9 @@ public final class MenuPixelFont extends PixelFont {
         // Sampling the centre of the atlas's white texel lets shapes and compact
         // text share one ordered submission, without texture switches or glyph bleed.
         selectBatch(Batch.COMPACT);
-        ensureCompactCapacity(compactQuads + 1);
-        TexturedQuadRenderer.writeColoredQuadVerticesAtOffset(compactVertices,
-                compactQuads++ * TexturedQuadRenderer.COLORED_QUAD_FLOATS,
+        ensureCapacity(quads + 1);
+        TexturedQuadRenderer.writeColoredQuadVerticesAtOffset(vertices,
+                quads++ * TexturedQuadRenderer.COLORED_QUAD_FLOATS,
                 x, 224 - y - height, width, height,
                 MenuGlyphs.SOLID_U, MenuGlyphs.SOLID_V, MenuGlyphs.SOLID_U, MenuGlyphs.SOLID_V,
                 r, g, b, a);
@@ -166,11 +168,11 @@ public final class MenuPixelFont extends PixelFont {
             checkerCache[nextCheckerSlot] = geometry;
             nextCheckerSlot = (nextCheckerSlot + 1) % checkerCache.length;
         }
-        ensureCompactCapacity(compactQuads + geometry.quads());
-        System.arraycopy(geometry.vertices(), 0, compactVertices,
-                compactQuads * TexturedQuadRenderer.COLORED_QUAD_FLOATS,
+        ensureCapacity(quads + geometry.quads());
+        System.arraycopy(geometry.vertices(), 0, vertices,
+                quads * TexturedQuadRenderer.COLORED_QUAD_FLOATS,
                 geometry.quads() * TexturedQuadRenderer.COLORED_QUAD_FLOATS);
-        compactQuads += geometry.quads();
+        quads += geometry.quads();
         if (!batching) flushActiveBatch();
     }
 
@@ -178,22 +180,21 @@ public final class MenuPixelFont extends PixelFont {
         if (activeBatch == next) return;
         flushActiveBatch();
         activeBatch = next;
-        if (next == Batch.FULL && batching) super.beginMegaBatch();
     }
 
     private void flushActiveBatch() {
-        if (activeBatch == Batch.FULL && batching) super.endMegaBatch();
-        if (activeBatch == Batch.COMPACT && compactQuads != 0) {
-            menuRenderer.drawColoredTextureBatch(compactTexture, compactVertices, compactQuads);
-            compactQuads = 0;
+        if (quads != 0) {
+            menuRenderer.drawColoredTextureBatch(activeBatch == Batch.FULL ? fullTexture : compactTexture,
+                    vertices, quads);
+            quads = 0;
         }
         activeBatch = Batch.NONE;
     }
 
-    private void ensureCompactCapacity(int quadCount) {
+    private void ensureCapacity(int quadCount) {
         int required = quadCount * TexturedQuadRenderer.COLORED_QUAD_FLOATS;
-        if (required > compactVertices.length)
-            compactVertices = Arrays.copyOf(compactVertices, Math.max(required, compactVertices.length * 2));
+        if (required > vertices.length)
+            vertices = Arrays.copyOf(vertices, Math.max(required, vertices.length * 2));
     }
 
     @Override
@@ -201,16 +202,11 @@ public final class MenuPixelFont extends PixelFont {
         // Cleanup deliberately drops queued text; it must not draw while tearing down GL.
         batching = false;
         activeBatch = Batch.NONE;
-        compactQuads = 0;
-        if (initialized) {
-            // Reset the parent batch state without submitting queued full-size quads.
-            super.beginMegaBatch();
-            super.endMegaBatch();
-            super.cleanup();
-        }
+        quads = 0;
         PngTextureLoader.deleteTexture(compactTexture);
+        PngTextureLoader.deleteTexture(fullTexture);
         compactTexture = 0;
-        initialized = false;
+        fullTexture = 0;
         menuRenderer = null;
     }
 

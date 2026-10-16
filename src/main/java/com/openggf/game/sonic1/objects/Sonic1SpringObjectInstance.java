@@ -84,7 +84,6 @@ public class Sonic1SpringObjectInstance extends AbstractObjectInstance
 
         int subtype = spawn.subtype();
 
-        // Determine spring type from subtype bits
         if ((subtype & 0x10) != 0) {
             this.springType = TYPE_HORIZONTAL;
         } else if ((subtype & 0x20) != 0) {

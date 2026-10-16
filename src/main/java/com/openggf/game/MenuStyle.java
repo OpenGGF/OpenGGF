@@ -73,7 +73,7 @@ public final class MenuStyle {
         font.drawText(fit(text, maxWidth), x, y, COMPACT, r, g, b, 1);
     }
 
-    /** Primary labels keep the original prototype's full-size 9x10 lettering. */
+    /** Primary labels use the menu family's bold weight in fixed 9x10 cells. */
     public static void label(PixelFont font, String text, int x, int y, int maxWidth,
                             float r, float g, float b) {
         font.drawText(fitLabel(text, maxWidth), x, y, 1f, r, g, b, 1);

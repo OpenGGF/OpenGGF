@@ -11,6 +11,50 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class TestMenuPixelFont {
     @Test
+    void fullAndCompactLetteringUseTheSameCharacterCellsWithStableNativeMetrics() throws Exception {
+        Fixture fixture = new Fixture();
+        fixture.font.beginMegaBatch();
+        fixture.font.drawText("A", 9.4f, 12.6f, 1.3f, 1, 1, 1, 1);
+        fixture.font.drawText("A", 9.4f, 12.6f, .6f, 1, 1, 1, 1);
+        fixture.font.endMegaBatch();
+        Draw full = fixture.renderer.draws.get(0);
+        Draw compact = fixture.renderer.draws.get(1);
+        assertEquals(1, full.quads());
+        assertEquals(1, compact.quads());
+        assertEquals(compact.vertices()[2], full.vertices()[2],
+                "Changing weight must keep the authored family's glyph cell");
+        assertEquals(compact.vertices()[3], full.vertices()[3]);
+        assertEquals(compact.vertices()[18], full.vertices()[18]);
+        assertEquals(compact.vertices()[11], full.vertices()[11]);
+        assertEquals(9, full.vertices()[0]);
+        assertEquals(211, full.vertices()[1]);
+        assertEquals(201, full.vertices()[9]);
+        assertEquals(18, full.vertices()[16]);
+        assertEquals(9, MenuPixelFont.glyphAdvance(1.3f));
+        assertEquals(10, MenuPixelFont.glyphLineHeight(1.3f));
+    }
+
+    @Test
+    void fullLetteringRendersAllPrintablePathsPunctuationAndDescendersAtIntegerScale() throws Exception {
+        Fixture fixture = new Fixture();
+        String text = "C:\\ROMs\\Sonic (REV01).gen /roms/[a]_{b}-+!@#$%^&*='\";:,.?<>|`~ gjpqy";
+        fixture.font.beginMegaBatch();
+        fixture.font.drawText(text, 0, 0, 1.7f, 1, 1, 1, 1);
+        fixture.font.endMegaBatch();
+        assertFalse(fixture.renderer.draws.isEmpty(), "Full weight must submit the authored path alphabet");
+        Draw draw = fixture.renderer.draws.getFirst();
+        assertEquals(text.chars().filter(c -> c != ' ').count(), draw.quads(),
+                "Both weights must support the same authored alphabet, including straight quotes");
+        assertEquals(224, draw.vertices()[1]);
+        assertEquals(204, draw.vertices()[9]);
+        assertEquals(18, draw.vertices()[16]);
+        for (int i = 0; i < draw.vertices().length; i += 8) {
+            assertEquals(Math.round(draw.vertices()[i]), draw.vertices()[i]);
+            assertEquals(Math.round(draw.vertices()[i + 1]), draw.vertices()[i + 1]);
+        }
+    }
+
+    @Test
     void adjacentRectanglesBatchWithoutChangingOverlapOrderOrColour() throws Exception {
         Fixture fixture = new Fixture();
         fixture.font.beginMegaBatch();
@@ -164,6 +208,92 @@ class TestMenuPixelFont {
     }
 
     @Test
+    void boldAtlasAddsWeightToEveryAuthoredMaskWithoutOutlineShadowOrResampling() {
+        byte[] compact = MenuGlyphs.atlasRgba();
+        byte[] full = MenuGlyphs.fullAtlasRgba();
+        assertEquals(144 * 60 * 4, full.length);
+        for (int index = 0; index < 95; index++) {
+            int compactX = index % 16 * 6;
+            int compactY = index / 16 * 8;
+            int fullX = index % 16 * 9;
+            int fullY = index / 16 * 10;
+            for (int y = 0; y < 10; y++) {
+                for (int x = 0; x < 9; x++) {
+                    boolean expectedInk = expandedInk(compact, compactX, compactY, x, y);
+                    int offset = ((60 - 1 - fullY - y) * 144 + fullX + x) * 4;
+                    for (int channel = 0; channel < 4; channel++) {
+                        assertEquals(expectedInk ? 255 : 0, full[offset + channel] & 255,
+                                "Bold " + (char) (index + 32) + " at " + x + "," + y
+                                        + " must retain the authored shape and white ink");
+                    }
+                }
+            }
+        }
+        for (char character : "gjpqy".toCharArray()) {
+            assertNotEquals(0, MenuGlyphs.fullRow(character, 8), "Keep bold descender for " + character);
+            assertEquals(0, MenuGlyphs.fullRow(character, 9));
+        }
+        for (char character : "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefhiklmnorstuvwxz0123456789".toCharArray())
+            assertEquals(0, MenuGlyphs.fullRow(character, 8), "Keep the bold baseline for " + character);
+    }
+
+    @Test
+    void boldMAndWKeepThreeSeparatedStemsInsteadOfBecomingSolidBlocks() {
+        byte[] atlas = MenuGlyphs.fullAtlasRgba();
+        char[] characters = {'M', 'm', 'W', 'w'};
+        int[] stemRows = {3, 4, 4, 5};
+        for (int i = 0; i < characters.length; i++) {
+            int index = characters[i] - 32;
+            int originX = index % 16 * 9;
+            int originY = index / 16 * 10;
+            for (int x : new int[] {0, 1, 3, 4, 6, 7})
+                assertEquals(255, fullAlpha(atlas, originX + x, originY + stemRows[i]),
+                        "Keep all three bold stems for " + characters[i]);
+            for (int x : new int[] {2, 5, 8})
+                assertEquals(0, fullAlpha(atlas, originX + x, originY + stemRows[i]),
+                        "Keep separated stems and trailing spacing for " + characters[i]);
+        }
+    }
+
+    @Test
+    void unbatchedFullTextUsesColoredBatchAndCleanupDropsPendingGeometry() throws Exception {
+        Fixture fixture = new Fixture();
+        fixture.font.drawText("gjpqy'\"", 0, 0, 1f, .2f, .4f, .6f, .8f);
+        assertEquals(1, fixture.renderer.draws.size());
+        Draw draw = fixture.renderer.draws.getFirst();
+        assertEquals(7, draw.texture());
+        assertEquals(7, draw.quads());
+        assertEquals(.2f, draw.vertices()[4]);
+        assertEquals(.8f, draw.vertices()[7]);
+        fixture.font.beginMegaBatch();
+        fixture.font.drawText("A", 0, 0, 1f, 1, 1, 1, 1);
+        // Synthetic fixtures have no GL textures to release.
+        set(MenuPixelFont.class, fixture.font, "compactTexture", 0);
+        set(MenuPixelFont.class, fixture.font, "fullTexture", 0);
+        fixture.font.cleanup();
+        fixture.font.endMegaBatch();
+        fixture.font.drawText("A", 0, 0, 1f, 1, 1, 1, 1);
+        assertEquals(1, fixture.renderer.draws.size(), "Cleanup must drop queued geometry and detach the renderer");
+    }
+
+    private static boolean expandedInk(byte[] atlas, int originX, int originY, int x, int y) {
+        int[] positions = {0, 1, 3, 5, 6};
+        for (int sourceX = 0; sourceX < positions.length; sourceX++) {
+            if ((x == positions[sourceX] || x == positions[sourceX] + 1)
+                    && sourceInk(atlas, originX, originY, sourceX, y - 1)) return true;
+        }
+        return false;
+    }
+
+    private static int fullAlpha(byte[] atlas, int x, int topY) {
+        return atlas[((60 - 1 - topY) * 144 + x) * 4 + 3] & 255;
+    }
+
+    private static boolean sourceInk(byte[] atlas, int originX, int originY, int x, int y) {
+        return x >= 0 && x < 5 && y >= 0 && y < 8 && alpha(atlas, originX + x, originY + y) != 0;
+    }
+
+    @Test
     void pathsAndAsciiPunctuationRenderEveryNonSpaceCharacter() throws Exception {
         Fixture fixture = new Fixture();
         String path = "C:\\ROMs\\Sonic (REV01).gen /roms/[a]_{b}-+!@#$%^&*='\";:,.?<>|`~";
@@ -211,22 +341,8 @@ class TestMenuPixelFont {
         Fixture() throws Exception {
             set(MenuPixelFont.class, font, "menuRenderer", renderer);
             set(MenuPixelFont.class, font, "compactTexture", 11);
-            set(PixelFont.class, font, "renderer", renderer);
-            set(PixelFont.class, font, "textureId", 7);
-            set(PixelFont.class, font, "textureWidth", 416);
-            set(PixelFont.class, font, "textureHeight", 80);
-            boolean[] known = (boolean[]) field(PixelFont.class, font, "charKnown");
-            int[] columns = (int[]) field(PixelFont.class, font, "charToCol");
-            known['A'] = true;
-            known['B'] = true;
-            columns['B'] = 1;
+            set(MenuPixelFont.class, font, "fullTexture", 7);
         }
-    }
-
-    private static Object field(Class<?> type, Object object, String name) throws Exception {
-        Field field = type.getDeclaredField(name);
-        field.setAccessible(true);
-        return field.get(object);
     }
 
     private static void set(Class<?> type, Object object, String name, Object value) throws Exception {
