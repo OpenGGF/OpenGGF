@@ -2,12 +2,15 @@
 import os
 import json
 import errno
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import shutil
 import time
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -42,13 +45,18 @@ class QueueTests(unittest.TestCase):
             process.communicate(timeout=5)
 
     def launch(self, name, root=None, resource_snapshot=(100 * 1024**3, 128, 0),
-               estimate=900, aging_seconds=300, realised_rss=0, reservation=None):
+               estimate=900, aging_seconds=300, realised_rss=0, reservation=None, clock=None):
         code = '''
 import sys, time, json
 from pathlib import Path
 sys.path.insert(0, sys.argv[1])
 from maven_queue import maven_slot, handle_termination
 import maven_resources, maven_schedule
+if sys.argv[9]:
+    import maven_queue
+    from types import SimpleNamespace
+    maven_queue.time = SimpleNamespace(
+        monotonic=lambda: float(Path(sys.argv[9]).read_text()), sleep=time.sleep)
 maven_schedule.AGING_SECONDS = float(sys.argv[6])
 maven_resources.snapshot = lambda: json.loads(sys.argv[4])
 if float(sys.argv[7]):
@@ -67,7 +75,8 @@ except KeyboardInterrupt:
         marker = Path(self.temp.name) / name
         process = subprocess.Popen([sys.executable, '-c', code, str(TOOLS),
                                     str(root or self.root), str(marker), json.dumps(resource_snapshot),
-                                    str(estimate), str(aging_seconds), str(realised_rss), json.dumps(reservation)],
+                                    str(estimate), str(aging_seconds), str(realised_rss), json.dumps(reservation),
+                                    str(clock) if clock is not None else ''],
                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         self.processes.append(process)
         return process, marker
@@ -163,6 +172,153 @@ with worktree_build_slot(root) as tree_fd:
             with self.subTest(descriptor=descriptor), self.assertRaises(ValueError):
                 with maven_slot(self.root, tree_fd=descriptor):
                     self.fail('invalid lease accepted')
+
+    def test_retained_continuation_uses_credit_against_a_real_competing_process(self):
+        self.assert_retained_continuation_priority()
+
+    @unittest.skipUnless(sys.platform == 'linux', 'Linux resource admission')
+    def test_resource_aware_retained_continuation_preserves_priority_against_foreign_probe(self):
+        os.environ['OPENGGF_MAVEN_QUEUE'] = 'auto'
+        self.git('config', 'openggf.mavenMaxRuns', '1')
+        self.assert_retained_continuation_priority()
+
+    def assert_retained_continuation_priority(self):
+        import maven_queue as queue
+        code = '''
+import sys, time
+from pathlib import Path
+from types import SimpleNamespace
+sys.path.insert(0, sys.argv[1])
+import maven_queue as queue
+import maven_resources
+from maven_schedule import ServiceCredit
+maven_resources.snapshot = lambda: (100 * 1024**3, 128, 0)
+root, marker, clock = map(Path, sys.argv[2:5])
+queue.time = SimpleNamespace(monotonic=lambda: float(clock.read_text()), sleep=time.sleep)
+credit = ServiceCredit()
+with queue.worktree_build_slot(root) as tree_fd:
+    for number in (1, 2):
+        with queue.maven_slot(root, estimate=45, tree_fd=tree_fd,
+                              service_credit=credit, kind='category'):
+            marker.with_name(marker.name + f'-{number}').with_suffix('.started').touch()
+            while not marker.with_suffix(f'.{number}.release').exists():
+                time.sleep(.02)
+        marker.with_suffix('.credit').write_text(str(credit.seconds))
+        if number == 1:
+            marker.with_name(marker.name + '-between').with_suffix('.started').touch()
+            while not marker.with_suffix('.next').exists():
+                time.sleep(.02)
+'''
+        clock = Path(self.temp.name) / 'clock'
+        def advance(now):
+            replacement = clock.with_suffix('.next')
+            replacement.write_text(str(now))
+            replacement.replace(clock)
+        advance(1000)
+        marker = Path(self.temp.name) / 'credited-batches'
+        with (self.root / '.git/maven-queue.lock').open('a+b') as legacy:
+            self.assertTrue(queue._acquire(legacy))
+            process = subprocess.Popen([sys.executable, '-c', code, str(TOOLS),
+                                        str(self.root), str(marker), str(clock)],
+                                       stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+            self.processes.append(process)
+            self.wait_queued(1)
+            advance(4600)
+            queue._unlock(legacy)
+            self.wait_started(process, marker.with_name(marker.name + '-1'))
+            advance(4640)
+            marker.with_suffix('.1.release').touch()
+            self.wait_started(process, marker.with_name(marker.name + '-between'))
+            self.assertEqual(260, float(marker.with_suffix('.credit').read_text()))
+            with (self.root / '.git/maven-worktree.lock').open('a+b') as competing:
+                self.assertFalse(queue._acquire(competing))
+            self.assertTrue(queue._acquire(legacy))
+            focused, focused_marker = self.launch('focused', self.linked, estimate=30, clock=clock)
+            self.wait_queued(1)
+            marker.with_suffix('.next').touch()
+            self.wait_queued(2)
+            advance(4680)
+            queue._unlock(legacy)
+            self.wait_started(process, marker.with_name(marker.name + '-2'))
+            self.assertFalse(focused_marker.with_suffix('.started').exists())
+            advance(4720)
+            marker.with_suffix('.2.release').touch()
+            self.assertEqual(0, process.wait(timeout=5), process.communicate()[0])
+            self.assertEqual(260, float(marker.with_suffix('.credit').read_text()))
+            self.wait_started(focused, focused_marker)
+            advance(4750)
+            focused_marker.with_suffix('.release').touch()
+            self.assertEqual(0, focused.wait(timeout=5), focused.communicate()[0])
+        rows = [json.loads(line) for line in
+                (self.root / '.git/maven-queue-log.jsonl').read_text().splitlines()]
+        self.assertEqual([(3600, 40), (40, 40)],
+                         [(row['waitSeconds'], row['holdSeconds']) for row in rows
+                          if row['kind'] == 'category'])
+        expected_mode = 'resource-aware' if os.environ['OPENGGF_MAVEN_QUEUE'] == 'auto' else 'serial'
+        self.assertEqual({expected_mode}, {row['mode'] for row in rows})
+        self.assertEqual([], list((self.root / '.git/maven-waiters').glob('*.request')))
+
+    def test_service_credit_preserves_actual_wait_telemetry_and_charges_interrupted_service(self):
+        import maven_queue as queue
+        from maven_schedule import ServiceCredit
+        common = self.root / '.git'
+        credit = ServiceCredit(250)
+        clock = [1000]
+        output = StringIO()
+        with (common / 'maven-queue.lock').open('a+b') as legacy:
+            self.assertTrue(queue._acquire(legacy))
+            def release_after_wait(_delay):
+                records = list((common / 'maven-waiters').glob('*.request'))
+                self.assertEqual(1, len(records))
+                record = json.loads(records[0].read_bytes()[1:])
+                self.assertEqual(750, record['enqueued'])
+                clock[0] = 1010
+                queue._unlock(legacy)
+            with patch.object(queue, 'time', SimpleNamespace(
+                    monotonic=lambda: clock[0], sleep=release_after_wait)), redirect_stdout(output):
+                with self.assertRaisesRegex(RuntimeError, 'interrupted batch'):
+                    with queue.maven_slot(self.root, service_credit=credit):
+                        clock[0] = 1050
+                        raise RuntimeError('interrupted batch')
+        self.assertEqual(220, credit.seconds)
+        row, = map(json.loads, (common / 'maven-queue-log.jsonl').read_text().splitlines())
+        self.assertEqual('interrupted', row['outcome'])
+        self.assertEqual(10, row['waitSeconds'])
+        self.assertEqual(40, row['holdSeconds'])
+        self.assertIn('Waiting for Maven slot (0s;', output.getvalue())
+        self.assertIn('waited 10s)', output.getvalue())
+        self.assertEqual([], list((common / 'maven-waiters').glob('*.request')))
+        self.assertEqual([], list((common / 'maven-running').glob('*.lease')))
+        with queue.maven_slot(self.root):
+            pass
+
+    def test_cancelled_wait_does_not_earn_credit_or_release_retained_tree(self):
+        import maven_queue as queue
+        from maven_schedule import ServiceCredit
+        common = self.root / '.git'
+        credit = ServiceCredit(250)
+        clock = [1000]
+        def cancel_after_wait(_delay):
+            clock[0] = 4600
+            raise KeyboardInterrupt
+        with queue.worktree_build_slot(self.root) as tree_fd:
+            with (common / 'maven-queue.lock').open('a+b') as legacy:
+                self.assertTrue(queue._acquire(legacy))
+                with patch.object(queue, 'time', SimpleNamespace(
+                        monotonic=lambda: clock[0], sleep=cancel_after_wait)):
+                    with self.assertRaises(KeyboardInterrupt):
+                        with queue.maven_slot(self.root, tree_fd=tree_fd, service_credit=credit):
+                            self.fail('blocked request admitted')
+            self.assertEqual(250, credit.seconds)
+            with (common / 'maven-worktree.lock').open('a+b') as competing:
+                self.assertFalse(queue._acquire(competing))
+            self.assertEqual([], list((common / 'maven-waiters').glob('*.request')))
+        row, = map(json.loads, (common / 'maven-queue-log.jsonl').read_text().splitlines())
+        self.assertEqual('cancelled-waiting', row['outcome'])
+        self.assertEqual(3600, row['waitSeconds'])
+        self.assertEqual(0, row['holdSeconds'])
+        with queue.maven_slot(self.root):
+            pass
 
     def test_vanished_foreign_metadata_during_probe_does_not_block_aged_serial_waiter(self):
         import maven_queue as queue
@@ -725,12 +881,15 @@ with worktree_build_slot(root) as tree_fd:
 import json, os, sys, time
 from pathlib import Path
 marker = Path(sys.argv[1])
-marker.with_suffix('.args').write_text(json.dumps({'cwd': str(Path.cwd()), 'args': sys.argv[3:],
+if sys.argv[3] == 'yes' and 'test-compile' in sys.argv[4:]:
+    marker.with_suffix('.prepared').touch()
+    sys.exit(0)
+marker.with_suffix('.args').write_text(json.dumps({'cwd': str(Path.cwd()), 'args': sys.argv[4:],
                                                   'mavenOpts': os.environ.get('MAVEN_OPTS')}))
 marker.with_suffix('.started').touch()
 while not marker.with_suffix('.release').exists():
     time.sleep(.02)
-for arg in sys.argv[3:]:
+for arg in sys.argv[4:]:
     if arg.startswith('-Dopenggf.surefire.reports='):
         reports = Path(arg.split('=', 1)[1])
         reports.mkdir(parents=True)
@@ -751,7 +910,7 @@ original = subprocess.Popen
 marker, fake, code, category, lean, supplied_args = sys.argv[2:]
 def probe(command, *args, **kwargs):
     if command[0] == 'mvn':
-        command = [sys.executable, '-u', '-c', fake, marker, code, *command[1:]]
+        command = [sys.executable, '-u', '-c', fake, marker, code, category, *command[1:]]
     return original(command, *args, **kwargs)
 try:
     with queue.handle_termination(), patch.object(subprocess, 'Popen', probe):
@@ -929,6 +1088,7 @@ except KeyboardInterrupt:
         # Longer than the entire category invocation timeout (three seconds).
         time.sleep(3.2)
         self.assertIsNone(command.poll())
+        self.assertTrue(marker.with_suffix('.prepared').exists())
         self.assertFalse(marker.with_suffix('.started').exists())
         first.with_suffix('.release').touch()
         holder.wait(timeout=5)

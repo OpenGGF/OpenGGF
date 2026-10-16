@@ -73,7 +73,7 @@ class CategoryPolicyTests(unittest.TestCase):
             self.assertEqual(2, discover.call_count)
             for call in discover.call_args_list:
                 self.assertEqual((root, originals), call.args)
-            for call in process.call_args_list:
+            for call in process.call_args_list[1:]:
                 self.assertIn(argument, call.args[0])
             self.assertEqual([], list(originals.iterdir()))
 
@@ -306,9 +306,9 @@ class RunnerTests(unittest.TestCase):
             with self.subTest(code=code), tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
                 plan = {'tests': ['com/openggf/TestExample.java'], 'full': False, 'guards': True, 'categories': ['common'], 'inventory_count': 1}
-                with patch.object(runner, 'tree_state', return_value='state'), patch.object(runner, 'rom_args', return_value=[]), patch.object(runner, 'run_logged', return_value=code) as process:
+                with patch.object(runner, 'tree_state', return_value='state'), patch.object(runner, 'rom_args', return_value=[]), patch.object(runner, 'run_logged', side_effect=[0, code]) as process:
                     self.assertEqual(1, runner.run_plan(root, plan))
-                    self.assertEqual(1, process.call_count)
+                    self.assertEqual(2, process.call_count)
                     self.assertIn('-Dmse=off', process.call_args.args[0])
                     self.assertTrue(any(arg.startswith('-Dsurefire.includesFile=') for arg in process.call_args.args[0]))
 
@@ -319,7 +319,8 @@ class RunnerTests(unittest.TestCase):
             summary = {'reports': 1, 'tests': 2, 'skipped': 0, 'errors': 0, 'failures': 0, 'skipped_cases': []}
             with patch.object(runner, 'tree_state', return_value='state'), patch.object(runner, 'rom_args', return_value=[]), patch.object(runner, 'summarize', side_effect=lambda _: dict(summary)), patch.object(runner, 'run_logged', return_value=0) as process:
                 self.assertEqual(0, runner.run_plan(root, plan))
-            ordinary, guards = [call.args[0] for call in process.call_args_list]
+            preparation, ordinary, guards = [call.args[0] for call in process.call_args_list]
+            self.assertEqual(['mvn', '-Dmse=off', 'test-compile', '-B'], preparation)
             self.assertIn('-Pguards', guards)
             self.assertFalse(any('includesFile' in arg for arg in guards))
             self.assertNotEqual([arg for arg in ordinary if 'surefire.reports' in arg], [arg for arg in guards if 'surefire.reports' in arg])
@@ -335,7 +336,7 @@ class RunnerTests(unittest.TestCase):
                     summary = {'reports': 1, 'tests': 2, 'skipped': 0, 'errors': 0, 'failures': 0}
                     with patch.object(runner, 'tree_state', return_value='state'), patch.object(runner, 'rom_args', return_value=['-Dsonic1.rom.path=/roms/s1.gen']), patch.object(runner, 'summarize', side_effect=lambda _: dict(summary)), patch.object(runner, 'run_logged', return_value=0) as process:
                         self.assertEqual(0, runner.run_plan(root, plan))
-                    ordinary, guards = [call.args[0] for call in process.call_args_list]
+                    _, ordinary, guards = [call.args[0] for call in process.call_args_list]
                     self.assertIn('-Psmoke', ordinary)
                     self.assertNotIn('-Pfull-suite', ordinary)
                     self.assertNotIn('-Psmoke', guards)
@@ -416,9 +417,9 @@ class RunnerTests(unittest.TestCase):
                 {'reports': 1, 'tests': 2, 'skipped': 0, 'errors': 0, 'failures': 1},
                 {'reports': 1, 'tests': 2, 'skipped': 0, 'errors': 0, 'failures': 0},
             ]
-            with patch.object(runner, 'tree_state', return_value='state'), patch.object(runner, 'rom_args', return_value=[]), patch.object(runner, 'summarize', side_effect=summaries), patch.object(runner, 'run_logged', side_effect=[1, 0]) as process:
+            with patch.object(runner, 'tree_state', return_value='state'), patch.object(runner, 'rom_args', return_value=[]), patch.object(runner, 'summarize', side_effect=summaries), patch.object(runner, 'run_logged', side_effect=[0, 1, 0]) as process:
                 self.assertEqual(1, runner.run_plan(root, plan))
-                self.assertEqual(2, process.call_count)
+                self.assertEqual(3, process.call_count)
 
     def test_interruption_cleans_owned_temp_and_preserves_other_target_files(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -427,6 +428,8 @@ class RunnerTests(unittest.TestCase):
             (root / 'target/test-tmp/keep').write_text('other Maven output')
             plan = {'tests': ['com/openggf/TestExample.java'], 'full': False, 'guards': False, 'categories': ['common'], 'inventory_count': 1}
             def interrupted(command, cwd, log_path, temporary, **kwargs):
+                if 'test-compile' in command:
+                    return 0
                 temporary = Path(next(arg.split('=', 1)[1] for arg in command
                                       if arg.startswith('-Dopenggf.test.tmpdir=')))
                 (temporary / 'large-fixture').write_text('temporary')

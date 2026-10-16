@@ -24,6 +24,7 @@ class BatchTests(unittest.TestCase):
         self.selections = []
         self.active = False
         self.timeouts = []
+        self.preparation_timeouts = []
         self.outcomes = [(0, 'passed')] * 4
         for name, value in [('tree_state', lambda root: self.state), ('rom_args', lambda *args: []),
                             ('run_logged', self.maven)]:
@@ -48,10 +49,21 @@ class BatchTests(unittest.TestCase):
             self.events.append(('release', lane))
 
     def maven(self, command, cwd, log, temporary, **kwargs):
+        if 'test-compile' in command:
+            self.assertFalse(self.active)
+            self.assertIsNone(kwargs['queue_fd'])
+            self.preparation_timeouts.append(kwargs['timeout'])
+            self.events.append(('execute', 'preparation'))
+            self.clock += 5
+            return 0
         self.assertTrue(self.active)
         self.assertEqual(27, kwargs['queue_fd'])
         self.timeouts.append(kwargs['timeout'])
         self.assertEqual(runner.IDLE_SECONDS, kwargs['idle_timeout'])
+        self.assertIn('surefire:test', command)
+        self.assertNotIn('test', command)
+        for fork in (1, 2):
+            self.assertTrue((temporary / f'fork-{fork}').is_dir())
         lane = 'guards' if '-Pguards' in command else 'ordinary'
         self.events.append(('execute', lane))
         if lane == 'ordinary':
@@ -99,14 +111,15 @@ class BatchTests(unittest.TestCase):
         self.assertEqual(0, self.execute())
         self.assertEqual([50, 50, 1], [len(batch) for batch in self.selections])
         self.assertEqual(self.plan['tests'], sum(self.selections, []))
-        self.assertEqual([(event, lane) for lane in ['ordinary'] * 3 + ['guards']
+        self.assertEqual([('execute', 'preparation')] +
+                         [(event, lane) for lane in ['ordinary'] * 3 + ['guards']
                           for event in ('acquire', 'execute', 'release')], self.events)
         ordinary, guards = self.results()
         self.assertEqual(3, ordinary['reports'])
         self.assertEqual(3, ordinary['batches_completed'])
         self.assertEqual(1, guards['reports'])
         commands = list(self.diagnostics().glob('*command*.json'))
-        self.assertEqual(4, len(commands))
+        self.assertEqual(5, len(commands))
         self.assertEqual(self.plan['tests'], json.loads((self.diagnostics() / 'plan.json').read_text())['tests'])
         self.assertFalse(list(self.diagnostics().glob('*-reports')))
         self.assertFalse(list(self.diagnostics().glob('*-tmp')))
@@ -114,13 +127,15 @@ class BatchTests(unittest.TestCase):
 
     def test_queue_waits_do_not_consume_combined_execution_budget(self):
         self.assertEqual(0, self.execute(max_minutes=1))
-        self.assertEqual([60, 50, 40, 30], self.timeouts)
+        self.assertEqual([60], self.preparation_timeouts)
+        self.assertEqual([55, 45, 35, 25], self.timeouts)
         self.assertEqual([30, 10], [result['elapsed_seconds'] for result in self.results()])
 
     def test_exhausted_execution_budget_does_not_rejoin_queue(self):
         with self.assertRaisesRegex(TimeoutError, 'exhausted before another batch'):
-            self.execute(max_minutes=1 / 6)
-        self.assertEqual([('acquire', 'ordinary'), ('execute', 'ordinary'), ('release', 'ordinary')], self.events)
+            self.execute(max_minutes=1 / 4)
+        self.assertEqual([('execute', 'preparation'), ('acquire', 'ordinary'),
+                          ('execute', 'ordinary'), ('release', 'ordinary')], self.events)
         ordinary, = self.results()
         self.assertEqual(1, ordinary['batches_completed'])
         self.assertEqual('incomplete', ordinary['status'])
@@ -183,12 +198,14 @@ class BatchTests(unittest.TestCase):
         original = self.maven
         def changed(*args, **kwargs):
             code = original(*args, **kwargs)
-            self.state = 'edited during execution'
+            if 'surefire:test' in args[0]:
+                self.state = 'edited during execution'
             return code
         with patch.object(runner, 'run_logged', side_effect=changed):
             with self.assertRaisesRegex(ValueError, 'Working tree changed during validation'):
                 self.execute()
-        self.assertEqual([('acquire', 'ordinary'), ('execute', 'ordinary'), ('release', 'ordinary')], self.events)
+        self.assertEqual([('execute', 'preparation'), ('acquire', 'ordinary'),
+                          ('execute', 'ordinary'), ('release', 'ordinary')], self.events)
         self.assertEqual(1, self.results()[0]['batches_completed'])
 
     def test_timeout_aggregates_completed_and_partial_reports_before_releasing(self):
@@ -197,7 +214,7 @@ class BatchTests(unittest.TestCase):
         def timeout(*args, **kwargs):
             nonlocal calls
             code = original(*args, **kwargs)
-            calls += 1
+            calls += int('surefire:test' in args[0])
             if calls == 2:
                 raise TimeoutError('execution budget exhausted')
             return code

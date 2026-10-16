@@ -4,6 +4,7 @@ Inputs: invocation shape and automatically leased waiting records. Records conta
 no Maven arguments or PIDs and never authorize execution: OS locks do that.
 Origin: 2026-09-15 short-run priority follow-up to Maven resource profiling.
 """
+from dataclasses import dataclass
 import json
 import math
 from pathlib import Path
@@ -15,6 +16,24 @@ FULL_SECONDS = 900
 REQUEST_NAME = re.compile(r'[0-9a-f]{32}\.request')
 WORKTREE_BUSY = object()
 WORKTREE_GONE = object()
+
+
+@dataclass
+class ServiceCredit:
+    """Invocation-local waiting credit, spent by each admitted batch's service."""
+    seconds: float = 0.0
+
+    def __post_init__(self):
+        if (type(self.seconds) not in (int, float) or not math.isfinite(self.seconds)
+                or not 0 <= self.seconds <= AGING_SECONDS):
+            raise ValueError('Service credit must be finite and within the aging window')
+
+    def enqueued(self, started):
+        return started - self.seconds
+
+    def account(self, waited, held):
+        # Cap before charging service so a long wait cannot retain full priority.
+        self.seconds = max(0, min(AGING_SECONDS, self.seconds + waited) - held)
 
 
 def class_estimate(count):

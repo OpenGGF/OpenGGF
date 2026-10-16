@@ -11,6 +11,84 @@ class SchedulingTests(unittest.TestCase):
     def request(self, name, estimate, enqueued=0):
         return dict(id=name, estimate=estimate, enqueued=enqueued)
 
+    def test_service_credit_caps_wait_before_charging_service(self):
+        credit = schedule.ServiceCredit()
+        self.assertEqual(0, credit.seconds)
+        credit.account(waited=3600, held=40)
+        self.assertEqual(260, credit.seconds)
+        self.assertEqual(3740, credit.enqueued(4000))
+
+    def test_service_credit_accumulates_wait_and_drains_without_wait(self):
+        credit = schedule.ServiceCredit()
+        for _ in range(4):
+            credit.account(waited=100, held=20)
+        self.assertEqual(280, credit.seconds)
+        credit.account(waited=0, held=100)
+        self.assertEqual(180, credit.seconds)
+        credit.account(waited=0, held=200)
+        self.assertEqual(0, credit.seconds)
+
+    def test_service_credit_rejects_invalid_initial_values(self):
+        for seconds in (-1, 301, float('nan'), float('inf'), True, '10'):
+            with self.subTest(seconds=seconds), self.assertRaises(ValueError):
+                schedule.ServiceCredit(seconds)
+
+    def test_continuation_still_yields_to_older_aged_waiter(self):
+        credit = schedule.ServiceCredit(260)
+        requests = [self.request('continuation', 45, credit.enqueued(1000)),
+                    self.request('older', 900, 700),
+                    self.request('focused', 30, 1050)]
+        self.assertEqual(['older', 'continuation', 'focused'],
+                         [r['id'] for r in schedule.ordered(requests, 1050)])
+
+    def test_focused_work_wins_until_continuation_earns_back_service(self):
+        credit = schedule.ServiceCredit(260)
+        requests = [self.request('continuation', 45, credit.enqueued(1000)),
+                    self.request('focused', 30, 1000)]
+        self.assertEqual('focused', schedule.choose(requests, 1039, lambda r: True)['id'])
+        self.assertEqual('continuation', schedule.choose(requests, 1040, lambda r: True)['id'])
+
+    def test_fixed_work_simulation_bounds_category_delay_without_monopolizing_queue(self):
+        def simulate(retain_credit):
+            now = 0
+            credit = schedule.ServiceCredit()
+            batches, focused = 6, 60
+            category = self.request('category', 45)
+            single = self.request('focused', 30)
+            category_started = 0
+            events = []
+            while batches or focused:
+                requests = ([category] if batches else []) + ([single] if focused else [])
+                selected = schedule.choose(requests, now, lambda r: True)
+                start = now
+                if selected['id'] == 'category':
+                    now += 40
+                    credit.account(waited=start - category_started, held=40)
+                    batches -= 1
+                    category_started = now
+                    category = self.request('category', 45,
+                        credit.enqueued(now) if retain_credit else now)
+                else:
+                    now += 30
+                    focused -= 1
+                    single = self.request('focused', 30, now)
+                events.append((selected['id'], start, now))
+            return events
+
+        reset, retained = simulate(False), simulate(True)
+        for events in (reset, retained):
+            self.assertEqual(6, sum(kind == 'category' for kind, _, _ in events))
+            self.assertEqual(60, sum(kind == 'focused' for kind, _, _ in events))
+            self.assertEqual(2040, events[-1][2])
+        category_events = [event for event in retained if event[0] == 'category']
+        self.assertEqual([300, 400, 500, 600, 700, 800],
+                         [start for _, start, _ in category_events])
+        self.assertEqual(840, category_events[-1][2])
+        self.assertEqual(2040, [end for kind, _, end in reset if kind == 'category'][-1])
+        self.assertEqual(20, sum(kind == 'focused' for kind, _, end in retained if end <= 840))
+        self.assertFalse(any(left[0] == right[0] == 'category'
+                             for left, right in zip(retained, retained[1:])))
+
     def test_short_requests_overtake_earlier_large_requests(self):
         requests = [self.request('full', 900), self.request('single', 30, 10)]
         self.assertEqual(['single', 'full'], [r['id'] for r in schedule.ordered(requests, 20)])

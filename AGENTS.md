@@ -106,7 +106,10 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
   all **smoke** categories, never the release-only full suite. Broad routine local
   coverage uses the category runner, which partitions the complete selection into
   at most 50 candidate classes per ordinary batch and releases shared admission
-  between batches and before guards. Keep the combined worktree lock so another
+  between batches and before guards. The runner prepares compiled tests/resources
+  once with `test-compile`, then queues `surefire:test` for each batch; its POM
+  contract and source fingerprint checks protect that reuse. Keep the combined
+  worktree lock so another
   command cannot modify its `target/`. Raw unfiltered Maven runs remain monolithic;
   do not use them for routine broad checks or repeat testing during packaging.
   Do not manually
@@ -169,7 +172,10 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
   aged requests take priority in arrival order. An aged request needing shared capacity
   pauses new admissions so existing jobs can drain; an aged resource-aware request
   waiting only on its own busy worktree permits unrelated trees to proceed while
-  retaining priority in its tree. Running jobs are never preempted. Temporary
+  retaining priority in its tree. Category continuations retain at most five minutes
+  of accumulated waiting credit, then spend it by their actual execution time;
+  preparation and gaps earn no credit. This preserves progress across batches
+  without granting permanent aged priority. Running jobs are never preempted. Temporary
   OS-leased waiting records are automatic and pruned after cancellation/death;
   older wrappers retain lock safety but cannot honour priority. See the testing guide.
   Set `OPENGGF_MAVEN_QUEUE=serial` for exclusive execution; shared
