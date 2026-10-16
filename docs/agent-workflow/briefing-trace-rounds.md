@@ -71,6 +71,14 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A `TraceCaptureTool --clip frames:START:END` window can omit presentation
+state that only advances while frames are drawn (2026-10-16, AIZ first tree).
+The window fast-forwards without rendering, so the AIZ fire curtain was absent
+from a `frames:6290:6480` clip around the act switch, before and after the
+change under test, while native and the semantic `--clip aiz-fire-transition`
+capture both show it covering those frames. Capture from the semantic start, or
+from well before the window, before reading a missing overlay as a regression.
+
 Mocked subprocesses must not reach real process cleanup (2026-10-16, test queue).
 An unset `MagicMock.pid` converts to `1`; on Linux, `killpg(1, signal)` calls
 `kill(-1, signal)` and broadcasts to processes the caller can signal. A queue
