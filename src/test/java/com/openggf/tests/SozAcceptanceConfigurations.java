@@ -44,7 +44,10 @@ public final class SozAcceptanceConfigurations {
 
     public static void assertUsableTeam(String donor) {
         assertUsable(donor, GameServices.sprites().getMainPlayable(), false);
-        for (var follower : GameServices.sprites().getRegisteredSidekicks()) {
+        var sprites = GameServices.sprites();
+        for (var follower : sprites.getRegisteredSidekicks()) {
+            // A native script actor (loc_68D8 Obj_Tails) is not a launch participant.
+            if (com.openggf.sprites.managers.SpriteManagerInternalAccess.usesNativeScriptedArt(sprites, follower)) continue;
             assertUsable(donor, follower, true);
         }
     }

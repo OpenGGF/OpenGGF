@@ -227,9 +227,15 @@ class TestS3kCanonicalEntryLifecycle {
         assertEquals(rom.read16BitAddr(address + 2), main.getCentreY() & 0xFFFF, "ROM start Y");
     }
 
+    /**
+     * A Sonic-led CNZ1 start always has one Obj_Tails story writer: loc_68D8 writes
+     * it to Player_2 for solo Sonic (sonic3k.asm:8190-8197) and loc_13A10 gives it
+     * the carry (sonic3k.asm:26389-26415). A configured Tails P2 is that carrier;
+     * any other configured follower keeps its place and the native actor joins it.
+     */
     private static boolean hasNativeCarrier(Entry row) {
         return row.binding().zone() == 3 && row.binding().act() == 0 && row.main().equals("sonic")
-                && row.followers().isEmpty();
+                && !row.followers().split(",")[0].equals("tails");
     }
 
     private static void assertOwners(Entry row) {
@@ -248,34 +254,35 @@ class TestS3kCanonicalEntryLifecycle {
         assertArt(main, "configured main " + row.donor());
         var followers = GameServices.sprites().getRegisteredSidekicks();
         var nativeP2 = GameServices.level().getObjectManager().getObjectServices().playerQuery().nativeP2OrNull();
+        int configured = row.followers().isEmpty() ? 0 : 1;
+        assertEquals(configured + (carrierPresent ? 1 : 0), followers.size(),
+                "configured followers plus the native transient NPC, if live");
+        if (configured == 1) {
+            var follower = followers.getFirst();
+            assertEquals(row.followers(), follower.characterKey().persisted());
+            assertSame(follower, nativeP2, "the configured follower keeps physical Player_2");
+            assertTrue(follower.isCpuControlled());
+            assertSame(main, follower.getCpuController().getLeader());
+            assertFalse(follower.getCpuController().isTransientCarrySidekick());
+            assertFalse(SpriteManagerInternalAccess.usesNativeScriptedArt(GameServices.sprites(), follower));
+            SozAcceptanceConfigurations.assertUsableTeam(row.donor());
+        }
         if (carrierPresent) {
             // loc_68D8 creates native Obj_Tails for solo Sonic. It is not a
             // configured donor participant; S1's configured-Tails rejection
             // must not be applied to this throwaway script owner.
-            assertEquals(1, followers.size(), "native transient NPC, configured follower count remains zero");
-            var carrier = assertInstanceOf(Tails.class, followers.getFirst());
+            var carrier = assertInstanceOf(Tails.class, followers.getLast());
             assertNotSame(main, carrier);
-            assertSame(carrier, nativeP2, "native Player_2 resolves the carrier");
+            if (configured == 0) assertSame(carrier, nativeP2, "native Player_2 resolves the carrier");
             assertTrue(carrier.isCpuControlled());
             assertNotNull(carrier.getCpuController());
             assertTrue(carrier.getCpuController().isTransientCarrySidekick());
+            assertTrue(SpriteManagerInternalAccess.usesNativeScriptedArt(GameServices.sprites(), carrier));
             assertSame(main, carrier.getCpuController().getLeader());
             assertArt(carrier, "native CNZ Tails NPC with " + row.donor() + " configured donor");
-        } else {
-            if (row.followers().isEmpty()) {
-                assertTrue(followers.isEmpty(), "no configured or still-live scripted P2");
-                assertNull(nativeP2);
-            } else {
-                assertEquals(1, followers.size(), "actual configured single follower");
-                var follower = followers.getFirst();
-                assertEquals(row.followers(), follower.characterKey().persisted());
-                assertSame(follower, nativeP2);
-                assertTrue(follower.isCpuControlled());
-                assertSame(main, follower.getCpuController().getLeader());
-                assertFalse(follower.getCpuController().isTransientCarrySidekick());
-                assertFalse(SpriteManagerInternalAccess.usesNativeScriptedArt(GameServices.sprites(), follower));
-                SozAcceptanceConfigurations.assertUsableTeam(row.donor());
-            }
+        } else if (configured == 0) {
+            assertTrue(followers.isEmpty(), "no configured or still-live scripted P2");
+            assertNull(nativeP2);
         }
         assertEquals(row.followers(), SonicConfigurationService.getInstance()
                 .getString(SonicConfiguration.SIDEKICK_CHARACTER_CODE), "NPC never becomes a configured follower");
@@ -293,8 +300,9 @@ class TestS3kCanonicalEntryLifecycle {
                 ? host : configured;
         assertRendererSource(main.getSpriteRenderer(), mainProvider.loadPlayerSpriteArt(row.main()));
         assertPaletteSource(main.getSpriteRenderer(), mainProvider.loadCharacterPalette(row.main()));
-        for (var follower : GameServices.sprites().getRegisteredSidekicks()) {
-            boolean nativeActor = hasNativeCarrier(row);
+        var followers = GameServices.sprites().getRegisteredSidekicks();
+        for (var follower : followers) {
+            boolean nativeActor = hasNativeCarrier(row) && follower == followers.getLast();
             assertEquals(nativeActor, SpriteManagerInternalAccess.usesNativeScriptedArt(GameServices.sprites(), follower));
             var provider = nativeActor ? host : configured;
             String character = follower.characterKey().persisted();

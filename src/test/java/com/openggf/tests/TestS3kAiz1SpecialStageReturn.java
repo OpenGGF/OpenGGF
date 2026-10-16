@@ -204,15 +204,19 @@ public class TestS3kAiz1SpecialStageReturn {
             int camX = bigRingX - 160, camY = bigRingY - 96;
             // Secondary path: player was past plane switchers
             byte topBit = 0x0E, lrbBit = 0x0F;
-            lm.saveBigRingReturn(new BigRingReturnState(bigRingX, bigRingY, camX, camY, 10,
-                    topBit, lrbBit, 1194 + 200, 0));
+            lm.saveBigRingReturn(saved2(bigRingX, bigRingY, camX, camY, 10,
+                    topBit, lrbBit, 1194 + 200));
 
             System.out.println("=== bigRingPos: saved position X=0x"
                     + Integer.toHexString(bigRingX) + " Y=0x"
                     + Integer.toHexString(bigRingY)
                     + " solidBits=0x0E/0x0F ===");
 
-            // Reload level (simulating special stage return)
+            // Reload level (simulating special stage return). The stage clear ORs
+            // $80 into Last_star_post_hit before this reload (sonic3k.asm:12121,
+            // 12676), as GameLoop.doExitResultsScreen does; a fresh level holds
+            // zero (sonic3k.asm:10039) and would read Sonic_Start_Locations.
+            lm.setLastStarPostHit();
             lm.loadCurrentLevel();
             GroundSensor.setLevelManager(lm);
 
@@ -298,10 +302,13 @@ public class TestS3kAiz1SpecialStageReturn {
         assertTrue(objectManager.isRemembered(monitor),
                 "The setup monitor should be marked as broken before entering the special stage");
 
-        lm.saveBigRingReturn(new BigRingReturnState(
+        lm.saveBigRingReturn(saved2(
                 monitor.x(), monitor.y(),
                 monitor.x() - 0xA0, monitor.y() - 0x60, sprite.getRingCount(),
-                sprite.getTopSolidBit(), sprite.getLrbSolidBit(), fixture.camera().getMaxY(), 0));
+                sprite.getTopSolidBit(), sprite.getLrbSolidBit(), fixture.camera().getMaxY()));
+        // Special-stage clear: ori.b #$80,(Last_star_post_hit).w (sonic3k.asm:12121, 12676)
+        // precedes the return reload, as GameLoop.doExitResultsScreen does.
+        lm.setLastStarPostHit();
         lm.loadCurrentLevel();
 
         ObjectSpawn reloadedMonitor = lm.getCurrentLevel().getObjects().stream()
@@ -322,6 +329,20 @@ public class TestS3kAiz1SpecialStageReturn {
         reloadedMonitorInstance.update(0, sprite);
         assertEquals(0, reloadedMonitorInstance.getCollisionFlags(),
                 "A remembered monitor should materialize as a broken shell, not an intact monitor");
+    }
+
+    /**
+     * Save_Level_Data2 records Saved2_zone_and_act with the rest of the return
+     * snapshot (sonic3k.asm:61735-61737); the stage clear restores it before the
+     * reload (sonic3k.asm:12120, 12675). A snapshot without that origin is not a
+     * reachable return.
+     */
+    private static BigRingReturnState saved2(int playerX, int playerY, int cameraX, int cameraY,
+            int rings, byte topSolidBit, byte lrbSolidBit, int cameraMaxY) {
+        LevelManager lm = GameServices.level();
+        return new BigRingReturnState(playerX, playerY, cameraX, cameraY, rings,
+                topSolidBit, lrbSolidBit, cameraMaxY, 0, 0,
+                lm.getCurrentZone(), lm.getCurrentAct(), -1, -1, 0, 0, 0, 0);
     }
 
     private void specialStageReturnFlowTest(String label, int teleportX, int teleportY) {
@@ -366,12 +387,16 @@ public class TestS3kAiz1SpecialStageReturn {
 
         // Save big ring return position
         LevelManager lm = GameServices.level();
-        lm.saveBigRingReturn(new BigRingReturnState(savedCentreX, savedCentreY,
+        lm.saveBigRingReturn(saved2(savedCentreX, savedCentreY,
                 savedCameraX, savedCameraY, savedRings,
                 sprite.getTopSolidBit(), sprite.getLrbSolidBit(),
-                fixture.camera().getMaxY(), 0));
+                fixture.camera().getMaxY()));
 
         // ---- Simulate doExitResultsScreen flow ----
+        // The stage clear ORs $80 into Last_star_post_hit before the return
+        // reload (sonic3k.asm:12121, 12676); without it Get_LevelSizeStart
+        // reads Sonic_Start_Locations instead of Saved2 (sonic3k.asm:38147-38149).
+        lm.setLastStarPostHit();
         lm.loadCurrentLevel();
         GroundSensor.setLevelManager(lm);
 
