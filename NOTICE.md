@@ -56,7 +56,8 @@ retained in every ported file.
 
 `src/main/java/com/openggf/audio/synth/MuslSin.java` is a Java port of musl's
 double-precision `sin` (`sin.c`, `__sin.c`, `__cos.c`, `__rem_pio2.c` without
-its large-argument path). The BizHawk 2.11 Genesis Plus GX core links this
+its large-argument path). `tools/audio/native-pcm/musl_sin.c` reproduces the
+`__sin` kernel branch for the vector generator. The BizHawk 2.11 Genesis Plus GX core links this
 `sin` for its equaliser cutoffs. The file retains both notices:
 
 - musl: Copyright © 2005-2020 Rich Felker, et al., MIT licence (text in the
