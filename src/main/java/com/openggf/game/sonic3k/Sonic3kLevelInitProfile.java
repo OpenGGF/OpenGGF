@@ -83,6 +83,7 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
         };
         if (!explicitDmaService && !nativeHandler) return;
         // The caller's existing token guard guarantees exactly-once dispatch.
+        recordVIntDma(phase, runtimeArtCoordinator, levelManager);
         if (levelManager != null
                 && levelManager.getAnimatedPatternManager() instanceof Sonic3kLevelAnimationManager animator) {
             animator.publishAniPlcAtVBlank();
@@ -90,9 +91,51 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
         S3kRuntimeArtCoordinator.from(runtimeArtCoordinator).publishPatternModuleDma();
     }
 
+    /**
+     * Records this V-int's Process_DMA_Queue work before the queues publish: object entries already submitted, then
+     * Animate_Tiles uploads, then KosM completions (LevelLoop order). Diagnostic only; it decides nothing.
+     */
+    private static void recordVIntDma(com.openggf.game.resources.PlcLifecyclePhase phase,
+                                      com.openggf.game.RuntimeArtCoordinator runtimeArtCoordinator,
+                                      com.openggf.level.LevelManager levelManager) {
+        var art = S3kRuntimeArtCoordinator.from(runtimeArtCoordinator);
+        var ledger = art.vintDmaLedger();
+        var services = levelManager != null && levelManager.getObjectManager() != null
+                ? levelManager.getObjectManager().getObjectServices() : null;
+        if (!ledger.romBound() && services != null) {
+            try {
+                ledger.bindRom(com.openggf.game.sonic3k.timing.S3kVIntDma.VInt8Transfers.decode(
+                        services.romReader().slice(0, 0x6170)));
+            } catch (java.io.IOException failure) {
+                throw new java.io.UncheckedIOException(failure);
+            }
+        }
+        var animateTiles = new java.util.ArrayList<com.openggf.game.sonic3k.timing.S3kVIntDmaLedger.QueuedEntry>();
+        if (levelManager != null && levelManager.getAnimatedPatternManager() instanceof Sonic3kLevelAnimationManager animator) {
+            for (int[] upload : animator.pendingAniPlcTransfers()) {
+                animateTiles.add(new com.openggf.game.sonic3k.timing.S3kVIntDmaLedger.QueuedEntry(
+                        com.openggf.game.sonic3k.timing.S3kVIntDmaLedger.Producer.ANIMATE_TILES,
+                        upload[1] / 2, upload[0] * 32));
+            }
+        }
+        // VInt_8: tst.b (Hyper_Sonic_flash_timer).w selects CPU CRAM writes instead of the palette DMA.
+        boolean hyperFlash = services != null
+                && services.playerQuery().mainPlayerOrNull() instanceof com.openggf.sprites.playable.AbstractPlayableSprite player
+                && player.getSuperStateController() instanceof Sonic3kSuperStateController controller
+                && controller.hyperFlashStateLive();
+        ledger.serviceVInt(phase, hyperFlash, animateTiles, art.pendingKosModuleDmaEntries());
+    }
+
     @Override
     public List<InitStep> levelLoadSteps(LevelLoadContext ctx) {
         List<InitStep> steps = buildCoreSteps(ctx);
+        steps.addFirst(new InitStep("ResetDmaQueue",
+                "Level/loc_61BE ($61C6): clr.w (DMA_queue).w / move.l #DMA_queue,(DMA_queue_slot).w",
+                () -> {
+                    if (GameServices.runtimeArtCoordinator() instanceof S3kRuntimeArtCoordinator art) {
+                        art.vintDmaLedger().resetQueueAtLevelLoad();
+                    }
+                }));
         steps.addFirst(new InitStep("PrepareFreshTitleCardSst",
                 "Level/loc_62B6: fixed title owner precedes layout placement",
                 () -> freshTitleCardSst.prepare(ctx)));

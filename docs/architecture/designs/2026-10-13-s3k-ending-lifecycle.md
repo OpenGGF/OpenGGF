@@ -2335,3 +2335,76 @@ Proposed slice:
 
 The ledger API (`FrameCpuLedger.charge/markOwnerExecuted/isComplete`) is added only
 when this first owner is proven. The ending scene driver belongs to the ending-runtime lane.
+
+#### Per-V-int DMA work ledger (2026-10-16, kos-cycle-consumer lane, slice 2)
+
+The first production input for an exact Kos idle budget is the 68000 bus freeze of each V-int's DMA. `S3kVIntDma`
+and `S3kVIntDmaLedger` (`game/sonic3k/timing`) record the DMA work the engine's own owners submit, as a diagnostic
+budget term. The `s3k-kos-v1` rows, profile, fingerprint, fallback and readiness are unchanged; nothing reads the
+record to decide anything.
+
+**GPGX rules** (pinned 051d430d, `core/vdp_ctrl.c` blob `e99ab3d6`, `vdp_dma_update`):
+- Access slots per line: {16, 18} active and {166, 204} blank, for {H32, H40}. VBLANK or a disabled display counts as
+  blank.
+- A 68k-to-VRAM transfer spends two slots per word (`rate >> 1`). A 68k-to-CRAM/VSRAM transfer loses the blank line's
+  refresh slots (166 to 161, 204 to 198).
+- If the word count is strictly below what fits in the remaining VBLANK, the 68k freezes for
+  `words * 3420 / rate`, floored per transfer. An exact fit takes the whole remaining VBLANK; a longer transfer
+  continues at the active rate.
+- The model states only the strict case. Whether a transfer ends inside VBLANK depends on the V-int handler's own
+  instruction time, which the ledger does not have; it is a reported precondition.
+
+**ROM facts** (shipped S3&K, decoded and pinned at runtime, no disassembly input):
+- VInt_8 fixed transfers, decoded from the `dma68kToVDP` immediates:
+  - palette $40 words to CRAM (`$844`, water copy `$86A`);
+  - H_scroll_buffer $1C0 words to VRAM $F000 (`$892`);
+  - Sprite_table $140 words to VRAM $F800 (`$8F8`, alternate page `$8D2`);
+  - then `bsr.w Process_DMA_Queue` (`$916`).
+- `Level` sets H40 (`move.w #$8C81,(a6)` at `$616A`) and resets the queue at `loc_61BE` (`$61C6`).
+- Shipped `Add_To_DMA_Queue` (`Sonic3_Complete = 0`) makes one VRAM entry per call, without the S3C bank split. It
+  returns without queueing once the 18-entry `DMA_queue` is full.
+- `Tails_Tail_Load_PLC` compares `mapping_frame` with `Player_prev_frame_P2_tail` and stores it before the empty-DPLC
+  check. It then queues one entry per DPLC piece, `(count) * $10` words, consecutive from $D600.
+- The VInt_8 Hyper flash branch replaces the palette DMA with CPU writes. While the engine's flash state is live the
+  fixed set is reported as unmodelled. So is every routine other than VInt_8.
+
+**Producers** (LevelLoop order: objects, then Animate_Tiles, then Process_Kos_Module_Queue):
+- `Tails_Tail_Load_PLC` is submitted from `TailsTailsController`'s S3K branch through the internal
+  `game.internal.PlayerDplcDmaSink`. `RuntimeArtCoordinator` is `@ModApi`, so it was not extended.
+- The AniPLC publication queue and the KosM pattern-module transfer are read when the S3K V-int drains them, in
+  `Sonic3kLevelInitProfile.serviceQueuedPatternDma`. `PlcFrameLifecycleCoordinator` is unchanged.
+- **Not yet recorded:** player body DPLCs (`Sonic_Load_PLC`, `Tails_Load_PLC`, Knuckles), object `Perform_DPLC`
+  users, and zone tile routines that bypass the AniPLC queue. A record is therefore never a complete statement of a
+  V-int's DMA.
+
+**Validation:**
+- `TestS3kVIntDma`: the ROM decode; GPGX rate, refresh-slot and exact-fit vectors; the retained native
+  `dma_freeze_mclk` values 26,855, 30,073, 31,683 and 95,523 from the decoded transfers.
+- `TestS3kVIntDmaLedger`: tail dedupe, queue order and cap, unmodelled routines, lag carry-over, and capture/restore
+  with forward replay.
+- `TestS3kVIntDmaLedgerProduction`: a fresh HCZ1 start records the real AniPLC/KosM work. VInt_8 totals equal 26,855
+  plus the queue; title-card routines get no total (the negative control). Registry restore replays the same records.
+- `TestS3kEndingVIntDmaNative` (long):
+  - Setup: tails-super, sonic-super and sonic-none, through the ending tests' declared component ingress.
+  - Compared: every LF 4400-4406 V-int against `src/test/resources/timing/s3k-ending-vint-dma-native-v1.tsv`
+    (35 rows, NTSC and PAL, comparison-only): drained entries and `dma_freeze_mclk`. All 35 match: the Tails
+  products show the 96-word tail entry to $D600 at LF 4403 (30,073), and every other V-int has the fixed 26,855.
+  - The first run keyed engine records by the counter after the step. It showed exactly a one-frame shift of the
+    Tails entry (LF 4404 against 4403). The probe keys `frame-dma.csv` by `Level_frame_counter` read at
+    `Process_DMA_Queue` (`$1588`), before LevelLoop's `addq` at `$6520`. The engine drains before
+    `advanceLevelFrameCounter`, so the key is the counter before the step. That was a test-keying error, not engine
+    behaviour.
+
+**Limits:**
+- Completion inside VBLANK is not proven per V-int.
+- The queue cap uses phase order, which differs from ROM submission order only when the queue overflows across a V-int
+  that did not drain it.
+- The engine has no region switch, so the PAL rows are compared with the NTSC run (VInt_8 DMA work is
+  region-independent).
+- The level-load value of `Player_prev_frame_P2_tail` is not modelled.
+- Sonic's "no entry" rows are only partly meaningful while the player body DPLC producer is absent.
+
+**Next:**
+1. Record the player body `*_Load_PLC` producers the same way.
+2. Then cost the VInt_8 handler and `Set_Kos_Bookmark` instructions, so the Kos window budget can subtract the
+   V-int's time.

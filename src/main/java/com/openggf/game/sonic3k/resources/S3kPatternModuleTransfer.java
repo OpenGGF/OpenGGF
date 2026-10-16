@@ -141,6 +141,11 @@ final class S3kPatternModuleTransfer implements NativeKosModuleTransfer,
         pendingDma.add(new KosinskiModuleQueue.DmaWriteState(chunk.destinationVramBytes(), chunk.data()));
         if (archive.modulesRemaining() == 1) bindings.remove(b);
     }
+    /** Pending Process_Kos_Module_Queue Add_To_DMA_Queue writes, oldest first. */
+    List<KosinskiModuleQueue.DmaWriteState> pendingDmaWrites() {
+        return List.copyOf(pendingDma);
+    }
+
     void publish() {
         if (physical == null && !pendingDma.isEmpty())
             throw new IllegalStateException("Pending native DMA has no session pattern owner");

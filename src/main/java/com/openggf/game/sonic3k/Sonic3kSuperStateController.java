@@ -742,6 +742,11 @@ public class Sonic3kSuperStateController extends SuperStateController {
         return objectManager.createDynamicObject(() -> stars);
     }
 
+    /** Whether the VInt_8 Hyper flash branch (or its palette restore) is live for this V-int's palette upload. */
+    boolean hyperFlashStateLive() {
+        return hyperFlashFrames > 0 || hyperFlashRestorePending;
+    }
+
     void onPaletteUploadVInt() {
         if (hyperFlashFrames > 0) {
             uploadHyperFlashPalette();

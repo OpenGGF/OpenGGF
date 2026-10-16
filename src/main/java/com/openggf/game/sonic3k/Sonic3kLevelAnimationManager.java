@@ -79,6 +79,10 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
         }
     }
 
+    java.util.List<int[]> pendingAniPlcTransfers() {
+        return patternAnimator.pendingAniPlcTransfers();
+    }
+
     void publishAniPlcAtVBlank() {
         patternAnimator.publishAniPlcAtVBlank();
     }
