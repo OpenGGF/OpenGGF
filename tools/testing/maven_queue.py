@@ -7,6 +7,7 @@ Focused low-memory lane: add --lean before the Maven arguments (1 GiB JVM heaps)
 The OS owns execution and waiting leases. Short estimated runs are preferred;
 five-minute aging protects larger waiters. Origin: 2026-09-14 testing queue cleanup.
 `maven_queue.py --stats` summarises recorded wait/hold/memory telemetry.
+`maven_queue.py --dashboard [--port 8766]` serves a read-only local browser view.
 """
 from contextlib import contextmanager, ExitStack
 import errno
@@ -234,7 +235,9 @@ def maven_slot(root, *, exclusive=False, estimate=900, kind='maven', reservation
                             request = WaitingRequest(common, dict(
                                 tree=str(git_dir / 'maven-worktree.lock'), auto=auto,
                                 retained_tree=tree_fd is not None,
-                                estimate=estimate, enqueued=enqueued, reservation=reservation), _acquire)
+                                estimate=estimate, enqueued=enqueued, reservation=reservation,
+                                submitted=started, kind=str(kind)[:160], pid=os.getpid(),
+                                worktree=root.name[:160]), _acquire)
 
                         def fits(record):
                             nonlocal execution, leases
@@ -279,7 +282,10 @@ def maven_slot(root, *, exclusive=False, estimate=900, kind='maven', reservation
                             admitted = time.monotonic()
                             request.remove()
                             try:
-                                running = RunningLease(common, reservation, _acquire)
+                                running = RunningLease(common, reservation, _acquire, display=dict(
+                                    worktree=root.name[:160], kind=str(kind)[:160], pid=os.getpid(),
+                                    submitted=started, admitted=admitted,
+                                    mode='resource-aware' if auto else 'serial'))
                             except (OSError, RuntimeError):
                                 running = None  # No lease only forfeits credit; admission stays valid.
                     finally:
@@ -483,6 +489,9 @@ def main(argv=None):
     if not args or args == ['--help']:
         print(__doc__)
         return 0
+    if args[0] == '--dashboard':
+        from queue_dashboard import main as dashboard_main
+        return dashboard_main(args[1:])
     if args == ['--stats']:
         from maven_running import summarise
         print(summarise(Path(subprocess.check_output(

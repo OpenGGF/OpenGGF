@@ -287,6 +287,31 @@ The log is trimmed to its newest half above 512 KiB. Summarise it with:
 python3 tools/testing/maven_queue.py --stats
 ```
 
+For a live browser view of the shared queue, run this from any linked worktree:
+
+```bash
+python3 tools/testing/maven_queue.py --dashboard
+# Optional alternative port:
+python3 tools/testing/maven_queue.py --dashboard --port 8767
+```
+
+Open `http://127.0.0.1:8766`. Keep the command running and stop it with Ctrl-C.
+The dashboard uses Python's standard library, binds only to loopback, and refreshes
+every two seconds. It shows running jobs, priority-ordered waiters, host resources,
+per-job reservations and sampled usage, plus recent execution history. Pause and
+refresh controls affect only the display. It never submits, cancels or reorders jobs,
+acquires admission slots, or prunes queue files. Completed history entries describe
+the wrapper's execution outcome, not whether tests passed.
+
+Scheduling age includes carried wait credit; it is separate from actual wait.
+Older wrappers do not publish actual wait/start metadata, so those fields display
+`Unknown`. Do not restart a test just to populate the view. On Linux the view
+checks existing OS leases without taking locks; when liveness cannot be verified,
+records are shown separately instead of counted as active jobs. Stale usage is
+marked explicitly. Priority order is not a guaranteed start order: capacity and
+worktree ownership can permit backfilling. The server serves only the dashboard
+and `/api/queue`, with no file browsing or job-control endpoints.
+
 Peak RSS sums shared pages and two-second sampling misses short peaks; see the
 [2026-09-15 profiling](../../docs/architecture/research/2026-09-15-maven-resource-admission.md).
 The [2026-10-07 focused-throughput investigation](../../docs/architecture/research/2026-10-07-maven-focused-throughput.md)

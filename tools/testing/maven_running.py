@@ -35,13 +35,14 @@ LEASE_NAME = re.compile(r'[0-9a-f]{32}\.lease')
 
 class RunningLease:
     """Created and removed under the admission lock; updated by its sampler."""
-    def __init__(self, common, reservation, acquire):
+    def __init__(self, common, reservation, acquire, *, display=None):
         self.directory = common / 'maven-running'
         self.directory.mkdir(exist_ok=True)
         self.path = self.directory / (uuid.uuid4().hex + '.lease')
         self.stream = self.path.open('x+b')
         self.lock = threading.Lock()
         self.memory, self.cores = reservation
+        self.display = dict(display or {})
         try:
             self.stream.write(b'\0')
             self.stream.flush()
@@ -55,8 +56,9 @@ class RunningLease:
             raise
 
     def publish(self, rss, cores):
-        record = json.dumps(dict(memoryBytes=self.memory, cpuCores=self.cores,
-                                 rss=rss, cores=cores, updated=time.time())).encode()
+        record = json.dumps(dict(self.display, memoryBytes=self.memory, cpuCores=self.cores,
+                                 rss=rss, cores=cores, updated=time.time()),
+                            ensure_ascii=False).encode('utf-8', errors='backslashreplace')
         with self.lock:
             if self.stream.closed:
                 return
