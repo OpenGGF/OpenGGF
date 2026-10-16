@@ -255,7 +255,7 @@ class TestMushroomHillPulsedWind {
     }
     private static final class CapacityObject extends AbstractObjectInstance {
         CapacityObject(){super(new ObjectSpawn(0,0,0,0,0,false,0),"capacity");}
-        @Override public void update(int frame,PlayableEntity player){}
+        @Override public void update(int vIntRunCount,PlayableEntity player){}
         @Override public void appendRenderCommands(List<GLCommand> commands){}
     }
 }

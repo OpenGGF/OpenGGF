@@ -108,7 +108,7 @@ class TestWestCampaignBridgeLifecycle {
     }
     private static final class Dummy extends AbstractObjectInstance {
         Dummy() { super(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), "capacity"); }
-        @Override public void update(int frame, PlayableEntity player) { }
+        @Override public void update(int vIntRunCount, PlayableEntity player) { }
         @Override public void appendRenderCommands(java.util.List<com.openggf.graphics.GLCommand> commands) { }
     }
     private static Object field(Object object, String name) throws Exception {

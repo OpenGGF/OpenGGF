@@ -37,7 +37,8 @@ Unreleased. The earlier development themes remain in
   checkpoint reloads restore post activation before the first object pass.
   Opted-in checkpoint invitations defer shared art until native queue admission
   and reuse that work for their marker and bonus stars. The Slots bonus stage
-  reads its original board and entry position from the supplied ROM.
+  reads its original board and entry position from the supplied ROM. Development
+  mod captures retain the accepted loader when restoring creator-owned child graphs.
 
 - **S3K Knuckles routes:** Locked-on Mushroom Hill deletes the standalone S&K
   intro before it can freeze the camera and take player control. Its native

@@ -10,8 +10,6 @@ import com.openggf.game.GameModule;
 import com.openggf.game.GameServiceBundle;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
-import com.openggf.game.session.EngineContext;
-import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
@@ -61,9 +59,7 @@ class TestOwnedNativeBossRecipeBirth {
 
     @BeforeEach
     void headlessConfiguration() {
-        SessionManager.clear();
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        GameServices.configuration().resetToDefaults();
+        com.openggf.tests.TestEnvironment.resetAll();
         GraphicsManager.getInstance().initHeadless();
     }
 

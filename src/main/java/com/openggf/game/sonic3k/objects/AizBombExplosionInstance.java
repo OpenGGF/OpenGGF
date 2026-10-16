@@ -80,7 +80,7 @@ public class AizBombExplosionInstance extends AbstractObjectInstance
     public void update(int vIntRunCount, PlayableEntity player) {
         if (isDestroyed()) return;
         if (difficultyOwner != null && !difficultyOwner.difficultyBombsAreLive()) {
-            setDestroyed(true);
+            com.openggf.level.objects.ObjectLifetimeOps.expireDynamic(this);
             return;
         }
 

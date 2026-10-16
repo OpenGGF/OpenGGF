@@ -346,7 +346,7 @@ class TestAizExitLookout {
 
     private static final class SlotFiller extends com.openggf.level.objects.AbstractObjectInstance {
         SlotFiller() { super(new ObjectSpawn(0x2D00, 0x3CC, 0, 0, 0, false, 0), "A5 slot fixture"); }
-        @Override public void update(int tick, com.openggf.game.PlayableEntity player) { }
+        @Override public void update(int vIntRunCount, com.openggf.game.PlayableEntity player) { }
         @Override public void appendRenderCommands(java.util.List<com.openggf.graphics.GLCommand> commands) { }
     }
 

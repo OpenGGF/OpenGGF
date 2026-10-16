@@ -130,29 +130,39 @@ branches, preserving user config/ROM/save targets, useful captures and histories
 ## Compact execution checkpoint
 
 Root private branch is `feature/ai-second-strike-campaign-delivery`, HEAD
-`5301c95ed4c2464be1d6f94e87cb9a385a8d974c` (normal merge with updated develop1259).
-Main remains develop1259 with its three dirty disassemblies and five untracked
-user files preserved. The immutable pre-task comparison base remains
+`1bff1b90f9133c1e2f2e237bf1f303934ba73c24` plus the bounded repairs below.
+Main has fast-forwarded from1259 to `b07c52dfd601ff78cd00d89a24e7fe57320acd65`
+(editor-chrome retirement); the three dirty disassemblies and five untracked user
+files remain preserved. That upstream change is not yet merged into this private
+source. The immutable pre-task comparison base remains
 `76022570e8233823e1e36419666a0f29c768f4b6`.
 
-Latest root runtime58138:31focused cases pass with zero failures/errors/skips on
-frozenf41af61e (R3 capsule2,reservation7+8,Stock golem14),1095seconds queue and
-30.256seconds Maven at22:54:06BST. Build64846 compiled4041main/3977test Java25
-sources in72seconds. Actual50133 host/API/SDK37 and92531 strict paired consumers
-remain valid for their earlier21067/22a1 source; final artifacts must include later
-native fixes. Stock-only ICZ consumer is composed; its rejected-placed-owner raw
-fallback correction is worker318807 pending, not yet accepted. Ordinary checkpoint
-high-water omission is inherited from760; root helper50411 component negative
-confirms re-save/SFX, positive72178 pending. AIZ pending-art admission fix and matched
-post controls remain separate; no checkpoint workaround in post code.
+Combined smoke24453 on247fd is terminal and its diagnostics were inspected and
+acknowledged. All owned ordinary failures are repaired; the unchanged audio CLI
+assertion reproduces on base1259 with the inherited launcher environment. Focus19399
+passes83 cases with one expected historical-artifact opt-in skip, and guard32731
+passes62 with no skips. Their exact identities/source/timings are recorded in
+[bounded repairs](#bounded-repairs-after-the-combined-run). Build-only30455
+`-DskipTests verify` succeeds in42.368seconds at03:26:50BST, including actual
+engine/SDK/Javadoc/test-kit packaging and the artifact verifier. This build's
+configured publisher is the default Time Attack bundle; Second Strike's separate
+maintained builder and actual paired signature/consumer checks are still required.
 
-Next source batch: exact reviewed C3 native packets plus their HPZ/DEZ fixes,
-with three factories/four enums added to the genuine export inventory. API pin
-must come from actual new compiled classes before SDK/creator qualification;
-public version remains unpublished0.7.0. No C3 creator activation, harder-gameplay,
-fuel, routes or complete-campaign claim. Full delivery still needs content/route
-closure, change-selected smoke+fresh guards, normal main integration/push and
-accounted cleanup. Historical batch handoffs and exact negatives remain below.
+C3 native ingredients, STOCK golem, placed A2/capsule, corrected reservation seam,
+ICZ fail-closed consumer, checkpoint high-water restoration, pending-art admission,
+Slots ROM authority and inactive MHZ/LRZ/HPZ creator files are composed. Public
+version remains unpublished0.7.0; the21107-line candidate pin is unchanged. Existing
+53676 artifacts remain immutable and keep their historical witness attribution.
+No current-artifact route or harder-gameplay claim is inferred from compiler support.
+Campaign workers are stopped and their unmerged trees remain cleanup_pending.
+
+Next: reconcile the new upstream editor source by intent, verify the affected
+capture/startup boundary and actual final paired artifacts, then perform normal
+main integration/push and account for cleanup. Original M0–M6 delivery is still
+incomplete: all four full AIZ-to-HCZ cold routes and substantial later-act/character,
+bonus/ending, counterplay and hardness gates remain open. The separate development
+reel is delivered; it does not close those gates. Historical batch handoffs and
+exact rejected/limited outcomes remain below.
 
 ### Stable private composition
 
@@ -1209,3 +1219,143 @@ includes the unwired ingredients. A subsequent intended-tree-lease export from
 current compiled classes remains byte-equal21107-line candidate pin/SHAaba80f03.
 No API/SDK suite or unchanged HPZ behavior test is repeated. Immutable53676 paired
 fatjar/SDK are not replaced or relabelled; final coherent packaging remains pending.
+
+### Combined smoke and guard result on 247fd438
+
+Run `20261015T230210Z-1cbe254b` is terminal, not a green delivery. Exact command:
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  python3 tools/testing/run_categories.py \
+  --base 76022570e8233823e1e36419666a0f29c768f4b6 \
+  --max-minutes 90 --rom-directory "$OPENGGF_MAIN_WORKTREE" --run
+```
+
+Tested source was clean `247fd43810bce7e6f5dc9d3372dd7893cea8ab2d` throughout.
+All 67 ordinary batches completed: 27,849 tests, one failure, two errors,
+74 skips, 4,784 execution seconds. Guards completed separately: 712 tests,
+six failures, no errors/skips, 272.19 execution seconds. Queue waits are separate;
+no delivery wall-time total is inferred by adding overlapping worker intervals.
+This is the complete selected smoke/guard run, not the release-only full suite.
+
+Ordinary failures by exact identity:
+
+- `TestMgzEndBossHandoffHeadless#eventSpawnedKnucklesBossCompletesRealFightCapsuleResultsAndAutoWalk`:
+  missing synthetic upper event boss; the fixture still expects the removed owner.
+- `TestSecondStrikeEastCampaign#threeCampaignsRegisterTogetherWithTheAizModWithoutKeyCollisions`:
+  stale helper registers east campaigns after the real provider already registered them.
+- `TestCompleteRunAudioCli#freshJvmBootstrapsTheS1ProfileButItsUnavailableDispatcherEmitsNoStandardOutput`:
+  stderr-prefix assertion; source is identical at760/1259/247fd. Environment versus
+  inherited failure remains unqualified until its bounded matched check.
+
+Guard failures by exact identity:
+
+- `TestRewindCoverageGuard#noNewCoverageGapsBeyondBaseline`: new `difficultyOwner`
+  and `exitLookout` references lack explicit captured-policy declarations.
+- `TestObjectPhysicsStandardizationGuard#productionObjectLifecycleRawCallCountsDoNotGrow`:
+  raw destruction calls587 versus budget582; investigate only the new calls.
+- `TestObjectUpdateClockTerminologyGuard#objectUpdateClockUsesVIntRunCountTerminologyAcrossBoundaryAndFrameworkHooks`:
+  six new test update-parameter names use frame/tick rather than the ROM V-int clock.
+- `TestArchitecturalSourceGuard#objectManagerFacadeStaysWithinExtractedCollaboratorBudget`:
+  manager3132 effective lines versus3086; extract reservation business logic without
+  changing the budget, snapshot ledger or allocation/release semantics.
+- `TestNoServicesInObjectConstructors#objectsWhoseConstructorsReachServices_mustUseManagedCreationContext`:
+  the bridge and two Hydrocity factory constructor chains need source attribution.
+- `TestSingletonLifecycleGuard#ambientGameplayModeSetupsDoNotGrowWithoutLifecycleTriage`:
+  `TestOwnedNativeBossRecipeBirth#headlessConfiguration` bypasses the shared reset.
+
+All74 skip identities/reasons were inspected. They include explicit artifact,
+capture, benchmark/soak and diagnostic opt-ins; Infinite Sonic topology assumptions;
+graphics capability assumptions; and the existing CPZ tube-capture prerequisite.
+They are unexecuted coverage, not passes. No missing-ROM skip was reported. The
+graphics skips do not establish broad GPU pixel qualification. Existing separately
+executed artifact/ROM outcomes keep their own source and coverage limits.
+
+The source freeze ends at this terminal boundary. Preserve the failing identities,
+repair owned regressions and verify affected checks only; do not repeat unchanged
+67-batch coverage as a ceremony or weaken guards/baselines to manufacture green.
+
+### Bounded repairs after the combined run
+
+The unchanged updated base1259 reproduces the exact audio stderr-prefix failure
+at `TestCompleteRunAudioCli.java:182`:15920, one failure/no errors/skips,817seconds
+admission wait/25.857seconds Maven,03:11:52BST. Its command used the same inherited
+`JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl`; both the test and complete-run
+audio production package are byte-identical at760/1259/247fd. No audio production or
+test assertion was changed. The candidate's identical method passes with that
+environment variable unset and the explicit headless JVM property retained. The
+combined-run failure is therefore pre-existing under that launcher environment,
+not a new Second Strike audio regression or an audio playback certificate.
+
+19399 completed0 on HEAD1bff1b90 plus source overlay
+`fa568f50b666ad2bdb44e5cec0f862379fada84db645d2c888f13714914ab81d`:
+365seconds queue/74seconds Maven,03:13:07BST. All14 fresh XML identities inspected:
+84 cases,83 passing,zero failures/errors,one explicit opt-in skip. Exact ordinary
+selection (normal queue, DISPLAY/WAYLAND/JAVA_TOOL_OPTIONS unset, original absolute
+S3K ROM and `-Dopenggf.headless.gl=surfaceless-egl`):
+
+```text
+TestCampaignNativeFactories,
+TestWestCampaignBridgeLifecycle,
+TestS3kCollapsingBridgeParity,
+TestHczEndBossInstance,
+TestS3kHczEndBossGraphRewind,
+TestSecondStrikeEastCampaign,
+TestOwnedNativeBossRecipeBirth,
+TestAizNativeDifficultyPresets#nativeOwnerRemovalRetiresOptionalGraphsEvenWhileTheServicesRemainAvailable+committedPortAndHarmfulFragmentsRestoreAndRetireWithTheirExactShip+waterfallWithdrawalAndDefeatRetireCommittedFlameBombAndSmoke+failedMinibossWarningDoesNotBecomeAnUnwarnedWaveWhenSlotsReturn,
+TestAizExitLookout#progressedBornLookoutRelinksAndContinuesOnceAfterDestructiveWorldRestore+actualSlotExhaustionOrOneFreeSlotKeepsOneRestorableAdmissionDecision,
+TestMgzEndBossHandoffHeadless#nativePlacedKnucklesBossCompletesRealFightCapsuleResultsAndAutoWalk,
+TestSecondStrikeEastNativeRecipes,
+TestWestMgzBossNativeArena,
+TestGameplayCaptureDataSelectLaunch,
+TestCompleteRunAudioCli#freshJvmBootstrapsTheS1ProfileButItsUnavailableDispatcherEmitsNoStandardOutput
+```
+
+Counts in that order:19,3,14,5,2,6,6,4,3,1,16,1,3,1. The historical MGZ
+artifact method is the sole skip: `secondstrike.mgz.packaged.arena` is absent.
+Its immutable76734/74c72d8a passing body remains separately attributed to53676,
+organic349=1 and the bounded hit/glide/full-pair response. Promotion adds only a
+distinct opt-in header/import: wrong artifacts/CodeSources/ROM/environment still
+fail when enabled; ordinary current classes do not become artifact proof.
+
+Repairs retain strict duplicate registration rejection and the actual placed A2
+owner. Bridge zone configuration and HCZ end-boss character bounds resolve on
+genuine service injection before first managed geometry/INIT, rather than requiring
+ambient constructor services. No native child births, slot claims or timers move.
+Existing captured mode/lock targets prevent reinjection from resetting progress;
+direct construction, native zone variants and destructive recreation are checked.
+The guard parser also rejects control-flow keywords as method declarations, with a
+regression for the false HCZ-miniboss dependency and existing real dependency checks.
+
+Explicit reference policies declare the already-tested native owner/child graphs;
+six new owned cancellation branches use existing lifetime operations. Dummy test
+update parameters name the V-int clock, and the host fixture uses the shared reset.
+No baseline/guard budget was enlarged.
+
+32731 completed0 at03:21:24BST on HEAD1bff1b90 plus overlay
+`ecc0ae08a98b747cbf834f0b5e713c57ed3688401041b6ff3cc773f0910c6867`
+(the Java inputs match19399; only this plan changed between requests). Admission
+wait91seconds, Maven90seconds. Eight fresh XML suites contain62 passing identities,
+zero failures/errors/skips: coverage1, lifecycle-raw-call budget1, update-clock
+terminology1, ObjectManager facade budget1, constructor-service guard11, singleton
+lifecycle triage1, rewind policy21 and schema25. The command used a fresh guards
+JVM, DISPLAY/WAYLAND/JAVA_TOOL_OPTIONS unset and the explicit surfaceless-EGL
+property. Its exact selection was:
+
+```text
+TestRewindCoverageGuard,
+TestObjectPhysicsStandardizationGuard#productionObjectLifecycleRawCallCountsDoNotGrow,
+TestObjectUpdateClockTerminologyGuard#objectUpdateClockUsesVIntRunCountTerminologyAcrossBoundaryAndFrameworkHooks,
+TestArchitecturalSourceGuard#objectManagerFacadeStaysWithinExtractedCollaboratorBudget,
+TestNoServicesInObjectConstructors,
+TestSingletonLifecycleGuard#ambientGameplayModeSetupsDoNotGrowWithoutLifecycleTriage,
+TestRewindPolicyRegistry,
+TestRewindSchemaRegistry
+```
+
+All six combined-run guard failures are resolved by these affected checks. The
+ordinary regressions are resolved by19399; the unchanged audio failure is attributed
+by15920 as above. This is bounded follow-up to the consumed combined smoke run,
+not a second broad smoke pass or whole-campaign certification. Actual final
+engine/SDK/bundle packaging and compiled signature comparison remain next.

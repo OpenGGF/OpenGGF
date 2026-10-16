@@ -64,7 +64,7 @@ public class AizEndBossSmokeChild extends AbstractObjectInstance implements Rewi
     public void update(int vIntRunCount, PlayableEntity player) {
         if (isDestroyed()) return;
         if (difficultyAttack && !boss.difficultyAttackIsLive()) {
-            setDestroyed(true);
+            com.openggf.level.objects.ObjectLifetimeOps.expireDynamic(this);
             return;
         }
 

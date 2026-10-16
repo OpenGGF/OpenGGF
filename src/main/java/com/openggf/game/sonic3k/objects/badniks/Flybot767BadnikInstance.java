@@ -262,7 +262,7 @@ public final class Flybot767BadnikInstance extends AbstractS3kBadnikInstance imp
         animateLoop(IDLE_FRAMES, 4);
         // Silent retirement: an escort that leaves the screen awards nothing.
         if (!isOnScreen(WAIT_OFFSCREEN_MARGIN)) {
-            setDestroyed(true);
+            com.openggf.level.objects.ObjectLifetimeOps.expireDynamic(this);
         }
     }
 

@@ -816,7 +816,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
         if (admittedWarnings.size() != 3) {
             // A partially visible cue cannot authorize a later invisible wave,
             // even when slots become free again before the warning expires.
-            admittedWarnings.forEach(warning -> warning.setDestroyed(true));
+            admittedWarnings.forEach(com.openggf.level.objects.ObjectLifetimeOps::expireDynamic);
             return;
         }
         difficultyFollowupTimer = delay;

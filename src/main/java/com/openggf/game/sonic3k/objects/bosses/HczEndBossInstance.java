@@ -16,6 +16,7 @@ import com.openggf.game.sonic3k.objects.S3kBossExplosionChild;
 import com.openggf.game.sonic3k.objects.S3kBossExplosionController;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnConstructionContextRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
@@ -182,6 +183,22 @@ public class HczEndBossInstance extends AbstractBossInstance
         this.counterCadence = counterCadence;
     }
 
+    @Override
+    public void setServices(ObjectServices services) {
+        super.setServices(services);
+        // Native lock bounds are all nonzero. Resolve once at injection, before
+        // the first INIT dispatch can begin the camera gate. A reconstructed
+        // owner is injected before its captured targets are restored, and later
+        // reinjection must preserve those encounter targets and gate progress.
+        if (services != null && targetLockXRight == 0) {
+            boolean isKnuckles = (getPlayerCharacter() == PlayerCharacter.KNUCKLES);
+            targetLockYTop = isKnuckles ? KN_LOCK_Y_TOP : ST_LOCK_Y_TOP;
+            targetLockYBottom = isKnuckles ? KN_LOCK_Y_BOTTOM : ST_LOCK_Y_BOTTOM;
+            targetLockXLeft = isKnuckles ? KN_LOCK_X_LEFT : ST_LOCK_X_LEFT;
+            targetLockXRight = isKnuckles ? KN_LOCK_X_RIGHT : ST_LOCK_X_RIGHT;
+        }
+    }
+
     // =========================================================================
     // AbstractBossInstance contract
     // =========================================================================
@@ -211,13 +228,6 @@ public class HczEndBossInstance extends AbstractBossInstance
         directionCounter = 0;
         attackPassCounter = 0;
         facingRight = false;
-
-        // Resolve character-specific lock targets
-        boolean isKnuckles = (getPlayerCharacter() == PlayerCharacter.KNUCKLES);
-        targetLockYTop = isKnuckles ? KN_LOCK_Y_TOP : ST_LOCK_Y_TOP;
-        targetLockYBottom = isKnuckles ? KN_LOCK_Y_BOTTOM : ST_LOCK_Y_BOTTOM;
-        targetLockXLeft = isKnuckles ? KN_LOCK_X_LEFT : ST_LOCK_X_LEFT;
-        targetLockXRight = isKnuckles ? KN_LOCK_X_RIGHT : ST_LOCK_X_RIGHT;
     }
 
     @Override

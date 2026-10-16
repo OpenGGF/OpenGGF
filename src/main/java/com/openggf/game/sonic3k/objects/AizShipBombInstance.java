@@ -132,7 +132,7 @@ public class AizShipBombInstance extends AbstractObjectInstance implements Touch
     public void update(int vIntRunCount, PlayableEntity player) {
         if (isDestroyed()) return;
         if (difficultyAttack && (sourceShip == null || !sourceShip.difficultyBombsAreLive())) {
-            setDestroyed(true);
+            com.openggf.level.objects.ObjectLifetimeOps.expireDynamic(this);
             return;
         }
         this.frameCounter++;

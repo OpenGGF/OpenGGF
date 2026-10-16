@@ -41,18 +41,18 @@ shapes and do not qualify those production presets.
 | Zone / scene | Acts and character boundaries | Native identity / work | Actual implementation | Route / checkpoint / rewind / capture evidence |
 | --- | --- | --- | --- | --- |
 | HCZ | 1/2; separate Knuckles water/arena | Defended junctions, reliable air, wall chase, punishable boss follow-up | Finite native bridge/enemy/boss presets and actual creator recipes in immutable west110659; provider023a7ec handed root | Initial67 focused identities plus R1 fifteen pass0skip; OpusR2 leaves air/bubble-monitor and cold/catch/character-route gates OPEN |
-| MGZ | 1/2; assisted Sonic/Tails and Knuckles | Cracked support/catch, guarded top landing, native attackable boss pass | Lower A1 event; placed A2 dormant/staging/active owner plus native capsule flag clear; Spiker initial-only96/open64 | Native33714 twenty-two pass and capsule18280 two pass; root31/107 composed scopes separate. Actual packaged46052 ordinary HP8→7 punish without damage boost passes, then recovery hurt fails the full safe-answer witness; route/readability/damaged-cadence gates OPEN |
-| CNZ | 1/2; Knuckles late act/exit | Staggered rhythm, waiting-pocket pressure, unchanged barrels | Finite Clamer cadence/stagger and creator recipes east9982, no static collections | R1 pure55pass0skip; actual platform rhythm/boss/Knux/cold/checkpoint/route value OPEN |
-| ICZ | 1/2; snowboard / Tails skip / Knuckles teleporter | Warned shelter, recoverable lower lane, native friction | WARNED stalactites and carried/true ring split east9982; carried BC2prime separately green; true BD inactive; native frost/structural rewind prerequisites proven | Pure R1 fifty-five pass; separate BC592pass0skip, not initial C1; actual shelters/openings/true BD/pixels/checkpoint/route OPEN |
+| MGZ | 1/2; assisted Sonic/Tails and Knuckles | Cracked support/catch, guarded top landing, native attackable boss pass | Lower A1 event; placed A2 dormant/staging/active owner correction source-ready7a488e; Spiker initial-only96/open64 | R1 fifteen pass; Sonic positioned trailing-jump punish pass; placed-A2 33714 native22pass and root50133 host6pass; Knux43072 two full drop pairs/cue/blink measured but one short jump missed;24233 ordinary held-jump HP8->7/native bounce passes using earned invulnerability; 76734 actual53676 packaged creator hit796/glide798/supported recovery835/full136+160 pair, all924 inputs no hurt/invulnerability/ring loss/death; actual349 pickup leaves1ring, so zero-ring arena entry/damaged cadence/cold remain OPEN |
+| CNZ | 1/2; Knuckles late act/exit | Staggered rhythm, waiting-pocket pressure, unchanged barrels | Finite Clamer cadence/stagger and creator recipes east9982, no static collections | R1 pure55pass0skip; P14 real strict creator tell79 observed;P15 fixed B0ring/nohurt/nativeSpring pass, A unbraked contact death; unchangedB451287 captured first projectile126 and completed60 forward frames, but restore aborted on a missing owned Spring identity before comparisons; root then measured the development-loader resolver negative against a real-runtime control and repaired the capture-local resolver; unchanged B now passes immediate identity/tuple and60-frame full replay with zero snapshot differences at0rings. Actual platform rhythm/boss/Knux/cold/checkpoint/route value OPEN |
+| ICZ | 1/2; snowboard / Tails skip / Knuckles teleporter | Warned shelter, recoverable lower lane, native friction | WARNED stalactites and carried/true ring split east9982; carried BC2prime separately green; true BD inactive; native frost/structural rewind prerequisites qualified by P12 plus fail-closed P13 | Pure R1 fifty-five pass; separate BC592pass0skip, not initial C1; actual shelters/openings/true BD/pixels/checkpoint/route OPEN |
 | LBZ | 1/2; Knuckles corridor/presentation | Bounded alarm reinforcement, sentry lane, native launch/boss control | BOUNDED per-allocated-instance escort; native sequence-only retirement; creator recipes east9982 | R1 fifty-five pass0skip; OpusR2 blocked-alarm real touch-order5pass, H expectation16pass; LBZ2/boss/Knux/cold/route OPEN |
-| MHZ | 1/2; Knuckles opening, seasons | Committed wind, mushroom/pulley exit, seasonal arrangements/chase | PULSED native packet5d354c65 plus inactive exact MHZ2 record34 creator ingredient; provider unwired | 34unique native passes, creator three identities across94540/78037 and paired strict0. Prior backside/wrong-band capture is not counterplay; fixed frontal pair44377 pending. Season/chase/boss/cold/readability OPEN |
+| MHZ | 1/2; Knuckles opening, seasons | Committed wind, mushroom/pulley exit, seasonal arrangements/chase | Stable PULSED native5d354; exact original34 creator ingredientf0d1eb9b remains unwired | 34unique plus same strengthenedP2; creator2+corrected1 pass across94540/78037;37721 wrong lower band/backside;31133 read-only native floor053F x0600..06B8 + genuine34 binding; 44377 stopped before live-owner prerequisite;82072 eight-call read-only diagnostic proves authenticated34 vertically deferred under native camera settling, art ready/FIFO empty; 19540 reaches readiness59 then fixed approach stalls0647 before0649/totalprefix120, no wind/DOWN; these Settings probes unintentionally request fallback Sonic sidekick via none token, so no solo-route credit; season/chase/boss/cold OPEN |
 | FBZ | 1/2; all native characters | Taught tube/grabber transfers and recoverable missed grabs | Stable staged EXTRA_BEAT accepted-birth packet99ee348f; explicit inherited Knux weapon-bit correction; no support removal | Measured10/11waves352/384updates,512/256rotation,97-update native overlap30peak; birth/withdrawal/replay pass; real host/catch/cold/route OPEN |
-| SOZ | 1/2; native routes | Non-stalemate golem, readable fading lights, native ghost count/size | Both absolute-left and relative experimental golem recipes REJECTED; golem source/test now byte-equal760 STOCK. TOMB retains native600 light interval and bounded ghost recipe only; no activation | Stock78847 fourteen pass and root58138 fourteen pass. Earlier death-censored passive and zero-launch attack outcomes do not establish hardness, launched-hop fairness or self-win exclusion; pixels/cold/fullzone OPEN |
-| LRZ | 1/2 plus boss sublevel; Knuckles transport | Crusher/lava/collapse cadence, switches and HPZ handoff | Stable annotated LRZ2 ECHO_JET source packet335f23e7 retained by root; no creator activation | 16focused pass0skip; mock presentation/controlled graph only; no pixels/zero-ring safe-pocket/cold-route proof |
-| HPZ playable | `$1601`; Sonic/Tails story | Concise traversal and punishable personal duel | Native FEINT/copy/facade and inactive authentic1601/index31 full-field/unowned creator ingredient; provider unwired | Native23067 seven plus legacy STOCK/FEINT story two pass; creator29394 three actual publication/identity cases and paired53676 compiler/strict0 proofb2c118c. No campaign activation, ordinary side/back punish, zero-ring recovery, cold-route or pixel qualification |
+| SOZ | 1/2; native routes | Non-stalemate golem, readable fading lights, native ghost count/size | STOCK golem restored byteexact760 in0d57; TOMB600 light/ghost accepted; both authored golem variants REJECTED |34903 actual matched passive DEATH/attack identical Stock vs research after launch-index fix; no hardness/selfwin exclusion; Stock units78847 fourteen pass0skip, pixels/cold/fullzone OPEN |
+| LRZ | 1/2 plus boss sublevel; Knuckles transport | Crusher/lava/collapse cadence, switches and HPZ handoff | Stable ECHO_JET native335f23; exact original0 creator687c8e27 remains unwired | 16native pass0skip; creator54546 three pass0skip and paired strict jar65bf077d; native cue/pixels/zero-ring safe-pocket/cold-route OPEN |
+| HPZ playable | `$1601`; Sonic/Tails story | Concise traversal and punishable personal duel | Native FEINT/copy/facade; inactive HiddenPalaceCampaign exact1601/index31 ingredient41d490 v2 root-imported, no provider activation | HPZ23067 native7+legacySTOCK/FEINT story2pass after dust fix35d8;29394 authentic creator publication3pass and actual53676 paired strict0; ordinary punish/cold/pixels OPEN |
 | Super sanctuary | `$1701`; native emerald progression | Reward/progression scene; distinct from HPZ duel | Pending | Pending |
 | SSZ | Character-specific scenes; Knuckles two fights/ending | Learned supports/transfers, returning boss extra beat | Native FOURTH_PAIR accepted-birth and explicit graph/commit rewind in lead tree | Four actual arena3/4pair and two defeat/escape identities pass; birth five plus corrected recreation1 pass across runs; safe lane/pixels/Knux ending OPEN |
-| DEZ | 1/2/finale; Knuckles level-select research only | Visible gravity choices, bounded drone/firing lanes, final control | ALERT initial detection and exact A4 facade; inherited OWN-mace unload correction after both-presets negative | Detection/native motion/replay/defeat focused valid;83191 lifecycle7pass; real stale-list touch27855 both-presets negative; owned-child live-flags fix94068 fivepass; native3-slot footprint/gravity/route OPEN |
+| DEZ | 1/2/finale; Knuckles level-select research only | Visible gravity choices, bounded drone/firing lanes, final control | ALERT PATROL detection on each return and exact A4 facade; inherited OWN-mace unload correction after both-presets negative | Detection/native motion/replay/defeat focused valid;83191 lifecycle7pass; real stale-list touch27855 both-presets negative; owned-child live-flags fix94068 fivepass; native3-slot footprint/gravity/route OPEN |
 | Doomsday | Native eligible Sonic only | Fuel risk/reward and missile lesson; exempt from five-ring scarcity | Internal TAIL_ECHO third-missile seed32->48/exactB6 facade, no activation | 52041 twenty-ninepass/two inherited unload negatives;10526 eleven affectedpass; fuel/readability/route gates OPEN |
 | Chaos boards | Seven native boards | Individually authored turn commitments, native blue/ring/perfect outcomes | Stable provider/recipe commit e0efcb for slots0–6 |82627:3pass0skip covers native admission and all rectangular comparisons; no full-board/perfect clear proved |
 | Super boards | Seven native boards | Individually authored turn commitments, native emerald persistence | Stable provider/recipe commit e0efcb for slots8–14 |82627:3pass0skip covers native admission and all rectangular comparisons; no full-board/perfect clear proved |
@@ -61,6 +61,216 @@ shapes and do not qualify those production presets.
 | Slots | Native family | Demanding navigation; stock RNG/payouts | No authored variant; runtime reads native start words and1024 cells through ROM pipeline; literal oracle is test-only | Worker74852 bounded128pass and root22786 affected22 Slots pass establish source authority. Dedicated live-runtime rewind remains disabled; authored variant and played reward/return/whole family qualification OPEN |
 
 ## Compact checkpoint
+
+Root continuation after this immutable campaign handoff: run24453 on247fd is now
+terminal (27,849 ordinary tests:1failure/2errors/74skips;712 guards:6failures,
+0errors/skips). Exact failures, inspection and diagnostic acknowledgment are in the
+[root delivery plan](2026-10-15-second-strike-campaign-delivery.md#combined-smoke-and-guard-result-on-247fd438).
+The existing root helper established the development-capture resolver prerequisite:
+matched required-Spring negative/runtime control, four repaired component passes,
+and unchanged CNZ B first-shot126/immediate/60-frame replay with zero snapshot
+differences at0rings (one pass, no skips). See the
+[resolver checkpoint](2026-10-16-development-capture-rewind-resolution.md).
+This supersedes the earlier pending source hypothesis, while preserving its failed
+physical restore history. A later root helper extraction preserves the same native
+reservation ledger and own-execution retirement; nine focused outcomes pass, including
+genuine StockICZ replay. Neither result qualifies whole M4-M6, current artifact routes,
+MHZ wind counterplay, or the still-disabled live Slots rewind runtime. The Glowing
+and Slots table rows retain their separately observed positive bounded evidence.
+Campaign workers remain stopped with unmerged trees/indices/packets retained as
+cleanup_pending; no campaign calibration or deletion is authorized by this checkpoint.
+
+- Lead HEAD e0efcb372f9131ce959c5f2487d2acca0cdd977e/pinned760 and actual staged
+  C3 tree56b06 remain unchanged. Working DDZ/Slots source and current plan are
+  owned uncommitted inputs; immutable packets are accounted by root.
+  No campaign job/observer is live after19540; workers are idle/read-only. Normal
+  hook awaits composed pin in these private source trees; no hook bypass or
+  fake export. Root alone integrates/pushes; preserve all unknown/unmerged work.
+- Historical pre-smoke checkpoint: root normal-hook private247fd4381 was
+  clean and contained the compiled21107 candidate plus PLC/Slots and inactive
+  MHZ/LRZ/HPZ ingredients. Its3335-class,67-batch smoke+guards is now terminal;
+  the result and affected repairs are in the root delivery plan above. Root22786 TERMINAL40pass
+ 0F/E/skip on20bb8485 closes exact physical476 only: death402/reload557/escape703
+  alivegrounded0R; reload557PNG black before presentation readiness,703 valid.
+  No broad bonus/revisit/death claim. Builder14483 strict0 actualmodcb2c4cb4,
+ 67252B is newer creator content, NOT a newly handed paired engine. All46052/
+ 76734/44377/82072 evidence keeps immutable53676 engine76ab99/SDKf41bc/mod0dd53
+  identities. No main integration/push or fully complete campaign claim.
+- West76734 TERMINAL1pass0F/E/skip,447squeue/2.619schild/JUnit2.204s at00:13:19BST.
+  Actual packaged creator/5MGZ2 keepers/18monitor bindings/native333+341 and one
+  committed root; hit796HP8->7 before any playerinvulnerability; LEFT release797
+  then fresh LEFT+jump798 naturally enters Knux glide(flag1,radii10,vx-1048,
+  vy1812), supported slide802..834 then grounded flag0/floor136/137 at835.
+  First136drop564..699 and second160drop764..923 with32/64 waits pass. All924
+  inputs hurt0/invulnerability0/ringloss0/deadfalse. OrganicONLY349pickup205
+  leaves1ring, so actualzero-ring arena entry/HP<=4 cadence/cold/death/ending
+  remain OPEN. No further West calibration/run. Immutable source51134129,
+  base02f8b652->2234d6d1; docs-onlyc80f6bea->25864e1f. Root-requested standalone
+  /dev/null->final TestWestMgzBossNativeArena.java export134c06c8 has full tested
+  blob74c72d8a56fd7b00de86349aecc1e569bc58d15e; no private ancestry/native replay
+  needed. Parent verified digests/XML/key ability rows/actual840PNG. Prior46052/66b0 recovery
+  HURT801 preserved, callback still unidentified. Native/index98717 unchanged.
+- MHZ44377 TERMINAL1 before approach/floor/wind,539squeue/1.252sMaven00:00:46BST;
+  native Level2/playerframe186 but authentic34 live query missing; header-only
+  CSV/no PNG/DOWN never started. Followup82072 TERMINAL0 diagnostic,350squeue/
+ 1.145sMaven00:13:21BST (notJUnit/no pass certificate), exact53676/fc3bbproof.
+  Boot+eight neutral driver calls produce Level0->7/VInt1->8: first setup-only.
+  Same manager/currentlevel; bound original34 selected/deferredVertical true,
+  pending/dormant/remembered false and no managed actor. Camera starts0580/0620
+  despite player0620/052C; native first completed update releases minY to0,
+  then camera eases6px/update to05FC; manager Ycoarse remains0600 atcall8.
+  Cluckoid renderer/provider READY and native titleFIFO empty at every read.
+  Missing-owner cause is observed native vertical deferral during inherited
+  camera settling; no art/placement/camera fix, actor absence or wind claim.
+  Root approved one repaired-prerequisite successor only: derived62 neutral
+  calls max (ceil((620-4CC)/6)=57 plus setup/boundary/loader/init), ALL inside
+  original totalprefix120, outside native128 at620; same R649/LEFTbrake and
+ 600neutral/DOWN inputs. Require real owner/recipe/floor/LEVEL/camera/coarse/
+  nativeinit/visible body/art; stop any missing prerequisite, no calibration.
+  Externalv2 source692928a8/classccd2eb48 are actually compiled against53676;
+  creator proof fc3bb remains byteexact. Readiness and approach share prefix120.
+ 19540 TERMINAL1,482squeue/1.853sMaven ending00:27:52BST; owned Java reaped,
+  no further run/calibration/native edit. Readiness succeeds59calls/58completed:
+  current original34 slot24/PULSED/init/visible body/ready renderer/real53F floor,
+  camera4CC/coarse480,dx136. Fixed RIGHT then stops at0647 fromframe40 onward;
+  totalprefix120 expires stillstage0 after61approach calls,0postframes,0wind/
+  pulse/emissions,DOWN notstarted. Native tell frame4/BREATHING is observed.
+  Authentic unchanged monitor28 at0660/0530 plus native solid width19hex matches
+  the observed stop0660-19=0647; callback not instrumented, so this is source/
+  trajectory attribution. Floor probes alone had omitted live object solids.
+  ReadyPNG shows native Cluckoid, but also reveals MY Settings caller mistake:
+  API sidekickCharacter="none" is nonblank and falls back UNKNOWN_KEY to Sonic,
+  producing an unintended second Sonic. CLI normalizes --sidekick none to "";
+  direct Settings callers must do the same. These MHZ probes have no Sonic-solo
+  or wind certificate. Prior37721/31133 used the same token, so retain only
+  their declared geometry/inventory observations with this team caveat; native
+  unit/publication evidence is unaffected. West76734 and SonnetP15/P16 already
+  pass empty sidekick strings; their team attribution is unaffected. Root's read-only
+  audit likewise confirms Gumball/Glowing/Giant/checkpoint callers use empty
+  strings and cold11708 has explicit sk_present data. Do not withdraw those
+  unrelated verified rosters because of this narrow MHZ caller mistake.
+  Exact v2 runnerda0824d7, notes935e893c, CSVdd15e8eb and ready/tell PNGs remain
+  outside the repository under the explicit task directory. No raw-log archive.
+- Sonnet451287 TERMINAL1case0F/1ERROR/0skip at23:58:22BST,26.171sMaven;
+  queue wait unknown. First projectile capture126 and60forward frames were
+  alive/nohurt with native spring. registry.restore then aborted before any
+  comparison: missing required ObjectRefId(spawn165,dynamic15,DYNAMIC).
+  Root independently confirms development capture publishes owner boundary
+  but no rewind resolver; ENGINE_ONLY rejects non-null owners. This is a
+  composition-gap path/source hypothesis, not an exclusive measured cause,
+  Clamer codec defect or actual ModRuntime failure. Root owns the smallest
+  matched attribution/seam: existing root helper39812 now tests the owned native
+  Spring negative against accepted-runtime control, production unchanged pending
+  that control; delivery-tree composition waits24453. Sonnet stopped, no controller/native
+  fix or rerun. Immutable test-onlyP16be780a2c, baseP15tree31c07e3a, testd59d766d.
+  Consumed owned raw logs and redundant terminal receipt removed; existing
+  plan/notes/source/packets/P15CSV+PNGs retained, histories/trees preserved.
+- HPZ v2 immutable41d4903a/baseac989de5->0b8f8022 root-imported by intent,
+  creator/test a262eea3/168db0b1 unchanged from27c4de. Provider remains unwired;
+ 29394 actual3pass0skip and actual53676 paired strict proof still separate from
+  gameplay/cold/hardness. All owned trees retain unmerged work/cleanup_pending.
+- This bounded turn is stopped after its terminal handoffs. Original M4-M6 scope
+  remains incomplete and active, not cancelled or accepted. Root owns the next
+  prerequisite/artifact sequence and bounded continuation. No campaign engine
+  job, calibration, shared-source edit, tree/index/packet deletion or integration
+  is pending from this turn; retained unmerged trees remain cleanup_pending.
+
+## Historical checkpoint after source/artifact qualifications (superseded)
+
+- Main/integration is ROOT-ONLY. Lead HEAD e0efcb372f9131ce959c5f2487d2acca0cdd977e;
+  pinned760 and real stagedC3 index56b06 unchanged. All private trees/unknown
+  unmerged changes and immutable packets remain preserved/cleanup_pending.
+- Root50133 actual37pass/zero skip on22a1/HEAD5301 plus strict21067/a5a7871c,
+  engineffad06c7/SDK6190e722 compiler pair;92531 typed C2 consumers strict0.
+  Root imported Stock-golem0d57+304985 (native/test exact760,78847 fourteenpass),
+  nativeR3 capsule final9ccacab9 (owner8a37/testd19;18280 twopass) and slot seam
+  v2d9e9/85cadd (23018 fifteenpass after55227 expected13/actual12 negative).
+  Root84932 build-only passed69s, actual C3 surface21107/+40/SHAaba80f03;
+ 53676 TERMINAL107tests0fail/error/skip13freshXML,1322squeue98sMaven23:36:23BST.
+  Actual strict bundled0/artifactverifier +17658 actualfatjar21107 byteeq/typed7
+  C3rootsjavac25/strict0. New exactengine76ab99e2/SDKf41bc456/mod0dd53e4d
+  copies are in ${TASK_ARTIFACTS}/53676-c0a3513c373e; provider5C1+boards, M5
+  classesUNWIRED/noC3activation. Root22786 frozen at lastreport;3324smoke+guards
+  remains ROOT dry-run only. No campaign duplicate SDK/native22/host37 checks.
+- Sonnet SAME task second-strike-c1-east-sonnet-20261015-r1 remains one implementer.
+  P12 immutable68e07ff5 qualified624 STOCK tuple/geometry/ledger/replay outcomes
+  on exact root seam; root imported STOCK-only3files, no P5/FLANKED/API. OPEN
+  root-found source defect (placed helper exception raw fallback) fixed in P13
+  immutable230b23aa,71affected pass0skip, no624/schema/helper/API repeat; root
+  exact-applied to STOCK owner without FLANKED. Raw path onlylayoutIndex<0.
+  ClamerP14 genuine strict creator STAGGERED79 with contact deaths retained.
+  P15 c26bc21c/31c07e3a terminal1observational case0skip after17minqueue/2.4s:
+  fixedA neutral coasting40px kills before shot (braking assumption false);
+  fixedB jumps180, native165spring107/108 launches-$800, passesboth0rings/nohurt/
+  alive900 and shot126goesaway. Unrelated stage6successflag never set; outcome
+  bounded rawtimeline, not whole route or projectileavoidance. Parent inspected
+  tell165-f71/shot-f126 stills: Clamer/Sonic visible; uncalibrated boxcounts are
+  NOT separate art proof. Same Sonnet now owns ONE UNCHANGED-B semanticfirst
+  projectile registered-worldcapture/60replay, no thirdcontrollercalibration.
+- Existing Sol /root/c1_west: sourceR3 stablef086/9ccacab9 and native22pass33714;
+  actual root host6pass50133. M4 negatives14258/30327/11834/90166/43072 retained.
+  Readiness now source-bound and positive (setup then at most2ordinary steps,
+  actual published player/HUD); original341 then stable moving identity/slot.
+ 43072 two full32wait/136drop/64wait/160drop pairs/reset120, one root/sample,
+  actual positive600pixels, and840matched native post-hit blink proved. BODY
+  subject tagcount is nondiscriminating and NOT independent visibility evidence.
+  Sole jump817 missed/HP8; organicdamage768 consumed4rings, alive at1822.
+ 24233 TERMINAL1pass0F/E/skip,195squeue27.401sMaven23:11:00BST: ordinary
+  held LEFT+jump817..824, release825 yields actual HP8->7/native bounce at824
+  and31post-update invulnerability observations, flags15again855, alive924.
+  Sourcea4e4a50e/base5e7584->314bdf immutable; docs407c2265/base314bdf->3eff60.
+  Organicdamage768 consumed4rings, recollect1at848: earned invulnerability
+  participates, NOT zero-ring damage-free safety. Existing Sol now source-only
+  mapping proved legacycaptures use Delegating module stand-in, NOT packaged
+  MarbleGardenCampaign; creator retains local349 only whilenativecapture took
+  346..349. NEW46052 ONE current53676 actualpair/mod witness nowqueued/frozen:
+  packet66b0c2cb/base3eff60->15a3e0bb, classpathactualengine+SDK+Jupiter+four
+  ownedhostclasses, no privateproduction. RealapplyMod/5keepers/18monitors/333/
+  341/nativecommit/readiness; supported3E38brake and one48px-clearance sidejump;
+  anyhurt/death/earnedinvul/prereq stop,1800bound,180sactualchilddeadline/reap.
+  No physics/callback/HP writes, nativecode or repeated22/host/SDK checks.
+- New M5 creator packets (UNWIRED) in ${TASK_HANDOFFS}: MHZf0d1eb9bb4438b9df7838032b3f7f914d106204b89c6d67924286fc247149fba
+  basee2daf->999dcdd1 (exact34); LRZ687c8e276d208190177267e3a272dff7faa096b8ab45a1db492c05e054df51ca
+  base965e->e143a000 (exact0). MHZ94540 2pass/1identity-fixture failure0skip;
+  source-backed value-equality correction78037 onlyfailedmethod1pass0skip.
+  LRZ54546 threepass0skip. Actual matched-pair creator javac/strict0 proof jars
+  47de82a8/65bf077d.37721 capture0/997squeue/3.269s Maven:300neutral+300DOWN at
+ 6F0/4F0 falls to lower62C, no visible Cluckoid/frame120; backside/wrongband only,
+  no encounter/counterplay certificate.31133 READ-ONLYgeometry terminal0:1047s
+  queue/1.133sMaven23:41:23;2ndordinary counter1/playerframe186,34realmodbinding
+  confirmed, foregroundbothpaths053F x600..6B8 (old6F0beyondledge/backside).
+  Compiled53676 ACT_X128/ACT_Y64 and signed absolute distance confirmed, not96;
+  no sourcechange. Next agreedonefrontpair: declared620/52C outside128, ordinary
+  RIGHT649/oppositebrake untilgspeed<=0, thenneutralvsDOWN max600postprefix120.
+  Must positivelyobservefloor/actual34/art/BREATHING/pulses/organicrings; geometry
+  and alivealone are not safety/hardness. No newrequest yet at checkpoint.
+- Authorized later Slots native ROM authority slice is now implemented in LEAD
+  ONLY after37721/source freeze drained. Native sub4B6AA/loc4B6D2 corroborates
+ 1E4080..1E4483:2entrywords+0400cells. Production resolves entire bounds-checked
+  userROM before state mutation; private immutabledata/buffer/bootstrap injection;
+  literal board/start oracle moved to testsource. Coordinator/payout/RNG/cage/
+  physics/policy/API/compiler unchanged. Component/direct fixture callers migrated;
+  coordinator unit owns explicit scoped in-memory ROM, no runtime fallback.
+ 75842 BUILD-ONLY0/78s Java25,4007production/3947test sources; warnings remain.
+ 74852 TERMINAL0:19fresh XML/128actual tests0fail/error/skip,14squeue/26.804s
+  Maven ending23:12:10BST. Exact selector includes canonical loader/bootstrap2,
+  bounds/atomic-failure/copy4, native runtime/player/collision/render/palette/
+  coordinator/graph/codec/scroll controls. Normal queue, canonical absolute ROM,
+  EGL DISPLAY/WAYLAND unset; source union includes existing uncommitted C3 but
+  only Slots owner/fixtures selected. No native payout/RNG/cage/physics change.
+  Immutable23pathnative/fixturepacketd7f73494/basee0efcb->2ac8c37e rootcomposed
+  after53676. Existing productionSlots live-rewindcapability remainsfalse;3graph
+  controls are NOT whole-runtime rewind proof. This establishes native asset
+  authority only, not a Slots variant/M6 completion.
+- New HPZ source-only ingredient27c4de2660223f3b2e5f745f5371e2c56e7e5d4ee4baadd6125ea13bc69a752b
+  baseac989de5->4708f60b (onlynewcreator+test); genuine original31/allfields/
+  unowned/forZone16 matcher, no MasterEmerald/1600LRZ/1701sanctuary changes.
+ 29394 TERMINAL3pass0F/E/skip,789squeue39.507sMaven23:42:03,1.100s freshXML.
+  Actual53676pair javac25/strict0 proofjarb2c118c171ccd28fcb20e8fbb61b8765c6800cc60d1365d8f41aa7140b63f78d
+  is separate from private publicationtests; no native/pin/provideredit/activation
+  or ordinaryduel/cold/wholeM6 claim. Root22786 freeze controls future import.
+
+## Historical checkpoint before native prerequisites (superseded)
 
 - Lead HEAD remains e0efcb372f9131ce959c5f2487d2acca0cdd977e on pinned760.
   Real staged SSZ/DEZ10path tree56b06c08c47a628b2d08b2b8ab8913db65219075,
@@ -982,3 +1192,99 @@ dependency. Uses reserveAfter/release(manager,currentPLACEDparent,predecessor/sl
 existingledger, ALWAYS child.nativeSlot=-1 onfirstrelease. No additional manager
 edit/synthetic keys/rawglobalhelper change; STOPactualinvariantfailure. Native
 consumer pending,FLANKED inactive. All owned trees still cleanup_pending.
+
+
+## Current source-ready/requests checkpoint
+
+C2 golem disposition is now concrete0d57f04a217e0b21fda36645b64a884bdfc7395bdc6f1b6261e9644e3f319c45,
+base584881/d964 ->79b8f6bde77e523e4f74a8e89601cdaea2c96148.4paths; native
+SozMinibossInstance+originalunit BYTE-EXACT760, researcharena removed from
+candidate; acceptedenum/light/ghost source untouched. Realindexd6d34 preserved.
+Sole78847 stockunit request pending/frozen. Research5182/2790 immutable:
+34903 actual2casesPASS are diagnostic/index regression only. Every requested
+passive4400/4330/4280 exitsDEATH (Stock2210/3launches180,180,-180; research2483/
+4launches100,-80,100,100;HEX). All three requests produced identicaloutputs;
+no sustainedpositions/selfwin/hardness certificate. Sameordinaryattack both
+SINK4914/9hits/9observations/0hops, alive. No furtherretuning; future180/awaypit
+mechanism needs separate grounded decision. Root received exact source delta,
+not the erroneous73pending placeholder filename (explicitly corrected,no file).
+
+C3 HPZ increment35d8a96efe3c167e0002d40408968f830d43b5f8d4107f585a9e8ffd85619f29,
+9c3d->ac989de50e1cd094ac74fff4466859f4d011656d;4paths. Native flagsbit0 retires
+feintdust, followingrealchargeatmostone;23067 sevennative+twolegacyStock/Feint
+storyPASS0skip. DEZ/doc increment536ec347ff1e4c9eaa49f825a6e56dba5eb871183063ed9bf882cc2ee24e396a,
+07be->effbf9069ff642dfc606f74b5f00c19b66b6d402;3paths, no runtimeproductionchange,
+postbonk8PASS58676; DDZscopeDYNAMIC/TEARDOWNnotordinarypersistentplacedunload.
+Alllater-only,no rootC3import/activation. Prepared7trailers/coauthorsparsed,
+realstagedindices56b06/9c3d unchanged, useful source/captures preserved.
+
+C1 OpusR3-retry1 pending (original providerFAILED/nofindings): freshdelegate,
+fulloriginalscope/R1/R2history+newactualhost50133=37PASS evidence, exact9fdA2+
+3260placedseam+22a1hosttestONLY. West30327routefixture source4caba754 pending:
+14258 actualpost333/save8/fullreload/registercamera proof PASSED but pixelguard
+BEFOREfirstnativeupdate failed mapping0/noHUD. OnlyoneordinaryneutralGameLoop
+step afterregisterasserts added, no production/camera/player/HPwrites; new
+capturev2 kept distinct. Sonnet resumed testedroot3260 seam into ownICZtree,
+bothcausallists/nativecalls/prefix/order/release invariants pending. No extra
+workers/checkouts/sharedtests or cleanup of unmerged trees.
+
+
+## Checkpoint after corrected seam and placed-owner publication
+
+Root50133 is terminal:37PASS/0F/E/skip, actual migrated host6 plus surface10,
+pin4,Javadoc7,SDK10 on22a1/HEAD5301; strict artifacts matched21067/a5a7871c.
+The immutable engineffad06c7 and SDK6190e722 are compiler inputs; they predate
+the later Stock-golem fallback and are not current gameplay acceptance. Root
+92531 paired six-C2-root compile/package/strict validation was0/zero findings.
+SOZ78847 now terminal14Stock native passes/zero skips;0d57+304985 preserves the
+accepted light/ghost enum but native golem/test bytes are exact760. Research
+34903/index5182 and all rejected self-win/engagement observations stay historical.
+
+C1 OpusR3 original failed with no findings; NEW retry1 completed read-only.
+The two concrete findings were native capsule Boss_flag clear and intermediate
+SST allocation ordering. West final9ccacab9 from9fd->f086 contains owner8a37 and
+testd19;18280 two actual normal/full-slot cases PASS/0skip with legal ordinary
+VBlank and native MGZ pattern resume. Earlier23460 missed-publication failures
+remain historical. Root helper85cadd/d9e9 fixes own-execution-position release:
+55227 negative expected13/actual12 retained;23018 sevennew+eight existing=15PASS.
+No unchangedR4/SDK/host repeat requested.
+
+Sonnet P12 consumer68e07ff5 on exact corrected seam qualified624STOCK outcomes:
+immediate quiet/committed child tuple, ledger, allocator, structural pose and
++1..130 destructive replay all pass/0skip. This fixes the inherited committed
+puff6->0 and67px structural pose defects. Root imported ONLY the three-file
+STOCK consumer, independently reversing P5 owner delta; no FLANKED/API change.
+New source finding remains OPEN: rejected PLACED parent helper exception must
+fail allocation, never fall back to raw reserve. Same Sonnet owns a small
+post-freeze owner/test incremental, preserving any Clamer capture request;
+raw compatibility remains only for layoutIndex<0. No624/helper/schema repeat.
+
+West11834 completed1fixture failure/0error/skip (33squeue/24.532sMaven): setup
+then two actual ordinary steps proved native published player+HUD/numeric
+counters and reload pixels. Ordinary input reached authentic original341 A2,
+dormant29/admit212/handoff333/first init334; one recipe sample/peak one root.
+Stopped564 when the fixture demanded layout341 after native dynamic spawn
+replacement made it-1 (same live identity/slot); not an attributed engine defect.
+AliveHP8/rings4: initial/reload0rings does not mean zero-ring fight. Source d0ec
+and docs b746 immutable. Necessary fixture-only90166 now pending/frozen:
+authenticate full original on first observation, then track actual identity/slot.
+Controller/native/readiness unchanged, no R3/22/host/API repeat.
+
+Same Sonnet CNZ plan is bounded to authentic act2Clamer165/180 and one declared
+zero-ring encounter, not a checkpoint. Verify actual native floor continuity
+first; stop geometry/admission gaps. Actual creator registration and strict
+packaging remain required for activation evidence. No new worker/checkout.
+
+Lead MHZ2 content now authors ONLY original34@1F3136=06A805189000 through the
+finite PULSED factory; no ring/monitor/terrain/other-record edits and no provider
+wire. MHZ1 contains no90 and remains OPEN. Correct engine+SDK paired javac25/
+strict package0findings produced creator-only proof jar47de82a8; initial
+SDK-only classpath attempt was a tooling-input mistake, not an API failure.
+Sole new focused request94540 is pending/frozen in the MHZ tree: exactly
+TestSecondStrikeMushroomHillCampaign (three expected registration/ROM-field/
+rejection/idempotence checks), no native/shared/API suite repetition. Actual
+encounter/pixels/counterplay/rewind/hardness and provider activation remain OPEN.
+
+All private staged indices and immutable packet histories remain preserved.
+Lead staged56b06 and HEAD e0efcb are unchanged; all child cleanup is pending
+root accounting of useful unmerged source, not permission to delete trees.

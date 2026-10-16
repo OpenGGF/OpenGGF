@@ -18,6 +18,7 @@ import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.objects.RewindRecreateContext;
@@ -295,7 +296,7 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
             {MGZ_FBZ_DELAYS, MGZ_FBZ_DELAYS_FLIP}  // Same as type 0
     };
 
-    // ===== Instance configuration (set once during construction via init methods) =====
+    // ===== Instance configuration (set once on managed service injection) =====
 
     private String artKey;
     private int halfWidth;
@@ -359,9 +360,21 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
         this.x = spawn.x();
         this.y = spawn.y();
         this.hFlip = (spawn.renderFlags() & 0x01) != 0;
-        resolveZoneConfig(spawn.subtype() & 0xFF);
-        this.brittleSupport = brittleSupport && mode == CollapseMode.STANDARD;
-        if (this.brittleSupport) collapseTimer = Math.min(collapseTimer, 16);
+        this.brittleSupport = brittleSupport;
+    }
+
+    @Override
+    public void setServices(ObjectServices services) {
+        super.setServices(services);
+        // Every zone initializer sets mode. Resolve only at the first real
+        // injection, before ObjectManager can query geometry or dispatch this
+        // object. Rewind restores captured mode/timer/recipe fields after this
+        // boundary; reinjecting a live/restored instance must not restart them.
+        if (services != null && mode == null) {
+            resolveZoneConfig(spawn.subtype() & 0xFF);
+            brittleSupport = brittleSupport && mode == CollapseMode.STANDARD;
+            if (brittleSupport) collapseTimer = Math.min(collapseTimer, 16);
+        }
     }
 
     /**

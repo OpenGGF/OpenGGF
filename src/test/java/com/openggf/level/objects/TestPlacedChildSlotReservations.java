@@ -188,7 +188,7 @@ class TestPlacedChildSlotReservations {
         @com.openggf.game.rewind.RewindTransient(reason = "Test-only actual manager dispatch action, never snapshot state")
         private Runnable onUpdate;
         public Probe(ObjectSpawn spawn) { super(spawn, "placed-reservation-probe"); }
-        @Override public void update(int frame, PlayableEntity player) { if (onUpdate != null) onUpdate.run(); }
+        @Override public void update(int vIntRunCount, PlayableEntity player) { if (onUpdate != null) onUpdate.run(); }
         @Override public void appendRenderCommands(List<GLCommand> commands) { }
     }
 }

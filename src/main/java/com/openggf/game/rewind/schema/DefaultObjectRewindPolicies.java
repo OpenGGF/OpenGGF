@@ -447,6 +447,9 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizHollowTreeObjectInstance", "mainOwner"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizHollowTreeObjectInstance", "nativeP2Owner"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizHollowTreeObjectInstance", "extensionRideStates"), RewindFieldPolicy.CAPTURED),
+            // These admitted native graphs must rebind their live owner/child identities.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizHollowTreeObjectInstance", "exitLookout"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizBombExplosionInstance", "difficultyOwner"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizHollowTreeObjectInstance", "lastDecision"), RewindFieldPolicy.TRANSIENT),
             // AIZ collapsing log bridge: once collapsing it stops being a solid surface (onSolidContact no longer
             // fires), so an empty standingPlayers cannot self-heal and the collapse/final loops never knock the

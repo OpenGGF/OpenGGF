@@ -239,37 +239,75 @@ class TestMgzEndBossHandoffHeadless {
     }
 
     @Test
-    void eventSpawnedKnucklesBossCompletesRealFightCapsuleResultsAndAutoWalk() {
+    void nativePlacedKnucklesBossCompletesRealFightCapsuleResultsAndAutoWalk() {
         SonicConfigurationService config = SonicConfigurationService.getInstance();
         config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "knuckles");
-        fixture.camera().setX((short) 0x3A00);
-        fixture.camera().setY((short) 0x0000);
-        fixture.sprite().setCentreY((short) 0x00A0);
-        fixture.sprite().setAir(false);
-        mgzEvents().update(1, 0);
-        fixture.camera().setX((short) 0x3C80);
-        mgzEvents().update(1, 1);
-
-        MgzEndBossKnuxInstance boss = GameServices.level().getObjectManager().getActiveObjects().stream()
-                .filter(MgzEndBossKnuxInstance.class::isInstance)
-                .map(MgzEndBossKnuxInstance.class::cast)
+        config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+        // This component case needs a Knuckles team and load profile, rather
+        // than changing the character setting on the shared Sonic fixture.
+        // Positioned entry and accepted attack/capsule callbacks below do not
+        // certify a cold physical traversal or player-authored boss attacks.
+        fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_MGZ, 1)
+                .startPosition((short) 0x3E18, (short) 0x0080)
+                .startPositionIsCentre()
+                .build();
+        var manager = GameServices.level().getObjectManager();
+        ObjectSpawn original = GameServices.level().getCurrentLevel().getObjects().stream()
+                .filter(spawn -> spawn.objectId() == Sonic3kObjectIds.MGZ_END_BOSS_KNUX
+                        && spawn.layoutIndex() == 0x7FE / 6)
                 .findFirst().orElseThrow();
+        assertEquals(0x3E78, original.x(), "the original $A2 record owns admission");
+        assertEquals(0, original.y());
+        MgzEndBossKnuxInstance boss = manager.activeObjectsOfType(MgzEndBossKnuxInstance.class).stream()
+                .filter(object -> object.getSpawn().layoutIndex() == original.layoutIndex())
+                .findFirst().orElseThrow();
+        assertEquals(original, boss.getSpawn(), "use the ROM placement, not a synthetic event spawn");
+        assertTrue(boss.isHidden());
+        assertEquals(0, boss.getCollisionFlags());
+
+        // Declared camera inputs enter Check_CameraInRange. The real manager
+        // then advances the placed owner's raw120 wait and first fight pass;
+        // no boss phase, timer, HP or child-ready field is written by this test.
+        fixture.camera().setX((short) 0x3D78);
+        fixture.camera().setY((short) 0x0028);
+        GameServices.audio().commandTimeline().clear();
+        int objectPass = 0;
+        manager.update(0x3D78, fixture.sprite(), GameServices.sprites().getSidekicks(), objectPass++, false);
         assertEquals(Sonic3kObjectIds.MGZ_END_BOSS_KNUX, GameServices.gameState().getCurrentBossId());
+        assertTrue(boss.isHidden(), "native admission must not expose the fight immediately");
+        for (int pass = 0; pass < 120; pass++) {
+            manager.update(0x3D78, fixture.sprite(), GameServices.sprites().getSidekicks(), objectPass++, false);
+        }
+        assertFalse(GameServices.audio().commandTimeline().entries().stream()
+                        .map(entry -> entry.command())
+                        .anyMatch(command -> command instanceof AudioCommand.PlayMusic music
+                                && music.musicId() == Sonic3kMusic.MINIBOSS.id),
+                "the native raw120 wait must expire before miniboss music starts");
+        assertTrue(boss.isHidden());
+        manager.update(0x3D78, fixture.sprite(), GameServices.sprites().getSidekicks(), objectPass++, false);
         assertTrue(GameServices.audio().commandTimeline().entries().stream()
                         .map(entry -> entry.command())
                         .anyMatch(command -> command instanceof AudioCommand.PlayMusic music
                                 && music.musicId() == Sonic3kMusic.MINIBOSS.id),
-                "The Knuckles event branch must start the ROM miniboss music");
+                "the placed owner's native admission must start the ROM miniboss music");
+        assertTrue(boss.isHidden(), "camera/music completion only installs the next native continuation");
+        manager.update(0x3D78, fixture.sprite(), GameServices.sprites().getSidekicks(), objectPass, false);
+        assertEquals(0x02, boss.getNativeRoutineForTesting());
+        assertFalse(boss.isHidden());
+        assertEquals(8, manager.activeObjectsOfType(MgzEndBossRenderChild.class).size(),
+                "the first real fight pass owns all eight vehicle render components");
+        assertEquals(1, manager.activeObjectsOfType(MgzEndBossKnuxDrillChild.class).size(),
+                "the first real fight pass must admit the native drill child");
         assertFalse(mgzEvents().isBossTransitionDeathPlaneDisabled(),
                 "Knuckles must retain normal death-plane ownership instead of entering Sonic's rescue handoff");
         assertTrue(GameServices.sprites().getSidekicks().isEmpty(),
                 "The Knuckles route must not create rescue Tails");
-        assertEquals(0x3C80, fixture.camera().getMinX() & 0xFFFF,
-                "MGZ2_Resize must own the left arena boundary before spawning $A2");
-        assertEquals(0x00A0, fixture.camera().getMinY() & 0xFFFF,
-                "Knuckles' placement-path arena is the top MGZ band, $600 above Sonic's arena");
-        assertEquals(0x0068, boss.getSpawn().y(),
-                "$A2 must spawn in the native top-band coordinate space used by reset y=-$58 and capsule y=$B0");
+        assertEquals(0x3D78, fixture.camera().getMinX() & 0xFFFF);
+        assertEquals(0x3D78, fixture.camera().getMaxX() & 0xFFFF);
+        assertEquals(0x0028, fixture.camera().getMinY() & 0xFFFF);
+        assertEquals(0x0028, fixture.camera().getMaxYTarget() & 0xFFFF,
+                "the placed owner must retain its native $28/$3D78 camera destination");
 
         for (int frame = 0; frame < 1200 && boss.getNativeRoutineForTesting() < 0x06; frame++) {
             fixture.stepIdleFrames(1);

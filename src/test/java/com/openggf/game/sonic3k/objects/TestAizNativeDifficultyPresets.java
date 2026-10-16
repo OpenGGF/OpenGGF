@@ -278,7 +278,7 @@ class TestAizNativeDifficultyPresets {
 
     private static final class Filler extends AbstractObjectInstance {
         Filler() { super(new ObjectSpawn(0x100, 0x100, 0x7F, 0, 0, false, 0), "Filler"); }
-        @Override public void update(int tick, com.openggf.game.PlayableEntity player) { }
+        @Override public void update(int vIntRunCount, com.openggf.game.PlayableEntity player) { }
         @Override public void appendRenderCommands(List<com.openggf.graphics.GLCommand> commands) { }
     }
 

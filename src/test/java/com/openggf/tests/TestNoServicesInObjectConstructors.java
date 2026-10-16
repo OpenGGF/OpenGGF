@@ -494,6 +494,29 @@ public class TestNoServicesInObjectConstructors {
                 findMethodsCallingRawObjectRegistration(source, "Child"));
     }
 
+    @Test
+    void controlFlowBlocksCannotBecomeMethodsInConstructorCallClosure() {
+        String source = """
+                class LoopOnly {
+                    private boolean visible;
+                    public LoopOnly() { initialize(); }
+                    private void initialize() {
+                        for (int i = 0; i < 2; i++) {
+                            if (i == 0) { advance(); }
+                        }
+                    }
+                    private void advance() { }
+                    private void later() {
+                        if (visible) { needsServices(); }
+                    }
+                    private boolean needsServices() { return services() != null; }
+                }
+                """;
+        assertEquals(Set.of("later", "needsServices"), findMethodsCallingServices(source, "LoopOnly"));
+        assertEquals(Set.of(), findClassesWhoseConstructorsMayReachServices(Map.of(
+                "LoopOnly", new ClassSource("LoopOnly.java", "LoopOnly", null, source))));
+    }
+
     /**
      * Returns the set of non-constructor method names in a class that call
      * {@code services()}, either directly or transitively through other
@@ -516,7 +539,13 @@ public class TestNoServicesInObjectConstructors {
         Matcher m = methodDecl.matcher(content);
         while (m.find()) {
             String methodName = m.group(1);
-            if (methodName.equals(className)) continue; // skip constructors
+            // A block's preceding brace can satisfy the permissive return-type
+            // match. Java control-flow blocks are not callable declarations;
+            // admitting them links unrelated for/if bodies into constructor
+            // closures (for example HCZ miniboss rocket initialization).
+            if (methodName.equals(className) || Set.of(
+                    "if", "for", "while", "switch", "catch", "synchronized", "try", "do")
+                    .contains(methodName)) continue;
 
             int start = m.end();
             int braceDepth = 1;

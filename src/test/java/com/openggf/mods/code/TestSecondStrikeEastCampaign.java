@@ -59,10 +59,11 @@ class TestSecondStrikeEastCampaign {
         var context = new ModContext("second-strike", "s3k", ModAssetRoot.forTests("second-strike"));
         if (withAizMod) {
             ((GgfMod) loader.loadClass("secondstrike.SecondStrikeMod").getConstructor().newInstance()).register(context);
-        }
-        for (String name : CAMPAIGNS) {
-            loader.loadClass("secondstrike.campaign." + name).getMethod("register", ModContext.class)
-                    .invoke(null, context);
+        } else {
+            for (String name : CAMPAIGNS) {
+                loader.loadClass("secondstrike.campaign." + name).getMethod("register", ModContext.class)
+                        .invoke(null, context);
+            }
         }
         return context.freeze();
     }
@@ -95,11 +96,15 @@ class TestSecondStrikeEastCampaign {
         return field.get(owner);
     }
 
-    @Test void threeCampaignsRegisterTogetherWithTheAizModWithoutKeyCollisions() throws Exception {
+    @Test void composedProviderRegistersAizAndAllFiveC1CampaignsOnce() throws Exception {
         var plan = registration(true);
-        // AIZ: six factories, two patches. East: clamer x2, monitor, stalactite, monitor, alarm, monitor.
-        assertEquals(6 + 7, plan.objectFactories().size());
-        assertEquals(2 + 6, plan.decodedLevelPatches().size());
+        // The actual entrypoint owns the provider call: AIZ11 + HCZ4/MGZ4/east7.
+        // Strict ModContext duplicate rejection remains part of this composition.
+        assertEquals(26, plan.objectFactories().size());
+        assertEquals(12, plan.decodedLevelPatches().size());
+        assertTrue(plan.objectFactories().containsKey("second-strike:hcz-endboss"));
+        assertTrue(plan.objectFactories().containsKey("second-strike:mgz-miniboss"));
+        assertTrue(plan.objectFactories().containsKey("second-strike:icz-warned-stalagtite"));
     }
 
     @Test void carnivalNightBindsEveryOriginalClamerAndOnlyTheSecondOfEachAdjacentPairIsStaggered() throws Exception {
