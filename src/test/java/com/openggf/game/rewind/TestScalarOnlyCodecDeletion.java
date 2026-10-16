@@ -230,9 +230,12 @@ import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.lang.reflect.Modifier;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -6456,15 +6459,22 @@ public class TestScalarOnlyCodecDeletion {
                 "settled restore must relink all 12 children to the recreated controller");
     }
 
-    @Test
-    void batch44ClassesRoundTripPassedThroughObjectManagerSessionPath() {
-        for (CodecDeletionCandidate candidate : BATCH44_DELETED_CODECS) {
-            RoundTripSweepResult result = RewindRoundTripHarness.probeClass(candidate.fqn());
-            assertInstanceOf(RoundTripSweepResult.Passed.class, result,
-                    candidate.fqn()
-                            + " must round-trip as Passed through the ObjectManager session path; got: "
-                            + result);
+    static Stream<String> batch44RoundTripClasses() {
+        return BATCH44_DELETED_CODECS.stream().map(CodecDeletionCandidate::fqn);
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("batch44RoundTripClasses")
+    void batch44ClassesRoundTripPassedThroughObjectManagerSessionPath(String fqn) {
+        RoundTripSweepResult result = RewindRoundTripHarness.probeClass(fqn);
+        var outcome = RewindRoundTripHarnessCoverage.assertResult(fqn, result);
+        if (outcome == RewindRoundTripHarnessCoverage.Outcome.PREREQUISITE_UNAVAILABLE) {
+            // Each exact object gets its own visible skip; another object or the
+            // ROMless twelve-child graph fixture must not disappear with it.
+            org.junit.jupiter.api.Assumptions.abort(fqn + ": " + RewindRoundTripHarness.MISSING_ROM_REASON);
         }
+        assertEquals(RewindRoundTripHarnessCoverage.Outcome.ISOLATED, outcome,
+                fqn + " must execute its real ObjectManager session round-trip when its ROM is available");
     }
 
     // =====================================================================

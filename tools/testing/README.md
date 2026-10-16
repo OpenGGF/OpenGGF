@@ -301,6 +301,11 @@ prevent that holder from resuming to finish and release `target/`. This also app
 to an aged serial waiter on that held tree; unrelated aged capacity requests keep
 their normal priority. Execution locks, not the continuation marker, authorize work.
 Already-running backfill can still delay an older request.
+If another live waiter's worktree metadata disappears, admission ignores only
+that foreign missing-lock/missing-parent combination, including an aged serial
+waiter. Its owner retains the waiting lease. Own-worktree loss, busy locks,
+permission failures and other I/O errors remain authoritative; the queue neither
+recreates foreign metadata nor deletes locks or live waiting records.
 
 Estimates are coarse ordering hints, independent of the RAM/CPU reservation:
 

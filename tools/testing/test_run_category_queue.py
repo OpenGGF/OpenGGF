@@ -1,10 +1,12 @@
 """Exercise the shared Maven queue with real competing processes, without Java."""
 import os
 import json
+import errno
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import shutil
 import time
 import unittest
 from unittest.mock import patch
@@ -161,6 +163,140 @@ with worktree_build_slot(root) as tree_fd:
             with self.subTest(descriptor=descriptor), self.assertRaises(ValueError):
                 with maven_slot(self.root, tree_fd=descriptor):
                     self.fail('invalid lease accepted')
+
+    def test_vanished_foreign_metadata_during_probe_does_not_block_aged_serial_waiter(self):
+        import maven_queue as queue
+        from maven_schedule import WaitingRequest, AGING_SECONDS
+        common = self.root / '.git'
+        metadata = Path(subprocess.check_output(
+            ['git', 'rev-parse', '--absolute-git-dir'], cwd=self.linked, text=True).strip())
+        foreign_lock = metadata / 'maven-worktree.lock'
+        foreign = WaitingRequest(common, dict(tree=str(foreign_lock), auto=False,
+                estimate=30, enqueued=time.monotonic() - AGING_SECONDS - 1), queue._acquire)
+        original = queue._open_lock
+        probed = []
+        def remove_metadata_during_open(stack, path):
+            if path == foreign_lock:
+                probed.append(path)
+                shutil.rmtree(metadata)
+            return original(stack, path)
+        try:
+            with patch.object(queue, '_open_lock', side_effect=remove_metadata_during_open):
+                with queue.maven_slot(self.root) as leases:
+                    self.assertTrue(leases)
+                    # Admission still owns a real worktree lease; it did not
+                    # merely ignore the vanished request and bypass locking.
+                    with (common / 'maven-worktree.lock').open('a+b') as competing:
+                        self.assertFalse(queue._acquire(competing))
+            self.assertEqual([foreign_lock], probed)
+            self.assertFalse(metadata.exists(), 'never recreate another worktree metadata directory')
+            self.assertTrue(foreign.path.exists(), 'the foreign live waiting lease belongs to its owner')
+        finally:
+            foreign.remove()
+
+    def test_own_metadata_disappearing_during_probe_remains_fatal(self):
+        import maven_queue as queue
+        import maven_schedule as schedule
+        metadata = Path(subprocess.check_output(
+            ['git', 'rev-parse', '--absolute-git-dir'], cwd=self.linked, text=True).strip())
+        own_lock = metadata / 'maven-worktree.lock'
+        original = queue._open_lock
+        def remove_own_metadata(stack, path):
+            if path == own_lock:
+                shutil.rmtree(metadata)
+            return original(stack, path)
+        def probe_once(requests, now, fits):
+            self.assertEqual(1, len(requests))
+            fits(requests[0])
+            self.fail('the current worktree cannot be skipped when its own lock disappears')
+        with patch.object(queue, '_open_lock', side_effect=remove_own_metadata), \
+                patch.object(schedule, 'choose', side_effect=probe_once):
+            with self.assertRaises(FileNotFoundError) as failure:
+                with queue.maven_slot(self.linked):
+                    self.fail('own missing worktree admitted')
+        self.assertEqual(str(own_lock), failure.exception.filename)
+
+    def test_foreign_lock_errors_with_existing_metadata_remain_fatal(self):
+        import maven_queue as queue
+        from maven_schedule import WaitingRequest, AGING_SECONDS
+        common = self.root / '.git'
+        metadata = Path(subprocess.check_output(
+            ['git', 'rev-parse', '--absolute-git-dir'], cwd=self.linked, text=True).strip())
+        foreign_lock = metadata / 'maven-worktree.lock'
+        foreign = WaitingRequest(common, dict(tree=str(foreign_lock), auto=False,
+                estimate=30, enqueued=time.monotonic() - AGING_SECONDS - 1), queue._acquire)
+        original = queue._open_lock
+        try:
+            for error in (FileNotFoundError(errno.ENOENT, 'dangling lock target', str(foreign_lock)),
+                          PermissionError(errno.EACCES, 'permission denied', str(foreign_lock)),
+                          OSError(errno.EIO, 'I/O error', str(foreign_lock))):
+                def failing_open(stack, path):
+                    if path == foreign_lock:
+                        raise error
+                    return original(stack, path)
+                with self.subTest(error=type(error).__name__), \
+                        patch.object(queue, '_open_lock', side_effect=failing_open):
+                    with self.assertRaises(type(error)) as failure:
+                        with queue.maven_slot(self.root):
+                            self.fail('an existing foreign worktree error was ignored')
+                    self.assertIs(error, failure.exception)
+                    self.assertTrue(metadata.is_dir())
+        finally:
+            foreign.remove()
+
+    def test_foreign_metadata_inspection_permission_error_is_not_treated_as_vanished(self):
+        import maven_queue as queue
+        from maven_schedule import WaitingRequest, AGING_SECONDS
+        common = self.root / '.git'
+        metadata = Path(subprocess.check_output(
+            ['git', 'rev-parse', '--absolute-git-dir'], cwd=self.linked, text=True).strip())
+        foreign_lock = metadata / 'maven-worktree.lock'
+        foreign = WaitingRequest(common, dict(tree=str(foreign_lock), auto=False,
+                estimate=30, enqueued=time.monotonic() - AGING_SECONDS - 1), queue._acquire)
+        original_open, original_stat = queue._open_lock, Path.stat
+        denied = PermissionError(errno.EACCES, 'metadata inspection denied', str(metadata))
+        def failing_open(stack, path):
+            if path == foreign_lock:
+                raise FileNotFoundError(errno.ENOENT, 'lock unavailable', str(path))
+            return original_open(stack, path)
+        def failing_stat(path, *args, **kwargs):
+            if path == metadata:
+                raise denied
+            return original_stat(path, *args, **kwargs)
+        try:
+            with patch.object(queue, '_open_lock', side_effect=failing_open), \
+                    patch.object(Path, 'stat', failing_stat):
+                with self.assertRaises(PermissionError) as failure:
+                    with queue.maven_slot(self.root):
+                        self.fail('metadata inspection failure was ignored')
+            self.assertIs(denied, failure.exception)
+        finally:
+            foreign.remove()
+
+    def test_other_missing_file_is_fatal_even_if_foreign_metadata_also_disappeared(self):
+        import maven_queue as queue
+        from maven_schedule import WaitingRequest, AGING_SECONDS
+        common = self.root / '.git'
+        metadata = Path(subprocess.check_output(
+            ['git', 'rev-parse', '--absolute-git-dir'], cwd=self.linked, text=True).strip())
+        foreign_lock = metadata / 'maven-worktree.lock'
+        foreign = WaitingRequest(common, dict(tree=str(foreign_lock), auto=False,
+                estimate=30, enqueued=time.monotonic() - AGING_SECONDS - 1), queue._acquire)
+        original = queue._open_lock
+        missing = FileNotFoundError(errno.ENOENT, 'shared file unavailable', str(common / 'maven-queue.lock'))
+        def failing_open(stack, path):
+            if path == foreign_lock:
+                shutil.rmtree(metadata)
+                raise missing
+            return original(stack, path)
+        try:
+            with patch.object(queue, '_open_lock', side_effect=failing_open):
+                with self.assertRaises(FileNotFoundError) as failure:
+                    with queue.maven_slot(self.root):
+                        self.fail('a shared-file failure was ignored')
+            self.assertIs(missing, failure.exception)
+        finally:
+            foreign.remove()
 
     @unittest.skipUnless(os.name == 'posix', 'POSIX open-file-description leases')
     def test_unowned_descriptor_cannot_bypass_a_foreign_worktree_holder(self):

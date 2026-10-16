@@ -178,7 +178,7 @@ def maven_slot(root, *, exclusive=False, estimate=900, kind='maven', reservation
     """
     from maven_resources import GIB, policy, snapshot
     from maven_running import RunningLease, UsageSampler, append_log, trim_log
-    from maven_schedule import WaitingRequest, choose, aged, WORKTREE_BUSY
+    from maven_schedule import WaitingRequest, choose, aged, WORKTREE_BUSY, WORKTREE_GONE
 
     if not isinstance(estimate, (int, float)) or not math.isfinite(estimate) or estimate <= 0:
         raise ValueError('Maven duration estimate must be finite and positive')
@@ -229,8 +229,23 @@ def maven_slot(root, *, exclusive=False, estimate=900, kind='maven', reservation
                             nonlocal execution, leases
                             candidate = ExitStack()
                             try:
-                                found = _execution_leases(candidate, common, record, config,
-                                    tree_fd=tree_fd if record['id'] == request.record['id'] else None)
+                                try:
+                                    found = _execution_leases(candidate, common, record, config,
+                                        tree_fd=tree_fd if record['id'] == request.record['id'] else None)
+                                except FileNotFoundError as error:
+                                    # Another worktree can disappear after its live
+                                    # waiting record was read. Skip only that exact
+                                    # foreign lock-open race, never our own lock,
+                                    # a dangling target in existing metadata, or a
+                                    # failure opening shared admission/resource files.
+                                    if (record['id'] == request.record['id']
+                                            or error.filename != record['tree']):
+                                        raise
+                                    try:
+                                        Path(record['tree']).parent.stat()
+                                    except FileNotFoundError:
+                                        return WORKTREE_GONE
+                                    raise
                                 if found is WORKTREE_BUSY:
                                     return found
                                 if found and record['id'] == request.record['id']:

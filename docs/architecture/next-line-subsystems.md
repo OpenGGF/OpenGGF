@@ -115,16 +115,23 @@ missing required creator fields and invalid nested room/round/standings state be
 the game loop consumes it. The broker's slotless `JoinAccepted` is an exact
 intermediate master-admission marker; a final direct or relayed room join must
 carry a bounded player slot, room descriptor, and round snapshot. Master reply
-queues preserve timed-out requests as FIFO tombstones so a late answer cannot
-complete a later request with stale room metadata. The broker sends an explicit
+queues match replies in FIFO order. An unanswered or cancelled request retires
+the connection: the transport is aborted, all other pending operations fail
+promptly, and further requests reject with an instruction to reconnect. Late
+frames cannot complete another operation. Callers recover by establishing a fresh
+`MasterClient`; requests are never replayed automatically, because a timed-out
+create/join may already have executed at the broker. Explicit close flushes already
+accepted writes before its close frame; failure retirement discards queued writes,
+including when failure interrupts a graceful close. Retirement also publishes a
+`Disconnected` inbound event, including on explicit local close; an attached
+relay receives that event through its own inbound queue. The broker sends an explicit
 empty `RoomListResult` with negative `totalPages` when browsing is rate-limited;
 the client turns that sentinel into a failed request rather than mistaking a
 silent drop for a later reply. Invalid room-create routing similarly receives
-a rejection alongside its strike. Without wire request IDs, FIFO matching
-still favors safety over availability if an earlier answer never arrives: each
-later reply of that type is then consumed by the previous request's tombstone, so
-every later request of that type times out until the master connection is
-replaced. Every broker path for list, create, and join therefore must reply. A
+a rejection alongside its strike. Ordinary explicit rejections retain the usable
+connection. Without wire request IDs, reply deadlines require connection
+retirement rather than guessing which later request owns an answer. Every broker
+path for list, create, and join must still reply. A
 failed `RelayAttach` is answered with `RoomJoinRejected` on the already-attached
 socket; that frame goes to the relay handshake, not the join queue, and fails the
 handshake immediately with the broker's reason. A

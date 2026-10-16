@@ -15,13 +15,17 @@ import java.net.http.HttpClient;
 import java.net.http.WebSocket;
 import java.nio.ByteBuffer;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
 /** Client for master browsing plus direct/relay room join orchestration. */
 @com.openggf.game.ModApi
@@ -37,6 +41,9 @@ public final class MasterClient implements AutoCloseable {
     private final ConcurrentLinkedQueue<CompletableFuture<ControlMessage.RoomJoinResult>>
             pendingJoins = new ConcurrentLinkedQueue<>();
     private final AtomicReference<RelayRaceConnection> attached = new AtomicReference<>();
+    private final AtomicBoolean retired = new AtomicBoolean();
+    /** Failed retirement discards writes; graceful close flushes writes already accepted. */
+    private volatile boolean discardQueuedSends;
     private final Object sendLock = new Object();
     private final ControlJsonCodec codec = new ControlJsonCodec();
     private final PlayerIdentity identity;
@@ -80,6 +87,7 @@ public final class MasterClient implements AutoCloseable {
         admitted.orTimeout(MASTER_REPLY_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
                 .whenComplete((ignored, error) -> {
                     if (error != null) {
+                        client.retire("master admission failed");
                         WebSocket socket = client.webSocket;
                         if (socket != null) {
                             socket.abort();
@@ -91,10 +99,7 @@ public final class MasterClient implements AutoCloseable {
 
     public CompletableFuture<ControlMessage.RoomListResult> listRooms(
             String gameFilter, int page) {
-        CompletableFuture<ControlMessage.RoomListResult> future = new CompletableFuture<>();
-        pendingLists.add(future);
-        sendControl(new ControlMessage.RoomListRequest(gameFilter, page));
-        return future.orTimeout(MASTER_REPLY_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
+        return request(pendingLists, new ControlMessage.RoomListRequest(gameFilter, page));
     }
 
     public String masterSessionToken() {
@@ -118,18 +123,43 @@ public final class MasterClient implements AutoCloseable {
             ControlMessage.RoomDescriptor descriptor, String routing, int directPort,
             String determinismFingerprint, List<String> voteTrackKeys,
             String certificateSha256) {
-        CompletableFuture<ControlMessage.RoomCreated> future = new CompletableFuture<>();
-        pendingCreates.add(future);
-        sendControl(new ControlMessage.RoomCreate(descriptor, routing, directPort,
+        return request(pendingCreates, new ControlMessage.RoomCreate(descriptor, routing, directPort,
                 determinismFingerprint, voteTrackKeys, certificateSha256));
-        return future.orTimeout(MASTER_REPLY_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
     }
 
     public CompletableFuture<ControlMessage.RoomJoinResult> requestJoin(String roomId) {
-        CompletableFuture<ControlMessage.RoomJoinResult> future = new CompletableFuture<>();
-        pendingJoins.add(future);
-        sendControl(new ControlMessage.RoomJoinRequest(roomId));
-        return future.orTimeout(MASTER_REPLY_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
+        return request(pendingJoins, new ControlMessage.RoomJoinRequest(roomId));
+    }
+
+    private <T> CompletableFuture<T> request(ConcurrentLinkedQueue<CompletableFuture<T>> queue,
+                                             ControlMessage message) {
+        CompletableFuture<T> future = new CompletableFuture<>();
+        PendingSend send;
+        synchronized (sendLock) {
+            if (retired.get() || !open) {
+                return CompletableFuture.failedFuture(new RaceClient.JoinRejectedException(
+                        "master connection is closed; reconnect before retrying"));
+            }
+            String text = codec.encode(joinAccepted.sessionToken(), message);
+            WebSocket socket = webSocket;
+            // Reserve both FIFO positions atomically, but invoke neither the
+            // transport nor future continuations while holding the lock.
+            queue.add(future);
+            send = reserveSend(() -> discardQueuedSends ? CompletableFuture.completedFuture(socket)
+                    : socket.sendText(text, true));
+        }
+        future.orTimeout(MASTER_REPLY_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
+                .whenComplete((value, failure) -> {
+                    if (failure instanceof TimeoutException || future.isCancelled()) {
+                        // No wire request IDs exist. Reusing this socket after an
+                        // unanswered/cancelled request would make later replies ambiguous.
+                        retire("master reply was not received");
+                        WebSocket socket = webSocket;
+                        if (socket != null) socket.abort();
+                    }
+                });
+        send.dispatch();
+        return future;
     }
 
     public CompletableFuture<RaceConnection> joinRoom(
@@ -174,6 +204,9 @@ public final class MasterClient implements AutoCloseable {
     }
 
     public RaceConnection attachRelay(String roomId) {
+        if (!open || retired.get()) {
+            throw new RaceClient.JoinRejectedException("master connection is closed; reconnect before retrying");
+        }
         RelayRaceConnection connection = new RelayRaceConnection(this);
         if (!attached.compareAndSet(null, connection)) {
             throw new IllegalStateException("master socket is already attached to a room");
@@ -287,8 +320,7 @@ public final class MasterClient implements AutoCloseable {
 
     private void enqueueInbound(WebSocket socket, RaceClient.InboundEvent event) {
         if (!inbound.offer(event)) {
-            open = false;
-            signalDisconnected("inbound event limit exceeded");
+            retire("inbound event limit exceeded");
             socket.abort();
         }
     }
@@ -302,19 +334,20 @@ public final class MasterClient implements AutoCloseable {
     }
 
     public boolean isOpen() {
-        return open;
+        return open && !retired.get();
     }
 
     @Override
     public void close() {
-        open = false;
+        if (!retire("master connection closed", false)) return;
         WebSocket socket = webSocket;
         if (socket != null) {
+            PendingSend send;
             synchronized (sendLock) {
-                sendChain = sendChain.thenCompose(ignored ->
-                                socket.sendClose(WebSocket.NORMAL_CLOSURE, "bye"))
-                        .exceptionally(error -> null);
+                send = reserveSend(() -> discardQueuedSends ? CompletableFuture.completedFuture(socket)
+                        : socket.sendClose(WebSocket.NORMAL_CLOSURE, "bye"));
             }
+            send.dispatch();
         }
     }
 
@@ -353,15 +386,7 @@ public final class MasterClient implements AutoCloseable {
 
             @Override
             public CompletionStage<?> onClose(WebSocket socket, int statusCode, String reason) {
-                open = false;
-                RaceClient.Disconnected disconnected = new RaceClient.Disconnected(
-                        reason == null || reason.isBlank() ? "connection closed" : reason);
-                RelayRaceConnection relay = attached.get();
-                if (relay != null) {
-                    relay.signalDisconnected(disconnected.reason());
-                } else {
-                    signalDisconnected(disconnected.reason());
-                }
+                retire(reason == null || reason.isBlank() ? "connection closed" : reason);
                 admitted.completeExceptionally(new RaceClient.JoinRejectedException(
                         "master closed during admission"));
                 return null;
@@ -369,16 +394,7 @@ public final class MasterClient implements AutoCloseable {
 
             @Override
             public void onError(WebSocket socket, Throwable error) {
-                open = false;
-                RaceClient.Disconnected disconnected = new RaceClient.Disconnected(
-                        error.getMessage() == null ? error.getClass().getSimpleName()
-                                : error.getMessage());
-                RelayRaceConnection relay = attached.get();
-                if (relay != null) {
-                    relay.signalDisconnected(disconnected.reason());
-                } else {
-                    signalDisconnected(disconnected.reason());
-                }
+                retire(error.getMessage() == null ? error.getClass().getSimpleName() : error.getMessage());
                 admitted.completeExceptionally(error);
             }
         };
@@ -386,6 +402,7 @@ public final class MasterClient implements AutoCloseable {
 
     private void receiveText(WebSocket socket, String text,
                              CompletableFuture<MasterClient> admitted) {
+        if (retired.get()) return;
         RelayRaceConnection relay = attached.get();
         if (relay != null) {
             relay.acceptText(text);
@@ -462,35 +479,33 @@ public final class MasterClient implements AutoCloseable {
     }
 
     private boolean completeReply(ControlMessage message) {
-        switch (message) {
-            case ControlMessage.RoomListResult result -> {
-                if (result.totalPages() == Protocol.ROOM_LIST_RATE_LIMITED) {
-                    return completeNext(pendingLists, null,
-                            new IllegalStateException("room list rate limited"));
-                }
-                return completeNext(pendingLists, result, null);
-            }
-            case ControlMessage.RoomCreated created -> {
-                return completeNext(pendingCreates, created, null);
-            }
-            case ControlMessage.RoomCreateRejected rejected -> {
-                return completeNext(pendingCreates, null,
+        ReplyCompletion<?> reply;
+        synchronized (sendLock) {
+            if (retired.get()) return true;
+            // Dequeuing claims this reply for exactly one request. Retirement
+            // can fail the remaining queue, never reassign this frame to it.
+            reply = switch (message) {
+                case ControlMessage.RoomListResult result ->
+                        result.totalPages() == Protocol.ROOM_LIST_RATE_LIMITED
+                                ? takeNext(pendingLists, null,
+                                        new IllegalStateException("room list rate limited"))
+                                : takeNext(pendingLists, result, null);
+                case ControlMessage.RoomCreated created -> takeNext(pendingCreates, created, null);
+                case ControlMessage.RoomCreateRejected rejected -> takeNext(pendingCreates, null,
                         new RaceClient.JoinRejectedException(rejected.reason()));
-            }
-            case ControlMessage.RoomJoinResult result -> {
-                return completeNext(pendingJoins, result, null);
-            }
-            case ControlMessage.RoomJoinRejected rejected -> {
-                return completeNext(pendingJoins, null,
+                case ControlMessage.RoomJoinResult result -> takeNext(pendingJoins, result, null);
+                case ControlMessage.RoomJoinRejected rejected -> takeNext(pendingJoins, null,
                         new RaceClient.JoinRejectedException(rejected.reason()));
-            }
-            default -> {
-                return false;
-            }
+                default -> null;
+            };
         }
+        if (reply == null) return false;
+        reply.complete();
+        return true;
     }
 
     private void receiveBinary(byte[] data) {
+        if (retired.get()) return;
         RelayRaceConnection relay = attached.get();
         if (relay != null) {
             relay.acceptBinary(data);
@@ -507,10 +522,13 @@ public final class MasterClient implements AutoCloseable {
         if (socket == null) {
             return;
         }
+        PendingSend send;
         synchronized (sendLock) {
-            sendChain = sendChain.thenCompose(ignored -> socket.sendText(text, true))
-                    .exceptionally(error -> null);
+            if (retired.get()) return;
+            send = reserveSend(() -> discardQueuedSends ? CompletableFuture.completedFuture(socket)
+                    : socket.sendText(text, true));
         }
+        send.dispatch();
     }
 
     private void sendRawBinary(byte[] data) {
@@ -519,37 +537,84 @@ public final class MasterClient implements AutoCloseable {
             return;
         }
         byte[] copy = data.clone();
+        PendingSend send;
         synchronized (sendLock) {
-            sendChain = sendChain.thenCompose(ignored ->
-                            socket.sendBinary(ByteBuffer.wrap(copy), true))
-                    .exceptionally(error -> null);
+            if (retired.get()) return;
+            send = reserveSend(() -> discardQueuedSends ? CompletableFuture.completedFuture(socket)
+                    : socket.sendBinary(ByteBuffer.wrap(copy), true));
+        }
+        send.dispatch();
+    }
+
+    /** Must be called under sendLock; dispatch is deliberately separate and outside it. */
+    private PendingSend reserveSend(Supplier<CompletableFuture<WebSocket>> action) {
+        CompletableFuture<Void> completion = new CompletableFuture<>();
+        PendingSend send = new PendingSend(sendChain, completion, action);
+        sendChain = completion;
+        return send;
+    }
+
+    private record PendingSend(CompletableFuture<?> previous, CompletableFuture<Void> completion,
+                               Supplier<CompletableFuture<WebSocket>> action) {
+        void dispatch() {
+            previous.handle((value, failure) -> null)
+                    .thenCompose(ignored -> action.get())
+                    .whenComplete((value, failure) -> completion.complete(null));
         }
     }
 
     private void fail(WebSocket socket, CompletableFuture<MasterClient> admitted,
                       Throwable error) {
-        open = false;
+        retire(error.getMessage() == null ? "master connection failed" : error.getMessage());
         admitted.completeExceptionally(error);
         socket.abort();
     }
 
-    private static <T> boolean completeNext(
+    private boolean retire(String reason) {
+        return retire(reason, true);
+    }
+
+    private boolean retire(String reason, boolean discardAcceptedSends) {
+        RaceClient.JoinRejectedException failure = new RaceClient.JoinRejectedException(
+                reason + "; reconnect before retrying");
+        List<CompletableFuture<?>> pending = new ArrayList<>();
+        synchronized (sendLock) {
+            // Publish failure before any future continuation can release an
+            // earlier transport write. Failure also escalates a graceful close
+            // whose accepted writes or close frame have not yet been dispatched.
+            if (discardAcceptedSends) discardQueuedSends = true;
+            if (!retired.compareAndSet(false, true)) return false;
+            open = false;
+            drainPending(pendingLists, pending);
+            drainPending(pendingCreates, pending);
+            drainPending(pendingJoins, pending);
+        }
+        for (CompletableFuture<?> future : pending) future.completeExceptionally(failure);
+        RelayRaceConnection relay = attached.get();
+        if (relay != null) relay.signalDisconnected(failure.getMessage());
+        else signalDisconnected(failure.getMessage());
+        return true;
+    }
+
+    private static <T> void drainPending(ConcurrentLinkedQueue<CompletableFuture<T>> queue,
+                                         List<CompletableFuture<?>> pending) {
+        CompletableFuture<T> future;
+        while ((future = queue.poll()) != null) pending.add(future);
+    }
+
+    private static <T> ReplyCompletion<T> takeNext(
             ConcurrentLinkedQueue<CompletableFuture<T>> queue, T value, Throwable error) {
         CompletableFuture<T> future = queue.poll();
-        if (future == null) {
-            return false;
+        return future == null ? null : new ReplyCompletion<>(future, value, error);
+    }
+
+    private record ReplyCompletion<T>(CompletableFuture<T> future, T value, Throwable error) {
+        void complete() {
+            // An already completed/cancelled request still consumes its own
+            // reply; completion cannot spill over into the next FIFO entry.
+            if (error == null) future.complete(value);
+            else future.completeExceptionally(error);
         }
-        // A timed-out request still owns its reply position. Dropping that reply
-        // is safer than completing a later request with stale room metadata.
-        if (future.isDone()) {
-            return true;
-        }
-        if (error == null) {
-            future.complete(value);
-        } else {
-            future.completeExceptionally(error);
-        }
-        return true;
     }
 
     private static final class RelayRaceConnection implements RaceConnection {

@@ -13,6 +13,7 @@ import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.AbstractLevelEventManager;
 import com.openggf.game.RuntimeArtCoordinator;
+import com.openggf.game.TitleCardProvider;
 import com.openggf.game.animation.AnimatedTileCachePolicy;
 import com.openggf.game.animation.AnimatedTileChannel;
 import com.openggf.game.animation.AnimatedTileChannelGraph;
@@ -197,6 +198,38 @@ class TestGameplayModeContextRewindRegistry {
         var order = org.mockito.Mockito.inOrder(objectAdapter, rings);
         order.verify(objectAdapter).restore(objectSnapshot);
         order.verify(rings).restore(ringSnapshot);
+    }
+
+    @Test
+    void repeatedLevelRegistrationRestoresEventTitleExtrasBeforeReconciliation() {
+        GameplayModeContext ctx = buildAttachedContext();
+        int[] restored = new int[4];
+        AtomicInteger reconciliations = new AtomicInteger();
+        var events = new DependentEventManager(restored, reconciliations);
+        var title = new DependentTitleProvider(restored);
+        GameModule module = mock(GameModule.class);
+        when(module.getLevelEventProvider()).thenReturn(new TestEventRewindResolver(events));
+        when(module.getTitleCardProvider()).thenReturn(title);
+        LevelManager level = mock(LevelManager.class);
+        when(level.getGameModule()).thenReturn(module);
+        when(level.getTilemapManager()).thenReturn(mock(com.openggf.level.LevelTilemapManager.class));
+        when(level.levelRewindSnapshottable()).thenReturn(new LevelTestSnapshot());
+        when(level.levelTilemapRewindSnapshottable()).thenReturn(new LevelTilemapTestSnapshot());
+
+        for (int registration = 0; registration < 2; registration++) {
+            ctx.registerLevelAdapters(level);
+            var registry = ctx.getRewindRegistry();
+            var captured = registry.capture();
+            java.util.Arrays.fill(restored, -1);
+
+            registry.restore(captured);
+
+            // Title consumes the restored primary event; its extra consumes the
+            // title, and reconciliation must observe the completed dependency chain.
+            assertArrayEquals(new int[]{17, 37, 42, 42}, restored);
+            assertEquals(registration + 1, reconciliations.get(),
+                    "re-registration replaces the callback rather than retaining an old one");
+        }
     }
 
     @Test
@@ -839,6 +872,53 @@ class TestGameplayModeContextRewindRegistry {
         @Override protected void onInitLevel(int zone, int act) { }
         @Override protected void onUpdate() { }
         @Override public PlayerCharacter getPlayerCharacter() { return PlayerCharacter.SONIC_ALONE; }
+    }
+
+    private static final class DependentEventManager extends AbstractLevelEventManager {
+        private final int[] restored;
+        private final AtomicInteger reconciliations;
+
+        private DependentEventManager(int[] restored, AtomicInteger reconciliations) {
+            this.restored = restored;
+            this.reconciliations = reconciliations;
+        }
+
+        @Override protected byte[] captureExtra() { return new byte[]{17}; }
+        @Override protected void restoreExtra(byte[] payload) { restored[0] = payload[0]; }
+        @Override public List<RewindSnapshottable<?>> extraRewindAdapters() {
+            return List.of(new RewindSnapshottable<Integer>() {
+                public String key() { return "dependent-event-extra"; }
+                public Integer capture() { return 5; }
+                public void restore(Integer value) { restored[2] = restored[1] + value; }
+            });
+        }
+        @Override public void reconcileAfterRewindRestore() {
+            restored[3] = restored[2];
+            reconciliations.incrementAndGet();
+        }
+        @Override protected int getRoutineStride() { return 2; }
+        @Override protected int getEventDataFgSize() { return 0; }
+        @Override protected int getEventDataBgSize() { return 0; }
+        @Override protected void onInitLevel(int zone, int act) { }
+        @Override protected void onUpdate() { }
+        @Override public PlayerCharacter getPlayerCharacter() { return PlayerCharacter.SONIC_ALONE; }
+    }
+
+    private static final class DependentTitleProvider implements TitleCardProvider, RewindSnapshottable<Integer> {
+        private final int[] restored;
+        private DependentTitleProvider(int[] restored) { this.restored = restored; }
+        @Override public String key() { return "s3k-title-card"; }
+        @Override public Integer capture() { return 3; }
+        @Override public void restore(Integer value) { restored[1] = restored[0] * 2 + value; }
+        @Override public void initialize(int zone, int act) { }
+        @Override public void update() { }
+        @Override public boolean shouldReleaseControl() { return true; }
+        @Override public boolean isOverlayActive() { return false; }
+        @Override public boolean isComplete() { return true; }
+        @Override public void draw() { }
+        @Override public void reset() { }
+        @Override public int getCurrentZone() { return 0; }
+        @Override public int getCurrentAct() { return 0; }
     }
 
     private static final class LevelTestSnapshot implements RewindSnapshottable<LevelSnapshot> {

@@ -47,7 +47,8 @@ public class SignpostSparkleObjectInstance extends AbstractObjectInstance
         this.worldY = y;
 
         // Try to get actual sparkle frame info from RingManager
-        RingManager ringManager = staticRingManager();
+        ObjectServices owner = tryServices();
+        RingManager ringManager = owner != null ? owner.ringManager() : null;
         if (ringManager != null) {
             int count = ringManager.getSparkleFrameCount();
             if (count > 0) {
@@ -83,7 +84,8 @@ public class SignpostSparkleObjectInstance extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        RingManager ringManager = staticRingManager();
+        ObjectServices owner = tryServices();
+        RingManager ringManager = owner != null ? owner.ringManager() : null;
         if (ringManager == null) {
             return;
         }

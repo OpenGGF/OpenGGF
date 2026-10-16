@@ -1,6 +1,7 @@
 package com.openggf.game.rewind;
 
 import com.openggf.tests.TestSessionOutputPaths;
+import com.openggf.tests.RomTestUtils;
 
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfigurationService;
@@ -780,11 +781,7 @@ public final class RewindRoundTripHarness {
             new ObjectRenderManager(new InertObjectArtProvider());
     private static final String FORCE_ROMLESS_CI_PROPERTY =
             "openggf.rewind.harness.forceRomless";
-    private static final List<String> DEFAULT_ROM_FILENAMES = List.of(
-            "s1.gen",
-            "s2.gen",
-            "s3k.gen");
-    private static final Set<String> ROMLESS_CI_SURROGATE_CLASSES = Set.of(
+    private static final Set<String> ROM_REQUIRED_ISOLATED_CLASSES = Set.of(
             "com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance",
             "com.openggf.game.sonic3k.objects.Mgz2ResultsScreenObjectInstance",
             "com.openggf.game.sonic3k.objects.Aiz2EndEggCapsuleInstance$Aiz2ResultsScreenObjectInstance");
@@ -1123,8 +1120,8 @@ public final class RewindRoundTripHarness {
         if (graphEvidence != null) {
             return new RoundTripSweepResult.GraphCovered(graphEvidence);
         }
-        if (shouldUseRomlessCiSurrogate(fqn)) {
-            return new RoundTripSweepResult.Passed();
+        if (requiredRomUnavailable(fqn)) {
+            return new RoundTripSweepResult.Unprobed(MISSING_ROM_REASON);
         }
 
         // 1. Resolve the class.
@@ -1198,8 +1195,7 @@ public final class RewindRoundTripHarness {
         try {
             om.addDynamicObject(instance);
         } catch (Throwable t) {
-            return new RoundTripSweepResult.Unprobed(
-                    "addDynamicObject threw: " + describeThrowable(t));
+            throw probeFailure(fqn, "registration", t);
         }
 
         // 5. Capture the state BEFORE round-trip.
@@ -1214,7 +1210,6 @@ public final class RewindRoundTripHarness {
         try {
             snap = rr.capture();
         } catch (Throwable t) {
-            String description = describeThrowable(t);
             // A constructed child can refer to an unregistered stub parent.
             // Custom snapshots reject that just as generic reference codecs do;
             // do not make the registered-parent retry depend on exception wording.
@@ -1224,18 +1219,17 @@ public final class RewindRoundTripHarness {
             if (retried != null) {
                 return retried;
             }
-            return new RoundTripSweepResult.Unprobed("capture threw: " + description);
+            throw probeFailure(fqn, "capture", t);
         }
         try {
             rr.restore(snap);
         } catch (Throwable t) {
-            String description = describeThrowable(t);
             RoundTripSweepResult retried =
                     tryRoundTripWithSeededParent(fqn, cls, gameId, beforeFields);
             if (retried != null) {
                 return retried;
             }
-            return new RoundTripSweepResult.Unprobed("restore threw: " + description);
+            throw probeFailure(fqn, "restore", t);
         }
 
         // 7. Check count (no double-spawn, no drop).
@@ -1345,22 +1339,29 @@ public final class RewindRoundTripHarness {
         return config;
     }
 
-    private static boolean shouldUseRomlessCiSurrogate(String fqn) {
-        return ROMLESS_CI_SURROGATE_CLASSES.contains(fqn)
-                && defaultRomFilesUnavailable();
+    static final String MISSING_ROM_REASON = "required original S3K ROM unavailable";
+
+    static Map<String, String> declaredGraphCoverage() {
+        return GRAPH_COVERED_ISOLATED_PROBE_CLASSES;
+    }
+
+    static Set<String> romPrerequisiteClasses() {
+        return ROM_REQUIRED_ISOLATED_CLASSES;
+    }
+
+    static boolean requiredRomUnavailable(String fqn) {
+        return ROM_REQUIRED_ISOLATED_CLASSES.contains(fqn) && defaultRomFilesUnavailable();
     }
 
     private static boolean defaultRomFilesUnavailable() {
-        if (Boolean.getBoolean(FORCE_ROMLESS_CI_PROPERTY)) {
-            return true;
-        }
-        Path cwd = Path.of(System.getProperty("user.dir"));
-        for (String filename : DEFAULT_ROM_FILENAMES) {
-            if (Files.exists(cwd.resolve(filename))) {
-                return false;
-            }
-        }
-        return true;
+        return Boolean.getBoolean(FORCE_ROMLESS_CI_PROPERTY)
+                || RomTestUtils.ensureSonic3kRomAvailable() == null;
+    }
+
+    private static AssertionError probeFailure(String fqn, String phase, Throwable cause) {
+        if (cause instanceof VirtualMachineError fatal) throw fatal;
+        if (cause instanceof ThreadDeath fatal) throw fatal;
+        return new AssertionError("Rewind probe " + phase + " failed for " + fqn, cause);
     }
 
     /**
@@ -2061,9 +2062,13 @@ public final class RewindRoundTripHarness {
         CompositeSnapshot snap;
         try {
             snap = rr.capture();
+        } catch (Throwable t) {
+            throw probeFailure(cls.getName(), "seeded capture", t);
+        }
+        try {
             rr.restore(snap);
         } catch (Throwable t) {
-            return null;
+            throw probeFailure(cls.getName(), "seeded restore", t);
         }
 
         // Check count — parent + child should both survive.
@@ -2151,9 +2156,13 @@ public final class RewindRoundTripHarness {
         CompositeSnapshot snap;
         try {
             snap = rr.capture();
+        } catch (Throwable t) {
+            throw probeFailure(cls.getName(), "seeded capture", t);
+        }
+        try {
             rr.restore(snap);
         } catch (Throwable t) {
-            return null;
+            throw probeFailure(cls.getName(), "seeded restore", t);
         }
 
         Map<String, Integer> afterCounts = countByTypeFrom(om);

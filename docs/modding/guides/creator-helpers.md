@@ -458,7 +458,9 @@ payload, injected services and object/player queries. Recreate the instance from
 those inputs; captured references reconnect in the normal second restore phase.
 Native player-bound objects can retain deferred reconstruction through
 `enqueuePendingPlayerBoundEntry`. Flappy and the gameplay examples show this
-path. The existing expert reconstruction contract remains available.
+path. The existing expert reconstruction hook remains available to native
+subclasses, but its host context and whole-manager snapshots are engine-internal
+shapes, outside the candidate creator compatibility promise.
 
 Save providers receive one immutable `RuntimeSaveContext` with the current zone
 key, act, lives, continues, emerald state and selected save/team information.

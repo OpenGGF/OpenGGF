@@ -110,11 +110,6 @@ public class SplashObjectInstance extends AbstractObjectInstance implements Rewi
      * @return A new splash object, or null if renderer is not available
      */
     public static SplashObjectInstance create(PlayableEntity player, int waterY) {
-        var levelManager = staticLevelManager();
-        if (levelManager == null) {
-            return null;
-        }
-
         // Get the dust/splash renderer from the player's dust manager
         // Escape hatch: getSpindashDustController() returns sprites.managers type,
         // not exposed on PlayableEntity to avoid game -> sprites.managers dependency.

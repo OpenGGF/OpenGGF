@@ -194,17 +194,20 @@ class TestMasterClient {
         pending.add(joinB);
         joinA.completeExceptionally(new java.util.concurrent.TimeoutException());
 
-        Method completeNext = MasterClient.class.getDeclaredMethod("completeNext",
+        Method takeNext = MasterClient.class.getDeclaredMethod("takeNext",
                 ConcurrentLinkedQueue.class, Object.class, Throwable.class);
-        completeNext.setAccessible(true);
+        takeNext.setAccessible(true);
         ControlMessage.RoomJoinResult replyA = new ControlMessage.RoomJoinResult(
                 "room-a", "DIRECT", "a.example", 1234, "host-a", FP, "ab".repeat(32));
         ControlMessage.RoomJoinResult replyB = new ControlMessage.RoomJoinResult(
                 "room-b", "DIRECT", "b.example", 5678, "host-b", FP, "cd".repeat(32));
 
-        completeNext.invoke(null, pending, replyA, null);
+        Object firstClaim = takeNext.invoke(null, pending, replyA, null);
+        Method complete = firstClaim.getClass().getDeclaredMethod("complete");
+        complete.setAccessible(true);
+        complete.invoke(firstClaim);
         assertTrue(!joinB.isDone(), "A's late result must not bind join B");
-        completeNext.invoke(null, pending, replyB, null);
+        complete.invoke(takeNext.invoke(null, pending, replyB, null));
         assertEquals("room-b", joinB.get(1, TimeUnit.SECONDS).roomId());
     }
 
