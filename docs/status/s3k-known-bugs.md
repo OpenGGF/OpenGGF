@@ -6607,31 +6607,43 @@ trace results are in the
 ## Knuckles Credits and Terminal Residuals (OPEN)
 
 The 2026-10-15 kterminal lane matched the Knuckles terminal banner, its pose flash and
-logo fade, and the credits' Plane A phase against the native complete run. Four gaps remain:
+logo fade, and the credits' Plane A phase against the native complete run. The
+2026-10-16 presentation lane resolved three of its four residuals:
 
-- **Credits start one V-int late.** With the native inlets declared, the cold movie now
-  reaches credits part one with `V_int_run_count` `$66CC6`; native and the `9b0c85dd0`
-  render hold `$66CC5` at the same engine frame, with an identical flight log. The ending
-  clouds seed from `V_int_run_count` (`loc_5F94C`) and emit on its low bits (`loc_5F986`),
-  so every cloud differs. Unattributed; it arrived between `9b0c85dd0` and `516ca64f1`.
-- **A glyph fragment in credits part one.** At the credits-one spans 9 and 10 a white,
-  glyph-like fragment (screen x 128-191) scrolls with the planes. It is in every engine
-  render since `9b0c85dd0` and never in native. Unattributed.
-- **One zero-copy credits pass.** `ParallaxManager` reads a handler's zero FG V-scroll as
-  "use the camera", and `ZoneScrollHandler` is Mod API. On the pass where
-  `Camera_Y_pos_copy` is still 0 and `Camera_Y_pos` has reached 1, SSZ2's Plane A is prepared
-  one line low. No native picture covers that pass; its visibility was not measured.
-- **S3 eyecatch fades.** `loc_5F26C`, `loc_5F31C` and `loc_5F410` fade lines 1, 0 and 2
-  through `loc_5FF62` (up toward `$EEE`, then down to the target, every fourth pass). The
-  engine's S3 eyecatch uses a six-pass from-black fade. No native picture of that terminal
-  exists.
+- **Credits one V-int late: capture inlet, not engine.** Native observations put
+  `V_int_run_count` at `$66141` on the flight edge row (input 419847) and `$66CC5` at
+  credits part one (422795), 2948 frames later. The engine flight object first exists
+  at frame 58253 and the credits start at 61201, also 2948 frames later, and the engine
+  counts one V-int per frame. The renders that showed `$66CC6` had declared `$66142` at
+  flight init (the driver comment cited input 419848). With `$66141` declared, cloud SSTs
+  equal native at all 12 credits-one spans.
+- **Glyph fragment at spans 9-10 (fixed).** It was the HPZ teleporter pad
+  (`Obj_SSZHPZTeleporter`, `($A0,$4B0)`) drawn from tiles the credits font had replaced.
+  Native deletes it through `Sprite_OnScreen_Test` once the camera reaches `$240`. The
+  credits camera then jumps from `$1CF` to 0. `Load_Sprites`'s backward branch subtracts
+  `$80` from the new coarse X and skips the back cursor on the borrow
+  (sonic3k.asm:37604-37605; S2 `ObjectsManager_GoingBackward`, s2.asm:33051-33052), so
+  the pad never returns. The engine's backward pass handed it to the cursor again, and it
+  was live from span 7 (camera Y `$333`). `ObjectPlacementController` now skips that pass
+  too.
+- **Zero-copy credits pass (fixed).** `SwScrlSsz` now declares its foreground V-scroll
+  explicit through the internal `ExplicitForegroundVerticalScroll`, so `ParallaxManager`
+  uses a `Camera_Y_pos_copy` of 0 instead of the moved camera
+  (`TestSszAct2CameraController`, red first at credits pass 122). No Mod API declaration
+  changed.
+- **S3 eyecatch fades (open).** `loc_5F26C`, `loc_5F31C` and `loc_5F410` fade lines 1, 0
+  and 2 through their own `loc_5FF62` instances (up toward `$EEE`, then down to the
+  target, every fourth pass from each allocation). The engine's S3 eyecatch
+  (`S3kPostCreditsObjectInstance.initializeS3Eyecatch`) uses a six-pass from-black fade.
+  No native picture of that terminal exists. The owner is the three allocations' pass
+  order and parameters (`$30`, `$32`, `$3A`).
 
 Evidence and the measured spots are in the
-[ending matrix](../architecture/validation/levels/s3k-ending.md#knuckles-terminal-banner-pose-flash-and-the-credits-plane-a-phase-kterminal-lane-2026-10-15).
+[ending matrix](../architecture/validation/levels/s3k-ending.md#knuckles-credits-v-int-inlet-teleporter-pad-and-zero-copy-pass-presentation-lane-2026-10-16).
 
 ### Removal condition
-Each gap is attributed to a ROM owner and modelled with a focused red-first test, or shown
-equal to a native capture of the same state.
+The S3 eyecatch fades are modelled from `loc_5FF62` with a focused red-first test, or
+shown equal to a native capture of the same state.
 
 ---
 

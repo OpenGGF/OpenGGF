@@ -226,7 +226,8 @@ class TestSszAct2CameraController {
      * Screen_shake_offset to that copy (sonic3k.asm:117750-117751). The credits' loc_5B204
      * moves only Camera_Y_pos, so Plane A keeps the copy: the generation the published sprite
      * table is projected with. Native Knuckles credits frames show both one pass behind RAM.
-     * ParallaxManager reads a zero handler value as "use the camera", so a zero copy is skipped.
+     * A zero copy is V_scroll_value too, although ParallaxManager reads a zero handler value as
+     * "use the camera" for other handlers.
      */
     @Test
     void creditsPlaneAVScrollFollowsCameraYCopyNotTheCameraTheCreditsMoved() {
@@ -251,11 +252,11 @@ class TestSszAct2CameraController {
                 short copy = fixture.camera().getYCopy();
                 boolean differs = copy != fixture.camera().getY();
                 if (differs) moved++;
-                if (copy == 0) { if (differs) zeroCopyMoves++; continue; }
+                if (copy == 0 && differs) zeroCopyMoves++;
                 assertEquals(copy, GameServices.parallax().getVscrollFactorFG(), "credits pass " + pass);
             }
             assertTrue(moved > 100, "loc_5B204 moves Camera_Y_pos after the copy: " + moved);
-            assertTrue(zeroCopyMoves <= 1, "zero-copy passes with a moved camera: " + zeroCopyMoves);
+            assertEquals(1, zeroCopyMoves, "one pass keeps the copy at 0 after loc_5B204 has moved the camera");
         } finally {
             config.clearSessionOverrides();
         }

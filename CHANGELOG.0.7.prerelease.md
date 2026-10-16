@@ -247,7 +247,11 @@ Unreleased. The earlier development themes remain in
   names now scroll in step with the clouds, as the original's picture does. After the
   credits the closing logo takes the original's place for each ending, with its
   trademark: above Knuckles rather than across him. It fades in through white, and with
-  every Super Emerald Knuckles flashes pink as he does in the original.
+  every Super Emerald Knuckles flashes pink as he does in the original. The Hidden
+  Palace teleporter pad no longer reappears under the island during Knuckles' credits:
+  as in Sonic 2 and 3&K, a camera jump back into a level's first block reloads nothing
+  behind the object cursor. The first scrolling pass keeps the names on the original's
+  line.
 
 - **Capture and controller tools:** Input branches reject checkpoints whose pending
   fresh assembly or transition callback cannot be restored by gameplay rewind.

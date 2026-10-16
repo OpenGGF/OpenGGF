@@ -67,7 +67,8 @@ import static com.openggf.level.scroll.M68KMath.negWord;
  * The ending redraws (foreground routine {@code $C} onward) use the plain and island
  * deformations, and background routine 4 uses {@code loc_58D44}'s fan.
  */
-public class SwScrlSsz extends SwScrlS3kDefault {
+public class SwScrlSsz extends SwScrlS3kDefault
+        implements com.openggf.game.internal.ExplicitForegroundVerticalScroll {
 
     /** {@code SSZ1_BGDeformArray} (sonic3k.asm:117580): 29 finite bands then the remainder. */
     static final int[] SSZ1_BG_DEFORM = {
@@ -189,10 +190,19 @@ public class SwScrlSsz extends SwScrlS3kDefault {
      * next pass, together with the sprite table.
      */
     @Override public short getVscrollFactorFG() {
-        var state = state();
-        if (state != null && state.actIndex() == 1 && state.screenInitApplied())
+        if (act2PlaneAFollowsCopy())
             return GameServices.camera().getYCopy();
         return super.getVscrollFactorFG();
+    }
+
+    /** A copy of 0 is still V_scroll_value, e.g. when loc_5B204 has already moved Camera_Y_pos to 1. */
+    @Override public boolean foregroundVerticalScrollExplicit() {
+        return act2PlaneAFollowsCopy();
+    }
+
+    private boolean act2PlaneAFollowsCopy() {
+        var state = state();
+        return state != null && state.actIndex() == 1 && state.screenInitApplied();
     }
 
     @Override public short[] getPerColumnVScrollBG() {
