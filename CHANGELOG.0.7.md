@@ -128,6 +128,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   art owner by character identity, restoring Tails DPLC submissions for runtime
   names such as `tails_p2`. Horizontal springs apply the native unsigned
   launch-side check for both participants, including the flipped equality case.
+  Launchers, flippers and Point Pokey preserve captured rolls through object
+  control without enabling native pinball jump blocking or speed boosts.
   All five native spring types finish initialization before checking players on
   the following update, preventing early launches when a spring reloads.
   Coconuts faces and targets the nearer native player, preserving the ROM's
@@ -465,7 +467,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   speed, Tails strikes his victory pose only once the ship has left the screen, and
   Tails keeps his hurt pose when a boss arm hits him.
   Across S3K, horizontal springs now launch a player who comes to rest in front of
-  them, Blastoid hits scatter rings, and rewinding past an opened egg capsule keeps
+  them and require actual terrain penetration for a falling-player landing handoff.
+  Blastoid hits scatter rings, and rewinding past an opened egg capsule keeps
   its explosions going. Players balance at the ROM distance from the edges of egg
   capsules and horizontal springs, and corkscrew ramps draw the tumble frames the ROM
   shows for left-facing players.

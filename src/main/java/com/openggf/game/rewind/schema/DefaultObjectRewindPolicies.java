@@ -349,8 +349,6 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.FlipperObjectInstance", "animationState"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.FlipperObjectInstance", "launchCooldown"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.FlipperObjectInstance", "lockedPlayerPrevSuppressed"), RewindFieldPolicy.CAPTURED),
-            // Sibling of lockedPlayerPrevSuppressed: the saved pre-lock pinball mode restored on release.
-            // Capturing only the suppressed flag left a rewound release clearing the player's pinball mode.
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.FlipperObjectInstance", "playerFlipperState"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.LauncherBallObjectInstance", "playerCooldowns"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.LauncherBallObjectInstance", "playerStates"), RewindFieldPolicy.CAPTURED),
