@@ -241,7 +241,15 @@ short-lived peaks/CPU can be missed. Disk figures exclude the checkout and Maven
 dependency cache. Native-image compilation was not measured. The 7 GiB / 8-core
 test reservation below includes a separate test JVM and is not a build requirement.
 
-For small focused tests with known bounded memory needs, use the **lean lane**:
+On Linux, exact focused commands with `-Dmse=off` automatically use the **lean
+lane** when every selected class belongs to the reviewed small-test registry in
+`maven_small.py` (initially 55 configuration, input and utility classes). Up to 50
+classes or exact methods qualify per invocation. Unknown or ambiguous selectors,
+profiles, custom properties/JVM settings and expensive fixture annotations keep
+normal admission. The wrapper prints when it selects the smaller budget. Use
+`--normal` before Maven arguments to retain the larger heap.
+
+For other focused tests with known bounded memory needs, explicitly use the lean lane:
 
 ```bash
 python3 tools/testing/maven_queue.py --lean -Dmse=off "-Dtest=TestCollisionLogic" test
@@ -251,11 +259,14 @@ It caps both Maven and the reused test JVM at **1 GiB heap each**, preserving th
 Mockito agent, CDS setting and macOS first-thread flag, and reserves **4 GiB RAM / 4
 cores** rather than the normal 7 GiB / 8 cores. The same headroom, three-run ceiling,
 worktree exclusion and waiting order apply. An out-of-memory result is a failed run;
-rerun that test in the normal lane and report the lean failure. Full suites, wildcard
+rerun that test with `--normal` and report the lean failure. Full suites, wildcard
 selectors, explicit profiles, custom build/JVM overrides and custom `.mvn` launch
-settings are rejected by `--lean`. This is an opt-in development lane, not a substitute
-for required broad, trace, native or release validation. It does not certify every
-exact test selector as fitting in 1 GiB.
+settings are rejected by `--lean`. Explicit lean remains a development option; it
+does not qualify an unknown class for the aged-head backfill allowance below.
+Required broad, trace, native and release checks keep their coverage and lanes.
+Ordinary category batches receive the same automatic budget only when every
+candidate qualifies and one worker is used. Includes, batching and assertions
+are unchanged; guards and mixed/heavy batches keep their existing budget.
 
 An older worktree can use the updated wrapper by its absolute path while remaining
 in the intended worktree: the caller's working directory selects the build tree.
@@ -278,8 +289,8 @@ use short-run priority with aging; different clones have separate queues. Each c
 #### Queue telemetry
 
 Each admitted or cancelled request appends one line to `.git/maven-queue-log.jsonl`:
-kind (`focused`, `focused-lean`, `full`, `category`, `category-full`, `profile:<names>`, `exclusive`,
-`cleanup`, `category-batch`, `category-guards`), worktree name, wait and hold seconds, sampled peak RSS and mean CPU. It
+kind (`focused`, `focused-lean`, `focused-auto-lean`, `full`, `category`, `category-full`, `profile:<names>`, `exclusive`,
+`cleanup`, `category-batch`, `category-batch-lean`, `category-guards`), worktree name, wait and hold seconds, sampled peak RSS and mean CPU. It
 records no Maven arguments and no test results, so it is not a validation receipt.
 The log is trimmed to its newest half above 512 KiB. Summarise it with:
 
@@ -312,12 +323,19 @@ marked explicitly. Priority order is not a guaranteed start order: capacity and
 worktree ownership can permit backfilling. The server serves only the dashboard
 and `/api/queue`, with no file browsing or job-control endpoints.
 
+New waiters publish why they cannot start: memory/CPU shortfall, occupied slots,
+exclusive execution, their own busy worktree, priority or draining for an older
+request. The view labels scheduler reports separately from resource observations
+inferred for older clients. Reports expire after 15 seconds; incomplete or stale
+observations remain unknown. An available backfill allowance is not a promise
+that a job will fit or start next.
+
 Peak RSS sums shared pages and two-second sampling misses short peaks; see the
 [2026-09-15 profiling](../../docs/architecture/research/2026-09-15-maven-resource-admission.md).
 The [2026-10-07 focused-throughput investigation](../../docs/architecture/research/2026-10-07-maven-focused-throughput.md)
 records the lean lane's design, evidence and coverage limits.
 The [2026-10-16 category-throughput investigation](../../docs/architecture/research/2026-10-16-test-throughput.md)
-records preparation reuse and bounded continuation credit.
+records preparation reuse, bounded continuation credit and small-job qualification.
 
 #### Waiting order
 
@@ -340,8 +358,15 @@ times, not this scheduling credit.
 
 An unaged request blocked by its worktree, an exclusive run or resource limits can be
 bypassed by another request that fits (backfilling). Once the oldest aged request
-needs shared capacity, **new admissions pause** until it can start or is cancelled;
-existing runs finish normally. An aged resource-aware request waiting only for its
+needs shared capacity, it normally drains existing runs. If only memory or CPU
+blocks a resource-aware head, **one qualified small job** in a different worktree
+may use spare capacity first: at most 4 GiB / 4 cores and a duration estimate of
+60 seconds or less. The allowance is consumed only after actual admission and
+stays spent after that small job finishes. Further admissions pause until the
+aged request starts or leaves the queue. This bounds overtaking by count, not by
+wall-clock time; a small job is never killed for exceeding its estimate. Serial
+heads, occupied slots and unknown admission state still drain immediately.
+An aged resource-aware request waiting only for its
 own busy worktree allows unrelated trees to proceed: pausing them cannot release its
 `target/`. Later requests for that same tree cannot overtake it, even if the holder
 exits during a scheduler scan. Aged serial requests still drain the shared queue.
@@ -351,7 +376,10 @@ to an aged serial waiter on that held tree; unrelated aged capacity requests kee
 their normal priority. Execution locks, not the continuation marker, authorize work.
 Foreign schedulers probe shared capacity for a retained-tree continuation so its
 own worktree lease does not make it appear blocked and forfeit its priority.
-Already-running backfill can still delay an older request.
+Already-running backfill can still delay an older request. The gate-protected
+`.git/maven-backfill.json` stores consumed allowances only for live waiting IDs;
+it is not a pass cache or an execution lease. Missing state starts empty; malformed
+or unwritable state disables extra backfill while normal admission stays available.
 If another live waiter's worktree metadata disappears, admission ignores only
 that foreign missing-lock/missing-parent combination, including an aged serial
 waiter. Its owner retains the waiting lease. Own-worktree loss, busy locks,
@@ -391,7 +419,7 @@ Avoid editing that worktree during execution; the category runner rejects change
 
 Admission uses available memory, CPU affinity, visible cgroup v2 limits and one-minute
 system load. Each normal run reserves **7 GiB RAM and 8 CPU cores**, with **2 GiB
-memory headroom**; the opt-in lean lane reserves **4 GiB and 4 cores**. Existing runs
+memory headroom**; the lean lane reserves **4 GiB and 4 cores**. Existing runs
 retain their own full reservations. While a run holds a
 slot, its wrapper samples the run's process tree every two seconds and publishes RSS and
 recent CPU in an OS-leased `.git/maven-running/*.lease` record. Admission credits that

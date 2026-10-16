@@ -131,6 +131,26 @@ class BatchTests(unittest.TestCase):
         self.assertEqual([55, 45, 35, 25], self.timeouts)
         self.assertEqual([30, 10], [result['elapsed_seconds'] for result in self.results()])
 
+    def test_small_batch_keeps_includes_coverage_and_applies_both_bounded_heaps(self):
+        shapes = []
+        original = self.maven
+        def observe(command, *args, **kwargs):
+            if 'surefire:test' in command:
+                shapes.append((command, kwargs.get('environment')))
+            return original(command, *args, **kwargs)
+        bounded = (['-Dmse=off', '-Dtest=placeholder', 'test', '-Dsurefire.argLine=-Xmx1g',
+                    '-Dsurefire.forkCount=1', '-Dsurefire.reuseForks=true'], {'MAVEN_OPTS': '-Xmx1g'})
+        with patch.object(runner, 'batch_lean', return_value=bounded), \
+                patch.object(runner, 'run_logged', side_effect=observe):
+            self.assertEqual(0, self.execute())
+        self.assertEqual(self.plan['tests'], sum(self.selections, []))
+        for command, env in shapes[:3]:
+            self.assertIn('-Dsurefire.argLine=-Xmx1g', command)
+            self.assertFalse(any(a.startswith('-Dtest=') for a in command))
+            self.assertEqual('-Xmx1g', env['MAVEN_OPTS'])
+        self.assertIsNone(shapes[-1][1])
+        self.assertNotIn('-Dsurefire.argLine=-Xmx1g', shapes[-1][0])
+
     def test_exhausted_execution_budget_does_not_rejoin_queue(self):
         with self.assertRaisesRegex(TimeoutError, 'exhausted before another batch'):
             self.execute(max_minutes=1 / 4)

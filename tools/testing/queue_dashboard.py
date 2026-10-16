@@ -17,7 +17,7 @@ import sys
 import threading
 import time
 
-from maven_resources import GIB, policy, snapshot
+from maven_resources import GIB, admission_reason, policy, snapshot
 from maven_running import FRESH_SECONDS, LEASE_NAME, LOG_NAME
 from maven_schedule import AGING_SECONDS, REQUEST_NAME, ordered
 
@@ -26,6 +26,8 @@ REFRESH_SECONDS = 2
 MAX_RECORDS = 512
 LOG_TAIL_BYTES = 64 * 1024
 _DEFAULT = object()
+ADMISSION_REASONS = {'memory', 'cpu', 'slots', 'exclusive', 'worktree',
+                     'priority', 'draining', 'ready', 'unknown'}
 
 
 def _number(value, *, positive=False, signed=False):
@@ -225,7 +227,49 @@ def _job(identifier, record, pid, proc, liveness):
                 waitSeconds=None, runSeconds=None, schedulingAgeSeconds=None,
                 estimateSeconds=None, aged=None, retainedTree=None, rssBytes=None,
                 cpuCores=None, budgetMemoryBytes=None, budgetCpuCores=None,
-                usageFresh=False, position=None, liveness=liveness)
+                usageFresh=False, position=None, admission=None, liveness=liveness)
+
+
+def _reported_admission(record, now):
+    report = record.get('admission')
+    if not isinstance(report, dict):
+        return None
+    updated = _number(report.get('updated'))
+    reason = report.get('reason')
+    if (not isinstance(reason, str) or reason not in ADMISSION_REASONS
+            or updated is None or not 0 <= now - updated <= FRESH_SECONDS):
+        return None
+    blocked_by = report.get('blockedBy')
+    if not isinstance(blocked_by, str) or not REQUEST_NAME.fullmatch(blocked_by + '.request'):
+        blocked_by = None
+    return dict(reason=reason, source='scheduler', updated=updated,
+                memoryShortfallBytes=_number(report.get('memoryShortfallBytes')),
+                cpuShortfallCores=_number(report.get('cpuShortfallCores')),
+                blockedBy=blocked_by,
+                backfillAvailable=report.get('backfillAvailable')
+                if type(report.get('backfillAvailable')) is bool else None)
+
+
+def _observe_admission(waiting, running, reservations, held_slots, exclusive_held, resources, config, now):
+    # A lock-free snapshot cannot determine scheduling priority. Explain only
+    # resource shortages, and only when every slot has a fresh matching lease.
+    if (resources is None or config is None or held_slots is None or exclusive_held is not False
+            or len(running) != held_slots or len({job['pid'] for job in running}) != held_slots
+            or any(job['pid'] is None or job['mode'] != 'resource-aware' or not job['usageFresh']
+                   or job['budgetMemoryBytes'] is None or job['budgetCpuCores'] is None for job in running)):
+        return
+    reserved = (sum(job['budgetMemoryBytes'] for job in running),
+                sum(job['budgetCpuCores'] for job in running))
+    credit = (sum(min(job['rssBytes'], job['budgetMemoryBytes']) for job in running),
+              sum(min(job['cpuCores'], job['budgetCpuCores']) for job in running))
+    for job in waiting:
+        if job['admission'] is not None or job['mode'] != 'resource-aware' or job['id'] not in reservations:
+            continue
+        observed = admission_reason(resources, config, held_slots, credit,
+                                    reservation=reservations[job['id']], reserved=reserved)
+        if observed['reason'] != 'ready':
+            job['admission'] = dict(observed, source='observation', updated=now,
+                                    blockedBy=None, backfillAvailable=None)
 
 
 def _recent(common, warnings):
@@ -290,7 +334,7 @@ def collect_snapshot(root, *, common, policy_config=None, now=None, monotonic=No
         if job['usageFresh']:
             job['rssBytes'], job['cpuCores'] = rss, cores
         (running if verified else unverified).append(job)
-    candidates = []
+    candidates, reservations = [], {}
     for identifier, record, pid, verified in _records(common / 'maven-waiters', REQUEST_NAME, locks, warnings):
         enqueued, estimate = _number(record.get('enqueued'), signed=True), _number(record.get('estimate'), positive=True)
         tree = Path(record.get('tree', '')) if isinstance(record.get('tree'), str) else Path()
@@ -306,10 +350,16 @@ def collect_snapshot(root, *, common, policy_config=None, now=None, monotonic=No
                    schedulingAgeSeconds=round(monotonic - enqueued, 1),
                    estimateSeconds=estimate, aged=monotonic - enqueued >= AGING_SECONDS,
                    retainedTree=record.get('retained_tree') if type(record.get('retained_tree')) is bool else None)
+        if verified:
+            job['admission'] = _reported_admission(record, now)
         reservation = record.get('reservation')
         if isinstance(reservation, list) and len(reservation) == 2:
             job['budgetMemoryBytes'] = _number(reservation[0], positive=True)
             job['budgetCpuCores'] = _number(reservation[1], positive=True)
+            if job['budgetMemoryBytes'] is not None and job['budgetCpuCores'] is not None:
+                reservations[identifier] = (job['budgetMemoryBytes'], job['budgetCpuCores'])
+        elif reservation is None:
+            reservations[identifier] = None
         candidates.append(dict(id=identifier, enqueued=enqueued, estimate=estimate, job=job))
     for record in ordered(candidates, monotonic):
         record['job']['position'] = len(waiting) + 1 if record['job']['liveness'] == 'verified' else None
@@ -341,6 +391,8 @@ def collect_snapshot(root, *, common, policy_config=None, now=None, monotonic=No
             warnings.append(f'{unmatched} admission holder(s) have no matching live usage record; timing and usage are unknown.')
     if unverified or (locks is not None and (held_slots is None or exclusive_held is None)):
         warnings.append('Some lease owners could not be verified. Their records may be stale.')
+    elif locks is not None:
+        _observe_admission(waiting, running, reservations, held_slots, exclusive_held, resources, policy_config, now)
     if any(job['runSeconds'] is None for job in running) or any(job['waitSeconds'] is None for job in waiting):
         warnings.append('Older clients do not publish actual start times. Scheduling age is not elapsed waiting.')
     return dict(version=1, capturedAt=datetime.fromtimestamp(now, timezone.utc).isoformat(timespec='seconds'),

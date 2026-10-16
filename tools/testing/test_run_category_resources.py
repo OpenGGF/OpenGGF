@@ -17,6 +17,18 @@ class ResourceTests(unittest.TestCase):
         self.assertFalse(resources.admits((16 * resources.GIB, 20, 4.01), self.policy, 1))
         self.assertFalse(resources.admits((100 * resources.GIB, 100, 0), self.policy, 3))
 
+    def test_capacity_reason_uses_same_arithmetic_as_admission(self):
+        for resources_in, active, reason, memory, cpu in (
+                ((15 * resources.GIB, 20, 4), 1, 'memory', resources.GIB, 0),
+                ((16 * resources.GIB, 20, 5), 1, 'cpu', 0, 1),
+                ((100 * resources.GIB, 100, 0), 3, 'slots', 0, 0),
+                ((16 * resources.GIB, 20, 4), 1, 'ready', 0, 0)):
+            with self.subTest(reason=reason):
+                observed = resources.admission_reason(resources_in, self.policy, active)
+                self.assertEqual(dict(reason=reason, memoryShortfallBytes=memory,
+                                      cpuShortfallCores=cpu), observed)
+                self.assertEqual(reason == 'ready', resources.admits(resources_in, self.policy, active))
+
     def test_realised_usage_of_active_runs_is_not_counted_twice(self):
         # One active run already using 5 GiB and 3 cores: without credit the
         # 15 GiB left looks too small for a second 7 GiB reservation plus headroom.

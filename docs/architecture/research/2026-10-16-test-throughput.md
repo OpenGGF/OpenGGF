@@ -279,3 +279,89 @@ which occur at most every 30 seconds. It is not a general overhead guarantee.
 No extra process-memory sampler or history ledger was added. The dashboard
 cannot show build-only work, reconstruct missing legacy timings, guarantee
 admission order or infer test success from a completed execution record.
+
+## Qualified small jobs and one aged-head backfill
+
+This follow-up started from dashboard merge `e8b9a0db2` and incorporated
+`1fb1f4ce4` (the process-cleanup safety fix) before final validation. The earlier
+interruptions produced no completed qualification result. They are not counted
+as test failures or completed runs. The safety fix merged without conflicts and
+preserves the new category subprocess environment handling.
+
+The queue's bounded history supported keeping different execution budgets:
+617 of 629 recorded ordinary batches peaked below 4 GiB, but the maximum was
+4.855 GiB and guards reached 6.736 GiB. All 36 recorded focused lean invocations
+were below 2.692 GiB. These sampled process-tree measurements can miss peaks and
+count shared pages twice. They do not establish a universal 4 GiB ceiling.
+
+The implementation therefore qualifies an explicit registry of 55 small classes,
+with at most 50 exact classes/method selectors per command. Source resolution
+rejects ambiguity, inherited fixtures, expensive annotations and unknown command
+shapes. Both Maven and Surefire use 1 GiB heaps and reserve 4 GiB / 4 cores. The
+normal lane, guards and unknown tests retain existing reservations. A category
+batch qualifies only when every candidate is registered and one worker is used;
+its includes, order, smoke profile and assertions are unchanged. `--normal`
+opts focused commands out. Explicit `--lean` still supports caller-reviewed
+checks but does not by itself grant backfill eligibility.
+
+An aged resource-aware request blocked on memory or CPU permits one qualified
+small request from another tree to use spare capacity. The gate-protected ledger
+consumes this allowance only on actual admission and retains it until the aged
+request leaves the waiting set. A completed small job does not replenish it.
+Afterward the queue drains for the head. Serial requests, full slots and unknown
+capacity retain draining behavior. This limits overtaking by count, not execution
+time; there is no new timeout or preemption. Existing worktree/slot locks remain
+the execution authority, including with older wrappers.
+
+Opus 5.5 contributed design and review. A proposed negative-keyword classifier
+was rejected: absence of ROM or native keywords does not establish bounded
+allocations through helpers. The explicit registry requires fixture review and
+actual lean execution before expansion. Review also caught two unsafe admission
+assumptions, now covered by regressions: explicit lean must not automatically
+receive backfill rights, and automatic qualification requires one unambiguous
+`-Dmse=off` so selectors and heap flags survive the Maven extension.
+
+Waiting records now publish admission reasons and resource shortfalls. Dashboard
+rows distinguish fresh scheduler reports from conservative resource observations
+for legacy clients. Unknown/stale data stays unknown. The observer acquires no
+queue locks, changes no policy and does not forecast start times.
+
+Validation used the development tree at `1fb1f4ce4` plus this patch:
+
+- `python3 -m unittest discover -v -s tools/testing -p 'test_run_categor*.py'`
+  exercised 240 checks in 31.960s. One stale CLI test double rejected the new
+  `reservation` keyword; its signature and normal-budget assertions were updated.
+  `PYTHONPATH=tools/testing python3 -m unittest -v test_run_category_control
+  test_run_category_queue.QueueTests.test_normal_cli_opt_out_and_auto_lean_share_the_expected_budget_contract`
+  then passed all nine affected checks, including explicit unqualified lean.
+  Process tests cover racing backfill owners, one consumed allowance after exit,
+  failed ledger writes, aged-head progress and old-client lock compatibility.
+- `LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base
+  1fb1f4ce4 --preflight` passed actual Java 25, Lua 5.4 and PowerShell checks.
+- The first 50 sorted `maven_small.QUALIFIED_CLASSES` were passed unchanged as
+  `-Dtest=<comma-separated classes>` to `python3 tools/testing/maven_queue.py
+  -Dmse=off -B -Dtest=... -Dopenggf.surefire.reports=<worktree>/target/short-job-validation/focused-reports test`.
+  Automatic lean passed 50 reports / 307 tests with zero failures, errors or skips.
+  Queue telemetry recorded 0.0s wait, 27.0s execution and 1.734 GiB sampled peak
+  process-tree RSS, while two unrelated category runs were active. Maven reported
+  26.397s including compilation. This is one qualification run, not a speedup benchmark.
+- The remaining five sorted classes (four utilities and `TestBuildIdentity`)
+  exercised `run_plan` with an exact focused qualification plan, one ordinary
+  batch, no guards, the real preparation contract, retained worktree lock and
+  `maven_slot` callback with 4 GiB / 4 cores. Preparation took 23.04s; the unchanged
+  includes batch passed 5 reports / 28 tests in 1.76s, without failures, errors or
+  skips. Its command retained `-Psmoke`, ROM properties and includes-file selection
+  while adding the 1 GiB Surefire shape. This is tool integration qualification,
+  not a narrowed substitute for broad smoke coverage.
+- The live browser endpoint refreshed successfully. Display-only fixtures covered
+  memory shortfall and draining rows, blocker labels and literal HTML-like worktree
+  names. At 1280px and 390px there was no page overflow; the narrow table scrolls.
+  Python tests cover stale/unknown reasons and observation provenance.
+
+The change-based plan selects broad smoke because shared tooling is involved.
+Focused Python safety coverage plus actual execution of every newly qualified
+class addresses this bounded admission/heap change; no POM, Java, tag, selection
+manifest, workflow or hook changed. No broad engine or release-full-suite claim
+is made. Consumed category diagnostics and focused reports are deleted before
+delivery. Existing running commands retain the code they loaded; new invocations
+must use the updated tooling, including by absolute path from older worktrees.

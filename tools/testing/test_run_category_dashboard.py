@@ -79,6 +79,90 @@ class DashboardTests(unittest.TestCase):
         self.assertTrue(any('Older clients' in item for item in view['warnings']))
 
     @unittest.skipUnless(sys.platform == 'linux', 'Requires Linux lease observation')
+    def test_fresh_authored_reasons_preserve_provenance_and_validated_details(self):
+        blocker = self.waiting(worktree='<script>unexpected()</script>')
+        request = self.waiting(admission=dict(reason='memory', updated=self.now - 2,
+            memoryShortfallBytes=1.4 * dashboard.GIB, cpuShortfallCores=0,
+            blockedBy=blocker.record['id'], backfillAvailable=True))
+        before = request.path.read_bytes()
+        jobs = {job['id']: job for job in self.collect()['waiting']}
+        report = jobs[request.record['id']]['admission']
+        self.assertEqual('scheduler', report['source'])
+        self.assertEqual('memory', report['reason'])
+        self.assertEqual(1.4 * dashboard.GIB, report['memoryShortfallBytes'])
+        self.assertEqual(blocker.record['id'], report['blockedBy'])
+        self.assertTrue(report['backfillAvailable'])
+        self.assertEqual('<script>unexpected()</script>', jobs[blocker.record['id']]['worktree'])
+        self.assertEqual(before, request.path.read_bytes())
+
+    def test_stale_future_and_invalid_authored_reasons_are_unknown(self):
+        valid = dict(reason='memory', updated=self.now)
+        for changed in (dict(updated=self.now - dashboard.FRESH_SECONDS - .01),
+                        dict(updated=self.now + .01), dict(updated=True),
+                        dict(updated=float('inf')), dict(reason='<script>'), dict(reason=[])):
+            with self.subTest(changed=changed):
+                self.assertIsNone(dashboard._reported_admission({'admission': dict(valid, **changed)}, self.now))
+        report = dashboard._reported_admission({'admission': dict(valid,
+            memoryShortfallBytes=float('nan'), cpuShortfallCores=-1,
+            blockedBy='<img src=x onerror=alert(1)>', backfillAvailable='yes')}, self.now)
+        self.assertEqual('memory', report['reason'])
+        for field in ('memoryShortfallBytes', 'cpuShortfallCores', 'blockedBy', 'backfillAvailable'):
+            self.assertIsNone(report[field])
+
+    @unittest.skipUnless(sys.platform == 'linux', 'Requires Linux lease observation')
+    def test_legacy_resource_shortfall_uses_fresh_complete_holder_evidence(self):
+        lease = self.running()
+        lease.publish(2.5 * dashboard.GIB, 1.25)
+        self.now = time.time() + .1
+        large = self.waiting()
+        small = self.waiting(reservation=[4 * dashboard.GIB, 4])
+        authored = self.waiting(admission=dict(reason='priority', updated=self.now))
+        config = dict(maxRuns=3, memoryGiB=7, cpuCores=8, headroomGiB=2)
+        with (self.common / 'maven-slot-0.lock').open('wb') as stream:
+            maven_queue._try_lock(stream)
+            jobs = {job['id']: job for job in self.collect(policy_config=config)['waiting']}
+        report = jobs[large.record['id']]['admission']
+        self.assertEqual('observation', report['source'])
+        self.assertEqual('memory', report['reason'])
+        self.assertEqual(1.5 * dashboard.GIB, report['memoryShortfallBytes'])
+        self.assertIsNone(jobs[small.record['id']]['admission'])
+        self.assertEqual('priority', jobs[authored.record['id']]['admission']['reason'])
+        self.assertEqual('scheduler', jobs[authored.record['id']]['admission']['source'])
+
+    @unittest.skipUnless(sys.platform == 'linux', 'Requires Linux lease observation')
+    def test_missing_or_stale_holder_usage_cannot_explain_legacy_admission(self):
+        self.waiting()
+        config = dict(maxRuns=3, memoryGiB=7, cpuCores=8, headroomGiB=2)
+        with (self.common / 'maven-slot-0.lock').open('wb') as stream:
+            maven_queue._try_lock(stream)
+            self.assertIsNone(self.collect(policy_config=config)['waiting'][0]['admission'])
+            self.running()
+            self.now += dashboard.FRESH_SECONDS + 1
+            self.assertIsNone(self.collect(policy_config=config)['waiting'][0]['admission'])
+
+    @unittest.skipUnless(sys.platform == 'linux', 'Requires Linux lease observation')
+    def test_exclusive_holder_and_invalid_reservation_do_not_get_resource_guesses(self):
+        self.running()
+        self.now = time.time() + .1
+        invalid = self.waiting(reservation=[0, 4])
+        valid = self.waiting()
+        config = dict(maxRuns=3, memoryGiB=7, cpuCores=8, headroomGiB=2)
+        for name in ('maven-slot-0.lock', 'maven-queue.lock'):
+            with self.subTest(lock=name), (self.common / name).open('wb') as stream:
+                maven_queue._try_lock(stream)
+                jobs = {job['id']: job for job in self.collect(policy_config=config)['waiting']}
+                self.assertIsNone(jobs[invalid.record['id']]['admission'])
+                if name == 'maven-slot-0.lock':
+                    self.assertEqual('memory', jobs[valid.record['id']]['admission']['reason'])
+                else:
+                    self.assertIsNone(jobs[valid.record['id']]['admission'])
+
+    def test_unverified_waiter_has_no_authored_admission_claim(self):
+        self.waiting(admission=dict(reason='memory', updated=self.now, memoryShortfallBytes=dashboard.GIB))
+        view = self.collect(proc=self.root / 'no-proc')
+        self.assertIsNone(view['unverified'][0]['admission'])
+
+    @unittest.skipUnless(sys.platform == 'linux', 'Requires Linux lease observation')
     def test_stale_unlocked_records_are_ignored_and_never_pruned(self):
         running, waiting = self.running(), self.waiting()
         maven_queue._unlock(running.stream)
