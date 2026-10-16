@@ -60,8 +60,9 @@ public class Sonic3kTitleCardManager
     private static final int SLIDE_SPEED_IN = 16;
     private static final int SLIDE_SPEED_OUT = 32;
 
-    // Display hold duration (frames). ROM: Level routine overwrites $2E to $16 (22)
-    // at lines 7897-7900, synchronizing the hold with Palette_fade_timer.
+    // Display hold duration (frames). ROM: Obj_TitleCardInit stores 90; Level/loc_64DC
+    // overwrites $2E with $16 (22) for LevelLoop (sonic3k.asm:62162, 7876-7878),
+    // synchronizing the hold with Palette_fade_timer.
     private static final int DISPLAY_HOLD_FRAMES = 90;
     private static final int FRESH_LEVEL_TRANSITION_HOLD_FRAMES = 22;
 
@@ -415,19 +416,40 @@ public class Sonic3kTitleCardManager
 
     // ---- TitleCardProvider interface ----
 
+    /**
+     * Every {@code Level:} entry -- a data-select launch, a death's
+     * {@code Restart_level_flag} reload, a bonus-stage return, a direct boot --
+     * installs this owner at loc_62B6 and runs the same loc_62CC wait,
+     * {@code LoadLevelLoadBlock} and loc_64DC hold before LevelLoop
+     * (sonic3k.asm:7730-7878). A zone request differs only in also holding its
+     * destination players, which LevelManager's fresh boundary owns.
+     */
     @Override
     public void initialize(int zoneIndex, int actIndex) {
-        initInternal(zoneIndex, actIndex, false, DISPLAY_HOLD_FRAMES);
+        initializeLevelRoutineTitle(zoneIndex, actIndex);
     }
 
     @Override
     public void initializeFreshLevelTransition(int zoneIndex, int actIndex) {
+        initializeLevelRoutineTitle(zoneIndex, actIndex);
+    }
+
+    private void initializeLevelRoutineTitle(int zoneIndex, int actIndex) {
         // Obj_TitleCardInit stores 90, then Level overwrites the same owner
-        // with #$16 just before LevelLoop (sonic3k.asm:62187, 7897-7900).
+        // with #$16 just before LevelLoop (sonic3k.asm:62162, 7878).
         // Obj_TitleCardInit queues its archives on every Level: entry even
         // when this process already retains decoded art from the same act.
         artLoaded = false;
         initInternal(zoneIndex, actIndex, false, DISPLAY_HOLD_FRAMES);
+        enterLevelRoutineTitleLoop(zoneIndex, actIndex);
+    }
+
+    /**
+     * Arms the Level routine's loc_62CC gates for this owner: the Nemesis queue
+     * Level filled before installing it, and the terrain parents
+     * LoadLevelLoadBlock queues once the card has settled.
+     */
+    private void enterLevelRoutineTitleLoop(int zoneIndex, int actIndex) {
         freshLevelTransitionMode = true;
         var plc = GameServices.module().getGameService(
                 com.openggf.game.sonic3k.Sonic3kLevelTitlePlcService.class);
@@ -829,10 +851,14 @@ public class Sonic3kTitleCardManager
      * Uses 2 horizontal elements (frames 19/20) instead of the normal 4-element layout.
      * Both elements have exit priority 1 (exit simultaneously).
      *
-     * <p>ROM reference: ObjArray_TtlCardBonus (sonic3k.asm line 62482).
+     * <p>ROM reference: ObjArray_TtlCardBonus (sonic3k.asm line 62482). A bonus
+     * stage is entered through the same {@code Level:} routine as any zone, so
+     * this owner takes the same loc_62CC gates and loc_64DC hold.
      */
     @Override
     public void initializeBonus() {
+        // Obj_TitleCardInit queues the archives again on every Level: entry.
+        artLoaded = false;
         this.bonusMode = true;
         this.inLevelMode = false;
         this.freshLevelTransitionMode = false;
@@ -865,6 +891,10 @@ public class Sonic3kTitleCardManager
         }
 
         artCached = false;
+        // The bonus card has no zone/act of its own; the loaded bonus zone's
+        // LevelLoadBlock PLC fills the Nemesis queue loc_62CC waits on.
+        var level = GameServices.level();
+        enterLevelRoutineTitleLoop(level.getCurrentZone(), level.getCurrentAct());
         LOG.info("S3K bonus title card initialized");
     }
 
@@ -941,14 +971,14 @@ public class Sonic3kTitleCardManager
      * Whether the hold is the one {@code Level/loc_64DC} armed for LevelLoop
      * (sonic3k.asm:7874-7878): {@code Pal_FillBlack} over
      * {@code Palette_fade_info = $202F}, then {@code Palette_fade_timer} and
-     * this owner's {@code $2E} both set to {@code $16}. Only the fresh title
-     * owner's handoff installs that hold; in-level and bonus cards never pass
-     * through the Level routine. The lines 1-3 fade itself belongs to that
-     * routine ({@code Sonic3kLevelAnimationManager}'s {@code Animate_Palette}).
+     * this owner's {@code $2E} both set to {@code $16}. Every Level-routine
+     * owner, the bonus card included, receives that hold at its handoff; an
+     * in-level card never passes through the Level routine. The lines 1-3 fade
+     * itself belongs to that routine ({@code Sonic3kLevelAnimationManager}'s
+     * {@code Animate_Palette}).
      */
     private boolean levelLoopHoldArmed() {
-        return displayHoldFrames == FRESH_LEVEL_TRANSITION_HOLD_FRAMES
-                && !inLevelMode && !bonusMode;
+        return displayHoldFrames == FRESH_LEVEL_TRANSITION_HOLD_FRAMES && !inLevelMode;
     }
 
     private void updateOwnedChildren() {
@@ -977,15 +1007,17 @@ public class Sonic3kTitleCardManager
                 }
                 return;
             }
-            if (!freshLevelTransitionMode) {
+            // A Level-routine owner publishes at LoadLevelLoadBlock (terrain
+            // start below); once released, any armed level is a later load's.
+            if (inLevelMode) {
                 publishFreshLevelRuntimeArtHandoffIfNeeded();
             }
         } else if (artLoaded) {
-            // A repeated same-zone load reuses the already-ready title sheet.
-            // Publish at the same readiness boundary as the queued-art path
+            // A repeated same-zone in-level card reuses the already-ready title
+            // sheet. Publish at the same readiness boundary as the queued-art path
             // instead of waiting for EXIT, where another load could replace
             // the armed level identity.
-            if (!freshLevelTransitionMode) {
+            if (inLevelMode) {
                 publishFreshLevelRuntimeArtHandoffIfNeeded();
             }
         }
@@ -1405,7 +1437,7 @@ public class Sonic3kTitleCardManager
                 consumeRuntimeArtAdmissionIfNeeded();
             }
             state = Sonic3kTitleCardState.COMPLETE;
-            if (!freshLevelTransitionMode) {
+            if (inLevelMode) {
                 publishFreshLevelRuntimeArtHandoffIfNeeded();
             }
             if (inLevelMode && !inLevelGameplayOwnedExternally) {

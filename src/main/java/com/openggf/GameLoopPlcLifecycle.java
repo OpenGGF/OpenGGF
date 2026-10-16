@@ -2,6 +2,8 @@ package com.openggf;
 
 import com.openggf.game.EndingProvider;
 import com.openggf.game.GameModule;
+import com.openggf.game.TitleCardProvider;
+import com.openggf.game.internal.FreshLevelTitleBoundaryPublication;
 import com.openggf.game.internal.LevelEntryPresentation;
 import com.openggf.game.internal.LevelPaletteFadeOwner;
 import com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame;
@@ -82,6 +84,23 @@ final class GameLoopPlcLifecycle {
             return;
         }
         fade.startFadeFromBlack(null, terminalNoOpFrames);
+    }
+
+    /**
+     * Reveals a reload that re-enters the game's own level routine (a death
+     * restart, a bonus-stage return). S3K's {@code Level} has already faded to
+     * black, loads line 0 with {@code LoadPalette_Immediate} (sonic3k.asm:7666)
+     * before its title loop and fades lines 1-3 in at loc_64DC; no whole-screen
+     * reveal runs over the card's slide-in.
+     */
+    static void revealLevelRoutineEntry(
+            GameplayModeContext context, FadeManager fade, TitleCardProvider titleCard) {
+        if (titleCard instanceof FreshLevelTitleBoundaryPublication boundary
+                && boundary.installsImmediateFreshLevelPalette()) {
+            fade.clearOverlayForImmediatePaletteLoad();
+            return;
+        }
+        startFromBlack(context, fade, null);
     }
 
     static void startToWhite(GameplayModeContext context, FadeManager fade, Runnable completion) {

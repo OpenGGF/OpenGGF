@@ -2716,10 +2716,10 @@ public class GameLoop {
         // Enter TITLE_CARD mode — exitTitleCard will transition to BONUS_STAGE
         applyTitleCardControlLock(true);
 
-        // Cancel the FadeManager overlay — the bonus title card manages its own
-        // per-channel background fade (matching ROM Pal_FadeFromBlack). The FadeManager
-        // was in HOLD_BLACK from the fade-to-black; clearing it lets the title card's
-        // own black rect and text render without being covered by the fade overlay.
+        // Cancel the FadeManager overlay — the stage fades in through its own
+        // Level/loc_64DC Animate_Palette fade. The FadeManager was in HOLD_BLACK from
+        // the fade-to-black; clearing it lets the title card's own black rect and
+        // text render without being covered by the fade overlay.
         fadeManager.cancel();
 
         if (gameModeChangeListener != null) {
@@ -2918,8 +2918,8 @@ public class GameLoop {
         // Play zone music (ROM: Restore_LevelMusic during title card wait)
         levelManager.playCurrentLevelMusic();
 
-        // Fade from black — level + zone title card become visible together
-        GameLoopPlcLifecycle.startFromBlack(resolveGameplayModeContext(), fadeManager, null);
+        // The reload re-enters Level: the zone card appears over black at full colour.
+        GameLoopPlcLifecycle.revealLevelRoutineEntry(resolveGameplayModeContext(), fadeManager, tcp);
 
         if (gameModeChangeListener != null) {
             gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);

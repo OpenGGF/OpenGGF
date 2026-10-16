@@ -2,6 +2,7 @@
 # Bonus entry: frozen window 3191 is 21 native frames; the old harness spent 10 inputs there (old load row 3201), so 11 held inputs are inserted
 # (FadeWindowRetimeTool ceil(21/2) inserts only 10 for this phase). Bonus exit: the player-frozen fade runs with live VInt, so the tool does not
 # treat it as frozen; the old return row 3559 lands at native 3581, so the held L run before it gains 11 inputs.
+# Retimed for the Level-routine title-card hold (titlecard-r2 lane, base d3fb0625e): the bonus entry card releases BONUS_STAGE at its loc_64DC hold 5 frames earlier (old locked window 3215-3321, now 102 frames) and the bonus return card 64 frames earlier (old window 3588-3712, now 61 frames), so 5 neutral inputs before the entry release (3312-3316) and the return window's first 64 inputs (3588-3651, never read while locked) are removed; the held L / R at each release keep their edge history.
 88 - / -
 9 B / -
 19 - / -
@@ -138,7 +139,7 @@
 6 R / -
 32 - / -
 11 B / -
-124 - / -
+119 - / -
 111 L / -
 2 - / -
 10 B / -
@@ -151,10 +152,6 @@
 25 L+B / -
 45 L / -
 27 - / -
-4 R / -
-3 - / -
-10 B / -
-47 - / -
 14 L / -
 5 - / -
 23 R / -
