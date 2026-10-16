@@ -5,6 +5,7 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.runtime.AizZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ZeroScalarArgsRewindRecreatable;
@@ -39,6 +40,9 @@ public class AizBgTreeInstance extends AbstractObjectInstance
     /** Camera X threshold to delete tree. ROM: cmpi.w #$4880,(Camera_X_pos).w. */
     private static final int DELETE_CAMERA_X = 0x4880;
 
+    /** First AIZMakeTreeScript priority word, used by the legacy/probe constructors. */
+    private static final int FIRST_SCRIPT_PRIORITY = 0x280;
+
     /** Smooth scroll X value at spawn time (baseline for parallax delta).
      *  Non-final so the generic rewind field capturer reapplies it after a
      *  generic rewind recreate supplies a placeholder. */
@@ -48,14 +52,29 @@ public class AizBgTreeInstance extends AbstractObjectInstance
     private int screenX;
     /** Prevents a deferred dynamic slot from drawing before its first update. */
     private boolean positionInitialized;
+    /**
+     * ROM priority(a0), written by Obj_AIZ2MakeTree's {@code move.w (a2)+,8(a1)}
+     * (sonic3k.asm:105579) from the AIZMakeTreeScript entry ($280 or $380).
+     * Non-final so the generic rewind field capturer reapplies it.
+     */
+    private int priorityWord;
 
     /**
      * @param spawnSmoothScrollX the battleship smooth scroll X at the moment
      *                           this tree was spawned (baseline for parallax)
      */
     public AizBgTreeInstance(int spawnSmoothScrollX) {
+        this(spawnSmoothScrollX, FIRST_SCRIPT_PRIORITY);
+    }
+
+    /**
+     * @param spawnSmoothScrollX the battleship smooth scroll X when the tree was allocated
+     * @param priorityWord       the AIZMakeTreeScript priority word ($280 or $380)
+     */
+    public AizBgTreeInstance(int spawnSmoothScrollX, int priorityWord) {
         super(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), "AIZ2BGTree");
         this.spawnSmoothScrollX = spawnSmoothScrollX;
+        this.priorityWord = priorityWord;
         this.screenX = NATIVE_INITIAL_X_OFFSET;
         this.positionInitialized = false;
     }
@@ -124,14 +143,18 @@ public class AizBgTreeInstance extends AbstractObjectInstance
     }
 
     /**
-     * Trees render BEHIND the foreground level tiles (seen through gaps in the forest).
-     * On the Mega Drive, high-priority BG tiles render in front of high-priority sprites,
-     * so the forest FG tiles cover these tree sprites. In the engine, isHighPriority=false
-     * places sprites behind the FG tilemap layer.
+     * Sprite order comes from the script's priority word: $280 is bucket 5 and
+     * $380 is bucket 7, alternating per entry. That is how the small Eggman
+     * craft (priority $300, sonic3k.asm:105620) passes between trees.
      */
     @Override
-    public int getPriorityBucket() { return 3; }
+    public int getPriorityBucket() { return RenderPriority.fromS3kWord(priorityWord); }
 
+    /**
+     * make_art_tile(ArtTile_AIZBackgroundTree,0,0) (sonic3k.asm:105588): the
+     * low-priority art word puts the trees behind high-priority plane tiles,
+     * independently of their sprite bucket.
+     */
     @Override
     public boolean isHighPriority() { return false; }
 

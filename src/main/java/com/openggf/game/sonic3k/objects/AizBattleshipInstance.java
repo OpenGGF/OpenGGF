@@ -9,6 +9,7 @@ import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.game.sonic3k.events.S3kAizEventWriteSupport;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnYCoordinateRewindRecreatable;
 
@@ -29,7 +30,8 @@ import java.util.logging.Logger;
  * for the counter to underflow before consuming the first script entry. That
  * makes the first bomb appear on update 421 after spawn, and each entry's delay
  * governs the gap before the following bomb.
- * When the ship crosses below $3CDC, spawns {@link AizBossSmallInstance}.
+ * When the ship crosses below $3CDC, its own SST becomes {@link AizBossSmallInstance}
+ * and {@link AizBgTreeSpawnerInstance} is allocated after it.
  * Every 16 frames plays {@code cfx_LargeShip} SFX.
  */
 public class AizBattleshipInstance extends AbstractObjectInstance implements SpawnYCoordinateRewindRecreatable {
@@ -68,6 +70,8 @@ public class AizBattleshipInstance extends AbstractObjectInstance implements Spa
     private int shipXFixed;
     /** False until the object pass that created the ship has gone by unused. */
     private boolean creationPassConsumed;
+    /** True once the Obj_AIZBattleship init has allocated its propellers. */
+    private boolean propellersAllocated;
     // Non-final so the generic rewind field capturer reapplies it after
     // Phase-2 generic recreate.
     private int baseSecondaryY;
@@ -112,6 +116,10 @@ public class AizBattleshipInstance extends AbstractObjectInstance implements Spa
             // ahead in its fraction for the rest of the act.
             creationPassConsumed = true;
             return;
+        }
+        if (!propellersAllocated) {
+            propellersAllocated = true;
+            allocatePropellers();
         }
 
         this.frameCounter++;
@@ -167,6 +175,33 @@ public class AizBattleshipInstance extends AbstractObjectInstance implements Spa
         delayTimer = nextDelay;
     }
 
+    /**
+     * ROM Obj_AIZBattleship init (sonic3k.asm:105303-105318): two
+     * AllocateObjectAfterCurrent calls create the front ($3FBC) and back ($3DCC)
+     * Obj_BattleshipPropeller before the init falls through to the Main pass, so
+     * both take SST slots after the ship and run later in this same pass. A
+     * failed allocation skips the remaining propeller (bne.s loc_5037E).
+     */
+    private void allocatePropellers() {
+        int[] secondaryXs = {
+                AizBattleshipPropellerInstance.FRONT_SECONDARY_X,
+                AizBattleshipPropellerInstance.BACK_SECONDARY_X};
+        int cameraX = services().camera().getX();
+        int cameraY = services().camera().getY();
+        int shipX = shipXFixed >> 16;
+        for (int secondaryX : secondaryXs) {
+            ObjectSpawn spawn = new ObjectSpawn(
+                    cameraX + secondaryX - shipX,
+                    cameraY + AizBattleshipPropellerInstance.SECONDARY_Y - effectiveSecondaryY,
+                    0, 0, 0, false, 0);
+            AizBattleshipPropellerInstance propeller = spawnChild(
+                    () -> new AizBattleshipPropellerInstance(spawn, this, secondaryX));
+            if (propeller == null || propeller.isDestroyed()) {
+                return;
+            }
+        }
+    }
+
     private boolean bombDelayUnderflowed() {
         return --delayTimer < 0;
     }
@@ -211,12 +246,31 @@ public class AizBattleshipInstance extends AbstractObjectInstance implements Spa
         finished = true;
         int shipX = shipXFixed >> 16;
 
-        // Signal the event system that the battleship is complete
+        // ROM Obj_AIZBattleshipMain (sonic3k.asm:105327-105338): the ship rewrites
+        // its OWN SST to Obj_AIZ2BossSmall, sets Events_fg_4, and allocates
+        // Obj_AIZ2MakeTree with AllocateObjectAfterCurrent. The rewritten slot has
+        // already been passed this frame, so the small craft's init first runs on
+        // the next pass; MakeTree takes the next free SST after the ship and runs
+        // later in this one.
+        var objectManager = services().objectManager();
+        int shipSlot = ObjectLifetimeOps.detachSlotForTransfer(this);
+        setDestroyed(true);
+        if (objectManager != null) {
+            ObjectLifetimeOps.addReplacementAtTransferredSlot(
+                    objectManager, new AizBossSmallInstance(), shipSlot);
+        }
         S3kAizEventWriteSupport.onBattleshipComplete(services());
+        if (objectManager != null) {
+            AizBgTreeSpawnerInstance makeTree = new AizBgTreeSpawnerInstance();
+            if (shipSlot >= 0) {
+                objectManager.addDynamicObjectAfterSlot(makeTree, shipSlot);
+            } else {
+                objectManager.addDynamicObjectAfterCurrent(makeTree);
+            }
+        }
 
         LOG.info("AIZ2 battleship: ship exited at shipX=0x" + Integer.toHexString(shipX)
                 + " after " + frameCounter + " frames, " + scriptIndex + " bombs dropped");
-        setDestroyed(true);
     }
 
     @Override
