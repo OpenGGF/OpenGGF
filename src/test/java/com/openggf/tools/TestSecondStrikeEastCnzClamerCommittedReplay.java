@@ -10,6 +10,7 @@ import com.openggf.graphics.ScreenshotCapture;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.tests.RomTestUtils;
+import com.openggf.tests.TestTempFiles;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import com.openggf.tools.modsdk.GgfModCli;
@@ -312,7 +313,7 @@ class TestSecondStrikeEastCnzClamerCommittedReplay {
 
     @Test void committedClamerShotRestoresAndReplaysExactly() throws Exception {
         Files.createDirectories(OUT);
-        Path jar = buildProbeJar(Files.createTempDirectory("c1east-probe-replay"));
+        Path jar = buildProbeJar(TestTempFiles.createTempDirectory("c1east-probe-replay"));
         int startX = 0x17F8, startY = 0x42C;
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "", "off", null,
                 startX, startY, null, false, false, null, null, false, 0, false);
