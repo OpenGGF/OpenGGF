@@ -840,6 +840,31 @@ public final class SmpsDriverSession implements AutoCloseable {
         emitPendingDacSampleEnds();
     }
 
+    /**
+     * Moves up to {@code maxFrames} completed stereo frames of the opt-in
+     * native-compatible output (44.1 kHz, see
+     * {@link com.openggf.audio.synth.NativeCompatiblePcmOutput}) into
+     * {@code target}; zero when the session's settings do not enable it.
+     */
+    public int drainNativeCompatiblePcm(short[] target, int offsetSamples, int maxFrames) {
+        requireInstalled();
+        return device.drainNativeCompatiblePcm(target, offsetSamples, maxFrames);
+    }
+
+    /** The native-compatible stage's master clock (chip time), or -1 when it is not enabled. */
+    long nativeCompatibleMasterClockForTesting() {
+        requireInstalled();
+        var output = device.nativeCompatibleOutputForInspection();
+        return output == null ? -1 : output.masterClock();
+    }
+
+    /** Completed NTSC frames the native-compatible stage has read, or -1 when it is not enabled. */
+    public long nativeCompatibleFramesEnded() {
+        requireInstalled();
+        var output = device.nativeCompatibleOutputForInspection();
+        return output == null ? -1 : output.framesEnded();
+    }
+
     public int renderFrames(
             short[] target, int offsetSamples, int stereoFrames) {
         requireInstalled();

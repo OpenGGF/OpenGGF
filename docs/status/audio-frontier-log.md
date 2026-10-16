@@ -27,6 +27,45 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-10-16 - Presentation cadence corrected: one NTSC hardware frame per presentation
+
+- **Commit / worktree:** lane `pcm-output`, branch `feature/ai-s3k-r2-pcm-native-output`.
+- **Fixture:** none. The engine runs the production capture path, with the
+  `s3k-sonic-tails-complete-emeralds.bk2` inputs from row 577.
+- **Command:** focused `-Dtest=TestNativePcmCaptureLive` through the main queue
+  wrapper.
+- **Result before (red, 20:58:51Z):** 600 presentations completed 599 NTSC frames,
+  440,832 stereo frames against the expected 441,568.
+- **Change:** the live session's device now synthesizes at
+  `sampleRate * 53,693,175 / (frameRate * 896,040)` (NTSC; PAL unchanged), so each
+  presentation spans exactly one 896,040-master-clock hardware frame.
+- **Notes:** This is the cadence tier only. Waveform equality against native still
+  needs a matching power-on/title prefix, which the engine lacks for S3K.
+
+## 2026-10-16 - S3K native-compatible PCM: first real window measures a presentation cadence defect
+
+- **Commit / worktree:** lane `pcm-output`, branch `feature/ai-s3k-r2-pcm-native-output`
+  (component tier `3adac4e67` plus the uncommitted live wiring at the time of the run),
+  and TraceChaser `feaf6fb0c` (local).
+- **Fixture:** none committed. Native final PCM for
+  `s3k-sonic-tails-complete-emeralds.bk2` rows 0-2399 (stock 2.11 core, Nuked_YM2612,
+  ThreeBand) and an engine AIZ1 capture from row 577 for 600 frames.
+- **Command:** TraceChaser `--final-pcm-window --frames 2400`, then
+  `GameplayCaptureTool ... --input-start 577 --frames 600 --audio --native-pcm`, then
+  `tools/audio/compare_native_pcm_window.py --start-row 577`.
+- **Result, cadence tier (structural):** native gives 441,569 stereo frames for 600 rows,
+  one 896,040-master-clock NTSC frame per row. The engine gives 440,832 for 600
+  presentations, exactly blip_buf's count for 599 frames. The presentation clock
+  (`AudioFrameClock`, 48,000 / 60 Hz = 800 samples) advances the chip by 894,886.2
+  master clocks, 1,153.8 short per frame.
+- **Result, waveform tier:** DIFFERENT at stereo frame 0, native (792, 1002) against
+  engine (0, 0). This is exploratory and not attributable: the engine booted AIZ1 fresh,
+  while native carried rows 0-576 of audio history.
+- **Notes:** The existing v2 per-service producer faults on this movie at frame 146
+  (68k PC `$108A`, HInt2). The existing per-service oracle is a different, MAME-core
+  movie. Details are in
+  `docs/architecture/validation/audio/2026-10-16-native-compatible-pcm-output.md`.
+
 ## 2026-09-07 - S1/S2: SFX are refused through the 1-up jingle and its fade in
 
 - **Worktree/branch:** `.worktrees/s1s2-1up-restore`,

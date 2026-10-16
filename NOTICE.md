@@ -28,4 +28,49 @@ conveyed under GPL-3 by applying the upgrade option of LGPL-2.1 section 3 to
 the combination; the LGPL headers and the upstream copyright notice are
 retained in every ported file.
 
+## blip_buf
+
+The band-limited delta buffer in `src/main/java/com/openggf/audio/synth/blip/`
+is a Java port of blip_buf 1.1.0 as modified for Genesis Plus GX. It is used
+only by the opt-in native-compatible PCM output stage, a capture and diagnostic
+configuration.
+
+- Copyright (C) 2003-2009 Shay Green; modified for Genesis Plus GX by EkeEke
+- Source: `core/sound/blip_buf.c` and `blip_buf.h` of the Genesis Plus GX tree
+  in BizHawk commit `427556b5ef3ac437eba754d90c5e7e9096c9a8df` (sha256 recorded
+  in the package documentation)
+- Licence: GNU Lesser General Public License, version 2.1 or (at your option)
+  any later version (`LGPL-2.1-or-later`); the licence text is in
+  `LICENSES/LGPL-2.1.txt`
+- Modified 2026-10 by the OpenGGF contributors: translated from C to Java;
+  stereo configuration only; state copy helpers and value equality added.
+  Each modified file records this in its header (LGPL-2.1 section 2(b)).
+
+The ported files remain licensed under LGPL-2.1-or-later and may be extracted
+and reused under that licence on their own. OpenGGF as a combined work is
+conveyed under GPL-3 by applying the upgrade option of LGPL-2.1 section 3 to
+the combination; the LGPL headers and the upstream copyright notice are
+retained in every ported file.
+
+## musl libm sin
+
+`src/main/java/com/openggf/audio/synth/MuslSin.java` is a Java port of musl's
+double-precision `sin` (`sin.c`, `__sin.c`, `__cos.c`, `__rem_pio2.c` without
+its large-argument path). The BizHawk 2.11 Genesis Plus GX core links this
+`sin` for its equaliser cutoffs. The file retains both notices:
+
+- musl: Copyright © 2005-2020 Rich Felker, et al., MIT licence (text in the
+  file header)
+- origin FreeBSD msun: Copyright (C) 1993 by Sun Microsystems, Inc. All rights
+  reserved. Developed at SunPro, a Sun Microsystems, Inc. business. Permission
+  to use, copy, modify, and distribute this software is freely granted,
+  provided that this notice is preserved. `__rem_pio2` optimized by
+  Bruce D. Evans.
+
+## 3 Band EQ
+
+`NativeCompatiblePcmOutput.ThreeBandEq` ports `eq.c` from Genesis Plus GX:
+"3 Band EQ", (c) Neil C / Etanza Systems 2K6, after Paul Kellet's filter. The
+author placed it in the public domain.
+
 Full contributor and third-party acknowledgements are in `CREDITS.md`.
