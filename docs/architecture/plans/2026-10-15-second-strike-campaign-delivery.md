@@ -158,8 +158,10 @@ and entry at9 calls, then stops after27Right because a native enemy-art batch
 violates an unsupported continuing global-idle observer guard. Corrected observer
 43267 fails at setup on a null module-class CodeSource before issuing any pad.
 R6 preparation reuses the existing pure native proxy-lineage contract; no native
-change or new runtime result is implied. Actual oxygen/refill/escape remains
-open; independent HCZ2 maker221 inventory has no supported entry or route proof.
+change is made. Attempt77730 qualifies one positioned zero-ring maker114 refill
+and supported return: one A294, native intake302/air25→29,35 native lock decrements,
+stationary endpoint424. This uses immutable42171/cb2 only. Whole-act air budgets,
+cold routes and HCZ2 maker221's supported entry remain open.
 ICZ28579 qualifies the declared zero-ring neutral WARNED fall/landing and84-update
 registered replay. Successor97772 lands on the stone, retreats unharmed to real
 terrain and matches73 registered return/replay updates. Its STOCK arm follows
@@ -2058,6 +2060,55 @@ class identity without invoking proxy methods or assuming CodeSource exists.
 The selected outer module identity and every other native-owner/local-art/input
 check remain required. No new runtime or native helper/API change is authorized
 by that preparation; its diff and compiled hashes require root inspection first.
+
+R6 preparation50818 passes against the immutable42171 engine/SDK/cb2 sidecar:
+2.803s build-lock wait and1.653s lease-held verification/snapshot+javac interval,
+not isolated compiler timing. Core b878e751/wrapper482fcef5 retain the exact R5
+policy after mechanical renames; observer3aee09a8 uses the pure canonical lineage
+walk. Prepare75d3c30f/report321b4a4f and four class hashes are frozen; root runner
+489551d5 passes preflight. No native source, queue, physics, API or creator change.
+
+The sole root attempt77730 is terminal0 after43s normal admission and1.788s child,
+ending08:43:50.833Z; group reaped/source unchanged. Readiness qualifies at9 calls.
+It stops at12C7/082C by69, waits for the first eligible actual native subtype02
+bubble, and issues exactly one A at294. The native jump is accepted; the chosen
+slot24 child is consumed at302 with actual air25→29, native BUBBLE animation21
+and moveLock35. Fifty-eight neutral breath-phase calls include falling/landing;
+only326..360 decrement the lock, exactly35 native owner dispatches. At424 it
+returns stationary to12A5/082C on current DOWN feet0/0, no manager rider or
+standing-object relation, air27. All426 CSV rows are alive/nohurt/zero-ring;
+424 issued pads comprise423 completed ordinary passes and one held call. The
+endpoint row is an additional observation, not a425th input.
+
+All37 R4 prefix rows match59 common scalar/diagnostic fields exactly. The pure
+observer now measures the selected jdk.proxy2.$Proxy4, verified native
+OwnerBoundGamePatch.Handler and canonical Sonic3kGameModule. It authenticates
+all four native module parents and their four direct-child handles; the actual
+Blastoid head36A7C6→A720 at36 is no longer merely inferred **for this run**.
+Normal native submission/retirement proceeds without observer servicing; the
+provider batch is retired by46 and required local art/DPLC readiness stays valid.
+
+Root reads CSV4fb37bc7/script0441d7cc/observations e8b7b534 before viewing all four
+normal320px PNGs (entry, pre-hop, post-intake, endpoint). The native maker,
+collectible bubble, breath and supported return are visible. Raw logf0cc37d1 is
+inspected/consumed; generated config removed, no owned JVM survives. This closes
+one **positioned Sonic-solo320 HCZ1 maker114 oxygen/refill/return** ingredient on
+42171/cb2. It is not a whole-HCZ air budget, stock comparison, cold route,
+all-character/wide, rewind/save or current-upstream-runtime qualification.
+
+Upstream develop advances to4a26a651e through architecture-debt commitsf38814eff/
+ed8857f98 and merge222. Root fast-forwards main to that exact ref after a pull
+reports multiple merge heads; that failed pull changed no source, and the cause
+of its transient FETCH_HEAD state is unmeasured. Exact eight unrelated main
+paths remain preserved. Upstream tightens injected object-service ownership and
+session/rewind cleanup, normalizes the unpublished API to exclude engine-internal
+snapshot/queue shapes, adds native AIZ/HCZ route obligations and fixes a foreign
+worktree-disappearance admission race. Root's own continuation change is only
+documentation; no native conflict resolution or API-pin rewrite is intended.
+The old private760-based worker inputs and immutable19448/42171 artifact pairs
+stay retained. Fresh current engine/SDK packaging and affected qualification are
+required before attributing a later current-runtime result to this new base;
+77730 and earlier proofs are not silently promoted to it.
 
 Independent HCZ2 source auditf7fec727 authenticates the sole maker221,
 raw204008F85480 at1E6EBE; it has no conveyor duplicate-marker semantics. The
