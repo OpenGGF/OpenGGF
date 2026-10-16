@@ -17,6 +17,7 @@ class TestHubProgressStore {
     @Test
     void navigationRemembersImmediatelyAndPersistsOnlyAfterSettling() throws Exception {
         var config = SonicConfigurationService.createStandalone(directory);
+        config.saveConfig();
         var clock = new AtomicLong();
         var store = new HubProgressStore(config, clock::get);
         String originalFile = Files.readString(directory.resolve("config.yaml"));
@@ -49,6 +50,7 @@ class TestHubProgressStore {
     @Test
     void returningToPersistedSelectionCancelsPendingWrite() throws Exception {
         var config = SonicConfigurationService.createStandalone(directory);
+        config.saveConfig();
         var clock = new AtomicLong();
         var store = new HubProgressStore(config, clock::get);
         String original = store.lastGame();

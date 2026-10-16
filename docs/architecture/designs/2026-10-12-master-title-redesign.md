@@ -648,3 +648,27 @@ Focused command (Java 25):
 ```bash
 python3 tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestDisplaySettingsTrial,TestDisplayWindowController,TestEngineSettingsDisplayConfirmation,TestEngineSettingsScreen,TestEngineSettingsDraft,TestHubProgressStore,TestHubHistory,TestMenuRomLocator,TestMenuGameOnboarding,TestMasterTitleHub,TestMasterTitleSuspendedGame,TestSparseUserConfig' test -B
 ```
+
+### 2026-10-16: develop integration
+
+Fetched `origin/develop` at `887c771094` and merged it into this checkout as
+`117e30f8d5`, without conflicts. The incoming commit changes only the Second
+Strike delivery/expansion documents; production sources match `d30166864e`.
+Local develop was fast-forwarded to the fetched destination before integration;
+the current checkout remains on the feature branch.
+
+Java 25 tool preflight passed. The focused command above now compiled and ran
+86 tests: 84 passed and two errored, with no skips. Both errors were in
+`TestHubProgressStore`: its fixtures read `config.yaml` before explicitly saving
+the initial configuration. Fresh standalone configuration intentionally need not
+create that file. Added `saveConfig()` only to those two fixtures; production
+code is unchanged. With `117e30f8d5` plus that test-only fix, the queued Java 25
+command `python3 tools/testing/maven_queue.py --lean -Dmse=off
+'-Dtest=TestHubProgressStore' test -B` passed all three cases without skips.
+The other 83 passing cases are unchanged and were not repeated.
+
+The change-based plan against `887c771094` selects 3,362 smoke classes through
+shared/unclassified owners. Focused checks close the outstanding menu-follow-up
+gap; earlier validation above remains bounded to its documented coverage. No
+broad smoke, full-suite, new ROM/trace sweep or desktop-input validation is
+claimed for this integration.
