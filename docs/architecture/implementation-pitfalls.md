@@ -2043,3 +2043,14 @@ clear bit 15 of the base art word for the ORIGINAL unsigned perspective word
 at least `$54`; mapping attributes are added with `ADD.W`, including carries,
 rather than ORed. Shadow operators are later SAT entries; HUD number cells
 belong to Plane A. Origin: Blue Sphere native sprite-priority task, 2026-10-17.
+
+
+**Bind white-fade semantics at gameplay composition.** `GameplaySessionFactory`
+translates the host's `PaletteWhiteFadeModel` into renderer-owned values through
+`FadeManagerInternalAccess`. `FadeManager` must not discover a world/session or
+game rules during palette publication, update or render. This policy belongs to
+the composed owner, survives logical reset/rewind, and defaults to the overlay
+for detached UI fades. Keep renderer attachment separate: only the actively
+bound palette owner publishes CRAM fades. Origin: 2026-10-17 white-fade
+architecture guard repair; existing native component/22-V-int and immediate-scene
+rewind-release semantics are unchanged.

@@ -101,7 +101,9 @@ Unreleased. The earlier development themes remain in
   as the original does, instead of one frame later. White stage transitions follow
   the original palette colours and 22-frame wait, including the scene backdrop
   and underwater colours, instead of adding a yellow/red overlay. Rewinding a
-  special-stage entry releases its restored palette on the next scene update.
+  special-stage entry releases its restored palette on the next scene update. The host's
+  white-fade policy is bound to its gameplay session, keeping detached UI fades
+  and other worlds independent.
   Score and bonus
   digits use the original mapping positions and trailing zero, and overlapping
   labels and sphere icons follow the console's sprite priority.
