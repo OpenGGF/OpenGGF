@@ -5380,3 +5380,70 @@ No runtime, allocator, reparent API, readiness/profile or service-count changes.
 No trace frontier moves; existing route/viewport/donor/native coverage limits and
 ending production caller/bus inputs/6+46/Hyper/PAL/PCM blockers remain open.
 Root owns later composition and integration; this branch is local only.
+
+
+### Canonical HCZ8329 skim logical-press owner — 2026-10-17
+
+The [bounded owner evidence](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#canonical-returned-hcz8329-water-skim-input-owner--2026-10-17)
+records original AD40 prefix21228 (observer success1/0F0E0S, live comparator218
+errors through8330), actual raw/logical no-press state and the post-terrain/
+pre-object launch. Native385D2 masks logical pressed bits; the HCZ skim owner
+incorrectly tested held input. Independent5337 reproduces both wrong branches
+as2/2F0E0S. Runtime change is confined to that owner's existing predicate.
+Current source53d plus HCZWaterSkimHandler/test edits; unrelated native4fdf,
+private config, kernel16b and warning53d refs remain preserved. No shared input,
+movement, camera/counter/visibility, native/media, broad or ending readiness work.
+
+Exact invocation shape from the owned tree uses unchanged current Main tooling
+and original absolute ROMs, with the selection substituted below:
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH \
+  EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=${OPENGGF_MAIN}/s1.gen" "-Dsonic2.rom.path=${OPENGGF_MAIN}/s2.gen" \
+  "-Ds3k.rom.path=${OPENGGF_MAIN}/s3k.gen" "-Dtest=${SELECTION}" test -B
+```
+
+- Build-only99674 used `-DskipTests -Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical test-compile -B` (no tests),0/Maven23.656s.
+- Original witness21228 selection `TestS3kCanonicalHcz8329Witness#originalAd40ThroughHczFirstVelocityDisagreement` additionally used `-Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical`; its JTO had exactly the single EGL token, with no additional CLI lag/driver override. No CLI EGL token was needed because JTO supplied it. Queue914s/Maven48.519s; partial evidence, not parity green.
+- Old-red5337 selection `TestHCZWaterSkimHandler#heldActionAcrossActivationAndSustainDoesNotCreateJump+logicalEdgeWithoutRawHeldTriggersTheNativeJumpExit`,2/2F0E0S,queue882s/Maven24.283s.
+- Focused9066 selection `TestHCZWaterSkimHandler,TestHCZWaterSkimExitOnCurve,TestHczWaterRewindStaticAdapters,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils` passed80/0F0E0S at16:39:02UTC,queue55s/Maven1m18s. Seven selectors matched eight classes because both level-loading classes share a simple name. Separate authority7703 passed25/0F0E0S (16:41:21UTC,queue20s/Maven29.089s). One postrow-only originalprefix9812 completed1/1F0E0S (16:42:13UTC,queue29s/Maven50.427s):8329vy0/no falsejump assertions pass,8330native velocity matches; a newly added unsupported animation0 diagnostic assertion fails on195. Live206=11physics+195animation,firstNonCameraPhysicsMismatch null,0warnings/bootstrap,54lag through8330. No automatic rerun/relaxation/source widening; Root owns retained-animation classification. Root subsequently authorized one required original maintained full canonical after classifying the zero-animation diagnostic mistake; terminal outcome is recorded below.
+
+Short tests cover declared semantic input and the captured owner/player world,
+not a natural route or new viewport/donor/native visual row. Full canonical
+completion/giant-ring exit, the separate82EA/R14 camera question and ending
+production caller/bus/6+46/Hyper/PAL/PCM acceptance remain open.
+
+- Authority7703 selection `TestHardwareTimingAuthorityGuard` used the same ordinary environment in a fresh JVM;25/0F0E0S.
+- Prefix9812 selection `TestS3kCanonicalHczSkimPrefix#originalAd40HeldSkimDoesNotLaunchThrough8330` used the original21228 trace-replay/single-fork/reuse/alphabetical environment, no CLI lag/driver override, JTO single EGL token. Its failed extra animation expectation is documented, not hidden by its successful8329 causal checks. The subsequent required maintained canonical49197 is recorded below.
+
+Root disposition: existing R10/R11 already record195 animation through7135/7808,
+first3475 sidekick17/1C. Current9812 stderr confirms that first field/head; no
+full195 vector identity or precise maximum/all-field extraction is available
+from compact reports. Remove temporary diagnostic code, retain its1F result,
+then run exactly one maintained selection
+`-Ptrace-replay -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical`
+with the original AD40 boot/lag driver and21228 environment/all3ROMs, no cutoff,
+observer or additional assertion. No further fix/probe/slice/selection follows
+its actual next frontier without a new handoff.
+
+
+Required maintained canonical49197 used that exact original AD40 selection and
+single-EGL-token environment, no cutoff/observer/extra assertion. On53dbe8fd plus
+reviewed runtime99957690/test2dd28e9b it finished16:51:28UTC, queue151s,
+Maven52.840s/JUnit27.372s, **1/1F0E0S**. Seg11 completes14208rows:
+26153=23312physics+2841animation,0warnings/bootstrap,lag59; first non-camera
+moves8329 y_speed0/-680→8717 sidekick_air1/0. Prior17194 same-window125612
+(107498+18114) is a bounded aggregate comparison, not full-vector acceptance.
+Earlier0/2/4/6/8/9 remain complete-zero;13 gaps have0failures, including actual
+hcz_2→ss_6→hcz_3 (manifest giant_ring/stage_exit). The giant-ring exit is reached,
+while the strict chain remains red. Seg13 is incomplete:63295=54642physics+
+8653animation,0warnings/bootstrap,lag6,first287 y06D4/06DA, recent row3208;
+walk loses ownership at BK2cursor88306 (LEVEL/gen10/zone1/act1; manifest expects
+act2). Four future hardware edges3256/3257/5356/5357 remain suppressed unmatched;
+no hydration, descriptor fitting or SS parity total is inferred. Full details
+and exact reviewed hashes are in the linked audit. Stop: no further probe/fix/
+selection; Root owns next frontier, composition and ending6+46/PAL/PCM limits.

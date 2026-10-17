@@ -290,9 +290,10 @@ public final class HCZWaterSkimHandler {
 
         // === Sustain / exit logic (sonic3k.asm:75424-75491) ===
 
-        // Check jump exit (A/B/C pressed)
-        // ROM: andi.w #button_A_mask|button_B_mask|button_C_mask,d0
-        if (player.isJumpPressed()) {
+        // loc_385D2 masks the LOW pressed byte of Ctrl_*_logical (d5),
+        // not its held byte or the raw hardware pad. Native P2 may publish a
+        // CPU logical edge independently of that raw pad (sonic3k.asm:75465-75468).
+        if (player.isLogicalJumpPressActive()) {
             return exitWithJump(player, playerIndex, extensionState);
         }
 

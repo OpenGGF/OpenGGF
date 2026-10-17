@@ -3606,3 +3606,193 @@ Root independently reviewed this exact eight-line override and98ea5c runtime
 file: no material finding. Source review confirms the Full2 Player2 dispatch,
 Full2_1P direct continuation and block call before Sprite_OnScreen_Test; no
 additional review or runtime check was requested.
+
+
+## Canonical returned HCZ8329 water-skim input owner — 2026-10-17
+
+Owned `t3-fa8da232` starts at warning-fixture53dbe8fd905104a0d21b1ebc8aa0b7edc172342d:
+HCZ runtime is Root02b/bef8 plus an unused ending kernel. Kernel16b and warning53d
+refs, private config and unknown TraceChaser4fdf checkout remain retained.
+R12's original canonical17194 context is immutable
+`bd2fb639ebb1fd1db561e954a273349acd68d7fb`, heading
+“R12 slice cached visibility consequence and full composed canonical”. Its complete
+returned HCZ11 window14208 has125612 errors, first non-camera8329 y_speed0/-680;
+this is distinct from the82EA slice9482/10834 work. That camera investigation is
+separately owned; no camera/counter/visibility source or probe is changed here.
+
+The original AD40 movie SHA256 is
+`ad40fb0b0a74fa12b08ab71b2e48a7455b388d14f43f4cded502ac4a15d1b3c0`.
+Build-only99674 passed at16:00:39UTC, Maven23.656s. One passive canonical boot
+prefix21228 used the maintained AbstractRunChainTest driver/bootstrap/lag policy,
+segment11 offset63075, stopping after8331 committed rows (8330 inclusive).
+Temporary witness SHA256
+`ade3e6f661b9c57af2468f1551524197b39810148351197ed98e38e0a344729c`
+used whole-production pre/post brackets and existing CollisionTrace callbacks,
+forwarding each existing callback once and restoring its observer in finally.
+There was no sensor/controller replacement, input/gameplay write, private
+movement entry hook, new shared API, trace hydration or new native execution.
+
+21228 finished16:16:53UTC, queue914s, Maven48.519s/JUnit24.316s,
+1/0F0E0S **observer result only**. All five target rows and345 actual callbacks
+were sampled; read-only movement-latch equality assertions held. The live
+seg11 comparator at cursor8331 remained red:218 errors,0 warnings/bootstrap,
+54 lag rows, first non-camera still8329 y_speed0/-680. No closed seg11 report is
+claimed: the prefix exception intentionally avoids full-segment closure/assertion.
+Earlier segments0/2/4/6/8/9 completed0 errors/warnings/bootstrap (lag0/11/14/16/62/55),
+and the11-gap ledger had0 failures. Do not compare this8331-row partial count
+against the prior14208-row total as an improvement.
+
+| Row | Native logical word | Engine action held/pressed | Engine post-row velocity X/Y | Engine post-row air/jumping |
+| --- | --- | --- | --- | --- |
+|8326|5240 (Down+A+B, new A)|3/1|0000/0000|false/false|
+|8327|5000 (A+B, no press)|3/0|0000/0000|false/false|
+|8328|5000 retained delta state|3/0|08FA/0000|false/false|
+|8329|4000 (A, no press)|1/0|08F4/F980|true/true|
+|8330|0000|0/0|08AD/FC38|true/true|
+
+Action bits above are engine A=1/B=2/C=4; native A=$40/B=$10/C=$20.
+At8329 raw pad pressedMask/actionPressedMask are0; the playable logical press,
+movement inputJumpPress and forcedJumpPress are all false. Movement's held and
+previous-held inputs remain true. Published raw/effective/admitted scratch fields
+are already null at these callbacks; this is **not** an observation inside their
+publication/consumption. Prepared movie row71404 holds A with predecessor71403
+holding A+B, correctly generating no edge. The outer movie cursor71404→71405,
+actual ObjectManager Vbla71359/objectLF2142 and LevelManager LF8276 are distinct
+observations, not a fitted clock offset. Across8326–8330 the respective post-row
+ranges are movie71402–71406, Vbla71356–71360, objectLF2139–2143, levelLF8273–8277.
+
+The last ground-probe callback at8329 still sees0BBE.EB00/06F1.DA00,
+velocity08F4/0000, grounded/not jumping. The first dynamic checkpoint,
+HCZ2Wall@4, already sees0BBE.EB00/06F0.DA00,08F4/F980,air/jumping true.
+All21 actual dynamic checkpoints retain that velocity. In particular the
+physical Sonic3kSpike@17 at0B91/06F3 returns main NONE and changes no velocity;
+the later invisible hurt blocks are not the first writer either. No private
+`doJump` entry/exit is claimed. The native splash object at384B2 is a gameplay
+owner too: `sub_38534` loads Ctrl_1/2_logical into d5 and calls `sub_3857E`.
+
+Source call chain SpriteManager929 → LevelManager1549 →
+Sonic3kZoneFeatureProvider861 executes HCZWaterSkimHandler immediately after the
+playable slot, before dynamic objects. Its sustain path used **held**
+`isJumpPressed()` and `exitWithJump` writes precisely-$680,air and jumping.
+The activation inputs at8328 (Y6F1, rolling radius14,water700,X08FA,Yspeed0)
+fit ordinary skim activation; private skim participation was not directly
+sampled, so that branch membership was initially an inference. The following
+independent reproducer resolves the semantic defect without another long probe.
+
+Shipped-ROM SHA1CFBF98C36C776677290A872547AC47C53D2761D6 bytes at385D2 are
+`3005024000706678`: move.w d5,d0; andi.w #$70,d0; bne.s38652. This masks the
+LOW **pressed** byte, while the direction sustain test masks high held bits.
+Disassembly `sonic3k.asm:75403–75422,75465–75468,75522–75534` owns this decision.
+There is no FixBugs alternate at this branch. The smallest owner correction is
+`isLogicalJumpPressActive()`, preserving raw/logical and native P2 distinctions.
+
+Independent old-red5337 at16:36:07UTC selected only the held-without-logical-edge
+and logical-edge/raw-neutral methods in TestHCZWaterSkimHandler. Both naturally
+activate via feet/speed checks and public production pad-latch setters at arbitrary
+water200, with no private routine/state injection. Result2/2F0E0S,
+queue882s/Maven24.283s/JUnit0.233s: held sustain wrongly clears active skim;
+logical edge/raw neutral leaves Yspeed0 instead of-$680. No setup/NPE/skip error
+is counted as red evidence. Companion curve/P2/registered-world two-forward
+controls remain independent of the long prefix.
+
+Focused9066 finished16:39:02UTC, queue55s/Maven1m18s:80/0F0E0S.
+The seven selectors matched eight classes: skim13, water-gate3, static adapters4,
+bootstrap6, decoding3, AIZ skip8, plus both level-loading classes36+7.
+The genuine old-red branches now pass. Curve-held/noedge, separate native P2
+logical input and two full registered-world capture/restore/forward comparisons
+pass too. The replay drives isolated declared owner phases at arbitrary water200,
+not full terrain frames or a cold route; it uses the installed hcz-water-skim
+adapter together with all other registered world keys, with no comparator
+relaxation. Root source review found no material issue in runtime SHA256
+`99957690824c7cb147da4284345aaff9004703e253d4f40fbe6e404a56c488a1`
+and test SHA256
+`2dd28e9ba775b173c2851effa3be3461bffb4e943ad3ea260328a2791e193cae`.
+At that checkpoint, separate authority validation and the authorized simple
+post-row prefix were pending; their results and maintained canonical follow below.
+
+
+Fresh-JVM authority7703 passed25/0F0E0S at16:41:21UTC,
+queue20s/Maven29.089s. One newly authorized same-AD40 post-row prefix9812
+(no replacement observer) finished16:42:13UTC, queue29s,
+Maven50.427s/JUnit25.760s: **1/1F0E0S, not a parity pass**.
+Temporary source SHA256
+`9f6471fe7973039fb70db1c1353fe4edc979dccfd39d7172bedd4c5666bde4d2`.
+Actual8329 velocity0/grounded/not-jumping assertions passed; active skim is now
+directly observed true at8328 and false at8329. This confirms the earlier
+participation inference and ordinary raised-curve exit. Post8330 is
+0BC7.1F00/06EE.7A00,velocity0834/FCA0,inertia08E6,angleF0,grounded/not jumping.
+At cursor8331 the live/aborted comparator has206=11physics+195animation,
+0 warnings/bootstrap,54 lag, firstNonCameraPhysicsMismatch null. The remaining
+recent physics fields are camera_y at6948/6947/6792/6791/6790, not new gameplay
+state in the inspected window. Earlier six gameplay segments and11 gaps retain
+their prior complete-zero results.
+
+The prefix failed an **extra unsupported diagnostic assertion** expecting zero
+animation errors. The agent added that after authoring the initial prefix;
+21228's218 total did not record its group split, so195 cannot be labeled new or
+inherited from that prior result alone. No baseline zero-animation claim was
+justified. This is a diagnostic-assumption failure, not observed proof of a
+production regression. The resulting ordinary assertion abort also reports four
+unconsumed future hardware completions at10162/10163/14172/14173; this is distinct
+from the normal handled prefix-abort lifecycle and does not price a new runtime
+input. No assertion is relaxed, no second corrected prefix is silently run, and
+no runtime/source widening or canonical request follows automatically. Root
+owns classification/next authorization. Runtime and maintained test bytes remain
+the independently reviewed,80+25-focused-qualified hashes above. Full-window
+animation/camera parity and the giant-ring route exit remain open.
+
+
+Root's disposition uses the existing immutable R10fa/R11cd94 bounded evidence:
+195 animation errors already exist through7135/7808 with first3475
+sidekick_animation_id17/1C. Current9812 XML stderr independently logs that same
+first3475 sidekick_animation_id17/1C. Thus zero animation was an invalid diagnostic
+expectation, not evidence of a new195-error regression. Equal aggregates and the
+same first field do **not** prove full vector identity. Current compact reports
+retain only group totals and five recent camera entries; first-error logging
+retains3475, but the195 entries' exact maximum frame and complete field inventory
+are unavailable without new instrumentation. No values are reconstructed or
+invented. The existing known first/aggregate limit is retained explicitly.
+Temporary prefix source/classes and consumed owned diagnostics are removed
+normally, preserving9812=1F in the durable record. Maintained short controls
+are unchanged. Root now explicitly authorizes one original maintained full
+canonical on the frozen reviewed runtime, without prefix/cutoff/assertion or
+observer replacement; its actual next frontier is pending and stops this unit.
+
+
+The single required maintained canonical49197 is now terminal, unchanged original
+AD40/bootstrap/from-boot/default-lag driver, with no cutoff, observer replacement
+or extra assertion. It used the plan's environment/all3ROMs and exact selection
+`-Ptrace-replay -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical`,
+JTO's single EGL token and no additional CLI EGL token. Source is53dbe8fd plus
+exact reviewed runtime99957690/test2dd28e9b above. At16:51:28UTC:
+**1/1F0E0S**, queue151s, Maven52.840s/JUnit27.372s.
+
+| Gameplay segment | Completed | Errors (physics + animation) | Lag | First non-camera physics |
+| --- | --- | --- | --- | --- |
+|0/2/4/6/8/9|all complete|0 each|0/11/14/16/62/55|none|
+|11 hcz_2|all14208 rows|26153 =23312 +2841|59|8717 sidekick_air native1 / engine0|
+|13 hcz_3|incomplete; recent comparison row3208|63295 =54642 +8653|6|287 y native06D4 / engine06DA|
+
+All eight gameplay reports have0 warnings/bootstrap errors. The13-gap ledger
+has0 failures, including actual hcz_2→ss_6 at movie-logical77283 and
+ss_6→hcz_3 at85096. The manifest calls these transitions giant_ring and stage_exit
+(BK2 mode changes77284 and85097); the maintained walker reaches both. Thus the
+previous missing returned-HCZ giant-ring exit is no longer the walk blocker,
+without certifying this red route or a new character/donor/viewport row.
+
+The chain fails two strict axes: the completed seg11 comparator and seg13 losing
+production ownership before source closure at BK2cursor88306, modeLEVEL,
+loadGeneration10/progressionZone1/romZone1/act1 (manifest hcz_3 expects act2).
+Four suppressed unconsumed hardware completions at raw3256/3257/5356/5357 remain:
+Kos#244/KosM#171 and KosM#172 have different descriptors; Kos#245 has no unclaimed
+matching submission. They are reported, not hydrated, repriced or repaired.
+No special-stage parity total is inferred from gap traversal.
+
+Compared with prior17194's same completed14208-row seg11, first non-camera moves
+8329 y_speed0/-680→8717 sidekick_air1/0, and aggregate125612
+(107498physics+18114animation)→26153 (23312+2841). Fewer errors are not acceptance;
+old full vectors are unavailable, so no exact per-field regression attribution
+is claimed beyond the retained first-frontier evidence. Seg13 is a newly reached
+incomplete window, not an equal-window baseline gain. Stop here: no further
+probe, runtime fix, slice, native or selection is run. Root owns next causality
+and composition; ending caller/bus/6+46/Hyper/PAL/PCM acceptance stays open.

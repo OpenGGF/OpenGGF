@@ -371,3 +371,26 @@ exit. Independent full HCZ65594 retains exactly4353 spans/first9482air, Poindext
 passes; earlier divergence prevents a second clean repaired-owner claim. No new
 entry, product breadth, engine pixel or cross-load timeline certification.
 [Exact evidence and limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r4-retained-title-parent-and-child-movement-latch--2026-10-17).
+
+
+### Returned HCZ8329 skim logical input — 2026-10-17 candidate
+
+The existing HCZ skim owner now consumes the logical A/B/C pressed edge rather
+than held/raw input (`loc_385D2`). Independent held/noedge and logical-edge/raw-
+neutral controls are genuinely old-red2/2F then pass in focused80/0F0E0S,
+including curve exit, native P2 and two registered-world owner-phase replay
+continuations; fresh authority25/0F0E0S also passes. These are declared component
+inlets at arbitrary water200, not cold traversal or new viewport/donor rows.
+One unchanged originalAD40 boot prefix directly observes active skim8328,
+ordinary exit8329 with Yspeed0 and no falsejump, then native-matching8330 velocity.
+Its live8331 cutoff is still206 errors=11camera-physics+195animation; the prefix
+itself fails an unsupported extra animation0 expectation. Existing bounded
+R10/R11 evidence already records195 with the same first3475 sidekick17/1C,
+without proving full vector identity. No corrected prefix was run. One separately
+authorized original maintained canonical49197 is1/1F0E0S: returned HCZ11 completes
+14208 rows with26153=23312physics+2841animation,0warnings/bootstrap,lag59, first
+non-camera8717 sidekick_air1/0 (previously8329 y_speed0/-680). It crosses the
+manifest giant_ring→ss_6→hcz_3 boundaries, then loses ownership at BK2cursor88306.
+The newly reached hcz_3 is incomplete,63295=54642physics+8653animation,first287
+y06D4/06DA; no route certification follows from reduced counts or later progress.
+Earlier six gameplay windows remain complete-zero. No further probe/fix follows. See [exact evidence and limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#canonical-returned-hcz8329-water-skim-input-owner--2026-10-17).

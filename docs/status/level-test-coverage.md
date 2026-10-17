@@ -1363,3 +1363,15 @@ HCZ7809/14208 rows still has206 camera/animation errors and no non-camera physic
 mismatch through that bound. First remaining animation3475; later frontier is
 unmeasured. Full route/exit, independent slice, alternate, exact GLFW and broader
 matrix products remain open. [Affected HCZ2 matrix](../architecture/validation/levels/s3k-hcz2.md#r11-hczblock-full2-visibility-and-whole-world-replay--2026-10-17).
+
+
+HCZ returned-route skim owner candidate (2026-10-17): the [HCZ1 matrix](../architecture/validation/levels/s3k-hcz1-sonic.md#returned-hcz8329-skim-logical-input--2026-10-17-candidate)
+records independent logical-press controls (old-red2/2F,focused80/0F,authority25/0F)
+and twice-restored registered-world owner-phase replay. OriginalAD40 postrow
+prefix confirms8329 no false jump and native8330 velocity; its overall diagnostic
+still fails an unsupported zero-animation expectation on195 errors already
+recorded in bounded R10/R11 evidence (no full-vector identity proof). Required
+maintained canonical49197 remains1/1F: HCZ11 completes14208 with26153 errors,first
+non-camera8717 sidekick_air1/0, then crosses the giant-ring/special-stage return
+and loses hcz_3 ownership at BK2cursor88306. No cold/whole-route, viewport/donor
+or native presentation row is newly certified; remaining obligations stay open.

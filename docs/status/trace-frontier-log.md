@@ -113619,3 +113619,48 @@ categories plus guards, <=50 per ordinary batch, max150execution minutes/10min
 no-output/queueexcluded. This is separate from trace acceptance; neither a
 lower total nor the planned broad run certifies HCZ, SlotRGB, ICZdeath or the
 coherent ending timeline. Source/commands/limits are in the existing plan.
+
+
+### 2026-10-17 — canonical returned HCZ8329 water-skim owner candidate
+
+Owned fa8 at53dbe8fd plus one HCZWaterSkimHandler predicate and independent tests;
+runtime/test SHA25699957690/2dd28e9b (full hashes in the [audit](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#canonical-returned-hcz8329-water-skim-input-owner--2026-10-17)).
+Original AD40 prefix21228 through8330 observes the first non-camera8329 Yspeed
+0/-680 with no logical pressed edge. Native loc385D2 tests that pressed byte;
+independent old-red5337 is2/2F0E0S, then affected skim/water/S3K4 focused9066
+passes80/0F0E0S and fresh authority7703 passes25/0F0E0S. No shared movement,
+input, camera/visibility or timing-authority edit.
+
+One authorized postrow-only same-driver prefix9812 uses
+`-Ptrace-replay -Dtest=TestS3kCanonicalHczSkimPrefix#originalAd40HeldSkimDoesNotLaunchThrough8330 -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical`,
+all three original absolute ROMs/current Main absolute wrapper from the owned
+cwd, JTO single surfaceless-EGL token/nullAL/no ambient display (full commands in
+[Plan](../architecture/plans/2026-10-13-s3k-playable-completion.md#canonical-hcz8329-skim-logical-press-owner--2026-10-17)).
+At16:42:13UTC it is1/1F0E0S,queue29s/Maven50.427s. Actual8329 no-false-jump
+assertions pass and8330 velocity matches; firstNonCameraPhysicsMismatch is null
+through8330. Live partial206=11physics(camera only)+195animation,0warnings/
+bootstrap,54lag. The failing extra animation0 assertion was an unsupported
+diagnostic assumption; the initial218-total witness omitted group splits, so
+no new/inherited animation attribution follows from that alone. Prefix remains
+red; no automatic corrected prefix rerun or tuning. The separately required
+maintained canonical result follows below.
+The separate82EA slice/R14 camera-input question and existing coverage limits
+remain owned/open independently.
+
+
+Required maintained canonical49197 used that exact original AD40 selection and
+single-EGL-token environment, no cutoff/observer/extra assertion. On53dbe8fd plus
+reviewed runtime99957690/test2dd28e9b it finished16:51:28UTC, queue151s,
+Maven52.840s/JUnit27.372s, **1/1F0E0S**. Seg11 completes14208rows:
+26153=23312physics+2841animation,0warnings/bootstrap,lag59; first non-camera
+moves8329 y_speed0/-680→8717 sidekick_air1/0. Prior17194 same-window125612
+(107498+18114) is a bounded aggregate comparison, not full-vector acceptance.
+Earlier0/2/4/6/8/9 remain complete-zero;13 gaps have0failures, including actual
+hcz_2→ss_6→hcz_3 (manifest giant_ring/stage_exit). The giant-ring exit is reached,
+while the strict chain remains red. Seg13 is incomplete:63295=54642physics+
+8653animation,0warnings/bootstrap,lag6,first287 y06D4/06DA, recent row3208;
+walk loses ownership at BK2cursor88306 (LEVEL/gen10/zone1/act1; manifest expects
+act2). Four future hardware edges3256/3257/5356/5357 remain suppressed unmatched;
+no hydration, descriptor fitting or SS parity total is inferred. Full details
+and exact reviewed hashes are in the linked audit. Stop: no further probe/fix/
+selection; Root owns next frontier, composition and ending6+46/PAL/PCM limits.

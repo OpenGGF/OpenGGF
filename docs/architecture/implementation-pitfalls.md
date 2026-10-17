@@ -44,6 +44,16 @@ barrel pose before its dispatch, while a higher warning reads the updated pose.
 Check actual physical owner/ObjectRef and both poses, then force recreation and
 repeat the continuation. See the [Second Strike fixture evidence](plans/2026-10-13-s3k-playable-completion.md#second-strike-warning-fixture-physical-ownership--2026-10-17).
 
+**A “pressed” getter may expose held input rather than the native press byte.**
+HCZ splash `sub_38534` passes the complete Ctrl_1/2_logical word in d5;
+`loc_385D2` masks its low pressed bits with `$0070`, while sustain direction
+checks mask the high held byte. `isJumpPressed()` exposes held/forced input;
+this owner must use `isLogicalJumpPressActive()`. A raw hardware edge also cannot
+stand in for a CPU-written logical P2 edge. Independently activate skim and test
+held/no logical edge, logical edge/raw neutral, and held input on a raised curve;
+a spindash-held route alone does not identify which input owner was wrong.
+See the [HCZ8329 evidence](audits/trace/2026-10-14-s3k-monkey-dude-sst.md#canonical-returned-hcz8329-water-skim-input-owner--2026-10-17).
+
 **Optional presentation does not erase native object ownership.** S3K `Level`
 writes the title owner at `Dynamic_object_RAM+5`, absolute SST8, and creates
 four higher-slot children before `Load_Sprites`. Omitting its visible loop still
