@@ -113981,3 +113981,39 @@ stack, command and report limits](../architecture/audits/trace/2026-10-14-s3k-mo
 Earlier six reports/gap zero; R22full11118/actualexit and seg13ownership88306
 remain distinct. Two temporarysources/classes restored/removed;18rawfiles held
 for Rootread. NativeR28 original9files were consumed only after Rootread.
+
+
+### 2026-10-17 — Knuckles Gumball trigger fires and origin returns, title release unassigned
+
+Owned649 HEAD`d092a584c5315b39ea76f98bedd3486bc314e58c`, current Java3be/7df,
+plus reviewed temporary helperab2f61/runtime diagnostic7f24b3. One original
+boot-to-`(RUN_DIR,2,1)` prefix, selector
+`-Ptrace-replay-r7 -Dtest=TestS3kGumballTriggerChronologyWitness#originalGumballExitChronology`,
+normal current Main absolute wrapper/all3ROM/Java25/EGL/nullAL/noambient/Lua,
+fork1reusealpha, no extra CLI GL property. Actual3717 terminal1 **20:24:14UTC**,
+queue0/Maven1m19, **1T/1F/0E/0S**; original1661 stage_exit assertion unchanged.
+Only original29 timing-close completion records are suppressed; diagnostic error
+is null. All10 original JSONL records/18131B and matched XML were inspected by
+worker and directly by Root:4actual trigger entries,1after-fired event,
+4lifecycle changes,9known-projection passivity checks/6190once-forward steps.
+
+Actual real trigger engine slot31/rawspawn0100/0368 consumes main P1 at
+1277/movie6847 centre0101/035C, flips exitFired, then the SAME provider holds
+exitRequested=true and starts black fade. Actual origin load returns at emitted
+cursor1299/movie6869 into **TITLE_CARD**, load generation3→4, P1 restored2778/025C,
+loop provider null/contextNoOp/fade callback absent. Final cursor1430/movie7121
+remains TITLE_CARD; original stage_exit1→2@7001 raw latch stays null both before
+and after driver cleanup. Final port raw latch/last boundary are null, edge17;
+missing clocks remain missing. This proves actual engine trigger/request/origin
+load, **not the cause of absent TITLE_CARD→LEVEL release** or native cleanup.
+No trigger-failure claim, fitted title/window/clock, fake LEVEL or repair.
+
+AIZpartial1physics/0animation,camera4545 and Gumball comparator-complete1430rows /
+18physics,first1300X0000/2778,0animation/warnings/bootstrap,lag0/21 remain. Recent5
+at1380 is not full18-vector proof. Seg2 opening/SS/fdf remainUNREACHED, with no
+readiness/kernel/live4/5/4/wholeSS/fullroute claim. No retry/native/capture.
+[Exact source/command, all actual phase samples, report limits and accepted cleanup](../architecture/plans/2026-10-13-s3k-playable-completion.md#r17-actual-trigger-request-and-origin-return-witnessed-title-release-unassigned--2026-10-17).
+After Root read originals, exact runtime restored/test removed;9 inspected owned
+diagnostics85122B and13 owner/helper classes95780B consumed metadata-slot-alone.
+Only existing Plan/frontier docs committed; target3717 diagnostics is not a fresh
+maintained build after cleanup. Main/private config/refs/native/media preserved.
