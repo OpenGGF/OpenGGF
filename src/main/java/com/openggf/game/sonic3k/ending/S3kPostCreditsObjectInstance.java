@@ -407,14 +407,21 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
                 draw(S3kEndingArt.AND_KNUCKLES,1,screenX,screenY+0x48,false,-1);
                 drawTrademark(4);
             }
-            // Native SAT order is the slot order Sonic 8, Tails 9, Knuckles 10, tail 12 (earlier
-            // link in front); each call here paints over the previous one, so the order is reversed.
-            // loc_5F400 shares the Tails child's mappings/art at (-$10,+8).
-            draw(S3kEndingArt.S3_GRAPHICS,tailAnimation.mappingFrame,screenX+(tails?8:0x24)-0x10,screenY+(tails?0x40:0x2C)+8,false,0);
-            if(initPass)return;
-            draw(S3kEndingArt.EYECATCH_KNUCKLES,knucklesAnimation.mappingFrame,screenX+(knux?0:tails?0x1C:-0x1C),screenY+(knux?0x40:0x2C),false,2);
-            draw(S3kEndingArt.S3_GRAPHICS,tailsAnimation.mappingFrame,screenX+(tails?8:0x24),screenY+(tails?0x40:0x2C),false,0);
-            draw(S3kEndingArt.S3_GRAPHICS,childFrame,screenX+(tails||knux?-0x1C:0),screenY+(tails||knux?0x2C:0x40),false,0);
+            // Native priority-$100 children link Sonic, Tails, Knuckles, then tail.
+            // SAT collection needs that native order; its replay reverses it. Only
+            // immediate GL painting reverses the group here (044fa46 loc_5F26C/5F3AA).
+            boolean collecting=services().graphicsManager().isSpriteSatCollectionActive();
+            for(int i=0;i<4;i++) {
+                int child=collecting?i:3-i;
+                // Only loc_5F400 reaches Draw_Sprite on the initialization pass.
+                if(initPass&&child!=3)continue;
+                switch(child) {
+                    case 0 -> draw(S3kEndingArt.S3_GRAPHICS,childFrame,screenX+(tails||knux?-0x1C:0),screenY+(tails||knux?0x2C:0x40),false,0);
+                    case 1 -> draw(S3kEndingArt.S3_GRAPHICS,tailsAnimation.mappingFrame,screenX+(tails?8:0x24),screenY+(tails?0x40:0x2C),false,0);
+                    case 2 -> draw(S3kEndingArt.EYECATCH_KNUCKLES,knucklesAnimation.mappingFrame,screenX+(knux?0:tails?0x1C:-0x1C),screenY+(knux?0x40:0x2C),false,2);
+                    case 3 -> draw(S3kEndingArt.S3_GRAPHICS,tailAnimation.mappingFrame,screenX+(tails?8:0x24)-0x10,screenY+(tails?0x40:0x2C)+8,false,0);
+                }
+            }
         } else if(phase==7&&!held) draw(Sonic3kObjectArtKeys.MECHA_SONIC,frame,screenX,screenY,false,-1);
     }
     /**

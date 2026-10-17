@@ -938,6 +938,14 @@ regression reproduces the old missing interior pixels and covers both physical
 edges, drift directions and sprite-priority masks. See the SSZ2 matrix and
 campaign audit for execution and delivery status.
 
+Knuckles terminal overlap correction (2026-10-17): the eyecatch now preserves
+native child order during SAT collection and reverse order during direct
+drawing. Its declared native 320 NTSC Super-emerald checkpoint matches the
+emulator's original active RGB exactly after a 70-pixel old-code GPU failure.
+This is one SSZ2 component checkpoint; whole-terminal, cold, PAL/PCM, wide and
+donor presentation limits remain in the
+[ending matrix](architecture/validation/levels/s3k-ending.md#knuckles-eyecatch-native-sat-priority--2026-10-17).
+
 ## Sprite_OnScreen_Test lifetime audit
 
 LRZ Fireworm defeat correction (2026-09-29): body retirement previously cleared

@@ -6674,8 +6674,14 @@ logo fade, and the credits' Plane A phase against the native complete run. The
   `TestS3kEndingS3Eyecatch` and `TestS3kEndingS3EyecatchTail` pin these behaviours
   red-first. Native captures cover the Tails/+2 NTSC and Sonic/+2 PAL terminals.
   Tails/+2 NTSC is raw-RGB identical at every spot, including each eyecatch frame. The
-  Sonic/+2 PAL residual comes only from the PAL Kos phase above. Knuckles/+2 shares the
-  code but has no native capture of its own eyecatch.
+  Sonic/+2 PAL residual comes only from the PAL Kos phase above. A separate 2026-10-17
+  Knuckles/+2 native 320 NTSC checkpoint exposed 70 overlap pixels: the eyecatch
+  reversed its children before native SAT collection reversed them again. The
+  corrected order is byte-RGB identical to that original emulator picture and
+  has a red-first GPU regression; direct drawing keeps its reverse painter order.
+  This is one declared SSZ2 component checkpoint, not whole-terminal certification;
+  [the ending matrix](../architecture/validation/levels/s3k-ending.md#knuckles-eyecatch-native-sat-priority--2026-10-17)
+  retains the remaining original-RGB and product limits.
 
 Evidence and the measured spots are in the
 [ending matrix](../architecture/validation/levels/s3k-ending.md#knuckles-credits-v-int-inlet-teleporter-pad-and-zero-copy-pass-presentation-lane-2026-10-16).

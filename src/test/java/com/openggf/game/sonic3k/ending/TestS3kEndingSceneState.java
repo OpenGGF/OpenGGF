@@ -6,11 +6,12 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class TestS3kEndingSceneState {
     @Test void preendingSnapshotsEncodeNativeZeroPlanesSparselyAndClearLaterCellsOnRestore(){
-        var ending=new S3kEndingState();assertEquals(131,ending.snapshotBytes());
+        // The title-entry countdown is a captured int in addition to the original 131-byte sparse header.
+        var ending=new S3kEndingState();assertEquals(135,ending.snapshotBytes());
         var saved=ByteBuffer.allocate(ending.snapshotBytes());ending.captureTo(saved);
         ending.scene().foreground().fill(0,0,(x,y)->0xABCD);
-        assertEquals(131+4096,ending.snapshotBytes());
-        ending.restoreFrom(saved.flip());assertEquals(131,ending.snapshotBytes());
+        assertEquals(135+4096,ending.snapshotBytes());
+        ending.restoreFrom(saved.flip());assertEquals(135,ending.snapshotBytes());
         assertEquals(0,ending.scene().foreground().descriptor(0,0));
     }
     @Test void aBlankDelayedRedrawRetainsItsHeaderAcrossSparseRestore(){

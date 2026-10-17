@@ -5501,6 +5501,15 @@ calls otherwise hide the Tornado wheel behind its later propeller. Preserve
 native collection order. Use actual ROM mapping/pattern opacity for overlap
 oracles; never mask coordinates selected from an image difference.
 
+The folded S3 eyecatch must make the same distinction for its whole child
+group: emit Sonic, Tails, Knuckles, tail during SAT collection, and reverse
+that group only for direct painting. Native `$F800` displayed tail frame 8 while
+CPU SST already held frame 9; treating CPU state as the displayed generation
+would invent animation drift. The 2026-10-17 independent GPU regression
+reproduces 70 opaque-overlap differences and the corrected original-RGB
+checkpoint matches all 71680 pixels. Convert canonical Full palette RGB through
+the actual display range before judging a Limited framebuffer oracle.
+
 A high-background replay also needs the same published scroll as the rear
 plane draw, not the CPU deformation produced later in that frame. Rebuild pure
 restored output without advancing captured scroll RAM. The S3K ending repair

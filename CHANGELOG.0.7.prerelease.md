@@ -232,7 +232,9 @@ Unreleased. The earlier development themes remain in
   and their progress-dependent final scenes. Knuckles continues from the final
   Sky Sanctuary fight through his plane flight, island credits and terminal
   scene. Scene resources, palette and animation owners, terminal Start input
-  and rewind state remain inside the native level lifecycle. Island-lift sprites
+  and rewind state remain inside the native level lifecycle. The final eyecatch
+  keeps Sonic, Tails, Knuckles and the tail in their native overlap order through
+  both sprite-table collection and direct drawing. Island-lift sprites
   and the Master Emerald, waterfall and torch palette cycles follow their native
   object and screen-event timing. Paired pattern uploads wait for their actual
   decompression child and publish at the supported VInt; duplicate descriptors

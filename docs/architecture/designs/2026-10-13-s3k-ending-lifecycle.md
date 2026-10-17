@@ -2212,3 +2212,64 @@ Evidence:
 - the scripts `B/compile_kos_budget_probe_v{6,7,7p,7c}.py`,
   `B/run_kos_budget_probe_v{6,7,7b,7p,7c}.py` and
   `B/analyze_kos_budget_v{6,7}.py`.
+
+
+### Knuckles eyecatch child priority (2026-10-17, Root)
+
+The retained native `eyecatch-steady-seq009-in433872` original PPM and the
+old engine picture differed at 70 pixels, all within `(150,160)..(192,176)`.
+Both used native 320, NTSC, seven Super Emeralds, donor off and Limited/RAW_RGB.
+The native 348x240 picture's active window is `(14,8)..(334,232)`; no colour
+normalization, translated alignment or difference mask is used. Source is
+`a1afac243` plus the independent regression and conditional render correction.
+
+The actual native VDP SAT at `$F800` links Sonic, Tails, Knuckles, then tail;
+the displayed tail uses frame 8, just as the engine does. The CPU SST already
+shows frame 9, one VInt ahead. Atlas CPU/GPU bytes and Knuckles frame DC match
+the ROM. Removing the tail increases the difference to 150 pixels. These
+observations reject animation-offset, missing-tail and atlas-corruption fixes.
+
+`loc_5F26C`/`loc_5F3AA` and `word_60170` assign the children priority `$100`.
+The folded ending object must emit their native order during SAT collection,
+because the collector itself replays entries in reverse painter order. Direct
+GL drawing still needs the reverse group. The initialization pass still draws
+only the tail. No animation, clock, allocation or captured-state field changes.
+
+`TestS3kEndingS3EyecatchTail` enters the actual SSZ2 final-fight component with
+its existing 8704-input movie and declared 410766 authoring VInt. At eyecatch
+init+576 it independently combines opaque ROM mapping/pattern footprints,
+including 70 overlaps whose colours distinguish child priority. The corrected
+old-code oracle fails exactly 70 pixels (one test, no errors/skips, 05:48:10 UTC).
+An earlier 1945-pixel failure was an invalid oracle: canonical Full palette RGB
+had not been converted to the capture's Limited range. That run earns no defect
+evidence. With the production correction, the new SAT case and existing Tails
+direct-draw/init case pass 2/0/0/0 at 06:01:31 UTC. The actual new engine PNG is
+byte-RGB identical to the unchanged original native active picture (71680 pixels).
+The image was inspected. Durable originals and captures remain under the task's
+external `ending-pal-native/knux/` directory.
+
+Command: current main absolute `maven_queue.py --normal -Dmse=off
+-Dtest=TestS3kEndingS3EyecatchTail -Ds3k.rom.path=$S3K_TASK_ROM
+test -B` (`S3K_TASK_ROM` resolved to the original locked-on ROM, CRC32 `63522553`),
+with inherited `-Dopenggf.headless.gl=surfaceless-egl`, DISPLAY/WAYLAND_DISPLAY
+unset and nullAL. This is one declared native 320 checkpoint and a direct-path
+regression, not whole-sequence, cold-campaign, PAL, PCM, donor or wide RGB
+certification. Lifecycle/replay and source-guard follow-up are recorded separately.
+
+Focused follow-up at 06:05:00 UTC passes 92 tests in nine resolved classes, no
+failures/errors/skips: `TestS3kEndingS3Eyecatch,TestS3kPostCredits,
+TestS3kEndingSceneState,TestS3kKnucklesEndingLifecycleCapture,TestS3kAiz1SkipHeadless,
+TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`,
+using the same absolute wrapper, ROM and headless environment. The level-loading
+selector resolves both existing package classes. Knuckles lifecycle coverage
+retains six NTSC products (320/800 × incomplete/Chaos/Super) and three PAL
+products with real final-fight input, phase restore and forward replay; it is
+state/lifecycle coverage, not native wide/PAL original-RGB comparison. The sparse
+ending-state test now accounts for the title handoff's captured four-byte
+countdown (135-byte empty header, formerly 131), retaining its dense-plane and
+restore assertions. This stale assertion was found by Root's retained smoke.
+
+Fresh `TestArchitecturalSourceGuard` in a separate lean Maven invocation passes
+72 tests, no failures/errors/skips, at 06:18:55 UTC. Source, mirror and local
+link/anchor checks pass. Root's full composed smoke remains a separate retained
+request; this lane does not claim combined delivery.

@@ -528,3 +528,12 @@ terminal has no native counterpart here.
 Limits: the boot inlet has no save session, so the final full save is covered by the
 save-site tests (`TestS3kLrzHpzSszColdCampaign`) rather than read back here; ending
 progress 0/2 and wide/PAL breadth remain with the direct-SSZ2 lifecycle tests.
+
+
+Knuckles eyecatch follow-up (2026-10-17): the declared final-fight component's
+native 320 NTSC all-Super terminal has one byte-RGB-identical original emulator
+checkpoint after correcting native SAT child order. The independent GPU overlap
+regression and existing direct-draw/init case pass 2/0/0/0. This is component
+presentation evidence, not a new cold-route or whole-terminal certificate;
+[the ending matrix](s3k-ending.md#knuckles-eyecatch-native-sat-priority--2026-10-17)
+records the inlet and inherited limits.

@@ -905,3 +905,19 @@ the title's own content.
 Pictures:
 `$HOME/Videos/OGGF/s3k-parity-coverage-2026-10-14/spot-checks/ending-title-handoff-v1/`.
 
+
+
+### Knuckles eyecatch native SAT priority — 2026-10-17
+
+The declared native 320 NTSC Super-emerald SSZ2 component now has one original-RGB
+eyecatch checkpoint: native input 433872 / eyecatch init+576, 71680/71680 pixels
+identical in Limited/RAW_RGB, donor off. The old code differs 70 pixels; native
+SAT collection was receiving a group already reversed for direct drawing.
+`TestS3kEndingS3EyecatchTail` passes both the new independent four-child opaque
+overlap oracle and the existing Tails direct-draw/init case (2/0/0/0).
+
+The displayed native tail is frame 8; CPU SST frame 9 describes the next producer.
+No animation offset is fitted. This closes that checkpoint's overlap defect,
+not every Knuckles terminal picture or PAL/PCM/cold/wide/donor products. Earlier
+terminal original-RGB residuals remain open. See the
+[implementation and rejected diagnoses](../../designs/2026-10-13-s3k-ending-lifecycle.md#knuckles-eyecatch-child-priority-2026-10-17-root).

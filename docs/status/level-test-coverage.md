@@ -1182,3 +1182,10 @@ is retained honestly and resolved separately. [SOZ1](../architecture/validation/
 [SOZ2](../architecture/validation/levels/s3k-soz-act2.md#production-checkpoint-fade-and-incoming-world-replay-2026-10-14)
 and [DDZ](../architecture/validation/levels/s3k-ddz.md#single-production-fade-owner-and-released-world-replay-2026-10-14)
 retain mechanic/cold-route/native and broader configuration obligations.
+
+
+S3K SSZ2 ending presentation (2026-10-17): one native 320 NTSC all-Super
+eyecatch checkpoint now matches the emulator's original active RGB output
+exactly, with an independent GPU child-priority regression. This does not
+replace the remaining terminal/cold/PAL/PCM/wide/donor obligations in the
+[ending matrix](../architecture/validation/levels/s3k-ending.md#knuckles-eyecatch-native-sat-priority--2026-10-17).
