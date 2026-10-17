@@ -4706,3 +4706,52 @@ Root; no new singleton debt or blanket guard waiver is introduced. All other
 R10 failures remain subject to their own comparison. No duplicate baseline,
 mock repair or broad suite was submitted. The two inspected baseline reports
 and owned invocation log were consumed under the metadata lease alone.
+
+
+### Ending caller closure boundary — 2026-10-17
+
+Read-only source/dependency research on Root `2d8008148` establishes that the
+remaining budget is a coupled instruction/bus timeline, not another callee
+subtotal or `framePeriod - subtotal` passed to Kos. Refresh is tested at each
+opcode fetch; Z80/DMA/FIFO stalls advance the same master clock, and interrupt
+acceptance depends on `(MCLK/7)%10`. Current VInt projection explicitly refuses
+the busy-Kos input needed for the deciding reunion window. Missing inputs must
+remain unavailable; VInt counters and scene-entry clock assignments do not
+supply legitimate master-clock phase.
+
+The coherent internal ownership boundary is the physical head at PRE_MAIN_LOOP,
+through the existing runtime-art boundary/preparation service. It requires:
+
+- Captured CPU/bus phase, SR/IRQ/continuation and refresh/DMA/Z80/FIFO/HInt state;
+  an instruction-boundary clock that advances the existing pure Kos model.
+- Actual ordered caller/object/player/tail/render/HUD/rings/palette/plane work
+  from their production owners, with authenticated operands and branch inputs.
+  GPU commands, occupied-slot totals and native oracle counts are insufficient.
+- Complete VInt callees and DMA submission/trigger order, including object-owned
+  player DPLC intervals, multiple loop visits and VBLANK straddles.
+- Coupled resumable physical-head preparation and semantic readiness admission.
+  DirectPreparation currently decodes on first PRE; a separate four-service
+  profile still gates publication, so changing only one connection cannot fix
+  native Sonic3 versus Tails4. Do not rewrite the immutable manifest to fit it.
+
+Existing C5/Apply, VInt/DMA subtotals and retained source models are prerequisites,
+not evidence that these production inputs exist. This unit spans caller/render/
+palette, hardware/audio-bus and queue/admission owners. Its acceptance needs
+hand-derived phase/stall/bookmark checks, twice-forward captured-timeline replay,
+then independent byte/stop-PC/retirement predictions for the six original ending
+counts (NTSC Tails+2=4, Sonic+2=3, team+2=3, Sonic0=4, Sonic-2=4; PAL Tails+2=3)
+and the eligible 46-context corpus before activation and Hyper/PAL/PCM checks.
+
+Retained B is `s3k-parity-20261014/ending-native-reference-prerequisites` under
+task scratch; D is this task's `s3k-parity-coverage-20261014` scratch root. B's
+`native-kos-budget-v7-job-cycles.txt` and v6/v7p/v7c captures anchor the counts;
+D's `kos46-research-20261016/context-inventory-next/validation-inputs.draft-v1.json`
+(SHA256 `7da2b0859cf20c3f498d74a5a722128a77fedbd09cb1087030b1cce1fccbd249`)
+anchors the 46 identities and regeneration commands. Actual retained schema2
+corpora now contain 399 samples across all46: 334 classified/65 unclassified,
+with classified coverage only45/46. The sole wholly unclassified identity is
+`fdf98ef424cd800a5a3729e70bfbc4d186580cd83e9e26df0b347fe156e7a8fb`
+(ArtKosM_SStageChaosEmerald module0, source0AE3EE toFFFFD000). Resolve its
+comparator explicitly; do not normalize these observations into the old327
+aggregates. The committed63 supplied-budget consumer windows and native closure
+checker recordings do not predict the six counts or qualify readiness.
