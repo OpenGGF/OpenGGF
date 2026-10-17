@@ -2101,3 +2101,26 @@ these durable facts; no new document type, raw archive or diagnostic file. All
 analysis Python was ephemeral read-only; only the normal docs commit message is
 temporary and consumed under metadata ownership. Prior refs/config/media/runtime
 pins and candidate target remain unchanged; no engine/native job or lease remains.
+
+
+## Current Pachinko refresh and matched timeout-owner attribution — 2026-10-18
+
+The historical unchanged-Root28 statement above belongs to the score-popup
+producer epoch. Current Root4bfd18e18/CPU8930 request32759 is2T2F0E0S:
+Pachinko1 full error array remains04d9c7f6/1638, first122 rings262/261;
+Pachinko2 is0c4ba6e4/1258, first469 vx04F3/0100. Bounded matched old-CPU4bb9
+request63729 reproduces historical72a46f98/1257 exactly. Every non-tails-status
+record remains identical;15 spans are removed and16 added, first differently
+covered frame2457. These are full-array comparisons, not a totals-only claim.
+The nine-line native literal-status fix remains preserved; matched attribution
+does not identify the actual live setter or excuse the changed vector.
+
+Both requests used the same two exact `-Ptrace-segments` selectors, all3 original
+ROMs/Java25/EGL/single fork reuse-alpha and queue0/Maven76s. Three output-directory
+properties isolate the old-owner originals. Source8930 was restored, while Java
+target remains last old-owner compilation. All methods/properties/streams,
+full arrays/owners and changed tuples were read. Comparator/bootstrap warnings0
+and no skips are separate from FAST runtime warnings. Serialized total_frames
+2907/3571 supplies no separate complete/compared/reference count. Ring122 and
+reward469 remain current questions; missing writer/retained-list evidence is not
+reconstructed from endpoint state. No component or route closure follows.

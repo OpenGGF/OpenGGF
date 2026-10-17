@@ -13106,3 +13106,90 @@ Current change-based dry plan selects3534 classes/10 smoke categories/71 batches
 of at most50, then guards. No broad run was launched: previous90-minute coverage
 completed65/71 batches only, and further owner changes remain in progress.
 Main is still unchanged803; no integrated push or delivery is claimed.
+
+
+### Root current Pachinko refresh and bounded CPU attribution — 2026-10-18
+
+At Root4bfd18e18, ONE normal current-Main-wrapper request32759 used
+`-Dmse=off -Ptrace-segments -Dtest=TestS3kSonicTailsPachinkoBonusTraceReplay,TestS3kSonicTailsPachinko2BonusTraceReplay test -B`,
+all3 original absolute ROMs, Java25.0.4.1, single-fork reuse/alphabetical,
+JTO+CLI surfaceless-EGL/nullAL/Lua/no ambient display/LD environment. Exact argv
+and config/source fingerprint are in the existing r1 ownership entry. Queue0,
+Maven76s, actual2T2F0E0S, no skips. Pachinko1 retains1638 errors
+(1051 physics/587 animation), first122 rings262/261 and animation269 map96/97;
+its entire error-array SHA04d9c7f698941706d4c0df5423dc936e97f35f9fdda4660d4ee5c37b7641159e
+matches the historical producer epoch. Pachinko2 now has1258 errors
+(649 physics/609 animation), first469 vx04F3/0100 and animation1436 map99/96.
+Its entire array SHA0c4ba6e41be8f196d8a8b7236799aac249399cba9b93b3295330617495f48586
+differs from historical1257/SHA72a46f982f33f4af53077e288848a04849e1c1ef5f5d80e7301eaa4889dc845e.
+Both have zero comparator warnings/bootstrap errors and empty warning/bootstrap
+lists, separately from three FAST/no-manifest runtime warnings per method.
+Serialized total_frames2907/3571 is not a separately serialized reference count,
+compared count or complete flag. Missing advertised aux schemas remain explicit.
+
+A single matched attribution request63729 kept every other tracked source/POM,
+fixture, flag and environment fixed, restoring ONLY the known nine-line CPU
+owner from8930b6b4 to4bb9f42f under the writer. Three declared POM output-directory
+properties preserve the r1 originals. Queue0/Maven76s,2T2F0E0S. Old-owner
+Pachinko2 exactly reproduces all1257 historical error tuples/hash72a46; Pachinko1
+remains byte-equivalent04d9. Every non-tails_status_byte tuple is identical in
+value/span/severity/group/order. The changed tails spans comprise15 removed and
+16 added records, not simply one new error: ordered split747 changes2446–2456
+into2446–2467; first differently covered frame is2457. Full31 tuples are in the
+existing r2 entry and were checked directly against both full original arrays.
+This attributes the changed comparison vector to the matched nine-line owner;
+it does not observe an actual setter/timeout branch or native cause, waive a
+regression, or justify rolling back the independently native-correct literal02.
+Candidate CPU8930 and full tracked fingerprint86502b3b6551fef0dfa2c1e2c8f13ce84bc986d463b1e2f9ee5b20c04890de04
+were restored exactly afterward. Last Java target is the OLDCPU4bb9 attribution
+compile, not a freshly compiled current candidate. No third JVM was launched.
+
+Root read all r2 ten originals with expected full hashes/sizes, all XML methods,
+72 properties, failure stacks/streams, contexts and owner physical paths; full
+arrays and all31 changed tuples were compared without relying on totals. Both
+r1/r2 originals remain owned pending exact normal cleanup; no archives/receipts.
+The source-only follow-up prefers the earliest ring122 frontier: native slot8
+changes AttractedRing code1A88C to1A920 at D0/D79, while current separate pooled
+rings grant during touch processing. A possible deferred own-pass award contract
+requires a natural production allocation/acceptance inlet and final phase
+oracles; endpoint code alone is not a callback witness. Independent vx469 reward
+and later status2457 remain separate. No route fix, hydration or clock/slot fit.
+
+### Root prerequisite checkpoints following corrected native compilers — 2026-10-18
+
+The corrected ending observer compiled28160B/SHA80112f33dd5e2823cbe21729414daa75253b1dc3aae905f0de128fc4ec52ed18
+from reviewed freeze404c1640. Its ONE neutral-row/reset206 attempt then stopped
+before Open: primary guard-before-open InvalidOperationException, managed assembly
+path differs: BizHawk.BizInvoke; cleanup failures empty,0 Advances/callbacks/pairs.
+The guard uses that same message for an absent assembly or wrong path; actual
+loaded path/absence was not serialized. Header only, no raw clock/Waterbox/positive
+marker. Earlier finally-masked cause remains unknown. Source-only managed binding
+inventory is next; no path guard is weakened or raw clock/ending parity claimed.
+
+Cold's same-held-target length/hash correction compiled PEdef0d6f. The next ONE
+AD40 parent-observer attempt43532 reached Host.Open but stopped with missing
+observer-target/dll/gpgx.wbx;0 observer Advances, no journal/253 controls. Root read
+all original473B/SHA22d9b817caf387695341b6bd9869f08eee93de353e844b039a139246c898b9a6.
+Its frozen launcher sets managed/native search paths but omits BIZHAWK_HOME;
+stock PathUtils chooses that installation or AppContext.BaseDirectory. This is
+an installation-environment source question, not ROM/gameplay/parent-lifetime
+proof. Neither attempted observer has yielded native gameplay observations.
+
+FDF independent public return9629 reached final cause oracle after actual bonus
+entry, new receipt/history retirement, return TITLE_CARD and natural LEVEL:
+expected INTERIOR_RETURN, actual ORDINARY generation3/origin0/0. Its separate
+ordinary HCZ load/bonus-entry control passes;2T1F0E0S,queue0/Maven25.914s. Root
+read both originals29086B, all72 properties and complete streams. Five FAST
+fallback and ten deterministic-estimate warnings do not qualify readiness.
+The proposed mark belongs after successful return preparation immediately before
+the saved-origin synchronous load; ordinary and null-origin loads stay distinct.
+No candidate implementation has yet run; no actual original-route receipt or
+12 unmatched timing identities are attributed by this independent component.
+
+HCZ source review confirms a joint moving-wall rewind contract can collect both
+immediate saved-A Camera/full-registry differences and twice forward-B world
+differences as final oracles, without hiding either behind an expected equality
+prerequisite. Initial actual event/registered-wall linkage and naturally different
+published shake AND wall integer offset/X remain setup prerequisites. Restored
+linkage is an oracle. No wall/handler repair, dropped keys or new execution has
+occurred. Main remains803; goal, combined validation and integration stay open.

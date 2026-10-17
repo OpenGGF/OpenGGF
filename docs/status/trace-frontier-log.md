@@ -114243,3 +114243,23 @@ combined guards, or launch the conditional original Mega route. Earliest route
 facts remain their earlier epochs. Full missing ordinal attribution/native birth,
 recorded readiness/SS/fdf/live CPU prediction/route parity remain open.
 [Exact old-red/source/145-case qualification and limits](../architecture/plans/2026-10-13-s3k-playable-completion.md#r37-qualified-component-preservation-and-inherited-warning--2026-10-18).
+
+
+### 2026-10-18 — Current Pachinko frontier refresh; CPU-only vector attribution
+
+Root4bfd18e18/current CPU8930, normal queued32759 with `-Ptrace-segments
+-Dtest=TestS3kSonicTailsPachinkoBonusTraceReplay,TestS3kSonicTailsPachinko2BonusTraceReplay`,
+all3 original ROM/JDK25/EGL/fork1-reuse-alpha:2T2F0E0S,queue0/Maven76s.
+Pachinko1 remains1638 (1051phys/587anim),first122 rings262/261,fullarray04d9c7f6
+exact historical. Pachinko2 becomes1258 (649phys/609anim),first469 vx04F3/0100,
+fullarray0c4ba6e4 versus historical1257/72a46f98. Matched63729 changes ONLY
+CPU8930 to prior4bb9 (three output directories preserve originals),same command:
+2T2F0E0S,queue0/Maven76s; old array exactly72a46f98. Every non-tails-status tuple
+is identical;15 old spans removed/16 added,first different covered frame2457.
+This is owner-variant attribution, not an observed setter/native-branch cause,
+regression waiver or rollback authority. CPU8930 source restored exactly;
+compiled Java is last OLDCPU4bb9. Comparator warnings/bootstrap0, no skips;
+FAST runtime warnings and absent advertised auxiliary writer schemas remain.
+No serialized independent compared/reference/complete certificate. Earliest
+ring122 and reward-vx469 ownership remain open. Full pins, commands, hashes and
+limits are in the existing Plan and r1/r2 ownership records; no extra probe/JVM.
