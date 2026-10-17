@@ -32,8 +32,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
  * Long route check: the engine's own ending run, entered through the declared component ingress used by the ending
  * tests (zone 13 act 1 fresh start, then {@code restoreS3kEmeraldProgress}), records per-V-int DMA work that must
  * equal the retained native observation for LF 4400-4406: the drained Add_To_DMA_Queue entries and the
- * {@code dma_freeze_mclk} counter. Native rows are comparison-only. The engine has no region switch, so each NTSC run
- * is also compared with its PAL product: VInt_8's DMA work and GPGX's blank rates do not depend on region.
+ * {@code dma_freeze_mclk} counter. Native rows are comparison-only. PAL products run with the configured
+ * {@code REGION} set to PAL before the level initializes, the same owner FrameRateResolver and the ending credits
+ * read; the record must carry that region.
  */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestS3kEndingVIntDmaNative {
@@ -72,12 +73,14 @@ class TestS3kEndingVIntDmaNative {
     }
 
     @ParameterizedTest
-    @CsvSource({"tails-super,tails,3333333", "sonic-super,sonic,3333333", "sonic-none,sonic,0000000"})
-    void engineRecordsTheNativeVIntDmaWorkAtLf4400To4406(String product, String main, String emeralds)
-            throws IOException {
-        List<NativeRow> expected = nativeRows().get(product);
-        assertNotNull(expected, product);
+    @CsvSource({"tails-super,tails,3333333,ntsc", "sonic-super,sonic,3333333,ntsc", "sonic-none,sonic,0000000,ntsc",
+            "tails-super,tails,3333333,pal", "sonic-super,sonic,3333333,pal"})
+    void engineRecordsTheNativeVIntDmaWorkAtLf4400To4406(String product, String main, String emeralds,
+                                                         String region) throws IOException {
+        List<NativeRow> expected = nativeRows().get(product).stream().filter(r -> r.region().equals(region)).toList();
+        assertEquals(7, expected.size(), product + " " + region);
         var config = SonicConfigurationService.getInstance();
+        config.setSessionOverride(SonicConfiguration.REGION, region.toUpperCase(java.util.Locale.ROOT));
         config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS, 320);
         GameServices.camera().refreshViewportDimensions(config);
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, main);
@@ -114,11 +117,15 @@ class TestS3kEndingVIntDmaNative {
                 }
             }
             boolean equal = record != null && record.fixed() == FixedTransfers.VINT_8
-                    && entries.equals(row.entries()) && record.freezeMclk() == row.freeze();
+                    && record.region().name().equalsIgnoreCase(region)
+                    && entries.equals(row.entries())
+                    && record.freezeStatus() == S3kVIntDmaLedger.FreezeStatus.CONDITIONAL_ON_VINT_START
+                    && record.conditionalFreezeMclk() == row.freeze();
             if (!equal) {
                 mismatches.append(String.format("%n%s %s LF %d native %s/%d engine %s", product, row.region(),
                         row.levelFrame(), row.entries(), row.freeze(), record == null ? "no draining V-int"
-                                : record.fixed() + " " + entries + "/" + record.freezeMclk() + " " + record.phase()));
+                                : record.fixed() + " " + entries + "/" + record.conditionalFreezeMclk() + " " + record.phase()
+                                        + " " + record.region()));
             }
         }
         assertEquals("", mismatches.toString());

@@ -104,6 +104,18 @@ public final class S3kVIntDma {
         /** {@code Level} writes {@code move.w #$8C81,(a6)} (40-cell display) at ROM $616A before LevelLoop. */
         static final int LEVEL_REGISTER_12_PC = 0x616A;
 
+        /**
+         * The decoded transfers, or empty when any pinned instruction differs: the S3K detector also accepts other
+         * images (any "SONIC THE HEDGEHOG 3" / "SONIC & KNUCKLES" header), and a diagnostic must not break them.
+         */
+        public static java.util.Optional<VInt8Transfers> tryDecode(byte[] rom) {
+            try {
+                return java.util.Optional.of(decode(rom));
+            } catch (IllegalArgumentException | IndexOutOfBoundsException unsupported) {
+                return java.util.Optional.empty();
+            }
+        }
+
         public static VInt8Transfers decode(byte[] rom) {
             Objects.requireNonNull(rom, "rom");
             Transfer normal = transfer(rom, 0x844, 0x854, 0x858);

@@ -6593,9 +6593,10 @@ candidates are in the [ending lifecycle design](../architecture/designs/2026-10-
   counts are unchanged. See the
   [design record](../architecture/designs/2026-10-13-s3k-ending-lifecycle.md#resumable-kos-service-consumer-2026-10-16-kos-cycle-consumer-lane).
 - 2026-10-16: `S3kVIntDmaLedger` records each S3K V-int's DMA work and its GPGX bus freeze, from the engine's own
-  submissions (VInt_8 fixed transfers, `Tails_Tail_Load_PLC`, Animate_Tiles uploads, KosM completions). It equals the
-  native observation on all 35 retained ending V-ints (LF 4400-4406, NTSC and PAL). The record is diagnostic: player
-  body DPLCs and V-int handler time are not yet recorded, and no count changes. See the
+  submissions (VInt_8 fixed transfers, the players' `*_Load_PLC`, `Tails_Tail_Load_PLC`, Animate_Tiles uploads, KosM
+  completions). It equals the native observation on all 35 retained ending V-ints (LF 4400-4406, NTSC and `REGION=PAL`
+  runs). Those are two independent observations with one positive entry. Its freeze is a conditional subtotal until the
+  V-int instruction terms fix each transfer's start, and no count changes. See the
   [design record](../architecture/designs/2026-10-13-s3k-ending-lifecycle.md#per-v-int-dma-work-ledger-2026-10-16-kos-cycle-consumer-lane-slice-2).
 
 ---

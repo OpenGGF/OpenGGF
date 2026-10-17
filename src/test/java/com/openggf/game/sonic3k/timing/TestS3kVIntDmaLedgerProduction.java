@@ -62,11 +62,14 @@ class TestS3kVIntDmaLedgerProduction {
         boolean animateTiles = false;
         for (Record record : records) {
             if (record.fixed() == FixedTransfers.VINT_8) {
-                assertEquals(26_855 + record.queueFreezeMclk(), record.freezeMclk(), record.toString());
+                assertEquals(S3kVIntDmaLedger.FreezeStatus.CONDITIONAL_ON_VINT_START, record.freezeStatus(),
+                        record.toString());
+                assertEquals(26_855 + record.queueFreezeMclk(), record.conditionalFreezeMclk(), record.toString());
                 assertTrue(S3kVIntDmaLedger.runsVInt8(record.phase()));
             } else {
                 // negative control: no total for VInt_A_C / title-card or other unmodelled routines
-                assertEquals(-1, record.freezeMclk(), record.toString());
+                assertEquals(-1, record.conditionalFreezeMclk(), record.toString());
+                assertEquals(S3kVIntDmaLedger.FreezeStatus.FIXED_UNMODELLED, record.freezeStatus(), record.toString());
                 assertTrue(!S3kVIntDmaLedger.runsVInt8(record.phase()) || record.phase() == null,
                         "VInt_8 phases are modelled outside the Hyper flash: " + record);
             }
@@ -84,16 +87,69 @@ class TestS3kVIntDmaLedgerProduction {
         assertTrue(records.stream().anyMatch(r -> r.phase() == PlcLifecyclePhase.ORDINARY_LEVEL
                 && r.fixed() == FixedTransfers.VINT_8));
 
+        // capture only once DMA is actually queued, so restore and replay cross a positive drain
+        int guard = 0;
+        while (ledger().pendingObjectEntries().isEmpty()) {
+            assertTrue(++guard < 240, "no queued object DMA to capture");
+            fixture.stepFrame(false, false, false, true, false);
+        }
         var registry = TestEnvironment.activeGameplayMode().getRewindRegistry();
         var capture = registry.capture();
+        assertTrue(!((S3kVIntDmaLedger.State) capture.get(S3kVIntDmaLedger.REWIND_KEY)).objectPending().isEmpty());
         List<Record> forward = step(fixture, 40);
+        assertTrue(!forward.getFirst().drained().isEmpty(), "the first replayed V-int drains the captured entries");
         var after = registry.capture();
         for (int cycle = 0; cycle < 2; cycle++) {
             registry.restore(capture);
+            assertTrue(!ledger().pendingObjectEntries().isEmpty(), "restored with DMA queued");
             assertEquals(forward, step(fixture, 40), "forward replay from the capture");
             var replayed = registry.capture();
             assertTrue(RewindSnapshotDiff.diffKey(S3kVIntDmaLedger.REWIND_KEY,
                     after.get(S3kVIntDmaLedger.REWIND_KEY), replayed.get(S3kVIntDmaLedger.REWIND_KEY)).isEmpty());
         }
+    }
+
+    @Test
+    void freshLevelResetRunsOnlyForANativeLevelEntryAndBeforeTheTitleCardOwner() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder().withZoneAndAct(1, 0).build();
+        for (int frame = 0; frame < 30; frame++) {
+            fixture.stepFrame(false, false, false, true, false);
+        }
+        var profile = (com.openggf.game.sonic3k.Sonic3kLevelInitProfile)
+                com.openggf.game.GameModuleRegistry.getCurrent().getLevelInitProfile();
+        var fresh = new com.openggf.game.LevelLoadContext();
+        fresh.setLoadMode(com.openggf.game.LevelLoadMode.FULL);
+        fresh.setIncludePostLoadAssembly(true);
+        fresh.setAssemblyKind(com.openggf.game.LevelAssemblyKind.FRESH_LEVEL_ASSEMBLY);
+        List<String> names = profile.levelLoadSteps(fresh).stream().map(com.openggf.game.InitStep::name).toList();
+        assertEquals(List.of("ClearFreshLevelRng", "ResetFreshLevelDmaQueue", "PrepareFreshTitleCardSst"),
+                names.subList(0, 3), "$610E/$61C6 precede loc_62B6");
+        for (var kind : List.of(com.openggf.game.LevelAssemblyKind.STATE_RESTORATION,
+                com.openggf.game.LevelAssemblyKind.DECODE_ONLY)) {
+            var other = new com.openggf.game.LevelLoadContext();
+            other.setLoadMode(com.openggf.game.LevelLoadMode.FULL);
+            other.setIncludePostLoadAssembly(true);
+            other.setAssemblyKind(kind);
+            assertTrue(profile.levelLoadSteps(other).stream().noneMatch(s -> s.name().equals("ResetFreshLevelDmaQueue")),
+                    kind + " never runs Level");
+        }
+        var preview = new com.openggf.game.LevelLoadContext();
+        preview.setLoadMode(com.openggf.game.LevelLoadMode.PREVIEW_CAPTURE);
+        preview.setIncludePostLoadAssembly(true);
+        preview.setAssemblyKind(com.openggf.game.LevelAssemblyKind.FRESH_LEVEL_ASSEMBLY);
+        assertTrue(profile.levelLoadSteps(preview).stream().noneMatch(s -> s.name().equals("ResetFreshLevelDmaQueue")));
+        // positive control: queued DMA and the previous-frame bytes are cleared only by the fresh step
+        int guard = 0;
+        while (ledger().pendingObjectEntries().isEmpty()) {
+            assertTrue(++guard < 240, "no queued object DMA");
+            fixture.stepFrame(false, false, false, true, false);
+        }
+        var pending = ledger().pendingObjectEntries();
+        profile.levelLoadSteps(fresh).stream().filter(s -> s.name().equals("ResetFreshLevelDmaQueue"))
+                .findFirst().orElseThrow().action().run();
+        assertEquals(List.of(), ledger().pendingObjectEntries());
+        assertTrue(!pending.isEmpty());
+        assertEquals(0, ((S3kVIntDmaLedger.State) ledger().capture()).player1PreviousFrame());
+        assertEquals(0, ledger().capture().tailPreviousFrame());
     }
 }

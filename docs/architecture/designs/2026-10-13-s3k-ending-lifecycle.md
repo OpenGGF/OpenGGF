@@ -2389,6 +2389,7 @@ record to decide anything.
   - Compared: every LF 4400-4406 V-int against `src/test/resources/timing/s3k-ending-vint-dma-native-v1.tsv`
     (35 rows, NTSC and PAL, comparison-only): drained entries and `dma_freeze_mclk`. All 35 match: the Tails
   products show the 96-word tail entry to $D600 at LF 4403 (30,073), and every other V-int has the fixed 26,855.
+    These are two independent native DMA observations with one positive queued entry; see the slice-3 note.
   - The first run keyed engine records by the counter after the step. It showed exactly a one-frame shift of the
     Tails entry (LF 4404 against 4403). The probe keys `frame-dma.csv` by `Level_frame_counter` read at
     `Process_DMA_Queue` (`$1588`), before LevelLoop's `addq` at `$6520`. The engine drains before
@@ -2399,12 +2400,88 @@ record to decide anything.
 - Completion inside VBLANK is not proven per V-int.
 - The queue cap uses phase order, which differs from ROM submission order only when the queue overflows across a V-int
   that did not drain it.
-- The engine has no region switch, so the PAL rows are compared with the NTSC run (VInt_8 DMA work is
-  region-independent).
-- The level-load value of `Player_prev_frame_P2_tail` is not modelled.
+- Corrected in slice 3: the engine does have a configured `REGION`, and the PAL rows now run with `REGION=PAL`.
+- Corrected in slice 3: a fresh `Level` clears the previous-frame bytes (`$610E`).
 - Sonic's "no entry" rows are only partly meaningful while the player body DPLC producer is absent.
 
 **Next:**
 1. Record the player body `*_Load_PLC` producers the same way.
 2. Then cost the VInt_8 handler and `Set_Kos_Bookmark` instructions, so the Kos window budget can subtract the
    V-int's time.
+
+#### Body DPLC producers, configured region and review r1 response (2026-10-16, kos-cycle-consumer lane, slice 3)
+
+**Body DPLC producers.**
+- **ROM routines:** `Sonic_Load_PLC` and `Knuckles_Load_PLC` compare `mapping_frame` with `Player_prev_frame` (`$F766`)
+  and load at ArtTile_Player_1 (VRAM `$D000`). `Tails_Load_PLC` uses `Player_prev_frame_P2` (`$F7DE`) and
+  ArtTile_Player_2 (`$D400`), whatever Tails' player slot.
+- **Super Sonic:** with `Super_Sonic_Knux_flag` set it uses `PLC_SuperSonic`. The engine's Super art is loaded from
+  that table.
+- **Entries:** one per piece, `(count) * $10` words, consecutive.
+- **Engine hook:** the routine runs after `Animate_*` (loc_10C7A). The engine reports it from
+  `PlayableSpriteAnimation.update`, at the same point as the existing S1/S2 DPLC decision, through the internal
+  `PlayerDplcDmaSink`. The game maps the character to the routine.
+- **When it does not report:**
+  - while an object owns the mapping frame (ROM `object_control` bit 1 skips both calls);
+  - for sprites that are not the session's registered playables (ghost and preview copies).
+- **Not recorded:** objects that call a player's `*_Load_PLC` themselves (for example the ending objects), object
+  `Perform_DPLC` users, and zone routines that bypass the AniPLC queue.
+- **Witness:** `TestS3kVIntDmaBodyDplcProduction`. Sonic runs and stops in HCZ1. On every frame the queued and the
+  drained body entries equal an independent reading of `PLC_Sonic` (`$148182`) for the mapping frame the engine
+  published. Controls:
+  - an unchanged frame queues nothing;
+  - drawing other frames twice on the real renderer queues nothing;
+  - registry restore across queued body DMA replays the same 30 records twice.
+
+**Configured region (correction).** The slice-2 statement "the engine has no region switch" was false.
+- The engine has `SonicConfiguration.REGION`. `FrameRateResolver`, the audio backends and the S3K ending credits
+  (`S3kEndingCoordinator`) read it.
+- The ledger now reads the same configured `REGION` at each drain. The record carries NTSC, PAL or UNKNOWN.
+- The PAL ending rows now run with `REGION=PAL` set before the level initializes, and each record must report PAL.
+- The VBLANK length used by the precondition is region-specific: NTSC 126,540 and PAL 300,960 mclk.
+
+**Review r1 response** (`kos-consumer-dma-review-r1.md`):
+- **M1 (fixed).**
+  - Fresh `Level` entries run `clearRAM Tails_CPU_interact,$100` at `$610E`, zeroing `$F700-$F7FF`. That range holds
+    all three previous-frame bytes. `resetAtFreshLevel` now clears them with the queue (`$61C6`).
+  - The old test that asserted the tail byte survives was replaced by a same-nonzero-frame control. Without a Level
+    entry the same frames queue nothing; after the reset they queue again.
+- **M2 (fixed).**
+  - The reset step (`ResetFreshLevelDmaQueue`) is gated by `permitsInitialProcessSpritesRequest()`, the gate of the
+    sibling `loc_60DE` RNG clear. It is ordered after `ClearFreshLevelRng` and before `PrepareFreshTitleCardSst`
+    (`$610E`/`$61C6` precede `loc_62B6`).
+  - `STATE_RESTORATION`, `DECODE_ONLY` and `PREVIEW_CAPTURE` loads have no such step. A queued positive entry
+    survives everything except the fresh step's action.
+- **M3 (fixed).**
+  - The record no longer states a total. `FreezeStatus` is one of `CONDITIONAL_ON_VINT_START`, `EXCEEDS_VBLANK`,
+    `UNKNOWN_REGION`, `FIXED_UNMODELLED` or `ROM_UNSUPPORTED`. `conditionalFreezeMclk` is the recorded-producer floor
+    sum only in the conditional case.
+  - A sum at or above the region's VBLANK is refused. That is a necessary condition only: even a smaller sum is the GPGX
+    freeze only if the V-int reaches each transfer early enough, and that start time stays open until the V-int
+    instruction terms exist.
+  - The reviewer's vector (fixed + `$800`-word KosM + `$600`-word AniPLC = 147,024) is `EXCEEDS_VBLANK` in NTSC and
+    conditional in PAL.
+- **M4 (fixed).** See the region note above.
+- **L1 (wording).** The 35 ending rows are two independent native DMA observations (the tails and the Sonic
+  `frame-dma.csv`). 34 values are the constant VInt_8 set, and there is one positive queued entry (tails LF 4403,
+  96 words to `$D600`). The AniPLC, KosM, cap and Hyper-flash paths have no native corroboration. The body witness
+  above rests on the ROM table, not on native rows.
+- **L2 (fixed).** The HCZ1 rewind now captures only once DMA is queued. It asserts the restored queue is non-empty and
+  that the first replayed V-int drains it.
+- **L3 (wording).** The drained order is ROM order only when one LevelLoop iteration's submissions reach a drain.
+- **L4 (fixed).** The S3K detector accepts any "SONIC THE HEDGEHOG 3" / "SONIC & KNUCKLES" header. A ROM without the
+  pinned VInt_8 instructions, or shorter than them, now binds `ROM_UNSUPPORTED` and prices nothing instead of throwing
+  in the V-int. The Kos model still pins opcodes only; it stays unregistered until its extension words or the ROM
+  SHA-1 are pinned.
+
+**Validation for this slice:**
+- `TestS3kVIntDmaLedger`, `TestS3kVIntDma`, `TestS3kVIntDmaLedgerProduction` (HCZ1 records with positive rewind; the
+  fresh-step gate and order) and `TestS3kVIntDmaBodyDplcProduction`.
+- `TestS3kEndingVIntDmaNative`, five products: three NTSC, and two with `REGION=PAL`. With the body producer active,
+  every LF 4400-4406 V-int still equals the native rows, including "no body transfer".
+- The four AGENTS S3K tests. All passed at the committed tree, with no skips.
+
+**Still open:**
+- V-int handler instruction time, which fixes each transfer's start, and therefore any unconditional freeze.
+- The object-called `*_Load_PLC`, object `Perform_DPLC` and direct zone-upload producers.
+- The six counts and the 46 contexts.

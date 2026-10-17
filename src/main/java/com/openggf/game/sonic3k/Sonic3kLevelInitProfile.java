@@ -104,8 +104,10 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
                 ? levelManager.getObjectManager().getObjectServices() : null;
         if (!ledger.romBound() && services != null) {
             try {
-                ledger.bindRom(com.openggf.game.sonic3k.timing.S3kVIntDma.VInt8Transfers.decode(
-                        services.romReader().slice(0, 0x6170)));
+                var reader = services.romReader();
+                // An accepted image shorter than the pinned VInt_8 code prices nothing (ROM_UNSUPPORTED).
+                ledger.bindRom(reader.size() < 0x6170 ? java.util.Optional.empty()
+                        : com.openggf.game.sonic3k.timing.S3kVIntDma.VInt8Transfers.tryDecode(reader.slice(0, 0x6170)));
             } catch (java.io.IOException failure) {
                 throw new java.io.UncheckedIOException(failure);
             }
@@ -123,23 +125,33 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
                 && services.playerQuery().mainPlayerOrNull() instanceof com.openggf.sprites.playable.AbstractPlayableSprite player
                 && player.getSuperStateController() instanceof Sonic3kSuperStateController controller
                 && controller.hyperFlashStateLive();
-        ledger.serviceVInt(phase, hyperFlash, animateTiles, art.pendingKosModuleDmaEntries());
+        // The console region is the configured REGION, the same owner FrameRateResolver and the ending credits read.
+        String configuredRegion = services != null && services.configuration() != null
+                ? services.configuration().getString(com.openggf.configuration.SonicConfiguration.REGION) : null;
+        var region = "PAL".equalsIgnoreCase(configuredRegion)
+                ? com.openggf.game.sonic3k.timing.S3kVIntDmaLedger.VideoRegion.PAL
+                : "NTSC".equalsIgnoreCase(configuredRegion)
+                        ? com.openggf.game.sonic3k.timing.S3kVIntDmaLedger.VideoRegion.NTSC
+                        : com.openggf.game.sonic3k.timing.S3kVIntDmaLedger.VideoRegion.UNKNOWN;
+        ledger.serviceVInt(phase, region, hyperFlash, animateTiles, art.pendingKosModuleDmaEntries());
     }
 
     @Override
     public List<InitStep> levelLoadSteps(LevelLoadContext ctx) {
         List<InitStep> steps = buildCoreSteps(ctx);
-        steps.addFirst(new InitStep("ResetDmaQueue",
-                "Level/loc_61BE ($61C6): clr.w (DMA_queue).w / move.l #DMA_queue,(DMA_queue_slot).w",
-                () -> {
-                    if (GameServices.runtimeArtCoordinator() instanceof S3kRuntimeArtCoordinator art) {
-                        art.vintDmaLedger().resetQueueAtLevelLoad();
-                    }
-                }));
         steps.addFirst(new InitStep("PrepareFreshTitleCardSst",
                 "Level/loc_62B6: fixed title owner precedes layout placement",
                 () -> freshTitleCardSst.prepare(ctx)));
         if (ctx.permitsInitialProcessSpritesRequest()) {
+            // Same fresh-Level gate: $610E clears $F700-$F7FF (the three DPLC previous-frame bytes) and $61C6 empties
+            // DMA_queue, both before loc_62B6. Restoration, decode, preview and seamless continuation never run Level.
+            steps.addFirst(new InitStep("ResetFreshLevelDmaQueue",
+                    "Level/loc_60DE $610E clearRAM Tails_CPU_interact,$100; loc_61BE $61C6 DMA_queue reset",
+                    () -> {
+                        if (GameServices.runtimeArtCoordinator() instanceof S3kRuntimeArtCoordinator art) {
+                            art.vintDmaLedger().resetAtFreshLevel();
+                        }
+                    }));
             // Level/loc_60DE clears Lag_frame_count ($F62A), $58 bytes:
             // RNG_seed at $F636 lies inside it, before any new sprite dispatch.
             // This includes ending/stage-return loads, but not preview, pure

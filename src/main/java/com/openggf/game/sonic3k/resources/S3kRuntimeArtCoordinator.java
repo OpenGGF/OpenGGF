@@ -138,6 +138,18 @@ public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator,
         vintDmaLedger.observeTailsTailFrame(mappingFrame, dplc);
     }
 
+    /**
+     * {@code Sonic_Load_PLC} and {@code Knuckles_Load_PLC} share {@code Player_prev_frame} and ArtTile_Player_1;
+     * {@code Tails_Load_PLC} uses {@code Player_prev_frame_P2} and ArtTile_Player_2 whatever Tails' player slot.
+     */
+    @Override
+    public void playerLoadPlc(com.openggf.sprites.playable.AbstractPlayableSprite player, int mappingFrame,
+                              com.openggf.level.render.SpriteDplcFrame dplc) {
+        vintDmaLedger.observePlayerFrame(player instanceof com.openggf.sprites.playable.Tails
+                ? com.openggf.game.sonic3k.timing.S3kVIntDmaLedger.BodySlot.TAILS
+                : com.openggf.game.sonic3k.timing.S3kVIntDmaLedger.BodySlot.SONIC_KNUCKLES, mappingFrame, dplc);
+    }
+
     /** Per-V-int DMA work record (diagnostic budget term; never an activation input). */
     public com.openggf.game.sonic3k.timing.S3kVIntDmaLedger vintDmaLedger() { return vintDmaLedger; }
 

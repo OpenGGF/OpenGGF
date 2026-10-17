@@ -10,4 +10,11 @@ import com.openggf.level.render.SpriteDplcFrame;
 public interface PlayerDplcDmaSink {
     /** One {@code Tails_Tail_Load_PLC} call: the tail object's {@code mapping_frame} and that frame's DPLC. */
     void tailsTailLoadPlc(int mappingFrame, SpriteDplcFrame dplc);
+
+    /**
+     * One body DPLC call for {@code player} after its animation pass: the player's {@code mapping_frame} and the DPLC
+     * of the art it is drawn with. The game selects the ROM routine for the character.
+     */
+    void playerLoadPlc(com.openggf.sprites.playable.AbstractPlayableSprite player, int mappingFrame,
+                       SpriteDplcFrame dplc);
 }

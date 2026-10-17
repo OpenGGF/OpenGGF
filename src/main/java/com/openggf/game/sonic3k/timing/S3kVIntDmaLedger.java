@@ -16,17 +16,21 @@ import java.util.Objects;
  * every {@code Add_To_DMA_Queue} entry {@code Process_DMA_Queue} drains, with its GPGX bus freeze.
  *
  * <p>Producers, in LevelLoop order (sonic3k.asm {@code LevelLoop}: Process_Sprites, then Animate_Tiles, then
- * Process_Kos_Module_Queue): object DPLC loads submitted here as they happen ({@code Tails_Tail_Load_PLC});
+ * Process_Kos_Module_Queue): object DPLC loads submitted here as they happen (the players' {@code *_Load_PLC} and
+ * {@code Tails_Tail_Load_PLC});
  * Animate_Tiles uploads and KosM module completions, read from their own pending queues when the V-int drains them.
  * Shipped {@code Add_To_DMA_Queue} (Sonic3_Complete = 0) makes one VRAM entry per call and returns without queueing
- * once the 18-entry {@code DMA_queue} is full; entries are capped in that phase order. That order is exact unless the
- * queue overflows across a V-int that did not drain it.
+ * once the 18-entry {@code DMA_queue} is full; entries are capped in that phase order. The drained order equals the
+ * ROM's only when one LevelLoop iteration's submissions reach a drain; when several iterations share one (a V-int
+ * that did not drain), the ROM interleaves them per iteration and this record does not.
  *
  * <p>This is a diagnostic budget term, never an activation input: it does not decide readiness, rows, profiles or
- * fingerprints, and it covers only the producers above. Other {@code Add_To_DMA_Queue} callers (player and object
- * DPLCs other than the Tails tail, zone tile routines that bypass the AniPLC queue) are not yet recorded, so a record
- * is never a complete statement of the V-int's DMA. The freeze is exact only when each transfer ends strictly inside
- * VBLANK, which depends on V-int handler instruction time this ledger does not have.
+ * fingerprints, and it covers only the producers above. Other {@code Add_To_DMA_Queue} callers (object
+ * {@code Perform_DPLC} users, objects that call a player's {@code *_Load_PLC} while they own its frame, zone tile
+ * routines that bypass the AniPLC queue) are not yet recorded, so a record is never a complete statement of the
+ * V-int's DMA. Its freeze is a conditional subtotal of the recorded transfers: it equals the GPGX freeze only if every
+ * transfer starts and ends strictly inside VBLANK, and the start depends on V-int handler instruction time this
+ * ledger does not have. {@link FreezeStatus} says which statement a record can make.
  */
 public final class S3kVIntDmaLedger implements RewindSnapshottable<S3kVIntDmaLedger.State> {
     public static final String REWIND_KEY = "s3k-vint-dma-ledger";
@@ -34,6 +38,33 @@ public final class S3kVIntDmaLedger implements RewindSnapshottable<S3kVIntDmaLed
     public static final int DMA_QUEUE_ENTRIES = 0x12;
     /** {@code ArtTile_Player_2_Tail}: {@code Tails_Tail_Load_PLC} loads at {@code tiles_to_bytes} of it, VRAM $D600. */
     public static final int TAILS_TAIL_VRAM = 0xD600;
+
+    /** The body DPLC routine's previous-frame byte and VRAM base. */
+    public enum BodySlot {
+        /** {@code Sonic_Load_PLC} / {@code Knuckles_Load_PLC}: {@code Player_prev_frame}, ArtTile_Player_1 ($680). */
+        SONIC_KNUCKLES(0xD000),
+        /** {@code Tails_Load_PLC}: {@code Player_prev_frame_P2}, ArtTile_Player_2 ($6A0). */
+        TAILS(0xD400);
+
+        private final int vram;
+
+        BodySlot(int vram) {
+            this.vram = vram;
+        }
+
+        public int vram() {
+            return vram;
+        }
+    }
+
+    /** The console region whose VBLANK the transfers must fit in; UNKNOWN states no total. */
+    public enum VideoRegion {
+        NTSC, PAL, UNKNOWN;
+
+        long vblankMclk() {
+            return this == UNKNOWN ? -1 : S3kVIntDma.vblankMclk(this == PAL);
+        }
+    }
 
     public enum Producer { OBJECT_DPLC, ANIMATE_TILES, KOS_MODULE }
 
@@ -59,14 +90,36 @@ public final class S3kVIntDmaLedger implements RewindSnapshottable<S3kVIntDmaLed
         UNMODELLED
     }
 
+    /** What a record's freeze figure means. */
+    public enum FreezeStatus {
+        /**
+         * The fixed transfers plus the recorded queue sum to less than the region's VBLANK. The figure is the GPGX
+         * freeze only if the V-int reaches each transfer early enough for it to end strictly inside VBLANK; that
+         * start time is not modelled yet. A recorded-producer subtotal, never a measured or complete V-int freeze.
+         */
+        CONDITIONAL_ON_VINT_START,
+        /** The sum alone reaches the end of VBLANK, so some transfer continues into active display: no figure. */
+        EXCEEDS_VBLANK,
+        /** The configured region is neither NTSC nor PAL: no figure. */
+        UNKNOWN_REGION,
+        /** The draining routine, or a live Hyper flash, is not modelled: no figure for the V-int. */
+        FIXED_UNMODELLED,
+        /** The session ROM does not carry the pinned VInt_8 instructions: nothing is priced. */
+        ROM_UNSUPPORTED
+    }
+
     /**
-     * One draining V-int. {@code freezeMclk} sums the per-transfer GPGX freezes and is -1 when the fixed transfers
-     * are unmodelled; {@code queueFreezeMclk} covers the drained entries alone and is -1 before the ROM is bound.
+     * One draining V-int. {@code conditionalFreezeMclk} is the per-transfer GPGX floor sum of the fixed transfers and
+     * the recorded queue when {@code freezeStatus} is {@link FreezeStatus#CONDITIONAL_ON_VINT_START}, otherwise -1.
+     * {@code queueFreezeMclk} is the same floor sum over the drained entries alone, -1 with an unsupported ROM.
      */
-    public record Record(long ordinal, PlcLifecyclePhase phase, FixedTransfers fixed, List<Transfer> fixedTransfers,
-                         List<QueuedEntry> drained, int droppedEntries, long queueFreezeMclk, long freezeMclk) {
+    public record Record(long ordinal, PlcLifecyclePhase phase, VideoRegion region, FixedTransfers fixed,
+                         List<Transfer> fixedTransfers, List<QueuedEntry> drained, int droppedEntries,
+                         long queueFreezeMclk, FreezeStatus freezeStatus, long conditionalFreezeMclk) {
         public Record {
             Objects.requireNonNull(fixed, "fixed");
+            Objects.requireNonNull(region, "region");
+            Objects.requireNonNull(freezeStatus, "freezeStatus");
             fixedTransfers = List.copyOf(fixedTransfers);
             drained = List.copyOf(drained);
         }
@@ -77,7 +130,7 @@ public final class S3kVIntDmaLedger implements RewindSnapshottable<S3kVIntDmaLed
      * {@code Player_prev_frame_P2_tail} byte and the last record.
      */
     public record State(List<QueuedEntry> objectPending, int refusedSincePreviousDrain, int tailPreviousFrame,
-                        long ordinal, Record last) {
+                        int player1PreviousFrame, int player2PreviousFrame, long ordinal, Record last) {
         public State {
             objectPending = List.copyOf(objectPending);
         }
@@ -86,19 +139,29 @@ public final class S3kVIntDmaLedger implements RewindSnapshottable<S3kVIntDmaLed
     private final List<QueuedEntry> objectPending = new ArrayList<>();
     /** Add_To_DMA_Queue calls that found the queue full: {@code cmpa.w #DMA_queue_slot,a1 / beq.s ..._Done}. */
     private int refusedSincePreviousDrain;
-    /** {@code Player_prev_frame_P2_tail}; Level's RAM clear leaves it 0. */
+    /** {@code Player_prev_frame_P2_tail}; a fresh Level clears it to 0. */
     private int tailPreviousFrame;
+    /** {@code Player_prev_frame} and {@code Player_prev_frame_P2}; a fresh Level clears them to 0. */
+    private int player1PreviousFrame;
+    private int player2PreviousFrame;
     private long ordinal;
     private Record last;
     private S3kVIntDma.VInt8Transfers vint8;
+    private boolean romChecked;
 
     /** Decoded once from the session ROM; a constant of the ROM, not rewind state. */
     public void bindRom(S3kVIntDma.VInt8Transfers transfers) {
-        this.vint8 = Objects.requireNonNull(transfers, "transfers");
+        bindRom(java.util.Optional.of(transfers));
+    }
+
+    /** Empty when the session ROM lacks the pinned VInt_8 instructions: records then price nothing. */
+    public void bindRom(java.util.Optional<S3kVIntDma.VInt8Transfers> transfers) {
+        this.vint8 = transfers.orElse(null);
+        this.romChecked = true;
     }
 
     public boolean romBound() {
-        return vint8 != null;
+        return romChecked;
     }
 
     /**
@@ -111,10 +174,35 @@ public final class S3kVIntDmaLedger implements RewindSnapshottable<S3kVIntDmaLed
             return;
         }
         tailPreviousFrame = frame;
+        queueDplc(dplc, TAILS_TAIL_VRAM);
+    }
+
+    /**
+     * {@code Sonic_Load_PLC} / {@code Knuckles_Load_PLC} / {@code Tails_Load_PLC}: the same compare, store and
+     * per-piece {@code Add_To_DMA_Queue} as the tail, against the slot's previous-frame byte and VRAM base.
+     */
+    public void observePlayerFrame(BodySlot slot, int mappingFrame, SpriteDplcFrame dplc) {
+        Objects.requireNonNull(slot, "slot");
+        int frame = mappingFrame & 0xFF;
+        if (slot == BodySlot.TAILS) {
+            if (frame == player2PreviousFrame) {
+                return;
+            }
+            player2PreviousFrame = frame;
+        } else {
+            if (frame == player1PreviousFrame) {
+                return;
+            }
+            player1PreviousFrame = frame;
+        }
+        queueDplc(dplc, slot.vram());
+    }
+
+    private void queueDplc(SpriteDplcFrame dplc, int base) {
         if (dplc == null) {
             return;
         }
-        int destination = TAILS_TAIL_VRAM;
+        int destination = base;
         for (TileLoadRequest request : dplc.requests()) {
             int words = request.count() * 0x10;
             if (objectPending.size() < DMA_QUEUE_ENTRIES) {
@@ -130,8 +218,9 @@ public final class S3kVIntDmaLedger implements RewindSnapshottable<S3kVIntDmaLed
      * The draining V-int: fixed transfers for {@code phase}, then the queue in LevelLoop phase order, capped at
      * eighteen entries.
      */
-    public Record serviceVInt(PlcLifecyclePhase phase, boolean hyperFlashStateLive,
+    public Record serviceVInt(PlcLifecyclePhase phase, VideoRegion region, boolean hyperFlashStateLive,
                               List<QueuedEntry> animateTilesPending, List<QueuedEntry> kosModulePending) {
+        Objects.requireNonNull(region, "region");
         List<QueuedEntry> queued = new ArrayList<>(objectPending);
         queued.addAll(animateTilesPending);
         queued.addAll(kosModulePending);
@@ -140,7 +229,7 @@ public final class S3kVIntDmaLedger implements RewindSnapshottable<S3kVIntDmaLed
         refusedSincePreviousDrain = 0;
         int kept = Math.min(queued.size(), DMA_QUEUE_ENTRIES);
         List<QueuedEntry> drained = List.copyOf(queued.subList(0, kept));
-        // The VDP width comes from the ROM's Level register write; without it no freeze is stated.
+        // The VDP width comes from the ROM's Level register write; without it nothing is priced.
         long queueFreeze = -1;
         if (vint8 != null) {
             queueFreeze = 0;
@@ -151,10 +240,26 @@ public final class S3kVIntDmaLedger implements RewindSnapshottable<S3kVIntDmaLed
         FixedTransfers fixed = vint8 != null && !hyperFlashStateLive && runsVInt8(phase)
                 ? FixedTransfers.VINT_8 : FixedTransfers.UNMODELLED;
         List<Transfer> fixedTransfers = fixed == FixedTransfers.VINT_8 ? vint8.inOrder(false) : List.of();
-        long freeze = fixed == FixedTransfers.VINT_8
-                ? S3kVIntDma.blankFreeze(fixedTransfers, vint8.h40()) + queueFreeze : -1;
-        last = new Record(++ordinal, phase, fixed, fixedTransfers, drained, refused + queued.size() - kept,
-                queueFreeze, freeze);
+        FreezeStatus status;
+        long freeze = -1;
+        if (vint8 == null) {
+            status = FreezeStatus.ROM_UNSUPPORTED;
+        } else if (fixed != FixedTransfers.VINT_8) {
+            status = FreezeStatus.FIXED_UNMODELLED;
+        } else if (region == VideoRegion.UNKNOWN) {
+            status = FreezeStatus.UNKNOWN_REGION;
+        } else {
+            long sum = S3kVIntDma.blankFreeze(fixedTransfers, vint8.h40()) + queueFreeze;
+            // Necessary, not sufficient: even a sum inside VBLANK needs every transfer to start early enough.
+            if (sum >= region.vblankMclk()) {
+                status = FreezeStatus.EXCEEDS_VBLANK;
+            } else {
+                status = FreezeStatus.CONDITIONAL_ON_VINT_START;
+                freeze = sum;
+            }
+        }
+        last = new Record(++ordinal, phase, region, fixed, fixedTransfers, drained, refused + queued.size() - kept,
+                queueFreeze, status, freeze);
         return last;
     }
 
@@ -179,7 +284,8 @@ public final class S3kVIntDmaLedger implements RewindSnapshottable<S3kVIntDmaLed
 
     @Override
     public State capture() {
-        return new State(objectPending, refusedSincePreviousDrain, tailPreviousFrame, ordinal, last);
+        return new State(objectPending, refusedSincePreviousDrain, tailPreviousFrame, player1PreviousFrame,
+                player2PreviousFrame, ordinal, last);
     }
 
     @Override
@@ -189,6 +295,8 @@ public final class S3kVIntDmaLedger implements RewindSnapshottable<S3kVIntDmaLed
         objectPending.addAll(state.objectPending());
         refusedSincePreviousDrain = state.refusedSincePreviousDrain();
         tailPreviousFrame = state.tailPreviousFrame();
+        player1PreviousFrame = state.player1PreviousFrame();
+        player2PreviousFrame = state.player2PreviousFrame();
         ordinal = state.ordinal();
         last = state.last();
     }
@@ -199,12 +307,17 @@ public final class S3kVIntDmaLedger implements RewindSnapshottable<S3kVIntDmaLed
     }
 
     /**
-     * {@code Level} loc_61BE (ROM $61C6): {@code clr.w (DMA_queue).w / move.l #DMA_queue,(DMA_queue_slot).w}.
-     * {@code Player_prev_frame_P2_tail} is left as it is.
+     * A fresh {@code Level} entry: loc_60DE's {@code clearRAM Tails_CPU_interact,$100} at ROM $610E zeroes $F700-$F7FF,
+     * which holds {@code Player_prev_frame} ($F766), {@code Player_prev_frame_P2} ($F7DE) and
+     * {@code Player_prev_frame_P2_tail} ($F7DF); loc_61BE then empties the queue
+     * ({@code clr.w (DMA_queue).w / move.l #DMA_queue,(DMA_queue_slot).w} at $61C6).
      */
-    public void resetQueueAtLevelLoad() {
+    public void resetAtFreshLevel() {
         objectPending.clear();
         refusedSincePreviousDrain = 0;
+        tailPreviousFrame = 0;
+        player1PreviousFrame = 0;
+        player2PreviousFrame = 0;
     }
 
     /** Missing-snapshot reset: no queue, no record. */
@@ -212,6 +325,8 @@ public final class S3kVIntDmaLedger implements RewindSnapshottable<S3kVIntDmaLed
         objectPending.clear();
         refusedSincePreviousDrain = 0;
         tailPreviousFrame = 0;
+        player1PreviousFrame = 0;
+        player2PreviousFrame = 0;
         ordinal = 0;
         last = null;
     }
