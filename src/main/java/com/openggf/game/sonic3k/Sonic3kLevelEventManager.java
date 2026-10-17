@@ -1510,7 +1510,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                 new com.openggf.game.sonic3k.features.HCZWaterSkimStaticAdapter(),
                 new com.openggf.game.sonic3k.features.HCZWaterTunnelStaticAdapter(),
                 new com.openggf.game.sonic3k.objects.HCZBreakableBarStaticAdapter(),
-                new com.openggf.game.sonic3k.objects.HCZWaterRushPaletteCycleStaticAdapter());
+                new com.openggf.game.sonic3k.objects.HCZWaterRushPaletteCycleStaticAdapter(),
+                new com.openggf.game.sonic3k.S3kCollisionLayoutRewindAdapter());
     }
 
     @Override

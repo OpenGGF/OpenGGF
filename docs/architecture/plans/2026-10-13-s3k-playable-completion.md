@@ -4345,6 +4345,21 @@ temporary runner/consumed diagnostics removed; all jobs terminal. [Exact command
 fingerprint, all windows and native limit](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r8-lexical-wall-owner-observer-and-actual7134-bg-result--2026-10-17).
 
 
+## R9 word-layout provenance; cross-load design handback — 2026-10-17
+
+Own tree safely FF32a, native4fdf retained, R9 exactID/ordinal10 registered.
+Root's retained native16359 proves BG7134-1 vs engine+31 with equal raw layers/
+provider. FF907F94 is Block_table+007F, low byte of current common HCZ E094;
+ROM3B91F8's entire0558-byte output matches all four native snapshots. It is not
+unknown stale layout RAM. Adjacent FF703E0179 instead belongs to HCZ1's retained
+128×128 tail6F80–79FF; HCZ2's shorter overwrite ends6F80. One cold loader/provider
+regression32483 errors at missing block224 before lookup assertions (1/0F/1E/0S),
+so no qualified old-red. No retry or production/API change. Stop before new
+encoded-layout addressing and resident-table/cross-load/rewind contracts; Root
+owns implementation authorization. Temporary test/diagnostics consumed. [Exact
+writers, command, source checks and bounded design](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r9-native-word-layout-byte-provenance-and-resident-table-boundary--2026-10-17).
+
+
 ## 2026-10-17 producer-owned ending ApplyDeformation work
 
 This independent unit reuses `$OWNED_TREE` (`t3-fa8da232`) and its own
@@ -4915,3 +4930,27 @@ sessions, temporary backup and consumed diagnostic cleanup are accounted for.
 Only the generated ignored private config remains for Root's tree cleanup.
 No Main integration/push, branch/tree removal, RGB certificate, native run or
 whole-objective qualification is included; Root owns remaining delivery gates.
+## R10 HCZ word-address and destination-residency owner — 2026-10-17
+
+Local e757 (Root067 merge64b77, then pre-edit Root28 merge) implements the two
+R9 production owners: encoded native collision address selection and retained
+128×128 destination bytes through actual HCZ1→HCZ2 construction/commit. Current
+ROM prefix ownership also models positive MOVEA.W aliases after independent
+review exposed incorrect RAM substitution. The safe refusal first stopped74271
+at AIZ segment8 after2195 rows/ROM00007F; Root explicitly authorized the bounded
+immutable current-ROM extension. No fixture/native RAM hydration or public API.
+
+Genuine transition21043 old-red→6557 green; reviewed sign-domain38709 old-red;
+ROM-owner53171 old-red→final3897 seven affected cases green. Twice-forced whole-
+world recreation/restoration/forward replay covers live16×16/retained128×128/map
+mutations, scene geometry, and immutable ROM binding after the intentional load
+history reset. Focused4439=122/1 inherited mock error (exact Root61070 baseline);
+guards45410=179/2 exact inherited MenuAudio failures, other177 pass. No unrelated
+mock/guard edits or repeated broad selection.
+
+Final original prefix49095 reaches7135 inclusive. Actual native7134 FG31/BG-1/
+combined-1 and P20175.F800/vx0170/g0/push match. Returned HCZ7136/14208 rows still
+contains206 errors (11camera physics+195animation); no non-camera physics
+mismatch through7135. This is bounded closure, not zero frontier/full parity.
+No full canonical/slice/alternate/GLFW claim; Root owns further qualification.
+[Source hashes, exact commands, all windows and preserved intermediate failures](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r10-encoded-collision-words-resident-destinations-and-rom-aliases--2026-10-17).

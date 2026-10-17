@@ -71,6 +71,13 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A negative layout word can read a neighbouring RAM owner (2026-10-17, HCZ R9).
+Native907F is outside the layout buffer and aliases current16×16 ROM definitions;
+the next cell's128×128 definition can be an unwritten prior-act tail. Trace the
+byte writer and each table's destination extent before replacing width wrapping.
+A cold target-level load is not an independent control for retained predecessor
+RAM: R9's cold test errored before lookup assertions, and is not old-red proof.
+
 One shared sensor is not one gameplay-owner call (2026-10-17, HCZ BG witness).
 CalcRoomInFront, the fatal BG floor and post-move wall clamps share a probe. Tag
 the actual caller, copy the returned pool immediately, and distinguish vertical

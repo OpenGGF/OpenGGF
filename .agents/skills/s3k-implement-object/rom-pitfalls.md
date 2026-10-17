@@ -6088,3 +6088,25 @@ alone does not override the render consumer's object header defaults.
 Origin: 2026-10-17 bounded Pachinko popup producer task over Root28fd18de8;
 real-contact old-red and twice-recreated whole-world lifetime evidence are in
 `docs/architecture/validation/levels/s3k-bonus-stage-transitions.md`.
+
+
+## Encoded collision word pointers can select ROM or adjacent resident assets
+
+Find_Tile_BG/FG ($EFB6/$EFF0, sonic3k.asm19151–19201) adds unsigned word X>>7
+to an encoded layout pointer, then MOVEA.W sign-extends the selected byte
+address.0000–7FFF selects ROM, not FF0000 RAM. After reading that byte, the
+separate ChunkAddrArray calculation deliberately retains D1's FFFF upper word
+for128×128 definition RAM. Do not merge these two address-space operations.
+A zero row pointer may therefore read current ROM bytes; width modulo, an empty
+row default, and treating every word as RAM can all yield plausible wrong data.
+
+A negative column can instead spill from layout8000–8FFF into live16×16 data
+at9000. The selected128×128 descriptor may come from a prior level's unwritten
+destination tail: HCZ2's shorter load preserves HCZ1's703E=0179. Trace both ROM
+producers and exact write extents; a cold target load cannot prove residency.
+Use immutable production asset carry and coherent map/definition mutations,
+with per-game restoration metadata and two forced whole-world replay controls.
+Observation RAM and trace rows never supply gameplay bytes. Unknown regions
+remain explicit limits. The reviewed safe ROM refusal was hit by the original
+route before HCZ; supporting aliases requires current-ROM pipeline ownership,
+not hardcoded observed zeros. Origin: HCZ R9/R10, e757 epoch, dated trace audit.

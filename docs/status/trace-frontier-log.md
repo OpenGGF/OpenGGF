@@ -113390,6 +113390,20 @@ alternate/native/media/guard/broad run or new GLFW certification. [Exact invocat
 source fingerprint, windows and metrics](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r8-lexical-wall-owner-observer-and-actual7134-bg-result--2026-10-17).
 
 
+### 2026-10-17 — R9 native layout-word source attribution; engine frontier unchanged
+
+Source32a, no production change or engine replay. Root native16359's existing
+7134 FG+31/BG-1 with equal layers/provider narrows R8 engineBG+31 to layout
+addressing. Static current-ROM decoding plus all four retained snapshots proves
+FF907F94 is current16×16 tile data, while adjacent703E0179 is retained HCZ1
+128×128 data beyond HCZ2's shorter write. Sole normal/EGL ROM test32483,
+-Dtest=TestS3kWordLayoutCollision#encodedBackgroundRowCanReadTheCurrentRomTileDefinitionBytes,
+ends1/0F/1E/0S at missing cold block224 before lookup assertions. No qualified
+old-red, retry, fix or trace count/frontier advance. Root receives internal
+addressing plus cross-load residency/rewind design before implementation.
+[Exact command, provenance and stopping boundary](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r9-native-word-layout-byte-provenance-and-resident-table-boundary--2026-10-17).
+
+
 ### 2026-10-17 — R5 freed-animal previous-render lifetime; alternate frontier unchanged
 
 Own t3-98d036a9, parent e207faf7d (separate R4 evidence), runtime AizMiniboss1878
@@ -113477,3 +113491,28 @@ schemas remain explicit in the matrix. No new/worsened frontier, no timing/SAT/
 VRAM/RGB certificate. Candidate source restored exactly afterward; last local
 target is attribution-baseline compiled. Root owns fresh composition validation.
 Reports/XML are consumed after inspection; no archives or pass caches retained.
+### 2026-10-17 — R10 native7134 wall owner closes through7135; residual206
+
+Own t3-3aa3bc3c, e757 + final runtime SHA256
+0b1f59eb135fd284a5e058e0f08e8f438d2869193935d06c3c9da1531318b676.
+Internal encoded collision addressing, actual destination residency, and bounded
+immutable current-ROM positive aliases have independent old-red/green and two
+forced whole-world restore/replay controls. Earlier74271 refused ROM00007F after
+AIZ segment8 2195/7175 rows; this remains an incomplete distinct result. Root's
+subsequently authorized ROM extension passes3897 seven affected checks.
+
+49095 uses `-Ptrace-replay -Dtest=TestS3kHcz7135ResidentLayoutWitness#canonicalThroughHcz7135`
+through the current Main absolute normal wrapper, original AD40 BK2/3ROMs,
+EGL/nullAL/noambient/singlefork.1/0F/0E/0S observer, queue0s/Maven48.198s,
+finished14:01:25UTC. Six complete gameplay windows0/2/4/6/8/9 have0errors;
+returned HCZ11 consumes7136/14208 rows, **206=11physics(camera)+195animation**,
+lag53, warning/bootstrap0. First non-camera physics mismatch is absent through
+7135; no later frontier is measured. Actual7134 selected BG-1 produces native
+0175.F800/vx0170/g0/push;7133 selectedBG+2 also matches. Recent remaining camera
+fields include6790–6792/6947–6948 camera_y; first remaining animation identity is
+not established by this report. Not zero-frontier or full-route parity.
+
+No full returned-HCZ/slice/alternate/GLFW qualification on this runtime. Matched
+historical4699/4353 remains mixed,3738 unmatched. Focused122 has one exactly
+matched inherited mock error; guards179 have two inherited MenuAudio failures.
+[Exact selectors, source epochs, all windows, intermediate failures and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r10-encoded-collision-words-resident-destinations-and-rom-aliases--2026-10-17).
