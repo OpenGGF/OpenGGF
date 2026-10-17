@@ -3471,3 +3471,18 @@ matched4699/4353 remains mixed and3738 unmatched. Exact GLFW, broader products,
 auxiliary fields and later exit remain unqualified. One fix, no further sweep,
 broad/full, Main writes or push; own jobs terminal. [Native argv/UTC/pins, exact
 selectors, all groups and limits](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r4-retained-title-parent-and-child-movement-latch--2026-10-17).
+
+
+## HCZ7134 bounded coupled-pipeline decision — 2026-10-17
+
+Test-only follow-up on3896: one declared floor/wall regression plus no-nudge
+control executes ordinary CPU history -> actual sprite scheduler -> underwater
+acceleration -> projected wall response -> integration. Focused86494 passes
+7/0F/0E/0S. Nudge yields00F6/ground0/Push; control01F6/ground01F6/noPush, both
+ending at the same X. Initial56102's2 failures were an incorrect test accessor
+stub, corrected without production changes. Generic ordering is disproved for
+these conditions;7134 still needs the live engine CPU branch, full pre-wall
+position/velocity/path and actual terrain probe/distance. No new traces/native
+observations, runtime edit, broad suite, Main write or push. Prior strict
+7134sidekick_x/9482air and exact GLFW limits remain. [Math, exact focused
+command and causal blocker](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#hcz7134-coupled-cpu-and-ground-wall-decision--2026-10-17).

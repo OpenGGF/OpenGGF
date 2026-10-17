@@ -120,3 +120,11 @@ exit. Independent full HCZ65594 retains exactly4353 spans/first9482air, Poindext
 passes; earlier divergence prevents a second clean repaired-owner claim. No new
 entry, product breadth, engine pixel or cross-load timeline certification.
 [Exact evidence and limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r4-retained-title-parent-and-child-movement-latch--2026-10-17).
+
+
+HCZ7134 test-only decision (2026-10-17, base3896): independent one-tick coupled
+CPU/movement/wall/integration and no-nudge control pass in focused86494
+(7/0F/0E/0S total). Generic ordering is supported; actual7134 branch/probe/terrain
+is still unknown. Equal final X can conceal different velocity/Push results.
+No new route, matrix product or runtime qualification. [Exact evidence and
+missing live fields](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#hcz7134-coupled-cpu-and-ground-wall-decision--2026-10-17).
