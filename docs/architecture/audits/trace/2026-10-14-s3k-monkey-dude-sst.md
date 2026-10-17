@@ -4877,3 +4877,130 @@ After durable extraction, restore exact column source/remove temporary test and
 instrumented classes, then consume the owned witness/XML/text and seven fresh
 trace reports with their owner sidecars under normal metadata admission. No
 archive; native4fdf/private config/all refs preserved, no live owned jobs.
+
+
+## R19 independent column cached-release old-red — 2026-10-17
+
+**Independent old-red only; production remains unchanged.** After the accepted
+R18df2bbf accounting, the same owned branch/tree runs exactly one focused
+selection79315. Real factory/allocation/SST capture, visible-held/jump controls
+and whole-world recreation/replay pass. The native offscreen release and retained
+standing recapture assertions fail at their intended final assertion group,
+not during setup or an observer. No runtime edit or another trace/native run is
+made; the8717 strict frontier remains unqualified.
+
+### Source, inlet and independent oracle
+
+HEAD is **df2bbf13f93b341f8c576414f68c200512487dcb**, runtime
+**f196e95da4583206a1201b3b4d02b1f626f7026e**. The only executable addition is
+[TestHczSpinningColumnCachedRelease](../../../../src/test/java/com/openggf/game/sonic3k/objects/TestHczSpinningColumnCachedRelease.java).
+Test SHA256 `c35d447ad95e556324022e1b6f77414bb4afc056e3a8506f4add69b3e23a313b`;
+unchanged production column SHA256
+`9d93fcd89b25135a60f430fb16b48c0aed877227e652d91dc7af2ecf06e5857c`,
+verified after execution. R18's c9ddec hash described temporary logging, not this
+restored production file. Exact R19 task/ordinal21/24h expiry are recorded in
+`gpt61_hcz_column_release_oldred_r19`; R18ordinal20 and all earlier refs/results
+remain. Native4fdf/private regular0600 config and Main hash/mtime are preserved.
+
+The test loads the actual ROM-backed HCZ2 world, creates a stationary column
+through the current game's registry factory inside the normal dynamic allocator,
+and admits its first dispatch normally. It assigns no SST slot or timer. Initial
+component geometry is declared independently: column0400/0400, Tails X=column+8,
+positive vy0100, and top overlap8 derived from the actual FullSolid air half-height
+and loaded Tails radius (`relY=y-objectY+4+d2+radius`, native valid window[0,10hex)).
+Fractions3A00/7B00 are independent inlet values. Real SST execution plus the real
+inline FullSolid callback first establishes OnObj/riding/native object standing;
+the next real owning dispatch captures the player. No manual onSolidContact,
+private Rider seeding, trace hydration or direct owner invocation is used.
+
+Visibility is published by SpriteManager.refreshPlayableRenderFlags. Physical
+camera/column admission stay fixed; only the existing copied-camera inlet changes
+using the player's real loaded render-body width. The hidden control places the
+copy one pixel beyond the body's left visibility edge; the visible control places
+the body inside the viewport. Cached validity and the resulting visibility are
+asserted. Neither the cached flag nor any private rider field is written.
+The test intentionally ticks the real object/SST component, not the CPU/movement/
+camera loop; it claims the local owner contract, not a complete route.
+
+Source pin044fa46725c71187399e13f5ddb70e11d32dc024 remains the authority:
+sub_32784/loc_327FC first tests held player's cached render_flags, before routine
+or standing. loc_328AC sets Air, priority100hex and control0, then loc_328BE clears
+held. It preserves OnObj/pose/fractions/velocities. Priority100 is bucket2,
+not bucket1. Inactive sub_32784 tests the **column's** native per-player standing
+bit, and active !standing goes straight to loc_328BE without generic release.
+SolidObjectFull's offscreen P2 return precedes Full_1P and leaves that bit intact.
+
+### One focused execution, results and rewind limits
+
+Build-only prerequisite1696 passes at18:31:26UTC, displayed Maven01:17min;
+no runtime tests execute there. Before the sole actual selection, an additional
+existing getter is added to its oracle: ObjectManager.hasObjectStandingBit is
+the public read of the actual shared native standing latch. This is recorded
+separately from getRidingObject. The final test hash above is what79315 compiles
+and executes; no production source changes.
+
+From the owned cwd, with MAIN/S1/S2/S3K bound to the same original absolute
+Main-wrapper/ROM paths recorded in R18, the exact focused invocation is:
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN/tools/testing/maven_queue.py" --normal -Dmse=off \
+  "-Dsonic1.rom.path=$S1" "-Dsonic2.rom.path=$S2" "-Ds3k.rom.path=$S3K" \
+  '-Dtest=TestHczSpinningColumnCachedRelease' \
+  -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true \
+  -Dsurefire.runOrder=alphabetical test -B
+```
+
+Session79315: terminal1 at **18:32:11UTC**, queue0s, Maven25.475s;
+**2tests/1F0E0S**, JUnit suite0.782s. The visible-held/newly-pressed-jump control
+passes (method0.323s), including native jump vy=-680hex and preservation of
+native centreY/fractions. The cached-release method0.180s reaches its final
+`native cached release and retained object-standing lifecycle` assertAll:
+9 top-level failures (one nests4 control/OnObj failures), not9 failing tests.
+
+At the first actual cached-false dispatch, expected native release is Airtrue/
+control0 with X0408 preserved. Actual old owner keeps Airfalse/controlTTT and
+performs its shrinking-radius hold: X0408→0407. Y03D0, fractions3A00/7B00 and
+all zero velocities remain. OnObj, actual riding binding and native object
+standing bit are all true; priority remains1 instead of2. On the next dispatch,
+asserted control/OnObj state is false with Air still false, while the shared
+standing bit/binding remain. The inactive native recapture and following release
+assertions also fail. The source explains this second state through its stale
+callback-standing generic release; it is not a newly instrumented branch trace.
+
+Before checking native semantic expectations, the test captures the entire
+registered world before visibility flips and after the first false-cache dispatch.
+With in-place restore explicitly disabled, it forces recreation and forward
+continuation **twice from each boundary**, comparing every registry key through
+the existing RewindSnapshotDiff and checking the recreated column/ride relink.
+All these checks pass before the final old-red assertions. The second boundary
+is honestly the old implementation's **post-visibility held state**, not a proven
+native release. Thus deterministic reconstruction is observed; correct release
+and correct post-release recreation remain obligations for a later authorized fix.
+
+### Minimal local design handed back, not implemented
+
+Production already exposes services().objectManager().hasObjectStandingBit:
+ObjectManager2939 delegates to the shared standing latch. The offscreen inline
+branch preserves it and the riding state without issuing a standing callback.
+Therefore callback freshness is the wrong production predicate. No new generic
+solid/API contract is required. Proposed bounded owner correction is:
+
+1. Read this existing native standing bit for managed column riders; retain only
+   clearly isolated callback compatibility for unmanaged direct component tests.
+2. For active held riders, test their existing valid cached offscreen flag before
+   routine/standing/hold. Apply the native Air/control0/priority100/heldfalse
+   release while preserving OnObj/pose/fractions/velocities. The existing generic
+   releaseRider must not implement this branch because it clears OnObj.
+3. On active !standing, clear only held as loc_328BE requires. Inactive capture
+   reads the retained native column standing bit, allowing offscreen recapture.
+
+No shared solid/CPU/camera/render publisher changes, new API, clock/route fit or
+fresh visibility calculation is justified. No runtime fix, green release claim,
+canonical/independent BK2 requalification or new native observation is included.
+The deliberately red component test is retained for the next authorized fix;
+consumed two owned JUnit reports are removed under metadata_slot after durable
+facts, without archives. All previous qualification limits remain.

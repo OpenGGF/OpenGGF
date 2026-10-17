@@ -6578,3 +6578,24 @@ a missing local branch/latch question, not shared solid/CPU/camera/cache changes
 No old-red or fix authorized/authored; stop at handback. Temporary source/classes
 and consumed owned diagnostics removed after facts; local evidence docs only,
 not full canonical/independent-BK2/parity-green acceptance.
+
+
+### R19 independent column cached-release old-red — 2026-10-17
+
+On R18df2bbf/runtimef196, new TestHczSpinningColumnCachedRelease reaches actual
+ROM factory/allocator/SST FullSolid landing/capture. Build1696 passes before the
+sole focused79315 (18:32:11UTC, queue0/Maven25.475s): **2/1F0E0S**, intended
+final native cached-release/recapture assertions red; visible hold/jump control
+passes. Before those native assertions, twice forced whole-world recreation and
+forward comparison from each of the before-flip/actual post-first-dispatch
+boundaries passes every registry key. The latter is still a held old-owner state,
+not a correct native release. Actual first false-cache dispatch holds Airfalse/
+controlTTT and moves X0408→0407; actual shared standing/riding and OnObj survive.
+[Source, independent geometry, exact command/hashes and local design](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r19-independent-column-cached-release-old-red--2026-10-17).
+Existing hasObjectStandingBit supplies the required retained native latch;
+callback standingLastFrame is not its production substitute. Handed-back design
+is local cached release before hold/routine/standing, native OnObj preservation,
+!standing clearing only held, and inactive capture from that existing latch.
+**No runtime edit or further run:**8717 strict frontier remains unqualified.
+R19ordinal21 is separately registered; R18/all prior refs/native4fdf/config/Main
+identity remain, consumed owned diagnostics removed without archive.

@@ -277,3 +277,20 @@ Strict prefix remains red:213=15physics+198animation/8721 rows, first non-camera
 windows complete zero. No independent old-red, runtime repair, new native,
 whole canonical or viewport/roster qualification. Logs are removed after facts;
 this records an owner question and preserves all existing coverage limits.
+
+
+## R19 independent column release old-red (2026-10-17)
+
+TestHczSpinningColumnCachedRelease uses actual ROM factory/normal allocation,
+SST FullSolid landing/capture and the real copied-camera/body visibility
+publisher. Focused79315 on R18df2bbf/runtimef196 is **2/1F0E0S**: visible hold/jump
+passes; the intended offscreen release/retained-standing recapture assertions
+fail. First hidden dispatch holds Airfalse/controlTTT and moves0408→0407 while
+OnObj, actual ride binding and native standing bit remain. Twice forced whole-
+world recreate/forward comparisons at both before-flip and actual post-dispatch
+boundaries pass before native expectations. Correct native release/post-release
+replay is **not** proven; the old state is held. The existing standing-bit getter
+supports a column-local correction, with no shared/API widening. See the
+[R19 source/design/results](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r19-independent-column-cached-release-old-red--2026-10-17).
+No runtime fix, new native, trace qualification or broader roster/viewport
+coverage; the existing8717 frontier and all earlier qualification limits remain.
