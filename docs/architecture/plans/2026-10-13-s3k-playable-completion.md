@@ -6559,3 +6559,60 @@ Only7,745bytes of targeted logs; no collision observer/replacement or gameplay
 writes. Temporary source/classes and owned XML/text consumed after facts.
 This closes the missing engine writer, not upstream regression/native-death
 causality. No runtime repair or additional execution; Root owns the next scope.
+
+
+### Root current-source cold checkpoint and next evidence gates — 2026-10-17
+
+Root composition `f196e95da4583206a1201b3b4d02b1f626f7026e` includes the qualified
+ICZ known-pattern carry `70e8d101` and Slot retained-plane repair `2077fd1d`,
+plus R17 writer evidence. It excludes the unqualified DEZ continuation WIP.
+Main remains `develop` at `8030832d2`; no integration, push or public acceptance.
+
+The once-only unchanged maintained cold Sonic check98174 on exact f196 used
+`${MAIN_ROOT}/tools/testing/maven_queue.py --normal -Dmse=off
+-Dtest=TestS3kLrzHpzSszColdCampaign#sonicColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory
+-Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical`
+with all three original absolute ROM properties, Java25, the required EGL JVM
+flag in both CLI and JAVA_TOOL_OPTIONS, EGL/nullAL/Lua and no ambient display.
+It started18:05:40.740833UTC and ended18:07:26.539559UTC, queue0,
+parent105.798726s, case30.060s: **1/1F/0E/0S**, same `cold death 49613`.
+The XML identity, assertion and skips were inspected, then its two owned reports
+were consumed under metadata-slot alone. This does not re-observe R17's exact
+Mecha writer on f196 or attribute the earlier route divergence. Main status,
+config bytes and mtime were checked unchanged. No repeated unchanged cold check.
+
+R12's portable two-file scalar journal was reviewed on an explicitly803-based
+owned tree. The original driver's step/render pairs, assertions, input history,
+45-step windows and two restore/replay cycles remain ordered identically;
+removing five diagnostic blocks reconstructs the original class. Fifty getter
+bodies match803/f196. It records41 int32 fields per row, with actual outer/input/
+BK2 indices, replay context and28 pure state scalars. Its60000-row hard cap is
+9840500bytes including header; no comparison values supply gameplay. One
+baseline request38651 is authorized and live at this checkpoint; current-source
+execution needs its separate gate. A usable journal must have valid schema,
+length and keys, with rows equal verified primitive passivity checks. Any
+postboot observer failure stops without a retry. First metadata/clock and first
+P1/ring/shield differences will be reported separately, without a row shift.
+
+Slot R8's actual ROM/FBO old-red80718 establishes source descriptor4AC5 becoming
+CAC5 and an opaque peppermint pixel hidden by the foreground; all opacity,
+high-sprite-bypass, repeat/passivity and GL controls pass. Removing the blanket
+promotion and its two calls is under one bounded independent source review.
+No runtime removal or new five-picture capture is authorized at this checkpoint;
+845-pixel closure and a native high-priority glass control remain unqualified.
+HCZ R18 is preparing its sole original-driver column/cache witness through8720;
+no column, shared-collision, CPU or camera repair is inferred in advance.
+
+The separate native live-clock reader remains compiler-only. Its final source
+61474d4e, plan d01626d1 and DLL afb40bec were built successfully at
+17:59:13.905810..17:59:14.010899UTC under tree plus shared build-activity leases.
+No host, callback or live native read was executed. Actual loaded native-library
+provenance is still a gate before binding or reading; expected file hashes do
+not resolve it. Phase origin, SR/IRQ semantics and hardware initializer remain
+open. No timing acceptance or readiness budget follows from compilation.
+
+Combined change-based smoke and guards remain pending after focused blockers.
+The earlier3527-class dry plan is planning only; a fresh current-source plan and
+preflight are required before the next complete batched run. The interrupted
+15826 tail is not manually resumed. New/worsened cold and DEZ route failures,
+remaining HCZ frontiers and visual/hardware coverage still block delivery.
