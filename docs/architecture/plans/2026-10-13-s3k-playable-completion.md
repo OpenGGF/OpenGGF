@@ -5318,3 +5318,86 @@ remain unchanged; owned config is a regular private0600 exact byte copy.
 Documentation links/fences, identical skill mirrors and diff checks pass.
 Normal seven-trailer local commit retains the reviewed and tested runtime bytes;
 Root owns later composition/combined qualification, with no Main publication here.
+
+
+### Slot large residual classification R6 — 2026-10-17
+
+On preserved clean759acb131 before documentation, offline original-domain
+analysis assigns both large remaining R4 components to Slot's foreground
+priority-promotion owner, not cell traversal. Native971's578pixels are sole
+SAT30/31 colored-wall frame9;974's267 are soleSAT19 peppermint frame3. All845
+native SAT/pattern/CRAM pixels match original PNGs; all845 retained engine
+wrong colors equal native low-priority, nontransparent Plane A. Their published
+scroll-projected world positions lie exactly inside
+`S3kSlotBonusStageRuntime.ensureForegroundGlassPriority`'s promoted
+`$430..$497/$400..$467` square. Its runtime bytes remain R4-identical.
+Pinned044 source, exact publication/CPU distinction, samples, full-component
+counts and the independent production-render disconfirming question are in the
+[existing bonus matrix](../validation/levels/s3k-bonus-stage-transitions.md#slot-large-residual-owner-classification-r6--2026-10-17).
+Root received the concrete owner handback BEFORE any runtime proposal/edit or
+new Slot execution. Engine visible-list/FBO descriptor metadata is not retained;
+no new screenshot equality is inferred from source. No source/branch/tree/worker,
+native/capture/test fixture or Root/Main change. R4 residual totals remain
+599/295/41/52/57 and HUD carry difference stays unqualified.
+
+Separate explicitly authorized R5 affected-consumer qualification on unchanged
+759: job84980 exact
+`TestFbzSandopolisTimelineHeadless#productionExitResetsTimelineAndFreshDestinationRestoresAndReplaysTwice`
+passes1/0F0E0S at15:48:12UTC, Maven37.246s/queue64s. Same recorded
+`r5_presentation_maven` environment/all3ROMs/current Main absolute wrapper/owned
+cwd, with `-Dsurefire.forkCount=1 -Dsurefire.reuseForks=true`. Inspected its full
+XML/test identity and consumed2 reports under metadata alone. No duplicated
+baseline/broad/119-selection or runtime edit. Root owns Main803 attribution.
+Authorized NORMAL request82303 on the same candidate is exactly
+`-Dtest=TestLrzSszCheckpointRoutes,TestNativeCarriedPlayerArtBinding` with those
+same flags plus `--normal`; terminal0,892/0F0E0S at16:03:46UTC,
+Maven4m46/queue618s. Full populations888 checkpoint routes+4 carried-art;
+inspected all XML/zero skips. Metadata94256 consumed4 reports961787bytes
+after waiting for shared compatibility while holding the intended-tree lock;
+no outer activity, cancelled request or target race.
+
+
+Root-provided actual Main803 baseline96596 is892/0F0E0S at16:08:36.081607UTC,
+Maven4m48/queue874s, with all779 failed Root case identities included and both
+class sources byte-identical803..02b. This is independent provided evidence,
+not this worker's execution. No repeated baseline is claimed or needed.
+
+Next explicitly authorized normal request34577 is EXACT
+`-Dtest=TestS3kBonusPortalMechanismProducts,TestS3kBonusStageReturnProducts`,
+same recorded environment/ROMs/owned cwd/current Main wrapper,
+`--normal -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true`. It completes
+16:28:21UTC,993/142F0E0S,Maven11m27/queue748s, unchanged759 runtime/tests.
+Full portal568 has142F (460.163s); return425 all pass (202.967s). All142
+messages are identical publishedPlane byte differences, no pending/otherfield.
+The existing bonus matrix records exact affected method names, shortcases[3]
+(SLOT_MACHINE/tails/sonic,sonic/400/off) and[5]
+(SLOT_MACHINE/sonic/sonic,sonic/800/s1), plus the actual20-element assertion
+preview and its limits. No complete-array/span attribution is invented.
+Root's original993 pending messages were all inspected despite its then-current
+1000-detail/797-omitted results cap. Current851 pass/142 different-field fail
+is bounded progress, not combined-smoke green.
+
+**STOP new field honored.** No planned728 request (Gumball/Pachinko726 plus
+the named LRZ2 gateway method's2 cases), additional execution, runtime repair,
+new source hypothesis or baseline was submitted. Root owns short-pilot Main
+attribution; no R2 cause is assigned. Root's independent four-original-image
+visual inspection corroborates R6's Plane A attribution without adding a native
+or engine picture. Foreground845 remains uncorrected; all five residual totals
+and the separate unqualified HUD life bootstrap difference remain unchanged.
+
+**Queued R7 technical gate:** exact verified task
+`node:delegated-task:command%3Amcp%3Ae0f15981-d194-439f-81ab-b848692b7d95%3Athread-send%3As3k-gpt61-slot-rom-foreground-priority-owner-20261017-r7`
+is preserved, NOT started in R6. After R6 accounting it may READ ONLY prepare
+the actual Plane B publication/restore lifecycle question. No runtime edit, GPU
+test or five-PNG capture until Root authorizes a concrete bounded published-plane
+owner unit or clears that gate. No R7 branch/worker/tree was created.
+
+
+R6 final accounting: all Maven handles84980/82303/34577 and metadata94256
+are terminal. Inspected SOZ2 reports, LRZ/carried4 (961787bytes), portal/return4
+(3578565bytes) were consumed under metadata ownership alone; diagnostics empty.
+No raw archive/pass cache, temporary decoder file, additional request or source
+change. Private config remains regular0600/exact bytes; Main config hash/mtime
+unchanged. Docs-only links/fences/diff and unchanged reviewed runtime hashes
+verified, normal seven-trailer GPT-6.1 local commit follows. R1–R5 branch refs,
+results, originals and private config preserved; no Root/Main edit or push.

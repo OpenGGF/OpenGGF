@@ -1062,3 +1062,140 @@ helper sources/classes/classpath are removed without archives or pass caches.
 Durable originals/new5PNGs/provenance, local branches, registry history, ignored
 private config and candidate build remain accounted for. Root owns composition,
 combined smoke/guards and publication; no Main/Root changes or push from this unit.
+
+
+## Slot large residual owner classification R6 — 2026-10-17
+
+Read-only classification on clean `759acb1311fbe11427330154c327c6f255f921fb`
+uses ONLY original native971/core10114 and974/core10117 SAT/VRAM/CRAM/RAM
+and the retained R4 PNGs/provenance. No new render, native run, picture variant,
+clock/palette search, mask, normalization or gameplay-state injection. R1–R5
+refs/results/private config remain preserved. The R4 residual totals remain
+**599/295/41/52/57**; no corrected-picture claim follows.
+
+All578 pixels in the971 eight-connected component (287,190..319,218) have
+one opaque native sprite owner:139 fromSAT30 and439 fromSAT31. Both are
+Map_SB_ColoredWall frame9, art `$33B+$99=$3D4`, palette3,32×32 at282,170
+and296,190. All267 pixels in974's component (150,158..166,176) have sole
+SAT19: Map_SB_R_and_Peppermint frame3, art `$33B+$122+$12=$46F`, palette2,
+24×24 at143,153. Every decoded original native sprite pixel equals the native
+PNG through retained CRAM:845 exact,0 competing opaque sprites. Thus these
+components are not another inter-cell overlap or RGB-black transparency error.
+Native source: pinned skdisasm044fa46725c71187399e13f5ddb70e11d32dc024,
+Slots_RenderLayout/sub_4B490 (:98199–98347), sub_4B4C4 (:98353–98398),
+SlotBonusMaps (:98644–98694) and the included wall/peppermint mappings.
+
+The retained native publication identity matters:974's published producer8800
+corresponds to seq2/core10116 prepared RAM producer8800, not seq3's later8801.
+That prepared RAM independently reconstructs SAT19 exactly: layout `$433D`=id7,
+visible grid9,10, mapping frame3, xy143,153,size`$A`,tileword`$446F`. All32
+transient slots at `$7400` are inactive in retained971/seq0, seq2 and seq3.
+974 therefore has no transient slot in its exact published preparation;971 CPU
+RAM is one producer ahead, so its prior transient-list state is not independently
+retained. Its published wall mapping is established directly by SAT/ROM bytes.
+No per-frame offset is fitted and no native comparison bytes enter engine gameplay.
+
+**Concrete source owner: foreground priority promotion.** Project original
+Plane A using the pinned VDP owner (register table :1367–1386: A=`$C000`,
+hscroll=`$F000`,64×32), retained published hscroll/VSRAM and native pattern/CRAM
+bytes. The engine's wrong RGB equals this native Plane A at ALL845 pixels.
+All845 Plane A pixels have nonzero pattern indices and priority bit CLEAR.
+971 has hscroll`$FCC6` (−`$33A`),vscroll`$342`;974 has`$FC66` (−`$39A`),`$362`.
+Their world bounds are respectively `$459,$400..$479,$41C` and
+`$430,$400..$440,$412`. Every pixel is inside the exact square that
+S3kSlotBonusStageRuntime.ensureForegroundGlassPriority (:553–578) promotes:
+centre`$460,$430`,±`$30`,inclusive8-pixel writes,covered extent
+`$430..$497/$400..$467`. It ORs `$8000` into every nonzero descriptor there.
+The provider calls it before foreground/sprite rendering; bootstrap also calls
+it. LevelTilemapManager's existing getter/setter address those world tiles.
+Runtime SHA256 `3d4d5f10dba4a5d113af444f4b5a03e17973e054328765a3b3ab41d5e0675838`
+is byte-identical to R4. This overbroad promotion explains low-priority native
+layout sprites being replaced by Plane A; no shared renderer/order/palette/
+physics change is indicated by these components.
+
+| Original pixel | Sole native sprite RGB | Native Plane A descriptor / RGB = retained engine RGB |
+|---|---|---|
+|971 (287,190)|0,34,238|`$C016=$4A87` /102,102,34|
+|971 (300,200)|102,238,238|`$C098=$4AAA` /0,0,0|
+|971 (310,210)|34,136,238|`$C11C=$7A76` /170,0,0|
+|974 (150,158)|136,0,34|`$C00C=$4AC5` /102,170,0|
+|974 (156,166)|136,68,170|`$C08C=$4AC7` /0,0,0|
+|974 (160,170)|136,68,170|`$C08E=$4ACA` /0,0,170|
+
+Handed Root this owning branch BEFORE any edit or new engine execution. The
+smallest independent disconfirming question is: through actual Slot bootstrap
+and the real painter/FBO consumer, does a native-low foreground descriptor at
+world`$430,$400` or`$459,$400` gain priority and incorrectly hide an opaque
+actual-ROM peppermint/frame3 or wall/frame9 pixel? That question uses source
+geometry and ROM assets, without a fixture/frame/trace gate. The retained R4
+provenance does not include engine visible-cell/FBO descriptor state; direct
+engine execution-level flag/cell confirmation remains a missing witness. No
+runtime repair, new visual acceptance or whole-parity certificate is authorized
+by classification alone. HUD4/3 remains separate unqualified carried-life
+bootstrap state, with no lives field in the comparison inlet.
+
+
+Root independently visually inspected the same four original320×224 images
+(native10114/10117 versus R4 rows971/974). The wall and peppermint occlusion
+differences accord with the Plane A attribution; HUD4/3 is distinct. This is
+read-only corroboration, not another engine run or a replacement for a real-ROM
+painter/FBO old-red. No residual is certified repaired.
+
+### R6 affected-consumer extension and technical stop
+
+Explicitly authorized R5 consumer checks reused unchanged runtime/test source
+at759, current Main absolute Maven queue from owned649, all3 original ROMs and
+the recorded Java25/EGL/nullAL/Lua5.4 environment, one reused Surefire fork.
+No broad/native/trace/image execution was added. Results are separate populations:
+
+| Job / UTC finish | Exact selected population | Outcome / execution / queue |
+|---|---|---|
+|84980 /15:48:12|TestFbzSandopolisTimelineHeadless#productionExitResetsTimelineAndFreshDestinationRestoresAndReplaysTwice|1/0F0E0S;37.246s/64s|
+|82303 /16:03:46|TestLrzSszCheckpointRoutes;TestNativeCarriedPlayerArtBinding|892/0F0E0S=888+4;4m46/618s|
+|34577 /16:28:21|TestS3kBonusPortalMechanismProducts;TestS3kBonusStageReturnProducts|993/142F0E0S=568/142F+425/0F;11m27/748s|
+
+Both two-class requests explicitly used `--normal`,7GiB/8cores,
+`-Dsurefire.forkCount=1 -Dsurefire.reuseForks=true`, with literal comma-separated
+`-Dtest` selectors from the table. The first two passed every selected case,
+with zero skips. Root-provided actual Main803 baseline96596 independently passes
+the same892 cases (LRZ888/263.877s, carried4/.385s),16:08:36.081607UTC,
+Maven4m48/queue874s/parent1163.437s. Root matched all779 failed broad-case
+identities to that population and verified both class sources byte-identical
+803..Root02b; this worker did not execute or duplicate that baseline.
+
+Root's frozen02b broad had993 pending-false/true failures across the full
+portal568+return425 population. Root's then-current results.json capped detailed
+cases at1000 with797 omitted; Root inspected ALL993 messages in ordinary.log.
+Own34577 instead passes851 cases and fails142, ALL one byte-identical message
+family: `parallax.handlerRewindState.publishedPlane.bytes`. No pending or other
+field appears in those142. Portal class time460.163s; return425 all pass in
+202.967s. Failed methods are
+`finitePortalAndExitProductsRetainRosterAndBothLoadBoundaries` (140 cases) and
+`shortPortalAndMechanismPilotsLoadAndReturnThroughRealBoundaries` (2). Exact
+short parameter identities/inlets, from the maintained `pilots()` source:
+
+- `[3]`: SLOT_MACHINE, main=`tails`, followers=`sonic,sonic`,width400,donor=`off`.
+- `[5]`: SLOT_MACHINE, main=`sonic`, followers=`sonic,sonic`,width800,donor=`s1`.
+
+Both call checkStage through the actual portal boundary. Stack:
+verifySlotGoalWindAndFade:277 → replaySlotPictureAction:391 → same:574.
+Every failure reports ONLY this **20-element preview**, not the complete arrays
+or all differing byte spans:
+
+```text
+indices = [2048,2052,2056,2088,2092,2096,2128,2132,2136,2168,2172,2176,2208,2212,2216,2217,2304,2308,2312,2344]
+A = [-61,-60,-57,-55,-54,-46,-44,-43,-40,-34,-33,-30,-28,-27,69,105,-59,-58,-56,-53]
+B = [-79,-78,-75,-73,-72,-69,-61,-60,-57,-55,-54,-46,-44,-43,-40,9,-77,-76,-74,-71]
+```
+
+This is a newly exposed, UNATTRIBUTED owner boundary, not proof of an R2 cause
+or an R5 regression. STOP honored before any additional run or repair. The
+planned Gumball/Pachinko726 plus exact two-case LRZ2 gateway method (expected728)
+was NEVER submitted; that full consumer coverage remains unqualified. Root owns
+a bounded short-pilot Main attribution. No DDZ/asset/terrain owner was touched.
+
+R7's verified queued task identity is preserved, but its new technical gate
+permits only read-only preparation of the actual Plane B publication/restore
+lifecycle question after R6 accounting. **No R7 runtime edit, GPU test or five-PNG
+capture until Root authorizes a concrete bounded published-plane unit or clears
+the gate.** The845-pixel foreground-priority goal remains open.
