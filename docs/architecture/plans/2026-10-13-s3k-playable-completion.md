@@ -10497,3 +10497,61 @@ workflowREADME, existingreleasefold/knownS3K/backlog/matrix/frontier/pitfallmirr
 updated; no newcaller/property/function/compile/JVM/native/route. Runtime/test
 frozen bytes unchanged; helper executable body remains testedadcb. Await normal
 local7trailer/modelcoauthor hook commit; Root owns integration/push/nextcampaign.
+
+
+### Root composed smoke timeout checkpoint — 2026-10-17
+
+Tested source `86d1794dc6fa0bb4875ddceef0af15af04bcf67d`, integration base
+`8030832d2ab6080e5324cdfe35e971677fd97b41`, run
+`20261017T211314Z-fd8e3419`, owning session29527 terminal exit2. The exact
+3531-candidate change-based selection comprised all ten smoke categories,
+71 ordinary batches of at most50 classes, one worker followed by fresh guards.
+Java25/Lua5.4/PowerShell preflight passed. Preparation passed in71.87s; working
+fingerprint7f63e77c16cb0d022fbdd53f0d223962785d7cf19bfd0d062a9e5fcd762fe85b.
+The90-minute invocation timeout stopped the owned Maven tree during batch66:
+65/71 complete,3266 reports,35522 tests,2failures/2errors/86skips, ordinary
+execution5328.25s. Queue waits are separate per-batch measurements, not this
+execution total. Fresh guards were NOT reached. This is incomplete smoke,
+not a full-suite pass or delivery certificate.
+
+Executed from the Root composition tree (OPENGGF_MAIN_WORKSPACE identifies the
+unchanged main checkout containing the three original ROMs):
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH \
+ JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+ JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+ ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless LUA_BIN=/usr/bin/lua5.4 \
+ python3 tools/testing/run_categories.py \
+ --base 8030832d2ab6080e5324cdfe35e971677fd97b41 \
+ --rom-directory "$OPENGGF_MAIN_WORKSPACE" --max-minutes 90 --run
+```
+
+All four full failure/error identities and details
+were inspected and match actual previously executed Main803 baselines:
+
+- TestTitleInputOwnership#captureChordIsConsumedWhileBlockedAndCannotFireAfterReturningWithKeyHeld:
+  expectedtrue/actualfalse, line105; matched Main83109.
+- TestZoneLayoutMutationPipeline#levelFrameStepFlushesQueuedMutationsAfterCameraScrollAndEventsBeforeBoundary:
+  null GameModule.getRules/paletteWhiteFade, GameplaySessionFactory60/39 and
+  test220; matched Main83109.
+- TestHczMinibossNativeRendering#allOrbitPhasesMatchRomSpriteCompositionInNativePixels:
+  GLFW initialization expectedtrue/actualfalse, line53; matched Main89086.
+- TestLevelManagerModPatternWindows#everyLoadAndEditorRebuildRegistersModWindowsBeforeStockArtCaching:
+  the same null-rules exception, test65; matched Main80669.
+
+All86 actual skip identities/reasons were inspected, omitted0/no missing-ROM
+skips:41 opt-in benchmark/soak/graphics/native-capture or unavailable GLFW/EGL,
+32 InfiniteSonic act-platform/flyer assumptions,9 SecondStrike-JAR/Survivors
+opt-ins,1 CPZ spin-tube capture assumption,3 SOZ capture properties. Skipped
+behavior remains unverified. Last running class was the ColdCampaign tool;
+no terminal XML or method outcome is claimed for that interrupted class. Earlier
+completed batch66 classes do not establish its outcome.
+
+Results SHA256288b69076ac69a361e1249032f42b7fe4c871a6fc443e3f9c57c4c3d8b6f8451.
+After this durable checkpoint, acknowledge the exact runner directory through
+its normal cleanup command; do not retain copies/archives or manually resume
+a narrowed tail. Finish focused parity work and compose the qualified units
+before planning the next combined validation with an adequate explicit budget.
+Main remains803/unchanged; integration/push/cleanup and the original Cold49613
+regression remain unresolved.
