@@ -138,6 +138,7 @@ class TestCrossGameRuleComposer {
         assertSame(host.sidekickCpu(), hybrid.sidekickCpu());
         assertSame(host.powerUp(), hybrid.powerUp());
         assertSame(host.drowningBubble(), hybrid.drowningBubble());
+        assertSame(host.paletteWhiteFade(), hybrid.paletteWhiteFade());
     }
 
     private static void assertHostOwnedPlayerCapabilityComponentsAreKept(

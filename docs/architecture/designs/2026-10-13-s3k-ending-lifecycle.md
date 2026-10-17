@@ -2212,3 +2212,661 @@ Evidence:
 - the scripts `B/compile_kos_budget_probe_v{6,7,7p,7c}.py`,
   `B/run_kos_budget_probe_v{6,7,7b,7p,7c}.py` and
   `B/analyze_kos_budget_v{6,7}.py`.
+
+#### Resumable Kos service consumer (2026-10-16, kos-cycle-consumer lane)
+
+This slice adds the pure consumer that research slice 1 called for: a model of the
+shipped `Process_Kos_Queue` service that, given the instruction cycles available
+before a V-int, reports how far the job gets and what state it leaves. It is not
+registered anywhere. The `s3k-kos-v1` rows, the hardware profile and fingerprint,
+the fallback, any ledger and the runtime are unchanged, so no published count moves.
+
+**Source.** `S3kKosServiceModel` (`game/sonic3k/timing`) executes the routine's own
+instructions, `Process_Kos_Queue` `$1C1A` through `Restore_Kos_Bookmark` `$1D0A`, on
+its own state: d0-d6/a0-a2, the CCR and the 68000 RAM image the routine touches
+(`Kos_decomp_queue_count` `$FF0E` through the queue at `$FF40`, plus destination
+buffers). All 88 instruction words, plus the three `Backup_Kos_Registers` words
+(`$1D0C`-`$1D16`), are pinned to the ROM. Each is charged its 68000 cycles. The
+table equals GPGX 051d430d `m68ki_cycles` and the Motorola MC68000 UM row for row
+(audited per instruction, including Bcc.s 10/8, Bcc.w 10/12 and DBF 10/14). The
+research prototype `kos_service.py` (`f594432f…`) and the uncompiled draft
+(`f452580d…`) were ported, not merged. Changes made during review:
+- `cmpi.b #1,d1` and `subq.w #1,(Kos_decomp_queue_count).w` now set V, C and X as
+  the 68000 does. The draft cleared or kept them; no later instruction reads them,
+  but they are saved in a bookmark.
+- Absolute-short addresses sign-extend: `a2` holds `$FFFFFF3E`, as stored natively.
+- `move sr,d6` and the stored SR carry the `$23` system byte. Every caller enters
+  after `Wait_VSync`'s `move #$2300,sr` (ROM `$1D18`), and under `$2700` no V-int
+  could interrupt the routine.
+- Output bytes are counted at the two writing instructions (`$1C58`, `$1CBA`), not
+  from cursor bookkeeping.
+
+**ROM semantics settled (a prototype limit removed).** The prototype threw when
+the budget ended outside `Process_Kos_Queue_Main`..`Done`. The ROM decides it:
+- `Set_Kos_Bookmark` is the tail (`jmp`) of VInt_8, VInt_A_C, VInt_10 (which reaches
+  VInt_8 or VInt_1C), VInt_14, VInt_16, VInt_1A, VInt_1C and VInt_1E. VInt_0 (lag),
+  VInt_2, VInt_4, VInt_6, VInt_E, VInt_12 and VInt_18 return without it.
+  `Wait_TitleS3K` calls `Process_Kos_Queue` under VInt_4, so a job serviced there
+  never bookmarks.
+- `Set_Kos_Bookmark` bookmarks only with `Kos_decomp_queue_count` bit 15 set and
+  the stacked PC in `[Process_Kos_Queue_Main, Process_Kos_Queue_Done)`.
+- Otherwise the V-int `rte`s to the interrupted instruction and the same call keeps
+  running. Its entry cleared `V_int_routine` (`move.b #VInt_ID_0,(V_int_routine).w`),
+  so every later V-int in that call takes `VInt_0_Main`. That path saves and
+  restores d0-a6, writes no Kos RAM and never reaches `Set_Kos_Bookmark`, so the
+  rest of the call completes to its `rts` whatever the later frame timing is. The
+  caller's `Wait_VSync` then returns at once.
+- The model reports this as `INTERRUPTED_LIVE`; `finishInterruptedCall` runs the
+  remainder. Cases: the entry prefix `$1C1A`-`$1C26` (busy bit not yet set, so a whole
+  job can finish across lag frames), `Restore_Kos_Bookmark`, and the retiring tail
+  after `andi.w #$7FFF` cleared the busy bit (`$1CE0`-`$1CFA`).
+- `Backup_Kos_Registers` runs after a bookmarking V-int and costs 124 cycles
+  (`move sr` 16, `movem.l` 92, `rts` 16). It is reported as `postVIntCycles`, for the
+  next frame's ledger, not charged to the window.
+- `Process_Kos_Queue_EndReached` retires one job, shifts the queue and returns; the
+  successor starts in the next call.
+
+**Validation** (`TestS3kKosServiceModel`, ROM-backed):
+- Hand-assembled streams with written-out output: literals, inline 2-bit copy,
+  separate 3-bit copy, extended count with no-op, end, and the descriptor refill on
+  the 16th flag before that flag's byte. The engine's `KosinskiReader` agrees on each.
+- The four ending jobs `$1D17A6`, `$1CF2D4`, `$1CFB46` and `$1D02B6` decode to
+  `KosinskiReader`'s bytes in one call and under five bookmark budgets. Each extra
+  window adds exactly 190 cycles: the resumed entry plus `Restore_Kos_Bookmark`.
+- Capture and restore: three windows (two restores) replay to equal results and
+  equal state from either capture. The bookmark RAM holds the stacked PC, SR and
+  live registers. The job's 3,712 bytes equal native Tails/+2's 706+1499+1459+48.
+- Exhaustion: for every budget 1-3,999 the stop satisfies
+  `cycles >= budget > cycles - last instruction`.
+- No successor starts in a retiring window; the queue shifts and the next call
+  starts it.
+- Live interruption: VInt_4-style, at the entry prefix, at `Done` and after the
+  busy bit clears.
+- Native comparison: `src/test/resources/timing/s3k-kos-native-windows-v1.tsv` holds
+  63 retained windows (Tails/+2 and Sonic/+2 NTSC v6, both PAL v7p, Sonic/0 and
+  Sonic/−2 NTSC v7c; three FIFO jobs each). Its budgets are the native per-PC counts
+  costed with GPGX through the research decoder; its expected fields are native
+  observations. For every window the Java model matches the queue count at entry,
+  the outcome, bytes out, the interrupted PC, every per-PC execution count, and
+  cycles equal to the budget. That last check compares the Java table with the
+  GPGX-costed counts. The fixture is comparison-only, never runtime input.
+- Break on purpose: changing only the `$1CB6` cost from 14 to 16 in the production
+  table turned exactly the native-window test red (Tails/+2 LF 4402: 690 bytes
+  against 706). Every other check stayed green, because the bytes do not depend on
+  costs. The first mutation run also exposed a test flaw: one split budget legitimately
+  landed in the retiring tail (`INTERRUPTED_LIVE`), and the split loop did not finish
+  that call. The loop now follows the ROM path.
+
+**Still not modelled (ledger terms, deliberately outside this consumer).** The
+budget is 68000 instruction cycles. Converting frame time into it needs:
+- DRAM refresh;
+- Z80 68k-bus waits and H-int time inside the window;
+- V-int acceptance (GPGX 50-59 cycles) and the V-int body, including
+  `Set_Kos_Bookmark`.
+
+The routine only reads ROM/RAM and writes RAM (the model throws otherwise), so no
+VDP FIFO wait or 68k DMA freeze can fall inside a window. No defer rule was added.
+The six measured counts and the 46 multi-valued contexts remain open: this is a
+necessary component, not the removal condition.
+
+**Next: first per-owner ledger input and its state proof.** `LevelLoop`
+(sonic3k.asm `LevelLoop`) calls `Process_Kos_Queue` immediately before `Wait_VSync`,
+so a window's budget is the frame period less the previous V-int and the whole
+frame body. The first owner should have a closed-form ROM path from state the
+engine already owns. `Pal_ToBlack` qualifies (ROM `$3C04`, `Pal_DecColor` `$3C32`-`$3C66`;
+27% of a steady ending frame in research E4):
+- Its path is a pure function of `Palette_fade_info`, `Palette_fade_count` and the
+  `Normal_palette` and `Water_palette` words. It makes 128 `Pal_DecColor` calls per
+  frame, and each colour takes the zero, blue, green or red branch.
+- It touches only RAM, so no stall term arises.
+- The retained v7 histograms already show its per-PC counts. For example, Tails/+2
+  NTSC LF 4400 has 124 zero-colour paths and 4 single-component steps; LF 4402 has
+  all 128 zero.
+
+Proposed slice:
+- A pinned pure `S3kPalToBlackCost.cost(normalPalette, waterPalette, fadeInfo,
+  fadeCount)` returning cycles and per-PC counts, in the same style as this model.
+- A ROM-backed state proof. The engine's palette owner images, sampled at the ending
+  frames LF 4400-4416 on every captured product, must predict the native histogram's
+  `$3C04`-`$3C66` counts exactly. That proves the input state, `Water_palette`
+  included, not only the cost.
+- If the engine cannot produce the `Water_palette` image for that scene, record it as
+  the missing state and stop.
+
+The ledger API (`FrameCpuLedger.charge/markOwnerExecuted/isComplete`) is added only
+when this first owner is proven. The ending scene driver belongs to the ending-runtime lane.
+
+#### Per-V-int DMA work ledger (2026-10-16, kos-cycle-consumer lane, slice 2)
+
+The first production input for an exact Kos idle budget is the 68000 bus freeze of each V-int's DMA. `S3kVIntDma`
+and `S3kVIntDmaLedger` (`game/sonic3k/timing`) record the DMA work the engine's own owners submit, as a diagnostic
+budget term. The `s3k-kos-v1` rows, profile, fingerprint, fallback and readiness are unchanged; nothing reads the
+record to decide anything.
+
+**GPGX rules** (pinned 051d430d, `core/vdp_ctrl.c` blob `e99ab3d6`, `vdp_dma_update`):
+- Access slots per line: {16, 18} active and {166, 204} blank, for {H32, H40}. VBLANK or a disabled display counts as
+  blank.
+- A 68k-to-VRAM transfer spends two slots per word (`rate >> 1`). A 68k-to-CRAM/VSRAM transfer loses the blank line's
+  refresh slots (166 to 161, 204 to 198).
+- If the word count is strictly below what fits in the remaining VBLANK, the 68k freezes for
+  `words * 3420 / rate`, floored per transfer. An exact fit takes the whole remaining VBLANK; a longer transfer
+  continues at the active rate.
+- The model states only the strict case. Whether a transfer ends inside VBLANK depends on the V-int handler's own
+  instruction time, which the ledger does not have; it is a reported precondition.
+
+**ROM facts** (shipped S3&K, decoded and pinned at runtime, no disassembly input):
+- VInt_8 fixed transfers, decoded from the `dma68kToVDP` immediates:
+  - palette $40 words to CRAM (`$844`, water copy `$86A`);
+  - H_scroll_buffer $1C0 words to VRAM $F000 (`$892`);
+  - Sprite_table $140 words to VRAM $F800 (`$8F8`, alternate page `$8D2`);
+  - then `bsr.w Process_DMA_Queue` (`$916`).
+- `Level` sets H40 (`move.w #$8C81,(a6)` at `$616A`) and resets the queue at `loc_61BE` (`$61C6`).
+- Shipped `Add_To_DMA_Queue` (`Sonic3_Complete = 0`) makes one VRAM entry per call, without the S3C bank split. It
+  returns without queueing once the 18-entry `DMA_queue` is full.
+- `Tails_Tail_Load_PLC` compares `mapping_frame` with `Player_prev_frame_P2_tail` and stores it before the empty-DPLC
+  check. It then queues one entry per DPLC piece, `(count) * $10` words, consecutive from $D600.
+- The VInt_8 Hyper flash branch replaces the palette DMA with CPU writes. While the engine's flash state is live the
+  fixed set is reported as unmodelled. So is every routine other than VInt_8.
+
+**Producers** (LevelLoop order: objects, then Animate_Tiles, then Process_Kos_Module_Queue):
+- `Tails_Tail_Load_PLC` is submitted from `TailsTailsController`'s S3K branch through the internal
+  `game.internal.PlayerDplcDmaSink`. `RuntimeArtCoordinator` is `@ModApi`, so it was not extended.
+- The AniPLC publication queue and the KosM pattern-module transfer are read when the S3K V-int drains them, in
+  `Sonic3kLevelInitProfile.serviceQueuedPatternDma`. `PlcFrameLifecycleCoordinator` is unchanged.
+- **Not yet recorded:** player body DPLCs (`Sonic_Load_PLC`, `Tails_Load_PLC`, Knuckles), object `Perform_DPLC`
+  users, and zone tile routines that bypass the AniPLC queue. A record is therefore never a complete statement of a
+  V-int's DMA.
+
+**Validation:**
+- `TestS3kVIntDma`: the ROM decode; GPGX rate, refresh-slot and exact-fit vectors; the retained native
+  `dma_freeze_mclk` values 26,855, 30,073, 31,683 and 95,523 from the decoded transfers.
+- `TestS3kVIntDmaLedger`: tail dedupe, queue order and cap, unmodelled routines, lag carry-over, and capture/restore
+  with forward replay.
+- `TestS3kVIntDmaLedgerProduction`: a fresh HCZ1 start records the real AniPLC/KosM work. VInt_8 totals equal 26,855
+  plus the queue; title-card routines get no total (the negative control). Registry restore replays the same records.
+- `TestS3kEndingVIntDmaNative` (long):
+  - Setup: tails-super, sonic-super and sonic-none, through the ending tests' declared component ingress.
+  - Compared: every LF 4400-4406 V-int against `src/test/resources/timing/s3k-ending-vint-dma-native-v1.tsv`
+    (35 rows, NTSC and PAL, comparison-only): drained entries and `dma_freeze_mclk`. All 35 match: the Tails
+  products show the 96-word tail entry to $D600 at LF 4403 (30,073), and every other V-int has the fixed 26,855.
+    These are two independent native DMA observations with one positive queued entry; see the slice-3 note.
+  - The first run keyed engine records by the counter after the step. It showed exactly a one-frame shift of the
+    Tails entry (LF 4404 against 4403). The probe keys `frame-dma.csv` by `Level_frame_counter` read at
+    `Process_DMA_Queue` (`$1588`), before LevelLoop's `addq` at `$6520`. The engine drains before
+    `advanceLevelFrameCounter`, so the key is the counter before the step. That was a test-keying error, not engine
+    behaviour.
+
+**Limits:**
+- Completion inside VBLANK is not proven per V-int.
+- The queue cap uses phase order, which differs from ROM submission order only when the queue overflows across a V-int
+  that did not drain it.
+- Corrected in slice 3: the engine does have a configured `REGION`, and the PAL rows now run with `REGION=PAL`.
+- Corrected in slice 3: a fresh `Level` clears the previous-frame bytes (`$610E`).
+- Sonic's "no entry" rows are only partly meaningful while the player body DPLC producer is absent.
+
+**Next:**
+1. Record the player body `*_Load_PLC` producers the same way.
+2. Then cost the VInt_8 handler and `Set_Kos_Bookmark` instructions, so the Kos window budget can subtract the
+   V-int's time.
+
+#### Body DPLC producers, configured region and review r1 response (2026-10-16, kos-cycle-consumer lane, slice 3)
+
+**Body DPLC producers.**
+- **ROM routines:** `Sonic_Load_PLC` and `Knuckles_Load_PLC` compare `mapping_frame` with `Player_prev_frame` (`$F766`)
+  and load at ArtTile_Player_1 (VRAM `$D000`). `Tails_Load_PLC` uses `Player_prev_frame_P2` (`$F7DE`) and
+  ArtTile_Player_2 (`$D400`), whatever Tails' player slot.
+- **Super Sonic:** with `Super_Sonic_Knux_flag` set it uses `PLC_SuperSonic`. The engine's Super art is loaded from
+  that table.
+- **Entries:** one per piece, `(count) * $10` words, consecutive.
+- **Engine hook:** the routine runs after `Animate_*` (loc_10C7A). The engine reports it from
+  `PlayableSpriteAnimation.update`, at the same point as the existing S1/S2 DPLC decision, through the internal
+  `PlayerDplcDmaSink`. The game maps the character to the routine.
+- **When it does not report:**
+  - while an object owns the mapping frame (ROM `object_control` bit 1 skips both calls);
+  - for sprites that are not the session's registered playables (ghost and preview copies).
+- **Not recorded:** objects that call a player's `*_Load_PLC` themselves (for example the ending objects), object
+  `Perform_DPLC` users, and zone routines that bypass the AniPLC queue.
+- **Witness:** `TestS3kVIntDmaBodyDplcProduction`. Sonic runs and stops in HCZ1. On every frame the queued and the
+  drained body entries equal an independent reading of `PLC_Sonic` (`$148182`) for the mapping frame the engine
+  published. Controls:
+  - an unchanged frame queues nothing;
+  - drawing other frames twice on the real renderer queues nothing;
+  - registry restore across queued body DMA replays the same 30 records twice.
+
+**Configured region (correction).** The slice-2 statement "the engine has no region switch" was false.
+- The engine has `SonicConfiguration.REGION`. `FrameRateResolver`, the audio backends and the S3K ending credits
+  (`S3kEndingCoordinator`) read it.
+- The ledger now reads the same configured `REGION` at each drain. The record carries NTSC, PAL or UNKNOWN.
+- The PAL ending rows now run with `REGION=PAL` set before the level initializes, and each record must report PAL.
+- The VBLANK length used by the precondition is region-specific: NTSC 126,540 and PAL 300,960 mclk.
+
+**Review r1 response** (`kos-consumer-dma-review-r1.md`):
+- **M1 (fixed).**
+  - Fresh `Level` entries run `clearRAM Tails_CPU_interact,$100` at `$610E`, zeroing `$F700-$F7FF`. That range holds
+    all three previous-frame bytes. `resetAtFreshLevel` now clears them with the queue (`$61C6`).
+  - The old test that asserted the tail byte survives was replaced by a same-nonzero-frame control. Without a Level
+    entry the same frames queue nothing; after the reset they queue again.
+- **M2 (fixed).**
+  - The reset step (`ResetFreshLevelDmaQueue`) is gated by `permitsInitialProcessSpritesRequest()`, the gate of the
+    sibling `loc_60DE` RNG clear. It is ordered after `ClearFreshLevelRng` and before `PrepareFreshTitleCardSst`
+    (`$610E`/`$61C6` precede `loc_62B6`).
+  - `STATE_RESTORATION`, `DECODE_ONLY` and `PREVIEW_CAPTURE` loads have no such step. A queued positive entry
+    survives everything except the fresh step's action.
+- **M3 (fixed).**
+  - The record no longer states a total. `FreezeStatus` is one of `CONDITIONAL_ON_VINT_START`, `EXCEEDS_VBLANK`,
+    `UNKNOWN_REGION`, `FIXED_UNMODELLED` or `ROM_UNSUPPORTED`. `conditionalFreezeMclk` is the recorded-producer floor
+    sum only in the conditional case.
+  - A sum at or above the region's VBLANK is refused. That is a necessary condition only: even a smaller sum is the GPGX
+    freeze only if the V-int reaches each transfer early enough, and that start time stays open until the V-int
+    instruction terms exist.
+  - The reviewer's vector (fixed + `$800`-word KosM + `$600`-word AniPLC = 147,024) is `EXCEEDS_VBLANK` in NTSC and
+    conditional in PAL.
+- **M4 (fixed).** See the region note above.
+- **L1 (wording).** The 35 ending rows are two independent native DMA observations (the tails and the Sonic
+  `frame-dma.csv`). 34 values are the constant VInt_8 set, and there is one positive queued entry (tails LF 4403,
+  96 words to `$D600`). The AniPLC, KosM, cap and Hyper-flash paths have no native corroboration. The body witness
+  above rests on the ROM table, not on native rows.
+- **L2 (fixed).** The HCZ1 rewind now captures only once DMA is queued. It asserts the restored queue is non-empty and
+  that the first replayed V-int drains it.
+- **L3 (wording).** The drained order is ROM order only when one LevelLoop iteration's submissions reach a drain.
+- **L4 (fixed).** The S3K detector accepts any "SONIC THE HEDGEHOG 3" / "SONIC & KNUCKLES" header. A ROM without the
+  pinned VInt_8 instructions, or shorter than them, now binds `ROM_UNSUPPORTED` and prices nothing instead of throwing
+  in the V-int. The Kos model still pins opcodes only; it stays unregistered until its extension words or the ROM
+  SHA-1 are pinned.
+
+**Validation for this slice:**
+- `TestS3kVIntDmaLedger`, `TestS3kVIntDma`, `TestS3kVIntDmaLedgerProduction` (HCZ1 records with positive rewind; the
+  fresh-step gate and order) and `TestS3kVIntDmaBodyDplcProduction`.
+- `TestS3kEndingVIntDmaNative`, five products: three NTSC, and two with `REGION=PAL`. With the body producer active,
+  every LF 4400-4406 V-int still equals the native rows, including "no body transfer".
+- The four AGENTS S3K tests. All passed at the committed tree, with no skips.
+
+**Still open:**
+- V-int handler instruction time, which fixes each transfer's start, and therefore any unconditional freeze.
+- The object-called `*_Load_PLC`, object `Perform_DPLC` and direct zone-upload producers.
+- The six counts and the 46 contexts.
+
+#### Body DPLC cache correctness, review r2 response (2026-10-17, kos-cycle-consumer lane, slice 4)
+
+Review r2 (`kos-consumer-dma-review-r2.md`) found that the slice-3 body producer's previous-frame cache was wrong in
+two ways (N1, N2), plus four smaller gaps (N3-N6).
+
+- **N1 (fixed).**
+  - ROM: the control routine skips `Animate_*`/`*_Load_PLC` only for `object_control` bit 1.
+  - Engine: `isObjectMappingFrameControl()` also includes a player ability's raw frames (Knuckles' glide, slide and
+    climb). The producer now tests the bit-1 owner alone, through the engine-internal
+    `PlayableSpriteInternalAccess.objectOwnsMappingFrame`, backed by a package-private field. That is not `@ModApi`
+    surface; `TestModApiSignatureSurface` is unchanged and passes.
+  - Witness: Knuckles lands in HCZ1, jumps and glides while turning. Every queued and drained body entry equals an
+    independent read of `PLC_Knuckles` (`$14BD0A`), including ability frames.
+- **N2 (fixed).**
+  - ROM: `SonicKnux_SuperHyper` `.revertToNormal` stores `-1` in `Player_prev_frame`. Tails' revert writes no
+    previous-frame byte.
+  - Engine: the S3K revert owner (`Sonic3kSuperStateController.onRevertStarted`) now calls
+    `forcePlayerOneReload` for Sonic and Knuckles (renamed in r3 for its second native caller).
+  - Witness: a real ring-exhaustion revert stores `$FF`. The next load reloads the normal-form `PLC_Sonic` pieces of
+    the unchanged frame, and restore before the revert replays the same records twice.
+  - **Engine-order limit:** the engine runs the revert in `tickStatus` after the animation pass; the ROM runs it in the
+    control path before `Animate_Sonic`. So the reload drains one V-int later than in the ROM. This ordering belongs to
+    the Super-state owner and was not changed here.
+- **N3 (fixed by failing closed).**
+  - Objects also drive the previous-frame bytes: the 38 `Perform_Player_DPLC` gameplay sites, direct calls (the AIZ
+    intro plane after `move.b #-1,(Player_prev_frame).w`, the ending objects) and their `clr.b` writes.
+  - Engine: while an object owns a player's frame, the producer tells the ledger instead of submitting. The slot's
+    byte becomes unknown and drains report `PRODUCER_STATE_UNKNOWN`. The first own compare afterwards queues nothing,
+    because whether the ROM queued is unknown, and re-establishes the byte.
+  - The ending's players are object-owned at LF 4400-4406, so those records are now refused. The native ending test
+    checks the drained entries, the refused status, and the native `dma_freeze_mclk` against the raw per-transfer GPGX
+    floors of the recorded transfers.
+- **N4 (fixed).** `queueFreezeMclk` is -1 unless the record is `CONDITIONAL_ON_VINT_START`.
+- **N5 (fixed).**
+  - ROM: the hurt and death routines (4 and 6, through `sub_125E0`/`sub_15842`/`sub_17D1E`) animate and load without
+    the bit-1 test.
+  - Engine: the producer submits while `isHurt()`, `getDead()` or `isDrowningDeath()`, even under bit 1.
+  - Witness: a real `applyHurtOrDeath` knockback under bit 1 queues `PLC_Knuckles` pieces.
+  - **Limit:** routines `$A`/`$C` call the same helpers; their engine counterparts were not identified.
+- **N6 (refused).** Cross-game donor art (`CrossGameFeatureProvider.isActive()`) and the slot stage's engine player (an
+  active S3K slot runtime) are not the ROM routine's producer. Their submissions are refused and make the byte unknown;
+  no record certifies them.
+- **M1 in game (added).** A real death restart (`restartCurrentLevelAfterDeath`, Level re-entry) after Sonic held a
+  non-zero frame clears the byte. The same frame queues again after the title card, and restore across the first
+  queued body DMA replays the same records twice. Restoring to the load boundary itself is a rewind limit and is not
+  claimed.
+
+**Old-source reds:** with the slice-3 body gate, no revert store and a queue-only fresh reset, the witnesses fail for their own reasons:
+- N1: the glide queue differs at frame 6;
+- N3: an owned interval drains `CONDITIONAL`;
+- N5: hurt queues nothing;
+- N2: the byte is 2, not `$FF`;
+- M1: frame 140 is not re-queued, so the first queue appears at 141;
+- M1 unit control: fails too.
+
+The source was restored byte-exact and checked by sha256 before the commit.
+
+**Limits (unchanged unless stated above):**
+- Body entries are recorded only for the players' own routines.
+- Object `Perform_DPLC` and direct zone uploads are missing owners.
+- The V-int start time is open.
+- Only two native DMA observations exist, and the PAL runs prove region propagation, not the PAL VBLANK limit.
+
+### Review r3: actual giant-ring DMA ownership (2026-10-17)
+
+The r2 ownership protocol was tested by setting its mapping flag directly. A real ring did not set that flag:
+`loc_6173A` writes `Player_prev_frame=$FF`, then frame 0, animation `$1C` and `object_control=$53`; the engine set
+the broad movement/CPU control flags and BLANK animation only. Its ordinary animation tail therefore kept recording
+body calls against a falsely known previous byte. This is separate from ability-owned Knuckles frames.
+
+`Sonic3kSSEntryRingObjectInstance` now publishes the global `$FF` write through its injected S3K art coordinator and
+sets the existing mapping-ownership flag for P1 and a carrying P2. The byte is global, even when P1 is Tails; it is
+not selected by the touched character. The shared ledger helper is named `forcePlayerOneReload`, retaining the
+Super-revert caller's behavior. The ordinary player's body calls are suppressed during capture, and subsequent
+unrecorded object-owned intervals report `PRODUCER_STATE_UNKNOWN`. No readiness, profile or service count changes.
+
+The independent ROM-backed `TestS3kGiantRingDmaOwnership` uses the decoded CNZ1 subtype-4 ring at `$2DC0,$064C`.
+The real object forms normally. A declared inlet just outside its collision box then enters through an ordinary
+Right frame; neither the ring routine nor its collision is forced. Sonic, Tails and Knuckles each check immediate
+native ownership/byte writes, the following refused DMA records, immediate full-world restoration and two forward
+replays. This is a local component inlet, not a cold CNZ route or an emulator RGB qualification.
+
+Validation on parent `7bbf1eb2` plus this change, Java 25, normal queued Maven, `-Dmse=off`, surfaceless EGL,
+unset DISPLAY/WAYLAND_DISPLAY and null OpenAL:
+
+- Old production source plus the new test: **3 run / 3 failures / 0 errors / 0 skips**, finished **02:26:52 UTC**.
+  Every actual capture lacked bit 1 and the global byte was 186/0/86 rather than 255 for Sonic/Tails/Knuckles.
+- Initial fixed-source selection: **112 run / 0 failures / 6 errors / 0 skips**. All three new cases, the body-cache
+  and ledger neighbors, flash graph and required S3K four passed. Six formation/routing unit cases lacked the newly
+  consumed runtime-art service. Their narrow harness now explicitly supplies `RuntimeArtCoordinator.NONE`; the
+  production ROM witness uses the real coordinator, and the shared fail-fast test services remain unchanged.
+- Harness repair and return follow-up: **35 run / 0 failures / 0 errors / 0 skips**, finished **02:31:04 UTC**:
+  `TestSonic3kSSEntryRingFormation`, `TestS3kSanctuaryReturnState` and
+  `TestS3kSanctuaryOriginReturnLifecycle#configuredRepresentativeUsesTheActualSaved2OwnersAndIncomingWorldReplay`.
+  The eight representative returns include native mains, S1/S2 donors and wide teams; their released origin now
+  explicitly checks mapping ownership is clear. All three original absolute ROM properties were supplied.
+- Separate fresh `-Pguards` JVM: **109 run / 0 failures / 0 errors / 0 skips**, finished **02:32:07 UTC**:
+  `TestArchitecturalSourceGuard`, `TestRewindFieldDispositionGuard`, `TestModApiSignatureSurface` and
+  `TestHardwareTimingAuthorityGuard`.
+
+Commands used `<main-workspace>/tools/testing/maven_queue.py` from the intended isolated worktree. The first
+112-case invocation and repaired 35-case invocation are recorded separately; no green 112-case rerun is claimed.
+No broad smoke or release-only full suite was run for this bounded fix. Full delivery composition and its affected
+trace checks remain separate. Other object DPLC/direct-upload owners, the Super-revert ordering, VInt start, PAL
+limits, all six ending counts and the 46-fingerprint predictive qualification remain open.
+
+#### kos46 instruction ledgers promoted as diagnostics (2026-10-17)
+
+The kos46 CPU-budget research (rounds R4–R17, 2026-10-16/17) left three tool groups. They were promoted at base
+`00f8ab78a` as **diagnostics only**. None is registered with the engine, no Java consumes them, and they supply no
+runtime cost, readiness decision or hardware-timing input. Promotion does not turn a source prediction into native
+hardware closure or a ready-job input; any later use must earn that through the hardware-timing contract.
+
+- `tools/timing/m68k-closure`, with instruction-closure patch v3 and the native lane's unconditional-jump successor
+  rule: `refine.py` and `interrupt_phase.py`.
+- `tools/timing/native-ledger`: the corrected native stall ABI v2 ledger checker and the declared-ingress producer
+  source.
+- `tools/timing/s3k-instruction-ledgers`: per-routine ROM cost models for R6–R17. R16 (deformation) and R17
+  (palette fade) were frozen at qualification and hash-bound on copy.
+
+Their READMEs list the commands, test counts and the evidence below.
+
+**What they establish.**
+- **Interrupt acceptance.** GPGX `051d430d` charges 50–59 cycles (`m68ki_cycle_interrupts[(cycles/7)%10]`,
+  `m68kcpu.h:1405,1449`), not Motorola's 44. The committed v1 spec now returns ERROR rather than using 44.
+- **Instruction-width refinement.** Instruction width is 0 in every bucket, LF 4400–4406, once `refine.py` proves
+  the Scc, `dbmi`, `bset Dn` and AllocateObjectAfterCurrent exits from ROM semantics and bucket counts.
+- **Eight pinned windows.** With the v9 stall and acceptance-phase counters, the windows return PASS within the
+  12-cycle tolerance. Residuals run from −10.3 to +0.3 cycles.
+- **Native ledger recordings.** The corrected checker closes every master-clock cycle of 44 VInt-to-VInt intervals
+  in three Tails/+2 declared-setup recordings (NTSC first-proof core, NTSC and PAL r2 core). The residual is 0 in
+  each. Every executed PC is admissible: about 38.8k exact, 8.0k branch-mix-admissible, 92 operand-bounded and
+  151 mix-bounded rows. Count, MCLK, kind, refresh and stall-conservation controls each FAIL.
+- **Source models.** They reproduce the native per-PC counts of the 42 retained ending buckets wherever the native
+  path is covered. Uncovered paths have synthetic, hand-summed and mutation tests: 106 source-model tests plus
+  14 Kos-service tests.
+
+**What they do not establish.**
+- **Instruction time only.** Interrupt acceptance, refresh, Z80-to-68000 bus and VDP FIFO waits, and DMA freeze are
+  separate terms. They are observed natively or bounded by `m68k-closure`; the source models never include them.
+- **Coverage.** Per bucket (12,721 executed instructions), `closed-ranges.txt` (sha256 `c5116921…a579d404`)
+  covers 11,365, and 1,356 remain open. The open set includes `Ending_ScreenEvent_Index` (662), `sub_5B0A8` (94) and
+  the plane-buffer producers (about 130).
+  - The covered count includes 5,201 `Process_Kos_Queue` instructions (the consumer whose count is the unknown) and
+    2,765 idle `Wait_VSync` tests (a timing-model output).
+  - The counts are instructions, not cycles. R14 had left 3,220 open, R15 2,384 and R16 1,717.
+- **Oracle-supplied inputs.** Three R14 skeleton inputs come from the native oracle, not from runtime authority:
+  the `Wait_VSync` test count, the occupied SST slot count and the Player_1 routine class. The same holds for the
+  R15 `Level_started_flag`/`Spritemask_flag` gates, the R16 dry-water gate and the R17 `Animate_Palette` timer gate.
+- **Native witnesses.**
+  - R16: the captures hold no `Camera_Y_pos_BG_copy`, `Water_level` or `HScroll_table` inputs. ApplyDeformation's
+    body, the water split, MakeFGDeformArray and ApplyFGandBGDeformation are therefore not witnessed.
+  - R17 is priced from palette-owner inputs over ROM `$3AF0`–`$3DBE`. Natively it witnesses only Pal_ToBlack's loop
+    control and the negative-timer return; colour branches and the white or blocking fades are native-absent.
+  - Also native-absent: the y/xy sprite writers, Spritemask, the nonempty Nemesis path, the lag VInt and every
+    H-int handler. Process_Kos_Module_Queue is source-only.
+- **Native recordings.** The ingress is declared-setup research ingress, not authentic cold input, and covers one
+  product (Tails/+2, NTSC and PAL). The live data has no straddle, inline IRQ-delay or HInt intervals. The checker
+  does not validate main/IRQ attribution or that the declared region was in effect.
+- **No 6+46 closure credit.** Nothing predicts the six measured ending service counts or the 46 multi-valued
+  fingerprints, and nothing in Java is activated.
+- **No conversion of missing timing.** An unobserved term may not be filled from a measured native budget or a
+  fitted constant. This covers acceptance phases, stalls, open routines and presentation or phase timing.
+
+**Rejected or superseded.**
+- **The first native checker** (native lane, sha256 `af521b1d…`). It reported 44/44 PASS but labelled branch mixes
+  as exact (review N1) and did not check output completeness (N4) or acceptance joins (N10). Root's correction
+  replaces it and reproduces the same 44 zero-residual intervals with honest classes; the original is not promoted.
+- **Closure patches v1/v2.** v2 accepted MOVEA and memory destinations as CCR sources; on Root's counterexample it
+  claimed 64 cycles where 62 is true. v3 replaced both.
+- **One-off comparators.** `compare_v2.py` and `interval_sources.py` were not promoted.
+  - `compare_v2.py` found ledger on/off byte-identical, v8-on-v2 identical to the candidate captures, and 24/24
+    acceptances equal to the v9-derived phases. It hard-codes the scratch layout, and its runner-versus-v8
+    savestate comparison used an invalid reference: v8 registers managed callbacks, the runner does not.
+  - `interval_sources.py`'s width listing is superseded by the report's `refined_pcs`.
+
+Native stall ABI v2 was developed on TraceChaser `feature/ai-s3k-m68k-stall-counters` (research commits
+`393f0be42`, `5afbc3dbd` and `0801da8ac`). It is now published on TraceChaser `main` at `4ae64e075`, the pin in
+this composition. The retained recordings still identify the research core `98be79a6` / raw `f8c953aa` / build
+`08320bb667a0ed07`; publication does not change their provenance. The declared-ingress producer remains a
+consumer-side diagnostic under `tools/timing/native-ledger`: its RAM setup and all-address histogram do not
+expand TraceChaser's fixed-observer policy. Its header gives the published build target and the historical
+research build; no new producer compilation or recording is claimed by this documentation reconciliation.
+
+Citations: research passes 1–13 cited line numbers from the local `docs/skdisasm` checkout `1a454a0`, while the
+superproject pins `044fa46`; ROM bytes and addresses are identical. Promoted files cite `044fa46` lines or ROM labels.
+The 2026-10-15 Kos idle-budget section above uses `1a454a0` lines. At the pin, `sonic3k.asm` 2819–2967 is 2851–2999,
+7884–7889 is 7916–7921, `constants.asm` 896–903 is 918–925 and 971 is 995.
+
+#### Native white-palette fade owner decision — 2026-10-17, Root
+
+The event-paired special-stage reveal after the Super layout correction (`8d0763bea`) still differs on all
+71,680 pixels through reveal+18. Native reduces the components together; the engine's whole-screen additive
+fade goes through yellow/red. This is a palette-presentation defect, not a reason to shift the reference image.
+
+ROM evidence (skdisasm `044fa46`): `Pal_FadeFromWhite` / `Pal_FillWhite` (:5148–5182) fill normal/water palettes
+with `$EEE`, clear `Pal_fade_delay2`, then wait 22 V-ints. `Pal_FromWhite` (:5189–5219) subtracts that delay,
+resets it to 2 on underflow, and calls `Pal_DecColor2` (:5226–5258). Each such pass independently lowers B/G/R
+by one 3-bit level towards the target. Thus the colour passes are V-ints 1,4,7,10,13,16,19. This differs from
+`Pal_ToWhite` / `Pal_AddColor2` (:5281–5340): every V-int raises **one** component per colour, R then G then B,
+short-circuiting as soon as one component changes. Both directions must retain their distinct native algorithm.
+The initially drafted parallel-ToWhite test expectation was rejected against that source before production edits.
+
+**Scope and owner.** This rule is game-wide shared runtime scheduling, not palette asset data, a character
+ability, a zone or an object family. A typed `GameRules.paletteWhiteFade` model is the narrow owner, following
+its existing dynamic-art service model. It selects existing overlay behavior or native CRAM steps. The
+`PaletteFadePresentation` colour model gains FROM_WHITE/TO_WHITE alongside its existing black modes; CRAM
+publication, display-profile/Full–Limited conversion and displayed-generation rewind stay in their existing
+owners. The world-managed FadeManager drives the rule; a detached creator/UI FadeManager retains its overlay
+behavior. No raw game/zone/frame/fixture branch belongs in shared graphics code.
+
+| Host | White presentation | Scheduling / evidence limit |
+|---|---|---|
+| S1 | Existing screen overlay | Unchanged in this slice; no new native RGB qualification |
+| S2 | Existing screen overlay | Unchanged in this slice; no new native RGB qualification |
+| S3K | ROM palette steps | ToWhite: per-colour R→G→B each V-int. FromWhite: all components every third V-int |
+
+The new field stays host-owned in CrossGameRuleComposer; a donor cannot change the host's fade hardware.
+Existing ten/eleven-argument GameRules constructors remain available and keep their old default. The public rule
+and white-mode enum additions update the mutable `0.7` Mod API pin and runtime description together, retaining
+descriptor candidate `0.7.0` and the empty published-baseline set. No rule-size budget is raised.
+
+**Verification plan and current evidence.** A first draft's six colour cases read a converter-only test helper;
+they were corrected to read the actual uploaded GPU palette texture. On `fbfe2999c` plus that test, the GPU,
+backdrop and V-int rewind selection is **13/13F/0E/0S**, finished 03:20:47 UTC. The first failed GPU colour is
+black at FromWhite frame 0 (expected white CRAM, actual black); all backdrop and rewind failures also precede
+any ToWhite assertion. The independent ToWhite oracle was corrected from the owning source before activation.
+
+The first CRAM prototype passed 13 checks at 03:26:03 UTC. Three targeted regressions then failed at 03:29:47:
+FromWhite returned on V-int 21 rather than 22, and the water tint erased an already-faded donor colour.
+A private bank beyond row 31 also reproduced black instead of white (1/1F/0E/0S at 03:36:13). The fixes
+retain the 22nd wait, step the final derived water target before display conversion, apply the all-lines mask
+to private rows, and retain detached raw water inputs while publishing/restoring the white generation.
+The combined eight-class focused selection passed **60/0F/0E/0S at 03:43:04 UTC**: all 512 Genesis words in both
+directions across six profile/range products, GPU readback, framebuffer/backdrop, donor/scoped water,
+pending-versus-displayed state and two forward replays, host/legacy constructor ownership, and existing fades.
+Command: normal main-workspace `maven_queue.py -Dmse=off`, selectors TestNativeWhitePaletteFade,
+TestUnderwaterPaletteUpload, TestPaletteWhiteFadeModel, TestCrossGameRuleComposer, TestFadeManager,
+TestFadeManagerRewindSnapshot, TestPaletteFadePresentation and TestPaletteUploadLatch; absolute verified S3K
+ROM, surfaceless EGL, no display, null OpenAL. Root was `fbfe2999c` plus the uncommitted white-fade fix.
+
+The unchanged declared native-v2 twin was compared with new engine v4 (capture 1/0F/0E/0S, 03:50:03 UTC).
+At the first stage reveal, raw RGB differences fall from all 71,680 pixels to **446**; +10 has **667**, +20 **763**
+and +22 **1,112**. Engine/native reveal offsets remain +24/+138. Results sampled reveal+0,2,4,6,8 are exact;
+the eventual 420-pixel digit/icon residual remains. Root viewed stage+0/+10 and results+32 comparisons.
+No image shifts/normalisation, cold-route credit, whole-scene parity or overall timing acceptance follow.
+Durable v4 pictures use `spot-checks/seven-chaos-{engine-twin-v4,compare-v4}` beside unchanged `native-v2`.
+
+Review also reproduced a new derived-row cache alias: public step 256 reused byte-key step 0, retaining white
+at a completed FromWhite endpoint (1/1F/0E/0S at 03:56:13 UTC). Canonicalising the colour step to its existing
+native endpoint before key storage addresses it. The next 17-selector (18-class) selection passes **141/0F/0E/0S at
+04:03:08 UTC**, including all 16 water-upload tests and this regression, manager rebinding, hybrid rules,
+special-stage entry/rewind/snapshots, SDK packaging/Javadoc/maintained starters, and all four required S3K
+loading tests. Command uses the same normal main wrapper/environment plus the three verified absolute ROMs;
+`-Dtest=TestUnderwaterPaletteUpload,TestGraphicsManagerFadeRebinding,TestHybridGameRules,TestGameLoopSpecialStageEntryPresentation,TestSpecialStageEntryPresentationController,TestSonic3kSpecialStageRewindAdapter,TestSonic3kSpecialStageManagerSnapshot,TestSonic3kSpecialStageGameplaySnapshot,TestSpecialStageRewindCapability,TestModApiSdkPackager,TestModApiJavadocTool,TestModSdkArtifactVerifier,TestPurposeStarters,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`.
+The V4 scene uses ordinary native fade steps, so the final bound correction (only steps beyond 21) changes
+none of its rendered inputs. The compiled mutable API snapshot adds 14 lines and removes none.
+Fresh selected source/API/rule guards pass **142/0F/0E/0S at 04:05:31 UTC** in their own Maven JVM:
+TestArchitecturalSourceGuard (72), TestRewindFieldDispositionGuard (1), TestModApiSignatureSurface (11),
+TestHardwareTimingAuthorityGuard (25) and TestObjectPhysicsStandardizationGuard (33), with the same normal
+wrapper, EGL/no-display/null-OpenAL environment and `-Dmse=off -Dtest=<those five exact classes> test -B`.
+The candidate pin, recursive annotations and unchanged engine-internal inventory pass. This is selected guard
+coverage, not all guards. Affected replay and delivery-wide combined smoke remain separate.
+
+
+## Native results geometry and painter order — 2026-10-17 Root
+
+Root `57774b451` plus this results correction keeps the unchanged native-v2 seven-Chaos diagnostic.
+The owning source is skdisasm `044fa46`: `ObjDat2_2E834` at ROM `$2E834`, `Map_Results` at `$2F26A`,
+`LevResults_DisplayScore` (:62794–62821), child clearing `loc_2E6C8`, and `Render_Sprites`
+(`loc_1AEE4` draws the parent before `loc_1AF1C` tests its child count).
+The row table positions the score parent at active160 and ring/time parents at active248.
+The score mapping already supplies the live digit offsets. Each bonus parent retains mapping frame1 (zero),
+with seven child BCD slots from parentX−$38 through parentX−8, derived from the unmultiplied word counter.
+This changes presentation only; counter values and awarded points are unchanged.
+
+The independent raw-ROM oracle first passes its table-shape check and fails all85 geometry products
+(86/85F/0E/0S, 04:16:43 UTC). The first fixed nine-class selection passes146/0F/0E/0S at04:20:10.
+An initial `TAILS` enum typo failed test compilation and provides no parity evidence. The expanded geometry
+coverage includes normal Tails, Super Tails and Super Knuckles score mappings at320/352/400/528/800,
+seven zero/nonzero/word-bound bonus values for both rows, and the parent retained after child clearing.
+
+The geometry-only engine-v5 capture (one capture and15 mapping variants pass at04:22:30) reduces the
+settled results difference420→30 pixels. All remaining differences are blue icon pixels overwriting native
+font shadow/yellow: Score12, Ring13, Perfect4, and one cross-row pixel. Native SAT emission is forward,
+but its first opaque sprite wins; GL must paint the complete group and each mapping in reverse.
+Reversing only pieces cannot fix a later row covering an earlier label. Both palette mapping helpers now
+share the same tile emission primitive. The continue icon's existing lifetime and separate path are retained;
+this five-row overlap oracle does not certify all scene actors or all continue overlaps.
+
+Two rejected hypotheses matter. The first ordinary-row priority oracle incorrectly added `$6000` to maps
+that already contain palette3 bits; its1238-pixel failures were test defects, not production evidence.
+After correction, all four normal/Super320/800 cases reproduce the same30-pixel defect. A proposed continue
+replacement at slot49 was also wrong: `loc_2EAC8` deletes failure-message slot43 before
+`AllocateObjectAfterCurrent` scans for the icon. On this ordinary won/all-seven product, the icon occupies43,
+which survives both reveal tables44–49 and44–46. Two negative controls retain it; no approximate slot field
+or production lifetime fix was added. The corrected four-case priority old-red was observed in the six-case
+04:45:59 run; its fifth failure was the rejected continue oracle.
+
+Final normal-wrapper focused selection, with verified absolute S3K ROM, surfaceless EGL, unset displays and
+null OpenAL: `-Dmse=off -Dtest=TestS3kSpecialStageResultsRenderPositions,TestS3kSpecialStageResultsArt,TestS3kSpecialStageResultsTally,TestS3kSpecialStageResultsReveal,TestS3kSpecialStageResultsPreparation,TestS3kSpecialStageResultsBackdrop,TestS3kSanctuaryResultsBackdropHeadless,TestSpecialStageRewindCapability,TestGameplayCaptureFrameRendering test -B`.
+It passes162/0F/0E/0S at04:57:09 UTC (102 new oracle cases plus60 neighbours). Engine-v6 capture passes
+1/0F/0E/0S at05:00:57. All17 raw RGB results checkpoints reveal+0..32/every2 match unchanged native-v2
+exactly (engine+52/native+128); no image shift, recolouring or normalization. Root viewed the +32 pair.
+All82 stage PNGs, state.csv and ledger.csv are byte-identical to v5; stage residuals446..1112 remain.
+Events remain contact338, hub403, release1295, pedestal1425, stage1441, results1789 and LRZ2return2423.
+
+The diagnostic is promoted to `S3kSevenChaosGatewayCaptureTool`: verified4MiB ROM identity, absolute paths,
+fresh output directory, Linux EGL/no-display checks, the same declared Tails/native320/Limited/RAW_RGB inlet
+and event-relative input, and a30000-frame bound. Through the normal main-workspace wrapper, `compile
+exec:java -Dexec.mainClass=com.openggf.tools.S3kSevenChaosGatewayCaptureTool` with `--rom` and `--out-dir`
+completes exit0 at05:10:48 UTC after338s queue waiting (execution64s). Its174 files (172PNGs plus both CSVs)
+are byte-for-byte identical to v6. Maven reports one lingering Discord daemon during shutdown; the owned
+Maven/JVM invocation is terminal, and this is CLI reproduction rather than a suite pass.
+Durable outputs are `spot-checks/seven-chaos-{engine-twin-v5,compare-v5,engine-twin-v6,compare-v6,engine-tool-v7}`
+under the existing external S3K parity directory, with native-v2 unchanged. This sampled results prefix is
+one declared NTSC Tails product, not cold input, the full results timeline, native PAL/character/wide/donor
+breadth, full-scene equality, predictive timing closure or delivery-wide validation.
+
+Fresh selected source guards pass130/0F/0E/0S at05:14:14 UTC through the normal main wrapper:
+`-Dmse=off -Dtest=TestArchitecturalSourceGuard,TestHardwareTimingAuthorityGuard,TestObjectPhysicsStandardizationGuard test -B`.
+The Java25/Lua5.4/PowerShell category preflight also passes with `LUA_BIN=/usr/bin/lua5.4`; default `lua`
+is a different version and its earlier preflight failed before tests. These are selected guards/tool
+prerequisites, not the pending combined smoke result.
+
+### Knuckles eyecatch child priority (2026-10-17, Root)
+
+The retained native `eyecatch-steady-seq009-in433872` original PPM and the
+old engine picture differed at 70 pixels, all within `(150,160)..(192,176)`.
+Both used native 320, NTSC, seven Super Emeralds, donor off and Limited/RAW_RGB.
+The native 348x240 picture's active window is `(14,8)..(334,232)`; no colour
+normalization, translated alignment or difference mask is used. Source is
+`a1afac243` plus the independent regression and conditional render correction.
+
+The actual native VDP SAT at `$F800` links Sonic, Tails, Knuckles, then tail;
+the displayed tail uses frame 8, just as the engine does. The CPU SST already
+shows frame 9, one VInt ahead. Atlas CPU/GPU bytes and Knuckles frame DC match
+the ROM. Removing the tail increases the difference to 150 pixels. These
+observations reject animation-offset, missing-tail and atlas-corruption fixes.
+
+`loc_5F26C`/`loc_5F3AA` and `word_60170` assign the children priority `$100`.
+The folded ending object must emit their native order during SAT collection,
+because the collector itself replays entries in reverse painter order. Direct
+GL drawing still needs the reverse group. The initialization pass still draws
+only the tail. No animation, clock, allocation or captured-state field changes.
+
+`TestS3kEndingS3EyecatchTail` enters the actual SSZ2 final-fight component with
+its existing 8704-input movie and declared 410766 authoring VInt. At eyecatch
+init+576 it independently combines opaque ROM mapping/pattern footprints,
+including 70 overlaps whose colours distinguish child priority. The corrected
+old-code oracle fails exactly 70 pixels (one test, no errors/skips, 05:48:10 UTC).
+An earlier 1945-pixel failure was an invalid oracle: canonical Full palette RGB
+had not been converted to the capture's Limited range. That run earns no defect
+evidence. With the production correction, the new SAT case and existing Tails
+direct-draw/init case pass 2/0/0/0 at 06:01:31 UTC. The actual new engine PNG is
+byte-RGB identical to the unchanged original native active picture (71680 pixels).
+The image was inspected. Durable originals and captures remain under the task's
+external `ending-pal-native/knux/` directory.
+
+Command: current main absolute `maven_queue.py --normal -Dmse=off
+-Dtest=TestS3kEndingS3EyecatchTail -Ds3k.rom.path=$S3K_TASK_ROM
+test -B` (`S3K_TASK_ROM` resolved to the original locked-on ROM, CRC32 `63522553`),
+with inherited `-Dopenggf.headless.gl=surfaceless-egl`, DISPLAY/WAYLAND_DISPLAY
+unset and nullAL. This is one declared native 320 checkpoint and a direct-path
+regression, not whole-sequence, cold-campaign, PAL, PCM, donor or wide RGB
+certification. Lifecycle/replay and source-guard follow-up are recorded separately.
+
+Focused follow-up at 06:05:00 UTC passes 92 tests in nine resolved classes, no
+failures/errors/skips: `TestS3kEndingS3Eyecatch,TestS3kPostCredits,
+TestS3kEndingSceneState,TestS3kKnucklesEndingLifecycleCapture,TestS3kAiz1SkipHeadless,
+TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`,
+using the same absolute wrapper, ROM and headless environment. The level-loading
+selector resolves both existing package classes. Knuckles lifecycle coverage
+retains six NTSC products (320/800 × incomplete/Chaos/Super) and three PAL
+products with real final-fight input, phase restore and forward replay; it is
+state/lifecycle coverage, not native wide/PAL original-RGB comparison. The sparse
+ending-state test now accounts for the title handoff's captured four-byte
+countdown (135-byte empty header, formerly 131), retaining its dense-plane and
+restore assertions. This stale assertion was found by Root's retained smoke.
+
+Fresh `TestArchitecturalSourceGuard` in a separate lean Maven invocation passes
+72 tests, no failures/errors/skips, at 06:18:55 UTC. Source, mirror and local
+link/anchor checks pass. Root's full composed smoke remains a separate retained
+request; this lane does not claim combined delivery.

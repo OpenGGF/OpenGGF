@@ -14,7 +14,30 @@ public record GameRules(
         SidekickCpuRules sidekickCpu,
         PowerUpRules powerUp,
         DrowningBubbleRules drowningBubble,
-        DynamicArtDmaServiceModel dynamicArtDmaService) {
+        DynamicArtDmaServiceModel dynamicArtDmaService,
+        PaletteWhiteFadeModel paletteWhiteFade) {
+
+    public GameRules {
+        java.util.Objects.requireNonNull(paletteWhiteFade, "paletteWhiteFade");
+    }
+
+    /** Retains the prior candidate constructor's screen-overlay presentation. */
+    public GameRules(
+            PlayerMovementRules playerMovement,
+            PlayerCapabilityRules playerCapability,
+            CollisionRules collision,
+            PlayerAnimationRules playerAnimation,
+            CameraRules camera,
+            RingRules ring,
+            ObjectInteractionRules objectInteraction,
+            SidekickCpuRules sidekickCpu,
+            PowerUpRules powerUp,
+            DrowningBubbleRules drowningBubble,
+            DynamicArtDmaServiceModel dynamicArtDmaService) {
+        this(playerMovement, playerCapability, collision, playerAnimation,
+                camera, ring, objectInteraction, sidekickCpu, powerUp,
+                drowningBubble, dynamicArtDmaService, PaletteWhiteFadeModel.SCREEN_OVERLAY);
+    }
 
     public GameRules(
             PlayerMovementRules playerMovement,
@@ -496,6 +519,7 @@ public record GameRules(
                     true,
                     -256
             ),
-            DynamicArtDmaServiceModel.EVERY_CLAIM_WITHOUT_PLAYER_ART_AUDIT
+            DynamicArtDmaServiceModel.EVERY_CLAIM_WITHOUT_PLAYER_ART_AUDIT,
+            PaletteWhiteFadeModel.ROM_PALETTE
     );
 }

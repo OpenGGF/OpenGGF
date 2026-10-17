@@ -54,6 +54,37 @@ public class Sonic3kSpecialStageRenderer {
     private int tailsTailsMappingFrameCount = 15;
 
     private boolean artLoaded;
+    private int playerProjectionSine;
+    private int playerProjectionCosine;
+    private boolean playerProjectionLoaded;
+
+    /** GetScalars2($E0): the special-stage camera pitch comes from ScalarTable2. */
+    void setPlayerProjectionScalars(byte[] table) {
+        if (table == null || table.length != 512) {
+            throw new IllegalArgumentException("S3K player projection needs the ROM scalar table");
+        }
+        playerProjectionSine = readSignedWord(table, 0xE0 * 2);
+        playerProjectionCosine = readSignedWord(table, 0x20 * 2);
+        playerProjectionLoaded = true;
+    }
+
+    /**
+     * sub_953E: the stage's first three rotation axes remain zero; add $100 to
+     * depth and $980 to native height, then sub_A206 pitches both with the ROM
+     * sine/cosine. MULS/add.l/add.l/SWAP truncate before DIVS truncates toward
+     * zero. The sidekick's $38 depth is -$20, not a constant screen-Y offset.
+     */
+    private int projectedPlayerY(long jumpHeight, int nativeDepth) {
+        if (!playerProjectionLoaded) {
+            throw new IllegalStateException("S3K player projection scalars were not loaded");
+        }
+        int height = (short) ((jumpHeight >> 16) - 0x800);
+        int depth = nativeDepth + 0x100;
+        height = (short) (height + 0x980);
+        int projectedDepth = (playerProjectionCosine * depth - playerProjectionSine * height) << 2 >> 16;
+        int projectedHeight = (playerProjectionSine * depth + playerProjectionCosine * height) << 2 >> 16;
+        return 0x70 + projectedHeight * 0x100 / projectedDepth;
+    }
 
     /** Decompressed perspective map data (loaded from SStageKos_PerspectiveMaps). */
     private byte[] perspectiveMaps;
@@ -88,6 +119,10 @@ public class Sonic3kSpecialStageRenderer {
      * (Map_SStageChaosEmerald / Map_SStageSuperEmerald), 16 frames, no DPLC.
      */
     private byte[] emeraldMappingData;
+    /** ROM Map_SStageSphere; repeated pointers preserve distant sprite dimensions/art. */
+    private byte[] sphereMappingData;
+
+    void setSphereMappingData(byte[] data) { sphereMappingData = data; }
 
     /** Raw mapping data for Sonic's SS sprite. */
     private byte[] sonicMappingData;
@@ -114,10 +149,10 @@ public class Sonic3kSpecialStageRenderer {
     };
 
     private static final int[] HUD_TEMPLATE_BORDER_COLUMNS = {0, 7};
-    /** Emerald mappings hold 16 frames, one per perspective size index. */
-    private static final int EMERALD_MAPPING_FRAME_COUNT = 16;
+    /** The perspective renderer admits mapping indices 0 through 15. */
+    private static final int PERSPECTIVE_MAPPING_FRAME_COUNT = 16;
     /** Sanity bound on pieces per frame; the busiest ROM frame uses 4. */
-    private static final int EMERALD_MAX_PIECES = 8;
+    private static final int PERSPECTIVE_MAPPING_MAX_PIECES = 8;
 
     private static final int[] RING_FRONT_SIZE_MAP = {
             3, 2, 0x00, 3, 2, 0x0C, 3, 3, 0x18, 3, 2, 0x27,
@@ -236,6 +271,9 @@ public class Sonic3kSpecialStageRenderer {
 
         // Render checkerboard floor (Plane A)
         renderFloor(manager, player);
+
+        // Draw_SSShadows is last in native SAT, behind every ordinary sprite.
+        renderShadows(manager);
 
         // Render grid sprites with perspective projection (VDP sprites)
         renderGridSprites3D(manager, grid, player);
@@ -877,19 +915,10 @@ public class Sonic3kSpecialStageRenderer {
             renderPerspectiveSprite(spriteCellTypes[i], sx, sy, spriteSizeIndices[i], ringAnim);
         }
 
-        // Render player with jump height offset.
-        // Full 3D projection trace with actual scalar values gives:
-        //   Ground ($36=-0x800): screenY=162, Peak ($36=-0x858): screenY=130
-        //   Delta = 32 pixels for jumpHeight peak of -0x580000.
-        // Scale factor: 32 / 0x580000 ≈ 1 / 0x2C000. Approximated as >> 17 * 3/4.
-        // Simplified: (jumpHeight >> 16) * 32 / 0x58 = (jumpHeight >> 16) / 2.75
-        long swapped = player.getJumpHeight() >> 16;
-        int jumpYOffset = (int)(swapped * 32 / 0x58);
-
         // Render main player character.
         // ROM: Obj_SStage_8FAA uses palette 1 when Player_mode == 2 (Tails alone).
         PlayerCharacter playerCharacter = manager.getPlayerCharacter();
-        renderPlayerSprite(player, playerCharacter, PLAYER_SCREEN_CENTER_X, 160 + jumpYOffset);
+        renderPlayerSprite(player, playerCharacter, PLAYER_SCREEN_CENTER_X);
 
         // Render tails appendage on main player when Tails is the main character
         if (playerCharacter == PlayerCharacter.TAILS_ALONE
@@ -899,17 +928,38 @@ public class Sonic3kSpecialStageRenderer {
                     && ttFrame * 2 + 1 < tailsTailsMappingData.length) {
                 renderCharacterSprite(tailsTailsMappingData, tailsTailsMappingFrameCount,
                         tailsTailsPatternBase, 1, ttFrame,
-                        PLAYER_SCREEN_CENTER_X, 160 + jumpYOffset);
+                        PLAYER_SCREEN_CENTER_X, projectedPlayerY(player.getJumpHeight(), 0));
             }
         }
 
         // Render Tails sidekick on top (closer to camera, lower on screen)
         // ROM: Tails at $38=-0x20 (closer to camera in Z), rendered lower on screen
         if (manager.isTailsEnabled() && tailsPatternBase > 0 && tailsMappingData != null) {
-            renderTailsSprite(manager, PLAYER_SCREEN_CENTER_X, 172);
+            renderTailsSprite(manager, PLAYER_SCREEN_CENTER_X);
         }
 
         graphicsManager.flushPatternBatch();
+    }
+
+    /** word_94FC: fixed 4x4 shadow-operator sprite(s), not the player's jump position. */
+    private void renderShadows(Sonic3kSpecialStageManager manager) {
+        if (!artLoaded || shadowPatternBase <= 0 || !manager.hasPublishedMainLoopSprites()) return;
+        graphicsManager.beginShadowBatch();
+        reusableDesc.set(0);
+        reusableDesc.setPriority(true);
+        reusableDesc.setPaletteIndex(3);
+        appendShadow(SHADOW_P1_X - 0x80, SHADOW_P1_Y - 0x80);
+        if (manager.isTailsEnabled()) appendShadow(SHADOW_P2_X - 0x80, SHADOW_P2_Y - 0x80);
+        graphicsManager.flushShadowBatch();
+    }
+
+    private void appendShadow(int x, int y) {
+        for (int col = 0; col < 4; col++) {
+            for (int row = 0; row < 4; row++) {
+                graphicsManager.addShadowPattern(shadowPatternBase + col * 4 + row, reusableDesc,
+                        x + col * TILE_SIZE + specialStageViewport.outerOriginX(), y + row * TILE_SIZE);
+            }
+        }
     }
 
     private void appendSprite(int cellType, int screenX, int screenY, int sizeIndex) {
@@ -1019,7 +1069,14 @@ public class Sonic3kSpecialStageRenderer {
         // the Super Emerald frames are mirrored multi-piece sprites that no single
         // rectangular block of tiles can describe.
         if (cellType == CELL_CHAOS_EMERALD || cellType == CELL_SUPER_EMERALD) {
-            renderEmeraldSprite(screenX, screenY, sizeIndex, patternBase, paletteIndex);
+            renderMappedSprite(emeraldMappingData, screenX, screenY, sizeIndex, patternBase, paletteIndex);
+            return;
+        }
+        // Map_SStageSphere_ aliases frames 10/11, 12/13 and 14/15. A linear
+        // size/tile formula shrinks the last two pairs and selects the wrong art.
+        if (cellType == CELL_BLUE || cellType == CELL_TOUCHED || cellType == CELL_RED
+                || cellType == CELL_BUMPER || cellType == CELL_SPRING) {
+            renderMappedSprite(sphereMappingData, screenX, screenY, sizeIndex, patternBase, paletteIndex);
             return;
         }
 
@@ -1112,7 +1169,7 @@ public class Sonic3kSpecialStageRenderer {
     }
 
     /**
-     * Render the Chaos or Super Emerald from its ROM sprite mapping.
+     * Render a sphere or emerald from its ROM sprite mapping.
      * <p>
      * ROM: Draw_SSSprites resolves the perspective size field to a frame index
      * (0-15) and walks the mapping frame's pieces. The Chaos Emerald frames are a
@@ -1120,24 +1177,24 @@ public class Sonic3kSpecialStageRenderer {
      * more pieces with the right half H-flipped, so both are driven from the
      * mapping data rather than a rectangular block of tiles.
      */
-    private void renderEmeraldSprite(int screenX, int screenY, int frame,
+    private void renderMappedSprite(byte[] mappingData, int screenX, int screenY, int frame,
                                      int patternBase, int paletteIndex) {
-        if (emeraldMappingData == null || frame < 0 || frame >= EMERALD_MAPPING_FRAME_COUNT) return;
-        if (frame * 2 + 1 >= emeraldMappingData.length) return;
+        if (mappingData == null || frame < 0 || frame >= PERSPECTIVE_MAPPING_FRAME_COUNT) return;
+        if (frame * 2 + 1 >= mappingData.length) return;
 
-        int frameOff = readWord(emeraldMappingData, frame * 2);
-        if (frameOff + 1 >= emeraldMappingData.length) return;
-        int pieceCount = readWord(emeraldMappingData, frameOff);
-        if (pieceCount <= 0 || pieceCount > EMERALD_MAX_PIECES) return;
+        int frameOff = readWord(mappingData, frame * 2);
+        if (frameOff + 1 >= mappingData.length) return;
+        int pieceCount = readWord(mappingData, frameOff);
+        if (pieceCount <= 0 || pieceCount > PERSPECTIVE_MAPPING_MAX_PIECES) return;
 
         for (int p = 0; p < pieceCount; p++) {
             int po = frameOff + 2 + p * 6;
-            if (po + 5 >= emeraldMappingData.length) break;
+            if (po + 5 >= mappingData.length) break;
 
-            int yOff = (byte) emeraldMappingData[po];
-            int sizeByte = emeraldMappingData[po + 1] & 0xFF;
-            int patternWord = readWord(emeraldMappingData, po + 2);
-            int xOff = readSignedWord(emeraldMappingData, po + 4);
+            int yOff = (byte) mappingData[po];
+            int sizeByte = mappingData[po + 1] & 0xFF;
+            int patternWord = readWord(mappingData, po + 2);
+            int xOff = readSignedWord(mappingData, po + 4);
 
             int tilesW = ((sizeByte >> 2) & 3) + 1;
             int tilesH = (sizeByte & 3) + 1;
@@ -1182,11 +1239,8 @@ public class Sonic3kSpecialStageRenderer {
      * ROM: Obj_SStage_9212 (Tails body) + Obj_SStage_9444 (tails' tails).
      * Tails uses palette 1 and has an independent jump height.
      */
-    private void renderTailsSprite(Sonic3kSpecialStageManager manager, int centerX, int centerY) {
-        // Apply Tails' own jump height offset
-        long swapped = manager.getTailsJumpHeight() >> 16;
-        int tailsJumpY = (int)(swapped * 32 / 0x58);
-        int tailsY = centerY + tailsJumpY;
+    private void renderTailsSprite(Sonic3kSpecialStageManager manager, int centerX) {
+        int tailsY = projectedPlayerY(manager.getTailsJumpHeight(), -0x20);
 
         // Render Tails body first (behind tails' tails)
         int frame = manager.getTailsMappingFrame();
@@ -1206,8 +1260,9 @@ public class Sonic3kSpecialStageRenderer {
 
     private void renderPlayerSprite(Sonic3kSpecialStagePlayer player,
                                     PlayerCharacter playerCharacter,
-                                    int centerX, int centerY) {
+                                    int centerX) {
         if (!artLoaded || playerPatternBase <= 0 || sonicMappingData == null) return;
+        int centerY = projectedPlayerY(player.getJumpHeight(), 0);
         int paletteIndex = playerCharacter == PlayerCharacter.TAILS_ALONE ? 1 : 0;
         renderCharacterSprite(sonicMappingData, sonicMappingFrameCount,
                 playerPatternBase, paletteIndex, player.getMappingFrame(), centerX, centerY);

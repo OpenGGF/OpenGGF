@@ -9,6 +9,9 @@ record ScopedUnderwaterBasis(PaletteView[] rows,PaletteView normalLine0,PaletteF
         if(rows!=null)for(int line=0;line<rows.length;line++)capturedRows[line]=copy(rows[line]);
         return new ScopedUnderwaterBasis(capturedRows,copy(normalLine0),fade.mode(),fade.steps(),fade.lineMask());
     }
+    ScopedUnderwaterBasis withFade(PaletteFadePresentation fade) {
+        return new ScopedUnderwaterBasis(rows,normalLine0,fade.mode(),fade.steps(),fade.lineMask());
+    }
     boolean matches(PaletteView[] candidate,PaletteView normal,PaletteFadePresentation fade) {
         if(fadeMode!=fade.mode() || fadeSteps!=fade.steps() || fadeMask!=fade.lineMask())return false;
         if((rows==null)!=(candidate==null) || rows!=null && rows.length!=candidate.length)return false;

@@ -69,6 +69,7 @@ tools/*
 !tools/traces/s1_credits_raw_evidence.py
 !tools/traces/build_s1_credits_raw_host_evidence.py
 !tools/traces/no_replace_output.py
+!tools/timing/
 
 # Windows Explorer folder metadata
 desktop.ini

@@ -223,6 +223,10 @@ class TestMutatorStageAdmission {
             manager.reset(0);
         }
         @Override public GameStateManager gameState() { return gameState; }
+        // Admission-only fixture: no ROM/runtime-art pipeline is installed.
+        @Override public com.openggf.game.RuntimeArtCoordinator runtimeArtCoordinator() {
+            return com.openggf.game.RuntimeArtCoordinator.NONE;
+        }
         @Override public LevelState levelGamestate() { return level; }
         @Override public Camera camera() { return camera; }
         @Override public ObjectManager objectManager() { return manager; }

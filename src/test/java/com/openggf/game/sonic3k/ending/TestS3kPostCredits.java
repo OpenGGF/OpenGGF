@@ -40,7 +40,8 @@ class TestS3kPostCredits {
         owner.update(511,fixture.sprite());assertEquals(2,owner.phase());
         for(int i=0;i<42;i++)owner.update(i,fixture.sprite());
         assertEquals(2,owner.phase());
-        owner.update(42,fixture.sprite());assertEquals(8,owner.phase());assertTrue(owner.isDestroyed());
+        owner.update(42,fixture.sprite());assertEquals(8,owner.phase());
+        assertFalse(owner.isDestroyed(),"loc_5F0DA writes Game_mode 0 only; the SST stays for the title entry fade");
         assertEquals(GameOverExit.TITLE_SCREEN,GameServices.level().consumeGameOverExitRequest());
     }
     @Test void bannerAnimationPaletteAndFadeRestoreReplayBeforeTheSuperEyecatch(){
@@ -56,7 +57,8 @@ class TestS3kPostCredits {
         assertEquals(3,owner.phase());assertArrayEquals(ram,((SszZoneRuntimeState)GameServices.zoneRuntimeState()).captureBytes());
         for(int i=0;i<32;i++)owner.update(i,fixture.sprite());assertEquals(6,owner.phase());
         ((SszZoneRuntimeState)GameServices.zoneRuntimeState()).ending().setStartHeld(true);
-        owner.update(1,fixture.sprite());assertTrue(owner.isDestroyed());
+        owner.update(1,fixture.sprite());assertEquals(8,owner.phase());
+        assertFalse(owner.isDestroyed(),"loc_5F314 writes Game_mode 0 only; the SST stays for the title entry fade");
         assertEquals(GameOverExit.TITLE_SCREEN,GameServices.level().consumeGameOverExitRequest());
     }
     @Test void badKnucklesRunsAllocatedChargeChildThenNativeJumpLandingAndAutomaticTitleHold(){
@@ -73,8 +75,9 @@ class TestS3kPostCredits {
         registry.restore(saved);owner=manager.activeObjectsOfType(S3kPostCreditsObjectInstance.class).getFirst();
         for(int i=0;i<160;i++)tickTerminal(owner,fixture,i);
         assertArrayEquals(expected,new int[]{owner.getY(),owner.mappingFrame(),owner.phase()});
-        for(int i=0;i<2000&&!owner.isDestroyed();i++)tickTerminal(owner,fixture,i);
-        assertTrue(owner.isDestroyed());assertEquals(GameOverExit.TITLE_SCREEN,GameServices.level().consumeGameOverExitRequest());
+        for(int i=0;i<2000&&owner.phase()!=8;i++)tickTerminal(owner,fixture,i);
+        assertEquals(8,owner.phase());assertFalse(owner.isDestroyed(),"loc_5F314 keeps the SST");
+        assertEquals(GameOverExit.TITLE_SCREEN,GameServices.level().consumeGameOverExitRequest());
     }
     @Test void badEndingMasterAllocatesTheNativeFadeOwnerAndReplaysItsTimer(){
         var fixture=boot();var services=TestEnvironment.objectServices();

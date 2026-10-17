@@ -23,6 +23,16 @@ headless tests, or audio. S3K-specific routing is in [AGENTS_S3K.md](../../AGENT
 
 The things that cost the most time when missed.
 
+A headless boot must release its audio base-ROM reference before closing the
+owned ROM. A later title boot installs its audio profile before the new ROM;
+otherwise the loader reads the previous, closed FileChannel. Close/reboot
+therefore retire that reference at the ROM owner's boundary, while preserving
+existing dependent-owner failure/retry semantics. The saved-slot HPZ
+roundtrip reproduced four second-title errors before the repair, then passed
+actual disk/session reloads; see the
+[task evidence](plans/2026-10-13-s3k-playable-completion.md#saved-slot-hpz-to-ssz-roundtrips-2026-10-17).
+
+
 **Optional presentation does not erase native object ownership.** S3K `Level`
 writes the title owner at `Dynamic_object_RAM+5`, absolute SST8, and creates
 four higher-slot children before `Load_Sprites`. Omitting its visible loop still
@@ -1911,6 +1921,15 @@ identity map and explicitly ordered maps. A deterministic changed-bucket-order
 fixture checks replacement identities and duplicate character labels in both
 restore directions. Never filter snapshot bytes to hide this discrepancy.
 
+**Native white fades are distinct CRAM loops, not reversed screen overlays.** S3K `Pal_FromWhite`
+lowers all components together every third V-int; `Pal_ToWhite` raises only the first nonwhite R/G/B
+component each V-int. Retain the blocking loop's 22nd wait even when all colours have arrived.
+Step the final normal/water target before profile/range conversion; tinting an already-faded donor
+can erase its white floor. Keep raw published water inputs detached from pending writers when the
+white generation advances or restores. Saturate public colour-step values before compact cache-key
+storage: byte key 256 otherwise aliases step zero. See the
+[ROM owner and red/green evidence](designs/2026-10-13-s3k-ending-lifecycle.md#native-white-palette-fade-owner-decision--2026-10-17-root).
+
 **A capture does not need a second fade owner.** The runtime-ready GameLoop's
 PLC lifecycle already services the FadeManager once per presentation, exactly
 as the live Engine. A direct GameplayCaptureSession formerly also called its
@@ -1937,6 +1956,11 @@ propeller mapping overwrite an earlier main-body wheel. Keep SAT collection in
 native main-first order (`Render_Sprites` `$1AEE4/$1AF2A`). Independently reconstruct
 opaque ROM overlap and priority before excluding a covered player pixel; the
 native reunion's earlier wing legitimately covers20 of619 player pixels.
+The same applies to manual results painters: after correcting digit geometry,30 native
+icon/text pixels still differed because only each mapping was considered. Reverse the
+whole tally/reveal group as well as its pieces; the declared Tails results prefix then
+matches17 raw RGB checkpoints. An animation-phase explanation was rejected by opaque
+ROM pixels. Clearing a multipart child count does not suppress its parent's mapping.
 Scripted status-facing does not imply render_flags-facing when object mappings
 bypass the ordinary playable mapper. See the
 [ending publication evidence](designs/2026-10-13-s3k-ending-lifecycle.md#source-owned-initial-and-published-ending-presentation-2026-10-14).
@@ -1982,3 +2006,14 @@ resource installation, preserve it over ordinary title reset, and clear it on
 a fresh context/hardware lifetime. Newer admitted SaveScreen uploads supersede
 title art. This does not model untouched name tables, SAT or every level-to-level
 gap (2026-10-14 ending ingress; d0fabc3ef candidate4d401bcc).
+
+
+**A presentation hold can outlive its upload latch.** Rewind restores the CRAM
+generation shown with the captured picture, independently of whether the next
+scene uses level palette latching. Releasing immediate scene publication must
+flush that restored hold even when the level latch is already false; guarding
+release only by that latch leaves subsequent fade requests parked. Preserve the
+immediate redraw generation, then test the next publication and two forward
+cycles with an independent unlatched control. A capped matrix-failure preview
+is not complete attribution: rerun both entire affected classes after the
+mechanism repair. Origin: S3K sanctuary palette rewind,2026-10-17.

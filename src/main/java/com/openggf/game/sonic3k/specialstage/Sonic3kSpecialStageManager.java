@@ -176,6 +176,12 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
      * at all.
      */
     private boolean firstUpdateCall;
+    /** Draw_SSShadows is absent from boot; loc_84C2 first appends it after the fade waits. */
+    private boolean mainLoopSpritesPublished;
+
+    boolean hasPublishedMainLoopSprites() {
+        return initialized && mainLoopSpritesPublished;
+    }
 
     /**
      * Remaining real, input-polled frames during which the ROM does not
@@ -280,6 +286,7 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
         this.exitSpinStarted = false;
         this.exitWaitFramesRemaining = 0;
         this.firstUpdateCall = true;
+        this.mainLoopSpritesPublished = false;
         this.preBootFadeHoldFrames = PAL_FADE_TO_WHITE_FRAMES;
         this.postBootFadeHoldFrames = 22;
         this.palFadeDelay = 0;
@@ -341,14 +348,18 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
      */
     private void loadRomData() throws IOException {
         dataLoader = Sonic3kSpecialStageDataLoader.create();
+        renderer.setPlayerProjectionScalars(dataLoader.getScalarTable());
         GraphicsManager gm = GameServices.graphics();
 
-        // Load layout from ROM.
-        // Stages 0-7: S3 layouts (Lockon data, uncompressed)
-        // Stages 8-15: SK layouts (Kosinski compressed Set 1)
+        // sub_85B0 / loc_85E4 (skdisasm 044fa46:10845-10904): SK_special_stage_flag
+        // selects the S&K bank independently of Current_special_stage. HPZ pedestals
+        // carry that flag in the Super Emerald reward; legacy indices 8-15 also
+        // explicitly request the S&K bank. Either bank is indexed by the low three bits.
         com.openggf.data.Rom rom = GameServices.rom().getRom();
+        renderer.setSphereMappingData(rom.readBytes(Sonic3kSpecialStageRomOffsets.MAP_SPHERE,
+                Sonic3kSpecialStageRomOffsets.MAP_SPHERE_SIZE));
         byte[] stageData;
-        if (currentStage < 8) {
+        if (!superEmeraldMode && currentStage < 8) {
             // S3 layouts
             long layoutAddr = Sonic3kSpecialStageRomOffsets.LAYOUT_S3_STAGE_1
                     + (long) currentStage * Sonic3kSpecialStageRomOffsets.LAYOUT_STAGE_SIZE;
@@ -357,7 +368,7 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
         } else {
             // SK layouts (Kosinski compressed)
             byte[] skCompressed = dataLoader.getCompressedLayoutSet(0);
-            int skStage = (currentStage - 8) % 8;
+            int skStage = currentStage & 7;
             int offset = skStage * Sonic3kSpecialStageRomOffsets.LAYOUT_STAGE_SIZE;
             stageData = new byte[Sonic3kSpecialStageRomOffsets.LAYOUT_STAGE_SIZE];
             if (offset + stageData.length <= skCompressed.length) {
@@ -693,6 +704,8 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
         } else if (postBootFadeHoldFrames > 0) {
             postBootFadeHoldFrames--;
             return;
+        } else {
+            mainLoopSpritesPublished = true;
         }
 
         pacingOwner.acceptedSample();
@@ -1303,6 +1316,7 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
                 spriteDebugMode,
                 useSkLayouts,
                 firstUpdateCall,
+                mainLoopSpritesPublished,
                 preBootFadeHoldFrames,
                 postBootFadeHoldFrames,
                 gameState != null ? gameState.capture() : null,
@@ -1361,6 +1375,7 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
         spriteDebugMode = snapshot.spriteDebugMode();
         useSkLayouts = snapshot.useSkLayouts();
         firstUpdateCall = snapshot.firstUpdateCall();
+        mainLoopSpritesPublished = snapshot.mainLoopSpritesPublished();
         preBootFadeHoldFrames = snapshot.preBootFadeHoldFrames();
         postBootFadeHoldFrames = snapshot.postBootFadeHoldFrames();
 
@@ -1467,6 +1482,7 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
         spheresLeft = 0;
         currentStage = 0;
         frameCounter = 0;
+        mainLoopSpritesPublished = false;
         clearRoutine = 0;
         clearTimer = 0;
         emeraldTimer = 0;

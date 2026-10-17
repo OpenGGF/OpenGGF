@@ -82,12 +82,25 @@ public final class GameplayCaptureTool {
         int deathFrame = -1;
         int lastFrame = -1;
         String stopReason = "frame budget reached";
+        NativePcmCapture nativePcm = null;
         try (GameplayCaptureSession session = new GameplayCaptureSession(settings);
              BufferedWriter state = Files.newBufferedWriter(outDir.resolve("state.csv"), StandardCharsets.UTF_8)) {
             if (arguments.mod() != null) session.applyMod(arguments.mod());
             if (arguments.titleScreen()) session.startAtTitle();
             if (arguments.audio()) session.enableAudio();
+            if (arguments.nativePcm()) {
+                // The stage taps the accurate (Nuked) chip's pins; this diagnostic capture selects that
+                // production core explicitly for its own session instead of failing inside level load.
+                GameServices.configuration().setSessionOverride(com.openggf.configuration.SonicConfiguration.AUDIO_FM_CORE,
+                        com.openggf.audio.synth.FmCoreSelection.ACCURATE.configValue());
+                com.openggf.audio.AudioNativePcmCaptureAccess.enable(GameServices.audio(), NativePcmCapture.configFromBk2(arguments.input(),
+                        romPath, GameServices.configuration().getString(com.openggf.configuration.SonicConfiguration.REGION)));
+                // Observe from before boot: the session's driver initialisation (the policy's boot program) is
+                // written when the presentation session is installed, which can happen during boot.
+                nativePcm = new NativePcmCapture(outDir, GameServices.audio());
+            }
             session.boot(romPath, zone, act, settings);
+            if (nativePcm != null) nativePcm.endBoot();
             var audio = GameServices.audio();
             int sampleRate = arguments.audio() ? audio.outputSampleRate() : 0;
             if (arguments.audio() && audio.presentationFrameRate()!=arguments.fps())
@@ -114,6 +127,7 @@ public final class GameplayCaptureTool {
                         else com.openggf.Engine.presentOuterAudioFrame(session.loop(), false, false);
                         int count=capture.drainPresentationFrame(samples)*2;
                         for(int i=0;i<count;i++) { pcm.write(samples[i]&255); pcm.write((samples[i]>>>8)&255); }
+                        if (nativePcm != null) nativePcm.endFrame(frame);
                     }
                     lastFrame = frame;
                     state.write(arguments.titleScreen() ? session.stateLineWithHostState(frame, input) : session.stateLine(frame, input));
@@ -149,6 +163,10 @@ public final class GameplayCaptureTool {
                 }
                 Files.delete(raw);
             }
+        } finally {
+            if (nativePcm != null) nativePcm.close();
+            // The opt-in only applies to this capture's presentation sessions, even when boot fails.
+            if (arguments.nativePcm()) com.openggf.audio.AudioNativePcmCaptureAccess.enable(GameServices.audio(), null);
         }
         Path video = null;
         String videoNote = "video skipped (--no-video)";
@@ -209,7 +227,8 @@ public final class GameplayCaptureTool {
                             boolean stopOnDeath, int deathGrace, boolean video, int scale, int fps,
                             Path outDir, String emeralds, boolean titleCard, boolean completeSpecialStage,
                             Integer vIntRunCount, Integer cameraXSub, boolean starPost, Integer rings, boolean reverseGravity,
-                            Path mod, boolean titleScreen, boolean audio, boolean interactivePacing) {
+                            Path mod, boolean titleScreen, boolean audio, boolean interactivePacing,
+                            boolean nativePcm) {
 
         public static Arguments parse(String[] argv) {
             String game = "s3k";
@@ -245,7 +264,7 @@ public final class GameplayCaptureTool {
             boolean titleCard = false;
             boolean completeSpecialStage = false;
             Path mod = null;
-            boolean titleScreen=false, audio=false, interactivePacing=false;
+            boolean titleScreen=false, audio=false, interactivePacing=false, nativePcm=false;
             for (int i = 0; i < argv.length; i++) {
                 String flag = argv[i];
                 switch (flag) {
@@ -255,6 +274,7 @@ public final class GameplayCaptureTool {
                     case "--title-screen" -> titleScreen=true;
                     case "--interactive-pacing" -> interactivePacing=true;
                     case "--audio" -> audio=true;
+                    case "--native-pcm" -> nativePcm=true;
                     case "--zone" -> zone = value(argv, ++i, flag);
                     case "--act" -> act = number(value(argv, ++i, flag), flag);
                     case "--x" -> startX = number(value(argv, ++i, flag), flag);
@@ -314,12 +334,15 @@ public final class GameplayCaptureTool {
                     || ZoneIds.resolve(game,zone)!=0 || act!=1))
                 throw new IllegalArgumentException("--title-screen starts before assembly: use first zone/act and no positioned/donor setup");
             if (audio && (captureFrom!=0 || every!=1 || fps!=60)) throw new IllegalArgumentException("--audio requires capture-from 0, every 1, fps 60");
+            if (nativePcm && (!audio || input == null || !input.toString().toLowerCase(Locale.ROOT).endsWith(".bk2")))
+                throw new IllegalArgumentException("--native-pcm requires --audio and a .bk2 --input whose SyncSettings select the output");
             if (interactivePacing && (completeSpecialStage || fps != 60))
                 throw new IllegalArgumentException("--interactive-pacing requires native 60 Hz presentation and no debug stage completion");
             return new Arguments(game, rom, zone, act - 1, startX, startY, width, main, sidekick, donor, donorRom, input,
                     settle, inputStart, frames, captureFrom, every, Set.copyOf(stills), stopOnDeath, deathGrace,
                     video, scale, fps, outDir, emeralds, titleCard, completeSpecialStage,
-                    vIntRunCount, cameraXSub, starPost, rings, reverseGravity, mod, titleScreen, audio, interactivePacing);
+                    vIntRunCount, cameraXSub, starPost, rings, reverseGravity, mod, titleScreen, audio, interactivePacing,
+                    nativePcm);
         }
 
         private static String value(String[] argv, int index, String flag) {

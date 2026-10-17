@@ -310,6 +310,8 @@ public class TestGameLoop {
 
     private static GameModule neutralGameModule() {
         GameModule module = mock(GameModule.class);
+        // Runtime fade binding reads the module's typed rules, including before a fade starts.
+        when(module.getRules()).thenReturn(com.openggf.game.rules.GameRules.SONIC_2);
         when(module.createRuntimeArtCoordinator(any())).thenReturn(RuntimeArtCoordinator.NONE);
         return module;
     }

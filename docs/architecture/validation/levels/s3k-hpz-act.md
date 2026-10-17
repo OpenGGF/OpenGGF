@@ -444,13 +444,145 @@ draws its locked-loop black field, it now reports `TitleCardBeneathLevelHud`. Th
 drawn under the card. Natively they are above it, but the engine's ring pass sits inside the
 sprite pass, before the card.
 
+**Native title-card hold on every `Level` entry (titlecard-r2 lane, 2026-10-16).** Native
+timeline from the `hpz-entry` RAM dumps (card SST at `$B250`; inputs 411365-411624). The
+fade-out runs from seq 0 to 22. The card is installed at seq 23 with `Level_frame_counter` 0.
+`Obj_TitleCardCreate` waits for its KosM archives over seq 24-32. The slide-in runs from seq
+33 to 57; `Obj_TitleCardWait` clears `$34` at 57 and `$48` at 58. loc_62CC keeps looping on
+`Nem_decomp_queue` over seq 59-83, with `Process_Sprites` still running, so `Wait2` counts
+`$2E` from 90 down to 65. `LoadLevelLoadBlock` and `LevelSetup` run over seq 84-129 with no
+`Process_Sprites`; three of those frames have no V-int. `loc_64DC` and `LevelLoop` start at
+seq 130 with the counter at 0 and `Palette_fade_timer = $2E = 22`. `$2E` reaches 0 at counter
+22, the children start leaving at 23 (`$32` = 1), and the card is deleted at counter 35. From
+card install to `LevelLoop` is 107 frames. The S3K disassembly sends every `Level:` entry
+through this routine (7504-7878): death restarts via `Restart_level_flag`, data-select
+launches, bonus entries and returns, and special-stage returns. Only `$1701`, `Act3_flag`
+and demos skip the card. The native multibonus trace shows 84 frames at counter 0 between
+AIZ and the gumball stage's `LevelLoop`.
+
+Before this change, only the fresh zone request (`initializeFreshLevelTransition`) ran that
+timeline. `Sonic3kTitleCardManager.initialize` covered direct boots with the card shown, the
+windowed data select, death restarts (presented even headless through `levelRoutineReentry`)
+and the bonus return. `initializeBonus` covered bonus entry. Both held DISPLAY for 90 locked
+frames and released at EXIT. Now every one of them shares the Level-routine timeline: the
+archives are re-queued, the `Wait` passes run, `Sonic3kLevelTitlePlcService` holds on the
+Nemesis queue, the terrain gate applies where the load owns fresh art, and the `$16` hold is
+armed at release. A released card no longer publishes a later load's terrain handoff. The
+death restart and bonus return no longer run a host reveal over the slide-in
+(`GameLoopPlcLifecycle.revealLevelRoutineEntry`).
+
+Measured with a temporary per-step probe. "Locked" counts title-loop steps; each column
+gives the card at release, then the hold and exit.
+
+| Route | Before | After |
+|---|---|---|
+| Fresh request, HPZ Knuckles | 102 locked, release DISPLAY/0, hold LFC 0-21, EXIT 22-35, COMPLETE 36 | unchanged |
+| Direct boot, card shown, HPZ | 32 slide + 90 locked, release at EXIT | 60 locked, then the native hold |
+| Direct boot, card shown, LRZ1 | 36 + 90, release at EXIT | 67 locked, then the hold |
+| Data select, AIZ1 (owns fresh art, so the terrain wait applies) | 36 + 90, release at EXIT | 120 locked, then the hold |
+| Bonus entry (Pachinko) | 17 + 90, release at EXIT into BONUS_STAGE | 101 locked, then the hold in BONUS_STAGE |
+| Death restart, LRZ1 Knuckles | host fade-from-black over the slide-in, 36 + 90, release at EXIT | no host reveal, 67 locked, then the hold |
+| Special-stage return, AIZ | 122 locked, then the hold | unchanged |
+
+Pictures (LIMITED/RAW_RGB, 320 wide) are in `spot-checks/round2-titlecard/` with provenance.md.
+Native pairing (corrected 2026-10-16 from independent producer boundaries, superseding the
+seq 131+k pairing first recorded here): RAM `Level_frame_counter` and `Timer` frames are both k
+at seq 130+k, and `Normal_palette` in the seq N RAM equals the seq N+1 CRAM. Native seq N shows
+the `VInt_8` publication at the start of that hardware frame (SAT, scroll and CRAM built by the
+logic of seq N-1, plus `UpdateHUD`). The engine picture after step k shows the V-int published
+at the start of step k: every S3K sprite and the HUD come from `spriteTables.published()`, and
+the terrain scroll is the generation paired with it (`LevelRenderer.scrollForDraw`). So the
+published layers of engine counter k pair with native seq 130+k. The earlier 131+k pairing
+matched the fade because the level fade was applied on the frame its logic requested it, one
+V-int early, while the HUD (correctly published) appeared to lag. With the fade published at
+its V-int (`GraphicsManager` displayed/requested fade, 2026-10-16) the direct HPZ boot at
+counters 0, 1, 2, 3, 21 and 22 differs from seq 130+k by 256-486 of 71680 pixels in exact RGB,
+all in the score and lives boxes, which carry the native run's own values. The earlier
+`hud-phase/` measurements (TIME ticks at counter 60, RINGS flash at 24/56) already match seq
+130+k, and counter 2's former two-entry palette swap is gone. The card is published the
+same way (2026-10-16): its pieces are captured where LevelLoop's `Render_Sprites` would place
+them (sonic3k.asm:7911) and drawn from the following `VInt_8` (701-748). Before that it was
+drawn from the current step's state and its exit matched seq 131+k. On the direct HPZ boot
+the card region (x 110-319) now changes between counters 21-22, 22-23, 23-24 and 24-25 by
+3206, 0, 620 and 471 pixels, as native seq 151-152 through 154-155 do. Counters 21-25 differ
+from seq 130+k by 474-603 pixels, all left of x 104 (score and lives boxes). At counters 33-38
+a further 282-578 pixels at x 0-29, y 56-92 are Knuckles' body, which there equals seq 131+k:
+his animation runs one frame ahead of native. That is the player's animation phase, not
+publication, and it is open. The LRZ1
+death restart shows the card sliding in at full colour over black and the same hold; there
+is no native picture of it.
+
+Red first, `TestS3kTitleCardHoldRoutes` failed 4/4 on baseline `d3fb0625e`: direct boot,
+data select and bonus released at `EXIT/90`, and the death restart showed
+`FADING_FROM_BLACK` over the slide-in. It covers direct boot, data select, death restart,
+bonus entry and return. It also covers rewind inside the hold: capture at counter 5, run 29
+frames to counter 34 with the card leaving, restore, and replay them to an equal snapshot.
+The re-timed `soz1-cold-knuckles` movie is recorded in the [SOZ1 matrix](s3k-soz-act1.md).
+
+Limits: `known-bugs` "Level-Entry Title Card Residuals". Loads without the fresh-art
+admission skip the `LoadLevelLoadBlock` terrain wait, so the direct HPZ boot locks for 60
+frames against the native routine's 107. `Level`'s KosM queue clear is not modelled. The
+card reaches COMPLETE one frame late (counter 36 against native 35). Knuckles' animation runs
+one frame ahead of native from counter 33. Rings draw under the card, and
+`Pal_FromWhite` is not presented.
+
 ## Cold Tails HPZ campaign leg (2026-10-15)
 
 The cold Tails-alone campaign (`TestS3kLrzHpzSszColdCampaign#tailsColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory`,
 SSZ1 matrix) is the first cold Tails replay through HPZ's Knuckles fight, theft, collapse and
 altar with the single-player helper timers to `loc_45D8A` (`$A00`): HPZ load 62424, SSZ1
 load 69861 with HPZ's live history retired at the SSZ1 assembly. It continues to DEZ1. The
-solo Sonic LRZ→HPZ→SSZ1 campaign remains open: its cold attempt stopped at the LRZ3 end boss
-(kill condition, three bounded searches in `Obj_LRZEndBoss` routine 4) and never reached HPZ
-(SSZ1 matrix).
+solo Sonic LRZ→HPZ→SSZ1 campaign was open here on 2026-10-15; it is now covered (next section).
 
+## Cold solo Sonic HPZ campaign leg (2026-10-16)
+
+The cold Sonic-alone campaign (`TestS3kLrzHpzSszColdCampaign#sonicColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory`,
+[SSZ1 matrix](s3k-ssz-act1.md#cold-lrzhpzssz1dez1-solo-sonic-campaign-2026-10-16)) is the
+first cold Sonic-alone replay through HPZ: it enters from LRZ3's end boss (taken with the
+placed fire shield, [LRZ boss matrix](s3k-lrz-boss.md#solo-sonic-cold-fight-2026-10-16)),
+follows the joined pair chain's HPZ path to the lower teleporter and crosses the Knuckles
+fight, theft, collapse and altar with the single-player helper timers to `loc_45D8A`
+(`$A00`): HPZ load 30123, SSZ1 load 39248 with HPZ's live history retired at the SSZ1
+assembly. It continues to DEZ1.
+
+## Saved-slot HPZ exits and title reload — 2026-10-17
+
+`TestS3kSaveRouteRoundtrip` declares a valid native 320, donor-off HPZ slot in
+a temporary save root, with five lives and emerald states `[1,1,1,0,0,0,0]`.
+Actual title Start, data-select Right and A load that slot. The ordinary HPZ
+exit writes its next destination; the test disposes the session and reads the
+persisted file, then repeats title/menu entry into released SSZ. No position,
+clock, gameplay progress or SaveGame call is injected after the declared file.
+Reading the selected LOAD_SLOT action is pure on this non-delete path; only
+the A input dispatches it. HPZ and released SSZ each get two full registry
+restore/forward-replay cycles, and the HPZ load history is retired at SSZ.
+
+| Saved team | Actual HPZ exit inputs after release | Persisted/reloaded destination | SSZ release inputs |
+| --- | ---: | --- | ---: |
+| Knuckles | 780 | SSZ2 | 134 |
+| Tails | 7354 | SSZ1 | 174 |
+| Sonic+Tails | 14007 | SSZ1, same selected team | 174 |
+
+Two independent Knuckles/Tails negative cases leave without reaching the exit
+and reload HPZ. The three exit cases assert the persisted team, lives and
+emeralds and released gameplay. The current five-case class passes with no
+failures/errors/skips at 06:19:13 UTC on `0197c5a5a` plus the inherited headless
+ROM-release repair and test. A later assertion also checks actual follower
+stable character keys, rather than only the registered count; its focused result is recorded
+in the task plan. Knuckles' early arrival release precedes the later crane
+encounter and is not the cold route's post-crane control release.
+
+Native owners: `loc_45B94` / `loc_45D8A`, `SaveGame_NextLevel[$1601]=$B`,
+`sub_DA4E` / `LevelList_DA6E`. The engine's presentation `progressCode` is
+one-based (HPZ 11); it is not the raw SRAM level byte `$A`. The initial file
+is a declared inlet, not a cold campaign or SRAM interchange certificate.
+Solo Sonic, donor/wide/other-team saved-slot products, native RGB and PCM
+remain separate obligations. See the
+[task evidence](../../plans/2026-10-13-s3k-playable-completion.md#saved-slot-hpz-to-ssz-roundtrips-2026-10-17).
+
+The actual registered follower identity is also checked through
+`characterKey().persisted()` on both HPZ and SSZ launches. The exact
+Sonic+Tails roundtrip passed 1/0/0/0 at 06:47:35 UTC after that assertion
+was strengthened; the fresh architectural source guard passed 72/0/0/0
+at 06:47:59 UTC. These focused checks retain the inlet and coverage limits
+above.

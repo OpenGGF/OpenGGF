@@ -179,7 +179,7 @@ class TestSonic3kTitleCardKosQueue {
     }
 
     @Test
-    void repeatedSameZoneCachedCardPublishesExactlyOneFreshTerrainBatch()
+    void repeatedSameZoneCardRequeuesItsArchivesBeforePublishingTerrain()
             throws Exception {
         Object previousGame = getLevelManagerGame();
         var previousLevel = GameServices.level().getCurrentLevel();
@@ -192,21 +192,18 @@ class TestSonic3kTitleCardKosQueue {
             manager.requestFreshLevelRuntimeArtHandoff(
                     LevelData.S3K_ANGEL_ISLAND_1.getLevelIndex());
             manager.initialize(0, 0);
+            assertEquals(4, moduleHandles().size(),
+                    "Obj_TitleCardInit queues its archives on every Level: entry");
 
             manager.update();
             S3kRuntimeArtCoordinator.current().afterTimingService(
                     HardwareServiceBoundary.PRE_MAIN_LOOP);
 
-            assertEquals(2, moduleHandles().size(),
-                    "cached title readiness publishes the two-parent terrain batch");
-            assertEquals(-1,
-                    manager.capture().freshLevelRuntimeArtHandoffLevelIndex());
-
-            manager.update();
-            S3kRuntimeArtCoordinator.current().afterTimingService(
-                    HardwareServiceBoundary.PRE_MAIN_LOOP);
-            assertEquals(2, moduleHandles().size(),
-                    "the armed handoff is consumed exactly once");
+            assertEquals(4, moduleHandles().size(),
+                    "LoadLevelLoadBlock's terrain follows the card's loc_62CC gates");
+            assertEquals(LevelData.S3K_ANGEL_ISLAND_1.getLevelIndex(),
+                    manager.capture().freshLevelRuntimeArtHandoffLevelIndex(),
+                    "the armed handoff waits for the loc_62CC gates");
         } finally {
             setLevelManagerGame(previousGame);
             setField(GameServices.level(), "level", previousLevel);
@@ -353,6 +350,9 @@ class TestSonic3kTitleCardKosQueue {
         setField(manager, "lastLoadedAct", 0);
         setField(manager, "combinedPatterns", new com.openggf.level.Pattern[0x100]);
         manager.initialize(0, 0);
+        // Obj_TitleCardInit re-queued the archives; treat them as claimed.
+        installCachedTitleArt();
+        setField(manager, "artLoading", false);
         prepareExitForCompletion(manager);
 
         manager.update();
@@ -526,6 +526,9 @@ class TestSonic3kTitleCardKosQueue {
 
     private static void prepareExitForCompletion(Sonic3kTitleCardManager manager)
             throws Exception {
+        // A Level-routine owner reaches EXIT only after loc_64DC handed it to
+        // LevelLoop; an in-level owner has no such handoff (a no-op here).
+        manager.completeFreshLevelRuntimeArtHandoff();
         setField(manager, "state", Sonic3kTitleCardState.EXIT);
         setField(manager, "exitChildrenGone", true);
         setField(manager, "actNumberVisible", true);

@@ -113,10 +113,9 @@ public class AizEndBossShipChild extends AbstractBossChild implements RewindRecr
     private void updateDefeatWait() {
         setPosition(boss.getX(), boss.getY() + SHIP_Y_OFFSET);
 
-        // ROM: btst #4,$38(a1) — check parent's defeat phase 1 flag.
-        // In the engine, the boss sets FLAG_DEFEAT_STARTED immediately in onDefeatStarted(),
-        // so this transitions right away. The brief wait ensures one frame of rendering
-        // at the boss position before the escape begins.
+        // ROM loc_67DD8: btst #4,$38(a1). The boss sets that bit in AIZEndBoss_StartDefeat,
+        // when Wait_FadeToLevelMusic's $3F countdown underflows, so the ship holds the boss
+        // position until then.
         if (boss.isDefeatStarted()) {
             // ROM: loc_46110 — begin escape
             defeatState = STATE_DEFEAT_FLYING;

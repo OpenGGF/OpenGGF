@@ -71,6 +71,23 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A native-source C harness inherits the host libm, not the BizHawk core's
+(2026-10-16, native-compatible PCM). The harness was built from the pinned GPGX
+`eq.c` but linked glibc `sin`. That moved the 880 Hz ThreeBand cutoff by one
+ulp and changed 916 of 11,774 unity-gain samples, while three other filter
+vectors still matched. The waterbox core links musl. Find the exact routine in
+the stock core instead: the unstripped `gpgx.wbx` has symbols, and its fixed
+`PT_LOAD` addresses can be mapped to execute a pure leaf routine. Do not trust
+a harness that only happens to match.
+
+A `TraceCaptureTool --clip frames:START:END` window can omit presentation
+state that only advances while frames are drawn (2026-10-16, AIZ first tree).
+The window fast-forwards without rendering, so the AIZ fire curtain was absent
+from a `frames:6290:6480` clip around the act switch, before and after the
+change under test, while native and the semantic `--clip aiz-fire-transition`
+capture both show it covering those frames. Capture from the semantic start, or
+from well before the window, before reading a missing overlay as a regression.
+
 Preflight and Python safety checks can launch real JVMs (2026-10-17, test queue).
 `mvn -v` starts Java; two Python memory-observer controls also compile and run
 JUnit fixtures. They previously bypassed isolated measurement leases. Preflight

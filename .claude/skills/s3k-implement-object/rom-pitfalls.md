@@ -5501,6 +5501,15 @@ calls otherwise hide the Tornado wheel behind its later propeller. Preserve
 native collection order. Use actual ROM mapping/pattern opacity for overlap
 oracles; never mask coordinates selected from an image difference.
 
+The folded S3 eyecatch must make the same distinction for its whole child
+group: emit Sonic, Tails, Knuckles, tail during SAT collection, and reverse
+that group only for direct painting. Native `$F800` displayed tail frame 8 while
+CPU SST already held frame 9; treating CPU state as the displayed generation
+would invent animation drift. The 2026-10-17 independent GPU regression
+reproduces 70 opaque-overlap differences and the corrected original-RGB
+checkpoint matches all 71680 pixels. Convert canonical Full palette RGB through
+the actual display range before judging a Limited framebuffer oracle.
+
 A high-background replay also needs the same published scroll as the rear
 plane draw, not the CPU deformation produced later in that frame. Rebuild pure
 restored output without advancing captured scroll RAM. The S3K ending repair
@@ -5909,3 +5918,43 @@ Keep already launched independent projectiles on their own lifetime. Do not
 hide an orphan by inventing empty fields for an unsupported replacement owner.
 Origin: AIZ tree25/body4 with five higher arms, current-prefix34784 SkidDust slot4 abort;
 focused75404's setup failure and corrected29965 lifecycle cases, 2026-10-16.
+
+
+## Multipart parents and allocation holes survive simplified result graphs
+
+`LevResults_DisplayScore` keeps its mapping-frame1 parent zero plus seven BCD
+children; clearing `mainspr_childsprites` removes only the children. Native
+`Render_Sprites` draws that parent first, and the first opaque SAT sprite wins.
+A GL painter reverses the complete row group and each mapping, not just pieces.
+A declared results twin exposed420 geometry pixels and then30 overlap pixels;
+ROM-backed geometry/raster oracles and17 original-RGB checkpoints separate them.
+Do not assign a later actor the first slot after an initial table by counting
+rows. Conditional rows may already have deleted themselves. In the ordinary
+won/all-seven product, `loc_2EAC8` frees failure-message43 before the continue
+allocator scans; the icon takes43, not49, and both reveal tables preserve it.
+Trace the actual allocator and deletion branches before changing lifetime.
+Origin: S3K seven-Chaos results investigation, Root57774b451 plus correction,
+2026-10-17. The parent/priority/allocation lessons apply across games; the
+specific slots and conditional branches belong to this S3K product.
+
+## Special-stage projection and shadow operators
+
+`sub_953E` projects native player height/depth through ROM ScalarTable2 before
+signed DIVS. A ground screen offset plus linear jump scaling loses both integer
+truncation and perspective; P1 and P2 also have different depths. Load those
+scalar bytes through the ROM pipeline. `Draw_SSShadows` uses fixed screen
+coordinates and palette3/index15 shadow operators behind the ordinary SAT,
+not opaque black art tied to the jumping body. Its first regular-loop publication
+is absent from the boot fade and must rewind with the presentation phase.
+
+
+`Map_SStageSphere_` has19 pointers even though Draw_SSSprites admits only0..15;
+10/11,12/13 and14/15 deliberately alias the same pieces. Equal geometry across
+successive perspective depths is shipped data, not a linear shrinking formula.
+Read the ROM pointers, including their signed piece offsets and column-major
+art. Native frame-end SAT/VRAM separates mapping defects from composition:
+fixing those aliases reduced the actual stage picture330→46 pixels, exposing
+low-priority far-sphere/overlap behavior as a separate remaining gap. Never
+reshape the reference or fit the asset mapping to hide it. This table is S3K;
+the pointer-alias versus inferred-geometry lesson applies across games.
+Origin: Root Blue Sphere original-RGB mapping comparison,2026-10-17.

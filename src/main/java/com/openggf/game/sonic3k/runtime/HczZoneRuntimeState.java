@@ -24,6 +24,11 @@ public final class HczZoneRuntimeState implements S3kZoneRuntimeState {
     @Override public boolean isActTransitionFlagActive() { return events.isEventsFg5(); }
     public boolean isBackedBy(Sonic3kHCZEvents candidate) { return events == candidate; }
 
+    /** HCZ1's {@code Events_bg+$16}: the HCZ2 art is queued and act 1's tile animation stops. */
+    public boolean act1TransitionArtQueued() {
+        return actIndex == 0 && events.isAct1TransitionArtQueued();
+    }
+
     /**
      * Whether the HCZ2 wall-chase BG high-priority overlay is currently active.
      * Drives the staged {@code HczWallChaseBgOverlayEffect} render pass.

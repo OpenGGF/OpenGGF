@@ -3,8 +3,10 @@ package com.openggf.game.sonic3k;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.data.RomByteReader;
 import com.openggf.game.GameServices;
 import com.openggf.game.rewind.snapshot.PatternAnimatorSnapshot;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.level.Pattern;
 import com.openggf.tests.HeadlessTestFixture;
@@ -15,12 +17,14 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.function.ToIntFunction;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -148,6 +152,241 @@ class TestS3kZoneAnimateTilesPublication {
             return;
         }
         throw new AssertionError("CNZ sweep produced no published background change");
+    }
+
+    @Test
+    void aiz2FirstTreeIsQueuedOnEveryPassBelow1C0() throws IOException {
+        // AnimateTiles_AIZ2 (sonic3k.asm:53953-53967): below Camera_X_pos $1C0 every pass ends by
+        // queueing ArtUnc_AniAIZ2_FirstTree ($230 words to tile $0CA) with Add_To_DMA_Queue.
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_AIZ, 1).build();
+        Sonic3kPatternAnimator animator = animator();
+        Camera camera = fixture.camera();
+        camera.setFrozen(true);
+        camera.setX((short) 0x100);
+        fixture.stepIdleFrames(2);
+        byte[] tree = rom(Sonic3kConstants.ART_UNC_AIZ2_FIRST_TREE_ADDR, Sonic3kConstants.ART_UNC_AIZ2_FIRST_TREE_SIZE);
+        assertArrayEquals(tree, tiles(0x0CA, 0x0EC), "first tree resident below $1C0");
+
+        writeTiles(0x0CA, new byte[tree.length]);
+        animator.update();
+        assertArrayEquals(new byte[tree.length], tiles(0x0CA, 0x0EC), "first tree not presented before VInt");
+        animator.publishAniPlcAtVBlank();
+        assertArrayEquals(tree, tiles(0x0CA, 0x0EC), "every pass below $1C0 queues the first tree again");
+    }
+
+    @Test
+    void aiz2FirstTreeReturnsAtTheFollowingVBlank() throws IOException {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_AIZ, 1).build();
+        Sonic3kPatternAnimator animator = animator();
+        Camera camera = fixture.camera();
+        camera.setFrozen(true);
+        camera.setX((short) 0x200);
+        fixture.stepIdleFrames(3);
+        byte[] tree = rom(Sonic3kConstants.ART_UNC_AIZ2_FIRST_TREE_ADDR, Sonic3kConstants.ART_UNC_AIZ2_FIRST_TREE_SIZE);
+        byte[] scripted = tiles(0x0CA, 0x0EC);
+        assertFalse(Arrays.equals(tree, scripted), "AniPLC_AIZ2 scripts 1-4 replaced the tree at $1C0+");
+
+        camera.setX((short) 0x100);
+        animator.update();
+        assertArrayEquals(scripted, tiles(0x0CA, 0x0EC), "Add_To_DMA_Queue art presented in its own iteration");
+        animator.publishAniPlcAtVBlank();
+        assertArrayEquals(tree, tiles(0x0CA, 0x0EC), "first tree presented by the following VInt");
+    }
+
+    @Test
+    void aiz2Below1C0ClearsTheSecondAndThirdScriptCounters() {
+        // After AnimateTiles_DoAniPLC_Part2 runs the first script only, a3 points at
+        // Anim_Counters+2 and clr.l (a3) zeroes the counters of scripts 1 and 2 (sonic3k.asm:53958-53963).
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_AIZ, 1).build();
+        Sonic3kPatternAnimator animator = animator();
+        Camera camera = fixture.camera();
+        camera.setFrozen(true);
+        camera.setX((short) 0x200);
+        fixture.stepIdleFrames(5);
+        PatternAnimatorSnapshot.ScriptCounter[] above = animator.capture().scriptCounters();
+        assertTrue(above.length >= 5, "AniPLC_AIZ2 has five scripts");
+        assertNotEquals(new PatternAnimatorSnapshot.ScriptCounter(0, 0), above[1], "script 1 advanced at $1C0+");
+        assertNotEquals(new PatternAnimatorSnapshot.ScriptCounter(0, 0), above[2], "script 2 advanced at $1C0+");
+
+        camera.setX((short) 0x100);
+        animator.update();
+        PatternAnimatorSnapshot.ScriptCounter[] below = animator.capture().scriptCounters();
+        assertEquals(new PatternAnimatorSnapshot.ScriptCounter(0, 0), below[1], "Anim_Counters+2 cleared");
+        assertEquals(new PatternAnimatorSnapshot.ScriptCounter(0, 0), below[2], "Anim_Counters+4 cleared");
+        assertEquals(above[3], below[3], "Anim_Counters+6 untouched");
+        assertEquals(above[4], below[4], "Anim_Counters+8 untouched");
+    }
+
+    @Test
+    void hcz1EquilibriumFallsThroughBothFixRoutinesAndSkipsAniPlc() throws IOException {
+        // Events_bg+$10 == 0: loc_2797E stores 1 in Anim_Counters+4, calls AniHCZ_FixLowerBG and
+        // falls through into AniHCZ_FixUpperBG, whose jmp returns before AnimateTiles_DoAniPLC
+        // (sonic3k.asm:53993, 54078-54099). The stored 1 differs from 0, so every pass repeats it.
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_HCZ, 0).build();
+        Sonic3kPatternAnimator animator = animator();
+        Camera camera = fixture.camera();
+        camera.setFrozen(true);
+        camera.setY((short) 0x640);
+        fixture.stepIdleFrames(3);
+        assertTrue(animator.computeHcz1WaterlineDelta() < 0, "below the waterline");
+        byte[] upperFix = concat(rom(Sonic3kConstants.ART_UNC_FIX_HCZ1_UPPER_BG1_ADDR, 0x180),
+                rom(Sonic3kConstants.ART_UNC_FIX_HCZ1_UPPER_BG2_ADDR, 0x180));
+        byte[] lowerFix = concat(rom(Sonic3kConstants.ART_UNC_FIX_HCZ1_LOWER_BG1_ADDR, 0x180),
+                rom(Sonic3kConstants.ART_UNC_FIX_HCZ1_LOWER_BG2_ADDR, 0x180));
+        assertFalse(Arrays.equals(upperFix, tiles(0x2DC, 0x2F3)), "composed waterline strip at $2DC");
+
+        camera.setY((short) 0x610);
+        assertEquals(0, animator.computeHcz1WaterlineDelta());
+        PatternAnimatorSnapshot.ScriptCounter[] counters = animator.capture().scriptCounters();
+        fixture.stepIdleFrames(2);
+        assertArrayEquals(upperFix, tiles(0x2DC, 0x2F3), "AniHCZ_FixUpperBG reached by fall-through");
+        assertArrayEquals(lowerFix, tiles(0x2F4, 0x30B), "AniHCZ_FixLowerBG");
+        for (int pass = 0; pass < 12; pass++) {
+            fixture.stepIdleFrames(1);
+            assertArrayEquals(counters, animator.capture().scriptCounters(),
+                    "AnimateTiles_DoAniPLC skipped at the equilibrium, pass " + pass);
+        }
+        camera.setY((short) 0x640);
+        fixture.stepIdleFrames(12);
+        assertFalse(Arrays.equals(counters, animator.capture().scriptCounters()), "AniPLC resumes off the equilibrium");
+    }
+
+    @Test
+    void hcz1BeyondSixtyLinesKeepsTheLastComposedStrip() throws IOException {
+        // addi.w #$60 / bcc loc_2797A (sonic3k.asm:54001-54002, 54042-54044): past +-$60 the routine
+        // queues nothing and VRAM keeps the strip composed on the last pass inside the range.
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_HCZ, 0).build();
+        Camera camera = fixture.camera();
+        camera.setFrozen(true);
+        Sonic3kPatternAnimator animator = animator();
+
+        camera.setY((short) 0x67A);
+        fixture.stepIdleFrames(3);
+        assertEquals(-0x50, animator.computeHcz1WaterlineDelta());
+        byte[] below = composeHcz1Strip(Sonic3kConstants.ART_UNC_HCZ1_WATERLINE_BELOW1_ADDR, 0x10);
+        assertFalse(Arrays.equals(below, concat(rom(Sonic3kConstants.ART_UNC_HCZ1_WATERLINE_BELOW1_ADDR, 0x180),
+                rom(Sonic3kConstants.ART_UNC_HCZ1_WATERLINE_BELOW2_ADDR, 0x180))), "composed strip differs from full art");
+        assertArrayEquals(below, tiles(0x2DC, 0x2F3), "loc_278C6 composition at $2DC");
+        camera.setY((short) 0x700);
+        fixture.stepIdleFrames(3);
+        assertTrue(animator.computeHcz1WaterlineDelta() < -0x60);
+        assertArrayEquals(below, tiles(0x2DC, 0x2F3), "no transfer below -$60");
+
+        camera.setY((short) 0x5A5);
+        fixture.stepIdleFrames(3);
+        assertEquals(0x50, animator.computeHcz1WaterlineDelta());
+        byte[] above = composeHcz1Strip(Sonic3kConstants.ART_UNC_HCZ1_WATERLINE_ABOVE1_ADDR, 0x10);
+        assertArrayEquals(above, tiles(0x2F4, 0x30B), "loc_27934 composition at $2F4");
+        camera.setY((short) 0x500);
+        fixture.stepIdleFrames(3);
+        assertTrue(animator.computeHcz1WaterlineDelta() > 0x60);
+        assertArrayEquals(above, tiles(0x2F4, 0x30B), "no transfer above +$60");
+    }
+
+    @Test
+    void hcz1FreshLevelRunsAnimateInitWithTheCappedEventsBgValue() throws IOException {
+        // HCZ1_BackgroundInit leaves Events_bg+$10 at $60 when it exceeds $60 (sonic3k.asm:105690-105699);
+        // Animate_Init's sub_279D4 then runs AniHCZ_FixUpperBG and the loc_2788C composition at
+        // offset 0 (sonic3k.asm:54117-54152). Above $60 the following passes queue nothing.
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_HCZ, 0).build();
+        Sonic3kPatternAnimator animator = animator();
+        fixture.camera().setFrozen(true);
+        fixture.stepIdleFrames(1);
+        assertTrue(animator.computeHcz1WaterlineDelta() > 0x60, "HCZ1 starts high above the waterline");
+        assertArrayEquals(concat(rom(Sonic3kConstants.ART_UNC_FIX_HCZ1_UPPER_BG1_ADDR, 0x180),
+                        rom(Sonic3kConstants.ART_UNC_FIX_HCZ1_UPPER_BG2_ADDR, 0x180)),
+                tiles(0x2DC, 0x2F3), "AniHCZ_FixUpperBG from Animate_Init");
+        assertArrayEquals(composeHcz1Strip(Sonic3kConstants.ART_UNC_HCZ1_WATERLINE_ABOVE1_ADDR, 0),
+                tiles(0x2F4, 0x30B), "loc_27934 composition at offset 0 from Animate_Init");
+    }
+
+    @Test
+    void hcz1StopsAnimatingOnceTheHcz2ArtIsQueued() {
+        // AnimateTiles_HCZ1 returns at once while Events_bg+$16 is set (sonic3k.asm:53974-53977);
+        // HCZ1BGE_Normal sets it when it queues the HCZ2 art (sonic3k.asm:105716-105738).
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_HCZ, 0).build();
+        Sonic3kPatternAnimator animator = animator();
+        Camera camera = fixture.camera();
+        camera.setFrozen(true);
+        camera.setY((short) 0x640);
+        fixture.stepIdleFrames(3);
+        var events = ((Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider()).getHczEvents();
+        events.setBgRoutine(4); // HCZ1BGE_DoTransition
+        PatternAnimatorSnapshot.ScriptCounter[] counters = animator.capture().scriptCounters();
+        byte[] strips = tiles(0x2DC, 0x30B);
+        camera.setY((short) 0x67A);
+        for (int pass = 0; pass < 12; pass++) {
+            animator.update();
+            animator.publishAniPlcAtVBlank();
+        }
+        assertArrayEquals(counters, animator.capture().scriptCounters(), "no AnimateTiles_DoAniPLC while the HCZ2 art loads");
+        assertArrayEquals(strips, tiles(0x2DC, 0x30B), "no waterline transfer while the HCZ2 art loads");
+        events.setBgRoutine(0);
+    }
+
+    @Test
+    void hcz1RewindRestoresTheWaterlineCounters() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_HCZ, 0).build();
+        Sonic3kPatternAnimator animator = animator();
+        Camera camera = fixture.camera();
+        camera.setFrozen(true);
+        camera.setY((short) 0x640);
+        fixture.stepIdleFrames(3);
+        camera.setY((short) 0x610);
+        fixture.stepIdleFrames(3);
+        PatternAnimatorSnapshot atEquilibrium = animator.capture();
+        byte[] presented = tiles(0x2DC, 0x30B);
+
+        camera.setY((short) 0x640);
+        fixture.stepIdleFrames(3);
+        assertFalse(Arrays.equals(presented, tiles(0x2DC, 0x30B)), "composed strip after leaving the equilibrium");
+        animator.restore(atEquilibrium);
+        assertArrayEquals(presented, tiles(0x2DC, 0x30B), "restore presents the captured strips");
+
+        // The equilibrium pass left Anim_Counters+4 at 1, so Events_bg+$10 = 1 compares equal and
+        // AnimateTiles_HCZ1 queues nothing; a lost counter would compose the strip at $2F4.
+        camera.setY((short) 0x60E);
+        assertEquals(1, animator.computeHcz1WaterlineDelta());
+        animator.update();
+        animator.publishAniPlcAtVBlank();
+        assertArrayEquals(presented, tiles(0x2DC, 0x30B), "restored Anim_Counters+4 suppresses the transfer");
+    }
+
+    /** loc_278C6 / loc_27934: $60 rows from HCZ_WaterlineScroll_Data pick longwords from art and art+$600. */
+    private static byte[] composeHcz1Strip(int artAddress, int tableRow) throws IOException {
+        byte[] table = rom(Sonic3kConstants.HCZ_WATERLINE_SCROLL_DATA_ADDR + tableRow * 0x60, 0x60);
+        byte[] out = new byte[0x300];
+        for (int row = 0; row < 0x60; row++) {
+            int source = (table[row] & 0xFF) << 2;
+            System.arraycopy(rom(artAddress + source, 4), 0, out, row << 2, 4);
+            System.arraycopy(rom(artAddress + 0x600 + source, 4), 0, out, 0x180 + (row << 2), 4);
+        }
+        return out;
+    }
+
+    private static byte[] rom(int address, int length) throws IOException {
+        return RomByteReader.fromRom(GameServices.rom().getRom()).slice(address, length);
+    }
+
+    private static byte[] concat(byte[] first, byte[] second) {
+        byte[] out = Arrays.copyOf(first, first.length + second.length);
+        System.arraycopy(second, 0, out, first.length, second.length);
+        return out;
+    }
+
+    private static void writeTiles(int firstTile, byte[] segaBytes) {
+        var level = GameServices.level().getCurrentLevel();
+        for (int tile = 0; tile < segaBytes.length / 32; tile++) {
+            level.getPattern(firstTile + tile).fromSegaFormat(Arrays.copyOfRange(segaBytes, tile * 32, tile * 32 + 32));
+        }
     }
 
     private static void assertQueuedUntilNextVBlank(Route route) {

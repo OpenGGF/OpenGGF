@@ -101,6 +101,25 @@ public class VirtualSynthesizer implements SmpsLogicalWriteTarget {
         psg.setSampleRate(outputSampleRate);
     }
 
+    /**
+     * Attaches the opt-in native-compatible output stage to the production
+     * FM chip (capture/diagnostic only; see {@link NativeCompatiblePcmOutput}).
+     * Only the accurate Nuked core exposes the pin sums it needs; any other
+     * core is rejected rather than substituted.
+     */
+    public void enableNativeCompatibleOutput(NativeCompatiblePcmOutput.Config config) {
+        if (!(ym instanceof Ym2612Chip accurate)) {
+            throw new IllegalStateException(
+                    "native-compatible output requires the accurate FM core, not " + fmCore.configValue());
+        }
+        accurate.enableNativeCompatibleOutput(config);
+    }
+
+    /** The FM chip's native-compatible output stage, or {@code null} when it is not enabled. */
+    public NativeCompatiblePcmOutput nativeCompatibleOutput() {
+        return ym instanceof Ym2612Chip accurate ? accurate.nativeCompatibleOutput() : null;
+    }
+
     /** The FM core this synthesizer was built with. */
     public FmCoreSelection fmCore() {
         return fmCore;
@@ -314,6 +333,10 @@ public class VirtualSynthesizer implements SmpsLogicalWriteTarget {
     @Override
     public void writePsg(Object source, int val) {
         psg.write(val);
+        if (ym instanceof Ym2612Chip accurate) {
+            // The native-compatible stage (when enabled) mixes this byte the way GPGX's PSG does.
+            accurate.nativeCompatiblePsgWrite(val);
+        }
     }
 
     @Override

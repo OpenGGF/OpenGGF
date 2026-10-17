@@ -14,7 +14,7 @@ This act additionally qualifies solo Sonic at every preset with off/S1/S2 donati
 | Obligation | Contract / existing binding | Current evidence and shortest remaining action |
 | --- | --- | --- |
 | ENTRY / CAMERA: normal character start and current focus | `Sonic_Start_Locations` / `Knux_Start_Locations`; [`TestS3kCnz1EntryMatrix#normalEntryAppliesTheProductionPresetAndEveryDeclaredParticipantThenReplaysTwice`](../../../../src/test/java/com/openggf/tests/TestS3kCnz1EntryMatrix.java) | 140 supported products: actual host-ROM start table, all resolved production widths, typed admitted roster/ordered CPU leaders/current native P2 and camera focus, decoded current mappings and unchanged P1 lives. This is a fresh entry floor, not every intro/alternate-entry mechanism. |
-| REWIND: normal entry world | Complete registered-world capture/restore and 45 ordinary Right-input frames twice; all title-card pattern bytes compared by content | Qualified for all 140 finite products. No P1 death or hidden life loss is permitted. This does not certify later event/interaction/child lifetimes or cross-load history policy. |
+| REWIND: normal entry world | Complete registered-world capture/restore and 45 ordinary Right-input frames twice; all title-card pattern bytes compared by content | Qualified for all 140 finite products. Held Right is requalified by the 2026-10-17 input correction below; the 2026-10-14 runs held Down. No P1 death or hidden life loss is permitted. This does not certify later event/interaction/child lifetimes or cross-load history policy. |
 | OBJECT / PRESENT / REWIND: native solo-Sonic carrier | `loc_68D8` creates `Obj_Tails`; `loc_13A10` first arms routine $C, next dispatch writes x_vel $100; `loc_140AC` naturally clears offscreen P2 | 15 preset×donor cases qualify native typed CPU/P2/leader ownership and host-ROM body/palette/dust/tail source; 15 more restore the naturally deleted carrier and reverse to actual absence. No native pixel comparison is claimed. |
 | LOAD / REWIND: script roster retirement and configured donor controls | Explicit engine-only native-scripted registration; immutable role restored by recreation factory or internal retired-roster binding | 1 native 320/S1 scene-retirement/refresh case; 15 configured pair controls preserve configured follower donor body/palette data; the carried P1 temporarily uses the host bank required by the literal mapping owner. No public snapshot or Mod API shape changes. |
 | PRESENT / REWIND: literal carried-P1 mappings and resource return | `sub_1459E` / `Tails_Carry_Sonic` / `AniRaw_Tails_Carry` write $91,$90,$92 with their raw timer; [`TestNativeCarriedPlayerArtBinding`](../../../../src/test/java/com/openggf/tests/TestNativeCarriedPlayerArtBinding.java) | 3 off/S1/S2 native-320 lifecycle vectors capture active carry, the final native pose after P2 release, ordinary resource return, and reverse restoration before first attachment twice. A fourth vector preserves a distinct later script resource owner. Physics/rules/powered-controller identities remain unchanged. Other powered, donor-character and manual-carry products remain independent obligations. |
@@ -110,3 +110,31 @@ Every restored live carrier replays45 whole-world ticks twice. Capture-host28
 checks preserve the original current P1 and configured CPU leaders while explicitly
 recognizing the intrinsic role. This requalifies those products; later mechanism,
 route, native audiovisual and viewport-edge obligations remain separate.
+
+## Local giant-ring ownership correction — 2026-10-17
+
+`TestS3kGiantRingDmaOwnership` independently uses the decoded subtype-4 ring at `$2DC0,$064C` after its ordinary
+formation, then a declared inlet outside its collision box and one Right frame. Native 320 solo Sonic/Tails/Knuckles
+all reproduce the old missing mapping bit/global `$FF` write, and pass after the owning object publishes both.
+Capture, immediate full-world restore and two forward replays include the flash graph and per-VInt DMA record.
+Eight representative MHZ→sanctuary→Saved2 origin returns separately confirm ordinary mapping ownership releases.
+The [r3 design record](../../designs/2026-10-13-s3k-ending-lifecycle.md#review-r3-actual-giant-ring-dma-ownership-2026-10-17)
+records the three old-source failures, the repaired unit harness, 35-case follow-up and 109 separate guard checks.
+
+This does not qualify a cold CNZ giant-ring route, a direct emulator RGB comparison, or this interaction's complete
+viewport/donor/team matrix. Those inherited obligations, physical checkpoint/hazard coverage and natural completion
+remain separate from the entry and dead-dispatch floors above.
+
+## Entry replay input correction — 2026-10-17
+
+`CanonicalEntryMatrixSupport.advanceEntry(fixture, row, frames, right)` passed its `right` flag as the second argument of `HeadlessTestFixture.stepFrame(up, down, left, right, jump)` in every committed revision from the helper's introduction in `a54c1a8ae` through `0197c5a5a`. The `#normalEntryAppliesTheProductionPresetAndEveryDeclaredParticipantThenReplaysTwice` runs recorded above on those sources therefore held **Down**, not Right, in each 45-frame capture/replay window, so a grounded P1 ducked in place instead of moving. Request 83519's uncommitted initial candidate cannot be inspected here; treat its replay input as unverified rather than as Right. Those records keep their original commands, sources and counts and remain evidence within that Down-held scope: actual start table, owners, survival, unchanged lives and full-world restore/replay equality. They did not exercise held-Right movement, the camera scroll it causes or the object placement that scroll admits. The restart products' post-release windows were already neutral and are not affected.
+
+The helper now passes the flag as `right`. [`TestS3kCanonicalEntryRightInput`](../../../../src/test/java/com/openggf/tests/TestS3kCanonicalEntryRightInput.java) drives the same helper on native 320 solo Sonic in CNZ2, whose start is grounded on flat floor, and checks the production joypad path on each of 45 frames (Right held; Up, Down and Left absent; not crouching). It then requires P1 still grounded with `ground_vel` 45 × `$C` (`Sonic_Move` adds `Acceleration` for `button_right` in `Ctrl_1_held_logical`) and forward movement.
+
+Corrected qualification, all on `0197c5a5a` plus this commit's test-only deltas (helper SHA-1 `49e31e0026db`), command prefix `env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null python3 <main-workspace>/tools/testing/maven_queue.py --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl`, original absolute S1/S2/S3K ROM properties, then `test`:
+
+- Eight-act entry selection: `-Dtest` lists `TestS3kAiz2EntryMatrix`, `TestS3kHcz2EntryMatrix`, `TestS3kMgz1EntryMatrix`, `TestS3kMgz2EntryMatrix`, `TestS3kCnz1EntryMatrix`, `TestS3kCnz2EntryMatrix`, `TestS3kIcz1EntryMatrix` and `TestS3kIcz2EntryMatrix`, each restricted with `#normalEntryAppliesTheProductionPresetAndEveryDeclaredParticipantThenReplaysTwice`, plus the first version of the input test. It finished at 02:02:24 UTC after a 193 s queue wait and 1m46s of Maven: 1121 tests / 1 failure / 0 errors / 0 skips. Every act passed 140/0/0/0 with held Right. The one failure was the input test's own premise. It first used MGZ1, whose Sonic start (ROM `$C0,$F00`) is airborne, so `ground_vel` stays zero while air control raises `x_vel` by 24 each frame. The test was moved to CNZ2; the helper was not changed.
+- Revised input test with the helper restored to its `0197c5a5a` bytes: fails at Right frame 0 (`isRightPressed` false), 02:04:26–02:05:01 UTC, 1 test / 1 failure / 0 errors / 0 skips.
+- Revised input test with the fix: 02:05:15–02:05:44 UTC, 1 test / 0 failures / 0 errors / 0 skips.
+
+Death/reload products, combined smoke and integration were not rerun here. This requalifies the held-Right entry floor only; it is not act certification.

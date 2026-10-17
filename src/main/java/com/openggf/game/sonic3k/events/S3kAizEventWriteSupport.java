@@ -51,6 +51,11 @@ public final class S3kAizEventWriteSupport {
         return bridge != null && bridge.isAct2TransitionRequested();
     }
 
+    public static boolean isAiz2ShipEndRefreshActive(ObjectServices services) {
+        AizObjectEventBridge bridge = bridgeOrNull(services);
+        return bridge != null && bridge.isAiz2ShipEndRefreshActive();
+    }
+
     private static AizObjectEventBridge bridgeOrNull(ObjectServices services) {
         Object provider = services.levelEventProvider();
         return provider instanceof AizObjectEventBridge bridge ? bridge : null;

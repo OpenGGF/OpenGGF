@@ -3,6 +3,7 @@ package com.openggf.audio.session;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.synth.ChipWriteObserver;
 import com.openggf.audio.synth.FmCoreSelection;
+import com.openggf.audio.synth.NativeCompatiblePcmOutput;
 import com.openggf.audio.synth.VirtualSynthesizer;
 
 import java.util.Arrays;
@@ -11,13 +12,43 @@ import java.util.Objects;
 public final class SmpsPhysicalDevice {
     private static final java.util.logging.Logger LOGGER =
             java.util.logging.Logger.getLogger(SmpsPhysicalDevice.class.getName());
+    /**
+     * @param nativePcmOutput opt-in capture/diagnostic native-compatible
+     *                        output stage on the production FM chip, or
+     *                        {@code null} (the default) for none; it requires
+     *                        the accurate core and never changes ordinary output
+     * @param exactRate       the synthesis rate as an exact rational when it is
+     *                        not a whole number of hertz (the live hardware-frame
+     *                        budget), or {@code null}; whole-cycle consumers such
+     *                        as the SEGA PCM transport count with it
+     */
     public record Settings(
             double outputSampleRate,
             boolean dacInterpolate,
-            FmCoreSelection fmCore) {
+            FmCoreSelection fmCore,
+            NativeCompatiblePcmOutput.Config nativePcmOutput,
+            SmpsHardwareFrameBudget.Rate exactRate) {
         /** Accurate-core settings; the core is the Nuked-OPN2 port unless configured otherwise. */
         public Settings(double outputSampleRate, boolean dacInterpolate) {
             this(outputSampleRate, dacInterpolate, FmCoreSelection.ACCURATE);
+        }
+
+        /** Settings without the native-compatible output stage. */
+        public Settings(double outputSampleRate, boolean dacInterpolate, FmCoreSelection fmCore) {
+            this(outputSampleRate, dacInterpolate, fmCore, null);
+        }
+
+        /** Settings at a rate given only as a double. */
+        public Settings(double outputSampleRate, boolean dacInterpolate, FmCoreSelection fmCore,
+                NativeCompatiblePcmOutput.Config nativePcmOutput) {
+            this(outputSampleRate, dacInterpolate, fmCore, nativePcmOutput, null);
+        }
+
+        /** Settings at an exact rational rate. */
+        public Settings(SmpsHardwareFrameBudget.Rate exactRate, boolean dacInterpolate, FmCoreSelection fmCore,
+                NativeCompatiblePcmOutput.Config nativePcmOutput) {
+            this(Objects.requireNonNull(exactRate, "exactRate").hz(), dacInterpolate, fmCore, nativePcmOutput,
+                    exactRate);
         }
 
         public Settings {
@@ -26,6 +57,13 @@ public final class SmpsPhysicalDevice {
                     || outputSampleRate <= 0.0) {
                 throw new IllegalArgumentException(
                         "outputSampleRate must be positive and finite");
+            }
+            if (exactRate != null && Double.compare(exactRate.hz(), outputSampleRate) != 0) {
+                throw new IllegalArgumentException("exactRate must equal outputSampleRate");
+            }
+            if (nativePcmOutput != null && fmCore != FmCoreSelection.ACCURATE) {
+                throw new IllegalArgumentException(
+                        "native-compatible output requires the accurate FM core");
             }
         }
     }
@@ -101,12 +139,20 @@ public final class SmpsPhysicalDevice {
                 VirtualSynthesizer.Initialization.DEFERRED,
                 settings.fmCore());
         synth.setDacInterpolate(settings.dacInterpolate());
+        if (settings.nativePcmOutput() != null) {
+            synth.enableNativeCompatibleOutput(settings.nativePcmOutput());
+        }
         LOGGER.info("FM core: " + settings.fmCore().configValue()
                 + " (" + settings.outputSampleRate() + " Hz)");
     }
 
     double outputSampleRate() {
         return settings.outputSampleRate();
+    }
+
+    /** The exact rational synthesis rate, or {@code null} when only the double is known. */
+    SmpsHardwareFrameBudget.Rate exactRate() {
+        return settings.exactRate();
     }
 
     void apply(SmpsWriteProgram program) {
@@ -152,6 +198,22 @@ public final class SmpsPhysicalDevice {
         renderInvocationCount++;
         renderedStereoFrames += stereoFrames;
         return stereoFrames;
+    }
+
+    /**
+     * Moves up to {@code maxFrames} completed native-compatible stereo frames
+     * into {@code target}; zero when the stage is not enabled. Draining is a
+     * consumer action outside rollback: drain only published frames.
+     */
+    int drainNativeCompatiblePcm(short[] target, int offsetSamples, int maxFrames) {
+        requireActive();
+        NativeCompatiblePcmOutput output = synth.nativeCompatibleOutput();
+        return output == null ? 0 : output.drain(target, offsetSamples, maxFrames);
+    }
+
+    NativeCompatiblePcmOutput nativeCompatibleOutputForInspection() {
+        requireActive();
+        return synth.nativeCompatibleOutput();
     }
 
     Snapshot captureSnapshot() {

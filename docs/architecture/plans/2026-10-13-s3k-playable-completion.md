@@ -1124,6 +1124,32 @@ and locked-on S3K paths as applicable. No runtime source changed in this slice;
 combined follow-up validation and integration remain pending. Consumed local
 redirects are removed after this summary.
 
+**Native 50 Hz follow-up (ending-pal lane, 2026-10-16).** This adds one declared
+native PAL product: Sonic/+2, D01 at 320, from the scene through credits and terminal to
+`Title_Screen`.
+
+Native is GPGX with only `Region=Europe` changed; native-reference setup is otherwise as
+before. The engine runs at `REGION=PAL`, 50 Hz, with LIMITED + RAW_RGB output. Both
+queued runs started from the lane worktree:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Dexec.executable=python3 '-Dexec.args=<lane>/run_native_pal.py' exec:exec -B
+python3 tools/testing/maven_queue.py -Dmse=off -Dexec.executable=python3 '-Dexec.args=<lane>/run_engine_pal.py <head> %classpath' exec:exec -B
+```
+
+Native finished 20:24:07 UTC (1:10 Maven) and the engine on `e94f6c4e7` finished
+20:30:58 UTC (10.9 s).
+
+Results:
+- Raw RGB matches at polls 1–3071.
+- Level frame, V-int and RNG are equal for 13,888 frames.
+- Credits durations are equal (7,415 frames).
+- First divergence: LF 3778, where native PAL finishes the AIZ1 Kos modules four
+  frames earlier. That gap belongs to the Kos CPU-budget model.
+
+The other eight PAL products remain open. Details are in the
+[ending matrix](../validation/levels/s3k-ending.md#native-pal-50-hz-sonic2-product-ending-pal-lane-2026-10-16).
+
 ### Ordinary S2 RAM and matching-controller binding qualification
 
 The inherited ordinary S2 controller returned a null RAM snapshot. On unchanged
@@ -1836,7 +1862,8 @@ The ending matrix's stale blanket pressure statement is corrected to existing
 17 real-child cases (19591 plus two unchanged43234 pilots) and separate11-core7093,
 with impossible fixed8/48 and Knuckles-only victims excluded by native owners.
 Actual loc5DB76/5DD6A full-table dispatch and downstream scene composition are
-separate remaining qualification. Consumed root redirects are deleted after this
+separate remaining qualification (director-owned dispatch and its progress/Player_mode 3
+gates are now covered headlessly; see the ending matrix's 2026-10-17 continuation section). Consumed root redirects are deleted after this
 account; combined smoke/guards and integrated delivery remain pending.
 
 
@@ -2203,3 +2230,320 @@ palette, a missing bonus HUD lives row, Gumball player priority in LEVEL-mode
 captures and an early Slot goal fade), assigned to a presentation-parity lane.
 SSZ arrival spots at 118/119/330/680/1341-1343/1430 match native exactly after
 `f950a720c`; 0 and 120 are attributed declared-inlet limits.
+
+## Exact Kos observer native publication and pin (2026-10-16)
+
+TraceChaser observer `de43cf78c25478b5d23d69cf7bd541faa9923745` (read-only
+schema-2 occupied-head Kos FIFO service observer) is integrated into TraceChaser
+main as `33c05c1623c2e7c2ebb7664e111a4ed3c0505e9d`, a fast-forward from the
+previous pin `4fdf73880f93a3172d23bf9e157b15de3c78fc32`; the merge tree is
+byte-identical to the qualified observer commit. It is published on the GitHub
+origin named by `.gitmodules`; the read-only Gitea mirror rejected the push and
+is not a pin prerequisite. Source-only CI run 38949410410 on that exact SHA
+passed (Python 3.12, 185 source-contract tests with no failures, errors or
+skips; 5 Lua behaviour tests; repository, history, shell-syntax, v5 conformance
+and documentation policy). Its optional native-integration job was skipped.
+Native evidence keeps its recorded scope: ExactKosMeasurement 11/0/0,
+HardwareTiming 70/0/0 and the actual v2 run's 30/30 agreement with an
+independent head oracle. The parent gitlink now records that SHA. This is a
+pin and source-contract qualification, not a full native gate or engine suite.
+
+## Native CPU-ledger diagnostics pin (2026-10-17)
+
+The parent gitlink moves to TraceChaser main
+`4ae64e075d2e233539f5637fd16bd5ae7aa7d76e`, a fast-forward from
+`33c05c1623c2e7c2ebb7664e111a4ed3c0505e9d`. It adds:
+
+- the observation-only GPGX 68000 stall counters (stall ABI v1, published at
+  `0c0cef7`) and the diagnostic final-PCM window runner;
+- the callback-free 68000 CPU ledger (stall ABI v2, `393f0be`, hardened in
+  `5afbc3d`);
+- exact Kos service samples beside load-time v1 (`a081a02`);
+- the reviewed r2 documentation (`0801da8`). It explicitly limits the claims:
+  FIFO, rewind, lockup, STOPPED and H-int paths are not harness-tested; input
+  identity is separate from external conservation; SMS is outside the
+  contract.
+
+Source-only CI run 38991106862 on that SHA succeeded. Its optional
+native-integration job was skipped. The retained native proof is 12/12 within
+the documented unsupported-shape limits. This is a diagnostic pin: it is not
+full native timing or hardware closure, and supplies no 6+46 parity credit or
+engine gameplay input.
+
+### Blue Sphere player projection and shadow publication (2026-10-17)
+
+Root compared the retained seven-Chaos native-v2 original PPM/VRAM/CRAM/RAM
+with engine twin-v6. Stage reveal+0/+10/+22 have 446/667/1112 raw RGB differences;
+281/433/782 lie in the lower player region. Independently rasterizing the
+published native SAT finds 643 body/tail foreground samples: every sample
+matches the actual engine art at y-2 for native138/148/160 versus engine24/34/46.
+This is a diagnostic translation witness, not a normalized full-image pass.
+The original images and their declared event fences remain unchanged.
+
+`sub_953E` and `GetScalars2`/`sub_A206` explain the position error. The shipped
+ScalarTable2 pitch `$E0` has sine -11585 and cosine 11585; its integer projection
+places P1 at y162 and P2 at y179 on the ground. The renderer used y160/y172
+plus a fitted linear jump offset. It now loads the scalar bytes through the
+existing ROM data loader, preserves MULS/SWAP then signed DIVS truncation,
+and includes P2's native depth -$20. No trace row or reference snapshot supplies
+runtime state, and no clocks, movement or animation are changed.
+
+The native `word_94FC` shadow is a fixed 4x4 operator sprite at (144,150), with
+P2 at (144,167) only for Player_mode zero. The ROM art contains index15 shadow
+operators, while the engine loaded it without drawing it. The regular
+`loc_84C2` loop appends shadows after all ordinary SAT entries; the boot sequence
+does not. The renderer uses the existing multiplicative shadow batch behind
+stage sprites, gated by a captured `mainLoopSpritesPublished` phase. Restoring
+the boot/last-wait snapshot removes future shadows; restoring the published
+snapshot and two forward replays restores them. Shadows remain fixed while
+players jump. No mapping-piece priority defect was proved in these idle spots.
+
+Old-source projection request5293 on `ac1e1403c` plus its regression fails
+7/7/0/0 at 06:50:12 UTC, reproducing the ground and nonlinear jump errors.
+The projection-only change passes 37/0/0/0 at 06:52:20 UTC. Shadow request56500
+then fails 4/4/0/0 at 06:53:37 UTC, after its negative boot/fade checks pass.
+Combined request31083 passes 106/0/0/0 at 06:55:21 UTC, using the main absolute
+queue wrapper from the ending worktree, `--normal -Dmse=off`, the original
+locked-on ROM (`-Ds3k.rom.path=$S3K_TASK_ROM`, CRC32 `63522553`), surfaceless EGL,
+unset DISPLAY/WAYLAND_DISPLAY and nullAL. Exact selector:
+`TestS3kSpecialStageShadowPublication,TestS3kSpecialStagePlayerProjection,TestSonic3kSpecialStageRenderer,TestSonic3kSpecialStageWidescreen,TestSonic3kSpecialStageManagerSnapshot,TestSonic3kSpecialStageVisualSnapshot,TestSonic3kSpecialStageGameplaySnapshot,TestSonic3kSpecialStageRewindAdapter,TestS3kSpecialStageHeadlessBoot,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`.
+
+This is component command/phase/typed-manager rewind evidence at native320/800,
+all four character/team modes, seven jump heights, donor off. It does not yet
+qualify a new framebuffer, complete stage/cold route, configured donor/roster
+breadth, PAL or PCM. The independent native whole-frame residual and later
+sphere/HUD phase differences remain open until the composed capture is compared.
+
+Fresh `--lean -Dmse=off -Dtest=TestArchitecturalSourceGuard test -B` then
+passes 72/0/0/0 at 06:57:02 UTC (3.154s test execution). No API signature or
+configuration default changed; the new projection/phase helpers are package-private.
+
+### Saved-slot HPZ to SSZ roundtrips (2026-10-17)
+
+Root recovered the stopped Opus lane at `0197c5a5a`, preserving its uncommitted
+`HeadlessGameBoot` ROM/audio release and `TestS3kSaveRouteRoundtrip`. The
+original four cases failed with four errors at 01:59:30 UTC: a second title
+launch rebuilt its SMPS loader from the ROM already closed by the first
+headless session (`AudioManager.setAudioProfile` → `Sonic3kSmpsLoader` →
+`Rom.readBytes`, null FileChannel). Releasing the audio base-ROM reference at
+its owning headless close/reboot boundary fixed this without changing title
+or save routing. Existing teardown failure/retry ordering is retained.
+
+The lane's unchanged production repair passed 89 checks at 02:12:52 UTC:
+four route cases, headless close/audio identity, standalone/catalog boots,
+physical data-select launch, cold save-site consumers and required S3K
+loading checks. After the lane added Sonic+Tails, Root ran the current full
+class through the current main absolute Maven wrapper from the intended
+worktree: `--normal -Dmse=off -Dtest=TestS3kSaveRouteRoundtrip
+-Ds3k.rom.path=$S3K_TASK_ROM test -B`, with the original locked-on ROM
+(CRC32 `63522553`), surfaceless EGL, no DISPLAY/WAYLAND_DISPLAY and nullAL.
+It passes 5/0/0/0 at 06:19:13 UTC, class execution 21.28s. Queue waiting is
+separate from execution. The
+[HPZ matrix](../validation/levels/s3k-hpz-act.md#saved-slot-hpz-exits-and-title-reload--2026-10-17)
+records the three real exits/reloads, two no-exit negatives and two replay
+cycles. Initial saved payload, native 320/donor-off scope and inherited
+configuration/cold/native-presentation limits remain explicit.
+
+The stronger actual follower check then passed separately at 06:47:35 UTC:
+`-Dtest=TestS3kSaveRouteRoundtrip#sonicAndTailsAltarExitSaveRoundTripsThroughTheTitleToSkySanctuaryOne`
+with the same normal-lane environment, 1/0/0/0 (12.14s class execution;
+1329s queue wait). Fresh `--lean -Dmse=off -Dtest=TestArchitecturalSourceGuard
+test -B` passed 72/0/0/0 at 06:47:59 UTC. The first stronger assertion had
+incorrectly compared the role name `tails_p2` with the saved character key
+`tails`; that test-oracle error was corrected to
+`sidekick.characterKey().persisted()`, without changing production behavior.
+The two solo cases' empty identity lists are equivalent to their previous
+zero-roster checks. No additional cold, wide, donor or native audiovisual
+coverage is claimed.
+
+#### Composed presentation qualification and native RGB — 2026-10-17
+
+The free ending tree composes the retained Root `3aad23d38`, ending order
+`ac1e1403c`, projection/shadows `4cce16113`, develop preflight `707b3c208`
+and saved-slot `81a2e707f` as `a259e695e`. Source merges were clean; append-only
+research/matrices/pitfalls and release prose retained both sides' intent.
+The original Root category run remains frozen on `3aad23d38` while it completes.
+
+Two minimal test-service repairs address the observed broad errors: the neutral
+GameModule fixture supplies its required SONIC_2 rules (matching its test setup),
+and the admission-only mutator fixture explicitly supplies RuntimeArtCoordinator.NONE
+for its final accepted STOCK branch. The latter failure followed successful
+denial checks; it was not a denied mutation. No production null fallback is added.
+With these repairs the composed exact focused selection passes all 101 GameLoop,
+10 mutator-admission, five ending-state, two ending-GPU and five saved-slot cases,
+plus projection, shadows, snapshots and required S3K consumers. Request17744
+finishes 07:02:50 UTC with 219 tests, 1 failure, 0 errors and 1 skip. The sole
+failure is `TestTitleInputOwnership.captureChordIsConsumedWhileBlockedAndCannotFireAfterReturningWithKeyHeld`,
+expected true/actual false at line105. Fresh matched baseline request24091 on
+unchanged develop `707b3c208` has the same failure (8/1/0/0, 07:01:26 UTC).
+`TestForegroundWindowRendering` still aborts its GLFW-null EGL setup even with
+EGL_PLATFORM=surfaceless; its framebuffer remains unqualified. This is not an
+all-green or full-suite result.
+
+Maintained `S3kSevenChaosGatewayCaptureTool` request31444 on that composed source
+completes exit0 at 07:04:46 UTC via the normal main queue wrapper,
+`-Dmse=off compile exec:java -Dexec.mainClass=com.openggf.tools.S3kSevenChaosGatewayCaptureTool`,
+with `--rom $S3K_TASK_ROM --out-dir NEW_ABSOLUTE_DIRECTORY`, Limited/RAW_RGB,
+surfaceless EGL, unset DISPLAY/WAYLAND_DISPLAY and nullAL. Its 174 files
+(172 actual PNGs and two CSVs) are retained in the existing external task's
+`spot-checks/seven-chaos-engine-player-v8`. State.csv and ledger.csv are
+byte-identical to v6; events still end in LRZ2 return2423.
+
+Compared directly with unchanged original native-v2 PPMs, using the declared
+native active crop `(14,8)..(334,232)` only, stage reveal+0..22 by2 has raw RGB
+difference counts `165,165,187,214,214,234,299,299,314,330,330,330`, down from
+`446,446,578,643,643,667,732,732,747,763,763,1112`. Every pixel at y128..223
+matches at the inspected +0/+10/+22 spots; all +22 residuals lie in bbox
+(9,21)..(276,57), above the player and shadow. The actual +22 pair was viewed.
+Results reveal+0..32 by2 still has zero differing pixels at all17 spots. There
+is no colour normalization, alignment shift or difference mask in these full
+image counts. The comparison pair lives in `seven-chaos-compare-player-v8`.
+
+Maven reports the existing Discord presence worker lingering for15s at CLI
+shutdown; its owned Maven/JVM invocation is terminal. This is diagnostic CLI
+and bounded picture evidence, not a suite pass. Remaining upper HUD/distant
+object phase, complete stage/results timeline, cold/donor/PAL/PCM and other
+native configurations remain open.
+
+
+### Blue Sphere distant mapping frames — 2026-10-17
+
+The composed v8 capture's remaining330 stage pixels were all owned by distant
+native SAT entries23..31, rather than the HUD. Shipped `Map_SStageSphere_`
+(`$A464`, 166 bytes) has19 word pointers: frames10/11 share the2x2 `$6C`
+piece,12/13 share2x2 `$70`,14/15 share1x1 `$74`; later16..18 are outside
+Draw_SSSprites' admitted0..15 perspective range. The former formula incorrectly
+advanced tiles at11 and shrank12/13. The manager now loads the mapping bytes
+through the ROM pipeline; sphere/red/bumper/spring/touched branches use the
+existing bounded mapping-piece reader. Ring/emerald selection, gameplay,
+clocks and snapshot state are unchanged.
+
+Independent `TestS3kSpecialStageSphereMappings` reads each actual ROM pointer
+and piece as its oracle. The unchanged old mapper fails5 of16 cases (11..15),
+with11 passing, no errors/skips (20891, 07:10:30 UTC). With the correction,
+38930 completes138/0/0/0 at07:13:36 UTC:16 admitted mapping frames, each five
+cell/palette branches at320/800, plus layout bank, projection, shadow publication,
+rendering/wide, typed manager/visual/gameplay snapshots, rewind, headless boot
+and required S3K loading consumers. Command uses the current main absolute
+queue wrapper from `t3-2f458d35` at `4eb88883c` plus the mapping correction,
+`--normal -Dmse=off`, original absolute `-Ds3k.rom.path`, Java25, surfaceless EGL,
+unset DISPLAY/WAYLAND_DISPLAY and nullAL. Exact selector adds
+`TestS3kSpecialStageSphereMappings,TestS3kSpecialStageLayoutBank` to the previous
+106-case presentation selection. This is not a full suite or full-route claim.
+
+The maintained capture CLI then completes36070 exit0 at07:16:41 UTC on that
+same source, using the preceding documented command and new external output
+`spot-checks/seven-chaos-engine-sphere-v9`. All174 files are retained. Against
+unchanged native-v2 original RGB and its declared active crop only, stage
+reveal+0..22 by2 now differs by `19,19,43,43,43,43,46,46,46,46,46,46` pixels.
+The17 results samples still match exactly. State.csv and ledger.csv remain
+byte-identical to v6, including LRZ2 return2423. The actual +22 paired image
+was inspected in `seven-chaos-compare-sphere-v9`; no colour normalization,
+translation, rescaling or masking enters the counts.
+
+The remaining46 pixels occupy bbox(91,22)..(260,43). Native published SAT29
+at(155,22) and30 at(189,24) overlap earlier high-priority pieces25/26;28 and31
+also carry low priority. `Draw_SSSprites/loc_9A04` clears priority when the
+perspective word is at least `$54` (the second axis has the same branch).
+The renderer still paints those cells with unconditional high priority.
+This is a separate composition gap, not a reason to alter mapping pointers or
+ignore those pixels. Exact full-stage RGB, the complete results timeline,
+cold/donor/other native configurations, PAL and PCM remain open.
+
+Fresh mapping-source guards27554 complete83/0/0/0 at07:20:41 UTC: architectural
+source guard72, trace replay invariant10 and default hydration switch1, via
+`--lean -Dmse=off -Dtest=TestArchitecturalSourceGuard,TestTraceReplayInvariantGuard,TestTraceHydrateSwitchDefault test -B`.
+The two latter names resolve their existing trace packages; all three ran with
+no skips. Diff whitespace, affected relative links and mirrored pitfalls pass.
+
+
+### Immediate-scene fade publication after rewind — 2026-10-17
+
+The retained Root3aad smoke's gateway and sanctuary matrix cases exposed a
+new regression in the local white-palette presentation change. The restored
+level publication could hold a displayed fade even after the scene had
+released its level palette-upload latch. `PaletteUploadPresentation.release`
+only flushed when that latch was set, so subsequent SPECIAL_STAGE publications
+never released the independent rewind hold. Gameplay/world comparison detected
+`displayedFade` NONE/0/mask0/pendingfalse versus FROM_WHITE/7/mask-1/pendingtrue.
+This was production behavior; the comparator and world assertions are retained.
+
+Composed-source reproduction27986 is4/2F/0E/0S at07:21:49 UTC: both seven-Chaos
+gateway cases fail that exact four-field comparison; both seven-Super payout
+controls pass. New headless `TestPaletteUploadLatch` reproduction1577 is
+5/1F/0E/0S at07:22:43 UTC: an unlatched scene restores displayed step1, requests
+step3, then release incorrectly leaves step1/pendingtrue. Its four existing
+latch checks pass. The correction always invokes the normal palette release
+flush when graphics exists, including this unlatched rewind state. The restored
+picture still holds its captured generation until the next scene publication;
+subsequent direct writes are immediate. No new timing, snapshot field or API.
+
+Focused83390 passes112/0/0/0 at07:27:53 UTC in11 resolved classes: palette latch5,
+gateway4, native white GPU14, underwater publication16, fade snapshots7, level
+presentation lifecycle6 and required S3K loading60. The exact selector is
+`TestPaletteUploadLatch,TestS3kLrz2SevenChaosGiantRingGateway,TestNativeWhitePaletteFade,TestUnderwaterPaletteUpload,TestFadeManagerRewindSnapshot,TestLevelSpritePresentationLifecycle,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`.
+
+The broad run's affected matrix batch had1853 failures; its retained failed-case
+preview was capped, so sample similarity alone was not treated as complete
+attribution. Root then ran both complete exact affected classes on the correction:
+`TestS3kSanctuaryOriginReturnLifecycle,TestS3kSanctuaryPedestalLifecycle`.
+57173 completes2006/0/0/0 at07:35:05 UTC:580 origin/return cases (124.688s) and
+1426 pedestal cases (170.765s). Maven execution5:16 is separate from queue wait.
+Both commands use the current main absolute queue wrapper from the intended
+composed worktree at68cb5d183 plus this two-file correction, `--normal -Dmse=off`,
+absolute original S3K and (for the complete matrices) S1/S2 ROM properties,
+Java25, surfaceless EGL, unset DISPLAY/WAYLAND_DISPLAY and nullAL. No lean
+reservation was used for these ROM-heavy matrix products.
+
+The retained broad run stays frozen until terminal; no duplicate broad/full
+suite is submitted. The corrected behavior is bounded to releasing an already
+restored presentation hold through the existing scene-publication owner.
+Affected mechanism, GPU, level consumers and complete failing matrices qualify
+this delta; previously covered unaffected ordinary batches are not repeated.
+Whole-stage RGB, cold/configuration products not in those classes, PAL/PCM and
+strict trace/timing closure remain separate obligations.
+
+
+Fresh source guards43534 pass83/0/0/0 at07:37:24 UTC, same exact architectural,
+trace-invariant and default-hydration selector recorded above. To close the
+capped failure-detail gap,64631 then checks the other48 exact classes from
+original Root3aad ordinary batch61 (plan.tests[3000:3050], excluding the two
+already-qualified matrices), using their full names in `com.openggf.tests`:
+
+```text
+TestS3kMhzMinibossViewport,TestS3kMhzTailsAuthoredRoute,TestS3kMhzTeamAuthoredRoute,TestS3kMhzWideAuthoredRoute
+TestS3kMonkeyDudePlacedGraph,TestS3kPaletteFadeTimerGatesPaletteCycles,TestS3kPenguinatorBadnik,TestS3kReverseGravityBoundary
+TestS3kReverseGravityCameraLook,TestS3kReverseGravityDezCorridor,TestS3kReverseGravityFlagLifecycle,TestS3kReverseGravityIntegration
+TestS3kReverseGravitySolidObject,TestS3kReverseGravitySpringLaunch,TestS3kReverseGravityTerrain,TestS3kScreenEventCameraCopies
+TestS3kScriptedIntroCarryAdmission,TestS3kSlotPresentationParity,TestS3kSnaleBlasterBadnik,TestS3kSpecialStageHeadlessBoot
+TestS3kSpecialStageReturnWaterRestore,TestS3kSpringObjectInstance,TestS3kSszAct2ColdFight,TestS3kSszAct2FinalFight
+TestS3kSszArrivalContinuation,TestS3kSszArrivalHeadless,TestS3kSszBackgroundClouds,TestS3kSszBackgroundLayout
+TestS3kSszCarriersAndSprings,TestS3kSszColdRoutes,TestS3kSszCompatibilityMatrix,TestS3kSszCraneRouteHeadless
+TestS3kSszEggRobo,TestS3kSszGhzArenaHeadless,TestS3kSszKnucklesArrivalHeadless,TestS3kSszKnucklesBridgeHeadless
+TestS3kSszLifecycleProduction,TestS3kSszMechaSpawnHeadless,TestS3kSszMtzArenaHeadless,TestS3kSszPlacementCensus
+TestS3kSszTeleporterPads,TestS3kSszTraversalPlatforms,TestS3kTensionBridgeObject,TestS3kZoneRuntimeRegistrationHeadless
+TestSaxmanDecompressor,TestSbz1CreditsDemoBug,TestScriptedVelocityAnimationProfile,TestSczObjectArtPalette
+```
+
+The command retains `--normal -Dmse=off`, absolute original S3K/S1/S2 ROM
+properties and the same headless environment. It completes440/0/0/0 at07:40:23
+UTC (Maven1:10). Together with the2006 matrix cases, this qualifies all2446
+cases from that original50-class batch in two bounded parts, with no repeated
+matrix run and no hidden omitted-failure assumption.
+
+Maintained capture27778 then completes exit0 at07:44:37 UTC (Maven19.947s;
+queue wait separate). Its new external `seven-chaos-engine-fade-release-v10`
+has the same174 filenames and every file is byte-identical to v9, including
+172 actual PNGs, state.csv and ledger.csv. The actual stage+046 picture was
+viewed. Consequently the original-RGB comparisons retain the same19..46 stage
+residuals and17 exact results samples. This is a fresh production-path capture,
+not framebuffer input to gameplay or a full PAL/PCM/cold/configuration claim.
+
+A read-only audit also rejects a tempting priority shortcut for the separate
+46-pixel gap: original native stage+160 RAM has23 valid perspective pointers
+(0..22). Frames2/10 have7 admitted high-priority cells after the first low-priority
+cell; turn frames16..22 have11/16/30/32/40/40/39. Painting all low sprites before
+all high sprites therefore cannot preserve first-SAT-pixel ownership generally.
+The eventual correction needs exact sprite ownership and plane composition,
+not a fitted layer split that only matches this still. No such renderer change
+or broader priority acceptance is included in the fade release repair.

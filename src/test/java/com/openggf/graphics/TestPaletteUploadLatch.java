@@ -68,6 +68,33 @@ class TestPaletteUploadLatch {
     }
 
     @Test
+    void immediateScenePublicationReleasesARewindHeldFadeWithoutALevelLatch() {
+        graphics.setPaletteFadePresentation(PaletteFadePresentation.Mode.FROM_WHITE, 1,
+                PaletteFadePresentation.ALL_LINES);
+        var displayed = PaletteUploadPresentation.captureDisplayedFade(graphics);
+        for (int cycle = 0; cycle < 2; cycle++) {
+            graphics.setPaletteFadePresentation(PaletteFadePresentation.Mode.FROM_WHITE, 2,
+                    PaletteFadePresentation.ALL_LINES);
+            PaletteUploadPresentation.restoreDisplayedFade(graphics, displayed);
+            graphics.setPaletteFadePresentation(PaletteFadePresentation.Mode.FROM_WHITE, 3,
+                    PaletteFadePresentation.ALL_LINES);
+            assertFalse(graphics.isPaletteUploadLatched(), "a special scene has no level upload latch");
+            assertEquals(1, PaletteUploadPresentation.captureDisplayedFade(graphics).steps(),
+                    "the immediate restore redraw still uses its captured CRAM generation");
+            assertTrue(PaletteUploadPresentation.captureDisplayedFade(graphics).pending());
+            PaletteUploadPresentation.release(graphics);
+            assertEquals(new PaletteUploadPresentation.DisplayedFade(
+                    PaletteFadePresentation.Mode.FROM_WHITE, 3, PaletteFadePresentation.ALL_LINES, false),
+                    PaletteUploadPresentation.captureDisplayedFade(graphics),
+                    "the next scene publication releases the rewind hold even without a level latch");
+            graphics.setPaletteFadePresentation(PaletteFadePresentation.Mode.FROM_WHITE, 4,
+                    PaletteFadePresentation.ALL_LINES);
+            assertEquals(4, PaletteUploadPresentation.captureDisplayedFade(graphics).steps(),
+                    "subsequent immediate writes must not remain parked behind the old picture");
+        }
+    }
+
+    @Test
     void scenesOutsideTheLevelPipelineUploadImmediatelyWhileLatched() throws Exception {
         // Special stages, menus and loads write CRAM directly; a stale level latch must not hold them.
         PaletteUploadPresentation.publishAndLatch(graphics);

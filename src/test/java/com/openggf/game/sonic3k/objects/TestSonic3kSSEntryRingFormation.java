@@ -778,6 +778,12 @@ public class TestSonic3kSSEntryRingFormation {
     }
 
     private static class CapturingObjectServices extends TestObjectServices {
+        @Override
+        public com.openggf.game.RuntimeArtCoordinator runtimeArtCoordinator() {
+            // Formation/routing-only harness; the ROM-backed DMA-owner test installs its real coordinator.
+            return com.openggf.game.RuntimeArtCoordinator.NONE;
+        }
+
         int requestedZone = -1;
         int requestedAct = -1;
         boolean deactivateLevelNow;

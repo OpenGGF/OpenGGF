@@ -1,6 +1,8 @@
 package com.openggf.graphics;
 
 import com.openggf.game.rewind.RewindSnapshottable;
+import com.openggf.game.rules.PaletteWhiteFadeModel;
+import com.openggf.game.session.SessionManager;
 
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL14.*;
@@ -12,16 +14,15 @@ import static org.lwjgl.opengl.GL20.*;
  * Supports two types of fades:
  *
  * WHITE FADES (Special Stage):
- * Implements the original Sonic 2 fade-to-white algorithm where RGB channels
- * increment sequentially over 21 frames:
- * - Frames 0-6: Red channel increases
- * - Frames 7-13: Green channel increases
- * - Frames 14-20: Blue channel increases
- * Uses additive blending with a full-screen quad.
+ * World-managed presentation follows the host's typed white-fade model. Native
+ * S3K FromWhite lowers components together every third V-int; ToWhite raises the
+ * first nonwhite component R/G/B on every V-int. These transform CRAM colours
+ * before display conversion. S1/S2 and detached UI fades retain the sequential
+ * additive full-screen overlay.
  *
  * BLACK FADES (Level transitions, menus, etc.):
- * Standard fade-to-black where all RGB channels decrement together.
- * Uses alpha blending with a black overlay quad.
+ * Per-channel darkness uses alpha blending with a black overlay quad; dedicated
+ * palette-fade owners retain their existing CRAM publication model.
  */
 @com.openggf.game.ModApi
 public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
@@ -52,7 +53,7 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
      */
     @com.openggf.game.ModApi
     public enum FadeType {
-        /** White fade using additive blending */
+        /** White fade using the host palette model or additive blending */
         WHITE,
         /** Black fade using alpha blending */
         BLACK
@@ -105,12 +106,50 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
 
     // Shader program reference (set by GraphicsManager)
     private ShaderProgram fadeShader;
+    // Renderer service binding; not logical rewind state. Only the world-managed fade owns CRAM.
+    private GraphicsManager paletteGraphics;
     private final QuadRenderer quadRenderer = new QuadRenderer();
 
     // Cached uniform location
     private int fadeColorLocation = -1;
 
     public FadeManager() {
+    }
+
+    void bindPaletteGraphics(GraphicsManager graphics) {
+        paletteGraphics = graphics;
+        syncWhitePalettePresentation();
+    }
+
+    private PaletteWhiteFadeModel whiteFadeModel() {
+        var world = SessionManager.getCurrentWorldSession();
+        return paletteGraphics == null || world == null || world.getGameModule() == null
+                ? PaletteWhiteFadeModel.SCREEN_OVERLAY
+                : world.getGameModule().getRules().paletteWhiteFade();
+    }
+
+    private void syncWhitePalettePresentation() {
+        if (paletteGraphics == null) return;
+        var mode = PaletteFadePresentation.Mode.NONE;
+        int steps = 0;
+        if (whiteFadeModel() == PaletteWhiteFadeModel.ROM_PALETTE && fadeType == FadeType.WHITE) {
+            if (state == FadeState.FADING_FROM_WHITE) {
+                mode = PaletteFadePresentation.Mode.FROM_WHITE;
+                int period = whiteFadeModel().fromWhiteVintsPerStep();
+                steps = (frameCount + period - 1) / period;
+            } else if (state == FadeState.FADING_TO_WHITE || state == FadeState.HOLD_WHITE
+                    || state == FadeState.NONE && fadeR == 1f && fadeG == 1f && fadeB == 1f) {
+                mode = PaletteFadePresentation.Mode.TO_WHITE;
+                steps = state == FadeState.FADING_TO_WHITE ? frameCount : PaletteFadePresentation.COLOR_STEPS;
+            }
+        }
+        if (mode != PaletteFadePresentation.Mode.NONE) {
+            paletteGraphics.setPaletteFadePresentation(mode, steps, PaletteFadePresentation.ALL_LINES);
+        } else {
+            var current = paletteGraphics.getPaletteFadePresentation().mode();
+            if (current == PaletteFadePresentation.Mode.FROM_WHITE || current == PaletteFadePresentation.Mode.TO_WHITE)
+                paletteGraphics.clearPaletteFadePresentation();
+        }
     }
 
     /**
@@ -160,6 +199,7 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
         this.onFadeComplete = onComplete;
         this.holdDuration = holdFrames;
         this.holdFrameCount = 0;
+        syncWhitePalettePresentation();
     }
 
     /**
@@ -178,6 +218,7 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
         this.onFadeComplete = onComplete;
         this.holdDuration = 0;
         this.holdFrameCount = 0;
+        syncWhitePalettePresentation();
     }
 
     /**
@@ -220,6 +261,7 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
         onFadeComplete = null;
         holdDuration = Integer.MAX_VALUE;
         holdFrameCount = 0;
+        syncWhitePalettePresentation();
     }
 
     /**
@@ -282,6 +324,7 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
             this.effectiveDuration = FADE_DURATION;
             this.exactToFadeDuration = false;
         }
+        syncWhitePalettePresentation();
     }
 
     /**
@@ -314,6 +357,7 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
         this.onFadeComplete = onComplete;
         this.holdDuration = terminalNoOpFrames;
         this.holdFrameCount = 0;
+        syncWhitePalettePresentation();
     }
 
     /**
@@ -350,6 +394,7 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
             default:
                 break;
         }
+        syncWhitePalettePresentation();
     }
 
     /**
@@ -421,9 +466,13 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
     private void updateFadeFromWhite() {
         frameCount++;
 
-        // Reverse of fade-to-white: decrement blue, then green, then red
-        // Frames 1-7: Blue decreases, Frames 8-14: Green decreases, Frames 15-21: Red decreases
-        if (frameCount <= FRAMES_PER_CHANNEL) {
+        // Pal_FromWhite is not the reverse of Pal_ToWhite: it lowers all
+        // components together every third V-int (the delay was cleared by Pal_FillWhite).
+        if (whiteFadeModel() == PaletteWhiteFadeModel.ROM_PALETTE) {
+            int period = whiteFadeModel().fromWhiteVintsPerStep();
+            int passes = Math.min(7, (frameCount + period - 1) / period);
+            fadeR = fadeG = fadeB = (7 - passes) / 7f;
+        } else if (frameCount <= FRAMES_PER_CHANNEL) {
             // Decrement blue
             fadeB = Math.max(0f, fadeB - CHANNEL_INCREMENT);
         } else if (frameCount <= FRAMES_PER_CHANNEL * 2) {
@@ -434,8 +483,11 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
             fadeR = Math.max(0f, fadeR - CHANNEL_INCREMENT);
         }
 
-        // Check if fade is complete
-        if (frameCount >= FADE_DURATION) {
+        // Pal_FadeFromWhite still waits its 22nd V-int after all target colours
+        // have arrived; returning on colour step 21 advances the caller early.
+        int duration = whiteFadeModel() == PaletteWhiteFadeModel.ROM_PALETTE
+                ? PaletteFadePresentation.ROM_FADE_FRAMES : FADE_DURATION;
+        if (frameCount >= duration) {
             // Ensure we're at zero (no overlay)
             fadeR = 0f;
             fadeG = 0f;
@@ -573,8 +625,9 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
      * Render the fade overlay. Call after all game rendering is complete.
      */
     public void render() {
-        if (state == FadeState.NONE) {
-            return;
+        if (state == FadeState.NONE || fadeType == FadeType.WHITE
+                && whiteFadeModel() == PaletteWhiteFadeModel.ROM_PALETTE) {
+            return; // CRAM colours already include the fade; an overlay would apply it twice.
         }
         quadRenderer.init();
 
@@ -770,6 +823,7 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
         holdDuration = 0;
         holdFrameCount = 0;
         exactToFadeDuration = false;
+        syncWhitePalettePresentation();
     }
 
     /**
@@ -794,6 +848,7 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
         holdDuration = 0;
         holdFrameCount = 0;
         exactToFadeDuration = false;
+        syncWhitePalettePresentation();
     }
 
     public void cleanup() {
@@ -846,5 +901,6 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
         // Note: onFadeComplete callback is NOT restored (transient)
         this.onFadeComplete = null;
         this.holdRestoredFrameForNextUpdate = true;
+        syncWhitePalettePresentation();
     }
 }

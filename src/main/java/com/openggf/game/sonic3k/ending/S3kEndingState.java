@@ -39,16 +39,23 @@ public final class S3kEndingState {
     public boolean postCreditsStarted() { return postCreditsStarted; }
     public void markPostCreditsStarted() { postCreditsStarted = true; }
     public boolean startHeld() { return startHeld; }
+    // Title_Screen's Pal_FadeToBlack passes still to run over the retained terminal picture.
+    private int titleEntryPasses;
+    /** loc_5F314: Game_mode 0, then Sega_Screen's 4; Title_Screen opens with 22 fade passes. */
+    public void beginTitleEntryFade() { titleEntryPasses = 0x15 + 1; }
+    public boolean titleEntryFadePending() { return titleEntryPasses > 0; }
+    /** @return the passes left after this one */
+    public int consumeTitleEntryPass() { return --titleEntryPasses; }
     public void setStartHeld(boolean held) { startHeld = held; }
-    public int snapshotBytes() { return 2 * Integer.BYTES + 3 + credits.snapshotBytes() + art.snapshotBytes() + scene.snapshotBytes() + S3kEndingCloudState.BYTES; }
+    public int snapshotBytes() { return 3 * Integer.BYTES + 3 + credits.snapshotBytes() + art.snapshotBytes() + scene.snapshotBytes() + S3kEndingCloudState.BYTES; }
     public void captureTo(ByteBuffer buffer) {
         buffer.putInt(progress).putInt(flags).put((byte) (initialized ? 1 : 0))
-                .put((byte) (postCreditsStarted ? 1 : 0)).put((byte) (startHeld ? 1 : 0));
+                .put((byte) (postCreditsStarted ? 1 : 0)).put((byte) (startHeld ? 1 : 0)).putInt(titleEntryPasses);
         credits.captureTo(buffer); art.captureTo(buffer); scene.captureTo(buffer); clouds.captureTo(buffer);
     }
     public void restoreFrom(ByteBuffer buffer) {
         progress = buffer.getInt(); flags = buffer.getInt(); initialized = buffer.get() != 0;
-        postCreditsStarted = buffer.get() != 0; startHeld = buffer.get() != 0;
+        postCreditsStarted = buffer.get() != 0; startHeld = buffer.get() != 0; titleEntryPasses = buffer.getInt();
         credits.restoreFrom(buffer); art.restoreFrom(buffer); scene.restoreFrom(buffer); clouds.restoreFrom(buffer);
     }
 }

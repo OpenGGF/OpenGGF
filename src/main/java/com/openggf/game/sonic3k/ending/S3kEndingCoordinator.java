@@ -90,6 +90,19 @@ public final class S3kEndingCoordinator {
         var object = services.objectManager().createDynamicObject(S3kPostCreditsObjectInstance::new);
         if (object != null) state.markPostCreditsStarted();
     }
+    /**
+     * One Title_Screen entry pass (044fa46 sonic3k.asm:5074-5084): Pal_FadeToBlack's loop waits for
+     * the V-int and then runs Pal_ToBlack over all 64 colours, $15+1 times. Its VInt_12
+     * (871) runs Do_ControllerPal (948-964): the Normal_palette written by the previous pass,
+     * the unchanged Sprite_table and the H-scroll buffer go out before this pass's Pal_ToBlack.
+     */
+    public static boolean stepTitleEntryFade(S3kEndingState state, ObjectServices services) {
+        // The last level pass's table (built after loc_5F314 skipped the holder's Draw_Sprite).
+        com.openggf.level.LevelSpritePresentation.publishPreparedScene(services.levelManager());
+        com.openggf.graphics.PaletteUploadPresentation.publishAndLatch(services.graphicsManager());
+        S3kEndingPalette.toBlackAll(services);
+        return state.consumeTitleEntryPass() <= 0;
+    }
     public static void paletteWord(ObjectServices services, int line, int color, int word) {
         S3kPaletteWriteSupport.applyContiguousPatch(services.paletteOwnershipRegistryOrNull(), services.currentLevel(),
                 services.graphicsManager(), "s3k-ending", S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE,

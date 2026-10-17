@@ -6,7 +6,7 @@ import java.nio.ByteBuffer;
 import java.util.Objects;
 
 /** The internal $D01 ending level; it is neither AIZ1 nor a public campaign act. */
-public final class EndingZoneRuntimeState implements S3kZoneRuntimeState {
+public final class EndingZoneRuntimeState implements S3kZoneRuntimeState, com.openggf.game.TitleEntryFadeSource {
     private final PlayerCharacter character;
     private final S3kEndingState ending = new S3kEndingState();
     private final ScreenRam screen = new ScreenRam();
@@ -55,6 +55,10 @@ public final class EndingZoneRuntimeState implements S3kZoneRuntimeState {
 
     public EndingZoneRuntimeState(PlayerCharacter character) { this.character = Objects.requireNonNull(character); }
     public S3kEndingState ending() { return ending; }
+    @Override public boolean titleEntryFadePending() { return ending.titleEntryFadePending(); }
+    @Override public boolean stepTitleEntryFade(com.openggf.level.objects.ObjectServices services) {
+        return com.openggf.game.sonic3k.ending.S3kEndingCoordinator.stepTitleEntryFade(ending, services);
+    }
     public ScreenRam screen() { return screen; }
     @Override public int zoneIndex() { return 0x0D; }
     @Override public int actIndex() { return 1; }

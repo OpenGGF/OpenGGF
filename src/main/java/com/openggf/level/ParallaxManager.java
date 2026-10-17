@@ -398,8 +398,11 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
                 // Handlers that don't override FG vscroll return 0 (the default).
                 // SCZ modifies camera position directly during update(), so we
                 // re-read cam.getY() for the default case.
+                // An internal ExplicitForegroundVerticalScroll handler means its 0 as well.
                 short handlerFgVscroll = handler.getVscrollFactorFG();
-                if (handlerFgVscroll != 0) {
+                if (handlerFgVscroll != 0
+                        || handler instanceof com.openggf.game.internal.ExplicitForegroundVerticalScroll explicit
+                        && explicit.foregroundVerticalScrollExplicit()) {
                     vscrollFactorFG = handlerFgVscroll;
                 } else {
                     vscrollFactorFG = (short) cam.getY();

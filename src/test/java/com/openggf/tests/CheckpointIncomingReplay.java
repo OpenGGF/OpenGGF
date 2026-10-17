@@ -11,10 +11,10 @@ import com.openggf.game.rewind.RewindSnapshotDiff;
 import static org.junit.jupiter.api.Assertions.*;
 
 /** Full incoming-world replay after the actual reload/title/fade release, task S3K20261014. */
-final class CheckpointIncomingReplay {
+public final class CheckpointIncomingReplay {
     private CheckpointIncomingReplay() { }
 
-    static void verify(HeadlessTestFixture fixture, GameLoop loop, InputHandler input,
+    public static void verify(HeadlessTestFixture fixture, GameLoop loop, InputHandler input,
                        int checkpoint, Runnable assertOwners) {
         var registry = fixture.gameplayMode().getRewindRegistry();
         var objects = GameServices.level().getObjectManager();

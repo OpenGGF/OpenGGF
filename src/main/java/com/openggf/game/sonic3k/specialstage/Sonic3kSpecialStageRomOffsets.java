@@ -112,6 +112,10 @@ public final class Sonic3kSpecialStageRomOffsets {
     public static final long ART_UNC_TAILS_TAILS = 0x2909E8;
     public static final int ART_UNC_TAILS_TAILS_SIZE = 1792;
 
+    /** Map_SStageSphere_: 19 frame pointers, including shared far-size frames. */
+    static final long MAP_SPHERE = 0xA464;
+    static final int MAP_SPHERE_SIZE = 166;
+
     // ==================== Scalar Table ====================
 
     /** ScalarTable2 - sine/cosine lookup for 3D projection (256 words = 512 bytes) */

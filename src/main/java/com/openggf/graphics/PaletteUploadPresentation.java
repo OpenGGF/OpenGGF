@@ -27,9 +27,35 @@ public final class PaletteUploadPresentation {
         }
     }
 
+    /** Displayed CRAM fade generation and whether a later request still waits for its V-int. */
+    public record DisplayedFade(PaletteFadePresentation.Mode mode, int steps, int lineMask, boolean pending) { }
+
+    /** The fade CRAM currently holds (one V-int behind the requested fade while latched). */
+    public static PaletteFadePresentation displayedFade(GraphicsManager graphics) {
+        return graphics.displayedPaletteFade();
+    }
+
+    /** Captures the displayed fade generation for a rewind snapshot of the V-int publication. */
+    public static DisplayedFade captureDisplayedFade(GraphicsManager graphics) {
+        return graphics == null ? null : graphics.captureDisplayedPaletteFade();
+    }
+
+    /**
+     * Restores the captured displayed generation and holds it until the next V-int publication,
+     * so owners that re-request their fade while a snapshot is restored do not show it early.
+     */
+    public static void restoreDisplayedFade(GraphicsManager graphics, DisplayedFade state) {
+        if (graphics != null && state != null) {
+            graphics.restoreDisplayedPaletteFade(state);
+        }
+    }
+
     /** Uploads anything pending and returns to immediate uploads. */
     public static void release(GraphicsManager graphics) {
-        if (graphics != null && graphics.isPaletteUploadLatched()) {
+        if (graphics != null) {
+            // A rewind redraw also holds the displayed fade when this scene has
+            // no level upload latch. Its next publication must release that hold
+            // and flush the requested generation before returning to direct CRAM.
             graphics.setPaletteUploadLatched(false);
         }
     }

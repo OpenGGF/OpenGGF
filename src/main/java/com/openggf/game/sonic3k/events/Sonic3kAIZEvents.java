@@ -25,7 +25,6 @@ import com.openggf.game.sonic3k.resources.S3kKosRamDestinations;
 import com.openggf.game.timing.HardwareWorkHandle;
 import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.game.sonic3k.objects.AizBattleshipInstance;
-import com.openggf.game.sonic3k.objects.AizBgTreeSpawnerInstance;
 import com.openggf.game.sonic3k.objects.AizBombExplosionInstance;
 import com.openggf.game.sonic3k.objects.AizShipBombInstance;
 import com.openggf.game.sonic3k.objects.AizBossSmallInstance;
@@ -82,6 +81,13 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
 
     /** PalPointers index for Pal_AIZ (main AIZ palette, 3 lines → palette 1-3). */
     private static final int PAL_AIZ_INDEX = 0x2A;
+
+    /**
+     * word_4FAE4/word_4FAEA (sonic3k.asm:104562-104565): Knuckles' four colours for
+     * Normal_palette_line_4+$10, written by Adjust_AIZ1Chunks2 at AIZ1_ScreenInit and by
+     * AIZ1_Resize's $1308 palette reload when Player_mode is 3.
+     */
+    private static final int AIZ1_KNUCKLES_LINE4_PATCH_ADDR = 0x4FAE4;
 
     /** PalPointers index for Pal_AIZFire (fire palette, 3 lines → palette 1-3). */
     private static final int PAL_POINTER_AIZ_FIRE_INDEX = 0x0B;
@@ -197,6 +203,11 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
      * $200, with HInt split rendering hiding the seam.
      */
     private static final int BATTLESHIP_WRAP_X_POST_BOMBING = 0x46C0;
+    /**
+     * AIZ2SE_EndRefresh passes for loc_50008's 4-row redraw: two rows per
+     * Draw_PlaneVertBottomUp call, complete when the row count goes negative.
+     */
+    private static final int BATTLESHIP_END_REFRESH_PASSES = 3;
     /** Forest mask becomes visible once the bombship redraw reaches this camera X. */
     private static final int BATTLESHIP_FOREST_FRONT_START_X = 0x4380;
     /** ROM: Sonic's AIZ end-boss arena camera lock. Forest-front override ends here. */
@@ -271,6 +282,11 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     private boolean battleshipSpawned;
     /** Remaining ShipRefresh plane passes before AllocateObject creates the ship. */
     private int battleshipSpawnRefreshPasses;
+    /**
+     * Remaining AIZ2SE_EndRefresh passes; non-zero exactly while ROM
+     * {@code Events_routine_fg == $C} after the battleship has left.
+     */
+    private int battleshipEndRefreshPassesRemaining;
     /** True once the AIZ2 end boss has been handed off to the object system. */
     private boolean endBossSpawned;
     @RewindTransient(reason = "queue facade is rebound to the restored session ledger by captured ordinals")
@@ -614,6 +630,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         battleshipCameraWasFrozen = false;
         battleshipSpawned = false;
         battleshipSpawnRefreshPasses = 0;
+        battleshipEndRefreshPassesRemaining = 0;
         endBossSpawned = false;
         battleshipKosQueue = null;
         battleshipTerrainKosHandle = null;
@@ -681,10 +698,17 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         } else if (act == 0) {
             // Skip-intro level loading already selected the main AIZ1 terrain
             // profile, so only publish the matching palette/semantic phase.
+            // This is the Level's own palette, not AIZ1_Resize routine 0: that routine
+            // still reloads Pal_AIZ once the camera reaches $1308 (loc_1C4A6), so the
+            // preload must not mark that reload done.
             if (!paletteSwapped) {
                 loadPaletteFromPalPointers(PAL_AIZ_INDEX);
-                paletteSwapped = true;
             }
+            // AIZ1_ScreenInit -> Adjust_AIZ1Chunks (sonic3k.asm:104337-104338): for
+            // Player_mode 3, Adjust_AIZ1Chunks2 writes word_4FAE4 to
+            // Target_palette_line_4+$10 (104498-104502), which the level fade reaches.
+            // The chunk edits in the same routine are a separate owner.
+            applyKnucklesAiz1Line4TargetPatch();
             AizPlaneIntroInstance.setMainLevelPhaseActive(true);
         }
     }
@@ -831,7 +855,12 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         // use the predicted end-of-frame X for this threshold just like the
         // later AIZ1 resize and terrain-swap thresholds below.
         if (!paletteSwapped && frameEndCameraX >= PALETTE_SWAP_X) {
+            // loc_1C4A6: LoadPalette_Immediate PalID_AIZ, then for Player_mode 3 the
+            // word_4FAE4 colours at Normal_palette_line_4+$10 (sonic3k.asm:38928-38935).
+            // Both are zone-event writes, so they override this frame's AnPal colours as
+            // the ROM's resize does after Animate_Palette.
             loadPaletteFromPalPointers(PAL_AIZ_INDEX);
+            applyKnucklesAiz1Line4Patch();
             releaseAizIntroSidekickMarker();
             paletteSwapped = true;
             LOG.info("AIZ1: loaded main palette (PalPointers #0x2A) at cameraX=0x"
@@ -863,7 +892,10 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             // Skip palette reload if the fire transition is already active — the fire
             // palette takes precedence.  In skip-intro or teleport scenarios, the
             // simulated decompression countdown may expire after the fire has started.
-            if (!isFireTransitionActive()) {
+            // Engine-only: ROM routines 2/4 (loc_1C4D0/loc_1C550) load no palette. The
+            // re-apply clears the plane intro's emerald residue, so a start without the
+            // intro keeps its own palette (Knuckles' Adjust_AIZ1Chunks2 colours included).
+            if (!isFireTransitionActive() && shouldSpawnIntro(0)) {
                 loadPaletteFromPalPointers(PAL_AIZ_INDEX);
             }
             camera().setMinY((short) 0);
@@ -921,6 +953,44 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             AizIntroTerrainSwap.precomputeTransitionTilemaps(rom(), levelManager);
         } catch (IOException e) {
             LOG.warning("AIZ intro transition tilemap pre-build skipped: " + e.getMessage());
+        }
+    }
+
+    /** Adjust_AIZ1Chunks2: word_4FAE4 to Target_palette_line_4+$10, which the level fade reaches. */
+    private void applyKnucklesAiz1Line4TargetPatch() {
+        var registry = paletteRegistryOrNull();
+        if (playerCharacter() != PlayerCharacter.KNUCKLES || registry == null) {
+            return;
+        }
+        try {
+            registry.applyTargetPatch(S3kPaletteOwners.ZONE_EVENT_PALETTE_LOAD, 3, 8,
+                    rom().readBytes(AIZ1_KNUCKLES_LINE4_PATCH_ADDR, 8));
+        } catch (java.io.IOException e) {
+            throw new java.io.UncheckedIOException("AIZ1 Knuckles target line-4 patch", e);
+        }
+        // Also the immediate copy, as the level palette shows Target_palette once the fade ends.
+        applyKnucklesAiz1Line4Patch();
+    }
+
+    /** loc_1C4A6, Player_mode 3: word_4FAE4 to Normal_palette_line_4+$10. */
+    private void applyKnucklesAiz1Line4Patch() {
+        if (playerCharacter() != PlayerCharacter.KNUCKLES) {
+            return;
+        }
+        try {
+            S3kPaletteWriteSupport.applyContiguousPatch(
+                    paletteRegistryOrNull(),
+                    levelManager().getCurrentLevel(),
+                    graphics(),
+                    S3kPaletteOwners.ZONE_EVENT_PALETTE_LOAD,
+                    S3kPaletteOwners.PRIORITY_ZONE_EVENT,
+                    3,
+                    8,
+                    rom().readBytes(AIZ1_KNUCKLES_LINE4_PATCH_ADDR, 8));
+            S3kPaletteWriteSupport.resolvePendingWritesNow(
+                    paletteRegistryOrNull(), levelManager().getCurrentLevel(), graphics());
+        } catch (java.io.IOException e) {
+            throw new java.io.UncheckedIOException("AIZ1 Knuckles line-4 patch", e);
         }
     }
 
@@ -1905,11 +1975,48 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     }
 
     private void updateAiz2ScreenEvent() {
+        if (battleshipEndRefreshPassesRemaining > 0) {
+            runBattleshipEndRefreshPass();
+            return;
+        }
+        if (eventsFg4 && battleshipSpawned) {
+            // ROM AIZ2SE_ShipDraw: Obj_AIZBattleshipMain sets Events_fg_4 as the
+            // ship leaves; loc_50008 clears it, arms a 4-row redraw and advances
+            // Events_routine_fg to $C, falling into the first EndRefresh pass
+            // (docs/skdisasm/sonic3k.asm:104978-105002).
+            eventsFg4 = false;
+            battleshipEndRefreshPassesRemaining = BATTLESHIP_END_REFRESH_PASSES;
+            runBattleshipEndRefreshPass();
+            return;
+        }
         if (!eventsFg4 || battleshipAutoScrollActive || battleshipSpawned) {
             return;
         }
         eventsFg4 = false;
         startBattleshipSequence();
+    }
+
+    /**
+     * One AIZ2SE_EndRefresh pass. Draw_PlaneVertBottomUp draws two rows per
+     * call and reports completion only when Draw_delayed_rowcount goes
+     * negative (sonic3k.asm:103470-103502), so the 4-row redraw armed by
+     * loc_50008 finishes on the third pass; only then does EndRefresh move
+     * the ship-loop boundary to $46C0 and advance Events_routine_fg to $10
+     * (sonic3k.asm:105003-105017).
+     */
+    private void runBattleshipEndRefreshPass() {
+        battleshipEndRefreshPassesRemaining--;
+        if (battleshipEndRefreshPassesRemaining > 0) {
+            return;
+        }
+        battleshipWrapX = BATTLESHIP_WRAP_X_POST_BOMBING;
+        LOG.info("AIZ2 battleship: EndRefresh complete, wrap boundary now 0x"
+                + Integer.toHexString(battleshipWrapX));
+    }
+
+    /** ROM {@code Events_routine_fg == $C} (AIZ2SE_EndRefresh) after the battleship leaves. */
+    public boolean isAiz2ShipEndRefreshActive() {
+        return battleshipEndRefreshPassesRemaining > 0;
     }
 
     // --- Knuckles resize routines (sonic3k.asm:39157-39241) ---
@@ -2190,9 +2297,10 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         // small boss craft (post-bombing). If that driver is gone, the loop can never end,
         // so release it the same way onBossSmallComplete() does (unlock camera bounds).
         if (battleshipAutoScrollActive) {
-            boolean driverLive = (battleshipWrapX == BATTLESHIP_WRAP_X_POST_BOMBING)
-                    ? anyLiveObject(o -> o instanceof AizBossSmallInstance b && !b.isDestroyed())
-                    : anyLiveObject(o -> o instanceof AizBattleshipInstance b && !b.isDestroyed());
+            // The ship's SST becomes the small craft before AIZ2SE_EndRefresh moves
+            // the wrap to $46C0, so either occupant is a live loop driver.
+            boolean driverLive = anyLiveObject(o -> o instanceof AizBossSmallInstance b && !b.isDestroyed())
+                    || anyLiveObject(o -> o instanceof AizBattleshipInstance b && !b.isDestroyed());
             if (!driverLive) {
                 onBossSmallComplete();
             }
@@ -2546,27 +2654,18 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
 
     /**
      * Called by {@link AizBattleshipInstance} when the ship has crossed the screen
-     * and all bombs have been dropped. Spawns the small Eggman craft.
+     * and all bombs have been dropped. The ship itself hands its SST to the small
+     * Eggman craft and allocates the tree maker; this records the event flag.
      */
     public void onBattleshipComplete() {
-        // ROM: AIZ2SE_EndRefresh sets Events_bg+$02 = $46C0.
-        // This moves the wrap into the forested area right before the boss arena.
+        // ROM Obj_AIZBattleshipMain: st (Events_fg_4).w as the ship leaves
+        // (sonic3k.asm:105327-105333). This frame's AIZ2SE_ShipDraw consumes it
+        // and runs AIZ2SE_EndRefresh, which moves the ship-loop wrap to $46C0
+        // only when its redraw completes (see runBattleshipEndRefreshPass).
         // In the ROM, the HInt screen-split hides the terrain seam at the wrap point;
         // without it there's a slight visual discontinuity, but the loop location is correct.
-        battleshipWrapX = BATTLESHIP_WRAP_X_POST_BOMBING;
-
-        var objManager = levelManager().getObjectManager();
-        if (objManager != null) {
-            AizBossSmallInstance smallBoss = new AizBossSmallInstance();
-            objManager.addDynamicObject(smallBoss);
-
-            // ROM: Obj_AIZ2MakeTree - spawner for parallax background trees
-            AizBgTreeSpawnerInstance treeSpawner = new AizBgTreeSpawnerInstance();
-            objManager.addDynamicObject(treeSpawner);
-        }
-        LOG.info("AIZ2 battleship: bombing complete, wrap boundary now 0x"
-                + Integer.toHexString(battleshipWrapX)
-                + ", spawned small boss craft and tree spawner");
+        eventsFg4 = true;
+        LOG.info("AIZ2 battleship: bombing complete, Events_fg_4 set for AIZ2SE_ShipDraw");
     }
 
     /**
@@ -3298,6 +3397,8 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     public boolean isBattleshipAutoScrollActiveRaw()        { return battleshipAutoScrollActive; }
     public void    setBattleshipAutoScrollActiveRaw(boolean v){ battleshipAutoScrollActive = v; }
     public boolean isBattleshipSpawned()                    { return battleshipSpawned; }
+    public int     getBattleshipEndRefreshPassesRemaining() { return battleshipEndRefreshPassesRemaining; }
+    public void    setBattleshipEndRefreshPassesRemaining(int v){ battleshipEndRefreshPassesRemaining = v; }
     public void    setBattleshipSpawned(boolean v)          { battleshipSpawned = v; }
     public boolean isEndBossSpawned()                       { return endBossSpawned; }
     public void    setEndBossSpawned(boolean v)             { endBossSpawned = v; }

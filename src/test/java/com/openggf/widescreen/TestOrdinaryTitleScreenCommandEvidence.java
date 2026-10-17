@@ -259,8 +259,9 @@ class TestOrdinaryTitleScreenCommandEvidence {
             assertPattern(graphics.patterns().get(0), PatternAtlasRange.S3K_TITLE_SCREEN_ANIMATION.base() + 1, 1);
             assertEquals(width == 320 ? 0 : width == 400 ? 40 : 104,
                     graphics.patterns().get(0).x(), "S3K animation offset at " + width);
-            assertEquals(width, graphics.rects().getLast().width(),
-                    "S3K animation fade covers live width at " + width);
+            // Pal_FadeFromBlack steps CRAM line 0, so the backdrop clear carries the fade across the live
+            // width; there is no overlay quad.
+            assertTrue(graphics.rects().isEmpty(), "S3K SEGA fade is a palette fade at " + width);
 
             graphics.clear();
             setField(manager, "phase", enumFieldValue(manager, "phase", "INTERACTIVE"));

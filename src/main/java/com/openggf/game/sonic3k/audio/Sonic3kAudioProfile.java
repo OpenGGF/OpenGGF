@@ -30,7 +30,20 @@ import java.util.Map;
  *   <li>DAC samples use DPCM compression with bank switching.</li>
  * </ul>
  */
-public class Sonic3kAudioProfile extends AbstractAudioProfile implements com.openggf.audio.NativeAudioEffectCues {
+public class Sonic3kAudioProfile extends AbstractAudioProfile implements com.openggf.audio.NativeAudioEffectCues,
+        com.openggf.audio.NativeMailboxMusicRoutes {
+    /** {@code mus_CreditsK}, placed after the SFX ids (skdisasm 044fa46 sonic3k.constants.asm:1691). */
+    private static final int MUS_CREDITS_K = 0xDC;
+
+    /**
+     * {@code zPlaySoundByIndex} tests {@code mus_CreditsK} before every other range and jumps to
+     * {@code zPlayMusicCredits}, which loads the last music-table entry, {@code $32}, and continues
+     * as ordinary music through {@code zPlayMusic_DoFade} (skdisasm 044fa46 Sound/Z80 Sound Driver.asm:1641-1644,
+     * 1709-1712). Engine music ids are one-based, so that entry is {@link Sonic3kMusic#CREDITS_SK}.
+     */
+    @Override public int musicForNativeRequest(int nativeRequestId) {
+        return nativeRequestId == MUS_CREDITS_K ? Sonic3kMusic.CREDITS_SK.id : -1;
+    }
     @Override public boolean permitsTemporaryMusic(int musicId) {
         // The locked-on driver table's first 23 entries are ordinary zone music, not priority jingles.
         return musicId >= Sonic3kMusic.AIZ1.id && musicId <= Sonic3kMusic.DEZ2.id;

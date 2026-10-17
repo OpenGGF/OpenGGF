@@ -98,6 +98,8 @@ public final class ModApiVersion {
      * ownership and whole-picture transforms without exposing implementation classes.
      * Display colour expansion independently selects Full or Limited palette RGB output
      * while retaining colour profile semantics and native palette ownership.
+     * Host-owned PaletteWhiteFadeModel rules and white palette presentation modes
+     * expose native S3K CRAM passes; prior GameRules constructors retain their overlay default.
      * Creator reconstruction uses ObjectReconstructionContext; host dynamic-entry
      * queues and whole-object-manager snapshot shapes remain engine internals.
      */

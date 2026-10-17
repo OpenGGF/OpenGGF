@@ -54,6 +54,19 @@ no fallback asset or intentional discrepancy is introduced. All 55 affected cont
 scroll/RAM, lifecycle and pixel checks pass; scope is recorded in the
 [dated resource-boundary record](architecture/designs/2026-10-13-s3k-ending-lifecycle.md#deferred-ending-deformation-resources--2026-10-13).
 
+**Native white-palette repair (2026-10-17, local candidate):** managed white fades now follow the
+host ROM's distinct component routines and wait count, with the same display conversion on backdrop and
+water colours. This removes an implementation defect, not an accepted deviation. The
+[owner/evidence record](architecture/designs/2026-10-13-s3k-ending-lifecycle.md#native-white-palette-fade-owner-decision--2026-10-17-root)
+and [known-bug limits](status/s3k-known-bugs.md#super-emerald-stage-layout-set-and-results-digit-column-open)
+retain the remaining scene pixels, timing and native-product breadth; delivery validation is still pending.
+
+**Results presentation repair (2026-10-17, local candidate):** the ROM-backed score/bonus geometry and
+native opaque sprite priority are restored. All17 sampled results reveal checkpoints of the declared
+Tails320 NTSC seven-Chaos product match original native RGB; stage pixels and broader products remain open.
+The [results evidence](architecture/designs/2026-10-13-s3k-ending-lifecycle.md#native-results-geometry-and-painter-order--2026-10-17-root)
+records the162 focused passes and the reproducible maintained capture tool. No accepted deviation was added.
+
 ## Table of Contents
 
 1. [YM Service Timing: Source-Relative Timeline Without Absolute VInt Phase](#ym-service-timing-source-relative-timeline-without-absolute-vint-phase)
@@ -946,6 +959,14 @@ regression reproduces the old missing interior pixels and covers both physical
 edges, drift directions and sprite-priority masks. See the SSZ2 matrix and
 campaign audit for execution and delivery status.
 
+Knuckles terminal overlap correction (2026-10-17): the eyecatch now preserves
+native child order during SAT collection and reverse order during direct
+drawing. Its declared native 320 NTSC Super-emerald checkpoint matches the
+emulator's original active RGB exactly after a 70-pixel old-code GPU failure.
+This is one SSZ2 component checkpoint; whole-terminal, cold, PAL/PCM, wide and
+donor presentation limits remain in the
+[ending matrix](architecture/validation/levels/s3k-ending.md#knuckles-eyecatch-native-sat-priority--2026-10-17).
+
 ## Sprite_OnScreen_Test lifetime audit
 
 LRZ Fireworm defeat correction (2026-09-29): body retirement previously cleared
@@ -1108,3 +1129,44 @@ position state stays synchronized to native x/y, without a custom restore hook.
 - SSZ1 cloud-mode transitions keep the background source window aligned to the
   displayed vertical scroll, eliminating the blank entering frame. Rewind
   re-render restores the displayed mode and intermediate HScroll words.
+
+
+## Blue Sphere player projection and shadows (local correction, 2026-10-17)
+
+Native `sub_953E`/`sub_A206` project the main player and sidekick using
+ROM ScalarTable2 and their different depths; the former linear screen offset
+put their ground centres at 160/172 instead of 162/179 and distorted jumps.
+The renderer now uses the ROM integer projection. `Draw_SSShadows`' fixed
+4x4 shadow operators are also drawn behind ordinary sprites after the boot
+fade, with the publication phase captured for rewind. The
+[sanctuary matrix](architecture/validation/levels/s3k-hpz-sanctuary.md#blue-sphere-presentation-components--2026-10-17)
+records old-source failures and 106 focused passes. A new actual framebuffer
+comparison, remaining sphere/HUD phase differences, whole routes, donor,
+PAL and PCM remain open; component passes do not certify those products.
+
+Composed native RGB follow-up (2026-10-17): the actual seven-Chaos v8 capture
+reduces stage reveal+22 from1112 to330 differing pixels, confined above y58;
+all pixels at y128..223 match at +0/+10/+22. The17 sampled results frames
+remain exact and both state/event CSVs are byte-identical to v6. See the
+completion plan's composed presentation qualification. This certifies those
+sampled native320 Tails/NTSC/Limited-RAW_RGB pictures only; upper HUD/distant
+object phase and the wider route/configuration/PAL/PCM obligations stay open.
+
+
+Distant-sphere follow-up (2026-10-17): the actual ROM mapping table aliases
+several far-depth frames. Using those bytes passes138 focused checks without
+skips and reduces stage reveal+22 from330 to46 raw RGB differences; the17
+sampled results frames remain exact and gameplay/event CSVs are unchanged.
+The remaining far-sphere overlap/priority gap is explicit in the
+[completion plan](architecture/plans/2026-10-13-s3k-playable-completion.md#blue-sphere-distant-mapping-frames--2026-10-17).
+These sampled native320 Tails/NTSC/Limited-RAW_RGB pictures do not certify
+complete stage/cold routes, donor/PAL/PCM or other native configurations.
+
+
+Rewind fade-publication follow-up (2026-10-17): the composed white-fade change
+left a restored displayed generation held in scenes without a level upload latch.
+The normal scene release now flushes that independent hold. Old-source gateway
+and short latch assertions fail; corrected focused112 and complete sanctuary
+entry/return matrices2006 pass without skips. The [completion plan](architecture/plans/2026-10-13-s3k-playable-completion.md#immediate-scene-fade-publication-after-rewind--2026-10-17)
+records exact commands and scope. Native RGB residuals, strict traces and
+configuration/cold/PAL/PCM limits outside these products remain open.

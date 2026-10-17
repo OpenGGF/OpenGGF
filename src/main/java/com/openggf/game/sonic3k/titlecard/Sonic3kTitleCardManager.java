@@ -52,6 +52,7 @@ public class Sonic3kTitleCardManager
         implements TitleCardProvider,
         com.openggf.game.internal.FreshLevelTitleBoundaryPublication,
         com.openggf.game.internal.TitleCardBeneathLevelHud,
+        com.openggf.game.internal.TitleCardVintPublication,
         RewindSnapshottable<Sonic3kTitleCardManager.Snapshot> {
     private static final Logger LOG = Logger.getLogger(Sonic3kTitleCardManager.class.getName());
     public static final String REWIND_KEY = "s3k-title-card";
@@ -60,8 +61,9 @@ public class Sonic3kTitleCardManager
     private static final int SLIDE_SPEED_IN = 16;
     private static final int SLIDE_SPEED_OUT = 32;
 
-    // Display hold duration (frames). ROM: Level routine overwrites $2E to $16 (22)
-    // at lines 7897-7900, synchronizing the hold with Palette_fade_timer.
+    // Display hold duration (frames). ROM: Obj_TitleCardInit stores 90; Level/loc_64DC
+    // overwrites $2E with $16 (22) for LevelLoop (sonic3k.asm:62162, 7876-7878),
+    // synchronizing the hold with Palette_fade_timer.
     private static final int DISPLAY_HOLD_FRAMES = 90;
     private static final int FRESH_LEVEL_TRANSITION_HOLD_FRAMES = 22;
 
@@ -167,6 +169,28 @@ public class Sonic3kTitleCardManager
     private final boolean[] elemExited = new boolean[ELEMENT_COUNT];
     private boolean actNumberVisible;  // False for single-act zones
 
+    /**
+     * The card pieces are sprite objects: Render_Sprites places them in the sprite table during
+     * a frame's logic and the next V-int uploads it (title-card VInt_C, LevelLoop VInt_8), so the
+     * screen shows the generation latched at that publication, not the state logic has advanced to.
+     * Null until the host has published the card once (drawing without a publication uses the
+     * live state, as callers outside the level presentation do).
+     */
+    private PublishedCard publishedCard;
+    /** The generation the last Render_Sprites point placed in the sprite table, awaiting its V-int. */
+    private PublishedCard preparedCard;
+
+    /** One published generation of the card's drawn inputs. */
+    record PublishedCard(int[] x, int[] y, int[] frame, boolean[] exited,
+                         boolean opaqueBackdrop, boolean bonusMode, boolean actNumberVisible) {
+        PublishedCard {
+            x = x.clone();
+            y = y.clone();
+            frame = frame.clone();
+            exited = exited.clone();
+        }
+    }
+
     // Art data
     private Pattern[] combinedPatterns;
     private boolean artLoaded;
@@ -238,7 +262,9 @@ public class Sonic3kTitleCardManager
             boolean artLoading,
             long runtimeArtAdmissionLeaseId,
             boolean runtimeArtAdmissionConsumed,
-            int freshLevelRuntimeArtHandoffLevelIndex) {
+            int freshLevelRuntimeArtHandoffLevelIndex,
+            PublishedCard publishedCard,
+            PublishedCard preparedCard) {
         public Snapshot {
             Objects.requireNonNull(state, "state");
             elemX = elemX.clone();
@@ -296,7 +322,7 @@ public class Sonic3kTitleCardManager
                 combinedPatterns, artLoaded, artCached, lastLoadedZone,
                 lastLoadedAct, artHandles, artDestinations, artLoading,
                 runtimeArtAdmissionLeaseId, runtimeArtAdmissionConsumed,
-                freshLevelRuntimeArtHandoffLevelIndex);
+                freshLevelRuntimeArtHandoffLevelIndex, publishedCard, preparedCard);
     }
 
     @Override
@@ -349,6 +375,8 @@ public class Sonic3kTitleCardManager
         copy(snapshot.elemOutsideViewport(), elemOutsideViewport);
         copy(snapshot.elemExited(), elemExited);
         actNumberVisible = snapshot.actNumberVisible();
+        publishedCard = snapshot.publishedCard();
+        preparedCard = snapshot.preparedCard();
         combinedPatterns = snapshot.combinedPatterns();
         artLoaded = snapshot.artLoaded();
         artCached = snapshot.artCached();
@@ -415,19 +443,40 @@ public class Sonic3kTitleCardManager
 
     // ---- TitleCardProvider interface ----
 
+    /**
+     * Every {@code Level:} entry -- a data-select launch, a death's
+     * {@code Restart_level_flag} reload, a bonus-stage return, a direct boot --
+     * installs this owner at loc_62B6 and runs the same loc_62CC wait,
+     * {@code LoadLevelLoadBlock} and loc_64DC hold before LevelLoop
+     * (sonic3k.asm:7730-7878). A zone request differs only in also holding its
+     * destination players, which LevelManager's fresh boundary owns.
+     */
     @Override
     public void initialize(int zoneIndex, int actIndex) {
-        initInternal(zoneIndex, actIndex, false, DISPLAY_HOLD_FRAMES);
+        initializeLevelRoutineTitle(zoneIndex, actIndex);
     }
 
     @Override
     public void initializeFreshLevelTransition(int zoneIndex, int actIndex) {
+        initializeLevelRoutineTitle(zoneIndex, actIndex);
+    }
+
+    private void initializeLevelRoutineTitle(int zoneIndex, int actIndex) {
         // Obj_TitleCardInit stores 90, then Level overwrites the same owner
-        // with #$16 just before LevelLoop (sonic3k.asm:62187, 7897-7900).
+        // with #$16 just before LevelLoop (sonic3k.asm:62162, 7878).
         // Obj_TitleCardInit queues its archives on every Level: entry even
         // when this process already retains decoded art from the same act.
         artLoaded = false;
         initInternal(zoneIndex, actIndex, false, DISPLAY_HOLD_FRAMES);
+        enterLevelRoutineTitleLoop(zoneIndex, actIndex);
+    }
+
+    /**
+     * Arms the Level routine's loc_62CC gates for this owner: the Nemesis queue
+     * Level filled before installing it, and the terrain parents
+     * LoadLevelLoadBlock queues once the card has settled.
+     */
+    private void enterLevelRoutineTitleLoop(int zoneIndex, int actIndex) {
         freshLevelTransitionMode = true;
         var plc = GameServices.module().getGameService(
                 com.openggf.game.sonic3k.Sonic3kLevelTitlePlcService.class);
@@ -829,10 +878,14 @@ public class Sonic3kTitleCardManager
      * Uses 2 horizontal elements (frames 19/20) instead of the normal 4-element layout.
      * Both elements have exit priority 1 (exit simultaneously).
      *
-     * <p>ROM reference: ObjArray_TtlCardBonus (sonic3k.asm line 62482).
+     * <p>ROM reference: ObjArray_TtlCardBonus (sonic3k.asm line 62482). A bonus
+     * stage is entered through the same {@code Level:} routine as any zone, so
+     * this owner takes the same loc_62CC gates and loc_64DC hold.
      */
     @Override
     public void initializeBonus() {
+        // Obj_TitleCardInit queues the archives again on every Level: entry.
+        artLoaded = false;
         this.bonusMode = true;
         this.inLevelMode = false;
         this.freshLevelTransitionMode = false;
@@ -865,6 +918,10 @@ public class Sonic3kTitleCardManager
         }
 
         artCached = false;
+        // The bonus card has no zone/act of its own; the loaded bonus zone's
+        // LevelLoadBlock PLC fills the Nemesis queue loc_62CC waits on.
+        var level = GameServices.level();
+        enterLevelRoutineTitleLoop(level.getCurrentZone(), level.getCurrentAct());
         LOG.info("S3K bonus title card initialized");
     }
 
@@ -941,14 +998,14 @@ public class Sonic3kTitleCardManager
      * Whether the hold is the one {@code Level/loc_64DC} armed for LevelLoop
      * (sonic3k.asm:7874-7878): {@code Pal_FillBlack} over
      * {@code Palette_fade_info = $202F}, then {@code Palette_fade_timer} and
-     * this owner's {@code $2E} both set to {@code $16}. Only the fresh title
-     * owner's handoff installs that hold; in-level and bonus cards never pass
-     * through the Level routine. The lines 1-3 fade itself belongs to that
-     * routine ({@code Sonic3kLevelAnimationManager}'s {@code Animate_Palette}).
+     * this owner's {@code $2E} both set to {@code $16}. Every Level-routine
+     * owner, the bonus card included, receives that hold at its handoff; an
+     * in-level card never passes through the Level routine. The lines 1-3 fade
+     * itself belongs to that routine ({@code Sonic3kLevelAnimationManager}'s
+     * {@code Animate_Palette}).
      */
     private boolean levelLoopHoldArmed() {
-        return displayHoldFrames == FRESH_LEVEL_TRANSITION_HOLD_FRAMES
-                && !inLevelMode && !bonusMode;
+        return displayHoldFrames == FRESH_LEVEL_TRANSITION_HOLD_FRAMES && !inLevelMode;
     }
 
     private void updateOwnedChildren() {
@@ -977,15 +1034,17 @@ public class Sonic3kTitleCardManager
                 }
                 return;
             }
-            if (!freshLevelTransitionMode) {
+            // A Level-routine owner publishes at LoadLevelLoadBlock (terrain
+            // start below); once released, any armed level is a later load's.
+            if (inLevelMode) {
                 publishFreshLevelRuntimeArtHandoffIfNeeded();
             }
         } else if (artLoaded) {
-            // A repeated same-zone load reuses the already-ready title sheet.
-            // Publish at the same readiness boundary as the queued-art path
+            // A repeated same-zone in-level card reuses the already-ready title
+            // sheet. Publish at the same readiness boundary as the queued-art path
             // instead of waiting for EXIT, where another load could replace
             // the armed level identity.
-            if (!freshLevelTransitionMode) {
+            if (inLevelMode) {
                 publishFreshLevelRuntimeArtHandoffIfNeeded();
             }
         }
@@ -1175,10 +1234,14 @@ public class Sonic3kTitleCardManager
         GraphicsManager gm = GameServices.graphics();
         if (gm == null) return;
 
+        PublishedCard shown = publishedCard != null ? publishedCard
+                : new PublishedCard(elemX, elemY, elemFrame, elemExited,
+                        drawsOpaqueLevelBackdrop(), bonusMode, actNumberVisible);
+
         // Black background during the locked SLIDE_IN/DISPLAY (not in-level mode).
         // The bonus card is the same Obj_TitleCard: its stage fades in through the
         // level's Animate_Palette once LevelLoop runs, not through the card.
-        if (drawsOpaqueLevelBackdrop()) {
+        if (shown.opaqueBackdrop()) {
             // Span the full viewport so no level bleeds through on wider screens.
             // viewportWidth()==SCREEN_WIDTH at native 320 — byte-identical.
             int vw = viewportWidth();
@@ -1191,15 +1254,15 @@ public class Sonic3kTitleCardManager
 
         gm.beginPatternBatch();
 
-        if (bonusMode) {
-            renderElement(gm, BONUS_ELEM_BONUS);
-            renderElement(gm, BONUS_ELEM_STAGE);
+        if (shown.bonusMode()) {
+            renderElement(gm, shown, BONUS_ELEM_BONUS);
+            renderElement(gm, shown, BONUS_ELEM_STAGE);
         } else {
-            renderElement(gm, ELEM_BANNER);
-            renderElement(gm, ELEM_ZONE_NAME);
-            renderElement(gm, ELEM_ZONE_TEXT);
-            if (actNumberVisible) {
-                renderElement(gm, ELEM_ACT_NUM);
+            renderElement(gm, shown, ELEM_BANNER);
+            renderElement(gm, shown, ELEM_ZONE_NAME);
+            renderElement(gm, shown, ELEM_ZONE_TEXT);
+            if (shown.actNumberVisible()) {
+                renderElement(gm, shown, ELEM_ACT_NUM);
             }
         }
 
@@ -1254,6 +1317,8 @@ public class Sonic3kTitleCardManager
         Arrays.fill(elemExiting, false);
         Arrays.fill(elemOutsideViewport, false);
         Arrays.fill(elemExited, false);
+        publishedCard = null;
+        preparedCard = null;
     }
 
     @Override
@@ -1405,7 +1470,7 @@ public class Sonic3kTitleCardManager
                 consumeRuntimeArtAdmissionIfNeeded();
             }
             state = Sonic3kTitleCardState.COMPLETE;
-            if (!freshLevelTransitionMode) {
+            if (inLevelMode) {
                 publishFreshLevelRuntimeArtHandoffIfNeeded();
             }
             if (inLevelMode && !inLevelGameplayOwnedExternally) {
@@ -1728,16 +1793,27 @@ public class Sonic3kTitleCardManager
 
     // ---- Rendering ----
 
-    private void renderElement(GraphicsManager gm, int elemIdx) {
-        if (!artLoaded || combinedPatterns == null) return;
-        if (elemExited[elemIdx]) return;
+    @Override
+    public void prepareTitleCardPresentation() {
+        preparedCard = new PublishedCard(elemX, elemY, elemFrame, elemExited,
+                drawsOpaqueLevelBackdrop(), bonusMode, actNumberVisible);
+    }
 
-        int frameIndex = elemFrame[elemIdx];
+    @Override
+    public void publishTitleCardPresentation() {
+        publishedCard = preparedCard;
+    }
+
+    private void renderElement(GraphicsManager gm, PublishedCard shown, int elemIdx) {
+        if (!artLoaded || combinedPatterns == null) return;
+        if (shown.exited()[elemIdx]) return;
+
+        int frameIndex = shown.frame()[elemIdx];
         TitleCardMappings.SpritePiece[] pieces = Sonic3kTitleCardMappings.getFrame(frameIndex);
         // xOffset() centres the 320-wide composition in the viewport.
         // At native 320 xOffset()==0 — byte-identical.
-        int centerX = elemX[elemIdx] + xOffset();
-        int centerY = elemY[elemIdx];
+        int centerX = shown.x()[elemIdx] + xOffset();
+        int centerY = shown.y()[elemIdx];
 
         // Render back-to-front: VDP sprites earlier in the mapping have higher
         // priority (appear in front). Drawing in reverse ensures the highest-priority

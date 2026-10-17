@@ -592,3 +592,26 @@ The bonus-only rewind spots and live-history bounds move with the movie (3400/35
 load. Validation: run `v-soz2` (focused queued `TestSozColdRouteCapture`, S3K ROM,
 branch bugfix/ai-s3k-route-behaviour-regressions on 2adfa37a7) 9/0/0/0, 0 skips;
 Knuckles solo ready=23872, 29 replay windows.
+
+## Knuckles bonus route retimed for the Level-routine title-card hold (2026-10-16)
+
+The bonus entry and bonus return cards now release `LevelLoop` into the native `$16` hold at
+`Level/loc_64DC` instead of after a 90-frame locked DISPLAY. On the unchanged movie the
+route died at 4531. Per-frame tables were taken on baseline `d3fb0625e` and on the change.
+At the bonus entry the old card was locked over inputs 3215-3321 and released into
+BONUS_STAGE at 3322 (`EXIT/90`). The new card is locked for 102 inputs and releases at 3317
+(`DISPLAY/0`). At the bonus return the old card was locked over 3588-3712 (125 inputs). The
+new card is locked for 61. Every one of those inputs falls in a locked window, where the game
+never reads them. The edit removes five neutral inputs before the entry release (3312-3316)
+and the return window's first 64 inputs (3588-3651). The held `L` at the entry release and
+the held `R` at the return release keep their edge history. On the edited movie the return
+card starts at 3583 and releases at 3644, as predicted. The bonus spots and the live-history
+bound move with the movie: 3411 and 3511 by -5, 3722 and 3822 by -69. Validation on the
+round-2 integration base `6405313ce` with the change: focused queued `TestSozColdRouteCapture`
+(S3K ROM, Maven finished 2026-10-16T18:51:47+01:00) 9 run, 0 failed, 0 errors, 0 skipped.
+Knuckles act 1 reaches ready=23803 (23872 - 69) with 29 replay windows. The Sonic and Tails
+act-1 and act-2 routes are unchanged: ready 28436, 31587, 16626 and 28612.
+
+| Movie | Old SHA-256 | New SHA-256 | Removed | Frames | Releases |
+|---|---|---|---|---|---|
+| `soz1-cold-knuckles.bk2` | `1f470578c537eb075398b77b0614884efda6deaf8e099d4e243d0be5775f198e` | `f2d6cdccac2a5f1ca7d70c6aa8f62a8803cbb972ba66be3dc71c3b4f28f332d6` | -5 at 3312 (bonus entry), -64 at 3588 (bonus return) | 24005 | bonus 3317, return 3644 |
