@@ -197,7 +197,8 @@ abstract class CanonicalEntryMatrixSupport {
     void advanceEntry(HeadlessTestFixture fixture, Row row, int frames, boolean right) {
         int lives = GameServices.gameState().getLives();
         for (int frame = 0; frame < frames; frame++) {
-            fixture.stepFrame(false, right, false, false, false);
+            // stepFrame order is (up, down, left, right, jump).
+            fixture.stepFrame(false, false, false, right, false);
             assertFalse(GameServices.sprites().getMainPlayable().getDead());
             assertEquals(lives, GameServices.gameState().getLives(), "no hidden P1 restart");
             assertOwners(row);
