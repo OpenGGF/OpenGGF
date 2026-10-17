@@ -6047,3 +6047,19 @@ pop/landing/flight and next-pass hole reuse, copied-camera/vertical-wrap edge
 cases, and twice forced whole-world recreation/forward replay. Shared nonzero
 animal subtypes have additional player-relative branches; ending/capsule animal
 owners are separate. Neither is certified by the subtype0 correction.
+
+
+## Bumper score credit, popup allocation and the zero-respawn branch
+
+`sub_32F56` / `loc_32FC4` (locked-on `sonic3k.asm`, pinned skdisasm
+`044fa46725c71187399e13f5ddb70e11d32dc024`) tests the `$8A` hit-credit cap
+only when `respawn_addr(a0)` is nonzero. A zero address branches directly to
+`HUD_AddToScore`, then `AllocateObject`; allocation failure loses the popup,
+not the score. An unconditional Java ten-hit counter does not model that path.
+The popup receives the bumper centre and mapping frame4. Existing S3K points
+must also carry `Obj_EnemyScore`'s priority `$80` (bucket1) separately from
+`make_art_tile(ArtTile_StarPost,0,1)`'s high plane bit; ROM-backed mapping art
+alone does not override the render consumer's object header defaults.
+Origin: 2026-10-17 bounded Pachinko popup producer task over Root28fd18de8;
+real-contact old-red and twice-recreated whole-world lifetime evidence are in
+`docs/architecture/validation/levels/s3k-bonus-stage-transitions.md`.

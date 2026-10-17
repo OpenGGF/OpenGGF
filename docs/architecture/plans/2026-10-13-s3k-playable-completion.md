@@ -4643,3 +4643,36 @@ and normal hooks. Root39policy cases/shell+PS syntax/review reused, no extraJava
 R6 seven inspected diagnostic/class files consumed metadataalone, no archives,
 no live handles. Only existing R6 Plan/matrix evidence remains for its separate
 normal docs commit; R4e207 and R5 remain separate, Main803 untouched.
+
+
+### Pachinko popup producer handback — 2026-10-17
+
+One bounded GPT-6.1 implementation in owned `t3-649fee32`, branch
+`feature/ai-s3k-pachinko-score-popup-gpt61`, fast-forwarded cleanly from
+Main `8030832d2` to Root `28fd18de8212f8a844763d8399c9bcd000684a79` before edits.
+[Source, exact commands, hashes and coverage](../validation/levels/s3k-bonus-stage-transitions.md#pachinko-bumper-score-popup-producer--2026-10-17)
+record native `sub_32F56` credit → ordinary allocation → centre/frame 4 and
+the authorized S3K-only points header dependency (bucket 1/high bit).
+Retained draft `d56216d5ea199e49d848ef8d9f6505f513db8d9e` was inspected,
+not adopted: its unconditional cap contradicts native zero-respawn bypass.
+No foreign shield work or Slot follow-up `7380f7b1f` was changed.
+
+Real-contact old-red 86734 fails only missing popup after score +10;
+presentation old-red 67734 exposes all five S3K header values while S1/S2
+controls pass. Final 37738 qualifies85 focused tests, including fresh-object
+whole-world contact/live-popup natural-deletion replay twice and mandatory
+S3K4. Canonical 75651 qualifies all three bonus traces. Segment63341 passes
+Pachinko3 and Gumball; the other two fail at inherited122 rings /469 x_speed.
+Matched Root28 runtime-only34084 reproduces the complete1638/1257 error arrays,
+including all fields/spans/values/groups, with zero warnings/bootstrap/skips.
+No frontier was tuned, omitted or reclassified. Candidate bytes restored
+exactly; last local target is baseline-compiled, so Root compiles its final
+composition afresh. No extra Maven/capture/review run is needed for this unit.
+
+Owned private config is now an exact regular-file copy of Main's unchanged
+config instead of T3's symlink. Source/Git changes used the intended-tree
+lease; Maven used current Main's absolute wrapper from this cwd. All terminal
+sessions, temporary backup and consumed diagnostic cleanup are accounted for.
+Only the generated ignored private config remains for Root's tree cleanup.
+No Main integration/push, branch/tree removal, RGB certificate, native run or
+whole-objective qualification is included; Root owns remaining delivery gates.
