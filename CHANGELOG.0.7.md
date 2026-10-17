@@ -169,7 +169,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   leaving its registration to the next ordinary status tick. Fresh title
   boundaries retain their deferred assembly and publication state on rewind.
   HCZ hanging bars read the native raw companion-controller directions,
-  preserving neutral input while the follower CPU steers. Collision layout reads
+  preserving neutral input while the follower CPU steers. Its solid blocks keep
+  their native underside and side contacts offscreen. Collision layout reads
   preserve the ROM's encoded word addressing and current ROM aliases; seamless
   terrain loads retain unwritten definition bytes, including through rewind. Full native saves
   clear collected giant rings at their seven existing save points, including in

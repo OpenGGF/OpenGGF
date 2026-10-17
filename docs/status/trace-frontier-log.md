@@ -113516,3 +113516,27 @@ No full returned-HCZ/slice/alternate/GLFW qualification on this runtime. Matched
 historical4699/4353 remains mixed,3738 unmatched. Focused122 has one exactly
 matched inherited mock error; guards179 have two inherited MenuAudio failures.
 [Exact selectors, source epochs, all windows, intermediate failures and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r10-encoded-collision-words-resident-destinations-and-rom-aliases--2026-10-17).
+
+
+### 2026-10-17 — R11 native HCZBlock Full2 closes7807 through7808
+
+Base152d07 in owned3aa3, branchbugfix/ai-s3k-hcz-7807-causal-owner. HCZBlock
+loc1F3CA calls Full2: both player and object offscreen gates are bypassed.
+Independent real-object controls85345 old-red3/2F (on-screen passes) →41923
+focused157/0F/0E/0S, twice whole-world recreation/replay; guards22063 118/0F/0E/0S.
+Only existing HCZBlock bypass capability changes; no shared movement/API/state.
+
+Current Main absolute wrapper, normal lane, original three ROMs, Java25/Lua5.4,
+EGL/nullAL/no ambient display, single reusable fork/alphabetical, `-Dmse=off
+-Ptrace-replay -Dtest=TestS3kHcz7808QualifiedPrefix#originalCanonicalThrough7808
+ test -B` runs sole final7687 from original AD40 bootstrap/input/lag. Temporary
+sensor/checkpoint observer removed before it. Observer1/0F/0E/0S is not parity.
+HCZ7809/14208 rows:206=11camera physics+195animation, lag53, warning/bootstrap0,
+no non-camera physics mismatch through7808. Pre-fix46246 same window214/19+195;
+eight non-camera fields close. Row7807 P209B1.FD00/066F.F700/vxFEA2/vy-g0 and
+7808 P209B0.9300/066F.F700/vxFE96/vy0038/g0 match native. Earlier complete
+0/2/4/6/8/9 windows remain zero errors. First remaining all-group3475
+sidekick_animation_id17/1C; later non-camera frontier unmeasured. No zero-frontier,
+full returned-HCZ/exit, slice, alternate or exact GLFW qualification. Root owns
+combined validation and delivery; no Main write/push.
+[Exact source hashes, commands, compared windows and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r11-hczblock-full2-visibility-owner-closes7807-through7808--2026-10-17).

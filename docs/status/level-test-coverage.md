@@ -1341,3 +1341,15 @@ The distinct independent HCZ slice reproduces all4353 spans/first9482air and
 passes Poindexter. No clean route/auxiliary/product/GLFW certification or second
 fix; alternate760 reused, matched4699/4353 mixed,3738 unmatched.
 [Exact native evidence, selectors, windows and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r4-retained-title-parent-and-child-movement-latch--2026-10-17).
+
+
+R11 HCZ2 local Full2 visibility (2026-10-17,152d07 composition): independent real
+HCZBlock visible/offscreen controls show old-red3/2F→four new cases green,
+including twice-forced whole-world recreation/registered-key replay; total157
+focused and118 affected guards pass with no skips. Existing object capability
+bypasses both native-absent render gates; shared collision/movement/API unchanged.
+One final original prefix through7808 closes7807 sidekick_y and matches7808;
+HCZ7809/14208 rows still has206 camera/animation errors and no non-camera physics
+mismatch through that bound. First remaining animation3475; later frontier is
+unmeasured. Full route/exit, independent slice, alternate, exact GLFW and broader
+matrix products remain open. [Affected HCZ2 matrix](../architecture/validation/levels/s3k-hcz2.md#r11-hczblock-full2-visibility-and-whole-world-replay--2026-10-17).

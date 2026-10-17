@@ -3545,6 +3545,19 @@ width byte, and the same default lives in the shared
 **Originating commit.** MGZ Sonic+Tails segment frame 4716 -> 10709; see
 `docs/status/trace-frontier-log.md`, 2026-08-15.
 
+**Full2 exception (HCZ R11, 2026-10-17).** Identify the actual helper before
+changing bounds. `Obj_HCZBlock` / `loc_1F3CA` (:43287–43297) calls
+`SolidObjectFull2`: its Player2 dispatch (:41091–41102) omits the player
+render_flags gate, and `SolidObjectFull2_1P` (:41105–41107) enters
+`SolidObject_cont` directly, bypassing the object's `loc_1DF88` gate
+(:41430–41434). Both require the existing object-local
+`bypassesOffscreenSolidGate()` capability, rather than wider geometry or a shared
+rule change. Calibrate an independent real-object checkpoint against an on-screen
+control: the object's initial first-dispatch guard can otherwise make every case
+red before either visibility gate is reached. R11's corrected controls distinguish
+P2-visible/object-offscreen from both offscreen, and twice-forced whole-world
+recreation/replay verifies the static capability survives normal reconstruction.
+
 ## P61 -- `swap` on a register `GetSineCosine` only word-wrote carries an inherited residue
 
 **Shape.** A ROM routine calls `GetSineCosine`, then does `swap dN` and a long

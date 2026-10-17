@@ -1288,3 +1288,15 @@ Full returned-HCZ, independent slice, alternate and exact GLFW remain unqualifie
 on the new source; this is not route certification. Focused mock error and two
 MenuAudio source-guard failures are exactly attributed as inherited, not passes.
 [Commands, prior refusal boundary, source hashes and limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r10-encoded-collision-words-resident-destinations-and-rom-aliases--2026-10-17).
+
+
+R11 HCZBlock Full2 owner (2026-10-17,152d07 composition): native loc1F3CA
+bypasses both player and object offscreen gates. Existing object-local capability
+now preserves underside separation offscreen. Independent corrected old-red
+3/2F→visibility/world-replay4 green,157 total focused/118 affected guards pass
+without skips. Original once prefix7687 closes7807 sidekick_y and matches7808;
+HCZ7809/14208 rows remains206=11camera physics+195animation, no non-camera
+physics mismatch through7808, warnings/bootstrap0. First remaining all-group
+error3475 sidekick_animation_id17/1C; later non-camera frontier is unmeasured.
+No full returned-HCZ/exit/slice/alternate/GLFW or route certification is claimed.
+[Native source, exact controls/commands/hashes and limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r11-hczblock-full2-visibility-owner-closes7807-through7808--2026-10-17).
