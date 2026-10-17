@@ -132,6 +132,58 @@ class TestGameplayCaptureFrameRendering {
         }
     }
 
+    /**
+     * Once a special stage owns the frame (its entry fade-to-white is over), a capture shows the
+     * stage through Engine's own sequence: the provider's clear colour, a screen-space camera, the
+     * provider's viewport for the capture width and the provider's draw, then the frame flush.
+     */
+    @Test
+    void liveSpecialStageFramesUseTheProvidersOwnDraw() throws Exception {
+        var settings = new GameplayCaptureSession.Settings(320, "sonic", "", "off",
+                null, null, null, null, false, false);
+        try (var session = new GameplayCaptureSession(settings)) {
+            session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 0, 0, settings);
+            for (int frame = 0; frame < 240 && GameServices.fade().isActive(); frame++) {
+                session.step(null);
+                session.renderFrame();
+            }
+            assertFalse(GameServices.fade().isActive(), "initial level reveal must finish before stage entry");
+            var loop = session.loop();
+            loop.enterSpecialStage();
+            boolean live = false;
+            for (int frame = 0; frame < 900 && !live; frame++) {
+                session.step(null);
+                session.renderFrame();
+                var provider = loop.getActiveSpecialStageProvider();
+                live = loop.getCurrentGameMode() == GameMode.SPECIAL_STAGE && provider.isEntryPresentationReady()
+                        && !provider.isEntryFadeToWhiteActive() && !GameServices.fade().isActive();
+            }
+            assertTrue(live, "the special stage reaches its live presentation");
+            for (int frame = 0; frame < 30; frame++) {
+                session.step(null);
+                session.renderFrame();
+            }
+            assertEquals(GameMode.SPECIAL_STAGE, loop.getCurrentGameMode());
+            assertFalse(GameServices.fade().isActive());
+            RgbaImage captured = session.render();
+
+            var provider = loop.getActiveSpecialStageProvider();
+            provider.setClearColor();
+            org.lwjgl.opengl.GL11.glClear(org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT
+                    | org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT);
+            GameServices.camera().setX((short) 0);
+            GameServices.camera().setY((short) 0);
+            provider.setSpecialStageViewport(com.openggf.game.SpecialStageViewport.fromLogicalWidth(320));
+            provider.draw();
+            GameServices.graphics().flush();
+            org.lwjgl.opengl.GL11.glFinish();
+            RgbaImage reference = ScreenshotCapture.captureFramebuffer(320, GameplayCaptureSession.HEIGHT);
+            assertArrayEquals(reference.pixels(), captured.pixels(),
+                    "the capture draws the live stage through its provider, not the level beneath it");
+            assertVisiblePixels(captured);
+        }
+    }
+
     @ParameterizedTest
     @CsvSource({"320,false", "800,false", "320,true", "800,true"})
     void drawingWithoutReadbackPreservesPixelsAndState(int width, boolean titles) throws Exception {
