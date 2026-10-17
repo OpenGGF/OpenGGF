@@ -1570,9 +1570,28 @@ Findings:
   slot 6, and initialises next frame. The engine twin draws it on contact +1. The engine already
   models `AllocateObject`'s lowest free slot, so different slot occupancy under the declared
   hold is suspected; an engine slot log is needed.
-- **Capture limitation, not gameplay:** `GameplayCaptureSession.render()` draws the `$1701` level
-  under the special-stage palette during `SPECIAL_STAGE`, so stage frames are not compared. The
-  results +60 frames are not aligned, because the two sides define the results start differently.
+- **Capture limitation, fixed (`39fb32b32`).** The capture session drew the `$1701` level during
+  `SPECIAL_STAGE`, so the v1 stage frames were not comparable. It now follows Engine's dispatcher:
+  the level while the entry fade-to-white is active, then the provider's own draw.
+- **v2 pairs (2026-10-17).** Native v2 and engine twin v2 snapshots run every 2 frames over the first
+  160 frames of the stage and of results, plus +300. They are paired on the published reveal: the
+  first non-uniform frame after the white minimum.
+  - Stage: both hub frames fade to white (engine by +22, native by +20). The native screen then
+    stays white until +136 and reveals at +138; the engine reveals at +24. The engine's
+    fade-to-white flag ends at +29.
+  - Stage content: once live (reveal +20/+22) the engine shows a different Super stage, with 118
+    blue spheres against native's 72. `sub_85B0` (skdisasm `044fa46` sonic3k.asm:10845) selects
+    the S&K layout set from `SK_special_stage_flag`; the engine selects it only for indices 8 and
+    up (S3K known-bugs #58). The longer engine stage before failing is consistent with that
+    layout, and is not separately attributed.
+  - Results: the native mode starts during the stage fade-out and reveals the card at +128; the
+    engine reveals at +52. Paired on that event, the frames are identical for 8 frames. They then
+    reach a static 420 px, mostly the digit column, which the engine draws one tile left
+    (known-bugs #58).
+  - The native white hold of about 116 frames before the stage appears is recorded without a
+    timing claim.
+  - Pictures are in `seven-chaos-native-v2`, `seven-chaos-engine-twin-v2` and `seven-chaos-compare-v2`
+    (`pair_reveal_v2.json` and the reveal side-by-sides).
 
 Pictures: `$HOME/Videos/OGGF/s3k-parity-coverage-2026-10-14/spot-checks/seven-chaos-native-v1`,
 `seven-chaos-engine-twin-v1` and `seven-chaos-compare-v1`, which holds side-by-sides and

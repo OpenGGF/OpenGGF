@@ -144,6 +144,7 @@ Entries should include:
 55. [Knuckles Credits and Terminal Residuals (OPEN)](#knuckles-credits-and-terminal-residuals-open)
 56. [MHZ Rewind Snapshot Identity Gaps (RESOLVED)](#mhz-rewind-snapshot-identity-gaps-resolved)
 57. [Saved2 Return Star-Post Projection and LRZ Load-Frame Restore Words (RESOLVED)](#saved2-return-star-post-projection-and-lrz-load-frame-restore-words-resolved)
+58. [Super Emerald Stage Layout Set and Results Digit Column (OPEN)](#super-emerald-stage-layout-set-and-results-digit-column-open)
 
 ---
 
@@ -6751,3 +6752,38 @@ Citations are to skdisasm `044fa46`.
 - **Why it is not a runtime defect:** no consumer reads the masked live byte after load, and
   each level assembly recomputes the boolean. Clearing it at the level-loop entry would break
   the Tails-copy role. The return bit itself is not modelled separately.
+
+---
+
+## Super Emerald Stage Layout Set and Results Digit Column (OPEN)
+
+Found once `GameplayCaptureSession` presented live special stages (`39fb32b32`). The evidence
+is the declared native/engine twin of the LRZ2 seven-Chaos branch, paired on published reveal
+events ([LRZ act 2 matrix](../architecture/validation/levels/s3k-lrz-act2.md#declared-native-twin-of-the-seven-chaos-branch-2026-10-17)).
+Citations are to skdisasm `044fa46`.
+
+**Wrong layout set for a pedestal Super stage.**
+
+- **Observed:** with native `Current_special_stage=2` and `SK_special_stage_flag=1`, native shows
+  72 blue spheres and its own sphere field. The engine shows 118 and a different field.
+- **ROM:** `sub_85B0` (sonic3k.asm:10845) reads `SStageLayoutPtrs` (the S3 set). It switches to
+  `SSLayoutOffs_RAM` (the Kosinski-decompressed S&K set) when `SK_special_stage_flag` is set, and
+  indexes either with `Current_special_stage & 7`.
+- **Engine:** `Sonic3kSpecialStageManager.loadRomData` picks the S&K set only for
+  `currentStage >= 8`. The pedestal request is stage 2 with `SUPER_EMERALD`, which sets
+  `superEmeraldMode` but still loads S3 layout 2.
+- **Owner:** S3K special-stage layout selection, which is shared special-stage ownership.
+
+**Results digit column.**
+
+- With both sides paired on the card reveal, the cards match for 8 frames. The static card then
+  differs in 420 px.
+- About 390 of those are the right-hand digit column: native draws the score, ring-bonus and
+  perfect "0" glyphs at active x 248-255, the engine at 240-247, one 8-pixel tile to the left.
+- The rest is sphere-icon animation phase beside the labels.
+- **Owner:** `S3kSpecialStageResultsScreen` digit placement.
+
+### Removal condition
+Select the layout set from `SK_special_stage_flag` and place the results digits on the native
+column. Each needs a red test first and a native event-paired picture.
+
