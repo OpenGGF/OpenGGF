@@ -5401,3 +5401,45 @@ change. Private config remains regular0600/exact bytes; Main config hash/mtime
 unchanged. Docs-only links/fences/diff and unchanged reviewed runtime hashes
 verified, normal seven-trailer GPT-6.1 local commit follows. R1–R5 branch refs,
 results, originals and private config preserved; no Root/Main edit or push.
+
+
+#### R7A passive single-pilot handback — no repair authorized
+
+Exact followup task ordinal8:
+`node:delegated-task:command%3Amcp%3Ae0f15981-d194-439f-81ab-b848692b7d95%3Athread-send%3As3k-gpt61-slot-published-plane-wind-causal-witness-20261017-r7a`.
+Owned649 branch `bugfix/ai-s3k-slot-rom-foreground-priority-gpt61`, base333df955b,
+unchanged759 runtime. Build55336 terminal0; ONE actual original pilot[3] witness
+88468 terminal1,1/1F0E0S at16:51:04UTC,Maven28.729s/queue277s. No observer or
+bootstrap failure. Exact temporary method, command, source hash, full46-byte
+comparison and source/observation limits are in the existing bonus matrix R7A
+section.81 observations/81 passivity checks,11 verified full8192-byte payloads.
+
+Raw live PlaneB equals cached publishedPlane at every observed hook. Exact bytes
+return immediately on restore but authority=false/dirty=true; first matching
+replay publication replaces the actual raw array and changes46 EXTRA bytes outside
+the identical legitimate row batch. Those46 persist after13 wind steps. Owner
+identities/scroll/row batch match; no cache-only or full-width explanation.
+Source relation: parallax restores retained bytes before later level restoration;
+conditional geometry-reference invalidation can clear retained authority without
+clearing restoredForRewind, then generic reset/ensure can rebuild before row writes.
+No geometry-array identities/call stacks were retained, so that conditional
+caller is not uniquely observed. Concrete handback is the retained-plane restore
+versus later cache invalidation/ensure lifecycle, not an unqualified R2 assignment.
+
+Smallest independent old-red question: production-order retained-plane restore,
+actual level geometry-reference restoration/invalidation, postrestore reset and
+one ordinary row publication must preserve untouched retained rows while rebuilding
+geometry-derived caches; keep real layout/scene reset controls. Not executed or
+implemented. Root-provided Main61811 passes5 original short pilots,0skips; its803
+source lacks the publishedPlane key, so this cannot qualify retained-plane replay.
+No duplicate Main run,728 request, runtime fix, GPU test, native or image capture.
+R7 foreground845 priority remains deferred pending a separate concrete owner grant.
+
+R7A final accounting: both55336/88468 terminal; owned temporary source removed
+under intended-tree lock, journal/two reports/four witness class files consumed
+metadata-slot alone (7 files/354004 bytes).
+No raw archive, additional execution or runtime change. Last compilation included
+the now-removed temporary witness; no fresh maintained-source compile is claimed.
+Private config remains regular0600/exact bytes; Main config SHA256/mtime unchanged.
+R1–R6 refs/results/native originals/captures and foreign jobs preserved. Docs-only
+local commit; no integration/push, foreground845 unit still gated.

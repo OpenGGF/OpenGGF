@@ -1199,3 +1199,114 @@ permits only read-only preparation of the actual Plane B publication/restore
 lifecycle question after R6 accounting. **No R7 runtime edit, GPU test or five-PNG
 capture until Root authorizes a concrete bounded published-plane unit or clears
 the gate.** The845-pixel foreground-priority goal remains open.
+
+
+### R7A one passive actual wind witness: restored-plane authority boundary
+
+2026-10-17, owned649 at333df955b625624d7b31d1fc6f7e256b695d38ac,
+unchanged759 runtime. Exactly ONE temporary subclass method invoked the original
+maintained `shortPortalAndMechanismPilotsLoadAndReturnThroughRealBoundaries`
+pilot[3] with SLOT_MACHINE/tails/sonic,sonic/400/off. No copied driver, alternate
+sequence, gameplay writes or fixture values. A static SessionManager pass-through
+forwarded each call once and returned its original value solely to attach existing
+hardware-boundary/Camera/PostRestore hooks to the actual newly booted context.
+Prior observers forwarded once, hooks restored in finally. Observation armed on
+actual exit `isWindingDown()`, read raw tilemap bytes/dimensions and defensively
+copied private cached bytes; it NEVER called captureBackgroundVdpPlane/ensure/
+rebuild for observation. The original picture calls remained unchanged.
+
+Build-only55336: current Main absolute queue wrapper, `-Dmse=off -DskipTests
+test-compile`, terminal0 at16:45:24UTC,23.829s, Java25. Temporary test source SHA256
+`a86e6d775cadadaffb6d582f569a40e29b5c5f152ed2114fa15d9e30d10083c9`.
+ONE execution88468 used the recorded R5 command environment/all3 original ROMs,
+owned cwd/current Main absolute wrapper, with this exact argument selection:
+
+```text
+--normal -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true
+-Dtest=TestSlotPublishedPlaneWindWitnessR7A#originalDeclaredPilotThreeWithPassivePlaneWitness
+-Dsonic1.rom.path=${MAIN}/Sonic The Hedgehog (W) (REV01) [!].gen
+-Dsonic2.rom.path=${MAIN}/Sonic The Hedgehog 2 (W) (REV01) [!].gen
+-Ds3k.rom.path=${MAIN}/Sonic and Knuckles & Sonic 3 (W) [!].gen
+test
+```
+
+Terminal1 at16:51:04UTC,1/1F0E0S, class3.175s/Maven28.729s/queue277s.
+Original stack/PlaneB failure above reproduced; NO observer/prerequisite failure,
+no inherited finite population executed. Actual journal294344bytes contains81
+observations/81 successful passivity checks and11 full8192-byte payloads, all
+SHA256-verified after Base64 decode. Bounds200 observations/10MiB were respected.
+27 POST_OBJECTS,27 PRE_MAIN_LOOP,26 VINT_SERVICE and1 own PostRestore callback;
+no armed Camera hook fired. Labels are OUTSIDE publication/profile calls, not
+inside them; the own callback is not asserted to be last. No second run.
+
+**Observed:** all81 actual raw images equal cached published images. Manager,
+level, runtime, handler, tilemap and cache-owner tuple identities stay unchanged.
+Forward raw array1599248355 stays installed. Restore installs1657760388 with
+EXACT baseline bytes/cache; the own callback nevertheless reads BGdirty=true,
+retainedAuthority=false,restoredForRewind=true. Next VINT still has exact bytes,
+dirty=true/authority=false but restoredForRewind=false. At matching LF20,
+objectV317/executed21, PRE_MAIN_LOOP still has baseline raw/cache. The next
+VINT_SERVICE bracket replaces replay raw array with1797959612; forward does not
+replace its array. Both have identical scroll values and exact last row batch:
+sourceX216/sourceY0/destination0xDFFE/25 longwords, then sourceY16/0xE0FE/25.
+Both tokens are ORDINARY_LEVEL, gameVblankDispatched=true, explicitDMA=false;
+token identity changes normally. Pending lists are empty at observed outer hooks:
+formation/consumption occurs between hooks, not directly witnessed inside.
+
+Full8192-byte comparisons: forward publication changes125bytes in rows0–3/31;
+replay changes those SAME125 plus46 EXTRA bytes in rows8–10, offsets2048..2728.
+The exact same46 differences persist after the13 real wind steps. Complete
+signed byte triples (offset:forward/replay), extending the earlier20-only preview:
+
+```text
+2048:-61/-79 2052:-60/-78 2056:-57/-75 2088:-55/-73 2092:-54/-72 2096:-46/-69
+2128:-44/-61 2132:-43/-60 2136:-40/-57 2168:-34/-55 2172:-33/-54 2176:-30/-46
+2208:-28/-44 2212:-27/-43 2216:69/-40 2217:105/9 2304:-59/-77 2308:-58/-76
+2312:-56/-74 2344:-53/-71 2348:-52/-70 2352:-45/-68 2384:-42/-59 2388:-41/-58
+2392:-39/-56 2424:-32/-53 2428:-31/-52 2432:-29/-45 2464:-26/-42 2468:-25/-41
+2472:-24/-39 2560:-51/-67 2564:-50/-66 2568:-49/-65 2600:-48/-64 2604:-47/-63
+2608:-38/-62 2640:-37/-51 2644:-36/-50 2648:-35/-49 2680:-23/-48 2684:-22/-47
+2688:-21/-38 2720:-20/-37 2724:-19/-36 2728:-18/-35
+```
+
+**Source relation, not a claimed unique callsite observation:** SwScrlSlots
+restore installs the exact retained plane through LevelManager; registry restores
+in registration order (RNG last), with parallax registered before level. The later
+LevelRewindSnapshotAdapter.restore invalidates all tilemaps IF blocks/chunks/map
+references differ. That invalidator clears retained authority/sets BGdirty while
+leaving restoredForRewind, matching the observed callback state. The later
+resetTilemapsForRewindRestore cannot take its exact-retained-plane branch without
+authority; next LevelManager.copyTileRowFromLayerToRetainedPlane calls ensure
+before current row writes, allowing full reconstruction and raw replacement.
+Observed mode is STATIC_WINDOW, fullwidth=false, wrap=false, descriptorRevision0;
+no full-width exception, fitted timing or stale-cache explanation is supported.
+The witness did not retain geometry-array identities or invalidator call stacks,
+so the conditional geometry-reference caller is not uniquely proven. Other
+generic invalidation callers must not be silently attributed to that branch.
+
+**Smallest independent old-red question handed back before repair:** in actual
+production registration order, can a restored event-owned retained PlaneB survive
+later actual geometry-reference restoration/cache invalidation, the existing
+postrestore reset and one legitimate row publication, preserving untouched bytes
+while geometry-derived caches still rebuild? A future bounded owner test must
+retain layout-change/scene-reset controls; blindly ignoring invalidation or
+omitting PlaneB snapshot keys is not a repair. No such test/fix has been executed.
+This locates a concrete retained-plane restore/invalidation/ensure owner boundary;
+it does not assign all142 cases or blame R2 from Main's missing state key.
+
+Root-provided Main803 short-pilot baseline61811 independently passes all5 cases,
+0skips at16:50:35.133086UTC, class6.386s/Maven29.851s/queue624s/parent654.205s.
+Main had no publishedPlane snapshot key; this is not evidence that its retained
+plane replay is deterministic. No baseline duplicated here. R7 foreground845
+priority implementation, GPU old-red and five-PNG capture remain gated. No728,
+other population, native, screenshot or runtime edit was added; original residual
+counts and separate unqualified HUD carry difference remain unchanged.
+
+R7A final accounting: both55336/88468 terminal; owned temporary source removed
+under intended-tree lock, journal/two reports/four witness class files consumed
+metadata-slot alone (7 files/354004 bytes).
+No raw archive, additional execution or runtime change. Last compilation included
+the now-removed temporary witness; no fresh maintained-source compile is claimed.
+Private config remains regular0600/exact bytes; Main config SHA256/mtime unchanged.
+R1–R6 refs/results/native originals/captures and foreign jobs preserved. Docs-only
+local commit; no integration/push, foreground845 unit still gated.
