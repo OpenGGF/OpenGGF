@@ -1179,11 +1179,19 @@ water-owner extraction with focused/rewind/source evidence, but strict replay
 remains red. Returned HCZ's first reported non-camera physics is7134 `sidekick_x`
 (`0175/0176`), with133771 total errors over a longer window through14207 and no
 owned giant-ring exit. Its summary does not expose the first animation error or
-full span history. Segment8's four load7126 errors stay separate; actual title
-archive submission/regression remains open and is not certified walker-only.
+full span history. These are b9/866 observations; the returned HCZ route has
+not been requalified on the subsequent load-owner fix. That bounded followup
+moves Nemesis submission to the real load and closes first-title-loop preparation;
+its canonical prefix fully closes segment8's four7126 fields and reaches the first
+segment9 row. Independent old-red/green, focused134 and named guards131 pass
+without skips. This is not a full canonical or all-auxiliary qualification.
 
-HCZ slice has4353 spans first9482 `air` (1/0), with the changed later count not
-matched-baseline attributed; alternate AIZ retains one26179 `rings` span (72/0).
+Pre-fix matched dc338/866 HCZ-slice windows have4699/4353 spans and the same9482
+`air` (1/0) frontier. Exact span/field-row comparison is mixed, with newly
+mismatching CPU respawn counter at10834; historical3738 is not a matched baseline.
+The full slice is not requalified on the new source. The distinct alternate is
+requalified and retains exactly one26179 `rings` span (72/0).
+[Followup evidence](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#bounded-followup-qualification-and-limits).
 The engine pixel oracle fails at GLFW init; native-only 320 Sonic+Tails images
 and passing named guards do not certify missing auxiliary channels, other
 products or downstream campaign. [Exact evidence and limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#final-single-invocation-strict-qualification),

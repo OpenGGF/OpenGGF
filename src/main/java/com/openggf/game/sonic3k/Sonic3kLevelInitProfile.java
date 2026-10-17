@@ -139,6 +139,18 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
     @Override
     public List<InitStep> levelLoadSteps(LevelLoadContext ctx) {
         List<InitStep> steps = buildCoreSteps(ctx);
+        if (ctx.permitsInitialProcessSpritesRequest()) {
+            // Level/loc_6068 and loc_60DA fill Nem_decomp_queue before
+            // loc_62B6 installs Obj_TitleCard, with no intervening VBlank.
+            // Decode, preview, restoration and seamless loads do not run Level.
+            steps.add(1, ioStep("SubmitFreshLevelTitlePlcs",
+                    "Level/loc_6068, loc_60DA: submit before the loc_62CC wait",
+                    () -> GameServices.module().getGameService(Sonic3kLevelTitlePlcService.class)
+                            .beginFreshZoneTitle(GameServices.level().getCurrentZone(),
+                                    GameServices.level().getCurrentAct(),
+                                    com.openggf.game.session.ActiveGameplayTeamResolver.resolveMainCharacterCode(
+                                            GameServices.configuration()))));
+        }
         steps.addFirst(new InitStep("PrepareFreshTitleCardSst",
                 "Level/loc_62B6: fixed title owner precedes layout placement",
                 () -> freshTitleCardSst.prepare(ctx)));

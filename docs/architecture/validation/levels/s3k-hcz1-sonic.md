@@ -335,3 +335,10 @@ records the three assertion-red qualifiers, summary-only returned-HCZ7134 row,
 missing exit, load7126, unqualified slice spans and absent auxiliary coverage.
 Cold traversal, full product breadth, boss and cross-load/respawn obligations
 retain their inherited gaps; Root owns combined delivery validation.
+
+
+## Fresh load and title submission ownership — 2026-10-17
+
+The same worker's followup after866 adds a short real-load test for Level's ten HCZ1 Nemesis descriptors before title dispatch, first-loop preparation, next-VBlank six-pattern drain and twice-restored queue/job ordinals. Old-red4/3F becomes4/0F/0E/0S. Focused134 plus source/authority/schema guards131 pass without skips. Canonical load-prefix through the first segment9 row passes, including complete segment8 with its prior7126 position/camera errors gone; the alternate BK2 still has exactly26179 `rings`72/0. [Evidence/commands/native observations](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#bounded-followup-qualification-and-limits).
+
+This covers the native320 Sonic+Tails load owner and short semantic replay, not cold-route traversal, an engine pixel product, cross-load timeline policy or the full matrix. Matched pre-fix slice totals4699 ondc338 and4353 on866 include mixed span deltas and the same9482 frontier; historical3738 is not attributed. Full new-source HCZ replay, other viewports/donors/teams and the exact GLFW oracle remain open.

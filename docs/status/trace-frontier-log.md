@@ -113141,3 +113141,17 @@ No repeated qualifiers, reference edits, timing fitting or readiness fabrication
 No downstream exit/campaign success, complete auxiliary coverage, all-preset or
 pixel/audio certification. Row7134, the owned exit, slice-span attribution and
 the title-load boundary remain Root follow-up; this is not a green delivery.
+
+
+## 2026-10-17 — native load PLC submission closes canonical HCZ-entry row7126
+
+Same worker branch after866e68501; frozen executable digest8b1e770e6904e76fec9822267e2fc75ad994a8c1068c86d3bdeb7901c5920232. Level now fills the Nemesis FIFO on the load frame; the live first loc_62CC iteration prepares it, while Obj_TitleCardInit retains its own KosM submissions. Independent old-red4/3F/0E/0S becomes4/0/0/0, with twice-restored hardware queues/ordinals; affected focused134 and named source/authority/schema guards131 pass without skips. Native original-BK2 completed frames53487/53488/53489 show queued0-prepared ->56 ->50 patterns;53559 installs native P1/camera.
+
+Commands use the current absolute Main queue from the owned cwd, --normal, -Dmse=off, CLI surfaceless-EGL, no DISPLAY/WAYLAND_DISPLAY, nullAL, Java25/Lua5.4 and original three absolute ROM properties. Add single-fork/reuse/alphabetical flags:
+
+- `-Ptrace-replay '-Dtest=TestS3kSonicTailsCompleteEmeraldRunPrefix#aiz1ThroughHczLoadBoundary' test -B`: session10857,10:53:22 BST,1/0F/0E/0S. First segment9 row driven; completed segment0/2/4/6/8 reports0 physics/animation/bootstrap/warnings. Segment8 declared7175 rows complete, lag62; previous four row7126 fields now match.
+- `-Ptrace-segments '-Dtest=TestS3kAizZoneSliceTraceReplay#replayMatchesTrace' test -B`: session69802,10:53:58 BST,1/1F/0E/0S. Exactly one physics span26179–26179 `rings` expected72/actual0; animation/bootstrap/warnings0, total_frames26041. Distinct original BK2; existing ring-publication boundary remains unqualified.
+
+Before new production edits, one exact dc338d3e3 HCZ-slice baseline and the necessary866 span regeneration both ran the full class, including independent Poindexter. Matched windows total_frames29302 / maximum mismatch row31461; baseline4699(3973physics/726animation), current4353(3424/929); both first9482 `air`1/0, Poindexter passes.1132 exact common spans,3567 baseline-only,3221 current-only; first newly mismatching field/row10834 `tails_cpu_respawn_counter`0/1. This is mixed downstream coverage, not proof of improvement or an attribution of historical3738. [Exact span identities, commands, native products and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#bounded-followup-qualification-and-limits).
+
+No new-source full canonical/returned-HCZ11/full-HCZ-slice qualification, general green or auxiliary/breadth certification. Prior7134 sidekick_x/missing-exit evidence remains historical and unresolved. Specific GLFW pixel-init failure has no matched identity baseline. Root owns combination and broad validation; local only, no Main writes/push.

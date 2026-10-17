@@ -1250,6 +1250,10 @@ Retained HCZ repair (2026-10-17, worker `t3-3aa3bc3c`):
 and [HCZ2 incoming boundary](../architecture/validation/levels/s3k-hcz2.md#retained-hcz1-to-hcz2-carrier-boundary--2026-10-17)
 now bind stored targets, X-lock release, actual restore/replay and final pass4
 regressions. Focused/named guards pass within their recorded scope; four external
-authored-AIZ JAR cases skip. All three single strict qualifiers remain red, slice
-span attribution and the hard-coded GLFW pixel oracle remain open. Other
-products/cold routes retain their matrix gaps; Root owns combined validation.
+authored-AIZ JAR cases skip in the original qualification. A later bounded
+load-owner fix passes134 focused and131 named guards without skips, closes the
+canonical segment8 row7126 boundary through the first segment9 row, and retains
+the alternate's single26179 ring failure. Matched pre-fix dc338/866 slice spans
+are mixed at the same9482 frontier; historical3738 remains unmatched. New-source
+full HCZ/full canonical, the exact GLFW oracle and other products/cold routes
+retain their matrix gaps; Root owns combined validation.

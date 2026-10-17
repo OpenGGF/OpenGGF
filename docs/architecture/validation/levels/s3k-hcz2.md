@@ -88,3 +88,6 @@ physics7134 and absent owned exit, the separate load7126 boundary, and HCZ slice
 Sonic+Tails images are inspected; the engine GLFW pixel oracle is blocked at init.
 Cold traversal, other products, arena completion and cross-load rewind policy
 retain their existing obligations; no general HCZ2 certification.
+
+
+Followup after866 (2026-10-17): the independent load/title owner is qualified narrowly by old-red/green, focused134, guards131 and a canonical prefix closing HCZ1-entry row7126. The distinct alternate retains its one26179 ring span. This adds no HCZ2 cold/fresh/arena or cross-load matrix product. Pre-fix dc338/866 full-slice comparison has identical windows but mixed span deltas (4699/4353);3738 is not a matched baseline. New-source full slice and returned HCZ11 remain unqualified. [Exact evidence](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#bounded-followup-qualification-and-limits).
