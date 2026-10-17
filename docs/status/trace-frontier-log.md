@@ -113813,3 +113813,17 @@ already different at first observed BEFORE48274 and remains unknown; no native
 truth/allocator defect/fix or cold completion claim. Root inspected ORIGINAL
 bounded journals before normal consumption; DOCS ONLY, no new trace/native/
 media/broad. [Exact audit and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#matched-cold-contact-order-r14-and-r15--2026-10-17).
+
+
+2026-10-17 cold R16–R18 matched pool predecessor (98d, exact803/f196): original
+TestS3kLrzHpzSszColdCampaign#sonicColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory,
+normal Main-absolute queue/no profile/all3ROM/EGL, identical reviewed temporary
+observer. BASE70778/CURRENT81089 each1/0F0E0S PREFIX ONLY through48276,
+18603positive verified samples/6real restore markers. Full-route death49613 frontier
+unchanged. First43945 Animal264 span closes43956;44245→44254 and47250→47262 also close.
+First surviving48195 Animal629 removal (630/631 later) frees CURRENT6/7/8 before same
+48201 admissions632/633/634:BASE9/30/32 vsCURRENT6/7/8; same48213spring635 BASE6/current9.
+No sparse BASE clock, allocator fault or native correctness inferred. Source candidate
+is inherited EggRobo loc_917C0 special-launch inlet; shared-render revert not justified.
+Root inspected both originals before metadata-only consumption; no runtime edit/newrun.
+[Commands, exact pins/counts/hashes and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#matched-cold-pool-producer-r16-to-r18-2026-10-17).

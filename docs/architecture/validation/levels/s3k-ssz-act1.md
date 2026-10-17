@@ -2125,3 +2125,27 @@ alone. Ordinary original45step/two-cycle replays remain in place. Root directly
 verified both original bounded journals before consumption; temporary observer
 sources/classes and4inspected reports are removed, no archives. This is an
 honest contact-order frontier, not a natural native/world/campaign certificate.
+
+
+## Matched cold pool producer R16 to R18 (2026-10-17)
+
+Original Sonic ColdCampaign BASE803/CURRENTf196 each1/0F0E0S, **PREFIX ONLY** through
+48276, identical inputs/driver/observer and real45-forward/two-replay windows.
+Root directly inspected both original journals;18,603positive verified observations
+and6restore markers per arm validate declared source/slot/ID/pool changes, not native
+birth/correctness or complete hidden-world equality. [Exact audit/limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#matched-cold-pool-producer-r16-to-r18-2026-10-17)
+and Plan preserve command/epoch/hash/count/skip/cleanup details.
+
+Three spans43945→43956,44245→44254,47250→47262 self-close. First surviving48195
+Animal629 deletion, then630/631, frees CURRENT6/7/8 before48201 admissions632/633/634:
+BASE9/30/32 vsCURRENT6/7/8; same48213spring635 BASE6/CURRENT9. No allocator fault,
+BASE clock fill at sparse48195 or unique cold parent callback claim. Source follow-up
+is inherited EggRobo loc_917C0 special launch approximated by shared generic Animal
+MAIN/frame2/X0/Y-400; native table launch/frame1/routine4or6 differs. Mode/velocity/
+prior-render branch remains unrecorded. Shared correct R5 render rule is retained.
+
+Current full campaign remains blocked at historical49613; later finals untested by
+this prefix. No runtime fix/new input/native/media/extra campaign. Both originals
+consumed after Root inspection/durable facts; original driver restored and compiled
+instrumentation removed. Useful helper source remains temporarily owned pending
+preservation decision. Independent release-inlet old-red SOURCE ONLY is separate.

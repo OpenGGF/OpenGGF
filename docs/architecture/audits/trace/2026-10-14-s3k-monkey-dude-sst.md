@@ -4793,3 +4793,67 @@ classes removed under intended writer. Last target was f196+observer; no rebuild
 or maintained uninstrumented-build claim. All refs/native/private config and
 Main hash/mtime preserved. Final accounting is DOCS ONLY; full cold campaign
 remains blocked, no native/new probe/guards/broad execution.
+
+
+## Matched cold pool producer R16 to R18 (2026-10-17)
+
+Root directly inspected BOTH ORIGINAL raw-pool journals: exact BASE803 handle70778
+(19:34:52Z) and CURRENTf196 handle81089 (19:42:31Z), each **1/0F0E0S PREFIX ONLY**
+through original48276 after assertions and unchanged45-forward/two-replay windows.
+Full-route finals intentionally unreached; historical current cold-death49613
+remains a completion blocker. Same98d/native01a1496e, original Sonic case/movie/
+session and class2aa3/helperc35c/portablea3d00169, other runtime/test exact each pin.
+[Plan: exact commands, source hashes and task IDs](../../plans/2026-10-13-s3k-playable-completion.md).
+Normal Main-absolute queue/no profile/all3original absoluteROMs/Java25/EGL/nullAL/
+noambient/Lua/fork1/reuse/alphabetical; ONLY output path differs. Queue0s/Maven1m42
+both; BASE case34.454s/class34.732s, CURRENT34.149s/34.423s. Parent elapsed unmeasured.
+Lifecycle BASE4133main/4163test, CURRENT4143/4192; Java25.0.4.1/release25. No repair,
+retry, observer/cap/key/passivity/original assertion failure.
+
+Each arm:18,603positive activation/verified passivity observations,48,547original
+step-render pairs,6restore markers; explicit original main/forward/replay/restore
+keys and independent BK2 buttons/session cursor/real VInt-LF-OM/loadgen4 validated.
+BASE1315records/1313emitted, CURRENT1312/1310. Previous/current full110ordered pools
+and deltas validated; Java reference numbers excluded across arms. Sparse absence
+carries declared structural state ONLY, not clock metadata. No native/all110-byte/
+within-pass birth certificate. Initial declared state agrees.
+
+| First different AFTER input/sample | Owner | Equal again AFTER input/sample |
+| --- | --- | --- |
+|43945/9668|Animal264 slot8,03A0/0550 id28|43956/9690|
+|44245/10268|Animal322 slot5,09F8/05B0 id28|44254/10286|
+|47250/16551|Animal556 slot30,0EA8/0F08 id28|47262/16575|
+|48195/18441|Animal629 slot6,18B0/0CA0 id00|not equal again through48276|
+
+First three spans close before the surviving fourth. At48195 CURRENT actually
+removes629: before→after VInt48125→48126/LF8946→8947/rawOM8947→8948. BASE has no
+emitted clock metadata there; none is invented. Same-source animals629/630/631 enter
+BOTH arms slots6/7/8 after48149/48165/48181; CURRENT removes48195/48198/48199 versus
+BASE48202/48202/48204. Before48201 BASE first allocator-free slots9,30,32… versus
+CURRENT6,7,8,9,30,32…. Same48201 source order/IDs632/633/634 (diagonal198/diagonal201/
+flat204) receiveBASE9/30/32 vsCURRENT6/7/8; same48213spring206/id635 BASE6/CURRENT9.
+Actual free-empty→USED/registered/exec pools establish surviving lifetime/hole/
+admission lineage, not allocator fault/native correctness. First direct common
+recorded camera difference remains48275 AFTER, BASE0A04/CURRENT0A0C.
+
+Source candidate: registered releaser layout207/idA0/sub04,18B0/0CA0,slot5/id624;
+unchanged EggRoboBadnikInstance.releaseAnimal uses shared generic Animal initializer,
+a gap already documented in its header. Pin044fa46725c71187399e13f5ddb70e11d32dc024
+loc_915F6→ChildObjDat_919E6→loc_917C0/917E2/91800/9181C
+(sonic3k.asm198774..198819) installs table/facing X, bounded random high-word negative
+Y, frame1/routine4or6 before initial Draw_Sprite; generic MAIN/frame2/X0/Y-400 differs.
+Actual cold parent callback/unique parent/mode/velocity/prior render-bit/retirement
+branch were NOT observed. Shared correct R5 render semantics stay; no revert/fit.
+Independent special-launch old-red source is a separately gated unit, not a repair
+or native truth claim from this engine comparison.
+
+Original BASE4924861B SHA256bd1e48195a97a303a2565b1396f5c43020768fde79ab068f4b02d95d14b8447f
+and CURRENT4917574B SHA25626b224709a4c4883efeeef952aad462b85213d574cdef88321d983a765bb4a7a
+were directly inspected read-only0444; their exact9842435B are consumed metadata_slot
+ALONE after durable facts, no copy/archive/receipt. Reports already consumed separately
+(BASE171736B,CURRENT171741B). Maintained class restored9616921c; instrumented outer/
+helper/Picture classes removed. Original helper sourcec35c remains owned/untracked at
+its original path pending Root preservation choice: proposed opt-in test-side protocol
+plus existing workflow README entry, no runtime API/refactor/copied driver; no
+promotion/deletion in this docs commit. Target has no maintained rebuilt outer
+ColdCampaign class. No further campaign/native/media/guards/test/runtime edit.
