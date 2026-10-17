@@ -110,7 +110,11 @@ missing player hook, rather than renaming a late sample to match its question. R
 RecordPos writes from final P1 pose and Camera-entry selected history: correct
 arithmetic on a divergent history word is not a camera-owner old-red. Verify
 real instruction boundaries against ROM bytes before using a named recorder pin;
-its label alone does not establish an entry callback.
+its label alone does not establish an entry callback. R15 then verifies
+RecordPos pre/post and Camera-entry at real PCs: native selects239 while engine
+selects23A, so correct arithmetic cannot identify the earlier P1 writer. Recheck
+all pinned identities after queue admission immediately before native launch and
+after terminal; a pre-queue hash alone is not execution provenance.
 
 Opcode pins alone do not authenticate instruction timing (2026-10-17, S3K V-int diagnostics).
 An unchanged `dbf` opcode can have a changed initial iteration count, and an unchanged `jsr` can call a different

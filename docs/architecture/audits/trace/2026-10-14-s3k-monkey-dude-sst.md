@@ -4059,3 +4059,206 @@ mixed full-slice4353/4699 vectors remain explicit. After durable facts, temporar
 observer source/two compiled classes are removed under intended writer lease;
 six exact own diagnostics are consumed under metadata_slot alone, no archives.
 All own jobs terminal, source/index clean apart from inherited native checkout.
+
+## R15 original native camera/history input plan — 2026-10-17
+
+Owned3aa, `feature/ai-s3k-hcz-native-camera-history-gpt61`, starts clean at
+R14docs72d1be929. R10..R14 refs, native4fdf versus gitlink322 and regular0600
+private config remain preserved. No Main/Root writes or engine replay/runtime
+edit. The native-reference-capture skill/host guide and actual IGpgxHost contract
+are read; Root owns the concrete native-plan review boundary before execution.
+
+Retained domains do not close the question: the four full64KiB HCZ7134 dumps
+are AD40 inputs70207..10, not82EA input38003/core38004. Earlier retained title
+captures are also AD40. No matching82EA full RAM is identified in the bounded
+external inventory. BK2's BizState1.0 member is only format text `3\r\n`, not a
+saved gameplay state. P2 is inactive throughout original inputs0..38005.
+
+### Frozen helper and compiler-only prerequisite
+
+Owned external task directory `$D/hcz-native-camera-history-r15-v1` contains:
+
+| Input/output | SHA256 |
+| --- | --- |
+|NativeCameraHistory.cs|a237ef891ab8daa71517a384122d0facd80665a7316cf1bc51a4a0cad04df127|
+|plan.json|44c0be5300b0c8592bf52de557bc41445fdf29fb78313e5120d352f6709a9510|
+|run_native_camera_history.py|a0312eddf33550510bcccb85bebbd39b75667a046ad5c296aeb49608034e259d|
+|NativeCameraHistory.exe|b668c1ebdfa7fdd758c5a710e8c67f6efe7815fb4dcfdf65ad7b17ca601f0c46|
+
+Compiler-only command `python3 "$D/hcz-native-camera-history-r15-v1/run_native_camera_history.py" compile`
+finishes0 at16:27:53.327119..914875UTC. It holds own intended-tree writer and
+shared build_activity_slot, propagates FDs3/5 to Mono/Roslyn, then releases both.
+No host/core/native source is rebuilt or edited, and no GPGX host is instantiated.
+An initial pure byte-plan check caught a D1/D0 opcode transcription before source
+creation; the checked selected-ready prefix is905104400090. No native retry.
+
+Reuse existing compiled host-bf3c539 SHA256
+71b949a6b3ecb0709d4ba73f8cc0752d945a14c15c58f0326fc3adb7d4d4031b;
+relevant Bk2/GpgxHost/IGpgxHost paths have empty bf3c→4fdf source diff. Actual
+BizHawk2.11 core/common/Newtonsoft DLLs, gpgx.wbx.zst and libwaterboxhost hashes
+match retained R9 provenance and are rechecked by the launcher. Critical native
+payloads: gpgx.wbx.zst c4231296ec5ba59b431df22b68e234ae7bfbbfc87b6e72fa471234ac1b220d12;
+libwaterboxhost.so d2367818aafb4e520ad5ab005b5762c61506b0c819c4d79687235acfb0fc0c78.
+Original ROM/BK2/fixture hashes are the unchanged R14 identities above.
+
+### Concrete execution proposal, pending parent technical review
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$D/hcz-native-camera-history-r15-v1/run_native_camera_history.py" run
+```
+
+The launcher imports current Main's absolute maven_queue, uses normal default
+maven_slot(ownroot,estimate90,kind=native-r15-camera-history), and passes all
+execution leases to its one Mono child. No reservation/exclusive override or
+outer activity shim. Compiler leases have ended before test admission. Native
+execution deadline240s/outer child timeout300s excludes normal queue wait.
+
+Actual GpgxHost.Open receives original ROM and original movie.SyncSettings,
+power-on inputs0..38005, every hardware frame, no load-state/position/RAM writes,
+no video/audio/media or canonical publication. Callbacks are armed only for
+inputs38001..38005 (neighboring raw10831 through10835), after every pinned ROM
+opcode has been checked before host creation/registration. Selected native D0
+is compared to the actual RAM read, never to an inferred0199 target. RecordPos
+preX/preY/postXY/preincrement/postincrement/return and Deform/actual camera call/
+entry/history-or-current read/selected-ready/return have separate PC phases and
+count/order assertions. Source pins, registers and exact ring arithmetic are
+those verified in R14; existing named10D80 is unchanged and never registered.
+
+The bounded external journal contains actual P1/P2 raw fields, Pos_table256,
+EE24/26, physical/published camera/bounds/forced/lock fields and real registers,
+with before/after read passivity checks and a10MiB limit. Equality controls use
+existing fixture values only after advancement: original P1 fullXY/vx/g/status,
+P2XY/status/render84, copiedcamera, LF/VIntword/index and CPU0/routine6 for
+10832..35. These comparison values never select native inputs or supply gameplay.
+Each callback logs actual CompletedFrame separately from established movie/raw
+mapping. A postboot trajectory, observer or phase-count mismatch must stop with
+partial evidence before any retry. No engine probe or runtime repair is authorized.
+
+At this checkpoint **native execution count is zero**. Exact source/command/
+hashes/bootstrap/controls were handed to Root for review; no execution permission
+is inferred from the compiler result or from unavailable retained RAM.
+
+### Reviewed provenance correction and the sole actual native pass
+
+Root independently reread all three sources, all14 original ROM pins and the
+original10830..35 CSV controls, then authorized one execution with a bounded
+Python-only provenance correction. Original ordinal16 plan task/result remains
+separate from execution followup ordinal17. No fresh reviewer or C# rebuild.
+The reviewed launcher a0312edd is superseded only for identity guarding by
+**09acfdbd1768893eb1c8df95738c110452650853af1bf0822d2db85e10ee69f8**.
+One verifier checks planfiles_sha256, original ROM SHA1/movie hash, all four
+fixture member hashes,14 ROM opcode pins, compiled source/plan/EXE and launcher
+freeze initially, immediately inside normal maven_slot before MonoPopen and
+after terminal, including the failure path. C#/plan/EXE hashes remain unchanged.
+Syntax and readback checks pass; the exact proposed command above runs once.
+
+Sole owned handle**46154** finishes**0**. Normal resource-aware admission is
+7GiB/8cores, estimate90, queue**248s**, no override or shim. Submitted
+16:34:54.059330UTC, admitted16:39:02.371206; immediate pre-native identity guard
+16:39:02.407631 and post-terminal guard16:39:13.106020 both pass. Final timestamp
+16:39:13.106040; native stopwatch**10.3544623s**, distinct from queue and parent
+wall time. FDs5/6/7 propagate to the only Mono child. All38006 original inputs
+0..38005 execute once; callbacks observe only38001..38005, no media/state loads/
+manual RAM writes, canonical publication or engine execution.
+
+All four native10832..35 equality controls match: full P1/P2 positions/status,
+P1 velocities/routine, P2render84, CPUroutine6/timers0, copiedcamera, LF/VIntword
+and index. **60 callbacks**, contiguous sequence0..59, twelve ordered phases per
+five observed inputs, satisfy all count/order/passivity checks. Actual CPU PC
+matches each registered real instruction boundary. There are three history
+reads, two current reads, five moved returns, no forced or early-return branch.
+The five actual RecordPos X/Y writes target the observed next-write slot,
+advance its byte index by4 and preserve all other Pos_table bytes. No named10D80
+hook or capture-authority change is used.
+
+### Actual producer, selected history and current-pose distinction
+
+Positions/indices below are hex; raw/movie/core columns are decimal. Native
+callbacks occur at actual CompletedFrame=input, and post-advance core=input+1;
+the original raw/movie mapping has not been fitted or shifted.
+
+| Raw / movie input / core after | Actual native RecordPos P1X / index before→after | Native camera-entry P1X / H_scroll | Actual selected source / offset / word | Native physical camera entry→return / end copy |
+| --- | --- | --- | --- | --- |
+|10831 /38001 /38002|0225.7900 /0040→0044|0225.7900 /0300|history /0038 /0218|0163→0178 /0178|
+|10832 /38002 /38003|022F.AE00 /0044→0048|022F.AE00 /0200|history /0040 /0225|0178→0185 /0185|
+|10833 /38003 /38004|0239.E000 /0048→004C|0231.E000 /0100|history /0048 /0239|0185→0199 /0199|
+|10834 /38004 /38005|023C.0F00 /004C→0050|023C.0F00 /0000|current /— /023C|0199→019C /019C|
+|10835 /38005 /38006|0246.3B00 /0050→0054|0246.3B00 /0000|current /— /0246|019C→01A6 /01A6|
+
+P1Y is0831.1900. Actual full native VInt0000944A..0000944E and LF2A11..2A15
+are constant across the distinct callback phases of their corresponding frame.
+At camera entry A0FFFFB000, force/scroll-lock/deform-lock/teleport all0. For the
+history branches, actual D1 byte displacement is0C/08/04 and post-decrement
+H_scroll0200/0100/0000; offsets selectFFE538/FFE540/FFE548. No native-selected
+history word is reverse-inferred from final pose or camera output.
+
+Physical camera and publication remain distinct: at moved-return PC1C11C,
+physicalX is the new endpoint while copiedX still holds0163/0178/0185/0199/019C;
+only end-of-frame copiedX is0178/0185/0199/019C/01A6. This is RAM publication,
+not a rendered-frame/VDP claim. Current native minX80 and maxX966/988/9AA/9CC/
+9EF do not clamp these moves. Sampled native target wordsEE0C/EE0E are0000/6000,
+whereas R14 engine target fields follow its current easing bounds. Their exact
+owner-equivalence is not qualified by this observation and is not tuned; current
+bounds are remote from cameraX, so neither is a demonstrated cause here.
+
+**At10833 the native input gap is closed:** RecordPos writes0239 atFFE548,
+H_scroll0100 subtracts0100 and selects that same latest word with displacement4;
+239−185−A0=14 and185+14=199. R14 engine delay1 likewise selects its actual latest
+023A, with pre186, and23A−186−A0=14 ->19A. Native/engine implement the same
+selection arithmetic for their respective inputs. Native10832 selected0225 vs
+engine0226 likewise precedes the10834 CPUcounter consequence. At10834 both use
+current pose; native023C ->19C versus engine023B ->19B. At10835 the same current
+word0246 gives1A6 on both, without removing existing fractional differences.
+
+Native10833 P1 remains0239.E0 through RecordPos return, then is0231.E0 by
+Deform. This observed bracket includes later P1 water/touch and object execution;
+**the intervening writer is not identified**. Engine R14 latest023A versus current
+0231.CD shows the same history/current-pose distinction. No HCZBlock, carrier,
+movement/collision or allocator defect follows merely from this bracket.
+
+The causal input owner is P1's position arriving at the history-record point,
+already different before this camera consequence. Native10832 P1 is022F.AE00,
+engine R14 camera-entry is0230.9B00; native selected0225 came from the neighboring
+10831 record, whereas engine selected0226. The earliest defective engine writer
+and earlier divergence onset remain unproven. No engine pre-RecordPos full-pose/
+terrain witness is supplied by this native-only pass. Missing native inputs are
+now observed; missing upstream engine causality is not replaced by a camera or
+CPU fit, a source-history compound boundary or a fitted fractional adjustment.
+
+### Independent disconfirming design and stopping limit
+
+Smallest proposed control, not authored/run here: use a real playable's production
+history-record point after movement, then a legitimate solid-object side correction
+that changes current pose. Delay1 must read the recorded word; delay0 must read
+the corrected current word, alongside the existing forced-scroll control. Use
+declared geometry/native rules rather than replay coordinates/history injection;
+if made stateful, capture/recreate/forward twice with the full world. This is
+expected to be green and disconfirm a Camera/order defect. It is **not** a genuine
+old-red and cannot authorize any shared runtime repair. Further work must identify
+the earlier P1 writer; no additional engine/native probe is launched by this task.
+
+Inspected native outputs and SHA256 before consumption:
+
+| Artifact | Bytes | SHA256 |
+| --- | --- | --- |
+|callbacks.jsonl|139705|158991c7fcf745f80a95d8620e3dc8bb6c70c1761c9183b4a75759367395126e|
+|boundaries.jsonl|11973|a523f0a16c7716f637a181ac5e6914d69fcd77b3765e2ec0607501c69b4a7024|
+|completion.json|263|b76af91085b6a720813620c560be726422bb77460465d5110444bf03430e2f02|
+|host-settings.json|738|ed9d54360bcd6639229bacff00bce004230d76a96d521d884fe214ad51c54792|
+
+All own jobs terminal; no postboot mismatch or retry. No engine/runtime/API/
+fixture/pin edit, new native build/profile, media, broader route or extra test.
+R14's strict104spans/10773row prefix and mixed full4353/4699 vectors remain;
+R12's8329y_speed/absent returned exit are not requalified. This is one qualified
+native input observation, not engine parity or native presentation certification.
+The helper is a one-off exact-input diagnostic completed below the hour threshold;
+no new general tool/API is promoted. Root owns any next owner authorization,
+combined validation, integration and push. Consumed owned native diagnostics and
+compiler/helper temporaries are cleaned after durable facts; no archives, foreign
+captures, performance artifacts, refs, private config or native4fdf are removed.
+
+R15 cleanup complete: four exact owned helper/source/class/plan files removed
+under own writer lease and six consumed native/compile/execution diagnostics
+under metadata_slot alone; external task directory empty/removed, no archives.
+All prior native captures and foreign artifacts remain untouched.

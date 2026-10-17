@@ -113675,3 +113675,18 @@ or final-pose inference. Byte-verified RecordPos entry10D66 differs from existin
 named10D80 operand pin, which is unchanged. Observer/diagnostics consumed; no
 further execution or full-window improvement claim. Root owns native-plan review.
 [Exact commands, hashes, phase clocks and remaining field-owner gap](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r14-slice-camera-entry-history-inputs-no-camera-or-cpu-repair--2026-10-17).
+
+### 2026-10-17 — R15 native history input resolved; upstream P1 writer unqualified
+
+Owned3aa/source72d1be929 production unchanged. Root-reviewed/authorized one
+original82EA native46154 terminal0, queue248s, native10.3544623s, all four
+endpoint controls and60 passive/ordered callbacks match through raw10835.
+Current Main absolute maven_slot defaultnormal/estimate90, original ROM/movie/
+power-on bootstrap, nullAL/EGL/no ambient; exact external command in audit.
+Native10833 RecordPos0239.E0 ->selected0239@FFE548/delay0100 ->camera0199,
+versus R14 engine latest023A/delay1 ->019A. Correct Camera/CPU consumers; input
+producer differs already before camera. The exact earlier engine P1 writer is
+unproven, and RecordPos→Deform position change is only a bracket. No runtime
+fix, old-red, extra engine/native execution or full-window parity claim. Existing
+104-prefix/mixed4353/4699 and returned8329/absentexit limits remain explicit.
+[Identity guards, actual clocks/pins and smallest disconfirming design](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r15-original-native-camerahistory-input-plan--2026-10-17).

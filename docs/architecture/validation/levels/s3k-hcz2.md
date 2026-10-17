@@ -248,3 +248,16 @@ No new native/fullslice/canonical/alternate/8329/GLFW/broad or matrix breadth
 qualification. Temporary observer removed; R12's returned8329/absent exit and
 mixed whole-slice vector limits remain. Root owns missing native-plan review.
 [Actual source pins, fixture identity, clocks and passivity](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r14-slice-camera-entry-history-inputs-no-camera-or-cpu-repair--2026-10-17).
+
+### R15 original native selected camera input observed — 2026-10-17
+
+One original82EA native power-on pass46154,0..38005, observes raw10831..35.
+All four10832..35 endpoint controls,60 ordered/passive callbacks and immediate
+pre/post identity guards pass. Actual10833 RecordPos0239.E0 writesFFE548;
+delay0100 selects0239 ->camera0199. R14 engine latest023A ->019A uses the same
+correct rule. Native prior selected0225 vs engine0226 shows producer divergence
+already before this camera consequence. Exact earlier engine P1 writer remains
+unknown; no Camera/CPU or unobserved late-object repair is justified.
+No new engine replay/focused pass, matrix product, full route/exit, alternate,
+GLFW or native visual acceptance. Existing strict slice/8329/exit limits remain.
+[Exact original inputs, byte pins, CPU/publication phases and disconfirming proposal](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r15-original-native-camerahistory-input-plan--2026-10-17).

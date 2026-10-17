@@ -5276,3 +5276,28 @@ No further execution; observer/classes and six consumed diagnostics removed,
 all own jobs terminal. R10..R13 refs/native4fdf/private config preserved. Root
 owns native-plan review, broader route/8329/exit and delivery.
 [Exact original fixture hashes, source pins, clocks and causal limit](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r14-slice-camera-entry-history-inputs-no-camera-or-cpu-repair--2026-10-17).
+
+**R15 native-input plan checkpoint (2026-10-17, source72d1be929):** same owned
+3aa/new local feature branch, engine/native checkout unchanged. No matching
+original82EA retained fullRAM identified; AD40 dumps do not close the question.
+External real-instruction RecordPos/MoveCameraX observer is compiled-only0 under
+writer/shared activity/inheritedFDs, native count0. Frozen source/command/opcodes/
+original power-on bootstrap and four endpoint equality controls handed to Root;
+parent technical review is required before one normally admitted native pass
+through10835. No engine replay/runtime fix or source/fixture authority mutation.
+[Concrete pending plan and hashes](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r15-original-native-camerahistory-input-plan--2026-10-17).
+
+**R15 actual one-pass result (2026-10-17, unchanged72d1be929 production):** Root
+reviewed the concrete plan, then authorized only launcher provenance rechecks
+and one normal native execution.46154 terminal0, queue248s/native10.3544623s,
+FDs5/6/7; all four endpoint controls and60 ordered/passive callbacks match.
+Native10833 RecordPos writes0239.E0, next index48→4C; entrydelay0100 selects
+actual0239@FFE548 ->camera0199. Engine R14 selects actual023A ->019A correctly.
+Native/engine selection agrees by intent; differing P1 producer input already
+precedes the camera/CPUcounter consequence. NativeRecordPosreturn239.E0→Deform
+231.E0 brackets an unobserved writer, not an attributed HCZBlock/carrier fix.
+No Camera/CPU/shared runtime correction or genuine old-red is supported. Proposed
+independent real-record/solid-correction delay1/0 control is disconfirming and
+not run. All own jobs terminal, no second native/engine test or route certificate;
+Root owns the earlier P1 writer,8329/exit, combined validation and delivery.
+[Actual source pins, phases, identities and limits](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r15-original-native-camerahistory-input-plan--2026-10-17).

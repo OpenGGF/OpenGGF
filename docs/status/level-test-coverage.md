@@ -1380,3 +1380,10 @@ camera-entry delayed history explains engine019A correctly; matching native
 selected-history/P1/delay/forced/latch values remain unqualified. No Camera/CPU
 fix, new matrix product, fullroute/exit/GLFW/native or broader certification.
 [HCZ2 exact input-owner limit](../architecture/validation/levels/s3k-hcz2.md#r14-slice-camera-history-input-limit--2026-10-17).
+
+R15 HCZ native camera input (2026-10-17): one original82EA observation through
+10835 matches four native endpoint controls and60 passive instruction callbacks.
+Native selected0239 vs engine023A identifies the upstream P1 history-input
+question; Camera/CPU arithmetic is correct, exact earlier writer unqualified.
+No engine test, route/exit, visual/GLFW or matrix breadth credit is added.
+[HCZ2 observation limits](../architecture/validation/levels/s3k-hcz2.md#r15-original-native-selected-camera-input-observed--2026-10-17).

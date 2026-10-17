@@ -2087,3 +2087,18 @@ errors were an undeclared synthetic fixture floor pass: Sonic_Init has no floor
 probe and loc81554 owns flight. Declare its existing fresh-start inlet and keep
 an independent unknown-definition refusal; do not invent missing RAM to make a
 component bootstrap green (R13, 2026-10-17).
+
+### Native instruction pins and delayed camera history are different authorities
+
+A named recorder pin may lie inside an operand: actual locked-on ROM RecordPos
+entry is10D66, X/Y writes10D7E/10D82, increment10D86; the retained named10D80
+is the0010 operand of the X write. Verify bytes at real instruction boundaries
+before registering a passive callback; do not mutate capture authority/fixtures
+from a diagnostic. Recheck original ROM/movie/runtime/fixture/source identities
+inside normal admission immediately before launch and after terminal, because
+queue waiting can outlast a source freeze. Keep RecordPos, camera-entry, physical
+camera return and published RAM-copy phases separate. Native R15 writes239.E0,
+then current pose becomes231.E0, while delay0100 still selects239; engine's
+latest23A likewise correctly gives19A. Different producer inputs do not prove a
+Camera/CPU bug or identify the unobserved intervening object writer (R15,
+2026-10-17; see the existing HCZ trace audit).

@@ -1334,3 +1334,11 @@ Pos_table_index are insufficient. No Camera/CPU repair or parity claim. Existing
 named RecordPos10D80 pin is an operand in the actual ROM; verified entry10D66
 is recorded for future plan review without changing capture authority/fixtures.
 [Exact original inputs, phases, source pins and limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r14-slice-camera-entry-history-inputs-no-camera-or-cpu-repair--2026-10-17).
+
+R15 native camera input (2026-10-17): the missing native selection is now observed
+in one original82EA power-on pass, all four endpoint controls/60 callbacks match.
+10833 RecordPos writes0239.E0; delay0100 selects0239 ->0199. Engine R14 history
+023A ->019A is also correct. This moves the causal input question upstream to
+P1 arriving at RecordPos, not Camera/CPU. Exact earlier engine writer remains
+unproven; no runtime fix or new engine/route/visual qualification is claimed.
+[Actual byte-verified instruction phases and limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r15-original-native-camerahistory-input-plan--2026-10-17).
