@@ -4196,3 +4196,37 @@ alone; original Knux driver/native33c are preserved. No runtime/source fix,
 new native run, additional capture or tests were made. This is one declared
 inlet/moment, not cold-route, inherited-VRAM, whole-scene, audio, timing or
 wide/roster qualification; existing gaps remain open.
+
+
+### AIZ physical retained-control R3 — 2026-10-17 checkpoint
+
+Same t3-98d036a9/branch, native01a1496e-feed-7130-9b66-9f402f964177, base7ed6ba5b8.
+Only AizMinibossInstance runtime changes; final SHA256
+1878f322bfa03f2c20970c5dd2a371839a4e90481b93c872c332695331027626.
+The [R3 matrix](../validation/levels/s3k-aiz2.md#physical-miniboss-handoff-and-alternate-ring-blocker--2026-10-17-r3)
+records exact controls59027/58516, old-red38946/59829/33946, source pin, commands,
+real clock/cursor mappings and rejected missing-static/invented63 hypotheses.
+Native post-routine fatal poll, literal63/64 later entries, global independent
+music, physical loc68C02 replacement/fresh119 and existing generic DoStart
+replace the auxiliary flow and13/catch-up camera compensation. Independent
+subtype10 explosion tail survives replacement and recreation.
+
+75120 passes77/0F0E0S (wait36s/Maven1m15s);56721 passes3/0F0E0S (no wait/59.417s):
+original20463 rows zero errors, exact20 standing assertions/SST12, segments0/2/4
+complete zero errors. Single distinct alternate33952 is11 ring errors, first13740
+rings1/2; prior76 queue/animation frontier is gone but ten new ring spans are
+unattributed. Authorized unchanged observation86679 through13742 identifies
+engine LostRing SST13 at1BB0/01EE as the extra own-dispatch increment, but native
+filtered aux lacks ring positions/routines and no passive actor-increment hook
+exists. No LostRing/touch/debris owner is added here. Root owns next evidence and
+ring attribution; **alternate UNQUALIFIED and integration blocked**.
+
+Four native loc68E98 debris children remain an inherited occupancy omission.
+Fullaux/configuration/roster/BK2/cold/nativepixels/fullchain limits remain. Guards40441 completed134/1F0E0S at12:05:39UTC:133pass, one exact raw-insert
+inventory stale10/current9 after removing AIZ inline insertion. The ratchet is
+tightened10→9; only that method27275 passes1/0F0E0S at12:07:05UTC (24.683s/no wait),
+with no repeated134. No duplicate replay or broad/native run.
+R1/R2 results remain historical, not erased. Consumed diagnostics/helpers are
+removed under the metadata lease. Target is final1878 plus maintained test/guard
+compilation; all jobs terminal/released. Local commit/clean handoff only, no Main edits,
+new worktree, integration or push.

@@ -37,8 +37,9 @@ class TestAizAct2LevelSizeWorkers {
         var fixture = HeadlessTestFixture.builder().withZoneAndAct(0, 1).build();
         var manager = GameServices.level().getObjectManager();
         var below = manager.createDynamicObject(() -> new ScanWitness(1));
-        var boss = manager.createDynamicObject(() -> new AizMinibossInstance(
-                new ObjectSpawn(0x11F0, 0x334, 0x91, 0, 0, false, 0x334)));
+        var boss = manager.createDynamicObject(() -> new S3kBossDefeatSignpostFlow(
+                0x11F0, 0, S3kBossDefeatSignpostFlow.CleanupAction.NONE, true));
+        boss.beginNativeReplacement(boss.getSlotIndex());
         var firstHole = manager.createDynamicObject(() -> new ScanWitness(1));
         var middle = manager.createDynamicObject(() -> new ScanWitness(2));
         var oldResults = manager.createDynamicObject(() -> new S3kResultsScreenObjectInstance(true));
@@ -55,24 +56,25 @@ class TestAizAct2LevelSizeWorkers {
                 && middleSlot < minSlot && minSlot < maxSlot && maxSlot < tailSlot);
 
         // Explicit component entry: the defeated control is retained, before its title-completion poll.
-        // The live results owner is visible to that control for this scan, then retires.
-        boss.getState().routine = 16;
-        boss.getState().defeated = true;
+        // The actual DoStart flow waits on the title flag while the declared results owner retires.
+        var phase = S3kBossDefeatSignpostFlow.class.getDeclaredField("phase");
+        phase.setAccessible(true);
+        @SuppressWarnings({"rawtypes", "unchecked"})
+        Object doStart = Enum.valueOf((Class) phase.getType(), "AWAIT_ACT_TRANSITION");
+        phase.set(boss, doStart);
         scan(fixture, 0);
         manager.removeDynamicObject(oldResults);
         assertNull(NativeSstSlotAccess.currentOwner(manager, belowSlot));
         assertNull(NativeSstSlotAccess.currentOwner(manager, xSlot));
         assertNull(NativeSstSlotAccess.currentOwner(manager, minSlot));
         assertNull(NativeSstSlotAccess.currentOwner(manager, maxSlot));
-        var complete = AizMinibossInstance.class.getDeclaredField("defeatRenderComplete");
-        complete.setAccessible(true);
-        complete.setBoolean(boss, true);
         GameServices.gameState().setEndOfLevelFlag(true);
         middle.armed = tail.armed = true;
         var level = GameServices.level().getCurrentLevel();
         int targetX = level.getMaxX();
         int targetMin = level.getMinY();
         int targetMax = level.getMaxY();
+        fixture.camera().setMinX((short) 0x10E0);
         fixture.camera().setMaxX((short) (targetX - 16));
         fixture.camera().setMinY((short) (targetMin + minYDistance));
         fixture.camera().setMaxY((short) (targetMax - 16));
@@ -163,8 +165,7 @@ class TestAizAct2LevelSizeWorkers {
             if (!armed) return;
             var objects = services().objectManager();
             var workers = objects.getActiveObjects().stream().filter(o -> !o.isDestroyed())
-                    .filter(o -> o instanceof AizAct2CameraResizeController
-                            || o instanceof S3kIncLevelEndXGradualInstance
+                    .filter(o -> o instanceof S3kIncLevelEndXGradualInstance
                             || o instanceof S3kCameraGradualObjectInstance)
                     .map(o -> (AbstractObjectInstance) o)
                     .sorted(Comparator.comparingInt(AbstractObjectInstance::getSlotIndex)).toList();

@@ -385,3 +385,172 @@ exhaustion, native full-SST/position equivalence, the absent advertised auxiliar
 families, other configurations/rosters, complete-route title frontier, native
 pixels and whole-chain/act certification remain open. No new native/media run,
 whole chain, broad smoke or release suite was run.
+
+
+## Physical miniboss handoff and alternate ring blocker — 2026-10-17 R3
+
+This record supersedes the ownership model, not the historical R1/R2 results
+above. Base is Root `7ed6ba5b8b05d4e460c64307a50630f94e795552`, same
+`t3-98d036a9` / `bugfix/ai-s3k-aiz-bridge-standing-gpt61`. Only
+`AizMinibossInstance` changes runtime; final SHA256 is
+`1878f322bfa03f2c20970c5dd2a371839a4e90481b93c872c332695331027626`.
+Shared flow, allocator, bounds workers, collision/touch, inputs and trace data
+are unchanged. Root owns subsequent composition and integration clearance.
+
+### Source and rejected compensation
+
+Citations use this tree's skdisasm pin
+`044fa46725c71187399e13f5ddb70e11d32dc024`; line numbers are not universal.
+`Obj_AIZMiniboss`137287–137292 dispatches its routine before the HP/collision
+poll `loc_68F62`137826. Fatal touch now carries the existing production HP write
+into that local post-routine poll, with ordinary movement/Obj_Wait first and
+score/hurt/defeat side effects once. The previous13-entry fatal delay and carried
+catch-up/results terms had no owning ROM state and are removed together.
+
+**Rejected hypothesis:** `$3F` was not invented. `BossDefeated_StopTimer`180900
+falls through `BossDefeated`180908–180913, which writes literal63 to `$2E`.
+`Wait_FadeToLevelMusic`179742–179759 consumes64 later own dispatches, then
+installs fresh119 and creates independent SongFade with plain global
+`AllocateObject`179749. The existing `spawnDynamicObject` helper is AfterCurrent;
+the correct existing API here is `spawnDynamicObjectLowestFreeSlot`. A lower
+free SST waits until the next production scan; no inline update compensates.
+
+`loc_68C02`137455–137458 calls `Obj_EndSignControl` in the same physical SST.
+Existing detach/transfer/deleteNoRespawn/replacement APIs now install the generic
+flow there and invoke `beginNativeReplacement`. The generic owner retains fresh
+119, literal results90, normal sign INIT/stub dispatch and DoStart's X/min-Y/max-Y
+workers. The old AIZ shadow camera bridge, title-art early-release predicate,
+results-slot reservation and displaced-entry state are obsolete and removed.
+R2's short camera/three-worker tests now enter actual generic DoStart rather than
+the removed private path. Nontrivial min-Y acceleration, at-target creation-pass
+retirement and twice-forced recreation before and during live workers remain.
+
+`loc_68FB6`137858–137869 creates Child6_CreateBossExplosion subtype `$10`.
+The unchanged existing `MhzMinibossExplosionController` models that exact native
+independent owner:31 consumed attempts, allocation before RNG/sound, final
+next-pass deletion. It is an independent AfterCurrent sibling, survives physical
+boss replacement and finishes its tail after capture/recreation. Early parent
+music fade and the inline subtype0 explosion helper are removed; SongFade owns
+its own lifetime/flags. No new generic lifecycle or dispatch contract was added.
+
+### Attribution and short old-red witnesses
+
+Root41825 on7ed had original AIZ80 errors (8 queue/72 animation), first8218
+animation13/5, and chain segment4 11789 errors (10255 physics/1534 animation),
+first6749 x_speed -00E0/0000. Control59027 restores only AIZ to da706 (R2 off),
+all other production7ed: both exact selectors fail with the complete same arrays.
+Control58516 additionally restores shared flow to Main803 (R1 off), running only
+original AIZ: zero errors. These controls exonerate R2; they do not alone
+attribute segment4. Exact Root source bytes were restored before implementation.
+
+New independent `TestAizEndSignControlReplacement` declares component inlets,
+uses normal allocation/hole retirement and production scans, and never seeds a
+slot, wait word, clock or trace value. Old-red38946:2/1F/0E/0S, actual AIZ
+control17/sign18 first birth Y0, no stub, no physical replacement; the in-place
+control initializes correctly. Old-red59829:1/1F/0E/0S, the local fatal poll and
+fresh wait/replacement are missing. Old-red33946:1/1F/0E/0S, a naturally freed
+lower hole17 is skipped for music19, birth updates1 instead of0, and music
+expires one own dispatch early. Each behavior witness completes full-world
+forced-recreation/restore and forward replay twice before asserting behavior.
+
+The single authorized original-driver prefix53263 through8941 on interim source
+`600d70aa7e2b99c582efce3a055b7235ebefd4031229703aaf1aaa63c74177a6`
+localized the global music call. Native7973 has music4, control7, sign10/stub11;
+engine music10 instead shifts sign11/stub12. Native8940 X12/max-Y14 contrasts
+engine X10/max-Y14; min-Y13 self-retires in that creation pass. Full native
+`slot_dump` plus appearance/retirement evidence proves the static occupants8/9
+exist in both: the missing-static-owner hypothesis is rejected. Filtered
+`object_state` alone could not prove their absence.
+
+These are trace-row/phase observations, not guessed BK2 offsets. At7972–7975,
+FULL_LEVEL_FRAME, trace LF1DF9–1DFC, engine LF1DF8–1DFB, actual ObjectManager
+Vbla2110–2113, executed7673–7676, next BK2 cursor8484–8487. At8938–8941,
+trace LF21BB–21BE, engine LF21BA–21BD, Vbla24D6–24D9, executed8635–8638,
+next cursor9450–9453. GameplayModeContext binds the object clock to that manager;
+the unbound EngineTiming facade's0 is not object-clock evidence.
+
+### Commands and observed results
+
+All commands below run from this tree with this exact common prefix and suffix:
+`OPENGGF_MAIN` denotes the original absolute Main checkout, not this task tree;
+its current wrapper is invoked by absolute path while output remains in this tree.
+
+```text
+env -u DISPLAY -u WAYLAND_DISPLAY EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null \
+ LUA_BIN=/usr/bin/lua5.4 JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+ python3 $OPENGGF_MAIN/tools/testing/maven_queue.py --normal \
+ -Dmse=off -Dopenggf.headless.gl=surfaceless-egl [selection] \
+ -Dsonic1.rom.path=$OPENGGF_MAIN/s1.gen \
+ -Dsonic2.rom.path=$OPENGGF_MAIN/s2.gen \
+ -Ds3k.rom.path=$OPENGGF_MAIN/s3k.gen test -B
+```
+
+Java25, original S3K SHA1`CFBF98C36C776677290A872547AC47C53D2761D6`;
+inherited JDK_JAVA_OPTIONS/MAVEN_OPTS preserved. Trace selections add
+`-Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical`.
+No source changed while queued/live. Times below are UTC; execution excludes wait.
+
+| Selection / source | Terminal observation |
+| --- | --- |
+| `-Ptrace-replay -Dtest=TestS3kSonicTailsCompleteEmeraldRunPrefix#twoSpecialStageReturnsThroughThirdEntry,TestS3kAizTraceReplay#replayMatchesTrace`, R2-off control |59027,11:29:00,2/2F/0E/0S,Maven1m35s,no wait; exact Root errors retained. |
+| `-Ptrace-replay -Dtest=TestS3kAizTraceReplay#replayMatchesTrace`, both AIZ fixes off |58516,11:31:14,1/0F/0E/0S,Maven1m21s,no wait. |
+| New birth / fatal / music methods separately before their owner corrections |38946,11:35:49,Maven1m07s;59829,11:40:53,23.537s;33946,11:52:26,23.605s; old-red counts above, no wait. |
+| `-Dtest=TestAizEndSignControlReplacement,TestAizAct2LevelSizeWorkers,TestAizMinibossCameraUnlock,TestS3kBossDefeatSignpostFlow,TestS3kSignpostNativeControlSst,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestMhzMinibossExplosionAllocation,TestMhzMinibossDefeat`, final1878 |75120,11:56:09,77/0F/0E/0S,Maven1m15s,wait36s. Includes four new owner cases, two worker cases, independent Mhz3 and mandatory S3K4. Music17=natural hole17 below control18, birth updates0, alive at120. |
+| `-Ptrace-replay -Dtest=TestS3kSonicTailsCompleteEmeraldRunPrefix#twoSpecialStageReturnsThroughThirdEntry,TestS3kAizTraceReplay#normalBridgeStandingSstMatchesOriginalFullrun+replayMatchesTrace`, final1878 |56721,11:57:19,3/0F/0E/0S,Maven59.417s,no wait. All20 standing assertions: actual12 at9510–9513, bridge12/display17 at9392, correct centres/identity. Original AIZ20463 rows, zero errors/warnings/bootstrap; prefix segments0/2/4 complete, zero physics/animation errors. |
+| Same three selectors on interim600, before the demonstrated global music correction |93177,11:47:18,3/1F/0E/0S,Maven1m42s,no wait. Original and prefix green, four standing-slot failures10/12; new source repair justifies the final affected replay. Earlier focused63597 passed73. |
+| Read-only unchanged original prefix through8941, interim600 |53263,11:50:36,1/0F/0E/0S,Maven29.973s,no wait; temporary test removed. |
+| `-Ptrace-segments -Dtest=TestS3kAizZoneSliceTraceReplay#replayMatchesTrace`, final1878, distinct existing BK2 |33952,11:58:08,1/1F/0E/0S,Maven40.703s,no wait:11 ring errors, no animation/errors in other fields,26041 compared rows, zero warnings/bootstrap. **Alternate UNQUALIFIED.** |
+| One read-only alternate observation, same driver via existing frame observer and semantic prefix13742 |86679,12:02:23,1/1F/0E/0S,Maven31.570s,no wait: same first13740 rings1/2. Prior20566 failed test compilation before executing any replay; private helper misuse was corrected, not a second executed variant. Temporary observer removed. |
+
+The single planned guards command was `-Pguards -Dtest=TestArchitecturalSourceGuard,TestHardwareTimingAuthorityGuard,TestRewindArchitectureGuard,TestObjectPhysicsStandardizationGuard`:
+40441,12:05:39 UTC,134/1F/0E/0S,Maven33.151s,no wait. Source72/authority25/
+rewind4 and32 object cases pass. The exact raw-allocation inventory alone expects10,
+now9 because this correction removes AIZ's obsolete inline raw insertion. The
+owned inventory ratchet is tightened10→9, with no assertion weakening. Authorized
+`-Dtest=TestObjectPhysicsStandardizationGuard#productionObjectLifecycleRawCallCountsDoNotGrow`
+then runs once:27275,12:07:05 UTC,1/0F/0E/0S,Maven24.683s,no wait. This is the
+other133 retained passes plus one corrected-method pass, not a pristine repeated
+134-case invocation. No further Maven/check is requested.
+
+### Unattributed alternate ring owner: integration blocker
+
+R1/R2's historical76-error alternate frontier is not the final result. The new
+source removes its queue/animation errors but exposes ten ring1/2 spans:
+13740–13932,13934–13935,13937–13938,13940–13960,13962–13993,13995,13997,
+13999–14208,14210–14214,14216–16669. The eleventh entry is inherited trailing
+26179 rings72/0. The ten new spans are **not attributed or waived**; reduced
+error totals do not establish no worsening or integration clearance.
+
+The authorized observation identifies the actual engine increment owner.
+Completed13739 FULL: LF358E, ObjectManager Vbla3933, executed13710,
+next BK2 cursor14681, count1. LostRing SST13 at1BB0/01EE, velocity00C4/FE74,
+phase96, flags47, collected=false/routineStarted=false, source spawn
+1B2D/01F9,id37, currentTouch=true. Completed13740 FULL: LF358F,Vbla3934,
+executed13711,cursor14682,count2; that same SST13/position alone becomes
+collected/routineStarted=true, flags0. P1 centre1BA0/01FF→1BA2/01FF,
+radii7/14,status04,routine2,invulnerability8→7. P2 centre1B7C/019F→1B7F/01A0,
+radii7/14,status02,objectControlled=true. Existing last-touch state has P1's
+left/top1B9A/01F4,height22/radius11, but the later P2 skip clears the hit list.
+P1 is supported by eligibility/geometry; no passive per-increment actor hook
+records it directly. Both players read the shared count, not two increments.
+
+Source `Touch_ChkValue`20810–20835 writes routine4 and returns; bouncing-ring
+`loc_1A7C2`35699 later owns GiveRing. Existing engine LostRing.update likewise
+starts the collection routine/adds one ring in its own dispatch. Native13740
+slot_dump lists bouncing-ring owners12–15 and52–54/56–59, but filtered
+object_state/object_near has no ring positions/routines at13735–13742. The
+native position/writer witness needed to distinguish ring trajectory/cadence
+from touch admission is absent. No LostRing/touch/collision/debris change, clock
+fit, count correction or further variant/prefix was made. Root owns the next
+ring evidence/owner unit; this R3 correction is useful but not integration clearance.
+
+Native `loc_68C02` also creates four `loc_68E98` debris children. That inherited
+omission is outside this correction and limits complete SST occupancy proof.
+Original's seven advertised aux schemas remain absent; alternate has eight
+absent families. Full native aux/position/RNG equivalence, allocation exhaustion,
+configuration/roster/viewport breadth, cold routes, other BK2s, native pixels and
+full-chain/act certification remain open. No new native/media/fullchain/broad run.
+The final target compilation is runtime1878 plus restored maintained replay tests
+and the tightened guard inventory, from27275. Temporary observer source is absent.
+All inspected diagnostics and bounded source helpers are consumed under the metadata
+lease alone; no receipts/log archives remain. All job handles are terminal/released.

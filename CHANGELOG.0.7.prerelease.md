@@ -174,7 +174,10 @@ Unreleased. The earlier development themes remain in
   AIZ rewind preserves completed miniboss spawn history after the native results
   owner retires.
   End signs allocate after the retained native boss/control slot, preserving
-  later Angel Island bridge slot identities when the Java flow is separate.
+  later Angel Island bridge slot identities. Angel Island replaces its miniboss
+  with the end-sign control in the same physical slot, polls fatal HP after the
+  current routine, and preserves native wait words and independent music and
+  explosion lifetimes.
   The Angel Island control creates all three gradual camera workers in native
   order, including min-Y, and releases each at its original boundary instead
   of snapping min-Y or reserving a remembered results slot.

@@ -10,9 +10,14 @@ closes the omitted `Make_LevelSizeObj` min-Y owner and remembered-results slot
 reservation: a real active control creates X/min-Y/max-Y through AfterCurrent,
 including min-Y's same-scan retirement at target and nontrivial accelerating
 continuation, with twice-recreated full-world replay before and during the work.
-The original twenty standing assertions remain green. The distinct existing BK2
-retains the exact same76 errors as matched R1, first11350 animation, including the
-trailing26179 ring difference; that route is not green. Allocation exhaustion,
+Those are historical R1/R2 results. The [R3 physical-owner record](../architecture/validation/levels/s3k-aiz2.md#physical-miniboss-handoff-and-alternate-ring-blocker--2026-10-17-r3)
+qualifies77 focused cases, all20 standing assertions, original AIZ and the
+two-special-stage prefix after replacing the physical control and preserving
+literal waits/global music allocation. The distinct alternate now has11 ring
+errors, first13740 rings1/2: ten newly exposed spans remain unattributed, plus
+the trailing26179 ring difference. **Alternate UNQUALIFIED; integration blocked.**
+Native four-debris occupancy, absent ring-position/writer evidence and full aux
+coverage remain explicit gaps; Root owns the next ring-owner unit. Allocation exhaustion,
 full native SST comparison, missing advertised auxiliary observations,
 viewport/donor/roster breadth and the full continuous chain remain open. These
 bounded results do not certify a complete act.

@@ -5996,3 +5996,30 @@ sizes available to those children. This is an HCZ owner fact; the captured-read
 and current/target-bound distinction is reusable across games.
 Origin: retained HCZ repair `b6c4898e2`, merged with Root at `b9c1c8b3d`,
 2026-10-17; native owners verified in the locked-on disassembly.
+
+
+## Physical pointer replacement and literal allocation primitive at AIZ defeat
+
+A retained allocation cursor is insufficient if the Java flow still dispatches
+from a later auxiliary SST: a lower sign then misses its native birth-pass INIT.
+`loc_68C02` calls Obj_EndSignControl in the same physical a0; use the existing
+slot-transfer/replacement lifecycle, then beginNativeReplacement. Keep independent
+SongFade and subtype-$10 explosion controllers alive across that replacement.
+Wait_FadeToLevelMusic uses global AllocateObject, whereas the engine helper named
+spawnDynamicObject is AfterCurrent. Use existing spawnDynamicObjectLowestFreeSlot
+for this caller; a naturally freed lower hole must wait until the next scan.
+
+Follow tail calls through fallthrough writers: BossDefeated_StopTimer falls through
+BossDefeated, which writes literal$3F to$2E. The rejected 'invented63' hypothesis
+missed that writer. Preserve64 later decrement/branch passes, fresh$77 and results90;
+remove displaced-entry compensation only with the actual poll/physical owner.
+Full slot_dump can establish occupants that filtered object_state omits. Read the
+bound ObjectManager Vbla clock, actual phase/LF/execution/cursor independently;
+an unbound timing facade's0 cannot prove object timing.
+
+Origin: AIZ R3 on7ed6ba5b8,2026-10-17; skdisasm pin
+044fa46725c71187399e13f5ddb70e11d32dc024, sonic3k.asm137287–137292,
+137455–137458,137826–137869,179742–179759,180900–180913. The physical dispatch,
+allocator-name and fallthrough lessons apply across games. Native debris/full-SST
+and the alternate's newly exposed ring1/2 frontier remain separate unqualified
+obligations; see the existing AIZ2 matrix's R3 record.
