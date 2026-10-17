@@ -1367,3 +1367,18 @@ remain open. [Exact evidence and limits](architecture/validation/levels/s3k-icz-
 R11 ICZ final five exact source/API guards also pass without skips (89633);
 Root's bounded P2 resolution inspection has no remaining material objection.
 No extra construction/trace/broad re-execution or integration clearance follows.
+
+
+R20/R21 spinning-column owner (2026-10-17, local f196-based candidate): native
+cached offscreen release preserves OnObj/kinematics, while the existing native
+column standing latch permits subsequent recapture. ClearHeldFlag alone does
+not clear control. This repairs an implementation defect, not an accepted ROM
+deviation; no shared solid/CPU/camera/cache/API changes. Genuine independent
+old-red→green,73focused0skip, twice-world release/recapture and original native
+8715..20endpoint equality are qualified. Separately authorized actual final
+report95476 compares8721/14208, completefalse:206=11camera physics+195animation,
+firstNonCameraNULL through8720, lag59/warnbootstrap0. Same-window10733 is213
+(15/198), but bounded recent5 does not prove exhaustive residual-array identity.
+Strict1F remains; first all-group3475animation17/1C. No later frontier, full
+returned-HCZ/exit, independent slice/alternate/GLFW/native or product breadth
+certificate. [Exact source, commands, rejected JUnit-only inference and report](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r21-actual-final-prefix-report-qualifies-the-local-column-repair--2026-10-17).

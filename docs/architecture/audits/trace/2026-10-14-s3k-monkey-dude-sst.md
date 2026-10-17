@@ -5004,3 +5004,247 @@ canonical/independent BK2 requalification or new native observation is included.
 The deliberately red component test is retained for the next authorized fix;
 consumed two owned JUnit reports are removed under metadata_slot after durable
 facts, without archives. All previous qualification limits remain.
+
+
+## R20 local column release owner and prefix reporting limit — 2026-10-17
+
+**One local owner correction, focused green and native endpoints matched; strict
+matched-window totals are not captured.** R19's genuine old-red commit57dd6a035
+is preserved. Root authorizes the same owned tree/branch to correct only
+HCZSpinningColumnObjectInstance, reviews its exact frozen source with no material
+finding, and conditionally permits one originalAD40 prefix after all focused
+checks pass. No shared solid, CPU/camera/cache publisher, jump velocity, renderer,
+allocator or public API changes are made. No Root/Main writes or integration.
+
+### Exact owner mapping and frozen source
+
+Runtime base remains f196, with HEAD57dd6a035 plus the local owner/test diff;
+this is not execution on Root's later composed250f source. Managed standing
+reads the existing ObjectManager.hasObjectStandingBit(player,this), not callback
+freshness, the player's OnObj flag or another object's ride. Only unmanaged
+objects/no ObjectManager retain the old callback compatibility through
+tryServices. Active valid cached-false, or existing dead/hurt routine state,
+uses the native loc_328AC release before standing/hold: Airtrue, priority100hex
+(bucket2), control0, heldfalse, retaining OnObj/pose/fractions/velocities.
+Clearing the engine object-mapping projection accompanies native control bit1
+release without changing published mapping/animation values. Active !standing
+maps only to loc_328BE/heldfalse. Inactive sub_32784 has only its actual native
+standing gate, so positive control3 does not block recapture.
+
+The old generic jump release path and all its velocity writes are unchanged.
+Dedicated dead/hurt lifecycle cases are not added; that branch is source-backed
+mapping to the same helper, not independent qualification of every routine state.
+The existing unmanaged test's ordinary-release expectation was wrong for
+loc_328BE. It now verifies retained control/mapping/OnObj/pose/fractions/nonzero
+velocities/animation, followed by contact recapture with control3 still present.
+This strengthens the local source contract, rather than removing a check to
+hide a failed managed inlet.
+
+| Frozen file | SHA256 |
+| --- | --- |
+|HCZSpinningColumnObjectInstance.java|d8119e4afe924b7e76adcc6e8a71bf38c46e1c85067f5f7e5e42cd956cd3b303|
+|TestHczSpinningColumnCachedRelease.java (unchanged R19 oracle)|c35d447ad95e556324022e1b6f77414bb4afc056e3a8506f4add69b3e23a313b|
+|TestS3kHczSpinningColumn.java|6c7416b9637acce642ee7d0c4f109736ae9f88621cf29829ce577ee73496ebfb|
+
+Ordered path-NUL-byte combined SHA256 is
+`8f0266a1fc9e6fe5b211d709555ee746792c021b0728617842ee6c80322ac98f`.
+Root independently verifies source pin044fa467's render/routine-before-standing,
+ReleaseHeldPlayer/ClearHeldFlag and inactive capture branches, the retained
+standing getter and mapping projection. Source/test hashes remain exact through
+both actual runs below. Native4fdf checkout, all prior refs/private regular0600
+config and Main config bytes/mtime remain untouched. Exact returned R20task ID,
+ordinal22 and24h expiry live in gpt61_hcz_column_release_fix_r20; R19ordinal21
+and R18ordinal20 accounting remain separate.
+
+### Single affected focused selection
+
+Use the same original absolute S1/S2/S3K paths, current Main absolute wrapper,
+owned cwd, Java25/JTO EGL/nullAL/Lua5.4/no ambient display environment as R19,
+normal admission, forkCount1/reuseForkstrue/runOrderalphabetical, -Dmse=off and
+`test -B`. No trace profile for this component/load selection. Exact selector:
+
+```text
+com.openggf.game.sonic3k.objects.TestHczSpinningColumnCachedRelease,com.openggf.tests.TestS3kHczSpinningColumn,com.openggf.game.sonic3k.objects.TestS3kHczMechanismRewind,com.openggf.game.rewind.TestS3kCnzHczRiderRewindMaps#hczSpinningColumnRestoresRiderArrayAndPlayerReference,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils
+```
+
+Session62518 terminal0 at **18:38:32UTC**, queue0s, displayedMaven01:19min:
+**73/0F0E0S**, all nine actual class XMLs inspected. Counts: new unchanged R19
+oracle2, existing column8, mechanism2, exact rider recreation1; mandatory AIZ1
+skip8, loading36+7, bootstrap6, decoding3. The managed offscreen release/retained
+standing recapture and twice forced whole-world forward cycles at both
+before-flip and now-actual release snapshots pass. Visible-held/newly-pressed
+jump controls remain green. The separate legacy control proves clear-held
+preservation and positive-control recapture. No broad/unchanged134/118 rerun.
+
+### Sole original prefix93493: direct endpoints and reporting gap
+
+Root source approval plus the all-green/zero-skip focus opens the separate gate.
+Temporary TestS3kCanonicalHczColumnReleasePrefix SHA256
+`c972858eb5a98f58c73e5049a47645c8f508fcf530ccf4767df54dec3a1829fd`
+calls the original assertChainReplayThroughSegmentRow(run,11,8721), from boot.
+Its existing afterProductionStep hook forwards the original once, then reads
+only actual comparator cursor and P2 primitives at committed rows8715..8720;
+no owner logs, callback/checkpoint replacement, hardware observer alteration,
+new input/bootstrap/lag authority or gameplay writes. Target rows/cursors are
+observation boundaries, not runtime conditions. Exact invocation uses R18's
+original -Ptrace-replay environment/ROM/flags, replacing only its selector with
+`TestS3kCanonicalHczColumnReleasePrefix#originalAd40ColumnThrough8720`.
+
+Session93493 terminal0 at **18:40:29UTC**, queue0s, Maven47.927s,
+JUnit **1/0F0E0S**, method23.962s/suite24.191s. Six actual samples are:
+
+| Row | BK2 cursor | Level LF | Status | Control tuple | Air / OnObj |
+| --- | --- | --- | --- | --- | --- |
+|8715|71791|8657|09|T/T/T|false /true|
+|8716|71792|8658|09|T/T/T|false /true|
+|8717|71793|8659|0B|F/F/F|true /true|
+|8718|71794|8660|09|T/T/T|false /true|
+|8719|71795|8661|0B|F/F/F|true /true|
+|8720|71796|8662|09|T/T/T|false /true|
+
+Every sample retains X0E10.BB00/Y0572.AE00 and all velocities0, matching the
+original native R18 rows. Status is the existing canonical sprite status;
+control is its exact semantic tuple, not fabricated raw bytes. The actual8717
+release and8718/19/20 recapture/release alternation therefore match the native
+endpoint witness. No object VInt clock is inferred from postrow Level LF.
+
+**Measurement limitation found after terminal:** AbstractRunChainTest's deliberate
+ReplayPrefixReached catch aborts/cleans the unfinished comparator without writing
+or asserting that segment. This temporary postrow observer omitted its aggregate
+summary. Thus there is **no seg11 JSON, current error total, per-group totals,
+lag/warning/bootstrap summary or firstNonCameraPhysicsMismatch** from this
+execution. It cannot be compared numerically as213→206, and JUnit0F cannot be
+called strict green. Its first logged all-group mismatch remains row3475
+sidekick_animation_id17/1C; totals cannot be reconstructed from a bounded first-
+error log. No count is borrowed from an older runtime or inferred from endpoints.
+
+Six completed earlier gameplay reports0/2/4/6/8/9 are all-group zero, complete,
+warning/bootstrap0 and lag0/11/14/16/62/55 as in10733; their original windows
+are2290/4023/8235/4103/7175/3574 rows. The11-gap report has0 failures. These
+completed windows and the direct six endpoints are observed; the unfinished
+8721-row current aggregate and any later frontier are **unqualified**.
+
+Stop and hand back the exact reporting gap before another execution/source
+variant. Root received it immediately; no retry, full canonical/slice/alternate,
+GLFW/native/media/broad run or runtime retuning is implied. Local documentation
+may record source/focused/endpoint facts, but a complete matched-window count
+requires a separately authorized observer/reporting step.
+
+
+## R21 actual final-prefix report qualifies the local column repair — 2026-10-17
+
+**The R20 reporting gap is now resolved by an independently authorized reporting-
+only execution, not an inferred count or behavioral variant.** The same frozen
+one-file runtime correction d8119e4a and unchanged R19 oracle c35d447a remain;
+legacy native-clear-held test6c7416b9 is also unchanged. Root reviews the final
+report-only temporary source a625ad6c with no material finding before authorizing
+one normal wrapper request. No further behavior change or selection is made.
+R19 genuine old-red57dd6a035 remains in history; R20 source/focused/native-
+endpoint evidence and its original missing-summary limitation remain above.
+
+### Reviewed report phase, identity and actual execution
+
+R21 source prep has its own ordinal23/task. The actual returned execution task
+is separately registered as ordinal24 in
+`gpt61_hcz_final8720_reporting_execution_r21`, preserving23/22/21/20 and refreshing
+24h expiry. Prepared c174f2e4 is an **unexecuted** draft, superseded before any
+compiler/JVM by final temporary source SHA256
+`a625ad6c56fb2744d42034777c4f5a4e202e5f91b9b447cb4da421f1fe72678b`.
+AbstractRunChainTest itself remains SHA256
+`967c9896bf566218e9198626ec7d256f181be9fb78ca5abc787d6b82932148bb`.
+
+The temporary subclass forwards existing stepEngineFrame exactly once. It
+intercepts only that base's exact private ReplayPrefixReached control exception,
+after final playable animation/dynamic-art comparisons and coordinator.afterStep,
+before the outer catch calls hardwareTiming.abort and clears the comparator.
+It reads the actual current comparator and its immutable loaded TraceData via
+read-only reflection; frameCount is frames.size, not a substituted metadata
+value. Assertions distinguish **8721 actually compared** from **14208 loaded
+reference rows**, and require completefalse/current comparator/metadata identity.
+Existing writeChainSegmentReport writes its normal session-owned JSON/owner
+sidecar, using the original group+bootstrap accounting invariant. Only diagnostic
+maps/output are written. The identical stop exception is rethrown; only after the
+original abort/cleanup returns does the test assert the original strict zero.
+No endpoint/owner logs, new timing callback, input/lag/bootstrap changes, gameplay
+writes or new API are introduced.
+
+Exact sole invocation from the owned cwd, with the original absolute wrapper/
+ROM paths bound as in R18 (including original AD40 BK2/manifest/bootstrap):
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_WORKSPACE/tools/testing/maven_queue.py" --normal -Dmse=off -Ptrace-replay \
+  "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" "-Ds3k.rom.path=$S3K_ROM" \
+  '-Dtest=TestS3kCanonicalHczColumnReleasePrefix#originalAd40ColumnThrough8720' \
+  -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical test -B
+```
+
+Session **95476** finishes **18:52:31UTC**, queue0s/Maven51.190s,
+JUnit **1/1F0E0S**, method23.924s/suite24.211s. Compiler prerequisite stays
+inside this single request. The sole failure is strict0 versus actual206 **after
+original cleanup**; there is no observer/identity/reference/accounting error,
+postboot retry or additional JVM. All runtime/test/temporary hashes remain exact.
+
+Actual scalar identity/window record:
+
+```text
+comparator=871662667 compared=8721 reference=14208 total=206 physics=11 animation=195 bootstrap=0 warnings=0 lag=59 complete=false firstNonCamera=null
+```
+
+The current partial seg11 JSON SHA256 is
+`f8edb2e08345316394dc995d903c091cfb9974863b863a3dcefb7c5bb7540972`.
+Its full available fields and arrays are inspected, not merely a preview:
+
+| Same original returned-HCZ prefix | R18/10733 | R21/95476 |
+| --- | --- | --- |
+|Compared rows / loaded reference|8721 /14208|8721 /14208|
+|Total field errors|213|206|
+|Physics / animation errors|15 /198|11 /195|
+|First non-camera physics|8717 sidekick_air1/0|none through8720|
+|Lag / warning / bootstrap|59 /0 /0|59 /0 /0|
+|Complete reference|false|false|
+
+This is an **observed** matched-window aggregate change, not the formerly
+forbidden213→206 prediction. The counts reduce by4 physics and3 animation fields;
+there is no exhaustive seven-identity set-difference claim. The summary retains
+only a five-entry recent mismatch ring, not the full error array. All five
+available entries are remaining camera_y errors (repeatCount1 each):
+
+| Row | Native / engine camera_y | Delta |
+| --- | --- | --- |
+|6948|07C7 /07C9|2|
+|6947|07C2 /07C4|2|
+|6792|0678 /067E|6|
+|6791|0670 /0678|8|
+|6790|0668 /0670|8|
+
+The original first logged all-group mismatch is still3475
+sidekick_animation_id17/1C. firstNonCameraPhysicsMismatch is actually null,
+so the11 physics errors are camera-only through the measured boundary. Strict
+camera/animation errors remain red; neither JUnit nor the partial source is
+reported as strict green. Exact full residual-array equivalence is not proved
+by the bounded recent ring or durable10733 summary.
+
+Six completed earlier gameplay windows0/2/4/6/8/9 remain complete/all-group zero,
+warning/bootstrap0, original lag0/11/14/16/62/55 over the same
+2290/4023/8235/4103/7175/3574-row references. The actual11-gap report has0 failures.
+R20's six postrow endpoints already match original native8715..20, including
+8717/8719Air/control release and8718/8720recapture, retaining OnObj/kinematics.
+Together with unchanged independent old-red→green and twice-world replay, this
+qualifies the **local column owner through8720**. A later non-camera frontier is
+not measured. There is no full returned-HCZ/exit, independent slice/alternate,
+GLFW, new native/media, wider roster/viewport or auxiliary-channel certificate.
+Dedicated hurt/dead lifecycle breadth and other owner handoffs remain outside
+this focused proof. Source epoch is f196+this local d811 owner, not Root's later
+composition. Root owns combined guards/smoke/integration/push.
+
+After these facts, remove only the temporary prefix source/compiled class and
+consume inspected owned JUnit/segment/gap reports and owner sidecars under
+metadata_slot alone. Keep the production owner, strengthened legacy test and R19
+independent oracle; no raw archive or validation receipt. All earlier refs,
+native4fdf/private config/Main identity remain preserved. Normal local runtime/
+test+existing-doc commit is authorized after this bounded qualification; no
+further execution follows.

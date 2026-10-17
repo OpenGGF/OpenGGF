@@ -491,7 +491,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   recorded return-tail comparisons and timing checks. HCZ fan bubbles rise at
   the native speed and remain allocated until reaching the water surface. Fan
   bubble and sound cadence use the gameplay clock; a full object pool leaves
-  the random-number state unchanged. Freed animals retire from the preceding
+  the random-number state unchanged. HCZ spinning columns use cached sprite
+  visibility to release and recapture riders while preserving their platform
+  attachment. Freed animals retire from the preceding
   sprite-render visibility flag, preserving the native object-slot lifetime and
   the animal's separate render and collision dimensions.
 

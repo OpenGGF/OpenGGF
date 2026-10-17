@@ -4637,3 +4637,20 @@ runtime directory and audio backend; verify the actual backend rather than the
 property name. Legacy baseline graphics may require a separate authenticated
 virtual framebuffer, never the user's display. Keep that server's ownership and
 cleanup bounded. The feature's explicit EGL captures do not need it.
+
+
+### Intentional prefix return can omit the unfinished comparator report
+
+AbstractRunChainTest's ReplayPrefixReached path aborts timing and clears the
+active comparator without asserting/writing the unfinished segment. A JUnit
+prefix pass can therefore coexist with strict camera/animation errors. Read the
+actual current comparator after final playable/dynamic-art comparisons and
+before abort, reuse its existing session-owned summary, and retain the original
+stop/cleanup order. Keep a strict-zero assertion after original cleanup. Record
+actual compared cursor separately from the loaded reference frameCount and
+complete flag. A five-entry recent mismatch ring is not an exhaustive error
+array or proof of exact residual-set equality. R20's93493 reached the correct
+native endpoints but omitted counts; separately reviewed/authorized R21's95476
+actually records8721/14208/completefalse and206 errors. No total was recovered
+from the earlier terminal JVM or borrowed from another source epoch. See the
+[dated owner/report evidence](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r21-actual-final-prefix-report-qualifies-the-local-column-repair--2026-10-17).

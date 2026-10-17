@@ -294,3 +294,39 @@ supports a column-local correction, with no shared/API widening. See the
 [R19 source/design/results](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r19-independent-column-cached-release-old-red--2026-10-17).
 No runtime fix, new native, trace qualification or broader roster/viewport
 coverage; the existing8717 frontier and all earlier qualification limits remain.
+
+
+## R20 local column release and measured limits (2026-10-17)
+
+On f196+local column owner (d8119e4a), unchanged R19oracle now passes real SST
+capture, actual cached release/retained-standing recapture and twice forced
+whole-world replay around before-flip and actual release boundaries. Visible
+hold/jump and unmanaged clear-held/positive-control controls also pass. Sole
+focus62518 is73/0F0E0S, including required S3K loading checks. No shared/API change.
+Root-reviewed source then runs one originalAD40 boot prefix93493 through8720;
+actual8715..20pose/fractions/velocities/status/control match the retained native
+sequence, including8717Airtrue/control0/OnObjtrue. Its JUnit1/0F is **not strict
+qualification**: unfinished seg11 aggregate was not captured. No current total/
+group/firstNonCamera count or213→current comparison is available. Earlier six
+completed gameplay reports/gap remain zero. See [R20 evidence and reporting gap](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r20-local-column-release-owner-and-prefix-reporting-limit--2026-10-17).
+No later frontier, full returned-HCZ/exit, independent slice/alternate, new native,
+GLFW or wider viewport/roster qualification; dedicated hurt/dead cases remain open.
+Stop after handback before any additional execution.
+
+
+## R21 actual partial report closes R20's count gap (2026-10-17)
+
+One separately authorized reporting-only execution95476 on the same frozen
+d811/c35d/6c741 source actually records8721 compared/14208 reference rows,
+completefalse: **206=11camera physics+195animation**, firstNonCameraNULL through
+8720, lag59/warnbootstrap0. Strict1/1F0E0S is solely0-versus206 after original
+prefix cleanup. No diagnostic failure or behavioral variant. Same-window10733
+is213=15physics+198animation; only aggregate/group deltas and available recent
+identities are proved, not an exhaustive error-array difference. First all-group
+3475sidekick_animation_id17/1C remains; six earlier complete windows/gap are zero.
+[Exact source/identity/phase/report and counts](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r21-actual-final-prefix-report-qualifies-the-local-column-repair--2026-10-17).
+With73focused0skip, real twice-world release/recapture and R20's native-matching
+8715..20 endpoints, the local owner is qualified through8720. No later frontier,
+full returned-HCZ/exit, independent slice/alternate, new native, exact GLFW or
+wider roster/viewport/auxiliary certification. Hurt/dead and multi-owner breadth
+remain limited to the recorded source argument. No further execution here.

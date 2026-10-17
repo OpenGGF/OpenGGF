@@ -6202,3 +6202,30 @@ Async prepared builds lack predecessor identity/generation; do not silently reus
 this synchronous inlet there. ICZ R11 (2026-10-17,077767+repair) proves the handoff
 and opaque counterexample with independent old-reds and twice-restored replay;
 see the existing ICZ1 matrix. No trace/observation bytes supply gameplay assets.
+
+
+## Cached offscreen release can preserve the object's standing latch
+
+HCZSpinningColumn sub_32784/loc_327FC checks the held player's cached render_flags
+sign before routine and standing. loc_328AC sets Air/priority100/control0;
+loc_328BE clears only held. Neither release clears OnObj or velocities. Active
+!standing branches directly to ClearHeldFlag, preserving control; inactive
+capture checks only this column's standing bit, with no positive-control3 gate.
+SolidObjectFull's offscreen P2 return precedes Full_1P, retaining native standing
+without publishing a new contact callback (skdisasm044fa46725c71187399e13f5ddb70e11d32dc024,
+sonic3k.asm sub_32784/loc_327FC/loc_328AC/loc_328BE and SolidObjectFull).
+
+Use the existing managed hasObjectStandingBit(player,this) for that native bit,
+not callback freshness, player-only OnObj or another object's sticky interaction.
+Keep unmanaged callback compatibility separate. Do not reuse a generic release
+that clears OnObj, reject retained positive control on inactive capture, or
+recalculate fresh visibility to bypass the existing cache-validity contract.
+Changing control bit1 may release its engine mapping-ownership projection while
+preserving the last published mapping/animation values.
+
+Prove capture through real factory/allocation/SST FullSolid contact, visibility
+through the actual copied-camera/body publisher, and whole-world recreation/
+forward replay before visibility flip and after release/recapture. Manual
+onSolidContact tests alone miss this retained managed latch. Origin: HCZ R18
+owner witnessdf2bbf, R19 genuine oldred57dd6a035 and R20/R21 local qualification,
+2026-10-17; existing dated trace audit/HCZ2 matrix record strict residual limits.

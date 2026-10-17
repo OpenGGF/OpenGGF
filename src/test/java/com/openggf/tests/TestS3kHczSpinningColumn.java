@@ -163,7 +163,7 @@ public class TestS3kHczSpinningColumn {
     }
 
     @Test
-    public void ordinaryReleasePreservesTheRidersPublishedAnimation() {
+    public void lostStandingOnlyClearsHeldAndAllowsPositiveControlRecapture() {
         HCZSpinningColumnObjectInstance column = new HCZSpinningColumnObjectInstance(
                 new ObjectSpawn(0x1000, 0x0800, 0x68, 0x01, 0x00, false, 0));
         TestablePlayableSprite player = new TestablePlayableSprite(
@@ -173,12 +173,40 @@ public class TestS3kHczSpinningColumn {
         column.onSolidContact(player, new SolidContact(true, false, false, false, false), 0);
         column.update(0, null);
         player.setAnimationId(Sonic3kAnimationIds.DUCK);
+        player.setOnObject(true);
+        player.setSubpixelRaw(0x3A00, 0x7B00);
+        player.setXSpeed((short) 0x123);
+        player.setYSpeed((short) -0x234);
+        player.setGSpeed((short) 0x345);
+        int centreX = player.getCentreX();
+        int centreY = player.getCentreY();
 
         column.update(1, null);
 
-        assertFalse(player.isObjectControlled());
-        assertEquals(Sonic3kAnimationIds.DUCK.id(), player.getAnimationId(),
-                "loc_328AC releases control without writing anim");
+        assertTrue(player.isObjectControlled(), "loc_328BE clears only the held byte");
+        assertTrue(player.isObjectControlAllowsCpu());
+        assertTrue(player.isObjectControlSuppressesMovement());
+        assertTrue(player.isObjectMappingFrameControl());
+        assertTrue(player.isOnObject());
+        assertFalse(player.getAir());
+        assertEquals(centreX, player.getCentreX());
+        assertEquals(centreY, player.getCentreY());
+        assertEquals(0x3A00, player.getXSubpixelRaw());
+        assertEquals(0x7B00, player.getYSubpixelRaw());
+        assertEquals(0x123, player.getXSpeed());
+        assertEquals(-0x234, player.getYSpeed());
+        assertEquals(0x345, player.getGSpeed());
+        assertEquals(Sonic3kAnimationIds.DUCK.id(), player.getAnimationId());
+
+        // This unmanaged compatibility control supplies its ordinary contact
+        // again. Inactive sub_32784 must capture even with positive control3.
+        column.onSolidContact(player, new SolidContact(true, false, false, false, false), 2);
+        column.update(2, null);
+        assertTrue(player.isObjectControlled());
+        assertEquals(0, player.getXSpeed());
+        assertEquals(0, player.getYSpeed());
+        assertEquals(0, player.getGSpeed());
+        assertEquals(Sonic3kAnimationIds.WALK.id(), player.getAnimationId());
     }
 
     @Test
