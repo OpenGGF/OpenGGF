@@ -1403,40 +1403,25 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         if (level == null || level.getMap() == null) {
             return;
         }
-        Map map = level.getMap();
+        if (!(level instanceof Sonic3kLevel s3kLevel)) {
+            throw new IllegalStateException("LBZ row-pointer mutation requires its encoded level owner");
+        }
         LayoutMutationContext context = new LayoutMutationContext(
                 LevelMutationSurface.forLevel(level),
                 levelManager()::applyMutationEffects);
         zoneLayoutMutationPipeline().applyImmediately(
                 mutationContext -> {
-                    LevelMutationSurface surface = mutationContext.surface();
-                    MutationEffects combined = copyBackgroundRow(
-                            map,
-                            surface,
+                    // loc_544C6 copies WORD row pointers at a3=Level_layout_main+2.
+                    // Copying map-width bytes would overwrite neighbouring physical BG rows.
+                    s3kLevel.copyLayoutRowPointer(BG_LAYER,
                             LBZ2_DEATH_EGG_BG_REFRAME_SOURCE_ROW_0,
                             LBZ2_DEATH_EGG_BG_REFRAME_DEST_ROW_0);
-                    return mergeEffects(combined, copyBackgroundRow(
-                            map,
-                            surface,
+                    s3kLevel.copyLayoutRowPointer(BG_LAYER,
                             LBZ2_DEATH_EGG_BG_REFRAME_SOURCE_ROW_1,
-                            LBZ2_DEATH_EGG_BG_REFRAME_DEST_ROW_1));
+                            LBZ2_DEATH_EGG_BG_REFRAME_DEST_ROW_1);
+                    return MutationEffects.redrawAllTilemaps();
                 },
                 context);
-    }
-
-    private static MutationEffects copyBackgroundRow(Map map,
-                                                     LevelMutationSurface surface,
-                                                     int sourceRow,
-                                                     int destRow) {
-        if (sourceRow >= map.getHeight() || destRow >= map.getHeight()) {
-            return MutationEffects.NONE;
-        }
-        MutationEffects combined = MutationEffects.NONE;
-        for (int col = 0; col < map.getWidth(); col++) {
-            int blockIndex = map.getValue(BG_LAYER, col, sourceRow) & 0xFF;
-            combined = mergeEffects(combined, surface.setBlockInMap(BG_LAYER, col, destRow, blockIndex));
-        }
-        return combined;
     }
 
     private void updateLaunchMotion(LbzZoneRuntimeState state) {

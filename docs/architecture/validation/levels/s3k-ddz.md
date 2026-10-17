@@ -775,3 +775,17 @@ load (14 live frames before the native 22-frame fade-out). Rows still red there 
 not fade timing and are owned elsewhere: the Knuckles act-2 restore at 37130 and the
 LRZ boss sidekick overlap parity at 47471 (rewind-snapshot rows) and solo Tails' SSZ1
 opening camera (behaviour row). No skips.
+
+
+## R13 explicit fresh-entry component-test inlet — 2026-10-17
+
+The palette/stars component boot helpers now use the existing fresh-start
+lifecycle. Native Sonic_Init returns without a floor probe; loc81554 takes
+movement control81. The pre-edit synthetic builder floor pass throws14 errors
+at FF82AF/definition20 after encoded addressing exposed its undeclared inlet.
+No DDZ runtime/terrain fallback is changed. A new ROM-derived20×6/row80B0 +
+unsigned column1FF control still rejects the unproduced definition20 explicitly.
+Palette4/stars11 pass, including existing native cadence and replay assertions,
+inside86 focused checks;118 affected guards pass with no skips. This is a test
+entry repair, not new campaign/native-pixel/viewport breadth. [Exact source,
+commands and limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r13-residency-smoke-regressions-native-row-pointers-and-ddz-fixture-entry--2026-10-17).

@@ -1300,3 +1300,45 @@ physics mismatch through7808, warnings/bootstrap0. First remaining all-group
 error3475 sidekick_animation_id17/1C; later non-camera frontier is unmeasured.
 No full returned-HCZ/exit/slice/alternate/GLFW or route certification is claimed.
 [Native source, exact controls/commands/hashes and limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r11-hczblock-full2-visibility-owner-closes7807-through7808--2026-10-17).
+
+
+R12 current composed HCZ qualification (2026-10-17,bef8 unchanged): one maintained
+full canonical17194 compares all14208 returnedHCZ rows,125612 total field errors
+(107498physics+18114animation),first non-camera8329y_speed0000/-0680. Earlier
+six windows complete zero-error, but giant_ring exit remains absent; no onward
+segment/playable exit. Four suppressed unmatched hardware completions are
+unattributed. Separate slice witness proves10834counter0/1 is a correct consumer
+of10833cached offscreen caused by enginecamera copy019A versus native0199 at
+an inclusive left edge. Fresh-entry delay is disabled; no CPU/cache/runtime fix.
+Selected P1/history/camera-latch producer remains unqualified. No extra selection,
+native or broad run, and no general green.
+[Exact fixtures, commands, clocks, windows, phase correction and handback](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r12-slice-cached-visibility-consequence-and-full-composed-canonical--2026-10-17).
+
+
+R13 residency smoke regression repair (2026-10-17): DDZ component fixtures now
+select their existing native fresh-start/no-floor inlet; manual undeclared FF82AF
+terrain lookup still explicitly rejects unproduced definition20. LBZ's Death Egg
+launch copies two encoded row-pointer words, preserving source bytes and later
+mutation aliases through two forced whole-world restore/replay cycles. Exact
+pre-edit15/1F/14E and independent ROM-pointer1/1F -> final86 focused/118 affected
+guards all pass without skips. This does not requalify HCZ8329/exit, independent
+slice/alternate/GLFW or full routes; no CPU/camera/unknown-RAM fallback changes.
+[Exact owner evidence and limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r13-residency-smoke-regressions-native-row-pointers-and-ddz-fixture-entry--2026-10-17).
+
+R14 camera-input witness (2026-10-17, unchanged0cd178d8f production): original
+82EA prefix through10835 remains104spans/10773 rows, first9482air1/0 and
+10834counter0/1. Actual10833delay1 selects enginehistory023A, while current
+P1word0231;186+(23A−186−A0)=019A is correct. Native selected table contents,
+H_scroll, forced/latch state and camera-entry P1 are unobserved; final poses and
+Pos_table_index are insufficient. No Camera/CPU repair or parity claim. Existing
+named RecordPos10D80 pin is an operand in the actual ROM; verified entry10D66
+is recorded for future plan review without changing capture authority/fixtures.
+[Exact original inputs, phases, source pins and limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r14-slice-camera-entry-history-inputs-no-camera-or-cpu-repair--2026-10-17).
+
+R15 native camera input (2026-10-17): the missing native selection is now observed
+in one original82EA power-on pass, all four endpoint controls/60 callbacks match.
+10833 RecordPos writes0239.E0; delay0100 selects0239 ->0199. Engine R14 history
+023A ->019A is also correct. This moves the causal input question upstream to
+P1 arriving at RecordPos, not Camera/CPU. Exact earlier engine writer remains
+unproven; no runtime fix or new engine/route/visual qualification is claimed.
+[Actual byte-verified instruction phases and limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r15-original-native-camerahistory-input-plan--2026-10-17).

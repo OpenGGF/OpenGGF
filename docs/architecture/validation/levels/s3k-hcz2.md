@@ -211,3 +211,53 @@ contains only post-row reads and is removed after facts are durable. No full
 act/returned exit/slice/alternate/GLFW/viewport/roster/native presentation
 certification; Root owns remaining route and delivery validation.
 [Source, controls, clocks, commands and exact window comparison](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r11-hczblock-full2-visibility-owner-closes7807-through7808--2026-10-17).
+
+
+### R12 actual composed full-window frontier and slice cause — 2026-10-17
+
+No production/test edit onbef8; R11 code/test bytes retained. Once existing full
+canonical17194 completes all14208 returnedHCZ rows with125612 field errors
+(107498physics/18114animation),lag59,warn/bootstrap0. First non-camera now8329
+y_speed0000/-0680; pre-R11 same-window133258 started7807sidekick_y. Earlier six
+gameplay windows remain complete zero-error. The giant_ring exit is still absent,
+so no onward segment/playable exit or act certification. Four suppressed unmatched
+hardware completions are not attributed to a new timing owner.
+
+Separate original82EA slice prefix68487 reaches10835, strict1/1F/0E/0S and104
+spans/10773 compared rows.10833camera copy019A (native0199) makes the real render
+edge negative instead of inclusive0; valid cached false correctly yields counter1
+on10834, then resets10835 after visibility returns. Fresh-entry delay is disabled.
+No CPU/cache/width fix. Selected camera P1/history/latch inputs were not captured;
+actual native aux lacks those selected-history/scroll fields. Observer's
+PRE_MAIN_LOOP label corrected to loop tail. Independent disconfirming test design
+is handed back, not run; all temporary observers removed before canonical.
+Full independent-slice delta attribution, later8329 owner/exit, other BK2/GLFW/
+viewport/roster/native presentation breadth remain open. Root owns delivery.
+[Exact source, clocks, comparison windows and limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r12-slice-cached-visibility-consequence-and-full-composed-canonical--2026-10-17).
+
+### R14 slice camera history input limit — 2026-10-17
+
+On unchanged0cd178d8f production, sole original82EA prefix63258 compares10773
+rows through10835 with104=92physics+12animation spans, strict1/1F/0E/0S, first
+9482air1/0. Four actual camera-entry samples prove delay2→1→0 selects0226 then
+023A; at10833currentP10231.CD00 differs from latesthistory023A. Correct native
+camera arithmetic for these engine inputs yields019A. No Camera/CPU/counter fix
+or independent old-red is supported. Native final poses/index/copies do not
+supply matching selected history, H_scroll, forced/latch or camera-entry P1.
+No new native/fullslice/canonical/alternate/8329/GLFW/broad or matrix breadth
+qualification. Temporary observer removed; R12's returned8329/absent exit and
+mixed whole-slice vector limits remain. Root owns missing native-plan review.
+[Actual source pins, fixture identity, clocks and passivity](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r14-slice-camera-entry-history-inputs-no-camera-or-cpu-repair--2026-10-17).
+
+### R15 original native selected camera input observed — 2026-10-17
+
+One original82EA native power-on pass46154,0..38005, observes raw10831..35.
+All four10832..35 endpoint controls,60 ordered/passive callbacks and immediate
+pre/post identity guards pass. Actual10833 RecordPos0239.E0 writesFFE548;
+delay0100 selects0239 ->camera0199. R14 engine latest023A ->019A uses the same
+correct rule. Native prior selected0225 vs engine0226 shows producer divergence
+already before this camera consequence. Exact earlier engine P1 writer remains
+unknown; no Camera/CPU or unobserved late-object repair is justified.
+No new engine replay/focused pass, matrix product, full route/exit, alternate,
+GLFW or native visual acceptance. Existing strict slice/8329/exit limits remain.
+[Exact original inputs, byte pins, CPU/publication phases and disconfirming proposal](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r15-original-native-camerahistory-input-plan--2026-10-17).

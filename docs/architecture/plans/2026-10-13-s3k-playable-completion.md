@@ -5207,6 +5207,101 @@ frozen during the retained run. Later isolated fixes require their meaningful
 affected checks before composition; repeated unchanged broad coverage is not
 a ceremony. Whole ending CPU/bus/readiness acceptance remains a separate gate.
 
+## R12 HCZ slice visibility consequence and composed route frontier — 2026-10-17
+
+Same3aa fast-forwarded cd94→bef8, preserving R10/R11 refs, native4fdf and an
+isolated exact-byte private config. No R12 production/maintained-test edit.
+One original82EA slice prefix68487 stops10835:1/1F/0E/0S,104spans/10773 compared
+rows, first9482air1/0, no warnings/bootstrap, eight missing aux schemas.
+Actual10833 camera copy019A versus native0199 places P2x0181,width18 one pixel
+outside instead of exactly on the inclusive edge. Its published valid cached
+false correctly increments the following NORMAL CPU counter0→1 at10834;
+fresh-entry rule/consumption are false. Next publication true resets10835.
+No counter/cache/geometry correction is justified. A temporary PRE_MAIN_LOOP
+label was wrong: it is the post-camera loop tail here. Causal proof uses prior
+end-row publication and next post-CPU sample, not an invented pre-CPU hook.
+
+The precise upstream gap is focused P1/selected history, H_scroll delay/forced
+coordinate/clamp inputs at camera entry. Native final poses/copies/index exist;
+selected Pos_table contents and scroll latch are absent from actual read aux.
+Independent real-refresh/next-CPU edge controls should disconfirm the consumer;
+a genuine camera-producer old-red needs those source inputs first, not native
+output0199 assigned as a fixture. No new test or runtime change at this boundary.
+
+Root separately required one maintained full AD40 canonical after removing all
+temporary observation source/classes.17194 on exactbef8 is1/1F/0E/0S. Six earlier
+gameplay windows0/2/4/6/8/9 complete at zero errors; returnedHCZ compares all14208
+rows,125612=107498physics+18114animation, lag59, warning/bootstrap0. First
+non-camera moves7807→8329 y_speed0000/-0680. Matched pre-R11 Root93212 was133258
+(113873+19385) over the same rows. Exit giant_ring is still never observed; no
+onward segment/playable exit qualifies. Four suppressed unmatched hardware
+completions remain unattributed. No8329 repair/rerun/extra selection or broad.
+Root owns further owner authorization, smoke/integration/push.
+[Exact inputs, clocks, seam correction, commands, windows and limits](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r12-slice-cached-visibility-consequence-and-full-composed-canonical--2026-10-17).
+
+
+## R13 residency smoke regressions repaired locally — 2026-10-17
+
+Same3aa branchbugfix/ai-s3k-residency-smoke-regressions-gpt61, pre-edit merge25d
+of Root02b into R12bd2; both append sections/old refs/native4fdf retained. Exact
+pre-edit43333 reproduces15/1F/14E/0S. DDZ two component boot helpers now declare
+existing fresh-start lifecycle (native Sonic_Init has no floor pass); a separate
+ROM-derived FF82AF/definition20 probe still refuses unowned bytes. No DDZ runtime
+fallback. LBZ native loc544C6 copies two row pointer words, while old code copied
+154 bytes through four-byte BG rows. Independent ROM owner5006 old-red1/1F at
+pointer8EF8 vs8F00 -> final same control green. Internal pointer COW/decoded view/
+alias reindex and BG producer flag preserve source bytes, live mutation aliases
+and two forced whole-world restore/forward cycles. No public API/pin expansion.
+
+Frozen runtime363e7328… / runtime+tests581a2665… has Root read-only no-material-
+finding review (no tests), reused.16322 passes86/0F/0E/0S including mandatory
+S3K4=60 and native-word/overlay7;48957 passes118 affected guards, no skips.
+All four own jobs terminal, no further selection. No trace/native/media/broad or
+Root/Main writes; Root15826 remains foreign. R12 HCZ8329/exit and GLFW/slice limits
+remain unqualified on the new source. Root owns composition/delivery. Exact
+commands/measurements/owner classification are in the [existing audit](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r13-residency-smoke-regressions-native-row-pointers-and-ddz-fixture-entry--2026-10-17).
+
+**R14 bounded camera-input handback (2026-10-17, base0cd178d8f):** production
+and maintained tests unchanged. Build-only82622 passes; sole original82EA
+prefix63258 is1/1F/0E/0S,104=92physics+12animation spans/10773 compared rows
+through10835, first9482air1/0;10834counter0/1 remains. Queue1026s/Maven30.850s.
+20 passive samples/58494bytes prove actual camera-entry history selection:
+10833currentP10231.CD00/latest23A/slot19/delay1 selects23A, so186+14=19A is
+correct; no bounds/cap/forced/defer latch explains a camera-owner fault. Native
+aux has index/copies but lacks selected history/delay/entry P1/forced state;
+final pose cannot replace RecordPos/Camera-entry values. No Camera/CPU fix or
+old-red is supported. Byte-read native entry pins1C0A8/RecordPos10D66 are distinct
+from retained named10D80 operand pin; capture code/fixtures remain untouched.
+No further execution; observer/classes and six consumed diagnostics removed,
+all own jobs terminal. R10..R13 refs/native4fdf/private config preserved. Root
+owns native-plan review, broader route/8329/exit and delivery.
+[Exact original fixture hashes, source pins, clocks and causal limit](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r14-slice-camera-entry-history-inputs-no-camera-or-cpu-repair--2026-10-17).
+
+**R15 native-input plan checkpoint (2026-10-17, source72d1be929):** same owned
+3aa/new local feature branch, engine/native checkout unchanged. No matching
+original82EA retained fullRAM identified; AD40 dumps do not close the question.
+External real-instruction RecordPos/MoveCameraX observer is compiled-only0 under
+writer/shared activity/inheritedFDs, native count0. Frozen source/command/opcodes/
+original power-on bootstrap and four endpoint equality controls handed to Root;
+parent technical review is required before one normally admitted native pass
+through10835. No engine replay/runtime fix or source/fixture authority mutation.
+[Concrete pending plan and hashes](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r15-original-native-camerahistory-input-plan--2026-10-17).
+
+**R15 actual one-pass result (2026-10-17, unchanged72d1be929 production):** Root
+reviewed the concrete plan, then authorized only launcher provenance rechecks
+and one normal native execution.46154 terminal0, queue248s/native10.3544623s,
+FDs5/6/7; all four endpoint controls and60 ordered/passive callbacks match.
+Native10833 RecordPos writes0239.E0, next index48→4C; entrydelay0100 selects
+actual0239@FFE548 ->camera0199. Engine R14 selects actual023A ->019A correctly.
+Native/engine selection agrees by intent; differing P1 producer input already
+precedes the camera/CPUcounter consequence. NativeRecordPosreturn239.E0→Deform
+231.E0 brackets an unobserved writer, not an attributed HCZBlock/carrier fix.
+No Camera/CPU/shared runtime correction or genuine old-red is supported. Proposed
+independent real-record/solid-correction delay1/0 control is disconfirming and
+not run. All own jobs terminal, no second native/engine test or route certificate;
+Root owns the earlier P1 writer,8329/exit, combined validation and delivery.
+[Actual source pins, phases, identities and limits](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r15-original-native-camerahistory-input-plan--2026-10-17).
+
 
 ### Combined smoke interruption and matched consumer gates — 2026-10-17
 

@@ -2075,3 +2075,30 @@ for detached UI fades. Keep renderer attachment separate: only the actively
 bound palette owner publishes CRAM fades. Origin: 2026-10-17 white-fade
 architecture guard repair; existing native component/22-V-int and immediate-scene
 rewind-release semantics are unchanged.
+
+
+**A row-pointer write is not a decoded row copy.** Native LBZ loc544C6 changes
+BG row addresses, retaining shared byte owners. After encoded collision aliases
+are modelled, copying the common154-column map width into native four-byte BG
+rows overwrites neighbouring storage. Repoint the encoded words under COW,
+sync the decoded view and rebuild aliases; verify later source mutations and
+whole-world restoration, not just the first rendered row. DDZ's separate smoke
+errors were an undeclared synthetic fixture floor pass: Sonic_Init has no floor
+probe and loc81554 owns flight. Declare its existing fresh-start inlet and keep
+an independent unknown-definition refusal; do not invent missing RAM to make a
+component bootstrap green (R13, 2026-10-17).
+
+### Native instruction pins and delayed camera history are different authorities
+
+A named recorder pin may lie inside an operand: actual locked-on ROM RecordPos
+entry is10D66, X/Y writes10D7E/10D82, increment10D86; the retained named10D80
+is the0010 operand of the X write. Verify bytes at real instruction boundaries
+before registering a passive callback; do not mutate capture authority/fixtures
+from a diagnostic. Recheck original ROM/movie/runtime/fixture/source identities
+inside normal admission immediately before launch and after terminal, because
+queue waiting can outlast a source freeze. Keep RecordPos, camera-entry, physical
+camera return and published RAM-copy phases separate. Native R15 writes239.E0,
+then current pose becomes231.E0, while delay0100 still selects239; engine's
+latest23A likewise correctly gives19A. Different producer inputs do not prove a
+Camera/CPU bug or identify the unobserved intervening object writer (R15,
+2026-10-17; see the existing HCZ trace audit).

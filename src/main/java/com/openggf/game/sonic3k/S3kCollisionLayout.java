@@ -20,7 +20,12 @@ final class S3kCollisionLayout {
     S3kCollisionLayout(byte[] encoded, int width, int height) {
         if (encoded.length != 0x1000) throw new IllegalArgumentException("Load_Level layout extent");
         this.encoded = encoded.clone();this.width = width;this.height = height;
-        next = new int[width * height * 2];Arrays.fill(first, -1);Arrays.fill(next, -1);
+        next = new int[width * height * 2];
+        rebuildAliases();
+    }
+
+    private void rebuildAliases() {
+        Arrays.fill(first, -1);Arrays.fill(next, -1);
         for (int row = 0; row < Math.min(height, 32); row++) {
             for (int layer = 0; layer < 2; layer++) {
                 int pointer = rowPointer(layer, row * 4);
@@ -100,6 +105,31 @@ final class S3kCollisionLayout {
         return new IllegalStateException(String.format("Unmodelled S3K collision address $%06X: %s", ((short) address) & 0xFFFFFF, reason));
     }
 
+    /** Native layout word write: change the row's address, preserving its source bytes. */
+    void copyRowPointer(Sonic3kLevel owner, int layer, int sourceRow, int destRow) {
+        if (layer < 0 || layer > 1 || sourceRow < 0 || destRow < 0
+                || sourceRow >= Math.min(height, 32) || destRow >= Math.min(height, 32))
+            throw new IllegalArgumentException("layout row pointer");
+        int pointer = rowPointer(layer, sourceRow * 4);
+        if (pointer == rowPointer(layer, destRow * 4)) return;
+        long epoch = owner.currentEpoch();
+        ensureEncodedWritable(epoch);
+        Map map = owner.getMap();
+        map.cowEnsureWritable(epoch);
+        int offset = 8 + layer * 2 + destRow * 4;
+        encoded[offset] = (byte) (pointer >>> 8);
+        encoded[offset + 1] = (byte) pointer;
+        byte[] data = map.getData();
+        System.arraycopy(data, sourceRow * width * 2 + layer * width,
+                data, destRow * width * 2 + layer * width, width);
+        rebuildAliases();
+    }
+
+    private void ensureEncodedWritable(long epoch) {
+        // Captures share the unchanged value; only an actual later write clones it.
+        if (lastTouchedEpoch != epoch) { encoded = encoded.clone();lastTouchedEpoch = epoch; }
+    }
+
     private void setAliases(LayoutMap map, int layer, int x, int y, byte value) {
         if (y >= 32) return;
         int pointer = rowPointer(layer, y * 4);
@@ -109,8 +139,7 @@ final class S3kCollisionLayout {
             throw unknown(address, "layout mutation reaches a different asset owner");
         // LevelSnapshot advances the epoch before the per-game adapter shares this
         // workspace. Copy only on an actual write in a new epoch, never per frame.
-        long epoch = map.owner.currentEpoch();
-        if (lastTouchedEpoch != epoch) { encoded = encoded.clone();lastTouchedEpoch = epoch; }
+        ensureEncodedWritable(map.owner.currentEpoch());
         encoded[address - LAYOUT_BASE] = value;
         byte[] data = map.getData();
         for (int i = first[address - LAYOUT_BASE]; i >= 0; i = next[i]) data[i] = value;

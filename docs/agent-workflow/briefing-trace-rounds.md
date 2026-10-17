@@ -101,7 +101,20 @@ A ready/physicallyRetired timing handle can still be the direct facade head at
 PRE. Keep outer, LF before-step, LF at observation, callback phase and real
 submission handles separately; the next outer VINT still reads the previous LF.
 Diagnostic queuedFingerprints are not submission fingerprints. Never infer a
-second service or shift clocks from these projections.
+second service or shift clocks from these projections. PRE_MAIN_LOOP is also
+not a pre-CPU observation in the ordinary LevelFrameStep: that service boundary
+runs after CPU, camera and ScreenEvents. HCZ R12's compact callback already had
+the new CPU LF; its temporary pre-CPU label was rejected. Use the actual caller
+order and previous cached publication/next post-CPU bracket, or identify the
+missing player hook, rather than renaming a late sample to match its question. R14 also separates
+RecordPos writes from final P1 pose and Camera-entry selected history: correct
+arithmetic on a divergent history word is not a camera-owner old-red. Verify
+real instruction boundaries against ROM bytes before using a named recorder pin;
+its label alone does not establish an entry callback. R15 then verifies
+RecordPos pre/post and Camera-entry at real PCs: native selects239 while engine
+selects23A, so correct arithmetic cannot identify the earlier P1 writer. Recheck
+all pinned identities after queue admission immediately before native launch and
+after terminal; a pre-queue hash alone is not execution provenance.
 
 Opcode pins alone do not authenticate instruction timing (2026-10-17, S3K V-int diagnostics).
 An unchanged `dbf` opcode can have a changed initial iteration count, and an unchanged `jsr` can call a different

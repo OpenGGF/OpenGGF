@@ -3606,3 +3606,659 @@ Root independently reviewed this exact eight-line override and98ea5c runtime
 file: no material finding. Source review confirms the Full2 Player2 dispatch,
 Full2_1P direct continuation and block call before Sprite_OnScreen_Test; no
 additional review or runtime check was requested.
+
+
+## R12 slice cached visibility consequence and full composed canonical — 2026-10-17
+
+Owned3aa3 safely fast-forwarded R11cd94 to Root
+`bef8f27ca5069ec296e6912b1e1bc7f735375c2f` on
+`bugfix/ai-s3k-hcz-slice-cpu-visibility-gpt61`. R10fa and R11cd94 branch refs
+remain retained. Native4fdf is internally clean and its inherited gitlink322
+checkout difference is untouched. The inherited private config symlink was
+isolated under the intended-tree writer lease as an identical regular0600 copy;
+no Main/Root configuration write. **No R12 production or maintained-test edit.**
+
+Root's actual matched whole-slice comparison is context: Main80317155 has4699
+spans=3973physics+726animation, current58673 onbef8 has4353=3424+929, both29302
+compared rows, no warning/bootstrap errors, eight advertised aux schemas missing
+and first9482 air1/0. Root reports sorted whole-errors JSON SHA256
+`71f91e9494d9a6926cd2f032dcc174a0d289355d9f9a6658b3752ae61d96d251`, identical
+to historicalR3. First newly mismatching field/row is10834
+`tails_cpu_respawn_counter`0000/0001. Lower totals are not a regression waiver.
+The earliest demonstrated compound b6 attribution does not identify its causal
+sub-owner. No ancestor sweep or another full slice is run here; historical3738
+remains unmatched. Root artifacts were not needed for the new observation.
+
+### Original slice witness: cached flag is consumed correctly
+
+Fixture is `src/test/resources/traces/s3k/hcz_completerun`; its original movie
+`src/test/resources/traces/s3k/_movies/s3k-complete-sonic-tails.bk2` SHA256 is
+`82eabfbc65e33c160ce209baa1ca3f967cb677fe22350bc100625d8c41a8e1bf`.
+This is distinct from canonicalAD40. One temporary subclass retains the original
+slice bootstrap/input/lag/row driver and strict divergence assertion, stopping
+through raw10835. It forwards the existing session hardware observer and uses
+existing Camera.UpdateObserver callbacks plus the end-row hook. No controller
+replacement, new shared debug API, flag/counter write, trace hydration, CPU
+journal, new native execution or media. Read-only sampling is checked for
+passivity; journal55779bytes/13 bounded samples, not a full-row dump.
+
+**Observer phase correction:** its temporary label
+`pre_main_loop_before_CPU` was wrong. Actual call order and CPU LF show that
+PRE_MAIN_LOOP occurs after CPU/camera scrolling. LevelFrameStep:518 services
+that boundary after ScreenEvents, before boundary easing and render-flag refresh.
+Those samples are retained only as loop-tail observations. No direct private
+checkDespawn entry/exit hook is claimed. The exact relevant dataflow is the prior
+end-row cached publication and the following post-CPU camera-entry callback:
+SpriteManager:1506 is the runtime cached-flag setter, called by the LevelFrameStep
+post-camera tail; there is no intervening new publication before that CPU tick.
+Compact latest-normal diagnostics identify its NORMAL branch/preStatus; no
+second observer run is submitted to repair a label.
+
+| Raw row | Native P2 / camera copy X / flag / timer | Engine post-row P2 / camera copy X / cached flag / timer |
+| --- | --- | --- |
+|10832|0176.0500 /0185 /84 /0|0176.2500 /0186 /true /0|
+|10833|0181.6700 /0199 /84 /0|0181.8700 /019A /false /0|
+|10834|018C.C600 /019C /84 /0|018C.E600 /019B /true /1|
+|10835|0198.2200 /01A6 /84 /0|0198.4200 /01A6 /true /0|
+
+All these cached states are valid in engine. P2 Y0831 is identical as a word;
+engine fraction4900 versus nativeB900 is an already divergent field, not repaired.
+Render centre equals body centre; render width18 (24pixels), body dimensions20×28pixels (decimal),
+radii07/0E, 320×224 camera, zero XY shake, copied/live camera X equal in samples,
+and Y copy07CC. Both native and engine CPU routine6, preStatus44 (grounded rolling
+underwater), object control0, no OnObj; stale native interact slot28 is empty and
+not active support. Engine flightTimerRaw0. Fresh-entry rule is **false**, and
+fresh-entry-delay-consumed remains false throughout.
+
+At10833 native horizontal inclusion is0181-0199+18=0, so render_flags84 is
+correct. Engine copiedX019A gives0181-019A+18=-1, so the actual production
+visibility lookup publishes false. The next CPU dispatch10834 therefore sees
+the real valid cached false and increments its counter0→1. Current geometry is
+already visible at that post-CPU callback, but CPU deliberately consumes the
+preceding publication. End10834 publishes true; CPU10835 resets the counter.
+This is precisely native `sub_13EFC` / loc13F18/13F28
+(`docs/skdisasm/sonic3k.asm:26856–26885`) for those inputs, and the native
+Render_Sprites inclusive left-edge test (:36376–36395). Counter/cache/width tuning
+would hide the wrong camera/P1 consequence. No CPU runtime defect is proven.
+Current minX/target80 and maxX/target9AA→9CC→9EF are far from this camera X;
+the observation does not prove which earlier carrier/bounds/history write
+created its one-pixel difference.
+
+| Raw row | Recorded native Vblank word / LF | Engine real object VInt / object LF / level LF | Actual recording cursor during row → after row |
+| --- | --- | --- | --- |
+|10833 (2A51)|944C /2A13=10771|37964 /926 /10771|38003→38004|
+|10834 (2A52)|944D /2A14=10772|37965 /927 /10772|38004→38005|
+|10835 (2A53)|944E /2A15=10773|37966 /928 /10773|38005→38006|
+
+These are recorded/actual owner clocks, not fitted offsets or EngineTiming0.
+Recording start index27170 is an actual driver field; P1 input0008 on these
+native rows. Dynamic-art movieLogicalFrame is the local presentation10833→10834
+at raw10833, not the absolute BK2 cursor38003. No full native VInt is fabricated.
+
+### Exact source gap and independent disconfirming design
+
+Camera.computeNextHorizontalCameraX (:491–570) selects focused P1, delayed
+position history or forced coordinates; native MoveCameraX
+(:38400–38473) likewise reads H_scroll_frame_offset and a selected Pos_table
+word, or x_pos. R12 did **not** capture actual focused P1/camera history input,
+horizScrollDelayFrames, forcedScrollRequested/X, fastScrollCap or the one-shot
+clamp latch at camera entry. Camera-entry callback precedes the owner; its next
+sample follows camera/fixed objects/ScreenEvents. It cannot distinguish those
+upstream writes just from the eventual copied X. Existing native aux through10835
+was actually inventoried: camera/history keys are `pos_table_index` and camera
+XY copies only; no H_scroll_frame_offset, selected Pos_table contents or forced
+XY fields. `sonic_record_pos_per_frame` is advertised but missing. Native final
+P1 physics poses exist; they do not establish the selected camera input phase.
+No shared Camera/P1/allocator/API correction is therefore justified.
+
+Proposed independent disconfirming control, **not executed**: declare body X=W,
+width24, publish via the real refresh owner at copied cameraW+24 (visible/reset0)
+and W+25 (offscreen/increment1), then run the following NORMAL CPU dispatch.
+Vary physical camera independently of the copy to test publication ownership;
+do not force flags/counters. This should be green on current code and disconfirm
+the CPU/visibility owner. A genuine camera-producer old-red needs the missing
+native input/history/latch contract first, with production motion driving it;
+assigning expected camera0199 or widening the edge would not be a valid test.
+This is a precise causal handback, not an implemented source repair.
+
+### One newly required existing full canonical on unchanged production
+
+Root separately authorized the maintained full canonical because R11 only
+qualified through7808. Temporary R12 source and two exact compiled classes were
+removed under writer lease after facts were durable. The existing maintained
+class ran once, no observer or source/API changes, on exactbef8 production.
+Original movie SHA256 is
+`ad40fb0b0a74fa12b08ab71b2e48a7455b388d14f43f4cded502ac4a15d1b3c0` at
+`src/test/resources/traces/s3k/runs/s3k-sonic-tails-complete-emeralds/s3k-sonic-tails-complete-emeralds.bk2`.
+
+Both runtime invocations use current Main's absolute wrapper via the existing
+`$MAIN_WORKSPACE` binding, own cwd/target, `--normal -Dmse=off`, Java25/Lua5.4,
+EGL surfaceless flag, nullAL, unset DISPLAY/WAYLAND_DISPLAY, original absolute
+three ROM properties and single reusable fork/alphabetical flags recorded in
+R10/R11 above. Original bootstrap/fixtures/input/lag are unchanged.
+
+| Handle / exact selection | Completed result | Queue / Maven / JUnit / finish UTC |
+| --- | --- | --- |
+|50567, `-DskipTests test-compile`|build success, no tests|build-only /1m14s /n/a /14:57:11|
+|68487, `-Ptrace-segments -Dtest=TestS3kHczSliceCpuVisibilityWitness#replayMatchesTrace`|1/1F/0E/0S, strict104 spans=92physics+12animation,10773 compared rows through raw10835, warning/bootstrap0|6s /32.803s /7.446s /14:58:17|
+|17194, `-Ptrace-replay -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds`|1/1F/0E/0S, two actual failure axes below|32s /50.504s /25.835s /15:05:18|
+
+68487 retains first9482 air1/0, first animation9486 player_animation_id0000/0005,
+eight missing advertised aux schemas, and the one-frame10834 counter0/1 span.
+Its short window is not improvement proof against whole-slice4353/4699 totals.
+
+17194 actual gameplay reports have cursor-derived complete=true against these
+unchanged fixture lengths (LiveTraceComparator:712–713 closes at frameCount):
+
+| Segment | Reference rows fully compared | Physics / animation errors | Lag |
+| --- | --- | --- | --- |
+|0|2290|0/0|0|
+|2|4023|0/0|11|
+|4|8235|0/0|14|
+|6|4103|0/0|16|
+|8|7175|0/0|62|
+|9|3574|0/0|55|
+|11 returned HCZ|14208|107498/18114|59|
+
+All listed windows have zero warnings/bootstrap errors. Returned HCZ's **125612
+is total across both groups**, despite the assertion's misleading “physics
+comparator errors” label. Matched pre-R11 Root93212 had133258=113873physics+
+19385animation over the same14208 rows, first non-camera7807 sidekick_y.
+Current first non-camera is **8329 y_speed**, native0000/engine-0680 (delta1664).
+The total reduction7646 is6375physics+1271animation; it is not a parity or
+regression waiver, and earlier camera/animation errors remain. No source
+investigation or repair is performed at8329.
+
+The other actual failure axis remains **segment11 giant_ring exit never observed
+within its boundary window**. No onward segment or playable exit is qualified.
+Dynamic-art gap journal has11gaps/0failures; this does not waive suppressed
+unmatched hardware completions in cleanup: raw10162 PRE_MAIN_LOOP KOS_DECOMPRESSION_QUEUE#220,
+10163 POST_OBJECTS KOS_MODULE_QUEUE#154,14172 PRE_MAIN_LOOP
+KOS_DECOMPRESSION_QUEUE#221 and14173 POST_OBJECTS KOS_MODULE_QUEUE#155, each with no matching pending engine job. Their baseline
+identity/causality is not newly attributed; no readiness fabrication or retry.
+
+Stopping boundary: read-only slice cause and exact missing upstream owner inputs,
+plus the one required full canonical's concrete next non-camera8329 frontier and
+still missing exit. No R12 runtime/test fix, second witness/full slice/alternate/
+native/media/guard/broad run, source integration or push. Root owns further
+owner authorization, broad smoke and delivery. Prior focused/guard successes
+retain their original R11 scope, not new R12 passes. Consumed own diagnostics are
+removed under metadata lease alone after facts are durable:24 exact own report/
+XML/text/owner files, no archive. Native4fdf, private config, useful images and
+foreign performance artifacts remain preserved. Temporary source/two classes
+are absent, all own jobs terminal, and no further selection is planned.
+
+
+## R13 residency smoke regressions: native row pointers and DDZ fixture entry — 2026-10-17
+
+Owned3aa, `bugfix/ai-s3k-residency-smoke-regressions-gpt61`, starts at R12bd2.
+Pre-edit merge25d3500cd retains both complete Root02b and R12 evidence suffixes;
+production/maintained tests at that merge match bef8/02b. R10fa/R11cd94/R12bd2
+refs, native4fdf versus gitlink322 and private regular config are preserved.
+Root's broad15826 stays foreign/frozen; this lane launches no broad, trace,
+native, media, ancestor sweep or extra worker/tree and makes no Root/Main write.
+
+### Two distinct causes, with actual old-reds
+
+Root's observed Main803 matched baseline89086 is18/1F/0E/0S; DDZ/LBZ/S2/Results
+pass and its sole GLFW failure is inherited. Own pre-edit43333 reproduces exactly
+**15/1F/14E/0S**: LBZ `launchStartReframesDeathEggSmallBackgroundRows`34/17,
+and DDZ palette3 + stars11 all throw `$FF82AF: 128x128 definition 20` from the
+fixture's synthetic `resolveGroundAttachment` (Builder577). This is not evidence
+that unknown definition RAM should become zero or a decoded fallback.
+
+DDZ is a fixture-inlet correction, with no DDZ runtime edit. Native Sonic_Init
+(disassembly21938–21978) returns after initialization without a floor probe;
+DDZ_ScreenInit allocates loc81492 and loc81554 installs object_control81 before
+ordinary movement. The two component-test boot helpers now declare the existing
+`withFreshLevelStartLifecycle`, as the production DDZ lifecycle tests already do.
+A separate pure-lookup control reads the actual ROM schema20×6, FG row2 pointer
+80B0 plus unsigned-word column1FF ->82AF, byte14hex/20. The cold load has no
+producer for definition20. It still throws the full24-bit FF82AF refusal under
+that explicitly undeclared terrain probe; no region, empty asset or zone carve-out
+is invented. The existing native flight/star/palette behavior checks remain intact.
+
+LBZ is a production pointer-owner repair. Native `LBZ2BGE_Normal/loc_544C6`
+(disassembly111493–111532), a3=Level_layout_main+2, copies WORD pointers
+8(a3)->(a3), C(a3)->4(a3); it does not copy row bytes. Actual current ROM LBZ2
+layout28A6FE has FGwidth154, BGwidth4 and BG row0..3 pointers8EF8/8EFC/8F00/8F04.
+The old byte-row implementation used mapWidth154, overwriting overlapping native
+row storage after R10 made encoded/decoded aliases coherent. The old test also
+seeded154 BG columns; it now declares the real four-column geometry.
+
+The independent short control loads the production ROM, verifies actual BG source
+bytes against ROM and calls the exact private reframe owner. Genuine old-red5006
+is **1/1F/0E/0S**, first encoded index10 expected8F (pointer8F00) / actual8E
+(pointer8EF8), before production changes. Its oracle requires the complete1000
+encoded bytes to differ only in the two native destination pointer words.
+Final16322 passes that same oracle. It uses no trace rows, forced blocks or RAM.
+
+### Internal owner, mutation and rewind
+
+S3kCollisionLayout changes the two encoded pointer words under COW, syncs the
+decoded destination view and rebuilds its inverse alias index. Sonic3kLevel's
+unmarked internal helper carries the BG producer flag; LBZ invokes it inside the
+existing zone mutation pipeline and requests the existing redraw. A later source
+row mutation reaches both logical aliases and the actual collision descriptor.
+Two forced whole-world recreations each restore every registry key, repeat the
+reframe/live ROM-block mutation and run two ordinary forward ticks with exact
+whole-world equality. Existing scene swap, retained-tail, positive-ROM, negative/
+adjacent/word-wrap, live-asset mutation and replay controls remain unchanged/green.
+No new persistent field, public Mod API shape/pin, general RAM bus, shared movement,
+CPU, counter, camera, metric, timing-authority or readiness change is introduced.
+
+Frozen runtime path+NUL+bytes sorted SHA256:
+`363e7328c6f0834b788ccdd08de170951a3bfe85f1307445e57838b2009c332a`.
+Runtime plus three changed test files:
+`581a266573ad547be61dd4a9b94ab405df62c7b14fb8ec8c18112eb29ff79579`.
+Root's exact-hash read-only review found no material issue in pointer COW, decoded
+sync, alias reindex/write/restore, producer flag or pipeline redraw; it ran no
+tests. That inspection is reused without another unchanged review round.
+
+### Exact bounded verification
+
+Same original absolute Main/ROM bindings as R3/R10, own cwd/target, current Main
+wrapper, normal lane, Java25/Lua5.4, EGL/nullAL/no ambient display, one fork:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless LUA_BIN=/usr/bin/lua5.4 python3 "$MAIN_WORKSPACE/tools/testing/maven_queue.py" --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" "-Ds3k.rom.path=$S3K_ROM" <selection> -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical test -B
+```
+
+| Owned session / selection | Tests/F/E/S | Queue seconds / Maven / finished UTC |
+| --- | --- | --- |
+|43333, `-Dtest=TestDdzRomPalettes,TestDdzSuperStars,TestSonic3kLbzLaunchSignals#launchStartReframesDeathEggSmallBackgroundRows` on pre-edit25d|15/1/14/0|522 /30.677s /15:30:21|
+|5006, `-Dtest=TestSonic3kLbzLaunchSignals#launchRepointsTheRomRowsWithoutOverwritingTheirByteOwners`, test-only diff on25d|1/1/0/0|27 /26.853s /15:33:24|
+|16322, focused selector below, final frozen runtime/tests|86/0/0/0|101 /1m20s /15:38:47|
+|48957, affected guards below, same frozen runtime/tests|118/0/0/0|39 /35.007s /15:40:22|
+
+16322 exact selector:
+`-Dtest=TestDdzRomPalettes,TestDdzSuperStars,TestSonic3kLbzLaunchSignals#launchStartReframesDeathEggSmallBackgroundRows+launchRepointsTheRomRowsWithoutOverwritingTheirByteOwners+repointedRowsKeepMutationAliasesAfterTwoWholeWorldRestores,TestS3kNativeWordLayoutResidency,TestSonic3kLevelOverlayRewindIsolation,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestModApiSignatureSurface#candidateZeroSevenSurfaceIsPinnedToTheCurrentSurface`.
+Breakdown: DDZ4+11, LBZ3, native-word4 + overlay3, mandatory S3K4=60
+(including both loading packages), exact API-pin1. No skips.
+
+48957 exact selection:
+`-Pguards -Dtest=TestArchitecturalSourceGuard,TestPerGameRuleArchitectureGuard,TestHardwareTimingAuthorityGuard,TestTraceReplayInvariantGuard,TestTraceRunVblankClockAuthorityGuard,TestRewindArchitectureGuard,TestRewindCoverageGuard,TestHelperStateRewindCoverageGuard`.
+Breakdown72+3+25+10+2+4+1+1. No skips, guard budgets/keys unchanged.
+All four requests are terminal. Useful work was not separately metered; this
+slice's elapsed time stayed below90 minutes even before excluding queue waits.
+Consumed own diagnostics are removed under metadata_slot alone, without archives.
+
+### Limits and handback
+
+This qualifies these two smoke-regression causes and their bounded consumers,
+not a complete smoke/full-suite or campaign. Root owns composed validation and
+integration/push. No new HCZ run occurs: R12's full returned-HCZ14208 rows /
+125612 all-group errors / first non-camera8329y_speed0000/-0680 / absent giant_ring
+exit remains historical bef8 evidence, not a new pass on this source. Current
+slice/alternate/GLFW/native-pixel/whole-route qualifications are not inferred.
+No8329, CPU visibility, camera-input or unknown RAM owner is repaired here.
+
+## R14 slice camera-entry history inputs; no Camera or CPU repair — 2026-10-17
+
+Owned3aa, `bugfix/ai-s3k-hcz-slice-camera-input-gpt61`, base0cd178d8f (R13).
+Production and maintained tests are unchanged. R10fa/R11cd94/R12bd2/R13refs,
+native4fdf versus gitlink322 and private regular0600 config remain preserved.
+No Root/Main write, child, new tree, native/media execution or broad selection.
+Root's15826 is foreign; its source/output is untouched.
+
+### Original input identity, exact invocation and strict result
+
+This is the original **82EA slice**, not AD40 complete-emerald chain:
+`src/test/resources/traces/s3k/hcz_completerun`, using
+`src/test/resources/traces/s3k/_movies/s3k-complete-sonic-tails.bk2`, SHA256
+`82eabfbc65e33c160ce209baa1ca3f967cb677fe22350bc100625d8c41a8e1bf`.
+Unchanged compressed fixture hashes, SHA256:
+
+| File | Hash |
+| --- | --- |
+|physics.csv.gz|f5b2f7b97951a3b8897d2e3f96c1a8155cd2bcf5d82410a441f8b376c2020337|
+|aux_state.jsonl.gz|c87c92393e09e050012001296009145d86018f55e4cc7a16a12862e7f61cef77|
+|metadata.json|7e115e9488de8be8954390c7ef01cc75fc939e61f005b1b30563c6fe01ef1f33|
+|hardware_timing.jsonl|f055e4863d0048dd5143d353ad5946544a09da9d14325fe0fdf113a3d002a811|
+
+Temporary `TestS3kHczSliceCameraInputWitness` extends the original maintained
+driver with only its passive observation and lastRaw10835 bound. Source SHA256
+`02cae7c30522c0e70f73c3731385366e7b038c0e5aa52dceb909083a63d0b1ec`.
+Original bootstrap/input/lag and strict comparison remain active. From own cwd,
+current Main absolute wrapper and the original absolute ROM bindings used above:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_WORKSPACE/tools/testing/maven_queue.py" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" "-Ds3k.rom.path=$S3K_ROM" \
+  -Ptrace-segments '-Dtest=TestS3kHczSliceCameraInputWitness#replayMatchesTrace' \
+  -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical test -B
+```
+
+Build-only82622, `-DskipTests test-compile -B`, succeeds at15:51:12UTC,
+Maven30.933s; no tests. Sole63258 finishes16:09:07UTC, exit1,
+**1/1F/0E/0S**, queue1026s, Maven30.850s, JUnit7.121s. It compares10773 rows
+through raw10835 inclusive, **104 spans=92physics+12animation**, no warning or
+bootstrap error/warning. First9482air1/0; first animation9486player_animation_id
+0000/0005; the one-row10834tails_cpu_respawn_counter0000/0001 remains. Eight
+advertised aux schemas are absent, including sonic_record_pos_per_frame and
+position/velocity/CPU-normal-step writes, as in R12. Prefix sorted-error SHA256
+`5cfd8f6d23cd616b20ed183cd13c8981e333cde522059f79946c87e025694dd1`
+is not the complete-slice4353-vector hash. No longer-window total or full route
+qualification is inferred from this bounded run.
+
+### Passive seam and actual camera inputs
+
+Existing Camera.UpdateObserver fires before the owner consumes delay/forced
+latches. A transparent existing timing observer delegate forwards every original
+notification exactly once; actual replay-port raw latch is read after forwarding.
+Original comparedSprite identity is returned unchanged. No CPU journal, gameplay
+write, clock assignment, controller replacement, API expansion or hydration.
+Before/after read assertions preserve Camera.capture, forced fields, P1 pose,
+history cursor and both full history arrays. Four camera-entry callbacks and one
+forwarded VINT_SERVICE/POST_OBJECTS/PRE_MAIN_LOOP per row are observed. All20
+samples/58494bytes complete without observer failure. PRE_MAIN_LOOP is the
+post-CPU/camera/events tail, not a pre-CPU hook. Other phases are camera entry,
+after POST_OBJECTS, before boundary easing after events, and end-row comparison.
+
+Hexadecimal positions/fractions, decimal delay/history slots:
+
+| Raw | Focused actual P1 at camera entry | vx/g | Delay entry→tail | Latest X/slot | Selected behind/X/slot | Physical/copy X entry→tail/end | maxX/target |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+|10832|0230.9B00|0A35|2→1|0230/18|1/0226/17|0177→0186|0988|
+|10833|0231.CD00|0A32|1→0|023A/19|0/023A/19|0186→019A|09AA|
+|10834|023B.FC00|0A2F|0→0|023B/20|0/023B/20|019A→019B|09CC|
+|10835|0246.2800|0A2C|0→0|0246/21|0/0246/21|019B→01A6|09EF|
+
+Focused sprite is the real registered main. P1Y0831.EB00, vy0/angle0,
+grounded/rolling, no active object-control/OnObj/movement suppression. Camera
+320×224, proportional deadzone90..A0, zero shake, Y/copy07CC; frozen/force argument/
+forced-request/fast-vertical/deferred-clamp/custom-max-easing/uncapped-left all
+false. ForcedXY0, cap18hex, minX/target80, viewportMax7FFF; bounds do not clamp.
+Previous end10831 is0177/07CC and each next entry matches the previous endpoint.
+
+The observed owner computes selected226−177−A0=F ->186; then
+**23A−186−A0=14 ->19A**; then23B−19A−A0=1 ->19B and246−19B−A0=B ->1A6.
+Every step is below cap18. Camera arithmetic is correct for its observed inputs.
+At10833 currentP1word231 is nine pixels behind its latest delayed-history23A;
+this witness does not identify an intervening object/solid writer. In particular,
+it does not prove a carrier, HCZBlock, bounds, CPU or camera-owner correction.
+An independent control with this history/current-pose difference would disconfirm
+a camera bug; it is not an old-red and is not authored/run. No output0199 fit or
+counter/cache change is justified.
+
+### Separate raw, movie, native and engine clocks
+
+Metadata and actual driver start index are27170. The original frame-contiguous
+recorder contract writes rowN after core27171+N, using movie input27170+N
+(S3KCompleteRunCaptureRunner's documented InputRow/on-frame-end contract).
+This is a source-derived mapping corroborated by actual driver cursors, not a
+fitted offset or a newly executed native observation. Core endpoints below must
+not be substituted for camera-entry PCs inside that frame.
+
+| Raw/index | Movie input→post-advance core endpoint | Recorded native VInt word / LF | Engine object VInt / object LF / level LF | Actual cursor entry→end |
+| --- | --- | --- | --- | --- |
+|10832 (2A50)|38002→38003|944B /2A12=10770|37963 /925 /10770|38002→38003|
+|10833 (2A51)|38003→38004|944C /2A13=10771|37964 /926 /10771|38003→38004|
+|10834 (2A52)|38004→38005|944D /2A14=10772|37965 /927 /10772|38004→38005|
+|10835 (2A53)|38005→38006|944E /2A15=10773|37966 /928 /10773|38005→38006|
+
+Sprite-manager LF and driver executed counter equal levelLF here. At camera entry,
+last-polled BK2 is one less than the current cursor: the driver marks/increments
+it after the step. Actual last-polled and recorded P1 masks are8 throughout.
+No unbound EngineTiming0 or fabricated high word of native VInt is used.
+
+Existing native final P1 endpoints10832..35 are022F.AE00,0231.E000,023C.0F00,
+0246.3B00, Y0831.1900, vx0A35/0A32/0A2F/0A2C. Native copiedcamera0185/0199/
+019C/01A6 and Pos_table_index0048/004C/0050/0054 are recorded. These final poses
+are not camera-entry P1 or the earlier RecordPos write. Native index is a next-write
+byte offset; engine history slot is a current slot. Their numerical values alone
+do not establish selected native history or an indexing defect. The actual aux
+camera/history key union is only camera_x_copy/camera_y_copy/pos_table_index;
+no H_scroll word, table contents, forced state or camera-entry P1 is available.
+
+### Byte-verified native source pins and missing observation contract
+
+Read-only original ROM SHA1`cfbf98c36c776677290a872547ac47c53d2761d6` and
+locked-on sonic3k.asm agree on MoveCameraX entry**01C0A8**, bytes
+`3811 4A38 F623 6636 3215 671E`; DeformBgLayer entry**01BFB0**, bytes
+`4A38 EE30 6702 4E75`. Source loc1BFF0 sets a1=EE78(cameraX),a2=EE14(bounds),
+a4=EE00(scroll amount),a5=EE24(H_scroll),a6=E500(Pos_table). Nonzero H_scroll
+subtracts0100, derives byte displacement4×(remaining high byte)+4, subtracts that
+from next-write indexEE26, reads(a6,d0.w), masks7FFF, then uses the ordinary
+90..A0 deadzone/cap18. DelayN thus selects N−1 chronological frames behind the
+last recorded write, consistent with the engine rule for equivalent histories.
+
+**Pin caveat, no capture-authority edit:** retained recorder/docs name10D80 as
+Sonic_RecordPos entry. Actual original ROM has entry**010D66**
+`4A78 FFE8 6634 B0FC B000 662C`; index read010D72, X write**010D7E**
+`32E8 0010`, Y write**010D82**`32E8 0014`, increment**010D86**`5838 EE27`,
+RTS010D9E. **010D80 is the0010 operand word, not an instruction entry.** Existing
+pins, native capture code and canonical fixtures are untouched. Any later native
+plan must check expected ROM bytes before registering callbacks, count/order
+real instructions and separate RecordPos pre/post from camera-entry phases.
+
+Native full RAM addresses (FFxxxx hardware, xxxx mainmemory): P1B000 with x10 /
+x-sub12 / y14 / y-sub16; Pos_tableE500..E5FF, indexEE26, H_scrollEE24,
+physical cameraEE78/EE7C, published copiesEE80/EE84, Scroll_lockEE0A,
+Deform_lockEE30, Teleport_activeF623, force flagF676/forcedXF678/YF67C.
+Normal LevelLoop calls Process_Sprites before DeformBgLayer then ScreenEvents;
+P1 calls RecordPos after movement/display/super processing, before water/animation/
+touch and later object slots. Deform checks locks, clears forced flag/delay and
+selects forced coordinates when requested, then calls MoveCameraX. Exact missing
+native question is P1/history/index/delay/forced/latches at those distinct PCs,
+not a final-pose inference.
+
+Bounded retained-domain inventory identifies full64KiB RAM in
+`$D/hcz-native7134-selected-wall-v1/input-70207..70210.ram`; provenance is AD40,
+not82EA input38003/core38004. Those domains contain history bytes at their own
+endpoints only and cannot close this question. No matching82EA full RAM was
+identified in that bounded inventory; no domains/probe are widened or executed.
+Root owns review of a concrete new native plan and any execution authorization.
+
+R14 stops with precise missing native selected inputs. No Camera/CPU/runtime fix,
+new native capture, second prefix, fullslice/canonical/alternate/8329/GLFW/guard/
+broad run or act certificate. R12's returned-HCZ8329/absent-exit limit and the
+mixed full-slice4353/4699 vectors remain explicit. After durable facts, temporary
+observer source/two compiled classes are removed under intended writer lease;
+six exact own diagnostics are consumed under metadata_slot alone, no archives.
+All own jobs terminal, source/index clean apart from inherited native checkout.
+
+## R15 original native camera/history input plan — 2026-10-17
+
+Owned3aa, `feature/ai-s3k-hcz-native-camera-history-gpt61`, starts clean at
+R14docs72d1be929. R10..R14 refs, native4fdf versus gitlink322 and regular0600
+private config remain preserved. No Main/Root writes or engine replay/runtime
+edit. The native-reference-capture skill/host guide and actual IGpgxHost contract
+are read; Root owns the concrete native-plan review boundary before execution.
+
+Retained domains do not close the question: the four full64KiB HCZ7134 dumps
+are AD40 inputs70207..10, not82EA input38003/core38004. Earlier retained title
+captures are also AD40. No matching82EA full RAM is identified in the bounded
+external inventory. BK2's BizState1.0 member is only format text `3\r\n`, not a
+saved gameplay state. P2 is inactive throughout original inputs0..38005.
+
+### Frozen helper and compiler-only prerequisite
+
+Owned external task directory `$D/hcz-native-camera-history-r15-v1` contains:
+
+| Input/output | SHA256 |
+| --- | --- |
+|NativeCameraHistory.cs|a237ef891ab8daa71517a384122d0facd80665a7316cf1bc51a4a0cad04df127|
+|plan.json|44c0be5300b0c8592bf52de557bc41445fdf29fb78313e5120d352f6709a9510|
+|run_native_camera_history.py|a0312eddf33550510bcccb85bebbd39b75667a046ad5c296aeb49608034e259d|
+|NativeCameraHistory.exe|b668c1ebdfa7fdd758c5a710e8c67f6efe7815fb4dcfdf65ad7b17ca601f0c46|
+
+Compiler-only command `python3 "$D/hcz-native-camera-history-r15-v1/run_native_camera_history.py" compile`
+finishes0 at16:27:53.327119..914875UTC. It holds own intended-tree writer and
+shared build_activity_slot, propagates FDs3/5 to Mono/Roslyn, then releases both.
+No host/core/native source is rebuilt or edited, and no GPGX host is instantiated.
+An initial pure byte-plan check caught a D1/D0 opcode transcription before source
+creation; the checked selected-ready prefix is905104400090. No native retry.
+
+Reuse existing compiled host-bf3c539 SHA256
+71b949a6b3ecb0709d4ba73f8cc0752d945a14c15c58f0326fc3adb7d4d4031b;
+relevant Bk2/GpgxHost/IGpgxHost paths have empty bf3c→4fdf source diff. Actual
+BizHawk2.11 core/common/Newtonsoft DLLs, gpgx.wbx.zst and libwaterboxhost hashes
+match retained R9 provenance and are rechecked by the launcher. Critical native
+payloads: gpgx.wbx.zst c4231296ec5ba59b431df22b68e234ae7bfbbfc87b6e72fa471234ac1b220d12;
+libwaterboxhost.so d2367818aafb4e520ad5ab005b5762c61506b0c819c4d79687235acfb0fc0c78.
+Original ROM/BK2/fixture hashes are the unchanged R14 identities above.
+
+### Concrete execution proposal, pending parent technical review
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$D/hcz-native-camera-history-r15-v1/run_native_camera_history.py" run
+```
+
+The launcher imports current Main's absolute maven_queue, uses normal default
+maven_slot(ownroot,estimate90,kind=native-r15-camera-history), and passes all
+execution leases to its one Mono child. No reservation/exclusive override or
+outer activity shim. Compiler leases have ended before test admission. Native
+execution deadline240s/outer child timeout300s excludes normal queue wait.
+
+Actual GpgxHost.Open receives original ROM and original movie.SyncSettings,
+power-on inputs0..38005, every hardware frame, no load-state/position/RAM writes,
+no video/audio/media or canonical publication. Callbacks are armed only for
+inputs38001..38005 (neighboring raw10831 through10835), after every pinned ROM
+opcode has been checked before host creation/registration. Selected native D0
+is compared to the actual RAM read, never to an inferred0199 target. RecordPos
+preX/preY/postXY/preincrement/postincrement/return and Deform/actual camera call/
+entry/history-or-current read/selected-ready/return have separate PC phases and
+count/order assertions. Source pins, registers and exact ring arithmetic are
+those verified in R14; existing named10D80 is unchanged and never registered.
+
+The bounded external journal contains actual P1/P2 raw fields, Pos_table256,
+EE24/26, physical/published camera/bounds/forced/lock fields and real registers,
+with before/after read passivity checks and a10MiB limit. Equality controls use
+existing fixture values only after advancement: original P1 fullXY/vx/g/status,
+P2XY/status/render84, copiedcamera, LF/VIntword/index and CPU0/routine6 for
+10832..35. These comparison values never select native inputs or supply gameplay.
+Each callback logs actual CompletedFrame separately from established movie/raw
+mapping. A postboot trajectory, observer or phase-count mismatch must stop with
+partial evidence before any retry. No engine probe or runtime repair is authorized.
+
+At this checkpoint **native execution count is zero**. Exact source/command/
+hashes/bootstrap/controls were handed to Root for review; no execution permission
+is inferred from the compiler result or from unavailable retained RAM.
+
+### Reviewed provenance correction and the sole actual native pass
+
+Root independently reread all three sources, all14 original ROM pins and the
+original10830..35 CSV controls, then authorized one execution with a bounded
+Python-only provenance correction. Original ordinal16 plan task/result remains
+separate from execution followup ordinal17. No fresh reviewer or C# rebuild.
+The reviewed launcher a0312edd is superseded only for identity guarding by
+**09acfdbd1768893eb1c8df95738c110452650853af1bf0822d2db85e10ee69f8**.
+One verifier checks planfiles_sha256, original ROM SHA1/movie hash, all four
+fixture member hashes,14 ROM opcode pins, compiled source/plan/EXE and launcher
+freeze initially, immediately inside normal maven_slot before MonoPopen and
+after terminal, including the failure path. C#/plan/EXE hashes remain unchanged.
+Syntax and readback checks pass; the exact proposed command above runs once.
+
+Sole owned handle**46154** finishes**0**. Normal resource-aware admission is
+7GiB/8cores, estimate90, queue**248s**, no override or shim. Submitted
+16:34:54.059330UTC, admitted16:39:02.371206; immediate pre-native identity guard
+16:39:02.407631 and post-terminal guard16:39:13.106020 both pass. Final timestamp
+16:39:13.106040; native stopwatch**10.3544623s**, distinct from queue and parent
+wall time. FDs5/6/7 propagate to the only Mono child. All38006 original inputs
+0..38005 execute once; callbacks observe only38001..38005, no media/state loads/
+manual RAM writes, canonical publication or engine execution.
+
+All four native10832..35 equality controls match: full P1/P2 positions/status,
+P1 velocities/routine, P2render84, CPUroutine6/timers0, copiedcamera, LF/VIntword
+and index. **60 callbacks**, contiguous sequence0..59, twelve ordered phases per
+five observed inputs, satisfy all count/order/passivity checks. Actual CPU PC
+matches each registered real instruction boundary. There are three history
+reads, two current reads, five moved returns, no forced or early-return branch.
+The five actual RecordPos X/Y writes target the observed next-write slot,
+advance its byte index by4 and preserve all other Pos_table bytes. No named10D80
+hook or capture-authority change is used.
+
+### Actual producer, selected history and current-pose distinction
+
+Positions/indices below are hex; raw/movie/core columns are decimal. Native
+callbacks occur at actual CompletedFrame=input, and post-advance core=input+1;
+the original raw/movie mapping has not been fitted or shifted.
+
+| Raw / movie input / core after | Actual native RecordPos P1X / index before→after | Native camera-entry P1X / H_scroll | Actual selected source / offset / word | Native physical camera entry→return / end copy |
+| --- | --- | --- | --- | --- |
+|10831 /38001 /38002|0225.7900 /0040→0044|0225.7900 /0300|history /0038 /0218|0163→0178 /0178|
+|10832 /38002 /38003|022F.AE00 /0044→0048|022F.AE00 /0200|history /0040 /0225|0178→0185 /0185|
+|10833 /38003 /38004|0239.E000 /0048→004C|0231.E000 /0100|history /0048 /0239|0185→0199 /0199|
+|10834 /38004 /38005|023C.0F00 /004C→0050|023C.0F00 /0000|current /— /023C|0199→019C /019C|
+|10835 /38005 /38006|0246.3B00 /0050→0054|0246.3B00 /0000|current /— /0246|019C→01A6 /01A6|
+
+P1Y is0831.1900. Actual full native VInt0000944A..0000944E and LF2A11..2A15
+are constant across the distinct callback phases of their corresponding frame.
+At camera entry A0FFFFB000, force/scroll-lock/deform-lock/teleport all0. For the
+history branches, actual D1 byte displacement is0C/08/04 and post-decrement
+H_scroll0200/0100/0000; offsets selectFFE538/FFE540/FFE548. No native-selected
+history word is reverse-inferred from final pose or camera output.
+
+Physical camera and publication remain distinct: at moved-return PC1C11C,
+physicalX is the new endpoint while copiedX still holds0163/0178/0185/0199/019C;
+only end-of-frame copiedX is0178/0185/0199/019C/01A6. This is RAM publication,
+not a rendered-frame/VDP claim. Current native minX80 and maxX966/988/9AA/9CC/
+9EF do not clamp these moves. Sampled native target wordsEE0C/EE0E are0000/6000,
+whereas R14 engine target fields follow its current easing bounds. Their exact
+owner-equivalence is not qualified by this observation and is not tuned; current
+bounds are remote from cameraX, so neither is a demonstrated cause here.
+
+**At10833 the native input gap is closed:** RecordPos writes0239 atFFE548,
+H_scroll0100 subtracts0100 and selects that same latest word with displacement4;
+239−185−A0=14 and185+14=199. R14 engine delay1 likewise selects its actual latest
+023A, with pre186, and23A−186−A0=14 ->19A. Native/engine implement the same
+selection arithmetic for their respective inputs. Native10832 selected0225 vs
+engine0226 likewise precedes the10834 CPUcounter consequence. At10834 both use
+current pose; native023C ->19C versus engine023B ->19B. At10835 the same current
+word0246 gives1A6 on both, without removing existing fractional differences.
+
+Native10833 P1 remains0239.E0 through RecordPos return, then is0231.E0 by
+Deform. This observed bracket includes later P1 water/touch and object execution;
+**the intervening writer is not identified**. Engine R14 latest023A versus current
+0231.CD shows the same history/current-pose distinction. No HCZBlock, carrier,
+movement/collision or allocator defect follows merely from this bracket.
+
+The causal input owner is P1's position arriving at the history-record point,
+already different before this camera consequence. Native10832 P1 is022F.AE00,
+engine R14 camera-entry is0230.9B00; native selected0225 came from the neighboring
+10831 record, whereas engine selected0226. The earliest defective engine writer
+and earlier divergence onset remain unproven. No engine pre-RecordPos full-pose/
+terrain witness is supplied by this native-only pass. Missing native inputs are
+now observed; missing upstream engine causality is not replaced by a camera or
+CPU fit, a source-history compound boundary or a fitted fractional adjustment.
+
+### Independent disconfirming design and stopping limit
+
+Smallest proposed control, not authored/run here: use a real playable's production
+history-record point after movement, then a legitimate solid-object side correction
+that changes current pose. Delay1 must read the recorded word; delay0 must read
+the corrected current word, alongside the existing forced-scroll control. Use
+declared geometry/native rules rather than replay coordinates/history injection;
+if made stateful, capture/recreate/forward twice with the full world. This is
+expected to be green and disconfirm a Camera/order defect. It is **not** a genuine
+old-red and cannot authorize any shared runtime repair. Further work must identify
+the earlier P1 writer; no additional engine/native probe is launched by this task.
+
+Inspected native outputs and SHA256 before consumption:
+
+| Artifact | Bytes | SHA256 |
+| --- | --- | --- |
+|callbacks.jsonl|139705|158991c7fcf745f80a95d8620e3dc8bb6c70c1761c9183b4a75759367395126e|
+|boundaries.jsonl|11973|a523f0a16c7716f637a181ac5e6914d69fcd77b3765e2ec0607501c69b4a7024|
+|completion.json|263|b76af91085b6a720813620c560be726422bb77460465d5110444bf03430e2f02|
+|host-settings.json|738|ed9d54360bcd6639229bacff00bce004230d76a96d521d884fe214ad51c54792|
+
+All own jobs terminal; no postboot mismatch or retry. No engine/runtime/API/
+fixture/pin edit, new native build/profile, media, broader route or extra test.
+R14's strict104spans/10773row prefix and mixed full4353/4699 vectors remain;
+R12's8329y_speed/absent returned exit are not requalified. This is one qualified
+native input observation, not engine parity or native presentation certification.
+The helper is a one-off exact-input diagnostic completed below the hour threshold;
+no new general tool/API is promoted. Root owns any next owner authorization,
+combined validation, integration and push. Consumed owned native diagnostics and
+compiler/helper temporaries are cleaned after durable facts; no archives, foreign
+captures, performance artifacts, refs, private config or native4fdf are removed.
+
+R15 cleanup complete: four exact owned helper/source/class/plan files removed
+under own writer lease and six consumed native/compile/execution diagnostics
+under metadata_slot alone; external task directory empty/removed, no archives.
+All prior native captures and foreign artifacts remain untouched.
