@@ -973,3 +973,29 @@ This adds one checkpoint beyond the first32 matching eyecatch pictures and the
 independent +576/offset1163 sprite-order witness. Remaining frames, older
 terminal-init inlet limits, PAL, PCM, wide/cold native parity and timing remain
 open; it is not whole-ending certification.
+
+
+## 2026-10-17 producer-owned AIZ deformation instruction work
+
+The [bounded production unit](../../plans/2026-10-13-s3k-playable-completion.md#2026-10-17-producer-owned-aiz-deformation-instruction-work)
+exposes the existing logical Ending_BackgroundEvent AIZ1_Deform preparation as
+one ROM-authenticated **1094-instruction-cycle callee term**. All 150 code bytes,
+including operands, must match. The existing R16 hand sum and 28 complete native
+callee PC paths supply its source/comparison evidence; no new native capture ran.
+The state-$10 caller subtraction stays outside the term. Unsupported code refuses
+qualification without changing ordinary gameplay; draw/rebuild paths add no work.
+
+Short declared background-state8/12/16 fixtures verify fixed-point RAM,
+same-frame deduplication, the next actual logical call, an in-memory operand
+negative, every-byte authentication, and six-frame whole-world capture/restore
+with two forward replays of live work. Final focused coverage97 and separate
+source/authority/rewind guards112 pass with0 failures/errors/skips; exact commands,
+source identity, the short old-red and corrected camera-source fixture are in the
+linked plan. These are phase controls, not new cold-route or character breadth.
+
+Caller, ApplyDeformation, raw water/deformation and hardware availability remain
+unpriced; this diagnostic does not supply a CPU/window budget or alter profiles,
+manifests, readiness or service counts. The common term cannot distinguish the
+native Sonic3/Tails4 service behavior. The four-service production collapse,
+late +2 Sonic/team171/194 RGB residuals, remaining native breadth and6+46 timing
+acceptance stay open. Root owns later composition and combined validation.
