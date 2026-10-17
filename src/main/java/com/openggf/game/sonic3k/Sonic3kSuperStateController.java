@@ -1075,7 +1075,7 @@ public class Sonic3kSuperStateController extends SuperStateController {
             var objects = level != null ? level.getObjectManager() : null;
             if (objects != null && objects.getObjectServices().runtimeArtCoordinator()
                     instanceof com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator art) {
-                art.vintDmaLedger().forcePlayerOneReloadAfterSuperRevert();
+                art.vintDmaLedger().forcePlayerOneReload();
             }
         }
         LOGGER.info("Super Sonic deactivated (S3K)");

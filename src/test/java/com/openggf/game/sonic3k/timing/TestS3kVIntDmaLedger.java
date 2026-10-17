@@ -167,7 +167,7 @@ class TestS3kVIntDmaLedger {
         ledger.serviceVInt(PlcLifecyclePhase.ORDINARY_LEVEL, VideoRegion.NTSC, false, List.of(), List.of());
         ledger.observePlayerFrame(BodySlot.SONIC_KNUCKLES, 0xBA, dplc(3));
         assertEquals(List.of(), ledger.pendingObjectEntries(), "control: no revert, no reload");
-        ledger.forcePlayerOneReloadAfterSuperRevert();
+        ledger.forcePlayerOneReload();
         ledger.observePlayerFrame(BodySlot.TAILS, 0xBA, dplc(1));
         ledger.serviceVInt(PlcLifecyclePhase.ORDINARY_LEVEL, VideoRegion.NTSC, false, List.of(), List.of());
         S3kVIntDmaLedger.State reverted = ledger.capture();

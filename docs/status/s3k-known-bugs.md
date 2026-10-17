@@ -6599,6 +6599,11 @@ candidates are in the [ending lifecycle design](../architecture/designs/2026-10-
   V-int instruction terms fix each transfer's start. An object-owned player frame makes the body cache unknown, and the
   record then states no figure (the ending's LF 4400-4406 records are refused this way). No count changes. See the
   [design record](../architecture/designs/2026-10-13-s3k-ending-lifecycle.md#per-v-int-dma-work-ledger-2026-10-16-kos-cycle-consumer-lane-slice-2).
+- 2026-10-17: actual giant-ring capture now publishes native mapping ownership and the global
+  `Player_prev_frame=$FF` write at `loc_6173A`, including solo Tails. The three native-main local collision cases
+  restore/replay twice; eight representative Saved2 returns release ordinary mapping ownership. Unrecorded object
+  DPLC work still refuses a freeze figure, and the six-count/46-fingerprint removal condition remains open. See the
+  [r3 evidence](../architecture/designs/2026-10-13-s3k-ending-lifecycle.md#review-r3-actual-giant-ring-dma-ownership-2026-10-17).
 
 ---
 

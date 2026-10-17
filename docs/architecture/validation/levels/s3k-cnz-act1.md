@@ -110,3 +110,17 @@ Every restored live carrier replays45 whole-world ticks twice. Capture-host28
 checks preserve the original current P1 and configured CPU leaders while explicitly
 recognizing the intrinsic role. This requalifies those products; later mechanism,
 route, native audiovisual and viewport-edge obligations remain separate.
+
+## Local giant-ring ownership correction — 2026-10-17
+
+`TestS3kGiantRingDmaOwnership` independently uses the decoded subtype-4 ring at `$2DC0,$064C` after its ordinary
+formation, then a declared inlet outside its collision box and one Right frame. Native 320 solo Sonic/Tails/Knuckles
+all reproduce the old missing mapping bit/global `$FF` write, and pass after the owning object publishes both.
+Capture, immediate full-world restore and two forward replays include the flash graph and per-VInt DMA record.
+Eight representative MHZ→sanctuary→Saved2 origin returns separately confirm ordinary mapping ownership releases.
+The [r3 design record](../../designs/2026-10-13-s3k-ending-lifecycle.md#review-r3-actual-giant-ring-dma-ownership-2026-10-17)
+records the three old-source failures, the repaired unit harness, 35-case follow-up and 109 separate guard checks.
+
+This does not qualify a cold CNZ giant-ring route, a direct emulator RGB comparison, or this interaction's complete
+viewport/donor/team matrix. Those inherited obligations, physical checkpoint/hazard coverage and natural completion
+remain separate from the entry and dead-dispatch floors above.

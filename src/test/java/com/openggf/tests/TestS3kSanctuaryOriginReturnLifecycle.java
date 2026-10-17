@@ -293,6 +293,8 @@ class TestS3kSanctuaryOriginReturnLifecycle {
             assertEquals(returnSpawnY, GameServices.sprites().getMainPlayable().getCentreY());
             waitForReleasedWorld(loop, lives, 7, 0, row);
             origin.assertOwners(row);
+            assertFalse(com.openggf.sprites.playable.PlayableSpriteInternalAccess.objectOwnsMappingFrame(
+                    GameServices.sprites().getMainPlayable()), "Saved2 origin releases native mapping ownership");
             assertFalse(GameServices.level().hasBigRingReturn(), "Saved2 consumed only after destination restore");
             assertTrue(GameServices.level().getTransitions().isLastStarPostHitSet(), "native saved eligibility survives consumption");
             assertEquals(saved.rings(), GameServices.sprites().getMainPlayable().getRingCount());

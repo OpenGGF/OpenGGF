@@ -93,7 +93,9 @@ Unreleased. The earlier development themes remain in
   native hit check of whichever phase it is in. When the object table is full,
   pending placements wait for the next camera block crossing, which restores the
   Hydrocity fan timing. Ending reunion loads use measured native decompression
-  costs, and the credits start on the original frame.
+  costs, and the credits start on the original frame. Giant-ring capture retains
+  the original blank-frame ownership and art-reload state; ordinary animation
+  is released again on return.
 
 - **S3K level entry:** Captures that omit the title presentation complete the
   destination's deferred player assembly before its animation and art-loading

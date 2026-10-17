@@ -2495,7 +2495,7 @@ two ways (N1, N2), plus four smaller gaps (N3-N6).
   - ROM: the control routine skips `Animate_*`/`*_Load_PLC` only for `object_control` bit 1.
   - Engine: `isObjectMappingFrameControl()` also includes a player ability's raw frames (Knuckles' glide, slide and
     climb). The producer now tests the bit-1 owner alone, through the engine-internal
-    `PlayableSpriteInternalAccess.objectOwnsMappingFrame`, backed by a package-private getter. That is not `@ModApi`
+    `PlayableSpriteInternalAccess.objectOwnsMappingFrame`, backed by a package-private field. That is not `@ModApi`
     surface; `TestModApiSignatureSurface` is unchanged and passes.
   - Witness: Knuckles lands in HCZ1, jumps and glides while turning. Every queued and drained body entry equals an
     independent read of `PLC_Knuckles` (`$14BD0A`), including ability frames.
@@ -2503,7 +2503,7 @@ two ways (N1, N2), plus four smaller gaps (N3-N6).
   - ROM: `SonicKnux_SuperHyper` `.revertToNormal` stores `-1` in `Player_prev_frame`. Tails' revert writes no
     previous-frame byte.
   - Engine: the S3K revert owner (`Sonic3kSuperStateController.onRevertStarted`) now calls
-    `forcePlayerOneReloadAfterSuperRevert` for Sonic and Knuckles.
+    `forcePlayerOneReload` for Sonic and Knuckles (renamed in r3 for its second native caller).
   - Witness: a real ring-exhaustion revert stores `$FF`. The next load reloads the normal-form `PLC_Sonic` pieces of
     the unchanged frame, and restore before the revert replays the same records twice.
   - **Engine-order limit:** the engine runs the revert in `tickStatus` after the animation pass; the ROM runs it in the
@@ -2548,3 +2548,46 @@ The source was restored byte-exact and checked by sha256 before the commit.
 - Object `Perform_DPLC` and direct zone uploads are missing owners.
 - The V-int start time is open.
 - Only two native DMA observations exist, and the PAL runs prove region propagation, not the PAL VBLANK limit.
+
+### Review r3: actual giant-ring DMA ownership (2026-10-17)
+
+The r2 ownership protocol was tested by setting its mapping flag directly. A real ring did not set that flag:
+`loc_6173A` writes `Player_prev_frame=$FF`, then frame 0, animation `$1C` and `object_control=$53`; the engine set
+the broad movement/CPU control flags and BLANK animation only. Its ordinary animation tail therefore kept recording
+body calls against a falsely known previous byte. This is separate from ability-owned Knuckles frames.
+
+`Sonic3kSSEntryRingObjectInstance` now publishes the global `$FF` write through its injected S3K art coordinator and
+sets the existing mapping-ownership flag for P1 and a carrying P2. The byte is global, even when P1 is Tails; it is
+not selected by the touched character. The shared ledger helper is named `forcePlayerOneReload`, retaining the
+Super-revert caller's behavior. The ordinary player's body calls are suppressed during capture, and subsequent
+unrecorded object-owned intervals report `PRODUCER_STATE_UNKNOWN`. No readiness, profile or service count changes.
+
+The independent ROM-backed `TestS3kGiantRingDmaOwnership` uses the decoded CNZ1 subtype-4 ring at `$2DC0,$064C`.
+The real object forms normally. A declared inlet just outside its collision box then enters through an ordinary
+Right frame; neither the ring routine nor its collision is forced. Sonic, Tails and Knuckles each check immediate
+native ownership/byte writes, the following refused DMA records, immediate full-world restoration and two forward
+replays. This is a local component inlet, not a cold CNZ route or an emulator RGB qualification.
+
+Validation on parent `7bbf1eb2` plus this change, Java 25, normal queued Maven, `-Dmse=off`, surfaceless EGL,
+unset DISPLAY/WAYLAND_DISPLAY and null OpenAL:
+
+- Old production source plus the new test: **3 run / 3 failures / 0 errors / 0 skips**, finished **02:26:52 UTC**.
+  Every actual capture lacked bit 1 and the global byte was 186/0/86 rather than 255 for Sonic/Tails/Knuckles.
+- Initial fixed-source selection: **112 run / 0 failures / 6 errors / 0 skips**. All three new cases, the body-cache
+  and ledger neighbors, flash graph and required S3K four passed. Six formation/routing unit cases lacked the newly
+  consumed runtime-art service. Their narrow harness now explicitly supplies `RuntimeArtCoordinator.NONE`; the
+  production ROM witness uses the real coordinator, and the shared fail-fast test services remain unchanged.
+- Harness repair and return follow-up: **35 run / 0 failures / 0 errors / 0 skips**, finished **02:31:04 UTC**:
+  `TestSonic3kSSEntryRingFormation`, `TestS3kSanctuaryReturnState` and
+  `TestS3kSanctuaryOriginReturnLifecycle#configuredRepresentativeUsesTheActualSaved2OwnersAndIncomingWorldReplay`.
+  The eight representative returns include native mains, S1/S2 donors and wide teams; their released origin now
+  explicitly checks mapping ownership is clear. All three original absolute ROM properties were supplied.
+- Separate fresh `-Pguards` JVM: **109 run / 0 failures / 0 errors / 0 skips**, finished **02:32:07 UTC**:
+  `TestArchitecturalSourceGuard`, `TestRewindFieldDispositionGuard`, `TestModApiSignatureSurface` and
+  `TestHardwareTimingAuthorityGuard`.
+
+Commands used `<main-workspace>/tools/testing/maven_queue.py` from the intended isolated worktree. The first
+112-case invocation and repaired 35-case invocation are recorded separately; no green 112-case rerun is claimed.
+No broad smoke or release-only full suite was run for this bounded fix. Full delivery composition and its affected
+trace checks remain separate. Other object DPLC/direct-upload owners, the Super-revert ordering, VInt start, PAL
+limits, all six ending counts and the 46-fingerprint predictive qualification remain open.
