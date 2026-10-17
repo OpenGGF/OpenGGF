@@ -72,7 +72,7 @@ def sha256(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
-def compare(native, engine, spots, mapping, expected_count, size, native_crop=None, engine_crop=None):
+def compare(native, engine, spots, mapping, expected_count, size, native_crop=None, engine_crop=None, native_digits=5):
     if expected_count <= 0 or len(spots) != expected_count:
         raise ValueError(f"Expected exactly {expected_count} requested pairs, got {len(spots)}")
     if len(set(spots)) != len(spots) or any(type(p) is not int or p < 0 or p >= 60000 for p in spots):
@@ -83,10 +83,12 @@ def compare(native, engine, spots, mapping, expected_count, size, native_crop=No
         if crop is not None and (len(crop) != 4 or any(type(n) is not int for n in crop)
                                  or min(crop[:2]) < 0 or min(crop[2:]) <= 0):
             raise ValueError("Invalid crop")
+    if type(native_digits) is not int or native_digits not in (4, 5):
+        raise ValueError("Native filename digits must be explicitly 4 or 5")
     pairs = []
     for poll in sorted(spots):
         outer = engine_index(poll, mapping)
-        np = Path(native) / f"input-{poll:05d}.ppm"
+        np = Path(native) / f"input-{poll:0{native_digits}d}.ppm"
         ep = Path(engine) / f"outer-{outer:05d}.png"
         ns, nsize, a = load_rgb(np, native_crop)
         es, esize, b = load_rgb(ep, engine_crop)
@@ -101,7 +103,7 @@ def compare(native, engine, spots, mapping, expected_count, size, native_crop=No
         pairs.append(dict(native_poll=poll, engine_outer=outer, native_size=ns, engine_size=es,
                           native_sha256=sha256(np), engine_sha256=sha256(ep),
                           mismatching_rgb_pixels=len(differing), first_difference=first))
-    return dict(mapping=mapping, expected_pairs=expected_count, compared_pairs=len(pairs), size=size,
+    return dict(mapping=mapping, native_digits=native_digits, expected_pairs=expected_count, compared_pairs=len(pairs), size=size,
                 native_crop=native_crop, engine_crop=engine_crop,
                 mismatching_pairs=sum(p['mismatching_rgb_pixels'] != 0 for p in pairs),
                 mismatching_rgb_pixels=sum(p['mismatching_rgb_pixels'] for p in pairs), pairs=pairs)
@@ -110,6 +112,7 @@ def compare(native, engine, spots, mapping, expected_count, size, native_crop=No
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--native-dir', required=True, type=Path)
+    parser.add_argument('--native-digits', type=int, choices=[4, 5], default=5, help='Declared filename zero-padding; no autodiscovery (default: 5)')
     parser.add_argument('--engine-dir', required=True, type=Path)
     parser.add_argument('--spots', required=True, type=Path)
     parser.add_argument('--mapping', required=True, choices=['identity', 'native-poll-plus-one'])
@@ -123,7 +126,7 @@ def main(argv=None):
         result = compare(args.native_dir, args.engine_dir, read_spots(args.spots), args.mapping,
                          args.expected_count, dimensions(args.size),
                          crop_rectangle(args.native_crop) if args.native_crop else None,
-                         crop_rectangle(args.engine_crop) if args.engine_crop else None)
+                         crop_rectangle(args.engine_crop) if args.engine_crop else None, args.native_digits)
         result.update(spots_sha256=sha256(args.spots), comparator_sha256=sha256(__file__),
                       native_dir=str(args.native_dir.resolve()), engine_dir=str(args.engine_dir.resolve()))
         with args.report.open('x') as report:

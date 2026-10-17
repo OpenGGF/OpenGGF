@@ -927,3 +927,21 @@ terminal original-RGB residuals remain open. See the
 The [maintained sampler and current-source evidence](../../plans/2026-10-13-s3k-playable-completion.md#2026-10-17-maintained-positioned-ending-sampler) replace the temporary engine-facing probe for the bounded Tails solo/+2/NTSC/native320 product. One capture from frozen `dc338d3e3` plus exact sampler source hash `b47871f82488802ea2c9a356218825eb372b29c518804f65f57d24fdbe45161c` reaches TITLE_SCREEN at outer15532 and captures every165 requested pre-exit picture. The fail-closed raw RGB comparator checks original320×224 dimensions on both sides with no crop and reports165/165 pairs,0 differing pixels, including native5119/6143 paired to engine5120/6144. CLI2, required S3K60 and comparator9 controls pass without skips. Source/runtime/plan/spot hashes and exact commands are linked above.
 
 This positioned title-owner ingress is not a cold campaign. Native ordinals select observation moments only; no native gameplay data hydrate engine state. Unsampled frames, prepared palettes, other native products, PAL/PCM, strict hardware timing and interactive hub recovery remain inherited gaps; no ending runtime behavior changed. Root owns combined guards and integration.
+
+## 2026-10-17 nine-product NTSC sampler follow-up
+
+The [explicit nine-product sampler and exact current-source evidence](../../plans/2026-10-13-s3k-playable-completion.md#2026-10-17-nine-declared-ntsc-ending-products) adopt diagnostic VInt prerequisitea547 through merge957c78a54 while preserving R1. All three declared rosters (Sonic, Tails, Sonic+Tails) and progress−2/0/+2 have one fresh capture each, with the frozen title-owner VInt0/RNG0 positioned ingress, native320/LIMITED238/RAW_RGB and private configuration. Original native declarations/ledgers verify eight11-pair early plans and dense Tails165. No reference was recaptured or renamed; four-/five-digit filenames are selected explicitly.
+
+| Product/progress | Required pairs | Fresh raw RGB result | Actual capture bound |
+| --- | --- | --- | --- |
+| sonic-solo / 0 | 11/11 | 0 differing pixels | 6144 / LEVEL |
+| tails-solo / +2 | 165/165 | 0 differing pixels | 15532 / TITLE_SCREEN |
+| sonic-solo / -2 | 11/11 | 0 differing pixels | 6144 / LEVEL |
+| sonic-solo / +2 | 11/11 | First9 zero;171 at5119 and194 at6143 | 6144 / LEVEL |
+| tails-solo / -2 | 11/11 | 0 differing pixels | 6144 / LEVEL |
+| tails-solo / 0 | 11/11 | 0 differing pixels | 6144 / LEVEL |
+| sonic-tails / -2 | 11/11 | 0 differing pixels | 6144 / LEVEL |
+| sonic-tails / 0 | 11/11 | 0 differing pixels | 6144 / LEVEL |
+| sonic-tails / +2 | 11/11 | First9 zero;171 at5119 and194 at6143 | 6144 / LEVEL |
+
+All253 required pairs have original320×224 dimensions with no crop or normalization:249 equal and4 differing. The two+2 Sonic-led products are not pixel-qualified. Their first mismatch at5119→5120 is `(7,160)`, native238/238/238 versus engine136/204/238, with exact scene/timing/source hashes recorded in the linked Plan; no causal or new-regression attribution is made. Their qualification stops at that result. Team pre-dispatch provenance confirms actual Sonic+Tails registration, followed by ordinary native ending retirement. Source/runtime remain frozen across all nine captures; there is no runtime fix, fitted clock, retry or broader acceptance claim. CLI4+mandatoryS3K60+trace-authority11 controls pass75 with0 failures/errors/skips; Python10 passes. Actual private config outputs and unchanged Main config hash/mtime are verified. Root owns separate runtime investigation and combined guards/integration. Eight11-spot results do not certify later exit, unsampled frames, PAL/PCM/cold/Knuckles/wide or strict timing.

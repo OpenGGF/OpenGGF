@@ -3018,3 +3018,203 @@ EndingProvider/CREDITS_DEMO path. That permitted future phase is not certified: 
 its real timer writer or refuse pricing. No fitted timer adjustment was added. This is local diagnostic
 qualification only; combined guards, Main integration and push remain Root-owned. No broad/full suite,
 performance gain or predictive six-ending/46-fingerprint timing acceptance is claimed for this slice.
+
+## 2026-10-17 nine declared NTSC ending products
+
+This follow-up extends the maintained CLI beyond the historical R1 Tails-only
+support described above. It changes only tooling, configuration isolation,
+observation completion and diagnostic provenance; no ending gameplay owner or
+readiness/timing authority changes. Prerequisite merge
+`957c78a54c49cb9a2358ab6ed8637d4874f0a852` combines R1 `2f058df9a` with Root's
+qualified diagnostic-only VInt operand intake
+`a5470cef29ea3f90320c2627f93bb562386f8fa2`. The sole conflict was this append-only
+Plan. Both complete suffixes were retained and checked against their common
+`dc338d3e3` base. R1 private configuration and source/runtime checks were preserved.
+
+The explicit product is now `sonic-solo`, `tails-solo` or `sonic-tails`; region
+remains exactly `ntsc`. Frozen `declared-scene-spec-v2.json` and observation plans
+v1/v2 supply the declarations: progress `-2` → `0000000`, `0` → `1111111`,
+`+2` → `3333333`. Sonic+Tails configures main Sonic and sidekick Tails (native
+Player_option0); solo Sonic/Tails use native options1/2. Product, region,
+progress, emerald inventory, settings, declared sidekick, pre-dispatch observed
+roster and completion provenance are dynamic. Initial production progress is
+checked against the declared inventory. None of these values come from native
+physics/auxiliary observation rows.
+
+`--completion spots` steps through the largest requested engine outer index,
+requires every unique requested picture, verifies the ending remains in LEVEL
+mode at that bound, and reports actual last outer/mode. It does not claim an
+ending exit. `--completion title` preserves the R1 default when omitted: a neutral
+stream must actually reach ending exit and TITLE_SCREEN within60000 outer steps.
+Neutral title completion accepts only progress+2; other progress products must
+explicitly select the bounded spot contract. Unsupported product, region,
+progress, completion and repeated/unknown flags fail. All images remain native
+320×224, LIMITED238/RAW_RGB, and the frozen real-title-owner positioned ingress
+sets VInt0/RNG0 once before initial dispatch. No new game mode, clock fitting,
+scene mutation, native input hydration or normalization was introduced.
+
+The original early-scene native references use `input-0001.ppm` (four-digit
+zero-padding), while dense retained Tails v2 uses `input-00001.ppm`. The comparator
+therefore adds explicit `--native-digits 4|5`, with5 retaining the R1 default.
+There is no filename discovery, fallback, renaming, copied reference or new ROM
+link. Every requested pair must exist and both original dimensions are asserted
+320×224. All comparisons here omit both crop options and retain strict raw RGB,
+with no shifts, masks, rescaling or alignment search. A new negative control
+proves four-digit selection cannot silently fall back to five-digit files.
+
+The existing native per-product provenance case and ledger hashes were checked
+against frozen plan cases, not guessed from filenames. Early native ledgers
+contain exactly the11 poll ordinals
+`1,31,63,511,1023,1535,2047,3071,4095,5119,6143`, paired only to engine p+1.
+Dense Tails uses the retained v2 first non-ending poll15531: exactly165 snapshots
+precede it, with16383/17407 excluded as post-exit. Thus this slice requests eight
+11-pair products and one165-pair product,253 comparisons total. Native screenshot
+ordinals select observation moments only; they never supply gameplay state.
+
+Focused validation from the owned worktree, with current Main's absolute queue
+wrapper, Java25, surfaceless EGL/null audio and no ambient DISPLAY/WAYLAND:
+
+```bash
+python3 "$QUEUE" -Dmse=off compile -B
+python3 -m unittest discover -s tools/bizhawk -p test_compare_native_rgb.py -v
+python3 "$QUEUE" --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestS3kEndingSamplerTool,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestTraceReplayInvariantGuard,TestTraceHydrateSwitchDefault' \
+  "-Ds3k.rom.path=$ROM" test -B
+```
+
+Build86103 passed (56.996s Maven). Focused81696 was admitted immediately and
+passed75 tests,0 failures/errors/skips (27.693s Maven): sampler4, required S3K60,
+trace replay invariant10 and hydrate-default1. Sampler controls exercise all nine
+roster/inventory settings, exact progress labels/native options, R1 default title,
+unsupported combinations and strict observation plans. Python's existing nine
+RGB controls plus explicit padding control pass10 tests with no skips. The source
+and CLI changes are bounded tooling; no broad/full suite, new native production,
+benchmark or PCM workload belongs to this slice. Root owns remaining combined
+smoke/guards and integration. No timing/performance or6+46 acceptance is inferred.
+
+All captures use one source/runtime fingerprint, one new output per product and
+one queued `exec:java` invocation per product, sequentially observed by session
+29080. No request is retried or replaced while waiting. The new immutable labels
+live under `${CAPTURE_ROOT}/s3k-ending-sampler-20261017-t3-0485d89b/r2-nine-ntsc-v1`;
+retained native references and R1 captures remain untouched. Representative
+commands for an early product are:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null \
+  python3 "$QUEUE" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  -Djava.awt.headless=true exec:java \
+  -Dexec.mainClass=com.openggf.tools.S3kEndingSamplerTool \
+  "-Dexec.args=--rom '$ROM' --product sonic-tails --region ntsc --progress 0 --completion spots --out-dir '$CAPTURE/engine-team-chaos-320' --spots '$CAPTURE/team-chaos-320-engine-outers.txt'"
+python3 tools/bizhawk/compare_native_rgb.py \
+  --native-dir "$NATIVE" --native-digits 4 --engine-dir "$CAPTURE/engine-team-chaos-320" \
+  --spots "$CAPTURE/team-chaos-320-native-polls.txt" --mapping native-poll-plus-one \
+  --expected-count 11 --size 320x224 --report "$CAPTURE/comparison-team-chaos-320.json"
+```
+
+Dense Tails explicitly uses `--product tails-solo --progress +2 --completion title`,
+`--native-digits 5` and `--expected-count 165`. Actual commands, declaration/plan/
+spot/ledger hashes, each product's source/runtime hashes and outcomes are in the
+external `observation-provenance.json`, alongside per-product comparison JSON
+and the sampler's own immutable output/provenance. Generated private
+`configuration/config.yaml.example` files prove actual loader output paths,
+not just a changed property; each output records its hash and restored user.dir.
+The linked Main config's hash and mtime are measured before/after the sequential
+captures to detect migration. No validation pass cache or new repository record
+type is created.
+
+### Completed current-source observations and stopping boundary
+
+All nine engine invocations and all complete comparisons finished. Seven products
+have zero RGB mismatches. Two products have current-source differences, so this
+is **partial pixel qualification**, not an all-green ending result. Each comparator
+required its complete plan and original320×224 dimensions; both crop fields are
+null. No native capture was produced, no source was changed during the nine
+attempts, and no product was retried. All eight early products ended at outer6144
+in LEVEL; only dense Tails actually reached TITLE_SCREEN at15532. There are253
+required pairs,249 equal pairs and4 differing pairs across two products.
+
+| Declared product / progress | Required/compared pairs | Differing RGB pixels per native poll | Actual last outer / mode |
+| --- | --- | --- | --- |
+| sonic-solo / 0 | 11/11 | 0 | 6144 / LEVEL |
+| tails-solo / +2 | 165/165 | 0 | 15532 / TITLE_SCREEN |
+| sonic-solo / -2 | 11/11 | 0 | 6144 / LEVEL |
+| sonic-solo / +2 | 11/11 | 171 at5119;194 at6143 (first9 zero) | 6144 / LEVEL |
+| tails-solo / -2 | 11/11 | 0 | 6144 / LEVEL |
+| tails-solo / 0 | 11/11 | 0 | 6144 / LEVEL |
+| sonic-tails / -2 | 11/11 | 0 | 6144 / LEVEL |
+| sonic-tails / 0 | 11/11 | 0 | 6144 / LEVEL |
+| sonic-tails / +2 | 11/11 | 171 at5119;194 at6143 (first9 zero) | 6144 / LEVEL |
+
+All captures ran on prerequisite HEAD
+`957c78a54c49cb9a2358ab6ed8637d4874f0a852` plus the same uncommitted sampler:
+SHA-256 `f674bfe82b5d6432a64ef8237c85c107112a5077689459eb0e8aa421c3d05050`.
+Every output records the identical full Java-source fingerprint
+`03c45342d00011337acae72d9c46bf9a14456079daacd5ade058cce8735c79a3`
+and compiled runtime fingerprint
+`fbee8a466206df679d586c986f70e32135483da26b70df202496f93f3a8e38e4`.
+Source and runtime were verified unchanged after each capture. The final local
+commit packages those same sampler bytes; it does not change the recorded dirty
+capture HEAD into a clean committed build. The revised comparator SHA-256 is
+`b90da677fe6c666aaa32672ca0c2aa96602bd22e67085faa1f8160f268e02ef3`.
+
+Frozen `declared-scene-spot-plan-v1.json` SHA-256: `feffd33db7cd9e86f35d5b7d763ad223e1bf4e8bcdf3e77cd2d6876a4ff11c01`.
+
+Frozen `declared-scene-spot-plan-v2.json` SHA-256: `a687c92a1db070b060cc9c41fc292ee8de8966ad692cbb9a4b134633f41131d3`.
+
+Frozen `declared-scene-spec-v2.json` SHA-256: `7711c315a9b10fa7cb94fa9c3465fb280509a338d18cf8ebfa0d80ad3fcfc7cb`.
+
+Frozen `engine-title-owner-ingress-spec-v2.json` SHA-256: `768e172c3555a840b929f7154398b5358556a8f411b214087a55fd0e9cb7787a`.
+
+Both Sonic solo/+2 and Sonic+Tails/+2 first differ at native poll5119 paired to
+engine outer5120:171 raw RGB pixels. Their native and engine PNG/PPM hashes are
+identical between these two products at that pair, but differ between engines
+and native. The first differing coordinate is `(7,160)`: native RGB
+`(238,238,238)`, engine `(136,204,238)`. The other differing requested pair is
+poll6143→outer6144,194 pixels per product. Every earlier requested pair for those
+two products is zero. Comparator exits1 for these two products and0 for the other
+seven; every engine invocation exits0. Those nonzero RGB verdicts were preserved,
+not treated as skipped pictures or coerced to pass.
+
+At the first mismatch the engine reports LEVEL, progress2, level frame5120,
+object ordinal5121, VInt5120, foreground routine56 (`$38`), background routine4,
+RNG`c7892900`, player centre192/221 and mapping186. Its camera is512/516 and
+published copy512/515; credits routine4, part0, row12, delay−1, speed`cf00`.
+Native's last published ledger row for that poll records completed hardware5687,
+VInt5120, level frame5120, Process/producer5121, publication5120, mode`0C`,
+zone/act`0D01`, progress2, RNG`C7892900`, and camera copy`0200/0204`.
+Native player mode is1 for solo Sonic and0 for team; native P2 code is zero at
+this late spot. Team outputs nevertheless record the actual declared pre-dispatch
+roster `sonic,tails`, while solo outputs record their correct single leader.
+These are scene/timing observations, not causal attribution. Matching the older
+171/194 shape does not make it a newly introduced Root defect, identify an
+owning routine, or authorize a clock adjustment. Qualification of each mismatching
+product stopped at this completed result. Remaining roster/progress products were
+independent declared coverage, not retries; no runtime repair was attempted.
+Root's separate read-only investigation may use these exact immutable outputs.
+
+The first queued capture waited512s, dense Tails92s, final team/+2 31s;
+the other six were admitted immediately. These are queue waits, not execution.
+Maven execution reported6.688s (Sonic0),13.173s (dense Tails+2),5.415s (Sonic−2),
+5.571s (Sonic+2),5.646s (Tails−2),6.527s (Tails0),5.443s (team−2),5.399s
+(team0),6.110s (team+2). They are diagnostic invocation durations, not benchmark
+or performance acceptance, and are not summed with overlapping foreign work.
+
+Each of the nine emitted configuration examples resolves under its own private
+capture directory; all have SHA-256
+`a52e0507338cce515e7f404c7fb269b963dc423664cf3900119d30de1b739fb4` and
+`user.dir.restored=true`. The actual JVM loader resolution remains
+`resolveRelativeFile(user.dir)` for config/legacy JSON and example publication
+beside `resolveConfigFile()`. Main's linked config before/after hash is exactly
+`6abd111c03f798dbe2a618cb4985aeb599127f44668edb2a8edbde118d11f7da`, and its
+mtime is unchanged at1792141742849921547ns. This run did not migrate Main config.
+Per-product ledger/state/spot/reference-image hashes, the matched native ledger
+rows and exact commands remain in external provenance and per-product JSON.
+
+No broad/full suite, additional trace/native pass, new reference production,
+PAL/Knuckles/wide/cold/PCM product, terminal breadth for the eight early products,
+strict hardware timing or interactive hub certificate follows. There is no6+46
+acceptance or readiness activation. Root owns combined guards, runtime diagnosis,
+integration and eventual push. The local branch/worktree and unrelated unstaged
+TraceChaser gitlink remain for Root accounting. The bounded stopping boundary is
+nine fresh captures and their complete comparisons; no further capture or Java
+workload is needed for this slice.
