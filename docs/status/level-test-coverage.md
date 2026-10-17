@@ -1194,3 +1194,12 @@ is retained honestly and resolved separately. [SOZ1](../architecture/validation/
 [SOZ2](../architecture/validation/levels/s3k-soz-act2.md#production-checkpoint-fade-and-incoming-world-replay-2026-10-14)
 and [DDZ](../architecture/validation/levels/s3k-ddz.md#single-production-fade-owner-and-released-world-replay-2026-10-14)
 retain mechanic/cold-route/native and broader configuration obligations.
+
+
+HPZ saved-slot roundtrip (2026-10-17): native320 donor-off Knuckles, Tails
+and Sonic+Tails now have actual title/menu saved-slot entry, gameplay HPZ
+SaveGame, disk read, disposed-session title reload and released SSZ1/2
+proof, plus two no-exit controls and repeated world replay. The five-case
+class passes without skips. This is a declared HPZ save inlet; other
+configuration and cold/presentation products remain in the
+[HPZ matrix](../architecture/validation/levels/s3k-hpz-act.md#saved-slot-hpz-exits-and-title-reload--2026-10-17).

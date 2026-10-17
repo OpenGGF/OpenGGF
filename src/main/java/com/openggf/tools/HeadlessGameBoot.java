@@ -697,6 +697,7 @@ public final class HeadlessGameBoot implements AutoCloseable {
         }
         if (rom != null) {
             try {
+                releaseAudioRom();
                 rom.close();
                 rom = null;
             } catch (Throwable romFailure) {
@@ -707,6 +708,16 @@ public final class HeadlessGameBoot implements AutoCloseable {
             rethrowCloseFailure(failure);
         }
         return boot(romPath, zone, act, admissionPolicy);
+    }
+
+    /**
+     * The process-wide audio manager still names this boot's ROM as its base source. A later
+     * title boot installs its audio profile before its ROM ({@code GameLoop.initializeTitleScreenMode}),
+     * and the profile builds its SMPS loader from the previous base ROM, so a closed image here
+     * failed the next in-process title launch. Release the reference with the ROM it names.
+     */
+    private void releaseAudioRom() {
+        engineServices.audio().setRom(null);
     }
 
     private static Throwable combine(Throwable first, Throwable later) {
@@ -759,6 +770,7 @@ public final class HeadlessGameBoot implements AutoCloseable {
         }
         if (rom != null) {
             try {
+                releaseAudioRom();
                 rom.close();
                 rom = null;
             } catch (Throwable romFailure) {
