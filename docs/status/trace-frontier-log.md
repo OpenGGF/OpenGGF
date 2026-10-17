@@ -113965,3 +113965,19 @@ remain unknown; no timer/facing/CPU/camera fix or additional probe/test follows.
 No engine trace is run: prior R25partial207/8777 and R22full11118/14208,
 firstNonCamera8775statusB/A/actualexit/separate seg13ownership88306 unchanged.
 Native originals retained for Root read; no new green or route certification.
+
+### 2026-10-17 — HCZ8774 move-lock decrement caller observed; no frontier move
+
+Owned3aa24cd/Java7df plus reviewed APS5ecf9/test3e53, sole originalAD40 boot
+prefix41203 with `-Ptrace-replay -Dtest=TestS3kCanonicalHczMoveLockWriterPrefix#originalAd40MoveLockWriterThrough8776`,
+normal Main absolutequeue/original3ROM/Java25/EGL/nullAL/noambient/singlefork.
+Terminal1 at20:21:04UTC, queue0/displayedMaven01:41min,1/1F0E0S; only strict0vs207
+fails after cleanup. Actualpartial8777/14208/completefalse207=12physics+195anim,
+lag59/warnbootstrap0, first8775statusB/A; serializedsummary03052 exactR25 bounded
+report. Actual8774setter1→0 caller is doSlopeRepel3871 via modeNormal901; PREAir
+true is false by setter time, Air writer/native29producer not observed. No global
+countdown/facing/CPU/column fix or extra oldred/probe/run. [Full source, clocks,
+stack, command and report limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r29r30-actual-move-lock-writer-reaches-ground-dispatch--2026-10-17).
+Earlier six reports/gap zero; R22full11118/actualexit and seg13ownership88306
+remain distinct. Two temporarysources/classes restored/removed;18rawfiles held
+for Rootread. NativeR28 original9files were consumed only after Rootread.
