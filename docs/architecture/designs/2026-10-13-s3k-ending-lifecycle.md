@@ -2736,7 +2736,7 @@ Durable v4 pictures use `spot-checks/seven-chaos-{engine-twin-v4,compare-v4}` be
 
 Review also reproduced a new derived-row cache alias: public step 256 reused byte-key step 0, retaining white
 at a completed FromWhite endpoint (1/1F/0E/0S at 03:56:13 UTC). Canonicalising the colour step to its existing
-native endpoint before key storage addresses it. The next 17-class selection passes **141/0F/0E/0S at
+native endpoint before key storage addresses it. The next 17-selector (18-class) selection passes **141/0F/0E/0S at
 04:03:08 UTC**, including all 16 water-upload tests and this regression, manager rebinding, hybrid rules,
 special-stage entry/rewind/snapshots, SDK packaging/Javadoc/maintained starters, and all four required S3K
 loading tests. Command uses the same normal main wrapper/environment plus the three verified absolute ROMs;
