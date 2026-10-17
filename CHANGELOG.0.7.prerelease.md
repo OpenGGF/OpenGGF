@@ -274,7 +274,8 @@ Unreleased. The earlier development themes remain in
 - **Native-compatible PCM output (diagnostics):** An opt-in audio session setting
   feeds the accurate FM chip's own pin sums through a Java port of blip_buf. It
   uses BizHawk's Nuked YM2612 scale and the movie's filter, which is None,
-  LowPass or ThreeBand with musl's `sin`. It produces 44.1 kHz PCM for comparison
+  LowPass or ThreeBand with musl's `sin` and the stock core's single-precision
+  pi in its cutoffs. It produces 44.1 kHz PCM for comparison
   against BizHawk. On an identical strobe schedule it matches Genesis Plus GX
   source vectors byte for byte. `GameplayCaptureTool --native-pcm` records it from
   live gameplay using a BK2's own settings; only NTSC Nuked movies are accepted.

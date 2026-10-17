@@ -27,6 +27,21 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-10-17 - S3K title start: the stereo-frame-11 PCM difference was the ThreeBand cutoff pi; first difference now row 16
+
+- **Commit / worktree:** lane `pcm-output`, 844b19f02 (clean).
+- **Command:** as the 2026-10-16 title-start entry (`GameplayCaptureTool --game s3k --zone aiz --act 1
+  --title-screen --main sonic --sidekick tails --input <emeralds.bk2> --input-start 0 --frames 600 --audio
+  --native-pcm --no-video`), then `compare_native_pcm_window.py --start-row 0` against the same native rows
+  0-2399 capture.
+- **Result:** stereo frames 0-11,784 (rows 0-15) equal. First difference at stereo frame 11,785 (row 16),
+  native (0, 0) against engine (1, 1): the engine's SEGA PCM starts at frame 16, native's at row 63.
+- **Owner of the old frame-11 difference:** the stock core computes the ThreeBand cutoffs with GPGX
+  `core/macros.h`'s float `M_PI` (`0x400921FB60000000` at `0x36f001c8a08`), not the double pi. With unity
+  gains the filter returns its input up to the last bits, so the cutoff bits decided 47 one-LSB truncation
+  flips in rows 0-4. Killed: YM resets at Z80-reset edges (any clock 0-700, no change), PSG power-on (silent),
+  EQ operation order (stock code audited), `vsa`.
+
 ## 2026-10-17 - S3K title start: level entry keeps the sound device; Title_Screen's cmd_FadeOut supplies the Z80 PSG silence
 
 - **Commit / worktree:** lane `pcm-output`, 3c30e7352 plus the re-install guard and the
