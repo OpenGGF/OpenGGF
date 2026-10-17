@@ -5260,3 +5260,107 @@ All four own jobs terminal, no further selection. No trace/native/media/broad or
 Root/Main writes; Root15826 remains foreign. R12 HCZ8329/exit and GLFW/slice limits
 remain unqualified on the new source. Root owns composition/delivery. Exact
 commands/measurements/owner classification are in the [existing audit](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r13-residency-smoke-regressions-native-row-pointers-and-ddz-fixture-entry--2026-10-17).
+
+
+### R9 ICZ/LRZ residency smoke owner — 2026-10-17
+
+Same98d/native01a1496e/GPT6.1, new local branch
+`bugfix/ai-s3k-icz-lrz-residency-smoke-gpt61`. R8 c8703d172 and prior AIZ refs
+preserved. Clean FF through frozen Root02b38825c → merge25d3500cd → qualified
+R13 `0cd178d8f4bf8e9ea54e10b133aa2260a68483be` before new edits; all native/
+submodule identities retained. Own config re-isolated as regular exact Main
+bytes after hook, Main6abd111c…f7da/mtime1792141742849921547 unchanged.
+Exact returned R9 taskID/native/workspace/24h expiry in own registry entry;
+previous entries untouched. Root owns baseline/composition/broad15826.
+
+Source-read the exact ICZ in-frame deferred128x128 assertion and LRZ terrain
+request after restore. ONE preedit command selects only
+`TestS3kIczAct1TransitionHeadless#act1OutdoorTransitionReloadsIcz2AndAppliesRomCameraBounds,TestS3kLrzBossCameraHeadless#freshEntryConsumesTwoIndependentSignalsAndRewindsTerrainEdits`.
+Current Main absolute queue wrapper from own cwd, --normal/-Dmse=off,
+all3original absolute ROMs/Java25/EGLsurfaceless/nullAL/noambient/Lua5.4,
+exact JTOsingle token/singlefork/reuse/alphabetical; no profile. Source frozen
+queued/live. No Main baseline duplication, palettegateway edits, native/media,
+ancestor/trace/broad/full run or natural-death authoring. No runtime cause or
+pass claimed before results; precise owner proposal precedes shared extension.
+
+
+R9 preedit58042 terminal1 at16:37:42UTC, queue835s/Maven1m09,
+2tests/2failures/0errors/0skips. Exact expected ICZ235→517 deferred128 index0
+and LRZ83 expected23/actual20 reproduce on adoptedR13; no other case ran.
+These existing reds discriminate the stale oracles, so no duplicate old-red.
+Native044 ICZ1BGE_Transition→Load_Level copies1000 layout bytes without RAMclear;
+Sonic3k only carries resident128 during an executing transition. Test-only ICZ
+oracle now immutably captures every known outgoing target128 byte before actual
+handoff, checks common ROMprimary/endA00 and distinct detachedconstructor values;
+all16/pattern/timing/admission/claimed/payload checks remain. LRZ adapter restores
+new encodedowner/Map, while real mutation resolves currentLevel. Rebind after
+restore; native ROMlayout0A766C row9→81A8, bytes81A9/81AA=14 independently anchor
+literal17 writes, currentdecodedcells/encodedbytes/COW and twiceforcedworld
+replay; oldMap is explicit detached-negative control. No runtime extension.
+
+Root's separate batch58 DDZ2 synthetic-floor errors are a distinct accepted
+R13 inlet cause: Sonic_Init has no floor read and loc81554 owns control81.
+Only the two TestS3kDdzFlightControllerHeadless build calls add the existing
+fresh-start lifecycle; no runtime/RAM/fallback/assertion change. Upcoming focused
+selector includes those exact2 and existing TestDdzRomPalettes unknown-definition
+negative, not its14 unchanged functional cases. Source hashes relayed frozen;
+stop on any new postboot assertion/owner before edits or further runs.
+
+
+Root-provided matched Main80371290, NOT an own execution: terminal0
+2026-10-17T16:36:32.760938Z,4/0F0E0S (ICZ1 .124s,LRZ1 .119s,DDZ2 .806s),
+queue853s/Maven24.405s/parent878.591s. Root inspected all four identities/skips;
+all3 test files are byte-identical Main803..Root02b. Main HEAD/foreignstatus/
+config preserved and inspected reports consumed. This independently attributes
+all four new Root failures; no duplicate baseline run in this tree.
+
+
+### R9 green LRZ/DDZ split and R10 ICZ evidence boundary — 2026-10-17
+
+R9 final54296 terminal1 at16:40:51UTC, queue0/Maven28.788s,
+72tests/1failure/0errors/0skips across11 actual classes. Exactly71 pass:
+LRZ current-map/encoded/COW/detached-negative/twice-forced-world case1 (.107s),
+DDZ controller2 (.134s), DDZ unknown-definition refusal1 (.037s), native-word
+residency4 (.201s), overlay3 (.078s), and mandatoryS3K4 selectors60 (both
+same-simple-name loading classes43, skip8, bootstrap6, decoding3).
+First NEW failure is ICZ258→536 deferred16x16 index0 after the corrected128
+checks pass. Pattern and later publication assertions remain unreached. No
+further code edit/run/guard followed that STOP. Root source review found no
+material finding on the exact three test hashes, but does not replace results.
+All26 inspected own XML/TXT files (4preedit+22focused) consumed under metadata
+slot alone; no archives. Main config/hash/mtime unchanged, all handles released.
+
+Actual focused command, current Main absolute wrapper from own cwd (set
+`OPENGGF_MAIN` to the unchanged Main checkout; original ROMs are absolute):
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null \
+  LUA_BIN=/usr/bin/lua5.4 JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical \
+  '-Dtest=TestS3kIczAct1TransitionHeadless#act1OutdoorTransitionReloadsIcz2AndAppliesRomCameraBounds,TestS3kLrzBossCameraHeadless#freshEntryConsumesTwoIndependentSignalsAndRewindsTerrainEdits,TestS3kDdzFlightControllerHeadless#entryRingAwardRetainsHudDigitsAndReplaysTheLaterDrainRefresh+introFlightTransformationAndReleaseFollowTheControllerRoutines,TestDdzRomPalettes#freshEntryDoesNotFabricateDefinitionsForAnUndeclaredTerrainProbe,TestS3kNativeWordLayoutResidency,TestSonic3kLevelOverlayRewindIsolation,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' \
+  "-Dsonic1.rom.path=$OPENGGF_MAIN/s1.gen" \
+  "-Dsonic2.rom.path=$OPENGGF_MAIN/s2.gen" \
+  "-Ds3k.rom.path=$OPENGGF_MAIN/s3k.gen" test -B
+```
+
+Fresh ICZ R10 (distinct from HCZ R10fa289) registers its exact returned taskID/
+native01a1496e/workspace/24h expiry in its own entry; R1–R9 results untouched.
+User authorizes FIRST a separate local green-slice commit: only reviewed LRZ
+and two DDZ inlet source changes plus their accurate existing docs. Reuse54296
+proof without rerunning71. ICZ partial test stays UNSTAGED at exact SHA-256
+`e06e322770e26e6f19f2c2f211d00d331c9adb65e5face390230cfeade9fe5cc`;
+no red ICZ/runtime/whole-suite pass is committed. Normal hooks/7trailers/final
+GPT6.1 coauthor, exact-path commit; report accounting before any ICZ execution.
+Then ONE passive original maintained ICZ driver observation may inspect actual
+16-table counts/complete bounded words/ROM destinations/128 references at the
+outgoing, detached-constructor and actual in-frame/prePOST boundaries. No runtime
+extension, unknown-zero normalization or dropped comparison is authorized.
+Current source candidate: loadChunks has no retained16 input and constructor
+capacity validation can add empty entries after retained128 references expand.
+Actual counts/words were unavailable in the original assertion; neither missing
+retention nor capacity-only extent is proved. Hand back that evidence and an
+independent old-red proposal before any production extension. Existing ICZ
+pattern/publication tail, runtime parity and R8 natural death remain open.
+No broad/trace/native/media/extra worker; Root owns composition/delivery.

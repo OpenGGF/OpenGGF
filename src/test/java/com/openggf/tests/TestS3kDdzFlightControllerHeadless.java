@@ -54,7 +54,9 @@ class TestS3kDdzFlightControllerHeadless {
     @Test
     void entryRingAwardRetainsHudDigitsAndReplaysTheLaterDrainRefresh() {
         var fixture = HeadlessTestFixture.builder()
-                .withZoneAndAct(Sonic3kZoneIds.ZONE_DDZ, 0).build();
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_DDZ, 0)
+                // Sonic_Init has no floor probe; native loc_81554 installs flight control $81.
+                .withFreshLevelStartLifecycle().build();
         GameServices.gameState().restoreS3kEmeraldProgress(java.util.Collections.nCopies(7, 3), true);
         fixture.stepIdleFrames(25);
         var state = GameServices.level().getLevelGamestate();
@@ -89,6 +91,8 @@ class TestS3kDdzFlightControllerHeadless {
     void introFlightTransformationAndReleaseFollowTheControllerRoutines() {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_DDZ, 0)
+                // Sonic_Init has no floor probe; native loc_81554 installs flight control $81.
+                .withFreshLevelStartLifecycle()
                 .build();
         GameServices.gameState().restoreS3kEmeraldProgress(List.of(3, 3, 3, 3, 3, 3, 3), true);
         var sonic = fixture.sprite();
