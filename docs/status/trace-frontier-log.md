@@ -113855,6 +113855,101 @@ R21partial206 and73focused remain their actual epochs. Normal docs-only local
 accounting/consumed cleanup; Root owns next causal scope, combined validation,
 integration and push. R22ordinal25 separate; queuedR23 is not started here.
 
+
+2026-10-17 cold Sonic contact R14/R15, exact803 versus f196 in same98d:
+sole original maintained Sonic selector via normal wrapper/no profile/all3ROMs/
+Java25/EGL/nullAL/singlefork/reuse/alpha; only owned journal output filename
+changes.39089 terminal0 18:54:32UTC and1886 terminal0 19:00:47UTC are each
+**1/0F0E0S PREFIX through original48276 only** (later fullroute finals UNREACHED),
+3keys/152verifiedevents each. R13 first end-of-step48275 Y/OnObj divergence is
+now bracketed at actual flat bridge204: baseline spring206slot6 runs before
+bridge204slot32, while current bridge204slot8 runs before spring206slot9.
+Radius/width/eligibility/clocks/12terrain payloads agree; baseline snaps0A6C→0A64,
+current sees X1882outside before spring pushes187D. Earlier slot producer is
+already different at first observed BEFORE48274 and remains unknown; no native
+truth/allocator defect/fix or cold completion claim. Root inspected ORIGINAL
+bounded journals before normal consumption; DOCS ONLY, no new trace/native/
+media/broad. [Exact audit and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#matched-cold-contact-order-r14-and-r15--2026-10-17).
+
+### 2026-10-17 — Original Knuckles Gumball predecessor blocks the first-fdf witness
+
+Owned649 `bugfix/ai-s3k-fdf-recorded-consumption-witness-gpt61`, committed source
+`3be3949fabb12e0c342318ff3536f7f4495c0ba0` (current Java source epoch
+`7df991e289b93f92b34e10e79dc4f9900ec67eaa`), plus reviewed temporary witness
+SHA256 `acc5334f45724a8775c03b61c9348ca821e0f8eac2a4bc19a34b5b7352c72b74`
+before cleanup. This is one original maintained chain drive from its normal boot,
+not an SS rebase or an independent live timing experiment. Exact selector:
+`-Ptrace-replay-r7 -Dtest=TestS3kFdfRecordedConsumptionWitness#firstRecordedDirectRetirement`,
+through the current Main absolute Maven queue wrapper from owned649, normal
+all3 original ROM/Java25/EGL/nullAL/no ambient display/Lua5.4, single fork/reuse,
+alphabetical; unchanged chain prefix `(RUN_DIR,12,4367)`.
+
+Actual98161 terminal1 **19:25:48UTC**, normal queue0s/Maven1m24s,
+**1T/1F/0E/0S (0 skips)**. Production/test compilation succeeds without source
+correction. Original `AbstractRunChainTest:1661` fails because Gumball seg1's
+`stage_exit` boundary was never observed within its original boundary window.
+Seg0 AIZ is partial:1physics/0animation,0warnings/bootstrap,lag0; camera_y4545
+ROM01F2/engine01EE. Seg1 Gumball comparator completes its reference1430-row
+window with18physics/0animation,0warnings/bootstrap,lag21, first non-camera
+**1300 x ROM0000/engine2778 (delta10104)**. Its five-entry recent ring retains
+only1380 queue fields and cannot enumerate the full18-error identity set.
+Original timing-close failure is suppressed on the original assertion:29 unmatched
+completion records (18direct/11module;12unconsumed-at-end/17pending mismatches).
+One AIZ→Gumball gap report has0failures; this is not whole-chain completion.
+Two runtime warnings report FAST missing-manifest→NONE.
+
+**SS/fdf UNREACHED.** Seg12's direct211/fdf PRE at4365 and parent137 POST at4366
+remain canonical reference edges, with no actual witness sample. The observer
+was never installed; only the terminal journal summary exists (1event/254journal
+bytes,334 framed stdout bytes). No target submission/preparation/admission/
+retirement evidence, matching803 attribution, CPU/SR/IRQ initialization,
+independent live4/5/4, whole-SS, ending or whole-route claim follows. No retry,
+rebase, skip, source repair, native recording or additional engine run.
+
+[Source-preparation/review, full exact command, phase labels, report coverage and cleanup](../architecture/plans/2026-10-13-s3k-playable-completion.md#r12-one-actual-first-fdf-witness-original-gumball-gate-target-unreached--2026-10-17).
+Eight inspected reports/sidecars and six temporary classes were consumed under
+the metadata lease alone; the one temporary source was removed under the intended
+tree lease, restoring exact committed source. Existing docs only, no raw archive
+or pass receipt. Prior refs, private config, native/media and Root/Main are
+preserved. Root owns causal attribution/next scope and combined validation.
+
+
+2026-10-17 cold R16–R18 matched pool predecessor (98d, exact803/f196): original
+TestS3kLrzHpzSszColdCampaign#sonicColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory,
+normal Main-absolute queue/no profile/all3ROM/EGL, identical reviewed temporary
+observer. BASE70778/CURRENT81089 each1/0F0E0S PREFIX ONLY through48276,
+18603positive verified samples/6real restore markers. Full-route death49613 frontier
+unchanged. First43945 Animal264 span closes43956;44245→44254 and47250→47262 also close.
+First surviving48195 Animal629 removal (630/631 later) frees CURRENT6/7/8 before same
+48201 admissions632/633/634:BASE9/30/32 vsCURRENT6/7/8; same48213spring635 BASE6/current9.
+No sparse BASE clock, allocator fault or native correctness inferred. Source candidate
+is inherited EggRobo loc_917C0 special-launch inlet; shared-render revert not justified.
+Root inspected both originals before metadata-only consumption; no runtime edit/newrun.
+[Commands, exact pins/counts/hashes and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#matched-cold-pool-producer-r16-to-r18-2026-10-17).
+
+
+R14 matched original-inlet baseline50308 (separate from current98161): reviewed
+19-line helper7475c909 invokes only original `(RUN_DIR,2,1)`, requiring natural
+Gumball exit and returned-level opening. Same owned649 temporary local baseline
+branch at **8030832d2ab6080e5324cdfe35e971677fd97b41**, all other tracked source/
+POM exact803; same command/environment as98161 except selector/base, normal
+current Main absolute wrapper/all3ROM/Java25/EGL/nullAL/noambient/Lua/fork1reusealpha.
+Actual terminal1 **19:46:12UTC**, queue0/Maven1m22, **1T/1F/0E/0S** (0skips),
+class5.570s. It reproduces the **exact original1661 Gumball stage_exit assertion**;
+returned seg2 row1 is unreached. AIZpartial1physics/camera4545 and Gumball
+comparator-complete18physics/first1300x0000/2778,0animation/warnings/bootstrap,
+lag0/21 and five recent1380 field/value entries match current's retained record.
+Recent5 is not full18-vector equality. All29 baseline suppressed identities were
+inspected (18direct/11module=12unconsumed+17pending mismatches); current retained
+counts/endpoints match, not an exhaustive29 delta. TwoFAST→NONE warnings persist.
+This qualifies that **particular original route assertion on actualMain803**;
+no blanket inheritance waiver, producer/closure cause, route advance or native
+correctness. SS/fdf remainsUNREACHED in both, with no readiness/kernel/wholeSS/
+whole-route claim. No current rerun/rebase/repair/extra execution. Candidateb0b4
+and exact Plan WIP restored, helpers/inspected diagnostics/backup consumed,
+all refs/config/native/media preserved; target last compiled803, not current.
+[Exact source/flags, attribution and restoration limits](../architecture/plans/2026-10-13-s3k-playable-completion.md#r14-actual-main803-natural-gumball-exit-prefix--2026-10-17).
+
 ### 2026-10-17 — HCZ8775 native PANIC guard observed; engine frontier unchanged
 
 Owned3aa513781/Java7df/native4fdf; sole reviewed originalAD40 power-on native
