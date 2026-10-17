@@ -3592,3 +3592,26 @@ published revision. The foreign Main native checkout at `e0a2443e0` was preserve
 KiS2 work. No native schema/ABI, gameplay writer, canonical fixture or CPU-budget prediction was changed.
 Focused engine tool/boundary/source checks on this follow-up composition are pending; its later Main
 integration/package/push and fully accounted worktree cleanup are not claimed yet.
+
+
+Follow-up composition `c6cc2db2f9f75e1284633a3f5f3609b8125f8f93` completed focused session55438 at
+**10:13:42 UTC**, Maven1m21s: **159 tests / 2 failures / 0 errors / 0 skips**. Exact selection was
+`-Pguards -Dtest=TestS3kEndingQueueProbeTool,TestS3kEndingSamplerTool,TestHardwareTimingAuthorityGuard,TestArchitecturalSourceGuard,TestProductionSingletonClosureGuard,TestTraceChaserBoundaryGuard,TestBuildToolingGuard#traceChaserStaysExactOptionalAndOutsideOrdinaryBuilds`
+through the current Main queue wrapper, `--normal -Dmse=off`, isolated report/tmp paths and `test -B`, with
+EGL/null-OpenAL/no ambient display and Lua5.4. These are non-ROM unit/source/boundary selectors.
+
+The seven products contain probe3, sampler4, hardware-authority25, source72, singleton42, optional-boundary12
+and the single exact-pin build-contract method. The only failures are the two previously matched
+MenuAudioProbe singleton assertions, with unchanged test identity/type/message. All tool/boundary/authority
+checks pass and no selector is skipped; the existing HubMusic failures were outside this bounded follow-up
+and remain inherited from the prior exact145-case comparison. No runtime timing/profile change or fresh
+pixel/route/full-suite certification is inferred. This bounded selection covers the added passive tool and
+immutable optional pin without repeating unchanged smoke or native captures.
+
+Cleanup accounting found the untracked Knuckles diagnostic source in the free ending tree still has
+unknown provenance. Its complete11782-byte source was preserved exactly in task scratch with
+SHA256`1c4916a595d98e7955f12389761a3cd372443af6dc50328222352c8be0863b14`, but the original tree/branch
+will also remain `cleanup_pending`; no unknown file is deleted. Active/unmerged HCZ work and old retained
+lanes likewise remain preserved. Other named delivery trees are eligible only after this follow-up's
+Main verification/push, using exact paths and normal Main inventory leases, with no global pruning or
+submodule deinitialization that could alter the foreign Main checkout.
