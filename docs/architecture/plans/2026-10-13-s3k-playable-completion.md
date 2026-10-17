@@ -4144,3 +4144,55 @@ No executable source changed after those affected checks. Consumed XML/text
 reports are inspected and removed under `worktree_metadata_slot` alone; no raw
 archives or validation receipts are retained. No media, native, full-chain,
 broad-suite, integration or push was performed for this unit.
+
+
+## Current-source SSZ arrival input1342 (2026-10-17)
+
+One fresh engine picture on `78472d97a75a0eea56874d165b73037bb4a2068c`
+matches the original native `native-ssz-arrival-allocation-ntsc-v1/input-1342.ppm`:
+0/71680 differing original RGB pixels, both320×224, no crop/normalization/
+rescale/shift/mask/clock search. Both images were inspected; the retained native
+PNG preview was first verified RGB-identical to the original PPM. See the
+[bounded matrix observation and method](../validation/levels/s3k-ssz-act1.md#current-source-arrival-input1342-2026-10-17).
+
+The temporary adapter preserves the qualified directSSZ ProcessSprites inlet
+(`loc_6468`→`$6484`, LFC0, native VInt0/RNG0 declaration), restores
+`S3K_SKIP_INTROS=false` after capture-session construction and before boot,
+steps/renders one neutral initial ProcessSprites, then renders each original
+AD40 input448920..450262 (1343 inputs) and reads back one image at ordinal1342.
+Private `user.dir` precedes all services and is restored. Existing production
+`HeadlessGameBoot`/`DisplayColorProfileController.applySavedSettings` applies
+requested colour modes; renderer getters confirm LIMITED/RAW_RGB, NTSC,
+320×224, FAST, Java25.0.4.1. Main config SHA256 and mtime remain unchanged.
+
+Source/runtime/input identity (SHA256 unless noted):
+
+| Item | Hash |
+| --- | --- |
+| Production Java source tree | `9bec82f789dd039680e972c65b4f8d1dd3933a1c65db51bd37a3298a66bfd178` |
+| Compiled runtime class tree | `2af69e4b17e86ac23e7db9c42b09c6eb5d55da4efdb0b9ca85c262be173898b9` |
+| Temporary adapter | `18aa0f87268efade9c3aa240d7a68b948de1625ec27f1e775efd9900d2b08a16` |
+| Original S3K ROM (SHA1) | `cfbf98c36c776677290a872547ac47c53d2761d6` |
+| Original Sonic+Tails complete-emeralds BK2 | `ad40fb0b0a74fa12b08ab71b2e48a7455b388d14f43f4cded502ac4a15d1b3c0` |
+| Native original PPM | `c4635aa6996b5a0d5b2eb06552e5b17557ed701a69ebd6792d222d90577738e0` |
+| Engine PNG | `26c88ee3612b5c0ab4c1cbd5bae1bc8e78a810c20ea277c8cd0564c2374edfb2` |
+
+`$MAIN_TREE` denotes the unchanged Main workspace and `$TASK_EVIDENCE_ROOT`
+the external task capture root; exact absolute paths remain in provenance.
+Exactly one queued invocation75052 completed terminal0, Maven3.398s,
+2026-10-17T11:43:44.578546–11:43:47.653156UTC:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 "$MAIN_TREE/tools/testing/maven_queue.py" --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dexec.executable=python3 '-Dexec.args=target/ssz1342-helper/run.py %classpath' exec:exec -B
+```
+
+The normal queued Maven parent in `t3-2f458d35` retained worktree/admission/activity
+leases through the Java25 compiler and capture JVM. Durable
+`$TASK_EVIDENCE_ROOT/ssz-input1342-main803-v1/`
+retains exact compiler/JVM argv, source/runtime hash protocols, adapter source,
+state/effective-mode/provenance/comparison data and one engine PNG. Own temporary
+adapter/classes/launcher/log were inspected then removed under metadata slot
+alone; original Knux driver/native33c are preserved. No runtime/source fix,
+new native run, additional capture or tests were made. This is one declared
+inlet/moment, not cold-route, inherited-VRAM, whole-scene, audio, timing or
+wide/roster qualification; existing gaps remain open.
