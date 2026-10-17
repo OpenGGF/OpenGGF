@@ -13044,3 +13044,65 @@ this merge. Existing qualified486 geometry extraction composes without runtime
 conflict: resulting LevelManager b0dcc051 and bridge9693c50d match the child
 frozen combined source. Full combined smoke/guards and original route evidence
 remain separate obligations. Both append-only Plan histories are retained.
+
+
+### Root reviewed gates and new observation limits — 2026-10-18
+
+Root local composition f5e9ff821 contains the bounded145-case bonus terrain
+component and the previously qualified geometry extraction. Child FDF R38 then
+ran fresh99 guards on the combined b0dcc051/9693c50d source: Architectural72,
+HardwareTimingAuthority25 and the exact two ModApi surface methods all passed,
+without skips. This is the child's tested source epoch, not fresh execution on
+all of Root's composition. Its sole conditional original Mega route16285 failed
+coordinator admission for segment2 in TRANSITION_GAP, after the original
+stage_exit and assertReturnBoundary checks. The returned comparator was never
+attached; exact LEVEL release and exit clocks were not serialized. Partial AIZ
+report1 physics/camera4545 and Gumball12 physics/first1300 x0000/2778 both retain
+complete=false; available recent5 are not an exhaustive mismatch vector. The
+sole suppressed timing close lists12 unclaimed identity edges; that wording
+permits never-submitted OR already-claimed, not a unique missing-producer cause.
+Root read all8 original52835B, including full12 fingerprints, all72 properties,
+all JSON/owners and both36-field first-row tables by a bounded second read after
+initial display truncation. SS/FDF and full route remain unqualified.
+
+HCZ R52's sole35501 request compiled frozen9074435e/runtime04ed and executed19
+cases,18 passing. The retention test stopped at its first beforeBirth restore:
+camera.shakeOffsetY expected0/actual1 at test46, before any replay birth, held
+restore or final native-player retention oracle. Actual ROM admission, TopSolid
+capture, visible CPU warm and first range cull had run; unprinted final-player
+values are not reconstructed. Root read all6 original74471B and accepted exact
+cleanup after child durable accounting. This is a shared restore-prerequisite
+question, not a genuine launcher old-red or authority to waive full-world checks.
+
+Cold native parent observer R39 compiled once, no diagnostics:95232B PE SHA256
+0b0557677960d105509adf9c4579ce558ea7dac5382f324d82308d7d1d896844.
+All4 source hashes and later Planb8229b13 were checked. A separately owned R40
+now has one original AD40 power-on traversal authorized, with no checkpoint,
+alignment search or retry. Its463837 Advances and253 candidate endpoint controls
+are unexecuted at this checkpoint;600s from spawn is a stopping bound and660s
+includes teardown, not a throughput prediction. This scene cannot certify the
+solo Cold49613 failure or a unique Cold animal parent.
+
+Ending-clock positive source uses existing integrated c26f7cd6 harness/Reader;
+the historical separate0bf13 DLL was consumed and is not reconstructed/mixed
+with the old host. Root and an independent GPT-6.1 reviewer read the three frozen
+files and52 artifact pins. The one observer compilation passed, retaining25088B
+PE SHA256904823f1aee74b727adc9a723704ce9720f47ef3fa0054bde273ca76770bee02.
+Its ONE original82EA neutral-row attempt then stopped partial before any Advance,
+callback, header or raw observation. Original output has advances0/callbacks0/
+pairedObservations0 and no cycle, refresh, encoded-interrupt or PC/SR value.
+The observer finally replaced the primary exception with post-terminal artifact
+InvalidOperationException, so the first cause is unavailable; unchanged52 pins
+checked by the parent do not reconstruct it. Native PID3520985 was reaped,
+admission released; tool wall0.89087125s is not a separately measured child time.
+Only source-only primary/cleanup error preservation is next authorized. No
+clock origin, phase/IRQ, production continuation,6+46/live4-5-4, readiness or
+ending parity follows. Raw output remains solely in the original bounded tool
+transcript, with no log archive or receipt. The3 frozen sources/PE remain owned
+pending review. The separate native parent observer's different stock host and
+AD40 stream are distinct protocols.
+
+Current change-based dry plan selects3534 classes/10 smoke categories/71 batches
+of at most50, then guards. No broad run was launched: previous90-minute coverage
+completed65/71 batches only, and further owner changes remain in progress.
+Main is still unchanged803; no integrated push or delivery is claimed.

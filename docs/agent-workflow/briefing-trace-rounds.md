@@ -71,6 +71,15 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A cleanup exception can erase the first diagnostic failure (2026-10-18,
+ending-clock positive control). The observer stopped before its header/first
+Advance, then a finally artifact check overwrote the primary exception. Its
+zero callbacks/raw values and partial footer are not a clock observation or
+unique artifact cause. Preserve the first exception type/message, report cleanup
+failures separately under the same output cap, and keep provisional rows
+unqualified until parent exit/identity/count acceptance. Do not infer the hidden
+cause from a later successful parent-side hash check or retry unchanged input.
+
 Sparse structural deltas and typed last-sample poses have different contracts
 (2026-10-17, cold R32/R33). An intentionally internal full-pose key can advance
 without an emitted motion-only event; reconstruct only declared structural/phase
