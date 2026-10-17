@@ -4680,3 +4680,29 @@ old-red and first repaired owner checks pass; mutation/rewind/scene and strict
 7135 qualification remain pending. No repeated broad smoke, full suite, package
 or Main publication has been submitted. Final source-frozen canonical/segment
 checks and one complete local change-based smoke/guard run remain Root-owned.
+
+
+### Matched R10 test-prerequisite attribution — 2026-10-17
+
+Root `0684ba5f2adc5d81e233854f84d5967d5a619386` (runtime identical to Root28,
+without R10) ran one exact baseline through the current Main wrapper:
+`--normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl` plus all three
+original absolute ROM properties and
+`-Dtest=TestZoneLayoutMutationPipeline#levelFrameStepFlushesQueuedMutationsAfterCameraScrollAndEventsBeforeBoundary test -B`.
+JAVA_TOOL_OPTIONS retained the single required EGL property; EGL/nullAL/no
+ambient display/Lua5.4 environment matched the worker. Session61070 terminal1
+at **13:47:37 UTC**, Maven1m12s, observed admission wait2s, total parent wall
+74.543s: **1 test / 0 failures / 1 error / 0 skips**. Actual XML inspection
+against R10's retained XML gives exact test-name, exception-type, message and
+first four stack-line equality. Both fail because the mock GameModule's
+`getRules()` is null at `GameplaySessionFactory.attachManagers:60` before
+`paletteWhiteFade()`. This attributes R10 focused4439's sole error to its
+unchanged prerequisite; it is not a pass or a new layout failure.
+
+R10 guards45410's two MenuAudioProbe singleton assertions retain the actual
+Main707 session6602 / Root94450 / follow-up55438 identities recorded above.
+The guard and MenuAudioProbeTool files are byte-unchanged from707 through this
+Root; no new singleton debt or blanket guard waiver is introduced. All other
+R10 failures remain subject to their own comparison. No duplicate baseline,
+mock repair or broad suite was submitted. The two inspected baseline reports
+and owned invocation log were consumed under the metadata lease alone.
