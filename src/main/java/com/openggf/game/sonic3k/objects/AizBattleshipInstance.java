@@ -253,21 +253,17 @@ public class AizBattleshipInstance extends AbstractObjectInstance implements Spa
         // the next pass; MakeTree takes the next free SST after the ship and runs
         // later in this one.
         var objectManager = services().objectManager();
+        // AllocateObjectAfterCurrent searches above the ship's SST. Allocate the
+        // independent sibling while that identity is still held, before replacing
+        // the ship at the same SST; this preserves the ROM's allocation result.
+        spawnAfterCurrentSibling(AizBgTreeSpawnerInstance::new);
         int shipSlot = ObjectLifetimeOps.detachSlotForTransfer(this);
-        setDestroyed(true);
+        ObjectLifetimeOps.expireDynamic(this);
         if (objectManager != null) {
             ObjectLifetimeOps.addReplacementAtTransferredSlot(
                     objectManager, new AizBossSmallInstance(), shipSlot);
         }
         S3kAizEventWriteSupport.onBattleshipComplete(services());
-        if (objectManager != null) {
-            AizBgTreeSpawnerInstance makeTree = new AizBgTreeSpawnerInstance();
-            if (shipSlot >= 0) {
-                objectManager.addDynamicObjectAfterSlot(makeTree, shipSlot);
-            } else {
-                objectManager.addDynamicObjectAfterCurrent(makeTree);
-            }
-        }
 
         LOG.info("AIZ2 battleship: ship exited at shipX=0x" + Integer.toHexString(shipX)
                 + " after " + frameCounter + " frames, " + scriptIndex + " bombs dropped");

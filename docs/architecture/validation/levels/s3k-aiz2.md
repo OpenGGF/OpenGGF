@@ -173,3 +173,34 @@ Corrected qualification, all on `0197c5a5a` plus this commit's test-only deltas 
 - Revised input test with the fix: 02:05:15–02:05:44 UTC, 1 test / 0 failures / 0 errors / 0 skips.
 
 Death/reload products, combined smoke and integration were not rerun here. This requalifies the held-Right entry floor only; it is not act certification.
+
+## Root composition: managed ship-exit sibling — 2026-10-17
+
+Root composed the qualified `11af51ca0`..`704a49587` lane onto `8d0763bea` as `a1a381dd5`, keeping the later
+`ec1d6b8dc` title-archive work and its failing follow-up separate. The composed ship exit still called raw
+`addDynamicObjectAfterSlot` / `addDynamicObjectAfterCurrent`, causing two structural guard failures. It now calls
+`spawnAfterCurrentSibling` while the ship still holds its SST, then detaches that SST, retires only the old wrapper
+through `ObjectLifetimeOps.expireDynamic`, and installs the small craft at the transferred slot. The independent
+sibling keeps the native `AllocateObjectAfterCurrent` result without acquiring the old ship's child lifetime.
+The owning ROM order and slot outcome are documented by `Obj_AIZBattleshipMain` (pinned `044fa46`:105327–105339).
+
+On `a1a381dd5` plus this ship-only repair, normal queued Maven, Java 25, surfaceless EGL, null OpenAL and the three
+original absolute ROM paths:
+
+- Focused `-Dtest=TestAiz2BattleshipSlotOwnership,TestAizBattleshipPropellerSlots,TestAiz2MakeTreeScriptOwnership,TestAiz2ShipLoopRewindRoundTrip,TestAizEndBossInstance,TestS3kAizEndBossGraphRewind,TestAiz2BossEndSequenceObjects,TestPlayableSpriteMovement,TestSozLastCheckpointShortcutProduction,TestSozEndBossProduction,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`:
+  **360/0F/0E/0S**, finished 03:01:09 UTC. Slot transfer, same-pass tree allocation and world rewind all pass.
+- Fresh `-Pguards` with TestArchitecturalSourceGuard, TestRewindFieldDispositionGuard, TestModApiSignatureSurface,
+  TestHardwareTimingAuthorityGuard and TestObjectPhysicsStandardizationGuard: **142/0F/0E/0S**, 03:02:54 UTC.
+  Before this repair the same selection had two failures from the ship's raw additions (12 against budget 10).
+- `-Ptrace-segments -Dtest=TestS3kAizZoneSliceTraceReplay#replayMatchesTrace`: **1/1F/0E/0S**, 03:04:59 UTC;
+  exactly one comparator error at row 26179, `rings`, native 72 / engine 0, as on the qualified lane.
+- `-Ptrace-replay -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds`,
+  single fork / alphabetical: **1/1F/0E/0S**, 03:08:38 UTC. Segment 8 retains four physics errors on row 7126
+  (first non-camera `x`, native `$0280` / engine `$0000`); segment 11 still loses production ownership at BK2
+  cursor 68801, load generation 9, HCZ1. The canonical route is not green.
+- `-Ptrace-replay -Dtest=TestS2Ehz1TraceReplay#replayMatchesTrace`, same fork/order: **1/0F/0E/0S**, 03:09:05 UTC.
+  This is affected S2 replay coverage for the shared spin-dash camera change, not a complete S2 sweep.
+
+Commands used the updated main-workspace maven_queue.py from this composition's cwd, with `--normal -Dmse=off`.
+No broad smoke or release full suite was run in this slice. Title-card/load, strict HCZ and complete-route/native
+presentation obligations remain open.

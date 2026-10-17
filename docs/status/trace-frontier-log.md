@@ -112905,3 +112905,25 @@ alternate's trailing row and was present before. At the capsule's creation (row 
 capsule sits in slot 9 against native 10: native slot 9 still holds the child `loc_69482` creates
 (ChildObjDat_69D66, `$85B1E`), which the engine does not create; the results object now runs on the
 native pass anyway.
+
+## 2026-10-17 — Root AIZ composition preserves the qualified frontiers
+
+Root `a1a381dd5` plus the managed ship-exit sibling repair (this commit) composes `11af51ca0`..`704a49587` with
+the previously qualified parity lanes. The tree-maker allocation remains after the original ship's SST; the old
+wrapper retires without releasing the replacement craft's slot. Focused 360 and separate guards 142 pass, no skips.
+
+Using updated main-workspace maven_queue.py from `.worktrees/ai-s3k-dma-ring-r3`, normal lane, Java 25,
+`-Dmse=off -Dopenggf.headless.gl=surfaceless-egl`, unset DISPLAY/WAYLAND_DISPLAY, null OpenAL and original
+absolute ROM properties:
+
+- `-Ptrace-segments -Dtest=TestS3kAizZoneSliceTraceReplay#replayMatchesTrace test`: 1 test fails at the existing
+  single error, row 26179 `rings` (72 / 0), finished 03:04:59 UTC.
+- `-Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+  -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds test`: 1 test fails,
+  finished 03:08:38 UTC. Segment 8 retains four physics errors at 7126 (`x` first non-camera, `$0280` / `$0000`);
+  the walk still stops at input 68801 in segment 11, HCZ1/load generation 9. No green strict-chain claim.
+- Same trace profile/fork/order, `-Dtest=TestS2Ehz1TraceReplay#replayMatchesTrace test`: 1 pass, no skips,
+  03:09:05 UTC. No wider S2 replay credit.
+
+The later title-card archive WIP remains outside this composition. Its pending failures, ring/timer reset at
+`loc_63B4`, HCZ and downstream frontiers remain separate obligations. No full-suite run or new trace payload.
