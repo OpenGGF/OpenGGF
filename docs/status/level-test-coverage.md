@@ -411,7 +411,7 @@ matrices; never collapse skipped or unrun into pass.
 | S3K | `S3K_CARNIVAL_NIGHT_2` | [Act 2 matrix](../architecture/validation/levels/s3k-cnz-act2.md) — bounded normal-entry/restart and object-graph floor qualified (1120 finite restart products across eight acts, `d13585237`; its normal-entry replay held Down, not Right, until the 2026-10-17 input correction); the act is not certified. Route, interaction, lifecycle and native presentation breadth remain open |
 | S3K | `S3K_FLYING_BATTERY_1` | [Act 1 coverage matrix](../architecture/validation/levels/s3k-fbz-act1.md) — partial; execution/route/visual gaps remain |
 | S3K | `S3K_FLYING_BATTERY_2` | [Act 2 coverage matrix](../architecture/validation/levels/s3k-fbz-act2.md) — native Sonic/Tails/Knuckles and donor completion routes pass; broader rewind/visual certification remains partial |
-| S3K | `S3K_ICECAP_1` | [Act 1 matrix](../architecture/validation/levels/s3k-icz-act1.md) — bounded normal-entry/restart and object-graph floor qualified (1120 finite restart products across eight acts, `d13585237`; its normal-entry replay held Down, not Right, until the 2026-10-17 input correction); three bounded native320 solo Sonic physical-post1 authoring candidates (2026-10-17) reached post contact and natural ring-loss hits but all ended alive (final repeated-return endpoint frame 4594, zero rings), so natural death/respawn/rewind remains open; the act is not certified. Route, interaction, lifecycle and native presentation breadth remain open |
+| S3K | `S3K_ICECAP_1` | [Act 1 matrix](../architecture/validation/levels/s3k-icz-act1.md) — bounded normal-entry/restart and object-graph floor qualified (1120 finite restart products across eight acts, `d13585237`; its normal-entry replay held Down, not Right, until the 2026-10-17 input correction); three historical native320 solo Sonic physical-post1 authoring candidates reached post contact/ring-loss hits but ended alive at the final 4594-input zero-ring endpoint; [R8 ground-aware continuation](../architecture/validation/levels/s3k-icz-act1.md#r8-ground-aware-post1-continuation--2026-10-17) (2026-10-17) reproduced that endpoint and regained platform support, then capped at 5794 after 1200 additional inputs/10 jump starts alive with zero rings, so natural death/respawn/rewind remains open; the act is not certified. Route, interaction, lifecycle and native presentation breadth remain open |
 | S3K | `S3K_ICECAP_2` | [Act 2 matrix](../architecture/validation/levels/s3k-icz-act2.md) — bounded normal-entry/restart and object-graph floor qualified (1120 finite restart products across eight acts, `d13585237`; its normal-entry replay held Down, not Right, until the 2026-10-17 input correction); the act is not certified. Route, interaction, lifecycle and native presentation breadth remain open |
 | S3K | `S3K_LAUNCH_BASE_1` | [Act 1 matrix](../architecture/validation/levels/s3k-lbz-act1.md) — partial; cold traversal and viewport/donor/team, lifecycle and native presentation breadth remain open |
 | S3K | `S3K_LAUNCH_BASE_2` | [Act 2 matrix](../architecture/validation/levels/s3k-lbz-act2.md) — actual placed Knuckles CD entry and positioned CA→CC→released MHZ are qualified; cold traversal and donor/team, lifecycle and native presentation breadth remain open |
@@ -1359,3 +1359,15 @@ five-original comparison:599/295/41/52/57 remaining pixels,137 recovered/zero
 newly bad. Larger578/267 components remain unattributed; native4/engine3 HUD
 bootstrap difference persists. R2 gameplay/S3K4/trace results are reused, not new
 route execution. [Evidence and coverage limits](../architecture/validation/levels/s3k-bonus-stage-transitions.md#slot-native-cell-priority-r3r4--2026-10-17).
+
+
+R11 HCZ2 local Full2 visibility (2026-10-17,152d07 composition): independent real
+HCZBlock visible/offscreen controls show old-red3/2F→four new cases green,
+including twice-forced whole-world recreation/registered-key replay; total157
+focused and118 affected guards pass with no skips. Existing object capability
+bypasses both native-absent render gates; shared collision/movement/API unchanged.
+One final original prefix through7808 closes7807 sidekick_y and matches7808;
+HCZ7809/14208 rows still has206 camera/animation errors and no non-camera physics
+mismatch through that bound. First remaining animation3475; later frontier is
+unmeasured. Full route/exit, independent slice, alternate, exact GLFW and broader
+matrix products remain open. [Affected HCZ2 matrix](../architecture/validation/levels/s3k-hcz2.md#r11-hczblock-full2-visibility-and-whole-world-replay--2026-10-17).

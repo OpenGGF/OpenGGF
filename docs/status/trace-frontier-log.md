@@ -113390,6 +113390,20 @@ alternate/native/media/guard/broad run or new GLFW certification. [Exact invocat
 source fingerprint, windows and metrics](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r8-lexical-wall-owner-observer-and-actual7134-bg-result--2026-10-17).
 
 
+### 2026-10-17 — R9 native layout-word source attribution; engine frontier unchanged
+
+Source32a, no production change or engine replay. Root native16359's existing
+7134 FG+31/BG-1 with equal layers/provider narrows R8 engineBG+31 to layout
+addressing. Static current-ROM decoding plus all four retained snapshots proves
+FF907F94 is current16×16 tile data, while adjacent703E0179 is retained HCZ1
+128×128 data beyond HCZ2's shorter write. Sole normal/EGL ROM test32483,
+-Dtest=TestS3kWordLayoutCollision#encodedBackgroundRowCanReadTheCurrentRomTileDefinitionBytes,
+ends1/0F/1E/0S at missing cold block224 before lookup assertions. No qualified
+old-red, retry, fix or trace count/frontier advance. Root receives internal
+addressing plus cross-load residency/rewind design before implementation.
+[Exact command, provenance and stopping boundary](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r9-native-word-layout-byte-provenance-and-resident-table-boundary--2026-10-17).
+
+
 ### 2026-10-17 — R5 freed-animal previous-render lifetime; alternate frontier unchanged
 
 Own t3-98d036a9, parent e207faf7d (separate R4 evidence), runtime AizMiniboss1878
@@ -113477,6 +113491,72 @@ schemas remain explicit in the matrix. No new/worsened frontier, no timing/SAT/
 VRAM/RGB certificate. Candidate source restored exactly afterward; last local
 target is attribution-baseline compiled. Root owns fresh composition validation.
 Reports/XML are consumed after inspection; no archives or pass caches retained.
+### 2026-10-17 — R10 native7134 wall owner closes through7135; residual206
+
+Own t3-3aa3bc3c, e757 + final runtime SHA256
+0b1f59eb135fd284a5e058e0f08e8f438d2869193935d06c3c9da1531318b676.
+Internal encoded collision addressing, actual destination residency, and bounded
+immutable current-ROM positive aliases have independent old-red/green and two
+forced whole-world restore/replay controls. Earlier74271 refused ROM00007F after
+AIZ segment8 2195/7175 rows; this remains an incomplete distinct result. Root's
+subsequently authorized ROM extension passes3897 seven affected checks.
+
+49095 uses `-Ptrace-replay -Dtest=TestS3kHcz7135ResidentLayoutWitness#canonicalThroughHcz7135`
+through the current Main absolute normal wrapper, original AD40 BK2/3ROMs,
+EGL/nullAL/noambient/singlefork.1/0F/0E/0S observer, queue0s/Maven48.198s,
+finished14:01:25UTC. Six complete gameplay windows0/2/4/6/8/9 have0errors;
+returned HCZ11 consumes7136/14208 rows, **206=11physics(camera)+195animation**,
+lag53, warning/bootstrap0. First non-camera physics mismatch is absent through
+7135; no later frontier is measured. Actual7134 selected BG-1 produces native
+0175.F800/vx0170/g0/push;7133 selectedBG+2 also matches. Recent remaining camera
+fields include6790–6792/6947–6948 camera_y; first remaining animation identity is
+not established by this report. Not zero-frontier or full-route parity.
+
+No full returned-HCZ/slice/alternate/GLFW qualification on this runtime. Matched
+historical4699/4353 remains mixed,3738 unmatched. Focused122 has one exactly
+matched inherited mock error; guards179 have two inherited MenuAudio failures.
+[Exact selectors, source epochs, all windows, intermediate failures and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r10-encoded-collision-words-resident-destinations-and-rom-aliases--2026-10-17).
+
+
+### 2026-10-17 — Composed canonical152d07 advances returned-HCZ non-camera frontier to7807
+
+Normal Main-wrapper request93212 atRoot152d07 (all originalROMs, trace-replay,
+EGL/nullAL/noambient/singlefork) completed14:12:04UTC,6/1F0E0S,Maven2m46s,
+queue0. OriginalAIZ+standing20 and all3prefix methods pass; complete windows0/2/
+4/6/8/9 have0errors/warnings/bootstrap. Fullchain remainsred: HCZ11complete14208
+rows,133258errors (113873physics+19385animation),lag59,warnings/bootstrap0;
+firstnoncamera7807 sidekick_y066F/0669, giant_ringexitabsent. Earlier7134 wall
+causal unit is fixed; no later-physics or fullroute certificate follows.
+Main803's older incomplete result is not an exact waiver for these later rows.
+Root retains inspected reports temporarily for the activeR11 causal owner;
+no archives or pass caches. Four distinct segment checks pending, broad smoke
+not yet launched; see existing completion Plan for exact selector/environment.
+
+
+### 2026-10-17 — Exact published HCZ slice comparison exposes mixed composed delta
+
+Current Roota58bdc058/runtime152d07, current Main absolute Maven wrapper,
+`-Dmse=off -Ptrace-segments` and exact classes
+`TestS3kAizZoneSliceTraceReplay,TestS3kSonicTailsHczSegmentTraceReplay,TestS3kHczZoneSliceTraceReplay`,
+normal/all3originalROMs/EGL/nullAL/noambient/singlefork/reuse/alpha:
+67653 terminal1 at14:16:10UTC,4/2F0E0S, queue0/Maven48.013s. AIZ slice's
+sole26179 rings72/0 matches actual803 baseline78232; team HCZ and Poindexter
+pass. HCZ slice completes29302 observations,4353 errors=3424physics+929anim,
+first9482 air1/0, warnings/bootstrap0.
+
+Matched actual Main80317155 used only
+`TestS3kHczZoneSliceTraceReplay#replayMatchesTrace` with the same profile,
+ROMs/flags/environment, terminal1 at14:24:23UTC,1/1F0E0S,
+queue0/Maven35.057s:29302 observations,4699=3973physics+726anim,
+same first9482 air1/0 and same eight missing aux schemas. Main foreign
+status and config bytes/mtime are unchanged. Full records share1132 exact
+identities;3221current/3567baseline are unmatched, including split spans.
+The first genuinely new field/row is10834 tails_cpu_respawn_counter0000/0001;
+Main's comparator has no counter error there. Lower totals do not waive it.
+This mixed delta remains an integration blocker; read-only causal attribution
+is separate from original-route R11's7807 block gate. No broad smoke or
+full-suite result is claimed. Exact commands, bounds and cleanup obligations
+are in the existing playable-completion plan.
 
 
 ### 2026-10-17 — Slot native band publication, bounded traces retained green
@@ -113508,3 +113588,49 @@ originals at971/974/1017/1022/1026:661/360/50/52/58→599/295/41/52/57,
 137 original pixels recovered and zero newly bad. Original578/267 components
 remain identical/unattributed; HUD native4/engine3 unqualified bootstrap life
 state persists. No new trace frontier, zero-RGB claim or further owner repair.
+
+
+### 2026-10-17 — R11 native HCZBlock Full2 closes7807 through7808
+
+Base152d07 in owned3aa3, branchbugfix/ai-s3k-hcz-7807-causal-owner. HCZBlock
+loc1F3CA calls Full2: both player and object offscreen gates are bypassed.
+Independent real-object controls85345 old-red3/2F (on-screen passes) →41923
+focused157/0F/0E/0S, twice whole-world recreation/replay; guards22063 118/0F/0E/0S.
+Only existing HCZBlock bypass capability changes; no shared movement/API/state.
+
+Current Main absolute wrapper, normal lane, original three ROMs, Java25/Lua5.4,
+EGL/nullAL/no ambient display, single reusable fork/alphabetical, `-Dmse=off
+-Ptrace-replay -Dtest=TestS3kHcz7808QualifiedPrefix#originalCanonicalThrough7808
+ test -B` runs sole final7687 from original AD40 bootstrap/input/lag. Temporary
+sensor/checkpoint observer removed before it. Observer1/0F/0E/0S is not parity.
+HCZ7809/14208 rows:206=11camera physics+195animation, lag53, warning/bootstrap0,
+no non-camera physics mismatch through7808. Pre-fix46246 same window214/19+195;
+eight non-camera fields close. Row7807 P209B1.FD00/066F.F700/vxFEA2/vy-g0 and
+7808 P209B0.9300/066F.F700/vxFE96/vy0038/g0 match native. Earlier complete
+0/2/4/6/8/9 windows remain zero errors. First remaining all-group3475
+sidekick_animation_id17/1C; later non-camera frontier unmeasured. No zero-frontier,
+full returned-HCZ/exit, slice, alternate or exact GLFW qualification. Root owns
+combined validation and delivery; no Main write/push.
+[Exact source hashes, commands, compared windows and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r11-hczblock-full2-visibility-owner-closes7807-through7808--2026-10-17).
+
+
+### 2026-10-17 — Composed R11/Slot source preserves the exact mixed HCZ slice vector
+
+Rootbef8f27ca includes qualified Slot670cf353d and HCZcd94d7ca4 byte-for-byte,
+plus docs-only ICZc8703d172. Normal Main-wrapper58673 ran only
+`TestS3kHczZoneSliceTraceReplay#replayMatchesTrace -Ptrace-segments`, with
+all3originalROMs/EGL/nullAL/noambient/singlefork/reuse/alpha. Terminal1 at
+14:45:55UTC:1/1F0E0S, queue0/Maven1m23s,29302observations,
+4353=3424physics+929animation, first9482air1/0, warnings/bootstrap0.
+Full sorted error-array SHA25671f91e9494d9a6926cd2f032dcc174a0d289355d9f9a6658b3752ae61d96d251
+matches pre-R11/current/historical R3 exactly. No new slice delta from these
+bounded owners; published803's4699 vector still differs, and10834 CPUcounter
+0000/0001 remains unresolved. Source history locates the earliest compound
+boundary b6c4898e2, not a single proven counter cause; R12 observes visibility
+before any correction. Native10833..35 render_flags84/routine6/counter0.
+
+One complete actual change-based smoke plan now selects3523candidates/all10
+categories plus guards, <=50 per ordinary batch, max150execution minutes/10min
+no-output/queueexcluded. This is separate from trace acceptance; neither a
+lower total nor the planned broad run certifies HCZ, SlotRGB, ICZdeath or the
+coherent ending timeline. Source/commands/limits are in the existing plan.

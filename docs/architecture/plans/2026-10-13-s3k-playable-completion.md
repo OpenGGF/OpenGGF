@@ -4345,6 +4345,21 @@ temporary runner/consumed diagnostics removed; all jobs terminal. [Exact command
 fingerprint, all windows and native limit](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r8-lexical-wall-owner-observer-and-actual7134-bg-result--2026-10-17).
 
 
+## R9 word-layout provenance; cross-load design handback — 2026-10-17
+
+Own tree safely FF32a, native4fdf retained, R9 exactID/ordinal10 registered.
+Root's retained native16359 proves BG7134-1 vs engine+31 with equal raw layers/
+provider. FF907F94 is Block_table+007F, low byte of current common HCZ E094;
+ROM3B91F8's entire0558-byte output matches all four native snapshots. It is not
+unknown stale layout RAM. Adjacent FF703E0179 instead belongs to HCZ1's retained
+128×128 tail6F80–79FF; HCZ2's shorter overwrite ends6F80. One cold loader/provider
+regression32483 errors at missing block224 before lookup assertions (1/0F/1E/0S),
+so no qualified old-red. No retry or production/API change. Stop before new
+encoded-layout addressing and resident-table/cross-load/rewind contracts; Root
+owns implementation authorization. Temporary test/diagnostics consumed. [Exact
+writers, command, source checks and bounded design](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r9-native-word-layout-byte-provenance-and-resident-table-boundary--2026-10-17).
+
+
 ## 2026-10-17 producer-owned ending ApplyDeformation work
 
 This independent unit reuses `$OWNED_TREE` (`t3-fa8da232`) and its own
@@ -4915,6 +4930,106 @@ sessions, temporary backup and consumed diagnostic cleanup are accounted for.
 Only the generated ignored private config remains for Root's tree cleanup.
 No Main integration/push, branch/tree removal, RGB certificate, native run or
 whole-objective qualification is included; Root owns remaining delivery gates.
+## R10 HCZ word-address and destination-residency owner — 2026-10-17
+
+Local e757 (Root067 merge64b77, then pre-edit Root28 merge) implements the two
+R9 production owners: encoded native collision address selection and retained
+128×128 destination bytes through actual HCZ1→HCZ2 construction/commit. Current
+ROM prefix ownership also models positive MOVEA.W aliases after independent
+review exposed incorrect RAM substitution. The safe refusal first stopped74271
+at AIZ segment8 after2195 rows/ROM00007F; Root explicitly authorized the bounded
+immutable current-ROM extension. No fixture/native RAM hydration or public API.
+
+Genuine transition21043 old-red→6557 green; reviewed sign-domain38709 old-red;
+ROM-owner53171 old-red→final3897 seven affected cases green. Twice-forced whole-
+world recreation/restoration/forward replay covers live16×16/retained128×128/map
+mutations, scene geometry, and immutable ROM binding after the intentional load
+history reset. Focused4439=122/1 inherited mock error (exact Root61070 baseline);
+guards45410=179/2 exact inherited MenuAudio failures, other177 pass. No unrelated
+mock/guard edits or repeated broad selection.
+
+Final original prefix49095 reaches7135 inclusive. Actual native7134 FG31/BG-1/
+combined-1 and P20175.F800/vx0170/g0/push match. Returned HCZ7136/14208 rows still
+contains206 errors (11camera physics+195animation); no non-camera physics
+mismatch through7135. This is bounded closure, not zero frontier/full parity.
+No full canonical/slice/alternate/GLFW claim; Root owns further qualification.
+[Source hashes, exact commands, all windows and preserved intermediate failures](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r10-encoded-collision-words-resident-destinations-and-rom-aliases--2026-10-17).
+
+
+### Composed strict qualification at152d07 — 2026-10-17
+
+Root merged AIZR7 `e6ac5a0ef`, Pachinko `f1c319492` and HCZR10 `fa289e22e`
+as `152d07ce90d512d2b75dfddfd10c777b0788acea`. Every changed runtime/test byte
+matches its qualified local commit; only append-evidence conflicts were resolved,
+with complete sections and both skill mirrors preserved. Main was fetched/FF
+again and remains803; its exact unrelated status is preserved.
+
+One current-Main absolute-wrapper canonical6 request93212, normal ROM lane,
+original3ROMs/EGL/nullAL/noambient/Lua5.4/singlefork/reuse/alphabetical,
+`-Ptrace-replay` originalAIZ+standing20, CompleteEmeraldRunPrefix, and fullchain
+selector completed terminal1 at **14:12:04 UTC**, Maven2m46s, queue0s,
+parent wall166.958s: **6 tests / 1 failure / 0 errors / 0 skips**. Original AIZ
+and all three prefix methods pass. Fullchain's complete gameplay windows0/2/4/
+6/8/9 have zero physics/animation/warnings/bootstrap errors (lags0/11/14/16/62/55).
+ReturnedHCZ11 completes14208 rows with133258 errors =113873physics+19385animation,
+lag59, warning/bootstrap0. First non-camera mismatch advances from7134 to
+**7807 sidekick_y native066F/engine0669**; giant_ring exit remains absent.
+This is not strict green, a full campaign pass or a blanket inherited waiver;
+Main803's old HCZ result was incomplete and cannot certify these later rows.
+
+The independent HCZ worker resumes bounded R11 on this exact source: existing
+aux/source first, one original-driver passive7808 prefix, then only a proven
+owner's independent old-red/minimal correction. No broad/ancestor/native sweep.
+Root's four distinct segment checks are next; broad smoke is not yet submitted.
+Actual local change-based plan3521smokeclasses/all10categories+guards remains
+complete, with planned150execution-minute/no-output/source-fingerprint limits.
+The separate Slot R2 tree owns VInt publication and five originalRGB moments;
+it cannot edit this frozen validation tree. Ending's coherent caller/bus/readiness
+closure and the whole-objective ledger above remain open, not covered by this run.
+
+
+### Distinct slice qualification and matched published baseline — 2026-10-17
+
+Root `a58bdc058` (runtime `152d07ce9`) ran exactly three distinct segment
+classes through current Main's absolute wrapper, normal ROM lane, all three
+original absolute ROM properties, `-Dmse=off -Ptrace-segments`, EGL/nullAL,
+no ambient display, single fork/reuse/alphabetical: `-Dtest=TestS3kAizZoneSliceTraceReplay,TestS3kSonicTailsHczSegmentTraceReplay,TestS3kHczZoneSliceTraceReplay`.
+Session67653 completed at14:16:10UTC, queue0, Maven48.013s/parent48.757s:
+**4 tests / 2 failures / 0 errors / 0 skips**. AIZ slice retains only26179
+rings72/0, matching actual803 baseline78232; team HCZ and the independent
+Poindexter check pass. HCZ slice completes29302 observations with4353 errors
+(3424physics+929animation), first9482 air1/0, warning/bootstrap0.
+
+A single matched baseline17155 ran only
+`TestS3kHczZoneSliceTraceReplay#replayMatchesTrace` on actual Main803, same
+profile/runtime flags/ROMs/environment, with isolated owned report paths.
+It completed at14:24:23UTC, queue0, Maven35.057s/parent35.759s:
+**1 test / 1 failure / 0 errors / 0 skips**, complete29302 observations,
+4699 errors (3973physics+726animation), same first9482 air1/0. Main's exact
+foreign status and config hash/mtime remained unchanged. No branch switch,
+source edit or copied build tree was used.
+
+Full error-record comparison shares1132 exact records; current3221 and
+baseline3567 records are unmatched, partly because consecutive spans split
+or coalesce. These numbers are not counts of newly wrong gameplay values.
+The earliest current field/row absent from all baseline error spans is
+**10834 tails_cpu_respawn_counter expected0000/actual0001**. Baseline has no
+error for that field at10834. Both runs have identical total observations,
+latest zone/act, warnings/bootstrap and eight missing advertised aux schemas.
+The lower total therefore does not establish nonregression; the mixed slice
+trajectory remains an integration blocker pending causal attribution. A
+read-only source/history audit owns that question, while R11 independently
+owns the original-route7807 block contact. No tolerance, field omission or
+fixture hydration was introduced.
+
+R11 and Slot R2 remain separate local trees. Once their bounded owner work is
+accounted for, Root will compose before the one complete change-based smoke
+selection (currently3521 candidate classes/all10 categories plus guards),
+with150 execution-minute and10-minute no-output limits, queue excluded.
+No broad run has yet been submitted. The full suite remains release-only;
+ending's coherent CPU/bus/readiness timeline and other ledger limits remain
+open. Consumed report cleanup follows the read-only attribution audit; no
+raw-log archive or validation receipt is retained.
 
 
 ### Slot native publication R2 handback — 2026-10-17
@@ -4964,3 +5079,153 @@ bootstrap limit. [Exact evidence, failures, commands, hashes and provenance](../
 Source/test frozen before capture; all handles terminal, consumed diagnostics/
 helpers removed; private config/durable pictures/R1R2R3 registry results preserved.
 Local commit only; no extra review/trace/owner, Main/Root edits or publication.
+
+
+## R11 HCZBlock offscreen Full2 owner — 2026-10-17
+
+Owned3aa3 branch `bugfix/ai-s3k-hcz-7807-causal-owner` fast-forwarded fa→152d07,
+preserving R10 evidence and foreign native4fdf. Root93212's first non-camera7807
+sidekick_y066F/0669 was an actual block-owner miss, not ceiling terrain. The
+one passive prefix46246 observes empty ceiling+20 and block21 at09B0/0650
+returning NONE despite native Full2 underside separation. Native loc1F3CA calls
+SolidObjectFull2, bypassing BOTH Player2 render and object loc1DF88 gates.
+Only HCZBlock's existing bypassesOffscreenSolidGate capability now returns true.
+No shared solver/movement/API/new state or source/clock fit.
+
+Initial89593 was a first-dispatch test setup error (3/3F including control).
+Corrected ordinary admission85345 gives genuine3/2F: on-screen passes, two
+offscreen cases miss six pixels. Final focused41923 passes157/0F/0E/0S, including
+three visibility controls, twice-forced whole-world recreation/replay, block and
+solid neighbors and mandatoryS3K4. Affected guards22063 pass118/0F/0E/0S.
+
+Temporary sensor/checkpoint observers were removed before sole final prefix7687.
+Original driver/input/lag from boot through7808: HCZ7809/14208 rows has206
+errors=11camera physics+195animation, lag53, no warnings/bootstrap or non-camera
+physics mismatch. Actual7807/7808 endpoints match native. Matched pre-fix46246
+same7809-row window had214=19physics+195animation; eight non-camera fields close.
+Earlier complete gameplay windows0/2/4/6/8/9 remain zero errors. First remaining
+all-group error3475 sidekick_animation_id17/1C; next non-camera beyond7808 is
+unmeasured. No fullcanonical/slice/alternate/GLFW/native/broad claim or next fix.
+Root owns further qualification/integration; local commit only.
+[Source, exact commands/hashes, clocks, all windows and limits](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r11-hczblock-full2-visibility-owner-closes7807-through7808--2026-10-17).
+
+
+### R8 ICZ1 bounded natural post-death controller authoring — 2026-10-17
+
+Same owned98d/native01a1496e/GPT6.1, clean AIZ branch FF to Root
+`a58bdc058ec440d6e2ce70f3be38ee0ebcecc9b5`; previous branch ref retained,
+new `feature/ai-s3k-icz-natural-post-coverage-gpt61` in the same tree. Exact
+returned R8 taskID is registered with native/workspace/24h expiry; R1–R7
+records are untouched. Own config is now a regular exact Main byte copy,
+not the T3 symlink. Main SHA-256 `6abd111c…f7da` and mtime_ns
+`1792141742849921547` were verified unchanged before/after all execution.
+
+Read the existing three failed authored routes, ROM placements and disassembly
+pin044fa467. The old temporary blob is unavailable in this object inventory,
+so reused the durable literal4594 input stream and production
+`CanonicalEntryMatrixSupport.boot` / `GameLoop` input contract. Original S3K
+ROM SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6` verified. Block1EE3CA
+confirms post3BD0/076F, harmful ice3BF3/06CE and3D10/0658, platform3CE0/0784
+and springs3CB6/07B3,3E0A/07B0. `sub_8B0B0` needs standing lower contact,
+speed at least200hex and matching facing; static ice subtype0 uses ordinary touch.
+
+ONE offline policy observed ground/air/position and live platform geometry to
+choose buttons: seek a grounded leftward approach from its right side, jump,
+steer toward its centre, release A at the observed ascent end, move right at
+platform height. Cap1200 additional inputs/12 jump starts, stop on natural
+death or cap. Velocities/hurt/rings/lives were observations only. No gameplay
+state writes, hydration, raw restore, API/runtime change, native/media,
+branch sweep, second candidate or extra validation JVM.
+
+All requests used the current Main absolute Maven wrapper from own cwd,
+normal ROM lane/all3 original ROMs/Java25/EGL/nullAL/no ambient display,
+Lua5.4/exact single-token JTO, single fork/reuse/alphabetical. Source was
+frozen queued/live; every queue wait was0. Prerequisites are separate:
+
+- 90341 terminal1 14:28:52UTC, Maven1m01: testCompile-only nonexistent
+  `GameStateManager.getRings`, no tests/gameplay. Corrected two read-only
+  observation calls to playable.getRingCount.
+- 3516 terminal1 14:30:41UTC, Maven23.411s,1/0F1E0S: input-tool separator
+  error BEFORE boot/GameLoop, zero gameplay. Added only the statement separator.
+- 53312 terminal1 14:32:25UTC, Maven22.963s,1/0F1E0S: exact1701/3523/4594
+  assertions pass, then optional dump called default getX on a null-spawn
+  synthetic owner. Zero continuation inputs/jumps. Root explicitly authorized
+  ONE exact rerun after the dump fix. Null metadata now avoids getX/getY;
+  optional isDestroyed is omitted because some overrides can mutate lifetime.
+
+Final53551 terminal1 at14:35:23UTC, Maven25.214s,1/1F0E0S,class1.797s:
+exact prefix assertions GREEN; sole continuation consumed1200 inputs/10 jump
+starts and capped alive at5794, x3D04/y0765, airtrue/hurtfalse/deadfalse,
+rings0/inv0/lives3/post1active, LF16A1/camera3C74/0720,gs0/VX−247/VY−195.
+No observer failure; only the explicit natural-death assertion fails.
+Actual platform ride sampled5482/5582 (X speeds−305/−318, below native200hex
+threshold); later samples return to the lower channel. No lethal owner or
+runtime defect proved. Exact literal31-block RLE, tested probe SHA-256
+`5648de0e5ac7fd924860e572af36e33bd2b30952cf48b7d16b84456741fc578f`,
+command/source/clock/endpoint/limits and prior prerequisites are recorded in
+[the existing ICZ1 matrix](../validation/levels/s3k-icz-act1.md#r8-ground-aware-post1-continuation--2026-10-17).
+Natural post death/life loss/saved-post reload/world replacement/history
+retirement and pre-contact/after-release twice-world replay remain OPEN.
+Existing semantic restart qualifications are unchanged; no runtime fix,
+changelog, strict trace frontier, integration or publication claim follows.
+Only docs syntax/link/diff/policy checks and local commit/consumed cleanup
+remain. Root owns composition/broad/Main; all four handles are terminal.
+Target last compiled the temporary observer, with no maintained rebuild.
+
+
+R8 final cleanup: removed the owned temporary source under the intended-tree
+lease, then consumed seven inspected diagnostic/input/compiled-class files
+(76451bytes) under the metadata slot alone. No archives/receipts remain.
+Exact durable RLE equals the executed literal (1200inputs/10 A holds/31blocks);
+new local links/anchors, Markdown fences and diff checks pass. Source diff is
+empty. Main config hash/mtime and own regular exact byte copy verified again.
+No extra Java execution. Preparing the normal local evidence-only commit;
+all seven policy trailers and final GPT-6.1 coauthor are parsed before commit.
+
+
+### Current composition, slice attribution and broad-validation boundary — 2026-10-17
+
+Root7397c5368 merges Slot R2 `670cf353d`; Root60d6fe135 merges HCZ R11
+`cd94d7ca4`; Rootbef8f27ca merges ICZ R8 evidence `c8703d172`. Every affected
+runtime/test byte matches its locally qualified commit. Append-evidence merge
+conflicts retain both complete sections and identical skill mirrors. ICZ R8
+is docs-only: the one executed continuation reaches5794 alive, so natural
+lethal-contact/respawn/history coverage remains open. Slot's five original
+RGB residuals661/360/50/52/58 also remain open; nativeHUD4/engine3 is an
+unqualified carried-life/bootstrap difference, not attributed life loss.
+
+Read-only slice attribution confirms current complete error array equals
+historical R3 (SHA256 of `json.dumps(errors, sort_keys=True)`:
+`71f91e9494d9a6926cd2f032dcc174a0d289355d9f9a6658b3752ae61d96d251`).
+Matched Main803 array is `9c41e6af15d487b927e3ec81a53a4462653aeac299e257d3c189cfb23287551b`.
+The10834 counter consequence predates R3/R4 title and R10/R11 layout/block
+owners; earliest demonstrated boundary is compound `b6c4898e2`. Its native
+carrier target/X-lock correction supports earlier camera improvement, but no
+retained single-change observation explains10834. Normal CPU counter logic
+is unchanged: on-screen resets0, off-screen increments. Native10833..35
+has render_flags84/routine6/counter0; actual engine visibility decision remains
+unobserved. R12 owns one passive slice-prefix question, not a counter fit.
+
+One necessary post-composition slice58673 onbef8f27ca, same exact method,
+trace-segments/profile/ROMs/environment/single-fork flags as17155, completed
+at14:45:55UTC, queue0, Maven1m23s/parent83.857s:1/1F0E0S,29302observations,
+4353errors=3424physics+929animation, warnings/bootstrap0/eightmissingaux.
+Its ENTIRE sorted error-array hash equals the historical/current hash above.
+Thus SlotR2/HCZR11 introduce no further slice error-vector delta, but10834
+still blocks integration relative to published803. Both original matched
+reports and all inspected canonical/segment output were consumed; no archives.
+
+The actual local plan atbef8f27ca/base803 selects **3523 candidate smoke
+classes, all10 categories, plus separate guards**. Root now owns ONE complete
+`python3 tools/testing/run_categories.py --base 8030832d2ab6080e5324cdfe35e971677fd97b41 --run --rom-directory "$OPENGGF_MAIN" --max-minutes 150`
+in this intended tree. Estimated execution90–120minutes, variable queue time
+extra;150 execution-minute and10-minute no-output limits, source fingerprint
+or launcher failure stops incomplete coverage. Ordinary batches contain at
+most50 candidates and yield shared admission between batches/before guards.
+No release-only full suite, manual narrowing, duplicate baseline broad run,
+or package-triggered testing is selected. This broad check can find other
+regressions while R12 and the bounded Slot painter owner work independently;
+it does not waive known trace/RGB/ending/coverage blockers. Root source stays
+frozen during the retained run. Later isolated fixes require their meaningful
+affected checks before composition; repeated unchanged broad coverage is not
+a ceremony. Whole ending CPU/bus/readiness acceptance remains a separate gate.

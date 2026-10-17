@@ -349,12 +349,14 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
     Sonic3kLevel buildDetachedLevel(int zone, int act, Sonic3kLoadBootstrap.Mode bootstrapMode)
             throws IOException {
         return buildLevel(zone * Sonic3kConstants.ACTS_PER_ZONE_STRIDE + act, DeferredLevelResourceTracker.none(),
-                false, new LevelBuildInputs(bootstrapMode, "sonic", false, null));
+                false, new LevelBuildInputs(bootstrapMode, "sonic", false, null, new byte[0]));
     }
 
     private record LevelBuildInputs(Sonic3kLoadBootstrap.Mode bootstrapMode, String mainCharacter,
                                     boolean omitSecondaryLevelPlc,
-            com.openggf.game.sonic3k.resources.S3kFrontendPatternResidency.Seed frontendPatterns) {
+            com.openggf.game.sonic3k.resources.S3kFrontendPatternResidency.Seed frontendPatterns,
+            byte[] residentBlocks) {
+        LevelBuildInputs { residentBlocks = residentBlocks.clone(); }
         Sonic3kLoadBootstrap bootstrap() {
             // Level construction consumes only the mode, never the mutable start-position array.
             return new Sonic3kLoadBootstrap(bootstrapMode, null);
@@ -371,7 +373,9 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
                 resolveActiveMainCharacterCode(),
                 transitionRequest != null && transitionRequest.omitSecondaryLevelPlc(),
                 com.openggf.game.sonic3k.resources.S3kFrontendPatternResidency.currentOrNull() != null
-                        ? com.openggf.game.sonic3k.resources.S3kFrontendPatternResidency.currentOrNull().seed() : null);
+                        ? com.openggf.game.sonic3k.resources.S3kFrontendPatternResidency.currentOrNull().seed() : null,
+                transitionRequest != null && levelManager.getCurrentLevel() instanceof Sonic3kLevel resident
+                        && resident.hasStockRomZoneIdentity() ? resident.residentBlockBytes() : new byte[0]);
     }
 
     /**
@@ -692,7 +696,8 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
                 objectSpawns, ringSpawns, ringSpriteSheet,
                 publishGraphics,
                 new Sonic3kLevel.TerrainArtSources(primaryArtAddr, secondaryArtAddr),
-                inputs.frontendPatterns() == null ? new byte[0] : inputs.frontendPatterns().packed());
+                inputs.frontendPatterns() == null ? new byte[0] : inputs.frontendPatterns().packed(),
+                inputs.residentBlocks());
         validateCustomBounds(level, customResources);
         return level;
     }

@@ -157,3 +157,57 @@ wall-owner call per observed tick; floor/clamp calls pass unchanged. Native P2
 layer/selected terrain remains missing; no wrapping fault or production fix
 established. No new route/matrix/GLFW qualification. R7's partial assertion red
 is preserved. [Full selected metrics, passivity and native gaps](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r8-lexical-wall-owner-observer-and-actual7134-bg-result--2026-10-17).
+
+
+R9 source inventory (2026-10-17,32a): retained native7134 BG-1 now qualifies
+layers0E/0F/provider0200/0500. Source resolves FF907F94 to current HCZ shared
+16×16 ROM bytes and adjacent703E0179 to retained HCZ1 128×128 table tail.
+One cold-HCZ2 regression32483 is1/0F/1E/0S at missing block224 before lookup
+assertions; it is not an active-transition old-red. No runtime/API fix, retry,
+new engine trace, rewind/matrix/route qualification or native execution here.
+Internal address lookup plus resident-table/capture design handed back to Root.
+[Exact source and limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r9-native-word-layout-byte-provenance-and-resident-table-boundary--2026-10-17).
+
+
+### R10 encoded collision and resident asset ownership — 2026-10-17
+
+Actual HCZ1→HCZ2 production job/request/build/commit now preserves unwritten
+128×128 destination bytes and encoded layout row addressing. Current live16×16
+bytes select A216 at FF80/0338; retained prior-act0179 selects the adjacent cell.
+Positive MOVEA.W aliases read the current constructor ROM's immutable bounded
+prefix, with source-derived zero/nonzero controls; unknown regions still fail.
+No public API expansion, observation hydration, zone or row fit.
+
+Independent transition old-red21043→green6557; ROM owner old-red53171→final3897
+7/0F/0E/0S. Every snapshot key matches after two forced whole-world recreations,
+live definition/map mutations, scene swap and forward replay. Captures start
+after the intentional cross-load history reset; no retired timeline is revived.
+
+Original prefix49095: actual7133 FG18/BG2/combined2;7134 FG31/BG-1/combined-1,
+P20175.F800/vx0170/g0/pushing matches native. Through7135, HCZ7136/14208 rows
+has206 errors (11camera physics/195animation), lag53 and no non-camera physics
+mismatch. Observer pass is not full parity. Full returned-HCZ, independent slice,
+alternate, viewport/roster/cold/PAL/auxiliary breadth and GLFW remain open.
+[Exact command, hashes, inherited failures and all compared windows](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r10-encoded-collision-words-resident-destinations-and-rom-aliases--2026-10-17).
+
+
+### R11 HCZBlock Full2 visibility and whole-world replay — 2026-10-17
+
+On152d07 composition, only HCZBlock's existing offscreen bypass capability
+changes to match loc1F3CA→SolidObjectFull2. Both the Player2 render gate and the
+object loc1DF88 gate are absent from that native path. Independent actual HCZ2
+object controls use visible/visible, visible/offscreen and offscreen/offscreen
+participants; corrected genuine old-red85345 fails only the last two. New four
+cases pass within41923's157 focused checks (mandatoryS3K4 included), including
+two forced whole-world recreations and complete registered-key forward replay.
+Affected source/authority/rewind guards22063 pass118 without skips.
+
+Final original prefix7687 consumes7809/14208 HCZ rows,206 errors=11camera physics+
+195animation, lag53, warnings/bootstrap0. Native7807/7808 P2 endpoints now match;
+no non-camera physics mismatch through7808. Earlier complete gameplay windows
+0/2/4/6/8/9 remain zero errors. First remaining all-group error3475 companion
+animation17/1C; later non-camera frontier not observed. The once final observer
+contains only post-row reads and is removed after facts are durable. No full
+act/returned exit/slice/alternate/GLFW/viewport/roster/native presentation
+certification; Root owns remaining route and delivery validation.
+[Source, controls, clocks, commands and exact window comparison](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r11-hczblock-full2-visibility-owner-closes7807-through7808--2026-10-17).

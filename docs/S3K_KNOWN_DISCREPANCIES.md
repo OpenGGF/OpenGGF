@@ -1274,3 +1274,29 @@ SST/phase/position comparison, four omitted68E98 debris and cold/otherBK2/config
 viewport/donor/roster/fullchain coverage remain open. This is a local owner
 qualification; Root owns composed validation and Main delivery.
 [Source, old-reds, review findings, commands and limits](architecture/validation/levels/s3k-aiz2.md#r7-physical-parent-and-five-child-defeat-retirement--2026-10-17).
+
+
+R10 HCZ internal asset ownership (2026-10-17): production HCZ1→HCZ2 preserves
+unwritten128×128 destination bytes; encoded native word lookup reads current
+16×16/layout assets and positive MOVEA.W aliases from a bounded immutable copy
+of the current ROM. Independent old-red/green and twice-recreated whole-world
+mutation/scene/ROM-binding replay pass. Original prefix49095 closes7134's wall:
+FG31/BG-1/combined-1, P20175.F800/vx0170/g0/pushing matches native. Through7135,
+returned HCZ consumes7136/14208 rows with206 errors (11camera physics and195
+animation), no non-camera physics mismatch, and no later frontier measured.
+Full returned-HCZ, independent slice, alternate and exact GLFW remain unqualified
+on the new source; this is not route certification. Focused mock error and two
+MenuAudio source-guard failures are exactly attributed as inherited, not passes.
+[Commands, prior refusal boundary, source hashes and limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r10-encoded-collision-words-resident-destinations-and-rom-aliases--2026-10-17).
+
+
+R11 HCZBlock Full2 owner (2026-10-17,152d07 composition): native loc1F3CA
+bypasses both player and object offscreen gates. Existing object-local capability
+now preserves underside separation offscreen. Independent corrected old-red
+3/2F→visibility/world-replay4 green,157 total focused/118 affected guards pass
+without skips. Original once prefix7687 closes7807 sidekick_y and matches7808;
+HCZ7809/14208 rows remains206=11camera physics+195animation, no non-camera
+physics mismatch through7808, warnings/bootstrap0. First remaining all-group
+error3475 sidekick_animation_id17/1C; later non-camera frontier is unmeasured.
+No full returned-HCZ/exit/slice/alternate/GLFW or route certification is claimed.
+[Native source, exact controls/commands/hashes and limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r11-hczblock-full2-visibility-owner-closes7807-through7808--2026-10-17).
