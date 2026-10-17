@@ -1166,7 +1166,12 @@ whole-registry replay obligation.
 SSZ EggRobo attachment: the presentation-fix matrix adds real moving body/child
 anchors, mirrored offsets, live flame versus delayed gun Y and graph recreation
 in both orientations, including immediate object-manager capture after recreation.
-Existing fly-by scaling and animal-launch gaps remain.
+Fly-by scaling remains open. The [special animal launch unit](../architecture/validation/levels/s3k-ssz-act1.md#r29-native-eggrobo-animal-launch-unit--2026-10-17)
+now has independent real-parent and pending-child controls for both facings and
+variants, twice forced full-world recreation/replay and actual renderer arguments.
+R27's78 focused cases and R28's6 exact guards pass; the original uninstrumented
+Sonic cold campaign still fails at49613. No cold completion, post-fix pool lineage
+or unique Animal629 parent claim follows from the component qualification.
 
 SSZ diagonal bridge collapse: the presentation-fix matrix records four local
 slope-flip × collapse-side cases, exact intact-to-fragment ROM tile composition,

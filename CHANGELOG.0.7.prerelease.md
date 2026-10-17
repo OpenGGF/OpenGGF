@@ -167,6 +167,10 @@ Unreleased. The earlier development themes remain in
   Carnival Night's miniboss stays dormant until the arena camera gate and native
   wait release it, including at wide viewports. Its defeated top releases standing
   riders before deletion, preserving their status and the rewindable encounter.
+  Sky Sanctuary's EggRobo releases animals directly into their original walking
+  or flying launch, with native facing, random lift and stationary first drawing;
+  the launch and rendering state survive recreation. Scaled fly-by art remains
+  an implementation gap.
 
 - **Spin dash camera:** While a spin dash charges, and on its release frame, the
   camera eases back toward its normal height as it does when standing, as Sonic 2

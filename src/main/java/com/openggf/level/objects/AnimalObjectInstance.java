@@ -12,6 +12,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.game.PlayableEntity;
 
 import java.util.List;
+import java.util.Objects;
 
 public class AnimalObjectInstance extends AbstractObjectInstance
         implements SpawnServicesDefaultArgsRewindRecreatable {
@@ -29,6 +30,18 @@ public class AnimalObjectInstance extends AbstractObjectInstance
         WALK,
         FLY
     }
+
+    private enum LaunchMode {
+        POP,
+        WALK_OR_FLY
+    }
+
+    // Persist beyond the RNG gate: loc_917C0's flags5 keeps hFlip set for either X sign.
+    // Mutable scalar/enum fields use the existing generic rewind codecs, including before init.
+    private LaunchMode launchMode = LaunchMode.POP;
+    private AnimalType launchTypeA;
+    private AnimalType launchTypeB;
+    private boolean launchParentFlipX;
 
     private final PatternSpriteRenderer renderer;
     private int currentX;
@@ -69,6 +82,26 @@ public class AnimalObjectInstance extends AbstractObjectInstance
             ObjectSpawn spawn, ObjectServices services,
             DestructionEffects.PointsFactory pointsFactory) {
         return new AnimalObjectInstance(spawn, services, 0, pointsFactory, true);
+    }
+
+    /**
+     * Defers an already-walking/flying animal launch to its own first SST dispatch.
+     * The caller supplies the two native table definitions and the consumed parent
+     * facing bit; this mode bypasses the normal zone-pair/MAIN pop initialization.
+     * S3K loc_917C0..loc_9181C (skdisasm044fa467:198774..198819) consumes one full
+     * Random_Number: low bit chooses the row, original high word the initial Y speed.
+     */
+    public static AnimalObjectInstance deferredWalkingFlyingLaunch(
+            ObjectSpawn spawn, ObjectServices services, AnimalType typeA, AnimalType typeB,
+            boolean parentFlipX) {
+        Objects.requireNonNull(typeA, "first launch profile");
+        Objects.requireNonNull(typeB, "second launch profile");
+        AnimalObjectInstance animal = new AnimalObjectInstance(spawn, services, 0, null, true);
+        animal.launchMode = LaunchMode.WALK_OR_FLY;
+        animal.launchTypeA = typeA;
+        animal.launchTypeB = typeB;
+        animal.launchParentFlipX = parentFlipX;
+        return animal;
     }
 
     /**
@@ -138,6 +171,21 @@ public class AnimalObjectInstance extends AbstractObjectInstance
         }
         deferArtVariantRng = false;
         ObjectServices svc = services();
+        if (launchMode == LaunchMode.WALK_OR_FLY) {
+            // loc_917E2 selects word_2C7EA directly, not the current zone's animal pair.
+            int random = svc.rng().nextRaw();
+            artVariant = random & 1;
+            definition = artVariant == 0 ? launchTypeA : launchTypeB;
+            mappingSetIndex = definition.mappingSet().ordinal();
+            groundXVelocity = definition.xVel();
+            groundYVelocity = definition.yVel();
+            xVelocity = launchParentFlipX ? -groundXVelocity : groundXVelocity;
+            // swap d0 retains Random_Number's original high word; [100,1FF] then neg.w.
+            yVelocity = -Math.max(0x100, (random >>> 16) & 0x1FF);
+            animFrame = 1;
+            state = definition.flying() ? State.FLY : State.WALK;
+            return; // Existing firstDisplayFrame branch draws without moving on this pass.
+        }
         this.artVariant = svc.rng().nextBits(1);
         applyAnimalDefinition(svc.renderManager());
     }
@@ -304,7 +352,7 @@ public class AnimalObjectInstance extends AbstractObjectInstance
         if (renderer == null || !renderer.isReady()) {
             return;
         }
-        boolean hFlip = xVelocity < 0;
+        boolean hFlip = launchMode == LaunchMode.WALK_OR_FLY || xVelocity < 0;
         renderer.drawFrameIndex(getFrameIndex(), currentX, currentY, hFlip, false);
     }
 

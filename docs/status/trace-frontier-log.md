@@ -113827,3 +113827,22 @@ No sparse BASE clock, allocator fault or native correctness inferred. Source can
 is inherited EggRobo loc_917C0 special-launch inlet; shared-render revert not justified.
 Root inspected both originals before metadata-only consumption; no runtime edit/newrun.
 [Commands, exact pins/counts/hashes and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#matched-cold-pool-producer-r16-to-r18-2026-10-17).
+
+
+2026-10-17 cold R29 independent EggRobo animal launch (not a strict trace run):
+parentb264/runtimef196 + frozen Animal944a/EggRobob9e3 in same98d. Native044
+loc_917C0's fixed table/full RNG/facing/direct WALK-FLY/frame1/firstdraw and fixed
+render flip now use captured semantic launch state. R20 70304 compiler-only and
+24069 fixture+1 stop are not old-red;50817 raw registration projection explains
+the inlet before four existing camera assignments move to pre-warm0d2d. Genuine
+96038 fourcase old-red reaches twice-world prerequisites and fails exactly4launch
+fields/case. Corrected36866 passes78/0F0E0S across10classes; fresh51551 exact
+rewind/trace/no-hydrate/API guards6/0F0E0S. The single original UNINSTRUMENTED
+`TestS3kLrzHpzSszColdCampaign#sonicColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory`
+96020 still1/1F0E0S: SAME first original `cold death49613`, expectedfalse/actualtrue
+at454→506. Full-route tail UNREACHED; no post-fix first-split/pool/uniqueAnimal629
+or native correctness claim. Normal Main-absolute wrapper/no-profile except
+`-Pguards`/all3ROMs/Java25/EGL/nullAL/noambient/fork1/reuse/alpha; queue0/Maven
+1m09,26.652s,52.053s. No new observer/native/variant/extra campaign after STOP.
+Local unit qualified, campaign/integration remain blocked. [Exact commands,
+source epochs, old-red/inlet distinctions and limits](../architecture/validation/levels/s3k-ssz-act1.md#r29-native-eggrobo-animal-launch-unit--2026-10-17).

@@ -2149,3 +2149,66 @@ this prefix. No runtime fix/new input/native/media/extra campaign. Both original
 consumed after Root inspection/durable facts; original driver restored and compiled
 instrumentation removed. Useful helper source remains temporarily owned pending
 preservation decision. Independent release-inlet old-red SOURCE ONLY is separate.
+
+
+## R29 native EggRobo animal launch unit — 2026-10-17
+
+**Qualified component repair; original cold campaign remains blocked.** Same98d,
+parent HEADb264/runtimef196 plus frozen Animal944a2933/EggRobob9e3474e; original
+ColdCampaign9616921c and promoted helper8492f006 unchanged. Native pin
+`044fa46725c71187399e13f5ddb70e11d32dc024`, loc_915F6 → ChildObjDat_919E6 →
+loc_917C0/917E2/91800/9181C (own sonic3k.asm198614..198638/198774..198819),
+word_2C7EA60996..61000. Line numbers apply only to this pin. Independent runtime
+ROM read confirms first two rows Rabbit `FE00/FC00/0002CF32`, Chicken
+`FE00/FD00/0002CEBA`. Native caller uses AfterCurrent; child's own first dispatch
+consumes ONE full Random_Number, low bit selects the fixed table row, original
+high word yields `-max($100,high&$1FF)`, captured parent renderbit0 signs X,
+frame1/routine4or6. Initial draw does not translate. Flags5 require fixed render
+hFlip for both X signs; collision radiusC is distinct from render height0.
+
+The semantic deferred factory retains all three existing constructor signatures
+and bodies. Private nontransient launch-mode/profile enums/facing scalars are
+captured by the existing codec before and after own init, with no parent link,
+new SST/API/schema/pin/allocator/physics change. The discriminator survives RNG
+deferral clearing so later render arguments remain native. Generic POP, zone
+animal selection, S1/S2 and the correct R5 previous-render lifetime are unchanged.
+
+| Epoch / handle | Actual result / reached contract | Limits |
+|---|---|---|
+|R20 compiler70304 | missing pure getter; NO gameplay | bounded getter prerequisite correction only |
+|R20 actual24069 |4/4F0E0S, original expected5/actual7 allocator assertion | native oracle/world replay UNREACHED; not old-red launch proof |
+|R23 raw projection50817 |4/4F0E0S at same +1 assertion; four validated ABC rows | ABC4/4/7; capture unchanged, scan adds placements11/12/13 plus animal and removes placement0; registered projection only |
+|R24 source0d2d | ONLY four existing public camera assignments moved before unchanged warm loop | ordinary placement inlet correction; no extra scan/wait/filter/count waiver |
+|R25 corrected96038 |4/4F0E0S, exact four native launch failures AFTER ordinary allocation/RNG and twice full-world recreation/replay prerequisites | genuine independent component old-red, not coldAnimal629 attribution |
+|R27 focused36866 |78/0F0E0S,10 actual classes from9 simple selectors | real-parent4 +pending-before-own-dispatch4 +RNG/render7 +S2/lifetime/S3K4 controls; no campaign/native route certificate |
+|R28 guard51551 |6/0F0E0S, exact requested methods/0skips | fresh JVM; field/coverage/no-hydrate/source/API surface controls, no pin changes |
+|R28 original campaign96020 |1/1F0E0S, SAME `cold death49613` | first original failure STOP, no retry; later full-route finals unqualified |
+
+R25 expected/old actual: X-512 or+512/0, Y-256 or-421/-1024,
+WALK orFLY/MAIN, frame1/2. Exact unchanged four-case oracle0d2d now passes.
+Pending mode test5702 captures a normally allocated child BEFORE its own first
+dispatch; constructor/capture/restore consume no RNG. Two forced whole-world
+recreation cycles cover pending and initialized snapshots plus identical forward
+replay/no redraw. RNG/render test81f7 checks actual drawFrameIndex arguments for
+both velocity signs after deferral clears, with generic-render negative and null
+profile/no-RNG controls. All new tests are green; no failing new test is committed.
+
+All commands use current Main absolute wrapper from own cwd, normal lane, all3
+original absolute ROMs, Java25.0.4.1, single EGL JTO plus CLI, nullAL/noambient/
+Lua5.4/fork1/reuse/alphabetical. Focus/no-profile; guards `-Pguards`; original
+campaign/no-profile/no `openggf.cold.*` or other new property. Queue0 for these
+three qualified phases; Maven1m09/26.652s/52.053s respectively. Exact commands,
+all six source hashes, actual10class/78case and6method identities, timing and
+artifact disposition are in the [existing Plan](../../plans/2026-10-13-s3k-playable-completion.md).
+
+The original campaign class/movie/session/step-render/45-forward/two-replay/
+assertion ordering is byte-unchanged. Its sole failure remains original method454
+→ verifyDeathEggCampaign506, expectedfalse/actualtrue at49613. Full-route final
+load/boss/results/DEZ/history/release assertions are unreached; no post-fix
+first-tuple/pool equality, native P1 correctness or unique coldAnimal629 callback
+is implied by the unchanged death message. Fly-by scaling, complete subtype/
+participant/width/donor/native-scene breadth and composed broad validation remain
+open. No new campaign/native/media/diagnostic was run after STOP. All inspected
+standard reports were durably accounted then consumed metadata-slot ALONE, no
+copy/archive/receipt. The opt-in helper remains promoted; original driver has no
+instrumentation. R29 preserves this bounded fix locally, not integration clearance.
