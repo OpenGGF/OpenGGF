@@ -1254,3 +1254,17 @@ as their complete explanation. Post-fix ring/SST causality, nonzero-subtype and
 ending/capsule animals, four native68E98 debris, fullaux/configuration/BK2/cold/
 viewport/roster/fullchain coverage remain open. Local result, no Main delivery.
 [Exact commands, profile qualification, evidence and limits](architecture/validation/levels/s3k-aiz2.md#r5-low-sst-journal-and-animal-lifetime-owner--2026-10-17).
+
+
+R10 HCZ internal asset ownership (2026-10-17): production HCZ1→HCZ2 preserves
+unwritten128×128 destination bytes; encoded native word lookup reads current
+16×16/layout assets and positive MOVEA.W aliases from a bounded immutable copy
+of the current ROM. Independent old-red/green and twice-recreated whole-world
+mutation/scene/ROM-binding replay pass. Original prefix49095 closes7134's wall:
+FG31/BG-1/combined-1, P20175.F800/vx0170/g0/pushing matches native. Through7135,
+returned HCZ consumes7136/14208 rows with206 errors (11camera physics and195
+animation), no non-camera physics mismatch, and no later frontier measured.
+Full returned-HCZ, independent slice, alternate and exact GLFW remain unqualified
+on the new source; this is not route certification. Focused mock error and two
+MenuAudio source-guard failures are exactly attributed as inherited, not passes.
+[Commands, prior refusal boundary, source hashes and limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r10-encoded-collision-words-resident-destinations-and-rom-aliases--2026-10-17).

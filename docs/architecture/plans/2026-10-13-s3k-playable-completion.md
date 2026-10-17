@@ -4658,3 +4658,29 @@ and normal hooks. Root39policy cases/shell+PS syntax/review reused, no extraJava
 R6 seven inspected diagnostic/class files consumed metadataalone, no archives,
 no live handles. Only existing R6 Plan/matrix evidence remains for its separate
 normal docs commit; R4e207 and R5 remain separate, Main803 untouched.
+
+
+## R10 HCZ word-address and destination-residency owner — 2026-10-17
+
+Local e757 (Root067 merge64b77, then pre-edit Root28 merge) implements the two
+R9 production owners: encoded native collision address selection and retained
+128×128 destination bytes through actual HCZ1→HCZ2 construction/commit. Current
+ROM prefix ownership also models positive MOVEA.W aliases after independent
+review exposed incorrect RAM substitution. The safe refusal first stopped74271
+at AIZ segment8 after2195 rows/ROM00007F; Root explicitly authorized the bounded
+immutable current-ROM extension. No fixture/native RAM hydration or public API.
+
+Genuine transition21043 old-red→6557 green; reviewed sign-domain38709 old-red;
+ROM-owner53171 old-red→final3897 seven affected cases green. Twice-forced whole-
+world recreation/restoration/forward replay covers live16×16/retained128×128/map
+mutations, scene geometry, and immutable ROM binding after the intentional load
+history reset. Focused4439=122/1 inherited mock error (exact Root61070 baseline);
+guards45410=179/2 exact inherited MenuAudio failures, other177 pass. No unrelated
+mock/guard edits or repeated broad selection.
+
+Final original prefix49095 reaches7135 inclusive. Actual native7134 FG31/BG-1/
+combined-1 and P20175.F800/vx0170/g0/push match. Returned HCZ7136/14208 rows still
+contains206 errors (11camera physics+195animation); no non-camera physics
+mismatch through7135. This is bounded closure, not zero frontier/full parity.
+No full canonical/slice/alternate/GLFW claim; Root owns further qualification.
+[Source hashes, exact commands, all windows and preserved intermediate failures](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r10-encoded-collision-words-resident-destinations-and-rom-aliases--2026-10-17).

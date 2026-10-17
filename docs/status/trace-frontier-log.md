@@ -113435,3 +113435,30 @@ ancestor/native/media/alternate/wholechain/broad checks or new owner edits.
 Independent source review no material finding; consumed diagnostics/no archives;
 local owner correction only. Root owns composition, remaining ring causality and
 combined smoke/source-authority guards; Main803 unchanged, no publication clearance.
+
+
+### 2026-10-17 — R10 native7134 wall owner closes through7135; residual206
+
+Own t3-3aa3bc3c, e757 + final runtime SHA256
+0b1f59eb135fd284a5e058e0f08e8f438d2869193935d06c3c9da1531318b676.
+Internal encoded collision addressing, actual destination residency, and bounded
+immutable current-ROM positive aliases have independent old-red/green and two
+forced whole-world restore/replay controls. Earlier74271 refused ROM00007F after
+AIZ segment8 2195/7175 rows; this remains an incomplete distinct result. Root's
+subsequently authorized ROM extension passes3897 seven affected checks.
+
+49095 uses `-Ptrace-replay -Dtest=TestS3kHcz7135ResidentLayoutWitness#canonicalThroughHcz7135`
+through the current Main absolute normal wrapper, original AD40 BK2/3ROMs,
+EGL/nullAL/noambient/singlefork.1/0F/0E/0S observer, queue0s/Maven48.198s,
+finished14:01:25UTC. Six complete gameplay windows0/2/4/6/8/9 have0errors;
+returned HCZ11 consumes7136/14208 rows, **206=11physics(camera)+195animation**,
+lag53, warning/bootstrap0. First non-camera physics mismatch is absent through
+7135; no later frontier is measured. Actual7134 selected BG-1 produces native
+0175.F800/vx0170/g0/push;7133 selectedBG+2 also matches. Recent remaining camera
+fields include6790–6792/6947–6948 camera_y; first remaining animation identity is
+not established by this report. Not zero-frontier or full-route parity.
+
+No full returned-HCZ/slice/alternate/GLFW qualification on this runtime. Matched
+historical4699/4353 remains mixed,3738 unmatched. Focused122 has one exactly
+matched inherited mock error; guards179 have two inherited MenuAudio failures.
+[Exact selectors, source epochs, all windows, intermediate failures and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r10-encoded-collision-words-resident-destinations-and-rom-aliases--2026-10-17).

@@ -3253,3 +3253,184 @@ forced full-world restores with forward replay. None is claimed by R9.
 Raw907F94 and adjacent703E0179 now have source-backed current/prior-load
 provenance. Production remains32a's runtime86171; canonical7134sidekick_x and
 independent9482air remain open, with no new trace counts or general HCZ claim.
+
+
+## R10 encoded collision words, resident destinations and ROM aliases — 2026-10-17
+
+Owned tree `t3-3aa3bc3c`, branch `feature/ai-s3k-hcz-gpt61-repair`, R10 child
+ordinal11. Base `64b77a2ab39e64c17624cc32197b4e7a8606df18` merges Root067 while
+preserving9f0 R9 evidence; before edits, `e757cfaa5e6cb585a757700069f6a4dd1da5df8a`
+merges Root28. Append conflicts retain both complete evidence suffixes. No Main
+or Root writes, new tree, children, native execution, media, alternate or broad
+run. The inherited clean native4fdf checkout against gitlink322 is preserved.
+
+### Production owners and independent old-red
+
+Native Find_Tile_BG/FG ($EFB6/$EFF0; disassembly19151–19201) masks the word Y row,
+adds unsigned word X>>7 to the encoded row pointer, then MOVEA.W selects the
+byte's address space. That byte selects a separate ChunkAddrArray entry whose
+D1 upper word remainsFFFF. These are two different address-formation owners.
+R9's current ROM907F=94/A216 and prior HCZ1 tail703E=0179 provenance remains
+unchanged; no observation RAM enters gameplay.
+
+`TestS3kNativeWordLayoutResidency#productionActTransitionRetainsTheNativeWordLookupOwners`
+loads actual HCZ1, signals its native results completion, services the real
+jobs, and executes the existing request/build/commit into HCZ2. It verifies
+E094 from current16×16 ROM data, current block94/A216, retained blockE0/0179,
+negative FF80/0338, adjacent FF70, unsigned/word-wrap and ordinary positive
+controls. No forced block, cold-target substitution, trace rows or hydrated state.
+Initial95005 failed a test assumption that the transition remained pending;
+HCZ's existing BG owner executes it inline when a level exists. That is not an
+owner old-red. Corrected21043 is genuine **1/1F/0E/0S**: all five retention/
+negative-word assertions fail (missing resident tail and zero descriptors),
+while the positive control passes.6557 is **1/0F/0E/0S** after implementation.
+
+Shared lookup delegates to an internal semantic level capability; S1/S2 use the
+existing path. S3K retains the1000 encoded layout bytes, uses the existing live
+camera wrap register's paired row mask, and reads live16×16 definition words.
+Map writes update encoded bytes and aliases through existing mutation surfaces.
+The128×128 build seed is an immutable value of the predecessor's actual live
+ROM-produced definitions; ResourceLoader destination writes start at zero and
+preserve only unwritten tail bytes. Prepared builds capture the seed before
+worker execution. No public Mod API/snapshot shape or signature pins change.
+
+The per-game rewind adapter captures encoded/scene metadata; existing level COW
+arrays own live definitions. Unchanged captures reuse their value, with no
+large unchanged per-frame byte copies. Tests mutate live16×16/retained128×128/
+map data and swap a real ROM scene, then force whole-world object recreation,
+restore twice, replay forward, and compare **every registered snapshot key**.
+Captures begin after the intentional transition history-reset boundary.
+
+### Independent review: MOVEA.W ROM space and the necessary extension
+
+The reviewed runtime7 hash `eed1f832c06869d305b39d0ba2e88da08ad8e7b2dfd808010594e5afafd820bf`
+contained one material defect: initial selected words0000–7FFF were incorrectly
+read as FF0000 resident RAM. Stock zero row pointers select ROM instead.
+A production HCZ2 FG row28/column1 control is genuine38709 old-red, **1/1F**:
+no exception under that incorrect substitution. The authorized safe correction
+explicitly refused ROM aliases with full24-bit addresses;97298 then passed7.
+The sole74271 original prefix reached segment8 (`aiz_5`)2195/7175 rows with
+zero comparison errors, then refused **ROM00007F** in an airborne ceiling probe.
+Last observed row2194; the next advance did not commit. No HCZ7134 observation
+occurred. This was an honest unsupported source boundary, not bad native-RAM
+provenance or HCZ qualification. Its suppressed undrained future timing edges
+on early close do not establish a second timing defect.
+
+Root then authorized a bounded same-owner ROM extension. Revised short control
+53171 is genuine **1/0F/1E/0S** against the refusal, at ROM000000. Final code
+loads a private final32KiB prefix from the constructor's current production
+`Rom.readBytes(0,0x8000)`. Positive MOVEA.W byte selection reads that immutable
+bounded asset; no ROM handle, public API, arbitrary RAM bus, hardcoded zeros,
+zone/row fit or reference hydration is added. Recreated layout bindings use the
+current level's immutable asset without copying it per snapshot. Unknown other
+regions/unwritten definitions still fail explicitly with full24-bit context.
+The control compares real ROM-selected descriptors across reachable zero-row
+columns, including nonzero bytes whose result differs from block0. ROM binding
+is checked again after both forced whole-world restorations and forward replay.
+Final3897 passes **7/0F/0E/0S**.
+
+### Commands, measured results and inherited failures
+
+All invocations use the unchanged R3 absolute `MAIN_WORKSPACE`, `S1_ROM`,
+`S2_ROM`, `S3K_ROM` bindings, own cwd/target, current Main wrapper, normal ROM
+admission, Java25/Lua5.4, no ambient display, EGL, nullAL and one reusable fork:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless LUA_BIN=/usr/bin/lua5.4   python3 "$MAIN_WORKSPACE/tools/testing/maven_queue.py" --normal -Dmse=off   -Dopenggf.headless.gl=surfaceless-egl   "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" "-Ds3k.rom.path=$S3K_ROM"   <selection below> -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true   -Dsurefire.runOrder=alphabetical test -B
+```
+
+| Session | Exact selection (in place of selection above) | Result tests/F/E/S | Queue / Maven; finished UTC |
+| --- | --- | --- | --- |
+|95005|`-Dtest=TestS3kNativeWordLayoutResidency#productionActTransitionRetainsTheNativeWordLookupOwners`|1/1/0/0, setup assertion only|Maven1m13s;13:29:27|
+|21043|same owner selector, corrected test|1/1/0/0, genuine five owner assertions|8s/25.648s;13:30:14|
+|6557|same owner selector|1/0/0/0|0s/1m12s;13:35:02|
+|31686|`-Dtest=TestS3kNativeWordLayoutResidency,TestSonic3kLevelOverlayRewindIsolation`|6/0/0/0|0s/1m13s;13:39:27|
+|4439|focused selector below|122/0/1/0|0s/31.884s;13:45:06|
+|45410|guard selector below|179/2/0/0|6s/40.199s;13:46:23|
+|38709|`-Dtest=TestS3kNativeWordLayoutResidency#zeroRowPointerUsesTheRomAddressSpaceRatherThanResidentDefinitions`|1/1/0/0, wrong-space old-red|0s/25.588s;13:50:33|
+|97298|same two-class selector as31686|7/0/0/0, explicit-refusal source|11s/1m15s;13:53:00|
+|74271|`-Ptrace-replay -Dtest=TestS3kHcz7135ResidentLayoutWitness#canonicalThroughHcz7135`|1/0/1/0, ROM00007F refusal|0s/48.756s;13:54:34|
+|53171|same zero-row selector, actual-ROM expectation|1/0/1/0, refusal old-red|14s/26.077s;13:58:12|
+|3897|same two-class selector as31686|7/0/0/0, final ROM-owner source|0s/1m13s;14:00:17|
+|49095|same original-prefix selector as74271|1/0/0/0 observer, **red comparator below**|0s/48.198s;14:01:25|
+
+4439 exact selection:
+`-Dtest=TestChunkDescPow2Indexing,TestCollisionLogic,TestObjectTerrainUtils,TestTerrainSurface,TestZoneLayoutMutationPipeline,TestZoneLayoutMutationPipelineNoRedraw,TestSeamlessTransitionResourceHandoffAcceptance,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestS3kAiz1SkipHeadless,TestModApiSignatureSurface,TestResourceLoaderModSources`.
+Mandatory S3K4 contributes60 passing cases; both level-loading packages run.
+Mod API signature checks11 and the S1/S2/default layout arithmetic controls6 pass.
+Sole error is `TestZoneLayoutMutationPipeline.levelFrameStepFlushesQueuedMutationsAfterCameraScrollAndEventsBeforeBoundary`:
+mock `GameModule.getRules()` null at `GameplaySessionFactory.attachManagers:60/39`
+→`TestEnvironment.activeGameplayMode:167`→test220 (`paletteWhiteFade`). Root's
+fresh compiled exact baseline61070 on Root0684/runtime28/noR10 is **1/0F/1E/0S**,
+finished13:47:37 UTC, Maven1m12s/wall74.543s. Root directly compared both XMLs:
+name/type/message/top four stack lines identical. **Inherited, not a pass.**
+
+45410 exact selection:
+`-Pguards -Dtest=TestArchitecturalSourceGuard,TestPerGameRuleArchitectureGuard,TestHardwareTimingAuthorityGuard,TestTraceReplayInvariantGuard,TestTraceRunVblankClockAuthorityGuard,TestStaticStateRewindCoverageGuard,TestRewindArchitectureGuard,TestZoneEventRewindSchemaGuard,TestRewindCoverageGuard,TestHelperStateRewindCoverageGuard,TestProductionSingletonClosureGuard`.
+Only `TestProductionSingletonClosureGuard.productionCodeDoesNotUseForbiddenProcessSingletonsOutsideEngineServices`
+and `.productionCodeOnlyUsesRawGetInstanceAtEngineServicesBootstrapBridge` fail,
+both `MenuAudioProbeTool.java:41` singleton access. Root attributes exact identities
+through Main7076602 (73/4F), Root94450 (145/4F,09:56:49 UTC), and Root55438
+(159/2F,10:13:42 UTC); guard/tool diff707→Root0684 is empty. Other177 pass,
+including architecture72, hardware timing25, trace invariants10, per-game3,
+Vblank2, zone schema18 and rewind coverage. No budgets, guards or mock changed.
+These checks precede the reviewed address-space correction/ROM extension and
+are reused for unchanged contracts; final affected owner/rewind tests are fresh.
+No broader guard/full/smoke rerun is claimed.21043 JUnit time was not retained.
+
+### Final original prefix: actual native7134 closure, bounded residuals
+
+Final base is e757. Runtime7 path+NUL+bytes SHA256 is
+`0b1f59eb135fd284a5e058e0f08e8f438d2869193935d06c3c9da1531318b676`;
+runtime plus permanent test8 is
+`e8df8b23588dfb249e37c271c2e02bcca9c132972cefce98a7ec38bf551b25aa`;
+with temporary observer it is
+`28afdb9ddec7b7c8e2cb313ce45d1271c337f4393698f8fbd8c3d715405609fc`.
+49095 uses the original AD40 BK2, bootstrap, inputs/lag and original driver from
+boot; it stops after segment11 row7135 inclusive (7136/14208 rows). The R8
+lexical observer forwards the actual wall owner once per7133/7134 tick, copies
+pooled results before pure lookups, and asserts playable/provider/returned-result
+passivity. Other legitimate floor/clamp calls remain unchanged. No new CPU journal.
+
+| Actual tick | FG / BG / combined distance | Selected BG / post-P2 |
+| --- | --- | --- |
+|7133|+18 /+2 /+2|FF7D/0338;0173.8800,0830.1F00,vx/g026A,noPush|
+|7134|+31 /-1 /-1|FF80/0338;0175.F800,0830.1F00,vx0170,g0,pushing|
+|7135|not additionally probed|0175.FE00,0830.1F00,vx/g0006,pushing|
+
+Provider active/diff0200/0500, layers0E/0F remain correct.7134 selects current
+A216: chunk0216, no flips, LRB solid, collisionFF, angleFF, metric16; adjacent
+FF70 selects retained0179 nonsolid. Native7133/7134 distances and7134 endpoint
+now match Root's already-qualified ONEpass16359. No new native run is implied.
+
+| Gameplay segment | Consumed/reference rows | Physics /animation errors | Lag |
+| --- | --- | --- | --- |
+|0|2290/2290|0/0|0|
+|2|4023/4023|0/0|11|
+|4|8235/8235|0/0|14|
+|6|4103/4103|0/0|16|
+|8|7175/7175|0/0|62|
+|9|3574/3574|0/0|55|
+|11|7136/14208, incomplete|11/195|53|
+
+All listed windows have zero warning/bootstrap errors. HCZ's **206** residual
+errors are11 camera physics and195 animation; `firstNonCameraPhysicsMismatch`
+is absent through7135. R8's identical7136-row window had217 (20physics/197animation),
+so nine non-camera physics fields and two animation fields close here. Recent
+camera entries include6790–6792 and6947–6948 `camera_y`; the report does not
+establish the earliest remaining animation field. No next non-camera frontier
+beyond7135 is measured. The JUnit observer pass is **not strict parity green**.
+
+Stopping condition met: production ROM ownership and actual7134 wall closure
+with independent old-red/green and full-world replay evidence. Full returned HCZ,
+independent4353-span slice, alternate and exact GLFW oracle remain unqualified
+on this source. Historical matched4699/4353 is mixed,3738 unmatched; no old full
+window totals or alternate760 result are transferred. Root owns combined smoke,
+further strict qualification, Main integration/push and native publication.
+
+Final housekeeping:72 consumed own report/XML/text/owner metadata files removed
+under current Main `worktree_metadata_slot` alone; temporary observer source and
+two compiled classes removed under own writer lease. Exact results/limits above
+and existing ownership entry retain the useful evidence; no raw log archive.
+Native4fdf checkout, original native RAM/PC artifacts, useful images and foreign
+performance work remain untouched. No own live jobs or further test submission.
