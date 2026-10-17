@@ -7657,3 +7657,32 @@ source. Native and parent integration/push and final owned-resource cleanup
 remain pending with the broader delivery. External one-off runner/compiled
 artifacts are consumed only after their durable facts and source preservation
 are verified; they are not archived as a second maintained tool.
+
+### R25 actual8775 writer is PANIC; prior timer writer remains missing — 2026-10-17
+
+Root reviews R24temporary source14e058db/10315b23/combined764455f3 before one
+execution R25ordinal28, preserving27/26/25. Same51320/Java7df, originalAD40boot
+prefix8777rows/8776inclusive, trace-replay/currentnormalMainabsolutequeue,
+all3ROM/Java25/EGLsingleJTO+CLI/nullAL/noambient/Lua/fork1/reuse/alphabetical.
+Sole8612 finishes19:32:38UTC, queue0/displayedMaven01:41min,
+**1/1F0E0S**, method24.655s/suite24.923s, no skips or observer/passivity failure.
+Live report captured before original abort, strict-zero after cleanup:
+**207=12physics+195animation /8777 compared /14208 reference**, completefalse,
+lag59/warnbootstrap0, first8775status000B/000A. Eight bounded5367-byte records,
+one rising call; no numerical prediction/rerun. Earlier six complete windows
+all-group0;11gaps0failures. Recent5 is not exhaustive-vector evidence.
+
+Actual LEFT→RIGHT caller at8775 is **SidekickCpuController.updatePanic3424**,
+via update480/SpriteManager.processPlayableSlots831. Setter-time P2 remains
+0E10.BB00/0572.AE00/g0, status09; actual PANIC8/manual0/signedlockfalse/
+moveLock0/spinfalse/pinballfalse/deadfalse/hurtfalse, leaderX0E75. The existing
+facing choice is correct for these inputs. Previous8774 PRE_NOT_CPU_ENTRY has
+moveLock1/status0B/controlnone; postrow hasmoveLock0/status09/controlalltrue.
+The timer's actual writer/call/dispatch is **unobserved**. Native CPU-entry
+move_lock/spin/lock guards remain missing from retained AUX; no native timer value
+or shared grounding/CPU/column fix is inferred. [Exact phases, clocks, stack,
+source/command/report and limits](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r24r25-actual8775-facing-writer-native-guard-still-missing--2026-10-17).
+Stop without additional query/instrumentation/execution. Exact source restored,
+temporary test and both instrumented classes removed,18 inspected diagnostics
+consumed metadata-slot-alone; no extra compile or runtime commit/fix. R22 fullwindow/exit and independent seg13ownership88306
+remain separate. Root owns further causal scope and combined delivery.

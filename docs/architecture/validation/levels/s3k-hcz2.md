@@ -352,3 +352,20 @@ partial and73focused source epochs remain distinct. No independent slice,
 alternate, auxiliary/GLFW/native or viewport/roster breadth is newly qualified.
 No runtime edit/probe/rerun; next8775 causal scope belongs to Root. Own docs-only
 accounting/consumed cleanup follows this single maintained route measurement.
+
+
+## R25 bounded8775 facing-writer observation (2026-10-17)
+
+On51320/Java7df, sole originalAD40 boot prefix8612 compares8777/14208,
+completefalse:207=12physics+195animation, firstNonCamera8775status000B/000A,
+lag59/warningsbootstrap0. JUnit1/1F0E0S is the unchanged strict0-versus207
+assertion after original cleanup; no observer error/skip/retry. Existing six
+complete earlier windows/gap remain zero. Actual setter stack identifies
+SidekickCpuController.updatePanic3424, with moveLock0/g0/spinfalse/pinballfalse/
+manual0/signedlockfalse. Engine moveLock1→0 is observed across preceding8774,
+but its writer and native gate inputs are missing. No CPU/column/facing repair
+is justified from the correct current PANIC arithmetic. [Exact source/command,
+phases/clocks/stack, report and native limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r24r25-actual8775-facing-writer-native-guard-still-missing--2026-10-17).
+This does not change R22's full14208/actual exit or certify seg13ownership88306,
+slice/alternate/native/GLFW/roster/viewport breadth. Temporary source/classes and
+inspected own diagnostics are removed after facts; no runtime change/new run.

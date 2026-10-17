@@ -5588,3 +5588,147 @@ source. Native and parent integration/push and final owned-resource cleanup
 remain pending with the broader delivery. External one-off runner/compiled
 artifacts are consumed only after their durable facts and source preservation
 are verified; they are not archived as a second maintained tool.
+
+## R24/R25 actual8775 facing writer; native guard still missing — 2026-10-17
+
+**The actual engine LEFT→RIGHT caller is observed, with no facing repair.**
+Source-only R24ordinal27 and execution R25ordinal28 are separately registered,
+preserving R23/22/all earlier entries. HEAD is51320c6c0 (R22/R23 docs on Java7df),
+not Root's later documentation composition. Root reads both actual temporary
+files/getter contracts and the original seg11 awaitBoundary path before approving
+one original AD40/fromboot prefix through8776 inclusive. No callback/controller/
+provider, input, timing/hardware observer, solid, sensor, fixture or gameplay
+state is replaced. No native execution or runtime-owner correction occurs.
+
+### Reviewed two-file source and sole invocation
+
+| Temporary source | SHA256 |
+| --- | --- |
+| AbstractSprite.java | `14e058db692aebb3b4a484f908b9112c6115894cf7c3cf7c349bc869835f05ba` |
+| TestS3kCanonicalHczFacingWriterPrefix.java | `10315b23623e079f937e7b551d4c769f2b2651e82dc8a4371070a4263221068d` |
+
+Combined SHA256 over ordered pathUTF8+NUL+bytes+NUL is
+`764455f36083874d16f0ab6685c8cebd9da996b3736b1094c823805d40b08389`.
+The logger adds60 marked lines before the existing single setDirection assignment
+and private diagnostic helpers; the temporary subclass is224lines. Removing both
+R24_DIAGNOSTIC_BEGIN..END blocks recovers exact7df AbstractSprite SHA256
+`7194d82461a2bd1174d7104290e916de682fb14ba7ec1c56370c03f803e4c0b2`.
+Maintained driver/base/BK2 remain the R22 pins. Inventory finds no alternate live
+setter override: constructors initialize direction directly, and playable rewind
+restore writes it directly. Those paths are not instrumented; absence of a
+setter record would not prove absence of a direct write.
+
+The logging context binds the actual registered P2 object, not a name or assumed
+slot. Only LEFT→RIGHT calls for that exact identity during8774..76 emit a bounded
+16-frame caller stack. Getter projections read raw fractions, canonical status,
+engine object-control booleans, speeds, current PANIC scalars/logical mirrors,
+leader centre and separately named counters. No fabricated native object_control
+byte, NormalStepDiagnostics/PANIC alias, fresh visibility calculation or object
+owner action is used. Output and pure reads are checked against the same known
+primitive projection; this is not a full-world passivity certificate. A shared
+200-record/1MiB cap includes the final partial summary. Diagnostic context/property
+and previous row observer are restored; the original observer and super step each
+forward exactly once. Pre-step is explicitly **not CPU entry**.
+
+The source-approved R21 reporting seam catches only the identical private prefix
+stop after the base's final comparisons/coordinator.afterStep, before original
+abort/cleanup. It reads actual current comparator and loaded immutable TraceData,
+writes via the existing diagnostic-only report owner, and rethrows the same stop.
+Strict all-group zero remains after the original abort/fixture cleanup.
+
+One request, using R18's original absolute variable bindings, from owned3aa:
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_WORKSPACE/tools/testing/maven_queue.py" --normal \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Ptrace-replay \
+  "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" "-Ds3k.rom.path=$S3K_ROM" \
+  '-Dtest=TestS3kCanonicalHczFacingWriterPrefix#originalAd40FacingWriterThrough8776' \
+  -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical test -B
+```
+
+The execution authorization explicitly retains the single EGL JTO token plus
+same-valued CLI property. Original boot/input/bootstrap/lag/profile are unchanged;
+the maintained fullcase selector itself is not edited. No duplicate live job
+exists at submission. **8612** is the only request, terminal1 at
+**19:32:38UTC**, queue0s/displayedMaven01:41min, JUnit **1/1F0E0S**,
+method24.655s/suite24.923s. Compiler prerequisites succeed inside that request;
+no source correction, extra build, observer failure, postboot retry or second
+execution. Both reviewed hashes remain exact before/after terminal.
+
+### Actual caller and separately sampled phases
+
+The actual registered Tails identity is665641137; one rising assignment is logged.
+All targeted P2 centres/fractions remain0E10.BB00/0572.AE00, vx/vy/g0.
+Control below is the logged engine tuple
+(owned,cpuAllowed,movementSuppressed,mapping), not a native raw byte.
+
+| Stamped row / phase | Direction / status | Control tuple | moveLock | cpuCounter / levelLF / objectFrame / objectVblaCounter | Playback cursor / stated next row |
+| --- | --- | --- | --- | --- | --- |
+|8774 PRE_STEP_NOT_CPU_ENTRY|LEFT /0B|false×4|1|8715 /8715 /2581 /71803|71849 /71850|
+|8774 POSTROW_AFTER_FINAL_COMPARISON|LEFT /09|true×4|0|8716 /8716 /2582 /71804|71849 /71850|
+|8775 PRE_STEP_NOT_CPU_ENTRY|LEFT /09|true×4|0|8716 /8716 /2582 /71804|71850 /71851|
+|8775 SETTER_PRE_ASSIGN|LEFT→RIGHT /09 before assignment|true×4|0|8717 /8717 /2582 /71804|71850 /71851|
+|8775 POSTROW_AFTER_FINAL_COMPARISON|RIGHT /0A|false×4|0|8717 /8717 /2583 /71805|71850 /71851|
+|8776 PRE_STEP_NOT_CPU_ENTRY|RIGHT /0A|false×4|0|8717 /8717 /2583 /71805|71851 /71852|
+|8776 POSTROW_AFTER_FINAL_COMPARISON|RIGHT /08|true×4|0|8718 /8718 /2584 /71806|71851 /71852|
+
+The movie values in this table are the diagnostic stamp captured by the original
+row announcement before production, including on later setter/postrow lines;
+no extra postrow cursor read or fitted row offset is inferred. Counter values
+are read at each named phase and are not renamed native VInt or CPU entry.
+
+The bounded stack's direct owner is
+**SidekickCpuController.updatePanic:3424 → update:480 →
+SpriteManager.processPlayableSlots:831 → update:708 →
+GameLoop updateLevelMode callbacks1873/1876 → LevelFrameStep.execute:343**.
+The remaining captured callers are GameLoop.updateLevelMode1870,
+stepInternalBody1451, stepInternal callbacks1174/1164,
+PlcFrameLifecycleCoordinator.runLogicalIteration155,
+TraceSessionLauncher.runProductionIterationIfActive2981,
+GameLoop.stepInternal1180, LevelIterationAdmissionController.runTraceObservedStep285,
+and GameLoop.step823. The stack observes a call, not a substituted controller.
+
+At the actual setter: PANIC/routine8, manual counter0, Ctrl2 signed lockfalse,
+moveLock0, spindashfalse, pinballfalse, dead/hurtfalse, gSpeed0. The current
+held/pressed **diagnostic logical mirrors** are2/2; they are not raw hardware
+input or a newly sampled CPU-entry word. Leader centre is0E75/0411 at this call.
+Cached visibility validtrue/onScreenfalse is read, not recalculated. The existing
+PANIC facing choice RIGHT for its actual P2X<P1X inputs is source-consistent.
+The engine's previous moveLock1→0 is observed across8774, but **its writer/caller/
+movement dispatch is not recorded**. R23's native AUX still lacks the actual
+native move_lock/spin/lock guards at CPU entry. No positive native move_lock
+value, earlier timer producer, shared grounding fault, column fault, CPU formula
+repair or native execution path is proved by this witness.
+
+### Actual partial report and stopping limit
+
+All8 targeted records (5367UTF8bytes), JUnit XML/text and every available JSON
+array/group are inspected. Only the final original strict-zero assertion fails:
+**compared8777/reference14208, completefalse,207=12physics+195animation**,
+bootstrap0/warnings0/lag59, firstNonCamera8775 sidekick_status_byte000B/000A.
+No skip or suppressed diagnostic failure. Seg11 JSON
+`s3k-sonic-tails-complete-emeralds_seg11-segment-11-6603d91c777bb604.json`
+has SHA256 `03052a152bac3b0478f4cefa09ded728bf5e9c9e01fe53d5413ab3eb8011cdba`.
+Its entire available recent5 array is ERROR/repeatCount1 each:8775status000B/000A,
+6948camera_y07C7/07C9,6947camera_y07C2/07C4,6792camera_y0678/067E,
+6791camera_y0670/0678. This is not an exhaustive error vector. Do not manufacture
+additional comparator errors from postrow samples or fit their phase to a count.
+R21's206/8721 and R22's11118/14208 remain different measured windows.
+
+Earlier six0/2/4/6/8/9 gameplay reports complete2290/4023/8235/4103/7175/3574
+rows, all groups/warnings/bootstrap0, lag0/11/14/16/62/55. The11-gap report has
+0failures; no returned-HCZ exit or onward ownership is reached by this prefix.
+R22's actual exit and independent seg13ownership88306 stay historical/separate.
+No general green, native-gate qualification or owner repair follows.
+
+Stop after these facts. No extra query/run/selector/native/media/fix. Production
+source is restored byte-exact, the temporary test source and both instrumented
+class files are removed (no unrequested recompile; the next normal build must
+recreate those classes), and18 inspected owned diagnostic files are consumed under
+metadata_slot alone. Actual XML confirms Java25.0.4.1/surfaceless-EGL/all3absolute
+ROM properties and0skips. All refs/native4fdf/private config remain. Existing docs
+only are committed locally under normal hooks; Root owns any next causal scope.
