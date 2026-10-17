@@ -8707,3 +8707,426 @@ Main/privateconfig/native/media/refs and previous results preserved. R21 is
 source read/plan only after this accounting; no logger/test authoring, compiler,
 JVM, baseline/current repeat, native or fix is authorized. SS/fdf remains
 unvisited and independent live CPU/readiness prediction remains unqualified.
+
+
+### R21 earlier production submissions and handoff identity — source plan only, 2026-10-17
+
+R20 accepted evidence/cleanup is committed locally as
+`c3ce70c517818cd22cea23618e65374cd0457e7c` (Plan/frontier only, normal hooks,
+seven policy trailers and parsed final GPT-6.1 co-author). New exact returned
+`fdf-r21-accounted-return-gate-earlier-producer-source-20261017`, ordinal31, is
+registered separately for24h, preserving30..19 and all older results. Same owned
+649/native01a14a19/branch/privateconfig/refs/media. This section is **source
+read/plan only**: no Java/probe/logger authoring, compiler/JVM/engine/native,
+baseline/current repeat, test, fix or input/fixture change. R20 current97317 and
+R14 actual80350308 remain separate original stage_exit assertion epochs.
+
+#### Inventory and exact source limits
+
+The maintained source is still Java3be/7df; actual `src/main` tree
+`67b445e8c8a69c1e49d530d582707668cfabe39c` equals committed Root3be. No tracked
+Java/test/POM differs from3be. Original `s3-knux-multibonus-ss` RUN_DIR/movie/ROM/
+fixture pins and command environment remain those in R19/R20. The manifest's
+first AIZ offset is915/4654rows, Gumball5570/1430rows, returned AIZ7001.
+Pinned disassembly044fa467 and ROM SHA1CFBF98C36C776677290A872547AC47C53D2761D6
+remain unchanged. TraceChaser source HEAD322851cbfa2e1c1803332142e11ab74b4eb34eea.
+
+Canonical first two hardware streams contain **completion** records only:
+`aiz/hardware_timing.jsonl`20records/4412B, SHA256
+`471d13719b3d328997e203c5d72fcbc9d3fe9646af729d2012885b45f2c6ffed`;
+`gumball/hardware_timing.jsonl`17records/3777B, SHA256
+`94ddd1aa68402b266cc60595c4447f4f47b6b82bcc294a3e0e1722f2906f6d9d`.
+All37 original records read. Keys are event/raw_frame/boundary/kind/ordinal/
+submission_fingerprint, with no producer caller, enqueue timestamp or source
+field. First AIZ completions are direct11@34PRE/module6@35POST; then12/7,13/8,
+14/9. Later source-AIZ title-like fingerprint sequence15/10 through18/13 at
+4570..4577 and19..21/module14 at4640..4648 is recorded, not actual engine
+submission evidence. First Gumball22/15 at1302/1303 is the R20 refusal. The
+run has **no** `hardware_timing_interstitial.jsonl`; loader68..74 explicitly
+returns empty spans. A source inventory command encountered that absent optional
+file; no prerequisite/workload ran or was repaired. No native canonical identity
+is equated with the separate retained schema2 measurement ledger.
+
+Native `HardwareTimingEventEngine` maintains run-wide nextOrdinal and
+nextDirectOrdinal even with a null segment writer (:98..108,252..258). Module
+identity is allocated when physical FIFO entries are reconciled (:1243..1301),
+and direct identity at CreateDirectSubmission (:855..876), including the actual
+post-Queue_Kos callback (:169..241). Reset zeros both counters (:149..161).
+This explains the provenance of canonical identity; it does not serialize a
+complete native birth/caller chronology into the fixture. The separate exact
+measurement observer's classified flag is a diagnostic whitelist, not timing
+authority. Existing native source/control evidence is reused; no native run or
+new artifact decoding/capture was made.
+
+#### Actual engine owners to distinguish
+
+- `HardwareTimingService.submit`71..89 reads per-kind nextOrdinal, creates the
+  canonical fingerprint/handle/job, increments the cursor, appends the job, then
+  records unrepresented membership if applicable. Fingerprint computation uses
+  kind, ROMsource, compressedLength, destination, outputLength, compressionVariant
+  and moduleCount; it contains **no caller, birth clock or route**. Same
+  fingerprint can legitimately recur on distinct title loads.
+- `GameplayModeContext`235..255 creates one timing service/runtime-art coordinator
+  and activates recorded policies before first load. `TraceReplayDriver.start`
+  resets normal subsystems, registers team, loads level, swallows the initial
+  presentation request and starts playback (:113..160). The original chain
+  constructs its preliminary fixture first, then driver.start, then coordinator
+  (:1273..1309). The actual retained timing/service identity across these setup
+  phases must be observed, not assumed from a late title sample.
+- `TraceReplaySessionBootstrap` installs the initial port during bootstrap
+  (:270,674..701). Port64..94 configures policies and one-time bases from the
+  first schedule; `initializeOrdinalBases`634..655 sets a base **only if that kind
+  has no cursor yet**. An already-submitted kind is not renumbered. This makes
+  the pre-install submission and initial-base interval necessary evidence.
+- Module `submitPrepared`234..247 submits the inspected ROM archive parent;
+  `coordinate`636..697 appends its real aligned direct child to the same timing
+  ledger, then waits for direct physical FIFO empty and child ready before its
+  ordinary claim/output/module advance. Direct `queueInspected`90..112 submits
+  before physical append; `afterTimingService`115..127 removes ready physical
+  heads only at PRE. Ledger ready/claimed/physicallyRetired flags and direct
+  physical FIFO presence are different observations, never interchangeable.
+- Handoff is walker308..327 → original fixture5728..5733 → port255..344. It
+  verifies source edges, validates exportable exact future work and optional
+  interstitial spans, then swaps schedule/cursor/latch; it does not create work
+  or initialize new ordinal bases. Gap128..133 only deactivates row authority.
+  Service71..119 and claim241..245 do not globally reset ordinal cursors.
+  Full reset475..485, restore442..471, explicit live→recorded epoch384..406,
+  initial-base634..655, guarded span659..718 and guarded unrepresented return
+  184..229 are the cursor-writing lifecycle inventory. Repository call sites
+  of releaseUnrepresentedIdentity are S1 PLC owners; no S3K call site found.
+  This is source inventory, not proof any reset/span/return occurred in R20.
+- Real producers to identify by call stack include omitted/visible initial title,
+  AIZ intro block+terrain handoff, fresh-level terrain, enemy/object art, bonus
+  title entry and returned origin title. `Sonic3kTitleCardManager`625..658 queues
+  four omitted initial archives; normal loadAllArt1638..1671 queues four;
+  `Sonic3k.queueFreshLevelRuntimeArt`251..290 submits or defers terrain behind
+  actual pending modules. `GameLoop`2682..2712 loads the real bonus level then
+  calls initializeBonus; return initialization remains the R18 source chain.
+
+One **source candidate**, not an observed missing submission: pinned native
+Obj_TitleCardInit62143..62200 takes bonus zone$13 past the2P skip and queues
+RedAct/$500, zone/$510, act-number/$53D, then selected graphic/$54D.
+TitleCard_LevelGfx62482 selects BonusTitleCard for$13. Java loadBonusArt1690..1723
+queues RedAct, zone and bonus graphic (three archives), while normal loadAllArt
+queues four. The actual selected native act-number branch/engine init dispatches
+and earlier production counts are not captured by R20. This static difference
+cannot be multiplied to explain the observed two-module/four-direct offset,
+assigned an actual lost caller, or used to seed/relabel/drop work. No fix is
+proposed here; actual earliest birth/provenance is the decisive next question.
+
+#### Smallest proposed passive question, pending separate source-authoring authority
+
+**From the original prefix's own setup/boot through the first bonus entry and
+return, which actual timing service allocates each direct/module handle, from
+which production call stack and immutable ROM descriptor, and what is the first
+allocation/base/gap/handoff interval whose observed identity sequence cannot be
+qualified against the original recorded completion order?** A completion row
+can constrain eventual identity, never prove an enqueue time. The result may
+still be a precise native-birth evidence gap instead of a defective producer.
+
+The existing HardwareTimingBoundaryObserver has only onBoundary(boundary); it
+cannot report submit callers or work that is submitted/claimed within one step.
+ModuleTransferObserver reports child source/index after coordinate, is already
+bound to the production S3kPatternModuleTransfer, whose receipt consumer ignores
+timing-only title jobs, and carries no general parent-birth caller. Replacing it would change a production
+consumer. Pure outside jobs lists retain ledger identities but lose actual
+submit call stacks and can miss intervening lifecycle changes. **No adequate
+existing general submission-provenance observer seam was found.**
+
+If separately authorized, the smallest proposed diagnostic is one temporary
+original-driver subclass plus private property-gated passive blocks in
+HardwareTimingService, with no permanent/public API or replacement observer.
+The subclass solely invokes original assertChainReplayThroughSegmentRow
+(original RUN_DIR,2,1); its optional existing step override forwards super
+exactly once and only samples raw outside context/change markers. Arm diagnostics
+before invoking the original method so original fixture/driver-load submissions
+are visible, with each actual service identity kept separate. No title/boundary/
+input/controller/provider/bootstrap/report change, no stop-phase exception.
+
+Proposed birth log is immediately after normal successful submit's original
+allocation/list append, preserving its exact handle and original throwables.
+Read actual this/job/submission/preparation/handle identity, immutable descriptor
+scalars+existing fingerprint, actual nextOrdinals, policies/recorded active+row
+representation/hasSubmitted/last serviced boundary, unrepresented membership,
+and a bounded stack of actual class/method/line names. No recomputing work,
+preparing/claiming/ensuring/capturing, payload bytes/clones, object callbacks or
+default toString. Parent relation is not invented from matching source; where
+necessary the original existing preparation raw activeChild link can be sampled
+after a normal step and labelled outside-only. Actual submit caller is proved
+only by a submit-site record.
+
+Proposed sparse lifecycle records at successful initial-base/cursor-changing
+methods and claim/reset/restore capture actual entry/exit scalar cursors, owner
+identity and caller; ordinary original operations run exactly once. They do
+not log every service tick or alter readiness/admission. Existing outside raw
+port/context/load/movie/comparison identities may align handoff and gap changes,
+with missing clock/cursor null rather than fitted. Same-step ordering is journal
+event order, not a synthesized native time. No new port/runtime callback seam.
+
+Known scalar/reference projection must compare immediately before/after each
+diagnostic write, outside the original operation's legitimate mutation; no
+whole-world passivity claim. Property absent is inert. <=200records/<1MiB UTF-8
+including footer, positive birth/cursor event counts and actual owner identity
+required; a capped/incomplete/unknown-type/diagnostic-failure witness is invalid.
+Original assert/report/cleanup stay active; diagnostics errors defer and attach
+as suppressed to the SAME original Throwable (including Error). Fresh owned
+journal, no archive. Original1661 remains expected pending evidence; no success
+claim from JUnit headline. Source hashes/strip-byte recovery/full read review
+and a separate one-execution gate are required before any possible workload.
+
+This plan authorizes none of that code or execution. Reuse the original profile/
+all3ROM/Java25/JTO EGL(no CLI GL)/EGL/nullAL/noambient/Lua/fork1reusealpha normal
+lane command shape from R20, with only a separately reviewed future selector;
+no baseline/current rerun is presently authorized. All kind/ordinal/fingerprint/
+prepared/boundary refusal guards remain intact. No title34/window/drainfit,
+arithmetic renumbering, closure waiver, extra birth from comparison, SS rebase
+or live CPU/readiness/full-route claim. FDF SS remains unvisited.
+
+R21 actual unchanged source SHA256 pins (not tested new epochs):
+
+| Source | SHA256 |
+|---|---|
+| HardwareTimingService |9559d54c5d09049301d963b9fadf0f2ce16a0c72cca4449c65f58cfef188938d|
+| S3kKosDecompressionQueue |00c68f7651078cefff7eb1e315a09e1e3fcfe487c35c833ff071a5af268fd00e|
+| S3kKosModuleQueue |c16fee96524478d92ff619f2a3f8b0899154560a4109a2ee62d627b969925c5b|
+| HardwareTimingReplayPort |d29b080f1a81a94cc62cb68d9ac9eeeb5ecc21b3d4bf2ed2639b1454ba2be99f|
+| Sonic3kTitleCardManager |7715a8e1e9e58d1268fed1a91af3ea32ed968197b5da2ea9b2bb5b04980bda02|
+| TraceReplayDriver |0d85014d815a68d0dcfe8b8a3e16e2cfbef9432011d99c170bf7545be565860e|
+| TraceRunReplayWalker |49ae05dffdd9f5ea328ae0abf2ef8c9a694b4278b8964d167082f9157510bcbc|
+| AbstractRunChainTest |967c9896bf566218e9198626ec7d256f181be9fb78ca5abc787d6b82932148bb|
+
+R21 handback: only this existing Plan is uncommitted; source/POM/tests/fixtures
+unchanged, no new helper/artifact/job/observer. Whitespace/source-diff and exact
+config hash+mtime checks pass. R20 commit/source cleanup remains accounted.
+All leases terminal; source-only plan awaits review before authoring. No R21
+commit or execution authority inferred.
+
+
+### R22 successful-submit provenance witness — source authored, not executed, 2026-10-17
+
+Root accepted the R21 direction as a bounded diagnostic, not proof of a missing
+act-title submission. New returned task `fdf-r22-production-submit-provenance-source-20261017`,
+ordinal32, is registered separately24h, preserving31..19/all earlier results.
+HEAD remains c3ce70c517818cd22cea23618e65374cd0457e7c/current Java3be/7df plus
+ONLY the two temporary sources below and existing Plan prose. No compiler/JVM,
+engine/native, baseline/current repeat, fix, title-art change or commit occurred.
+
+The only runtime file is HardwareTimingService:15 marked R22_DIAG blocks add
+private property-gated logging after successful original submit and at the
+successful cursor-writing lifecycle methods (return-unrepresented, live→recorded
+epoch, restore, reset, initialize bases and guarded span advance). Original guards,
+assignments, queue/job construction, preparation, admission and return values
+remain byte-exact when the marked blocks are removed. The original fingerprint
+is read from the actual original handle; it is never recomputed by observation.
+No claim/tick/admission hook was added. No observer is replaced.
+
+ONE temporary subclass TestS3kSubmissionProvenanceWitness invokes original
+`assertChainReplayThroughSegmentRow(RUN_DIR,2,1)` exactly once. It arms the
+diagnostic property/file before the original method, so the original preliminary
+fixture/load/driver-start submits can be observed. Its one step override invokes
+`super.stepEngineFrame(loop)` exactly once in try/finally; both observations are
+labelled OUTSIDE original steps. Original driver/setup/bootstrap/input/assertions/
+report/cleanup are unchanged. Original Throwable including Error is caught and
+re-thrown as the SAME object only after original cleanup; diagnostic setup,
+reflection, cap/purity/type/footer and property-cleanup errors are deferred and
+suppressed onto it. With no original failure, any diagnostic error fails the witness.
+Pre-existing diagnostic property is preserved and makes the witness invalid.
+
+Private runtime logger opens ONLY fresh `target/gumball-r22-submission-provenance.jsonl`
+with CREATE_NEW; absent property is inert. Successful submit records actual
+service/job/submission/preparation/handle reference IDs, kind/ordinal/existing
+fingerprint, immutable ROMsource/compressedLength/destination/outputLength/
+compressionVariant/moduleCount/exportable fields, raw ready/claimed/ledger-
+retired/payload-presence flags, unrepresented membership, before/after cursor
+values and bounded18-frame actual caller stack. IDs are backed by identity maps,
+not identityHashCode alone. First service event labels any already-existing job
+prefix unknown; it never reconstructs a birth clock from an ordinal. A returned
+unrepresented handle is logged as an operation handle after its normal removal,
+not misrepresented as a successful submit or looked up as a still-live job.
+
+The known service projection compares references to service/scheduler/profile/
+authority/maps/lists/sets and every actual job/handle/submission/preparation, plus
+actual ordinal/policy maps, flags/boundary/counts, unrepresented-set membership
+and raw job flags. It is read immediately before/after diagnostic writes; this
+is **only an explicit known scalar/reference projection**, not whole-world or
+preparation-internal passivity. No payload array is read/cloned/exported, no
+preparation, claim, capture, ensure, actor/provider callback or default object
+toString is invoked. Jackson sees diagnostic scalar/map/list values only.
+
+The subclass reads27 verified raw field contracts across actual SessionManager,
+GameplayModeContext, LevelManager, GameLoop, original chain/coordinator/fixture/
+BoundaryProbe, LiveTraceComparator, hardware replay port and playback timeline.
+It reads actual current context/timing/level/load-generation, loop mode/provider
+identity, comparison cursor, movie cursor and port/coordinator identities/flags.
+Raw port latch/edge cursor/schedule distinguish outside initial install/gap/
+handoff changes. Sparse key excludes per-step clocks/last-boundary values, so
+ordinary rows do not cause tick logging; actual edge/owner/mode/load/gap changes
+do. Every outside observation compares its raw scalar/reference projection
+before/after the diagnostic call. Missing owners/clocks/cursors remain null.
+The logger's latest outside clocks are explicitly **not** an actual submit clock
+or callback proof. Full outside context is recorded on sparse changes; birth/
+lifecycle records carry compact latest clocks and point to that full record.
+No row/window/fixture physics value selects gameplay or logging admission.
+
+Hard bounds are200records and strictly less than1048576 UTF-8 bytes, including
+footer. Normal records reserve one footer record and4096bytes. Footer carries
+actual counts/purity/once-super invocations/original and diagnostic failure type,
+bytes-before-footer and current outside context; original XML remains the full
+original assertion/closure evidence. The source-only envelope estimate allocates
+roughly100submit records (canonical first-prefix54 identity slots plus room for
+preliminary fixture/load work),37edge changes,20cursor lifecycle events and
+roughly40other context changes plus footer. These are **budget estimates, not
+observed engine counts or native birth times**; any extra/capped/type-unknown/
+purity/footer error invalidates the witness, with no retry/fitted cap increase.
+Compact non-context records keep expected serialized output within1MiB; the
+actual byte bound is enforced before each write, never inferred from this estimate.
+Positive submit/lifecycle/actual-owner outside-purity and test-purity counts are
+required. No runtime result is claimed from source checks.
+
+Source readback and compiler-free lexical delimiter checks completed. All27 raw
+declaration types were checked in actual source. Original-prefix count1 and
+super-step count1 are source-verified. Strip regex over the15 complete marked
+blocks recovers byte-exact maintained service SHA256
+`9559d54c5d09049301d963b9fadf0f2ce16a0c72cca4449c65f58cfef188938d`.
+This is not a Java compile/type-check certificate. Source output path is absent;
+no journal/classes/reports were created and target remains last97317 diagnostic
+epoch after its accepted cleanup.
+
+Frozen source fingerprints:
+
+| Input | SHA256 |
+|---|---|
+| HardwareTimingService temporary full source |`c4631b32fc23be33df22fbc65d17a405e57fdabaf4ae84d894c4d070fb1bb50c`|
+| Temporary subclass full source |`d06043c01170aaa886520ebbe24085e6996decff9c84794c15f1e87892e9707d`|
+| Runtime binary diff from HEAD |`59149642f63d0d3dc808ed1c06adb83efb27f94f92bc47d69782f984388602d6`|
+| New subclass binary diff from /dev/null |`db885d0d25082e52de091cf86c7a4ae4211cd30c24a7bb3b805c58a0f515cbe3`|
+| Runtime diff followed by subclass diff |`22c6dd9024fd993bc4892adec48f50ee8bd57363c74fdeac8afc7ec0fd7e179a`|
+
+Proposed exact future single-prefix command (NOT EXECUTED, separate authorization
+required), from the owned649 cwd, with MAIN_ROOT denoting the original Main
+checkout and its existing three original ROM files:
+
+```bash
+MAIN_ROOT=/path/to/main/OpenGGF
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  PATH="/usr/lib/jvm/java-25-openjdk/bin:$PATH" \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_ROOT/tools/testing/maven_queue.py" --normal -Dmse=off \
+  -Ptrace-replay-r7 \
+  '-Dtest=TestS3kSubmissionProvenanceWitness#originalFirstBonusSubmissionProvenance' \
+  "-Dsonic1.rom.path=$MAIN_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$MAIN_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$MAIN_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true \
+  -Dsurefire.runOrder=alphabetical test -B
+```
+
+JDK_JAVA_OPTIONS/MAVEN_OPTS and other inherited JVM environment are preserved;
+there is NO extra CLI GL property or diagnostic-property CLI change. The test
+owns its private property. Normal compiler prerequisites would be inside that
+one separately authorized lifecycle, not an outer activity wrapper. Original
+R20 environment/fixture/movie/ROM/native pins remain unchanged. Source-only
+R22 freeze awaits Root actual-file review before any compiler or execution.
+No producer/title-act defect, arithmetic renumber/relabel/seed/drop, readiness
+waiver, closure suppression, stage-exit bypass, SS rebase, native or live CPU/
+readiness/whole-route conclusion follows.
+
+
+### R23 actual submit-site provenance, R24 accepted accounting — 2026-10-17
+
+Root reviewed ALL15 runtime blocks and full228-line subclass, and an independent
+source review found no material issue. The static logger is explicitly one
+invocation/fresh JVM. Actual returned R23 `fdf-r23-reviewed-production-submit-provenance-once-20261017`,
+ordinal33, is separate from source32; R24 accounting/source phase ordinal34
+preserves all33..19 results. Same HEADc3ce/current Java3be/7df plus ONLY frozen
+servicec4631b32/subclassd06043c0/Plan7a2e. Preflight verified literal hashes,
+base/fixturedb73/manifest149c/movieD748/native044+asmD2ce/all3originalROMCRC+SHA1
+and private/Mainconfig hash+mtime. Fixed output absent, no duplicate owned job.
+The exact proposed R22 command ran ONCE, normal current Main absolute queue from
+owned649, all3ROM/Java25/single JTO EGL/no CLI GL/EGL/nullAL/noambient/Lua/
+fork1reusealpha. Compiler inside that lifecycle, no outer activity/override.
+Root/foreign requests were untouched.
+
+Actual79227 terminal1 **2026-10-17T21:25:20Z**, queue0/Maven1m23s, parent
+elapsed unmeasured. Java25.0.4.1; both compilation stages pass with ordinary
+deprecation/unchecked warnings, no repair or retry. **1T/1F/0E/0S**, class5.963s/
+method5.676s; original1661 stage_exit assertion unchanged. ALL29 original timing-
+close suppression records read (12unconsumed source-segment edges,17identity
+mismatches;18direct/11module). No diagnostic suppression, Error/type/prerequisite/
+cap/passivity/identity failure. Two FAST missing-manifest warnings → NONE.
+
+The SINGLE ORIGINAL journal has60strict UTF-8/LF records/171370B, SHA256
+`f9a214efe1aff46bd7de9e830ad4dd64b9af8bbd7610da43a1de9884d7a72145`.
+ALL60 records/field trees,123keys,actual stacks/types/reference links,38outside
+contexts,both lifecycle maps and footer were inspected by worker and directly
+by Root. After initial display truncation, bounded all-field traversal and
+unique-index reconstruction covered every actual stack frame; no artifact was
+rewritten/copied/archived. Duplicatekeys0;200record/<1MiB bounds pass. Footer
+diagnostic type/message null:19successful submits,2lifecycle,21service-known-
+projection checks,12382outside-service+12382test-outside known-projection checks,
+6190once-super invocations. These checks cover explicit scalars/references, not
+whole-world/preparation internals. Matched ORIGINAL XML50474B SHA256
+`b516a8baee7620f38885b5070f42df05558e98cbe06a36cacd677dac51d8b029`,
+TXT and all6trace report/owner JSONs read fully; XML contains only the original
+assertion plus original timing-close suppression. No JUnit-headline-only proof.
+
+**Actual owners and first identity difference.** Old service1 is reset empty
+through preliminary fixture reopen. Actual service2 initial port install changes
+empty cursors to module6/direct11; no already-existing job prefix is observed.
+All19 successful births are on SAME service2, with76 distinct actual job/
+submission/preparation/handle references. Parents6..8 come from actual
+processEnemyKosArt,9 from queueStarPostBonusArt; direct11..14 are submitted by
+real module coordinate. Actual doEnterBonusStage2712 → initializeBonus906 →
+loadBonusArt1704/1707/1711 submits parent10 RedAct880424,11zone1426338,12bonus881260.
+Those three parents and direct15/16/17 are actually marked unrepresented in the
+source-segment gap. Comparing only SAME kind/ordinal/fingerprint,12 births match
+canonical identities and7 differ. The FIRST parent difference is actual event26:
+parent12 source881260/348bytes →43424/1344bytes, FP3f7193...47e6a (bonus), versus
+canonical AIZ12@4575POST FP705980...f6aa (act-number archive). First direct
+difference event30 is17 source881262/346bytes →-12288/1344bytes FP159ca...ce31,
+versus canonical17@4574PRE FPd24be...377b. Those native rows are **completions,
+not observed enqueue times/callers**. No forced alignment or full2module/4direct
+omission attribution follows.
+
+Actual origin return doExitBonusStage2915 → loadAllArt1652/1655/1662/1669 submits
+parents13..16, then coordinate submits direct18. The current return Num1 job is
+real ROMsource880004/compressed185/destination42912/output512, existingFP705980...f6aa.
+No reset/base/span/identity-return lifecycle event follows initial installation.
+Handoff retains service2/same port and swaps actual schedule identity11→20;
+no counter rewrite is inferred or permitted. The R20 prepared-child/physical-head
+observation remains its separate epoch: R23 birth records themselves show the
+new jobs unready/unclaimed/no payload at birth and are not an inside-admission
+or physical-retirement observation.
+
+Clock qualification is material: actual submit-site stacks prove consumed
+production callers, but each attached clock is the latest OUTSIDE sample. For
+bonus submission it can still say LEVEL/loadgen2 while the actual callback is
+loading the bonus scene; it is not an entry clock. All actualSubmitClock fields
+remain null. Last persisted noncleanup context is cmp1430/movie7000; sparse
+clock-only changes after that are not retained, and final cleanup clears cursors.
+Do not call that the last actual movie clock or synthesize a native enqueue time.
+Canonical completion fingerprints/counters do not serialize native birth times
+or complete missing-producer provenance. This gap remains after the valid
+actual engine three-archive caller observation. No readiness waiver/renumber/
+seed/drop/closure suppression, title time/window fit or runtime fix follows.
+
+AIZpartial1physics/camera4545 native01F2/engine01EE,0animation/warnings/bootstrap/
+lag0. Gumball comparator-complete1430reference rows/18physics,firstNonCamera1300
+X0000/2778delta10104,0animation/warnings/bootstrap,lag21. Recent5 queue entries
+at1380 are NOT all18 vectors. One5390→5570 dynamic-art gap/0failures. Returned
+seg2 opening and SS/fdf **UNREACHED**; no recorded readiness consumption, native
+birth clock, independent CPU/live4/5/4, wholeSS or full-route certificate.
+
+After Root DIRECT accepted originals, R24 strips all15 marked service blocks
+back to exact maintained9559d54c, removes exact temporary d060 test, and hash-
+checks/removes ONLY6 owned instrumented classes74921B under the intended writer.
+All9 inspected original diagnostics238368B are hash-verified and consumed under
+metadata_slot ALONE after these durable facts. No archive/copy/receipt/public
+logger/API/refactor is retained. Target last79227 is the diagnostic epoch, not a
+fresh maintained build after cleanup. Only existing Plan/frontier/measurement
+catalogue accounting enters the normal local docs commit. Same private/Main
+config, native/media/refs/results preserved; all owned requests/leases terminal.
+Then R24 may author only the independent ROM bonus-title component test source,
+with native act selection and restore-controls reviewed before any compiler/JVM.

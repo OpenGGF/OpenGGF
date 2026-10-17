@@ -113963,3 +113963,34 @@ After accepted original read, temporary test/two classes and all nine inspected
 original diagnostics consumed; no runtime change. Target97317 is the diagnostic
 epoch, not fresh maintained-source verification.
 [Exact command, job identities, bounds and cleanup](../architecture/plans/2026-10-13-s3k-playable-completion.md#r20-actual-outside-return-title-gate-prepared-direct-child-held-unready--2026-10-17).
+
+
+### 2026-10-17 — First actual bonus-title submit sequence disagrees at parent12
+
+Owned649 HEADc3ce/currentJava3be/7df plus frozen temporaryc463/d060, ONE original
+boot-to-(RUN_DIR,2,1) prefix:
+`-Ptrace-replay-r7 -Dtest=TestS3kSubmissionProvenanceWitness#originalFirstBonusSubmissionProvenance`,
+normal Main absolute wrapper/all3ROM/Java25/JTO-onlyEGL/noCLIgl/EGL/nullAL/
+noambient/Lua/fork1reusealpha. Actual79227 terminal1 **21:25:20UTC**,queue0/
+Maven1m23, **1F0E0S**, unchanged1661 stage_exit assertion, only original29
+timing-close suppression records. All60 original171370B JSONL records/field
+trees/stacks/38outside contexts/footer and matchedXML/TXT/6trace JSONs read by
+worker and Root.19actual births,2lifecycle,positive explicit-projection passivity,
+no diagnostic failure/cap/type/identity error.
+
+Actual same service2 starts with port bases module6/direct11. Consumed
+doEnterBonusStage→initializeBonus→loadBonusArt submits10RedAct/11zone/12bonus,
+with direct15/16/17; these are marked unrepresented during the actual gap. First
+SAME-kind/ordinal fingerprint difference is parent12(actual bonus vs canonical
+act-number), direct17 likewise. Origin doExitBonusStage→loadAllArt submits13..16,
+then direct18. This proves actual engine caller/descriptor order, not native
+enqueue timestamps or the full2module/4direct cause. Latest OUTSIDE clocks are
+not submit clocks; no counters/recorded completions are used to force alignment.
+
+AIZpartial1physics/camera4545; Gumball1430rows/18physics,first1300X0000/2778,
+0animation/warnings/bootstrap,lag0/21,recent5NOTfull18;gap1/0F;2FASTwarnings.
+Returned seg2/SS/fdf UNREACHED; no readiness/CPU/fullroute certificate or retry.
+After accepted read, exact service restored and temporary test/6classes removed;
+9inspected originals consumed without archives. Target79227 remains diagnostic
+epoch, not maintained-source validation.
+[Exact caller evidence, clock limits and cleanup](../architecture/plans/2026-10-13-s3k-playable-completion.md#r23-actual-submit-site-provenance-r24-accepted-accounting--2026-10-17).
