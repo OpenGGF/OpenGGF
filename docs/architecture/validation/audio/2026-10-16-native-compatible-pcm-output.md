@@ -469,6 +469,36 @@ are unchanged.
   (sonic3k.asm:1528-1548: `zPauseFlag = 1`, so the Z80 runs `zPauseAudio` and skips
   track updates while the YM2612 keeps clocking), still differs from the engine's
   SILENT presentation, which writes nothing and freezes the chip.
+  - ROM semantics (2026-10-17). `Pause_Game` writes `zPauseFlag = 1` on the pause
+    press and `$80` on the unpause press; `Pause_Loop` runs only `Wait_VSync`.
+    `zPauseUnpause` (Z80 driver :2232-2305) runs first in `zUpdateEverything`.
+    - Flag 1: the flag becomes 2 and `zPauseAudio` (:2552-2586, `fix_sndbugs = 0`)
+      writes 19 times: PSG `9F BF DF FF`, `B4/B5/B6 = 0` on part I and `B4/B5 = 0`
+      on part II, `28h = 00..05`, then PSG `9F BF DF FF` again. FM6/DAC is left
+      alone.
+    - Flag 2: the routine pops its return, so no SFX or music update runs, and
+      nothing is written.
+    - Flag `$80`: the flag clears; with `zFadeOutTimeout` set it runs
+      `zStopAllSound`, otherwise it rewrites `B4+ch` for each halted or playing FM
+      track (PSG1 is a no-op through `zWriteFMIorII`). The shipped SFX loop then
+      reads seven "tracks" from `zTracksSFXEnd` onwards, memory the engine cannot
+      model. Updates resume in that same service.
+    - The YM2612 and PSG keep clocking throughout.
+  - Engine. A level Start in production toggles `GameLoop.userPaused` (the host
+    pause), and `OuterFramePresentation` then presents SILENT: zeros, no service, chips
+    frozen. The engine's ROM pause (`GameStateManager.applyPauseToggle` from
+    `LevelFrameStep`/`LevelIterationAdmissionController`) gates only the level update:
+    `GameLoop.isPresentationPaused` does not read it, so those frames present FORWARD
+    and the driver keeps servicing the music.
+  - Minimal hunks (not landed; they exceed one bounded slice and touch shared loop
+    code). Audio/session: a policy pause program and unpause rule, a session
+    sound-pause state that skips `serviceOuterFrame` while the chip renders, its
+    snapshot field, and a command-timeline path so rewind stays deterministic. Shared
+    loop (lead and ending owner): drive that from `GameStateManager` pause
+    transitions, decide whether a level Start is the ROM pause or the host pause, and
+    keep the modal picker, frame-step and application mute SILENT. Validating it
+    against native needs a window with a native in-level pause; the title-start
+    window has none.
 - [CORE] A MAME YM2612 output path for the Knuckles movie; Nuked is never
   substituted.
 - PAL, DAC timing, carry state at an ending window, and every ending product.
