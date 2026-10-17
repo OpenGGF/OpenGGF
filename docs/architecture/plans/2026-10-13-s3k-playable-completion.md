@@ -11949,3 +11949,32 @@ the existing neutral MAIN_ROOT alias for the original Main absolute wrapper/ROM
 checkout; flags/arguments/source pins are unchanged, and no command was rerun.
 The hook is not bypassed. This is documentation portability repair, not a new
 validation/source epoch.
+
+
+### Root qualified composition and release-fold checkpoint — 2026-10-17
+
+After durable smoke checkpoint57af0d2a, normal runner acknowledgment deleted
+20261017T211314Z-fd8e3419; no archives or narrowed tail were retained. Locally
+composed48650119 geometry extraction (merge2bf0d032),04ed6114 HCZ column/timeout
+(mergef11f9c600),353566 typed pool preservation (merge06f823ca6) and8b1e965
+Num1 qualification (merge6b56a1338). All runtime sources retain exact worker
+qualification hashes; these merge SHAs do not retroactively change tested epochs.
+Line-based three-way conflict review preserved both append-only evidence sides;
+the workflow entry retains the native reader and updates the existing pool
+contract. No gameplay conflict was resolved by changing a qualified source.
+
+Moved only task-owned new release prose out of historical CHANGELOG.0.7.md into
+current CHANGELOG.0.7.prerelease.md themes: HCZ solid/column lifetime, freed-animal
+render lifetime, encoded collision/retained definitions and AIZ physical parent
+header. Historical0.7 is byte-exact Main803 again. The obligation checklist now
+uses the POM-selected release file instead of a stale hardcoded example. Existing
+Num1/initializer/timeout current-release folds remain intact. Syntax, mirrors and
+local link targets checked; no extra JVM or behavior result is implied.
+
+Main remains develop803 with foreign configuration/submodule work preserved.
+Cold49613 is a regression versus the actual full80338651 pass, not an inference
+from the48276 prefixes. HCZ first13322 and segment13 ownership88306 remain open;
+R49/R50 writer evidence is separately gated. FDF corrected-origin terrain old-red
+26359 proves only its component omission; producer design must avoid activating
+an ordinary four-child title graph in a bonus scene. Root combined smoke remains
+incomplete, fresh combined guards/integration/push/task cleanup remain pending.

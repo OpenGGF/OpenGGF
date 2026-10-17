@@ -150,6 +150,10 @@ Unreleased. The earlier development themes remain in
   pending placements wait for the next camera block crossing, which restores the
   Hydrocity fan timing. Hydrocity's hand launcher checks its top surface on every
   pass, as in the original, so a rising hand catches a player rolling over it.
+  Hydrocity solid blocks retain underside and side contacts while offscreen.
+  Spinning columns use cached sprite visibility to release and recapture riders
+  while preserving platform attachment. Airborne releases retain the movement
+  lock through the next player update.
   Water skimming launches on a new jump-button press, so holding the spin-dash
   button through release preserves the run across water.
   A Mega Chopper that catches Sonic alone locks his controls and passes through
@@ -175,7 +179,8 @@ Unreleased. The earlier development themes remain in
   Sky Sanctuary's EggRobo releases animals directly into their original walking
   or flying launch, with native facing, random lift and stationary first drawing;
   the launch and rendering state survive recreation. Scaled fly-by art remains
-  an implementation gap.
+  an implementation gap. Ordinary freed animals retire from the preceding
+  sprite-render visibility flag, with separate render and collision dimensions.
 
 - **Spin dash camera:** While a spin dash charges, and on its release frame, the
   camera eases back toward its normal height as it does when standing, as Sonic 2
@@ -187,6 +192,9 @@ Unreleased. The earlier development themes remain in
   restores the destination ring count after the title boundary temporarily
   retains the source count, including rewind across that boundary. Ordinary
   checkpoint reloads restore post activation before the first object pass.
+  Collision layout reads preserve the ROM's encoded word addressing and supported
+  aliases. Hydrocity's act handoff retains unwritten 128×128 definitions through
+  rewind.
   Opted-in checkpoint invitations defer shared art until native queue admission
   and reuse that work for their marker and bonus stars. Development
   mod captures retain the accepted loader when restoring creator-owned child graphs.
@@ -196,7 +204,10 @@ Unreleased. The earlier development themes remain in
   later Angel Island bridge slot identities. Angel Island replaces its miniboss
   with the end-sign control in the same physical slot, polls fatal HP after the
   current routine, and preserves native wait words and independent music and
-  explosion lifetimes.
+  explosion lifetimes. The Angel Island miniboss body, arm and barrels retain
+  their native sprite slots through the defeat wait, continue their own animation
+  and callbacks, and retire after the physical parent flag changes. Rewind
+  preserves that parent header across the sign-control replacement.
   The Angel Island control creates all three gradual camera workers in native
   order, including min-Y, and releases each at its original boundary instead
   of snapping min-Y or reserving a remembered results slot.

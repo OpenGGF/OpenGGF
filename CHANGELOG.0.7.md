@@ -169,10 +169,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   leaving its registration to the next ordinary status tick. Fresh title
   boundaries retain their deferred assembly and publication state on rewind.
   HCZ hanging bars read the native raw companion-controller directions,
-  preserving neutral input while the follower CPU steers. Its solid blocks keep
-  their native underside and side contacts offscreen. Collision layout reads
-  preserve the ROM's encoded word addressing and current ROM aliases; seamless
-  terrain loads retain unwritten definition bytes, including through rewind. Full native saves
+  preserving neutral input while the follower CPU steers. Full native saves
   clear collected giant rings at their seven existing save points, including in
   No Save games, restoring giant-ring availability in later levels. Ordinary
   persistence requests, special-stage and lives saves, and death reloads preserve
@@ -491,12 +488,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   recorded return-tail comparisons and timing checks. HCZ fan bubbles rise at
   the native speed and remain allocated until reaching the water surface. Fan
   bubble and sound cadence use the gameplay clock; a full object pool leaves
-  the random-number state unchanged. HCZ spinning columns use cached sprite
-  visibility to release and recapture riders while preserving their platform
-  attachment. Airborne releases retain the movement lock through the next player
-  update. Freed animals retire from the preceding
-  sprite-render visibility flag, preserving the native object-slot lifetime and
-  the animal's separate render and collision dimensions.
+  the random-number state unchanged.
 
 - **Frame-counter low-byte gates:** routines that read `(V_int_run_count+3)` or
   `(Level_frame_counter+1)` take the counter's low byte instead of adding 3 or 1
@@ -702,11 +694,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   releases it, instead of easing back toward the loaded act's default bounds.
   The AIZ2 boss retains its native owner through results and the Knuckles
   cutscene, preserving button input release, the drawbridge's delayed eject,
-  and captured rider state through rewind. Its miniboss body, arm and barrels
-  retain their native sprite slots through the defeat wait, continue their own
-  animation and callbacks, and retire after the physical parent flag changes.
-  Rewind preserves that parent header across the sign-control replacement.
-  Playable construction and level reset
+  and captured rider state through rewind. Playable construction and level reset
   bind rules from the selected world before the first CPU dispatch, retaining
   the bootstrap fallback for pre-session construction.
 
