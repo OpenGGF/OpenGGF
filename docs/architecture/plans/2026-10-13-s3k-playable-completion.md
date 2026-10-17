@@ -5158,3 +5158,122 @@ new local links/anchors, Markdown fences and diff checks pass. Source diff is
 empty. Main config hash/mtime and own regular exact byte copy verified again.
 No extra Java execution. Preparing the normal local evidence-only commit;
 all seven policy trailers and final GPT-6.1 coauthor are parsed before commit.
+
+### Ending Kos CPU/bus core dependency — 2026-10-17
+
+GPT-6.1 owns this bounded dependency in retained `t3-fa8da232`, branch
+`feature/ai-s3k-kos-bus-timeline-gpt61`, based on Root
+`bef8f27ca5069ec296e6912b1e1bc7f735375c2f`. The preceding Apply branch ref and
+unknown TraceChaser checkout `4fdf7388` are preserved. The intended-tree build
+lease protected branch creation/fast-forward; hooks are installed. Ignored
+`config.yaml` is a private regular exact-byte Main copy; Main was read-only.
+
+`S3kKosBusTimeline` is package-private and has **no production registration or
+initializer**. It advances the existing Kos semantic switch one instruction at
+a time, rather than subtracting a known subtotal from a frame period. Captured
+state includes Kos registers/RAM, monotonic MCLK, explicit native phase origin,
+refresh deadline, SR/IRQ, nested exception return frames and interval work.
+GPGX `051d430d3d1b54625f9900c8f152d7f232e06daf` owns the rules:
+`m68kcpu.c:m68k_run` refreshes at opcode fetch, resets its deadline to fetch+896
+MCLK and charges14; `m68kcpu.h:m68ki_exception_interrupt` indexes
+`{50,59,58,57,56,55,54,53,52,51}` by `(counter/7)%10`;
+`system.c` rebases CPU and refresh counters together. Explicit origin rebasing
+preserves the native phase without assigning a scene clock.
+
+Per-instruction inputs must explicitly resolve fetch/execution stalls and
+post-instruction IRQ. Interrupt inputs separately resolve vector, post-ack IRQ
+and acceptance-stack waits before the phase lookup. Missing work refuses before
+clock or Kos RAM mutation. `m68kops.h:RTE` restores PC/SR and calls
+`m68ki_set_sr` **before** charging its20 base cycles; an inline pending VInt
+therefore receives those cycles in its new interval. Actual Set_Kos_Bookmark
+writes occur in their handler instructions; Backup's16+92+16 instructions run
+after RTE in the following interval. The original budget consumer remains an
+oracle; both consumers share the instruction seam.
+
+All 296 bytes `$1BF0..$1D18` are authenticated, including branch/immediate
+operands and Backup redirect target (SHA256
+`071f3b96cee3219995dbdb672901740653bc1dbfbf643c53c28e3fc3f9a236a9`).
+The existing Kos model independently authenticates its254-byte body
+`$1C1A..$1D18` (SHA256
+`0df7c3df3656a11694522ab3cd50046d2fe7f58e8b6d5e999f0fd690011ee0cd`).
+ROM arrays and captures are defensive. The only supported RAM instruction is
+`V_int_jump` at `$FFFFF0`: a future live engine RAM owner must supply all six
+`4EF9` bytes and the selected aligned ROM target; exact12-cycle JMP semantics
+are checked. No initialized bytes or arbitrary RAM instruction execution exist.
+
+Observed validation, all via current Main absolute
+`${OPENGGF_MAIN}/tools/testing/maven_queue.py` (`OPENGGF_MAIN` is the absolute
+Main-workspace root; the task thread retains the expanded host commands)
+from this intended tree, `JAVA_HOME=/usr/lib/jvm/java-25-openjdk`,
+`LUA_BIN=/usr/bin/lua5.4`, `--normal -Dmse=off`, no DISPLAY/WAYLAND or
+LD_LIBRARY_PATH, `EGL_PLATFORM=surfaceless`, `ALSOFT_DRIVERS=null`,
+`-Dopenggf.headless.gl=surfaceless-egl` and absolute Main
+`-Dsonic1.rom.path=${OPENGGF_MAIN}/s1.gen`,
+`-Dsonic2.rom.path=${OPENGGF_MAIN}/s2.gen`,
+`-Ds3k.rom.path=${OPENGGF_MAIN}/s3k.gen`, suffix `test -B`:
+
+- Red98448: `-Dtest=TestS3kKosServiceModel#refusesChangedOperandEvenWhenEveryOpcodeStillMatches`:
+  1 assertion failure/0 errors/0 skips, old opcode pins accepted immediate 1C29.
+  Scaffold 33983 separately errored on its unimplemented API; that is not a
+  gameplay failure or an additional old-red assertion. Intermediate 95409 passed 29.
+- Pre-P2 focused38250: `-Dtest=TestS3kKosBusTimeline,TestS3kKosServiceModel,TestS3kVIntInstructionCycles,TestS3kVIntInstructionProduction,TestS3kVIntDma,TestS3kVIntDmaLedger,TestHardwareTimingService,TestHardwareTimingRewind,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`:
+  **157/0F/0E/0S**, Maven 77s, queue 10s, 13 resolved classes. Core 20 covers
+  hand-derived refresh/ordering, all10 phases, non-whole-cycle stalls, explicit
+  ack, both RTE paths, bookmark/Backup/resume, nested IRQ, six-byte RAM negatives,
+  atomic refusal and two restored forward continuations with real Kos RAM/output.
+  Existing Kos 15 retains all 63 comparison-only native service windows; mandatory
+  S3K4 contributes 60. This is bounded focused validation, not a full suite.
+- Pre-P2 guards25449: `-Pguards -Dtest=TestArchitecturalSourceGuard,TestHardwareTimingAuthorityGuard,TestRewindArchitectureGuard,TestTraceReplayInvariantGuard,TestTraceHydrateSwitchDefault,TestZoneEventRewindSchemaGuard,TestRewindCoverageGuard,TestHelperStateRewindCoverageGuard`:
+  **132/0F/0E/0S**, Maven 37.067s, queue 6s. Runtime/test sources stayed frozen.
+
+Tested source blobs for that pre-P2 epoch (before documentation/local commit): timeline
+`670266e8380b6d265cb8eca179c4e85e68b7712d`, Kos model
+`3616911bd8dfaef28c8e53c070c4e823c922562d`, core tests
+`ccb36e301dc093598ccee108f4d9aa6b28d20850`, Kos tests
+`1d33ea8dbd045b65a2fad978f8ef57bd2020d369`. Runtime SHA256 values are
+`b532630730183a75fc00890f2686d961341282064baed303ae7cc849e1b8f493` and
+`e50315982110d8501376cd8b13b420e71f170a7c89a9e53b3dcebeec1a8debbe`.
+
+**Limits:** captured pure state is not a legitimate clock initializer or whole-world
+registration. Production boot/RAM phase, ordered caller/object/render/palette/HUD/
+plane/Nemesis work, complete handler producers, DMA/Z80/FIFO/HInt event producers
+and readiness coupling remain missing. Ordinary external handler system-SR writes,
+multiple differently targeted acceptances in one step, IRQ7, DMA rewind and
+VDP-write delayed IRQ semantics refuse/are unsupported rather than approximated.
+There is no frame-period budget, character/route fit, trace hydration, manifest,
+profile or service-count change. The original 6 measured counts, eligible 46-context
+prediction, Hyper/PAL/PCM and full ending acceptance remain OPEN. No native,
+media, performance, full-chain or broad job was launched; Root owns composition.
+
+Independent source review found one P2 before commit: an unsupported Kos source
+could change fetch/stall timing before rejecting, and a literal's source cursor
+could advance before its unsupported destination rejected. Old-red63834 selected
+`-Dtest=TestS3kKosBusTimeline#unsupportedLiteralDestinationRefusesBeforeSourceCursorOrAnyCapturedStateChanges+unsupportedSourceRefusesBeforeFetchStallRefreshOrAnyCapturedStateChanges`
+and observed **2 assertion failures/0 errors/0 skips** against complete timeline+
+Kos state equality (Maven 26.675s, admission 648s; waiting was not execution).
+The correction prevalidates every variable byte/word/long memory operand before
+clock, SR, register or RAM mutation, including both sides of a postincrement copy.
+It retains signed copy offsets, 24-bit addressing and supported RAM alignment.
+This is bounded address checking, not a speculative decode or 64KiB per-instruction
+copy; no bus value or emulated cost is invented. A focused independent source-only
+review cleared the exact correction; that reviewer did not execute tests.
+
+Final affected checks used the same normal wrapper/environment/ROM prefix above:
+
+- 2023, `-Dtest=TestS3kKosBusTimeline,TestS3kKosServiceModel test -B`:
+  **37/0F/0E/0S** (core 22 + existing Kos 15), Maven 72s, admission 86s.
+- 83355, `-Pguards -Dtest=TestArchitecturalSourceGuard test -B`:
+  **72/0F/0E/0S**, Maven 26.251s, admission 27s, separate fresh JVM.
+
+Those final runtime blobs are timeline `1026a5c928672d063de8bd191b5dc82fa2696db0`
+and model `91fbac1c7a45226bdce415a9652fb9b95453d17f`; core-test blob is
+`2e7673cc12f938e8812271fffcb1a4175a50d95d`, with the Kos-test blob unchanged.
+Final runtime SHA256 values are
+`116c8bcec841278dea325b2cddb8f63714472b66308f301fb05a763fae0828ff` and
+`2f00bd16f5b807600d9e095e51b4ca3e35060dcd3bf39c313e37461b8e3c27d2`.
+The earlier 157/132 epochs remain identified separately; unaffected neighboring
+checks were not rerun. No production field, registration, timing authority or
+profile changed in the P2 correction. All owned jobs are terminal; inspected
+reports and the temporary commit message are consumed under the metadata lease
+alone before handoff, with no archives. Only the preserved unknown TraceChaser
+checkout and accounted private config remain outside the local commit.

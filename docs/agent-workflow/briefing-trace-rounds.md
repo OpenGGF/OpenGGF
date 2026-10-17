@@ -71,6 +71,23 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Equal instruction/stall totals do not fix CPU phase (2026-10-17, ending Kos core).
+GPGX051d430d refreshes only after opcode fetch and restarts its deadline from that
+fetch. Moving112 MCLK of wait from execution to fetch can add a14-MCLK refresh
+while leaving both supplied totals identical. Native counter rebasing also changes
+`(counter/7)%10`; capture its explicit origin, not an assigned scene clock.
+`m68ki_set_sr` checks IRQ inside RTE before its20 base cycles are charged, so a
+pending VInt places those cycles in the following interval. A fixed acceptance
+constant, scalar callee sum or post-RTE-only IRQ check can all look plausible.
+The independent `TestS3kKosBusTimeline` controls cover these distinctions. Its
+explicit event inputs and two-forward captures prove an unused pure core, not
+the existence of production boot/caller/bus/handler producers or6+46 prediction.
+Refusal must also preserve the whole coupled state: checking a literal's
+destination after source postincrement, or checking memory after charging a
+fetch wait, leaks state on unsupported memory. Validate every operand before
+either the CPU timeline or instruction mutates; a per-instruction 64KiB copy is
+unnecessary for this closed routine's bounded accesses.
+
 A negative layout word can read a neighbouring RAM owner (2026-10-17, HCZ R9).
 Native907F is outside the layout buffer and aliases current16×16 ROM definitions;
 the next cell's128×128 definition can be an unwritten prior-act tail. Trace the

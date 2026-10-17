@@ -156,6 +156,13 @@ class TestS3kKosServiceModel {
     }
 
     @Test
+    void refusesChangedOperandEvenWhenEveryOpcodeStillMatches() {
+        byte[] changed = rom.clone();
+        changed[0x1C29] ^= 1; // ori.w #$8000: immediate operand, not the opcode word
+        assertThrows(IllegalArgumentException.class, () -> new S3kKosServiceModel(changed));
+    }
+
+    @Test
     void refusesRomWhoseRoutineDiffersFromThePins() {
         byte[] img = image(END);
         img[0x1CB7] ^= 0x01;
