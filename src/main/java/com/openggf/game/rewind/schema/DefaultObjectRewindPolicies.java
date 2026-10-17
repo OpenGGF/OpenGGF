@@ -879,9 +879,6 @@ final class DefaultObjectRewindPolicies {
             // owning player while their target reservations remain stable ObjectRefIds.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SuperTailsFlickyFlockObjectInstance", "owner"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance", "animationState"), RewindFieldPolicy.CAPTURED),
-            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance", "monitorContentsSlot"), RewindFieldPolicy.CAPTURED),
-            // Contents retain an exact managed shell identity; nearest/structural reconstruction merges colocated shells.
-            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance$MonitorContentsSlot", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance", "p1SolidContact"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance", "p2SolidContact"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance", "p2RecentlyClearedSolidContact"), RewindFieldPolicy.DEFERRED),

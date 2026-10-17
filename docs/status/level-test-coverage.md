@@ -1245,6 +1245,19 @@ records exact commands and scope. Native RGB residuals, strict traces and
 configuration/cold/PAL/PCM limits outside these products remain open.
 
 
+Retained HCZ repair (2026-10-17, worker `t3-3aa3bc3c`):
+[HCZ1 local contracts](../architecture/validation/levels/s3k-hcz1-sonic.md#retained-hcz-handlers-and-incoming-act-2-carrier--2026-10-17)
+and [HCZ2 incoming boundary](../architecture/validation/levels/s3k-hcz2.md#retained-hcz1-to-hcz2-carrier-boundary--2026-10-17)
+now bind stored targets, X-lock release, actual restore/replay and final pass4
+regressions. Focused/named guards pass within their recorded scope; four external
+authored-AIZ JAR cases skip in the original qualification. A later bounded
+load-owner fix passes134 focused and131 named guards without skips, closes the
+canonical segment8 row7126 boundary through the first segment9 row, and retains
+the alternate's single26179 ring failure. Matched pre-fix dc338/866 slice spans
+are mixed at the same9482 frontier; historical3738 remains unmatched. New-source
+full HCZ/full canonical, the exact GLFW oracle and other products/cold routes
+retain their matrix gaps; Root owns combined validation.
+
 Blue Sphere SAT/plane follow-up (2026-10-17): the private indexed compositor
 resolves the first opaque sprite pixel before Plane A priority, preserves
 native cell/mapping-piece order and the original unsigned `$54` gate, and
@@ -1257,3 +1270,28 @@ focused GPU/resource checks and exact capture protocol](../architecture/plans/20
 record the bounded result. This repairs the sampled overlap gap without an
 accepted ROM deviation; complete timelines, other native configurations,
 cold/donor/PAL/PCM and strict timing/trace products remain separate obligations.
+
+
+R3 HCZ follow-up (2026-10-17), local worker merge21327d78a with Main460:
+full canonical6/1F/0E/0S reaches returned HCZ11's complete14208-row reference
+window but lacks the giant-ring exit;134710 field errors split115689physics and
+19021animation, first reported non-camera6674 `rings`114/0. Independent full
+HCZ slice2/1F/0E/0S reproduces all4353 spans(3424physics/929animation), first9482
+air and9486 animation, with Poindexter passing. These are completed strict-red
+qualifications, not new product certification. Matched dc3384699/8664353 remains
+mixed,3738 unmatched; alternate760's one26179 ring span is reused, not freshly
+passed. Active-level title-parent/movement-latch causality and the exact GLFW
+oracle remain open; no fitted delay or separate fresh-load fix was substituted.
+[Commands, windows, all groups and causal limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r3-current-composed-strict-qualification--2026-10-17).
+
+
+R4 HCZ retained-title correction (2026-10-17): the real parent survives until
+its higher-slot children stop writing the movement latch. Native reset follows
+last movement→parent clear→stationary parent poll; short whole-world replay twice,
+focused182 and guards131 pass. New canonical chain first reported non-camera
+frontier is7134 sidekick_x0175/0176, closing6674 rings;133771 field errors remain
+over the complete14208-row returned-HCZ window, with its giant-ring exit absent.
+The distinct independent HCZ slice reproduces all4353 spans/first9482air and
+passes Poindexter. No clean route/auxiliary/product/GLFW certification or second
+fix; alternate760 reused, matched4699/4353 mixed,3738 unmatched.
+[Exact native evidence, selectors, windows and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r4-retained-title-parent-and-child-movement-latch--2026-10-17).

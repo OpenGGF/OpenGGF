@@ -203,7 +203,8 @@ public record GameRules(
                     60,
                     0,
                     false,
-                    -136
+                    -136,
+                    false
             ),
             DynamicArtDmaServiceModel.SONIC_1_VBLANK_SONIC_GFX
     );
@@ -363,7 +364,8 @@ public record GameRules(
                     0,
                     8,
                     true,
-                    -136
+                    -136,
+                    false
             ),
             DynamicArtDmaServiceModel.SONIC_2_PROCESS_DMA_QUEUE
     );
@@ -517,7 +519,8 @@ public record GameRules(
                     60,
                     8,
                     true,
-                    -256
+                    -256,
+                    true
             ),
             DynamicArtDmaServiceModel.EVERY_CLAIM_WITHOUT_PLAYER_ART_AUDIT,
             PaletteWhiteFadeModel.ROM_PALETTE

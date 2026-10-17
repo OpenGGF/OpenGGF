@@ -410,6 +410,14 @@ public class SidekickCpuController {
             updateDeadFalling();
             return;
         }
+        if (sidekick.isDrowningPreDeath() && drownInstallsDedicatedRoutine()) {
+            // S3K's drown installs routine $C (loc_15810). Tails_CPU_Control is
+            // reached only from the routine-2 control path, so the drowning
+            // sidekick runs no CPU step: no input, no facing write
+            // (sonic3k.asm:26180-26190, 29314-29330).
+            clearInputs();
+            return;
+        }
 
         if (controller2SignedLocked) {
             carryController().setParentagePending(false);
@@ -5470,6 +5478,13 @@ public class SidekickCpuController {
             syncApproachTargetDiagnostics();
         }
         return true;
+    }
+
+    private boolean drownInstallsDedicatedRoutine() {
+        var rules = sidekick.getGameRules();
+        return rules != null
+                && rules.drowningBubble() != null
+                && rules.drowningBubble().drownInstallsDedicatedPlayerRoutine();
     }
 
     private void clearInputs() {

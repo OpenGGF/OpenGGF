@@ -117,6 +117,23 @@ class TestLevelSeamlessTransitionExecutor {
     }
 
     @Test
+    void nativeWaitGateSurvivesNormalizationAndCarriedOwnerPolicy() {
+        var source = SeamlessLevelTransitionRequest.builder(
+                        SeamlessLevelTransitionRequest.TransitionType.RELOAD_SAME_LEVEL)
+                .showInLevelTitleCard(false)
+                .resetLevelGamestateAtInLevelTitleCardDisplay(true)
+                .inLevelTitleCardResetAdditionalDispatches(com.openggf.game.TitleCardResetGates.NATIVE_WAIT_GATE)
+                .build();
+        var normalized = LevelSeamlessTransitionExecutor.normalizeReloadSameRequest(source, 1, 1);
+        assertEquals(com.openggf.game.TitleCardResetGates.NATIVE_WAIT_GATE,
+                normalized.inLevelTitleCardResetAdditionalDispatches(),
+                "a native child-movement gate is not a zero-dispatch countdown");
+        assertEquals(com.openggf.game.TitleCardResetGates.NATIVE_WAIT_GATE,
+                CarriedTitlePublicationTiming.from(normalized).resetAdditionalDispatches(),
+                "the retained owner must receive the same semantic gate");
+    }
+
+    @Test
     void nullRequestHasNoTransitionSideEffects() {
         executor.execute(null);
 

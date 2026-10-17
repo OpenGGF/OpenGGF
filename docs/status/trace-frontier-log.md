@@ -112927,3 +112927,286 @@ absolute ROM properties:
 
 The later title-card archive WIP remains outside this composition. Its pending failures, ring/timer reset at
 `loc_63B4`, HCZ and downstream frontiers remain separate obligations. No full-suite run or new trace payload.
+
+### 2026-10-16 — returned HCZ hand launcher solid order and Mega Chopper control lock
+
+Owned `bugfix/ai-s3k-r2-hcz11-row1768` over round-2 integration `cc3e77ee9`.
+Commits `5096be6cc` (hand launcher) and `1eaa2cc4a` (Mega Chopper).
+[Native owners, observer and evidence](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#returned-hcz-hand-launcher-and-mega-chopper-control-lock--2026-10-16).
+**Both commits are unqualified for merge** (lead ruling): the HCZ zone-slice
+change below still needs attribution, and the 3475/5065 owners are open.
+
+Canonical command (Java 25, surfaceless EGL, ALSOFT_DRIVERS=null, three absolute
+original ROMs): `python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay
+-Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+'-Dtest=TestS3kAizTraceReplay#replayMatchesTrace,TestS3kSonicTailsHczSegmentTraceReplay#replayMatchesTrace,TestS3kSonicTailsCompleteEmeraldRunPrefix,TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds' test`.
+Every run is 5 tests, 1 failure, 0 errors, 0 skips.
+
+| Tree | Returned HCZ11 first error | Raw (physics + animation) | Last compared row | Stop |
+|---|---|---|---|---|
+| `cc3e77ee9` baseline (lead, 6405313ce profile) | 1768 Y $870/$871 | 81981 (69334 + 12647) | 5725 | ownership loss at BK2 68801, gen 9 act 0 |
+| `5096be6cc` hand only (19:58:18 BST) | 1891 x $24B3/$24AE | 22571 (21083 + 1488) | 4001 | walk-failure: KosM FIFO full at a starpost |
+| `1eaa2cc4a` both (20:32:38 BST) | 3475 sidekick_routine $0C/$02 | 36896 (33352 + 3544) | 7642 | ownership loss at BK2 70718, gen 9 act 1 (`DEATH_RESTART`) |
+
+AIZ5 (segment 8) is unchanged at 1692 (1613 + 79), first 6111
+`sidekick_x_speed`. Every other segment is 0.
+
+The alternate selector (`-Ptrace-segments`,
+`TestS3kAizZoneSliceTraceReplay#replayMatchesTrace`) is unchanged: 60 errors,
+first 25589 `player_animation_id` $13/$05 (20:42:57 BST).
+
+The HCZ zone slice (`-Ptrace-segments -Dtest=TestS3kHczZoneSliceTraceReplay`;
+2 tests, 1 failure) was measured as a matched pair, both with first error 9482
+`air` 1/0:
+
+- original-source arm: 4699 errors (20:53:45 BST);
+- `1eaa2cc4a`: 3746 errors (20:45:26 BST).
+
+Next owners:
+
+- **3475 (comparator only).** `TraceCharacterState.routineFromSprite` reports
+  $02 for an S3K drowning player. The ROM writes $C (`AirCountdown_ReduceAir`).
+  The engine air and drown timing match native.
+- **5065 (production).** Native P1 bounces off the HCZ miniboss (slot 6, $69F7A
+  status $40). The engine admits the hit one row late because its descent leads
+  native by one 4-px step. P1 diverges from 5066 and the engine P1 later dies
+  (about 7478), which triggers the gen-9 death reload.
+- **3477 (production, 1 px).** The drowned Tails' y is 1 px off: $06A2 against
+  native $06A3.
+
+### 2026-10-16 — S3K drown routine export, HCZ miniboss Init pass, drowned motion order
+
+Same branch, pass 2: `78eea96fc` (drown routine export), `a126d5104` (miniboss
+loop Init pass plus native vortex capture and release) and `d80c5ca0f`
+(drowned motion order).
+[Native dating and witnesses](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#pass-2-drown-export-miniboss-init-pass-drowned-motion--2026-10-16).
+Commands are unchanged from the entry above; each canonical run is 5 tests,
+1 failure, 0 errors, 0 skips.
+
+| Run (BST) | Returned HCZ11 first error | Raw | Last row | Stop |
+|---|---|---|---|---|
+| `1eaa2cc4a` (20:32:38) | 3475 sidekick_routine $0C/$02 | 36896 | 7642 | BK2 70718, gen 9 act 1 |
+| final tree (23:09:50) | 3483 sidekick_status_byte $42/$02 | 32876 (28942 + 3934) | 8525 | BK2 71601, gen 9 act 1 |
+
+AIZ5 is unchanged at 1692, first 6111. The alternate is unchanged: 60 errors,
+first 25589 (23:12:03 BST).
+
+HCZ zone slice (`-Ptrace-segments TestS3kHczZoneSliceTraceReplay`, 2 tests,
+1 failure), compared as a matched pair:
+
+| Arm | Errors | First error |
+|---|---|---|
+| original source `cc3e77ee9` | 4699 | 9482 `air` |
+| final tree (23:19:23 BST) | 3748 | 9482 `air` |
+
+- **Common prefix.** The first 810 error spans are identical.
+- **Resolved.** 1960 spans from 13549 resolve, including the old hand-launch
+  `g_speed` −$1000/−$0350.
+- **New.** 1009 spans start at 13637 (`x` $0942/$0943) and 411 spans change.
+
+An interim run before the vortex fixes moved the slice's first error to 9046
+and then 9338. The cause was a pair of compensating one-pass latches, which the
+final tree removes.
+
+Next:
+
+- **3483.** S3K's drowned routine $C never runs `Sonic_Water`/`Tails_Water`,
+  so the underwater bit persists. The engine's `LevelWaterCoordinator` still
+  updates the drowning player. The fix needs a per-game gameplay rule, and the
+  rule records are `@ModApi`.
+- **Slice 13637.** One pixel after the first-visit hand launch.
+
+### 2026-10-17 — returned HCZ drowned water check, CPU pause and dead underwater status
+
+Same branch, pass 3: `64b70ebf1` (drown routine rule plus water check),
+`0d7127e63` (no CPU step during routine $C) and `b3af7e635` (dead players keep
+underwater status).
+[Evidence](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#pass-3-drowned-routine-rule-cpu-pause-dead-underwater--2026-10-17).
+
+The canonical selection (unchanged commands, 5/1/0/0) moves the returned
+HCZ11 first error through four rows:
+
+| Tree | First error | Raw |
+|---|---|---|
+| `7a5b3996c` | 3483 | 32876 |
+| `64b70ebf1` (23:42:26 BST) | 3611 `sidekick_status_byte` $42/$43 | 32772 |
+| `0d7127e63` (23:58:40 BST) | 3619 `sidekick_status_byte` $42/$02 | 32764 |
+| `b3af7e635` (00:20:28 BST) | 3832 `rings` 104/94 | 32763 (28829 + 3934) |
+
+The walk-stop is unchanged at BK2 71601. AIZ5 stays at 1692 (first 6111) and
+the alternate at 60 (first 25589, 00:21:01 BST). The HCZ zone slice is
+unchanged at 3748 (first 9482) at `64b70ebf1`; neither slice trace contains a
+drowning row.
+
+The shared dead-status gate was checked with matched arms:
+
+- the S1/S2 fixtures with underwater deaths all pass
+  (`TestS1Lz1CompleteRunTraceReplay`, `TestS2Cpz2LevelSelectTraceReplay`,
+  `TestS2Cpz2Seg9/Seg10CompleteEmeraldsSegmentTraceReplay`);
+- the S3K LBZ slice is identical with and without the gate (1663 errors,
+  first 30582).
+
+**Next (attributed, not fixed).** The rings monitor (subtype 3) at
+($2D9C,$0270) breaks on the same row in both: 3800, per an engine print-only
+diagnostic. Natively its +10 rings land at 3832.
+
+The ROM broken shell (`Obj_MonitorAnimate` → `loc_1D61A`) runs
+`Sprite_OnScreen_Test` and is deleted offscreen, while the separate
+`Obj_MonitorContents` finishes its 32-step rise and award
+(sonic3k.asm:40504-40516).
+
+The engine runs the icon and award inside `Sonic3kMonitorObjectInstance` and
+destroys the contents slot in the shell's `onUnload`. Sonic outruns the monitor,
+so the award never happens. The fix is to move icon ownership to
+`MonitorContentsSlot`, which needs rewind and owner handling.
+
+**Slice 13637.** These spans are a cascade from the inherited 9482 boss-defeat
+error, not a hand-launch fault: x/y are already 1 px off at 13500-13546, and the
+grab preserves the incoming x_sub.
+
+### 2026-10-17 — returned HCZ monitor contents outlive their shell
+
+Same branch, pass 4: `5b747c95f` makes S3K `Obj_MonitorContents` an
+independent object.
+[Evidence](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#pass-4-independent-monitor-contents--2026-10-17).
+
+Canonical selection (unchanged commands, 5/1/0/0, 02:21:48 BST):
+
+| Tree | First error | Raw |
+|---|---|---|
+| `b3af7e635` | 3832 `rings` 104/94 | 32763 (28829 + 3934) |
+| `5b747c95f` source | 6796 `sidekick_x` $C5/$C2 | 29258 (25432 + 3826) |
+
+Lag (59), the last compared row (8525), the recent mismatches and the
+walk-stop (BK2 71601, gen 9 act 1) are unchanged. AIZ5 stays at 1692 (first
+6111), and segments 0/2/4/6/9 stay at 0. The chain report is summary-only, so
+seg11 spans after 3832 were not compared.
+
+- **Alternate** (02:30:45 BST): 60 errors, first 25589, all 60 spans identical
+  to the `b3af7e635` report.
+- **HCZ zone slice** (02:33:45 BST): 3738 errors, first 9482 `air`. A matched
+  arm with only the two fix sources at `0204eb045` (02:36:20 BST) gives an
+  identical span set, so the monitor change does not move the slice.
+- **Correction.** Pass 3's "3748, unchanged" was measured at `64b70ebf1`. The
+  later `0d7127e63`/`b3af7e635` change 60 cascading `tails_cpu_*` spans from
+  18466 (−10 errors); these were not separated per commit.
+
+**Next.** 6796 `sidekick_x` (Tails, 3 px) is unattributed. Zone slice 9482
+(boss-defeat support edge) remains the inherited gap; 13637 is its cascade.
+
+
+## 2026-10-17 — retained HCZ repair on Root: stored targets and qualified limits
+
+Worker `t3-3aa3bc3c`, local branch `feature/ai-s3k-hcz-gpt61-repair`:
+`b6c4898e2` composes the missing final pass4 source and retained carrier/water WIP
+onto Root `2056a99cd`; `b9c1c8b3d` merges qualified prerequisite `534a69e74`.
+The carrier reads its captured `$3A` target and the reload keeps both X easing
+targets locked until native P1 release owns widening. Fresh focused 1591/0/0/4
+has four external authored-AIZ Second Strike JAR skips; fresh named source,
+rewind and timing guards pass 113/0/0/0. Additional boss/transition checks are
+37/1/0/0, solely an unchanged hard-coded GLFW-init pixel failure before scene
+verification. Native-only original-movie 320 Sonic+Tails images are retained;
+no engine pixel-equality claim.
+
+Exactly one canonical, HCZ slice and alternate qualification each, all on
+`b9c1c8b3d` and unchanged executable inputs. Current Main absolute queue wrapper,
+normal admission, Java25/Lua5.4, surfaceless EGL, unset DISPLAY/WAYLAND/ALSOFT,
+original absolute ROM properties, one reused fork and alphabetical class order.
+Exact selectors/common command options and group limitations are in the
+[audit](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#final-single-invocation-strict-qualification).
+
+- `25747`, `-Ptrace-replay` canonical five-case controls/prefixes/chain:
+  **5/1/0/0**, finished 10:03:18 BST. Four controls pass; segments 0/2/4/6/9
+  have zero comparator errors. Segment8 retains **4** at row **7126** (first
+  reported non-camera `x`, `$0280/$0000`), a separate unqualified load boundary.
+  Returned HCZ11 has **133771 total** (114800 physics + 18971 animation),
+  zero bootstrap/warnings, lag59, comparator complete and tail at row14207.
+  First reported non-camera physics is **7134 `sidekick_x`**, `$0175/$0176`.
+  The owned giant-ring exit is absent; late native direct #220/#221 and module
+  #154/#155 completions have no prepared engine job. Summary-only reporting
+  does not establish the first animation error or full span history. The longer
+  comparison window makes the raw total incomparable to retained pass4's
+  row8525 cutoff; the old BK2-71601 stop is not transferred.
+- `67547`, `-Ptrace-segments -Dtest=TestS3kHczZoneSliceTraceReplay`:
+  **2/1/0/0**, 10:03:57 BST. **4353 spans** (3424 physics + 929 animation),
+  first **9482 `air`**, expected1/actual0; Poindexter slot control passes.
+  The initial edge coincides with the historical boss-support gap, but the
+  later count differs from historical3738 and is **not matched-baseline attributed**.
+- `45622`, `-Ptrace-segments -Dtest=TestS3kAizZoneSliceTraceReplay#replayMatchesTrace`:
+  **1/1/0/0**, 10:04:35 BST. **1** physics span at **26179 `rings`**, 72/0;
+  no animation/bootstrap errors or warnings. Historical60 is not current credit.
+
+Queue waits were 1336.2s / 789.0s / 828.2s respectively; those intervals overlap.
+No repeated qualifiers, reference edits, timing fitting or readiness fabrication.
+No downstream exit/campaign success, complete auxiliary coverage, all-preset or
+pixel/audio certification. Row7134, the owned exit, slice-span attribution and
+the title-load boundary remain Root follow-up; this is not a green delivery.
+
+
+## 2026-10-17 — native load PLC submission closes canonical HCZ-entry row7126
+
+Same worker branch after866e68501; frozen executable digest8b1e770e6904e76fec9822267e2fc75ad994a8c1068c86d3bdeb7901c5920232. Level now fills the Nemesis FIFO on the load frame; the live first loc_62CC iteration prepares it, while Obj_TitleCardInit retains its own KosM submissions. Independent old-red4/3F/0E/0S becomes4/0/0/0, with twice-restored hardware queues/ordinals; affected focused134 and named source/authority/schema guards131 pass without skips. Native original-BK2 completed frames53487/53488/53489 show queued0-prepared ->56 ->50 patterns;53559 installs native P1/camera.
+
+Commands use the current absolute Main queue from the owned cwd, --normal, -Dmse=off, CLI surfaceless-EGL, no DISPLAY/WAYLAND_DISPLAY, nullAL, Java25/Lua5.4 and original three absolute ROM properties. Add single-fork/reuse/alphabetical flags:
+
+- `-Ptrace-replay '-Dtest=TestS3kSonicTailsCompleteEmeraldRunPrefix#aiz1ThroughHczLoadBoundary' test -B`: session10857,10:53:22 BST,1/0F/0E/0S. First segment9 row driven; completed segment0/2/4/6/8 reports0 physics/animation/bootstrap/warnings. Segment8 declared7175 rows complete, lag62; previous four row7126 fields now match.
+- `-Ptrace-segments '-Dtest=TestS3kAizZoneSliceTraceReplay#replayMatchesTrace' test -B`: session69802,10:53:58 BST,1/1F/0E/0S. Exactly one physics span26179–26179 `rings` expected72/actual0; animation/bootstrap/warnings0, total_frames26041. Distinct original BK2; existing ring-publication boundary remains unqualified.
+
+Before new production edits, one exact dc338d3e3 HCZ-slice baseline and the necessary866 span regeneration both ran the full class, including independent Poindexter. Matched windows total_frames29302 / maximum mismatch row31461; baseline4699(3973physics/726animation), current4353(3424/929); both first9482 `air`1/0, Poindexter passes.1132 exact common spans,3567 baseline-only,3221 current-only; first newly mismatching field/row10834 `tails_cpu_respawn_counter`0/1. This is mixed downstream coverage, not proof of improvement or an attribution of historical3738. [Exact span identities, commands, native products and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#bounded-followup-qualification-and-limits).
+
+No new-source full canonical/returned-HCZ11/full-HCZ-slice qualification, general green or auxiliary/breadth certification. Prior7134 sidekick_x/missing-exit evidence remains historical and unresolved. Specific GLFW pixel-init failure has no matched identity baseline. Root owns combination and broad validation; local only, no Main writes/push.
+
+
+## R3 composed strict HCZ qualification — 2026-10-17
+
+Local merge21327d78a combines worker760 with published Main460715cbc, preserving
+both append-only Plan contributions, Root's fresh-title/DPLC/white-fade APIs and
+the actual clean TraceChaser4fdf checkout difference. Frozen executable digest
+8b2bb7e6e6bc297554c97501fa1051555bbdd20e018e6da4b6f95a04a9d7048d.
+Canonical3815 finishes6/1F/0E/0S: all3 prefixes and standalone AIZ/initial HCZ pass;
+returned HCZ11 consumes0–14207 and reports134710 field mismatches
+(115689physics/19021animation), bootstrap/warnings0, first reported non-camera
+6674 `rings`114/0; giant-ring exit absent. The summary does not identify first
+camera/animation or a full span history. HCZ90977 finishes2/1F/0E/0S, all31482
+reference rows,29302 comparison records,4353 spans(3424physics/929animation),
+first9482 `air`1/0, first animation9486, Poindexter passes. Its entire error array
+matches the prior4353 digest, not merely its total. Matched dc3384699/8664353
+remains mixed; historical3738 is unmatched. Alternate760's one26179 ring span is
+reused with no post-merge alternate pass claimed.
+
+No runtime fix followed: a separate fresh-load37-ring semantic trial70863 failed
+2/2F, but native canonical6674 is an active in-level boundary and does not prove
+that load owner caused it. The trial is removed, committed checks untouched.
+Obj_TitleCardWait's real child-movement/reset ownership still needs matched live
+parent/latch evidence; no fitted dispatch delay is justified. Slice9482's stale
+interact pointers likewise do not prove deletion support ownership. Exact GLFW
+oracle, full route exit/auxiliary/products remain unqualified. No broad/full,
+children/new tree, Main writes or push; no own live jobs. [Exact selections,
+windows, all groups, rejected attribution and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r3-current-composed-strict-qualification--2026-10-17).
+
+
+## R4 retained HCZ title-parent movement gate — 2026-10-17
+
+After98e2c6029, native instruction observation proves retained slot15 with
+children16/18/19/20: final movement69754, parent clears$3469755 and resets rings
+only69756 (canonical6680). The old manager countdown reset at6674 while the act
+child still moved. HCZ now requests the existing native-wait sentinel; request
+normalization/carry preserves it and the carried SST uses the existing literal
+child graph. Requested control lock and hold90 remain unchanged. No new state,
+public API, timing input, row/zone fit or source-budget allowance.
+
+Independent final old-red48402 is3/3F; focused65721 is182/0F/0E/0S including
+whole-world recreation/replay twice, actual higher-slot hole/latch order and
+mandatory S3K4; guards22781 are131/0/0/0. Frozen executable digest
+e49c68da90e35b1bb8173ba57053464cefa9e5dbf273715f754cd0e453e01773.
+Affected canonical chain2015 is1/1F/0E/0S: same14208-row returned-HCZ window,
+133771 field errors(114800physics/18971animation), first reported non-camera
+**7134 sidekick_x0175/0176**;6674 rings is closed. Exit remains absent; first
+camera/animation is not reported. Distinct-BK2 HCZ65594 is2/1F/0E/0S and its
+entire4353-span error array is unchanged:3424physics/929animation, first9482air,
+first animation9486, Poindexter passes. This is bounded proof, not a green route
+or second clean repaired-owner traversal. Alternate760 is reused, no new pass;
+matched4699/4353 remains mixed and3738 unmatched. Exact GLFW, broader products,
+auxiliary fields and later exit remain unqualified. One fix, no further sweep,
+broad/full, Main writes or push; own jobs terminal. [Native argv/UTC/pins, exact
+selectors, all groups and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r4-retained-title-parent-and-child-movement-latch--2026-10-17).

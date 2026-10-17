@@ -119,12 +119,15 @@ Unreleased. The earlier development themes remain in
   routine fades the level in from black over its first 21 frames, with the player,
   HUD and card already at full colour. This covers zone changes, new games from the
   data select, restarts, special and bonus stage returns, and loads without a card.
+  The level submits its queued art during the load and prepares the first item
+  in the first title-loop step, keeping destination setup on the original frame.
   Previously the level stayed black and then appeared at full brightness. Each fade
   step and each move of the card reaches the screen with the same frame's sprites and
   HUD, one frame after it is computed, as the original's palette and sprite uploads
   do, and a rewind shows what was on screen. The data
   select no longer fades the whole screen, card included, back in on top. Seamless
-  act changes still do not fade, as in the original. The score, time and ring
+  act changes still do not fade, as in the original. Hydrocity resets rings and
+  time after its act-change card pieces stop sliding. The score, time and ring
   counters are drawn over the card's red banner, as on hardware. Direct boots, new
   games, restarts and bonus stage entries and returns now hand control over with
   the card still holding for its last 22 frames, as zone changes already did, instead
@@ -134,7 +137,18 @@ Unreleased. The earlier development themes remain in
 - **S3K objects and bosses:** The Angel Island end boss starts its defeat at the
   native hit check of whichever phase it is in. When the object table is full,
   pending placements wait for the next camera block crossing, which restores the
-  Hydrocity fan timing. Ending reunion loads use measured native decompression
+  Hydrocity fan timing. Hydrocity's hand launcher checks its top surface on every
+  pass, as in the original, so a rising hand catches a player rolling over it.
+  A Mega Chopper that catches Sonic alone locks his controls and passes through
+  only left and right, so he must shake it off rather than roll, duck or jump.
+  The Hydrocity miniboss spends the original start-up pass before it descends,
+  so its dives, hits and whirlpool grab and release land on the original frames.
+  Its retained act-change carriers keep their captured swing targets and the
+  arena's camera lock until the original release event widens the boundaries.
+  A drowning player sinks with the original motion, even while an object holds it,
+  and in Sonic 3&K it keeps its underwater state until it dies, as in the original.
+  A broken monitor's contents still rise and pay out after the player leaves the
+  monitor behind. Ending reunion loads use measured native decompression
   costs, and the credits start on the original frame. Timing diagnostics distinguish
   verified instruction terms from work that is still unpriced. Giant-ring capture retains
   the original blank-frame ownership and art-reload state; ordinary animation

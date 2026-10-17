@@ -86,6 +86,8 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
     private int shakeWindowTimer;
     private int remainingShakeChanges;
     private int lastDirectionBits;
+    /** ROM {@code $38(a0)} bit 2: this capture owns {@code Ctrl_1_locked}. */
+    private boolean mainControlsLocked;
 
     private static TouchResponseProfile continuousStandardEnemyProfile() {
         TouchResponseProfile standard = TouchResponseProfile.standardEnemy();
@@ -227,6 +229,9 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
 
     @Override
     public void onUnload() {
+        // A carried chopper stays in range; an engine-side unload must not leave
+        // the captured player locked after this object no longer exists.
+        releaseMainControls();
         capturedPlayer = null;
     }
 
@@ -282,6 +287,12 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
             return;
         }
 
+        if (mainControlsLocked) {
+            // This object's previous pass wrote the masked Ctrl_1_logical word
+            // through the forced-input mask; drop it so the checks below read
+            // this frame's Ctrl_1 rather than last frame's logical bits.
+            capturedPlayer.setForcedInputMask(0);
+        }
         if (capturedPlayer.isDebugMode()
                 || capturedPlayer.getDead()
                 || capturedPlayer.isHurt()
@@ -290,6 +301,9 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
                 || processShakeEscape(capturedPlayer)) {
             startReleasedFlight();
             return;
+        }
+        if (mainControlsLocked) {
+            publishCarriedLogicalInput(capturedPlayer);
         }
 
         syncCarryFacing(capturedPlayer);
@@ -357,7 +371,7 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
             return;
         }
 
-        enterCarry(player);
+        enterCarry(player, selector);
     }
 
     private void enterLeap(AbstractPlayableSprite player) {
@@ -370,9 +384,18 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
         yVelocity = LEAP_SPEED_Y;
     }
 
-    private void enterCarry(AbstractPlayableSprite player) {
+    private void enterCarry(AbstractPlayableSprite player, int selector) {
         state = State.CARRY;
         capturedPlayer = player;
+        if (selector == PLAYER_MAIN) {
+            // MegaChopper_CheckCapture: only collision_property == 1 clears
+            // Ctrl_1_logical, sets Ctrl_1_locked and bit 2 of $38(a0). A P2
+            // capture (2) or a same-pass P1+P2 touch (3, which still selects
+            // Player_1) leaves the controls alone (sonic3k.asm:184431-184435).
+            player.clearLogicalInputState();
+            player.setControlLocked(true);
+            mainControlsLocked = true;
+        }
         childDx = clampSignedByte(currentX - player.getCentreX());
         childDy = clampSignedByte(currentY - player.getCentreY());
         carryFacingBit = isPlayerFacingRight(player) ? 1 : 0;
@@ -386,7 +409,39 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
         facingLeft = childDx >= 0;
     }
 
+    /**
+     * MegaChopper_CarryFollowPlayer writes {@code Ctrl_1 & $8C8C} to
+     * {@code Ctrl_1_logical} after its release checks (sonic3k.asm:184356-184360).
+     * Sonic_Control keeps that word while {@code Ctrl_1_locked} is set, so the next
+     * player pass moves on this frame's left/right only; up, down and A/B/C drop out.
+     */
+    private void publishCarriedLogicalInput(AbstractPlayableSprite player) {
+        int leftRight = 0;
+        if (player.isLeftPressed()) {
+            leftRight |= AbstractPlayableSprite.INPUT_LEFT;
+        }
+        if (player.isRightPressed()) {
+            leftRight |= AbstractPlayableSprite.INPUT_RIGHT;
+        }
+        player.clearLogicalInputState();
+        player.setForcedInputMask(leftRight);
+    }
+
+    private void releaseMainControls() {
+        if (!mainControlsLocked) {
+            return;
+        }
+        // MegaChopper_ReleasePlayer: bclr #2,$38(a0) / clr.b (Ctrl_1_locked).w
+        // (sonic3k.asm:184393-184396).
+        mainControlsLocked = false;
+        if (capturedPlayer != null) {
+            capturedPlayer.setForcedInputMask(0);
+            capturedPlayer.setControlLocked(false);
+        }
+    }
+
     private void startReleasedFlight() {
+        releaseMainControls();
         state = State.RELEASED;
         mappingFrame = FRAME_CARRY_ALT;
         xVelocity = facingLeft ? -LEAP_SPEED_X : LEAP_SPEED_X;

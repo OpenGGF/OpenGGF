@@ -69,3 +69,54 @@ Corrected qualification, all on `0197c5a5a` plus this commit's test-only deltas 
 - Revised input test with the fix: 02:05:15–02:05:44 UTC, 1 test / 0 failures / 0 errors / 0 skips.
 
 Death/reload products, combined smoke and integration were not rerun here. This requalifies the held-Right entry floor only; it is not act certification.
+
+
+## Retained HCZ1-to-HCZ2 carrier boundary — 2026-10-17
+
+`TestSonic3kHCZEvents` now binds incoming X-lock ownership to both current and
+target bounds and checks each carrier's captured `$3A` target after camera motion.
+Actual manager/player/camera restoration twice replays both carriers through P1
+release and native size-child ownership; manager recreation and the schema guard
+also check distinct per-player target words. These local fixtures pass within
+worker focused1591/0/0/4; named guards113/0/0/0 pass on `b9c1c8b3d`, including
+Root prerequisite `534a69e74`. They add no fresh-entry matrix products.
+
+The [audit](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#final-single-invocation-strict-qualification)
+records three assertion-red qualifiers, returned-HCZ first reported non-camera
+physics7134 and absent owned exit, the separate load7126 boundary, and HCZ slice
+4353 spans first9482 `air` without matched-baseline attribution. Native-only 320
+Sonic+Tails images are inspected; the engine GLFW pixel oracle is blocked at init.
+Cold traversal, other products, arena completion and cross-load rewind policy
+retain their existing obligations; no general HCZ2 certification.
+
+
+Followup after866 (2026-10-17): the independent load/title owner is qualified narrowly by old-red/green, focused134, guards131 and a canonical prefix closing HCZ1-entry row7126. The distinct alternate retains its one26179 ring span. This adds no HCZ2 cold/fresh/arena or cross-load matrix product. Pre-fix dc338/866 full-slice comparison has identical windows but mixed span deltas (4699/4353);3738 is not a matched baseline. New-source full slice and returned HCZ11 remain unqualified. [Exact evidence](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#bounded-followup-qualification-and-limits).
+
+
+## R3 full strict qualification on Main460 composition — 2026-10-17
+
+Worker merge21327d78a: canonical3815 is6/1F/0E/0S, with all three prefixes,
+standalone AIZ and initial HCZ passing. Returned HCZ11 consumes14208 reference
+rows,134710 field mismatches(115689physics/19021animation), first reported
+non-camera6674 `rings`114/0 and missing giant-ring exit. HCZ90977 is2/1F/0E/0S:
+full31482 reference rows,29302 comparison records,4353 spans(3424physics/929animation),
+first9482 `air`1/0, first animation9486; independent Poindexter passes. The entire
+slice error array matches the prior4353 result. Matched4699/4353 deltas remain
+mixed;3738 is unmatched. Alternate760's one26179 ring span is reused, not rerun.
+No new entry, viewport/donor/team, pixel, cold traversal or cross-load product is
+certified. Active-level ring-reset/title-latch ownership, later route exit and
+the exact GLFW oracle remain unqualified. No new runtime fix. [Exact source,
+commands, windows and rejected load attribution](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r3-current-composed-strict-qualification--2026-10-17).
+
+
+R4 title-owner follow-up (2026-10-17): HCZ's carried results SST now receives
+its native child-movement gate through the existing request/carry contract.
+Short real allocation-hole/latch tests recreate and replay every registered
+world key twice; focused182 and guards131 pass without skips. Native slot15's
+last child movement69754 precedes clear69755/reset69756. Canonical2015 moves the
+first reported non-camera frontier6674 rings→7134 sidekick_x0175/0176, with
+133771 field mismatches over the same14208-row returned-HCZ window and missing
+exit. Independent full HCZ65594 retains exactly4353 spans/first9482air, Poindexter
+passes; earlier divergence prevents a second clean repaired-owner claim. No new
+entry, product breadth, engine pixel or cross-load timeline certification.
+[Exact evidence and limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r4-retained-title-parent-and-child-movement-latch--2026-10-17).

@@ -1441,6 +1441,27 @@ The fan's sound and bubble gates read `Level_frame_counter`, whereas object
 `update` receives `V_int_run_count`; test the clocks with different residues.
 See the [S3K lane audit](audits/2026-10-07-s3k-parity-gap-verification.md).
 
+### Independently allocated contents need their own lifetime contract
+
+S3K `Obj_MonitorSpawnIcon` allocates `Obj_MonitorContents` with
+`AllocateObjectAfterCurrent`. The broken shell is later deleted offscreen by
+`Sprite_OnScreen_Test`, while the contents finish the rise and pay out
+(sonic3k.asm:40504-40516, 40640-40652; returned HCZ row 3832, 2026-10-17).
+Three engine defaults each cancelled that award without an error:
+
+- a shell `onUnload` that destroys a parent-linked mirror;
+- the generic dynamic-object `out_of_range` unload in `ObjectManager`, which
+  runs unless the object reports `isPersistent()`. Use it when the ROM routine
+  has no offscreen check;
+- the rewind probe in `ObjectRewindDynamicCodecs`, which knows only listed
+  constructor shapes. Any other shape is silently not recreated. S2
+  `MonitorContentsObjectInstance` shows the working pair: an `(ObjectSpawn)`
+  probe and an `(ObjectSpawn, PlayableEntity)` recreate.
+
+A persistent world-space object (`render_flags` bit 2) also needs
+`RomWorldPositionedObject`; without it, a seamless transition that carries it
+throws.
+
 ### A dying child can outlive its parent's SST identity
 
 FBZ's cold Tails results replay (2026-09-27) found the same ownership error in

@@ -55,6 +55,12 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
     private static final int ROUTINE_INIT = 0;
     private static final int ROUTINE_WAIT_TRIGGER = 2;
     private static final int ROUTINE_WAIT_FADE = 4;
+    /**
+     * Obj_HCZ_MinibossLoop routine 0 (HCZMinibossLoop_Init), the dispatch after
+     * HCZMiniboss_StartFight. Ordered below {@link #ROUTINE_DESCEND}: the boss is
+     * not drawn or touchable until that Init pass reaches Draw_And_Touch_Sprite.
+     */
+    private static final int ROUTINE_LOOP_INIT = 5;
     private static final int ROUTINE_DESCEND = 6;
     private static final int ROUTINE_WAIT = 8;
     private static final int ROUTINE_RISE = 10;
@@ -255,9 +261,7 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
     private int waterEffectFrame;
     private int waterEffectAnimFrame;
     private int waterEffectAnimTimer;
-    private boolean waterEffectPullReady;
     private boolean waterEffectCooldownEntry;
-    private boolean vortexFinalPullPending;
     private boolean vortexTrackedP1;
     private boolean vortexTrackedP2;
     private int defeatHandoffTimer;
@@ -447,8 +451,6 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         waterEffectFrame = WATER_EFFECT_BASE_FRAME;
         waterEffectAnimFrame = 0;
         waterEffectAnimTimer = 0;
-        waterEffectPullReady = false;
-        vortexFinalPullPending = false;
         defeatHandoffTimer = -1;
         defeatHandoffStarted = false;
         pendingDefeatDispatch = false;
@@ -565,8 +567,6 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         waterEffectRoutine = WATER_EFFECT_ROUTINE_DEFEATED;
         waterEffectAnimFrame = 0;
         waterEffectAnimTimer = 0;
-        waterEffectPullReady = false;
-        vortexFinalPullPending = false;
         // Touch_Enemy sets the defeated status after Obj_HCZ_MinibossLoop has
         // already run. On the following object pass sub_6AC48 installs
         // Wait_FadeToLevelMusic, which counts the retained $3F wait before
@@ -599,6 +599,7 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         switch (state.routine) {
             case ROUTINE_INIT -> updateInit();
             case ROUTINE_WAIT_TRIGGER -> updateWaitTrigger();
+            case ROUTINE_LOOP_INIT -> updateLoopInit();
             case ROUTINE_WAIT_FADE, ROUTINE_WAIT -> updateWaitOnly();
             case ROUTINE_COOLDOWN -> updateCooldown(player);
             case ROUTINE_DESCEND, ROUTINE_RISE -> updateMoveAndWait();
@@ -665,9 +666,22 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         setWait(FADE_OUT_TIME, WaitCallback.START_FIGHT);
     }
 
+    /**
+     * HCZMiniboss_StartFight installs Obj_HCZ_MinibossLoop and starts the boss
+     * music; the loop's Init runs on the next dispatch (sonic3k.asm:139286-139294).
+     */
     private void startFight() {
         services().gameState().setCurrentBossId(0x99);
         services().playMusic(Sonic3kMusic.MINIBOSS.id);
+        state.routine = ROUTINE_LOOP_INIT;
+    }
+
+    /**
+     * HCZMinibossLoop_Init: attributes, y_vel=$100, $2E=$DF and the rockets/engine
+     * children, without MoveSprite2; the first descent move is the following
+     * dispatch (sonic3k.asm:139319-139334).
+     */
+    private void updateLoopInit() {
         resetRocketPhases();
         beginRocketWindUp();
         state.routine = ROUTINE_DESCEND;
@@ -799,8 +813,6 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         waterEffectRoutine = WATER_EFFECT_ROUTINE_WINDUP;
         waterEffectAnimFrame = 0;
         waterEffectAnimTimer = 1;
-        waterEffectPullReady = false;
-        vortexFinalPullPending = false;
         waterEffectFrame = WATER_EFFECT_BASE_FRAME;
         crossedWaterThisPass = true;
         // loc_6A57C starts the fan; BossRotate belongs to the later pull loop.
@@ -814,11 +826,13 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         waterEffectRoutine = WATER_EFFECT_ROUTINE_COOLDOWN;
         // loc_6A5FA retains the current animation cursor/timer for its first step.
         waterEffectCooldownEntry = true;
-        waterEffectPullReady = false;
-        vortexFinalPullPending = true;
         for (VortexBubbleChild bubble : vortexBubbles) {
             bubble.signalVortexEnd();
         }
+        // This pass already ran the water effect's pull; on the same pass it
+        // sees $38 bit 2 clear and releases via loc_6A5FA -> loc_6A986/sub_6A996
+        // (sonic3k.asm:139849-139866).
+        releaseVortexPlayers();
         state.routine = ROUTINE_COOLDOWN;
         setWait(COOLDOWN_TIME, WaitCallback.START_POST_VORTEX_PAUSE);
     }
@@ -927,22 +941,16 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
                 && isOnScreen()) {
             services().playSfx(Sonic3kSfx.BOSS_ROTATE.id);
         }
-        if (waterEffectRoutine == WATER_EFFECT_ROUTINE_PULL && waterEffectPullReady) {
+        // loc_6A5BC installs water-effect routine 8 at the end of a pass;
+        // loc_6A5D8 runs sub_6A9B8 on routine 8's first pass, so the pull
+        // starts on the next dispatch (sonic3k.asm:139841-139853).
+        if (waterEffectRoutine == WATER_EFFECT_ROUTINE_PULL) {
             applyVortexPull(player);
-        } else if (waterEffectRoutine == WATER_EFFECT_ROUTINE_PULL) {
-            waterEffectPullReady = true;
         }
         tickWait();
     }
 
     private void updateCooldown(AbstractPlayableSprite player) {
-        if (vortexFinalPullPending) {
-            if (player != null) {
-                applyVortexPull(player);
-            }
-            vortexFinalPullPending = false;
-            releaseVortexPlayers();
-        }
         updateWaitOnly();
     }
 
@@ -1252,7 +1260,7 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
             }
         }
         return String.format(
-                "r=%02X hits=%d def=%s inv=%s/%d lastHit=%d/%s hr=%02X hw=%d hwr=%02X xV=%04X yV=%04X wait=%d cb=%s pass=%d closed=%s vortex=%s waterR=%02X water=%04X,%04X wf=%d wa=%02X/%02X pullReady=%s rockets=%s",
+                "r=%02X hits=%d def=%s inv=%s/%d lastHit=%d/%s hr=%02X hw=%d hwr=%02X xV=%04X yV=%04X wait=%d cb=%s pass=%d closed=%s vortex=%s waterR=%02X water=%04X,%04X wf=%d wa=%02X/%02X rockets=%s",
                 state.routine & 0xFF,
                 state.hitCount,
                 state.defeated,
@@ -1276,7 +1284,6 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
                 waterEffectFrame,
                 waterEffectAnimFrame & 0xFF,
                 waterEffectAnimTimer & 0xFF,
-                waterEffectPullReady,
                 rocketSummary.isEmpty() ? "none" : rocketSummary.toString());
     }
 
@@ -1570,7 +1577,6 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         waterEffectRoutine = WATER_EFFECT_ROUTINE_PULL;
         waterEffectAnimFrame = 0;
         waterEffectAnimTimer = 0;
-        waterEffectPullReady = false;
         waterEffectFrame = WATER_EFFECT_BASE_FRAME;
     }
 

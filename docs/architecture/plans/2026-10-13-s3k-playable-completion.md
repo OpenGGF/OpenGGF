@@ -2621,6 +2621,34 @@ changed. The original six-batch tail and final guards remain required before
 integration; this local commit is not a delivery claim.
 
 
+## Retained HCZ repair worker checkpoint — 2026-10-17
+
+Worker `t3-3aa3bc3c`, local `feature/ai-s3k-hcz-gpt61-repair`: `b6c4898e2`
+composes final pass4 and retained carrier/water WIP onto Root `2056a99cd`;
+`b9c1c8b3d` merges qualified prerequisite `534a69e74`. Stored targets, X-lock
+release ownership and actual manager/player/camera restore/replay are complete;
+Root-only rules, mapping access and title helpers remain. Candidate API gets the
+necessary semantic drowning flag while retaining its prior constructor and 0.7.0
+unpublished descriptor. Focused1591/0/0/4 (four external authored-AIZ JAR skips),
+named guards113/0/0/0; extra boss/transition37/1/0/0 fails only GLFW init.
+
+All three single qualifiers are assertion-red: returned HCZ's first reported
+non-camera physics is7134 `sidekick_x` over a longer window through14207, with
+no owned exit; segment8 load7126 stays separate. HCZ slice4353 first9482 `air`
+is not matched-baseline attributed; alternate has one26179 `rings` span.
+[Exact evidence/limits](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#final-single-invocation-strict-qualification),
+[HCZ1](../validation/levels/s3k-hcz1-sonic.md#retained-hcz-handlers-and-incoming-act-2-carrier--2026-10-17)
+and [HCZ2](../validation/levels/s3k-hcz2.md#retained-hcz1-to-hcz2-carrier-boundary--2026-10-17)
+retain the open obligations. No zero frontier, broad smoke/full-suite, Main write,
+push or retained-tree cleanup; Root owns follow-up and delivery validation.
+
+
+## Bounded HCZ native load ownership followup — 2026-10-17
+
+Same worker after866e68501 establishes an independent short old-red4/3F, then moves Nemesis submission to Level's load frame and closes GameLoop's first title-loop preparation tail. Obj_TitleCardInit retains the four archive submissions; no public API, new snapshot fields, readiness authority, fitted clock or budget changes. New source digest8b1e770e6904e76fec9822267e2fc75ad994a8c1068c86d3bdeb7901c5920232: focused134 and named guards131 pass without skips; actual native captures corroborate queued/unprepared ->56 ->50 and destination publication. The canonical prefix through the first segment9 row passes and fully closes segment8's four7126 fields; the distinct alternate remains strict-red solely26179 `rings`72/0. Returned HCZ11/full canonical/full slice are not requalified on this source.
+
+Matched pre-fix dc338 versus866 slice coverage is now recorded: same window,4699 versus4353 spans,1132 exact common, mixed removals/additions; newly mismatching field/row10834 CPU respawn counter. Historical3738 is not a matched baseline. Other matrix/auxiliary/cold products, missing returned-HCZ exit and exact GLFW oracle remain open. [Evidence and stopping boundary](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#bounded-followup-qualification-and-limits). Root owns combination with its later source; no Main edit/push, broad run or child. Existing task ownership expiry refreshed24h, no new taskId returned, all worker requests terminal. Preserve local branch and the existing TraceChaser checkout mismatch for Root review.
+
 ### Blue Sphere SAT ownership and Plane A composition — 2026-10-17
 
 Implementation checkout `feature/ai-s3k-sprite-priority` at
@@ -3648,3 +3676,90 @@ show the leased wrapper command for independent version checks, and the existing
 measurement hazard records the manual path and multiple-JVM launcher. This is a
 documentation correction only, with mirror, whitespace, link and command-routing
 scenario checks; no new JVM, engine tests or scheduler implementation is needed.
+
+
+## R3 composed strict HCZ qualification — 2026-10-17
+
+Local merge21327d78a combines worker760 with published Main460715cbc, preserving
+both append-only Plan contributions, Root's fresh-title/DPLC/white-fade APIs and
+the actual clean TraceChaser4fdf checkout difference. Frozen executable digest
+8b2bb7e6e6bc297554c97501fa1051555bbdd20e018e6da4b6f95a04a9d7048d.
+Canonical3815 finishes6/1F/0E/0S: all3 prefixes and standalone AIZ/initial HCZ pass;
+returned HCZ11 consumes0–14207 and reports134710 field mismatches
+(115689physics/19021animation), bootstrap/warnings0, first reported non-camera
+6674 `rings`114/0; giant-ring exit absent. The summary does not identify first
+camera/animation or a full span history. HCZ90977 finishes2/1F/0E/0S, all31482
+reference rows,29302 comparison records,4353 spans(3424physics/929animation),
+first9482 `air`1/0, first animation9486, Poindexter passes. Its entire error array
+matches the prior4353 digest, not merely its total. Matched dc3384699/8664353
+remains mixed; historical3738 is unmatched. Alternate760's one26179 ring span is
+reused with no post-merge alternate pass claimed.
+
+No runtime fix followed: a separate fresh-load37-ring semantic trial70863 failed
+2/2F, but native canonical6674 is an active in-level boundary and does not prove
+that load owner caused it. The trial is removed, committed checks untouched.
+Obj_TitleCardWait's real child-movement/reset ownership still needs matched live
+parent/latch evidence; no fitted dispatch delay is justified. Slice9482's stale
+interact pointers likewise do not prove deletion support ownership. Exact GLFW
+oracle, full route exit/auxiliary/products remain unqualified. No broad/full,
+children/new tree, Main writes or push; no own live jobs. [Exact selections,
+windows, all groups, rejected attribution and limits](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r3-current-composed-strict-qualification--2026-10-17).
+
+
+## R4 retained HCZ title-parent movement gate — 2026-10-17
+
+After98e2c6029, native instruction observation proves retained slot15 with
+children16/18/19/20: final movement69754, parent clears$3469755 and resets rings
+only69756 (canonical6680). The old manager countdown reset at6674 while the act
+child still moved. HCZ now requests the existing native-wait sentinel; request
+normalization/carry preserves it and the carried SST uses the existing literal
+child graph. Requested control lock and hold90 remain unchanged. No new state,
+public API, timing input, row/zone fit or source-budget allowance.
+
+Independent final old-red48402 is3/3F; focused65721 is182/0F/0E/0S including
+whole-world recreation/replay twice, actual higher-slot hole/latch order and
+mandatory S3K4; guards22781 are131/0/0/0. Frozen executable digest
+e49c68da90e35b1bb8173ba57053464cefa9e5dbf273715f754cd0e453e01773.
+Affected canonical chain2015 is1/1F/0E/0S: same14208-row returned-HCZ window,
+133771 field errors(114800physics/18971animation), first reported non-camera
+**7134 sidekick_x0175/0176**;6674 rings is closed. Exit remains absent; first
+camera/animation is not reported. Distinct-BK2 HCZ65594 is2/1F/0E/0S and its
+entire4353-span error array is unchanged:3424physics/929animation, first9482air,
+first animation9486, Poindexter passes. This is bounded proof, not a green route
+or second clean repaired-owner traversal. Alternate760 is reused, no new pass;
+matched4699/4353 remains mixed and3738 unmatched. Exact GLFW, broader products,
+auxiliary fields and later exit remain unqualified. One fix, no further sweep,
+broad/full, Main writes or push; own jobs terminal. [Native argv/UTC/pins, exact
+selectors, all groups and limits](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r4-retained-title-parent-and-child-movement-latch--2026-10-17).
+
+
+### Current integration-base HCZ attribution — 2026-10-17
+
+Root isolated tree `ai-s3k-current-parity-composition`, unmodified executable
+base **8030832d2ab6080e5324cdfe35e971677fd97b41**, runs exactly
+`-Ptrace-replay -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds`
+with the current Main queue wrapper, `--normal -Dmse=off`, explicit surfaceless
+EGL, null OpenAL, no ambient display, original verified S1/S2/S3K ROM properties
+and the R4 single-fork/reuse/alphabetical settings. Session66140 exits1 at
+**10:47:35 UTC**, Maven1m40s: **1 test /1F/0E/0S**, test24.447s. The generated
+worktree config link was replaced by an owned private exact copy before any JVM;
+Main config hash and modification time were unchanged after execution.
+
+Ordinary segments0/2/4/6/9 have zero physics and animation errors. Segment8 is
+complete with4 physics errors, first7126 `x` native640/engine0. Segment11 is
+**incomplete**, with81981 field errors (69334 physics,12647 animation), first
+non-camera1768 `y` native2160/engine2161. Its recent-mismatch ring ends at5725;
+that ring is not a complete span history or proof of the exact consumed-window
+length. The walk loses production ownership at BK2 cursor68801 in HCZ act1
+(internal act0). Warnings/bootstrap errors are zero.
+
+The qualified HCZ lane3896deae8 closes segment8's load boundary and consumes
+the represented14208-row returned-HCZ window, first non-camera7134
+`sidekick_x`,133771 field errors. Those totals cover different scopes from
+the incomplete base and must not be compared as an equal-window error reduction.
+The distinct independent HCZ slice retains4353 spans. The remaining returned
+route, giant-ring exit, auxiliary schemas and later campaign remain open.
+Root composes the source-backed fixes for affected validation; no clean broad
+run or new whole-chain pass is implied by this merge. The public drowning-rule
+addition retains the four-argument constructor and normalized mutable0.7 pin;
+the descriptor remains unpublished candidate0.7.0 with no published baselines.

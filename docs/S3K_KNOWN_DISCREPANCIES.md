@@ -1172,6 +1172,31 @@ records exact commands and scope. Native RGB residuals, strict traces and
 configuration/cold/PAL/PCM limits outside these products remain open.
 
 
+## Retained HCZ replay qualification — 2026-10-17
+
+Worker source `b9c1c8b3d` closes the retained stored-carrier-target/X-lock and
+water-owner extraction with focused/rewind/source evidence, but strict replay
+remains red. Returned HCZ's first reported non-camera physics is7134 `sidekick_x`
+(`0175/0176`), with133771 total errors over a longer window through14207 and no
+owned giant-ring exit. Its summary does not expose the first animation error or
+full span history. These are b9/866 observations; the returned HCZ route has
+not been requalified on the subsequent load-owner fix. That bounded followup
+moves Nemesis submission to the real load and closes first-title-loop preparation;
+its canonical prefix fully closes segment8's four7126 fields and reaches the first
+segment9 row. Independent old-red/green, focused134 and named guards131 pass
+without skips. This is not a full canonical or all-auxiliary qualification.
+
+Pre-fix matched dc338/866 HCZ-slice windows have4699/4353 spans and the same9482
+`air` (1/0) frontier. Exact span/field-row comparison is mixed, with newly
+mismatching CPU respawn counter at10834; historical3738 is not a matched baseline.
+The full slice is not requalified on the new source. The distinct alternate is
+requalified and retains exactly one26179 `rings` span (72/0).
+[Followup evidence](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#bounded-followup-qualification-and-limits).
+The engine pixel oracle fails at GLFW init; native-only 320 Sonic+Tails images
+and passing named guards do not certify missing auxiliary channels, other
+products or downstream campaign. [Exact evidence and limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#final-single-invocation-strict-qualification),
+[frontier log](status/trace-frontier-log.md#2026-10-17--retained-hcz-repair-on-root-stored-targets-and-qualified-limits).
+
 Blue Sphere SAT/plane follow-up (2026-10-17): the private indexed compositor
 resolves the first opaque sprite pixel before Plane A priority, preserves
 native cell/mapping-piece order and the original unsigned `$54` gate, and
@@ -1184,3 +1209,28 @@ focused GPU/resource checks and exact capture protocol](architecture/plans/2026-
 record the bounded result. This repairs the sampled overlap gap without an
 accepted ROM deviation; complete timelines, other native configurations,
 cold/donor/PAL/PCM and strict timing/trace products remain separate obligations.
+
+
+R3 HCZ follow-up (2026-10-17), local worker merge21327d78a with Main460:
+full canonical6/1F/0E/0S reaches returned HCZ11's complete14208-row reference
+window but lacks the giant-ring exit;134710 field errors split115689physics and
+19021animation, first reported non-camera6674 `rings`114/0. Independent full
+HCZ slice2/1F/0E/0S reproduces all4353 spans(3424physics/929animation), first9482
+air and9486 animation, with Poindexter passing. These are completed strict-red
+qualifications, not new product certification. Matched dc3384699/8664353 remains
+mixed,3738 unmatched; alternate760's one26179 ring span is reused, not freshly
+passed. Active-level title-parent/movement-latch causality and the exact GLFW
+oracle remain open; no fitted delay or separate fresh-load fix was substituted.
+[Commands, windows, all groups and causal limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r3-current-composed-strict-qualification--2026-10-17).
+
+
+R4 HCZ retained-title correction (2026-10-17): the real parent survives until
+its higher-slot children stop writing the movement latch. Native reset follows
+last movement→parent clear→stationary parent poll; short whole-world replay twice,
+focused182 and guards131 pass. New canonical chain first reported non-camera
+frontier is7134 sidekick_x0175/0176, closing6674 rings;133771 field errors remain
+over the complete14208-row returned-HCZ window, with its giant-ring exit absent.
+The distinct independent HCZ slice reproduces all4353 spans/first9482air and
+passes Poindexter. No clean route/auxiliary/product/GLFW certification or second
+fix; alternate760 reused, matched4699/4353 mixed,3738 unmatched.
+[Exact native evidence, selectors, windows and limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r4-retained-title-parent-and-child-movement-latch--2026-10-17).

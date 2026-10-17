@@ -5800,6 +5800,15 @@ an empty fresh-SST query alone does not prove completion. [Native graph and
 strict closure](../../../docs/architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-retained-resultstitle-sst-and-real-child-latches--2026-10-14).
 
 
+HCZ's carried reload uses the same `loc_2DD06`/Wait owner: an original-BK2
+instruction observer sees slot15 retain children16/18/19/20, the act child's
+final move still writes$34, the next parent clears it, and only the following
+poll clears rings. Carry the existing NATIVE_WAIT_GATE semantic intact through
+request normalization; clamping it to zero silently selects a countdown. A
+real allocation-hole component test restores/recreates every world key twice.
+[2026-10-17 HCZ observation and bounded closure](../../../docs/architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r4-retained-title-parent-and-child-movement-latch--2026-10-17).
+
+
 ## Same-SST code replacement must detach the obsolete Java handle
 
 Obj_HiddenMonitor loc_83760 changes the current SST to Obj_Monitor without
@@ -5968,3 +5977,22 @@ low-priority far-sphere/overlap behavior as a separate remaining gap. Never
 reshape the reference or fit the asset mapping to hide it. This table is S3K;
 the pointer-alias versus inferred-geometry lesson applies across games.
 Origin: Root Blue Sphere original-RGB mapping comparison,2026-10-17.
+
+
+## HCZ carrier targets and release-owned camera bounds
+
+`loc_6A80C` captures `Camera_X_pos + $A0` once in the carrier word `$3A`;
+`sub_6A916` compares that word on every swing pass. Persist the captured target
+for each native player and rewind it with that carrier. A camera move after
+capture is a useful disconfirming regression for a recomputed target; restore
+and forward-replay the actual manager/player/camera snapshots through release.
+
+`Change_Act2Sizes` stores HCZ2's sizes but explicitly skips applying HCZ's
+current X bounds. P1 release at `loc_6A8AE` creates `Child1_Act2LevelSize`, whose
+children own the later widening. An engine reload that overrides current X
+bounds must also retain the X easing targets until that owner runs; leaving the
+new level's targets active releases the lock early. Keep the real stored act-2
+sizes available to those children. This is an HCZ owner fact; the captured-read
+and current/target-bound distinction is reusable across games.
+Origin: retained HCZ repair `b6c4898e2`, merged with Root at `b9c1c8b3d`,
+2026-10-17; native owners verified in the locked-on disassembly.
