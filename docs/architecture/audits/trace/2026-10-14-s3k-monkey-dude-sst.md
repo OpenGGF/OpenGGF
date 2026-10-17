@@ -5552,183 +5552,65 @@ Main hash/mtime preserved. Final accounting is DOCS ONLY; full cold campaign
 remains blocked, no native/new probe/guards/broad execution.
 
 
-### Root preserves the reviewed native diagnostic source — 2026-10-17
+## Matched cold pool producer R16 to R18 (2026-10-17)
 
-The recurring stock-clock identity/access helper is now maintained in
-TraceChaser local commit4c3d6ba8c93ae0e607cb15e16e367d47f40f36a0, based
-exactly on the existing parent gitlink322851cbfa2e1c1803332142e11ab74b4eb34eea.
-It preserves the f4 prototype body byte-for-byte after its purpose/origin
-header, at bizhawk-headless/src/Core/StockKosLiveClockReader.cs. Only that
-reader, its single production project inclusion, README and byte-identical
-native AGENTS/CLAUDE guidance changed. Guidance documents a dormant diagnostic
-exception with explicitly authenticated instruction PCs and corrects the stale
-instruction to compile production classes again into the referencing test
-assembly. No recorder, CLI, host-interface, canonical fixture, gameplay,
-readiness or kernel integration was added.
+Root directly inspected BOTH ORIGINAL raw-pool journals: exact BASE803 handle70778
+(19:34:52Z) and CURRENTf196 handle81089 (19:42:31Z), each **1/0F0E0S PREFIX ONLY**
+through original48276 after assertions and unchanged45-forward/two-replay windows.
+Full-route finals intentionally unreached; historical current cold-death49613
+remains a completion blocker. Same98d/native01a1496e, original Sonic case/movie/
+session and class2aa3/helperc35c/portablea3d00169, other runtime/test exact each pin.
+[Plan: exact commands, source hashes and task IDs](../../plans/2026-10-13-s3k-playable-completion.md).
+Normal Main-absolute queue/no profile/all3original absoluteROMs/Java25/EGL/nullAL/
+noambient/Lua/fork1/reuse/alphabetical; ONLY output path differs. Queue0s/Maven1m42
+both; BASE case34.454s/class34.732s, CURRENT34.149s/34.423s. Parent elapsed unmeasured.
+Lifecycle BASE4133main/4163test, CURRENT4143/4192; Java25.0.4.1/release25. No repair,
+retry, observer/cap/key/passivity/original assertion failure.
 
-The maintained build.sh compiled both managed projects under the native
-worktree build lease and shared OpenGGF build-activity lease, inherited
-through the compiler. Terminal0 in2.33s; three existing xbuild warnings concern
-unchanged .NET4.8/toolset declarations. Index/history/documentation scanners,
-mirrors, XML/source inclusion, links/fences and diff checks passed. Reader body
-equality was independently checked by Root. Maintained reader source SHA256
-60d014fc3eefe76ef104625676c0122e0eafeb48d6d216f3af05f4e6c847186e;
-managed executable c26f7cd661a679db3d59f32d08cc4231a17962497cc63991d95d322dac8935aa.
-No tests, core opening, frame advance, callback, native-core rebuild or fresh
-maintained-binary bind check occurred. Historical88245 qualifies only its
-previously pinned external prototype; it does not transfer raw-scalar/timing
-acceptance to this maintained executable.
+Each arm:18,603positive activation/verified passivity observations,48,547original
+step-render pairs,6restore markers; explicit original main/forward/replay/restore
+keys and independent BK2 buttons/session cursor/real VInt-LF-OM/loadgen4 validated.
+BASE1315records/1313emitted, CURRENT1312/1310. Previous/current full110ordered pools
+and deltas validated; Java reference numbers excluded across arms. Sparse absence
+carries declared structural state ONLY, not clock metadata. No native/all110-byte/
+within-pass birth certificate. Initial declared state agrees.
 
-Root reviewed the exact five-file native diff, then relocated only that clean,
-owned native worktree into this composition tree's previously empty optional
-submodule directory. Main's existing native e0a2443e checkout and foreign native
-worktrees/refs remain unchanged; no unrelated native commits were adopted.
-The local parent gitlink and agent tool catalogue now reference the preserved
-source. Native and parent integration/push and final owned-resource cleanup
-remain pending with the broader delivery. External one-off runner/compiled
-artifacts are consumed only after their durable facts and source preservation
-are verified; they are not archived as a second maintained tool.
+| First different AFTER input/sample | Owner | Equal again AFTER input/sample |
+| --- | --- | --- |
+|43945/9668|Animal264 slot8,03A0/0550 id28|43956/9690|
+|44245/10268|Animal322 slot5,09F8/05B0 id28|44254/10286|
+|47250/16551|Animal556 slot30,0EA8/0F08 id28|47262/16575|
+|48195/18441|Animal629 slot6,18B0/0CA0 id00|not equal again through48276|
 
-## R24/R25 actual8775 facing writer; native guard still missing — 2026-10-17
+First three spans close before the surviving fourth. At48195 CURRENT actually
+removes629: before→after VInt48125→48126/LF8946→8947/rawOM8947→8948. BASE has no
+emitted clock metadata there; none is invented. Same-source animals629/630/631 enter
+BOTH arms slots6/7/8 after48149/48165/48181; CURRENT removes48195/48198/48199 versus
+BASE48202/48202/48204. Before48201 BASE first allocator-free slots9,30,32… versus
+CURRENT6,7,8,9,30,32…. Same48201 source order/IDs632/633/634 (diagonal198/diagonal201/
+flat204) receiveBASE9/30/32 vsCURRENT6/7/8; same48213spring206/id635 BASE6/CURRENT9.
+Actual free-empty→USED/registered/exec pools establish surviving lifetime/hole/
+admission lineage, not allocator fault/native correctness. First direct common
+recorded camera difference remains48275 AFTER, BASE0A04/CURRENT0A0C.
 
-**The actual engine LEFT→RIGHT caller is observed, with no facing repair.**
-Source-only R24ordinal27 and execution R25ordinal28 are separately registered,
-preserving R23/22/all earlier entries. HEAD is51320c6c0 (R22/R23 docs on Java7df),
-not Root's later documentation composition. Root reads both actual temporary
-files/getter contracts and the original seg11 awaitBoundary path before approving
-one original AD40/fromboot prefix through8776 inclusive. No callback/controller/
-provider, input, timing/hardware observer, solid, sensor, fixture or gameplay
-state is replaced. No native execution or runtime-owner correction occurs.
+Source candidate: registered releaser layout207/idA0/sub04,18B0/0CA0,slot5/id624;
+unchanged EggRoboBadnikInstance.releaseAnimal uses shared generic Animal initializer,
+a gap already documented in its header. Pin044fa46725c71187399e13f5ddb70e11d32dc024
+loc_915F6→ChildObjDat_919E6→loc_917C0/917E2/91800/9181C
+(sonic3k.asm198774..198819) installs table/facing X, bounded random high-word negative
+Y, frame1/routine4or6 before initial Draw_Sprite; generic MAIN/frame2/X0/Y-400 differs.
+Actual cold parent callback/unique parent/mode/velocity/prior render-bit/retirement
+branch were NOT observed. Shared correct R5 render semantics stay; no revert/fit.
+Independent special-launch old-red source is a separately gated unit, not a repair
+or native truth claim from this engine comparison.
 
-### Reviewed two-file source and sole invocation
-
-| Temporary source | SHA256 |
-| --- | --- |
-| AbstractSprite.java | `14e058db692aebb3b4a484f908b9112c6115894cf7c3cf7c349bc869835f05ba` |
-| TestS3kCanonicalHczFacingWriterPrefix.java | `10315b23623e079f937e7b551d4c769f2b2651e82dc8a4371070a4263221068d` |
-
-Combined SHA256 over ordered pathUTF8+NUL+bytes+NUL is
-`764455f36083874d16f0ab6685c8cebd9da996b3736b1094c823805d40b08389`.
-The logger adds60 marked lines before the existing single setDirection assignment
-and private diagnostic helpers; the temporary subclass is224lines. Removing both
-R24_DIAGNOSTIC_BEGIN..END blocks recovers exact7df AbstractSprite SHA256
-`7194d82461a2bd1174d7104290e916de682fb14ba7ec1c56370c03f803e4c0b2`.
-Maintained driver/base/BK2 remain the R22 pins. Inventory finds no alternate live
-setter override: constructors initialize direction directly, and playable rewind
-restore writes it directly. Those paths are not instrumented; absence of a
-setter record would not prove absence of a direct write.
-
-The logging context binds the actual registered P2 object, not a name or assumed
-slot. Only LEFT→RIGHT calls for that exact identity during8774..76 emit a bounded
-16-frame caller stack. Getter projections read raw fractions, canonical status,
-engine object-control booleans, speeds, current PANIC scalars/logical mirrors,
-leader centre and separately named counters. No fabricated native object_control
-byte, NormalStepDiagnostics/PANIC alias, fresh visibility calculation or object
-owner action is used. Output and pure reads are checked against the same known
-primitive projection; this is not a full-world passivity certificate. A shared
-200-record/1MiB cap includes the final partial summary. Diagnostic context/property
-and previous row observer are restored; the original observer and super step each
-forward exactly once. Pre-step is explicitly **not CPU entry**.
-
-The source-approved R21 reporting seam catches only the identical private prefix
-stop after the base's final comparisons/coordinator.afterStep, before original
-abort/cleanup. It reads actual current comparator and loaded immutable TraceData,
-writes via the existing diagnostic-only report owner, and rethrows the same stop.
-Strict all-group zero remains after the original abort/fixture cleanup.
-
-One request, using R18's original absolute variable bindings, from owned3aa:
-
-```sh
-env -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH \
-  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
-  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
-  ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless LUA_BIN=/usr/bin/lua5.4 \
-  python3 "$MAIN_WORKSPACE/tools/testing/maven_queue.py" --normal \
-  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Ptrace-replay \
-  "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" "-Ds3k.rom.path=$S3K_ROM" \
-  '-Dtest=TestS3kCanonicalHczFacingWriterPrefix#originalAd40FacingWriterThrough8776' \
-  -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical test -B
-```
-
-The execution authorization explicitly retains the single EGL JTO token plus
-same-valued CLI property. Original boot/input/bootstrap/lag/profile are unchanged;
-the maintained fullcase selector itself is not edited. No duplicate live job
-exists at submission. **8612** is the only request, terminal1 at
-**19:32:38UTC**, queue0s/displayedMaven01:41min, JUnit **1/1F0E0S**,
-method24.655s/suite24.923s. Compiler prerequisites succeed inside that request;
-no source correction, extra build, observer failure, postboot retry or second
-execution. Both reviewed hashes remain exact before/after terminal.
-
-### Actual caller and separately sampled phases
-
-The actual registered Tails identity is665641137; one rising assignment is logged.
-All targeted P2 centres/fractions remain0E10.BB00/0572.AE00, vx/vy/g0.
-Control below is the logged engine tuple
-(owned,cpuAllowed,movementSuppressed,mapping), not a native raw byte.
-
-| Stamped row / phase | Direction / status | Control tuple | moveLock | cpuCounter / levelLF / objectFrame / objectVblaCounter | Playback cursor / stated next row |
-| --- | --- | --- | --- | --- | --- |
-|8774 PRE_STEP_NOT_CPU_ENTRY|LEFT /0B|false×4|1|8715 /8715 /2581 /71803|71849 /71850|
-|8774 POSTROW_AFTER_FINAL_COMPARISON|LEFT /09|true×4|0|8716 /8716 /2582 /71804|71849 /71850|
-|8775 PRE_STEP_NOT_CPU_ENTRY|LEFT /09|true×4|0|8716 /8716 /2582 /71804|71850 /71851|
-|8775 SETTER_PRE_ASSIGN|LEFT→RIGHT /09 before assignment|true×4|0|8717 /8717 /2582 /71804|71850 /71851|
-|8775 POSTROW_AFTER_FINAL_COMPARISON|RIGHT /0A|false×4|0|8717 /8717 /2583 /71805|71850 /71851|
-|8776 PRE_STEP_NOT_CPU_ENTRY|RIGHT /0A|false×4|0|8717 /8717 /2583 /71805|71851 /71852|
-|8776 POSTROW_AFTER_FINAL_COMPARISON|RIGHT /08|true×4|0|8718 /8718 /2584 /71806|71851 /71852|
-
-The movie values in this table are the diagnostic stamp captured by the original
-row announcement before production, including on later setter/postrow lines;
-no extra postrow cursor read or fitted row offset is inferred. Counter values
-are read at each named phase and are not renamed native VInt or CPU entry.
-
-The bounded stack's direct owner is
-**SidekickCpuController.updatePanic:3424 → update:480 →
-SpriteManager.processPlayableSlots:831 → update:708 →
-GameLoop updateLevelMode callbacks1873/1876 → LevelFrameStep.execute:343**.
-The remaining captured callers are GameLoop.updateLevelMode1870,
-stepInternalBody1451, stepInternal callbacks1174/1164,
-PlcFrameLifecycleCoordinator.runLogicalIteration155,
-TraceSessionLauncher.runProductionIterationIfActive2981,
-GameLoop.stepInternal1180, LevelIterationAdmissionController.runTraceObservedStep285,
-and GameLoop.step823. The stack observes a call, not a substituted controller.
-
-At the actual setter: PANIC/routine8, manual counter0, Ctrl2 signed lockfalse,
-moveLock0, spindashfalse, pinballfalse, dead/hurtfalse, gSpeed0. The current
-held/pressed **diagnostic logical mirrors** are2/2; they are not raw hardware
-input or a newly sampled CPU-entry word. Leader centre is0E75/0411 at this call.
-Cached visibility validtrue/onScreenfalse is read, not recalculated. The existing
-PANIC facing choice RIGHT for its actual P2X<P1X inputs is source-consistent.
-The engine's previous moveLock1→0 is observed across8774, but **its writer/caller/
-movement dispatch is not recorded**. R23's native AUX still lacks the actual
-native move_lock/spin/lock guards at CPU entry. No positive native move_lock
-value, earlier timer producer, shared grounding fault, column fault, CPU formula
-repair or native execution path is proved by this witness.
-
-### Actual partial report and stopping limit
-
-All8 targeted records (5367UTF8bytes), JUnit XML/text and every available JSON
-array/group are inspected. Only the final original strict-zero assertion fails:
-**compared8777/reference14208, completefalse,207=12physics+195animation**,
-bootstrap0/warnings0/lag59, firstNonCamera8775 sidekick_status_byte000B/000A.
-No skip or suppressed diagnostic failure. Seg11 JSON
-`s3k-sonic-tails-complete-emeralds_seg11-segment-11-6603d91c777bb604.json`
-has SHA256 `03052a152bac3b0478f4cefa09ded728bf5e9c9e01fe53d5413ab3eb8011cdba`.
-Its entire available recent5 array is ERROR/repeatCount1 each:8775status000B/000A,
-6948camera_y07C7/07C9,6947camera_y07C2/07C4,6792camera_y0678/067E,
-6791camera_y0670/0678. This is not an exhaustive error vector. Do not manufacture
-additional comparator errors from postrow samples or fit their phase to a count.
-R21's206/8721 and R22's11118/14208 remain different measured windows.
-
-Earlier six0/2/4/6/8/9 gameplay reports complete2290/4023/8235/4103/7175/3574
-rows, all groups/warnings/bootstrap0, lag0/11/14/16/62/55. The11-gap report has
-0failures; no returned-HCZ exit or onward ownership is reached by this prefix.
-R22's actual exit and independent seg13ownership88306 stay historical/separate.
-No general green, native-gate qualification or owner repair follows.
-
-Stop after these facts. No extra query/run/selector/native/media/fix. Production
-source is restored byte-exact, the temporary test source and both instrumented
-class files are removed (no unrequested recompile; the next normal build must
-recreate those classes), and18 inspected owned diagnostic files are consumed under
-metadata_slot alone. Actual XML confirms Java25.0.4.1/surfaceless-EGL/all3absolute
-ROM properties and0skips. All refs/native4fdf/private config remain. Existing docs
-only are committed locally under normal hooks; Root owns any next causal scope.
+Original BASE4924861B SHA256bd1e48195a97a303a2565b1396f5c43020768fde79ab068f4b02d95d14b8447f
+and CURRENT4917574B SHA25626b224709a4c4883efeeef952aad462b85213d574cdef88321d983a765bb4a7a
+were directly inspected read-only0444; their exact9842435B are consumed metadata_slot
+ALONE after durable facts, no copy/archive/receipt. Reports already consumed separately
+(BASE171736B,CURRENT171741B). Maintained class restored9616921c; instrumented outer/
+helper/Picture classes removed. Original helper sourcec35c remains owned/untracked at
+its original path pending Root preservation choice: proposed opt-in test-side protocol
+plus existing workflow README entry, no runtime API/refactor/copied driver; no
+promotion/deletion in this docs commit. Target has no maintained rebuilt outer
+ColdCampaign class. No further campaign/native/media/guards/test/runtime edit.
