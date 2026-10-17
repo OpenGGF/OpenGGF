@@ -473,7 +473,7 @@ public record GameRules(
                     false,
                     true,
                     false,
-                    false,
+                    true, // animalObjectUsesRenderFlagDeleteBounds: Obj_Animal loc_2C9E0/2CA68/2CAD0
                     true,
                     true,
                     true,

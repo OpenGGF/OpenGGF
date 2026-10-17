@@ -16,8 +16,14 @@ two-special-stage prefix after replacing the physical control and preserving
 literal waits/global music allocation. The distinct alternate now has11 ring
 errors, first13740 rings1/2: ten newly exposed spans remain unattributed, plus
 the trailing26179 ring difference. **Alternate UNQUALIFIED; integration blocked.**
-Native four-debris occupancy, absent ring-position/writer evidence and full aux
-coverage remain explicit gaps; Root owns the next ring-owner unit. Allocation exhaustion,
+The [R5 animal lifetime unit](../architecture/validation/levels/s3k-aiz2.md#r5-low-sst-journal-and-animal-lifetime-owner--2026-10-17)
+repairs a proved previous-render-flag lifetime, including zero render height,
+with73 focused cases and the three maintained controls green. The corrected
+alternate still has the same11 errors; Root's matched803 exact case has only
+one26179 error, so all ten early spans are confirmed new and remain blockers.
+R5 does not certify post-fix ring/SST ownership or nonzero/ending/capsule animals.
+Native four-debris occupancy, remaining ring ownership and full aux coverage
+remain explicit gaps; Root owns the next ring-owner unit. Allocation exhaustion,
 full native SST comparison, missing advertised auxiliary observations,
 viewport/donor/roster breadth and the full continuous chain remain open. These
 bounded results do not certify a complete act.

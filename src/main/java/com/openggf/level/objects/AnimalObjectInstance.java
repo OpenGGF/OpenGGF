@@ -21,7 +21,7 @@ public class AnimalObjectInstance extends AbstractObjectInstance
     private static final int ANIM_TIMER_INIT = 7;
     private static final int FRAMES_PER_MAPPING = 3;
     private static final int ART_VARIANT_COUNT = 2;
-    private static final int S2_RENDER_HALF_WIDTH = 8;
+    private static final int RENDER_HALF_WIDTH = 8;
     private static final int APPROX_RENDER_HALF_HEIGHT = 32;
 
     private enum State {
@@ -160,6 +160,13 @@ public class AnimalObjectInstance extends AbstractObjectInstance
     }
 
     private void updateMain() {
+        // S3K loc_2C9E0 polls the preceding Render_Sprites bit before MoveSprite;
+        // walk/fly loc_2CA68/loc_2CAD0 poll after their routine work instead
+        // (skdisasm044fa467:61139-61217). The init draw still returns above.
+        if (usesRenderFlagDeleteBounds() && usesScreenYWrapRenderBounds() && !romRenderOnScreen) {
+            setDestroyed(true);
+            return;
+        }
         objectMoveAndFall();
         if (yVelocity >= 0 && checkFloorCollision()) {
             xVelocity = groundXVelocity;
@@ -258,6 +265,13 @@ public class AnimalObjectInstance extends AbstractObjectInstance
         return rules != null && rules.animalObjectUsesRenderFlagDeleteBounds();
     }
 
+    private boolean usesScreenYWrapRenderBounds() {
+        ObjectServices ctx = tryServices();
+        GameModule module = ctx != null ? ctx.gameModule() : null;
+        GameRules rules = module != null ? module.getRules() : null;
+        return rules != null && rules.camera().useScreenYWrapValueForVisibility();
+    }
+
     private ObjectInteractionRules animalObjectInteractionRules() {
         ObjectServices ctx = tryServices();
         GameModule module = ctx != null ? ctx.gameModule() : null;
@@ -315,7 +329,7 @@ public class AnimalObjectInstance extends AbstractObjectInstance
 
     @Override
     public int getOnScreenHalfWidth() {
-        return S2_RENDER_HALF_WIDTH;
+        return RENDER_HALF_WIDTH;
     }
 
     @Override
@@ -325,6 +339,19 @@ public class AnimalObjectInstance extends AbstractObjectInstance
         }
         // BuildSprites updates render_flags.on_screen after Obj28 has displayed.
         Camera camera = services().camera();
+        if (usesScreenYWrapRenderBounds()) {
+            // Obj_Animal sets width_pixels=8 and y_radius=$C but leaves
+            // height_pixels=0. Render_Sprites reads that zero height, copied
+            // camera words and Screen_Y_wrap_value, not the collision radius
+            // or S2's approximate 32px Y band (044fa467:61087-61110,
+            // 36376-36417). Keep this captured flag until the next render.
+            int relativeX = (short) (currentX - camera.getXCopy());
+            int relativeY = (currentY - camera.getYCopy()) & camera.screenYWrapValue();
+            romRenderOnScreen = (short) (relativeX + RENDER_HALF_WIDTH) >= 0
+                    && (short) (relativeX - RENDER_HALF_WIDTH) < viewportWidth()
+                    && relativeY < viewportHeight();
+            return;
+        }
         int cameraX = camera.getX();
         int cameraY = camera.getY();
         romRenderOnScreen = currentX >= cameraX - getOnScreenHalfWidth()

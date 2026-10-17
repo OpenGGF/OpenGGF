@@ -113402,3 +113402,36 @@ ends1/0F/1E/0S at missing cold block224 before lookup assertions. No qualified
 old-red, retry, fix or trace count/frontier advance. Root receives internal
 addressing plus cross-load residency/rewind design before implementation.
 [Exact command, provenance and stopping boundary](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r9-native-word-layout-byte-provenance-and-resident-table-boundary--2026-10-17).
+
+
+### 2026-10-17 — R5 freed-animal previous-render lifetime; alternate frontier unchanged
+
+Own t3-98d036a9, parent e207faf7d (separate R4 evidence), runtime AizMiniboss1878
+unchanged plus Animal73f1c45485ca81a7ef055d58c0e26abda1664089456eba4f4f4829dff734b5ed /
+GameRules7b694eba04238262861a76cc6977f85eb93a8709f30464c1eb891fe4fecaeb1c.
+One original passive prefix84110 ending12019 pins animal5 native deletion9375
+versus engine9418 and the earlier hole/admission permutation. Correct only that
+native owner: prior Render_Sprites bit7, width8/height0, copied camera/wrappedY;
+MAIN pre-motion versus walk/fly post-work. No physics/RNG/points/allocator change.
+
+Normal current Main absolute queue/all-three-original-ROM/EGL/nullAL/no-ambient,
+JTOsingle surfaceless flag, singlefork/reuse/alphabetical. Commands/selectors:
+15578 `-Dtest=TestS3kFreedAnimalRenderLifetime` old-red2/2F0E0S,12:55:08UTC;
+27140 newanimal/S2/RNG/destruction/rewind/S3K4 exact focused selection73/0F0E0S,
+12:57:40UTC.39799 `-Ptrace-segments -Dtest=TestS3kAizZoneSliceTraceReplay#replayMatchesTrace`
+1/1F0E0S,12:59:18UTC,Maven36.231s/no wait,26041rows,11rings errors/zero
+animation/warnings/bootstrap,first13740rings1/2. All eleven field/span/values
+match R3; the owner fix alone does not close that frontier. Root's published803
+78232 used exact alternate with trace-replay (same fork/runtime properties,
+different suite selection), retaining only26179rings72/0. Ten early spans are
+therefore NEWvs803 and remain integration blockers, not inherited waivers.
+
+6148 `-Ptrace-replay -Dtest=TestS3kAizTraceReplay#normalBridgeStandingSstMatchesOriginalFullrun+replayMatchesTrace,TestS3kSonicTailsCompleteEmeraldRunPrefix#twoSpecialStageReturnsThroughThirdEntry`
+3/0F0E0S,13:01:20UTC,Maven1m01/no wait: original20463rows/zeroerrors,warnings,
+bootstrap;exact9510..13actualSST12/all20assertions;prefix0/2/4complete/zeroerrors.
+Original seven/alternate eight advertised aux families remain absent. No further
+ancestor/native/media/alternate/wholechain/broad checks or new owner edits.
+[Full command template, source/recreation evidence and limits](../architecture/validation/levels/s3k-aiz2.md#r5-low-sst-journal-and-animal-lifetime-owner--2026-10-17).
+Independent source review no material finding; consumed diagnostics/no archives;
+local owner correction only. Root owns composition, remaining ring causality and
+combined smoke/source-authority guards; Main803 unchanged, no publication clearance.

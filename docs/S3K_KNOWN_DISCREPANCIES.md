@@ -1234,3 +1234,23 @@ The distinct independent HCZ slice reproduces all4353 spans/first9482air and
 passes Poindexter. No clean route/auxiliary/product/GLFW certification or second
 fix; alternate760 reused, matched4699/4353 mixed,3738 unmatched.
 [Exact native evidence, selectors, windows and limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r4-retained-title-parent-and-child-movement-latch--2026-10-17).
+
+
+### AIZ animal lifetime correction and remaining new alternate rings (2026-10-17 R5)
+
+The ordinary subtype0 freed-animal owner now uses the preceding Render_Sprites
+bit7, with MAIN polling before motion and walk/flight after routine work. Its
+render width8/height0 and copied-camera word-mask bounds remain separate from
+collision y_radiusC and S2's approximate Y bounds. Independent natural flight,
+hole reuse, edge/wrap and twice-recreated whole-world replay checks pass, as do
+73 affected cases, original AIZ, all20 exact standing assertions and the two-SS
+prefix. S1/S2 behavior, animal physics/RNG/points and allocators are unchanged.
+
+This useful owner correction does **not** resolve the alternate ring blocker:
+39799 retains R3's11 ring entries, first13740rings1/2; a matched published803
+control78232 has only trailing26179rings72/0. The ten early spans are new and
+cannot be waived as inherited. The same animal correction alone is disproved
+as their complete explanation. Post-fix ring/SST causality, nonzero-subtype and
+ending/capsule animals, four native68E98 debris, fullaux/configuration/BK2/cold/
+viewport/roster/fullchain coverage remain open. Local result, no Main delivery.
+[Exact commands, profile qualification, evidence and limits](architecture/validation/levels/s3k-aiz2.md#r5-low-sst-journal-and-animal-lifetime-owner--2026-10-17).
