@@ -500,3 +500,66 @@ older, current and newer reported revisions. Blocking worktree names containing
 HTML-like text rendered literally. Desktop 1280px and narrow 390px layouts had no
 page overflow; the narrow table retained its own horizontal scroll. The live view
 was restored after fixture inspection. No scheduler state was modified by the view.
+
+## Maven preflight activity follow-up (2026-10-17)
+
+At base `0197c5a5`, `category_control.preflight` invoked `mvn -v` without the
+build-activity lease. The S3K owner reported a completed guard run releasing
+admission at 05:14:14Z, followed by a local preflight ending at 05:14:16.391Z.
+The runtime owner observed Java PID 1572731 in that worktree during its exclusive
+interval 05:14:14.263907–05:14:16.7068095Z. No PID argv was retained, so attribution
+to this preflight is inferential. The source-level omission is independently
+confirmed; the timing report alone does not prove overlap or measurement acceptance.
+
+The Maven version probe now acquires shared build activity before launching its
+JVM, passes the lease descriptor to the child, and releases it before guard-tool
+checks and test admission. Waiting for a measurement is outside the existing
+20-second subprocess timeout. No test queue request or target ownership is needed
+for a version query. Wrapping the whole category invocation in activity was
+rejected because it could wait for test admission while holding the build lease;
+an additional outer lease around fixed preflight can also deadlock behind an
+exclusive intent holder. Existing callers must remove that temporary workaround
+when adopting this fix. Tooling revision 2 is an advisory marker for the change.
+
+A private-repository process regression fails before the fix and passes after it:
+preflight waits behind exclusive activity, Maven inherits the descriptor, and
+the lease is released on completion. Focused checks also cover release on a
+missing executable, timeout and nonzero exit before checking remaining tools.
+
+The first safety run exposed another missed entry point: its two real JDK memory
+controls called `javac` and Java directly. The runtime owner's S3K demanding audit
+rejected PID 1597816 in this task worktree during 05:18:13.197–05:18:42.440Z.
+The safety run finished with 252 checks passing in 33.818s; that pass did not make
+the concurrent measurement valid. PID absence was observed at 05:19:10.479161Z,
+with no remaining Java/javac/unittest process in the tree at 05:19:36.435804Z.
+Neither an exact child exit time nor a lease-release time is available for the
+unleased compiler. The runtime owner excluded the whole incomplete unit and
+retained its prior 25 qualified units.
+
+Both controls now compile under intended-tree ownership plus shared activity,
+then release those leases before normal queue admission for the Java probe.
+Compiler and Java children inherit their respective descriptors. Compilation
+has a 40-second timeout; queue/activity waiting is outside subprocess timeouts.
+No scheduler budget, priority, selection or benchmark acceptance rule changed.
+
+Validation on base `0197c5a5` plus the fix:
+
+- `PYTHONPATH=tools/testing python3 -m unittest -v test_run_category_control
+  test_run_category_activity`: 15 passed in 2.366s, including the regression that
+  failed with the old preflight implementation.
+- `python3 -m unittest discover -s tools/testing -p 'test_run_categor*.py'`:
+  252 passed in 33.818s before repairing the two JDK controls identified above.
+- After that repair, `PYTHONPATH=tools/testing python3 -m unittest -v
+  test_run_category_memory_profile test_run_category_ordinary_memory`: all 12
+  affected checks passed in 1.381s, including both real Java controls under normal
+  shared admission. Unchanged safety checks were not repeated.
+- `LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base
+  0197c5a5abaa082acea798c6b2b96637c12c0f23 --rom-directory
+  <main-checkout> --preflight`: passed Java 25, Lua 5.4 and
+  PowerShell, after briefly waiting for an isolated measurement; no engine tests.
+
+Opus 5.5 review was requested but returned a Claude API rate-limit error before
+reviewing. No Opus approval is claimed. Local review checked lease ordering,
+descriptor propagation, timeout boundaries and non-POSIX fallback. The scope is
+Python tooling/tests and prose; no POM, engine, selection-policy, workflow or hook
+change requires broad engine coverage.

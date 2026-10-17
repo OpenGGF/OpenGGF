@@ -10,6 +10,10 @@ import unittest
 from unittest.mock import patch
 
 import profile_test_memory as profile
+from maven_activity import build_activity_slot
+from maven_queue import inherited_slot, maven_slot, worktree_build_slot
+
+REPOSITORY = Path(__file__).resolve().parents[2]
 
 
 class MemoryProfileTests(unittest.TestCase):
@@ -123,13 +127,19 @@ public class MemoryFixture {
     @Disabled("control skip") @Test void skipped() {}
 }
 ''')
-            compiled = subprocess.run(['javac', '--release', '25', '-cp', str(jar), '-d', str(root),
-                                       str(source), str(fixture)], text=True, capture_output=True)
+            with worktree_build_slot(REPOSITORY) as tree_fd, build_activity_slot(REPOSITORY) as activity_fds:
+                compiled = subprocess.run(['javac', '--release', '25', '-cp', str(jar), '-d', str(root),
+                                           str(source), str(fixture)], text=True, capture_output=True,
+                                          cwd=REPOSITORY, timeout=40,
+                                          **inherited_slot(tree_fd, activity_fds))
             self.assertEqual(0, compiled.returncode, compiled.stderr)
             output = root / 'events.jsonl'
-            ran = subprocess.run(['java', '-Xmx128m', '-cp', str(root) + ':' + str(jar),
-                                  'com.openggf.tools.MemoryProfileLauncher', str(output), 'test', '3', '50',
-                                  'MemoryFixture'], text=True, capture_output=True, timeout=40)
+            # Compilation releases activity before the probe waits for execution.
+            with maven_slot(REPOSITORY, estimate=30, kind='python-jdk-control') as fd:
+                ran = subprocess.run(['java', '-Xmx128m', '-cp', str(root) + ':' + str(jar),
+                                      'com.openggf.tools.MemoryProfileLauncher', str(output), 'test', '3', '50',
+                                      'MemoryFixture'], text=True, capture_output=True, timeout=40,
+                                     cwd=REPOSITORY, **inherited_slot(fd))
             self.assertEqual(0, ran.returncode, ran.stdout + ran.stderr)
             events = [json.loads(line) for line in output.read_text().splitlines()]
             result = profile.analyse(events)

@@ -1,6 +1,6 @@
 """Check prerequisites, invocation timeouts and unrestricted retries without Maven."""
 import io
-from contextlib import nullcontext
+from contextlib import contextmanager, nullcontext
 import json
 from pathlib import Path
 import subprocess
@@ -13,6 +13,12 @@ import run_categories as runner
 
 
 class ControlTests(unittest.TestCase):
+    def setUp(self):
+        # These tests replace every subprocess, including Git's lease lookup.
+        activity = patch.object(control, 'build_activity_slot', return_value=nullcontext(()))
+        activity.start()
+        self.addCleanup(activity.stop)
+
     def plan(self):
         return dict(full=True, tests=['Example.java'], guards=True,
                     working_tree_fingerprint='state', categories=['common'], inventory_count=1)
@@ -41,6 +47,38 @@ class ControlTests(unittest.TestCase):
         with patch.object(control.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, 'Java version: 25')) as process:
             control.preflight(Path('.'), dict(guards=False))
         self.assertEqual(1, process.call_count)
+
+    def test_maven_probe_releases_activity_before_guard_probes_even_on_failure(self):
+        for failure in (FileNotFoundError('missing'), subprocess.TimeoutExpired(['mvn', '-v'], 20),
+                        subprocess.CompletedProcess([], 1, 'failed'),
+                        subprocess.CompletedProcess([], 0, 'Java version: 25')):
+            events = []
+
+            @contextmanager
+            def activity(root):
+                events.append('activity acquired')
+                try:
+                    yield ()
+                finally:
+                    events.append('activity released')
+
+            def probe(command, **kwargs):
+                if command == ['mvn', '-v']:
+                    self.assertEqual(['activity acquired'], events)
+                    if isinstance(failure, Exception):
+                        raise failure
+                    return failure
+                self.assertEqual(['activity acquired', 'activity released'], events)
+                return subprocess.CompletedProcess([], 0, 'Lua 5.4')
+
+            with self.subTest(result=failure), patch.object(control, 'build_activity_slot', activity), \
+                    patch.object(control.subprocess, 'run', side_effect=probe):
+                if isinstance(failure, Exception) or failure.returncode:
+                    with self.assertRaises(ValueError):
+                        control.preflight(Path('.'), self.plan())
+                else:
+                    control.preflight(Path('.'), self.plan())
+            self.assertEqual(['activity acquired', 'activity released'], events)
 
     def test_cli_prerequisite_failure_never_calls_runner(self):
         with patch.object(runner, 'worktree_build_slot', return_value=nullcontext(None)), patch.object(runner, 'preflight', side_effect=ValueError('missing tool')), patch.object(runner, 'run_plan') as run, patch('sys.stdout', new_callable=io.StringIO), patch('sys.stderr', new_callable=io.StringIO):
