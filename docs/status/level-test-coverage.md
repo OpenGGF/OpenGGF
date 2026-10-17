@@ -365,7 +365,7 @@ matrices; never collapse skipped or unrun into pass.
 | S3K | `S3K_CARNIVAL_NIGHT_2` | [Act 2 matrix](../architecture/validation/levels/s3k-cnz-act2.md) — bounded normal-entry/restart and object-graph floor qualified (1120 finite restart products across eight acts, `d13585237`; its normal-entry replay held Down, not Right, until the 2026-10-17 input correction); the act is not certified. Route, interaction, lifecycle and native presentation breadth remain open |
 | S3K | `S3K_FLYING_BATTERY_1` | [Act 1 coverage matrix](../architecture/validation/levels/s3k-fbz-act1.md) — partial; execution/route/visual gaps remain |
 | S3K | `S3K_FLYING_BATTERY_2` | [Act 2 coverage matrix](../architecture/validation/levels/s3k-fbz-act2.md) — native Sonic/Tails/Knuckles and donor completion routes pass; broader rewind/visual certification remains partial |
-| S3K | `S3K_ICECAP_1` | [Act 1 matrix](../architecture/validation/levels/s3k-icz-act1.md) — bounded normal-entry/restart and object-graph floor qualified (1120 finite restart products across eight acts, `d13585237`; its normal-entry replay held Down, not Right, until the 2026-10-17 input correction); the act is not certified. Route, interaction, lifecycle and native presentation breadth remain open |
+| S3K | `S3K_ICECAP_1` | [Act 1 matrix](../architecture/validation/levels/s3k-icz-act1.md) — bounded normal-entry/restart and object-graph floor qualified (1120 finite restart products across eight acts, `d13585237`; its normal-entry replay held Down, not Right, until the 2026-10-17 input correction); three bounded native320 solo Sonic physical-post1 authoring candidates (2026-10-17) reached post contact and natural ring-loss hits but all ended alive (final repeated-return endpoint frame 4594, zero rings), so natural death/respawn/rewind remains open; the act is not certified. Route, interaction, lifecycle and native presentation breadth remain open |
 | S3K | `S3K_ICECAP_2` | [Act 2 matrix](../architecture/validation/levels/s3k-icz-act2.md) — bounded normal-entry/restart and object-graph floor qualified (1120 finite restart products across eight acts, `d13585237`; its normal-entry replay held Down, not Right, until the 2026-10-17 input correction); the act is not certified. Route, interaction, lifecycle and native presentation breadth remain open |
 | S3K | `S3K_LAUNCH_BASE_1` | [Act 1 matrix](../architecture/validation/levels/s3k-lbz-act1.md) — partial; cold traversal and viewport/donor/team, lifecycle and native presentation breadth remain open |
 | S3K | `S3K_LAUNCH_BASE_2` | [Act 2 matrix](../architecture/validation/levels/s3k-lbz-act2.md) — actual placed Knuckles CD entry and positioned CA→CC→released MHZ are qualified; cold traversal and donor/team, lifecycle and native presentation breadth remain open |
@@ -1257,3 +1257,16 @@ the alternate's single26179 ring failure. Matched pre-fix dc338/866 slice spans
 are mixed at the same9482 frontier; historical3738 remains unmatched. New-source
 full HCZ/full canonical, the exact GLFW oracle and other products/cold routes
 retain their matrix gaps; Root owns combined validation.
+
+Blue Sphere SAT/plane follow-up (2026-10-17): the private indexed compositor
+resolves the first opaque sprite pixel before Plane A priority, preserves
+native cell/mapping-piece order and the original unsigned `$54` gate, and
+keeps players/HUD sprites before the grid and shadows after it. The fresh
+maintained v11 capture has zero raw RGB differences at all 12 original-native
+stage reveal checkpoints (+0..22 by 2), replacing the prior 19..46 residuals;
+all 17 results samples remain exact. Its entire state.csv and ledger.csv are
+byte-identical to v10, including LRZ2 return frame 2423. The [implementation,
+focused GPU/resource checks and exact capture protocol](../architecture/plans/2026-10-13-s3k-playable-completion.md#blue-sphere-sat-ownership-and-plane-a-composition--2026-10-17)
+record the bounded result. This repairs the sampled overlap gap without an
+accepted ROM deviation; complete timelines, other native configurations,
+cold/donor/PAL/PCM and strict timing/trace products remain separate obligations.

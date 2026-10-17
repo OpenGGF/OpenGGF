@@ -1,8 +1,6 @@
 package com.openggf.graphics;
 
 import com.openggf.game.rewind.RewindSnapshottable;
-import com.openggf.game.rules.PaletteWhiteFadeModel;
-import com.openggf.game.session.SessionManager;
 
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL14.*;
@@ -108,6 +106,9 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
     private ShaderProgram fadeShader;
     // Renderer service binding; not logical rewind state. Only the world-managed fade owns CRAM.
     private GraphicsManager paletteGraphics;
+    // Immutable host semantics injected by the gameplay composition root, not rewind state.
+    private boolean paletteWhiteFade;
+    private int fromWhiteVintsPerStep = 1;
     private final QuadRenderer quadRenderer = new QuadRenderer();
 
     // Cached uniform location
@@ -121,21 +122,27 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
         syncWhitePalettePresentation();
     }
 
-    private PaletteWhiteFadeModel whiteFadeModel() {
-        var world = SessionManager.getCurrentWorldSession();
-        return paletteGraphics == null || world == null || world.getGameModule() == null
-                ? PaletteWhiteFadeModel.SCREEN_OVERLAY
-                : world.getGameModule().getRules().paletteWhiteFade();
+    void bindWhiteFadePresentation(boolean paletteWhiteFade, int fromWhiteVintsPerStep) {
+        if (fromWhiteVintsPerStep < 1) {
+            throw new IllegalArgumentException("FromWhite period must be positive");
+        }
+        this.paletteWhiteFade = paletteWhiteFade;
+        this.fromWhiteVintsPerStep = fromWhiteVintsPerStep;
+        syncWhitePalettePresentation();
+    }
+
+    private boolean usesPaletteWhiteFade() {
+        return paletteGraphics != null && paletteWhiteFade;
     }
 
     private void syncWhitePalettePresentation() {
         if (paletteGraphics == null) return;
         var mode = PaletteFadePresentation.Mode.NONE;
         int steps = 0;
-        if (whiteFadeModel() == PaletteWhiteFadeModel.ROM_PALETTE && fadeType == FadeType.WHITE) {
+        if (usesPaletteWhiteFade() && fadeType == FadeType.WHITE) {
             if (state == FadeState.FADING_FROM_WHITE) {
                 mode = PaletteFadePresentation.Mode.FROM_WHITE;
-                int period = whiteFadeModel().fromWhiteVintsPerStep();
+                int period = fromWhiteVintsPerStep;
                 steps = (frameCount + period - 1) / period;
             } else if (state == FadeState.FADING_TO_WHITE || state == FadeState.HOLD_WHITE
                     || state == FadeState.NONE && fadeR == 1f && fadeG == 1f && fadeB == 1f) {
@@ -468,8 +475,8 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
 
         // Pal_FromWhite is not the reverse of Pal_ToWhite: it lowers all
         // components together every third V-int (the delay was cleared by Pal_FillWhite).
-        if (whiteFadeModel() == PaletteWhiteFadeModel.ROM_PALETTE) {
-            int period = whiteFadeModel().fromWhiteVintsPerStep();
+        if (usesPaletteWhiteFade()) {
+            int period = fromWhiteVintsPerStep;
             int passes = Math.min(7, (frameCount + period - 1) / period);
             fadeR = fadeG = fadeB = (7 - passes) / 7f;
         } else if (frameCount <= FRAMES_PER_CHANNEL) {
@@ -485,7 +492,7 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
 
         // Pal_FadeFromWhite still waits its 22nd V-int after all target colours
         // have arrived; returning on colour step 21 advances the caller early.
-        int duration = whiteFadeModel() == PaletteWhiteFadeModel.ROM_PALETTE
+        int duration = usesPaletteWhiteFade()
                 ? PaletteFadePresentation.ROM_FADE_FRAMES : FADE_DURATION;
         if (frameCount >= duration) {
             // Ensure we're at zero (no overlay)
@@ -626,7 +633,7 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
      */
     public void render() {
         if (state == FadeState.NONE || fadeType == FadeType.WHITE
-                && whiteFadeModel() == PaletteWhiteFadeModel.ROM_PALETTE) {
+                && usesPaletteWhiteFade()) {
             return; // CRAM colours already include the fade; an overlay would apply it twice.
         }
         quadRenderer.init();

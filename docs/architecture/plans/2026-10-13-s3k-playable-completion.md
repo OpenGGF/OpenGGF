@@ -2648,3 +2648,771 @@ push or retained-tree cleanup; Root owns follow-up and delivery validation.
 Same worker after866e68501 establishes an independent short old-red4/3F, then moves Nemesis submission to Level's load frame and closes GameLoop's first title-loop preparation tail. Obj_TitleCardInit retains the four archive submissions; no public API, new snapshot fields, readiness authority, fitted clock or budget changes. New source digest8b1e770e6904e76fec9822267e2fc75ad994a8c1068c86d3bdeb7901c5920232: focused134 and named guards131 pass without skips; actual native captures corroborate queued/unprepared ->56 ->50 and destination publication. The canonical prefix through the first segment9 row passes and fully closes segment8's four7126 fields; the distinct alternate remains strict-red solely26179 `rings`72/0. Returned HCZ11/full canonical/full slice are not requalified on this source.
 
 Matched pre-fix dc338 versus866 slice coverage is now recorded: same window,4699 versus4353 spans,1132 exact common, mixed removals/additions; newly mismatching field/row10834 CPU respawn counter. Historical3738 is not a matched baseline. Other matrix/auxiliary/cold products, missing returned-HCZ exit and exact GLFW oracle remain open. [Evidence and stopping boundary](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#bounded-followup-qualification-and-limits). Root owns combination with its later source; no Main edit/push, broad run or child. Existing task ownership expiry refreshed24h, no new taskId returned, all worker requests terminal. Preserve local branch and the existing TraceChaser checkout mismatch for Root review.
+
+### Blue Sphere SAT ownership and Plane A composition — 2026-10-17
+
+Implementation checkout `feature/ai-s3k-sprite-priority` at
+`${TASK_WORKTREE}` starts from Main
+`707b3c2082433c4833da93fbf855a0a748dd58b1` and merges the qualified composed
+prerequisite `2056a99cd4011dff1b725f401a905f8baa7ff779` as `9311b333e` under
+its own build-slot lease. This is local qualification, not Main publication.
+
+Native `Draw_SSSprites` (`loc_99CC` / `loc_9A84`) emits direct grid traversal;
+`Draw_SSSprite_Normal` emits mapping pieces forward and adds the adjusted
+base art word with 16-bit wrap. The unsigned ORIGINAL perspective word at
+`$54` or above clears the base priority bit (`loc_9A04` / `loc_9ABC`).
+Published native stage+160 entries 25/26 (high) precede 29/30 (low) over the
+same horizon pixels. Neither Y sorting, an all-low/all-high split, nor reverse
+painting with per-sprite plane clipping reproduces that ownership. The prior
+call-order test admitted a wrong pixel winner and remains a geometry check;
+actual framebuffer regressions now exercise the ownership consequence.
+
+A package-private special-stage layer samples the immutable indexed bytes of
+its own ROM-backed uploaded patterns, claims the first opaque sprite pixel,
+and only then masks a winning low pixel behind an opaque high Plane A pixel.
+Masked fragments stay in the existing private special-stage atlas range;
+unchanged fragments reuse their original pattern, changed masks reuse slots,
+and uploads are batched. Loaded art is checked against the reserved mask
+range. The helper tracks atlas generation and rebuilds masks on replacement.
+No public API or normalized signature pin changes, shared SAT replay changes,
+new framebuffer, stencil, comparison-data input, or fixture-dependent gate is
+introduced. Rendering preserves an already-bound capture framebuffer.
+
+Resource inspection: the helper owns two fixed 320×224 boolean maps, one
+64-index scratch pattern and one descriptor. Its mask list grows only to its
+high-water mark inside the fixed 8,192-ID reservation; unchanged masks retain
+the same Pattern and atlas entry, and changed masks overwrite the same IDs.
+There is no per-frame range registration or helper-owned GL texture/FBO.
+Stage reset uncaches owned slots; the shared atlas may retain a bounded CPU
+sample for those IDs until its normal cleanup. Atlas disposal deletes its
+page textures; a replacement atlas invalidates retained mask contents. Two
+small command-scope objects per GPU render preserve delayed shader state;
+this is bounded allocation, not a claim of an allocation-free whole renderer.
+Changed mask uploads use the atlas's existing immutable CPU pattern-version
+records. The pre-existing player DPLC temporary arrays remain unchanged.
+No separate performance benchmark was requested or run.
+
+Plane A number cells join the plane mask; icons/banner, appendages, sidekick
+body and main body retain their native priority buckets before grid traversal.
+Shadows follow the grid in SAT ownership and cannot darken an earlier sprite
+or shine through an earlier low sprite hidden by a high plane. The local
+shader scope restores both submission and delayed-execution flags.
+
+All commands ran from this checkout at `9311b333e` plus this commit's local
+implementation/test changes, with Java 25.0.4.1. Main's absolute queue wrapper
+was used throughout; no foreign target tree, ambient display, nested queue,
+policy override, or native agent child was used. Root owns delivery-wide
+validation; this lane ran focused checks only, never a broad smoke or full suite.
+
+Focused renderer/ROM/GPU selection (finished 08:15:51 UTC): **51 tests, 0
+failures, 0 errors, 0 skips**. Maven execution was 1:10; queue wait was 281 s.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null \
+  python3 ${OPENGGF_MAIN}/tools/testing/maven_queue.py \
+  --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  -Ds3k.rom.path=${OPENGGF_ROM_DIRECTORY}/s3k.gen \
+  -Dtest=TestS3kSpecialStageSpritePixels,TestSonic3kSpecialStageRenderer,TestSonic3kSpecialStageWidescreen,TestSonic3kSpecialStageVisualSnapshot,TestS3kSpecialStageSphereMappings,TestS3kSpecialStageShadowPublication,TestS3kSpecialStagePlayerProjection test -B
+```
+
+After adding stage-reset resource retirement, the affected GPU/static-geometry
+checks plus source guards finished 08:22:11 UTC: **100 tests, 0 failures, 0
+errors, 0 skips** (Maven 1:15; queue wait 138 s). The 5 GPU cases include
+600 renders per context, mask/scratch/entry reuse, fixed atlas-page count,
+stage reset/re-entry, real context replacement and page-texture deletion.
+The selection repeats only checks affected by the new lifecycle edit:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null \
+  python3 ${OPENGGF_MAIN}/tools/testing/maven_queue.py \
+  --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  -Ds3k.rom.path=${OPENGGF_ROM_DIRECTORY}/s3k.gen \
+  -Dtest=TestS3kSpecialStageSpritePixels,TestSonic3kSpecialStageVisualSnapshot,TestArchitecturalSourceGuard,TestTraceReplayInvariantGuard,TestTraceHydrateSwitchDefault test -B
+```
+
+GPU assertions cover front-low/rear-high/high-plane → plane,
+front-high/rear-low → front, either priority pair without a high plane →
+earlier SAT, transparent flipped front → rear, equal and inverted screen Y,
+earlier mapping piece, original perspective `$53` / `$54` / `$8050`,
+16-bit art-word addition, number planes versus icon sprites, ordinary player
+before grid, late shadow operators and an already-bound offscreen framebuffer.
+Both unbatched and batched sprite submission and native 320 / outer 800 widths
+are covered. A final test refinement alternates actual GL viewport/projection
+width (320 / 800), asserts retained mask/entry/texture identity and verifies
+the unbatched delayed-shader scope. The same 5 GPU cases pass at 08:27:57 UTC,
+0 failures/errors/skips (Maven 27.826 s; queue wait 206 s):
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null \
+  python3 ${OPENGGF_MAIN}/tools/testing/maven_queue.py \
+  --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  -Dtest=TestS3kSpecialStageSpritePixels test -B
+```
+
+An independent GPT-6.1 source review found no blocking defect and requested a
+distinct-colour 2×2 flipped overlap witness. After the preceding request was
+terminal, that single new regression passes at 08:29:13 UTC, 1 test and
+0 failures/errors/skips (Maven 26.661 s; queue wait 0 s). It checks every pixel
+of the earlier H+V 2×2 piece, its four distinct source tiles/corner colours,
+and the partially masked rear piece's exposed strip, with both batching modes
+and widths. No runtime source changes followed the qualified capture.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null \
+  python3 ${OPENGGF_MAIN}/tools/testing/maven_queue.py \
+  --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestS3kSpecialStageSpritePixels#multiTileFlipsRetainColumnMajorArtAndEarlierSatOwnership' test -B
+```
+
+Fresh maintained capture finished 08:22:33 UTC, exit 0 (Maven 21.337 s; queue
+wait 65 s):
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null \
+  python3 ${OPENGGF_MAIN}/tools/testing/maven_queue.py \
+  --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl compile exec:java \
+  -Dexec.mainClass=com.openggf.tools.S3kSevenChaosGatewayCaptureTool \
+  "-Dexec.args=--rom ${OPENGGF_ROM_DIRECTORY}/s3k.gen --out-dir ${CAPTURE_ROOT}/s3k-sprite-priority-20261017-t3-3be884f6/engine-v11" -B
+```
+
+The original ROM SHA-1 is `CFBF98C36C776677290A872547AC47C53D2761D6`.
+The capture contains the same 174 filenames as v10 (172 PNGs and two CSVs);
+70 PNGs change. `state.csv` (196,072 bytes, SHA-256
+`ad2498e3b7ee7ed788da9dc7feb715b68b4f350eea24ce4cd37bbe15c7af7c3e`)
+and `ledger.csv` (217 bytes, SHA-256
+`d03075823b756908df74a3c2604eb04af9b7b368680ccd4b2f13f207c4dfc514`)
+are byte-identical to `seven-chaos-engine-fade-release-v10`. Events remain
+contact 338, HPZ first 403, release 1295, pedestal 1425, special stage 1441,
+results 1789 and LRZ2 return 2423. Maven emits a `discord-presence-worker`
+shutdown warning, then exits 0; it does not leave this capture JVM running.
+
+Original native input remains
+`${CAPTURE_ROOT}/s3k-parity-coverage-2026-10-14/spot-checks/seven-chaos-native-v2`.
+No native asset or observation is fed into engine rendering/gameplay.
+The unchanged comparator command is:
+
+```bash
+python3 ${TASK_SCRATCH}/s3k-parity-coverage-20261014/seven-chaos-native/compare/pair_reveal_v2.py \
+  ${CAPTURE_ROOT}/s3k-sprite-priority-20261017-t3-3be884f6/engine-v11 \
+  ${CAPTURE_ROOT}/s3k-parity-coverage-2026-10-14/spot-checks/seven-chaos-native-v2 \
+  ${CAPTURE_ROOT}/s3k-sprite-priority-20261017-t3-3be884f6/compare-v11
+```
+
+Native PPMs are 348×240 with the declared active crop `(14,8)..(334,232)`;
+engine PNGs are 320×224. Raw RGB is compared without normalization, shifting,
+rescaling or masking, paired by first nonwhite published reveal after the
+uniform-white minimum. Stage reveal is engine +24 / native +138; results
+is engine +52 / native +128. **All 12 stage comparisons (+0..22 by 2) have
+0 differing pixels**, replacing `19,19,43,43,43,43,46,46,46,46,46,46`.
+**All 17 results comparisons (+0..32 by 2) remain 0**. The actual paired
+stage +22 (`engine046/native160`) and results +32 (`engine084/native160`)
+images were inspected, not inferred from successful file creation.
+
+This closes the sampled 46-pixel sprite-priority mismatch. Grid collection
+still admits every mapped piece: inherited SAT capacity and per-scanline
+admission are not modeled here, so dense or turning scenes are not certified
+as complete VDP parity. The existing visible plane painter also does not fully
+compose transparent HUD Plane A pixels with Plane B; this fix changes their
+priority mask without expanding into that inherited plane-composition work.
+Full-stage RGB, complete timelines, other native character
+configurations, cold/donor/PAL/PCM products and strict timing/trace closure
+remain outside this bounded result. Resource checks establish reuse and
+cleanup, not a performance or frame-time claim. The task branch stays local;
+Root owns integration/publication.
+
+## 2026-10-17 maintained positioned ending sampler
+
+The recurring ending observation protocol now lives in
+[`S3kEndingSamplerTool`](../../../src/main/java/com/openggf/tools/S3kEndingSamplerTool.java)
+and the fail-closed [`compare_native_rgb.py`](../../../tools/bizhawk/compare_native_rgb.py).
+This bounded slice promotes external `EndingEnginePalProbeV2` (SHA-256
+`da6bff78c4c1ebd47f0305e3602990962644bf430284a1c5f7cfb8177f82b056`)
+from the retained ending-pal/native v2 experiment. It changes no ending runtime
+owner. The separate [ending route matrix](../validation/levels/s3k-ending.md)
+continues to distinguish positioned observations from final-fight continuations.
+
+The supported CLI product is explicitly **Tails solo / +2 / NTSC / native
+320×224 / LIMITED (238 maximum) / RAW_RGB**. All six options are required;
+other products, region/progress values, unknown/duplicate options, malformed,
+duplicate, empty or out-of-range outer indices fail. Output must be a new directory.
+The ingress is the frozen title-owner v2 protocol: production title setup through
+ACTIVE, a real logical Start directly through the title owner yielding EXITING,
+no data-select initialization, then an explicitly positioned fresh `$0D01` load
+with seven Super Emeralds. VInt0/RNG0 are authored once before initial dispatch.
+Every outer step thereafter uses neutral controller input through
+`GameplayCaptureSession` and renders the normal scene. This is not a cold
+campaign or a native-state replay. TITLE_SCREEN mode is the terminal check;
+the capture host does not certify interactive hub recovery.
+
+The caller supplies engine outer indices, one canonical decimal index per line.
+For retained native v2, select only `input-*` snapshots strictly before its first
+non-ending controller ordinal, assert the requested count, then author the
+observation list with **native poll p → engine outer p+1**. This mapping never
+enters a gameplay owner. Native inputs, physics, aux rows and screenshots supply
+no engine state. The tool records startup ownership, per-outer scene/clock/player/
+credits state, requested PNGs, ending-exit/title events and completion ledger,
+plus ROM/spot/source/runtime and final CSV hashes. Fresh preferences live inside
+the new output directory, so a checkout config link cannot migrate Main settings. It requires a source checkout;
+source and compiled runtime fingerprints must remain stable during capture.
+The external probe's reflective SST inventories, plane/texture dumps and palette
+reconstruction are deliberately outside this recurring raw-RGB question.
+
+Use the current integration checkout's queue wrapper by absolute path from the
+intended worktree. Build-only compilation takes its intended-tree/shared activity
+leases; release those before the queued capture. On Linux preserve surfaceless
+EGL and null audio with no ambient DISPLAY/WAYLAND_DISPLAY. For example, with
+`QUEUE`, `ROM`, `CAPTURE` and `NATIVE` set to absolute paths and a newly named
+capture label:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null \
+  python3 "$QUEUE" -Dmse=off compile -B
+env -u DISPLAY -u WAYLAND_DISPLAY EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null \
+  python3 "$QUEUE" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  exec:java -Dexec.mainClass=com.openggf.tools.S3kEndingSamplerTool \
+  "-Dexec.args=--rom '$ROM' --product tails-solo --region ntsc --progress +2 --out-dir '$CAPTURE/engine-current-v1' --spots '$CAPTURE/engine-outers.txt'"
+python3 tools/bizhawk/compare_native_rgb.py \
+  --native-dir "$NATIVE" --engine-dir "$CAPTURE/engine-current-v1" \
+  --spots "$CAPTURE/native-polls.txt" --mapping native-poll-plus-one \
+  --expected-count 165 --size 320x224 --report "$CAPTURE/comparison-current-v1.json"
+```
+
+The comparator requires every pair and equal resulting dimensions, including the
+explicit `--size` assertion. Default is **no crop**; optional `--native-crop` and
+`--engine-crop` each require an in-bounds `x,y,width,height` rectangle. The Tails
+product uses neither. Knuckles' separate 348×240 product must not inherit a Tails
+crop or acceptance claim. Raw R/G/B bytes are compared without normalization,
+shift, rescale, mask or alignment search. Reports include every pair's hashes,
+original dimensions, mismatch pixel count and first differing coordinate/bytes.
+Missing/bad files, duplicate/invalid spots, count/dimension/crop errors exit2;
+any pixel difference exits1; an exact comparison exits0. Existing report paths
+are refused. No pair can disappear silently.
+
+Focused controls:
+`python3 -m unittest discover -s tools/bizhawk -p test_compare_native_rgb.py -v`
+and queued `-Dtest=TestS3kEndingSamplerTool` cover missing/corrupt PNGs, dimensions
+with equal byte counts, exact RGB, low-bit pixel changes, explicit mapping,
+invalid/duplicate spots, crop bounds and report preservation, plus Java product/
+CLI and observation-plan rejection. No broad smoke/full suite, benchmark or PCM
+claim belongs to this tool-only slice. Current-source capture evidence follows
+only after its single completed run; historical Oct15 pictures are not acceptance
+inputs. The later retained after5 comparison supersedes those old errors and
+reports all165 pre-exit spots zero, including5119/6143, without proving current
+source acceptance.
+
+### Single current-source result
+
+One new capture, `${CAPTURE_ROOT}/s3k-ending-sampler-20261017-t3-0485d89b/engine-current-v1`,
+completed on 2026-10-17 at09:06:24UTC. Capture source was frozen composition
+`dc338d3e3a30916559a32d4684ff46e9ad77492c` plus the uncommitted maintained sampler;
+its exact Java file SHA-256 is
+`b47871f82488802ea2c9a356218825eb372b29c518804f65f57d24fdbe45161c`.
+The source-tree SHA-256 is
+`ad531ab7730e83ff55e2c9a8950f1fc08accb379985a1fc1f20f909f8af7fdb4`;
+the compiled runtime-directory SHA-256 is
+`975519879e1c303d01d312164797851f05dd443b641d2c59cebf3393bab43673`.
+The tool checked both source/runtime fingerprints again after capture. The later
+local commit packages those same sampler bytes; it does not retroactively turn
+the capture's recorded source HEAD into a clean committed build.
+
+Original native input is
+`${TASK_SCRATCH}/s3k-parity-coverage-20261014/ending-pal-native/native-tails-super-320-ntsc-v2`.
+Its `state.csv` SHA-256 is
+`efa88767158a71826df9e3f8540c35847fa10208ffcfcc49edd44b603c8769d6`,
+and `ledger.csv` is
+`ba925de564a6d0ef4681aa4990905d4d0e09f6bed705d20ef42d23167c0c7f63`.
+Retained `pal-spot-plan-v2.json` SHA-256 is
+`1bf7895e9ee47c18a8daed3fb0d2c6cfa2276041347c94b765a1b711dd217fe3`;
+retained `run_engine_v2.py` is
+`be9a09a2441011cf87d4952500e6b777c6f77f442e7df9f46b288c86b1b75e6f`.
+The native ledger has167 `input-*` snapshots. Native first non-ending poll15531
+excludes16383/17407, leaving exactly165 pre-exit requests. No set de-duplication
+or missing-picture skip reduced that count. The native-poll file hash is
+`9c209bd9e707f582920b793302e99551289121505648a98296d3e9edb2ce5335`;
+its explicit p+1 engine observation file is
+`f490ac9d7e083e83e2c54d8804d3de442f1f884a8ebb05784f663a39b00a53b8`.
+These hashes and protocol-source hashes are retained in the external task's
+`observation-provenance.json`; native rows selected only observation moments.
+
+Queued command sessions were build16052, focused31401 and capture54720, each
+observed by this worker only and now terminal0. Commands from this worktree used
+`${MAIN}/tools/testing/maven_queue.py`, Java25, `EGL_PLATFORM=surfaceless`,
+`ALSOFT_DRIVERS=null` and no DISPLAY/WAYLAND_DISPLAY. Build16052 ran
+`-Dmse=off compile -B` successfully after at least270s waiting for isolated
+measurement activity; Maven execution reported59.993s. After the material
+fresh-configuration isolation edit, focused31401 recompiled final sources and
+ran the following unchanged selection (81s queue wait; Maven1:20):
+
+```bash
+python3 "$QUEUE" --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestS3kEndingSamplerTool,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' \
+  "-Ds3k.rom.path=$ROM" test -B
+```
+
+All62 tests pass, with0 failures/errors/skips: sampler2, bootstrap6, decoding3,
+level-loading36+7 and AIZ skip8. Python's nine comparator controls pass with no
+skips. Test XML identities/counts were inspected before removing consumed owned
+reports. The change-based preview againstdc338d3e3 selected3496 smoke classes
+because these new tools are unclassified and an unrelated TraceChaser gitlink
+is present. The requested focused tool/domain/capture checks replace that
+selection: no gameplay owner, shared algorithm, timing contract or build policy
+changed. No broad/full suite, benchmark or PCM workload was launched. Root owns
+combined guards and integration. The unrelated gitlink is preserved unstaged.
+
+Capture54720 used the `exec:java` command above (plus `-Djava.awt.headless=true`),
+was admitted immediately and completed in12.919s Maven time. Actual title ACTIVE
+required305 neutral steps; real Start yielded EXITING with no data select.
+State outer0 has progress2, VInt0 and RNG0. Ending exit and TITLE_SCREEN mode
+occur at outer15532. The ledger ends
+`DONE,-1,requested=165;captured=165;title_mode=true`; its SHA-256 is
+`4392567cc986efa196380f84cb9f72792e7946ee2cf6a969925b4d443d24a60f`.
+Final engine `state.csv` SHA-256 is
+`95996e38208a631811fa6d7c1772bcf04a7dd558035e0cff48f5609328bc7f0e`.
+FAST load-time simulation remains the default; runtime logs include deterministic
+estimates for missing measured Kos profiles, not native readiness hydration.
+
+Configuration isolation was verified against the loader's actual JVM path:
+`SonicConfigurationService` reads through `resolveRelativeFile`, which uses the
+current `user.dir` for relative `config.yaml`/legacy JSON, and publishes its
+example beside `resolveConfigFile()`. The actual generated
+`engine-current-v1/configuration/config.yaml.example` exists (15419 bytes,
+mtime09:06:12.610630UTC), inside this capture's private scope. No private
+`config.yaml` existed to migrate. The checkout's pre-existing config link points
+at Main; that target's observed last modification remains
+2026-10-16T09:09:02.849921UTC, before this capture. Thus this run did not migrate
+Main config. The tool restores `user.dir` after closing the capture session.
+
+The maintained comparator (SHA-256
+`903bae9e12cdc4b2d0e29dc39b983a14c012e2ca2dc84b8a1af5d47dd0e4939f`)
+was then executed once with the exact165 requests, `native-poll-plus-one`,
+`--size 320x224` and **neither crop option**. It exited0 and reports **165/165
+pairs,0 mismatching pairs,0 differing raw RGB pixels**. Every original native
+and engine dimension in the report is320×224. Poll5119→outer5120 and
+poll6143→outer6144 each have0 differences; they are fresh current-source
+observations, not the superseded Oct15 errors. `comparison-current-v1.json`
+SHA-256 is `3a1ed2882c0a953e85a500b6367562ca00ff6b0d52f3d2dd7f6f79baac74b32a`.
+The actual outer6144 credit-scene PNG was inspected after reading its state.
+
+This establishes only the declared165 positioned Tails/+2 NTSC pictures and
+terminal mode for this exact source/runtime. It does not certify the unsampled
+frames, full prepared palette timeline, cold campaign, other products, PAL,
+Knuckles crops, PCM, strict hardware timing or interactive hub recovery. No
+ending runtime fix or pixel fitting was made. Worktree/branch remain local for
+Root to account; no Main integration, push or worktree removal belongs to this
+worker's slice. All worker execution handles are terminal; the stopping boundary
+is the maintained tool plus this one completed comparison.
+
+
+### Conditional V-int instruction diagnostic intake — 2026-10-17
+
+At composed prerequisite `dc338d3e3`, Root intakes the retained slice-5 diagnostic delta by three-way application,
+preserving the newer `forcePlayerOneReload()` giant-ring and Super invalidation semantics. The retained
+`7bbf1eb2b` plus uncommitted work had a historical 93/0F/0E/0S focused result; that is not current-source
+qualification. No readiness, gameplay, load-profile estimate or canonical trace contract consumes the new term.
+
+`Record.instructions()` separates closed-handler instruction cycles from the unpriced DrawLevel, HUD and
+Nemesis callees and from interrupt acceptance, refresh, bus/FIFO waits and DMA freeze. Production refuses busy
+Kos, water, Hyper flash, unknown state/region/producers and unsupported routines. Region, queue emptiness and
+water presence come from engine owners; `Demo_timer` is a fresh-level mirror captured/restored with the ledger.
+Other timer writers and every unobserved wait-loop precondition remain explicit limits. The 1,920-state source
+oracle and 42 historical native instruction buckets do not establish predictive six-ending/46-fingerprint closure.
+
+Independent review found sparse opcode pins accepted timing-sensitive operand changes. On the composed dirty
+candidate, two new negatives both fail against the old checker at 09:06:36 UTC: PAL delay immediate at `$5BA`
+and absolute callee operand after `$920` (2 tests, 2 assertion failures, 0 errors/skips; Maven 1:11). The replacement
+checks every byte through `$4E80F`, including `SpecialVInt_Array` routine-0 `rts`, against original-ROM prefix
+SHA-256 `29bc98328ecbdb7d8a8a6f00c98af597949b16fdd53ffe9276610aee4a7e4743`.
+The full input ROM SHA-1 was verified as `CFBF98C36C776677290A872547AC47C53D2761D6` before deriving that hash.
+A minimum-prefix positive and a one-byte truncation negative protect the actual production slice boundary.
+Changed bytes anywhere in this conservative prefix refuse pricing; code after it is not authenticated by this check.
+
+The composed dirty candidate passes 211 tests, 0 failures, 0 errors, 0 skips at 09:17:36 UTC (Maven 1:24),
+including the two operand/target negatives, all 1,920 source-grid states, production capture/restore, existing
+body/DMA consumers, mandatory S3K loading controls and source/trace/hardware-authority guards. Sixteen exact
+selectors resolve seventeen classes because both existing `TestSonic3kLevelLoading` classes match. Command:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  python3 ${OPENGGF_MAIN}/tools/testing/maven_queue.py --normal -Dmse=off \
+  '-Dtest=TestS3kVIntInstructionCycles,TestS3kVIntInstructionProduction,TestS3kVIntDmaLedger,TestS3kVIntDmaLedgerProduction,TestS3kVIntDmaBodyDplcProduction,TestS3kVIntDmaBodyCacheProduction,TestS3kVIntDma,TestSonic3kLevelInitProfile,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestArchitecturalSourceGuard,TestTraceReplayInvariantGuard,TestTraceHydrateSwitchDefault,TestHardwareTimingAuthorityGuard' \
+  "-Dsonic1.rom.path=${S1_ROM}" "-Dsonic2.rom.path=${S2_ROM}" \
+  "-Ds3k.rom.path=${S3K_ROM}" "-Dkis2.rom.path=${KIS2_ROM}" test -B
+```
+
+Independent review found no blocker in the prefix identity, authority or rewind handling. The native fresh
+attract-level path initializes the same 1800 timer before GetDemoPtr; S3K currently supplies no generic
+EndingProvider/CREDITS_DEMO path. That permitted future phase is not certified: a future S3K provider must supply
+its real timer writer or refuse pricing. No fitted timer adjustment was added. This is local diagnostic
+qualification only; combined guards, Main integration and push remain Root-owned. No broad/full suite,
+performance gain or predictive six-ending/46-fingerprint timing acceptance is claimed for this slice.
+
+
+### Completion of interrupted smoke selection and bounded composition — 2026-10-17
+
+Main `develop` was fetched/fast-forward-pulled under its normal writer lease and remains
+`707b3c2082433c4833da93fbf855a0a748dd58b1`; its foreign submodule dirt and untracked files are preserved.
+The original selection used integration base `d3fb0625e179d00ad6eadebbfcc49d38ecd45c9f`, 3,490 candidate classes
+in 70 ordinary smoke batches. The retained run on `3aad23d38` timed out during batch65; its consumed diagnostics
+were inspected/acknowledged. Completed earlier coverage is retained with the separately recorded focused repair
+qualification, not presented as a clean one-SHA smoke pass. The old partial65 is not added to the complete65 below.
+
+After focused repairs, the exact original candidates65–70 (290 classes; no manual selector narrowing) completed
+on `dc338d3e3`. Each at-most-50 batch used the updated Main queue wrapper with `--normal -Dmse=off -Psmoke`,
+its original `surefire.includesFile`, the original four absolute ROM properties, isolated report/tmp paths and
+`test -B`. `JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl`, null OpenAL, surfaceless EGL and no ambient
+DISPLAY/WAYLAND were retained. Admission/tree leases released between batches; queue waits were not execution
+timeouts. Continuations stopped at each failure for inspection and exact baseline attribution, without rerunning
+completed unchanged batches. This is smoke coverage, never a release-only full-suite run.
+
+| Original batch | Candidates | Tests | Failures | Errors | Skips |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 65 | 50 | 292 | 0 | 0 | 2 |
+| 66 | 50 | 353 | 1 | 2 | 1 |
+| 67 | 50 | 226 | 0 | 0 | 2 |
+| 68 | 50 | 357 | 0 | 0 | 0 |
+| 69 | 50 | 366 | 1 | 0 | 0 |
+| 70 | 40 | 249 | 0 | 0 | 0 |
+
+The six resumed batches total **1,843 tests, 2 failures, 2 errors and 5 skips**. All four failure/error identities
+match Main707 in fresh bounded checks with the same launcher environment/ROM properties:
+
+- `TraceCaptureBootDimensionsTest.realBootKeepsNativeGameplayCameraAndWidePresentationCaches(int)[1]` and `[2]`:
+  `IllegalStateException: Unable to initialize GLFW`. The matched selection includes preceding
+  `TestSurfacelessEglContext`, which clears the inherited EGL property in its existing teardown.
+- `TestCompleteRunAudioCli.freshJvmBootstrapsTheS1ProfileButItsUnavailableDispatcherEmitsNoStandardOutput`:
+  line182 `expected true, actual false`; the child launcher inherits the Java-options notice before its required
+  first-byte diagnostic. Both Main707 and dc338 matched 18 tests / 1 failure / 2 errors / 0 skips in the exact
+  `TestSurfacelessEglContext,TraceCaptureBootDimensionsTest,TestCompleteRunAudioCli` selection.
+- `TestOrdinaryTitleScreenCommandEvidence.masterTitleDrawExpandsBackdropAndFitsActionPaneAtEveryWidth`:
+  `card-row footer hint START at 320`, expected true/actual false. The exact method separately fails once on
+  both Main707 and dc338, with the same assertion type/message and zero errors/skips.
+
+The five skips are explicit opt-in/native-mod prerequisites: Slot glass native oracle (`openggf.test.gl.native`),
+Second Strike HCZ air mod, packaged Second Strike MGZ arena, deterministic BizHawk S1 audio reference and an
+unrequested S1 audio timeline capture. No resumed-batch skip was a missing base ROM. Earlier retained-run skip
+limits remain recorded separately; these five do not erase them.
+
+The shared camera consumer neighbors also pass at `534a69e74`: exact
+`TestS2ObjectWindowing,TestS2ColocatedObjectPlacement,TestObjectManagerExecLoopParity`, 14/0F/0E/0S at
+09:02:37 UTC (Maven26.980s). This supplements the recorded wide LRZ/MHZ fixes and genuine backward-borrow tests.
+
+Root then fast-forwards to `dbae340c26b71ab0770ee0cb3e8e53d134466293`: qualified sampler prerequisite merge
+`957c78a54` contains R1`2f058df9a` and diagnostic`a5470cef2`; the ICZ docs-only `e8d51ddf5` adds the two exact
+unsuccessful natural-death input attempts and preserves that coverage gap. No unqualified HCZ repair or ending
+R2 source is included. R1's 165-pair raw-RGB reference comparison, new-tool focused62 and diagnostic focused211
+are bounded separate qualifications with their exact source identities above. Root independently inspected
+native poll6143 and engine outer6144; a temporary lossless PNG view of the PPM was deleted after viewing.
+
+Fresh combined guards on this composition are pending. Main integration, packaging, push and accounted cleanup
+are not yet claimed. Strict AIZ/HCZ frontiers, ICZ natural death/respawn/rewind, ending/PAL/PCM/timing breadth,
+SAT/scanline capacity and other documented parity limits remain open.
+
+
+Fresh combined guards completed on `dbae340c2` plus this prose: session20097, terminal1 at 09:43:10 UTC,
+Maven5m14s, **715 tests / 6 failures / 1 error / 0 skips**. This is a complete red guard result, not a pass.
+Two findings belong to this delivery: FadeManager's new white-fade rule lookup crosses from graphics into
+game/session orchestration; and the virtual-pattern guard rejects the special-stage mask initializer.
+The mask ID was already derived from `SPECIAL_STAGE_PLAYFIELD.endExclusive() - 0x2000`, rather than a literal
+ID. The guard recognizes only `.base()` initializers; the equivalent `base() + size() - 0x2000` preserves
+exactly the same `$E000` start and 8192-slot bounds without changing the guard or public atlas registry.
+The original red guard is its regression witness; focused verification is pending.
+
+The white-fade ownership repair is isolated in the existing diagnostic composition tree. Main707 matched
+`TestArchUnitRules,TestProductionSingletonClosureGuard` is queued once to attribute the remaining MenuAudioProbe,
+HubMusic and frozen-store findings by exact identity; no baseline result is inferred yet. Root integration,
+packaging, push and cleanup remain pending. No full suite or performance acceptance is claimed.
+
+
+
+## 2026-10-17 nine declared NTSC ending products
+
+This follow-up extends the maintained CLI beyond the historical R1 Tails-only
+support described above. It changes only tooling, configuration isolation,
+observation completion and diagnostic provenance; no ending gameplay owner or
+readiness/timing authority changes. Prerequisite merge
+`957c78a54c49cb9a2358ab6ed8637d4874f0a852` combines R1 `2f058df9a` with Root's
+qualified diagnostic-only VInt operand intake
+`a5470cef29ea3f90320c2627f93bb562386f8fa2`. The sole conflict was this append-only
+Plan. Both complete suffixes were retained and checked against their common
+`dc338d3e3` base. R1 private configuration and source/runtime checks were preserved.
+
+The explicit product is now `sonic-solo`, `tails-solo` or `sonic-tails`; region
+remains exactly `ntsc`. Frozen `declared-scene-spec-v2.json` and observation plans
+v1/v2 supply the declarations: progress `-2` → `0000000`, `0` → `1111111`,
+`+2` → `3333333`. Sonic+Tails configures main Sonic and sidekick Tails (native
+Player_option0); solo Sonic/Tails use native options1/2. Product, region,
+progress, emerald inventory, settings, declared sidekick, pre-dispatch observed
+roster and completion provenance are dynamic. Initial production progress is
+checked against the declared inventory. None of these values come from native
+physics/auxiliary observation rows.
+
+`--completion spots` steps through the largest requested engine outer index,
+requires every unique requested picture, verifies the ending remains in LEVEL
+mode at that bound, and reports actual last outer/mode. It does not claim an
+ending exit. `--completion title` preserves the R1 default when omitted: a neutral
+stream must actually reach ending exit and TITLE_SCREEN within60000 outer steps.
+Neutral title completion accepts only progress+2; other progress products must
+explicitly select the bounded spot contract. Unsupported product, region,
+progress, completion and repeated/unknown flags fail. All images remain native
+320×224, LIMITED238/RAW_RGB, and the frozen real-title-owner positioned ingress
+sets VInt0/RNG0 once before initial dispatch. No new game mode, clock fitting,
+scene mutation, native input hydration or normalization was introduced.
+
+The original early-scene native references use `input-0001.ppm` (four-digit
+zero-padding), while dense retained Tails v2 uses `input-00001.ppm`. The comparator
+therefore adds explicit `--native-digits 4|5`, with5 retaining the R1 default.
+There is no filename discovery, fallback, renaming, copied reference or new ROM
+link. Every requested pair must exist and both original dimensions are asserted
+320×224. All comparisons here omit both crop options and retain strict raw RGB,
+with no shifts, masks, rescaling or alignment search. A new negative control
+proves four-digit selection cannot silently fall back to five-digit files.
+
+The existing native per-product provenance case and ledger hashes were checked
+against frozen plan cases, not guessed from filenames. Early native ledgers
+contain exactly the11 poll ordinals
+`1,31,63,511,1023,1535,2047,3071,4095,5119,6143`, paired only to engine p+1.
+Dense Tails uses the retained v2 first non-ending poll15531: exactly165 snapshots
+precede it, with16383/17407 excluded as post-exit. Thus this slice requests eight
+11-pair products and one165-pair product,253 comparisons total. Native screenshot
+ordinals select observation moments only; they never supply gameplay state.
+
+Focused validation from the owned worktree, with current Main's absolute queue
+wrapper, Java25, surfaceless EGL/null audio and no ambient DISPLAY/WAYLAND:
+
+```bash
+python3 "$QUEUE" -Dmse=off compile -B
+python3 -m unittest discover -s tools/bizhawk -p test_compare_native_rgb.py -v
+python3 "$QUEUE" --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestS3kEndingSamplerTool,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestTraceReplayInvariantGuard,TestTraceHydrateSwitchDefault' \
+  "-Ds3k.rom.path=$ROM" test -B
+```
+
+Build86103 passed (56.996s Maven). Focused81696 was admitted immediately and
+passed75 tests,0 failures/errors/skips (27.693s Maven): sampler4, required S3K60,
+trace replay invariant10 and hydrate-default1. Sampler controls exercise all nine
+roster/inventory settings, exact progress labels/native options, R1 default title,
+unsupported combinations and strict observation plans. Python's existing nine
+RGB controls plus explicit padding control pass10 tests with no skips. The source
+and CLI changes are bounded tooling; no broad/full suite, new native production,
+benchmark or PCM workload belongs to this slice. Root owns remaining combined
+smoke/guards and integration. No timing/performance or6+46 acceptance is inferred.
+
+All captures use one source/runtime fingerprint, one new output per product and
+one queued `exec:java` invocation per product, sequentially observed by session
+29080. No request is retried or replaced while waiting. The new immutable labels
+live under `${CAPTURE_ROOT}/s3k-ending-sampler-20261017-t3-0485d89b/r2-nine-ntsc-v1`;
+retained native references and R1 captures remain untouched. Representative
+commands for an early product are:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null \
+  python3 "$QUEUE" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  -Djava.awt.headless=true exec:java \
+  -Dexec.mainClass=com.openggf.tools.S3kEndingSamplerTool \
+  "-Dexec.args=--rom '$ROM' --product sonic-tails --region ntsc --progress 0 --completion spots --out-dir '$CAPTURE/engine-team-chaos-320' --spots '$CAPTURE/team-chaos-320-engine-outers.txt'"
+python3 tools/bizhawk/compare_native_rgb.py \
+  --native-dir "$NATIVE" --native-digits 4 --engine-dir "$CAPTURE/engine-team-chaos-320" \
+  --spots "$CAPTURE/team-chaos-320-native-polls.txt" --mapping native-poll-plus-one \
+  --expected-count 11 --size 320x224 --report "$CAPTURE/comparison-team-chaos-320.json"
+```
+
+Dense Tails explicitly uses `--product tails-solo --progress +2 --completion title`,
+`--native-digits 5` and `--expected-count 165`. Actual commands, declaration/plan/
+spot/ledger hashes, each product's source/runtime hashes and outcomes are in the
+external `observation-provenance.json`, alongside per-product comparison JSON
+and the sampler's own immutable output/provenance. Generated private
+`configuration/config.yaml.example` files prove actual loader output paths,
+not just a changed property; each output records its hash and restored user.dir.
+The linked Main config's hash and mtime are measured before/after the sequential
+captures to detect migration. No validation pass cache or new repository record
+type is created.
+
+### Completed current-source observations and stopping boundary
+
+All nine engine invocations and all complete comparisons finished. Seven products
+have zero RGB mismatches. Two products have current-source differences, so this
+is **partial pixel qualification**, not an all-green ending result. Each comparator
+required its complete plan and original320×224 dimensions; both crop fields are
+null. No native capture was produced, no source was changed during the nine
+attempts, and no product was retried. All eight early products ended at outer6144
+in LEVEL; only dense Tails actually reached TITLE_SCREEN at15532. There are253
+required pairs,249 equal pairs and4 differing pairs across two products.
+
+| Declared product / progress | Required/compared pairs | Differing RGB pixels per native poll | Actual last outer / mode |
+| --- | --- | --- | --- |
+| sonic-solo / 0 | 11/11 | 0 | 6144 / LEVEL |
+| tails-solo / +2 | 165/165 | 0 | 15532 / TITLE_SCREEN |
+| sonic-solo / -2 | 11/11 | 0 | 6144 / LEVEL |
+| sonic-solo / +2 | 11/11 | 171 at5119;194 at6143 (first9 zero) | 6144 / LEVEL |
+| tails-solo / -2 | 11/11 | 0 | 6144 / LEVEL |
+| tails-solo / 0 | 11/11 | 0 | 6144 / LEVEL |
+| sonic-tails / -2 | 11/11 | 0 | 6144 / LEVEL |
+| sonic-tails / 0 | 11/11 | 0 | 6144 / LEVEL |
+| sonic-tails / +2 | 11/11 | 171 at5119;194 at6143 (first9 zero) | 6144 / LEVEL |
+
+All captures ran on prerequisite HEAD
+`957c78a54c49cb9a2358ab6ed8637d4874f0a852` plus the same uncommitted sampler:
+SHA-256 `f674bfe82b5d6432a64ef8237c85c107112a5077689459eb0e8aa421c3d05050`.
+Every output records the identical full Java-source fingerprint
+`03c45342d00011337acae72d9c46bf9a14456079daacd5ade058cce8735c79a3`
+and compiled runtime fingerprint
+`fbee8a466206df679d586c986f70e32135483da26b70df202496f93f3a8e38e4`.
+Source and runtime were verified unchanged after each capture. The final local
+commit packages those same sampler bytes; it does not change the recorded dirty
+capture HEAD into a clean committed build. The revised comparator SHA-256 is
+`b90da677fe6c666aaa32672ca0c2aa96602bd22e67085faa1f8160f268e02ef3`.
+
+Frozen `declared-scene-spot-plan-v1.json` SHA-256: `feffd33db7cd9e86f35d5b7d763ad223e1bf4e8bcdf3e77cd2d6876a4ff11c01`.
+
+Frozen `declared-scene-spot-plan-v2.json` SHA-256: `a687c92a1db070b060cc9c41fc292ee8de8966ad692cbb9a4b134633f41131d3`.
+
+Frozen `declared-scene-spec-v2.json` SHA-256: `7711c315a9b10fa7cb94fa9c3465fb280509a338d18cf8ebfa0d80ad3fcfc7cb`.
+
+Frozen `engine-title-owner-ingress-spec-v2.json` SHA-256: `768e172c3555a840b929f7154398b5358556a8f411b214087a55fd0e9cb7787a`.
+
+Both Sonic solo/+2 and Sonic+Tails/+2 first differ at native poll5119 paired to
+engine outer5120:171 raw RGB pixels. Their native and engine PNG/PPM hashes are
+identical between these two products at that pair, but differ between engines
+and native. The first differing coordinate is `(7,160)`: native RGB
+`(238,238,238)`, engine `(136,204,238)`. The other differing requested pair is
+poll6143→outer6144,194 pixels per product. Every earlier requested pair for those
+two products is zero. Comparator exits1 for these two products and0 for the other
+seven; every engine invocation exits0. Those nonzero RGB verdicts were preserved,
+not treated as skipped pictures or coerced to pass.
+
+At the first mismatch the engine reports LEVEL, progress2, level frame5120,
+object ordinal5121, VInt5120, foreground routine56 (`$38`), background routine4,
+RNG`c7892900`, player centre192/221 and mapping186. Its camera is512/516 and
+published copy512/515; credits routine4, part0, row12, delay−1, speed`cf00`.
+Native's last published ledger row for that poll records completed hardware5687,
+VInt5120, level frame5120, Process/producer5121, publication5120, mode`0C`,
+zone/act`0D01`, progress2, RNG`C7892900`, and camera copy`0200/0204`.
+Native player mode is1 for solo Sonic and0 for team; native P2 code is zero at
+this late spot. Team outputs nevertheless record the actual declared pre-dispatch
+roster `sonic,tails`, while solo outputs record their correct single leader.
+These are scene/timing observations, not causal attribution. Matching the older
+171/194 shape does not make it a newly introduced Root defect, identify an
+owning routine, or authorize a clock adjustment. Qualification of each mismatching
+product stopped at this completed result. Remaining roster/progress products were
+independent declared coverage, not retries; no runtime repair was attempted.
+Root's separate read-only investigation may use these exact immutable outputs.
+
+The first queued capture waited512s, dense Tails92s, final team/+2 31s;
+the other six were admitted immediately. These are queue waits, not execution.
+Maven execution reported6.688s (Sonic0),13.173s (dense Tails+2),5.415s (Sonic−2),
+5.571s (Sonic+2),5.646s (Tails−2),6.527s (Tails0),5.443s (team−2),5.399s
+(team0),6.110s (team+2). They are diagnostic invocation durations, not benchmark
+or performance acceptance, and are not summed with overlapping foreign work.
+
+Each of the nine emitted configuration examples resolves under its own private
+capture directory; all have SHA-256
+`a52e0507338cce515e7f404c7fb269b963dc423664cf3900119d30de1b739fb4` and
+`user.dir.restored=true`. The actual JVM loader resolution remains
+`resolveRelativeFile(user.dir)` for config/legacy JSON and example publication
+beside `resolveConfigFile()`. Main's linked config before/after hash is exactly
+`6abd111c03f798dbe2a618cb4985aeb599127f44668edb2a8edbde118d11f7da`, and its
+mtime is unchanged at1792141742849921547ns. This run did not migrate Main config.
+Per-product ledger/state/spot/reference-image hashes, the matched native ledger
+rows and exact commands remain in external provenance and per-product JSON.
+
+No broad/full suite, additional trace/native pass, new reference production,
+PAL/Knuckles/wide/cold/PCM product, terminal breadth for the eight early products,
+strict hardware timing or interactive hub certificate follows. There is no6+46
+acceptance or readiness activation. Root owns combined guards, runtime diagnosis,
+integration and eventual push. The local branch/worktree and unrelated unstaged
+TraceChaser gitlink remain for Root accounting. The bounded stopping boundary is
+nine fresh captures and their complete comparisons; no further capture or Java
+workload is needed for this slice.
+
+
+### Composed guard attribution and unchanged allocation record — 2026-10-17
+
+Root `74fb068e1` passed focused session31023: **78 tests / 0 failures / 0 errors / 0 skips** at
+09:50:48 UTC (Maven1m11s): six actual GPU special-stage sprite/atlas lifecycle tests and 72 architectural
+source guards. This qualifies the equivalent range-base expression and newly composed ending sampler source;
+the exact ArchUnit range rule will be checked with the remaining architecture fixes.
+
+Main707 session6602 completed the exact `-Pguards -Dtest=TestArchUnitRules,TestProductionSingletonClosureGuard`
+selection with **73 tests / 4 failures / 0 errors / 0 skips**. The same original ROM/launcher environment was
+retained. Both MenuAudioProbe singleton failures and both HubMusic provider/shared-layer failures match
+Root's fresh guard result by class, test name, exception type and complete assertion message. They remain
+inherited and unfixed; no failing result is described as a pass.
+
+The additional frozen-store error was caused by the shared AnPal-bank overload: the existing nullable
+`PaletteOwnershipRegistry` fallback moved from Sonic3kPaletteCycler's six-argument constructor to the same
+class's seven-argument constructor receiving `Sonic3kGlobalAnimationState`. Source comparison confirms the
+identical conditional allocation occurs once both before and after this change. Only that existing stored
+exception's constructor signature/location is reconciled; the two stored dependencies and unchanged S2 entry
+remain. No new exception is added, no production allocation is introduced, and automatic store creation or
+updates remain disabled. This preserves the existing ownership debt without hiding an additional dependency.
+The exact current ArchUnit check remains pending after the separate white-fade composition repair.
+
+
+
+
+### White-fade policy composition repair — 2026-10-17
+
+The fresh combined guards on `dbae340c2` found 13 new low-level/runtime edges:
+`FadeManager` queried `SessionManager` and the world's `PaletteWhiteFadeModel`
+during update/render/publication. Keep the public host rule and its existing
+signatures; `GameplaySessionFactory` now translates it once into palette/overlay
+and FromWhite-period values through `FadeManagerInternalAccess`. Graphics no
+longer discovers gameplay orchestration. The bound values survive logical reset
+and snapshot restore; renderer attachment still limits CRAM publication to its
+active owner. Detached UI managers keep their overlay default. No guard or
+frozen exception store was changed.
+
+Focused validation in `feature/ai-s3k-vint-instruction-refusal`, based on
+`dbae340c2`, used Java 25 and the current main absolute `maven_queue.py --normal
+-Dmse=off`, `test -B`, no ambient DISPLAY/WAYLAND_DISPLAY, surfaceless EGL, null
+OpenAL and the original absolute S1/S2/S3K ROM properties. The first selection
+also used `-Dopenggf.headless.gl=surfaceless-egl`:
+
+- `-Dtest=TestWhiteFadePresentationBinding,TestNativeWhitePaletteFade,TestUnderwaterPaletteUpload,TestFadeManager,TestFadeManagerRewindSnapshot,TestPaletteUploadLatch,TestPaletteWhiteFadeModel,TestLevelSpritePresentationLifecycle,TestS3kLrz2SevenChaosGiantRingGateway,TestGameplayModeContextRewindRegistry,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`: 150/0F/0E/0S, finished 09:52:10 UTC. This resolves 15 classes because two classes share the LevelLoading simple name. Native white GPU14, underwater16, rewind7, immediate-scene latch5 and gateway4 genuinely ran.
+- After strengthening only the new test's explicit snapshot-restore assertion, `-Dtest=TestWhiteFadePresentationBinding,TestGameplayModeTeardownFailures,TestSessionManager,TestSessionManagerReadAccessors,TestGameplayModeContextSpecialStageRewindAdapter,TestGameLoopRewindBoundaryPolicy,TestModEngineWiringSeams`: 57/0F/0E/0S, finished 09:53:19 UTC. The new tests verify factory-bound S3K semantics despite a later ambient S2 world, reset and snapshot restore, plus a detached overlay while an S3K world exists. Production retains its non-null rules contract.
+
+The unchanged native component algorithms, 22-V-int duration and `2056a99cd`
+immediate-scene rewind-release path remain covered. Source inspection confirms
+no `SessionManager`/`game.rules` dependency in `FadeManager`. Root owns the
+combined architecture-class check after its independent mask/store repairs,
+integration and push; this slice does not claim a fresh green architecture or
+broad suite. Consumed local logs/XML were removed after checking all skips.
+
+
+### Final affected architecture qualification — 2026-10-17
+
+Composition `3f6758cef0b528eef888874671e37ae7c3760fbf` includes the qualified white-fade binding
+`b3cf0337a`, equivalent mask-range expression, existing AnPal fallback-signature reconciliation, ending
+sampler `3896035af` and ICZ authoring-limit record `04506e5cd`. The white-fade repair separately passed
+150 focused native-GPU/palette/rewind/gateway/required-S3K tests and 57 binding/reset/restore/session
+construction/lifecycle neighbors, each with zero failures, errors or skips. Public rule/API signatures
+are unchanged. Complete appended Plan evidence from both parents was preserved during the sole doc conflict.
+
+The final affected command used the current Main queue wrapper from the intended Root checkout:
+`--normal -Dmse=off -Pguards -Dtest=TestArchUnitRules,TestProductionSingletonClosureGuard,TestArchitecturalSourceGuard`
+plus the original four absolute ROM properties, isolated report/tmp paths and `test -B`. The same
+surfaceless-EGL/null-OpenAL/no-ambient-display/Lua5.4 launcher environment was preserved. Session94450
+completed terminal1 at **09:56:49 UTC**, Maven1m19s: **145 tests / 4 failures / 0 errors / 0 skips**.
+All four failure identities, exception types and complete messages exactly equal Main707's matched73-case
+result: MenuAudioProbe's two singleton checks and HubMusic's provider/shared-layer checks. The FadeManager
+lower-layer violation, mask initializer finding and frozen-store error are absent. No exception was added,
+guard weakened, automatic frozen-store update enabled or unrelated baseline code fixed. This is bounded
+validation with inherited failures, not a green suite.
+
+The original 70-batch smoke selection is covered across the retained completed batches, exact resumed
+65–70 and separately recorded focused repairs. Neither the interrupted partial65 nor overlapping focused
+products are added to manufacture a one-SHA test total. The completed715-case guard run and final affected
+145-case comparison have their distinct source identities above; unchanged guard coverage was not repeated
+as a ceremony. The full suite was not run. Main707 was fetched/fast-forward-pulled again and remained
+unchanged, preserving all foreign dirt. Integration, package-with-tests-skipped, push and accounted cleanup
+are the next delivery steps, not already claimed here.
+
+All nine current NTSC ending products were sampled exactly once:253 required pairs,249 exact and four
+different. Sonic/+2 and Sonic+Tails/+2 share171/194 late cloud/water pixels; seven products match, including
+Tails/+2's165-pair title-reaching run. Read-only image/native-state analysis finds a one-pass reunion
+background phase deficit; production queue causality is being observed separately without changing timings.
+ICZ's third finite controller attempt also ended alive at4594, so natural death/respawn/history/rewind
+qualification remains open. Strict HCZ work and the retained native diagnostic attribution stay separate
+from this delivery. No all-S3K, PAL, PCM, predictive six-ending/46-fingerprint timing or performance acceptance
+is claimed.

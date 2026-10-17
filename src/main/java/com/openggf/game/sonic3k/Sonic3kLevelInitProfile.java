@@ -108,6 +108,9 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
                 // An accepted image shorter than the pinned VInt_8 code prices nothing (ROM_UNSUPPORTED).
                 ledger.bindRom(reader.size() < 0x6170 ? java.util.Optional.empty()
                         : com.openggf.game.sonic3k.timing.S3kVIntDma.VInt8Transfers.tryDecode(reader.slice(0, 0x6170)));
+                // Byte-exact prefix through SpecialVInt_Array routine-0 rts ($4E80E), including all operands.
+                ledger.bindVIntRom(reader.size() >= 0x4E810
+                        && com.openggf.game.sonic3k.timing.S3kVIntInstructionCycles.romMatches(reader.slice(0, 0x4E810)));
             } catch (java.io.IOException failure) {
                 throw new java.io.UncheckedIOException(failure);
             }
@@ -133,7 +136,13 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
                 : "NTSC".equalsIgnoreCase(configuredRegion)
                         ? com.openggf.game.sonic3k.timing.S3kVIntDmaLedger.VideoRegion.NTSC
                         : com.openggf.game.sonic3k.timing.S3kVIntDmaLedger.VideoRegion.UNKNOWN;
-        ledger.serviceVInt(phase, region, hyperFlash, animateTiles, art.pendingKosModuleDmaEntries());
+        // Engine-owned inputs of the V-int instruction figure: the physical Kos queue and the level's Water_flag.
+        Boolean levelHasWater = services != null && services.waterSystem() != null && levelManager != null
+                ? services.waterSystem().hasWater(levelManager.getCurrentZone(), levelManager.getCurrentAct()) : null;
+        var instructionInputs = new com.openggf.game.sonic3k.timing.S3kVIntDmaLedger.InstructionInputs(
+                !art.directQueue().decompressionsPending(), levelHasWater);
+        ledger.serviceVInt(phase, region, hyperFlash, animateTiles, art.pendingKosModuleDmaEntries(),
+                instructionInputs);
     }
 
     @Override

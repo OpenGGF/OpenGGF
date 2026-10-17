@@ -92,14 +92,18 @@ Unreleased. The earlier development themes remain in
 - **S3K special stage presentation:** Blue Sphere players and their tails use
   the original perspective projection through jumps, with fixed ground shadows
   under the players. Distant spheres retain the original shared mapping frames
-  and tile sizes. The results card sits on the locked-on game's grey backdrop
+  and tile sizes. Overlapping spheres use the original sprite-table order and
+  compare the winning pixel's priority against the floor and HUD planes.
+  The results card sits on the locked-on game's grey backdrop
   instead of white, matching native frames of won and failed stages.
   A Super Emerald pedestal loads the S&K sphere layout for its selected stage and
   selects that stage on the frame the player lands on it,
   as the original does, instead of one frame later. White stage transitions follow
   the original palette colours and 22-frame wait, including the scene backdrop
   and underwater colours, instead of adding a yellow/red overlay. Rewinding a
-  special-stage entry releases its restored palette on the next scene update.
+  special-stage entry releases its restored palette on the next scene update. The host's
+  white-fade policy is bound to its gameplay session, keeping detached UI fades
+  and other worlds independent.
   Score and bonus
   digits use the original mapping positions and trailing zero, and overlapping
   labels and sphere icons follow the console's sprite priority.
@@ -144,7 +148,8 @@ Unreleased. The earlier development themes remain in
   and in Sonic 3&K it keeps its underwater state until it dies, as in the original.
   A broken monitor's contents still rise and pay out after the player leaves the
   monitor behind. Ending reunion loads use measured native decompression
-  costs, and the credits start on the original frame. Giant-ring capture retains
+  costs, and the credits start on the original frame. Timing diagnostics distinguish
+  verified instruction terms from work that is still unpriced. Giant-ring capture retains
   the original blank-frame ownership and art-reload state; ordinary animation
   is released again on return. Robotnik's ship stays with the beaten boss through
   its defeat pause before flying off, as in the original.
