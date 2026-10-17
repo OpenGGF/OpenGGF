@@ -128,3 +128,12 @@ CPU/movement/wall/integration and no-nudge control pass in focused86494
 is still unknown. Equal final X can conceal different velocity/Push results.
 No new route, matrix product or runtime qualification. [Exact evidence and
 missing live fields](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#hcz7134-coupled-cpu-and-ground-wall-decision--2026-10-17).
+
+
+R6 live witness (2026-10-17, Root86171 composition): one canonical prefix through
+7135 observes correct CPU nudge/acceleration/projection but missing wall response
+at7134. Engine final0176.F800/vx-ground0270/noPush vs native0175.F800/0170-0/Push.
+BG collision is active; selected distance, translated BG terrain and native layer
+comparison are still missing. Prefix217 errors/7136 rows is a partial window,
+not improvement versus full R4 or a matrix certification. No runtime change or
+new independent slice/GLFW qualification. [Fields/clocks and seam limit](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r6-actual-hcz7134-cpu-and-wall-input-witness--2026-10-17).

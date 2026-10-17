@@ -113330,3 +113330,18 @@ No production edit or trace/native/broad invocation. Prior canonical7134
 error count/window claimed. Missing live engine CPU branch, full pre-wall state
 and probe/distance/terrain prevent a causal owner assignment. [Exact selector,
 math, outcomes and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#hcz7134-coupled-cpu-and-ground-wall-decision--2026-10-17).
+
+
+### 2026-10-17 — R6 live HCZ7134 wall input witness; first non-camera field unchanged
+
+Root86171 composition in the same owned feature tree; one normal/EGL canonical
+prefix56073 stops after7135 (7136 of14208 rows, lag53). JUnit1/0F/0E/0S only
+means the intentional prefix completed: active comparator217=20physics+197animation,
+bootstrap/warnings0, first non-camera7134sidekick_x0175/0176. Earlier206 errors
+(11physics+195animation) are already present by7132. CPU nudge+1 and acceleration
+026A→0270 yield the native projected0180/0838, but the actual wall call leaves
+0270/ground0270/noPush and integrates to0176.F800. BG active, engine layers0E/0F;
+selected BG distance/terrain/transforms and native layer bytes were not captured.
+No runtime edit, second invocation, full/slice/alternate/native/media/guard/broad
+qualification; no replacement of R4's longer-window totals or exact GLFW limit.
+[Exact command, all groups, fields and clocks](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r6-actual-hcz7134-cpu-and-wall-input-witness--2026-10-17).

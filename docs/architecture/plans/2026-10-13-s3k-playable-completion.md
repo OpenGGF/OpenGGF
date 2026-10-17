@@ -4245,3 +4245,18 @@ position/velocity/path and actual terrain probe/distance. No new traces/native
 observations, runtime edit, broad suite, Main write or push. Prior strict
 7134sidekick_x/9482air and exact GLFW limits remain. [Math, exact focused
 command and causal blocker](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#hcz7134-coupled-cpu-and-ground-wall-decision--2026-10-17).
+
+
+## R6 actual HCZ7134 live wall input witness — 2026-10-17
+
+Own tree fast-forwards to Root86171; native4fdf difference preserved. One normal
+canonical prefix56073 stops after7135. Execution1/0F/0E/0S is not parity green:
+open HCZ comparator217=20physics+197animation, lag53,7136/14208 rows, first
+non-camera7134sidekick_x0175/0176. Earlier206 errors already exist by7132.
+Actual CPU+1, acceleration026A→0270 and projected0180/0838 agree with native;
+wall call leaves0270/ground0270/noPush instead of0170/ground0/Push, producing
+0176.F800. BG collision is active; selected BG distance/terrain/transforms and
+native layer equivalence remain uncaptured. Actual engine top/lrb0E/0F. Stop at
+this wall-boundary handback, without runtime edit or second run. No independent
+slice/alternate/guard/native/media/broad claim. Temporary observer/diagnostics
+are consumed and removed. [Exact fields, clocks, command and limits](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r6-actual-hcz7134-cpu-and-wall-input-witness--2026-10-17).

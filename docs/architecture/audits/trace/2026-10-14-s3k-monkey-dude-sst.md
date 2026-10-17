@@ -2626,3 +2626,141 @@ terrain, or integration ownership. The synthetic result does not establish any
 of those live values. No new canonical/slice/alternate result or frontier move,
 no HCZ certification or exact GLFW oracle claim. Existing7134sidekick_x and
 independent9482air remain; no runtime fix is justified in this bounded slice.
+
+
+## R6 actual HCZ7134 CPU and wall input witness — 2026-10-17
+
+Own feature tree fast-forwards under its normal intended-tree writer lease from
+b8ff76c5c to Root86171c6b87f1bb9d3392ebd5036c4d0eb4071d71. All prior own
+jobs were terminal. Actual clean TraceChaser4fdf7388 remains untouched against
+the new322851cb gitlink. R1–R5 identities/results are preserved separately;
+R6 is `s3k-gpt61-hcz-7134-live-wall-input-witness-20261017-r6`, ordinal6.
+
+One temporary `TestS3kHcz7134LiveWallWitness#canonicalThroughHcz7135` subclasses
+the existing chain harness and calls its ordinary
+`assertChainReplayThroughSegmentRow(...,11,7136)`: original BK2, bootstrap,
+input and lag admission, starting at segment0, stopping after row7135. The
+existing slot-probe callback arms at row7131. CPU and collision proxies delegate
+every call to the actual owners and wrap only CPU.update and the P2 ground-wall
+call. They sample before/after, then restore the original bindings. No gameplay
+values, fixtures, physics, readiness, clocks, ROM bytes or auxiliary reference
+are modified; no fake geometry, positioned state, reseed, runtime/API widening,
+new native/media capture, variant, alternate, guard or broad run.
+
+Observer source SHA256
+47f7cfbdaa5ac6ffe869821d7fe91cfe4c8ecb59e099661979658c21ae31028f.
+It reads the actual NormalStepDiagnostics, leader/history buffers, sprite state,
+production probe descriptor and call-boundary clocks. Projected coordinates below
+are derived from those actual full16.16 inputs using the production descriptor;
+they are not a direct scanWorld callback. The foreground terrain queries are
+additional read-only lookups, not a substitute response. The observer deliberately
+does not label the pooled foreground result as the selected result when BG is
+active. Temporary source/classes and consumed diagnostics are removed after this
+summary; this small observation can be reconstructed from the existing seams.
+
+### Single invocation and bounded comparison
+
+Current absolute Main wrapper from the owned cwd; the original three absolute
+ROM bindings are the same as R3/R5. Exact command:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_WORKSPACE/tools/testing/maven_queue.py" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" "-Ds3k.rom.path=$S3K_ROM" \
+  -Ptrace-replay '-Dtest=TestS3kHcz7134LiveWallWitness#canonicalThroughHcz7135' \
+  -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical test -B
+```
+
+Request56073 is terminal: queue0s, Maven1m39s, JUnit23.886s, finished
+**2026-10-17 13:22:30 BST /12:22:30 UTC**,1/0F/0E/0S. This is successful
+bounded observation, **not parity green**: an intentional prefix stop does not
+close/assert the current comparator. Capturing it before detachment reveals
+**217 field mismatches =20physics+197animation**, warning/bootstrap0, lag53,
+`complete=false`, consumed7136 of14208 reference rows (0–7135). The first
+non-camera physics error remains **7134 sidekick_x0175/0176**. At7132 there
+were already206 errors (11physics+195animation), with no non-camera physics
+mismatch; the retained camera entries are6790/6791/6792/6947/6948. This recent
+buffer does not establish the first animation or first camera mismatch globally.
+At7134 the increment is4physics+1animation;7135 adds5physics+1animation.
+
+Six earlier ordinary windows complete with zero physics/animation/bootstrap/
+warning errors: seg0/2/4/6/8/9 consume2290/4023/8235/4103/7175/3574 reference
+rows; lag0/11/14/16/62/55 respectively. Prefix gap record has11 recorded gaps,
+0 reported failures; incomplete later structural gaps are deliberately not
+verified. These bounded counts do not replace R4's full14208-row/133771 total,
+certify a route exit, or qualify the independent HCZ slice/alternate/GLFW oracle.
+
+### Actual clocks and P2 pipeline
+
+Each row association is the harness's pre-production comparator cursor passed to
+its post-step slot callback. No fitted clock offset or replay state injection.
+The metadata declares BK2 offset63075. `announcedMovieRow` is the existing
+driver's cursor+1 convention; the after-step cursor has consumed that row.
+
+| Trace/CSV row | BK2 cursor before → after /announced | Engine VInt_run_count | LevelManager LF /SpriteManager /CPU argument | ObjectManager frame preCPU → postrow | Chain stepEngineFrame ordinal |
+| --- | --- | --- | --- | --- | --- |
+| 7133 (CSV1BDD) | 70208→70209 /70209 | 69065 (10DC9) | 7081 (1BA9) | 946→947 | 69065 |
+| 7134 (CSV1BDE) | 70209→70210 /70210 | 69066 (10DCA) | 7082 (1BAA) | 947→948 | 69066 |
+
+The native CSV LF is likewise1BA9/1BAA; its separate `vblank_counter` column is
+0FDC/0FDD, not an observed native power-on VInt longword. The chain step count
+counts this diagnostic's completed `stepEngineFrame` calls, not every possible
+engine dispatch. Its preCPU/prewall value is completed+1 for the current call;
+the postrow helper ran after the increment and printed the next ordinal instead
+(69066/69067). The table uses the actual in-call event count, with no timing fit.
+
+P2 Y is0830.1F00 and y velocity0 throughout both observed ticks. Angle0,
+radii9/15, grounded GROUND path, underwater, facingRight, not rolling/sliding,
+OnObj false (also false at frame start), move_lock0/object_control0, no tunnel,
+stick-to-convex or wall suppression. Actual top/lrb bits are **0E/0F**,
+loop-low-plane false, acceleration6 and logical Right08. Native layer bytes
+were not provided by the relayed native witness, so their equivalence is unproven.
+
+| Row | Actual phase | Centre X | vx /ground | Push |
+| --- | --- | --- | --- | --- |
+| 7133 | preCPU | 0170.1E00 | 0264/0264 | false |
+| 7133 | postCPU | 0171.1E00 | 0264/0264 | false |
+| 7133 | prewall → postwall | 0171.1E00 | 026A/026A unchanged | false |
+| 7133 | postrow | 0173.8800 | 026A/026A | false |
+| 7134 | preCPU | 0173.8800 | 026A/026A | false |
+| 7134 | postCPU | 0174.8800 | 026A/026A | false |
+| 7134 | prewall → postwall | 0174.8800 | 0270/0270 unchanged | false |
+| 7134 | postrow | **0176.F800** | **0270/0270** | **false** |
+| 7134 | relayed native postrow | **0175.F800** | **0170/0** | **true** |
+
+The latest CPU record is NORMAL, branch `leader_fast`, delay16, held/pressed08,
+recorded/push-bypass status44, dy1, generatedRight08, immediate nudge+1,
+object_control0 and pre/post status40, no jump press or skipped steering. At7133,
+history slot19 contains0559/0831, dx03E9;7134 slot1A contains0560/0831,
+dx03ED. Raw position lookback16 and recorded-slot target agree. The current
+leader g0750/074D exceeds0400, so no slow-leader $20 target bias is applied.
+Postphysics diagnostic capture is true and agrees with the observed final state.
+
+The production probe descriptor is modeC0/rotationC0, Right, offset+10/+8.
+At7133 its live inputs project to **017D/0838**;7134 projects to **0180/0838**,
+matching the native probe location. Ground-wall call eligibility is true.
+Foreground descriptors at7134 are005D at0180,005C at0170,0058 at0190, no flips;
+all have the live lrb bit0F clear and return no solid tile for that path. **BG
+collision is active** at each observed call. No selected BG terrain/metric,
+Camera_X/Y_diff, translated BG probe, row mask, or exact returned distance was
+recorded. Public CollisionTrace has no CalcRoomInFront-result event. This
+observer's FG-only pooled-result qualification therefore did not expose the
+selected result; this is an observation limit, not proof that test-local BG
+sampling would require a production API change.
+
+### Causal handback
+
+CPU nudge, acceleration, full-position projection and integration are now live
+witnessed. The earliest demonstrated missing effect is inside the wall-call
+boundary: native loc_14BCA consumes-1 and changes0270→0170/ground0/Push, while
+the engine leaves0270/ground0270/Push clear before integration. Source eligibility
+and the lack of any change indicate a nonnegative selected result on this path;
+the exact distance was not observed and is not asserted as0. The BG-vs-FG
+selection uses BG on equal/nearer signed distance (`GroundSensor.scanWorld` /
+`combineDualPlaneResults`). BG transforms/selected terrain and native-vs-engine
+layer bytes are the remaining inputs needed to distinguish provider timing,
+plane translation/row-mask, terrain lookup and distance/selection ownership.
+No CPU/order, collision-response constant or runtime fix is justified here.
+No second invocation or new qualification was launched. Main/Root and foreign
+native/performance artifacts remain untouched; only this evidence is retained.
