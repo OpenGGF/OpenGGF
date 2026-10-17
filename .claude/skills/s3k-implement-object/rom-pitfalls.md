@@ -5909,3 +5909,21 @@ Keep already launched independent projectiles on their own lifetime. Do not
 hide an orphan by inventing empty fields for an unsupported replacement owner.
 Origin: AIZ tree25/body4 with five higher arms, current-prefix34784 SkidDust slot4 abort;
 focused75404's setup failure and corrected29965 lifecycle cases, 2026-10-16.
+
+
+## Multipart parents and allocation holes survive simplified result graphs
+
+`LevResults_DisplayScore` keeps its mapping-frame1 parent zero plus seven BCD
+children; clearing `mainspr_childsprites` removes only the children. Native
+`Render_Sprites` draws that parent first, and the first opaque SAT sprite wins.
+A GL painter reverses the complete row group and each mapping, not just pieces.
+A declared results twin exposed420 geometry pixels and then30 overlap pixels;
+ROM-backed geometry/raster oracles and17 original-RGB checkpoints separate them.
+Do not assign a later actor the first slot after an initial table by counting
+rows. Conditional rows may already have deleted themselves. In the ordinary
+won/all-seven product, `loc_2EAC8` frees failure-message43 before the continue
+allocator scans; the icon takes43, not49, and both reveal tables preserve it.
+Trace the actual allocator and deletion branches before changing lifetime.
+Origin: S3K seven-Chaos results investigation, Root57774b451 plus correction,
+2026-10-17. The parent/priority/allocation lessons apply across games; the
+specific slots and conditional branches belong to this S3K product.

@@ -730,3 +730,26 @@ The old raw-spawn guard failures above were repaired in `fbfe2999c` (fresh 142/0
 Final cache/lifecycle/SDK/Javadoc/neighbour coverage passes 141/0F/0E/0S at 04:03:08 UTC, including all four
 required S3K loading tests. Fresh selected structural/API guards pass 142/0F/0E/0S at 04:05:31 UTC.
 Affected replay and delivery-wide validation remain; neither selection is a full-suite or all-guards pass.
+
+
+## Results geometry and native RGB prefix — 2026-10-17
+
+The results renderer now uses the unadjusted ROM score mappings and the bonus parent's zero plus seven
+word-BCD children. The parent's zero survives clearing the child count. Native first-opaque priority is
+preserved across both mapping pieces and the tally/reveal row groups. The independent ROM oracle has102
+cases, including five widths, normal/Super Tails and Super Knuckles score mappings, zero/nonzero counters,
+cleared parents, four opaque raster overlaps and two continue-retention negative controls. The final
+nine-class selection passes162/0F/0E/0S at04:57:09 UTC on `57774b451` plus the correction.
+The [source, rejected hypotheses and exact command](../../designs/2026-10-13-s3k-ending-lifecycle.md#native-results-geometry-and-painter-order--2026-10-17-root)
+retain the scope of those component inlets.
+
+Against unchanged native-v2 original RGB, engine-v6 results reveal+0..32 every two frames matches all17
+checkpoints exactly. Stage PNGs, every state row and the event ledger remain unchanged; the return is2423.
+Root inspected the pair. The maintained
+[seven-Chaos capture tool](../../../../src/main/java/com/openggf/tools/S3kSevenChaosGatewayCaptureTool.java)
+reproduces all174 files byte-for-byte (CLI exit0, 05:10:48 UTC). Invoke through the normal Maven queue with
+`-Dmse=off compile exec:java -Dexec.mainClass=com.openggf.tools.S3kSevenChaosGatewayCaptureTool` and
+`-Dexec.args="--rom ABSOLUTE_S3K_ROM --out-dir NEW_ABSOLUTE_DIRECTORY"`, surfaceless EGL, unset
+DISPLAY/WAYLAND_DISPLAY and null OpenAL. It verifies the ROM and fixes the same Limited/RAW_RGB protocol.
+This is a declared Tails320 NTSC journey. Stage pixels, the full results timeline, other characters,
+PAL/wide/donor native products, cold routes and timing remain inherited gaps; no blanket parity certificate.

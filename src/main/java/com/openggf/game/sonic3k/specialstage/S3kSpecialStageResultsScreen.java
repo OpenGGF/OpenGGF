@@ -133,7 +133,6 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
     private static final int SCORE_DIGIT_COUNT = 7;
     private static final int SCORE_DIGIT_TILE_COUNT = SCORE_DIGIT_COUNT * 2;
     private static final int[] SCORE_DIVISORS = {1_000_000, 100_000, 10_000, 1_000, 100, 10, 1};
-    private static final int SCORE_VALUE_X_ADJUST = -8;
 
     // ---- Input parameters ----
     private final int ringsCollected;
@@ -1122,14 +1121,16 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
         }
         if (!artCached || !renderer.isReady()) return;
 
-        for (ResultsElement elem : phase1Elements) {
-            if (!elem.visible) continue;
-            renderElement(elem);
+        // Native Render_Sprites gives earlier SST entries/pieces priority. The
+        // new reveal rows follow the surviving tally rows in SST order; GL must
+        // paint those later groups first, then the earlier rows from back to front.
+        for (int i = phase2Elements.size() - 1; i >= 0; i--) {
+            ResultsElement elem = phase2Elements.get(i);
+            if (elem.visible) renderElement(elem);
         }
-
-        for (ResultsElement elem : phase2Elements) {
-            if (!elem.visible) continue;
-            renderElement(elem);
+        for (int i = phase1Elements.size() - 1; i >= 0; i--) {
+            ResultsElement elem = phase1Elements.get(i);
+            if (elem.visible) renderElement(elem);
         }
 
         if (showContinueIcon) {
@@ -1145,12 +1146,8 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
     private void renderElement(ResultsElement elem) {
         switch (elem.type) {
             case SCORE_ROW -> renderScoreRow(elem);
-            case RING_BONUS -> {
-                if (!elem.digitsCleared) renderBonusDigits(elem, ringBonus);
-            }
-            case TIME_BONUS -> {
-                if (!elem.digitsCleared) renderBonusDigits(elem, timeBonus);
-            }
+            case RING_BONUS -> renderBonusDigits(elem, ringBonus);
+            case TIME_BONUS -> renderBonusDigits(elem, timeBonus);
             case EMERALD -> renderEmerald(elem);
             default -> {
                 int tileOffset = isCharNameFrame(elem.mappingFrame) ? CHAR_NAME_TILE_OFFSET : 0;
@@ -1166,24 +1163,8 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
     }
 
     private void renderScoreRow(ResultsElement elem) {
-        if (frameIndexOutOfRange(elem.mappingFrame)) {
-            return;
-        }
-        var frame = spriteSheet.getFrame(elem.mappingFrame);
-        if (frame == null) {
-            return;
-        }
-        var pieces = frame.pieces();
-        for (int i = 0; i < pieces.size(); i++) {
-            // Pieces 2/3 are the live score digits, drawn 8px left of the label run.
-            int pieceWorldX = elem.screenX()
-                    + ((i == 2 || i == 3) ? SCORE_VALUE_X_ADJUST : 0);
-            renderMappingPiece(pieces.get(i), pieceWorldX, elem.screenY(), 0, -1);
-        }
-    }
-
-    private boolean frameIndexOutOfRange(int frameIndex) {
-        return frameIndex < 0 || frameIndex >= spriteSheet.getFrameCount();
+        // Map_Results already positions both labels and live HUD digits.
+        renderMappingFrameWithTileOffset(elem.mappingFrame, elem.screenX(), elem.screenY(), 0, -1);
     }
 
     private boolean isCharNameFrame(int frame) {
@@ -1199,18 +1180,23 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
     }
 
     /**
-     * Render a 7-digit bonus value with leading zero suppression.
-     * ROM: LevResults_DisplayScore (sonic3k.asm lines 62789-62815).
+     * Render the native parent zero and seven child BCD slots with leading-zero suppression.
+     * ROM: LevResults_DisplayScore (044fa46 sonic3k.asm:62794-62821) keeps the
+     * parent's mapping frame 1; Render_Sprites draws it before checking the child count.
      * <p>
      * Digit mapping frames (1-10) reference tiles at $520+ but general art is loaded
      * at $5B8 for SS results. ROM compensates with art_tile=$98 ($5B8-$520).
      */
     private void renderBonusDigits(ResultsElement elem, int value) {
-        int x = elem.screenX() - 0x38;
         int y = elem.screenY();
+        // Draw_Sprite/loc_1AEE4 draws mapping_frame even when loc_2E6C8 cleared
+        // mainspr_childsprites. That permanent trailing zero is separate from the BCD children.
+        renderMappingFrameWithTileOffset(elem.mappingFrame, elem.screenX(), y, DIGIT_TILE_OFFSET, -1);
+        if (elem.digitsCleared) return;
+        int x = elem.screenX() - 0x38;
         boolean hasNonZero = false;
-        // Shared native LevResults_DisplayScore appends the seventh zero nibble.
-        int remaining = value * 10;
+        // loc_2EA5A/loc_2EA64 load a word; the parent's zero supplies the displayed x10.
+        int remaining = value & 0xFFFF;
 
         for (int i = 0; i < 7; i++) {
             int digit = remaining / DIVISORS[i];
@@ -1218,7 +1204,7 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
             if (digit != 0) hasNonZero = true;
 
             int frameIdx;
-            if (hasNonZero || i == 6) {
+            if (hasNonZero) {
                 frameIdx = digit + 1;
             } else {
                 frameIdx = 0;
@@ -1268,8 +1254,10 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
         var frame = spriteSheet.getFrame(frameIndex);
         if (frame == null) return;
 
-        for (var piece : frame.pieces()) {
-            renderMappingPiece(piece, worldX, worldY, tileOffset, paletteOverride);
+        // First native piece wins an opaque overlap; GL paints it last.
+        var pieces = frame.pieces();
+        for (int i = pieces.size() - 1; i >= 0; i--) {
+            renderMappingPiece(pieces.get(i), worldX, worldY, tileOffset, paletteOverride);
         }
     }
 
@@ -1282,35 +1270,10 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
         if (frameIndex < 0 || frameIndex >= spriteSheet.getFrameCount()) return;
         var frame = spriteSheet.getFrame(frameIndex);
         if (frame == null) return;
-        var gm = GameServices.graphics();
-        if (gm == null) return;
-
-        for (var piece : frame.pieces()) {
-            int widthTiles = piece.widthTiles();
-            int heightTiles = piece.heightTiles();
-            boolean pieceHFlip = piece.hFlip();
-            boolean pieceVFlip = piece.vFlip();
-            int palIdx = (piece.paletteIndex() + palAdd) & 0x3;
-
-            for (int col = 0; col < widthTiles; col++) {
-                for (int row = 0; row < heightTiles; row++) {
-                    int tileIdx = piece.tileIndex() + tileOffset + (col * heightTiles + row);
-                    int patternId = PATTERN_BASE + tileIdx;
-                    int drawX = worldX + piece.xOffset()
-                            + (pieceHFlip ? (widthTiles - 1 - col) : col) * 8;
-                    int drawY = worldY + piece.yOffset()
-                            + (pieceVFlip ? (heightTiles - 1 - row) : row) * 8;
-
-                    int descIndex = patternId & 0x7FF;
-                    if (piece.priority()) descIndex |= 0x8000;
-                    if (pieceHFlip) descIndex |= 0x800;
-                    if (pieceVFlip) descIndex |= 0x1000;
-                    descIndex |= (palIdx & 0x3) << 13;
-
-                    com.openggf.level.PatternDesc desc = configureReusablePatternDesc(descIndex);
-                    gm.renderPatternWithId(patternId, desc, drawX, drawY);
-                }
-            }
+        var pieces = frame.pieces();
+        for (int i = pieces.size() - 1; i >= 0; i--) {
+            var piece = pieces.get(i);
+            renderMappingPiece(piece, worldX, worldY, tileOffset, (piece.paletteIndex() + palAdd) & 0x3);
         }
     }
 
@@ -1553,7 +1516,7 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
         /** loc_2EC1E's {@code $2E}: frames to hold before sliding out. */
         int slideOutDelay;
         boolean deleted;
-        /** loc_2E6C8: {@code mainspr_childsprites} cleared, so no bonus digits are drawn. */
+        /** loc_2E6C8 clears the seven digit children; the parent zero still draws. */
         boolean digitsCleared;
 
         ResultsElement(ElemType type, int targetX, int startX, int y,

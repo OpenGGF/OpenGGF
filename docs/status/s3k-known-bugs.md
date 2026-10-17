@@ -6843,19 +6843,28 @@ The unchanged native-v2 versus engine-v4 pictures reduce stage reveal+0 from 71,
 returns. Root viewed the original event-paired pictures, with no normalization or image shifts. Other character,
 PAL, scene/timing products remain unqualified; the stage still has pose/scene residuals.
 
-**Results digit column.**
+**Results digit column and opaque sprite overlaps (corrected for the declared product, 2026-10-17).**
 
-- With both sides paired on the card reveal, the cards match for 8 frames. The static card then
-  differs in 420 px.
-- About 390 of those are the right-hand digit column: native draws the score, ring-bonus and
-  perfect "0" glyphs at active x 248-255, the engine at 240-247, one 8-pixel tile to the left.
-- The rest is sphere-icon animation phase beside the labels.
-- **Owner:** `S3kSpecialStageResultsScreen` digit placement.
+`Map_Results` already positions the score digits. The bonus rows draw seven BCD children of the native word
+counter plus a separate permanent parent zero; clearing the child count retains that parent. Removing the
+extra score offset and restoring this graph reduces the settled difference from 420 to 30 pixels.
+The remaining 30 are icon/text overlaps, not the previously suspected animation phase: native earlier
+SST entries and mapping pieces win opaque overlaps, while the manual GL painter previously let later ones win.
+Reversing the piece and tally/reveal group emission removes all 30 in this product.
+
+The ROM-backed geometry oracle reproduces 85 failures before the fix. After the corrected independent
+priority oracle reproduces 30 pixels in each of four cases, the final nine-class selection passes
+162/0F/0E/0S at 04:57:09 UTC. Native-v2 versus engine-v6 has zero raw RGB differences at all 17 paired
+results reveal checkpoints +0 through +32, every two frames. The maintained capture CLI reproduces every
+PNG and both state/event CSVs byte-for-byte (05:10:48 UTC). Root inspected the original pictures.
+The initial ordinary-label palette-offset oracle and proposed continue-icon slot49 removal were rejected
+against source; no production continue lifetime was changed. See the
+[results evidence](../architecture/designs/2026-10-13-s3k-ending-lifecycle.md#native-results-geometry-and-painter-order--2026-10-17-root).
 
 ### Removal condition
-The layout bank and the declared local white-fade product are corrected. Place the results digits on the native
-column with ROM-backed failing tests and event-paired native pictures. Remaining character, scene and timing
-pixels need attribution; broader native products and final candidate verification remain open.
+The layout bank, white-fade product and sampled results prefix are corrected locally. Stage reveal pixels,
+other character/PAL/viewport/donor products, the rest of the results timeline and final candidate verification
+remain open. One declared native320 NTSC Tails Limited/RAW_RGB product is not whole-scene or timing parity.
 
 ---
 

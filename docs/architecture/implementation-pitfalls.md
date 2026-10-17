@@ -1946,6 +1946,11 @@ propeller mapping overwrite an earlier main-body wheel. Keep SAT collection in
 native main-first order (`Render_Sprites` `$1AEE4/$1AF2A`). Independently reconstruct
 opaque ROM overlap and priority before excluding a covered player pixel; the
 native reunion's earlier wing legitimately covers20 of619 player pixels.
+The same applies to manual results painters: after correcting digit geometry,30 native
+icon/text pixels still differed because only each mapping was considered. Reverse the
+whole tally/reveal group as well as its pieces; the declared Tails results prefix then
+matches17 raw RGB checkpoints. An animation-phase explanation was rejected by opaque
+ROM pixels. Clearing a multipart child count does not suppress its parent's mapping.
 Scripted status-facing does not imply render_flags-facing when object mappings
 bypass the ordinary playable mapper. See the
 [ending publication evidence](designs/2026-10-13-s3k-ending-lifecycle.md#source-owned-initial-and-published-ending-presentation-2026-10-14).

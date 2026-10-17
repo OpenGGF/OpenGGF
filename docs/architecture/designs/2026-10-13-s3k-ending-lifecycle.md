@@ -2749,3 +2749,64 @@ TestHardwareTimingAuthorityGuard (25) and TestObjectPhysicsStandardizationGuard 
 wrapper, EGL/no-display/null-OpenAL environment and `-Dmse=off -Dtest=<those five exact classes> test -B`.
 The candidate pin, recursive annotations and unchanged engine-internal inventory pass. This is selected guard
 coverage, not all guards. Affected replay and delivery-wide combined smoke remain separate.
+
+
+## Native results geometry and painter order — 2026-10-17 Root
+
+Root `57774b451` plus this results correction keeps the unchanged native-v2 seven-Chaos diagnostic.
+The owning source is skdisasm `044fa46`: `ObjDat2_2E834` at ROM `$2E834`, `Map_Results` at `$2F26A`,
+`LevResults_DisplayScore` (:62794–62821), child clearing `loc_2E6C8`, and `Render_Sprites`
+(`loc_1AEE4` draws the parent before `loc_1AF1C` tests its child count).
+The row table positions the score parent at active160 and ring/time parents at active248.
+The score mapping already supplies the live digit offsets. Each bonus parent retains mapping frame1 (zero),
+with seven child BCD slots from parentX−$38 through parentX−8, derived from the unmultiplied word counter.
+This changes presentation only; counter values and awarded points are unchanged.
+
+The independent raw-ROM oracle first passes its table-shape check and fails all85 geometry products
+(86/85F/0E/0S, 04:16:43 UTC). The first fixed nine-class selection passes146/0F/0E/0S at04:20:10.
+An initial `TAILS` enum typo failed test compilation and provides no parity evidence. The expanded geometry
+coverage includes normal Tails, Super Tails and Super Knuckles score mappings at320/352/400/528/800,
+seven zero/nonzero/word-bound bonus values for both rows, and the parent retained after child clearing.
+
+The geometry-only engine-v5 capture (one capture and15 mapping variants pass at04:22:30) reduces the
+settled results difference420→30 pixels. All remaining differences are blue icon pixels overwriting native
+font shadow/yellow: Score12, Ring13, Perfect4, and one cross-row pixel. Native SAT emission is forward,
+but its first opaque sprite wins; GL must paint the complete group and each mapping in reverse.
+Reversing only pieces cannot fix a later row covering an earlier label. Both palette mapping helpers now
+share the same tile emission primitive. The continue icon's existing lifetime and separate path are retained;
+this five-row overlap oracle does not certify all scene actors or all continue overlaps.
+
+Two rejected hypotheses matter. The first ordinary-row priority oracle incorrectly added `$6000` to maps
+that already contain palette3 bits; its1238-pixel failures were test defects, not production evidence.
+After correction, all four normal/Super320/800 cases reproduce the same30-pixel defect. A proposed continue
+replacement at slot49 was also wrong: `loc_2EAC8` deletes failure-message slot43 before
+`AllocateObjectAfterCurrent` scans for the icon. On this ordinary won/all-seven product, the icon occupies43,
+which survives both reveal tables44–49 and44–46. Two negative controls retain it; no approximate slot field
+or production lifetime fix was added. The corrected four-case priority old-red was observed in the six-case
+04:45:59 run; its fifth failure was the rejected continue oracle.
+
+Final normal-wrapper focused selection, with verified absolute S3K ROM, surfaceless EGL, unset displays and
+null OpenAL: `-Dmse=off -Dtest=TestS3kSpecialStageResultsRenderPositions,TestS3kSpecialStageResultsArt,TestS3kSpecialStageResultsTally,TestS3kSpecialStageResultsReveal,TestS3kSpecialStageResultsPreparation,TestS3kSpecialStageResultsBackdrop,TestS3kSanctuaryResultsBackdropHeadless,TestSpecialStageRewindCapability,TestGameplayCaptureFrameRendering test -B`.
+It passes162/0F/0E/0S at04:57:09 UTC (102 new oracle cases plus60 neighbours). Engine-v6 capture passes
+1/0F/0E/0S at05:00:57. All17 raw RGB results checkpoints reveal+0..32/every2 match unchanged native-v2
+exactly (engine+52/native+128); no image shift, recolouring or normalization. Root viewed the +32 pair.
+All82 stage PNGs, state.csv and ledger.csv are byte-identical to v5; stage residuals446..1112 remain.
+Events remain contact338, hub403, release1295, pedestal1425, stage1441, results1789 and LRZ2return2423.
+
+The diagnostic is promoted to `S3kSevenChaosGatewayCaptureTool`: verified4MiB ROM identity, absolute paths,
+fresh output directory, Linux EGL/no-display checks, the same declared Tails/native320/Limited/RAW_RGB inlet
+and event-relative input, and a30000-frame bound. Through the normal main-workspace wrapper, `compile
+exec:java -Dexec.mainClass=com.openggf.tools.S3kSevenChaosGatewayCaptureTool` with `--rom` and `--out-dir`
+completes exit0 at05:10:48 UTC after338s queue waiting (execution64s). Its174 files (172PNGs plus both CSVs)
+are byte-for-byte identical to v6. Maven reports one lingering Discord daemon during shutdown; the owned
+Maven/JVM invocation is terminal, and this is CLI reproduction rather than a suite pass.
+Durable outputs are `spot-checks/seven-chaos-{engine-twin-v5,compare-v5,engine-twin-v6,compare-v6,engine-tool-v7}`
+under the existing external S3K parity directory, with native-v2 unchanged. This sampled results prefix is
+one declared NTSC Tails product, not cold input, the full results timeline, native PAL/character/wide/donor
+breadth, full-scene equality, predictive timing closure or delivery-wide validation.
+
+Fresh selected source guards pass130/0F/0E/0S at05:14:14 UTC through the normal main wrapper:
+`-Dmse=off -Dtest=TestArchitecturalSourceGuard,TestHardwareTimingAuthorityGuard,TestObjectPhysicsStandardizationGuard test -B`.
+The Java25/Lua5.4/PowerShell category preflight also passes with `LUA_BIN=/usr/bin/lua5.4`; default `lua`
+is a different version and its earlier preflight failed before tests. These are selected guards/tool
+prerequisites, not the pending combined smoke result.

@@ -95,7 +95,9 @@ Unreleased. The earlier development themes remain in
   selects that stage on the frame the player lands on it,
   as the original does, instead of one frame later. White stage transitions follow
   the original palette colours and 22-frame wait, including the scene backdrop
-  and underwater colours, instead of adding a yellow/red overlay.
+  and underwater colours, instead of adding a yellow/red overlay. Score and bonus
+  digits use the original mapping positions and trailing zero, and overlapping
+  labels and sphere icons follow the console's sprite priority.
 
 - **S3K SEGA screen:** The title opens as the ROM's does: 22 frames of fade to
   black, then the SEGA logo fades in over 22 frames in the console's own palette

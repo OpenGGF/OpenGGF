@@ -61,6 +61,12 @@ water colours. This removes an implementation defect, not an accepted deviation.
 and [known-bug limits](status/s3k-known-bugs.md#super-emerald-stage-layout-set-and-results-digit-column-open)
 retain the remaining scene pixels, timing and native-product breadth; delivery validation is still pending.
 
+**Results presentation repair (2026-10-17, local candidate):** the ROM-backed score/bonus geometry and
+native opaque sprite priority are restored. All17 sampled results reveal checkpoints of the declared
+Tails320 NTSC seven-Chaos product match original native RGB; stage pixels and broader products remain open.
+The [results evidence](architecture/designs/2026-10-13-s3k-ending-lifecycle.md#native-results-geometry-and-painter-order--2026-10-17-root)
+records the162 focused passes and the reproducible maintained capture tool. No accepted deviation was added.
+
 ## Table of Contents
 
 1. [YM Service Timing: Source-Relative Timeline Without Absolute VInt Phase](#ym-service-timing-source-relative-timeline-without-absolute-vint-phase)
