@@ -113516,3 +113516,18 @@ No full returned-HCZ/slice/alternate/GLFW qualification on this runtime. Matched
 historical4699/4353 remains mixed,3738 unmatched. Focused122 has one exactly
 matched inherited mock error; guards179 have two inherited MenuAudio failures.
 [Exact selectors, source epochs, all windows, intermediate failures and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r10-encoded-collision-words-resident-destinations-and-rom-aliases--2026-10-17).
+
+
+### 2026-10-17 — Composed canonical152d07 advances returned-HCZ non-camera frontier to7807
+
+Normal Main-wrapper request93212 atRoot152d07 (all originalROMs, trace-replay,
+EGL/nullAL/noambient/singlefork) completed14:12:04UTC,6/1F0E0S,Maven2m46s,
+queue0. OriginalAIZ+standing20 and all3prefix methods pass; complete windows0/2/
+4/6/8/9 have0errors/warnings/bootstrap. Fullchain remainsred: HCZ11complete14208
+rows,133258errors (113873physics+19385animation),lag59,warnings/bootstrap0;
+firstnoncamera7807 sidekick_y066F/0669, giant_ringexitabsent. Earlier7134 wall
+causal unit is fixed; no later-physics or fullroute certificate follows.
+Main803's older incomplete result is not an exact waiver for these later rows.
+Root retains inspected reports temporarily for the activeR11 causal owner;
+no archives or pass caches. Four distinct segment checks pending, broad smoke
+not yet launched; see existing completion Plan for exact selector/environment.

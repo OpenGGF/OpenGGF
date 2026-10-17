@@ -4954,3 +4954,35 @@ contains206 errors (11camera physics+195animation); no non-camera physics
 mismatch through7135. This is bounded closure, not zero frontier/full parity.
 No full canonical/slice/alternate/GLFW claim; Root owns further qualification.
 [Source hashes, exact commands, all windows and preserved intermediate failures](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r10-encoded-collision-words-resident-destinations-and-rom-aliases--2026-10-17).
+
+
+### Composed strict qualification at152d07 — 2026-10-17
+
+Root merged AIZR7 `e6ac5a0ef`, Pachinko `f1c319492` and HCZR10 `fa289e22e`
+as `152d07ce90d512d2b75dfddfd10c777b0788acea`. Every changed runtime/test byte
+matches its qualified local commit; only append-evidence conflicts were resolved,
+with complete sections and both skill mirrors preserved. Main was fetched/FF
+again and remains803; its exact unrelated status is preserved.
+
+One current-Main absolute-wrapper canonical6 request93212, normal ROM lane,
+original3ROMs/EGL/nullAL/noambient/Lua5.4/singlefork/reuse/alphabetical,
+`-Ptrace-replay` originalAIZ+standing20, CompleteEmeraldRunPrefix, and fullchain
+selector completed terminal1 at **14:12:04 UTC**, Maven2m46s, queue0s,
+parent wall166.958s: **6 tests / 1 failure / 0 errors / 0 skips**. Original AIZ
+and all three prefix methods pass. Fullchain's complete gameplay windows0/2/4/
+6/8/9 have zero physics/animation/warnings/bootstrap errors (lags0/11/14/16/62/55).
+ReturnedHCZ11 completes14208 rows with133258 errors =113873physics+19385animation,
+lag59, warning/bootstrap0. First non-camera mismatch advances from7134 to
+**7807 sidekick_y native066F/engine0669**; giant_ring exit remains absent.
+This is not strict green, a full campaign pass or a blanket inherited waiver;
+Main803's old HCZ result was incomplete and cannot certify these later rows.
+
+The independent HCZ worker resumes bounded R11 on this exact source: existing
+aux/source first, one original-driver passive7808 prefix, then only a proven
+owner's independent old-red/minimal correction. No broad/ancestor/native sweep.
+Root's four distinct segment checks are next; broad smoke is not yet submitted.
+Actual local change-based plan3521smokeclasses/all10categories+guards remains
+complete, with planned150execution-minute/no-output/source-fingerprint limits.
+The separate Slot R2 tree owns VInt publication and five originalRGB moments;
+it cannot edit this frozen validation tree. Ending's coherent caller/bus/readiness
+closure and the whole-objective ledger above remain open, not covered by this run.
