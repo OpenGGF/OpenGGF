@@ -323,6 +323,7 @@ Unreleased. The earlier development themes remain in
   Knuckles campaigns. Lava Reef's end boss needed no change: its mines run on
   the original's fixed clock whoever plays, and the route takes the placed
   fire shield that keeps the lava from hurting Sonic during the fight.
+  Wider views restore the entry objects when the camera returns from beyond the level's left edge.
 
 - **Capture and controller tools:** Input branches reject checkpoints whose pending
   fresh assembly or transition callback cannot be restored by gameplay rewind.

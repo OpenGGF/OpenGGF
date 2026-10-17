@@ -605,3 +605,14 @@ solo Sonic follows the pair's P1 pads aligned on activation through all 14 hits 
 hurt; no engine change was made. Movie, boundaries and authoring:
 [SSZ1 matrix](s3k-ssz-act1.md#cold-lrzhpzssz1dez1-solo-sonic-campaign-2026-10-16),
 `TestS3kLrzHpzSszColdCampaign#sonicColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory`.
+
+
+### Coarse camera discontinuity recovery — 2026-10-17
+
+The composed source2056 retained the correct native first-chunk backward borrow
+but regressed this matrix's existing800px cold route. The loader now rebuilds
+its current window when signed visible-camera movement and its masked coarse
+movement disagree; native backward loads keep the ROM borrow branch. The full
+route is requalified without changing the movie or supplying gameplay state.
+See the [repair and validation record](../../plans/2026-10-13-s3k-playable-completion.md#wide-route-coarse-camera-discontinuity--2026-10-17)
+for the matched baseline, causal controls, exact commands and remaining limits.

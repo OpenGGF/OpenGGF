@@ -873,7 +873,12 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
             }
         } else {
             int delta = cameraX - lastCameraX;
-            if (Math.abs(delta) > (getLoadAhead() + getUnloadBehind())) {
+            // A negative widescreen origin wraps in the ROM's 16-bit coarse mask.
+            // Opposite raw/coarse directions denote that discontinuity, not a ROM
+            // backward pass. Rebuild the window through the existing catch-up path.
+            boolean coarseDiscontinuity = (delta > 0 && cameraChunk < lastCameraChunk)
+                    || (delta < 0 && cameraChunk > lastCameraChunk);
+            if (coarseDiscontinuity || Math.abs(delta) > (getLoadAhead() + getUnloadBehind())) {
                 lastScrollBackward = cameraX < lastCameraX;
                 refreshWindow(cameraX);
             } else if (cameraChunk > lastCameraChunk) {

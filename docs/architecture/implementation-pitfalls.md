@@ -516,6 +516,18 @@ miss this: the 2026-09-22 DEZ curved-bridge approach passed at 320 and failed at
 800 even though both positioned width checks passed. Test an approach from
 outside the native spawn window as well as an already-loaded interaction.
 
+**A masked coarse camera can reverse a signed viewport movement.** A negative
+visible origin such as -3 becomes `$FF80` under the ROM's 16-bit chunk mask;
+returning to zero then looks like backward scrolling. The new first-chunk
+borrow guard can strand both placement cursors at the layout end with no
+active objects. Treat disagreement between raw and masked movement directions
+as a coordinate discontinuity and use the existing window reconstruction.
+Do not remove native `Load_Sprites`' `$80` borrow branch or invent a native-camera
+projection for the viewport. The 2026-10-17 regression checks ordered entry
+ownership, strict 640/928 right edges and two restore/replays at 320/800, then
+complete LRZ and MHZ wide routes. Negative-origin window semantics themselves
+remain unchanged.
+
 **Object clocks.** `ObjectInstance.update(int vIntRunCount, ...)` receives the
 object-visible ROM `V_int_run_count`, stored by `ObjectManager` as `vblaCounter`. It is not
 the manager's executed-frame counter or the ROM `Level_frame_counter`; lag frames can

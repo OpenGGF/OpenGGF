@@ -639,3 +639,14 @@ lane, S3K/S1/S2 ROMs, Maven Finished 23:37:15Z, 11 tests, 0 failures/errors/skip
 `TestMhzWideColdRouteCapture` 1/0 (25 named whole-world replay spots, two restore cycles each),
 `TestS3kMhzAuthoredRoute` 1/0, `TestS3kMhzWideAuthoredRoute` 1/0, `TestS3kMhzAct2AuthoredRoute` 3/0,
 `TestMhzKnucklesColdRouteCapture` 2/0, `TestMhzRewindFidelitySweep` 3/0.
+
+
+### Coarse camera discontinuity recovery — 2026-10-17
+
+The composed source2056 retained the correct native first-chunk backward borrow
+but regressed this matrix's existing800px cold route. The loader now rebuilds
+its current window when signed visible-camera movement and its masked coarse
+movement disagree; native backward loads keep the ROM borrow branch. The full
+route is requalified without changing the movie or supplying gameplay state.
+See the [repair and validation record](../../plans/2026-10-13-s3k-playable-completion.md#wide-route-coarse-camera-discontinuity--2026-10-17)
+for the matched baseline, causal controls, exact commands and remaining limits.

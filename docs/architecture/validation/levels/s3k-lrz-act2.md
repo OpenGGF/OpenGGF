@@ -1596,3 +1596,14 @@ Findings:
 Pictures: `$HOME/Videos/OGGF/s3k-parity-coverage-2026-10-14/spot-checks/seven-chaos-native-v1`,
 `seven-chaos-engine-twin-v1` and `seven-chaos-compare-v1`, which holds side-by-sides and
 `compare.json`.
+
+
+### Coarse camera discontinuity recovery — 2026-10-17
+
+The composed source2056 retained the correct native first-chunk backward borrow
+but regressed this matrix's existing800px cold route. The loader now rebuilds
+its current window when signed visible-camera movement and its masked coarse
+movement disagree; native backward loads keep the ROM borrow branch. The full
+route is requalified without changing the movie or supplying gameplay state.
+See the [repair and validation record](../../plans/2026-10-13-s3k-playable-completion.md#wide-route-coarse-camera-discontinuity--2026-10-17)
+for the matched baseline, causal controls, exact commands and remaining limits.

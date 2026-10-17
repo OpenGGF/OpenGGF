@@ -151,6 +151,16 @@ coarse-back setup (`docs/skdisasm/sonic3k.asm:37472-37478`).
 
 **Originating commit.** `fix: model HCZ conveyor coarse-back culling`.
 
+**Related viewport boundary (2026-10-17).** A negative widened visible origin
+masks to `$FF80`; returning to zero reverses the apparent coarse direction and
+can strand placement cursors. Reconstruct the window when raw and masked
+movement disagree. Keep the genuine backward `$80` borrow skip at
+`loc_1B864` (sonic3k.asm:37604-37605), including the Knuckles credits return
+`$1CF -> 0`; do not relax it by viewport width. This also applies to shared
+non-counter placement using S2 boundary strategies; controller checks do not
+certify a full S2 lifecycle. See the existing implementation-pitfall catalogue
+and 2026-10-13 playable-completion plan for exact regression evidence.
+
 ---
 
 ## P5 — SolidObject returns non-solid prematurely on state transition
