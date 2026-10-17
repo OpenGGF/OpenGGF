@@ -1451,6 +1451,7 @@ public class GameLoop {
             if (!updateLevelMode(doFrameStep)) {
                 return;
             }
+            if (GameLoopTitleEntryFade.beginAfterLevelPass(this, audioManager::stopMusic)) userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
         } else if (currentGameMode == GameMode.BONUS_STAGE) {
             updateBonusStageMode(doFrameStep);
         }
@@ -1461,6 +1462,9 @@ public class GameLoop {
 
         inputHandler.update();
     }
+
+    /** True while TITLE_SCREEN still shows the level's retained picture under the title's entry fade. */
+    public boolean isTitleEntryShowingLevel() { return GameLoopTitleEntryFade.showsLevel(currentGameMode); }
 
     public boolean ownsGameplayFadeLifecycle() {
         GameplayModeContext context = resolveGameplayModeContext();
@@ -1656,6 +1660,7 @@ public class GameLoop {
      * fade is in progress. The controller owns {@code inputHandler.update()}.
      */
     private void updateTitleScreenMode() {
+        if (GameLoopTitleEntryFade.step(this, continueScreen::returnToTitleScreen)) return;
         menuScreenModeController.updateTitleScreen(
                 getTitleScreenProviderLazy(),
                 inputHandler,

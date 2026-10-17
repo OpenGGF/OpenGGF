@@ -274,7 +274,13 @@ Unreleased. The earlier development themes remain in
   as in Sonic 2 and 3&K, a camera jump back into a level's first block reloads nothing
   behind the object cursor. The first scrolling pass keeps the names on the original's
   line. Sonic's and Tails' endings now start the credits music where the original
-  requests it, instead of staying silent after the rescue fade.
+  requests it, instead of staying silent after the rescue fade. After the credits, the
+  closing logo for every Super Emerald ending fades in through white with its characters,
+  as in the original. Sonic returns to his normal colours rather than staying Hyper white,
+  the sea's colours stop cycling once the picture has faded to black, the fade to black
+  starts on the original's frame, and Tails' tail is back behind him. The ending then hands
+  over to the title screen on the original's frame. The closing picture stays up without its
+  logo and fades out under the title instead of losing its characters first.
 
 - **S3K cold campaign coverage:** Sonic alone now has one uninterrupted
   replay from Lava Reef act 1 through the Lava Reef boss, Hidden Palace and Sky

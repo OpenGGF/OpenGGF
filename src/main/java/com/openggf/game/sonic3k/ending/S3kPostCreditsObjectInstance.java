@@ -37,6 +37,8 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
     private int childFrame;
     private int childTimer;
     private int childStage;
+    // The phase whose picture stays drawn after loc_5F314 (phase 8 runs nothing).
+    private int drawPhase;
     // loc_5FBA0's own SST: alive flag, anim_frame_timer byte and $3A table offset.
     private boolean poseFlash;
     private int poseFlashTimer;
@@ -45,6 +47,8 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
     private final S3kRawAnimation.State childAnimation = new S3kRawAnimation.State();
     private final S3kRawAnimation.State tailsAnimation = new S3kRawAnimation.State();
     private final S3kRawAnimation.State knucklesAnimation = new S3kRawAnimation.State();
+    // loc_5F3EA/loc_5F400: the Tails child's own tail child (ChildObjDat_60204).
+    private final S3kRawAnimation.State tailAnimation = new S3kRawAnimation.State();
     private final SszMechaPalette mechaPalette = new SszMechaPalette();
     private transient S3kRawAnimation scripts;
     private transient S3kRawAnimation mechaScripts;
@@ -63,7 +67,7 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
                          boolean poseFlash, int poseFlashTimer, int poseFlashOffset,
                          S3kRawAnimation.State.Value animation, S3kRawAnimation.State.Value childAnimation,
                          S3kRawAnimation.State.Value tailsAnimation, S3kRawAnimation.State.Value knucklesAnimation,
-                         SszMechaPalette.Value mechaPalette)
+                         S3kRawAnimation.State.Value tailAnimation, SszMechaPalette.Value mechaPalette, int drawPhase)
             implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra { }
     @Override public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
         return super.captureRewindState(context).withObjectSubclassExtra(new Extra(phase, timer, afterBanner,
@@ -71,7 +75,8 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
                 motionY, motionVelocity, childFrame, childTimer, childStage,
                 poseFlash, poseFlashTimer, poseFlashOffset,
                 animation.captureRewindStateValue(), childAnimation.captureRewindStateValue(),
-                tailsAnimation.captureRewindStateValue(),knucklesAnimation.captureRewindStateValue(),mechaPalette.captureRewindStateValue()));
+                tailsAnimation.captureRewindStateValue(),knucklesAnimation.captureRewindStateValue(),
+                tailAnimation.captureRewindStateValue(),mechaPalette.captureRewindStateValue(),drawPhase));
     }
     @Override public void restoreRewindState(PerObjectRewindSnapshot snapshot, RewindCaptureContext context) {
         super.restoreRewindState(snapshot, context);
@@ -83,7 +88,8 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
             poseFlash=e.poseFlash(); poseFlashTimer=e.poseFlashTimer(); poseFlashOffset=e.poseFlashOffset();
             animation.restoreRewindStateValue(e.animation()); childAnimation.restoreRewindStateValue(e.childAnimation());
             tailsAnimation.restoreRewindStateValue(e.tailsAnimation());knucklesAnimation.restoreRewindStateValue(e.knucklesAnimation());
-            mechaPalette.restoreRewindStateValue(e.mechaPalette());
+            tailAnimation.restoreRewindStateValue(e.tailAnimation());
+            mechaPalette.restoreRewindStateValue(e.mechaPalette()); drawPhase=e.drawPhase();
         }
     }
     @Override public void update(int vIntRunCount, PlayableEntity player) {
@@ -94,17 +100,16 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
                 stepBannerFade(); stepKnucklesPose();
                 timer = (short) (timer - 1);
                 if (timer == 0x40) ending().setFlag(2); // loc_5F144
-                if (timer < 0) { phase=2; fadeWait=0; fadeSteps=7; rotationDisabled(true); }
+                if (timer < 0) {
+                    phase=2; fadeWait=0; fadeSteps=7; rotationDisabled(true); stopPaletteCycles();
+                    stepObjectFade(); // the allocated fade runs after loc_5F15A in this pass
+                }
                 stepPoseFlash(); // slot 8 runs after slot 4's loc_5F15A
             }
             case 2 -> {
-                if (--fadeWait < 0) {
-                    fadeWait=5; S3kEndingPalette.decreaseAll(services());
-                    if (--fadeSteps < 0) {
-                        rotationDisabled(false); ending().setFlag(3); // loc_5F18A
-                        initializeAfterBanner();
-                    }
-                }
+                // loc_5F18A sees the deleted fade's status bit 7 on the pass after its eighth step.
+                if (fadeSteps < 0) { ending().setFlag(3); initializeAfterBanner(); }
+                else stepObjectFade();
             }
             case 3 -> { // loc_5FD5A: 32 ticks before the final S3 pose banner
                 if ((timer=(short)(timer-1)) < 0) initializeS3Eyecatch();
@@ -121,6 +126,10 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
         }
     }
     private void initializeBanner() {
+        // Obj_5EF68 (044fa46 sonic3k.asm:125517-125520): clr.b (Super_palette_status).w before the dispatch.
+        if (services().playerQuery().mainPlayerOrNull() instanceof com.openggf.sprites.playable.AbstractPlayableSprite player
+                && player.getSuperStateController() instanceof com.openggf.game.sonic3k.Sonic3kSuperStateController powered)
+            powered.clearEndingPaletteStatus();
         try {
             var rom=services().romReader();
             var dispatch=S3kPostCreditsData.resolve(rom,character(),ending().progress());
@@ -143,21 +152,47 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
         } catch(IOException failure) { throw new UncheckedIOException(failure); }
     }
     /**
-     * loc_5FF62 (sonic3k.asm:126958), allocated by sub_5FF1C after the logo: every fourth
+     * Obj_FadeSelectedToBlack (044fa46 sonic3k.asm:179589-179612): its first pass falls into
+     * loc_8555E with $2E clear, so DecColor_Obj runs at once, then every sixth pass, eight times.
+     * The eighth step clears Palette_rotation_disable and deletes the fade.
+     */
+    private void stepObjectFade() {
+        if (--fadeWait >= 0) return;
+        fadeWait=5; S3kEndingPalette.decreaseAll(services());
+        if (--fadeSteps < 0) rotationDisabled(false);
+    }
+    private void stepBannerFade() { stepThroughWhite(false); }
+    /**
+     * loc_5FF62 (044fa46 sonic3k.asm:126999), allocated by sub_5FF1C after the logo: every fourth
      * pass, from the allocating one, sub_85EB4 raises the 16 line-1 colours a level toward
      * $EEE, eight times. loc_5FF94 then resets $2E to 3 and falls into loc_5FFA6's subq,
      * and sub_85F2A lowers them toward Target_palette_line_2, eight more times.
+     * The S3 eyecatch has three loc_5FF62 instances: sub_5FF1C's line 1 (16 colours),
+     * loc_5F31C's Normal_palette+2 and loc_5F410's Normal_palette_line_3+2 ($3A=$E, colours
+     * 1-15). Each lands after its allocator (native slots 4 -> 5, 8 -> 11, 10 -> 13), so all
+     * three step on the initialization pass and share this countdown.
      */
-    private void stepBannerFade() {
+    private void stepThroughWhite(boolean eyecatch) {
         if (fadeSteps<0 || (fadeWait=(short)(fadeWait-1))>=0) return;
         fadeWait=3;
-        if (fadeSteps>=8) {
-            S3kEndingPalette.towardsWhite(services(),1);
-            if (--fadeSteps==7) fadeWait=2;
-        } else {
-            S3kEndingPalette.downTowardsActualTarget(services(),1);
-            fadeSteps--;
-        }
+        boolean raise=fadeSteps>=8;
+        fadeThroughWhite(1,0,raise);
+        if (eyecatch) { fadeThroughWhite(0,1,raise); fadeThroughWhite(2,1,raise); }
+        if (raise) { if (--fadeSteps==7) fadeWait=2; }
+        else fadeSteps--;
+    }
+    private void fadeThroughWhite(int line,int first,boolean raise) {
+        if (raise) S3kEndingPalette.towardsWhite(services(),line,first);
+        else S3kEndingPalette.downTowardsActualTarget(services(),line,first);
+    }
+    /**
+     * loc_5F15A (044fa46 sonic3k.asm:125704-125706) sets Palette_cycle_counters+0 beside the object fade.
+     * Nothing in the terminal clears it, so D01's sub_5928C water cycle stays stopped and the
+     * faded line 3 stays black (native PAL Sonic/+2, poll 13311).
+     */
+    private void stopPaletteCycles() {
+        if (services().zoneRuntimeState() instanceof com.openggf.game.sonic3k.runtime.EndingZoneRuntimeState zone)
+            zone.screen().aizPalette.beginFade();
     }
     /**
      * loc_5FBA0 (sonic3k.asm:126562): deleted once Palette_cycle_counters+0 is set; otherwise
@@ -233,19 +268,24 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
         phase=6; screenX=0x120; screenY=0xF0; timer=0x4AF; childStage=0; childFrame=1;
         ending().clearFlag(2);
         ending().art().loadRaw(services(),S3kEndingResources.S3_ENDING_GRAPHICS,0x45D);
+        // sub_5FF1C blacks line 1 before loc_5F294 loads its target; loc_5F31C and loc_5F410
+        // load Target_palette lines 0 and 2. None of them touches Palette_rotation_disable.
+        S3kEndingPalette.blackLine(services(),1);
+        S3kEndingPalette.targetLine(services(),1,S3kEndingResources.PAL_S3K_LOGO);
         S3kEndingPalette.targetLine(services(),0,Sonic3kConstants.SONIC_PALETTE_ADDR);
         S3kEndingPalette.targetLine(services(),2,S3kEndingResources.PAL_EYECATCH_KNUCKLES);
         S3kRawAnimation.set(knucklesAnimation,0x66771);knucklesAnimation.mappingFrame=0xD8;
         tailsAnimation.mappingFrame=0xA;
-        reveal(S3kEndingResources.PAL_S3K_LOGO);
+        // loc_5F3AA's CreateChild1_Normal(ChildObjDat_60204) lands after the Tails child, and
+        // loc_5F3EA (word_60170 frame $A) falls into loc_5F400's first Animate_RawNoSST this pass.
+        S3kRawAnimation.set(tailAnimation,0x6026F);tailAnimation.mappingFrame=0xA;
+        scripts().animateNoSst(tailAnimation,0x6026F,()->{});
+        fadeWait=0; fadeSteps=15; stepThroughWhite(true);
     }
     private void stepS3Eyecatch() {
-        stepRevealFade();
-        if(fadeSteps>=0&&fadeWait==5){
-            S3kEndingPalette.towardsTarget(services(),0,Sonic3kConstants.SONIC_PALETTE_ADDR);
-            S3kEndingPalette.towardsTarget(services(),2,S3kEndingResources.PAL_EYECATCH_KNUCKLES);
-        }
+        stepThroughWhite(true);
         scripts().animateNoSst(tailsAnimation,0x6026B,()->{});
+        scripts().animateNoSst(tailAnimation,0x6026F,()->{}); // loc_5F400: AniRaw_6026F
         if(knucklesScripts==null)try{knucklesScripts=S3kRawAnimation.load(services().romReader(),0x66771,0x100);}
         catch(IOException failure){throw new UncheckedIOException(failure);}
         knucklesScripts.animateRaw2MultiDelay(knucklesAnimation,()->{});
@@ -312,9 +352,13 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
         if (timer==0x40) ending().setFlag(2);
         if (ending().startHeld() || (timer=(short)(timer-1))<0) finish();
     }
+    /**
+     * loc_5F314 / loc_5F0DA (044fa46 sonic3k.asm:125858, 125642) only write Game_mode 0: the SST
+     * stays, so the last sprite table stays on screen through Title_Screen's entry fade.
+     */
     private void finish() {
-        phase=8; services().levelManager().requestGameOverExit(GameOverExit.TITLE_SCREEN);
-        ObjectLifetimeOps.deleteNoRespawn(this);
+        drawPhase=phase; phase=8; ending().beginTitleEntryFade();
+        services().levelManager().requestGameOverExit(GameOverExit.TITLE_SCREEN);
     }
     private void rotationDisabled(boolean value) {
         var registry=services().paletteOwnershipRegistryOrNull(); if(registry!=null) registry.setPaletteRotationDisabled(value);
@@ -334,7 +378,12 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
     @Override public int getY(){return screenY;}
     public int phase(){return phase;}
     @Override public void appendRenderCommands(List<GLCommand> commands) {
+        int phase=this.phase==8?drawPhase:this.phase; // the retained picture after loc_5F314
         if(isDestroyed() || phase==0 || phase==8) return;
+        // loc_5F2F8 (044fa46 sonic3k.asm:125848-125861), shared by every terminal hold, takes
+        // loc_5F314 instead of Draw_Sprite: the holder's own sprite leaves the last table while
+        // its separately allocated children, TM and caption keep theirs.
+        boolean held=this.phase==8&&drawPhase>=4;
         if(phase<=2) {
             // Each initializer returns before Draw_Sprite; the logo, pose and
             // Child_Draw_Sprite children first draw on the next pass.
@@ -344,19 +393,29 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
             drawTrademark(2);
             if(knucklesPose())
                 draw(S3kEndingArt.KNUCKLES_POSE,frame,0x120,0x108,false,-1);
-        } else if(phase==4) draw(S3kEndingArt.EGGMAN,frame,screenX,screenY,false,-1);
+        } else if(phase==4) { if(!held) draw(S3kEndingArt.EGGMAN,frame,screenX,screenY,false,-1); }
         else if(phase==5) {
-            draw(S3kEndingArt.EGG_ROBO,frame,screenX,screenY,false,-1);
+            if(!held) draw(S3kEndingArt.EGG_ROBO,frame,screenX,screenY,false,-1);
             if(childStage==1 || childStage==2) draw(S3kEndingArt.EGG_ROBO,childFrame,screenX,screenY+0x1C,false,-1);
         } else if(phase==6) {
-            draw(S3kEndingArt.S3_GRAPHICS,0,screenX,screenY,false,-1);
-            draw(S3kEndingArt.AND_KNUCKLES,1,screenX,screenY+0x48,false,-1);
-            drawTrademark(4);
             boolean tails=character()==PlayerCharacter.TAILS_ALONE,knux=character()==PlayerCharacter.KNUCKLES;
-            draw(S3kEndingArt.S3_GRAPHICS,childFrame,screenX+(tails||knux?-0x1C:0),screenY+(tails||knux?0x2C:0x40),false,0);
-            draw(S3kEndingArt.S3_GRAPHICS,tailsAnimation.mappingFrame,screenX+(tails?8:0x24),screenY+(tails?0x40:0x2C),false,0);
+            // On the initialization pass only loc_5F3EA falls into Draw_Sprite: loc_5F26C, the TM
+            // and the three children return first (stepThroughWhite has just left 14/3).
+            boolean initPass=fadeSteps==14&&fadeWait==3;
+            if(!initPass) {
+                if(!held) draw(S3kEndingArt.S3_GRAPHICS,0,screenX,screenY,false,-1);
+                draw(S3kEndingArt.AND_KNUCKLES,1,screenX,screenY+0x48,false,-1);
+                drawTrademark(4);
+            }
+            // Native SAT order is the slot order Sonic 8, Tails 9, Knuckles 10, tail 12 (earlier
+            // link in front); each call here paints over the previous one, so the order is reversed.
+            // loc_5F400 shares the Tails child's mappings/art at (-$10,+8).
+            draw(S3kEndingArt.S3_GRAPHICS,tailAnimation.mappingFrame,screenX+(tails?8:0x24)-0x10,screenY+(tails?0x40:0x2C)+8,false,0);
+            if(initPass)return;
             draw(S3kEndingArt.EYECATCH_KNUCKLES,knucklesAnimation.mappingFrame,screenX+(knux?0:tails?0x1C:-0x1C),screenY+(knux?0x40:0x2C),false,2);
-        } else if(phase==7) draw(Sonic3kObjectArtKeys.MECHA_SONIC,frame,screenX,screenY,false,-1);
+            draw(S3kEndingArt.S3_GRAPHICS,tailsAnimation.mappingFrame,screenX+(tails?8:0x24),screenY+(tails?0x40:0x2C),false,0);
+            draw(S3kEndingArt.S3_GRAPHICS,childFrame,screenX+(tails||knux?-0x1C:0),screenY+(tails||knux?0x2C:0x40),false,0);
+        } else if(phase==7&&!held) draw(Sonic3kObjectArtKeys.MECHA_SONIC,frame,screenX,screenY,false,-1);
     }
     /**
      * loc_5F4FA (sonic3k.asm:125982): ObjDat3_60130's TM, mapping frame 2, placed by

@@ -365,7 +365,7 @@ public final class GameplayCaptureSession implements AutoCloseable {
             renderSpecialStageResults(graphics, level);
             return;
         }
-        if (loop.getCurrentGameMode() == GameMode.TITLE_SCREEN) {
+        if (loop.getCurrentGameMode() == GameMode.TITLE_SCREEN && !loop.isTitleEntryShowingLevel()) {
             var title = loop.getTitleScreenProvider();
             title.setClearColor(); glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             title.draw();
