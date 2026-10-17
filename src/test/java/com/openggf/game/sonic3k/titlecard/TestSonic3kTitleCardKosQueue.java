@@ -47,9 +47,10 @@ class TestSonic3kTitleCardKosQueue {
     private static final int[] BONUS_SOURCES = {
             Sonic3kConstants.ART_KOSM_TITLE_CARD_RED_ACT_ADDR,
             Sonic3kConstants.ART_KOSM_TITLE_CARD_S3K_ZONE_ADDR,
+            Sonic3kConstants.ART_KOSM_TITLE_CARD_NUM1_ADDR,
             Sonic3kConstants.ART_KOSM_BONUS_TITLE_CARD_ADDR
     };
-    private static final int[] BONUS_DESTINATIONS = {0x500, 0x510, 0x54D};
+    private static final int[] BONUS_DESTINATIONS = {0x500, 0x510, 0x53D, 0x54D};
 
     private HardwareTimingService timing;
     private Rom rom;
@@ -139,14 +140,14 @@ class TestSonic3kTitleCardKosQueue {
     }
 
     @Test
-    void bonusCardQueuesThreeArchivesInOrderAndPollsUntilFinalPostObjects() throws Exception {
+    void bonusCardQueuesFourArchivesInOrderAndPollsUntilFinalPostObjects() throws Exception {
         List<HardwareWorkHandle> expected =
                 expectedHandles(BONUS_SOURCES, BONUS_DESTINATIONS);
 
         manager.initializeBonus();
 
         assertEquals(expected, moduleHandles(),
-                "bonus title art must retain native three-archive FIFO order");
+                "bonus title art must retain native four-archive FIFO order");
         assertTrue(isArtLoading(manager));
         drainThroughPostObjects(expected);
     }

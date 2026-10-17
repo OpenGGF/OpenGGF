@@ -129,6 +129,8 @@ Unreleased. The earlier development themes remain in
   data select, restarts, special and bonus stage returns, and loads without a card.
   The level submits its queued art during the load and prepares the first item
   in the first title-loop step, keeping destination setup on the original frame.
+  Bonus title cards load the complete native art batch, including the unused act
+  number.
   Previously the level stayed black and then appeared at full brightness. Each fade
   step and each move of the card reaches the screen with the same frame's sprites and
   HUD, one frame after it is computed, as the original's palette and sprite uploads

@@ -3054,10 +3054,27 @@ never engaged, so the trace reported `x_speed 0x0400 vs 0x0300` — a player phy
 frames after the actual defect.
 
 **What to check, in this order.**
-1. Dump the fixture's `hardware_timing.jsonl` ordinals for the segment.
-2. Probe every engine `submitPrepared` with its ordinal, source and stack.
-3. Diff the two sequences. The first ordinal where they part is the missing producer; everything
-   after it is collateral.
+1. Inventory the existing canonical descriptors and completion edges separately for
+   physical module parents and direct children. Completion rows do not record native births.
+2. Observe actual successful production submissions with service/handle identity,
+   immutable ROM descriptor and caller. An attached last OUTSIDE clock is not a submit clock.
+3. Treat the first sequence disagreement as a producer question, then prove its native
+   branch and an independent component old-red. Do not infer a unique missing caller or
+   repair the complete offset by relabelling later ordinals.
+
+**Undrawn title art still has a real submission.** Obj_TitleCardInit queues four
+archives even for the two-label bonus banner. In the shipped locked-on Gumball
+entry, current/apparent `$1300` selects Num1 at `$53D` between Zone and Bonus;
+`Apparent_act` nonzero selects Num2. Do not derive work count from visible child
+count, omit the unused glyph, or fake readiness for a later matching descriptor.
+R23 observed three actual engine births at this owner; R25 independently failed
+its actual-ROM four-descriptor oracle and R28 passed all120 affected cases,
+including that oracle, after restoring the submission. The pending five-key partition restores/forwards
+twice, not whole-world/route parity. The separate97-case guard phase has one
+source-size failure and blocked the maintained route; neither the full remaining
+offset nor native birth timestamps/readiness were established. Source:
+skdisasm044fa46725c71187399e13f5ddb70e11d32dc024 Obj_TitleCardInit62143..62200,
+portal61952..61959; [existing owner record](../../../docs/architecture/plans/2026-10-13-s3k-playable-completion.md#r28-reviewed-native-bonus-number-affected-focus--2026-10-17).
 
 **Do not** "fix" the consumer, and do not release the handle by relaxing the fingerprint match —
 that is the hardware-timing exception leaking outside its port. Find the unimplemented producer.

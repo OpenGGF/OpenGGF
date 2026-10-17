@@ -80,6 +80,19 @@ source-epoch ABSENT fields separate, and Java bindings run-local. Qualification
 requires the positive footer, verified post-footer write marker and terminal result;
 a prefix pass leaves later route finals unqualified.
 
+A submit-site caller is not the attached outside clock (2026-10-17, S3K R23).
+The real timing-service submit hook proves which original production stack
+created a handle, while the latest outside mode/load/movie sample may predate
+that callback. Keep actual caller, service/handle identity and OUTSIDE clocks
+separate; leave an unobserved birth clock null. Canonical completion counters/
+fingerprints do not supply enqueue timestamps or unique caller provenance.
+Compare identities without forced alignment or renumbering. A temporary private
+property-gated logger may check an explicit scalar/reference projection around
+its writes, forward the original driver once and preserve its Throwable/report/
+cleanup; that is not whole-world passivity or readiness/route parity. R23's
+original60-record bounded witness and exact strip recovery are recorded in the
+[existing S3K plan](../architecture/plans/2026-10-13-s3k-playable-completion.md#r23-actual-submit-site-provenance-r24-accepted-accounting--2026-10-17).
+
 
 Native execute callbacks are not a complete instruction ledger (2026-10-17,
 stock GPGX051d430d). The normal callback precedes opcode fetch and its refresh
