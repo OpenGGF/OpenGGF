@@ -1351,3 +1351,15 @@ recreate and replay twice. Final34focused pass, unaffected73/S3K4 reused, both
 canonical Slot character traces retain zero errors (1024/5259 rows). Exactly five
 matched original RGB frames retain661/360/50/52/58 differing pixels; visual/native
 whole-Slot certification remains open. [Exact execution and pixel limits](../architecture/validation/levels/s3k-bonus-stage-transitions.md#slot-zero-step-and-native-row-publication--2026-10-17).
+
+
+R11 HCZ2 local Full2 visibility (2026-10-17,152d07 composition): independent real
+HCZBlock visible/offscreen controls show old-red3/2F→four new cases green,
+including twice-forced whole-world recreation/registered-key replay; total157
+focused and118 affected guards pass with no skips. Existing object capability
+bypasses both native-absent render gates; shared collision/movement/API unchanged.
+One final original prefix through7808 closes7807 sidekick_y and matches7808;
+HCZ7809/14208 rows still has206 camera/animation errors and no non-camera physics
+mismatch through that bound. First remaining animation3475; later frontier is
+unmeasured. Full route/exit, independent slice, alternate, exact GLFW and broader
+matrix products remain open. [Affected HCZ2 matrix](../architecture/validation/levels/s3k-hcz2.md#r11-hczblock-full2-visibility-and-whole-world-replay--2026-10-17).

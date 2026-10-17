@@ -5056,3 +5056,32 @@ normalization, search, media encode, extra test or zero-parity claim.
 All jobs/leases terminal, candidate compilation current; consumed diagnostics and
 temporary helpers cleaned, private config/durable originals retained. Root owns
 composition/combined smoke/guards/integration/push; no Main change or tree removal.
+
+
+## R11 HCZBlock offscreen Full2 owner — 2026-10-17
+
+Owned3aa3 branch `bugfix/ai-s3k-hcz-7807-causal-owner` fast-forwarded fa→152d07,
+preserving R10 evidence and foreign native4fdf. Root93212's first non-camera7807
+sidekick_y066F/0669 was an actual block-owner miss, not ceiling terrain. The
+one passive prefix46246 observes empty ceiling+20 and block21 at09B0/0650
+returning NONE despite native Full2 underside separation. Native loc1F3CA calls
+SolidObjectFull2, bypassing BOTH Player2 render and object loc1DF88 gates.
+Only HCZBlock's existing bypassesOffscreenSolidGate capability now returns true.
+No shared solver/movement/API/new state or source/clock fit.
+
+Initial89593 was a first-dispatch test setup error (3/3F including control).
+Corrected ordinary admission85345 gives genuine3/2F: on-screen passes, two
+offscreen cases miss six pixels. Final focused41923 passes157/0F/0E/0S, including
+three visibility controls, twice-forced whole-world recreation/replay, block and
+solid neighbors and mandatoryS3K4. Affected guards22063 pass118/0F/0E/0S.
+
+Temporary sensor/checkpoint observers were removed before sole final prefix7687.
+Original driver/input/lag from boot through7808: HCZ7809/14208 rows has206
+errors=11camera physics+195animation, lag53, no warnings/bootstrap or non-camera
+physics mismatch. Actual7807/7808 endpoints match native. Matched pre-fix46246
+same7809-row window had214=19physics+195animation; eight non-camera fields close.
+Earlier complete gameplay windows0/2/4/6/8/9 remain zero errors. First remaining
+all-group error3475 sidekick_animation_id17/1C; next non-camera beyond7808 is
+unmeasured. No fullcanonical/slice/alternate/GLFW/native/broad claim or next fix.
+Root owns further qualification/integration; local commit only.
+[Source, exact commands/hashes, clocks, all windows and limits](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r11-hczblock-full2-visibility-owner-closes7807-through7808--2026-10-17).

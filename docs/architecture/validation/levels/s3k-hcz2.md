@@ -189,3 +189,25 @@ has206 errors (11camera physics/195animation), lag53 and no non-camera physics
 mismatch. Observer pass is not full parity. Full returned-HCZ, independent slice,
 alternate, viewport/roster/cold/PAL/auxiliary breadth and GLFW remain open.
 [Exact command, hashes, inherited failures and all compared windows](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r10-encoded-collision-words-resident-destinations-and-rom-aliases--2026-10-17).
+
+
+### R11 HCZBlock Full2 visibility and whole-world replay — 2026-10-17
+
+On152d07 composition, only HCZBlock's existing offscreen bypass capability
+changes to match loc1F3CA→SolidObjectFull2. Both the Player2 render gate and the
+object loc1DF88 gate are absent from that native path. Independent actual HCZ2
+object controls use visible/visible, visible/offscreen and offscreen/offscreen
+participants; corrected genuine old-red85345 fails only the last two. New four
+cases pass within41923's157 focused checks (mandatoryS3K4 included), including
+two forced whole-world recreations and complete registered-key forward replay.
+Affected source/authority/rewind guards22063 pass118 without skips.
+
+Final original prefix7687 consumes7809/14208 HCZ rows,206 errors=11camera physics+
+195animation, lag53, warnings/bootstrap0. Native7807/7808 P2 endpoints now match;
+no non-camera physics mismatch through7808. Earlier complete gameplay windows
+0/2/4/6/8/9 remain zero errors. First remaining all-group error3475 companion
+animation17/1C; later non-camera frontier not observed. The once final observer
+contains only post-row reads and is removed after facts are durable. No full
+act/returned exit/slice/alternate/GLFW/viewport/roster/native presentation
+certification; Root owns remaining route and delivery validation.
+[Source, controls, clocks, commands and exact window comparison](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r11-hczblock-full2-visibility-owner-closes7807-through7808--2026-10-17).

@@ -3434,3 +3434,175 @@ two compiled classes removed under own writer lease. Exact results/limits above
 and existing ownership entry retain the useful evidence; no raw log archive.
 Native4fdf checkout, original native RAM/PC artifacts, useful images and foreign
 performance work remain untouched. No own live jobs or further test submission.
+
+
+## R11 HCZBlock Full2 visibility owner closes7807 through7808 — 2026-10-17
+
+Owned `t3-3aa3bc3c` safely fast-forwarded R10 `fa289e22e` to Root runtime
+`152d07ce90d512d2b75dfddfd10c777b0788acea` under the intended-tree writer
+lease, retaining the R10 feature branch and private configuration. R11 branch is
+`bugfix/ai-s3k-hcz-7807-causal-owner`. Root's later a58bdc docs-only update was
+not a reason to restart. Native checkout4fdf remains clean internally and differs
+from gitlink322851 exactly as inherited; it was neither changed nor staged.
+No Main/Root write, new worker/tree, native execution, media or broad run.
+
+Root93212 on152 supplied the first actual non-camera frontier7807
+`sidekick_y` native066F/engine0669. Its complete14208-row HCZ window had133258
+errors =113873physics+19385animation, lag59, zero warnings/bootstrap; that full
+pre-fix total is context, not this slice's qualification. Root's report facts
+were extracted read-only and relayed as consumed.
+
+### Native owner and one passive engine prefix
+
+Original run directory is
+`src/test/resources/traces/s3k/runs/s3k-sonic-tails-complete-emeralds`, BK2 SHA256
+`ad40fb0b0a74fa12b08ab71b2e48a7455b388d14f43f4cded502ac4a15d1b3c0`.
+Segment11 offset63075 and the original driver/bootstrap/input/lag remain
+unchanged. Observing46246 walks from boot through7808 inclusive. Test-local
+ceiling wrappers forward each actual scan once and return its identical pooled
+result; FG/BG/combined copies precede pure lookups. Existing CollisionTrace
+callbacks observe the actual block checkpoint without replacing its owner.
+Playable/provider/result passivity is asserted. Journal166423bytes,10 ceiling
+samples and90 block checkpoint samples; no full CPU journal or state hydration.
+19262 was a separate successful build-only test-compile prerequisite, not a test.
+
+Native existing aux identifies active slot21 `loc_1F3CA` HCZBlock at09B0/0650.
+P2's retained interaction slot25 at09D0/06C0 is stale, not current support.
+At7807 the engine's actual upward terrain probes at09AA/065B and09B8/065B
+return FG/BG/combined+20, empty. Active BG provider diff0426/0500 yields
+0584/015B and0592/015B, also empty; this is not a terrain solver correction.
+Actual post-movement block21 checkpoint receives P2
+09B1.FD00/0669.F700, vxFEA2/vyFBB0/gFF1A, radii07/0E, stand radius0F,
+air/rolling, no OnObj/object control, params1B/10/11. It returns NONE and
+leaves those fields unchanged. Native instead ends066F.F700/vy0/g0.
+Native raw P2 render_flags05 is offscreen. The engine raw render flag was not
+sampled by this observer; the independent visibility controls below establish
+the causal gate rather than inventing that missing measurement.
+
+ROM `Obj_HCZBlock` / `loc_1F3CA` calls `SolidObjectFull2`
+(`docs/skdisasm/sonic3k.asm:43287–43297`). **Both gates are bypassed**:
+`SolidObjectFull2` dispatches Player2 without the player render_flags test
+(:41091–41102), and new-contact `SolidObjectFull2_1P` branches directly to
+`SolidObject_cont` (:41105–41107), skipping the object's `loc_1DF88` test
+(:41430–41434). HCZBlock had inherited the shared regular-Full visibility
+contract. Its existing `bypassesOffscreenSolidGate()` capability now returns true;
+no shared geometry/movement/profile/API, timer, CPU, camera or plane changed.
+
+Underside arithmetic is source-derived: current radius0E, default0F and block
+half-height10 give maxTop1E/total3D. Integrated relativeY19 gives overlap
+19+4+1E=3B, so signed bottom distance3B-4-3D=-6. `loc_1E0F6` clears ground
+speed and `loc_1E104` subtracts -6 from y_pos and clears y_vel, preserving y_sub.
+
+### Independent old-red, visibility controls and twice-world replay
+
+`TestHczBlockFull2Visibility` uses a real production HCZ2 fixture and allocated
+subtype0 HCZBlock at declared0400/0400, with airborne rolling CPU Tails at
+0400/0419, fractions3500/A500 and rising velocity. These are independent
+geometry inputs, not positioned replay rows. The block first receives its
+ordinary admission dispatch, then the actual object-manager checkpoint runs.
+
+| Camera Y | P2 visible / object contact bounds | Before fix85345 | After fix41923 |
+| --- | --- | --- | --- |
+|0380|true /true|pass|pass|
+|0420|true /false|fail Y041F/0419|pass|
+|0500|false /false|fail Y041F/0419|pass|
+
+Initial89593 failed all three, including the on-screen control: the freshly
+allocated object's first-dispatch contact guard was still armed. This was a
+setup error, not owner proof. Only the test's normal admission tick was corrected
+before85345, which genuinely fails just the two offscreen cases (3/2F/0E/0S).
+The permanent fourth case disables in-place rewind, captures all registered
+world keys, resolves the underside and advances two ordinary ticks. It twice
+restores/recreates the whole world and repeats that forward sequence, comparing
+every registered key at restore and replay endpoints. No new runtime state or
+rewind schema is introduced.
+
+All invocations below used Java25, Lua5.4, current Main absolute
+`$MAIN_WORKSPACE/tools/testing/maven_queue.py --normal`
+from this cwd, `-Dmse=off`, EGL `-Dopenggf.headless.gl=surfaceless-egl`,
+`EGL_PLATFORM=surfaceless`, `ALSOFT_DRIVERS=null`, unset DISPLAY/WAYLAND_DISPLAY,
+`-Dsurefire.forkCount=1 -Dsurefire.reuseForks=true
+-Dsurefire.runOrder=alphabetical test -B`, and the three original absolute ROM
+properties shown in R10's command above. No wrapper/activity shim or direct JVM.
+
+| Handle / exact selection | Observed completed result | Queue / Maven / finish UTC |
+| --- | --- | --- |
+|19262, `-DskipTests test-compile`|build success, no tests|build-only /1m14s /14:20:47|
+|46246, `-Ptrace-replay -Dtest=TestS3kHcz7808OwnerWitness#originalCanonicalThrough7808`|1/0F/0E/0S observer, HCZ7809-row214errors|0s /49.731s /14:22:49|
+|89593, `-Dtest=TestHczBlockFull2Visibility#full2UndersideDoesNotDependOnVisibility`|3/3F/0E/0S setup error|0s /24.042s /14:27:36|
+|85345, same selector after ordinary admission setup|3/2F/0E/0S genuine old-red, on-screen passes|0s /24.230s /14:29:49|
+|41923, `-Dtest=TestHczBlockFull2Visibility,TestHCZBlockObjectInstance,TestS3kHczMechanismRewind,TestSolidObjectManager,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`|157/0F/0E/0S|0s /1m14s /14:34:11|
+|22063, `-Pguards -Dtest=TestArchitecturalSourceGuard,TestPerGameRuleArchitectureGuard,TestHardwareTimingAuthorityGuard,TestTraceReplayInvariantGuard,TestTraceRunVblankClockAuthorityGuard,TestRewindArchitectureGuard,TestRewindCoverageGuard,TestHelperStateRewindCoverageGuard`|118/0F/0E/0S|1s /33.171s /14:35:55|
+|7687, `-Ptrace-replay -Dtest=TestS3kHcz7808QualifiedPrefix#originalCanonicalThrough7808`|1/0F/0E/0S bounded final observer, not parity green|0s /46.965s /14:37:04|
+
+41923 includes block5, mechanism rewind2, shared solid86, new visibility/world4,
+and mandatory S3K4: bootstrap6/decoding3/AIZ skip8/loading36+7 (both loading
+classes selected). Guards include architecture72, per-game3, timing25, trace10,
+Vblank2 and rewind4+1+1. No new disputed failure or skip; no unrelated mock,
+singleton, guard budget or allowance changed. R10's inherited failures retain
+that earlier scope; this finite selection does not certify their repair.
+
+### Final frozen runtime and bounded frontier
+
+Runtime file HCZBlock SHA256:
+`98ea5c3633c6cba49ecfccb2b990631820708be9dff6d6aa5e513bbb0597127f`.
+Production eight-line diff from152 SHA256:
+`fea6adf0854b9048d4043318b336cede1848c3d3f6425a8771be1c11d5fa1758`.
+Runtime+permanent regression path+NUL+bytes (sorted) SHA256:
+`bc784ce429608d4e3d06f1ed23f68e156adbc2440c4a0d4b5f19632c79753cc2`.
+Initial two-file temporary observer hash was
+`ba370d9b4c7c4f1f7290a3a6d2e33fd5f75cac9c53dd63e97e921b46f60a019c`;
+its sensor/checkpoint wrappers were removed before final qualification. Final
+post-row-only observer SHA256 was
+`72fd2739a694201d51c81a27864335aaa8a3ae6152f0f3099fe3f20d53ed6529`.
+It only reads post-row poses and existing comparator summaries. No sensor,
+CollisionTrace or driver substitution remains; no gameplay field is supplied.
+
+| Gameplay segment | Consumed / reference rows | Physics / animation errors | Lag |
+| --- | --- | --- | --- |
+|0|2290/2290 complete|0/0|0|
+|2|4023/4023 complete|0/0|11|
+|4|8235/8235 complete|0/0|14|
+|6|4103/4103 complete|0/0|16|
+|8|7175/7175 complete|0/0|62|
+|9|3574/3574 complete|0/0|55|
+|11|7809/14208 incomplete|11/195|53|
+
+All listed windows have zero warning/bootstrap errors. Matched7809-row HCZ
+window46246 had214=19physics+195animation; final7687 has206=11camera physics+
+195animation. Eight non-camera fields close; no non-camera physics mismatch
+remains through7808. The first remaining all-group mismatch is3475
+`sidekick_animation_id`, native17/engine1C, observed in the comparator's first
+error output. Recent camera_y mismatches include6790–6792 and6947–6948; this
+summary does not establish the earliest camera mismatch or later non-camera
+frontier. It is not zero-frontier/whole-HCZ/whole-chain certification.
+
+| Row | Actual engine P2 X.Y fractions / velocities | Clock at completed row |
+| --- | --- | --- |
+|7806|09B4.5B00 /066E.7F00, vxFEAE/vyFB78/gFF1A|objectVInt70836, objectLF1620, levelLF7754, movieLogicalFrame70881|
+|7807|09B1.FD00 /066F.F700, vxFEA2/vy0000/g0000|objectVInt70837, objectLF1621, levelLF7755, movieLogicalFrame70882|
+|7808|09B0.9300 /066F.F700, vxFE96/vy0038/g0000|objectVInt70838, objectLF1622, levelLF7756, movieLogicalFrame70883|
+
+These endpoints match existing native rows; air/rolling remain true and no OnObj
+is invented. BK2 cursor7804..7808 maps70879..70883 by actual manifest/driver
+observations. Native7807 frame1E7F, LF1E4B=7755, recorded Vblank word127E;
+engine terrain phase objectVInt70836/objectLF1620 precedes its block phase
+70837/1621. These are named clocks, not fitted offsets or an inferred full native
+VInt. P1 physical7804 input0014 and7805..8 input0004 are distinct from generated
+P2 CPU held0014/pressed0. Physical P2 is neutral.
+
+Stopping condition: one source-backed object-local capability correction with
+independent old-red/green, twice-world replay and actual7807/7808 closure. Later
+non-camera frontier, full returned HCZ/exit, independent slice, alternate, exact
+GLFW oracle and viewport/roster/native presentation breadth remain unqualified
+on this source. Historical4699/4353 mixed windows and3738 unmatched totals are
+not improvement proof; Root owns current baseline vector attribution and further
+strict/broad validation. No extra prefix/native/capture/alternate/guard run.
+Both temporary runners, the sensor helper and exact compiled classes were
+removed after facts became durable.70 consumed own report/XML/text/owner files
+were removed under `worktree_metadata_slot` alone, preserving foreign native/
+performance artifacts and useful images. No log archive or new job remains.
+Root independently reviewed this exact eight-line override and98ea5c runtime
+file: no material finding. Source review confirms the Full2 Player2 dispatch,
+Full2_1P direct continuation and block call before Sprite_OnScreen_Test; no
+additional review or runtime check was requested.
