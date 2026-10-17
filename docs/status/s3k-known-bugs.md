@@ -144,6 +144,7 @@ Entries should include:
 55. [Knuckles Credits and Terminal Residuals (OPEN)](#knuckles-credits-and-terminal-residuals-open)
 56. [MHZ Rewind Snapshot Identity Gaps (RESOLVED)](#mhz-rewind-snapshot-identity-gaps-resolved)
 57. [Saved2 Return Star-Post Proxy and LRZ Load-Frame Restore Words (OPEN)](#saved2-return-star-post-proxy-and-lrz-load-frame-restore-words-open)
+58. [AnPal Shared Bank: Remaining Owners (OPEN)](#anpal-shared-bank-remaining-owners-open)
 
 ---
 
@@ -6748,4 +6749,54 @@ Found by the declared native twin of the LRZ2 seven-Chaos giant-ring branch (202
 Model the `:7881` mask without breaking the native-CPU entry eligibility, and make the
 post-restore parallax rebuild leave captured runtime words unchanged. Each needs a focused
 red test first.
+
+---
+
+## AnPal Shared Bank: Remaining Owners (OPEN)
+
+Every `AnPal_*` routine reads and writes one RAM bank: `Palette_cycle_counter0`,
+`Palette_cycle_counter1` and `Palette_cycle_counters` (sonic3k.constants.asm:580-596).
+Level's loc_60DE clears it (sonic3k.asm:7652), and a seamless act reload does not.
+`Sonic3kGlobalAnimationState` now holds that bank at ROM width. The fresh-Level step
+clears it, and it rides the animator's rewind snapshot. The AIZ1 and AIZ2 cycles read
+it, so AnPal_AIZ2 continues from AnPal_AIZ1's counters. The iteration that performs the
+reload runs AnPal_AIZ1: LevelLoop calls Animate_Palette (7923) before the
+DeformBgLayer/ScreenEvents work that reloads (7929-7930).
+
+AnPal_AIZ1 now matches its ROM boundaries:
+- Its counters+$02 cycle is gated by `Palette_cycle_counters+$00` (3217), not by
+  `Level_started_flag`. Obj_AIZPlaneIntro sets the byte at Sonic's x `$13D0`
+  (loc_67712, 135755-135756), and Obj_CutsceneKnuckles clears it when Knuckles leaves
+  (loc_61F22, 128795-128796). Both writes land after that frame's palette call, as
+  Process_Sprites (7926) follows Animate_Palette.
+- It reads a carried counters+$02 before wrapping it (3219-3223), including the ROM bytes
+  after AnPal_PalAIZ1_2 for a fire-branch `$30`/`$36`.
+- Its fire/normal branch uses `AIZ1_palette_cycle_flag` as AIZ1_Resize left it
+  (loc_1C46E, 38913-38917, run from DeformBgLayer after Animate_Palette).
+
+The `aiz_completerun` handoff and the AIZ2 window now show native's trickle entry on
+native's rows. Palette words and the bank, torch channel B included, equal native RAM on
+every row from the reload. A Knuckles AIZ1 start, which has no counters+$00 writer, matches
+native's bank on all 300 compared Level_frame_counter values. Covered by `TestS3kAizAnPalBankCarry`, `TestS3kAiz1AnPalBoundaries` and
+`TestS3kAiz1AnPalGateWrites`; evidence is in the
+[AIZ2 matrix](../architecture/validation/levels/s3k-aiz2.md).
+
+Still open:
+- The other zones' cycles keep private copies of the bank, so their seamless reloads
+  still restart those counters, and their `counters+$00` writers are not modelled
+  through the bank. Each needs its own native witness before it moves.
+- A reload consumed at the next frame top (`LevelSeamlessTransitionExecutor`) runs no
+  palette call on its transition row. Natively that iteration's Animate_Palette ran for
+  the outgoing act. Not measured.
+- AIZ1_Resize routine 4 writes `Normal_palette_line_3+$1E` from word_4FAEA for Knuckles
+  once camera X reaches `$2D80` (sonic3k.asm:39001-39010). The engine uses one colour for
+  every character there. This is from the source; no native witness yet.
+- `Adjust_AIZ1Chunks2`'s chunk edits for Knuckles (sonic3k.asm:104503-104538) are not
+  checked here; only its palette half is modelled.
+- The `GameplayCaptureSession` harness starts Knuckles AIZ1 with camera X `$1308`, where
+  native and the headless fixture start at `$1300`. Its Knuckles AIZ1 pictures are
+  therefore not a matched trajectory.
+
+### Removal condition
+Each item matches native RAM at its handoff, with a focused test.
 

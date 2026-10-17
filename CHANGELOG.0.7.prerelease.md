@@ -79,7 +79,15 @@ Unreleased. The earlier development themes remain in
   Island 2's first tree is restored on every frame before the scroll point, as in
   the original. Hydrocity 1's background waterline follows the original routine:
   at the waterline both repair strips load and the other animations pause, and far
-  from it the last drawn strip stays.
+  from it the last drawn strip stays. Angel Island 2's water, trickle and torch
+  colour cycles continue from Act 1's cycle counters across the act change, as in
+  the original, instead of restarting, and the frame of the act change still runs
+  Act 1's cycle. A full level load or restart clears the counters. Angel Island 1's
+  water cycle pauses only from the plane intro's explosion until Knuckles leaves,
+  continues correctly out of the intro's fire colours, and changes to its normal
+  colours on the original frame. Knuckles' Angel Island 1 starts with his own four
+  palette colours, and the main palette reloads at the original camera position for
+  every start without the plane intro.
 
 - **S3K special stage results:** The results card sits on the locked-on game's
   grey backdrop instead of white, matching native frames of won and failed stages.

@@ -82,6 +82,13 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     /** PalPointers index for Pal_AIZ (main AIZ palette, 3 lines → palette 1-3). */
     private static final int PAL_AIZ_INDEX = 0x2A;
 
+    /**
+     * word_4FAE4/word_4FAEA (sonic3k.asm:104562-104565): Knuckles' four colours for
+     * Normal_palette_line_4+$10, written by Adjust_AIZ1Chunks2 at AIZ1_ScreenInit and by
+     * AIZ1_Resize's $1308 palette reload when Player_mode is 3.
+     */
+    private static final int AIZ1_KNUCKLES_LINE4_PATCH_ADDR = 0x4FAE4;
+
     /** PalPointers index for Pal_AIZFire (fire palette, 3 lines → palette 1-3). */
     private static final int PAL_POINTER_AIZ_FIRE_INDEX = 0x0B;
 
@@ -691,10 +698,17 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         } else if (act == 0) {
             // Skip-intro level loading already selected the main AIZ1 terrain
             // profile, so only publish the matching palette/semantic phase.
+            // This is the Level's own palette, not AIZ1_Resize routine 0: that routine
+            // still reloads Pal_AIZ once the camera reaches $1308 (loc_1C4A6), so the
+            // preload must not mark that reload done.
             if (!paletteSwapped) {
                 loadPaletteFromPalPointers(PAL_AIZ_INDEX);
-                paletteSwapped = true;
             }
+            // AIZ1_ScreenInit -> Adjust_AIZ1Chunks (sonic3k.asm:104337-104338): for
+            // Player_mode 3, Adjust_AIZ1Chunks2 writes word_4FAE4 to
+            // Target_palette_line_4+$10 (104498-104502), which the level fade reaches.
+            // The chunk edits in the same routine are a separate owner.
+            applyKnucklesAiz1Line4TargetPatch();
             AizPlaneIntroInstance.setMainLevelPhaseActive(true);
         }
     }
@@ -841,7 +855,12 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         // use the predicted end-of-frame X for this threshold just like the
         // later AIZ1 resize and terrain-swap thresholds below.
         if (!paletteSwapped && frameEndCameraX >= PALETTE_SWAP_X) {
+            // loc_1C4A6: LoadPalette_Immediate PalID_AIZ, then for Player_mode 3 the
+            // word_4FAE4 colours at Normal_palette_line_4+$10 (sonic3k.asm:38928-38935).
+            // Both are zone-event writes, so they override this frame's AnPal colours as
+            // the ROM's resize does after Animate_Palette.
             loadPaletteFromPalPointers(PAL_AIZ_INDEX);
+            applyKnucklesAiz1Line4Patch();
             releaseAizIntroSidekickMarker();
             paletteSwapped = true;
             LOG.info("AIZ1: loaded main palette (PalPointers #0x2A) at cameraX=0x"
@@ -873,7 +892,10 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             // Skip palette reload if the fire transition is already active — the fire
             // palette takes precedence.  In skip-intro or teleport scenarios, the
             // simulated decompression countdown may expire after the fire has started.
-            if (!isFireTransitionActive()) {
+            // Engine-only: ROM routines 2/4 (loc_1C4D0/loc_1C550) load no palette. The
+            // re-apply clears the plane intro's emerald residue, so a start without the
+            // intro keeps its own palette (Knuckles' Adjust_AIZ1Chunks2 colours included).
+            if (!isFireTransitionActive() && shouldSpawnIntro(0)) {
                 loadPaletteFromPalPointers(PAL_AIZ_INDEX);
             }
             camera().setMinY((short) 0);
@@ -931,6 +953,44 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             AizIntroTerrainSwap.precomputeTransitionTilemaps(rom(), levelManager);
         } catch (IOException e) {
             LOG.warning("AIZ intro transition tilemap pre-build skipped: " + e.getMessage());
+        }
+    }
+
+    /** Adjust_AIZ1Chunks2: word_4FAE4 to Target_palette_line_4+$10, which the level fade reaches. */
+    private void applyKnucklesAiz1Line4TargetPatch() {
+        var registry = paletteRegistryOrNull();
+        if (playerCharacter() != PlayerCharacter.KNUCKLES || registry == null) {
+            return;
+        }
+        try {
+            registry.applyTargetPatch(S3kPaletteOwners.ZONE_EVENT_PALETTE_LOAD, 3, 8,
+                    rom().readBytes(AIZ1_KNUCKLES_LINE4_PATCH_ADDR, 8));
+        } catch (java.io.IOException e) {
+            throw new java.io.UncheckedIOException("AIZ1 Knuckles target line-4 patch", e);
+        }
+        // Also the immediate copy, as the level palette shows Target_palette once the fade ends.
+        applyKnucklesAiz1Line4Patch();
+    }
+
+    /** loc_1C4A6, Player_mode 3: word_4FAE4 to Normal_palette_line_4+$10. */
+    private void applyKnucklesAiz1Line4Patch() {
+        if (playerCharacter() != PlayerCharacter.KNUCKLES) {
+            return;
+        }
+        try {
+            S3kPaletteWriteSupport.applyContiguousPatch(
+                    paletteRegistryOrNull(),
+                    levelManager().getCurrentLevel(),
+                    graphics(),
+                    S3kPaletteOwners.ZONE_EVENT_PALETTE_LOAD,
+                    S3kPaletteOwners.PRIORITY_ZONE_EVENT,
+                    3,
+                    8,
+                    rom().readBytes(AIZ1_KNUCKLES_LINE4_PATCH_ADDR, 8));
+            S3kPaletteWriteSupport.resolvePendingWritesNow(
+                    paletteRegistryOrNull(), levelManager().getCurrentLevel(), graphics());
+        } catch (java.io.IOException e) {
+            throw new java.io.UncheckedIOException("AIZ1 Knuckles line-4 patch", e);
         }
     }
 
