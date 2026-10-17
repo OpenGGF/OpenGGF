@@ -18,7 +18,7 @@ The initial native/default binding covers all three solo mains at 320; the finit
 | ENTRY / OBJECT / CAMERA: snowboard startup, slope and crash | `TestS3kIcz1SnowboardIntroHeadless#sonicAloneRunsSnowboardIntroAndReleasesControlAfterCrash`, `#checkpointRespawnDoesNotRestartSnowboardIntro` | Actual Sonic intro motion plus declared checkpoint state. Existing checkpoint setup is not physical starpost contact or a new all-config death/reload qualification. Listed bindings were setup-inspected, not independently rerun as a whole in this slice. |
 | OBJECT / REWIND: ice blocks, freezers and segment columns | `TestS3kIczIceObjectRewind`, `TestS3kIczPlatformHazardRewind`, `TestS3kIczFreezerGraphRewind`, `TestS3kIczSegmentColumnGraphRewind`, `TestS3kIcz1PathFollowPlatformHeadless` | Non-default constructed/local families; not every act placement or all supported configuration products. Listed bindings were setup-inspected, not independently rerun as a whole in this slice. |
 | BOSS / LOAD: miniboss and ICZ1BGE_Normal handoff | `TestS3kIczMinibossObject`, `TestS3kIczAct1TransitionHeadless#act1OutdoorTransitionReloadsIcz2AndAppliesRomCameraBounds` | Boss components and actual resource publication from repositioned late state with a forced normal-background routine; not cold traversal. Listed bindings were setup-inspected, not independently rerun as a whole in this slice. |
-| LIFE / LOAD: physical post, actual death/restart and incoming/outgoing worlds | Native checkpoint/death/reload owners and the edges listed above | All 140 supported preset/donor/main/roster products are qualified by `TestS3kIcz1EntryMatrix#actualDeathReloadPreservesTheSupportedProductAndReplaysEachIncomingWorldTwice`: two actual deaths/reloads, exactly one life lost per restart, new world owners, outgoing live-history retirement, restored current roster/camera and two complete-world 45-frame restore/replay cycles after each released destination. Physical post activation and incoming/outgoing route edges remain separate obligations. The [2026-10-17 bounded post1 authoring attempt](#bounded-post1-natural-death-authoring--2026-10-17) observed cold physical contact and ring-loss hits, but all three finite candidates (including the bounded follow-up below) ended alive; natural death/reload/rewind remains unqualified. |
+| LIFE / LOAD: physical post, actual death/restart and incoming/outgoing worlds | Native checkpoint/death/reload owners and the edges listed above | All 140 supported preset/donor/main/roster products are qualified by `TestS3kIcz1EntryMatrix#actualDeathReloadPreservesTheSupportedProductAndReplaysEachIncomingWorldTwice`: two actual deaths/reloads, exactly one life lost per restart, new world owners, outgoing live-history retirement, restored current roster/camera and two complete-world 45-frame restore/replay cycles after each released destination. Physical post activation and incoming/outgoing route edges remain separate obligations. The [2026-10-17 bounded post1 authoring attempt](#bounded-post1-natural-death-authoring--2026-10-17) observed cold physical contact and ring-loss hits, but all three historical finite candidates ended alive. The [R8 ground-aware continuation](#r8-ground-aware-post1-continuation--2026-10-17) also ended alive after its 1200-input cap; natural death/reload/rewind remains unqualified. |
 | PRESENT: actual viewport, palette/scroll/plane and audio | Act-owned ROM art/AniPLC/AnPal/event and music/SFX owners | Decoded playable source is checked at entry. Scene pixels, native audiovisual timing and viewport-edge parity require their own bounded native/GPU evidence. |
 | ROUTE: representative completion and compatibility axes | Authentic entry→mandatory mechanics→boss/results→released next state | Complete character-route composition, every preset/donor axis and applicable team-shape traversals remain open; short entry is not route certification. |
 | ORACLE: timing-sensitive native behavior | Existing ICZ trace bindings and [frontier log](../../../status/trace-frontier-log.md); no new strict trace run in this slice. | Preserve each owning strict-ledger result/source. Comparison rows do not supply gameplay; no strict trace or conformance sweep was run here. |
@@ -135,3 +135,116 @@ The third block's required natural-death assertion failed after all 1071 new inp
 The exact focused command was the command above with `-Dtest=TmpIczThirdContactProbe`. It used the current main-checkout absolute queue wrapper from the intended checkout, original absolute locked-on ROM, Java 25.0.4.1, surfaceless EGL, null OpenAL and unset DISPLAY/WAYLAND_DISPLAY. Session `61328` completed at **09:37:55 UTC**, exit 1, **1 test / 1 failure / 0 errors / 0 skips**; class 1.585 s, Maven 26.289 s, queue wait 493 s. Tested temporary source blob: `dac3021890c62ce9329e3ef9deb36d8dd677faed`. The source stayed fixed after submission; waiting did not trigger a replacement request or another candidate. The temporary source, authored temporary input and consumed Maven diagnostics were removed after inspection.
 
 This is the final authorized authoring limit for this follow-up. Natural death, real respawn/life loss, saved post1 coordinate restoration, no-snowboard/control/focus release, history retirement, incoming replay and the two requested pre-contact rewind spots remain unqualified. No maintained test or source/API change was promoted. No broad/full validation ran; the other configuration/post/act limits listed above are unchanged.
+
+
+### R8 ground-aware post1 continuation — 2026-10-17
+
+**No natural-death certificate:** one controller-only continuation reached its
+1200-input cap alive after 10 jump starts (limit 12). No maintained lifecycle
+coverage or runtime change resulted. This is an additional bounded authoring
+result, not a replacement for the historical three candidates above.
+
+Source was clean Root `a58bdc058ec440d6e2ce70f3be38ee0ebcecc9b5` in owned
+`t3-98d036a9`, new local branch
+`feature/ai-s3k-icz-natural-post-coverage-gpt61`. The previous AIZ branch/ref and
+R1–R7 records were preserved. The temporary probe's tested SHA-256 was
+`5648de0e5ac7fd924860e572af36e33bd2b30952cf48b7d16b84456741fc578f`;
+production and maintained test sources were unchanged. `CanonicalEntryMatrixSupport.boot`
+provided the real cold native320/donor-off/solo-Sonic world, then ordinary
+`GameLoop.step()` logical input and pending render tasks drove every input.
+`InputLogAuthorTool.author` and production `Bk2MovieLoader` verified every button
+of the unchanged 4594-input prefix before boot and the complete 5794-input
+stream at termination. The prefix is exactly the earlier 1780-input stream,
+672-input first candidate and the 1071-input return block twice; retain a
+statement separator after the inline repeat when concatenating these blocks.
+
+Offline button selection used only actual player ground/air and current/prior
+centre coordinates, the placed platform's live pose and landing geometry.
+It sought a grounded leftward approach from the platform's right side, held
+jump through observed ascent, released when ascent ended, steered toward the
+platform in air and moved right while standing at its height. Speed, rings,
+hurt and lives were observations only. No position/velocity/ring/life/flag/
+timer/routine/slot/RNG writes, death calls, trace hydration, seeded hazards,
+world restore, gameplay API or production change was used. No alternate
+policy or second gameplay candidate was tried.
+
+Append this exact literal RLE to the accepted 4594-input stream to reproduce
+the executed continuation; counts sum to **1200**, with 10 distinct A holds:
+
+```text
+22 R;23 L+A;25 L;111 R;23 L+A;25 L;109 R;22 L+A;26 L;
+112 R;22 L+A;25 L;108 R;22 L+A;25 L;110 R;22 L+A;25 L;
+18 L+A;13 L;42 R;27 L;18 L+A;13 L;18 R;27 L;93 R;
+22 L+A;25 L;18 L+A;9 L;
+```
+
+All counts below are **executed cold logical inputs**, not native frames or
+trace rows. `BEFORE` samples precede the next selected input; LF is the actual
+level counter at observation, not a substituted input count.
+
+| Observation | Input count / LF | Actual P1 state | Interpretation |
+| --- | --- | --- | --- |
+| Reproduced prefix | 4594 / `$11F1` | `$3CCE/$07AF`, grounded, rings0/inv0/hurtfalse/deadfalse, ground speed −4092, lives3, post1 active; camera `$3C3E/$074F` | Exact 1701, 3523 and 4594 assertions pass |
+| First jump selection | 4616 / `$1207` | `$3DED/$07AD`, grounded, speed −4068; next sample airborne | Ordinary leftward return from spring channel |
+| First recorded platform ride | 5482 / `$1569` | `$3D00/$0760`, grounded, `IczSwingingPlatformObjectInstance`, X speed −305, rings0/inv0/lives3 | Ride regained; first riding tick was not sampled |
+| Later recorded platform ride | 5582 / `$15CD` | `$3CFE/$0760`, grounded, same platform, X speed −318 | Ride regained again; later samples return to lower channel |
+| Cap endpoint | 5794 / `$16A1` | `$3D04/$0765`, airborne, rings0/inv0/hurtfalse/deadfalse, ground speed0, VX−247/VY−195, lives3/post1 active; camera `$3C74/$0720` | 1200 extra inputs / 10 jump starts, no death |
+
+The 77 recorded continuation samples spanned X `$3CCE..$3DFD`,
+Y `$0760..$07B2`; these are sampled bounds, not continuous trajectory extrema.
+The live platform remained at `$3CE0/$0784`, layout14/object`$B4`/subtype0;
+static ice layout12 `$3BF3/$06CE` and layout15 `$3D10/$0658` remained present.
+On disassembly pin `044fa46725c71187399e13f5ddb70e11d32dc024`,
+`sub_8B0B0` requires the lower solid's standing contact, absolute horizontal
+speed at least `$200` and matching facing. The recorded negative riding speeds
+above are below that threshold; they do not prove which piece/branch ran
+between observations. The platform pose stayed unchanged in recorded samples.
+No lethal touch owner or runtime defect was demonstrated. Merely regaining
+support did not author the elevated damaging route.
+
+Exact command shape (the actual original three ROMs were absolute paths under
+`$OPENGGF_MAIN`, the unchanged Main checkout; no profile was selected):
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null \
+  LUA_BIN=/usr/bin/lua5.4 JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical \
+  '-Dtest=TmpIczR8GroundAwareAuthoring#authorOneGroundAwareContinuation' \
+  "-Dsonic1.rom.path=$OPENGGF_MAIN/s1.gen" \
+  "-Dsonic2.rom.path=$OPENGGF_MAIN/s2.gen" \
+  "-Ds3k.rom.path=$OPENGGF_MAIN/s3k.gen" test -B
+```
+
+Java 25.0.4.1, normal ROM heap, exact single-token `JAVA_TOOL_OPTIONS` shown above;
+inherited `JDK_JAVA_OPTIONS`/`MAVEN_OPTS` were preserved. The S3K ROM retained
+SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`. Own private config was a
+regular exact Main byte copy before each JVM; Main SHA-256
+`6abd111c03f798dbe2a618cb4985aeb599127f44668edb2a8edbde118d11f7da` and
+mtime_ns `1792141742849921547` were unchanged before/after. No Main branch or
+source/config migration occurred. Queue waiting was zero for these requests.
+
+| Session / terminal UTC | Result | Execution and limit |
+| --- | --- | --- |
+| 90341 / 14:28:52 | testCompile failure, no tests/gameplay | Observer used nonexistent `GameStateManager.getRings`; corrected to read-only playable getter, Maven1m01 |
+| 3516 / 14:30:41 | 1 test / 0 failures / 1 error / 0 skips | Input-script separator rejected **before boot**, zero gameplay; Maven23.411s |
+| 53312 / 14:32:25 | 1 / 0 / 1 / 0 | Prefix assertions green, then optional null-spawn dump error; **zero continuation inputs/jumps**, Maven22.963s |
+| 53551 / 14:35:23 | 1 / 1 / 0 / 0, intentional cap-alive assertion | Explicitly authorized exact re-execution after null-safe optional dump only; full1200-input candidate, class1.797s/Maven25.214s |
+
+The first two were pre-execution tool prerequisites. The third was an
+observation prerequisite failure, separately authorized for one exact rerun;
+null owners/spawns now emit class/null metadata without default getX/getY.
+Optional `isDestroyed()` was excluded because some owner overrides can mutate
+lifetime state. Policy/buttons/bootstrap/caps stayed fixed. The final failure
+was solely the explicit natural-death assertion, with no observer error or skip.
+
+No further candidate/JVM, maintained rebuild, affected validation, native/media,
+strict trace, sweep or broad run was warranted by this cap result. Inspected
+temporary probe/input/observation/reports and its compiled class were consumed;
+`target` last compiled the temporary observer, not a newly validated maintained
+test tree. Existing normal-entry and independent semantic death/reload floors
+remain historical, unchanged qualifications. Physical-post natural lethal
+contact, exactly one life lost, saved-post destination/no-snowboard release,
+world replacement/history retirement, and before-contact/after-release capture
+with two forward replays remain **open**, along with all other axes above.
