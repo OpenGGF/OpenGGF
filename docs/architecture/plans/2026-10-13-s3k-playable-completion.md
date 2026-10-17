@@ -3615,3 +3615,36 @@ will also remain `cleanup_pending`; no unknown file is deleted. Active/unmerged 
 lanes likewise remain preserved. Other named delivery trees are eligible only after this follow-up's
 Main verification/push, using exact paths and normal Main inventory leases, with no global pruning or
 submodule deinitialization that could alter the foreign Main checkout.
+
+
+### Published follow-up and manual-version isolation correction — 2026-10-17
+
+Follow-up **467d070a35e1ba311641a1864830ef1099df8f66** was integrated into Main
+`develop` and its push was remote-verified. Main package94281 exited0 with
+`-Dmse=off -DskipTests package -B`, explicit `Tests are skipped`, Maven1m25s,
+finished **10:20:32 UTC**. The preceding159-case focused result remains the
+qualification; no unchanged smoke/native capture was repeated. Consumed reports
+and the package log were removed under normal metadata leases. Root's delivery
+tree and six completed lane trees were removed after exact ancestry/status checks;
+merged engine task branches were deleted and native canonical `main` retained.
+The unknown Knuckles source/tree and active/unmerged lanes remain preserved.
+
+The resumed CNZ worker subsequently ran the manual shell command
+`mvn -v | head -5` in `t3-fa8da232`, outside the queue/activity/tree leases.
+Its owned command record bounds execution conservatively at
+**10:26:05.341–10:26:05.550 UTC**, epochs1792232765.341–1792232765.550.
+The isolated performance pair's audit was1792232627.9009695–1792232765.819888;
+the entire probe bracket falls inside that audit. The reported Java PID2167043
+has no retained PID/argv binding to the probe. Script inspection shows the
+Maven launcher invokes both a suppressed `java -version` helper and
+`org.codehaus.plexus.classworlds.launcher.Launcher -v`; these are possible
+identities, not observed process argv. The performance owner excluded the whole
+pair; no acceptance or optimization rejection follows. No foreign signal, source,
+lease, reservation or policy change was made, and existing queued work was preserved.
+
+The fixed category preflight already leases its Maven version probe; the manual
+command bypassed that implementation. The agent mirrors and testing guide now
+show the leased wrapper command for independent version checks, and the existing
+measurement hazard records the manual path and multiple-JVM launcher. This is a
+documentation correction only, with mirror, whitespace, link and command-routing
+scenario checks; no new JVM, engine tests or scheduler implementation is needed.

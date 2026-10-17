@@ -112,6 +112,13 @@ ownership plus activity, then releases both before queued Java execution. A
 Python safety pass does not validate a concurrent timing unit. Intersect actual
 or conservative execution intervals; queue submission and inherited descriptors
 alone do not prove execution overlap or a held lock.
+The fixed preflight does not protect a separate manual `mvn -v`. A CNZ recovery
+probe ran without leases at10:26:05.341–10:26:05.550 UTC on17 October2026,
+inside an isolated pair's audit interval. Its launcher starts a suppressed
+`java -version` helper and then Maven; the reported foreign PID could not be bound
+to either JVM. The whole measurement pair was excluded. Use the queued version
+command or updated preflight, and retain actual command bounds rather than
+substituting queue-submit time or inferred argv.
 
 Mocked subprocesses must not reach real process cleanup (2026-10-16, test queue).
 An unset `MagicMock.pid` converts to `1`; on Linux, `killpg(1, signal)` calls

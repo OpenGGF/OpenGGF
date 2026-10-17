@@ -165,6 +165,10 @@ The Maven version probe holds a shared build-activity lease, inherited by its JV
 so it waits for isolated measurements without joining the test queue. Its 20-second
 launch timeout starts after that wait. The lease is released before guard-tool
 checks and test admission; do not wrap preflight in another activity lease.
+For an independent Maven/JDK version check, run `python3 tools/testing/maven_queue.py -v`
+from the intended worktree (or use the current Main wrapper by absolute path).
+A direct `mvn -v` also starts JVMs and must not bypass isolation; some launchers
+run a suppressed `java -version` helper before the Maven launcher itself.
 This checks tool launches, not ROM completeness, native display access or every fixture
 prerequisite. On macOS use the known working native display/service permissions from the
 first graphics launch, especially after a documented sandbox failure.

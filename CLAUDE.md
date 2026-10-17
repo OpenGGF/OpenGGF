@@ -62,7 +62,7 @@ workflow defaults.
 ## Build and verification
 
 ```bash
-mvn -v                              # must report Java 25
+python3 tools/testing/maven_queue.py -v  # leased version probe; must report Java 25
 mvn -Dmse=off compile               # build only; no test queue
 mvn -Dmse=off -DskipTests package    # package without running tests; no test queue
 tools/testing/install-hooks.sh     # once per worktree
@@ -153,6 +153,10 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
   category worktrees do not block measurements; never sweep foreign worktree locks
   or request test admission while holding a build activity lease. Direct/older
   wrappers do not honor activity isolation; use current tooling for measurements.
+  Even `mvn -v` can launch multiple JVMs. Use the queued version command above
+  or the updated category preflight; do not run an ad hoc version probe without
+  activity or execution admission. Release activity before requesting queued tests,
+  and do not wrap the updated preflight in another activity lease.
   Direct `mvn` builds are also allowed, provided nothing else is writing that worktree's
   `target/`. Prefer the wrapper when builds and tests may share a worktree. Unknown plugin
   goals, alternate POMs/profiles and custom Maven launch arguments remain queued conservatively;
