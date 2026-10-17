@@ -10766,3 +10766,138 @@ R47strict13322 and independentownership88306/limitedvectors remain scoped.
 After durable localcommit, exact20rawfiles are consumed metadata-only with
 class SHA+mtime preserved. ONLY after clean accounting: bounded existingnative
 13319..25/source read/plan. No logger/test/runtime authoring/JVM/native/probe.
+
+
+## R30–R34 matched typed pool evidence and preservation — 2026-10-17
+
+**Bounded engine comparison accepted; native scene and original49613 remain open.**
+Own98d/native01a1496e; R30 source ordinal34, R31 correction35, R32 BASE36,
+R33 CURRENT37, R34 accounting38 are separate registry identities. Parent/current
+`781c296abb3d9c4df0ac3376c131d4df085baa4a`; BASE
+`8030832d2ab6080e5324cdfe35e971677fd97b41`. No Root/HCZ/DEZ WIP overlay.
+Temporary driver `a6904a3a3cebad305935a774cd45988a5a6ee65ba5c81cae2673e890a1d573cc`,
+helper `f8aebe1b199f497d2e56e03a5a2ae426680dd14e65ad8884ebcff44e9d983b0e`,
+portable class+NUL+helper `e667b850d03bb9a980cce407c4412a7c93d6c6054cbf718bccbf25d26b984fb5`
+were identical in both arms. Eleven driver markers strip to original9616921c;
+sixteen helper markers plus former header recover promoted8492f006. R31 replaced
+an inaccessible package-private superclass literal with EggRobo.class.getSuperclass,
+checked its exact binary name, then used the unchanged declared-field read. This
+was source-only before either compiler/gameplay lifecycle, not a runtime repair.
+
+One original maintained Sonic selector/no profile, same fixed movie/bootstrap/input/
+step/render/assert/history/45-forward/two-replay/restore order and owned stop after
+all original48276 per-frame assertions/windows. Actual common command (Main root
+placeholder expands to its actual absolute checkout; registry retains literal text):
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 ${OPENGGF_MAIN_WORKSPACE}/tools/testing/maven_queue.py --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dsonic1.rom.path=${OPENGGF_MAIN_WORKSPACE}/s1.gen -Dsonic2.rom.path=${OPENGGF_MAIN_WORKSPACE}/s2.gen -Ds3k.rom.path=${OPENGGF_MAIN_WORKSPACE}/s3k.gen -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical -Dtest=TestS3kLrzHpzSszColdCampaign#sonicColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory -Dopenggf.cold.poolJournal=target/cold-r30-base803-pool.jsonl test
+```
+
+CURRENT changes ONLY the output property to `target/cold-r30-current-781c-pool.jsonl`.
+Normal7GiB/8cores; Java25.0.4.1; all3 original absolute ROM identities; one JTO EGL
+plus same CLI/EGL_PLATFORM/nullAL/noambient/Lua5.4. Inherited JDK_JAVA_OPTIONS /
+MAVEN_OPTS unset, preserved. Compiler belongs to each sole lifecycle, no separate
+build or target copy. No duplicate/equivalent own queued/live request, retry or
+variant; foreign Root29527/FDF79227 requests untouched.
+
+| Arm / handle | Terminal / queue / Maven | Actual XML | Validated journal |
+|---|---|---|---|
+|BASE803 /56945|0 at21:31:48UTC /1s /1m46|1/0F0E0S, class36.326s/method36.054s;4133main/4163test compiled|1323lines,1321emitted,78typed transitions/69event rows,22Animal snapshots,394animal-positive/493releaser-positive samples|
+|CURRENT781c /70631|0 at21:45:03UTC /0s /1m41|1/0F0E0S, class34.722s/method34.472s;4143main/4194test compiled|1319lines,1317emitted,81typed transitions/70event rows,28Animal snapshots,320animal-positive/493releaser-positive samples|
+
+Each arm has18603 positive verified samples,6 real restore markers,48547 original
+step-render pairs, matching footer and exact post-footer verified-write marker
+(1323/1319 including footer). Strict UTF8/no duplicate JSON keys/newline/size/caps,
+all raw BK2 P1/P2/debug buttons and session previousInput validated. BASE1321actual+
+1320previous=2641 key records/2635 unique; CURRENT1317+1316=2633/2627 unique. Six
+restore previous keys repeat already emitted keys: checked records are not all
+unique. Common explicit semantic keys2613; BASE-only22/CURRENT-only14. Common
+outer/input/context/cycle/window/phase/completed-step/load keys match; all common
+VInt/LF/raw-object/load values match. Nine full-pool rows per arm contain18 previous/
+current projections; first predecessor is explicitly empty, all nonempty arrays
+have110 ordered slots. Max run-local Java ref888; no unresolved identity keys.
+Both source-epoch fields and run-local Java bindings are excluded from common
+phase comparison; all four BASE launch fields remain ABSENT_IN_SOURCE_EPOCH.
+
+First common phase difference is43944/sample9666 AFTER: Animal264slot8 prior-render
+BASEtrue/CURRENTfalse, VInt43875/LF4696/rawOM4697 both. First sparse structural split
+43945/sample9668 removes current264; BASE has no exact clock emission there. First
+shared actual key showing that pool difference is43953/sample9683 BEFORE. Three
+self-closing structural spans remain43945→43956,44245→44254,47250→47262 (samples
+9668→9690,10268→10286,16551→16575; closing endpoint is equal again). First nonclosing
+span48195/sample18441 now removes **Animal630slot7**, not old f196's629. No sparse
+BASE clock or first arbitrary motion-only difference is inferred.
+
+| Original input / sample | Same-boundary releaser624slot5 count | Actual CURRENT launch / BASE launch |
+|---|---|---|
+|48149 /18349|4→3|629slot6 CHICKEN/FLY/frame1/vx-512/vy-279 versus MAIN/frame2/vx0/vy-1024|
+|48165 /18381|3→2|630slot7 CHICKEN/FLY/frame1/vx-512/vy-256 versus MAIN/frame2/vx0/vy-1024|
+|48181 /18413|2→1|631slot8 RABBIT/WALK/frame1/vx-512/vy-281 versus MAIN/frame2/vx0/vy-1024|
+
+All three appear at18B0/0CA0, subpixels0, points0, firstDisplay/deferfalse. CURRENT
+has actual WALK_OR_FLY/fixedRABBIT+CHICKEN/capturedflipfalse, while BASE fields are
+absent, not synthetic POP/defaults. Layout207/id624slot5 at same source stays
+RELEASING/facingLefttrue; counter/child association is source-consistent boundary
+evidence, **not an observed callback or unique parent link**. Actual clocks are
+VInt48080/LF8901/rawOM8902,48096/8917/8918,48112/8933/8934 respectively. The qualified
+initializer therefore changes the actual route, despite unchanged full-route death.
+
+Current630 prior-render becomes false48194 then registered-removal48195;629+631
+become false48195 then removal48196. Last observed previous actual poses at removal:
+6301876/0CA9/vx-512/vy440;6291854/0C9B/-512/-552;6311894/0CA4/-512/503. These are last
+sampled states, not the within-pass deletion instruction. BASE629/630 removal48202,
+63148204. At same48201 admissions layouts198/201/204 IDs632/633/634 get BASE9/30/32
+versus CURRENT6/7/8; BASE animals still occupy6/7/8, current predecessor pool is free.
+At48213 spring206/id635 getsBASE6/CURRENT9. First shared camera metadata difference
+remains48275 AFTER, Y2564/2572 physical and copied. P1 full pose is not measured by
+this protocol. Baseline/native correctness, allocator fault and callback claims
+remain excluded; correct R5 lifetime and qualified launch initializer stay intact.
+
+Root DIRECT inspected BOTH single originals, ALL2642 JSON records/159 typed objects,
+50Animal snapshots, actual keys/buttons/history, arrays/counters/footers/postmarkers
+and all four XML/TXT reports before accepting this bounded comparison. The one-off
+offline readers were corrected for the intentionally internal typedSnapshots key
+and six repeated restore-previous keys; no source/data/JVM repair or second execution.
+
+| Accepted original path | Bytes | SHA256 |
+|---|---:|---|
+|target/cold-r30-base803-pool.jsonl|5255171|f4f8ba1c9309a2ddb22d64595e246b1219d5e0dda923f8d299093ea7b448a464|
+|target/cold-r30-base803-test.xml|172455|eb76321062ecb38daebb1d6fade5090ed48602766ea7a37e669d526b2b26caf9|
+|target/cold-r30-base803-test.txt|342|222153ebefec537d3f710a402fccae37bb303a77d87345a2029652168b64346e|
+|target/cold-r30-current-781c-pool.jsonl|5249695|78ee25285262b7131f3eba523e78d6527d1d633f36457fe01e6ef85611090e9d|
+|target/surefire-reports/TEST-com.openggf.tools.TestS3kLrzHpzSszColdCampaign.xml|172460|a89811b6ae2655d8221513f5d5fa282aab8f4ba9e1897a9dc49fdbeb55c74633|
+|target/surefire-reports/com.openggf.tools.TestS3kLrzHpzSszColdCampaign.txt|342|0cc7e21dca18696e69735778d82d172c2c5294398d4be61206c53e048e65363c|
+
+BASE reports were same-inode renamed within target before CURRENT to preserve the
+unchanged command and both originals. All6 are0444; exactly10850465B are authorized
+for metadata_slot-ALONE consumption after this normal local preservation commit,
+with full hash checks and no archive/copy/receipt. Registry records final disposal.
+No raw original is committed. Helper stays in place: R34 changes ONLY its header
+relative to tested f8ae functional body, documents opt-in r30Open/typed/cap/absence/
+strip contracts and updates one workflow entry. Original driver is restored9616;
+no permanent instrumentation/property installation/copied driver/runtime/API change.
+Owned compiled class inventory/removal below leaves no maintained Cold/helper build;
+no extra Java is run for source/header/docs preservation. Main803/confighashmtime,
+private regular600copy/native/all old refs remain unchanged. R34 then permits only
+source reading and a native-evidence plan: no input/probe/logger/test authoring,
+compiler/JVM/campaign/native run or runtime fix. Historical full campaign96020 still
+fails49613; prefix0 does not qualify its later route/load/history/results finals.
+
+Owned R33 compiled-artifact inventory (SHA256 before exact removal; no target sweep):
+
+| Path | Bytes | SHA256 |
+|---|---:|---|
+|target/test-classes/com/openggf/tools/ColdCampaignPoolJournal.class|45402|5000d6ae03573e44adb42125cc036bf2870fc16185a9101773ff1ee1ab70b985|
+|target/test-classes/com/openggf/tools/ColdCampaignPoolJournal$Picture.class|2688|67632657b632f400cf409b24e9665b065eb4b898bd736e8f33a1303d84839532|
+|target/test-classes/com/openggf/tools/TestS3kLrzHpzSszColdCampaign.class|46970|69695096492be324b2c272bf8990246fcad3e6b409fcda9c3dffd5de7960c8db|
+|target/test-classes/com/openggf/tools/TestS3kLrzHpzSszColdCampaign$DeathEggCampaign.class|3055|a803caaf16fec06689cb054a0fe1ba983ad65a701e9c7f52ded65f7bdf9a3781|
+
+Preserved helper full SHA256 `dcba4f8ddf1b609015b2ded10341ed81ca97a07084ffab102552a02f3b98e1bf`;
+functional body excluding only its Javadoc SHA256
+`ee0425a38cc933557003e9774a8c774040b5d30ff29ac3a9c7dc902eb16128a9`.
+Restoring the former header reconstructs exact f8ae; stripping16markers then
+reconstructs8492. Syntax/diff, new relative links/anchors, inert property/no installed
+driver calls and byte proofs pass. No compiler/JVM/guard/native rerun is performed.
+The exact full prepared message is parsed for its final GPT6.1 coauthor; seven
+policy lines are parsed as a separate block with a subject, preserving the required
+blank line before coauthors. Prior tested epochs remain separately accountable.
