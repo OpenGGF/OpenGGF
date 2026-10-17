@@ -89,6 +89,21 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
             animator.publishAniPlcAtVBlank();
         }
         S3kRuntimeArtCoordinator.from(runtimeArtCoordinator).publishPatternModuleDma();
+        // VInt8/10: Process_DMA_Queue -> SpecialVInt_Function -> VInt_DrawLevel
+        // (sonic3k.asm, skdisasm 044fa46). VIntC and Do_ControllerPal DMA do not
+        // call DrawLevel; a DMA-only declaration is not that additional authority.
+        boolean drawsLevel = phase != null && switch (phase) {
+            case ORDINARY_LEVEL, CREDITS_DEMO, NORMAL_PAUSE -> true;
+            default -> false;
+        };
+        var objects = levelManager != null ? levelManager.getObjectManager() : null;
+        var services = objects != null ? objects.getObjectServices() : null;
+        var parallax = services != null ? services.parallaxManager() : null;
+        if (drawsLevel && parallax != null
+                && parallax.getHandler(levelManager.getCurrentZone())
+                instanceof com.openggf.game.sonic3k.scroll.SwScrlSlots slots) {
+            slots.publishBackgroundPlaneRows(levelManager);
+        }
     }
 
     /**

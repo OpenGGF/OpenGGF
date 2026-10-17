@@ -69,7 +69,9 @@ Unreleased. The earlier development themes remain in
   on return). Pachinko orb rewards follow the level frame counter, and round
   bumpers show their ten-point score with the native sprite priority. All three bonus
   traces now replay without errors. The Slot cage keeps re-centring the machine
-  through the goal wind-down, so the machine stays where the original shows it,
+  through the goal wind-down, so the machine stays where the original shows it.
+  Its background keeps moving at zero cage rotation and publishes queued rows
+  at the native VBlank boundary, including through rewind;
   the Gumball background stays pinned as in the original instead of scrolling
   with the camera, and Pachinko's background survives rewind.
 

@@ -796,3 +796,142 @@ and mtime-ns `1792141742849921547` were unchanged before/after and before
 cleanup. No Main config migration or foreign tree edit occurred. Temporary
 source backup and consumed diagnostics are removed; no pass cache/receipt or
 log archive is kept. Local task branch/tree remain for Root delivery.
+
+
+## Slot zero step and native row publication — 2026-10-17
+
+Bounded GPT-6.1 R2 in `t3-649fee32`, branch
+`feature/ai-s3k-slot-native-publication-gpt61`, over clean fast-forwarded Root
+`e8f2d15e28a46d959e38755959ffe93b5f45f5d1` (R1 popup and R7 included).
+Only `SwScrlSlots`, `Sonic3kLevelInitProfile` and their focused controls change.
+Main remains untouched. The R1 branch/registry/private config are retained.
+
+**Native owner.** Pinned skdisasm `044fa46725c71187399e13f5ddb70e11d32dc024`,
+locked-on ROM SHA-1 `cfbf98c36c776677290a872547ac47c53d2761d6`:
+`Slots_BackgroundEvent` (:119193 onward) starts at +$400 and uses `tst.w` /
+`bpl`, so zero runs the positive step and band loop. `sub_4ECAA` prepares
+`Plane_buffer_2`; preparation must not copy visible Plane B. `VInt_8_Cont`
+(:760 onward) runs `Process_DMA_Queue`, `SpecialVInt_Function`, then
+`VInt_DrawLevel` (:102400 onward), which consumes and clears row entries.
+VInt A/C and controller/palette-only DMA do not provide DrawLevel authority.
+The shipped FixBugs=0 branch and ROM-backed band/resource data are retained.
+
+The existing once-per-physical-token S3K profile seam now invokes the actual
+typed Slot owner after queued pattern DMA, only for ordinary level, credits
+and normal pause. Lag, declared DMA-only lag, fade, event preparation, rendering
+and output rebuild cannot publish. A second service of the same token cannot
+consume newly prepared work. No fixture/frame/zone carve-out, public Mod API,
+generic contract, pin, global clock, renderer mutation or trace hydration was
+added. The preserved `7380f7b1fd4ab66b7a71a543fd757dc026183baa` next-update delay
+was rejected as an approximation to VInt; neither it nor `d56216d5e` was adopted
+wholesale, and the foreign tree's four unknown shield changes were untouched.
+
+Pending rows and the actual published Plane B belong to this handler's existing
+rewind payload. The initial visible baseline is captured before pending work;
+a changed publication captures a new immutable value, while unchanged captures,
+rebuilds and pending events share it. Constructor/accessor ownership is defensive;
+restore installs both cached value and actual Plane B coherently. Existing manager,
+actual Level and Slot runtime identity changes invalidate it, including fresh
+initialization. No per-tick retained-plane byte copy or invented version clock.
+The existing LevelManager APIs copy caller data; Slot is the sole band-row writer
+for this current handler (FBZ/SSZ writers have their own typed owners).
+
+`TestS3kSlotPlanePublication` enters through the normal offscreen logical bonus
+entry/title/fade path, with actual 64x32 visible backing. It queues through the
+real event and publishes through `LevelFrameStep.dispatchGameVBlank`, comparing
+all registered world state and actual plane bytes with in-place object restoration
+disabled. Before-queue/live-pending and live-pending/after-publication each replay
+forward and restore in both directions twice. No private routine, timer, slot,
+RNG or gameplay-value assignment drives those boundaries. The shorter headless
+fixture was rejected because it did not initialize visible Plane B. A genuine
+forward-replay failure then exposed missing published bytes; that owner state was
+captured rather than omitted from the comparator. Independent native GPT-6.1
+source review found no material finding at the four final hashes below; it ran
+no builds, tests or edits. Remaining RGB differences are unresolved.
+
+**Execution record.** Same CURRENT MAIN absolute wrapper, owned cwd, Java25,
+all3 original absolute ROM arguments and exact headless environment documented
+in the preceding R1 section; other inherited JVM environment preserved. All
+selections below are literal `-Dtest` values with `-Dmse=off`, ending in `test`.
+No broad smoke/guards/R1 rerun was requested; Root owns combined delivery gates.
+Times are Maven execution; every R2 queue wait was zero.
+
+| Session / UTC finish | Selection / extra flags | Result |
+|---|---|---|
+| 85042 / 14:08:31 | `SwScrlSlotsTest#zeroRotationScalarRunsThePositiveBackgroundStepAndBandLoop`, unchanged e8 production | 1/1 intended F/0E/0S; expected +1024 velocity, -64 band and two rows, actual all zero; 1:18 |
+| 93592 / 14:10:48 | `SwScrlSlotsTest#backgroundEventQueuesRowsWithoutCommittingVisiblePlaneB`, unchanged e8 production | 1/1 intended F/0E/0S; event immediately copied both rows, source ($48,0)/($48,$10), destinations $DFFE/$E0FE, longword count $19; 25.735s |
+| 57879 / 14:15:22 | `SwScrlSlotsTest,TestS3kSlotPlanePublication`, first implementation | 32/0F/1E/0S; 31 unit cases pass, initial headless fixture lacks retained backing; 1:13 |
+| 12642 / 14:16:38 | world test plus `SwScrlSlotsTest#onePhysicalVBlankTokenCannotConsumeWorkPreparedAfterItsPublication` | 2/1F/0E/0S; real entry exposes published-plane forward replay deficiency; token case passes; 24.882s |
+| 92667 / 14:19:14 | `SwScrlSlotsTest,TestS3kSlotPlanePublication,TestSonic3kLevelInitProfile,TestS3kBonusAnimateTilesPublication,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils` | 105/0F/0E/0S; captured published bytes before immutable-value optimization; 1:18 |
+| 9051 / 14:22:53 | two Slot classes after immutable-value change | test compilation error: missing static `assertSame` import; no tests executed; import corrected; 1:13 |
+| 51197 / 14:23:33 | `SwScrlSlotsTest,TestS3kSlotPlanePublication` | final runtime 34/0F/0E/0S, including immutable reuse/defense and twice-forced world cycles; 24.590s |
+| 3566 / 14:24:58 | `-Ptrace-replay-r7 -Dsurefire.forkCount=1`, `TestS3kSlotsBonusTraceReplay` | Knuckles 1/0F/0E/0S, 1024 compared rows; 24.773s |
+| 78564 / 14:29:07 | `-Ptrace-replay -Dsurefire.forkCount=1`, same selector | Sonic+Tails 1/0F/0E/0S, 5259 compared rows; 26.298s |
+
+The 73 unaffected profile/animated-publication/S3K4 cases from 92667 are reused;
+final 34 replaces that run's initial32 Slot cases, not an additional broad pass.
+Both complete trace reports have empty errors/warnings/bootstrap lists and zero
+counts in physics and animation. Knuckles advertises nine missing aux schemas;
+team advertises eight (same cage/execution, velocity/position writes, record-pos,
+CPU-normal-step and CNZ-cylinder state/execution; Knuckles also lacks
+sidekick-interact). No SAT/VRAM/full timing coverage follows from those reports.
+Compiler deprecation/unchecked warnings, FAST load-profile fallback and blocked
+presentation-shadow SFX warnings are visible, distinct from comparator warnings.
+No new/worsened trace frontier and no matched-baseline run were needed.
+
+Final source SHA-256 (reviewed, tested and captured):
+
+```text
+SwScrlSlots.java fd0cb05e1bd7202657d9a87c86f592948b2e6f6fc7b2c7c30d8902d74b23fc87
+Sonic3kLevelInitProfile.java 714bdcf948377cbb5b3405296adc53c153510a710a2c9b3aa4807a15d48fa2e5
+SwScrlSlotsTest.java 6c7d8d798eee09766ea417e671ac79e8736f1c108b4f59260f5f7b27adb5faae
+TestS3kSlotPlanePublication.java 96036ade389cda9468db6b0f061d64049dc588c78c278404054b3e3e83371585
+```
+
+**Five original-pixel screenshots.** `${OGGF_VIDEOS}` denotes the user's durable
+OGGF video directory, outside the repository. Original native provenance is
+`${OGGF_VIDEOS}/s3k-parity-coverage-2026-10-14/spot-checks/slot-native-v1/provenance.json`;
+new engine PNGs/provenance are the sibling `slot-r2-gpt61-e8f2-v1` directory.
+The original movie `s3-knux-multibonus-ss.bk2` SHA-256 is
+`d7485e13f427d1b335cbbb3c405ff6136a77326239b79d3aed61e902078af45c`.
+Its canonical `bonus_slots` inlet, native core row=9143+trace row, viewport320x224,
+RAW_RGB/LIMITED, NTSC60, lag0 and published-producer=producer-1 were recovered
+before selection. Exactly the five declared rows below were compared at the same
+row; no offset search, crop, scale, palette normalization or native re-record.
+
+A temporary source copy of maintained `TraceCaptureTool` retained its production
+boot/driver/presentation/timing path, replacing only its media sink with five PNG
+readbacks and setting the declared display profile. Rendering began at fixed925
+and ended1026; the other97 presentations had no readback. GL bottom-up storage
+was converted to PNG top-left using the standard capture orientation. Helper
+compilation held intended-tree plus shared activity leases, released before queued
+execution; current Main wrapper ran `-Dmse=off exec:exec -Dexec.executable=python3`
+with the owned temporary launcher. Session28913 completed at14:29:36UTC, terminal0,
+3.312s, zero queue. No native execution, video encoder, profiler or benchmark ran.
+The durable provenance records exact Java argv, helper/source hashes, original
+image hashes and completion; temporary helper/classpath/classes are consumed.
+
+| Trace row / native core | Native original relative to slot-native-v1 | Differing original RGB pixels / 71680 |
+|---|---|---|
+| 971 / 10114 | `native-knux/slot-knux-row971-seq0-core10114.png` | 661 |
+| 974 / 10117 | `native-knux/slot-knux-row971-seq3-core10117.png` | 360 |
+| 1017 / 10160 | `native-knux-fade/slot-knux-fade-row1012-seq5-core10160.png` | 50 |
+| 1022 / 10165 | `native-knux-fade/slot-knux-fade-row1012-seq10-core10165.png` | 52 |
+| 1026 / 10169 | `native-knux-fade/slot-knux-fade-row1012-seq14-core10169.png` | 58 |
+
+All ten originals were visually inspected: major machine/plane presentation and
+fade silhouettes agree; HUD lives4 native versus3 engine and sprite/edge residuals
+remain. The comparison metadata has no lives field and bootstrap does not assign lives;
+this is an unqualified carried-life/bootstrap difference, not observed gameplay
+life loss. No value was injected to hide that limit. These are current original-pixel observations, not transferred historical
+1046→661 claims, a before/after improvement measurement, or zero-RGB certification.
+All residuals remain explicit; no second capture or tuning followed.
+
+Main config SHA-256 `6abd111c03f798dbe2a618cb4985aeb599127f44668edb2a8edbde118d11f7da`
+and mtime-ns `1792141742849921547` stayed unchanged before team replay and
+before/after capture. Owned config remains a regular private exact-byte copy.
+Every job/lease is terminal/released; current target is candidate-compiled.
+Inspected trace JSON/owners and Surefire diagnostics are consumed under metadata
+ownership alone, without archives/receipts. Durable original references and five
+new PNGs/provenance stay outside the repo; ignored private config stays accounted
+for future owned-tree cleanup. No Main/Root integration, push or branch removal.
