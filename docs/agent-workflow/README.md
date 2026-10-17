@@ -28,6 +28,8 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 ## Tools
 
+- [Stock native-clock diagnostic reader](../../tools/tracechaser/bizhawk-headless/README.md#stock-native-clock-diagnostic-adapter): preserves reviewed stock-core identity/access checks and raw scalar copying with explicit inputs; dormant, with no recorder/gameplay/readiness wiring or qualified phase origin (2026-10-17 S3K ending timing investigation).
+
 - [Seven-Chaos gateway diagnostic](../../src/main/java/com/openggf/tools/S3kSevenChaosGatewayCaptureTool.java): repeats the declared Tails/LRZ2 ring→sanctuary→sphere-stage→results→return scenario with verified ROM identity, fixed Limited/RAW_RGB, event/state CSVs and original PNGs; `--rom` and `--out-dir` require absolute paths, Linux uses surfaceless EGL with no display. This preserves the 2026-10-17 native RGB investigation; it is not a cold-route certificate.
 
 - [Trace SST occupancy probe](../../src/test/java/com/openggf/tests/trace/SlotOccupancyProbe.java): optional comparison-only `OGGF_SLOT_PROBE=1` diagnostics over existing V5 slot dumps; `OGGF_SLOT_PROBE_FULL=1` prints physical owner/phase labels, fails closed on duplicate SST owners, and writes only below `target/` (2026-10-14 AIZ retained results/title audit). Labels alone do not certify native code parity.

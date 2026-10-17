@@ -7619,3 +7619,41 @@ Docs accounting branch fast-forwards from f196 to existing DOCS ONLY3537 before
 the new R14/R15commit, preserving R13matrix/frontier anchors without duplicate
 evidence or source changes. Runtime/test source is still exactf196; execution
 pins/results above remain the actual tested803/f196 epochs.
+
+
+### Root preserves the reviewed native diagnostic source — 2026-10-17
+
+The recurring stock-clock identity/access helper is now maintained in
+TraceChaser local commit4c3d6ba8c93ae0e607cb15e16e367d47f40f36a0, based
+exactly on the existing parent gitlink322851cbfa2e1c1803332142e11ab74b4eb34eea.
+It preserves the f4 prototype body byte-for-byte after its purpose/origin
+header, at bizhawk-headless/src/Core/StockKosLiveClockReader.cs. Only that
+reader, its single production project inclusion, README and byte-identical
+native AGENTS/CLAUDE guidance changed. Guidance documents a dormant diagnostic
+exception with explicitly authenticated instruction PCs and corrects the stale
+instruction to compile production classes again into the referencing test
+assembly. No recorder, CLI, host-interface, canonical fixture, gameplay,
+readiness or kernel integration was added.
+
+The maintained build.sh compiled both managed projects under the native
+worktree build lease and shared OpenGGF build-activity lease, inherited
+through the compiler. Terminal0 in2.33s; three existing xbuild warnings concern
+unchanged .NET4.8/toolset declarations. Index/history/documentation scanners,
+mirrors, XML/source inclusion, links/fences and diff checks passed. Reader body
+equality was independently checked by Root. Maintained reader source SHA256
+60d014fc3eefe76ef104625676c0122e0eafeb48d6d216f3af05f4e6c847186e;
+managed executable c26f7cd661a679db3d59f32d08cc4231a17962497cc63991d95d322dac8935aa.
+No tests, core opening, frame advance, callback, native-core rebuild or fresh
+maintained-binary bind check occurred. Historical88245 qualifies only its
+previously pinned external prototype; it does not transfer raw-scalar/timing
+acceptance to this maintained executable.
+
+Root reviewed the exact five-file native diff, then relocated only that clean,
+owned native worktree into this composition tree's previously empty optional
+submodule directory. Main's existing native e0a2443e checkout and foreign native
+worktrees/refs remain unchanged; no unrelated native commits were adopted.
+The local parent gitlink and agent tool catalogue now reference the preserved
+source. Native and parent integration/push and final owned-resource cleanup
+remain pending with the broader delivery. External one-off runner/compiled
+artifacts are consumed only after their durable facts and source preservation
+are verified; they are not archived as a second maintained tool.
