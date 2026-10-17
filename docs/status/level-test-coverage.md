@@ -1,5 +1,14 @@
 # Level test coverage backlog
 
+Slot retained-plane restore (2026-10-17): the [R7G qualification](../architecture/validation/levels/s3k-bonus-stage-transitions.md#r7g-actual-captured-plane-inlet-and-bounded-repair-qualification--2026-10-17)
+adds a genuine matched old-red/green with the actual stored parallax checkpoint,
+then all five maintained portal pilots pass, including twice-forward world
+restore and Slot wind/fade checks. R7D/E's cold-unit after-exact-restore claim is
+superseded by R7F's observed missing restore. Earlier175/108 and27/API15 checks
+retain their source epochs. Full finite products, combined smoke/guards, route
+breadth and the separate845-pixel foreground owner remain open; no RGB closure.
+
+
 Pachinko score-popup producer (2026-10-17): the [bounded bonus evidence](../architecture/validation/levels/s3k-bonus-stage-transitions.md#pachinko-bumper-score-popup-producer--2026-10-17)
 adds actual placed-bumper contact, ordinary allocation failure, rejected/no-contact
 and twice-recreated full-world contact/live-popup/deletion replay at native320

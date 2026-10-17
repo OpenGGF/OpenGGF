@@ -5443,3 +5443,293 @@ the now-removed temporary witness; no fresh maintained-source compile is claimed
 Private config remains regular0600/exact bytes; Main config SHA256/mtime unchanged.
 R1–R6 refs/results/native originals/captures and foreign jobs preserved. Docs-only
 local commit; no integration/push, foreground845 unit still gated.
+
+
+#### R7B genuine independent old-red — runtime design pending
+
+Exact task ordinal9:
+`node:delegated-task:command%3Amcp%3Ae0f15981-d194-439f-81ab-b848692b7d95%3Athread-send%3As3k-gpt61-retained-plane-rewind-invalidation-oldred-20261017-r7b`.
+Same649/native01a14a19/priority branch from5c59, new ownership key
+`gpt61_slot_plane_restore_r7b`; all prior entries/results/refs preserved.
+Only existing TestLevelTilemapManagerRewindReset source plus these two docs change.
+Normal current-Main-wrapper request30571, exact4 new methods/all3ROM/recorded
+Java25 EGL/nullAL/Lua environment/single fork, terminal1 at17:04:16UTC:
+4/1F0E0S,Maven23.972s/queue85s. Actual owner geometry-reference swap and derived
+FG/pattern rebuild prerequisites pass; full8192 retainedPlane oracle failscycle0
+byte619 expected-1/actual0, outside current rows0/1. Three no-retained/live-mutation/
+real-scene-replacement controls all pass. Second partition cycle not reached;
+no whole-world/canonical-pilot/native/priority/capture execution is claimed.
+
+Bonus matrix R7B records exact selector/sourcehash and minimal owner design.
+Preserve exact physicalPlane only for geometry-restore invalidation when BOTH
+existing authoritative/restoredForRewind flags hold; still rebuild derived caches.
+Ordinary/live/scene invalidation unchanged. Adapter subpackage access would require
+a narrow nonModApi internal bridge plus package-private tilemap helper, not a new
+public/protected method on either ModApi manager. This additional internal seam is
+explicitly handed back BEFORE implementation. No runtime edits or further execution
+until Root's bounded design decision. Original five pilots remain unchanged for
+later whole-world validation; no full142/993/892/broad repeat. R7A conditional
+invalidator caller is not uniquely attributed by this independent partition test.
+
+R7B handback accounting:30571 terminal; both inspected reports27094bytes consumed
+metadata-slot alone. No live owned request, raw archive or runtime edit. Main
+config hash/mtime unchanged, private config regular/exact bytes. Reviewable owned
+test+two-doc diff retained uncommitted at5c59 pending the runtime design decision;
+no failing-test commit, integration or push. Last compilation includes these tests.
+
+
+#### R7C STOP: independent owner unit green, same production pilots still red
+
+Exact ordinal10/task and frozen3-runtime/test SHA256 are in bonus matrix R7C.
+Same649/native/priority branch over5c59, newkeygpt61_slot_plane_restore_r7c;
+all prior refs/results/privateconfig preserved. Authorized unannotated internal
+bridge/package-private helper only changes level geometry-restore invalidation;
+ordinary/live/scene invalidation/API/pins unchanged. Root reviewed exact4paths,
+no material finding, no additional review execution. Source frozen throughout.
+
+22973 passes175/0F0E0S,14 actual classes (13 simple names, duplicate loading
+class selects36+7),17:10:48UTC,Maven1m22/queue0. All14XML inspected after fixing
+an offline report-count assumption; no Maven repeat. R7B primary now completes
+both partition cycles; three original negative controls plus added forward-retained
+without-exact-restore control pass. Existing persistent/stateless/geometry rewind,
+exact ModAPI pins and S3K4 green. Fresh85536 authority/source guards108/0F0E0S,
+17:12:02UTC,Maven33.878s/queue0,all4XML inspected.
+
+ONCE-only same five original short portal pilots6665 FAIL5/2F0E0S,
+17:13:26UTC,Maven29.831s/queue0,class5.465s. Exact[3]tails/team/400/off and
+[5]sonic/team/800/s1 remain at the original publishedPlane20-byte-preview family,
+not a new pending/field. No full-array witness or full-world-two-cycle pass is
+inferred. Root Main61811 passes all5 without the new key; it does not qualify
+this plane state. The geometry-restore hypothesis is independently valid but
+insufficient to close actual142 failures. Concrete invalidator/flag state in the
+real restore/publication interval remains missing; no caller is assigned.
+
+STOP/no tuning/new probe/replay/runtime edit or population/capture. Keep reviewed
+candidate/test/two-doc diff UNCOMMITTED for Root's decision. No normal bugfix
+commit or release completion claim before the required production gate passes.
+Foreground845/GPU/five-PNG unit remains gated; broader pending populations,
+combined broad tail/guards and whole objective remain unqualified. No Root/Main
+source change, integration/push, tree/ref cleanup or foreign-job action.
+
+R7C terminal accounting:22973/85536/6665 all released;38 inspected affected,
+guard and pilot XML/text reports540590bytes consumed metadata-slot alone. No
+raw archive or live owned request. All four reviewed source hashes unchanged;
+Main config SHA256/mtime unchanged, private config regular/exact bytes. HEAD5c59
+and six reviewable owned paths (three runtime, one test, two docs) retained;
+new bridge untracked, no commit/push or cleanup of branches/native evidence.
+
+
+R7D initial independent-unit execution50619 (17:21:19UTC,normal/all3ROM/env,
+Maven25.395s/queue0) is1/1F0E0S, NOT a retained-plane old-red. New method
+`TestS3kSlotPlanePublication#encodedSlotLayoutRestoreKeepsPublishedPlaneThroughTheRealWorldRegistrationOrder`
+boots native Slot21 headlessly and verifies actual encoded-layout key, production
+parallax<level<collision registration order, real retained history matching the
+published-plane snapshot, missing-encoded no-op and same-level/new-map ownership.
+It then fails a mistaken test prerequisite at line133: assertSame on map-data
+arrays. Map's normal constructor allocates and copies data (Map.java:30–38),
+so byte equality is the source-backed oracle; array identity is not promised.
+Dimensions/animation/FG/final8192-plane checks are NOT reached. Source is unchanged
+R7C candidate plus new test SHA256dd5282fa23a96d198f4f272e0ef17e87afac1c6acd7dc648bc0175bd8bfb7935.
+Test error acknowledged to Root; stopped before test edit/rerun/runtime edit or
+caller attribution. This is not proof of the actual142 caller or an old-red repair
+qualification. R7C175+108 passes and2/5 production failures remain separate epochs.
+
+
+R7D corrected independent-unit old-red59005 completes17:25:02UTC,
+1/1F0E0S,class.576s/Maven24.142s/queue0. ONLY test prerequisite identity assertion
+became byte equality; corrected TestS3kSlotPlanePublication SHA256
+3dc6f7c12d7ff8586884b1aafaafc2323c9b09b8d65fb68d8b952ee99c029e19.
+All actual Slot21 encoded-key/order/published-plane, missing-state no-op, current
+map/dimensions, same animation owner/all logical counter+extra arrays and FG
+geometry prerequisites PASS. Complete8192-plane oracle then failsbyte2048,
+expected9/actual-79, in untouched row8 after one publication into rows0/1.
+This is an independent source-backed owner interaction, NOT an actual-pilot
+full46 identity or unique142 caller certificate. The source factory caches the
+animation manager by same Level identity/zone; animator/cycler retain Level,
+not a Map reference, and logical state already restores under pattern-animator.
+Proposed three-path fix: dedicated existing internal bridge to package-private
+LevelManager current-level geometry/dimension rebind, updateGeometry then R7C
+restore invalidator; collision adapter switches only its post-scene restore call.
+No ordinary setLevel/writeCurrentLevel/initAnimatedContent or API/pin change.
+Root accepted this genuine red/design for a separately tracked bounded continuation;
+R7C's175+108 passes and2/5 pilot failures remain separate tested epochs.
+
+
+#### R7E implementation phase STOP: independent real-owner unit still red
+
+R7E is an actual STEERED phase of existing ordinal11/R7D taskId (recorded in
+bonus matrix), not a new task/native ordinal. Source freeze/new three-path hashes
+76193c067/19bafeeb/cf8b1689, actual unit3dc6f7c1 and unchanged R7C source/test
+hashes reviewed by Root with no material source finding. Only current-level
+geometry/dimension rebind plus internal bridge and collision adapter's one call;
+no ordinary scene/animation/API/pin behavior change.
+
+9026 is ACTUAL28/1F0E0S/six classes at17:30:12UTC,Maven1m17/queue0,
+normal/all3ROM/current Main wrapper/owned cwd/recorded JVM env/single fork.
+All six XML/case populations inspected. Partition5+native-word/encoded scene4+
+overlay3+API15 pass. SAME independent Slot unit still loses untouched row8
+byte2048 expected9/actual-79, with all preceding key/order/geometry/animation/FG
+checks green. This disconfirms the three-path rebind as a sufficient repair;
+no unique remaining writer/caller is observed. No actual full46 identity claim.
+
+STOP before tuning/new caller query or source extension. Fresh108 guards and
+same five production pilots NOT SUBMITTED on this epoch. Previous R7C175/108
+and2/5 pilot red stay separate; full populations/broad/native/picture/priority
+scope remain open. Preserve nine owned uncommitted paths (five runtime, two tests,
+two docs), HEAD5c59/R1–R7D evidence/native/privateconfig. No normal fix commit,
+Main/Root integration or push before required unit/production qualification.
+
+R7E handback accounting:9026 terminal/released; all12 inspected XML/text reports
+150870bytes consumed under metadata-slot alone. No live owned request or archive.
+Main config SHA256/mtime unchanged; private config remains regular/exact bytes.
+Seven reviewed source/test hashes unchanged, last target compiled this candidate.
+Nine owned paths retained uncommitted at5c59; normal hooks were not bypassed and
+no commit/integration/push/branch/native/capture cleanup was attempted.
+
+
+#### R7F evidence-only handback: independent cold unit lacks the exact restore
+
+Exact fresh ordinal12/taskId and full source fingerprints/command are in bonus
+matrix R7F. ONE passive6231 execution of unchanged independent inlet/assertions,
+normal/all3ROM/env/current Main wrapper/single fork, terminal1 at17:42:23UTC,
+1/1F0E0S,class.546s/Maven1m16/queue0. Original2048(9/-79) repeats, no diagnostic
+error/retry.17 owner events+4 markers/30357bytes; contiguous and identical in
+Maven/XML, below200/1MiB. No observation-side ensure/capture call or gameplay write.
+
+Observed first collision-layout rebind enters auth=true/restored=false/dirty=false;
+updateGeometry dirties it, restore-helper correctly falls through ordinary
+invalidation and clears authority. Postrestore callback resets the derived cache;
+next row publication takes dirty/shifted=false full-build, replacing raw array
+and expanding64x32→208x32 before retained conversion. ZERO exact retained-restore
+method events/keep-both-flags events; stable level/tilemap, STATIC/revision0/
+wrap=false/fullwidth=false. This is NOT an invalidator after exact restoration.
+
+The unit's snapshot-ownership prerequisite is insufficient: it captures world
+`before`, then asserts on a fresh direct scroll capture, never the stored
+parallax value. Source routes capture/restore by active currentZone (initial-1,
+initialized by production parallax), while this cold fixture has no first frame.
+Inactive handler is a source inference, not an observed private-field value.
+R7D/E counts remain real but the claimed after-exact-restore old-red meaning is
+superseded. Do not relax both-flags preservation to fit this inlet. R7A actual
+portal restored=true evidence/142 failures remain distinct and unqualified.
+
+Hand back smallest boundary: assert actual stored parallax snapshot owns the
+nonempty plane after ordinary production parallax initialization and retained
+history capture; no private flags/hydration/new fixture variant. NO automatic
+inlet/runtime fix, second query/pilot/guard/fullpopulation/GPU/capture/priority.
+All nine candidate hashes restored and verified before doc facts appended;
+compiled instrumented owners will be removed, not credited as candidate build.
+Root owns next bounded authorization. No commit/integration/push/foreign action.
+
+R7F final accounting:6231 terminal/released; exactly10 owned diagnostic files
+286110bytes consumed metadata-slot alone (Maven log,two reports,two source
+backups,five instrumented compiled owners). Temporary source/log/counters/markers
+are gone; all seven candidate source/test hashes exact, and all nine candidate
+path hashes had matched BEFORE this authorized durable evidence append. No
+remaining diagnostic archive/live job. Last compilation was instrumented and its
+owner classes were removed, so a future authorized run needs a fresh compile.
+Main config hash/mtime unchanged, private config regular/exact; HEAD5c59 and
+nine owned candidate paths preserved uncommitted. R7G identity is queued
+separately after this accounting; no R7G execution or runtime fix is started here.
+
+#### R7G actual captured-plane inlet and bounded repair qualification — 2026-10-17
+
+The R7F correction supersedes the claimed after-exact-restore meaning of R7D/E:
+those cold independent-unit checkpoints did not restore a retained plane.
+R7F observed21 events (17 owners/four markers), including no retained-restore
+call; authoritative=true/restored=false correctly rejected preservation. This is
+an inlet defect, not evidence against the strict both-flags runtime contract.
+The original R7B partition old-red30571 remains valid: explicit physical restore,
+actual geometry-reference swap/invalidation, then legitimate row publication;
+cycle0 failed byte619(-1/0), so cycle1 was not reached on that old source.
+
+R7G changes only that independent unit's inlet: ordinary
+`ParallaxManager.initZone` receives actual loaded zone/act/camera before retained
+history. Before restoring, it now asserts the ACTUAL stored
+`before.get("parallax")` handler state is nonnull and its published8192 bytes
+exactly equal retained history. The separate fresh-handler capture assertion is
+removed. No other driver/oracle, runtime behavior, flag, provider, adapter or
+plane bytes are injected. This prerequisite now passes in both matched runs.
+
+The corrected test SHA256 is
+`bf56ddd9c3e20862f71a0d88c0a991ad77d9ff03442babed8bcfe612566dfae1`.
+From HEAD5c59, reconstruct ONLY the three R7E files to R7C: LevelManager HEAD
+`6807b61ff1302c82ba523c5469292de3bacde803bad81bd825417370630d1731`,
+collision adapter HEAD
+`f9963d074da0941524cfd5e04ad855e5e101588efad8f46d8162dbef6b6fb06b`,
+and R7C-only internal bridge
+`086f81fa94aa2e797fd12c092a4016c160c69ed2107368726a1fffb0541a0f6f`.
+Tilemapde1/LevelSnapshot6a9/partition06ea remain unchanged. Source-only diff and
+hashes were checked before launch; the corrected test stays byte-identical.
+
+- 77160 old-source terminal1 at17:53:09UTC:1T/1F/0E/0S,class0.487s,
+ Maven1m16s,queue0. Actual stored-parallax bytes, registry order, encoded map,
+ missing-state no-op, dimensions, animation owner/logical state and FG cache
+ prerequisites pass. The final untouched-plane assertion alone fails at byte2048,
+ expected9/actual-79. This is genuine R7E old-red credit, replacing59005/9026's
+ invalid inlet interpretation.
+- 50305 exact restored R7E terminal0 at17:55:39UTC:1T/0F/0E/0S,
+ class0.614s,Maven1m15s,queue0. Same corrected test, complete8192-byte assertion
+ and all owner prerequisites pass. The independent unit is one restore/row
+ partition, not by itself a twice-recreated whole-world certificate.
+- 82138 same FIVE ORIGINAL maintained short portal pilots terminal0 at17:56:41UTC:
+ 5T/0F/0E/0S,class6.919s,Maven31.620s,queue0. All five actual XML identities
+ inspected: Gumball Sonic/Tails320 off; spheres Knuckles/Tails+Sonic352 off;
+ Slot Tails/Sonic+Sonic400 off; Gumball Tails/Sonic+Sonic800 S2;
+ Slot Sonic/Sonic+Sonic800 S1. Unchanged production driver retains both-cycle
+ whole-world interior/return replay and Slot wind/fade picture/readback checks,
+ including the previous Slot[3]/[5] failures. No new capture variant is created.
+
+Every invocation uses currentMain absolute
+`${MAIN_ROOT}/tools/testing/maven_queue.py` (MAIN_ROOT is the original main checkout) from owned649,
+`--normal -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true`, all three
+original absolute root ROM paths, Java25, exact
+`JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl`,
+`EGL_PLATFORM=surfaceless`, `ALSOFT_DRIVERS=null`, `LUA_BIN=/usr/bin/lua5.4`,
+no DISPLAY/WAYLAND, inherited other JVM environment preserved. The exact unit
+selector is `-Dtest=TestS3kSlotPlanePublication#encodedSlotLayoutRestoreKeepsPublishedPlaneThroughTheRealWorldRegistrationOrder`;
+the final selector is
+`-Dtest=TestS3kBonusPortalMechanismProducts#shortPortalAndMechanismPilotsLoadAndReturnThroughRealBoundaries`.
+Source frozen during each request; no direct JVM, queued duplicates or retries.
+Warnings are existing compile removal/unchecked warnings, FAST no-manifest NONE
+and pilot Kos deterministic estimates; no bootstrap/observer errors or skips.
+
+Final runtime SHA256 values remain the reviewed R7E/R7C candidate:
+
+| Owner | SHA256 |
+|---|---|
+| LevelManager | `76193c0671bb235a3b7b494f37d170b25c3b58ebfc0861644990ca7b48eee3bd` |
+| LevelTilemapRewindAccess | `19bafeeb89887444a2a56af60fe4baa2cbc66483af0f5e56512626b7ff662310` |
+| S3kCollisionLayoutRewindAdapter | `cf8b1689a5568c8d0bb67d3468fa49847c1f2b2a1eb995b82285b8f2151e1cf8` |
+| LevelTilemapManager | `de1ab9483d5f0e580f3f61d830a418d57ae0400fadcf275d07f04dde19d7936c` |
+| LevelRewindSnapshotAdapter | `6a9c14bf4d6fae4394cfd229ddadeac6a16e809d9b3b98aeb0bcd78a5b665a71` |
+
+The nine-path source fingerprints (SHA256 canonical sorted JSON of base+path
+hashes) are old551b5a98b74478de3d2e35325dc95bd6b0d8cb13614be331d0cbe2503c4bc236
+and fixed516c2479f7e782524f7e89c7b6de37d24b8331556846c7bedf6ad5b0561fed4a,
+before this documentation fold. Root's exact source reviews found no material
+objection; no additional reviewer, Maven, guard or capture round is required here.
+
+Coverage epochs stay distinct: R7C175/14classes includes both-cycle partition,
+ordinary/no-retained/forward-without-restore/live/new-scene controls and API15;
+R7C108 guards are NOT final R7E all-source guards. R7E9026 has27 passing cases
+(five partitions,four native-word,three overlay,API15), plus its now-disqualified
+cold-unit red. Reuse those unaffected results honestly; R7G adds the valid matched
+unit and final five-pilot world qualification. Ordinary `setLevel` same/new,
+live mutation and scene/load invalidation remain unchanged. The internal current-
+level restore rebind retains animation lifecycle while updating geometry and
+all cached dimensions; only authoritative&&restored physical PlaneB survives.
+Derived FG/pattern/geometry caches and incremental baselines are still invalidated.
+
+This qualifies the bounded owner repair, not a uniquely observed cause of all
+142 product failures or all568 portal cases. No full population, complete route,
+trace or RGB certificate is claimed. Lead combined3527-class smoke/guards remain
+required. Foreground845 priority/GPU/five-PNG work stays separately gated.
+Main/private config hashes and mtimes are unchanged; private config stays regular.
+Normal local commit only; Root owns composition/current-source validation/push.
+
+R7G cleanup: six inspected XML/text reports and three invocation logs across
+three requests, plus three owned original-source backups, are consumed under
+metadata-slot alone (final six files 281648bytes; earlier six files78250bytes).
+No live request/helper/log archive remains. Last candidate compilation/execution
+is82138; final source is exactR7E plus correctedtest.

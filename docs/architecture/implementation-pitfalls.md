@@ -1,5 +1,19 @@
 # Shared implementation pitfalls
 
+**A handler capture is not proof of a stored world checkpoint.** Cold headless
+loading can leave parallax's active selection uninitialized even when a zone
+handler is available directly. Initialize through the ordinary production entry
+before retained history, then assert the actual registry snapshot carries that
+history. A fresh direct capture after the registry capture proves a different
+boundary. R7F observed no physical-plane restore in the former Slot unit; its
+true/false authority flags correctly rejected preservation. Separately, a real
+exact restore must survive later geometry-cache invalidation and same-level
+metadata rebind, while ordinary live/scene invalidation still discards residency.
+Keep the strict authoritative-and-restored gate, invalidate derived caches, and
+consume the transient restore marker at the existing postrestore reset. See the
+[matched R7G evidence](validation/levels/s3k-bonus-stage-transitions.md#r7g-actual-captured-plane-inlet-and-bounded-repair-qualification--2026-10-17).
+
+
 Screen-relative sprites must cancel the camera origin that the renderer actually
 subtracts. S3K endings deliberately write `Camera_X_pos_copy`/`Camera_Y_pos_copy`
 independently of physical camera words: Tails departure can have physicalX0 and

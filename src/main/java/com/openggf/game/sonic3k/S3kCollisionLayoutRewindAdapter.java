@@ -28,7 +28,7 @@ public final class S3kCollisionLayoutRewindAdapter implements RewindSnapshottabl
             throw new IllegalStateException("Encoded collision layout restored without its level");
         level.collisionLayout = new S3kCollisionLayout(encoded, state.scene().width(), state.scene().height());
         level.restoreSceneLayout(state.scene());
-        GameServices.level().setLevel(level);
+        com.openggf.level.LevelTilemapRewindAccess.rebindCurrentLevelGeometryForRestore(GameServices.level());
         last = null;lastSource = null;
     }
     @Override public void resetForMissingSnapshot() { last = null;lastSource = null; }

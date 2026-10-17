@@ -83,6 +83,82 @@ class TestS3kSlotPlanePublication {
         }
     }
 
+    @Test
+    void encodedSlotLayoutRestoreKeepsPublishedPlaneThroughTheRealWorldRegistrationOrder() throws Exception {
+        saved = TraceReplaySessionBootstrap.snapshotGameplayConfig();
+        // Normal ROM scene loading, with the existing headless fixture: no GPU,
+        // bonus-driver copy, playback rows or manually installed rewind adapter.
+        var fixture = HeadlessTestFixture.builder().withZoneAndAct(21, 0).build();
+        var manager = GameServices.level();
+        var level = assertInstanceOf(com.openggf.game.sonic3k.Sonic3kLevel.class, manager.getCurrentLevel());
+        assertTrue(level.hasEncodedCollisionLayout());
+        // The production parallax entry must select the active handler before
+        // retained history is captured by the world registry.
+        var camera = GameServices.camera();
+        GameServices.parallax().initZone(manager.getCurrentZone(), manager.getCurrentAct(),
+                camera.getX(), camera.getY());
+        var scroll = assertInstanceOf(SwScrlSlots.class,
+                GameServices.parallax().getHandler(manager.getCurrentZone()));
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        assertNotNull(registry);
+        manager.seedBackgroundVdpPlaneFromWorld(0);
+        byte[] cold = manager.getTilemapManager().getBackgroundTilemapData().clone();
+        manager.copyBackgroundTileRowFromWorldToVdpPlane(0xD8, 0, 0xE400, 0x19);
+        byte[] retained = manager.getTilemapManager().getBackgroundTilemapData().clone();
+        assertFalse(Arrays.equals(cold, retained), "actual ROM row publication must leave retained history");
+        var before = registry.capture();
+        var keys = new java.util.ArrayList<>(before.entries().keySet());
+        var collision = assertInstanceOf(com.openggf.game.sonic3k.S3kCollisionLayoutRewindAdapter.State.class,
+                before.get("s3k-collision-layout"));
+        assertNotNull(collision.encoded(), "actual Slot registry must carry encoded layout, not the empty branch");
+        assertTrue(keys.indexOf("parallax") >= 0 && keys.indexOf("parallax") < keys.indexOf("level"));
+        assertTrue(keys.indexOf("level") < keys.indexOf("s3k-collision-layout"),
+                "production extra restores after the parallax and shared level owners");
+        var parallax = assertInstanceOf(com.openggf.game.rewind.snapshot.ParallaxSnapshot.class,
+                before.get("parallax"));
+        assertNotNull(parallax.handlerRewindState(), "the actual world snapshot must carry the active Slot handler");
+        assertArrayEquals(retained, publishedBytes(publishedValue(parallax.handlerRewindState())),
+                "the stored world snapshot must own this exact physical image");
+        var animator = assertInstanceOf(com.openggf.game.sonic3k.Sonic3kLevelAnimationManager.class,
+                manager.getAnimatedPatternManager());
+        var animation = animator.capture();
+        assertSame(animator, manager.getAnimatedPaletteManager());
+        var mapBefore = level.getMap();
+        // The missing-encoded branch is an actual no-op, including map identity,
+        // animation owner and the complete physical image.
+        new com.openggf.game.sonic3k.S3kCollisionLayoutRewindAdapter().restore(
+                new com.openggf.game.sonic3k.S3kCollisionLayoutRewindAdapter.State(null, null));
+        assertSame(mapBefore, level.getMap());
+        assertSame(animator, manager.getAnimatedPatternManager());
+        assertArrayEquals(retained, manager.getTilemapManager().getBackgroundTilemapData());
+
+        manager.copyBackgroundTileRowFromWorldToVdpPlane(0xD8, 0x10, 0xE000, 0x19);
+        byte[] expectedAfterRow = manager.getTilemapManager().getBackgroundTilemapData().clone();
+        registry.restore(before);
+
+        assertSame(level, manager.getCurrentLevel(), "this is a same-level metadata restore, not a scene load");
+        assertNotSame(mapBefore, level.getMap(), "actual encoded layout restore must install its new map owner");
+        assertArrayEquals(collision.scene().mapData(), level.getMap().getData());
+        assertEquals(collision.scene().width(), level.getMap().getWidth());
+        assertEquals(collision.scene().height(), level.getMap().getHeight());
+        assertEquals(collision.scene().fgWidth(), level.getLayerWidthBlocks(0));
+        assertEquals(collision.scene().bgWidth(), level.getLayerWidthBlocks(1));
+        assertSame(animator, manager.getAnimatedPatternManager(), "same scene must retain its captured animator");
+        assertSame(animator, manager.getAnimatedPaletteManager());
+        var restoredAnimation = animator.capture();
+        assertArrayEquals(animation.scriptCounters(), restoredAnimation.scriptCounters());
+        assertArrayEquals(animation.handlerCounters(), restoredAnimation.handlerCounters());
+        assertArrayEquals(animation.extra(), restoredAnimation.extra(), "logical animation owner restores independently");
+        assertEquals(manager.getForegroundTileDescriptorAtWorld(0x80, 0),
+                manager.getForegroundTileDescriptorFromTilemapAtWorld(0x80, 0),
+                "actual FG cache must resolve the restored geometry");
+        // One legitimate native row publication must not reconstruct unrelated
+        // rows from the source map after the later collision-layout restore.
+        manager.copyBackgroundTileRowFromWorldToVdpPlane(0xD8, 0x10, 0xE000, 0x19);
+        assertArrayEquals(expectedAfterRow, manager.getTilemapManager().getBackgroundTilemapData(),
+                "same-level encoded layout rebind must preserve all untouched physical Plane B bytes");
+    }
+
     private static com.openggf.tools.GameplayCaptureSession enterSlot() throws Exception {
         var settings = new com.openggf.tools.GameplayCaptureSession.Settings(320, "knuckles", "", "off", null, null, null);
         var session = new com.openggf.tools.GameplayCaptureSession(settings);
