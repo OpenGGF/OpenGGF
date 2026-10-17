@@ -4281,3 +4281,90 @@ consumed;81466 inspected outputs consumed normally after facts recorded.
 No production change, native, full alternate, canonical, guards or broad run;
 the alternate's ten new ring spans remain integration blockers. Root owns the
 next evidence/owner scope. R1/R2/R3 results and task entries remain preserved.
+
+
+### R5 animal lifetime implementation checkpoint — 2026-10-17
+
+R4 Plan/matrix only committed separately e207faf7d with syntax/link/diff checks,
+seven parsed policy trailers/final GPT6.1 coauthor/hooks; clean before R5.
+R5 exact task from gpt61_aiz_ring_pool_r5 registry, native01a1496e-feed-7130-9b66-9f402f964177,
+same tree/branch/base5da/runtime1878;24h expiry refreshed. Single passive84110
+through12019:1/0F0E0S,12:44:57UTC,Maven45.503s/no wait,11994rows/zeroerrors,
+warnings/bootstrap.362 low-SST ownership/state events,2,423,252bytes under10MB.
+159's actual first9077/retire9230/reload9509/retire12018 all match native rows;
+its engine8/native5 permutation predates DoStart. Flow4/nativeControlSlot4 at12000
+correctly consumes actual free5 for X and22 for maxY at12001. No allocator fix.
+The recorded earlier animal5 birth9279, matching pop/floor9323, native deletion9375
+versus engine9418, native PathSwap5 reuse9378, and decor152/159 re-admissions pin
+an actual wrong lifetime. Native loc_2CAD0 polls prior Render_Sprites bit7;
+engine S3K selects fresh onScreen(64). Native width8/height_pixels0 must be
+preserved separately from y_radiusC/S2approx32. Full evidence/source pin and
+phase limits in existing R5 matrix. Observer removed; inspected journal/reports
+consumed, no archive. Authorized next: one independent old-red natural animal
+birth/flight edge/reuse plus twice forced world recreation, smallest lifetime
+repair only, affected animal/S2/RNG/rewind/S3K4 then alternate and exactstanding/
+original/twoSS each once. Stop on unexpected divergence; no more ancestor/native/
+fullchain/broad. Root arranges independent review/composition; Main remains803.
+
+
+Independent old-red15578 on unchanged runtime1878: terminal1 at12:55:08UTC,
+Maven24.170s/no wait,2tests/2F0E0S. Natural flight reaches width8 left edge,
+but cached bit stays true, next-pass retirement and actual free-hole reuse fail;
+geometry has eight expected failures covering outside/height0/wrap and MAIN
+pre-motion order. Two complete forced-recreation/restores from birth and live
+outside-edge snapshots replayed successfully even on the old owner. No seeded
+routine/timer/slot/RNG. Runtime repair is limited to AnimalObjectInstance and
+existing GameRules.SONIC_3K animal lifetime flag: existing camera semantic
+useScreenYWrapValueForVisibility selects copied signed16X and zero-height
+word-maskedY; S1/S2 rules/geometry remain untouched. MAIN polls before motion;
+walk/fly retain their after-work poll. Captured init/romRenderOnScreen state is
+not recomputed during restore. Physics/RNG/points/allocator remain unchanged.
+Focused tests and bounded affected traces pending; no green integration claim.
+
+
+Post-fix focused27140 terminal0 at12:57:40UTC,Maven1m11s/no queue wait:
+73/0F0E0S across ten actual classes (the selector matches two LevelLoading
+packages). New animal2, AnimalRNG3, S2animal1, DestructionEffects6,
+EggPrisonAnimalRewindRendering1 plus mandatory S3K60 all pass. Naturaledge
+pass92,X0D77/dx-9 now cachedfalse, next-pass retirementtrue, normal hole4 reused;
+birth and live-edge whole-world recreation/replay twice passes. Independent
+exact-source review reports no material finding, without claiming execution.
+Animal source73f1c45485ca81a7ef055d58c0e26abda1664089456eba4f4f4829dff734b5ed,
+GameRules7b694eba04238262861a76cc6977f85eb93a8709f30464c1eb891fe4fecaeb1c.
+Root exact matched803 alternate78232 retains only26179rings72/0; the ten early
+R3 spans are confirmed new, not waivable. One corrected alternate next; exact
+standing/original/twoSS remain pending subject to first unexpected divergence.
+All27140 reports inspected/consumed. No additional runtime edits or broad run.
+
+
+R5 final bounded qualification: corrected alternate39799 terminal1 at12:59:18UTC,
+Maven36.231s/no wait,1/1F0E0S,26041rows. All11rings field/span/expected/actual
+identities match R3,first13740rings1/2,0animation/warnings/bootstrap;tenearlyspans
+remainNEWvsRoot80378232(one26179rings72/0). Baseline profiletrace-replay differs
+fromworkertrace-segments onlyinselection;exactcase/runtimefork/envverified,
+no literal sameprofile claim or rerun. Oneanimalrepairalone doesNOTclose rings.
+Three maintained controls6148 terminal0 at13:01:20UTC,Maven1m01/no wait,
+3/0F0E0S: original20463rowszeroerrors/warnings/bootstrap;all20standingassertions
+9510..13actual12,parent12/display17;twoSSprefix0/2/4complete/zeroerrors,
+five dynamicartgapszero failures. No new/worsened field vsstartingR3.
+Animal73focused/source-review and3controls qualifyonlythiscorrectnativeowner;
+alternate UNQUALIFIED blocks integration. No extraowner/prefix/alternate/native/
+media/guards/broad. Allinspecteddiagnosticsconsumedmetadataalone,immutableinputs
+preserved;targetfinalanimalsource+maintainedtests from6148,alljobsterminal/released.
+Final localcommit includesexistingmatrix/backlog/frontier/known/changelog and
+mirroredpitfall,sevenpolicytrailers/finalparsedGPT6.1coauthor/hooks;R4e207separate.
+Root ownsremainingringcausality/composition/combinedsmoke/sourceguards;Main803
+unchanged. Fullaux/config/BK2/cold/wide/roster/fullchain/nonzeroanimal/ending and
+four-debris omissions remain explicit limits, with no integration clearance.
+
+
+R5 local commit attempt is blocked by the normal pre-commit policy hook:
+"detectable @ModApi surface changes require updating the current candidate
+signature pin." The sole GameRules change is an existing SONIC_3K static
+preset argument false to true; no declaration/constructor/record component
+changed. The current shell surface detector keeps record preset initializer
+text and therefore reports a signature delta that the normalized API snapshot
+cannot express. No signature pin fabrication, hook edit or bypass. Eleven
+owned files remain staged on R4e207; all tested hashes/results and consumed
+diagnostic state are preserved. Root has the exact policy-owner handoff;
+no extra runtime/source variant or Maven run is justified by this blocker.

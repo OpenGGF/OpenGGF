@@ -766,3 +766,158 @@ Inspected diagnostic summaries/facts are recorded here; consumed reports are
 removed under the metadata lease alone. Original native/capture inputs stay
 immutable. No new native/media/alternate/canonical/guards/broad run. The ten new
 alternate ring spans and inherited terminal ring error remain integration blockers.
+
+
+## R5 low-SST journal and animal lifetime owner — 2026-10-17
+
+R4 evidence is preserved separately at e207faf7dd14c9b6c9cc435fb438922d8f689f52.
+One passive original-alternate-driver prefix84110 through12019 ran on that
+commit/base5da/runtime1878, with the same current Main absolute wrapper,
+normal/all-three-ROM/EGL/nullAL/no-ambient environment, trace-segments,
+single-fork/reuse/alphabetical flags. Selector
+TestS3kAizZoneSliceTraceReplay#observeEarliestLowSstTransitionsReadOnly.
+Terminal0 at12:44:57UTC,1/0F0E0S,Maven45.503s/no wait;11994 compared rows,
+zero errors/warnings/bootstrap, eight known absent advertised aux families.
+The completed-frame low-SST4–23 journal has362 ownership/lifecycle-state events,
+2,423,252 bytes below its10,000,000-byte cap. Initial full pool and requested
+previous/current birth/control pools were recorded; no110-slot certification,
+within-pass listener, source API, state seeding or gameplay writes.
+
+Source159 first naturally appears9077 in31 in both engine/native, unloads9230,
+and returns9509 in engine8/native5. It stays live through DoStart and retires
+12018 in both. Thus the R4 slot5-specific9509 birth was a re-admission, not its
+first lifetime. It is neither missing nor prematurely culled at the worker handoff.
+Actual12000 flow occupies4, phaseAWAIT_ACT_TRANSITION,nativeControlSlot4,
+End_of_level_flag=true,159in8, genuine free5/21/22/23. Actual12001 X worker5 has
+accumulator4000 and maxY22 has8000; flow4 is gone. The independent workers have
+no retained engine-parent backlink; the previous flow and source factory identify
+the caller. Source order is consistent with minY21 self-retiring in its birth
+pass; that transient is not claimed as a direct completed-frame observation.
+Native workers are21/23, with the same source-consistent minY22 transient.
+Actual12001 FULL_LEVEL_FRAME LF2EC8,ObjectManager Vbla3269,executed11976,
+next BK2 cursor12943, live/copy camera10E0/02B8. No allocator defect is shown.
+
+The same journal identifies a concrete earlier lifetime disagreement:
+
+| Boundary | Engine | Existing native evidence |
+| --- | --- | --- |
+|9279 freed animal birth |AnimalObjectInstance5,source0E10/033C |Obj_Animal/code2C778 in5,same centre |
+|9295,9315,9316 pop |0E10/0316,0E10/0328,0E10/032B |Same centres,routine2 |
+|9323 landing |FLY,0E10/0342 |routine0E,0E10/0342 |
+|9373–9374 native render edge |The later engine9377 sample remainsFLY at0D74/02EE;9378 at0D71/02EF, consistent with the same -300 flight |9373 centre0D80/02EC,camera0D88/02DA: right edge0;9374 centre0D7D/02EC,camera0D86/02DA: right edge-1 |
+|9375 next object pass |Animal5 remains live |Animal5 actually removed |
+|9378 next native admission |Engine5 still animal |PathSwap/code1CD8A at0CF0/02E8 takes5 |
+|9418 |Animal5 finally retires;5 becomes free |PathSwap5 still live |
+|9463 decor admission |layout152 F80/038A takes genuine free5,153 F85/0338 takes10 |PathSwap5 retires during this pass after loading;152 takes10,153 takes32 |
+|9509 re-admission159 |159 takes8,160 takes11 |159 takes5,160 takes8 |
+
+This proves a causal lifetime branch, rather than assigning blame from slot
+numbers. It does not certify every intervening owner or put an unobserved engine
+PathSwap allocation into a guessed slot. The journal observes completed passes;
+source/load order explains the still-occupied native5 at9463 loading. Existing
+native object_state/appear/remove/full slot_dump and original physics camera rows
+are comparison-only inputs to this analysis.
+
+At own skdisasm044fa46725c71187399e13f5ddb70e11d32dc024,
+Obj_Animal60938 dispatches initial pop through loc_2C9E0 (61139), then this
+species' flight through loc_2CA7C. loc_2CAD0 (61211) tests the prior
+render_flags bit7 and deletes through loc_2C9DA (61135). Render_Sprites
+36376–36417 clears then recomputes that bit using copied camera and width8;
+the left edge is inclusive at dx=-8 and outside at dx=-9. Animal init writes
+y_radius=C and width_pixels=8, but leaves height_pixels=0. That zero render
+height is distinct from its collision radius and S2's approximate32-pixel Y band.
+Engine AnimalObjectInstance.onScreen(64) uses a fresh64-pixel margin because
+GameRules.SONIC_3K.animalObjectUsesRenderFlagDeleteBounds is false. Its existing
+cached-render path assumes S2 height32, so simply enabling that switch is incomplete.
+The observed animal's pop/floor/flight agree before retirement; no physics, RNG,
+points or allocator correction is justified by this evidence.
+
+Root authorized one independent old-red production-birth/previous-render-edge
+regression with natural pop/landing/flight, next-pass retirement/free-hole reuse,
+in-range control and twice forced whole-world recreation/forward replay, followed
+by the smallest animal lifetime/S3K semantic seam repair. Shared owner scope is
+explicitly coordinated before editing. Affected animal/S2/RNG/rewind and mandatory
+S3K checks, then one existing alternate and exact standing/original/twoSS methods,
+remain required. No new ancestor prefix/native/media/fullchain/broad work.
+The ten new alternate ring spans remain integration blockers until requalified.
+Temporary observer source is restored exactly; its journal and inspected reports
+are consumed normally after these facts are recorded. Target retains84110's
+last temporary observer compilation until the next authorized test build.
+
+
+### R5 animal repair qualification and unchanged alternate blocker
+
+The final runtime delta from R4e207 is only AnimalObjectInstance and the existing
+GameRules.SONIC_3K animal lifetime switch. No new rule shape, factory API,
+physics/RNG/points/allocator behavior, collision radius, native input, capture or
+state hydration. The existing camera semantic
+useScreenYWrapValueForVisibility selects the S3K copied-camera/word-mask render
+path. S1/S2 keep their original lifetime flags and geometry. MAIN now polls
+before movement; walk/fly keep their post-work poll. First init draws first, and
+existing captured romRenderOnScreen/firstDisplayFrame are retained through
+recreation. The class handles ordinary subtype0 freed animals; nonzero-subtype
+player-relative branches and separate ending/capsule animals are not certified.
+
+| Exact check | Observed result |
+| --- | --- |
+| Independent old-red TestS3kFreedAnimalRenderLifetime on runtime1878 |15578,12:55:08UTC,2/2F0E0S,Maven24.170s/no wait. Natural edge pass92,X0D77/dx-9: cachedtrue,retirementfalse,reuse-1. Geometry's eight assertions expose outside/height0/wrap and MAIN motion before deletion. Twice forced whole-world recreation from birth/live edge replays consistently. |
+| Affected animal/S2/RNG/rewind and mandatory S3K checks after repair |27140,12:57:40UTC,73/0F0E0S,Maven1m11s/no wait, ten actual classes. Newanimal2,AnimalRNG3,S2animal1,DestructionEffects6,EggPrisonAnimalRewindRendering1 and mandatory S3K60 pass. Natural edge now cachedfalse,next-pass retirementtrue,reused4; two complete forced-recreation cycles pass. |
+| One corrected existing alternate replay |39799,12:59:18UTC,1/1F0E0S,Maven36.231s/no wait,26041 compared rows,zero warnings/bootstrap. Physics11,animation0. All eleven field/span/expected/actual identities match R3's durable33952 record, including first13740 rings1/2. **Alternate remains UNQUALIFIED.** |
+| Original AIZ + exact standing + two-special-stage prefix |6148,13:01:20UTC,3/0F0E0S,Maven1m01s/no wait. Original20463 rows/zeroerrors,warnings,bootstrap,seven known absent advertised aux schemas. Standing9510–9513actual12/all20assertions,admissionparent12/display17. Prefix0/2/4complete,physics0/animation0/warnings0/bootstrap0;five dynamic-art gaps/failures0. |
+
+Final source hashes: AnimalObjectInstance
+73f1c45485ca81a7ef055d58c0e26abda1664089456eba4f4f4829dff734b5ed;
+GameRules7b694eba04238262861a76cc6977f85eb93a8709f30464c1eb891fe4fecaeb1c.
+Independent exact-source review found no material issue and made no execution
+claim. The actual focused/trace results above supply that separate evidence.
+No extra review loop, guard sweep, ancestor prefix, native/media or full chain.
+Root owns combined smoke/source-authority guards and composition.
+
+Root's matched published803 control78232 (separate owned baseline tree) executed
+only the exact alternate case and retained **one**26179 rings72/0 error,
+1/1F0E0S,12:52:40.260085UTC,Maven1m25s,zero warnings. It used
+**-Ptrace-replay**, while worker39799 used **-Ptrace-segments**. The POM has
+identical3GiB argLine,fork/reuse/order,tmp/system properties for these profiles;
+only suite selection/includes/excludes/groups differ, and the exact requested
+case executed once in both. No runtime/bootstrap/fixture property difference or
+rerun is inferred. Record the actual profile names rather than claiming literal
+command equality.
+
+The ten13740–16669 spans are therefore confirmed **new versus803**, even though
+the animal-rule defect itself was inherited. The hypothesis that this one
+lifetime correction alone closes those ring spans is rejected by39799. It
+repairs a demonstrated native lifetime and has not located the remaining
+post-fix ring admission/trajectory owner. No post-fix SST certificate, phase
+adjustment, collision/debris/LostRing change or green integration claim follows.
+Four native loc68E98 debris omissions, full native aux/RNG/position equivalence,
+original's seven/alternate's eight missing advertised aux families, allocation
+exhaustion, wider viewport/donor/roster, cold/other BK2 routes and full chain/act
+coverage remain open.
+
+All R5 commands ran from the owned tree. In this reproducible command form,
+OPENGGF_MAIN denotes the original absolute Main checkout; JDK_JAVA_OPTIONS and
+MAVEN_OPTS remain inherited. No direct toolchain probe or outer activity lease.
+
+```bash
+r5_maven() {
+  env -u DISPLAY -u WAYLAND_DISPLAY EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null \
+    LUA_BIN=/usr/bin/lua5.4 JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+    python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal \
+    -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+    -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical \
+    "$@" "-Dsonic1.rom.path=$OPENGGF_MAIN/s1.gen" \
+    "-Dsonic2.rom.path=$OPENGGF_MAIN/s2.gen" "-Ds3k.rom.path=$OPENGGF_MAIN/s3k.gen" test -B
+}
+r5_maven '-Dtest=TestS3kFreedAnimalRenderLifetime'
+r5_maven '-Dtest=TestS3kFreedAnimalRenderLifetime,TestAnimalObjectRngOwnership,TestSonic2AnimalObjectTiming,TestDestructionEffects,TestEggPrisonAnimalRewindRendering,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils'
+r5_maven -Ptrace-segments '-Dtest=TestS3kAizZoneSliceTraceReplay#replayMatchesTrace'
+r5_maven -Ptrace-replay '-Dtest=TestS3kAizTraceReplay#normalBridgeStandingSstMatchesOriginalFullrun+replayMatchesTrace,TestS3kSonicTailsCompleteEmeraldRunPrefix#twoSpecialStageReturnsThroughThirdEntry'
+```
+
+These are the executed old-red/focused/alternate/three-control selections, not
+requests to repeat them. Source remained frozen queued/live. Reports and the
+bounded observer journal were inspected and consumed under metadata ownership
+alone, with no receipts/log archives. No live handles remain. Current target is
+the final animal source plus maintained tests compiled by6148; no temporary
+observer source or compilation claim is carried forward. Local owner commit
+only; R4e207 remains separate, Main803 is untouched and publication is blocked.
