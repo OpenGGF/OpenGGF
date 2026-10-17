@@ -107,7 +107,8 @@ class TestNativePcmCaptureLive {
 
     /**
      * Same-game level entry must not reset the sound hardware (round-2 lane pcm-output, 2026-10-16). From the
-     * production title start, the emeralds movie leaves DATA_SELECT for AIZ1 at frame 208
+     * production title start, the emeralds movie leaves DATA_SELECT for AIZ1 inside the window (the capture's own
+     * state log must show it; frame 208 when this was written, 238 once the title ran its ROM fades)
      * ({@code NativeDataSelectLaunchFlow.launch} -> fresh level load -> {@code LevelManager.configureAudio}), which
      * re-installs the same ROM and the same audio profile. The ROM's Z80 driver keeps running into the level, so
      * the presentation device (chip, filter, PSG and buffer state) must survive: one stage session, one hardware
@@ -117,7 +118,7 @@ class TestNativePcmCaptureLive {
     void dataSelectLevelEntryKeepsThePresentationDevice() throws Exception {
         Path rom = RomTestUtils.ensureSonic3kRomAvailable().toPath();
         Path outDir = TestSessionOutputPaths.diagnostics("native-pcm-data-select-entry");
-        int presentations = 230;
+        int presentations = 260;
         GameplayCaptureTool.Arguments arguments = GameplayCaptureTool.Arguments.parse(new String[] {
                 "--game", "s3k", "--rom", rom.toString(), "--zone", "aiz", "--act", "1", "--title-screen",
                 "--sidekick", "tails", "--input", EMERALDS.toString(), "--input-start", "0",
@@ -137,6 +138,13 @@ class TestNativePcmCaptureLive {
         long cumulative = Long.parseLong(rows.get(presentations).split("\t")[2]);
         assertEquals(blipSamplesForFrames(presentations), cumulative,
                 "the device kept one hardware frame per presentation across the level entry");
+        List<String> states = Files.readAllLines(outDir.resolve("state.csv"), StandardCharsets.UTF_8);
+        int modeColumn = List.of(states.get(0).split(",")).indexOf("mode");
+        List<String> modes = states.subList(1, states.size()).stream().map(row -> row.split(",")[modeColumn]).toList();
+        int levelEntry = modes.indexOf("LEVEL");
+        assertTrue(levelEntry > 0 && "DATA_SELECT".equals(modes.get(levelEntry - 1)),
+                "the window crosses the DATA_SELECT -> LEVEL entry it is a witness for; modes changed at "
+                        + levelEntry);
     }
 
     /**

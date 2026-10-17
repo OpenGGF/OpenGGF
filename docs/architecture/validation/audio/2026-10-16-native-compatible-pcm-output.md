@@ -295,8 +295,44 @@ capture of rows 0-2399 with no realignment:
      equivalent. Genesis CPU power-on is not modelled.
   2. Before `cmd_SEGA`, ROM `Title_Screen` (sonic3k.asm:5392-5485) runs `cmd_FadeOut`,
      `Pal_FadeToBlack`, the logo `Kos_Decomp`/`Eni_Decomp`, the plane map and
-     `Pal_FadeFromBlack`. The engine runs a fixed 16-frame `SEGA_FADE_IN`
-     (`SEGA_FADE_DURATION`) and issues `CMD_SEGA` at frame 16.
+     `Pal_FadeFromBlack`. The engine ran a fixed 16-frame `SEGA_FADE_IN`
+     (`SEGA_FADE_DURATION`) and issued `CMD_SEGA` at frame 16, after reading Start.
+     - Fixed (2026-10-17, 225cffe5b): both fades are 22 `Wait_VSync` iterations
+       (`move.w #$15,d4` / `dbf`). `Pal_FadeFromBlack` steps line 0 toward
+       `Pal_TitleSonic1` with `Pal_AddColor`, uploaded per VBlank, and `cmd_SEGA`
+       follows the 22nd step before `Wait_SegaS3K` first reads Start. So a press on
+       that first frame issues `cmd_SEGA` then `cmd_StopSEGA` instead of a lone stop.
+       `TestSonic3kTitleScreenSegaTiming` failed 4 of 4 on the old source.
+     - Start in `Wait_SegaS3K` leaves through `loc_3FE4` like the timeout
+       (sonic3k.asm:5490-5500): `cmd_StopSEGA`, then the `Pal_Title` loop, which reads
+       no input (:5501-5512), then `mus_TitleScreen`. The engine had jumped to the
+       white flash and started the title music in the same frame (fixed aec7836ce).
+     - Title entry after the ending (ending owner, a1afac243):
+       `GameLoopTitleEntryFade.beginAfterLevelPass` still calls `stopMusic`, while ROM
+       `Title_Screen` only issues `cmd_FadeOut`, which the manager now issues on
+       every title entry. The closing music is still an actual PCM gap; the fix
+       belongs at that title-entry seam, by agreement with the ending owner and lead.
+     - The native lag column dates the same structure from the BK2's own rows
+       (comparison only): rows 13-34 polled (22, `Pal_FadeToBlack`), rows 35-40 lag
+       (6, the masked span), rows 41-62 polled (22, `Pal_FadeFromBlack`), and the
+       SEGA PCM is first audible in row 63 at stereo sample 504 of that row.
+     - Still open, with owners: (a) the cold boot before `Title_Screen`, rows 0-12
+       (68000 `EntryPoint`, `Init_ClearRAM`, `Test_LockOn`, `GameProgram`,
+       `SndDrvInit`), which the engine does not run; (b) the interrupt-masked span
+       (sonic3k.asm:5400-5483), whose hardware frames need the 68000 cost of
+       `Kos_Decomp`, `Eni_Decomp`, `Plane_Map_To_VRAM` and the RAM clears, which the
+       engine has no model of. The title-loop Kos manifests time `Process_Kos_Queue`
+       services and do not apply to this synchronous decode. (c) The Z80's service
+       time inside the frame: native's onset is 504 samples into its row, the
+       engine's transport starts 10 samples into its packet. No frames were inserted
+       for (a) or (b), and no native row was hard-coded.
+     - Real window after the fixes (aec7836ce, same title-start command, Maven finished
+       01:48:06Z): stereo frames 0-31,655 (rows 0-42) equal native. The first difference
+       is stereo frame 31,656, packet 43 sample 11, native (0, 0) against engine (1, 1):
+       the engine's SEGA PCM onset, 43 = 2 x 22 fade VSyncs - 1, against native's row 63
+       (owners (a)-(c) above). One stage session. The engine now enters DATA_SELECT at
+       frame 195 and AIZ1 at 238 (was 208). An earlier capture at 225cffe5b is void: it
+       ran classes the preceding old-source red run had recompiled.
   3. At engine frame 208 the movie leaves DATA_SELECT for AIZ1
      (`NativeDataSelectLaunchFlow.launch` -> `loadZoneAndActForFreshRuntime` ->
      `LevelManager.configureAudio`). That call re-installs the same ROM and audio
@@ -420,9 +456,49 @@ are unchanged.
   any waveform-equality claim.
 - [SCHEDULE] PSG write timing: engine PSG bytes land at the next YM clock after
   a service; native bytes land at Z80/68k bus times.
-- [POWER-ON] The 68k `Init_InputPSG` cold power-on writes (no engine owner), and the
-  startup timing: engine frame 0 against native rows 14-15, SEGA PCM at engine frame
-  16 against native row 63.
+- [POWER-ON] The 68k `Init_InputPSG` cold power-on writes (no engine owner), the
+  cold boot before `Title_Screen` (native rows 0-12) and `Title_Screen`'s
+  interrupt-masked decompression span (native rows 35-40). Both need a 68000 cost
+  model.
+- [PAUSE] The engine's 161 silent packets at frames 328-488 of the title-start
+  capture are its host pause (`GameLoop.userPaused`, SILENT presentation,
+  `host_paused = 1`) on the movie's row-328 Start. Native does not pause there: its
+  rows 322-499 carry full audio, and its AIZ1 segment begins at BK2 row 577, so the
+  movie's rows 200-328 are data-select input natively while the engine is already in
+  the level (front-end timing). The ROM's own pause, `Pause_Game`
+  (sonic3k.asm:1528-1548: `zPauseFlag = 1`, so the Z80 runs `zPauseAudio` and skips
+  track updates while the YM2612 keeps clocking), still differs from the engine's
+  SILENT presentation, which writes nothing and freezes the chip.
+  - ROM semantics (2026-10-17). `Pause_Game` writes `zPauseFlag = 1` on the pause
+    press and `$80` on the unpause press; `Pause_Loop` runs only `Wait_VSync`.
+    `zPauseUnpause` (Z80 driver :2232-2305) runs first in `zUpdateEverything`.
+    - Flag 1: the flag becomes 2 and `zPauseAudio` (:2552-2586, `fix_sndbugs = 0`)
+      writes 19 times: PSG `9F BF DF FF`, `B4/B5/B6 = 0` on part I and `B4/B5 = 0`
+      on part II, `28h = 00..05`, then PSG `9F BF DF FF` again. FM6/DAC is left
+      alone.
+    - Flag 2: the routine pops its return, so no SFX or music update runs, and
+      nothing is written.
+    - Flag `$80`: the flag clears; with `zFadeOutTimeout` set it runs
+      `zStopAllSound`, otherwise it rewrites `B4+ch` for each halted or playing FM
+      track (PSG1 is a no-op through `zWriteFMIorII`). The shipped SFX loop then
+      reads seven "tracks" from `zTracksSFXEnd` onwards, memory the engine cannot
+      model. Updates resume in that same service.
+    - The YM2612 and PSG keep clocking throughout.
+  - Engine. A level Start in production toggles `GameLoop.userPaused` (the host
+    pause), and `OuterFramePresentation` then presents SILENT: zeros, no service, chips
+    frozen. The engine's ROM pause (`GameStateManager.applyPauseToggle` from
+    `LevelFrameStep`/`LevelIterationAdmissionController`) gates only the level update:
+    `GameLoop.isPresentationPaused` does not read it, so those frames present FORWARD
+    and the driver keeps servicing the music.
+  - Minimal hunks (not landed; they exceed one bounded slice and touch shared loop
+    code). Audio/session: a policy pause program and unpause rule, a session
+    sound-pause state that skips `serviceOuterFrame` while the chip renders, its
+    snapshot field, and a command-timeline path so rewind stays deterministic. Shared
+    loop (lead and ending owner): drive that from `GameStateManager` pause
+    transitions, decide whether a level Start is the ROM pause or the host pause, and
+    keep the modal picker, frame-step and application mute SILENT. Validating it
+    against native needs a window with a native in-level pause; the title-start
+    window has none.
 - [CORE] A MAME YM2612 output path for the Knuckles movie; Nuked is never
   substituted.
 - PAL, DAC timing, carry state at an ending window, and every ending product.

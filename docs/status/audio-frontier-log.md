@@ -27,6 +27,21 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-10-17 - S3K title start: Title_Screen's fades and SEGA request order; first difference now row 43
+
+- **Commit / worktree:** lane `pcm-output`, aec7836ce (clean).
+- **Command:** as the 2026-10-16 title-start entry (`GameplayCaptureTool --game s3k --zone aiz --act 1
+  --title-screen --main sonic --sidekick tails --input <emeralds.bk2> --input-start 0 --frames 600 --audio
+  --native-pcm --no-video`), then `compare_native_pcm_window.py --start-row 0` against the same native rows
+  0-2399 capture.
+- **Result:** stereo frames 0-31,655 (rows 0-42) equal. First difference at stereo frame 31,656 (packet 43,
+  sample 11), native (0, 0) against engine (1, 1): the engine's SEGA PCM onset; native's is row 63, sample 504.
+- **What moved it:** `Title_Screen` now runs `Pal_FadeToBlack` and `Pal_FadeFromBlack` for 22 VSyncs each,
+  issues `cmd_SEGA` before `Wait_SegaS3K` reads Start, and leaves the SEGA wait through `loc_3FE4` on Start.
+- **Open owners for the remaining 20 rows:** the cold boot before `Title_Screen` (native rows 0-12), the
+  interrupt-masked decompression span (native rows 35-40), and the Z80's service time inside the frame. All
+  need a 68000/Z80 cost model; none was fitted.
+
 ## 2026-10-17 - S3K title start: the stereo-frame-11 PCM difference was the ThreeBand cutoff pi; first difference now row 16
 
 - **Commit / worktree:** lane `pcm-output`, 844b19f02 (clean).

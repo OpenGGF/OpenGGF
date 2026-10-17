@@ -114,7 +114,9 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
      * These map to the coarser {@link TitleScreenProvider.State} values.
      */
     private enum Phase {
-        /** Fade from black, show first animation frame. */
+        /** {@code Title_Screen}'s {@code Pal_FadeToBlack} (sonic3k.asm:5399, 5042-5052). */
+        SEGA_FADE_TO_BLACK,
+        /** {@code Pal_FadeFromBlack} to the SEGA logo palette (sonic3k.asm:5484, 4903-4913). */
         SEGA_FADE_IN,
         /** Hold for ~3 seconds, play SEGA sound. */
         SEGA_HOLD,
@@ -132,14 +134,28 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         EXITING
     }
 
-    private Phase phase = Phase.SEGA_FADE_IN;
+    private Phase phase = Phase.SEGA_FADE_TO_BLACK;
 
     // -----------------------------------------------------------------------
     // Timing constants
     // -----------------------------------------------------------------------
 
-    /** Duration of the SEGA fade-in from black (frames). */
-    private static final int SEGA_FADE_DURATION = 16;
+    /**
+     * Iterations of {@code Pal_FadeToBlack} and of {@code Pal_FadeFromBlack}:
+     * {@code move.w #$15,d4} then {@code dbf d4}, one {@code Wait_VSync} each
+     * (sonic3k.asm:4906-4912, 5044-5050).
+     */
+    static final int PAL_FADE_ITERATIONS = 0x15 + 1;
+
+    /** Colours of {@code Pal_TitleSonic1}, the logo palette faded in on line 0 (32 bytes, sonic3k.asm:5954). */
+    private static final int SEGA_LOGO_COLOURS = 16;
+
+    /** {@code Normal_palette} line 0 during the SEGA fade, as {@code Pal_FromBlack} steps it. */
+    private final int[] segaNormalPalette = new int[SEGA_LOGO_COLOURS];
+    /** The line 0 colours in CRAM: {@code Normal_palette} as last uploaded at a VSync. */
+    private final int[] segaCram = new int[SEGA_LOGO_COLOURS];
+    /** {@code Target_palette} line 0: {@code Pal_TitleSonic1} (sonic3k.asm:5476-5481). */
+    private final int[] segaTargetPalette = new int[SEGA_LOGO_COLOURS];
 
     /** Duration of the SEGA hold (frames, ~3 seconds at 60fps). */
     private static final int SEGA_HOLD_DURATION = 180;
@@ -432,8 +448,10 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
 
         // Reset state
         state = State.INTRO_TEXT_FADE_IN;
-        phase = Phase.SEGA_FADE_IN;
+        phase = Phase.SEGA_FADE_TO_BLACK;
         phaseTimer = 0;
+        java.util.Arrays.fill(segaNormalPalette, 0);
+        java.util.Arrays.fill(segaCram, 0);
         frameCounter = 0;
         animTableIndex = 0;
         currentAnimFrame = 1;
@@ -496,7 +514,8 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
     @Override
     public void update(InputHandler input) {
         switch (phase) {
-            case SEGA_FADE_IN -> updateSegaFadeIn(input);
+            case SEGA_FADE_TO_BLACK -> updateSegaFadeToBlack();
+            case SEGA_FADE_IN -> updateSegaFadeIn();
             case SEGA_HOLD -> updateSegaHold(input);
             case PAL_TRANSITION -> updatePalTransition(input);
             case SONIC_ANIMATION -> updateSonicAnimation(input);
@@ -528,6 +547,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         }
 
         switch (phase) {
+            case SEGA_FADE_TO_BLACK -> { /* display still off at a cold entry; Normal_palette is black */ }
             case SEGA_FADE_IN, SEGA_HOLD, PAL_TRANSITION, SONIC_ANIMATION ->
                     drawAnimationPhase(gm);
             case WHITE_FLASH -> drawWhiteFlash(gm);
@@ -542,7 +562,9 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         // On the Mega Drive, palette line 0 color 0 is the background color —
         // it fills the screen behind everything. Transparent pixels (color 0)
         // in tile patterns show this background color.
-        byte[] palData = dataLoader.getAnimPaletteData(displayedAnimFrame);
+        byte[] palData = phase == Phase.SEGA_FADE_TO_BLACK || phase == Phase.SEGA_FADE_IN
+                || phase == Phase.SEGA_HOLD
+                ? segaCramBytes() : dataLoader.getAnimPaletteData(displayedAnimFrame);
         if (palData != null && palData.length >= 2) {
             // Read color 0 from palette line 0 (first 2 bytes, big-endian)
             // Mega Drive format: 0x0BGR where B,G,R are nibbles (0-E, 8 levels)
@@ -559,7 +581,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         endTitleLoopKosWork();
         stalledFrames = 0;
         state = State.INACTIVE;
-        phase = Phase.SEGA_FADE_IN;
+        phase = Phase.SEGA_FADE_TO_BLACK;
         phaseTimer = 0;
         frameCounter = 0;
         musicPlaying = false;
@@ -603,10 +625,46 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
     // Phase update methods
     // -----------------------------------------------------------------------
 
-    private void updateSegaFadeIn(InputHandler input) {
+    /**
+     * One {@code Pal_FadeToBlack} iteration: {@code Wait_VSync}, then
+     * {@code Pal_ToBlack} on {@code Normal_palette}. At a cold entry the
+     * palette is still the power-on black and the display is off, so only the
+     * 22 VSyncs show. The interrupt-masked decompression that follows
+     * (sonic3k.asm:5400-5483: {@code Kos_Decomp}, {@code Eni_Decomp},
+     * {@code Plane_Map_To_VRAM} with {@code sr = $2700}) costs hardware frames
+     * the engine does not model yet: that needs the 68000 cost of the span.
+     */
+    private void updateSegaFadeToBlack() {
         phaseTimer++;
+        if (phaseTimer >= PAL_FADE_ITERATIONS) {
+            // Pal_FadeFromBlack: Pal_FillBlack, then the logo palette as target.
+            java.util.Arrays.fill(segaNormalPalette, 0);
+            byte[] logo = dataLoader.getAnimPaletteData(1);
+            for (int colour = 0; colour < SEGA_LOGO_COLOURS; colour++) {
+                segaTargetPalette[colour] = logo != null && logo.length >= 2 * (colour + 1)
+                        ? ((logo[2 * colour] & 0xFF) << 8) | (logo[2 * colour + 1] & 0xFF) : 0;
+            }
+            phase = Phase.SEGA_FADE_IN;
+            phaseTimer = 0;
+        }
+    }
 
-        if (phaseTimer >= SEGA_FADE_DURATION) {
+    /**
+     * One {@code Pal_FadeFromBlack} iteration: {@code Wait_VSync} (the VBlank
+     * uploads the palette stepped last time), then {@code Pal_FromBlack}. After
+     * the 22nd, the routine returns and {@code Title_Screen} plays
+     * {@code cmd_SEGA} at once, before {@code Wait_SegaS3K} reads Start for the
+     * first time (sonic3k.asm:5484-5494).
+     */
+    private void updateSegaFadeIn() {
+        uploadSegaCram();
+        for (int colour = 0; colour < SEGA_LOGO_COLOURS; colour++) {
+            segaNormalPalette[colour] = palAddColor(segaNormalPalette[colour], segaTargetPalette[colour]);
+        }
+        phaseTimer++;
+        if (phaseTimer >= PAL_FADE_ITERATIONS) {
+            segaSoundPlayed = true;
+            GameServices.audio().playMusic(Sonic3kSmpsConstants.CMD_SEGA);
             phase = Phase.SEGA_HOLD;
             phaseTimer = 0;
             state = State.INTRO_TEXT_HOLD;
@@ -614,24 +672,63 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         }
     }
 
+    /**
+     * {@code Pal_AddColor} (sonic3k.asm:4954-4985): a colour short of its
+     * target gains $200 (blue) if that does not pass the target as a word,
+     * else $20 (green) under the same test, else 2 (red).
+     */
+    static int palAddColor(int current, int target) {
+        if (current == target) {
+            return current;
+        }
+        if (current + 0x200 <= target) {
+            return current + 0x200;
+        }
+        if (current + 0x20 <= target) {
+            return current + 0x20;
+        }
+        return current + 2;
+    }
+
+    /**
+     * The VBlank's CRAM upload of {@code Normal_palette} line 0, every VSync:
+     * line 0 still holds frame 1's palette from {@link #initialize()} until the
+     * first upload replaces it with {@code Pal_FillBlack}'s black.
+     */
+    private void uploadSegaCram() {
+        System.arraycopy(segaNormalPalette, 0, segaCram, 0, SEGA_LOGO_COLOURS);
+        GraphicsManager gm = GameServices.graphics();
+        if (gm != null && !gm.isHeadlessMode()) {
+            S3kFrontendPaletteUploader.cacheLineFromBytes(gm, segaCramBytes(), 0);
+        }
+    }
+
+    private byte[] segaCramBytes() {
+        byte[] line = new byte[2 * SEGA_LOGO_COLOURS];
+        for (int colour = 0; colour < SEGA_LOGO_COLOURS; colour++) {
+            line[2 * colour] = (byte) (segaCram[colour] >> 8);
+            line[2 * colour + 1] = (byte) segaCram[colour];
+        }
+        return line;
+    }
+
+    /** Test observation: line 0 as in CRAM. */
+    int[] segaCramForTest() {
+        return segaCram.clone();
+    }
+
+    /**
+     * {@code Wait_SegaS3K} (sonic3k.asm:5490-5497): VSync, then Start, then the
+     * 3-second timer. Start and the timeout both leave through {@code loc_3FE4}
+     * (:5498-5500): {@code cmd_StopSEGA}, then the {@code Pal_Title} transition.
+     * A Start press here does not reach the white flash.
+     */
     private void updateSegaHold(InputHandler input) {
+        uploadSegaCram();
         phaseTimer++;
 
-        if (checkSkipToInteractive(input)) {
-            return;
-        }
-
-        // Play SEGA sound immediately (disassembly plays it right after Pal_FadeFromBlack)
-        if (!segaSoundPlayed) {
-            segaSoundPlayed = true;
-            GameServices.audio().playMusic(Sonic3kSmpsConstants.CMD_SEGA);
-        }
-
-        if (checkSkipToInteractive(input)) {
-            return;
-        }
-
-        if (phaseTimer >= SEGA_HOLD_DURATION) {
+        boolean startPressed = confirmPressed(input, configService.getInt(SonicConfiguration.JUMP));
+        if (startPressed || phaseTimer >= SEGA_HOLD_DURATION) {
             GameServices.audio().playMusic(Sonic3kSmpsConstants.CMD_STOP_SEGA);
             segaChantStopped = true;
             phase = Phase.PAL_TRANSITION;
@@ -650,10 +747,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
      * the SEGA text (colors 7+) unchanged. Completes when color 0 becomes $0000.
      */
     private void updatePalTransition(InputHandler input) {
-        if (checkSkipToInteractive(input)) {
-            return;
-        }
-
+        // loc_3FF0 (sonic3k.asm:5501-5512) waits for the backdrop to reach black and reads no input.
         // Apply one palette transition step per frame (matching the disassembly's
         // VSync loop that writes 14 bytes per iteration)
         byte[] transitionData = dataLoader.getPalTransitionData();
@@ -1350,23 +1444,6 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
             }
         }
         gm.flushPatternBatch();
-
-        // Apply fade overlay for SEGA fade-in only.
-        // PAL_TRANSITION uses actual per-color palette modification (not an overlay)
-        // so the SEGA text stays white while the background goes dark.
-        // Width extended to viewportWidth() so side-bars are covered at widescreen;
-        // at native 320 viewportWidth() == SCREEN_WIDTH — byte-identical.
-        if (phase == Phase.SEGA_FADE_IN) {
-            float fadeAmount = 1.0f - (float) phaseTimer / SEGA_FADE_DURATION;
-            if (fadeAmount > 0.0f) {
-                gm.registerCommand(new GLCommand(
-                        GLCommand.CommandType.RECTI, -1,
-                        GLCommand.BlendType.ONE_MINUS_SRC_ALPHA,
-                        0.0f, 0.0f, 0.0f, fadeAmount,
-                        0, 0, viewportWidth(), SCREEN_HEIGHT
-                ));
-            }
-        }
     }
 
     /**
