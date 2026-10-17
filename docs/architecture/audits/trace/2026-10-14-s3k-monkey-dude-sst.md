@@ -4595,3 +4595,125 @@ exact compiled adapter/instrumented outer class and owned raw JSON/XML/text are
 removed under the normal intended-tree/metadata leases. No archive is created.
 The final change is documentation only; full campaign completion/native parity,
 regression ancestry and Root smoke/delivery remain open. No live R16 jobs remain.
+
+
+## R17 cold Sonic campaign rising-death writer — 2026-10-17
+
+The next single original maintained-case prefix48401 closes R16's missing engine
+writer fact. At original **outer movieLoop49613 / Bk2FrameInput.frameIndex49613**,
+shared touch selects **SszMechaSonicObjectInstance**, category **HURT**,
+**cause NORMAL**, **hadRings false**, sourceX6592/19C0. Its actual call reaches
+applyHurtOrDeath→applyDeath→the first false→true setDead. This is a directly
+observed engine damage path, not the cloud observation stack from R16, a custom
+Mecha update kill, or proof of native-correct death. The00c54-vs-Main803 upstream
+trajectory/ring producer remains unqualified; no gameplay repair is proposed.
+
+R16 completed first at eeb79fa158b554899802586eebb200eab9faf8a2; R17 uses that
+same branch/tree and production00c54, with only authorized temporary diagnostics.
+Exact returned task ID ordinal19 is separate in the owned registry, with24h
+expiry; R15/R16 histories and all prior refs remain. No Root/Main/native writes.
+
+### Frozen diagnostic and exact run
+
+Three temporary source hashes, inspected before execution and unchanged through
+terminal48401:
+
+| Source | SHA256 |
+| --- | --- |
+|AbstractPlayableSprite.java|4fe85619e72be3fcfac44dabe1775d8bffafe6fa8ade9387b071c9ebd259dc8a|
+|ObjectTouchResponseController.java|c7dd04e2412652538acbcc773aa5afe99ae46098fab77d16679b534c381bcb96|
+|TestS3kLrzHpzSszColdCampaign.java|68263f857f01adfe184b8008b9f0db7ba8d1837ee18c7f705fb8d1cd202a28aa|
+
+Combined ordered path-NUL-byte SHA256
+`5b415a708de21bc76e0af402946c69b32239cc98ee2e5ecc8d8acb4013f6dd2c`;
+exact three-file diff SHA256
+`70402a2d43e5c0e02605fe1be9cbbc90bfbd9892846b2c70cb315447bbff77a3`.
+The first diagnostic runs only on !this.dead && incomingdead, before the original
+assignment: actual StackWalker caller frames first, then existing scalar pose/
+status/rings. applyDeath logs its existing DamageCause immediately before the
+original setDead. Shared applyHurt logs only its already-computed cause/hadRings/
+sourceX/category and Java class/identity immediately before applyHurtOrDeath;
+it calls no additional provider getter. No trace/controller/provider replacement.
+
+A test-local AutoCloseable cursor saves/restores the exact prior
+`openggf.diagnostic.r17.cursor` property for each outer and existing replay step;
+nested replay restores its outer stamp. Only actual input indices49551..49614
+publish a stamp. The property controls diagnostic printing only. Original input,
+step/render order, assertions/history, replay capture/restore and camera calls
+are unchanged; the prefix cap follows the original loop body. No position,
+velocity, timer, rings, RNG, slot, camera, fixture or runtime state is supplied.
+
+66285 build-only `-DskipTests test-compile` passes, Maven displayed01:18min,
+finished17:44:46UTC; no tests/gameplay. Sole actual48401 then uses **exactly the
+R16 command/environment/all3original-ROM paths and original maintained selector**,
+including normal admission, Java25, EGL JTO/CLI flag, nullAL, no ambient display,
+Lua5.4 and single-fork/reuse/alphabetical. Same original movie SHA256
+41cc9e73afc5a62a901a7ad3afaedc509b19ac68127673be09ca018054b5d9b5.
+No trace profile or new input/bootstrap is added.
+
+48401 finishes17:45:46UTC, queue0/Maven51.878s,
+JUnit method29.932s/suite30.186s: **1/1F0E0S**, original `cold death49613`.
+XML inspected: no diagnostic error/suppressed exception. The original assertion
+line506 is507 with the temporary outer resource. No postboot retry/new selection.
+The targeted stderr subset has **68 lines/7,745bytes**, SHA256
+`08df5b3778c933162337e632b22a4a3643af2a664a39afe051684e4fd484a52c`:
+one SHARED_TOUCH_HURT, one APPLY_DEATH, one RISING_DEAD_STACK marker,
+64 real stack frames and one RISING_DEAD_POSE. The actual XML is180,261bytes;
+no separate journal/archive is made.
+
+### Direct writer/provider witness
+
+SHARED_TOUCH_HURT records provider identity440159038 and player identity1406114969;
+APPLY_DEATH and RISING_DEAD_POSE record that same player identity. These identities
+are invocation-local Java identities, not native SST addresses or rewind keys.
+The real caller stack's relevant prefix is:
+
+```text
+AbstractPlayableSprite.setDead:2704
+AbstractPlayableSprite.applyDeath:3184
+AbstractPlayableSprite.applyHurtOrDeath:3087,3064
+ObjectTouchResponseController.applyHurt:1398
+ObjectTouchResponseController.handleTouchResponse:1131
+ObjectTouchResponseController.processCollisionLoop:700
+ObjectTouchResponseController.update:414
+ObjectManager.runTouchResponsesForPlayer:625
+LevelManager.applyTouchResponses:1335
+SpriteManager.tickPlayablePhysics:2113
+SpriteManager.processPlayableSlots:925
+SpriteManager.update:708
+GameLoop.lambda$updateLevelMode$1:1873
+GameLoop.lambda$updateLevelMode$2:1876
+LevelFrameStep.execute:343
+GameLoop.updateLevelMode:1870
+GameLoop.stepInternalBody:1451
+GameLoop.lambda$stepInternal$11:1174
+PlcFrameLifecycleCoordinator.runLogicalIteration:155
+GameLoop.lambda$stepInternal$9:1164
+TraceSessionLauncher.runProductionIterationIfActive:2981
+GameLoop.stepInternal:1180
+LevelIterationAdmissionController.runTraceObservedStep:285
+GameLoop.step:823
+GameplayCaptureSession.step:316
+TestS3kLrzHpzSszColdCampaign.verifyDeathEggCampaign:505
+```
+
+Line numbers above belong to the temporary diagnostic source, not restored HEAD.
+At the first rising-dead assignment, P1 is **19BF.2A00/061D.8600**,
+vx=-339/vy=-656/g=-786, angle0, air/jumping/rolling true;
+hurt/water/pushing/onObject/objectControl/controlLock false; rings0,
+invulnerable false, both invulnerability/invincibility timers0;
+oldDead false/incomingDead true. Thus the directly observed kill caller is the
+shared touch damage route with the Mecha parent class, **not the secondary
+collision child**. No selected native provider or native death state is observed.
+R16's separate VInt/LF/camera/parent-slot snapshots remain separate evidence;
+this logging stamp is an input cursor, not a fabricated ROM clock.
+
+This result identifies the engine writer/cause/provider only. It does not
+isolate which earlier runtime change produced the vulnerable encounter, prove
+that shared damage handling is wrong, or justify altering player collision,
+Mecha collision bytes, rings, camera, CPU or timing. Root owns the next causal
+question and any independent native-backed old-red; no repair/test/run follows.
+Temporary three-file edits are restored exactly to eeb79, exact instrumented
+outer classes/test cursor are removed, and inspected own XML/text are consumed
+under normal leases after durable extraction. Final change: docs only; no live
+R17 jobs, no archives, foreignnative4fdf/privateconfig/all refs preserved.
