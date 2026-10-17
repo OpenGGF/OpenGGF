@@ -175,6 +175,9 @@ Unreleased. The earlier development themes remain in
   owner retires.
   End signs allocate after the retained native boss/control slot, preserving
   later Angel Island bridge slot identities when the Java flow is separate.
+  The Angel Island control creates all three gradual camera workers in native
+  order, including min-Y, and releases each at its original boundary instead
+  of snapping min-Y or reserving a remembered results slot.
   Admitted title and save-menu ROM patterns survive the following level overlays,
   retaining unwritten spans while newer zero/art uploads supersede them.
   Prepared installation rejects detached art owners and stale generations.

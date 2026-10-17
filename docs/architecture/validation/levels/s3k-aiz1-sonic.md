@@ -3,8 +3,10 @@
 Original fullrun follow-up (2026-10-17): the unchanged intro/bootstrap and original
 controller route now qualify the later normal bridge's exact standing SST at
 rows9510–9513. That bridge is in the reloaded Act2 world; its bounded certificate,
-source repair, independent owner replay and inherited min-Y/auxiliary gaps belong
+source repair, independent owner replay and inherited auxiliary gaps belong
 to the [AIZ2 matrix](s3k-aiz2.md#original-fullrun-normal-bridge-standing-sst--2026-10-17).
+The separate [R2 three-worker component qualification](s3k-aiz2.md#three-act2-level-size-workers--2026-10-17-r2)
+closes the omitted min-Y handoff owner; it adds no cold-route breadth.
 This adds no Act1 route/configuration certification.
 
 Canonical game/zone/act: Sonic 3 & Knuckles, Angel Island, act 1.

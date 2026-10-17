@@ -3975,3 +3975,70 @@ The image was inspected. No runtime defect appeared, and captures stopped after
 this pair. This does not qualify the remaining sequence, older terminal-init
 pictures with undeclared V-int/HScroll inlets, PAL, PCM, cold-run native parity,
 wide products or predictive timing. Root owns integration and broader validation.
+
+### AIZ three level-size workers R2 — 2026-10-17
+
+Separate bounded owner on R1 `da70653308ecf6290b3df020ebed3fd624399789`, same
+`t3-98d036a9`/branch. Only `AizMinibossInstance` runtime changes: replace the
+remembered-results reservation and direct min-Y snap with all three existing
+AfterCurrent workers in ROM order. The [R2 matrix](../validation/levels/s3k-aiz2.md#three-act2-level-size-workers--2026-10-17-r2)
+records source pin/labels, hashes, exact commands, scopes and limits.
+Old-red12271 is2/2F/0E/0S after two whole-world45-scan replays: actual old
+workers21/22 skip first eligible19 and omit min-Y; nontrivial min-Y snaps.
+Corrected production scans observe X19/min-Y21/max-Y22 and exact native
+accelerating retirement, including min-Y's creation-pass deletion at target.
+Both before-handoff and live-worker snapshots force recreation and replay twice.
+
+Focused55530 is70/0F/0E/0S including mandatory S3K4; strengthened recreation93137
+is13/0F/0E/0S; the single R2 original9513 prefix36591 retains all20 assertions,
+1/0F/0E/0S. Guards87743 are134/0F/0E/0S. Distinct existing BK2 45125 is red76,
+first11350 animation13/5; authorized matched exact R1 control75679 has the same
+complete76-entry errors array, warnings/bootstrap/groups/missing-aux arrays.
+Eight queue and67 animation entries plus trailing26179 rings72/0 remain inherited;
+this is no green alternate or title-frontier repair. Queue wait77s belongs only
+to45125; execution times are separately recorded in the matrix.
+
+Exact R2 source SHA256`3aa35fede24c479ef72af6ead674f4f1cbf9595837ea600c0874ffb59ec15cd2`
+is restored after that baseline control; new test bytes are unchanged. Target
+classes are last compiled R1 control, not R2. No further Maven is requested;
+Root fresh-compiles composed source and owns combined smoke/integration. The
+actual task-tree dry preview selects3040 smoke classes/guards, not executed here.
+No shared flow/worker/allocator, title timing, trace/input/config or Main edits.
+The three-worker owner obligation is closed within the matrix's component scope;
+allocation exhaustion, full native SST/aux/configuration breadth, inherited title
+frontier and full chain remain open. Consumed diagnostics/helper are removed;
+the local tree/branch remain for Root, without push or integration.
+
+
+### Lead-owned composed validation boundary — 2026-10-17
+
+The current isolated composition is based on pinned Main8030832d2 and includes
+HCZ3896deae8, CNZad1a689cd, AIZda7065330/bfa9d38b0 and the Knuckles tool78472d97a.
+Only append-only evidence conflicts were resolved by preserving both sources;
+production sources merged without conflict. The Root baseline observation above
+is retained, with its incomplete-window limit. A read-only independent review of
+the shared drowning/water/CPU/candidate-API delta found no material issue; it did
+not execute tests and does not certify carry-boundary or drowning-boundary replay.
+
+The next fresh compilation belongs to Root: the AIZ worker restored exact source
+SHA2563aa35fede24c479ef72af6ead674f4f1cbf9595837ea600c0874ffb59ec15cd2 after
+its matched parent control, while that worker target still held R1 classes.
+Root will run six exact canonical cases (original AIZ comparison and four-row
+standing identity, three chain prefixes, full emerald chain) under trace-replay;
+four independent segment cases (AIZ alternate, HCZ initial, HCZ full slice and
+Poindexter) use trace-segments. Remaining red frontiers are compared by exact
+identity, fields and represented window, never totals alone.
+
+The final local change-based runner plan is inspected against8030832d2 before
+launch. Shared movement, water and API changes justify the complete smoke
+selection plus fresh guards. The anticipated3511 candidates form71 ordinary
+batches of at most50; the actual launch plan is authoritative. Expected cost is
+roughly90–120 execution minutes plus variable queue waits, not a wall ETA.
+Use --max-minutes150, excluding queue wait, with the unchanged10-minute no-output
+limit; input changes or an unreported launcher/JVM failure stop the runner.
+Reported JUnit failures aggregate across batches. No release-only full suite,
+manual selection narrowing or duplicate baseline/development/integrated broad
+run is planned. Java25/Lua5.4/PowerShell preflight already passed at10:56:23UTC
+in the actual EGL/nullAL/no-ambient launch environment. The original ROM paths
+are discovered from Main without copies/links. All validation is pending here;
+Root owns observed results, integration/push and accounted cleanup.

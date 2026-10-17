@@ -5,10 +5,17 @@ qualifies native320 Sonic + CPU Tails rows9510–9513 at SST12, including the ac
 placed bridge and player centre coordinates. One signpost allocation-anchor
 repair closes the earlier slot permutation; an independent owner scene restores
 and replays the complete registered world twice for detached, in-place and unset
-control boundaries. The omitted `Make_LevelSizeObj` min-Y SST, exact three-worker
-allocation/lifetimes, missing advertised auxiliary observations, other BK2s,
-viewport/donor/roster breadth and the full continuous chain remain open. This
-bounded standing result does not certify those obligations or a complete act.
+control boundaries. The separate [R2 handoff qualification](../architecture/validation/levels/s3k-aiz2.md#three-act2-level-size-workers--2026-10-17-r2)
+closes the omitted `Make_LevelSizeObj` min-Y owner and remembered-results slot
+reservation: a real active control creates X/min-Y/max-Y through AfterCurrent,
+including min-Y's same-scan retirement at target and nontrivial accelerating
+continuation, with twice-recreated full-world replay before and during the work.
+The original twenty standing assertions remain green. The distinct existing BK2
+retains the exact same76 errors as matched R1, first11350 animation, including the
+trailing26179 ring difference; that route is not green. Allocation exhaustion,
+full native SST comparison, missing advertised auxiliary observations,
+viewport/donor/roster breadth and the full continuous chain remain open. These
+bounded results do not certify a complete act.
 
 S3K horizontal spring terrain gate (2026-10-16): focused object fixtures sample
 real collision tiles for positive/zero/negative foot distances and a slope with
