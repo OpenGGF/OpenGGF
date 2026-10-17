@@ -3648,3 +3648,71 @@ show the leased wrapper command for independent version checks, and the existing
 measurement hazard records the manual path and multiple-JVM launcher. This is a
 documentation correction only, with mirror, whitespace, link and command-routing
 scenario checks; no new JVM, engine tests or scheduler implementation is needed.
+
+
+### 2026-10-17 cold Knuckles eyecatch offset 619
+
+One current-engine observation closes the first previously differing Knuckles
+eyecatch checkpoint beyond its initial 32 matching pictures. Base `8030832d2`
+contains the native sprite-order repair `ac1e1403c`; no gameplay/rendering source
+was changed in this slice. The retained ending-pal driver is positively attributed
+to authorized Claude Opus 5.5 child ordinal 5: durable positions 828/833 create and
+copy it, and 862/889/891/954 transform it into the preserved 11782-byte source,
+blob `3c595210b4dda561c1b737d1e2557b44e3d7979e`, SHA256
+`1c4916a595d98e7955f12389761a3cd372443af6dc50328222352c8be0863b14`.
+Reconstructing those exact command/Edit payloads equals both original and saved
+copy; attribution does not rely on a filename or checkpoint alone.
+
+`S3kKnucklesTerminalCaptureTool` promotes its reusable cold-route/event/controller
+mechanism into production capture infrastructure. The temporary original stays
+unchanged. The standalone tool does not need the test ROM extension, which would
+initialize GameServices before method-level preference isolation. It establishes
+a fresh private `user.dir` before constructing `GameplayCaptureSession`, restores
+it afterwards, refuses existing outputs and verifies the original ROM. Its sole
+product inlet remains seven Super Emeralds after ordinary Mecha defeat; it writes
+no position, RNG, V-int, image, phase or native comparison state. Unlike the
+Sonic/Tails positioned sampler, this follows shipped LRZ → HPZ → SSZ2.
+
+Let `K` be the external task directory `ending-pal-native/knux`. Immutable evidence:
+`K/engine-knux-main803-offset619-v1-inputs.json`, its frozen source copy under
+`K/engine-source/S3kKnucklesTerminalCaptureTool-main803-offset619.java`, and
+`K/engine-knux-main803-offset619-v1/{capture.properties,frames.csv,eyecatch.png,comparison.json}`.
+The input manifest contains the exact argv/environment/paths and input hashes.
+Normal Main-absolute queue invocation used Java 25, unset DISPLAY/WAYLAND_DISPLAY,
+EGL_PLATFORM=surfaceless, ALSOFT_DRIVERS=null and Lua 5.4:
+
+```text
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl -Dtest=TestS3kKnucklesTerminalCaptureTool \
+  -Dexec.mainClass=com.openggf.tools.S3kKnucklesTerminalCaptureTool \
+  "-Dexec.args=--rom '$S3K_TASK_ROM' --route '$COLD_KNUX_BK2' --native-input '$NATIVE_KNUX_BK2' --native-init 432709 --offset 619 --out-dir '$K/engine-knux-main803-offset619-v1'" \
+  test exec:java -B
+```
+
+`COLD_KNUX_BK2` is `src/test/resources/routes/s3k/lrz-knuckles-cold-hpz-ssz2-ending-320.bk2`
+(SHA256 `6408ae378f849a01615260c5cdec641b01d72a9b1d35dd8df56f18ecfcdf009a`);
+`NATIVE_KNUX_BK2` is the retained canonical
+`src/test/resources/traces/s3k/runs/s3k-knuckles-complete-superemeralds/s3k-knuckles-complete-superemeralds.bk2`
+(SHA256 `aa892856df22b7bb1fe5accb48db10b90dc26845d1dccee90352da30349f53cc`).
+The three CLI/private-scope controls passed 3/0F/0E/0S. The same invocation then
+performed the only capture, completed 10:56:56 UTC, Java 25.0.4.1, FAST,
+NTSC320/LIMITED238/RAW_RGB. Inlet frame 58252, actual Obj_5EF68 init 71034;
+observation 71653 = init+619, phase 6. It consumed 71654 inputs: 71035 cold-route
+rows including init, followed by 619 canonical native rows ending at input 433328.
+Private config example publication and user.dir restoration were observed; Main
+config SHA256 and mtime were identical before/after. Native checkout 33c05c16 and
+the original temporary driver were preserved.
+
+Exact RGB comparison used existing `compare_native_rgb.load_rgb`: original
+`native-knux-terminal-v1/eyecatch-init-seq032-in433328.ppm` is 348×240, explicit
+active crop `(14,8,320,224)`; engine PNG is unmodified 320×224. Result: **0 differing
+pixels out of 71680**, no normalization, shift, rescale, mask or search. Native
+file SHA256 `c33b24e86ad6648fd9b3a4b169206b083f6f31274fc8642cca219a1cd03b7131`;
+engine `a0bfd34a79ab4b07749537b39bfa3da883b2cbb414c64d4d39706e5fd7325e15`.
+Tool source SHA256 `27256fb78ae3fe8f4475563d912fd80d17179a068e467323059658e6bc359bd5`;
+production-source tree `178db901fc94c16853e9e308e036218cc5dacb815c99d586b1d56d09006d42cd`;
+compiled runtime `957706e945dde22535731a2fab1f697ee1b34e1cc894f5f20af312d534cf525e`.
+The image was inspected. No runtime defect appeared, and captures stopped after
+this pair. This does not qualify the remaining sequence, older terminal-init
+pictures with undeclared V-int/HScroll inlets, PAL, PCM, cold-run native parity,
+wide products or predictive timing. Root owns integration and broader validation.

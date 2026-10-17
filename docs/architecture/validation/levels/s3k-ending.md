@@ -952,3 +952,24 @@ All253 required pairs have original320×224 dimensions with no crop or normaliza
 The [two-product production-handle observation](../../plans/2026-10-13-s3k-playable-completion.md#2026-10-17-passive-reunion-queue-causality) runs once each for Sonic solo/+2 and Tails solo/+2, NTSC320/FAST/LIVE with the same frozen title-owner ingress, on3896035af plus the recorded passive tool source. Each emits187 metadata rows over all47 LF4400..4446, no images; per-product4447-row state prefixes match R2. Observer/user.dir restoration and actual private config publication are verified; Main config is unchanged. Focused controls pass18/0F/0E/0S.
 
 Direct handle19, source `$1D17A6`, actual submission fingerprint `5b4280f6…`, is MEASURED `s3k-kos-v1`, assigned4 PRE_MAIN_LOOP services for both products. Their observed production queue chains are identical: head retirement4405, final parent retirement4433/4440/4443 and gate4444. Retained native Sonic retires that head4404 and gates4443; Tails retires4405 and gates4444. This establishes the production profile's collapse of native three-/four-window behavior; the existing instruction-budget research supplies the native cost explanation. Missing engine-owned CPU/hardware budgets prevent a supported timing repair. No manifest/readiness/runtime mutation or new RGB qualification follows; R2's Sonic/team late171/194 residuals remain open. Team, PAL/wide/cold/terminal breadth and6+46 acceptance are outside this metadata slice.
+
+
+## 2026-10-17 cold Knuckles eyecatch offset 619
+
+The [single-pair cold Knuckles observation](../../plans/2026-10-13-s3k-playable-completion.md#2026-10-17-cold-knuckles-eyecatch-offset-619)
+uses the original LRZ → HPZ → shipped SSZ2 controller route, ordinary Mecha
+defeat, and the sole seven-Super-Emerald inlet after defeat. From actual
+Obj_5EF68 init71034 it uses canonical native controller rows at equal offsets.
+On Main803 runtime plus the promoted capture tool, engine frame71653 (offset619,
+phase6) exactly matches retained native input433328: **0/71680 RGB pixel
+differences**, native348×240 activecrop14,8,320,224 versus engine320×224
+LIMITED238/RAW_RGB. It consumed71654 inputs (71035 route +619 native suffix).
+Source/runtime/input/ROM/spot hashes and exact command live in the linked plan
+and immutable capture provenance. CLI/private-scope controls pass3/0/0/0;
+private config publication, user.dir restoration and unchanged Main config
+hash/mtime were verified. No gameplay source changed and no further capture ran.
+
+This adds one checkpoint beyond the first32 matching eyecatch pictures and the
+independent +576/offset1163 sprite-order witness. Remaining frames, older
+terminal-init inlet limits, PAL, PCM, wide/cold native parity and timing remain
+open; it is not whole-ending certification.
