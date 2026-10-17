@@ -4452,3 +4452,146 @@ is claimed beyond the retained first-frontier evidence. Seg13 is a newly reached
 incomplete window, not an equal-window baseline gain. Stop here: no further
 probe, runtime fix, slice, native or selection is run. Root owns next causality
 and composition; ending caller/bus/6+46/Hyper/PAL/PCM acceptance stays open.
+
+
+## R16 cold Sonic campaign first-death bracket — 2026-10-17
+
+Outcome: the single original-driver observation42765 reproduces **cold death49613**,
+**1/1F0E0S**, on production `00c54ec82fa7fcf39822698a0de11df612b0148d`.
+It identifies a death interval, **not the rising-death writer or a proven repair**.
+No further execution or runtime edit follows. Root's earlier smoke66 on02b and
+matched Main803 case24967 (pass) are separate source qualifications:00c54 also
+contains later Slot/painter, LRZ/DDZ split, skim and unused-timeline composition.
+The maintained campaign test, movie and GameplayCaptureSession have no803→00c54
+diff; equal input/test source does not isolate the changed runtime owner.
+
+Owned branch `bugfix/ai-s3k-cold-sonic-campaign-causal-owner-gpt61` safely starts
+from R15docs9bdf and fast-forwards to00c54. Prior R10–R15 refs remain. Foreign
+TraceChaser checkout4fdf73880f93a3172d23bf9e157b15de3c78fc32 (parent gitlink322851c)
+is untouched/unstaged. Private regular0600 config retains exact Main bytes
+SHA256 `6abd111c03f798dbe2a618cb4985aeb599127f44668edb2a8edbde118d11f7da`;
+own original mtime is restored and Main bytes/mtime remain unchanged. No Root
+uncommitted EGL change was copied. R16 exact task ID/ordinal18 and refreshed24h
+expiry are recorded only in the owned registry entry; R15 ordinals16/17 remain.
+
+### Original selection and execution accounting
+
+Original movie: `src/test/resources/routes/s3k/lrz-sonic-cold-hpz-ssz1-dez1-320.bk2`,
+SHA256 `41cc9e73afc5a62a901a7ad3afaedc509b19ac68127673be09ca018054b5d9b5`.
+The unchanged maintained inlet is Settings(320,sonic,empty-team,donor-off,nulls),
+ordinary `boot(ROM,9,0,settings)`, every original movie input followed by normal
+`renderFrame()`. Original assertions, semantic rewind spots and45-step replay
+windows stay in their original order. The temporary observer stops first death
+or input49614; the original death assertion ends this run at49613.
+
+From the owned cwd, with Main tooling and the original absolute ROM paths bound
+to the variables below (no ROM copies/links), the sole gameplay command is:
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_WORKSPACE/tools/testing/maven_queue.py" --normal \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" "-Ds3k.rom.path=$S3K_ROM" \
+  '-Dtest=TestS3kLrzHpzSszColdCampaign#sonicColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory' \
+  -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical test -B
+```
+
+- Initial build-only wrapper3033316/Maven3033322: process continuity was observed;
+  both became absent before7156. Lost command-handle metadata means terminal exit
+  **unknown**, not a pass. No live build was duplicated or restarted.
+- 7156: testCompile failure before Surefire/boot, exit1, queue0/Maven21.374s,
+ 17:30:30UTC. The observer's nonexistent getOnObject getter was corrected only
+ to existing pure isOnObject. No gameplay executed.
+- 19431: repaired build-only `-DskipTests test-compile`, exit0/Maven23.124s,
+ 17:31:28UTC. No gameplay executed.
+- 42765: sole actual gameplay execution, exit1, queue0/Maven52.688s,
+ JUnit method30.105s/suite30.410s, finished17:32:52UTC. XML inspected:
+ **1/1F0E0S**, exact original `cold death 49613`, no observer error/suppressed
+ exception. Original maintained assertion506 is508 with the two diagnostic calls.
+ No postboot retry, alternate selection, native/media or broad run.
+
+Temporary helper SHA256
+`4c8b355f38f60a7829ab993573db8f92751a9055714492a494253acbd7b75721`;
+instrumented maintained source
+`1d48fb0977c7029a604cc53480d8d92561b043abae90e36b77c5d1f95c007ad9`;
+original restored maintained source
+`9616921c0665bd5ac0372beb60eb9fe40d7bab9d469ba68360e9ec36d5b519c0`.
+No production source changed. The proxy invokes the original CollisionTrace
+method once and returns its original value, copying pooled SensorResult distance/
+angle immediately. Pure playable/camera sample-equality checks and trace identity
+restoration pass. It calls no isDestroyed accessor and avoids null-spawn default
+position getters. No timing authority, input/controller, scene or gameplay writes.
+
+### Directly observed primitives
+
+The bounded journal is5,688,626bytes, SHA256
+`b20d6306995be6137a0e41e492a27c961dce634dd60b6227633af237fb23b9a9`:
+63 original loop/input entries49551..49613,1860 forwarded callbacks:474 terrain
+results,693 solid starts and693 solid results. Only **SszSolidCloudObjectInstance**
+and **SSZHPZTeleporterObjectInstance** are named by solid callbacks (ten clouds
+plus one teleporter per input). No touch/damage callback exists in CollisionTrace.
+All recorded samples have rings0, no shield/hurt/invulnerability; the earlier
+ring-loss/trajectory producer is outside this window. Death first appears49613.
+
+| Actual boundary | P1 centre16.16 X/Y | vx / vy / g | object VInt / object LF / level LF / sprite LF | State |
+| --- | --- | --- | --- | --- |
+| after input49612 / before49613 |19C0.7D00 /0620.4E00|-374 /-712 /-786|49543 /10365 /10364 /10364|alive, air/jump/roll; logical24|
+|49613 last terrain result, ceiling_5 null|19BF.2A00 /061D.8600|-339 /-656 /-786|49543 /10365 /10365 /10365|still alive, air/jump/roll|
+|49613 first cloud checkpoint START, before resolution|19BF.2A00 /0618.8600|0 /-1792 /0|49544 /10366 /10365 /10365|dead, air/jump, roll cleared|
+|49613 after original step/render|19BF.2A00 /0618.8600|0 /-1792 /0|49544 /10366 /10365 /10365|same dead pose; lives4|
+
+Movie loop index and actual Bk2FrameInput.frameIndex both equal49613; raw input
+`|...R.A..|........|`, P1mask24/action1, P2zero, previous session index49612
+before step and49613 afterward. No row/VInt/LF offset is fitted. The routine6
+label in this observer is explicitly **derived from dead/hurt**, not native RAM
+or an observed engine routine byte; nullable routine override stays null.
+Camera physical/published19A0/05C0 and current/target bounds are locked throughout
+this window; the frozen bit changes false→true at the first observed death.
+
+Before death, nearby ordered snapshots show parent **Mecha slot6** at19C0/0604,
+routine10/timer22/mapping5, collision86/property2/hits2, invulnerability/flash0,
+not defeated; child10 is at19C0/0604 but its collision byte is **not sampled**.
+Afterward parent timer21/mapping3, same position/86/hits2. Other nearby entries:
+path swap4, lost ring5, roaming clouds14–16. These before/after owner views are
+not a selected touch-provider record or a full SST execution journal.
+
+### Source route and exact missing evidence
+
+`LevelFrameStep` prepares frame-start touch snapshots, runs player physics, then
+fixed objects and dynamic SST execution. `SpriteManager.tickPlayablePhysics`
+runs movement/terrain, history/water/display/animation and then
+`LevelManager.applyTouchResponses` before the dynamic object loop.
+`ObjectTouchResponseController` decodes80-category as HURT; its shared route is
+handleTouchResponse→applyHurt→applyHurtOrDeath→private applyDeath when not blocked,
+without rings/shield. Separate movement/custom callers can reach applyDeath or setDead directly. The Mecha parent/secondary child and cloud update bodies inspected
+contain no direct damage/death call. **None of these source facts proves which
+call executed during the unobserved interval.**
+
+Native source `Touch_ChkValue`→`Touch_ChkHurt`→`Touch_Hurt`→`HurtCharacter`→
+`loc_10350/loc_1036E` supplies the corresponding shared damage route; rolling
+alone does not turn a harmful80-category object into an attackable enemy.
+`sub_7D2D8`/byte_7D2FC and `sub_7D260`/byte_7D280 separately produce parent and
+child collision bytes. Read directly from the canonical user ROM
+(SHA1 CFBF98C36C776677290A872547AC47C53D2761D6): parent mapping5 at07D301=86,
+child mapping5 at07D294..97=00000000, Touch_Sizes entry6 at00FF6E..6F=1010.
+These are source/ROM controls, **not captured native state or proof that either
+provider was selected**. No native execution occurred.
+
+The first-dead stack starts in the observer proxy at onSolidCheckpointStart and
+ObjectSolidContactController.resolveCheckpointBatchInternal. That callback runs
+**before** resolveCheckpointForPlayer; the cloud is already looking at a dead
+player. This stack locates the observation only and cannot attribute the kill
+to the cloud. Shared TouchResponse and custom damage/update execution are not
+reported by this proxy. The precise remaining gap is the first rising-dead
+writer/caller/cause, including the selected provider if it is a touch call.
+Only after that fact could a short independent ROM-semantic old-red be designed
+for the actual owner; no camera/CPU/timing/terrain/touch correction is proposed.
+
+After durable extraction the temporary adapter, modified maintained source,
+exact compiled adapter/instrumented outer class and owned raw JSON/XML/text are
+removed under the normal intended-tree/metadata leases. No archive is created.
+The final change is documentation only; full campaign completion/native parity,
+regression ancestry and Root smoke/delivery remain open. No live R16 jobs remain.
