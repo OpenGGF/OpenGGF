@@ -4717,3 +4717,79 @@ Temporary three-file edits are restored exactly to eeb79, exact instrumented
 outer classes/test cursor are removed, and inspected own XML/text are consumed
 under normal leases after durable extraction. Final change: docs only; no live
 R17 jobs, no archives, foreignnative4fdf/privateconfig/all refs preserved.
+
+
+## Matched cold contact order R14 and R15 — 2026-10-17
+
+Root directly inspected both ORIGINAL bounded journals: hashes, headers,3explicit
+main keys48274/75/76,152events and actual bridge204/spring206 START/RESULT
+slots/XY/status/clocks. This follows R13's matched original803 pass versus
+f196 full-campaign death49613; its first end-of-step P1 difference48275 remains
+separate from the earlier engine kill writer in R17 above. These prefixes are
+not native truth, allocator-fault proof or repaired campaign acceptance.
+
+Same owned worktree `t3-98d036a9`, native session
+`01a1496e-feed-7130-9b66-9f402f964177`; exact803 and
+`f196e95da4583206a1201b3b4d02b1f626f7026e` runtime, no DEZ/Root WIP.
+Original maintained Sonic cold-campaign class/movie/step+render/45-step forward
+and two replay cycles are unchanged except9temporary marked observer blocks.
+The pure diagnostic return follows ALL original48276 assertions/route/window
+handling. Full-route final assertions are intentionally UNREACHED.
+
+| Exact source / sole request | Terminal UTC / queue / Maven | Actual result |
+| --- | --- | --- |
+|8030832d2,39089|18:54:32 /0s /1m31|1/0F0E0S; method29.275s; PREFIX ONLY|
+|f196e95d,1886|19:00:47 /0s /1m38|1/0F0E0S; method30.259s; PREFIX ONLY|
+
+Both used the same original
+`TestS3kLrzHpzSszColdCampaign#sonicColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory`
+selector and no profile; normal absolute-Main wrapper, all3original ROMs,
+Java25.0.4.1/EGL/nullAL/no ambient display, single-fork/reuse/alphabetical,
+inherited JDK_JAVA_OPTIONS/MAVEN_OPTS unchanged. Only the owned output filename
+changed. Exact command, source hashes and source-only contract are in the
+[existing Plan](../../plans/2026-10-13-s3k-playable-completion.md#r14-first48275-solid-contact-source-preparation--2026-10-17).
+No compiler repair/retry or extra selection. Parent elapsed unmeasured.
+
+Strictly validated header/schema/UTF8/length/newline/caps, original movie/input
+hashes and literal L/L/A input bits,3exact main keys,52/54/46events,67matched
+checkpoint pairs per run and12existing terrain results. All3step writes and
+152event passivity checks verify in each run. ROOT original inspection confirms
+this. Per-process Java identity values do not select comparisons.
+
+At original48275, all selected actual checkpoints read VInt48206/LF9027/OM9028:
+
+| Actual run order | Actual P1 at bridge checkpoint | Actual result |
+| --- | --- | --- |
+|803 spring206/slot6 → bridge204/slot32|X187D.F000,Y0A6C.6800,radius13|TOP;Y0A64.6800,status21→29|
+|f196 bridge204/slot8 → spring206/slot9|X1882.F000,Y0A6C.6800,radius13|NONE;spring later pushes X187D.F000|
+
+The same ROM placement204/offset04C8/id7C/sub00 at1860/0A88 is present in
+both. Bridge uncollapsed, width20hex, preupdate valid, skipfalse, render-bound
+eligibletrue; P1 cached render validity/onScreen bothtrue. Source-derived
+params20/10/9 are not actual captured Java locals/native registers. Spring206
+is id74/sub00 at18A0/0A70. Unchanged ascending SST scan/width gate explains the
+immediate branch: bridge8 sees1882 outside right1880; bridge32 sees187D inside
+after spring6's SIDE push. Source/controller constants are not a justified fix.
+All12emitted terrain argument payloads agree. The callbacks bracket resolution;
+they are not direct position-write hooks or native correctness evidence.
+
+At FIRST recorded BEFORE48274, the only differing recorded passive field
+(excluding invocation-local identities) is bridge204's slot32 versus8. First
+checkpoint-order mismatch is48274/event9: spring206/slot6 versus diagonal198/
+slot6. Positional comparison stops there; named placements are extracted in
+actual independent event order, without fitted alignment. The earlier producer
+of these allocations/lifetimes is outside the window. No actual birth is dated
+from a first observation. Root owns next scope; no runtime edit/extra run.
+
+Original baseline807618bytes SHA256
+`b14d412887c8e603599443810d1c71b2820152a65c5c3310b3c0520ec2754313`;
+current780114bytes SHA256
+`296f5fa12fdfc670f0546940f656e8c968d4f84facf08bc7b09628b7080d3a67`.
+After Root's original inspection and durable extraction, BOTH originals are
+consumed under metadata lease ALONE (1587732bytes, no copies/archives/receipts).
+The4normal inspected reports were already consumed. Original source9616921c is
+restored, owned observer source removed, exactly2instrumented outer/helper
+classes removed under intended writer. Last target was f196+observer; no rebuild
+or maintained uninstrumented-build claim. All refs/native/private config and
+Main hash/mtime preserved. Final accounting is DOCS ONLY; full cold campaign
+remains blocked, no native/new probe/guards/broad execution.

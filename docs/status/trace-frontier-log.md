@@ -113797,3 +113797,19 @@ Root independently inspected both original binaries; raw binaries then consumed
 metadata-slot-alone and temporary sources/instrumented classes removed. No extra
 JVM/native/media/sweep.
 [Exact commands, source pins, neighbors and limits](../architecture/validation/levels/s3k-ssz-act1.md#r13-matched-cold-campaign-first-tuple-difference--2026-10-17).
+
+
+2026-10-17 cold Sonic contact R14/R15, exact803 versus f196 in same98d:
+sole original maintained Sonic selector via normal wrapper/no profile/all3ROMs/
+Java25/EGL/nullAL/singlefork/reuse/alpha; only owned journal output filename
+changes.39089 terminal0 18:54:32UTC and1886 terminal0 19:00:47UTC are each
+**1/0F0E0S PREFIX through original48276 only** (later fullroute finals UNREACHED),
+3keys/152verifiedevents each. R13 first end-of-step48275 Y/OnObj divergence is
+now bracketed at actual flat bridge204: baseline spring206slot6 runs before
+bridge204slot32, while current bridge204slot8 runs before spring206slot9.
+Radius/width/eligibility/clocks/12terrain payloads agree; baseline snaps0A6C→0A64,
+current sees X1882outside before spring pushes187D. Earlier slot producer is
+already different at first observed BEFORE48274 and remains unknown; no native
+truth/allocator defect/fix or cold completion claim. Root inspected ORIGINAL
+bounded journals before normal consumption; DOCS ONLY, no new trace/native/
+media/broad. [Exact audit and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#matched-cold-contact-order-r14-and-r15--2026-10-17).

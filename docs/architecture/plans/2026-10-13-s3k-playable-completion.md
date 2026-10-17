@@ -6627,3 +6627,288 @@ cold/helper classes are now absent; do not call it a fresh maintained build.
 Main config6abd/mtime1792141742849921547 and private regular exact bytes/native
 checkouts/old refs preserved. Normal docs-only local evidence commit; seven parsed
 trailers/finalGPT6.1 coauthor/hooks. Root owns next owner/evidence scope/delivery.
+
+
+### R14 first48275 solid-contact source preparation — 2026-10-17
+
+**Source only; no compiler/gameplay execution.** Continues R13 docs commit
+`3537e6238a84d271288a51de2129f606a6968015` above exact production
+`f196e95da4583206a1201b3b4d02b1f626f7026e` in the same owned `t3-98d036a9`.
+The explicit803 baseline ref remains intact. R13's two inspected binary journals
+were consumed, and its observer source/classes removed, before this preparation.
+No production edit, new owner, native run, or renewed correctness claim.
+
+Root's read-only ROM audit identifies a **candidate**, not an observed contact:
+SSZ1 list`1F90EE`, placement offset`04C8`, absolute`1F95B6`, bytes
+`18600A887C00` (flat bridge id`7C`/sub`00` at`1860/0A88`). Spring
+`1F95C2=18A00A707400` is a secondary candidate. On pinned skdisasm
+`044fa46725c71187399e13f5ddb70e11d32dc024`, `loc_44C76`/`loc_44D48`
+(sonic3k.asm:90172–90260) call `SolidObjectTop` with width`20`, height`10`,
+landing`9`; `loc_1E42E`/`loc_1E45A` own the native new-landing branch.
+Baseline's eight-pixel snap is **not native correctness proof**: actual owner,
+call/radius, eligibility, bridge state and upstream geometry remain unobserved.
+Shared bridge/OM/solid-controller/CollisionSystem bytes are unchanged803..f196.
+
+Prepared temporary `ColdCampaignContactJournal.java` plus marked calls in the
+**original** `TestS3kLrzHpzSszColdCampaign` observe only input-list48274..48276.
+No copied driver or provider/controller/session substitution. Deleting exactly
+its nine marked blocks reconstructs byte-exact original class SHA256
+`9616921c0665bd5ac0372beb60eb9fe40d7bab9d469ba68360e9ec36d5b519c0`;
+all original input/step+render/assert/45-step rewind/history calls and ordering
+remain. All56 inspected getter/observer method bodies are source-identical803/f196.
+
+The existing `CollisionTrace` is wrapped only for each observed original
+step+render pair and restored before original assertions. Every pre-existing
+callback is forwarded. Actual `onSolidCheckpointStart/Result` arguments are
+joined with `solidExecutionRegistry.currentObject().object()` regardless of
+AUTO context's null resolver. START is **before** pre-contact scratch refresh;
+RESULT is **after** result/cache publication, before registry batch publication.
+No resolver/capture/restore or collision/terrain helper is invoked. Null-safe
+sensor scalar copies come **only from already-triggered callbacks**; no reprobe.
+
+Each event records original outer/input/BK2/context/cycle/window/input bits,
+actual OM VInt/level LF/OM frame, raw execution cursor, full P1 integer/fraction,
+radii/dimensions/status/speeds/angle/control/rings, physical/copied camera,
+actual context class/physical slot/placement key/base+managed spawn and preupdate
+fields, prior-standing result, current riding/latched owner and cached ride,
+standing/latch/headroom values. Reflection only reads existing private fields;
+generic identity never calls `getX/getY/getSpawn/isDestroyed` or unknown provider
+methods. All live flat bridges are also recorded through their reviewed scalar
+getters (XY/collapsed/live halfwidth/first-pass skip/render-bound eligibility),
+with cached camera bounds. Actual P1 cached render-flag validity and on-screen
+booleans are separate pure reads; no fresh visibility call or invented raw byte.
+Latched bound/released scalars, interact slot and cache-presence bits distinguish
+an absent cache/binding from a false value. Bridge params/anchor are clearly **source-derived**,
+not a captured Java local or native d-register; unknown owner geometry remains
+explicitly unavailable. No guessed owner or zero fallback.
+
+**Writer-observation boundary:** existing hooks do not fire at `setY`,
+`shiftY` or `NativePositionOps.writeYPosPreserveSubpixel`. Actual checkpoint
+START/RESULT can identify an executing owner and **bracket** its resolution,
+including compatibility callbacks/cache writes; they cannot name a particular
+position-write instruction or distinguish several intermediate writes inside
+that bracket. `resolveContactInternal` (:4274/4760+) writes via `player.setY`;
+`applyNonUnifiedTopSolidLandingHeightOverride` (:3937+) can then use
+`NativePositionOps`. `resolveGroundAttachmentAtRawAngle` (:659+) gets existing
+terrain probe results before later `moveForSensorResult` (:1691+) calls
+`shiftX/shiftY`; terrain callbacks may therefore only bracket a wider interval.
+`onSolidCandidate/onSolidResolved/onPostAdjustment` have no production emitters
+in the inspected owners; the wrapper forwards them but does not synthesize them.
+No new callback/API is proposed. If the first Y change lies outside a uniquely
+observed checkpoint, report the actual interval/owner evidence and this seam
+limit, without asserting a unique terrain/bridge cause.
+
+Updated output proposal: own-target UTF-8 JSONL schema`COLD_CONTACT_R14_v1`, one
+header **plus exactly three step rows**, with bounded nested callback events and
+explicit metadata keys; hard cap**1MiB total**/2000events per step. Each buffered
+event compares the same passive tuple before/after buffering; each step write
+also compares before/after. Qualification requires three verified step writes,
+all event passivity checks, complete main BEFORE/AFTER keys, valid header/length/
+keys and the original JUnit assertion outcome. No partial last record qualifies.
+Observer/key/cap/passivity failures invalidate the output and stop, no postboot
+retry. Per-run identity ordinals are not cross-run matching keys.
+
+Root's reviewed earlier helper`0addf06b`/class`664b83ee` required two source-only
+corrections, now implemented: the separate cached render booleans above, and a
+single marked end-of-original-loop return block **after all original per-frame
+assertions, route checks and window handling**. Its helper predicate only reads
+owned-journal/completed48276 state; no mutation, output or gameplay call. With
+property absent/other methods it returns false. Original48276 failures remain
+active. Later full-campaign final assertions are deliberately **UNREACHED**;
+even a future JUnit0 here is **PREFIX scope only**, never a full-route pass.
+No compiler/JVM/test request has been made. Source prepared, **uncompiled**:
+
+- Instrumented class SHA256 `e1e0cfaa988d4d43190a24547e10919288137d10a8260494564200bb34386b59`.
+- Helper SHA256 `533260454a1a7f88e15d13c2650c2ba28172366b3c5a953ba526bc55dbe408a2`.
+- Original-class diff SHA256 `bc4f63ea0701b09d1024bc398bbda71930ac8b5c7cc0e6c8c7983009d286f859`.
+- Combined portable diff SHA256 `b6023e1e7f8bc9c858e1aaec923d3313e743e627045d743bf3537b03322a2eda`.
+
+Proposed command below is **not executed**. If Root grants separate baseline
+and current gates, use identical prepared source at explicit803 and f196,
+changing only the own output filename for current (`cold-r14-current-f196-contacts.jsonl`).
+Preserve inherited `JDK_JAVA_OPTIONS`/`MAVEN_OPTS`; no profile, no outer activity
+shim, original movie/ROM/bootstrap/input/render/rewind semantics:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null \
+ LUA_BIN=/usr/bin/lua5.4 JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+ python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal \
+ -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+ -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical \
+ '-Dtest=TestS3kLrzHpzSszColdCampaign#sonicColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory' \
+ -Dopenggf.cold.contactJournal=target/cold-r14-base803-contacts.jsonl \
+ -Dsonic1.rom.path="$OPENGGF_MAIN/s1.gen" -Dsonic2.rom.path="$OPENGGF_MAIN/s2.gen" \
+ -Ds3k.rom.path="$OPENGGF_MAIN/s3k.gen" test -B
+```
+
+**Hold:** no compiler/JVM, gameplay, new runtime edit or claimed collision cause
+until Root reviews this concrete source/plan and separately authorizes execution.
+Main config/hash/mtime and private regular copy remain unchanged. No live jobs;
+only the two owned temporary sources and this Plan checkpoint are uncommitted.
+
+
+**R14 baseline execution ordinal17 — terminal 2026-10-17T18:54:32Z.** Root
+reviewed class`e1e0cfaa`/helper`53326045`/portable`b6023e1e`, then authorized
+ONE exact803 contact prefix. Same worktree/native session; new local branch
+`bugfix/ai-s3k-cold-campaign-base803-contact-gpt61` at
+`8030832d2ab6080e5324cdfe35e971677fd97b41`. Preserved current`3537e6238`,
+explicit803 and70e refs, all four native/submodule checkout IDs, exact two
+reviewed source bytes and existing Plan WIP. No stash/reset/archive. Hooks
+installed normally; private config regular/exact Main bytes, Main hash/mtime
+unchanged. All other tracked runtime/test source equals803; removing9 observer
+blocks restores original`9616921c`. No runtime edits or current execution.
+
+Executed **exact proposed command above once**, session`39089`; normal lane,
+queue0s, compiler prerequisite in same lifecycle:4133main/4163test source files,
+release25, actual fork Java`25.0.4.1`. No compiler repairs/retry/other selection.
+Maven terminal0, total1m31; method29.275s/class29.522s; **1/0F0E0S**. Parent
+elapsed unmeasured. This is **PREFIX through original48276 assertions ONLY**;
+all original later full-campaign final assertions intentionally UNREACHED.
+
+Original own journal `target/cold-r14-base803-contacts.jsonl`:807618bytes,
+SHA256`b14d412887c8e603599443810d1c71b2820152a65c5c3310b3c0520ec2754313`.
+Validated schema/header, UTF-8/complete length/trailing newline, exactly3explicit
+main keys48274/75/76, sequence1..3, event indices/global sequence1..152, original
+movie/Input Log SHA256 and actual literal input bits L/L/A, clocks/presence,
+67matched START/RESULT pairs. Records52/54/46 events:67START+67RESULT,
+12existing terrain results+3BEFORE+3AFTER. Terminal counters:3step writes and
+152events, all3/152passivity checks verified; no observer/cap/key error. Retain
+ONLY this ORIGINAL bounded journal read-only for Root/upcoming separate current
+gate; inspect/consume the two normal reports under metadata lease alone.
+
+Actual baseline observation (integers/fractions hex, **no trace-row mapping**):
+
+| Original input | Actual bridge checkpoint clocks VInt/LF/OM | Actual engine slot / placement | P1 at START → RESULT | Actual result |
+| --- | --- | --- | --- | --- |
+|48274|48205/9026/9027|32 /204=`04C8`, id`7C`/sub`00`, `1860/0A88`|X`1885.B000`, Y`0A6C.6800`, radius`13`, status`21` unchanged|NONE; previous NONE; no riding cache|
+|48275|48206/9027/9028|same actual owner/cursor32|X`187D.F000`, Y`0A6C.6800`→`0A64.6800`, radius`13`, status`21`→`29`; vx/g`F400`,vy0 and fractions preserved|TOP, standingNow true/last false; prior NONE|
+|48276|48207/9028/9029|same owner/cursor32|X`187D.F000`,Y`0A69.6800`, radius`0E`, status`07` unchanged at bridge|NONE; prior TOP/last true, no riding cache|
+
+The48275 START/RESULT are global events100/101, per-step47/48. The actual
+`SszCollapsingBridgeObjectInstance` placement map and base spawn both identify
+layout204/ROM candidate`1F95B6`; no dynamic spawn. Bridge uncollapsed, halfwidth
+`20`, preupdate`1860/0A88` valid, first-pass skip false, pure render-bound
+eligibility true. Source-derived params remain `[20,10,9,0,0]`, **not captured
+local/native call arguments**. This is the sole observed Y change inside any
+of the67checkpoint pairs; it identifies the actual baseline resolving checkpoint,
+not a position-write instruction or native correctness.
+
+Before that contact, P1's sticky binding points to actual normal
+`Sonic3kSpringObjectInstance` slot10, layout208/id`07`/sub`01`, `18C0/0CC8`,
+interact10, bound true/released false, while current riding cache is absent.
+After the contact, interact/latched/riding owner is bridge32/id`7C`, riding
+baseline`1860/0A88`/piece-1 and standing cache TOP; standing-latch key added.
+Latest-standing and headroom caches are present before/after; they are read
+without querying/recomputing support. P1 cached render validity/onScreen are
+both true at all bridge checkpoints. At48275 bridge START, actual cached bounds
+`[17F5,0A0C,1935,0AEC]`, wrap`1000`, agree with physical/copied camera
+`17F5/0A0C`; after the complete step camera Y becomes`0A04`.
+
+A separate earlier actual SIDE checkpoint at48274 is retracting spring slot6,
+layout206/id`74`/sub`00`, `18A0/0A70`, and does not change Y. No terrain-result
+callback brackets a Y change directly; terrain-only result callbacks precede
+later motion, and there is no position-write callback. No unique native actor,
+current difference, geometry producer, copy-map fault or ROM correctness is
+inferred. Current f196 contact execution remains **UNAUTHORIZED/UNSUBMITTED**;
+no extra prefix, runtime fix, native/media, guards or broad run.
+
+
+**R15 matched-current contact prefix ordinal18 — terminal 2026-10-17T19:00:47Z.**
+Root authorized ONE matched current prefix, no fix/extra probe. Same worktree;
+new local `bugfix/ai-s3k-cold-campaign-current-f196-contact-gpt61` at EXACT
+`f196e95da4583206a1201b3b4d02b1f626f7026e`, without Root/DEZ WIP. Current3537,
+803baseline/observation,70e and other prior refs/native checkouts preserved;
+Plan WIP carried in memory, private regular config exactMain/hash/mtime intact.
+Class`e1e0cfaa`, helper`53326045`, portable`b6023e1e` IDENTICAL to39089;
+all other tracked runtime/test source exactf196;9blocks restore original9616921c.
+
+Executed exact baseline command above **once**, changing ONLY output property to
+`target/cold-r15-current-f196-contacts.jsonl`; session`1886`, queue0s, normal
+lane, Java25.0.4.1/release25. Lifecycle compiled4143main/4192test inputs (normal
+compiler input lists); no compile repair/retry. Maven terminal0,total1m38;
+method30.259s/class30.531s, **1/0F0E0S PREFIX ONLY** through original48276
+assertions. Later full-route final assertions intentionally UNREACHED. Parent
+elapsed unmeasured; no full-campaign closure or native correctness claim.
+
+Current ORIGINAL bounded journal:780114bytes,
+SHA256`296f5fa12fdfc670f0546940f656e8c968d4f84facf08bc7b09628b7080d3a67`.
+Header/schema/UTF-8/length/newline/caps validated; EXACT same3main keys, literal
+movie/Input Log hashes and L/L/A input bits,52/54/46events, global1..152;
+67actual START/RESULT pairs,12emitted terrain results.3/3step-write and
+152/152event-passivity checks verified. Actual clock/context/cursor bindings
+validated, no observer/key/cap failure. Baseline ORIGINAL b14d4128/807618bytes
+unchanged. Preserve BOTH originals read-only until Root inspection; consume
+only the two inspected current XML/TXT normally under metadata lease alone.
+
+**Comparison uses exact step keys and actual placement identity, not Java identity
+ordinals or fitted event alignment.** Before original48274's first observed
+step, all recorded passive fields agree after excluding per-process identity
+numbers EXCEPT flat bridge204's physical slot: **803=32,current=8**. This is
+first observable in this journal, **not an observed birth/allocation time**.
+First checkpoint-order mismatch is48274/event9: 803 retracting spring206 at
+slot6; current diagonal bridge198 atslot6. Positional event comparison stopped
+there. Named placements were then extracted independently from each ORIGINAL
+row, preserving their actual event/slot order. No shifted/aligned trajectory.
+An offline reader Path-join typo was corrected without gameplay/source changes
+or another JVM; it occurred after current journal validation, before comparison.
+
+At original48275, both runs' actual object checkpoints have real
+VInt48206/LF9027/OM9028. Observed source-identity order:
+
+| Run | Actual checkpoint/order | P1 integer+full fraction at START → RESULT | Actual result |
+| --- | --- | --- | --- |
+|803|spring206/id74/sub00,18A0/0A70,slot6; step9/10,global62/63|X1882.F000→187D.F000,Y0A6C.6800 unchanged; vx/gFD40,vy0|SIDE|
+|803|bridge204/id7C/sub00,1860/0A88,slot32; step47/48,global100/101|X187D.F000,Y0A6C.6800→0A64.6800; vx/gF400,vy0|TOP,standing false→true,status21→29|
+|f196|bridge204 SAME source placement,slot8; step13/14,global66/67|X1882.F000,Y0A6C.6800 unchanged; vx/gFD40,vy0|NONE,standing false,status21|
+|f196|spring206 SAME source placement,slot9; step15/16,global68/69|X1882.F000→187D.F000,Y0A6C.6800 unchanged; vx/gFD40,vy0|SIDE|
+
+Both bridge instances are present, uncollapsed, halfwidth20hex, preupdate
+1860/0A88 valid, first-pass skipfalse, render-bound eligibletrue; P1 radius13,
+cached render validity/onScreen bothtrue, boundtrue/releasedfalse, prior bridge
+standing NONE. Actual callback XY1860/0A88 agrees. Source-derived params
+20/10/9/0/0 remain clearly **not captured Java-local/native d-register values**.
+Cached/physical/copied camera at both bridge checkpoints matches
+17F5/0A0C..1935/0AEC,wrap1000. All12 existing terrain-result callback argument
+payloads agree (6at48274,6at48275,0at48276); no reprobe.
+
+The observed immediate branch is source-backed: unchanged OM runs physical
+slots ascending (ObjectManager.java:970,1175); unchanged resolveContact
+(:3697+) compares relX against twice halfwidth. Current bridge8 sees actual
+X1882, right of1880 (relX42hex >=width40hex) and returns NONE **before**
+spring9 pushes X187D. Baseline spring6 pushes first, then bridge32 sees X187D
+(relX3Dhex within40hex) and the observed TOP bracket snaps Y by8px. The
+bridge is not missing or a changed radius/eligibility/halfwidth case. This
+pins **contact-order difference**, not the earlier allocation/lifetime producer
+or either run's native correctness. Do not tune SolidObjectTop/landing heights,
+force slots, replay a bridge after its native pass, or blame geometry/allocator
+from these slot numbers.
+
+After48275 baseline interact/riding/latch transfers10→32/id7C and cacheTOP;
+current retains normal spring10/id07 and no riding cache. End48274 P1 agrees
+exactly; end48275 Y0A64/0A6C with status29/21; end48276 Y0A69/0A71 with status07
+both. Endpoint clocks agree all3keys. Prior R13 full-route f196 death49613
+remains unqualified/historical; these intentionally truncated prefixes repair
+nothing. Earliest missing producer is **before48274**, when placement204 acquired
+slot32 versus8 (and spring2066versus9). No admission/birth/lifetime history is
+in this window; no unique upstream owner is proved. **HAND BACK / STOP** before
+any runtime fix, extra prefix, native/media, guards or broad run.
+
+
+**R14/R15 closure after Root ORIGINAL inspection (2026-10-17):** Root directly
+verified both original byte hashes/headers,3explicit keys/152events and all
+bridge204/spring206 START/RESULT sequence/slots/XY/status/clocks. Accepted the
+immediate contact-order explanation, not native correctness/allocator fault.
+Both original1587732bytes consumed under metadata lease ALONE after extraction;
+no copies/archives/receipts. Restore original ColdCampaign source9616921c, remove
+owned helper53326045 and exactly2instrumented classes (outer46514/helper34553
+bytes) under intended writer.4normal reports consumed previously. Final
+accounting updates this Plan, existing trace audit, SSZ matrix and frontier only;
+normal seven-trailer/GPT6.1 local commit, no runtime/test source committed.
+Last target remains f196+temporary observer compilation with those2classes
+removed, no maintained rebuild. Main/native/config/all refs preserved. R16 is
+SOURCE PREPARATION ONLY after this clean accounting, no JVM/new probe/fix.
+
+Docs accounting branch fast-forwards from f196 to existing DOCS ONLY3537 before
+the new R14/R15commit, preserving R13matrix/frontier anchors without duplicate
+evidence or source changes. Runtime/test source is still exactf196; execution
+pins/results above remain the actual tested803/f196 epochs.
