@@ -113597,3 +113597,25 @@ sidekick_animation_id17/1C; later non-camera frontier unmeasured. No zero-fronti
 full returned-HCZ/exit, slice, alternate or exact GLFW qualification. Root owns
 combined validation and delivery; no Main write/push.
 [Exact source hashes, commands, compared windows and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r11-hczblock-full2-visibility-owner-closes7807-through7808--2026-10-17).
+
+
+### 2026-10-17 — Composed R11/Slot source preserves the exact mixed HCZ slice vector
+
+Rootbef8f27ca includes qualified Slot670cf353d and HCZcd94d7ca4 byte-for-byte,
+plus docs-only ICZc8703d172. Normal Main-wrapper58673 ran only
+`TestS3kHczZoneSliceTraceReplay#replayMatchesTrace -Ptrace-segments`, with
+all3originalROMs/EGL/nullAL/noambient/singlefork/reuse/alpha. Terminal1 at
+14:45:55UTC:1/1F0E0S, queue0/Maven1m23s,29302observations,
+4353=3424physics+929animation, first9482air1/0, warnings/bootstrap0.
+Full sorted error-array SHA25671f91e9494d9a6926cd2f032dcc174a0d289355d9f9a6658b3752ae61d96d251
+matches pre-R11/current/historical R3 exactly. No new slice delta from these
+bounded owners; published803's4699 vector still differs, and10834 CPUcounter
+0000/0001 remains unresolved. Source history locates the earliest compound
+boundary b6c4898e2, not a single proven counter cause; R12 observes visibility
+before any correction. Native10833..35 render_flags84/routine6/counter0.
+
+One complete actual change-based smoke plan now selects3523candidates/all10
+categories plus guards, <=50 per ordinary batch, max150execution minutes/10min
+no-output/queueexcluded. This is separate from trace acceptance; neither a
+lower total nor the planned broad run certifies HCZ, SlotRGB, ICZdeath or the
+coherent ending timeline. Source/commands/limits are in the existing plan.
