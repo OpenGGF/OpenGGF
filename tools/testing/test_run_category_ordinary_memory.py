@@ -8,6 +8,10 @@ import tempfile
 import unittest
 
 import profile_ordinary_memory as profile
+from maven_activity import build_activity_slot
+from maven_queue import inherited_slot, maven_slot, worktree_build_slot
+
+REPOSITORY = Path(__file__).resolve().parents[2]
 
 
 class OrdinaryMemoryTests(unittest.TestCase):
@@ -77,16 +81,22 @@ class CThird { byte[] fixture = new byte[20 * 1024 * 1024];
     @Test void transientAllocation() { byte[] a = new byte[1024 * 1024]; Assertions.assertEquals(0, a[0]); }
 }
 ''')
-            compile = subprocess.run(['javac','--release','25','-cp',str(jar),'-d',str(root),str(source),
-                                      str(source.with_name('MemoryProfileLauncher.java')),str(fixture)],capture_output=True,text=True)
+            with worktree_build_slot(REPOSITORY) as tree_fd, build_activity_slot(REPOSITORY) as activity_fds:
+                compile = subprocess.run(['javac','--release','25','-cp',str(jar),'-d',str(root),str(source),
+                                          str(source.with_name('MemoryProfileLauncher.java')),str(fixture)],
+                                         capture_output=True,text=True,cwd=REPOSITORY,timeout=40,
+                                         **inherited_slot(tree_fd, activity_fds))
             self.assertEqual(0,compile.returncode,compile.stderr)
             service = root / 'META-INF/services/org.junit.platform.launcher.TestExecutionListener'
             service.parent.mkdir(parents=True)
             service.write_text('com.openggf.tools.SuiteMemoryListener\n')
             events = root / 'events.jsonl'
-            run = subprocess.run(['java','-Xmx128m','-Dopenggf.memory.events='+str(events),'-cp',str(root)+os.pathsep+str(jar),
-                                  'org.junit.platform.console.ConsoleLauncher','execute','--disable-banner',
-                                  '--select-class=AFirst','--select-class=BSecond','--select-class=CThird'],capture_output=True,text=True,timeout=40)
+            # Compilation releases activity before the probe waits for execution.
+            with maven_slot(REPOSITORY, estimate=30, kind='python-jdk-control') as fd:
+                run = subprocess.run(['java','-Xmx128m','-Dopenggf.memory.events='+str(events),'-cp',str(root)+os.pathsep+str(jar),
+                                      'org.junit.platform.console.ConsoleLauncher','execute','--disable-banner',
+                                      '--select-class=AFirst','--select-class=BSecond','--select-class=CThird'],
+                                     capture_output=True,text=True,timeout=40,cwd=REPOSITORY,**inherited_slot(fd))
             self.assertEqual(0,run.returncode,run.stdout+run.stderr)
             report = profile.analyse(json.loads(line) for line in events.read_text().splitlines())
             self.assertTrue(report['observerFinished'])

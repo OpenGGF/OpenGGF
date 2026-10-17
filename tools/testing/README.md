@@ -161,6 +161,10 @@ Run `python3 tools/testing/run_categories.py --base <pinned-base> --preflight` i
 same environment as the intended test command. Every `--run` also performs these checks:
 Maven must use Java 25; selections with guards require executable Lua 5.4 (`LUA_BIN`,
 default `lua`) and `pwsh` on PATH. Failures are collected before any test lane starts.
+The Maven version probe holds a shared build-activity lease, inherited by its JVM,
+so it waits for isolated measurements without joining the test queue. Its 20-second
+launch timeout starts after that wait. The lease is released before guard-tool
+checks and test admission; do not wrap preflight in another activity lease.
 This checks tool launches, not ROM completeness, native display access or every fixture
 prerequisite. On macOS use the known working native display/service permissions from the
 first graphics launch, especially after a documented sandbox failure.
@@ -607,6 +611,13 @@ The selector, queue and retention tests run in the CI smoke and full test jobs. 
 ```bash
 python3 -m unittest discover -s tools/testing -p 'test_run_categor*.py'
 ```
+
+Two memory-observer controls compile and run small real JUnit fixtures when the
+JDK and cached console JAR are available. Compilation holds the intended
+repository worktree and shared build-activity leases; each Java probe uses normal
+execution admission after compilation releases those leases. Both children
+inherit their leases. These controls can wait behind isolated measurements even
+though the rest of the Python safety suite uses private repositories or mocks.
 
 ## Per-test memory diagnostics
 

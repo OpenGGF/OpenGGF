@@ -88,6 +88,15 @@ change under test, while native and the semantic `--clip aiz-fire-transition`
 capture both show it covering those frames. Capture from the semantic start, or
 from well before the window, before reading a missing overlay as a regression.
 
+Preflight and Python safety checks can launch real JVMs (2026-10-17, test queue).
+`mvn -v` starts Java; two Python memory-observer controls also compile and run
+JUnit fixtures. They previously bypassed isolated measurement leases. Preflight
+now inherits shared build activity into Maven; fixture compilation holds tree
+ownership plus activity, then releases both before queued Java execution. A
+Python safety pass does not validate a concurrent timing unit. Intersect actual
+or conservative execution intervals; queue submission and inherited descriptors
+alone do not prove execution overlap or a held lock.
+
 Mocked subprocesses must not reach real process cleanup (2026-10-16, test queue).
 An unset `MagicMock.pid` converts to `1`; on Linux, `killpg(1, signal)` calls
 `kill(-1, signal)` and broadcasts to processes the caller can signal. A queue
