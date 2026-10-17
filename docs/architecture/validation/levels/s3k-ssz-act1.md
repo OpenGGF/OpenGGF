@@ -2101,3 +2101,27 @@ Main config hash/mtime, regular private bytecopy, native checkouts,803 and70e re
 are preserved. Target last compiled f196+temporary observer; instrumented cold/helper
 classes are now removed, so this is not a fresh maintained build. [Exact source hashes, commands and stopping limits](../../plans/2026-10-13-s3k-playable-completion.md#r13-matched-cold-campaign-baselinecurrent-comparison--2026-10-17).
 Current cold completion stays blocked; no native/world/full-route certificate follows.
+
+
+## Matched cold contact order R14 and R15 — 2026-10-17
+
+Actual matched original-driver prefixes through48276 pass separately:
+80339089 **1/0F0E0S** and exactf1961886 **1/0F0E0S**. Each has3explicit keys,
+152verified events/passivity checks; later full-campaign final assertions are
+intentionally UNREACHED. They do not close the current f196 death49613 or
+certify native correctness. [Exact commands, epochs and Root-inspected evidence](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#matched-cold-contact-order-r14-and-r15--2026-10-17).
+
+At48275, baseline retracting spring206/slot6 SIDE-pushes X1882→187D before
+flat bridge204/slot32 TOP-snaps Y0A6C→0A64. Current bridge204/slot8 sees X1882
+outside right1880 before spring206/slot9 pushes inside, returning NONE. Radius13,
+bridge width20hex/uncollapsed/eligibility, actual VInt48206/LF9027/OM9028 and all
+12emitted terrain-result payloads agree. Source-derived solid params remain
+separate from actual callback arguments. Native geometry correctness is open.
+
+The first recorded BEFORE48274 already differs in bridge204 slot32vs8. Its
+admission/allocation/lifetime producer is UNOBSERVED before this window; no
+allocator, Animal, geometry, restore or controller defect follows from slots
+alone. Ordinary original45step/two-cycle replays remain in place. Root directly
+verified both original bounded journals before consumption; temporary observer
+sources/classes and4inspected reports are removed, no archives. This is an
+honest contact-order frontier, not a natural native/world/campaign certificate.
