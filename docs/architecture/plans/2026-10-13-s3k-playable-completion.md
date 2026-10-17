@@ -3388,3 +3388,172 @@ ICZ's third finite controller attempt also ended alive at4594, so natural death/
 qualification remains open. Strict HCZ work and the retained native diagnostic attribution stay separate
 from this delivery. No all-S3K, PAL, PCM, predictive six-ending/46-fingerprint timing or performance acceptance
 is claimed.
+
+
+
+
+## 2026-10-17 passive reunion queue causality
+
+This R3 follow-up starts from local R2 commit
+`3896035afa98fc0d52611e982cd2a82b1b92f3f9`, without adopting later Root source.
+Exactly two metadata-only invocations observe solo Sonic/+2 and solo Tails/+2,
+NTSC/native320/LIMITED238/RAW_RGB, default FAST, neutral inputs and the same frozen
+real title-owner VInt0/RNG0 ingress. This is positioned protocol, not a cold
+campaign. Native rows never enter gameplay or readiness. R2's Sonic/team late
+171/194 RGB results remain unresolved; no pictures, native reference production,
+retry, timing repair or manifest edit occurred here.
+
+The recurring [queue probe](../../../src/main/java/com/openggf/tools/S3kEndingQueueProbeTool.java)
+reuses the sampler's private configuration scope and installs the existing
+session boundary observer only when it is unowned. It restores the observer and
+`user.dir` on exit. Its CLI accepts only the two solo/+2/NTSC products and an
+explicit inclusive level-frame window of 1..128 frames. All timing policies must
+remain LIVE, recorded admission must be inactive, and art diagnostic
+`serviceObservations` must remain empty. The JSONL projection includes real
+handle kind/ordinal/submission fingerprint, descriptors, parent/child identity,
+readiness/claim/retirement, profile activation, assigned/remaining service frames,
+eligible boundaries, decision source/model, physical queue head/module metadata,
+last serviced boundary and scene clocks. Prepared bytes, decoder/rewind snapshots
+and native data are not serialized or applied. Diagnostic `queuedFingerprints`
+are explicitly distinct from timing submission fingerprints.
+
+Immutable output label: `${CAPTURE_ROOT}/r3-reunion-queues-v1/`, with
+`engine-sonic-super-320` and `engine-tails-super-320`. Each invocation exits0,
+emits187 JSONL rows including every47 after-step LF4400..4446, stops at outer4446
+in LEVEL, and emits zero image files. Both journals are byte-identical, SHA-256
+`3223626a036b68b151048cd9f7e8c74c1dcf6d92dcf77f880e626540da18552e`.
+Per-product state differs as expected; each full4447-row state prefix exactly
+matches its own retained R2 state prefix. This is a bounded passivity control,
+not a full world-state/rewind equivalence proof. Both provenance records prove
+FAST, LIVE, observer restoration and private configuration publication under
+that output's `configuration/config.yaml.example`; Main's linked config hash and
+mtime remain unchanged. Existing loader resolution via `user.dir` is preserved;
+no Main config migration occurs.
+
+Captured source is HEAD389 plus the exact uncommitted tool bytes packaged by
+this follow-up. SHA-256 sampler:
+`f3911f7a1512f210564c64369e5c873531d564797d9a1d531bf4c06dcc8142c9`;
+queue probe:
+`c1462eaebb7667897fdecabbd3513a411be26efcdf4817e0906976397f0499b7`;
+aggregate Java source:
+`0daa47e529d01366cb7d452e25e2abffb0511b2c26754b418efc1f186cbf896a`;
+compiled runtime:
+`06fb46e90ad4eef2e7d13a9fc8be3ba016dcb248110a78f237ffdcfe53ea48ad`.
+Unchanged FAST manifest SHA-256:
+`c9a0e04c59be87e8bfdf3ef3cf6bff3e342b161a0f6202bbe3f4f2e8a2fbcf06`.
+Sonic state SHA-256:
+`fd859dddd235f585334628581ba33c6cf69208fdde5fa692431c1311bdb68d88`;
+Tails state:
+`f5656e31fc09de9fd8d863d701b42ea5c3cb4785db93837d61e27ebfba8f6772`.
+Both ledgers:
+`76a6bc10d8589776d0f1bb2a66f3786b8512b70e7b2919e94f3ec3fb7b5e8531`.
+Exact commands, source/output hashes and configuration proof remain in the
+existing external `observation-provenance.json` and product provenance files.
+
+### Observed production chain and retained native control
+
+Published ROM `loc_5ADCE` queues `SSZ2_128x128_Kos` at `$1D17A6`, then
+`SSZ2_16x16_Kos` to Block_table, then moduled art; `loc_5AE0A` tests
+`Kos_modules_left`. The following are actual production handles, not an inferred
+mapping from the facade's diagnostic fingerprints. All direct jobs below use
+`KOS_DECOMPRESSION_QUEUE`; all parents use `KOS_MODULE_QUEUE`.
+
+| Actual handle/source | Profile activation / assigned services | First ready/retired after-step LF | First claimed LF |
+| --- | --- | --- | --- |
+| Direct19 / `$1D17A6` | 4402 /4 | 4405 | 4444 |
+| Direct20 / `$1CF2D4` Block_table | 4405 /3 | 4408 | 4444 |
+| Direct21 / `$1CFB46`, child of parent8 `$1CFB44` | 4408 /4 | 4412 | 4413 |
+| Parent8 / `$1CFB44` | child sequence | 4426 | 4427 |
+| Parent9 / `$163418` | child sequence | 4433 | 4434 |
+| Parent10 / `$162914` | child sequence | 4440 | 4441 |
+| Direct29 / `$160D8E`, child of parent11 `$160D8C` | 4441 /2 | 4442 | 4443 |
+| Parent11 / `$160D8C` | final child | 4443 | 4444 |
+
+Direct19's **actual submission fingerprint** is
+`sha256:5b4280f6fbe1de79558386df9153a4f16e91d1abfc34b719c02a9f57292bcde3`.
+It is MEASURED, `s3k-kos-v1`, profileActive, assigned4 and eligible only at
+PRE_MAIN_LOOP for both products. Its remaining count is4 after POST_OBJECTS at
+LF4402, then3/2/1/0 at PRE_MAIN_LOOP observations LF4402/4403/4404/4405.
+The timing job is already ready and physicallyRetired at the last callback;
+the physical facade still lists it until the subsequent art-after hook, with
+Direct20 visible after-step4405 and not serviced at that same boundary.
+Direct21's actual child fingerprint is
+`sha256:e56bd0cfc2bfc32728102336cd4703f19f9f5b54dd431dbd355b011d8edf96a9`.
+The parent/child progression and later service/claim chain are identical between
+Sonic and Tails. Physical module state becomes IDLE/modules0 after-step4443;
+logical `modulesLeft` is false then, and foreground40 advances to44 at LF4444
+for both. These observations bind the formerly hypothetical four-service head
+to the production readiness chain and gate.
+
+Boundary phase matters: PRE_MAIN_LOOP's existing callback is after timing
+service but before runtime art's after-service hook; VINT/POST callbacks run
+after both. The next outer step's VINT callback still reads the previous LF,
+then gameplay increments LF before POST/PRE. Rows therefore retain outer,
+level-before-step, level-at-observation and callback phase separately. PRE is
+the completed loop tail, not an extra next-frame service. Timing retirement and
+physical facade membership are separate observations. No clock correction or
+alignment search is used.
+
+Retained native evidence under `${TASK_SCRATCH}/ending-native-reference-prerequisites/`:
+`native-kos-budget-sonic-super-ntsc-320-v7/kos-service.csv` SHA-256
+`63e60a24c5bb8abbc6eb0f828115a675def132576881ec792a965fee5cac4528`,
+and the corresponding Tails file SHA-256
+`4efcc5a54266f254f5c51a8efb733bd09402b7fde561b3216671aca5f99aa70d`.
+Native Sonic services `$1D17A6` at LF4402..4404 and reaches its end at4404;
+Tails services4402..4405 and reaches its end at4405. Native Block_table retires
+4407/4408 and the first module child4411/4412 respectively. Retained
+`native-cloud-transition-{sonic,tails}-super-320-v5/branches.csv` records final
+modules0 at4442/4443 and gate foreground44 at4443/4444. No native run is repeated.
+
+**Finding and blocker:** the current production profile collapses the native
+three-versus-four service distinction into four for both products, preserving
+the downstream one-pass gate difference for Sonic while matching Tails. This is
+the missing production causal link, not a new-root regression claim or a pixel
+repair qualification. The [existing budget investigation](../designs/2026-10-13-s3k-ending-lifecycle.md)
+already measured nearly identical head work (about211k instruction cycles) with
+different available service windows. `S3kKosServiceModel` models the ROM decoder
+with caller-supplied instruction-cycle budgets and explicit BOOKMARKED versus
+INTERRUPTED_LIVE handling; it does not supply the caller's budget or activate a
+runtime policy. A supported budget still needs exact per-object/player/tail
+animation/DPLC/sprite/screen CPU paths, phase to the next VInt, refresh/Z80/HInt
+and interrupt acceptance, VInt body/callees and VDP/DMA stalls outside the decoder.
+`S3kVIntInstructionCycles` explicitly leaves VIntDrawLevel, UpdateHUD and
+ProcessNemQueue2 unpriced; the VInt/DMA ledger is diagnostic-only. Available
+metadata does not provide those hardware inputs. Changing4 to3 would fit Sonic
+and lose the Tails control. No character/route-keyed cost, manifest adjustment,
+readiness activation or calibrated budget is justified. The causal observation
+ends here; deriving a complete budget is a separate evidence-led slice.
+
+### Focused verification and stopping boundary
+
+Java25 build-only: `python3 "$QUEUE" -Dmse=off compile -B` exits0 (session16453).
+Focused command, from this tree with current Main absolute `$QUEUE`:
+
+```sh
+python3 "$QUEUE" --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl   '-Dtest=TestS3kEndingSamplerTool,TestS3kEndingQueueProbeTool,TestTraceReplayInvariantGuard,TestTraceHydrateSwitchDefault' test -B
+```
+
+Session76536 exits0:18 tests,0 failures/errors/skips (sampler4, probe3,
+trace-authority10+1). Controls cover declared CLI/window refusals, actual
+parent/child projection without payloads or decoder snapshots, and LIVE-only
+refusal without policy mutation. Runtime sources are unchanged from389; mandatory
+S3K4's retained R2 sixty checks are not repeated. The unchanged Python comparator
+is not rerun; there is no broad/full/PCM/benchmark or snapshot/replay workload.
+No semantic red test is promoted.
+
+Each product is invoked once, in the same session94261, using:
+
+```sh
+python3 "$QUEUE" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl   -Djava.awt.headless=true exec:java   -Dexec.mainClass=com.openggf.tools.S3kEndingQueueProbeTool   "-Dexec.args=--rom '$ROM' --out-dir '$CAPTURE_ROOT/r3-reunion-queues-v1/engine-$PRODUCT-super-320' --product $PRODUCT-solo --region ntsc --progress +2 --level-window 4400:4446"
+```
+
+`PRODUCT` is explicitly `sonic` then `tails`; ROM is the discovered original
+absolute file, never copied/linked. Every command uses JDK25, surfaceless EGL,
+null OpenAL, no DISPLAY/WAYLAND_DISPLAY and the normal queue/activity wrappers.
+Both observations admit immediately; Maven execution reports4.766s/4.300s.
+Build56.729s and focused28.563s are invocation durations, not performance claims.
+Consumed focused reports are inspected then removed under the metadata lease.
+No jobs/observers remain. The worktree, branch, immutable observations and unrelated
+TraceChaser gitlink remain for Root accounting; no Main edit, integration or push.
+This does not certify new RGB pairs, team causality, later exit, PAL/Knuckles/wide,
+cold campaign, strict hardware timing or6+46 acceptance.
