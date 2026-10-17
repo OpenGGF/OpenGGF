@@ -2547,3 +2547,175 @@ all high sprites therefore cannot preserve first-SAT-pixel ownership generally.
 The eventual correction needs exact sprite ownership and plane composition,
 not a fitted layer split that only matches this still. No such renderer change
 or broader priority acceptance is included in the fade release repair.
+
+
+### Blue Sphere SAT ownership and Plane A composition — 2026-10-17
+
+Implementation checkout `feature/ai-s3k-sprite-priority` at
+`${TASK_WORKTREE}` starts from Main
+`707b3c2082433c4833da93fbf855a0a748dd58b1` and merges the qualified composed
+prerequisite `2056a99cd4011dff1b725f401a905f8baa7ff779` as `9311b333e` under
+its own build-slot lease. This is local qualification, not Main publication.
+
+Native `Draw_SSSprites` (`loc_99CC` / `loc_9A84`) emits direct grid traversal;
+`Draw_SSSprite_Normal` emits mapping pieces forward and adds the adjusted
+base art word with 16-bit wrap. The unsigned ORIGINAL perspective word at
+`$54` or above clears the base priority bit (`loc_9A04` / `loc_9ABC`).
+Published native stage+160 entries 25/26 (high) precede 29/30 (low) over the
+same horizon pixels. Neither Y sorting, an all-low/all-high split, nor reverse
+painting with per-sprite plane clipping reproduces that ownership. The prior
+call-order test admitted a wrong pixel winner and remains a geometry check;
+actual framebuffer regressions now exercise the ownership consequence.
+
+A package-private special-stage layer samples the immutable indexed bytes of
+its own ROM-backed uploaded patterns, claims the first opaque sprite pixel,
+and only then masks a winning low pixel behind an opaque high Plane A pixel.
+Masked fragments stay in the existing private special-stage atlas range;
+unchanged fragments reuse their original pattern, changed masks reuse slots,
+and uploads are batched. Loaded art is checked against the reserved mask
+range. The helper tracks atlas generation and rebuilds masks on replacement.
+No public API or normalized signature pin changes, shared SAT replay changes,
+new framebuffer, stencil, comparison-data input, or fixture-dependent gate is
+introduced. Rendering preserves an already-bound capture framebuffer.
+
+Resource inspection: the helper owns two fixed 320×224 boolean maps, one
+64-index scratch pattern and one descriptor. Its mask list grows only to its
+high-water mark inside the fixed 8,192-ID reservation; unchanged masks retain
+the same Pattern and atlas entry, and changed masks overwrite the same IDs.
+There is no per-frame range registration or helper-owned GL texture/FBO.
+Stage reset uncaches owned slots; the shared atlas may retain a bounded CPU
+sample for those IDs until its normal cleanup. Atlas disposal deletes its
+page textures; a replacement atlas invalidates retained mask contents. Two
+small command-scope objects per GPU render preserve delayed shader state;
+this is bounded allocation, not a claim of an allocation-free whole renderer.
+Changed mask uploads use the atlas's existing immutable CPU pattern-version
+records. The pre-existing player DPLC temporary arrays remain unchanged.
+No separate performance benchmark was requested or run.
+
+Plane A number cells join the plane mask; icons/banner, appendages, sidekick
+body and main body retain their native priority buckets before grid traversal.
+Shadows follow the grid in SAT ownership and cannot darken an earlier sprite
+or shine through an earlier low sprite hidden by a high plane. The local
+shader scope restores both submission and delayed-execution flags.
+
+All commands ran from this checkout at `9311b333e` plus this commit's local
+implementation/test changes, with Java 25.0.4.1. Main's absolute queue wrapper
+was used throughout; no foreign target tree, ambient display, nested queue,
+policy override, or native agent child was used. Root owns delivery-wide
+validation; this lane ran focused checks only, never a broad smoke or full suite.
+
+Focused renderer/ROM/GPU selection (finished 08:15:51 UTC): **51 tests, 0
+failures, 0 errors, 0 skips**. Maven execution was 1:10; queue wait was 281 s.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null \
+  python3 ${OPENGGF_MAIN}/tools/testing/maven_queue.py \
+  --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  -Ds3k.rom.path=${OPENGGF_ROM_DIRECTORY}/s3k.gen \
+  -Dtest=TestS3kSpecialStageSpritePixels,TestSonic3kSpecialStageRenderer,TestSonic3kSpecialStageWidescreen,TestSonic3kSpecialStageVisualSnapshot,TestS3kSpecialStageSphereMappings,TestS3kSpecialStageShadowPublication,TestS3kSpecialStagePlayerProjection test -B
+```
+
+After adding stage-reset resource retirement, the affected GPU/static-geometry
+checks plus source guards finished 08:22:11 UTC: **100 tests, 0 failures, 0
+errors, 0 skips** (Maven 1:15; queue wait 138 s). The 5 GPU cases include
+600 renders per context, mask/scratch/entry reuse, fixed atlas-page count,
+stage reset/re-entry, real context replacement and page-texture deletion.
+The selection repeats only checks affected by the new lifecycle edit:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null \
+  python3 ${OPENGGF_MAIN}/tools/testing/maven_queue.py \
+  --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  -Ds3k.rom.path=${OPENGGF_ROM_DIRECTORY}/s3k.gen \
+  -Dtest=TestS3kSpecialStageSpritePixels,TestSonic3kSpecialStageVisualSnapshot,TestArchitecturalSourceGuard,TestTraceReplayInvariantGuard,TestTraceHydrateSwitchDefault test -B
+```
+
+GPU assertions cover front-low/rear-high/high-plane → plane,
+front-high/rear-low → front, either priority pair without a high plane →
+earlier SAT, transparent flipped front → rear, equal and inverted screen Y,
+earlier mapping piece, original perspective `$53` / `$54` / `$8050`,
+16-bit art-word addition, number planes versus icon sprites, ordinary player
+before grid, late shadow operators and an already-bound offscreen framebuffer.
+Both unbatched and batched sprite submission and native 320 / outer 800 widths
+are covered. A final test refinement alternates actual GL viewport/projection
+width (320 / 800), asserts retained mask/entry/texture identity and verifies
+the unbatched delayed-shader scope. The same 5 GPU cases pass at 08:27:57 UTC,
+0 failures/errors/skips (Maven 27.826 s; queue wait 206 s):
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null \
+  python3 ${OPENGGF_MAIN}/tools/testing/maven_queue.py \
+  --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  -Dtest=TestS3kSpecialStageSpritePixels test -B
+```
+
+An independent GPT-6.1 source review found no blocking defect and requested a
+distinct-colour 2×2 flipped overlap witness. After the preceding request was
+terminal, that single new regression passes at 08:29:13 UTC, 1 test and
+0 failures/errors/skips (Maven 26.661 s; queue wait 0 s). It checks every pixel
+of the earlier H+V 2×2 piece, its four distinct source tiles/corner colours,
+and the partially masked rear piece's exposed strip, with both batching modes
+and widths. No runtime source changes followed the qualified capture.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null \
+  python3 ${OPENGGF_MAIN}/tools/testing/maven_queue.py \
+  --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestS3kSpecialStageSpritePixels#multiTileFlipsRetainColumnMajorArtAndEarlierSatOwnership' test -B
+```
+
+Fresh maintained capture finished 08:22:33 UTC, exit 0 (Maven 21.337 s; queue
+wait 65 s):
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null \
+  python3 ${OPENGGF_MAIN}/tools/testing/maven_queue.py \
+  --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl compile exec:java \
+  -Dexec.mainClass=com.openggf.tools.S3kSevenChaosGatewayCaptureTool \
+  "-Dexec.args=--rom ${OPENGGF_ROM_DIRECTORY}/s3k.gen --out-dir ${CAPTURE_ROOT}/s3k-sprite-priority-20261017-t3-3be884f6/engine-v11" -B
+```
+
+The original ROM SHA-1 is `CFBF98C36C776677290A872547AC47C53D2761D6`.
+The capture contains the same 174 filenames as v10 (172 PNGs and two CSVs);
+70 PNGs change. `state.csv` (196,072 bytes, SHA-256
+`ad2498e3b7ee7ed788da9dc7feb715b68b4f350eea24ce4cd37bbe15c7af7c3e`)
+and `ledger.csv` (217 bytes, SHA-256
+`d03075823b756908df74a3c2604eb04af9b7b368680ccd4b2f13f207c4dfc514`)
+are byte-identical to `seven-chaos-engine-fade-release-v10`. Events remain
+contact 338, HPZ first 403, release 1295, pedestal 1425, special stage 1441,
+results 1789 and LRZ2 return 2423. Maven emits a `discord-presence-worker`
+shutdown warning, then exits 0; it does not leave this capture JVM running.
+
+Original native input remains
+`${CAPTURE_ROOT}/s3k-parity-coverage-2026-10-14/spot-checks/seven-chaos-native-v2`.
+No native asset or observation is fed into engine rendering/gameplay.
+The unchanged comparator command is:
+
+```bash
+python3 ${TASK_SCRATCH}/s3k-parity-coverage-20261014/seven-chaos-native/compare/pair_reveal_v2.py \
+  ${CAPTURE_ROOT}/s3k-sprite-priority-20261017-t3-3be884f6/engine-v11 \
+  ${CAPTURE_ROOT}/s3k-parity-coverage-2026-10-14/spot-checks/seven-chaos-native-v2 \
+  ${CAPTURE_ROOT}/s3k-sprite-priority-20261017-t3-3be884f6/compare-v11
+```
+
+Native PPMs are 348×240 with the declared active crop `(14,8)..(334,232)`;
+engine PNGs are 320×224. Raw RGB is compared without normalization, shifting,
+rescaling or masking, paired by first nonwhite published reveal after the
+uniform-white minimum. Stage reveal is engine +24 / native +138; results
+is engine +52 / native +128. **All 12 stage comparisons (+0..22 by 2) have
+0 differing pixels**, replacing `19,19,43,43,43,43,46,46,46,46,46,46`.
+**All 17 results comparisons (+0..32 by 2) remain 0**. The actual paired
+stage +22 (`engine046/native160`) and results +32 (`engine084/native160`)
+images were inspected, not inferred from successful file creation.
+
+This closes the sampled 46-pixel sprite-priority mismatch. Grid collection
+still admits every mapped piece: inherited SAT capacity and per-scanline
+admission are not modeled here, so dense or turning scenes are not certified
+as complete VDP parity. The existing visible plane painter also does not fully
+compose transparent HUD Plane A pixels with Plane B; this fix changes their
+priority mask without expanding into that inherited plane-composition work.
+Full-stage RGB, complete timelines, other native character
+configurations, cold/donor/PAL/PCM products and strict timing/trace closure
+remain outside this bounded result. Resource checks establish reuse and
+cleanup, not a performance or frame-time claim. The task branch stays local;
+Root owns integration/publication.

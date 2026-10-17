@@ -55,9 +55,9 @@ class TestS3kSpecialStagePlayerProjection {
                 set(manager, "tailsJumpHeight", (long) height << 16);
                 renderer.render(manager);
                 var expected = new ArrayList<Tile>();
-                expected.add(new Tile(0x5000, width / 2, mainY));
                 if (character == PlayerCharacter.SONIC_AND_TAILS)
                     expected.add(new Tile(0x6000, width / 2, sidekickY));
+                expected.add(new Tile(0x5000, width / 2, mainY));
                 assertEquals(expected, graphics.tiles, character + " width=" + width + " height=" + height);
             }
         }
