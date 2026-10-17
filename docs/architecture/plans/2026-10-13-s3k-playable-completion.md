@@ -6232,3 +6232,25 @@ hash. A separate file hash alone is not that attestation. No adapter, emulator,
 compiler or native execution occurred in this read-only audit. Even a qualified
 initial-state reader would leave ordered per-instruction bus/IRQ/handler inputs
 open; the unused kernel is not production acceptance or a fitted readiness budget.
+
+
+### R16 cold Sonic campaign death bracket — 2026-10-17
+
+[Exact command, source and primitive evidence](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r16-cold-sonic-campaign-first-death-bracket--2026-10-17).
+Production00c54 is broader than failed Root02b and passing Main803; maintained
+case/movie/inlet are unchanged. Sole actual42765 reproduces `cold death49613`,
+1/1F0E0S, queue0/Maven52.688s,17:32:52UTC. Initial build PID outcome stays unknown;
+7156 is preboot getter compile failure only; repaired build19431 passes.
+
+63 observed inputs49551..49613/1860 collision callbacks retain an alive final
+terrain pose19BF.2A00/061D.8600 (-339/-656), then an already-dead pose
+19BF.2A00/0618.8600 (0/-1792) before the first cloud solid checkpoint. Direct
+solid callback names are clouds and teleporter only. CollisionTrace has no
+TouchResponse/damage callback: no exact kill writer/provider is observed.
+Mecha state/ROM collision bytes and shared touch source route are recorded as
+controls, not causal attribution. All samples already have rings0; the earlier
+ring-loss/trajectory owner is outside this observation. Stop at the missing
+first rising-dead writer/cause; no runtime fix or additional execution.
+Temporary observer and owned diagnostics are consumed after durable facts;
+local docs only, prior refs/native4fdf/private config preserved. No campaign
+completion, native parity, regression-isolation or broad/delivery claim.

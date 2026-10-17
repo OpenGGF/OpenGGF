@@ -1999,3 +1999,21 @@ The temporary adapter/classes/launcher/log were consumed and removed; captures s
 This adds one current-source checkpoint. Cold LRZ/HPZ continuity, input0 title
 presentation, inherited VRAM at120, other moments/widths/rosters, audio, timing
 and whole-scene qualification remain outside this observation.
+
+
+## R16 current cold Sonic campaign blocker (2026-10-17)
+
+The unchanged maintained solo320 LRZ→HPZ→SSZ→DEZ campaign fails at movie input49613
+on production00c54, sole observation42765: **1/1F0E0S**, original `cold death49613`.
+The actual matched Main803 case24967 passes;00c54 contains later composition than
+failed Root02b, so this does not isolate a regression or establish native death
+correctness. Historical completion rows above are not current-source acceptance.
+
+A63-input passive window observes P1 alive after terrain and dead before the
+first cloud checkpoint. Only cloud/teleporter solid callbacks are named; the
+proxy has no touch/damage callback. Mecha parent state and ROM collision tables
+are controls, not selected-provider or kill-writer evidence. Earlier ring loss
+is outside the window. See the [R16 audit](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r16-cold-sonic-campaign-first-death-bracket--2026-10-17)
+for exact clocks, pose, movie hash, command and prerequisite accounting.
+No runtime repair, native/media, variant or further campaign execution follows;
+first rising-dead writer/cause and current campaign completion remain open.
