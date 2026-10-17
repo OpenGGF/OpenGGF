@@ -3319,3 +3319,34 @@ exception's constructor signature/location is reconciled; the two stored depende
 remain. No new exception is added, no production allocation is introduced, and automatic store creation or
 updates remain disabled. This preserves the existing ownership debt without hiding an additional dependency.
 The exact current ArchUnit check remains pending after the separate white-fade composition repair.
+
+
+
+
+### White-fade policy composition repair — 2026-10-17
+
+The fresh combined guards on `dbae340c2` found 13 new low-level/runtime edges:
+`FadeManager` queried `SessionManager` and the world's `PaletteWhiteFadeModel`
+during update/render/publication. Keep the public host rule and its existing
+signatures; `GameplaySessionFactory` now translates it once into palette/overlay
+and FromWhite-period values through `FadeManagerInternalAccess`. Graphics no
+longer discovers gameplay orchestration. The bound values survive logical reset
+and snapshot restore; renderer attachment still limits CRAM publication to its
+active owner. Detached UI managers keep their overlay default. No guard or
+frozen exception store was changed.
+
+Focused validation in `feature/ai-s3k-vint-instruction-refusal`, based on
+`dbae340c2`, used Java 25 and the current main absolute `maven_queue.py --normal
+-Dmse=off`, `test -B`, no ambient DISPLAY/WAYLAND_DISPLAY, surfaceless EGL, null
+OpenAL and the original absolute S1/S2/S3K ROM properties. The first selection
+also used `-Dopenggf.headless.gl=surfaceless-egl`:
+
+- `-Dtest=TestWhiteFadePresentationBinding,TestNativeWhitePaletteFade,TestUnderwaterPaletteUpload,TestFadeManager,TestFadeManagerRewindSnapshot,TestPaletteUploadLatch,TestPaletteWhiteFadeModel,TestLevelSpritePresentationLifecycle,TestS3kLrz2SevenChaosGiantRingGateway,TestGameplayModeContextRewindRegistry,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`: 150/0F/0E/0S, finished 09:52:10 UTC. This resolves 15 classes because two classes share the LevelLoading simple name. Native white GPU14, underwater16, rewind7, immediate-scene latch5 and gateway4 genuinely ran.
+- After strengthening only the new test's explicit snapshot-restore assertion, `-Dtest=TestWhiteFadePresentationBinding,TestGameplayModeTeardownFailures,TestSessionManager,TestSessionManagerReadAccessors,TestGameplayModeContextSpecialStageRewindAdapter,TestGameLoopRewindBoundaryPolicy,TestModEngineWiringSeams`: 57/0F/0E/0S, finished 09:53:19 UTC. The new tests verify factory-bound S3K semantics despite a later ambient S2 world, reset and snapshot restore, plus a detached overlay while an S3K world exists. Production retains its non-null rules contract.
+
+The unchanged native component algorithms, 22-V-int duration and `2056a99cd`
+immediate-scene rewind-release path remain covered. Source inspection confirms
+no `SessionManager`/`game.rules` dependency in `FadeManager`. Root owns the
+combined architecture-class check after its independent mask/store repairs,
+integration and push; this slice does not claim a fresh green architecture or
+broad suite. Consumed local logs/XML were removed after checking all skips.

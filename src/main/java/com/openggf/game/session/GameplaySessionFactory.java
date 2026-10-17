@@ -13,6 +13,8 @@ import com.openggf.game.solid.DefaultSolidExecutionRegistry;
 import com.openggf.game.solid.SolidExecutionRegistry;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.graphics.FadeManager;
+import com.openggf.graphics.FadeManagerInternalAccess;
+import com.openggf.game.rules.PaletteWhiteFadeModel;
 import com.openggf.level.LevelManager;
 import com.openggf.level.ParallaxManager;
 import com.openggf.level.WaterSystem;
@@ -54,6 +56,10 @@ public final class GameplaySessionFactory {
                     sessionModule.getChaosEmeraldCount());
         }
         FadeManager fadeManager = new FadeManager();
+        var whiteFade = sessionModule == null ? PaletteWhiteFadeModel.SCREEN_OVERLAY
+                : sessionModule.getRules().paletteWhiteFade();
+        FadeManagerInternalAccess.bindWhiteFadePresentation(fadeManager,
+                whiteFade == PaletteWhiteFadeModel.ROM_PALETTE, whiteFade.fromWhiteVintsPerStep());
         GameRng rng = new GameRng(sessionModule != null
                 ? sessionModule.rngFlavour()
                 : GameRng.Flavour.S1_S2);
