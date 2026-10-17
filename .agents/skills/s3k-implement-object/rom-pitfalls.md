@@ -6229,3 +6229,27 @@ forward replay before visibility flip and after release/recapture. Manual
 onSolidContact tests alone miss this retained managed latch. Origin: HCZ R18
 owner witnessdf2bbf, R19 genuine oldred57dd6a035 and R20/R21 local qualification,
 2026-10-17; existing dated trace audit/HCZ2 matrix record strict residual limits.
+
+
+## A special animal caller can own launch mode and render flags
+
+EggRobo loc_915F6 → ChildObjDat_919E6 → loc_917C0..9181C (skdisasm
+044fa46725c71187399e13f5ddb70e11d32dc024, sonic3k.asm198614..198638/198774..198819)
+does not call the generic MAIN pop initializer. Its own child dispatch uses one
+full Random_Number: lowbit selects fixed word_2C7EA Rabbit/Chicken, original high
+word gives negative max(100,high&1FF), parent renderbit0 signs X, and frame1/
+routine4or6 draws once without translating. SetUp_ObjAttributes only sets bit2,
+so a parent conversion does not erase the consumed facing bit. Native flags5
+keeps render hFlip set for BOTH velocity signs, beyond the deferred RNG gate.
+Persist the semantic mode/profile/facing, not a fixture slot or Java parent link.
+
+Keep existing RNG-free recreation constructor selection intact: adding a longer
+constructor with required enum arguments can make generic default-argument
+recreation pass null. Existing private mutable enum/scalar codecs can preserve
+pending-before-own-init and already-initialized state without a snapshot/API change.
+Test both snapshots with forced whole-world recreation/forward replay, no redraw,
+and actual renderer arguments plus generic POP negative. An independent parent
+component proves its callback by construction; matching source coordinates in a
+campaign pool does not prove that campaign child's unique parent or retirement
+branch. R29 (2026-10-17) closes this launch unit, while original colddeath49613
+still blocks the campaign. Keep its first post-fix producer question separate.

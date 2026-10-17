@@ -1126,8 +1126,14 @@ position rather than inherited spawn coordinates. Gun, flame and muzzle flash
 use the body's render-flip convention, including mirrored child offsets.
 `sub_91930` retains delayed hover Y, falls back to live Y while `$32` is zero,
 and latches gun position/flags during firing. The flame uses live Y from
-`Refresh_ChildPositionAdjusted`. Scaled fly-by art and specialized animal
-launch differences remain inherited gaps.
+`Refresh_ChildPositionAdjusted`. Scaled fly-by art remains an inherited gap.
+The specialized animal launch is now source-backed and independently qualified:
+fixed Rabbit/Chicken table, one full RNG draw, captured parent facing, direct
+WALK/FLY entry/frame1 and stationary first draw, with persistent native render
+flip through recreation. This resolves that component's launch gap, not the
+cold Sonic campaign: the unchanged original case still dies at49613 after the
+repair; actual coldAnimal629 parent/callback and first post-fix split remain
+unobserved. [Bounded tests, source pin and limits](architecture/validation/levels/s3k-ssz-act1.md#r29-native-eggrobo-animal-launch-unit--2026-10-17).
 
 - SSZ EggRobo rewind restores its live x/y spawn metadata after the base badnik
   restore; recreated moving bodies and attachments retain the captured position.

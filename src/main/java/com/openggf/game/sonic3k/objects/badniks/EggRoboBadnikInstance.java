@@ -6,6 +6,7 @@ import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.game.sonic3k.runtime.SszZoneRuntimeState;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AnimalObjectInstance;
+import com.openggf.level.objects.AnimalType;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -44,11 +45,9 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  * and only then does it join {@code loc_9159A} as a hovering fighter — without the
  * {@code _unkFA82} gate, which only {@code sub_91914} applies.
  *
- * <p>Two things this class does not reproduce, filed in {@code docs/status/s3k-known-bugs.md}: the
- * fly-by draws the badnik sheet rather than {@code ArtScaled_EggRoboFly} through
- * {@code Perform_Art_Scaling}, because the engine has no runtime art scaler; and the released
- * animal is the shared {@link AnimalObjectInstance} rather than {@code loc_917C0}'s own
- * {@code word_2C7EA} launch.
+ * <p>The fly-by still draws the badnik sheet rather than {@code ArtScaled_EggRoboFly} through
+ * {@code Perform_Art_Scaling}, because the engine has no runtime art scaler
+ * (filed in {@code docs/status/s3k-known-bugs.md}).
  */
 public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
         implements SpawnRewindRecreatable {
@@ -326,8 +325,13 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
 
     /** {@code CreateChild6_Simple} over {@code ChildObjDat_919E6} -> {@code loc_917C0}. */
     private void releaseAnimal() {
-        spawnChild(() -> AnimalObjectInstance.deferredArtVariant(
-                new ObjectSpawn(x, y, 0, 0, 0, false, 0), services(), null));
+        // word_2C7EA's first two rows are fixed Rabbit/Chicken, independent of zone animals.
+        // loc_917E2 consumes parent render bit0. SetUp_ObjAttributes only bsets bit2, so
+        // even the final-release conversion preserves this bit before the child's own init
+        // (skdisasm044fa467:60996..61000,176987..177005,198614..198638,198784..198800).
+        spawnChild(() -> AnimalObjectInstance.deferredWalkingFlyingLaunch(
+                new ObjectSpawn(x, y, 0, 0, 0, false, 0), services(),
+                AnimalType.RABBIT, AnimalType.CHICKEN, !badnikFacingLeft()));
     }
 
     /** {@code loc_9164E}. */

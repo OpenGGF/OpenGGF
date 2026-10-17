@@ -9755,3 +9755,515 @@ Main/privateconfig/native/media/refs and previous results preserved. R21 is
 source read/plan only after this accounting; no logger/test authoring, compiler,
 JVM, baseline/current repeat, native or fix is authorized. SS/fdf remains
 unvisited and independent live CPU/readiness prediction remains unqualified.
+
+
+**R20 single EggRobo component attempt STOP — 2026-10-17.** Source23 review
+accepted74f1e632 on unchanged f196 runtime with preserved helper8492/b264. Native
+ordinal24/task `cold-r20-reviewed-eggrobo-launch-oldred-once-20261017` authorized one
+exact no-profile normal-lane `-Dtest=TestSszEggRoboAnimalLaunch test`, current Main
+absolute Maven wrapper from owned98d cwd, original absolute s1/s2/s3k ROMs,
+JTO+CLI surfaceless-egl/EGL_PLATFORM=surfaceless/nullAL/no DISPLAY/WAYLAND/Lua5.4,
+fork1/reuse/alphabetical, inherited JDK_JAVA_OPTIONS/MAVEN_OPTS unchanged (unset).
+No equivalent owned live job. Initial70304 terminal1, queue0/Maven21.933s at20:09:44Z,
+stopped at4193-test release25 compilation: two nonexistent
+`nativeDynamicObjectCount()` references105/127. No Surefire/gameplay. Authorized
+pure getter prerequisite corrected ONLY those2calls to existing
+`getActiveObjectSlotCount()` (actual slotAllocator.activeCount), no actor/oracle/
+input/runtime change; reversing2substitutions reconstructs74f1 exactly. Corrected
+source SHA2561e7cba3d5dc40e5272219fc6807a0f83d5e99a641c577ea8c26beb8996168717,
+same13710B/251lines. Source23 result preserved separately.
+
+Same selection24069 terminal1 at20:10:43Z, queue0/Maven24.249s; main reported
+up-to-date,4193 tests compiled release25. XML confirms actual Java25.0.4.1 and all3
+ROM properties, EGL and fork/reuse/order. Exact4 parameter identities[1]..[4],
+4F/0E/0S, class0.729s; case times0.299/0.055/0.044/0.038s. ALLfail line127:
+actual allocator occupancy before4→after7, expected5. Single-new-animal lookup
+and actual childSlot>parentSlot checks passed; score/one-RNG-draw/parent countdown,
+birth snapshot, ALL two-cycle forced whole-world controls and native launch
+assertAll were UNREACHED. This is an unexpected full-scene allocation prerequisite,
+NOT genuine wrong-launch old-red or recreation/native launch proof. Extra2owners
+were not identified by this test; no attribution to initializer/points/arrival/
+allocator, no fabricated native slot truth. Fixture logs warn FAST has no timing
+manifest and uses NONE; no readiness/campaign certificate. STOP exactly here:
+no postboot source/inlet/oracle tuning, retry/JVM/runtime/factory/API change or
+native/campaign run. Root handback precedes any proposed production initializer.
+
+All4 XML identities/failures/0errors/0skips/properties inspected. Exact inspected
+XML44084B SHA2561806a73b02c6ac2626ce31fbd716e2f29045167e8e0707335827e1e8634b9324
+and text19801B SHA2561b0b5e2ae59736c69ca21c373c6a9770ab9dd3582ed1ff9dbc4bcccc49dac064
+consumed under metadata_slot ALONE after this durable checkpoint; no copy/archive/
+receipt. Current target now contains freshly compiled maintained test sources,
+including original ColdCampaign9616, helper8492 and failing component1e7c; runtime
+remains f196/up-to-date, not an animal fix. Main803/config hash+mtime/native/refs
+unchanged. New execution entry24 only;23/source and all prior results retained.
+Frozen untracked component source and this Plan checkpoint remain owned WIP,
+no commit/green claim/implementation authority. Both handles terminal/released.
+
+
+**R21 source seam finding / R22 private raw diagnostic SOURCE ONLY.** Ordinal25
+`cold-r21-eggrobo-fixture-pool-delta-source-prep-20261017` stopped without edit/JVM:
+NativeSstSlotAccess.currentOwner→ObjectNativeSstOverwrite.currentOwner41..49 calls
+virtual getSlotIndex/isDestroyed via ObjectCallbackRouter, so Root accepted that
+its proposed seam was not passive. Prior inspected R20 reports were already
+consumed; no retained before/after registration identities establish the +2owner.
+No arrival/points/allocator attribution from count. Original R20 actual24069 and
+compile-only70304 remain distinct; no launch old-red or recreation proof.
+
+Root separately authorized ordinal26/task
+`cold-r22-raw-registration-fixture-delta-source-20261017` local test-only raw
+protocol, not a helper/API/runtime extension. Frozen uncommitted component full
+SHA25691a1c2c4a493622e17e80265543a5c6751fd7a4cb204f78a760efe7a90ad8780,
+24699B/419lines. Stripping EXACT5 TEMP R22 blocks reconstructs1e7cba3d5dc40e5272219fc6807a0f83d5e99a641c577ea8c26beb8996168717,
+13710B/251lines, byte-for-byte. All original input/seed/camera/parameters/actor
+calls/capture/scan/oracles/+1 STOPassertion preserved in order. New A read is
+immediately after ORIGINAL beforeCount assignment, B immediately after ORIGINAL
+registry.capture before ORIGINAL scan, C immediately after ORIGINAL scan before
+ORIGINAL singleNewAnimal. The unchanged original127 assertion is now physical152.
+
+Source contracts checked directly: ObjectManager activeObjects Map backed by
+IdentityHashMap, dynamicObjects List backed by ArrayList, rewindObjectIds declared
+IdentityHashMap, slotAllocator SlotAllocator; AbstractObjectInstance OWN slotIndex
+int/spawn ObjectSpawn/dynamicSpawn ObjectSpawn; allocator used BitSet cloned.
+Known S3K static layout4/90/110 bounds allocator bits and declared own SSTs; -1
+slotless explicit. Exact raw container/field types fail closed. Raw reflection
+never invokes actor methods. Only immutable ObjectSpawn/ObjectRefId accessors and
+host metadata containers; no getActiveObjects, currentOwner, getX/Y/getSpawn/
+isDestroyed or gameplay capture/restore/scan in new protocol. A/B/C count labels
+are originalBeforeCount plus cloned raw used cardinalities. Only A→B and B→C
+added/removed/rebound registered metadata and used-bit deltas emitted. Same-id
+stored-spawn/slot change is metadata, not proof of birth; null spawn/unresolved
+identity explicit; ambiguous equal simultaneous keys fail closed. Registered
+projection is NOT liveness/current dispatch/native owner, and whole-step transient
+owners or identical unresolved replacements remain unobservable. No clocks added.
+
+One fixed fresh target/eggrobo-r22-registration-deltas.jsonl CREATE_NEW then append,
+4 unique bit0/variant keys, total1MiB hard cap, no truncate/continue. Data records
+require matching compact R22_VALIDATED stdout and originalassert reach. Repeated
+known raw projection equals C before filewrite, after filewrite and after compact
+validation stdout; this proves only declared registered metadata/allocator scope,
+not every gameplay scalar. Runtime f196/helper8492/HEADb264 unchanged. NO compiler,
+JVM/request/output/old-red/fix/commit authorized or executed in this source phase;
+new source/diff/hash/contracts handed back before any separate execution gate.
+
+
+**R23 one raw-registration diagnostic50817 — 2026-10-17.** Native ordinal27,
+`cold-r23-reviewed-fixture-registration-delta-once-20261017`, on HEADb264/runtime
+f196/helper8492/frozen test91a1. SAME original exact-class/no-profile command/env/
+ROM/fork/reuse/order as R20, one normal Main-absolute queue lifecycle; original
+fresh output absent/no equivalent owned job. Queue24s, Maven25.592s, terminal1 at
+20:20:50Z. Main up-to-date;4193 tests compiled release25; XML Java25.0.4.1/all3
+ROM/EGL/fork/order checked. Four exact case identities[1..4],4F/0E/0S,class0.802s,
+cases0.335/0.061/0.050/0.045s. EVERYfailure is original expected5/actual7 assertion
+(now152), after successful diagnostic checks; no cap/passivity/new prerequisite
+failure. Original score/RNG/countdown/worldrecreation/nativeoracle remain UNREACHED.
+This is bounded diagnostic evidence, NOT genuine launch old-red or world/native/
+campaign qualification. FAST-no-manifest→NONE warnings remain the readiness limit.
+
+SINGLE ORIGINAL target/eggrobo-r22-registration-deltas.jsonl14628B,
+SHA256530898bd4f1eb015998461f10315bc2bd41dd361b4f54e2182f6a4a3673665b1;
+all4 complete JSONL keys/phase labels/schema/cap/metadata fields inspected. Case
+keys0,2,1,3 (bit0/variant00,10,01,11); each3657B, cumulative3657/7314/10971/14628
+exactly matches per-case R22_VALIDATED stdout. Matching originalassert reach also
+proves the following known-projection check passed; this is only raw registered
+metadata/allocator passivity, not unmeasured gameplay fields. Original output and
+matching inspected XML44425B(cdbb4609872ddd082d601e95bc8a15b3c2a6e0705921904ef34364d13878c35e)
+/text19801B(2ce2e8a9acab0ff17a0582c4270d87efad8aeab58949f87cc48bb1d3c6729a5c)
+retained read-only for Root DIRECT inspection; no copy/archive/receipt.
+
+ALLcases actual A/B/C allocatorcounts4/4/7. A→B registration AND used-bit deltas
+empty: no change in declared projection across ORIGINAL capture. B→C shows:
+
+| Change | Registered class/source | OWN SST | Raw engine ObjectRefId |
+|---|---|---:|---|
+| added | Updraft,layout11,id14/sub01,stored0300/0CC0 | 8 | DYNAMIC:-1:0:11:4 |
+| added | SszCutsceneBridge,layout12,id77/sub00,stored0320/0C88 | 9 | DYNAMIC:-1:0:12:5 |
+| added | Updraft,layout13,id14/sub01,stored0340/0CC0 | 10 | DYNAMIC:-1:0:13:6 |
+| added | Animal,id00/sub00,stored0180/0C00,not placement | 11 | DYNAMIC:-1:0:-1:7 |
+| removed | Updraft,layout0,id14/sub01,stored0040/0CC0 | 4 | DYNAMIC:-1:0:0:0 |
+
+B→C used bits allocate global8/9/10/11 and release4, agreeing net+3. Parent
+EggRobo remains OWN7/idDYNAMIC:-1:0:-1:3; only rawDynamicSpawn changes NULL→stored
+0180/0C00, with facingbit0 matching the actual case. That is same-identity stored
+metadata publication, not a birth. Actual3 new ROM placement registrations minus1
+removed old placement plus1animal explain this observed count delta; no inferred
+arrival siblings/points/new initializer. Source context is S3K manager's existing
+load-then-execute placement call before exec (ObjectManager732..739,856..859);
+observations only bracket the original scan, not individual allocation/lifetime
+writer dispatches. Raw stored spawn coordinates are not actor live positions;
+registration is not liveness/currentOwner/native SST proof. No clocks were added.
+No count/assertion/inlet/runtime/initdesign/API repair, rerun/new probe/campaign/
+native/wholeworld claim. Source91a1 and all prior results remain unchanged, one
+job terminal/released. Target now test-compiled91a1 (not a maintained animal fix).
+Plan+component remain unstaged owned WIP, no failing-test commit.
+
+
+**R23 Root DIRECT read / R24 source-only inlet follow-up.** Root read ORIGINAL
+14628B/530898bd full4JSON rows plus matching44425B XML markers/originalassertions,
+accepted ABC4/4/7/no projected capture change/scan ROMplacements11/12/13 minus0
+plus1animal, with no liveness/native/inside-scan callback claim. This authorizes
+consuming ONLY these inspected originals (journal14628/XML44425/text19801,total
+78854B), metadata_slot ALONE; no archive/copy/receipt. Prior source/execution
+results remain historical. No new JVM or runtime fix authorized. R24 may only
+strip fiveR22 blocks to exact1e7, then move the SAME4 public declared camera
+assignments before the unchanged existing warm loop if actual production latch
+source supports it; preserve all loop ticks/release gate/seed/parent/count/score/
+RNG/nativeoracle/twice-world controls. Source/hash/diff before another execution gate.
+
+
+**R24 declared initial camera — SOURCE ONLY, no execution.** Exact ordinal28
+`cold-r24-declared-camera-inlet-source-correction-20261017` on same98d/b264/runtime
+f196/helper8492. First retained Root's DIRECT accepted R23 raw facts in Plan/
+registry, then consumed all3originals78854B under metadata_slot ALONE, no archive/
+copy/receipt. Stripped EXACT5 TEMP R22 blocks, recovering reviewed1e7cba3d
+13710B/251lines byte-for-byte. ONLY subsequent source difference: move the same
+four public fixture.camera setX/setY/setXCopy/setYCopy assignments, same order/
+values, from after warm-loop gateassert to immediately after manager retrieval
+BEFORE that existing unchanged loop. Reverse that4line move reconstructs exact1e7.
+New frozen source SHA2560d2d216c91721c1c61f609f16441a2686e67824d862027f80733b935adceb89f,
+13710B/251lines. No new wait/scan/filter/count waiver/private actor/cache write or
+actor/oracle change. Original +1 assertion remainsphysical127; original loop,
+VInt16mod32 gate/seed/parent/score/RNG/nativeassertAll/two-world controls unchanged.
+
+Source justification: existing scan passes fixture.camera.getX into manager.update;
+ObjectManager693..704 advances its normal clocks and refreshes live camera bounds,
+732..739 invokes S3K load-then-execute placement. runTwoAxisLoadThenExecutePlacement
+856..859 calls placement.update(cameraX) then syncActiveSpawnsLoad(false). The X
+cursor compares actual camera coarse/chunk (ObjectPlacementController831+), while
+currentCameraYCoarseForTwoAxisPlacement3638..3639 reads live camera.getY()&FF80;
+syncActiveSpawnsLoad3517..3543 consumes/latches the actual coarse Y. Existing
+render-state publisher consumes copied camera words3879..3888. Therefore declared
+initial camera inputs belong before the already-existing ordinary warm scans,
+rather than introducing a new camera window between warm/count and release scan.
+This supports a routine fixture-order correction, not proof that the next run's
+pool/RNG/recreation/native assertions pass. No earlier R20/R23 failure reclassified
+as native launch old-red. No production/method/API/allocator/timing/physics edit.
+No compiler/JVM/queue after correction; target still last compiled91a1 R23 observer,
+including stale temporary R22Read class, NOT compiled0d2d. All original inputs and
+prior results/refs/config/native remain preserved. R24 source/diff/hash handed back
+before separate compiler/execution gate. No failing test commit; owned source and
+Plan remain unstaged.
+
+
+**R25 corrected independent unit96038 — GENUINE OLD-RED, no implementation.**
+Native ordinal29/task `cold-r25-reviewed-declared-camera-oldred-once-20261017`,
+HEADb264/runtimef196/helper8492/test0d2d. Root actual251line/sourcehash/reverse4move
+readback accepted before ONE same no-profile exact-class normal-wrapper lifecycle,
+all3originalROM/JDK25/EGL/env/fork/reuse/alphabetical as R20/R23. No equivalent
+owned live selection, no new diagnostics. Admitted queue0, Maven24.072s, terminal1
+20:34:40Z. Main up-to-date;4193 tests compiled release25; actual XML Java25.0.4.1,
+all3ROMs/EGL/fork/order inspected.4F/0E/0S,class0.819s,cases0.353/0.083/0.063/0.052.
+ALL4actualidentities[1..4] reach final native assertAll172 AFTER all prerequisites
+and BOTH full-world forced-recreation/replay cycles; no unexpected setup or rewind
+failure. Every case has EXACT4 native launch assertion failures:
+
+| Parent bit0 | Variant | X speed expected/actual | Y speed expected/actual | State expected/actual | Frame expected/actual |
+|---:|---:|---|---|---|---|
+| 0 | 0 | -512 / 0 | -256 / -1024 | WALK / MAIN | 1 / 2 |
+| 1 | 0 | +512 / 0 | -256 / -1024 | WALK / MAIN | 1 / 2 |
+| 0 | 1 | -512 / 0 | -421 / -1024 | FLY / MAIN | 1 / 2 |
+| 1 | 1 | +512 / 0 | -421 / -1024 | FLY / MAIN | 1 / 2 |
+
+Passed first: real ROM parent factory/ordinary lowestfree and AfterCurrent later
+child, exact+1 pool/no extra points SST/unchanged score, one actual own-init RNGdraw,
+parent countdown. Two cycles restore pre-release and already-born world snapshots,
+prove fresh parent/child identities and whole-registry equality, replay4 ordinary
+passes identically. Other final native assertions pass: initXY0180/0C00/fractions0,
+fixed tablegroundY/map/artvariant,timer7,completedfirstdraw/deferfalse,priority6/width8.
+This proves the independent parent-constructed release uses the wrong general
+launch initialization; NO coldAnimal629 unique parent/native campaign proof. Raw
+flags5 are not asserted by current scalar oracle. FAST-no-manifest→NONE warnings
+remain; no readiness/fullroute/world/native certificate beyond stated controls.
+
+FULL original XML70708B SHA256474af00ebf35d3308ef11516e614c4e0af32a7ef36107a5ba37e877c09108f0e
+and text44785B SHA25683debf9420959e8a17e4ddf8d688d71e1a0e7c0199986ef7cb0230f5605a6c6b
+inspected, retained0444 at original target/surefire-reports paths for Root direct
+failure-values read, no copy/archive/receipt. No retry/extra JVM/source edit/failing
+test commit; target now test-compiled0d2d, unchanged mainf196. Unreferenced earlier
+R22Read compiled inner artifact may remain; no maintained animal fix claimed.
+
+**SOURCE-ONLY initializer design handed back, NOT implemented/authorized.** Limit
+production proposal to EggRoboBadnikInstance.releaseAnimal + AnimalObjectInstance.
+One semantic deferred already-walking/flying launch entry using fixed existing
+RABBIT/CHICKEN definitions (native word2C7EA first2rows:Map5/-200/-400 andMap1/-200/
+-300), not general zone-pair selection. Shared Animal receives explicit typed
+profiles and scalar native parentbit0; captured private mode/profile-enums/facing,
+no Java-parent link, extra SST, spawn-subtype overloading, runtime game/zone/route
+branch or allocator/schema rewrite. Own first dispatch ONE nextRaw, variant=lowbit,
+X=profileX with parentbit0 sign, Y=-max(100,(raw>>>16)&1FF),frame1,stateWALK/FLY,
+timer7, then draw/return without translation. Keep R5 prior-render lifetime and
+native width8/y_radiusC/height0/priority300. Native flags5 requires own renderflip1
+independent from velocity sign for this mode; normal general/S1/S2 paths unchanged.
+
+Parentbit0 scalar provenance: native CreateChild6_Simple177205..177227 copies
+position/parent3 through AfterCurrent; SetUp_ObjAttributes176987..177005 only bset2
+render_flags, preserving bit0 even final-release fighter conversion. The release's
+remaining native work does not change bit0 before the child's later own init. This
+supports projecting that one consumed bit without an unregistered Java-parent
+reference. Existing SpawnServicesDefaultArgsRewindRecreatable constructor remains
+non-RNG placeholder; existing primitive/enum codec (RewindCodecs89..94) restores
+captured mode/profile/facing/firstdraw/defer before next own dispatch. New mode's
+allocated-but-not-yet-initialized child snapshot is NOT yet tested: existing before
+snapshot is parent-beforecreation and birth is child-afterinit; any eventual fix
+needs short pre-owninit capture/recreate control as well as current two-cycle unit.
+Cross-package semantic factory would be public static INTERNAL on existing
+non-ModAPI Animal class, no new ModAPI annotation/descriptor/interface/pin; any
+unexpected policy/public-contract expansion is a handback, no fabricated pins.
+No production writing or new execution before Root scope decision. All prior
+results/refs/Main/config/native unchanged, only existing Plan+untracked unit WIP.
+
+
+**R25 Root DIRECT read / R26 source-only repair gate.** Root read entire ORIGINAL
+70708B XML474af00e...09108f0e and accepted all4 exact4-field native failures after
+unchanged two-world prerequisites/ordinary RNG/allocation/native other fields.
+Independent eggrobo_launch_design_review plus Root source read found no blocking
+objection to bounded deferred semantic launch. Record then consume inspected
+XML+TXT115493B metadata_slot ALONE, no archive/copy/receipt; preserve exact0d2d
+old-red oracle. New R26 authoring only: existing AnimalObjectInstance and
+EggRobo.releaseAnimal, persistent captured mode/profile/facing after defer clears,
+fixedhFlip both X signs, constructor SET EXACT/RNG-free restore ctor unchanged,
+new pending-preowninit wholeworld/twiceforward control and actualrendererarg/
+genericnegative controls. Source frozen/hash/diff/selectors before ANYcompiler/JVM.
+No API/interface/schema/modpin/sharedallocator/physics/campaign/native extension.
+
+
+**R26 implementation SOURCE FREEZE — no compiler/JVM.** New ordinal30/task
+`cold-r26-native-launch-implementation-source-freeze-20261017`. R25 Root DIRECT
+inspection durably recorded first; original XML+TXT115493B consumed metadata_slot
+ALONE, no copies/archive/receipt. Scope follows accepted independent design review.
+Only production paths AnimalObjectInstance and EggRobo.releaseAnimal changed.
+
+- Animal SHA256944a29333c7d41e58d8b693fcb668443d6e351acc47da08ad65bbaecb6a8cba8
+  (16812B): private persistent LaunchMode POP/WALK_OR_FLY, two nontransient mutable
+  AnimalType enum profiles and facing scalar. deferredWalkingFlyingLaunch validates
+  both profiles before construction, then sets those fields. ALL3 constructor
+  signatures AND full bodies byte-identical to b264; no longer/defaultable overload.
+  Own defer branch ONE nextRaw selects fixed profile bylowbit; full original high
+  word gives -max(100,high&1FF), profileX signedbyparentbit0,frame1,WALK/FLY, first
+  display still returns without movement. Mode persists after deferfalse and makes
+  actual appendRenderCommands hFlip=true regardless of velocity sign. Existing
+  POP constructor/factories, zone definition/nextBits branch, points, motion,
+  R5 render/visibility and S1/S2 defaults unchanged. Existing generic primitive/
+  enum codec captures profiles/mode/facing before and after initialization.
+- EggRobo SHA256b9e3474e3bdb66d6a9c691d3ce69dc327b4eea445dcf1c30b74ebba8e91db52a
+  (19310B): release uses same spawnChild/ordinary AfterCurrent allocation with fixed
+  RABBIT/CHICKEN and !badnikFacingLeft scalar; no Java parentlink/new SST. Native
+  word2C7EA/loc917C0/SetUp_ObjAttributes bit0-preservation citations at own044pin.
+  Header removes only now-implemented animal launch gap; scaling gap remains.
+- Existing TestAnimalObjectRngOwnership SHA25681f7db5422e2f2a75a4ccbf81872bf5320eb6c53773c0aa2fb27a89620364bfb
+  (8774B): existing3 cases untouched; added2 parameter renderer cases verify actual
+  drawFrameIndex hFliptrue for both -200/+200 X, then AGAIN after next routine with
+  deferalreadyfalse. Deliberately different mocked zone types verify direct profile
+  mapping selection. Added generic-pop actualrenderer negative (frame2/no flip),
+  null-profile validation/noRNG case. Existing renderer-only Stub services seam,
+  no private actor writes or renderer-field injection. Old stub renderManager
+  defaultnull preserved. Future class case count7, not executed.
+- New real ROM TestSszEggRoboPendingAnimalLaunch SHA256570281df21d22784511888df93ee5cb1b300c95d2e8cf25bad4eb96b61177980
+  (7543B):4 cases both facing/variant, ordinary factory allocation captured BEFORE
+  own dispatch. Asserts no constructor/capture RNG, native firstdraw stationary
+  launch, exact one draw; two FULLWORLD forced recreation cycles restore pending
+  and initialized snapshots, assert fresh instances/no restore RNG/whole-registry
+  equality and four-pass identical forward replay. Pending profile/mode propagation
+  and already-initialized no-redraw both exercised. No assigned slots/private actor
+  writes/trace data/controller/provider substitution. Authored, NOT compiled/run.
+- Original four-case old-red oracle is byte-unchanged0d2d; helper byte-unchanged8492
+  in separate b264 preservation commit. No API/interface/schema/pin/allocator/source
+  authority/timing/physics/ROM/fixture edits outside those two runtime owners.
+
+Frozen selectors proposed for later separate authority, NOT submitted:
+`TestSszEggRoboAnimalLaunch,TestSszEggRoboPendingAnimalLaunch,TestAnimalObjectRngOwnership`
+(expected15 cases by source); affected existing
+`TestSonic2AnimalObjectTiming,TestS3kFreedAnimalRenderLifetime`, mandatory S3K4
+`TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`;
+relevant bounded capture/source guards
+`TestRewindFieldDispositionGuard,TestRewindCoverageGuard,TestTraceReplayInvariantGuard,TestTraceHydrateSwitchDefault`
+if Root selects them. No repeated broad/profile/trace/campaign/native probe.
+Root exact-source/hash/diff handback precedes every compiler/JVM. Source-only
+checks: git diff whitespace, exact2productionpaths, all3constructor bodies/set,
+original0d2d/helper8492 hashes, configMain hash/mtime/private regular copy and clean
+index. No behavioral pass claimed. Target remains R25 test-compiled0d2d with main
+f196, NOT new runtime944a/b9e3 nor new tests; earlier unused R22Read class mayremain.
+HEADb264/refs/native/Main unchanged. Existing Plan/runtime/test WIP unstaged, no
+failing test commit; source frozen pending Root readback/next gate.
+
+
+**R27 focused execution36866 — 78 GREEN, separate campaign/guard gate pending.**
+Native ordinal31/task `cold-r27-reviewed-native-launch-focused-once-20261017`;
+Root accepted exact R26 runtime/test diff and all5 hashes before ONE lifecycle.
+HEADb264/runtimef196 + Animal944a/EggRobob9e3; source fingerprint
+3d3814aa52c58465e920b5f498af289f43036eacdec1df11cedd28bcb51aae6f,
+original old-red0d2d and maintained helper8492 unchanged. All6 Java hashes verified
+again after terminal. Command from own98d cwd, no profile/outer activity shim:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 ${OPENGGF_MAIN_WORKSPACE}/tools/testing/maven_queue.py --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dsonic1.rom.path=${OPENGGF_MAIN_WORKSPACE}/s1.gen -Dsonic2.rom.path=${OPENGGF_MAIN_WORKSPACE}/s2.gen -Ds3k.rom.path=${OPENGGF_MAIN_WORKSPACE}/s3k.gen -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical -Dtest=TestSszEggRoboAnimalLaunch,TestSszEggRoboPendingAnimalLaunch,TestAnimalObjectRngOwnership,TestSonic2AnimalObjectTiming,TestS3kFreedAnimalRenderLifetime,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test
+```
+
+Inherited JDK_JAVA_OPTIONS/MAVEN_OPTS remained unset. Queue0; Maven1m09s;
+terminal0 2026-10-17T20:50:52Z. Fresh compilation4143 main/4194 test sources
+release25; actual XML Java25.0.4.1, all3 absolute ROM properties, EGL/fork1/reuse/
+alphabetical verified for every class. Nine simple selectors ran10 actual XML
+classes because LevelLoading matches both packages. All78 unique case identities,
+all10 XML+10 TXT summaries inspected: **78/0F/0E/0S**.
+
+| Actual XML class | Tests | Failures/errors/skips |
+|---|---:|---|
+| game.sonic2.objects.TestSonic2AnimalObjectTiming | 1 | 0/0/0 |
+| game.sonic3k.TestSonic3kBootstrapResolver | 6 | 0/0/0 |
+| game.sonic3k.TestSonic3kDecodingUtils | 3 | 0/0/0 |
+| game.sonic3k.TestSonic3kLevelLoading | 36 | 0/0/0 |
+| game.sonic3k.objects.TestS3kFreedAnimalRenderLifetime | 2 | 0/0/0 |
+| game.sonic3k.objects.badniks.TestSszEggRoboAnimalLaunch | 4 | 0/0/0 |
+| game.sonic3k.objects.badniks.TestSszEggRoboPendingAnimalLaunch | 4 | 0/0/0 |
+| level.objects.TestAnimalObjectRngOwnership | 7 | 0/0/0 |
+| tests.TestS3kAiz1SkipHeadless | 8 | 0/0/0 |
+| tests.TestSonic3kLevelLoading | 7 | 0/0/0 |
+
+Class names above share prefix `com.openggf.`. Four unchanged0d2d native-launch
+oracle cases now pass after prior genuine R25 red; four pending-before-own-dispatch
+cases and actual render-argument/generic-negative controls pass. Both forced
+whole-world recreation/replay paths are exercised, including pending captured mode
+and already-initialized/no-redraw state. Existing R5 animal lifetime and S2 timing,
+RNG controls and mandatory S3K4 pass. FAST fixtures still have no timing manifest
+and select NONE: this is not a hardware-readiness certificate. DecodingUtils'
+deliberate out-of-bounds collision-index warning is not a failed case.
+
+Focused result only: no original campaign, unique coldAnimal629 parent attribution,
+native route truth, source/API guard, broad smoke or full-suite pass claimed.
+No extra JVM/retry/production edit after the authorized lifecycle. Root was notified
+of78green; fresh guards and one original campaign require the separate specified
+gate. Target now contains freshly compiled candidate944a/b9e3 and tests, rather
+than former f196-only classes; an unused older R22Read inner artifact may remain.
+Main803/config SHA2566abd111c...d11f7da/mtime_ns1792141742849921547 and own regular
+exact config copy verified unchanged; refs/native/private state preserved. Existing
+Plan/runtime/test WIP remains unstaged, index empty, no new commit. After this durable
+checkpoint the20 inspected standard reports (255785B) are consumed under metadata_slot
+ALONE, no archive/copy/receipt; job36866 and owned leases terminal/released.
+
+
+**R28 conditional sequential validation — frozen source, results pending.**
+Native ordinal32/task `cold-r28-frozen-native-launch-guards-then-original-campaign-20261017`.
+R27 actual78green/accounting accepted. SAME HEADb264/runtimef196 + approved
+Animal944a/EggRobob9e3/tests81f7/5702/0d2d/helper8492; all6 literal Java hashes
+and original maintained ColdCampaign9616921c verified, index empty. No duplicate
+owned Maven request/process found. Main803/config hash+mtime/private regular copy
+verified unchanged. FIRST one normal fresh-JVM `-Pguards` exact6cases:
+`TestRewindFieldDispositionGuard#noNewSilentlyDroppedRewindFieldsBeyondBaseline,TestRewindCoverageGuard#noNewCoverageGapsBeyondBaseline,TestTraceReplayInvariantGuard#traceReplayCodeDoesNotWriteRecordedStateBackIntoEngine,TestTraceHydrateSwitchDefault,TestModApiSignatureSurface#candidateZeroSevenSurfaceIsPinnedToTheCurrentSurface+engineOnlyRuntimeHelpersDoNotLeakIntoTheZeroSevenSurface`.
+All3 original absolute ROMs/Java25/EGL single JTO+CLI/nullAL/noambient/Lua/fork1/
+reuse/alphabetical/current Main absolute wrapper, no extra build. Only if actual
+6/0F/0E/0S and all7 source hashes still exact: ONE original UNINSTRUMENTED
+`TestS3kLrzHpzSszColdCampaign#sonicColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory`
+full method, no profile or journal/contact/pool/new property. All original driver,
+movie/step/render/assert/45-forward/two-world-window/full-route finals preserved.
+Any failure STOP/no tune/retry/extra execution. Both compiler prerequisites belong
+inside their authorized lifecycle. No commit/integration/source change until
+handback. Original campaign success would cover engine route/world windows only,
+not native P1 parity or unique coldAnimal629 parent provenance. Source frozen
+while queued/live; distinct phase handles/results recorded below after terminal.
+
+
+**R28 phase1 guard51551 — EXACT6 GREEN; conditional campaign admitted to submit.**
+One fresh `-Pguards` normal JVM, queue0, Maven26.652s, terminal0
+2026-10-17T20:55:55Z. Main compile up-to-date;4194 tests recompiled release25.
+ALL5 XML+5 TXT inspected:6/0F/0E/0S, exact requested methods, Java25.0.4.1,
+all3originalROM/EGL/fork1/reuse/alphabetical verified. Actual methods:
+- `com.openggf.game.rewind.coverage.TestRewindCoverageGuard#noNewCoverageGapsBeyondBaseline`
+- `com.openggf.game.rewind.schema.TestRewindFieldDispositionGuard#noNewSilentlyDroppedRewindFieldsBeyondBaseline`
+- `com.openggf.mods.TestModApiSignatureSurface#candidateZeroSevenSurfaceIsPinnedToTheCurrentSurface`
+- `com.openggf.mods.TestModApiSignatureSurface#engineOnlyRuntimeHelpersDoNotLeakIntoTheZeroSevenSurface`
+- `com.openggf.tests.TestTraceReplayInvariantGuard#traceReplayCodeDoesNotWriteRecordedStateBackIntoEngine`
+- `com.openggf.tests.trace.TestTraceHydrateSwitchDefault#hydrateSwitchDefaultsOff`
+
+No baseline/schema/pin adjustment; existing closed-gap notices are not failures.
+All6 frozen Java SHA256s AND original uninstrumented ColdCampaign9616921c
+rechecked exact AFTER terminal. Index empty; no equivalent owned live/queued
+Maven request. Guard10 standard reports (119186B) inspected then consumed
+metadata_slot ALONE, no archive/copy/receipt. Compiler belongs to authorized
+lifecycle, no extra build. Conditional authorization satisfied; original full
+campaign now submitted ONCE, unchanged source/no observer/no diagnostic property:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 ${OPENGGF_MAIN_WORKSPACE}/tools/testing/maven_queue.py --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dsonic1.rom.path=${OPENGGF_MAIN_WORKSPACE}/s1.gen -Dsonic2.rom.path=${OPENGGF_MAIN_WORKSPACE}/s2.gen -Ds3k.rom.path=${OPENGGF_MAIN_WORKSPACE}/s3k.gen -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical -Dtest=TestS3kLrzHpzSszColdCampaign#sonicColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory test
+```
+
+No journal/contact/pool blocks, early stop or provider substitution; all original
+movie/step/render/45forward/two-replay/route-final assertions remain active. Target
+is current candidate runtime944a/b9e3 and4194 test classes, not a detached baseline.
+No native/uniqueAnimal629-parent claim; campaign outcome not forecast.
+
+
+**R28 phase2 campaign96020 — SAME ORIGINAL DEATH49613, STOP.**
+The exact6guard/hash conditions were satisfied before the only original full-method
+submission. No profile/instrumentation/early return/new diagnostic property; XML
+has NO `openggf.cold.*` property. Original ColdCampaign9616921c stays byte-exact,
+including fixed movie, step+render, assertion/order, 45-forward/two-cycle world
+windows and full-route finals. Both compiler prerequisites occurred inside the
+normal lifecycle; main up-to-date,4194 tests recompiled release25. Queue0,
+Maven52.053s, terminal1 2026-10-17T20:57:29Z. All original XML/TXT inspected:
+**1/1F/0E/0S**, case28.622s/class28.907s, actual requested sole method:
+
+```text
+com.openggf.tools.TestS3kLrzHpzSszColdCampaign#sonicColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory
+org.opentest4j.AssertionFailedError: cold death 49613 ==> expected: <false> but was: <true>
+TestS3kLrzHpzSszColdCampaign.java:454 -> verifyDeathEggCampaign:506
+```
+
+This is the first original failure, same endpoint as unpatched f19698174 and
+matched R13 tuple run. Per-input no-death assertion stops the method at49613;
+no novel assertion/observer/setup error. Previous per-input assertions and any
+already-triggered replay controls remained active, but uninstrumented XML has
+no per-window/route endpoint log: do not invent which windows triggered or their
+boundary values. Full-route completion, Mecha/results/DEZ load/assembly/release,
+exact final load/boss values and outgoing-SSZ-history retirement assertions after
+the loop are UNREACHED/UNQUALIFIED; no campaign pass claimed. Same death message
+does not establish unchanged earlier pool, unique coldAnimal629 parent/callback,
+current first tuple/contact difference or native correctness. The independent
+source-backed EggRobo initializer unit remains78green and exact source/API guards
+6green; it has not closed the original campaign regression. No phase/allocator/
+collision/boss/campaign tuning, runtime edit, further JVM/probe/native/variant,
+commit or integration after STOP.
+
+All6 literal Java SHA256s AND original9616921c rechecked exact after terminal;
+HEADb264/indexempty/Main803/config6abd111c...d11f7da+mtime_ns1792141742849921547/
+own regular exact config copy unchanged. All required3ROM/Java25.0.4.1/EGL/fork1/
+reuse/alphabetical properties verified. Original XML172413B SHA256
+3605eedba79660e9810facc406a5ff339dc61b1107d7e1fd0b655fca710767b1;
+TXT1458B SHA2564587a72bce8eee1604fff164380a2d6e63e59dfd6bd7f716b08ead53053f07a6.
+Known same49613 failure, not a novel producer witness; two inspected standard
+reports173871B consumed metadata_slot ALONE after these durable facts, no copy/
+archive/receipt. All R28 jobs/leases terminal/released; only existing Plan plus
+approved runtime/test WIP remains unstaged, no new commit. Fresh target contains
+candidate944a/b9e3/test compilation, possible unused old R22Read inner artifact.
+Root notified of exact STOP/limits; further work requires its next bounded scope.
+
+
+**R29 local preservation decision / source-read-only next scope.** R28 actual
+78focused+6freshguards and unchanged original49613 failure accepted. Root
+independently accepts the two-owner launch repair despite the open campaign:
+real-parent0d2d and pending5702/render81f7 are green; all6 Java source bytes remain
+944a/b9e3/81f7/5702/0d2d/helper8492. Preserve local commit with exactly2runtime+
+3test paths, affected existing matrix/backlog/knownS3K/frontier/audit/Plan, release
+fold (native animal launch only, scaled fly-by still open), and mirrored reusable
+pitfall. No original driver/helper edits, failing new test, source/API pin or extra
+JVM/guard/campaign/probe. Existing detailed70304→24069→50817→0d2d→96038→78focus→
+6guards→same49613 evidence above remains exact; no prerequisite red reclassified.
+
+Inspected owned compiled TestSszEggRoboAnimalLaunch set contains only outer and
+Launch record classes; no R22Read artifact remains. No metadata deletion/rebuild
+or broad target cleanup is performed. Target candidate/runtime/tests are the
+actual R27/R28 compilation, no old instrumentation claim. Seven documentation
+attestations/final parsed GPT6.1 coauthor and normal hooks required for local
+commit; Main/integration/push/branch/refs/config/native untouched.
+
+AFTER this local unit is preserved: SOURCE READ/PLAN ONLY, not author/run any
+logger/test/probe. Determine smallest original-driver observation needed to
+separate new-current first split from actual parent→child launch→retirement
+lineage. Promoted helper8492 inventories registered pools but lacks launch fields
+and unique-parent provenance; old declared803/f196 facts cannot certify the
+post-fix world. Same49613 endpoint proves neither unchanged first split nor
+unchanged pool. No campaign/native arm, fitted alignment, R5 rollback or initializer
+retuning is authorized; bounded plan/source contracts go back to Root first.
+
+R29 documentation-policy note: `${OPENGGF_MAIN_WORKSPACE}` in the newly recorded
+R27/R28 command examples denotes the actual absolute Main checkout used at launch;
+all wrapper/ROM paths share that root. The owned external registry retains the
+literal executed commands. This neutral spelling changes documentation only.

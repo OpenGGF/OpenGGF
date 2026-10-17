@@ -6164,3 +6164,48 @@ for explicit Root direct read; cleanup_pending, no copy/archive. Test0d285 stays
 uncommitted/unmodified; no failing-test/runtime commit. Ordinals35/36/37 exact
 IDs/results and24h expiry are separate in both own registries. No live handle;
 native4fdf/private regular config/all prior refs/Root/Main remain untouched.
+
+
+## R29 independent EggRobo launch closure, cold route still open (2026-10-17)
+
+Preserve the qualified local two-owner unit separately from the unmatched cold
+producer. Own98d/native01a1496e, parentb264/runtimef196; frozen Animal944a2933,
+EggRobob9e3474e, RNG test81f7db54, pending test570281df, unchanged real-parent oracle
+0d2d216c and promoted helper8492f006. Native044 pin loc_915F6/loc_917C0..9181C and
+word_2C7EA prove fixed Rabbit/Chicken, full RNG lowbit/highword, parent facing,
+frame1/direct WALK-FLY, stationary first draw and persistent flags5 flip. Native
+labels/independent ROM words are recorded in the [SSZ1 matrix](../../validation/levels/s3k-ssz-act1.md#r29-native-eggrobo-animal-launch-unit--2026-10-17).
+
+The source path is not a fitted slot/clock/campaign repair. Existing constructors,
+generic POP/R5/S1S2/points/physics/allocator behavior stay; pending scalar/enum
+provenance and actual renderer arguments are covered across forced recreation.
+
+Evidence accounting:70304 was compiler-only missing pure getter;24069 stopped
+4cases at allocator expected5/actual7 before native/world controls.50817 then
+passively established ABC4/4/7: capture A→B unchanged; original scan B→C adds
+placements11/12/13 and one animal, removes placement0. This did not prove actor
+liveness or exact within-pass callback. Moving ONLY four existing public camera
+assignments before the unchanged warm-loop produced0d2d; original+1 assertion,
+seed/gate/timing/native oracle unchanged.96038 then reached all twice-world
+controls and failed EXACT4 native launch fields in all4cases: X±512/0,
+Y-256 or-421/-1024, WALK-FLY/MAIN, frame1/2. This is genuine independent old-red.
+No earlier prerequisite failure is relabeled as such.
+
+R27 sole9selector lifecycle36866 is78/0F0E0S/10classes; all78 XML identities and
+skips inspected, compiler4143main/4194test release25. R28 exact6guard lifecycle
+51551 is6/0F0E0S. Only after6green and all six Java plus originalCold9616921c
+hashes stayed exact, sole original uninstrumented full campaign96020 ran and
+failed1/1F0E0S at SAME colddeath49613, method454→helper506, expectedfalse/actualtrue.
+Queue0; Maven1m09/26.652/52.053s. All3 absolute ROMs/Java25.0.4.1/EGL/fork/reuse/
+alpha checked in XML; no diagnostic property or early prefix stop. Full original
+route tail remains unreached. No observed post-fix first split or Animal629
+parent→launch→retirement lineage; same endpoint does not prove same predecessor.
+R5 lifetime stays correct; no rollback/phase/allocator/init retuning follows.
+
+All inspected XML/TXT normally consumed after durable Plan facts, metadata-slot
+ALONE/no copies/archive/receipt. No R22Read compiled artifact exists in the inspected
+owned EggRobo test class set; no target sweep/delete/rebuild is needed. Qualified
+current target contains frozen candidate plus maintained tests. R29 local commit
+preserves independently justified ROM behavior only; scaling/native-route/coverage
+limits and original completion blocker stay open. No further execution or probe
+authoring follows from this accounting; next scope is source-read provenance plan.
