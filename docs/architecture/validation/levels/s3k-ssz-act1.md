@@ -1545,6 +1545,14 @@ runtime, original AD40 suffix from 448920 after the one-shot initial
 ProcessSprites; native `native-ssz-arrival-allocation-ntsc-v1` PPMs; no
 normalization, quantization, shift or crop):
 
+Capture method: `GameplayCaptureSession` sets `S3K_SKIP_INTROS=true` in its
+constructor; the declared arrival inlet must restore `false` after construction
+and before boot. Render every setup/movie step, including discarded intermediate
+frames, as the qualified probe does. Set private `user.dir` before any
+`GameServices` access, request colour settings before boot, and verify the
+renderer's effective expansion/profile; saved preferences alone are not evidence
+that the renderer applied them. The [current-source input1342 check](#current-source-arrival-input1342-2026-10-17) follows this protocol.
+
 | Input | Differing pixels | Attribution |
 |---|---:|---|
 | 118, 119, 330, 680, 1430 | 0 | Exact |
@@ -1963,3 +1971,31 @@ Validation on 0b03f8705 (focused selectors through `tools/testing/maven_queue.py
 lane, S3K/S1/S2 ROMs, run `v-ssz`, Maven Finished 17:47:00Z):
 `TestSszTailsColdRouteCapture` 11/0/0/0, `TestSszBossInputAuthorTool` 2/0/0/0,
 `TestSszSoloColdRouteCapture` 3/0/0/0 — 16 tests, no failures, errors or skips.
+
+
+## Current-source arrival input1342 (2026-10-17)
+
+On `78472d97a75a0eea56874d165b73037bb4a2068c` (Main803 runtime plus
+Knuckles capture tooling), exactly one fresh engine picture matches the retained
+original native `native-ssz-arrival-allocation-ntsc-v1/input-1342.ppm`:
+**0/71680 differing RGB pixels**, both320×224, no crop, normalization, rescale,
+shift, masks or clock search. The original native preview was verified RGB-identical
+to its PPM before viewing; that image and the fresh engine PNG were inspected.
+
+This is the declared direct-SSZ Sonic+Tails inlet: native ProcessSprites
+`loc_6468`→`$6484`, Level_frame_counter0, VInt0/RNG0, then one neutral setup step
+and original AD40 movie rows448920..450262 inclusive (1343 inputs), with the
+picture after ordinal1342. Effective renderer modes were `LIMITED`/`RAW_RGB`,
+NTSC, intros enabled, FAST load simulation, Java25.0.4.1. Private preferences
+preceded all services; `user.dir` was restored and Main config SHA256/mtime
+were unchanged. No gameplay state was supplied from observations.
+
+Durable task evidence is `ssz-input1342-main803-v1/` under
+`$TASK_EVIDENCE_ROOT/` (the external task capture root):
+`provenance.json`, `effective.properties`, `state.csv`, `comparison.json`,
+`input-1342.png` and the immutable temporary adapter source. Exact hashes and
+queued command are in the [task plan](../../plans/2026-10-13-s3k-playable-completion.md#current-source-ssz-arrival-input1342-2026-10-17).
+The temporary adapter/classes/launcher/log were consumed and removed; captures stopped.
+This adds one current-source checkpoint. Cold LRZ/HPZ continuity, input0 title
+presentation, inherited VRAM at120, other moments/widths/rosters, audio, timing
+and whole-scene qualification remain outside this observation.
