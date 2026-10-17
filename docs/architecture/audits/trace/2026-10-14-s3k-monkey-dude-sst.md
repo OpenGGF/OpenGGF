@@ -6036,3 +6036,247 @@ R37 deletes only the four inventoried R35-containing classes under the intended
 writer. Accepted XML+TXT50878B are rehashed and consumed at21:23:49UTC under
 metadata_slot alone, with no copy/archive/receipt. The unchanged existing inner
 classes, private regular config/native4fdf/all refs and foreign work remain.
+
+
+## R37 to R39 visible CPU inlet reaches the independent timer old-red — 2026-10-17
+
+R37 source-only ordinal41 preserves test0d285 except two new release-case
+fixture calls and a semantic helper. It first obtains the same real captured
+fixture (including the production subtype2 bubble when requested), publishes
+real visible render state, then takes exactly one ordinary fixture frame before
+the held/offscreen-release snapshot boundary. Same P2/controller, LF+1,
+NORMAL/PANIC, actual column ride/standing/held, cached-valid+visible and stored
+CPU interact projection3 are prerequisites. Native loc_326B6 installs pointer
+$000326B6; loc_13F2E owns the ordinary CPU word refresh. No CPU/latch/timer
+setter, history manipulation, leader-start fit, loop or private write is added.
+
+Reviewed test SHA256
+`db5a94d9db416653b0479e85e9f9b21e4b7e9a5f4dbd77bbc0a6bab67669e9c5`;
+inlet-only diff against0d285 SHA256
+`5d89c226b0c08438f84d2e2c479de1ef4ac60b8a910b3a75b56858ac316728c1`.
+Removing that exact helper/separator and reversing the two calls recovers0d285
+byte-exactly. Old two cases, grounded-positive case, bubble producer, release/
+ordinary-frame/prerequisite helpers, timer expectations and forced-world loops
+remain unchanged. Runtime remains Java7df/column d8119e4a.
+
+R38 execution ordinal42 uses ONE unchanged five-method normal Main-absolute
+wrapper lifecycle on HEAD17480/testdb5a, the exact R33 command above: no profile,
+all original absolute ROM paths, Java25/EGL JTO plus CLI/nullAL/no ambient
+DISPLAY/WAYLAND or LD path/Lua5.4/fork1/reuse/alphabetical. Duplicate/source/
+ROM-SHA1/config/native/ref/output preflight passes. Sole session42497 is admitted
+with reportedqueue0, compiler inside the same request, terminal1 at21:30:01UTC,
+Maven01:20, suite1.067s: **5/1F0E0S**. All five identities, full nested failure,
+streams, skips and72 properties are inspected; there is no R35 instrumentation
+or diagnostic property, setup/warm-slot/terrain/CPU/recreation prerequisite error.
+
+| Actual case | Result |
+| --- | --- |
+| Existing cached release/standing/recreation | PASS |
+| Existing visible hold/jump | PASS |
+| Genuine-grounded positive lock | PASS, original two forced-world replay cycles and K-1 |
+| Released natural zero | PASS, both two-cycle held/released world-recreation paths and final0 |
+| Released positive lock | genuine final timer FAIL: nextFrame.moveLock expected35, actual34 |
+
+The released-positive helper RETURNS after BOTH twice-forced pre-release-world
+recreation/forward and twice-forced released-world recreation/forward loops.
+Every real object recreation/relink, whole-world snapshot equality, forward
+state comparison and original post-frame CPU/held prerequisite precedes the
+final native timer oracle. The original assertAll139 has only one failure:
+MultipleFailuresError wrapping the suppressed AssertionFailedError at141,
+nextFrame.moveLock expected35/actual34. The other final assertion140 verifies
+releasedLock35 successfully. The actual bubble and visible CPU inlet are valid
+in this component run. This is a **genuine independent component old-red**;
+no writer instrumentation identifies the precise Air/decrement caller here.
+Campaign8774's actual Air caller and native001D's earlier producer remain
+unobserved/separate. No campaign/native/route equivalence or parity claim.
+
+Root directly accepts original XML27074B SHA256
+`140bf82cf2448da97e09ddb2fc0898802d442ae83a9f12c6933a40e3cfd35880`
+and TXT2881B SHA256
+`4144409a05f3839e9bbb88e085f8cbf0bc7100f9bcbbe3c7487028db4187ab28`,
+all five cases/full nested failure and all four released forced-world cycles.
+R39 may consume only these29955B after this durable account, metadata_slot
+alone, no copy/archive/receipt. The exact R38 taskId/ordinal42 are retained;
+its full native runId was not relayed and is not inferred.
+
+R39 is source implementation only: native loc_326B6 calls SolidObjectFull;
+the latter's cached-offscreen P2 return precedes SolidObjectFull_1P's airborne
+standing-bit cleanup at loc_1DC98. Column release loc_328AC sets Air and leaves
+OnObj; skipped standing cleanup cannot make that stale ride a pre-movement
+floor. Existing SolidObjectProvider capability defaults false, so the column
+currently cannot use ObjectSolidContactController's existing offscreen stale-air
+grounding exclusion. Only this column opts into the existing
+`airborneStaleStandingBitReturnsNoContact(PlayableEntity)` capability with true.
+No new method contract, state, shared algorithm, timer/CPU/movement/visibility
+gate or API is added; the existing release/recapture/pose implementation and
+testdb5a remain unchanged. This source candidate is frozen for Root read before
+any compiler/JVM; no green result, runtime/failing-test commit or new execution.
+
+After the durable facts above, accepted original XML+TXT29955B are rehashed
+and consumed at21:34:55UTC under metadata_slot alone; no copy/archive/receipt.
+Frozen source-only column SHA256
+`a1704354640d93659bbda7ce4ff01ab5985d0cbff3810dd903b652ac58f91a49`,
+exact one-file git diff SHA256
+`523f13d6ed66cea82459d0d6494dc61099d3dc8d3678c05f6f835a8d9da065de`.
+Removing only the override recovers d811 byte-exactly. Testdb5a and all other
+Java7df runtime files, including APS/movement/shared solid, are unchanged.
+No compiler/JVM or test/owner/source variant has run on this candidate.
+
+
+## R40 sole affected nine-class focus closes the component old-red — 2026-10-17
+
+Root approves the exact R39 nine-line local capability diff a1704354/diff523f13d6
+and unchanged testdb5a, including all existing shared consumer sites. R40 uses
+ONE normal Main-absolute wrapper lifecycle with the exact historical62518
+nine-class selector above, retaining the single HCZ rider recreation method
+`TestS3kCnzHczRiderRewindMaps#hczSpinningColumnRestoresRiderArrayAndPlayerReference`.
+The registry62518 actual nine-class list and its existing exact audit selector
+are cross-checked; the mixed rider class is not expanded. No profile,
+original three ROM paths/identities, Java25/EGL JTO plus CLI/nullAL/no ambient
+DISPLAY/WAYLAND or LD path/Lua5.4/fork1/reuse/alphabetical, compiler in this one
+request. Duplicate/output/source/config/native/ref preflight passes.
+
+Exact execution ordinal44/session48240 is admitted with reportedqueue0 and
+finishes terminal0 at21:42:12UTC, Maven01:17: **76/0F0E0S**. All nine actual XML
+class identities, all76 method/parameterized identities, skips, assertions and
+complete captured streams are inspected. Source/environment properties match;
+no diagnostic, observer, prerequisite or novel failure. Output consists of the
+FAST missing-manifest/NONE warnings and the decoding bounds-control warning.
+
+| Actual XML class | Tests | F/E/S |
+| --- | ---: | --- |
+| game.sonic3k.objects.TestHczSpinningColumnCachedRelease | 5 | 0/0/0 |
+| tests.TestS3kHczSpinningColumn | 8 | 0/0/0 |
+| game.sonic3k.objects.TestS3kHczMechanismRewind | 2 | 0/0/0 |
+| game.rewind.TestS3kCnzHczRiderRewindMaps, exact HCZ method only | 1 | 0/0/0 |
+| tests.TestS3kAiz1SkipHeadless | 8 | 0/0/0 |
+| game.sonic3k.TestSonic3kLevelLoading | 36 | 0/0/0 |
+| tests.TestSonic3kLevelLoading | 7 | 0/0/0 |
+| game.sonic3k.TestSonic3kBootstrapResolver | 6 | 0/0/0 |
+| game.sonic3k.TestSonic3kDecodingUtils | 3 | 0/0/0 |
+
+All class names above carry the com.openggf prefix. The unchanged five-method
+component now passes the previously genuine final released-positive timer
+oracle, both twice-forced held-world and twice-forced released-world recreation/
+forward paths, grounded K-1, natural zero and original release/hold/jump controls.
+The existing mechanism/rider recreation and mandatory S3K four obligations pass
+within this exact selection, including both loading-class identities. This is
+bounded affected validation, not a general green/campaign/trace certificate.
+No original prefix/full canonical/native/extra guard or additional JVM is run;
+actual campaign8774 Air caller/native001D earlier producer remain separate.
+
+Post-terminal literal source checks confirm column a1704354/diff523f13d6,
+unchanged testdb5a, APS838c9252, movement3f324b74, CPU4bb9f42f, shared solid06245eea
+and provider31bedb35. Exactly the column differs from Java7df; all nine selected
+test sources are unchanged from their frozen fingerprints. Own/Main private
+regular0600 configs retain exact bytes/mtime, native4fdf/all refs/index/HEAD17480
+and foreign work are preserved. No source repair, retry, variant or commit.
+Compact exact class/method results and original report ownership hashes live in
+the existing own R40 registry entry; standard18 XML/TXT reports231910B are the
+normal cleanup scope after this durable account. No novel failure needs retention.
+
+After inspection and the durable compact results above, exact18 standard
+XML/TXT reports231910B are rehashed/consumed at21:44:17UTC under metadata_slot
+alone; no copy/archive/receipt or novel failure retained. Ordinal44 and all
+prior IDs/results remain separate; no live job or authorized further JVM.
+
+
+## R41 original canonical advances to11920; strict route remains red — 2026-10-17
+
+After Root accepts R40's actual76/0F0E0S, R41 ordinal45 runs exactly ONE original
+maintained `TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds`
+with `-Ptrace-replay`, normal Main-absolute queue, original AD40/fromboot/default
+bootstrap/lag/all three absolute ROMs, Java25/single EGL JTO plus CLI/nullAL/no
+ambient DISPLAY/WAYLAND or LD path/Lua5.4/fork1/reuse/alphabetical. The selection
+is the exact R22/76850 maintained method/profile above; R41's explicit CLI EGL
+flag accompanies the same required JTO backend. Compiler stays in this one
+lifecycle. No temporary prefix, observer, logger, reflection, base/fixture/input
+edit, gameplay hydration or driver variant. Tested HEAD17480 plus local column
+**a1704354**, unchanged bounded testdb5a, maintainedeb743765/base967c9896;
+only the column differs from Java7df. Original movie AD40 and tracked route
+fixtures, private configs/native4fdf/all refs and source pins remain exact.
+
+Sole session62139 is admitted with reportedqueue0 and finishes terminal1 at
+**21:47:19UTC**, Maven51.362s, method26.227s/suite26.472s, **1/1F0E0S**. All
+available JSON arrays, original JUnit method/full failure/suppressed exceptions,
+output and skips are inspected. There are two failure axes, not a green route:
+
+| Current segment | Full reference / compared | Complete | Total = physics + animation | Lag | Warn/bootstrap |
+| --- | --- | --- | --- | ---: | --- |
+| 0 aiz | 2290 /2290 | true | 0=0+0 | 0 | 0/0 |
+| 2 aiz_2 | 4023 /4023 | true | 0=0+0 | 11 | 0/0 |
+| 4 aiz_3 | 8235 /8235 | true | 0=0+0 | 14 | 0/0 |
+| 6 aiz_4 | 4103 /4103 | true | 0=0+0 | 16 | 0/0 |
+| 8 aiz_5 | 7175 /7175 | true | 0=0+0 | 62 | 0/0 |
+| 9 hcz | 3574 /3574 | true | 0=0+0 | 55 | 0/0 |
+| 11 hcz_2 | 14208 /14208 | true | **6553=5489+1064** | 59 | 0/0 |
+| 13 hcz_3 | 5393 /not emitted | false | 63295=54642+8653 | 6 | 0/0 |
+
+The completed14208-row returned-HCZ firstNonCameraPhysicsMismatch is now
+**11920 sidekick_status_byte native0002/engine0003**. The earlier all-group first
+logged error remains3475 sidekick_animation_id native17/engine1C. R22's same
+full window had11118=10054physics+1064animation and first8775statusB/A. The JUnit
+label calls all6553 errors physics; JSON groups above are authoritative. Each
+summary exposes only its recent-five mismatch buffer: lower totals and the
+unchanged animation count **do not prove full-vector regression absence**.
+No exhaustive error array is available to claim otherwise.
+
+The six earlier complete zero-summary payloads are byte-identical to R22.
+Segment13's complete available summary payload is also byte-identical to R22
+(SHA8d3f4010...), including first287 y native06D4/engine06DA and final retained
+row3208. It remains incomplete; row3208 is not substituted for an unreported
+compared-row cursor. Actual ownership fails at BK2 cursor88306, modeLEVEL,
+loadGeneration10/progressionZone1/romZone1/act1 while segment13 expects act2.
+The same four suppressed hardware identities remain: raw3256 PRE_MAIN_LOOP
+KosDecompression244;3257 POST_OBJECTS KosModule171;5356 PRE_MAIN_LOOP
+KosDecompression245;5357 POST_OBJECTS KosModule172. Their full original expected/
+actual descriptors stay in the retained JUnit, with no fabricated readiness.
+
+The maintained semantic boundary assertions do observe entry into ss_6 and
+return into hcz_3. Current dynamic-art gap report has13 gaps/0 failures; its full
+gap/failure arrays are inspected. Producer-labelled movieLogical journal stamps
+are hcz_2->ss_6 sourceclose/arm77283/77283, and ss_6->hcz_3 sourceclose83626/
+arm85096. Manifest expected boundary cursors77284/85097 remain separately named;
+actual observedBk2Frame is not persisted in the retained report, so those
+journal rows are not renamed actual callback cursor values or offset-fitted.
+No segment beyond13 is qualified. This measurement establishes a new reported
+non-camera frontier, not the actual campaign8774 Air caller/native001D producer.
+
+Original changed seg11 JSON SHA256
+`2a766df88cbcb46af1194ce06bf5891d202209b5743505c4b4d083265055892b`,
+JUnit XML117150B
+`78cec1bc9fe00557ab22c9c4dd248769b5cadef67c53ce1bc82c8fdea169daaf`,
+TXT4810B `cb6cc93de9676b00d16485c4525f6544f089f2af16537e674a06025070c99cfd`.
+All20 current originals133157B (eight segment JSONs/owners, gap JSON/owner,
+JUnit XML/TXT) remain at original target paths for explicit Root DIRECT read.
+No archive/copy/cleanup, retry, new probe/owner fix, extra JVM or commit. Exact
+R41 IDs/results/24h expiry stay separate; queued R42 identity46 is not started
+or folded into this measurement. Runtime/test/docs WIP and foreign work remain.
+
+
+## R42 preservation boundary before11920 source plan — 2026-10-17
+
+Root directly accepts all9 current JSON reports/all9 owner sidecars and original
+JUnit XML/TXT, including the entire available arrays/full nested ownership and
+hardware failures. Comparator warningCount0 is **not zero runtime warnings**:
+R41's actual output separately contains468 SMPS presentation-shadow warnings,
+2 FAST-load missing-manifest/NONE warnings and1 markRemembered warning for
+(4584,896), id1. None is omitted or relabelled comparator parity output.
+
+The qualified local change is the one nine-line column capability a170 and the
+green unchanged db5a independent component: genuine35/34 old-red after all4
+released forced-world cycles -> exact affected76/0F0E0S. The one maintained
+fullcase measures non-camera8775->11920 on complete14208 with6553=5489+1064;
+recent5/lower11118->6553 are not a full-vector/no-regression waiver. Actual
+campaign8774 Aircaller/native001D producer and independent seg13 ownership88306
+remain outside that proof. Release prose folds into the existing spinning-column
+entry; S3K discrepancy/matrix/frontier and the existing mirrored standing-latch
+pitfall retain these limits and the real visible-CPU-inlet setup lesson.
+
+R42 ordinal46 first preserves exactly the column/test and owned existing docs
+with normal local policy commit; no failing test/runtime variant or additional
+validation is introduced. After this durable account and Root DIRECTread, only
+the20 hash-inventoried originals133157B may be consumed metadata_slot alone,
+without touching compiled maintained-candidate classes, copying/archive/receipt
+or unknown files. Source read/plan for11920 starts only after that commit and
+clean-accounting boundary; no new JVM, test/logger/runtime/native probe follows.

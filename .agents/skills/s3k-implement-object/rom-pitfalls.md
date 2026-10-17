@@ -6223,6 +6223,25 @@ recalculate fresh visibility to bypass the existing cache-validity contract.
 Changing control bit1 may release its engine mapping-ownership projection while
 preserving the last published mapping/animation values.
 
+
+Retaining the native standing bit does not make an airborne offscreen rider a
+floor for pre-movement support recovery. SolidObjectFull_1P's Air branch returns
+through loc_1DC98; the earlier cached-P2 skip can leave that branch unconsumed.
+The column must opt into the existing airborneStaleStandingBitReturnsNoContact
+capability so the existing offscreen support filter preserves the next airborne
+player dispatch. Do not repair its consequence by freezing a global timer or
+changing CPU/facing arithmetic. Origin: R38 independent real-bubble/column
+old-red (final next-player lock35/34 after all forced-world controls), R39 local
+capability and R40 affected76green; R41 remains strict-red at11920.
+
+An object-only component setup can also reach the correct offscreen CPU despawn
+branch before its intended physics oracle: actual stored interact0 versus live
+column code word3, despite a real standing record. If the scenario requires a
+previously observed visible ride, express one ordinary visible CPU slot before
+the held/offscreen-release boundary and assert its stored projection. Do not
+seed or refresh the CPU latch through a setter, suppress the mismatch, move the
+leader to fit a guard, or reinterpret CATCH_UP as an ordinary movement result.
+
 Prove capture through real factory/allocation/SST FullSolid contact, visibility
 through the actual copied-camera/body publisher, and whole-world recreation/
 forward replay before visibility flip and after release/recapture. Manual

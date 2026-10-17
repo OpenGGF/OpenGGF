@@ -6,8 +6,11 @@ import com.openggf.game.rewind.RewindSnapshotDiff;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.physics.Direction;
+import com.openggf.physics.GroundSensor;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
+import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -122,7 +125,190 @@ class TestHczSpinningColumnCachedRelease {
         // rider. Its end-of-SST OnObj is not the loc_328AC release write.
     }
 
+    @Test
+    void releasedAirborneRideRetainsBubbleLockThroughNextNormalFrameAndWorldRecreation() {
+        var fixture = capturedFixtureAfterVisibleCpuSlot(true);
+        int producedLock = sidekick().getMoveLockTimer();
+        assertTrue(producedLock > 0, "prerequisite: actual bubble collection supplied a positive lock");
+        var result = releaseAndReplayNextNormalFrame(fixture);
+
+        // loc_328AC retains Air + OnObj. loc_13872 dispatches from status&6;
+        // Tails_Stand_Freespace never calls Player_SlopeRepel. Later column
+        // recapture may clear Air again, but cannot consume that air-phase lock.
+        // Keep these native timer oracles AFTER both forced recreation cycles.
+        assertAll("released air phase retains the production lock",
+                () -> assertEquals(producedLock, result.releasedLock()),
+                () -> assertEquals(producedLock, result.nextFrame().moveLock()));
+    }
+
+    @Test
+    void genuinelyGroundedBubbleLockDecrementsThroughNextNormalFrameAndWorldRecreation() {
+        var fixture = landedFixture(true);
+        assertFalse(sidekick().getAir(), "prerequisite: actual FullSolid ground landing");
+        assertFalse(sidekick().isObjectControlled(), "prerequisite: capture has not run yet");
+        int producedLock = sidekick().getMoveLockTimer();
+        assertTrue(producedLock > 0, "prerequisite: actual bubble collection supplied a positive lock");
+        var objects = GameServices.level().getObjectManager();
+        objects.setRewindInPlaceRestoreEnabledForTest(false);
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        var grounded = registry.capture();
+        var next = stepOneNormalFrame(fixture);
+        var after = registry.capture();
+        for (int replay = 0; replay < 2; replay++) {
+            var previous = column();
+            registry.restore(grounded);
+            assertNotSame(previous, column(), "force actual grounded-world recreation");
+            assertWorld(grounded, registry.capture());
+            assertSame(column(), objects.getRidingObject(sidekick()));
+            assertEquals(next, stepOneNormalFrame(fixture));
+            assertWorld(after, registry.capture());
+        }
+        // Tails_Stand_Path calls Player_SlopeRepel; loc_11E86 decrements once.
+        // This control rules out a blanket freeze of a legitimate ground lock.
+        assertEquals(producedLock - 1, next.moveLock());
+    }
+
+    @Test
+    void releasedAirborneRideWithNaturalZeroLockStaysZeroThroughNextNormalFrameAndWorldRecreation() {
+        var fixture = capturedFixtureAfterVisibleCpuSlot(false);
+        assertEquals(0, sidekick().getMoveLockTimer(), "prerequisite: naturally zero, never reset by this test");
+        var result = releaseAndReplayNextNormalFrame(fixture);
+        assertAll("a real zero-lock release does not arm a timer",
+                () -> assertEquals(0, result.releasedLock()),
+                () -> assertEquals(0, result.nextFrame().moveLock()));
+    }
+
+    private static LockLifecycle releaseAndReplayNextNormalFrame(HeadlessTestFixture fixture) {
+        var objects = GameServices.level().getObjectManager();
+        objects.setRewindInPlaceRestoreEnabledForTest(false);
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        var held = registry.capture();
+        var beforePose = Pose.read();
+        publishVisibility(fixture, false);
+        tickObjects(fixture); // real owning release and offscreen FullSolid checkpoint
+        var releasedRider = Rider.read();
+        assertAll("prerequisite: native release, not a manufactured airborne pose",
+                () -> assertTrue(releasedRider.air()),
+                () -> assertTrue(releasedRider.onObject()),
+                () -> assertTrue(releasedRider.ridingColumn()),
+                () -> assertTrue(releasedRider.objectStanding()),
+                () -> assertFalse(releasedRider.controlled()),
+                () -> assertFalse(releasedRider.cpuAllowed()),
+                () -> assertFalse(releasedRider.movementSuppressed()),
+                () -> assertEquals(beforePose, releasedRider.pose()));
+        int releasedLock = sidekick().getMoveLockTimer();
+        var released = registry.capture();
+        var next = stepOneNormalFrame(fixture);
+        var after = registry.capture();
+
+        for (int replay = 0; replay < 2; replay++) {
+            var previous = column();
+            registry.restore(held);
+            assertNotSame(previous, column(), "force actual pre-release world recreation");
+            assertWorld(held, registry.capture());
+            assertSame(column(), objects.getRidingObject(sidekick()), "relink actual riding owner");
+            publishVisibility(fixture, false);
+            tickObjects(fixture);
+            assertEquals(releasedRider, Rider.read());
+            assertEquals(releasedLock, sidekick().getMoveLockTimer(), "replay equality, not native timer oracle");
+            assertWorld(released, registry.capture());
+            assertEquals(next, stepOneNormalFrame(fixture));
+            assertWorld(after, registry.capture());
+        }
+        for (int replay = 0; replay < 2; replay++) {
+            var previous = column();
+            registry.restore(released);
+            assertNotSame(previous, column(), "force actual released-world recreation");
+            assertWorld(released, registry.capture());
+            assertSame(column(), objects.getRidingObject(sidekick()));
+            assertEquals(next, stepOneNormalFrame(fixture));
+            assertWorld(after, registry.capture());
+        }
+        return new LockLifecycle(releasedLock, next);
+    }
+
+    private static NormalFrame stepOneNormalFrame(HeadlessTestFixture fixture) {
+        var p2 = sidekick();
+        assertNormalPlayerPrerequisites();
+        // Query independent copies of the loaded floor-sensor geometry. These
+        // test-owned scans use the real ROM/path/dual-plane lookup and write no
+        // player sensor or gameplay state. Reject an unrelated terrain landing.
+        var floors = p2.getGroundSensors();
+        assertNotNull(floors, "prerequisite: native floor sensor pair exists");
+        assertEquals(2, floors.length, "prerequisite: both loaded floor sensors");
+        for (var floor : floors) {
+            assertEquals(Direction.DOWN, floor.getDirection());
+            var probe = new GroundSensor(p2, Direction.DOWN, floor.getX(), floor.getY(), true);
+            for (short dx = -1; dx <= 1; dx++) {
+                var result = probe.scan(dx, (short) 1);
+                assertNotNull(result, "prerequisite: loaded terrain lookup available");
+                assertTrue(result.distance() > 0, "prerequisite: clear terrain below declared object contact");
+            }
+        }
+        int beforeLevelFrame = GameServices.level().getFrameCounter() & 0xFFFF;
+        fixture.stepFrame(false, false, false, false, false); // unchanged normal CPU -> player -> objects
+        assertEquals((beforeLevelFrame + 1) & 0xFFFF, GameServices.level().getFrameCounter() & 0xFFFF,
+                "prerequisite: exactly one ordinary gameplay frame");
+        assertSame(p2, sidekick(), "prerequisite: no player replacement/respawn");
+        assertNormalPlayerPrerequisites();
+        assertHeld(Rider.read()); // actual subsequent native standing-bit recapture
+        return new NormalFrame(Rider.read(), p2.getMoveLockTimer(), p2.getCpuController().getState());
+    }
+
+    private static void assertNormalPlayerPrerequisites() {
+        var p2 = sidekick();
+        assertTrue(p2.isCpuControlled());
+        assertFalse(p2.getDead(), "prerequisite: no death/respawn path");
+        assertFalse(p2.isHurt(), "prerequisite: no hurt landing");
+        assertEquals(0, p2.getDoubleJumpFlag(), "prerequisite: no flight/ability takeover");
+        assertNotNull(p2.getCpuController());
+        var state = p2.getCpuController().getState();
+        assertTrue(state == SidekickCpuController.State.NORMAL || state == SidekickCpuController.State.PANIC,
+                () -> "prerequisite: ordinary CPU state, not " + state);
+        assertSame(column(), GameServices.level().getObjectManager().getRidingObject(p2));
+        assertTrue(GameServices.level().getObjectManager().hasObjectStandingBit(p2, column()));
+        assertTrue(p2.isOnObject());
+    }
+
+    private record NormalFrame(Rider rider, int moveLock, SidekickCpuController.State cpuState) { }
+    private record LockLifecycle(int releasedLock, NormalFrame nextFrame) { }
+
     private static HeadlessTestFixture capturedFixture() {
+        return capturedFixture(false);
+    }
+
+    private static HeadlessTestFixture capturedFixture(boolean collectBubble) {
+        var fixture = landedFixture(collectBubble);
+        tickObjects(fixture); // native held capture from prior standing contact
+        assertHeld(Rider.read());
+        return fixture;
+    }
+
+    private static HeadlessTestFixture capturedFixtureAfterVisibleCpuSlot(boolean collectBubble) {
+        var fixture = capturedFixture(collectBubble);
+        var p2 = sidekick();
+        var cpu = p2.getCpuController();
+        assertNotNull(cpu, "prerequisite: real captured P2 controller");
+        publishVisibility(fixture, true);
+        int beforeLevelFrame = GameServices.level().getFrameCounter() & 0xFFFF;
+        fixture.stepFrame(false, false, false, false, false);
+        assertEquals((beforeLevelFrame + 1) & 0xFFFF, GameServices.level().getFrameCounter() & 0xFFFF,
+                "prerequisite: one ordinary visible held CPU slot");
+        assertSame(p2, sidekick(), "prerequisite: no warm-slot player replacement");
+        assertSame(cpu, p2.getCpuController(), "prerequisite: same warm-slot CPU controller");
+        assertNormalPlayerPrerequisites();
+        assertHeld(Rider.read());
+        assertTrue(p2.hasRenderFlagOnScreenState(), "prerequisite: warm-slot cached flag valid");
+        assertTrue(p2.isRenderFlagOnScreen(), "prerequisite: warm-slot actual visible publication");
+        // Native loc_326B6 installs code pointer $000326B6. The ordinary
+        // visible CPU slot owns Tails_CPU_interact's high-word refresh via
+        // loc_13F2E; this only reads its stored projection, never refreshes it.
+        assertEquals(0x0003, cpu.getDiagnosticInteractId(),
+                "prerequisite: actual CPU slot latched the column code high word");
+        return fixture;
+    }
+
+    private static HeadlessTestFixture landedFixture(boolean collectBubble) {
         var fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_HCZ, 1)
                 .withSkippedZoneIntro().build();
@@ -148,10 +334,16 @@ class TestHczSpinningColumnCachedRelease {
         p2.setRolling(false);
         p2.setAir(true);
         p2.setJumpInputPressed(false, false);
+        if (collectBubble) {
+            collectOrdinaryLargeBubble(fixture);
+        }
         p2.setCentreX((short) (X + 8));
         // FullSolid top window: relY = y - objY + 4 + d2 + y_radius.
         // Choose overlap 8 (inside native [0,$10)), not a replay pose.
         p2.setCentreY((short) (Y - 4 - column.getSolidParams().airHalfHeight() - p2.getYRadius() + 8));
+        if (collectBubble) {
+            GameServices.level().updatePlayableWaterStateForCurrentLevel(p2);
+        }
         p2.setSubpixelRaw(0x3A00, 0x7B00);
         p2.setXSpeed((short) 0);
         p2.setYSpeed((short) 0x100);
@@ -162,9 +354,49 @@ class TestHczSpinningColumnCachedRelease {
         assertSame(column(), objects.getRidingObject(p2));
         assertTrue(objects.hasObjectStandingBit(p2, column()));
         assertFalse(p2.isObjectControlled(), "landing precedes the next owning capture dispatch");
-        tickObjects(fixture); // native held capture from prior standing contact
-        assertHeld(Rider.read());
         return fixture;
+    }
+
+    private static void collectOrdinaryLargeBubble(HeadlessTestFixture fixture) {
+        var p2 = sidekick();
+        assertEquals(0, p2.getMoveLockTimer(), "prerequisite: no earlier positive-lock producer");
+        var level = GameServices.level();
+        var water = GameServices.water();
+        int zone = level.getFeatureZoneId();
+        int act = level.getFeatureActId();
+        assertTrue(water.hasWater(zone, act), "prerequisite: real ROM-loaded water");
+        int bubbleY = water.getWaterLevelY(zone, act) + 0x80;
+        assertTrue(bubbleY > Y + 0x80 && bubbleY < 0x7F00,
+                "prerequisite: submerged bubble inlet separated from the column");
+        short cameraX = fixture.camera().getX();
+        short cameraY = fixture.camera().getY();
+        fixture.camera().setX((short) (X - 0x80));
+        fixture.camera().setY((short) (bubbleY - 0x80));
+        var factory = GameServices.module().createObjectRegistry();
+        var allocated = level.getObjectManager().createDynamicObject(() -> factory.create(
+                new ObjectSpawn(X, bubbleY, Sonic3kObjectIds.BUBBLER, 2, 0, false, 0)));
+        var bubble = assertInstanceOf(BubblerObjectInstance.class, allocated, "real ROM object registry");
+        assertTrue(bubble.getSlotIndex() >= 0, "ordinary bubble SST allocation");
+        try {
+            // Ani_Bubbler subtype2: delay $0E, frames2..6, then routine advance.
+            // This is only a bounded setup deadline; no timer/frame is assigned.
+            for (int dispatch = 0; dispatch < 6 * (0x0E + 1) && p2.getMoveLockTimer() == 0; dispatch++) {
+                // Declared pickup overlap, relative to the real rising/wobbling
+                // bubble. No private animation/inhalable/consumed state is read.
+                p2.setCentreX((short) bubble.getX());
+                p2.setCentreY((short) (bubble.getY() + 1));
+                level.updatePlayableWaterStateForCurrentLevel(p2);
+                assertTrue(p2.isInWater(), "prerequisite: ordinary water owner admitted pickup");
+                assertFalse(p2.isObjectControlled(), "prerequisite: collection precedes column capture");
+                tickObjects(fixture);
+            }
+            // loc_2FBB2 collection really calls replenishAir and writes35. This
+            // validates the producer, never seeds native29 or any move-lock field.
+            assertEquals(35, p2.getMoveLockTimer(), "prerequisite: actual large-bubble collection");
+        } finally {
+            fixture.camera().setX(cameraX);
+            fixture.camera().setY(cameraY);
+        }
     }
 
     private static List<Rider> twoOffscreenDispatches(HeadlessTestFixture fixture) {

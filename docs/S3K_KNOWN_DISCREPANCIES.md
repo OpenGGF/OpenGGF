@@ -1391,3 +1391,24 @@ firstNonCameraNULL through8720, lag59/warnbootstrap0. Same-window10733 is213
 Strict1F remains; first all-group3475animation17/1C. No later frontier, full
 returned-HCZ/exit, independent slice/alternate/GLFW/native or product breadth
 certificate. [Exact source, commands, rejected JUnit-only inference and report](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r21-actual-final-prefix-report-qualifies-the-local-column-repair--2026-10-17).
+
+
+R38-R41 column stale-air support follow-up (2026-10-17, local a170/db5a): the
+native cached offscreen FullSolid skip can retain Air+OnObj and column standing;
+that stale record must not restore ground mode before the next playable update.
+Only the column opts into the existing airborne-stale-standing capability;
+shared solid/movement/CPU/timer/cache/API code is unchanged. Independent real
+bubble/column/visible-CPU/normal-frame35->34 old-red after all forced-world
+controls becomes green with grounded K-1/natural0/old controls; exact affected
+nine-class selection is76/0F0E0S, mandatory S3K4 included.
+
+One unchanged original fullcanonical then completes returnedHCZ14208 with
+6553 total=5489physics+1064animation, firstNonCamera11920status0002/0003, lag59,
+comparator warn/bootstrap0. Earlier animation3475 remains; runtime output has
+468SMPSshadow+2FAST+1markRemembered warnings separately. Six earlier windows are
+zero; SS6 entry/HCZ return is observed, but independent seg13 ownership still
+fails88306/act1 vs2 and its summary remains incomplete. First8775->11920 and
+11118->6553 totals do not prove exhaustive residual-vector equivalence or a
+fully green route; only recent5 is retained by the maintained summaries.
+Actual campaign8774 Aircaller/native001D producer and the11920 writer remain
+unqualified. [Exact old-red/source/focus/canonical/limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r41-original-canonical-advances-to11920-strict-route-remains-red--2026-10-17).

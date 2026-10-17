@@ -401,3 +401,26 @@ remain unknown. This proves the countdown caller, not a global countdown defect.
 All10records,8reports/8owners/XML/TXT inspected; source/classes restored/removed,
 raw18files retained until Rootread. No repair/oldred/newnative/broader coverage.
 R22full11118/exit/R28nativeguard/seg13ownership88306 remain prior epochs.
+
+
+## R38 to R41 stale-air ride capability and current canonical (2026-10-17)
+
+An independent real bubble/column/visible-CPU inlet establishes genuine final
+lock35/34 old-red only after two held-world plus two released-world forced
+recreation/forward cycles. Grounded K-1/natural0/old controls pass. Local column
+capability a170 (all other Java7df runtime unchanged) plus unchanged testdb5a
+passes one exact affected R40focus:76/0F0E0S, mandatory S3K4 included. No generic
+CPU/timer/movement change. R41 then runs one original maintained fullcanonical:
+returned HCZ complete14208 **6553=5489physics+1064animation**, firstNonCamera11920
+sidekick_status_byte0002/0003, lag59/warnbootstrap0. Animation3475 remains.
+Earlier six windows zero; actual SS6 entry/hcz_3 return observed, but seg13
+ownership still fails88306/actualact1 vs expected2. Its incomplete summary is
+byte-identical to R22. Recent5 is not a full error vector; lower11118->6553
+cannot certify all fields. [Exact commands/windows/source/results/limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r41-original-canonical-advances-to11920-strict-route-remains-red--2026-10-17).
+No current native/independent-BK2/caller-producer/general-route certificate;
+strict residuals and later ownership remain. Originals retained for Root read;
+no additional run, source variant, commit or delivery action in R41.
+
+R42 Root DIRECTread accepts all20current originals. Comparator warn0 remains
+separate from actual runtime468SMPSshadow+2FAST+1markRemembered warnings. Local
+preservation/cleanup does not change this coverage or prove the11920 writer.
