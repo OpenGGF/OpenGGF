@@ -113855,48 +113855,18 @@ R21partial206 and73focused remain their actual epochs. Normal docs-only local
 accounting/consumed cleanup; Root owns next causal scope, combined validation,
 integration and push. R22ordinal25 separate; queuedR23 is not started here.
 
+### 2026-10-17 — HCZ8775 native PANIC guard observed; engine frontier unchanged
 
-2026-10-17 cold Sonic contact R14/R15, exact803 versus f196 in same98d:
-sole original maintained Sonic selector via normal wrapper/no profile/all3ROMs/
-Java25/EGL/nullAL/singlefork/reuse/alpha; only owned journal output filename
-changes.39089 terminal0 18:54:32UTC and1886 terminal0 19:00:47UTC are each
-**1/0F0E0S PREFIX through original48276 only** (later fullroute finals UNREACHED),
-3keys/152verifiedevents each. R13 first end-of-step48275 Y/OnObj divergence is
-now bracketed at actual flat bridge204: baseline spring206slot6 runs before
-bridge204slot32, while current bridge204slot8 runs before spring206slot9.
-Radius/width/eligibility/clocks/12terrain payloads agree; baseline snaps0A6C→0A64,
-current sees X1882outside before spring pushes187D. Earlier slot producer is
-already different at first observed BEFORE48274 and remains unknown; no native
-truth/allocator defect/fix or cold completion claim. Root inspected ORIGINAL
-bounded journals before normal consumption; DOCS ONLY, no new trace/native/
-media/broad. [Exact audit and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#matched-cold-contact-order-r14-and-r15--2026-10-17).
-
-[Source-preparation/review, full exact command, phase labels, report coverage and cleanup](../architecture/plans/2026-10-13-s3k-playable-completion.md#r12-one-actual-first-fdf-witness-original-gumball-gate-target-unreached--2026-10-17).
-Eight inspected reports/sidecars and six temporary classes were consumed under
-the metadata lease alone; the one temporary source was removed under the intended
-tree lease, restoring exact committed source. Existing docs only, no raw archive
-or pass receipt. Prior refs, private config, native/media and Root/Main are
-preserved. Root owns causal attribution/next scope and combined validation.
-
-
-R14 matched original-inlet baseline50308 (separate from current98161): reviewed
-19-line helper7475c909 invokes only original `(RUN_DIR,2,1)`, requiring natural
-Gumball exit and returned-level opening. Same owned649 temporary local baseline
-branch at **8030832d2ab6080e5324cdfe35e971677fd97b41**, all other tracked source/
-POM exact803; same command/environment as98161 except selector/base, normal
-current Main absolute wrapper/all3ROM/Java25/EGL/nullAL/noambient/Lua/fork1reusealpha.
-Actual terminal1 **19:46:12UTC**, queue0/Maven1m22, **1T/1F/0E/0S** (0skips),
-class5.570s. It reproduces the **exact original1661 Gumball stage_exit assertion**;
-returned seg2 row1 is unreached. AIZpartial1physics/camera4545 and Gumball
-comparator-complete18physics/first1300x0000/2778,0animation/warnings/bootstrap,
-lag0/21 and five recent1380 field/value entries match current's retained record.
-Recent5 is not full18-vector equality. All29 baseline suppressed identities were
-inspected (18direct/11module=12unconsumed+17pending mismatches); current retained
-counts/endpoints match, not an exhaustive29 delta. TwoFAST→NONE warnings persist.
-This qualifies that **particular original route assertion on actualMain803**;
-no blanket inheritance waiver, producer/closure cause, route advance or native
-correctness. SS/fdf remainsUNREACHED in both, with no readiness/kernel/wholeSS/
-whole-route claim. No current rerun/rebase/repair/extra execution. Candidateb0b4
-and exact Plan WIP restored, helpers/inspected diagnostics/backup consumed,
-all refs/config/native/media preserved; target last compiled803, not current.
-[Exact source/flags, attribution and restoration limits](../architecture/plans/2026-10-13-s3k-playable-completion.md#r14-actual-main803-natural-gumball-exit-prefix--2026-10-17).
+Owned3aa513781/Java7df/native4fdf; sole reviewed originalAD40 power-on native
+session66263 exits0, reportedqueue0/C#56.2263242s. Command is task-local
+`run_native_panic_gates.py run --expected-launcher-sha256 9c01499b6146aeb0f5b7430fb631ed790c7ed7428eb29e2422bce8755ff2ec26`,
+through current Main normal maven_slot/allFDs. Original inputs0..71851 once,
+only71848..51/raw8773..76 observed; all4endpoint controls and32callback+
+4endpoint passivity checks match. Native CPU/PANIC executes each frame but
+returns on move_lock001D at13F44→13FBE before facing; no CPUskip/facecallback.
+Historical engine8775setter sees0. Earlier nativeproducer/engine1→0 actualwriter
+remain unknown; no timer/facing/CPU/camera fix or additional probe/test follows.
+[Exact source/command/hashes/clocks/counts and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r26r28-original-native-panic-returns-on-retained-move_lock--2026-10-17).
+No engine trace is run: prior R25partial207/8777 and R22full11118/14208,
+firstNonCamera8775statusB/A/actualexit/separate seg13ownership88306 unchanged.
+Native originals retained for Root read; no new green or route certification.

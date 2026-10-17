@@ -5604,13 +5604,182 @@ branch were NOT observed. Shared correct R5 render semantics stay; no revert/fit
 Independent special-launch old-red source is a separately gated unit, not a repair
 or native truth claim from this engine comparison.
 
-Original BASE4924861B SHA256bd1e48195a97a303a2565b1396f5c43020768fde79ab068f4b02d95d14b8447f
-and CURRENT4917574B SHA25626b224709a4c4883efeeef952aad462b85213d574cdef88321d983a765bb4a7a
-were directly inspected read-only0444; their exact9842435B are consumed metadata_slot
-ALONE after durable facts, no copy/archive/receipt. Reports already consumed separately
-(BASE171736B,CURRENT171741B). Maintained class restored9616921c; instrumented outer/
-helper/Picture classes removed. Original helper sourcec35c remains owned/untracked at
-its original path pending Root preservation choice: proposed opt-in test-side protocol
-plus existing workflow README entry, no runtime API/refactor/copied driver; no
-promotion/deletion in this docs commit. Target has no maintained rebuilt outer
-ColdCampaign class. No further campaign/native/media/guards/test/runtime edit.
+All8 targeted records (5367UTF8bytes), JUnit XML/text and every available JSON
+array/group are inspected. Only the final original strict-zero assertion fails:
+**compared8777/reference14208, completefalse,207=12physics+195animation**,
+bootstrap0/warnings0/lag59, firstNonCamera8775 sidekick_status_byte000B/000A.
+No skip or suppressed diagnostic failure. Seg11 JSON
+`s3k-sonic-tails-complete-emeralds_seg11-segment-11-6603d91c777bb604.json`
+has SHA256 `03052a152bac3b0478f4cefa09ded728bf5e9c9e01fe53d5413ab3eb8011cdba`.
+Its entire available recent5 array is ERROR/repeatCount1 each:8775status000B/000A,
+6948camera_y07C7/07C9,6947camera_y07C2/07C4,6792camera_y0678/067E,
+6791camera_y0670/0678. This is not an exhaustive error vector. Do not manufacture
+additional comparator errors from postrow samples or fit their phase to a count.
+R21's206/8721 and R22's11118/14208 remain different measured windows.
+
+Earlier six0/2/4/6/8/9 gameplay reports complete2290/4023/8235/4103/7175/3574
+rows, all groups/warnings/bootstrap0, lag0/11/14/16/62/55. The11-gap report has
+0failures; no returned-HCZ exit or onward ownership is reached by this prefix.
+R22's actual exit and independent seg13ownership88306 stay historical/separate.
+No general green, native-gate qualification or owner repair follows.
+
+Stop after these facts. No extra query/run/selector/native/media/fix. Production
+source is restored byte-exact, the temporary test source and both instrumented
+class files are removed (no unrequested recompile; the next normal build must
+recreate those classes), and18 inspected owned diagnostic files are consumed under
+metadata_slot alone. Actual XML confirms Java25.0.4.1/surfaceless-EGL/all3absolute
+ROM properties and0skips. All refs/native4fdf/private config remain. Existing docs
+only are committed locally under normal hooks; Root owns any next causal scope.
+
+## R26–R28 original native PANIC returns on retained move_lock — 2026-10-17
+
+**Native CPU entry is observed; its PANIC guard consumes move_lock=$001D. No
+engine repair or new trace qualification occurs.** Source-plan ordinal29,
+launcher-correction30, compiler31 and execution32 have separate exact task IDs
+in the existing ownership registry, preserving all earlier results. Tested own
+HEAD is5137810973f4aa009a151a0ce55b15586d509009, Java7df, native checkout
+4fdf73880f93a3172d23bf9e157b15de3c78fc32 internally clean. No Root/Main edits,
+new worker/tree, engine probe, runtime/test/fixture changes or native/core build.
+
+### Reviewed source, compiler and sole native command
+
+External task directory is `hcz-native-panic-gates-r26-v1` under the existing
+parity task D. It contains a task-local C# passive reader, plan and Python
+launcher, using the existing stock GpgxHost/official BizHawk2.11 runtime.
+Root independently reads actual sources and verifies all20 ROM byte pins,
+15callback sites, original movie/fixture/host/tool identities before launch.
+
+| Artifact | Final SHA256 |
+| --- | --- |
+| NativePanicGates.cs | `8d6dd5e4db69acb5f4c3412e7d38203529d4dab0e70e5dab436d496bd8b3b62d` |
+| plan.json | `00222528e5493b300392ca59340f5180fae12f1fa177bf0fffc690be9907438d` |
+| run_native_panic_gates.py | `9c01499b6146aeb0f5b7430fb631ed790c7ed7428eb29e2422bce8755ff2ec26` |
+| NativePanicGates.exe | `fee52fa3f0245d9af04a004242590304a9754eb3edf01d420ca28b6b9884cf87` |
+| compile.json | `18107e02dcf41ef4ca5dc0942ed4d372feb59b361145466dd861447964ef9d5d` |
+
+The original launcher163dd081 lacks Main's existing `handle_termination()` at
+CLI dispatch: SIGTERM of Python alone could bypass cleanup while Mono retained
+inherited leases. Root's material review finding is closed by importing that
+handler and wrapping only compile/run dispatch. Reversing this minimal block
+recovers163dd081; C#/plan remain exact. Ordered filenameUTF8+NUL+bytes+NUL over
+C#,plan,launcher has SHA256
+`d42593fb984de8cfea3d2673d410c26e23f296b7d15431b2a7e4306e8370f41a`.
+No signal-execution experiment, observer changes or additional review round.
+
+Only compiler request (exec20b9c9) exits0, empty compiler log, EXE23040bytes.
+Metadata UTC20:00:17.829950→20:00:18.452447 gives0.622497s; this metadata span
+and tool-reported0.589932387s are separate measurements. Intended-tree writer
+and shared build-activity leases/all inherited FDs cover existing MonoRoslyn;
+both scopes end before native admission. No GpgxHost is opened by compilation.
+
+After separate Root acceptance of actual compiler output, the only native
+command from owned3aa is:
+
+```sh
+python3 "$TASK_D/hcz-native-panic-gates-r26-v1/run_native_panic_gates.py" run \
+  --expected-launcher-sha256 9c01499b6146aeb0f5b7430fb631ed790c7ed7428eb29e2422bce8755ff2ec26
+```
+
+The launcher uses current Main's default normal `maven_slot`, estimate90,
+kind `native-r26-hcz-panic-gates`; no Mavenexec goal, reservation, override or
+outer activity shim. Session66263, actual MonoPID3257017, terminal0; reported
+queue0s. Admission20:02:06.687443UTC, native Popen20:02:06.724924, terminal
+metadata20:03:03.354513. C# reports56.2263242s; outer started→finished span is
+56.629589s. Initial, inside-admission immediately-before-Mono and post-terminal
+identity guards pass. Exact six accepted artifact hashes are independently
+rechecked before submission and after terminal, including EXE/compile metadata;
+execution records inherited FDs5/6/7. No retries/variants/other selection.
+
+### Original movie mapping and complete controls
+
+Original AD40 BK2 is the maintained
+`src/test/resources/traces/s3k/runs/s3k-sonic-tails-complete-emeralds/`
+`s3k-sonic-tails-complete-emeralds.bk2`, SHA256
+`ad40fb0b0a74fa12b08ab71b2e48a7455b388d14f43f4cded502ac4a15d1b3c0`.
+Original40-character ROM SHA1 isCFBF98C36C776677290A872547AC47C53D2761D6.
+Power-on uses original BK2 SyncSettings and inputs0..71851 once. Only inputs
+71848..71851 are observed: original manifest offset63075+raw8773..8776.
+Expected after-core=input+1 is separately checked, without row shifts/state
+loads/RAM writes/trace hydration/reseeding/media/canonical publication. Original
+BizState1.0 member is format text3LF; opaque legacy32-character header SHA1 is
+not substituted for ROM identity. P2 physical input is inactive in this prefix.
+Bounded existing-D inventory had no exact target fullRAM; oldAD40 inputs70207..10
+and original82EA artifacts cannot answer this endpoint.
+
+All41 journal records are inspected, including every one of32 actual callbacks,
+four after-frame records, four classifications and completion. Same-projection
+RAM/register passivity checks succeed32callbacks+4endpoints. All four complete
+original CSV/AUX endpoint controls match, neutral input/no lag. AUX is selected
+by actual frame key, never multievent line ordinal. Journal62134bytes plus
+normal native boot log2165bytes=64299bytes, below200records/1MiB caps. No
+failure.json, count/order/control/passivity/observer failure or output overflow.
+No JUnit result is implied by this native execution.
+
+| Raw row | Original input / callback CompletedFrame | After-core CompletedFrame | LF | Actual full VInt / recorded LOW | End status/control | Column held at entry→end |
+| --- | --- | --- | --- | --- | --- | --- |
+|8773|71848 /71848|71849|8715|00011644 /1644|0B /00|1→0|
+|8774|71849 /71849|71850|8716|00011645 /1645|09 /03|0→1|
+|8775|71850 /71850|71851|8717|00011646 /1646|0B /00|1→0|
+|8776|71851 /71851|71852|8718|00011647 /1647|09 /03|0→1|
+
+Full VInt is actual RAM longFE0C, LF isFE04, LOW isFE0E. Native callback
+CompletedFrame is actual host input-phase state, distinct from after-Advance.
+All P2 poses are0E10.BB00/0572.AE00, vx/vy/g0, render04, interactB32E.
+Column actual code326B6/subtype2/status10 qualifies private P2 held+36;
+its status retains native P2standing. P1 callback poses are0E75.A400,
+Y0413/0412/0411/0410.8F00,VY0038; endpointY0412/0411/0410/040F.8F00,VY0,
+g1/status02. Callback copied-camera is0DD5/Y03D3/03D2/03D1/03D0; endpoint
+0DD5/Y03D2/03D1/03D0/03CF. These distinct phases are not aligned by final pose.
+
+### Actual dispatch and missing earlier timer owner
+
+All four frames execute exactly once in this source order:
+Obj_Tails1365C → Tails_Control137C4 → CPUentry139CC → dispatch139E0 →
+PANIC13F40 → post-sub_13EFC13F44 → commonRTS13FBE → CPUjoin1384A.
+The real Tails_Control entry is137C4;137C2 is precedingRTS, and the verified
+136BC table word0108 selects137C4. No canonical capture pin is changed.
+Actual A0 isFFFFB04A throughout. A1 at CPUentry is0001365C, **not leader**;
+after native LEA139DC, actual dispatch/PANIC A1 isFFFFB000. Execute callbacks
+are before the pinned instruction and do not invoke gameplay owners.
+
+At every callback and end row, raw P2 move_lockB07C is**001D (29)**. All
+recorded raw74 projections independently decode to the same source offsets.
+Post-despawn idle0, spin_dash_flag0, ground_vel0, signedCtrl2lock0, competition0,
+physical/logical heldpressed0, CPUroutine8. Thus native runs CPU/PANIC, tests
+idle0, then takes nonzero move_lock return to13FBE. No CPUskip; all four
+classifications are `PANIC_return_move_lock`. Facing clear13F5E/afterclear13F64/
+set13F6E/done13F74, spin13F94 and alternate return13F92/13FB0 counts are0.
+The optional callbacks are absent because of the actual guard, not a hook failure.
+CPU flight increments56→57,57→58,58→59,59→60 across sub_13EFC.
+
+Only after complete native inspection, compare historical R25 engine evidence:
+its8775 setter correctly reaches PANIC facing with moveLock0, whereas native
+returns on001D before facing. This supports an upstream timer-state/lifetime
+question, **not a facing formula, CPU/cache/camera or fitted29 repair**. Native
+001D is already present at first observed object entry and unchanged over this
+window. Its earlier producer and the engine's observed8774 moveLock1→0 writer/
+movement dispatch remain unobserved. Source Player_SlopeRepel11E86 decrements
+only when the ground/roll path reaches it; object_control and Air/OnObj have
+separate dispatch ownership. Current movement suppression/air dispatch and
+PANIC guard already contain those branches. Their existence does not prove
+which actual engine branch depleted the timer or whether the initial producer
+already differed. No generic movement defect is established.
+
+Smallest next independent proposal, **not authored/executed**: use production
+movement and actual column capture/release/retained-standing recapture with a
+legitimately production-armed movement lock. Check held skip and released
+Air+OnObj dispatch preserve the lock, against a reached-ground countdown
+control and zero-lock PANIC-facing control; no native29/route/frame injection.
+A green check would disconfirm that coupled lifetime hypothesis; a red must
+identify its real owner before any shared edit. Earlier native producer remains
+a separate missing witness if this independent sequence is correct.
+
+Original observation journal SHA256
+`5cadb395d4639d36f2313b43683ac3baf9935b3d12fd91fc34395c14edb82f42`,
+execution metadata SHA256
+`d274eda12cc16b3fb6ffe5c1d869a6b5eb5f2edd4a35ef1bc558dfe5c03941bf`.
+Originals are explicitly retained for Root read, cleanup_pending; no duplicate
+summary/archive/pass receipt. No cleanup before Root inspection. R25 strict
+207/8777, R22 full11118/14208/actual exit, and independent seg13ownership88306
+remain their prior epochs; this native pass moves no engine frontier. Stop here:
+no engine witness/old-red/runtime edit or extra native/route/guard/broad run.
