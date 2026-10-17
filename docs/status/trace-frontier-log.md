@@ -113274,3 +113274,46 @@ contains its last R1 compilation. Root will fresh-compile the composition. No
 new native/media, input changes, field waiver, full chain or broad smoke here.
 Inspected reports/helper are consumed normally; full SST/aux/breadth and complete
 act qualification remain open, while this three-worker owner unit is closed.
+
+
+## 2026-10-17 — AIZ physical handoff closes canonical regressions; alternate ring blocker
+
+R3 on Root7ed6ba5b8 in t3-98d036a9 changes only AizMinibossInstance runtime,
+SHA2561878f322bfa03f2c20970c5dd2a371839a4e90481b93c872c332695331027626.
+The [R3 matrix](../architecture/validation/levels/s3k-aiz2.md#physical-miniboss-handoff-and-alternate-ring-blocker--2026-10-17-r3)
+records exact common Main-wrapper/env/ROM commands, matched controls, old-red and
+source pin044fa467. R2-off59027 retains Root original80/segment4 11789 exactly;
+both-AIZ-off58516 clears original80. Physical native control replacement plus
+post-routine fatal poll/literal63/global music and independent subtype10 tail
+replace unowned13/catch-up terms. Literal63 is source-backed by fallthrough; the
+'invented63' hypothesis is rejected. Three camera workers remain native owners.
+
+Final75120 passes77/0F0E0S,11:56:09UTC,wait36s/Maven1m15s. Exact56721 uses
+-Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true
+-Dsurefire.runOrder=alphabetical with
+-Dtest=TestS3kSonicTailsCompleteEmeraldRunPrefix#twoSpecialStageReturnsThroughThirdEntry,TestS3kAizTraceReplay#normalBridgeStandingSstMatchesOriginalFullrun+replayMatchesTrace:
+3/0F0E0S,11:57:19UTC,no wait/Maven59.417s. Original AIZ20463 rows has0errors,
+0warnings/bootstrap; segment4complete0physics/animation (previous first6749
+x_speed,11789errors); all20 standing assertions at9510–9513 pass actual12,
+admission9392 bridge12/display17. Seven advertised original aux remain absent.
+
+Distinct -Ptrace-segments -Dtest=TestS3kAizZoneSliceTraceReplay#replayMatchesTrace,
+same env/fork/order:33952,11:58:08UTC,1/1F0E0S,no wait/Maven40.703s,26041rows,
+11physics ring errors,0animation/other fields/warnings/bootstrap. First13740
+rings1/2; ten new spans through16669 plus inherited26179 rings72/0. These are
+not the historical76-entry R1/R2 array and not a qualified alternate.
+
+One authorized actual original-driver observation86679 through13742,12:02:23UTC,
+1/1F0E0S,no wait/Maven31.570s, identifies engineLostRing SST13 at1BB0/01EE
+starting collection/addRings at13740; LF358F,Vbla3934,executed13711,nextBK2cursor14682.
+Native slot_dump includes bouncing rings but filtered aux gives no ring position/
+routine/writer witness. A preceding diagnostic compile20566 ran no replay. The
+temporary observer is removed; no shared ring/touch change or extra variant.
+**Alternate UNQUALIFIED; ten newly exposed ring spans block integration.**
+Guards40441 are134/1F0E0S (12:05:39UTC,33.151s/no wait):133pass and exact raw
+inventory10/current9 after removing AIZ inline insertion. Tightened ratchet10→9,
+then only that method27275 passes1/0F0E0S (12:07:05UTC,24.683s/no wait). No repeat134.
+Final target compiled runtime1878 and maintained restored tests; inspected
+diagnostics/helpers consumed under metadata lease, no archives/live jobs.
+Root owns ring attribution/composed validation. Four
+native debris children/fullSST, aux/config/BK2/cold/fullchain limits remain.

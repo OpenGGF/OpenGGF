@@ -20,6 +20,15 @@ contains commands and rejected variants. These observations are over source
 `a0e2b79cc` in `.worktrees/ai-runtime-perf-series`; updated-base validation and
 integration remain pending.
 
+**AIZ R3 alternate ring blocker, 2026-10-17:** the physical miniboss/control
+handoff candidate on7ed6ba5b8 closes original AIZ80 and chain segment4 11789
+errors while preserving all20 exact standing assertions. Its distinct alternate
+now reports11 ring errors: ten newly exposed rings1/2 spans beginning13740, plus
+inherited26179 rings72/0. Engine LostRing SST13 increments at13740; existing
+native aux lacks the ring-position/routine/writer evidence for attribution. This
+is unqualified and blocks integration; no ring-count waiver or fitted behavior.
+See the [R3 matrix](../architecture/validation/levels/s3k-aiz2.md#physical-miniboss-handoff-and-alternate-ring-blocker--2026-10-17-r3).
+
 > **Audit note, 2026-06-12:** this file still contains many historical dedicated-trace entries
 > retained for diagnosis context. The canonical current S3K parity ledger is
 > `docs/status/trace-frontier-log.md`, especially the S3K complete-run per-zone frontiers. Use this file
