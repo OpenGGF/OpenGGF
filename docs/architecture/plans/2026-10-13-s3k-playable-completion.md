@@ -4643,3 +4643,40 @@ and normal hooks. Root39policy cases/shell+PS syntax/review reused, no extraJava
 R6 seven inspected diagnostic/class files consumed metadataalone, no archives,
 no live handles. Only existing R6 Plan/matrix evidence remains for its separate
 normal docs commit; R4e207 and R5 remain separate, Main803 untouched.
+
+
+### Whole-objective checkpoint — 2026-10-17 13:45 UTC
+
+Read-only completion audit pinned Root `28fd18de8212f8a844763d8399c9bcd000684a79`
+and published Main `8030832d2ab6080e5324cdfe35e971677fd97b41`. Root is an
+unpublished composition; its target was last built at the older `7ed6ba5b8`
+epoch. No delivery-wide current-source pass or completion is inferred.
+
+| Obligation | Observed scope and next owner/check |
+|---|---|
+| Strict AIZ/HCZ | AIZ R7 owns premature five-component retirement and the ten new alternate ring spans; HCZ R10 owns encoded-word addressing and retained destination writes. Their focused results do not replace final strict replays. |
+| Ending caller/window/Hyper | C5 and ApplyDeformation are qualified callee producers only. Production still assigns four head services to Sonic and Tails where native Sonic uses three. Caller and hardware inputs, six measured counts and 46 contexts remain unowned acceptance work; do not close with another isolated callee. |
+| Ending products/terminal | Nine NTSC products retain 249/253 equal RGB pairs and four Hyper differences. Tails/+2 alone reaches title in that sampler. Full-table dispatch checks are declared pressure, not native full-capacity comparison; remaining terminals need their own fixed products. |
+| Ending PAL/PCM | One early PAL Sonic/+2 product diverges from LF3778 on Kos timing; other PAL products and matched rendered PCM remain open. Preserve request-ledger versus physical-audio distinctions. |
+| Bonus presentation | Preserved branch candidates `d56216d5e` and `7380f7b1f` are absent from Root. Historical XML has no current source fingerprint; four unknown shield edits in their tree are untouched. Do not adopt the whole candidate. |
+| Pachinko mechanisms | New independent GPT-6.1 popup owner task starts from Root28: actual-contact missing Obj_EnemyScore allocation, allocation-failure score preservation, recreation and relevant existing traces. The draft's unconditional ten-hit cap conflicts with native respawn-address gating and is excluded. Broader bonus RGB, reward collection/expiry, spring/flipper/magnet/platform and absent auxiliary observations remain separate limits. |
+| Title/tiles/credits | Delivered publication and credits repairs remain delivered. The recorded title36/35 residual needs an actual child-drain/SST-deletion/art-admission witness; the existing short hold test ends at counter34. Native pictures of the precise AIZ2-tree/HCZ upload moments remain absent. |
+| SSZ/cold breadth | Solo Sonic cold campaign `030731207` supersedes the stale LRZ-boss gap. Pair/Tails/Knuckles continuations and one SSZ arrival1342 RGB pair plus one cold-derived Knuckles619 pair are scoped controls, not whole-terminal/wide/donor/PAL certificates. |
+| ICZ | Three physical post1 candidates never died. Semantic pit-death/reload checks do not prove natural lethal contact, actual saved-post respawn, retired history or twice-forward replay across those boundaries. No production defect follows from failed route authorship. |
+| MHZ | Identity/rider/shield and wide25-window work supersedes the stale generic identity-gap label. The distinct Cluckoid explicit-removal arrow defect still needs offscreen/death/removal/recreation controls preserving detached leaves. |
+| Entry/save/giant-ring | 140 held-Right entry floors per eight acts are entry products, not mechanic routes. Saved-slot HPZ covers Knuckles/Tails/team; solo Sonic and donor/wide products, full giant-ring timelines and their load/history boundaries remain explicit missing products. |
+| SAT/colour breadth | Full255/Limited238 and sampled SAT priority are delivered. Scanline capacity, transparent-plane and arbitrary-product native breadth remain unqualified; no reopening of delivered colour settings is required. |
+
+Audit corrections are evidence corrections, not newly run checks. All other
+checked recorded qualified engine commits were accounted for in Root28;
+HCZ `9f0f429d1` is evidence documentation in the active R10 lineage.
+
+At this checkpoint AIZ's independent exact-hash review found two newly
+reachable native mismatches in the surviving wait: the barrel suppressed its
+own routine on defeat, and the body froze animation. The worker is correcting
+those within the authorized physical-parent unit before long replays; the
+initial 207 focused passes do not certify those paths. HCZ's genuine transition
+old-red and first repaired owner checks pass; mutation/rewind/scene and strict
+7135 qualification remain pending. No repeated broad smoke, full suite, package
+or Main publication has been submitted. Final source-frozen canonical/segment
+checks and one complete local change-based smoke/guard run remain Root-owned.
