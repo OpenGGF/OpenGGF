@@ -952,9 +952,26 @@ boot driven by the same BK2. Paired by Level_frame_counter 1-300:
 - The AnPal_AIZ1 destination words are equal on 279. Frames 1-17 are the level fade,
   which native writes into `Normal_palette` and the engine presents separately.
 - On frames 35-38, native shows L4c12-14 at the base colours. AIZ1_Resize's camera-`$1308`
-  `LoadPalette_Immediate PalID_AIZ` reloaded them (sonic3k.asm:38919-38929). The engine
-  pre-loads that palette at the non-intro start and skips the reload; this is open in
-  known-bugs "AnPal Shared Bank: Remaining Owners" for the AIZ events owner.
+  `LoadPalette_Immediate PalID_AIZ` reloaded them (sonic3k.asm:38919-38929).
+
+Fixed 2026-10-17 in `Sonic3kAIZEvents`:
+- The non-intro start keeps its `Pal_AIZ` preload but no longer marks routine 0's
+  `$1308` reload done.
+- The reload adds the `Player_mode` 3 `word_4FAE4` colours at line 4 colours 8-11
+  (38928-38935).
+- Knuckles' AIZ1_ScreenInit colours (`Adjust_AIZ1Chunks2`, 104337-104338 and
+  104498-104502) go to the Target palette and the level palette.
+- The engine-only routine-4 palette re-apply now runs only when the plane intro ran. ROM
+  routines 2 and 4 load no palette, and on non-intro starts the re-apply wiped those
+  colours on the first frame.
+
+`TestS3kAiz1MainPaletteReload` derives the expected words from the ROM's `PalPoint` entry
+and `word_4FAE4`. It covers Knuckles across the camera boundary with the complete-run
+input, a Sonic control, two restore and forward-replay cycles, and a fresh load. It fails
+2 of 3 on `9183561ea` sources: Knuckles' colours are absent before the boundary, and no
+reload happens at it. With the change, Normal_palette lines 2-4 equal native on all 38
+counters from 23 to 60, the boundary frames included. Evidence:
+`spot-checks/aiz-palette-bank-v4/`.
 
 Evidence and native pictures (`native-knux-aiz1-lfc34/35/39`):
 `spot-checks/aiz-palette-bank-v3/`.

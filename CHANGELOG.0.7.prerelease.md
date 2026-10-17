@@ -85,7 +85,9 @@ Unreleased. The earlier development themes remain in
   Act 1's cycle. A full level load or restart clears the counters. Angel Island 1's
   water cycle pauses only from the plane intro's explosion until Knuckles leaves,
   continues correctly out of the intro's fire colours, and changes to its normal
-  colours on the original frame.
+  colours on the original frame. Knuckles' Angel Island 1 starts with his own four
+  palette colours, and the main palette reloads at the original camera position for
+  every start without the plane intro.
 
 - **S3K special stage results:** The results card sits on the locked-on game's
   grey backdrop instead of white, matching native frames of won and failed stages.

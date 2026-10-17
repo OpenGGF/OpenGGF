@@ -6753,14 +6753,14 @@ Still open:
 - A reload consumed at the next frame top (`LevelSeamlessTransitionExecutor`) runs no
   palette call on its transition row. Natively that iteration's Animate_Palette ran for
   the outgoing act. Not measured.
-- AIZ1_Resize routine 0 reloads `PalID_AIZ` with `LoadPalette_Immediate` once camera X
-  reaches `$1308` (sonic3k.asm:38919-38929). For Knuckles it also patches
-  `Normal_palette_line_4+$10` from word_4FAE4 (38930-38935).
-  - Native Knuckles AIZ1 shows L4c12-14 back at the base colours on Level_frame_counter
-    35-38, until the next AnPal run.
-  - `Sonic3kAIZEvents` pre-loads that palette on the non-intro AIZ1 start and marks it
-    done, so the `$1308` reload and the Knuckles patch never run there. Owner: AIZ events.
-    Evidence: `spot-checks/aiz-palette-bank-v3/`.
+- AIZ1_Resize routine 4 writes `Normal_palette_line_3+$1E` from word_4FAEA for Knuckles
+  once camera X reaches `$2D80` (sonic3k.asm:39001-39010). The engine uses one colour for
+  every character there. This is from the source; no native witness yet.
+- `Adjust_AIZ1Chunks2`'s chunk edits for Knuckles (sonic3k.asm:104503-104538) are not
+  checked here; only its palette half is modelled.
+- The `GameplayCaptureSession` harness starts Knuckles AIZ1 with camera X `$1308`, where
+  native and the headless fixture start at `$1300`. Its Knuckles AIZ1 pictures are
+  therefore not a matched trajectory.
 
 ### Removal condition
 Each item matches native RAM at its handoff, with a focused test.
