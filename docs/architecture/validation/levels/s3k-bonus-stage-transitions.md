@@ -1998,3 +1998,106 @@ Root independently opened all ten original native/new R8 images from provenance
 and corroborated wall/peppermint layering/fade geometry plus the visible HUD4/3
 limit. This read-only visual corroboration adds no execution, modification or
 native-high-glass/full-route certificate; no extra review/image/session follows.
+
+#### R9 remaining original pixels: all HUD, no scene component — 2026-10-17
+
+Read-only classification on clean da28, same649/native/branch, exact returned
+nativeordinal18 task preserved separately in ownership. No engine, native,
+Maven, compiler, test, capture, image variant or runtime/source edit. Original
+native and R8 PNG hashes still match their retained provenance. Source is only
+read for the exact residual owners; no clock/palette/position search, crop,
+normalization, pixel exclusion or gameplay hydration. Root accepts this bounded
+classification and ends further owner investigation at the missing witness.
+
+All78 remaining pixels form22 eight-connected components:73 life-glyph pixels
+in17 components and5 top-HUD counter pixels in5 singleton components. There are
+NO remaining non-HUD scene pixels in these FIVE fixed originals. This does not
+certify other frames, native-high-glass, whole routes, zero RGB or native writers.
+
+| Row | Total | Life glyph ROI (56..63,208..215) | Top counter | Life component sizes and exact bounding boxes |
+|---|---|---|---|---|
+|971|21|19|2|13:(57,209..60,214);2:(62,210..63,210);2:(62,212..63,212);2:(62,214..63,215)|
+|974|23|21|2|16:(57,209..60,215);2:(62,210..63,210);2:(62,212..63,212);1:(63,214)|
+|1017|11|11|0|9:(57,210..60,213);1:(62,210);1:(62,212)|
+|1022|12|11|1|9:(57,210..60,213);1:(62,210);1:(62,212)|
+|1026|11|11|0|9:(57,210..60,213);1:(62,210);1:(62,212)|
+
+**Life glyph: native four, engine three, carried-state limit.** ALL five retained
+native RAM images have Life_count at$FE12=4. The locked-on owning HUD_Lives ROM
+instruction at$E126 is `12 38 FE 12` (operand$E128), reading that address;
+constants:816 and HUD_Lives/loc_E138 source:18185–18238 corroborate it.
+Native SAT4 at(32,200),32x16,tileword$A7D8, has its final lower-column tile$7DF
+at(56,208). Its entire32 bytes match ROM life glyph4 at$E50A in ALL five images.
+Every one of the73 differing life-ROI coordinates is exactly a glyph3-vs-glyph4
+pattern-index difference using ROM glyph3$E4EA and glyph4$E50A; none lies outside
+that independent glyph difference. Native glyph4 is opaque at62 of those pixels;
+all62 decoded nonzero-index/CRAM colors exactly match the native PNG. At all50
+coordinates where glyph3 is opaque, its ROM index through retained CRAM exactly
+matches the engine PNG. Nonzero palette indices that resolve to RGB black remain
+opaque; they are not treated as transparency.
+
+The eleven native glyph4-transparent differences have these exact matching native plane samples:
+971 four PlaneB pixels: (58,209)/(59,209),$6056/index51 RGB(0,0,0), and
+(63,210)/(63,212),$6057/index55 RGB(0,170,0).
+974 three PlaneA pixels: (58,209)/(59,209)/(58,210),$6A7D/index58
+RGB(136,0,0). Its other four exposed PlaneB pixels are (63,210)/(63,212),
+$6057/$6059 index54 RGB(0,238,0), and (58,215)/(59,215),$6058 index55
+RGB(0,136,0). These plane colors corroborate the underlay at all eleven holes; they are not
+a separate claim of uniquely observed writer ownership. All73 pixels remain
+inside the independently established glyph-shape difference.
+Projection uses retained VRAM/VSRAM and native level register setup: A$C000,
+B$E000,64x32,per-line HScroll$F000, source loc_60DE:7658 ($8B03).
+
+Engine source draws the lives metric from GameState.getLives via
+HudRenderManager:405/425, and loads uncompressed ROM life digits via
+Sonic3kObjectArtProvider:295. Fresh GameStateManager/resetSession defaults to3;
+TraceMetadata/bonus_slots metadata has NO lives field, and maintained
+TraceReplaySessionBootstrap.prepareConfiguration/applyBonusStageEntry supplies
+no carried lives. Actual engine life-state metadata was not retained. The
+pictures and glyph proof establish rendered4/3; fresh-default/source behavior
+supports the existing UNQUALIFIED carried-state/bootstrap limit. They do not
+prove an actual gameplay loss, its writer, or authorize default/bootstrap changes.
+
+**The five other pixels are also HUD: retained digit-tail bytes.** Native SAT2
+at(64,8),24x16,tileword$A6FA, contains pattern$6FF at screen(80,16). Its last
+scanline is VRAM$DFFC..$DFFF=`00 00 40 09` in ALL five native artifacts. The
+corresponding full64-byte ROM digit5 at$E18A+5*64 differs in only the two final
+bytes: its last scanline is`00 00 00 00`. Nonzero nibbles4 and9 at x84/x87,y23
+are therefore opaque palette1 indices20/25 in the HIGH-priority HUD sprite.
+
+| Row / pixel | Native SAT2 index / exact RGB | R8 engine RGB |
+|---|---|---|
+|971 (84,23)|20 /102,170,0|0,0,0|
+|971 (87,23)|25 /68,0,68|0,0,0|
+|974 (84,23)|20 /68,170,0|136,0,34|
+|974 (87,23)|25 /34,0,68|0,0,0|
+|1022 (87,23)|25 /0,0,0 (opaque)|0,0,102|
+
+At rows1017/1026 both tail coordinates match the engine RGB, so they add no
+residual pixel;1022(84,23) also matches. All five mismatching
+native colors decode exactly from SAT/VRAM/CRAM. At974(84,23) the engine color
+also equals native underlying SAT20 peppermint index36 RGB(136,0,34), consistent
+with the clean ROM tail exposing that sprite. It does not prove the actual engine
+published pattern bytes. Native HUD_DrawInitial/DrawThreeDigitNumber copies ROM
+glyph data; engine Sonic3kObjectArtProvider:280 loads ROM HUD digits and
+HudRenderManager:582 draws their two patterns. Neither source alone establishes
+the later writer that left native `$40/$09` in$DFFE/$DFFF.
+
+**Precise missing witness, no automatic repair.** Existing artifacts have neither
+native write history for those two VRAM bytes nor engine published HUD-counter
+pattern/palette payload at those two sample positions. The smallest provenance/
+consumer question is which native writer left those retained bytes after the HUD
+upload, and whether the actual engine displayed tile payload is the clean ROM
+tail inferred from source. Writer identity/causal runtime branch is UNPROVEN;
+no native re-record, passive engine query, repair, hardcoded exception, altered
+oracle or bootstrap hydration is authorized here. There is no remaining non-HUD
+owner to pursue within these five images.
+
+Root accepts all78 HUD classification,73 life plus5 counter-tail, as read-only
+evidence only. R8's966 fixed/zero new bad and full578/267 target closures remain
+unchanged observations. Native-high-glass, full-population/cold/HCZ/route and lead
+smoke/guards/Main delivery remain separate. Existing Plan/matrix alone receive
+these durable facts; no new document type, raw archive or diagnostic file. All
+analysis Python was ephemeral read-only; only the normal docs commit message is
+temporary and consumed under metadata ownership. Prior refs/config/media/runtime
+pins and candidate target remain unchanged; no engine/native job or lease remains.
