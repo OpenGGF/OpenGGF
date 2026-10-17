@@ -167,7 +167,11 @@ public class Sonic3kSpecialStageRenderer {
     private int[] spriteScreenXs = new int[16];
     private int[] spriteScreenYs = new int[16];
     private int[] spriteSizeIndices = new int[16];
+    private int[] spritePerspectiveWords = new int[16];
     private int spriteCount;
+    private final S3kSpecialStageSpriteLayer spriteLayer = new S3kSpecialStageSpriteLayer();
+    private boolean spritePixels;
+    private boolean planePixels;
 
     public Sonic3kSpecialStageRenderer(GraphicsManager graphicsManager) {
         this.graphicsManager = graphicsManager;
@@ -178,8 +182,13 @@ public class Sonic3kSpecialStageRenderer {
     }
 
     private void renderNativePattern(int patternId, PatternDesc desc, int x, int y) {
-        graphicsManager.renderPatternWithId(patternId, desc,
-                x + specialStageViewport.outerOriginX(), y);
+        if (spritePixels) {
+            spriteLayer.sprite(patternId, desc, x, y, false);
+        } else {
+            graphicsManager.renderPatternWithId(patternId, desc,
+                    x + specialStageViewport.outerOriginX(), y);
+            if (planePixels) spriteLayer.plane(patternId, desc, x, y);
+        }
     }
 
     public void loadArt(Sonic3kSpecialStageDataLoader dataLoader) {
@@ -206,6 +215,7 @@ public class Sonic3kSpecialStageRenderer {
     }
 
     void resetStageGeometryCache() {
+        spriteLayer.reset();
         staticGeometryStageGeneration++;
         invalidateStaticGeometry();
     }
@@ -266,23 +276,42 @@ public class Sonic3kSpecialStageRenderer {
         Sonic3kSpecialStagePlayer player = manager.getPlayer();
         Sonic3kSpecialStageGrid grid = manager.getGrid();
 
-        // Render starfield background (Plane B) with scroll
-        renderBackground(manager, player);
+        spriteLayer.begin(graphicsManager, specialStageViewport.outerOriginX());
+        var priorityScope = spriteLayer.priorityScope();
+        boolean savedPriorityShader = graphicsManager.isUseSpritePriorityShader();
+        // This layer resolves plane occlusion after SAT ownership on indexed pixels.
+        graphicsManager.setUseSpritePriorityShader(false);
+        graphicsManager.beginPatternAtlasBatch();
+        try {
+            renderBackground(manager, player);
+            planePixels = true;
+            renderFloor(manager, player);
+            renderHudNumbers(manager);
+            planePixels = false;
 
-        // Render checkerboard floor (Plane A)
-        renderFloor(manager, player);
-
-        // Draw_SSShadows is last in native SAT, behind every ordinary sprite.
-        renderShadows(manager);
-
-        // Render grid sprites with perspective projection (VDP sprites)
-        renderGridSprites3D(manager, grid, player);
-
-        // Render HUD (sphere/ring counts and icons)
-        renderHud(manager);
-
-        // Render "Get Blue Spheres" banner
-        renderBanner(manager);
+            // Render_Sprites: icons/banner bucket 0, tails appendage $100,
+            // sidekick body $180, main body $200; then Draw_SSSprites, then
+            // Draw_SSShadows (loc_84C2). Earlier opaque SAT pixels win.
+            spritePixels = true;
+            renderHud(manager);
+            renderBanner(manager);
+            renderPlayers(manager, player);
+            renderGridSprites3D(manager, grid, player);
+            renderShadows(manager);
+        } finally {
+            spritePixels = false;
+            planePixels = false;
+            try {
+                graphicsManager.flushPatternBatch();
+            } finally {
+                try {
+                    graphicsManager.endPatternAtlasBatch();
+                } finally {
+                    priorityScope.endSubmission();
+                    graphicsManager.setUseSpritePriorityShader(savedPriorityShader);
+                }
+            }
+        }
     }
 
     /** Raw mapping data for the "Get Blue Spheres" banner sprite. */
@@ -398,18 +427,20 @@ public class Sonic3kSpecialStageRenderer {
 
         graphicsManager.beginPatternBatch();
 
-        // Render number boxes first (Plane A — behind sprites)
-        if (digitsPatternBase > 0) {
-            renderThreeDigitNumber(manager.getSpheresLeft(), 16, 8);
-            renderThreeDigitNumber(manager.getRingsCollected(), 240, 8);
-        }
-
         // Render icons on top (VDP sprites — in front of plane tiles)
         if (iconsPatternBase > 0) {
             renderHudIcon(72, 8, 0);   // Sphere icon
             renderHudIcon(224, 8, 9);  // Ring icon
         }
 
+        graphicsManager.flushPatternBatch();
+    }
+
+    private void renderHudNumbers(Sonic3kSpecialStageManager manager) {
+        if (!artLoaded || digitsPatternBase <= 0) return;
+        graphicsManager.beginPatternBatch();
+        renderThreeDigitNumber(manager.getSpheresLeft(), 16, 8);
+        renderThreeDigitNumber(manager.getRingsCollected(), 240, 8);
         graphicsManager.flushPatternBatch();
     }
 
@@ -844,11 +875,8 @@ public class Sonic3kSpecialStageRenderer {
         // d5 = row variable: dir[1] (row_start) + d1, masked by dir[5]
         int d5 = (dir[1] + d1) & dir[5];
 
-        // Collect all visible sprites with their screen positions, then sort
-        // by screen Y ascending so that far sprites (top of screen) draw first
-        // and close sprites (bottom of screen) draw last (on top).
-        // This matches VDP behaviour where lower sprite table entries (drawn first
-        // by Draw_SSSprites for close rows) appear in front of later entries.
+        // Preserve Draw_SSSprites' direct cell traversal. Screen Y does not
+        // select SAT ownership, including equal/inverted Y during turns.
         spriteCount = 0;
         int ringAnim = manager.getRingAnimFrame();
 
@@ -883,7 +911,7 @@ public class Sonic3kSpecialStageRenderer {
                         int sizeIndex = sizeField - 6;
 
                         if (sizeIndex >= 0 && sizeIndex < 16) {
-                            appendSprite(cellType, scrX, scrY, sizeIndex);
+                            appendSprite(cellType, scrX, scrY, sizeIndex, perspWord);
                         }
                     }
                 }
@@ -894,9 +922,6 @@ public class Sonic3kSpecialStageRenderer {
 
             d5 = (d5 + dir[4]) & dir[5];
         }
-
-        // Sort by screen Y ascending: far/top sprites first, close/bottom sprites last (on top)
-        sortSpritesByScreenYStable();
 
         // Apply fly-away effect during clear sequence
         // ROM: Draw_SSSprite_FlyAway modifies sprite positions:
@@ -912,32 +937,29 @@ public class Sonic3kSpecialStageRenderer {
                 sy -= clearTimer;                              // Fly upward
                 sx = (((sx - 160) * (clearTimer + 256)) >> 8) + 160; // Spread outward
             }
-            renderPerspectiveSprite(spriteCellTypes[i], sx, sy, spriteSizeIndices[i], ringAnim);
+            renderPerspectiveSprite(spriteCellTypes[i], sx, sy, spriteSizeIndices[i], ringAnim,
+                    spritePerspectiveWords[i]);
         }
 
-        // Render main player character.
-        // ROM: Obj_SStage_8FAA uses palette 1 when Player_mode == 2 (Tails alone).
-        PlayerCharacter playerCharacter = manager.getPlayerCharacter();
-        renderPlayerSprite(player, playerCharacter, PLAYER_SCREEN_CENTER_X);
+        graphicsManager.flushPatternBatch();
+    }
 
-        // Render tails appendage on main player when Tails is the main character
+    private void renderPlayers(Sonic3kSpecialStageManager manager, Sonic3kSpecialStagePlayer player) {
+        graphicsManager.beginPatternBatch();
+        PlayerCharacter playerCharacter = manager.getPlayerCharacter();
         if (playerCharacter == PlayerCharacter.TAILS_ALONE
                 && tailsTailsPatternBase > 0 && tailsTailsMappingData != null) {
             int ttFrame = manager.getTailsTailsMappingFrame();
-            if (ttFrame >= 0 && ttFrame < tailsTailsMappingFrameCount
-                    && ttFrame * 2 + 1 < tailsTailsMappingData.length) {
+            if (ttFrame >= 0 && ttFrame < tailsTailsMappingFrameCount) {
                 renderCharacterSprite(tailsTailsMappingData, tailsTailsMappingFrameCount,
                         tailsTailsPatternBase, 1, ttFrame,
                         PLAYER_SCREEN_CENTER_X, projectedPlayerY(player.getJumpHeight(), 0));
             }
         }
-
-        // Render Tails sidekick on top (closer to camera, lower on screen)
-        // ROM: Tails at $38=-0x20 (closer to camera in Z), rendered lower on screen
         if (manager.isTailsEnabled() && tailsPatternBase > 0 && tailsMappingData != null) {
             renderTailsSprite(manager, PLAYER_SCREEN_CENTER_X);
         }
-
+        renderPlayerSprite(player, playerCharacter, PLAYER_SCREEN_CENTER_X);
         graphicsManager.flushPatternBatch();
     }
 
@@ -956,18 +978,19 @@ public class Sonic3kSpecialStageRenderer {
     private void appendShadow(int x, int y) {
         for (int col = 0; col < 4; col++) {
             for (int row = 0; row < 4; row++) {
-                graphicsManager.addShadowPattern(shadowPatternBase + col * 4 + row, reusableDesc,
-                        x + col * TILE_SIZE + specialStageViewport.outerOriginX(), y + row * TILE_SIZE);
+                spriteLayer.sprite(shadowPatternBase + col * 4 + row, reusableDesc,
+                        x + col * TILE_SIZE, y + row * TILE_SIZE, true);
             }
         }
     }
 
-    private void appendSprite(int cellType, int screenX, int screenY, int sizeIndex) {
+    private void appendSprite(int cellType, int screenX, int screenY, int sizeIndex, int perspectiveWord) {
         ensureSpriteCapacity(spriteCount + 1);
         spriteCellTypes[spriteCount] = cellType;
         spriteScreenXs[spriteCount] = screenX;
         spriteScreenYs[spriteCount] = screenY;
         spriteSizeIndices[spriteCount] = sizeIndex;
+        spritePerspectiveWords[spriteCount] = perspectiveWord;
         spriteCount++;
     }
 
@@ -980,28 +1003,7 @@ public class Sonic3kSpecialStageRenderer {
         spriteScreenXs = Arrays.copyOf(spriteScreenXs, newCapacity);
         spriteScreenYs = Arrays.copyOf(spriteScreenYs, newCapacity);
         spriteSizeIndices = Arrays.copyOf(spriteSizeIndices, newCapacity);
-    }
-
-    /** Stable insertion sort: equal Y keys never move ahead of their traversal predecessor. */
-    private void sortSpritesByScreenYStable() {
-        for (int i = 1; i < spriteCount; i++) {
-            int cellType = spriteCellTypes[i];
-            int screenX = spriteScreenXs[i];
-            int screenY = spriteScreenYs[i];
-            int sizeIndex = spriteSizeIndices[i];
-            int insertAt = i;
-            while (insertAt > 0 && spriteScreenYs[insertAt - 1] > screenY) {
-                spriteCellTypes[insertAt] = spriteCellTypes[insertAt - 1];
-                spriteScreenXs[insertAt] = spriteScreenXs[insertAt - 1];
-                spriteScreenYs[insertAt] = spriteScreenYs[insertAt - 1];
-                spriteSizeIndices[insertAt] = spriteSizeIndices[insertAt - 1];
-                insertAt--;
-            }
-            spriteCellTypes[insertAt] = cellType;
-            spriteScreenXs[insertAt] = screenX;
-            spriteScreenYs[insertAt] = screenY;
-            spriteSizeIndices[insertAt] = sizeIndex;
-        }
+        spritePerspectiveWords = Arrays.copyOf(spritePerspectiveWords, newCapacity);
     }
 
     /**
@@ -1044,6 +1046,11 @@ public class Sonic3kSpecialStageRenderer {
      */
     private void renderPerspectiveSprite(int cellType, int screenX, int screenY, int sizeIndex,
                                          int ringAnimPhase) {
+        renderPerspectiveSprite(cellType, screenX, screenY, sizeIndex, ringAnimPhase, (sizeIndex + 6) << 2);
+    }
+
+    private void renderPerspectiveSprite(int cellType, int screenX, int screenY, int sizeIndex,
+                                         int ringAnimPhase, int perspectiveWord) {
         int patternBase;
         int paletteIndex;
 
@@ -1065,18 +1072,21 @@ public class Sonic3kSpecialStageRenderer {
             default: return;
         }
 
+        int nativeBase = patternBase == spherePatternBase ? ART_TILE_SPHERE : ART_TILE_RING;
+        int artWord = nativeBase | (paletteIndex << 13) | 0x8000;
+
         // Emeralds are drawn from their ROM mapping (MapPtr_A10A entries $0B / $0D):
         // the Super Emerald frames are mirrored multi-piece sprites that no single
         // rectangular block of tiles can describe.
         if (cellType == CELL_CHAOS_EMERALD || cellType == CELL_SUPER_EMERALD) {
-            renderMappedSprite(emeraldMappingData, screenX, screenY, sizeIndex, patternBase, paletteIndex);
+            renderMappedSprite(emeraldMappingData, screenX, screenY, sizeIndex, patternBase, nativeBase, artWord, perspectiveWord);
             return;
         }
         // Map_SStageSphere_ aliases frames 10/11, 12/13 and 14/15. A linear
         // size/tile formula shrinks the last two pairs and selects the wrong art.
         if (cellType == CELL_BLUE || cellType == CELL_TOUCHED || cellType == CELL_RED
                 || cellType == CELL_BUMPER || cellType == CELL_SPRING) {
-            renderMappedSprite(sphereMappingData, screenX, screenY, sizeIndex, patternBase, paletteIndex);
+            renderMappedSprite(sphereMappingData, screenX, screenY, sizeIndex, patternBase, nativeBase, artWord, perspectiveWord);
             return;
         }
 
@@ -1155,17 +1165,21 @@ public class Sonic3kSpecialStageRenderer {
                 int srcCol = ringHFlip ? (tilesW - 1 - col) : col;
                 int srcRow = sparkleVFlip ? (tilesH - 1 - row) : row;
                 tileIdx = srcCol * tilesH + srcRow;
-                int patternId = patternBase + tileOffset + tileIdx;
-                reusableDesc.set(0);
-                reusableDesc.setPriority(true);
-                reusableDesc.setPaletteIndex(paletteIndex);
-                reusableDesc.setHFlip(ringHFlip);
-                reusableDesc.setVFlip(sparkleVFlip);
+                int mappingWord = tileOffset | (ringHFlip ? 0x800 : 0) | (sparkleVFlip ? 0x1000 : 0);
+                int effective = effectiveGridArtWord(mappingWord, artWord, perspectiveWord);
+                int patternId = patternBase + ((effective & 0x7FF) - nativeBase) + tileIdx;
+                reusableDesc.set(effective);
                 renderNativePattern(patternId, reusableDesc,
                         screenX + centerOffX + drawCol * TILE_SIZE,
                         screenY + centerOffY + row * TILE_SIZE);
             }
         }
+    }
+
+    /** loc_9A04/loc_9ABC test the ORIGINAL unsigned perspective word; Normal uses ADD.W. */
+    static int effectiveGridArtWord(int mappingWord, int artWord, int perspectiveWord) {
+        int adjusted = (perspectiveWord & 0xFFFF) >= 0x54 ? artWord & 0x7FFF : artWord;
+        return (mappingWord + adjusted) & 0xFFFF;
     }
 
     /**
@@ -1178,7 +1192,7 @@ public class Sonic3kSpecialStageRenderer {
      * mapping data rather than a rectangular block of tiles.
      */
     private void renderMappedSprite(byte[] mappingData, int screenX, int screenY, int frame,
-                                     int patternBase, int paletteIndex) {
+                                     int patternBase, int nativeBase, int artWord, int perspectiveWord) {
         if (mappingData == null || frame < 0 || frame >= PERSPECTIVE_MAPPING_FRAME_COUNT) return;
         if (frame * 2 + 1 >= mappingData.length) return;
 
@@ -1193,12 +1207,12 @@ public class Sonic3kSpecialStageRenderer {
 
             int yOff = (byte) mappingData[po];
             int sizeByte = mappingData[po + 1] & 0xFF;
-            int patternWord = readWord(mappingData, po + 2);
+            int patternWord = effectiveGridArtWord(readWord(mappingData, po + 2), artWord, perspectiveWord);
             int xOff = readSignedWord(mappingData, po + 4);
 
             int tilesW = ((sizeByte >> 2) & 3) + 1;
             int tilesH = (sizeByte & 3) + 1;
-            int tileBase = patternWord & 0x07FF;
+            int tileBase = (patternWord & 0x07FF) - nativeBase;
             boolean hFlip = (patternWord & 0x0800) != 0;
             boolean vFlip = (patternWord & 0x1000) != 0;
 
@@ -1210,11 +1224,7 @@ public class Sonic3kSpecialStageRenderer {
                     int srcRow = vFlip ? (tilesH - 1 - row) : row;
                     int patternId = patternBase + tileBase + srcCol * tilesH + srcRow;
 
-                    reusableDesc.set(0);
-                    reusableDesc.setPriority(true);
-                    reusableDesc.setPaletteIndex(paletteIndex);
-                    reusableDesc.setHFlip(hFlip);
-                    reusableDesc.setVFlip(vFlip);
+                    reusableDesc.set(patternWord);
                     renderNativePattern(patternId, reusableDesc,
                             screenX + xOff + col * TILE_SIZE,
                             screenY + yOff + row * TILE_SIZE);
@@ -1242,12 +1252,7 @@ public class Sonic3kSpecialStageRenderer {
     private void renderTailsSprite(Sonic3kSpecialStageManager manager, int centerX) {
         int tailsY = projectedPlayerY(manager.getTailsJumpHeight(), -0x20);
 
-        // Render Tails body first (behind tails' tails)
-        int frame = manager.getTailsMappingFrame();
-        renderCharacterSprite(tailsMappingData, tailsMappingFrameCount,
-                tailsPatternBase, 1, frame, centerX, tailsY);
-
-        // Render Tails' tails on top of body
+        // Render Tails' tails before the sidekick body in native SAT order
         if (tailsTailsPatternBase > 0 && tailsTailsMappingData != null) {
             int ttFrame = manager.getTailsTailsMappingFrame();
             if (ttFrame >= 0 && ttFrame < tailsTailsMappingFrameCount
@@ -1256,6 +1261,11 @@ public class Sonic3kSpecialStageRenderer {
                         tailsTailsPatternBase, 1, ttFrame, centerX, tailsY);
             }
         }
+        // Obj_SStage_9444's $100 bucket precedes Obj_SStage_9212's $180.
+        int frame = manager.getTailsMappingFrame();
+        renderCharacterSprite(tailsMappingData, tailsMappingFrameCount,
+                tailsPatternBase, 1, frame, centerX, tailsY);
+
     }
 
     private void renderPlayerSprite(Sonic3kSpecialStagePlayer player,

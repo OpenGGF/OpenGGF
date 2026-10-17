@@ -586,6 +586,9 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
             byte[] ttMapData = rom.readBytes(ttMapAddr, 300);
             renderer.setTailsTailsMappingData(ttMapData);
         }
+        if (nextBase > S3kSpecialStageSpriteLayer.MASK_PATTERN_BASE) {
+            throw new IllegalStateException("Blue Sphere ROM art overlaps its private masked-pattern range");
+        }
         // Load scalar table
         byte[] scalars = dataLoader.getScalarTable();
         // Scalars are used by the 3D projection system

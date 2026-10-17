@@ -792,3 +792,17 @@ and short latch assertions fail; corrected focused112 and complete sanctuary
 entry/return matrices2006 pass without skips. The [completion plan](../../plans/2026-10-13-s3k-playable-completion.md#immediate-scene-fade-publication-after-rewind--2026-10-17)
 records exact commands and scope. Native RGB residuals, strict traces and
 configuration/cold/PAL/PCM limits outside these products remain open.
+
+
+Blue Sphere SAT/plane follow-up (2026-10-17): the private indexed compositor
+resolves the first opaque sprite pixel before Plane A priority, preserves
+native cell/mapping-piece order and the original unsigned `$54` gate, and
+keeps players/HUD sprites before the grid and shadows after it. The fresh
+maintained v11 capture has zero raw RGB differences at all 12 original-native
+stage reveal checkpoints (+0..22 by 2), replacing the prior 19..46 residuals;
+all 17 results samples remain exact. Its entire state.csv and ledger.csv are
+byte-identical to v10, including LRZ2 return frame 2423. The [implementation,
+focused GPU/resource checks and exact capture protocol](../../plans/2026-10-13-s3k-playable-completion.md#blue-sphere-sat-ownership-and-plane-a-composition--2026-10-17)
+record the bounded result. This repairs the sampled overlap gap without an
+accepted ROM deviation; complete timelines, other native configurations,
+cold/donor/PAL/PCM and strict timing/trace products remain separate obligations.

@@ -92,7 +92,9 @@ Unreleased. The earlier development themes remain in
 - **S3K special stage presentation:** Blue Sphere players and their tails use
   the original perspective projection through jumps, with fixed ground shadows
   under the players. Distant spheres retain the original shared mapping frames
-  and tile sizes. The results card sits on the locked-on game's grey backdrop
+  and tile sizes. Overlapping spheres use the original sprite-table order and
+  compare the winning pixel's priority against the floor and HUD planes.
+  The results card sits on the locked-on game's grey backdrop
   instead of white, matching native frames of won and failed stages.
   A Super Emerald pedestal loads the S&K sphere layout for its selected stage and
   selects that stage on the frame the player lands on it,

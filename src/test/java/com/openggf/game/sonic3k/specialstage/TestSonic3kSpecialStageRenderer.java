@@ -157,8 +157,8 @@ class TestSonic3kSpecialStageRenderer {
         renderer.render(manager);
 
         assertEquals(List.of(
-                        new RenderCall(playerBase, 1),
-                        new RenderCall(tailsTailBase, 1)),
+                        new RenderCall(tailsTailBase, 1),
+                        new RenderCall(playerBase, 1)),
                 graphics.calls);
     }
 

@@ -6867,8 +6867,22 @@ The initial ordinary-label palette-offset oracle and proposed continue-icon slot
 against source; no production continue lifetime was changed. See the
 [results evidence](../architecture/designs/2026-10-13-s3k-ending-lifecycle.md#native-results-geometry-and-painter-order--2026-10-17-root).
 
+**Stage horizon sprite priority (corrected for the declared product, 2026-10-17).**
+
+After the ROM mapping/player/shadow corrections, the remaining 19..46 pixels
+come from native first-SAT-pixel ownership and the unsigned perspective priority
+gate. The private indexed compositor now claims the first opaque pixel before
+Plane A can hide it; a later high sprite cannot appear through a hidden low
+winner. Direct grid traversal and forward mapping-piece order replace Y sorting.
+The maintained v11 capture matches the original native v2 RGB at all 12 paired
+stage reveal checkpoints (+0..22 by 2) and preserves all 17 exact results
+checkpoints. State and event CSVs are byte-identical to v10. See the
+[implementation and bounded GPU/capture evidence](../architecture/plans/2026-10-13-s3k-playable-completion.md#blue-sphere-sat-ownership-and-plane-a-composition--2026-10-17).
+The whole-timeline/native-configuration, cold/donor/PAL/PCM and timing/trace
+removal conditions below remain open; this is not a whole special-stage claim.
+
 ### Removal condition
-The layout bank, white-fade product and sampled results prefix are corrected locally. Stage reveal pixels,
+The layout bank, white-fade product and sampled stage/results prefixes are corrected locally. Complete stage RGB,
 other character/PAL/viewport/donor products, the rest of the results timeline and final candidate verification
 remain open. One declared native320 NTSC Tails Limited/RAW_RGB product is not whole-scene or timing parity.
 

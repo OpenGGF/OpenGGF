@@ -2029,3 +2029,17 @@ immediate redraw generation, then test the next publication and two forward
 cycles with an independent unlatched control. A capped matrix-failure preview
 is not complete attribution: rerun both entire affected classes after the
 mechanism repair. Origin: S3K sanctuary palette rewind,2026-10-17.
+
+
+**Sprite ownership precedes plane priority.** In Blue Sphere, `Draw_SSSprites`
+(`loc_99CC` / `loc_9A84`) appends cells directly, and `Draw_SSSprite_Normal`
+appends mapping pieces forward. The first nontransparent SAT pixel owns the
+sprite result even when a high plane hides its low-priority pixel. Clipping
+that pixel before ownership can incorrectly expose a later high sprite;
+painting all low sprites before all high sprites also fails the interleaved
+priority entries in native turn frames. Keep indexed ownership and winning
+priority together, then compare against the plane. `loc_9A04` / `loc_9ABC`
+clear bit 15 of the base art word for the ORIGINAL unsigned perspective word
+at least `$54`; mapping attributes are added with `ADD.W`, including carries,
+rather than ORed. Shadow operators are later SAT entries; HUD number cells
+belong to Plane A. Origin: Blue Sphere native sprite-priority task, 2026-10-17.
