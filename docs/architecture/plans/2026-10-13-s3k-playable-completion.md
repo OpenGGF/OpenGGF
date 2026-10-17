@@ -2355,3 +2355,52 @@ incorrectly compared the role name `tails_p2` with the saved character key
 The two solo cases' empty identity lists are equivalent to their previous
 zero-roster checks. No additional cold, wide, donor or native audiovisual
 coverage is claimed.
+
+#### Composed presentation qualification and native RGB — 2026-10-17
+
+The free ending tree composes the retained Root `3aad23d38`, ending order
+`ac1e1403c`, projection/shadows `4cce16113`, develop preflight `707b3c208`
+and saved-slot `81a2e707f` as `a259e695e`. Source merges were clean; append-only
+research/matrices/pitfalls and release prose retained both sides' intent.
+The original Root category run remains frozen on `3aad23d38` while it completes.
+
+Two minimal test-service repairs address the observed broad errors: the neutral
+GameModule fixture supplies its required SONIC_2 rules (matching its test setup),
+and the admission-only mutator fixture explicitly supplies RuntimeArtCoordinator.NONE
+for its final accepted STOCK branch. The latter failure followed successful
+denial checks; it was not a denied mutation. No production null fallback is added.
+With these repairs the composed exact focused selection passes all 101 GameLoop,
+10 mutator-admission, five ending-state, two ending-GPU and five saved-slot cases,
+plus projection, shadows, snapshots and required S3K consumers. Request17744
+finishes 07:02:50 UTC with 219 tests, 1 failure, 0 errors and 1 skip. The sole
+failure is `TestTitleInputOwnership.captureChordIsConsumedWhileBlockedAndCannotFireAfterReturningWithKeyHeld`,
+expected true/actual false at line105. Fresh matched baseline request24091 on
+unchanged develop `707b3c208` has the same failure (8/1/0/0, 07:01:26 UTC).
+`TestForegroundWindowRendering` still aborts its GLFW-null EGL setup even with
+EGL_PLATFORM=surfaceless; its framebuffer remains unqualified. This is not an
+all-green or full-suite result.
+
+Maintained `S3kSevenChaosGatewayCaptureTool` request31444 on that composed source
+completes exit0 at 07:04:46 UTC via the normal main queue wrapper,
+`-Dmse=off compile exec:java -Dexec.mainClass=com.openggf.tools.S3kSevenChaosGatewayCaptureTool`,
+with `--rom $S3K_TASK_ROM --out-dir NEW_ABSOLUTE_DIRECTORY`, Limited/RAW_RGB,
+surfaceless EGL, unset DISPLAY/WAYLAND_DISPLAY and nullAL. Its 174 files
+(172 actual PNGs and two CSVs) are retained in the existing external task's
+`spot-checks/seven-chaos-engine-player-v8`. State.csv and ledger.csv are
+byte-identical to v6; events still end in LRZ2 return2423.
+
+Compared directly with unchanged original native-v2 PPMs, using the declared
+native active crop `(14,8)..(334,232)` only, stage reveal+0..22 by2 has raw RGB
+difference counts `165,165,187,214,214,234,299,299,314,330,330,330`, down from
+`446,446,578,643,643,667,732,732,747,763,763,1112`. Every pixel at y128..223
+matches at the inspected +0/+10/+22 spots; all +22 residuals lie in bbox
+(9,21)..(276,57), above the player and shadow. The actual +22 pair was viewed.
+Results reveal+0..32 by2 still has zero differing pixels at all17 spots. There
+is no colour normalization, alignment shift or difference mask in these full
+image counts. The comparison pair lives in `seven-chaos-compare-player-v8`.
+
+Maven reports the existing Discord presence worker lingering for15s at CLI
+shutdown; its owned Maven/JVM invocation is terminal. This is diagnostic CLI
+and bounded picture evidence, not a suite pass. Remaining upper HUD/distant
+object phase, complete stage/results timeline, cold/donor/PAL/PCM and other
+native configurations remain open.

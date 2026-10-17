@@ -1143,3 +1143,11 @@ fade, with the publication phase captured for rewind. The
 records old-source failures and 106 focused passes. A new actual framebuffer
 comparison, remaining sphere/HUD phase differences, whole routes, donor,
 PAL and PCM remain open; component passes do not certify those products.
+
+Composed native RGB follow-up (2026-10-17): the actual seven-Chaos v8 capture
+reduces stage reveal+22 from1112 to330 differing pixels, confined above y58;
+all pixels at y128..223 match at +0/+10/+22. The17 sampled results frames
+remain exact and both state/event CSVs are byte-identical to v6. See the
+completion plan's composed presentation qualification. This certifies those
+sampled native320 Tails/NTSC/Limited-RAW_RGB pictures only; upper HUD/distant
+object phase and the wider route/configuration/PAL/PCM obligations stay open.

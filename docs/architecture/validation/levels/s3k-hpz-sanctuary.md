@@ -765,3 +765,11 @@ character/team modes, regular-loop shadow publication, two restore/forward
 replays and the required S3K loading checks. This adds no cold gateway, whole
 framebuffer, donor, PAL or PCM certification. New composed RGB comparison
 remains pending; the original native images are retained unchanged.
+
+Composed native RGB follow-up (2026-10-17): the actual seven-Chaos v8 capture
+reduces stage reveal+22 from1112 to330 differing pixels, confined above y58;
+all pixels at y128..223 match at +0/+10/+22. The17 sampled results frames
+remain exact and both state/event CSVs are byte-identical to v6. See the
+completion plan's composed presentation qualification. This certifies those
+sampled native320 Tails/NTSC/Limited-RAW_RGB pictures only; upper HUD/distant
+object phase and the wider route/configuration/PAL/PCM obligations stay open.
