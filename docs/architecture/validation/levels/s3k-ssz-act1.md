@@ -2017,3 +2017,15 @@ is outside the window. See the [R16 audit](../../audits/trace/2026-10-14-s3k-mon
 for exact clocks, pose, movie hash, command and prerequisite accounting.
 No runtime repair, native/media, variant or further campaign execution follows;
 first rising-dead writer/cause and current campaign completion remain open.
+
+
+## R17 engine death-writer clarification (2026-10-17)
+
+One original maintained prefix48401 on00c54 plus R16docs/passive logs again fails
+colddeath49613 (1/1F0E0S). The actual rising setDead stack now identifies shared
+TouchResponse.applyHurt→applyHurtOrDeath→applyDeath, selecting Mecha **parent**
+class as HURT/NORMAL with hadRingsfalse. The secondary child/custom update/cloud
+checkpoint is not this observed writer. See [R17 exact witness](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r17-cold-sonic-campaign-rising-death-writer--2026-10-17).
+No shared damage defect or earlier trajectory/ring producer is established;
+current campaign completion and native comparison remain open. Temporary logs
+are removed; no runtime repair, new route, native/media or further execution.

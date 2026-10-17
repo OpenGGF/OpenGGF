@@ -6057,3 +6057,18 @@ first rising-dead writer/cause; no runtime fix or additional execution.
 Temporary observer and owned diagnostics are consumed after durable facts;
 local docs only, prior refs/native4fdf/private config preserved. No campaign
 completion, native parity, regression-isolation or broad/delivery claim.
+
+
+### R17 cold Sonic campaign death writer — 2026-10-17
+
+After R16 eeb79 completion, one original-case prefix48401 on unchanged production
+00c54 plus passive logs reproduces colddeath49613:1/1F0E0S,
+queue0/Maven51.878s,17:45:46UTC. Build-only66285 passed first.
+[Exact source/run and real stack](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r17-cold-sonic-campaign-rising-death-writer--2026-10-17).
+Actual shared touch selects Mecha parent class (not secondary child), HURT,
+NORMAL, hadRingsfalse/sourceX19C0, then applyHurtOrDeath→applyDeath→rising setDead.
+The preassignment P1 pose19BF.2A00/061D.8600 matches R16's last alive sample.
+Only7,745bytes of targeted logs; no collision observer/replacement or gameplay
+writes. Temporary source/classes and owned XML/text consumed after facts.
+This closes the missing engine writer, not upstream regression/native-death
+causality. No runtime repair or additional execution; Root owns the next scope.
