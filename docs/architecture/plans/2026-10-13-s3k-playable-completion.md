@@ -3975,3 +3975,105 @@ The image was inspected. No runtime defect appeared, and captures stopped after
 this pair. This does not qualify the remaining sequence, older terminal-init
 pictures with undeclared V-int/HScroll inlets, PAL, PCM, cold-run native parity,
 wide products or predictive timing. Root owns integration and broader validation.
+
+
+## 2026-10-17 producer-owned AIZ deformation instruction work
+
+This independent follow-up reuses `$OWNED_TREE` (existing `t3-fa8da232`),
+fast-forwarded under its normal build lease to composition
+`ba48017e9280c103f4df8d8baec5a2558d979041` (including CNZ `ad1a689cd`). Only
+its own branch was renamed from `feature/ai-s3k-cnz-natural-miniboss-edge` to
+`feature/ai-s3k-ending-aiz-deform-work-gpt61`. Separate registry entry
+`gpt61_ending_aiz_deform_work` retains that alias, scope and a 24-hour expiry.
+There was no owned live request before source writes; the foreign TraceChaser
+`4fdf73880f93a3172d23bf9e157b15de3c78fc32` checkout remains untouched.
+Root owns integration and combined validation; this is a later composition unit.
+
+**Production boundary.** Ending_BackgroundEvent states 8/$C/$10 already call
+`SwScrlEnding.prepareAizBackgroundEvent` before drawing. That logical owner now
+records one closed `AIZ1_Deform` instruction term after the existing fixed-point
+callee. Its full 150-byte body at `$23B03E..$23B0D4` must match immutable original
+ROM SHA-256 `e437770a9eae297587d89a6ba317e97ad6df65d651f11abb4a6dff77c0af157f`.
+The original locked-on ROM remains SHA-1
+`CFBF98C36C776677290A872547AC47C53D2761D6`; the original file was never modified or duplicated.
+The closed **1094 instruction cycles** come from the existing R16 instruction
+hand sum and input-independent full-PC comparison in 28 retained native ending
+buckets (`tools/timing/s3k-instruction-ledgers/deform/README.md`). No new native
+capture or research was performed, and native PCs/counts/trace rows are never
+runtime inputs.
+
+The state-$10 background-Y subtraction is now a separate caller helper, with
+unchanged arithmetic. It is outside the authenticated callee term. Same-frame
+preparation, output composition, its compatibility fallback and pure rebuilding
+publish no duplicate instruction work. The session ROM binding is immutable and
+cached; each actual call updates scalar ordinal/frame/qualification without
+per-frame allocation. These live scalars are captured with existing ending RAM.
+Unsupported/truncated code, including altered operands, refuses qualification
+(`-1`, never zero) while the existing gameplay calculation still runs.
+
+**Deliberate limit.** This follows the existing V-int diagnostic-term exposure
+pattern; it introduces no generic budget framework or readiness consumer. Caller,
+ApplyDeformation, water deformation, other frame callers, interrupt acceptance,
+refresh, Z80 bus, VDP FIFO and DMA freeze remain explicitly unpriced. In
+particular, `WaterSystem`'s no-water zero is not a source for the raw ROM
+`Water_level=$1000` operand. The common 1094-cycle callee cannot explain native
+Sonic three versus Tails four services. Static measured head19/fingerprint
+`5b4280f6…` stays four services for both products. Profiles, manifests, timing
+admission and readiness/service counts are unchanged. The late +2 Sonic/team
+171/194-pixel residual, full CPU/window budget and 6+46 acceptance remain open.
+
+**Red, fixture correction and final checks.** All commands below ran from the
+owned tree with the current Main absolute wrapper, Java 25, surfaceless EGL,
+null OpenAL and no ambient display. Here `OGGF_MAIN` is the absolute original
+Main checkout and `OWNED_TREE` the absolute retained task checkout; they are
+path placeholders only. The original absolute ROM was supplied:
+
+```bash
+cd "$OWNED_TREE"
+Q=(env -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH
+   EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null
+   JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4
+   python3 "$OGGF_MAIN/tools/testing/maven_queue.py"
+   --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl
+   "-Ds3k.rom.path=$OGGF_MAIN/s3k.gen")
+"${Q[@]}" '-Dtest=TestS3kEndingAizDeformWork#actualBackgroundEventPublishesOneClosedCalleeTerm' test -B
+"${Q[@]}" '-Dtest=TestS3kEndingAizDeformWork,TestS3kAizDeformInstructionWork,TestSwScrlEnding,TestSwScrlEndingResources' test -B
+"${Q[@]}" '-Dtest=TestS3kEndingAizDeformWork,TestS3kEndingInitialBackground,TestS3kVIntInstructionCycles,TestS3kVIntInstructionProduction,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' test -B
+"${Q[@]}" -Pguards '-Dtest=TestArchitecturalSourceGuard,TestHardwareTimingAuthorityGuard,TestRewindArchitectureGuard,TestTraceReplayInvariantGuard,TestTraceHydrateSwitchDefault' test -B
+```
+
+- Old-red session54490: terminal1 at11:19:18 UTC, **1/1F/0E/0S**. After adding
+  the captured diagnostic surface but before wiring it, actual background event
+  execution expected ordinal1 and observed0. The test took0.244s; initial full
+  compilation plus test took75s, queue wait0s. This was an assertion failure.
+- Session94617: terminal1 at11:22:08 UTC, **21/3F/0E/0S**, Maven74s, wait0s.
+  All three failures were new fixed-point fixture checks: only camera copies had
+  been seeded, but ScreenEvents replaces them from the live camera before dispatch.
+  Correcting the fixture's live camera source changed no production code. The
+  auth3 and existing scroll11 controls already passed and were not repeated.
+- Session76285: terminal0 at11:23:33 UTC, **83/0F/0E/0S**, Maven31.032s,
+  queue wait23s. This includes corrected owner7, existing ending-background10,
+  V-int instruction5/production1, and mandatory S3K60 (the LevelLoading selector
+  resolves both 36-case and 7-case classes).
+- Session72319: terminal0 at11:24:31 UTC, **112/0F/0E/0S**, Maven32.257s,
+  wait0s: source72, hardware authority25, rewind architecture4, trace invariant10,
+  hydrate-default1. Final bounded coverage is **97 focused +112 guards**, not a
+  broad smoke or full-suite result.
+
+The short owner fixtures declare background state8/12/16; they do not claim a
+cold route or another character product. They retain the inherited `$3C` drift
+vector and state-$10 caller subtraction, require exactly one term on the next
+logical call, and prove draw-only preparation cannot invent a term. An in-memory
+operand mutation preserves semantic RAM while refusing qualification; another
+control mutates every callee byte independently, including operands and RTS.
+Six actual logical frames are captured and fully restored/replayed twice,
+comparing every registered world snapshot key and the live work ordinal.
+
+Final executable/test input identity: base `ba48017e` plus the five owned Java
+files, concatenated as path/NUL/content in runtime-state, scroll, timing-work,
+owner-test, timing-test order, SHA-256
+`fa262c8f35c00c20e00669c487a7d6f3b13a606402c65476d337b71c330e9cc9`.
+No executable source changed after those affected checks. Consumed XML/text
+reports are inspected and removed under `worktree_metadata_slot` alone; no raw
+archives or validation receipts are retained. No media, native, full-chain,
+broad-suite, integration or push was performed for this unit.
