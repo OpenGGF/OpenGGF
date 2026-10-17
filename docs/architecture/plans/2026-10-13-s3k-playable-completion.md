@@ -3350,3 +3350,41 @@ no `SessionManager`/`game.rules` dependency in `FadeManager`. Root owns the
 combined architecture-class check after its independent mask/store repairs,
 integration and push; this slice does not claim a fresh green architecture or
 broad suite. Consumed local logs/XML were removed after checking all skips.
+
+
+### Final affected architecture qualification — 2026-10-17
+
+Composition `3f6758cef0b528eef888874671e37ae7c3760fbf` includes the qualified white-fade binding
+`b3cf0337a`, equivalent mask-range expression, existing AnPal fallback-signature reconciliation, ending
+sampler `3896035af` and ICZ authoring-limit record `04506e5cd`. The white-fade repair separately passed
+150 focused native-GPU/palette/rewind/gateway/required-S3K tests and 57 binding/reset/restore/session
+construction/lifecycle neighbors, each with zero failures, errors or skips. Public rule/API signatures
+are unchanged. Complete appended Plan evidence from both parents was preserved during the sole doc conflict.
+
+The final affected command used the current Main queue wrapper from the intended Root checkout:
+`--normal -Dmse=off -Pguards -Dtest=TestArchUnitRules,TestProductionSingletonClosureGuard,TestArchitecturalSourceGuard`
+plus the original four absolute ROM properties, isolated report/tmp paths and `test -B`. The same
+surfaceless-EGL/null-OpenAL/no-ambient-display/Lua5.4 launcher environment was preserved. Session94450
+completed terminal1 at **09:56:49 UTC**, Maven1m19s: **145 tests / 4 failures / 0 errors / 0 skips**.
+All four failure identities, exception types and complete messages exactly equal Main707's matched73-case
+result: MenuAudioProbe's two singleton checks and HubMusic's provider/shared-layer checks. The FadeManager
+lower-layer violation, mask initializer finding and frozen-store error are absent. No exception was added,
+guard weakened, automatic frozen-store update enabled or unrelated baseline code fixed. This is bounded
+validation with inherited failures, not a green suite.
+
+The original 70-batch smoke selection is covered across the retained completed batches, exact resumed
+65–70 and separately recorded focused repairs. Neither the interrupted partial65 nor overlapping focused
+products are added to manufacture a one-SHA test total. The completed715-case guard run and final affected
+145-case comparison have their distinct source identities above; unchanged guard coverage was not repeated
+as a ceremony. The full suite was not run. Main707 was fetched/fast-forward-pulled again and remained
+unchanged, preserving all foreign dirt. Integration, package-with-tests-skipped, push and accounted cleanup
+are the next delivery steps, not already claimed here.
+
+All nine current NTSC ending products were sampled exactly once:253 required pairs,249 exact and four
+different. Sonic/+2 and Sonic+Tails/+2 share171/194 late cloud/water pixels; seven products match, including
+Tails/+2's165-pair title-reaching run. Read-only image/native-state analysis finds a one-pass reunion
+background phase deficit; production queue causality is being observed separately without changing timings.
+ICZ's third finite controller attempt also ended alive at4594, so natural death/respawn/history/rewind
+qualification remains open. Strict HCZ work and the retained native diagnostic attribution stay separate
+from this delivery. No all-S3K, PAL, PCM, predictive six-ending/46-fingerprint timing or performance acceptance
+is claimed.
