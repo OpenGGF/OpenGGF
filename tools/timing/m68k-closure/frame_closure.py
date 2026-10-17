@@ -20,11 +20,12 @@ Commands:
 Inputs: --spec (cases, windows, identities), --rom, --capture-root, optional --counters (observer stall counters),
 and --gpgx-git (Genesis-Plus-GX repository) unless the spec selects the Motorola cost model.
 Origin: OpenGGF S3K ending Kos CPU-budget research (known-bug "Ending Reunion Kos Service Count"), 2026-10-16.
-GPGX hardware rules cited from 051d430d: refresh m68kcpu.c:308-313; DMA vdp_ctrl.c:632-690; interrupt entry 44 cycles
-(m68kcpu.h exception table); Z80-area latency mem68k.c:144,179; Z80 access to the 68000 bus memz80.c:95-118 and
+GPGX hardware rules cited from 051d430d: refresh m68kcpu.c:308-313; DMA vdp_ctrl.c:632-690; interrupt acceptance
+m68ki_cycle_interrupts[(cycles/7)%10] = 50..59 cycles (m68kcpu.h:1405,1449; exact only with an observed phase); Z80-area latency mem68k.c:144,179; Z80 access to the 68000 bus memz80.c:95-118 and
 VDP FIFO waits vdp_ctrl.c:2307,2401 are not visible in 68000 execution counts and must come from --counters.
 """
 import argparse
+import math
 import collections
 import csv
 import hashlib
@@ -35,6 +36,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import m68k_timing  # noqa: E402
 import gpgx_cycles  # noqa: E402
+import refine  # noqa: E402
 
 PASS, FAIL, INCOMPLETE, ERROR = 0, 1, 2, 3
 STATUS = {PASS: 'PASS', FAIL: 'FAIL', INCOMPLETE: 'INCOMPLETE', ERROR: 'ERROR'}
@@ -65,7 +67,14 @@ class CostModel:
                 raise UsageError('spec selects the GPGX cost model; --gpgx-git is required')
             self.table = gpgx_cycles.load_table(args.gpgx_git, spec['cost_model']['commit'],
                                                 spec['cost_model']['cycles_blob'])
-        elif self.kind != 'motorola':
+            if 'cpu_header_blob' not in spec['cost_model']:
+                raise UsageError('GPGX cost model needs cpu_header_blob for the interrupt acceptance table')
+            irq = gpgx_cycles.load_interrupt_cycles(args.gpgx_git, spec['cost_model']['commit'],
+                                                    spec['cost_model']['cpu_header_blob'])
+            self.interrupt = (min(irq), max(irq))
+        elif self.kind == 'motorola':
+            self.interrupt = (44, 44)   # Motorola UM autovector interrupt time; E-clock synchronisation not modelled
+        else:
             raise UsageError('unknown cost model %r' % self.kind)
 
     def word(self, a):
@@ -81,7 +90,7 @@ class CostModel:
 
 # ---------------------------------------------------------------- flow solver
 
-def solve_bucket(counts, dec, cache, cited):
+def solve_bucket(counts, dec, cache, cited, pins=None):
     """Decode executed PCs and solve conditional outcomes. Returns dict with intervals and solver evidence."""
     ins, unsupported = {}, {}
     for pc, c in counts.items():
@@ -106,7 +115,7 @@ def solve_bucket(counts, dec, cache, cited):
         if i.kind == 'seq':
             known[nxt] += c
         elif i.kind in ('cond', 'dbcc'):
-            br[pc] = [0, c]
+            br[pc] = list((pins or {}).get(pc, [0, c]))
             tin[i.target].append(pc)
             fin[nxt].append(pc)
         elif i.kind == 'jump':
@@ -182,7 +191,9 @@ def idle_refresh_interval(iters, steps):
 
 def bucket_terms(counts, model, dec, cache, plat, dma_words):
     cited = {int(k, 16): v for k, v in plat['cited_instruction_cycles'].items()}
-    s = solve_bucket(counts, dec, cache, cited)
+    s, refined, notes = refine.resolve(model.rom, counts,
+                                       lambda pins: solve_bucket(counts, dec, cache, cited, pins),
+                                       model.cost, plat.get('refinements', []))
     lo = hi = 0
     durations = []
     open_branches = 0
@@ -190,6 +201,13 @@ def bucket_terms(counts, model, dec, cache, plat, dma_words):
     for pc, i in s['ins'].items():
         c = counts[pc]
         k = model.cost(i)
+        if pc in refined:
+            lo += refined[pc]
+            hi += refined[pc]
+            d = max(k['taken'][1], k['fall'][1]) if isinstance(k, dict) else k[1]
+            if pc not in idle_pcs:
+                durations.extend([d] * c)
+            continue
         if isinstance(k, dict):
             t0, t1 = s['branches'][pc]
             open_branches += t0 != t1
@@ -208,13 +226,15 @@ def bucket_terms(counts, model, dec, cache, plat, dma_words):
         hi += counts.get(pc, 0) * cyc['cycles']
         durations.extend([cyc['cycles']] * counts.get(pc, 0))
     vints = counts.get(int(plat['vint_entry_pc'], 16), 0)
+    irq = [vints * model.interrupt[0], vints * model.interrupt[1]]
     z80lat = 0
     for pc, i in s['ins'].items():
         for a in i.abs_addrs:
             if 0xA00000 <= a <= 0xA0FFFF:
                 z80lat += counts[pc] * (2 if i.size == 'l' else 1)
-    dma_mclk = vints * sum((w * MCLK_PER_LINE) // r for w, r in plat['vint_dma_words_and_rates'])
-    dma_mclk += sum((w * MCLK_PER_LINE) // plat['queue_dma_rate'] for w in dma_words)
+    dma_jumps = [(w * MCLK_PER_LINE) // r for w, r in plat['vint_dma_words_and_rates']] * vints
+    dma_jumps += [(w * MCLK_PER_LINE) // plat['queue_dma_rate'] for w in dma_words]
+    dma_mclk = sum(dma_jumps)
     idle_iters = counts.get(idle_pcs[0], 0)
     if any(counts.get(p, 0) != idle_iters for p in idle_pcs):
         idle_iters = None
@@ -222,24 +242,47 @@ def bucket_terms(counts, model, dec, cache, plat, dma_words):
     # every RTE beyond the interrupt returns (e.g. a stacked-SR/PC resume) lands at a dynamic address
     budget_l = s['indirect'] + vints + 1 + bookmarks + max(0, s['rte'] - vints)
     budget_d = 1 + bookmarks
-    return {'instr': [lo, hi], 'vints': vints, 'z80_area_latency': z80lat, 'dma_mclk': dma_mclk,
+    return {'instr': [lo, hi], 'vints': vints, 'interrupt': irq, 'dma_jumps_mclk': dma_jumps, 'z80_area_latency': z80lat, 'dma_mclk': dma_mclk,
             'idle_iters': idle_iters, 'bookmarks': bookmarks, 'open_branches': open_branches,
             'unsupported': {('%06X' % pc): why for pc, (why, c) in s['unsupported'].items()},
             'forced_landings': sum(s['landings'].values()), 'landing_budget': budget_l,
             'forced_deficits': sum(s['deficits'].values()), 'deficit_budget': budget_d,
+            'refined_pcs': sorted('%06X' % p for p in refined), 'refinement_notes': notes,
             'durations': durations}
 
 
-def refresh_bounds(t, plat):
+def refresh_bounds(t, plat, stall_cycles):
+    """Sound bounds on GPGX bus-refresh events in one bucket (m68kcpu.c:308-313).
+
+    GPGX tests `m68k.cycles >= m68k.refresh_cycles` at every instruction fetch, then sets
+    refresh_cycles = m68k.cycles + 128 and adds 2. m68k.cycles is the single clock that instructions, interrupt
+    acceptance (m68kcpu.h:1449), DMA freezes (vdp_ctrl.c:690), FIFO waits (vdp_ctrl.c:2307,2401) and Z80 accesses to
+    the 68000 bus (memz80.c:114) all advance, and system.c:687-688 rebases both counters by the same amount, so every
+    one of those stalls is elapsed time for the refresh test. With W = bucket time without refresh stalls and
+    T = W + 2R:
+      upper: consecutive refreshes are >= 128 apart and a DMA freeze of J cycles lies inside one interval, so
+             T >= 128 (R - 1) + sum(max(0, J - 128))
+      lower: each interval exceeds 128 by less than the fetch gap that straddles its deadline (+2 for a refresh
+             in that gap); deadlines are >= 128 apart, so at most floor(B / 128) + 2 fall outside the contiguous
+             idle loop (gap <= its longest step) and every non-instruction stall enlarges at most one gap:
+             T <= 128 (R + 1) + top_nb(body gaps) + (idle_step - 1)(R + 1) + J_total + 2 (R + 1).
+    `stall_cycles` (Z80 bus + FIFO, measured) is required; without it no sound bound exists and None is returned."""
+    if stall_cycles is None:
+        return None
+    dma = [j / 7 for j in t['dma_jumps_mclk']]
+    jumps = t['interrupt'][1] + sum(dma) + stall_cycles
+    w_lo = t['instr'][0] + t['interrupt'][0] + sum(dma) + stall_cycles
+    w_hi = t['instr'][1] + t['interrupt'][1] + sum(dma) + stall_cycles
+    absorbed = sum(max(0.0, j - 128) for j in dma)
+    r_hi = math.floor(((w_hi - absorbed) / 128 + 1) * 64 / 63)
     steps = plat['idle_loop']['step_cycles']
-    period = sum(steps)
-    iters = t['idle_iters'] or 0
-    a, b = idle_refresh_interval(iters, steps)
-    body = (t['instr'][0] + t['instr'][1]) / 2 - iters * period + 44 * t['vints']
-    rmax = int(body / 128) + 2
-    over = sorted((d - 1 for d in t['durations']), reverse=True)[:rmax]
-    rmin = max(0, int((body - sum(over)) / 128) - 1)
-    return a + rmin, b + rmax
+    idle_time = (t['idle_iters'] or 0) * sum(steps)
+    body_time = t['instr'][1] - idle_time + 2 + jumps
+    nb = int(body_time // 128) + 3
+    top = sum(sorted((d - 1 for d in t['durations']), reverse=True)[:nb])
+    idle_over = max(steps) - 1
+    r_lo = max(0, math.ceil((w_lo - jumps - top - 128 - idle_over - 2) / (128 + idle_over)))
+    return r_lo, r_hi
 
 
 # ---------------------------------------------------------------- windows
@@ -263,22 +306,28 @@ def close_window(case, a, b, terms, counters, plat, tol):
                 n, t['forced_landings'], t['landing_budget'], t['forced_deficits'], t['deficit_budget']))
     period = (b - a + 1) * LINES[case['region']] * MCLK_PER_LINE / 7
     instr = [sum(t['instr'][0] for t in win), sum(t['instr'][1] for t in win)]
-    fixed = sum(44 * t['vints'] + t['z80_area_latency'] + t['dma_mclk'] / 7 for t in win)
-    rb = [refresh_bounds(t, plat) for t in win]
-    r_lo, r_hi = sum(x[0] for x in rb), sum(x[1] for x in rb)
+    fixed = sum(t['z80_area_latency'] + t['dma_mclk'] / 7 for t in win)
+    irq = [sum(t['interrupt'][0] for t in win), sum(t['interrupt'][1] for t in win)]
+    r_lo = r_hi = 0
     extra = None
     obs = {}
     if counters is None:
         unknown.append('stall counters absent: Z80 bus, FIFO, endpoint stamps')
+        # informational only: with unmeasured stalls the refresh upper bound is open, and the window is INCOMPLETE
+        rb = [refresh_bounds(t, plat, 0.0) for t in win]
+        r_lo, r_hi = sum(x[0] for x in rb), sum(x[1] for x in rb)
     else:
         rows = [counters.get(n) for n in need]
         if any(r is None or any(r.get(f) is None for f in COUNTER_FIELDS) for r in rows):
             unknown.append('stall counters incomplete for LF %d..%d' % (a - 1, b))
         else:
             wrows = rows[1:]
+            rb = [refresh_bounds(t, plat, (r['z80_bus_mclk'] + r['fifo_wait_mclk']) / 7) for t, r in zip(win, wrows)]
+            r_lo, r_hi = sum(x[0] for x in rb), sum(x[1] for x in rb)
             obs_refresh = sum(r['refresh_events'] for r in wrows)
             obs_dma = sum(r['dma_freeze_mclk'] for r in wrows)
             model_dma = sum(t['dma_mclk'] for t in win)
+            refresh_bound = [r_lo, r_hi]
             if not (r_lo <= obs_refresh <= r_hi):
                 failures.append('observed refresh %d outside model bound [%d, %d]' % (obs_refresh, r_lo, r_hi))
             if obs_dma != model_dma:
@@ -287,11 +336,21 @@ def close_window(case, a, b, terms, counters, plat, tol):
             endpoint = (rows[-1]['vint_to_increment_mclk'] - rows[0]['vint_to_increment_mclk']) / 7
             extra = sum(r['z80_bus_mclk'] + r['fifo_wait_mclk'] for r in wrows) / 7
             period += endpoint
-            obs = {'refresh': obs_refresh, 'z80_fifo_cycles': round(extra, 3), 'endpoint_cycles': round(endpoint, 3)}
-    known_lo = instr[0] + fixed + 2 * r_lo + (extra or 0)
-    known_hi = instr[1] + fixed + 2 * r_hi + (extra or 0)
+            if all(r.get('vint_interrupt_cycles') is not None for r in wrows):
+                obs_irq = sum(r['vint_interrupt_cycles'] for r in wrows)
+                if not irq[0] <= obs_irq <= irq[1]:
+                    failures.append('observed interrupt cycles %d outside model bound %s' % (obs_irq, irq))
+                irq = [obs_irq, obs_irq]
+                obs['interrupt_cycles'] = obs_irq
+            elif any(r.get('vint_interrupt_cycles') is not None for r in wrows):
+                unknown.append('interrupt phase observed for only part of LF %d..%d' % (a, b))
+            obs.update({'refresh': obs_refresh, 'refresh_bound': refresh_bound, 'z80_fifo_cycles': round(extra, 3),
+                        'endpoint_cycles': round(endpoint, 3)})
+    known_lo = instr[0] + irq[0] + fixed + 2 * r_lo + (extra or 0)
+    known_hi = instr[1] + irq[1] + fixed + 2 * r_hi + (extra or 0)
     resid = [period - known_hi, period - known_lo]
-    out = {'buckets': b - a + 1, 'period': round(period, 3), 'instr': instr, 'fixed_stalls': round(fixed, 3),
+    out = {'buckets': b - a + 1, 'period': round(period, 3), 'instr': instr, 'interrupt': irq,
+           'fixed_stalls': round(fixed, 3),
            'refresh': [r_lo, r_hi], 'residual': [round(resid[0], 3), round(resid[1], 3)], 'tolerance': tol,
            'observed': obs, 'unknown': unknown, 'failures': failures}
     if failures or resid[1] < -tol:
@@ -307,8 +366,8 @@ def close_window(case, a, b, terms, counters, plat, tol):
     elif resid[0] < -tol or resid[1] > tol:
         # Every term is known but operand-dependent times or unforced branch outcomes leave an interval that
         # only overlaps the tolerance: some unobserved value would close, which does not prove closure.
-        unknown.append('residual interval [%.1f, %.1f] is wider than the tolerance +-%s (unresolved operand or '
-                       'branch-outcome cycles)' % (resid[0], resid[1], tol))
+        unknown.append('residual interval [%.1f, %.1f] is wider than the tolerance +-%s (unresolved operand, branch-outcome or interrupt-phase '
+                       'cycles)' % (resid[0], resid[1], tol))
         out['status'] = INCOMPLETE
     else:
         out['status'] = PASS

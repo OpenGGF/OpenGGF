@@ -2212,3 +2212,82 @@ Evidence:
 - the scripts `B/compile_kos_budget_probe_v{6,7,7p,7c}.py`,
   `B/run_kos_budget_probe_v{6,7,7b,7p,7c}.py` and
   `B/analyze_kos_budget_v{6,7}.py`.
+
+#### kos46 instruction ledgers promoted as diagnostics (2026-10-17)
+
+The kos46 CPU-budget research (rounds R4–R17, 2026-10-16/17) left three tool groups. They were promoted at base
+`00f8ab78a` as **diagnostics only**. None is registered with the engine, no Java consumes them, and they supply no
+runtime cost, readiness decision or hardware-timing input. Promotion does not turn a source prediction into native
+hardware closure or a ready-job input; any later use must earn that through the hardware-timing contract.
+
+- `tools/timing/m68k-closure`, with instruction-closure patch v3 and the native lane's unconditional-jump successor
+  rule: `refine.py` and `interrupt_phase.py`.
+- `tools/timing/native-ledger`: the corrected native stall ABI v2 ledger checker and the declared-ingress producer
+  source.
+- `tools/timing/s3k-instruction-ledgers`: per-routine ROM cost models for R6–R17. R16 (deformation) and R17
+  (palette fade) were frozen at qualification and hash-bound on copy.
+
+Their READMEs list the commands, test counts and the evidence below.
+
+**What they establish.**
+- **Interrupt acceptance.** GPGX `051d430d` charges 50–59 cycles (`m68ki_cycle_interrupts[(cycles/7)%10]`,
+  `m68kcpu.h:1405,1449`), not Motorola's 44. The committed v1 spec now returns ERROR rather than using 44.
+- **Instruction-width refinement.** Instruction width is 0 in every bucket, LF 4400–4406, once `refine.py` proves
+  the Scc, `dbmi`, `bset Dn` and AllocateObjectAfterCurrent exits from ROM semantics and bucket counts.
+- **Eight pinned windows.** With the v9 stall and acceptance-phase counters, the windows return PASS within the
+  12-cycle tolerance. Residuals run from −10.3 to +0.3 cycles.
+- **Native ledger recordings.** The corrected checker closes every master-clock cycle of 44 VInt-to-VInt intervals
+  in three Tails/+2 declared-setup recordings (NTSC first-proof core, NTSC and PAL r2 core). The residual is 0 in
+  each. Every executed PC is admissible: about 38.8k exact, 8.0k branch-mix-admissible, 92 operand-bounded and
+  151 mix-bounded rows. Count, MCLK, kind, refresh and stall-conservation controls each FAIL.
+- **Source models.** They reproduce the native per-PC counts of the 42 retained ending buckets wherever the native
+  path is covered. Uncovered paths have synthetic, hand-summed and mutation tests: 106 source-model tests plus
+  14 Kos-service tests.
+
+**What they do not establish.**
+- **Instruction time only.** Interrupt acceptance, refresh, Z80-to-68000 bus and VDP FIFO waits, and DMA freeze are
+  separate terms. They are observed natively or bounded by `m68k-closure`; the source models never include them.
+- **Coverage.** Per bucket (12,721 executed instructions), `closed-ranges.txt` (sha256 `c5116921…a579d404`)
+  covers 11,365, and 1,356 remain open. The open set includes `Ending_ScreenEvent_Index` (662), `sub_5B0A8` (94) and
+  the plane-buffer producers (about 130).
+  - The covered count includes 5,201 `Process_Kos_Queue` instructions (the consumer whose count is the unknown) and
+    2,765 idle `Wait_VSync` tests (a timing-model output).
+  - The counts are instructions, not cycles. R14 had left 3,220 open, R15 2,384 and R16 1,717.
+- **Oracle-supplied inputs.** Three R14 skeleton inputs come from the native oracle, not from runtime authority:
+  the `Wait_VSync` test count, the occupied SST slot count and the Player_1 routine class. The same holds for the
+  R15 `Level_started_flag`/`Spritemask_flag` gates, the R16 dry-water gate and the R17 `Animate_Palette` timer gate.
+- **Native witnesses.**
+  - R16: the captures hold no `Camera_Y_pos_BG_copy`, `Water_level` or `HScroll_table` inputs. ApplyDeformation's
+    body, the water split, MakeFGDeformArray and ApplyFGandBGDeformation are therefore not witnessed.
+  - R17 is priced from palette-owner inputs over ROM `$3AF0`–`$3DBE`. Natively it witnesses only Pal_ToBlack's loop
+    control and the negative-timer return; colour branches and the white or blocking fades are native-absent.
+  - Also native-absent: the y/xy sprite writers, Spritemask, the nonempty Nemesis path, the lag VInt and every
+    H-int handler. Process_Kos_Module_Queue is source-only.
+- **Native recordings.** The ingress is declared-setup research ingress, not authentic cold input, and covers one
+  product (Tails/+2, NTSC and PAL). The live data has no straddle, inline IRQ-delay or HInt intervals. The checker
+  does not validate main/IRQ attribution or that the declared region was in effect.
+- **No 6+46 closure credit.** Nothing predicts the six measured ending service counts or the 46 multi-valued
+  fingerprints, and nothing in Java is activated.
+- **No conversion of missing timing.** An unobserved term may not be filled from a measured native budget or a
+  fitted constant. This covers acceptance phases, stalls, open routines and presentation or phase timing.
+
+**Rejected or superseded.**
+- **The first native checker** (native lane, sha256 `af521b1d…`). It reported 44/44 PASS but labelled branch mixes
+  as exact (review N1) and did not check output completeness (N4) or acceptance joins (N10). Root's correction
+  replaces it and reproduces the same 44 zero-residual intervals with honest classes; the original is not promoted.
+- **Closure patches v1/v2.** v2 accepted MOVEA and memory destinations as CCR sources; on Root's counterexample it
+  claimed 64 cycles where 62 is true. v3 replaced both.
+- **One-off comparators.** `compare_v2.py` and `interval_sources.py` were not promoted.
+  - `compare_v2.py` found ledger on/off byte-identical, v8-on-v2 identical to the candidate captures, and 24/24
+    acceptances equal to the v9-derived phases. It hard-codes the scratch layout, and its runner-versus-v8
+    savestate comparison used an invalid reference: v8 registers managed callbacks, the runner does not.
+  - `interval_sources.py`'s width listing is superseded by the report's `refined_pcs`.
+
+Native stall ABI v2 lives on the TraceChaser branch `feature/ai-s3k-m68k-stall-counters`, which the native lane
+records as commits `393f0be42`, `5afbc3dbd` and `0801da8ac`. It is not in the `33c05c16` pin used here; the
+promoted producer source names that build target.
+
+Citations: research passes 1–13 cited line numbers from the local `docs/skdisasm` checkout `1a454a0`, while the
+superproject pins `044fa46`; ROM bytes and addresses are identical. Promoted files cite `044fa46` lines or ROM labels.
+The 2026-10-15 Kos idle-budget section above uses `1a454a0` lines. At the pin, `sonic3k.asm` 2819–2967 is 2851–2999,
+7884–7889 is 7916–7921, `constants.asm` 896–903 is 918–925 and 971 is 995.

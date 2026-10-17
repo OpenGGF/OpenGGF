@@ -144,14 +144,30 @@ class ClosureCli(unittest.TestCase):
         write(path, json.dumps(spec))
         return path
 
-    def write_counters(self, z80_delta=0, refresh=None):
+    def write_counters(self, z80_delta=0, refresh=None, **extra):
         path = os.path.join(self.tmp.name, 'counters.jsonl')
         with open(path, 'w') as f:
             for lf in (1, 2):
-                f.write(json.dumps({'case': 'synthetic', 'level_frame': lf, 'z80_bus_mclk': self.z80 + z80_delta,
-                                    'fifo_wait_mclk': 0, 'dma_freeze_mclk': 0, 'vint_to_increment_mclk': 300,
-                                    'refresh_events': self.refresh if refresh is None else refresh}) + '\n')
+                row = {'case': 'synthetic', 'level_frame': lf, 'z80_bus_mclk': self.z80 + z80_delta,
+                       'fifo_wait_mclk': 0, 'dma_freeze_mclk': 0, 'vint_to_increment_mclk': 300,
+                       'refresh_events': self.refresh if refresh is None else refresh}
+                row.update(extra)
+                f.write(json.dumps(row) + '\n')
         return path
+
+    def test_observed_interrupt_phase_is_reported(self):
+        # Motorola model bound is [44, 44]; an observed 44 must survive into the window's observed evidence
+        self.write_case()
+        r = self.run_tool('report', self.write_spec(), self.write_counters(vint_interrupt_cycles=44))
+        w = json.loads(r.stdout)['cases']['synthetic']['windows']['2-2']
+        self.assertEqual((w['status'], w['observed'].get('interrupt_cycles')), (0, 44))
+        self.assertIn('refresh', w['observed'])
+
+    def test_observed_interrupt_phase_outside_model_fails(self):
+        self.write_case()
+        r = self.run_tool('check', self.write_spec(), self.write_counters(vint_interrupt_cycles=50))
+        self.assertEqual(r.returncode, 1, r.stdout)
+        self.assertIn('observed interrupt cycles', r.stdout)
 
     def run_tool(self, command, spec, counters=None):
         argv = [sys.executable, '-I', TOOL, command, '--spec', spec, '--rom', self.rom,
