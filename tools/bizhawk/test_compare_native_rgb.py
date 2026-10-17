@@ -100,6 +100,18 @@ class NativeRgbComparison(unittest.TestCase):
             with self.assertRaises(ValueError):
                 rgb.crop_rectangle(text)
 
+    def test_declared_four_digit_names_never_fall_back_or_search(self):
+        # A separately authored four-digit original reference; no renamed reference files.
+        Image.new('RGB', (2, 2), (238, 0, 0)).save(self.native / 'input-0001.ppm')
+        (self.native / 'input-00001.ppm').unlink()
+        self.assertEqual(0, self.compare(native_digits=4)['mismatching_rgb_pixels'])
+        self.assertEqual(0, self.cli('--native-digits', '4'))
+        with self.assertRaises(FileNotFoundError):
+            self.compare()  # Five remains the R1 default; no filename discovery.
+        for digits in (0, 3, 6, '4', True):
+            with self.assertRaises(ValueError):
+                self.compare(native_digits=digits)
+
     def test_report_refuses_overwrite(self):
         report = self.root / 'report.json'
         report.write_text('retained')

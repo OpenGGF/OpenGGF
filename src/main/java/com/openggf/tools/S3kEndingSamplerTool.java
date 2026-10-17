@@ -33,7 +33,6 @@ import java.util.TreeSet;
 public final class S3kEndingSamplerTool {
     static final int LIMIT = 60000;
     private static final String ROM_SHA1 = "CFBF98C36C776677290A872547AC47C53D2761D6";
-    private static final String EMERALDS = "3333333";
 
     private S3kEndingSamplerTool() { }
 
@@ -41,21 +40,72 @@ public final class S3kEndingSamplerTool {
         run(Arguments.parse(args));
     }
 
-    record Arguments(Path rom, Path output, Path spots) {
+    enum Product {
+        SONIC_SOLO("sonic-solo", "sonic", "", 1),
+        TAILS_SOLO("tails-solo", "tails", "", 2),
+        SONIC_TAILS("sonic-tails", "sonic", "tails", 0);
+
+        final String cli, main, sidekick;
+        final int nativePlayerOption;
+
+        Product(String cli, String main, String sidekick, int nativePlayerOption) {
+            this.cli = cli;
+            this.main = main;
+            this.sidekick = sidekick;
+            this.nativePlayerOption = nativePlayerOption;
+        }
+
+        static Product parse(String value) {
+            for (Product product : values()) if (product.cli.equals(value)) return product;
+            throw new IllegalArgumentException("Supported products: sonic-solo, tails-solo, sonic-tails");
+        }
+    }
+
+    record Arguments(Path rom, Path output, Path spots, Product product, int progress, String region,
+                     boolean throughTitle) {
+        String emeraldStates() {
+            // Frozen declared-scene-spec-v2 inventory, not inferred from native observations.
+            return switch (progress) {
+                case -2 -> "0000000";
+                case 0 -> "1111111";
+                case 2 -> "3333333";
+                default -> throw new IllegalArgumentException("Unsupported declared progress");
+            };
+        }
+
+        GameplayCaptureSession.Settings settings() {
+            return new GameplayCaptureSession.Settings(320, product.main, product.sidekick, "off", null, null, null,
+                    emeraldStates(), false, false, null, null);
+        }
+
+        String progressLabel() { return progress == 2 ? "+2" : Integer.toString(progress); }
+        String completion() { return throughTitle ? "title" : "spots"; }
+
         static Arguments parse(String[] args) {
-            Set<String> allowed = Set.of("--rom", "--out-dir", "--spots", "--product", "--region", "--progress");
+            Set<String> required = Set.of("--rom", "--out-dir", "--spots", "--product", "--region", "--progress");
             Map<String, String> values = new LinkedHashMap<>();
             for (int i = 0; i < args.length; i += 2) {
-                if (!allowed.contains(args[i]) || i + 1 >= args.length
+                if ((!required.contains(args[i]) && !"--completion".equals(args[i])) || i + 1 >= args.length
                         || values.putIfAbsent(args[i], args[i + 1]) != null) {
-                    throw new IllegalArgumentException("Expected unique --rom --out-dir --spots --product tails-solo --region ntsc --progress +2");
+                    throw new IllegalArgumentException("Expected unique --rom --out-dir --spots --product --region --progress [--completion spots|title]");
                 }
             }
-            if (!values.keySet().equals(allowed) || !"tails-solo".equals(values.get("--product"))
-                    || !"ntsc".equals(values.get("--region")) || !"+2".equals(values.get("--progress"))) {
-                throw new IllegalArgumentException("Supported declared product: tails-solo / ntsc / +2; all six arguments required");
+            if (!values.keySet().containsAll(required) || !"ntsc".equals(values.get("--region"))) {
+                throw new IllegalArgumentException("All six declared arguments required; only ntsc is supported");
             }
-            return new Arguments(Path.of(values.get("--rom")), Path.of(values.get("--out-dir")), Path.of(values.get("--spots")));
+            Product product = Product.parse(values.get("--product"));
+            int progress = switch (values.get("--progress")) {
+                case "-2" -> -2;
+                case "0" -> 0;
+                case "+2" -> 2;
+                default -> throw new IllegalArgumentException("Progress must be -2, 0 or +2");
+            };
+            String completion = values.getOrDefault("--completion", "title");
+            if (!Set.of("spots", "title").contains(completion) || (completion.equals("title") && progress != 2)) {
+                throw new IllegalArgumentException("Completion is spots or title; neutral-stream title completion requires +2");
+            }
+            return new Arguments(Path.of(values.get("--rom")), Path.of(values.get("--out-dir")), Path.of(values.get("--spots")),
+                    product, progress, values.get("--region"), completion.equals("title"));
         }
     }
 
@@ -86,7 +136,13 @@ public final class S3kEndingSamplerTool {
         provenance.setProperty("runtime.sha256", runtimeHash);
         provenance.setProperty("rom.sha1", ROM_SHA1);
         provenance.setProperty("spots.sha256", hash(args.spots(), "SHA-256"));
-        provenance.setProperty("product", "tails-solo/+2/ntsc/320x224/LIMITED238/RAW_RGB");
+        provenance.setProperty("product", args.product().cli + "/" + args.progressLabel() + "/" + args.region() + "/320x224/LIMITED238/RAW_RGB");
+        provenance.setProperty("character.main", args.product().main);
+        provenance.setProperty("character.sidekick", args.product().sidekick);
+        provenance.setProperty("native.player_option", Integer.toString(args.product().nativePlayerOption));
+        provenance.setProperty("progress", args.progressLabel());
+        provenance.setProperty("emerald.states", args.emeraldStates());
+        provenance.setProperty("completion", args.completion());
         provenance.setProperty("ingress", "frozen-title-owner-v2; positioned, not cold campaign; title ACTIVE then real Start EXITING; no data select; fresh ending load; VInt=0/RNG=0 before initial dispatch only");
         provenance.setProperty("observation", "engine outer indices only; neutral controller stream; no native gameplay hydration");
         provenance.setProperty("started.utc", java.time.Instant.now().toString());
@@ -94,8 +150,7 @@ public final class S3kEndingSamplerTool {
         Files.createDirectory(args.output());
         Files.copy(args.spots(), args.output().resolve("spots.txt"));
         writeProperties(args.output(), provenance);
-        var settings = new GameplayCaptureSession.Settings(320, "tails", "", "off", null, null, null,
-                EMERALDS, false, false, null, null);
+        var settings = args.settings();
         Set<Integer> captured = new TreeSet<>();
         // Configuration resolves against user.dir. T3 may link config.yaml into another
         // checkout: use fresh preferences without migrating or writing that linked file.
@@ -103,13 +158,16 @@ public final class S3kEndingSamplerTool {
         Files.createDirectory(configurationDirectory);
         String previousUserDir = System.getProperty("user.dir");
         System.setProperty("user.dir", configurationDirectory.toString());
+        int lastOuter = -1;
+        GameMode lastMode = null;
+        int outerLimit = args.throughTitle() ? LIMIT : java.util.Collections.max(requested) + 1;
         try (var session = new GameplayCaptureSession(settings);
              var state = Files.newBufferedWriter(args.output().resolve("state.csv"));
              var ledger = Files.newBufferedWriter(args.output().resolve("ledger.csv"))) {
             var configuration = GameServices.configuration();
             configuration.setSessionOverride(SonicConfiguration.DISPLAY_COLOR_EXPANSION, "LIMITED");
             configuration.setSessionOverride(SonicConfiguration.DISPLAY_COLOR_PROFILE, "RAW_RGB");
-            configuration.setSessionOverride(SonicConfiguration.REGION, "NTSC");
+            configuration.setSessionOverride(SonicConfiguration.REGION, args.region().toUpperCase(java.util.Locale.ROOT));
             if (FrameRateResolver.effective(configuration) != 60) throw new IllegalStateException("NTSC did not resolve to 60 Hz");
             provenance.setProperty("configuration.loadTimeSimulation", configuration.getString(SonicConfiguration.LOAD_TIME_SIMULATION));
             session.startAtTitle();
@@ -126,22 +184,27 @@ public final class S3kEndingSamplerTool {
             title.update(session.loop().getInputHandler());
             if (title.getState() != TitleScreenProvider.State.EXITING) throw new IllegalStateException("Real title Start did not publish EXITING");
             // Exact external v2 protocol: real title ownership, then declared positioned ending.
-            GameServices.gameState().restoreS3kEmeraldProgress(EMERALDS.chars().map(c -> c - '0').boxed().toList(), false);
+            GameServices.gameState().restoreS3kEmeraldProgress(args.emeraldStates().chars().map(c -> c - '0').boxed().toList(), false);
             session.loop().setGameMode(GameMode.LEVEL);
             GameServices.level().loadZoneAndActForFreshRuntime(13, 1);
             GameServices.level().getObjectManager().initVblaCounter(0);
             GameServices.rng().setSeed(0);
+            provenance.setProperty("roster.before_dispatch.leader", session.player().characterKey().persisted());
+            provenance.setProperty("roster.before_dispatch.sidekicks", GameServices.sprites().getRegisteredSidekicks().stream()
+                    .map(player -> player.characterKey().persisted()).collect(java.util.stream.Collectors.joining(",")));
             Files.writeString(args.output().resolve("startup-owner.txt"), "actual_title_neutral=" + startup
                     + " real_Start=1 exit=" + title.getState() + " data_select_initialized=false\n");
-            state.write("outer,game_mode,level_frame,object_ordinal,vint,progress,fg,bg,p1_x,p1_y,p1_mapping,rng,camera_x,camera_y,copy_x,copy_y,credits_routine,credits_part,credits_row,credits_delay,credits_speed\n");
+            state.write("outer,game_mode,level_frame,object_ordinal,vint,progress,fg,bg,p1_x,p1_y,p1_mapping,rng,camera_x,camera_y,copy_x,copy_y,credits_routine,credits_part,credits_row,credits_delay,credits_speed,registered_sidekicks\n");
             ledger.write("event,outer,detail\n");
             boolean exited = false;
             boolean titleReached = false;
-            for (int outer = 0; outer < LIMIT; outer++) {
+            for (int outer = 0; outer < outerLimit; outer++) {
                 session.step(neutral(outer));
                 var image = session.render();
                 if (image.width() != 320 || image.height() != 224) throw new IllegalStateException("Expected native 320x224 image");
                 var mode = session.loop().getCurrentGameMode();
+                lastOuter = outer;
+                lastMode = mode;
                 if (mode != GameMode.LEVEL || !(GameServices.zoneRuntimeState() instanceof EndingZoneRuntimeState zone)) {
                     state.write(outer + "," + mode + "\n");
                     if (!exited) {
@@ -158,6 +221,9 @@ public final class S3kEndingSamplerTool {
                     continue;
                 }
                 if (exited) throw new IllegalStateException("Ending re-entered after exit");
+                if (outer == 0 && zone.ending().progress() != args.progress()) {
+                    throw new IllegalStateException("Initial production progress differs from declared inventory");
+                }
                 var level = GameServices.level();
                 var manager = level.getObjectManager();
                 var player = session.player();
@@ -169,16 +235,22 @@ public final class S3kEndingSamplerTool {
                         + "," + player.getMappingFrame() + "," + Long.toHexString(GameServices.rng().getSeed())
                         + "," + camera.getX() + "," + camera.getY() + "," + camera.getXCopy() + "," + camera.getYCopy()
                         + "," + credits.routine() + "," + credits.partIndex() + "," + credits.rowIndex()
-                        + "," + credits.delay() + "," + Integer.toHexString(credits.speed()) + "\n");
+                        + "," + credits.delay() + "," + Integer.toHexString(credits.speed()) + "," + GameServices.sprites().getRegisteredSidekicks().size() + "\n");
                 if (requested.contains(outer)) {
                     ScreenshotCapture.savePNG(image, args.output().resolve(String.format("outer-%05d.png", outer)));
                     captured.add(outer);
                     ledger.write("snapshot," + outer + ",320x224\n");
                 }
             }
-            if (!exited || !titleReached) throw new IllegalStateException("No ending exit and title mode within " + LIMIT + " steps");
+            if (args.throughTitle() && (!exited || !titleReached)) {
+                throw new IllegalStateException("No ending exit and title mode within " + LIMIT + " steps");
+            }
+            if (!args.throughTitle() && (lastMode != GameMode.LEVEL || lastOuter != outerLimit - 1)) {
+                throw new IllegalStateException("Ending observation bound not reached in LEVEL mode");
+            }
             if (!captured.equals(requested)) throw new IllegalStateException("Requested spots missing before exit: " + difference(requested, captured));
-            ledger.write("DONE,-1,requested=" + requested.size() + ";captured=" + captured.size() + ";title_mode=true\n");
+            ledger.write("DONE," + lastOuter + ",completion=" + args.completion() + ";requested=" + requested.size()
+                    + ";captured=" + captured.size() + ";mode=" + lastMode + "\n");
         }
         finally {
             if (previousUserDir == null) System.clearProperty("user.dir");
@@ -192,9 +264,19 @@ public final class S3kEndingSamplerTool {
         provenance.setProperty("ledger.sha256", hash(args.output().resolve("ledger.csv"), "SHA-256"));
         provenance.setProperty("completed.utc", java.time.Instant.now().toString());
         provenance.setProperty("captured", Integer.toString(captured.size()));
-        provenance.setProperty("terminal", "TITLE_SCREEN mode; capture host does not certify hub recovery");
+        provenance.setProperty("last.outer", Integer.toString(lastOuter));
+        provenance.setProperty("last.mode", lastMode.name());
+        provenance.setProperty("configuration.actual.example", configurationDirectory.resolve("config.yaml.example").toString());
+        if (!Files.isRegularFile(configurationDirectory.resolve("config.yaml.example"))) {
+            throw new IllegalStateException("No actual configuration output inside private scope");
+        }
+        provenance.setProperty("configuration.example.sha256", hash(configurationDirectory.resolve("config.yaml.example"), "SHA-256"));
+        provenance.setProperty("user.dir.restored", Boolean.toString(java.util.Objects.equals(previousUserDir, System.getProperty("user.dir"))));
+        provenance.setProperty("terminal", args.throughTitle() ? "TITLE_SCREEN mode; capture host does not certify hub recovery"
+                : "LEVEL observation bound only; no ending exit or title certificate");
         writeProperties(args.output(), provenance);
-        System.out.println("Ending sampler completed: " + captured.size() + " requested pre-exit spots; TITLE_SCREEN mode");
+        System.out.println("Ending sampler completed: " + args.product().cli + "/" + args.progressLabel() + "/" + args.region()
+                + "; " + captured.size() + " requested spots; completion=" + args.completion() + "; outer=" + lastOuter + "; mode=" + lastMode);
     }
 
     private static Set<Integer> difference(Set<Integer> requested, Set<Integer> captured) {
