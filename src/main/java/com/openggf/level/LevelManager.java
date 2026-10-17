@@ -142,7 +142,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     BlockGridIndexer blockGrid = new BlockGridIndexer(128);
     /** Owns block/chunk/pattern resolution from world coordinates. */
     private final LevelLayoutLookup layoutLookup = new LevelLayoutLookup(this);
-    private int chunksPerBlockSide = 8;
+    int chunksPerBlockSide = 8;
     // Cached level pixel dimensions (immutable once level loads).
     // Avoids repeated getLayerWidthBlocks()*blockPixelSize in hot-path collision lookups.
     int cachedFgWidthPx;
@@ -930,22 +930,6 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         } else {
             invalidateForegroundTilemap();
         }
-    }
-
-    /** Rebinds metadata restored on the current level without performing a scene load. */
-    void rebindCurrentLevelGeometryForRewindRestore() {
-        if (level == null) throw new IllegalStateException("Geometry restore requires the current level");
-        blockPixelSize = level.getBlockPixelSize();
-        chunksPerBlockSide = level.getChunksPerBlockSide();
-        cacheLevelDimensions();
-        if (tilemapManager != null) {
-            tilemapManager.updateGeometry(buildGeometry());
-            tilemapManager.invalidateGeometryCachesForRewindRestore();
-        } else {
-            invalidateForegroundTilemap();
-        }
-        // Level identity and zone have not changed. Their animation owners and
-        // captured logical state remain bound to this level, including its new map.
     }
 
     /**
@@ -2278,7 +2262,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * Populates cached FG/BG pixel dimensions from the current level.
      * Must be called after a level is loaded (dimensions are immutable during gameplay).
      */
-    private void cacheLevelDimensions() {
+    void cacheLevelDimensions() {
         if (level != null) {
             cachedFgWidthPx = getLayerLevelWidthPx((byte) 0);
             cachedFgHeightPx = getLayerLevelHeightPx((byte) 0);
@@ -2350,7 +2334,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     /**
      * Builds a LevelGeometry snapshot from the current cached dimensions.
      */
-    private LevelGeometry buildGeometry() {
+    LevelGeometry buildGeometry() {
         return new LevelGeometry(level, cachedFgWidthPx, cachedFgHeightPx,
                 cachedBgWidthPx, cachedBgContiguousWidthPx, cachedBgHeightPx,
                 blockPixelSize, chunksPerBlockSide);

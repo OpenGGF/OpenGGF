@@ -10497,3 +10497,27 @@ workflowREADME, existingreleasefold/knownS3K/backlog/matrix/frontier/pitfallmirr
 updated; no newcaller/property/function/compile/JVM/native/route. Runtime/test
 frozen bytes unchanged; helper executable body remains testedadcb. Await normal
 local7trailer/modelcoauthor hook commit; Root owns integration/push/nextcampaign.
+
+
+### R7 geometry-rebind size guard extraction — 2026-10-17
+
+FDFguard68289's measured3153/budget3144 is inherited within the Title slice but
+an overall owned2077 regression: exactMain803 source counts3141, owned geometry
+restore adds12effective lines. Actual guardedcwd/algorithm/guardhash and all four
+source identities verified; no Mainbaseline JVM. Existing LevelTilemapRewindAccess
+now owns that exact body, with only three necessary package-private accesses;
+LevelManager count returns3141, unchangedguard/budget/publicsurface/state/order.
+Root actualdiff review accepted31a7201f/9693c50d on exact86d179, ownbranch
+bugfix/ai-s3k-rewind-geometry-budget-extraction-gpt61; prior49ae/kernel/warning/
+baseline refs, privateconfig mode/mtime and native4fdf preserved.
+
+Authorized affected38036 ACTUAL77/0F0E0S/7classes at22:16:26UTC,queue0/
+Maven1m21s, including16tilemaprewind+1encodedSlot+S3K4 with BOTHLevelLoading
+packages. Fresh full2guards+exactAPI2 job74389 ACTUAL99/0F0E0S at22:17:42UTC,
+queue0/Maven32.737s; actual sizepredicatepasses,Architectural72+Hardware25+API2.
+All XML identities/skips/properties/streams/TXT inspected; source remainedfrozen.
+Exactcommands,counts,hashes/semanticproof in existingaudit R7geometry section.
+Normal local2runtime+Plan/audit preservationcommit authorized; no additional
+JVM/build/size-only/route/native/broad/capture/integration/push. Root owns current
+29527smoke/futurecomposition; FDFroutegate remains separate. Consumedoriginal
+reports metadataalone afterfacts/noarchive. No DEZfunctional scope reopened.
