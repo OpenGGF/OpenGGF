@@ -126,6 +126,11 @@ class TestSonic3kTitleScreenSegaTiming {
         assertTrue(pressed, "the SEGA hold was reached");
         assertEquals(List.of(Sonic3kSmpsConstants.CMD_SEGA, Sonic3kSmpsConstants.CMD_STOP_SEGA), ids(),
                 "cmd_SEGA precedes the first Start check, so a press there issues the pair (loc_3FE4)");
+        assertEquals(com.openggf.game.TitleScreenProvider.State.INTRO_TEXT_FADE_OUT, manager.getState(),
+                "Start leaves Wait_SegaS3K through loc_3FE4 into the Pal_Title transition, not the white flash");
+        step(true); // loc_3FF0 reads no input
+        assertEquals(com.openggf.game.TitleScreenProvider.State.INTRO_TEXT_FADE_OUT, manager.getState(),
+                "the Pal_Title loop ignores Start");
     }
 
     @Test

@@ -717,16 +717,18 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         return segaCram.clone();
     }
 
-    /** {@code Wait_SegaS3K} (sonic3k.asm:5490-5497): VSync, then Start, then the 3-second timer. */
+    /**
+     * {@code Wait_SegaS3K} (sonic3k.asm:5490-5497): VSync, then Start, then the
+     * 3-second timer. Start and the timeout both leave through {@code loc_3FE4}
+     * (:5498-5500): {@code cmd_StopSEGA}, then the {@code Pal_Title} transition.
+     * A Start press here does not reach the white flash.
+     */
     private void updateSegaHold(InputHandler input) {
         uploadSegaCram();
         phaseTimer++;
 
-        if (checkSkipToInteractive(input)) {
-            return;
-        }
-
-        if (phaseTimer >= SEGA_HOLD_DURATION) {
+        boolean startPressed = confirmPressed(input, configService.getInt(SonicConfiguration.JUMP));
+        if (startPressed || phaseTimer >= SEGA_HOLD_DURATION) {
             GameServices.audio().playMusic(Sonic3kSmpsConstants.CMD_STOP_SEGA);
             segaChantStopped = true;
             phase = Phase.PAL_TRANSITION;
@@ -745,10 +747,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
      * the SEGA text (colors 7+) unchanged. Completes when color 0 becomes $0000.
      */
     private void updatePalTransition(InputHandler input) {
-        if (checkSkipToInteractive(input)) {
-            return;
-        }
-
+        // loc_3FF0 (sonic3k.asm:5501-5512) waits for the backdrop to reach black and reads no input.
         // Apply one palette transition step per frame (matching the disassembly's
         // VSync loop that writes 14 bytes per iteration)
         byte[] transitionData = dataLoader.getPalTransitionData();
