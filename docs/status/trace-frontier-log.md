@@ -113345,3 +113345,16 @@ selected BG distance/terrain/transforms and native layer bytes were not captured
 No runtime edit, second invocation, full/slice/alternate/native/media/guard/broad
 qualification; no replacement of R4's longer-window totals or exact GLFW limit.
 [Exact command, all groups, fields and clocks](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r6-actual-hcz7134-cpu-and-wall-input-witness--2026-10-17).
+
+
+### 2026-10-17 — R7 partial selected BG witness;7134 observation incomplete
+
+Same runtime86171/docs786 source, one normal/EGL prefix67242. It fails the
+observer's one-shared-probe-call assertion after7133 (actual4 includes floor/
+left/right tails):1/1F/0E/0S. Qualified7133 projected wall selects BG on the
+FG/BG+18 tie, provider0200/0500, translatedFF7D/0338 and empty BG descriptors.
+Partial7134/14208 reference rows (0–7133),206=11physics+195animation, lag53,
+bootstrap/warnings0 matches R6 before its7134 frontier. No new7134/7135 result,
+frontier move, full/slice/alternate/GLFW/native/guard/broad qualification. Native
+P2 layer/raw BG fields remain missing; source-derived diffs are inference.
+[Exact command/fingerprint, selected sample and observer failure](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r7-native-inventory-and-partial-selected-bg-witness--2026-10-17).

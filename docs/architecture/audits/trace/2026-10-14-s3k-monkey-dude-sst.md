@@ -2764,3 +2764,127 @@ plane translation/row-mask, terrain lookup and distance/selection ownership.
 No CPU/order, collision-response constant or runtime fix is justified here.
 No second invocation or new qualification was launched. Main/Root and foreign
 native/performance artifacts remain untouched; only this evidence is retained.
+
+
+## R7 native inventory and partial selected BG witness — 2026-10-17
+
+Same feature tree at7863745b6, runtime source unchanged from86171c6b8. R6
+and all earlier evidence are preserved; actual clean native4fdf remains against
+gitlink322851cb. No Main/Root/oldlane writes, native/media, variants, alternate,
+guards, broad qualification or production/API change. Exactly one engine request
+was submitted. **The requested actual7134 selected-result witness remains
+incomplete: an observer assertion ended the attempt after7133. No retry.**
+
+### What native evidence already contains
+
+The complete committed `hcz_2/aux_state.jsonl.gz` stream was read before authoring:
+18 event kinds, including376 state snapshots,14208 CPU/sidekick-interact records,
+28416 character interact records and1178 slot dumps. Its only collision/layer
+keys are `top_solid_bit`, `lrb_solid_bit`, `primary_collision_addr` and
+`secondary_collision_addr`. No raw BG collision flag, camera diffs, layout mask,
+BG probe or plane-result event exists in this fixture.
+
+The layer snapshots bracket7134 at7080 and7140 with0E/0F and collision-array
+addresses00276B61/00277161. These are **P1**, not P2: the snapshot has no
+character key, and `S3KAuxEventEngine.BuildStateSnapshot` reads `PlayerBase`.
+Those global array addresses do not establish which array P2 selected. P2's
+per-frame interact record contains status/object_control but no layer bytes;
+slot dumps are only `[slot,code]`. Native P2 layer bytes are missing data, not
+an unread equivalent of P1's snapshot. The newer exporter has other focused
+character payloads, but those events are absent from this fixture.
+
+There is source-backed indirect BG information. At7133/7134, native sidekick
+interact payload reports occupied slot9 code000510DA, X05BE/Y0700 and camera
+copies052F/07CC then0537/07CC. `Obj_HCZ2Wall` /loc_510E8 writes
+`x_pos = $5BE - (Events_bg+$00).w` while BG routine4 is active, so that sampled
+wall X indicates offset word0. `HCZ2_WallMove` /loc_51052 derives BG copies as
+FGcopy-$200+wallOffset and FGcopy-$500; `Get_BGActualEffectiveDiff` therefore
+implies camera diffs0200/0500. Native P1 X05CF/05D7,Y0831 also lies inside
+`HCZ2BGE_WallMove`'s BG-enabled bounds [03F0,0C10) × [0600,0840).
+These are **owner/source inferences**, not sampled BG flag/diff registers.
+`Find_Tile_BG` uses `(Y >> 5) & Layout_row_index_mask`; the normal level-init
+source seeds007C and HCZ has no override. The actual mask word at7134 was not
+recorded. Native P2 layer, selected tile and exact plane-result witness remain
+unqualified; the relayed ROM/math expectation at7134 remains-1.
+
+### Single frozen invocation and why it stopped
+
+Temporary physics helper `HczSelectedWallWitness` spies the existing private
+CalcRoomInFront GroundSensor. Shared pooled buffers are identity-checked; its
+real scan runs once per invocation and the exact returned object is forwarded.
+Primitive FG/BG/combined copies precede terrain queries. Assertions verify no
+playable mutation across scan/lookups, provider state stability and no pooled
+return overwrite. Original probe binding is restored on exit. No CPU journal,
+positioned setup, fake geometry, gameplay values or clock adjustment is added.
+
+Observer file SHA256s: helper504712881af75a6a56a1d024719217de6cd83ff54bcd12ab49530ace9a103591;
+runnerd7ec2b33e7b314379dc35b306822ce52856277fdf845b7a3cd4bbdb682477b8e.
+Combined SHA256 over the listed helper then runner paths, each path+NUL+bytes:
+**b9b8c4163e0ee8887fdcad2638e6ded958dff813f80c232d52a87086dbff2141**.
+Exact original-ROM normal/EGL command from the owned cwd, using R3 bindings:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_WORKSPACE/tools/testing/maven_queue.py" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" "-Ds3k.rom.path=$S3K_ROM" \
+  -Ptrace-replay '-Dtest=TestS3kHcz7134SelectedBgWitness#canonicalThroughHcz7135' \
+  -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical test -B
+```
+
+Request67242 finished13:38:11 BST /12:38:11 UTC, queue0s/Maven48.960s,
+JUnit24.202s: **1/1F/0E/0S**. The failure is the observer's assertion
+`one P2 wall-owner scan per observed tick`, expected1/actual4. The shared probe
+also serves the fatal BG floor tail and left/right post-movement clamps
+(`CollisionSystem` lines494–540). It does **not** mean four CalcRoomInFront
+owner calls. The assertion runs after row7133, so7134/7135 were not executed.
+The original7135 stop target was not reached. Cleanup additionally reports four
+future unmatched completion edges10162/10163/14172/14173; this early abort
+cannot attribute or qualify the prior full-route unmatched-completion condition.
+
+Partial HCZ comparison consumes7134/14208 reference rows (0–7133), with
+**206=11physics+195animation**, bootstrap/warnings0, lag53, no non-camera
+physics mismatch yet. Counts and actual postrow state match R6 at7132/7133.
+Six earlier complete ordinary segments0/2/4/6/8/9 again have zero group/bootstrap/
+warning errors and lag0/11/14/16/62/55 over2290/4023/8235/4103/7175/3574 rows.
+No new earlier comparator decision is observed; no whole-prefix or7134
+passivity/qualification claim follows. Prior R6's first7134 field is unchanged
+as historical evidence, not reproduced anew by this attempt.
+
+### Qualified actual7133 wall sample
+
+Only sample1 is the requested projected RIGHT CalcRoomInFront call. Its live
+inputs match R6: centre0171.1E00,0830.1F00, vx/ground026A, vy0, angle0,
+underwater/grounded/notPush, radii9/15, top/lrb0E/0F. Actual scan arguments
+are offset(+10,0), projected delta(+2,+8), layer0 FG /layer1 BG, lrb15.
+
+| Actual7133 item | Observed value |
+| --- | --- |
+| Provider | DefaultBackgroundPlaneCollisionProvider; active=true, diffX0200/diffY0500, identical before/after scan |
+| FG probe → BG probe | 017D/0838 → FF7D/0338 (signedX-131), using the actual provider transform and word cast |
+| Provider Y mask /BG row gate | FFFF; Sonic3kLevel background row present=true (source row `(Y & 0FFF) >> 7`, row6) |
+| FG signed result | +18 (0012), tile0, flagged angle03, RIGHT, no angle write |
+| BG signed result | +18 (0012), tile0, flagged angle03, RIGHT, no angle write |
+| Combined result /selected plane | +18/tile0/angle03, exact returned object is BG; equality selects BG |
+| Passivity checks | Shared buffers, unchanged playable state, stable provider, copied result unchanged after lookups all pass |
+
+FG query017D/016D/018D yields descriptors005C/0059/005D, no flips, no lrb
+solidity and both collision indices0. BG queryFF7D/FF6D/FF8D (signed-131/-147/
+-115) yields descriptor/chunk0, no flips/solidity, primary/secondary indices0.
+There is no solid shape metric: the +18 is the empty-cell extension result,
+not a fitted width or a negative contact. Engine provider0200/0500 agrees with
+the native source inference at7133, but native P2 layers remain unknown.
+
+Samples2–4 are the post-movement floor/left/right tails, outside the requested
+wall owner. In particular, the DOWN sample uses `bgScanResult`; this helper's
+fixed `bgWallScanResult` read there is stale and must **not** be called its BG
+result or selected plane. Those extra samples are excluded from qualified wall
+evidence. A future observer must tag the real caller and choose the pool by
+scan direction, rather than asserting that a shared probe has one call/tick.
+
+The actual7134 FG/BG/combined distance and selected terrain are still missing.
+No value is projected from7133 and called an actual7134 observation. No runtime
+fault/fix is certified from this partial attempt. The one authorized run is
+spent; stop with this concrete observer failure plus native P2-layer/raw-state
+gaps. Temporary source/classes and consumed diagnostics are removed normally;
+useful native images and foreign/performance artifacts remain untouched.

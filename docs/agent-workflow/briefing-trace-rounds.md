@@ -71,6 +71,12 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+One shared sensor is not one gameplay-owner call (2026-10-17, HCZ BG witness).
+CalcRoomInFront, the fatal BG floor and post-move wall clamps share a probe. Tag
+the actual caller, copy the returned pool immediately, and distinguish vertical
+`bgScanResult` from horizontal `bgWallScanResult`. R7's one-call assertion aborted
+at7133; its vertical read of the horizontal pool was stale and is excluded.
+
 An intentional chain-prefix stop can pass with a red open comparator (2026-10-17,
 HCZ7134 witness). `ReplayPrefixReached` ends before closing/asserting that segment;
 R6 returned1/0F while its live partial comparator contained217 errors. Capture the

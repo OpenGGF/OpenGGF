@@ -4260,3 +4260,18 @@ native layer equivalence remain uncaptured. Actual engine top/lrb0E/0F. Stop at
 this wall-boundary handback, without runtime edit or second run. No independent
 slice/alternate/guard/native/media/broad claim. Temporary observer/diagnostics
 are consumed and removed. [Exact fields, clocks, command and limits](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r6-actual-hcz7134-cpu-and-wall-input-witness--2026-10-17).
+
+
+## R7 partial selected BG observation;7134 still missing — 2026-10-17
+
+Native aux inventory confirms P1-only0E/0F snapshots; no native P2 layer, raw
+BGflag/diff/mask fields. Native wall X05BE plus owning source implies offset0
+and diffs0200/0500; it is inference, not a native register sample. One engine
+request67242,1/1F/0E/0S, stops after7133 on an incorrect observer assertion:
+shared probe also runs floor/left/right tails, so4 calls do not mean4 wall-owner
+calls. Qualified projected wall sample7133 selects BG on equality, FG/BG/combined
++18, empty BG terrain, provider0200/0500 and translatedFF7D/0338. Passivity
+checks and comparator206=11physics+195animation agree with R6 through7133;
+7134/7135 are not executed. No second run, production edit, qualification or
+frontier advance. Vertical tail's wrong pooled-result read is excluded. [Exact
+source inventory, frozen fingerprint, selected result and failure](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r7-native-inventory-and-partial-selected-bg-witness--2026-10-17).

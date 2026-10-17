@@ -137,3 +137,12 @@ BG collision is active; selected distance, translated BG terrain and native laye
 comparison are still missing. Prefix217 errors/7136 rows is a partial window,
 not improvement versus full R4 or a matrix certification. No runtime change or
 new independent slice/GLFW qualification. [Fields/clocks and seam limit](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r6-actual-hcz7134-cpu-and-wall-input-witness--2026-10-17).
+
+
+R7 selected BG attempt (2026-10-17): actual7133 projected wall selects BG+18,
+empty tile0, provider0200/0500, translatedFF7D/0338. The single invocation67242
+fails an observer shared-probe count assertion after7133 (1/1F/0E/0S), so actual
+7134 selected distance/terrain remains unobserved. Partial206 errors over7134
+reference rows matches R6's same earlier window; no matrix/route certification.
+Native P2 layer/raw BG state fields are absent; inferred native diffs are kept
+separate. No retry or runtime edit. [Evidence and excluded stale vertical pool](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r7-native-inventory-and-partial-selected-bg-witness--2026-10-17).
