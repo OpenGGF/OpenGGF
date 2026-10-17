@@ -1342,3 +1342,19 @@ in one original82EA power-on pass, all four endpoint controls/60 callbacks match
 P1 arriving at RecordPos, not Camera/CPU. Exact earlier engine writer remains
 unproven; no runtime fix or new engine/route/visual qualification is claimed.
 [Actual byte-verified instruction phases and limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r15-original-native-camerahistory-input-plan--2026-10-17).
+
+
+
+ICZ R11 synchronous retained16 owner (2026-10-17): Load_Level now preserves
+known outgoing pattern groups until existing deferred publication, using current
+target collision indices. Unknown placeholder capacity is not exported as RAM;
+owned opaque restore also restores saved extent. Independent real-handoff old-red
+1/1F -> construction/publication77green; review P2 opaque688/718 old-red1/1F ->
+affected4green, with two forced world restores/replays and no skips. These are
+separate source epochs. Cold/async/presentation16 carry remains unchanged empty;
+R8 natural death/reload, full aux/native/strict trace/routes and combined smoke
+remain open. [Exact evidence and limits](architecture/validation/levels/s3k-icz-act1.md#r11-synchronous-known16-handoff-repair--2026-10-17).
+
+R11 ICZ final five exact source/API guards also pass without skips (89633);
+Root's bounded P2 resolution inspection has no remaining material objection.
+No extra construction/trace/broad re-execution or integration clearance follows.

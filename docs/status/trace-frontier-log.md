@@ -113772,3 +113772,14 @@ act2). Four future hardware edges3256/3257/5356/5357 remain suppressed unmatched
 no hydration, descriptor fitting or SS parity total is inferred. Full details
 and exact reviewed hashes are in the linked audit. Stop: no further probe/fix/
 selection; Root owns next frontier, composition and ending6+46/PAL/PCM limits.
+
+
+
+2026-10-17 ICZ R11 retained-resource smoke owner (same98d,077767+private carry):
+no trace frontier run or strict trace claim. Real handoff entry129 C131→0000
+old-red31728 (1/1F), then focused45686 77/0F0E0S reaches original ICZ16/pattern/
+publication tail. Review's distinct opaque688→718 P2 reproduced9826 (1/1F),
+corrected68955 affected4/0F0E0S with two forced-world replays. No unknown-zero
+fallback, async predecessor input, public snapshot/API, physics or timing change.
+These are separate source epochs; current campaign/HCZ frontiers stay historical
+and Root owns composed smoke/delivery. [Commands, sources and explicit limits](../architecture/validation/levels/s3k-icz-act1.md#r11-synchronous-known16-handoff-repair--2026-10-17).

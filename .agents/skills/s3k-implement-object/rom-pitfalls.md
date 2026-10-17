@@ -6181,3 +6181,24 @@ transition without private timer/routine writes. This is a test migration, not
 a reason to retune the literal runtime wait. Origin: bounded R5 smoke repair,
 2026-10-17; actual production inlet passes, existing full fatal/handoff replay
 coverage remains qualified only at its recorded R7 epoch.
+
+
+## Resident pattern provenance is not decoded chunk capacity
+
+ICZ1BGE_Transition on skdisasm044fa467 calls Load_Level (layout-only copy), then
+LoadSolids (current collision pointers); neither clears Block_table. A deferred
+constructor may decode129 entries while retained128 definitions reference687,
+causing validation to allocate688 Chunks. Those empty placeholders are not ROM
+pattern writers. Carry only known native8byte groups within Block_table1800bytes,
+apply target ROM writes over them, and decode with target collision tables rather
+than copying predecessor metadata. Keep unknown gaps distinct from real zero writes.
+
+Provenance must follow geometry COW, collision-only updates, value snapshots and
+whole-world restore. An owned688-entry opaque snapshot temporarily overlaid to718
+must restore its saved extent too: prefix-only restore leaves temporary717 falsely
+known. Preserve external full-state prefix semantics separately. Private geometry
+markers and immutable sparse values can avoid changing public snapshot contracts.
+Async prepared builds lack predecessor identity/generation; do not silently reuse
+this synchronous inlet there. ICZ R11 (2026-10-17,077767+repair) proves the handoff
+and opaque counterexample with independent old-reds and twice-restored replay;
+see the existing ICZ1 matrix. No trace/observation bytes supply gameplay assets.

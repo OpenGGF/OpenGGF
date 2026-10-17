@@ -44,6 +44,53 @@ public class Sonic3kLevel extends AbstractLevel implements com.openggf.game.inte
 
     private static final int BLOCK_GRID_SIDE = 8;
 
+    // Validation may allocate decoded placeholders without writing Block_table.
+    // Keep that distinction in the existing COW geometry objects: rewind restores
+    // those same objects, without adding state to the public LevelSnapshot.
+    private static final class UnwrittenPatternChunk extends Chunk { }
+    private final java.util.Map<int[][], java.util.BitSet> snapshotUnwrittenPatterns =
+            new java.util.WeakHashMap<>();
+    private static final int NATIVE_BLOCK_TABLE_BYTES = 0x1800;
+
+    /** Immutable, sparse native pattern bytes; null entries have no known writer. */
+    static final class ResidentChunkPatterns {
+        static final ResidentChunkPatterns EMPTY = new ResidentChunkPatterns(new byte[0][]);
+        private final byte[][] entries;
+
+        private ResidentChunkPatterns(byte[][] entries) {
+            this.entries = new byte[entries.length][];
+            for (int i = 0; i < entries.length; i++) {
+                this.entries[i] = entries[i] == null ? null : entries[i].clone();
+            }
+        }
+
+        int extent() { return entries.length; }
+
+        byte[] entry(int index) {
+            return index < entries.length && entries[index] != null ? entries[index].clone() : null;
+        }
+    }
+
+    synchronized ResidentChunkPatterns residentChunkPatterns() {
+        int limit = Math.min(chunkCount, NATIVE_BLOCK_TABLE_BYTES / Chunk.CHUNK_SIZE_IN_ROM);
+        int knownEnd = 0;
+        for (int i = 0; i < limit; i++) {
+            if (!(chunks[i] instanceof UnwrittenPatternChunk)) knownEnd = i + 1;
+        }
+        byte[][] entries = new byte[knownEnd][];
+        for (int i = 0; i < knownEnd; i++) {
+            if (chunks[i] instanceof UnwrittenPatternChunk) continue;
+            byte[] bytes = new byte[Chunk.CHUNK_SIZE_IN_ROM];
+            int[] state = chunks[i].saveState();
+            for (int word = 0; word < 4; word++) {
+                bytes[word * 2] = (byte) (state[word] >>> 8);
+                bytes[word * 2 + 1] = (byte) state[word];
+            }
+            entries[i] = bytes;
+        }
+        return new ResidentChunkPatterns(entries);
+    }
+
     private byte[] primaryCollisionIndexTable = new byte[0];
     private byte[] secondaryCollisionIndexTable = new byte[0];
     private final Integer minXOverride;
@@ -167,6 +214,19 @@ public class Sonic3kLevel extends AbstractLevel implements com.openggf.game.inte
             int levelPaletteAddr, Integer minXOverride, List<ObjectSpawn> objects,
             List<RingSpawn> rings, RingSpriteSheet ringSpriteSheet, boolean publishGraphicsOnLoad,
             TerrainArtSources terrainArtSources, byte[] retainedPatterns, byte[] retainedBlocks) throws IOException {
+        this(rom, zoneIndex, resourcePlan, primaryCollisionAddr, secondaryCollisionAddr,
+                interleavedCollision, layoutAddr, levelBoundariesAddr, characterPaletteAddr,
+                levelPaletteAddr, minXOverride, objects, rings, ringSpriteSheet, publishGraphicsOnLoad,
+                terrainArtSources, retainedPatterns, retainedBlocks, ResidentChunkPatterns.EMPTY);
+    }
+
+    Sonic3kLevel(Rom rom, int zoneIndex, LevelResourcePlan resourcePlan,
+            int primaryCollisionAddr, int secondaryCollisionAddr, boolean interleavedCollision,
+            int layoutAddr, int levelBoundariesAddr, int characterPaletteAddr,
+            int levelPaletteAddr, Integer minXOverride, List<ObjectSpawn> objects,
+            List<RingSpawn> rings, RingSpriteSheet ringSpriteSheet, boolean publishGraphicsOnLoad,
+            TerrainArtSources terrainArtSources, byte[] retainedPatterns, byte[] retainedBlocks,
+            ResidentChunkPatterns retainedChunks) throws IOException {
         super(zoneIndex);
         collisionRomPrefix = rom.readBytes(0, 0x8000);
         this.terrainArtSources = terrainArtSources;
@@ -184,6 +244,7 @@ public class Sonic3kLevel extends AbstractLevel implements com.openggf.game.inte
         loadSolidTiles(rom);
         loadChunksWithCollision(rom, resourcePlan, primaryCollisionAddr, secondaryCollisionAddr,
                 interleavedCollision);
+        retainUnwrittenChunkPatterns(retainedChunks);
         loadBlocksWithPlan(rom, resourcePlan, retainedBlocks);
         loadMap(rom, layoutAddr);
         loadBoundaries(rom, levelBoundariesAddr);
@@ -723,6 +784,22 @@ public class Sonic3kLevel extends AbstractLevel implements com.openggf.game.inte
         LOG.info("S3K chunk count: " + chunkCount + " (" + chunkBuffer.length + " bytes)");
     }
 
+    private void retainUnwrittenChunkPatterns(ResidentChunkPatterns retained) {
+        // skdisasm044fa467 ICZ1BGE_Transition -> Load_Level leaves Block_table
+        // resident. The target's non-deferred ROM writes win; LoadSolids owns
+        // current collision indices independently of those four pattern words.
+        int targetWrittenCount = chunkCount;
+        ensureChunkCapacity(Math.max(chunkCount, retained.extent()));
+        for (int i = targetWrittenCount; i < retained.extent(); i++) {
+            byte[] bytes = retained.entry(i);
+            if (bytes == null) continue;
+            Chunk chunk = new Chunk();
+            chunk.fromSegaFormat(bytes, readCollisionIndex(primaryCollisionIndexTable, i),
+                    readCollisionIndex(secondaryCollisionIndexTable, i));
+            chunks[i] = chunk;
+        }
+    }
+
     private void decodeChunks(byte[] data, int[] primary, int[] secondary) {
         chunkCount = data.length / Chunk.CHUNK_SIZE_IN_ROM;
         chunks = new Chunk[chunkCount];
@@ -907,9 +984,12 @@ public class Sonic3kLevel extends AbstractLevel implements com.openggf.game.inte
      */
     public int[][] snapshotChunks() {
         int[][] snapshot = new int[chunkCount][];
+        java.util.BitSet unwritten = new java.util.BitSet(chunkCount);
         for (int i = 0; i < chunkCount; i++) {
             snapshot[i] = chunks[i].saveState();
+            if (chunks[i] instanceof UnwrittenPatternChunk) unwritten.set(i);
         }
+        snapshotUnwrittenPatterns.put(snapshot, unwritten);
         return snapshot;
     }
 
@@ -919,13 +999,22 @@ public class Sonic3kLevel extends AbstractLevel implements com.openggf.game.inte
      * sharing the previous array (LevelSnapshot contract) are not mutated.
      */
     public void restoreChunks(int[][] snapshot) {
-        Chunk[] newChunks = chunks.clone();
-        for (int i = 0; i < snapshot.length && i < chunkCount; i++) {
-            Chunk chunk = new Chunk();
+        java.util.BitSet unwritten = snapshotUnwrittenPatterns.get(snapshot);
+        // An owned snapshot is the entire prior table, including its extent.
+        // Temporary precomputation overlays must not leave a newly known tail.
+        // External full-state prefixes retain their existing partial-write semantics.
+        Chunk[] newChunks = unwritten != null ? new Chunk[snapshot.length] : chunks.clone();
+        for (int i = 0; i < snapshot.length && i < newChunks.length; i++) {
+            // An opaque snapshot made here preserves provenance. An external
+            // full six-word state is an explicit pattern write, like the existing
+            // mutation surface's restoreChunkState operation.
+            Chunk chunk = unwritten != null && unwritten.get(i)
+                    ? new UnwrittenPatternChunk() : new Chunk();
             chunk.restoreState(snapshot[i]);
             newChunks[i] = chunk;
         }
         chunks = newChunks;
+        chunkCount = newChunks.length;
     }
 
     /**
@@ -998,7 +1087,7 @@ public class Sonic3kLevel extends AbstractLevel implements com.openggf.game.inte
         int oldCount = chunkCount;
         chunks = Arrays.copyOf(chunks, minCount);
         for (int i = oldCount; i < minCount; i++) {
-            chunks[i] = new Chunk();
+            chunks[i] = new UnwrittenPatternChunk();
         }
         chunkCount = minCount;
     }
@@ -1156,7 +1245,9 @@ public class Sonic3kLevel extends AbstractLevel implements com.openggf.game.inte
         for (int i=0;i<updated.length;i++) {
             int[] state=updated[i].saveState();
             state[4]=readCollisionIndex(primary,i); state[5]=readCollisionIndex(secondary,i);
-            Chunk chunk=new Chunk(); chunk.restoreState(state); updated[i]=chunk;
+            Chunk chunk = updated[i] instanceof UnwrittenPatternChunk
+                    ? new UnwrittenPatternChunk() : new Chunk();
+            chunk.restoreState(state); updated[i]=chunk;
         }
         chunks=updated;
     }
