@@ -113446,3 +113446,34 @@ full-route/integration certificate. Seven/eight advertised aux families, four
 native68E98 debris, fullSST/phase/positions/config/BK2/cold/fullchain remain open.
 No new captures/probes, source/input hydration or allocator/phase changes.
 Root owns composed requalification; local commit only, Main803 unchanged.
+
+
+### 2026-10-17 — bounded Pachinko score producer; existing segment frontiers unchanged
+
+Owned `t3-649fee32` / `feature/ai-s3k-pachinko-score-popup-gpt61`, over
+Root `28fd18de8212f8a844763d8399c9bcd000684a79`. Added only the native bumper
+`Obj_EnemyScore` allocation and authorized S3K points bucket1/high-bit header;
+score/cap/physics/allocator and trace contracts are unchanged.
+[Exact commands and runtime hashes](../architecture/validation/levels/s3k-bonus-stage-transitions.md#pachinko-bumper-score-popup-producer--2026-10-17).
+All commands use CURRENT MAIN absolute `tools/testing/maven_queue.py` from the
+owned cwd, Java25/surfaceless EGL and all3 original absolute ROM paths.
+
+75651 (`-Dmse=off -Ptrace-replay-r7 -Dsurefire.forkCount=1`, exact
+`TestS3kPachinkoBonusTraceReplay,TestS3kGumballBonusTraceReplay,TestS3kSlotsBonusTraceReplay`)
+passes3/0F0E0S at13:53:55UTC: canonical Pachinko2900/Gumball1277/KnucklesSlot1024
+rows, zero errors/warnings/bootstrap. 63341 (`-Ptrace-segments`, same other flags,
+exact `TestS3kSonicTailsPachinkoBonusTraceReplay,TestS3kSonicTailsPachinko2BonusTraceReplay,TestS3kSonicTailsPachinko3BonusTraceReplay,TestS3kSonicTailsGumballBonusTraceReplay`)
+finishes4/2F0E0S at13:55:05UTC: Pachinko3(188rows)/Gumball(590rows) green;
+Pachinko1 1638errors/2907rows, first122 `rings`262/261 (physics1051/animation587);
+Pachinko2 1257errors/3571rows, first469 `x_speed`$04F3/$0100 (physics648/animation609).
+
+34084 repeats ONLY those two failing selectors on Root28 runtime, identical
+candidate test source/environment/private config/profile:2/2F0E0S at13:57:45UTC.
+Complete field/span/value/severity/group error arrays exactly match by hashes
+`04d9c7f698941706d4c0df5423dc936e97f35f9fdda4660d4ee5c37b7641159e` and
+`72a46f982f33f4af53077e288848a04849e1c1ef5f5d80e7301eaa4889dc845e` respectively.
+Both warning/bootstrap lists empty, zero JUnit skips; missing advertised aux
+schemas remain explicit in the matrix. No new/worsened frontier, no timing/SAT/
+VRAM/RGB certificate. Candidate source restored exactly afterward; last local
+target is attribution-baseline compiled. Root owns fresh composition validation.
+Reports/XML are consumed after inspection; no archives or pass caches retained.

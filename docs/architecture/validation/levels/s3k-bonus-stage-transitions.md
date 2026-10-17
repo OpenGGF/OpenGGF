@@ -679,3 +679,120 @@ The re-timed `soz1-cold-knuckles` movie, which crosses an entry and a return, is
 | `TestS3kTitleCardHoldRoutes` (bonus entry and return among its 5 cases); `TestSonic3kBonusTitleCard`; `TestPachinkoTitleCardIntegration`; `TestS3kBonusStageHeadlessBoot` | 5, 6, 2 and 3 run, 0 failed, 0 errors, 0 skipped (Maven finished 2026-10-16T19:14:59+01:00, 18:26:52+01:00 and 18:31:58+01:00) |
 | `TestS3kBonusPortalMechanismProducts`, `TestS3kBonusStageReturnProducts`, `TestS3kGumballPachinkoRewardMechanics` | 568, 425 and 723 run, 0 failed, 0 errors, 0 skipped (Maven finished 2026-10-16T18:51:47+01:00) |
 | `TestSecondStrikeInvitationGameplay` (opt-in candidate jar `1f6bfedd…`) | gumball case passes. The glowing-spheres case fails at line 300 ("ordinary bonus play must earn a positive native award before exit"). It fails with the same assertion on the pre-task `d3fb0625e` sources and on `6405313ce`, so the failure is inherited, not caused by this change |
+
+
+## Pachinko bumper score-popup producer — 2026-10-17
+
+Bounded local candidate in `feature/ai-s3k-pachinko-score-popup-gpt61`, owned
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-649fee32`, over Root composition
+`28fd18de8212f8a844763d8399c9bcd000684a79` (Main remains `8030832d2`).
+`sub_32F56` / `loc_32FC4` in pinned skdisasm
+`044fa46725c71187399e13f5ddb70e11d32dc024` credits `HUD_AddToScore` first,
+then calls `AllocateObject`, writes `Obj_EnemyScore` at the bumper centre and
+sets `mapping_frame=4`. The original locked-on ROM SHA-1
+`cfbf98c36c776677290a872547ac47c53d2761d6` corroborates that tail at `$32FC4`.
+The existing bounce credited 10 without the allocation. It now uses
+`spawnFreeChild` and the existing `Sonic3kPointsObjectInstance(..., 10)`;
+allocation failure leaves the credit intact. No bounce, hit-credit, cap,
+respawn/persistence, phase, allocator, RNG or shared points physics changes.
+
+The needed presentation dependency is confined to the existing S3K points
+owner: `Obj_EnemyScore` writes priority `$80` (bucket 1) and
+`make_art_tile(ArtTile_StarPost,0,1)` (high plane priority). Before this change,
+`ObjectRenderParts.addToRenderBuckets` consumed its inherited bucket 0/low
+header; the ROM-backed points sheet did not override those object properties.
+Two S3K-only overrides correct them for existing 10/100/200/500/1000 consumers.
+S1/S2 and `AbstractPointsObjectInstance` remain unchanged.
+
+The retained UNMERGED draft `d56216d5ea199e49d848ef8d9f6505f513db8d9e`
+was read narrowly, not adopted; its unconditional ten-hit cap is rejected.
+Native `respawn_addr=0` branches directly to `loc_32FC4`; only a nonzero
+respawn owner is tested against `$8A`. Neither that draft, follow-up
+`7380f7b1fd4ab66b7a71a543fd757dc026183baa`, nor the foreign tree's unknown
+shield work was changed. Existing score/persistence behavior is deliberately
+preserved rather than replaced with a private hit counter.
+
+**Actual contact and recreation.** Three independent short tests in
+`TestS3kGumballPachinkoRewardMechanics` use a normal logical stage entry,
+ROM-authored placed bumper and declared free-player local contact. Ordinary
+`session.step`/Touch_Loop owns the bounce; no private callback/routine, clock,
+slot, timer, RNG or reward assignment drives it. They cover score +10,
+ordinary SST identity and same-pass motion, frame 4, no contact/hurt rejection,
+and a pool filled through ordinary allocation (existing 100-point consumers
+remain frame 0). Contact and live-popup natural deletion each replay the
+complete registered world twice with in-place object restoration disabled.
+Restoration recreates both producer and popup, including its non-default
+frame; deletion uses the native pre-move nonnegative-velocity test.
+
+Coverage is native 320 Sonic solo, logical entry plus local actual contact,
+not cold portal traversal or a complete act certificate. Producer coordinates
+are world-space and its allocation/header choice is viewport/donor independent;
+existing broader products retain their prior scope, not new execution credit.
+No new RGB/native/audio capture or pixel-parity certificate is claimed. The
+retained draft's earlier pictures/counts are not transferred to this candidate.
+
+In commands below, `${MAIN}` denotes the absolute shared primary checkout;
+it was resolved to the original absolute paths when each command ran.
+All Maven commands used the CURRENT MAIN absolute wrapper from this owned cwd:
+`${MAIN}/tools/testing/maven_queue.py`.
+Environment was Java 25.0.4.1 (`JAVA_HOME=/usr/lib/jvm/java-25-openjdk`),
+`JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl`,
+`EGL_PLATFORM=surfaceless`, `ALSOFT_DRIVERS=null`, `LUA_BIN=/usr/bin/lua5.4`,
+with `DISPLAY`/`WAYLAND_DISPLAY` unset and other inherited JVM environment
+preserved. `-v` confirmed Java 25. Every ROM-backed invocation supplied all
+three original absolute paths (identities checked):
+
+```text
+-Dsonic1.rom.path=${MAIN}/Sonic The Hedgehog (W) (REV01) [!].gen
+-Dsonic2.rom.path=${MAIN}/Sonic The Hedgehog 2 (W) (REV01) [!].gen
+-Ds3k.rom.path=${MAIN}/Sonic and Knuckles & Sonic 3 (W) [!].gen
+```
+
+Selections below are literal `-Dtest` values; each command ends in `test`
+and uses `-Dmse=off`. Times are Maven elapsed, with queue waiting separate.
+
+| Session / UTC completion | Additional flags and selection | Observed result |
+|---|---|---|
+| 86734 / 13:46:02 | `TestS3kGumballPachinkoRewardMechanics#actualPachinkoBumperContactAllocatesScorePopupAndReplaysItsWorldTwice`, unchanged Root28 production | 1 test / 1 intended failure / 0 errors / 0 skips; actual score +10 passed, popup expected 1 / actual 0; 1:20, zero wait |
+| 18362 / 13:49:18 | `TestS3kGumballPachinkoRewardMechanics#actualPachinkoBumperContactAllocatesScorePopupAndReplaysItsWorldTwice+actualPachinkoBumperKeepsScoreWhenOrdinarySstAllocationFails+actualPachinkoBumperDoesNotProduceScoreWithoutEligibleContact` | 3 / 0 / 0 / 0 on producer before header dependency; 1:18, 22s queue |
+| 67734 / 13:50:42 | `--lean`, `TestS3kEnemyScorePresentation` (pure, no ROM properties) | 6 / 5 intended failures / 0 / 0; all five S3K values expose bucket 0/low routing; S1/S2 control passes; 26.098s, zero wait |
+| 37738 / 13:52:32 | `TestS3kEnemyScorePresentation,TestS3kGumballPachinkoRewardMechanics#actualPachinkoBumperContactAllocatesScorePopupAndReplaysItsWorldTwice+actualPachinkoBumperKeepsScoreWhenOrdinarySstAllocationFails+actualPachinkoBumperDoesNotProduceScoreWithoutEligibleContact,TestCnzBumperObjectInstance,TestS3kPachinkoStandaloneRewind,TestRewindRoundTripHarnessConstruction#pointsObjectsWithServicesAndScoreConstructorRoundTrip,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils` | Final runtime: 85 / 0 / 0 / 0; 1:22, zero wait |
+| 75651 / 13:53:55 | `-Ptrace-replay-r7 -Dsurefire.forkCount=1`, `TestS3kPachinkoBonusTraceReplay,TestS3kGumballBonusTraceReplay,TestS3kSlotsBonusTraceReplay` | 3 / 0 / 0 / 0; Knuckles Slot selected by r7, Sonic+Tails Slot excluded by tag; 28.003s, zero wait |
+| 63341 / 13:55:05 | `-Ptrace-segments -Dsurefire.forkCount=1`, `TestS3kSonicTailsPachinkoBonusTraceReplay,TestS3kSonicTailsPachinko2BonusTraceReplay,TestS3kSonicTailsPachinko3BonusTraceReplay,TestS3kSonicTailsGumballBonusTraceReplay` | 4 / 2 failures / 0 / 0; Pachinko3 and Gumball pass; 29.616s, zero wait |
+| 34084 / 13:57:45 | Same segment flags/environment/config/test source, only `TestS3kSonicTailsPachinkoBonusTraceReplay,TestS3kSonicTailsPachinko2BonusTraceReplay`; only two owned runtime files temporarily restored to Root28 | 2 / 2 failures / 0 / 0; exact inherited arrays below; 1:19, zero wait |
+
+Inspected physics/animation reports: canonical Pachinko 2900, Gumball 1277,
+Knuckles Slot 1024, Sonic+Tails Pachinko3 188 and Gumball 590 rows each have
+0 errors/warnings and empty bootstrap lists. The two red segment results
+match Root28 by every error field/span/value/severity/group record, not totals
+alone (`SHA256(json.dumps(errors, sort_keys=True))`):
+
+| Segment | Rows / errors | First error | Error-array SHA-256, equal before/after |
+|---|---|---|---|
+| Sonic+Tails Pachinko1 | 2907 / 1638 (physics 1051, animation 587) | 122 `rings` 262/261, span 122–174; animation first 269 `player_mapping_frame` $96/$97 | `04d9c7f698941706d4c0df5423dc936e97f35f9fdda4660d4ee5c37b7641159e` |
+| Sonic+Tails Pachinko2 | 3571 / 1257 (physics 648, animation 609) | 469 `x_speed` $04F3/$0100; animation first 1436 `player_mapping_frame` $99/$96 | `72a46f982f33f4af53077e288848a04849e1c1ef5f5d80e7301eaa4889dc845e` |
+
+Both have zero warnings/bootstrap errors/bootstrap warnings, empty warning
+and bootstrap lists and zero JUnit skips. Advertised but missing auxiliary
+schemas remain reported (cage state/execution, velocity/position writes,
+record-pos, CPU-normal-step and CNZ-cylinder state/execution; canonical traces
+also lack sidekick-interact rows). These are bounded physics/animation checks,
+not native timing, SAT, VRAM or popup-pixel certificates.
+
+Candidate runtime bytes were restored exactly after baseline attribution:
+`PachinkoBumperObjectInstance.java` SHA-256
+`83e184411ded441ca38ffb6a5203655482587e19136e3106da26e0890950c9ad`;
+`Sonic3kPointsObjectInstance.java`
+`c933caccd86db1efad1a5152959837470bf7ff79432e149ea640f218d6683f7b`.
+The last local compilation is the attribution baseline, not a fresh candidate
+build; Root owns fresh compilation after composition, combined smoke/guards,
+integration and push. Completed candidate checks are reused unchanged.
+
+After 75651 ended, only this worktree's T3 config symlink was replaced under
+its intended-tree lease by an exact private regular-file copy. Main config
+SHA-256 `6abd111c03f798dbe2a618cb4985aeb599127f44668edb2a8edbde118d11f7da`
+and mtime-ns `1792141742849921547` were unchanged before/after and before
+63341/34084. The private ignored copy is retained for handoff/owned-tree
+cleanup. No Main config migration or foreign tree edit occurred. Temporary
+source backup and consumed diagnostics are removed; no pass cache/receipt or
+log archive is kept. Local task branch/tree remain for Root delivery.

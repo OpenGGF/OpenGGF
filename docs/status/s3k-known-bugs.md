@@ -6944,3 +6944,14 @@ Still open:
 
 ### Removal condition
 Each item matches native RAM at its handoff, with a focused test.
+
+
+### Pachinko round-bumper score sprite — fixed in bounded 2026-10-17 candidate
+
+Actual round-bumper contact credited 10 points without allocating native
+`Obj_EnemyScore`. The [bounded producer and presentation dependency](../architecture/validation/levels/s3k-bonus-stage-transitions.md#pachinko-bumper-score-popup-producer--2026-10-17)
+now allocate the existing frame-4 popup after credit and retain score on pool
+exhaustion; S3K points use native bucket 1/high plane priority. Score/cap/
+persistence behavior is unchanged. Two pre-existing Sonic+Tails Pachinko trace
+frontiers remain exactly equal to Root28; cold-route/native RGB qualification
+and Root integration are not claimed by this local unit.

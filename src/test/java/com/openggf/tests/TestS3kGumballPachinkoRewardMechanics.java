@@ -14,6 +14,9 @@ import com.openggf.game.sonic3k.objects.GumballMachineObjectInstance;
 import com.openggf.game.sonic3k.objects.GumballTriangleBumperObjectInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.game.sonic3k.objects.PachinkoItemOrbObjectInstance;
+import com.openggf.game.sonic3k.objects.PachinkoBumperObjectInstance;
+import com.openggf.game.sonic3k.objects.Sonic3kPointsObjectInstance;
+import org.junit.jupiter.api.Test;
 import com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.sprites.NativePositionOps;
@@ -159,6 +162,125 @@ class TestS3kGumballPachinkoRewardMechanics {
             assertSame(player2, GameServices.sprites().getRegisteredSidekicks().getFirst(),
                     "the origin reload recreates the configured Player_2 first");
         }
+    }
+
+    /** sub_32F56 / loc_32FC4: real Touch_Loop contact adds 10, then AllocateObject owns the popup. */
+    @Test
+    void actualPachinkoBumperContactAllocatesScorePopupAndReplaysItsWorldTwice() throws Exception {
+        var row = new CanonicalEntryMatrixSupport.Row("sonic", WidescreenAspect.NATIVE_4_3, "off", "");
+        try (var session = enter(row, BonusStageType.GLOWING_SPHERE)) {
+            var objects = GameServices.level().getObjectManager();
+            objects.setRewindInPlaceRestoreEnabledForTest(false);
+            var bumper = objects.activeObjectsOfType(PachinkoBumperObjectInstance.class).stream()
+                    .min(java.util.Comparator.comparingInt(object -> Math.abs(object.getY()
+                            - GameServices.sprites().getMainPlayable().getCentreY()))).orElseThrow();
+            int x = bumper.getX(), y = bumper.getY(), bumperSlot = bumper.getSlotIndex();
+            place(x, y - 16);
+            var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+            var before = registry.capture();
+            Runnable contact = () -> {
+                int score = GameServices.gameState().getScore();
+                for (int frame = 0; frame < 8 && GameServices.gameState().getScore() == score; frame++)
+                    step(session, GameMode.BONUS_STAGE, objects);
+                assertEquals(score + 10, GameServices.gameState().getScore(), "actual bumper bounce owns the credit");
+                var popups = objects.activeObjectsOfType(Sonic3kPointsObjectInstance.class);
+                assertEquals(1, popups.size(), "loc_32FC4 AllocateObject must create Obj_EnemyScore on the bounce");
+                var popup = popups.getFirst();
+                assertEquals(x, popup.getX());
+                assertEquals(y, popup.getSpawn().y(), "the producer writes the bumper centre, before popup movement");
+                assertEquals(4, pointsFrame(popup), "Map_EnemyScore frame 4 is the 10-point sprite");
+                assertTrue(popup.getSlotIndex() >= 0, "ordinary AllocateObject supplies the SST identity");
+                int updates = popup.getSlotIndex() > bumperSlot ? 1 : 0;
+                assertEquals(y - 3 * updates, popup.getY(), "first update follows the ordinary SST execution order");
+                assertEquals(-0x300 + 0x18 * updates, pointsVelocity(popup));
+            };
+            replayTwice(before, contact, "actual Pachinko bumper contact / popup allocation");
+            var livePopup = registry.capture();
+            var oldPopup = objects.activeObjectsOfType(Sonic3kPointsObjectInstance.class).getFirst();
+            Runnable naturalDeletion = () -> {
+                var popup = objects.activeObjectsOfType(Sonic3kPointsObjectInstance.class).getFirst();
+                int score = GameServices.gameState().getScore();
+                place(x + 0x40, y - 0x40);
+                int remaining = (-pointsVelocity(popup) + 0x17) / 0x18;
+                for (int frame = 0; frame < remaining; frame++) step(session, GameMode.BONUS_STAGE, objects);
+                assertFalse(popup.isDestroyed(), "loc_2CD0C tests velocity before moving");
+                assertEquals(0, pointsVelocity(popup));
+                step(session, GameMode.BONUS_STAGE, objects);
+                assertTrue(popup.isDestroyed(), "nonnegative velocity naturally deletes Obj_EnemyScore");
+                assertTrue(objects.activeObjectsOfType(Sonic3kPointsObjectInstance.class).isEmpty());
+                assertEquals(score, GameServices.gameState().getScore(), "popup lifetime never adds score");
+            };
+            replayTwice(livePopup, naturalDeletion, "natural Pachinko popup deletion / recreation");
+            registry.restore(livePopup);
+            same(livePopup, registry.capture(), "live popup restores after natural deletion");
+            var restoredPopup = objects.activeObjectsOfType(Sonic3kPointsObjectInstance.class).getFirst();
+            assertNotSame(oldPopup, restoredPopup, "restore must recreate the naturally deleted popup");
+            assertEquals(4, pointsFrame(restoredPopup), "recreation restores the non-default score frame");
+            var restoredBumper = objects.activeObjectsOfType(PachinkoBumperObjectInstance.class).stream()
+                    .filter(object -> object.getSlotIndex() == bumperSlot).findFirst().orElseThrow();
+            assertNotSame(bumper, restoredBumper, "whole-world restore recreates the producer too");
+        }
+    }
+
+    @Test
+    void actualPachinkoBumperKeepsScoreWhenOrdinarySstAllocationFails() throws Exception {
+        var row = new CanonicalEntryMatrixSupport.Row("sonic", WidescreenAspect.NATIVE_4_3, "off", "");
+        try (var session = enter(row, BonusStageType.GLOWING_SPHERE)) {
+            var objects = GameServices.level().getObjectManager();
+            var bumper = objects.activeObjectsOfType(PachinkoBumperObjectInstance.class).getFirst();
+            // Fill the pool through AllocateObject; no slot, allocator or private state writes.
+            int allocated = 0;
+            while (objects.createDynamicObject(() -> new Sonic3kPointsObjectInstance(
+                    new com.openggf.level.objects.ObjectSpawn(bumper.getX(), bumper.getY(), 0x29, 0, 0, false, 0),
+                    objects.getObjectServices(), 100)) != null) {
+                assertTrue(++allocated <= 128, "the native dynamic SST pool is bounded");
+            }
+            int before = objects.activeObjectsOfType(Sonic3kPointsObjectInstance.class).size();
+            assertTrue(before > 0);
+            int score = GameServices.gameState().getScore();
+            place(bumper.getX(), bumper.getY() - 16);
+            for (int frame = 0; frame < 8 && GameServices.gameState().getScore() == score; frame++)
+                step(session, GameMode.BONUS_STAGE, objects);
+            assertEquals(score + 10, GameServices.gameState().getScore(), "HUD_AddToScore precedes allocation failure");
+            var popups = objects.activeObjectsOfType(Sonic3kPointsObjectInstance.class);
+            assertEquals(before, popups.size(), "allocation failure creates no extra popup");
+            for (var popup : popups) assertEquals(0, pointsFrame(popup), "existing 100-point consumers remain unchanged");
+        }
+    }
+
+    @Test
+    void actualPachinkoBumperDoesNotProduceScoreWithoutEligibleContact() throws Exception {
+        var row = new CanonicalEntryMatrixSupport.Row("sonic", WidescreenAspect.NATIVE_4_3, "off", "");
+        try (var session = enter(row, BonusStageType.GLOWING_SPHERE)) {
+            var objects = GameServices.level().getObjectManager();
+            var bumper = objects.activeObjectsOfType(PachinkoBumperObjectInstance.class).getFirst();
+            int score = GameServices.gameState().getScore();
+            place(bumper.getX(), bumper.getY() - 64);
+            step(session, GameMode.BONUS_STAGE, objects);
+            assertEquals(score, GameServices.gameState().getScore());
+            assertTrue(objects.activeObjectsOfType(Sonic3kPointsObjectInstance.class).isEmpty());
+            place(bumper.getX(), bumper.getY() - 16);
+            GameServices.sprites().getMainPlayable().setHurt(true);
+            for (int frame = 0; frame < 3; frame++) step(session, GameMode.BONUS_STAGE, objects);
+            assertEquals(score, GameServices.gameState().getScore(), "hurt contact is rejected by the ordinary touch owner");
+            assertTrue(objects.activeObjectsOfType(Sonic3kPointsObjectInstance.class).isEmpty());
+        }
+    }
+
+    private static int pointsFrame(Sonic3kPointsObjectInstance popup) {
+        return pointsScalar(popup, "scoreFrame");
+    }
+
+    private static int pointsVelocity(Sonic3kPointsObjectInstance popup) {
+        return pointsScalar(popup, "yVel");
+    }
+
+    private static int pointsScalar(Sonic3kPointsObjectInstance popup, String name) {
+        try {
+            var field = com.openggf.level.objects.AbstractPointsObjectInstance.class.getDeclaredField(name);
+            field.setAccessible(true);
+            return field.getInt(popup);
+        } catch (ReflectiveOperationException e) { throw new AssertionError(e); }
     }
 
     private GameplayCaptureSession enter(CanonicalEntryMatrixSupport.Row row, BonusStageType type) throws Exception {

@@ -1,5 +1,12 @@
 # Level test coverage backlog
 
+Pachinko score-popup producer (2026-10-17): the [bounded bonus evidence](../architecture/validation/levels/s3k-bonus-stage-transitions.md#pachinko-bumper-score-popup-producer--2026-10-17)
+adds actual placed-bumper contact, ordinary allocation failure, rejected/no-contact
+and twice-recreated full-world contact/live-popup/deletion replay at native320
+Sonic solo. Existing broader bonus products retain their earlier scope. This is
+not a cold-route, full-act or new native-pixel certificate; two Sonic+Tails
+Pachinko segment frontiers are exactly unchanged against Root28.
+
 Exact original AIZ standing SST (2026-10-17): the [AIZ2 certificate](../architecture/validation/levels/s3k-aiz2.md#original-fullrun-normal-bridge-standing-sst--2026-10-17)
 qualifies native320 Sonic + CPU Tails rows9510–9513 at SST12, including the actual
 placed bridge and player centre coordinates. One signpost allocation-anchor

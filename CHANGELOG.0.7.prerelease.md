@@ -66,7 +66,8 @@ Unreleased. The earlier development themes remain in
   solid and crumble in the same pass, gumballs drop from the container with the
   machine's native random seed, ejected balls also push the second player, and a
   companion that drops into the exit is removed as in the original (it rejoins
-  on return). Pachinko orb rewards follow the level frame counter. All three bonus
+  on return). Pachinko orb rewards follow the level frame counter, and round
+  bumpers show their ten-point score with the native sprite priority. All three bonus
   traces now replay without errors. The Slot cage keeps re-centring the machine
   through the goal wind-down, so the machine stays where the original shows it,
   the Gumball background stays pinned as in the original instead of scrolling
