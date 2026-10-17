@@ -8058,3 +8058,70 @@ Only this Plan and the frontier log are staged; relevant checks are documentatio
 links/anchors/whitespace and policy trailers/hooks. No new workload, source,
 fixture, native or capture is introduced. No matching803 attribution or target
 readiness evidence is inferred. Root's earliest-Gumball audit remains independent.
+
+
+### Root next authentic timing dependency: CPU continuation — 2026-10-17
+
+A source-only review on composed e72aa7bc0d2fc575b1a40c997384271295d6d7ba
+refined the next dependency beyond the preserved, dormant native reader. No
+compiler, native core, engine test or new implementation ran for this review.
+The reader still has zero accepted clock observations. The original six measured
+counts, independent 46-context predictions and live readiness remain open.
+
+The missing production state is a session-owned, rewindable 68000 continuation:
+absolute elapsed time T, CPU count D, frame-origin B, PC/registers/SR/stack,
+relevant RAM, pending exceptions and board state. GPGX exposes relative C=T-B
+and R=D-B; frame rebasing subtracts B from both and preserves overshoot. A
+legitimate initial state comes from modeled hard reset or restoration of the
+same continuation's own captured state. A level load, queue submission,
+WaitVSync call or measured callback is not a proved synchronization boundary.
+Semantic queue descriptors do not determine incoming refresh phase or IRQ mask.
+
+Concrete source boundaries are now distinguished:
+
+- `S3kKosDecompressionQueue` submits real ROM work, but its first PRE service
+  currently performs eager decompression. Authentic instruction preparation and
+  physical retirement eventually need the same continuation; readiness alone
+  cannot manufacture the preceding work. `S3kRuntimeArtCoordinator` and
+  `S3kKosModuleQueue` retain their real direct/module submission order.
+- `S3kVIntInstructionProduction` is a test, not a production executor. The
+  production level-init/DMA profile refuses busy Kos and unsupported special-stage
+  or waterline paths. The bounded Kos/bookmark bus kernel does not execute the
+  ordinary caller. It currently rejects ordinary system-SR writes; native VInt8
+  executes `move #$2300,sr`, whose IRQ check must occur at that instruction.
+- Native special-stage loop VInt1C, `sub_9B62`/`loc_9C52` and its module-queue
+  tail call, empty-FIFO module header loading, later module-to-direct submission,
+  reunion producer `loc_5ADCE`, and the ordinary LevelLoop have distinct ordered
+  callees. Native VInt1C also owns RotateSSPal/controller/map work. Engine
+  `Sonic3kSpecialStageManager` and `EndingSceneResourceHandoff` supply semantic
+  producer descriptors, not the missing CPU/SR/board history.
+- Reset vectors and region timing, VDP pending/enabled interrupts and acknowledge,
+  inline SR writes/RTE, Z80 bus requests, FIFO and DMA waits share one causal
+  clock. Word counts and a handler subtotal do not reproduce their access order.
+  Ordinary execute callbacks are not a complete instruction ledger: delayed IRQ
+  acceptance can execute outside that callback/refresh loop, and read/write
+  hooks have different coverage.
+
+The smallest dependency order proposed by that review is:
+
+1. Internal continuation with explicit unavailable state, hard-reset/own-restore
+   provenance, and two forced restore/forward checks.
+2. Actual ROM caller instructions, branch/JSR/BSR/RTS, SR/inline IRQ and RTE,
+   with unsupported work refused before any state or RAM mutation.
+3. Small authentic producer paths and real queue callees, including empty/full
+   queues, module headers and direct alignment; reconcile existing submissions
+   rather than submitting their work a second time.
+4. VDP/IRQ/FIFO/DMA/Z80 board events on the same clock. Unknown state remains
+   unavailable, and strict DMA fit is preserved.
+5. Continuous reset-to-boot/scene/caller execution and complete VInt8/VInt1C
+   callees, including delayed IRQ behavior, with no unexplained zero-charge gap.
+6. Couple preparation and physical-head retirement last; compare shadow
+   predictions before allowing independent live readiness.
+
+These are dependency proposals, not implemented or qualified units. In
+particular, closing the continuous caller/board path is substantial work; it is
+not a small clock initializer. No synthetic PRE clock, fitted phase, trace-row
+hydration, unconditional wait budget, game/route carve-out or new dormant kernel
+was authorized. Current cold-campaign/DEZ regressions and the inherited Gumball
+exit blocker remain the immediate causal work. A separately scoped native PANIC
+probe uses the existing stock host and does not qualify this timing design.
