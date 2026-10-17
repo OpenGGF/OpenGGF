@@ -628,9 +628,8 @@ class TestS3kLrzHpzSszColdCampaign {
      * G: the LRZ2 giant ring s9 at ($2640,$640), entered by cold Tails with the 12-input L+A hold
      * recorded in s3k-lrz-act2.md, then the return to LRZ2 at Saved2. No emeralds are declared:
      * {@code SSEntryFlash_GoSS} starts Blue Sphere, which neutral input fails. The seven-Chaos
-     * $1701 branch is not covered: HPZSSEntryControl's exit gate refuses to leave while any emerald
-     * awaits a pedestal stage, so a return needs a won Super stage, and with all seven Super the
-     * ring pays rings instead of opening a stage.
+     * $1701 branch is {@link #tailsSevenChaosGiantRingFailsAPedestalStageAndReturnsToLrzTwo}: the
+     * sanctuary's exit band stays closed, but a failed pedestal stage still returns to LRZ2.
      */
     @ParameterizedTest(name = "giant ring s9 emeralds {0}")
     @CsvSource({"0000000,lrz-tails-cold-giant-ring-s9-320"})
@@ -692,6 +691,116 @@ class TestS3kLrzHpzSszColdCampaign {
         assertTrue(entry > 49073, "giant ring entered after the hold");
         assertEquals(!sanctuary, results > entry, "Blue Sphere results only on the stage path");
         assertTrue(returned > entry && returned + 245 < movie.getFrameCount(), "released LRZ2 return with replays");
+    }
+
+    /**
+     * G7: the accepted s9 route under declared seven-Chaos progress ({@code 1111111}, the
+     * only declared state). Inputs 0-50099 equal {@code lrz-tails-cold-giant-ring-s9-320.bk2};
+     * the authored tail {@code 45 R;46 -;1 A;3000 -} walks off the arrival pad, coasts to a stop
+     * under gray pedestal 2 and jumps straight up through its top-only solid, landing on the
+     * descent near its centre (SolidObjectTop loc_1E42E :41987-42013), then stays neutral. {@code SSEntryFlash_GoSS} restarts into $1701
+     * (sonic3k.asm:128438-128477), the sanctuary converts every Chaos Emerald to gray
+     * (:197949-197987), the pedestal selects its Super stage by actual contact
+     * (:197808-197841), neutral input fails it, and the results return to LRZ2 at Saved2
+     * (:12709-12712, :7571-7582). The exit band is not crossed by this route. A declared native
+     * twin of the hub-onward sequence lands on pedestal 2 at the same release-relative frame.
+     */
+    @Test
+    void tailsSevenChaosGiantRingFailsAPedestalStageAndReturnsToLrzTwo() throws Exception {
+        var loader = new Bk2MovieLoader();
+        var movie = loader.loadMovieOrInputLog(route("lrz-tails-cold-seven-chaos-s9-320.bk2"));
+        var source = loader.loadMovieOrInputLog(route("lrz-tails-cold-giant-ring-s9-320.bk2"));
+        int authoredFrom = 50100;
+        for (int f = 0; f < authoredFrom; f++) assertEquals(source.getFrame(f), movie.getFrame(f), "accepted s9 input " + f);
+        var settings = new GameplayCaptureSession.Settings(320, "tails", "", "off", null, null, null, "1111111",
+                false, false);
+        int hub = -1, hubRelease = -1, pedestal = -1, selected = -1, stage = -1, results = -1, returned = -1, ringsBefore = -1;
+        int markBefore = Integer.MIN_VALUE;
+        Object outgoingObjects = null;
+        com.openggf.level.BigRingReturnState saved = null;
+        var gray = java.util.List.of(2, 2, 2, 2, 2, 2, 2);
+        try (var session = new GameplayCaptureSession(settings)) {
+            session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 9, 0, settings);
+            for (int frame = 0; frame < movie.getFrameCount(); frame++) {
+                var level = GameServices.level();
+                if (hub < 0) {
+                    ringsBefore = session.player().getRingCount();
+                    outgoingObjects = level.getObjectManager();
+                    markBefore = level.getCheckpointState().getStarPostActivationMark();
+                }
+                session.step(movie.getFrame(frame)); session.renderFrame();
+                var mode = session.loop().getCurrentGameMode();
+                if (mode == GameMode.LEVEL) assertFalse(session.player().getDead(), "death " + frame);
+                boolean inHub = mode == GameMode.LEVEL && level.getCurrentZone() == 0x17 && level.getCurrentAct() == 1;
+                if (hub < 0 && (inHub || mode == GameMode.SPECIAL_STAGE)) {
+                    hub = frame;
+                    assertEquals(GameMode.LEVEL, mode, "seven Chaos on an S&K level restarts into $1701, not Blue Sphere");
+                    assertEquals(0x200, GameServices.gameState().capture().collectedSpecialRings() & 0x200,
+                            "Collected_special_ring_array bit = subtype 9");
+                    saved = level.getBigRingReturn();
+                    assertNotNull(saved, "Save_Level_Data2 recorded the origin");
+                    assertEquals(9, saved.originZone());
+                    assertEquals(1, saved.originAct());
+                    assertFalse(level.getTransitions().isLastStarPostHitSet(), "loc_618AC clears Last_star_post_hit");
+                }
+                if (hub >= 0 && hubRelease < 0 && inHub && !session.player().isObjectControlled()
+                        && !session.player().isControlLocked() && !level.hasPendingFreshLevelTransitionBoundary()
+                        && !level.getTransitions().isTitleCardRequested()) {
+                    hubRelease = frame;
+                    assertEquals(gray, GameServices.gameState().getS3kEmeraldStates(), "every Chaos Emerald converted to gray");
+                    assertTrue(GameServices.gameState().isEmeraldsConverted(), "Emeralds_converted_flag");
+                }
+                if (hubRelease >= 0 && frame == hubRelease + 10) replayWindow(session, movie, frame, 45, "$1701 hub +10");
+                if (inHub && hubRelease >= 0 && pedestal < 0
+                        && level.getObjectManager().getRidingObject(session.player())
+                                instanceof com.openggf.game.sonic3k.objects.HPZSuperEmeraldObjectInstance ridden) {
+                    pedestal = frame;
+                    assertEquals(2, ridden.getSpawn().subtype(), "ordinary input lands on gray pedestal 2");
+                }
+                if (inHub && pedestal >= 0 && selected < 0 && session.player().isObjectControlled()) selected = frame;
+                if (mode == GameMode.SPECIAL_STAGE && stage < 0) {
+                    stage = frame;
+                    var provider = assertInstanceOf(com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageProvider.class,
+                            session.loop().getActiveSpecialStageProvider());
+                    assertEquals(2, provider.getCurrentStage(), "loc_90926: Current_special_stage = pedestal subtype");
+                }
+                if (mode == GameMode.SPECIAL_STAGE_RESULTS && results < 0) results = frame;
+                if (results >= 0 && returned < 0 && mode == GameMode.LEVEL && level.getCurrentZone() == 9
+                        && level.getCurrentAct() == 1 && !level.hasPendingFreshLevelTransitionBoundary()
+                        && !level.getTransitions().isTitleCardRequested() && !session.player().isControlLocked()) {
+                    returned = frame;
+                    assertNotSame(outgoingObjects, level.getObjectManager(), "the return is a real LRZ2 load");
+                    assertEquals(saved.playerX(), session.player().getCentreX(), "Saved2 X");
+                    assertEquals(ringsBefore, session.player().getRingCount(), "Saved2 rings");
+                    assertTrue(level.getObjectManager().activeObjectsOfType(
+                            com.openggf.game.sonic3k.objects.Sonic3kSSEntryRingObjectInstance.class).stream()
+                            .noneMatch(ring -> ring.getSpawn() != null && ring.getSpawn().subtype() == 9),
+                            "the collected giant ring is not respawned");
+                    assertEquals(gray, GameServices.gameState().getS3kEmeraldStates(), "a failed stage keeps the pedestal gray");
+                    assertTrue(GameServices.gameState().isEmeraldsConverted());
+                    // Level masks the stage exit's ori.b #$80 off with andi.b #$7F,(Last_star_post_hit) just
+                    // before LevelLoop (sonic3k.asm:7881; native RAM $FE2A reads 0 on the first $0C frame), so
+                    // only the restored low-bit mark below is ROM state here. The engine's boolean load-gate
+                    // proxy (LevelTransitionCoordinator.isLastStarPostHitSet) stays set; recorded as open.
+                    assertEquals(markBefore, level.getCheckpointState().getStarPostActivationMark(),
+                            "loc_90926 restored Saved2_last_star_post_hit across the sanctuary detour");
+                    assertFalse(level.hasBigRingReturn(), "Saved2 consumed by the destination restore");
+                }
+                if (returned >= 0 && (frame == returned + 60 || frame == returned + 200)) {
+                    replayWindow(session, movie, frame, 45, "LRZ2 return +" + (frame - returned));
+                }
+            }
+        }
+        System.out.println("G7 1111111: hub " + hub + ", release " + hubRelease + ", pedestal " + pedestal
+                + ", stage " + stage + ", results " + results + ", return " + returned + ", Saved2 " + saved);
+        assertTrue(hub > 49073, "giant ring entered after the hold");
+        assertTrue(hubRelease > hub && hubRelease + 10 + 45 < pedestal, "hub replay window precedes the pedestal");
+        assertTrue(pedestal >= authoredFrom && stage > pedestal && results > stage && returned > results,
+                "pedestal, stage, results and LRZ2 return in order");
+        // loc_908DE (sonic3k.asm:197705-197719) calls SolidObjectTop and tests p1_standing_bit in the
+        // same routine, so object_control $81 lands with the player (native twin: same frame).
+        assertEquals(pedestal, selected, "the landing frame selects the pedestal");
+        assertTrue(returned + 245 < movie.getFrameCount(), "released LRZ2 return with replays");
     }
 
     /** Two-cycle whole-world replay of {@code window} inputs inside the current world. */

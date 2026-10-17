@@ -143,6 +143,7 @@ Entries should include:
 54. [AIZ2 First-Tree and HCZ1 Zero-Offset Animated Tile Uploads (FIXED)](#aiz2-first-tree-and-hcz1-zero-offset-animated-tile-uploads-fixed)
 55. [Knuckles Credits and Terminal Residuals (OPEN)](#knuckles-credits-and-terminal-residuals-open)
 56. [MHZ Rewind Snapshot Identity Gaps (RESOLVED)](#mhz-rewind-snapshot-identity-gaps-resolved)
+57. [Saved2 Return Star-Post Proxy and LRZ Load-Frame Restore Words (OPEN)](#saved2-return-star-post-proxy-and-lrz-load-frame-restore-words-open)
 
 ---
 
@@ -6713,3 +6714,38 @@ Evidence: `TestMhzRewindFidelitySweep#identityWindowsRestoreSnapshotExactly` (MH
 (every-frame restore and forward replay; red first: the LBZ release frame 64 and the mud's
 second frame diverged). Matrix:
 [MHZ act 1](../architecture/validation/levels/s3k-mhz-act1.md#rewind-fidelity-fixes-2026-10-16-902ba8a10).
+
+---
+
+## Saved2 Return Star-Post Proxy and LRZ Load-Frame Restore Words (OPEN)
+
+Found by the declared native twin of the LRZ2 seven-Chaos giant-ring branch (2026-10-17,
+[LRZ act 2 matrix](../architecture/validation/levels/s3k-lrz-act2.md#declared-native-twin-of-the-seven-chaos-branch-2026-10-17)).
+
+**Star-post proxy after a special-stage Saved2 return.**
+
+- **ROM:** the stage exit sets `Last_star_post_hit|$80` (sonic3k.asm:12673-12674). `Level`'s
+  last setup step, just before `LevelLoop`, is `andi.b #$7F,(Last_star_post_hit).w` (:7881).
+  Native RAM `$FE2A` goes from `$80` to 0 on the first `$0C` frame of the LRZ2 reload.
+- **Engine:** the engine models only a boolean load gate,
+  `LevelTransitionCoordinator.isLastStarPostHitSet()`. It stays set into gameplay, and the
+  native-CPU entry step deliberately keeps it past bank consumption.
+- **Effect:** no gameplay consumer was observed. The load consumers also require an
+  unconsumed Saved2.
+
+**LRZ load-frame restore.**
+
+- **What happens:** a registry restore of a snapshot captured before the first scroll pass
+  republishes derived words into captured state. After a direct-boot load-frame restore,
+  act 2 `backgroundCameraX` goes 0 to 1 and act 1 `backgroundCameraY` goes 0 to -23.
+- **Path:** `LevelFrameRuntimeUpdater.refreshParallaxState(rebuild)` →
+  `ParallaxManager.rebuildDerivedOutput` → `SwScrlLrz.update` →
+  `LrzZoneRuntimeState.publishDeformationWords`.
+- **Scope:** the Saved2-return capture does not show it, because its first scroll pass has
+  already run.
+
+### Removal condition
+Model the `:7881` mask without breaking the native-CPU entry eligibility, and make the
+post-restore parallax rebuild leave captured runtime words unchanged. Each needs a focused
+red test first.
+

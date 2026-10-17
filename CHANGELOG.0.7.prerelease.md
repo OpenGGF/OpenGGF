@@ -83,6 +83,8 @@ Unreleased. The earlier development themes remain in
 
 - **S3K special stage results:** The results card sits on the locked-on game's
   grey backdrop instead of white, matching native frames of won and failed stages.
+  A Super Emerald pedestal selects its stage on the frame the player lands on it,
+  as the original does, instead of one frame later.
 
 - **S3K zone title cards:** Every level entry that passes through the game's level
   routine fades the level in from black over its first 21 frames, with the player,
@@ -169,7 +171,10 @@ Unreleased. The earlier development themes remain in
   Hill restores mushroom-cap bounces, curled vines, catapults, dropping platforms,
   launched Mushmeanie shells and the act 2 Knuckles cutscene's player lift
   exactly. Launch Base falling platforms keep their riders and Marble Garden
-  sinking mud keeps each player's sink depth through rewind.
+  sinking mud keeps each player's sink depth through rewind. Rewinding to the first
+  frame of a Lava Reef load replays its background setup: act 2 no longer refills
+  its background or adds a second Death Egg, and Knuckles keeps act 1's background
+  chunk.
 
 - **S3K underwater objects:** Large-bubble pickup follows persistent character
   identity for leaders and followers. Sonic clears the rolling state; Tails

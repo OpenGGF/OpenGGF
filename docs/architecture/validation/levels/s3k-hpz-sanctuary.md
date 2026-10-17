@@ -660,3 +660,13 @@ observer1969766 ran under normal queued admission22:30:28.735001–22:30:31.0018
 Exact source/argv/clock/crystal/SAT observations and hashes remain in the existing
 external `hpz-sanctuary-ceremony/publication-clock-a6ddbd14e/` task directory.
 Actual-ingress and publication-aligned native presentation remain the honest open scope.
+
+## Same-frame pedestal selection — 2026-10-17
+
+`loc_908DE` calls `SolidObjectTop` and tests `p1_standing_bit` in one routine
+(sonic3k.asm:197705-197719), so `object_control $81` lands on the landing frame. A declared
+native twin of the LRZ2 seven-Chaos branch shows this on the same landing at (5805,896). The
+engine pedestal now resolves its solid at that call point (`MANUAL_CHECKPOINT`) instead of
+reading the next frame's ride. Evidence and checks are in the
+[LRZ act 2 matrix](s3k-lrz-act2.md#declared-native-twin-of-the-seven-chaos-branch-2026-10-17).
+
