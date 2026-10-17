@@ -2075,3 +2075,15 @@ for detached UI fades. Keep renderer attachment separate: only the actively
 bound palette owner publishes CRAM fades. Origin: 2026-10-17 white-fade
 architecture guard repair; existing native component/22-V-int and immediate-scene
 rewind-release semantics are unchanged.
+
+
+**A row-pointer write is not a decoded row copy.** Native LBZ loc544C6 changes
+BG row addresses, retaining shared byte owners. After encoded collision aliases
+are modelled, copying the common154-column map width into native four-byte BG
+rows overwrites neighbouring storage. Repoint the encoded words under COW,
+sync the decoded view and rebuild aliases; verify later source mutations and
+whole-world restoration, not just the first rendered row. DDZ's separate smoke
+errors were an undeclared synthetic fixture floor pass: Sonic_Init has no floor
+probe and loc81554 owns flight. Declare its existing fresh-start inlet and keep
+an independent unknown-definition refusal; do not invent missing RAM to make a
+component bootstrap green (R13, 2026-10-17).

@@ -91,6 +91,8 @@ Unreleased. The earlier development themes remain in
   colours on the original frame. Knuckles' Angel Island 1 starts with his own four
   palette colours, and the main palette reloads at the original camera position for
   every start without the plane intro.
+  Launch Base's Death Egg rise reassigns its native background row pointers and
+  preserves their later terrain edits through rewind.
 
 - **S3K special stage presentation:** Blue Sphere players and their tails use
   the original perspective projection through jumps, with fixed ground shadows

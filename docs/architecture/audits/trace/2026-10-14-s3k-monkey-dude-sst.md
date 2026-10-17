@@ -3787,3 +3787,108 @@ removed under metadata lease alone after facts are durable:24 exact own report/
 XML/text/owner files, no archive. Native4fdf, private config, useful images and
 foreign performance artifacts remain preserved. Temporary source/two classes
 are absent, all own jobs terminal, and no further selection is planned.
+
+
+## R13 residency smoke regressions: native row pointers and DDZ fixture entry — 2026-10-17
+
+Owned3aa, `bugfix/ai-s3k-residency-smoke-regressions-gpt61`, starts at R12bd2.
+Pre-edit merge25d3500cd retains both complete Root02b and R12 evidence suffixes;
+production/maintained tests at that merge match bef8/02b. R10fa/R11cd94/R12bd2
+refs, native4fdf versus gitlink322 and private regular config are preserved.
+Root's broad15826 stays foreign/frozen; this lane launches no broad, trace,
+native, media, ancestor sweep or extra worker/tree and makes no Root/Main write.
+
+### Two distinct causes, with actual old-reds
+
+Root's observed Main803 matched baseline89086 is18/1F/0E/0S; DDZ/LBZ/S2/Results
+pass and its sole GLFW failure is inherited. Own pre-edit43333 reproduces exactly
+**15/1F/14E/0S**: LBZ `launchStartReframesDeathEggSmallBackgroundRows`34/17,
+and DDZ palette3 + stars11 all throw `$FF82AF: 128x128 definition 20` from the
+fixture's synthetic `resolveGroundAttachment` (Builder577). This is not evidence
+that unknown definition RAM should become zero or a decoded fallback.
+
+DDZ is a fixture-inlet correction, with no DDZ runtime edit. Native Sonic_Init
+(disassembly21938–21978) returns after initialization without a floor probe;
+DDZ_ScreenInit allocates loc81492 and loc81554 installs object_control81 before
+ordinary movement. The two component-test boot helpers now declare the existing
+`withFreshLevelStartLifecycle`, as the production DDZ lifecycle tests already do.
+A separate pure-lookup control reads the actual ROM schema20×6, FG row2 pointer
+80B0 plus unsigned-word column1FF ->82AF, byte14hex/20. The cold load has no
+producer for definition20. It still throws the full24-bit FF82AF refusal under
+that explicitly undeclared terrain probe; no region, empty asset or zone carve-out
+is invented. The existing native flight/star/palette behavior checks remain intact.
+
+LBZ is a production pointer-owner repair. Native `LBZ2BGE_Normal/loc_544C6`
+(disassembly111493–111532), a3=Level_layout_main+2, copies WORD pointers
+8(a3)->(a3), C(a3)->4(a3); it does not copy row bytes. Actual current ROM LBZ2
+layout28A6FE has FGwidth154, BGwidth4 and BG row0..3 pointers8EF8/8EFC/8F00/8F04.
+The old byte-row implementation used mapWidth154, overwriting overlapping native
+row storage after R10 made encoded/decoded aliases coherent. The old test also
+seeded154 BG columns; it now declares the real four-column geometry.
+
+The independent short control loads the production ROM, verifies actual BG source
+bytes against ROM and calls the exact private reframe owner. Genuine old-red5006
+is **1/1F/0E/0S**, first encoded index10 expected8F (pointer8F00) / actual8E
+(pointer8EF8), before production changes. Its oracle requires the complete1000
+encoded bytes to differ only in the two native destination pointer words.
+Final16322 passes that same oracle. It uses no trace rows, forced blocks or RAM.
+
+### Internal owner, mutation and rewind
+
+S3kCollisionLayout changes the two encoded pointer words under COW, syncs the
+decoded destination view and rebuilds its inverse alias index. Sonic3kLevel's
+unmarked internal helper carries the BG producer flag; LBZ invokes it inside the
+existing zone mutation pipeline and requests the existing redraw. A later source
+row mutation reaches both logical aliases and the actual collision descriptor.
+Two forced whole-world recreations each restore every registry key, repeat the
+reframe/live ROM-block mutation and run two ordinary forward ticks with exact
+whole-world equality. Existing scene swap, retained-tail, positive-ROM, negative/
+adjacent/word-wrap, live-asset mutation and replay controls remain unchanged/green.
+No new persistent field, public Mod API shape/pin, general RAM bus, shared movement,
+CPU, counter, camera, metric, timing-authority or readiness change is introduced.
+
+Frozen runtime path+NUL+bytes sorted SHA256:
+`363e7328c6f0834b788ccdd08de170951a3bfe85f1307445e57838b2009c332a`.
+Runtime plus three changed test files:
+`581a266573ad547be61dd4a9b94ab405df62c7b14fb8ec8c18112eb29ff79579`.
+Root's exact-hash read-only review found no material issue in pointer COW, decoded
+sync, alias reindex/write/restore, producer flag or pipeline redraw; it ran no
+tests. That inspection is reused without another unchanged review round.
+
+### Exact bounded verification
+
+Same original absolute Main/ROM bindings as R3/R10, own cwd/target, current Main
+wrapper, normal lane, Java25/Lua5.4, EGL/nullAL/no ambient display, one fork:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless LUA_BIN=/usr/bin/lua5.4 python3 "$MAIN_WORKSPACE/tools/testing/maven_queue.py" --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" "-Ds3k.rom.path=$S3K_ROM" <selection> -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical test -B
+```
+
+| Owned session / selection | Tests/F/E/S | Queue seconds / Maven / finished UTC |
+| --- | --- | --- |
+|43333, `-Dtest=TestDdzRomPalettes,TestDdzSuperStars,TestSonic3kLbzLaunchSignals#launchStartReframesDeathEggSmallBackgroundRows` on pre-edit25d|15/1/14/0|522 /30.677s /15:30:21|
+|5006, `-Dtest=TestSonic3kLbzLaunchSignals#launchRepointsTheRomRowsWithoutOverwritingTheirByteOwners`, test-only diff on25d|1/1/0/0|27 /26.853s /15:33:24|
+|16322, focused selector below, final frozen runtime/tests|86/0/0/0|101 /1m20s /15:38:47|
+|48957, affected guards below, same frozen runtime/tests|118/0/0/0|39 /35.007s /15:40:22|
+
+16322 exact selector:
+`-Dtest=TestDdzRomPalettes,TestDdzSuperStars,TestSonic3kLbzLaunchSignals#launchStartReframesDeathEggSmallBackgroundRows+launchRepointsTheRomRowsWithoutOverwritingTheirByteOwners+repointedRowsKeepMutationAliasesAfterTwoWholeWorldRestores,TestS3kNativeWordLayoutResidency,TestSonic3kLevelOverlayRewindIsolation,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestModApiSignatureSurface#candidateZeroSevenSurfaceIsPinnedToTheCurrentSurface`.
+Breakdown: DDZ4+11, LBZ3, native-word4 + overlay3, mandatory S3K4=60
+(including both loading packages), exact API-pin1. No skips.
+
+48957 exact selection:
+`-Pguards -Dtest=TestArchitecturalSourceGuard,TestPerGameRuleArchitectureGuard,TestHardwareTimingAuthorityGuard,TestTraceReplayInvariantGuard,TestTraceRunVblankClockAuthorityGuard,TestRewindArchitectureGuard,TestRewindCoverageGuard,TestHelperStateRewindCoverageGuard`.
+Breakdown72+3+25+10+2+4+1+1. No skips, guard budgets/keys unchanged.
+All four requests are terminal. Useful work was not separately metered; this
+slice's elapsed time stayed below90 minutes even before excluding queue waits.
+Consumed own diagnostics are removed under metadata_slot alone, without archives.
+
+### Limits and handback
+
+This qualifies these two smoke-regression causes and their bounded consumers,
+not a complete smoke/full-suite or campaign. Root owns composed validation and
+integration/push. No new HCZ run occurs: R12's full returned-HCZ14208 rows /
+125612 all-group errors / first non-camera8329y_speed0000/-0680 / absent giant_ring
+exit remains historical bef8 evidence, not a new pass on this source. Current
+slice/alternate/GLFW/native-pixel/whole-route qualifications are not inferred.
+No8329, CPU visibility, camera-input or unknown RAM owner is repaired here.

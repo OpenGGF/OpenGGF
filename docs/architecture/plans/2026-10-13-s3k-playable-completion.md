@@ -5238,3 +5238,25 @@ onward segment/playable exit qualifies. Four suppressed unmatched hardware
 completions remain unattributed. No8329 repair/rerun/extra selection or broad.
 Root owns further owner authorization, smoke/integration/push.
 [Exact inputs, clocks, seam correction, commands, windows and limits](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r12-slice-cached-visibility-consequence-and-full-composed-canonical--2026-10-17).
+
+
+## R13 residency smoke regressions repaired locally — 2026-10-17
+
+Same3aa branchbugfix/ai-s3k-residency-smoke-regressions-gpt61, pre-edit merge25d
+of Root02b into R12bd2; both append sections/old refs/native4fdf retained. Exact
+pre-edit43333 reproduces15/1F/14E/0S. DDZ two component boot helpers now declare
+existing fresh-start lifecycle (native Sonic_Init has no floor pass); a separate
+ROM-derived FF82AF/definition20 probe still refuses unowned bytes. No DDZ runtime
+fallback. LBZ native loc544C6 copies two row pointer words, while old code copied
+154 bytes through four-byte BG rows. Independent ROM owner5006 old-red1/1F at
+pointer8EF8 vs8F00 -> final same control green. Internal pointer COW/decoded view/
+alias reindex and BG producer flag preserve source bytes, live mutation aliases
+and two forced whole-world restore/forward cycles. No public API/pin expansion.
+
+Frozen runtime363e7328… / runtime+tests581a2665… has Root read-only no-material-
+finding review (no tests), reused.16322 passes86/0F/0E/0S including mandatory
+S3K4=60 and native-word/overlay7;48957 passes118 affected guards, no skips.
+All four own jobs terminal, no further selection. No trace/native/media/broad or
+Root/Main writes; Root15826 remains foreign. R12 HCZ8329/exit and GLFW/slice limits
+remain unqualified on the new source. Root owns composition/delivery. Exact
+commands/measurements/owner classification are in the [existing audit](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r13-residency-smoke-regressions-native-row-pointers-and-ddz-fixture-entry--2026-10-17).

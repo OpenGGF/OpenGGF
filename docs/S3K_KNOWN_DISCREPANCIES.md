@@ -1313,3 +1313,14 @@ an inclusive left edge. Fresh-entry delay is disabled; no CPU/cache/runtime fix.
 Selected P1/history/camera-latch producer remains unqualified. No extra selection,
 native or broad run, and no general green.
 [Exact fixtures, commands, clocks, windows, phase correction and handback](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r12-slice-cached-visibility-consequence-and-full-composed-canonical--2026-10-17).
+
+
+R13 residency smoke regression repair (2026-10-17): DDZ component fixtures now
+select their existing native fresh-start/no-floor inlet; manual undeclared FF82AF
+terrain lookup still explicitly rejects unproduced definition20. LBZ's Death Egg
+launch copies two encoded row-pointer words, preserving source bytes and later
+mutation aliases through two forced whole-world restore/replay cycles. Exact
+pre-edit15/1F/14E and independent ROM-pointer1/1F -> final86 focused/118 affected
+guards all pass without skips. This does not requalify HCZ8329/exit, independent
+slice/alternate/GLFW or full routes; no CPU/camera/unknown-RAM fallback changes.
+[Exact owner evidence and limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r13-residency-smoke-regressions-native-row-pointers-and-ddz-fixture-entry--2026-10-17).

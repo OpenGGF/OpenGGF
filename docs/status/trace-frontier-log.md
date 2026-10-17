@@ -113645,3 +113645,17 @@ producer remains unqualified; no CPU/cache fix. PRE_MAIN_LOOP label corrected
 to actual post-camera loop tail. All temporary observer source/classes removed
 before canonical; no native/fullslice/alternate/broad/guard or runtime edit.
 [Exact separate fixtures, source gaps, clock phases and results](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r12-slice-cached-visibility-consequence-and-full-composed-canonical--2026-10-17).
+
+
+### 2026-10-17 — R13 local residency smoke repair; no new route qualification
+
+Owned3aa/25d3500cd + bounded LBZ pointer-owner and DDZ test-inlet changes.
+43333 reproduces15/1F/14E; actual-ROM pointer old-red5006 is1/1F at encoded
+index10 (8F00 required,8EF8 retained). Final16322 passes86 focused and48957
+passes118 source/authority/rewind guards, all0F/0E/0S. DDZ keeps explicit FF82AF
+unknown-definition refusal; LBZ copies native row pointer words, preserving bytes,
+mutation aliases and twice-restored world replay. Root reviewed exact frozen
+runtime363e7328… with no material finding. No trace/native/media/broad or CPU/
+camera/8329 edit. R12's first non-camera8329y_speed and absent exit remain
+historical bef8 observations, not new qualification; Root owns combined delivery.
+[Commands, source ownership, old-reds and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r13-residency-smoke-regressions-native-row-pointers-and-ddz-fixture-entry--2026-10-17).
