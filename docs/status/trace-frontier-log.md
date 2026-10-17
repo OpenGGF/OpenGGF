@@ -113317,3 +113317,16 @@ Final target compiled runtime1878 and maintained restored tests; inspected
 diagnostics/helpers consumed under metadata lease, no archives/live jobs.
 Root owns ring attribution/composed validation. Four
 native debris children/fullSST, aux/config/BK2/cold/fullchain limits remain.
+
+
+### 2026-10-17 — HCZ7134 bounded coupled pipeline check; frontier unchanged
+
+Base3896, same owned feature tree: new independent geometry regression/control
+and existing related checks pass7/0F/0E/0S in normal/EGL focused86494. CPU nudge,
+underwater acceleration, actual projected probe, wall response and integration
+compose correctly; initial56102's2 failures were a test accessor-stub error.
+No production edit or trace/native/broad invocation. Prior canonical7134
+`sidekick_x`0175/0176 and independent9482`air`1/0 remain unqualified, with no new
+error count/window claimed. Missing live engine CPU branch, full pre-wall state
+and probe/distance/terrain prevent a causal owner assignment. [Exact selector,
+math, outcomes and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#hcz7134-coupled-cpu-and-ground-wall-decision--2026-10-17).

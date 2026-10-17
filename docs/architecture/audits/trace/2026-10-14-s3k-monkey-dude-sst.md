@@ -2558,3 +2558,71 @@ HCZ exit, sidekick7134, support9482, full auxiliary coverage, configuration brea
 PAL/PCM and broader timing acceptance remain unqualified. All own jobs are terminal;
 consumed diagnostics are removed under current Main's worktree_metadata_slot alone.
 Root owns review/integration/broad validation and push. Local only.
+
+
+## HCZ7134 coupled CPU and ground-wall decision — 2026-10-17
+
+Test-only follow-up on3896deae811e5b12732a1ff4017e599263339105, same owned
+feature tree. Production, fixtures, clocks, source budgets and API pins are
+unchanged; actual clean TraceChaser4fdf checkout difference is preserved. No
+prior own job was live. No trace/native/capture/broad qualification was launched.
+
+Parent-relayed read-only native analysis identifies7133 P2 X0173.8800,
+Y0830.1F00, vx/ground026A, status40;7134 X0175.F800, vx0170, ground0,
+status60. The actual native path is loc_13E34's immediate +1, underwater +6,
+sub_F61C's projected probe0180/0838 returning-1, then loc_14BCA subtracting0100
+and setting Push before integration. This slice corroborates the owning source
+in locked-on `sonic3k.asm`; it does not recapture that native observation.
+
+`TestS3kCpuFollowGroundWallPipeline` adds one two-case, one-tick independent
+regression. A declared tile-aligned wall W0400 and full floor F0300 use actual
+SolidTile/GroundSensor geometry. Tails' real radii9/15 put the initial centre at
+(W-13).C000,F-16, with underwater ground velocity01F0. Ordinary leader-history
+writes through `recordFollowerHistoryForTick` supply held Right and delayed
+target delta1 or0 after loc_13DA6's slow-leader $20 offset. Real routine-0
+initialization and `SpriteManager.update` dispatch the CPU and movement; no
+forced CPU state, nudge, collision distance or replay values. A passive wrapper
+around the real wall response observes the actual first terrain query and
+pre/post velocity. A floor distance0 sanity check validates the setup.
+
+| Delayed target delta | CPU nudge | Accelerated vx/g | Actual projected probe | Wall response vx/g/Push | Integrated X |
+| --- | --- | --- | --- | --- | --- |
+| 1 | +1 | 01F6/01F6 | W,F-8 | 00F6/0/true | (W-11).B600 |
+| 0 | 0 | 01F6/01F6 | W-1,F-8 | 01F6/01F6/false | (W-11).B600 |
+
+The full-tile wall/previous-empty calculation returns-1 at W; the empty-cell
+extension is flush0 at W-1. Both final X values are identical, so position alone
+cannot diagnose this ordering. The regression checks the CPU result, actual
+probe, response, final velocity/ground/Push and grounded integration.
+
+Exact focused invocation, using the existing original absolute ROM and Main
+workspace bindings from R3 above, from this owned cwd:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_WORKSPACE/tools/testing/maven_queue.py" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" "-Ds3k.rom.path=$S3K_ROM" \
+  '-Dtest=TestS3kCpuFollowGroundWallPipeline,TestS3kHcz1GroundWallProbe,TestSidekickCpuFollowParity#s3kFreshSpawnInitFrameResetsKinematicsWithoutRunningNormalCpu+followRightStillNudgesPositionWhenDxIsBelowThreshold+followNudgeIsSuppressedWhileObjectControlBitZeroIsSet' test -B
+```
+
+Initial request56102 finished13:08:43 BST, queue0s/Maven25.744s,7/2F/0E/0S.
+Both new cases saw empty terrain because the test stubbed the three-argument
+solid-tile accessor while GroundSensor uses the two-argument overload. CPU and
+probe assertions already passed; this is a test setup error, not a runtime
+old-red. Correcting only that stub and adding the floor sanity assertion gives
+request86494,13:09:42 BST, queue0s/Maven25.296s: **7/0F/0E/0S**. New coupled
+cases2, existing ROM terrain checks2, existing CPU initialization/nudge/control
+checks3; no skips. New cases take0.648s together. Both requests are terminal.
+
+This disproves the generic shared-order hypothesis for these conditions and
+establishes no production defect. Canonical7134 remains unqualified: the
+retained report supplies only integer actual X0176. The next causal decision
+requires the **live engine** CPU branch/delayed target/nudge, full16.16 pre-wall
+X/Y and vx/yv/ground/angle/control path, and its actual probe/distance plus
+terrain descriptor, solidity bits, collision-table tile/flip/width at0180/0838.
+Compare these to the native branch before assigning CPU, acceleration, wall,
+terrain, or integration ownership. The synthetic result does not establish any
+of those live values. No new canonical/slice/alternate result or frontier move,
+no HCZ certification or exact GLFW oracle claim. Existing7134sidekick_x and
+independent9482air remain; no runtime fix is justified in this bounded slice.

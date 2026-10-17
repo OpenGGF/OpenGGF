@@ -4230,3 +4230,18 @@ R1/R2 results remain historical, not erased. Consumed diagnostics/helpers are
 removed under the metadata lease. Target is final1878 plus maintained test/guard
 compilation; all jobs terminal/released. Local commit/clean handoff only, no Main edits,
 new worktree, integration or push.
+
+
+## HCZ7134 bounded coupled-pipeline decision — 2026-10-17
+
+Test-only follow-up on3896: one declared floor/wall regression plus no-nudge
+control executes ordinary CPU history -> actual sprite scheduler -> underwater
+acceleration -> projected wall response -> integration. Focused86494 passes
+7/0F/0E/0S. Nudge yields00F6/ground0/Push; control01F6/ground01F6/noPush, both
+ending at the same X. Initial56102's2 failures were an incorrect test accessor
+stub, corrected without production changes. Generic ordering is disproved for
+these conditions;7134 still needs the live engine CPU branch, full pre-wall
+position/velocity/path and actual terrain probe/distance. No new traces/native
+observations, runtime edit, broad suite, Main write or push. Prior strict
+7134sidekick_x/9482air and exact GLFW limits remain. [Math, exact focused
+command and causal blocker](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#hcz7134-coupled-cpu-and-ground-wall-decision--2026-10-17).
