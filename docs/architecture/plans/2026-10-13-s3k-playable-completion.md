@@ -7248,3 +7248,89 @@ No8775 writer attribution or runtime fix; strict camera/animation/route remain
 red. Stop after sole terminal; no extra run/probe/native/guards or R23 owner work.
 Consume inspected diagnostics normally; docs-only local commit, Root owns
 combined delivery. Earlier73focused/R21prefix epochs stay explicitly separate.
+
+
+### R23 source-only8775 facing inventory; actual writer unobserved — 2026-10-17
+
+R22 is fully committed/accounted at10bbc69fa on runtime7df, one maintained76850
+terminalred. R23ordinal26 is registered separately with24h expiry, preserving
+25..20 and all refs/native4fdf/config. This unit reads only existing compressed
+physics/AUX and current source/pinned disassembly044fa46725c71187399e13f5ddb70e11d32dc024.
+No compiler/JVM/native/probe/test, source instrumentation, callback, gameplay/
+fixture writes or new runtime result. Only this existing Plan receives facts.
+The independent seg13 ownership88306 is not attributed to this8775 field.
+
+Actual original AD40 `hcz_2` AUX records are selected by their **frame property**,
+not their JSONL line ordinal; physics rows exclude comment/header lines using
+TraceData's contract. SHA256: physics.csv.gz
+`519cd5166db70cd58c2a173ba0859d3bd034395ea1c7178ee2d6fc89ef67ad57`,
+aux_state.jsonl.gz
+`453f2d04f3a66e25724428b4184afc7b1f4a27f365140c0d944c472142241505`.
+R22's status0A means logical RIGHT by TraceCharacterState.statusByteFromSprite;
+native0B means LEFT. Their XOR is only bit0. Current8775 pose/CPU/guard/caller
+values were not captured by R22 and are not reconstructed from its first field.
+
+| Native trace row | CSV frame (hex) | LF / AUX vfc (decimal) | Status / control | Column Y | CPU flight timer |
+| --- | --- | --- | --- | --- | --- |
+|8772|2244|8714|09 /03|05CA|56|
+|8773|2245|8715|0B /00|05CB|57|
+|8774|2246|8716|09 /03|05CD|58|
+|8775|2247|8717|0B /00|05CE|59|
+|8776|2248|8718|09 /03|05CF|60|
+|8777|2249|8719|0B /00|05D0|61|
+|8778|224A|8720|09 /03|05D1|62|
+
+Across all seven rows, native P2 stays0E10.BB00/0572.AE00, vx/vy/g0,
+angle0/routine2/nonrolling, standing index0B/OnObjtrue. Native CPU routine8,
+idle0, auto-fly/jump0, logical Ctrl2 held/pressed0, target0BFC/0655; pos-table
+index28/2C/30/34/38/3C/40. P1 staysX0E75.A400 whileY0413→040D.
+Actual interactB32E/SST11/code326B6/subtype2/status10 retains p2_standingtrue.
+P2 and column end-row render_flags are04 throughout; these are **end-row bytes**,
+not a new column-entry callback. Render body dimensions24×24 and the P2 slot's
+collision radii9/15 are distinct recorded fields. At8775 recorded CSV gameplay
+counter220D corresponds to decimal8717, AUX vfc/LF8717; CSV vblank_counter1646
+is a separate recorded value, not an engine clock or a fitted offset.
+
+Actual event types in this window are cpu_state, oscillillation_state,
+game_paused_state, object_state, interact_state, sidekick_interact_object,
+air_countdown_state and object_near. Advertised velocity/position/normal-step
+extras do not create missing records. No move_lock, spin_dash_flag, Ctrl2 lock,
+CPU-entry/exit/status-write stack or column private held/swing bytes are present
+here. Exporter object_active means codepointer!=0, **not held/rider active**;
+object_object_control is also not the column's private held byte. The retained
+standing bit identifies the physical binding, not a facing writer/caller.
+
+Source narrows the question without proving a faulty branch:
+
+- Native sub_32784 capture/held/release and current d811 column do not write
+  Status_Facing. loc_32610 writes mapping/render flips only; native Animate_Tails
+  derives render flipping from status, rather than writing facing back.
+- CPU routine8 dispatches loc_13F40. After sub_13EFC, idle_timer and move_lock
+  can return; spin_dash_flag bypasses the facing block, and nonzero ground_vel
+  returns. Otherwise it clears Facing and sets it only when P2X−P1X does not
+  borrow. Engine updatePanic has the corresponding manual/move-lock/spin/gSpeed
+  gates and direction choice. For the recorded end positionsE10<E75, both would
+  choose RIGHT **if that guarded block actually executes**. End-row native LEFT
+  does not identify which guard/entry value or subsequent writer preserved it.
+- Tails_Control runs CPU before testing object_control bit0 to suppress movement.
+  Player_SlopeRepel decrements move_lock only on its reached ground/roll path;
+  engine doSlopeRepel and movement-suppression return model those distinct
+  owners. No timer producer/lifetime divergence is observed here.
+- Ordinary movement has input/balance facing writers; HCZ hand/bar capture also
+  has explicit facing writes. Their existence or nearby slot identity is not
+  evidence of invocation against this P2. Shared solid/CPU/camera, the column's
+  render publisher and a fitted direction/counter change are not justified.
+
+Smallest next **proposal, unexecuted**: keep the original driver and a tiny
+8772..8778 observation window. Existing afterProductionStep can read current
+CPU state/control counter/move_lock/spin flags, preCPU gSpeed, prephysics pose
+and final status. It cannot name the first LEFT→RIGHT setter. updatePanic does not refresh NormalStepDiagnostics, so an older record is not
+fresh PANIC evidence; preCPU snapshot contains gSpeed, not facing. No existing SpriteManager/CPU entry-exit observer
+was found. A separately scoped passive direction-transition stack at the existing
+setter, with the already-read PANIC gate scalars/identity and logging-only row
+stamp, is the smallest decisive caller question if Root chooses instrumentation.
+No API/controller/owner replacement or gameplay writes are needed, but none is
+authored or authorized by this source-only unit. Native guard-entry values may
+still be missing after that witness; an independent old-red/runtime repair
+requires a demonstrated condition, not this endpoint hypothesis. Stop and hand
+back before any execution or owner change.
