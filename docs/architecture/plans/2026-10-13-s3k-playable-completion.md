@@ -9755,3 +9755,898 @@ the existing neutral MAIN_ROOT alias for the original Main absolute wrapper/ROM
 checkout; flags/arguments/source pins are unchanged, and no command was rerun.
 The hook is not bypassed. This is documentation portability repair, not a new
 validation/source epoch.
+
+### R30 after clean preservation: canonical parents13–15 source question only
+
+LOCAL preservation commit `8b1e965383eefab0e32cbdd5402502361ed96185` completed
+with normal hooks, all seven policies and the exact parsed final GPT-6.1
+coauthor. Exact11 owned paths were committed; `git status --short` was empty
+before this second, source-only phase began. Original guard reports were
+consumed as accepted; candidate classes and all refs/config/native/media stayed
+in place. No JVM/compiler/native/probe/logger/test/runtime authoring followed.
+This continuation leaves ONLY this existing Plan as deliberate source-plan WIP.
+
+**New parent-provided guard attribution, not worker execution.** Root's source
+count audit reports the identical guardeffa5049 in all trees, Main803 and parent
+5c59e6da LevelManager6807b61f at3141 effective lines, and owned2077fd1d adding12
+in rebindCurrentLevelGeometryForRewindRestore, giving the present3153. Current
+worker/Root LM76193c06 is therefore an owned overall regression, NOT an actual
+Main-baseline guard failure. Independent source extraction fa8da moves that
+same body to existing engine-only LevelTilemapRewindAccess, with package-only
+edges/no API/order/schema change; Root read31a720/9693/diffed151 gives3141. Those
+are Root-provided source findings, not this worker's tests or a blanket waiver.
+Root owns its separate38036 affected request and fresh guards/API qualification.
+No LevelManager/extraction edit, guard retry or route run is authorized here;
+Root's3531-class smoke remains live in its separate immutable tree.
+
+#### Retained canonical inventory
+
+Read ONLY existing original fixture
+src/test/resources/traces/s3k/runs/s3-knux-multibonus-ss (tree db73f445...), native
+044fa46725c71187399e13f5ddb70e11d32dc024/asmD2ce, original locked-on ROM
+SHA1CFBF98C36C776677290A872547AC47C53D2761D6 and current committed source.
+Manifest149c879c.../movieD748... remain exact. Canonical hardware records contain
+kind/ordinal/submission fingerprint/completion raw_frame/boundary; they do NOT
+serialize ROM descriptor fields, native submit caller or native birth clock.
+These ordinals are canonical, not the separate retained schema2 ledger.
+
+| Canonical parent | Actual existing completion record | Fingerprint | Semantic descriptor evidence |
+|---|---|---|---|
+|13|aiz raw_frame4577 POST_OBJECTS|3f7193a29cfe5ec7d3f890c239a0e9bf3c25d7b18e6e91dcca3d304210747e6a|BonusTitleCard, ROM0D726C/881260, compressed348, VRAM$A9A0/43424, output1344, one module. Same immutable descriptor/fingerprint was measured at R23's actual pre-fix Bonus submit; independent four-archive ROM oracle corroborates its source/shape.|
+|14|aiz raw_frame4648 POST_OBJECTS|366bb3460cdb69f6eb1dca8ca39e2ea9f06b0ef5dc657ec93d03eace44e28726|Source-supported association: Gumball_8x8_KosM at3FEE2E, VRAM0, header2640/output9792, three modules. Canonical completion record alone cannot invert this hash or prove the native birth caller; complete compressed length/fingerprint was NOT recomputed or searched to fit.|
+|15|gumball raw_frame1303 POST_OBJECTS|10eb568a70724c579f022914f56227c2c7fa421aafa8578aebaa874f0cffb0ca|RedAct, ROM0D6F28/880424, compressed470, VRAM$A000/40960, output1952, one module. Same descriptor/fingerprint appears in R23's actual initial/return title submissions; matching it does not identify a unique native caller/birth.|
+
+Parent14 association has concrete retained-byte/source support, rather than
+ordinal subtraction: pinned native LevelLoadBlock199576..199577 selects
+Gumball_8x8_KosM for both primary/secondary; LoadLevelLoadBlock9737..9783 queues
+primary at VRAM0 and skips a duplicate secondary. Actual ROM3FEE2E begins
+26400D2100FFF81F, so its9792-byte header requires three$1000-byte module spans
+(last1600bytes). Correctly frame-filtered existing AUX at aiz4638 shows module
+busy/remaining3; frame4639 direct active_source4189744=$3FEE30 is the native
+archive+2 payload. Later actual direct sources are$3FF2B0 at4643 and$3FF880 at4646;
+canonical direct19/20/21 complete at4640/4644/4647 PRE_MAIN_LOOP, followed by
+module14 at4648 POST_OBJECTS. These are observed publication/completion samples,
+not enqueue timestamps or an exported per-child parent link. Module AUX active
+source/destination are -1 (unknown), and queued_fingerprints are diagnostics,
+not submission fingerprints. No game state is populated from any of these rows.
+
+An initial reader display selected AUX JSONL line indexes and showed unrelated
+frame365/370 records; it was discarded without inference. The support above
+filters each record's ACTUAL frame property, not JSONL position. Local canonical
+raw_frame labels remain separate from movie/BK2/native CPU clocks; none is fitted
+or shifted. No new native recording, runtime query, pixel or clock search exists.
+
+Exact existing input SHA256 pins:
+
+- aiz/hardware_timing.jsonl4412B:471d13719b3d328997e203c5d72fcbc9d3fe9646af729d2012885b45f2c6ffed;
+- aiz/aux_state.jsonl.gz1004151B:e202bdc57dff86bc75fab58d0d87bfe879b48ee72a0c34affcb7c09a6a6f395b;
+- gumball/hardware_timing.jsonl3777B:94ddd1aa68402b266cc60595c4447f4f47b6b82bcc294a3e0e1722f2906f6d9d;
+- gumball/aux_state.jsonl.gz368075B:fa1fef59dd4b81336aa277b369ce4d47b54027db5c963de3625dbc88b38a5b6f.
+
+#### Concrete next producer question and source boundary
+
+Native Level/loc_62CC first waits for title$48 and Nemesis, then loc_6310 calls
+LoadLevelLoadBlock at7793 before LoadLevelLoadBlock2. The latter decodes blocks/
+chunks and is not a replacement for the former's physical terrain-art job.
+Current Sonic3kLevel.loadPatternsWithPlan678 synchronously decodes retained ROM
+pattern operations for rendering; ready pattern bytes do not prove a hardware
+submission. A real terrain producer already exists: Sonic3k.queueFreshLevelRuntimeArt251
+selects the loaded level's frozen terrainArtSources and the existing coordinator
+submitFreshLevelRuntimeArt250 queues the primary/unique secondary batch at0.
+No new queue/provider/controller or timing API is needed merely to ask whether
+this existing producer is reached.
+
+The explicit source candidate is the ordinary bonus-entry load/handoff:
+GameLoop.doEnterBonusStage2684 calls plain levelManager.loadZoneAndAct(zone,act).
+LevelManager3808..3813 selects title-required=false/queueFreshLevelRuntimeArt=false;
+the separate existing semantic loadZoneAndActForFreshRuntime3817 selects false/
+true. loadCurrentLevel3667 ORs the queue flag with an existing results-return
+owner flag; its actual carried value must be observed, never assumed. Only when
+ctx.isQueueFreshLevelRuntimeArt is true does requestTitleCardIfNeeded3422 request
+the title's level-index handoff. Gumball19/act0 is not suppressed by the actual
+zone-feature provider1199. initializeBonus913 enters the real fresh title loop,
+but enterLevelRoutineTitleLoop479 does not itself arm the resource level index;
+its default is -1, and publisher1532 returns for a negative index. At title/Nemesis
+readiness1063..1071, that publisher is the existing terrain submission path.
+The default false call is therefore a concrete source-backed missed-handoff
+question; actual retained flags/index and production entry remain prerequisites,
+not an invented observed R30 state.
+
+Smallest independent disconfirming question, NOT AUTHORED/RUN: through ordinary
+public requestBonusStageEntry and the existing real GameLoop neutral-step entry
+inlet, does declared actual Gumball initialization retain the loaded level's
+terrain handoff until its genuine title/Nemesis gates open, then create exactly
+the ROM-selected terrain parent at0 before released bonus gameplay? Require the
+actual primary source/header-derived descriptor and real queue/owner identity,
+with no fixed ordinal, direct-child-count fit, ready/claim/payload fabrication,
+private gameplay writes, borrowed fixture state or retimed title wait. Preserve
+ordinary normal-fresh terrain and duplicate-primary/secondary semantics as
+controls. Existing TestS3kTitleCardHoldRoutes uses that public entry inlet but
+currently exercises GlowingSphere and presentation release, not this Gumball
+terrain descriptor; its R28 pass alone cannot answer this missing producer.
+No test variant or new driver was created in R30.
+
+For a future bounded passive witness, existing pendingHandles is a pure handle
+projection; actual immutable submissions are inside timing.jobs, while title
+freshLevelRuntimeArtHandoffLevelIndex/freshLevelTitleReady/freshLevelTerrainStarted
+are captured owner fields. Snapshot capture is NOT silently treated as passive
+observation: timing capture memoizes and may collect preparation/payload data.
+A truly passive projection would need the separately reviewed raw-read contract
+or another already-pure accessor, and must leave unknown fields null. Existing
+HardwareBoundaryDispatch calls coordinator.before → timing.service → observer
+for PRE, then coordinator.after; other observers run after coordinator.after.
+Such an observer proves its actual outside service phase, not inside producer
+entry or birth. No HW observer or R22 private-submit logger remains installed;
+if actual submit caller proof is required beyond existing source/R23 evidence,
+that missing seam needs separate authorization, not an invented callback/API.
+
+Source contracts (SHA256): GameLoop5124502753d87e658cb717afb83701fe42ebb2bac64336dc480b1bedd6dbb85f;
+Sonic3k1ec70e427f97c3fa8da696b4ec8818d66e5d608e14af47aa273e5c5440bfab2f;
+coordinator7c5f16ea56eba5b01ac319b8034db52f2da5b7cd255d53aa28b16311e2748228;
+zone-feature6f36f0958a36b4346c8225cf818aa0f9265d2d2b8e8d3b5ed9bc3379f03622ab;
+LevelManager76193c06 and titlef028 remain untouched. A source-read initially used
+the wrong package for HardwareBoundaryDispatch; corrected from the existing
+HardwareBoundaryPump import to com.openggf.game, no code/runtime effect.
+
+R23's19 actual births remain its pre-fix measured epoch. The committed source
+now DECLARES bonus RedAct→Zone→Num1→Bonus and ordinary-return
+RedAct→Zone→Num1→AIZ; there is NO post-fix observed full-route birth sequence,
+new ordinal assignment, forced alignment or renumbered old journal. The native
+terrain candidate's size/three modules is derived from its ROM header, not from
+subtracting the observed offset. It must not be promoted into full remaining
+two-module/four-direct cause/closure without independent owner and actual-route
+qualification. Native caller/birth times are absent from canonical completion
+records, and a repaired input archive cannot establish recorded readiness,
+SS/fdf consumption, liveCPU timing or whole-route parity. Root's guard repair/
+composition gate still blocks the maintained route. This source-plan handback
+ends R30; no further action, runtime/test/logger authoring or execution is implied.
+
+
+### R31 real GameLoop Gumball terrain oracle — SOURCE ONLY, 2026-10-17
+
+Exact task `fdf-r31-gumball-real-entry-terrain-oldred-source-20261017`, native
+ordinal41; separately registered24h, preserving R30/40 and all earlier results.
+HEAD remains8b1e965383eefab0e32cbdd5402502361ed96185 on the same owned649 branch.
+R30's uncommitted canonical inventory above is retained verbatim. Root's separate
+rewind extraction48650119/parent86, reported77 affected plus99 guards green, is
+NOT merged here; LevelManager76193c06 and its97/1F guard epoch remain unchanged.
+No component/source-only conclusion clears that independent delivery gate.
+
+Authored ONLY new source
+`src/test/java/com/openggf/tools/TestS3kGumballTerrainSubmission.java`:
+325lines/18022B, SHA256
+`a1b86bae9fbfb97c1ae667b5a9984f4b4caa13c90b5c37540d42dd71f0d0e001`;
+exact new-file diff SHA256
+`30aac40f1195529b3659f11196f93ffe598843866908f0689415ee7a917be539`.
+No compiler/JVM/Maven/native/trace/probe/commit occurred. Readback and lexical
+delimiter checks pass; this is NOT Java parsing/typechecking or executed control
+reach. No runtime, old test, fixture, POM, API/pin or queue implementation changed.
+
+#### Actual inlet and independent native oracle
+
+The existing GameplayCaptureSession uses real HeadlessGameBoot/GameLoop, with
+Knuckles, no sidekick/donor, showTitleCard=true and completeSpecialStage=false.
+All optional position/emerald/clock settings are absent. Ordinary AIZ0 boot is
+stepped neutrally until actual LEVEL, complete title and empty unclaimed timing
+FIFO. This is a prerequisite, not an asserted normal-fresh terrain control: the
+boot itself uses plain loadZoneAndAct. The public requestBonusStageEntry(GUMBALL)
+then drives the original fade/load/provider/initializeBonus/real title loop.
+No copied driver, field writes, handoff/index seed, provider/controller/port
+replacement, observer or logger is present. Each session.step(null) forwards its
+existing loop exactly once. The600-step bounds detect uncompleted prerequisites;
+they are neither native waits nor fitted release clocks.
+
+Pinned native044fa46725c71187399e13f5ddb70e11d32dc024 Level/loc_62CC waits for
+title$48 and Nemesis, then loc_6310/LoadLevelLoadBlock queues actual primary at
+VRAM0 and skips an equal secondary. Expected terrain descriptors independently
+read ROM LevelLoadBlock's primary/secondary24-bit pointers at the declared
+zone/act and inspect the actual KosM archive for compressed/output/module spans.
+Gumball19/0 explicitly asserts equal pointers, source3FEE2E and ONE terrain
+parent; output/destination are not derived from canonical ordinals, fingerprints,
+completion rows, direct-child counts or engine queued data. The expected module
+sequence is native RedAct/Zone/Num1/Bonus plus that terrain, preserving exact
+semantic source/span/destination/module fields and first-observed FIFO order.
+
+The Gumball case must actually see TITLE_CARD, live Knuckles/zone19/act0/apparent0,
+the typed coordinator and the real pending four-job title batch. It must then
+reach actual terrain submission OR natural BONUS_STAGE release, with actual
+artLoading=false/freshLevelTitleReady/freshLevelTerrainStarted and Nemesis not
+busy, BEFORE the final complete descriptor oracle. exitTitleCard preserves
+these actual title flags; the release check is OUTSIDE the step, not evidence
+of an entry callback, native service clock or submit-site timestamp. A capacity,
+load, title/PLC, identity, timeout or rewind failure is a prerequisite boundary,
+not genuine missing-terrain old-red credit. The intended independent red is the
+final missing ROM terrain descriptor, still UNEXECUTED.
+
+#### Three proposed controls and exact scope
+
+1. `ordinaryKnucklesGumballEntrySubmitsNativeTerrainBeforeBonusRelease`: full
+   semantic module sequence, actual gates and still-TITLE_CARD when terrain is
+   observed. Complete observed work and the latest unfiltered pending FIFO stay
+   in failure context, including actual direct jobs. Equal native primary/
+   secondary yields exactly one expected terrain parent, never a duplicated one.
+2. `normalFreshHczEntryRetainsItsNativeTerrainBatch`: from the same naturally
+   settled origin, public loadZoneAndActWithTitleCard(HCZ,0) exercises the real
+   normal fresh entry and expects ROM-selected HCZ title plus its primary/unique
+   secondary terrain batch at native consecutive destinations. No art/reset or
+   queue writes manufacture capacity, and actual title/Nemesis gates are checked.
+3. `pendingBonusTitleResourcePartitionRestoresAndForwardsTwiceWithoutCrossingLoad`:
+   capture the actual registered pending four-job bonus title within its loaded
+   TITLE_CARD scene; forward two ordinary steps with real hardware-state progress,
+   then restore/forward twice. Same gameplay context, Level, ObjectManager and
+   TITLE_CARD are required throughout. Compare complete hardware-timing/direct-
+   FIFO/coordinator/title/ObjectArtProvider five-key partition at immediate restore
+   and forward result. The real registry capture is for legitimate rewind state,
+   NOT a hardware-capture shortcut for observing descriptor submissions. No
+   manufactured cross-load/mode restore or whole-world equivalence is claimed.
+   Two steps declare a short pending-window control, not a native delay fit.
+
+#### Getter and passivity contracts
+
+HardwareTimingService.pendingHandles returns the unclaimed handles in actual job
+list order. S3kKosDecompressionQueue.descriptor is a strict cached-map read.
+S3kKosModuleQueue.descriptor CAN rebind its cache after rewind; it is NOT globally
+pure. FreshSubmissions is therefore restricted to continuous fresh-live cases,
+where production submitPrepared stores the descriptor before returning and claim
+removes it only as the handle leaves pending. It is never used in the rewind
+case. Any missing descriptor/identity/kind is a failing prerequisite, not a reason
+to fabricate work or widen an accessor. The known pending-handle projection is
+checked unchanged before/after the metadata reads; no whole-world passivity claim
+is made. Whole FIFO entries are retained, with only a separate module projection
+used for the native module oracle. No capture/prepare/claim/queue/submit/reset,
+payload clone/export or fingerprint recomputation is used for that observation.
+Sonic3kLevelTitlePlcService.isBusy reads its queue's active/queued fields only.
+Title.capture defensively copies its retained owner fields and does not pump work.
+
+Read actual public method/record contracts, snapshot keys, constructor arity and
+source lifecycle: GameplayCaptureSession SHA256
+b3e026f199e38ec3815e01c161cdefe1aa71b632b9752548cb8fc04ba957cb23;
+GameLoopTitleCardLifecycled15752d4f5d40dca4c073f9ea700132fc54ec408e2d1cbd3e51c265c3dc72a22.
+The latter runs one hardware-timed provider scan per step, preserving observable
+pending multi-module terrain before its ordinary release. No existing seam was
+extended. Runtime f02866ab02cd93f5ef462a24f2d6f9f534cf4f50e0ffbf740e1d91554732efc1,
+old queue69c6f374abcda89326448174a82e2a17eec9ec169893fada7fbae424d371fe3e,
+independent title54633aa10bdc1771c1d90f21ae03fbb012b449dd256dadba1f316d59809f76c8
+and all other tracked Java remain EXACT HEAD8b1e965. No instrumentation is present.
+Own private config remains regular, exact same bytes/settings; own/Main SHA256
+6abd111c03f798dbe2a618cb4985aeb599127f44668edb2a8edbde118d11f7da and mtimes
+1792245253441720736/1792141742849921547 respectively are unchanged. Native/ROM/
+fixture/movie pins above and all previous refs/media remain preserved.
+
+Proposed SHORT exact full-three-method command, NOT SUBMITTED. Same own cwd,
+normal lane/all three original ROMs, no trace profile/movie or extra CLIgl:
+
+```bash
+MAIN_ROOT=/path/to/main/OpenGGF
+env -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  PATH="/usr/lib/jvm/java-25-openjdk/bin:$PATH" \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_ROOT/tools/testing/maven_queue.py" \
+  --normal -Dmse=off '-Dtest=TestS3kGumballTerrainSubmission' \
+  "-Dsonic1.rom.path=$MAIN_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$MAIN_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$MAIN_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true \
+  -Dsurefire.runOrder=alphabetical test -B
+```
+
+This selection is only a proposal for Root's actual frozen-source read and a
+separate execution gate. Three case identities/control reach, actual counts,
+skips and genuine red are NOT established by authoring. Existing120 green/
+97 guard-red epochs remain separate; target is still last68289, not an R31 build.
+No original route/SS/fdf window, remaining two-module/four-direct cause, native
+birth caller/time, recorded readiness or live CPU prediction is qualified.
+Source-only boundary: new test plus this existing Plan/R30 WIP are retained
+uncommitted for Root; no further authoring, compiler/runtime fix or execution is
+implied. All owned source leases are released, no owned live Maven request, and
+foreign Root smoke29527 remains untouched. There are no R31 diagnostics to consume.
+
+
+### R32 actual independent terrain class — STOP at extra sequence, 2026-10-17
+
+Exact task `fdf-r32-reviewed-gumball-terrain-independent-oldred-once-20261017`,
+native ordinal42, separately registered24h preserving source41 and all prior
+identities/results. Root read the complete frozen325line/18022B source a1b86bae
+and reported an independent native review with no material blocker. Only ONE
+normal lifecycle was authorized. Preflight confirmed literal HEAD8b1e965,
+f028/69c6/54633/76193 runtime/test pins and Planf7c44092, exact original3 ROM
+SHA1/CRC identities, native044, private/Main config hash/mtimes, fresh class-report
+paths and no equivalent own queued/running selector. No source changed while live.
+
+Executed EXACT R31 proposed full-class command above FROM owned649, resolving
+MAIN_ROOT to the actual main checkout; no trace profile/movie/CLIgl, all3 original
+absolute ROM paths, JDK25 and inherited JVM environment with only the approved
+single JTO-EGL, surfaceless/nullAL/noambient/Lua/fork1/reuse/alphabetical settings.
+Sole command session28848 acquired normal7GiB/8core admission with queue wait0s;
+compiler inside this lifecycle, no separate build. Actual terminal1 at
+2026-10-17T22:38:41UTC (23:38:41BST); Maven25.418s, class1.240s. Parent elapsed
+was not measured. Test compilation succeeded; main classes were up to date.
+
+ALL actual identities, no skipped/errored methods:
+
+| Actual case | Result | Seconds | Scope reached |
+|---|---|---|---|
+|pendingBonusTitleResourcePartitionRestoresAndForwardsTwiceWithoutCrossingLoad|PASS|0.653|Real pending4-job bonus title; registered five-key partition restored and forwarded twice, same gameplay/Level/ObjectManager and TITLE_CARD; real resource-state progress. No whole-world/cross-load claim.|
+|normalFreshHczEntryRetainsItsNativeTerrainBatch|PASS|0.154|Actual public normal fresh HCZ title/ROM-terrain sequence and title/Nemesis readiness, before title release.|
+|ordinaryKnucklesGumballEntrySubmitsNativeTerrainBeforeBonusRelease|FAIL|0.150|Reached final native semantic descriptor oracle line107, after declared actual Knuckles/Gumball/apparent0, pending bonus4, real title/Nemesis gates and natural BONUS_STAGE release. Extra AIZ title sequence makes this an unexpected inlet/observation boundary, not a clean intended5-versus4 old-red qualification.|
+
+Total3T/1F/0E/0S. The sole failure is AssertionFailedError, no suppressed
+exception, diagnostic/type/cap/identity/restore error, or skip. Complete expected
+list has five module descriptors; complete actual first-observed list has EIGHT:
+
+| Actual observed module order | Source | Compressed | VRAM bytes | Output | Modules |
+|---|---|---|---|---|---|
+|0 RedAct|880424 / D6F28|470|40960|1952|1|
+|1 Zone|1426338 / 15C3A2|174|41472|384|1|
+|2 Num1|880004 / D6D84|185|42912|512|1|
+|3 AIZ|3784136 / 39BDC8|260|43424|960|1|
+|4 RedAct|880424 / D6F28|470|40960|1952|1|
+|5 Zone|1426338 / 15C3A2|174|41472|384|1|
+|6 Num1|880004 / D6D84|185|42912|512|1|
+|7 Bonus|881260 / D726C|348|43424|1344|1|
+
+The expected native Gumball terrain descriptor is source4189742/3FEE2E,
+compressed3407, destination0, output9792, moduleCount3; it is absent from that
+observed list. All eight actual direct children are retained in the original
+unfiltered failure context, not discarded to make the module projection pass.
+Final actual FIFO is empty. Actual retained title: DISPLAY/stateTimer0/hold22,
+bonusMode=true, artLoaded=true/artLoading=false, artHandles empty,
+freshLevelTitleReady=true/freshLevelTerrainStarted=true,
+freshLevelRuntimeArtHandoffLevelIndex=-1, freshLevelTransitionMode=false after
+normal release. This is OUTSIDE-step owner state, not submit/callback timing proof.
+The initial natural-quiescence assertions passed, but do not exclude the actually
+observed later four AIZ jobs. Their cause is NOT assigned here. Do not subtract,
+filter, reset or repair that sequence under this authorization. Missing terrain
+was observed within this bounded run, but the sole final list equality also fails
+on unexpected AIZ entries; no automatic runtime-fix authorization or clean isolated
+missing-producer old-red claim follows. STOP with no source correction or retry.
+
+Inspected ALL3 XML identities/72 properties, complete sole failure/stack and all
+three stderr streams; the TXT contains the exact complete XML failure text and
+its actual3/1/0/0 header. JVM reports25.0.4.1, correct three absolute ROMs,
+surfaceless-egl/fork1/reuse/alphabetical/selector/own user.dir. Streams warn FAST
+has no manifest and falls back to NONE; missing s3k-kos-v1 direct profiles
+513a9a90... and d24be135... use deterministic estimates. No native or recorded
+readiness/live-CPU prediction follows. No dump/dumpstream was emitted.
+
+SINGLE original reports retained in place for Root DIRECT read, no copy/archive:
+
+- target/surefire-reports/TEST-com.openggf.tools.TestS3kGumballTerrainSubmission.xml:
+  43319B, SHA256d86b3d7533b275ad16bbcad1bcc33b45502e91fa52af5de50d93292884522d82;
+- target/surefire-reports/com.openggf.tools.TestS3kGumballTerrainSubmission.txt:
+  9679B, SHA2563a2054527ba40931f3e2574280e2b5acc50b358ab27825c78b81763b17c1b953.
+
+Inspection used metadata_slot ALONE; originals52998B remain unconsumed pending
+Root acceptance. No new diagnostic journal/helper/logger exists. All five source
+pins remain exact; private/Main config bytes+mtimes unchanged. Target's last
+compile is now actual28848/a1b86bae, not the earlier68289 guard compile. Existing
+120green/component and97/1Fguard epochs remain separate; no guard retry, maintained
+route, native, observer/probe, extra JVM or commit occurred. Only existing Plan
+R30/R31/R32 and the unchanged new test are uncommitted; leases terminal, no owned
+live request. Root smoke29527/foreign sessions remain untouched. Handback is the
+observed extra-sequence boundary plus two qualified controls, not full remaining
+ordinal-offset, canonical birth, readiness, SS/fdf, fullworld or route proof.
+
+
+#### R33 accepted R32 diagnostic accounting — 2026-10-17
+
+Root DIRECT-read accepted ALL3 R32 methods/full sole failure, actual eight module
+plus eight direct descriptor lists/title flags, both green controls and complete
+streams/properties. Original XML43319B/d86b3d7533b275ad16bbcad1bcc33b45502e91fa52af5de50d93292884522d82
+and TXT9679B/3a2054527ba40931f3e2574280e2b5acc50b358ab27825c78b81763b17c1b953,
+total52998B, are accepted for exact-hash consumption under metadata_slot ALONE.
+No class deletion/archive/copy is authorized or needed. R32 final-descriptor RED
+includes unexpected AIZ4+Bonus4; it is NOT clean five-versus-four component old-red.
+No producer runtime change is authorized. The source-only inlet question is
+whether initial LEVEL/cardComplete/empty can coexist with the pending boot-title
+request; this is not a measured R32 step count or uniquely observed cause.
+
+
+### R33 pending origin-title boundary correction — SOURCE ONLY, 2026-10-17
+
+Exact task `fdf-r33-pending-origin-title-inlet-source-correction-20261017`, native
+ordinal43, separately registered24h; preserve execution42/source41/all previous
+identities/results. After the durable acceptance note above, rehashed both
+accepted original reports and consumed ONLY those2 paths/52998B under
+metadata_slot ALONE. Both paths are now absent; no compiled class deletion,
+archive/copy or other artifact cleanup. R32 remains3/1F0E0S with two green
+controls, final-descriptor red plus unexpected AIZ4+Bonus4, NOT clean5versus4
+missing-producer old-red. There was no new runtime or test execution.
+
+Read full current GameplayCaptureSession.boot125..256, HeadlessGameBoot's normal
+team/load/return565..575, LevelManager.requestTitleCardIfNeeded3391..3448 and
+isTitleCardRequested4521/consumeTitleCardRequest4531 delegates, actual
+LevelTransitionCoordinator.request493/is565/consume574, and GameLoop.updateLevelMode
+1715..1720. showTitleCard=true leaves the initial request for ordinary GameLoop;
+its boot path does not call skipPendingInitialTitleCardPresentation. The rest of
+boot's optional donor/emerald/clock/position/ring seeds are absent for this declared
+fixture and contain no hidden title-request consumption. isTitleCardRequested
+returns the existing scalar without mutation; the normal loop's consume reads
+and clears it, entersPending once and returns before ordinary level update.
+Initial LEVEL + isComplete + empty pending FIFO therefore does not by itself
+prove that the origin title has run. This is a source-supported expressible inlet
+gap; no R32 callback/actual origin-step count was recorded, and this source
+correction does NOT uniquely attribute the observed extra jobs to that gap.
+An early lookup used nonexistent LevelTransitions.java, then resolved the actual
+LevelTransitionCoordinator.java; no runtime consequence or extra seam resulted.
+
+Corrected ONLY bootAndSettleOrigin readiness loop/prerequisites. It now tracks
+actual observed origin TITLE_CARD (including a real TITLE_CARD at boot if present)
+and requires that observation plus actual LEVEL, NO pending title request, complete
+card and empty FIFO before returning. Each iteration still calls the original
+session.step(null) exactly once; the existing600 bound is unchanged. Post-loop
+assertions independently require the observed phase and no pending title request,
+then retain old LEVEL/card-complete/FIFO-empty/actual-Knuckles assertions. No
+unconditional wait, queue operation, direct consumption/claim/reset, gameplay
+write, provider/port/observer/logger, filter/drop, index/counter/ordinal change or
+fitted deadline was introduced. If the real phase never appears or any gate fails,
+that is a prerequisite STOP rather than permission to manufacture a new inlet.
+
+Frozen new test334lines/18733B SHA256
+`c41accefd5f3f64e3e6229ac87aad6ade8c0e46e939f9f7abfba725e4619022d`.
+Exact helper-only unified diff SHA256
+`e4696ad47633759e50abebd315efd56fda2e82ac4afde0903812693bbfd2f928`
+uses old label R31-a1b86bae and the current test path as new label. Reversing that
+helper delta recovers the complete R31/R32 source SHA256
+`a1b86bae9fbfb97c1ae667b5a9984f4b4caa13c90b5c37540d42dd71f0d0e001`
+byte-for-byte. Prefix and suffix outside the helper were compared exact: ALL3
+method bodies, complete native five-descriptor oracle/four-job bonus prerequisite,
+normal HCZ and same-scene five-key twice-restore controls, unfiltered
+FreshSubmissions and all other helpers are unchanged. No backup/receipt/helper
+artifact was created to prove the inverse.
+
+HEAD8b1e965, Titlef028, oldqueue69c6, independent54633 and LevelManager76193 remain
+exact. No production source, POM, fixtures, API/pins, other tests, branch/ref,
+private/Main config hash/mtimes, native044 or retained media changed. The target
+still contains R32's a1b86bae compilation; this corrected c41acce source is NOT
+compiled. Existing source guard97/1F remains its separate epoch, with Root's
+48650119 extraction unmerged here; no budget waiver, guard retry or route launch.
+
+Proposed SAME exact ordinary command is the R31 full-class command above:
+`--normal -Dmse=off -Dtest=TestS3kGumballTerrainSubmission test -B` with original
+all3 absolute ROM paths/JDK25/singleJTO-EGL/NO CLIgl/surfaceless/nullAL/noambient/
+Lua/fork1/reuse/alphabetical, no trace profile/movie. It is NOT SUBMITTED. Actual
+corrected-origin phase reach, three case outcomes/skips and a clean missing-terrain
+oracle are unqualified until a separate explicit execution gate. Whitespace and
+lexical delimiter/readback checks only, no Java parser/compiler/JVM/Maven/native/
+probe/route/production edit/commit. Retain only new test plus existing Plan WIP
+for actual Root source review; all leases released and no owned live request.
+No full remaining two-module/four-direct cause, native birth, recorded readiness,
+SS/fdf, whole-world or route conclusion follows.
+
+
+### R34 corrected-origin terrain component old-red — 2026-10-17
+
+Exact task `fdf-r34-reviewed-pending-origin-terrain-oldred-once-20261017`, native
+ordinal44, separately registered24h, preserving43/source and all earlier results.
+Root read actual corrected c41acce helper and affirmed observed-origin/pending-
+request source contracts with no new finding. Authorized ONE same full-class
+normal lifecycle, compiler inside. Preflight literal HEAD8b1e965/f028/69c6/54633/
+76193/c41acce/Plan8dfb98de, original3 ROM SHA1/CRCs, native044, private/Main config
+hash/mtimes, fresh class-report paths and absence of any own Java/queue process
+all passed. All sources stayed frozen while queued/live. Root's now-terminal
+smoke29527 was neither adopted nor touched; no result from it is claimed here.
+
+Executed the unchanged R31 full-class command (same R32 literal CLI/environment)
+from owned649: current Main absolute maven_queue.py --normal, -Dmse=off,
+-Dtest=TestS3kGumballTerrainSubmission, all3 original absolute ROMs, JDK25,
+single inherited JTO-EGL/NO CLIgl, surfaceless/nullAL/no DISPLAY/WAYLAND/LD,
+Lua5.4/fork1/reuse/alphabetical, no trace profile/movie. Sole26359, normal7GiB/
+8cores, queue wait0s, terminal1 at2026-10-17T22:50:37UTC/23:50:37BST. Maven24.721s;
+class1.363s. Parent elapsed unmeasured. Main compilation was up to date; corrected
+test compiled in this lifecycle. No other JVM/build/guard/route/native/probe ran.
+
+ALL actual identities:
+
+| Actual case | Result | Seconds | Reached assertion/coverage |
+|---|---|---|---|
+|pendingBonusTitleResourcePartitionRestoresAndForwardsTwiceWithoutCrossingLoad|PASS|0.752|Actual pending bonus4; five registered owner keys, two immediate restore/ordinary-forward cycles in SAME gameplay/Level/ObjectManager/TITLE_CARD; actual resource progression. No whole-world/cross-load claim.|
+|normalFreshHczEntryRetainsItsNativeTerrainBatch|PASS|0.174|Ordinary public HCZ fresh entry, actual native title/terrain batch and title/Nemesis gates before release.|
+|ordinaryKnucklesGumballEntrySubmitsNativeTerrainBeforeBonusRelease|FAIL|0.164|ONLY final native complete-five-descriptor oracle line107: actual bonus four exactly, missing native terrain. All origin/entry/gate prerequisites reached.|
+
+Total3T/1F/0E/0S. No compile/prerequisite/identity/capacity/restore/extra-sequence/
+unexpected-owner error, skip or suppressed exception. The corrected helper's
+actual origin TITLE_CARD observation, no pending request and natural LEVEL/
+cardComplete/empty FIFO prerequisites all passed before FreshSubmissions and
+public bonus entry. Actual Knuckles/zone19/act0/apparent0, typed provider, real
+four-job bonus batch and actual title/Nemesis gates passed; natural BONUS_STAGE
+release reached the final oracle. No step count, submit callback or clock was
+instrumented/claimed. Unlike R32, no AIZ source or other extra module occurs in
+the full retained observation, and no filter/drop was added to get this result.
+
+Complete actual module descriptor sequence (diagnostic actual ordinals7..10,
+NOT expected/fitted canonical values):
+
+| Source | Compressed bytes | VRAM bytes | Output bytes | Modules |
+|---|---|---|---|---|
+|880424 / D6F28 RedAct|470|40960|1952|1|
+|1426338 / 15C3A2 Zone|174|41472|384|1|
+|880004 / D6D84 Num1|185|42912|512|1|
+|881260 / D726C Bonus|348|43424|1344|1|
+
+The expected list contains exactly those four IN THAT ORDER plus native ROM
+Gumball source4189742/$3FEE2E, compressed3407, destination0, output9792, modules3;
+that terrain descriptor is the ONLY absent list element. Equal native primary/
+secondary dedup prerequisite passed. Original unfiltered observation also retains
+exactly four actual direct children7..10, respectively source880426/1426340/
+880006/881262, compressed468/172/183/346, destination-12288, outputs1952/384/
+512/1344. These are actual records, not canonical ordinal relabeling or a
+calculated missing-job birth sequence. Final FIFO is empty. Retained title has
+DISPLAY/hold22, ready=true/terrainStarted=true, artLoaded=true/artLoading=false,
+empty handles, handoff index-1, consumed lease=true and fresh mode=false after
+normal release. These are OUTSIDE-step retained fields, not inside publisher
+execution or a uniquely observed missed-call stack.
+
+This is now a clean independent native5versusactual4 component old-red with both
+positive controls green. It proves this declared ordinary Gumball entry failed
+to produce the native terrain parent before its observed release. It does NOT
+by itself qualify a runtime repair, complete remaining two-module/four-direct
+cause, canonical14's opaque full fingerprint/native birth caller/time, recorded
+readiness, live CPU prediction, SS/fdf or whole-route parity. R32's extra-AIZ
+result and R33 source correction remain separate honest epochs. No automatic
+producer implementation or additional workload follows; handback at this gate.
+
+Inspected ALL3 method identities/full failure/stack/all3 stderr streams, all72
+XML properties and complete TXT (same full XML failure text/header). Actual
+JVM25.0.4.1/three absolute ROMs/selector/surfaceless/fork1/reuse/alphabetical/own
+user.dir match. Streams retain FAST-no-manifest→NONE and missing direct513a9a90/
+d24be135 profile→deterministic-estimate warnings. No dump/dumpstream exists;
+there is no native execution or measured-service-clock claim to infer from them.
+SINGLE original novel-failure reports retained in original paths for RootDIRECT:
+
+- target/surefire-reports/TEST-com.openggf.tools.TestS3kGumballTerrainSubmission.xml:
+  37315B, SHA25607eab83846516535e32c05a7dd27c5ed7a54c1c784d49da73d54f31e5892b4d6;
+- target/surefire-reports/com.openggf.tools.TestS3kGumballTerrainSubmission.txt:
+  6676B, SHA2566b8f03fe3cd75db79fac53df76cc522c3cbb82fcb2fd7c751de63a6a31495df6.
+
+43991B total, metadata_slot ALONE inspection, NO cleanup/copy/archive/receipt.
+All five source pins and private/Main config SHA+mtimes remain exact. Target is
+now actual26359 compiled corrected c41acce over unchanged8b1e runtime. No runtime
+or test-source edit, retry, extra execution or commit occurred after the result.
+Only new unchanged test and existing Plan WIP remain dirty; all leases terminal,
+no owned live job. Registry44 records exact counts/limits/original hashes and
+pending accepted-diagnostic cleanup; previous identities/results preserved.
+
+
+#### R35 Root acceptance of R34 and consumed originals — 2026-10-17
+
+Root DIRECT-read original XML37315B/07eab83846516535e32c05a7dd27c5ed7a54c1c784d49da73d54f31e5892b4d6
+and TXT6676B/6b8f03fe3cd75db79fac53df76cc522c3cbb82fcb2fd7c751de63a6a31495df6
+in full: all three methods, full eight actual descriptors/native expected five,
+retained flags, streams and properties. Accepted bounded3T1F0E0S, exact missing
+terrain3FEE2E with all prerequisites and both controls green, no extra AIZ. These
+43991B originals are authorized for exact-hash consumption metadata_slot ALONE;
+no class deletion/archive/copy. This accepts component old-red only, not full
+remaining offset, native birth/readiness/SS/fdf/route qualification.
+
+Independent GPT6.1 source review rejected the caller-only switch to
+loadZoneAndActForFreshRuntime: that also enables a fixed-SST ordinary four-child
+graph where the native bonus card has two children. No such switch, context flag
+change or separate graph fix is authorized. R35 is source-only investigation of
+the existing handoff eligibility/index lifecycle before any narrow owner edit;
+no compiler/JVM/native/route/commit is authorized.
+
+
+### R35 semantic bonus terrain handoff source freeze — SOURCE ONLY, 2026-10-17
+
+Exact task `fdf-r35-bonus-terrain-semantic-handoff-source-20261017`, native
+ordinal45, separately registered24h preserving44/43/all prior identities/results.
+Accepted R34 originals noted above were rehashed and consumed ONLY those2 paths/
+43991B under metadata_slot ALONE; no compiled class, archive/copy or foreign output
+touched. Genuine independent R34 clean5versus4 old-red and its two green controls
+remain their c41acce/f028/69c6/54633/76193 epoch, not a post-fix result.
+
+#### Source relation and exact scope
+
+GameLoop.doEnterBonusStage sets the active provider on the actual gameplay context,
+then calls provider.onEnter BEFORE plain loadZoneAndAct, and only AFTER the load
+initializes the actual bonus title. AbstractBonusStageCoordinator.onEnter stores
+its real activeType; getActiveType is its scalar read. On exit GameLoop calls
+provider.onExit (clearing type to NONE), clears the active context provider, THEN
+reloads the origin. GameServices.bonusStageOrNull reads the existing gameplay
+context or null, never creates one; the active-context getter returns the retained
+provider (NoOp when inactive). This permits a semantic bonus-load predicate without
+a game/zone/route/fixture/frame carveout or unsafe bootstrap gameplay lookup.
+
+Read complete requestTitleCardIfNeeded/skip/completeSkipped paths, TitleCardProvider
+beginOmittedPresentation(false), the S3K provider's omitted hooks, initializeBonus,
+loadBonusArt, title capture/restore and gate publisher. The actual load still
+uses its existing context flags. At handoff eligibility, the title index is armed
+before choosing rendered versus omitted presentation. For the actual plain bonus
+load, completeSkippedInitialTitleCardPresentation(false) invokes ObjectArtProvider's
+teardown-lease hook (no title reset/index write) and the provider's default
+beginOmittedPresentation(false): S3K has no exit-tail override and the false branch
+does not start the ordinary omitted fresh owner. S3K's inherited
+completeInitialPresentationPlcs default is a no-op. It does NOT consume/reset the
+newly pending resource index or install the ordinary fresh-title SST graph.
+
+initializeBonus resets its title presentation fields and starts the existing TWO
+bonus elements, but does not clear freshLevelRuntimeArtHandoffLevelIndex. Its
+normal loadBonusArt queue path retains that index. Existing capture/restore already
+stores/rebinds the index and title/resource handles. updateOwnedChildren reaches
+publishFreshLevelRuntimeArtHandoffIfNeeded only after actual title readiness and
+Nemesis !busy; the publisher then consumes the index once, preserves the late-
+producer queue boundary, and calls the existing loaded-ROM terrain producer.
+No new callback/API/context flag/snapshot schema or queue operation is necessary.
+The guarded early suppressed/no-show paths keep their previous semantics; this
+slice does not invent a title owner for a path that has none.
+
+ONLY production file changed is LevelManager.requestTitleCardIfNeeded. Existing
+ctx.isQueueFreshLevelRuntimeArt eligibility remains, OR the actual nonnull active
+bonus provider with getActiveType()!=NONE. It invokes the exact existing
+requestFreshLevelRuntimeArtHandoff(ctx.getLevelIndex()) under the old nullable
+title-provider guard. Two source comments cite native Level/loc_6310 ->
+LoadLevelLoadBlock (pinned044 :7793) and preserve the bonus two-child title graph.
+There is NO GameLoop caller switch to loadZoneAndActForFreshRuntime, fresh-context
+flag change, fixed-SST graph correction, queue/port/reset/ordinal/fingerprint/
+claim/preparation/payload change, provider/controller replacement or public API.
+S1/S2 and inactive/bootstrap contexts use the old ctx gate, with a null-safe new
+read. Ordinary return clears the bonus predicate before its existing return load.
+
+Frozen LevelManager5026lines/235450B SHA256
+`c65f588ffebaaa2089e4c61f1d579e2eda39f603b9926c1ab345d2a0d6e23f07`.
+The exact inverse of this small eligibility/comment delta recovers
+`76193c0671bb235a3b7b494f37d170b25c3b58ebfc0861644990ca7b48eee3bd`.
+No other tracked production source changed. Titlef028, oldqueue69c6,
+independent nativeArchives54633 and HEAD8b1e965 remain exact.
+
+#### Independent affected controls, preserved oracles and ratchet
+
+Kept ALL bytes of genuine c41acce source outside ONE inserted60-line control block.
+Removing that new block recovers complete SHA256
+c41accefd5f3f64e3e6229ac87aad6ade8c0e46e939f9f7abfba725e4619022d;
+ALL THREE existing method bodies/native complete-five-descriptor oracle/bonus4
+prerequisite/normal HCZ/equal-source dedup/five-key twice-restore controls and
+unfiltered FreshSubmissions/helpers remain byte-exact. Existing public request/
+portal/hold pilots cover roster/lifecycle/hold/rewind but have no actual native
+terrain-parent descriptor oracle for Pachinko or Slots, so two short independently
+declared test methods were added using the same existing real session inlet:
+ordinaryPachinkoEntrySubmitsItsNativeTerrainBeforeBonusRelease and
+ordinarySlotEntrySubmitsItsNativeTerrainBeforeBonusRelease. They share only a
+new test-local entry/oracle helper and reuse the existing pure fresh-live FIFO
+projection. No copied engine/trace driver, private gameplay writes or fabricated
+queue/capacity/state seed is used. No runtime method or observer was added.
+
+Each new control naturally settles the origin, publicly requests its real bonus
+type, observes actual typed provider/Knuckles/zone/act0/apparent0/bonus title/pending
+four archives and real title/Nemesis gates, then compares the complete semantic
+module sequence to independent ROM title4 plus primary/unique-secondary terrain.
+All actual pending kinds remain in the unfiltered diagnostic view. Natural
+prerequisite/capacity/identity/timeout failures remain STOP boundaries; the same
+600 bound and once-per-step neutral input are used with no fitted wait. Still
+TITLE_CARD is required while the terrain is actually observed. No nodelete or
+whole-world claim follows from the pending five-key control.
+
+Pinned044 LevelLoadBlock199576..199581 declares equal primary/secondary for all
+three bonus stages. Read original locked-on ROM pointer/header bytes only (no
+native execution): Gumball19/0 primary=secondary3FEE2E/header2640; Pachinko20/0
+1DEB40/header2F60; Slots21/0 1E0AF2/header6020. Native LoadLevelLoadBlock queues at0
+and deduplicates equality. The new expectations use full ROM KosM inspection,
+not these headers as fitted output state, or canonical14's opaque fingerprint.
+No all-type visual/counter or actual new-control execution is claimed.
+
+New test394lines/21936B SHA256
+`1f3f60673d67a3cdf4bd43e566601fd5eb371bdf51342ea405e335ed631c9ada`.
+Inserted block SHA256
+`d30f94b01a1c1d55bceaee491ee19c1aee6e29178a9d49d242fe930e69d44d8a`.
+New five-case source is UNCOMPILED. Existing target is R34 c41acce/76193, not this
+candidate. Whitespace/lexical delimiter/source inverse/readback only; no new Java
+parser/compiler/JVM/Maven/native/probe/route/guard/commit.
+
+Read EXACT effectiveSourceLineCount and its comment/string state-machine policy
+from unchanged guard effa50492eb609231ce9c4570ffca3b4bfd3e5b859f2271b217c440a0111642f.
+A faithful source-only Python port reproduces the established3153 own HEAD count
+and3141 on read-only qualified extraction48650119. This eligibility adds TWO
+effective lines: current child3155 still exceeds3144 due to its known uncomposed
+owned rewind extraction; applying ONLY this exact delta IN MEMORY to48650119's
+actual LevelManager source yields3143<=3144. No Root source copy/file edit/adoption,
+budget waiver or unrelated extraction occurred. This is a static count, NOT a
+fresh guard pass. Root reports that extraction already composed in its stream;
+our child remains HEAD8b1e965 and needs separately authorized composition/guard
+gating before a full-guard success can be claimed.
+
+#### Proposed impact-bounded validation, NOT SUBMITTED
+
+Inventory covers changed request/omitted-presentation semantics and null-context
+controls; actual three-bonus terrain producer/title and existing normal-fresh/
+dedup/pending-resource rewind; bonus entry/return/public and portal short pilots;
+existing title hold/archive/queue/resource/Nemesis/return-water consumers; required
+S3K4 and ROM-art mapping method. The exact proposed selector has15 full simple
+class selectors and3 exact methods. Source inventory maps these to19 package
+classes because TestSonic3kLevelLoading matches TWO existing classes; actual JUnit
+case identities/counts/skips remain unqualified. No full finite portal/return
+population, broad smoke, trace route or native run is proposed in this slice.
+
+```bash
+MAIN_ROOT=/path/to/main/OpenGGF
+env -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  PATH="/usr/lib/jvm/java-25-openjdk/bin:$PATH" \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_ROOT/tools/testing/maven_queue.py" \
+  --normal -Dmse=off \
+  '-Dtest=TestS3kGumballTerrainSubmission,TestLevelManagerInitialPresentationPlcLifecycle,TestSonic3kBonusTitleNativeArchives,TestSonic3kBonusTitleCard,TestSonic3kTitleCardKosQueue,TestSonic3kTitleCardManagerRewind,TestS3kTitleCardHoldRoutes,TestS3kKosModuleQueue,TestS3kKosDecompressionQueueLifecycle,TestRuntimeArtAdmissionContract,TestBonusStageReturnWaterRestore,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestSonic3kPlcArtRegistry#s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits,TestS3kBonusStageReturnProducts#declaredStageRequestLoadsAndReturnsThroughRealBoundaries,TestS3kBonusPortalMechanismProducts#shortPortalAndMechanismPilotsLoadAndReturnThroughRealBoundaries' \
+  "-Dsonic1.rom.path=$MAIN_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$MAIN_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$MAIN_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true \
+  -Dsurefire.runOrder=alphabetical test -B
+```
+
+The selector above is literal (with no trailing whitespace in its -Dtest value).
+A separate fresh structural/authority proposal uses the SAME full environment/
+ROM/fork flags and current Main absolute wrapper, replacing ordinary selection
+with `-Pguards -Dtest=TestArchitecturalSourceGuard,TestHardwareTimingAuthorityGuard`.
+That guard phase is NOT submitted, and the child3155 known-ratchet state must not
+be described as qualified or repaired without the actual authorized extraction
+composition. API/pins are unchanged; existing R7 API epochs do not become a fresh
+candidate API result. Root decides exact source-review/execution/composition
+order; no guard retry or original Mega route authority is implied here.
+
+All existing ROM/native044/fixture/movie/ref/private/Main config identities remain
+preserved; no source policy/pin/POM or returned state was edited. No owned live
+request or diagnostics remain. Only existing Plan R30..R35 WIP, the one small
+LevelManager change, and the existing new test with two added controls are dirty.
+All leases terminal. Source-only handback: no clean post-fix component result,
+complete offset/native birth/readiness/SS/fdf/whole-world/route conclusion, or
+integration/local-commit clearance is claimed.
+
+
+### R36 approved focused lifecycle — JUnit145 green, capacity-warning STOP
+
+2026-10-18 BST / 2026-10-17 UTC. Exact task
+`fdf-r36-reviewed-active-bonus-terrain-focused-once-20261018`, native ordinal46;
+separate24h ownership preserves R35/45 and earlier identities/results. Root read
+actual LM c65 eligibility diff and complete new60-line control block/test1f3f,
+verified inverse->c41, retained3 oracles, title fresh gates/omitted(false)/onExit
+semantics and that Slot runtime initialization is deferred until after its title.
+No material source finding; authorized ONLY one exact R35 focused lifecycle.
+
+Preflight exact HEAD8b1e965/LMc65/test1f3f/Titlef028/oldqueue69c6/nativeArchives54633/
+Planbd3a609b, original3 ROM SHA1/CRC/native044/config hashes+mtimes, fresh selected
+report paths and no own Java/queue request passed. Executed EXACT R35 full
+15-simple-class plus3-method selector command above, normal current Main absolute
+wrapper from owned649, all3 original absolute ROMs/JDK25/singleJTO-EGL/NO CLIgl/
+EGL/nullAL/no DISPLAY/WAYLAND/LD/Lua/fork1/reuse/alphabetical, no profile/movie.
+Sole48911, queue wait0s, normal7GiB/8cores; compiler inside the single lifecycle
+compiled4143 main and4194 test source files. No source edit while live, other
+compiler/JVM/guard/route/native/probe/logger, retry or commit.
+
+Actual terminal0 at2026-10-17T23:04:43UTC / 2026-10-18T00:04:43BST. Maven1m28
+(as its displayed precision); parent elapsed unmeasured. Actual JUnit145T/0F/0E/
+0S in19 package classes. Inspected EVERY145 method identity, all19 XML suites/
+19 TXT headers,72 properties PER suite,110 streams/52788B, all warning fields;
+no failure/error/skipped/suppressed XML element or dump/dumpstream. The completed
+result is bounded JUnit-green coverage, not an unqualified delivery/guard result.
+
+| Actual package class | Tests | Class seconds |
+|---|---:|---:|
+|game.TestRuntimeArtAdmissionContract|3|0.271|
+|game.sonic3k.TestBonusStageReturnWaterRestore|2|0.445|
+|game.sonic3k.TestSonic3kBootstrapResolver|6|0.018|
+|game.sonic3k.TestSonic3kDecodingUtils|3|0.005|
+|game.sonic3k.TestSonic3kLevelLoading|36|0.997|
+|game.sonic3k.TestSonic3kPlcArtRegistry (only exact mapping method)|1|0.166|
+|game.sonic3k.resources.TestS3kKosDecompressionQueueLifecycle|3|0.048|
+|game.sonic3k.resources.TestS3kKosModuleQueue|18|0.023|
+|game.sonic3k.titlecard.TestSonic3kBonusTitleCard|6|0.015|
+|game.sonic3k.titlecard.TestSonic3kBonusTitleNativeArchives|3|0.124|
+|game.sonic3k.titlecard.TestSonic3kTitleCardKosQueue|11|0.093|
+|game.sonic3k.titlecard.TestSonic3kTitleCardManagerRewind|12|0.426|
+|level.TestLevelManagerInitialPresentationPlcLifecycle|6|0.781|
+|tests.TestS3kAiz1SkipHeadless|8|1.675|
+|tests.TestS3kBonusPortalMechanismProducts (only shortPortalAndMechanismPilots...)|5|6.094|
+|tests.TestS3kBonusStageReturnProducts (only declaredStageRequest...)|5|3.021|
+|tests.TestSonic3kLevelLoading|7|0.101|
+|tools.TestS3kGumballTerrainSubmission|5|0.464|
+|tools.TestS3kTitleCardHoldRoutes|5|0.532|
+
+The two LevelLoading classes really executed36+7, not a guessed selector count.
+Both selected pilot methods executed their exact parameterized identities[1]..[5]
+only (10 total); finite full populations were not selected. S3K4 and exact ROM
+mapping guard passed. These results do not add a broad smoke or recorded route.
+
+All FIVE terrain test methods passed, unchanged or separately declared as frozen:
+
+- ordinaryPachinkoEntrySubmitsItsNativeTerrainBeforeBonusRelease:0.093s;
+- pendingBonusTitleResourcePartitionRestoresAndForwardsTwiceWithoutCrossingLoad:0.096s;
+- normalFreshHczEntryRetainsItsNativeTerrainBatch:0.099s;
+- ordinaryKnucklesGumballEntrySubmitsNativeTerrainBeforeBonusRelease:0.090s;
+- ordinarySlotEntrySubmitsItsNativeTerrainBeforeBonusRelease:0.079s.
+
+Thus the preserved genuine Gumball native-five-descriptor oracle now passes after
+R34's clean missing-terrain old-red; real other-bonus descriptor/dedup/title/Nemesis
+controls and existing normal HCZ passed. The complete unfiltered module projection
+oracle was neither renamed nor relaxed. Its registered two-cycle rewind control
+compares the declared five-key partition inside one title scene, not whole-world
+or cross-load recreation. Positive green assertions are evidence of their reached
+questions; no successful-run FIFO/payload journal or submit-site clock was added.
+
+#### Warning boundary: retain originals and stop before further qualification
+
+Inspection found one potentially material capacity warning despite0 JUnit failures:
+TestBonusStageReturnWaterRestore#bonusStageReturn_restoresSavedWaterLevelImmediately
+logged `Failed to load S3K title card art: S3K KosM module FIFO is full`.
+Actual source78..150 creates the real HCZ fixture/saved water state, reflectively
+invokes private GameLoop.doEnterBonusStage, then immediately private doExitBonusStage,
+with NO ordinary title/queue iteration between. Its water assertion passes, but
+that inlet does not establish title-art readiness. This is concrete source context,
+NOT an instrumented enqueue/exception call stack, unique dynamic cause, measured
+Main baseline attribution, or permission to waive the warning. R36's capacity
+STOP applies: no source/fixture fix, dropped assertion, queue reset, selection
+change, retry or additional execution. Root was notified with exact originals and
+must decide this boundary; do not silently certify the whole focus as clean art
+readiness merely from its JUnit headline.
+
+The OTHER capacity warning belongs to the explicit negative
+TestS3kKosModuleQueue#deferredFreshBatchRetainsRequestUntilTwoQueueSlotsAreAvailable:
+it submits3 tiny fixture parents, requests2 and asserts the request remains
+pending after service with insufficient capacity. That warning has an independent
+source-backed negative-control oracle, not a newly assumed benign production
+failure. Other complete-stream categories:142 FAST-no-manifest->NONE warnings;
+missing direct-profile deterministic estimates; seven ROM-unavailable art warnings
+inside the artless BonusTitleCard unit methods; the explicit DecodingUtils
+out-of-bounds control; two fallback-WAV-null music messages in existing queue
+controls. No unknown non-warning stream lines remain. Required headless backend,
+JDK25.0.4.1, three ROM paths and fork/reuse/order values match all19 property sets.
+Read the existing measurement-hazard catalogue before reporting these limits.
+
+ALL38 SINGLE ORIGINAL XML/TXT files526017B are retained IN PLACE pending Root
+DIRECT-read warning disposition (even though standard-green cleanup was allowed);
+no copies/archive/receipt. Relevant originals:
+
+- target/surefire-reports/TEST-com.openggf.game.sonic3k.TestBonusStageReturnWaterRestore.xml:
+  24134B SHA2568cfe12421ed5d83e467fb4a15263cccb2497f5086efb908457eb4920862f4e43;
+- target/surefire-reports/com.openggf.game.sonic3k.TestBonusStageReturnWaterRestore.txt:
+  364B SHA25692df9cd242d8171bc5de1683db486eb4fa83b79853f1b2d35bf63d91c15307c4;
+- target/surefire-reports/TEST-com.openggf.tools.TestS3kGumballTerrainSubmission.xml:
+  28459B SHA256131ea6277376c36b0edbfbb10fa574601c830d61d395cda9eba3c88829358abe;
+- target/surefire-reports/com.openggf.tools.TestS3kGumballTerrainSubmission.txt:
+  348B SHA256b1b20dcdb1873176a4110ca30714556a3b6b92da23692b4fac3c6529c32e3e3b.
+
+All original hashes were inspected under metadata_slot ALONE; no cleanup or class
+mutation since terminal. All frozen five source pins/config SHA+mtimes remain
+exact; HEAD8b1e965/native044/refs/media are preserved. Target is now actual48911
+LMc65/test1f3f compile. Current child3155 ratchet remains the known owned uncomposed
+extraction, no guards run or budget waiver. Static composed3143 is NOT a fresh
+guard result. Only Plan plus LM/newtest WIP are dirty; leases released, no live
+owned job. This hands back145/0/0/0 AND its material capacity-warning qualification
+limit; no commit/integration, original Mega, full offset/native birth/readiness/
+SS/fdf/liveCPU/fullworld/route conclusion or further work is inferred.
+
+
+### R37 qualified component preservation and inherited warning — 2026-10-18
+
+Root DIRECT-read ALL19 R36 XML/19TXT/145 unique method identities/full streams,
+all five terrain cases/72 properties per suite, actual water capacity-warning
+source and expected negative FIFO control. Root separately executed the ACTUAL
+Main803 sole exact water method (worker did NOT run it):69090 terminal0 at
+2026-10-17T23:07:52Z, queue0/Maven23.987s,1T0F0E0S/class0.673s/case0.358s.
+It reproduces SAME loadAllArt warning `Failed to load S3K title card art: S3K KosM
+module FIFO is full`. Water test source is byte-exact Main803/current; reflective
+immediate entry/exit with no ordinary title queue steps is the retained inlet.
+Root DIRECT-read baseline XML22801B/SHA256353ce65b5d5aedd4e2c3be82cb3ca0147b41670e7aeecc3b00a81bbde58dd9f1
+and TXT364B/ca7b1176efe4082b30004ca998eca8018d88fb0d597427ed1154b50d6beaf9c3,
+durably accounted them in Root a2c00d01eea02e137e10ab29b52a1713f4b75978, then
+consumed metadata_slot ALONE. Root reports Main HEAD/foreign status/config exact.
+These are PARENT-PROVIDED baseline facts, not worker execution or full-stream-
+equality proof. The inherited diagnostic is not a new R35 regression; the water
+fixture still certifies its water assertion, NOT title-art readiness.
+
+Root accepts R36 bounded145/0F0E0S across19 classes, all five actual terrain cases
+and10 selected entry/return pilots, with these warning limits. No fixture/runtime
+fix, source-warning waiver or extra workload. The native Gumball old-red→green
+and independent Pachinko/Slot/normal-fresh/dedup/resource-rewind controls qualify
+this local producer component. Current child3155 source-size ratchet remains
+known; no fresh guard/delivery/full remaining two-module/four-direct attribution,
+native birth/readiness/SS/fdf/route claim. Original full route remains unvisited
+post-fix. Approved preservation commit includes ONLY frozen LMc65/test1f3f plus
+relevant existing docs/release fold/mirrored lesson; no behavior/test rewrite.
+
+ALL38 accepted R36 originals526017B were rehashed as a group BEFORE ANY deletion,
+then consumed metadata_slot ALONE; every expected SHA256 matched. No class deletion/archive/copy/receipt. The
+subsequent source-only geometry adoption is a separate post-clean-commit phase;
+R36 target/coverage epoch remains pre-extraction48911.

@@ -3419,7 +3419,11 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         // whether this process renders the title card. Headless gameplay still
         // retains the native title owner through its omitted-presentation exit
         // tail, so arm that owner's handoff before choosing the render path.
-        if (ctx.isQueueFreshLevelRuntimeArt()) {
+        // Level:/loc_6310 -> LoadLevelLoadBlock queues bonus terrain too (S3K :7793).
+        // Arm only that handoff; a bonus title retains its own two-child graph.
+        var bonus = GameServices.bonusStageOrNull();
+        if (ctx.isQueueFreshLevelRuntimeArt()
+                || (bonus != null && bonus.getActiveType() != BonusStageType.NONE)) {
             var titleCardProvider = activeGameModule().getTitleCardProvider();
             if (titleCardProvider != null) {
                 titleCardProvider.requestFreshLevelRuntimeArtHandoff(

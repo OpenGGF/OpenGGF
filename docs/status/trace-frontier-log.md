@@ -114030,3 +114030,32 @@ The full two-module/four-direct difference, native birth context, recorded
 readiness, liveCPU prediction and route closure remain open. Approved LOCAL
 component preservation is not integration/delivery/full-guard qualification.
 [Exact source/commands, independent old-red/green and guard STOP](../architecture/plans/2026-10-13-s3k-playable-completion.md#r28-reviewed-native-bonus-number-affected-focus--2026-10-17).
+
+
+### 2026-10-18 — Native bonus terrain producer component; original route unvisited
+
+Owned649/8b1e965-based LMc65/test1f3f: one normal current-Main wrapper focused
+selection (exact15 full selectors+3 methods in existing Plan R35), all3 original
+ROMs/JDK25/singleJTO-EGL/fork1/reuse/alphabetical, session48911 terminal0 at
+2026-10-17T23:04:43UTC, queue0/Maven1m28:145T0F0E0S in19 actual classes. Preserved
+native Gumball five-versus-four descriptor old-red26359 is now green; separately
+declared real Pachinko/Slot terrain oracles, HCZ fresh control, pending five-key
+resource restore/forward twice and10 short entry/return pilots pass. No first
+trace error/frame exists for this selection because it is not trace replay.
+
+Root actual Main803 exact water method69090 reproduces SAME loadAllArt FIFO-full
+warning,1/0F0E0S, terminal23:07:52UTC, queue0/Maven23.987s; source byte-identical,
+private entry then immediate exit with no queue iteration. Parent-provided proof
+is accounted at Root a2c00d01eea02e137e10ab29b52a1713f4b75978; no worker baseline
+rerun/full-stream-equality or water-fixture art-readiness claim. Root DIRECT-read
+all38 R36 reports; their526017B were all rehashed before consumed metadataalone.
+No archive/receipt or class deletion.
+
+The caller-only fresh-load switch was rejected because it also enables an
+ordinary four-child SST title graph; the minimal fix arms only the existing
+captured resource handoff on actual active bonus entry. This local component
+preservation does not clear the known child3155 size ratchet, count as fresh
+combined guards, or launch the conditional original Mega route. Earliest route
+facts remain their earlier epochs. Full missing ordinal attribution/native birth,
+recorded readiness/SS/fdf/live CPU prediction/route parity remain open.
+[Exact old-red/source/145-case qualification and limits](../architecture/plans/2026-10-13-s3k-playable-completion.md#r37-qualified-component-preservation-and-inherited-warning--2026-10-18).

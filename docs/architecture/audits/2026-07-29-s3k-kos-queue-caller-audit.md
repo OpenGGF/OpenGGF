@@ -152,3 +152,28 @@ Canonical completion descriptors have no native enqueue timestamp/caller. Keep
 R23's measured pre-fix births distinct from a statically inserted Num1 job;
 there is no post-fix route execution in this slice. [Exact epochs, commands and
 STOP](../plans/2026-10-13-s3k-playable-completion.md#r29-conditional-guard-gate-red-original-maintained-route-not-launched--2026-10-17).
+
+
+## Bonus terrain handoff independently retained — 2026-10-18 local component
+
+The plain bonus load does not own the ordinary fresh-load context/SST graph, but
+native Level/loc_6310 -> LoadLevelLoadBlock still submits its ROM terrain after
+Obj_TitleCardWait and Nemesis readiness. R34 actual production Knuckles/Gumball
+entry reached the final independent descriptor oracle: four correct title jobs,
+missing terrain3FEE2E/compressed3407/dest0/output9792/modules3. R32's earlier extra
+AIZ title batch was an inlet boundary, not clean old-red credit; observe the real
+origin TITLE_CARD phase and consumed pending title request before declaring boot
+quiescence. Do not hide those jobs with filters or reset the FIFO.
+
+The narrow LevelManager eligibility now retains the existing captured title
+resource index for an actual active bonus as well as the old fresh-load cause.
+GameLoop onEnter sets active type before loading and onExit clears it before
+return. Omitted(false)/initializeBonus preserve the index until the native gate;
+no caller mode switch, ordinary four-child graph, queue/admission/ordinal/schema
+change or public API. R36 preserves all original three oracles and adds real
+Pachinko/Slots controls:145/0F0E0S,19 actual classes,10 selected entry/return pilots.
+WaterRestore's immediate reflective enter/exit logs FIFO-full on actual Main803
+too (Root69090), so its water result is not art readiness. Existing child size
+ratchet and fresh combined guards remain separate. No post-fix original route,
+full remaining two-module/four-direct attribution, native births or recorded
+SS/fdf readiness is established. [Exact evidence and epochs](../plans/2026-10-13-s3k-playable-completion.md#r37-qualified-component-preservation-and-inherited-warning--2026-10-18).

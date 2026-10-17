@@ -312,11 +312,16 @@ rewind across the recorded completion boundary.
 Knuckles/Gumball apparent-act-zero owner now queues RedAct, Zone, Num1 and Bonus
 through the existing ROM pipeline, including the number archive that its banner
 does not draw. This removes an omitted producer, not an accepted deviation.
-The independent old-red and120 affected cases pass, including pending owner
-restore/forward twice; the fresh structural/authority phase remains97/1F because
-LevelManager exceeds its source-size budget. The conditional maintained route
-was not launched, so recorded readiness and the complete ordinal difference
-remain open. [Bounded qualification and guard limit](architecture/plans/2026-10-13-s3k-playable-completion.md#r28-reviewed-native-bonus-number-affected-focus--2026-10-17).
+The independent archive old-red and120 affected cases pass, including pending
+owner restore/forward twice. A separate native terrain-parent old-red now also
+passes: active bonus entry retains the existing title-gated resource handoff
+without enabling the ordinary four-child title graph. R36 covers145 cases in19
+classes without failures/errors/skips, including all three actual bonus terrain
+oracles and10 short entry/return pilots. Its water-only reflective entry/exit
+fixture emits the same full-art-FIFO warning on actual Main803; it does not certify
+art readiness. The child still carries the known uncomposed source-size ratchet;
+no fresh combined guard pass or maintained route was executed. Recorded readiness
+and the complete ordinal difference remain open. [Bounded component qualification and remaining gates](architecture/plans/2026-10-13-s3k-playable-completion.md#r37-qualified-component-preservation-and-inherited-warning--2026-10-18).
 
 ---
 

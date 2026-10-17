@@ -3076,6 +3076,24 @@ offset nor native birth timestamps/readiness were established. Source:
 skdisasm044fa46725c71187399e13f5ddb70e11d32dc024 Obj_TitleCardInit62143..62200,
 portal61952..61959; [existing owner record](../../../docs/architecture/plans/2026-10-13-s3k-playable-completion.md#r28-reviewed-native-bonus-number-affected-focus--2026-10-17).
 
+**Presentation, SST graph and terrain handoff are separate owners.** Native
+Level/loc_6310 -> LoadLevelLoadBlock queues bonus terrain after title/Nemesis
+readiness too (skdisasm044 :7793, :9737..9783). A plain bonus load must retain its
+existing captured title resource index without toggling a fresh-load flag that
+also enables an ordinary four-child SST graph; initializeBonus has two labels.
+Use actual active-bonus semantics, with onEnter before load/onExit before return,
+and preserve omitted(false)/initialization until the gate consumes that index.
+Prove the ROM primary/unique-secondary descriptor at VRAM0 through ordinary public
+entry; equal pointers deduplicate. Do not fit ordinals or infer jobs from eager
+CPU-decoded art. Observe initial TITLE_CARD and no pending request before calling
+LEVEL/card-complete/empty FIFO boot quiescent: otherwise a later origin title
+batch contaminates the component oracle. R34 clean old-red -> R36 five terrain/
+resource controls and145 focused cases qualify this component; recorded route,
+whole-world and full remaining ordinal difference do not follow. A water-only
+private-enter/immediate-private-exit fixture may pass its assertion while logging
+FIFO-full on both Main and candidate; attribute it with a matched method instead
+of waiving or changing the runtime queue. [Existing evidence](../../../docs/architecture/plans/2026-10-13-s3k-playable-completion.md#r37-qualified-component-preservation-and-inherited-warning--2026-10-18).
+
 **Do not** "fix" the consumer, and do not release the handle by relaxing the fingerprint match —
 that is the hardware-timing exception leaking outside its port. Find the unimplemented producer.
 
