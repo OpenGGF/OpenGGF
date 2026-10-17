@@ -342,3 +342,19 @@ retain their inherited gaps; Root owns combined delivery validation.
 The same worker's followup after866 adds a short real-load test for Level's ten HCZ1 Nemesis descriptors before title dispatch, first-loop preparation, next-VBlank six-pattern drain and twice-restored queue/job ordinals. Old-red4/3F becomes4/0F/0E/0S. Focused134 plus source/authority/schema guards131 pass without skips. Canonical load-prefix through the first segment9 row passes, including complete segment8 with its prior7126 position/camera errors gone; the alternate BK2 still has exactly26179 `rings`72/0. [Evidence/commands/native observations](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#bounded-followup-qualification-and-limits).
 
 This covers the native320 Sonic+Tails load owner and short semantic replay, not cold-route traversal, an engine pixel product, cross-load timeline policy or the full matrix. Matched pre-fix slice totals4699 ondc338 and4353 on866 include mixed span deltas and the same9482 frontier; historical3738 is not attributed. Full new-source HCZ replay, other viewports/donors/teams and the exact GLFW oracle remain open.
+
+
+## R3 full strict qualification on Main460 composition — 2026-10-17
+
+Worker merge21327d78a: canonical3815 is6/1F/0E/0S, with all three prefixes,
+standalone AIZ and initial HCZ passing. Returned HCZ11 consumes14208 reference
+rows,134710 field mismatches(115689physics/19021animation), first reported
+non-camera6674 `rings`114/0 and missing giant-ring exit. HCZ90977 is2/1F/0E/0S:
+full31482 reference rows,29302 comparison records,4353 spans(3424physics/929animation),
+first9482 `air`1/0, first animation9486; independent Poindexter passes. The entire
+slice error array matches the prior4353 result. Matched4699/4353 deltas remain
+mixed;3738 is unmatched. Alternate760's one26179 ring span is reused, not rerun.
+No new entry, viewport/donor/team, pixel, cold traversal or cross-load product is
+certified. Active-level ring-reset/title-latch ownership, later route exit and
+the exact GLFW oracle remain unqualified. No new runtime fix. [Exact source,
+commands, windows and rejected load attribution](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r3-current-composed-strict-qualification--2026-10-17).

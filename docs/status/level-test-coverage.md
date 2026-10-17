@@ -1270,3 +1270,16 @@ focused GPU/resource checks and exact capture protocol](../architecture/plans/20
 record the bounded result. This repairs the sampled overlap gap without an
 accepted ROM deviation; complete timelines, other native configurations,
 cold/donor/PAL/PCM and strict timing/trace products remain separate obligations.
+
+
+R3 HCZ follow-up (2026-10-17), local worker merge21327d78a with Main460:
+full canonical6/1F/0E/0S reaches returned HCZ11's complete14208-row reference
+window but lacks the giant-ring exit;134710 field errors split115689physics and
+19021animation, first reported non-camera6674 `rings`114/0. Independent full
+HCZ slice2/1F/0E/0S reproduces all4353 spans(3424physics/929animation), first9482
+air and9486 animation, with Poindexter passing. These are completed strict-red
+qualifications, not new product certification. Matched dc3384699/8664353 remains
+mixed,3738 unmatched; alternate760's one26179 ring span is reused, not freshly
+passed. Active-level title-parent/movement-latch causality and the exact GLFW
+oracle remain open; no fitted delay or separate fresh-load fix was substituted.
+[Commands, windows, all groups and causal limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r3-current-composed-strict-qualification--2026-10-17).

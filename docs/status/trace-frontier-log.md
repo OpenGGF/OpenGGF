@@ -113155,3 +113155,31 @@ Commands use the current absolute Main queue from the owned cwd, --normal, -Dmse
 Before new production edits, one exact dc338d3e3 HCZ-slice baseline and the necessary866 span regeneration both ran the full class, including independent Poindexter. Matched windows total_frames29302 / maximum mismatch row31461; baseline4699(3973physics/726animation), current4353(3424/929); both first9482 `air`1/0, Poindexter passes.1132 exact common spans,3567 baseline-only,3221 current-only; first newly mismatching field/row10834 `tails_cpu_respawn_counter`0/1. This is mixed downstream coverage, not proof of improvement or an attribution of historical3738. [Exact span identities, commands, native products and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#bounded-followup-qualification-and-limits).
 
 No new-source full canonical/returned-HCZ11/full-HCZ-slice qualification, general green or auxiliary/breadth certification. Prior7134 sidekick_x/missing-exit evidence remains historical and unresolved. Specific GLFW pixel-init failure has no matched identity baseline. Root owns combination and broad validation; local only, no Main writes/push.
+
+
+## R3 composed strict HCZ qualification — 2026-10-17
+
+Local merge21327d78a combines worker760 with published Main460715cbc, preserving
+both append-only Plan contributions, Root's fresh-title/DPLC/white-fade APIs and
+the actual clean TraceChaser4fdf checkout difference. Frozen executable digest
+8b2bb7e6e6bc297554c97501fa1051555bbdd20e018e6da4b6f95a04a9d7048d.
+Canonical3815 finishes6/1F/0E/0S: all3 prefixes and standalone AIZ/initial HCZ pass;
+returned HCZ11 consumes0–14207 and reports134710 field mismatches
+(115689physics/19021animation), bootstrap/warnings0, first reported non-camera
+6674 `rings`114/0; giant-ring exit absent. The summary does not identify first
+camera/animation or a full span history. HCZ90977 finishes2/1F/0E/0S, all31482
+reference rows,29302 comparison records,4353 spans(3424physics/929animation),
+first9482 `air`1/0, first animation9486, Poindexter passes. Its entire error array
+matches the prior4353 digest, not merely its total. Matched dc3384699/8664353
+remains mixed; historical3738 is unmatched. Alternate760's one26179 ring span is
+reused with no post-merge alternate pass claimed.
+
+No runtime fix followed: a separate fresh-load37-ring semantic trial70863 failed
+2/2F, but native canonical6674 is an active in-level boundary and does not prove
+that load owner caused it. The trial is removed, committed checks untouched.
+Obj_TitleCardWait's real child-movement/reset ownership still needs matched live
+parent/latch evidence; no fitted dispatch delay is justified. Slice9482's stale
+interact pointers likewise do not prove deletion support ownership. Exact GLFW
+oracle, full route exit/auxiliary/products remain unqualified. No broad/full,
+children/new tree, Main writes or push; no own live jobs. [Exact selections,
+windows, all groups, rejected attribution and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r3-current-composed-strict-qualification--2026-10-17).

@@ -2244,3 +2244,162 @@ Actual native corroboration, session**43873**, used official BizHawk2.11/GPGX an
 These are completed-frame counts, distinct from the fixture's zero-based BK2 input indices. Committed segment8 has offset46432; row7126 is input index53558, completed frame53559. This is input-stream identity, not a fitted clock. Published pixels and CPU end state are separate products; native PNGs do not certify engine pixel equality, same-frame GPU/CPU state, or other configurations. The short production regression plus real BK2 prefix establishes the causal runtime ownership fix.
 
 **Stopping boundary:** one evidenced load/submission/first-loop fix, focused and schema/authority proof, a clean affected canonical prefix and unchanged strict alternate frontier. Returned HCZ segment11/full canonical/HCZ full slice were not requalified on the new source; prior b9/866 counts are not transferred. The matched pre-fix slice delta is mixed, not an all-fields improvement. The exact `TestHczMinibossNativeRendering.allOrbitPhasesMatchRomSpriteCompositionInNativePixels` GLFW failure remains unqualified; Root's different batch66 test identities do not attribute it. No broad smoke/full suite, new tree/children, Main/Root writes, integration or push. Root's later f8f08a5bd composition is separate. All existing requests are terminal and reports are consumed after recording these summaries.
+
+
+## R3 current composed strict qualification — 2026-10-17
+
+Owned branch `feature/ai-s3k-hcz-gpt61-repair`, worktree `t3-3aa3bc3c`.
+Merge **21327d78ad7f5455df3e83c9d0c0f55201e0cf96** combines760b2005d with
+published Main **460715cbca03d81b4f289051ccb9779cdc8ff5be**, under the normal
+intended-tree writer lease. Four prose conflicts were reconciled by preserving
+both contributions: the release fold, S3K discrepancy appendix, append-only Plan
+and coverage backlog. No Java conflicts. Root's immutable white-fade session
+binding, player mapping access, fresh-title/DPLC APIs and diagnostic instruction
+ledger remain intact. No later passive Root commit was adopted.
+
+The tested executable digest is
+**8b2bb7e6e6bc297554c97501fa1051555bbdd20e018e6da4b6f95a04a9d7048d**,
+using the preceding sorted Java/POM/signature-pin recipe. The actual clean
+TraceChaser checkout remains4fdf73880f93a3172d23bf9e157b15de3c78fc32 against
+parent gitlink4ae64e075d2e233539f5637fd16bd5ae7aa7d76e; it was neither updated
+nor staged. All executable inputs stayed frozen through both qualifications.
+Original S1/S2/S3K SHA1 identities were verified; no fixture or native source changed.
+
+Exact common command prefix, from the owned cwd, with the three variables bound
+to the original absolute ROM files and `$MAIN_WORKSPACE` to the Main checkout:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless LUA_BIN=/usr/bin/lua5.4 python3 "$MAIN_WORKSPACE/tools/testing/maven_queue.py" --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" "-Ds3k.rom.path=$S3K_ROM"
+```
+
+Append exactly one of the following selections, followed by
+`-Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical test -B`:
+
+- Canonical3815: `-Ptrace-replay '-Dtest=TestS3kAizTraceReplay#replayMatchesTrace,TestS3kSonicTailsHczSegmentTraceReplay#replayMatchesTrace,TestS3kSonicTailsCompleteEmeraldRunPrefix,TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds'`.
+- Independent HCZ90977: `-Ptrace-segments '-Dtest=TestS3kHczZoneSliceTraceReplay'`.
+
+Both requests were submitted once after checking existing own jobs; one observer
+per session, normal resource admission, no retry, hold, reservation or override.
+Queue intervals overlap and are not additive elapsed time.
+
+### R3 completed windows and all reported groups
+
+**Canonical3815**, finished11:15:49 BST: **6 tests /1F/0E/0S**, queue287s,
+Maven1m55s. All three prefix methods, standalone AIZ and initial HCZ pass. The
+additional prefix method is760's HCZ load-boundary pin; this is six tests, not the
+old five-test selection. Standalone AIZ consumes declared rows0–20797 with20463
+comparison records, zero physics/animation/bootstrap/warnings. Initial HCZ consumes
+rows0–3573 with3519 comparison records and the same zero groups.
+
+The full chain completes the comparator for every reached ordinary segment:
+
+| Segment | Native reference rows consumed | Physics errors | Animation errors | Lagged frames |
+| --- | --- | --- | --- | --- |
+| 0 aiz | 0–2289 (2290) | 0 | 0 | 0 |
+| 2 aiz_2 | 0–4022 (4023) | 0 | 0 | 11 |
+| 4 aiz_3 | 0–8234 (8235) | 0 | 0 | 14 |
+| 6 aiz_4 | 0–4102 (4103) | 0 | 0 | 16 |
+| 8 aiz_5 | 0–7174 (7175) | 0 | 0 | 62 |
+| 9 hcz | 0–3573 (3574) | 0 | 0 | 55 |
+| 11 hcz_2 | 0–14207 (14208) | **115689** | **19021** | 59 |
+
+Bootstrap and warnings are zero in all these reports. Segment11's total is
+**134710 field mismatches**, not4353-style deduplicated spans. First reported
+**non-camera physics** is **6674 `rings`, native114 / engine0**. The five-entry
+recent ring ends at14207 and is not a full span history. This summary does not
+publish the first camera or animation error, or the exact number of ordinary
+physics-comparison rows after phase filtering; do not infer those from the
+reference-window length or lag count. `complete=true` proves consumption of the
+represented window, not observation of its requested exit. The giant-ring exit
+is absent, so the walk fails independently. The11-gap dynamic-art report has
+zero gap failures; that does not certify all special-stage physics or auxiliary
+schemas. The close-time exception retains four unmatched recorded completions:
+direct#220 at10162 PRE_MAIN_LOOP, module#154 at10163 POST_OBJECTS, direct#221
+at14172 PRE_MAIN_LOOP and module#155 at14173 POST_OBJECTS, engine pending none.
+Their first causes and the later campaign remain unqualified. No new stop BK2
+cursor is published; the historical71601 cursor is not transferred.
+
+**HCZ90977**, finished11:13:52 BST: **2/1F/0E/0S**, queue193s,
+Maven about91s. The full31482-row reference window0–31481 is driven without a
+frontier/prefix override. Report `total_frames=29302` counts comparison records,
+not the last row. **4353 spans =3424 physics +929 animation**, bootstrap/warnings0;
+maximum mismatching row31461. First physics:9482–9484 `air`1/0, with
+9482–9485 `tails_air`1/0 and both status bytes diverging on the same edge.
+First animation:9486–9488 `player_animation_id`0/5. Independent
+`hczPoindexterOccupiesRomSlotBeforeTailsBounce` passes. The complete sorted error
+array SHA256 is
+**71f91e9494d9a6926cd2f032dcc174a0d289355d9f9a6658b3752ae61d96d251**
+(`sha256(json.dumps(errors, sort_keys=True))`), identical to the earlier4353
+result. This is exact span reuse evidence, not just equal totals.
+
+The prior matched dc338/866 pair remains **4699 versus4353 with mixed deltas**:
+1132 common exact spans,3567 baseline-only,3221 current-only; the first added
+field/row is10834 `tails_cpu_respawn_counter`0/1. Same29302 comparison records
+and31461 maximum mismatch row. Historical3738 is unmatched. R3's nullAL runs do
+not rewrite the pair's original unset-AL environment or turn its mixed result
+into a regression-free claim.
+
+Alternate69802 on760 is reused within its stated scope: one26179 `rings`72/0
+span, physics1/animation0/bootstrap0/warnings0,26041 comparison records over
+declared26228 rows. No post-merge alternate pass is claimed. Static reconciliation
+found no changed AIZ/HCZ gameplay owner in Main460: the level-profile additions
+are diagnostic instruction inputs, the special-stage renderer is private, and
+the immutable white-fade binding does not change this RecordingFrameDriver's
+black-fade path. The full HCZ span array also remains identical. No source change
+was made in response to these results; an affected runtime fix would invalidate
+this reuse decision.
+
+### R3 rejected fresh-load attribution and stopping boundary
+
+The first candidate was `FreshLevelTransitionBoundaryController.publishInitial`:
+it publishes destination rings with Get_LevelSizeStart's players, while
+`complete` publishes them only if initial publication did not occur. Native
+Level/loc_6310 calls Get_LevelSizeStart before LoadLevelLoadBlock's actual
+Wait_VSync loop; **loc_63B4 clears Ring_count after that loop and j_LevelSetup**,
+with the Last_star_post_hit branch preserving the checkpoint owner's choice.
+
+Before any production edit, a temporary two-act independent semantic test loaded
+HCZ with37 source rings, called the real partial publication and expected37 until
+completion, then captured both boundaries for twice-restored completion/job-ordinal
+replay. Session**70863**, exact selector
+`TestS3kFreshTitlePlcLoadBoundary#playerAssemblyRetainsSourceRingsUntilTerrainCompletesWithRewind`,
+normal common prefix above without a trace profile, `test -B`, finished11:19:32
+BST after13s queue and25.843s Maven: **2/2F/0E/0S**, both expected37 / actual0
+at partial publication. It did not reach its downstream rewind assertions. This
+is an unqualified separate fresh-load phase defect, not proof of the current
+canonical cause. The uncommitted trial was removed; the four previously committed
+load/archive checks are byte-identical. No production fix or new green is claimed.
+
+Kill evidence for that attribution: committed hcz_2 rows6672–6679 retain114 rings,
+P1 at0116,06EC and P2 at00F6,06F0; gameplay_frame_counter advances19DE–19E5.
+Native rings become0 on6680 while the same players remain. This is an active
+level/in-place transition, not the held zero-player fresh-load boundary. Thus
+loc_63B4's otherwise real ordering defect cannot be substituted for this cause.
+The candidate in-level owner is **Obj_TitleCardWait/loc_2D810**, whose ring/timer
+reset requires the preceding higher-slot children's $34 movement latch to stay
+clear. Current results source only gives the literal SST child graph to the AIZ
+handoff (`nativeTitleChildrenOwned = aizAct1MinibossTitleHandoff`); other retained
+handoffs still use the manager/external presentation and dispatch-reset policies.
+That static gap is not yet a matched live engine/native parent-and-latch proof.
+No six-dispatch adjustment, forced readiness, zone/row condition or title-counter
+fit is justified. The next bounded investigation must identify the actual HCZ
+retained title parent's create/Wait dispatch, child birth slots and $34 latch on
+both products before changing its owner. First non-camera rings6674 remains
+explicitly unqualified; the current report cannot independently pin first animation.
+
+The slice9482 edge is also not certified as “boss deletion clears support”. Native
+interact pointers are P1 slot47 and P2 slot28, both with standing-on-object bit3
+clear before the edge; those pointers persist across it. BossDefeated_StopTimer
+stops the HUD timer, awards score and clears the boss render flag, without a
+player-air write. No forced airborne patch was made from these stale pointers.
+
+**Bounded outcome:** the requested full canonical and independent full HCZ
+qualifications are complete and strict-red on the Main460 composition. They do
+not certify returned HCZ exit, campaign completion, all auxiliary fields, PAL,
+PCM, other presets/donors/teams or six-ending/46-fingerprint timing. Exact
+`TestHczMinibossNativeRendering.allOrbitPhasesMatchRomSpriteCompositionInNativePixels`
+GLFW initialization remains unqualified; Root's different EGL test identities
+are not its baseline. No changed visual behavior or new native pixel product;
+previous useful native images remain retained. No broad smoke/full suite,
+children, new tree, Main/Root write or push. All own jobs are terminal; only
+append-only evidence changes follow merge21327. Root owns delivery and integration.

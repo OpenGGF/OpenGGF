@@ -91,3 +91,19 @@ retain their existing obligations; no general HCZ2 certification.
 
 
 Followup after866 (2026-10-17): the independent load/title owner is qualified narrowly by old-red/green, focused134, guards131 and a canonical prefix closing HCZ1-entry row7126. The distinct alternate retains its one26179 ring span. This adds no HCZ2 cold/fresh/arena or cross-load matrix product. Pre-fix dc338/866 full-slice comparison has identical windows but mixed span deltas (4699/4353);3738 is not a matched baseline. New-source full slice and returned HCZ11 remain unqualified. [Exact evidence](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#bounded-followup-qualification-and-limits).
+
+
+## R3 full strict qualification on Main460 composition — 2026-10-17
+
+Worker merge21327d78a: canonical3815 is6/1F/0E/0S, with all three prefixes,
+standalone AIZ and initial HCZ passing. Returned HCZ11 consumes14208 reference
+rows,134710 field mismatches(115689physics/19021animation), first reported
+non-camera6674 `rings`114/0 and missing giant-ring exit. HCZ90977 is2/1F/0E/0S:
+full31482 reference rows,29302 comparison records,4353 spans(3424physics/929animation),
+first9482 `air`1/0, first animation9486; independent Poindexter passes. The entire
+slice error array matches the prior4353 result. Matched4699/4353 deltas remain
+mixed;3738 is unmatched. Alternate760's one26179 ring span is reused, not rerun.
+No new entry, viewport/donor/team, pixel, cold traversal or cross-load product is
+certified. Active-level ring-reset/title-latch ownership, later route exit and
+the exact GLFW oracle remain unqualified. No new runtime fix. [Exact source,
+commands, windows and rejected load attribution](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r3-current-composed-strict-qualification--2026-10-17).
