@@ -113531,3 +113531,29 @@ Main803's older incomplete result is not an exact waiver for these later rows.
 Root retains inspected reports temporarily for the activeR11 causal owner;
 no archives or pass caches. Four distinct segment checks pending, broad smoke
 not yet launched; see existing completion Plan for exact selector/environment.
+
+
+### 2026-10-17 — Exact published HCZ slice comparison exposes mixed composed delta
+
+Current Roota58bdc058/runtime152d07, current Main absolute Maven wrapper,
+`-Dmse=off -Ptrace-segments` and exact classes
+`TestS3kAizZoneSliceTraceReplay,TestS3kSonicTailsHczSegmentTraceReplay,TestS3kHczZoneSliceTraceReplay`,
+normal/all3originalROMs/EGL/nullAL/noambient/singlefork/reuse/alpha:
+67653 terminal1 at14:16:10UTC,4/2F0E0S, queue0/Maven48.013s. AIZ slice's
+sole26179 rings72/0 matches actual803 baseline78232; team HCZ and Poindexter
+pass. HCZ slice completes29302 observations,4353 errors=3424physics+929anim,
+first9482 air1/0, warnings/bootstrap0.
+
+Matched actual Main80317155 used only
+`TestS3kHczZoneSliceTraceReplay#replayMatchesTrace` with the same profile,
+ROMs/flags/environment, terminal1 at14:24:23UTC,1/1F0E0S,
+queue0/Maven35.057s:29302 observations,4699=3973physics+726anim,
+same first9482 air1/0 and same eight missing aux schemas. Main foreign
+status and config bytes/mtime are unchanged. Full records share1132 exact
+identities;3221current/3567baseline are unmatched, including split spans.
+The first genuinely new field/row is10834 tails_cpu_respawn_counter0000/0001;
+Main's comparator has no counter error there. Lower totals do not waive it.
+This mixed delta remains an integration blocker; read-only causal attribution
+is separate from original-route R11's7807 block gate. No broad smoke or
+full-suite result is claimed. Exact commands, bounds and cleanup obligations
+are in the existing playable-completion plan.

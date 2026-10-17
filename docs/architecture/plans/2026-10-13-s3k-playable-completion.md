@@ -4986,3 +4986,47 @@ complete, with planned150execution-minute/no-output/source-fingerprint limits.
 The separate Slot R2 tree owns VInt publication and five originalRGB moments;
 it cannot edit this frozen validation tree. Ending's coherent caller/bus/readiness
 closure and the whole-objective ledger above remain open, not covered by this run.
+
+
+### Distinct slice qualification and matched published baseline — 2026-10-17
+
+Root `a58bdc058` (runtime `152d07ce9`) ran exactly three distinct segment
+classes through current Main's absolute wrapper, normal ROM lane, all three
+original absolute ROM properties, `-Dmse=off -Ptrace-segments`, EGL/nullAL,
+no ambient display, single fork/reuse/alphabetical: `-Dtest=TestS3kAizZoneSliceTraceReplay,TestS3kSonicTailsHczSegmentTraceReplay,TestS3kHczZoneSliceTraceReplay`.
+Session67653 completed at14:16:10UTC, queue0, Maven48.013s/parent48.757s:
+**4 tests / 2 failures / 0 errors / 0 skips**. AIZ slice retains only26179
+rings72/0, matching actual803 baseline78232; team HCZ and the independent
+Poindexter check pass. HCZ slice completes29302 observations with4353 errors
+(3424physics+929animation), first9482 air1/0, warning/bootstrap0.
+
+A single matched baseline17155 ran only
+`TestS3kHczZoneSliceTraceReplay#replayMatchesTrace` on actual Main803, same
+profile/runtime flags/ROMs/environment, with isolated owned report paths.
+It completed at14:24:23UTC, queue0, Maven35.057s/parent35.759s:
+**1 test / 1 failure / 0 errors / 0 skips**, complete29302 observations,
+4699 errors (3973physics+726animation), same first9482 air1/0. Main's exact
+foreign status and config hash/mtime remained unchanged. No branch switch,
+source edit or copied build tree was used.
+
+Full error-record comparison shares1132 exact records; current3221 and
+baseline3567 records are unmatched, partly because consecutive spans split
+or coalesce. These numbers are not counts of newly wrong gameplay values.
+The earliest current field/row absent from all baseline error spans is
+**10834 tails_cpu_respawn_counter expected0000/actual0001**. Baseline has no
+error for that field at10834. Both runs have identical total observations,
+latest zone/act, warnings/bootstrap and eight missing advertised aux schemas.
+The lower total therefore does not establish nonregression; the mixed slice
+trajectory remains an integration blocker pending causal attribution. A
+read-only source/history audit owns that question, while R11 independently
+owns the original-route7807 block contact. No tolerance, field omission or
+fixture hydration was introduced.
+
+R11 and Slot R2 remain separate local trees. Once their bounded owner work is
+accounted for, Root will compose before the one complete change-based smoke
+selection (currently3521 candidate classes/all10 categories plus guards),
+with150 execution-minute and10-minute no-output limits, queue excluded.
+No broad run has yet been submitted. The full suite remains release-only;
+ending's coherent CPU/bus/readiness timeline and other ledger limits remain
+open. Consumed report cleanup follows the read-only attribution audit; no
+raw-log archive or validation receipt is retained.
