@@ -2247,3 +2247,51 @@ Native evidence keeps its recorded scope: ExactKosMeasurement 11/0/0,
 HardwareTiming 70/0/0 and the actual v2 run's 30/30 agreement with an
 independent head oracle. The parent gitlink now records that SHA. This is a
 pin and source-contract qualification, not a full native gate or engine suite.
+
+### Blue Sphere player projection and shadow publication (2026-10-17)
+
+Root compared the retained seven-Chaos native-v2 original PPM/VRAM/CRAM/RAM
+with engine twin-v6. Stage reveal+0/+10/+22 have 446/667/1112 raw RGB differences;
+281/433/782 lie in the lower player region. Independently rasterizing the
+published native SAT finds 643 body/tail foreground samples: every sample
+matches the actual engine art at y-2 for native138/148/160 versus engine24/34/46.
+This is a diagnostic translation witness, not a normalized full-image pass.
+The original images and their declared event fences remain unchanged.
+
+`sub_953E` and `GetScalars2`/`sub_A206` explain the position error. The shipped
+ScalarTable2 pitch `$E0` has sine -11585 and cosine 11585; its integer projection
+places P1 at y162 and P2 at y179 on the ground. The renderer used y160/y172
+plus a fitted linear jump offset. It now loads the scalar bytes through the
+existing ROM data loader, preserves MULS/SWAP then signed DIVS truncation,
+and includes P2's native depth -$20. No trace row or reference snapshot supplies
+runtime state, and no clocks, movement or animation are changed.
+
+The native `word_94FC` shadow is a fixed 4x4 operator sprite at (144,150), with
+P2 at (144,167) only for Player_mode zero. The ROM art contains index15 shadow
+operators, while the engine loaded it without drawing it. The regular
+`loc_84C2` loop appends shadows after all ordinary SAT entries; the boot sequence
+does not. The renderer uses the existing multiplicative shadow batch behind
+stage sprites, gated by a captured `mainLoopSpritesPublished` phase. Restoring
+the boot/last-wait snapshot removes future shadows; restoring the published
+snapshot and two forward replays restores them. Shadows remain fixed while
+players jump. No mapping-piece priority defect was proved in these idle spots.
+
+Old-source projection request5293 on `ac1e1403c` plus its regression fails
+7/7/0/0 at 06:50:12 UTC, reproducing the ground and nonlinear jump errors.
+The projection-only change passes 37/0/0/0 at 06:52:20 UTC. Shadow request56500
+then fails 4/4/0/0 at 06:53:37 UTC, after its negative boot/fade checks pass.
+Combined request31083 passes 106/0/0/0 at 06:55:21 UTC, using the main absolute
+queue wrapper from the ending worktree, `--normal -Dmse=off`, the original
+locked-on ROM (`-Ds3k.rom.path=$S3K_TASK_ROM`, CRC32 `63522553`), surfaceless EGL,
+unset DISPLAY/WAYLAND_DISPLAY and nullAL. Exact selector:
+`TestS3kSpecialStageShadowPublication,TestS3kSpecialStagePlayerProjection,TestSonic3kSpecialStageRenderer,TestSonic3kSpecialStageWidescreen,TestSonic3kSpecialStageManagerSnapshot,TestSonic3kSpecialStageVisualSnapshot,TestSonic3kSpecialStageGameplaySnapshot,TestSonic3kSpecialStageRewindAdapter,TestS3kSpecialStageHeadlessBoot,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`.
+
+This is component command/phase/typed-manager rewind evidence at native320/800,
+all four character/team modes, seven jump heights, donor off. It does not yet
+qualify a new framebuffer, complete stage/cold route, configured donor/roster
+breadth, PAL or PCM. The independent native whole-frame residual and later
+sphere/HUD phase differences remain open until the composed capture is compared.
+
+Fresh `--lean -Dmse=off -Dtest=TestArchitecturalSourceGuard test -B` then
+passes 72/0/0/0 at 06:57:02 UTC (3.154s test execution). No API signature or
+configuration default changed; the new projection/phase helpers are package-private.

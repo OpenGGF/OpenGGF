@@ -81,8 +81,10 @@ Unreleased. The earlier development themes remain in
   at the waterline both repair strips load and the other animations pause, and far
   from it the last drawn strip stays.
 
-- **S3K special stage results:** The results card sits on the locked-on game's
-  grey backdrop instead of white, matching native frames of won and failed stages.
+- **S3K special stage presentation:** Blue Sphere players and their tails use
+  the original perspective projection through jumps, with fixed ground shadows
+  under the players. The results card sits on the locked-on game's grey backdrop
+  instead of white, matching native frames of won and failed stages.
 
 - **S3K zone title cards:** Every level entry that passes through the game's level
   routine fades the level in from black over its first 21 frames, with the player,

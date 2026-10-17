@@ -1108,3 +1108,17 @@ position state stays synchronized to native x/y, without a custom restore hook.
 - SSZ1 cloud-mode transitions keep the background source window aligned to the
   displayed vertical scroll, eliminating the blank entering frame. Rewind
   re-render restores the displayed mode and intermediate HScroll words.
+
+
+## Blue Sphere player projection and shadows (local correction, 2026-10-17)
+
+Native `sub_953E`/`sub_A206` project the main player and sidekick using
+ROM ScalarTable2 and their different depths; the former linear screen offset
+put their ground centres at 160/172 instead of 162/179 and distorted jumps.
+The renderer now uses the ROM integer projection. `Draw_SSShadows`' fixed
+4x4 shadow operators are also drawn behind ordinary sprites after the boot
+fade, with the publication phase captured for rewind. The
+[sanctuary matrix](architecture/validation/levels/s3k-hpz-sanctuary.md#blue-sphere-presentation-components--2026-10-17)
+records old-source failures and 106 focused passes. A new actual framebuffer
+comparison, remaining sphere/HUD phase differences, whole routes, donor,
+PAL and PCM remain open; component passes do not certify those products.

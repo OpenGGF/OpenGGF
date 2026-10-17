@@ -1189,3 +1189,10 @@ eyecatch checkpoint now matches the emulator's original active RGB output
 exactly, with an independent GPU child-priority regression. This does not
 replace the remaining terminal/cold/PAL/PCM/wide/donor obligations in the
 [ending matrix](../architecture/validation/levels/s3k-ending.md#knuckles-eyecatch-native-sat-priority--2026-10-17).
+
+Blue Sphere presentation components (2026-10-17) now cover ROM integer player
+projection and main-loop-only ground shadows at 320/800 for all native
+character/team modes, with typed-manager restore and two forward replays.
+The [sanctuary matrix](../architecture/validation/levels/s3k-hpz-sanctuary.md#blue-sphere-presentation-components--2026-10-17)
+records the bounded 106-check selection. Actual composed framebuffer, complete
+stage/cold route, donor, PAL and PCM limits remain open.

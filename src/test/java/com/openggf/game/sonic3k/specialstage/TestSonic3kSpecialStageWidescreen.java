@@ -73,6 +73,10 @@ class TestSonic3kSpecialStageWidescreen {
         renderer.setFloorMapData(repeatedMap(9 * 40 * 28, 0x12));
         renderer.setHudNumberMap(new byte[120]);
         renderer.setHudTemplate(new byte[48]);
+        byte[] scalars = new byte[512];
+        writeWord(scalars, 0xE0 * 2, -11585);
+        writeWord(scalars, 0x20 * 2, 11585);
+        renderer.setPlayerProjectionScalars(scalars);
         renderer.setSonicMappingData(singleTileMappingData(12), singleTileMappingData(12));
         renderer.setBannerMappingData(singleTileBannerMappingData());
 

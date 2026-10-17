@@ -144,6 +144,10 @@ class TestSonic3kSpecialStageRenderer {
         int tailsTailBase = 0x6000;
         renderer.setPlayerPatternBase(playerBase);
         renderer.setTailsTailsPatternBase(tailsTailBase);
+        byte[] scalars = new byte[512];
+        writeWord(scalars, 0xE0 * 2, -11585);
+        writeWord(scalars, 0x20 * 2, 11585);
+        renderer.setPlayerProjectionScalars(scalars);
         renderer.setSonicMappingData(singleTileMappingData(12), singleTileMappingData(12));
         renderer.setTailsTailsMappingData(singleTileMappingData(15));
         renderer.setArtLoaded(true);

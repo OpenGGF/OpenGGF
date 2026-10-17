@@ -176,6 +176,12 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
      * at all.
      */
     private boolean firstUpdateCall;
+    /** Draw_SSShadows is absent from boot; loc_84C2 first appends it after the fade waits. */
+    private boolean mainLoopSpritesPublished;
+
+    boolean hasPublishedMainLoopSprites() {
+        return initialized && mainLoopSpritesPublished;
+    }
 
     /**
      * Remaining real, input-polled frames during which the ROM does not
@@ -280,6 +286,7 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
         this.exitSpinStarted = false;
         this.exitWaitFramesRemaining = 0;
         this.firstUpdateCall = true;
+        this.mainLoopSpritesPublished = false;
         this.preBootFadeHoldFrames = PAL_FADE_TO_WHITE_FRAMES;
         this.postBootFadeHoldFrames = 22;
         this.palFadeDelay = 0;
@@ -341,6 +348,7 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
      */
     private void loadRomData() throws IOException {
         dataLoader = Sonic3kSpecialStageDataLoader.create();
+        renderer.setPlayerProjectionScalars(dataLoader.getScalarTable());
         GraphicsManager gm = GameServices.graphics();
 
         // Load layout from ROM.
@@ -693,6 +701,8 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
         } else if (postBootFadeHoldFrames > 0) {
             postBootFadeHoldFrames--;
             return;
+        } else {
+            mainLoopSpritesPublished = true;
         }
 
         pacingOwner.acceptedSample();
@@ -1303,6 +1313,7 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
                 spriteDebugMode,
                 useSkLayouts,
                 firstUpdateCall,
+                mainLoopSpritesPublished,
                 preBootFadeHoldFrames,
                 postBootFadeHoldFrames,
                 gameState != null ? gameState.capture() : null,
@@ -1361,6 +1372,7 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
         spriteDebugMode = snapshot.spriteDebugMode();
         useSkLayouts = snapshot.useSkLayouts();
         firstUpdateCall = snapshot.firstUpdateCall();
+        mainLoopSpritesPublished = snapshot.mainLoopSpritesPublished();
         preBootFadeHoldFrames = snapshot.preBootFadeHoldFrames();
         postBootFadeHoldFrames = snapshot.postBootFadeHoldFrames();
 
@@ -1467,6 +1479,7 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
         spheresLeft = 0;
         currentStage = 0;
         frameCounter = 0;
+        mainLoopSpritesPublished = false;
         clearRoutine = 0;
         clearTimer = 0;
         emeraldTimer = 0;

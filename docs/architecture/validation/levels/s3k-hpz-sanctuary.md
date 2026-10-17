@@ -660,3 +660,15 @@ observer1969766 ran under normal queued admission22:30:28.735001–22:30:31.0018
 Exact source/argv/clock/crystal/SAT observations and hashes remain in the existing
 external `hpz-sanctuary-ceremony/publication-clock-a6ddbd14e/` task directory.
 Actual-ingress and publication-aligned native presentation remain the honest open scope.
+
+## Blue Sphere presentation components — 2026-10-17
+
+The seven-Chaos gateway's saved native-v2/engine-v6 images exposed a separate
+special-stage player projection error and missing ground shadows. The
+[completion plan](../../plans/2026-10-13-s3k-playable-completion.md#blue-sphere-player-projection-and-shadow-publication-2026-10-17)
+records the ROM/SAT witnesses and old-source failures. The corrected component
+selection passes 106/0/0/0: seven jump heights at 320/800 for all native
+character/team modes, regular-loop shadow publication, two restore/forward
+replays and the required S3K loading checks. This adds no cold gateway, whole
+framebuffer, donor, PAL or PCM certification. New composed RGB comparison
+remains pending; the original native images are retained unchanged.

@@ -5899,3 +5899,13 @@ one live actor per marker.31538 observed99/100 while116/117 were absent. Its
 shared load bytes were false, so those bytes alone are not an actor-identity
 proof. Native ID3E is non-rendered conveyor logic; ID68 spinning-column art or
 dimensions cannot establish its body, motion or clearance.
+
+### Special-stage projection and shadow operators
+
+`sub_953E` projects native player height/depth through ROM ScalarTable2 before
+signed DIVS. A ground screen offset plus linear jump scaling loses both integer
+truncation and perspective; P1 and P2 also have different depths. Load those
+scalar bytes through the ROM pipeline. `Draw_SSShadows` uses fixed screen
+coordinates and palette3/index15 shadow operators behind the ordinary SAT,
+not opaque black art tied to the jumping body. Its first regular-loop publication
+is absent from the boot fade and must rewind with the presentation phase.
