@@ -7755,3 +7755,412 @@ remain. **Current target is last compiled50308 on803**, not restored b0b4/3be;
 a future combined owner must compile its own current source before validation.
 All owned job/admission/build leases are terminal. Root reviews these bounded
 facts before any next task; no automatic fix or additional scope is inferred.
+
+
+### R15 source-only Gumball exit prerequisite and passive evidence boundary — 2026-10-17
+
+First, R13/R14 accounting was committed normally as local docs-only
+`d092a584c5315b39ea76f98bedd3486bc314e58c`: exactly this existing Plan and
+`docs/status/trace-frontier-log.md`, seven policy trailers and final exact
+GPT-6.1 co-author parsed before normal hooks (exit0). The701-byte R12 commit
+message was already consumed; this followup's800-byte message was consumed
+metadata-slot-alone. Worktree was clean before source continuation. No Java,
+POM, API or fixture change. b0b4, the local803 baseline branch and all prior refs
+remain. **Target50308 was compiled onBASE803, not restored current3be Java.**
+
+Only after that accounting, separately returned task
+`fdf-r15-accounted-gumball-exit-causal-source-prep-20261017`, ordinal25, was
+registered24h preserving24..19/older results. This phase reads source, original
+fixture/ROM and existing seams only; no temporary Java, compiler/JVM/test,
+engine/native/capture, current/baseline rerun, source repair, SS rebase or new
+observer/controller/provider/API. Current HEADd092 changes docs only fromb0b4;
+its Java epoch remains3be/7df. Source below is not a new observed engine run.
+
+**Native control actually retained.** Original Gumball segment1 has offset5570,
+1430 rows; manifest entry saved origin `(2778,025C)`, bonus→returnedAIZ edge
+movie7001. CSV frame words are hexadecimal (`TraceFrame.fromCsv:186`), AUX frame
+numbers decimal; actual CSV frame values were checked against row indices.
+An initial offline decimal parse rejected `000A` before any facts were used;
+no gameplay/input or fixture changed. Existing object_state records identify
+native **slot40/code00061050 at centre0100/0368** (not an invented object).
+Pinned disassembly044fa46725c71187399e13f5ddb70e11d32dc024 identifies:
+
+- Obj_GumballMachine subtracts100 from its initial Y, then CreateChild1_Normal
+  uses third child loc61044/offset0,0. loc61044 adds2A0 once, then loc61050 polls.
+- Actual ROM SHA1CFBF98C36C776677290A872547AC47C53D2761D6 bytes at61406 are
+  `000610440000`, and word610AE at610AE is `FF000200FFF00040`.
+- Check_PlayerInRange/sub8592C compares unsigned word centres against
+  `[x-100,x+100) × [y-10,y+30)`; upper edges are exclusive. loc61050 first
+  consumes P1's low-word result; only if P1 is out does it consider deleting P2.
+  loc61076 writes saved zone/act/checkpoint and Restart_level_flag, plus reward
+  carry. Its call-entry and that write are not serialized as callback evidence.
+
+For the **recorded** trigger centre, source-derived box is
+`[0000,0200) × [0358,0398)`:
+
+| Native raw row (CSV word) | P1 centre | Geometry against recorded trigger | Other recorded state |
+|---|---|---|---|
+| 1275 (04FB) | 0103/033E | below top | routine02, LF04FC, VInt1A95 |
+| 1276 (04FC) | 0102/034D | below top | routine02, LF04FD, VInt1A96 |
+| 1277 (04FD) | 0101/035C | inside: dx1,dy-0C | routine02, LF04FE, VInt1A97; zone_act_state zone0/act0/raw mode8C |
+| 1278..1299 (04FE..0513) | 0101/035C | still inside in retained post-frame records | LF04FE holds; VInt advances through1AAD |
+| 1300 (0514) | 0000/0000 | no exit-call inference | routine00/LF0000, VInt1AAE; routine_change is recorded |
+
+Trigger object_state is present at1275/76/77/78 and through1299; the first
+retained trigger/P1 post-frame pair inside this source box is1277. These are
+**post-frame state observations, not the P1 coordinates consumed by a witnessed
+native callback**. No native cleanup/deletion writer is inferred from X0,
+zeroed fields, or absence from a filtered object_state row at1300. No timing
+fit, fade-clock correction or changed comparison phase follows from the plateau.
+Current first non-camera1300X2778 equals manifest saved-origin X, but that is
+only static context: actual current mode/provider/load/return at that row were
+not retained. It cannot prove that return happened, or that the trigger failed.
+
+**Actual existing production owner chain.** Machine first update spawns
+ExitTriggerChild at its declared parent Y-100+2A0. Its update returns on null
+P1/exitFired, tests that actual P1 centre against the same half-open box, then
+sets exitFired and calls services.requestBonusStageExit. DefaultObjectServices
+resolves the CURRENT owning GameplayModeContext active provider; its catch path
+logs an exit-request failure. AbstractBonusStageCoordinator.requestExit sets
+exitRequested; GameLoop.updateBonusStageMode later polls isStageComplete.
+exitBonusStage records transition pending and starts the existing black fade;
+FadeManager retains the original callback. GameLoopPlcLifecycle's native-blocking
+wrapper closes its fade owner then forwards the callback. doExitBonusStage
+reloads origin/restores carry and enters TITLE_CARD; ordinary title completion
+later reaches LEVEL. These source paths are present; no missing-runtime-owner
+bug is assigned from source alone. Replacing either callback/provider is not a
+passive observation.
+
+Original comparedDrive uses PhysicalMovieRowDrive and the existing
+stepEngineFrame(GameLoop). BoundaryProbe's stage_exit is a **persistent LEVEL
+mode** check inside its existing boundary window (7001 minus600 through plus120),
+not merely an exitRequested flag or P1 coordinate. `latched()` mutates its latch;
+`observation()`/other latch helpers are not passive getters for a new observer.
+The original assertion remains live; no window/budget/stop/report adjustment.
+
+**Smallest next evidence question (not authorized/executed here).** On that same
+original driver, did the real trigger exist at its actual slot, did its actual
+update consume P1 inside the source range, did its exitFired/request reach the
+same active provider, and did the original fade/return reach LEVEL while the
+original boundary probe was armed/in-window? Retain original boot/input and
+prefix `(RUN_DIR,2,1)`, original failure/report/cleanup; no replay is implied by
+this plan. Existing useful seams and exact limits:
+
+- Package-local overridable `stepEngineFrame(GameLoop)` and existing row/
+  afterProductionStep hooks can wrap/forward original work exactly once and
+  supply the real loop object. Label samples outside the original step, not
+  inside a trigger callback. Existing HardwareTimingBoundaryObserver POST can
+  bracket after the actual object/art queue tail and before GameLoop's later
+  isStageComplete poll; original delegate must still forward once/throw identity. Lag/frozen-fade
+  rows expose only actual serviced boundaries; never manufacture a POST sample.
+- Inspect actual raw manager activeObjects/dynamicObjects/execOrder references,
+  the real trigger instance/slot, its declared raw spawn/exitFired/player2Deleted,
+  actual P1 identity/centre, active provider identity/raw exitRequested and loop
+  mode/transitionPending; FadeManager pure state/hasPendingCompletion or raw
+  callback **presence**, never call/replace its callback. Keep identity and clock
+  names explicit, and any future passivity claim limited to the known projection.
+- Do **not** call ObjectManager.getActiveObjects for observation: it rebuilds
+  caches. Do not call trigger.getSpawn's managedSpawn view to invent its consumed
+  geometry: inExitRange reads its actual declared spawn. Use raw read-only fields
+  or genuinely pure existing getters; no capture/ensure/rebuild/claim/export.
+- Existing ObjectManager.has/getPlayerCentreAtObjectSlotStart are pure and expose
+  actual captured slot-start centre values. Their valid flag is set **before**
+  slot retirement, null-slot checks, and routine-policy dispatch. A visited slot
+  or valid centre therefore does not prove the trigger's update executed, nor
+  is it an inside-callback argument-identity witness. A changed exitFired flag
+  is useful positive branch evidence under an unchanged original forward drive;
+  a false flag cannot distinguish no dispatch from a rejected range.
+- Exact missing witness for a negative/ambiguous case: ObjectExecutionController
+  invokes ObjectManager.runObjectCallback → ObjectCallbackRouter around
+  `instance.update(objects.vblaCounter(), player)`, after permitsRoutine. Neither
+  exposes a passive per-routine observer. Do not install a policy/mutator, mock
+  provider, substitute object/services/controller, or new generic API to observe
+  it. Actual callback-entry/consumed-P1 proof there would require **separate
+  explicit authorization for a bounded passive instrumentation seam**. Hand back
+  this boundary before adding it; no such source is authored now.
+
+An eventual raw-state observation could disconfirm “missing exit trigger” if
+actual exitFired/provider request and the natural fade/return are seen; it must
+then report the real mode/latch ownership rather than tune trigger geometry or
+hold durations. If it cannot prove dispatch/consumed input, report that exact
+missing witness. No fix is proposed before actual owner evidence.
+
+Existing source controls are TestGumballMachineExitTrigger's four inside/four
+outside half-open boundaries and one-shot request (mocked P1/counting services),
+and TestS3kGumballPachinkoRewardMechanics's real P2-only deletion/return/rewind
+control. They establish narrower declared inlets, not this original Knuckles
+movie's dispatch/exit/latch chronology. They were **not run** in this phase.
+Original98161/50308 groups/first/recent5/closure limits above are reused, no new
+current/baseline execution or full18-vector proof. Source/fixture pins:
+
+| Input/owner | SHA256 |
+|---|---|
+| pinned044 sonic3k.asm bytes | `d2ce907d1bad9447fbd11196a498a65a73f744ee8e57153b62c46581b1368ed1` |
+| GumballMachineObjectInstance | `920c2a0957ab4e4dfd4b903ce0b72bae339181522fe9d9408e4d8a998fee24c4` |
+| DefaultObjectServices | `e4b822efc855c40e2f5245b63ba7263fa4e4fcb4a130be470b23eb1c1eaf2718` |
+| AbstractBonusStageCoordinator | `ba21efab8dbb47b206036b6d212b2bb1f9ac71aecdc8410142ccda4825c9ecea` |
+| GameLoop | `5124502753d87e658cb717afb83701fe42ebb2bac64336dc480b1bedd6dbb85f` |
+| FadeManager | `5846a4cbe3552a9d5e6b2592a196ef089adc2a8d674802c31bc01676a18fa37b` |
+| GameLoopPlcLifecycle | `9a17ce750f2c13a8d38c51fd5e66aeb0e1d7f666eb693138e62351f2ac50bdd2` |
+| PlcFrameLifecycleCoordinator | `82c1d12e8007f1987819a58a521bfa21b996c6bd5fcce710a20a15d42e46fc79` |
+| ObjectManager | `8816e1fb8621fe73cdb44fc7941646a6c0622e102b7d1a92c37b7a31dbbac8b3` |
+| ObjectExecutionController | `d25023630ffd8af5e1cbcb4235daf54f2debe33392b40df275f62869aa737165` |
+| ObjectCallbackRouter | `d3fba1ab816d9c61db9b2da2216588eca962c5638a0a2a712a7a4d553f7390fd` |
+| original AbstractRunChainTest | `967c9896bf566218e9198626ec7d256f181be9fb78ca5abc787d6b82932148bb` |
+| ComparedInteriorRowDrive | `5e3dc5ea332b0a6c09dabcf8b1332c2ef401bfcfbad1037da5bc5be600e9eb54` |
+| TraceRunReplayWalker | `49ae05dffdd9f5ea328ae0abf2ef8c9a694b4278b8964d167082f9157510bcbc` |
+| Gumball original physics.csv.gz | `81b12446b031e8731295e521e1e51afd5b5c916a623affb8575713e5bd308d42` |
+| Gumball original aux_state.jsonl.gz | `fa1fef59dd4b81336aa277b369ce4d47b54027db5c963de3625dbc88b38a5b6f` |
+
+Original fixture tree/movie/manifest pins stay db73f445…/D748…/149c… as recorded
+above. Only existing Plan is dirty after the clean accounting commit; no helper,
+class, report, archive or live job is created. Source/Git reads and this edit use
+the intended-tree lease; all leases terminal. Config/Main/native/media/refs and
+all earlier results are preserved. Root reviews the source-pinned question and
+missing callback seam before any future probe/fix; no readiness/CPU/wholeSS or
+route parity is inferred from this source preparation.
+
+
+### R16 source-only actual Gumball trigger chronology witness — 2026-10-17
+
+Root read R15's source/range/slot40/post-frame1277 geometry and accepted it as
+source proof, **not a consumed callback**. Separately returned
+`fdf-r16-gumball-trigger-chronology-witness-source-20261017`, ordinal26, is
+registered24h with exact task/native/workspace identity, preserving25..19 and
+all older results. Authorization is **source authoring only**: one temporary
+original-driver subclass plus one private logging-only block in the actual
+Gumball ExitTriggerChild. No compiler/JVM/engine/test/native/capture, runtime
+repair, new controller/provider/policy/API, driver/fixture/POM edit, new observer
+router or changed input/window/stop/report/cleanup. HEAD remains
+`d092a584c5315b39ea76f98bedd3486bc314e58c`, current Java3be/7df except this
+explicitly temporary diagnostic. Existing98161 current /50308 BASE803 matching
+stage_exit failures remain their own epochs; neither is this unexecuted witness.
+
+**Frozen actual source, for Root review before any possible execution:**
+
+| Owned source | SHA256 | Shape |
+|---|---|---|
+| `src/test/java/com/openggf/tests/trace/runs/TestS3kGumballTriggerChronologyWitness.java` | `ab2f61e414a0b00e845ab44f6135e870b12c35098d33fefaa6bee0e10a9d4bc4` | temporary395lines/21502bytes |
+| `src/main/java/com/openggf/game/sonic3k/objects/GumballMachineObjectInstance.java` | `7f24b324baa63f2da8ff9f18ad3552206c151a34ce3bbd23ac45d72c5b1b1c11` | temporary diagnostic only |
+
+Runtime diff SHA256 `096a358df7137ad165ba981e14458a2db67e25ba0c3eb6dfa24e1fad9c66dc6e`;
+combined runtime diff + normal `git diff --no-index /dev/null <helper>` bytes
+SHA256 `eccc7f14b76aaa9e6c25c2f131c1280a43243ee8c39544535e63606a70efd53e`.
+Removing exactly the three marked R16_DIAGNOSTIC_ENTRY/FIRED/HELPERS blocks
+recovers **byte-identical HEAD runtime** SHA256
+`920c2a0957ab4e4dfd4b903ce0b72bae339181522fe9d9408e4d8a998fee24c4`.
+No original predicate/call/guard/assignment/request/catch is changed, duplicated
+or reevaluated. No imported native/trace values are passed into gameplay.
+
+The test invokes only original `assertChainReplayThroughSegmentRow(RUN_DIR,2,1)`
+on the original Knuckles run from boot. Its override calls
+`super.stepEngineFrame(loop)` exactly once; observational work is outside that
+call except the expressly authorized actual owner hooks. There is **no hardware
+observer installation/wrapper**, so original hardware admission dispatch remains
+untouched. Actual trigger entry is labeled ACTUAL_TRIGGER_UPDATE_ENTRY; the
+second event is immediately after the original exitFired=true and before the
+original LOGGER/request, labeled AFTER_ORIGINAL_EXIT_FIRED_BEFORE_REQUEST.
+The sink checks exact callback-P1 reference identity against the current main
+sprite, not merely equal coordinates. Per-entry output is restricted to actual
+coordinator segment1 / actual comparator cursor1274..1280. An actual fired event
+is retained independently of that cursor window. No inExitRange/predicate is
+called for observation. A false flag or visited exec slot is **not no-dispatch
+proof**; a positive actual-entry count is required.
+
+After the drive first owns segment1, outside-step samples are CHANGE-ONLY for
+mode, actual level/manager identity + completed-load generation, loop/context
+provider identity, actual coordinator type/exitRequested, transition pending,
+fade state/callback presence and actual raw armed/latch fields. P1/clock/fade
+counter differences alone do not emit lifecycle rows. Entries include actual
+comparison cursor, physical playback timeline cursor, port raw-frame latch /
+edge cursor / last-applied boundary, object VInt argument where actually
+available, object manager counters and level counter. Missing owners/clocks are
+null, never filled from reference geometry/row or another clock. The last-applied
+port boundary is labeled as its raw field, **not the currently executing phase**.
+The actual source phase is inside-original-step/no-boundary-claim or outside
+before/after-original-step. No callback presence test calls the callback.
+
+The last actual probe reference is retained read-only. Footer distinguishes
+LAST_OUTSIDE_AFTER_ORIGINAL_STEP_BEFORE_DRIVER_CLEANUP from
+AFTER_ORIGINAL_DRIVER_REPORT_AND_CLEANUP_RETAINED_PROBE_RAW: the latter can read
+the original driver's final raw armed/latch fields after its own latch calls,
+but detach/cleanup may already have cleared frame-preparation aliases. It is
+not an inside-call/publication bracket or proof of callback consumption.
+
+**Pure/raw inventory checked against actual sources (no lazy managed views):**
+
+- AbstractRunChainTest: raw activeHardwareTiming, productionComparator,
+  activeBoundaryProbe. Coordinator: currentSegment/insideSegment. Comparator:
+  cursor. PlaybackDebugManager: timeline → PlaybackTimelineController.cursorFrame
+  (the cursor is not a field on the outer debug manager).
+- GameLoop: gameplayMode/levelManager/spriteManager/configService,
+  playbackDebugManager/currentGameMode/activeBonusStageProvider,
+  bonusStageTransitionPending/fadeManager. GameplayModeContext: raw active
+  provider and hardwareTimingBoundaryObserver. Only the actual existing
+  TraceHardwareTimingBoundaryObserver's replayPort is read; no substitution.
+- Port: rawFrameLatch/edgeCursor/lastAppliedBoundary/installed/runComplete.
+  LevelManager: level/objectManager/completedProductionLoadGeneration/frameCounter.
+  ObjectManager: raw execOrder/currentExecSlot/frameCounter/vblaCounter. The raw
+  execOrder is iterated only to name real trigger identities/physical slot;
+  no getActiveObjects/rebuild, no managed getSpawn, no isDestroyed/default object
+  getters. Trigger: raw final declared spawn, exitFired/player2Deleted; base
+  slotIndex, immutable ObjectSpawn x/y. No private field writes.
+- Actual provider raw activeType/exitRequested only when it is an existing
+  AbstractBonusStageCoordinator; a different/null provider stays explicitly
+  identified/absent, not an invented coordinator. Fade raw state/frameCount and
+  onFadeComplete **presence** only. Probe raw armed/latchedObservation/
+  pendingSpecialStageRequestFrame/framePrepared; only immutable Transition /
+  BoundaryObservation record accessors read scalar payloads. Never latched()
+  or observation(), capture/ensure/lazy title-card factory.
+- Main sprite lookup uses existing pure ActiveGameplayTeamResolver main-team /
+  config resolution then READS the existing raw sprite map. Actual P1 centre
+  getters are AbstractSprite's final primitive arithmetic reads. Runtime
+  diagnostic property carries only owner Thread, test-owned deferred failure
+  reference and logging sink; it supplies no gameplay values. Property absent
+  returns before player/object getter work. The original property object is
+  never overwritten; the test removes only its own context in finally.
+
+Runtime primitives (P1 centre, declared spawn, both flags, owner/player/spawn
+identities) are compared before/after sink output. Each emitted sample compares
+the explicitly listed raw/identity projection before/after output; footer checks
+the retained-probe/loop raw projection as well. This is **known-projection
+passivity**, not a whole-world claim. Diagnostic errors, including Error, are
+caught only in diagnostic work and deferred until original replay/report/cleanup
+has run. Original Throwable is rethrown by identity; at most a diagnostic failure
+is suppressed on it. No new stop/skip exception, altered original assertion,
+report phase or requested route is introduced.
+
+A fresh `target/gumball-r16-trigger-chronology.jsonl` is opened CREATE_NEW;
+no existing journal is overwritten. Output cap is <=200records and strictly
+<1MiB UTF-8 including footer (one record/16KiB reserved for footer). Only scalar
+projections/identities are serialized, no gameplay array payload or RGB/media.
+Cap/output/missing-field errors stop further diagnostic output, preserve normal
+original drive, and are reported after its cleanup. Positive original-forward,
+actual-entry, lifecycle and explicit-projection passivity counts are required;
+footer carries actual counts, terminal type/message (bounded512chars), phase
+labels and raw last state. A missing fired event is not proof of no dispatch.
+No output/journal/classes have been created in this source-only phase.
+
+**Proposed exact command, NOT EXECUTED (separate gate required):** from owned649,
+preserve inherited JDK_JAVA_OPTIONS/MAVEN_OPTS/other JVM environment, select
+existing JDK25 bin in PATH, and use the same flags/env as98161/50308 except the
+explicitly reviewed selector. In particular, no additional CLI GL property:
+
+```bash
+MAIN_ROOT=/path/to/main/OpenGGF
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 \
+env -u DISPLAY -u WAYLAND_DISPLAY \
+python3 "${MAIN_ROOT}/tools/testing/maven_queue.py" --normal -Dmse=off \
+  -Ptrace-replay-r7 \
+  '-Dtest=TestS3kGumballTriggerChronologyWitness#originalGumballExitChronology' \
+  "-Dsonic1.rom.path=${MAIN_ROOT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${MAIN_ROOT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${MAIN_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true \
+  -Dsurefire.runOrder=alphabetical test -B
+```
+
+Source-only readback, actual field/getter contracts, exact strip-back, one-super
+call/original prefix, forbidden observational-call scan, lexical delimiter and
+`git diff --check` checks passed. These are **not Java parsing/typechecking or
+compilation**. Original fixture/tree/movie/ROM/native pins remain unchanged.
+Main config SHA2566abd111c…/mtime_ns1792141742849921547 and private regular copy
+samehash/mtime_ns1792245253441720736 remain exact. No new job/admission request
+or live lease, commit, engine/native/capture, readiness/CPU/SS/whole-route claim.
+Target still last compiled50308BASE803, not this temporary source. Exactly
+runtime/helper/existing Plan dirty, frozen for Root's actual-file review; Root
+owns any future execution gate and no fix is inferred.
+
+
+### R17 actual trigger request and origin return witnessed, title release unassigned — 2026-10-17
+
+Root read the entire395-line helper ab2f61 and all private Gumball blocks7f24b3,
+actual raw-field/pure-getter contracts and exact strip-back920c, with no material
+finding. Separate exact returned `fdf-r17-reviewed-trigger-chronology-original-once-20261017`,
+ordinal27, was registered24h preserving26..19. Root then authorized **one**
+execution on HEADd092/current Java3be/7df plus only those frozen diagnostics;
+Plan256a remained frozen through terminal. The exact R16 proposed command above
+was executed unchanged: original `(RUN_DIR,2,1)` from boot, trace-replay-r7,
+normal Main absolute queue from649, all3 original ROMs/Java25, single JTO EGL
+flag and **no extra CLI GL property**, EGL/nullAL/no ambient display/Lua5.4,
+fork1/reuse/alphabetical. Original assertions/window/report/cleanup stayed live.
+
+Actual session3717 terminal1 **2026-10-17 20:24:14UTC**, normal7GiB/8cores,
+queue0s, Maven1m19s; parent elapsed unmeasured. Java25.0.4.1 compiled4143main /
+4193test sources within the one lifecycle, no prerequisite repair/retry.
+**1T/1F/0E/0S**, class5.498s/method5.241s. Original AssertionFailedError remains
+`AbstractRunChainTest:1661`: Interior exit boundary (stage_exit) was never
+observed within the boundary window for the original Knuckles run. All XML
+suppressed entries were inspected: only the original timing-close failure's
+29records (18direct/11module,12unconsumed/17pending mismatches), **no diagnostic
+failure**. This is the original failure object path, not a replaced stop/oracle.
+Ordinary compile deprecation/unchecked warnings and two runtime FAST missing
+manifest→NONE warnings remain; zero skips.
+
+**All10 original journal records /18131bytes inspected**, SHA256
+`ebcf814b4eb7197c4690118a2dbaa25eee8ef36fe7cffa007bb949e154515f36`.
+Matched original XML SHA256
+`3cbb97d2feb5e734d93fc9d6e131580ad77a2670dab32efaaa8faf4ad4b7d6e1`.
+Footer:4actual entry samples,1actual after-FIRED sample,4change-only lifecycle
+samples,9explicit known-projection passivity checks,6190original super steps;
+diagnostic type/message null. Footer raw projection check also passed (otherwise
+a diagnostic error would have been suppressed). Caps were not approached.
+
+| Actual owner sample | Comparison cursor / movie cursor | Actual P1 centre | Observation |
+|---|---|---|---|
+| trigger ENTRY |1274 /6844|0103/032F|exitFired=false, actual callback P1 is current main |
+| trigger ENTRY |1275 /6845|0103/033E|same real trigger/P1/provider |
+| trigger ENTRY |1276 /6846|0102/034D|same real trigger/P1/provider |
+| trigger ENTRY then AFTER original assignment / BEFORE request |1277 /6847|0101/035C|exitFired false→true; object VInt argument1A72 |
+| outside original step |1278 /6848|0101/035C|same provider exitRequested=true, transitionPending=true, FADING_TO_BLACK/callback present |
+| later outside lifecycle change |1299 /6869|0101/035C|HOLD_BLACK, fade frameCount21, callback present |
+| next emitted outside lifecycle change |1299 /6869|2778/025C|TITLE_CARD, new level/object manager, completed load generation3→4, loop provider null/context NoOp, pending false/fade NONE/callback absent |
+| last outside step before driver cleanup |1430 /7121|2778/025C|still TITLE_CARD, original stage_exit armed1→2@7001, raw latch null |
+
+Actual trigger identity2022562847 occupies **engine physical execslot31**, with
+raw declared spawn0100/0368; P1 identity589610983 matches current main by reference.
+Native retained slot40 is a different domain, never relabeled to31. Same loop /
+context provider identity1395725953 is observed before/after the request. Actual
+entry centres establish real consumed engine P1 input at that owner; native1277
+remains a post-frame reference, not an observed native callback. No no-dispatch
+inference from a false flag or stale raw execOrder projection is needed.
+
+At origin return the port actually holds rawFrameLatch1299/lastAppliedBoundary
+PRE_MAIN_LOOP; the outside sample is not an inside-service timestamp. At final
+movie7121/cursor1430, port latch/last boundary are **null** and edgeCursor17;
+no clock is filled or fitted. Original raw stage_exit latch is null both before
+and after original report/cleanup; after cleanup framePrepared has become false.
+Both labels remain explicit. Actual original mode is TITLE_CARD in both samples.
+
+This disconfirms a missing/nonexecuted trigger or absent origin-return load in
+this drive. It **does not identify a defective title-release owner**, prove
+native cleanup/X0 writes, explain the full18 comparison errors or qualify return
+all the way to LEVEL. No title34/window/fade/timer/geometry tuning, fake LEVEL,
+early return, SS rebase/skip, fix or additional execution follows. Seg2 row1 and
+SS/fdf remain **UNREACHED**; no readiness/CPU/live4/5/4/wholeSS/whole-route claim.
+
+Original reports retain the earlier bounds: AIZpartial1physics/0animation,
+0warnings/bootstrap,lag0,camera_y4545native01F2/engine01EE; Gumball comparator
+complete1430reference rows,18physics/0animation,0warnings/bootstrap,lag21,
+firstNonCamera1300X0000/2778delta10104. The recent ring has five1380 queue
+field/value entries only; they match retained98161/50308 observations but are
+not the whole18-vector identity set. One AIZ→Gumball gap5390→5570 has0failures.
+All29 current suppressed completion identities were read; no newly fabricated
+full baseline/current29 comparison is claimed.
+
+Root directly read all10 ORIGINAL journal rows and matched XML, corroborated
+the chronology and accepted this bounded handback. Only then were the two
+source diagnostics removed under intended-tree lease: exact3block strip-back
+recovers HEAD runtime920c; the21502-byte temporary test is removed. Nine
+inspected journal/report/sidecar files totaling85122bytes and13 exact classes
+from the temporary owner/test totaling95780bytes are consumed under metadata
+lease **alone**, after original hashes, without archive/copy/pass receipt.
+Plan/frontier preserve compact causal facts/source/command/limits; no new audit
+type or runtime/test code is committed. Main/private config hashes+mtimes,
+all prior refs/native/media remain. Target last compiled3717's diagnostics is
+**not a fresh maintained build after cleanup**; removed owner/helper classes
+must be compiled again by any later actual validation owner. All leases/jobs
+terminal. A normal local docs-only commit accounts R15/R16/R17 before separately
+authorized R18 source preparation; Root owns combined validation/composition.
