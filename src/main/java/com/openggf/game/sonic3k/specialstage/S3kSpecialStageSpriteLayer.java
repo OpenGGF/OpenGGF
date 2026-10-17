@@ -21,7 +21,8 @@ import java.util.Arrays;
  */
 final class S3kSpecialStageSpriteLayer {
     // The stage's loaded ROM art occupies the bottom of its existing range.
-    static final int MASK_PATTERN_BASE = PatternAtlasRange.SPECIAL_STAGE_PLAYFIELD.endExclusive() - 0x2000;
+    static final int MASK_PATTERN_BASE = PatternAtlasRange.SPECIAL_STAGE_PLAYFIELD.base()
+            + PatternAtlasRange.SPECIAL_STAGE_PLAYFIELD.size() - 0x2000;
     private static final int WIDTH = 320, HEIGHT = 224;
     private final boolean[] occupied = new boolean[WIDTH * HEIGHT];
     private final boolean[] highPlane = new boolean[WIDTH * HEIGHT];

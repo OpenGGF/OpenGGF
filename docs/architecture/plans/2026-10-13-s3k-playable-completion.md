@@ -3018,3 +3018,79 @@ EndingProvider/CREDITS_DEMO path. That permitted future phase is not certified: 
 its real timer writer or refuse pricing. No fitted timer adjustment was added. This is local diagnostic
 qualification only; combined guards, Main integration and push remain Root-owned. No broad/full suite,
 performance gain or predictive six-ending/46-fingerprint timing acceptance is claimed for this slice.
+
+
+### Completion of interrupted smoke selection and bounded composition — 2026-10-17
+
+Main `develop` was fetched/fast-forward-pulled under its normal writer lease and remains
+`707b3c2082433c4833da93fbf855a0a748dd58b1`; its foreign submodule dirt and untracked files are preserved.
+The original selection used integration base `d3fb0625e179d00ad6eadebbfcc49d38ecd45c9f`, 3,490 candidate classes
+in 70 ordinary smoke batches. The retained run on `3aad23d38` timed out during batch65; its consumed diagnostics
+were inspected/acknowledged. Completed earlier coverage is retained with the separately recorded focused repair
+qualification, not presented as a clean one-SHA smoke pass. The old partial65 is not added to the complete65 below.
+
+After focused repairs, the exact original candidates65–70 (290 classes; no manual selector narrowing) completed
+on `dc338d3e3`. Each at-most-50 batch used the updated Main queue wrapper with `--normal -Dmse=off -Psmoke`,
+its original `surefire.includesFile`, the original four absolute ROM properties, isolated report/tmp paths and
+`test -B`. `JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl`, null OpenAL, surfaceless EGL and no ambient
+DISPLAY/WAYLAND were retained. Admission/tree leases released between batches; queue waits were not execution
+timeouts. Continuations stopped at each failure for inspection and exact baseline attribution, without rerunning
+completed unchanged batches. This is smoke coverage, never a release-only full-suite run.
+
+| Original batch | Candidates | Tests | Failures | Errors | Skips |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 65 | 50 | 292 | 0 | 0 | 2 |
+| 66 | 50 | 353 | 1 | 2 | 1 |
+| 67 | 50 | 226 | 0 | 0 | 2 |
+| 68 | 50 | 357 | 0 | 0 | 0 |
+| 69 | 50 | 366 | 1 | 0 | 0 |
+| 70 | 40 | 249 | 0 | 0 | 0 |
+
+The six resumed batches total **1,843 tests, 2 failures, 2 errors and 5 skips**. All four failure/error identities
+match Main707 in fresh bounded checks with the same launcher environment/ROM properties:
+
+- `TraceCaptureBootDimensionsTest.realBootKeepsNativeGameplayCameraAndWidePresentationCaches(int)[1]` and `[2]`:
+  `IllegalStateException: Unable to initialize GLFW`. The matched selection includes preceding
+  `TestSurfacelessEglContext`, which clears the inherited EGL property in its existing teardown.
+- `TestCompleteRunAudioCli.freshJvmBootstrapsTheS1ProfileButItsUnavailableDispatcherEmitsNoStandardOutput`:
+  line182 `expected true, actual false`; the child launcher inherits the Java-options notice before its required
+  first-byte diagnostic. Both Main707 and dc338 matched 18 tests / 1 failure / 2 errors / 0 skips in the exact
+  `TestSurfacelessEglContext,TraceCaptureBootDimensionsTest,TestCompleteRunAudioCli` selection.
+- `TestOrdinaryTitleScreenCommandEvidence.masterTitleDrawExpandsBackdropAndFitsActionPaneAtEveryWidth`:
+  `card-row footer hint START at 320`, expected true/actual false. The exact method separately fails once on
+  both Main707 and dc338, with the same assertion type/message and zero errors/skips.
+
+The five skips are explicit opt-in/native-mod prerequisites: Slot glass native oracle (`openggf.test.gl.native`),
+Second Strike HCZ air mod, packaged Second Strike MGZ arena, deterministic BizHawk S1 audio reference and an
+unrequested S1 audio timeline capture. No resumed-batch skip was a missing base ROM. Earlier retained-run skip
+limits remain recorded separately; these five do not erase them.
+
+The shared camera consumer neighbors also pass at `534a69e74`: exact
+`TestS2ObjectWindowing,TestS2ColocatedObjectPlacement,TestObjectManagerExecLoopParity`, 14/0F/0E/0S at
+09:02:37 UTC (Maven26.980s). This supplements the recorded wide LRZ/MHZ fixes and genuine backward-borrow tests.
+
+Root then fast-forwards to `dbae340c26b71ab0770ee0cb3e8e53d134466293`: qualified sampler prerequisite merge
+`957c78a54` contains R1`2f058df9a` and diagnostic`a5470cef2`; the ICZ docs-only `e8d51ddf5` adds the two exact
+unsuccessful natural-death input attempts and preserves that coverage gap. No unqualified HCZ repair or ending
+R2 source is included. R1's 165-pair raw-RGB reference comparison, new-tool focused62 and diagnostic focused211
+are bounded separate qualifications with their exact source identities above. Root independently inspected
+native poll6143 and engine outer6144; a temporary lossless PNG view of the PPM was deleted after viewing.
+
+Fresh combined guards on this composition are pending. Main integration, packaging, push and accounted cleanup
+are not yet claimed. Strict AIZ/HCZ frontiers, ICZ natural death/respawn/rewind, ending/PAL/PCM/timing breadth,
+SAT/scanline capacity and other documented parity limits remain open.
+
+
+Fresh combined guards completed on `dbae340c2` plus this prose: session20097, terminal1 at 09:43:10 UTC,
+Maven5m14s, **715 tests / 6 failures / 1 error / 0 skips**. This is a complete red guard result, not a pass.
+Two findings belong to this delivery: FadeManager's new white-fade rule lookup crosses from graphics into
+game/session orchestration; and the virtual-pattern guard rejects the special-stage mask initializer.
+The mask ID was already derived from `SPECIAL_STAGE_PLAYFIELD.endExclusive() - 0x2000`, rather than a literal
+ID. The guard recognizes only `.base()` initializers; the equivalent `base() + size() - 0x2000` preserves
+exactly the same `$E000` start and 8192-slot bounds without changing the guard or public atlas registry.
+The original red guard is its regression witness; focused verification is pending.
+
+The white-fade ownership repair is isolated in the existing diagnostic composition tree. Main707 matched
+`TestArchUnitRules,TestProductionSingletonClosureGuard` is queued once to attribute the remaining MenuAudioProbe,
+HubMusic and frozen-store findings by exact identity; no baseline result is inferred yet. Root integration,
+packaging, push and cleanup remain pending. No full suite or performance acceptance is claimed.
