@@ -179,6 +179,135 @@ class SnapshotPolicyTests(unittest.TestCase):
                     self.assertNotEqual(0, result.returncode, result.stdout)
                     self.assertIn(expected, result.stdout)
 
+    def assert_api_commit_policy(self, expected):
+        message = self.root / 'api-message.txt'
+        message.write_text('chore: candidate API check\n\n' + '\n'.join(
+            key + ': n/a' for key in ['Changelog', 'Guide', 'Known-Discrepancies',
+                                     'S3K-Known-Discrepancies', 'Agent-Docs',
+                                     'Configuration-Docs', 'Skills']) + '\n')
+        for command in self.policies(self.base):
+            with self.subTest(implementation=command[0]):
+                result = subprocess.run(command + ['commit-msg', str(message)], cwd=self.repo,
+                                        text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                if expected is None:
+                    self.assertEqual(0, result.returncode, result.stdout)
+                else:
+                    self.assertNotEqual(0, result.returncode, result.stdout)
+                    self.assertIn(expected, result.stdout)
+
+    def check_api_source_change(self, old, new, expected):
+        path = 'src/main/java/example/Rules.java'
+        self.write(path, old)
+        self.base = self.commit('existing candidate API declaration')
+        self.write(path, new)
+        self.assert_api_commit_policy(expected)
+
+    def test_record_preset_initializer_and_implementation_bodies_do_not_require_pin(self):
+        old = """@ModApi
+public record Rules(int value) {
+    public static final Rules STOCK = new Rules(
+            1);
+    static { if (true) { configure(1); } }
+    public Rules { if (value < 0) { throw new IllegalArgumentException("old"); } }
+    public int twice() { return value * 2; }
+    private static void configure(int n) { }
+}
+"""
+        new = old.replace('            1);', '            2);').replace('configure(1)', 'configure(2)')
+        new = new.replace('"old"', '"new"').replace('value * 2', 'value + value')
+        self.check_api_source_change(old, new, None)
+
+    def test_actual_game_rules_preset_initializer_change_does_not_require_pin(self):
+        old = (ROOT / 'src/main/java/com/openggf/game/rules/GameRules.java').read_text()
+        begin = old.index('public static final GameRules SONIC_3K =')
+        new = old[:begin] + old[begin:].replace('                    false,',
+                                                '                    true,', 1)
+        self.assertNotEqual(old, new)
+        self.check_api_source_change(old, new, None)
+
+    def test_record_initializer_lambdas_arrays_and_multiple_fields_keep_only_declarations(self):
+        old = """@ModApi
+public record Rules(int value) {
+    public static final java.util.function.IntSupplier FN = () -> { return 1; };
+    public static final int[] ARRAY = { 1, 2, 3 };
+    public static final int FIRST = call(1, 2), SECOND = 3;
+    public static final Object OBJECT = new Object() {
+        public String toString() { return "old"; }
+    };
+}
+"""
+        new = old.replace('return 1;', 'return 2;').replace('{ 1, 2, 3 }', '{ 3, 4 }')
+        new = new.replace('call(1, 2)', 'call(4, 5)').replace('SECOND = 3', 'SECOND = 9')
+        new = new.replace('"old"', '"new"')
+        self.check_api_source_change(old, new, None)
+        self.write('src/main/java/example/Rules.java', new.replace(', SECOND = 9', ''))
+        self.assert_api_commit_policy('candidate signature pin')
+
+    def test_record_literals_cannot_hide_following_public_declarations(self):
+        old = '''@ModApi
+public record Rules(int value) {
+    public static final String URL = "https://example.invalid/{/*";
+    public String text() { return """
+        // text, not a comment: { }
+        /* still text */
+        """; }
+    public int size() { return 1; }
+}
+'''
+        self.check_api_source_change(old, old.replace('still text', 'different text'), None)
+        self.write('src/main/java/example/Rules.java', old.replace('int size()', 'long size()'))
+        self.assert_api_commit_policy('candidate signature pin')
+
+    def test_nested_interface_implicit_public_method_still_requires_pin(self):
+        old = """@ModApi
+public record Rules(int value) {
+    public interface Nested {
+        int size();
+    }
+}
+"""
+        self.check_api_source_change(old, old.replace('int size()', 'long size()'),
+                                     'candidate signature pin')
+
+    def test_class_multiline_initializer_does_not_capture_following_private_body(self):
+        old = """@ModApi
+public class Rules {
+    public static final Rules STOCK = create(
+            1);
+    private void hidden() { publicLookingCall(1); }
+    public int value() { return 1; }
+}
+"""
+        self.check_api_source_change(old, old.replace('            1);', '            2);')
+                                     .replace('publicLookingCall(1)', 'publicLookingCall(2)')
+                                     .replace('return 1', 'return 2'), None)
+
+    def test_record_public_declaration_changes_still_require_candidate_pin(self):
+        old = """@ModApi
+public record Rules(int value) {
+    @Deprecated
+    public static final Rules STOCK = new Rules(1);
+    public Rules(String text) { this(Integer.parseInt(text)); }
+    public int twice() { return value * 2; }
+    public static class Nested { public int size() { return 1; } }
+}
+"""
+        changes = [old.replace('int value)', 'long value)'),
+                   old.replace('int twice()', 'long twice()'),
+                   old.replace('final Rules STOCK', 'final Object STOCK'),
+                   old.replace('Rules(String text)', 'Rules(CharSequence text)'),
+                   old.replace('@Deprecated', '@Deprecated(since="1")'),
+                   old.replace('static class Nested', 'static final class Nested'),
+                   old.replace('public int size()', 'public long size()'),
+                   old.replace('    public int twice() { return value * 2; }', ''),
+                   old.replace('    public int twice()', '    public int extra() { return 0; }\n    public int twice()')]
+        path = 'src/main/java/example/Rules.java'
+        self.write(path, old); self.base = self.commit('existing candidate API declaration')
+        for changed in changes:
+            with self.subTest(changed=changed):
+                self.write(path, changed)
+                self.assert_api_commit_policy('candidate signature pin')
+
     def test_exact_authored_fixtures_pass_both_staged_and_commit_policy(self):
         for source in sorted((ROOT / AUTHORED_ROOT).glob('act*/*.bin')):
             self.write_fixture(source.relative_to(ROOT).as_posix(), source.read_bytes())
