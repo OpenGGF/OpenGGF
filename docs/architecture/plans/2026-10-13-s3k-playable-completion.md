@@ -4295,3 +4295,112 @@ numeric API is therefore a future-consumer dependency, not an observed current
 ending defect. Source: sonic3k.asm CheckLevelForWater/WaterHeight/ending load and
 s3.asm AIZ1_Deform/AIZ1_ApplyDeformWater. Caller-window budgets, Hyper/Kos6+46 and
 PAL/PCM remain open. No JVM, capture or runtime edit was needed for this check.
+
+
+## 2026-10-17 producer-owned ending ApplyDeformation work
+
+This independent unit reuses `$OWNED_TREE` (`t3-fa8da232`) and its own
+`feature/ai-s3k-ending-aiz-deform-work-gpt61` branch, safely fast-forwarded from
+C5 to Root `50a9823c778fef4d3c2af8fed8cbd2c550a01f58` under the intended-tree
+build lease. No owned live job existed before writes. Separate ownership entry
+`gpt61_ending_apply_deformation_work` records this scope and expiry
+2026-10-18T12:57:46UTC. The unrelated TraceChaser checkout remains
+`4fdf73880f93a3172d23bf9e157b15de3c78fc32`, unstaged and untouched. Root owns
+later composition, integration and combined coverage.
+
+**Production boundary.** Ending_BackgroundEvent entry states0/4 now publish one
+ApplyDeformation descriptor at their actual logical event tail: after
+`streamRows` (native Draw_TileRow), before palette cycling (`loc_5AFAA`). This is
+separate from HScroll-bank preparation, so an already-prepared bank cannot
+suppress actual work. The descriptor uses the post-dispatch table `$5B144` or
+`$5B15A`, post-preparation background Y and native224 lines. Entry states8/12/16
+and delayed redraw20/24 remain outside this producer, including a delayed redraw
+that changes the current routine to4. Draw fallback, pure rebuild and repeated
+same-frame preparation publish no extra term; the next actual event does.
+
+The helper authenticates every140 code bytes at `$4F0CE..$4F15A`, including
+operands and the RTS, against original-body SHA-256
+`ea1cce9bf7b73fc63cffc164ebfe10658ec8d25e0a2a78e385c395ce295dafee`.
+The immutable original ROM remains SHA-1
+`CFBF98C36C776677290A872547AC47C53D2761D6`. Both band tables are read from the ROM
+pipeline. Scalar count/frame/table/Y/lines/cycles/qualification are captured in
+existing ending RAM; immutable ROM bindings are cached without per-frame
+allocation. Unsupported code or input refuses qualification with an unavailable
+`-1` term while ordinary scroll output still runs unchanged.
+
+**Independent evidence and limits.** The existing R16 instruction ledger
+(`tools/timing/s3k-instruction-ledgers/deform/deform_cost.py`) supplies63 maintained
+source-oracle vectors: negative/zero/positive Y and both sides of every boundary
+in the two shipped band tables. An independent one-per-line-band hand sum is
+`40+132+112*24+111*10+14+30=4014` cycles. Every supported code byte is mutated
+individually in memory; an operand negative also exercises the production seam
+and preserves the ordinary output/HScroll bank. The original ROM file is never
+modified or copied. R16's retained native evidence for ApplyDeformation covers
+entry/exit, not its input-dependent body; these controls do not add native
+coverage or consume native PCs/counts/trace values at runtime.
+
+This is a closed instruction term, not an available frame/window budget.
+Ending caller, other ApplyDeformation paths, AIZ water/delayed redraw, other
+callers, interrupt acceptance, refresh, Z80 bus, VDP FIFO and DMA freeze remain
+unpriced. C5's1094 AIZ1_Deform callee is preserved separately. No timing consumer,
+manifest, profile, readiness or service count changes. In particular this BG0/4
+unit cannot close the BG16 head19 Sonic3/Tails4 difference, Hyper/Kos6+46 or
+PAL/PCM. The existing late +2 Sonic/team RGB residuals remain open.
+
+**Commands and observed results.** Commands ran from the owned tree using the
+current Main absolute wrapper, Java25, normal admission, surfaceless EGL, null
+OpenAL and no ambient display. `OGGF_MAIN`/`OWNED_TREE` below are absolute original
+checkout placeholders; all three original ROM paths were supplied and their
+SHA-1 identities verified. Sources stayed frozen while each job ran.
+
+```bash
+cd "$OWNED_TREE"
+Q=(env -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH
+   EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null
+   JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4
+   python3 "$OGGF_MAIN/tools/testing/maven_queue.py"
+   --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl
+   "-Dsonic1.rom.path=$OGGF_MAIN/s1.gen"
+   "-Dsonic2.rom.path=$OGGF_MAIN/s2.gen"
+   "-Ds3k.rom.path=$OGGF_MAIN/s3k.gen")
+"${Q[@]}" '-Dtest=TestS3kEndingApplyDeformationWork#actualEventPublishesApplyCallEvenWhenTheScrollBankIsAlreadyPrepared' test -B
+"${Q[@]}" '-Dtest=TestS3kEndingApplyDeformationWork,TestS3kEndingApplyDeformationCycles,TestS3kEndingAizDeformWork,TestSwScrlEnding,TestSwScrlEndingResources' test -B
+"${Q[@]}" '-Dtest=TestS3kEndingApplyDeformationWork,TestS3kEndingInitialBackground,TestS3kEndingSceneState,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' test -B
+"${Q[@]}" -Pguards '-Dtest=TestArchitecturalSourceGuard,TestHardwareTimingAuthorityGuard,TestRewindArchitectureGuard,TestTraceReplayInvariantGuard,TestTraceHydrateSwitchDefault,TestZoneEventRewindSchemaGuard,TestRewindCoverageGuard,TestHelperStateRewindCoverageGuard' test -B
+```
+
+- Old-red64353: terminal1 at13:01:18UTC, **2/2F/0E/0S**, Maven75s, wait0s.
+  Before the production hook, both actual event states expected count1 and
+  observed0. These were assertion failures, independent of a long ending route.
+- First focused67382: terminal1 at13:05:16UTC, **33/0F/2E/0S**, Maven74s,
+  wait0s. All21 cost/auth/C5/scroll cases and10 owner cases passed, including
+  both twice-recreated worlds. Only the two final full-tick steps errored:
+  manually advancing the fixture Level_frame_counter conflicted with initial
+  Process_Sprites epoch `expected1/0/1, received1/1/1`. Invalidating the prepared
+  bank cache instead fixes the fixture without advancing production clocks;
+  no runtime source changed. This was a fixture error, not a gameplay failure.
+- Final focused14976: terminal0 at13:06:56UTC, **87/0F/0E/0S**, Maven29.078s,
+  wait0s: corrected owner12, initial background10, scene state5 and mandatory
+  S3K60 (the LevelLoading selector resolves both36-case and7-case classes).
+- Guards5753: terminal0 at13:08:42UTC, **132/0F/0E/0S**, Maven32.515s, wait0s:
+  source72, authority25, rewind architecture4, trace invariant10,
+  hydrate-default1, zone schema18, world coverage1 and helper coverage1.
+
+Final bounded coverage is **108 focused +132 guards**, reusing the21 unchanged
+passing focused cases without repeating them. Both declared BG0/4 fixtures
+force object recreation, compare every registered world snapshot key immediately
+after restore, and repeat the same six-frame forward state twice, including the
+live descriptor. They are phase controls, not cold routes or character breadth.
+Independent read-only source review found no material issue; it did not execute
+the tests or establish additional runtime coverage.
+
+Final executable/test identity is base `50a9823c` plus path/NUL/content of the
+six owned inputs in this order: Sonic3kEndingEvents, EndingZoneRuntimeState,
+S3kEndingApplyDeformationWork, TestS3kEndingApplyDeformationWork,
+TestS3kEndingApplyDeformationCycles and
+`src/test/resources/timing/s3k-ending-apply-deformation-r16-v1.txt`.
+SHA-256: `207f0b23cb192d7b0c7b3657329e8db9e09b0fdba4ad26037ab4ae68e91653fd`.
+No executable source changed after qualification. Consumed XML/text diagnostics
+are inspected and removed under `worktree_metadata_slot` alone, with no raw
+archive or validation receipt. No trace frontier moved; no native/media capture,
+broad/full suite, integration or push was performed for this unit.

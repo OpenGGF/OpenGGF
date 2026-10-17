@@ -999,3 +999,31 @@ manifests, readiness or service counts. The common term cannot distinguish the
 native Sonic3/Tails4 service behavior. The four-service production collapse,
 late +2 Sonic/team171/194 RGB residuals, remaining native breadth and6+46 timing
 acceptance stay open. Root owns later composition and combined validation.
+
+
+## 2026-10-17 producer-owned ending ApplyDeformation work
+
+The [bounded BG0/4 producer](../../plans/2026-10-13-s3k-playable-completion.md#2026-10-17-producer-owned-ending-applydeformation-work)
+records the actual event-owned ApplyDeformation call after row streaming and
+before palette cycling, independently of HScroll-bank preparation. Its captured
+descriptor uses the post-dispatch ROM table `$5B144`/`$5B15A`, prepared background
+Y and native224 lines. Complete140-byte callee authentication includes operands;
+unsupported ROM/input refuses qualification without changing ordinary output.
+C5's1094-cycle AIZ1_Deform term remains separate.
+
+Short independent controls cover both declared BG states, same-frame/draw/rebuild
+non-submission, the next logical event,63 R16 source-oracle boundary vectors,
+an independent4014-cycle hand sum, every-byte authentication and an in-memory
+operand refusal. Both states force object recreation and compare all registered
+world state immediately after restore and after two identical six-frame forward
+replays, including live descriptor state. Final108 focused and132 guards pass
+with0 failures/errors/skips; the linked plan records exact commands, source
+identity, old-red assertions and the corrected fixture epoch errors. No route or
+character breadth was added.
+
+Existing native ApplyDeformation evidence covers entry/exit rather than the full
+input-dependent body. This instruction term does not supply caller windows or
+hardware availability, and changes no profiles/manifests/readiness/service counts.
+AIZ water/delayed redraw, other caller costs, interrupt/hardware terms, the BG16
+head19 Sonic3/Tails4 difference, Hyper/Kos6+46 and PAL/PCM remain open. Root owns
+later composition and combined validation; no native/media capture ran here.
