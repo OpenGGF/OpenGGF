@@ -835,3 +835,35 @@ load (14 live frames before the native 22-frame fade-out). Rows still red there 
 not fade timing and are owned elsewhere: the Knuckles act-2 restore at 37130 and the
 LRZ boss sidekick overlap parity at 47471 (rewind-snapshot rows) and solo Tails' SSZ1
 opening camera (behaviour row). No skips.
+
+
+## Native final-scene terrain residency and ScreenInit clear — 2026-10-17
+
+The original maintained `TestDezIncomingFinalRouteCapture` class is unchanged
+(SHA256 `63ce204f11b62724a6a40c6088fc62a79541362f99d831c959792e76c3ac188b`).
+On base271457 plus reviewed native carry/ScreenInit changes, run54531 completes
+**7/0F0E0S** at21:05:15UTC, queue0/Maven2m11s, JUnit108.6s. This requalifies
+its existing positioned incoming320/800, cold soloSonic320/Tails320/Sonic800,
+ordinary team and emerald-team cases with all original death/phase/end/replay
+assertions active. Earlier128-only and known16+128 candidates both had five
+deaths (solo60811/Tails67976/wide60189/incoming16647/16652); they are historical
+failed epochs, not remaining failures of this tested composition. No movie changed.
+
+Independent short controls qualify public DEZ2->final native fresh continuation:
+all actual ROM128 bytes, target-written414 known16 groups, retained414..765
+groups and final target collision `$09CFC0/+1`, with unknown capacity distinct
+from native zero writes. Cold/manual/nonmatching/REQUESTED-prepared negatives
+remain explicit; no independently executed LOADING-prepared negative is claimed.
+Captures/replays begin after the intentional fresh-load history reset.
+
+Separate first-production-ScreenInit cold/public-continuation controls authenticate
+the complete ROM clear and preserve all meaningful prefix/resources. Two forced
+world recreations/forwards and a declared legitimate later BGedit/idempotence
+control precede the final full `$FF80F8..$FF8FFF` clear assertions. Actual old-red
+76475:2intendedF at FF80FF; affected74516:122pass/0skips including15ScreenEntry
+cases and all `$F08` assertions; fresh5039:5exactsource/APIguardspass.
+
+Four native alias-word writes remain separate; definition0 emptiness and native
+route descriptor/pixel/clock equality are unproven. No new route product, native
+capture, broad/full suite, campaign or Hyper/Kos budget qualification follows.
+[Source hashes, exact commands and failed hypotheses](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#dez-screeninit-unused-encoded-layout-owner-source-and-independent-red-design--2026-10-17).

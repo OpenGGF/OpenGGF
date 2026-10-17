@@ -4595,3 +4595,735 @@ exact compiled adapter/instrumented outer class and owned raw JSON/XML/text are
 removed under the normal intended-tree/metadata leases. No archive is created.
 The final change is documentation only; full campaign completion/native parity,
 regression ancestry and Root smoke/delivery remain open. No live R16 jobs remain.
+
+
+### DEZ final fresh-continuation resident definitions — 2026-10-17 source handback
+
+Owned fa8 source0c7d9f20dea96eb91765ca1a1e6709cac35c4fe3 retains unknown
+TraceChaser4fdf/private exact Main config/kernel16b/warning53d. Relative Root02b,
+production differences are HCZ skim and the unused Kos kernel; DEZ/layout/resource
+sources are identical, not an identical whole-source fingerprint. Root's actual
+Main803 baseline8712 selected the same two ordinary solo/team DEZ incoming-final
+methods and passed2/0F0E0S at16:58:34UTC,queue0/Maven57.117s (XML inspected and
+consumed by Root). The composed broad smoke reports seven DEZ errors, not seven
+new independent diagnostic runs.
+
+One temporary passive witness59905 selects only
+`TestDezIncomingFinalRouteCapture#coldOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding+coldOrdinaryTeamClearsHandsCoreAndEscapeShipAndLoadsEnding`.
+It keeps the original boot/movie/input/rewind/draw recipe, adds read-only existing
+exception operands/resource-load bounds and catches/rethrows each first step
+exception. No new API, gameplay write, lookup fallback, observer replacement,
+native/media, new tree/worker or second witness. Current Main absolute wrapper
+from owned cwd, all3 original absolute ROMs, normal lane, single fork/reuse/
+alphabetical, Java25/JTO single surfaceless-EGL token/nullAL/noDISPLAY/WAYLAND,
+unchanged other JVM environment. Build-only61387 test-compile passed0 at17:05:53UTC,
+Maven1m15s. Witness59905 at17:06:37UTC: **2/0F2E0S**,queue0/Maven37.433s/
+JUnit14.030s; XML36205 bytes, no extra journal/archive. These are real unsupported
+memory errors during playable movement, not an independent assertion old-red.
+
+| Original case / movie row | Actual first probe owner | Raw word X/Y | FG row index / pointer / unsigned column | Layout byte / selected resident word |
+| --- | --- | --- | --- | --- |
+|solo60320|CalcRoomInFront→ground wall|2E82/00D5|0004/809C/005D|FF80F9=90 → FF4850 (definition144,offset50)|
+|team48730|airborne floor scan|299C/0109|0008/80B0/0053|FF8103=B8 → FF5C02 (definition184,offset02)|
+
+Both use wrapFFFF/rowMask007C, live zone23/0,blockCount29/chunkCount414,
+pendingFreshBoundary=false; LF9316/8404 respectively. Catch-time P1 is2E62/CD
+with velocity600/0, and29C5/CE with3FC/0, both grounded. The team's actual
+playable identity inside the airborne probe is **not sampled**; do not substitute
+that catch-time P1 state or infer P2. Selected resident word contents are not
+inferred from exceptions.
+
+For each actual route, the resource producer logs DEZ ROM1D5068 write8000 bytes
+into an empty initial definition extent; DEZ2 writes the same8000 with retained8000.
+The final scene ROM1DC24E writes0E80, but gets retained0000, leaving29 definitions.
+Native Find_Tile_FG19175–19200 performs unsigned word arithmetic and preserves
+D1FFFF through ChunkAddrArray. Width wrapping/clamping/zero/known-count fallback
+would hide the missing owner. Native loc_7F310 (169866–169874) saves Act3 counters/
+shield then StartNewLevel1700. StartNewLevel180728–180735 changes IDs/restart/
+checkpoint flags; it does not clear the definition RAM. LoadLevelLoadBlock2
+loc_1C30E writes atFF0000 and leaves the unwritten tail. Clear_DisplayData1391–1420
+clears VDP/sprite/hscroll ranges, not FF0E80–7FFF; Act3 skips the title loop.
+
+The exact engine seam is DezEndBossInstance97→LevelContinuationCarry.request,
+whose matching request becomes LOADING at LevelManager3854 before synchronous
+load; loadCurrentLevel3604 discards prepared builds. Sonic3k.captureLevelBuildInputs
+currently seeds128 definitions only for an executing seamless request. Proposed
+bounded next unit: permit the existing immutable stock-ROM definition seed for
+that validated matching native fresh-continuation phase/target, no all-livelevel
+fallback or cold/manual/async/prepared widening. ICZR11 independently owns16pattern
+carry for synchronous transitions; coordinate the shared Sonic3k.java seam before
+editing. No generic RAM/public snapshot/API change is proposed.
+
+Independent short red-first design: load real DEZ2, independently decode1D5068
+with the existing ResourceLoader and prove8000 extent/selected source words;
+decode1DC24E and prove0E80 extent. Use the production continuation request and
+actual fresh-load boundary, then assert replaced prefix plus retained ROM tails
+and both unsigned FG queries. A normal cold/manual load must not borrow arbitrary
+live definitions. Only after the intentional history reset, force recreation and
+twice-replay the captured world. This is a proposal, **not executed evidence**.
+No runtime extension or additional selection follows this handback. Root owns
+coordination and later acceptance; existing ending6+46/Hyper/PAL/PCM remains open.
+
+
+### DEZ128 guarded continuation candidate and later death limit — 2026-10-17
+
+Root authorized the single128 producer repair after the preceding source handback.
+New local branch `bugfix/ai-s3k-dez-final-definition-residency-gpt61` retains0c7d9f20d
+and prior refs/config/native dirt. Short independent64188 on unchanged runtime
+at17:14:22UTC is genuine **1/1F0E0S**,queue0/Maven1m14s/JUnit0.610s: actual ROM
+streams independently decode8000/0E80, every source definition matches, and the
+public continuation request plus actual fresh boundary reaches23/0; the intended
+retained-tail assertion fails because only29 definitions remain. No private phase,
+health/timer/routine/slot writes or long-route prerequisite.
+
+Frozen candidate changes only Sonic3k.java's128 construction seed. A private
+synchronous-capture boolean is true only at the public synchronous load; prepared
+and generic construction calls pass false. Existing executing seamless behavior
+is unchanged. The additional admission requires existing validated LOADING native
+continuation, exact current-manager destination matching requested levelIndex,
+and existing stock-ROM source identity; the existing immutable seed clone and
+ResourceLoader prefix/tail semantics do the work. No16pattern carry, global bus,
+new API/snapshot/ContinuationCarry shape, cold/manual/async/prepared widening or
+route-keyed fallback. Runtime SHA256
+`2e1a580f6d0d70fd2e4397599418a5807c4ce74ea7e118fc124d67d4e088ecab`,
+new TestS3kNativeContinuationDefinitionResidency SHA256
+`6cd8fb960e1913b64950e1c77ba98791e4697d0b345dfea0d55d041c394a7d49`.
+Root independently reviewed these exact bytes: no material finding; reviewer
+executed no tests. The REQUESTED prepared negative is not an independent LOADING
+prepared test; exclusion in that phase has source-review support, not observed
+phase-specific test coverage.
+
+Focused32851 at17:16:44UTC passes99/0F0E0S,queue0/Maven1m23s:12 selectors match
+13 classes (both level-loading classes). New3 methods check all8000 ROM destination
+bytes, prefix replacement/tail144+184/actual unsigned word probes, cold/manual/
+nonmatching/REQUESTED-prepared exclusion, and two forced-recreation full-registry
+forward continuations after the intentional fresh-load history reset. These are
+short declared continuation inlets, not a cold whole route or replay across a
+retired history. Fresh authority/rewind architecture5109 passes29/0F0E0S at
+17:17:32UTC,queue0/Maven28.671s. All XML for these epochs is inspected/consumed.
+
+One required original entire TestDezIncomingFinalRouteCapture1616 at17:19:26UTC
+is **7/5F0E0S**,queue0/Maven1m36s/JUnit73.454s. Original movies, bootstrap, strict
+assertions and replay windows are unchanged; no instrumentation or second witness.
+No unsupported-definition exceptions remain, but five actual later deaths block
+qualification:
+
+| Case | Actual result |
+| --- | --- |
+|coldOrdinarySoloSonic|death60811|
+|coldOrdinarySoloTails|death67976|
+|coldWideOrdinarySoloSonic|death60189|
+|incomingFinalFight320|death16647|
+|incomingFinalFight800|death16652|
+|coldOrdinaryTeam|pass|
+|coldEmeraldTeam|pass|
+
+These five deaths are a new observed behavior boundary, not parity acceptance
+or a proven native outcome. Main8712's matched solo Sonic passes; no equal-window
+native death/terrain attribution is available. Stop all additional probes, tests,
+runtime extension and input tuning. Keep frozen source and report the precise
+limit to Root before normal runtime commit/disposition; no donor/viewport/native
+presentation/whole-route coverage is newly certified for the failed rows. Root's
+other baseline/broad/ICZ jobs remain separate; ending6+46/PAL/PCM stays open.
+
+
+### DEZ solo death witness stopped on observer error — 2026-10-17
+
+Root authorized one passive original solo-Sonic method to observe the five-route
+candidate's later death; it did not authorize an automatic retry after a post-boot
+observer failure. Production2e1a580f and maintained residency test6cd8fb96 stayed
+frozen. Temporary test-only code forwarded the original production step and its
+existing rewind-tail helper once, and delegated every CollisionTrace callback.
+It used pure getter projections, guarded null-spawn positions and never polled
+isDestroyed or wrote gameplay values. A rolling64 actual-step window was limited
+to input60300–60812 and at most10MiB; there was no native/media/variant/new tree.
+
+Build-only39825 passed at17:33:25UTC,Maven22.876s. One original selector
+`TestDezIncomingFinalRouteCapture#coldOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding`
+with the preceding exact environment/flags returned **1/0F1E0S** at17:34:17UTC,
+queue0/Maven32.343s/JUnit9.566s. The agent observer incorrectly dereferenced a
+legitimate null SensorResult in onTerrainProbeResult, during a ceiling callback
+in the original checkpoint60413 forward helper at submitted input60422.
+This is a diagnostic NPE, not a gameplay or ROM discrepancy. The preceding
+callback was delegated before the NPE; resource-finally restores the observer.
+No correction or second witness was run.
+
+The inspected1355463-byte journal retains64 actual steps60359–60422, with zero
+omitted callbacks and no dead=true sample. The final step is **incomplete**:
+P1 before3003/D2,velocity0000/F980,air/rolling,status06,routine2,rings12; after
+exception unwind3002/CB,velocityFFE8/F9B8,status07,routine2,still alive/unhurt.
+Camera2EE3/20,copy2EE3/22,boundsY20,zone23/0,generation2; LF9417→9418,
+objectLF9418,VInt60398,timer34159. Do not treat that unwind state as a completed
+row or claim a private jump/kill-entry observation. Original60811 death was not
+reached, so its actual native writer and route-authorship attribution remain
+**unresolved**. The smallest remaining question is still which real owner first
+changes Sonic's safe terrain/support path before that death; no new fix follows
+from this aborted observer. Prior independent99+29 passes and original7/5F
+remain separate valid epochs, with five routes blocking qualification.
+
+Temporary test source/helper/classes and inspected journal/XML are removed after
+these facts; the four accounted candidate/source/docs WIP paths are retained.
+No normal runtime commit, input retiming, wrapping/fallback or further execution.
+
+
+### DEZ explicit replacement witness identifies pit writer — 2026-10-17
+
+After the accounted41244 STOP, Root separately authorized one replacement of the
+same original solo-Sonic selector, not an automatic retry. Temporary logging was
+limited to rising setDead(true), applyDeath's existing cause, one computed shared
+touch-hurt site, and a logging-only submitted-input stamp around the original
+outer/replay steps. There was no sensor callback, object dump, gameplay mutation,
+new API, changed input, native capture or new route. Temporary source fingerprints
+were recorded separately from unchanged candidate2e1a580f/test6cd8fb96.
+
+Build-only96384 passed at17:42:57UTC,Maven1m15s. Original selector
+`TestDezIncomingFinalRouteCapture#coldOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding`
+using the preceding exact normal wrapper/environment returned **1/1F0E0S** at
+17:43:42UTC,queue0/Maven32.543s/JUnit10.572s (case10.254s). The original strict
+`death at60811` assertion remains the failure. No diagnostic error occurred.
+
+The actual call chain at submitted input60811 (direction/action masks0/0) is
+applyDeath(PIT) -> rising setDead(true), called by applyPitDeath from
+PlayableSpriteMovement.doLevelBoundary:3730, modeAirborne:1087, then the normal
+movement dispatch/SpriteManager/GameLoop/session step. Setter/applyDeath line
+numbers include temporary logging and are not durable source anchors. At the
+writer P1 centre13600/262,sub0/47104,x/y/ground velocities0/2016/0,
+air/rolling/onObject/hurt=true/false/false/false,rings12,iframes0,
+routineOverride=null,controls=false/false. Physical camera13584/32,copy13584/34,
+Y bounds32/32/32/32. The gated shared touch-hurt log count is zero.
+
+Native Player_Boundary_CheckBottom through Player_Boundary_Bottom
+(sonic3k.asm:23223–23243) tests the death-plane/reverse-gravity branches, then
+compares player Y against Camera_max_Y_pos+$E0 and jumps to Kill_Character.
+Observed262 exceeds32+224=256. This establishes the engine pit writer and the
+matching native boundary condition; it does **not** establish why Sonic was
+already airborne without safe support, nor prove native outcome/route authorship.
+
+The inspected53547-byte scalar journal has64 complete actual steps, including
+original checkpoint forward/replay steps: submitted indices are nonmonotonic,
+first retained60793 and last60811, not a contiguous64-input interval. Last normal
+steps60809/60810 end at13591/255,vy1960 and13595/262,vy2016,alive/unhurt/airborne,
+no support,rings12. Step60811 ends13600/255,vy-1736,dead,after the normal kill.
+Level23/0,generation2,timer34159; its LF9806->9807,objectLF9807->9808,
+VInt60787->60788 are distinct clocks. No earlier support-loss owner is observed.
+
+Temporary sources/helper/classes and inspected journal/XML are removed after
+these durable facts. Four accounted WIP paths remain; source2e1a580f/test6cd8fb96
+are exact. No qualified runtime commit, fix, extra selection or parity claim:
+99+29 controls remain separate, and the original7-case epoch still has five deaths.
+The remaining causal evidence gap is the earlier loss of safe terrain/support,
+not the identity of the now-observed pit death writer. Stop and hand back to Root.
+
+
+### DEZ coherent known16/128 composition and independent old-red — 2026-10-17
+
+The separately authorized source-only dependency check confirms missing consumers,
+not the60811 PIT's earlier safe-support cause. On immutable original ROM, DEZ2
+LLB23 reads16 sources1D1DD6(15E0)+1D7E3A(0210):17F0 bytes/766 known groups.
+Final LLB46 source1D899C writes0CF0/414 groups. Retaining128 source1D5068's8000
+bytes beyond final1DC24E's0E80 prefix leaves2484 references to352 distinct groups
+19E..2FD outside the final16-written prefix,587 with solidity bits. All352 groups
+are nonzero known predecessor ROM words within766, never inferred buffer capacity.
+Final's own29 definitions have no references beyond414. Target LoadSolids owns
+indices independently: SolidIndexes DEZ2=09B1C0/DEZ,final=09CFC0/HPZ,interleaved.
+Retained128 byte3DE8,F1B0 references1B0 with sourcewordsD08E/D08F/C882/C881,
+targetcollision68/68 versus predecessorFF/FF; oldbase capacity was four zero
+pattern words/zero indices.156 solidity-bearing missing references have nonzero
+target indices. This is a semantic dependency, not evidence it closes any route.
+
+Under the owned writer, preserved33530-byte helper held only the three owned
+tracked diffs and exact newtest. FF0c7d9f20d->Root271457b316145fbc8549ad7fd09cd71007d333cb,
+which includes qualified ICZ70e8d10168d92cc30781e4072dc456f9d48093b8. Sonic3k128
+patch applied cleanly by three-way; exact owned append-only doc suffixes were
+appended to complete newRoot streams, and original6cd8 test restored exactly.
+No whole old Sonic3k overwrite, Root WIP adoption, rebase, new tree or Main write.
+Hooks installed; private regular config exact Main bytes and native4fdf preserved.
+Source hashes distinguish old2e1a base results from this composed source.
+
+One new independent public DEZ2->final request/fresh-load method ran on composed
+70e+128-only runtime3791dedef6379cc30bb87c7e08a85c6f2f4a5dd10c4f772dfd34c85fe1996c0c,
+testcc98d6ab40199e1d798e4ed4becef8c53b108d66a2053f63527a16dc3910ba11:
+`TestS3kNativeContinuationDefinitionResidency#actualFreshContinuationRetainsKnownPatternTailWithTargetCollision`.
+Exact preceding normal wrapper/environment/three original absolute ROMs, test -B,
+no profile, no altered movie or capture.20783 returned **1/1F0E0S** at17:52:33UTC,
+queue0/Maven1m10s/JUnit0.556s(case0.302s). All766 predecessor words and source-known
+bound pass; actual fresh load and all414 target-written groups/current collision
+indices pass. Intended retained1B0 firstword then fails expectedD08E/actual0000.
+No prerequisite failure/error/skip. Old-red proves actual missing known16 tail,
+not route outcome. Later alltail assertions and target unknown766/767 are beyond
+that failure; source unknown766 was checked before the load.
+
+Smallest private correction memoizes existing seamless OR validated matching
+synchronous LOADING eligibility once in LevelBuildInputs, uses it for both128
+seed and the synchronous known16 capture. Existing prepared/default build path
+still passes ResidentChunkPatterns.EMPTY; no async/cold/all-live fallback,
+predecessor collision copy, public API or placeholder change. Target ROM prefix
+wins and qualified ICZ70e sparse/provenance implementation supplies known tail.
+Frozen sourceffc6eba8fef3bd482f6390b7cba88677726ecb50e3db859c5dc78b418d357792,
+test397cf71cbc728a42ec3464b08fffb410d02ce923410e64fa5623c1b447c71555 sent to Root
+before any corrected execution. Existing two post-reset world recreation/forward
+cycles now explicitly check known1B0 patterns/target indices and unknown766 too.
+Root owns final predicate review; corrected checks and seven-route qualification
+are not yet run/accepted. Prior99+29 and7-with-five-deaths are separate oldbase
+epochs. No normal runtime commit or PIT/route acceptance follows from this red.
+
+
+Root reviewed frozenffc6eba8/397cf71c, no material finding, then authorized one
+focused selection.44773 stopped before any test at17:55:28UTC,queue0/Maven52.778s:
+the new private record eligibility argument was missing in documented presentation-
+only buildDetachedLevel. This was an agent compiler prerequisite error, not a
+runtime/test result. Root authorized appending false only to that ROM-only caller;
+readchecked source36381b201a3659f7b8c16b09fec64a489c03862644235491e8f0cefa1caee519,
+test397cf71c and eligibility unchanged. One same-selection resubmission15490
+returned **109/0F0E0S**,17selectors/18actualclasses at17:57:37UTC,
+queue0/Maven1m21s. All18 XML inspected, no skips; frozen source/test hashes match.
+
+Selection under the preceding exact normal wrapper/environment, test -B:
+
+```text
+-Dtest=TestS3kNativeContinuationDefinitionResidency,TestSonic3kResidentChunkPatterns,TestS3kIczRetainedChunkHandoff,TestS3kIczAct1TransitionHeadless,TestSonic3kLevelOverlayRewindIsolation,TestSonic3kDeferredLevelResourceLoading,TestLevelManagerDeferredResourceLoading,TestS3kDezSeamlessActChange,TestLevelContinuationCarry,TestFreshLevelBoundaryRewindHeadless,TestGameLoopFreshLevelHandoff,TestS3kFreshLevelRngState,TestS3kNativeWordLayoutResidency,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+```
+
+Actual counts: newDEZ4,resident3,ICZretained1,ICZAct1transition1,overlay3,
+deferred6/9,DEZtransition1,carry7,freshrewind2,handoff4,RNG4,nativeword4,
+S3K4 AIZ8/LevelLoading36+7/bootstrap6/decoding3. Existing all8000/prefix/nativeword
+probes and cold/manual/nonmatching/REQUESTEDprepared negatives pass. New method
+checks target414 and retained352 groups against ROM/current collision, preserving
+unknown766/767. Two postfresh-reset strict recreated-world/forward cycles also
+check retained1B0/currentcollision and unknown766. The earlier REQUESTEDprepared
+case is still not a distinct LOADINGprepared negative; source synchronous gate
+and existing private defaultbuild EMPTY review bound that exclusion. No claim of
+cold-route/reverse history continuity or full donor/viewport breadth from these
+component tests. Results handed to Root before any seven-route requalification;
+no original route, source/APIguard, newnative/media or broad selection run here.
+Inspected20783 diagnostics and33530-byte composition helper were consumed after
+durable facts under metadata lease alone; no patch/raw archive or pass cache.
+
+
+### DEZ composed known16/128 seven-route qualification remains red — 2026-10-17
+
+After actual109focused0skip, Root separately authorized ONE original entire
+`-Dtest=TestDezIncomingFinalRouteCapture` selection with preceding exact normal
+wrapper/environment/three absolute original ROMs, test -B, singlefork/reuse/alpha.
+No temporary observer, diagnostics, movie/controller/input/assertion changes,
+newnative/media or broad run. Frozen Root271457+runtime36381b20/test397cf71c.
+73020 returns **7/5F0E0S** at18:00:36UTC,queue0/Maven1m35s/JUnit72.540s.
+All seven XML case results are inspected:
+
+| Original case | Composed actual result | Case seconds |
+| --- | --- | --- |
+|coldOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding|death60811|7.564|
+|coldOrdinarySoloTailsClearsAllFinalPhasesAndLoadsEnding|death67976|10.955|
+|coldWideOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding|death60189|29.329|
+|incomingFinalFightRestoresAndReplaysEveryPhase320|death16647|1.052|
+|incomingFinalFightRestoresAndReplaysEveryPhase800|death16652|1.171|
+|coldOrdinaryTeamClearsHandsCoreAndEscapeShipAndLoadsEnding|pass|11.202|
+|coldEmeraldTeamClearsBothActsFinalFightAndDoomsday|pass|10.992|
+
+These are the same five exact death assertions/indices and two passes as128-only
+1616, with no errors/skips/newunsupportedmemory exception. Independent ROM-backed
+known16/targetcollision/provenance correction therefore does **not** move the
+observed route death endpoints. No claim of whole state/vector equality between
+epochs follows from identical assertions. Main803 matched8712 soloSonic+ordinaryteam
+actually passed2/0F0E0S at16:58:34UTC; that material baseline remains separate,
+not an identical whole source fingerprint. No native route/death acceptance is
+inferred. Root reviewed source and independent controls; five route failures
+still block normal runtime qualification/commit/integration.
+
+STOP at Root boundary: do not run the conditional five source/API guards (all7
+green prerequisite unsatisfied), repeat109, probe/fix another owner, retime input,
+rerun route/coldcampaign/native/media, or claim60811 support closure. Prior94784
+identifies PIT only; why safe support was lost earlier remains unresolved.
+Inspected73020 XML/text consumed after durable facts under metadata lease alone,
+no archives. Four accounted WIP paths, private exact config, native4fdf and old
+refs retained; no live handle or runtime commit. Root owns next disposition and
+any later current-composition cold campaign requirement.
+
+
+### DEZ matched original-route journals isolate first horizontal difference — 2026-10-17
+
+Root separately authorized ONE baseline and ONE candidate original maintained
+soloSonic selector, sequentially in owned fa8. Baseline8030832d2ab6080e5324cdfe35e971677fd97b41
+overlaid only reviewed helperadcb0ef1/test13174fe2; all other tracked main/test
+sources exactly803. Candidate271457b316145fbc8549ad7fd09cd71007d333cb retained
+runtime36381b20/residencytest397cf71c and pre-run audit a270ffd1/Plan de1a47a6,
+with identical helper/test bytes. Ordered portable pair b052d537. Stripping marked
+blocks restores the entire original class SHA25663ce204f11b62724a6a40c6088fc62a79541362f99d831c959792e76c3ac188b
+on both pins. No controller, boot, step/draw, checkpoint, 45-forward/replay, two
+restores or original assertions/end-helper order changed. Native4fdf/private
+regular config/Main bytes+mtime and old refs preserved. No native recording.
+
+Both actual commands from fa8 used the following exact environment/selection;
+only the two diagnostic property values below differed. No profile or separate
+build; compiler ran inside each sole normal queued lifecycle.
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH \
+ EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null \
+ JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+ JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl LUA_BIN=/usr/bin/lua5.4 \
+ python3 ${MAIN}/tools/testing/maven_queue.py \
+ --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+ -Dsonic1.rom.path=${MAIN}/s1.gen \
+ -Dsonic2.rom.path=${MAIN}/s2.gen \
+ -Ds3k.rom.path=${MAIN}/s3k.gen \
+ -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical \
+ '-Dtest=TestDezIncomingFinalRouteCapture#coldOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding' \
+ '-Dopenggf.tools.matchedStateJournal.path=target/dez-main803-matched-state.bin' \
+ '-Dopenggf.tools.matchedStateJournal.source=8030832d2ab6080e5324cdfe35e971677fd97b41+helper-adcb0ef1+test-13174fe2' test -B
+```
+
+Candidate replaces only path with `target/dez-candidate-matched-state.bin` and
+source with `271457b316145fbc8549ad7fd09cd71007d333cb+Sonic3k-36381b20+ResidencyTest-397cf71c+Audit-a270ffd1+Plan-de1a47a6+helper-adcb0ef1+test-13174fe2`.
+Baseline18673 returned1/0F0E0S at19:52:35UTC, queue0/Maven1m29s, JUnit15.964s
+(case15.666s). Candidate48975 returned1/1F0E0S at19:59:27UTC, queue0/Maven1m24s,
+JUnit10.371s(case9.875s): original death60811, no diagnostic/key/cap/passivity error.
+Queue submission is not execution start; exact process launch was not sampled.
+Candidate execution is conservatively inside registry creation19:57:55.795204UTC
+and console finish19:59:27UTC. No second candidate execution or CLI comparator.
+
+Entire candidate was independently parsed/validated before paired comparison:
+36-field schema/header/source/movie binding, 18-class dictionary, exact original
+68-spot key schedule/order, every raw BK2 input, footer/passivity/counts/bytes/cap
+and exact EOF. Baseline67187 observations/passivity, contexts60931/3060/3060/68/68,
+complete=true,9945853B,SHA256cdc2ee0824db0202d9c3c3fe71d65e3de24d0e5c6d040f3e7c564950d2dd41ef.
+Candidate66976/passivity,60812/3015/3015/67/67,complete=false,9914694B,
+SHA2561f9f1c7365da0767f9a2d0443d6d8193c53f954a5b5ebcceb879af5c88ed18c8.
+Root DIRECT independently inspected BOTH original readonly0444 binaries' entire
+header/schema/dictionary/key/order/footer streams and confirmed the common keys
+and differences. These are comparison-only post-step/restore observations;
+complete=true means the unchanged ending helper/assertions returned, NOT that
+every neutral ending-helper frame was sampled or that native parity is accepted.
+
+All66976 common explicit keys match without alignment fitting. The first ANY
+state difference is sequence66458, MAIN outer/submitted60570, raw Right8:
+baseline X31F8/candidate31F5, vx0600/0300, ground0600/0000. Previous60569 all36
+projections equal. At60570 both Y00CD.F800, Xfraction2400, declared flags2
+(OnObj), actual riding class DezFinalArenaFloor/ownslot4. Zone23act0/gen2,
+managerLF9566/OMframe9567/OMVbla60547/power-onVInt60547 are equal. No metadata,
+clock, mode, load, fresh-boundary, logical-input, rings or shield difference
+anywhere in the common prefix. First riding/support projection change is later
+MAIN60577/sequence66465: same floor class, ownslot4/16, both OnObj2; Y205/204
+with same F800 fraction and zero vy. First camera difference is sequence66532,
+FORWARD outer60624+n20/submitted60644, X12905/12909. A later camera difference
+is not the first cause. Both OnObj/same class/slot at60570 does not identify an
+inside writer; no collision descriptor or terrain/solid callback was observed.
+The earlier PIT writer60811 remains downstream, not closed.
+
+After Root acceptance, these durable facts permit consuming both owned original
+binaries under metadata lease alone, with no copy/archive. Inspected candidate
+XML/text already consumed. Restore the maintained test by exact marked stripping
+under source writer, remove only its instrumented outer class, and retain the
+useful engine-facing journal helper source pending bounded promotion. Runtime
+36381b20/residencytest397cf71c/helperadcb0ef1 remain unchanged. These appended
+docs are AFTER the tested frozen epoch; no claim of rerunning new docs/restored
+test, runtime qualification, five-route closure, guard pass or normal commit.
+Next scope is SOURCE/PREP ONLY for actual60569..71 horizontal writer boundary;
+no physics fix, terrain fitting, new execution, seven-case retry or native work.
+
+
+### DEZ actual CalcRoomInFront writer witness, matched prefix only — 2026-10-17
+
+Root reviewed the entire three-file reversible diagnostic source, then corrected
+the captured boot-player identity risk before any execution. Each selected MAIN
+arms the current session.player() field identity; output rechecks that same P1
+and context, pose and copied probe/result projections. Zero owner callbacks is
+explicitly inconclusive/STOP. Final diagnostic APS9f2859e9/Collision3118302f/
+routeTest794918fa, ordered portable0adcd9a40d2155c5ff45ec34dad915baa4f4d53c687078898fab89d8d3f82fa2.
+Marked stripping independently recovers entire original APS838c9252/Collision
+aa075429/routeTest63ce204f on BOTH Main803 and candidate271457. No new runtime
+API/class, CollisionTrace/provider replacement, reprobe or gameplay-value write.
+
+Root separately authorized exactly one BASE and one candidate writer PREFIX.
+The exact prior matched-original command/environment above was retained: normal
+Main absolute maven_queue.py from fa8, three original absolute ROMs, Java25,
+single EGL JVM token plus CLI, surfaceless/nullAL/Lua, DISPLAY/WAYLAND/LD unset,
+fork1/reuse/alpha/no-profile, originalsolo selector. The only diagnostic props:
+`-Dopenggf.tools.dezFirstWriter.path=target/dez-writer-base803.bin`
+`-Dopenggf.tools.dezFirstWriter.source=8030832d2ab6080e5324cdfe35e971677fd97b41+writer-0adcd9a4`
+`-Dopenggf.tools.dezFirstWriter.prefix=true`; candidate changes only path to
+`target/dez-writer-candidate.bin` and source to
+`271457b316145fbc8549ad7fd09cd71007d333cb+Sonic3k-36381b20+ResidencyTest-397cf71c+writer-0adcd9a4`.
+One compiler-inclusive queued lifecycle per arm, no separate build, target copy,
+outer lease or CLI comparator. During BASE all tracked source outside those
+three inserts was exact803; helperadcb retained unchanged. Eight owned candidate
+paths were temporarily preserved, then restored byte-exact under writer after
+BASE, temporary1272400B source snapshot consumed metadata-only. Unknown native
+4fdf/config/Mainmtime/refs preserved. No compiler repair or retry.
+
+BASE16038 returns1/0F0E0S at20:20:24UTC,queue0/Maven1m26s,JUnit9.459s
+(case9.208s). Candidate18206 returns1/0F0E0S at20:26:12UTC,queue0/Maven1m22s,
+JUnit9.187s(case8.934s). These are PREFIX ONLY: original MAIN60569..60571
+steps/draws/per-step assertions run, prior checkpoint windows/replays/restores
+remain unchanged, and static disjointness proves no checkpoint is cut on the
+three keys. Diagnostic return follows original60571 per-step assertions. Full
+route, later60811 death assertion and final ending/helper assertions are
+UNREACHED. These files contain NO clock projection; no previous clock-equality
+claim is transferred as fresh evidence. Queue0 is not a sampled launch time.
+
+Both entire length-prefixed UTF8 streams were validated before interpretation:
+header/source/movie SHA, keys/raw Right8/action0, order, arrays19 inputs/11 result
+(or null marker), counters/passivity/stacks, footer/EOF/1MiB cap. Root DIRECT
+read both single original readonly0444 files in full, every record and stack:
+BASE29747B,SHA256de8bc99e1660f8650ada48f4e4f631bde6a61f8f9c2ee40e47f3234ab8b20998,
+11records/9events,3begins+3actualprobes+3asserts-complete,0changedsetters,9passivity;
+candidate67156B,SHA256811e3dbe70fa513bd5450549e2a59048cf9ebb557bcfe35b84a40531978961eb,
+15records/13events,3begins+3probes+3asserts-complete+4changedsetters,13passivity.
+Footers originalFailure=none,prefixComplete=true,fullFinalAssertions=false.
+
+The first RESULT split is60569, despite equal actual probe inputs and P1 pose:
+BASE distance+19/angle03/tileId0 vs candidate+3/angleFF/tileIdFF. At60570 inputs
+and prepose are still identical; BASE+29/03/0 vs candidate-3/FF/FF. Actual
+candidate setter caller stack is CollisionSystem.applyGroundWallVelocityResponse
+558/559 <- resolveGroundWallCollision426 <- PlayableSpriteMovement.doGroundMove
+3058 <- modeNormal893: vx0600->0300 and g0600->0000, before originalmovement
+produces X31F5 rather than BASE31F8. Both are still OnObj at that boundary.
+60571 ordinary ground acceleration then writes g0->000C and calculateXY writes
+vx0300->000C; its probe0 vs BASE+23 has already-divergent inputs.
+
+The actual one-call inputs at60569/70 are angle0,g/vx0600,vy0,probeModeC0,
+rotatedAngleC0,Direction.RIGHT ordinal3,offsetX10/offsetY0,dynamicY8,predictedDx6/
+Dy0/effectiveDy8,solidity13/top12/lrb13,tunnel/convex/suppressWall0. Result FF is
+not a raw layout/128/16/collision descriptor or proof of native correctness. The
+writer is now observed; which resident terrain definition should feed that scan
+remains unresolved. Do not blank terrain, restore visual-width wrapping, fit
+velocity, infer moving-floor carry or waive the five failed original routes.
+
+After durable facts and Root direct acceptance, restore only the three marked
+diagnostic sources exactly under writer (including original assignments/return),
+preserve four WIP runtime36381/residency397cf/docs plus useful helperadcb, then
+consume BOTH originals metadata-only after hashes, no archive. Normal reports
+already inspected/consumed. Target's last build is candidate+diagnostics, NOT a
+maintained no-observer rebuild. No runtime commit/fix/repeated route follows.
+Next scope is SOURCE READ/PLAN ONLY for actual coordinate->layout128->16 pattern/
+collision-index authority, with a new bounded passive descriptor proposal only
+if existing source/ROM cannot establish the missing actual selection.
+
+
+### DEZ ScreenInit unused encoded-layout owner, source and independent red design — 2026-10-17
+
+SOURCE ONLY after matched writer cleanup; no new compiler/JVM/test/native run.
+Root and an independent read-only worker byte-checked the shipped owner.
+LevelPtrs[46decimal] at ROM0x09D678 is0x000A7F4C(Layout_DEZBoss); exact header
+bytes0014 0008 0004 0004 mean FGwidth0x14(20decimal),BGwidth0x08(8decimal),
+FG/BGheight0x04(4decimal). Native DEZ3_ScreenInit0x05A3DA..0x05A400(exclusive),
+sonic3k.asm120297–120310, uses unsigned mulu.w products0x0050/0x0020, low-word
+addition plus0x0088 =>offset0x00F8. Counter0x0F07 and inclusiveDBF clear0x0F08
+bytes RAM0xFF80F8..0xFF8FFF. This is an explicit scene write, not a global
+loadMap truncation or a claim that definition0 is empty. Load_Level first copies
+0x1000 bytes; final layout asset length248decimal=0xF8 matches the immutable ROM.
+Following MHZ_Custom_Layout starts0x0A8044, contributing bytes0x06/0x80 at final
+copy offsets0x00FF/0x0100. Current and Main803 ScreenInit omit that native clear.
+
+Source-derived scan origins from the OBSERVED equal inputs are(0x31FC,0x00D5)
+and(0x3202,0x00D5), not captured raw layout descriptors. Current encoded lookup
+with the source row-1 pointer0x809C would select0xFF80FF/0xFF8100; Main803 wraps
+X by the visual width0x0A00(2560decimal), selecting columns0x13/0x00 and bytes
+0xFF80AF/0xFF809C. Both are source-deduced paths until actual pointer/plane/
+loop-low-plane/primary-versus-adjacent metadata is observed. Existing DEZ source
+updates touch only FGrow0x02col0x0D/0x0E androw0x03col0x0E; neither rewrites
+row1. Native ScreenInit aliases row0 to FG/BGrows0x04/0x1F, notrow1; engine
+render aliases are separate from encoded collision ownership. SensorResult FF
+is SolidTile collision-PROFILE index0xFF, not raw128/16 descriptor/index.
+
+The target bank is independently fixed: SolidIndexes[46decimal]@0x0981B8
+->0x09CFC0, interleaved secondary0x09CFC1, same bytes as HPZ. Ordinary DEZ
+entries22/23decimal use0x09B1C0 and must NOT be carried/repointed into final.
+Engine layout128->ChunkDesc(index/flip/solidity)->known16->targetcollision index
+->global angle0x096000/horizontal profile0x097100 mirrors Find_Tile_FG/FindWall;
+actual selected hierarchy remains the missing runtime descriptor fact. No clear
+fix or route acceptance is inferred merely from the observed profile FF.
+
+Authorized TEST SOURCE ONLY adds two methods to existing TestDezFinalScreenEntry:
+`coldFirstProductionScreenInitClearsOnlyRomUnusedLayoutTail` and
+`publicNativeContinuationScreenInitClearsOnlyRomUnusedLayoutTail`. Real final
+boot23,0/first production step and existing public DEZ2->final fresh-load inlet;
+no private phase/timer/health/player/slot writes. They authenticate the COMPLETE
+0x26-byte native clear body including operands, exact header and read-only
+registered s3k-collision-layout encoded value. All two forced object/world
+recreation+forward cycles precede the final0x00FF/0x0100/all-tail discriminants.
+Strict registered-world equality includes real adapters/objects/events/art/
+players; captures are after intentional continuation history reset, not cross-load
+replay. Separate controls retain exact ROM128/known16 words and target0x09CFC0/+1
+indices, compare opaque capacity only for preservation, and preserve meaningful
+row1/prefix bytes excluding the eight native alias-write bytes.
+
+An explicitly DECLARED legitimate later mutation control applies the actual
+DEZ3_BackgroundEvent FG(col0x0D,row0x02)=block0x1A command through the existing
+zone mutation pipeline. It is NOT a naturally reached boss-signal claim.
+Repeated ScreenInit must preserve that edit, exact world and current encoded-owner
+identity; identity is compared within the current capture, never across recreated
+worlds. This isolates once-only scene ownership before the intended old-red.
+No blank velocity, definition0-emptiness assumption, ROM RAM hydration, new API,
+probe or campaign variation is authored. Source awaits Root handback/review and
+a separate one-short-execution gate; no result or runtime qualification claimed.
+
+
+Actual independent old-red76475 on frozen candidate271457/runtime36381/residency
+397cf/helperadcb/newScreenEntrytestff0f82a3: exactly the two proposed methods,
+normal Main absolute wrapper/all3originalROMs/Java25/EGLsingleJTO+CLI/nullAL/
+noambient/Lua/fork1reusealpha/no-profile,compiler inside the sole lifecycle.
+Returns **2/2F0E0S** at20:45:43UTC,queue0/Maven1m11s,JUnit0.800s
+(cold0.410s,publiccontinuation0.158s). BOTH fail only final helperline130:
+DEZ3_ScreenInit must clear native layout RAM$FF80FF, expected0/actual6.
+All preceding full-ROM-body/header, actualinit/inlet, two forced registered-world
+recreation/forward cycles, actualsupportrecreation, target0x09CFC0/+1 and exact
+128/known16/opaque-preservation, declared background edit/idempotence/prefix/row1
+controls executed and passed. Later$FF8100/all0x0F08tail assertions are UNREACHED.
+No compiler repair, prerequisite/world/control failure or retry. Root DIRECT
+inspected original XML25657B/SHA2565dbbc963abef9b6101a1bf8fce4b678d8e676e62d1acd0b3869587da6317a1d9,
+all2identities/fullfailures; TXT2691B/SHA256b7bb219f49d91981b041d9d155ce9476860f0923204cc4f0c264b0a49a97098e
+also inspected. After these durable facts, consume both original reports28348B
+metadata-only, no archive. Testoracleff0f remains unchanged; no runtime edit yet.
+
+Minimal design handed to Root BEFORE any implementation: package-owned
+S3kCollisionLayout header-derived/range-validated tailclear with existing COW and
+first/next Map alias synchronization; narrow internal delegation through the
+unannotated Sonic3kLevel implementation; actual once-only ScreenInit calls it
+inside existing zone mutation pipeline before allocations/initial plane refresh.
+No shared encoded-layout/publicModAPI contract, loadMap truncation, collision-bank
+change, four-row-alias extension, definition0-emptiness or route closure. Await
+separate runtime authorization; existing five route failures still block commit.
+
+
+DEZ ScreenInit SOURCE FREEZE (after old-red76475; no corrected execution):
+Root authorized the minimal three-file encoded-owner change. S3kCollisionLayout
+now derives the unsigned header products/low-word sum+$88, validates $88..$1000
+before writes, and clears only actual nonzero tail bytes through existing encoded
+COW plus first/next flattened Map aliases. An already-zero tail returns without
+COW cloning; row pointers/prefix/definition resources remain unchanged. The
+unannotated Sonic3kLevel implementation delegates internally; actual ScreenInit
+calls it once inside the existing mutation pipeline before marker/allocations,
+returns NONE effects, and retains the later explicit plane refresh. No shared
+interface/ModAPI/pin/global loadMap change or native four-row-alias extension.
+Final collision authority remains $09CFC0/+1; definition0 emptiness and route
+closure are NOT asserted. Prior five-route failures still block qualification.
+
+Frozen runtime SHA256:
+- `src/main/java/com/openggf/game/sonic3k/S3kCollisionLayout.java`: `6b47c7a5e56c72af13c3dcfcea9959c4026e801dc503c2726b34cab46e5f7bcf`
+- `src/main/java/com/openggf/game/sonic3k/Sonic3kLevel.java`: `887e4570255d493526dd433b69bbd355f19863e48cfbb9a6deda458dc6d9dfa9`
+- `src/main/java/com/openggf/game/sonic3k/events/DezFinalScreenEvents.java`: `c2519db25a954a9e837d3167b307293814f48719f3c61b28887dc8322d3a3838`
+Three-runtime-only binary diff: 5329 bytes/SHA256 `c46dac2e34f34057960680de6e1a59a79b8b06a678135b1bc31e01b577233fc8`.
+Oracle ff0f82a3, residency runtime36381/test397cf and helperadcb are unchanged;
+original route class63ce204f restored. Source base remains271457b316145fbc8549ad7fd09cd71007d333cb.
+`git diff --check` passed; no compiler/JVM/corrected tests/native/route/commit.
+These documentation additions are after the old-red tested epoch. Await the
+separate bounded affected-check execution gate; do not reuse old red as green.
+
+
+DEZ ScreenInit affected execution74516 (wrapperPID3310805), frozen reviewed
+6b47c7a5/887e4570/c2519db2 plus36381/397cf/helperadcb/oracleff0f, base271457.
+ONE normal Main absolute maven_queue.py lifecycle, same accepted all3original
+absoluteROMs/Java25/EGLsingleJTO+CLI/nullAL/noDISPLAY/WAYLAND/LD_LIBRARY_PATH/
+Lua5.4/fork1reusealpha/no-profile environment. Maven arguments: --normal
+-Dmse=off -Dopenggf.headless.gl=surfaceless-egl
+-Dsonic1.rom.path=${MAIN}/s1.gen
+-Dsonic2.rom.path=${MAIN}/s2.gen
+-Ds3k.rom.path=${MAIN}/s3k.gen
+-Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical
+-Dtest=TestDezFinalScreenEntry,TestDezFinalArenaFloor,TestDezFinalEntryObjects,TestDezFinalBackgroundEvents,TestDezFinalPlaneState,TestS3kNativeContinuationDefinitionResidency,TestS3kNativeWordLayoutResidency,TestSonic3kLevelOverlayRewindIsolation,TestSonic3kResidentChunkPatterns,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test -B.
+ACTUAL terminal0 at2026-10-17T20:56:00UTC,queue0/Maven1m19s,
+122/0F0E0S in14classes (13simpleselectors; LevelLoading matches TWOclasses).
+All14originalXMLs/all122testcase identities and TXT summaries read; allcases
+positive/no failure/error/skips. Each XML records correct three absoluteROM
+paths and surfaceless-EGL property. Per-class actualcounts:
+- `com.openggf.game.sonic3k.TestSonic3kBootstrapResolver`: 6
+- `com.openggf.game.sonic3k.TestSonic3kDecodingUtils`: 3
+- `com.openggf.game.sonic3k.TestSonic3kLevelLoading`: 36
+- `com.openggf.game.sonic3k.TestSonic3kLevelOverlayRewindIsolation`: 3
+- `com.openggf.game.sonic3k.TestSonic3kResidentChunkPatterns`: 3
+- `com.openggf.game.sonic3k.events.TestDezFinalBackgroundEvents`: 7
+- `com.openggf.game.sonic3k.objects.TestDezFinalArenaFloor`: 11
+- `com.openggf.game.sonic3k.objects.TestDezFinalEntryObjects`: 8
+- `com.openggf.game.sonic3k.objects.TestDezFinalScreenEntry`: 15
+- `com.openggf.game.sonic3k.runtime.TestDezFinalPlaneState`: 7
+- `com.openggf.tests.TestS3kAiz1SkipHeadless`: 8
+- `com.openggf.tests.TestS3kNativeContinuationDefinitionResidency`: 4
+- `com.openggf.tests.TestS3kNativeWordLayoutResidency`: 4
+- `com.openggf.tests.TestSonic3kLevelLoading`: 7
+Both unchanged oracleff0f methods passed AFTER all forced two-world/replay,
+ROM-body/header/resource/target9CFC0/+1, opaque-preservation, meaningful-prefix
+and later legitimate BGedit/idempotence controls. Thus FF80FF, FF8100 and ALL
+0x0F08 tail discriminants were reached and passed, unlike old-red76475.
+ScreenEntry originalXML28419B/SHA2561440990a6623c6fcfef6fe46490e7d77f4dcdfa03cbbb57f782318e544cfb625.
+No compile repair, retry, unexpected field, source mutation during queue/run or
+new native evidence. Prior109 is a DIFFERENT source epoch, not this122 claim.
+No original seven-route requalification, source/APIguards or commit launched;
+prior five route failures remain unqualified. Inspect then consume only these
+owned28 XML/TXT reports under metadata_slot ALONE, no archive.
+
+
+Conditional DEZ source/API guard5039 (wrapperPID3317054) ACTUAL5/0F0E0S,
+terminal0 at2026-10-17T21:02:33UTC,queue0/Maven25.334s. ONE fresh normal
+-Pguards lifecycle with accepted all3ROM/EGL/JDK25/nullAL/noambient/fork1reusealpha
+shape; exact -Dtest=TestArchitecturalSourceGuard#runtimeProductionCodeDoesNotReadDisassemblyAssets+productionGameplayCodeDoesNotBypassLevelMutationSurfaceWithRawLevelMutators+hardwareTimingAuthorityExceptionStaysDocumentedAndAgentGuidanceStaysMirrored,TestModApiSignatureSurface#candidateZeroSevenSurfaceIsPinnedToTheCurrentSurface+engineOnlyRuntimeHelpersDoNotLeakIntoTheZeroSevenSurface test -B.
+Both originalXMLs/all five exact case identities and TXT inspected, zero skips.
+Literal reviewed3runtime/residency/test/helper/originalroute hashes reverified
+unchanged after completion. Conditional original7route class gate is now earned;
+NO route result inferred. Consume only these four reports metadataalone after
+durablefacts; no archive. Source unchanged; this is NOT entire29/118guards.
+
+
+Conditional ORIGINAL full DEZ class54531 (wrapperPID3318408), after actual
+5guard pass and literal source recheck: ACTUAL7/0F0E0S, terminal0
+2026-10-17T21:05:15UTC,queue0/Maven2m11s,JUnit108.6s. Exact command from owned
+fa8cwd: env -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH
+EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null JAVA_HOME=/usr/lib/jvm/java-25-openjdk
+JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl LUA_BIN=/usr/bin/lua5.4
+python3 ${MAIN}/tools/testing/maven_queue.py --normal
+-Dmse=off -Dopenggf.headless.gl=surfaceless-egl
+-Dsonic1.rom.path=${MAIN}/s1.gen
+-Dsonic2.rom.path=${MAIN}/s2.gen
+-Ds3k.rom.path=${MAIN}/s3k.gen
+-Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical
+-Dtest=TestDezIncomingFinalRouteCapture test -B. No profile, diagnostic/path/source/
+input properties, observer, new movie, copied driver, gameplay writes or native.
+ALL original XML testcase identities and TXT summary inspected; no skips,
+failure/error elements or unexpected prerequisite. Actual identities/seconds:
+- `coldOrdinarySoloTailsClearsAllFinalPhasesAndLoadsEnding`: 16.617s
+- `coldOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding`: 13.075s
+- `incomingFinalFightRestoresAndReplaysEveryPhase(int)[1]`: 8.104s
+- `incomingFinalFightRestoresAndReplaysEveryPhase(int)[2]`: 12.404s
+- `coldWideOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding`: 38.143s
+- `coldEmeraldTeamClearsBothActsFinalFightAndDoomsday`: 9.725s
+- `coldOrdinaryTeamClearsHandsCoreAndEscapeShipAndLoadsEnding`: 10.254s
+Original route class63ce204f remained byte-exact to803; per-step death/ordinary
+character checks, established phase/checkpoint restore/forward assertions and
+original ending helper/end assertions remained active. Original old deaths
+soloSonic60811/Tails67976/wide60189/incoming32016647/incoming80016652 no longer
+reproduce in this class, and both original team passes remain passes. This is
+a bounded five-case regression closure on composed known128+known16+ScreenInit
+clear source, NOT native pose/descriptor equivalence, another BK2, a broad/full
+suite or cold-campaign acceptance. No separate isolation claim that known16
+alone fixed these routes: composed70e+128 previously still failed all same five.
+
+Frozen source remains reviewed3runtime6b47c7a5/887e4570/c2519db2, residency
+36381/397cf, unchanged oracleff0f/helperadcb and originalroute63ce; base271457.
+OriginalXML413141B/SHA2562fc7f7a4e98d2d210a3298fe3dee687b7164dbbe98c5470e5c056c185fcf850f,
+TXT350B/SHA25699b50746d5f894891985d19f9c5bb06280fbf63c5d4d7d6dfc0448804fe82002.
+Reports remain only at original target paths for immediate Root handback, no
+archive; consume under metadata_slot ALONE after durable inspection acceptance.
+No route retry, extra execution, source edit, qualified commit/integration/push.
+Four native row-alias writes and actual native collision descriptor/clock
+qualification remain separate limits; definition0 is not asserted empty.
+
+
+Qualified LOCAL commit preparation: Root DIRECT read/hash-verified original
+routeXML2fc7f7a4/all7identities/no skips and accepted122focus/5freshguards/7routes
+as separate epochs. Both original routeXML/TXT413491B consumed after hash check
+under metadata_slot ALONE, no archive. Runtime/oracles/originalroute/movies remain
+frozen. Journal helper promotion changes HEADER ONLY from testedadcb; stripping
+that comment insertion recovers its exact observed source. Existing workflow
+README names purpose/inputs/no installed caller. No maintained/production caller
+or property installation, functional refactor, compiler/JVM/test/native follows.
+KnownS3K/backlog/matrix/frontier/releasefold/pitfall mirrors record actual owners,
+rejected128-only/known16-alone route hypotheses and corrected7case result.
+This commit is local only; Root owns composition/integration/push/cold validation.
+
+
+Local resource-policy normalization before commit: `${MAIN}` in the exact command
+records denotes the absolute Main-workspace root used at execution (original
+paths remain in the task ownership registry, not portable repository prose).
+This replaces machine-local path spelling only; source/ROM identities, cwd,
+flags, selectors, environments and observed results are unchanged. The first
+normal pre-commit attempt rejected that prose; no code/test execution occurred.

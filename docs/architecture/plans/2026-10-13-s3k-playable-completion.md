@@ -6254,3 +6254,233 @@ first rising-dead writer/cause; no runtime fix or additional execution.
 Temporary observer and owned diagnostics are consumed after durable facts;
 local docs only, prior refs/native4fdf/private config preserved. No campaign
 completion, native parity, regression-isolation or broad/delivery claim.
+
+
+### DEZ smoke collision provenance handback — 2026-10-17
+
+On own0c7d9f20d, the one original matched two-method witness59905 reproduces
+2/0F2E0S after build-only61387 passes. Solo60320 actual FG groundwall2E82/D5
+selectsFF80F9=90→FF4850; team48730 actual airborne-floor299C/109 selects
+FF8103=B8→FF5C02 (physical playable identity not independently sampled).
+Both final loads write only0E80 bytes from ROM1DC24E with retained0000,
+although the preceding real DEZ producer1D5068 wrote8000. Root's matched
+Main803 baseline8712 passes2/0. No width-wrap/zero fallback or runtime change.
+[Exact source, command shape, timing and limits](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#dez-final-fresh-continuation-resident-definitions--2026-10-17-source-handback).
+
+Next proposed short old-red independently decodes both ROM writes and exercises
+the existing native continuation request/fresh-load boundary before asserting
+retained tail words and current prefix. Production proposal is only the matched
+LOADING continuation seed in Sonic3k.captureLevelBuildInputs; no arbitrary
+cold/manual/prepared/async livelevel fallback or16pattern carry. Root coordinates
+Sonic3k.java with active ICZR11 before any implementation. No short assertion
+old-red/runtime extension/new selection has run; stop after this source handback.
+
+
+### DEZ128 red-first candidate; stop at later deaths — 2026-10-17
+
+Local `bugfix/ai-s3k-dez-final-definition-residency-gpt61` at0c7d9f20d plus reviewed
+Sonic3k.java128 seed2e1a580f/new test6cd8fb96. No16pattern/API/shared snapshot or
+cold/manual/async/prepared fallback. Root source review no material finding;
+REQUESTED prepared negative does not prove an independent LOADING prepared case.
+[Source/ROM ownership and exact outcomes](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#dez128-guarded-continuation-candidate-and-later-death-limit--2026-10-17).
+
+All commands use the original three absolute ROMs and current Main absolute
+wrapper from the owned cwd, with no ambient display, nullAL and one EGL token:
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH \
+ EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+ JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl LUA_BIN=/usr/bin/lua5.4 \
+ python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" --normal -Dmse=off \
+ "-Dsonic1.rom.path=${OPENGGF_MAIN}/s1.gen" "-Dsonic2.rom.path=${OPENGGF_MAIN}/s2.gen" \
+ "-Ds3k.rom.path=${OPENGGF_MAIN}/s3k.gen" -Dsurefire.forkCount=1 \
+ -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical "-Dtest=${SELECTION}" test -B
+```
+
+- Old-red64188: `TestS3kNativeContinuationDefinitionResidency#actualFreshContinuationOverwritesOnlyItsRomDestinationPrefix`;1/1F0E0S at17:14:22UTC,queue0/Maven1m14s. Intended missing-tail assertion after actual request/fresh load; ROM extents/source checks pass.
+- Focused32851: `TestS3kNativeContinuationDefinitionResidency,TestS3kNativeWordLayoutResidency,TestLevelContinuationCarry,TestFreshLevelBoundaryRewindHeadless,TestGameLoopFreshLevelHandoff,TestS3kFreshLevelRngState,TestLevelManagerDeferredResourceLoading,TestSonic3kDeferredLevelResourceLoading,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`;99/0F0E0S at17:16:44UTC,queue0/Maven1m23s,13 actual classes; new3 methods include two strict post-reset world recreation/forward cycles.
+- Guards5109: `TestHardwareTimingAuthorityGuard,TestRewindArchitectureGuard`;29/0F0E0S at17:17:32UTC,queue0/Maven28.671s.
+- Required original class1616: `TestDezIncomingFinalRouteCapture`;7/5F0E0S at17:19:26UTC,queue0/Maven1m36s/JUnit73.454s. Team/emerald pass; solo Sonic60811,Tails67976,wide Sonic60189,incoming32016647/incoming80016652 die. No unsupported lookup errors, no route-green claim. XML inspected, no new selection/retry.
+
+STOP at this new actual behavior boundary, source frozen; normal runtime commit
+held pending Root disposition. Source unit's ROM/short controls do not certify
+later terrain, input endpoint or native parity. No runtime extension, fixture
+retiming, field omission, native/media, broad or canonical run follows.
+
+
+DEZ subsequent one-witness disposition: build-only39825 passes22.876s at17:33:25UTC.
+Original solo selector41244 in the exact preceding normal environment ends
+1/0F1E0S at17:34:17UTC,queue0/Maven32.343s/JUnit9.566s. Agent observer assumes a
+nonnull SensorResult and aborts on legitimate null ceiling callback at input60422,
+inside checkpoint60413's forward helper. This is diagnostic error; no death is
+observed and no automatic correction/retry follows. Last64steps60359–60422,
+1355463bytes,all alive,zero callback omissions; final step incomplete. Source
+2e1a580f/test6cd8fb96 and99+29/7-with-5-deaths prior epochs remain unchanged.
+[Exact aborted-witness limits](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#dez-solo-death-witness-stopped-on-observer-error--2026-10-17).
+Temporary source/classes/journal/reports consumed normally, four accounted WIP
+paths preserved; no runtime commit or additional execution. Actual60811 writer/
+route attribution remains unresolved and requires a new authorized decision.
+
+
+DEZ separately authorized replacement94784 (after accounted41244 STOP): original
+solo selector, exact preceding normal environment,1/1F0E0S at17:43:42UTC,
+queue0/Maven32.543s/JUnit10.572s. Build-only96384 passed1m15s at17:42:57UTC.
+No diagnostic failure; original death60811 assertion preserved. Actual writer is
+applyDeath(PIT) via applyPitDeath -> doLevelBoundary3730 -> modeAirborne1087;
+P1Y262 exceeds camera maxY32+$E0,airborne/no support,rings12,vy2016,neutral input.
+No gated shared-touch hurt call. This identifies the pit writer, not the earlier
+support-loss cause or a native route outcome. Last64 actual steps include original
+checkpoint replays (nonmonotonic submitted60793..60811),all complete,53547bytes.
+[Exact evidence and limits](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#dez-explicit-replacement-witness-identifies-pit-writer--2026-10-17).
+Temporary sources/helper/classes/journal/XML consumed after durable facts; four
+candidate/source/docs WIP paths preserved, source2e1a580f/test6cd8fb96 unchanged.
+Five original route deaths still block qualification. No runtime commit/fix or
+further execution; earlier safe-support loss remains the next evidence gap.
+
+
+DEZ coherent source composition checkpoint: safe FF0c7->Root271457 (includes70e
+known16), clean three-way owned128 patch, complete both append-only doc streams,
+original newtest/config/native/refs preserved. Actual ROM dependency: retained128
+tail requires352 known groups beyond final414-written prefix,2484 refs/587solid;
+source766-group words remain native resident, target LoadSolids indices win.
+[Exact composition/red/source limits](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#dez-coherent-known16128-composition-and-independent-old-red--2026-10-17).
+One exact newmethod20783 on composed128-only source3791dede/testcc98d6ab returns
+1/1F0E0S at17:52:33UTC,queue0/Maven1m10s/JUnit0.556s. Target414 ROM overwrite and
+all766 predecessor words pass before intended1B0 expectedD08E/actual0000 tail red.
+Minimal private memoized carry predicate corrected/frozenffc6eba8/test397cf71c;
+sent to Root before corrected execution. No correctedselection, sevenroutes,
+commit or PIT/support-loss closure yet. Old99+29/7-with-five-deaths remain distinct.
+
+
+DEZ composed focused checkpoint: Root reviewedffc6eba8/397cf71c no materialfinding.
+44773 compiler prerequisitefailed beforetests (missing newprivate ctorboolean in
+presentation-only buildDetachedLevel),52.778s at17:55:28UTC,queue0; nottestresult.
+Authorized exactfalse-only caller repair yields runtime36381b20; test397cf71c and
+eligibility unchanged. Same17selector focused15490 actually passes109/0F0E0S,
+18classes,queue0/Maven1m21s at17:57:37UTC; all18XML inspected,0skips. NewDEZ4,
+known16sparse/opaque3,ICZrealhandoff/transition1+1,overlay3,deferred6+9,
+DEZtransition1,fresh/carry/RNG/nativeword controls and mandatoryS3K4 included.
+Exact selection/counts/source limits in the preceding audit composition section.
+No originalsevenroutes/sourceAPIguards yet; handback before separate route
+qualification. Source staysfrozen; no qualified runtimecommit/PITclosure claim.
+
+
+DEZ composed seven-route73020 STOP: ONE original entire TestDezIncomingFinalRouteCapture
+on frozenRoot271457+36381b20/397cf71c returns7/5F0E0S at18:00:36UTC,
+queue0/Maven1m35s/JUnit72.540s. All7XML inspected,0errors/skips. Same exact deaths
+as128-only1616: soloSonic60811,Tails67976,wideSonic60189,incoming32016647,
+incoming80016652; ordinaryteam+emeraldteam pass. Known16semantic correction passes
+independent109 but does not move death endpoints; no whole-vector/native parity
+claim. Main8038712matchedsolo+ordinaryteam2green remains distinct material baseline.
+[Exact identities/limits](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#dez-composed-known16128-seven-route-qualification-remains-red--2026-10-17).
+Fivefailures still block runtimequalification/commit; conditional5guards NOT run.
+No repeated109/probe/fix/moviechange/newroute/coldcampaign/native/media/broad.
+Reports consumed after facts, fourWIP/config/native/refs preserved, no live jobs.
+Root owns next boundary; earlier safe-support loss remains unresolved.
+
+
+DEZ matched original selector checkpoint (post-tested docs only): baseline18673
+Main803+sameadcb/13174 journal passes1/0F0E0S19:52:35UTC(queue0/Maven1m29s);
+candidate48975 Root271457+36381/397cf+samejournal retains originaldeath60811,
+1/1F0E0S19:59:27UTC(queue0/Maven1m24s). Entire original binaries validated then
+Root DIRECT inspected both:67187completeBASE/66976validpartialcandidate,18class
+dictionaries,all66976commonkeys/rawinputs exact. FirstANY MAIN60570/seq66458:
+X31F8/31F5,vx600/300,g600/0;previous60569all36equal. Both stillOnObj/floorclass/
+slot4;allcommonclocks/load/mode/fresh/input/rings/shield equal. Riding slot4/16
+and Y205/204 first differ60577;camera laterFORWARD60624+n20/movie60644.
+[Exact commands, epochs, artifact hashes and observation limits](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#dez-matched-original-route-journals-isolate-first-horizontal-difference--2026-10-17).
+This is an earlier horizontal boundary, not insidewriter/supportloss/nativeparity
+attribution. CompleteBASE means originalendinghelper/assertionsreturned, not all
+neutralhelperstepsobserved. After durablefacts/Rootinspection consume both owned
+binaries metadataalone(noarchive); restore exact originalmaintainedtest, remove
+onlyinstrumentedouterclass, retain usefuljournalhelper. Runtime36381/residency
+397cf/helperadcb unchanged; appenddocs/restoredtest are AFTERtestedepoch. No
+runtimecommit/guards/retry/fix; next question source/prep60569..71writer only.
+
+
+DEZ matched writer PREFIX checkpoint: Root reviewed/source-corrected current-P1
+identity/zero-ownerSTOP, separately gated BASE16038 and candidate18206. Actual
+1/0F0E0S each,20:20:24/20:26:12UTC,queue0/Maven1m26s/1m22s. PREFIX ONLY through
+original60571per-stepasserts; fullroute/endingUNREACHED, no newclockprojection.
+Root DIRECT read entire original29747B/67156B files, exact3keys/positive3probes/
+9vs13passivity and allstacks; no diagnosticfailure. Firstresultsplit60569+19/+3
+with equalinputs/prepose;60570+29/-3 then actualCollisionSystem
+applyGroundWallVelocityResponse writesvx600->300/g600->0. RawtileIdFF does not
+identify native layout/definition/collision authority.
+[Exact commands, source/result epochs, hashes, caller and limits](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#dez-actual-calcroominfront-writer-witness-matched-prefix-only--2026-10-17).
+After durablefacts, strip onlythree diagnostic sources exactly, preserve4WIP+
+helperadcb, consume both inspected originals metadataalone(noarchive). No runtime
+commit/physicsfix or five-route acceptance. Next SOURCE READ/PLAN ONLY: actual
+probe coordinates and layout128->16->targetcollision authority, no newprobe yet.
+
+
+DEZ native clear source/test checkpoint (NOT executed): independent Root/worker
+ROM checks identify DEZ3_ScreenInit0x05A3DA..0x05A400, header0014/0008/0004/0004
+(20/8/4/4 decimal), offset0x00F8/inclusive0x0F08-byte clearFF80F8..FF8FFF.
+Source-derived31FC/D5 and3202/D5 couldreadunclearednext-MHZbytes06/80 through
+row1ptr809C; actualruntimepointer/adjacentdescriptor remainsunobserved. ProfileFF
+is collisionPROFILE only; finaltarget9CFC0/+1 preserved, notordinaryDEZ9B1C0.
+[Exact ownership, source limits and independent short old-red design](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#dez-screeninit-unused-encoded-layout-owner-source-and-independent-red-design--2026-10-17).
+Onlytestsource authored in TestDezFinalScreenEntry: coldproductioninit/public
+continuation controls, completeROMbody/headeroracle, targetcollision/definitions,
+2forcedworldrestore/forwards and declaredlegitimatebackgroundedit/idempotence all
+BEFOREfinaltailasserts. No compiler/JVM/native/probe/fix/commit;36381/397cf/helper
+adcb preserved. Runtimewrite/routeclosure requires separate authorization/evidence.
+
+
+IndependentDEZScreenInitoldred76475 ACTUAL2/2F0E0S20:45:43UTC,queue0/Maven1m11s
+on exactreviewedoracleff0f/candidate36381+397cf. BOTH failONLYfinal$FF80FF
+expected0/actual6 AFTERall2forcedworld/replay/resource/idempotence/prefixcontrols.
+Later8100/alltailunreached; no skips/errors/repair/retry. RootDIRECT originalXML
+inspection accepted;28348BownedXML/TXT consumed metadataalone afterdurablefacts.
+Minimal3fileencodedowner/COW/internaldelegator/onceScreenInitpipeline design sent
+beforeedits; no runtime/API/collisionbank/velocity/route change orqualifiedcommit.
+
+
+DEZ ScreenInit minimal runtime SOURCE FREEZE only: encoded-owner validated
+header-derived tail clear/COW+Map aliases, internal Sonic3kLevel delegation and
+once-only ScreenInit pipeline before allocations; no compiler/JVM/corrected test.
+Three-runtime diff SHA256 `c46dac2e34f34057960680de6e1a59a79b8b06a678135b1bc31e01b577233fc8` (5329B); full hashes/limits in
+existing audit. Exact oracleff0f/residency36381+397cf/helperadcb preserved.
+Prior76475 remains2intendedF, later-tail assertions unexecuted; original five
+route deaths still block qualification. No native four-alias extension, collision
+bank/definition0/route acceptance claim. Await Root affected-check gate.
+
+
+DEZ ScreenInit affected74516 ACTUAL122/0F0E0S,14classes/13selectors,
+20:56:00UTC/queue0/Maven1m19s on reviewed6b47/887e/c251+36381/397cf/ff0f/adcb.
+All originalXML testcase identities/skips/properties inspected. Both short
+productionScreenInit oracles reach/pass ALL0xF08tail assertions AFTER twice
+worldrecreation/replay/resource/idempotence/prefixcontrols. Full exact command,
+classcounts/testedepoch and limits in existing audit. No repair/retry/newnative.
+Prior109epoch separate; source/APIguards and seven-route qualification NOTRUN;
+priorfive route failures remain unqualified. Reports consumed metadataalone
+afterdurablefacts; no archive. Await Root next bounded gate, no commit.
+
+
+DEZ conditional5exactsource/APIguards5039 ACTUAL5/0F0E0S at21:02:33UTC,
+queue0/Maven25.334s, bothoriginalXML identities read/no skips. Frozenruntime
+6b47/887e/c251+36381/397cf/ff0f/adcb/originalroute63ce literalhashes unchanged;
+Root-authorized conditionalONE original7route class may now proceed. No full
+guard suite/native/commit; all route outcomes remain unknown until terminal.
+
+
+DEZ final conditional route54531 ACTUAL7/0F0E0S at21:05:15UTC,queue0/
+Maven2m11s,JUnit108.6s after exact5guard gate. ALL7 original class identities
+(incoming320/800,soloSonic/Tails/wide,ordinary+emeraldteam) inspected/no skips;
+original maintained route63ce and all assertions unchanged. Prior five deaths
+no longer reproduce; two team passes retained. Frozen6b47/887e/c251 plus36381/
+397cf/ff0f/adcb,base271457. Full command,methodtimings,hashes and precise limits
+in existing audit. OriginalXML/TXT retained only at target for immediate Root
+handback then metadata-only consumption, no archive. No native equivalence,
+newBK2,broad/coldcampaign/wholeobjective or commit claim; await localcommit/
+method-preservation scope. No further execution authorised by this checkpoint.
+
+
+Local qualification accepted by Root DIRECT originalXML inspection:122focus,
+5freshguards and7originalroutes allgreen/no skips, distinct epochs. Reports
+consumedmetadataalone413491B, noarchive. Journalheader-only promotion+one-line
+workflowREADME, existingreleasefold/knownS3K/backlog/matrix/frontier/pitfallmirrors
+updated; no newcaller/property/function/compile/JVM/native/route. Runtime/test
+frozen bytes unchanged; helper executable body remains testedadcb. Await normal
+local7trailer/modelcoauthor hook commit; Root owns integration/push/nextcampaign.

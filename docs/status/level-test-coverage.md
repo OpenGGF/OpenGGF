@@ -1416,3 +1416,15 @@ maintained canonical49197 remains1/1F: HCZ11 completes14208 with26153 errors,fir
 non-camera8717 sidekick_air1/0, then crosses the giant-ring/special-stage return
 and loses hcz_3 ownership at BK2cursor88306. No cold/whole-route, viewport/donor
 or native presentation row is newly certified; remaining obligations stay open.
+
+
+### DEZ final native resident terrain / scene clear — 2026-10-17
+
+[Final-boss matrix](../architecture/validation/levels/s3k-dez-final-boss.md#native-final-scene-terrain-residency-and-screeninit-clear--2026-10-17)
+records the source-bound122focused,5exactguards and unchanged7route cases, all
+with zero skips. Native continuation retains actual known128/16 ROM writes with
+final collision bank; first production ScreenInit clears FF80F8..FF8FFF once,
+with two forced world replays before all tail assertions. Prior five route deaths
+no longer reproduce in that class. Four native alias writes, native whole-route
+descriptors/pixels/clocks, additional supported products/lifecycle and the separate
+cold campaign remain open; no full-suite/native-equivalence claim.

@@ -6202,3 +6202,25 @@ Async prepared builds lack predecessor identity/generation; do not silently reus
 this synchronous inlet there. ICZ R11 (2026-10-17,077767+repair) proves the handoff
 and opaque counterexample with independent old-reds and twice-restored replay;
 see the existing ICZ1 matrix. No trace/observation bytes supply gameplay assets.
+
+
+## A scene-owned layout clear is not decoder truncation
+
+DEZ3 Load_Level copies a full `$1000` layout bytes from ROM; the actual layout
+asset is `$F8` bytes and the following MHZ asset contributes nonzero tail bytes.
+DEZ3_ScreenInit then multiplies unsigned header words (20*4+8*4 decimal), keeps
+the low-word sum plus `$88`, and clears `$FF80F8..$FF8FFF` with inclusive DBF.
+Missing that separate owner can select following-asset bytes through valid native
+word row pointers. Preserve the full initial copy and put the clear once in the
+scene event, synchronizing encoded COW and flattened mutation aliases. Global
+loadMap truncation, visual-width wrapping or blanking collision profiles hides
+the missing writer. SensorResult.tileId is a collision-profile index, not a raw
+layout/128/16 descriptor. Retained16 patterns still use the destination LoadSolids
+bank (`$09CFC0/+1` for final DEZ), never predecessor indices.
+
+Qualify a real first production ScreenInit, preserve meaningful prefix/resources,
+then force two whole-world recreations/forwards and a later legitimate terrain
+edit before discriminating all tail bytes. Do not infer definition0 emptiness or
+native route equality from a clear or a successful authored route. The separate
+native four alias-word writes remain unimplemented. Origin: DEZ final residency/
+first-difference task,2026-10-17; see existing trace audit and final-boss matrix.

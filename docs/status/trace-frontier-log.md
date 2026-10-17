@@ -113783,3 +113783,18 @@ corrected68955 affected4/0F0E0S with two forced-world replays. No unknown-zero
 fallback, async predecessor input, public snapshot/API, physics or timing change.
 These are separate source epochs; current campaign/HCZ frontiers stay historical
 and Root owns composed smoke/delivery. [Commands, sources and explicit limits](../architecture/validation/levels/s3k-icz-act1.md#r11-synchronous-known16-handoff-repair--2026-10-17).
+
+
+## DEZ maintained-route regression closure, not a trace sweep — 2026-10-17
+
+Ownedfa8 base271457 plus native definition carry/scene-owned unused layout clear:
+`maven_queue.py --normal -Dmse=off -Dtest=TestDezIncomingFinalRouteCapture test -B`
+with documented all3absoluteROM/Java25/EGL/nullAL/noambient/fork1reusealpha
+flags (exact command in existing audit), run54531 at21:05:15UTC:7/0F0E0S,
+all original methods/movies/strict assertions and replay windows unchanged.
+Earlier five first deaths60811/67976/60189/16647/16652 no longer reproduce;
+there is no current first failed frame/field in this bounded class. Separate
+122affected and5exactguards pass without skips. No trace fixture was replayed
+by this selection, so no new trace error count or native descriptor/clock parity
+is inferred. Four native alias writes and broader products remain open.
+[Matched evidence and failed epochs](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#dez-screeninit-unused-encoded-layout-owner-source-and-independent-red-design--2026-10-17).
