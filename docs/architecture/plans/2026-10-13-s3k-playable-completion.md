@@ -7441,3 +7441,35 @@ Air caller remain missing. [Exact source/command/failures/limits](../audits/trac
 R30original18 files are consumed after Root read; R33originalXML/TXT retained
 for direct Root read, cleanup_pending/noarchive. Test WIP stays uncommitted;
 no failing-test/runtime commit, new trace qualification or live job.
+
+
+### R34 to R36 selected component despawn cause — 2026-10-17
+
+R34source38 rejects a speculative nearby leader start: initializer/history
+inconsistency is source-readable but the actual R33 guard was unobserved.
+R35source39 freezes only reversible CPU/test logs (combined4daa, stripping to
+CPU4bb9/test0d285). R36execution40/session84126 uses the unchanged R33 normal
+wrapper/all-five/no-profile selector; terminal21:18:38UTC, queue0/Maven01:21,
+suite0.939s, **5/2F0E0S**. Root directly reads all five cases/full16 bounded
+records19778B and both original reports. Known projection/context checks pass;
+shared derived-cache memoization remains a stated limit.
+
+Both release cases actually enter checkDespawn with validcachedFALSE +
+Air/OnObjTRUE, stored interact0 versus already-computed live3, managedSST10;
+actual cause OBJECT_ID_MISMATCH reaches applyDespawnMarker(false). CATCH_UP
+preempts ordinary released physics/finaltimer/recreation oracles. Grounded
+visible control supplies three actual pairs stored0->3 and lock35->34 through
+ordinary CPU slots; its K-1/recreation plus the old two controls pass. No timer
+old-red or runtime-owner repair follows, and native001D producer/campaign8774
+Aircaller remain missing. [Full source/command/records/limits](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r34-to-r36-component-cpu-mismatch-is-observed-before-the-timer-oracle--2026-10-17).
+
+R37 accounts the accepted evidence and restores the exact diagnostic-free
+sources; only hash-owned R35-containing classes/reports are cleanup scope.
+Any next inlet authoring is restricted to one real visible CPU slot before
+held/offscreen release in only the two new release cases, with source frozen
+for a separate compiler/execution gate. No test/runtime commit or new run.
+
+R37 exact CPU4bb9/test0d285 restoration is verified before any inlet edit. Four
+R35-containing owned classes are removed under writer; accepted original two
+reports50878B are rehashed/consumed metadata-slot-alone at21:23:49UTC, no archive.
+Only docs are committed; accepted test WIP remains uncommitted. No live job.

@@ -5954,3 +5954,85 @@ for explicit Root direct read; cleanup_pending, no copy/archive. Test0d285 stays
 uncommitted/unmodified; no failing-test/runtime commit. Ordinals35/36/37 exact
 IDs/results and24h expiry are separate in both own registries. No live handle;
 native4fdf/private regular config/all prior refs/Root/Main remain untouched.
+
+
+## R34 to R36 component CPU mismatch is observed before the timer oracle — 2026-10-17
+
+R34 source-only ordinal38 rejects a speculative leader-start correction. The
+builder positions the leader before bootstrap/history initialization, whereas
+this component repositions after build, but no R33 selected history/guard was
+observed. Source also exposes an independent offscreen OnObj interact-word
+comparison before the counter/history-follow path; moving the leader cannot
+establish which branch caused the actual prerequisite failure. No inlet changes
+or additional execution follow that source inventory.
+
+R35 source-only ordinal39 inserts reversible passive blocks in only CPU and this
+existing five-method test. CPU SHA256
+`fc9ee63fed5ff2ff99ed501ca44bad3e996eef84f809f5bb0d5ae0ff4c166ca0`,
+test `b9ec0857c17d6e94fd67e4c17492f188c37293769b339577f4439d4e36967c38`;
+ordered path-NUL-bytes-NUL combined
+`4daab9e6b53a85327f9ed8748a991125a38032eeb63bff77b42ef019e90220d8`.
+Strip all four CPU/three test marked blocks to recover exact runtime
+`4bb9f42fc7e8c0551aeb94e9d4d612819e7981ff1db15e512c5e6aefdc3d6c5a`
+and accepted test0d285. The actual mismatch branch passes already-computed locals;
+trigger/marker hooks log their real argument and stack before original writes.
+Exact P2/controller identities bind the test-owned context, restored in finally.
+No owner getter, fresh visibility, CPU/history/timer/latch write or replacement.
+
+Root reviews the exact files and authorizes R36 ordinal40, sole session84126 on
+HEADdcbb/Java7df. It uses the exact R33 normal Main-absolute wrapper command
+above: `-Dtest=TestHczSpinningColumnCachedRelease`, all five methods, no profile,
+original three ROMs/Java25/single EGL JTO plus CLI/nullAL/no ambient display or
+LD path/Lua5.4/fork1/reuse/alphabetical. Compiler is inside this one lifecycle,
+with no repair or extra build. Terminal1 at21:18:38UTC, reported queue0/Maven01:21,
+suite0.939s: **5/2F0E0S**. All five identities/full failures and all16 continuous
+records are inspected. Records1..16 occupy19778 UTF-8 bytes including newlines
+(conservative charge79064, below128KiB); ordered line SHA256
+`239bcf101c4746ecf434c732e9d3adbe13220418e059a77ff2163b9f5872cad7`.
+All completed output sites pass CPU27/test25 known-projection equality and
+context identity checks. This is bounded projection evidence, not proof that
+all shared state is untouched; the prior background derived-cache memoization
+qualification still applies. No cap, observer, compiler or new prerequisite error.
+
+Both released cases directly select the same production branch at CPUframe2:
+valid cached on-screen=false, Air=true, OnObj=true, managed slot readable=true,
+interact SST10, raw live object ID104, already-computed live code word3 versus
+raw stored diagnostic interact word0. Respawn/flight/manual counters are0.
+Actual stacks show updateNormal -> checkDespawn ->
+triggerDespawn(OBJECT_ID_MISMATCH) -> applyDespawnMarker(false). Pre-step CPU is
+NORMAL/frame1, P2=$0408.3A00,$03D0.7B00, velocities0, lock35 or natural0,
+control/CPU-allow/suppression/mapping flags false. Post-step is CATCH_UP_FLIGHT,
+frame2, P2=$7F00.3A00,$0000.7B00, Air=false/OnObj=false, all four ownership
+projection flags true; locks remain35/0. The post-step Air caller is unobserved.
+The despawn marker preempts the intended released ordinary-physics oracle;
+these are the same two original CATCH_UP post-step prerequisite failures,
+**not genuine release timer old-reds**, and neither final release replay/oracle
+is reached.
+
+The grounded-positive control directly supplies three before/after pairs
+(original plus twice-recreated forward): visible cache=true, NORMAL/frame1,
+stored interact projection0/lock35 -> PANIC/frame2, stored projection3/lock34.
+Air=false/OnObj=true and pose/fractions/velocities stay unchanged. Its original
+K-1/recreation assertions and both existing release/visible-jump cases pass.
+The live selected word is unobserved on this non-mismatch branch; the reported3
+is the actual stored diagnostic projection, not a repeated owner query.
+Native001D's earlier producer and campaign8774's actual Air writer remain
+separate unknowns. No CPU/cache/timer/grounding/provider/runtime fix, route
+qualification, native query or source variant follows this diagnostic.
+
+Root directly accepts the original XML47407B SHA256
+`7f5a7ffd2be740616f8f25951cc603661300ee0a6e3410c9f6d901d295bac5cf`
+and TXT3471B SHA256
+`587e24abd0a3ee73aef2f648f6c1ad675251003c66da0b8a23052bbd237b3393`,
+all five cases/full16 records/stacks. R37 authorizes this durable account, exact
+marked-block source restoration, deletion of only the four hash-inventoried
+R35-containing compiled outer/projection classes, then metadata-slot-alone
+consumption of those original two reports. Other compiled inner classes and
+unknown/native work are preserved; no archive or failing-test/runtime commit.
+R34-36 exact IDs/results remain separate in both existing registries.
+
+After the durable account and Root acceptance, exact source strip proofs pass;
+R37 deletes only the four inventoried R35-containing classes under the intended
+writer. Accepted XML+TXT50878B are rehashed and consumed at21:23:49UTC under
+metadata_slot alone, with no copy/archive/receipt. The unchanged existing inner
+classes, private regular config/native4fdf/all refs and foreign work remain.
