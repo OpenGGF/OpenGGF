@@ -7332,3 +7332,20 @@ machine-local home paths in the proposed command example. Example paths now use
 OPENGGF_MAIN (the existing absolute Main workspace); actual executed flags, resolved
 Main-absolute wrapper/ROM paths and source evidence are unchanged. No hook bypass,
 source/JVM change or validation rerun.
+
+
+**R19 separate helper preservation disposition.** After the frozen independent
+EggRobo source handback, Root authorized preserving the ORIGINAL opt-in
+`src/test/java/com/openggf/tools/ColdCampaignPoolJournal.java` in place, with only
+its purpose/input/origin/source-epoch class header changed. Removing that header
+from old c35c and preserved source gives byte-identical functional source; no
+runtime/public API/refactor/copied driver or maintained campaign call blocks.
+The workflow README has one maintained-driver-call protocol entry linking this
+source and the existing plan. The property alone installs/runs no observation;
+explicit calls must retain original step/render/assert/restore order and prefix
+qualification. Reuse actual R17/R18 c35c compiler/execution evidence, each18603
+verified observations, honestly: no new JVM for header/docs, and no claim that
+preserved header bytes or uninstrumented ColdCampaign outer were rebuilt. The
+unexecuted independent EggRobo test remains unstaged, outside this separate
+preservation commit;8972 accounting is not amended. Original raw journals remain
+consumed, with no archive/copy/receipt.

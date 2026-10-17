@@ -28,6 +28,8 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 ## Tools
 
+- [ColdCampaign pool journal](../../src/test/java/com/openggf/tools/ColdCampaignPoolJournal.java): opt-in **maintained-driver-call protocol**, with no installed campaign instrumentation; explicit original step/render/restore keys, bounded raw SST metadata and passivity checks compare SSZ1 structural ownership. The [existing plan](../architecture/plans/2026-10-13-s3k-playable-completion.md#r16-earlier-semantic-pool-producer--source-preparation-only-2026-10-17) records the original803/f196 arms, required call ordering and prefix-only limits (2026-10-17 R16–R18).
+
 - [Seven-Chaos gateway diagnostic](../../src/main/java/com/openggf/tools/S3kSevenChaosGatewayCaptureTool.java): repeats the declared Tails/LRZ2 ring→sanctuary→sphere-stage→results→return scenario with verified ROM identity, fixed Limited/RAW_RGB, event/state CSVs and original PNGs; `--rom` and `--out-dir` require absolute paths, Linux uses surfaceless EGL with no display. This preserves the 2026-10-17 native RGB investigation; it is not a cold-route certificate.
 
 - [Trace SST occupancy probe](../../src/test/java/com/openggf/tests/trace/SlotOccupancyProbe.java): optional comparison-only `OGGF_SLOT_PROBE=1` diagnostics over existing V5 slot dumps; `OGGF_SLOT_PROBE_FULL=1` prints physical owner/phase labels, fails closed on duplicate SST owners, and writes only below `target/` (2026-10-14 AIZ retained results/title audit). Labels alone do not certify native code parity.
