@@ -113619,3 +113619,24 @@ categories plus guards, <=50 per ordinary batch, max150execution minutes/10min
 no-output/queueexcluded. This is separate from trace acceptance; neither a
 lower total nor the planned broad run certifies HCZ, SlotRGB, ICZdeath or the
 coherent ending timeline. Source/commands/limits are in the existing plan.
+
+
+### 2026-10-17 — Combined smoke stops incomplete; qualified local HCZ frontier advances
+
+Root02b run20261017T145127Z-5f175bf9 parent15826 returned143 with65/71 ordinary
+batches recorded (35353 tests/2788F26E86S). Its already-admitted batch66 children
+finished later;50 class XMLs report289 tests/1F2E3S separately. Batches67–71
+(223 candidates) and guards were not run. The signal cause is unknown; no pass
+or automatic replay is claimed. Family controls and remaining gates are in the
+existing [plan](../architecture/plans/2026-10-13-s3k-playable-completion.md#combined-smoke-interruption-and-matched-consumer-gates--2026-10-17).
+
+Local0c7d9f20's maintained originalAD40 canonical49197 is1F, queue151s/Maven52.840s:
+returnedHCZ complete14208rows,26153=23312physics+2841animation,warn/bootstrap0,
+lag59; first non-camera now8717 sidekick_air1/0 after logical-skim press repair.
+All six earlier gameplay windows remain complete zero. Giant-ring77284 and
+stage-exit85097 manifest boundaries are crossed (gap ledger0failures); hcz_3
+later loses expected act2 ownership at BK2cursor88306/actualact1, with only a
+partial recent row3208. No further route, strict animation, auxiliary or SS
+parity claim. Native R15's separate82EA history evidence locates an upstream
+recorded-P1 difference, not a Camera/CPU defect; it does not qualify this AD40
+frontier or waive the mixed-slice field differences.

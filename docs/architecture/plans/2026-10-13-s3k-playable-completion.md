@@ -5206,3 +5206,103 @@ it does not waive known trace/RGB/ending/coverage blockers. Root source stays
 frozen during the retained run. Later isolated fixes require their meaningful
 affected checks before composition; repeated unchanged broad coverage is not
 a ceremony. Whole ending CPU/bus/readiness acceptance remains a separate gate.
+
+
+### Combined smoke interruption and matched consumer gates — 2026-10-17
+
+The unchanged Root `02b38825ce28a41ab360a74d50b75a7e9cf3443c` invocation
+`python3 tools/testing/run_categories.py --base 8030832d2ab6080e5324cdfe35e971677fd97b41 --run --rom-directory "$OPENGGF_MAIN" --max-minutes 150`
+selected3523 smoke candidates/all10 categories/71 ordinary batches plus guards.
+Run `20261017T145127Z-5f175bf9`, parent command15826, returned143. The reason
+for that signal is unknown; it is not recorded as the runner's execution timeout.
+The original runner was gone while admitted batch66 Maven2980730 and fork2980920
+remained alive with inherited tree/admission/activity descriptors. Root remained
+frozen, neither child was signalled or restarted, and both later became absent.
+
+The last runner-owned aggregate records **65/71 batches,35353 tests,
+2788 failures,26 errors,86 skips,4527.09 execution seconds: INCOMPLETE**.
+Preparation had passed23.34s. Queue intervals are additional; execution sums are
+not elapsed delivery time. The failed-case list caps at1000 and omits1814 cases;
+family attribution used bounded current XML and rolling final summaries, not the
+capped list alone. Batch66 subsequently closed all50 class XMLs with289 tests,
+1 failure,2 errors,3 skips. These are separately observed class results: the
+parent never recorded that batch or a final Maven status. The remaining223
+ordinary candidates in batches67–71 and all guards were not executed. No full
+smoke/full-suite pass is claimed. There is no supported runner resume; slicing
+includes or silently repeating the unchanged broad selection is rejected. The
+next combined validation must use the resulting source and its actual change-
+based plan after focused repairs, with the uncompleted coverage explicit.
+
+Known families were inspected and attributed by identity/message, not totals:
+
+- Actual Main803 controls retain title-input ownership, two null-rules/white-fade
+  mock errors, and the HCZ native-rendering GLFW initialization failure. These
+  results do not qualify pixels or repair unrelated mocks.
+- The candidate's new restored-fade pending false/true families include donor,
+  LRZ/SSZ, carried-art, SOZ, portal/return, reward mechanics, gateway and sanctuary
+  consumers. Qualified local759 has119 focused/83 guards plus SOZ84980 and the
+  **entire892** LRZ/carried-art population green; actual Main96596 also passed
+  that892 population. This does not waive all other consumers.
+- Candidate759's complete portal/return34577 is **993/142F0E0S**. All142 messages
+  share the same publishedPlane byte-preview, replacing the older pending-field
+  failure;851 cases passed. The two affected short pilots are[3] and[5]. Main61811
+  ran all five short pilots:5/0F0E0S,0 skips, normal queue624s/Maven29.851s,
+  terminal16:50:35.133086UTC, unchanged Main/source/config. Main lacks the new
+  plane state key, so that pass does not prove current PlaneB determinism.
+- R7A88468's one unchanged pilot[3] reproduces the original plane failure with
+ 81/81 passive checks. Raw and cached bytes agree; the first replay publication
+  rebuilds the physical plane and adds46 bytes outside the matching current row
+  batch. The exact invalidator is not uniquely observed. A separate real
+  geometry-restore/invalidation partition30571 is4/1F0E0S: untouched byte619 is
+  lost; three no-retained/live-mutation/scene-replacement controls pass. The
+  retained-resource/derived-cache repair remains a separate bounded unit.
+- Native LBZ row-pointer ownership/DDZ fresh-start declarations are qualified
+  locally0cd (86 focused/118 guards). LRZ current-map/DDZ-flight declarations are
+  split as00272, excluding unqualified ICZ work. Actual Main71290 passed all four
+  matching ICZ/LRZ/DDZ-flight cases; no blanket old-baseline attribution is made.
+- ICZ3364 independently proves559 known outgoing16x16 pattern groups disappear
+  before deferred publication; the first native4 `C131/C132/C133/C134` becomes
+  zero. Thirty further entries remain absent/unknown. Target collision indices
+  are a different owner and must not be copied from the outgoing level. R10
+  evidence077767 excludes the uncommitted partial ICZ test. Only a synchronous,
+  known-extent private carry is under red-first design; no unknown-zero fallback.
+- All seven DEZ incoming/final route errors are real gameplay collision reads:
+  five `$FF80F9`/definition144 and two `$FF8103`/definition184. Main8712's exact
+  solo-Sonic and ordinary-team methods pass2/0F0E0S, normal queue0/Maven57.117s,
+  terminal16:58:34.519763UTC, Main/config unchanged. Candidate lookup exposes
+  missing native residency; visual-width wrapping is not an accepted repair.
+- Batch66's new `sonicColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory`
+  fails `cold death49613`; both TraceCaptureBootDimensions widths error while
+  initializing GLFW. Their matched Main control24967 is pending. These are
+  unattributed until that actual result; neither inherited nor fixed is assumed.
+
+All86 aggregate skips were inspected: opt-in measurements/captures, unavailable
+GLFW/EGL,32 unavailable platform/flyer route assumptions, external mod JAR/setup
+prerequisites and the explicit CPZ spin-tube assumption. Batch66's three skips
+are opt-in Slot glass, external SecondStrike air-mod and packaged MGZ arena.
+No wrong-ROM skip was observed. No skipped visual/native consumer is certified.
+Main96596/71290/61811/8712 diagnostics were inspected and consumed under the
+metadata lease alone. This run is likewise acknowledged only after the admitted
+children were absent and its remaining class outcomes inspected; no raw archive,
+pass cache or validation receipt is retained.
+
+Additional bounded frontier evidence remains separate from smoke. Native R15
+9bdf827aa proves original82EA10833 records239.E0 and correctly selects239 for
+camera199; R14 engine records23A and correctly selects23A for19A. The earlier
+P1 producer differs, but the intervening writer is not attributed. No Camera or
+CPU fit is justified. HCZ skim0c7d9f20 uses the native logical press edge:
+80 focused+25 authority green; its diagnostic prefix9812 remains honestly1F
+because of an unsupported zero-animation assertion. The maintained canonical
+49197 is1F: returnedHCZ completes14208 rows with26153=23312physics+2841animation,
+first non-camera8717 sidekick_air1/0, then reaches the original giant-ring exit
+and SS return. It later loses hcz_3 act ownership at BK2cursor88306, with only
+partial later observations. No strict full-route or SS certificate follows.
+
+Read-only ending inventory also identified three schema2 fdf jobs with4/5/4
+aggregate services; the old classifier excludes their caller/mode. Their caller,
+per-window initialization and actual hardware phase are unqualified. The current
+host can expose CPU registers/RAM but no proven passive master-clock/YM/FIFO/DMA
+phase getter was found. A first-stage original-movie producer/context plan is
+only a proposal; it cannot initialize the unused coupled timeline from aggregate
+counts. Ending6+46, Hyper/PAL/PCM, Slot845 foreground pixels/life bootstrap,
+ICZ natural death/reload, the mixed slice and later route coverage remain open.
