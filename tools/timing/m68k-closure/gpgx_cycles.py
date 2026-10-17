@@ -15,6 +15,8 @@ import subprocess
 PINNED_COMMIT = '051d430d3d1b54625f9900c8f152d7f232e06daf'
 PINNED_CYCLES_BLOB = '6b18bb209c1fcb1bf4e78d0c1e747da01a164542'
 CYCLES_PATH = 'core/m68k/m68ki_cycles.h'
+CPU_HEADER_PATH = 'core/m68k/m68kcpu.h'
+PINNED_CPU_HEADER_BLOB = 'da20b21499ffc6c7fbdf49ac804ea96de2ad94d2'
 
 
 _CONDITIONS = ('t', 'f', 'hi', 'ls', 'cc', 'cs', 'ne', 'eq', 'vc', 'vs', 'pl', 'mi', 'ge', 'lt', 'gt', 'le')
@@ -44,6 +46,24 @@ def load_table(repo, commit=PINNED_COMMIT, blob=PINNED_CYCLES_BLOB):
     vals = [int(a) for a in re.findall(r'(\d+)\s*\*\s*7', body)]
     if len(vals) != 0x10000:
         raise IdentityError('parsed %d cycle entries, expected 65536' % len(vals))
+    return vals
+
+
+def load_interrupt_cycles(repo, commit=PINNED_COMMIT, blob=PINNED_CPU_HEADER_BLOB):
+    """Interrupt acceptance cost table. GPGX charges m68ki_cycle_interrupts[(cycles / MUL) % 10] when it takes an
+    interrupt (m68kcpu.h m68ki_exception_interrupt), i.e. the autovector exception plus E-clock synchronisation,
+    not the exception-table value 44. Returns the ten per-phase costs in 68000 cycles."""
+    try:
+        got_blob = _git(repo, 'rev-parse', '%s:%s' % (commit, CPU_HEADER_PATH)).decode().strip()
+    except subprocess.CalledProcessError as e:
+        raise IdentityError('GPGX source %s@%s unavailable: %s' % (repo, commit, e.stderr.decode().strip()))
+    if got_blob != blob:
+        raise IdentityError('GPGX %s blob %s, expected %s' % (CPU_HEADER_PATH, got_blob, blob))
+    txt = _git(repo, 'show', '%s:%s' % (commit, CPU_HEADER_PATH)).decode()
+    m = re.search(r'm68ki_cycle_interrupts\[10\]\s*=\s*\{([^}]*)\}', txt)
+    vals = [int(v) for v in re.findall(r'(\d+)\s*\*\s*MUL', m.group(1))] if m else []
+    if len(vals) != 10 or 'USE_CYCLES(m68ki_cycle_interrupts[(m68ki_cpu.cycles / MUL) % 10])' not in txt:
+        raise IdentityError('GPGX interrupt cycle table not found as expected')
     return vals
 
 
