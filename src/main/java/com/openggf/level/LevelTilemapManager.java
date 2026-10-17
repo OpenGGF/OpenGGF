@@ -1470,6 +1470,21 @@ public class LevelTilemapManager {
         patternLookupDirty = true;
     }
 
+    /** Geometry restoration invalidates derived caches, not an exact restored physical Plane B. */
+    void invalidateGeometryCachesForRewindRestore() {
+        boolean keepRestoredPlane = retainedBackgroundPlaneAuthoritative
+                && retainedBackgroundPlaneRestoredForRewind;
+        invalidateAllTilemaps();
+        bgLastBuildValid = false;
+        if (keepRestoredPlane) {
+            // A preceding event/parallax adapter restored native VRAM history.
+            // The later post-restore reset consumes its marker; a live mutation
+            // or scene replacement still uses the ordinary invalidator above.
+            retainedBackgroundPlaneAuthoritative = true;
+            backgroundTilemapDirty = false;
+        }
+    }
+
     // -----------------------------------------------------------------------
     // Upload
     // -----------------------------------------------------------------------

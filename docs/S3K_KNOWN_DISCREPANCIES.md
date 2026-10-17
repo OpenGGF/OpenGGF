@@ -67,6 +67,15 @@ Tails320 NTSC seven-Chaos product match original native RGB; stage pixels and br
 The [results evidence](architecture/designs/2026-10-13-s3k-ending-lifecycle.md#native-results-geometry-and-painter-order--2026-10-17-root)
 records the162 focused passes and the reproducible maintained capture tool. No accepted deviation was added.
 
+**Slot retained-plane restore (2026-10-17, local candidate):** shared derived-cache
+invalidation now preserves an exact just-restored authoritative physical plane,
+and same-level encoded-layout restore rebinds geometry without a scene reload.
+This repairs an implementation defect; no intentional ROM deviation is added.
+The [bounded R7G record](architecture/validation/levels/s3k-bonus-stage-transitions.md#r7g-actual-captured-plane-inlet-and-bounded-repair-qualification--2026-10-17)
+separates genuine stored-plane old-red/green and five maintained pilot passes
+from earlier invalid-inlet evidence, untested finite products and RGB priority gaps.
+Root's combined validation and integration remain pending.
+
 ## Table of Contents
 
 1. [YM Service Timing: Source-Relative Timeline Without Absolute VInt Phase](#ym-service-timing-source-relative-timeline-without-absolute-vint-phase)

@@ -932,6 +932,22 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         }
     }
 
+    /** Rebinds metadata restored on the current level without performing a scene load. */
+    void rebindCurrentLevelGeometryForRewindRestore() {
+        if (level == null) throw new IllegalStateException("Geometry restore requires the current level");
+        blockPixelSize = level.getBlockPixelSize();
+        chunksPerBlockSide = level.getChunksPerBlockSide();
+        cacheLevelDimensions();
+        if (tilemapManager != null) {
+            tilemapManager.updateGeometry(buildGeometry());
+            tilemapManager.invalidateGeometryCachesForRewindRestore();
+        } else {
+            invalidateForegroundTilemap();
+        }
+        // Level identity and zone have not changed. Their animation owners and
+        // captured logical state remain bound to this level, including its new map.
+    }
+
     /**
      * Processes dirty regions from a MutableLevel, dispatching incremental
      * updates to the relevant subsystems. This is a no-op when the current
