@@ -113477,3 +113477,19 @@ schemas remain explicit in the matrix. No new/worsened frontier, no timing/SAT/
 VRAM/RGB certificate. Candidate source restored exactly afterward; last local
 target is attribution-baseline compiled. Root owns fresh composition validation.
 Reports/XML are consumed after inspection; no archives or pass caches retained.
+
+
+### 2026-10-17 — Slot native band publication, bounded traces retained green
+
+Owned `t3-649fee32`, `feature/ai-s3k-slot-native-publication-gpt61`, Root e8f2
+plus the two runtime files at [recorded hashes and exact execution](../architecture/validation/levels/s3k-bonus-stage-transitions.md#slot-zero-step-and-native-row-publication--2026-10-17).
+Current Main absolute queue wrapper from owned cwd, exact Java25/surfaceless
+EGL/nullAL/Lua5.4 environment and all3 original absolute ROM paths.
+`-Dmse=off -Ptrace-replay-r7 -Dsurefire.forkCount=1 -Dtest=TestS3kSlotsBonusTraceReplay test`
+(session3566,14:24:58UTC,24.773s/zero queue) passes Knuckles1/0F0E0S/1024rows.
+Same selector with `-Ptrace-replay` (78564,14:29:07UTC,26.298s/zero queue) passes
+team1/0F0E0S/5259rows. Both errors/warnings/bootstrap lists and physics/animation
+counts zero, no first-error field; advertised missing aux schemas remain explicit.
+No frontier fit or extra sweep/baseline run. Five fixed current RGB comparisons
+retain661/360/50/52/58 differing pixels; not a zero-RGB or whole-route certificate.
+Independent source review found no material finding; combined delivery remains Root's.

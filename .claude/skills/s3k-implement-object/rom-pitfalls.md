@@ -6088,3 +6088,25 @@ alone does not override the render consumer's object header defaults.
 Origin: 2026-10-17 bounded Pachinko popup producer task over Root28fd18de8;
 real-contact old-red and twice-recreated whole-world lifetime evidence are in
 `docs/architecture/validation/levels/s3k-bonus-stage-transitions.md`.
+
+
+## Slot row preparation is not VInt_DrawLevel publication
+
+`Slots_BackgroundEvent` (skdisasm044fa46725c71187399e13f5ddb70e11d32dc024,
+sonic3k.asm:119193 onward) starts with +$400 and takes `bpl` even for zero.
+Its `sub_4ECAA` rows prepare Plane_buffer_2. The visible row copy belongs to
+VInt_DrawLevel after Process_DMA_Queue/SpecialVInt_Function; next scroll update
+is not an equivalent publication boundary. DMA-only lag and output rebuild do
+not provide DrawLevel authority. Reusing the same physical service token must
+also reject work queued after its first service, not merely an empty queue.
+
+Capture pending and published visible data together. A scalar-only snapshot can
+restore the queue but replay from a later Plane B, failing complete-world forward
+equivalence. Use the existing plane capture/restore owner and immutable/COW
+values: retain the initial baseline and replace it after real writes, invalidating
+on actual manager/level/runtime identity. Defensive accessor clones alone should
+not cause an entire retained-plane copy in every rewind tick. Test unchanged
+value reuse, caller mutation and two forced world cycles around both boundaries.
+Origin: bounded Slot R2 over Roote8f2,2026-10-17; exact native phase controls,
+rejected next-update draft and original-RGB residuals are in the existing bonus
+transition validation matrix. No claim of complete RGB parity follows.

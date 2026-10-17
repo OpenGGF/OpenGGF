@@ -1341,3 +1341,13 @@ The distinct independent HCZ slice reproduces all4353 spans/first9482air and
 passes Poindexter. No clean route/auxiliary/product/GLFW certification or second
 fix; alternate760 reused, matched4699/4353 mixed,3738 unmatched.
 [Exact native evidence, selectors, windows and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r4-retained-title-parent-and-child-movement-latch--2026-10-17).
+
+
+Slot bounded publication R2 (2026-10-17, owned `t3-649fee32` over Root e8f2):
+zero scalar now takes native positive scroll step; queued band rows publish only
+at actual eligible VInt_DrawLevel after DMA. Short phase/token/lag/rebuild and
+immutable-plane ownership controls pass; queued and published complete worlds
+recreate and replay twice. Final34focused pass, unaffected73/S3K4 reused, both
+canonical Slot character traces retain zero errors (1024/5259 rows). Exactly five
+matched original RGB frames retain661/360/50/52/58 differing pixels; visual/native
+whole-Slot certification remains open. [Exact execution and pixel limits](../architecture/validation/levels/s3k-bonus-stage-transitions.md#slot-zero-step-and-native-row-publication--2026-10-17).

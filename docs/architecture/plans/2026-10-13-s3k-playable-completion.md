@@ -4915,3 +4915,29 @@ sessions, temporary backup and consumed diagnostic cleanup are accounted for.
 Only the generated ignored private config remains for Root's tree cleanup.
 No Main integration/push, branch/tree removal, RGB certificate, native run or
 whole-objective qualification is included; Root owns remaining delivery gates.
+
+
+### Slot native publication R2 handback — 2026-10-17
+
+Owned `t3-649fee32` fast-forwarded cleanly to Root `e8f2d15e2`, then created
+local `feature/ai-s3k-slot-native-publication-gpt61` while preserving the R1 ref,
+registry and private regular config. Recovered only the zero-scalar native +$400
+step and actual queued-row/VInt_DrawLevel publication owner; rejected retained
+7380's next-update approximation. Typed S3K profile invocation is after DMA and
+physical-token guarded, with captured pending and immutable actual published-plane
+state. Unchanged captures share one defensive value; actual initialization/scene/
+runtime identity invalidates it. Two forced complete-world cycles cover both
+sides of queuing and publication. Independent GPT-6.1 native review found no
+material finding at the recorded final hashes, no reviewer execution.
+
+Old-red85042/93592 proves each missing behavior. World12642 exposed missing
+published bytes, then repaired within the authorized handler. Final51197 passes34
+and reuses unaffected73 from92667 (S3K4/profile/animated-publication). Slot3566
+Knuckles1024rows and78564 team5259rows pass with no errors/warnings/bootstrap/skips.
+Single five-PNG capture28913 yields fixed971/974/1017/1022/1026 residuals
+661/360/50/52/58 original RGB pixels, all visually inspected; no native rerun,
+normalization, search, media encode, extra test or zero-parity claim.
+[Exact sources, selectors, failures, hashes and RGB provenance](../validation/levels/s3k-bonus-stage-transitions.md#slot-zero-step-and-native-row-publication--2026-10-17).
+All jobs/leases terminal, candidate compilation current; consumed diagnostics and
+temporary helpers cleaned, private config/durable originals retained. Root owns
+composition/combined smoke/guards/integration/push; no Main change or tree removal.
