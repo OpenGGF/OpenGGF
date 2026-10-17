@@ -2029,3 +2029,75 @@ checkpoint is not this observed writer. See [R17 exact witness](../../audits/tra
 No shared damage defect or earlier trajectory/ring producer is established;
 current campaign completion and native comparison remain open. Temporary logs
 are removed; no runtime repair, new route, native/media or further execution.
+
+
+## R13 matched cold-campaign first tuple difference — 2026-10-17
+
+**Comparison evidence, no runtime repair/native truth claim.** Same98d/native01a1496e
+ran the original maintained solo Sonic cold case once on explicit published Main803
+`8030832d2ab6080e5324cdfe35e971677fd97b41`, then once on exact composed
+`f196e95da4583206a1201b3b4d02b1f626f7026e` (Slot2077 +ICZ70e +R16/R17 docs;
+no unqualified DEZ WIP). The original class, GameplayCaptureSession and fixed BK2
+are byte-identical across both. Historical author policies do not execute here.
+Root reviewed the same two temporary test-source bytes; removing exactly five
+marked logging blocks reconstructs the original driver byte-for-byte. Existing
+step/render pairs stay adjacent; only passive scalar reads/output follow them.
+All original input/assert/capture/restore/history calls and ordering remain intact.
+
+| Epoch | Handle / terminalUTC | Original selected case | Queue / Maven / method |
+| --- | --- | --- | --- |
+|803 baseline |38651 /18:17:02 /exit0 |1/0F0E0S, full campaign and five45-step forward+two-replay windows pass |0s /1m46 /33.642s |
+|f196 current |49615 /18:22:28 /exit1 |1/1F0E0S, original `cold death49613`; later assertions unreached |0s /1m40 /30.874s |
+
+Both actual trees compiled within their single normal Maven lifecycle, unchanged
+reviewed source, no separate build/repair/retry or target copy. Both journals pass
+header/schema/length/cap validation and every serial, unique explicit metadata key,
+actual P1/P2/host input and primitive before/after passivity check. Baseline has
+52946 verified rows (52271 main+675 window steps), current49884 (49614+270).
+**All49884 current keys match the baseline prefix exactly**; no metadata mismatch,
+row-offset fit, interpolation or comparison past a mismatched key. Clocks are
+actual bound ObjectManager VInt, LevelManager LF and ObjectManager frame, distinct
+from outer movie, input-list and BK2 indexes. Phase is after original step+render.
+
+The first unequal scalar is main outer/input/BK2 **48275**, binary sequence48545
+because270 real rewind-window steps preceded it; **SSZ1, VInt48206/LF9027/OM9028**.
+At48274 the complete declared tuple still agrees: P1`1885.B000/0A6C.6800`,
+status`21`, vx/g`FD4C`, cameraYphysical/copy`0A0C`. At48275 both apply Left
+(input4/action0), P1X`187D.F000`, Yfraction`6800`, vx/g`F400`, vy0, rings15,
+no shield, same RNG. Baseline Y becomes **`0A64`**, status **`29`** (on-object bit3);
+current Y stays **`0A6C`**, status **`21`**. Baseline cameraYphysical/copy`0A04`
+versus current`0A0C`. At48276 both receive Jump16/A1 and retain the8px Y difference.
+This pins the first standing/snap outcome; the actual object/contact writer is
+**not identified** by this primitive-only journal. Do not blame a spring, cloud,
+monitor, allocator or camera source from these values alone.
+
+Later observed differences within the same explicit-key prefix:
+
+- First hurt/state difference49161: baseline remains hurt with invulnerability120;
+  current clears hurt with120, then49162 counters120/119.
+- First ring-count difference49201 is current1 versus baseline0 (an earlier/extra
+  increment, not a deficit). At49375 both lose all rings: baseline2→0/current3→0,
+  both hurt/invulnerability120. No shield type or has-shield difference occurs.
+- First current ring deficit49581: baseline0→1/current0→0. P1 Y is baseline
+  `0634.0600`, current`0633.FE00`, a full16:16 difference`0800` (1/32pixel).
+  The ring-count writer/ring identity is not observed. At49613 baseline1→0 becomes
+  hurt/invulnerability120, while the ringless current becomes dead, matching R17's
+  separate engine Mecha-parent HURT witness. No new death/contact owner is inferred.
+- No VInt/LF/OM-frame, RNG presence/seed, zone/act/mode or load-bit difference
+  occurs anywhere in the49884-row shared prefix. No clock-only first difference.
+
+Binary v1 is a500-byte header plus41 big-endian int32 fields per164-byte record,
+hard60000 rows/10MiB. Baseline8,683,644bytes SHA256
+`2f872001b8f92012ec9a4076d2be7a99bbc54886d1a7f031aa223c0f4742bb09`;
+current8,181,476bytes SHA256
+`55d9eb54d984c559b149d31ff86619945de59d9ff3c8a312602db82f9f0bf40c`.
+Root independently read both original binaries with actual schemas/explicit keys
+and confirmed48274/75/76,49161,49201,49375,49581,49613. After preserving these facts,
+both raw binaries are consumed under metadata-slot ALONE, no copies/archive/receipt.
+Inspected XML/TXT reports were already consumed. The two temporary sources are
+restored/removed and exactly two instrumented classes removed under the intended
+writer lease. No live job, runtime edit or extra JVM; no rebuild is claimed.
+Main config hash/mtime, regular private bytecopy, native checkouts,803 and70e refs
+are preserved. Target last compiled f196+temporary observer; instrumented cold/helper
+classes are now removed, so this is not a fresh maintained build. [Exact source hashes, commands and stopping limits](../../plans/2026-10-13-s3k-playable-completion.md#r13-matched-cold-campaign-baselinecurrent-comparison--2026-10-17).
+Current cold completion stays blocked; no native/world/full-route certificate follows.
