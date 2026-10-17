@@ -5342,3 +5342,136 @@ final provenance would still be needed. The unused S3kKosBusTimeline has no
 production consumer; engine-owned Kos state, explicit rebase/phase origin,
 SR/IRQ/vector/bus/handler inputs and ending service context remain unresolved.
 No additional native/engine command, callback or fixture mutation occurred.
+
+## R22 composed full canonical reaches8775 status; strict route remains red — 2026-10-17
+
+**One unmodified maintained fullcanonical, not a prefix or full suite, measures
+this frontier.** Owned3aa branch
+`bugfix/ai-s3k-hcz-composed-canonical-frontier-gpt61` is created from preserved
+a46 and fast-forwarded under its intended-tree writer lease to committed Root
+`7df991e289b93f92b34e10e79dc4f9900ec67eaa`. This composition includes other
+qualified Root changes; it is broader than historical49197. Prior held-release
+branch stays at a46; all earlier refs, native4fdf checkout and regular private
+config/Main bytes+mtime remain. No runtime/test/fixture/observer changes are
+made for R22. A source/registry/process check finds no duplicate queued/running
+same fullcase; unrelated jobs are preserved. R22ordinal25/task is registered in
+`gpt61_hcz_composed_fullcanonical_r22`, separately from24..20, with24h expiry.
+
+### Original selection, source and actual terminal
+
+The actual historical17194/49197 fullcase profile is `trace-replay`. The only
+request uses the existing maintained method, original AD40 fromboot/bootstrap/
+lag, and the normal Main absolute wrapper from this owned cwd. MAIN_WORKSPACE and
+the three ROM variables retain the original absolute bindings documented in R18:
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_WORKSPACE/tools/testing/maven_queue.py" --normal \
+  -Dmse=off -Ptrace-replay \
+  "-Dsonic1.rom.path=$S1_ROM" \
+  "-Dsonic2.rom.path=$S2_ROM" \
+  "-Ds3k.rom.path=$S3K_ROM" \
+  '-Dtest=TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds' \
+  -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true \
+  -Dsurefire.runOrder=alphabetical test -B
+```
+
+The compiler prerequisite stays inside this one request. There is no prefix
+cutoff, checkpoint replacement, reflection, callback, diagnostic gameplay log,
+input/timing change or reference hydration. Before/after SHA256 pins match:
+
+| Input | SHA256 |
+| --- | --- |
+| Maintained fullcase | `eb743765a952e947a54991ecd8fe67c2114bc1b2e5addfc4d3b8b1e4b19a5127` |
+| AbstractRunChainTest | `967c9896bf566218e9198626ec7d256f181be9fb78ca5abc787d6b82932148bb` |
+| Column runtime | `d8119e4afe924b7e76adcc6e8a71bf38c46e1c85067f5f7e5e42cd956cd3b303` |
+| Original run BK2 | `ad40fb0b0a74fa12b08ab71b2e48a7455b388d14f43f4cded502ac4a15d1b3c0` |
+
+BK2 remains at
+`src/test/resources/traces/s3k/runs/s3k-sonic-tails-complete-emeralds/s3k-sonic-tails-complete-emeralds.bk2`.
+Sole session **76850** finishes **19:02:24UTC**, exit1, queue0s,
+displayed Maven01:38min, JUnit **1/1F0E0S**, method26.092s/suite26.359s.
+The combined failure has both seg11 comparison and seg13 walk-ownership axes;
+four suppressed unmatched hardware completions are retained below. No skipped
+ROM test, observer error, retry or additional selection is hidden by this total.
+
+### Completed windows and actual next field
+
+All available JSON fields/arrays and the JUnit XML/failure text are inspected.
+Complete reports compare every row of their loaded reference; row counts are
+also checked against the original compressed CSVs using TraceData's nonempty/
+noncomment/header rules. Every listed report has0warnings and0bootstrap errors.
+
+| Segment | Compared / reference rows | Complete | Total | Physics | Animation | Lag |
+| --- | --- | --- | --- | --- | --- | --- |
+|0 aiz|2290 /2290|true|0|0|0|0|
+|2 aiz_2|4023 /4023|true|0|0|0|11|
+|4 aiz_3|8235 /8235|true|0|0|0|14|
+|6 aiz_4|4103 /4103|true|0|0|0|16|
+|8 aiz_5|7175 /7175|true|0|0|0|62|
+|9 hcz|3574 /3574|true|0|0|0|55|
+|11 hcz_2|14208 /14208|true|11118|10054|1064|59|
+|13 hcz_3|partial count not emitted /5393|false|63295|54642|8653|6|
+
+ReturnedHCZ's actual **firstNonCameraPhysicsMismatch is row8775
+`sidekick_status_byte`, native000B / engine000A, delta1**. This proves advance
+past repaired8717 in the complete window; no writer/cause is observed here.
+First logged all-group mismatch remains3475 `sidekick_animation_id`17/1C.
+Seg11 JSON
+`s3k-sonic-tails-complete-emeralds_seg11-segment-11-6d40780980dc3a7d.json`
+has SHA256
+`eb91529a17cd750726ad42e6d369fc218c9f84e49028e770caf5980da3a169b1`.
+The assertion's phrase “physics comparator errors” labels TOTAL11118;
+the actual group split is10054physics+1064animation, not11118physics.
+
+The entire *available* seg11 recent array has five ERROR/repeatCount1 entries,
+all at14207: mapping_frame00A0/0096, animation_id0020/0002,
+status_byte0002/0007, rolling0/1, g_speed0000/-0174. This bounded ring is
+**not an exhaustive error vector**. Historical49197's complete14208 total26153
+(23312physics+2841animation), first8717Air1/0, lag59/warnbootstrap0 is a
+same-window aggregate comparison only. Broader source composition and absent
+full arrays prevent single-owner attribution or a regression-free/full-vector
+claim. R21's8721-row206 remains its distinct partial result, never extrapolated.
+
+### Exit reached; onward ownership and timing limits
+
+The actual dynamic-art gap report has13 gaps/0failures, including
+hcz_2→ss_6 gapStart/nextArm77283 and ss_6→hcz_3 gapStart83626/nextArm85096.
+Original manifest transitions identify giant_ring at BK2frame77284 and
+stage_exit85097. Thus the returnedHCZ giant-ring exit is **present** and the
+walker actually enters SS6 and hcz_3. Traversal/gap0 does not certify SS parity.
+The next giant-ring transition90491 is not reached/qualified.
+
+Seg13 remains incomplete: first non-camera287 `y` native06D4/engine06DA,
+last recent comparison3208. Its5393-row loaded reference is checked, but the
+maintained summary does not emit the exact partial compared count; neither3209
+nor a fitted movie-offset count is asserted. The failure is
+`segment 13 lost production ownership before source closure`, modeLEVEL,
+`LevelIdentity[loadGeneration=10, progressionZone=1, romZone=1, act=1]`,
+BK2cursor88306 (hcz_3 expects act2). The five available recent entries at3208
+are mapping_frame0003/00BF, animation_id0000/0025, status_byte0002/0042,
+g_speed02A6/0000 and x_speed02A6/0000, all ERROR/repeatCount1. Its JSON SHA256
+is `8d3f40103186273799f2d85b6d6bf20aa0dd271442e83330f2c52506d85f96f5`.
+The same historical aggregate/first/recent row/ownership cursor does not prove
+exhaustive error-set equality.
+
+Four actual suppressed **unconsumed completion edges at segment end** remain:
+
+| Raw frame / boundary | Kind / ordinal | Expected fingerprint | Actual production |
+| --- | --- | --- | --- |
+|3256 PRE_MAIN_LOOP|KOS_DECOMPRESSION_QUEUE#244|`c2db2fda975f758607b601f686bc782c7ebe55e2413f540f23b193ba2b6f1741`|different descriptor `fbfc78d499717cfec6df27fdd04fa4b5293a7147ec7ff7a7a18004e9db801e78`|
+|3257 POST_OBJECTS|KOS_MODULE_QUEUE#171|`1523a70a6b4a9eea42f03f72e73e83ab222fb6e09187cbc49b028451f14e3033`|different descriptor `10eb568a70724c579f022914f56227c2c7fa421aafa8578aebaa874f0cffb0ca`|
+|5356 PRE_MAIN_LOOP|KOS_DECOMPRESSION_QUEUE#245|`3c96d8b9573e86f26814cb8a605459c8fef23cc1ca5425db2fd1cc250d408d91`|no unclaimed submission; never submitted versus already admitted/claimed is not distinguished|
+|5357 POST_OBJECTS|KOS_MODULE_QUEUE#172|`70da89e553f70fe647a00489dec5f2612854986b444b87a2e8d81ab0f821e431`|different descriptor `05324378670c6afa8c6d99f6e5313d625d2d926e6bc16f25cd9d8d1a5a195bf8`|
+
+No timing retuning, missing-job fabrication, exact historical descriptor equality
+or downstream causality is inferred. Stop at this terminal/new8775 field: no
+repair/probe/rerun/guards/fullslice/alternate/native/media or broad suite.
+No whole-route certificate, strict-green claim or refreshed matrix breadth.
+Root owns further causal scope, combined smoke/guards, integration and push.
+After durable facts, consume only inspected own XML/text/segment/gap JSON and
+owner sidecars under metadata_slot alone; no raw archive or pass receipt.
+R23's queued identity is retained separately without authorizing early owner work.

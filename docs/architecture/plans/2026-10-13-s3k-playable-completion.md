@@ -7218,3 +7218,33 @@ Root owns composition/guards/broad/delivery. Temporary test/class and inspected
 owned diagnostics are consumed normally; R19oldred history, refs/native/config
 remain. Runtime/test and existing release/discrepancy/frontier/pitfall evidence
 are committed locally under normal hooks, not integrated or pushed here.
+
+
+### R22 composed fullcanonical next frontier8775 — 2026-10-17
+
+Same3aa preserves a46/all prior refs, native4fdf and private config, creates local
+bugfix/ai-s3k-hcz-composed-canonical-frontier-gpt61 and safely FFs committed7df991e289b93f92b34e10e79dc4f9900ec67eaa.
+No runtime/test/fixture/observer edits or duplicate same-case job. R22ordinal25
+is separately registered with24h expiry. One unchanged maintained selector
+`TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds`
+uses actual historical `-Ptrace-replay`, original AD40 boot/lag/bootstrap,
+all3absoluteROM/normal Mainabsolutequeue/Java25/single-EGL/nullAL/noambient/
+singlefork/reuse/alphabetical. Session76850 terminal1 at19:02:24UTC,
+queue0/displayedMaven01:38min, JUnit1/1F0E0S, method26.092s/suite26.359s.
+
+ReturnedHCZ COMPLETE14208 is **11118=10054physics+1064animation**, lag59,
+0warnings/bootstrap; firstNonCamera **8775 sidekick_status_byte000B/000A**.
+The earlier six0/2/4/6/8/9 complete2290/4023/8235/4103/7175/3574 rows with
+all-group zero. Actual13gaps/0failures includes returnedHCZ giant_ring77284,
+SS6 and hcz_3 stage_exit85097; exit is present. Seg13 remains incomplete5393
+reference, exact partial count unreported, last recent3208;63295=54642+8653,
+first287y06D4/06DA, lag6/warnbootstrap0. Production ownership fails at
+BK2cursor88306, modeLEVEL/gen10/zone1/act1 (expectedact2). Four suppressed
+unmatched completion edges3256/3257/5356/5357 remain; no error waiver.
+[Exact command, source pins, groups, available arrays and descriptor limits](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r22-composed-full-canonical-reaches8775-status-strict-route-remains-red--2026-10-17).
+Historical49197 same complete14208 total26153/first8717 is an aggregate comparison
+on a different broader composition; recent5 is not exhaustive-vector evidence.
+No8775 writer attribution or runtime fix; strict camera/animation/route remain
+red. Stop after sole terminal; no extra run/probe/native/guards or R23 owner work.
+Consume inspected diagnostics normally; docs-only local commit, Root owns
+combined delivery. Earlier73focused/R21prefix epochs stay explicitly separate.

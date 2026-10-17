@@ -113827,3 +113827,30 @@ No later non-camera frontier, full route/exit, independent slice/alternate,
 auxiliary, exact GLFW or new native qualification; no general green. Root owns
 combined guards/smoke/integration/push. Temporary reporting source/classes and
 consumed owned diagnostics are removed; local runtime/test+docs only.
+
+
+### 2026-10-17 — HCZ composed fullcanonical first8775 status; actual exit reached
+
+Owned3aa safely FFs preserved a46 to committed7df991e289b93f92b34e10e79dc4f9900ec67eaa,
+branchbugfix/ai-s3k-hcz-composed-canonical-frontier-gpt61, column d811 exact;
+no runtime/test/fixture/observer edits. Sole actual unchanged maintained selector
+`-Ptrace-replay -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds`,
+originalAD40 fromboot/bootstrap/defaultlag, all3absoluteROM/Java25/normal Main
+absolutequeue/JTOsingleEGL/nullAL/noambient/fork1/reusetrue/alphabetical.
+Session76850 terminal1 at19:02:24UTC, queue0/displayedMaven01:38min,
+JUnit1/1F0E0S (method26.092s/suite26.359s). ReturnedHCZ COMPLETE14208:
+**11118=10054physics+1064animation**, lag59/warnbootstrap0, firstNonCamera
+**8775 sidekick_status_byte000B/000A**, after repaired8717. First all-group
+3475animation17/1C remains. Earlier0/2/4/6/8/9 complete all-group zero.
+Actual13gaps/0failures and giant_ring77284/stage_exit85097 show returnedHCZ exit,
+SS6 and hcz_3 reached. Seg13 partial63295=54642+8653/5393reference,
+exact partial count not emitted, first287y06D4/06DA/recent3208, lag6/0warnings/
+bootstrap; ownership fails BK2cursor88306 atLEVEL/gen10/zone1/act1, expectedact2.
+Four suppressed unmatched completion edges3256/3257/5356/5357 remain.
+[Exact invocation, source pins, windows, arrays and descriptor limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r22-composed-full-canonical-reaches8775-status-strict-route-remains-red--2026-10-17).
+Historical49197's complete14208 total26153/first8717 is an aggregate comparison;
+bounded recent5 is not exhaustive-vector/regression-free proof. No8775 owner
+attribution, strict-green/fullroute certificate or extra run/probe/repair.
+R21partial206 and73focused remain their actual epochs. Normal docs-only local
+accounting/consumed cleanup; Root owns next causal scope, combined validation,
+integration and push. R22ordinal25 separate; queuedR23 is not started here.
