@@ -119,6 +119,10 @@ public class Sonic3kSpecialStageRenderer {
      * (Map_SStageChaosEmerald / Map_SStageSuperEmerald), 16 frames, no DPLC.
      */
     private byte[] emeraldMappingData;
+    /** ROM Map_SStageSphere; repeated pointers preserve distant sprite dimensions/art. */
+    private byte[] sphereMappingData;
+
+    void setSphereMappingData(byte[] data) { sphereMappingData = data; }
 
     /** Raw mapping data for Sonic's SS sprite. */
     private byte[] sonicMappingData;
@@ -145,10 +149,10 @@ public class Sonic3kSpecialStageRenderer {
     };
 
     private static final int[] HUD_TEMPLATE_BORDER_COLUMNS = {0, 7};
-    /** Emerald mappings hold 16 frames, one per perspective size index. */
-    private static final int EMERALD_MAPPING_FRAME_COUNT = 16;
+    /** The perspective renderer admits mapping indices 0 through 15. */
+    private static final int PERSPECTIVE_MAPPING_FRAME_COUNT = 16;
     /** Sanity bound on pieces per frame; the busiest ROM frame uses 4. */
-    private static final int EMERALD_MAX_PIECES = 8;
+    private static final int PERSPECTIVE_MAPPING_MAX_PIECES = 8;
 
     private static final int[] RING_FRONT_SIZE_MAP = {
             3, 2, 0x00, 3, 2, 0x0C, 3, 3, 0x18, 3, 2, 0x27,
@@ -1065,7 +1069,14 @@ public class Sonic3kSpecialStageRenderer {
         // the Super Emerald frames are mirrored multi-piece sprites that no single
         // rectangular block of tiles can describe.
         if (cellType == CELL_CHAOS_EMERALD || cellType == CELL_SUPER_EMERALD) {
-            renderEmeraldSprite(screenX, screenY, sizeIndex, patternBase, paletteIndex);
+            renderMappedSprite(emeraldMappingData, screenX, screenY, sizeIndex, patternBase, paletteIndex);
+            return;
+        }
+        // Map_SStageSphere_ aliases frames 10/11, 12/13 and 14/15. A linear
+        // size/tile formula shrinks the last two pairs and selects the wrong art.
+        if (cellType == CELL_BLUE || cellType == CELL_TOUCHED || cellType == CELL_RED
+                || cellType == CELL_BUMPER || cellType == CELL_SPRING) {
+            renderMappedSprite(sphereMappingData, screenX, screenY, sizeIndex, patternBase, paletteIndex);
             return;
         }
 
@@ -1158,7 +1169,7 @@ public class Sonic3kSpecialStageRenderer {
     }
 
     /**
-     * Render the Chaos or Super Emerald from its ROM sprite mapping.
+     * Render a sphere or emerald from its ROM sprite mapping.
      * <p>
      * ROM: Draw_SSSprites resolves the perspective size field to a frame index
      * (0-15) and walks the mapping frame's pieces. The Chaos Emerald frames are a
@@ -1166,24 +1177,24 @@ public class Sonic3kSpecialStageRenderer {
      * more pieces with the right half H-flipped, so both are driven from the
      * mapping data rather than a rectangular block of tiles.
      */
-    private void renderEmeraldSprite(int screenX, int screenY, int frame,
+    private void renderMappedSprite(byte[] mappingData, int screenX, int screenY, int frame,
                                      int patternBase, int paletteIndex) {
-        if (emeraldMappingData == null || frame < 0 || frame >= EMERALD_MAPPING_FRAME_COUNT) return;
-        if (frame * 2 + 1 >= emeraldMappingData.length) return;
+        if (mappingData == null || frame < 0 || frame >= PERSPECTIVE_MAPPING_FRAME_COUNT) return;
+        if (frame * 2 + 1 >= mappingData.length) return;
 
-        int frameOff = readWord(emeraldMappingData, frame * 2);
-        if (frameOff + 1 >= emeraldMappingData.length) return;
-        int pieceCount = readWord(emeraldMappingData, frameOff);
-        if (pieceCount <= 0 || pieceCount > EMERALD_MAX_PIECES) return;
+        int frameOff = readWord(mappingData, frame * 2);
+        if (frameOff + 1 >= mappingData.length) return;
+        int pieceCount = readWord(mappingData, frameOff);
+        if (pieceCount <= 0 || pieceCount > PERSPECTIVE_MAPPING_MAX_PIECES) return;
 
         for (int p = 0; p < pieceCount; p++) {
             int po = frameOff + 2 + p * 6;
-            if (po + 5 >= emeraldMappingData.length) break;
+            if (po + 5 >= mappingData.length) break;
 
-            int yOff = (byte) emeraldMappingData[po];
-            int sizeByte = emeraldMappingData[po + 1] & 0xFF;
-            int patternWord = readWord(emeraldMappingData, po + 2);
-            int xOff = readSignedWord(emeraldMappingData, po + 4);
+            int yOff = (byte) mappingData[po];
+            int sizeByte = mappingData[po + 1] & 0xFF;
+            int patternWord = readWord(mappingData, po + 2);
+            int xOff = readSignedWord(mappingData, po + 4);
 
             int tilesW = ((sizeByte >> 2) & 3) + 1;
             int tilesH = (sizeByte & 3) + 1;

@@ -773,3 +773,13 @@ remain exact and both state/event CSVs are byte-identical to v6. See the
 completion plan's composed presentation qualification. This certifies those
 sampled native320 Tails/NTSC/Limited-RAW_RGB pictures only; upper HUD/distant
 object phase and the wider route/configuration/PAL/PCM obligations stay open.
+
+
+Distant-sphere follow-up (2026-10-17): the actual ROM mapping table aliases
+several far-depth frames. Using those bytes passes138 focused checks without
+skips and reduces stage reveal+22 from330 to46 raw RGB differences; the17
+sampled results frames remain exact and gameplay/event CSVs are unchanged.
+The remaining far-sphere overlap/priority gap is explicit in the
+[completion plan](../../plans/2026-10-13-s3k-playable-completion.md#blue-sphere-distant-mapping-frames--2026-10-17).
+These sampled native320 Tails/NTSC/Limited-RAW_RGB pictures do not certify
+complete stage/cold routes, donor/PAL/PCM or other native configurations.

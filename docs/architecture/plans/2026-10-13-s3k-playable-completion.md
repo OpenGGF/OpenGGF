@@ -2404,3 +2404,54 @@ shutdown; its owned Maven/JVM invocation is terminal. This is diagnostic CLI
 and bounded picture evidence, not a suite pass. Remaining upper HUD/distant
 object phase, complete stage/results timeline, cold/donor/PAL/PCM and other
 native configurations remain open.
+
+
+### Blue Sphere distant mapping frames — 2026-10-17
+
+The composed v8 capture's remaining330 stage pixels were all owned by distant
+native SAT entries23..31, rather than the HUD. Shipped `Map_SStageSphere_`
+(`$A464`, 166 bytes) has19 word pointers: frames10/11 share the2x2 `$6C`
+piece,12/13 share2x2 `$70`,14/15 share1x1 `$74`; later16..18 are outside
+Draw_SSSprites' admitted0..15 perspective range. The former formula incorrectly
+advanced tiles at11 and shrank12/13. The manager now loads the mapping bytes
+through the ROM pipeline; sphere/red/bumper/spring/touched branches use the
+existing bounded mapping-piece reader. Ring/emerald selection, gameplay,
+clocks and snapshot state are unchanged.
+
+Independent `TestS3kSpecialStageSphereMappings` reads each actual ROM pointer
+and piece as its oracle. The unchanged old mapper fails5 of16 cases (11..15),
+with11 passing, no errors/skips (20891, 07:10:30 UTC). With the correction,
+38930 completes138/0/0/0 at07:13:36 UTC:16 admitted mapping frames, each five
+cell/palette branches at320/800, plus layout bank, projection, shadow publication,
+rendering/wide, typed manager/visual/gameplay snapshots, rewind, headless boot
+and required S3K loading consumers. Command uses the current main absolute
+queue wrapper from `t3-2f458d35` at `4eb88883c` plus the mapping correction,
+`--normal -Dmse=off`, original absolute `-Ds3k.rom.path`, Java25, surfaceless EGL,
+unset DISPLAY/WAYLAND_DISPLAY and nullAL. Exact selector adds
+`TestS3kSpecialStageSphereMappings,TestS3kSpecialStageLayoutBank` to the previous
+106-case presentation selection. This is not a full suite or full-route claim.
+
+The maintained capture CLI then completes36070 exit0 at07:16:41 UTC on that
+same source, using the preceding documented command and new external output
+`spot-checks/seven-chaos-engine-sphere-v9`. All174 files are retained. Against
+unchanged native-v2 original RGB and its declared active crop only, stage
+reveal+0..22 by2 now differs by `19,19,43,43,43,43,46,46,46,46,46,46` pixels.
+The17 results samples still match exactly. State.csv and ledger.csv remain
+byte-identical to v6, including LRZ2 return2423. The actual +22 paired image
+was inspected in `seven-chaos-compare-sphere-v9`; no colour normalization,
+translation, rescaling or masking enters the counts.
+
+The remaining46 pixels occupy bbox(91,22)..(260,43). Native published SAT29
+at(155,22) and30 at(189,24) overlap earlier high-priority pieces25/26;28 and31
+also carry low priority. `Draw_SSSprites/loc_9A04` clears priority when the
+perspective word is at least `$54` (the second axis has the same branch).
+The renderer still paints those cells with unconditional high priority.
+This is a separate composition gap, not a reason to alter mapping pointers or
+ignore those pixels. Exact full-stage RGB, the complete results timeline,
+cold/donor/other native configurations, PAL and PCM remain open.
+
+Fresh mapping-source guards27554 complete83/0/0/0 at07:20:41 UTC: architectural
+source guard72, trace replay invariant10 and default hydration switch1, via
+`--lean -Dmse=off -Dtest=TestArchitecturalSourceGuard,TestTraceReplayInvariantGuard,TestTraceHydrateSwitchDefault test -B`.
+The two latter names resolve their existing trace packages; all three ran with
+no skips. Diff whitespace, affected relative links and mirrored pitfalls pass.

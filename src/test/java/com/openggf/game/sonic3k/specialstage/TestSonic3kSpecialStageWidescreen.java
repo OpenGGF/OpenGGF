@@ -62,6 +62,7 @@ class TestSonic3kSpecialStageWidescreen {
         renderer.setArtLoaded(true);
         renderer.setFloorPatternBase(0x1000);
         renderer.setSpherePatternBase(0x2000);
+        renderer.setSphereMappingData(TestSonic3kSpecialStageRenderer.sphereMappingData());
         renderer.setRingPatternBase(0x3000);
         renderer.setBgPatternBase(0x4000);
         renderer.setGetBlueSpherePatternBase(0x5000);

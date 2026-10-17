@@ -26,7 +26,8 @@ class TestSonic3kSpecialStageRenderer {
         renderer.render(manager);
 
         assertEquals(List.of(
-                new RenderCall(0x1000 + 0x74, 2),
+                new RenderCall(0x1000 + 0x70, 2), new RenderCall(0x1000 + 0x71, 2),
+                new RenderCall(0x1000 + 0x72, 2), new RenderCall(0x1000 + 0x73, 2),
                 new RenderCall(0x2000 + 0x48, 2)), graphics.calls);
     }
 
@@ -39,7 +40,8 @@ class TestSonic3kSpecialStageRenderer {
 
         renderer.render(manager);
 
-        assertEquals(List.of(new RenderCall(0x1000 + 0x74, 2)), graphics.calls);
+        assertEquals(List.of(new RenderCall(0x1000 + 0x70, 2), new RenderCall(0x1000 + 0x71, 2),
+                new RenderCall(0x1000 + 0x72, 2), new RenderCall(0x1000 + 0x73, 2)), graphics.calls);
     }
 
     @Test
@@ -181,9 +183,20 @@ class TestSonic3kSpecialStageRenderer {
         Sonic3kSpecialStageRenderer renderer = new Sonic3kSpecialStageRenderer(graphics);
         renderer.setArtLoaded(true);
         renderer.setSpherePatternBase(0x1000);
+        renderer.setSphereMappingData(sphereMappingData());
         renderer.setRingPatternBase(0x2000);
         renderer.setPerspectiveMaps(perspectiveMapWithUniformDepth());
         return renderer;
+    }
+
+    /** Synthetic frame12 fixture uses the native 2x2 shape; other frames are immaterial here. */
+    static byte[] sphereMappingData() {
+        byte[] data = new byte[40];
+        for (int frame = 0; frame < 16; frame++) writeWord(data, frame * 2, 32);
+        writeWord(data, 32, 1);
+        data[34] = (byte) -8; data[35] = 5;
+        writeWord(data, 36, 0x70); writeWord(data, 38, -8);
+        return data;
     }
 
     private static Sonic3kSpecialStageManager configuredGridManager() {

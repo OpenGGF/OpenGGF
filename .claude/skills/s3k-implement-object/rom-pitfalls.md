@@ -5946,3 +5946,15 @@ scalar bytes through the ROM pipeline. `Draw_SSShadows` uses fixed screen
 coordinates and palette3/index15 shadow operators behind the ordinary SAT,
 not opaque black art tied to the jumping body. Its first regular-loop publication
 is absent from the boot fade and must rewind with the presentation phase.
+
+
+`Map_SStageSphere_` has19 pointers even though Draw_SSSprites admits only0..15;
+10/11,12/13 and14/15 deliberately alias the same pieces. Equal geometry across
+successive perspective depths is shipped data, not a linear shrinking formula.
+Read the ROM pointers, including their signed piece offsets and column-major
+art. Native frame-end SAT/VRAM separates mapping defects from composition:
+fixing those aliases reduced the actual stage picture330→46 pixels, exposing
+low-priority far-sphere/overlap behavior as a separate remaining gap. Never
+reshape the reference or fit the asset mapping to hide it. This table is S3K;
+the pointer-alias versus inferred-geometry lesson applies across games.
+Origin: Root Blue Sphere original-RGB mapping comparison,2026-10-17.

@@ -356,6 +356,8 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
         // carry that flag in the Super Emerald reward; legacy indices 8-15 also
         // explicitly request the S&K bank. Either bank is indexed by the low three bits.
         com.openggf.data.Rom rom = GameServices.rom().getRom();
+        renderer.setSphereMappingData(rom.readBytes(Sonic3kSpecialStageRomOffsets.MAP_SPHERE,
+                Sonic3kSpecialStageRomOffsets.MAP_SPHERE_SIZE));
         byte[] stageData;
         if (!superEmeraldMode && currentStage < 8) {
             // S3 layouts
