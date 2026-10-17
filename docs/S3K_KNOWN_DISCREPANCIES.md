@@ -54,6 +54,13 @@ no fallback asset or intentional discrepancy is introduced. All 55 affected cont
 scroll/RAM, lifecycle and pixel checks pass; scope is recorded in the
 [dated resource-boundary record](architecture/designs/2026-10-13-s3k-ending-lifecycle.md#deferred-ending-deformation-resources--2026-10-13).
 
+**Native white-palette repair (2026-10-17, local candidate):** managed white fades now follow the
+host ROM's distinct component routines and wait count, with the same display conversion on backdrop and
+water colours. This removes an implementation defect, not an accepted deviation. The
+[owner/evidence record](architecture/designs/2026-10-13-s3k-ending-lifecycle.md#native-white-palette-fade-owner-decision--2026-10-17-root)
+and [known-bug limits](status/s3k-known-bugs.md#super-emerald-stage-layout-set-and-results-digit-column-open)
+retain the remaining scene pixels, timing and native-product breadth; delivery validation is still pending.
+
 ## Table of Contents
 
 1. [YM Service Timing: Source-Relative Timeline Without Absolute VInt Phase](#ym-service-timing-source-relative-timeline-without-absolute-vint-phase)

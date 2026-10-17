@@ -23,6 +23,126 @@ class TestUnderwaterPaletteUpload {
     }
 
     @Test
+    void fromWhiteFadesTheDerivedWaterTargetRatherThanChangingTheTintRatio() {
+        assertNativeWhiteDerivedTarget(PaletteFadePresentation.Mode.FROM_WHITE,
+                new int[]{219, 219, 219, 255});
+    }
+
+    @Test
+    void toWhiteFadesTheDerivedWaterTargetRatherThanChangingTheTintRatio() {
+        assertNativeWhiteDerivedTarget(PaletteFadePresentation.Mode.TO_WHITE,
+                new int[]{36, 0, 0, 255});
+    }
+
+    private void assertNativeWhiteDerivedTarget(PaletteFadePresentation.Mode mode, int[] expected) {
+        graphics = new GraphicsManager();
+        graphics.initHeadless();
+        RecordingUnderwaterUploadOps uploads = new RecordingUnderwaterUploadOps();
+        graphics.setUnderwaterPaletteUploadOps(uploads);
+        RenderContext donor = RenderContext.getOrCreateDonor(GameId.S2);
+        donor.setPalette(0, paletteWithColor(1, 255, 0, 0));
+        Palette[] underwater = fourRows();
+        underwater[0] = paletteWithColor(1, 0, 0, 0);
+        Palette normal = paletteWithColor(1, 36, 0, 0);
+        // This water transform makes the donor's red target black. The native
+        // white routine steps that final target, not the inputs of the tint ratio.
+        graphics.setPaletteFadePresentation(mode, 1, PaletteFadePresentation.ALL_LINES);
+        assertEquals(mode, graphics.displayedPaletteFade().mode());
+        assertEquals(1, graphics.displayedPaletteFade().steps());
+        assertTrue(graphics.displayedPaletteFade().affects(donor.getPaletteLineBase()));
+        graphics.cacheUnderwaterPaletteTexture(underwater, normal);
+        assertEquals(1, graphics.getUnderwaterDerivedRowRecomputeCount(), "the actual donor row was derived");
+        assertEquals(255, donor.getPalette(0).getColor(1).r & 255, "the donor target stays raw");
+        assertArrayEquals(expected, rgbaAt(ByteBuffer.wrap(uploads.lastUpload),
+                donor.getPaletteLineBase() * 16 + 1));
+    }
+
+    @Test
+    void wholePaletteWhiteFadeAlsoReachesScopedRowsBeyondTheMaskWidth() {
+        graphics = new GraphicsManager();
+        graphics.initHeadless();
+        RecordingUnderwaterUploadOps uploads = new RecordingUnderwaterUploadOps();
+        graphics.setUnderwaterPaletteUploadOps(uploads);
+        Palette black = paletteWithColor(1, 0, 0, 0);
+        int bank = 0;
+        for (int i = 0; i < 9; i++) {
+            bank = graphics.scopedPaletteBank(new Object(), new Palette[]{black, black, black, black});
+        }
+        assertTrue(bank >= Integer.SIZE, "exercise a real private row beyond the legacy bit mask");
+        graphics.setPaletteFadePresentation(PaletteFadePresentation.Mode.FROM_WHITE, 0,
+                PaletteFadePresentation.ALL_LINES);
+        assertTrue(graphics.displayedPaletteFade().affects(bank));
+        graphics.cacheUnderwaterPaletteTexture(null, null);
+        assertArrayEquals(new int[]{255, 255, 255, 255}, rgbaAt(ByteBuffer.wrap(uploads.lastUpload), bank * 16 + 1));
+    }
+
+    @Test
+    void whiteWaterPublicationKeepsRawWritersPendingAndRestoresTheDisplayedGeneration() {
+        graphics = new GraphicsManager();
+        graphics.initHeadless();
+        RecordingUnderwaterUploadOps uploads = new RecordingUnderwaterUploadOps();
+        graphics.setUnderwaterPaletteUploadOps(uploads);
+        RenderContext donor = RenderContext.getOrCreateDonor(GameId.S2);
+        donor.setPalette(0, paletteWithColor(1, 255, 0, 0));
+        Palette normal = paletteWithColor(1, 36, 0, 0);
+        Palette[] water = fourRows();
+        graphics.setPaletteFadePresentation(PaletteFadePresentation.Mode.FROM_WHITE, 1,
+                PaletteFadePresentation.ALL_LINES);
+        graphics.cacheUnderwaterPaletteTexture(water, normal);
+        PaletteUploadPresentation.publishAndLatch(graphics);
+        graphics.setPaletteFadePresentation(PaletteFadePresentation.Mode.FROM_WHITE, 2,
+                PaletteFadePresentation.ALL_LINES);
+        var displayed = PaletteUploadPresentation.captureDisplayedFade(graphics);
+        assertTrue(displayed.pending());
+
+        // A later raw writer and a newly admitted private bank must not advance CRAM.
+        water[0].setColor(1, new Palette.Color((byte) 36, (byte) 0, (byte) 0));
+        Palette black = paletteWithColor(1, 0, 0, 0);
+        int bank = graphics.scopedPaletteBank(new Object(), new Palette[]{black, black, black, black});
+        graphics.refreshScopedUnderwaterResidency();
+        assertArrayEquals(new int[]{219, 219, 219, 255}, rgbaAt(ByteBuffer.wrap(uploads.lastUpload), bank * 16 + 1));
+        assertArrayEquals(new int[]{219, 219, 219, 255}, rgbaAt(ByteBuffer.wrap(uploads.lastUpload), donor.getPaletteLineBase() * 16 + 1));
+        PaletteUploadPresentation.publishAndLatch(graphics);
+        graphics.refreshScopedUnderwaterResidency();
+        assertArrayEquals(new int[]{182, 182, 182, 255}, rgbaAt(ByteBuffer.wrap(uploads.lastUpload), bank * 16 + 1));
+
+        graphics.cacheUnderwaterPaletteTexture(water, normal);
+        graphics.setPaletteFadePresentation(PaletteFadePresentation.Mode.FROM_WHITE, 3,
+                PaletteFadePresentation.ALL_LINES);
+        PaletteUploadPresentation.restoreDisplayedFade(graphics, displayed);
+        graphics.refreshScopedUnderwaterResidency();
+        assertArrayEquals(new int[]{219, 219, 219, 255}, rgbaAt(ByteBuffer.wrap(uploads.lastUpload), bank * 16 + 1));
+        PaletteUploadPresentation.publishAndLatch(graphics);
+        graphics.refreshScopedUnderwaterResidency();
+        assertArrayEquals(new int[]{146, 146, 146, 255}, rgbaAt(ByteBuffer.wrap(uploads.lastUpload), bank * 16 + 1));
+        assertArrayEquals(new int[]{255, 146, 146, 255}, rgbaAt(ByteBuffer.wrap(uploads.lastUpload), donor.getPaletteLineBase() * 16 + 1),
+                "only the next native publication admits the changed water target");
+    }
+
+    @Test
+    void whiteWaterCacheUsesTheSaturatedColourStepRatherThanAWrappedByte() {
+        graphics = new GraphicsManager();
+        graphics.initHeadless();
+        RecordingUnderwaterUploadOps uploads = new RecordingUnderwaterUploadOps();
+        graphics.setUnderwaterPaletteUploadOps(uploads);
+        RenderContext donor = RenderContext.getOrCreateDonor(GameId.S2);
+        donor.setPalette(0, paletteWithColor(1, 255, 0, 0));
+        Palette normal = paletteWithColor(1, 36, 0, 0);
+        Palette[] water = fourRows();
+        for (var mode : new PaletteFadePresentation.Mode[]{PaletteFadePresentation.Mode.FROM_WHITE,
+                PaletteFadePresentation.Mode.TO_WHITE}) {
+            graphics.setPaletteFadePresentation(mode, 0, PaletteFadePresentation.ALL_LINES);
+            graphics.cacheUnderwaterPaletteTexture(water, normal);
+            graphics.setPaletteFadePresentation(mode, 256, PaletteFadePresentation.ALL_LINES);
+            graphics.cacheUnderwaterPaletteTexture(water, normal);
+            int channel = mode == PaletteFadePresentation.Mode.FROM_WHITE ? 0 : 255;
+            assertArrayEquals(new int[]{channel, channel, channel, 255},
+                    rgbaAt(ByteBuffer.wrap(uploads.lastUpload), donor.getPaletteLineBase() * 16 + 1),
+                    "public steps saturate at the native endpoint; a byte wrap must not reuse step zero");
+        }
+    }
+
+    @Test
     void expansionToggleReuploadsDirectAndDerivedRowsWithoutChangingNativePaletteBytes() throws Exception {
         graphics = new GraphicsManager();
         graphics.initHeadless();

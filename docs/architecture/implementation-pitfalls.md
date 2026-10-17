@@ -1911,6 +1911,15 @@ identity map and explicitly ordered maps. A deterministic changed-bucket-order
 fixture checks replacement identities and duplicate character labels in both
 restore directions. Never filter snapshot bytes to hide this discrepancy.
 
+**Native white fades are distinct CRAM loops, not reversed screen overlays.** S3K `Pal_FromWhite`
+lowers all components together every third V-int; `Pal_ToWhite` raises only the first nonwhite R/G/B
+component each V-int. Retain the blocking loop's 22nd wait even when all colours have arrived.
+Step the final normal/water target before profile/range conversion; tinting an already-faded donor
+can erase its white floor. Keep raw published water inputs detached from pending writers when the
+white generation advances or restores. Saturate public colour-step values before compact cache-key
+storage: byte key 256 otherwise aliases step zero. See the
+[ROM owner and red/green evidence](designs/2026-10-13-s3k-ending-lifecycle.md#native-white-palette-fade-owner-decision--2026-10-17-root).
+
 **A capture does not need a second fade owner.** The runtime-ready GameLoop's
 PLC lifecycle already services the FadeManager once per presentation, exactly
 as the live Engine. A direct GameplayCaptureSession formerly also called its

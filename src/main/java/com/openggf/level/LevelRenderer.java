@@ -1452,7 +1452,7 @@ public final class LevelRenderer {
             return;
 
         Palette.Color backdropColor = lm.resolveLevelBackdropColor();
-        int displayedBackdrop = com.openggf.level.PaletteDisplayColor.packed(backdropColor, lm.graphicsManager);
+        int displayedBackdrop = com.openggf.level.PaletteDisplayColor.packedDisplayed(backdropColor, lm.graphicsManager);
         bgRenderer.setBackdropColor(
                 com.openggf.level.PaletteDisplayColor.red(displayedBackdrop),
                 com.openggf.level.PaletteDisplayColor.green(displayedBackdrop),

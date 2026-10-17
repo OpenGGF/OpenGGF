@@ -537,7 +537,9 @@ public class GraphicsManager {
 
 	private void setActiveFadeManager(FadeManager resolvedFadeManager) {
 		if (fadeManager != resolvedFadeManager) {
+            if (fadeManager != null) fadeManager.bindPaletteGraphics(null);
 			fadeManager = resolvedFadeManager;
+            fadeManager.bindPaletteGraphics(this);
 			if (fadeShaderProgram != null) {
 				fadeManager.setFadeShader(fadeShaderProgram);
 			}
@@ -1083,6 +1085,7 @@ public class GraphicsManager {
 	 * picture keeps the captured CRAM generation until the next V-int publication.
 	 */
 	void restoreDisplayedPaletteFade(PaletteUploadPresentation.DisplayedFade state) {
+        var previousMode = publishedPaletteFade.mode();
 		int previousMask = publishedPaletteFade.lineMask();
 		boolean changed = state.mode() == PaletteFadePresentation.Mode.NONE
 				? publishedPaletteFade.clear()
@@ -1090,24 +1093,49 @@ public class GraphicsManager {
 		paletteFadePublicationPending = state.pending();
 		displayedPaletteFadeHeld = true;
 		if (changed) {
+            if (scopedUnderwaterBasis != null && (isWhitePaletteFade(previousMode)
+                    || isWhitePaletteFade(publishedPaletteFade.mode()))) {
+                // Keep captured raw water inputs detached from later palette writers.
+                scopedUnderwaterBasis = scopedUnderwaterBasis.withFade(publishedPaletteFade);
+                scopedUnderwaterDirty = true;
+            }
 			reuploadPaletteFadeLines(previousMask | publishedPaletteFade.lineMask());
 		}
 	}
 
 	private void publishRequestedPaletteFade() {
+        var previousMode = publishedPaletteFade.mode();
 		int previousMask = publishedPaletteFade.lineMask();
 		boolean changed = paletteFadePresentation.isActive()
 				? publishedPaletteFade.set(paletteFadePresentation.mode(), paletteFadePresentation.steps(),
 						paletteFadePresentation.lineMask())
 				: publishedPaletteFade.clear();
 		if (changed) {
+            if (scopedUnderwaterBasis != null && (isWhitePaletteFade(previousMode)
+                    || isWhitePaletteFade(publishedPaletteFade.mode()))) {
+                // Keep captured raw water inputs detached from later palette writers.
+                scopedUnderwaterBasis = scopedUnderwaterBasis.withFade(publishedPaletteFade);
+                scopedUnderwaterDirty = true;
+            }
 			reuploadPaletteFadeLines(previousMask | publishedPaletteFade.lineMask());
 		}
 	}
 
+    private static boolean isWhitePaletteFade(PaletteFadePresentation.Mode mode) {
+        return mode == PaletteFadePresentation.Mode.FROM_WHITE || mode == PaletteFadePresentation.Mode.TO_WHITE;
+    }
+
+    private static boolean paletteFadeAffects(PaletteFadePresentation.Mode mode, int mask, int line) {
+        return mode != PaletteFadePresentation.Mode.NONE && line >= 0
+                && (mask == PaletteFadePresentation.ALL_LINES
+                || line < Integer.SIZE && (mask & (1 << line)) != 0);
+    }
+
 	private void reuploadPaletteFadeLines(int lineMask) {
 		for (int line = 0; line < lastCachedPaletteLines.length; line++) {
-			if ((lineMask & (1 << line)) != 0 && lastCachedPaletteLines[line] != null) {
+			if ((lineMask == PaletteFadePresentation.ALL_LINES
+                    || line < Integer.SIZE && (lineMask & (1 << line)) != 0)
+                    && lastCachedPaletteLines[line] != null) {
 				uploadPaletteLine(lastCachedPaletteLines[line], line);
 			}
 		}
@@ -1735,6 +1763,13 @@ public class GraphicsManager {
         return composeUnderwaterPaletteTexture(palettes,normalLine0,null);
     }
     private Integer composeUnderwaterPaletteTexture(PaletteView[] palettes,PaletteView normalLine0,ScopedUnderwaterBasis publishedBasis) {
+        var fadeMode = publishedBasis == null ? publishedPaletteFade.mode() : publishedBasis.fadeMode();
+        int fadeSteps = publishedBasis == null ? publishedPaletteFade.steps() : publishedBasis.fadeSteps();
+        int fadeMask = publishedBasis == null ? publishedPaletteFade.lineMask() : publishedBasis.fadeMask();
+        boolean whiteFade = isWhitePaletteFade(fadeMode);
+        // Public requests may exceed the native endpoint. Canonicalise before
+        // storing a byte-sized derived-row key (256 must not alias step zero).
+        if (whiteFade) fadeSteps = Math.min(PaletteFadePresentation.COLOR_STEPS, fadeSteps);
 		int totalLines = RenderContext.getTotalPaletteLines();
 		PaletteView underwaterLine0 = (palettes != null && palettes.length > 0) ? palettes[0] : null;
 		ensureUnderwaterPaletteSourceScratch(totalLines);
@@ -1772,6 +1807,11 @@ public class GraphicsManager {
 		writeUnderwaterContentKeyInt(totalLines);
 		writeUnderwaterContentKeyInt(displayColorProfile.ordinal());
 		writeUnderwaterContentKeyInt(displayColorExpansion.ordinal());
+        // White fades step the final CRAM colour, including a derived water target.
+        // Their generation is therefore part of the key independently of raw RGB.
+        writeUnderwaterContentKeyInt(whiteFade ? fadeMode.ordinal() : 0);
+        writeUnderwaterContentKeyInt(whiteFade ? fadeSteps : 0);
+        writeUnderwaterContentKeyInt(whiteFade ? fadeMask : 0);
 		int sourceCount = totalLines + (hasDerivedDonorRow ? 2 : 0);
 		for (int sourceIndex = 0; sourceIndex < sourceCount; sourceIndex++) {
 			byte sourceTag = sourceIndex < totalLines
@@ -1786,11 +1826,8 @@ public class GraphicsManager {
 			// Rows below totalLines are effective palette lines; a fade on one of them
 			// (FadeIn_FromBlack also walks v_palette_water) transforms the composed
 			// bytes, and the content key built from them changes with each fade step.
-            var fadeMode=publishedBasis==null?publishedPaletteFade.mode():publishedBasis.fadeMode();
-            int fadeSteps=publishedBasis==null?publishedPaletteFade.steps():publishedBasis.fadeSteps();
-            int fadeMask=publishedBasis==null?publishedPaletteFade.lineMask():publishedBasis.fadeMask();
-            boolean fadeRow=sourceIndex<totalLines && sourceIndex<Integer.SIZE && fadeMode!=PaletteFadePresentation.Mode.NONE
-                    && (fadeMask&(1<<sourceIndex))!=0;
+            boolean fadeRow = !whiteFade && sourceIndex < totalLines
+                    && paletteFadeAffects(fadeMode, fadeMask, sourceIndex);
 			for (int colorIndex = 0; colorIndex < 16; colorIndex++) {
 				byte r = source.red(colorIndex);
 				byte g = source.green(colorIndex);
@@ -1865,9 +1902,12 @@ public class GraphicsManager {
 			if (rowCase == UNDERWATER_ROW_DERIVED) {
 				int normalOffset = totalLines * 16 * 3;
 				int shiftedOffset = (totalLines + 1) * 16 * 3;
-				if (!underwaterDerivedRowKeyMatches(row, rgbOffset, normalOffset, shiftedOffset)) {
+                var rowWhiteMode = whiteFade && paletteFadeAffects(fadeMode, fadeMask, row)
+                        ? fadeMode : PaletteFadePresentation.Mode.NONE;
+				if (!underwaterDerivedRowKeyMatches(row, rgbOffset, normalOffset, shiftedOffset,
+                        rowWhiteMode, fadeSteps)) {
 					updateUnderwaterDerivedRow(row, rgbOffset, normalOffset, shiftedOffset,
-							ratioR, ratioG, ratioB);
+							ratioR, ratioG, ratioB, rowWhiteMode, fadeSteps);
 				}
 				for (int value : underwaterDerivedRowRgba[row]) {
 					paletteBuffer.put((byte) value);
@@ -1882,6 +1922,12 @@ public class GraphicsManager {
 				int r = Byte.toUnsignedInt(underwaterPaletteSourceRgb[rgbOffset++]);
 				int g = Byte.toUnsignedInt(underwaterPaletteSourceRgb[rgbOffset++]);
 				int b = Byte.toUnsignedInt(underwaterPaletteSourceRgb[rgbOffset++]);
+                if (whiteFade && paletteFadeAffects(fadeMode, fadeMask, row)) {
+                    int faded = PaletteFadePresentation.fadeRgb(r, g, b, fadeMode, fadeSteps);
+                    r = (faded >>> 16) & 255;
+                    g = (faded >>> 8) & 255;
+                    b = faded & 255;
+                }
 				writePaletteColor(paletteBuffer, r, g, b, colorIndex);
 			}
 		}
@@ -1934,15 +1980,17 @@ public class GraphicsManager {
 	}
 
 	private boolean underwaterDerivedRowKeyMatches(int row, int donorOffset,
-			int normalOffset, int shiftedOffset) {
+			int normalOffset, int shiftedOffset, PaletteFadePresentation.Mode whiteMode, int whiteSteps) {
 		byte[] key = underwaterDerivedRowKeys[row];
 		if (key == null || key[0] != (byte) displayColorProfile.ordinal()
-				|| key[1] != (byte) displayColorExpansion.ordinal()) {
+				|| key[1] != (byte) displayColorExpansion.ordinal()
+                || key[2] != (byte) whiteMode.ordinal()
+                || key[3] != (byte) (whiteMode == PaletteFadePresentation.Mode.NONE ? 0 : whiteSteps)) {
 			return false;
 		}
-		return underwaterDerivedRowKeyRangeMatches(key, 2, donorOffset)
-				&& underwaterDerivedRowKeyRangeMatches(key, 2 + 16 * 3, normalOffset)
-				&& underwaterDerivedRowKeyRangeMatches(key, 2 + 2 * 16 * 3, shiftedOffset);
+		return underwaterDerivedRowKeyRangeMatches(key, 4, donorOffset)
+				&& underwaterDerivedRowKeyRangeMatches(key, 4 + 16 * 3, normalOffset)
+				&& underwaterDerivedRowKeyRangeMatches(key, 4 + 2 * 16 * 3, shiftedOffset);
 	}
 
 	private boolean underwaterDerivedRowKeyRangeMatches(byte[] key, int keyOffset, int sourceOffset) {
@@ -1955,18 +2003,21 @@ public class GraphicsManager {
 	}
 
 	private void updateUnderwaterDerivedRow(int row, int donorOffset,
-			int normalOffset, int shiftedOffset, int ratioR, int ratioG, int ratioB) {
+			int normalOffset, int shiftedOffset, int ratioR, int ratioG, int ratioB,
+            PaletteFadePresentation.Mode whiteMode, int whiteSteps) {
 		byte[] key = underwaterDerivedRowKeys[row];
 		if (key == null) {
-			key = new byte[2 + 3 * 16 * 3];
+			key = new byte[4 + 3 * 16 * 3];
 			underwaterDerivedRowKeys[row] = key;
 			underwaterDerivedRowRgba[row] = new int[16 * 4];
 		}
 		key[0] = (byte) displayColorProfile.ordinal();
 		key[1] = (byte) displayColorExpansion.ordinal();
-		System.arraycopy(underwaterPaletteSourceRgb, donorOffset, key, 2, 16 * 3);
-		System.arraycopy(underwaterPaletteSourceRgb, normalOffset, key, 2 + 16 * 3, 16 * 3);
-		System.arraycopy(underwaterPaletteSourceRgb, shiftedOffset, key, 2 + 2 * 16 * 3, 16 * 3);
+        key[2] = (byte) whiteMode.ordinal();
+        key[3] = (byte) (whiteMode == PaletteFadePresentation.Mode.NONE ? 0 : whiteSteps);
+		System.arraycopy(underwaterPaletteSourceRgb, donorOffset, key, 4, 16 * 3);
+		System.arraycopy(underwaterPaletteSourceRgb, normalOffset, key, 4 + 16 * 3, 16 * 3);
+		System.arraycopy(underwaterPaletteSourceRgb, shiftedOffset, key, 4 + 2 * 16 * 3, 16 * 3);
 
 		int[] rgba = underwaterDerivedRowRgba[row];
 		for (int colorIndex = 0; colorIndex < 16; colorIndex++) {
@@ -1974,6 +2025,12 @@ public class GraphicsManager {
 			int r = Math.min(255, Byte.toUnsignedInt(underwaterPaletteSourceRgb[colorOffset]) * ratioR / 256);
 			int g = Math.min(255, Byte.toUnsignedInt(underwaterPaletteSourceRgb[colorOffset + 1]) * ratioG / 256);
 			int b = Math.min(255, Byte.toUnsignedInt(underwaterPaletteSourceRgb[colorOffset + 2]) * ratioB / 256);
+            if (whiteMode != PaletteFadePresentation.Mode.NONE) {
+                int faded = PaletteFadePresentation.fadeRgb(r, g, b, whiteMode, whiteSteps);
+                r = (faded >>> 16) & 255;
+                g = (faded >>> 8) & 255;
+                b = faded & 255;
+            }
 			int rgbaOffset = colorIndex * 4;
 			DisplayColorConverter.writeRgbBytes(r, g, b, displayColorProfile, displayColorExpansion, rgba, rgbaOffset);
 			rgba[rgbaOffset + 3] = colorIndex == 0 ? 0 : 255;
@@ -2108,6 +2165,7 @@ public class GraphicsManager {
 		}
 		// Reset fade manager
 		if (fadeManager != null) {
+            fadeManager.bindPaletteGraphics(null);
 			fadeManager.cleanup();
 			fadeManager.cancel();
 			fadeManager = null;

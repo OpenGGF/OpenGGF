@@ -705,3 +705,28 @@ authority guards passed. The two failures are `TestArchitecturalSourceGuard.migr
 and `TestObjectPhysicsStandardizationGuard.productionObjectLifecycleRawCallCountsDoNotGrow` in the composed
 object code (raw child additions, count 12 against budget 10). Layout selection changes no object-production
 source; these composition failures remain blockers for the delivery and are not waived by this focused pass.
+
+
+## Native white-fade correction and retained RGB limits — 2026-10-17
+
+On Root `fbfe2999c` plus the native white-fade change, the eight-class palette/rule/publication selection
+passes 60/0F/0E/0S (03:43:04 UTC). It reads real GPU uploads for every Genesis word in both directions,
+all three display profiles and both expansion settings; it also checks backdrop/framebuffer, water targets,
+private rows above 31, pending/displayed restore and two replays. Legacy fades and constructor defaults remain.
+The owning loops and exact selectors are in the
+[white-palette decision](../../designs/2026-10-13-s3k-ending-lifecycle.md#native-white-palette-fade-owner-decision--2026-10-17-root).
+
+The V4 engine twin retains the V3 declared inlet, controller input and screenshot schedule. Its single capture
+test passes at 03:50:03 UTC and returns to LRZ2 at frame 2423. Native v2 is unchanged. Raw active 320×224,
+Limited 238 / RAW_RGB, event-paired comparisons improve stage reveal+0 from 71,680 different pixels to 446;
++10 is 667, +20 763, +22 1,112. The yellow/red overlay is gone. Results reveal+0,2,4,6,8 match exactly;
+the settled card still differs by 420 pixels, including the digit column one tile left. Root viewed the
++0/+10 stage and +32 results comparisons. Durable pictures are
+`spot-checks/seven-chaos-{engine-twin-v4,compare-v4}` in the existing external S3K parity capture directory.
+
+Stage reveal offsets remain engine+24/native+138; results +52/+128. This is one declared Tails native320
+NTSC product, not cold input, PAL/character breadth, whole-scene RGB equality or timing qualification.
+The old raw-spawn guard failures above were repaired in `fbfe2999c` (fresh 142/0F/0E/0S at 03:02:54 UTC).
+Final cache/lifecycle/SDK/Javadoc/neighbour coverage passes 141/0F/0E/0S at 04:03:08 UTC, including all four
+required S3K loading tests. Fresh selected structural/API guards pass 142/0F/0E/0S at 04:05:31 UTC.
+Affected replay and delivery-wide validation remain; neither selection is a full-suite or all-guards pass.

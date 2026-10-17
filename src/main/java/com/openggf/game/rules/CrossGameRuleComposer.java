@@ -44,7 +44,8 @@ public final class CrossGameRuleComposer {
                 base.sidekickCpu(),
                 base.powerUp(),
                 base.drowningBubble(),
-                base.dynamicArtDmaService());
+                base.dynamicArtDmaService(),
+                base.paletteWhiteFade());
     }
 
     public static GameRules compose(GameRules host, GameRules donor, DonorCapabilities donorCapabilities) {
@@ -87,6 +88,7 @@ public final class CrossGameRuleComposer {
                 host.sidekickCpu(),
                 host.powerUp(),
                 host.drowningBubble(),
-                host.dynamicArtDmaService());
+                host.dynamicArtDmaService(),
+                host.paletteWhiteFade());
     }
 }

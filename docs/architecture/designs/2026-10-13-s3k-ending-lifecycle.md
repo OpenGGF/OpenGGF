@@ -2674,3 +2674,78 @@ Citations: research passes 1–13 cited line numbers from the local `docs/skdisa
 superproject pins `044fa46`; ROM bytes and addresses are identical. Promoted files cite `044fa46` lines or ROM labels.
 The 2026-10-15 Kos idle-budget section above uses `1a454a0` lines. At the pin, `sonic3k.asm` 2819–2967 is 2851–2999,
 7884–7889 is 7916–7921, `constants.asm` 896–903 is 918–925 and 971 is 995.
+
+#### Native white-palette fade owner decision — 2026-10-17, Root
+
+The event-paired special-stage reveal after the Super layout correction (`8d0763bea`) still differs on all
+71,680 pixels through reveal+18. Native reduces the components together; the engine's whole-screen additive
+fade goes through yellow/red. This is a palette-presentation defect, not a reason to shift the reference image.
+
+ROM evidence (skdisasm `044fa46`): `Pal_FadeFromWhite` / `Pal_FillWhite` (:5148–5182) fill normal/water palettes
+with `$EEE`, clear `Pal_fade_delay2`, then wait 22 V-ints. `Pal_FromWhite` (:5189–5219) subtracts that delay,
+resets it to 2 on underflow, and calls `Pal_DecColor2` (:5226–5258). Each such pass independently lowers B/G/R
+by one 3-bit level towards the target. Thus the colour passes are V-ints 1,4,7,10,13,16,19. This differs from
+`Pal_ToWhite` / `Pal_AddColor2` (:5281–5340): every V-int raises **one** component per colour, R then G then B,
+short-circuiting as soon as one component changes. Both directions must retain their distinct native algorithm.
+The initially drafted parallel-ToWhite test expectation was rejected against that source before production edits.
+
+**Scope and owner.** This rule is game-wide shared runtime scheduling, not palette asset data, a character
+ability, a zone or an object family. A typed `GameRules.paletteWhiteFade` model is the narrow owner, following
+its existing dynamic-art service model. It selects existing overlay behavior or native CRAM steps. The
+`PaletteFadePresentation` colour model gains FROM_WHITE/TO_WHITE alongside its existing black modes; CRAM
+publication, display-profile/Full–Limited conversion and displayed-generation rewind stay in their existing
+owners. The world-managed FadeManager drives the rule; a detached creator/UI FadeManager retains its overlay
+behavior. No raw game/zone/frame/fixture branch belongs in shared graphics code.
+
+| Host | White presentation | Scheduling / evidence limit |
+|---|---|---|
+| S1 | Existing screen overlay | Unchanged in this slice; no new native RGB qualification |
+| S2 | Existing screen overlay | Unchanged in this slice; no new native RGB qualification |
+| S3K | ROM palette steps | ToWhite: per-colour R→G→B each V-int. FromWhite: all components every third V-int |
+
+The new field stays host-owned in CrossGameRuleComposer; a donor cannot change the host's fade hardware.
+Existing ten/eleven-argument GameRules constructors remain available and keep their old default. The public rule
+and white-mode enum additions update the mutable `0.7` Mod API pin and runtime description together, retaining
+descriptor candidate `0.7.0` and the empty published-baseline set. No rule-size budget is raised.
+
+**Verification plan and current evidence.** A first draft's six colour cases read a converter-only test helper;
+they were corrected to read the actual uploaded GPU palette texture. On `fbfe2999c` plus that test, the GPU,
+backdrop and V-int rewind selection is **13/13F/0E/0S**, finished 03:20:47 UTC. The first failed GPU colour is
+black at FromWhite frame 0 (expected white CRAM, actual black); all backdrop and rewind failures also precede
+any ToWhite assertion. The independent ToWhite oracle was corrected from the owning source before activation.
+
+The first CRAM prototype passed 13 checks at 03:26:03 UTC. Three targeted regressions then failed at 03:29:47:
+FromWhite returned on V-int 21 rather than 22, and the water tint erased an already-faded donor colour.
+A private bank beyond row 31 also reproduced black instead of white (1/1F/0E/0S at 03:36:13). The fixes
+retain the 22nd wait, step the final derived water target before display conversion, apply the all-lines mask
+to private rows, and retain detached raw water inputs while publishing/restoring the white generation.
+The combined eight-class focused selection passed **60/0F/0E/0S at 03:43:04 UTC**: all 512 Genesis words in both
+directions across six profile/range products, GPU readback, framebuffer/backdrop, donor/scoped water,
+pending-versus-displayed state and two forward replays, host/legacy constructor ownership, and existing fades.
+Command: normal main-workspace `maven_queue.py -Dmse=off`, selectors TestNativeWhitePaletteFade,
+TestUnderwaterPaletteUpload, TestPaletteWhiteFadeModel, TestCrossGameRuleComposer, TestFadeManager,
+TestFadeManagerRewindSnapshot, TestPaletteFadePresentation and TestPaletteUploadLatch; absolute verified S3K
+ROM, surfaceless EGL, no display, null OpenAL. Root was `fbfe2999c` plus the uncommitted white-fade fix.
+
+The unchanged declared native-v2 twin was compared with new engine v4 (capture 1/0F/0E/0S, 03:50:03 UTC).
+At the first stage reveal, raw RGB differences fall from all 71,680 pixels to **446**; +10 has **667**, +20 **763**
+and +22 **1,112**. Engine/native reveal offsets remain +24/+138. Results sampled reveal+0,2,4,6,8 are exact;
+the eventual 420-pixel digit/icon residual remains. Root viewed stage+0/+10 and results+32 comparisons.
+No image shifts/normalisation, cold-route credit, whole-scene parity or overall timing acceptance follow.
+Durable v4 pictures use `spot-checks/seven-chaos-{engine-twin-v4,compare-v4}` beside unchanged `native-v2`.
+
+Review also reproduced a new derived-row cache alias: public step 256 reused byte-key step 0, retaining white
+at a completed FromWhite endpoint (1/1F/0E/0S at 03:56:13 UTC). Canonicalising the colour step to its existing
+native endpoint before key storage addresses it. The next 17-class selection passes **141/0F/0E/0S at
+04:03:08 UTC**, including all 16 water-upload tests and this regression, manager rebinding, hybrid rules,
+special-stage entry/rewind/snapshots, SDK packaging/Javadoc/maintained starters, and all four required S3K
+loading tests. Command uses the same normal main wrapper/environment plus the three verified absolute ROMs;
+`-Dtest=TestUnderwaterPaletteUpload,TestGraphicsManagerFadeRebinding,TestHybridGameRules,TestGameLoopSpecialStageEntryPresentation,TestSpecialStageEntryPresentationController,TestSonic3kSpecialStageRewindAdapter,TestSonic3kSpecialStageManagerSnapshot,TestSonic3kSpecialStageGameplaySnapshot,TestSpecialStageRewindCapability,TestModApiSdkPackager,TestModApiJavadocTool,TestModSdkArtifactVerifier,TestPurposeStarters,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`.
+The V4 scene uses ordinary native fade steps, so the final bound correction (only steps beyond 21) changes
+none of its rendered inputs. The compiled mutable API snapshot adds 14 lines and removes none.
+Fresh selected source/API/rule guards pass **142/0F/0E/0S at 04:05:31 UTC** in their own Maven JVM:
+TestArchitecturalSourceGuard (72), TestRewindFieldDispositionGuard (1), TestModApiSignatureSurface (11),
+TestHardwareTimingAuthorityGuard (25) and TestObjectPhysicsStandardizationGuard (33), with the same normal
+wrapper, EGL/no-display/null-OpenAL environment and `-Dmse=off -Dtest=<those five exact classes> test -B`.
+The candidate pin, recursive annotations and unchanged engine-internal inventory pass. This is selected guard
+coverage, not all guards. Affected replay and delivery-wide combined smoke remain separate.

@@ -465,6 +465,7 @@ CF-ANNOTATION TYPE com.openggf.game.rules.CollisionRules visible @com.openggf.ga
 CF-ANNOTATION TYPE com.openggf.game.rules.DrowningBubbleRules visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.rules.GameRules visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.rules.ObjectInteractionRules visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.rules.PaletteWhiteFadeModel visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.rules.PlayerAirMovementRules visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.rules.PlayerAnimationRules visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.rules.PlayerCapabilityRules visible @com.openggf.game.ModApi
@@ -1470,6 +1471,7 @@ CONSTRUCTOR com.openggf.game.rules.CollisionRules public  <init>(com.openggf.gam
 CONSTRUCTOR com.openggf.game.rules.DrowningBubbleRules public  <init>(int,int,boolean,int)
 CONSTRUCTOR com.openggf.game.rules.GameRules public  <init>(com.openggf.game.rules.PlayerMovementRules,com.openggf.game.rules.PlayerCapabilityRules,com.openggf.game.rules.CollisionRules,com.openggf.game.rules.PlayerAnimationRules,com.openggf.game.rules.CameraRules,com.openggf.game.rules.RingRules,com.openggf.game.rules.ObjectInteractionRules,com.openggf.game.rules.SidekickCpuRules,com.openggf.game.rules.PowerUpRules,com.openggf.game.rules.DrowningBubbleRules)
 CONSTRUCTOR com.openggf.game.rules.GameRules public  <init>(com.openggf.game.rules.PlayerMovementRules,com.openggf.game.rules.PlayerCapabilityRules,com.openggf.game.rules.CollisionRules,com.openggf.game.rules.PlayerAnimationRules,com.openggf.game.rules.CameraRules,com.openggf.game.rules.RingRules,com.openggf.game.rules.ObjectInteractionRules,com.openggf.game.rules.SidekickCpuRules,com.openggf.game.rules.PowerUpRules,com.openggf.game.rules.DrowningBubbleRules,com.openggf.game.rules.DynamicArtDmaServiceModel)
+CONSTRUCTOR com.openggf.game.rules.GameRules public  <init>(com.openggf.game.rules.PlayerMovementRules,com.openggf.game.rules.PlayerCapabilityRules,com.openggf.game.rules.CollisionRules,com.openggf.game.rules.PlayerAnimationRules,com.openggf.game.rules.CameraRules,com.openggf.game.rules.RingRules,com.openggf.game.rules.ObjectInteractionRules,com.openggf.game.rules.SidekickCpuRules,com.openggf.game.rules.PowerUpRules,com.openggf.game.rules.DrowningBubbleRules,com.openggf.game.rules.DynamicArtDmaServiceModel,com.openggf.game.rules.PaletteWhiteFadeModel)
 CONSTRUCTOR com.openggf.game.rules.ObjectInteractionRules public  <init>(boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,int,int,boolean)
 CONSTRUCTOR com.openggf.game.rules.PlayerAirMovementRules public  <init>(boolean,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.PlayerAnimationRules public  <init>(boolean,boolean,boolean,boolean,boolean,boolean,com.openggf.game.rules.TailsTailPushDetection)
@@ -2707,6 +2709,8 @@ FIELD com.openggf.game.rules.GameRules public,static,final com.openggf.game.rule
 FIELD com.openggf.game.rules.ObjectInteractionRules public,static,final int DUCK_TOUCH_BOX_HEIGHT
 FIELD com.openggf.game.rules.ObjectInteractionRules public,static,final int DUCK_TOUCH_BOX_TOP_SHIFT
 FIELD com.openggf.game.rules.ObjectInteractionRules public,static,final int NO_DUCK_TOUCH_BOX
+FIELD com.openggf.game.rules.PaletteWhiteFadeModel public,static,final com.openggf.game.rules.PaletteWhiteFadeModel ROM_PALETTE
+FIELD com.openggf.game.rules.PaletteWhiteFadeModel public,static,final com.openggf.game.rules.PaletteWhiteFadeModel SCREEN_OVERLAY
 FIELD com.openggf.game.save.SaveReason public,static,final com.openggf.game.save.SaveReason CLEAR_RESTART_COMMIT
 FIELD com.openggf.game.save.SaveReason public,static,final com.openggf.game.save.SaveReason EXISTING_SLOT_LOAD
 FIELD com.openggf.game.save.SaveReason public,static,final com.openggf.game.save.SaveReason LIVES_CONTINUES_SAVE
@@ -2786,12 +2790,15 @@ FIELD com.openggf.graphics.GLCommand$CommandType public,static,final com.openggf
 FIELD com.openggf.graphics.GLCommand$CommandType public,static,final com.openggf.graphics.GLCommand$CommandType RECTI
 FIELD com.openggf.graphics.GLCommand$CommandType public,static,final com.openggf.graphics.GLCommand$CommandType USE_PROGRAM
 FIELD com.openggf.graphics.GLCommand$CommandType public,static,final com.openggf.graphics.GLCommand$CommandType VERTEX2I
+FIELD com.openggf.graphics.PaletteFadePresentation public,static,final int ALL_LINES
 FIELD com.openggf.graphics.PaletteFadePresentation public,static,final int COLOR_STEPS
 FIELD com.openggf.graphics.PaletteFadePresentation public,static,final int LINES_1_TO_3
 FIELD com.openggf.graphics.PaletteFadePresentation public,static,final int ROM_FADE_FRAMES
 FIELD com.openggf.graphics.PaletteFadePresentation$Mode public,static,final com.openggf.graphics.PaletteFadePresentation$Mode FROM_BLACK
+FIELD com.openggf.graphics.PaletteFadePresentation$Mode public,static,final com.openggf.graphics.PaletteFadePresentation$Mode FROM_WHITE
 FIELD com.openggf.graphics.PaletteFadePresentation$Mode public,static,final com.openggf.graphics.PaletteFadePresentation$Mode NONE
 FIELD com.openggf.graphics.PaletteFadePresentation$Mode public,static,final com.openggf.graphics.PaletteFadePresentation$Mode TO_BLACK
+FIELD com.openggf.graphics.PaletteFadePresentation$Mode public,static,final com.openggf.graphics.PaletteFadePresentation$Mode TO_WHITE
 FIELD com.openggf.graphics.PatternAtlas public,static,final int TILE_SIZE
 FIELD com.openggf.graphics.PatternAtlasRange public,static,final com.openggf.graphics.PatternAtlasRange CONTINUE_SCREEN
 FIELD com.openggf.graphics.PatternAtlasRange public,static,final com.openggf.graphics.PatternAtlasRange HUD
@@ -7731,6 +7738,7 @@ METHOD com.openggf.game.rules.GameRules public  com.openggf.game.rules.Collision
 METHOD com.openggf.game.rules.GameRules public  com.openggf.game.rules.DrowningBubbleRules drowningBubble()
 METHOD com.openggf.game.rules.GameRules public  com.openggf.game.rules.DynamicArtDmaServiceModel dynamicArtDmaService()
 METHOD com.openggf.game.rules.GameRules public  com.openggf.game.rules.ObjectInteractionRules objectInteraction()
+METHOD com.openggf.game.rules.GameRules public  com.openggf.game.rules.PaletteWhiteFadeModel paletteWhiteFade()
 METHOD com.openggf.game.rules.GameRules public  com.openggf.game.rules.PlayerAnimationRules playerAnimation()
 METHOD com.openggf.game.rules.GameRules public  com.openggf.game.rules.PlayerCapabilityRules playerCapability()
 METHOD com.openggf.game.rules.GameRules public  com.openggf.game.rules.PlayerMovementRules playerMovement()
@@ -7764,6 +7772,9 @@ METHOD com.openggf.game.rules.ObjectInteractionRules public  int duckTouchBoxMap
 METHOD com.openggf.game.rules.ObjectInteractionRules public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.game.rules.ObjectInteractionRules public,final  int hashCode()
 METHOD com.openggf.game.rules.ObjectInteractionRules public,final  java.lang.String toString()
+METHOD com.openggf.game.rules.PaletteWhiteFadeModel public  int fromWhiteVintsPerStep()
+METHOD com.openggf.game.rules.PaletteWhiteFadeModel public,static  com.openggf.game.rules.PaletteWhiteFadeModel valueOf(java.lang.String)
+METHOD com.openggf.game.rules.PaletteWhiteFadeModel public,static  com.openggf.game.rules.PaletteWhiteFadeModel[] values()
 METHOD com.openggf.game.rules.PlayerAirMovementRules public  boolean airAbilityAcceptsOverlappingJumpPress()
 METHOD com.openggf.game.rules.PlayerAirMovementRules public  boolean airSuperspeedPreserved()
 METHOD com.openggf.game.rules.PlayerAirMovementRules public  boolean glideRestoresStandingRadiiAfterCollision()
@@ -16495,6 +16506,7 @@ RECORD-COMPONENT com.openggf.game.rules.GameRules collision com.openggf.game.rul
 RECORD-COMPONENT com.openggf.game.rules.GameRules drowningBubble com.openggf.game.rules.DrowningBubbleRules
 RECORD-COMPONENT com.openggf.game.rules.GameRules dynamicArtDmaService com.openggf.game.rules.DynamicArtDmaServiceModel
 RECORD-COMPONENT com.openggf.game.rules.GameRules objectInteraction com.openggf.game.rules.ObjectInteractionRules
+RECORD-COMPONENT com.openggf.game.rules.GameRules paletteWhiteFade com.openggf.game.rules.PaletteWhiteFadeModel
 RECORD-COMPONENT com.openggf.game.rules.GameRules playerAnimation com.openggf.game.rules.PlayerAnimationRules
 RECORD-COMPONENT com.openggf.game.rules.GameRules playerCapability com.openggf.game.rules.PlayerCapabilityRules
 RECORD-COMPONENT com.openggf.game.rules.GameRules playerMovement com.openggf.game.rules.PlayerMovementRules
@@ -18725,6 +18737,7 @@ TYPE enum public,final com.openggf.game.profiles.touchresponse.TouchOverlapStopP
 TYPE enum public,final com.openggf.game.profiles.touchresponse.TouchShieldDeflectCapability SUPER java.lang.Enum<com.openggf.game.profiles.touchresponse.TouchShieldDeflectCapability>
 TYPE enum public,final com.openggf.game.render.SpecialRenderEffectStage SUPER java.lang.Enum<com.openggf.game.render.SpecialRenderEffectStage>
 TYPE enum public,final com.openggf.game.rewind.identity.ObjectRefKind SUPER java.lang.Enum<com.openggf.game.rewind.identity.ObjectRefKind>
+TYPE enum public,final com.openggf.game.rules.PaletteWhiteFadeModel SUPER java.lang.Enum<com.openggf.game.rules.PaletteWhiteFadeModel>
 TYPE enum public,final com.openggf.game.save.SaveReason SUPER java.lang.Enum<com.openggf.game.save.SaveReason>
 TYPE enum public,final com.openggf.game.save.SaveSlotState SUPER java.lang.Enum<com.openggf.game.save.SaveSlotState>
 TYPE enum public,final com.openggf.game.solid.ContactKind SUPER java.lang.Enum<com.openggf.game.solid.ContactKind>
@@ -20020,6 +20033,7 @@ TYPE-ANNOTATION com.openggf.game.rules.CollisionRules @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.rules.DrowningBubbleRules @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.rules.GameRules @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.rules.ObjectInteractionRules @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.rules.PaletteWhiteFadeModel @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.rules.PlayerAirMovementRules @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.rules.PlayerAnimationRules @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.rules.PlayerCapabilityRules @com.openggf.game.ModApi

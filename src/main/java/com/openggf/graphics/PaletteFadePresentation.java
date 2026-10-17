@@ -12,7 +12,10 @@ package com.openggf.graphics;
  * owners keep writing their live palettes as usual; this state transforms every
  * upload of a masked line on its way to the GPU, so an active fade covers writes
  * made by any owner during the frame (palette cycles, hit flashes, water swaps).
- * Unmasked lines pass through untouched, which is how Sonic 1 keeps line 0
+ * S3K's white routines instead lower all components together from white, or
+ * raise the first nonwhite component R/G/B towards white. The managed fade owner
+ * supplies their distinct V-int cadence. Unmasked lines pass through untouched,
+ * which is how Sonic 1 keeps line 0
  * (Sonic, the HUD and the title card) at full colour while the level fades in.
  */
 @com.openggf.game.ModApi
@@ -21,7 +24,11 @@ public final class PaletteFadePresentation {
     public enum Mode {
         NONE,
         FROM_BLACK,
-        TO_BLACK
+        TO_BLACK,
+        /** Pal_DecColor2 lowers all components towards their targets. */
+        FROM_WHITE,
+        /** Pal_AddColor2 raises the first nonwhite component, R then G then B. */
+        TO_WHITE
     }
 
     /** {@code move.w #22-1,d4}: VBlank periods in one blocking fade. */
@@ -30,6 +37,8 @@ public final class PaletteFadePresentation {
     public static final int COLOR_STEPS = 21;
     /** {@code move.w #$202F,(v_pfade_start).w}: palette lines 1, 2 and 3. */
     public static final int LINES_1_TO_3 = 0b1110;
+    /** The complete native palette, including engine-owned donor/scoped rows. */
+    public static final int ALL_LINES = -1;
 
     private Mode mode = Mode.NONE;
     private int steps;
@@ -75,7 +84,8 @@ public final class PaletteFadePresentation {
     }
 
     public boolean affects(int paletteLine) {
-        return isActive() && paletteLine >= 0 && paletteLine < Integer.SIZE && (lineMask & (1 << paletteLine)) != 0;
+        return isActive() && paletteLine >= 0 && (lineMask == ALL_LINES
+                || paletteLine < Integer.SIZE && (lineMask & (1 << paletteLine)) != 0);
     }
 
     /**
@@ -90,6 +100,7 @@ public final class PaletteFadePresentation {
      * One 8-bit-per-channel colour after {@code steps} passes of
      * {@code FadeIn_AddColor} ({@link Mode#FROM_BLACK}, rising from black) or
      * {@code FadeOut_DecColor} ({@link Mode#TO_BLACK}, dropping towards black),
+     * or the distinct {@code Pal_DecColor2}/{@code Pal_AddColor2} white routines,
      * packed as {@code 0xRRGGBB}. {@link Mode#NONE} passes the colour through the
      * same Mega Drive 3-bit quantisation.
      */
@@ -129,6 +140,18 @@ public final class PaletteFadePresentation {
                 } else if (b > 0) {
                     b--;
                 }
+            }
+        } else if (mode == Mode.FROM_WHITE) {
+            int floor = Math.max(0, 7 - clampedSteps);
+            r = Math.max(targetR, floor);
+            g = Math.max(targetG, floor);
+            b = Math.max(targetB, floor);
+        } else if (mode == Mode.TO_WHITE) {
+            for (int step = 0; step < clampedSteps; step++) {
+                if (r < 7) r++;
+                else if (g < 7) g++;
+                else if (b < 7) b++;
+                else break;
             }
         }
         return (toRgb(r) << 16) | (toRgb(g) << 8) | toRgb(b);

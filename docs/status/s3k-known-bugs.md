@@ -6830,6 +6830,19 @@ Citations are to skdisasm `044fa46`.
   remaining stage pixels are unqualified. These are event-paired 320×224 comparisons, Limited 238 / RAW_RGB,
   without image shifts or normalization; no cold-route or timing credit.
 
+**White entry fade (corrected for the declared native320 Tails product, 2026-10-17).**
+
+The managed host rule now uses native CRAM colours: FromWhite lowers all components every third V-int,
+ToWhite raises the first nonwhite component each V-int, and the caller retains its 22 waits. Profile/range
+conversion follows the fade, including backdrop and final derived-water targets. Eight focused classes pass
+60/0F/0E/0S at 03:43:04 UTC. A later cache-bound regression is fixed, with 141/0F/0E/0S focused
+cache/lifecycle/SDK/Javadoc checks at 04:03:08 UTC. Fresh selected structural/API guards pass
+142/0F/0E/0S at 04:05:31 UTC; delivery-wide validation remains.
+The unchanged native-v2 versus engine-v4 pictures reduce stage reveal+0 from 71,680 raw RGB differences to
+446 (+10:667, +20:763, +22:1,112). Results sampled reveal+0,2,4,6,8 match exactly, then the 420-pixel residual
+returns. Root viewed the original event-paired pictures, with no normalization or image shifts. Other character,
+PAL, scene/timing products remain unqualified; the stage still has pose/scene residuals.
+
 **Results digit column.**
 
 - With both sides paired on the card reveal, the cards match for 8 frames. The static card then
@@ -6840,8 +6853,9 @@ Citations are to skdisasm `044fa46`.
 - **Owner:** `S3kSpecialStageResultsScreen` digit placement.
 
 ### Removal condition
-The layout bank is corrected. Place the results digits on the native column and resolve the entry fade,
-with ROM-backed failing tests and event-paired native pictures. Remaining character and scene pixels need attribution.
+The layout bank and the declared local white-fade product are corrected. Place the results digits on the native
+column with ROM-backed failing tests and event-paired native pictures. Remaining character, scene and timing
+pixels need attribution; broader native products and final candidate verification remain open.
 
 ---
 
