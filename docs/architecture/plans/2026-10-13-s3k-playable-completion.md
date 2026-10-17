@@ -2547,3 +2547,75 @@ all high sprites therefore cannot preserve first-SAT-pixel ownership generally.
 The eventual correction needs exact sprite ownership and plane composition,
 not a fitted layer split that only matches this still. No such renderer change
 or broader priority acceptance is included in the fade release repair.
+
+
+### Wide-route coarse camera discontinuity — 2026-10-17
+
+Root's original3490-candidate smoke stopped at its90-minute execution deadline
+midbatch65/70:64 completed batches plus partial65,35269 tests/1860 failures/
+32 errors/65 skips. This is incomplete; guards never ran. Its inspected runner
+diagnostics were acknowledged and deleted. The remaining original290 candidates
+are preserved as six unchanged pending batches65..70, including all of partial65.
+The runner has no resume option; continuation uses queued lifecycle `test` with
+original smoke includes and all four original absolute ROM properties, then
+fresh guards. Partial65 counts must not be double-counted. This is bounded
+smoke coverage, not the release-only full suite.
+
+Three failures were new against current develop707b3c208: wide LRZ2 door8 stayed
+closed, the wide LRZ boss remained in zone9 instead of22, and wide MHZ died at
+input13946. Exact matched Main baselines24200 and91400 pass2+1 cases at07:45:42
+and07:50:10 UTC. Composed2056 reproduction16428 fails all three. Reverting only
+the camera-ease delta32472 preserves all three failures; that ROM-backed change
+is exonerated. Removing only the new backward borrow guard46130 passes3/0/0/0
+at07:59:31 UTC. Neither diagnostic reversion is the production repair.
+
+Temporary observation4379, removed before qualification, establishes the cause:
+LRZ visible camera-3 ->0 has masked coarse65408 ->0, both cursors455 and active0;
+MHZ-16 ->8 has the same coarse change, both cursors554 and active0. Negative
+visible X is possible with the wide camera. Masking changes its representation,
+so the old comparison mistakenly selects backward scrolling. The valid native
+borrow guard then leaves the exhausted cursor parked. Native `loc_1B864` really
+does skip the back cursor on `$80` subtraction borrow, while right trimming
+still runs. Removing that branch or fitting a width-specific bypass would undo
+the native Knuckles credits-pad repair.
+
+The repair adds raw/coarse direction disagreement to the existing teleport
+window-reconstruction condition. It changes neither signed alignment globally
+nor native-camera framing policy. A real backward `$1CF ->0` has agreeing
+negative directions and retains its borrow skip. Comparing coarse distance to
+the viewport span was rejected: it would also change ordinary quantized jumps
+near the existing catch-up threshold.
+
+New focused test7630 fails on2056 at08:09:47 UTC, expecting two entry objects
+but finding none after-3 ->0. The strengthened regression runs0 ->negative ->
+nonnegative, asserts cursor exhaustion first, then exact ordered active/pending
+ownership, strict native640/wide928 edges, distant-entry exclusion and two
+snapshot restore/replays. It exercises320/800 and LEGACY/S2 strategies; the S2
+product is a controller boundary check, not a production S2 route certificate.
+Existing independent native first-chunk borrow coverage is retained.
+
+Focused85219 completes31/0/0/0 at08:16:00 UTC:
+`--lean -Dmse=off -Dtest=TestObjectPlacementManager,TestObjectPlacementControllerS1Counter,TestObjectManagerVerticalPlacement test -B`.
+Full route qualification89369 completes63/0/0/0 at08:22:34 UTC:
+`--normal -Dmse=off -Dtest=TestLrzWideActTwoColdRouteCapture,TestLrzWideBossColdRouteCapture,TestMhzWideColdRouteCapture,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils -Ds3k.rom.path="${OPENGGF_ROM_DIRECTORY}/s3k.gen" test -B`.
+LRZ2 retains104 two-cycle rewind windows, LRZ boss71, and MHZ25 named whole-world
+replay spots. Both commands use the updated main absolute queue wrapper from
+the isolated ending worktree `t3-2f458d35` at2056 plus this repair,
+Java25, Lua5.4, unset DISPLAY/WAYLAND_DISPLAY, `EGL_PLATFORM=surfaceless`, nullAL
+and the retained exact EGL JVM flag. All resolved test classes execute with no
+skips. Source-only peer review found no duplicate-allocation or latch-loss path
+through the existing reconstruction; execution evidence remains the tests above.
+
+The updated local707 tool preflight also passes on Root2056 after normal shared
+activity waiting, with no outer temporary activity shim; that consumed shim was
+removed. Native credits lifecycle coverage is included in the pending original
+tail selection, not redundantly submitted as another full route request. Strict
+AIZ/HCZ frontiers, native sprite/plane pixel ownership, complete negative-origin
+window semantics, PAL/PCM and other unqualified matrix products remain separate.
+
+Fresh source/invariant/hydration guard84418 completes83/0/0/0 at08:28:00 UTC
+(Maven30.936s), with the exact three-class selector recorded above. Matrix
+relative links and their target heading, whitespace, and mirrored camera-pitfall
+bytes pass. No architecture budget, comparator, API pin or gameplay fixture was
+changed. The original six-batch tail and final guards remain required before
+integration; this local commit is not a delivery claim.

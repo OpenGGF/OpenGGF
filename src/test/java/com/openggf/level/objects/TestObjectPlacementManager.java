@@ -64,6 +64,59 @@ public class TestObjectPlacementManager {
     }
 
     @Test
+    void returningFromNegativeVisibleCameraRebuildsOrderedCursorOwnership() {
+        // The negative visible origin is represented as coarse $FF80. Recover
+        // the current window in ROM order; do not confuse that wrap with the
+        // native first-chunk backward borrow exercised independently below.
+        List<ObjectSpawn> layout = List.of(
+                new ObjectSpawn(0, 0x0100, 0x01, 0, 0, false, 0),
+                new ObjectSpawn(0x0080, 0x0100, 0x02, 0, 0, false, 0),
+                new ObjectSpawn(0x00A0, 0x0100, 0x03, 0, 0, false, 0),
+                new ObjectSpawn(0x027F, 0x0100, 0x04, 0, 0, false, 0),
+                new ObjectSpawn(0x0280, 0x0100, 0x05, 0, 0, false, 0),
+                new ObjectSpawn(0x039F, 0x0100, 0x06, 0, 0, false, 0),
+                new ObjectSpawn(0x03A0, 0x0100, 0x07, 0, 0, false, 0),
+                new ObjectSpawn(0x4000, 0x0100, 0x08, 0, 0, false, 0));
+        for (ObjectWindowingStrategy strategy : List.of(ObjectWindowingStrategy.LEGACY, S2ObjectWindowing.INSTANCE)) {
+            for (int width : new int[] {320, 800}) {
+                int end = width == 320 ? 4 : 6; // Strict native $280 / wide $3A0 right edge.
+                List<ObjectSpawn> expected = layout.subList(0, end);
+                for (int previous : new int[] {-3, -16}) {
+                    for (int landing : new int[] {0, 8, 127}) {
+                        ObjectPlacementController manager = new ObjectPlacementController(layout, () -> width);
+                        manager.setWindowingStrategy(strategy);
+                        manager.setTwoAxisCursorPlacement(true);
+                        manager.reset(0);
+                        for (ObjectSpawn spawn : manager.pendingCursorLoadSpawns()) {
+                            manager.completePendingCursorLoad(spawn);
+                        }
+                        manager.finishPendingCursorLoadBatch();
+                        manager.update(previous);
+                        assertEquals(layout.size(), manager.getLeftCursorIndex());
+                        assertEquals(layout.size(), manager.getCursorIndex());
+                        assertTrue(manager.getActiveSpawns().isEmpty());
+                        var before = manager.captureRewindState(0, Integer.MIN_VALUE);
+                        for (int cycle = 0; cycle < 2; cycle++) {
+                            manager.restoreRewindState(before);
+                            manager.update(landing);
+                            String context = "width=" + width + " camera=" + previous + "->" + landing;
+                            assertEquals(expected, List.copyOf(manager.getActiveSpawns()), context);
+                            assertEquals(0, manager.getLeftCursorIndex(), context);
+                            assertEquals(end, manager.getCursorIndex(), context);
+                            assertEquals(0, manager.getLastCameraChunk(), context);
+                            assertEquals(expected, manager.pendingCursorLoadSpawns(), context);
+                            int[] order = new int[end];
+                            for (int i = 0; i < end; i++) order[i] = i;
+                            assertArrayEquals(order,
+                                    manager.captureRewindState(0, Integer.MIN_VALUE).pendingCursorLoadOrder(), context);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     void backwardMoveToTheFirstChunkLoadsNothingBehindTheCursor() {
         // S3K loc_1B864 and S2 ObjectsManager_GoingBackward subtract $80 from the new coarse X
         // and branch on the borrow (sonic3k.asm:37604-37605, s2.asm:33051-33052), so a backward
