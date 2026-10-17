@@ -146,3 +146,14 @@ fails an observer shared-probe count assertion after7133 (1/1F/0E/0S), so actual
 reference rows matches R6's same earlier window; no matrix/route certification.
 Native P2 layer/raw BG state fields are absent; inferred native diffs are kept
 separate. No retry or runtime edit. [Evidence and excluded stale vertical pool](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r7-native-inventory-and-partial-selected-bg-witness--2026-10-17).
+
+
+R8 corrected observer (2026-10-17, production86171 unchanged): original prefix
+44688 reaches7135 with the same217 comparator errors/7136 reference rows and
+first7134sidekick_x0175/0176. Observation assertions pass1/0F/0E/0S. Actual7134
+FG/BG/combined+31 selects BG, transformed0180/0838→FF80/0338, provider0200/0500,
+empty BG descriptor0/no flips/primary-secondary collision0. Exactly one lexical
+wall-owner call per observed tick; floor/clamp calls pass unchanged. Native P2
+layer/selected terrain remains missing; no wrapping fault or production fix
+established. No new route/matrix/GLFW qualification. R7's partial assertion red
+is preserved. [Full selected metrics, passivity and native gaps](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r8-lexical-wall-owner-observer-and-actual7134-bg-result--2026-10-17).

@@ -113358,3 +113358,19 @@ bootstrap/warnings0 matches R6 before its7134 frontier. No new7134/7135 result,
 frontier move, full/slice/alternate/GLFW/native/guard/broad qualification. Native
 P2 layer/raw BG fields remain missing; source-derived diffs are inference.
 [Exact command/fingerprint, selected sample and observer failure](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r7-native-inventory-and-partial-selected-bg-witness--2026-10-17).
+
+
+### 2026-10-17 — R8 corrected actual7134 selected BG witness; frontier unchanged
+
+Same owned tree5daf/runtime86171. One original normal/EGL prefix44688 with
+-Ptrace-replay -Dtest=TestS3kHcz7134LexicalBgWitness#canonicalThroughHcz7135,
+original3ROMs/input/bootstrap/lag/singlefork reaches7135:1/0F/0E/0S observer
+success, open comparator217=20physics+197animation,7136/14208rows,lag53,
+bootstrap/warnings0. First non-camera7134sidekick_x0175/0176 remains; earlier
+206 errors at7132/7133 retained. Actual wall FG/BG/combined+31 selectsBG,
+provider0200/0500 transforms0180/0838→FF80/0338; BG descriptor/collision0,
+no flips. Lexical caller filter permits legitimate floor/clamp scans; passivity
+and exact R6 window/poststates agree. Native P2 layer/raw BG state/selected tile
+missing, no wrapping-owner inference or runtime change. No second/full/slice/
+alternate/native/media/guard/broad run or new GLFW certification. [Exact invocation,
+source fingerprint, windows and metrics](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r8-lexical-wall-owner-observer-and-actual7134-bg-result--2026-10-17).

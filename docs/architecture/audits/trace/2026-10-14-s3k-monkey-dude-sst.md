@@ -2888,3 +2888,209 @@ fault/fix is certified from this partial attempt. The one authorized run is
 spent; stop with this concrete observer failure plus native P2-layer/raw-state
 gaps. Temporary source/classes and consumed diagnostics are removed normally;
 useful native images and foreign/performance artifacts remain untouched.
+
+
+## R8 lexical wall-owner observer and actual7134 BG result — 2026-10-17
+
+Routine observer repair only, actual child run ordinal9 after the metadata-only
+ordinal8 turn. Own tree5daf6dbb6 retains R6/R7 docs; production remains exactly
+Root86171c6b8. Native actual4fdf/gitlink322851cb and useful images are preserved.
+R7 request67242 remains a partial assertion failure after7133, not a parity pass.
+Root's registered R8 ID is recorded separately in both own ownership entries,
+with refreshed24h expiry; all earlier round identities remain intact.
+
+### Corrected seam and sole invocation
+
+Test-only `GroundWallSensorWitness` filters the actual `CollisionSystem` stack
+for `resolveGroundWallCollision`, rather than counting every shared probe call.
+The eligible stack is `scanCalcRoomInFront` → `resolveGroundWallCollision`.
+Exactly one real scan per eligible call executes; all other callers also execute
+their real method unchanged. Pooled buffers are identity-checked, the identical
+actual result is returned, and FG/BG/combined primitives are copied immediately
+before pure terrain queries. Vertical/horizontal BG pools are selected by actual
+direction. Assertions check unchanged playable fields, provider stability and
+unchanged returned pool after lookup. No gameplay writes, new CPU journal,
+reseed, fixture/clock adjustment, production API or owner change is made.
+
+The observer is armed after actual7132 and closed after7134;7135 executes after
+restoring the original probe. Actual7133/7134 each have exactly one eligible
+wall-owner call and three other legitimate shared-probe calls (fatal BG floor
+and left/right clamps). There is no assertion that all probe users total one.
+The comparator at7132/7133/7134/7135 and actual postrow fields match R6, with no
+new earlier comparator decision. This is the passivity boundary tested here,
+not a claim that every unobserved internal field has been compared.
+
+Frozen helper SHA256:
+`f2982126b5f8e9e37182673ca8d27055333daea43439ec379b4f1f1c91a8842d`;
+temporary runner SHA256:
+`5db6cd8d22278e3d1aaf3d3b26a6817e4c684df013cad388070a100c366cb262`.
+Combined helper-then-runner path+NUL+bytes SHA256:
+`a75063e0d3014d07e418dc189d2efa2e4f3e68397b4efe01afccc05a6351c5b4`.
+The sole invocation from this owned cwd used the unchanged R3 absolute-path
+bindings (`MAIN_WORKSPACE`, `S1_ROM`, `S2_ROM`, `S3K_ROM`) and these exact options:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_WORKSPACE/tools/testing/maven_queue.py" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=$S1_ROM" \
+  "-Dsonic2.rom.path=$S2_ROM" \
+  "-Ds3k.rom.path=$S3K_ROM" \
+  -Ptrace-replay '-Dtest=TestS3kHcz7134LexicalBgWitness#canonicalThroughHcz7135' \
+  -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical test -B
+```
+
+Request44688 finished13:48:34 BST /12:48:34 UTC. Queue0s, Maven47.168s,
+JUnit23.578s, **1/0F/0E/0S**. The original chain driver/bootstrap/BK2 inputs/lag
+admission run from segment0, stopping after segment11 row7135 inclusive. No
+positioned state, native/media run, variant, alternate, broad or guard run.
+This execution success proves the bounded observer completed, **not parity**.
+
+| Segment | Compared reference rows | Physics /animation errors | Lag | Complete |
+| --- | ---: | --- | ---: | --- |
+| 0 | 2290 | 0 /0 | 0 | true |
+| 2 | 4023 | 0 /0 | 11 | true |
+| 4 | 8235 | 0 /0 | 14 | true |
+| 6 | 4103 | 0 /0 | 16 | true |
+| 8 | 7175 | 0 /0 | 62 | true |
+| 9 | 3574 | 0 /0 | 55 | true |
+| 11 prefix | 7136 of14208 (0–7135) | 20 /197 | 53 | false |
+
+Every listed window has zero warnings/bootstrap errors. The prefix dynamic-art
+gap report has11 records and zero reported failures; later gaps/exit/completion
+edges are outside this observation. HCZ is **217 errors**, with206 already by
+7132/7133 (11physics/195animation),211 at7134 (15/196),217 at7135 (20/197).
+First reported non-camera physics remains7134 `sidekick_x`,0175/0176. The
+7134 fields also retain native/engine x_speed0170/0270, ground0000/0270,
+status0060/0040 and mapping_frame0005/0006. No longer-window total is replaced.
+
+### Actual selected7134 result
+
+Reuse R6's row/clock association: row7134 is BK2cursor70209→70210,
+V_int_run_count69066, engineLF/CPU7082; native LF1BAA. The probe is observed
+inside the real movement wall call for that row, not reconstructed from a
+postrow position. Pre-wall centre0174.8800,0830.1F00, vx/ground0270, vy0,
+angle0, underwater/grounded/notPush, radii9/15, actual engine top/lrb0E/0F.
+RIGHT scan arguments offset(+10,0), delta(+2,+8), lrb15 are unchanged from R6.
+
+| Actual7134 item | Observed value |
+| --- | --- |
+| Provider | DefaultBackgroundPlaneCollisionProvider; active=true; diffX0200/diffY0500 stable before/after |
+| FG probe → BG probe | 0180/0838 → FF80/0338 (signedX-128), actual provider transform and word cast |
+| Provider Y mask /BG row gate | FFFF /present=true; engine source row6; layer1 dimensions20×8 blocks |
+| FG /BG signed distances | +31 /+31 (001F), both tile0, angle03, RIGHT, no angle write |
+| Combined /selected plane | +31/tile0/angle03; identical returned object is BG on equality |
+| Foreground layer0 descriptors at0180/0170/0190 | 005D/005C/0058; no flips/lrb solidity; primary and secondary collision indices0 |
+| Background layer1 descriptors atFF80/FF70/FF90 | 0000/0000/0000, chunk0, no flips/lrb solidity; primary and secondary collision indices0 |
+| Passivity | Shared pools, playable unchanged, provider stable and identical return unchanged after pure queries: all pass |
+
+There is no solid-tile width metric in these empty queried cells. +31 is the
+actual sensor's empty-cell extension result, not an inferred solid contact.
+7133 independently repeats R7's qualified RIGHT sample:017D/0838 → FF7D/0338,
+FG/BG/combined+18, selectedBG, empty background terrain, provider0200/0500.
+The actual7134 positive result explains why the wall response leaves0270/
+ground0270/noPush; integration remains0176.F800. It does not establish which
+terrain/layer/transform owner differs from native.
+
+### Concrete remaining native gap and handback
+
+R7's full native aux inventory is reused: no P2 layer bytes, raw BG flag,
+diffXY, row mask, translated descriptor or exact FG/BG/combined result exists
+in this fixture. P1-only0E/0F snapshots cannot qualify P2. Native wall-slot
+source inference still supports0200/0500, and the relayed native/ROM math
+requires-1 at7134, but neither is an actual native selected-plane/tile witness.
+The native layout007C mask and engine providerFFFF mask belong to different
+stages; their numeric difference alone proves no defect. Negative wordX and
+this chunk boundary are observations, **not proof of a wrapping fault**.
+
+Stop with the engine selectedBG+31 now established and native P2 layer/selected
+terrain unqualified. No production correction, second invocation, frontier
+advance or whole-chain/slice/alternate/GLFW certification is claimed. Root owns
+next native evidence and any runtime decision. The validated generic observer
+is retained in test scope because pooled-result/caller attribution recurred;
+it has no test entrypoint or production API. The fixture-specific runner,
+compiled runner classes and consumed raw diagnostics are removed normally;
+no raw archive, foreign/native/performance cleanup or Main write.
+
+
+### Native observation brief for Root; execution not authorized here
+
+Read-only static preparation after R8, no engine/native invocation or build.
+Original BK2 (relative to this owned tree):
+`src/test/resources/traces/s3k/runs/s3k-sonic-tails-complete-emeralds/s3k-sonic-tails-complete-emeralds.bk2`,
+SHA256 `ad40fb0b0a74fa12b08ab71b2e48a7455b388d14f43f4cded502ac4a15d1b3c0`.
+Manifest segment11 `hcz_2` starts at zero-based BK2 index63075. Direct ZIP
+`Input Log.txt` reads at indices70208/70209 are both
+`|..|...R....|........|`: P1 Right08, physical P2 neutral00. CPU-generated P2
+logical Right08 is separate from that physical controller input.
+
+| HCZ row | Actual input index (zero-based) → consumed count | Native CSV LF /VInt low word | Engine VInt /executed chain step /LF |
+| --- | --- | --- | --- |
+| 7133 (CSV frame1BDD) | 70208 →70209 | 1BA9 /0FDC | 69065 /69065 /7081 |
+| 7134 (CSV frame1BDE) | 70209 →70210 | 1BAA /0FDD | 69066 /69066 /7082 |
+
+This is manifest+actual input/driver boundary mapping, not a fitted native
+power-on clock. Native observer must log its own input index, core.Frame before/
+after, LF word at RAMFE04 and full VInt long atFE0C; no full native VInt or
+core.Frame value is reconstructed from engine69066. At7133 CSV P2 ends
+0173.8800/0830.1F00,vx-ground026A,status40;7134 ends0175.F800/0830.1F00,
+vx0170,vy0,ground0,status60. Expect the observed upstream+1 CPU nudge and
+acceleration6 to make pre-wall0174.8800/vx0270 at7134, but record actual native
+pre/post values and signed wall return rather than supplying them to the ROM.
+
+All RAM addresses below are low16 mainmemory offsets (24-bit hardware address
+FFxxxx), reads big-endian. Require A0 lowwordB04A (P2), and the call originating
+at14BB0 with return14BB4, so later P2 clamps cannot be conflated with this owner.
+
+| Required RAM | Address /width |
+| --- | --- |
+| P2 base; routine | B04A; B04F byte |
+| P2 centre X/sub, Y/sub | B05A/B05C and B05E/B060 words (or longs atB05A/B05E) |
+| P2 vx,vy,ground | B062/B064/B066 signed words |
+| P2 y/x radii; angle/status | B068/B069 bytes; B070/B074 bytes |
+| P2 object_control /move_lock | B078 byte /B07C word |
+| **Raw P2 top/lrb layers** | **B090/B091 bytes; actual values unknown, do not substitute P1's0E/0F** |
+| CPU P2 logical held/pressed | F66A/F66B bytes; physical P2 heldF606 is separate |
+| BG collision flag; X/Y diff | F664 byte; EE3E/EE40 words |
+| FG copy X/Y; BG copy X/Y | EE80/EE84 words; EE8C/EE90 words |
+| HCZ BG routine/offset | EEC2/EED2 words |
+| Layout header, row mask, X/Y wrap | 8000 (four dimension words); EEAE word; EEA8/EEAA words |
+| Current/primary/secondary collision pointers | F796/F7B4/F7B8 longs |
+| Primary angle/save, secondary angle/save | F768/F769/F76A/F76B bytes |
+
+Owning locked-on ROM PCs, verified by static reads of the original ROM
+(SHA1cfbf98c36c776677290a872547ac47c53d2761d6, CRC63522553):
+
+- `sub_F61C` = CalcRoomInFront at00F61C; it selects Collision_addr by raw
+  top_solid_bit==0C versus secondary, then loads actual lrb intoD5 at00F638.
+  Tails caller BSR at014BB0 returns at014BB4 (ROM bytes
+  `6100 AA6A 301F 4A41`);014BB6 tests signedD1. RecordD0–D6/A0–A5 at entry,
+  projection branch00FA88 and return014BB4; negative response reaches014BCA.
+- `FindWall` wrapper00F47E. FG signedD1 is available after its first scan at
+  00F48C; BG signedD1 at00F4B4; combined signedD1 at00F4DA /caller014BB4.
+  The wrapper subtracts diffX at00F4A4 and diffY at00F4A8 for right scans,
+  then selects BG on `D1 <= saved FG distance`. RecordA3 step, D2/D3 word
+  coordinates, D5 solidity bit, D6 flip control and A4 angle destination.
+- First wall-cell evaluator `sub_F4DC` at00F4DC; adjacent evaluator
+  `sub_F584` at00F584 (often called FindWall2). Their post-lookup boundaries
+  00F4DE/00F586 have A1 pointing to the actual raw descriptor word; capture
+  that address+word on **every** call inside this one lexical wall owner.
+- `Find_Tile_BG`00EFB6 and `Find_Tile_FG`00EFF0 (actual LEA literals in
+  FindWall). Capture inputD2/D3, row maskEEAE, row-pointer address/value,
+  logical X word shifts, selected layout byte address/value, and returnedA1.
+  BG computes `(D2.w >> 5) & mask`, reads header+0A+rowIndex, then adds
+  unsigned `(D3.w >> 7)`. For inferred0338/FF80 this is rowIndex0018,
+  row-pointer address8022 and X column01FF; **these calculations are not an
+  observed native RAM value or evidence of a wrapping defect**.7133's FF7D
+  would yield column01FE. Do not replace either with a width-modulo address.
+
+The layout byte selects a128-byte chunk via `ChunkAddrArray` at00F02A;
+within it the raw descriptor address uses `(Y & 70) + ((X >> 3) & 0E)`.
+Record descriptor low10 tile ID, flip bits0A/0B, actual D5 solidity bit,
+Collision_addr-selected byte at`pointer+2*tileID`, and the actual AngleArray /
+HeightMapsRot lookup address, signed metric and D1 returns, including adjacent
+lookups. This distinguishes native negative-word lookup from a different
+provider/plane/layer; no expected tile is injected. Qualify callback PC
+before/after-instruction semantics explicitly. Existing compiled one-pass
+harness may be reused by Root with transparent RAM/PC observation; this worker
+starts no native process, build, new recording or source modification.

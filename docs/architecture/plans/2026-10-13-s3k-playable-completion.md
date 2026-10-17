@@ -4275,3 +4275,21 @@ checks and comparator206=11physics+195animation agree with R6 through7133;
 7134/7135 are not executed. No second run, production edit, qualification or
 frontier advance. Vertical tail's wrong pooled-result read is excluded. [Exact
 source inventory, frozen fingerprint, selected result and failure](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r7-native-inventory-and-partial-selected-bg-witness--2026-10-17).
+
+
+## R8 corrected lexical wall witness; actual7134 BG+31 — 2026-10-17
+
+Runtime86171, own docs5daf source, actual child ordinal9. The observer now filters
+only the real resolveGroundWallCollision lexical call, allowing floor/clamp
+scans. Sole corrected prefix44688 reaches7135:1/0F/0E/0S observation success,
+7136/14208 HCZ rows,217=20physics+197animation,lag53,bootstrap/warnings0;
+first non-camera7134sidekick_x0175/0176 remains. Exact7134 probe0180/0838
+translatesFF80/0338 with active/stable0200/0500 provider; actualFG/BG/combined
+are+31, selectedBG on equality, empty BG descriptor/collision indices0 and no
+flips. One actual wall call/tick plus three legitimate shared-probe tails,
+unchanged pooled return/playable/provider and same R6 comparator/poststates.
+Native P2 layers/raw BG state/selected tile are absent from the original aux;
+source inference is separate and negativeX does not establish a wrapping bug.
+No production edit or retry/new qualification. Generic test-only helper retained,
+temporary runner/consumed diagnostics removed; all jobs terminal. [Exact command,
+fingerprint, all windows and native limit](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r8-lexical-wall-owner-observer-and-actual7134-bg-result--2026-10-17).
