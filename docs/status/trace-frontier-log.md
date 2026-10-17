@@ -113597,3 +113597,30 @@ sidekick_animation_id17/1C; later non-camera frontier unmeasured. No zero-fronti
 full returned-HCZ/exit, slice, alternate or exact GLFW qualification. Root owns
 combined validation and delivery; no Main write/push.
 [Exact source hashes, commands, compared windows and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r11-hczblock-full2-visibility-owner-closes7807-through7808--2026-10-17).
+
+
+### 2026-10-17 — R12 composed canonical first non-camera7807→8329; exit absent
+
+Sourcebef8f27ca in owned3aa, branchbugfix/ai-s3k-hcz-slice-cpu-visibility-gpt61,
+production/maintained tests unchanged. Root authorized once existing original
+AD40 full selector: current Main absolute wrapper, normal lane, Java25/Lua5.4,
+original3ROM/EGL/nullAL/no ambient display/single reusable fork/alphabetical,
+`-Dmse=off -Ptrace-replay
+-Dtest=TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds
+ test -B`.17194 is1/1F/0E/0S, queue32s/Maven50.504s, finished15:05:18UTC.
+All six earlier gameplay windows0/2/4/6/8/9 complete0errors. ReturnedHCZ11
+complete14208 rows,125612TOTAL=107498physics+18114animation,lag59,warn/bootstrap0.
+First non-camera **8329 y_speed native0000/engine-0680**, versus pre-R11 Root93212
+same14208 rows133258=113873+19385/first7807sidekick_y. Lower matched totals do not
+certify parity. Second failure axis remains giant_ring exit never observed;
+no onward segment/playable exit. Four suppressed unmatched hardware completions
+are retained unattributed. No new-field investigation/fix/rerun.
+
+Separate82EA slice witness68487 through10835 isstrictred104spans/10773 compared
+rows/first9482air1/0. New10834counter0/1 correctly follows previous valid cached
+false: engine10833copiedcamera019A versus native0199 atP2x0181,width18 changes
+inclusive left edge0→-1. Fresh-entry rule/consumed false. Camera/P1 input/history
+producer remains unqualified; no CPU/cache fix. PRE_MAIN_LOOP label corrected
+to actual post-camera loop tail. All temporary observer source/classes removed
+before canonical; no native/fullslice/alternate/broad/guard or runtime edit.
+[Exact separate fixtures, source gaps, clock phases and results](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r12-slice-cached-visibility-consequence-and-full-composed-canonical--2026-10-17).

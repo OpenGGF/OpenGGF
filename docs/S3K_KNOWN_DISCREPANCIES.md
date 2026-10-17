@@ -1300,3 +1300,16 @@ physics mismatch through7808, warnings/bootstrap0. First remaining all-group
 error3475 sidekick_animation_id17/1C; later non-camera frontier is unmeasured.
 No full returned-HCZ/exit/slice/alternate/GLFW or route certification is claimed.
 [Native source, exact controls/commands/hashes and limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r11-hczblock-full2-visibility-owner-closes7807-through7808--2026-10-17).
+
+
+R12 current composed HCZ qualification (2026-10-17,bef8 unchanged): one maintained
+full canonical17194 compares all14208 returnedHCZ rows,125612 total field errors
+(107498physics+18114animation),first non-camera8329y_speed0000/-0680. Earlier
+six windows complete zero-error, but giant_ring exit remains absent; no onward
+segment/playable exit. Four suppressed unmatched hardware completions are
+unattributed. Separate slice witness proves10834counter0/1 is a correct consumer
+of10833cached offscreen caused by enginecamera copy019A versus native0199 at
+an inclusive left edge. Fresh-entry delay is disabled; no CPU/cache/runtime fix.
+Selected P1/history/camera-latch producer remains unqualified. No extra selection,
+native or broad run, and no general green.
+[Exact fixtures, commands, clocks, windows, phase correction and handback](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r12-slice-cached-visibility-consequence-and-full-composed-canonical--2026-10-17).

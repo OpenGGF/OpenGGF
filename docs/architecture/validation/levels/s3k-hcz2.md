@@ -211,3 +211,26 @@ contains only post-row reads and is removed after facts are durable. No full
 act/returned exit/slice/alternate/GLFW/viewport/roster/native presentation
 certification; Root owns remaining route and delivery validation.
 [Source, controls, clocks, commands and exact window comparison](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r11-hczblock-full2-visibility-owner-closes7807-through7808--2026-10-17).
+
+
+### R12 actual composed full-window frontier and slice cause — 2026-10-17
+
+No production/test edit onbef8; R11 code/test bytes retained. Once existing full
+canonical17194 completes all14208 returnedHCZ rows with125612 field errors
+(107498physics/18114animation),lag59,warn/bootstrap0. First non-camera now8329
+y_speed0000/-0680; pre-R11 same-window133258 started7807sidekick_y. Earlier six
+gameplay windows remain complete zero-error. The giant_ring exit is still absent,
+so no onward segment/playable exit or act certification. Four suppressed unmatched
+hardware completions are not attributed to a new timing owner.
+
+Separate original82EA slice prefix68487 reaches10835, strict1/1F/0E/0S and104
+spans/10773 compared rows.10833camera copy019A (native0199) makes the real render
+edge negative instead of inclusive0; valid cached false correctly yields counter1
+on10834, then resets10835 after visibility returns. Fresh-entry delay is disabled.
+No CPU/cache/width fix. Selected camera P1/history/latch inputs were not captured;
+actual native aux lacks those selected-history/scroll fields. Observer's
+PRE_MAIN_LOOP label corrected to loop tail. Independent disconfirming test design
+is handed back, not run; all temporary observers removed before canonical.
+Full independent-slice delta attribution, later8329 owner/exit, other BK2/GLFW/
+viewport/roster/native presentation breadth remain open. Root owns delivery.
+[Exact source, clocks, comparison windows and limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r12-slice-cached-visibility-consequence-and-full-composed-canonical--2026-10-17).

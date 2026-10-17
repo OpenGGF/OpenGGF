@@ -1363,3 +1363,13 @@ HCZ7809/14208 rows still has206 camera/animation errors and no non-camera physic
 mismatch through that bound. First remaining animation3475; later frontier is
 unmeasured. Full route/exit, independent slice, alternate, exact GLFW and broader
 matrix products remain open. [Affected HCZ2 matrix](../architecture/validation/levels/s3k-hcz2.md#r11-hczblock-full2-visibility-and-whole-world-replay--2026-10-17).
+
+
+R12 full composed HCZ window (2026-10-17, unchangedbef8): once existing canonical
+17194 compares returnedHCZ all14208 rows,125612=107498physics+18114animation,
+first non-camera8329y_speed0000/-0680, still missing giant_ring exit. Earlier six
+gameplay windows complete zero-error; no onward segment/act certificate. Separate
+slice witness disconfirms CPUcounter/cache ownership: wrong one-pixel camera copy
+at10833 publishes offscreen and correctly yields10834counter1; upstream camera
+P1/history inputs remain unqualified. No runtime edit or new focused/broad pass.
+[HCZ2 current frontier and source limits](../architecture/validation/levels/s3k-hcz2.md#r12-actual-composed-full-window-frontier-and-slice-cause--2026-10-17).

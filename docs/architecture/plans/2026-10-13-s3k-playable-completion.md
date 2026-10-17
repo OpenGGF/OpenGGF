@@ -5158,3 +5158,36 @@ new local links/anchors, Markdown fences and diff checks pass. Source diff is
 empty. Main config hash/mtime and own regular exact byte copy verified again.
 No extra Java execution. Preparing the normal local evidence-only commit;
 all seven policy trailers and final GPT-6.1 coauthor are parsed before commit.
+
+
+## R12 HCZ slice visibility consequence and composed route frontier — 2026-10-17
+
+Same3aa fast-forwarded cd94→bef8, preserving R10/R11 refs, native4fdf and an
+isolated exact-byte private config. No R12 production/maintained-test edit.
+One original82EA slice prefix68487 stops10835:1/1F/0E/0S,104spans/10773 compared
+rows, first9482air1/0, no warnings/bootstrap, eight missing aux schemas.
+Actual10833 camera copy019A versus native0199 places P2x0181,width18 one pixel
+outside instead of exactly on the inclusive edge. Its published valid cached
+false correctly increments the following NORMAL CPU counter0→1 at10834;
+fresh-entry rule/consumption are false. Next publication true resets10835.
+No counter/cache/geometry correction is justified. A temporary PRE_MAIN_LOOP
+label was wrong: it is the post-camera loop tail here. Causal proof uses prior
+end-row publication and next post-CPU sample, not an invented pre-CPU hook.
+
+The precise upstream gap is focused P1/selected history, H_scroll delay/forced
+coordinate/clamp inputs at camera entry. Native final poses/copies/index exist;
+selected Pos_table contents and scroll latch are absent from actual read aux.
+Independent real-refresh/next-CPU edge controls should disconfirm the consumer;
+a genuine camera-producer old-red needs those source inputs first, not native
+output0199 assigned as a fixture. No new test or runtime change at this boundary.
+
+Root separately required one maintained full AD40 canonical after removing all
+temporary observation source/classes.17194 on exactbef8 is1/1F/0E/0S. Six earlier
+gameplay windows0/2/4/6/8/9 complete at zero errors; returnedHCZ compares all14208
+rows,125612=107498physics+18114animation, lag59, warning/bootstrap0. First
+non-camera moves7807→8329 y_speed0000/-0680. Matched pre-R11 Root93212 was133258
+(113873+19385) over the same rows. Exit giant_ring is still never observed; no
+onward segment/playable exit qualifies. Four suppressed unmatched hardware
+completions remain unattributed. No8329 repair/rerun/extra selection or broad.
+Root owns further owner authorization, smoke/integration/push.
+[Exact inputs, clocks, seam correction, commands, windows and limits](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r12-slice-cached-visibility-consequence-and-full-composed-canonical--2026-10-17).
