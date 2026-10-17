@@ -139,18 +139,52 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
         }
 
         if (rider.active) {
-            if (player.getDead() || player.isHurt() || !rider.standingLastFrame) {
-                releaseRider(rider, vIntRunCount, false);
+            // loc_327FC tests cached render_flags before routine or standing.
+            // Its offscreen and routine>=4 branches share loc_328AC.
+            if ((player.hasRenderFlagOnScreenState() && !player.isRenderFlagOnScreen())
+                    || player.getDead() || player.isHurt()) {
+                nativeReleaseHeldPlayer(rider);
+                return;
+            }
+            if (!hasNativeStandingBit(rider)) {
+                // loc_328BE clears only the held byte; it does not release
+                // object_control or alter the player's status/kinematics.
+                rider.active = false;
                 return;
             }
             holdRider(rider, vIntRunCount);
             return;
         }
 
-        if (!rider.standingLastFrame || player.isObjectControlled() || player.getDead() || player.isHurt()) {
-            return;
+        // Inactive sub_32784 checks only this column's standing bit. In
+        // particular, retained object_control=$03 does not prevent recapture.
+        if (hasNativeStandingBit(rider)) {
+            captureRider(rider);
         }
-        captureRider(rider);
+    }
+
+    private boolean hasNativeStandingBit(RiderState rider) {
+        var objectServices = tryServices();
+        var objectManager = objectServices != null ? objectServices.objectManager() : null;
+        if (objectManager != null) {
+            // SolidObjectFull skips offscreen P2 before touching the native
+            // object standing bit. Callback freshness is not that retained bit.
+            return objectManager.hasObjectStandingBit(rider.player, this);
+        }
+        // Unmanaged direct component tests have no native solid owner.
+        return rider.standingLastFrame;
+    }
+
+    private void nativeReleaseHeldPlayer(RiderState rider) {
+        AbstractPlayableSprite player = rider.player;
+        // loc_328AC -> loc_328BE: preserve OnObj, pose, fractions and speeds.
+        player.setAir(true);
+        player.setPriorityBucket(RenderPriority.fromS3kWord(0x100));
+        ObjectControlState.none().applyTo(player);
+        // Release the engine projection of native object_control bit 1;
+        // leave the last published mapping/animation values unchanged.
+        player.setObjectMappingFrameControl(false);
+        rider.active = false;
     }
 
     private void captureRider(RiderState rider) {

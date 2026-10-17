@@ -7121,3 +7121,100 @@ The matched three-step cold contact baseline is separately authorized on803;
 no current contact prefix, runtime repair or native correctness follows yet.
 Cold/DEZ regressions, later HCZ/ending contexts, complete current smoke/guards
 and Main integration/push remain open.
+
+
+### R19 independent column cached-release old-red — 2026-10-17
+
+On R18df2bbf/runtimef196, new TestHczSpinningColumnCachedRelease reaches actual
+ROM factory/allocator/SST FullSolid landing/capture. Build1696 passes before the
+sole focused79315 (18:32:11UTC, queue0/Maven25.475s): **2/1F0E0S**, intended
+final native cached-release/recapture assertions red; visible hold/jump control
+passes. Before those native assertions, twice forced whole-world recreation and
+forward comparison from each of the before-flip/actual post-first-dispatch
+boundaries passes every registry key. The latter is still a held old-owner state,
+not a correct native release. Actual first false-cache dispatch holds Airfalse/
+controlTTT and moves X0408→0407; actual shared standing/riding and OnObj survive.
+[Source, independent geometry, exact command/hashes and local design](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r19-independent-column-cached-release-old-red--2026-10-17).
+Existing hasObjectStandingBit supplies the required retained native latch;
+callback standingLastFrame is not its production substitute. Handed-back design
+is local cached release before hold/routine/standing, native OnObj preservation,
+!standing clearing only held, and inactive capture from that existing latch.
+**No runtime edit or further run:**8717 strict frontier remains unqualified.
+R19ordinal21 is separately registered; R18/all prior refs/native4fdf/config/Main
+identity remain, consumed owned diagnostics removed without archive.
+
+
+### R20 local column release repair; prefix aggregate not captured — 2026-10-17
+
+R19oldred57dd6a035 is preserved. Only the column runtime owner changes: managed
+native standing getter, cached/routine release before hold preserving OnObj and
+kinematics, clear-held-only !standing and inactive positive-control recapture.
+Root approves exact d8119e4a runtime/legacy test diff. Focus62518 is73/0F0E0S,
+queue0/displayedMaven01:19min (18:38:32UTC), including unchanged R19new2 and
+real managed whole-world release/recapture/replay, legacy controls and S3K4.
+Authorized sole AD40 prefix93493 reaches8720inclusive with six native-matching
+endpoint/status/control samples, including8717release and retained OnObj.
+JUnit1/0F0E0S (18:40:29UTC,47.927s) is **not strict parity**: the base prefix
+path neither writes nor asserts unfinished seg11, and the temporary observer
+omits its final counts. Current8721-row total/groups/firstNonCamera remain
+unqualified; no213→current numerical claim. Six completed earlier reports/gap
+are zero. [Exact hashes, source/focus, postrows and reporting limit](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r20-local-column-release-owner-and-prefix-reporting-limit--2026-10-17).
+STOP after handback, no automatic retry/runtime variant. Main/Root/native4fdf/
+private config/all refs remain; delivery guards/composition belong to Root.
+
+
+### R21 final-prefix reporting seam source preparation only — 2026-10-17
+
+R20's d8119e4a owner/73focused/six native endpoint matches remain qualified at
+that bounded scope; its unfinished seg11 aggregate is still missing. Exact R21
+ordinal23/task is separately registered, preserving R20/19/18. Under the same
+owned writer lease, only temporary TestS3kCanonicalHczColumnReleasePrefix is
+prepared (SHA256 `c174f2e4152aca2df5de045494f59f7bba37c850d9d82fe202c897f6c1c11ee8`); superclass
+AbstractRunChainTest SHA256 `967c9896bf566218e9198626ec7d256f181be9fb78ca5abc787d6b82932148bb` is read-only.
+The existing virtual stepEngineFrame is forwarded exactly once. Only its exact
+private ReplayPrefixReached control exception is intercepted after base final
+animation/dynamic-art comparison and coordinator.afterStep, before outer
+hardwareTiming.abort/cleanup. Existing writeChainSegmentReport is invoked for
+current segment11/cursor8721, preserving session-owned JSON/owner allocation and
+group+bootstrap accounting. The same exception is then rethrown unchanged.
+The test asserts that this report was actually written; no endpoint/owner/CPU
+journal, new API, shared source, clock, gameplay or fixture writes. Reporting
+mutates only existing test diagnostic maps/output. No current result is inferred.
+**No compiler/JVM/runtime submission:** Root must review this exact source first.
+Runtime/test pins d811/c35d/6c741 and the five R20 WIP paths remain unchanged;
+no extra focused/guard/native/media/broad selection is planned.
+
+
+R21 source-only refinement (still no compiler/JVM): prepared hash
+`a625ad6c56fb2744d42034777c4f5a4e202e5f91b9b447cb4da421f1fe72678b` supersedes the unexecuted c174 draft. It additionally reads the
+actual loaded TraceData.frameCount (frames.size) via the current comparator's
+private final trace reference, distinguishing reference14208 from compared8721,
+and persists those lengths/comparator identity in existing JUnit output beside
+existing partial seg11 JSON. The source asserts actual current comparator and
+metadata reference identity. Partial strict all-group zero is asserted after
+original prefix abort/cleanup, so diagnostic reporting cannot alter gameplay
+shutdown; existing residuals stay red. Root must review this final exact source
+before any explicit reporting-only execution authorization. R20 pins/results and
+all existing source remain unchanged; no count is reconstructed or inferred.
+
+
+### R20/R21 final local column qualification — 2026-10-17
+
+The R20 count gap is resolved by separately reviewed/authorized R21ordinal24,
+not a runtime variant. Final a625 reporting-only source reads the actual current
+comparator after final comparisons/before original prefix abort, preserves the
+same stop and asserts strict zero only after cleanup. Actual95476 terminal1 at
+18:52:31UTC (queue0/Maven51.190s,1/1F0E0S) compares **8721/14208**, completefalse:
+**206=11camera physics+195animation**, firstNonCameraNULL, lag59/warnbootstrap0.
+Durable10733 same-window213=15physics+198animation now has an observed aggregate
+comparison; the bounded recent5 ring does not prove exhaustive error-set deltas.
+First all-group3475sidekick_animation_id17/1C remains. All six earlier completed
+windows/gap remain zero. [Exact report, identities, source/phase and limits](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r21-actual-final-prefix-report-qualifies-the-local-column-repair--2026-10-17).
+Source-approved d811 column + unchanged c35d genuine old-red→green + legacy6c741
+and73focused0skip + R20 native-matching six endpoints qualify the local cached
+release/retained-standing owner **through8720**. No later frontier/fullroute/
+slice/alternate/GLFW/native or general strict-green claim. No extra execution;
+Root owns composition/guards/broad/delivery. Temporary test/class and inspected
+owned diagnostics are consumed normally; R19oldred history, refs/native/config
+remain. Runtime/test and existing release/discrepancy/frontier/pitfall evidence
+are committed locally under normal hooks, not integrated or pushed here.

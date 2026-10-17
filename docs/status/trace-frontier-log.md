@@ -113797,3 +113797,33 @@ Root independently inspected both original binaries; raw binaries then consumed
 metadata-slot-alone and temporary sources/instrumented classes removed. No extra
 JVM/native/media/sweep.
 [Exact commands, source pins, neighbors and limits](../architecture/validation/levels/s3k-ssz-act1.md#r13-matched-cold-campaign-first-tuple-difference--2026-10-17).
+
+### 2026-10-17 — HCZ column cached release closes8717 through8720; strict residuals remain
+
+Owned3aa3 branchbugfix/ai-s3k-hcz-column-held-release-gpt61, basef196/HEAD57dd
+plus one column owner SHA d8119e4a; no later Root source merge/execution claim.
+Native044sub32784 reads cached visibility before routine/standing/hold, preserves
+OnObj on release, clears only held on lost standing, and recaptures from its
+actual native standing bit despite positive control3. Existing manager getter
+supplies that retained bit; no shared solid/CPU/camera/cache/API changes.
+Independent actual production oracle R19oldred79315(2/1F)→R20focus62518
+**73/0F0E0S**, including unchanged new2, old controls, mechanism/recreation and
+S3K4. Twice forced whole-world continuations pass before/after actual release.
+R20prefix93493 directly matches native8715..20endpoint/status/control sequence,
+but omits unfinished comparator counts; its JUnit0F is not strict green.
+
+Separately reviewed report-only R21sourcea625 runs originalAD40 from boot once,
+selector TestS3kCanonicalHczColumnReleasePrefix#originalAd40ColumnThrough8720,
+normal Main absolute wrapper/EGL/nullAL/original all3ROM/singlefork. Actual95476
+18:52:31UTC, queue0/Maven51.190s, **1/1F0E0S**: compared8721/reference14208,
+completefalse, **206=11camera physics+195animation**, firstNonCameraNULL,
+lag59/warningbootstrap0. Its strict-zero fails after original cleanup, preserving
+all residuals. Actual matched10733 same-window213=15physics+198animation now
+reduces by group counts; no exhaustive error-set delta is inferred from the
+five-entry recent ring. First all-group3475sidekick_animation_id17/1C remains.
+Six earlier completed gameplay windows0/2/4/6/8/9 remain all-group zero and gap0.
+[Exact hashes, commands, report identities, source/phase and available mismatch rows](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r21-actual-final-prefix-report-qualifies-the-local-column-repair--2026-10-17).
+No later non-camera frontier, full route/exit, independent slice/alternate,
+auxiliary, exact GLFW or new native qualification; no general green. Root owns
+combined guards/smoke/integration/push. Temporary reporting source/classes and
+consumed owned diagnostics are removed; local runtime/test+docs only.
