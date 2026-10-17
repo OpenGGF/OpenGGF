@@ -7061,3 +7061,63 @@ a runtime fallback, permission change or acceptance. Complete hardware kernel
 initialization and ending contexts remain open. No more native access is
 inferred from this checkpoint. Complete current smoke/guards, cold/DEZ fixes,
 remaining HCZ frontiers and Main integration/push remain required.
+
+
+### Root native held-file identity gate and corrected HCZ report — 2026-10-17
+
+The later HCZ reporting-only run95476 used the unchanged R20 local column
+candidate d811 and reviewed temporary seam a625, on the original AD40 driver
+through row8720. It wrote the actual active comparator before the original
+prefix abort, after the final playable/dynamic-art/coordinator comparisons,
+then retained the strict-zero assertion after cleanup. Actual compared8721 /
+loaded reference14208, complete=false, comparator identity871662667. It ended
+1 test /1 failure /0 errors /0 skips at18:52:31UTC (queue0, Maven51.190s,
+method23.924s): ONLY the final strict0-versus206 assertion failed. The current
+partial report contains206 errors,11 physics and195 animation, bootstrap0,
+warnings0, lag59, firstNonCameraPhysicsMismatch=null. The matched earlier
+10733 window had213 errors,15 physics and198 animation. This qualifies that
+bounded group-count comparison and the absence of a current non-camera
+physics frontier through8720; it is not strict green, full HCZ parity or
+exhaustive identity equality. The JSON retains only five recent camera_y
+errors, not an exhaustive error array. Six preceding complete gameplay
+windows remain all-group0. The local fix/worker documentation commit and
+Root composition remain separate from this report fact.
+
+Native97028's map_files refusal remains the result for the OLD algorithm.
+After independent source review, Root compiled the NEW held-file algorithm
+once at18:52:05.043398..18:52:05.160192UTC under its worktree build lease plus
+shared build-activity lease, inherited descriptors3/5. Compiler terminal0,
+no warnings; no native host/core rebuild. Reader source SHA256
+`f4f2fbc81b2c7e0680b1596fab14f2795308ade5ca005a2926710f0da2c6ee5b`,
+DLL `0bf13e126f7a68da2609809c975c18432edfff261b3d586d5051e081c6383732`.
+The guard keeps its original native-library FileStream alive and serializes
+FD identity/hash/RX checks against disposal. It joins that held Unix FD's
+kernel mount/inode metadata to the two actual loaded native anchor maps and
+the complete executable mapping; it compares all pinned RX bytes without
+exclusions. Missing/ambiguous/changed identities still refuse. No permission
+change or runtime fallback was introduced. This proves kernel-exposed
+file-device/inode binding and loaded immutable-program identity, not kernel
+struct-file pointer equality, native RW/GOT state or whole-process integrity.
+
+Root reviewed the two updated launcher pins and frozen plan, then ran ONE
+new identity-only request88245 with normal7GiB/8-core admission, queue0,
+no outer activity shim. The same unchanged probe56768b70 EXE opened the
+existing stock host with original82EA SyncSettings only, bound/finalized
+identity and disposed it. PID3141538 ran18:53:31.1677954..18:53:33.4358537UTC;
+terminal0, `identity_only=true advances=0 callbacks=0 observations=0`.
+All initial/immediate-inside-slot/post-terminal frozen artifact checks agreed
+on fingerprint `7bf404a519f3a3ede4ad456c4fb2dc7c8fc0d2a146901daa65afe626c2cd0bd8`.
+Launcher SHA256 `56a5e34888d17a62181129d8503c5a5de12ec3f8ed932ba506b906bb7250e5ce`,
+pre-run plan `a0127bba5f91322a0c362441af01ae4b57a37709fb9a05816b5b66465fdff8fa`.
+There was no raw-clock observation, phase-origin measurement, decoded IRQ/SR,
+kernel initializer, prepared producer/service-window comparison or readiness
+acceptance. The source basis for a later passive clock comparison is the next
+bounded question. Six useful owned prototype files remain externally with
+24-hour ownership for eventual promotion/accounting, not as a raw-log archive.
+No new run log, receipt, pass cache or canonical artifact was written.
+
+Root composition at this checkpoint is8f72fc9, Main remains8030832 develop.
+The matched three-step cold contact baseline is separately authorized on803;
+no current contact prefix, runtime repair or native correctness follows yet.
+Cold/DEZ regressions, later HCZ/ending contexts, complete current smoke/guards
+and Main integration/push remain open.
