@@ -23,6 +23,16 @@ headless tests, or audio. S3K-specific routing is in [AGENTS_S3K.md](../../AGENT
 
 The things that cost the most time when missed.
 
+A headless boot must release its audio base-ROM reference before closing the
+owned ROM. A later title boot installs its audio profile before the new ROM;
+otherwise the loader reads the previous, closed FileChannel. Close/reboot
+therefore retire that reference at the ROM owner's boundary, while preserving
+existing dependent-owner failure/retry semantics. The saved-slot HPZ
+roundtrip reproduced four second-title errors before the repair, then passed
+actual disk/session reloads; see the
+[task evidence](plans/2026-10-13-s3k-playable-completion.md#saved-slot-hpz-to-ssz-roundtrips-2026-10-17).
+
+
 **Optional presentation does not erase native object ownership.** S3K `Level`
 writes the title owner at `Dynamic_object_RAM+5`, absolute SST8, and creates
 four higher-slot children before `Load_Sprites`. Omitting its visible loop still

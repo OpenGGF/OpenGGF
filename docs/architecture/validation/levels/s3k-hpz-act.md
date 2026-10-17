@@ -544,3 +544,45 @@ follows the joined pair chain's HPZ path to the lower teleporter and crosses the
 fight, theft, collapse and altar with the single-player helper timers to `loc_45D8A`
 (`$A00`): HPZ load 30123, SSZ1 load 39248 with HPZ's live history retired at the SSZ1
 assembly. It continues to DEZ1.
+
+## Saved-slot HPZ exits and title reload — 2026-10-17
+
+`TestS3kSaveRouteRoundtrip` declares a valid native 320, donor-off HPZ slot in
+a temporary save root, with five lives and emerald states `[1,1,1,0,0,0,0]`.
+Actual title Start, data-select Right and A load that slot. The ordinary HPZ
+exit writes its next destination; the test disposes the session and reads the
+persisted file, then repeats title/menu entry into released SSZ. No position,
+clock, gameplay progress or SaveGame call is injected after the declared file.
+Reading the selected LOAD_SLOT action is pure on this non-delete path; only
+the A input dispatches it. HPZ and released SSZ each get two full registry
+restore/forward-replay cycles, and the HPZ load history is retired at SSZ.
+
+| Saved team | Actual HPZ exit inputs after release | Persisted/reloaded destination | SSZ release inputs |
+| --- | ---: | --- | ---: |
+| Knuckles | 780 | SSZ2 | 134 |
+| Tails | 7354 | SSZ1 | 174 |
+| Sonic+Tails | 14007 | SSZ1, same selected team | 174 |
+
+Two independent Knuckles/Tails negative cases leave without reaching the exit
+and reload HPZ. The three exit cases assert the persisted team, lives and
+emeralds and released gameplay. The current five-case class passes with no
+failures/errors/skips at 06:19:13 UTC on `0197c5a5a` plus the inherited headless
+ROM-release repair and test. A later assertion also checks actual follower
+stable character keys, rather than only the registered count; its focused result is recorded
+in the task plan. Knuckles' early arrival release precedes the later crane
+encounter and is not the cold route's post-crane control release.
+
+Native owners: `loc_45B94` / `loc_45D8A`, `SaveGame_NextLevel[$1601]=$B`,
+`sub_DA4E` / `LevelList_DA6E`. The engine's presentation `progressCode` is
+one-based (HPZ 11); it is not the raw SRAM level byte `$A`. The initial file
+is a declared inlet, not a cold campaign or SRAM interchange certificate.
+Solo Sonic, donor/wide/other-team saved-slot products, native RGB and PCM
+remain separate obligations. See the
+[task evidence](../../plans/2026-10-13-s3k-playable-completion.md#saved-slot-hpz-to-ssz-roundtrips-2026-10-17).
+
+The actual registered follower identity is also checked through
+`characterKey().persisted()` on both HPZ and SSZ launches. The exact
+Sonic+Tails roundtrip passed 1/0/0/0 at 06:47:35 UTC after that assertion
+was strengthened; the fresh architectural source guard passed 72/0/0/0
+at 06:47:59 UTC. These focused checks retain the inlet and coverage limits
+above.

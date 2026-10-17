@@ -2317,3 +2317,41 @@ sphere/HUD phase differences remain open until the composed capture is compared.
 Fresh `--lean -Dmse=off -Dtest=TestArchitecturalSourceGuard test -B` then
 passes 72/0/0/0 at 06:57:02 UTC (3.154s test execution). No API signature or
 configuration default changed; the new projection/phase helpers are package-private.
+
+### Saved-slot HPZ to SSZ roundtrips (2026-10-17)
+
+Root recovered the stopped Opus lane at `0197c5a5a`, preserving its uncommitted
+`HeadlessGameBoot` ROM/audio release and `TestS3kSaveRouteRoundtrip`. The
+original four cases failed with four errors at 01:59:30 UTC: a second title
+launch rebuilt its SMPS loader from the ROM already closed by the first
+headless session (`AudioManager.setAudioProfile` → `Sonic3kSmpsLoader` →
+`Rom.readBytes`, null FileChannel). Releasing the audio base-ROM reference at
+its owning headless close/reboot boundary fixed this without changing title
+or save routing. Existing teardown failure/retry ordering is retained.
+
+The lane's unchanged production repair passed 89 checks at 02:12:52 UTC:
+four route cases, headless close/audio identity, standalone/catalog boots,
+physical data-select launch, cold save-site consumers and required S3K
+loading checks. After the lane added Sonic+Tails, Root ran the current full
+class through the current main absolute Maven wrapper from the intended
+worktree: `--normal -Dmse=off -Dtest=TestS3kSaveRouteRoundtrip
+-Ds3k.rom.path=$S3K_TASK_ROM test -B`, with the original locked-on ROM
+(CRC32 `63522553`), surfaceless EGL, no DISPLAY/WAYLAND_DISPLAY and nullAL.
+It passes 5/0/0/0 at 06:19:13 UTC, class execution 21.28s. Queue waiting is
+separate from execution. The
+[HPZ matrix](../validation/levels/s3k-hpz-act.md#saved-slot-hpz-exits-and-title-reload--2026-10-17)
+records the three real exits/reloads, two no-exit negatives and two replay
+cycles. Initial saved payload, native 320/donor-off scope and inherited
+configuration/cold/native-presentation limits remain explicit.
+
+The stronger actual follower check then passed separately at 06:47:35 UTC:
+`-Dtest=TestS3kSaveRouteRoundtrip#sonicAndTailsAltarExitSaveRoundTripsThroughTheTitleToSkySanctuaryOne`
+with the same normal-lane environment, 1/0/0/0 (12.14s class execution;
+1329s queue wait). Fresh `--lean -Dmse=off -Dtest=TestArchitecturalSourceGuard
+test -B` passed 72/0/0/0 at 06:47:59 UTC. The first stronger assertion had
+incorrectly compared the role name `tails_p2` with the saved character key
+`tails`; that test-oracle error was corrected to
+`sidekick.characterKey().persisted()`, without changing production behavior.
+The two solo cases' empty identity lists are equivalent to their previous
+zero-roster checks. No additional cold, wide, donor or native audiovisual
+coverage is claimed.

@@ -1208,3 +1208,11 @@ character/team modes, with typed-manager restore and two forward replays.
 The [sanctuary matrix](../architecture/validation/levels/s3k-hpz-sanctuary.md#blue-sphere-presentation-components--2026-10-17)
 records the bounded 106-check selection. Actual composed framebuffer, complete
 stage/cold route, donor, PAL and PCM limits remain open.
+
+HPZ saved-slot roundtrip (2026-10-17): native320 donor-off Knuckles, Tails
+and Sonic+Tails now have actual title/menu saved-slot entry, gameplay HPZ
+SaveGame, disk read, disposed-session title reload and released SSZ1/2
+proof, plus two no-exit controls and repeated world replay. The five-case
+class passes without skips. This is a declared HPZ save inlet; other
+configuration and cold/presentation products remain in the
+[HPZ matrix](../architecture/validation/levels/s3k-hpz-act.md#saved-slot-hpz-exits-and-title-reload--2026-10-17).
