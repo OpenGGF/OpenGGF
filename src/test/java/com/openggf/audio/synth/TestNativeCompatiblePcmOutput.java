@@ -133,27 +133,33 @@ class TestNativeCompatiblePcmOutput {
 
     /**
      * SHA-256 of little-endian {@code (x, sin(x))} double pairs for every 16-bit
-     * cutoff {@code f} at 44.1 kHz, {@code x = (f / 44100.0) * pi}, produced by
-     * executing the stock BizHawk 2.11 core's own {@code sin} machine code
-     * (README: {@code stock_core_sin}).
+     * cutoff {@code f} at 44.1 kHz, {@code x = (f / 44100.0) * pi} with the core's
+     * own pi operand ({@code 0x400921FB60000000}, the float {@code M_PI} of GPGX
+     * {@code core/macros.h}), produced by executing the stock BizHawk 2.11 core's
+     * own {@code sin} machine code (README: {@code stock_core_sin}).
      */
     private static final String STOCK_CORE_SIN_ALL_SHORTS_SHA256 =
-            "c2cc584475fb26fc9945ea45b116ff992fa98ce43c8608daaf5e766e38cceeb8";
+            "7a13007b392fed5de46b3faa7fb597782601090c86269fb7ba7f08b8d74234a5";
 
     @Test
-    void equaliserCutoffSinEqualsTheStockCoreForEverySixteenBitFrequency() throws Exception {
+    void equaliserCutoffsEqualTheStockCoreForEverySixteenBitFrequency() throws Exception {
+        assertEquals(0x400921FB60000000L, Double.doubleToRawLongBits(NativeCompatiblePcmOutput.ThreeBandEq.NATIVE_PI),
+                "the core multiplies by the float M_PI");
         java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
         java.nio.ByteBuffer pair = java.nio.ByteBuffer.allocate(16).order(java.nio.ByteOrder.LITTLE_ENDIAN);
         for (int f = Short.MIN_VALUE; f <= Short.MAX_VALUE; f++) {
-            double x = ((double) f / (double) 44100) * Math.PI;
+            double x = ((double) f / (double) 44100) * NativeCompatiblePcmOutput.ThreeBandEq.NATIVE_PI;
             pair.clear();
             pair.putDouble(x).putDouble(MuslSin.sin(x));
             digest.update(pair.array());
         }
         assertEquals(STOCK_CORE_SIN_ALL_SHORTS_SHA256, java.util.HexFormat.of().formatHex(digest.digest()));
-        // The 880 Hz cutoff the movie uses; glibc's sin gives ...3581 here.
-        assertEquals(0x3fc009b8777f3582L, Double.doubleToRawLongBits(
-                2 * NativeCompatiblePcmOutput.ThreeBandEq.nativeSin(Math.PI * (880.0 / 44100.0))));
+        // The movie's cutoffs, as the stock core's stock_core_sin run printed them. The double pi gave ...777f3582
+        // and ...39a13358, which put the first real-window difference at stereo frame 11.
+        assertEquals(0x3fc009b87ef9877aL,
+                Double.doubleToRawLongBits(NativeCompatiblePcmOutput.ThreeBandEq.cutoff(880, 44100)));
+        assertEquals(0x3fe65131439abe44L,
+                Double.doubleToRawLongBits(NativeCompatiblePcmOutput.ThreeBandEq.cutoff(5000, 44100)));
     }
 
     @Test

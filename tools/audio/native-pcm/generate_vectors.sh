@@ -16,6 +16,9 @@ case "${1:-}" in
   build)
     core=$(cd "$2" && pwd -P); build=$3
     mkdir -p "$build"
+    ( cd "$core" && sha256sum -c --quiet - ) <<'PINNED'
+954eabbd0f86e583bc7a3036ab19c84328759ee8c0d2e0db6c4d1cef6df09bef  macros.h
+PINNED
     ( cd "$core/sound" && sha256sum -c --quiet - ) <<'PINNED'
 519d005b525db422a80b2011abdad19ec774809d2852768975103b83cee7241b  ym3438.c
 8e60e35f77049d0e600ad1a47bfc3dfc8b832483e614104473a83c1f33cd7189  ym3438.h
@@ -28,7 +31,11 @@ a8a9d4dd19b00569e0e3101f7e4a04e5b0b2a4e75c6bbf850bb50e6cd55eb8f3  psg.h
 PINNED
     cc=${CC:-clang}
     flags=(-O2 -std=gnu99 -DHAVE_YM3438_CORE -DLSB_FIRST)
-    "$cc" "${flags[@]}" -fno-builtin-sin -I"$core/sound" -I"$core" -c -o "$build/eq.o" "$core/sound/eq.c"
+    # eq.c as the stock core builds it: its libc offers no M_PI, so core/macros.h:36-38 supplies the float literal
+    # 3.14159265358979323846264338327f (the core's audio_reset multiplies by 0x400921FB60000000). Strict ISO C keeps
+    # the host's double M_PI out. The cutoff sin is musl's (musl_sin.c).
+    "$cc" -O2 -std=c99 -DHAVE_YM3438_CORE -DLSB_FIRST -fno-builtin-sin -I"$core/sound" -I"$core" -c -o "$build/eq.o" \
+      "$core/sound/eq.c"
     objcopy --redefine-sym sin=musl_sin "$build/eq.o"
     "$cc" "${flags[@]}" -I"$here/shared_stub" -I"$core/sound" -o "$build/gpgx_pcm_vectors" \
       "$here/gpgx_pcm_vectors.c" "$here/musl_sin.c" "$core/sound/ym3438.c" "$core/sound/blip_buf.c" \

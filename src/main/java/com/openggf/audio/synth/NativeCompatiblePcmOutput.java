@@ -398,10 +398,24 @@ public final class NativeCompatiblePcmOutput {
      * stock BizHawk 2.11 core links, because the libm matters: glibc's
      * {@code sin} gives a cutoff one ulp away for 880 Hz at 44.1 kHz, which
      * changed 916 of 11,774 unity-gain output samples in the vector harness.
-     * The stock core inlines this filter (no {@code do_3band} symbol); its
-     * per-sample machine code is not audited here, only its source.
+     * The constant matters as much: the stock core's {@code eq.c} sees no libc
+     * {@code M_PI}, so GPGX {@code core/macros.h:36-38} supplies the float
+     * literal {@link #NATIVE_PI}; its {@code audio_reset} multiplies by
+     * {@code 0x400921FB60000000}, not the double pi. With unity gains
+     * {@code l + m + h} lands within an ulp of the input sample, so the
+     * cutoffs' last bits decide where truncation drops one: the double pi put
+     * the first difference against BizHawk at stereo frame 11 of the S3K title
+     * start. The stock core inlines this filter into {@code gpgx_advance}; that
+     * per-sample code performs the same operations as {@code eq.c}, reordered
+     * only commutatively, then truncates ({@code cvttpd2dq}) and clips.
      */
     public static final class ThreeBandEq {
+        /**
+         * {@code M_PI} as the stock core compiles it: GPGX {@code core/macros.h:36-38}
+         * {@code #define M_PI 3.14159265358979323846264338327f}, a float literal.
+         */
+        static final double NATIVE_PI = 3.14159265358979323846264338327f;
+
         /** {@code vsa}: very small amount (denormal fix), eq.c:52. */
         private static final double VSA = 1.0 / 4294967295.0;
 
@@ -416,11 +430,16 @@ public final class NativeCompatiblePcmOutput {
 
         /** {@code init_3band_state} (eq.c:68-87) then the gains of {@code audio_set_equalizer}. */
         public ThreeBandEq(int lowFreq, int highFreq, int mixFreq, int lowGain, int midGain, int highGain) {
-            lf = 2 * nativeSin(Math.PI * ((double) lowFreq / (double) mixFreq));
-            hf = 2 * nativeSin(Math.PI * ((double) highFreq / (double) mixFreq));
+            lf = cutoff(lowFreq, mixFreq);
+            hf = cutoff(highFreq, mixFreq);
             lg = (double) lowGain / 100.0;
             mg = (double) midGain / 100.0;
             hg = (double) highGain / 100.0;
+        }
+
+        /** {@code 2 * sin(M_PI * ((double) freq / (double) mixFreq))}, eq.c:72-73, with the core's pi. */
+        static double cutoff(int freq, int mixFreq) {
+            return 2 * nativeSin(NATIVE_PI * ((double) freq / (double) mixFreq));
         }
 
         /**
