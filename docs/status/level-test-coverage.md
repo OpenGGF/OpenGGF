@@ -1373,3 +1373,10 @@ slice witness disconfirms CPUcounter/cache ownership: wrong one-pixel camera cop
 at10833 publishes offscreen and correctly yields10834counter1; upstream camera
 P1/history inputs remain unqualified. No runtime edit or new focused/broad pass.
 [HCZ2 current frontier and source limits](../architecture/validation/levels/s3k-hcz2.md#r12-actual-composed-full-window-frontier-and-slice-cause--2026-10-17).
+
+R14 HCZ slice input witness (2026-10-17, unchanged0cd178d8f runtime): sole
+original82EA prefix104spans/10773rows remains strictred through10835. Actual
+camera-entry delayed history explains engine019A correctly; matching native
+selected-history/P1/delay/forced/latch values remain unqualified. No Camera/CPU
+fix, new matrix product, fullroute/exit/GLFW/native or broader certification.
+[HCZ2 exact input-owner limit](../architecture/validation/levels/s3k-hcz2.md#r14-slice-camera-history-input-limit--2026-10-17).

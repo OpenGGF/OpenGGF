@@ -106,7 +106,11 @@ not a pre-CPU observation in the ordinary LevelFrameStep: that service boundary
 runs after CPU, camera and ScreenEvents. HCZ R12's compact callback already had
 the new CPU LF; its temporary pre-CPU label was rejected. Use the actual caller
 order and previous cached publication/next post-CPU bracket, or identify the
-missing player hook, rather than renaming a late sample to match its question.
+missing player hook, rather than renaming a late sample to match its question. R14 also separates
+RecordPos writes from final P1 pose and Camera-entry selected history: correct
+arithmetic on a divergent history word is not a camera-owner old-red. Verify
+real instruction boundaries against ROM bytes before using a named recorder pin;
+its label alone does not establish an entry callback.
 
 Opcode pins alone do not authenticate instruction timing (2026-10-17, S3K V-int diagnostics).
 An unchanged `dbf` opcode can have a changed initial iteration count, and an unchanged `jsr` can call a different

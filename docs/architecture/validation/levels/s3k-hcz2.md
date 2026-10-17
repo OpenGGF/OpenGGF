@@ -234,3 +234,17 @@ is handed back, not run; all temporary observers removed before canonical.
 Full independent-slice delta attribution, later8329 owner/exit, other BK2/GLFW/
 viewport/roster/native presentation breadth remain open. Root owns delivery.
 [Exact source, clocks, comparison windows and limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r12-slice-cached-visibility-consequence-and-full-composed-canonical--2026-10-17).
+
+### R14 slice camera history input limit — 2026-10-17
+
+On unchanged0cd178d8f production, sole original82EA prefix63258 compares10773
+rows through10835 with104=92physics+12animation spans, strict1/1F/0E/0S, first
+9482air1/0. Four actual camera-entry samples prove delay2→1→0 selects0226 then
+023A; at10833currentP10231.CD00 differs from latesthistory023A. Correct native
+camera arithmetic for these engine inputs yields019A. No Camera/CPU/counter fix
+or independent old-red is supported. Native final poses/index/copies do not
+supply matching selected history, H_scroll, forced/latch or camera-entry P1.
+No new native/fullslice/canonical/alternate/8329/GLFW/broad or matrix breadth
+qualification. Temporary observer removed; R12's returned8329/absent exit and
+mixed whole-slice vector limits remain. Root owns missing native-plan review.
+[Actual source pins, fixture identity, clocks and passivity](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r14-slice-camera-entry-history-inputs-no-camera-or-cpu-repair--2026-10-17).

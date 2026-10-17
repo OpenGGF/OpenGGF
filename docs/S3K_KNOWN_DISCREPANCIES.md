@@ -1324,3 +1324,13 @@ pre-edit15/1F/14E and independent ROM-pointer1/1F -> final86 focused/118 affecte
 guards all pass without skips. This does not requalify HCZ8329/exit, independent
 slice/alternate/GLFW or full routes; no CPU/camera/unknown-RAM fallback changes.
 [Exact owner evidence and limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r13-residency-smoke-regressions-native-row-pointers-and-ddz-fixture-entry--2026-10-17).
+
+R14 camera-input witness (2026-10-17, unchanged0cd178d8f production): original
+82EA prefix through10835 remains104spans/10773 rows, first9482air1/0 and
+10834counter0/1. Actual10833delay1 selects enginehistory023A, while current
+P1word0231;186+(23A−186−A0)=019A is correct. Native selected table contents,
+H_scroll, forced/latch state and camera-entry P1 are unobserved; final poses and
+Pos_table_index are insufficient. No Camera/CPU repair or parity claim. Existing
+named RecordPos10D80 pin is an operand in the actual ROM; verified entry10D66
+is recorded for future plan review without changing capture authority/fixtures.
+[Exact original inputs, phases, source pins and limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r14-slice-camera-entry-history-inputs-no-camera-or-cpu-repair--2026-10-17).

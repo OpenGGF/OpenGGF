@@ -113659,3 +113659,19 @@ runtime363e7328… with no material finding. No trace/native/media/broad or CPU/
 camera/8329 edit. R12's first non-camera8329y_speed and absent exit remain
 historical bef8 observations, not new qualification; Root owns combined delivery.
 [Commands, source ownership, old-reds and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r13-residency-smoke-regressions-native-row-pointers-and-ddz-fixture-entry--2026-10-17).
+
+### 2026-10-17 — R14 engine camera input observed; native selected input remains open
+
+Owned3aa/base0cd178d8f production unchanged; original82EA temporary observer
+63258 once through10835 isstrict1/1F/0E/0S,10773 compared rows/104spans
+(92physics/12animation), first9482air1/0,10834CPUcounter0/1 still present;
+warning/bootstrap0. Same Main absolute wrapper/normal/original3ROM/EGL/nullAL/
+noambient/singlefork/alpha, `-Ptrace-segments
+-Dtest=TestS3kHczSliceCameraInputWitness#replayMatchesTrace test -B`.
+20passive samples show10833camera186 + (selectedhistory23A−186−A0)=019A,
+delay1, actualcurrentP10231.CD00. Correct arithmetic, no Camera/CPU repair.
+Native selected history/entry P1/delay/forced latches are missing; no row shift
+or final-pose inference. Byte-verified RecordPos entry10D66 differs from existing
+named10D80 operand pin, which is unchanged. Observer/diagnostics consumed; no
+further execution or full-window improvement claim. Root owns native-plan review.
+[Exact commands, hashes, phase clocks and remaining field-owner gap](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r14-slice-camera-entry-history-inputs-no-camera-or-cpu-repair--2026-10-17).

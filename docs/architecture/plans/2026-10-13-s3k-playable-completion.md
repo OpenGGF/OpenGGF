@@ -5260,3 +5260,19 @@ All four own jobs terminal, no further selection. No trace/native/media/broad or
 Root/Main writes; Root15826 remains foreign. R12 HCZ8329/exit and GLFW/slice limits
 remain unqualified on the new source. Root owns composition/delivery. Exact
 commands/measurements/owner classification are in the [existing audit](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r13-residency-smoke-regressions-native-row-pointers-and-ddz-fixture-entry--2026-10-17).
+
+**R14 bounded camera-input handback (2026-10-17, base0cd178d8f):** production
+and maintained tests unchanged. Build-only82622 passes; sole original82EA
+prefix63258 is1/1F/0E/0S,104=92physics+12animation spans/10773 compared rows
+through10835, first9482air1/0;10834counter0/1 remains. Queue1026s/Maven30.850s.
+20 passive samples/58494bytes prove actual camera-entry history selection:
+10833currentP10231.CD00/latest23A/slot19/delay1 selects23A, so186+14=19A is
+correct; no bounds/cap/forced/defer latch explains a camera-owner fault. Native
+aux has index/copies but lacks selected history/delay/entry P1/forced state;
+final pose cannot replace RecordPos/Camera-entry values. No Camera/CPU fix or
+old-red is supported. Byte-read native entry pins1C0A8/RecordPos10D66 are distinct
+from retained named10D80 operand pin; capture code/fixtures remain untouched.
+No further execution; observer/classes and six consumed diagnostics removed,
+all own jobs terminal. R10..R13 refs/native4fdf/private config preserved. Root
+owns native-plan review, broader route/8329/exit and delivery.
+[Exact original fixture hashes, source pins, clocks and causal limit](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r14-slice-camera-entry-history-inputs-no-camera-or-cpu-repair--2026-10-17).
