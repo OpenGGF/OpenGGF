@@ -113929,3 +113929,37 @@ After Root read originals, exact runtime restored/test removed;9 inspected owned
 diagnostics85122B and13 owner/helper classes95780B consumed metadata-slot-alone.
 Only existing Plan/frontier docs committed; target3717 diagnostics is not a fresh
 maintained build after cleanup. Main/private config/refs/native/media preserved.
+
+
+### 2026-10-17 — Knuckles returned title waits on prepared child with recorded ordinal mismatch
+
+Owned649 HEAD2de3/current maintained Java3be/7df plus frozen temporary b772 test.
+One original boot-to-`(RUN_DIR,2,1)` prefix, selector
+`-Ptrace-replay-r7 -Dtest=TestS3kReturnTitleFirstGateWitness#originalReturnTitleFirstGate`,
+normal current Main absolute wrapper/all3ROM/Java25/single JTO EGL/no CLI GL/
+EGL/nullAL/noambient/Lua/fork1reusealpha. Actual97317 terminal1 **20:54:03UTC**,
+queue0/Maven1m20, **1T/1F/0E/0S**; original1661 stage_exit assertion and29 original
+timing-close suppressed records retained, no diagnostic suppression. Worker and
+Root DIRECT inspected all83 original JSONL records/965233B plus matched XML;
+82known-projection passivity checks,6190once-forward original steps, no cap/type/
+identity/prerequisite failure. Outside samples are not actual service-entry proof.
+
+Actual returned title remains SLIDE_IN/artLoading with four actual module parents
+13..16 blocked through comparison1430/movie7121. Stable prepared direct18 is the
+physical FIFO head/active child of parent13, with an existing1952B payload,
+ready/claimed/retired=false. Original recorded refusals expect direct22 at
+seg1raw1302/PRE and parent15 at1303/POST, each with its matching fingerprint.
+The observed four-direct/two-module offset does not identify missing production
+submissions or authorize renumbering. Actual Nemesis drains to empty1379; title
+art stays blocked. Earlier submission/retirement/handoff provenance is missing,
+so no unique producer/port/handoff cause or title-time fix is claimed.
+
+Comparator AIZpartial1physics/camera4545 and Gumball1430rows/18physics,
+firstNonCamera1300X0000/2778,0animation/warnings/bootstrap,lag0/21 remain. Recent5
+is not full18-vector proof; two FAST manifest warnings are separately reported.
+Returned seg2 opening/SS/fdf remain **UNREACHED**; no readiness consumption, CPU/
+live4/5/4/wholeSS/fullroute or new baseline attribution. No retry/native/capture.
+After accepted original read, temporary test/two classes and all nine inspected
+original diagnostics consumed; no runtime change. Target97317 is the diagnostic
+epoch, not fresh maintained-source verification.
+[Exact command, job identities, bounds and cleanup](../architecture/plans/2026-10-13-s3k-playable-completion.md#r20-actual-outside-return-title-gate-prepared-direct-child-held-unready--2026-10-17).

@@ -8164,3 +8164,546 @@ all prior refs/native/media remain. Target last compiled3717's diagnostics is
 must be compiled again by any later actual validation owner. All leases/jobs
 terminal. A normal local docs-only commit accounts R15/R16/R17 before separately
 authorized R18 source preparation; Root owns combined validation/composition.
+
+
+### R18 source-only title-return release prerequisite and next passive question — 2026-10-17
+
+R17 accounting completed FIRST as normal local docs-only
+`2de3b74877d87efbcad941462b13a9ef7471edb0`, exactly existing Plan/frontier.
+Seven policy trailers and final exact GPT-6.1 co-author were parsed before
+normal hooks. First hook rejected the new R16 prose's machine-local Main path;
+only that documentation path became a portable MAIN_ROOT placeholder, then hooks
+passed0, no bypass/source change. The839-byte message was consumed under metadata
+lease alone. Runtime920c is byte-identical to pre-diagnostic HEAD, test removed;
+all9accepted original diagnostic files85122B and13exact owner/helper classes95780B
+consumed, no archive/pass receipt. Worktree clean before this phase.
+
+Separately returned `fdf-r18-title-return-release-source-plan-20261017`, ordinal28,
+was registered24h only after accounting, preserving27..19/older results and refs.
+Same649/native01a14a19/current branch, HEAD2de3b7487, maintained Java3be/7df.
+This phase is **source read + this existing Plan only**: no temporary Java/probe,
+compiler/JVM/test/native/capture, runtime/API/controller/provider edit, current or
+baseline rerun, fitted title34/window/clock, fake LEVEL/earlyreturn or SS rebase.
+Target's last3717 diagnostic compilation is not a fresh maintained build after
+cleanup. R17's accepted actual trigger/request/return evidence is reused; no
+additional engine observation is inferred from the following call graph.
+
+**Native owner and mode semantics, actual pinned044 source.**
+`Level` at current asm7536 sets Game_mode bit7, so native level loading is8C
+and ordinary LevelLoop is0C (base GameMode_Level is0C); there is no separate
+native enum corresponding one-to-one to the engine's TITLE_CARD abstraction.
+Level clears Kos/Nemesis working state, fades, loads palettes and installs
+Obj_TitleCard at Dynamic_object_RAM+5 (engine absolute SST8) at loc_62B6.
+Current `loc_62CC` (asm7769) services direct queue → VSync → Process_Sprites →
+Render_Sprites → Nemesis preparation → module queue, then waits on title+$48
+and the Nemesis queue. Obj_TitleCardInit queues four ROM archives and sets
+$2E=90/$48=true; Create polls global Kos_modules_left before after-current child
+allocation. Wait clears the child movement latch on one dispatch, then clears
+$48 on a later idle poll. These are separate readiness/movement gates.
+
+Only after those gates does LoadLevelLoadBlock queue its ROM terrain parent(s)
+and loc_7870 (asm9772) service direct/VSync/Nemesis preparation/module work until
+Kos_modules_left clears. loc_6468 assembles players/objects and processes them
+once; loc_64DC (asm7906) sets palette/title holds to$16, clears Game_mode bit7,
+and enters LevelLoop at7916. Wait2's child drain/LoadEnemyArt/owner retirement
+comes later, while LevelLoop already runs. Native35-versus-engine36 teardown
+is therefore a **separate retained candidate**, not an observed explanation for
+this pre-release stall. Shared art from an earlier owner could still matter;
+there is no captured current title/job link proving it here. No arithmetic
+one-frame correction follows from either record.
+
+**Current production call/phase ownership.**
+
+1. GameLoop.doExitBonusStage (2821ff) captures rewards, runs actual provider.onExit,
+   clears loop/context active bonus provider, loads origin with return context,
+   consumes the auto title request, restores carry, and calls cached/lazy title
+   initialize(apparent zone/act). It sets postTitleCardDestination=LEVEL,
+   current mode TITLE_CARD, player lock, music, and existing level-entry reveal.
+   R17 observed the load/mode/carry result, but did **not** retain this title
+   manager's identity/state/art handle payload.
+2. Sonic3kTitleCardManager.initialize → initializeLevelRoutineTitle (455..490)
+   forces artLoaded=false, initInternal binds the pending native title admission,
+   sets SLIDE_IN/timers0/normal (not bonus/in-level) layout and queues all four
+   ROM title archives through the current module queue, then arms
+   freshLevelTransitionMode. Same-act decoded art is not a readiness waiver.
+3. Initial profile (Sonic3kLevelInitProfile164..180) submits actual Nemesis level /
+   character PLCs when the real Level entry permits initial Process_Sprites.
+   Sonic3kFreshTitleCardSst.prepare/install owns the semantic full/fresh assembly
+   prerequisites and normal native bypasses, installs the actual parent at8 and
+   children after it. No diagnostic should call prepare/install/recreate or
+   getActiveObjects to force/predict this inventory.
+4. LevelIterationAdmissionController.admit (69ff) handles TITLE_CARD first,
+   deactivating the live-launcher represented hardware row only when that
+   existing launcher actually exists, and invokes updateTitleCard. Do not assume
+   its live-launcher deactivation ran in this headless chain: original
+   HeadlessRunCoordinatorAdapter.beforeProduction is its own observational
+   coordinator path. Actual port latch/recorded flags must be read, not filled
+   from a mode label. If title update is incomplete, admission returns SETUP_ONLY;
+   GameLoop does not execute the ordinary gameplay body.
+5. GameLoopTitleCardLifecycle.update claims LEVEL_TITLE_CARD, dispatches the
+   existing VBlank hook, then uses executeHardwareTimedObjectScan because S3K's
+   provider declares the locked VInt loop. Its actual order is VINT_SERVICE →
+   titleCard.update → sprite-presentation preparation → POST_OBJECTS →
+   PRE_MAIN_LOOP → existing loop-tail preparation. No observer may duplicate any
+   step. HardwareBoundaryDispatch calls runtime-before/timing-service, observer
+   at PRE **before** runtime-after, but VINT/POST observers **after** runtime-after.
+   A PRE-ready job is not automatically physically removed from the facade.
+6. Manager updateOwnedChildren waits for its art handles' real isReady results
+   before ordinary finishQueuedArtIfReady claims/places them. After movement
+   settles, freshLevelChildMovementObserved is cleared on one display poll and
+   freshLevelTitleReady set on a later idle poll. Only title-ready + Nemesis
+   not busy arms freshLevelTerrainStarted and publishes the existing fresh
+   terrain request. If terrain already started, further visual owner updates
+   return while the hardware loop drains resources.
+7. shouldCompleteFreshLevelTransitionBoundary is freshLevelTerrainStarted AND
+   no physical pending module preparations while fresh mode is active; otherwise
+   it uses EXIT/COMPLETE. S3kRuntimeArtCoordinator's physical check counts actual
+   unprepared module parents; it is **not equivalent to every timing job ready**.
+   Once complete, the lifecycle rewrites the carried hold to$16 (manager state
+   timer0, fresh mode false), follows the normal prelude/initial presentation
+   path, PostTitleCardDestination.LEVEL completes initial PLC presentation and
+   pending initial Process_Sprites, then exitTitleCard changes mode toLEVEL.
+   S3kInitialFixedSstDispatcher gives the surviving real parent wait2=$16 /
+   levelLoopActive during that initial assembly. Later actual parent/children
+   consume stagger/offscreen/count and retirement, not the pre-release timer.
+
+**Smallest passive original-driver evidence question, not authored/executed.**
+On the **same original boot/prefix(RUN_DIR,2,1)** and untouched assertions/window,
+when the actual bonus provider clears and load generation changes intoTITLE_CARD,
+which first actual title gate stays closed: title archive preparation/admission,
+movement/idle latch, Nemesis PLC, terrain physical modules, or a completed gate
+whose normal release path is not reached? Keep the title manager/provider/scene
+identity tied to that actual load and sample the same submitted jobs; never
+select work, supply trace state or change readiness to answer it.
+
+Existing seams can provide a bounded scalar/identity projection without new
+production hooks or APIs: the original package-local stepEngineFrame(GameLoop)
+once-super wrapper gives outside-step samples; an existing naturally serviced
+HardwareTimingBoundaryObserver, if later needed, can forward the original once
+and sample the real loop phase/token + hardware service interval. Its owner,
+errors (including Error), order and restoration must be preserved. Neither seam
+is inside title.update or exitTitleCard. A stable raw tuple/visited slot is not
+call-entry proof; if classification requires a consumed callback that these
+intervals cannot establish, hand back that exact missing seam before widening.
+No wrapper/source is written in R18.
+
+Proposed actual scalar/raw inventory (read only, no game-owner calls):
+
+- Raw GameLoop.titleCardProvider (do **not** call getTitleCardProvider/lazy factory),
+  currentGameMode/postTitleCardDestination/titleReleaseResult,
+  activePlcLifecycleFrame identity/owner/prepared/finished/gameVblankDispatched;
+  levelIterationAdmission's fresh-load/title-completed flags; manager identity /
+  completedProductionLoadGeneration/counter/initialPresentationPlcsCompleted /
+  initialPresentationOmitted and pending initial Process_Sprites owner/state.
+  The existing frame.ownerPhase() getter is a pure enum read, not a phase claim.
+- Actual Sonic3kTitleCardManager identity + state/stateTimer/displayHoldFrames,
+  freshLevelTransitionMode/freshLevelTitleReady/freshLevelChildMovementObserved/
+  freshLevelTerrainStarted/freshLevelTitleOwnerReplacedAtAssembly,
+  artLoading/artLoaded/artQueue identity/artHandles identities and immutable
+  handles/destinations, currentZone/act/bonusMode/inLevelMode/
+  inLevelGameplayOwnedExternally, runtimeArtAdmissionLeaseId/Consumed and pending
+  freshLevelRuntimeArtHandoffLevelIndex. Four element coordinates/target/exited
+  flags may be named scalar reads, not a renderer tick or movement prediction.
+- The already-created Sonic3kGameModule.levelTitlePlcService raw queue:
+  NemesisPlcServiceQueue.activeEntry and queuedEntries count/head. Its immutable
+  Entry record exposes source/destination/total/remaining patterns. isBusy()
+  merely reads active/queued presence, but raw fields avoid a service lookup.
+  Do not call serviceVBlank/prepareAfterLoop/beginFreshZoneTitle/capture.
+- Current session runtimeArtCoordinator raw direct/module queues and existing
+  HardwareTimingService.jobs; only actual unclaimed title-linked handles and
+  the real oldest waiting direct/module FIFO heads. Job raw submission/handle,
+  preparedPayload presence/length/identity, ready/claimed/physicallyRetired,
+  preparation identity and actual preparation flags. Immutable submission
+  source/destination/length and handle kind/ordinal/fingerprint are metadata,
+  not runtime input. S3k module preparation raw activeChild/completedModules/
+  prepared links to the same real direct child; direct preparation's decoder
+  complete is a pure boolean. No payload clone/export/claim/advance/admit.
+- Prefer raw actual preparation objects: module preparationFor(handle) is
+  **not passive**, because it puts into the descriptors map. HardwareTimingService
+  isReady, pendingHandles and coordinatorPreparation are reads but the latter
+  rejects unknown/claimed handles. Reading job.submission.preparation avoids
+  either a facade mutation or a hidden fallback. Unknown preparation type is a
+  handback boundary, never grounds to fabricate prepared/ready state.
+- Raw ObjectManager.execOrder and actual typed parent8/children/parent links,
+  levelLoopActive/wait2/stagger/childrenLeft and child x/y/onScreen; no managed
+  object collection/getSpawn/isDestroyed or slots/timers written for observation.
+  A missing or fixed-slot-replaced title graph remains missing/replaced evidence.
+- Actual timing recordedAdmissionActive/recordedRowRepresented/last service,
+  existing replay port raw latch/edge cursor/last applied boundary and raw
+  original probe armed/latch. Keep comparison cursor, movie cursor, frame-token
+  identity, service-boundary label, object VInt and level counter distinct.
+  Sparse absent clocks remain null. Never latched()/observation(), capture,
+  ensure/render/lazy factory or a comparison-row-selected callback.
+
+An eventual future witness should arm by the real return/load/TITLE_CARD owner
+change, record bounded change-only gate/job projections plus the first actual
+legitimate service intervals needed to distinguish ready versus prepared versus
+physical retirement, preserve <=200records/<1MiB, known-projection passivity and
+same original Throwable/report/cleanup. It must not run beyond/skip the original
+failure, overwrite prior evidence or infer a hardware initializer/live prediction
+from a recorded-ready job. This is a proposed question only; separate source /
+execution authorization is still required.
+
+**Existing smallest independent controls, source inventory only.**
+`TestS3kTitleCardHoldRoutes#bonusEntryAndReturnBothReleaseIntoTheHold` already
+uses the production capture-session boot, normal bonus entry, actual coordinator
+requestExit and unchanged loop steps through return, asserting locked counter0 /
+advancing VInt, then LEVEL with DISPLAY/0 and the$16 running hold. It is Sonic /
+GlowingSphere from SOZ, **not Knuckles/Gumball or recorded timing admission**;
+its existing successful inlet, if qualified at a particular epoch, cannot certify
+this failed chain. No modification/new variant or run is proposed automatically.
+`TestS3kFreshTitlePlcLoadBoundary#firstTitleLoopPreparesOnceAndNextVblankDrainsWithRewind`
+independently owns the Nemesis first-preparation/next-VBlank sequence and four
+ROM archive submissions on real load, both driver forms and two registry restores;
+it does not finish a natural bonus return. Its capture calls belong to its own
+existing test, never a passive witness recipe. Neither test was executed here.
+The old short rewind hold control ends at counter34, so it never proves35/36
+physical child drain/retirement; that remains explicit and separate.
+
+**Source pins read in this phase (SHA256; all Java unchanged from clean2de):**
+
+| Source | SHA256 |
+|---|---|
+| `src/main/java/com/openggf/GameLoop.java` | `5124502753d87e658cb717afb83701fe42ebb2bac64336dc480b1bedd6dbb85f` |
+| `src/main/java/com/openggf/GameLoopTitleCardLifecycle.java` | `d15752d4f5d40dca4c073f9ea700132fc54ec408e2d1cbd3e51c265c3dc72a22` |
+| `src/main/java/com/openggf/LevelIterationAdmissionController.java` | `d9b7a0b59041dd7b96574da71d29768a38c7b79aa40430b0deaee6248abfdbb2` |
+| `src/main/java/com/openggf/PostTitleCardDestination.java` | `22f7c89d30c9c676aa8b0aad5f88dd75de4e613731a7f5a6627b7651d207b1ea` |
+| `src/main/java/com/openggf/LevelFrameStep.java` | `4f9a0be7edf8e734130f6d4b073d39aebcde8132501de25131ac339f04c14341` |
+| `src/main/java/com/openggf/game/HardwareBoundaryDispatch.java` | `088f7dae0a9b7fd79e76e29f0360e9eae75ee42f1cf668562ab424b364f27ee9` |
+| `src/main/java/com/openggf/game/sonic3k/titlecard/Sonic3kTitleCardManager.java` | `7715a8e1e9e58d1268fed1a91af3ea32ed968197b5da2ea9b2bb5b04980bda02` |
+| `src/main/java/com/openggf/game/sonic3k/Sonic3kLevelTitlePlcService.java` | `3b2b072e61580c76b8e59cfff1bf39ad60fc0956c2db7ec50bbb41602f6d74ac` |
+| `src/main/java/com/openggf/level/resources/NemesisPlcServiceQueue.java` | `70229c06b492019043ecc18a28f22c6ebe310c2d0856151dd8e3a0ca709e1f1c` |
+| `src/main/java/com/openggf/game/sonic3k/Sonic3kFreshTitleCardSst.java` | `056d131df6eb8b7150cbcf82c614c62df090e153b2c73a83c8690927f41a6e38` |
+| `src/main/java/com/openggf/game/sonic3k/S3kInitialFixedSstDispatcher.java` | `ef9c9999f3852d0a5a5e4ad9d62fbae77686952627a1d12c66544dfa4ba52659` |
+| `src/main/java/com/openggf/game/sonic3k/objects/S3kFreshTitleCardOwnerObjectInstance.java` | `6e7a557ef812ea7fcedd76d9cbfb325f73f741aaa45a0dde6bd1b3d7a4f5d8e2` |
+| `src/main/java/com/openggf/game/sonic3k/objects/S3kFreshTitleCardElementObjectInstance.java` | `933c067dfc3e5a0a27381046d7f70a8a9d05e04368d37b9d9e07048f4890f2ce` |
+| `src/main/java/com/openggf/game/sonic3k/resources/S3kRuntimeArtCoordinator.java` | `7c5f16ea56eba5b01ac319b8034db52f2da5b7cd255d53aa28b16311e2748228` |
+| `src/main/java/com/openggf/game/sonic3k/resources/S3kKosModuleQueue.java` | `c16fee96524478d92ff619f2a3f8b0899154560a4109a2ee62d627b969925c5b` |
+| `src/main/java/com/openggf/game/sonic3k/resources/S3kKosDecompressionQueue.java` | `00c68f7651078cefff7eb1e315a09e1e3fcfe487c35c833ff071a5af268fd00e` |
+| `src/main/java/com/openggf/game/timing/HardwareTimingService.java` | `9559d54c5d09049301d963b9fadf0f2ce16a0c72cca4449c65f58cfef188938d` |
+| `src/main/java/com/openggf/game/timing/HardwareTimingJob.java` | `f95f43f8ffde25acd7e4b24261e2fd863b834194a2b13e94f85f62e0d4618ace` |
+| `src/main/java/com/openggf/trace/replay/runs/TraceRunReplayWalker.java` | `49ae05dffdd9f5ea328ae0abf2ef8c9a694b4278b8964d167082f9157510bcbc` |
+| `src/test/java/com/openggf/tools/TestS3kTitleCardHoldRoutes.java` | `6b70cf7723645b85beee1b30e500330afc7b4d960666f6b80cf669fea880b091` |
+| `src/test/java/com/openggf/TestS3kFreshTitlePlcLoadBoundary.java` | `585e03d797d5186318af4685abb0bf653603dbda08e7afd3e40c3857b9ebf509` |
+
+Disassembly remains044fa46725c71187399e13f5ddb70e11d32dc024 / asmSHA256
+`d2ce907d1bad9447fbd11196a498a65a73f744ee8e57153b62c46581b1368ed1`;
+original ROM SHA1CFBF98C36C776677290A872547AC47C53D2761D6 / fixture
+treedb73f445d9a07c616ef94d9ab793539326440cd3 / movieD748… / manifest149c…
+identities are the unchanged exact pins recorded above (no new native run).
+No actual title-manager/handle/readiness witness is present in retained R17
+facts: that is the precise missing input. No actual defective branch, queue
+reset/ordinal owner, title timer correction or normal-mode-transition failure
+is assigned by this source-only plan. Original803 matching assertion still bounds
+that route assertion only, not all18vectors/closure. SS/fdf remainsUNREACHED.
+
+Only this existing Plan is dirty after2de; no temporary source, class, report,
+journal, compiler/JVM/test/native/capture, new commit or live job is created.
+All source/Git work uses the intended-tree lease; cleanup metadata lease was held
+alone. No Root/Main edits/integration/push/ref removal; private config/native/media
+and earlier results remain. Root reviews this source-pinned gate question before
+any next diagnostic/control; no action or additional workload is inferred.
+
+
+### R19 source-only outside-step return-title first-gate witness — 2026-10-17
+
+Root read and accepted the R18 source inventory/Plan, then authorized one
+**temporary test source only**, no runtime block or hardware observer. Exact
+returned `fdf-r19-return-title-first-gate-witness-source-20261017`, ordinal29,
+was registered24h separately, preserving28..19/all prior results. HEAD remains
+`2de3b74877d87efbcad941462b13a9ef7471edb0`; maintained Java3be/7df and the R18
+Plan WIP are retained. This phase authors no probe/controller/provider/runtime
+API, fixture/input/POM or driver edit; no compiler/JVM/test/native/capture,
+independent control variant, current/baseline repetition or new readiness claim.
+
+Frozen temporary source:
+`src/test/java/com/openggf/tests/trace/runs/TestS3kReturnTitleFirstGateWitness.java`,
+**468lines /26603bytes**, SHA256
+`b772ead9042d4151c4db029bb48e0c0655b4e457153056ba770a9ae63f1ea18c`.
+Normal `git diff --no-index /dev/null <helper>` source diff SHA256
+`95af6d39a4fcab5d48259b5838ae94ed3a1323045785e35cc1c22c70a7564ccf`.
+One method `originalReturnTitleFirstGate` solely delegates production to original
+`assertChainReplayThroughSegmentRow(RUN_DIR,2,1)`; its package-local frame
+wrapper calls `super.stepEngineFrame(loop)` **exactly once**. Original boot,
+movie/controller, comparator/window, stage_exit1661 assertion, report/stop and
+cleanup remain in the unchanged base. No hardware observer is installed or
+replaced and no global/runtime hook/property/context is introduced.
+
+**Actual return arming, without a fitted row.** Before/after original steps,
+the helper reads actual mode/provider/manager/level/completed-load generation.
+It remembers the real BONUS_STAGE provider/level identity. It arms only when
+that same loop/manager has a newer load with a different level, the loop bonus
+provider cleared and actual modeTITLE_CARD. No native/comparison frame,
+coordinate, expected timer, fixture-row selection or physics value chooses this
+transition. Required cached title, S3K runtime-art/resolved module and already
+created Nemesis owner must have their real typed identities; an unsupported /
+missing required owner becomes a deferred diagnostic prerequisite failure,
+never a factory call, zero or replacement owner.
+
+At that observed return the helper retains REFERENCES to the actual immutable
+art handles before the ordinary manager later clears its list. Current versus
+initial observed handles and their actual counts are both reported. Four is the
+source-derived recipe, **not injected or asserted as an observed count**. A
+partial/empty real list stays partial/empty evidence. Raw actual timing.jobs is
+read to link each retained handle to the same existing job (with reference-same
+flag as well as stable immutable handle identity); each actual parent activeChild
+is linked to its existing child job too. Missing jobs remain null, not submissions.
+There is no output-derived gameplay or FIFO reordering.
+
+**Pure/raw read contracts checked from actual current source:**
+
+- GameLoop actual cached titleCardProvider (never getTitleCardProvider/lazy),
+  gameplayMode/levelManager/provider/mode/postTitleCardDestination/titleReleaseResult,
+  levelIterationAdmission flags and activePlcLifecycleFrame raw owner. Context
+  already owns final worldSession/hardwareTiming/runtimeArtCoordinator; raw
+  WorldSession.gameModule names the existing resolved Sonic3kGameModule.
+  Its already-created levelTitlePlcService is read directly; no service/factory
+  getter is invoked to obtain it. Source fields prove these paths, while actual
+  runtime type/identity is still an unexecuted prerequisite.
+- Raw title state/stateTimer/displayHoldFrames/phaseCounter, fresh mode/ready /
+  movement-latch/terrain-start/replaced-owner flags, artLoading/Loaded,
+  zone/act/bonus/in-level ownership, admission lease/consumed and pending terrain
+  handoff level index. Four-element primitive X/Y/target/exited fields are read
+  as individually named scalars; no array copy/render/move is performed. Actual
+  artQueue identity is compared with the session's existing module queue.
+- Both queue timing fields must be the SAME actual session timing service.
+  HardwareTimingService.jobs is read only; each HardwareTimingJob's immutable
+  submission/handle and raw preparedPayload presence/LENGTH/identity,
+  ready/claimed/physicallyRetired are projected. No payload bytes/clone/export.
+  HardwareWorkSubmission and HardwareWorkHandle are immutable records; their
+  source/destination/length/kind/ordinal/fingerprint/preparation accessors return
+  the existing descriptor fields, with no owner work.
+- Exact S3kKosModulePreparation has raw prepared/completedModules/activeChild /
+  activeModuleOffset; exact DirectPreparation has its already-existing decoder's
+  raw complete boolean. Unknown preparation class is named with
+  preparationQualified=false/prepared=null. If any unclaimed module preparation
+  is unknown, physical module count **and head** are null/unqualified, never a
+  fabricated0 or a selected known head that skips an unknown earlier owner.
+- First-awaiting direct/module heads follow the actual timing.jobs insertion
+  order, filtering only actual claimed/ready flags. The physical direct head /
+  count come from its real private physicalEntries Deque (peekFirst/size are
+  JDK read-only operations). Physical module count/head use the same actual
+  unclaimed unprepared-parent condition as the production queue. No
+  preparationFor call (which mutates descriptors), isReady/claim/prepare /
+  admission/capture/coordinator method or hidden fallback is invoked.
+- Existing Nemesis queue's raw activeEntry and queuedEntries Deque count/head
+  expose only immutable source/destination/total/remaining-pattern scalars.
+  No serviceVBlank/prepareAfterLoop/beginFreshZoneTitle/capture, and no synthetic
+  Nemesis service or replacement callback.
+- Original comparison cursor, movie timeline cursor, actual coordinator segment,
+  level counter/object VInt, current active frame pointer/owner, actual port
+  pointer/raw latch/edge cursor/last-applied boundary and original raw armed /
+  latched record fields are labeled independently. Missing pointers, clocks,
+  unknown flags and preparation results are null; identity helper also returns
+  null for missing owners, never0. No latched()/observation(), managed object
+  callbacks/getActiveObjects/getSpawn/isDestroyed, lazy title factory, capture
+  or ensure. The first gate needs no physical SST dump; unrelated objects are
+  not traversed. Active frame may already be null outside GameLoop, and stays
+  null rather than being renamed LEVEL_TITLE_CARD by assumption.
+
+**Bounds, passivity and original error.** Only actual gate, movement, handle/job /
+readiness, physical FIFO and Nemesis changes emit a row after arming. Pure
+clock/timer-only changes do not emit; every emitted state and first/last state
+still include the actual timers/clocks. The helper reads that complete explicitly
+listed primitive/identity projection immediately before and after each write.
+This is known-projection passivity only. All serialized fields are scalars or
+new diagnostic maps/lists of scalars, not gameplay objects/payload arrays.
+The original mode/probe raw projection is separately checked around footer output.
+A stable outside projection/visited slot is **not actual update-entry proof**,
+and no within-service readiness/physical-retirement ordering is claimed from
+these outside samples. Any ambiguity must be handed back as that missing interval.
+
+`target/gumball-r19-return-title-first-gate.jsonl` uses CREATE_NEW; no output
+exists now. A maximum199 event records reserve one footer/64KiB; final total
+must be <=200records and strictly<1MiB UTF-8 including first/last states and
+bounded512-character error messages. Cap, missing field/type, identity, output
+or projection failure stops diagnostic sampling but **not the original driver**.
+Original runtime/report/cleanup runs normally; afterward the SAME original
+Throwable (including Error) is rethrown with a diagnostic failure only suppressed
+on it. If original drive succeeds, a diagnostic error becomes its own failure.
+Footer requires positive forwarded steps/actual return arm/change/passivity
+counts and first/last owner states. XML suppressed errors and footer must both
+be inspected: a post-footer projection error is represented by the original
+Throwable's suppressed diagnostic, not retrospectively written into the footer.
+No extra stop exception, stage_exit waiver, independent variant or changed
+prefix budget is introduced.
+
+**Proposed exact single-prefix command — NOT EXECUTED, Root actual-file review
+and separate execution authorization required:** from owned649, same current
+Main wrapper/all3 original ROMs/Java25/env/flags as3717/98161/50308, preserving
+inherited JDK_JAVA_OPTIONS/MAVEN_OPTS/other JVM environment and selecting the
+existing JDK25 bin in PATH. No extra CLI GL property:
+
+```bash
+MAIN_ROOT=/path/to/main/OpenGGF
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 \
+env -u DISPLAY -u WAYLAND_DISPLAY \
+python3 "${MAIN_ROOT}/tools/testing/maven_queue.py" --normal -Dmse=off \
+  -Ptrace-replay-r7 \
+  '-Dtest=TestS3kReturnTitleFirstGateWitness#originalReturnTitleFirstGate' \
+  "-Dsonic1.rom.path=${MAIN_ROOT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${MAIN_ROOT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${MAIN_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true \
+  -Dsurefire.runOrder=alphabetical test -B
+```
+
+Actual source readback/declarations and immutable getter contracts, one-super /
+original-prefix shape, forbidden-call scan, lexical delimiter and whitespace
+checks passed. This is **not Java parse/typecheck/compilation or an executed
+passivity proof**. Maintained source/POM/fixtures remain byte-unchanged; the
+single new temporary test plus this existing Plan are the only dirt. All earlier
+R18 source/fixture/ROM/native pins apply; Main/privateconfig hash/mtime, prior
+refs/native/media and27..19 results remain. No classes/reports/journal/archive,
+new commit, live job or compiler/JVM/engine/native/capture is created. No title
+cause/drain35/36 fix/LEVEL shortcut/readiness/kernel/live4/5/4/SS/whole-route claim.
+Source stays frozen for Root review before any possible next step.
+
+
+### R20 actual outside return-title gate: prepared direct child held unready — 2026-10-17
+
+Root read all468lines of b772ead9 and an independent rawtype/accessor/passivity /
+error/bounds source review found no material issue. Separate exact returned
+`fdf-r20-reviewed-return-title-first-gate-once-20261017`, ordinal30, was registered
+24h preserving29..19/all earlier results. Root authorized one original prefix
+only, no runtime/hardware observer replacement. Actual session97317 executes the
+R19 command above unchanged on HEAD2de3b7487/current maintained Java3be/7df plus
+only the frozen helper b772; Plan3eab stayed exact through terminal. No equivalent
+owned job existed and the fixed output was absent before submission. Normal
+current Main absolute wrapper/all3 original ROM/Java25/single JTO EGL **no CLI GL
+property**/EGL/nullAL/noambient/Lua/fork1reusealpha, compiler inside one lifecycle,
+no outer activity or source edit during execution.
+
+Actual terminal1 **2026-10-17 20:54:03UTC**, normal7GiB/8cores, queue0s,
+Maven1m20s (parent elapsed unmeasured). Compilation succeeds without prerequisite
+repair or retry, actual JVM25.0.4.1. **1T/1F/0E/0S**, class5.696s/method5.436s,
+original unchanged stage_exit1661 AssertionFailedError. All29 original suppressed
+timing-close completion records inspected:18direct/11module,12unconsumed /
+17pending mismatches; **no diagnostic suppression**. Two FAST missing-manifest
+runtime warnings → NONE plus ordinary compile deprecation/unchecked warnings.
+No new exception/type/prerequisite/cap/passivity failure.
+
+The single ORIGINAL journal is83records/**965233 UTF-8 bytes**, SHA256
+`9cdf496ac208a28a387f2abd8d8a74fef3b52581f2c184fce3cce560a61c6e96`,
+`target/gumball-r19-return-title-first-gate.jsonl`. All83 lines decoded strictly,
+all records/keys/changes/job links/type qualifications inspected. It meets
+<=200records/<1MiB, with no truncated journal/footer. Initial full-output
+inspection exceeded the tool display budget; subsequent in-memory inspection
+walked **every** field/delta/record and printed bounded deltas/unique values,
+not another engine run or a rewritten/copied/archived artifact. Footer diagnostic
+type/message null,82change samples/82known-projection passivity checks,
+6190once-forward original steps, actual first/last states and raw terminal probe.
+Matched ORIGINAL XML50442B SHA256
+`77bbb2f0220423cb83bf6002c1515bf917cbf50020e93518394fd05b1d31a233`
+retains original failure plus only original timing-close suppression; a null
+footer alone was not treated as proof. All linked preparation types are qualified.
+
+**First actual closed gate observed outside original steps.** The witness arms
+naturally at comparison1299/movie6869, actual new load generation4/TITLE_CARD /
+loop provider null. Actual title identity1413491716 stays the same through last
+outside comparison1430/movie7121. Throughout all observed states and final state:
+SLIDE_IN, stateTimer0/displayHold90, artLoading=true/artLoaded=false,
+freshLevelTransitionMode=true, freshLevelTitleReady=false,
+freshLevelTerrainStarted=false; element coordinates/target/exited flags retain
+the initial positions. There is no evidence here that a$16 running hold or child
+exit/drain was reached. Both active frame pointer/phase are null outside the
+step; no title.update entry or in-service timestamp is asserted.
+
+Four **actual** retained/current return title handles are nonempty13..16,
+linked to SAME timing.jobs / immutable submission/preparation and handle
+references (all reference-same=true). Actual title artQueue is the session
+moduleQueue, and both direct/module queues use the same actual timing service.
+All four parents remain prepared=false, ready=false, claimed=false,
+physicallyRetired=false with no prepared payload; physical unprepared module
+count4 stays unchanged. Actual linked metadata:
+
+| Parent ordinal | Submission fingerprint | Actual ROM source / destination / output length |
+|---|---|---|
+|13|10eb568a70724c579f022914f56227c2c7fa421aafa8578aebaa874f0cffb0ca|880424 /40960 /1952 |
+|14|05324378670c6afa8c6d99f6e5313d625d2d926e6bc16f25cd9d8d1a5a195bf8|1426338 /41472 /384 |
+|15|7059802f2a045495d22a16d8c858c1758b786bf5d5f46c45838fa10bc0d1f6aa|880004 /42912 /512 |
+|16|8db61dd608db47c1390b250bccdfde88a1a1ff9c1f04cbf894fda75b33c3cd87|3784136 /43424 /960 |
+
+Parent13 has real activeChild direct18; others have no active child yet. The
+SAME child18 is the actual physical direct FIFO head, count1, and first awaiting
+direct admission. It has source880426/compressed468/destination-12288/output1952,
+fingerprint `fbfc78d499717cfec6df27fdd04fa4b5293a7147ec7ff7a7a18004e9db801e78`,
+prepared=true with an existing1952-byte payload, ready=false, claimed=false,
+physicallyRetired=false. Its job/submission/preparation/payload and handle
+identities stay unchanged across the entire observed interval. Parent13 remains
+completedModules0/activeModuleOffset2. Payload bytes were never copied/exported.
+This is a **prepared-but-unreleased actual child blocking the current title art
+readiness condition**, not a lack of a title owner, absent handle list or a
+Nemesis-only wait. It is not successful admission/retirement/SS-fdf readiness.
+
+Actual Nemesis owner/queue drains normally: ten queued entries at arm; first
+active prepared after comparison1300; every recorded six-pattern progression
+and descriptor transition was inspected; last active becomes null with queued
+count0 at comparison1379/movie6949. It stays empty while title art remains held.
+Only that Nemesis progress and the later actual recorded-row representation
+change produce subsequent gate records; all title/module/direct states above
+stay invariant. The final outside state is comparison1430/movie7121,
+levelCounter0, object VInt7044 (arm6792), raw port latch/last boundary null,
+edgeCursor17, recordedAdmissionActive=true/recordedRowRepresented=false.
+Original stage_exit@7001 latch remains absent before/after original cleanup.
+Missing raw clock/phase stays null; no interpolation or service-hook inference.
+
+Original XML supplies a separate refusal observation: at canonical segment1
+raw1302/PRE expected direct22 **same fingerprint** versus actual pending18;
+raw1303/POST expected module15 same fingerprint versus actual pending13.
+Earlier source-segment close retains12unconsumed identities at4570..4648;
+these are the original recorded contract reports, not proof of their actual
+submission/claim caller. No ordinal renumber/relabel/synthetic job or reference
+work is permitted. The narrower conclusion is actual title-art admission is
+closed with the stated prepared child and original identity refusals. The
+**earlier production submission/retirement/segment-handoff interval that created
+those identity counts is not captured**, nor is admission/physical retirement
+inside a service call. Exact defective producer/port/handoff branch remains
+unassigned; no timing-budget/CPU initializer, title34/35/36 or fake LEVEL fix.
+Outside state is not owner callback proof. No additional source investigation,
+new observer/variant, current/baseline repeat, native or SS rebase follows.
+
+Comparator coverage is unchanged in its available report: AIZpartial1physics /
+0animation/0warning/bootstrap/lag0,camera4545native01F2/engine01EE. Gumball
+comparator-complete1430reference rows,18physics/0animation/0warning/bootstrap,
+lag21, firstNonCamera1300X0000/2778delta10104; the recent ring holds only five1380
+queue entries, not the full18-vector identity set. One AIZ→Gumball5390→5570 gap
+has0failures. Seg2 opening and SS/fdf **UNREACHED**; no target recorded readiness
+consumption, CPU/live4/5/4/wholeSS/whole-route certification.
+
+After terminal, exact helper/runtime/base/Plan and Main/privateconfig hash+mtime
+were rechecked unchanged before appending these durable facts. ORIGINAL journal,
+matched XML/text and six trace report/sidecar files are intentionally retained
+for Root DIRECT read, no archive/copy/pass receipt. Temporary source/classes also
+remain frozen; no cleanup/commit authority is inferred before that handback.
+Only existing Plan/new helper dirty, all job/admission/build leases terminal.
+Target last97317 is maintained Java3be/7df + this temporary diagnostic test, not
+future maintained-source verification after its eventual removal. Root owns
+next scope; no runtime repair or additional execution is authorized here.
+
+
+#### R20 accepted original read and docs-only accounting
+
+Root DIRECT read every original83 journal record/field delta and matched XML,
+including footer/purity82 and all qualified job links. Root accepts the observed
+prepared direct18 / parent13 identity mismatch and actual title13..16 readiness
+barrier. The four-direct/two-module ordinal difference is an **observed offset
+only**: it identifies neither missing jobs nor permission to seed, renumber,
+relabel or bypass readiness. Native canonical completion rows do not establish
+submission birth times. Nemesis draining to empty at1379 does not release these
+blocked art parents. Earlier submission/physical-retirement/handoff provenance
+remains the next source question; no producer defect is assigned.
+
+After accepted original read, frozen b772 temporary test was removed byte-exact
+without any runtime change. All nine inspected original diagnostics (journal,
+XML, TXT and six trace reports/sidecars), total1032179B, and the two exact helper
+classes30851B were hash-checked then consumed under the metadata slot alone.
+No archives/copies/pass receipts remain. Only this existing Plan and frontier
+accounting are committed. Target last97317 remains the diagnostic source epoch,
+not a fresh maintained build after helper removal. All requests/leases terminal;
+Main/privateconfig/native/media/refs and previous results preserved. R21 is
+source read/plan only after this accounting; no logger/test authoring, compiler,
+JVM, baseline/current repeat, native or fix is authorized. SS/fdf remains
+unvisited and independent live CPU/readiness prediction remains unqualified.
