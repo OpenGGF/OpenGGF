@@ -85,6 +85,123 @@ class TestS3kSlotCellPainterPixels {
         }
     }
 
+    @Test
+    void nativeLowForegroundKeepsItsPriorityAndDoesNotOccludeTheRomPeppermint() throws Exception {
+        var saved = TraceReplaySessionBootstrap.snapshotGameplayConfig();
+        try (var session = enterSlot()) {
+            var manager = GameServices.level();
+            var level = manager.getCurrentLevel();
+            var graphics = GameServices.graphics();
+            var camera = GameServices.camera();
+            var coordinator = assertInstanceOf(com.openggf.game.sonic3k.Sonic3kBonusStageCoordinator.class,
+                    GameServices.module().getBonusStageProvider());
+            var runtime = coordinator.activeSlotRuntime();
+            assertNotNull(runtime);assertTrue(runtime.isInitialized());
+            assertInstanceOf(S3kSlotBonusPlayer.class, GameServices.sprites().getMainPlayable());
+            assertFalse(manager.getZoneFeatureProvider().useSpriteSatMasking(manager.getCurrentZone()));
+            assertFalse(graphics.isSpriteSatCollectionActive());
+            // Declared component geometry, not a replay row or camera/clock fit:
+            // native Slots Plane A $4AC5 at ($430,$400), and Map_SB_R_and_Peppermint
+            // frame3's opaque local(7,5), index4. LoadLevelLoadBlock2 loads the ROM
+            // 16x16 words unchanged; Slots_ScreenEvent copies them to Plane A.
+            int nativeDescriptor = manager.getForegroundTileDescriptorAtWorld(0x430, 0x400);
+            assertEquals(0x4AC5, nativeDescriptor, "independently declared original ROM descriptor");
+            int foregroundIndex = level.getPattern(nativeDescriptor & 0x7FF).getPixel(0, 0);
+            assertTrue(foregroundIndex != 0 && foregroundIndex != 4,
+                    "the native foreground sample must be opaque and distinct from peppermint index4");
+            int liveDescriptor = manager.getForegroundTileDescriptorFromTilemapAtWorld(0x430, 0x400);
+            int outside = manager.getForegroundTileDescriptorFromTilemapAtWorld(0x428, 0x400);
+            manager.getZoneFeatureProvider().renderAfterBackground(camera, manager.getFrameCounter());
+            assertEquals(outside, manager.getForegroundTileDescriptorFromTilemapAtWorld(0x428, 0x400),
+                    "the ordinary provider does not change the neighbouring tile outside its square");
+            graphics.clearPaletteFadePresentation();
+            com.openggf.graphics.PaletteUploadPresentation.publishAndLatch(graphics);
+            var palette = new com.openggf.level.Palette();
+            for (int index = 1; index < 16; index++) palette.setColor(index,
+                    new com.openggf.level.Palette.Color((byte) 238, (byte) 0, (byte) 0));
+            palette.setColor(4, new com.openggf.level.Palette.Color((byte) 0, (byte) 238, (byte) 0));
+            graphics.cachePaletteTexture(palette, 2);
+            var renderer = new S3kSlotLayoutRenderer();
+            // Ordinary animation entry: first publication, then two four-pass holds.
+            for (int pass = 0; pass < 9; pass++) renderer.updateAnimations(0);
+            assertEquals(3, renderer.peppermintFrame());
+            var cells = new S3kSlotRenderBuffers.VisibleCells(1);
+            cells.add(7, camera.getX() + 101, camera.getY() + 103);
+            int at = ((224 - 1 - 96) * 320 + 96) * 4;
+            byte[] unmasked = draw(renderer, cells, graphics);
+            assertEquals(0x00EE00, rgb(unmasked, at),
+                    "actual ROM frame3 local(7,5) is nonzero index4 through the Slot direct painter");
+            var state = CompactFieldCapturer.capture(renderer);
+            var registry = com.openggf.game.session.SessionManager.getCurrentGameplayMode().getRewindRegistry();
+            var before = registry.capture();
+            byte[] plane = manager.getTilemapManager().getForegroundTilemapData().clone();
+            byte[] combined = drawNativeForegroundAndCell(renderer, cells, graphics, false);
+            byte[] repeated = drawNativeForegroundAndCell(renderer, cells, graphics, false);
+            assertArrayEquals(combined, repeated, "identical render inputs give identical pixels");
+            byte[] aboveAllTiles = drawNativeForegroundAndCell(renderer, cells, graphics, true);
+            assertEquals(0x00EE00, rgb(aboveAllTiles, at), "the same actual sprite remains opaque when priority bypasses tiles");
+            assertArrayEquals(plane, manager.getTilemapManager().getForegroundTilemapData(), "rendering does not mutate Plane A");
+            assertEquals(state, CompactFieldCapturer.capture(renderer), "rendering does not advance animation");
+            var after = registry.capture();
+            assertEquals(before.entries().keySet(), after.entries().keySet());
+            for (String key : before.entries().keySet()) assertTrue(
+                    com.openggf.game.rewind.RewindSnapshotDiff.keyEquals(key, before.get(key), after.get(key)),
+                    () -> "render passivity: " + key);
+            assertEquals(GL_NO_ERROR, glGetError());
+            assertAll("native descriptor and actual FBO/painter consumer",
+                    () -> assertEquals(nativeDescriptor, liveDescriptor,
+                            "production Slot bootstrap must retain the ROM's low Plane A priority"),
+                    () -> assertEquals(0x00EE00, rgb(combined, at),
+                            "opaque low-priority peppermint must win over native-low Plane A"));
+        } finally {
+            TestEnvironment.resetAll();
+            TraceReplaySessionBootstrap.restoreGameplayConfig(saved);
+        }
+    }
+
+    private static byte[] drawNativeForegroundAndCell(S3kSlotLayoutRenderer renderer,
+            S3kSlotRenderBuffers.VisibleCells cells, GraphicsManager graphics, boolean highSprite) {
+        graphics.flush();
+        glDisable(GL_DITHER);glClearColor(1, 0, 1, 1);glClear(GL_COLOR_BUFFER_BIT);
+        // Use the same production terrain consumer, priority FBO and sprite shader
+        // as LevelRenderer. Project the declared ROM world point to screen(96,96),
+        // without touching camera/gameplay state or replacing any renderer/provider.
+        drawForegroundComponent(graphics, 0, false);
+        drawForegroundComponent(graphics, 1, false);
+        int drawFbo = glGetInteger(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER_BINDING);
+        int readFbo = glGetInteger(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER_BINDING);
+        var mask = graphics.getTilePriorityFBO(320, 224);
+        mask.begin();
+        try { drawForegroundComponent(graphics, 1, true); }
+        finally {
+            mask.end();
+            org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER, drawFbo);
+            org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER, readFbo);
+        }
+        graphics.setUseSpritePriorityShader(true);
+        graphics.setCurrentSpriteHighPriority(highSprite);
+        try {
+            graphics.beginPatternBatch();
+            renderer.renderVisibleCells(cells, GameServices.camera(), GameServices.level().getObjectRenderManager());
+            graphics.flushPatternBatch();graphics.flush();glFinish();
+        } finally {
+            graphics.setCurrentSpriteHighPriority(false);graphics.setUseSpritePriorityShader(false);
+        }
+        ByteBuffer buffer = MemoryUtil.memAlloc(320 * 224 * 4);
+        try {
+            glReadPixels(0, 0, 320, 224, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
+            byte[] bytes = new byte[buffer.remaining()];buffer.get(bytes);return bytes;
+        } finally { MemoryUtil.memFree(buffer); }
+    }
+
+    private static void drawForegroundComponent(GraphicsManager graphics, int priority, boolean mask) {
+        graphics.getTilemapGpuRenderer().render(com.openggf.graphics.TilemapGpuRenderer.Layer.FOREGROUND,
+                320, 224, 0, 0, 320, 224, 0x430 - 96, 0x400 - 96,
+                graphics.getPatternAtlasWidth(), graphics.getPatternAtlasHeight(),
+                graphics.getPatternAtlasTextureId(), graphics.getCombinedPaletteTextureId(),
+                0, priority, true, mask, false, 0);
+    }
+
     private static S3kSlotRenderBuffers.VisibleCells cells(int... xy) {
         var cells = new S3kSlotRenderBuffers.VisibleCells(xy.length / 2);
         for (int i = 0; i < xy.length; i += 2) cells.add(1, xy[i], xy[i + 1]);

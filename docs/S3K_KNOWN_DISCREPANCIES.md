@@ -76,6 +76,15 @@ separates genuine stored-plane old-red/green and five maintained pilot passes
 from earlier invalid-inlet evidence, untested finite products and RGB priority gaps.
 Root's combined validation and integration remain pending.
 
+**Slot foreground priority (2026-10-17, local candidate):** remove an unsupported
+central-square tile priority promotion and preserve complete ROM descriptor words.
+No intentional deviation or global priority stripping is introduced. The
+[R8 evidence](architecture/validation/levels/s3k-bonus-stage-transitions.md#r8-fixed-five-originals-native-priority-components-close--2026-10-17)
+records genuine actual-consumer old-red,54 focused passes and one fixed five-PNG
+comparison closing the845 targeted wall/peppermint component pixels with no new
+bad pixels. Remaining HUD/bootstrap and tiny RGB differences, native-high-glass
+control and full-product/integration qualification remain open.
+
 ## Table of Contents
 
 1. [YM Service Timing: Source-Relative Timeline Without Absolute VInt Phase](#ym-service-timing-source-relative-timeline-without-absolute-vint-phase)

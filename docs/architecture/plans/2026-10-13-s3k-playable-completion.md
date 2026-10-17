@@ -5733,3 +5733,226 @@ three requests, plus three owned original-source backups, are consumed under
 metadata-slot alone (final six files 281648bytes; earlier six files78250bytes).
 No live request/helper/log archive remains. Last candidate compilation/execution
 is82138; final source is exactR7E plus correctedtest.
+
+#### R8 native-low foreground priority: actual consumer old-red — 2026-10-17
+
+From clean2077 on the separately named foreground-priority branch, ONE exact
+normal-ROM-lane invocation80718 completes18:12:31UTC,1T/1F/0E/0S,
+class1.193s/Maven24.507s/queue0. Selection:
+`-Dtest=TestS3kSlotCellPainterPixels#nativeLowForegroundKeepsItsPriorityAndDoesNotOccludeTheRomPeppermint`.
+CurrentMain absolute wrapper from owned649, all3 original absolute ROM paths,
+Java25/single fork, required surfaceless-EGL/nullAL/Lua5.4/no ambient display and
+unchanged inherited JVM environment are the same as R7G. No retries, prerequisite
+repairs, runtime fixes, native execution, new pictures or broad/trace checks.
+Existing compile/Unsafe/FAST-NONE/deterministic-Kos warnings remain visible;
+no bootstrap/diagnostic errors or skips.
+
+The existing offscreen `enterSlot` inlet is reused verbatim, retaining actual
+coordinator, initialized typed runtime, Slot player and non-SAT painter. The
+unit projects declared ROM world($430,$400) to screen(96,96) through the actual
+TilemapGpuRenderer foreground passes/TilePriorityFBO, then the real
+S3kSlotLayoutRenderer/PatternRenderCommand priority shader. It does not replace
+renderer/provider or write camera/gameplay/trace state. Actual-ROM peppermint
+frame3/local(7,5) is opaque index4; a declared controlled palette distinguishes
+sprite green from the nonzero foreground red. Ordinary animation entry calls
+select frame3; no private timer/frame assignments or clock search.
+
+Both final assertions fail together: original descriptor$4AC5 becomes live$CAC5
+and low-priority sprite expected$00EE00 is hidden by foreground$EE0000.
+Unmasked opaque-sprite, high-sprite priority-bypass, neighbouring outside-square,
+repeat render, rawPlaneA/renderer/full-registry passivity and GL_NO_ERROR controls
+all pass before those final assertions. No genuine-high ROM glass descriptor
+was established in this bounded source scope; no high tile is fabricated and no
+native-high-glass preservation coverage is claimed. The old glass test explicitly
+acknowledges loaded ROM glass is low and then asserts the blanket promotion; that
+assumption conflicts with this native descriptor and actual consumer old-red.
+
+Source owning chain at pinned skdisasm044fa46725c71187399e13f5ddb70e11d32dc024:
+Slots LevelLoadBlock entries (:199580–81) select Slots_16x16_Kos/128x128_Kos;
+LoadLevelLoadBlock2 (:38709–76) decompresses descriptor words; Slots_ScreenEvent
+(:119095–77) uses Refresh_PlaneDirect/Draw_TileRow/Column. The stage bootstrap
+sub_4B6AA (:98597–98641) populates expanded layout/maps/transient slots/cage;
+it has no central-square priority promotion. Existing engine runtime
+ensureForegroundGlassPriority unconditionally ORs$8000 into every nonzero word
+in the square, from bootstrap and provider.renderAfterBackground. These actual
+owners provide no source-backed reason to override the declared ROM low bit.
+The demonstrated mismatch is in this producer, not a generic compositor defect.
+
+Frozen testSHA2562fcfdbdb44b7374be6f598ea235dadc9abf8ad11fb142a7821f069152a1963f4;
+runtime remains3d4d5f10dba4a5d113af444f4b5a03e17973e054328765a3b3ab41d5e0675838,
+provider02a6cb3168375961c06e70d851032bf78d4a70692e5c2200959858707058aada,
+painter148ce5f1b44beb40bacfe7979b88581547cd3f5717f47fa5b2e53adb2284455c.
+Seven-source fingerprint32a5e7815455e8f96bfa1453cdef90866b2c9751229a75d845067ee01aaca5ed
+is canonical sorted JSON(base2077+path hashes), exact map in task ownership.
+No runtime bytes changed. Root receives the smallest proposal BEFORE any fix:
+remove the blanket helper, two owning calls and now-unused constants, preserving
+all decoded ROM bits rather than stripping priority; migrate the old assumption
+test to ROM/live descriptor retention while retaining player-low/visible-cell
+controls. No narrower legitimate promotion producer was found in the inspected
+actual owning routines. Any runtime implementation remains separately authorized.
+
+The five original-domain residual totals599/295/41/52/57 and845-pixel image
+question retain R4/R6 provenance. This one-component independent execution does
+not repair/certify all845 or create any new image equality claim. Native originals,
+prior refs/private config and Root/Main remain preserved; config hashes/mtimes
+unchanged. No commit or five-PNG capture. Root owns proposal review/next scope.
+
+R8 accounting:80718 terminal/released; three inspected reports/log files
+49359bytes consumed under metadata-slot alone, no archive/live job.
+Owned test and two existing evidence files remain uncommitted on2077.
+
+#### R8 reviewed priority-removal fix: focused green, visual gate pending — 2026-10-17
+
+Root relayed the independent read-only design review disposition: no material
+objection to removing the unsupported promotion. Exact review task is
+`node:delegated-task:command%3Amcp%3Ae0f15981-d194-439f-81ab-b848692b7d95%3Adelegate-task%3As3k-slot-r8-foreground-removal-design-review-20261017-r1`.
+The fix followup is separate nativeordinal16, preserving old-red14/notify15 and
+all prior R7 results/refs. Only two runtime files change: remove
+ensureForegroundGlassPriority, its bootstrap call, the provider's promotion
+renderAfterBackground override (inherit empty default), and four unused constants.
+Correct the stale glass-promotion comment; retain player.setHighPriority(false)
+per loc_4B9E8/sonic3k.asm:98764. No descriptor high-bit stripping, new gate,
+renderer/profile/geometry/physics/ModAPI/pin or other owner behavior changes.
+
+TestS3kSlotGlassPriority now compares ALL169 complete source ROM/live descriptor
+words across the original square, including empty cells, after bootstrap and
+three ordinary provider calls. Existing player-low/visible-cell assertions stay.
+The genuine80718 FBO test and all its controls remain byte-identical. No genuine
+native-high glass descriptor was established/fabricated; that explicit control
+gap remains despite complete-word equality coverage of the original square.
+
+Frozen changed source SHA256:
+
+| File | SHA256 |
+|---|---|
+| S3kSlotBonusStageRuntime | `f0026ba2bf54258d9cff3ee9a4855948dac9dde0cb75947f815588df34caac00` |
+| Sonic3kZoneFeatureProvider | `6f36f0958a36b4346c8225cf818aa0f9265d2d2b8e8d3b5ed9bc3379f03622ab` |
+| TestS3kSlotGlassPriority | `312b665a08cb170f8572e87e9503524656233870c06a0ee835c6b57d2d5c3ccf` |
+| TestS3kSlotCellPainterPixels (unchanged from old-red) | `2fcfdbdb44b7374be6f598ea235dadc9abf8ad11fb142a7821f069152a1963f4` |
+
+26680 is the ONE bounded affected request, terminal0 at18:20:16UTC,
+**54T/0F/0E/0S across9 actual classes**, Maven1m18s/queue0. All9 XML reports,
+case identities, failures/errors/skips and warnings were inspected. Actual class
+populations: graph rewind3, sonic3k runtime6, slots runtime19, actual pixel2,
+glass1, layout13, buffers3, corrected stored-plane partition1, presentation6.
+Both actual pixel methods pass: unchanged opaque-black earlier-cell control and
+80718's actual ROM descriptor/FBO occlusion regression. Complete-word retention,
+passivity, graph recreation, runtime, presentation/layout and corrected PlaneB
+partition also pass. The two same-named runtime classes are both included;
+provisional class counts were replaced by actual XML population.
+
+Exact selection:
+`-Dtest=TestS3kSlotGlassPriority,TestS3kSlotCellPainterPixels,TestS3kSlotBonusStageRuntime,TestS3kSlotPresentationParity,TestS3kSlotLayoutRenderer,TestS3kSlotRenderBuffers,TestS3kSlotBonusGraphRewind,TestS3kSlotPlanePublication#encodedSlotLayoutRestoreKeepsPublishedPlaneThroughTheRealWorldRegistrationOrder`.
+Same currentMain absolute wrapper/from649/all3originalROM/Java25/singlefork/
+required surfaceless-EGL/nullAL/Lua5.4/no ambient display/inherited JVM environment
+as80718. Existing compile deprecation/unchecked, Unsafe, FAST-NONE and Kos
+estimate warnings; no prerequisite/observer/bootstrap errors. Source was frozen
+during the request. Changed-input fingerprint before this evidence append:
+`07a38a173772518d27a23f0b90d41ebaf8a936aa073374e7d69f00a4333ed5a8`
+(canonical sorted JSON of2077 base plus changed-path hashes in task ownership).
+
+R2's unchanged queued/pending/publication GPU whole-world method was deliberately
+not duplicated: this selection includes the corrected actual stored-plane owner
+partition and both affected render consumers. Prior S3K4/domain, R7C175/108 and
+R7E27/API15/final R7G five pilots retain their own source epochs. No ceremonial
+broad/trace/guard/S3K4 or additional review run. Root owns combined smoke/guards.
+
+This is focused logical/component qualification only. The original five residual
+counts599/295/41/52/57 remain unchanged observations; no845-pixel or route/RGB
+closure is claimed. The next ONE fixed five-row capture requires separate
+Root authorization; no new capture/native/clock/palette search or normalization
+has occurred. No local commit before that final visual outcome/accounting.
+Main/private config hashes and mtimes remain unchanged; native/media/refs preserved.
+
+R8 fix accounting:26680 terminal/released, all19 inspected XML/text/log files
+251006bytes consumed metadata-slot alone; no archive/live request/helper.
+Two runtime files, two tests and two existing evidence files remain owned and
+uncommitted on2077, exact tested source hashes preserved.
+
+#### R8 fixed five originals: native priority components close — 2026-10-17
+
+After26680's54 focused passes and consumed diagnostics, Root separately authorizes
+exactly ONE fixed five-PNG capture on the same frozen runtime/tests. Nativeordinal17
+and its actual returned taskId are recorded separately from fix16/old-red14/notify15
+in ownership. Execution65865 completes18:24:43UTC,terminal0; Maven3.206s,
+queue0. Retained launcher-start through wrapper-completion wall time3.000299s
+includes startup/teardown and is not isolated render time; component timings are
+unmeasured. Current target remains the26680 candidate build; the temporary capture
+classes are removed after inspection, never installed over runtime/tool classes.
+
+The maintained TraceCaptureTool SHA256 remains
+`c67b9983f5ac7791f03b89792d8415030ff8a467dfba906cc5cd6191b54058f4`,
+exactly matching prior R4 provenance. Temporary copy changes only profile setup
+and the media sink: exactly102 original presentations925..1026 rendered, with
+FIVE readbacks/PNGs at971/974/1017/1022/1026. No MKV/video/audio encode or new
+native execution. Original bonus_slots bootstrap/drive/presentation/timing is
+unchanged, viewport320x224, RAW_RGB/LIMITED, NTSC60/no ghosts. Same original
+movie SHA256d7485e13f427d1b335cbbb3c405ff6136a77326239b79d3aed61e902078af45c,
+ROM SHA1cfbf98c36c776677290a872547ac47c53d2761d6 and sourcepin044fa467 are
+retained. All ten native/R4 prior PNG hashes match their original provenance.
+No clock/palette search, alignment fit, crop, rescale, masking or normalization.
+
+Compiler terminal0 holds intended-tree+shared build_activity leases and passes
+FDs to javac25; both release before normal capture admission. CurrentMain absolute
+queue wrapper from owned649 runs `--normal -Dmse=off exec:exec
+-Dexec.executable=python3` with the owned narrow launcher. Java25/all3originalROM/
+required surfaceless-EGL/nullAL/Lua5.4/no ambient display/inherited JVM environment
+are unchanged. Restricted-native-access/Unsafe warnings remain; no capture error
+or retry. The first offline comparator import failed before image reads because
+NumPy was unavailable; ordinary Pillow decoded-RGB comparisons then read all
+pixels directly. No dependency install, engine rerun or image modification.
+
+New durable originals/provenance:
+`${OGGF_VIDEOS}/s3k-parity-coverage-2026-10-14/spot-checks/slot-r8-gpt61-2077-v1`.
+Prior R2/R4/native paths are unchanged. Provenance records exact Java argv,
+fixture/movie/helper/source/native/image hashes and actual render/readback counts.
+Temporary helper hashes: SlotR8FrameCapture
+`a1ed3ed7b98b66f41d091638043b34245e82a53efb0ef5965eac697d74afdeeb`,
+FivePngEncoder
+`2f943fc4284995738e1ab3cd2124ece189b678e6a7f639082944397be06b37e4`.
+Standard GL bottom-up to PNG top-left conversion matches the original capture
+orientation; it does not modify sampled RGB values. Only five durable PNGs plus
+provenance remain; no image variants or raw diagnostic archive.
+
+| Fixed row | R4 differing pixels | R8 differing pixels /71680 | Newly matching original | New bad | Changed still bad |
+|---|---|---|---|---|---|
+|971|599|21|578|0|0|
+|974|295|23|272|0|0|
+|1017|41|11|30|0|0|
+|1022|52|12|40|0|0|
+|1026|57|11|46|0|0|
+
+All original-domain pixels are compared.966 pixels newly match, zero previously
+matching pixels worsen, and zero changed pixels remain mismatches. Both complete
+original components—578 wall pixels at971 and267 peppermint pixels at974—now
+have ZERO residual pixels. This closes the845 targeted component question.
+Additional121 matching pixels are observed in the same fixed comparison, without
+claiming separately observed causal ownership for each.78 differing pixels remain
+across the five originals, so this is not zero-RGB/whole-scene/route certification.
+
+All TEN native/new original images were visually inspected at original resolution:
+wall and peppermint occlusion now agree, and fade silhouettes agree. Native HUD
+lives4 versus engine3 remains an unqualified bootstrap-carried state difference
+(metadata has no lives field), not observed gameplay life loss. Remaining tiny
+HUD/art/edge residuals are not patched or silently excluded. Native-high-glass
+control remains an explicit gap; complete169-word ROM/live equality and no bit
+stripping preserve the original source words. No second capture or runtime tuning.
+
+Before/after checks confirm exactf0026ba2/6f36f095/312b665a/2fcfdbdb/148ce5f1
+source hashes and unchanged R2 scroll/profile plus R7 retained-plane runtime.
+Main config SHA2566abd111c03f798dbe2a618cb4985aeb599127f44668edb2a8edbde118d11f7da
+and mtime-ns1792141742849921547 remain unchanged. Owned config stays a regular
+exact-byte copy with unchanged mtime-ns1792245253441720736. Native originals,
+refs and foreign processes remain untouched. Twelve inspected temporary
+source/class/classpath/launcher/log files115798bytes are consumed under metadata
+ownership alone. Source/Git edits use intended-tree ownership; no idle JVM lease.
+
+Root authorizes the normal local policy commit after this no-worsening result.
+Lead composition/current-source smoke3527+guards/Main/push remain separate and
+required. Prior domain/S3K4/trace and R7 source epochs are not rerun or relabelled
+as current full-population coverage. The broad parity objective remains open.
+
+Root independently opened all ten original native/new R8 images from provenance
+and corroborated wall/peppermint layering/fade geometry plus the visible HUD4/3
+limit. This read-only visual corroboration adds no execution, modification or
+native-high-glass/full-route certificate; no extra review/image/session follows.

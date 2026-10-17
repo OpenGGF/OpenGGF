@@ -5,8 +5,17 @@ adds a genuine matched old-red/green with the actual stored parallax checkpoint,
 then all five maintained portal pilots pass, including twice-forward world
 restore and Slot wind/fade checks. R7D/E's cold-unit after-exact-restore claim is
 superseded by R7F's observed missing restore. Earlier175/108 and27/API15 checks
-retain their source epochs. Full finite products, combined smoke/guards, route
-breadth and the separate845-pixel foreground owner remain open; no RGB closure.
+retain their source epochs. Full finite products, combined smoke/guards and route
+breadth remain open; foreground priority is separately qualified below.
+
+
+Slot foreground priority (2026-10-17): [R8 qualification](../architecture/validation/levels/s3k-bonus-stage-transitions.md#r8-fixed-five-originals-native-priority-components-close--2026-10-17)
+removes unsupported square-wide promotion after genuine descriptor/FBO old-red,
+independent source review and54 affected passes. The single fixed five-PNG
+comparison closes both targeted578/267 components:966 original pixels newly
+match with zero new bad pixels; remaining counts21/23/11/12/11 are explicit.
+HUD carried-life/native-high-glass and broader product/route/combined-validation
+limits remain; this is bounded component closure, not zero-RGB certification.
 
 
 Pachinko score-popup producer (2026-10-17): the [bounded bonus evidence](../architecture/validation/levels/s3k-bonus-stage-transitions.md#pachinko-bumper-score-popup-producer--2026-10-17)
