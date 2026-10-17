@@ -4717,3 +4717,163 @@ Temporary three-file edits are restored exactly to eeb79, exact instrumented
 outer classes/test cursor are removed, and inspected own XML/text are consumed
 under normal leases after durable extraction. Final change: docs only; no live
 R17 jobs, no archives, foreignnative4fdf/privateconfig/all refs preserved.
+
+
+## R18 HCZ8717 column cached-visibility owner witness — 2026-10-17
+
+**Owner witness only; no independent old-red or runtime fix.** The single original
+AD40 boot prefix10733 observes the missing local branch condition: at8717 the
+actual column/P2 binding is intact, cached visibility is valid/false, rider active
+and prior-standing are true, yet updateRider selects **active-hold**. This supports
+the column-local cached-render release question, not a shared collision/CPU/
+camera/cache correction. Handback precedes any behavioral test or edit.
+
+### Ownership, source and original reference
+
+Owned tree stays t3-3aa3bc3c. Under its intended writer lease, clean R17a1a safely
+fast-forwards to Root **f196e95da4583206a1201b3b4d02b1f626f7026e** on new local
+`bugfix/ai-s3k-hcz-column-held-release-gpt61`; the prior cold-campaign branch and
+R10–R17 results/refs remain. This adopts Root's qualified Slot/ICZ composition,
+not uncommitted DEZ work. No Root/Main changes or cold investigation are copied.
+Foreign TraceChaser4fdf checkout and private regular0600 config are preserved;
+Main config hash/mtime stay unchanged. Exact returned R18 task ID, ordinal20,
+workspace/native identity and24h expiry are in **gpt61_hcz_column_visibility_r18**;
+R17ordinal19's entry is unchanged.
+
+Original BK2 is the maintained complete-emerald run's
+`s3k-sonic-tails-complete-emeralds.bk2`, SHA256
+`ad40fb0b0a74fa12b08ab71b2e48a7455b388d14f43f4cded502ac4a15d1b3c0`.
+The manifest/trace/bootstrap/timing/lag/input remain original. hcz_2 metadata has
+trace_schema5 and bk2_frame_offset63075. Native AUX was read by its **frame field**,
+not JSONL line ordinal (many event records share each frame).
+
+AUX8714..8720 positively binds interactB32E/SST11/code000326B6/subtype02,
+column X0E10, P2 standing true throughout, with this published state:
+
+| Trace row | Native P2 status / control / render_flags | Column Y |
+| --- | --- | --- |
+|8714|09 /03 /84|05A2|
+|8715|09 /03 /84|05A2|
+|8716|09 /03 /04|05A2|
+|8717|0B /00 /04|05A3|
+|8718|09 /03 /04|05A3|
+|8719|0B /00 /04|05A3|
+|8720|09 /03 /04|05A4|
+
+Native physics keeps P2 **0E10.BB00/0572.AE00**, all velocities0. Native CSV frame
+220D is row8717; gameplay_frame_counter21D3 and vblank_counter160C are recorded
+hex values, not assigned engine clocks. Disassembly pin
+044fa46725c71187399e13f5ddb70e11d32dc024: sub_32784/loc_327FC first tests the
+held player's cached render_flags sign. loc_328AC sets Air, priority100/control0,
+then loc_328BE clears held; it preserves OnObj/velocities. Inactive capture reads
+the object's standing bit and clears Air/writes control3. SolidObjectFull's P2
+render gate returns without changing its standing bit. These native source facts
+explain the question; no new native observation/execution was made.
+
+### Temporary source and single execution
+
+Temporary column logging is the only production-file diff. Removing exactly its
+private helper/call lines recovers f196's original bytes, proving all original
+conditions, setters, ordering and owner calls remain. One temporary subclass
+uses the maintained AbstractRunChainTest from boot through segment11 committed
+row8721 (8720 inclusive). Existing before/after-production callbacks forward once;
+the original hardware observer/base are untouched. The CollisionTrace proxy
+forwards each method once/identical return, reads no pooled sensor, and samples
+an actual column/P2 checkpoint after its real callback. Exact owner identity comes
+from existing solidExecutionRegistry.currentObject().object(), not XY inference.
+It calls no isDestroyed/default null-spawn position getter and replaces no
+controller/provider. Primitive sample passivity and original P2 identity checks
+pass; no gameplay/private-state/visibility writes or fresh visibility calculation.
+
+Frozen tested source hashes:
+
+| Temporary source | SHA256 |
+| --- | --- |
+|HCZSpinningColumnObjectInstance.java|c9ddec6836095ab6a1f2d34ec5fb8b5987ddf5ea6f0b3f84e977760ca1bea2bf|
+|TestS3kCanonicalHczColumnVisibilityWitness.java|59abba20031c8675b83d637a737b98c412583ddbaf71a36a2d5eaaf82300ef43|
+
+Combined ordered path-NUL-byte SHA256
+`cc7f2cf8536a5e701e29f21a2a6411ec51e3f4cfa91558b5e296a78e8cd6ad84`,
+verified before/after runtime. Earlier build83124 failed testCompile **before
+boot**, exit1/displayedMaven01:13min at18:17:01UTC: the test used package-private
+ObjectManager.services. Only that accessor was changed to existing public
+GameServices.solidExecutionRegistry; original temporary combined5b5c4b3f was
+never executed. Repaired build-only63229 passes at18:17:48UTC, Maven24.681s.
+
+Sole actual10733 uses the original AD40 environment from the owned cwd, with
+original absolute ROM paths bound below; JTO has exactly the EGL token, with no
+additional CLI GL/timing/lag override:
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_WORKSPACE/tools/testing/maven_queue.py" --normal -Dmse=off -Ptrace-replay \
+  "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" "-Ds3k.rom.path=$S3K_ROM" \
+  '-Dtest=TestS3kCanonicalHczColumnVisibilityWitness#originalAd40ColumnThrough8720' \
+  -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical test -B
+```
+
+10733 finishes18:18:46UTC, queue0/Maven48.264s/JUnit24.602s (suite24.873s),
+**1/1F0E0S**: the strict prefix zero-error assertion reports213. No diagnostic
+error/suppressed failure or postboot retry. Earlier completed segments0/2/4/6/8/9
+compare2290/4023/8235/4103/7175/3574 rows, all physics/animation/warning/bootstrap0,
+lag0/11/14/16/62/55. The11-gap diagnostic has0 failures.
+The current8721-row hcz_2 prefix has **213=15physics+198animation**, lag59,
+0warnings/bootstrap; first non-camera remains **8717 sidekick_air native1/engine0**.
+This partial window is not compared as a gain against49197's full14208-row total,
+and is not a full canonical, route-exit, independent-BK2 or parity-green result.
+
+### Actual owner sequence and clock separation
+
+Bound column identity1966314043 = checkpoint identity, SST11/sub2; actual P2
+identity1751753651/interact11 points to that same column throughout. Six observed
+column dispatches8715..8720 have update/manager VInt71745..71750,
+objectLF2523..2528, levelLF8657..8662. Entry playback cursor71790..71795,
+driver next-logical-row71791..71796 and post-production cursor71791..71796 are
+separately recorded. In particular8717 entry cursor71792/next71793 accompanies
+VInt71747/objectLF2525/levelLF8659. No EngineTiming0 or fitted row offset is used;
+native CSV vblank_counter is not claimed to be this engine object-clock origin.
+
+Engine stores visibility bool/validity and render flips, not a full raw native
+render_flags byte. The witness reports those exact fields and bit7 mask, existing
+canonical trace_status, and the exact control tuple
+(objectControlled,allowsCpu,suppressesMovement), **not invented raw bytes**.
+Tuple T/T/T is the column's existing native3 semantic state; F/F/F is released.
+
+| Row | Actual cache at column entry | Rider active / prior standing | Selected existing branch | After production: status / control tuple / Air / OnObj |
+| --- | --- | --- | --- | --- |
+|8715|valid,true|true/true|hold|09 /TTT /false /true|
+|8716|valid,true|true/true|hold|09 /TTT /false /true; publication sets cachefalse|
+|8717|valid,false|true/true|hold|09 /TTT /false /true|
+|8718|valid,false|true/false|existing !standing release|01 /FFF /false /false|
+|8719|valid,false|false/false|inactive return|03 /FFF /true /false|
+|8720|valid,false|false/false|inactive return|09 /FFF /false /true|
+
+Preceding8714 publication has valid/true, active/prior-standing true. At8717
+column motion05A2→05A3 precedes the real hold branch; P2 remains exactly
+0E10.BB00/0572.AE00 with vx/vy/g0, alive/unhurt, control TTT. After update its
+private standingLastFrame is cleared as usual. The exact own solid callback is
+NONE/standingNowfalse/standingLastFrametrue while player OnObj stays true and
+interact binding is preserved. The private rider flag remains false. The next
+8718 existing release clears OnObj/control without setting Air. This is a
+recorded local follow-on latch/cleanup question, not authority to change shared
+solid gating. No geometry, player/camera/CPU or cached flag was changed to obtain
+this result.
+
+There are19 JSON samples (prior publication + six before/checkpoint/after sets),
+27,647bytes SHA256
+`139eac6e3476e057960e7d3436ab12f46d1438c65e8f14302e3d79f79cc98078`.
+Owner log30lines/17,236bytes SHA256
+`b45f98c1c965a0808e00c12b93fbc2560d66ab52d39fa5cd1e042e62e29c0856`.
+Proxy forwarded60 solid starts/120 results/42 terrain-result callbacks without
+inspecting sensor pools. Raw facts remain distinct from the native comparison.
+
+Stop at the evidenced local-owner handback before independent old-red/runtime
+edit. A later control must account for native retained OnObj/standing and zero
+velocities across release/recapture; no such test or repair is authored here.
+After durable extraction, restore exact column source/remove temporary test and
+instrumented classes, then consume the owned witness/XML/text and seven fresh
+trace reports with their owner sidecars under normal metadata admission. No
+archive; native4fdf/private config/all refs preserved, no live owned jobs.

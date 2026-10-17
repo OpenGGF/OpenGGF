@@ -261,3 +261,19 @@ unknown; no Camera/CPU or unobserved late-object repair is justified.
 No new engine replay/focused pass, matrix product, full route/exit, alternate,
 GLFW or native visual acceptance. Existing strict slice/8329/exit limits remain.
 [Exact original inputs, byte pins, CPU/publication phases and disconfirming proposal](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r15-original-native-camerahistory-input-plan--2026-10-17).
+
+
+## R18 spinning-column owner witness (2026-10-17)
+
+On Rootf196, one unchanged original AD40 boot prefix10733 reaches row8720
+inclusive. Actual8717 column slot11/P2 binding is intact, cached visibility
+valid/false, private rider active/prior-standing true, yet the column selects
+hold. Native AUX binds the same code326B6/sub2/interactB32E/SST11 and publishes
+Air/control release at8717. The exact engine checkpoint retains player OnObj but
+leaves its private rider standing flag false; next8718 existing release clears
+OnObj/control without Air. See the [R18 audit](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r18-hcz8717-column-cached-visibility-owner-witness--2026-10-17).
+Strict prefix remains red:213=15physics+198animation/8721 rows, first non-camera
+8717 sidekick_air1/0, lag59/0warnings/bootstrap,1/1F0E0S. Earlier six gameplay
+windows complete zero. No independent old-red, runtime repair, new native,
+whole canonical or viewport/roster qualification. Logs are removed after facts;
+this records an owner question and preserves all existing coverage limits.

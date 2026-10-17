@@ -6559,3 +6559,22 @@ Only7,745bytes of targeted logs; no collision observer/replacement or gameplay
 writes. Temporary source/classes and owned XML/text consumed after facts.
 This closes the missing engine writer, not upstream regression/native-death
 causality. No runtime repair or additional execution; Root owns the next scope.
+
+
+### R18 HCZ8717 cached-column owner witness — 2026-10-17
+
+Owned R18 branch safely fast-forwards R17a1a→Rootf196; prior refs/native4fdf/
+private config/Main identity remain. One original AD40 boot prefix10733 reaches
+row8720 inclusive:1/1F0E0S, queue0/Maven48.264s,18:18:46UTC. Its strict8721-row
+comparison is213=15physics+198animation, first non-camera8717 sidekick_air1/0,
+lag59/0warnings/bootstrap; six earlier gameplay windows complete zero in all
+groups. Source access typo83124 is preboot-only; repaired build63229 passes.
+[Exact frozen source, native rows, clocks and owner sequence](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r18-hcz8717-column-cached-visibility-owner-witness--2026-10-17).
+Actual8717 column/P2/interact11 binding, cached valid/false and rider active/
+prior-standing true select hold, retaining Airfalse/controlTTT. Exact later
+checkpoint preserves player OnObj while the private rider standing flag stays
+false; next8718 existing release clears OnObj/control without Air. This supports
+a missing local branch/latch question, not shared solid/CPU/camera/cache changes.
+No old-red or fix authorized/authored; stop at handback. Temporary source/classes
+and consumed owned diagnostics removed after facts; local evidence docs only,
+not full canonical/independent-BK2/parity-green acceptance.
