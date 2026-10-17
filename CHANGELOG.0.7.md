@@ -696,7 +696,11 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   releases it, instead of easing back toward the loaded act's default bounds.
   The AIZ2 boss retains its native owner through results and the Knuckles
   cutscene, preserving button input release, the drawbridge's delayed eject,
-  and captured rider state through rewind. Playable construction and level reset
+  and captured rider state through rewind. Its miniboss body, arm and barrels
+  retain their native sprite slots through the defeat wait, continue their own
+  animation and callbacks, and retire after the physical parent flag changes.
+  Rewind preserves that parent header across the sign-control replacement.
+  Playable construction and level reset
   bind rules from the selected world before the first CPU dispatch, retaining
   the bootstrap fallback for pre-session construction.
 

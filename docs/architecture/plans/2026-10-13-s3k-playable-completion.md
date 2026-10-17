@@ -4755,3 +4755,130 @@ with classified coverage only45/46. The sole wholly unclassified identity is
 comparator explicitly; do not normalize these observations into the old327
 aggregates. The committed63 supplied-budget consumer windows and native closure
 checker recordings do not predict the six counts or qualify readiness.
+
+
+### R7 normal AIZ five-child retirement owner — 2026-10-17
+
+Exact gpt61_aiz_child_retirement_r7 task/native/workspace/24h expiry registered;
+base0ee/R5/R6 preserved. Independent production-birth old-red42418 terminal1
+13:29:52UTC,Maven24.901s/queue39s,1/1F0E0S. Natural callback creates actual
+fivechildren in28..32 after physicalcontrol17; fatalPass183,retainedXY11F0/028A.
+Four native-lifetime assertions fail (fatal,mid64wait,wordzero,pendingpass);
+whole-world forced recreation from beforefatal/livewait/pending/deleted each
+replays twice without mismatch. Fifth reuse assertion exposed an unrelated
+pre-existing lower free5, so the maintained control must fill actual ordinary
+free holes until it reaches a retired child hole, without assigned slots.
+That test assumption is rejected; no runtime slot fit or second old-red run.
+Final-hit HP1 is declared component stimulus; no timer/routine/slot/RNG/trace
+state seeding. All real CreateChild1_AfterCurrent children lie above control;
+no impossible lower-slot variants.
+
+Root authorized local physical-SST child migration and minimal captured known-field
+shared flow projection after exact contract handback. No generic boss dispatch or
+allocator changes. Source044fa467:body136974/arm136993/barrel137461 each finishes
+Child_Draw*Sprite2; parent$38bit4 (178173..178197) installs Delete_Current via
+Go_Delete_Sprite_2 (179232..179235), then deletion on next own entry. Existing
+Java AbstractBossChild finalbosslink/clockgate/inlineparentlist cannot survive
+physicalparentreplacement; new AIZ-local scalar parentSlot/ordinarySST recreation
+will replace that dependency. Flow's retained x/y/renderflags/$38/defeated fields
+are package-private projection with captured scalars, not fabricated full native
+header zeros. Runtime edits have not yet begun;42418 terminal/released.
+
+
+R7 initial post-fix9555 terminal1 at13:37:55UTC,Maven1m04/no wait, no tests
+executed: migrated seamless unit used StubObjectServices instead of the existing
+fluent TestObjectServices. Corrected that owned test-only compile prerequisite.
+Production8files compiled successfully; their exact hashes remain frozen in R7
+registry. No runtime failure/trace result is inferred from this invocation.
+
+R7 corrected prerequisite32436 terminal0 at13:39:53UTC,Maven24.866s/queue67s,
+14/0F0E0S across normal child retirement2,physical handoff4,graph recreation4,
+shared flow4. Natural children28..32/control17 survive fatal and literalwait;
+bit4 installs pending and the next own pass frees them; realhole28 reused after
+ordinary lower holes are filled. Beforefatal/livewait/pending/deleted snapshots
+each force recreation twice and replay; independent known-header pose/flag/offset
+recreation passes. No generic boss/allocator/public constructor change.
+
+R7 remaining affected80769 terminal0 at13:41:57UTC,Maven31.229s/no wait,
+193/0F0E0S across22selectors (23actual classes: both LevelLoading packages).
+Actual cutscene/shot/flare/falling-shot/napalm/explosion/seamless callers and
+three-worker controls pass, mandatory S3K4 included (8+36+7+6+3 tests).
+Commands use normal current Main absolute queue wrapper, MSEoff, explicit EGL,
+all3originalabsoluteROMs,singlefork/reuse/alpha, nullAL/noambient as R6.
+Runtime8files unchanged since9555 compilation; stable for independent review.
+
+R7 review on exact8runtime hashes found two material masked branches: barrel
+defeated→IDLE suppresses own routine/pair birth through64wait and finalbit4pass;
+body defeated→frame2 freezes Animate_Raw before status7 collision clear. Root
+authorized local known-header bit1 write and FallingShot scalar parent status
+read if necessary; no generic boss/API/allocator widening. Long traces held
+unsubmitted until corrected short controls. Existing70775 preserved terminal1
+13:44:05UTC,Maven1m37/no wait,118/1F0E0S:117green, terminology guard found
+three owned dummy update argument names (R3count/R5frame/R7count). Renamed
+only those arguments to vIntRunCount, no gameplay changes; rerun only this
+affected guard after correction. Independent active-barrel old-red prepared
+from natural SWING_PREP_COMPLETE wordzero, no phase/timer/slot seeding.
+
+Active-sequence20704 terminal1 at13:46:31UTC,Maven28.140s/queue20s,1/1F0E0S.
+Body freeze red is meaningful; barrel pair assertions were NOT qualified because
+the declared default Sonic inlet does not activate native Knuckles-only barrels.
+Corrected only the character/camera/boss-position component inlet to Knuckles,
+with an explicit resolved-character assertion; no runtime/timer/routine edits.
+One corrected short old-red is necessary before the source-backed branch edit.
+
+9329 terminal1 at13:47:59UTC,Maven21.360s/queue37s,no tests: corrected
+character assertion used the wrong S3kRuntimeStates package. Fixed that test
+qualification to existing sonic3k.runtime; no runtime change or old-red claim.
+
+Corrected Knuckles active old-red22347 terminal1 at13:48:35UTC,24.672s/no wait,
+1/1F0E0S. Resolved Knuckles/control11/fatal379, four source assertions red: body
+Animate_Raw continuation, delayed thirdbarrel FIRING, finalflare/FallingShot pair.
+All three boundary whole-world forced-recreation cycles replay twice. Runtime
+correction removes only defeated→IDLE and bodyfreeze; ownroutine precedes bit4
+tail even on replacement. Package-private retained38 bclr1 supports that final
+work; FallingShot grandparent status now reads captured physicalslot via known
+header projection. Removes its obsolete Java parent field/one explicit captured
+policy entry, preserves live barrel ObjectRef and standalone constructors.
+No new generic dispatch/interface/allocator or public API. Fatal generic attack
+cleanup is unchanged; no separate projectile algorithm/physics/RNG changes.
+
+Finding-resolution independent read-only review matched all10 actual runtime
+hashes to fresh registry; both material findings resolved, no remaining material
+objection in bounded unit. No execution/pass inferred.91691 terminal1 at
+13:51:44UTC,Maven1m01/no wait,no tests: one migrated NapalmRoute assertion used
+checked reflection helper inside an unchecked method. Switched that assertion
+to its existing typed unchecked helper, no runtime bytes changed. Rerun only
+the same pending10class affected short selection before long traces.
+
+Final reviewed-runtime short34345 terminal0 at13:53:23UTC,Maven28.184s/queue27s,
+65/0F0E0S across10affectedclasses. Natural active Knuckles fatal379/control11
+now creates exactly one final-pass FallingShot plus flare; INIT runs before the
+retained status7 pending marker, next ownentry clears. Body animation continues.
+Original fivechild/freehole and retainedheader XY/flags/bclr1/offset controls pass;
+all captured whole-world boundaries recreate/replay twice. Earlier207 and117
+guard passes retain their tested epochs; only the affected exact terminology
+and changed-policy-entry guards are repeated. All pending long traces remain
+once each, unchanged driver/bootstrap/input/lag; no further runtime edit.
+
+R7 final exact guards31137 terminal0 at13:55:16UTC,Maven1m19/queue7s,2/0F0E0S.
+Original/standing/twoSS99318 terminal0 at13:56:45UTC,59.964s/no wait,3/0F0E0S:
+original20463zero,all20standing actual12 at9510..13;seg0/2/4completezero,
+lag0/11/14,5dynamicartgaps/0failures. Once alternate72859 terminal1 at13:58:19UTC,
+37.343s/queue29s,1/1F0E0S:26041rows,ONLY26179rings72/0 (single-row,
+noncascading physics),animation/warnings/bootstrap0. Exact array matches the
+remaining Root80378232 identity/values; all ten new13740..16669 ring spans close.
+Raw alternate remains red for that inherited trailing field. No further runtime,
+probe/native/media/ancestor/broad/fullchain run. Existing matrix records exact
+commands/source hashes/epochs/limits; all ten runtime hashes matched independent
+finding-resolution review. R5 animal73f1/GameRules7b694 remain unchanged.
+Only final docs/staging/normal local commit and inspected report cleanup remain;
+Root owns composition/combined validation, Main803 untouched. All JVMs terminal.
+
+R7 inspected46 latest Surefire identities across their recorded epochs (330cases,
+sole alternate trailing-field failure,0errors/0skips), all six trace diagnostic
+arrays/owners and the23-line rewind disposition inventory. Consumed105 owned
+files (92 XML/TXT,12traceJSONinclowners,1rewinddiagnostic) under metadata slot
+alone, no archives/receipts. All handles/leases terminal/released. Latesttarget
+is72859 final maintained runtime/tests compilation, no temporaryobserver/variant.
+Syntax/diff checks, affected local link targets and skillmirror equality pass.
+Preparing normal local owner commit, not integration or publication clearance.

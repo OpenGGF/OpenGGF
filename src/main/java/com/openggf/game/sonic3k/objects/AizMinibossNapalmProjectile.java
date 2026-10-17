@@ -78,12 +78,9 @@ public class AizMinibossNapalmProjectile extends AbstractObjectInstance
         FALL
     }
 
-    /**
-     * ROM parent3(a0): the boss that owns the barrel graph. Non-final so the
-     * compact rewind schema replaces the phase-one recreate seed with the
-     * exact captured ObjectRefId target.
-     */
-    private AbstractBossInstance parent;
+    // The barrel's parent3 is a physical SST; its status remains readable after
+    // AIZ replaces the registered boss with the sign control in that same slot.
+    private int parentSlot = -1;
     /**
      * ROM parent3(a0) for FallingShot: the existing barrel controller. This
      * must restore by identity because three live barrels make geometric
@@ -159,7 +156,8 @@ public class AizMinibossNapalmProjectile extends AbstractObjectInstance
                                          int positionCounter) {
         this(new ObjectSpawn(startX, startY, Sonic3kObjectIds.AIZ_MINIBOSS,
                 childSubtype & 0xFF, 0, false, 0));
-        this.parent = parent;
+        this.parentSlot = barrel != null ? barrel.physicalParentSlot()
+                : parent == null ? -1 : parent.getSlotIndex();
         this.barrel = barrel;
         this.barrelSubtype = barrelSubtype & 0xFF;
         this.standaloneHFlip = hFlip;
@@ -199,7 +197,8 @@ public class AizMinibossNapalmProjectile extends AbstractObjectInstance
         }
         // AIZMiniboss_FallingShot dispatches its routine before the grandparent
         // status7 gate. Its own Go_Delete marker still reaches this live-parent tail.
-        if (parent != null && (parent.isDestroyed() || parent.getState().defeated)) {
+        if (parentSlot >= 0 && S3kChildDrawParentHeader.read(
+                services().objectManager(), parentSlot).defeated()) {
             pendingDelete = true;
             return;
         }
@@ -309,8 +308,8 @@ public class AizMinibossNapalmProjectile extends AbstractObjectInstance
         if (barrel != null) {
             return barrel.isFacingFlipped();
         }
-        if (parent != null) {
-            return (parent.getState().renderFlags & 1) != 0;
+        if (parentSlot >= 0) {
+            return (S3kChildDrawParentHeader.read(services().objectManager(), parentSlot).renderFlags() & 1) != 0;
         }
         return standaloneHFlip;
     }

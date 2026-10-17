@@ -23,7 +23,6 @@ import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
-import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -247,15 +246,12 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
         // #$3F,$2E. Wait_FadeToLevelMusic consumes 64 later own entries.
         defeatHandoffTimer = DEFEAT_WAIT_FADE_TIMER;
 
-        // Clean up all visible children — barrels, body, arm, and live napalm shots.
-        for (var child : childComponents) {
-            child.setDestroyed(true);
-        }
-        childComponents.clear();
+        // Body/arm/barrel SSTs continue their own Child_Draw*Sprite2 entries.
+        // Status7 suppresses touch; only the later physical parent's $38 bit4
+        // selects their pending Delete_Current operation (044fa467:178173-178197).
 
-        // Destroy all in-flight attack objects (barrel shots, flames, napalm projectiles).
-        // ROM: barrel children enter defeat animation and stop spawning new attacks;
-        // existing projectiles check parent state and become inert.
+        // Preserve the existing final-hit attack-object cleanup separately from
+        // the five component SSTs, whose routines continue through the wait.
         destroyAttackObjects();
     }
 
@@ -549,6 +545,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
         // Wait_FadeToLevelMusic uses global AllocateObject (sonic3k.asm:179749),
         // so a lower free SST first dispatches on the following Process_Sprites pass.
         spawnDynamicObjectLowestFreeSlot(new SongFadeTransitionInstance(120, Sonic3kMusic.AIZ1.id));
+        var retainedHeader = S3kChildDrawParentHeader.fromBoss(this);
         int slot = ObjectLifetimeOps.detachSlotForTransfer(this);
         ObjectLifetimeOps.deleteNoRespawn(this);
         var flow = ObjectConstructionContext.construct(services(), () -> new S3kBossDefeatSignpostFlow(
@@ -558,6 +555,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
         // Native install writes fresh $77 and returns. Later own entries run
         // the wait, sign/results and DoStart's three workers. The former
         // auxiliary flow's displaced-entry/13-entry delays have no ROM owner.
+        flow.retainChildDrawHeader(retainedHeader);
         flow.beginNativeReplacement(slot);
     }
 
@@ -610,9 +608,8 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
         }
     }
 
-    private void spawnBossComponent(java.util.function.Supplier<? extends AbstractBossChild> factory) {
-        AbstractBossChild child = spawnChild(factory);
-        childComponents.add(child);
+    private void spawnBossComponent(java.util.function.Supplier<? extends AizMinibossComponent> factory) {
+        spawnChild(factory);
     }
 
     private void spawnBreathFlames() {
@@ -649,7 +646,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
         // ROM pose for the admitted delay. Ordinary barrel flares are unchanged.
         int warnedBarrels = 0;
         java.util.ArrayList<AizMinibossBarrelShotFlareChild> admittedWarnings = new java.util.ArrayList<>(3);
-        for (var child : childComponents) {
+        for (var child : AizMinibossComponent.family(services().objectManager(), getSlotIndex())) {
             if (child instanceof AizMinibossFlameBarrelChild barrel && !barrel.isDestroyed()
                     && warnedBarrels++ < 3) {
                 var warning = spawnChild(() -> AizMinibossBarrelShotFlareChild.warning(barrel, delay));
@@ -684,8 +681,8 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
 
     /**
      * Destroy all in-flight attack objects spawned by this boss.
-     * ROM: barrel children enter defeat animation; existing shots/flames check parent
-     * state and stop. We achieve the same by scanning active objects.
+     * Existing final-hit cleanup for attack objects. The five component controllers
+     * retain their separate physical-SST routines and native bit4 retirement tail.
      */
     private void destroyAttackObjects() {
         var objectManager = services().objectManager();
@@ -785,7 +782,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
     @Override
     public void onCarriedAcrossSeamlessTransition(int offsetX, int offsetY) {
         difficultyFollowupTimer = -1;
-        for (var child : childComponents) {
+        for (var child : AizMinibossComponent.family(services().objectManager(), getSlotIndex())) {
             ObjectLifetimeOps.destroyBossChildLatched(child);
         }
         childComponents.clear();

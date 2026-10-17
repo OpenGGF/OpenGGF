@@ -171,7 +171,7 @@ class TestS3kFreedAnimalRenderLifetime {
         Witness(int kind){this(new ObjectSpawn(0,0,0,kind,0,false,0));}
         public Witness(ObjectSpawn spawn){super(spawn,"AnimalLifetimeWitness");setRomWorldPositioned(false);}
         @Override public boolean isPersistent(){return true;}
-        @Override public void update(int frame,PlayableEntity player){if(getSpawn().subtype()==1)setDestroyed(true);}
+        @Override public void update(int vIntRunCount,PlayableEntity player){if(getSpawn().subtype()==1)setDestroyed(true);}
         @Override public void appendRenderCommands(List<GLCommand> commands){ }
     }
 }

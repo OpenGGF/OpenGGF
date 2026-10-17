@@ -481,9 +481,8 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossInstance", "defeatExplosionController"), RewindFieldPolicy.DEFERRED),
             // Three live AIZ miniboss barrels make nearest-object reconstruction
             // ambiguous after FallingShot teleports to its camera-relative drop.
-            // Capture the native parent3 graph by ObjectRefId in phase two; the
-            // recreate hooks retain nearest-object lookup only as a phase-one seed.
-            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossNapalmProjectile", "parent"), RewindFieldPolicy.CAPTURED),
+            // FallingShot captures its live barrel by ObjectRefId; the grandparent
+            // control address is a captured scalar and survives physical replacement.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossNapalmProjectile", "barrel"), RewindFieldPolicy.CAPTURED),
             // Common/falling shots can belong to the cutscene or fight graph. Their
             // camera-relative launch XY cannot identify the firing barrel/boss.

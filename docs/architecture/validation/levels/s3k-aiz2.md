@@ -1069,3 +1069,114 @@ stash/reset, bypass or extra Java. The policy owner notes a pre-existing generic
 RHS-comma false positive outside this preset; that separate limitation was not
 widened into this patch. R6 remains an evidence-only handback, not child-tail
 implementation or integration clearance.
+
+
+## R7 physical parent and five-child defeat retirement — 2026-10-17
+
+Same owned tree98d/branch, base0eeacbf81bca0ee0d404f4d4b2cb94d54c61f43d;
+R1–R6 identities/results remain historical. This unit closes the R6 demonstrated
+five-child lifetime cause. Normal production body/arm/three barrels dispatch
+from their own ordinary SSTs and retain a captured physical parent3 slot. They
+survive parent status7 and all64 literal Wait_FadeToLevelMusic passes. The same
+physical replacement publishes parent38 bit4; the five children run their own
+routine, install pending Delete_Current, then clear on their following entry.
+No old unregistered boss reference or inline parent dispatch remains in these five.
+
+The replacement flow captures only actual x/y/render_flags/$38/defeated scalars,
+with package-private reads and the literal barrel bclr1 writer. Public flow
+constructors and other callers are unchanged when that projection is unset.
+Its retained XY offsets independently of signpostX/getY0. FallingShot keeps its
+registered barrel ObjectRef but captures the grandparent physical slot, so INIT/
+routine work precedes status7 even when born on the final flag-observing pass.
+One obsolete Napalm Java-parent schema-policy entry is removed; no schema,
+allocator, generic boss dispatch, global hook or public API contract changes.
+Unknown nonempty physical headers fail rather than inventing full native state.
+Existing attack cleanup, music, explosion tail, scoring, physics/RNG and the four
+omitted loc68E98 debris are not expanded into another owner unit.
+
+Authority: own skdisasm044fa46725c71187399e13f5ddb70e11d32dc024,
+sonic3k.asm loc_686E8 at136974–136983, loc_68720 at136993–136995,
+loc_68C12 at137461–137467 and loc_68C64/68C84 at137496–137509.
+Refresh_ChildPositionAdjusted copies native word XY/facing at177386–177412;
+Child_Draw_Sprite2/Child_DrawTouch_Sprite2 test parent38 bit4 at178173–178197;
+Go_Delete_Sprite_2 installs next-entry deletion at179232–179235.
+Wait_FadeToLevelMusic/global music allocation and Obj_EndSignControl's bit4
+write are179742–179759 and180463–180469. These line numbers belong to this pin.
+
+Red-first production test42418:1/1F0E0S, four lifetime failures through fatal/
+wait/pending, ordinary control17/children28–32, fatal183; no assigned expected
+slots. A pre-existing lower free5 invalidated the first reuse assumption, so the
+maintained assertion fills ordinary free holes until it actually reuses child28.
+Beforefatal/livewait/pending/deleted world captures each force recreation and
+forward replay twice. All five real AfterCurrent children are higher than the
+control; no impossible lower-slot products were manufactured.
+
+Independent exact-hash review then found two masked branches: barrel
+`defeated→IDLE` suppressed callback/pair birth through the new live wait, and body
+`defeated→frame2` froze Animate_Raw before the separate status7 touch gate.
+Corrected Knuckles active old-red22347:1/1F0E0S, natural control11/fatal379,
+body continuation and final delayed-barrel flare/FallingShot birth red. It
+observes the natural SWING_PREP_COMPLETE wordzero before the final-hit stimulus;
+no timer/routine/RNG/slot/trace seeding. The initial default-Sonic20704 did not
+qualify barrel activation;9329 and91691 were owned test-compile prerequisite
+failures, no executed-test claims. Both review findings are resolved in the
+final runtime, independently read again at all ten exact hashes; no review pass
+is substituted for execution. The existing Plan records those corrections.
+
+| Execution / source epoch | Actual outcome | Limits |
+| --- | --- | --- |
+|32436 initial own-SST/header patch |14/0F0E0S,13:39:53UTC,24.866s/queue67s |Before the two review corrections |
+|80769 remaining callers + S3K4 |193/0F0E0S,13:41:57UTC,31.229s/no wait |Same earlier epoch; unaffected controls reused, not a claim that207 all reran on final bytes |
+|70775 affected16guard classes |118/1F0E0S,13:44:05UTC,1m37/no wait |Only terminology red: three owned dummy override names, renamed without behavior change |
+|34345 final reviewed10-file runtime |65/0F0E0S,13:53:23UTC,28.184s/queue27s |Ten affected child/body/barrel/FallingShot/cutscene/graph classes; final-pass pair, header bclr1/pose/offset, twice-forced whole-world replay |
+|31137 exact affected guards |2/0F0E0S,13:55:16UTC,1m19/queue7s |Terminology and changed field-policy guard only;116 other guard cases retained from70775 |
+|99318 original + standing + twoSS |3/0F0E0S,13:56:45UTC,59.964s/no wait |Original20463rows physics/animation/warnings/bootstrap0;20 exact assertions; seg0/2/4 complete0errors, lag0/11/14;5dynamic-art gaps/0failures |
+|72859 distinct original alternate |1/1F0E0S,13:58:19UTC,37.343s/queue29s |26041rows; only26179rings72/0; physics1/animation0/warnings/bootstrap0 |
+
+All20 standing assertions retain actual SST12 at raw rows9510–9513,
+FULL_LEVEL_FRAME; traceLF23F6–23F9, engineLF23F5–23F8, executed9206–9209.
+The standing admission print still contains the old unbound EngineTiming0;
+that is not object-clock evidence and is not used as such. R6 separately records
+bound object VInt/LF/executed/input cursor evidence. No row↔BK2 offset is fitted.
+
+**Ten new alternate ring spans13740–16669 are closed.** The sole remaining
+one-row error is exactly field rings,26179..26179,expected72/actual0,
+noncascading physics; it matches Root's published803 control78232. Root used
+-Ptrace-replay and this worker -Ptrace-segments; the previously inspected POM
+has identical runtime/fork settings and exact case execution, not literally
+identical profiles. The raw alternate remains red; the earlier ten-new-span
+integration blocker is resolved locally, while composed qualification belongs
+to Root. This field result does not prove every later SST/phase/native position.
+
+Final source SHA256: AizMinibossInstance
+0e8ff2faee2f384ca6bce23e0c945f401775aac188a5af77974dbbb255affc7f;
+Napalm6c55413936662423640dd60251150f36bdfa34bafb7e3d61bd2360f7053fb3ab;
+shared flow3a4c5f9477ef23450416454f4e4fd1d3571733a7d2e8f29a5f2a7fb757b89e4a.
+All ten runtime hashes matched independent review and stayed frozen queued/live.
+The R5 animal/rules hashes and original BK2/ROM identities above are unchanged.
+Use the R5 `r5_maven` template above for the actual normal Main absolute wrapper,
+all three original absolute ROMs, exact single-token JAVA_TOOL_OPTIONS/EGL,
+nullAL/noambient display, inherited JDK_JAVA_OPTIONS/MAVEN_OPTS and fork/reuse/order.
+Executed selections (not requests to repeat):
+
+```bash
+r5_maven '-Dtest=TestAizMinibossChildRetirement'
+r5_maven '-Dtest=TestAizMinibossChildRetirement#naturalActiveBarrelsAndBodyRunThroughFatalWaitAndTheFinalReplacementPass'
+r5_maven '-Dtest=TestAizMinibossChildRetirement,TestAizEndSignControlReplacement,TestS3kAizMinibossGraphRewind,TestS3kBossDefeatSignpostFlow'
+r5_maven '-Dtest=TestAizMinibossBarrelCounter39,TestAizMinibossBarrelShotChild,TestAizMinibossBarrelWaitCallback,TestAizMinibossCameraUnlock,TestAizMinibossCommonShotRetirement,TestAizMinibossCutsceneInstance,TestAizMinibossFallingShotNativeGraph,TestAizMinibossFlareNativeGraph,TestAizMinibossNapalmProductionRoute,TestAizMinibossNapalmProjectile,TestAizMinibossNapalmRoute,TestAizMinibossRegistry,TestAizMinibossSeamlessTransition,TestAizMinibossShotNativeGraph,TestAizMinibossShotNativeInit,TestAizMinibossSpecialExplosionOwner,TestAizCutsceneNativeTransition,TestAizAct2LevelSizeWorkers,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils'
+r5_maven -Pguards '-Dtest=TestObjectServicesMigrationGuard,TestObjectPhysicsStandardizationGuard,TestObjectUpdateClockTerminologyGuard,TestObjectPriorityBucketGuard,TestS3kRuntimeStateReadGuard,TestS3kTransitionBridgeGuard,TestS3kAizWriteBridgeGuard,TestRewindFieldDispositionGuard,TestRewindArchitectureGuard,TestParentDependentGraphCoverageGuard,TestRewindTransientGuard,TestConstructionContextGuard,TestHardwareTimingAuthorityGuard,TestTraceReplayReferenceClosureGuard,TestTraceReplayInvariantGuard,TestRuntimeSingletonGuard'
+r5_maven '-Dtest=TestAizMinibossChildRetirement,TestAizMinibossFallingShotNativeGraph,TestAizMinibossNapalmRoute,TestAizMinibossNapalmProductionRoute,TestAizMinibossNapalmProjectile,TestAizMinibossBarrelWaitCallback,TestAizMinibossBarrelCounter39,TestAizMinibossCutsceneInstance,TestAizCutsceneNativeTransition,TestS3kAizMinibossGraphRewind'
+r5_maven -Pguards '-Dtest=TestObjectUpdateClockTerminologyGuard,TestRewindFieldDispositionGuard'
+r5_maven -Ptrace-replay '-Dtest=TestS3kAizTraceReplay#normalBridgeStandingSstMatchesOriginalFullrun+replayMatchesTrace,TestS3kSonicTailsCompleteEmeraldRunPrefix#twoSpecialStageReturnsThroughThirdEntry'
+r5_maven -Ptrace-segments '-Dtest=TestS3kAizZoneSliceTraceReplay#replayMatchesTrace'
+```
+
+No new native/media/ancestor/fullchain/broad execution. The four omitted native
+loc68E98 debris, seven original/eight alternate missing advertised aux families,
+full native SST/position/RNG comparison, allocation exhaustion, cold/otherBK2,
+viewport/donor/roster/configuration and complete continuous act/chain coverage
+remain open. No fixture/physics/aux data changed or gameplay hydrated. All reports
+were inspected including skips and exact error arrays before metadata-only
+consumption; no raw archives or temporary observer remain. Target last compiled
+final maintained source/tests in72859, no unrebuilt source variant. Local owner
+qualification only; Main803 unchanged, no integration/push/tree removal.

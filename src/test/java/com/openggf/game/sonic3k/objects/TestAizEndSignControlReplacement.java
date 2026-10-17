@@ -206,7 +206,7 @@ class TestAizEndSignControlReplacement {
 
     private static final class RetiringSlot extends AbstractObjectInstance implements SpawnRewindRecreatable {
         public RetiringSlot(ObjectSpawn spawn) { super(spawn, "AizMusicHole"); setRomWorldPositioned(false); }
-        @Override public void update(int count, PlayableEntity player) { setDestroyed(true); }
+        @Override public void update(int vIntRunCount, PlayableEntity player) { setDestroyed(true); }
         @Override public void appendRenderCommands(java.util.List<com.openggf.graphics.GLCommand> commands) { }
     }
 
