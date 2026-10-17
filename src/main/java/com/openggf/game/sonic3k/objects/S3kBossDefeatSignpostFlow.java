@@ -293,12 +293,19 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
         services().gameState().setCurrentBossId(0);
 
         // Spawn signpost above camera
-        S3kSignpostInstance signpost = new S3kSignpostInstance(
-                signpostX, apparentAct, signpostResultsTimerCatchUpEntries, resultsWaitDurationAdjustment,
-                resultsPostControlHandoffDelayEntries, preservesGroundedResultsDispatchBoundary,
-                usesShortResultsChildRetireTail);
-        signpost.preserveNativeControlAllocationBoundary(nativeControlSlot);
-        spawnDynamicObject(signpost);
+        // Obj_EndSignControlDoSign -> CreateChild6_Simple calls
+        // AllocateObjectAfterCurrent from the retained boss/control SST
+        // (sonic3k.asm:180483-180492,177205-177225). A detached Java flow
+        // must not move that allocation cursor to its own auxiliary SST.
+        // An unset native boundary keeps the current execution-slot fallback.
+        spawnChildAfterSlot(nativeControlSlot, () -> {
+            var signpost = new S3kSignpostInstance(
+                    signpostX, apparentAct, signpostResultsTimerCatchUpEntries, resultsWaitDurationAdjustment,
+                    resultsPostControlHandoffDelayEntries, preservesGroundedResultsDispatchBoundary,
+                    usesShortResultsChildRetireTail);
+            signpost.preserveNativeControlAllocationBoundary(nativeControlSlot);
+            return signpost;
+        });
         LOG.fine("S3K defeat flow spawned signpost at X=" + signpostX);
 
         runCleanupAction();

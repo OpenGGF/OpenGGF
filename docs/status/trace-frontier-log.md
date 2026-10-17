@@ -112927,3 +112927,35 @@ absolute ROM properties:
 
 The later title-card archive WIP remains outside this composition. Its pending failures, ring/timer reset at
 `loc_63B4`, HCZ and downstream frontiers remain separate obligations. No full-suite run or new trace payload.
+
+## 2026-10-17 — Original AIZ normal-bridge standing SST12 qualified at four exact rows
+
+Base `8030832d2ab6080e5324cdfe35e971677fd97b41`, T3 `t3-98d036a9`, local
+`bugfix/ai-s3k-aiz-bridge-standing-gpt61`; one runtime change in
+`S3kBossDefeatSignpostFlow.updateSpawnSignpost`. The original fullrun's bootstrap,
+BK2, clock/lag driver and V5 payloads are unchanged. The [AIZ2 certificate](../architecture/validation/levels/s3k-aiz2.md#original-fullrun-normal-bridge-standing-sst--2026-10-17)
+records exact commands, source/movie hashes, occupants, clocks and coverage limits.
+
+Normal Main-wrapper admission, Java25, EGL/nullAL, original absolute S3K ROM:
+`-Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true
+-Dtest=TestS3kAizTraceReplay#normalBridgeStandingSstMatchesOriginalFullrun test -B`.
+Initial77167 (10:39:14 UTC) is 1/1F/0E/0S with four inner differences, first
+row9510 `player_stand`, expected12/actual10. A shorter causal prefix85012 ends8941:
+engine detached flow21 spawns sign22/stub23 versus native control7/sign10/stub11;
+later X-worker10 instead of12 permutes the decoration admissions. The bridge's
+display17 was already correct, so the later `b96ef2c4d` alternate proof is not the cause.
+
+The repaired signpost uses native `CreateChild6_Simple`'s retained control cursor
+through existing `spawnChildAfterSlot`. Single post-fix99559 (10:48:30 UTC)
+passes1/0F/0E/0S, all twenty assertions: live SST12, correct normal bridge and
+P1 centre X/Y at9510–9513; admission9392 parent12/display17. The independent
+allocation scene is old-red18/20 and corrected18/18 with two whole-world replay
+cycles; unset/in-place controls retain20. Focused60576 is88/0F/0E/0S;
+fresh guards83910 are134/0F/0E/0S. These counts are selected cases, not full suites.
+
+The omitted min-Y SST in AIZ's three-worker `Make_LevelSizeObj` contract remains
+explicit in the matrix/backlog. Missing advertised aux families, other BK2s,
+whole-prefix physics/animation, full SST/chain, configurations and act coverage
+are not certified. No fixture hydration, field removal/waiver, allocator/bounds
+rewrite, new native/media capture or repeated full chain was used. Root owns
+later composition and delivery.
