@@ -3296,3 +3296,26 @@ integration and eventual push. The local branch/worktree and unrelated unstaged
 TraceChaser gitlink remain for Root accounting. The bounded stopping boundary is
 nine fresh captures and their complete comparisons; no further capture or Java
 workload is needed for this slice.
+
+
+### Composed guard attribution and unchanged allocation record — 2026-10-17
+
+Root `74fb068e1` passed focused session31023: **78 tests / 0 failures / 0 errors / 0 skips** at
+09:50:48 UTC (Maven1m11s): six actual GPU special-stage sprite/atlas lifecycle tests and 72 architectural
+source guards. This qualifies the equivalent range-base expression and newly composed ending sampler source;
+the exact ArchUnit range rule will be checked with the remaining architecture fixes.
+
+Main707 session6602 completed the exact `-Pguards -Dtest=TestArchUnitRules,TestProductionSingletonClosureGuard`
+selection with **73 tests / 4 failures / 0 errors / 0 skips**. The same original ROM/launcher environment was
+retained. Both MenuAudioProbe singleton failures and both HubMusic provider/shared-layer failures match
+Root's fresh guard result by class, test name, exception type and complete assertion message. They remain
+inherited and unfixed; no failing result is described as a pass.
+
+The additional frozen-store error was caused by the shared AnPal-bank overload: the existing nullable
+`PaletteOwnershipRegistry` fallback moved from Sonic3kPaletteCycler's six-argument constructor to the same
+class's seven-argument constructor receiving `Sonic3kGlobalAnimationState`. Source comparison confirms the
+identical conditional allocation occurs once both before and after this change. Only that existing stored
+exception's constructor signature/location is reconciled; the two stored dependencies and unchanged S2 entry
+remain. No new exception is added, no production allocation is introduced, and automatic store creation or
+updates remain disabled. This preserves the existing ownership debt without hiding an additional dependency.
+The exact current ArchUnit check remains pending after the separate white-fade composition repair.
