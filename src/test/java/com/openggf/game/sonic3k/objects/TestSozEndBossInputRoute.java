@@ -108,15 +108,19 @@ class TestSozEndBossInputRoute {
         input.setLogicalOverride(com.openggf.debug.playback.RecordedInputSnapshots.fromBk2(neutral,neutral));
         var loop=new com.openggf.GameLoop(input);
         loop.setGameplayMode(f.gameplayMode());loop.setGameMode(com.openggf.game.GameMode.LEVEL);
+        // GameLoop's PLC logical iteration services the fade once per step; no test-side FadeManager.update().
+        assertTrue(loop.ownsGameplayFadeLifecycle(),"production loop owns the gameplay fade");
         try {
             boolean ready=false;
             for(int tick=0;tick<2000;tick++) {
-                f.gameplayMode().getFadeManager().update();loop.step();
+                loop.step();GameServices.graphics().runPendingRenderThreadTasks();
                 var title=GameServices.module().getTitleCardProvider();
                 if(GameServices.level().getCurrentZone()==9
                         && loop.getCurrentGameMode()==com.openggf.game.GameMode.LEVEL
                         && (title==null||title.isComplete())
                         && !f.gameplayMode().getFadeManager().isActive()
+                        && !f.gameplayMode().getFadeManager().hasPendingCompletion()
+                        && !GameServices.level().hasPendingFreshLevelTransitionBoundary()
                         && !GameServices.camera().getFocusedSprite().isControlLocked()) {
                     ready=true;break;
                 }

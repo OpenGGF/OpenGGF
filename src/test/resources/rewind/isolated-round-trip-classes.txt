@@ -320,6 +320,7 @@ com.openggf.game.sonic3k.objects.AizBombExplosionInstance
 com.openggf.game.sonic3k.objects.AizBossSmallInstance
 com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance
 com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance$CollapsingLogSegment
+com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance$DisplayChild
 com.openggf.game.sonic3k.objects.AizDisappearingFloorObjectInstance
 com.openggf.game.sonic3k.objects.AizDrawBridgeObjectInstance
 com.openggf.game.sonic3k.objects.AizDrawBridgeObjectInstance$FallingBridgeSegment

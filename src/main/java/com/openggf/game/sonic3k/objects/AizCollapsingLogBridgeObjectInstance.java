@@ -11,6 +11,8 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
@@ -88,6 +90,11 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
 
     private int x;
     private int y;
+    /**
+     * Init has run: the display SST was allocated (or its allocation failed). ROM
+     * Obj_AIZCollapsingLogBridge does this once, on its first pass.
+     */
+    private boolean displayChildAllocated;
     private int state = STATE_IDLE;
     private int collapseTimer;
     private boolean segmentsSpawned;
@@ -216,6 +223,15 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        if (!displayChildAllocated) {
+            // Obj_AIZCollapsingLogBridge init (sonic3k.asm:59245-59268 normal,
+            // 59290-59318 fire): AllocateObjectAfterCurrent gives the six logs their
+            // own display SST (loc_2AEB4) and stores its address in $3C. The parent
+            // never calls Draw_Sprite. Init then branches into loc_2AE70/loc_2AEE2
+            // in the same pass. A failed allocation (bne) leaves the logs undrawn.
+            displayChildAllocated = true;
+            spawnChild(() -> new DisplayChild(this));
+        }
         if (brittleSupportTicks != 0 && state == STATE_IDLE) {
             brittleWarningTick = (brittleWarningTick + 1) & 0x0F;
         }
@@ -324,11 +340,22 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
         ObjectLifetimeOps.markSpawnRemembered(objManager, spawn);
 
         int delay = brittleSupportTicks != 0 ? brittleSupportTicks : subtypeBase;
+        DisplayChild display = liveDisplayChild(objManager);
         for (int i = 0; i < SEGMENT_COUNT; i++) {
             CollapsingLogSegment segment = new CollapsingLogSegment(
                     segmentX[i], y, segmentFrame[i], delay, artKey, isFireBridge);
             segment.brittleWarning = brittleSupportTicks != 0;
-            spawnDynamicObject(segment);
+            if (i == 0 && display != null) {
+                // sub_2AFFE (sonic3k.asm:59486-59493): movea.w $3C(a0),a3 / movea.l a3,a1
+                // writes the first falling log into the display SST itself; it runs
+                // later in this pass because that SST follows the parent.
+                int displaySlot = ObjectLifetimeOps.detachSlotForTransfer(display);
+                display.setDestroyed(true);
+                ObjectLifetimeOps.addReplacementAtTransferredSlot(objManager, segment, displaySlot);
+            } else {
+                // loc_2B016: AllocateObjectAfterCurrent for the other five logs.
+                spawnDynamicObject(segment);
+            }
             if (brittleSupportTicks == 0) {
                 delay += COLLAPSE_DELAY_INCREMENT;
             }
@@ -337,15 +364,35 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
         services().playSfx(Sonic3kSfx.COLLAPSE.id);
     }
 
+    private DisplayChild liveDisplayChild(ObjectManager objectManager) {
+        if (objectManager == null) {
+            return null;
+        }
+        for (ObjectInstance instance : objectManager.getActiveObjects()) {
+            if (instance instanceof DisplayChild display && display.parent == this
+                    && !display.isDestroyed() && display.getSlotIndex() >= 0) {
+                return display;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Delete_Sprite_If_Not_In_Range and Sprite_OnScreen_Test share this window: the
+     * object's X with the low 7 bits cleared, minus Camera_X_pos_coarse_back, compared
+     * unsigned against $280 (sonic3k.asm:37302-37308).
+     */
+    private static boolean outsideCoarseWindow(int cameraX, int objectX) {
+        int cameraXPosCoarseBack = ((cameraX & 0xFFFF) - 0x80) & 0xFF80;
+        int objectXCoarse = objectX & 0xFF80;
+        return ((objectXCoarse - cameraXPosCoarseBack) & 0xFFFF) > 0x280;
+    }
+
     private void deleteSpriteIfNotInRange() {
         if (isDestroyed()) {
             return;
         }
-        int currentCameraX = services().camera().getX() & 0xFFFF;
-        int cameraXPosCoarseBack = (currentCameraX - 0x80) & 0xFF80;
-        int objectXCoarse = x & 0xFF80;
-        int diff = (objectXCoarse - cameraXPosCoarseBack) & 0xFFFF;
-        if (diff > 0x280) {
+        if (outsideCoarseWindow(services().camera().getX(), x)) {
             // loc_2AE98/loc_2AF06/loc_2AF70 all tail-call
             // Delete_Sprite_If_Not_In_Range, which clears the respawn bit
             // before deleting so the layout entry can reload on camera return.
@@ -406,6 +453,11 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        // The parent has no Draw_Sprite; its display SST draws the logs.
+    }
+
+    /** Draws the six logs for the display SST (mainspr_childsprites = 6). */
+    void renderLogs(List<GLCommand> commands) {
         if (segmentsSpawned) {
             return;
         }
@@ -487,6 +539,97 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
 
     protected SolidCheckpointBatch checkpointAll() {
         return services().solidExecution().resolveSolidNowAll();
+    }
+
+    /**
+     * ROM loc_2AEB4: the bridge's display SST. Init copies the parent's mappings, art,
+     * width, priority $200 and the six log positions and frames into its sub-sprites,
+     * then it only runs Sprite_OnScreen_Test (sonic3k.asm:37302-37315): Draw_Sprite
+     * inside the coarse window, otherwise Delete_Current_Sprite. It has no respawn
+     * entry. sub_2AFFE reuses this SST as the first falling log.
+     */
+    public static final class DisplayChild extends AbstractObjectInstance implements RewindRecreatable {
+        private final AizCollapsingLogBridgeObjectInstance parent;
+
+        DisplayChild(AizCollapsingLogBridgeObjectInstance parent) {
+            this(new ObjectSpawn(parent.x, parent.y, Sonic3kObjectIds.AIZ_COLLAPSING_LOG_BRIDGE,
+                    parent.isFireBridge ? 0x80 : 0, 0, false, 0), parent);
+        }
+
+        /** Rewind probe constructor. */
+        public DisplayChild(ObjectSpawn spawn) {
+            this(spawn, null);
+        }
+
+        private DisplayChild(ObjectSpawn spawn, AizCollapsingLogBridgeObjectInstance parent) {
+            super(spawn, "AIZCollapsingLogBridgeDisplay");
+            this.parent = parent;
+        }
+
+        @Override
+        public DisplayChild recreateForRewind(RewindRecreateContext ctx) {
+            if (ctx == null || ctx.spawn() == null) {
+                return null;
+            }
+            AizCollapsingLogBridgeObjectInstance liveParent = null;
+            if (ctx.objectServices() != null && ctx.objectServices().objectManager() != null) {
+                for (ObjectInstance instance : ctx.objectServices().objectManager().getActiveObjects()) {
+                    if (instance instanceof AizCollapsingLogBridgeObjectInstance bridge && !bridge.isDestroyed()
+                            && bridge.x == ctx.spawn().x() && bridge.y == ctx.spawn().y()) {
+                        liveParent = bridge;
+                        break;
+                    }
+                }
+            }
+            return new DisplayChild(ctx.spawn(), liveParent);
+        }
+
+        @Override
+        public void update(int vIntRunCount, PlayableEntity player) {
+            if (isDestroyed()) {
+                return;
+            }
+            if (outsideCoarseWindow(services().camera().getX(), spawn.x())) {
+                setDestroyed(true);
+            }
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            if (parent != null && !parent.isDestroyed()) {
+                parent.renderLogs(commands);
+            }
+        }
+
+        @Override
+        public int getX() {
+            return spawn.x();
+        }
+
+        @Override
+        public int getY() {
+            return spawn.y();
+        }
+
+        @Override
+        public int getPriorityBucket() {
+            return RenderPriority.clamp(PRIORITY);
+        }
+
+        @Override
+        public boolean isHighPriority() {
+            return false;
+        }
+
+        @Override
+        public int getTileOcclusionPaletteMask() {
+            return (spawn.subtype() & 0x80) != 0 ? 0b0111 : 0b1111;
+        }
+
+        @Override
+        public boolean isPersistent() {
+            return !isDestroyed();
+        }
     }
 
     public static class CollapsingLogSegment extends AbstractObjectInstance implements RewindRecreatable {
