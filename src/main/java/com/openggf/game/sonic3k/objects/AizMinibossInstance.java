@@ -114,7 +114,6 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
     /** Callback for when the current horizontal swing count expires. */
     private HorizontalCallback horizontalCallback = HorizontalCallback.NONE;
     private boolean defeatRenderComplete;
-    private int retainedResultsOwnerSlot = -1;
     private int pendingDefeatTimer = -1;
     private int endSignControlWaitEntriesOwnedByBossBridge;
     private int defeatHandoffTimer = -1;
@@ -304,7 +303,6 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
     protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         updateDifficultyFollowup();
-        captureRetainedResultsOwnerSlot();
         maintainArenaCameraLock();
         if (pendingDefeatTimer >= 0) {
             if (pendingDefeatTimer > 1) {
@@ -335,20 +333,6 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
             }
         }
         updateCustomFlash();
-    }
-
-    private void captureRetainedResultsOwnerSlot() {
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager == null) {
-            return;
-        }
-        for (S3kResultsScreenObjectInstance results :
-                objectManager.activeObjectsOfType(S3kResultsScreenObjectInstance.class)) {
-            if (!results.isDestroyed() && results.getSlotIndex() >= 0) {
-                retainedResultsOwnerSlot = results.getSlotIndex();
-                return;
-            }
-        }
     }
 
     /**
@@ -451,41 +435,27 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
                 return;
             }
             levelEndSizeChangeStarted = true;
-            // ROM Change_Act2Sizes copies Act 2 size words into the stored
-            // camera-boundary memory and Camera_target_max_Y_pos, then creates
-            // gradual level-size objects (sonic3k.asm:180575-180609). Keep
-            // X/Y under the ROM gradual objects below; use the engine's target
-            // max-Y path for the copied Camera_target_max_Y_pos word. This
+            // Change_Act2Sizes copies the Act 2 stored bounds and target max-Y;
+            // it does not snap Camera_min_Y_pos. Child1_Act2LevelSize creates
+            // X, min-Y, max-Y through CreateChild1_Normal/AllocateObjectAfterCurrent
+            // before this retained control is deleted (skdisasm 044fa46,
+            // sonic3k.asm:180666-180703,
+            // 177010-177041). Even an already-at-target min-Y consumes its own
+            // SST until its later same-pass dispatch takes the signed ble branch.
             if (level != null) {
-                camera.setMinY((short) level.getMinY());
+                camera.setMaxXTarget((short) level.getMaxX());
                 camera.setMaxYTarget((short) level.getMaxY());
             }
-            ObjectManager objectManager = services().objectManager();
-            // Obj_LevelResults and its in-level title owner occupy one native SST.
-            // The engine carries that owner in a later consolidated slot. When that
-            // slot lies after this retained control owner, it is the first eligible
-            // representation of the hole Change_Act2Sizes sees; reuse it for the
-            // first Child1 worker, then continue FindNextFreeObj from there.
-            boolean reusedResultsOwnerSlot = retainedResultsOwnerSlot > getSlotIndex()
-                    && objectManager != null
-                    && objectManager.reserveDynamicSlot(retainedResultsOwnerSlot);
-            if (reusedResultsOwnerSlot) {
-                ObjectLifetimeOps.addDynamicAtReservedSlot(objectManager,
-                        new AizAct2CameraResizeController(
-                                AizAct2CameraResizeController.MAX_X),
-                        retainedResultsOwnerSlot);
-                spawnChildAfterSlot(retainedResultsOwnerSlot,
-                        () -> new AizAct2CameraResizeController(
-                                AizAct2CameraResizeController.MAX_Y));
-            } else {
-                spawnDynamicObject(new AizAct2CameraResizeController(
-                        AizAct2CameraResizeController.MAX_X));
-                spawnDynamicObject(new AizAct2CameraResizeController(
-                        AizAct2CameraResizeController.MAX_Y));
-            }
+            // The native scan has no remembered results-owner input. Each
+            // independent sibling takes the first free SST after this control.
+            spawnAfterCurrentSibling(() -> new S3kIncLevelEndXGradualInstance(0, 0));
+            spawnAfterCurrentSibling(() -> S3kCameraGradualObjectInstance.forActTwoLevelSizes(
+                    S3kCameraGradualObjectInstance.DEC_START_Y));
+            spawnAfterCurrentSibling(() -> S3kCameraGradualObjectInstance.forActTwoLevelSizes(
+                    S3kCameraGradualObjectInstance.INC_END_Y));
             // Obj_EndSignControlDoStart calls Change_Act2Sizes and then
-            // Delete_Current_Sprite. The two workers above continue from
-            // their own slots (sonic3k.asm:180415-180419,180575-180609).
+            // Delete_Current_Sprite. The three workers above continue from
+            // their own slots (skdisasm 044fa46, sonic3k.asm:180506-180510).
             setDestroyed(true);
         }
         camera.setMinX((short) triggerX);

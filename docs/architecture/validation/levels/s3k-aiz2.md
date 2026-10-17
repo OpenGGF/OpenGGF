@@ -274,16 +274,16 @@ executed9087–9089. These are separate observed clocks, not a fitted row/BK2 of
 The supplemental `EngineTiming` facade read0 in this headless context; it is not
 used as an object-clock measurement or assertion.
 
-**Inherited three-worker gap:** exact ROM bytes at `$85DE0` jump to
+**R1 three-worker gap, separately closed by R2 below:** exact ROM bytes at `$85DE0` jump to
 `CreateChild1_Normal` at `$84060`; table `$85DE8` has count-minus-one2 and pointers
 `$84A48` (X), `$84AA4` (min-Y), `$84AD2` (max-Y), each with zero position offsets.
 Native8940 retains X12 and max-Y14; min-Y13 is absent from the completed row.
 Its `$4000` first carry has integer part0 and the signed `ble` already-at/beyond-
 target branch snaps and deletes it. Native X retires at9272 and max-Y at8989.
-The AIZ engine owner still creates only X/max-Y and snaps min-Y directly. This
-unit does not repair or qualify that omitted SST, exact three-worker allocation,
+At R1 the AIZ engine owner creates only X/max-Y and snaps min-Y directly. The
+R1 unit does not repair or qualify that omitted SST, three-worker allocation,
 nontrivial min-Y continuation, allocation failure or those workers' rewind.
-They remain a separate source-owned obligation, not a standing-field waiver.
+R2 below addresses the handoff separately; allocation exhaustion remains open.
 
 The change-based preview against803 selects2828 smoke classes plus guards.
 The authorized bounded owner/startup/trace/guard selection replaces that broad
@@ -293,3 +293,95 @@ flow component replay. It is not a full-prefix physics/animation sweep, full SST
 or auxiliary-schema certificate, another BK2, native pixels, all configurations,
 full chain or act certification. Missing advertised aux families remain missing.
 No full chain, broad smoke or release suite was rerun.
+
+## Three Act2 level-size workers — 2026-10-17 R2
+
+Separate owner unit on R1 `da70653308ecf6290b3df020ebed3fd624399789`, same
+checkout/branch and immutable original input evidence above. Only
+`AizMinibossInstance` changes runtime behavior; final tested/restored SHA256 is
+`3aa35fede24c479ef72af6ead674f4f1cbf9595837ea600c0874ffb59ec15cd2`.
+No shared flow, worker implementation, allocator, bounds manager, title timing,
+bootstrap, input or trace payload changes.
+
+References here use this checkout's skdisasm pin
+`044fa46725c71187399e13f5ddb70e11d32dc024`, not universal line numbers:
+`Obj_EndSignControlDoStart`180506–180510 calls `Change_Act2Sizes`180666;
+`Make_LevelSizeObj`180688 uses `Child1_Act2LevelSize`180694–180701, whose three
+entries are X/min-Y/max-Y. The previously verified ROM jump/table at
+`$85DE0/$85DE8` and targets `$84A48/$84AA4/$84AD2` agree. Each
+`CreateChild1_Normal` iteration177010–177041 calls `AllocateObjectAfterCurrent`
+37952–37969 from the active control, with no remembered results-slot input.
+The workers178245–178318 accumulate `$4000/$4000/$8000`; X uses unsigned `bhs`,
+min-Y signed `ble`, and max-Y signed `bgt` for retirement.
+
+The handoff now publishes Act2 max-X/max-Y targets and creates the existing
+`S3kIncLevelEndXGradualInstance` plus the two
+`S3kCameraGradualObjectInstance.forActTwoLevelSizes` modes through
+`spawnAfterCurrentSibling`, in source order, before deleting the retained control.
+It preserves min-X and the deferred title-completion poll. It removes the direct
+min-Y snap and the remembered-results reservation. No native equivalent of that
+reservation was found; the independent allocation witness demonstrates its effect.
+
+`TestAizAct2LevelSizeWorkers` declares the late retained-control component entry
+in an actual AIZ2 world, with a real active boss/results owner and normally
+allocated objects that retire to leave holes. Production ObjectManager scans,
+with read-only witnesses interleaved in the live SST, observe all three births
+before min-Y dispatch. Observed control18 has lower hole17, first eligible hole19,
+middle witness20, former results hole21, last hole22 and tail witness23. These are
+results of normal allocation, not assigned slots or runtime constants.
+
+The old-red12271 (11:05:50 UTC, 2/2F/0E/0S, Maven24.162s, no queue wait) creates
+the old X/max-Y controllers at21/22, skips19 and omits min-Y. Both cases complete
+two whole-registry45-scan restore/replay cycles before failing their behavior
+assertions. A min-Y distance16 snaps to the target on dispatch1 rather than
+remaining16 for the first three dispatches. Corrected births are X19/min-Y21/max-Y22.
+At distance0 the middle witness sees min-Y21 before it self-retires in that same
+creation scan; counting only surviving workers would miss this obligation.
+
+Both distance0 and distance16 cases compare every accelerating bound and live
+owner over45 production scans. With X/max-Y distances16, X retires on dispatch13;
+nontrivial min-Y also retires13. Max-Y remains live at equality on dispatch8 and
+retires9. No ordinary camera tail is executed in this component check, so the
+observations are worker dispatches, not trace rows or complete engine frames.
+Each case captures the full registered world before handoff and after scan1,
+forces object recreation, restores each snapshot twice, compares every registered
+key immediately, then replays45 or44 scans and compares the complete final world.
+The distance16 live snapshot recreates all three actual workers and their
+fractional accumulators/Act2 target modes.
+
+All Maven commands use the exact Java25/Main absolute wrapper/environment/ROM
+prefix above, with `-Ds3k.rom.path="$S3K_ROM" test -B`. Selections and results:
+
+| Selection | Completed result |
+| --- | --- |
+| `-Dtest=TestAizAct2LevelSizeWorkers,TestAizMinibossCameraUnlock,TestS3kBossDefeatSignpostFlow,TestS3kSignpostNativeControlSst,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils` |55530, 70/0F/0E/0S, 11:07:36 UTC, Maven1m12s, no wait; includes existing factory/acceleration controls and all mandatory S3K4 identities. |
+| `-Dtest=TestAizAct2LevelSizeWorkers,TestGenericRecreate` after strengthening live-worker restore |93137, 13/0F/0E/0S, 11:09:56 UTC, Maven23.353s, no wait. |
+| Original exact standing selection from R1 above, once on R2 |36591, 1/0F/0E/0S, 11:11:22 UTC, Maven1m12s, no wait; all twenty assertions pass, rows9510–9513 stand12, admission9392 parent12/display17, same clocks as R1. No initial R2 red prefix. |
+| `-Pguards -Dtest=TestArchitecturalSourceGuard,TestHardwareTimingAuthorityGuard,TestRewindArchitectureGuard,TestObjectPhysicsStandardizationGuard` |87743, 134/0F/0E/0S, 11:15:17 UTC, Maven34.867s, no wait; source72/authority25/rewind4/object33. |
+| `-Ptrace-segments -Dtest=TestS3kAizZoneSliceTraceReplay#replayMatchesTrace`, existing distinct movie |R2 45125, 1/1F/0E/0S, 11:13:37 UTC, queue77s/Maven35.395s. Authorized exact matched R1 75679, 1/1F/0E/0S, 11:17:01 UTC, no wait/Maven1m20s. The complete76-entry error arrays, warnings, bootstrap, verification groups and missing-aux arrays are equal. |
+
+The distinct `_movies/s3k-complete-sonic-tails.bk2` has SHA256
+`82eabfbc65e33c160ce209baa1ca3f967cb677fe22350bc100625d8c41a8e1bf`.
+Both alternate runs compare26041 frames and retain76 errors: first11350
+`player_animation_id` expected`0x13`/actual`0x05`, eight queue differences at
+11350–11351,67 animation differences through11858, and trailing26179 `rings`
+72/0. This is inherited on exact R1, not the earlier composition's single-ring
+frontier and not a green route. At the first difference the control still has
+`End_of_level_flag=false`; matching the full arrays, rather than that observation
+alone, establishes no R2 worsening. No title behavior was tuned.
+
+For the matched control only the owned runtime file was temporarily restored
+under the intended-tree lease; all production sources then matched `da706`.
+The new test stayed unchanged. Exact R2 bytes/hash above were restored under the
+lease afterward; earlier R2 prefix/guards apply to those identical source bytes.
+`target/` currently contains the last R1 control compilation, not R2 classes.
+No rebuild is claimed or requested here; Root will compile the composed source.
+Inspected reports and the bounded source helper are consumed/removed normally.
+
+The actual task-tree change-based preview against R1 selects3040 smoke classes
+plus guards. This bounded owner/startup/recreation/trace/guard selection replaces
+that broad run here; Root owns one combined composition validation. Allocation
+exhaustion, native full-SST/position equivalence, the absent advertised auxiliary
+families, other configurations/rosters, complete-route title frontier, native
+pixels and whole-chain/act certification remain open. No new native/media run,
+whole chain, broad smoke or release suite was run.

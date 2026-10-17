@@ -112959,3 +112959,35 @@ whole-prefix physics/animation, full SST/chain, configurations and act coverage
 are not certified. No fixture hydration, field removal/waiver, allocator/bounds
 rewrite, new native/media capture or repeated full chain was used. Root owns
 later composition and delivery.
+
+## 2026-10-17 — AIZ three-worker handoff qualified; matched R1 alternate frontier retained
+
+R2 on local R1 `da70653308ecf6290b3df020ebed3fd624399789`, T3 `t3-98d036a9`,
+same standing-SST branch. Only `AizMinibossInstance` runtime changes: existing
+X/min-Y/max-Y owners take AfterCurrent slots in native order; no min-Y snap or
+remembered-results reservation. The [R2 matrix](../architecture/validation/levels/s3k-aiz2.md#three-act2-level-size-workers--2026-10-17-r2)
+records own disassembly pin, source hash, old-red, exact commands and bounds.
+
+Normal Main-wrapper lane/Java25/EGL/nullAL/original absolute S3K ROM, no ambient
+display. Old-red12271 is2/2F/0E/0S; corrected70 focused cases and13 strengthened
+recreation cases have no failures/errors/skips. Both prehandoff and live-worker
+full-world snapshots force recreation/replay twice. Fresh guards87743 pass134.
+The original `-Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true
+-Dtest=TestS3kAizTraceReplay#normalBridgeStandingSstMatchesOriginalFullrun test -B`
+runs once on R2 (36591,11:11:22 UTC):1/0F/0E/0S, all20 assertions, four actual
+standing slots12, correct placed bridge/P1 centres and parent12/display17 at9392.
+
+Distinct existing `-Ptrace-segments
+-Dtest=TestS3kAizZoneSliceTraceReplay#replayMatchesTrace test -B` is red on R2
+(45125,11:13:37 UTC) and authorized exact R1 control (75679,11:17:01 UTC):
+1/1F/0E/0S each, complete76-entry error arrays equal, zero warnings. First11350
+`player_animation_id`13/5; eight queue entries11350–11351,67 animation entries
+through11858, trailing26179 `rings`72/0. There is no R2 worsening; the R1-only
+title frontier remains explicit and differs from the earlier composed single-ring
+result. No title repair or another alternate was attempted.
+
+Exact tested R2 source hash was restored after the matched control; target still
+contains its last R1 compilation. Root will fresh-compile the composition. No
+new native/media, input changes, field waiver, full chain or broad smoke here.
+Inspected reports/helper are consumed normally; full SST/aux/breadth and complete
+act qualification remain open, while this three-worker owner unit is closed.
