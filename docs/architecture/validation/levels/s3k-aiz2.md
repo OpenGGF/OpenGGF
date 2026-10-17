@@ -554,3 +554,518 @@ The final target compilation is runtime1878 plus restored maintained replay test
 and the tightened guard inventory, from27275. Temporary observer source is absent.
 All inspected diagnostics and bounded source helpers are consumed under the metadata
 lease alone; no receipts/log archives remain. All job handles are terminal/released.
+
+
+## Alternate ring birth and earlier placement admission — 2026-10-17 R4
+
+Read-only unit in the same t3-98d036a9 on Root5da817090e2925cd03d5f72b8546ae53a7687025;
+AIZ runtime1878f322bfa03f2c20970c5dd2a371839a4e90481b93c872c332695331027626 unchanged.
+The one unchanged alternate-driver prefix69634 ends13742:1/1F/0E/0S,12:17:26UTC,
+Maven1m11s/no queue wait,13713 compared rows,zero warnings/bootstrap,seven-plus-one
+known absent advertised aux families. First13740 rings1/2 remains; no green claim.
+It uses the R3 common Main-wrapper/normal/all-three-original-ROM/EGL/nullAL/no-ambient
+environment and trace-segments single-fork/reuse/alphabetical flags, selecting
+TestS3kAizZoneSliceTraceReplay#observeAlternateRingBirthAdmissionReadOnly.
+The temporary observer supplies only logging/semantic end, no gameplay values.
+
+Native fixture13565 frees11–15, including PathSwap12 and decor11. Engine retires
+the same source identities at13565, but in12–16. Native lowest hole11 contrasts
+engine actual firstFree12 at13565–13567. The engine monitor at1C08/04E0 occupies11,
+while the same native monitor is10. Engine13568 consumes free12 for the first
+negative-00C4 ring and13/phase96 for positive00C4; native uses11 and12/phase97.
+Both positive rings start1B2D/01F5, thirteen rings and count13→0. Thus the ring
+allocator does not skip actual lowest-free12; its reservation fault hypothesis
+is rejected. No pending queue remains at the completed sampled boundaries; that
+is not a claim about absence during the production pass. Earlier pool permutation
+precedes the hurt. First engine positive-vector bounce is13656:1B71/0207,
+y-velocity0454→FCAF, actual ObjectManager Vbla38E0,LF353B,executed13627,
+next input cursor14598. The first differing earlier admission is still unobserved.
+
+The three exact identities are ROM placements, read directly from the original
+ROM: pointer1E3D9C→AIZ2 object list1E4876, matching own skdisasm2.bin.
+
+| Placement / engine identity at13567 | ROM record / native owner and lifetime |
+| --- | --- |
+|256 Sonic3kInvisibleBlockObjectInstance, engine6, id28/sub11,rawY0490 |1E4E76=`1b9004902811`; native5/code1EC6C, first appearance12612; no retirement through13742. Obj_InvisibleBlock/loc_1EC6C owns solid and coarse-X range return (own pin42696–42745). |
+|258 AnimatedStillSpriteInstance, engine5, id30/sub01,renderFlags1,rawY2331 |1E4E82=`1b9723313001`; native23/code2BF5A, first appearance13025; no retirement through13742. Obj_AnimatedStillSprite→loc_2BF5A→Animate_Sprite/Sprite_OnScreen_Test (60417–60438). |
+|265 Sonic3kMonitorObjectInstance, engine11, id01/sub07,rawY04E0 |1E4EAC=`1c0804e00107`; nativecode1D566, first appearance12806/slot31, retirement12912/slot31, reappearance12967/slot10, no later retirement through13742. Obj_Monitor/Init/Main/range tail40482–40548. |
+
+All line citations use skdisasm044fa46725c71187399e13f5ddb70e11d32dc024.
+Static258 is not a child or mutable-spawn explanation: its only production
+construction is the registered placement factory plus rewind recreation; the
+class never updates dynamic spawn or overrides getSpawn. The six-byte record,
+layoutIndex258 and source coordinates agree. Native lifetime events are actual
+object_appeared/object_removed, corroborated by full slot_dump, rather than the
+first filtered object_state. Engine admission before13563 was not observed.
+
+Root's separately produced immutable taskD/aiz-ring-native13740-v2 supplies the
+missing native positions. Its single process47191 exited1 because the final
+assertion incorrectly required a nonzero Touch_ChkValue callback: nine raw
+Touch_Process boundaries and zero ChkValue are retained evidence, not a green
+diagnostic/certificate. ProbeSHA256a889b8740c33bfb18d56dd02c128ddd595a16866e3957589a1211ae6f7850cbc,
+original movie82eabfbc65e33c160ce209baa1ca3f967cb677fe22350bc100625d8c41a8e1bf.
+At native FF06 Touch_Process input14681 (next cursor14682),LF358F,VInt3934,
+P1/P2 and rings1 agree: B378/native12 positive00C4 ring is1BB0/04B9,vy0C34.
+The later completed RAM boundary is1BB1/04C5,vy0C4C; do not merge these phases.
+Engine before that touch retains13 at1BB0/01EE,vyFE74 and collects it.
+
+The targeted next question is placement258's first engine admission relative
+to256 and265, including the monitor's native reload cycle. Its rawY2331 bit15
+is clear: native loc_1BA92 applies the normal Y gate. At12612 camera1982/048A,
+window0400–0680 excludes0331; at13024 camera1A37/03FB,window0300–0580 includes it,
+then native13025 births it. This suggests a specific initial/deferred/cursor/
+camera-order question, not a proven AnimatedStill, monitor, ring, phase or allocator
+fix. One newly authorized unchanged prefix ending13026 will observe only these
+three admissions/retirements and event-neighbor placement/camera state. No new
+native, media, full alternate, canonical, guards or broad run is authorized here.
+The alternate's ten new ring spans and inherited terminal ring error still block integration.
+
+
+### Exact-three-placement observation: gate/lifetime hypothesis rejected
+
+Authorized final prefix11174 ends13026 using the original alternate replay
+method via its existing passive closure hook/semantic prefix. Same runtime1878,
+base5da and common flags/environment above; selector
+TestS3kAizZoneSliceTraceReplay#observeThreeExactPlacementAdmissionsReadOnly.
+Terminal0,12:27:37UTC,1/0F/0E/0S,Maven32.766s,no wait,12998 compared rows,
+zero errors/warnings/bootstrap. This shorter prefix stops before the known ring
+frontier and does not qualify the full alternate. Initial attempt30691 stopped
+with a diagnostic null-spawn NPE after3278 compared rows,12:26:40UTC,
+1/0F/1E/0S,28.408s/no wait; its null handling alone was corrected. It supplies
+no target-admission result or green credit.
+
+All three target admission/lifetime **rows match native**:
+
+| Event | Engine observation | Native event/full-pool evidence |
+| --- | --- | --- |
+|256 first birth12612 |InvisibleBlock6 |InvisibleBlock5, actual appearance12612 |
+|258 deferred12612 |absent, deferredVerticalLoad=true, active=true; rawY2331 |absent from full12612 slot_dump; native gate excludes0331 |
+|265 birth12806 |Monitor30 |Monitor31, actual appearance12806 |
+|265 retire12912 |absent/active=false |Monitor31 removed12912 |
+|265 reload12967 |Monitor11 |Monitor10 appeared12967 |
+|258 birth13025 |AnimatedStill5, deferredVerticalLoad=false |AnimatedStill23, actual appearance13025 |
+
+At12612 live/copy/manager cameras all1982/048A, minY0, normal Y window0400–0680;
+skipVerticalFilter=false. Source258 remains deferred. At13024 all cameras
+1A37/03FB, source258 remains absent/deferred; at13025 all cameras1A37/03EF,
+twoAxisCameraYCoarse changes0400→0380 and the deferred Y pass admits it.
+The X cursors are272/222, X coarse1A00, with no pending X load. Actual13025
+ObjectManager Vbla3669, LF32C5, executed12997, next BK2 cursor13967. This
+disconfirms early static admission, a missed vertical filter, or monitor reload
+timing as the repair for these three owners. No production change is justified.
+
+The permutation already exists before target256. Completed12610–12611 engine
+firstFree4, holes4/6/18/22+, with rock240 at slot5:1AC0/05D8,id05/sub11,
+ROM1E4E16=`1ac005d80511`. The same native rock is6, born12510. Thus engine
+loads256 into genuine next free6, while native can use5. At13024 engine5 is
+genuinely free (the prior rock/animal is gone), so static258 correctly takes5.
+The source owner and its normal retirement are different from an allocator skip.
+
+Existing full native slot_dump12586 lists rock6, static7, spring8, bridge9,
+static10–11, PathSwap12, static13, SS ring14, statics15–16 and bridge display17,
+plus transient bubble owners4/5/18/22. Native bubbles4/5 retire12592/12596;
+no intervening birth before12612 fills4/5. Before native rock admission12510,
+slots4/5 still hold placements208/209: static1803/04DF,code2BF5A,record
+1E4D56=`180324df3001`; AutoSpin1810/0460,code1E896,record
+1E4D5C=`181024602680` (id26/sub80). Both retire12554. Native rock6, spring8,
+bridge9 and its display17 all appear12510. Later engine event pools already have
+bridge9/display10 and rock5, but this observation does not capture their own
+12510 admission or the preceding208/209 retirement. The remaining targeted gap
+is those earlier owners' pool/admission history, not a full110-slot certificate.
+No shared placement, lifetime, collision, phase or allocator fix is claimed.
+
+
+### Earlier208/209 and rock/bridge observation: culling exonerated
+
+One authorized original-driver passive prefix81466 ends12555 on unchanged
+base5da/runtime1878. Selector
+`TestS3kAizZoneSliceTraceReplay#observeEarlierPlacementLifetimeReadOnly`,
+using the same current Main absolute wrapper, normal lane, trace-segments,
+all three original absolute ROM properties, single fork/reuse/alphabetical,
+EGL/nullAL/no DISPLAY or WAYLAND environment above. Terminal0 at12:35:40UTC,
+1/0F/0E/0S, Maven32.568s/no queue wait,12527 compared rows, zero errors,
+warnings and bootstrap errors. The same eight advertised aux families remain
+absent. This prefix ends before the known alternate ring frontier; it is not
+alternate qualification. The observer only reads existing owners, placement
+bits, camera/cursor/clocks and the existing pure range predicate. No gameplay,
+bootstrap, input, lag, allocation, physics or timing mutation.
+
+Identity correction: source209 is **AutoSpinObjectInstance**, not spikes.
+The ROM record1E4D5C=`181024602680` is id26/sub80; registry AUTO_SPIN=$26
+selects AutoSpin, and native loc_1E896 is Obj_AutoSpin's horizontal crossing
+routine. Spikes is id08. Tracking used the exact layout identity, so the prior
+name error did not affect observation. Sources208/209 are first naturally
+admitted together at12217 and both naturally retire at12554, matching native.
+
+| Event | Engine ordered owners / free holes | Native event and full-pool evidence |
+| --- | --- | --- |
+|12216 before target admission |X worker5; free4/6+ |The corresponding native X worker is21, not absent. Native5 is free after earlier owners retire. |
+|12217 first208/209 |208 AnimatedStill4; X worker5;209 AutoSpin6;211 collapsing platform7; firstFree8 |208 still4;209 AutoSpin5; platform6; X worker21. All three placement birth rows match. |
+|12509 |208 still4,209 AutoSpin6; firstFree5; holes5/7/9/10/18+; no reservations |208 still4,209 AutoSpin5 remain live. Native X worker21 already retired12335. |
+|12510 rock/bridge births |rock240=5,spring241=7,bridge243=9,display=10; firstFree18 |rock6,spring8,parent9,display17. Native10–16 already contain earlier placements. |
+|12554 retirement |208/209 removed, firstFree4, holes4/6/22+ |208/209 removed from4/5 on this same row. |
+|12555 |same rock/spring/parent/display5/7/9/10; holes4/6/22+ |No new target lifetime difference demonstrated. |
+
+The rock is ROM1E4E16=`1ac005d80511`; bridge is
+1E4E28=`1ae504f82c08`. The display is the actual DisplayChild whose private
+parent reference is the layout243 bridge, not a guessed id/position match.
+No reservation occupies the engine holes at the emitted event boundaries.
+At12510 the bridge's own update allocates its display into the genuine next
+free slot10. Native display17 follows its different existing pool. These are
+observed results, not grounds for changing bridge allocation or seeding slots.
+
+At12217 live/copy/manager cameras all1617/03D3, X cursors214/197,
+lastCameraX160A/coarse1600, Y coarse0380. Source208/209 are active with no
+pending/deferred/dormant/destroy latches. Actual completed12510 is
+FULL_LEVEL_FRAME, LF30C2,ObjectManager Vbla3466, executed12482,
+next BK2 cursor13452; live/copy/manager camera1881/04DA, placement's
+lastCameraX1880/coarse1880, X cursors244/207. These clocks and cursor are
+read from their actual owners; no EngineTiming facade or fitted row offset.
+
+The existing ObjectManager.isObjectOutOfRange query is evaluated against the
+**sampled completed live camera**, not mislabeled as an intra-pass observation.
+At12553 the owners still exist and that query is already true at live1901/04BA.
+The earlier object pass used camera18FD (also placement.lastCameraX):
+base1800, object-aligned1800, unsigned distance0. At12554 the next pass uses
+1901, base1880 and distanceFF80, so both owners unload; completed live is1906.
+That matches native retirement12554. The later camera/sample phase explains
+why the sampled predicate can be true while the just-completed object is still
+live. Obj_AnimatedStillSprite/loc_2BF5A tails to Sprite_OnScreen_Test;
+Obj_AutoSpin/loc_1E896 tails to Delete_Sprite_If_Not_In_Range. Both source
+helpers use Camera_X_pos_coarse_back and unsigned $280. Engine's existing
+non-custom per-object end-of-pass check consumes the corresponding reference
+X and native-width $280. The observed lifetime/cull hypothesis is rejected.
+
+The genuine earlier boundary is **X-worker allocation before12217**. Native
+Obj_IncLevEndXGradual/code84A48 is born12001 in21 and retires12335. Engine's
+same semantic worker is already5 at12216; this is not proof of an extra worker
+or a wrong lifetime. Actual native12001 full pool has placements/owners in5–20,
+X21 and maxY23. Native5 is exact ROM placement159, AnimatedStill1037/0322,
+id30/sub0, record1E4C30=`103703223000`, appeared9509 and removed12018.
+Other stable native occupants include160 static1049/0346 in8,169 static119C/02E3
+in7 and177 static12A0/02C4 in6. The four-placement observer did not emit the
+engine worker birth pool at12001 or locate159 at that boundary. Missing owner,
+earlier retirement, another permutation, or a cursor difference cannot yet be
+selected from slot numbers. No production repair or independent old-red is
+justified by this remaining gap.
+
+Owning source at skdisasm044fa46725c71187399e13f5ddb70e11d32dc024:
+Obj_EndSignControlDoStart180506 calls Change_Act2Sizes180666, which falls into
+Make_LevelSizeObj180688 and the three-entry table180694. CreateChild1_Normal
+177010 repeatedly calls AllocateObjectAfterCurrent37952. The existing engine
+flow likewise uses spawnAfterCurrentSibling for all three workers. Native
+maxY23 with X21 and the table's minY entry is consistent with minY22 retiring
+in its creation pass; no native minY appearance event is asserted. The next
+specific missing witness is the actual engine pool/source159 lifetime when
+DoStart creates the workers, not a new global allocator or culling fix.
+
+Temporary observer source is restored byte-for-byte to HEAD after terminal81466;
+production remains1878 and no runtime edit is proposed. Target retains the last
+temporary observer compilation, not a fresh maintained-test compilation.
+Inspected diagnostic summaries/facts are recorded here; consumed reports are
+removed under the metadata lease alone. Original native/capture inputs stay
+immutable. No new native/media/alternate/canonical/guards/broad run. The ten new
+alternate ring spans and inherited terminal ring error remain integration blockers.
+
+
+## R5 low-SST journal and animal lifetime owner — 2026-10-17
+
+R4 evidence is preserved separately at e207faf7dd14c9b6c9cc435fb438922d8f689f52.
+One passive original-alternate-driver prefix84110 through12019 ran on that
+commit/base5da/runtime1878, with the same current Main absolute wrapper,
+normal/all-three-ROM/EGL/nullAL/no-ambient environment, trace-segments,
+single-fork/reuse/alphabetical flags. Selector
+TestS3kAizZoneSliceTraceReplay#observeEarliestLowSstTransitionsReadOnly.
+Terminal0 at12:44:57UTC,1/0F0E0S,Maven45.503s/no wait;11994 compared rows,
+zero errors/warnings/bootstrap, eight known absent advertised aux families.
+The completed-frame low-SST4–23 journal has362 ownership/lifecycle-state events,
+2,423,252 bytes below its10,000,000-byte cap. Initial full pool and requested
+previous/current birth/control pools were recorded; no110-slot certification,
+within-pass listener, source API, state seeding or gameplay writes.
+
+Source159 first naturally appears9077 in31 in both engine/native, unloads9230,
+and returns9509 in engine8/native5. It stays live through DoStart and retires
+12018 in both. Thus the R4 slot5-specific9509 birth was a re-admission, not its
+first lifetime. It is neither missing nor prematurely culled at the worker handoff.
+Actual12000 flow occupies4, phaseAWAIT_ACT_TRANSITION,nativeControlSlot4,
+End_of_level_flag=true,159in8, genuine free5/21/22/23. Actual12001 X worker5 has
+accumulator4000 and maxY22 has8000; flow4 is gone. The independent workers have
+no retained engine-parent backlink; the previous flow and source factory identify
+the caller. Source order is consistent with minY21 self-retiring in its birth
+pass; that transient is not claimed as a direct completed-frame observation.
+Native workers are21/23, with the same source-consistent minY22 transient.
+Actual12001 FULL_LEVEL_FRAME LF2EC8,ObjectManager Vbla3269,executed11976,
+next BK2 cursor12943, live/copy camera10E0/02B8. No allocator defect is shown.
+
+The same journal identifies a concrete earlier lifetime disagreement:
+
+| Boundary | Engine | Existing native evidence |
+| --- | --- | --- |
+|9279 freed animal birth |AnimalObjectInstance5,source0E10/033C |Obj_Animal/code2C778 in5,same centre |
+|9295,9315,9316 pop |0E10/0316,0E10/0328,0E10/032B |Same centres,routine2 |
+|9323 landing |FLY,0E10/0342 |routine0E,0E10/0342 |
+|9373–9374 native render edge |The later engine9377 sample remainsFLY at0D74/02EE;9378 at0D71/02EF, consistent with the same -300 flight |9373 centre0D80/02EC,camera0D88/02DA: right edge0;9374 centre0D7D/02EC,camera0D86/02DA: right edge-1 |
+|9375 next object pass |Animal5 remains live |Animal5 actually removed |
+|9378 next native admission |Engine5 still animal |PathSwap/code1CD8A at0CF0/02E8 takes5 |
+|9418 |Animal5 finally retires;5 becomes free |PathSwap5 still live |
+|9463 decor admission |layout152 F80/038A takes genuine free5,153 F85/0338 takes10 |PathSwap5 retires during this pass after loading;152 takes10,153 takes32 |
+|9509 re-admission159 |159 takes8,160 takes11 |159 takes5,160 takes8 |
+
+This proves a causal lifetime branch, rather than assigning blame from slot
+numbers. It does not certify every intervening owner or put an unobserved engine
+PathSwap allocation into a guessed slot. The journal observes completed passes;
+source/load order explains the still-occupied native5 at9463 loading. Existing
+native object_state/appear/remove/full slot_dump and original physics camera rows
+are comparison-only inputs to this analysis.
+
+At own skdisasm044fa46725c71187399e13f5ddb70e11d32dc024,
+Obj_Animal60938 dispatches initial pop through loc_2C9E0 (61139), then this
+species' flight through loc_2CA7C. loc_2CAD0 (61211) tests the prior
+render_flags bit7 and deletes through loc_2C9DA (61135). Render_Sprites
+36376–36417 clears then recomputes that bit using copied camera and width8;
+the left edge is inclusive at dx=-8 and outside at dx=-9. Animal init writes
+y_radius=C and width_pixels=8, but leaves height_pixels=0. That zero render
+height is distinct from its collision radius and S2's approximate32-pixel Y band.
+Engine AnimalObjectInstance.onScreen(64) uses a fresh64-pixel margin because
+GameRules.SONIC_3K.animalObjectUsesRenderFlagDeleteBounds is false. Its existing
+cached-render path assumes S2 height32, so simply enabling that switch is incomplete.
+The observed animal's pop/floor/flight agree before retirement; no physics, RNG,
+points or allocator correction is justified by this evidence.
+
+Root authorized one independent old-red production-birth/previous-render-edge
+regression with natural pop/landing/flight, next-pass retirement/free-hole reuse,
+in-range control and twice forced whole-world recreation/forward replay, followed
+by the smallest animal lifetime/S3K semantic seam repair. Shared owner scope is
+explicitly coordinated before editing. Affected animal/S2/RNG/rewind and mandatory
+S3K checks, then one existing alternate and exact standing/original/twoSS methods,
+remain required. No new ancestor prefix/native/media/fullchain/broad work.
+The ten new alternate ring spans remain integration blockers until requalified.
+Temporary observer source is restored exactly; its journal and inspected reports
+are consumed normally after these facts are recorded. Target retains84110's
+last temporary observer compilation until the next authorized test build.
+
+
+### R5 animal repair qualification and unchanged alternate blocker
+
+The final runtime delta from R4e207 is only AnimalObjectInstance and the existing
+GameRules.SONIC_3K animal lifetime switch. No new rule shape, factory API,
+physics/RNG/points/allocator behavior, collision radius, native input, capture or
+state hydration. The existing camera semantic
+useScreenYWrapValueForVisibility selects the S3K copied-camera/word-mask render
+path. S1/S2 keep their original lifetime flags and geometry. MAIN now polls
+before movement; walk/fly keep their post-work poll. First init draws first, and
+existing captured romRenderOnScreen/firstDisplayFrame are retained through
+recreation. The class handles ordinary subtype0 freed animals; nonzero-subtype
+player-relative branches and separate ending/capsule animals are not certified.
+
+| Exact check | Observed result |
+| --- | --- |
+| Independent old-red TestS3kFreedAnimalRenderLifetime on runtime1878 |15578,12:55:08UTC,2/2F0E0S,Maven24.170s/no wait. Natural edge pass92,X0D77/dx-9: cachedtrue,retirementfalse,reuse-1. Geometry's eight assertions expose outside/height0/wrap and MAIN motion before deletion. Twice forced whole-world recreation from birth/live edge replays consistently. |
+| Affected animal/S2/RNG/rewind and mandatory S3K checks after repair |27140,12:57:40UTC,73/0F0E0S,Maven1m11s/no wait, ten actual classes. Newanimal2,AnimalRNG3,S2animal1,DestructionEffects6,EggPrisonAnimalRewindRendering1 and mandatory S3K60 pass. Natural edge now cachedfalse,next-pass retirementtrue,reused4; two complete forced-recreation cycles pass. |
+| One corrected existing alternate replay |39799,12:59:18UTC,1/1F0E0S,Maven36.231s/no wait,26041 compared rows,zero warnings/bootstrap. Physics11,animation0. All eleven field/span/expected/actual identities match R3's durable33952 record, including first13740 rings1/2. **Alternate remains UNQUALIFIED.** |
+| Original AIZ + exact standing + two-special-stage prefix |6148,13:01:20UTC,3/0F0E0S,Maven1m01s/no wait. Original20463 rows/zeroerrors,warnings,bootstrap,seven known absent advertised aux schemas. Standing9510–9513actual12/all20assertions,admissionparent12/display17. Prefix0/2/4complete,physics0/animation0/warnings0/bootstrap0;five dynamic-art gaps/failures0. |
+
+Final source hashes: AnimalObjectInstance
+73f1c45485ca81a7ef055d58c0e26abda1664089456eba4f4f4829dff734b5ed;
+GameRules7b694eba04238262861a76cc6977f85eb93a8709f30464c1eb891fe4fecaeb1c.
+Independent exact-source review found no material issue and made no execution
+claim. The actual focused/trace results above supply that separate evidence.
+No extra review loop, guard sweep, ancestor prefix, native/media or full chain.
+Root owns combined smoke/source-authority guards and composition.
+
+Root's matched published803 control78232 (separate owned baseline tree) executed
+only the exact alternate case and retained **one**26179 rings72/0 error,
+1/1F0E0S,12:52:40.260085UTC,Maven1m25s,zero warnings. It used
+**-Ptrace-replay**, while worker39799 used **-Ptrace-segments**. The POM has
+identical3GiB argLine,fork/reuse/order,tmp/system properties for these profiles;
+only suite selection/includes/excludes/groups differ, and the exact requested
+case executed once in both. No runtime/bootstrap/fixture property difference or
+rerun is inferred. Record the actual profile names rather than claiming literal
+command equality.
+
+The ten13740–16669 spans are therefore confirmed **new versus803**, even though
+the animal-rule defect itself was inherited. The hypothesis that this one
+lifetime correction alone closes those ring spans is rejected by39799. It
+repairs a demonstrated native lifetime and has not located the remaining
+post-fix ring admission/trajectory owner. No post-fix SST certificate, phase
+adjustment, collision/debris/LostRing change or green integration claim follows.
+Four native loc68E98 debris omissions, full native aux/RNG/position equivalence,
+original's seven/alternate's eight missing advertised aux families, allocation
+exhaustion, wider viewport/donor/roster, cold/other BK2 routes and full chain/act
+coverage remain open.
+
+All R5 commands ran from the owned tree. In this reproducible command form,
+OPENGGF_MAIN denotes the original absolute Main checkout; JDK_JAVA_OPTIONS and
+MAVEN_OPTS remain inherited. No direct toolchain probe or outer activity lease.
+
+```bash
+r5_maven() {
+  env -u DISPLAY -u WAYLAND_DISPLAY EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null \
+    LUA_BIN=/usr/bin/lua5.4 JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+    python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal \
+    -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+    -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical \
+    "$@" "-Dsonic1.rom.path=$OPENGGF_MAIN/s1.gen" \
+    "-Dsonic2.rom.path=$OPENGGF_MAIN/s2.gen" "-Ds3k.rom.path=$OPENGGF_MAIN/s3k.gen" test -B
+}
+r5_maven '-Dtest=TestS3kFreedAnimalRenderLifetime'
+r5_maven '-Dtest=TestS3kFreedAnimalRenderLifetime,TestAnimalObjectRngOwnership,TestSonic2AnimalObjectTiming,TestDestructionEffects,TestEggPrisonAnimalRewindRendering,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils'
+r5_maven -Ptrace-segments '-Dtest=TestS3kAizZoneSliceTraceReplay#replayMatchesTrace'
+r5_maven -Ptrace-replay '-Dtest=TestS3kAizTraceReplay#normalBridgeStandingSstMatchesOriginalFullrun+replayMatchesTrace,TestS3kSonicTailsCompleteEmeraldRunPrefix#twoSpecialStageReturnsThroughThirdEntry'
+```
+
+These are the executed old-red/focused/alternate/three-control selections, not
+requests to repeat them. Source remained frozen queued/live. Reports and the
+bounded observer journal were inspected and consumed under metadata ownership
+alone, with no receipts/log archives. No live handles remain. Current target is
+the final animal source plus maintained tests compiled by6148; no temporary
+observer source or compilation claim is carried forward. Local owner commit
+only; R4e207 remains separate, Main803 is untouched and publication is blocked.
+
+
+## R6 post-animal live pool and remaining boss-child lifetime — 2026-10-17
+
+One authorized read-only original-alternate-driver prefix9577 ran through raw
+row13742 on e207 plus the eleven staged R5 files, **before the R5 local commit**.
+Frozen SHA256: AnimalObjectInstance73f1c45485ca81a7ef055d58c0e26abda1664089456eba4f4f4829dff734b5ed,
+GameRules7b694eba04238262861a76cc6977f85eb93a8709f30464c1eb891fe4fecaeb1c,
+AizMinibossInstance1878f322bfa03f2c20970c5dd2a371839a4e90481b93c872c332695331027626.
+The sole unstaged observer added to the existing alternate test had SHA256
+f174c3665f074420f657f3da3707911a364ce9c34bb4ba93c236e59335a49c4e.
+It used the original superclass driver/bootstrap/input/lag/hardware-timing
+contract, its existing post-rewind-closure observer and semantic prefix seam;
+normal current Main absolute wrapper, all three original absolute ROMs, EGL/nullAL,
+no ambient display, inherited JDK_JAVA_OPTIONS/MAVEN_OPTS and the same explicit
+single-fork/reuse/alphabetical flags. Exact selection:
+`-Ptrace-segments -Dtest=TestS3kAizZoneSliceTraceReplay#observePostAnimalLivePoolReadOnly`.
+Use the preceding R5 command template for the unchanged environment/ROM flags.
+No trace gameplay hydration, input changes, timer/slot/RNG seeding, gameplay writes,
+production API/hooks, native/media, full alternate, broad run or second prefix.
+
+9577 terminal1 at13:14:15UTC, Maven41.509s, queue wait0s,1/1F0E0S.
+13713 compared rows, physics1/animation0, warnings/bootstrap0. The existing
+13740 rings expected1/actual2 error spans13740–13742; this diagnostic is red,
+not a trace certificate. Eight known advertised aux families remain absent.
+The target-only journal has223 events/5,805,290bytes under its10,000,000-byte cap.
+Only low-SST4–23 ownership/lifecycle changes and requested boundary pools were
+emitted, with selected source identities outside that window. It records
+completed observer passes, not within-pass transient allocation or110-slot
+certification. ObjectManager currentExecSlot is correctly -1 at this boundary.
+Stable registered ObjectRefId, original source spawn versus mutable live spawn,
+class/layout/subtype and actual allocated slot identify owners without assigning
+native-to-engine slot translations.
+
+The animal correction **does execute on the real route**:
+
+| Raw row | Actual engine result | Existing native comparison |
+| --- | --- | --- |
+|9279 |Animal identity19, registered dynamicId955, actual5, source0E10/033C, MAIN/firstDisplay=true; both lifetime/render semantic rules true |Obj_Animal2C778 birth5, same source centre |
+|9373 |FLY,0D80/02EC, copied/live camera0D88/02DA, signed dx-8, prior/current render bit true |Same centre/camera; right edge0 is included |
+|9374 |FLY,0D7D/02EC, copied/live0D86/02DA, dx-9; preceding bittrue, newly captured bitfalse |Same centre/camera; outside edge |
+|9375 |Fly work then prior-false poll retires5; retained diagnostic reference destroyed, allocator5free, registered identity removed |Actual object_removed5/2C778 on9375 |
+|9378–9463 |PathSwap source123,0CF0/02E8, naturally reuses5 at9378 and retires9463 |Same native5/code1CD8A lifetime |
+|9463 |1520F80/038A takes10,1530F85/0338 takes32 while PathSwap5 still owned at loading |Same native admissions; no guessed phase within the completed-frame observation |
+|9509–12018 |1591037/0322 returns in5,1601049/0346 in8;159 retires12018 |Same native placements/lifetimes |
+|9418 |The held animal remains destroyed and has no registered identity; its old physical slot number is not live occupancy |Rejects the old fresh64-margin retirement frontier |
+
+Actual clocks are separate from raw row labels and from each other. These are
+FULL_LEVEL_FRAME observations, with hex VInt/LF and decimal executed/input cursor:
+
+| Raw row | ObjectManager VInt | Level_frame_counter | Executed runner frames | Next BK2 cursor |
+| --- | --- | --- | --- | --- |
+|9279 |27C7 |2432 |9266 |10221 |
+|9375 |2827 |248D |9357 |10317 |
+|9463 |287F |24E5 |9445 |10405 |
+|9509 |28AD |2513 |9491 |10451 |
+|10837 |2DDD |2A41 |10817 |11779 |
+|10901 |2E1D |2A81 |10881 |11843 |
+|11021 |2E95 |2AF9 |11001 |11963 |
+|12001 |3269 |2EC8 |11976 |12943 |
+|13568 |3888 |34E3 |13539 |14510 |
+|13740 |3934 |358F |13711 |14682 |
+
+These clocks come from the attached ObjectManager, LevelManager and original
+fixture RecordingFrameDriver cursor, not the earlier unbound EngineTiming0.
+The native callback input14681 at13740 is a Touch_Process boundary; the table
+is after the completed engine row with the next input cursor14682. They are
+related by the original driver contract, not conflated as identical phases.
+
+The first remaining demonstrated lifetime branch in this recorded causal chain
+is the **normal miniboss's five component children**, not the animal or allocator:
+
+* At9768 engine/native births agree: body10 (native686E8), arm15 (68720),
+  barrels21/22/23 (68C12). They are real admitted children, not missing factories.
+* At10837 engine `AizMinibossInstance.onDefeatStarted`250–254 immediately marks
+  all five childComponents destroyed and clears the list. The prior completed
+  pool still had all five. Native status bit7 marks the defeated parent, while
+  all five child SSTs remain occupied through10900.
+* At10901 native control4 becomes EndSignControlWait85BD6; its child bit4 tail
+  changes these five pointers to Delete_Current_Sprite1ABB6. They actually clear
+  on10902. Native global music allocation therefore uses34, not10. Engine has
+  already freed10 and creates SongFadeTransition10 at10901.
+* At11021 engine control4 allocates sign15/stub21 while music10 is still occupied
+  at that earlier control pass; music then retires10 in its own pass. Native
+  sign10/stub15/music34 follow the same source allocation semantics with the
+  correct earlier lifetimes. No allocator helper fault follows from this.
+* At12001 native5–20 are occupied and X takes21/maxY23. Engine has a genuine
+  free10 and takes X10/maxY23. Both X workers retire12335. The source-consistent
+  minY22 transient is not directly visible at a completed-pass boundary.
+* At12235 still-live engine X10 displaces static layout220192A/049A to11;
+  native layout220 takes10. At12510 both bridge parents take9, while the actual
+  display child takes engine10/native17. Monitor2651C08/04E0 reloads12967 in
+  engine11/native10 because engine display10 still owns that hole.
+* At13567 engine11 is monitor265 and12 is genuinely free. Hurt rings13568
+  naturally take12 onward, versus native11 onward. The positive00C4 vector is
+  actual engine13/phaseOffset96 versus native12/countdown97. At13739/13740 it
+  remains1BB0/01EE with engine vyFE74 and is collected at13740, versus the
+  existing native callback1BB0/04B9/vy0C34. Static258 now occupies23 in both;
+  the animal repair corrected an earlier permutation without closing this one.
+
+Source authority is own skdisasm044fa46725c71187399e13f5ddb70e11d32dc024:
+body loc_686E8 at136974–136983; arm loc_68720 at136993–136995;
+Child_Draw_Sprite2/Child_DrawTouch_Sprite2 at178173–178197 test parent `$38`
+bit4, independently of parent status bit7. Go_Delete_Sprite_2 at179232–179235
+installs Delete_Current_Sprite for the following dispatch. Obj_EndSignControl
+at180463–180469 sets that bit4, after Wait_FadeToLevelMusic's global allocation
+at179742–179759 (AllocateObject call179751). Native pointer/retirement events and
+full slot_dump corroborate the source; the filtered aux does not itself expose
+all parent `$38` writes. Line numbers refer to this pin only.
+
+**Next bounded owner proposal, not an implemented fix:** one independent old-red
+with production-allocated normal AIZ body/arm/three barrels through fatal poll,
+literal64-pass wait, physical control replacement/bit4, and next-own-pass
+retirement/free reuse; include whole-world forced recreation/forward replay and
+independent music lifetime. Then, if authorized, correct only this normal AIZ
+child tail using existing native-pending/physical-owner semantics. Body/arm/barrel
+already have a captured nativeRetirementPending path for the cutscene; normal
+boss linkage/recreation after physical replacement must be preserved rather than
+introducing a generic dispatch/allocator contract. No slot assignment, phase tune,
+new arbitrary wait, LostRing/touch/debris implementation or collision rewrite.
+Further retirement/animation equivalence and matched replay closure are unproven.
+
+Temporary observer source is restored exactly; R5 staging is preserved unchanged.
+The journal/report facts above are retained here and in the existing Plan. Seven
+owned files were consumed under the metadata slot alone: two Surefire reports,
+three trace diagnostics, the journal and the compiled temporary alternate observer
+class. No raw archive/receipt or rebuild. Remaining target contents last came from
+9577 and are **not** claimed as a maintained build. All handles are terminal/leases
+released. No R6 production change or JVM
+beyond9577. R5 focused73/three controls remain their historical bounded results;
+alternate11/tennewvs803 still block integration. Four native loc68E98 debris,
+full aux/config/cold/BK2/wide/roster/fullchain limits remain open. Root owns the
+next owner authorization, policy prerequisite and combined composition/validation.
+
+
+R5 commit prerequisite is now resolved through Root's independently reviewed
+policy-only ff9e4be617c3d16ab3bb1f2c23ad0893c10694e5 (39 actual shell/PowerShell
+policy cases plus syntax/diff checks, supplied by Root; not rerun here). Its exact
+three committed files were copied under the owned build lease and committed with
+normal hooks using --only as b834344890603c1f3919c302be245ffadd863994. All eleven
+R5 staged path/blob identities and both R6 worktree document contents were verified
+unchanged afterward. Normal R5 commit3cce122ffcdb5e0c5371ed32f7a7158163b544c8
+then preserved the tested animal hashes and passed hooks; its seven policy trailers
+and final exact GPT-6.1 coauthor were parsed. No fabricated pin, API reshape,
+stash/reset, bypass or extra Java. The policy owner notes a pre-existing generic
+RHS-comma false positive outside this preset; that separate limitation was not
+widened into this patch. R6 remains an evidence-only handback, not child-tail
+implementation or integration clearance.

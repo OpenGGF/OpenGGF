@@ -6023,3 +6023,27 @@ Origin: AIZ R3 on7ed6ba5b8,2026-10-17; skdisasm pin
 allocator-name and fallthrough lessons apply across games. Native debris/full-SST
 and the alternate's newly exposed ring1/2 frontier remain separate unqualified
 obligations; see the existing AIZ2 matrix's R3 record.
+
+
+## Freed animals consume a previous render flag, with zero render height
+
+R5 AIZ allocation attribution (2026-10-17) found ordinary subtype0 Obj_Animal
+in native SST5 retiring9375 while the engine kept the same animal until9418.
+That occupied a hole later used by PathSwap, decor and camera-worker owners;
+changing the allocator or fitting ring phases would hide the wrong lifetime.
+
+At skdisasm044fa46725c71187399e13f5ddb70e11d32dc024, loc_2C9E0 polls
+render_flags bit7 before MAIN motion; loc_2CA68/loc_2CAD0 poll after walk/flight
+work. Init draws and returns first. Render_Sprites (36376–36417) publishes the
+bit from copied camera words: signed16 X, width8, rightedge0 inclusive and
+leftedge320 excluded. Animal init writes collision y_radius=C but leaves
+height_pixels=0, so Y is centre-only: unsigned `(y-copyY)&Screen_Y_wrap_value`
+must be below224. S2's approximate32px band and a fresh64px lifetime margin
+are different contracts. Keep the flag and first-init scalar captured through
+recreation; do not recompute the prior flag while restoring a world.
+
+The independent component uses real allocation and ROM terrain for natural
+pop/landing/flight and next-pass hole reuse, copied-camera/vertical-wrap edge
+cases, and twice forced whole-world recreation/forward replay. Shared nonzero
+animal subtypes have additional player-relative branches; ending/capsule animal
+owners are separate. Neither is certified by the subtype0 correction.
