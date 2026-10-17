@@ -54,7 +54,7 @@ import static com.openggf.level.scroll.M68KMath.negWord;
  * Death Egg background sprite at the tail of {@code sub_57082}, and the boss act {@code $1600},
  * which has its own {@code LRZ3_BackgroundEvent} and does not use this handler.
  */
-public class SwScrlLrz extends SwScrlS3kDefault {
+public class SwScrlLrz extends SwScrlS3kDefault implements com.openggf.level.scroll.ScrollOutputRebuilder {
 
     /** {@code LRZ1_BGDeformArray} (sonic3k.asm:115643); the trailing {@code $7FFF} is the remainder. */
     private static final int[] ACT1_BG_DEFORM =
@@ -103,6 +103,23 @@ public class SwScrlLrz extends SwScrlS3kDefault {
                        int cameraY,
                        int frameCounter,
                        int actId) {
+        fillScrollOutput(horizScrollBuf, cameraX, cameraY, actId, true);
+    }
+
+    /**
+     * Post-restore presentation only. {@code LRZ1_Deform} / {@code sub_57082} and
+     * {@code sub_56DAC} write {@code Camera_X/Y_pos_BG_copy}, {@code Events_bg+$10/+$12} and the
+     * act-2 Death Egg word as part of the native scroll dispatch; a registry restore already
+     * brought those words back, including a load-frame snapshot taken before the first dispatch,
+     * so the rebuild derives the same scroll output without writing them again.
+     */
+    @Override
+    public void rebuildOutput(int[] horizScrollBuf, int cameraX, int cameraY, int frameCounter, int actId) {
+        fillScrollOutput(horizScrollBuf, cameraX, cameraY, actId, false);
+    }
+
+    private void fillScrollOutput(int[] horizScrollBuf, int cameraX, int cameraY, int actId,
+                                  boolean publishScrollRam) {
         resetScrollTracking();
         composer.reset();
 
@@ -113,7 +130,7 @@ public class SwScrlLrz extends SwScrlS3kDefault {
         foregroundVscroll = (short) cameraYCopy;
 
         if (actId == 0 && lrz != null && lrz.backgroundRoutine() == LrzBackgroundStageMachine.BG_STAGE_LOCKED) {
-            applyLockedDome(horizScrollBuf, cameraX, cameraYCopy, lrz);
+            applyLockedDome(horizScrollBuf, cameraX, cameraYCopy, lrz, publishScrollRam);
             return;
         }
 
@@ -123,8 +140,10 @@ public class SwScrlLrz extends SwScrlS3kDefault {
         int base = (cameraX << 16) >> 3;               // asr.l #3: b
         int step = base >> 2;                          // asr.l #2: s
         buildHScrollTable(actId, base, step);
-        publishDeformationWords(lrz, bgY, base, step);
-        if (actId == 1 && lrz != null) lrz.setDeathEggScrollWord(hScrollTable.get(2));
+        if (publishScrollRam) {
+            publishDeformationWords(lrz, bgY, base, step);
+            if (actId == 1 && lrz != null) lrz.setDeathEggScrollWord(hScrollTable.get(2));
+        }
 
         if (actId == 0 && lrz != null && lrz.backgroundCameraPinned()) {
             // loc_56C30's tail: a non-zero Events_bg+$02 long puts the saved copies back into
@@ -132,7 +151,7 @@ public class SwScrlLrz extends SwScrlS3kDefault {
             // the plane keeps showing the dome while Draw_PlaneVertBottomUpComplex redraws it.
             short pinnedY = (short) lrz.savedBackgroundCameraY();
             composer.setVscrollFactorBG(pinnedY);
-            lrz.publishLockedBackgroundCamera(lrz.savedBackgroundCameraX(), pinnedY);
+            if (publishScrollRam) lrz.publishLockedBackgroundCamera(lrz.savedBackgroundCameraX(), pinnedY);
             plainDeformation(cameraX, lrz.savedBackgroundCameraX());
         } else {
             DeformationPlan.applyTableBands(
@@ -159,10 +178,10 @@ public class SwScrlLrz extends SwScrlS3kDefault {
      * hold whatever phase the last unlocked frame published.
      */
     private void applyLockedDome(int[] horizScrollBuf, int cameraX, int cameraYCopy,
-                                 LrzZoneRuntimeState lrz) {
+                                 LrzZoneRuntimeState lrz, boolean publishScrollRam) {
         int bgX = LrzDomeRegions.lockedBackgroundX(cameraX);
         short bgY = (short) LrzDomeRegions.lockedBackgroundY(cameraYCopy, lrz.domePlatformPhase());
-        lrz.publishLockedBackgroundCamera(bgX, bgY);
+        if (publishScrollRam) lrz.publishLockedBackgroundCamera(bgX, bgY);
         composer.setVscrollFactorBG(bgY);
         plainDeformation(cameraX, bgX);
         composer.copyPackedScrollWordsTo(horizScrollBuf);

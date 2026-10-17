@@ -698,7 +698,7 @@ class TestS3kLrzHpzSszColdCampaign {
      * only declared state). Inputs 0-50099 equal {@code lrz-tails-cold-giant-ring-s9-320.bk2};
      * the authored tail {@code 45 R;46 -;1 A;3000 -} walks off the arrival pad, coasts to a stop
      * under gray pedestal 2 and jumps straight up through its top-only solid, landing on the
-     * descent near its centre (SolidObjectTop loc_1E42E :41987-42013), then stays neutral. {@code SSEntryFlash_GoSS} restarts into $1701
+     * descent near its centre (SolidObjectTop loc_1E42E, skdisasm 044fa46 sonic3k.asm:42022-42048), then stays neutral. {@code SSEntryFlash_GoSS} restarts into $1701
      * (sonic3k.asm:128438-128477), the sanctuary converts every Chaos Emerald to gray
      * (:197949-197987), the pedestal selects its Super stage by actual contact
      * (:197808-197841), neutral input fails it, and the results return to LRZ2 at Saved2
@@ -779,9 +779,9 @@ class TestS3kLrzHpzSszColdCampaign {
                     assertEquals(gray, GameServices.gameState().getS3kEmeraldStates(), "a failed stage keeps the pedestal gray");
                     assertTrue(GameServices.gameState().isEmeraldsConverted());
                     // Level masks the stage exit's ori.b #$80 off with andi.b #$7F,(Last_star_post_hit) just
-                    // before LevelLoop (sonic3k.asm:7881; native RAM $FE2A reads 0 on the first $0C frame), so
-                    // only the restored low-bit mark below is ROM state here. The engine's boolean load-gate
-                    // proxy (LevelTransitionCoordinator.isLastStarPostHitSet) stays set; recorded as open.
+                    // before LevelLoop (loc_64DC, skdisasm 044fa46 sonic3k.asm:7913; native RAM $FE2A reads 0 on the first $0C frame), so
+                    // only the restored low-bit mark below is ROM state here. After load the engine boolean
+                    // plays Tails_CPU_star_post_flag (loc_137A4 copy, still $80 natively); not asserted here.
                     assertEquals(markBefore, level.getCheckpointState().getStarPostActivationMark(),
                             "loc_90926 restored Saved2_last_star_post_hit across the sanctuary detour");
                     assertFalse(level.hasBigRingReturn(), "Saved2 consumed by the destination restore");
@@ -797,7 +797,7 @@ class TestS3kLrzHpzSszColdCampaign {
         assertTrue(hubRelease > hub && hubRelease + 10 + 45 < pedestal, "hub replay window precedes the pedestal");
         assertTrue(pedestal >= authoredFrom && stage > pedestal && results > stage && returned > results,
                 "pedestal, stage, results and LRZ2 return in order");
-        // loc_908DE (sonic3k.asm:197705-197719) calls SolidObjectTop and tests p1_standing_bit in the
+        // loc_908DE (skdisasm 044fa46 sonic3k.asm:197807-197821) calls SolidObjectTop and tests p1_standing_bit in the
         // same routine, so object_control $81 lands with the player (native twin: same frame).
         assertEquals(pedestal, selected, "the landing frame selects the pedestal");
         assertTrue(returned + 245 < movie.getFrameCount(), "released LRZ2 return with replays");

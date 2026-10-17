@@ -21,13 +21,12 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * A rewind to a Lava Reef load frame, before the first background event, replays the
  * once-per-load background initializer exactly. {@code LRZ1_BackgroundInit} and
- * {@code LRZ2_BackgroundInit} (sonic3k.asm:115655-115668 for act 2, which leaves
+ * {@code LRZ2_BackgroundInit} (skdisasm 044fa46 sonic3k.asm:115704-115717 for act 2, which leaves
  * {@code Events_routine_bg} on 8) run in the native level setup; the engine runs them at the
  * first event dispatch, so whether they are still pending is restorable world state.
  *
- * <p>The comparison is the initializer's own output plus the whole world after the replay. An
- * immediate restore of this load-frame snapshot is not compared: the derived background camera
- * words are republished by restore before any scroll pass has run (recorded separately).
+ * <p>The initializer case compares the initializer's own output plus the whole world after the
+ * replay; the immediate-restore case adds exact restore equality at the load frame and mid-scroll.
  */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestS3kLrzBackgroundInitRewind {
@@ -75,6 +74,72 @@ class TestS3kLrzBackgroundInitRewind {
                     assertEquals(first, initialiserState(act), "load-frame restore replays the initializer");
                     TestS3kCanonicalEntryLifecycle.assertSameWorld(after, registry.capture(),
                             "LRZ load-frame replay", REPLAY_FRAMES);
+                }
+            } finally {
+                loop.closePresence();
+            }
+        } finally {
+            support.restoreConfiguration();
+        }
+    }
+
+    /**
+     * An immediate restore of a whole-world snapshot reproduces it exactly, at the load frame
+     * before any scroll pass and at a released frame, and two forward replays with the camera
+     * moving match the first pass. The post-restore presentation rebuild may derive scroll output
+     * from restored RAM; it must not publish Lava Reef's logical scroll words itself.
+     */
+    @ParameterizedTest(name = "LRZ act {1} {3} restore {2}")
+    @CsvSource({"9,1,tails,load", "9,1,tails,released", "9,0,knuckles,load", "9,0,knuckles,released"})
+    void immediateRestoreIsExactAndForwardReplaysMatch(int zone, int act, String main, String point) {
+        var support = new CanonicalEntryMatrixSupport() {
+            @Override TestS3kCanonicalEntryLifecycle.Act binding() {
+                return new TestS3kCanonicalEntryLifecycle.Act("LRZ", zone, act);
+            }
+        };
+        support.saveConfiguration();
+        try {
+            var row = new CanonicalEntryMatrixSupport.Row(main, WidescreenAspect.NATIVE_4_3, "off", "");
+            var fixture = support.boot(row);
+            var input = new InputHandler();
+            input.setLogicalOverride(RecordedInputSnapshots.fromBk2(NEUTRAL, NEUTRAL));
+            var loop = new GameLoop(input);
+            loop.setGameplayMode(fixture.gameplayMode());
+            loop.setGameMode(GameMode.LEVEL);
+            try {
+                var right = new Bk2FrameInput(0, 0x08, 0, false, "R");
+                if (point.equals("released")) {
+                    // Ordinary input until the camera is scrolling, so the snapshot is taken mid-scroll.
+                    step(loop, 60);
+                    input.setLogicalOverride(RecordedInputSnapshots.fromBk2(right, NEUTRAL));
+                    int previous = GameServices.camera().getX();
+                    boolean moving = false;
+                    for (int f = 0; f < 150 && !moving; f++) {
+                        step(loop, 1);
+                        moving = GameServices.camera().getX() != previous;
+                        previous = GameServices.camera().getX();
+                    }
+                    assertTrue(moving, "precondition: the camera scrolls at the captured frame");
+                }
+                var registry = fixture.gameplayMode().getRewindRegistry();
+                var before = registry.capture();
+                registry.restore(before);
+                TestS3kCanonicalEntryLifecycle.assertSameWorld(before, registry.capture(),
+                        "LRZ immediate " + point + " restore", 0);
+                input.setLogicalOverride(RecordedInputSnapshots.fromBk2(right, NEUTRAL));
+                int cameraBefore = GameServices.camera().getX();
+                step(loop, REPLAY_FRAMES);
+                var after = registry.capture();
+                if (point.equals("released")) {
+                    assertNotEquals(cameraBefore, GameServices.camera().getX(), "the replay window scrolls");
+                }
+                for (int cycle = 0; cycle < 2; cycle++) {
+                    registry.restore(before);
+                    TestS3kCanonicalEntryLifecycle.assertSameWorld(before, registry.capture(),
+                            "LRZ " + point + " restore " + cycle, REPLAY_FRAMES);
+                    step(loop, REPLAY_FRAMES);
+                    TestS3kCanonicalEntryLifecycle.assertSameWorld(after, registry.capture(),
+                            "LRZ " + point + " replay " + cycle, REPLAY_FRAMES);
                 }
             } finally {
                 loop.closePresence();

@@ -32,13 +32,13 @@ import java.util.Map;
  */
 public class Sonic3kAudioProfile extends AbstractAudioProfile implements com.openggf.audio.NativeAudioEffectCues,
         com.openggf.audio.NativeMailboxMusicRoutes {
-    /** {@code mus_CreditsK}, placed after the SFX ids (sonic3k.constants.asm:1666). */
+    /** {@code mus_CreditsK}, placed after the SFX ids (skdisasm 044fa46 sonic3k.constants.asm:1691). */
     private static final int MUS_CREDITS_K = 0xDC;
 
     /**
      * {@code zPlaySoundByIndex} tests {@code mus_CreditsK} before every other range and jumps to
      * {@code zPlayMusicCredits}, which loads the last music-table entry, {@code $32}, and continues
-     * as ordinary music through {@code zPlayMusic_DoFade} (Sound/Z80 Sound Driver.asm:1641-1644,
+     * as ordinary music through {@code zPlayMusic_DoFade} (skdisasm 044fa46 Sound/Z80 Sound Driver.asm:1641-1644,
      * 1709-1712). Engine music ids are one-based, so that entry is {@link Sonic3kMusic#CREDITS_SK}.
      */
     @Override public int musicForNativeRequest(int nativeRequestId) {

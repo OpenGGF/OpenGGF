@@ -664,7 +664,7 @@ Actual-ingress and publication-aligned native presentation remain the honest ope
 ## Same-frame pedestal selection — 2026-10-17
 
 `loc_908DE` calls `SolidObjectTop` and tests `p1_standing_bit` in one routine
-(sonic3k.asm:197705-197719), so `object_control $81` lands on the landing frame. A declared
+(skdisasm 044fa46 sonic3k.asm:197807-197821), so `object_control $81` lands on the landing frame. A declared
 native twin of the LRZ2 seven-Chaos branch shows this on the same landing at (5805,896). The
 engine pedestal now resolves its solid at that call point (`MANUAL_CHECKPOINT`) instead of
 reading the next frame's ride. Evidence and checks are in the

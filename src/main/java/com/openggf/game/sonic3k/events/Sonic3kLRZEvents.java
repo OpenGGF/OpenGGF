@@ -131,7 +131,7 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
     private static final int PALETTE_LINE_BYTES = 0x20;
 
     // LRZ1_/LRZ2_BackgroundInit's one-shot marks live in LrzZoneRuntimeState so rewind restores
-    // them. LRZ2_BackgroundInit (sonic3k.asm:115655-115668) runs on a direct $901 load and leaves
+    // them. LRZ2_BackgroundInit (skdisasm 044fa46 sonic3k.asm:115704-115717) runs on a direct $901 load and leaves
     // Events_routine_bg on 8. The seamless change does not run it at all -- loc_56CAA calls
     // Load_Level, not the background initializer, and ends on clr.w (Events_routine_bg) -- so
     // requestAct2Reload marks act 2's new state and it starts on LRZ2_BackgroundEvent's stage 0.

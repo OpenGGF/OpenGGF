@@ -626,11 +626,11 @@ declared protocol: `AudioRequestObserver`, `musicFadeOutCount()` and
 
 On base `6405313ce` all nine products pass every assertion:
 
-- **A1** (`loc_5DE36`/`loc_5DE46`, sonic3k.asm:124064-124075): one fade, on the first
+- **A1** (`loc_5DE36`/`loc_5DE46`, skdisasm 044fa46 sonic3k.asm:124105-124116): one fade, on the first
   gate-true frame. That is Level_frame_counter 3281 for −2 and 3692 for 0/+2. The
   gate's `foregroundY` equals the published camera Y copy on every gate frame.
-- **A2** (`Obj_5DFEE`, :124232-124246): `$DC` only for +2, at 3714.
-- **A3** (`Obj_Ending` `loc_5E1C2`, :124375-124385): `$DC` at 3303 for −2 and 3714 for
+- **A2** (`Obj_5DFEE`, :124273-124287): `$DC` only for +2, at 3714.
+- **A3** (`Obj_Ending` `loc_5E1C2`, :124416-124426): `$DC` at 3303 for −2 and 3714 for
   0. It is absent for +2, although `Obj_Ending` still first runs there at 4403.
 - No other credits or fade request occurs in the 6144 inputs.
 
@@ -654,8 +654,8 @@ Red-first checks:
   across audio enabled, audio disabled and the v16-limited run.
 
 The `$0D01` load issues `mus_SSZ` (`$15`) from `LevelMusic_Playlist`
-(:7676-7701). The ROM's non-demo `Level` entry also sends `cmd_FadeOut` through
-`Play_SFX` (:7504-7509). The declared engine ingress records no request for it, which
+(:7712-7733). The ROM's non-demo `Level` entry also sends `cmd_FadeOut` through
+`Play_SFX` (:7540-7541). The declared engine ingress records no request for it, which
 is noted here and not asserted. Whether the ordinary mode transition issues it was not
 checked.
 
@@ -670,7 +670,7 @@ reached the seam on its native frame, but none was admitted:
 The fix follows the driver:
 
 - `zPlaySoundByIndex` tests `mus_CreditsK` first. `zPlayMusicCredits` then loads music
-  table entry `$32` as ordinary music (Sound/Z80 Sound Driver.asm:1641-1644,
+  table entry `$32` as ordinary music (skdisasm 044fa46 Sound/Z80 Sound Driver.asm:1641-1644,
   1709-1712).
 - The S3K profile declares that route through the non-API `NativeMailboxMusicRoutes`
   capability.

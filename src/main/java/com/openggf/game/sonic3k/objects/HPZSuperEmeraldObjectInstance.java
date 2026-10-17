@@ -100,7 +100,7 @@ public final class HPZSuperEmeraldObjectInstance extends AbstractObjectInstance
 
     /**
      * {@code loc_908DE} calls {@code SolidObjectTop} inside the selectable routine and then tests
-     * {@code p1_standing_bit} (sonic3k.asm:197705-197719), so the landing frame already selects
+     * {@code p1_standing_bit} (skdisasm 044fa46 sonic3k.asm:197807-197821), so the landing frame already selects
      * and {@code object_control $81} lands with the player, as a native capture of the same landing
      * shows. The solid is therefore resolved at that call point; every other live path resolves it
      * after its own work, where the automatic mode used to.
