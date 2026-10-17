@@ -2006,3 +2006,14 @@ resource installation, preserve it over ordinary title reset, and clear it on
 a fresh context/hardware lifetime. Newer admitted SaveScreen uploads supersede
 title art. This does not model untouched name tables, SAT or every level-to-level
 gap (2026-10-14 ending ingress; d0fabc3ef candidate4d401bcc).
+
+
+**A presentation hold can outlive its upload latch.** Rewind restores the CRAM
+generation shown with the captured picture, independently of whether the next
+scene uses level palette latching. Releasing immediate scene publication must
+flush that restored hold even when the level latch is already false; guarding
+release only by that latch leaves subsequent fade requests parked. Preserve the
+immediate redraw generation, then test the next publication and two forward
+cycles with an independent unlatched control. A capped matrix-failure preview
+is not complete attribution: rerun both entire affected classes after the
+mechanism repair. Origin: S3K sanctuary palette rewind,2026-10-17.

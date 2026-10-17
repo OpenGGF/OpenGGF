@@ -2455,3 +2455,95 @@ source guard72, trace replay invariant10 and default hydration switch1, via
 `--lean -Dmse=off -Dtest=TestArchitecturalSourceGuard,TestTraceReplayInvariantGuard,TestTraceHydrateSwitchDefault test -B`.
 The two latter names resolve their existing trace packages; all three ran with
 no skips. Diff whitespace, affected relative links and mirrored pitfalls pass.
+
+
+### Immediate-scene fade publication after rewind — 2026-10-17
+
+The retained Root3aad smoke's gateway and sanctuary matrix cases exposed a
+new regression in the local white-palette presentation change. The restored
+level publication could hold a displayed fade even after the scene had
+released its level palette-upload latch. `PaletteUploadPresentation.release`
+only flushed when that latch was set, so subsequent SPECIAL_STAGE publications
+never released the independent rewind hold. Gameplay/world comparison detected
+`displayedFade` NONE/0/mask0/pendingfalse versus FROM_WHITE/7/mask-1/pendingtrue.
+This was production behavior; the comparator and world assertions are retained.
+
+Composed-source reproduction27986 is4/2F/0E/0S at07:21:49 UTC: both seven-Chaos
+gateway cases fail that exact four-field comparison; both seven-Super payout
+controls pass. New headless `TestPaletteUploadLatch` reproduction1577 is
+5/1F/0E/0S at07:22:43 UTC: an unlatched scene restores displayed step1, requests
+step3, then release incorrectly leaves step1/pendingtrue. Its four existing
+latch checks pass. The correction always invokes the normal palette release
+flush when graphics exists, including this unlatched rewind state. The restored
+picture still holds its captured generation until the next scene publication;
+subsequent direct writes are immediate. No new timing, snapshot field or API.
+
+Focused83390 passes112/0/0/0 at07:27:53 UTC in11 resolved classes: palette latch5,
+gateway4, native white GPU14, underwater publication16, fade snapshots7, level
+presentation lifecycle6 and required S3K loading60. The exact selector is
+`TestPaletteUploadLatch,TestS3kLrz2SevenChaosGiantRingGateway,TestNativeWhitePaletteFade,TestUnderwaterPaletteUpload,TestFadeManagerRewindSnapshot,TestLevelSpritePresentationLifecycle,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`.
+
+The broad run's affected matrix batch had1853 failures; its retained failed-case
+preview was capped, so sample similarity alone was not treated as complete
+attribution. Root then ran both complete exact affected classes on the correction:
+`TestS3kSanctuaryOriginReturnLifecycle,TestS3kSanctuaryPedestalLifecycle`.
+57173 completes2006/0/0/0 at07:35:05 UTC:580 origin/return cases (124.688s) and
+1426 pedestal cases (170.765s). Maven execution5:16 is separate from queue wait.
+Both commands use the current main absolute queue wrapper from the intended
+composed worktree at68cb5d183 plus this two-file correction, `--normal -Dmse=off`,
+absolute original S3K and (for the complete matrices) S1/S2 ROM properties,
+Java25, surfaceless EGL, unset DISPLAY/WAYLAND_DISPLAY and nullAL. No lean
+reservation was used for these ROM-heavy matrix products.
+
+The retained broad run stays frozen until terminal; no duplicate broad/full
+suite is submitted. The corrected behavior is bounded to releasing an already
+restored presentation hold through the existing scene-publication owner.
+Affected mechanism, GPU, level consumers and complete failing matrices qualify
+this delta; previously covered unaffected ordinary batches are not repeated.
+Whole-stage RGB, cold/configuration products not in those classes, PAL/PCM and
+strict trace/timing closure remain separate obligations.
+
+
+Fresh source guards43534 pass83/0/0/0 at07:37:24 UTC, same exact architectural,
+trace-invariant and default-hydration selector recorded above. To close the
+capped failure-detail gap,64631 then checks the other48 exact classes from
+original Root3aad ordinary batch61 (plan.tests[3000:3050], excluding the two
+already-qualified matrices), using their full names in `com.openggf.tests`:
+
+```text
+TestS3kMhzMinibossViewport,TestS3kMhzTailsAuthoredRoute,TestS3kMhzTeamAuthoredRoute,TestS3kMhzWideAuthoredRoute
+TestS3kMonkeyDudePlacedGraph,TestS3kPaletteFadeTimerGatesPaletteCycles,TestS3kPenguinatorBadnik,TestS3kReverseGravityBoundary
+TestS3kReverseGravityCameraLook,TestS3kReverseGravityDezCorridor,TestS3kReverseGravityFlagLifecycle,TestS3kReverseGravityIntegration
+TestS3kReverseGravitySolidObject,TestS3kReverseGravitySpringLaunch,TestS3kReverseGravityTerrain,TestS3kScreenEventCameraCopies
+TestS3kScriptedIntroCarryAdmission,TestS3kSlotPresentationParity,TestS3kSnaleBlasterBadnik,TestS3kSpecialStageHeadlessBoot
+TestS3kSpecialStageReturnWaterRestore,TestS3kSpringObjectInstance,TestS3kSszAct2ColdFight,TestS3kSszAct2FinalFight
+TestS3kSszArrivalContinuation,TestS3kSszArrivalHeadless,TestS3kSszBackgroundClouds,TestS3kSszBackgroundLayout
+TestS3kSszCarriersAndSprings,TestS3kSszColdRoutes,TestS3kSszCompatibilityMatrix,TestS3kSszCraneRouteHeadless
+TestS3kSszEggRobo,TestS3kSszGhzArenaHeadless,TestS3kSszKnucklesArrivalHeadless,TestS3kSszKnucklesBridgeHeadless
+TestS3kSszLifecycleProduction,TestS3kSszMechaSpawnHeadless,TestS3kSszMtzArenaHeadless,TestS3kSszPlacementCensus
+TestS3kSszTeleporterPads,TestS3kSszTraversalPlatforms,TestS3kTensionBridgeObject,TestS3kZoneRuntimeRegistrationHeadless
+TestSaxmanDecompressor,TestSbz1CreditsDemoBug,TestScriptedVelocityAnimationProfile,TestSczObjectArtPalette
+```
+
+The command retains `--normal -Dmse=off`, absolute original S3K/S1/S2 ROM
+properties and the same headless environment. It completes440/0/0/0 at07:40:23
+UTC (Maven1:10). Together with the2006 matrix cases, this qualifies all2446
+cases from that original50-class batch in two bounded parts, with no repeated
+matrix run and no hidden omitted-failure assumption.
+
+Maintained capture27778 then completes exit0 at07:44:37 UTC (Maven19.947s;
+queue wait separate). Its new external `seven-chaos-engine-fade-release-v10`
+has the same174 filenames and every file is byte-identical to v9, including
+172 actual PNGs, state.csv and ledger.csv. The actual stage+046 picture was
+viewed. Consequently the original-RGB comparisons retain the same19..46 stage
+residuals and17 exact results samples. This is a fresh production-path capture,
+not framebuffer input to gameplay or a full PAL/PCM/cold/configuration claim.
+
+A read-only audit also rejects a tempting priority shortcut for the separate
+46-pixel gap: original native stage+160 RAM has23 valid perspective pointers
+(0..22). Frames2/10 have7 admitted high-priority cells after the first low-priority
+cell; turn frames16..22 have11/16/30/32/40/40/39. Painting all low sprites before
+all high sprites therefore cannot preserve first-SAT-pixel ownership generally.
+The eventual correction needs exact sprite ownership and plane composition,
+not a fitted layer split that only matches this still. No such renderer change
+or broader priority acceptance is included in the fade release repair.

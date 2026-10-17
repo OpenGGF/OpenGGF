@@ -783,3 +783,12 @@ The remaining far-sphere overlap/priority gap is explicit in the
 [completion plan](../../plans/2026-10-13-s3k-playable-completion.md#blue-sphere-distant-mapping-frames--2026-10-17).
 These sampled native320 Tails/NTSC/Limited-RAW_RGB pictures do not certify
 complete stage/cold routes, donor/PAL/PCM or other native configurations.
+
+
+Rewind fade-publication follow-up (2026-10-17): the composed white-fade change
+left a restored displayed generation held in scenes without a level upload latch.
+The normal scene release now flushes that independent hold. Old-source gateway
+and short latch assertions fail; corrected focused112 and complete sanctuary
+entry/return matrices2006 pass without skips. The [completion plan](../../plans/2026-10-13-s3k-playable-completion.md#immediate-scene-fade-publication-after-rewind--2026-10-17)
+records exact commands and scope. Native RGB residuals, strict traces and
+configuration/cold/PAL/PCM limits outside these products remain open.

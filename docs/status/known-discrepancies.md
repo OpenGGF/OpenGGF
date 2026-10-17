@@ -3453,3 +3453,13 @@ data.
 `TestKis2PhysicsProvider`, `TestKis2GamePatchResolution`,
 `TestKis2PlacementOracle` (walks `$DF370` against the catalogue counts),
 `TestKis2HeadlessBoot`, `TestLaunchProfileKis2Roster`.
+
+
+### Scene palette publication after rewind (2026-10-17)
+
+A restored displayed fade can be held independently of the level palette-upload
+latch. Immediate-scene publication now releases that hold as well, so a special
+stage does not retain an old fade generation after rewind. The independent
+headless failure and complete S3K sanctuary entry/return qualification are
+recorded in the [completion plan](../architecture/plans/2026-10-13-s3k-playable-completion.md#immediate-scene-fade-publication-after-rewind--2026-10-17).
+This shared publication repair does not certify other games' route products.

@@ -98,7 +98,9 @@ Unreleased. The earlier development themes remain in
   selects that stage on the frame the player lands on it,
   as the original does, instead of one frame later. White stage transitions follow
   the original palette colours and 22-frame wait, including the scene backdrop
-  and underwater colours, instead of adding a yellow/red overlay. Score and bonus
+  and underwater colours, instead of adding a yellow/red overlay. Rewinding a
+  special-stage entry releases its restored palette on the next scene update.
+  Score and bonus
   digits use the original mapping positions and trailing zero, and overlapping
   labels and sphere icons follow the console's sprite priority.
 

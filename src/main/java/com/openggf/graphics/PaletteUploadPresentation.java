@@ -52,7 +52,10 @@ public final class PaletteUploadPresentation {
 
     /** Uploads anything pending and returns to immediate uploads. */
     public static void release(GraphicsManager graphics) {
-        if (graphics != null && graphics.isPaletteUploadLatched()) {
+        if (graphics != null) {
+            // A rewind redraw also holds the displayed fade when this scene has
+            // no level upload latch. Its next publication must release that hold
+            // and flush the requested generation before returning to direct CRAM.
             graphics.setPaletteUploadLatched(false);
         }
     }
