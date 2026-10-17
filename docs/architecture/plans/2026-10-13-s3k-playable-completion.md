@@ -5364,3 +5364,53 @@ retention nor capacity-only extent is proved. Hand back that evidence and an
 independent old-red proposal before any production extension. Existing ICZ
 pattern/publication tail, runtime parity and R8 natural death remain open.
 No broad/trace/native/media/extra worker; Root owns composition/delivery.
+
+
+### ICZ R10 observed retained16 loss and handback — 2026-10-17
+
+Green LRZ/DDZ split `00272ae474529412e3c02b7af05349499bc6b1c0` is complete under
+normal hooks/exact6path commit; no ICZ source or runtime in that commit. Seven
+policy trailers and final GPT6.1 coauthor parsed. New same-tree branch
+`bugfix/ai-s3k-icz-retained-16-owner-gpt61` preserves all old refs/native checkout/
+regular private config. ICZ e06 partial source remains unstaged, not qualified.
+Exact new ICZ R10 task/ordinal10/native/workspace/24h registry entry is separate
+from HCZ R10fa289; all earlier registry results remain untouched.
+
+Sole diagnostic3364 terminal1 at16:51:31UTC, queue14s/Maven25.677s,
+1/1F0E0S,class.576s, exact maintainedICZtransition method/driver/all original
+flags and all3ROMs as R9, observer811f3544…67e1. All3 read-only boundaries
+captured; no observer error or extra run. Journal284621bytes/1777lines (<10MiB).
+Outgoing688chunks/230blocks has559 known target entries129..687 matching every
+word of ROM3D5958/1178hex bytes; detached129chunks/20blocks hasall589 target
+entries absent; actual688chunks/230blocks hasthose559 entries all native4zero.
+First129 C131/C132/C133/C134 (collisionFF/FF) →sixzeros,12 references/firstblock30.
+Max retained128reference687 explains capacity688 versus decoded129. This proves
+both absent-vs-placeholder extent AND genuine loss of559 known pattern groups.
+30 target entries688..717 remainABSENT/unknown atall boundaries; no zero
+normalization/skip/narrowing. Collision metadata180differences remain a separate
+LoadSolids concern, not authority to copy predecessor indices. ActualLF0 belongs
+to this unchanged component driver, not native object-clock/trace timing proof.
+
+LoadChunks has no retained16 input; reference validation pads from retained128
+max687. Native044 ICZtransition→Load_Level copies onlylayout/no16clear, then
+LoadSolids owns collision indices. All initial128/queue/unclaimed checks pass;
+same16index0 fails, pattern/laterpublication tail unreached. Proposed next
+independent red is known entry129 across the real handoff, independent target
+collision indices and complete claimed ROM payloads, preserving unknown30limit.
+Potential private immutable16-pattern carry parallel128/COW/rewind is handed
+back BEFORE production extension; no runtime change or extra validation is
+made. No generic capacity/allocator/API/pin/fallback/clock/physics edit.
+[Exact phase counts, full first words, ROM sources/hashes and limits](../validation/levels/s3k-icz-act1.md#r10-retained16-ownership-observation--2026-10-17)
+are durable; temporary observer restored exactlye06, inspected diagnostics/class
+consumed under metadata slot alone, no archives/rebuild. Latest target compiled
+the observer and is not a fresh maintained test build. Root owns next scope.
+
+
+R10 evidence cleanup/checkpoint: exact observer-free ICZ e06 restored under the
+intended-tree lease, then four inspected journal/XML/TXT/compiled-observer files
+(340244bytes) consumed under metadata slot alone. No archives, raw reference
+changes or extra JVM. Source/main delta remains empty. Main config hash/mtime
+and own regular exact bytecopy verified unchanged. New local links/anchors,
+Markdown fences and diff checks pass. Preparing docs-only evidence commit;
+ICZ partial source remains deliberately unstaged/red. Root must authorize the
+next independent old-red/production owner unit; no extension is silently made.

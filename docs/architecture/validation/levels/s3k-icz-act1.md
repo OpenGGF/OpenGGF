@@ -248,3 +248,95 @@ remain historical, unchanged qualifications. Physical-post natural lethal
 contact, exactly one life lost, saved-post destination/no-snowboard release,
 world replacement/history retirement, and before-contact/after-release capture
 with two forward replays remain **open**, along with all other axes above.
+
+
+## R10 retained16 ownership observation — 2026-10-17
+
+**Concrete boundary, no runtime repair or ICZ pass:** the one authorized passive
+observation proves a genuine loss of559 known outgoing16x16 pattern entries,
+in addition to the detached-oracle absence/allocated-placeholder difference.
+Another30 target entries are absent in all observed worlds and remain unknown;
+they were never normalized to zero, skipped or removed from comparison.
+
+Green LRZ/DDZ test commit `00272ae474529412e3c02b7af05349499bc6b1c0` was completed
+and reported before this ICZ execution. It contains exactly the two reviewed
+test files and their four existing docs, reusing their actual `54296` passes.
+The ICZ partial128-oracle migration is excluded and remains unstaged at SHA-256
+`e06e322770e26e6f19f2c2f211d00d331c9adb65e5face390230cfeade9fe5cc`.
+Owned branch is `bugfix/ai-s3k-icz-retained-16-owner-gpt61`, same98d/native01a1496e;
+R1–R9 identities/results and earlier branch refs are preserved.
+
+The original maintained
+`TestS3kIczAct1TransitionHeadless#act1OutdoorTransitionReloadsIcz2AndAppliesRomCameraBounds`
+driver/bootstrap/service sequence and every comparison remained intact. A
+marked temporary test-only observer read immutable ROM payloads, actual
+Chunk presence/full six-word states, decoded extents and all128-reference
+indices. It wrote only `target/icz-r10-retained16.txt`,284621bytes/1777lines
+under a10MiB cap. No gameplay setter, private field, hydration, source API,
+allocator, collision fallback, service call or comparison was added/changed.
+The three sample phases are outgoing before detached construction, detached
+deferred construction, and actual in-frame reload before the next POST.
+Actual LevelManager LF was0 throughout this component driver, which directly
+pumps event/hardware boundaries; it is not native clock or trace-row evidence.
+
+| Actual phase |128 blocks /16 chunks | This build's decoded16 entries | Target indices129..717 (589 total) | All128 maximum16 reference |
+| --- | --- | --- | --- | --- |
+| Outgoing ICZ1 |230 /688 |688 |559 present, all nonzero native pattern groups;30 absent |687 |
+| Detached deferred ICZ2 |20 /129 |129 |589 absent |126 |
+| Actual reload before POST |230 /688 |129 |559 present, all four native pattern words zero;30 absent |687 |
+
+The first target entry129 (`$FF9408`) is referenced12 times, first from retained
+128-block30. Outgoing state is **`C131 C132 C133 C134 / 00FF 00FF`**; detached
+state is **ABSENT**; actual post-reload state is **`0000 0000 0000 0000 / 0000 0000`**.
+The first four words are native pattern descriptors; the last two are separate
+collision-index metadata. All559 outgoing pattern groups exactly match the
+independent ICZ1 secondary ROM decode, and all559 differ from actual zeros.
+Collision metadata differs for180 entries; this does not justify carrying old
+indices, because native LoadSolids is their separate current-level writer.
+
+| ROM producer | Source | Destination | Decoded bytes | SHA-256 of decoded payload |
+| --- | --- | --- | --- | --- |
+| Common ICZ primary16 |`$3D3FB6` |`$FF9000` |1032 / `$408` |`256f95e51a18034457c1badb873c1b3dd82c1900a4300b0ef1d4e5957a5c4397` |
+| ICZ1 secondary16 |`$3D5958` |`$FF9408` |4472 / `$1178` |`bdf0a5f5e78f069d8700f04cbdb281a5c843a1ea5ede6bfb8436de337b46613f` |
+| ICZ2 secondary16 |`$3DA26A` |`$FF9408` |4712 / `$1268` |`9e9268074574b2108b408d7c303f5dbd629d1219b7a3e213117a1c5ab6146f09` |
+
+ICZ1's known16 write ends at `$FFA580` exclusive. The last30 ICZ2 target entries
+688..717 correspond to `$FFA580..$FFA66F`; neither observed predecessor nor
+current construction supplied those bytes. ICZ2's queued payload, beginning
+`C0C5 C0C6 C122 C123`, owns them only when the existing publication owner runs.
+Their absence is a coverage/ownership limit, not evidence of native zeros.
+
+Source explanation on pin `044fa46725c71187399e13f5ddb70e11d32dc024`:
+`ICZ1BGE_Transition` calls `Load_Level` (layout-only1000-byte copy, no16 clear)
+and `LoadSolids`. Current `Sonic3k.captureLevelBuildInputs` carries128 definitions
+but no16-pattern bytes. `Sonic3kLevel.loadChunksWithCollision` decodes only the
+129 primary entries for the deferred build; `validateResourceReferences` sees
+the retained230 blocks/max687 and `ensureChunkCapacity` adds empty Chunks up to688.
+The measured counts/words establish that construction boundary. The detached
+fresh target lacks those retained128 references, so remains at129 and cannot
+serve as the actual handoff's resident16 oracle.
+
+Session **3364**, terminal1 at **16:51:31UTC**, queue14s/Maven25.677s,
+**1 test /1 failure /0 errors /0 skips**, class.576s. Temporary observer source
+SHA-256 `811f354491302307da88733f3ecd022d87f71e3c1ebaa1ff922d5e2774ec67e1`.
+The command is the [R9 focused command](../../plans/2026-10-13-s3k-playable-completion.md#r9-green-lrzddz-split-and-r10-icz-evidence-boundary--2026-10-17)
+with ONLY the exact ICZ method above as `-Dtest`; same normal lane/current Main
+absolute wrapper/from own cwd/all3 original ROMs/Java25/EGL/nullAL/noambient/
+Lua5.4/exact JTO/singlefork/reuse/alphabetical, no profile. No extra Java run.
+All128 initial pre-publication/queue/admission/unclaimed assertions pass, then
+the same16 index0 assertion fails. Initial pattern and later publication
+assertions remain unreached; no ICZ parity or full transition pass follows.
+
+Smallest proposed independent old-red: the short real ICZ handoff must preserve
+the known entry129 pattern words from its outgoing ROM owner until existing
+publication, while independently checking current-ROM LoadSolids indices and
+full claimed ICZ2 payload bytes. Keep the30 unknown pre-publication entries
+explicit and every original comparison; do not normalize them or narrow the
+span. A possible minimal runtime extension is private immutable native16-pattern
+byte carry parallel to128, with target collision indices and ordinary COW/
+deferred publication/rewind. **That extension is not authorized or implemented.**
+No blanket capacity rewrite, unknown-RAM fallback or public API is proposed.
+The observer is removed back to the exact unstaged e06 hash; inspected journal,
+reports and its compiled test class are consumed without archive or rebuild.
+Root owns the next source/evidence decision and composition. R8 natural-death,
+all other act products, full aux/native/cold-route and campaign limits remain open.
