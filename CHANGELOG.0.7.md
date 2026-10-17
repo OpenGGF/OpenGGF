@@ -1436,7 +1436,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   AIZ1/HCZ1 obligation lane rejects missing or skipped required
   cases. Rewind coverage protects individual object identities and distinguishes
   unavailable ROM prerequisites from executed round trips. Tool prerequisites
-  are checked before testing; category runs and a focused Maven wrapper wait automatically
+  are checked before testing, with the Maven version probe respecting isolated
+  measurements and the Python safety suite's real JDK controls participating in
+  build activity and execution admission; category runs and a focused Maven wrapper wait automatically
   for shared test execution slots across worktrees. Build-only Maven commands bypass
   the test queue while retaining exclusion against builds/tests in their own worktree.
   Linux admission can overlap up to three test runs

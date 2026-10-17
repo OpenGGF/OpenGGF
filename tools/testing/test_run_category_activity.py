@@ -150,6 +150,47 @@ marker.with_suffix('.result').write_text(json.dumps(dict(code=result, **timings)
         self.assertEqual(0, result['code'])
         self.assertGreater(result['build_wait_seconds'], .3)
 
+    @unittest.skipUnless(sys.platform == 'linux', 'Inspect inherited descriptors through /proc')
+    def test_preflight_waits_for_measurement_and_maven_inherits_activity(self):
+        binary = self.root / 'bin'
+        binary.mkdir()
+        (binary / 'mvn').write_text(f'''#!{sys.executable}
+from pathlib import Path
+import time
+root = Path({str(self.root)!r})
+fds = [p for p in Path('/proc/self/fd').iterdir()
+       if p.resolve() == root / '.git/maven-build-activity.lock']
+assert fds, 'Maven version probe must inherit the activity lease'
+(root / 'maven.started').touch()
+while not (root / 'maven.release').exists():
+    time.sleep(.01)
+print('Java version: 25')
+''')
+        (binary / 'mvn').chmod(0o755)
+        env = dict(os.environ, PATH=str(binary) + os.pathsep + os.environ['PATH'])
+        self.addCleanup((self.root / 'maven.release').touch)
+        with build_activity_slot(self.root, exclusive=True):
+            process, marker = self.launch('preflight', env=env, code='''
+from category_control import preflight
+marker.with_suffix('.ready').touch()
+preflight(root, dict(guards=False))
+marker.with_suffix('.done').touch()
+''')
+            self.wait_file(process, marker.with_suffix('.ready'))
+            time.sleep(.2)
+            self.assertFalse((self.root / 'maven.started').exists())
+            self.assertIsNone(process.poll())
+            self.assertFalse((self.root / '.git/maven-waiters').exists())
+        self.wait_file(process, self.root / 'maven.started')
+        with (self.root / '.git/maven-build-activity.lock').open('a+b') as probe:
+            self.assertFalse(_acquire(probe))
+        (self.root / 'maven.release').touch()
+        self.assertEqual(0, process.wait(timeout=5))
+        self.assertTrue(marker.with_suffix('.done').exists())
+        with (self.root / '.git/maven-build-activity.lock').open('a+b') as probe:
+            self.assertTrue(_acquire(probe))
+            _unlock(probe)
+
     def test_activity_is_inherited_by_child_after_wrapper_death(self):
         process, marker = self.launch('orphan', code='''
 import os, subprocess

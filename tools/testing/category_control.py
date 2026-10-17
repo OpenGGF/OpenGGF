@@ -1,7 +1,11 @@
 """Prerequisite checks and per-invocation timeouts for local validation."""
+from contextlib import nullcontext
 import os
 import re
 import subprocess
+
+from maven_activity import build_activity_slot
+from maven_queue import inherited_slot
 
 DEFAULT_MINUTES = 40
 IDLE_SECONDS = 600
@@ -19,8 +23,13 @@ def preflight(root, plan):
     failures = []
     for label, command, expected in checks:
         try:
-            result = subprocess.run(command, cwd=root, stdout=subprocess.PIPE,
-                                    stderr=subprocess.STDOUT, text=True, timeout=20)
+            # Even the Maven version probe starts a JVM. Coordinate it with
+            # measurements, releasing activity before any test admission.
+            activity = build_activity_slot(root) if command == ['mvn', '-v'] else nullcontext(())
+            with activity as fds:
+                result = subprocess.run(command, cwd=root, stdout=subprocess.PIPE,
+                                        stderr=subprocess.STDOUT, text=True, timeout=20,
+                                        **inherited_slot(None, fds))
             if result.returncode or (expected and not re.search(expected, result.stdout)):
                 failures.append(f'{label}: wrong version or unsuccessful launch')
         except (OSError, subprocess.TimeoutExpired) as error:
