@@ -146,6 +146,8 @@ Unreleased. The earlier development themes remain in
   pending placements wait for the next camera block crossing, which restores the
   Hydrocity fan timing. Hydrocity's hand launcher checks its top surface on every
   pass, as in the original, so a rising hand catches a player rolling over it.
+  Water skimming launches on a new jump-button press, so holding the spin-dash
+  button through release preserves the run across water.
   A Mega Chopper that catches Sonic alone locks his controls and passes through
   only left and right, so he must shake it off rather than roll, duck or jump.
   The Hydrocity miniboss spends the original start-up pass before it descends,

@@ -5182,6 +5182,124 @@ empty. Main config hash/mtime and own regular exact byte copy verified again.
 No extra Java execution. Preparing the normal local evidence-only commit;
 all seven policy trailers and final GPT-6.1 coauthor are parsed before commit.
 
+### Ending Kos CPU/bus core dependency — 2026-10-17
+
+GPT-6.1 owns this bounded dependency in retained `t3-fa8da232`, branch
+`feature/ai-s3k-kos-bus-timeline-gpt61`, based on Root
+`bef8f27ca5069ec296e6912b1e1bc7f735375c2f`. The preceding Apply branch ref and
+unknown TraceChaser checkout `4fdf7388` are preserved. The intended-tree build
+lease protected branch creation/fast-forward; hooks are installed. Ignored
+`config.yaml` is a private regular exact-byte Main copy; Main was read-only.
+
+`S3kKosBusTimeline` is package-private and has **no production registration or
+initializer**. It advances the existing Kos semantic switch one instruction at
+a time, rather than subtracting a known subtotal from a frame period. Captured
+state includes Kos registers/RAM, monotonic MCLK, explicit native phase origin,
+refresh deadline, SR/IRQ, nested exception return frames and interval work.
+GPGX `051d430d3d1b54625f9900c8f152d7f232e06daf` owns the rules:
+`m68kcpu.c:m68k_run` refreshes at opcode fetch, resets its deadline to fetch+896
+MCLK and charges14; `m68kcpu.h:m68ki_exception_interrupt` indexes
+`{50,59,58,57,56,55,54,53,52,51}` by `(counter/7)%10`;
+`system.c` rebases CPU and refresh counters together. Explicit origin rebasing
+preserves the native phase without assigning a scene clock.
+
+Per-instruction inputs must explicitly resolve fetch/execution stalls and
+post-instruction IRQ. Interrupt inputs separately resolve vector, post-ack IRQ
+and acceptance-stack waits before the phase lookup. Missing work refuses before
+clock or Kos RAM mutation. `m68kops.h:RTE` restores PC/SR and calls
+`m68ki_set_sr` **before** charging its20 base cycles; an inline pending VInt
+therefore receives those cycles in its new interval. Actual Set_Kos_Bookmark
+writes occur in their handler instructions; Backup's16+92+16 instructions run
+after RTE in the following interval. The original budget consumer remains an
+oracle; both consumers share the instruction seam.
+
+All 296 bytes `$1BF0..$1D18` are authenticated, including branch/immediate
+operands and Backup redirect target (SHA256
+`071f3b96cee3219995dbdb672901740653bc1dbfbf643c53c28e3fc3f9a236a9`).
+The existing Kos model independently authenticates its254-byte body
+`$1C1A..$1D18` (SHA256
+`0df7c3df3656a11694522ab3cd50046d2fe7f58e8b6d5e999f0fd690011ee0cd`).
+ROM arrays and captures are defensive. The only supported RAM instruction is
+`V_int_jump` at `$FFFFF0`: a future live engine RAM owner must supply all six
+`4EF9` bytes and the selected aligned ROM target; exact12-cycle JMP semantics
+are checked. No initialized bytes or arbitrary RAM instruction execution exist.
+
+Observed validation, all via current Main absolute
+`${OPENGGF_MAIN}/tools/testing/maven_queue.py` (`OPENGGF_MAIN` is the absolute
+Main-workspace root; the task thread retains the expanded host commands)
+from this intended tree, `JAVA_HOME=/usr/lib/jvm/java-25-openjdk`,
+`LUA_BIN=/usr/bin/lua5.4`, `--normal -Dmse=off`, no DISPLAY/WAYLAND or
+LD_LIBRARY_PATH, `EGL_PLATFORM=surfaceless`, `ALSOFT_DRIVERS=null`,
+`-Dopenggf.headless.gl=surfaceless-egl` and absolute Main
+`-Dsonic1.rom.path=${OPENGGF_MAIN}/s1.gen`,
+`-Dsonic2.rom.path=${OPENGGF_MAIN}/s2.gen`,
+`-Ds3k.rom.path=${OPENGGF_MAIN}/s3k.gen`, suffix `test -B`:
+
+- Red98448: `-Dtest=TestS3kKosServiceModel#refusesChangedOperandEvenWhenEveryOpcodeStillMatches`:
+  1 assertion failure/0 errors/0 skips, old opcode pins accepted immediate 1C29.
+  Scaffold 33983 separately errored on its unimplemented API; that is not a
+  gameplay failure or an additional old-red assertion. Intermediate 95409 passed 29.
+- Pre-P2 focused38250: `-Dtest=TestS3kKosBusTimeline,TestS3kKosServiceModel,TestS3kVIntInstructionCycles,TestS3kVIntInstructionProduction,TestS3kVIntDma,TestS3kVIntDmaLedger,TestHardwareTimingService,TestHardwareTimingRewind,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`:
+  **157/0F/0E/0S**, Maven 77s, queue 10s, 13 resolved classes. Core 20 covers
+  hand-derived refresh/ordering, all10 phases, non-whole-cycle stalls, explicit
+  ack, both RTE paths, bookmark/Backup/resume, nested IRQ, six-byte RAM negatives,
+  atomic refusal and two restored forward continuations with real Kos RAM/output.
+  Existing Kos 15 retains all 63 comparison-only native service windows; mandatory
+  S3K4 contributes 60. This is bounded focused validation, not a full suite.
+- Pre-P2 guards25449: `-Pguards -Dtest=TestArchitecturalSourceGuard,TestHardwareTimingAuthorityGuard,TestRewindArchitectureGuard,TestTraceReplayInvariantGuard,TestTraceHydrateSwitchDefault,TestZoneEventRewindSchemaGuard,TestRewindCoverageGuard,TestHelperStateRewindCoverageGuard`:
+  **132/0F/0E/0S**, Maven 37.067s, queue 6s. Runtime/test sources stayed frozen.
+
+Tested source blobs for that pre-P2 epoch (before documentation/local commit): timeline
+`670266e8380b6d265cb8eca179c4e85e68b7712d`, Kos model
+`3616911bd8dfaef28c8e53c070c4e823c922562d`, core tests
+`ccb36e301dc093598ccee108f4d9aa6b28d20850`, Kos tests
+`1d33ea8dbd045b65a2fad978f8ef57bd2020d369`. Runtime SHA256 values are
+`b532630730183a75fc00890f2686d961341282064baed303ae7cc849e1b8f493` and
+`e50315982110d8501376cd8b13b420e71f170a7c89a9e53b3dcebeec1a8debbe`.
+
+**Limits:** captured pure state is not a legitimate clock initializer or whole-world
+registration. Production boot/RAM phase, ordered caller/object/render/palette/HUD/
+plane/Nemesis work, complete handler producers, DMA/Z80/FIFO/HInt event producers
+and readiness coupling remain missing. Ordinary external handler system-SR writes,
+multiple differently targeted acceptances in one step, IRQ7, DMA rewind and
+VDP-write delayed IRQ semantics refuse/are unsupported rather than approximated.
+There is no frame-period budget, character/route fit, trace hydration, manifest,
+profile or service-count change. The original 6 measured counts, eligible 46-context
+prediction, Hyper/PAL/PCM and full ending acceptance remain OPEN. No native,
+media, performance, full-chain or broad job was launched; Root owns composition.
+
+Independent source review found one P2 before commit: an unsupported Kos source
+could change fetch/stall timing before rejecting, and a literal's source cursor
+could advance before its unsupported destination rejected. Old-red63834 selected
+`-Dtest=TestS3kKosBusTimeline#unsupportedLiteralDestinationRefusesBeforeSourceCursorOrAnyCapturedStateChanges+unsupportedSourceRefusesBeforeFetchStallRefreshOrAnyCapturedStateChanges`
+and observed **2 assertion failures/0 errors/0 skips** against complete timeline+
+Kos state equality (Maven 26.675s, admission 648s; waiting was not execution).
+The correction prevalidates every variable byte/word/long memory operand before
+clock, SR, register or RAM mutation, including both sides of a postincrement copy.
+It retains signed copy offsets, 24-bit addressing and supported RAM alignment.
+This is bounded address checking, not a speculative decode or 64KiB per-instruction
+copy; no bus value or emulated cost is invented. A focused independent source-only
+review cleared the exact correction; that reviewer did not execute tests.
+
+Final affected checks used the same normal wrapper/environment/ROM prefix above:
+
+- 2023, `-Dtest=TestS3kKosBusTimeline,TestS3kKosServiceModel test -B`:
+  **37/0F/0E/0S** (core 22 + existing Kos 15), Maven 72s, admission 86s.
+- 83355, `-Pguards -Dtest=TestArchitecturalSourceGuard test -B`:
+  **72/0F/0E/0S**, Maven 26.251s, admission 27s, separate fresh JVM.
+
+Those final runtime blobs are timeline `1026a5c928672d063de8bd191b5dc82fa2696db0`
+and model `91fbac1c7a45226bdce415a9652fb9b95453d17f`; core-test blob is
+`2e7673cc12f938e8812271fffcb1a4175a50d95d`, with the Kos-test blob unchanged.
+Final runtime SHA256 values are
+`116c8bcec841278dea325b2cddb8f63714472b66308f301fb05a763fae0828ff` and
+`2f00bd16f5b807600d9e095e51b4ca3e35060dcd3bf39c313e37461b8e3c27d2`.
+The earlier 157/132 epochs remain identified separately; unaffected neighboring
+checks were not rerun. No production field, registration, timing authority or
+profile changed in the P2 correction. All owned jobs are terminal; inspected
+reports and the temporary commit message are consumed under the metadata lease
+alone before handoff, with no archives. Only the preserved unknown TraceChaser
+checkout and accounted private config remain outside the local commit.
 
 ### Current composition, slice attribution and broad-validation boundary — 2026-10-17
 
@@ -5793,3 +5911,127 @@ the now-removed temporary witness; no fresh maintained-source compile is claimed
 Private config remains regular0600/exact bytes; Main config SHA256/mtime unchanged.
 R1–R6 refs/results/native originals/captures and foreign jobs preserved. Docs-only
 local commit; no integration/push, foreground845 unit still gated.
+
+
+
+### Second Strike warning fixture physical ownership — 2026-10-17
+
+Root02b's broad15826 exposed the sole new failure
+`TestSecondStrikeBoss#childFirstAndParentFirstBarrelSlotsKeepEveryWarningPresentation`:
+expected3/actual0 warnings. Root's matched Main803 method89643 passed1/0F0E0S
+at15:35:54UTC and its diagnostics were consumed. This is not an inherited
+baseline failure or a reason to restore Java parent references. R7 captures
+`AizMinibossComponent.parentSlot` at birth; moving the same Java boss from its
+original SST to70 leaves those physical parent3 words unchanged. The follow-up
+owner selects the family at its current root slot, correctly finding none.
+Native `loc_68A94` creates body/arm/barrels with `CreateChild1_Normal`, whose
+`move.w a0,parent3(a1)` follows `AllocateObjectAfterCurrent`
+(skdisasm044fa467,sonic3k.asm137334–137342/177010–177040).
+
+Local merge4e65da92e7d538015468114cccc56160fde269d5 preserves kernel16b and
+both complete append-only Plan streams. The test-only migration keeps a real
+root-before-five-child graph. Ordinary unrelated allocations before child birth
+are removed before warning admission, supplying real free holes before barrel
+anchors; the dense graph supplies warning slots after them. No assigned slots
+or relocated roots are used by either positive case. Assertions retain root
+ObjectRef/slot, all five captured parent3 values, each warning's actual barrel
+ObjectRef/slot, physical relative order and the pose visible at its own SST pass.
+Both cases present all16 cues, emit one four-flame wave, run its short tail and
+repeat the continuation twice after forced Java graph recreation. Comparison
+uses the existing strict canonical comparison of every registered object and
+game-state snapshot key. This fixture does not register the full terrain/player/
+art world, use a cold campaign inlet, or supply native visual evidence. The
+relocated-root scenario remains an explicitly invalid-inlet negative: captured
+parent3 does not change and no warning or invisible follow-up wave is admitted.
+
+Focused session3990 on4e65da92 plus test SHA256
+`eda34c2c5660b75130095fdee847bac9e4ae5dbc74c2d901c64f0b655cb5a54a`
+passed21/0F0E0S at15:48:40UTC: entire `TestSecondStrikeBoss`14,
+`TestS3kAizMinibossGraphRewind`4 and `TestAizMinibossChildRetirement`3.
+Queue245s and Maven27.255s are distinct; no broad/S3K4 repetition or new capture.
+XML counts/skips were inspected and the owned diagnostics consumed. Exact command
+from the owned tree, with `${OPENGGF_MAIN}` the unchanged Main workspace:
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH \
+  EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=${OPENGGF_MAIN}/s1.gen" \
+  "-Dsonic2.rom.path=${OPENGGF_MAIN}/s2.gen" \
+  "-Ds3k.rom.path=${OPENGGF_MAIN}/s3k.gen" \
+  '-Dtest=TestSecondStrikeBoss,TestS3kAizMinibossGraphRewind,TestAizMinibossChildRetirement' test -B
+```
+
+No runtime, allocator, reparent API, readiness/profile or service-count changes.
+No trace frontier moves; existing route/viewport/donor/native coverage limits and
+ending production caller/bus inputs/6+46/Hyper/PAL/PCM blockers remain open.
+Root owns later composition and integration; this branch is local only.
+
+
+### Canonical HCZ8329 skim logical-press owner — 2026-10-17
+
+The [bounded owner evidence](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#canonical-returned-hcz8329-water-skim-input-owner--2026-10-17)
+records original AD40 prefix21228 (observer success1/0F0E0S, live comparator218
+errors through8330), actual raw/logical no-press state and the post-terrain/
+pre-object launch. Native385D2 masks logical pressed bits; the HCZ skim owner
+incorrectly tested held input. Independent5337 reproduces both wrong branches
+as2/2F0E0S. Runtime change is confined to that owner's existing predicate.
+Current source53d plus HCZWaterSkimHandler/test edits; unrelated native4fdf,
+private config, kernel16b and warning53d refs remain preserved. No shared input,
+movement, camera/counter/visibility, native/media, broad or ending readiness work.
+
+Exact invocation shape from the owned tree uses unchanged current Main tooling
+and original absolute ROMs, with the selection substituted below:
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH \
+  EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=${OPENGGF_MAIN}/s1.gen" "-Dsonic2.rom.path=${OPENGGF_MAIN}/s2.gen" \
+  "-Ds3k.rom.path=${OPENGGF_MAIN}/s3k.gen" "-Dtest=${SELECTION}" test -B
+```
+
+- Build-only99674 used `-DskipTests -Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical test-compile -B` (no tests),0/Maven23.656s.
+- Original witness21228 selection `TestS3kCanonicalHcz8329Witness#originalAd40ThroughHczFirstVelocityDisagreement` additionally used `-Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical`; its JTO had exactly the single EGL token, with no additional CLI lag/driver override. No CLI EGL token was needed because JTO supplied it. Queue914s/Maven48.519s; partial evidence, not parity green.
+- Old-red5337 selection `TestHCZWaterSkimHandler#heldActionAcrossActivationAndSustainDoesNotCreateJump+logicalEdgeWithoutRawHeldTriggersTheNativeJumpExit`,2/2F0E0S,queue882s/Maven24.283s.
+- Focused9066 selection `TestHCZWaterSkimHandler,TestHCZWaterSkimExitOnCurve,TestHczWaterRewindStaticAdapters,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils` passed80/0F0E0S at16:39:02UTC,queue55s/Maven1m18s. Seven selectors matched eight classes because both level-loading classes share a simple name. Separate authority7703 passed25/0F0E0S (16:41:21UTC,queue20s/Maven29.089s). One postrow-only originalprefix9812 completed1/1F0E0S (16:42:13UTC,queue29s/Maven50.427s):8329vy0/no falsejump assertions pass,8330native velocity matches; a newly added unsupported animation0 diagnostic assertion fails on195. Live206=11physics+195animation,firstNonCameraPhysicsMismatch null,0warnings/bootstrap,54lag through8330. No automatic rerun/relaxation/source widening; Root owns retained-animation classification. Root subsequently authorized one required original maintained full canonical after classifying the zero-animation diagnostic mistake; terminal outcome is recorded below.
+
+Short tests cover declared semantic input and the captured owner/player world,
+not a natural route or new viewport/donor/native visual row. Full canonical
+completion/giant-ring exit, the separate82EA/R14 camera question and ending
+production caller/bus/6+46/Hyper/PAL/PCM acceptance remain open.
+
+- Authority7703 selection `TestHardwareTimingAuthorityGuard` used the same ordinary environment in a fresh JVM;25/0F0E0S.
+- Prefix9812 selection `TestS3kCanonicalHczSkimPrefix#originalAd40HeldSkimDoesNotLaunchThrough8330` used the original21228 trace-replay/single-fork/reuse/alphabetical environment, no CLI lag/driver override, JTO single EGL token. Its failed extra animation expectation is documented, not hidden by its successful8329 causal checks. The subsequent required maintained canonical49197 is recorded below.
+
+Root disposition: existing R10/R11 already record195 animation through7135/7808,
+first3475 sidekick17/1C. Current9812 stderr confirms that first field/head; no
+full195 vector identity or precise maximum/all-field extraction is available
+from compact reports. Remove temporary diagnostic code, retain its1F result,
+then run exactly one maintained selection
+`-Ptrace-replay -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical`
+with the original AD40 boot/lag driver and21228 environment/all3ROMs, no cutoff,
+observer or additional assertion. No further fix/probe/slice/selection follows
+its actual next frontier without a new handoff.
+
+
+Required maintained canonical49197 used that exact original AD40 selection and
+single-EGL-token environment, no cutoff/observer/extra assertion. On53dbe8fd plus
+reviewed runtime99957690/test2dd28e9b it finished16:51:28UTC, queue151s,
+Maven52.840s/JUnit27.372s, **1/1F0E0S**. Seg11 completes14208rows:
+26153=23312physics+2841animation,0warnings/bootstrap,lag59; first non-camera
+moves8329 y_speed0/-680→8717 sidekick_air1/0. Prior17194 same-window125612
+(107498+18114) is a bounded aggregate comparison, not full-vector acceptance.
+Earlier0/2/4/6/8/9 remain complete-zero;13 gaps have0failures, including actual
+hcz_2→ss_6→hcz_3 (manifest giant_ring/stage_exit). The giant-ring exit is reached,
+while the strict chain remains red. Seg13 is incomplete:63295=54642physics+
+8653animation,0warnings/bootstrap,lag6,first287 y06D4/06DA, recent row3208;
+walk loses ownership at BK2cursor88306 (LEVEL/gen10/zone1/act1; manifest expects
+act2). Four future hardware edges3256/3257/5356/5357 remain suppressed unmatched;
+no hydration, descriptor fitting or SS parity total is inferred. Full details
+and exact reviewed hashes are in the linked audit. Stop: no further probe/fix/
+selection; Root owns next frontier, composition and ending6+46/PAL/PCM limits.
