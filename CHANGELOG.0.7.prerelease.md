@@ -277,7 +277,8 @@ Unreleased. The earlier development themes remain in
 - **Native-compatible PCM output (diagnostics):** An opt-in audio session setting
   feeds the accurate FM chip's own pin sums through a Java port of blip_buf. It
   uses BizHawk's Nuked YM2612 scale and the movie's filter, which is None,
-  LowPass or ThreeBand with musl's `sin`. It produces 44.1 kHz PCM for comparison
+  LowPass or ThreeBand with musl's `sin` and the stock core's single-precision
+  pi in its cutoffs. It produces 44.1 kHz PCM for comparison
   against BizHawk. On an identical strobe schedule it matches Genesis Plus GX
   source vectors byte for byte. `GameplayCaptureTool --native-pcm` records it from
   live gameplay using a BK2's own settings; only NTSC Nuked movies are accepted.
@@ -290,7 +291,16 @@ Unreleased. The earlier development themes remain in
   time. Previously 600 frames completed only 599 hardware frames. The
   presentation still delivers 800 samples per frame at 48 kHz, so at 60 Hz music
   and effects sound about 1.29 per mille higher and faster than a 59.92 Hz
-  console, while staying in step with gameplay frames. PAL is unchanged.
+  console, while staying in step with gameplay frames. PAL is unchanged. The SEGA
+  chant's sample bytes follow the exact Z80 loop cadence on that budget instead of
+  a rate rounded to whole hertz.
+- **Sound hardware across level entry:** A level load that re-installs the same ROM
+  and audio profile no longer resets the sound chips. The ROM's sound driver keeps
+  running into the level, and the engine now keeps the chips with it; Sonic 3 &
+  Knuckles' Data Select hand-off used to rebuild them twice. A different ROM or
+  game, or a reset, still installs fresh hardware, and rewind restores the kept
+  chips exactly. The Sonic 3 & Knuckles title screen now opens with the ROM's
+  music fade-out request, which silences the PSG on entry as the console does.
 
 Rewind verification compares private records and complete captured opaque arrays
 by content, with explicit failures when snapshot inspection cannot complete. It also

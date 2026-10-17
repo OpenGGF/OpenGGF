@@ -27,6 +27,59 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-10-17 - S3K title start: the stereo-frame-11 PCM difference was the ThreeBand cutoff pi; first difference now row 16
+
+- **Commit / worktree:** lane `pcm-output`, 844b19f02 (clean).
+- **Command:** as the 2026-10-16 title-start entry (`GameplayCaptureTool --game s3k --zone aiz --act 1
+  --title-screen --main sonic --sidekick tails --input <emeralds.bk2> --input-start 0 --frames 600 --audio
+  --native-pcm --no-video`), then `compare_native_pcm_window.py --start-row 0` against the same native rows
+  0-2399 capture.
+- **Result:** stereo frames 0-11,784 (rows 0-15) equal. First difference at stereo frame 11,785 (row 16),
+  native (0, 0) against engine (1, 1): the engine's SEGA PCM starts at frame 16, native's at row 63.
+- **Owner of the old frame-11 difference:** the stock core computes the ThreeBand cutoffs with GPGX
+  `core/macros.h`'s float `M_PI` (`0x400921FB60000000` at `0x36f001c8a08`), not the double pi. With unity
+  gains the filter returns its input up to the last bits, so the cutoff bits decided 47 one-LSB truncation
+  flips in rows 0-4. Killed: YM resets at Z80-reset edges (any clock 0-700, no change), PSG power-on (silent),
+  EQ operation order (stock code audited), `vsa`.
+
+## 2026-10-17 - S3K title start: level entry keeps the sound device; Title_Screen's cmd_FadeOut supplies the Z80 PSG silence
+
+- **Commit / worktree:** lane `pcm-output`, 3c30e7352 plus the re-install guard and the
+  `Sonic3kTitleScreenManager.initialize` request (committed together on the same branch).
+- **Command:** as the 2026-10-16 title-start entry (`GameplayCaptureTool --game s3k --zone aiz --act 1
+  --title-screen --main sonic --sidekick tails --input <emeralds.bk2> --input-start 0 --frames 600 --audio
+  --native-pcm --no-video`), then `compare_native_pcm_window.py --start-row 0` against the same native rows
+  0-2399 capture, and the startup writes against the native partial v2 ledger (ticks 0-1).
+- **Result, device carry:** one native-compatible stage session for all 600 presentations (was 1 to 3 at
+  frame 208); 323,081 stereo frames drained, blip_buf's count for the frames crossed.
+- **Result, startup writes:** the engine's 89 startup writes equal native's 89 Z80 writes of rows 14-15 in
+  order: `zStopAllSound` (84), `zPlayDigitalAudio`'s `2Bh = 0`, then `cmd_FadeOut`'s `zPSGSilenceAll`
+  (`9Fh BFh DFh FFh`). Native's 4 68k writes (`Init_InputPSG`, cold power-on) remain unmatched and open.
+- **Result, PCM:** unchanged first difference at stereo frame 11, native (773, 773) against engine
+  (774, 774), inside the power-on transient; unattributed. Timing (engine frame 0 against rows 14-15;
+  SEGA PCM at engine frame 16 against row 63) is unchanged. No shift, wait or hydrated state.
+
+## 2026-10-16 - S3K production title start from row 0: first startup divergence and exact SEGA PCM cadence
+
+- **Commit / worktree:** lane `pcm-output`, 650a823ea (capture), then the transport fix on the same branch.
+- **Command:** `GameplayCaptureTool --game s3k --zone aiz --act 1 --title-screen --main sonic
+  --sidekick tails --input <emeralds.bk2> --input-start 0 --frames 600 --audio --native-pcm`,
+  then `compare_native_pcm_window.py --start-row 0` against the native rows 0-2399 capture.
+- **Result, PCM:** the first different stereo frame is 11, native (773, 773) against engine
+  (774, 774). Both carry the power-on DC transient. The difference is unattributed.
+- **Result, write ledger (corrected the same day):** the engine runs the ROM driver
+  initialisation (`zStopAllSound` plus the DAC idle entry) at session install, which is
+  engine frame 0 on the title path. Those 85 writes equal native row 14's 84 Z80 writes
+  and row 15's first write. The engine lacks 8 PSG silence writes: the 68k-side 4 at row
+  14 and 4 Z80 writes at row 15. The earlier "engine has none" came from a ledger
+  observer attached after boot. The native SEGA PCM starts at row 63,
+  the engine's at frame 16. Native rows 0-12 are power-on lag rows the engine does not
+  model. ROM `Title_Screen` (sonic3k.asm:5392-5485) fades to black and decompresses the
+  logo before `cmd_SEGA`, while the engine runs a 16-frame `SEGA_FADE_IN`. At engine frame
+  208 the DATA_SELECT handoff rebuilds the presentation session, which resets the chip.
+- **SEGA PCM transport:** whole-hertz rounding put 3,892 of 24,000 bytes one sample early
+  (first at byte 221). The transport now counts the exact rational rate.
+
 ## 2026-10-16 - Presentation cadence corrected: one NTSC hardware frame per presentation
 
 - **Commit / worktree:** lane `pcm-output`, branch `feature/ai-s3k-r2-pcm-native-output`.

@@ -106,13 +106,23 @@ The actual native core links musl. Evidence:
 - Its `sin`, `__sin`, `__cos` and `__rem_pio2` machine code follows musl 1.2.0
   (`waterbox/musl` at `2063abc4`) in operation order and constants.
 - Running that machine code, with the ELF mapped at its fixed addresses, for
-  every 16-bit cutoff gives `0x3fc009b8777f3582` at 880 Hz. The
-  65,536-value dump hash is pinned in the test, and `MuslSin` reproduces every
-  value.
-- `StrictMath.sin` differs on 792 of the 65,536 values.
+  every 16-bit cutoff: `MuslSin` reproduces every value, and `StrictMath.sin`
+  differs on 792 of the 65,536.
+- Correction (2026-10-17): the first dump formed its arguments with the host's
+  double `M_PI` and pinned `0x3fc009b8777f3582` at 880 Hz. That is not the
+  core's argument. The core's `audio_reset` multiplies `(f / 44100.0)` by the
+  constant at `0x36f001c8a08`, `0x400921FB60000000` (3.1415927410125732). That is
+  GPGX `core/macros.h:36-38`, `#define M_PI 3.14159265358979323846264338327f`, a
+  float literal used because that build's libc defines no `M_PI`. On the core's
+  own argument its `sin` gives `lf` = `0x3fc009b87ef9877a` (880 Hz) and `hf` =
+  `0x3fe65131439abe44` (5000 Hz). `ThreeBandEq.NATIVE_PI` is that literal, and
+  the test pins the corrected dump (`7a13007b...234a5`) and both cutoffs.
 
-The stock core's inlined per-sample EQ code has not been audited at machine
-level; only its source `eq.c` has.
+The stock core's per-sample EQ is inlined into `gpgx_advance`
+(`0x36f001bd6e0`-`0x36f001bd98a`, both channels in SSE2 lanes). It performs
+`eq.c`'s operations with commutative reordering only (`l + h`, `(m + l) + h`),
+then truncates with `cvttpd2dq` and clips to 16 bits. Its `vsa` constant is
+`1.0 / 4294967295.0`.
 
 ## First real window (2026-10-16): measured tiers
 
@@ -172,9 +182,7 @@ from the NTSC line and frame constants, not fitted.
   frame.
 - PAL is unchanged: the engine's chips use NTSC clocks, so a PAL budget
   needs PAL chip clocks. That remains open.
-- The SEGA PCM transport still rounds the device rate to whole hertz for its
-  Z80 byte cadence, a 4 ppm difference at 47,938.19 Hz. That is recorded,
-  not corrected.
+- The SEGA PCM transport's whole-hertz rounding is corrected; see [TRANSPORT] below.
 
 **[CARRY / INGRESS] — exploratory, not attributable.** The engine capture
 boots AIZ1 directly and replays inputs from row 577. Native ran rows 0-576
@@ -186,10 +194,162 @@ that native plays from row 577.
 (792, 1002) against engine (0, 0). The earliest unmatched ingress owner is
 the capture entry itself: `GameplayCaptureSession.boot(zone, act)` creates a
 fresh presentation session at level boot, with no power-on, title or menu
-audio history. The engine has no S3K power-on/SEGA-screen production entry,
-and its title-screen entry starts after native's SEGA prefix. Waveform equality and musical first-cause attribution need an
+audio history. A production S3K SEGA/title entry does exist:
+`GameplayCaptureTool --title-screen` (`GameplayCaptureSession.startAtTitle`)
+enters `Sonic3kTitleScreenManager` at `Phase.SEGA_FADE_IN`, and its SEGA hold
+issues the SEGA chant and stop commands. `S3K_SKIP_INTROS` is an AIZ level
+flag only. What may be unmodelled is Genesis CPU power-on equivalence, the
+native frames before the SEGA screen. The startup comparison below measures
+that boundary. Waveform equality and musical first-cause attribution need an
 authentic production entry from power-on or title matched to native rows,
 and that does not exist yet.
+
+**[STARTUP] — the production title-start window from row 0 (2026-10-16).**
+`GameplayCaptureTool --title-screen --input-start 0 --frames 600 --audio --native-pcm`
+replayed the original emeralds BK2 (sha256 `ad40fb0b...`; SyncSettings Nuked_YM2612,
+ThreeBand 880/5000 Hz, gains 1.0, Region 0, which autodetects to USA from the header
+`JUE`). The stage was attached before boot. The engine ran at 650a823ea plus the
+docs-only edit; Maven finished 21:24:47Z. It was compared with the preserved native
+capture of rows 0-2399 with no realignment:
+- PCM: identical to stereo frame 10. The first difference is stereo frame 11, native
+  (773, 773) against engine (774, 774), inside the power-on DC transient both sides
+  start at sample 3. The differences are isolated ±1 values: 47 per side over rows
+  0-4, none from row 5. Neither side has a write before row 14. These hypotheses
+  were killed:
+  1. A YM power-on clock-phase offset: no first-sweep phase from -23 to +96 clocks
+     reproduces native rows 0-12, while phase 0 reproduces the engine exactly.
+  2. FMA contraction: the stock core contains no FMA instructions.
+  3. Equaliser operation order: the core's vectorised inlined `do_3band`
+     (`gpgx_advance`, near `0x36f001bd660`) evaluates
+     `f1p0 += lf*(s-f1p0)+vsa` and `(l+m)+h` with commutative reordering only,
+     which is bit-identical to `eq.c` and to the Java port.
+  4. The 68k's power-on events (2026-10-17). GPGX resets the YM2612 on every
+     Z80-reset edge (`genesis.c` `gen_zreset_w`, including `EntryPoint`'s writes at
+     sonic3k.asm:146-147, 157-159). An `OPN2_Reset` at any internal clock from 0 to
+     700, keeping the wrapper's 24-slot phase as `sound.c` does, leaves the output
+     identical (701 of 701): the idle ladder output is the same in every slot. The
+     PSG powers on with `chanOut` 0, so its output is silent until a volume write,
+     and `Init_InputPSG`'s attenuation writes change nothing.
+- Attributed and fixed (2026-10-17): the equaliser's cutoff constant.
+  - A write-free GPGX-source power-on (the vector driver, no strobes or PSG bytes)
+    equals the engine over rows 0-13 exactly (10,290 stereo frames). So the engine's
+    frame-0 driver writes are inaudible, and its chip output, mixing, resampling and
+    presentation timing equal the source model there.
+  - At all 47 differing frames the model's EQ sum `l + m + h` lies within 1.14e-13
+    of the input sample, and native truncates to the other side. With unity gains
+    the equaliser returns its input up to the last bits, so only the cutoffs' last
+    bits can move these flips.
+  - Replaying the model's raw (unfiltered) output through `eq.c` with the stock
+    core's float-pi cutoffs reproduces native rows 0-13 exactly. With the double pi
+    it gives the same 47 differences as the engine.
+  - The vector generator now compiles `eq.c` as strict ISO C so `macros.h` supplies
+    the float pi. Only `native-threeband-unity.s16` changed; the other three
+    vectors regenerated byte for byte. The old Java source failed it at index 22
+    (stereo frame 11: expected 773, was 774) before `ThreeBandEq` took
+    `NATIVE_PI`.
+  - Real window after the fix (844b19f02, same title-start command, Maven finished
+    00:58:05Z): stereo frames 0-11,784 (rows 0-15) equal native exactly. The first
+    difference is stereo frame 11,785, native (0, 0) against engine (1, 1), at row 16
+    where the engine's SEGA PCM begins; native's starts at row 63 (open below). One
+    stage session for all 600 presentations. No shift, normalisation or fitted bias
+    was applied.
+- Write ledger (native partial v2 ledger, frames 14-63; the producer faults later at
+  frame 146):
+  - Native row 14 is the `driver_init` service with 88 writes: 4 PSG silence writes
+    from the 68k side, then the Z80's `zStopAllSound` (84 writes: YM release, TL `7Fh`,
+    key-off and SSG-EG clear per channel, PSG silence, `2Bh = 0`, `27h = 0`).
+  - Correction (fresh 230-frame capture whose ledger records boot writes): the engine
+    does run the ROM driver initialisation. `SmpsDriverSession.install` applies the S3K
+    policy's boot program (`zStopAllSound`) and then the DAC idle-loop entry
+    `2Bh = 0`. On the title path that happens at the first presentation, so engine
+    frame 0 holds 85 writes. They equal native row 14's 84 Z80 writes and row 15's
+    first write, in identical order. The earlier ledger missed them because its
+    observer was attached after boot.
+  - The remaining init differences were timing (engine frame 0 against native rows
+    14-15) and 8 PSG silence writes the engine did not emit: the 68k-side 4 at row 14
+    and 4 Z80 writes at row 15.
+  - Native row 15's `2Bh = 0` is `zPlayDigitalAudio`'s entry write (Z80 driver
+    :4258-4262), which the recorder files with the first `vint` service.
+  - The Z80-side 4 (2026-10-17, fixed) come from ROM `Title_Screen`'s first request,
+    `Play_Music(cmd_FadeOut)` (sonic3k.asm:5393-5394, written straight into
+    `zMusicNumber`, :1471-1475). The first VInt services it: `zFadeOutMusic` arms the
+    fade counters and falls through `zHaltDACPSG` into `zPSGSilenceAll` (Z80 driver
+    :2307-2325, :2587-2597), so the PSG writes `9Fh BFh DFh FFh` with no song playing.
+    `Sonic3kTitleScreenManager.initialize`, which every engine entry to the title game
+    mode calls, now issues that request; the engine's S3K fade policy already armed
+    the counters and wrote `zPSGSilenceAll` without a song. A title-start capture's
+    startup writes are now the 84 init writes, `2Bh = 0`, then the four PSG writes, in
+    native order (`TestNativePcmCaptureLive.titleStartServicesTitleScreensFadeOutAfterTheDriverInit`,
+    red before the fix).
+  - The 68k-side 4 stay open. They are `EntryPoint`'s `Init_InputPSG`, which writes
+    `PSGInitValues` (`9Fh BFh DFh FFh`, sonic3k.asm:177-180, :266-267) only on a cold
+    power-on; a soft reset branches to `Init_SkipPowerOn`. The engine models no 68k
+    power-on. The S3K physical policy's `boot()` is not that owner: it is the Z80
+    driver's `zInitAudioDriver` program and also runs on in-engine `HardReset`
+    boundaries, which are not power-ons. No write was injected.
+  - The native SEGA PCM starts in the service at row 63. The engine's SEGA bytes start
+    at frame 16.
+- Earliest unmatched owners:
+  1. Native rows 0-12 are power-on lag rows (68k init and Z80 driver load), and the
+     engine starts at `Sonic3kTitleScreenManager` `Phase.SEGA_FADE_IN` with no
+     equivalent. Genesis CPU power-on is not modelled.
+  2. Before `cmd_SEGA`, ROM `Title_Screen` (sonic3k.asm:5392-5485) runs `cmd_FadeOut`,
+     `Pal_FadeToBlack`, the logo `Kos_Decomp`/`Eni_Decomp`, the plane map and
+     `Pal_FadeFromBlack`. The engine runs a fixed 16-frame `SEGA_FADE_IN`
+     (`SEGA_FADE_DURATION`) and issues `CMD_SEGA` at frame 16.
+  3. At engine frame 208 the movie leaves DATA_SELECT for AIZ1
+     (`NativeDataSelectLaunchFlow.launch` -> `loadZoneAndActForFreshRuntime` ->
+     `LevelManager.configureAudio`). That call re-installs the same ROM and audio
+     profile instances, and each call rebuilds the presentation through
+     `replaceShadowPresentationForBaseMutation`. The stage session counter goes 1 to
+     3, so the production chip restarts from reset while native's chip continues.
+     - Red first, production path (22:07:41Z):
+       `TestNativePcmCaptureLive.dataSelectLevelEntryKeepsThePresentationDevice`
+       reported "session rebuilt at frame 208, expected 1 but was 3".
+     - Fixed (2026-10-17). `AudioManager.setRom`/`setAudioProfile` keep the
+       presentation when they would re-install the very source already installed:
+       the same profile and ROM instances, with its loader built. A new ROM or
+       profile instance, a reset, or a donor change still goes through the full
+       replacement (`TestAudioManagerRuntimeInstallation`: two identity cycles, ROM,
+       profile and reset replacements; the donor control is unchanged). The witness
+       now passes: one stage session and blip_buf's exact count for 230
+       presentations across the frame-208 entry.
+     - The first attempt broke `TestS3kEndingAudioRequestLedger` 3/3 ("mus_SSZ
+       ticks before the fade"), because that harness stepped the title for hundreds
+       of frames without presenting audio. The rebuild had been discarding the
+       resulting command backlog. The harness was wrong, not the queue: production
+       (`Engine.display`, `GameplayCaptureTool`) presents one outer audio frame after
+       every simulation step. The harness now opens its capture lease before the
+       title and presents and drains every title step in the tool's order (step,
+       `presentOuterFrame`, drain). A new control asserts `mus_Title` is serviced on
+       the title's presented frames, still at its own cadence when the title ends.
+       All three products pass unchanged, including the `mus_SSZ` control.
+     - Rewind of the kept device: `TestS3kLevelEntryAudioDeviceRestore` (S3K ROM,
+       accurate core, ThreeBand stage) takes a snapshot before a same-source
+       re-install, presents 90 frames, restores, and replays the stage output byte
+       for byte; a window shifted by one hardware frame must differ.
+- Waveform equality from row 0 therefore cannot hold past the startup boundary. No
+  offset was fitted and no chip state was hydrated.
+
+**[TRANSPORT] — SEGA PCM byte cadence is exact (2026-10-16).** The SEGA PCM bytes are
+ordinary YM `2Ah` writes into the production chip, so the native-compatible stage
+already carries them. Their cadence was wrong: `segaPcmByteCost` rounded the device
+rate to whole hertz.
+- On the live hardware-frame budget (47,938.19 Hz), a pre-fix scratch probe with
+  24,000 bytes put 3,892 of them one sample early. The first was byte 221, at render
+  734 instead of 735 (21:25:15Z).
+- Fix: the device settings now carry the rate as an exact rational,
+  357,954,500 / 7,467 Hz, through `SmpsHardwareFrameBudget.Rate`. The transport counts
+  Z80 cycles times the numerator, so a byte costs `248 * n` and an output frame adds
+  `3,579,545 * d`.
+- `TestSmpsSegaPcmTransportCadence` checks:
+  - every byte's render index against `ceil(k * 248 * 800 / 59,736)`, where 59,736 is
+    the Z80 cycles in one NTSC hardware frame;
+  - a whole-hertz control that misplaces bytes;
+  - the phase across a session snapshot restore;
+  - that the transport is audible in the stage at one hardware frame per presentation.
+- Rates given only as a double keep whole-hertz rounding, which is exact for integer
+  rates.
 
 **[PER-SERVICE LEDGER] — unavailable for this window.**
 - The existing per-service oracle (`s3k-aiz1-intro-reference-v2`) is a
@@ -260,6 +420,9 @@ are unchanged.
   any waveform-equality claim.
 - [SCHEDULE] PSG write timing: engine PSG bytes land at the next YM clock after
   a service; native bytes land at Z80/68k bus times.
+- [POWER-ON] The 68k `Init_InputPSG` cold power-on writes (no engine owner), and the
+  startup timing: engine frame 0 against native rows 14-15, SEGA PCM at engine frame
+  16 against native row 63.
 - [CORE] A MAME YM2612 output path for the Knuckles movie; Nuked is never
   substituted.
 - PAL, DAC timing, carry state at an ending window, and every ending product.

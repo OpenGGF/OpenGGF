@@ -55,6 +55,7 @@ class TestS3kEndingAudioRequestLedger {
     /** Engine music ids are one-based, so table entry $32 is id $33 (Sonic3kMusic.CREDITS_SK). */
     private static final int CREDITS_SONG = Sonic3kMusic.CREDITS_SK.id;
     private static final int SSZ_SONG = Sonic3kMusic.SSZ.id;
+    private static final int TITLE_SONG = Sonic3kMusic.TITLE.id;
     /** Frames of driver progress inspected after the credits request. */
     private static final int CREDITS_WINDOW = 120;
 
@@ -80,27 +81,31 @@ class TestS3kEndingAudioRequestLedger {
             session.enableAudio();
             session.startAtTitle();
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 13, 1, settings);
-            enterDeclaredScene(session, emeralds);
             var audio = GameServices.audio();
-            audio.setRequestObserver((type, id) -> requests.add(new Request(
-                    GameServices.level().getFrameCounter(), type, id, owner())));
-            audio.setDriverServiceObserver(new SmpsDriverServiceObserver() {
-                @Override public void onServiceEnd(ServiceEvent event, SmpsDriverSnapshot snapshot) {
-                    if (event.kind() != ServiceKind.SEQUENCER_TICK || event.sequencer().sfx()) return;
-                    SmpsSourceDescriptor source = event.sequencer().source();
-                    for (var entry : snapshot.sequencers()) {
-                        if (!entry.sfx() && entry.source().equals(source)) {
-                            pendingTicks.add(new MusicTick(source.id(), entry.snapshot().tracks().stream()
-                                    .map(track -> track.pos()).toList()));
-                        }
-                    }
-                }
-            });
-            long fadeCount = audio.musicFadeOutCount();
-            boolean rescueAtGate = false;
-            // GameplayCaptureTool --audio's pull: the driver only services frames that are presented.
+            // GameplayCaptureTool --audio's pull: the driver only services frames that are presented, so every
+            // title frame is presented and drained too, in the tool's order (step, outer presentation, drain).
             try (var capture = audio.beginLiveCaptureAudio(60)) {
                 short[] samples = new short[capture.maxStereoFramesPerPacket() * 2];
+                enterDeclaredScene(session, emeralds, () -> {
+                    session.loop().presentOuterFrame(false, false);
+                    capture.drainPresentationFrame(samples);
+                });
+                audio.setRequestObserver((type, id) -> requests.add(new Request(
+                        GameServices.level().getFrameCounter(), type, id, owner())));
+                audio.setDriverServiceObserver(new SmpsDriverServiceObserver() {
+                    @Override public void onServiceEnd(ServiceEvent event, SmpsDriverSnapshot snapshot) {
+                        if (event.kind() != ServiceKind.SEQUENCER_TICK || event.sequencer().sfx()) return;
+                        SmpsSourceDescriptor source = event.sequencer().source();
+                        for (var entry : snapshot.sequencers()) {
+                            if (!entry.sfx() && entry.source().equals(source)) {
+                                pendingTicks.add(new MusicTick(source.id(), entry.snapshot().tracks().stream()
+                                        .map(track -> track.pos()).toList()));
+                            }
+                        }
+                    }
+                });
+                long fadeCount = audio.musicFadeOutCount();
+                boolean rescueAtGate = false;
                 for (int outer = 0; outer <= lastFrame; outer++) {
                     var zone = (EndingZoneRuntimeState) GameServices.zoneRuntimeState();
                     // loc_5DE36 reads the copy written by the previous frame's ScreenEvents.
@@ -182,14 +187,35 @@ class TestS3kEndingAudioRequestLedger {
     }
 
     /** The declared title-owner ingress used by the native declared products. */
-    private static void enterDeclaredScene(GameplayCaptureSession session, String emeralds)
-            throws Exception {
+    private static void enterDeclaredScene(GameplayCaptureSession session, String emeralds,
+            Runnable presentAudio) throws Exception {
         var title = session.loop().getTitleScreenProvider();
-        for (int startup = 0; title.getState() != TitleScreenProvider.State.ACTIVE; startup++) {
+        // Control: the title's audio is consumed on its own presented frames, so the title song is serviced
+        // during the title at its own cadence up to the title's end, not carried as a backlog into the scene.
+        var titleSongFrames = new ArrayList<Integer>();
+        int[] presenting = {0};
+        GameServices.audio().setDriverServiceObserver(new SmpsDriverServiceObserver() {
+            @Override public void onServiceEnd(ServiceEvent event, SmpsDriverSnapshot snapshot) {
+                if (event.kind() == ServiceKind.SEQUENCER_TICK && !event.sequencer().sfx()
+                        && event.sequencer().source().id() == TITLE_SONG) titleSongFrames.add(presenting[0]);
+            }
+        });
+        int startup = 0;
+        for (; title.getState() != TitleScreenProvider.State.ACTIVE; startup++) {
             assertTrue(startup < 3000, "actual title becomes active");
             session.step(new Bk2FrameInput(startup, 0, 0, false, 0, 0, false, "ordinary startup neutral"));
+            presenting[0] = startup;
+            presentAudio.run();
             session.renderFrame();
         }
+        GameServices.audio().setDriverServiceObserver(null);
+        assertTrue(titleSongFrames.size() > 1, "mus_Title is serviced on the title's presented frames");
+        int largestGap = 0;
+        for (int i = 1; i < titleSongFrames.size(); i++) {
+            largestGap = Math.max(largestGap, titleSongFrames.get(i) - titleSongFrames.get(i - 1));
+        }
+        assertTrue(startup - 1 - titleSongFrames.getLast() <= largestGap,
+                "mus_Title is still serviced at its own cadence when the title ends");
         session.loop().getInputHandler().setLogicalOverride(LogicalInputSnapshot.ofPlayers(
                 PlayerInputState.of(0, 0, 0, 0, true, true), PlayerInputState.neutral()));
         title.update(session.loop().getInputHandler());

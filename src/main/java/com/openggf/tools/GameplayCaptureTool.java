@@ -82,6 +82,7 @@ public final class GameplayCaptureTool {
         int deathFrame = -1;
         int lastFrame = -1;
         String stopReason = "frame budget reached";
+        NativePcmCapture nativePcm = null;
         try (GameplayCaptureSession session = new GameplayCaptureSession(settings);
              BufferedWriter state = Files.newBufferedWriter(outDir.resolve("state.csv"), StandardCharsets.UTF_8)) {
             if (arguments.mod() != null) session.applyMod(arguments.mod());
@@ -94,8 +95,12 @@ public final class GameplayCaptureTool {
                         com.openggf.audio.synth.FmCoreSelection.ACCURATE.configValue());
                 com.openggf.audio.AudioNativePcmCaptureAccess.enable(GameServices.audio(), NativePcmCapture.configFromBk2(arguments.input(),
                         romPath, GameServices.configuration().getString(com.openggf.configuration.SonicConfiguration.REGION)));
+                // Observe from before boot: the session's driver initialisation (the policy's boot program) is
+                // written when the presentation session is installed, which can happen during boot.
+                nativePcm = new NativePcmCapture(outDir, GameServices.audio());
             }
             session.boot(romPath, zone, act, settings);
+            if (nativePcm != null) nativePcm.endBoot();
             var audio = GameServices.audio();
             int sampleRate = arguments.audio() ? audio.outputSampleRate() : 0;
             if (arguments.audio() && audio.presentationFrameRate()!=arguments.fps())
@@ -104,8 +109,7 @@ public final class GameplayCaptureTool {
             try (var presentationInput = arguments.interactivePacing()
                         ? MutatorGameplayCaptureTool.PresentationInput.install(session.loop()) : null;
                  var capture = arguments.audio() ? audio.beginLiveCaptureAudio(arguments.fps()) : null;
-                 var pcm = arguments.audio() ? Files.newOutputStream(outDir.resolve("audio.pcm")) : java.io.OutputStream.nullOutputStream();
-                 var nativePcm = arguments.nativePcm() ? new NativePcmCapture(outDir, audio) : null) {
+                 var pcm = arguments.audio() ? Files.newOutputStream(outDir.resolve("audio.pcm")) : java.io.OutputStream.nullOutputStream()) {
                 if (capture!=null && (capture.frameRate()!=arguments.fps() || capture.sampleRate()!=sampleRate))
                     throw new IllegalArgumentException("Audio clock differs from capture settings");
                 short[] samples = capture==null ? new short[0] : new short[capture.maxStereoFramesPerPacket()*2];
@@ -160,6 +164,7 @@ public final class GameplayCaptureTool {
                 Files.delete(raw);
             }
         } finally {
+            if (nativePcm != null) nativePcm.close();
             // The opt-in only applies to this capture's presentation sessions, even when boot fails.
             if (arguments.nativePcm()) com.openggf.audio.AudioNativePcmCaptureAccess.enable(GameServices.audio(), null);
         }

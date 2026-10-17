@@ -17,12 +17,17 @@ public final class SmpsPhysicalDevice {
      *                        output stage on the production FM chip, or
      *                        {@code null} (the default) for none; it requires
      *                        the accurate core and never changes ordinary output
+     * @param exactRate       the synthesis rate as an exact rational when it is
+     *                        not a whole number of hertz (the live hardware-frame
+     *                        budget), or {@code null}; whole-cycle consumers such
+     *                        as the SEGA PCM transport count with it
      */
     public record Settings(
             double outputSampleRate,
             boolean dacInterpolate,
             FmCoreSelection fmCore,
-            NativeCompatiblePcmOutput.Config nativePcmOutput) {
+            NativeCompatiblePcmOutput.Config nativePcmOutput,
+            SmpsHardwareFrameBudget.Rate exactRate) {
         /** Accurate-core settings; the core is the Nuked-OPN2 port unless configured otherwise. */
         public Settings(double outputSampleRate, boolean dacInterpolate) {
             this(outputSampleRate, dacInterpolate, FmCoreSelection.ACCURATE);
@@ -33,12 +38,28 @@ public final class SmpsPhysicalDevice {
             this(outputSampleRate, dacInterpolate, fmCore, null);
         }
 
+        /** Settings at a rate given only as a double. */
+        public Settings(double outputSampleRate, boolean dacInterpolate, FmCoreSelection fmCore,
+                NativeCompatiblePcmOutput.Config nativePcmOutput) {
+            this(outputSampleRate, dacInterpolate, fmCore, nativePcmOutput, null);
+        }
+
+        /** Settings at an exact rational rate. */
+        public Settings(SmpsHardwareFrameBudget.Rate exactRate, boolean dacInterpolate, FmCoreSelection fmCore,
+                NativeCompatiblePcmOutput.Config nativePcmOutput) {
+            this(Objects.requireNonNull(exactRate, "exactRate").hz(), dacInterpolate, fmCore, nativePcmOutput,
+                    exactRate);
+        }
+
         public Settings {
             Objects.requireNonNull(fmCore, "fmCore");
             if (!Double.isFinite(outputSampleRate)
                     || outputSampleRate <= 0.0) {
                 throw new IllegalArgumentException(
                         "outputSampleRate must be positive and finite");
+            }
+            if (exactRate != null && Double.compare(exactRate.hz(), outputSampleRate) != 0) {
+                throw new IllegalArgumentException("exactRate must equal outputSampleRate");
             }
             if (nativePcmOutput != null && fmCore != FmCoreSelection.ACCURATE) {
                 throw new IllegalArgumentException(
@@ -127,6 +148,11 @@ public final class SmpsPhysicalDevice {
 
     double outputSampleRate() {
         return settings.outputSampleRate();
+    }
+
+    /** The exact rational synthesis rate, or {@code null} when only the double is known. */
+    SmpsHardwareFrameBudget.Rate exactRate() {
+        return settings.exactRate();
     }
 
     void apply(SmpsWriteProgram program) {

@@ -34,6 +34,47 @@ public final class SmpsHardwareFrameBudget {
     }
 
     /**
+     * An exact rational rate in hertz ({@code numerator / denominator}, reduced).
+     * Consumers that count whole cycles, such as the SEGA PCM transport's Z80
+     * byte cadence, use it instead of the rounded double.
+     */
+    public record Rate(long numerator, long denominator) {
+        public Rate {
+            if (numerator <= 0 || denominator <= 0) {
+                throw new IllegalArgumentException("rate terms must be positive");
+            }
+            long divisor = java.math.BigInteger.valueOf(numerator).gcd(java.math.BigInteger.valueOf(denominator))
+                    .longValueExact();
+            numerator /= divisor;
+            denominator /= divisor;
+        }
+
+        public double hz() {
+            return (double) numerator / denominator;
+        }
+    }
+
+    /** {@link #synthesisRate} as an exact rational: {@code sampleRate * 53,693,175 / (frameRate * 896,040)}. */
+    public static Rate exactSynthesisRate(int sampleRate, int frameRate, boolean palRegion) {
+        if (sampleRate <= 0 || frameRate <= 0) {
+            throw new IllegalArgumentException("sample and frame rates must be positive");
+        }
+        if (palRegion) {
+            return new Rate(sampleRate, 1);
+        }
+        return new Rate((long) sampleRate * (long) NTSC_MASTER_CLOCK,
+                (long) frameRate * NTSC_MASTER_CLOCKS_PER_FRAME);
+    }
+
+    /** The live presentation's sound-device settings: the exact hardware-frame synthesis rate. */
+    public static SmpsPhysicalDevice.Settings presentationSettings(int sampleRate, int frameRate, boolean palRegion,
+            boolean dacInterpolate, com.openggf.audio.synth.FmCoreSelection fmCore,
+            com.openggf.audio.synth.NativeCompatiblePcmOutput.Config nativePcmOutput) {
+        return new SmpsPhysicalDevice.Settings(exactSynthesisRate(sampleRate, frameRate, palRegion),
+                dacInterpolate, fmCore, nativePcmOutput);
+    }
+
+    /**
      * The rate the sound device must synthesize at so that one presentation
      * of {@code sampleRate / frameRate} output samples spans one hardware frame.
      */
@@ -41,9 +82,6 @@ public final class SmpsHardwareFrameBudget {
         if (sampleRate <= 0 || frameRate <= 0) {
             throw new IllegalArgumentException("sample and frame rates must be positive");
         }
-        if (palRegion) {
-            return sampleRate;
-        }
-        return sampleRate * NTSC_MASTER_CLOCK / ((double) frameRate * NTSC_MASTER_CLOCKS_PER_FRAME);
+        return exactSynthesisRate(sampleRate, frameRate, palRegion).hz();
     }
 }
