@@ -6145,3 +6145,39 @@ value reuse, caller mutation and two forced world cycles around both boundaries.
 Origin: bounded Slot R2 over Roote8f2,2026-10-17; exact native phase controls,
 rejected next-update draft and original-RGB residuals are in the existing bonus
 transition validation matrix. No claim of complete RGB parity follows.
+
+
+## Slot cell order and opaque black require different checks
+
+Native Slots_RenderLayout/sub_4B490 (skdisasm044fa46725c71187399e13f5ddb70e11d32dc024,
+:98271–98343) appends row-major cells to the linked SAT. Earlier opaque pixels
+win. Slot's non-SAT direct painter must traverse cells in reverse while preserving
+PatternSpriteRenderer's existing piece traversal within each frame. A correct
+within-frame reversal does not fix inter-cell ordering. Nonzero palette indices
+remain opaque even when CRAM maps them to RGB black; only pattern index0 is
+transparent. Retained native row1017's SAT13/14 $63E4 black/blue overlap is the
+concrete witness. Map_SB_ColoredWall frame11, not1, supplies $A9+$33B=$3E4.
+
+An actual-ROM GPU test must flush its pattern batch and distinguish requested
+fade clear from displayed CRAM publication. A magenta clear plus controlled
+nonzero black/blue palette makes opacity explicit without treating fixture
+setup failure as the intended old-red. Keep capture comparison in the original
+pixel domain: this bounded correction recovers137 pixels across five fixed
+pictures, while the larger578/267 components remain unchanged and unattributed.
+Origin: Slot R3/R4,2026-10-17 over670cf; exact failed setup, genuine old-red,
+source hashes and residual limits are in the existing bonus validation matrix.
+
+
+## Results wait assertions must follow the production handoff
+
+`loc_2DCC0` writes literal90 before falling through into
+`Obj_LevelResultsWait2` (skdisasm044fa46725c71187399e13f5ddb70e11d32dc024,
+sonic3k.asm:62715–62730). After physical EndSignControl ownership is modeled,
+a test must not reflect a removed compensation constant or manufacture a
+results object with the former13-entry adjustment. Start the declared
+production EndSignControl component, let normal allocation/signpost/art/tally
+reach Wait2, then observe its first fallthrough, retained89th entry and90th
+transition without private timer/routine writes. This is a test migration, not
+a reason to retune the literal runtime wait. Origin: bounded R5 smoke repair,
+2026-10-17; actual production inlet passes, existing full fatal/handoff replay
+coverage remains qualified only at its recorded R7 epoch.

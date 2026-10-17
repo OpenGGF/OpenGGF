@@ -2077,6 +2077,18 @@ architecture guard repair; existing native component/22-V-int and immediate-scen
 rewind-release semantics are unchanged.
 
 
+**A restored palette owner can rebind without submitting new work.** Whole-world
+restore first reinstalls the displayed fade and its captured pending bit, then
+restores the logical animation owner. A matching mode/steps/line-mask request
+while that displayed generation is held is idempotent: preserve pending false
+AND pending true. Different requests and ordinary latched updates still queue.
+Otherwise an owner restoring NONE or FROM_BLACK creates phantom V-int work and
+whole-world replay fails even if the displayed RGB is unchanged. Compare every
+captured field; do not omit pending from snapshot equality. Origin: bounded
+presentation smoke repair R5,2026-10-17, isolated donor old-red and two restored
+generations in the existing S3K playable-completion Plan.
+
+
 **A row-pointer write is not a decoded row copy.** Native LBZ loc544C6 changes
 BG row addresses, retaining shared byte owners. After encoded collision aliases
 are modelled, copying the common154-column map width into native four-byte BG

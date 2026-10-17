@@ -71,7 +71,8 @@ Unreleased. The earlier development themes remain in
   traces now replay without errors. The Slot cage keeps re-centring the machine
   through the goal wind-down, so the machine stays where the original shows it.
   Its background keeps moving at zero cage rotation and publishes queued rows
-  at the native VBlank boundary, including through rewind;
+  at the native VBlank boundary, including through rewind, and overlapping cells
+  keep the original sprite priority;
   the Gumball background stays pinned as in the original instead of scrolling
   with the camera, and Pachinko's background survives rewind.
 
@@ -129,7 +130,8 @@ Unreleased. The earlier development themes remain in
   Previously the level stayed black and then appeared at full brightness. Each fade
   step and each move of the card reaches the screen with the same frame's sprites and
   HUD, one frame after it is computed, as the original's palette and sprite uploads
-  do, and a rewind shows what was on screen. The data
+  do, and a rewind shows what was on screen without creating a pending palette
+  upload when the restored owner already matches that displayed fade. The data
   select no longer fades the whole screen, card included, back in on top. Seamless
   act changes still do not fade, as in the original. Hydrocity resets rings and
   time after its act-change card pieces stop sliding. The score, time and ring

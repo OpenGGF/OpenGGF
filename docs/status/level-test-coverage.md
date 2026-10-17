@@ -1353,6 +1353,14 @@ matched original RGB frames retain661/360/50/52/58 differing pixels; visual/nati
 whole-Slot certification remains open. [Exact execution and pixel limits](../architecture/validation/levels/s3k-bonus-stage-transitions.md#slot-zero-step-and-native-row-publication--2026-10-17).
 
 
+Slot R4 presentation-only follow-up (2026-10-17) qualifies native inter-cell
+priority with an actual-ROM GPU old-red,24 affected render cases and one fixed
+five-original comparison:599/295/41/52/57 remaining pixels,137 recovered/zero
+newly bad. Larger578/267 components remain unattributed; native4/engine3 HUD
+bootstrap difference persists. R2 gameplay/S3K4/trace results are reused, not new
+route execution. [Evidence and coverage limits](../architecture/validation/levels/s3k-bonus-stage-transitions.md#slot-native-cell-priority-r3r4--2026-10-17).
+
+
 R11 HCZ2 local Full2 visibility (2026-10-17,152d07 composition): independent real
 HCZBlock visible/offscreen controls show old-red3/2F→four new cases green,
 including twice-forced whole-world recreation/registered-key replay; total157
@@ -1387,3 +1395,12 @@ Native selected0239 vs engine023A identifies the upstream P1 history-input
 question; Camera/CPU arithmetic is correct, exact earlier writer unqualified.
 No engine test, route/exit, visual/GLFW or matrix breadth credit is added.
 [HCZ2 observation limits](../architecture/validation/levels/s3k-hcz2.md#r15-original-native-selected-camera-input-observed--2026-10-17).
+
+
+2026-10-17 presentation smoke repair R5: the AIZ2 results-wait assertion now
+uses production EndSignControl/signpost/art/tally allocation and observes native
+first/89/90 dispatches; no private wait seeding or removed13 compensation.
+Final affected selection3511 is119/0F0E0S, including donor two-cycle world
+recreation, displayed-palette controls and S3K4. Existing AIZ2 R7 route evidence
+keeps its original epoch and breadth limits; no new route/trace/RGB coverage
+claim. See the [AIZ2 matrix](../architecture/validation/levels/s3k-aiz2.md#presentation-smoke-repair-r5--2026-10-17).

@@ -5058,6 +5058,29 @@ temporary helpers cleaned, private config/durable originals retained. Root owns
 composition/combined smoke/guards/integration/push; no Main change or tree removal.
 
 
+### Slot inter-cell painter priority R3/R4 handback — 2026-10-17
+
+R3 retained SAT/VRAM/CRAM identifies earlier nonzero-index black hidden by the
+later wall's blue at row1017. R4 in owned649, branch
+`feature/ai-s3k-slot-cell-native-priority-gpt61`, over670cf, changes only the
+Slot cell traversal to reverse painter order; frame-piece ordering and shared
+render/profile/API/geometry/gameplay remain unchanged. Genuine actual-ROM GPU
+old-red32764 (frame11 from $33B+$A9; black0/blue102) precedes the runtime edit;
+five earlier fixture-prerequisite failures are separately recorded. Final40686
+passes24 affected cases, including repeat/passivity/reversed/separated controls.
+Root's bounded source inspection has no material finding; R2 unaffected checks,
+S3K4 and both Slot traces are reused with exact original coverage limits.
+
+Single fixed five-PNG48918, same original references/inlet/profile as R2, yields
+599/295/41/52/57 residuals versus661/360/50/52/58:137 matching original pixels
+recovered, zero new bad pixels. All ten pictures inspected; original578/267
+components remain identical/unattributed, HUD native4/engine3 stays an unqualified
+bootstrap limit. [Exact evidence, failures, commands, hashes and provenance](../validation/levels/s3k-bonus-stage-transitions.md#slot-native-cell-priority-r3r4--2026-10-17).
+Source/test frozen before capture; all handles terminal, consumed diagnostics/
+helpers removed; private config/durable pictures/R1R2R3 registry results preserved.
+Local commit only; no extra review/trace/owner, Main/Root edits or publication.
+
+
 ## R11 HCZBlock offscreen Full2 owner — 2026-10-17
 
 Owned3aa3 branch `bugfix/ai-s3k-hcz-7807-causal-owner` fast-forwarded fa→152d07,
@@ -5555,3 +5578,218 @@ phase getter was found. A first-stage original-movie producer/context plan is
 only a proposal; it cannot initialize the unused coupled timeline from aggregate
 counts. Ending6+46, Hyper/PAL/PCM, Slot845 foreground pixels/life bootstrap,
 ICZ natural death/reload, the mixed slice and later route coverage remain open.
+
+
+
+### Presentation rewind smoke repair R5 — 2026-10-17
+
+Owned649 branch `bugfix/ai-s3k-presentation-rewind-smoke-gpt61` starts at
+Slot R4 `28916874df24e770ebf9184fa191d82b55ad0582`. Before edits it merges
+frozen Root `02b38825ce28a41ab360a74d50b75a7e9cf3443c` as local
+`485f21a94b55eb166aa6637e8e1ec38ae6254561`; three append-only doc conflicts
+preserve both streams. Slot renderer SHA256 remains
+`148ce5f1b44beb40bacfe7979b88581547cd3f5717f47fa5b2e53adb2284455c`.
+Root owns combined broad15826 and the separate SecondStrike barrel failure;
+this unit neither edits that owner nor claims combined smoke green.
+
+Root-provided Main803 exact-six-class control89086 completed15:12:57UTC:
+18tests/1F0E0S, sole pre-existing GLFW failure; both selected R5 cases pass.
+Own pre-edit isolated24274 on485 reproduces the donor failure,1/1F0E0S at
+15:29:49UTC, Maven1m24/queue573s:
+`after cycle0 level-sprite-presentation.displayedFade.pending A=false/B=true`.
+Thus the broad's19 predecessors are not required to trigger this failure; no
+predecessor/broad rerun follows. No exact introducing commit is attributed.
+
+Tables.restore reinstalls the displayed fade including pending; subsequent
+Sonic3kLevelAnimationManager restore rebinds its logical NONE/FROM_BLACK
+request. GraphicsManager previously treated even a matching held request as
+new pending work. The six-line shared semantic correction preserves the
+captured pending bit only when held mode/steps/lineMask already match. True
+stays true; different requests and ordinary palette latches retain the old
+publication path. No snapshot field/key/assertion, game gate, Mod API, timing
+owner or runtime results wait changes. Independent old-red51248 completed
+15:32:57UTC,4tests/2 intendedF0E0S, Maven30.239s/queue29s: both NONE and
+FROM_BLACK4 controls fail pending false→true; captured-true control passes.
+The migrated production EndSignControl/results first/89/90 test also passes.
+Native pinned044 `loc_2DCC0` / Wait2 own literal90; the obsolete removed13
+reflection/construction was the test defect. No private routine/timer/slot/RNG
+write or trace hydration is used by the new inlet.
+
+Frozen reviewed source SHA256: GraphicsManager
+`7155b074fd52dc0ed72beb62337955ce7d2d67c540ca45088a977b4f77c5174a`;
+TestPaletteUploadLatch
+`7f194e2d04a3330094261559e94f7b620550f0c1bf2c2433fec7a5484ebe9bed`;
+TestS3kResultsScreenObjectInstance
+`1ec02f171f002e4b2083b69c3a08e6aed10742a64879728e5fb0299abed685ec`.
+Root's independent source inspection found no material issue; no review
+execution or inferred pass is counted.
+
+Exact executed command template below uses the original Main root ROMs and
+current Main wrapper from the owned cwd; MAIN/OWNED_TREE denote those existing
+workspaces, not new copies. Inherited other JVM environment is preserved.
+
+```bash
+cd "$OWNED_TREE"
+r5_presentation_maven() {
+  env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+    JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+    EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 \
+    python3 "$MAIN/tools/testing/maven_queue.py" -Dmse=off \
+    "-Dsonic1.rom.path=$MAIN/Sonic The Hedgehog (W) (REV01) [!].gen" \
+    "-Dsonic2.rom.path=$MAIN/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+    "-Ds3k.rom.path=$MAIN/Sonic and Knuckles & Sonic 3 (W) [!].gen" "$@" test
+}
+r5_presentation_maven '-Dtest=TestSonic2DonorSuperStateRewind#midTransformationRestoresPaletteTimerDrainAndOrdinaryMapping'
+r5_presentation_maven '-Dtest=TestPaletteUploadLatch#restoredOwnerRebindDoesNotInventAPendingFadeWhenTheDisplayedGenerationAlreadyMatches+matchingRestoredOwnerRebindPreservesAnAlreadyCapturedPendingPublication,TestS3kResultsScreenObjectInstance#aizBossFlowDoesNotRepeatDisplacedOwnerEntriesInResultsWait'
+r5_presentation_maven '-Dtest=TestPaletteUploadLatch,TestNativeWhitePaletteFade,TestSonic2DonorSuperStateRewind,TestS3kResultsScreenObjectInstance,TestS3kResultsKosQueueAndChildren,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils'
+r5_presentation_maven -Pguards '-Dtest=TestTraceReplayInvariantGuard,TestTraceHydrateSwitchDefault,TestArchitecturalSourceGuard'
+```
+
+Final affected3511 completed15:37:27UTC,119/0F0E0S, Maven1m31/queue135s,
+fresh Java25 compile on485+the three frozen diffs. Ten actual classes include
+both LevelLoading packages36+7, donor4, bootstrap6, decoding3, results16,
+Kos/children17, native-white14, upload8 and AIZ1skip8. Inspected XML has no
+failures/errors/skips. Warnings include FAST missing-manifest→NONE, missing
+measured Kos profile→deterministic estimate, collision-index negative control,
+and compiler/JOML deprecations; no strict native timing qualification is claimed.
+Focused guards40112 completed15:39:46UTC,83/0F0E0S, Maven27.766s/queue65s;
+architectural72, trace-invariant10, hydrate-default1 in a fresh guards JVM.
+All XML and skip counts inspected. Target last compiled the maintained repair
+and tests; no restored baseline or temporary probe is left compiled. No new trace/native/capture,
+R4 media repeat, broad run, Main/Root edit, integration or push. R1–R4 evidence,
+refs, native artifacts and private config are preserved.
+
+
+R5 terminal cleanup: inspected all13 class XML summaries including0 skips, then
+consumed26 own Surefire files under the metadata slot alone; diagnostic directory
+was empty, no archive or pass cache. All four Maven handles24274/51248/3511/40112
+are terminal; no retained waiter or compiler remains. Main config hash/mtime
+remain unchanged; owned config is a regular private0600 exact byte copy.
+Documentation links/fences, identical skill mirrors and diff checks pass.
+Normal seven-trailer local commit retains the reviewed and tested runtime bytes;
+Root owns later composition/combined qualification, with no Main publication here.
+
+
+### Slot large residual classification R6 — 2026-10-17
+
+On preserved clean759acb131 before documentation, offline original-domain
+analysis assigns both large remaining R4 components to Slot's foreground
+priority-promotion owner, not cell traversal. Native971's578pixels are sole
+SAT30/31 colored-wall frame9;974's267 are soleSAT19 peppermint frame3. All845
+native SAT/pattern/CRAM pixels match original PNGs; all845 retained engine
+wrong colors equal native low-priority, nontransparent Plane A. Their published
+scroll-projected world positions lie exactly inside
+`S3kSlotBonusStageRuntime.ensureForegroundGlassPriority`'s promoted
+`$430..$497/$400..$467` square. Its runtime bytes remain R4-identical.
+Pinned044 source, exact publication/CPU distinction, samples, full-component
+counts and the independent production-render disconfirming question are in the
+[existing bonus matrix](../validation/levels/s3k-bonus-stage-transitions.md#slot-large-residual-owner-classification-r6--2026-10-17).
+Root received the concrete owner handback BEFORE any runtime proposal/edit or
+new Slot execution. Engine visible-list/FBO descriptor metadata is not retained;
+no new screenshot equality is inferred from source. No source/branch/tree/worker,
+native/capture/test fixture or Root/Main change. R4 residual totals remain
+599/295/41/52/57 and HUD carry difference stays unqualified.
+
+Separate explicitly authorized R5 affected-consumer qualification on unchanged
+759: job84980 exact
+`TestFbzSandopolisTimelineHeadless#productionExitResetsTimelineAndFreshDestinationRestoresAndReplaysTwice`
+passes1/0F0E0S at15:48:12UTC, Maven37.246s/queue64s. Same recorded
+`r5_presentation_maven` environment/all3ROMs/current Main absolute wrapper/owned
+cwd, with `-Dsurefire.forkCount=1 -Dsurefire.reuseForks=true`. Inspected its full
+XML/test identity and consumed2 reports under metadata alone. No duplicated
+baseline/broad/119-selection or runtime edit. Root owns Main803 attribution.
+Authorized NORMAL request82303 on the same candidate is exactly
+`-Dtest=TestLrzSszCheckpointRoutes,TestNativeCarriedPlayerArtBinding` with those
+same flags plus `--normal`; terminal0,892/0F0E0S at16:03:46UTC,
+Maven4m46/queue618s. Full populations888 checkpoint routes+4 carried-art;
+inspected all XML/zero skips. Metadata94256 consumed4 reports961787bytes
+after waiting for shared compatibility while holding the intended-tree lock;
+no outer activity, cancelled request or target race.
+
+
+Root-provided actual Main803 baseline96596 is892/0F0E0S at16:08:36.081607UTC,
+Maven4m48/queue874s, with all779 failed Root case identities included and both
+class sources byte-identical803..02b. This is independent provided evidence,
+not this worker's execution. No repeated baseline is claimed or needed.
+
+Next explicitly authorized normal request34577 is EXACT
+`-Dtest=TestS3kBonusPortalMechanismProducts,TestS3kBonusStageReturnProducts`,
+same recorded environment/ROMs/owned cwd/current Main wrapper,
+`--normal -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true`. It completes
+16:28:21UTC,993/142F0E0S,Maven11m27/queue748s, unchanged759 runtime/tests.
+Full portal568 has142F (460.163s); return425 all pass (202.967s). All142
+messages are identical publishedPlane byte differences, no pending/otherfield.
+The existing bonus matrix records exact affected method names, shortcases[3]
+(SLOT_MACHINE/tails/sonic,sonic/400/off) and[5]
+(SLOT_MACHINE/sonic/sonic,sonic/800/s1), plus the actual20-element assertion
+preview and its limits. No complete-array/span attribution is invented.
+Root's original993 pending messages were all inspected despite its then-current
+1000-detail/797-omitted results cap. Current851 pass/142 different-field fail
+is bounded progress, not combined-smoke green.
+
+**STOP new field honored.** No planned728 request (Gumball/Pachinko726 plus
+the named LRZ2 gateway method's2 cases), additional execution, runtime repair,
+new source hypothesis or baseline was submitted. Root owns short-pilot Main
+attribution; no R2 cause is assigned. Root's independent four-original-image
+visual inspection corroborates R6's Plane A attribution without adding a native
+or engine picture. Foreground845 remains uncorrected; all five residual totals
+and the separate unqualified HUD life bootstrap difference remain unchanged.
+
+**Queued R7 technical gate:** exact verified task
+`node:delegated-task:command%3Amcp%3Ae0f15981-d194-439f-81ab-b848692b7d95%3Athread-send%3As3k-gpt61-slot-rom-foreground-priority-owner-20261017-r7`
+is preserved, NOT started in R6. After R6 accounting it may READ ONLY prepare
+the actual Plane B publication/restore lifecycle question. No runtime edit, GPU
+test or five-PNG capture until Root authorizes a concrete bounded published-plane
+owner unit or clears that gate. No R7 branch/worker/tree was created.
+
+
+R6 final accounting: all Maven handles84980/82303/34577 and metadata94256
+are terminal. Inspected SOZ2 reports, LRZ/carried4 (961787bytes), portal/return4
+(3578565bytes) were consumed under metadata ownership alone; diagnostics empty.
+No raw archive/pass cache, temporary decoder file, additional request or source
+change. Private config remains regular0600/exact bytes; Main config hash/mtime
+unchanged. Docs-only links/fences/diff and unchanged reviewed runtime hashes
+verified, normal seven-trailer GPT-6.1 local commit follows. R1–R5 branch refs,
+results, originals and private config preserved; no Root/Main edit or push.
+
+
+#### R7A passive single-pilot handback — no repair authorized
+
+Exact followup task ordinal8:
+`node:delegated-task:command%3Amcp%3Ae0f15981-d194-439f-81ab-b848692b7d95%3Athread-send%3As3k-gpt61-slot-published-plane-wind-causal-witness-20261017-r7a`.
+Owned649 branch `bugfix/ai-s3k-slot-rom-foreground-priority-gpt61`, base333df955b,
+unchanged759 runtime. Build55336 terminal0; ONE actual original pilot[3] witness
+88468 terminal1,1/1F0E0S at16:51:04UTC,Maven28.729s/queue277s. No observer or
+bootstrap failure. Exact temporary method, command, source hash, full46-byte
+comparison and source/observation limits are in the existing bonus matrix R7A
+section.81 observations/81 passivity checks,11 verified full8192-byte payloads.
+
+Raw live PlaneB equals cached publishedPlane at every observed hook. Exact bytes
+return immediately on restore but authority=false/dirty=true; first matching
+replay publication replaces the actual raw array and changes46 EXTRA bytes outside
+the identical legitimate row batch. Those46 persist after13 wind steps. Owner
+identities/scroll/row batch match; no cache-only or full-width explanation.
+Source relation: parallax restores retained bytes before later level restoration;
+conditional geometry-reference invalidation can clear retained authority without
+clearing restoredForRewind, then generic reset/ensure can rebuild before row writes.
+No geometry-array identities/call stacks were retained, so that conditional
+caller is not uniquely observed. Concrete handback is the retained-plane restore
+versus later cache invalidation/ensure lifecycle, not an unqualified R2 assignment.
+
+Smallest independent old-red question: production-order retained-plane restore,
+actual level geometry-reference restoration/invalidation, postrestore reset and
+one ordinary row publication must preserve untouched retained rows while rebuilding
+geometry-derived caches; keep real layout/scene reset controls. Not executed or
+implemented. Root-provided Main61811 passes5 original short pilots,0skips; its803
+source lacks the publishedPlane key, so this cannot qualify retained-plane replay.
+No duplicate Main run,728 request, runtime fix, GPU test, native or image capture.
+R7 foreground845 priority remains deferred pending a separate concrete owner grant.
+
+R7A final accounting: both55336/88468 terminal; owned temporary source removed
+under intended-tree lock, journal/two reports/four witness class files consumed
+metadata-slot alone (7 files/354004 bytes).
+No raw archive, additional execution or runtime change. Last compilation included
+the now-removed temporary witness; no fresh maintained-source compile is claimed.
+Private config remains regular0600/exact bytes; Main config SHA256/mtime unchanged.
+R1–R6 refs/results/native originals/captures and foreign jobs preserved. Docs-only
+local commit; no integration/push, foreground845 unit still gated.

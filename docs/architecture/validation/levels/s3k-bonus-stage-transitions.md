@@ -935,3 +935,378 @@ Inspected trace JSON/owners and Surefire diagnostics are consumed under metadata
 ownership alone, without archives/receipts. Durable original references and five
 new PNGs/provenance stay outside the repo; ignored private config stays accounted
 for future owned-tree cleanup. No Main/Root integration, push or branch removal.
+
+
+## Slot native cell priority R3/R4 — 2026-10-17
+
+R3 classified the five unchanged R2 originals without new execution or pictures.
+R4 implements only the resulting inter-cell painter-order finding in owned
+`t3-649fee32`, local `feature/ai-s3k-slot-cell-native-priority-gpt61`, based on
+`670cf353d2229b56e2b4b73bdb8558a50d992e69`. R1/R2 refs, registry results and
+private config remain preserved; no Root/Main edit or integration occurred.
+
+**Direct causal evidence.** The original native `slot-native-v1` SAT/VRAM/CRAM
+at row1017, core10160, identifies five diagonal pixels (191,1), (189,2),
+(187,3), (185,4), (183,5). SAT13 and SAT14 both use tile word `$63E4`.
+SAT13's nonzero palette index `$33` is opaque black; SAT14's `$32` is blue
+(0,0,102). Native shows the earlier opaque black; R2 shows exactly the later
+blue. This is pixel ownership, not black RGB being treated as transparency.
+All colors in the five R2 mismatch sets occur in the retained native CRAM;
+that consistency check alone does not certify palette equality.
+
+Pinned skdisasm `044fa46725c71187399e13f5ddb70e11d32dc024`, native locked-on
+ROM SHA-1 `cfbf98c36c776677290a872547ac47c53d2761d6`:
+`Slots_RenderLayout` / `sub_4B490` (:98271–98343) appends cells in row-major
+SAT order, where earlier opaque sprites win. Slot does not enable the SAT-mask
+collection branch (`Sonic3kZoneFeatureProvider.useSpriteSatMasking`); its actual
+`LevelRenderer` direct painter called `renderVisibleCells` in ascending order,
+letting later cells cover earlier ones. The sole runtime change reverses that
+cell paint traversal. `PatternSpriteRenderer` still owns the unchanged reverse
+piece traversal within each frame; visible-cell construction/order/geometry,
+physics, resources, shared renderer, profile, API and generic SAT behavior are
+unchanged. Independent Root source inspection found no material finding in this
+exact one-loop diff; no extra review or trace run was requested.
+
+**Independent actual-pixel question.** `TestS3kSlotCellPainterPixels` enters Slot
+normally in an owned offscreen context and verifies its non-SAT branch. Actual
+ROM wall mappings and pattern pixels pass through the production Slot renderer,
+PatternSpriteRenderer and GPU consumer. The two cells retain native SAT13/14's
+relative displacement (11,21), translated into the viewport. A controlled opacity
+palette makes index2 blue, index3 black and other nonzero indices green; magenta
+clear proves drawn black is opaque, since the shader discards only index0.
+The fixture publishes the existing CRAM owner before using that palette, rather
+than confusing requested fade state with displayed state. This isolated palette
+is not a native screenshot or gameplay/trace hydration.
+
+The exact ROM frame is11: `Map_SB_ColoredWall` at `$4B8D8`, frame11 mapping
+offset `$A9` plus art base `$33B` equals SAT tile `$3E4`. The initial frame1
+assumption was wrong and corrected from bytes, not by searching render variants.
+With the final test unchanged, old production genuinely fails black0 versus
+later blue102 at buffer pixel36913. The one-loop correction passes. Controls
+render each cell alone, reverse their native order (blue then wins), separate
+them (both visible), repeat drawing (same bytes), and compare the renderer's
+complete captured state before/after (no animation advancement or cell mutation).
+
+All Maven used CURRENT MAIN's absolute queue wrapper from the owned cwd, Java25,
+all3 original absolute ROM paths, and the exact headless environment documented
+above (surfaceless EGL/nullAL/Lua5.4, DISPLAY/WAYLAND unset, other JVM environment
+preserved). Literal selection for all setup/old-red runs is
+`-Dmse=off -Dtest=TestS3kSlotCellPainterPixels test`. Queue wait is separate.
+
+| Session / UTC finish | Observed result | Maven time / queue wait |
+|---|---|---|
+| 47397 / 14:48:31 | 1/1F0E0S, fixture-only: pattern batch not flushed, no opacity witness | 24.594s / 0s |
+| 93711 / 14:49:22 | 1/1F0E0S, readback all magenta confirms missing batch flush | 24.783s / 0s |
+| 48802 / 14:50:12 | 1/1F0E0S, batch fixed; all580 drawn pixels black under displayed entry fade | 24.507s / 0s |
+| 22096 / 14:51:15 | 1/1F0E0S, test palette still transformed by the unpublished fade clear | 24.520s / 0s |
+| 32155 / 14:52:40 | 1/1F0E0S, published fixture palette draws black/blue; wrong frame1 has no declared overlap witness | 26.791s / 3s |
+| 32764 / 14:54:47 | Genuine old-red on unchanged670 production: 1/1F0E0S, expected earlier opaque black0 / actual later blue102 | 25.386s / 63s |
+| 40686 / 14:56:29 | Final five-class affected selection: 24/0F0E0S | 1:17 / 3s |
+
+The first five failures are fixture prerequisites, not old-red credit or runtime
+findings. Final selection is exactly
+`TestS3kSlotCellPainterPixels,TestS3kSlotLayoutRenderer,TestS3kSlotGlassPriority,TestS3kSlotPresentationParity,TestS3kSlotRenderBuffers`:
+1 GPU opacity/passivity,13 layout,1 glass,6 presentation and3 buffer cases.
+Compiler deprecation/unchecked, FAST load-profile fallback and deterministic
+load-time-estimate warnings remain visible; zero JUnit skips. R2's unchanged34
+publication/whole-world cases,73 profile/S3K4 cases and Knuckles1024/team5259
+physics/animation trace rows are reused at their recorded epochs. They are not
+fresh R4 executions or new SAT/VRAM/timing coverage. No broad/trace repeat.
+
+Frozen, tested and captured source SHA-256:
+
+```text
+S3kSlotLayoutRenderer.java 148ce5f1b44beb40bacfe7979b88581547cd3f5717f47fa5b2e53adb2284455c
+TestS3kSlotCellPainterPixels.java 3aa2b8ac8f4d03cd8b9ef3a858b63a6192439bbfdb5c029adfc4a41edeab00d8
+```
+
+**One new fixed five-PNG capture.** The original native images/hashes, movie,
+ROM, row/core relationship, inlet and profile are exactly those recorded in R2.
+No native rerun, crop, resize, palette normalization, clock search, pixel masking
+or media encoder. A temporary source copy of maintained TraceCaptureTool again
+replaces only the media sink with five readbacks; clip925..1026 still renders
+all102 presentations. Compile holds intended-tree/shared activity with inherited
+FDs, released before queued execution. Current Main wrapper runs
+`-Dmse=off exec:exec -Dexec.executable=python3` with the owned temporary launcher.
+Session48918 ends14:58:10UTC, terminal0,3.415s execution/33s queue.
+
+New durable PNGs/provenance are in
+`${OGGF_VIDEOS}/s3k-parity-coverage-2026-10-14/spot-checks/slot-r4-gpt61-670cf-v1`,
+separate from the original native and R2 engine sets. Provenance retains exact
+Java argv, source/helper/native/engine hashes, unchanged R2 source hashes,
+profile, original-domain comparison and inspection limits. GL bottom-up storage
+conversion is the same standard orientation as R2. All ten original native/new
+engine pictures were visually inspected.
+
+| Fixed row | R2 differing pixels | R4 differing pixels /71680 | Newly matching original pixels | New differing pixels |
+|---|---|---|---|---|
+| 971 | 661 | 599 | 62 | 0 |
+| 974 | 360 | 295 | 65 | 0 |
+| 1017 | 50 | 41 | 9 | 0 |
+| 1022 | 52 | 52 | 0 | 0 |
+| 1026 | 58 | 57 | 1 | 0 |
+
+Exactly137 original-domain pixels close; no changed-but-still-different pixels
+or newly differing pixels. The original large component at971 (578pixels,
+bbox287,190..319,218) remains exactly578, and974's (267pixels,
+bbox150,158..166,176) remains exactly267. They are not attributed to this fix.
+Native HUD lives4 versus engine3 remains an unqualified carried-life/bootstrap
+difference (metadata lacks lives), not observed gameplay loss. Additional HUD,
+art and edge residuals remain; no full RGB/native parity certificate or second
+owner repair follows. No second capture or post-capture runtime/test edit.
+
+Main config hash/mtime remain the R2 values before/after capture; owned config
+is still the exact regular private copy. All jobs/leases terminal/released;
+current target is candidate compiled. Consumed Surefire diagnostics and temporary
+helper sources/classes/classpath are removed without archives or pass caches.
+Durable originals/new5PNGs/provenance, local branches, registry history, ignored
+private config and candidate build remain accounted for. Root owns composition,
+combined smoke/guards and publication; no Main/Root changes or push from this unit.
+
+
+## Slot large residual owner classification R6 — 2026-10-17
+
+Read-only classification on clean `759acb1311fbe11427330154c327c6f255f921fb`
+uses ONLY original native971/core10114 and974/core10117 SAT/VRAM/CRAM/RAM
+and the retained R4 PNGs/provenance. No new render, native run, picture variant,
+clock/palette search, mask, normalization or gameplay-state injection. R1–R5
+refs/results/private config remain preserved. The R4 residual totals remain
+**599/295/41/52/57**; no corrected-picture claim follows.
+
+All578 pixels in the971 eight-connected component (287,190..319,218) have
+one opaque native sprite owner:139 fromSAT30 and439 fromSAT31. Both are
+Map_SB_ColoredWall frame9, art `$33B+$99=$3D4`, palette3,32×32 at282,170
+and296,190. All267 pixels in974's component (150,158..166,176) have sole
+SAT19: Map_SB_R_and_Peppermint frame3, art `$33B+$122+$12=$46F`, palette2,
+24×24 at143,153. Every decoded original native sprite pixel equals the native
+PNG through retained CRAM:845 exact,0 competing opaque sprites. Thus these
+components are not another inter-cell overlap or RGB-black transparency error.
+Native source: pinned skdisasm044fa46725c71187399e13f5ddb70e11d32dc024,
+Slots_RenderLayout/sub_4B490 (:98199–98347), sub_4B4C4 (:98353–98398),
+SlotBonusMaps (:98644–98694) and the included wall/peppermint mappings.
+
+The retained native publication identity matters:974's published producer8800
+corresponds to seq2/core10116 prepared RAM producer8800, not seq3's later8801.
+That prepared RAM independently reconstructs SAT19 exactly: layout `$433D`=id7,
+visible grid9,10, mapping frame3, xy143,153,size`$A`,tileword`$446F`. All32
+transient slots at `$7400` are inactive in retained971/seq0, seq2 and seq3.
+974 therefore has no transient slot in its exact published preparation;971 CPU
+RAM is one producer ahead, so its prior transient-list state is not independently
+retained. Its published wall mapping is established directly by SAT/ROM bytes.
+No per-frame offset is fitted and no native comparison bytes enter engine gameplay.
+
+**Concrete source owner: foreground priority promotion.** Project original
+Plane A using the pinned VDP owner (register table :1367–1386: A=`$C000`,
+hscroll=`$F000`,64×32), retained published hscroll/VSRAM and native pattern/CRAM
+bytes. The engine's wrong RGB equals this native Plane A at ALL845 pixels.
+All845 Plane A pixels have nonzero pattern indices and priority bit CLEAR.
+971 has hscroll`$FCC6` (−`$33A`),vscroll`$342`;974 has`$FC66` (−`$39A`),`$362`.
+Their world bounds are respectively `$459,$400..$479,$41C` and
+`$430,$400..$440,$412`. Every pixel is inside the exact square that
+S3kSlotBonusStageRuntime.ensureForegroundGlassPriority (:553–578) promotes:
+centre`$460,$430`,±`$30`,inclusive8-pixel writes,covered extent
+`$430..$497/$400..$467`. It ORs `$8000` into every nonzero descriptor there.
+The provider calls it before foreground/sprite rendering; bootstrap also calls
+it. LevelTilemapManager's existing getter/setter address those world tiles.
+Runtime SHA256 `3d4d5f10dba4a5d113af444f4b5a03e17973e054328765a3b3ab41d5e0675838`
+is byte-identical to R4. This overbroad promotion explains low-priority native
+layout sprites being replaced by Plane A; no shared renderer/order/palette/
+physics change is indicated by these components.
+
+| Original pixel | Sole native sprite RGB | Native Plane A descriptor / RGB = retained engine RGB |
+|---|---|---|
+|971 (287,190)|0,34,238|`$C016=$4A87` /102,102,34|
+|971 (300,200)|102,238,238|`$C098=$4AAA` /0,0,0|
+|971 (310,210)|34,136,238|`$C11C=$7A76` /170,0,0|
+|974 (150,158)|136,0,34|`$C00C=$4AC5` /102,170,0|
+|974 (156,166)|136,68,170|`$C08C=$4AC7` /0,0,0|
+|974 (160,170)|136,68,170|`$C08E=$4ACA` /0,0,170|
+
+Handed Root this owning branch BEFORE any edit or new engine execution. The
+smallest independent disconfirming question is: through actual Slot bootstrap
+and the real painter/FBO consumer, does a native-low foreground descriptor at
+world`$430,$400` or`$459,$400` gain priority and incorrectly hide an opaque
+actual-ROM peppermint/frame3 or wall/frame9 pixel? That question uses source
+geometry and ROM assets, without a fixture/frame/trace gate. The retained R4
+provenance does not include engine visible-cell/FBO descriptor state; direct
+engine execution-level flag/cell confirmation remains a missing witness. No
+runtime repair, new visual acceptance or whole-parity certificate is authorized
+by classification alone. HUD4/3 remains separate unqualified carried-life
+bootstrap state, with no lives field in the comparison inlet.
+
+
+Root independently visually inspected the same four original320×224 images
+(native10114/10117 versus R4 rows971/974). The wall and peppermint occlusion
+differences accord with the Plane A attribution; HUD4/3 is distinct. This is
+read-only corroboration, not another engine run or a replacement for a real-ROM
+painter/FBO old-red. No residual is certified repaired.
+
+### R6 affected-consumer extension and technical stop
+
+Explicitly authorized R5 consumer checks reused unchanged runtime/test source
+at759, current Main absolute Maven queue from owned649, all3 original ROMs and
+the recorded Java25/EGL/nullAL/Lua5.4 environment, one reused Surefire fork.
+No broad/native/trace/image execution was added. Results are separate populations:
+
+| Job / UTC finish | Exact selected population | Outcome / execution / queue |
+|---|---|---|
+|84980 /15:48:12|TestFbzSandopolisTimelineHeadless#productionExitResetsTimelineAndFreshDestinationRestoresAndReplaysTwice|1/0F0E0S;37.246s/64s|
+|82303 /16:03:46|TestLrzSszCheckpointRoutes;TestNativeCarriedPlayerArtBinding|892/0F0E0S=888+4;4m46/618s|
+|34577 /16:28:21|TestS3kBonusPortalMechanismProducts;TestS3kBonusStageReturnProducts|993/142F0E0S=568/142F+425/0F;11m27/748s|
+
+Both two-class requests explicitly used `--normal`,7GiB/8cores,
+`-Dsurefire.forkCount=1 -Dsurefire.reuseForks=true`, with literal comma-separated
+`-Dtest` selectors from the table. The first two passed every selected case,
+with zero skips. Root-provided actual Main803 baseline96596 independently passes
+the same892 cases (LRZ888/263.877s, carried4/.385s),16:08:36.081607UTC,
+Maven4m48/queue874s/parent1163.437s. Root matched all779 failed broad-case
+identities to that population and verified both class sources byte-identical
+803..Root02b; this worker did not execute or duplicate that baseline.
+
+Root's frozen02b broad had993 pending-false/true failures across the full
+portal568+return425 population. Root's then-current results.json capped detailed
+cases at1000 with797 omitted; Root inspected ALL993 messages in ordinary.log.
+Own34577 instead passes851 cases and fails142, ALL one byte-identical message
+family: `parallax.handlerRewindState.publishedPlane.bytes`. No pending or other
+field appears in those142. Portal class time460.163s; return425 all pass in
+202.967s. Failed methods are
+`finitePortalAndExitProductsRetainRosterAndBothLoadBoundaries` (140 cases) and
+`shortPortalAndMechanismPilotsLoadAndReturnThroughRealBoundaries` (2). Exact
+short parameter identities/inlets, from the maintained `pilots()` source:
+
+- `[3]`: SLOT_MACHINE, main=`tails`, followers=`sonic,sonic`,width400,donor=`off`.
+- `[5]`: SLOT_MACHINE, main=`sonic`, followers=`sonic,sonic`,width800,donor=`s1`.
+
+Both call checkStage through the actual portal boundary. Stack:
+verifySlotGoalWindAndFade:277 → replaySlotPictureAction:391 → same:574.
+Every failure reports ONLY this **20-element preview**, not the complete arrays
+or all differing byte spans:
+
+```text
+indices = [2048,2052,2056,2088,2092,2096,2128,2132,2136,2168,2172,2176,2208,2212,2216,2217,2304,2308,2312,2344]
+A = [-61,-60,-57,-55,-54,-46,-44,-43,-40,-34,-33,-30,-28,-27,69,105,-59,-58,-56,-53]
+B = [-79,-78,-75,-73,-72,-69,-61,-60,-57,-55,-54,-46,-44,-43,-40,9,-77,-76,-74,-71]
+```
+
+This is a newly exposed, UNATTRIBUTED owner boundary, not proof of an R2 cause
+or an R5 regression. STOP honored before any additional run or repair. The
+planned Gumball/Pachinko726 plus exact two-case LRZ2 gateway method (expected728)
+was NEVER submitted; that full consumer coverage remains unqualified. Root owns
+a bounded short-pilot Main attribution. No DDZ/asset/terrain owner was touched.
+
+R7's verified queued task identity is preserved, but its new technical gate
+permits only read-only preparation of the actual Plane B publication/restore
+lifecycle question after R6 accounting. **No R7 runtime edit, GPU test or five-PNG
+capture until Root authorizes a concrete bounded published-plane unit or clears
+the gate.** The845-pixel foreground-priority goal remains open.
+
+
+### R7A one passive actual wind witness: restored-plane authority boundary
+
+2026-10-17, owned649 at333df955b625624d7b31d1fc6f7e256b695d38ac,
+unchanged759 runtime. Exactly ONE temporary subclass method invoked the original
+maintained `shortPortalAndMechanismPilotsLoadAndReturnThroughRealBoundaries`
+pilot[3] with SLOT_MACHINE/tails/sonic,sonic/400/off. No copied driver, alternate
+sequence, gameplay writes or fixture values. A static SessionManager pass-through
+forwarded each call once and returned its original value solely to attach existing
+hardware-boundary/Camera/PostRestore hooks to the actual newly booted context.
+Prior observers forwarded once, hooks restored in finally. Observation armed on
+actual exit `isWindingDown()`, read raw tilemap bytes/dimensions and defensively
+copied private cached bytes; it NEVER called captureBackgroundVdpPlane/ensure/
+rebuild for observation. The original picture calls remained unchanged.
+
+Build-only55336: current Main absolute queue wrapper, `-Dmse=off -DskipTests
+test-compile`, terminal0 at16:45:24UTC,23.829s, Java25. Temporary test source SHA256
+`a86e6d775cadadaffb6d582f569a40e29b5c5f152ed2114fa15d9e30d10083c9`.
+ONE execution88468 used the recorded R5 command environment/all3 original ROMs,
+owned cwd/current Main absolute wrapper, with this exact argument selection:
+
+```text
+--normal -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true
+-Dtest=TestSlotPublishedPlaneWindWitnessR7A#originalDeclaredPilotThreeWithPassivePlaneWitness
+-Dsonic1.rom.path=${MAIN}/Sonic The Hedgehog (W) (REV01) [!].gen
+-Dsonic2.rom.path=${MAIN}/Sonic The Hedgehog 2 (W) (REV01) [!].gen
+-Ds3k.rom.path=${MAIN}/Sonic and Knuckles & Sonic 3 (W) [!].gen
+test
+```
+
+Terminal1 at16:51:04UTC,1/1F0E0S, class3.175s/Maven28.729s/queue277s.
+Original stack/PlaneB failure above reproduced; NO observer/prerequisite failure,
+no inherited finite population executed. Actual journal294344bytes contains81
+observations/81 successful passivity checks and11 full8192-byte payloads, all
+SHA256-verified after Base64 decode. Bounds200 observations/10MiB were respected.
+27 POST_OBJECTS,27 PRE_MAIN_LOOP,26 VINT_SERVICE and1 own PostRestore callback;
+no armed Camera hook fired. Labels are OUTSIDE publication/profile calls, not
+inside them; the own callback is not asserted to be last. No second run.
+
+**Observed:** all81 actual raw images equal cached published images. Manager,
+level, runtime, handler, tilemap and cache-owner tuple identities stay unchanged.
+Forward raw array1599248355 stays installed. Restore installs1657760388 with
+EXACT baseline bytes/cache; the own callback nevertheless reads BGdirty=true,
+retainedAuthority=false,restoredForRewind=true. Next VINT still has exact bytes,
+dirty=true/authority=false but restoredForRewind=false. At matching LF20,
+objectV317/executed21, PRE_MAIN_LOOP still has baseline raw/cache. The next
+VINT_SERVICE bracket replaces replay raw array with1797959612; forward does not
+replace its array. Both have identical scroll values and exact last row batch:
+sourceX216/sourceY0/destination0xDFFE/25 longwords, then sourceY16/0xE0FE/25.
+Both tokens are ORDINARY_LEVEL, gameVblankDispatched=true, explicitDMA=false;
+token identity changes normally. Pending lists are empty at observed outer hooks:
+formation/consumption occurs between hooks, not directly witnessed inside.
+
+Full8192-byte comparisons: forward publication changes125bytes in rows0–3/31;
+replay changes those SAME125 plus46 EXTRA bytes in rows8–10, offsets2048..2728.
+The exact same46 differences persist after the13 real wind steps. Complete
+signed byte triples (offset:forward/replay), extending the earlier20-only preview:
+
+```text
+2048:-61/-79 2052:-60/-78 2056:-57/-75 2088:-55/-73 2092:-54/-72 2096:-46/-69
+2128:-44/-61 2132:-43/-60 2136:-40/-57 2168:-34/-55 2172:-33/-54 2176:-30/-46
+2208:-28/-44 2212:-27/-43 2216:69/-40 2217:105/9 2304:-59/-77 2308:-58/-76
+2312:-56/-74 2344:-53/-71 2348:-52/-70 2352:-45/-68 2384:-42/-59 2388:-41/-58
+2392:-39/-56 2424:-32/-53 2428:-31/-52 2432:-29/-45 2464:-26/-42 2468:-25/-41
+2472:-24/-39 2560:-51/-67 2564:-50/-66 2568:-49/-65 2600:-48/-64 2604:-47/-63
+2608:-38/-62 2640:-37/-51 2644:-36/-50 2648:-35/-49 2680:-23/-48 2684:-22/-47
+2688:-21/-38 2720:-20/-37 2724:-19/-36 2728:-18/-35
+```
+
+**Source relation, not a claimed unique callsite observation:** SwScrlSlots
+restore installs the exact retained plane through LevelManager; registry restores
+in registration order (RNG last), with parallax registered before level. The later
+LevelRewindSnapshotAdapter.restore invalidates all tilemaps IF blocks/chunks/map
+references differ. That invalidator clears retained authority/sets BGdirty while
+leaving restoredForRewind, matching the observed callback state. The later
+resetTilemapsForRewindRestore cannot take its exact-retained-plane branch without
+authority; next LevelManager.copyTileRowFromLayerToRetainedPlane calls ensure
+before current row writes, allowing full reconstruction and raw replacement.
+Observed mode is STATIC_WINDOW, fullwidth=false, wrap=false, descriptorRevision0;
+no full-width exception, fitted timing or stale-cache explanation is supported.
+The witness did not retain geometry-array identities or invalidator call stacks,
+so the conditional geometry-reference caller is not uniquely proven. Other
+generic invalidation callers must not be silently attributed to that branch.
+
+**Smallest independent old-red question handed back before repair:** in actual
+production registration order, can a restored event-owned retained PlaneB survive
+later actual geometry-reference restoration/cache invalidation, the existing
+postrestore reset and one legitimate row publication, preserving untouched bytes
+while geometry-derived caches still rebuild? A future bounded owner test must
+retain layout-change/scene-reset controls; blindly ignoring invalidation or
+omitting PlaneB snapshot keys is not a repair. No such test/fix has been executed.
+This locates a concrete retained-plane restore/invalidation/ensure owner boundary;
+it does not assign all142 cases or blame R2 from Main's missing state key.
+
+Root-provided Main803 short-pilot baseline61811 independently passes all5 cases,
+0skips at16:50:35.133086UTC, class6.386s/Maven29.851s/queue624s/parent654.205s.
+Main had no publishedPlane snapshot key; this is not evidence that its retained
+plane replay is deterministic. No baseline duplicated here. R7 foreground845
+priority implementation, GPU old-red and five-PNG capture remain gated. No728,
+other population, native, screenshot or runtime edit was added; original residual
+counts and separate unqualified HUD carry difference remain unchanged.
+
+R7A final accounting: both55336/88468 terminal; owned temporary source removed
+under intended-tree lock, journal/two reports/four witness class files consumed
+metadata-slot alone (7 files/354004 bytes).
+No raw archive, additional execution or runtime change. Last compilation included
+the now-removed temporary witness; no fresh maintained-source compile is claimed.
+Private config remains regular0600/exact bytes; Main config SHA256/mtime unchanged.
+R1–R6 refs/results/native originals/captures and foreign jobs preserved. Docs-only
+local commit; no integration/push, foreground845 unit still gated.

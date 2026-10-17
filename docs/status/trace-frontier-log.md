@@ -113575,6 +113575,21 @@ retain661/360/50/52/58 differing pixels; not a zero-RGB or whole-route certifica
 Independent source review found no material finding; combined delivery remains Root's.
 
 
+### 2026-10-17 — Slot original-pixel cell overlap, physics frontiers reused
+
+Bounded R4 in owned649 over670cf only reverses Slot direct cell paint order.
+Native SAT13 opaque-black versus laterSAT14 blue is independently old-red in
+32764; final40686 passes24 render/Slot cases. R2 Knuckles1024/team5259 trace
+physics/animation/error/warning/bootstrap-zero results remain reused at their
+original epochs, not rerun for the presentation-only loop. Missing aux schemas
+and bounded timing/SAT coverage remain. [Exact commands/source hashes](../architecture/validation/levels/s3k-bonus-stage-transitions.md#slot-native-cell-priority-r3r4--2026-10-17).
+One fixed five-PNG48918 (14:58:10UTC,3.415s/33s queue) compares unchanged native
+originals at971/974/1017/1022/1026:661/360/50/52/58→599/295/41/52/57,
+137 original pixels recovered and zero newly bad. Original578/267 components
+remain identical/unattributed; HUD native4/engine3 unqualified bootstrap life
+state persists. No new trace frontier, zero-RGB claim or further owner repair.
+
+
 ### 2026-10-17 — R11 native HCZBlock Full2 closes7807 through7808
 
 Base152d07 in owned3aa3, branchbugfix/ai-s3k-hcz-7807-causal-owner. HCZBlock

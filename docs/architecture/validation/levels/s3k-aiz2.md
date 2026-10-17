@@ -1180,3 +1180,20 @@ were inspected including skips and exact error arrays before metadata-only
 consumption; no raw archives or temporary observer remain. Target last compiled
 final maintained source/tests in72859, no unrebuilt source variant. Local owner
 qualification only; Main803 unchanged, no integration/push/tree removal.
+
+
+### Presentation smoke repair R5 — 2026-10-17
+
+The obsolete results-wait test now enters the actual EndSignControl component
+through `S3kBossDefeatSignpostFlow.beginNativeReplacement`, allowing ordinary
+SST allocation, signpost landing, production results construction, art readiness
+and tally. Native `loc_2DCC0` / `Obj_LevelResultsWait2` at pinned044 lines
+62715–62730 own literal90. The maintained test observes first fallthrough1,
+retention through89 and transition on90. It neither reflects the removed
+`RESULTS_WAIT_DURATION_ADJUSTMENT` nor constructs the old13 compensation.
+No AIZ runtime changed. The component inlet alone passed old-red job51248;
+all16 results tests and17 Kos/child controls pass final3511, no skips. Existing
+R7 fatal/physical-handoff world replays are reused at their recorded source
+epoch; this test does not rerun or replace those route qualifications. Exact
+commands, shared displayed-fade repair and limits are in the existing
+[playable-completion Plan](../../plans/2026-10-13-s3k-playable-completion.md#presentation-rewind-smoke-repair-r5--2026-10-17).
