@@ -265,7 +265,9 @@ Unreleased. The earlier development themes remain in
   closing logo for every Super Emerald ending fades in through white with its characters,
   as in the original. Sonic returns to his normal colours rather than staying Hyper white,
   the sea's colours stop cycling once the picture has faded to black, the fade to black
-  starts on the original's frame, and Tails' tail is back behind him.
+  starts on the original's frame, and Tails' tail is back behind him. The ending then hands
+  over to the title screen on the original's frame. The closing picture stays up without its
+  logo and fades out under the title instead of losing its characters first.
 
 - **S3K cold campaign coverage:** Sonic alone now has one uninterrupted
   replay from Lava Reef act 1 through the Lava Reef boss, Hidden Palace and Sky

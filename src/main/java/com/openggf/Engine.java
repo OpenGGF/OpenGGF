@@ -2943,7 +2943,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		projectionMatrix.identity().ortho2D(0, (float) projectionWidth, 0, (float) realHeight);
 		projectionMatrix.get(matrixBuffer);
 
-		renderDispatcher.applyClearColor(getCurrentGameMode(), specialStageEntryShowsLevel(),
+		renderDispatcher.applyClearColor(getCurrentGameMode(), entryShowsLevel(),
 				clearActions);
 		glScissor(viewportX, viewportY, viewportWidth, viewportHeight);
 		glEnable(GL_SCISSOR_TEST);
@@ -3902,15 +3902,18 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	public void draw() {
-		renderDispatcher.draw(getCurrentGameMode(), specialStageEntryShowsLevel(), debugViewEnabled, debugState, drawActions);
+		renderDispatcher.draw(getCurrentGameMode(), entryShowsLevel(), debugViewEnabled, debugState, drawActions);
 	}
 
 	/**
 	 * True while a special stage is still inside the ROM's entry fade-to-white:
 	 * the level's last frame stays on screen under the fade until the stage's
 	 * own reveal boundary ({@link SpecialStageProvider#isEntryFadeToWhiteActive}).
+	 * The title's entry fade keeps the level picture the same way
+	 * ({@link GameLoop#isTitleEntryShowingLevel}).
 	 */
-	private boolean specialStageEntryShowsLevel() {
+	private boolean entryShowsLevel() {
+		if (getCurrentGameMode() == GameMode.TITLE_SCREEN) return gameLoop.isTitleEntryShowingLevel();
 		if (getCurrentGameMode() != GameMode.SPECIAL_STAGE || levelManager == null) {
 			// Outside SPECIAL_STAGE the accessor resolves the module's provider
 			// through the session, which editor-only draws do not have.

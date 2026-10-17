@@ -37,6 +37,8 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
     private int childFrame;
     private int childTimer;
     private int childStage;
+    // The phase whose picture stays drawn after loc_5F314 (phase 8 runs nothing).
+    private int drawPhase;
     // loc_5FBA0's own SST: alive flag, anim_frame_timer byte and $3A table offset.
     private boolean poseFlash;
     private int poseFlashTimer;
@@ -65,7 +67,7 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
                          boolean poseFlash, int poseFlashTimer, int poseFlashOffset,
                          S3kRawAnimation.State.Value animation, S3kRawAnimation.State.Value childAnimation,
                          S3kRawAnimation.State.Value tailsAnimation, S3kRawAnimation.State.Value knucklesAnimation,
-                         S3kRawAnimation.State.Value tailAnimation, SszMechaPalette.Value mechaPalette)
+                         S3kRawAnimation.State.Value tailAnimation, SszMechaPalette.Value mechaPalette, int drawPhase)
             implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra { }
     @Override public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
         return super.captureRewindState(context).withObjectSubclassExtra(new Extra(phase, timer, afterBanner,
@@ -74,7 +76,7 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
                 poseFlash, poseFlashTimer, poseFlashOffset,
                 animation.captureRewindStateValue(), childAnimation.captureRewindStateValue(),
                 tailsAnimation.captureRewindStateValue(),knucklesAnimation.captureRewindStateValue(),
-                tailAnimation.captureRewindStateValue(),mechaPalette.captureRewindStateValue()));
+                tailAnimation.captureRewindStateValue(),mechaPalette.captureRewindStateValue(),drawPhase));
     }
     @Override public void restoreRewindState(PerObjectRewindSnapshot snapshot, RewindCaptureContext context) {
         super.restoreRewindState(snapshot, context);
@@ -87,7 +89,7 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
             animation.restoreRewindStateValue(e.animation()); childAnimation.restoreRewindStateValue(e.childAnimation());
             tailsAnimation.restoreRewindStateValue(e.tailsAnimation());knucklesAnimation.restoreRewindStateValue(e.knucklesAnimation());
             tailAnimation.restoreRewindStateValue(e.tailAnimation());
-            mechaPalette.restoreRewindStateValue(e.mechaPalette());
+            mechaPalette.restoreRewindStateValue(e.mechaPalette()); drawPhase=e.drawPhase();
         }
     }
     @Override public void update(int vIntRunCount, PlayableEntity player) {
@@ -350,9 +352,13 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
         if (timer==0x40) ending().setFlag(2);
         if (ending().startHeld() || (timer=(short)(timer-1))<0) finish();
     }
+    /**
+     * loc_5F314 / loc_5F0DA (044fa46 sonic3k.asm:125858, 125642) only write Game_mode 0: the SST
+     * stays, so the last sprite table stays on screen through Title_Screen's entry fade.
+     */
     private void finish() {
-        phase=8; services().levelManager().requestGameOverExit(GameOverExit.TITLE_SCREEN);
-        ObjectLifetimeOps.deleteNoRespawn(this);
+        drawPhase=phase; phase=8; ending().beginTitleEntryFade();
+        services().levelManager().requestGameOverExit(GameOverExit.TITLE_SCREEN);
     }
     private void rotationDisabled(boolean value) {
         var registry=services().paletteOwnershipRegistryOrNull(); if(registry!=null) registry.setPaletteRotationDisabled(value);
@@ -372,7 +378,12 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
     @Override public int getY(){return screenY;}
     public int phase(){return phase;}
     @Override public void appendRenderCommands(List<GLCommand> commands) {
+        int phase=this.phase==8?drawPhase:this.phase; // the retained picture after loc_5F314
         if(isDestroyed() || phase==0 || phase==8) return;
+        // loc_5F2F8 (044fa46 sonic3k.asm:125848-125861), shared by every terminal hold, takes
+        // loc_5F314 instead of Draw_Sprite: the holder's own sprite leaves the last table while
+        // its separately allocated children, TM and caption keep theirs.
+        boolean held=this.phase==8&&drawPhase>=4;
         if(phase<=2) {
             // Each initializer returns before Draw_Sprite; the logo, pose and
             // Child_Draw_Sprite children first draw on the next pass.
@@ -382,9 +393,9 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
             drawTrademark(2);
             if(knucklesPose())
                 draw(S3kEndingArt.KNUCKLES_POSE,frame,0x120,0x108,false,-1);
-        } else if(phase==4) draw(S3kEndingArt.EGGMAN,frame,screenX,screenY,false,-1);
+        } else if(phase==4) { if(!held) draw(S3kEndingArt.EGGMAN,frame,screenX,screenY,false,-1); }
         else if(phase==5) {
-            draw(S3kEndingArt.EGG_ROBO,frame,screenX,screenY,false,-1);
+            if(!held) draw(S3kEndingArt.EGG_ROBO,frame,screenX,screenY,false,-1);
             if(childStage==1 || childStage==2) draw(S3kEndingArt.EGG_ROBO,childFrame,screenX,screenY+0x1C,false,-1);
         } else if(phase==6) {
             boolean tails=character()==PlayerCharacter.TAILS_ALONE,knux=character()==PlayerCharacter.KNUCKLES;
@@ -392,7 +403,7 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
             // and the three children return first (stepThroughWhite has just left 14/3).
             boolean initPass=fadeSteps==14&&fadeWait==3;
             if(!initPass) {
-                draw(S3kEndingArt.S3_GRAPHICS,0,screenX,screenY,false,-1);
+                if(!held) draw(S3kEndingArt.S3_GRAPHICS,0,screenX,screenY,false,-1);
                 draw(S3kEndingArt.AND_KNUCKLES,1,screenX,screenY+0x48,false,-1);
                 drawTrademark(4);
             }
@@ -404,7 +415,7 @@ public final class S3kPostCreditsObjectInstance extends AbstractObjectInstance i
             draw(S3kEndingArt.EYECATCH_KNUCKLES,knucklesAnimation.mappingFrame,screenX+(knux?0:tails?0x1C:-0x1C),screenY+(knux?0x40:0x2C),false,2);
             draw(S3kEndingArt.S3_GRAPHICS,tailsAnimation.mappingFrame,screenX+(tails?8:0x24),screenY+(tails?0x40:0x2C),false,0);
             draw(S3kEndingArt.S3_GRAPHICS,childFrame,screenX+(tails||knux?-0x1C:0),screenY+(tails||knux?0x2C:0x40),false,0);
-        } else if(phase==7) draw(Sonic3kObjectArtKeys.MECHA_SONIC,frame,screenX,screenY,false,-1);
+        } else if(phase==7&&!held) draw(Sonic3kObjectArtKeys.MECHA_SONIC,frame,screenX,screenY,false,-1);
     }
     /**
      * loc_5F4FA (sonic3k.asm:125982): ObjDat3_60130's TM, mapping frame 2, placed by

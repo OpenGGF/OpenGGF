@@ -129,6 +129,29 @@ class TestEngineRenderDispatcher {
                 draw.calls);
     }
 
+    /**
+     * Title_Screen's entry Pal_FadeToBlack keeps the last level picture (S3K ending exit only); every
+     * other TITLE_SCREEN frame draws the title provider, and the special-stage entry branch is unchanged.
+     */
+    @Test
+    void titleEntryFadeShowsTheLevelOnlyWhileFlagged() {
+        EngineRenderDispatcher dispatcher = new EngineRenderDispatcher();
+        RecordingClearActions clear = new RecordingClearActions();
+        RecordingDrawActions draw = new RecordingDrawActions();
+
+        dispatcher.applyClearColor(GameMode.TITLE_SCREEN, false, clear);
+        dispatcher.applyClearColor(GameMode.TITLE_SCREEN, true, clear);
+        dispatcher.applyClearColor(GameMode.LEVEL_SELECT, true, clear);
+        dispatcher.draw(GameMode.TITLE_SCREEN, false, false, DebugState.NONE, draw);
+        dispatcher.draw(GameMode.TITLE_SCREEN, true, false, DebugState.NONE, draw);
+        dispatcher.draw(GameMode.LEVEL_SELECT, true, false, DebugState.NONE, draw);
+        dispatcher.draw(GameMode.SPECIAL_STAGE, true, false, DebugState.NONE, draw);
+        dispatcher.draw(GameMode.SPECIAL_STAGE, false, false, DebugState.NONE, draw);
+
+        assertEquals(List.of("title", "level", "levelSelect"), clear.calls);
+        assertEquals(List.of("titleScreen", "level", "levelSelect", "level", "specialStage"), draw.calls);
+    }
+
     @Test
     void nullModeDrawFallsBackToLevelDraw() {
         EngineRenderDispatcher dispatcher = new EngineRenderDispatcher();

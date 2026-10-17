@@ -754,10 +754,9 @@ cannot yet explain.
   more.
 - Spots 4095–12287 show phase differences: cloud and Tornado positions, `Camera_Y_pos`
   during credits, and palette line 3 cycle phase.
-- The engine's `GameMode` changes 23 outer steps after its terminal ends. Native
-  `loc_5F314` (044fa46 sonic3k.asm:125858) sets `Game_mode` immediately, and `Title_Screen`
-  then runs `Pal_FadeToBlack` (5424-5431). The engine fades before switching mode. This is unchanged by
-  region.
+- The engine's `GameMode` used to change 23 outer steps after its terminal ended. This was
+  region-independent and is fixed in the
+  [2026-10-17 handoff section](#terminal-to-title_screen-handoff-ending-pal-lane-2026-10-17).
 
 **Terminal palette and tail (fixed; line numbers are 044fa46 `sonic3k.asm`).** The S3
 eyecatch has no PAL branch. The first picture (poll 13311) showed 478 differing pixels.
@@ -838,3 +837,71 @@ owners), and the source was then restored.
 - The `$47`-over-Tornado animation window (frames ≥4 outside the engine script window)
   has no reachable case.
 - No native full-table occupancy is compared.
+
+### Terminal to Title_Screen handoff (ending-pal lane, 2026-10-17)
+
+Line numbers are 044fa46 `sonic3k.asm`.
+
+**Native sequence.** The post-credits terminal hold `loc_5F2F8` (125848-125861) ends with
+`loc_5F314`. That writes `Game_mode` 0 and returns without `Draw_Sprite`, so the holder's own
+sprite leaves that pass's table. Its separately allocated children, TM and caption stay. The
+level loop ends. `Sega_Screen` (5419) writes 4, and `Title_Screen` (5424) runs
+`Pal_FadeToBlack` (5074-5084): 22 passes of `Wait_VSync` + `Pal_ToBlack`. `VInt_12` (871)
+publishes the previous pass's palette, the unchanged sprite table and H-scroll through
+`Do_ControllerPal` (948-964). Title initialization follows.
+
+**Native measurement** (declared Tails/+2 NTSC, `EndingScenePalProbeV3`, frozen plan v3
+`e10f1a82…`; exit window every frame from the `loc_5F2F8` pass whose countdown is ≤8; state
+equal to v2):
+- `Game_mode` 4 at poll 15531.
+- The logo is gone at 15532.
+- Fade steps run 15532-15552 (red, then green, then blue).
+- Black at 15553.
+
+**Engine before** (`eec53b4b7`; pairing poll p ↔ outer p+1):
+- LEVEL until outer 15554 and TITLE_SCREEN from 15555, 23 frames late.
+- 8618 → 231 differing pixels over 15532-15552. It deleted the terminal object and used the
+  FadeManager curve.
+
+**Fix.**
+- **The ending object keeps its SST.** `S3kPostCreditsObjectInstance.finish` keeps the object
+  and draws its last picture without the holder's own sprite.
+- **Pending passes are ending state.** `S3kEndingState` holds the entry-fade passes, captured
+  for rewind.
+- **Same-pass handoff.** `GameLoopTitleEntryFade` takes a `TITLE_SCREEN` exit only when the
+  level runtime is a `TitleEntryFadeSource` with a pending fade. It sets TITLE_SCREEN in the
+  same level pass and keeps the existing stop-music call. Each TITLE_SCREEN frame then runs one
+  pass with no level, object, HUD or title input update: publish the prepared table and
+  palette, then `Pal_ToBlack`. The last pass calls the unchanged title return.
+- **Render seam.** The engine and capture-session render seams show the level while that fade
+  is pending; every other TITLE_SCREEN path draws the title provider.
+
+**Engine after:**
+- TITLE_SCREEN from outer 15532 (poll 15531).
+- Raw RGB identical to native at every frame from 15528 to 15554, including all 22 fade frames.
+- The terminal timeline before the finish is unchanged.
+
+From 15555 the title's own content differs, because native spends 8 frames initializing
+the title. That is the existing title baseline and is not changed here.
+
+**Tests.**
+- **Red:** `TestS3kEndingTitleHandoff` (production D01 session) failed 2/2 on the old source,
+  with LEVEL on the finishing pass.
+- **New coverage:**
+  - Mode date, the per-pass `Pal_ToBlack` palette, frozen level/object counters and a held
+    Start.
+  - Mid-fade restore and forward replay, and the startup title as a negative case.
+  - `TestEngineRenderDispatcher`'s title-entry routing. `TestS3kPostCredits` now expects the
+    retained SST.
+- **Focused selection:** 24 classes, with the title-card lifecycle and hold routes, S1/S2/S3K
+  game over, the DEZ escape ship, `TestGameLoop` and the required S3K four.
+- **Guards:** `TestArchitecturalSourceGuard` passes (GameLoop/Engine size ratchets). The two
+  `TestProductionSingletonClosureGuard` failures are both in
+  `tools/MenuAudioProbeTool.java:41` (1e6d3d93a), outside this change.
+
+**Not covered:** PAL products, the Knuckles terminal (shares the code; no native picture) and
+the title's own content.
+
+Pictures:
+`$HOME/Videos/OGGF/s3k-parity-coverage-2026-10-14/spot-checks/ending-title-handoff-v1/`.
+
