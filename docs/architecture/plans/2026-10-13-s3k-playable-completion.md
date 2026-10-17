@@ -6035,3 +6035,45 @@ act2). Four future hardware edges3256/3257/5356/5357 remain suppressed unmatched
 no hydration, descriptor fitting or SS parity total is inferred. Full details
 and exact reviewed hashes are in the linked audit. Stop: no further probe/fix/
 selection; Root owns next frontier, composition and ending6+46/PAL/PCM limits.
+
+
+### Composed source and shared-fork graphics prerequisite — 2026-10-17
+
+After all orphaned batch66 children became absent, the inspected incomplete run
+was acknowledged normally. Root239bf414e records its limits, not a pass.
+Rootf5c3f9858 composes native LBZ/DDZ0cd and R15 camera evidence9bdf;
+Root550066842 composes qualified LRZ/DDZ-flight00272 and ICZ evidence077767;
+Roote74390c57 composes held-palette759/Slot painter289/R7A evidence5c59;
+Root00c54ec82 composes logical skim0c7, warning fixture53d and the unused native
+bus kernel16b. Every append-conflict resolution preserves both complete evidence
+streams; skill mirrors agree. No Main write or integration acceptance follows.
+The ICZ16 repair70e8 is separately qualified but not yet composed at this point.
+The DEZ128 continuation candidate remains uncommitted/unqualified:99 focused and
+29 guards pass, but its complete7-case route check has5 later death assertions.
+Slot R7C's175 affected/108 guards pass while the original five pilots still fail
+[3]/[5]; source cause remains under the separately bounded R7D investigation.
+
+Actual Main24967, exact cold-Sonic campaign plus both boot-width cases, passes
+3/0F0E0S at17:06:07.162791UTC (queue0/Maven58.216s/parent59.017s), with Main
+HEAD, foreign status and config unchanged. The cold campaign reaches Mecha49728,
+results50375 and DEZ release52150. Candidate cold death49613 therefore remains
+unqualified. Isolated boot-width passes alone do not explain the broad errors.
+
+A concrete shared-fork test cleanup defect was then found: TestSurfacelessEglContext
+unconditionally clears the launcher-provided headless backend after each case.
+The next HeadlessGameBoot consequently chooses GLFW without its null-platform
+hint. Exact matched Main23165 runs that3-case class before the two real boot-width
+cases in one alphabetical reused fork:5/0F2E0S, both errors Unable to initialize
+GLFW, normal queue0/Maven26.438s, terminal17:14:30.091350UTC; Main state/config
+preserved. This independent reproduction proves the leak, not the unrecorded
+property value at the interrupted broad's constructors, and does not explain143
+or the cold-route death.
+
+Only the test cleanup changes: save the incoming property before each case and
+restore that exact value afterward, including absence. No graphics/runtime owner,
+queue flag, resource budget or production API changes. Root65482 on composed
+00c54 plus that test delta passes the SAME alphabetical/reused-fork pair:
+5/0F0E0S, class counts3+2, no skips, queue0/Maven1m16s, terminal17:22:20UTC.
+Fresh Java25 compilation covers composed sources, but those five checks are not
+combined smoke or a route certificate. All corresponding XML identities/counts
+were inspected; Main baseline and Root result directories are consumed normally.

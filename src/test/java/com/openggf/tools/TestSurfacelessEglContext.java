@@ -1,6 +1,7 @@
 package com.openggf.tools;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL;
@@ -17,9 +18,20 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 
 class TestSurfacelessEglContext {
+    private String previousBackend;
+
+    @BeforeEach
+    void rememberBackend() {
+        previousBackend = System.getProperty(SurfacelessEglContext.PROPERTY);
+    }
+
     @AfterEach
-    void clearProperty() {
-        System.clearProperty(SurfacelessEglContext.PROPERTY);
+    void restoreBackend() {
+        if (previousBackend == null) {
+            System.clearProperty(SurfacelessEglContext.PROPERTY);
+        } else {
+            System.setProperty(SurfacelessEglContext.PROPERTY, previousBackend);
+        }
     }
 
     @Test

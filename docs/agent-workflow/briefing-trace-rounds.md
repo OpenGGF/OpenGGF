@@ -71,6 +71,17 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+
+A shared-fork test can erase a required launcher flag during cleanup
+(2026-10-17, graphics smoke). TestSurfacelessEglContext cleared the incoming
+headless backend instead of restoring it. Later real boots selected GLFW without
+the requested null-platform hint. An alphabetical two-class Main control reproduced
+two initialization errors; restoring the incoming value made the same five cases
+pass. Check the shared-fork predecessor and preserve incoming global properties;
+an isolated class pass or successful preflight does not prove that later tests
+still have the launch environment. This does not attribute an unrelated signal exit.
+
+
 Equal instruction/stall totals do not fix CPU phase (2026-10-17, ending Kos core).
 GPGX051d430d refreshes only after opcode fetch and restarts its deadline from that
 fetch. Moving112 MCLK of wait from execution to fetch can add a14-MCLK refresh
