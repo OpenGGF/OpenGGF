@@ -3,6 +3,8 @@ package com.openggf.sprites.playable;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
+import com.openggf.game.sonic2.Sonic2GameModule;
+import com.openggf.trace.TraceCharacterState;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.level.WaterSystem;
@@ -566,5 +568,91 @@ class TestSidekickCpuControllerFlightAutoRecovery {
                 "object_control=$81 must clear stale bits-0-to-6 CPU allowance");
         assertTrue(tails.isObjectControlSuppressesMovement(),
                 "object_control=$81 must suppress normal movement");
+    }
+
+    @Test
+    void s3kOffscreenFlightTimeoutClearsFacingAfterNaturalLeftSteering() {
+        TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
+        assertOffscreenFlightTimeoutWritesAirOnlyStatus(GameRules.SONIC_3K);
+    }
+
+    @Test
+    void s2OffscreenFlightTimeoutClearsFacingAfterNaturalLeftSteering() {
+        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
+        assertOffscreenFlightTimeoutWritesAirOnlyStatus(GameRules.SONIC_2);
+    }
+
+    private void assertOffscreenFlightTimeoutWritesAirOnlyStatus(GameRules rules) {
+        // Declared component inlet: static synthetic leader history and public
+        // routine-4 bootstrap, not managed entry or a replay/native snapshot.
+        TestableSprite sonic = sonicAt(0x1000, 0x0400);
+        sonic.useGameRules(rules);
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.useGameRules(rules);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x4000);
+        tails.setCentreY((short) 0x0400);
+        tails.setSubpixelRaw(0x1234, 0x5678);
+        tails.setAir(true);
+        tails.setRenderFlagOnScreen(false);
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.setInitialState(SidekickCpuController.State.FLIGHT_AUTO_RECOVERY);
+        assertEquals(0, controller.captureRewindState().flightTimer());
+
+        // Native sonic3k.asm:26574-26588 and s2.asm:39142-39155 count from
+        // zero to 5*60 offscreen. The declared distance exceeds 299 capped
+        // leftward steps, so real steering establishes LEFT without landing.
+        for (int update = 1; update < 5 * 60; update++) {
+            controller.update(update);
+        }
+        assertSame(SidekickCpuController.State.FLIGHT_AUTO_RECOVERY, controller.getState());
+        assertEquals(299, controller.getDiagnosticRespawnCounter());
+        assertEquals(Direction.LEFT, tails.getDirection());
+        assertEquals(0x03, TraceCharacterState.statusByteFromSprite(tails));
+        assertTrue(tails.getCentreX() > sonic.getCentreX());
+        assertTrue(tails.hasRenderFlagOnScreenState());
+        assertFalse(tails.isRenderFlagOnScreen());
+
+        var leaderBeforeTimeout = sonic.captureRewindState();
+        var beforeTimeout = tails.captureRewindState();
+        controller.update(5 * 60);
+        var firstTimeout = tails.captureRewindState(false);
+        // Two in-place local sprite/controller restore-forward cycles, with
+        // the same controller identity. This is not a whole-world restore.
+        for (int replay = 0; replay < 2; replay++) {
+            sonic.restoreRewindState(leaderBeforeTimeout);
+            tails.restoreRewindState(beforeTimeout);
+            assertSame(controller, tails.getCpuController());
+            assertSame(SidekickCpuController.State.FLIGHT_AUTO_RECOVERY, controller.getState());
+            assertEquals(299, controller.getDiagnosticRespawnCounter());
+            assertEquals(Direction.LEFT, tails.getDirection());
+            assertTrue(tails.hasRenderFlagOnScreenState());
+            assertFalse(tails.isRenderFlagOnScreen());
+            controller.update(5 * 60);
+            assertEquals(firstTimeout, tails.captureRewindState(false),
+                    "The captured local partition must replay the timeout identically");
+        }
+
+        if (rules == GameRules.SONIC_3K) {
+            assertEquals((8 * 60) / 2, tails.getDoubleJumpProperty() & 0xFF,
+                    "S3K timeout reloads flight fuel before Tails_Set_Flying_Animation");
+        }
+        // Both native timeout branches write the ENTIRE status byte as 2,
+        // unlike ordinary flight steering or the on-screen OR of InAir.
+        // Assert only after both local replay cycles and their prerequisites.
+        assertAll("Native offscreen flight timeout footprint",
+                () -> assertSame(SidekickCpuController.State.CATCH_UP_FLIGHT, controller.getState()),
+                () -> assertEquals(0x02, controller.getDiagnosticRomCpuRoutine()),
+                () -> assertEquals(0, controller.captureRewindState().flightTimer()),
+                () -> assertEquals(0, tails.getCentreX()),
+                () -> assertEquals(0, tails.getCentreY()),
+                () -> assertEquals(0x1234, tails.getXSubpixelRaw()),
+                () -> assertEquals(0x5678, tails.getYSubpixelRaw()),
+                () -> assertTrue(tails.isObjectControlled(), "Native object_control=$81"),
+                () -> assertFalse(tails.isObjectControlAllowsCpu()),
+                () -> assertTrue(tails.isObjectControlSuppressesMovement()),
+                () -> assertEquals(0x20, tails.getAnimationId()),
+                () -> assertEquals(0x02, TraceCharacterState.statusByteFromSprite(tails)),
+                () -> assertEquals(Direction.RIGHT, tails.getDirection()));
     }
 }

@@ -6223,6 +6223,25 @@ recalculate fresh visibility to bypass the existing cache-validity contract.
 Changing control bit1 may release its engine mapping-ownership projection while
 preserving the last published mapping/animation values.
 
+
+Retaining the native standing bit does not make an airborne offscreen rider a
+floor for pre-movement support recovery. SolidObjectFull_1P's Air branch returns
+through loc_1DC98; the earlier cached-P2 skip can leave that branch unconsumed.
+The column must opt into the existing airborneStaleStandingBitReturnsNoContact
+capability so the existing offscreen support filter preserves the next airborne
+player dispatch. Do not repair its consequence by freezing a global timer or
+changing CPU/facing arithmetic. Origin: R38 independent real-bubble/column
+old-red (final next-player lock35/34 after all forced-world controls), R39 local
+capability and R40 affected76green; R41 remains strict-red at11920.
+
+An object-only component setup can also reach the correct offscreen CPU despawn
+branch before its intended physics oracle: actual stored interact0 versus live
+column code word3, despite a real standing record. If the scenario requires a
+previously observed visible ride, express one ordinary visible CPU slot before
+the held/offscreen-release boundary and assert its stored projection. Do not
+seed or refresh the CPU latch through a setter, suppress the mismatch, move the
+leader to fit a guard, or reinterpret CATCH_UP as an ordinary movement result.
+
 Prove capture through real factory/allocation/SST FullSolid contact, visibility
 through the actual copied-camera/body publisher, and whole-world recreation/
 forward replay before visibility flip and after release/recapture. Manual
@@ -6275,3 +6294,27 @@ edit before discriminating all tail bytes. Do not infer definition0 emptiness or
 native route equality from a clear or a successful authored route. The separate
 native four alias-word writes remain unimplemented. Origin: DEZ final residency/
 first-difference task,2026-10-17; see existing trace audit and final-boss matrix.
+
+
+## Literal CPU status writes preserve independent body and physics fields
+
+S3K Tails_FlySwim_Unknown (pinned044 sonic3k.asm:26574–26588) and S2
+TailsCPU_Flying (pinned34fc s2.asm:39142–39155) both write literal status02
+at the offscreen300-update timeout. Ordinary steering may legitimately face
+LEFT, and the on-screen branch only ORs InAir. A timeout that merely sets Air
+therefore retains status03 even though its integer-position marker is correct.
+
+Project the literal status through existing status-only operations: clear roll
+without restoring radii, clear underwater without restoring water speed constants,
+and clear rollingJump/OnObj/push/facing. Do not call generic setRolling(false),
+setInWater(false), a floor/ride reset or a global facing correction. The existing
+push setter clears derived push bookkeeping; it does not scan geometry.
+
+An independent component oracle can start at the public routine4 bootstrap with
+timer0, let299 actual updates establish LEFT, then check the native full-status
+write after update300. Keep the initial status fields declared independently of
+recorded rows; preserve ordinary/on-screen/handoff controls. Local sprite/CPU
+restore-forward coverage is not whole-world recreation or the actual route
+caller's witness. Origin: HCZ R43/R44 genuine S2/S3K status02/03 old-red after
+two local replay cycles per case; R45 timeout-only projection, R46 exact156green
+including separate declared7F/radii/water controls, R47 strict first13322.

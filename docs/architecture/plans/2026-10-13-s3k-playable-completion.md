@@ -10579,3 +10579,190 @@ Normal local2runtime+Plan/audit preservationcommit authorized; no additional
 JVM/build/size-only/route/native/broad/capture/integration/push. Root owns current
 29527smoke/futurecomposition; FDFroutegate remains separate. Consumedoriginal
 reports metadataalone afterfacts/noarchive. No DEZfunctional scope reopened.
+
+
+### R34 to R36 selected component despawn cause — 2026-10-17
+
+R34source38 rejects a speculative nearby leader start: initializer/history
+inconsistency is source-readable but the actual R33 guard was unobserved.
+R35source39 freezes only reversible CPU/test logs (combined4daa, stripping to
+CPU4bb9/test0d285). R36execution40/session84126 uses the unchanged R33 normal
+wrapper/all-five/no-profile selector; terminal21:18:38UTC, queue0/Maven01:21,
+suite0.939s, **5/2F0E0S**. Root directly reads all five cases/full16 bounded
+records19778B and both original reports. Known projection/context checks pass;
+shared derived-cache memoization remains a stated limit.
+
+Both release cases actually enter checkDespawn with validcachedFALSE +
+Air/OnObjTRUE, stored interact0 versus already-computed live3, managedSST10;
+actual cause OBJECT_ID_MISMATCH reaches applyDespawnMarker(false). CATCH_UP
+preempts ordinary released physics/finaltimer/recreation oracles. Grounded
+visible control supplies three actual pairs stored0->3 and lock35->34 through
+ordinary CPU slots; its K-1/recreation plus the old two controls pass. No timer
+old-red or runtime-owner repair follows, and native001D producer/campaign8774
+Aircaller remain missing. [Full source/command/records/limits](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r34-to-r36-component-cpu-mismatch-is-observed-before-the-timer-oracle--2026-10-17).
+
+R37 accounts the accepted evidence and restores the exact diagnostic-free
+sources; only hash-owned R35-containing classes/reports are cleanup scope.
+Any next inlet authoring is restricted to one real visible CPU slot before
+held/offscreen release in only the two new release cases, with source frozen
+for a separate compiler/execution gate. No test/runtime commit or new run.
+
+R37 exact CPU4bb9/test0d285 restoration is verified before any inlet edit. Four
+R35-containing owned classes are removed under writer; accepted original two
+reports50878B are rehashed/consumed metadata-slot-alone at21:23:49UTC, no archive.
+Only docs are committed; accepted test WIP remains uncommitted. No live job.
+
+
+### R37 to R39 independent released-air timer old-red — 2026-10-17
+
+R37source41's reviewed testdb5a adds exactly one real visible CPU slot before
+held/release snapshot creation in only the two new release cases. Its actual
+word3/identity/LF/held/standing/cache prerequisites now pass. R38execution42
+session42497 uses unchanged normal/all-five/no-profile command on17480/Java7df;
+terminal21:30:01UTC, queue0/Maven01:20/suite1.067s: **5/1F0E0S**. All five/XML/
+nested failure/72 properties inspected. Grounded K-1, natural0 and old two cases
+pass. Positive release reaches final assertion141 expected35/actual34 AFTER
+two forced held-world plus two forced released-world recreation/forward cycles;
+releaseLock assertion140 passes35. Genuine short component old-red, not a
+campaign8774 Airwriter/native001D producer observation. [Exact source/command/failure/limits](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r37-to-r39-visible-cpu-inlet-reaches-the-independent-timer-old-red--2026-10-17).
+
+Root accepts original XML/TXT29955B for metadata-slot-alone consumption after
+durablefacts. R39 source candidate changes only the column's inherited existing
+stale-air capability to true, citing loc326B6 FullSolid / cached-P2 skip before
+loc1DC98 stale cleanup and loc328AC Air+OnObj release. Existing shared support
+filter handles this contract. No shared/timer/CPU/movement/test/API change,
+compiler/JVM/new run or runtime/failing-test commit; await exact source read.
+
+R39 source-only column freezes at a1704354 (one-file diff523f13d6); removing
+only the override restores d811. Testdb5a and every other Java7df runtime file
+are unchanged. Accepted originals29955B are rehashed/consumed at21:34:55UTC,
+metadata_slot alone after durablefacts. No compilation/execution or commit.
+
+
+### R40 exact affected focus is green; route remains unmeasured — 2026-10-17
+
+Root approves R39a170/diff523f, unchangeddb5a. R40execution44/session48240 runs
+ONE exact historical62518 normal nine-class/method selection (including only
+the HCZ rider recreation method), original ROM/environment/fork flags, compiler
+inside. Terminal21:42:12UTC, queue0/Maven01:17: **76/0F0E0S**, all nine XMLs/all76
+identities/skips/output inspected. Five cached-release methods now pass,
+including the prior genuine positive timer oracle and all forced-world loops;
+original column8/mechanism2/rider1 and mandatory S3K4/both loading identities
+pass. [Exact selection/counts/source/limits](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r40-sole-affected-nine-class-focus-closes-the-component-old-red--2026-10-17).
+
+Postrun a170/db5a/APS/movement/CPU/shared solid/provider and privateconfig/native/
+refs/source pins are exact; only the column differs from Java7df. Standard18
+focus reports231910B are inspected and become ordinary metadata-only cleanup
+scope after durablefacts; no novel failure. No trace/native/guard/broad/commit
+or second JVM is authorized. Campaign8774 Aircaller/native001D producer and
+actual current route frontier remain unqualified by this component focus.
+
+R40 inspected standard18 reports231910B are rehashed/consumed at21:44:17UTC,
+metadata_slot alone after durablefacts. No archive, novel failure, live job or
+commit; runtime/test remain frozen a170/db5a pending Root next-scope decision.
+
+
+### R41 original fullcanonical firstNonCamera11920; strict red — 2026-10-17
+
+After actual R40focus76green, one maintained originalAD40 fullcase/trace-replay
+session62139 on17480+a170/db5a/eb743/base967c ends21:47:19UTC, queue0/Maven51.362s,
+method26.227/suite26.472, **1/1F0E0S**. Six earlier windows completezero. Returned
+HCZ complete14208 has **6553 total=5489physics+1064animation**, lag59/warnbootstrap0,
+firstNonCamera11920sidekick_status0002/0003; earlier animation3475 remains.
+Historical R22complete11118/first8775 is a comparison, not full-vector proof:
+only recent5 arrays are available. Current seg13 summary is byte-identical R22,
+incomplete63295/first287y, same actual ownership88306/act1-vs2; exact compared
+count is not emitted. Actual semantic entry SS6/return hcz_3 assertions pass;
+13 dynamic-art gaps/0failures. [Full windows/groups/clocks/limits](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r41-original-canonical-advances-to11920-strict-route-remains-red--2026-10-17).
+All available arrays/fullJUnit/skips inspected; exact20 originals133157B retained
+at own target paths for Root DIRECTread, no archive or cleanup. Source/config/
+native/ref pins exact; no retry/repair/extra JVM/commit. R41ordinal45 finishes
+alone; queued R42ordinal46 stays separate/unstarted. CampaignAircaller/native001D
+producer, remaining11920 writer and route beyond13 are unqualified here.
+
+
+### R42 local preservation before11920 source plan — 2026-10-17
+
+Root DIRECTread accepts R41's20originals/full arrays and full2axis failure.
+Comparatorwarn0 is separate from actualruntime468SMPSshadow+2FAST+1markRemembered
+warnings. Preserve bounded a170/db5a genuineoldred->76focusgreen and canonical
+first11920, without full-vector/campaign/nativeproducer clearance. Existing
+releasefold/S3Kdiscrepancy/mirroredpitfall/matrix/frontier carry the exact limits.
+Ordinal46 first commits only owned column/test/docs under normal policy, then
+hash-consumes20accepted originals133157B metadata-slot alone. Candidate classes,
+foreign native/config/refs and Root/Main stay untouched. Only after accounting
+is clean: source-read actual11920 native rows/fields/guard/writer absences and
+hand back a minimal existing-seam question, with no new authoring or execution.
+
+
+### R43/R44 flight-timeout independent old-red — 2026-10-17
+
+R43ordinal47 source-only test779247 appends2cases with all18 old bodies unchanged.
+R44ordinal48 sole exact-class/no-profile normal-wrapper75570 on d712+a170/db5a/
+CPU4bb9 ends22:08:39UTC, queue0/Maven24.488s/suite0.336s, **20/2F0E0S**. Both
+S2/S3K cases reach only final native status02/03 and RIGHT/LEFT failures after
+all predeadline controls and two local restore-forward cycles apiece; remaining
+footprint and18old controls pass. Complete XML/failures/skips/properties inspected;
+24 FAST/no-manifest runtime warnings are separate. This independently demonstrates
+the general timeout status-reset defect, not actual11920 caller/managedentry or
+whole-world proof. Runtime/config/native pins unchanged; original XML+TXT48384B
+retained singly for Root DIRECTread, no commit/cleanup/retry/runtime fix or extra
+JVM. [Exact oracle/coverage/limits](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r43r44-independent-flight-timeout-full-status-old-red--2026-10-17).
+
+
+### R45 timeout literal-status source candidate — 2026-10-17
+
+After Root DIRECTread, accepted R44 XML/TXT2files48384B are rehashed/consumed
+metadata_slot alone at22:16:38UTC; compiledclasses unchanged. Source-only
+CPU8930b6b4 adds6 existing status operations/3citation lines to the timeout,
+strip->4bb9 exact; ordinary/on-screen behavior untouched. Genuine20case779247
+remains byte-exact. Separate declared S2/S3K status-input/radii/water-physics
+tests4fcd746b are uncompiled/unexecuted, not R44 old-red evidence. Current CPU
+has no explicit size-ratchet entry; guards/budgets/sharedowners/native/config
+pins unchanged. No JVM/queue/native/route/logger/runtime qualification/commit.
+[Contracts and next focused proposal](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r45-timeout-literal-status-candidate-source-only--2026-10-17).
+
+
+### R46 native timeout focused156green — 2026-10-17
+
+Ordinal50 sole normal exact10class/no-profile96888 on d712+CPU8930/20case779247/
+new2case4fcd ends22:22:52UTC, queue0/Maven01:20min rounded, **156/0F0E0S**.
+Both unchanged naturalLEFT/2localrestore S2/S3K old-red cases now pass; separate
+declared7F-input/radii/water-physics cases also pass, not the same old-red proof.
+All actual156 identities/10classXML+TXT/properties/streams/skips inspected,
+including mandatoryS3K4/bothloadingidentities and S2/S3K shared consumers.
+Runtime warnings154FAST+1HURTfallback+1collision-index diagnostic remain explicit.
+All source/config/native pins fixed. Normal metadata-only standard-report
+consumption follows durablefacts; no commit/guard/route/native/extraJVM.
+[Counts/coverage/limits](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r46-native-timeout-status-focused-qualification--2026-10-17).
+
+
+### R47 original canonical firstNonCamera13322 — 2026-10-17
+
+Ordinal51 sole original AD40 maintained fullcase35289 on d712+CPU8930/test779247/
+new4fcd (unchanged eb743/base967c), trace-replay/normal wrapper, ends22:27:01UTC,
+queue0/Maven51.355s, method26.391/suite26.660s, **1/1F0E0S**. Six earlier complete
+windows zero; returned HCZ complete14208 has TOTAL6511=5447physics+1064animation,
+lag59/warnbootstrap0; firstNonCamera13322status0009/0001, earlier all-group3475
+animation0017/001C remains. Recent5 is not an exhaustive vector/no-regression
+waiver; actual11920 engine caller/branch remains unobserved despite frontier
+movement. Segment13 incomplete63295/ref5393/countunknown/first287y and actual
+ownership88306 LEVEL/gen10/zone1act1-vs2 stay separate, same4fullsuppressed
+hardware identities. Actual giant_ring/SS6 and return semantic assertions pass;
+gap13/0, source-labelled logical77283/77283 and83626/85096 kept distinct from
+manifest77284/85097. All9JSON+9owners/fullXML+TXT/availablearrays/skips/properties
+inspected; actualruntime468SMPS+2FAST+1markRemembered warnings remain explicit.
+Original20files retained singly for RootDIRECTread, source/config/native pins
+exact. No commit/cleanup/extra JVM/guard/repair. [Full facts/limits](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r47-original-canonical-firstnoncamera13322-strict-red--2026-10-17).
+
+
+### R48 local preservation before next13322 source read — 2026-10-17
+
+Root DIRECT accepts R47's20 originals133156B/full XML/suppression/arrays.
+Ordinal52 first commits only CPU8930/20case779247/new2case4fcd and owned
+existing docs/releasefold/mirrored pitfall under normal policy. Release follows
+POM0.7.prerelease; historical0.7.md stays untouched. R44oldred->R46156green/
+R47strict13322 and independentownership88306/limitedvectors remain scoped.
+After durable localcommit, exact20rawfiles are consumed metadata-only with
+class SHA+mtime preserved. ONLY after clean accounting: bounded existingnative
+13319..25/source read/plan. No logger/test/runtime authoring/JVM/native/probe.

@@ -1432,3 +1432,40 @@ route layout/descriptor/clock equality with native remains unobserved. Native
 pixels, additional products/lifecycle breadth, broader cold campaign and ending
 Hyper/Kos6+46/PALPCM acceptance are unchanged.
 [Full commands, rejected hypotheses, matched observations and qualification limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#dez-screeninit-unused-encoded-layout-owner-source-and-independent-red-design--2026-10-17).
+
+
+R38-R41 column stale-air support follow-up (2026-10-17, local a170/db5a): the
+native cached offscreen FullSolid skip can retain Air+OnObj and column standing;
+that stale record must not restore ground mode before the next playable update.
+Only the column opts into the existing airborne-stale-standing capability;
+shared solid/movement/CPU/timer/cache/API code is unchanged. Independent real
+bubble/column/visible-CPU/normal-frame35->34 old-red after all forced-world
+controls becomes green with grounded K-1/natural0/old controls; exact affected
+nine-class selection is76/0F0E0S, mandatory S3K4 included.
+
+One unchanged original fullcanonical then completes returnedHCZ14208 with
+6553 total=5489physics+1064animation, firstNonCamera11920status0002/0003, lag59,
+comparator warn/bootstrap0. Earlier animation3475 remains; runtime output has
+468SMPSshadow+2FAST+1markRemembered warnings separately. Six earlier windows are
+zero; SS6 entry/HCZ return is observed, but independent seg13 ownership still
+fails88306/act1 vs2 and its summary remains incomplete. First8775->11920 and
+11118->6553 totals do not prove exhaustive residual-vector equivalence or a
+fully green route; only recent5 is retained by the maintained summaries.
+Actual campaign8774 Aircaller/native001D producer and the11920 writer remain
+unqualified. [Exact old-red/source/focus/canonical/limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r41-original-canonical-advances-to11920-strict-route-remains-red--2026-10-17).
+
+
+R44–R48 native follower flight-timeout status (2026-10-17, CPU8930/test779247/4fcd):
+both S2 and S3K timeout owners write literal status02, not an OR of Air. The
+timeout-only projection clears status without restoring radii/water physics or
+clearing native interaction ownership. Independent naturalLEFT S2/S3K old-red
+after local restore-forward controls becomes green in exact R46focused156/0F0E0S;
+separate declared7F/radii/water controls also pass. R47 original canonical remains
+strict **1/1F0E0S**: returnedHCZ complete14208 TOTAL6511=5447physics+1064animation,
+firstNonCamera13322status0009/0001, earlier animation3475 retained. Six earlier
+windows are completezero; seg13 remains incomplete with ownership88306/act1-vs2
+and four suppressed hardware identities. Recent5/aggregate totals do not prove
+full-vector/no-regression equivalence. Actual11920 engine caller, native001D
+producer and campaign8774 Aircaller remain unobserved/separate. No fresh child
+fullguard or fullroute certificate: known LevelManager3153/3144 is parent-owned.
+[Exact old-red/source/focus/canonical/limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r47-original-canonical-firstnoncamera13322-strict-red--2026-10-17).

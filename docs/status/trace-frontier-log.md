@@ -114085,3 +114085,51 @@ there is no current first failed frame/field in this bounded class. Separate
 by this selection, so no new trace error count or native descriptor/clock parity
 is inferred. Four native alias writes and broader products remain open.
 [Matched evidence and failed epochs](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#dez-screeninit-unused-encoded-layout-owner-source-and-independent-red-design--2026-10-17).
+
+
+### 2026-10-17 — HCZ column stale-air capability: canonical non-camera frontier11920
+
+Owned3aa HEAD17480+a170 column/testdb5a, maintainedeb743/base967c unchanged;
+sole62139 `--normal -Dmse=off -Ptrace-replay -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds`,
+current Main absolutewrapper/originalAD40/fromboot/defaultlag/all3ROM/Java25/
+EGL JTO+CLI/nullAL/noambient/Lua/fork1reusealpha. Terminal21:47:19UTC,
+queue0/Maven51.362s, **1/1F0E0S**. Six earlier windows completezero. Current
+returnedHCZ complete14208 total6553=5489physics+1064animation, firstNonCamera
+11920sidekick_status_byte native0002/engine0003, lag59/warnbootstrap0; earlier
+animation3475 remains. R22samewindow11118/first8775 is historical; recent5 arrays
+and lower counts do not prove full-vector regressionabsence. Current seg13
+summary is byte-identical R22/incomplete63295/first287y, same ownership88306/act1
+vs expected2. Actual SS6 entry/hcz_3 return semantic assertions pass, gap13/0F;
+no onward segment beyond13 qualified. [All current windows/groups/source/clocks/limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r41-original-canonical-advances-to11920-strict-route-remains-red--2026-10-17).
+R40exactaffected76green precedes this run. Exact20 originalreports133157B retained
+for Root DIRECTread; no cleanup/archive/retry/newprobe/fix/extraJVM/commit.
+
+R42 accounting: Root directly accepts all20originals/full available arrays.
+Comparatorwarn0 is separate from actualruntime468SMPSshadow+2FAST+1markRemembered
+warnings. No additional trace, source variant or11920 owner proof follows.
+
+
+### 2026-10-17 — Native flight-timeout status: returned HCZ first noncamera13322
+
+Owned3aa HEADd71264ed8 +CPU8930/20case779247/new2case4fcd, column a170/db5a.
+R44's independent S2/S3K naturalLEFT status02/03 and RIGHT/LEFT old-red after
+299 updates/two local restore-forward cycles per case becomes green in R46's
+exact10class156/0F0E0S (mandatoryS3K4 and both loading identities included).
+
+R47 sole35289 `--normal -Dmse=off -Ptrace-replay
+-Dtest=TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds`,
+current Main absolute wrapper/originalAD40/fromboot/all3ROM/Java25/EGL oneJTO+CLI/
+nullAL/noambient/Lua/fork1reusealpha, ends22:27:01UTC queue0/Maven51.355s,
+**1/1F0E0S**. Six earlier windows completezero. ReturnedHCZ complete14208
+**TOTAL6511=5447physics+1064animation**, firstNonCamera13322status0009/0001,
+lag59/comparatorwarnbootstrap0. First all-group3475animation0017/001C remains.
+R41 first11920/TOTAL6553 is historical; recent5/lower counts are not exhaustive
+vector/no-regression proof, and do not observe the actual11920 caller.
+
+Segment13 stays incomplete/ref5393/comparedcountunknown/63295/first287y, same
+ownership88306 LEVEL/gen10/zone1act1-vs2 and4suppressed hardware identities.
+Giant-ring/SS6 and return semantic assertions pass; no onward certificate.
+Runtime468SMPS+2FAST+1markRemembered warnings stay separate from comparator0.
+Root DIRECTread accepted all20 originals133156B; R48 preserves exact runtime/
+tests/docs locally before normal metadata-only consumption, no new JVM/guard/
+probe/native/repair/integration. [Complete windows, clocks and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r47-original-canonical-firstnoncamera13322-strict-red--2026-10-17).

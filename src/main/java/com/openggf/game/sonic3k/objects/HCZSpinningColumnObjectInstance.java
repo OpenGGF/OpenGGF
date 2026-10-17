@@ -367,6 +367,15 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
+        // loc_326B6 calls SolidObjectFull. Its offscreen P2 skip precedes
+        // SolidObjectFull_1P's stale-air cleanup (loc_1DC98). loc_328AC
+        // sets Air while retaining OnObj; that skipped stale ride must not
+        // ground the player before the next airborne movement dispatch.
+        return true;
+    }
+
+    @Override
     public boolean allowsObjectControlledSolidContacts() {
         // The native routine writes object_control=3 before calling
         // SolidObjectFull, so the captured rider remains on its normal
