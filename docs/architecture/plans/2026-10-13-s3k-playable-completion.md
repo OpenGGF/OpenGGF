@@ -5229,3 +5229,92 @@ it does not waive known trace/RGB/ending/coverage blockers. Root source stays
 frozen during the retained run. Later isolated fixes require their meaningful
 affected checks before composition; repeated unchanged broad coverage is not
 a ceremony. Whole ending CPU/bus/readiness acceptance remains a separate gate.
+
+
+### Presentation rewind smoke repair R5 — 2026-10-17
+
+Owned649 branch `bugfix/ai-s3k-presentation-rewind-smoke-gpt61` starts at
+Slot R4 `28916874df24e770ebf9184fa191d82b55ad0582`. Before edits it merges
+frozen Root `02b38825ce28a41ab360a74d50b75a7e9cf3443c` as local
+`485f21a94b55eb166aa6637e8e1ec38ae6254561`; three append-only doc conflicts
+preserve both streams. Slot renderer SHA256 remains
+`148ce5f1b44beb40bacfe7979b88581547cd3f5717f47fa5b2e53adb2284455c`.
+Root owns combined broad15826 and the separate SecondStrike barrel failure;
+this unit neither edits that owner nor claims combined smoke green.
+
+Root-provided Main803 exact-six-class control89086 completed15:12:57UTC:
+18tests/1F0E0S, sole pre-existing GLFW failure; both selected R5 cases pass.
+Own pre-edit isolated24274 on485 reproduces the donor failure,1/1F0E0S at
+15:29:49UTC, Maven1m24/queue573s:
+`after cycle0 level-sprite-presentation.displayedFade.pending A=false/B=true`.
+Thus the broad's19 predecessors are not required to trigger this failure; no
+predecessor/broad rerun follows. No exact introducing commit is attributed.
+
+Tables.restore reinstalls the displayed fade including pending; subsequent
+Sonic3kLevelAnimationManager restore rebinds its logical NONE/FROM_BLACK
+request. GraphicsManager previously treated even a matching held request as
+new pending work. The six-line shared semantic correction preserves the
+captured pending bit only when held mode/steps/lineMask already match. True
+stays true; different requests and ordinary palette latches retain the old
+publication path. No snapshot field/key/assertion, game gate, Mod API, timing
+owner or runtime results wait changes. Independent old-red51248 completed
+15:32:57UTC,4tests/2 intendedF0E0S, Maven30.239s/queue29s: both NONE and
+FROM_BLACK4 controls fail pending false→true; captured-true control passes.
+The migrated production EndSignControl/results first/89/90 test also passes.
+Native pinned044 `loc_2DCC0` / Wait2 own literal90; the obsolete removed13
+reflection/construction was the test defect. No private routine/timer/slot/RNG
+write or trace hydration is used by the new inlet.
+
+Frozen reviewed source SHA256: GraphicsManager
+`7155b074fd52dc0ed72beb62337955ce7d2d67c540ca45088a977b4f77c5174a`;
+TestPaletteUploadLatch
+`7f194e2d04a3330094261559e94f7b620550f0c1bf2c2433fec7a5484ebe9bed`;
+TestS3kResultsScreenObjectInstance
+`1ec02f171f002e4b2083b69c3a08e6aed10742a64879728e5fb0299abed685ec`.
+Root's independent source inspection found no material issue; no review
+execution or inferred pass is counted.
+
+Exact executed command template below uses the original Main root ROMs and
+current Main wrapper from the owned cwd; MAIN/OWNED_TREE denote those existing
+workspaces, not new copies. Inherited other JVM environment is preserved.
+
+```bash
+cd "$OWNED_TREE"
+r5_presentation_maven() {
+  env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+    JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+    EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 \
+    python3 "$MAIN/tools/testing/maven_queue.py" -Dmse=off \
+    "-Dsonic1.rom.path=$MAIN/Sonic The Hedgehog (W) (REV01) [!].gen" \
+    "-Dsonic2.rom.path=$MAIN/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+    "-Ds3k.rom.path=$MAIN/Sonic and Knuckles & Sonic 3 (W) [!].gen" "$@" test
+}
+r5_presentation_maven '-Dtest=TestSonic2DonorSuperStateRewind#midTransformationRestoresPaletteTimerDrainAndOrdinaryMapping'
+r5_presentation_maven '-Dtest=TestPaletteUploadLatch#restoredOwnerRebindDoesNotInventAPendingFadeWhenTheDisplayedGenerationAlreadyMatches+matchingRestoredOwnerRebindPreservesAnAlreadyCapturedPendingPublication,TestS3kResultsScreenObjectInstance#aizBossFlowDoesNotRepeatDisplacedOwnerEntriesInResultsWait'
+r5_presentation_maven '-Dtest=TestPaletteUploadLatch,TestNativeWhitePaletteFade,TestSonic2DonorSuperStateRewind,TestS3kResultsScreenObjectInstance,TestS3kResultsKosQueueAndChildren,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils'
+r5_presentation_maven -Pguards '-Dtest=TestTraceReplayInvariantGuard,TestTraceHydrateSwitchDefault,TestArchitecturalSourceGuard'
+```
+
+Final affected3511 completed15:37:27UTC,119/0F0E0S, Maven1m31/queue135s,
+fresh Java25 compile on485+the three frozen diffs. Ten actual classes include
+both LevelLoading packages36+7, donor4, bootstrap6, decoding3, results16,
+Kos/children17, native-white14, upload8 and AIZ1skip8. Inspected XML has no
+failures/errors/skips. Warnings include FAST missing-manifest→NONE, missing
+measured Kos profile→deterministic estimate, collision-index negative control,
+and compiler/JOML deprecations; no strict native timing qualification is claimed.
+Focused guards40112 completed15:39:46UTC,83/0F0E0S, Maven27.766s/queue65s;
+architectural72, trace-invariant10, hydrate-default1 in a fresh guards JVM.
+All XML and skip counts inspected. Target last compiled the maintained repair
+and tests; no restored baseline or temporary probe is left compiled. No new trace/native/capture,
+R4 media repeat, broad run, Main/Root edit, integration or push. R1–R4 evidence,
+refs, native artifacts and private config are preserved.
+
+
+R5 terminal cleanup: inspected all13 class XML summaries including0 skips, then
+consumed26 own Surefire files under the metadata slot alone; diagnostic directory
+was empty, no archive or pass cache. All four Maven handles24274/51248/3511/40112
+are terminal; no retained waiter or compiler remains. Main config hash/mtime
+remain unchanged; owned config is a regular private0600 exact byte copy.
+Documentation links/fences, identical skill mirrors and diff checks pass.
+Normal seven-trailer local commit retains the reviewed and tested runtime bytes;
+Root owns later composition/combined qualification, with no Main publication here.

@@ -235,34 +235,47 @@ class TestS3kResultsScreenObjectInstance {
     }
 
     @Test
-    void aizBossFlowDoesNotRepeatDisplacedOwnerEntriesInResultsWait()
-            throws Exception {
-        ActTransitionRecordingServices services =
-                new ActTransitionRecordingServices(0x00, Sonic3kMusic.AIZ2.id);
-        int aizWaitAdjustment = privateStaticInt(
-                AizMinibossInstance.class, "RESULTS_WAIT_DURATION_ADJUSTMENT");
-        S3kResultsScreenObjectInstance results =
-                ObjectConstructionContext.withRewindActiveRestore(
-                        () -> ObjectConstructionContext.construct(
-                                services,
-                                () -> new S3kResultsScreenObjectInstance(
-                                        PlayerCharacter.SONIC_AND_TAILS, 0,
-                                        aizWaitAdjustment, 13, true)));
-        results.setServices(services);
-        prepareWaitDispatch(results);
-
-        TestablePlayableSprite player =
-                new TestablePlayableSprite("sonic", (short) 0, (short) 0);
-        for (int dispatch = 0; dispatch < 90; dispatch++) {
-            results.update(dispatch, player);
+    @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void aizBossFlowDoesNotRepeatDisplacedOwnerEntriesInResultsWait() throws Exception {
+        var saved = com.openggf.trace.replay.TraceReplaySessionBootstrap.snapshotGameplayConfig();
+        try {
+            var config = com.openggf.game.GameServices.configuration();
+            config.setSessionOverride(com.openggf.configuration.SonicConfiguration.S3K_SKIP_INTROS, true);
+            config.setSessionOverride(com.openggf.configuration.SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+            config.setSessionOverride(com.openggf.configuration.SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+            var fixture = com.openggf.tests.HeadlessTestFixture.builder().withZoneAndAct(0, 1).build();
+            var manager = com.openggf.game.GameServices.level().getObjectManager();
+            // Declared Obj_EndSignControl component entry; the ordinary SST walk owns
+            // allocation, signpost landing, results construction, art readiness and tally.
+            var flow = manager.createDynamicObject(() -> new S3kBossDefeatSignpostFlow(
+                    fixture.sprite().getCentreX(), 0,
+                    S3kBossDefeatSignpostFlow.CleanupAction.RESTORE_AIZ_FIRE_PALETTE));
+            flow.beginNativeReplacement(flow.getSlotIndex());
+            S3kResultsScreenObjectInstance results = null;
+            for (int pass = 0; pass < 1800; pass++) {
+                fixture.stepFrame(false, false, false, false, false);
+                var owners = manager.activeObjectsOfType(S3kResultsScreenObjectInstance.class);
+                if (!owners.isEmpty()) results = owners.getFirst();
+                if (results != null && superclassInt(results, "state") == 3) break;
+            }
+            assertTrue(results != null && superclassInt(results, "state") == 3,
+                    "production EndSignControl/signpost/results flow must reach native Wait2");
+            assertEquals(1, superclassInt(results, "stateTimer"),
+                    "loc_2DCC0 writes #90 and falls through to the first Wait2 decrement");
+            for (int ownEntry = 2; ownEntry <= 89; ownEntry++) {
+                fixture.stepFrame(false, false, false, false, false);
+                assertEquals(3, superclassInt(results, "state"), "Wait2 must retain owned entry " + ownEntry);
+                assertEquals(ownEntry, superclassInt(results, "stateTimer"));
+            }
+            fixture.stepFrame(false, false, false, false, false);
+            assertEquals(4, superclassInt(results, "state"),
+                    "Obj_LevelResultsWait2 owns literal90 entries including its first fallthrough; "
+                            + "the physical EndSignControl handoff supplies no extra results wait");
+            assertEquals(0, superclassInt(results, "stateTimer"));
+        } finally {
+            com.openggf.tests.TestEnvironment.resetAll();
+            com.openggf.trace.replay.TraceReplaySessionBootstrap.restoreGameplayConfig(saved);
         }
-
-        assertEquals(4, superclassInt(results, "state"),
-                "Obj_LevelResultsWait2 owns exactly the ROM's #90 countdown; "
-                        + "AIZ's displaced EndSignControl entries are already "
-                        + "carried by the boss/signpost bridge and must not be "
-                        + "added to the results owner "
-                        + "(docs/skdisasm/sonic3k.asm:62676-62690)");
     }
 
     @Test
@@ -510,11 +523,7 @@ class TestS3kResultsScreenObjectInstance {
         return field.getInt(instance);
     }
 
-    private static int privateStaticInt(Class<?> type, String fieldName) throws Exception {
-        Field field = type.getDeclaredField(fieldName);
-        field.setAccessible(true);
-        return field.getInt(null);
-    }
+
 
     private static int superclassInt(Object instance, String fieldName) throws Exception {
         Field field = instance.getClass().getSuperclass().getDeclaredField(fieldName);
@@ -532,14 +541,7 @@ class TestS3kResultsScreenObjectInstance {
         state.setInt(results, 4);
     }
 
-    private static void prepareWaitDispatch(
-            S3kResultsScreenObjectInstance results) throws Exception {
-        setPrivate(results, "resultsChildrenCreated", true);
-        Field state = com.openggf.level.objects.AbstractResultsScreen.class
-                .getDeclaredField("state");
-        state.setAccessible(true);
-        state.setInt(results, 3);
-    }
+
 
     private static void setPrivate(Object target, String fieldName, Object value)
             throws Exception {

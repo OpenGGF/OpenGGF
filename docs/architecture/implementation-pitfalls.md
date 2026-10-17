@@ -2075,3 +2075,15 @@ for detached UI fades. Keep renderer attachment separate: only the actively
 bound palette owner publishes CRAM fades. Origin: 2026-10-17 white-fade
 architecture guard repair; existing native component/22-V-int and immediate-scene
 rewind-release semantics are unchanged.
+
+
+**A restored palette owner can rebind without submitting new work.** Whole-world
+restore first reinstalls the displayed fade and its captured pending bit, then
+restores the logical animation owner. A matching mode/steps/line-mask request
+while that displayed generation is held is idempotent: preserve pending false
+AND pending true. Different requests and ordinary latched updates still queue.
+Otherwise an owner restoring NONE or FROM_BLACK creates phantom V-int work and
+whole-world replay fails even if the displayed RGB is unchanged. Compare every
+captured field; do not omit pending from snapshot equality. Origin: bounded
+presentation smoke repair R5,2026-10-17, isolated donor old-red and two restored
+generations in the existing S3K playable-completion Plan.

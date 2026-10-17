@@ -1371,3 +1371,12 @@ HCZ7809/14208 rows still has206 camera/animation errors and no non-camera physic
 mismatch through that bound. First remaining animation3475; later frontier is
 unmeasured. Full route/exit, independent slice, alternate, exact GLFW and broader
 matrix products remain open. [Affected HCZ2 matrix](../architecture/validation/levels/s3k-hcz2.md#r11-hczblock-full2-visibility-and-whole-world-replay--2026-10-17).
+
+
+2026-10-17 presentation smoke repair R5: the AIZ2 results-wait assertion now
+uses production EndSignControl/signpost/art/tally allocation and observes native
+first/89/90 dispatches; no private wait seeding or removed13 compensation.
+Final affected selection3511 is119/0F0E0S, including donor two-cycle world
+recreation, displayed-palette controls and S3K4. Existing AIZ2 R7 route evidence
+keeps its original epoch and breadth limits; no new route/trace/RGB coverage
+claim. See the [AIZ2 matrix](../architecture/validation/levels/s3k-aiz2.md#presentation-smoke-repair-r5--2026-10-17).
