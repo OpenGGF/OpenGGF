@@ -939,5 +939,22 @@ shared AnPal bank, so AIZ2 inherits the corrected phase. Tests:
 
 Native trickle equality across the act change is recorded in the
 [AIZ2 matrix](s3k-aiz2.md#aiz1-boundaries-behind-the-inherited-phase--2026-10-17). The
-Knuckles AIZ1 start has no plane intro, so its gate stays clear; that route was
-previously gated by `Level_started_flag`, and has no native witness here.
+Knuckles AIZ1 start has no plane intro, so its gate stays clear; the witness below
+compares it with native.
+
+### Knuckles AIZ1 start witness — 2026-10-17
+
+Native: the no-write harness on the Knuckles complete-run BK2 from its AIZ1 entry
+(frames 810-1110; frame 810 is Level_frame_counter 1). Engine: a headless Knuckles AIZ1
+boot driven by the same BK2. Paired by Level_frame_counter 1-300:
+- The AnPal bank is equal on all 300 frames. counters+$00 stays clear, as no plane intro
+  runs, and counters+$02 advances with every normal run.
+- The AnPal_AIZ1 destination words are equal on 279. Frames 1-17 are the level fade,
+  which native writes into `Normal_palette` and the engine presents separately.
+- On frames 35-38, native shows L4c12-14 at the base colours. AIZ1_Resize's camera-`$1308`
+  `LoadPalette_Immediate PalID_AIZ` reloaded them (sonic3k.asm:38919-38929). The engine
+  pre-loads that palette at the non-intro start and skips the reload; this is open in
+  known-bugs "AnPal Shared Bank: Remaining Owners" for the AIZ events owner.
+
+Evidence and native pictures (`native-knux-aiz1-lfc34/35/39`):
+`spot-checks/aiz-palette-bank-v3/`.

@@ -6740,7 +6740,9 @@ AnPal_AIZ1 now matches its ROM boundaries:
   (loc_1C46E, 38913-38917, run from DeformBgLayer after Animate_Palette).
 
 The `aiz_completerun` handoff and the AIZ2 window now show native's trickle entry on
-native's rows. Covered by `TestS3kAizAnPalBankCarry`, `TestS3kAiz1AnPalBoundaries` and
+native's rows. Palette words and the bank, torch channel B included, equal native RAM on
+every row from the reload. A Knuckles AIZ1 start, which has no counters+$00 writer, matches
+native's bank on all 300 compared Level_frame_counter values. Covered by `TestS3kAizAnPalBankCarry`, `TestS3kAiz1AnPalBoundaries` and
 `TestS3kAiz1AnPalGateWrites`; evidence is in the
 [AIZ2 matrix](../architecture/validation/levels/s3k-aiz2.md).
 
@@ -6751,6 +6753,14 @@ Still open:
 - A reload consumed at the next frame top (`LevelSeamlessTransitionExecutor`) runs no
   palette call on its transition row. Natively that iteration's Animate_Palette ran for
   the outgoing act. Not measured.
+- AIZ1_Resize routine 0 reloads `PalID_AIZ` with `LoadPalette_Immediate` once camera X
+  reaches `$1308` (sonic3k.asm:38919-38929). For Knuckles it also patches
+  `Normal_palette_line_4+$10` from word_4FAE4 (38930-38935).
+  - Native Knuckles AIZ1 shows L4c12-14 back at the base colours on Level_frame_counter
+    35-38, until the next AnPal run.
+  - `Sonic3kAIZEvents` pre-loads that palette on the non-intro AIZ1 start and marks it
+    done, so the `$1308` reload and the Knuckles patch never run there. Owner: AIZ events.
+    Evidence: `spot-checks/aiz-palette-bank-v3/`.
 
 ### Removal condition
 Each item matches native RAM at its handoff, with a focused test.

@@ -139,7 +139,22 @@ sides resolve to a table-entry set; equal means the sets match.
 
 The one handoff miss is row 6316. There the fire curtain's edge leaves an engine colour
 that is in no table entry. The trickle entry and its row now equal native from the
-engine's own counters. Torch colours are shared and partly covered by the flame sprites.
-Their sets agree on some rows and differ on others with no constant entry offset, so the
-pixel method does not resolve channel B. It needs a palette-word observation and remains
-open in known-bugs "AnPal Shared Bank: Remaining Owners".
+engine's own counters.
+
+### Torch channel B settled from palette words — 2026-10-17
+
+A comparison-only engine probe ran during `TestS3kAizZoneSliceTraceReplay` (one queued
+job, rows 6290-6340 and 22790-22890, Maven 2026-10-17T01:31:19+01:00). After each row it
+logged the AnPal bank and the level palette words. Those are compared with native RAM at
+the same row: the bank at `$F632`/`$F634`/`$F650-$F65B`, and `Normal_palette`. Evidence is
+in `spot-checks/aiz-palette-bank-v3/`.
+- 22790-22890: bank 101/101 and every compared word 101/101. That covers torch L4c1
+  (counters+$04/+$08), trickle L3c4/L3c8/L4c11, L3c14 and water L4c12-15.
+- Handoff: bank 51/51 and torch 51/51. L3c4, L3c8, L4c11 and L4c15 differ on rows
+  6290-6299 only. They are static AIZ1 fire-transition words that no active AnPal_AIZ1
+  branch writes, so they are event-owned. From the reload row 6300 every word matches.
+
+The earlier torch pixel disagreement is therefore not palette. The L4c1 colour paints the
+burning background's fire shapes, which sit in different places in the engine, and
+Sonic's shield frame differs (`side-row22866.png`, `torch-pixels-row22866.png`). That
+inherited background/sprite rendering difference is not attributed here.
