@@ -36,6 +36,7 @@ class TestCnzMinibossSwingPhase {
         CnzMinibossInstance boss = new CnzMinibossInstance(
                 new ObjectSpawn(0x3240, 0x0100, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
         boss.setServices(services);
+        CnzMinibossPhaseFixture.releasedStart(boss, fixture);
 
         boss.update(0, fixture.sprite());
 
@@ -56,6 +57,7 @@ class TestCnzMinibossSwingPhase {
         CnzMinibossInstance boss = new CnzMinibossInstance(
                 new ObjectSpawn(0x3240, 0x0100, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
         boss.setServices(services);
+        CnzMinibossPhaseFixture.releasedStart(boss, fixture);
 
         int initialY = boss.getCentreY();
         for (int i = 0; i < Sonic3kConstants.CNZ_MINIBOSS_INIT_WAIT + 5; i++) {
@@ -75,6 +77,7 @@ class TestCnzMinibossSwingPhase {
         CnzMinibossInstance boss = new CnzMinibossInstance(
                 new ObjectSpawn(0x3240, 0x0100, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
         boss.setServices(services);
+        CnzMinibossPhaseFixture.releasedStart(boss, fixture);
 
         // Fast-forward through Init+Lower+Go2+Move waits so Obj_CNZMinibossGo3
         // fires. Per ROM (sonic3k.asm:144918..144922), Go3 writes x_vel=0x100
@@ -103,6 +106,7 @@ class TestCnzMinibossSwingPhase {
         CnzMinibossInstance boss = new CnzMinibossInstance(
                 new ObjectSpawn(0x3240, 0x0100, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
         boss.setServices(services);
+        CnzMinibossPhaseFixture.releasedStart(boss, fixture);
 
         boss.update(0, fixture.sprite());
         CnzMinibossTopInstance top = services.objectManager().getActiveObjects().stream()

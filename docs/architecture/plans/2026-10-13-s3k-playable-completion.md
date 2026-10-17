@@ -3615,3 +3615,124 @@ will also remain `cleanup_pending`; no unknown file is deleted. Active/unmerged 
 lanes likewise remain preserved. Other named delivery trees are eligible only after this follow-up's
 Main verification/push, using exact paths and normal Main inventory leases, with no global pruning or
 submodule deinitialization that could alter the foreign Main checkout.
+
+
+## CNZ1 fixed-input miniboss completion recovery — 2026-10-17
+
+Owned branch `feature/ai-s3k-cnz-natural-miniboss-edge`, task checkout
+`t3-fa8da232`. Original Claude Opus5.5 work stopped at its provider limit with
+exactly two task-owned uncommitted files: `CnzMinibossInstance` and
+`TestS3kCnz1MinibossCompletionEdge`. GPT-6.1 resumed those files, verified no
+owned live job, and fast-forwarded from `0197c5a5a` to delivered Main
+`467d070a35e1ba311641a1864830ef1099df8f66` under the normal intended-tree build
+slot. Both original byte sequences were preserved through adoption, without a
+stash or Main mutation. Main's boss file had no intervening changes. Hooks were
+installed; integration/push and combined smoke remain lead-owned.
+
+The retained run2 had646 tests,17 failures and1 error. It already contained
+successful native Sonic solo/pair, wide Sonic solo/pair and wide Knuckles
+completion timelines; native320 Knuckles remained dead at tick1294 in its first
+retained candidate. Recovery ran each known successful input policy exactly once
+(native Sonic variant0, wide Sonic6, wide Knuckles9) to retain its buttons, then
+removed authoring/search policy entirely from maintained tests. Three fixed RLE
+button resources now drive five independent rows. No uncovered pilot was
+reauthored or swept. The [CNZ1 matrix](../validation/levels/s3k-cnz-act1.md#fixed-input-miniboss-completion-and-nine-rewind-spots--2026-10-17)
+records the declared positioned inlet, exact milestone table and remaining axes.
+
+Two production owners changed, each with shipped-ROM evidence and a short red:
+
+- `Obj_CNZMiniboss` at `$6D99C` compares camera X with `$31E0` and returns below
+  it (`303c31e0b078ee7863024e75`). The prior extra engine `$3000` precondition
+  allowed wide object admission to dispatch Init before that gate. The retained
+  gate correction is preserved. On the current composed base with only that
+  correction reverted, session92170's observed owned Python2168003 run completed
+  at10:27:43 UTC:2 tests,1 failure,0 errors/skips. Wide800 failed at tick186,
+  routine2 versus0; native320 passed. After the correction, both short rows pass
+  and all completion rows observe the actual120-tick arena wait.
+- `loc_6DDD2` explicitly clears top collision, calls `Displace_PlayerOffObject`
+  (`4eb90008594e`) and then deletes (`4ef9000852a0`). The omitted displacement
+  left Tails riding the deleted top at native tick2308: captured spawn
+  `($326E,$02CC)`, `$A6`, slot10; restored riding list empty. Strict full-world
+  equality correctly failed. The bounded local top correction consumes each
+  standing bit, releases only that owner's folded support, clears OnObj and sets
+  InAir, through the existing extended native-P2 participation policy. It never
+  writes position/velocity or changes the shared contact/snapshot owners.
+  Session67600's one-case old-source witness was red at10:40:18 UTC on the first
+  standing-bit assertion. The corrected control releases P1/P2 and preserves a
+  third participant's other support. Native scroll restore now passes twice.
+
+Maintained full-world coverage has nine checked spots per row: prespawn, live
+attack/children, killing hit, post-defeat scroll, FG refresh, end sign, results
+before reload, held-title CNZ2 and released CNZ2. Each restores immediately and
+replays the same45 inputs twice; the results spot uses4 to remain before owner
+replacement. The visited-spot assertion prevents silent window overlap/skips.
+All registered-world fields remain in comparison, including object and contact
+state, world mutation, players and admitted art/pattern contents. This is not a
+live GameLoop-history or raw cross-owner-replacement restore claim.
+
+Rejected setup approaches are preserved by their concrete failures, not logs:
+retaining a prior module title owner allowed stale runtime-art leases in the
+isolated replay method (5 errors); resetting to the generic bootstrap alone
+selected S2 against the S3K ROM (14 setup errors, out-of-bounds `$555557F0`);
+a checked-ROM getter draft and one missing method-reference import were compile
+failures, not test results. The final test uses the existing fresh
+`configureGameModuleFixture(SONIC_3K)` before each independent declared inlet.
+Isolated phase tests explicitly consume the real one-update Go→Start handoff
+before testing their active phase; the separate false→true gate witness stays
+unchanged. No gameplay exception was added to preserve the old unit escape.
+
+Commands below ran from the owned checkout with Java25, original absolute ROMs
+and the current Main **absolute** queue wrapper; `OGGF_MAIN` denotes that main
+checkout, and the ROM variables denote its original `s1.gen`, `s2.gen`, `s3k.gen`
+(no copies/links). The locked-on S3K SHA1 was
+`CFBF98C36C776677290A872547AC47C53D2761D6`. Common invocation:
+
+```bash
+Q=(env -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH
+   EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null
+   JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4
+   python3 "$OGGF_MAIN/tools/testing/maven_queue.py" --normal
+   -Dmse=off -Dopenggf.headless.gl=surfaceless-egl)
+"${Q[@]}" "-Ds3k.rom.path=$S3K_ROM" "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" \
+  '-Dtest=TestS3kCnz1MinibossCompletionEdge,TestCnzMinibossAnimationArt,TestCnzMinibossDefeatPhase,TestCnzMinibossInstanceBase,TestCnzMinibossOpeningPhase,TestCnzMinibossPaletteOwnership,TestCnzMinibossRegistered,TestCnzMinibossSwingPhase,TestCnzMinibossTopPhysics,TestCnzMinibossConstants,TestCnzMinibossArenaEntry,TestS3kBossDefeatStopsLevelTimer,TestS3kBossTouchResponseProfiles,TestScalarOnlyCodecDeletion,TestS3kCnzMinibossArenaHeadless,TestS3kCnzMinibossHeadless,TestS3kCnzAct1EventFlow,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestObjectSolidContactController' test -B
+"${Q[@]}" -Pguards "-Ds3k.rom.path=$S3K_ROM" '-Dtest=TestArchitecturalSourceGuard' test -B
+"${Q[@]}" "-Ds3k.rom.path=$S3K_ROM" '-Dtest=TestS3kCnz1MinibossCompletionEdge#recordedOrdinaryInputReplaysAndRewindsEveryEdgeBoundaryTwice' test -B
+```
+
+The final affected invocation79883 completed terminal0 at10:43:10 UTC,
+**710/0 failures/0 errors/0 skips**, Maven39.833s, no queue wait. Its22 selectors
+resolve23 concrete classes because both packages contain
+`TestSonic3kLevelLoading`; the four mandatory S3K selectors total60 cases.
+The CNZ/codec selection647 includes the new class14; solid-contact controls3
+and the mandatory S3K60 complete the710 cases. Source guard85415 ran in a separate fresh JVM:72/0/0/0,
+terminal0 at10:45:06 UTC,60s queue wait and Maven27.426s. The standalone
+five-row replay4166 completed5/0/0/0 at10:45:45 UTC, Maven31.584s, resolving
+its earlier isolated title-lease risk. Earlier correction iteration93270 was
+55/0/0/0; final invocation adds the visited-spot assertion. These focused
+selections are not broad smoke, a full suite, strict replay or act certification.
+No pass cache/validation receipt or raw diagnostic archive is retained.
+
+The bounded engine-only visual command56421 completed terminal0 at10:46:17 UTC,
+Maven18.792s, using the first260 buttons of the maintained Sonic800 stream:
+
+```bash
+"${Q[@]}" -Dexec.mainClass=com.openggf.tools.GameplayCaptureTool \
+  "-Dexec.args=--game s3k --rom $S3K_ROM --zone cnz --act 1 --x 0x2CC0 --y 0x2A8 --width 800 --main sonic --sidekick none --input $CNZ_CAPTURE/input.txt --frames 260 --every 1 --stills 180,220,250 --no-video --out-dir $CNZ_CAPTURE/current" exec:java -B
+```
+
+`CNZ_CAPTURE` is the external `cnz-recovery-gate-spot` task directory in the
+session's Codex scratch root. All260 frames rendered; the inspected frame220
+has alive P1, LEVEL mode and camera `$3008` below the arena gate, with the boss
+absent at its visible placement. Its own production capture boot is not asserted
+to align with fixture tick indices. Existing native intro images are retained
+as intro evidence only: late-arena native pixels and timing remain open.
+The capture warned about the existing Discord presence worker during shutdown;
+the command exited and no task-owned JVM remained. No ambient display was used.
+
+One tooling protocol error was separately reported to the lead: a direct
+`mvn -v | head -5` version-only probe ran outside activity leases during
+10:26:05.341–10:26:05.550 UTC. Its startup script launches a short Java version
+helper and the Maven classworlds JVM; exact OS PID binding was not observed.
+The lead excluded the overlapping unrelated measurement pair. All subsequent
+JVM work used current Main's absolute wrapper and ordinary admission, including
+startup helpers. Queue-submit times were never used as execution timestamps.

@@ -19,7 +19,7 @@ This act additionally qualifies solo Sonic at every preset with off/S1/S2 donati
 | LOAD / REWIND: script roster retirement and configured donor controls | Explicit engine-only native-scripted registration; immutable role restored by recreation factory or internal retired-roster binding | 1 native 320/S1 scene-retirement/refresh case; 15 configured pair controls preserve configured follower donor body/palette data; the carried P1 temporarily uses the host bank required by the literal mapping owner. No public snapshot or Mod API shape changes. |
 | PRESENT / REWIND: literal carried-P1 mappings and resource return | `sub_1459E` / `Tails_Carry_Sonic` / `AniRaw_Tails_Carry` write $91,$90,$92 with their raw timer; [`TestNativeCarriedPlayerArtBinding`](../../../../src/test/java/com/openggf/tests/TestNativeCarriedPlayerArtBinding.java) | 3 off/S1/S2 native-320 lifecycle vectors capture active carry, the final native pose after P2 release, ordinary resource return, and reverse restoration before first attachment twice. A fourth vector preserves a distinct later script resource owner. Physics/rules/powered-controller identities remain unchanged. Other powered, donor-character and manual-carry products remain independent obligations. |
 | OBJECT / REWIND: carry, tubes, cylinders, fans and teleporter | `TestS3kCnzSoloCarryInHeadless`, `TestS3kCnzCarryHeadless`, `TestS3kCnzTubeTraversalHeadless`, `TestS3kCnzMechanismRewind`, `TestS3kCnzLocalMechanicsRewind`, `TestS3kCnzTraversalPlayerReferenceRewind` | Existing local contracts. Constructed mechanism tests do not establish every production placement or complete configuration products. Listed bindings were setup-inspected, not independently rerun as a whole in this slice. |
-| BOSS / EVENT / CAMERA: miniboss tunnel and scrolling arena | `TestS3kCnzMinibossArenaHeadless`, `TestS3kCnzMinibossHeadless`, `TestS3kCnzAct1EventFlow` | Positioned arena/event contracts; complete cold paths and native timing/rendering parity remain open. Listed bindings were setup-inspected, not independently rerun as a whole in this slice. |
+| BOSS / EVENT / CAMERA: miniboss tunnel and scrolling arena | `TestS3kCnzMinibossArenaHeadless`, `TestS3kCnzMinibossHeadless`, `TestS3kCnzAct1EventFlow`; [`TestS3kCnz1MinibossCompletionEdge`](../../../../src/test/java/com/openggf/tests/TestS3kCnz1MinibossCompletionEdge.java) | Local unit/event contracts plus five fixed-input positioned-inlet products reach real placed boss → four top-on-open-coil hits → defeat → scrolling/FG refresh → sign/results → released CNZ2. See the bounded qualification below. Cold routes and native timing/rendering parity remain open. |
 | LOAD / REWIND: results/title lease and CNZ2 publication | `TestS3kCnzAct1EventFlow#productionCnzReloadCarriesTheResultsTitleOwnerUntilTitleCompletion`, `#productionCnzCarriedTitleOwnerRewindsAtEveryOwnershipBoundary` | Actual local production resource/title ownership boundaries, reached from explicit post-boss state; not a cold act route. Listed bindings were setup-inspected, not independently rerun as a whole in this slice. |
 | LIFE / LOAD: physical post, actual death/restart and incoming/outgoing worlds | Native checkpoint/death/reload owners and the edges listed above | All 140 supported preset/donor/main/roster products are qualified by `TestS3kCnz1EntryMatrix#actualDeathReloadPreservesTheSupportedProductAndReplaysEachIncomingWorldTwice`: two actual deaths/reloads, exactly one life lost per restart, new world owners, outgoing live-history retirement, restored current roster/camera and two complete-world 45-frame restore/replay cycles after each released destination. Physical post activation and incoming/outgoing route edges remain separate obligations. |
 | PRESENT: actual viewport, palette/scroll/plane and audio | Act-owned ROM art/AniPLC/AnPal/event and music/SFX owners | Decoded playable source is checked at entry. One current native320 NTSC paired carry spot matches the independently normalized body/playfield rectangles; corrected S1 before/after bodies have equal raw-state rows. PAL, other scenes, viewport edges and native audiovisual timing remain separate bounded native/GPU obligations. |
@@ -138,3 +138,85 @@ Corrected qualification, all on `0197c5a5a` plus this commit's test-only deltas 
 - Revised input test with the fix: 02:05:15–02:05:44 UTC, 1 test / 0 failures / 0 errors / 0 skips.
 
 Death/reload products, combined smoke and integration were not rerun here. This requalifies the held-Right entry floor only; it is not act certification.
+
+## Fixed-input miniboss completion and nine rewind spots — 2026-10-17
+
+Source: task worktree `t3-fa8da232`, based on `467d070a35e1ba311641a1864830ef1099df8f66`,
+with this change's two CNZ runtime owners, phase-fixture correction and maintained
+`TestS3kCnz1MinibossCompletionEdge`. The inlet is a fresh positioned act assembly at
+ROM star post 3's centre `($2CC0,$02A8)`, not a physically activated checkpoint,
+checkpoint respawn or cold route. After that inlet, only ordinary P1 input is
+supplied: no health, rings, lives, clock, checkpoint, position, camera or defeat
+writes. The actual ROM census requires the sole placed `$A6` at `($32C0,$020C)`.
+
+The three committed held-button streams in
+[`src/test/resources/inputs/s3k/cnz1-miniboss`](../../../../src/test/resources/inputs/s3k/cnz1-miniboss)
+were recovered once from successful retained runs. The maintained test never
+searches offsets or steers from boss observations. Pair and solo Sonic replay
+the same stream independently with their actual configured roster and focus.
+All rows use native/off donation.
+
+| Product | Input ticks | Camera gate / release / first top | Four real damage ticks | Sign / results / CNZ2 load / released control |
+| --- | --- | --- | --- | --- |
+| Sonic + Tails, 320 | 3953 | 288 / 408 / 410 | 1150, 1592, 1932, 2029 | 2777 / 2914 / 2921 / 3892 |
+| Sonic solo, 320 | 3953 | 288 / 408 / 410 | 1150, 1592, 1932, 2029 | 2777 / 2914 / 2921 / 3892 |
+| Sonic + Tails, 800 | 3545 | 328 / 448 / 450 | 1042, 1100, 1467, 1648 | 2369 / 2506 / 2513 / 3484 |
+| Sonic solo, 800 | 3545 | 328 / 448 / 450 | 1042, 1100, 1467, 1648 | 2369 / 2506 / 2513 / 3484 |
+| Knuckles solo, 800 | 3737 | 328 / 448 / 450 | 992, 1242, 1496, 1847 | 2561 / 2698 / 2705 / 3676 |
+
+Ticks are zero-based fixture input indices, not native movie frames or strict
+trace comparisons. Native object admission is tick190 and wide admission186;
+the boss remains dormant until the `$31E0` camera predicate and `2*60` wait.
+The actual locked-on ROM bytes at `$6D99C` are
+`303c31e0b078ee7863024e75`. The removed `$3000` engine precondition had allowed
+wide admission to execute Init early. The independent short old-source witness
+failed at wide tick186 (routine2 instead of0), while native320 passed.
+
+Each product checks complete registered-world capture, immediate restore and
+45 fixed-input forward ticks twice at prespawn, active attack with children,
+killing hit, post-defeat scrolling, foreground refresh, end sign, loaded CNZ2
+with its title/results lease and released CNZ2. A ninth results spot uses four
+ticks to stop before owner replacement. Every declared spot must be visited.
+Comparisons retain players, objects/children, event/camera state, terrain,
+art/pattern contents and the remaining registered world; no contact fields or
+list differences are discarded. External controller edge history is primed from
+the preceding fixed input. No raw restore across the act's owner replacement or
+live `GameLoop` history retirement is claimed.
+
+The added native scroll spot originally exposed one unresolved Tails ride:
+`($326E,$02CC)`, `$A6`, slot10, referring to the defeated top. ROM `loc_6DDD2`
+explicitly calls `Displace_PlayerOffObject` (`$8594E`) before deletion; the engine
+omitted it. The correction clears this owner's standing support and each named
+rider's OnObj/InAir status through the existing native-P2 extension, preserving
+position/velocity and unrelated support. A short three-participant unit control
+was red on its first standing-bit assertion before the correction. Both native
+world restores now pass without comparison normalization.
+
+Executed qualification: final affected selection **710/0 failures/0 errors/0
+skips**, 22 selectors resolving23 classes, session79883, terminal0 at
+10:43:10 UTC, Maven39.833s and no queue wait. This includes the new class14,
+all original CNZ/codec consumers and the four mandatory S3K selectors (60 cases),
+plus solid-contact controls3. Separate source guard: **72/0/0/0**, session85415,
+terminal0 at10:45:06 UTC (60s queue wait, Maven27.426s). Standalone five-row
+rewind method: **5/0/0/0**, session4166, terminal0 at10:45:45 UTC, Maven31.584s.
+Exact commands and rejected setup attempts are in the
+[delivery plan](../../plans/2026-10-13-s3k-playable-completion.md#cnz1-fixed-input-miniboss-completion-recovery--2026-10-17).
+These are focused passes, not a full suite or act certification.
+
+One bounded engine-only800 capture rendered all260 input ticks with the first260
+buttons of the Sonic800 stream, using its own production capture boot. At inspected
+frame220, P1 is alive in LEVEL mode and camera X is `$3008`, below `$31E0`; the
+boss is absent from its visible arena position. The external task directory is
+`cnz-recovery-gate-spot/current` in the session's Codex scratch root; inspected
+`still-00220.png` and `state.csv` are retained there. This is a presentation spot,
+not an assertion that the capture driver shares fixture tick alignment. Existing
+native intro images do not cover this late arena; no native late-arena RGB,
+whole-scene or frame-parity claim is made.
+
+Remaining gaps: native320 Knuckles (the retained first candidate died at tick1294,
+`($32CA,$02EC)`, zero rings, boss3HP); Tails main; 352/400/528; donors; broader
+mixed/duplicate/large teams; physical post capture/respawn; cold approach and
+incoming route; allocation-failure breadth; native late-arena presentation and
+live history across the seamless reload. No new route candidate was attempted
+for an uncovered row during recovery. Neutral inlet and truncated-after-approach
+controls cannot produce the outgoing completion edge.

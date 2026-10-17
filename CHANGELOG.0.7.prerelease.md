@@ -140,6 +140,9 @@ Unreleased. The earlier development themes remain in
   the original blank-frame ownership and art-reload state; ordinary animation
   is released again on return. Robotnik's ship stays with the beaten boss through
   its defeat pause before flying off, as in the original.
+  Carnival Night's miniboss stays dormant until the arena camera gate and native
+  wait release it, including at wide viewports. Its defeated top releases standing
+  riders before deletion, preserving their status and the rewindable encounter.
 
 - **Spin dash camera:** While a spin dash charges, and on its release frame, the
   camera eases back toward its normal height as it does when standing, as Sonic 2

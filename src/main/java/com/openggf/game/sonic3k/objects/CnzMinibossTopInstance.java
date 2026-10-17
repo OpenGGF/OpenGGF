@@ -8,6 +8,7 @@ import com.openggf.game.sonic3k.events.S3kCnzEventWriteSupport;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.RewindRecreatable;
@@ -570,6 +571,20 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
         CnzMinibossBlockExplosionControllerChild controller = spawnChild(
                 () -> new CnzMinibossBlockExplosionControllerChild(motion.x, motion.y));
         controller.dispatchCreation();
+        // loc_6DDD2 clears collision_flags, calls Displace_PlayerOffObject
+        // ($8594E), then Go_Delete_Sprite. Each native standing bit releases
+        // its player without changing position or velocity. Apply the same
+        // ownership operation to configured followers through the engine's
+        // existing native-P2 participation extension.
+        var manager = services().objectManager();
+        for (PlayableEntity rider : services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED)) {
+            if (manager.hasObjectStandingBit(rider, this)) {
+                manager.releaseRidingObject(rider, this);
+                rider.setOnObject(false);
+                rider.setAir(true);
+            }
+        }
         setDestroyed(true);
         recordTraceBranchIfNotable();
     }
