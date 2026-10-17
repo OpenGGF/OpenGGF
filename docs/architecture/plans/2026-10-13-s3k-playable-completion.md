@@ -2973,3 +2973,48 @@ ending runtime fix or pixel fitting was made. Worktree/branch remain local for
 Root to account; no Main integration, push or worktree removal belongs to this
 worker's slice. All worker execution handles are terminal; the stopping boundary
 is the maintained tool plus this one completed comparison.
+
+
+### Conditional V-int instruction diagnostic intake — 2026-10-17
+
+At composed prerequisite `dc338d3e3`, Root intakes the retained slice-5 diagnostic delta by three-way application,
+preserving the newer `forcePlayerOneReload()` giant-ring and Super invalidation semantics. The retained
+`7bbf1eb2b` plus uncommitted work had a historical 93/0F/0E/0S focused result; that is not current-source
+qualification. No readiness, gameplay, load-profile estimate or canonical trace contract consumes the new term.
+
+`Record.instructions()` separates closed-handler instruction cycles from the unpriced DrawLevel, HUD and
+Nemesis callees and from interrupt acceptance, refresh, bus/FIFO waits and DMA freeze. Production refuses busy
+Kos, water, Hyper flash, unknown state/region/producers and unsupported routines. Region, queue emptiness and
+water presence come from engine owners; `Demo_timer` is a fresh-level mirror captured/restored with the ledger.
+Other timer writers and every unobserved wait-loop precondition remain explicit limits. The 1,920-state source
+oracle and 42 historical native instruction buckets do not establish predictive six-ending/46-fingerprint closure.
+
+Independent review found sparse opcode pins accepted timing-sensitive operand changes. On the composed dirty
+candidate, two new negatives both fail against the old checker at 09:06:36 UTC: PAL delay immediate at `$5BA`
+and absolute callee operand after `$920` (2 tests, 2 assertion failures, 0 errors/skips; Maven 1:11). The replacement
+checks every byte through `$4E80F`, including `SpecialVInt_Array` routine-0 `rts`, against original-ROM prefix
+SHA-256 `29bc98328ecbdb7d8a8a6f00c98af597949b16fdd53ffe9276610aee4a7e4743`.
+The full input ROM SHA-1 was verified as `CFBF98C36C776677290A872547AC47C53D2761D6` before deriving that hash.
+A minimum-prefix positive and a one-byte truncation negative protect the actual production slice boundary.
+Changed bytes anywhere in this conservative prefix refuse pricing; code after it is not authenticated by this check.
+
+The composed dirty candidate passes 211 tests, 0 failures, 0 errors, 0 skips at 09:17:36 UTC (Maven 1:24),
+including the two operand/target negatives, all 1,920 source-grid states, production capture/restore, existing
+body/DMA consumers, mandatory S3K loading controls and source/trace/hardware-authority guards. Sixteen exact
+selectors resolve seventeen classes because both existing `TestSonic3kLevelLoading` classes match. Command:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  python3 ${OPENGGF_MAIN}/tools/testing/maven_queue.py --normal -Dmse=off \
+  '-Dtest=TestS3kVIntInstructionCycles,TestS3kVIntInstructionProduction,TestS3kVIntDmaLedger,TestS3kVIntDmaLedgerProduction,TestS3kVIntDmaBodyDplcProduction,TestS3kVIntDmaBodyCacheProduction,TestS3kVIntDma,TestSonic3kLevelInitProfile,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestArchitecturalSourceGuard,TestTraceReplayInvariantGuard,TestTraceHydrateSwitchDefault,TestHardwareTimingAuthorityGuard' \
+  "-Dsonic1.rom.path=${S1_ROM}" "-Dsonic2.rom.path=${S2_ROM}" \
+  "-Ds3k.rom.path=${S3K_ROM}" "-Dkis2.rom.path=${KIS2_ROM}" test -B
+```
+
+Independent review found no blocker in the prefix identity, authority or rewind handling. The native fresh
+attract-level path initializes the same 1800 timer before GetDemoPtr; S3K currently supplies no generic
+EndingProvider/CREDITS_DEMO path. That permitted future phase is not certified: a future S3K provider must supply
+its real timer writer or refuse pricing. No fitted timer adjustment was added. This is local diagnostic
+qualification only; combined guards, Main integration and push remain Root-owned. No broad/full suite,
+performance gain or predictive six-ending/46-fingerprint timing acceptance is claimed for this slice.

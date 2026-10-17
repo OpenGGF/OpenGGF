@@ -16,9 +16,11 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Ledger semantics without a ROM: the VInt_8 transfers are the decoded values written out. */
 class TestS3kVIntDmaLedger {
@@ -207,6 +209,72 @@ class TestS3kVIntDmaLedger {
         ledger.observePlayerFrame(BodySlot.TAILS, 0xAD, dplc(1));
         assertEquals(1, ledger.pendingObjectEntries().size());
         assertEquals(owned.player1Known(), ledger.capture().player1Known(), "restored unknown state");
+    }
+
+    private static final S3kVIntDmaLedger.InstructionInputs DRY = new S3kVIntDmaLedger.InstructionInputs(true, false);
+
+    private static S3kVIntInstructionCycles.Term instructions(S3kVIntDmaLedger ledger, PlcLifecyclePhase phase,
+                                                              VideoRegion region,
+                                                              S3kVIntDmaLedger.InstructionInputs inputs) {
+        return ledger.serviceVInt(phase, region, false, List.of(), List.of(), inputs).instructions();
+    }
+
+    @Test
+    void vint8InstructionsFollowTheDemoTimerMirrorAndRefuseUnknownInputs() {
+        S3kVIntDmaLedger ledger = ledger();
+        ledger.bindVIntRom(true);
+        var before = instructions(ledger, PlcLifecyclePhase.ORDINARY_LEVEL, VideoRegion.NTSC, DRY);
+        assertEquals(Set.of(S3kVIntInstructionCycles.MissingInput.DEMO_TIMER_UNKNOWN), before.missing(),
+                "no Level entry seen: Demo_timer unknown");
+        ledger.resetAtFreshLevel();
+        // title-card V-ints (VInt_C) are not closed and do not count Demo_timer down
+        var titleCard = instructions(ledger, PlcLifecyclePhase.LEVEL_TITLE_CARD, VideoRegion.NTSC, DRY);
+        assertEquals(Set.of(S3kVIntInstructionCycles.MissingInput.ROUTINE_NOT_CLOSED), titleCard.missing());
+        assertEquals(1800, ledger.capture().demoTimer());
+        ledger.observeTailsTailFrame(5, dplc(6));
+        var first = ledger.serviceVInt(PlcLifecyclePhase.ORDINARY_LEVEL, VideoRegion.NTSC, false, List.of(), List.of(),
+                DRY);
+        assertEquals(1804 + 116 + 18, first.instructions().closedHandlerCycles(), "base + 1 entry + Demo_timer 1800");
+        assertEquals(3, first.instructions().unpricedCallees().size());
+        S3kVIntDmaLedger.State counting = ledger.capture();
+        for (int k = 2; k <= 1800; k++) {
+            assertEquals(1804 + 18, instructions(ledger, PlcLifecyclePhase.ORDINARY_LEVEL, VideoRegion.NTSC, DRY)
+                    .closedHandlerCycles(), "Demo_timer non-zero at VInt_8 #" + k);
+        }
+        assertEquals(1804, instructions(ledger, PlcLifecyclePhase.ORDINARY_LEVEL, VideoRegion.NTSC, DRY)
+                .closedHandlerCycles(), "the 1801st VInt_8 finds Demo_timer 0");
+        assertEquals(1804 + 17940, instructions(ledger, PlcLifecyclePhase.ORDINARY_LEVEL, VideoRegion.PAL, DRY)
+                .closedHandlerCycles());
+        ledger.restore(counting);
+        assertEquals(1799, ledger.capture().demoTimer(), "the mirror is rewind state");
+        assertEquals(1804 + 18, instructions(ledger, PlcLifecyclePhase.ORDINARY_LEVEL, VideoRegion.NTSC, DRY)
+                .closedHandlerCycles());
+        // each refusal reason
+        assertTrue(instructions(ledger, PlcLifecyclePhase.ORDINARY_LEVEL, VideoRegion.NTSC,
+                new S3kVIntDmaLedger.InstructionInputs(false, false)).missing()
+                .contains(S3kVIntInstructionCycles.MissingInput.KOS_BUSY_PC_UNKNOWN));
+        assertTrue(instructions(ledger, PlcLifecyclePhase.ORDINARY_LEVEL, VideoRegion.NTSC,
+                new S3kVIntDmaLedger.InstructionInputs(true, true)).missing()
+                .contains(S3kVIntInstructionCycles.MissingInput.WATER_LINE_UNOWNED));
+        assertTrue(instructions(ledger, PlcLifecyclePhase.ORDINARY_LEVEL, VideoRegion.NTSC,
+                new S3kVIntDmaLedger.InstructionInputs(true, null)).missing()
+                .contains(S3kVIntInstructionCycles.MissingInput.WATER_LINE_UNOWNED));
+        assertTrue(instructions(ledger, PlcLifecyclePhase.ORDINARY_LEVEL, VideoRegion.UNKNOWN, DRY).missing()
+                .contains(S3kVIntInstructionCycles.MissingInput.REGION_UNKNOWN));
+        assertTrue(instructions(ledger, PlcLifecyclePhase.NORMAL_PAUSE, VideoRegion.NTSC, DRY).missing()
+                .contains(S3kVIntInstructionCycles.MissingInput.ROUTINE_NOT_CLOSED));
+        assertTrue(ledger.serviceVInt(PlcLifecyclePhase.ORDINARY_LEVEL, VideoRegion.NTSC, true, List.of(), List.of(),
+                DRY).instructions().missing().contains(S3kVIntInstructionCycles.MissingInput.HYPER_FLASH_LIVE));
+        assertTrue(ledger.serviceVInt(PlcLifecyclePhase.ORDINARY_LEVEL, VideoRegion.NTSC, false, List.of(), List.of())
+                .instructions().missing().contains(S3kVIntInstructionCycles.MissingInput.INPUTS_NOT_SUPPLIED));
+        ledger.markPlayerFrameUnobserved(BodySlot.SONIC_KNUCKLES);
+        assertTrue(instructions(ledger, PlcLifecyclePhase.ORDINARY_LEVEL, VideoRegion.NTSC, DRY).missing()
+                .contains(S3kVIntInstructionCycles.MissingInput.DMA_PRODUCER_STATE_UNKNOWN));
+        S3kVIntDmaLedger unpinned = ledger();
+        unpinned.bindVIntRom(false);
+        unpinned.resetAtFreshLevel();
+        assertTrue(instructions(unpinned, PlcLifecyclePhase.ORDINARY_LEVEL, VideoRegion.NTSC, DRY).missing()
+                .contains(S3kVIntInstructionCycles.MissingInput.ROM_UNSUPPORTED));
     }
 
     @Test

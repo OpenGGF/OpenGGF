@@ -123,9 +123,11 @@ public final class S3kVIntDmaLedger implements RewindSnapshottable<S3kVIntDmaLed
      */
     public record Record(long ordinal, PlcLifecyclePhase phase, VideoRegion region, FixedTransfers fixed,
                          List<Transfer> fixedTransfers, List<QueuedEntry> drained, int droppedEntries,
-                         long queueFreezeMclk, FreezeStatus freezeStatus, long conditionalFreezeMclk) {
+                         long queueFreezeMclk, FreezeStatus freezeStatus, long conditionalFreezeMclk,
+                         S3kVIntInstructionCycles.Term instructions) {
         public Record {
             Objects.requireNonNull(fixed, "fixed");
+            Objects.requireNonNull(instructions, "instructions");
             Objects.requireNonNull(region, "region");
             Objects.requireNonNull(freezeStatus, "freezeStatus");
             fixedTransfers = List.copyOf(fixedTransfers);
@@ -139,7 +141,8 @@ public final class S3kVIntDmaLedger implements RewindSnapshottable<S3kVIntDmaLed
      */
     public record State(List<QueuedEntry> objectPending, int refusedSincePreviousDrain, int tailPreviousFrame,
                         int player1PreviousFrame, int player2PreviousFrame, boolean player1Known,
-                        boolean player2Known, boolean producerStateUnknownSinceDrain, long ordinal, Record last) {
+                        boolean player2Known, boolean producerStateUnknownSinceDrain, int demoTimer, long ordinal,
+                        Record last) {
         public State {
             objectPending = List.copyOf(objectPending);
         }
@@ -157,6 +160,10 @@ public final class S3kVIntDmaLedger implements RewindSnapshottable<S3kVIntDmaLed
     private boolean player1Known = true;
     private boolean player2Known = true;
     private boolean producerStateUnknownSinceDrain;
+    /** {@code Demo_timer}: Level's loc_6468 sets 1800, Do_Updates counts it down once per VInt_8; -1 unknown. */
+    private int demoTimer = -1;
+    private boolean vintRomChecked;
+    private boolean vintRomMatches;
     private long ordinal;
     private Record last;
     private S3kVIntDma.VInt8Transfers vint8;
@@ -175,6 +182,24 @@ public final class S3kVIntDmaLedger implements RewindSnapshottable<S3kVIntDmaLed
 
     public boolean romBound() {
         return romChecked;
+    }
+
+    /** Whether the session ROM carries the V-int closed routines the instruction figure is pinned to. */
+    public void bindVIntRom(boolean matches) {
+        vintRomMatches = matches;
+        vintRomChecked = true;
+    }
+
+    public boolean vintRomBound() {
+        return vintRomChecked;
+    }
+
+    /**
+     * Engine-owned inputs of the V-int instruction figure. {@code kosQueueEmpty}: the physical Kos queue is empty, so
+     * {@code Kos_decomp_queue_count} is 0 and Set_Kos_Bookmark's {@code bpl} returns at once (a non-empty queue leaves
+     * the busy bit and stacked PC unknown). {@code levelHasWater}: {@code Water_flag}; null when no water owner answers.
+     */
+    public record InstructionInputs(boolean kosQueueEmpty, Boolean levelHasWater) {
     }
 
     /**
@@ -271,6 +296,13 @@ public final class S3kVIntDmaLedger implements RewindSnapshottable<S3kVIntDmaLed
      */
     public Record serviceVInt(PlcLifecyclePhase phase, VideoRegion region, boolean hyperFlashStateLive,
                               List<QueuedEntry> animateTilesPending, List<QueuedEntry> kosModulePending) {
+        return serviceVInt(phase, region, hyperFlashStateLive, animateTilesPending, kosModulePending, null);
+    }
+
+    /** As above, with the V-int instruction figure's engine-owned inputs; null refuses that figure. */
+    public Record serviceVInt(PlcLifecyclePhase phase, VideoRegion region, boolean hyperFlashStateLive,
+                              List<QueuedEntry> animateTilesPending, List<QueuedEntry> kosModulePending,
+                              InstructionInputs instructionInputs) {
         Objects.requireNonNull(region, "region");
         List<QueuedEntry> queued = new ArrayList<>(objectPending);
         queued.addAll(animateTilesPending);
@@ -316,9 +348,57 @@ public final class S3kVIntDmaLedger implements RewindSnapshottable<S3kVIntDmaLed
         if (status != FreezeStatus.CONDITIONAL_ON_VINT_START) {
             queueFreeze = -1;
         }
+        S3kVIntInstructionCycles.Term instructions = instructionTerm(phase, region, hyperFlashStateLive,
+                producerStateUnknown, drained.size(), instructionInputs);
+        if (runsVInt8(phase) && demoTimer > 0) {
+            demoTimer--;   // Do_Updates (in the V-int, or the H-int when deferred): subq.w #1,(Demo_timer).w
+        }
         last = new Record(++ordinal, phase, region, fixed, fixedTransfers, drained, refused + queued.size() - kept,
-                queueFreeze, status, freeze);
+                queueFreeze, status, freeze, instructions);
         return last;
+    }
+
+    private S3kVIntInstructionCycles.Term instructionTerm(PlcLifecyclePhase phase, VideoRegion region,
+                                                         boolean hyperFlash, boolean producerStateUnknown,
+                                                         int drainedEntries, InstructionInputs inputs) {
+        var missing = java.util.EnumSet.noneOf(S3kVIntInstructionCycles.MissingInput.class);
+        if (!vintRomChecked || !vintRomMatches || vint8 == null) {
+            missing.add(S3kVIntInstructionCycles.MissingInput.ROM_UNSUPPORTED);
+        }
+        // NORMAL_PAUSE reaches VInt_8 through VInt_10's own test, which the closed form does not include.
+        if (phase != PlcLifecyclePhase.ORDINARY_LEVEL && phase != PlcLifecyclePhase.CREDITS_DEMO) {
+            missing.add(S3kVIntInstructionCycles.MissingInput.ROUTINE_NOT_CLOSED);
+        }
+        if (region == VideoRegion.UNKNOWN) {
+            missing.add(S3kVIntInstructionCycles.MissingInput.REGION_UNKNOWN);
+        }
+        if (producerStateUnknown) {
+            missing.add(S3kVIntInstructionCycles.MissingInput.DMA_PRODUCER_STATE_UNKNOWN);
+        }
+        if (hyperFlash) {
+            missing.add(S3kVIntInstructionCycles.MissingInput.HYPER_FLASH_LIVE);
+        }
+        if (demoTimer < 0) {
+            missing.add(S3kVIntInstructionCycles.MissingInput.DEMO_TIMER_UNKNOWN);
+        }
+        if (inputs == null) {
+            missing.add(S3kVIntInstructionCycles.MissingInput.INPUTS_NOT_SUPPLIED);
+        } else {
+            if (!inputs.kosQueueEmpty()) {
+                missing.add(S3kVIntInstructionCycles.MissingInput.KOS_BUSY_PC_UNKNOWN);
+            }
+            // Water_flag set: the line test reads H_int_counter, which no engine owner exposes yet.
+            if (inputs.levelHasWater() == null || inputs.levelHasWater()) {
+                missing.add(S3kVIntInstructionCycles.MissingInput.WATER_LINE_UNOWNED);
+            }
+        }
+        if (!missing.isEmpty()) {
+            return S3kVIntInstructionCycles.Term.refused(missing);
+        }
+        int cycles = S3kVIntInstructionCycles.cycles(new S3kVIntInstructionCycles.Input(region == VideoRegion.PAL,
+                drainedEntries, false, 0, false, false, false, 0xFF, demoTimer));
+        return new S3kVIntInstructionCycles.Term(cycles, java.util.Set.of(),
+                java.util.EnumSet.allOf(S3kVIntInstructionCycles.UnpricedCallee.class));
     }
 
     /** The routine LevelLoop and its pause arm: VInt_ID_8 directly, or VInt_10 falling into VInt_8 outside SS. */
@@ -343,7 +423,8 @@ public final class S3kVIntDmaLedger implements RewindSnapshottable<S3kVIntDmaLed
     @Override
     public State capture() {
         return new State(objectPending, refusedSincePreviousDrain, tailPreviousFrame, player1PreviousFrame,
-                player2PreviousFrame, player1Known, player2Known, producerStateUnknownSinceDrain, ordinal, last);
+                player2PreviousFrame, player1Known, player2Known, producerStateUnknownSinceDrain, demoTimer, ordinal,
+                last);
     }
 
     @Override
@@ -358,6 +439,7 @@ public final class S3kVIntDmaLedger implements RewindSnapshottable<S3kVIntDmaLed
         player1Known = state.player1Known();
         player2Known = state.player2Known();
         producerStateUnknownSinceDrain = state.producerStateUnknownSinceDrain();
+        demoTimer = state.demoTimer();
         ordinal = state.ordinal();
         last = state.last();
     }
@@ -382,6 +464,9 @@ public final class S3kVIntDmaLedger implements RewindSnapshottable<S3kVIntDmaLed
         player1Known = true;
         player2Known = true;
         producerStateUnknownSinceDrain = false;
+        // loc_6468: move.w #1800,(Demo_timer).w, after the setup objects and before LevelLoop; only VInt_C
+        // title-card drains, which do not touch Demo_timer, run in between.
+        demoTimer = 1800;
     }
 
     /** Missing-snapshot reset: no queue, no record. */
@@ -394,6 +479,7 @@ public final class S3kVIntDmaLedger implements RewindSnapshottable<S3kVIntDmaLed
         player1Known = true;
         player2Known = true;
         producerStateUnknownSinceDrain = false;
+        demoTimer = -1;
         ordinal = 0;
         last = null;
     }
