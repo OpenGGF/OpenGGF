@@ -935,3 +935,130 @@ Inspected trace JSON/owners and Surefire diagnostics are consumed under metadata
 ownership alone, without archives/receipts. Durable original references and five
 new PNGs/provenance stay outside the repo; ignored private config stays accounted
 for future owned-tree cleanup. No Main/Root integration, push or branch removal.
+
+
+## Slot native cell priority R3/R4 — 2026-10-17
+
+R3 classified the five unchanged R2 originals without new execution or pictures.
+R4 implements only the resulting inter-cell painter-order finding in owned
+`t3-649fee32`, local `feature/ai-s3k-slot-cell-native-priority-gpt61`, based on
+`670cf353d2229b56e2b4b73bdb8558a50d992e69`. R1/R2 refs, registry results and
+private config remain preserved; no Root/Main edit or integration occurred.
+
+**Direct causal evidence.** The original native `slot-native-v1` SAT/VRAM/CRAM
+at row1017, core10160, identifies five diagonal pixels (191,1), (189,2),
+(187,3), (185,4), (183,5). SAT13 and SAT14 both use tile word `$63E4`.
+SAT13's nonzero palette index `$33` is opaque black; SAT14's `$32` is blue
+(0,0,102). Native shows the earlier opaque black; R2 shows exactly the later
+blue. This is pixel ownership, not black RGB being treated as transparency.
+All colors in the five R2 mismatch sets occur in the retained native CRAM;
+that consistency check alone does not certify palette equality.
+
+Pinned skdisasm `044fa46725c71187399e13f5ddb70e11d32dc024`, native locked-on
+ROM SHA-1 `cfbf98c36c776677290a872547ac47c53d2761d6`:
+`Slots_RenderLayout` / `sub_4B490` (:98271–98343) appends cells in row-major
+SAT order, where earlier opaque sprites win. Slot does not enable the SAT-mask
+collection branch (`Sonic3kZoneFeatureProvider.useSpriteSatMasking`); its actual
+`LevelRenderer` direct painter called `renderVisibleCells` in ascending order,
+letting later cells cover earlier ones. The sole runtime change reverses that
+cell paint traversal. `PatternSpriteRenderer` still owns the unchanged reverse
+piece traversal within each frame; visible-cell construction/order/geometry,
+physics, resources, shared renderer, profile, API and generic SAT behavior are
+unchanged. Independent Root source inspection found no material finding in this
+exact one-loop diff; no extra review or trace run was requested.
+
+**Independent actual-pixel question.** `TestS3kSlotCellPainterPixels` enters Slot
+normally in an owned offscreen context and verifies its non-SAT branch. Actual
+ROM wall mappings and pattern pixels pass through the production Slot renderer,
+PatternSpriteRenderer and GPU consumer. The two cells retain native SAT13/14's
+relative displacement (11,21), translated into the viewport. A controlled opacity
+palette makes index2 blue, index3 black and other nonzero indices green; magenta
+clear proves drawn black is opaque, since the shader discards only index0.
+The fixture publishes the existing CRAM owner before using that palette, rather
+than confusing requested fade state with displayed state. This isolated palette
+is not a native screenshot or gameplay/trace hydration.
+
+The exact ROM frame is11: `Map_SB_ColoredWall` at `$4B8D8`, frame11 mapping
+offset `$A9` plus art base `$33B` equals SAT tile `$3E4`. The initial frame1
+assumption was wrong and corrected from bytes, not by searching render variants.
+With the final test unchanged, old production genuinely fails black0 versus
+later blue102 at buffer pixel36913. The one-loop correction passes. Controls
+render each cell alone, reverse their native order (blue then wins), separate
+them (both visible), repeat drawing (same bytes), and compare the renderer's
+complete captured state before/after (no animation advancement or cell mutation).
+
+All Maven used CURRENT MAIN's absolute queue wrapper from the owned cwd, Java25,
+all3 original absolute ROM paths, and the exact headless environment documented
+above (surfaceless EGL/nullAL/Lua5.4, DISPLAY/WAYLAND unset, other JVM environment
+preserved). Literal selection for all setup/old-red runs is
+`-Dmse=off -Dtest=TestS3kSlotCellPainterPixels test`. Queue wait is separate.
+
+| Session / UTC finish | Observed result | Maven time / queue wait |
+|---|---|---|
+| 47397 / 14:48:31 | 1/1F0E0S, fixture-only: pattern batch not flushed, no opacity witness | 24.594s / 0s |
+| 93711 / 14:49:22 | 1/1F0E0S, readback all magenta confirms missing batch flush | 24.783s / 0s |
+| 48802 / 14:50:12 | 1/1F0E0S, batch fixed; all580 drawn pixels black under displayed entry fade | 24.507s / 0s |
+| 22096 / 14:51:15 | 1/1F0E0S, test palette still transformed by the unpublished fade clear | 24.520s / 0s |
+| 32155 / 14:52:40 | 1/1F0E0S, published fixture palette draws black/blue; wrong frame1 has no declared overlap witness | 26.791s / 3s |
+| 32764 / 14:54:47 | Genuine old-red on unchanged670 production: 1/1F0E0S, expected earlier opaque black0 / actual later blue102 | 25.386s / 63s |
+| 40686 / 14:56:29 | Final five-class affected selection: 24/0F0E0S | 1:17 / 3s |
+
+The first five failures are fixture prerequisites, not old-red credit or runtime
+findings. Final selection is exactly
+`TestS3kSlotCellPainterPixels,TestS3kSlotLayoutRenderer,TestS3kSlotGlassPriority,TestS3kSlotPresentationParity,TestS3kSlotRenderBuffers`:
+1 GPU opacity/passivity,13 layout,1 glass,6 presentation and3 buffer cases.
+Compiler deprecation/unchecked, FAST load-profile fallback and deterministic
+load-time-estimate warnings remain visible; zero JUnit skips. R2's unchanged34
+publication/whole-world cases,73 profile/S3K4 cases and Knuckles1024/team5259
+physics/animation trace rows are reused at their recorded epochs. They are not
+fresh R4 executions or new SAT/VRAM/timing coverage. No broad/trace repeat.
+
+Frozen, tested and captured source SHA-256:
+
+```text
+S3kSlotLayoutRenderer.java 148ce5f1b44beb40bacfe7979b88581547cd3f5717f47fa5b2e53adb2284455c
+TestS3kSlotCellPainterPixels.java 3aa2b8ac8f4d03cd8b9ef3a858b63a6192439bbfdb5c029adfc4a41edeab00d8
+```
+
+**One new fixed five-PNG capture.** The original native images/hashes, movie,
+ROM, row/core relationship, inlet and profile are exactly those recorded in R2.
+No native rerun, crop, resize, palette normalization, clock search, pixel masking
+or media encoder. A temporary source copy of maintained TraceCaptureTool again
+replaces only the media sink with five readbacks; clip925..1026 still renders
+all102 presentations. Compile holds intended-tree/shared activity with inherited
+FDs, released before queued execution. Current Main wrapper runs
+`-Dmse=off exec:exec -Dexec.executable=python3` with the owned temporary launcher.
+Session48918 ends14:58:10UTC, terminal0,3.415s execution/33s queue.
+
+New durable PNGs/provenance are in
+`${OGGF_VIDEOS}/s3k-parity-coverage-2026-10-14/spot-checks/slot-r4-gpt61-670cf-v1`,
+separate from the original native and R2 engine sets. Provenance retains exact
+Java argv, source/helper/native/engine hashes, unchanged R2 source hashes,
+profile, original-domain comparison and inspection limits. GL bottom-up storage
+conversion is the same standard orientation as R2. All ten original native/new
+engine pictures were visually inspected.
+
+| Fixed row | R2 differing pixels | R4 differing pixels /71680 | Newly matching original pixels | New differing pixels |
+|---|---|---|---|---|
+| 971 | 661 | 599 | 62 | 0 |
+| 974 | 360 | 295 | 65 | 0 |
+| 1017 | 50 | 41 | 9 | 0 |
+| 1022 | 52 | 52 | 0 | 0 |
+| 1026 | 58 | 57 | 1 | 0 |
+
+Exactly137 original-domain pixels close; no changed-but-still-different pixels
+or newly differing pixels. The original large component at971 (578pixels,
+bbox287,190..319,218) remains exactly578, and974's (267pixels,
+bbox150,158..166,176) remains exactly267. They are not attributed to this fix.
+Native HUD lives4 versus engine3 remains an unqualified carried-life/bootstrap
+difference (metadata lacks lives), not observed gameplay loss. Additional HUD,
+art and edge residuals remain; no full RGB/native parity certificate or second
+owner repair follows. No second capture or post-capture runtime/test edit.
+
+Main config hash/mtime remain the R2 values before/after capture; owned config
+is still the exact regular private copy. All jobs/leases terminal/released;
+current target is candidate compiled. Consumed Surefire diagnostics and temporary
+helper sources/classes/classpath are removed without archives or pass caches.
+Durable originals/new5PNGs/provenance, local branches, registry history, ignored
+private config and candidate build remain accounted for. Root owns composition,
+combined smoke/guards and publication; no Main/Root changes or push from this unit.

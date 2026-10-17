@@ -4941,3 +4941,26 @@ normalization, search, media encode, extra test or zero-parity claim.
 All jobs/leases terminal, candidate compilation current; consumed diagnostics and
 temporary helpers cleaned, private config/durable originals retained. Root owns
 composition/combined smoke/guards/integration/push; no Main change or tree removal.
+
+
+### Slot inter-cell painter priority R3/R4 handback — 2026-10-17
+
+R3 retained SAT/VRAM/CRAM identifies earlier nonzero-index black hidden by the
+later wall's blue at row1017. R4 in owned649, branch
+`feature/ai-s3k-slot-cell-native-priority-gpt61`, over670cf, changes only the
+Slot cell traversal to reverse painter order; frame-piece ordering and shared
+render/profile/API/geometry/gameplay remain unchanged. Genuine actual-ROM GPU
+old-red32764 (frame11 from $33B+$A9; black0/blue102) precedes the runtime edit;
+five earlier fixture-prerequisite failures are separately recorded. Final40686
+passes24 affected cases, including repeat/passivity/reversed/separated controls.
+Root's bounded source inspection has no material finding; R2 unaffected checks,
+S3K4 and both Slot traces are reused with exact original coverage limits.
+
+Single fixed five-PNG48918, same original references/inlet/profile as R2, yields
+599/295/41/52/57 residuals versus661/360/50/52/58:137 matching original pixels
+recovered, zero new bad pixels. All ten pictures inspected; original578/267
+components remain identical/unattributed, HUD native4/engine3 stays an unqualified
+bootstrap limit. [Exact evidence, failures, commands, hashes and provenance](../validation/levels/s3k-bonus-stage-transitions.md#slot-native-cell-priority-r3r4--2026-10-17).
+Source/test frozen before capture; all handles terminal, consumed diagnostics/
+helpers removed; private config/durable pictures/R1R2R3 registry results preserved.
+Local commit only; no extra review/trace/owner, Main/Root edits or publication.

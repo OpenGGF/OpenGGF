@@ -71,7 +71,8 @@ Unreleased. The earlier development themes remain in
   traces now replay without errors. The Slot cage keeps re-centring the machine
   through the goal wind-down, so the machine stays where the original shows it.
   Its background keeps moving at zero cage rotation and publishes queued rows
-  at the native VBlank boundary, including through rewind;
+  at the native VBlank boundary, including through rewind, and overlapping cells
+  keep the original sprite priority;
   the Gumball background stays pinned as in the original instead of scrolling
   with the camera, and Pachinko's background survives rewind.
 

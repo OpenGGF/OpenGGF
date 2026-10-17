@@ -1351,3 +1351,11 @@ recreate and replay twice. Final34focused pass, unaffected73/S3K4 reused, both
 canonical Slot character traces retain zero errors (1024/5259 rows). Exactly five
 matched original RGB frames retain661/360/50/52/58 differing pixels; visual/native
 whole-Slot certification remains open. [Exact execution and pixel limits](../architecture/validation/levels/s3k-bonus-stage-transitions.md#slot-zero-step-and-native-row-publication--2026-10-17).
+
+
+Slot R4 presentation-only follow-up (2026-10-17) qualifies native inter-cell
+priority with an actual-ROM GPU old-red,24 affected render cases and one fixed
+five-original comparison:599/295/41/52/57 remaining pixels,137 recovered/zero
+newly bad. Larger578/267 components remain unattributed; native4/engine3 HUD
+bootstrap difference persists. R2 gameplay/S3K4/trace results are reused, not new
+route execution. [Evidence and coverage limits](../architecture/validation/levels/s3k-bonus-stage-transitions.md#slot-native-cell-priority-r3r4--2026-10-17).
