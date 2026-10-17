@@ -5160,6 +5160,53 @@ No extra Java execution. Preparing the normal local evidence-only commit;
 all seven policy trailers and final GPT-6.1 coauthor are parsed before commit.
 
 
+### Current composition, slice attribution and broad-validation boundary — 2026-10-17
+
+Root7397c5368 merges Slot R2 `670cf353d`; Root60d6fe135 merges HCZ R11
+`cd94d7ca4`; Rootbef8f27ca merges ICZ R8 evidence `c8703d172`. Every affected
+runtime/test byte matches its locally qualified commit. Append-evidence merge
+conflicts retain both complete sections and identical skill mirrors. ICZ R8
+is docs-only: the one executed continuation reaches5794 alive, so natural
+lethal-contact/respawn/history coverage remains open. Slot's five original
+RGB residuals661/360/50/52/58 also remain open; nativeHUD4/engine3 is an
+unqualified carried-life/bootstrap difference, not attributed life loss.
+
+Read-only slice attribution confirms current complete error array equals
+historical R3 (SHA256 of `json.dumps(errors, sort_keys=True)`:
+`71f91e9494d9a6926cd2f032dcc174a0d289355d9f9a6658b3752ae61d96d251`).
+Matched Main803 array is `9c41e6af15d487b927e3ec81a53a4462653aeac299e257d3c189cfb23287551b`.
+The10834 counter consequence predates R3/R4 title and R10/R11 layout/block
+owners; earliest demonstrated boundary is compound `b6c4898e2`. Its native
+carrier target/X-lock correction supports earlier camera improvement, but no
+retained single-change observation explains10834. Normal CPU counter logic
+is unchanged: on-screen resets0, off-screen increments. Native10833..35
+has render_flags84/routine6/counter0; actual engine visibility decision remains
+unobserved. R12 owns one passive slice-prefix question, not a counter fit.
+
+One necessary post-composition slice58673 onbef8f27ca, same exact method,
+trace-segments/profile/ROMs/environment/single-fork flags as17155, completed
+at14:45:55UTC, queue0, Maven1m23s/parent83.857s:1/1F0E0S,29302observations,
+4353errors=3424physics+929animation, warnings/bootstrap0/eightmissingaux.
+Its ENTIRE sorted error-array hash equals the historical/current hash above.
+Thus SlotR2/HCZR11 introduce no further slice error-vector delta, but10834
+still blocks integration relative to published803. Both original matched
+reports and all inspected canonical/segment output were consumed; no archives.
+
+The actual local plan atbef8f27ca/base803 selects **3523 candidate smoke
+classes, all10 categories, plus separate guards**. Root now owns ONE complete
+`python3 tools/testing/run_categories.py --base 8030832d2ab6080e5324cdfe35e971677fd97b41 --run --rom-directory "$OPENGGF_MAIN" --max-minutes 150`
+in this intended tree. Estimated execution90–120minutes, variable queue time
+extra;150 execution-minute and10-minute no-output limits, source fingerprint
+or launcher failure stops incomplete coverage. Ordinary batches contain at
+most50 candidates and yield shared admission between batches/before guards.
+No release-only full suite, manual narrowing, duplicate baseline broad run,
+or package-triggered testing is selected. This broad check can find other
+regressions while R12 and the bounded Slot painter owner work independently;
+it does not waive known trace/RGB/ending/coverage blockers. Root source stays
+frozen during the retained run. Later isolated fixes require their meaningful
+affected checks before composition; repeated unchanged broad coverage is not
+a ceremony. Whole ending CPU/bus/readiness acceptance remains a separate gate.
+
 ## R12 HCZ slice visibility consequence and composed route frontier — 2026-10-17
 
 Same3aa fast-forwarded cd94→bef8, preserving R10/R11 refs, native4fdf and an
