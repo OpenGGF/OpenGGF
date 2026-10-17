@@ -1,0 +1,128 @@
+{
+ "schema": "openggf.m68k-frame-closure-spec.v1",
+ "purpose": "S3K D01 ending reunion Kos idle-budget windows (known bug: Ending Reunion Kos Service Count); comparison-only native evidence",
+ "rom_sha1": "cfbf98c36c776677290a872547ac47c53d2761d6",
+ "cost_model": {
+  "kind": "gpgx",
+  "commit": "051d430d3d1b54625f9900c8f152d7f232e06daf",
+  "cycles_blob": "6b18bb209c1fcb1bf4e78d0c1e747da01a164542"
+ },
+ "counters_schema": "openggf.m68k-stall-counters.v1",
+ "tolerance_cycles": 12,
+ "platform": {
+  "vint_entry_pc": "FFFFF0",
+  "cited_instruction_cycles": {
+   "FFFFF0": {
+    "cycles": 12,
+    "why": "V_int_jump RAM jmp (VInt).l: sonic3k.asm:273 writes $4EF9; vector 30 = $FFFFF0; GPGX base cycles[0x4EF9] = 12"
+   }
+  },
+  "idle_loop": {
+   "pcs": [
+    "001D1C",
+    "001D20"
+   ],
+   "step_cycles": [
+    12,
+    10
+   ],
+   "why": "Wait_VSync tst.b (V_int_routine).w / bne.s (sonic3k.asm:2976)"
+  },
+  "bookmark_redirect_pc": "001D0C",
+  "vint_dma_words_and_rates": [
+   [
+    64,
+    198
+   ],
+   [
+    448,
+    102
+   ],
+   [
+    320,
+    102
+   ]
+  ],
+  "vint_dma_why": "VInt_8 CRAM $80 bytes (198 words/line, vdp_ctrl.c:638-642), H scroll $380 and sprite table $280 bytes to VRAM (204>>1 words/line)",
+  "queue_dma_rate": 102
+ },
+ "cases": [
+  {
+   "name": "tails-super-ntsc-320-v7",
+   "capture": "native-kos-budget-tails-super-ntsc-320-v7",
+   "region": "ntsc",
+   "histogram_sha256": "c803fe59216466b97b8d8b112a4fb8ca2b3854c0e929e7dec7f0b09c00b8a90d",
+   "dma_sha256": "18ec21a92e46824250873baa7cc5014f6ff75c1a356217b41e61bc0014854a25",
+   "windows": [
+    [
+     4401,
+     4401
+    ],
+    [
+     4401,
+     4405
+    ]
+   ]
+  },
+  {
+   "name": "sonic-super-ntsc-320-v7",
+   "capture": "native-kos-budget-sonic-super-ntsc-320-v7",
+   "region": "ntsc",
+   "histogram_sha256": "29033abe273ddf54da972a01ceccb53db398c2bae5eb5ae27003d2119f503faa",
+   "dma_sha256": "1179e2e01a1e4aaca760fa19f009a2103baeba3feb3e67c9fe32ac6d3eec687d",
+   "windows": [
+    [
+     4401,
+     4401
+    ],
+    [
+     4401,
+     4404
+    ]
+   ]
+  },
+  {
+   "name": "tails-super-pal-320-v7p",
+   "capture": "native-kos-budget-tails-super-pal-320-v7p",
+   "region": "pal",
+   "histogram_sha256": "1ca4f0a455c1396d8d830b0369805541a5249694a50242fc22f506dac8eab410",
+   "dma_sha256": "18ec21a92e46824250873baa7cc5014f6ff75c1a356217b41e61bc0014854a25",
+   "windows": [
+    [
+     4401,
+     4401
+    ],
+    [
+     4401,
+     4404
+    ]
+   ]
+  },
+  {
+   "name": "sonic-super-pal-320-v7p",
+   "capture": "native-kos-budget-sonic-super-pal-320-v7p",
+   "region": "pal",
+   "histogram_sha256": "ee89816f6bc1f64df451171ab070f578466a8fc37816f4dc12154a54b4056034",
+   "dma_sha256": "1179e2e01a1e4aaca760fa19f009a2103baeba3feb3e67c9fe32ac6d3eec687d",
+   "windows": [
+    [
+     4401,
+     4401
+    ]
+   ]
+  },
+  {
+   "name": "sonic-none-ntsc-320-v7",
+   "capture": "native-kos-budget-sonic-none-ntsc-320-v7",
+   "region": "ntsc",
+   "histogram_sha256": "0edda07d6d107fcbd30a5083e800c310686393f7ed132c0d638750b96dc2da11",
+   "dma_sha256": "1179e2e01a1e4aaca760fa19f009a2103baeba3feb3e67c9fe32ac6d3eec687d",
+   "windows": [
+    [
+     4401,
+     4401
+    ]
+   ]
+  }
+ ]
+}

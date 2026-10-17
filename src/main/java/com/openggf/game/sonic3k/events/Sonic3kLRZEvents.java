@@ -130,15 +130,11 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
     /** One Genesis palette line: sixteen words. */
     private static final int PALETTE_LINE_BYTES = 0x20;
 
-    private boolean act1BackgroundInitialised;
-    /**
-     * {@code LRZ2_BackgroundInit} (sonic3k.asm:115655-115668) runs on a direct {@code $901} load
-     * and leaves {@code Events_routine_bg} on 8. The seamless change does not run it at all --
-     * {@code loc_56CAA} calls {@code Load_Level}, not the background initializer, and ends on
-     * {@code clr.w (Events_routine_bg)} -- so {@link #requestAct2Reload} sets this before the
-     * reload and act 2 starts on {@code LRZ2_BackgroundEvent}'s stage 0 instead.
-     */
-    private boolean act2BackgroundInitialised;
+    // LRZ1_/LRZ2_BackgroundInit's one-shot marks live in LrzZoneRuntimeState so rewind restores
+    // them. LRZ2_BackgroundInit (sonic3k.asm:115655-115668) runs on a direct $901 load and leaves
+    // Events_routine_bg on 8. The seamless change does not run it at all -- loc_56CAA calls
+    // Load_Level, not the background initializer, and ends on clr.w (Events_routine_bg) -- so
+    // requestAct2Reload marks act 2's new state and it starts on LRZ2_BackgroundEvent's stage 0.
 
     @Override
     public void update(int act, int frameCounter) {
@@ -275,8 +271,8 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
         if (lrz == null || lrz.zoneIndex() != Sonic3kZoneIds.ZONE_LRZ || act != 1) {
             return;
         }
-        if (!act2BackgroundInitialised) {
-            act2BackgroundInitialised = true;
+        if (!lrz.act2BackgroundInitialised()) {
+            lrz.markAct2BackgroundInitialised();
             spawnDeathEggBackground();
             // loc_56FD2: Events_routine_bg = 8, sub_57082, Reset_TileOffsetPositionEff,
             // Refresh_PlaneFull, ApplyDeformation. The deformation is SwScrlLrz's already.
@@ -452,9 +448,9 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
         com.openggf.game.sonic3k.Sonic3kLevelTriggerManager.reset();
         // loc_56CAA never calls LRZ2_BackgroundInit: the act 2 background arrives through
         // LRZ2_BackgroundEvent's stage 0 (loc_5700C), which the cleared routine word selects.
-        act2BackgroundInitialised = true;
         boolean centeredArena = state().centerNativeArenaCamera();
         levelManager().applySynchronousScreenEventTransition(request);
+        state().markAct2BackgroundInitialised();
         // Carry the presentation choice with the native bounds/position rebase;
         // clearing it here would jump the wide view right by half its excess width.
         state().setCenterNativeArenaCamera(centeredArena);
@@ -528,10 +524,10 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
         if (lrz == null || lrz.zoneIndex() != Sonic3kZoneIds.ZONE_LRZ || act != 0) {
             return;
         }
-        if (act1BackgroundInitialised) {
+        if (lrz.act1BackgroundInitialised()) {
             return;
         }
-        act1BackgroundInitialised = true;
+        lrz.markAct1BackgroundInitialised();
         if (lrz.playerCharacter() != PlayerCharacter.KNUCKLES) {
             return;
         }

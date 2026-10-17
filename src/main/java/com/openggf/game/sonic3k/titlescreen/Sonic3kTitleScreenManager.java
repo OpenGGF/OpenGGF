@@ -416,6 +416,12 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
     public void initialize() {
         LOGGER.info("Initializing S3K title screen");
 
+        // Title_Screen's first request (sonic3k.asm:5393-5394), on every entry to the title game mode:
+        // cmd_FadeOut, "fade music if any is playing". The Z80 driver services it even with nothing
+        // playing: zFadeOutMusic arms the fade counters and falls through zHaltDACPSG into
+        // zPSGSilenceAll (Sound/Z80 Sound Driver.asm:2307-2325, 2587-2597).
+        GameServices.audio().fadeOutMusic();
+
         // Load data if not already loaded
         if (!dataLoader.isDataLoaded()) {
             dataLoader.loadData();

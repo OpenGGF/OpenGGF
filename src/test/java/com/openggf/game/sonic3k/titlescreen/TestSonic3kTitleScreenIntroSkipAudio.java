@@ -145,8 +145,11 @@ public class TestSonic3kTitleScreenIntroSkipAudio {
     }
 
     /**
-     * The ROM's intro emits exactly three audio requests, in one order, however
-     * the intro is left.
+     * The ROM's intro emits exactly three numbered sound requests, in one order,
+     * however the intro is left. {@code Title_Screen} opens with a fourth,
+     * {@code cmd_FadeOut} (sonic3k.asm:5393-5394), which the manager issues on
+     * entry through the fade path ({@code AudioManager.fadeOutMusic}); this
+     * request seam does not record fades, so it is not counted here.
      *
      * <p>{@code cmd_SEGA} follows {@code Pal_FadeFromBlack}
      * (sonic3k.asm:5485). {@code Wait_SegaS3K} is left either by its timeout or

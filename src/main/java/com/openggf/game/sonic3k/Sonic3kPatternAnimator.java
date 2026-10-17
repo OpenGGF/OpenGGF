@@ -10,6 +10,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
 import com.openggf.game.sonic3k.runtime.AizZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.CnzZoneRuntimeState;
+import com.openggf.game.sonic3k.runtime.HczZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.IczZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.LrzZoneRuntimeState;
@@ -183,8 +184,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
     private final List<AniPlcScriptState> scripts;
     private final Sonic3kAniPlcPublicationQueue aniPlcPublications = new Sonic3kAniPlcPublicationQueue();
 
-    private final Pattern[] firstTreePatterns;
-    private boolean firstTreeApplied;
+    private final byte[] firstTreeData;
 
     private final byte[] hczWaterlineScrollData;
     private final byte[] hcz1DynamicBlockData;
@@ -250,7 +250,13 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
     // Derived deformation values only; excluded from rewind state just like tile scratch.
     private final int[] hcz2HScrollScratch = new int[24];
 
-    private int lastHcz1WaterlineDelta = Integer.MIN_VALUE;
+    /**
+     * {@code Anim_Counters+4} and {@code +6} of {@code AnimateTiles_HCZ1}: the last
+     * {@code Events_bg+$10} handled (1 after an equilibrium pass) and the side whose fix
+     * strips were last queued (0 upper, -1 lower).
+     */
+    private int hcz1LastWaterline;
+    private int hcz1FixSide;
     private int lastHcz2SmallBgLineValue = Integer.MIN_VALUE;
     private int lastHcz2Art2Value = Integer.MIN_VALUE;
     private int lastHcz2Art3Value = Integer.MIN_VALUE;
@@ -302,7 +308,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         int aniPlcAddr = resolveAniPlcAddr(zoneIndex, actIndex);
         if (aniPlcAddr < 0) {
             this.scripts = List.of();
-            this.firstTreePatterns = null;
+            this.firstTreeData = null;
             this.hczWaterlineScrollData = null;
             this.hcz1DynamicBlockData = null;
             this.hcz1WaterlineBelow1Data = null;
@@ -391,12 +397,11 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             AniPlcParser.primeScripts(scripts, level, GameServices.graphics());
         }
 
-        this.firstTreePatterns = zoneIndex == 0 && actIndex == 1
-                ? loadUncompressedPatterns(reader,
+        this.firstTreeData = zoneIndex == 0 && actIndex == 1
+                ? loadRawBytes(reader,
                 Sonic3kConstants.ART_UNC_AIZ2_FIRST_TREE_ADDR,
                 Sonic3kConstants.ART_UNC_AIZ2_FIRST_TREE_SIZE)
                 : null;
-        this.firstTreeApplied = false;
 
         if (zoneIndex == 1 && actIndex == 0) {
             this.hczWaterlineScrollData = loadRawBytes(reader,
@@ -734,19 +739,23 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             return;
         }
 
-        int cameraX = getCameraX();
-        if (cameraX >= 0x1C0) {
+        if (getCameraX() >= 0x1C0) {
             runAllScripts();
-            firstTreeApplied = false;
             return;
         }
 
+        // AnimateTiles_AIZ2 below $1C0 (sonic3k.asm:53956-53967): AnimateTiles_DoAniPLC_Part2 with
+        // d6 = 0 runs the first script only, leaving a3 at Anim_Counters+2, so clr.l (a3) zeroes
+        // the counters of scripts 1 and 2 (the second clr.l repeats it). Every such pass queues
+        // the first tree with Add_To_DMA_Queue, presented by the next VInt like the scripts.
         if (!scripts.isEmpty()) {
             tickScript(scripts.get(0));
         }
-        if (!firstTreeApplied && firstTreePatterns != null) {
-            applyPatternsToLevel(firstTreePatterns, Sonic3kConstants.ART_UNC_AIZ2_FIRST_TREE_DEST_TILE);
-            firstTreeApplied = true;
+        for (int i = 1; i <= 2 && i < scripts.size(); i++) {
+            scripts.get(i).restoreCounters(0, 0);
+        }
+        if (firstTreeData != null) {
+            queueRawPatternDma(firstTreeData, Sonic3kConstants.ART_UNC_AIZ2_FIRST_TREE_DEST_TILE);
         }
     }
 
@@ -787,8 +796,21 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         return !scripts.isEmpty() && !isGenericBossActive();
     }
 
+    /**
+     * AnimateTiles_HCZ1 reaches AnimateTiles_DoAniPLC unless {@code Events_bg+$16} is set or the
+     * equilibrium pass returns through AniHCZ_FixUpperBG (loc_2797E). Script channels run before
+     * the waterline channel, so {@code Anim_Counters+4} still holds the previous pass, which is
+     * what {@code cmp.w (a3),d1} reads.
+     */
+    boolean shouldRunHcz1ScriptChannels() {
+        return !scripts.isEmpty()
+                && !isHcz1AnimationSuspended()
+                && !(computeHcz1WaterlineDelta() == 0 && hcz1LastWaterline != 0);
+    }
+
     boolean shouldRunHcz1CustomChannels() {
-        return hczWaterlineScrollData != null
+        return !isHcz1AnimationSuspended()
+                && hczWaterlineScrollData != null
                 && hcz1DynamicBlockData != null
                 && hcz1WaterlineBelow1Patterns != null
                 && hcz1LowerBg1Patterns != null
@@ -1023,38 +1045,111 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
     }
 
     private void updateHcz1BackgroundStrips() {
-        int waterlineDelta = computeHcz1WaterlineDelta();
-        if (waterlineDelta == lastHcz1WaterlineDelta) {
+        updateHcz1BackgroundStrips(computeHcz1WaterlineDelta());
+    }
+
+    /**
+     * The waterline half of AnimateTiles_HCZ1 from loc_2788C (sonic3k.asm:53987-54081);
+     * every transfer goes through Add_To_DMA_Queue.
+     */
+    private void updateHcz1BackgroundStrips(int waterline) {
+        if (waterline == hcz1LastWaterline) {
             return;
         }
-        lastHcz1WaterlineDelta = waterlineDelta;
+        hcz1LastWaterline = waterline;
 
-        if (waterlineDelta == 0) {
-            queuePatternsDma(hcz1LowerBg1Patterns, 0x2F4);
-            queuePatternsDma(hcz1LowerBg2Patterns, 0x300);
+        if (waterline == 0) {
+            // loc_2797E stores 1, so every pass at the equilibrium differs again and repeats this.
+            // After bsr AniHCZ_FixLowerBG the code falls through into AniHCZ_FixUpperBG, whose jmp
+            // to Add_To_DMA_Queue returns from AnimateTiles_HCZ1 without reaching
+            // AnimateTiles_DoAniPLC (see shouldRunHcz1ScriptChannels). Both fix strips are queued.
+            hcz1LastWaterline = 1;
+            queueHcz1FixLowerBg();
+            queueHcz1FixUpperBg();
             return;
         }
 
-        if (waterlineDelta < 0) {
-            if (waterlineDelta > -HCZ1_WATERLINE_VISIBLE) {
-                applyDynamicHcz1Strip(0x000, (waterlineDelta + HCZ1_WATERLINE_VISIBLE) * 0x60, 0x2DC);
-            } else {
-                queuePatternsDma(hcz1WaterlineBelow1Patterns, 0x2DC);
-                queuePatternsDma(hcz1WaterlineBelow2Patterns, 0x2E8);
+        if (waterline < 0) {
+            // addi.w #$60 / bcc loc_2797A: below -$60 nothing is queued and VRAM keeps the
+            // strip composed on the last pass inside the range.
+            int row = waterline + HCZ1_WATERLINE_VISIBLE;
+            if (row < 0) {
+                return;
             }
-            queuePatternsDma(hcz1LowerBg1Patterns, 0x2F4);
-            queuePatternsDma(hcz1LowerBg2Patterns, 0x300);
+            applyDynamicHcz1Strip(0x000, row * 0x60, 0x2DC);
+            if (hcz1FixSide >= 0) {
+                hcz1FixSide = -1;
+                queueHcz1FixLowerBg();
+            }
             return;
         }
 
+        // neg.w / addi.w #$60 / bcc loc_2797A, as above for +$60.
+        int row = HCZ1_WATERLINE_VISIBLE - waterline;
+        if (row < 0) {
+            return;
+        }
+        applyDynamicHcz1Strip(0x300, row * 0x60, 0x2F4);
+        if (hcz1FixSide != 0) {
+            hcz1FixSide = 0;
+            queueHcz1FixUpperBg();
+        }
+    }
+
+    /**
+     * Animate_Init's HCZ1 call to sub_279D4 (sonic3k.asm:56373-56376, 54117-54159), which runs on a
+     * fresh level just before loc_6468's Animate_Tiles. HCZ1_BackgroundInit has left
+     * {@code Events_bg+$10} at $60 above $60, at -$60 from -$60 through $60 (its second compare
+     * stores -$60 rather than keeping the value) and unchanged below -$60 (sonic3k.asm:105690-105699).
+     */
+    void runAnimateInitTransfers() {
+        if (zoneIndex != Sonic3kZoneIds.ZONE_HCZ || actIndex != 0 || !shouldRunHcz1CustomChannels()) {
+            return;
+        }
+        int waterline = computeHcz1WaterlineDelta();
+        if (waterline > HCZ1_WATERLINE_VISIBLE) {
+            waterline = HCZ1_WATERLINE_VISIBLE;
+        } else if (waterline >= -HCZ1_WATERLINE_VISIBLE) {
+            waterline = -HCZ1_WATERLINE_VISIBLE;
+        }
+        if (waterline < -HCZ1_WATERLINE_VISIBLE) {
+            // loc_279F2: the lower fix plus the whole below-water strips, then return.
+            queueHcz1FixLowerBg();
+            queuePatternsDma(hcz1WaterlineBelow1Patterns, 0x2DC);
+            queuePatternsDma(hcz1WaterlineBelow2Patterns, 0x2E8);
+            return;
+        }
+        if (waterline > 0) {
+            queueHcz1FixUpperBg();
+        } else {
+            queueHcz1FixLowerBg();
+        }
+        // bra.w loc_2788C, which ends in bra.w AnimateTiles_DoAniPLC with a2 = AniPLC_HCZ1.
+        updateHcz1BackgroundStrips(waterline);
+        runAllScripts();
+    }
+
+    /** AniHCZ_FixLowerBG (sonic3k.asm:54100-54108). */
+    private void queueHcz1FixLowerBg() {
+        queuePatternsDma(hcz1LowerBg1Patterns, 0x2F4);
+        queuePatternsDma(hcz1LowerBg2Patterns, 0x300);
+    }
+
+    /** AniHCZ_FixUpperBG (sonic3k.asm:54083-54091). */
+    private void queueHcz1FixUpperBg() {
         queuePatternsDma(hcz1UpperBg1Patterns, 0x2DC);
         queuePatternsDma(hcz1UpperBg2Patterns, 0x2E8);
-        if (waterlineDelta < HCZ1_WATERLINE_VISIBLE) {
-            applyDynamicHcz1Strip(0x300, (HCZ1_WATERLINE_VISIBLE - waterlineDelta) * 0x60, 0x2F4);
-        } else {
-            queuePatternsDma(hcz1WaterlineAbove1Patterns, 0x2F4);
-            queuePatternsDma(hcz1WaterlineAbove2Patterns, 0x300);
-        }
+    }
+
+    /**
+     * {@code Events_bg+$16}: HCZ1BGE_Normal sets it when it queues the HCZ2 art
+     * (sonic3k.asm:105716-105738), and AnimateTiles_HCZ1 then returns at once (53974-53977).
+     */
+    private boolean isHcz1AnimationSuspended() {
+        return actIndex == 0 && GameServices.hasRuntime()
+                && S3kRuntimeStates.currentHcz(GameServices.zoneRuntimeRegistry())
+                .map(HczZoneRuntimeState::act1TransitionArtQueued)
+                .orElse(false);
     }
 
     private void updateHcz2BackgroundStrips() {
@@ -1268,11 +1363,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         queueRawPatternDma(sourceData, sourceByteOffset, byteLength, destTile);
     }
 
-    /**
-     * Immediate write, used for load-time setup and for AnimateTiles_AIZ2's first-tree
-     * transfer. The latter is also an Add_To_DMA_Queue call (sonic3k.asm:53964-53967) and
-     * remains one frame early; it was left outside the 2026-10-15 custom-zone phase change.
-     */
+    /** Immediate write, used only for load-time setup before the first displayed frame. */
     private void applyPatternsToLevel(Pattern[] sourcePatterns, int destTile) {
         if (sourcePatterns == null || sourcePatterns.length == 0) {
             return;
@@ -2438,8 +2529,8 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         int pachinkoBytes = pachinkoScratch != null ? pachinkoScratch.length : 0;
         java.nio.ByteBuffer buf = java.nio.ByteBuffer.allocate(
                 SCALAR_BLOB_BYTES + 4 + pachinkoBytes + publicationState.length);
-        buf.put((byte) (firstTreeApplied ? 1 : 0));
-        buf.putInt(lastHcz1WaterlineDelta);
+        buf.put((byte) 0); // retired slot: the AIZ2 first tree is queued on every pass below $1C0
+        buf.putInt((hcz1LastWaterline & 0xFFFF) << 16 | hcz1FixSide & 0xFFFF);
         buf.putInt(lastHcz2SmallBgLineValue);
         buf.putInt(lastHcz2Art2Value);
         buf.putInt(lastHcz2Art3Value);
@@ -2477,8 +2568,10 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         byte[] extra = snap.extra();
         if (extra != null && extra.length >= 45) {
             java.nio.ByteBuffer buf = java.nio.ByteBuffer.wrap(extra);
-            firstTreeApplied     = buf.get() != 0;
-            lastHcz1WaterlineDelta   = buf.getInt();
+            buf.get(); // retired AIZ2 first-tree slot
+            int hcz1Counters = buf.getInt();
+            hcz1LastWaterline = (short) (hcz1Counters >>> 16);
+            hcz1FixSide = (short) hcz1Counters;
             lastHcz2SmallBgLineValue = buf.getInt();
             lastHcz2Art2Value        = buf.getInt();
             lastHcz2Art3Value        = buf.getInt();

@@ -112833,3 +112833,43 @@ is identical (SHA-256 `7f2a202ef107b8c671150274aa8bc70f4b4ea05320ad322c653f8a104
 This is an unchanged inherited frontier, not a passing trace or whole-route
 qualification. Isolated fixtures now supply real terrain and reject absent,
 empty and zero-distance floor probes; slope and underwater gates are retained.
+
+### 2026-10-16 — AIZ2 tree maker on native slots: S3K chain segment 8 moves from 6111 to 6989
+
+`Obj_AIZ2MakeTree` (pinned skdisasm `044fa46`, sonic3k.asm:105553-105585) now walks `AIZMakeTreeScript` from ROM
+`$23C13C`: all 17 entries, one `AllocateObjectAfterCurrent` attempt per pass, the same entry
+retried after a failed allocation, deletion on the pass after the last tree, and the script's
+priority word on each tree. The engine used to keep 15 entries, take the lowest free slot,
+loop within a pass, and advance past a failed allocation. Tree work order: battleship
+propellers and exit (`a28c5ab47`), then this maker change on top.
+
+Commands (round-2 AIZ tree `t3-3b77f2e1`, `a28c5ab47` plus the uncommitted maker change; Java
+25, surfaceless EGL, three absolute ROM paths): canonical `python3 tools/testing/maven_queue.py
+-Dmse=off -Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+"-Dtest=TestS3kAizTraceReplay#replayMatchesTrace,TestS3kSonicTailsHczSegmentTraceReplay#replayMatchesTrace,TestS3kSonicTailsCompleteEmeraldRunPrefix,TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds" test`
+with the comparison-only slot probe; alternate `-Ptrace-segments
+"-Dtest=TestS3kAizZoneSliceTraceReplay#replayMatchesTrace"`.
+
+| Check | `a28c5ab47` | maker change |
+|---|---|---|
+| Canonical, Maven finished | 19:55:21 | 20:57:58 (5 run / 1 F) |
+| Chain segment 8 (`aiz_5`) | 1692 (1613 physics + 79 animation), first 6111 `sidekick_x_speed` | 35 (35 + 0), first 6989 `camera_y` +2 (Knuckles cutscene), first non-camera 7126 (HCZ destination row, native camera `$01E0`) |
+| Chain segment 11 | 81981, first 1768 `y` | 81981, first 1768 `y` |
+| Walk stop | BK2 68801, load generation 9 | same |
+| Segments 0/2/4/6/9; AIZ, HCZ segment, prefixes | 0; pass | 0; pass |
+| Alternate (`aiz_completerun`) | 19:57:45: 60 (25 + 35), first 25589 `player_animation_id` 13/05 | 20:59:22: 9 (9 + 0), first 25038 `queue.s3k_kos_direct.busy` |
+| Segment 8 native SST occupancy sets, rows 4001-4096 | 0 of 6 samples equal | 6 of 6 equal |
+
+The alternate's new first error is one frame early, not a maker defect. At 25038
+`Obj_EggCapsule` allocates `Obj_LevelResults` with `AllocateObject` (sub_86984, sonic3k.asm:182053-182055). Native puts it
+in slot 8, below the capsule's slot 10, so it first runs, and queues its Kos art, at 25039.
+The engine capsule now sits in slot 7. Results take slot 8, run the same pass and queue at
+25038. A matched baseline probe (`a28c5ab47` source, 21:16:43, 60 errors, first 25589
+reproduced) had the capsule in slot 12 and the boss in 11, so it matched by accident. The
+engine end-arena layout differs from native in both trees. Native: slot 4 `$65C04`, boss 5,
+drawbridge 6, StillSprite 7, `$67D42` (Robotnik head area) 8, capsule 10. Engine with the
+change: boss 5, StillSprite 6, capsule 7, drawbridge 10. The owner is that layout,
+inherited. Tree slots match native at every sampled row. Engine tree screen X equals native
+`x_pos` - 128 to row 22816 and is 3 px right from 22837 (the inherited Events_fg_1 model).
+Pairs 16/17 and 20/22 are swapped because the log-bridge child `$2AEB4` that holds slots 16
+and 20 natively at the allocating rows is absent (inherited).

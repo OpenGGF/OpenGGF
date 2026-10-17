@@ -85,7 +85,7 @@ for exact execution and remaining blockers.
 | EVENT: autoscroll | `Special_events_routine $14` (`loc_59E46`), seven stages; thresholds X `$410`, Y <= `$330`, X `$650`, Y <= `$2F0`, X `$910`, Y >= `$320`, X `$BBF` with P1 X >= `$C50`; `sub_59F82` push at `Camera_X + $10`, kill on `Status_Push`, right cap `Camera_X + $120` | native + wide/donor | `TestLrzBossAutoscroll`, `TestS3kLrzBossCameraHeadless` | implemented | focused pass, 2026-09-22; 1635 native moving dispatches match arithmetic | Preserve 32px right margin at wide widths; flash graph implemented; ordinary native320 Sonic+Tails cold chain now completes; other cold products remain open |
 | OBJECT: `$9E` autoscroll controller, `$AD` platforms (7), `$6E` lava blocks (6), `$8B` sprite masks (2) | `Obj_LRZ3Autoscroll`, `Obj_LRZ3Platform`, `Obj_InvisibleLavaBlock`, `Obj_SpriteMask` | native | `TestS3kLrzPlacementCensus`, `TestSonic3kInvisibleHurtBlockHObjectInstance` | `$6E` and `$AD` implemented; `$8B` reads ROM mapping frame and enables SAT masking | platform graph/rewind and 900-frame checkpoint capture, 2026-09-22 | `$9E` and boss-driven stream implemented; allocation failure, reused-slot reads and graph replay covered by `TestLrzAutoscrollGraphHeadless` and `TestLrzEndBossEncounterHeadless`; native320 Sonic+Tails cold route completes; broader products remain open |
 | OBJECT: `$0F` collapsing bridges (8) use `Map_HPZCollapsingBridge` | `Obj_CollapsingBridge` picks the HPZ mappings for `Current_zone $16` by ROM design | native | — | implemented (shared switch already matches) | classification pass | Art under it unverified: open question, slice 9 |
-| BOSS: end boss and lava surface | `Obj_LRZEndBoss` `collision_property $E` (14 hits), `off_79812` six routines; `Obj_59FC4` `SolidObjectTopSloped2`, push `Events_bg+$14`; shared `HScroll_table+$110` table | native | `TestLrzBossLavaSurface`, `TestS3kLrzBossCameraHeadless` | lava surface and14-hit boss/mine graph implemented | `TestLrzEndBossEncounterHeadless`:25 positioned width/donor/roster completions with peak/defeat/capsule/results replay passed in September22 campaign | Native320 Sonic+Tails cold carry now completes; other route products and native capsule slot/pose/timing remain open |
+| BOSS: end boss and lava surface | `Obj_LRZEndBoss` `collision_property $E` (14 hits), `off_79812` six routines; `Obj_59FC4` `SolidObjectTopSloped2`, push `Events_bg+$14`; shared `HScroll_table+$110` table | native | `TestLrzBossLavaSurface`, `TestS3kLrzBossCameraHeadless` | lava surface and14-hit boss/mine graph implemented | `TestLrzEndBossEncounterHeadless`:25 positioned width/donor/roster completions with peak/defeat/capsule/results replay passed in September22 campaign | Native320 Sonic+Tails cold carry now completes; native320 solo Sonic completes cold with the placed fire shield ([2026-10-16](#solo-sonic-cold-fight-2026-10-16)); other route products and native capsule slot/pose/timing remain open |
 | LOAD: defeat -> capsule -> `$1601` handoff | `loc_79998`/`loc_79A30`, `mus_LRZ2` fade, `$EC0` gradual, `StartNewLevel $2D` | five widths and five supported donor/roster cases | `TestLrzEndBossEncounterHeadless#realMineFightCapsuleAndResultsPublishTheHiddenPalaceTransition` | implemented |25 positioned completions and declared-shield fresh route reach HPZ | Native320 Sonic+Tails cold carry now completes; lifecycle/route breadth and native capsule slot/pose remain open |
 | ORACLE: strict segment replay | `TestS3kSonicTailsHpz22SegmentTraceReplay` (LRZ3 autoscroll), `TestS3kSonicTailsHpz222SegmentTraceReplay` (boss -> `$1601`), Tails equivalents | `-Ptrace-segments` | — | — | see [trace frontier log](../../../status/trace-frontier-log.md) | Slice 11 |
 
@@ -566,3 +566,42 @@ and after old 50527 (the second window's start in the original movie).
 queued selector, S3K ROM, 0 skips) no longer dies; it stops at the first rewind
 window that diverges, input 42011 (old 42000), `touchResponseOverlap.sidekickEntries[0].paritySwapped`
 — the same rewind-snapshot row as the 320 sibling's 47471, owned by the rewind lane.
+
+## Solo Sonic cold fight (2026-10-16)
+
+Cold3's solo Sonic attempt ([SSZ1 matrix](s3k-ssz-act1.md#cold-lrzhpzssz1-solo-sonic-campaign-first-attempt-stopped-2026-10-15),
+2026-10-15) stopped in `Obj_LRZEndBoss`'s shot phase after three searches lost all 77
+rings. Round 2 first tested the engine-bug hypothesis (kill condition: a concrete
+ROM-vs-engine difference with a red-first test) and rejected it:
+
+- Routine-by-routine reading of `Obj_LRZEndBoss` (`sonic3k.asm` 161568–162590) against
+  `LrzEndBossObjectInstance`, `LrzEndBossChild`, `LrzEndBossPlatformStream`,
+  `LrzBossPlatformObjectInstance`, `LrzBossActState` and `LrzBossLavaSurfaceObjectInstance`:
+  routines 0–`$A` and their `Obj_Wait` callbacks (`loc_798C6`, `loc_798EA`, `loc_798FA`,
+  `loc_79942`, `loc_7995E`), `sub_79F58` (flash, `loc_79F9A` defeat), the mines
+  (`loc_79AAE`/`79AC4`/`79B22`/`79B4A`/`79B54`, `loc_79EC4`'s signed half-open
+  `Check_InTheirRange` ±`$30`), `sub_79F14` drift, `sub_79F30` lava follow (boss
+  `angle -$12`), the platforms (`loc_79DEA`, `sub_79FFE`, `sub_7A064`), the stream
+  (`loc_79A54`/`79A70`) and `Obj_59FC4`'s table rebuild, amplitude and P1-only fire-shield
+  exemption all match. The ROM has no player targeting: each mine moves at its apex to
+  `$9E0+$40` (`+$140` when flipped) and drifts on the lava; boss (`$B8`) and mines (`$9A`) are
+  hurt-type, so only the mines damage the boss.
+- Execution evidence (comparison-only aux `object_appeared` code pointers, printed by
+  `tools/traces/aux_code_pointer_timeline.py`): the Tails-alone fixture
+  `runs/s3k-tails-full-chain-all-emeralds/hpz22` and the pair fixture
+  `runs/s3k-sonic-tails-complete-emeralds/hpz22_2` take the 14 hits at the same offsets from
+  `loc_797FA`: +409/+507/+594, +1363/+1461/+1548, +2317/+2415/+2502, +3272/+3370/+3457,
+  +4226/+4324, defeat (`loc_79988`) at +4325; the stream object is re-created every 954–955
+  frames. A temporary engine probe on the committed pair and Tails movies and the cold3 solo
+  partial gives the same offsets (pair defeat 51626 = 47301 + 4325, Tails 61118 = 56793 + 4325).
+
+The solo cause was the shield. The pair's Sonic breaks the placed fire-shield monitor
+(`LRZ3_Sprites` `Obj_Monitor` subtype 5 at `($AE8,$481)`) at pair input ≈46416 and keeps FIRE
+through the fight; `loc_5A0AC` skips `sub_24280` for Player 1 with `Status_FireShield`, and the
+pair's path touches the sloped lava (first at activation + 160, on the entry platform's left
+edge). Cold3's solo route crossed above the monitor at input 23951 without breaking it, so its
+copies of the pair's path were hurt by the lava at the first touch. With the monitor broken,
+solo Sonic follows the pair's P1 pads aligned on activation through all 14 hits without a
+hurt; no engine change was made. Movie, boundaries and authoring:
+[SSZ1 matrix](s3k-ssz-act1.md#cold-lrzhpzssz1dez1-solo-sonic-campaign-2026-10-16),
+`TestS3kLrzHpzSszColdCampaign#sonicColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory`.

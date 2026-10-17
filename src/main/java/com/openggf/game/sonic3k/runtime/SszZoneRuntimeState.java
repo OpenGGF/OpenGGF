@@ -34,7 +34,7 @@ import java.util.Objects;
  * {@code SSZ2_ScreenInit} has run for this load. It lives here rather than on the event
  * instance so a rewind restore cannot replay the init.
  */
-public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
+public final class SszZoneRuntimeState implements S3kZoneRuntimeState, com.openggf.game.TitleEntryFadeSource {
     /** {@code Events_bg} is sixteen bytes; {@code LevelSetup} clears all of them. */
     public static final int EVENTS_BG_BYTES = 0x10;
 
@@ -92,6 +92,10 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
     private final com.openggf.game.sonic3k.ending.S3kEndingState ending =
             new com.openggf.game.sonic3k.ending.S3kEndingState();
     public com.openggf.game.sonic3k.ending.S3kEndingState ending() { return ending; }
+    @Override public boolean titleEntryFadePending() { return ending.titleEntryFadePending(); }
+    @Override public boolean stepTitleEntryFade(com.openggf.level.objects.ObjectServices services) {
+        return com.openggf.game.sonic3k.ending.S3kEndingCoordinator.stepTitleEntryFade(ending, services);
+    }
 
     private final SszLaunchState launch = new SszLaunchState();
     public SszLaunchState launch() { return launch; }

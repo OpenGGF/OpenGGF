@@ -12,11 +12,12 @@ public final class EngineRenderDispatcher {
      * stage is still inside the ROM's entry fade-to-white
      * ({@code SpecialStageProvider#isEntryFadeToWhiteActive}) the level's last
      * frame is what the display shows, so the level's clear colour applies.
+     * The title's entry fade keeps the level's last frame in the same way.
      */
-    public void applyClearColor(GameMode mode, boolean specialStageShowsLevel,
+    public void applyClearColor(GameMode mode, boolean entryShowsLevel,
                                 ClearActions actions) {
         Objects.requireNonNull(actions, "actions");
-        if (mode == GameMode.SPECIAL_STAGE && specialStageShowsLevel) {
+        if ((mode == GameMode.SPECIAL_STAGE || mode == GameMode.TITLE_SCREEN) && entryShowsLevel) {
             actions.level();
             return;
         }
@@ -48,10 +49,10 @@ public final class EngineRenderDispatcher {
      * {@link #applyClearColor(GameMode, boolean, ClearActions)}. The frozen
      * level is drawn through the ordinary level path, debug views included.
      */
-    public void draw(GameMode mode, boolean specialStageShowsLevel, boolean debugViewEnabled,
+    public void draw(GameMode mode, boolean entryShowsLevel, boolean debugViewEnabled,
                      DebugState debugState, DrawActions actions) {
         Objects.requireNonNull(actions, "actions");
-        if (mode == GameMode.SPECIAL_STAGE && specialStageShowsLevel) {
+        if ((mode == GameMode.SPECIAL_STAGE || mode == GameMode.TITLE_SCREEN) && entryShowsLevel) {
             drawLevel(debugViewEnabled, debugState, actions);
             return;
         }

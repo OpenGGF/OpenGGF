@@ -250,6 +250,14 @@ public class Sonic3kSuperStateController extends SuperStateController {
         paletteState = 0;
     }
 
+    /**
+     * {@code clr.b (Super_palette_status).w} in the post-credits {@code Obj_5EF68}
+     * (044fa46 sonic3k.asm:125520): the cycle stops and the form flag is left as it was.
+     */
+    public void clearEndingPaletteStatus() {
+        paletteState = 0;
+    }
+
     /** Native rescue {@code sub_5FC8E}: active Super palette/mappings, no transformation. */
     public void initializeEndingSuperSonic() {
         initializeEndingForm(S3kFormTier.SUPER);

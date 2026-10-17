@@ -58,7 +58,9 @@ public final class S3kEndingPalette {
         }
     }
     /** sub_85EB4 (sonic3k.asm:180701): each component of the line rises one level, up to $E. */
-    public static void towardsWhite(ObjectServices services, int line) {
+    public static void towardsWhite(ObjectServices services, int line) { towardsWhite(services, line, 0); }
+    /** As {@link #towardsWhite(ObjectServices, int)} from {@code first}: loc_5FF62's $30/$3A select the colours. */
+    public static void towardsWhite(ObjectServices services, int line, int first) {
         byte[] bytes = new byte[32];
         for (int color = 0; color < 16; color++) {
             int current = word(services, line, color);
@@ -66,17 +68,20 @@ public final class S3kEndingPalette {
             if (blue < 0xE) blue += 2;
             if (green < 0xE0) green += 0x20;
             if (red < 0xE) red += 2;
-            int next = blue << 8 | green | red;
+            int next = color < first ? current : blue << 8 | green | red;
             bytes[color * 2] = (byte) (next >>> 8); bytes[color * 2 + 1] = (byte) next;
         }
         writeLine(services, line, bytes);
     }
     /** sub_85F2A (sonic3k.asm:180757): components above Target_palette fall one level. */
-    public static void downTowardsActualTarget(ObjectServices services, int line) {
+    public static void downTowardsActualTarget(ObjectServices services, int line) { downTowardsActualTarget(services, line, 0); }
+    /** As {@link #downTowardsActualTarget(ObjectServices, int)} from {@code first} ($30/$32 offsets, $3A count). */
+    public static void downTowardsActualTarget(ObjectServices services, int line, int first) {
         byte[] bytes = services.paletteOwnershipRegistryOrNull().targetSegaData(line, 0, 16);
         for (int color = 0; color < 16; color++) {
             int target = (bytes[color * 2] & 255) << 8 | (bytes[color * 2 + 1] & 255);
-            int next = fromWhiteWord(word(services, line, color), target);
+            int current = word(services, line, color);
+            int next = color < first ? current : fromWhiteWord(current, target);
             bytes[color * 2] = (byte) (next >>> 8); bytes[color * 2 + 1] = (byte) next;
         }
         writeLine(services, line, bytes);

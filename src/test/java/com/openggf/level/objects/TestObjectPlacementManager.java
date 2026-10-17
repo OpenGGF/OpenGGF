@@ -64,6 +64,30 @@ public class TestObjectPlacementManager {
     }
 
     @Test
+    void backwardMoveToTheFirstChunkLoadsNothingBehindTheCursor() {
+        // S3K loc_1B864 and S2 ObjectsManager_GoingBackward subtract $80 from the new coarse X
+        // and branch on the borrow (sonic3k.asm:37604-37605, s2.asm:33051-33052), so a backward
+        // pass that lands in the first chunk walks the back cursor for nothing. The SSZ2
+        // Knuckles credits jump from $1CF to 0 therefore never reloads the HPZ teleporter pad
+        // at X $A0 that Sprite_OnScreen_Test deleted while the camera stood at $240.
+        ObjectSpawn pad = new ObjectSpawn(0x00A0, 0x04B0, 0x79, 0, 0, false, 0);
+        ObjectSpawn later = new ObjectSpawn(0x0400, 0x0100, 0x01, 0, 0, false, 0);
+        for (int landing : new int[] {0x0000, 0x007F, 0x0080}) {
+            ObjectPlacementController manager = new ObjectPlacementController(List.of(pad, later), () -> 320);
+            manager.reset(0x0100);
+            assertTrue(manager.getActiveSpawns().contains(pad), "pad loads with the level");
+            manager.update(0x0240);
+            assertFalse(manager.getActiveSpawns().contains(pad), "the back cursor passes the pad at $240");
+            manager.update(0x01CF);
+            assertFalse(manager.getActiveSpawns().contains(pad), "coarse $180 - $80 = $100 is past the pad");
+            manager.update(landing);
+            boolean borrows = (landing & 0xFF80) - 0x80 < 0;
+            assertEquals(!borrows, manager.getActiveSpawns().contains(pad),
+                    "backward pass to $" + Integer.toHexString(landing) + (borrows ? " borrows" : " loads x > 0"));
+        }
+    }
+
+    @Test
     public void testWindowingAndRememberedObjects() {
         ObjectSpawn spawnA = new ObjectSpawn(0, 0, 0x01, 0, 0, false, 0);
         // ROM parity: only respawn-tracked layout entries own a respawn-table

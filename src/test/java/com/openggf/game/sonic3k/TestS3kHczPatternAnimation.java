@@ -213,12 +213,14 @@ public class TestS3kHczPatternAnimation {
         Camera camera = fixture.camera();
         camera.setFrozen(true);
 
+        // AnimateTiles_HCZ1 composes only within +-$60 of the waterline equilibrium;
+        // beyond it nothing is queued (sonic3k.asm:54001-54002, 54042-54044).
         camera.setX((short) 0);
-        camera.setY((short) 0);
+        camera.setY((short) 0x5A5);
         advanceAnimationFrame();
         byte[] aboveWaterline = snapshotTiles(0x2DC, 0x2E8, 0x2F4, 0x300);
 
-        camera.setY((short) 0x700);
+        camera.setY((short) 0x67A);
         advanceAnimationFrame();
         byte[] belowWaterline = snapshotTiles(0x2DC, 0x2E8, 0x2F4, 0x300);
 

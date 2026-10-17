@@ -440,12 +440,16 @@ a fade with a completion callback is pending (`LiveRewindManager` `rewindBlocked
 `PlcFrameLifecycleCoordinator.beginNativeBlockingFade` refuses a second fade when a raw
 registry restore crosses one.
 
-Remaining snapshot-only inequalities (no P1/gameplay effect, outside the route tests' spots):
-the MHZ1 carry-in Tails is recreated by restores in its first ~100 frames and solid-contact
-headroom/plane-switcher snapshots keep direct references to the replaced instance; MHZ2's
-Knuckles-cutscene leaf particles recreate with a zero spawn record. Outside MHZ, unverified
-per-player identity collections without a policy: `CorkFloorObjectInstance.standingRiders`,
-`LbzMovingPlatformObjectInstance.standingPlayers`, `SinkingMudObjectInstance` maps.
+Snapshot-only inequalities found by these sweeps (no P1/gameplay effect) are resolved. The
+MHZ1 carry-in Tails was re-admitted on restore in `f07a25bf9`. The MHZ2 object that restored
+with a zero spawn record (sweep checkpoint 9674 of `mhz2-sonic-incoming-320`, spawn
+1155,2028 vs 0,0) was the Knuckles cutscene's player lift carrier, not a leaf particle: its
+`recreateForRewind` copied the restore probe's placeholder spawn; it now uses the captured
+spawn (`SpawnRewindRecreatable`). Outside MHZ, `LbzMovingPlatformObjectInstance.standingPlayers`
+and `SinkingMudObjectInstance`'s depth/standing maps are `CAPTURED` (red first in
+`TestS3kPlayerIdentityCollectionRewind`); `CorkFloorObjectInstance.standingRiders` is a
+per-update local. `TestMhzRewindFidelitySweep#identityWindowsRestoreSnapshotExactly` sweeps
+the MHZ1 opening (0-240) and the MHZ2 cutscene (9640-9760) snapshot-exactly.
 
 Validation (focused selectors via `maven_queue.py`, normal lane, S3K/S1/S2 ROMs): run `p6`
 (Maven EXIT 22:33:17Z) 139 tests, 0 failures/errors/skips, including `TestS3kMhzAuthoredRoute`,

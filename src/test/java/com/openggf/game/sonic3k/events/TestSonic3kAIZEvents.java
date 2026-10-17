@@ -1506,13 +1506,50 @@ public class TestSonic3kAIZEvents {
     }
 
     @Test
+    public void aiz2ShipExitHoldsEventsRoutineAtEndRefreshForThreeScreenEventPasses() throws Exception {
+        Camera camera = GameServices.camera();
+        Sonic3kAIZEvents.resetGlobalState();
+        var events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
+        events.init(1);
+        camera.setX((short) 0x4300);
+        camera.setY((short) 0x0200);
+        events.setAiz2ResizeRoutine(0x10);
+        setPrivateBoolean(events, "battleshipAutoScrollActive", true);
+        setPrivateBoolean(events, "battleshipSpawned", true);
+
+        // Obj_AIZBattleshipMain sets Events_fg_4 during Process_Sprites.
+        events.onBattleshipComplete();
+        assertTrue(events.isEventsFg4Raw(), "the leaving ship sets Events_fg_4 for AIZ2SE_ShipDraw");
+        assertFalse(events.isAiz2ShipEndRefreshActive(),
+                "Events_routine_fg only reaches $C in that frame's later ScreenEvents");
+
+        updateWithHardware(events, 1, 0);
+        assertFalse(events.isEventsFg4Raw(), "loc_50008 clears Events_fg_4");
+        assertTrue(events.isAiz2ShipEndRefreshActive(), "loc_50008 advances Events_routine_fg to $C");
+        assertEquals(0x4440, events.getBattleshipWrapX(),
+                "the $46C0 wrap is written only when EndRefresh's redraw completes");
+
+        updateWithHardware(events, 1, 1);
+        assertTrue(events.isAiz2ShipEndRefreshActive(),
+                "Draw_PlaneVertBottomUp leaves the 4-row redraw unfinished after two passes");
+        assertEquals(0x4440, events.getBattleshipWrapX());
+
+        updateWithHardware(events, 1, 2);
+        assertFalse(events.isAiz2ShipEndRefreshActive(),
+                "the third pass drives Draw_delayed_rowcount negative and leaves routine $C");
+        assertEquals(0x46C0, events.getBattleshipWrapX(),
+                "AIZ2SE_EndRefresh writes Events_bg+$02 = $46C0 on completion");
+    }
+
+    @Test
     public void aiz2PostBombingShipLoopUsesRomRepeatOffset() throws Exception {
         Camera camera = GameServices.camera();
         Sonic3kAIZEvents.resetGlobalState();
         var events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
         events.init(1);
         setPrivateBoolean(events, "battleshipAutoScrollActive", true);
-        events.onBattleshipComplete();
+        // AIZ2SE_EndRefresh has completed and moved the ship-loop wrap to $46C0.
+        setPrivateInt(events, "battleshipWrapX", 0x46C0);
 
         AbstractPlayableSprite sonic = fixture.sprite();
         camera.setFocusedSprite(sonic);
@@ -1554,14 +1591,25 @@ public class TestSonic3kAIZEvents {
     }
 
     @Test
-    public void aiz2TreeSpawnerStopsBeforeRomEntriesHiddenByForestPriorityMask() throws Exception {
-        Field field = AizBgTreeSpawnerInstance.class.getDeclaredField("TREE_SCRIPT");
-        field.setAccessible(true);
-        int[][] script = (int[][]) field.get(null);
+    public void aiz2TreeSpawnerReadsAizMakeTreeScriptFromTheRom() throws Exception {
+        // AIZMakeTreeScript, S3 half (Lockon S3/LockOn Pointers.asm:151, ds.b $46),
+        // at locked-on ROM $23C13C: (threshold, priority word) pairs then $FFFF.
+        Field address = java.util.Arrays.stream(AizBgTreeSpawnerInstance.class.getDeclaredFields())
+                .filter(f -> f.getName().equals("MAKE_TREE_SCRIPT_ADDR")).findFirst().orElse(null);
+        assertTrue(address != null, "the maker must walk the ROM's own script, not a copied table");
+        address.setAccessible(true);
+        assertEquals(0x23C13C, address.getInt(null), "the maker walks the ROM's own script");
+        byte[] rom = GameServices.rom().getRom().readBytes(0x23C13C, 0x46);
+        int entries = 0;
+        while ((rom[entries * 4] & 0x80) == 0) {
+            entries++;
+        }
+        assertEquals(17, entries, "AIZMakeTreeScript holds 17 entries before its terminator");
+        assertEquals(0xFFFF, word(rom, entries * 4), "the terminator word is $FFFF");
+    }
 
-        assertEquals(15, script.length,
-                "Engine-visible AIZ2 tree script should omit the two ROM entries hidden past the forest mask");
-        assertEquals(0x4CA, script[14][0], "last visible tree threshold should match AIZMakeTreeScript entry 15");
+    private static int word(byte[] bytes, int offset) {
+        return ((bytes[offset] & 0xFF) << 8) | (bytes[offset + 1] & 0xFF);
     }
 
     @Test

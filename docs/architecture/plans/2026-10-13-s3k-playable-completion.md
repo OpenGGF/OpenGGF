@@ -1124,6 +1124,32 @@ and locked-on S3K paths as applicable. No runtime source changed in this slice;
 combined follow-up validation and integration remain pending. Consumed local
 redirects are removed after this summary.
 
+**Native 50 Hz follow-up (ending-pal lane, 2026-10-16).** This adds one declared
+native PAL product: Sonic/+2, D01 at 320, from the scene through credits and terminal to
+`Title_Screen`.
+
+Native is GPGX with only `Region=Europe` changed; native-reference setup is otherwise as
+before. The engine runs at `REGION=PAL`, 50 Hz, with LIMITED + RAW_RGB output. Both
+queued runs started from the lane worktree:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Dexec.executable=python3 '-Dexec.args=<lane>/run_native_pal.py' exec:exec -B
+python3 tools/testing/maven_queue.py -Dmse=off -Dexec.executable=python3 '-Dexec.args=<lane>/run_engine_pal.py <head> %classpath' exec:exec -B
+```
+
+Native finished 20:24:07 UTC (1:10 Maven) and the engine on `e94f6c4e7` finished
+20:30:58 UTC (10.9 s).
+
+Results:
+- Raw RGB matches at polls 1–3071.
+- Level frame, V-int and RNG are equal for 13,888 frames.
+- Credits durations are equal (7,415 frames).
+- First divergence: LF 3778, where native PAL finishes the AIZ1 Kos modules four
+  frames earlier. That gap belongs to the Kos CPU-budget model.
+
+The other eight PAL products remain open. Details are in the
+[ending matrix](../validation/levels/s3k-ending.md#native-pal-50-hz-sonic2-product-ending-pal-lane-2026-10-16).
+
 ### Ordinary S2 RAM and matching-controller binding qualification
 
 The inherited ordinary S2 controller returned a null RAM snapshot. On unchanged
@@ -1836,7 +1862,8 @@ The ending matrix's stale blanket pressure statement is corrected to existing
 17 real-child cases (19591 plus two unchanged43234 pilots) and separate11-core7093,
 with impossible fixed8/48 and Knuckles-only victims excluded by native owners.
 Actual loc5DB76/5DD6A full-table dispatch and downstream scene composition are
-separate remaining qualification. Consumed root redirects are deleted after this
+separate remaining qualification (director-owned dispatch and its progress/Player_mode 3
+gates are now covered headlessly; see the ending matrix's 2026-10-17 continuation section). Consumed root redirects are deleted after this
 account; combined smoke/guards and integrated delivery remain pending.
 
 
@@ -2203,3 +2230,42 @@ palette, a missing bonus HUD lives row, Gumball player priority in LEVEL-mode
 captures and an early Slot goal fade), assigned to a presentation-parity lane.
 SSZ arrival spots at 118/119/330/680/1341-1343/1430 match native exactly after
 `f950a720c`; 0 and 120 are attributed declared-inlet limits.
+
+## Exact Kos observer native publication and pin (2026-10-16)
+
+TraceChaser observer `de43cf78c25478b5d23d69cf7bd541faa9923745` (read-only
+schema-2 occupied-head Kos FIFO service observer) is integrated into TraceChaser
+main as `33c05c1623c2e7c2ebb7664e111a4ed3c0505e9d`, a fast-forward from the
+previous pin `4fdf73880f93a3172d23bf9e157b15de3c78fc32`; the merge tree is
+byte-identical to the qualified observer commit. It is published on the GitHub
+origin named by `.gitmodules`; the read-only Gitea mirror rejected the push and
+is not a pin prerequisite. Source-only CI run 38949410410 on that exact SHA
+passed (Python 3.12, 185 source-contract tests with no failures, errors or
+skips; 5 Lua behaviour tests; repository, history, shell-syntax, v5 conformance
+and documentation policy). Its optional native-integration job was skipped.
+Native evidence keeps its recorded scope: ExactKosMeasurement 11/0/0,
+HardwareTiming 70/0/0 and the actual v2 run's 30/30 agreement with an
+independent head oracle. The parent gitlink now records that SHA. This is a
+pin and source-contract qualification, not a full native gate or engine suite.
+
+## Native CPU-ledger diagnostics pin (2026-10-17)
+
+The parent gitlink moves to TraceChaser main
+`4ae64e075d2e233539f5637fd16bd5ae7aa7d76e`, a fast-forward from
+`33c05c1623c2e7c2ebb7664e111a4ed3c0505e9d`. It adds:
+
+- the observation-only GPGX 68000 stall counters (stall ABI v1, published at
+  `0c0cef7`) and the diagnostic final-PCM window runner;
+- the callback-free 68000 CPU ledger (stall ABI v2, `393f0be`, hardened in
+  `5afbc3d`);
+- exact Kos service samples beside load-time v1 (`a081a02`);
+- the reviewed r2 documentation (`0801da8`). It explicitly limits the claims:
+  FIFO, rewind, lockup, STOPPED and H-int paths are not harness-tested; input
+  identity is separate from external conservation; SMS is outside the
+  contract.
+
+Source-only CI run 38991106862 on that SHA succeeded. Its optional
+native-integration job was skipped. The retained native proof is 12/12 within
+the documented unsupported-shape limits. This is a diagnostic pin: it is not
+full native timing or hardware closure, and supplies no 6+46 parity credit or
+engine gameplay input.

@@ -501,6 +501,16 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         return super.getWindowStart(cameraX);
     }
 
+    /** The backward load edge before the level-boundary clamp of {@link #getWindowStart(int)}. */
+    private int rawLeftLoadEdge(int cameraX) {
+        if (windowingStrategy.overridesLoadWindow()) {
+            return windowingStrategy instanceof ViewportAwareObjectWindowingStrategy viewportAware
+                    ? viewportAware.loadWindowLeftTrimEdge(cameraX, viewportWidth())
+                    : windowingStrategy.loadWindowLeftTrimEdge(cameraX);
+        }
+        return (cameraX & 0xFF80) - getUnloadBehind();
+    }
+
     private int viewportWidth() {
         return Math.max(320, viewportWidthSupplier.getAsInt());
     }
@@ -1220,6 +1230,12 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     }
 
     private void spawnBackwardNonCounter(int cameraX) {
+        // S3K loc_1B864 and S2 ObjectsManager_GoingBackward subtract $80 from the new coarse X
+        // and skip the back cursor on the borrow (sonic3k.asm:37604-37605, s2.asm:33051-33052),
+        // so a backward pass into the first chunk loads nothing, however far it jumped.
+        if (rawLeftLoadEdge(cameraX) < 0) {
+            return;
+        }
         int windowStart = getWindowStart(cameraX);
         while (leftCursorIndex > 0) {
             ObjectSpawn previous = spawns.get(leftCursorIndex - 1);

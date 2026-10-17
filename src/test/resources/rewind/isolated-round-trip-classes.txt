@@ -313,6 +313,7 @@ com.openggf.game.sonic3k.objects.Aiz2EndEggCapsuleInstance$Aiz2ResultsScreenObje
 com.openggf.game.sonic3k.objects.Aiz2EndEggCapsuleInstance$HighPriorityAnimal
 com.openggf.game.sonic3k.objects.AizAct2CameraResizeController
 com.openggf.game.sonic3k.objects.AizBattleshipInstance
+com.openggf.game.sonic3k.objects.AizBattleshipPropellerInstance
 com.openggf.game.sonic3k.objects.AizBgTreeInstance
 com.openggf.game.sonic3k.objects.AizBgTreeSpawnerInstance
 com.openggf.game.sonic3k.objects.AizBombExplosionInstance

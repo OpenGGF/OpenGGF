@@ -16,6 +16,7 @@ The initial native/default binding covers all three solo mains at 320; the finit
 | ENTRY / CAMERA: normal character start and current focus | `Sonic_Start_Locations` / `Knux_Start_Locations`; [`TestS3kAiz2EntryMatrix#normalEntryAppliesTheProductionPresetAndEveryDeclaredParticipantThenReplaysTwice`](../../../../src/test/java/com/openggf/tests/TestS3kAiz2EntryMatrix.java) | 140 supported products: actual host-ROM start table, all resolved production widths, typed admitted roster/ordered CPU leaders/current native P2 and camera focus, decoded current mappings and unchanged P1 lives. This is a fresh entry floor, not every intro/alternate-entry mechanism. |
 | REWIND: normal entry world | Complete registered-world capture/restore and 45 ordinary Right-input frames twice; all title-card pattern bytes compared by content | Qualified for all 140 finite products. No P1 death or hidden life loss is permitted. This does not certify later event/interaction/child lifetimes or cross-load history policy. |
 | OBJECT / EVENT / CAMERA: battleship loop and bomb child | `TestAiz2ShipLoopRewindRoundTrip#battleshipSurvivesRewindRestoreAndCameraLockIsNotOrphaned`, `TestAiz2TransientChildRewind#shipBombSurvivesRewindRestoreWithMidFlightState` | Constructed ship/child plus declared camera/autoscroll state; active graph checks do not prove natural placement admission. Listed bindings were setup-inspected, not independently rerun as a whole in this slice. |
+| OBJECT / SLOT: battleship propellers, ship exit and tree maker | `TestAiz2BattleshipSlotOwnership`, `TestAizBattleshipPropellerSlots` (a28c5ab47); `TestAiz2MakeTreeScriptOwnership`, `TestSonic3kAIZEvents#aiz2TreeSpawnerReadsAizMakeTreeScriptFromTheRom` | Propellers and ship exit (a28c5ab47) match native SST occupancy on `aiz_5` sample rows 2377-2830 and 3861-3951 (comparison-only slot probe); their old-source witnesses failed 5/5 on f96d31379. The tree maker reads AIZMakeTreeScript from ROM $23C13C: all 17 entries, one after-current attempt per pass, retry on failed allocation, deletion on the following pass, script priority. Its old-source witnesses failed 8 of 9 by assertion on a28c5ab47 (the rewind case is completeness, not a witness), and a same-pass-delete mutation failed the lifetime witness. Native occupancy on `aiz_5` rows 4001-4096 now equals the engine on every sample (was none), and the boss sits in slot 7 at 4109; on `aiz_completerun` the tree slots equal native at every sampled row 22768-22860 and tree screen X equals native `x_pos` - 128 to row 22816. Chain segment 8 went from 1692 errors (first 6111) to 35 (first 6989 `camera_y` +2 in the Knuckles cutscene); see the trace frontier log, 2026-10-16. LIMITED/RAW_RGB pictures against native (BK2 23700-23860) show the two formerly dropped trunks; whole frames still differ through the AnPal_AIZ2 cycle phase (engine one frame late, index two steps ahead; owner open) and player pose. Inherited gaps: the Translate_Camera2ObjX shake term for propellers and bombs (Y +-4 on shake rows); the small craft's bucket 2 against ROM priority $300; the tree X source is the engine smooth scroll, its Events_fg_1 model (3 px from `aiz_completerun` row 22837); the log-bridge child $2AEB4 (absent at 4109, which also swaps tree slots 16/17 and 20/22); bomb/explosion slot rows from 2861/3149/3215; the end-arena layout (native slot 4 $65C04, drawbridge 6, StillSprite 7, $67D42 at 8, capsule 10), which puts `Obj_LevelResults` after the engine capsule and queues its Kos art one frame early at `aiz_completerun` row 25038. Chain row 6111 now matches; 6989 is open. |
 | BOSS / LOAD: end-boss graph, splash and sequence | `TestS3kAizEndBossGraphRewind`, `TestAiz2BossEndSequenceObjects`, `TestAizEndBossInstance` | Component/late boss contracts; independent arena entry and all required character routes remain open. Listed bindings were setup-inspected, not independently rerun as a whole in this slice. |
 | OBJECT / CAMERA: forest ring and team bounds | `TestAiz2ForestRingCameraGeneration`, `TestS3kAiz2BigRingFormation`, `TestS3kAiz2BigRingCollision`, `TestS3kAiz2SidekickBoundsSync` | Local scene/bounds contracts; configuration and before/active/after placement breadth remain open. Listed bindings were setup-inspected, not independently rerun as a whole in this slice. |
 | LIFE / LOAD: physical post, actual death/restart and incoming/outgoing worlds | Native checkpoint/death/reload owners and the edges listed above | All 140 supported preset/donor/main/roster products are qualified by `TestS3kAiz2EntryMatrix#actualDeathReloadPreservesTheSupportedProductAndReplaysEachIncomingWorldTwice`: two actual deaths/reloads, exactly one life lost per restart, new world owners, outgoing live-history retirement, restored current roster/camera and two complete-world 45-frame restore/replay cycles after each released destination. Physical post activation and incoming/outgoing route edges remain separate obligations. |
@@ -56,3 +57,105 @@ This is the independently executed native 320/Sonic restart floor, not the remai
 After each title/fade/fresh-assembly release, the complete registered world is captured, advanced for 45 neutral logical ticks, restored immediately and replayed twice. Each forward tick checks P1 survival, unchanged lives and actual configured owners. Intrinsic intro control remains native-owned; this is not a forced unlock or a raw restore across the load. Physical pit traversal, physical post capture/respawn, completion edges and later mechanic lifetimes remain separate.
 
 One coherent focused invocation qualified all eight acts: command session54147 on runtime `e57236d519a861c9fbc43ba867230793dbd6fb0d` plus this commit's nine test-only deltas, 1120 tests / 0 failures / 0 errors / 0 skips (each act 140/0/0/0), actual terminal exit0 at 13:42:47 BST (12:42:47 UTC), Maven 3m05s. Exact selection: `TestS3kAiz2EntryMatrix`, `TestS3kHcz2EntryMatrix`, `TestS3kMgz1EntryMatrix`, `TestS3kMgz2EntryMatrix`, `TestS3kCnz1EntryMatrix`, `TestS3kCnz2EntryMatrix`, `TestS3kIcz1EntryMatrix`, `TestS3kIcz2EntryMatrix`, each restricted with `#actualDeathReloadPreservesTheSupportedProductAndReplaysEachIncomingWorldTwice` in the comma-separated `-Dtest` selector. Command prefix: `env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null python3 tools/testing/maven_queue.py --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl`; original absolute S1/S2/S3K ROM properties were supplied, followed by `test`. Entry rows were not rerun merely to repeat their unchanged evidence. This is finite lifecycle qualification, not complete act, native-pixel, strict-trace or arbitrary roster certification; combined smoke/integration/push remain lead-owned.
+
+## AnPal bank carry across the AIZ1 reload — 2026-10-16
+
+AnPal_AIZ1 and AnPal_AIZ2 share `Palette_cycle_counter0`, `Palette_cycle_counter1` and
+`Palette_cycle_counters` (sonic3k.constants.asm:580-596). Level's loc_60DE clears them
+(sonic3k.asm:7652), but the seamless reload in AIZ1BGE_Finish does not reach it. The
+engine used to rebuild the AIZ2 cycles with private counters starting at zero. On the
+reload row it also ticked the new AIZ2 cycler: engine observation `palobs1` at row 6300
+shows timer 5, counter0 8, counter2 6. The native `aiz_completerun` RAM instead carries
+counter1 4, counter0 `$1620` and counters+$02 `$2A` into AIZ2. Native row 6300 is still
+AnPal_AIZ1's call, 6301 is a lag frame, and the first AIZ2 call is 6302, where channel B
+starts. Channel A first runs at 6306 and reads entry 7. LevelLoop calls Animate_Palette
+(7923) before DeformBgLayer/ScreenEvents (7929-7930), so the reload iteration belongs
+to the outgoing act.
+
+The bank now lives at ROM width in `Sonic3kGlobalAnimationState`. The module owns that
+state, so it outlives the per-act animators. The fresh-Level step clears it, it rides
+the animator's rewind snapshot, and the AIZ cycles read and write it. At the start of
+a reload, the outgoing S3K animator runs that iteration's Animate_Palette if it has not
+yet run, and the incoming animator skips its AnPal call for that one iteration. A reload
+consumed at the frame top runs before the frame counter advances, so it is unchanged.
+
+`TestS3kAizAnPalBankCarry` derives every expectation from the ROM routines and tables
+and observes only the level palette:
+- AIZ1 history: runs 6 and 7 with their table entries, after the fresh-Level fade.
+- Seamless carry: no channel-A write until the inherited counter1 expires. Channel B
+  starts on the first AIZ2 call, and channel A then shows trickle entry 7 and water
+  entry 3.
+- A reload inside a LevelLoop iteration: that iteration runs AnPal_AIZ1, with no AIZ2
+  write.
+- A full load into AIZ2 clears the bank: entry 0 on the first call.
+- Two restore and forward-replay cycles over a carried window.
+
+Results:
+
+| Run (queued, focused, S3K ROM) | Source | Result |
+|---|---|---|
+| green3 | candidate | 4 run, 0 failed, 0 errors, 0 skipped (Maven 23:08:12+01:00) |
+| redold | `src/main` of `73d296f12` | 3 failed at the intended assertions: an immediate channel-A write at the first AIZ2 call or on the reload iteration, and the window phase. The full-load guard passed (Maven 23:11:28+01:00) |
+| redcarry | candidate with the reload hook disabled | 1 failed: the torch wrote on the reload iteration (Maven 23:18:45+01:00) |
+
+The first engine witness (LIMITED/RAW_RGB `TraceCaptureTool` clips at the bank-only
+commit `8d51c342a`) is in `spot-checks/aiz-palette-bank/`. The witness compares without
+normalisation at the native pixels of the unique trickle and torch colours. The engine's
+channel-A changes fell on native's rows, but the entry was a constant native + 4. The
+engine's AIZ1 counters+$02 was 18 at row 6297, where native has `$2A`.
+
+### AIZ1 boundaries behind the inherited phase — 2026-10-17
+
+Three AnPal_AIZ1 boundaries differed from the ROM:
+- The counters+$02 cycle used `Camera.isLevelStarted()` as its gate. The ROM tests
+  `Palette_cycle_counters+$00` (3217). Obj_AIZPlaneIntro sets it at Sonic's x `$13D0`
+  (loc_67712, 135755-135756), and Obj_CutsceneKnuckles clears it as Knuckles leaves
+  (loc_61F22, 128795-128796).
+- A fire-branch counters+$02 of `$30`/`$36` was re-wrapped to 0 before the read. The ROM
+  reads it (3219-3223), past the 48-byte table.
+- The fire/normal choice tested the current camera inside the call. The ROM uses
+  `AIZ1_palette_cycle_flag` as AIZ1_Resize (loc_1C46E, 38913-38917) left it in the
+  previous frame's DeformBgLayer (38343-38356). Level's own DeformBgLayer (7792) sets it
+  before the first call.
+
+The two writers now call `S3kPaletteCycleCounterWriter` on the animator. The byte lands
+after that frame's palette call, as Process_Sprites (7926) follows Animate_Palette
+(7923).
+
+| Run (queued, focused, S3K ROM) | Source | Result |
+|---|---|---|
+| g2green1: `TestS3kAiz1AnPalBoundaries`, `TestS3kAiz1AnPalGateWrites`, `TestS3kAizAnPalBankCarry` | candidate | 9 run, 0 failed, 0 errors, 0 skipped (Maven 2026-10-17T00:10:47+01:00) |
+| g2redold: `TestS3kAiz1AnPalBoundaries` | `src/main` of `8d51c342a` | 2 failed at the intended assertions: run 2 held while `Level_started_flag` was clear, and the carried `$30` read as entry 0 (00:15:59+01:00) |
+
+The second witness was captured at the same source and moments, in
+`spot-checks/aiz-palette-bank-v2/` (provenance.md). The tally counts rows where both
+sides resolve to a table-entry set; equal means the sets match.
+
+| Window | L3c4 | L3c8 | Torch L4c1 |
+|---|---|---|---|
+| Handoff 6294-6330, before (`8d51c342a`) | 4/5 | 0/2 | 0/5 |
+| Handoff 6294-6330, after | 14/15 | 6/6 | 0/5 |
+| AIZ2 22800-22880, before (rows 22800-22834) | 29/35 | 0/18 | 6/12 |
+| AIZ2 22800-22880, after | 81/81 | 42/42 | 10/27 |
+
+The one handoff miss is row 6316. There the fire curtain's edge leaves an engine colour
+that is in no table entry. The trickle entry and its row now equal native from the
+engine's own counters.
+
+### Torch channel B settled from palette words — 2026-10-17
+
+A comparison-only engine probe ran during `TestS3kAizZoneSliceTraceReplay` (one queued
+job, rows 6290-6340 and 22790-22890, Maven 2026-10-17T01:31:19+01:00). After each row it
+logged the AnPal bank and the level palette words. Those are compared with native RAM at
+the same row: the bank at `$F632`/`$F634`/`$F650-$F65B`, and `Normal_palette`. Evidence is
+in `spot-checks/aiz-palette-bank-v3/`.
+- 22790-22890: bank 101/101 and every compared word 101/101. That covers torch L4c1
+  (counters+$04/+$08), trickle L3c4/L3c8/L4c11, L3c14 and water L4c12-15.
+- Handoff: bank 51/51 and torch 51/51. L3c4, L3c8, L4c11 and L4c15 differ on rows
+  6290-6299 only. They are static AIZ1 fire-transition words that no active AnPal_AIZ1
+  branch writes, so they are event-owned. From the reload row 6300 every word matches.
+
+The earlier torch pixel disagreement is therefore not palette. The L4c1 colour paints the
+burning background's fire shapes, which sit in different places in the engine, and
+Sonic's shield frame differs (`side-row22866.png`, `torch-pixels-row22866.png`). That
+inherited background/sprite rendering difference is not attributed here.

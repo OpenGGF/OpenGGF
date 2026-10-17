@@ -1572,6 +1572,11 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         return aizEvents != null && aizEvents.isFireTransitionActive();
     }
 
+    @Override
+    public boolean isAiz2ShipEndRefreshActive() {
+        return aizEvents != null && aizEvents.isAiz2ShipEndRefreshActive();
+    }
+
     public boolean isEventsFg5() {
         if (aizEvents != null) {
             return aizEvents.isEventsFg5();

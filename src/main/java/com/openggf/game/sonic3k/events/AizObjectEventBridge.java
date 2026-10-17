@@ -11,4 +11,9 @@ public interface AizObjectEventBridge {
     void onBossSmallComplete();
     boolean isFireTransitionActive();
     boolean isAct2TransitionRequested();
+
+    /** ROM {@code Events_routine_fg == $C}: AIZ2SE_EndRefresh after the battleship leaves. */
+    default boolean isAiz2ShipEndRefreshActive() {
+        return false;
+    }
 }

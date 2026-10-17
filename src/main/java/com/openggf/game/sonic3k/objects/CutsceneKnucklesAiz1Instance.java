@@ -658,6 +658,12 @@ public class CutsceneKnucklesAiz1Instance extends AbstractObjectInstance impleme
     private void completeIntroExitHandoff() {
         LOG.fine("Routine 12: offscreen, cleaning up");
 
+        // ROM loc_61F22: clr.b (Palette_cycle_counters+$00).w (sonic3k.asm:128796)
+        // releases AnPal_AIZ1's counters+$02 cycle.
+        if (services().levelManager().getAnimatedPatternManager()
+                instanceof com.openggf.game.sonic3k.S3kPaletteCycleCounterWriter writer) {
+            writer.writePaletteCycleCountersByte(0, 0);
+        }
         unlockPlayerControls();
         // ROM deletes the Knuckles sprite this frame (Go_Delete_Sprite,
         // sonic3k.asm:128757); only the slot lives on as Obj_TitleCard.

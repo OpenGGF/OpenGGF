@@ -76,6 +76,16 @@ public class GraphicsManager {
 	private boolean underwaterUploadPending;
 	private final boolean[] pendingPaletteUploads = new boolean[64];
 	private final PaletteFadePresentation paletteFadePresentation = new PaletteFadePresentation();
+	// The fade CRAM currently holds. A fade step is a Normal_palette rewrite by the
+	// game's logic (S3K Animate_Palette -> Pal_FromBlack, sonic3k.asm:5018-5028), so
+	// while uploads are latched it reaches CRAM with the next V-int publication
+	// (VInt_8 dma68kToVDP Normal_palette), together with that frame's sprite table and
+	// scroll, not on the frame the logic requested it. Unlatched games keep the
+	// immediate upload: the published fade follows the requested one at once.
+	private final PaletteFadePresentation publishedPaletteFade = new PaletteFadePresentation();
+	private boolean paletteFadePublicationPending;
+	// Set by a rewind restore of the displayed generation; cleared by the next publication.
+	private boolean displayedPaletteFadeHeld;
 	private Integer combinedPaletteTextureId;
 	private int currentPaletteTextureHeight = 0;
 	private DisplayColorProfile displayColorProfile = DisplayColorProfile.RAW_RGB;
@@ -913,6 +923,11 @@ public class GraphicsManager {
 	}
 
 	void flushPendingPaletteUploads() {
+		displayedPaletteFadeHeld = false;
+		if (paletteFadePublicationPending) {
+			paletteFadePublicationPending = false;
+			publishRequestedPaletteFade();
+		}
 		if (underwaterUploadPending) {
 			underwaterUploadPending = false;
 			boolean latched = paletteUploadLatched;
@@ -988,13 +1003,13 @@ public class GraphicsManager {
 		paletteBuffer.clear();
 		// An active palette fade owns what CRAM receives for its lines (PalFadeIn_Alt
 		// rebuilds v_palette from v_palette_fading); the owner's palette is untouched.
-		boolean fadeLine = paletteFadePresentation.affects(paletteId);
+		boolean fadeLine = publishedPaletteFade.affects(paletteId);
 		for (int i = 0; i < COLORS_PER_PALETTE; i++) {
 			int r = Byte.toUnsignedInt(palette.red(i));
 			int g = Byte.toUnsignedInt(palette.green(i));
 			int b = Byte.toUnsignedInt(palette.blue(i));
 			if (fadeLine) {
-				int faded = paletteFadePresentation.fadeRgb(r, g, b);
+				int faded = publishedPaletteFade.fadeRgb(r, g, b);
 				r = (faded >>> 16) & 0xFF;
 				g = (faded >>> 8) & 0xFF;
 				b = faded & 0xFF;
@@ -1032,17 +1047,61 @@ public class GraphicsManager {
 	 * passes applied so far.
 	 */
 	public void setPaletteFadePresentation(PaletteFadePresentation.Mode mode, int steps, int lineMask) {
-		int previousMask = paletteFadePresentation.lineMask();
 		if (paletteFadePresentation.set(mode, steps, lineMask)) {
-			reuploadPaletteFadeLines(previousMask | paletteFadePresentation.lineMask());
+			requestPaletteFadePublication();
 		}
 	}
 
 	/** Ends the palette fade and re-uploads the lines it was transforming from their owners' palettes. */
 	public void clearPaletteFadePresentation() {
-		int previousMask = paletteFadePresentation.lineMask();
 		if (paletteFadePresentation.clear()) {
-			reuploadPaletteFadeLines(previousMask);
+			requestPaletteFadePublication();
+		}
+	}
+
+	private void requestPaletteFadePublication() {
+		if (paletteUploadLatched || displayedPaletteFadeHeld) {
+			paletteFadePublicationPending = true;
+			return;
+		}
+		publishRequestedPaletteFade();
+	}
+
+	/** The fade CRAM holds now; it can trail the requested fade by one V-int publication. */
+	PaletteFadePresentation displayedPaletteFade() {
+		return publishedPaletteFade;
+	}
+
+	PaletteUploadPresentation.DisplayedFade captureDisplayedPaletteFade() {
+		return new PaletteUploadPresentation.DisplayedFade(publishedPaletteFade.mode(), publishedPaletteFade.steps(),
+				publishedPaletteFade.lineMask(), paletteFadePublicationPending);
+	}
+
+	/**
+	 * Restores the displayed generation after a rewind redraw. Palette owners that re-request
+	 * their fade while the snapshot is restored update only the requested state; the restored
+	 * picture keeps the captured CRAM generation until the next V-int publication.
+	 */
+	void restoreDisplayedPaletteFade(PaletteUploadPresentation.DisplayedFade state) {
+		int previousMask = publishedPaletteFade.lineMask();
+		boolean changed = state.mode() == PaletteFadePresentation.Mode.NONE
+				? publishedPaletteFade.clear()
+				: publishedPaletteFade.set(state.mode(), state.steps(), state.lineMask());
+		paletteFadePublicationPending = state.pending();
+		displayedPaletteFadeHeld = true;
+		if (changed) {
+			reuploadPaletteFadeLines(previousMask | publishedPaletteFade.lineMask());
+		}
+	}
+
+	private void publishRequestedPaletteFade() {
+		int previousMask = publishedPaletteFade.lineMask();
+		boolean changed = paletteFadePresentation.isActive()
+				? publishedPaletteFade.set(paletteFadePresentation.mode(), paletteFadePresentation.steps(),
+						paletteFadePresentation.lineMask())
+				: publishedPaletteFade.clear();
+		if (changed) {
+			reuploadPaletteFadeLines(previousMask | publishedPaletteFade.lineMask());
 		}
 	}
 
@@ -1618,6 +1677,9 @@ public class GraphicsManager {
 		// clearPaletteFadePresentation() here would re-upload the old owners
 		// while the textures are being disposed.
 		paletteFadePresentation.clear();
+		publishedPaletteFade.clear();
+		paletteFadePublicationPending = false;
+		displayedPaletteFadeHeld = false;
 		lastCachedPaletteLines = new PaletteView[0];
 		if (!headlessMode && glInitialized) {
 			if (combinedPaletteTextureId != null) {
@@ -1724,9 +1786,9 @@ public class GraphicsManager {
 			// Rows below totalLines are effective palette lines; a fade on one of them
 			// (FadeIn_FromBlack also walks v_palette_water) transforms the composed
 			// bytes, and the content key built from them changes with each fade step.
-            var fadeMode=publishedBasis==null?paletteFadePresentation.mode():publishedBasis.fadeMode();
-            int fadeSteps=publishedBasis==null?paletteFadePresentation.steps():publishedBasis.fadeSteps();
-            int fadeMask=publishedBasis==null?paletteFadePresentation.lineMask():publishedBasis.fadeMask();
+            var fadeMode=publishedBasis==null?publishedPaletteFade.mode():publishedBasis.fadeMode();
+            int fadeSteps=publishedBasis==null?publishedPaletteFade.steps():publishedBasis.fadeSteps();
+            int fadeMask=publishedBasis==null?publishedPaletteFade.lineMask():publishedBasis.fadeMask();
             boolean fadeRow=sourceIndex<totalLines && sourceIndex<Integer.SIZE && fadeMode!=PaletteFadePresentation.Mode.NONE
                     && (fadeMask&(1<<sourceIndex))!=0;
 			for (int colorIndex = 0; colorIndex < 16; colorIndex++) {
@@ -1750,8 +1812,8 @@ public class GraphicsManager {
 		pendingUnderwaterPaletteContentKeyLength = underwaterPaletteContentKeyWriteIndex;
 		underwaterPaletteContentKeyChanged |= underwaterPaletteContentKeyLength
 				!= pendingUnderwaterPaletteContentKeyLength;
-        if(publishedBasis==null && (scopedUnderwaterBasis==null || !scopedUnderwaterBasis.matches(palettes,normalLine0,paletteFadePresentation)))
-            scopedUnderwaterBasis=ScopedUnderwaterBasis.capture(palettes,normalLine0,paletteFadePresentation);
+        if(publishedBasis==null && (scopedUnderwaterBasis==null || !scopedUnderwaterBasis.matches(palettes,normalLine0,publishedPaletteFade)))
+            scopedUnderwaterBasis=ScopedUnderwaterBasis.capture(palettes,normalLine0,publishedPaletteFade);
 		if (!underwaterPaletteContentKeyChanged) {
             scopedUnderwaterDirty=false;underwaterCompositionLines=totalLines;
 			return underwaterPaletteTextureId;

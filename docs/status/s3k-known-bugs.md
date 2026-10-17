@@ -139,11 +139,13 @@ Entries should include:
 50. [S3K Special-Property Sidekick Behaviour: Corrected Diagnosis](#s3k-special-property-sidekick-behaviour-corrected-diagnosis)
 51. [Object Art and Clock Reads Found by the Slay the Robotnik Sprite Research (SUSPECTED)](#object-art-and-clock-reads-found-by-the-slay-the-robotnik-sprite-research-suspected)
 52. [Ending Reunion Kos Service Count — Per-Object CPU Budget (OPEN)](#ending-reunion-kos-service-count--per-object-cpu-budget-open)
-53. [Non-Fresh Title Card Holds 90 Locked Frames (OPEN)](#non-fresh-title-card-holds-90-locked-frames-open)
-54. [AIZ2 First-Tree and HCZ1 Zero-Offset Animated Tile Uploads (OPEN)](#aiz2-first-tree-and-hcz1-zero-offset-animated-tile-uploads-open)
-55. [Knuckles Credits and Terminal Residuals (OPEN)](#knuckles-credits-and-terminal-residuals-open)
-56. [MHZ Rewind Snapshot Identity Gaps (OPEN)](#mhz-rewind-snapshot-identity-gaps-open)
+53. [Level-Entry Title Card Residuals (OPEN)](#level-entry-title-card-residuals-open)
+54. [AIZ2 First-Tree and HCZ1 Zero-Offset Animated Tile Uploads (FIXED)](#aiz2-first-tree-and-hcz1-zero-offset-animated-tile-uploads-fixed)
+55. [Knuckles Credits and Terminal Residuals (RESOLVED)](#knuckles-credits-and-terminal-residuals-resolved)
+56. [MHZ Rewind Snapshot Identity Gaps (RESOLVED)](#mhz-rewind-snapshot-identity-gaps-resolved)
 57. [Authored AIZ Lookout Clears a Physical Parent Before Its Arms (FIXED)](#authored-aiz-lookout-clears-a-physical-parent-before-its-arms-fixed)
+58. [Saved2 Return Star-Post Proxy and LRZ Load-Frame Restore Words (OPEN)](#saved2-return-star-post-proxy-and-lrz-load-frame-restore-words-open)
+59. [AnPal Shared Bank: Remaining Owners (OPEN)](#anpal-shared-bank-remaining-owners-open)
 
 ---
 
@@ -6573,6 +6575,14 @@ The engine's `s3k-kos-v1` profile keys service counts on the stable job
 fingerprint, so it publishes four services on every route. The engine therefore
 reaches the Sonic/+2 and team/+2 reunion gate one frame after native.
 
+PAL makes the same gap larger and earlier. On the native 50 Hz Sonic/+2 product
+(2026-10-16), the AIZ1 jobs that `loc_5AC12` queues finish at LF 3777 instead of 3781.
+`loc_5AC70` therefore opens four frames before the region-independent engine; this is the
+first PAL divergence. Native NTSC and PAL agree before it at every compared spot and
+ledger field. A PAL frame has 313 lines instead of 262, less VInt's 17,942-cycle PAL
+`dbf` (044fa46 sonic3k.asm:545-548). Evidence is in the
+[ending matrix PAL section](../architecture/validation/levels/s3k-ending.md#native-pal-50-hz-sonic2-product-ending-pal-lane-2026-10-16).
+
 ### Why it stays open
 - A route- or character-keyed row, a Hyper-keyed shift, or a corpus-mean budget
   would be fitted to this boundary. The runtime invariants reject all three.
@@ -6607,96 +6617,230 @@ candidates are in the [ending lifecycle design](../architecture/designs/2026-10-
 
 ---
 
-## Non-Fresh Title Card Holds 90 Locked Frames (OPEN)
+## Level-Entry Title Card Residuals (OPEN)
 
-Native `Level` arms a 22-frame title-card hold at `loc_64DC` (sonic3k.asm:7874-7878)
-while `LevelLoop` already runs, and the card exits when that hold ends. Only the fresh
-zone-request route models this. Direct boots with the card shown, data-select launches,
-bonus-stage entry and death restarts use the engine's 90-frame non-fresh card, which
-locks the loop until it exits. The level's lines 1-3 fade therefore plays while that card
-leaves rather than during a native 22-frame hold. The death restart also keeps the host's
-blocking whole-screen reveal over the card's slide-in. Rings draw under the card, where
-the original draws them above it, and the `$1701` arena's `Pal_FromWhite` reveal is not
-presented. Per-route measurements are in the
+Every S3K `Level` entry now uses the native title-card hold. Covered entries are direct
+boots with the card shown, data-select launches, bonus-stage entries and returns, and death
+restarts. The card waits through loc_62CC, and `Level/loc_64DC` (sonic3k.asm:7874-7878)
+releases `LevelLoop` with the card's `$2E` and `Palette_fade_timer` at `$16`. The card then
+holds while the level fades in, and leaves from `Level_frame_counter` 23. A death restart or
+bonus return no longer runs a whole-screen host reveal over the card's slide-in. The fixed
+90-frame locked hold is gone. Measurements and pictures are in the
 [HPZ matrix](../architecture/validation/levels/s3k-hpz-act.md).
 
+Still open:
+- Death restarts, bonus entries and returns, and direct boots do not own the fresh runtime-art
+  admission. Their title loop therefore omits `LoadLevelLoadBlock`'s terrain KosM wait, and
+  `LevelLoop` starts earlier than a full native `Level` routine would. A direct HPZ boot locks
+  for 60 frames. The engine's fresh request locks for 102, and the native HPZ entry spends
+  107 frames from card install to `LevelLoop`. A bonus entry locks for 101 frames, while the
+  native multibonus trace shows 84 frames at counter 0 before the gumball stage's `LevelLoop`;
+  that difference is not reconciled.
+- `Level` clears the KosM module and decompression queues on entry (`clearRAM
+  Kos_decomp_stored_registers,$6C`, sonic3k.asm:7512-7513). The engine keeps pending jobs from
+  the previous level across the reload.
+- The card leaves one frame late. It reaches COMPLETE, the `LoadEnemyArt` handoff, at counter
+  36; the native card is deleted at counter 35.
+- On the direct HPZ boot Knuckles' animation runs one frame ahead of native after the card
+  release. At counters 33-38 his body (x 0-29, y 56-92) equals native seq 131+k while the
+  card, HUD, palette and level equal seq 130+k. The owner is the player's animation phase, not
+  the V-int publication; it is not attributed.
+- Rings draw under the card, where the original draws them above it (`Render_Sprites` emits
+  `Render_Rings` before the object buckets, 36326-36329).
+- The `$D01`/`$1701` `Pal_FromWhite` reveal is not presented.
+
 ### Removal condition
-Every `Level` entry uses the native card hold and releases `LevelLoop` with it. Recorded
-route movies that cross these entries are re-timed by measurement in the same change.
+Each item above matches the native measurement on its route, with a focused test.
 
 ---
 
-## AIZ2 First-Tree and HCZ1 Zero-Offset Animated Tile Uploads (OPEN)
+## AIZ2 First-Tree and HCZ1 Zero-Offset Animated Tile Uploads (FIXED)
 
-Custom zone `AnimateTiles` routines queue their art through `Add_To_DMA_Queue`
-(sonic3k.asm:1673), drained at VBlank. Two cases still differ:
-- `AnimateTiles_AIZ2`'s first-tree upload still writes immediately, one frame early. It was
-  left unchanged to keep the AIZ to HCZ route stable.
-- When `Events_bg+$10` is 0, `AnimateTiles_HCZ1` falls through `AniHCZ_FixLowerBG` into
-  `AniHCZ_FixUpperBG` (sonic3k.asm:53993, 54071-54091) and skips its normal tile animations.
-  The engine uploads only the lower strips.
+**Location:** `Sonic3kPatternAnimator` (`updateAiz2`, `updateHcz1BackgroundStrips`,
+`runAnimateInitTransfers`).
 
-Evidence is in the
-[bonus-stage transitions matrix](../architecture/validation/levels/s3k-bonus-stage-transitions.md).
+Both custom routines now follow the ROM, through the `Add_To_DMA_Queue` publication
+that VInt drains (sonic3k.asm:1673, 764):
+- `AnimateTiles_AIZ2` below `Camera_X_pos` `$1C0` (sonic3k.asm:53953-53967) queues the
+  first tree on every pass, after running only the first script, and its `clr.l (a3)`
+  zeroes the counters of scripts 1 and 2. The engine wrote the tree once, immediately.
+- `AnimateTiles_HCZ1` (sonic3k.asm:53974-54108) keeps `Anim_Counters+4`/`+6`. At
+  `Events_bg+$10 == 0` it stores 1, queues both fix routines and skips
+  `AnimateTiles_DoAniPLC` on every such pass. Past ±$60 it queues nothing. The fix
+  strips follow only side changes. `Events_bg+$16` stops the routine while the HCZ2 art
+  loads. Animate_Init's `sub_279D4` runs on fresh loads, with `HCZ1_BackgroundInit`'s
+  capped value. The engine had uploaded whole strips past ±$60 and only the lower fix
+  at the equilibrium.
 
-### Removal condition
-Both cases follow the ROM routine, with a focused publication test and an unchanged S3K
-canonical trace result.
+`TestS3kZoneAnimateTilesPublication` was red 16/5 before the change. Evidence and the
+trace results are in the
+[bonus-stage transitions matrix](../architecture/validation/levels/s3k-bonus-stage-transitions.md#aiz2-first-tree-and-hcz1-waterline--2026-10-16-round-2-presentation-lane).
 
 ---
 
-## Knuckles Credits and Terminal Residuals (OPEN)
+## Knuckles Credits and Terminal Residuals (RESOLVED)
 
 The 2026-10-15 kterminal lane matched the Knuckles terminal banner, its pose flash and
-logo fade, and the credits' Plane A phase against the native complete run. Four gaps remain:
+logo fade, and the credits' Plane A phase against the native complete run. The
+2026-10-16 presentation lane resolved three of its four residuals:
 
-- **Credits start one V-int late.** With the native inlets declared, the cold movie now
-  reaches credits part one with `V_int_run_count` `$66CC6`; native and the `9b0c85dd0`
-  render hold `$66CC5` at the same engine frame, with an identical flight log. The ending
-  clouds seed from `V_int_run_count` (`loc_5F94C`) and emit on its low bits (`loc_5F986`),
-  so every cloud differs. Unattributed; it arrived between `9b0c85dd0` and `516ca64f1`.
-- **A glyph fragment in credits part one.** At the credits-one spans 9 and 10 a white,
-  glyph-like fragment (screen x 128-191) scrolls with the planes. It is in every engine
-  render since `9b0c85dd0` and never in native. Unattributed.
-- **One zero-copy credits pass.** `ParallaxManager` reads a handler's zero FG V-scroll as
-  "use the camera", and `ZoneScrollHandler` is Mod API. On the pass where
-  `Camera_Y_pos_copy` is still 0 and `Camera_Y_pos` has reached 1, SSZ2's Plane A is prepared
-  one line low. No native picture covers that pass; its visibility was not measured.
-- **S3 eyecatch fades.** `loc_5F26C`, `loc_5F31C` and `loc_5F410` fade lines 1, 0 and 2
-  through `loc_5FF62` (up toward `$EEE`, then down to the target, every fourth pass). The
-  engine's S3 eyecatch uses a six-pass from-black fade. No native picture of that terminal
-  exists.
+- **Credits one V-int late: capture inlet, not engine.** Native observations put
+  `V_int_run_count` at `$66141` on the flight edge row (input 419847) and `$66CC5` at
+  credits part one (422795), 2948 frames later. The engine flight object first exists
+  at frame 58253 and the credits start at 61201, also 2948 frames later, and the engine
+  counts one V-int per frame. The renders that showed `$66CC6` had declared `$66142` at
+  flight init (the driver comment cited input 419848). With `$66141` declared, cloud SSTs
+  equal native at all 12 credits-one spans.
+- **Glyph fragment at spans 9-10 (fixed).** It was the HPZ teleporter pad
+  (`Obj_SSZHPZTeleporter`, `($A0,$4B0)`) drawn from tiles the credits font had replaced.
+  Native deletes it through `Sprite_OnScreen_Test` once the camera reaches `$240`. The
+  credits camera then jumps from `$1CF` to 0. `Load_Sprites`'s backward branch subtracts
+  `$80` from the new coarse X and skips the back cursor on the borrow
+  (sonic3k.asm:37604-37605; S2 `ObjectsManager_GoingBackward`, s2.asm:33051-33052), so
+  the pad never returns. The engine's backward pass handed it to the cursor again, and it
+  was live from span 7 (camera Y `$333`). `ObjectPlacementController` now skips that pass
+  too.
+- **Zero-copy credits pass (fixed).** `SwScrlSsz` now declares its foreground V-scroll
+  explicit through the internal `ExplicitForegroundVerticalScroll`, so `ParallaxManager`
+  uses a `Camera_Y_pos_copy` of 0 instead of the moved camera
+  (`TestSszAct2CameraController`, red first at credits pass 122). No Mod API declaration
+  changed.
+- **S3 eyecatch fades (fixed 2026-10-16).** `sub_5FF1C`, `loc_5F31C` and `loc_5F410` each
+  allocate a `loc_5FF62` (044fa46 sonic3k.asm:126999). These fade lines 1, 0 and 2 up to
+  white, then down to their targets, every fourth pass from the eyecatch initialization
+  pass. `S3kPostCreditsObjectInstance` now runs that countdown in place of its old
+  raise-only reveal.
+
+  The same slice fixed four related owners:
+  - `Obj_5EF68` clears `Super_palette_status` (125520).
+  - `loc_5F15A` sets `Palette_cycle_counters+0` (125706), so `sub_5928C` stays off.
+  - `Obj_FadeSelectedToBlack` takes its first step on its allocation pass.
+  - The Tails child's tail (`loc_5F3EA`/`loc_5F400`) now exists, behind Tails.
+
+  `TestS3kEndingS3Eyecatch` and `TestS3kEndingS3EyecatchTail` pin these behaviours
+  red-first. Native captures cover the Tails/+2 NTSC and Sonic/+2 PAL terminals.
+  Tails/+2 NTSC is raw-RGB identical at every spot, including each eyecatch frame. The
+  Sonic/+2 PAL residual comes only from the PAL Kos phase above. Knuckles/+2 shares the
+  code but has no native capture of its own eyecatch.
 
 Evidence and the measured spots are in the
-[ending matrix](../architecture/validation/levels/s3k-ending.md#knuckles-terminal-banner-pose-flash-and-the-credits-plane-a-phase-kterminal-lane-2026-10-15).
+[ending matrix](../architecture/validation/levels/s3k-ending.md#knuckles-credits-v-int-inlet-teleporter-pad-and-zero-copy-pass-presentation-lane-2026-10-16).
 
 ### Removal condition
-Each gap is attributed to a ROM owner and modelled with a focused red-first test, or shown
-equal to a native capture of the same state.
+The S3 eyecatch fades are modelled from `loc_5FF62` with a focused red-first test, or
+shown equal to a native capture of the same state.
 
 ---
 
-## MHZ Rewind Snapshot Identity Gaps (OPEN)
+## MHZ Rewind Snapshot Identity Gaps (RESOLVED)
 
 After the MHZ rider/shell/shield restore fixes (`902ba8a10`), dense
-`RewindFidelitySweep` runs over the solo Sonic MHZ routes show no player drift, but two
-restores were not snapshot-exact (no gameplay effect observed):
-- Resolved 2026-10-16 (`f07a25bf9`): the MHZ1 carry-in Tails (`SpawnLevelMainSprites`
+`RewindFidelitySweep` runs over the solo Sonic MHZ routes showed no player drift, but some
+restores were not snapshot-exact. All are resolved:
+- 2026-10-16 (`f07a25bf9`): the MHZ1 carry-in Tails (`SpawnLevelMainSprites`
   `loc_68C2`/`loc_68D8`) was recreated as a new sprite by restores after its natural
-  deletion. Solid-contact headroom snapshots and plane-switcher player sides hold direct
-  player references, so stale entries for the old instance accumulated. Restores now
-  re-admit the departed instance; `TestS3kScriptedIntroCarryAdmission` (MHZ1) and the
-  widest CNZ1 rows of `TestS3kCanonicalEntryLifecycle` replay it exactly.
-- MHZ2's Knuckles cutscene leaf particles (`CutsceneKnucklesMhz2Instance`) restore with a
-  zero spawn record (x/y/velocity restore correctly).
+  deletion, leaving stale direct player references in solid-contact headroom snapshots and
+  plane-switcher sides. Restores now re-admit the departed instance.
+- 2026-10-16 (round 2): the MHZ2 object restored with a zero spawn record was not a leaf
+  particle, as first reported, but the Knuckles cutscene's player lift carrier
+  (`Mhz2KnucklesLiftChild`, `loc_6338E`, object `$82` subtype `$20`). Its
+  `recreateForRewind` copied the spawn of the placeholder probe a restore constructs instead
+  of the captured spawn. It now recreates from the restore context's spawn
+  (`SpawnRewindRecreatable`). The leaf particles already did.
+- 2026-10-16 (round 2): `LbzMovingPlatformObjectInstance.standingPlayers` (riders released by
+  the falling type's later update) and `SinkingMudObjectInstance`'s per-player depth and
+  standing maps (`Obj_SinkingMud`, sonic3k.asm:68500-68661) were not captured; restores
+  dropped a pending release or reset a sinking player to the full surface. Both are
+  `CAPTURED`; `killedThisFrame` is cleared before every read and stays transient.
+  `CorkFloorObjectInstance.standingRiders` is a per-update local, re-derived every frame.
 
-Outside MHZ, these per-player identity collections have no rewind policy and were not
-checked: `CorkFloorObjectInstance.standingRiders`,
-`LbzMovingPlatformObjectInstance.standingPlayers`, `SinkingMudObjectInstance` player maps.
-Evidence and sweep commands are in the
-[MHZ act 1 matrix](../architecture/validation/levels/s3k-mhz-act1.md#rewind-fidelity-fixes-2026-10-16-902ba8a10).
+Evidence: `TestMhzRewindFidelitySweep#identityWindowsRestoreSnapshotExactly` (MHZ1 opening
+0-240 and the MHZ2 cutscene 9640-9760 of `mhz2-sonic-incoming-320`; red first at checkpoint
+9674 with the lift's spawn A=1155,2028 B=0,0) and `TestS3kPlayerIdentityCollectionRewind`
+(every-frame restore and forward replay; red first: the LBZ release frame 64 and the mud's
+second frame diverged). Matrix:
+[MHZ act 1](../architecture/validation/levels/s3k-mhz-act1.md#rewind-fidelity-fixes-2026-10-16-902ba8a10).
+
+---
+
+## Saved2 Return Star-Post Proxy and LRZ Load-Frame Restore Words (OPEN)
+
+Found by the declared native twin of the LRZ2 seven-Chaos giant-ring branch (2026-10-17,
+[LRZ act 2 matrix](../architecture/validation/levels/s3k-lrz-act2.md#declared-native-twin-of-the-seven-chaos-branch-2026-10-17)).
+
+**Star-post proxy after a special-stage Saved2 return.**
+
+- **ROM:** the stage exit sets `Last_star_post_hit|$80` (sonic3k.asm:12673-12674). `Level`'s
+  last setup step, just before `LevelLoop`, is `andi.b #$7F,(Last_star_post_hit).w` (:7881).
+  Native RAM `$FE2A` goes from `$80` to 0 on the first `$0C` frame of the LRZ2 reload.
+- **Engine:** the engine models only a boolean load gate,
+  `LevelTransitionCoordinator.isLastStarPostHitSet()`. It stays set into gameplay, and the
+  native-CPU entry step deliberately keeps it past bank consumption.
+- **Effect:** no gameplay consumer was observed. The load consumers also require an
+  unconsumed Saved2.
+
+**LRZ load-frame restore.**
+
+- **What happens:** a registry restore of a snapshot captured before the first scroll pass
+  republishes derived words into captured state. After a direct-boot load-frame restore,
+  act 2 `backgroundCameraX` goes 0 to 1 and act 1 `backgroundCameraY` goes 0 to -23.
+- **Path:** `LevelFrameRuntimeUpdater.refreshParallaxState(rebuild)` →
+  `ParallaxManager.rebuildDerivedOutput` → `SwScrlLrz.update` →
+  `LrzZoneRuntimeState.publishDeformationWords`.
+- **Scope:** the Saved2-return capture does not show it, because its first scroll pass has
+  already run.
 
 ### Removal condition
-A `RewindFidelitySweep` over the MHZ1 opening and the MHZ2 cutscene reports no
-restore-identity or end-of-replay differences, and each listed collection either has a
-policy with a capture/restore/forward-replay test or is shown to be re-derived.
+Model the `:7881` mask without breaking the native-CPU entry eligibility, and make the
+post-restore parallax rebuild leave captured runtime words unchanged. Each needs a focused
+red test first.
+
+---
+
+## AnPal Shared Bank: Remaining Owners (OPEN)
+
+Every `AnPal_*` routine reads and writes one RAM bank: `Palette_cycle_counter0`,
+`Palette_cycle_counter1` and `Palette_cycle_counters` (sonic3k.constants.asm:580-596).
+Level's loc_60DE clears it (sonic3k.asm:7652), and a seamless act reload does not.
+`Sonic3kGlobalAnimationState` now holds that bank at ROM width. The fresh-Level step
+clears it, and it rides the animator's rewind snapshot. The AIZ1 and AIZ2 cycles read
+it, so AnPal_AIZ2 continues from AnPal_AIZ1's counters. The iteration that performs the
+reload runs AnPal_AIZ1: LevelLoop calls Animate_Palette (7923) before the
+DeformBgLayer/ScreenEvents work that reloads (7929-7930).
+
+AnPal_AIZ1 now matches its ROM boundaries:
+- Its counters+$02 cycle is gated by `Palette_cycle_counters+$00` (3217), not by
+  `Level_started_flag`. Obj_AIZPlaneIntro sets the byte at Sonic's x `$13D0`
+  (loc_67712, 135755-135756), and Obj_CutsceneKnuckles clears it when Knuckles leaves
+  (loc_61F22, 128795-128796). Both writes land after that frame's palette call, as
+  Process_Sprites (7926) follows Animate_Palette.
+- It reads a carried counters+$02 before wrapping it (3219-3223), including the ROM bytes
+  after AnPal_PalAIZ1_2 for a fire-branch `$30`/`$36`.
+- Its fire/normal branch uses `AIZ1_palette_cycle_flag` as AIZ1_Resize left it
+  (loc_1C46E, 38913-38917, run from DeformBgLayer after Animate_Palette).
+
+The `aiz_completerun` handoff and the AIZ2 window now show native's trickle entry on
+native's rows. Palette words and the bank, torch channel B included, equal native RAM on
+every row from the reload. A Knuckles AIZ1 start, which has no counters+$00 writer, matches
+native's bank on all 300 compared Level_frame_counter values. Covered by `TestS3kAizAnPalBankCarry`, `TestS3kAiz1AnPalBoundaries` and
+`TestS3kAiz1AnPalGateWrites`; evidence is in the
+[AIZ2 matrix](../architecture/validation/levels/s3k-aiz2.md).
+
+Still open:
+- The other zones' cycles keep private copies of the bank, so their seamless reloads
+  still restart those counters, and their `counters+$00` writers are not modelled
+  through the bank. Each needs its own native witness before it moves.
+- A reload consumed at the next frame top (`LevelSeamlessTransitionExecutor`) runs no
+  palette call on its transition row. Natively that iteration's Animate_Palette ran for
+  the outgoing act. Not measured.
+- AIZ1_Resize routine 4 writes `Normal_palette_line_3+$1E` from word_4FAEA for Knuckles
+  once camera X reaches `$2D80` (sonic3k.asm:39001-39010). The engine uses one colour for
+  every character there. This is from the source; no native witness yet.
+- `Adjust_AIZ1Chunks2`'s chunk edits for Knuckles (sonic3k.asm:104503-104538) are not
+  checked here; only its palette half is modelled.
+- The `GameplayCaptureSession` harness starts Knuckles AIZ1 with camera X `$1308`, where
+  native and the headless fixture start at `$1300`. Its Knuckles AIZ1 pictures are
+  therefore not a matched trajectory.
+
+### Removal condition
+Each item matches native RAM at its handoff, with a focused test.

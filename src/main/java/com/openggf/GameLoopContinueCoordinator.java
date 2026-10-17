@@ -86,7 +86,8 @@ final class GameLoopContinueCoordinator {
     void respawn() {
         TraceSessionLauncher.runDeathRestartLoad(loop.levelManager);
         loop.activateScheduledPlaybackForLoadedLevel();
-        GameLoopPlcLifecycle.startFromBlack(loop.resolveGameplayModeContext(), loop.fadeManager, null);
+        GameLoopPlcLifecycle.revealLevelRoutineEntry(
+                loop.resolveGameplayModeContext(), loop.fadeManager, loop.getTitleCardProvider());
         java.util.logging.Logger.getLogger(GameLoop.class.getName())
                 .info("Respawned player, entering title card");
     }

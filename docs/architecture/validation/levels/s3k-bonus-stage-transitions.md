@@ -608,3 +608,74 @@ and the lead-owned smoke/guards.
   pixels (max channel 34) where native row 1029 has 4411 and row 1031 is black.
 - Lives ×3 vs native ×4: `TraceMetadata` and the `bonus_slots` metadata declare
   no lives entry, so there is no contract field to seed it; fixture limit.
+
+## AIZ2 first tree and HCZ1 waterline — 2026-10-16 (round-2 presentation lane)
+
+Closes the two cases the section above left open, on Root `d3fb0625e`.
+
+**`AnimateTiles_AIZ2`** (sonic3k.asm:53953-53967). Below `Camera_X_pos` `$1C0` every
+pass calls `AnimateTiles_DoAniPLC_Part2` with `d6 = 0`, so only the first script runs.
+`a3` is then left at `Anim_Counters+2`, and `clr.l (a3)` zeroes the counters of
+scripts 1 and 2; the second `clr.l` writes the same longword. The pass ends by queueing
+`ArtUnc_AniAIZ2_FirstTree` (`$230` words to tile `$0CA`) with `Add_To_DMA_Queue`. The
+engine wrote the tree once, immediately, and kept the other counters. The tree now
+goes through the VBlank publication queue on every pass below `$1C0`, and the two
+counters are cleared.
+
+**`AnimateTiles_HCZ1`** (sonic3k.asm:53974-54108) keeps two words:
+- `Anim_Counters+4` holds the last `Events_bg+$10` (`HCZ1_Deform`'s
+  `(dy asr 2) - dy`, dy = `Camera_Y_pos_copy - $610`).
+- `Anim_Counters+6` records which fix strips were queued last.
+
+Equal values only run `AnimateTiles_DoAniPLC`. At 0 (`loc_2797E`) it stores 1, so every
+equilibrium pass differs again. `bsr AniHCZ_FixLowerBG` returns into
+`AniHCZ_FixUpperBG`, whose `jmp (Add_To_DMA_Queue)` returns from the routine, so both fix
+pairs are queued and the AniPLC scripts pause on every such pass. Within ±$60 the
+routine composes the 24-tile strip from `HCZ_WaterlineScroll_Data`. It queues the
+opposite fix pair only when `Anim_Counters+6` changes side. Past ±$60, `addi.w #$60` /
+`bcc loc_2797A` queues nothing, and VRAM keeps the last composed strip. A side effect:
+just after the equilibrium, a value of 1 equals the stored 1 and is skipped.
+
+`Events_bg+$16`, set by `HCZ1BGE_Normal` when it queues the HCZ2 art
+(sonic3k.asm:105716-105738), stops the whole routine. `Animate_Init` calls `sub_279D4`
+(sonic3k.asm:54117-54159) before `loc_6468`'s `Animate_Tiles`. `HCZ1_BackgroundInit` has
+just left `Events_bg+$10` at `$60` above `$60`. From -`$60` through `$60` it is -`$60`,
+because the second compare stores -`$60` instead of keeping the value. Below -`$60` it is
+unchanged (sonic3k.asm:105690-105699).
+
+The engine had uploaded only the lower fix pair at the equilibrium and whole strips past
+±$60, with both fix pairs on every change. It now keeps both words in the animator,
+packed into the snapshot's existing HCZ1 word. The script channels' guard reproduces the
+equilibrium return and the `Events_bg+$16` gate. The fresh-level initial pass runs
+`sub_279D4`.
+
+| Check (queued, focused, exact selectors, ROM paths) | Result |
+| --- | --- |
+| Red first: `TestS3kZoneAnimateTilesPublication` on `d3fb0625e` sources with the new cases | 16 run, 5 failed, 0 errors, 0 skipped (Maven finished 14:50:36Z): tree not queued again; tree presented in its own iteration; script 1 counter `74/1` not cleared; equilibrium `$2DC` held the composed strip; whole strip uploaded below -$60. The `Animate_Init` case passed (offset-0 composition equals the whole above-water strip) |
+| `TestS3kZoneAnimateTilesPublication` (18, including the `Events_bg+$16` gate and an HCZ1 counter restore), `TestS3kHczPatternAnimation`, `TestS3kBonusAnimateTilesPublication`, `TestSonic3kPatternAnimatorRewindSnapshot`, `TestS3kZoneRuntimeStateAdapters`, `TestS3kRuntimeStateReadGuard`, `TestZoneEventRuntimeAccessGuard`, `TestSonic3kActTransitionZoneFeatures` and the four S3K guards | 115 run, 0 failed, 0 errors, 0 skipped (14:55:25Z) |
+| `-Ptrace-replay -Dsurefire.forkCount=1`: `TestS3kAizTraceReplay`, `TestS3kAizZoneSliceTraceReplay`, `TestS3kHczZoneSliceTraceReplay` | 19 run, 2 failed, 0 errors, 0 skipped (14:56:57Z). AIZ 16/16 pass. The AIZ slice has 60 errors, first frame 25589 `player_animation_id` 13/05, and the HCZ slice 4699, first frame 9482 `air`, both equal to the baseline the title-fade lane measured |
+
+`TestS3kHczPatternAnimation`'s custom-path case now moves the camera between Y `$5A5`
+and `$67A`, inside ±$60, because the ROM queues nothing at its old Y 0 and `$700`. No
+native picture of the AIZ2 first tree or of the HCZ1 equilibrium exists among the
+campaign spot checks. The publication tests derive their expectations from ROM art and
+the routine. The physics trace replays do not compare VRAM; they show only that
+gameplay is unchanged.
+
+## Bonus entry and return title-card hold — 2026-10-16 (round-2 titlecard lane)
+
+A bonus entry and a bonus return both run the native `Level` routine, so both cards now take
+the loc_62CC gates and release `LevelLoop` into the `$16` hold at `Level/loc_64DC`
+(sonic3k.asm:7874-7878). Before, they held a locked 90-frame DISPLAY and released at the
+card's exit. The bonus return no longer runs a host fade from black over its card. The bonus
+card's Nemesis gate uses the loaded bonus zone's PLC. Per-route numbers are in the
+[HPZ matrix](s3k-hpz-act.md): the Pachinko entry now locks for 101 frames (was 107), against
+84 in the native multibonus trace (open in known-bugs "Level-Entry Title Card Residuals").
+The re-timed `soz1-cold-knuckles` movie, which crosses an entry and a return, is in the
+[SOZ1 matrix](s3k-soz-act1.md).
+
+| Check (queued, focused, exact selectors, S3K ROM; base `6405313ce` + the change) | Result |
+| --- | --- |
+| `TestS3kTitleCardHoldRoutes` (bonus entry and return among its 5 cases); `TestSonic3kBonusTitleCard`; `TestPachinkoTitleCardIntegration`; `TestS3kBonusStageHeadlessBoot` | 5, 6, 2 and 3 run, 0 failed, 0 errors, 0 skipped (Maven finished 2026-10-16T19:14:59+01:00, 18:26:52+01:00 and 18:31:58+01:00) |
+| `TestS3kBonusPortalMechanismProducts`, `TestS3kBonusStageReturnProducts`, `TestS3kGumballPachinkoRewardMechanics` | 568, 425 and 723 run, 0 failed, 0 errors, 0 skipped (Maven finished 2026-10-16T18:51:47+01:00) |
+| `TestSecondStrikeInvitationGameplay` (opt-in candidate jar `1f6bfedd…`) | gumball case passes. The glowing-spheres case fails at line 300 ("ordinary bonus play must earn a positive native award before exit"). It fails with the same assertion on the pre-task `d3fb0625e` sources and on `6405313ce`, so the failure is inherited, not caused by this change |
