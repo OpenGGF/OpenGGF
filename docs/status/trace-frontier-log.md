@@ -113870,3 +113870,26 @@ the metadata lease alone; the one temporary source was removed under the intende
 tree lease, restoring exact committed source. Existing docs only, no raw archive
 or pass receipt. Prior refs, private config, native/media and Root/Main are
 preserved. Root owns causal attribution/next scope and combined validation.
+
+
+R14 matched original-inlet baseline50308 (separate from current98161): reviewed
+19-line helper7475c909 invokes only original `(RUN_DIR,2,1)`, requiring natural
+Gumball exit and returned-level opening. Same owned649 temporary local baseline
+branch at **8030832d2ab6080e5324cdfe35e971677fd97b41**, all other tracked source/
+POM exact803; same command/environment as98161 except selector/base, normal
+current Main absolute wrapper/all3ROM/Java25/EGL/nullAL/noambient/Lua/fork1reusealpha.
+Actual terminal1 **19:46:12UTC**, queue0/Maven1m22, **1T/1F/0E/0S** (0skips),
+class5.570s. It reproduces the **exact original1661 Gumball stage_exit assertion**;
+returned seg2 row1 is unreached. AIZpartial1physics/camera4545 and Gumball
+comparator-complete18physics/first1300x0000/2778,0animation/warnings/bootstrap,
+lag0/21 and five recent1380 field/value entries match current's retained record.
+Recent5 is not full18-vector equality. All29 baseline suppressed identities were
+inspected (18direct/11module=12unconsumed+17pending mismatches); current retained
+counts/endpoints match, not an exhaustive29 delta. TwoFAST→NONE warnings persist.
+This qualifies that **particular original route assertion on actualMain803**;
+no blanket inheritance waiver, producer/closure cause, route advance or native
+correctness. SS/fdf remainsUNREACHED in both, with no readiness/kernel/wholeSS/
+whole-route claim. No current rerun/rebase/repair/extra execution. Candidateb0b4
+and exact Plan WIP restored, helpers/inspected diagnostics/backup consumed,
+all refs/config/native/media preserved; target last compiled803, not current.
+[Exact source/flags, attribution and restoration limits](../architecture/plans/2026-10-13-s3k-playable-completion.md#r14-actual-main803-natural-gumball-exit-prefix--2026-10-17).

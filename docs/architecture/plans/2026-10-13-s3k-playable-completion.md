@@ -7591,3 +7591,167 @@ Only this Plan and the frontier log are staged; relevant checks are documentatio
 links/anchors/whitespace and policy trailers/hooks. No new workload, source,
 fixture, native or capture is introduced. No matching803 attribution or target
 readiness evidence is inferred. Root's earliest-Gumball audit remains independent.
+
+
+### R13 source-only original Gumball exit baseline prefix — 2026-10-17
+
+After clean local docs commit `b0b4a4b59c59154cabb18823e71247c2e3c8ea6a`,
+Root authorized one **source-only** minimal baseline inlet and this existing
+Plan checkpoint. Ordinal23/exact returned
+`fdf-r13-first-gumball-baseline-prefix-source-prep-20261017` task ID is registered
+separately24h with native/workspace identity;22accounting/21execution/20/19 and
+prior refs/results remain. Root composed b0b4 as `e72aa7bc0`; no Root/Main write
+or worktree/branch change is made here. Current branch remains
+`bugfix/ai-s3k-fdf-recorded-consumption-witness-gpt61`, HEADb0b4; Java matches
+source3be (its current Java epoch7df), unchanged since actual98161.
+
+Prepared one temporary19-line/669-byte source:
+`src/test/java/com/openggf/tests/trace/runs/TestS3kKnucklesGumballExitBaseline.java`,
+SHA256 **`7475c909e89c9e57e6e55156983c2f313712248ecc096b857e6132adfed914a6`**.
+One `@RequiresRom(SONIC_3K)` test method
+`originalGumballExitReachesReturnedLevel` solely invokes
+`assertChainReplayThroughSegmentRow(RUN_DIR, 2, 1)` on the unchanged base.
+RUN_DIR is the original `src/test/resources/traces/s3k/runs/s3-knux-multibonus-ss`.
+No hook, observer, diagnostic payload, copied driver, controller, input,
+bootstrap, lag admission, assertion, report or exit-waiver change. Stop after
+seg2's first committed row, requiring the actual natural Gumball exit and
+returned-level opening; stopping seg1 at1430 would not ask that question.
+The original base still owns every predecessor/bootstrap/transition/report
+and failure. The helper has no witness state and no inherited full-run test.
+
+Baseline reference is actual Main
+`8030832d2ab6080e5324cdfe35e971677fd97b41`. Readback confirms its exact protected
+prefix method/signature and the whole `AbstractRunChainTest` equal current
+(SHA256 `967c9896bf566218e9198626ec7d256f181be9fb78ca5abc787d6b82932148bb`);
+`TestS3kMegaRunChain` also equals current
+(`74463d0a84cb070b564e9a4a29775886cd5988944889f4da65235f60ebaaa516`),
+and the imported RequiresRom annotation is byte-identical. Root's independent
+source audit additionally reports identical ComparedInteriorRowDrive, POM,
+timing queues and full fixture tree; shared title/load runtime differs. This
+source preparation does not claim that all runtime owners are identical.
+Fixture tree is `db73f445d9a07c616ef94d9ab793539326440cd3`; manifest SHA256
+`149c879ccb3e31cbe806b492dbe40cb060c5e4414e7666a0ab5199f0c7228302`;
+AIZ metadata `d61a5187ae83e11f87b30e798ecf49438c06bd6ee381bb279e3ffcd3776b4c0a`;
+Gumball metadata `1a2e60f7c8715085f10f3674c92db0819e02f7b5fd8775a03e82fde1875d6b9b`;
+original shared movie SHA256
+`d7485e13f427d1b335cbbb3c405ff6136a77326239b79d3aed61e902078af45c`.
+S3K ROM remains SHA1 `cfbf98c36c776677290a872547ac47c53d2761d6`.
+
+**No current rerun.** Root authorizes reusing98161 as the current original
+route-assertion epoch: it failed original1661 before any target observer was
+installed, so changing only the later prefix destination does not require a
+ceremonial current execution. That observed failure and all original limits
+remain as R12 above. Historical `36e73ddcc2`/the2026-10-02 campaign audit already
+headline Gumball18/first1300x; this is not exact original-assertion/vector/closure
+attribution. A future matched803 result could establish the same exit assertion
+or actual route advance only. It cannot establish all18 current vector identities
+from the recent5 ring, a whole chain/SS/fdf readiness outcome, native timing,
+CPU initialization or independent prediction. No gap is relabeled inherited.
+
+**Proposed exact baseline command — NOT submitted.** This would run only after
+Root actual-file review and separate803 source/setup/execution authorization,
+using the current Main absolute wrapper from this same owned649 cwd and an
+explicitly qualified803 source state. That state has **not** been installed;
+current Java remains3be. Preserve b0b4/all prior refs, this Plan WIP, original
+private config, native/media and Main while preparing any separately authorized
+baseline; no branch switch or source overlay is part of this task.
+
+```bash
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 \
+env -u DISPLAY -u WAYLAND_DISPLAY \
+python3 "${MAIN_ROOT}/tools/testing/maven_queue.py" --normal -Dmse=off \
+  -Ptrace-replay-r7 \
+  '-Dtest=TestS3kKnucklesGumballExitBaseline#originalGumballExitReachesReturnedLevel' \
+  "-Dsonic1.rom.path=${MAIN_ROOT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${MAIN_ROOT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${MAIN_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true \
+  -Dsurefire.runOrder=alphabetical test -B
+```
+
+As with98161, select the existing JDK25 bin in PATH while preserving other
+inherited JVM environment. Only lexical/readback/whitespace/source-compatibility
+checks occur now, no Java parse/typecheck, compiler/JVM/test/native/capture or
+additional current/baseline workload. No production/test-base/fixture/profile/
+API change, no SS-only seek/rebase or new stop. Original reporting/failure and
+cleanup remain authoritative. Root reads the actual frozen helper before
+separately deciding the single803 gate. Temporary helper and Plan are the only
+owned dirty paths; no new commit or execution result is claimed.
+
+
+### R14 actual Main803 natural Gumball exit prefix — 2026-10-17
+
+Root read the exact669-byte/19-line helper `7475c909e89c9e57e6e55156983c2f313712248ecc096b857e6132adfed914a6`
+and actual protected base/POM/Plan with no material finding. Separate exact
+returned task `fdf-r14-reviewed-first-gumball-base803-prefix-once-20261017`,
+ordinal24/native01a14a19, is registered24h;23/22/21 and all older results remain.
+Root authorized **one baseline only**, no current rerun. In same owned649, a new
+local `bugfix/ai-s3k-fdf-gumball-base803-gpt61` was created at exact
+`8030832d2ab6080e5324cdfe35e971677fd97b41`. Every other tracked main/test source
+and POM matched803. Original candidate branch/HEADb0b4 and all earlier refs stayed
+intact. Exact Plan WIP528950bytes/SHA256
+`445eaa30045d8829453165e066974ca2a82ec7f23103b2fd8c9d977401ebbb90`
+was temporarily preserved, then restored byte-for-byte after terminal50308 and
+before this facts append. Submodule recursion was disabled; native contents and
+regular private config/Main hash+mtime were preserved through both checkouts.
+
+Actual command is the R13 full command above, from owned649 with the current
+Main absolute wrapper, no extra CLI GL property. Environment/flags match98161:
+normal7GiB/8cores, all3 original absolute ROM properties, Java25.0.4.1, one
+required surfaceless-EGL JAVA_TOOL_OPTIONS token, nullAL/no ambient display/Lua5.4,
+fork1/reuse/alphabetical; other inherited JVM options remain. Only selector and
+source base differ. Lifecycle includes normal successful production/test
+compilation; no preboot correction or second request. Original source remained
+frozen throughout queued/live50308. No native/capture/fullclass/SS rebase.
+
+**Actual50308 terminal1,2026-10-17T19:46:12Z**, queue0s/Maven**01:22min**,
+JUnit **1T/1F/0E/0S**, class5.570s/method5.315s. Parent elapsed time was not
+separately measured. Exact original failure type `AssertionFailedError`, message
+`Interior exit boundary (stage_exit) was never observed within the boundary
+window for src/test/resources/traces/s3k/runs/s3-knux-multibonus-ss ==> expected:
+<true> but was: <false>`, owned by `AbstractRunChainTest.assertChainReplay:1661`,
+is the same route assertion as current98161. Seg2's first returned-level row is
+not reached. The original failure/report/abort/cleanup path stays intact.
+
+| Retained baseline report | Actual50308 | Bounded comparison with98161 |
+|---|---|---|
+| seg0 AIZ | completefalse;1physics/0animation,0warnings/bootstrap,lag0; camera_y4545 ROM01F2/engine01EE delta4 | same retained summary/only recent entry |
+| seg1 Gumball | comparator completetrue for1430 reference rows;18physics/0animation,0warnings/bootstrap,lag21; first non-camera1300x ROM0000/engine2778 delta10104 | same retained summary/first mismatch |
+| Gumball recent ring | exactly5 entries at1380: module queued_fingerprints/remaining_work, direct active_destination/active_source/prepared | same five observed field/value entries; not the complete18-error vector |
+| AIZ→Gumball gap | one gap5390→5570,0failures, no added transitions | same retained gap record, not whole-chain completion |
+
+The five-value comparison includes native remaining2/engine1, destination-1/
+-12288, source-1/880426, preparedfalse/true and the same queued-fingerprint
+strings observed in98161's recent output. It does not reconstruct absent older
+mismatches. All29 baseline suppressed completion identities were inspected:
+18direct/11module,12unconsumed-at-segment-end and17pending mismatches. The first
+is raw4570 PRE direct15/fbfc78d4…, the last raw1406 POST module20/d713465c…;
+those counts/endpoints match current's retained bounded record. No exhaustive
+29-identity current/baseline delta is claimed after current raw diagnostics were
+consumed. Both have two FAST missing-manifest→NONE warnings; ordinary compiler
+deprecation/unchecked/resource-encoding warnings remain. No selected skip/wrongROM.
+
+**Attribution boundary:** the observed original Gumball exit assertion also
+fails on actual Main803 under this matched original inlet/flags;98161 is not
+proof that current composition introduced that particular route assertion.
+This is not a blanket inheritance waiver, native correctness, exact equality
+of all18 error vectors, attribution of their producer/closure cause, or route
+advance. Historical36e's headline alone was insufficient for this bound.
+SS/fdf remains **UNREACHED in both**; neither execution observes its prepared
+head, parent, admission or retirement. No live4/5/4/kernel/wholeSS/ending/whole-route
+claim, source repair, current rerun or additional execution follows.
+
+After inspection, candidate branch `bugfix/ai-s3k-fdf-recorded-consumption-witness-gpt61`
+was restored at `b0b4a4b59c59154cabb18823e71247c2e3c8ea6a`, then exact saved
+Plan WIP restored. Only existing Plan/frontier facts are added. The temporary
+helper is removed under the intended-tree lease; inspected owned reports,
+sidecars, exact compiled helper class and temporary Plan backup are consumed
+under metadata lease alone, no archive/copy/pass receipt. The baseline branch
+ref stays local at803; no ref deletion, integration/push or commit at this
+accounting boundary. Main/private config/native/media and all prior refs/results
+remain. **Current target is last compiled50308 on803**, not restored b0b4/3be;
+a future combined owner must compile its own current source before validation.
+All owned job/admission/build leases are terminal. Root reviews these bounded
+facts before any next task; no automatic fix or additional scope is inferred.
