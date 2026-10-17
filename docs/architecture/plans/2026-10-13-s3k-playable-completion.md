@@ -4295,3 +4295,51 @@ numeric API is therefore a future-consumer dependency, not an observed current
 ending defect. Source: sonic3k.asm CheckLevelForWater/WaterHeight/ending load and
 s3.asm AIZ1_Deform/AIZ1_ApplyDeformWater. Caller-window budgets, Hyper/Kos6+46 and
 PAL/PCM remain open. No JVM, capture or runtime edit was needed for this check.
+
+
+## R6 actual HCZ7134 live wall input witness — 2026-10-17
+
+Own tree fast-forwards to Root86171; native4fdf difference preserved. One normal
+canonical prefix56073 stops after7135. Execution1/0F/0E/0S is not parity green:
+open HCZ comparator217=20physics+197animation, lag53,7136/14208 rows, first
+non-camera7134sidekick_x0175/0176. Earlier206 errors already exist by7132.
+Actual CPU+1, acceleration026A→0270 and projected0180/0838 agree with native;
+wall call leaves0270/ground0270/noPush instead of0170/ground0/Push, producing
+0176.F800. BG collision is active; selected BG distance/terrain/transforms and
+native layer equivalence remain uncaptured. Actual engine top/lrb0E/0F. Stop at
+this wall-boundary handback, without runtime edit or second run. No independent
+slice/alternate/guard/native/media/broad claim. Temporary observer/diagnostics
+are consumed and removed. [Exact fields, clocks, command and limits](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r6-actual-hcz7134-cpu-and-wall-input-witness--2026-10-17).
+
+
+## R7 partial selected BG observation;7134 still missing — 2026-10-17
+
+Native aux inventory confirms P1-only0E/0F snapshots; no native P2 layer, raw
+BGflag/diff/mask fields. Native wall X05BE plus owning source implies offset0
+and diffs0200/0500; it is inference, not a native register sample. One engine
+request67242,1/1F/0E/0S, stops after7133 on an incorrect observer assertion:
+shared probe also runs floor/left/right tails, so4 calls do not mean4 wall-owner
+calls. Qualified projected wall sample7133 selects BG on equality, FG/BG/combined
++18, empty BG terrain, provider0200/0500 and translatedFF7D/0338. Passivity
+checks and comparator206=11physics+195animation agree with R6 through7133;
+7134/7135 are not executed. No second run, production edit, qualification or
+frontier advance. Vertical tail's wrong pooled-result read is excluded. [Exact
+source inventory, frozen fingerprint, selected result and failure](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r7-native-inventory-and-partial-selected-bg-witness--2026-10-17).
+
+
+## R8 corrected lexical wall witness; actual7134 BG+31 — 2026-10-17
+
+Runtime86171, own docs5daf source, actual child ordinal9. The observer now filters
+only the real resolveGroundWallCollision lexical call, allowing floor/clamp
+scans. Sole corrected prefix44688 reaches7135:1/0F/0E/0S observation success,
+7136/14208 HCZ rows,217=20physics+197animation,lag53,bootstrap/warnings0;
+first non-camera7134sidekick_x0175/0176 remains. Exact7134 probe0180/0838
+translatesFF80/0338 with active/stable0200/0500 provider; actualFG/BG/combined
+are+31, selectedBG on equality, empty BG descriptor/collision indices0 and no
+flips. One actual wall call/tick plus three legitimate shared-probe tails,
+unchanged pooled return/playable/provider and same R6 comparator/poststates.
+Native P2 layers/raw BG state/selected tile are absent from the original aux;
+source inference is separate and negativeX does not establish a wrapping bug.
+No production edit or retry/new qualification. Generic test-only helper retained,
+temporary runner/consumed diagnostics removed; all jobs terminal. [Exact command,
+fingerprint, all windows and native limit](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r8-lexical-wall-owner-observer-and-actual7134-bg-result--2026-10-17).

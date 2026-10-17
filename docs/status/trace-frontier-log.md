@@ -113344,3 +113344,47 @@ spans are consequently new relative to the exact integration base and remain
 blocking. No new target fix, whole-route pass or broad run is claimed. The
 [task plan](../architecture/plans/2026-10-13-s3k-playable-completion.md#exact-published-base-alternate-control-and-pending-animal-owner--2026-10-17)
 records the matched environment and source-backed animal-lifetime investigation.
+
+
+### 2026-10-17 — R6 live HCZ7134 wall input witness; first non-camera field unchanged
+
+Root86171 composition in the same owned feature tree; one normal/EGL canonical
+prefix56073 stops after7135 (7136 of14208 rows, lag53). JUnit1/0F/0E/0S only
+means the intentional prefix completed: active comparator217=20physics+197animation,
+bootstrap/warnings0, first non-camera7134sidekick_x0175/0176. Earlier206 errors
+(11physics+195animation) are already present by7132. CPU nudge+1 and acceleration
+026A→0270 yield the native projected0180/0838, but the actual wall call leaves
+0270/ground0270/noPush and integrates to0176.F800. BG active, engine layers0E/0F;
+selected BG distance/terrain/transforms and native layer bytes were not captured.
+No runtime edit, second invocation, full/slice/alternate/native/media/guard/broad
+qualification; no replacement of R4's longer-window totals or exact GLFW limit.
+[Exact command, all groups, fields and clocks](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r6-actual-hcz7134-cpu-and-wall-input-witness--2026-10-17).
+
+
+### 2026-10-17 — R7 partial selected BG witness;7134 observation incomplete
+
+Same runtime86171/docs786 source, one normal/EGL prefix67242. It fails the
+observer's one-shared-probe-call assertion after7133 (actual4 includes floor/
+left/right tails):1/1F/0E/0S. Qualified7133 projected wall selects BG on the
+FG/BG+18 tie, provider0200/0500, translatedFF7D/0338 and empty BG descriptors.
+Partial7134/14208 reference rows (0–7133),206=11physics+195animation, lag53,
+bootstrap/warnings0 matches R6 before its7134 frontier. No new7134/7135 result,
+frontier move, full/slice/alternate/GLFW/native/guard/broad qualification. Native
+P2 layer/raw BG fields remain missing; source-derived diffs are inference.
+[Exact command/fingerprint, selected sample and observer failure](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r7-native-inventory-and-partial-selected-bg-witness--2026-10-17).
+
+
+### 2026-10-17 — R8 corrected actual7134 selected BG witness; frontier unchanged
+
+Same owned tree5daf/runtime86171. One original normal/EGL prefix44688 with
+-Ptrace-replay -Dtest=TestS3kHcz7134LexicalBgWitness#canonicalThroughHcz7135,
+original3ROMs/input/bootstrap/lag/singlefork reaches7135:1/0F/0E/0S observer
+success, open comparator217=20physics+197animation,7136/14208rows,lag53,
+bootstrap/warnings0. First non-camera7134sidekick_x0175/0176 remains; earlier
+206 errors at7132/7133 retained. Actual wall FG/BG/combined+31 selectsBG,
+provider0200/0500 transforms0180/0838→FF80/0338; BG descriptor/collision0,
+no flips. Lexical caller filter permits legitimate floor/clamp scans; passivity
+and exact R6 window/poststates agree. Native P2 layer/raw BG state/selected tile
+missing, no wrapping-owner inference or runtime change. No second/full/slice/
+alternate/native/media/guard/broad run or new GLFW certification. [Exact invocation,
+source fingerprint, windows and metrics](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r8-lexical-wall-owner-observer-and-actual7134-bg-result--2026-10-17).

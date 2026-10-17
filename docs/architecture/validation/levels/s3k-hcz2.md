@@ -128,3 +128,32 @@ CPU/movement/wall/integration and no-nudge control pass in focused86494
 is still unknown. Equal final X can conceal different velocity/Push results.
 No new route, matrix product or runtime qualification. [Exact evidence and
 missing live fields](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#hcz7134-coupled-cpu-and-ground-wall-decision--2026-10-17).
+
+
+R6 live witness (2026-10-17, Root86171 composition): one canonical prefix through
+7135 observes correct CPU nudge/acceleration/projection but missing wall response
+at7134. Engine final0176.F800/vx-ground0270/noPush vs native0175.F800/0170-0/Push.
+BG collision is active; selected distance, translated BG terrain and native layer
+comparison are still missing. Prefix217 errors/7136 rows is a partial window,
+not improvement versus full R4 or a matrix certification. No runtime change or
+new independent slice/GLFW qualification. [Fields/clocks and seam limit](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r6-actual-hcz7134-cpu-and-wall-input-witness--2026-10-17).
+
+
+R7 selected BG attempt (2026-10-17): actual7133 projected wall selects BG+18,
+empty tile0, provider0200/0500, translatedFF7D/0338. The single invocation67242
+fails an observer shared-probe count assertion after7133 (1/1F/0E/0S), so actual
+7134 selected distance/terrain remains unobserved. Partial206 errors over7134
+reference rows matches R6's same earlier window; no matrix/route certification.
+Native P2 layer/raw BG state fields are absent; inferred native diffs are kept
+separate. No retry or runtime edit. [Evidence and excluded stale vertical pool](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r7-native-inventory-and-partial-selected-bg-witness--2026-10-17).
+
+
+R8 corrected observer (2026-10-17, production86171 unchanged): original prefix
+44688 reaches7135 with the same217 comparator errors/7136 reference rows and
+first7134sidekick_x0175/0176. Observation assertions pass1/0F/0E/0S. Actual7134
+FG/BG/combined+31 selects BG, transformed0180/0838→FF80/0338, provider0200/0500,
+empty BG descriptor0/no flips/primary-secondary collision0. Exactly one lexical
+wall-owner call per observed tick; floor/clamp calls pass unchanged. Native P2
+layer/selected terrain remains missing; no wrapping fault or production fix
+established. No new route/matrix/GLFW qualification. R7's partial assertion red
+is preserved. [Full selected metrics, passivity and native gaps](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r8-lexical-wall-owner-observer-and-actual7134-bg-result--2026-10-17).
