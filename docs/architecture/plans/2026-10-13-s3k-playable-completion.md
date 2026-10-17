@@ -5324,3 +5324,59 @@ it does not waive known trace/RGB/ending/coverage blockers. Root source stays
 frozen during the retained run. Later isolated fixes require their meaningful
 affected checks before composition; repeated unchanged broad coverage is not
 a ceremony. Whole ending CPU/bus/readiness acceptance remains a separate gate.
+
+
+### Second Strike warning fixture physical ownership — 2026-10-17
+
+Root02b's broad15826 exposed the sole new failure
+`TestSecondStrikeBoss#childFirstAndParentFirstBarrelSlotsKeepEveryWarningPresentation`:
+expected3/actual0 warnings. Root's matched Main803 method89643 passed1/0F0E0S
+at15:35:54UTC and its diagnostics were consumed. This is not an inherited
+baseline failure or a reason to restore Java parent references. R7 captures
+`AizMinibossComponent.parentSlot` at birth; moving the same Java boss from its
+original SST to70 leaves those physical parent3 words unchanged. The follow-up
+owner selects the family at its current root slot, correctly finding none.
+Native `loc_68A94` creates body/arm/barrels with `CreateChild1_Normal`, whose
+`move.w a0,parent3(a1)` follows `AllocateObjectAfterCurrent`
+(skdisasm044fa467,sonic3k.asm137334–137342/177010–177040).
+
+Local merge4e65da92e7d538015468114cccc56160fde269d5 preserves kernel16b and
+both complete append-only Plan streams. The test-only migration keeps a real
+root-before-five-child graph. Ordinary unrelated allocations before child birth
+are removed before warning admission, supplying real free holes before barrel
+anchors; the dense graph supplies warning slots after them. No assigned slots
+or relocated roots are used by either positive case. Assertions retain root
+ObjectRef/slot, all five captured parent3 values, each warning's actual barrel
+ObjectRef/slot, physical relative order and the pose visible at its own SST pass.
+Both cases present all16 cues, emit one four-flame wave, run its short tail and
+repeat the continuation twice after forced Java graph recreation. Comparison
+uses the existing strict canonical comparison of every registered object and
+game-state snapshot key. This fixture does not register the full terrain/player/
+art world, use a cold campaign inlet, or supply native visual evidence. The
+relocated-root scenario remains an explicitly invalid-inlet negative: captured
+parent3 does not change and no warning or invisible follow-up wave is admitted.
+
+Focused session3990 on4e65da92 plus test SHA256
+`eda34c2c5660b75130095fdee847bac9e4ae5dbc74c2d901c64f0b655cb5a54a`
+passed21/0F0E0S at15:48:40UTC: entire `TestSecondStrikeBoss`14,
+`TestS3kAizMinibossGraphRewind`4 and `TestAizMinibossChildRetirement`3.
+Queue245s and Maven27.255s are distinct; no broad/S3K4 repetition or new capture.
+XML counts/skips were inspected and the owned diagnostics consumed. Exact command
+from the owned tree, with `${OPENGGF_MAIN}` the unchanged Main workspace:
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH \
+  EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=${OPENGGF_MAIN}/s1.gen" \
+  "-Dsonic2.rom.path=${OPENGGF_MAIN}/s2.gen" \
+  "-Ds3k.rom.path=${OPENGGF_MAIN}/s3k.gen" \
+  '-Dtest=TestSecondStrikeBoss,TestS3kAizMinibossGraphRewind,TestAizMinibossChildRetirement' test -B
+```
+
+No runtime, allocator, reparent API, readiness/profile or service-count changes.
+No trace frontier moves; existing route/viewport/donor/native coverage limits and
+ending production caller/bus inputs/6+46/Hyper/PAL/PCM blockers remain open.
+Root owns later composition and integration; this branch is local only.

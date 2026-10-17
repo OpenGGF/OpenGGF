@@ -9,11 +9,20 @@ import com.openggf.game.GameStateManager;
 import com.openggf.game.GameModule;
 import com.openggf.game.patch.DelegatingGameModule;
 import com.openggf.game.rewind.RewindRegistry;
+import com.openggf.game.rewind.CompositeSnapshot;
+import com.openggf.game.rewind.RewindSnapshotDiff;
+import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.difficulty.AizMinibossAttackPolicy;
 import com.openggf.game.sonic3k.objects.AizMinibossFlameChild;
 import com.openggf.game.sonic3k.objects.AizMinibossInstance;
+import com.openggf.game.sonic3k.objects.AizMinibossBodyChild;
+import com.openggf.game.sonic3k.objects.AizMinibossArmChild;
+import com.openggf.game.sonic3k.objects.AizMinibossFlameBarrelChild;
+import com.openggf.game.sonic3k.objects.AizMinibossBarrelShotFlareChild;
+import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.NativeSstSlotAccess;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
@@ -28,6 +37,9 @@ import java.lang.reflect.Method;
 import java.net.URLClassLoader;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -143,21 +155,172 @@ class TestSecondStrikeBoss {
         }
     }
 
-    @Test void childFirstAndParentFirstBarrelSlotsKeepEveryWarningPresentation() throws Exception {
-        for (boolean childFirst : List.of(false, true)) {
+    @Test void warningSlotsBeforeAndAfterBarrelAnchorsKeepEveryPresentationAndReplayTwice() throws Exception {
+        for (boolean warningBeforeBarrel : List.of(false, true)) {
             var harness = new Harness(policy, 3);
-            var initialize = AizMinibossInstance.class.getDeclaredMethod("onInitialDelayComplete");
-            initialize.setAccessible(true); initialize.invoke(harness.boss);
-            if (childFirst) {
-                harness.objects.removeDynamicObject(harness.boss);
-                harness.objects.addDynamicObjectAtSlot(harness.boss, 70);
+            int rootSlot = harness.boss.getSlotIndex();
+            var rootId = identity(harness, harness.boss);
+            var fillers = new ArrayList<AbstractObjectInstance>();
+            if (warningBeforeBarrel) {
+                // Real unrelated allocations precede CreateChild1_Normal. Freeing them
+                // later lets the root's warning allocation reuse holes before its barrels.
+                for (int i=0;i<3;i++) fillers.add(harness.objects.createDynamicObject(() ->
+                        new AbstractObjectInstance(new ObjectSpawn(0x1100,0x300,0x7f,0,0,false,0),
+                                "UnrelatedWarningHoleOccupant") {
+                            @Override public void update(int vIntRunCount, com.openggf.game.PlayableEntity player) { }
+                            @Override public void appendRenderCommands(List<com.openggf.graphics.GLCommand> commands) { }
+                        }));
             }
+            initializeFamily(harness);
+            assertPhysicalFamily(harness, rootSlot, rootId);
+            fillers.forEach(harness.objects::removeDynamicObject);
+            var previousPoses = barrelPoses(harness);
             startWarningAtNativePeak(harness);
-            for (int i=0;i<16;i++) {
-                harness.assertWarningPresentation(3); harness.managerTick(1);
+            var anchors = assertWarningAnchors(harness, warningBeforeBarrel, previousPoses);
+            for (int i=0;i<7;i++) warningStep(harness, warningBeforeBarrel, anchors);
+
+            // This owner fixture captures its entire registered object/game-state world;
+            // it does not claim a cold campaign, terrain/player world or native footage.
+            harness.objects.setRewindInPlaceRestoreEnabledForTest(false);
+            var registry = new RewindRegistry();
+            registry.register(harness.objects.rewindSnapshottable());
+            registry.register(harness.gameState);
+            harness.objects.validateRewindReferenceClosure();
+            var saved = registry.capture();
+            int savedTick = harness.tick;
+            finishWarningAndTail(harness, warningBeforeBarrel, anchors);
+            var expected = registry.capture();
+            for (int replay=0;replay<2;replay++) {
+                var priorBoss = harness.boss;
+                registry.restore(saved);
+                harness.tick = savedTick;
+                harness.boss = harness.objects.activeObjectsOfType(AizMinibossInstance.class).getFirst();
+                assertNotSame(priorBoss, harness.boss, "force real graph recreation");
+                sameWorld(saved, registry.capture());
+                assertPhysicalFamily(harness, rootSlot, rootId);
+                assertEquals(anchors, warningIdentities(harness));
+                finishWarningAndTail(harness, warningBeforeBarrel, anchors);
+                sameWorld(expected, registry.capture());
             }
-            assertEquals(4, harness.flames().size());
         }
+    }
+
+    @Test void movingAnExistingRootDoesNotReparentItsCapturedPhysicalChildren() throws Exception {
+        var harness = new Harness(policy, 3);
+        initializeFamily(harness);
+        int originalSlot = harness.boss.getSlotIndex();
+        var originalId = identity(harness, harness.boss);
+        assertPhysicalFamily(harness, originalSlot, originalId);
+        // Explicit invalid inlet retained from the old dispatch-order fixture:
+        // relocating an existing root is not native CreateChild1_Normal ownership.
+        harness.objects.removeDynamicObject(harness.boss);
+        harness.objects.addDynamicObjectAtSlot(harness.boss, 70);
+        assertNull(NativeSstSlotAccess.currentOwner(harness.objects, originalSlot));
+        assertSame(harness.boss, NativeSstSlotAccess.currentOwner(harness.objects, 70));
+        for (var child : family(harness)) assertEquals(originalSlot, parentSlot(child));
+        startWarningAtNativePeak(harness);
+        harness.managerTick(20);
+        assertEquals(0, liveFlares(harness));
+        assertTrue(harness.flames().isEmpty(), "missing physical family must not admit an invisible follow-up wave");
+    }
+
+    private static void initializeFamily(Harness harness) throws Exception {
+        var initialize = AizMinibossInstance.class.getDeclaredMethod("onInitialDelayComplete");
+        initialize.setAccessible(true);
+        initialize.invoke(harness.boss);
+    }
+
+    private static List<AbstractObjectInstance> family(Harness harness) {
+        return harness.objects.activeObjectsOfType(AbstractObjectInstance.class).stream()
+                .filter(o -> o instanceof AizMinibossBodyChild || o instanceof AizMinibossArmChild
+                        || o instanceof AizMinibossFlameBarrelChild).toList();
+    }
+
+    private static void assertPhysicalFamily(Harness harness, int rootSlot, ObjectRefId rootId) throws Exception {
+        assertEquals(rootSlot, harness.boss.getSlotIndex());
+        assertEquals(rootId, identity(harness, harness.boss));
+        assertSame(harness.boss, NativeSstSlotAccess.currentOwner(harness.objects, rootSlot));
+        assertEquals(5, family(harness).size());
+        for (var child : family(harness)) {
+            assertTrue(child.getSlotIndex()>rootSlot, "ordinary child birth remains after the unchanged root");
+            assertEquals(rootSlot, parentSlot(child));
+        }
+    }
+
+    private static int parentSlot(AbstractObjectInstance object) throws Exception {
+        Class<?> owner = object instanceof AizMinibossBarrelShotFlareChild
+                ? object.getClass() : object.getClass().getSuperclass();
+        var field = owner.getDeclaredField("parentSlot");
+        field.setAccessible(true);
+        return field.getInt(object);
+    }
+
+    private static ObjectRefId identity(Harness harness, AbstractObjectInstance object) {
+        return harness.objects.captureIdentityContext().requireIdentityTable().idFor(object);
+    }
+
+    private record BarrelPose(int x, int y) { }
+
+    private static Map<Integer, BarrelPose> barrelPoses(Harness harness) {
+        var poses = new LinkedHashMap<Integer, BarrelPose>();
+        for (var barrel : harness.objects.activeObjectsOfType(AizMinibossFlameBarrelChild.class))
+            poses.put(barrel.getSlotIndex(), new BarrelPose(barrel.getX(), barrel.getY()));
+        assertEquals(3, poses.size());
+        return poses;
+    }
+
+    private static Map<ObjectRefId, ObjectRefId> warningIdentities(Harness harness) throws Exception {
+        var anchors = new LinkedHashMap<ObjectRefId, ObjectRefId>();
+        for (var warning : harness.objects.activeObjectsOfType(AizMinibossBarrelShotFlareChild.class)) {
+            var barrel = assertInstanceOf(AizMinibossFlameBarrelChild.class,
+                    NativeSstSlotAccess.currentOwner(harness.objects, parentSlot(warning)));
+            anchors.put(identity(harness, warning), identity(harness, barrel));
+        }
+        assertEquals(3, anchors.size());
+        assertEquals(3, new java.util.HashSet<>(anchors.values()).size());
+        return anchors;
+    }
+
+    private static Map<ObjectRefId, ObjectRefId> assertWarningAnchors(Harness harness,
+            boolean warningBeforeBarrel, Map<Integer, BarrelPose> priorPoses) throws Exception {
+        var identities = warningIdentities(harness);
+        var currentPoses = barrelPoses(harness);
+        for (var warning : harness.objects.activeObjectsOfType(AizMinibossBarrelShotFlareChild.class)) {
+            int anchor = parentSlot(warning);
+            assertEquals(warningBeforeBarrel, warning.getSlotIndex()<anchor);
+            var pose = (warningBeforeBarrel ? priorPoses : currentPoses).get(anchor);
+            assertNotNull(pose);
+            assertEquals(pose.x(), warning.getX(), "physical order selects the actual barrel pose");
+            assertEquals((pose.y()+4)&0xffff, warning.getY());
+        }
+        return identities;
+    }
+
+    private static void warningStep(Harness harness, boolean before,
+            Map<ObjectRefId, ObjectRefId> anchors) throws Exception {
+        harness.assertWarningPresentation(3);
+        assertTrue(harness.flames().isEmpty());
+        var priorPoses = barrelPoses(harness);
+        harness.managerTick(1);
+        if (liveFlares(harness)>0)
+            assertEquals(anchors, assertWarningAnchors(harness, before, priorPoses));
+    }
+
+    private static void finishWarningAndTail(Harness harness, boolean before,
+            Map<ObjectRefId, ObjectRefId> anchors) throws Exception {
+        for (int i=7;i<16;i++) warningStep(harness, before, anchors);
+        assertEquals(0, liveFlares(harness));
+        assertEquals(4, harness.flames().size());
+        harness.managerTick(4);
+        assertEquals(4, harness.flames().size(), "one warning admits one native wave through its tail");
+        harness.objects.validateRewindReferenceClosure();
+    }
+
+    private static void sameWorld(CompositeSnapshot expected, CompositeSnapshot actual) {
+        assertEquals(expected.entries().keySet(), actual.entries().keySet());
+        for (String key : expected.entries().keySet())
+            assertTrue(RewindSnapshotDiff.keyEquals(key, expected.get(key), actual.get(key)),
+                    () -> key+": "+RewindSnapshotDiff.diffKey(key, expected.get(key), actual.get(key)));
     }
 
     @Test void exhaustedSlotsBoundWarningAndWaveAllocationWithoutLateRetries() throws Exception {

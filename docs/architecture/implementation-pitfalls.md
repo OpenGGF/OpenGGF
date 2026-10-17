@@ -33,6 +33,17 @@ actual disk/session reloads; see the
 [task evidence](plans/2026-10-13-s3k-playable-completion.md#saved-slot-hpz-to-ssz-roundtrips-2026-10-17).
 
 
+**Changing dispatch order must preserve captured physical parent ownership.**
+S3K `CreateChild1_Normal` stores the parent's SST address in `parent3`, not a
+Java identity. Removing an existing boss and re-adding that instance at another
+slot after child birth is an invalid inlet for ordinary family behavior. To
+exercise warnings before/after barrel anchors, allocate unrelated occupants
+normally before five-child birth and free those holes before warning admission;
+keep the root and captured component slots unchanged. A lower warning reads the
+barrel pose before its dispatch, while a higher warning reads the updated pose.
+Check actual physical owner/ObjectRef and both poses, then force recreation and
+repeat the continuation. See the [Second Strike fixture evidence](plans/2026-10-13-s3k-playable-completion.md#second-strike-warning-fixture-physical-ownership--2026-10-17).
+
 **Optional presentation does not erase native object ownership.** S3K `Level`
 writes the title owner at `Dynamic_object_RAM+5`, absolute SST8, and creates
 four higher-slot children before `Load_Sprites`. Omitting its visible loop still
