@@ -330,3 +330,25 @@ With73focused0skip, real twice-world release/recapture and R20's native-matching
 full returned-HCZ/exit, independent slice/alternate, new native, exact GLFW or
 wider roster/viewport/auxiliary certification. Hurt/dead and multi-owner breadth
 remain limited to the recorded source argument. No further execution here.
+
+
+## R22 composed fullcanonical returned-HCZ window (2026-10-17)
+
+On committed7df991e289b93f92b34e10e79dc4f9900ec67eaa, unchanged maintained
+original AD40 fullcase76850 (trace-replay/all3ROM/normalqueue/EGL/singlefork)
+finishes1/1F0E0S, no skips. ReturnedHCZ completes all14208 rows:
+**11118=10054physics+1064animation**, lag59/0warnings/bootstrap, firstNonCamera
+**8775 sidekick_status_byte native000B / engine000A**. Repaired8717 is passed;
+no new writer is observed. Earlier complete six gameplay windows remain
+all-group zero. Actual13gaps/0failures includes giant_ring77284 and SS6→hcz_3
+stage_exit85097: returned-HCZ exit is present, SS parity is not certified.
+Seg13 remains partial (5393 reference, exact compared count not emitted),63295
+errors/first287y06D4/06DA/recent3208, ownership loss88306 atLEVEL/gen10/zone1/
+act1; four suppressed unmatched hardware edges remain. No onward route green.
+[Exact source/command, group/window table, recent arrays and timing limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r22-composed-full-canonical-reaches8775-status-strict-route-remains-red--2026-10-17).
+The available recent5 ring does not permit exhaustive residual-set comparison;
+historical49197 total26153 is same-window aggregate evidence only. R21's206
+partial and73focused source epochs remain distinct. No independent slice,
+alternate, auxiliary/GLFW/native or viewport/roster breadth is newly qualified.
+No runtime edit/probe/rerun; next8775 causal scope belongs to Root. Own docs-only
+accounting/consumed cleanup follows this single maintained route measurement.
