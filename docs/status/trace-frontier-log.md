@@ -113330,3 +113330,17 @@ No production edit or trace/native/broad invocation. Prior canonical7134
 error count/window claimed. Missing live engine CPU branch, full pre-wall state
 and probe/distance/terrain prevent a causal owner assignment. [Exact selector,
 math, outcomes and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#hcz7134-coupled-cpu-and-ground-wall-decision--2026-10-17).
+
+
+### 2026-10-17 — exact803 alternate baseline distinguishes candidate ring regressions
+
+Root's clean pinned8030832d2 checkout, current Main queue wrapper, normal
+`-Ptrace-replay -Dtest=TestS3kAizZoneSliceTraceReplay#replayMatchesTrace`, explicit
+original ROMs, single fork, preserved surfaceless graphics/null audio and private
+configuration:78232 terminal1 at12:52:40.260085UTC,1/1F/0E/0S,26041 observations.
+Complete array: only26179 rings72/0; animation/warnings/bootstrap zero, eight
+advertised aux schemas absent. Candidate AIZ1878's ten13740..16669 rings1/2
+spans are consequently new relative to the exact integration base and remain
+blocking. No new target fix, whole-route pass or broad run is claimed. The
+[task plan](../architecture/plans/2026-10-13-s3k-playable-completion.md#exact-published-base-alternate-control-and-pending-animal-owner--2026-10-17)
+records the matched environment and source-backed animal-lifetime investigation.

@@ -4245,3 +4245,53 @@ position/velocity/path and actual terrain probe/distance. No new traces/native
 observations, runtime edit, broad suite, Main write or push. Prior strict
 7134sidekick_x/9482air and exact GLFW limits remain. [Math, exact focused
 command and causal blocker](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#hcz7134-coupled-cpu-and-ground-wall-decision--2026-10-17).
+
+
+## Exact published-base alternate control and pending animal owner — 2026-10-17
+
+Root creates an owned pinned8030832d2ab6080e5324cdfe35e971677fd97b41 baseline
+with the normal Main exclusive inventory lease, released12:50:54.920041UTC.
+The clean checkout uses a private regular config copy, not Main's config link;
+tracked sources and fixtures are unchanged. No build tree is copied. One exact
+`TestS3kAizZoneSliceTraceReplay#replayMatchesTrace` uses the current Main absolute
+queue wrapper from that checkout, `--normal -Dmse=off -Ptrace-replay`, explicit
+original S1/S2/S3K ROM properties, single-fork/reuse/alphabetical settings,
+`JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl`, the same CLI graphics
+property, surfaceless EGL, null OpenAL, Lua5.4 and no ambient display.
+
+Session78232 exits1 at12:52:40.260085UTC:1 test/1F/0E/0S, JUnit11.272s,
+Maven1m25s;26041 compared observations. Its complete errors array contains only
+one physics span,26179 rings72/0; animation/warnings/bootstrap errors and warnings
+are zero. Eight advertised auxiliary schemas are absent. Configuration bytes
+remain equal to Main, whose observed modification time remains the pre-run
+16October09:09:02.849921UTC. This control establishes that R3's ten earlier
+13740..16669 ring spans are new relative to the exact pre-task published base.
+They remain integration blockers; an older unmatched alternate result is not
+used to classify them. No broad baseline run or passing-route claim follows.
+
+The worker's unchanged original-driver low-SST journal84110 completes11994
+rows with zero comparisons errors/warnings/bootstrap errors (1/0F/0E/0S,
+12:44:57UTC). Its event history traces the earlier physical-pool permutation to
+an ordinary subtype0 animal: native retirement9375 follows the previous
+Render_Sprites bit7 clear at9374; the engine holds the same animal until9418.
+This changes PathSwap, decoration159, level-size-worker and later ring slots.
+The prior vertical-admission, monitor-lifetime, static/AutoSpin-cull and
+ring-allocator hypotheses were disconfirmed; no slot or ring-phase fit is
+justified. Independent source review confirms the native lifetime branch and
+S3K render geometry (width8, height_pixels0, prior-bit consumption), preserving
+S1/S2 rules and captured prior-render state. A short independent red-first
+animal-owner unit is authorized; no animal correction or alternate closure is
+yet claimed. Raw observations are consumed after extraction, not archived.
+
+### Ending raw-water boundary checked without a runtime change
+
+Native CheckLevelForWater's dry branch writes raw/mean/target$1000 and clears
+Water_flag; the per-frame writer skips a clear flag, and the ending's
+Load_Level/LoadSolids path preserves those values. C5 prices AIZ1_Deform, which
+does not read water. The separate AIZ1_ApplyDeformWater uses the dry branch at
+cameraY$01E0; current SwScrlEnding composes that branch directly rather than
+substituting WaterSystem's zero into a raw-register comparison. The absent raw
+numeric API is therefore a future-consumer dependency, not an observed current
+ending defect. Source: sonic3k.asm CheckLevelForWater/WaterHeight/ending load and
+s3.asm AIZ1_Deform/AIZ1_ApplyDeformWater. Caller-window budgets, Hyper/Kos6+46 and
+PAL/PCM remain open. No JVM, capture or runtime edit was needed for this check.
