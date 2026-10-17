@@ -6997,3 +6997,20 @@ exhaustion; S3K points use native bucket 1/high plane priority. Score/cap/
 persistence behavior is unchanged. Two pre-existing Sonic+Tails Pachinko trace
 frontiers remain exactly equal to Root28; cold-route/native RGB qualification
 and Root integration are not claimed by this local unit.
+
+
+### Bonus terrain handoff independently repaired — local 2026-10-18 component
+
+Native Level/loc_6310 calls LoadLevelLoadBlock after title/Nemesis readiness for
+bonus zones too. Ordinary public Knuckles/Gumball entry previously produced only
+the four title archives, missing ROM3FEE2E/VRAM0/output9792/modules3. The corrected
+origin-title inlet proved native five-versus-four old-red before the narrow
+active-bonus eligibility fix. The existing captured title handoff index now
+survives omitted presentation and bonus initialization; load flags, two-child
+bonus graph and queue/timing authority are unchanged. Gumball/Pachinko/Slot ROM
+terrain/dedup, normal-fresh and five-key twice-restore controls pass within R36's
+145 cases/19 classes/0 skips. Main803 reproduces the water-only fixture's immediate
+private-entry/private-exit art-FIFO warning; no art-readiness certificate or warning
+suppression. Child source-size extraction/fresh combined guards, full producer
+ordinal attribution, recorded readiness/SS/fdf and full routes remain separate.
+[Actual source epochs, original results and matched warning limit](../architecture/plans/2026-10-13-s3k-playable-completion.md#r37-qualified-component-preservation-and-inherited-warning--2026-10-18).
