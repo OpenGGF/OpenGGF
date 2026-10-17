@@ -6941,3 +6941,87 @@ paths remain in the task ownership registry, not portable repository prose).
 This replaces machine-local path spelling only; source/ROM identities, cwd,
 flags, selectors, environments and observed results are unchanged. The first
 normal pre-commit attempt rejected that prose; no code/test execution occurred.
+
+
+### R7 geometry-rebind size ratchet extraction — 2026-10-17
+
+The FDF Title guard68289's sole failure is NOT a new Title source regression,
+but IS an overall owned composition regression. The actual XML identifies
+user.dir/project.basedir as the FDF tree; TestArchitecturalSourceGuard uses
+SRC_MAIN=Path.of(src,main,java), SourceFile.read, stripComments(text,false),
+CR/LF lines, nonblank counting and exclusion only of standalone @ModApi. The
+unchanged budget is3144. A source-only exact state-machine reproduction matches
+its existing8-line sample and the actual failure3153. No baseline JVM was run.
+
+Input identities: Main8030832d2ab6080e5324cdfe35e971677fd97b41 LevelManager
+SHA2566807b61ff1302c82ba523c5469292de3bacde803bad81bd825417370630d1731
+counts3141. FDFpre74daf0939bec4ecd5f8ff7c8bc7414d9ff5058e6, its current
+Title-WIP file and Root86d1794dc6fa0bb4875ddceef0af15af04bcf67d all use
+LevelManager76193c0671bb235a3b7b494f37d170b25c3b58ebfc0861644990ca7b48eee3bd
+and count3153. All use guardeffa50492eb609231ce9c4570ffca3b4bfd3e5b859f2271b217c440a0111642f.
+Owned2077fd1d1834a3d369864bdb28027415a3eacbcc adds exactly12effective lines
+for rebindCurrentLevelGeometryForRewindRestore; its parent5c59e6da1ab66064d1aea5047d507185580bf23d
+has byte-identical Main803 geometry manager. Three lines of headroom leave nine
+over budget. Thus unchanged within the Title slice does not make it inherited Main.
+
+On owned fa8 branch bugfix/ai-s3k-rewind-geometry-budget-extraction-gpt61, FF-only
+49ae196a69745289472f524ceda420c9d8e8b610 -> exactRoot86d179, recursive checkout
+disabled and privateconfig/nativephysicalhead/oldrefs preserved. The complete
+12-effective-line restore body moves to existing engine-only
+LevelTilemapRewindAccess.rebindCurrentLevelGeometryForRestore(manager). Removing
+only manager receiver qualification recovers its old body EXACTLY, including
+null throw/text, assignments/cachecall, updateGeometry, retained-plane invalidation,
+early/no-tilemap fallback and comments. Remove the now-redundant package-private
+manager method; make only chunksPerBlockSide/cacheLevelDimensions/buildGeometry
+package-private. All public/protected declarations remain unchanged; no descriptor,
+pin, schema, capture state, mapping, animation or lifecycle changes.
+
+Source-only count is now3141; guard/budget unchanged. Frozen reviewed hashes:
+LevelManager31a7201fb1f83d2565a49b4d762d4ee0036508439b501e8ec1853d04c7093a4a;
+LevelTilemapRewindAccess9693c50d75dbb14a20031eda8057d71e3a03a674b35fdd5f0d5549baab3af2d9.
+Two-file binarydiff4330B/SHA256ed151232a34c07b974ed36a526dd5f89f77d2791b4576d930d8f0f1aed93a463;
+ordered(path NUL bytes) combined946d6159a0004604412b726d4ef5a5cc6944499cbd9ecb2485d6341ece8575c9.
+Root directly read/accepted that exact diff before compilation.
+
+Two authorized normal Main-absolute-wrapper lifecycles from the owned cwd, compiler
+inside each, source frozen/no duplicates. Portable command prefix (`MAIN` means
+the absolute Main root used at execution):
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH \
+ EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null \
+ JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+ JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl LUA_BIN=/usr/bin/lua5.4 \
+ python3 "${MAIN}/tools/testing/maven_queue.py" --normal -Dmse=off \
+ -Dopenggf.headless.gl=surfaceless-egl \
+ -Dsonic1.rom.path="${MAIN}/s1.gen" -Dsonic2.rom.path="${MAIN}/s2.gen" \
+ -Ds3k.rom.path="${MAIN}/s3k.gen" -Dsurefire.forkCount=1 \
+ -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical ... test -B
+```
+Affected38036 replaces `...` with `-Dtest=TestLevelTilemapManagerRewindReset,TestS3kSlotPlanePublication#encodedSlotLayoutRestoreKeepsPublishedPlaneThroughTheRealWorldRegistrationOrder,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`.
+ACTUAL77/0F0E0S,7classes, terminal22:16:26UTC,queue0/Maven1m21s:
+- `com.openggf.game.sonic3k.TestSonic3kBootstrapResolver`: 6
+- `com.openggf.game.sonic3k.TestSonic3kDecodingUtils`: 3
+- `com.openggf.game.sonic3k.TestSonic3kLevelLoading`: 36
+- `com.openggf.level.TestLevelTilemapManagerRewindReset`: 16
+- `com.openggf.tests.TestS3kAiz1SkipHeadless`: 8
+- `com.openggf.tests.TestS3kSlotPlanePublication`: 1
+- `com.openggf.tests.TestSonic3kLevelLoading`: 7
+Both LevelLoading packages were deliberately selected by basename. All16 tilemap
+rewind cases include retained-plane/ordinary/stale-forward/live/scene controls;
+the exact encoded Slot registration-order case passes. Mandatory S3K4 passes.
+All7XMLs/all77caseidentities/properties/streams and TXT read; no skips/SEVERE.
+Their14inspected reports185812B were consumed metadata_slot ALONE, no archive.
+
+Freshguards74389 replaces `...` with `-Pguards -Dtest=TestArchitecturalSourceGuard,TestHardwareTimingAuthorityGuard,TestModApiSignatureSurface#candidateZeroSevenSurfaceIsPinnedToTheCurrentSurface+engineOnlyRuntimeHelpersDoNotLeakIntoTheZeroSevenSurface`.
+ACTUAL99/0F0E0S, terminal22:17:42UTC,queue0/Maven32.737s: Architectural72,
+HardwareTimingAuthority25 and exactAPI2. All3XMLs/all99identities/properties/
+streams and TXT inspected/no skips/SEVERE; the original size predicate ACTUALLY
+passes. No separate size-only repetition, repair, retry, new API or budget waiver.
+Consume these6original reports metadata_slot ALONE after durablefacts; no archive.
+
+These focused results qualify the extraction only. FDF's separate original-route
+gate remains its owner's responsibility; Root29527's frozen combined smoke has
+not tested this extraction. No new Title/DEZ route, native/capture, broad/full
+suite, integration or push. Qualified DEZ49ae functionality is unchanged. Normal
+local preservation commit is authorized after these two green gates; all seven
+policy trailers precede the parsed final GPT6.1 coauthor.
