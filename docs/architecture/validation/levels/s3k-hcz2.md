@@ -369,3 +369,21 @@ phases/clocks/stack, report and native limits](../../audits/trace/2026-10-14-s3k
 This does not change R22's full14208/actual exit or certify seg13ownership88306,
 slice/alternate/native/GLFW/roster/viewport breadth. Temporary source/classes and
 inspected own diagnostics are removed after facts; no runtime change/new run.
+
+## R28 native8775 PANIC guard observation (2026-10-17)
+
+On513781/Java7df/native4fdf, after separately reviewed source and compiler,
+one originalAD40 power-on pass observes raw8773..76/input71848..51 only.
+Session66263 exits0; all4original endpoint controls,32callback+4endpoint
+passivity checks and conditional callback order match. Actual nativeCPU/PANIC
+executes, returning13F44→13FBE with move_lock001D on all four frames, idle/
+spin/g/signedCtrl2lock0. No facing hook executes. FullVInt00011644..47,
+LF8715..18 and callbackCompletedFrame71848..51 are separate from after-core.
+P2pose/velocities and column release/recapture endpoints match original CSV/AUX.
+[Exact command, reviewed hashes, counts/phases and retained originals](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r26r28-original-native-panic-returns-on-retained-move_lock--2026-10-17).
+Historical R25engine moveLock0 at8775 differs upstream of its correct facing
+choice. Earlier native timer producer and engine1→0 writer remain missing;
+no shared timer/movement/CPU/column repair or independent old-red is proved.
+Native observation is not engine trace green; R22full11118/first8775, actualexit,
+R25partial207 and separate seg13ownership88306 remain. Originals held for Root
+read; no additional run/fixture/runtime change or broader certification.

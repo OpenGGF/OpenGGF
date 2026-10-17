@@ -7364,3 +7364,31 @@ Stop without additional query/instrumentation/execution. Exact source restored,
 temporary test and both instrumented classes removed,18 inspected diagnostics
 consumed metadata-slot-alone; no extra compile or runtime commit/fix. R22 fullwindow/exit and independent seg13ownership88306
 remain separate. Root owns further causal scope and combined delivery.
+
+### R26–R28 native PANIC movement-lock guard observed — 2026-10-17
+
+Separate registry ordinals29sourceplan/30termination correction/31compiler/
+32execution preserve all earlier IDs/results. On own513781/Java7df/native4fdf,
+Root reviews actual20ROMpins/15sites/C#8d6/plan0022/launcher9c014; the sole
+launcher finding closes by existing Main handle_termination around CLI dispatch.
+Compiler-only exits0 (emptylog), EXEfee52fa3; writer+sharedactivity released
+before execution. Sole originalAD40 native session66263 terminal0,
+20:02:06.724924→20:03:03.354513UTC, C#56.2263242s, reportedqueue0. Normal Main
+maven_slot/allFDs; initial/inside-immediate/postterminal identity guards and
+literal6artifact hashes pass. No new core/host build, engine query or runtime edit.
+
+Original manifest63075+raw8773..76 maps input71848..51, aftercore71849..52;
+original power-on inputs0..71851 once, fourobserved only. All4endpoint controls,
+32callback+4endpoint passivity checks and41records/62134byte journal inspect
+successfully. Actual P2CPU/PANIC runs each frame, A0FFFFB04A/A1FFFFB000 after
+LEA; native idle/spin/g/Ctrl2lock0 but **move_lockB07C=001D throughout**.
+Source-order13F44→13FBE returns before every optional facing hook. Full native
+VInt00011644..47/LF8715..18/callbackCompletedFrame71848..51 stay distinct from
+after-core. No CPUskip/fittednative2/facing formula fault. Historical engine8775
+PANIC setter sees0; preceding1→0 writer/dispatch and earlier native001D producer
+remain unobserved. Coupled legitimate-lock/actualcolumn release-recapture versus
+reached-ground control is a proposed independent disconfirmation, not a test/fix.
+[Full pins/command/phases/counts/identities and limits](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r26r28-original-native-panic-returns-on-retained-move_lock--2026-10-17).
+Originalnative files retained until Root read, cleanup_pending/noarchive. Prior
+R25strict207/8777/R22full11118/14208/exit/seg13ownership88306 remain unchanged;
+no trace qualification, extra engine/native run or runtime repair here.

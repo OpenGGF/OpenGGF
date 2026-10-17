@@ -113854,3 +113854,19 @@ attribution, strict-green/fullroute certificate or extra run/probe/repair.
 R21partial206 and73focused remain their actual epochs. Normal docs-only local
 accounting/consumed cleanup; Root owns next causal scope, combined validation,
 integration and push. R22ordinal25 separate; queuedR23 is not started here.
+
+### 2026-10-17 — HCZ8775 native PANIC guard observed; engine frontier unchanged
+
+Owned3aa513781/Java7df/native4fdf; sole reviewed originalAD40 power-on native
+session66263 exits0, reportedqueue0/C#56.2263242s. Command is task-local
+`run_native_panic_gates.py run --expected-launcher-sha256 9c01499b6146aeb0f5b7430fb631ed790c7ed7428eb29e2422bce8755ff2ec26`,
+through current Main normal maven_slot/allFDs. Original inputs0..71851 once,
+only71848..51/raw8773..76 observed; all4endpoint controls and32callback+
+4endpoint passivity checks match. Native CPU/PANIC executes each frame but
+returns on move_lock001D at13F44→13FBE before facing; no CPUskip/facecallback.
+Historical engine8775setter sees0. Earlier nativeproducer/engine1→0 actualwriter
+remain unknown; no timer/facing/CPU/camera fix or additional probe/test follows.
+[Exact source/command/hashes/clocks/counts and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r26r28-original-native-panic-returns-on-retained-move_lock--2026-10-17).
+No engine trace is run: prior R25partial207/8777 and R22full11118/14208,
+firstNonCamera8775statusB/A/actualexit/separate seg13ownership88306 unchanged.
+Native originals retained for Root read; no new green or route certification.
