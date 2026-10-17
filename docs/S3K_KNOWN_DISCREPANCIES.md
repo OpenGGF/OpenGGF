@@ -1397,3 +1397,38 @@ firstNonCameraNULL through8720, lag59/warnbootstrap0. Same-window10733 is213
 Strict1F remains; first all-group3475animation17/1C. No later frontier, full
 returned-HCZ/exit, independent slice/alternate/GLFW/native or product breadth
 certificate. [Exact source, commands, rejected JUnit-only inference and report](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r21-actual-final-prefix-report-qualifies-the-local-column-repair--2026-10-17).
+
+
+## DEZ final native terrain ownership — 2026-10-17
+
+A validated matching synchronous native continuation now retains only the stock
+predecessor's actual written 128x128 definitions and known 16x16 pattern groups.
+The final scene's ROM prefix overwrites that state; current final collision
+indices remain SolidIndexes[46decimal] `$09CFC0/+1`, not ordinary DEZ's `$09B1C0`.
+Cold/manual/nonmatching and captured prepared builds do not borrow arbitrary
+live geometry. The prepared negative observed REQUESTED, not an independently
+executed LOADING prepared task; the latter refusal is source-reviewed only.
+
+`DEZ3_ScreenInit` authenticates the independent test oracle at `$05A3DA..$05A400`.
+Its actual header `0014/0008/0004/0004` is 20/8/4/4 decimal; low-word products
+plus `$88` select `$F8`, and inclusive DBF clears `$FF80F8..$FF8FFF`. The encoded
+owner performs that once-only scene write through the existing mutation pipeline,
+with COW and flattened aliases; no generic layout decoder truncation is used.
+Target resources, meaningful prefix and subsequent legitimate background edits
+survive twice-forced registered-world recreation and forward replay.
+
+On base `271457b316145fbc8549ad7fd09cd71007d333cb` plus the reviewed changes:
+independent tail old-red76475 is 2/2F0E0S at final `$FF80FF` expected0/actual6;
+affected74516 is **122/0F0E0S** (all `$F08` tail assertions reached), fresh five
+source/API guards5039 are **5/0F0E0S**, and unchanged original
+`TestDezIncomingFinalRouteCapture`54531 is **7/0F0E0S**. The five formerly failing
+solo/incoming cases and the two team cases pass with their original movies,
+assertions and replay windows. These are separate source-bound epochs, not a
+full-suite or native route equivalence claim.
+
+The native four row-alias WORD writes at encoded `$18/$1A/$84/$86` remain a
+separate implementation limit. Definition0 is not asserted empty; actual selected
+route layout/descriptor/clock equality with native remains unobserved. Native
+pixels, additional products/lifecycle breadth, broader cold campaign and ending
+Hyper/Kos6+46/PALPCM acceptance are unchanged.
+[Full commands, rejected hypotheses, matched observations and qualification limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#dez-screeninit-unused-encoded-layout-owner-source-and-independent-red-design--2026-10-17).

@@ -311,7 +311,10 @@ Unreleased. The earlier development themes remain in
   Preserved cold Knuckles inputs now complete both Mushroom Hill acts and the
   ship handoff into playable Flying Battery, with world replay and load-history checks.
 
-- **S3K endings:** Sonic and Tails continue from Death Egg or Doomsday into
+- **S3K endings:** The final Death Egg scene preserves native terrain definitions
+  across its act handoff, uses its own collision bank and clears its unused layout
+  bytes once at scene entry, retaining later terrain edits through rewind.
+  Sonic and Tails continue from Death Egg or Doomsday into
   the Tornado rescue, earned Super Emerald restoration, reunion, ROM credits
   and their progress-dependent final scenes. Knuckles continues from the final
   Sky Sanctuary fight through his plane flight, island credits and terminal

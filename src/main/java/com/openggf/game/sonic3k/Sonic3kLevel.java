@@ -1214,6 +1214,12 @@ public class Sonic3kLevel extends AbstractLevel implements com.openggf.game.inte
     /** Load_Level's in-place scene layout swap; the canonical zone/act stays unchanged. */
     public void applySceneLayout(Rom rom, int layoutAddr) throws IOException { loadMap(rom, layoutAddr); }
 
+    /** Internal scene-owner operation, invoked only by the actual ScreenInit mutation. */
+    public void clearUnusedSceneLayoutTail() {
+        if (collisionLayout == null) throw new IllegalStateException("No encoded scene layout owner");
+        collisionLayout.clearUnusedLayoutTail(this);
+    }
+
     /** Internal native row-pointer mutation, invoked inside the zone mutation pipeline. */
     public void copyLayoutRowPointer(int layer, int sourceRow, int destRow) {
         if (collisionLayout == null) throw new IllegalStateException("No encoded layout row owner");

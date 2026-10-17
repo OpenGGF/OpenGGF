@@ -105,6 +105,42 @@ final class S3kCollisionLayout {
         return new IllegalStateException(String.format("Unmodelled S3K collision address $%06X: %s", ((short) address) & 0xFFFFFF, reason));
     }
 
+    /**
+     * DEZ3_ScreenInit $5A3DA..$5A400: clear only the unused encoded layout bytes.
+     * Load_Level copied a full $1000 bytes, including following ROM data; the
+     * header products and $88 select the scene-owned clear, not definition RAM.
+     */
+    void clearUnusedLayoutTail(Sonic3kLevel owner) {
+        // MULU.W is unsigned 16x16; ADD.W/ADDI.W retain the low word used by ADDA.W/DBF.
+        int start = (int) (((long) word(0) * word(4) + (long) word(2) * word(6) + 0x88) & 0xFFFF);
+        if (start < 0x88 || start > encoded.length)
+            throw new IllegalStateException("Unsupported native scene layout clear offset: " + start);
+        boolean changed = false, aliasesChanged = false;
+        for (int offset = start; offset < encoded.length; offset++) {
+            if (encoded[offset] != 0) {
+                changed = true;
+                aliasesChanged |= first[offset] >= 0;
+            }
+        }
+        if (!changed) return;
+        long epoch = owner.currentEpoch();
+        ensureEncodedWritable(epoch);
+        byte[] mapData = null;
+        if (aliasesChanged) {
+            Map map = owner.getMap();
+            map.cowEnsureWritable(epoch);
+            mapData = map.getData();
+        }
+        for (int offset = start; offset < encoded.length; offset++) {
+            if (encoded[offset] == 0) continue;
+            encoded[offset] = 0;
+            for (int alias = first[offset]; alias >= 0; alias = next[alias])
+                mapData[alias] = 0;
+        }
+        // The validated range starts after all 32 FG/BG row-pointer words;
+        // their first/next address relationships and the meaningful prefix stay intact.
+    }
+
     /** Native layout word write: change the row's address, preserving its source bytes. */
     void copyRowPointer(Sonic3kLevel owner, int layer, int sourceRow, int destRow) {
         if (layer < 0 || layer > 1 || sourceRow < 0 || destRow < 0
