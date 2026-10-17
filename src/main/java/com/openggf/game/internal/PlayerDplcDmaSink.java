@@ -17,4 +17,10 @@ public interface PlayerDplcDmaSink {
      */
     void playerLoadPlc(com.openggf.sprites.playable.AbstractPlayableSprite player, int mappingFrame,
                        SpriteDplcFrame dplc);
+
+    /**
+     * The player's own routine skipped its body DPLC call because an object owns the mapping frame
+     * ({@code object_control} bit 1); that owner may have written the routine's previous-frame byte.
+     */
+    void playerLoadPlcOwnedByObject(com.openggf.sprites.playable.AbstractPlayableSprite player);
 }

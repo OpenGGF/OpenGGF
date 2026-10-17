@@ -6596,7 +6596,8 @@ candidates are in the [ending lifecycle design](../architecture/designs/2026-10-
   submissions (VInt_8 fixed transfers, the players' `*_Load_PLC`, `Tails_Tail_Load_PLC`, Animate_Tiles uploads, KosM
   completions). It equals the native observation on all 35 retained ending V-ints (LF 4400-4406, NTSC and `REGION=PAL`
   runs). Those are two independent observations with one positive entry. Its freeze is a conditional subtotal until the
-  V-int instruction terms fix each transfer's start, and no count changes. See the
+  V-int instruction terms fix each transfer's start. An object-owned player frame makes the body cache unknown, and the
+  record then states no figure (the ending's LF 4400-4406 records are refused this way). No count changes. See the
   [design record](../architecture/designs/2026-10-13-s3k-ending-lifecycle.md#per-v-int-dma-work-ledger-2026-10-16-kos-cycle-consumer-lane-slice-2).
 
 ---

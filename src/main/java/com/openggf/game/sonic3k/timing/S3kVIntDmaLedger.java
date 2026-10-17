@@ -25,10 +25,12 @@ import java.util.Objects;
  * that did not drain), the ROM interleaves them per iteration and this record does not.
  *
  * <p>This is a diagnostic budget term, never an activation input: it does not decide readiness, rows, profiles or
- * fingerprints, and it covers only the producers above. Other {@code Add_To_DMA_Queue} callers (object
- * {@code Perform_DPLC} users, objects that call a player's {@code *_Load_PLC} while they own its frame, zone tile
- * routines that bypass the AniPLC queue) are not yet recorded, so a record is never a complete statement of the
- * V-int's DMA. Its freeze is a conditional subtotal of the recorded transfers: it equals the GPGX freeze only if every
+ * fingerprints, and it covers only the producers above. Other {@code Add_To_DMA_Queue} callers are not recorded:
+ * object {@code Perform_DPLC} users, the 38 {@code Perform_Player_DPLC} gameplay sites and direct object calls of a
+ * player's {@code *_Load_PLC} (the AIZ intro plane, the ending objects), and zone tile routines that bypass the AniPLC
+ * queue. Recorded body entries are exact only while no such owner wrote the previous-frame byte; an object-owned
+ * interval makes the byte unknown and the next drains report {@link FreezeStatus#PRODUCER_STATE_UNKNOWN}. A record is
+ * never a complete statement of the V-int's DMA. Its freeze is a conditional subtotal of the recorded transfers: it equals the GPGX freeze only if every
  * transfer starts and ends strictly inside VBLANK, and the start depends on V-int handler instruction time this
  * ledger does not have. {@link FreezeStatus} says which statement a record can make.
  */
@@ -104,14 +106,20 @@ public final class S3kVIntDmaLedger implements RewindSnapshottable<S3kVIntDmaLed
         UNKNOWN_REGION,
         /** The draining routine, or a live Hyper flash, is not modelled: no figure for the V-int. */
         FIXED_UNMODELLED,
+        /**
+         * Since the previous drain an object owned a player's frame (and may have run that player's {@code *_Load_PLC}
+         * or written its previous-frame byte), or a non-native producer was refused: the recorded body entries may be
+         * missing or spurious, so no figure.
+         */
+        PRODUCER_STATE_UNKNOWN,
         /** The session ROM does not carry the pinned VInt_8 instructions: nothing is priced. */
         ROM_UNSUPPORTED
     }
 
     /**
      * One draining V-int. {@code conditionalFreezeMclk} is the per-transfer GPGX floor sum of the fixed transfers and
-     * the recorded queue when {@code freezeStatus} is {@link FreezeStatus#CONDITIONAL_ON_VINT_START}, otherwise -1.
-     * {@code queueFreezeMclk} is the same floor sum over the drained entries alone, -1 with an unsupported ROM.
+     * the recorded queue, and {@code queueFreezeMclk} the same sum over the drained entries alone; both are -1 unless
+     * {@code freezeStatus} is {@link FreezeStatus#CONDITIONAL_ON_VINT_START}.
      */
     public record Record(long ordinal, PlcLifecyclePhase phase, VideoRegion region, FixedTransfers fixed,
                          List<Transfer> fixedTransfers, List<QueuedEntry> drained, int droppedEntries,
@@ -130,7 +138,8 @@ public final class S3kVIntDmaLedger implements RewindSnapshottable<S3kVIntDmaLed
      * {@code Player_prev_frame_P2_tail} byte and the last record.
      */
     public record State(List<QueuedEntry> objectPending, int refusedSincePreviousDrain, int tailPreviousFrame,
-                        int player1PreviousFrame, int player2PreviousFrame, long ordinal, Record last) {
+                        int player1PreviousFrame, int player2PreviousFrame, boolean player1Known,
+                        boolean player2Known, boolean producerStateUnknownSinceDrain, long ordinal, Record last) {
         public State {
             objectPending = List.copyOf(objectPending);
         }
@@ -144,6 +153,10 @@ public final class S3kVIntDmaLedger implements RewindSnapshottable<S3kVIntDmaLed
     /** {@code Player_prev_frame} and {@code Player_prev_frame_P2}; a fresh Level clears them to 0. */
     private int player1PreviousFrame;
     private int player2PreviousFrame;
+    /** False after an unobserved interval in which another owner may have written the byte. */
+    private boolean player1Known = true;
+    private boolean player2Known = true;
+    private boolean producerStateUnknownSinceDrain;
     private long ordinal;
     private Record last;
     private S3kVIntDma.VInt8Transfers vint8;
@@ -184,18 +197,55 @@ public final class S3kVIntDmaLedger implements RewindSnapshottable<S3kVIntDmaLed
     public void observePlayerFrame(BodySlot slot, int mappingFrame, SpriteDplcFrame dplc) {
         Objects.requireNonNull(slot, "slot");
         int frame = mappingFrame & 0xFF;
-        if (slot == BodySlot.TAILS) {
-            if (frame == player2PreviousFrame) {
-                return;
-            }
-            player2PreviousFrame = frame;
-        } else {
-            if (frame == player1PreviousFrame) {
-                return;
-            }
-            player1PreviousFrame = frame;
+        boolean tails = slot == BodySlot.TAILS;
+        if (!(tails ? player2Known : player1Known)) {
+            // The byte's value is unknown, so whether the ROM queues now is unknown too. After this call it equals
+            // the frame either way, which re-establishes a known byte for later compares.
+            setPrevious(tails, frame);
+            producerStateUnknownSinceDrain = true;
+            return;
         }
+        if (frame == (tails ? player2PreviousFrame : player1PreviousFrame)) {
+            return;
+        }
+        setPrevious(tails, frame);
         queueDplc(dplc, slot.vram());
+    }
+
+    private void setPrevious(boolean tails, int frame) {
+        if (tails) {
+            player2PreviousFrame = frame;
+            player2Known = true;
+        } else {
+            player1PreviousFrame = frame;
+            player1Known = true;
+        }
+    }
+
+    /**
+     * The player's own routine did not run its {@code *_Load_PLC} this frame because an object owns the mapping frame
+     * ({@code object_control} bit 1). Owners such as the 38 {@code Perform_Player_DPLC} gameplay sites, the AIZ intro
+     * plane ($135534, after {@code move.b #-1,(Player_prev_frame).w}) and the ending objects queue and store through the
+     * same byte without being recorded here, or the producer is not a native one; the byte becomes unknown.
+     */
+    public void markPlayerFrameUnobserved(BodySlot slot) {
+        Objects.requireNonNull(slot, "slot");
+        if (slot == BodySlot.TAILS) {
+            player2Known = false;
+        } else {
+            player1Known = false;
+        }
+        producerStateUnknownSinceDrain = true;
+    }
+
+    /**
+     * {@code SonicKnux_SuperHyper} {@code .revertToNormal}: {@code move.b #-1,(Player_prev_frame).w}
+     * (sonic3k.asm line 23655 at the 044fa46 pin), so the next {@code Sonic_Load_PLC}/{@code Knuckles_Load_PLC} reloads
+     * the normal-form art even for an unchanged frame. Tails' revert writes no previous-frame byte.
+     */
+    public void forcePlayerOneReloadAfterSuperRevert() {
+        player1PreviousFrame = 0xFF;
+        player1Known = true;
     }
 
     private void queueDplc(SpriteDplcFrame dplc, int base) {
@@ -242,10 +292,14 @@ public final class S3kVIntDmaLedger implements RewindSnapshottable<S3kVIntDmaLed
         List<Transfer> fixedTransfers = fixed == FixedTransfers.VINT_8 ? vint8.inOrder(false) : List.of();
         FreezeStatus status;
         long freeze = -1;
+        boolean producerStateUnknown = producerStateUnknownSinceDrain;
+        producerStateUnknownSinceDrain = false;
         if (vint8 == null) {
             status = FreezeStatus.ROM_UNSUPPORTED;
         } else if (fixed != FixedTransfers.VINT_8) {
             status = FreezeStatus.FIXED_UNMODELLED;
+        } else if (producerStateUnknown) {
+            status = FreezeStatus.PRODUCER_STATE_UNKNOWN;
         } else if (region == VideoRegion.UNKNOWN) {
             status = FreezeStatus.UNKNOWN_REGION;
         } else {
@@ -257,6 +311,9 @@ public final class S3kVIntDmaLedger implements RewindSnapshottable<S3kVIntDmaLed
                 status = FreezeStatus.CONDITIONAL_ON_VINT_START;
                 freeze = sum;
             }
+        }
+        if (status != FreezeStatus.CONDITIONAL_ON_VINT_START) {
+            queueFreeze = -1;
         }
         last = new Record(++ordinal, phase, region, fixed, fixedTransfers, drained, refused + queued.size() - kept,
                 queueFreeze, status, freeze);
@@ -285,7 +342,7 @@ public final class S3kVIntDmaLedger implements RewindSnapshottable<S3kVIntDmaLed
     @Override
     public State capture() {
         return new State(objectPending, refusedSincePreviousDrain, tailPreviousFrame, player1PreviousFrame,
-                player2PreviousFrame, ordinal, last);
+                player2PreviousFrame, player1Known, player2Known, producerStateUnknownSinceDrain, ordinal, last);
     }
 
     @Override
@@ -297,6 +354,9 @@ public final class S3kVIntDmaLedger implements RewindSnapshottable<S3kVIntDmaLed
         tailPreviousFrame = state.tailPreviousFrame();
         player1PreviousFrame = state.player1PreviousFrame();
         player2PreviousFrame = state.player2PreviousFrame();
+        player1Known = state.player1Known();
+        player2Known = state.player2Known();
+        producerStateUnknownSinceDrain = state.producerStateUnknownSinceDrain();
         ordinal = state.ordinal();
         last = state.last();
     }
@@ -318,6 +378,9 @@ public final class S3kVIntDmaLedger implements RewindSnapshottable<S3kVIntDmaLed
         tailPreviousFrame = 0;
         player1PreviousFrame = 0;
         player2PreviousFrame = 0;
+        player1Known = true;
+        player2Known = true;
+        producerStateUnknownSinceDrain = false;
     }
 
     /** Missing-snapshot reset: no queue, no record. */
@@ -327,6 +390,9 @@ public final class S3kVIntDmaLedger implements RewindSnapshottable<S3kVIntDmaLed
         tailPreviousFrame = 0;
         player1PreviousFrame = 0;
         player2PreviousFrame = 0;
+        player1Known = true;
+        player2Known = true;
+        producerStateUnknownSinceDrain = false;
         ordinal = 0;
         last = null;
     }

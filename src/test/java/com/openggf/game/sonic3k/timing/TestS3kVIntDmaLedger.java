@@ -161,6 +161,55 @@ class TestS3kVIntDmaLedger {
     }
 
     @Test
+    void superRevertStoresFfSoTheUnchangedFrameReloads() {
+        S3kVIntDmaLedger ledger = ledger();
+        ledger.observePlayerFrame(BodySlot.SONIC_KNUCKLES, 0xBA, dplc(3));
+        ledger.serviceVInt(PlcLifecyclePhase.ORDINARY_LEVEL, VideoRegion.NTSC, false, List.of(), List.of());
+        ledger.observePlayerFrame(BodySlot.SONIC_KNUCKLES, 0xBA, dplc(3));
+        assertEquals(List.of(), ledger.pendingObjectEntries(), "control: no revert, no reload");
+        ledger.forcePlayerOneReloadAfterSuperRevert();
+        ledger.observePlayerFrame(BodySlot.TAILS, 0xBA, dplc(1));
+        ledger.serviceVInt(PlcLifecyclePhase.ORDINARY_LEVEL, VideoRegion.NTSC, false, List.of(), List.of());
+        S3kVIntDmaLedger.State reverted = ledger.capture();
+        ledger.observePlayerFrame(BodySlot.SONIC_KNUCKLES, 0xBA, dplc(3));
+        assertEquals(List.of(new QueuedEntry(Producer.OBJECT_DPLC, 48, 0xD000)), ledger.pendingObjectEntries());
+        ledger.restore(reverted);
+        ledger.observePlayerFrame(BodySlot.SONIC_KNUCKLES, 0xBA, dplc(3));
+        assertEquals(1, ledger.pendingObjectEntries().size(), "the $FF byte is rewind state");
+    }
+
+    @Test
+    void anObjectOwnedIntervalMakesTheByteUnknownAndTheDrainsFailClosed() {
+        S3kVIntDmaLedger ledger = ledger();
+        ledger.observePlayerFrame(BodySlot.SONIC_KNUCKLES, 0xBA, dplc(3));
+        assertEquals(FreezeStatus.CONDITIONAL_ON_VINT_START, ledger.serviceVInt(PlcLifecyclePhase.ORDINARY_LEVEL,
+                VideoRegion.NTSC, false, List.of(), List.of()).freezeStatus());
+        ledger.markPlayerFrameUnobserved(BodySlot.SONIC_KNUCKLES);
+        S3kVIntDmaLedger.State owned = ledger.capture();
+        Record during = ledger.serviceVInt(PlcLifecyclePhase.ORDINARY_LEVEL, VideoRegion.NTSC, false, List.of(),
+                List.of());
+        assertEquals(FreezeStatus.PRODUCER_STATE_UNKNOWN, during.freezeStatus());
+        assertEquals(-1, during.conditionalFreezeMclk());
+        assertEquals(-1, during.queueFreezeMclk());
+        // the first own call: the ROM may or may not queue, so nothing is claimed and the drain stays refused
+        ledger.observePlayerFrame(BodySlot.SONIC_KNUCKLES, 0xC0, dplc(2));
+        assertEquals(List.of(), ledger.pendingObjectEntries());
+        assertEquals(FreezeStatus.PRODUCER_STATE_UNKNOWN, ledger.serviceVInt(PlcLifecyclePhase.ORDINARY_LEVEL,
+                VideoRegion.NTSC, false, List.of(), List.of()).freezeStatus());
+        // after it, the byte is known again
+        ledger.observePlayerFrame(BodySlot.SONIC_KNUCKLES, 0xC1, dplc(2));
+        Record known = ledger.serviceVInt(PlcLifecyclePhase.ORDINARY_LEVEL, VideoRegion.NTSC, false, List.of(),
+                List.of());
+        assertEquals(FreezeStatus.CONDITIONAL_ON_VINT_START, known.freezeStatus());
+        assertEquals(1, known.drained().size(), "the $C1 piece");
+        // Tails' byte is independent
+        ledger.restore(owned);
+        ledger.observePlayerFrame(BodySlot.TAILS, 0xAD, dplc(1));
+        assertEquals(1, ledger.pendingObjectEntries().size());
+        assertEquals(owned.player1Known(), ledger.capture().player1Known(), "restored unknown state");
+    }
+
+    @Test
     void reviewCounterexampleExceedsNtscVBlankAndIsNotATotal() {
         // fixed 26,855 + KosM $800 words 68,668 + AniPLC $600 words 51,501 = 147,024 >= NTSC 126,540
         List<QueuedEntry> aniPlc = List.of(new QueuedEntry(Producer.ANIMATE_TILES, 0x600, 0x2000));
@@ -168,7 +217,7 @@ class TestS3kVIntDmaLedger {
         Record ntsc = ledger().serviceVInt(PlcLifecyclePhase.ORDINARY_LEVEL, VideoRegion.NTSC, false, aniPlc, kosm);
         assertEquals(FreezeStatus.EXCEEDS_VBLANK, ntsc.freezeStatus());
         assertEquals(-1, ntsc.conditionalFreezeMclk());
-        assertEquals(68_668 + 51_501, ntsc.queueFreezeMclk());
+        assertEquals(-1, ntsc.queueFreezeMclk(), "a refused record prices nothing");
         Record pal = ledger().serviceVInt(PlcLifecyclePhase.ORDINARY_LEVEL, VideoRegion.PAL, false, aniPlc, kosm);
         assertEquals(FreezeStatus.CONDITIONAL_ON_VINT_START, pal.freezeStatus(), "conditional, never a total");
         assertEquals(147_024, pal.conditionalFreezeMclk());
@@ -213,7 +262,8 @@ class TestS3kVIntDmaLedger {
         assertEquals(FixedTransfers.UNMODELLED, titleCard.fixed(), "VInt_A_C is not modelled here");
         assertEquals(-1, titleCard.conditionalFreezeMclk());
         assertEquals(FreezeStatus.FIXED_UNMODELLED, titleCard.freezeStatus());
-        assertEquals(3218, titleCard.queueFreezeMclk(), "its drained queue is still recorded");
+        assertEquals(-1, titleCard.queueFreezeMclk(), "a refused record prices nothing");
+        assertEquals(1, titleCard.drained().size(), "its drained queue is still recorded");
         Record flash = ledger.serviceVInt(PlcLifecyclePhase.ORDINARY_LEVEL, VideoRegion.NTSC, true, List.of(), List.of());
         assertEquals(FixedTransfers.UNMODELLED, flash.fixed());
         assertEquals(-1, flash.conditionalFreezeMclk());

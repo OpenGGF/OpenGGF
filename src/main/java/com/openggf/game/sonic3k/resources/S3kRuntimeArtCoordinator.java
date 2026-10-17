@@ -145,9 +145,39 @@ public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator,
     @Override
     public void playerLoadPlc(com.openggf.sprites.playable.AbstractPlayableSprite player, int mappingFrame,
                               com.openggf.level.render.SpriteDplcFrame dplc) {
-        vintDmaLedger.observePlayerFrame(player instanceof com.openggf.sprites.playable.Tails
+        var slot = bodySlot(player);
+        if (!nativeBodyProducer()) {
+            // Donor art or the slot stage's engine player: its DPLC cues are not the ROM routine's.
+            vintDmaLedger.markPlayerFrameUnobserved(slot);
+            return;
+        }
+        vintDmaLedger.observePlayerFrame(slot, mappingFrame, dplc);
+    }
+
+    @Override
+    public void playerLoadPlcOwnedByObject(com.openggf.sprites.playable.AbstractPlayableSprite player) {
+        vintDmaLedger.markPlayerFrameUnobserved(bodySlot(player));
+    }
+
+    private static com.openggf.game.sonic3k.timing.S3kVIntDmaLedger.BodySlot bodySlot(
+            com.openggf.sprites.playable.AbstractPlayableSprite player) {
+        return player instanceof com.openggf.sprites.playable.Tails
                 ? com.openggf.game.sonic3k.timing.S3kVIntDmaLedger.BodySlot.TAILS
-                : com.openggf.game.sonic3k.timing.S3kVIntDmaLedger.BodySlot.SONIC_KNUCKLES, mappingFrame, dplc);
+                : com.openggf.game.sonic3k.timing.S3kVIntDmaLedger.BodySlot.SONIC_KNUCKLES;
+    }
+
+    /**
+     * Native {@code *_Load_PLC} statements need the ROM's own player art and the level's own player object. A
+     * cross-game donor draws with donor DPLC tables, and the slot stage's ROM player is the dedicated
+     * {@code Obj_Sonic_RotatingSlotBonus} that this engine replaces with the ordinary player.
+     */
+    private static boolean nativeBodyProducer() {
+        if (com.openggf.game.CrossGameFeatureProvider.isActive()) {
+            return false;
+        }
+        return !(GameServices.module() != null
+                && GameServices.module().getBonusStageProvider() instanceof com.openggf.game.sonic3k.Sonic3kBonusStageCoordinator bonus
+                && bonus.activeSlotRuntime() != null);
     }
 
     /** Per-V-int DMA work record (diagnostic budget term; never an activation input). */

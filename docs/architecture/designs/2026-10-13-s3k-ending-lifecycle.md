@@ -2485,3 +2485,66 @@ record to decide anything.
 - V-int handler instruction time, which fixes each transfer's start, and therefore any unconditional freeze.
 - The object-called `*_Load_PLC`, object `Perform_DPLC` and direct zone-upload producers.
 - The six counts and the 46 contexts.
+
+#### Body DPLC cache correctness, review r2 response (2026-10-17, kos-cycle-consumer lane, slice 4)
+
+Review r2 (`kos-consumer-dma-review-r2.md`) found that the slice-3 body producer's previous-frame cache was wrong in
+two ways (N1, N2), plus four smaller gaps (N3-N6).
+
+- **N1 (fixed).**
+  - ROM: the control routine skips `Animate_*`/`*_Load_PLC` only for `object_control` bit 1.
+  - Engine: `isObjectMappingFrameControl()` also includes a player ability's raw frames (Knuckles' glide, slide and
+    climb). The producer now tests the bit-1 owner alone, through the engine-internal
+    `PlayableSpriteInternalAccess.objectOwnsMappingFrame`, backed by a package-private getter. That is not `@ModApi`
+    surface; `TestModApiSignatureSurface` is unchanged and passes.
+  - Witness: Knuckles lands in HCZ1, jumps and glides while turning. Every queued and drained body entry equals an
+    independent read of `PLC_Knuckles` (`$14BD0A`), including ability frames.
+- **N2 (fixed).**
+  - ROM: `SonicKnux_SuperHyper` `.revertToNormal` stores `-1` in `Player_prev_frame`. Tails' revert writes no
+    previous-frame byte.
+  - Engine: the S3K revert owner (`Sonic3kSuperStateController.onRevertStarted`) now calls
+    `forcePlayerOneReloadAfterSuperRevert` for Sonic and Knuckles.
+  - Witness: a real ring-exhaustion revert stores `$FF`. The next load reloads the normal-form `PLC_Sonic` pieces of
+    the unchanged frame, and restore before the revert replays the same records twice.
+  - **Engine-order limit:** the engine runs the revert in `tickStatus` after the animation pass; the ROM runs it in the
+    control path before `Animate_Sonic`. So the reload drains one V-int later than in the ROM. This ordering belongs to
+    the Super-state owner and was not changed here.
+- **N3 (fixed by failing closed).**
+  - Objects also drive the previous-frame bytes: the 38 `Perform_Player_DPLC` gameplay sites, direct calls (the AIZ
+    intro plane after `move.b #-1,(Player_prev_frame).w`, the ending objects) and their `clr.b` writes.
+  - Engine: while an object owns a player's frame, the producer tells the ledger instead of submitting. The slot's
+    byte becomes unknown and drains report `PRODUCER_STATE_UNKNOWN`. The first own compare afterwards queues nothing,
+    because whether the ROM queued is unknown, and re-establishes the byte.
+  - The ending's players are object-owned at LF 4400-4406, so those records are now refused. The native ending test
+    checks the drained entries, the refused status, and the native `dma_freeze_mclk` against the raw per-transfer GPGX
+    floors of the recorded transfers.
+- **N4 (fixed).** `queueFreezeMclk` is -1 unless the record is `CONDITIONAL_ON_VINT_START`.
+- **N5 (fixed).**
+  - ROM: the hurt and death routines (4 and 6, through `sub_125E0`/`sub_15842`/`sub_17D1E`) animate and load without
+    the bit-1 test.
+  - Engine: the producer submits while `isHurt()`, `getDead()` or `isDrowningDeath()`, even under bit 1.
+  - Witness: a real `applyHurtOrDeath` knockback under bit 1 queues `PLC_Knuckles` pieces.
+  - **Limit:** routines `$A`/`$C` call the same helpers; their engine counterparts were not identified.
+- **N6 (refused).** Cross-game donor art (`CrossGameFeatureProvider.isActive()`) and the slot stage's engine player (an
+  active S3K slot runtime) are not the ROM routine's producer. Their submissions are refused and make the byte unknown;
+  no record certifies them.
+- **M1 in game (added).** A real death restart (`restartCurrentLevelAfterDeath`, Level re-entry) after Sonic held a
+  non-zero frame clears the byte. The same frame queues again after the title card, and restore across the first
+  queued body DMA replays the same records twice. Restoring to the load boundary itself is a rewind limit and is not
+  claimed.
+
+**Old-source reds:** with the slice-3 body gate, no revert store and a queue-only fresh reset, the witnesses fail for their own reasons:
+- N1: the glide queue differs at frame 6;
+- N3: an owned interval drains `CONDITIONAL`;
+- N5: hurt queues nothing;
+- N2: the byte is 2, not `$FF`;
+- M1: frame 140 is not re-queued, so the first queue appears at 141;
+- M1 unit control: fails too.
+
+The source was restored byte-exact and checked by sha256 before the commit.
+
+**Limits (unchanged unless stated above):**
+- Body entries are recorded only for the players' own routines.
+- Object `Perform_DPLC` and direct zone uploads are missing owners.
+- The V-int start time is open.
+- Only two native DMA observations exist, and the PAL runs prove region propagation, not the PAL VBLANK limit.

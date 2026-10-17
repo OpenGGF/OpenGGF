@@ -116,15 +116,25 @@ class TestS3kEndingVIntDmaNative {
                     entries.add(String.format("%d@%04X", entry.words(), entry.vramAddress()));
                 }
             }
+            // The ending objects own the players' frames (and run their *_Load_PLC themselves), so the record must
+            // refuse a figure; the per-transfer GPGX floors of its recorded transfers are compared as raw components.
+            long rawComponents = -1;
+            if (record != null) {
+                var transfers = new java.util.ArrayList<>(record.fixedTransfers());
+                record.drained().forEach(e -> transfers.add(new S3kVIntDma.Transfer(e.words(),
+                        S3kVIntDma.Target.VRAM, e.vramAddress())));
+                rawComponents = S3kVIntDma.blankFreeze(transfers, true);
+            }
             boolean equal = record != null && record.fixed() == FixedTransfers.VINT_8
                     && record.region().name().equalsIgnoreCase(region)
                     && entries.equals(row.entries())
-                    && record.freezeStatus() == S3kVIntDmaLedger.FreezeStatus.CONDITIONAL_ON_VINT_START
-                    && record.conditionalFreezeMclk() == row.freeze();
+                    && record.freezeStatus() == S3kVIntDmaLedger.FreezeStatus.PRODUCER_STATE_UNKNOWN
+                    && record.conditionalFreezeMclk() == -1
+                    && rawComponents == row.freeze();
             if (!equal) {
                 mismatches.append(String.format("%n%s %s LF %d native %s/%d engine %s", product, row.region(),
                         row.levelFrame(), row.entries(), row.freeze(), record == null ? "no draining V-int"
-                                : record.fixed() + " " + entries + "/" + record.conditionalFreezeMclk() + " " + record.phase()
+                                : record.fixed() + " " + entries + "/" + record.freezeStatus() + "/raw " + rawComponents + " " + record.phase()
                                         + " " + record.region()));
             }
         }

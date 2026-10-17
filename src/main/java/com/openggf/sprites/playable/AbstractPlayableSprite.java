@@ -551,7 +551,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * Animation manager still handles flip state and controllers, but does not
          * overwrite mapping_frame.
          */
-        private boolean objectMappingFrameControl = false;
+        // Package access: PlayableSpriteInternalAccess reads the bit-1 owner alone (engine-internal, not Mod API).
+        boolean objectMappingFrameControl = false;
         /** Movement-owned raw frames; separate from an object's native bit-1 gate. */
         private boolean abilityMappingFrameControl = false;
         private int animationFrameIndex = 0;
