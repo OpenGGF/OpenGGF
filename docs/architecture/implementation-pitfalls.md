@@ -734,6 +734,17 @@ this: `Obj_HyperSonic_Stars_Init` fixes the display-list word at `$80`, while
 moves the orbiters behind the player. Check each field's writes independently;
 a follower's relationship to the player does not imply identical priorities.
 
+**Do not manufacture foreground priority to fit a sprite overlap.** Slot's ROM
+loads descriptor words and its row/column/VInt owners preserve priority. Promoting
+every nonzero tile in a central square hid opaque walls/peppermints behind native-
+low Plane A. The old glass test asserted the same promotion assumption. Compare
+complete ROM/live words, then exercise actual TilePriorityFBO and non-SAT sprite
+consumers with an opaque nonzero-index pixel. Controlled component palettes can
+discriminate opacity without becoming native-picture evidence. R8's independent
+red and one fixed original-pixel capture closed the two large components; HUD
+carried-life and remaining RGB differences remain separate. See the
+[bounded result](validation/levels/s3k-bonus-stage-transitions.md#r8-fixed-five-originals-native-priority-components-close--2026-10-17).
+
 **Hardware tile priority needs its own evidence.** The SSZ2 Mecha body retained
 the correct `$280` display-list bucket but inherited `isHighPriority() == false`,
 despite `ObjSlot_MechaSonic` setting `art_tile` bit15. The floating island's

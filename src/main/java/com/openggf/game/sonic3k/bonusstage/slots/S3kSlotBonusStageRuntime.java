@@ -32,10 +32,6 @@ import java.util.Iterator;
 import java.util.List;
 
 public final class S3kSlotBonusStageRuntime {
-    private static final int TILE_SIZE = 8;
-    private static final int GLASS_PRIORITY_HALF_EXTENT_X = 0x30;
-    private static final int GLASS_PRIORITY_HALF_EXTENT_Y = 0x30;
-    private static final int PRIORITY_BIT = 0x8000;
     private static final String SLOT_GOAL_FADE_OWNER = "s3k.slots.goalFade";
 
     private final S3kSlotResources suppliedResources;
@@ -159,7 +155,6 @@ public final class S3kSlotBonusStageRuntime {
             slotCage.suppressObjectManagerUpdate();
             registerDynamicSlotObject(slotCage);
             slotCage.suppressInitialCaptureOnce();
-            ensureForegroundGlassPriority();
             initialized = true;
         }
     }
@@ -548,34 +543,6 @@ public final class S3kSlotBonusStageRuntime {
     public void renderSlotMachineFaceForeground() {
         // The visible machine panel is part of the slot-machine foreground tiles.
         // Only the reel window is overlaid in renderAfterForeground().
-    }
-
-    public int ensureForegroundGlassPriority() {
-        LevelManager levelManager = GameServices.levelOrNull();
-        if (levelManager == null) {
-            return 0;
-        }
-
-        int changed = 0;
-        for (int y = S3kSlotRomData.SLOT_BONUS_CAGE_CENTER_Y - GLASS_PRIORITY_HALF_EXTENT_Y;
-             y <= S3kSlotRomData.SLOT_BONUS_CAGE_CENTER_Y + GLASS_PRIORITY_HALF_EXTENT_Y;
-             y += TILE_SIZE) {
-            for (int x = S3kSlotRomData.SLOT_BONUS_CAGE_CENTER_X - GLASS_PRIORITY_HALF_EXTENT_X;
-                 x <= S3kSlotRomData.SLOT_BONUS_CAGE_CENTER_X + GLASS_PRIORITY_HALF_EXTENT_X;
-                 x += TILE_SIZE) {
-                int descriptor = levelManager.getForegroundTileDescriptorFromTilemapAtWorld(x, y);
-                if ((descriptor & 0x7FF) == 0 || (descriptor & PRIORITY_BIT) != 0) {
-                    continue;
-                }
-                if (levelManager.setForegroundTileDescriptorAtWorld(x, y, descriptor | PRIORITY_BIT)) {
-                    changed++;
-                }
-            }
-        }
-        if (changed > 0) {
-            levelManager.uploadForegroundTilemap();
-        }
-        return changed;
     }
 
     private S3kSlotLayoutRenderer.TransformedStagePoint currentMachineAnchor() {
@@ -1029,8 +996,8 @@ public final class S3kSlotBonusStageRuntime {
         target.setSuperStateController(null);
         target.setPowerUpSpawner(source.getPowerUpSpawner());
         target.setDirection(source.getDirection());
-        // ROM Obj_Sonic_RotatingSlotBonus uses make_art_tile(...,0,0);
-        // the runtime promotes the slot-machine glass FG tilemap cells above the player.
+        // ROM loc_4B9E8 (sonic3k.asm:98764) uses make_art_tile(ArtTile_Player_1,0,0).
+        // Keep the player low-priority; Plane A retains its ROM descriptor priority.
         target.setHighPriority(false);
         target.setAir(source.getAir());
         target.setRolling(source.getRolling());
