@@ -97,7 +97,7 @@ Entries should include:
 ## Table of Contents
 
 1. [AIZ Completed Miniboss History on Rewind (FIXED)](#aiz-completed-miniboss-history-on-rewind-fixed)
-2. [MHZ Cluckoid Visual Child After Explicit Parent Removal (OPEN)](#mhz-cluckoid-visual-child-after-explicit-parent-removal-open)
+2. [MHZ Cluckoid Explicit-Removal Observation (NATIVE BUG UNPROVEN)](#mhz-cluckoid-visual-child-after-explicit-parent-removal-open)
 3. [ICZ2 Folded Boss Children and Reserved Slots on Rewind (OPEN)](#icz2-folded-boss-children-and-reserved-slots-on-rewind-open)
 4. [Native Ending Presentation Gaps (RESOLVED)](#native-ending-presentation-gaps-resolved)
 5. [AIZ1 Ledge — Ground Sensors and `checkFloorDist` Disagree About Solidity (OPEN — question, not yet a diagnosis)](#aiz1-ledge--ground-sensors-and-checkfloordist-disagree-about-solidity-open--question-not-yet-a-diagnosis)
@@ -204,8 +204,10 @@ negative history and artifact limits are in the
 
 ## MHZ Cluckoid Visual Child After Explicit Parent Removal (OPEN)
 
-**Location:** `CluckoidBadnikInstance.ArrowChild`; native `loc_8E2CE` and
-`Child_Draw_Sprite` retire a child when its parent has status bit7.
+**Disposition, 2026-10-18:** observed engine/API explicit-removal cleanup behavior;
+**not a source-proved shipped-ROM defect**. OPEN here means that the intended
+explicit-removal contract and separate native lifetime qualification remain
+unresolved. The prior native-deletion interpretation is rejected below.
 
 **Observed scope, 2026-10-15:** an explicit in-range dynamic-parent removal leaves
 STOCK's managed visual arrow alive through the next ordinary manager dispatch,
@@ -216,11 +218,38 @@ ordinary execution after removal. The arrow has no touch-response collision; det
 leaves intentionally continue native motion. Natural offscreen retirement and death
 were not shown broken by this test, since they can retire both actors independently.
 
+**Verified native predicate:** original locked-on ROM SHA-1
+`CFBF98C36C776677290A872547AC47C53D2761D6`, skdisasm
+`044fa46725c71187399e13f5ddb70e11d32dc024`. `loc_8E2CE` jumps to
+`Child_Draw_Sprite` at `$084920`: load `parent3` at `$46`, test only bit7 of
+`status` at parent `$2A`, branch to `Go_Delete_Sprite` if set, otherwise draw.
+There is **no parent-code-pointer-zero predicate**. `Go_Delete_Sprite` at
+`$0852A0` installs `Delete_Current_Sprite` and sets the object's status7;
+only its following own dispatch clears the whole SST at `$01ABB6`. A directly
+zeroed parent SST has status0, so that state alone cannot justify native arrow
+retirement on the next pass. The native pending-delete marker and immediate
+engine removal are different inlets.
+
+**Engine/API distinction:** `ObjectManager.removeDynamicObject` removes the
+requested registration and SST ownership before `onUnload`; STOCK's unload
+callback does not set `destroyed`. `ObjectInstance.onUnload` documents an optional
+cleanup hook (default no-op), and `AbstractObjectInstance.onRemovedFromObjectManager`
+offers owner-reference detachment. Neither named contract guarantees immediate
+cascade retirement of all attached children. No explicit authority for such an
+API guarantee was identified in these seams. Any desired cleanup extension must
+be specified independently, not called native parity or inferred from a cleared
+code pointer.
+
 Second Strike's PULSED opt-in unload defense retires its arrow and stops further
-pressure/emissions; it does not silently repair STOCK. The scoped tests and rejected
-broader interpretation are recorded in the [MHZ native plan](../architecture/plans/2026-10-15-second-strike-c2-mhz.md).
-**Removal condition:** native owner/child lifetime qualification covering explicit
-removal, normal offscreen/death, and rewind without altering detached leaves.
+pressure/emissions; it does not silently alter STOCK. The historical diagnostics
+and narrower PULSED behavior are recorded in the
+[MHZ native plan](../architecture/plans/2026-10-15-second-strike-c2-mhz.md).
+No runtime/test change, new old-red, execution or native capture was made for
+this correction. It neither fixes arbitrary explicit removal nor certifies
+normal offscreen/death/rewind behavior. Future native lifetime controls must
+start from a source-backed status7/pending-delete inlet and preserve detached
+leaves; any explicit API cleanup requirement remains a separate authority decision.
+[Rejected interpretation and exact immutable-ROM kill evidence](../architecture/plans/2026-10-13-s3k-playable-completion.md#cluckoid-explicit-removal-native-oracle-rejected--2026-10-18).
 
 ## ICZ2 Folded Boss Children and Reserved Slots on Rewind (OPEN)
 

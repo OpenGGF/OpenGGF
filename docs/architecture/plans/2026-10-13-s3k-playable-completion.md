@@ -11978,3 +11978,73 @@ R49/R50 writer evidence is separately gated. FDF corrected-origin terrain old-re
 26359 proves only its component omission; producer design must avoid activating
 an ordinary four-child title graph in a bonus scene. Root combined smoke remains
 incomplete, fresh combined guards/integration/push/task cleanup remain pending.
+
+
+### Cluckoid explicit-removal native oracle rejected — 2026-10-18
+
+Source-only R1 follow-up, canonical native agent `/root/cnz_completion`, owned
+fa8 tree/new local branch `bugfix/ai-s3k-cluckoid-explicit-removal-gpt61`.
+Prior486 and all DEZ/kernel/warning/baseline refs were preserved, then FF-only
+to exact Root `a800c137a645241be20b53c7951d7ec8a498382d` under intended writer
+with recursive checkout disabled. Own regular config bytes/mode/mtime and
+foreign TraceChaser4fdf physical head are unchanged; Main/Root untouched.
+No live owned JVM/queue job was present. The registered24h scope has no invented
+T3 task ID; `/root/cnz_completion` is the native follow-up identity.
+
+The requested old-red hypothesis was: ordinary explicit manager removal of a
+live STOCK Cluckoid clears its code owner, therefore its attached arrow must
+retire on the next ordinary child dispatch. BEFORE any test authoring, actual
+shipped code contradicted the supposed native oracle. Known-bugs prose was a
+claim to verify, not authority. Root accepted this contradiction and limited
+continuation to this factual Plan/Knownbugs correction, without gameplay or tests.
+
+Immutable original ROM SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`,
+skdisasm pin `044fa46725c71187399e13f5ddb70e11d32dc024`; no ROM copy/mutation.
+The following are complete relevant instruction bodies, end addresses exclusive:
+
+| ROM body | Actual immutable bytes | Source meaning |
+|---|---|---|
+| `$08E2CE..$08E2D4` | `4ef900084920` | Arrow `loc_8E2CE` jumps to Child_Draw_Sprite |
+| `$084920..$084934` | `3268004608290007002a660009744ef90001abc6` | MOVEA.W parent3($46), BTST#7 parent status($2A), BNE.W Go_Delete, else Draw_Sprite; NO parent-code-zero read |
+| `$0852A0..$0852AE` | `20bc0001abb608e80007002a4e75` | Go_Delete_Sprite installs `$01ABB6`, sets status7 and returns |
+| `$01ABB6..$01ABC6` | `22487011720022c151c8fffc32c14e75` | Delete_Current/Referenced clears the whole `$4A`-byte SST:18 longwords plus final word |
+
+The native pending-delete phase leaves status7 visible before the next own pass
+zeroes the SST. Immediate zeroing instead leaves parent status0. Child_Draw_Sprite
+reads no code pointer and cannot distinguish that zero-code state using the
+rejected predicate. Reused-slot/alternate native writer behavior was not observed
+or inferred; this is a closed source contradiction, not a new native capture.
+
+Current engine source: ObjectManager.removeDynamicObject1960 removes the actor,
+releases its SST, sets slot-1 and invokes onUnload; removeDynamicObjectInstance1985
+clears tracking/latches. STOCK Cluckoid onUnload115 is deliberately no-op, while
+ArrowChild.update538 reads its Java parent's destroyed flag. The historic
+normal-manager7159 observation (arrow remains; removed parent not scheduled)
+and retained-direct-call82258 observation remain valid engine diagnostics with
+their original limits, not evidence that shipped ROM requires a code-zero branch.
+PULSED's opt-in cleanup and detached native leaves are not changed.
+
+Actual named API authority is limited: ObjectInstance.java428..435 provides an
+optional onUnload cleanup hook, default no-op; AbstractObjectInstance.java309..316
+permits owner-reference detachment on manager removal. Neither promises that
+removing one parent cascades every attached child. Object implementation guidance
+recommends managed spawnChild but does not specify immediate cascade deletion.
+No explicit API authority for that stronger guarantee was found in the examined
+seams. It remains a separate possible engine-contract decision, NOT a native bug
+or an already unfulfilled documented guarantee.
+
+No test was authored: a red asserting native retirement from arbitrary immediate
+removal would encode an unsupported extension. Full-world recreation, post-removal
+native retirement and normal offscreen/death have no new qualification here.
+A future independently scoped native control must identify a real status7 /
+pending-delete inlet, preserve its own dispatch order and detached leaves, and
+separately prove recreation/linkage. No runtime repair, test, compiler/JVM,
+queue submission, native/media, stage, commit, integration or push occurred.
+Knownbugs retains the observation but removes the unsupported native-defect claim.
+
+Protected current source SHA256: Cluckoid76cb1ed1e1448b37423ae19be56a48cbef589a0581a3b3bf5ec3e7b64ff7240b;
+ObjectManager8816e1fb8621fe73cdb44fc7941646a6c0622e102b7d1a92c37b7a31dbbac8b3;
+ObjectInstancea1be836075e3fc8e277bd8a483dbac33945b415a86b0bd569d77f31d39f4887f;
+AbstractObjectInstance66a3ad9258d94e4528c53fb8cbb7f5ea4a8dd8db7575338d17d63b90fac4c417;
+existing TestCluckoidBadnikInstanceb3e65fb2cabb22838469a7da86e2e0ddea64d481943c6aeb4c43bb735be773e2.
+All remain byte-exact Roota800; only the two authorized existing documents change.
