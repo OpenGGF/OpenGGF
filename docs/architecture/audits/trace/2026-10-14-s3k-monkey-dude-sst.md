@@ -5739,3 +5739,128 @@ summary/archive/pass receipt. No cleanup before Root inspection. R25 strict
 207/8777, R22 full11118/14208/actual exit, and independent seg13ownership88306
 remain their prior epochs; this native pass moves no engine frontier. Stop here:
 no engine witness/old-red/runtime edit or extra native/route/guard/broad run.
+
+## R29/R30 actual move-lock writer reaches ground dispatch — 2026-10-17
+
+**The actual8774 timer1→0 caller is doSlopeRepel reached from modeNormal.**
+This is a writer witness, not a global countdown correction. Native R28's001D
+producer and the engine's Air-clearing caller remain unobserved. R29source
+ordinal33/R30execution34 have separate exact registry IDs; earlier32..29 stay
+intact. Root directly inspects all41 R28native records before its exact nine
+owned external files are consumed: six source/build files under intended writer,
+then three inspected diagnostics under metadata_slot alone. No archive. Compact
+native hashes/pins/guard/phases remain in the preceding section and registry.
+
+On HEAD24cd76909bfc6a3802cc00c7dbc61550c9284aa6/Java7df/native4fdf, R29 inventories
+26 production setter callers plus five owner assignments. Four assignments
+bypass the setter: field initialization0, resetState0, rewind restore and
+replenishAir0x23. No alternate setter override is found; absence of a setter
+record would not prove no write. No timer seed, native29 injection or old-red.
+
+Root reads the entire205-line temporary subclass and both marked playable
+blocks, independently verifies exact stripping/base pins, and approves one
+original AD40/fromboot prefix through row8776/cursor8777. Frozen temporary
+AbstractPlayableSprite SHA256
+`5ecf9aa2e16abf362e8b9250d0602c0de58ea2ca300253cf020e81db2cd8f025`;
+TestS3kCanonicalHczMoveLockWriterPrefix SHA256
+`3e53a56412d8b286f5fd414df4cddfe2f06ca432793bb9265f45a8462b52ac31`.
+Ordered repositorypathUTF8+NUL+bytes+NUL combined SHA256
+`e5ed9a35edb55e05a97b75f6f4bfce70ce42c4befef96287ff47759912de4a05`.
+Removing only both R29_DIAGNOSTIC_BEGIN..END blocks restores original owner
+`838c92521d635811df0b1d2c4ec325f87b82e61097116109d29dea8321eeb7a8`.
+No public/API/shared owner change; maintained base967c9896/driver eb743765/BK2AD40
+remain exact. The setter's original Math.max assignment runs once and unchanged.
+
+One current Main absolute normal-queue command, from owned3aa with the R25
+original ROM/environment bindings:
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_WORKSPACE/tools/testing/maven_queue.py" --normal \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Ptrace-replay \
+  "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" "-Ds3k.rom.path=$S3K_ROM" \
+  '-Dtest=TestS3kCanonicalHczMoveLockWriterPrefix#originalAd40MoveLockWriterThrough8776' \
+  -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical test -B
+```
+
+Sole session41203 finishes **20:21:04UTC**, queue0s/displayed Maven01:41min;
+JUnit **1/1F0E0S**, method24.602s/suite24.881s. Compiler succeeds inside that
+request, no prerequisite edit/extra build/observer failure/retry. XML confirms
+Java25.0.4.1, surfaceless-EGL, original three absolute ROMs and fork1/reuse/alpha.
+Only the strict0-versus207 assertion after original abort/cleanup fails.
+
+### Actual primitive states and caller
+
+All10 bounded records/4998UTF8bytes are inspected: eight row samples, one setter
+and one current-comparator report. Actual registered P2 identity is1751753651.
+Known-projection rereads succeed and the shared200record/strict<1MiB cap holds.
+**The projection has23 named fields**; earlier handback's24 was a counting error,
+not an omitted field/new probe. Field order is timer,X,Xsub,Y,Ysub,vx,vy,g,Air,
+OnObj,groundMode,direction,controlLocked,objectOwned,cpuAllowed,movementSuppressed,
+mappingOwned,cachedValid,cachedOnScreen,levelLF,objectFrame,objectVblaCounter,
+spriteManagerFrame. No NORMAL-only diagnostics or unbound EngineTiming read.
+Control below is the four engine ownership booleans, not a native raw byte.
+
+All samples retain P2 0E10.BB00/0572.AE00,vx/vy/g0, OnObjtrue,
+GroundModeGROUND, controlLockedfalse, cachedvalidtrue/onScreenfalse. GROUND is
+surface orientation and is not proof of Airfalse. PRE_STEP is not CPU entry;
+POST_PRODUCTION precedes final comparisons. Setter observation is before the
+unchanged assignment. Movie cursor/next-row stamps8773..76 are71848/49,
+71849/50,71850/51,71851/52 from the original row hook, not fitted clocks.
+
+| Row / phase | Timer | Air | Direction | objectOwned/cpuAllowed/movementSuppressed/mappingOwned | levelLF / objectFrame / objectVblaCounter / spriteManagerFrame |
+| --- | --- | --- | --- | --- | --- |
+|8773 PRE_STEP|1|false|LEFT|true×4|8714 /2580 /71802 /8714|
+|8773 POST_PRODUCTION|1|true|LEFT|false×4|8715 /2581 /71803 /8715|
+|8774 PRE_STEP|1|true|LEFT|false×4|8715 /2581 /71803 /8715|
+|8774 SETTER_PRE_ASSIGN|old1 /incomingRaw0|false|LEFT|false×4|8716 /2581 /71803 /8716|
+|8774 POST_PRODUCTION|0|false|LEFT|true×4|8716 /2582 /71804 /8716|
+|8775 PRE_STEP|0|false|LEFT|true×4|8716 /2582 /71804 /8716|
+|8775 POST_PRODUCTION|0|true|RIGHT|false×4|8717 /2583 /71805 /8717|
+|8776 PRE_STEP|0|true|RIGHT|false×4|8717 /2583 /71805 /8717|
+|8776 POST_PRODUCTION|0|false|RIGHT|true×4|8718 /2584 /71806 /8718|
+
+The real stack is AbstractPlayableSprite.setMoveLockTimer3361 ←
+PlayableSpriteMovement.doSlopeRepel3871 ← modeNormal901 ←
+handleMovementDispatch765 ← handleMovement485 ←
+SpriteManager.tickPlayablePhysics2061 ← processPlayableSlots925 ← update708 ←
+GameLoop.updateLevelMode callbacks1873/1876 ← LevelFrameStep.execute343 ←
+GameLoop.updateLevelMode1870 ← stepInternalBody1451 ← callback1174 ←
+PlcFrameLifecycleCoordinator.runLogicalIteration155. The extra leading frame is
+the private logger3376; all16 captured frames are inspected. The actual native
+VInt is not inferred from these separately named manager counters.
+
+This directly observes a normal-ground dispatcher reaching its existing
+SlopeRepel decrement. Air is true at8774pre-step and false before that call;
+**the intervening Air writer is not observed**. Existing source has separate
+object-control suppression, grounding support and Air/roll/normal decisions;
+source presence alone does not identify which grounding owner executed. The
+decrement is legitimate for the ground path it reached. No blanket timer freeze,
+column/facing/CPU formula correction or earlier native001D producer attribution
+follows. Direct-write bypass limits remain; no extra writer probe is launched.
+
+### Exact partial report and remaining boundary
+
+Current comparator identity2076619031 gives **8777compared/14208reference,
+completefalse,207=12physics+195animation, bootstrap0/warnings0/lag59**.
+FirstNonCamera remains8775sidekick_status_byte000B/000A. Seg11 file
+`s3k-sonic-tails-complete-emeralds_seg11-segment-11-3db3054cecc2203e.json`
+has SHA256 `03052a152bac3b0478f4cefa09ded728bf5e9c9e01fe53d5413ab3eb8011cdba`,
+byte-identical to the R25 serialized summary, including its entire available
+recent5 array. That ring contains8775status,6948/6947cameraY,6792/6791cameraY;
+it is **not** an exhaustive error vector. No parity forecast or full error-set
+identity follows. Six earlier reports0/2/4/6/8/9 complete with all groups/
+warnings/bootstrap0, lag0/11/14/16/62/55; actual gap11/failures0. All eight JSON,
+eight owner sidecars and original XML/TXT, including every available array,
+are inspected. XML SHA256
+`a2817dacfae28e30b8fa2e7c0ce849dd012e9fa6b453cd3afdeaff16b2bd4493`.
+Original18 diagnostic files remain explicitly retained until Root read, no copy/
+archive. Temporary two-source changes are restored exactly; only the two known
+instrumented class files are removed, with no extra compilation. A later normal
+build must recreate them. Prior refs/native4fdf/private config remain. Docs-only
+local accounting does not repair runtime or change R22full11118/actual exit,
+R25partial207/R28native29guard/independent seg13ownership88306 epochs. Stop after
+handback: no old-red, runtime fix, new native/probe/variant/full/slice/guard/broad.

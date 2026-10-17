@@ -387,3 +387,17 @@ no shared timer/movement/CPU/column repair or independent old-red is proved.
 Native observation is not engine trace green; R22full11118/first8775, actualexit,
 R25partial207 and separate seg13ownership88306 remain. Originals held for Root
 read; no additional run/fixture/runtime change or broader certification.
+
+## R30 actual8774 move-lock writer (2026-10-17)
+
+On24cd/Java7df plus two reviewed passive sources, sole originalAD40 prefix41203
+is1/1F0E0S, no skip/observer failure. Actual8777/14208 partial207=12physics+
+195animation/lag59/warnbootstrap0/first8775statusB/A; serialized03052 summary
+matches R25's bounded report, not a complete error-vector proof. One real setter
+at8774 old1/incoming0 is doSlopeRepel reached from modeNormal. PREAirtrue becomes
+false by setter time, OnObjtrue; actual Air writer and prior native001D producer
+remain unknown. This proves the countdown caller, not a global countdown defect.
+[Exact phases/stack/source/command/results and limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r29r30-actual-move-lock-writer-reaches-ground-dispatch--2026-10-17).
+All10records,8reports/8owners/XML/TXT inspected; source/classes restored/removed,
+raw18files retained until Rootread. No repair/oldred/newnative/broader coverage.
+R22full11118/exit/R28nativeguard/seg13ownership88306 remain prior epochs.

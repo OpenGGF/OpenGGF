@@ -7392,3 +7392,27 @@ reached-ground control is a proposed independent disconfirmation, not a test/fix
 Originalnative files retained until Root read, cleanup_pending/noarchive. Prior
 R25strict207/8777/R22full11118/14208/exit/seg13ownership88306 remain unchanged;
 no trace qualification, extra engine/native run or runtime repair here.
+
+### R29/R30 actual8774 move-lock decrement caller — 2026-10-17
+
+After Root reads R28original41records, exact9owned external files are consumed
+with separate writer6/metadata-alone3 leases; compact24cd facts/hashes preserved.
+Separate R29source33/R30execution34 retain all earlier IDs/results. Root reads
+APS5ecf9/test3e53/combinede5ed9a35 and authorizes one unchanged originalAD40 boot
+prefix8777. Sole41203 terminal1 at20:21:04UTC, queue0/displayedMaven01:41min,
+JUnit1/1F0E0S (24.602s), no prerequisite repair/observer failure/retry. Current
+partial8777/14208/completefalse207=12physics+195animation/lag59/warnbootstrap0,
+first8775statusB/A; serializedsummary03052 exactR25, not exhaustive-vector proof.
+
+All10records/4998bytes inspect. The one setter at8774 old1/incoming0 is actually
+**doSlopeRepel3871 ← modeNormal901 ← handleMovementDispatch765 ←
+SpriteManager.tickPlayablePhysics2061**. PREAirtrue/OnObjtrue becomes Airfalse
+by setter time, controlsnone; actualLF8716/objectFrame2581/Vbla71803/SM8716.
+The Air-clearing caller and earlier native001D producer remain unobserved;
+existing reached-ground countdown is not proved faulty. GroundModeGROUND is
+orientation, distinct from Air. Actualprojection has23fields (earlier24 label
+was a counting error). No staleNORMALdiagnostics/unboundclock/native29seed.
+[Complete source/command/stack/phases/report and limits](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r29r30-actual-move-lock-writer-reaches-ground-dispatch--2026-10-17).
+Two temporarysources/classes restored/removed, no extra compilation;18original
+inspected diagnostics retained until Rootread. No oldred/runtimefix/newprobe or
+new frontiers; R22full/exit and seg13ownership88306 remain separate.
