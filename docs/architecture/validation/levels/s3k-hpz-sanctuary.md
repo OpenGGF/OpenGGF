@@ -669,3 +669,39 @@ native twin of the LRZ2 seven-Chaos branch shows this on the same landing at (58
 engine pedestal now resolves its solid at that call point (`MANUAL_CHECKPOINT`) instead of
 reading the next frame's ride. Evidence and checks are in the
 [LRZ act 2 matrix](s3k-lrz-act2.md#declared-native-twin-of-the-seven-chaos-branch-2026-10-17).
+
+## Super Emerald layout-bank correction — 2026-10-17
+
+`loc_90926` sets `SK_special_stage_flag=1` when a pedestal selects its ordinal; `sub_85B0` / `loc_85E4`
+(skdisasm `044fa46`:10845–10904,197827–197836) therefore uses the Kosinski-decompressed S&K layout bank,
+including ordinals 0–7. The manager previously chose S3 for those ordinals. It now honors the existing semantic
+Super Emerald reward independently of the ordinal, retaining legacy 8–15 S&K requests.
+
+`TestS3kSpecialStageLayoutBank` reads the ROM's SStageLayoutPtrs, LockOnROM_Start and
+SSCompressedLayoutPtrs, independently decodes the layouts, then compares every cell and the angle/X/Y/rings
+trailer for both rewards and all eight ordinals. The real pedestal test also compares every destination cell
+before its existing incoming-world capture/restore and two forward replays. The angle oracle uses the API's
+high-byte angle units; five draft failures from comparing a ROM word to that byte were test defects, not production bugs.
+
+On composed `ccd415257` plus the new tests, old production completed **1,442/1,432F/0E/0S** at
+02:47:41 UTC: eight direct Super bank failures and 1,424 production pedestal layout failures. The fix completed
+**1,525/0F/0E/0S** at 02:52:09 UTC with Java 25, normal queued Maven, surfaceless EGL, null OpenAL and the
+three original absolute ROM paths. Selection: TestS3kSpecialStageLayoutBank, TestS3kSanctuaryPedestalLifecycle,
+TestSonic3kSpecialStageRewindAdapter, TestSonic3kSpecialStageManagerSnapshot,
+TestSonic3kSpecialStageGameplaySnapshot, TestGameplayCaptureFrameRendering, TestS3kAiz1SkipHeadless,
+TestSonic3kLevelLoading, TestSonic3kBootstrapResolver and TestSonic3kDecodingUtils (`-Dmse=off`, `test`).
+
+The unchanged declared seven-Chaos twin input produced a new engine capture (`TmpSevenChaosEngineTwinV3`,
+1/0F/0E/0S at 02:53:42 UTC). Preserved native v2 is the reference. Durable pictures are under task
+`spot-checks/seven-chaos-{native-v2,engine-twin-v3,compare-v3}` in the existing S3K parity capture directory.
+The sampled pair at reveal+20 improves from **6,692 to 763** different raw RGB pixels; +22 improves
+from **7,041 to 1,112**. Both show 72 blue spheres. The earlier reveal frames still differ on all 71,680 pixels:
+the engine fade passes through yellow/red and native reduces the channels together. The reveal timestamps still
+have the inherited +24 engine / +138 native offset. Results retain their 420-pixel residual. This is a declared
+local scene, not an authentic cold route, whole-scene RGB equality or timing acceptance.
+
+A fresh separate guard JVM completed **142/2F/0E/0S** at 02:56:25 UTC. The rewind, Mod API and hardware-timing
+authority guards passed. The two failures are `TestArchitecturalSourceGuard.migratedObjectChildSpawnsStayOnManagedHelpers`
+and `TestObjectPhysicsStandardizationGuard.productionObjectLifecycleRawCallCountsDoNotGrow` in the composed
+object code (raw child additions, count 12 against budget 10). Layout selection changes no object-production
+source; these composition failures remain blockers for the delivery and are not waived by this focused pass.

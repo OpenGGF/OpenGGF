@@ -6808,7 +6808,7 @@ is the declared native/engine twin of the LRZ2 seven-Chaos branch, paired on pub
 events ([LRZ act 2 matrix](../architecture/validation/levels/s3k-lrz-act2.md#declared-native-twin-of-the-seven-chaos-branch-2026-10-17)).
 Citations are to skdisasm `044fa46`.
 
-**Wrong layout set for a pedestal Super stage.**
+**Wrong layout set for a pedestal Super stage (FIXED, 2026-10-17).**
 
 - **Observed:** with native `Current_special_stage=2` and `SK_special_stage_flag=1`, native shows
   72 blue spheres and its own sphere field. The engine shows 118 and a different field.
@@ -6818,7 +6818,17 @@ Citations are to skdisasm `044fa46`.
 - **Engine:** `Sonic3kSpecialStageManager.loadRomData` picks the S&K set only for
   `currentStage >= 8`. The pedestal request is stage 2 with `SUPER_EMERALD`, which sets
   `superEmeraldMode` but still loads S3 layout 2.
-- **Owner:** S3K special-stage layout selection, which is shared special-stage ownership.
+- **Fix:** `loadRomData` now selects that bank when the existing Super Emerald reward flag is set,
+  independently of the ordinal. Legacy indices 8–15 still select S&K layouts; the low three bits index the bank.
+- **Evidence:** the independent ROM-pointer/Kosinski oracle reproduces eight wrong Super layouts on old source;
+  the production pedestal lifecycle reproduces 1,424 wrong-layout assertions. Fixed focused coverage passes
+  1,525/0F/0E/0S, including all 1,426 pedestal cases, 16 direct bank/ordinal products, rewind/capture neighbors
+  and the required S3K loading checks (2026-10-17 02:52:09 UTC).
+- **Raw RGB:** the unchanged declared native twin now shows the native 72-sphere field. At reveal+20 the
+  difference falls from 6,692 to 763 pixels; at +22, 7,041 to 1,112. The entry fade still differs on every pixel
+  through +18: engine passes through yellow/red while native fades the channels together. Character pose and
+  remaining stage pixels are unqualified. These are event-paired 320×224 comparisons, Limited 238 / RAW_RGB,
+  without image shifts or normalization; no cold-route or timing credit.
 
 **Results digit column.**
 
@@ -6830,8 +6840,8 @@ Citations are to skdisasm `044fa46`.
 - **Owner:** `S3kSpecialStageResultsScreen` digit placement.
 
 ### Removal condition
-Select the layout set from `SK_special_stage_flag` and place the results digits on the native
-column. Each needs a red test first and a native event-paired picture.
+The layout bank is corrected. Place the results digits on the native column and resolve the entry fade,
+with ROM-backed failing tests and event-paired native pictures. Remaining character and scene pixels need attribution.
 
 ---
 

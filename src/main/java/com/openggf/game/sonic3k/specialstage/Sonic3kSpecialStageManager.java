@@ -343,12 +343,13 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
         dataLoader = Sonic3kSpecialStageDataLoader.create();
         GraphicsManager gm = GameServices.graphics();
 
-        // Load layout from ROM.
-        // Stages 0-7: S3 layouts (Lockon data, uncompressed)
-        // Stages 8-15: SK layouts (Kosinski compressed Set 1)
+        // sub_85B0 / loc_85E4 (skdisasm 044fa46:10845-10904): SK_special_stage_flag
+        // selects the S&K bank independently of Current_special_stage. HPZ pedestals
+        // carry that flag in the Super Emerald reward; legacy indices 8-15 also
+        // explicitly request the S&K bank. Either bank is indexed by the low three bits.
         com.openggf.data.Rom rom = GameServices.rom().getRom();
         byte[] stageData;
-        if (currentStage < 8) {
+        if (!superEmeraldMode && currentStage < 8) {
             // S3 layouts
             long layoutAddr = Sonic3kSpecialStageRomOffsets.LAYOUT_S3_STAGE_1
                     + (long) currentStage * Sonic3kSpecialStageRomOffsets.LAYOUT_STAGE_SIZE;
@@ -357,7 +358,7 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
         } else {
             // SK layouts (Kosinski compressed)
             byte[] skCompressed = dataLoader.getCompressedLayoutSet(0);
-            int skStage = (currentStage - 8) % 8;
+            int skStage = currentStage & 7;
             int offset = skStage * Sonic3kSpecialStageRomOffsets.LAYOUT_STAGE_SIZE;
             stageData = new byte[Sonic3kSpecialStageRomOffsets.LAYOUT_STAGE_SIZE];
             if (offset + stageData.length <= skCompressed.length) {

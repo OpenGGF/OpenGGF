@@ -236,6 +236,11 @@ class TestS3kSanctuaryPedestalLifecycle {
         assertEquals(GameMode.SPECIAL_STAGE,loop.getCurrentGameMode(),"actual stage load"+stage);
         var provider=assertInstanceOf(Sonic3kSpecialStageProvider.class,loop.getActiveSpecialStageProvider());
         assertEquals(stage,provider.getCurrentStage());
+        // loc_90926 sets SK_special_stage_flag, so sub_85B0 loads the S&K bank's layout for this ordinal.
+        byte[] layout=com.openggf.game.sonic3k.specialstage.TestS3kSpecialStageLayoutBank.romLayout(stage,true);
+        var grid=provider.getManager().getGrid();
+        for(int cell=0;cell<0x400;cell++)
+            assertEquals(layout[cell]&0xFF,grid.getCell(cell&0x1F,cell>>5),"S&K layout"+stage+" cell "+cell);
         // Scene drawing is omitted in this sparse lifecycle driver. Invoke
         // Engine's actual presentation binding with the resolved preset,
         // without constructing another engine/loop or changing gameplay RAM.

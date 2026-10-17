@@ -91,7 +91,8 @@ Unreleased. The earlier development themes remain in
 
 - **S3K special stage results:** The results card sits on the locked-on game's
   grey backdrop instead of white, matching native frames of won and failed stages.
-  A Super Emerald pedestal selects its stage on the frame the player lands on it,
+  A Super Emerald pedestal loads the S&K sphere layout for its selected stage and
+  selects that stage on the frame the player lands on it,
   as the original does, instead of one frame later.
 
 - **S3K SEGA screen:** The title opens as the ROM's does: 22 frames of fade to
