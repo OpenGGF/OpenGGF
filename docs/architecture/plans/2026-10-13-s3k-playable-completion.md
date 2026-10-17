@@ -9187,3 +9187,28 @@ all prior refs/native/media remain. Target last compiled3717's diagnostics is
 must be compiled again by any later actual validation owner. All leases/jobs
 terminal. A normal local docs-only commit accounts R15/R16/R17 before separately
 authorized R18 source preparation; Root owns combined validation/composition.
+
+### R31 to R33 next-physics component prerequisite stop — 2026-10-17
+
+R31 source recovery727/support2604 is a feasible Air-clearing candidate, not an
+observed8774 writer. Separate R32source36/R33execution37 preserve35 and all
+prior IDs/results. On845bd9/Java7df, reviewed test0d285 uses real subtype2
+bubble35 production before actual column capture/release, one ordinary fixture
+frame, grounded/natural-zero controls and forced whole-world recreation. Existing
+two methods remain unchanged; no runtime edit. Copied terrain probes do not
+publish player angle/phase, but the background provider may memoize shared
+derived cache; zero shared writes were not proved.
+
+Sole normal Mainabsolutequeue/no-profile full-class selector
+`-Dtest=TestHczSpinningColumnCachedRelease` session7866 ends20:54:23UTC,
+queue0/Maven01:15/suite0.882s: **5/2F0E0S**. Original two controls and genuine
+grounded-positive case pass (including its twice-restored forward/K-1 oracle).
+Both released cases fail POST normal-frame prerequisite actualCPU
+CATCH_UP_FLIGHT at helper253/assert266, after LF+1/sameP2. Real bubble35 setup
+passes, but release-case replay cycles/final native timer assertions are never
+reached. **Not a genuine old-red or grounding-candidate disconfirmation.** Stop
+without tuning/retry/provider/runtime change; native001D producer and actual8774
+Air caller remain missing. [Exact source/command/failures/limits](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r31-to-r33-next-physics-component-stops-at-cpu-prerequisite--2026-10-17).
+R30original18 files are consumed after Root read; R33originalXML/TXT retained
+for direct Root read, cleanup_pending/noarchive. Test WIP stays uncommitted;
+no failing-test/runtime commit, new trace qualification or live job.

@@ -6074,3 +6074,93 @@ build must recreate them. Prior refs/native4fdf/private config remain. Docs-only
 local accounting does not repair runtime or change R22full11118/actual exit,
 R25partial207/R28native29guard/independent seg13ownership88306 epochs. Stop after
 handback: no old-red, runtime fix, new native/probe/variant/full/slice/guard/broad.
+
+## R31 to R33 next-physics component stops at CPU prerequisite — 2026-10-17
+
+R31 source-only ordinal35 inventories the sole APS Air storage/setter plus its
+reset/rewind/native-control/hurt-landing variants. The feasible pre-movement
+branch is PlayableSpriteMovement:727: DUAL_PATH + Air + nonnegative y velocity +
+current-session grounding support clears Air before movement-mode dispatch.
+ObjectSolidContactController:2604 can accept the retained column riding record;
+the column has not opted into the existing stale-air provider capabilities.
+This is a source-backed candidate, **not an observed8774 Air caller**. Native
+loc_13872 selects status&6; Tails_Stand_Freespace has no SlopeRepel. Later column
+recapture may legitimately clear Air again. Native001D's earlier producer remains
+unknown; the real R30 reached-ground decrement itself is not proved wrong.
+After Root reads R30, exact18 inspected diagnostics are rehashed and consumed
+metadata-slot-alone at20:31:42UTC; compact845bd9 facts/hashes remain, no archive.
+
+R32 ordinal36 authors only existing TestHczSpinningColumnCachedRelease, on
+HEAD845bd9/Java7df. Full test SHA256
+`0d28551d9b32bd873b083ed3be336b6cde2875def92bd5568812c9336b555334`;
+exact diff SHA256
+`75469c72e4f19b9e5e5621622167e6e0d93104ec3d6d69e357d74a7766e9764f`.
+Original two method bodies remain byte-identical. Three additional cases use a
+real ROM-registry subtype2 bubble, normal SST/animation, declared pickup overlap,
+loaded water owner and actual replenishAir35 before real column capture. No
+move-lock/private bubble/rider/cache writes or CPU replacement. The intended
+oracles are positive-lock Air retention versus genuine grounded decrement and
+natural zero; forced whole-world recreation/forward precedes final expectations.
+
+Purity qualification from source review: independent copied floor sensors do
+not publish player angles or CollisionSystem phase. However,
+DefaultBackgroundPlaneCollisionProvider.state **memoizes shared derived
+cachedState/cachedActive**. This is not a zero-shared-cache-write claim; no
+production source change follows. All runtime bytes remain Java7df, including
+column d8119e4a/APS838c9252/movement3f324b74/solid06245eea.
+
+Root accepts exact source and authorizes ONE R33 ordinal37 normal lifecycle.
+Below, MAIN and the three ROM variables denote the original absolute Main/ROM
+paths preserved verbatim in the own execution registry; cwd is the owned tree.
+These path-only substitutions satisfy repository documentation resource policy.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN/tools/testing/maven_queue.py" \
+  --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=$S1_ROM" \
+  "-Dsonic2.rom.path=$S2_ROM" \
+  "-Ds3k.rom.path=$S3K_ROM" \
+  -Dtest=TestHczSpinningColumnCachedRelease -Dsurefire.forkCount=1 \
+  -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical test -B
+```
+
+No profile or extra build. Duplicate-own-job check is empty; sole session7866
+finishes terminal1 at20:54:23UTC, reportedqueue0/displayedMaven01:15min,
+JUnit **5/2F0E0S**, suite0.882s, Java25.0.4.1. Compiler succeeds in this same
+lifecycle without repair. All5 cases/full both failure stacks and complete
+available system output are inspected. Six component FAST-load warnings select
+NONE when no manifest exists; no skipped cases or observer error.
+
+| Actual case | Result |
+| --- | --- |
+| Existing cached release/standing/recreation | PASS |
+| Existing visible hold/jump control | PASS |
+| New genuine-grounded positive lock | PASS, including twice-forced recreation/forward and final K-1 oracle |
+| New released positive lock | prerequisite FAIL after first normal frame: actual CPU CATCH_UP_FLIGHT |
+| New released natural zero lock | same prerequisite FAIL after first normal frame |
+
+Both release cases pass initial NORMAL/PANIC state, actual release prerequisites,
+terrain clearance, one ordinary fixture.stepFrame, levelLF+1 and same registered
+P2 identity. They fail at helper253 -> assertNormalPlayerPrerequisites266, before
+held recapture checking/NormalFrame return. The positive case reaches/passes the
+real35 producer assertion. **Neither release case reaches the forced forward
+cycles or final timer oracle.** Their resulting timer/Air/ride values were not
+serialized and are not reconstructed. This is an unexpected fixture CPU-state
+prerequisite stop, neither genuine timer old-red nor candidate disconfirmation.
+No provider/runtime design, source tuning, retry, variant, native or AD40 query
+is authorized or performed. Actual8774 Air caller/native001D earlier producer,
+R22full/exit/seg13ownership and trace residuals remain separate/unqualified.
+
+Original XML27623B SHA256
+`43f908749fc0cd1d9988c38f0da5f207dc247813fdf61bb8fe5dfd65bafa06f0`
+and TXT3471B SHA256
+`480f188085b27b868eebc87bb9985319d630f61d2a4e21cb9556a954160be414`
+remain at this worktree's target/surefire-reports under the complete class name
+for explicit Root direct read; cleanup_pending, no copy/archive. Test0d285 stays
+uncommitted/unmodified; no failing-test/runtime commit. Ordinals35/36/37 exact
+IDs/results and24h expiry are separate in both own registries. No live handle;
+native4fdf/private regular config/all prior refs/Root/Main remain untouched.
