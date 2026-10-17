@@ -499,10 +499,16 @@ its V-int (`GraphicsManager` displayed/requested fade, 2026-10-16) the direct HP
 counters 0, 1, 2, 3, 21 and 22 differs from seq 130+k by 256-486 of 71680 pixels in exact RGB,
 all in the score and lives boxes, which carry the native run's own values. The earlier
 `hud-phase/` measurements (TIME ticks at counter 60, RINGS flash at 24/56) already match seq
-130+k, and counter 2's former two-entry palette swap is gone. The card is
-the remaining exception: it is drawn from the current step's state, so its exit (counters
-23-36) matches seq 131+k (401 px, the same score/lives boxes) and is one frame early against
-the published layers. The LRZ1
+130+k, and counter 2's former two-entry palette swap is gone. The card is published the
+same way (2026-10-16): its pieces are captured where LevelLoop's `Render_Sprites` would place
+them (sonic3k.asm:7911) and drawn from the following `VInt_8` (701-748). Before that it was
+drawn from the current step's state and its exit matched seq 131+k. On the direct HPZ boot
+the card region (x 110-319) now changes between counters 21-22, 22-23, 23-24 and 24-25 by
+3206, 0, 620 and 471 pixels, as native seq 151-152 through 154-155 do. Counters 21-25 differ
+from seq 130+k by 474-603 pixels, all left of x 104 (score and lives boxes). At counters 33-38
+a further 282-578 pixels at x 0-29, y 56-92 are Knuckles' body, which there equals seq 131+k:
+his animation runs one frame ahead of native. That is the player's animation phase, not
+publication, and it is open. The LRZ1
 death restart shows the card sliding in at full colour over black and the same hold; there
 is no native picture of it.
 
@@ -516,8 +522,8 @@ The re-timed `soz1-cold-knuckles` movie is recorded in the [SOZ1 matrix](s3k-soz
 Limits: `known-bugs` "Level-Entry Title Card Residuals". Loads without the fresh-art
 admission skip the `LoadLevelLoadBlock` terrain wait, so the direct HPZ boot locks for 60
 frames against the native routine's 107. `Level`'s KosM queue clear is not modelled. The
-card reaches COMPLETE one frame late (counter 36 against native 35). The card is drawn from the
-current step's state, one frame ahead of the V-int publication. Rings draw under the card, and
+card reaches COMPLETE one frame late (counter 36 against native 35). Knuckles' animation runs
+one frame ahead of native from counter 33. Rings draw under the card, and
 `Pal_FromWhite` is not presented.
 
 ## Cold Tails HPZ campaign leg (2026-10-15)

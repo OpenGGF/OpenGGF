@@ -324,7 +324,11 @@ public class TailsTailsController {
     }
 
     private void publishDynamicArtDecision() {
-        if (isS3k || renderer == null || mappingFrame < 0) {
+        if (isS3k) {
+            submitS3kTailLoadPlc();
+            return;
+        }
+        if (renderer == null || mappingFrame < 0) {
             return;
         }
         // ROM LoadTailsTailsDynPLC reads the STORED mapping_frame(a0) and dedupes it
@@ -332,6 +336,23 @@ public class TailsTailsController {
         // but on a countdown frame mapping_frame is unchanged, so it queues nothing.
         if (dynamicArtDecisionOwner != null) {
             dynamicArtDecisionOwner.observe(mappingFrame);
+        }
+    }
+
+    /**
+     * S3K Obj_Tails_Tail calls {@code Tails_Tail_Load_PLC} after animating on every frame (sonic3k.asm
+     * {@code Tails_Tail_Load_PLC}); a game that records V-int DMA work receives the routine's inputs. Rendering keeps
+     * its own pattern upload path.
+     */
+    private void submitS3kTailLoadPlc() {
+        if (renderer == null || mappingFrame < 0) {
+            return;
+        }
+        var level = sprite.currentLevelManagerIfAvailable();
+        var objects = level != null ? level.getObjectManager() : null;
+        if (objects != null && objects.getObjectServices().runtimeArtCoordinator()
+                instanceof com.openggf.game.internal.PlayerDplcDmaSink sink) {
+            sink.tailsTailLoadPlc(mappingFrame, renderer.dplcFrame(mappingFrame));
         }
     }
 

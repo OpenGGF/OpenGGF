@@ -53,6 +53,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   stage policies validate isolated data.
   Bounded creator helpers preserve native destruction, shields, monitor contents
   and presentation; exact lifetime links survive rewind and colocated placements.
+  The tree-exit lookout retires its native arm chain in object-slot order before
+  its parent slot can be reused, while already launched coconuts keep their own lifetime.
   Game-owned recipes keep native construction out of shared effects.
   Field and powered callbacks retain the receiving creator's fault boundary,
   aborting a failed frame without blaming another mod that invoked the receiver.
@@ -128,6 +130,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   art owner by character identity, restoring Tails DPLC submissions for runtime
   names such as `tails_p2`. Horizontal springs apply the native unsigned
   launch-side check for both participants, including the flipped equality case.
+  Launchers, flippers and Point Pokey preserve captured rolls through object
+  control without enabling native pinball jump blocking or speed boosts.
   All five native spring types finish initialization before checking players on
   the following update, preventing early launches when a spring reloads.
   Coconuts faces and targets the nearer native player, preserving the ROM's
@@ -465,7 +469,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   speed, Tails strikes his victory pose only once the ship has left the screen, and
   Tails keeps his hurt pose when a boss arm hits him.
   Across S3K, horizontal springs now launch a player who comes to rest in front of
-  them, Blastoid hits scatter rings, and rewinding past an opened egg capsule keeps
+  them and require actual terrain penetration for a falling-player landing handoff.
+  Blastoid hits scatter rings, and rewinding past an opened egg capsule keeps
   its explosions going. Players balance at the ROM distance from the edges of egg
   capsules and horizontal springs, and corkscrew ramps draw the tumble frames the ROM
   shows for left-facing players.
@@ -1444,7 +1449,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   and peak memory. A lightweight local browser dashboard shows running jobs,
   waiting priority, resource usage and recent completions across worktrees,
   refreshing automatically without changing queue state and explaining admission
-  blockers when known. Waiting requests favour short checks, with aging and one
+  blockers when known. It names blocking requests, shows reported tooling revisions
+  across worktrees and labels scheduling estimates as coarse ordering hints.
+  Waiting requests favour short checks, with aging and one
   qualified small backfill before an older capacity-blocked request drains the queue.
   Reviewed small focused checks and ordinary batches automatically use 1 GiB JVM
   heaps with 4 GiB reservations; other checks retain normal budgets, with explicit
@@ -1485,7 +1492,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   bugfix pushes no longer start CI, and the ROM-fixture jobs are manual opt-ins again.
 - **Release-line integration:** preserve hosted release builds, snapshot policy
   checks, current launcher artifact selection, Linux packaging, and automatic
-  publication on master pushes from the 0.6 release branch.
+  publication on master pushes from the 0.6 release branch. Local launchers explain
+  build and launch progress; updated LWJGL uses Java 25 native interop without
+  deprecated Unsafe or unsupported JNI warnings.
 - **Rollover-safe tooling:** SDK scaffold dependencies and the complete-audio
   launcher derive artifact versions from build metadata. Keep the unpublished
   API candidate independent from the engine branch version.

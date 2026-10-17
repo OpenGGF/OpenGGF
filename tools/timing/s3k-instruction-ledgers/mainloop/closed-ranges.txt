@@ -1,0 +1,38 @@
+# start-end (hex, end exclusive) name: routines priced by earlier kos46 passes (instruction time only)
+FFFFF0-FFFFF6 VInt
+584-5E6 VInt
+606-76E VInt
+7EA-978 VInt_8/Do_Updates
+10DE-111A VInt
+1588-15BA VInt(DMA queue)
+1BF0-1C1A VInt(Set_Kos_Bookmark)
+4E800-4E810 VInt(SpecialVInt)
+4E758-4E7C2 VInt_DrawLevel
+DD06-DDCE UpdateHUD
+17F4-1882 Process_Nem_Queue_2
+1604-16FA Nemesis decoder
+1780-17D8 Process_Nem_Queue_Init
+1C1A-1D0A Process_Kos_Queue
+650C-65B2 LevelLoop skeleton (R14)
+13E4-1408 Pause_Game gates (R14)
+14BA-14BC Pause_Game gates (R14)
+1D18-1D24 Wait_VSync (R14; idle count = timing output)
+7616-761E Demo_PlayRecord gate (R14)
+6C34-6C3C Handle_Onscreen_Water_Height gate (R14)
+6C9C-6CA2 Handle_Onscreen_Water_Height gate (R14)
+1AADA-1AB32 Process_Sprites dispatch (R14)
+1B28-1BF0 Process_Kos_Module_Queue+Queue_Kos (R14, source-only)
+773C-7792 OscillateNumDo (R14)
+1BAF2-1BB16 AllocateObject/AfterCurrent (R14, building block)
+1ABB6-1ABC6 Delete_Current/Referenced_Sprite (R14, building block)
+1AD20-1B1F4 Render_Sprites family (R15, given display lists/SSTs)
+1ABC6-1ABE8 Draw_Sprite (R15)
+4F0CE-4F15A ApplyDeformation S&K copy (R16; sonic3k.asm ApplyDeformation)
+239E8C-239F18 ApplyDeformation S3 copy (R16; s3.asm $39E8C + $200000, byte-identical)
+23B03E-23B0D4 AIZ1_Deform (R16; s3.asm $3B03E + $200000)
+23B0D4-23B152 AIZ1_ApplyDeformWater dry + water split (R16; s3.asm $3B0D4..$3B152 + $200000; water line at/above screen top refused)
+239E74-239E8C MakeFGDeformArray S3 copy (R16; s3.asm $39E74 + $200000)
+4F0B6-4F0CE MakeFGDeformArray S&K copy (R16; byte-identical)
+239F18-239FB4 ApplyFGandBGDeformation S3 copy (R16; s3.asm $39F18 + $200000)
+4F1F0-4F28C ApplyFGandBGDeformation S&K copy (R16; byte-identical)
+3AF0-3DBE palette fade family: Pal_FadeFromBlack..Pal_AddColor2 incl. Animate_Palette $3BB8 (R17; sonic3k.asm 044fa46 4935-5340; AnPal_Load open)

@@ -110,8 +110,10 @@ class TestMutatorShowcaseRendering {
                         assertNotNull(nativeOwner);
                         if (!nativeOwner.pacingState().interactive() || GameServices.fade().isActive()) continue;
                         assertTrue(Arrays.stream(nativeStage.pixels()).distinct().count() > 16);
-                        assertFalse(Arrays.equals(session.render().pixels(), nativeStage.pixels()),
-                                "the native S1 stage must differ from the canonical level-plane fallback");
+                        // GameplayCaptureSession now presents a live special stage through the same
+                        // provider route (Engine.drawSpecialStage), not the level beneath it.
+                        assertArrayEquals(nativeStage.pixels(), session.render().pixels(),
+                                "the capture session draws the native S1 stage as the showcase route does");
                         assertEquals(0, GameServices.camera().getX());
                         assertEquals(0, GameServices.camera().getY());
                         assertTrue(sawLevelFade, "entry fade must be exercised before stage ownership");

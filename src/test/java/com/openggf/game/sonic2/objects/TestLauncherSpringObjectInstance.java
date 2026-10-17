@@ -20,6 +20,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 class TestLauncherSpringObjectInstance {
 
@@ -135,6 +136,62 @@ class TestLauncherSpringObjectInstance {
 
         assertEquals(0x0435, tails.getCentreY() & 0xFFFF,
                 "S2 Obj85 diagonal capture writes y_pos(a1)=y_pos(a0)-$13 before setting y_radius=$E");
+    }
+
+    @Test
+    void allLaunchTypesOwnRollThroughControlWithoutBorrowingNativePinballState() {
+        for (int subtype : new int[] {0, 1, 0x81}) {
+            LauncherSpringObjectInstance spring = new LauncherSpringObjectInstance(
+                    new ObjectSpawn(0x1000, 0x1000, Sonic2ObjectIds.LAUNCHER_SPRING,
+                            subtype, 0, false, 0), "LauncherSpring");
+            TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x1000, (short) 0x1000);
+            spring.setServices(new QueryOnlyPlayerServices(player, List.of()));
+            spring.onSolidContact(player, new SolidContact(true, false, false, true, false), 0);
+            assertTrue(player.getRolling());
+            assertTrue(player.isObjectControlSuppressesMovement());
+            assertFalse(player.getPinballMode(), "Obj85 never writes the native $39 alias");
+            assertFalse(player.getSpindash());
+            player.setJumpInputPressed(true);
+            spring.update(0, player);
+            player.setJumpInputPressed(false);
+            spring.update(1, player);
+            spring.update(2, player);
+            assertTrue(player.getRolling(), "release keeps the actual roll status");
+            assertFalse(player.isObjectControlSuppressesMovement());
+            assertFalse(player.getPinballMode(), "slope release must not latch native boosts/jump blocking");
+            assertFalse(player.getSpindash());
+            if (subtype == 0x81) {
+                assertFalse(player.getAir());
+                assertEquals((byte) 0xE0, player.getAngle());
+                assertTrue(player.getGSpeed() > 0);
+            } else {
+                assertTrue(player.getAir());
+                assertTrue(player.getYSpeed() < 0);
+            }
+        }
+    }
+
+    @Test
+    void releaseDoesNotRestoreStaleNativeStateOverAnOverlappingOwner() {
+        for (boolean initial : new boolean[] {false, true}) {
+            LauncherSpringObjectInstance spring = new LauncherSpringObjectInstance(
+                    new ObjectSpawn(0x1000, 0x1000, Sonic2ObjectIds.LAUNCHER_SPRING, 0, 0, false, 0),
+                    "LauncherSpring");
+            TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x1000, (short) 0x1000);
+            spring.setServices(new QueryOnlyPlayerServices(player, List.of()));
+            player.setPinballMode(initial);
+            player.setSpindash(initial);
+            spring.onSolidContact(player, new SolidContact(true, false, false, true, false), 0);
+            assertEquals(initial, player.getPinballMode());
+            // Model a later Obj84 enter/exit write while Obj85 still holds control.
+            player.setPinballMode(!initial);
+            player.setSpindash(!initial);
+            player.setHurt(true);
+            spring.update(0, player);
+            assertFalse(player.isObjectControlSuppressesMovement());
+            assertEquals(!initial, player.getPinballMode());
+            assertEquals(!initial, player.getSpindash());
+        }
     }
 
     private static final class QueryOnlyPlayerServices extends TestObjectServices {

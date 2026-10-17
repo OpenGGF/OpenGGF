@@ -20,6 +20,10 @@ This guide describes the ownership model for per-game rule gates. Game-wide shar
    - `SidekickCpuRules`: CPU sidekick follow, panic, despawn, catch-up, and death flow.
    - `PowerUpRules`: timer cadence, fixed power-up object slots, and shield/invincibility/speed-shoes support details.
    - `DrowningBubbleRules`: drowning countdown and mouth-bubble cadence rules.
+   - `PaletteWhiteFadeModel`: host-wide white-fade presentation and native component cadence;
+     S1/S2 retain the overlay model and S3K uses CRAM steps. Donor character rules do not replace it.
+     The owning ROM loops, cross-game values and publication/rewind checks are recorded in the
+     [ending lifecycle decision](designs/2026-10-13-s3k-ending-lifecycle.md#native-white-palette-fade-owner-decision--2026-10-17-root).
 6. If no existing owner fits, stop and add an architecture note before adding a new rule group.
 
 ## Admission Checklist

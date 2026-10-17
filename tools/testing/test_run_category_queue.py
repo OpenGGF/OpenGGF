@@ -820,7 +820,7 @@ with queue.worktree_build_slot(root) as tree_fd:
 
     def test_published_wait_reason_is_owner_authored_and_preserves_foreign_record(self):
         import maven_queue as queue
-        from maven_schedule import WaitingRequest, AGING_SECONDS
+        from maven_schedule import WaitingRequest, AGING_SECONDS, TOOLING_REVISION
         common = self.root / '.git'
         metadata = Path(subprocess.check_output(
             ['git', 'rev-parse', '--absolute-git-dir'], cwd=self.linked, text=True).strip())
@@ -840,6 +840,7 @@ with queue.worktree_build_slot(root) as tree_fd:
                         self.fail('higher-priority foreign owner should enter first')
             self.assertEqual(before, foreign.path.read_bytes())
             self.assertEqual(1, len(observed))
+            self.assertEqual(TOOLING_REVISION, observed[0]['toolingRevision'])
             self.assertEqual('priority', observed[0]['admission']['reason'])
             self.assertEqual(foreign.record['id'], observed[0]['admission']['blockedBy'])
         finally:
@@ -1212,6 +1213,7 @@ except KeyboardInterrupt:
                 later.wait(timeout=5)
 
     def test_lean_cli_passes_bounded_heaps_and_records_its_own_budget(self):
+        from maven_schedule import TOOLING_REVISION
         process, marker = self.launch_command('lean-cli', lean=True)
         self.wait_started(process, marker)
         invoked = json.loads(marker.with_suffix('.args').read_text())
@@ -1223,6 +1225,7 @@ except KeyboardInterrupt:
         records = list((self.root / '.git/maven-running').glob('*.lease'))
         self.assertEqual(1, len(records))
         self.assertEqual(4 * 1024**3, json.loads(records[0].read_bytes()[1:])['memoryBytes'])
+        self.assertEqual(TOOLING_REVISION, json.loads(records[0].read_bytes()[1:])['toolingRevision'])
         marker.with_suffix('.release').touch()
         output = process.communicate(timeout=5)[0]
         self.assertEqual(0, process.returncode, output)

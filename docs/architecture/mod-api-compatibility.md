@@ -59,6 +59,15 @@ mutable `0.7` pin is regenerated from the compiled inventory after qualification
 the descriptor and runtime description retain unpublished candidate `0.7.0`.
 No published contract exists or is changed.
 
+`GameRules.paletteWhiteFade` adds the typed, host-owned `PaletteWhiteFadeModel`
+with screen-overlay and native-ROM-palette values. The prior ten- and
+eleven-argument constructors keep their overlay default; character donation and
+player-rule composition retain the host's model. `PaletteFadePresentation` adds
+`FROM_WHITE`, `TO_WHITE` and the all-lines mask, leaving prior enum ordinals intact.
+Native white steps precede profile/range conversion, including backdrop and derived
+water colours. The normalized mutable `0.7` pin and runtime description are updated
+together; descriptor candidate `0.7.0` and published baselines are unchanged.
+
 The exact current candidate inventory is
 `src/test/resources/mods/mod-api-signatures-0.7.txt`. `TestModApiSignatureSurface`
 requires that file to be unique, sorted canonical UTF-8 text and exactly equal to

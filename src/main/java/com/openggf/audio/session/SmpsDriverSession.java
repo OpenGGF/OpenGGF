@@ -840,6 +840,31 @@ public final class SmpsDriverSession implements AutoCloseable {
         emitPendingDacSampleEnds();
     }
 
+    /**
+     * Moves up to {@code maxFrames} completed stereo frames of the opt-in
+     * native-compatible output (44.1 kHz, see
+     * {@link com.openggf.audio.synth.NativeCompatiblePcmOutput}) into
+     * {@code target}; zero when the session's settings do not enable it.
+     */
+    public int drainNativeCompatiblePcm(short[] target, int offsetSamples, int maxFrames) {
+        requireInstalled();
+        return device.drainNativeCompatiblePcm(target, offsetSamples, maxFrames);
+    }
+
+    /** The native-compatible stage's master clock (chip time), or -1 when it is not enabled. */
+    long nativeCompatibleMasterClockForTesting() {
+        requireInstalled();
+        var output = device.nativeCompatibleOutputForInspection();
+        return output == null ? -1 : output.masterClock();
+    }
+
+    /** Completed NTSC frames the native-compatible stage has read, or -1 when it is not enabled. */
+    public long nativeCompatibleFramesEnded() {
+        requireInstalled();
+        var output = device.nativeCompatibleOutputForInspection();
+        return output == null ? -1 : output.framesEnded();
+    }
+
     public int renderFrames(
             short[] target, int offsetSamples, int stereoFrames) {
         requireInstalled();
@@ -916,10 +941,24 @@ public final class SmpsDriverSession implements AutoCloseable {
      * rendered time. The bytes are ordinary physical writes, so the chip's
      * DAC renders them exactly as it renders the driver's own.
      */
-    /** One sample byte's loop cost, in Z80 cycles times output frames. */
+    /**
+     * One sample byte's loop cost in accumulator units. With an exact rational
+     * rate {@code n / d} Hz, one output frame is {@code Z80_CLOCK * d / n} Z80
+     * cycles, so the units are Z80 cycles times {@code n}: a byte costs
+     * {@code z80CyclesPerByte * n} and a frame adds {@code Z80_CLOCK * d}. Only
+     * a rate known solely as a double keeps the whole-hertz rounding, which is
+     * exact for integer rates.
+     */
     private long segaPcmByteCost(SmpsSegaPcmTransport transport) {
+        SmpsHardwareFrameBudget.Rate exact = device.exactRate();
         return (long) transport.z80CyclesPerByte()
-                * (long) Math.round(device.outputSampleRate());
+                * (exact != null ? exact.numerator() : Math.round(device.outputSampleRate()));
+    }
+
+    /** Accumulator units one rendered output frame adds; see {@link #segaPcmByteCost}. */
+    private long segaPcmFrameCycles() {
+        SmpsHardwareFrameBudget.Rate exact = device.exactRate();
+        return (long) SmpsSegaPcmTransport.Z80_CLOCK_HZ * (exact != null ? exact.denominator() : 1L);
     }
 
     private int renderSegaPcmTransport(
@@ -934,14 +973,13 @@ public final class SmpsDriverSession implements AutoCloseable {
                 continue;
             }
             long remainingCycles = cyclesPerByte - active.cycleAccumulator;
+            long frameCycles = segaPcmFrameCycles();
             int framesUntilByte = (int) Math.min(stereoFrames - rendered,
-                    Math.max(1L, (remainingCycles
-                            + SmpsSegaPcmTransport.Z80_CLOCK_HZ - 1)
-                            / SmpsSegaPcmTransport.Z80_CLOCK_HZ));
+                    Math.max(1L, (remainingCycles + frameCycles - 1)
+                            / frameCycles));
             device.renderFrames(target, offsetSamples + rendered * 2,
                     framesUntilByte);
-            active.cycleAccumulator += (long) framesUntilByte
-                    * SmpsSegaPcmTransport.Z80_CLOCK_HZ;
+            active.cycleAccumulator += (long) framesUntilByte * frameCycles;
             rendered += framesUntilByte;
         }
         if (rendered < stereoFrames) {

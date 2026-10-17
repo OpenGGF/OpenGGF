@@ -79,21 +79,43 @@ Unreleased. The earlier development themes remain in
   Island 2's first tree is restored on every frame before the scroll point, as in
   the original. Hydrocity 1's background waterline follows the original routine:
   at the waterline both repair strips load and the other animations pause, and far
-  from it the last drawn strip stays.
+  from it the last drawn strip stays. Angel Island 2's water, trickle and torch
+  colour cycles continue from Act 1's cycle counters across the act change, as in
+  the original, instead of restarting, and the frame of the act change still runs
+  Act 1's cycle. A full level load or restart clears the counters. Angel Island 1's
+  water cycle pauses only from the plane intro's explosion until Knuckles leaves,
+  continues correctly out of the intro's fire colours, and changes to its normal
+  colours on the original frame. Knuckles' Angel Island 1 starts with his own four
+  palette colours, and the main palette reloads at the original camera position for
+  every start without the plane intro.
 
 - **S3K special stage presentation:** Blue Sphere players and their tails use
   the original perspective projection through jumps, with fixed ground shadows
   under the players. The results card sits on the locked-on game's grey backdrop
   instead of white, matching native frames of won and failed stages.
+  A Super Emerald pedestal loads the S&K sphere layout for its selected stage and
+  selects that stage on the frame the player lands on it,
+  as the original does, instead of one frame later. White stage transitions follow
+  the original palette colours and 22-frame wait, including the scene backdrop
+  and underwater colours, instead of adding a yellow/red overlay. Score and bonus
+  digits use the original mapping positions and trailing zero, and overlapping
+  labels and sphere icons follow the console's sprite priority.
+
+- **S3K SEGA screen:** The title opens as the ROM's does: 22 frames of fade to
+  black, then the SEGA logo fades in over 22 frames in the console's own palette
+  steps, and the chant starts as the fade ends. Pressing Start during the logo
+  now stops the chant and runs the console's palette transition into the Sonic
+  animation, instead of jumping straight to the menu or skipping the chant. The console's boot and the logo's decompression time are
+  not yet included, so the logo still appears earlier than on hardware.
 
 - **S3K zone title cards:** Every level entry that passes through the game's level
   routine fades the level in from black over its first 21 frames, with the player,
   HUD and card already at full colour. This covers zone changes, new games from the
   data select, restarts, special and bonus stage returns, and loads without a card.
   Previously the level stayed black and then appeared at full brightness. Each fade
-  step reaches the screen with the same frame's sprites and HUD, one frame after it is
-  computed, as the original's palette upload does, and a rewind shows the step that
-  was on screen. The data
+  step and each move of the card reaches the screen with the same frame's sprites and
+  HUD, one frame after it is computed, as the original's palette and sprite uploads
+  do, and a rewind shows what was on screen. The data
   select no longer fades the whole screen, card included, back in on top. Seamless
   act changes still do not fade, as in the original. The score, time and ring
   counters are drawn over the card's red banner, as on hardware. Direct boots, new
@@ -106,7 +128,14 @@ Unreleased. The earlier development themes remain in
   native hit check of whichever phase it is in. When the object table is full,
   pending placements wait for the next camera block crossing, which restores the
   Hydrocity fan timing. Ending reunion loads use measured native decompression
-  costs, and the credits start on the original frame.
+  costs, and the credits start on the original frame. Giant-ring capture retains
+  the original blank-frame ownership and art-reload state; ordinary animation
+  is released again on return. Robotnik's ship stays with the beaten boss through
+  its defeat pause before flying off, as in the original.
+
+- **Spin dash camera:** While a spin dash charges, and on its release frame, the
+  camera eases back toward its normal height as it does when standing, as Sonic 2
+  and Sonic 3 & Knuckles do. A look up or down no longer holds until the dash ends.
 
 - **S3K level entry:** Captures that omit the title presentation complete the
   destination's deferred player assembly before its animation and art-loading
@@ -171,7 +200,10 @@ Unreleased. The earlier development themes remain in
   Hill restores mushroom-cap bounces, curled vines, catapults, dropping platforms,
   launched Mushmeanie shells and the act 2 Knuckles cutscene's player lift
   exactly. Launch Base falling platforms keep their riders and Marble Garden
-  sinking mud keeps each player's sink depth through rewind.
+  sinking mud keeps each player's sink depth through rewind. Rewinding to the first
+  frame of a Lava Reef load replays its background setup: act 2 no longer refills
+  its background or adds a second Death Egg, and Knuckles keeps act 1's background
+  chunk.
 
 - **S3K underwater objects:** Large-bubble pickup follows persistent character
   identity for leaders and followers. Sonic clears the rolling state; Tails
@@ -284,6 +316,33 @@ Unreleased. The earlier development themes remain in
   fresh assembly or transition callback cannot be restored by gameplay rewind.
   An individual trace segment resolves its validated containing run's declared
   movie, preserving shared-movie priority and rejecting unsafe source aliases.
+- **Native-compatible PCM output (diagnostics):** An opt-in audio session setting
+  feeds the accurate FM chip's own pin sums through a Java port of blip_buf. It
+  uses BizHawk's Nuked YM2612 scale and the movie's filter, which is None,
+  LowPass or ThreeBand with musl's `sin` and the stock core's single-precision
+  pi in its cutoffs. It produces 44.1 kHz PCM for comparison
+  against BizHawk. On an identical strobe schedule it matches Genesis Plus GX
+  source vectors byte for byte. `GameplayCaptureTool --native-pcm` records it from
+  live gameplay using a BK2's own settings; only NTSC Nuked movies are accepted.
+  A first real window measured the presentation clock running 1.29 per mille
+  short of the ROM's hardware frame. The PSG half follows GPGX's integrated
+  PSG and also matches its source vectors. The MAME YM2612 core and waveform
+  parity are not covered.
+- **Audio cadence:** Each presented frame now advances the sound chips by exactly
+  one NTSC hardware frame (3420 x 262 master clocks) instead of 1/60 s of chip
+  time. Previously 600 frames completed only 599 hardware frames. The
+  presentation still delivers 800 samples per frame at 48 kHz, so at 60 Hz music
+  and effects sound about 1.29 per mille higher and faster than a 59.92 Hz
+  console, while staying in step with gameplay frames. PAL is unchanged. The SEGA
+  chant's sample bytes follow the exact Z80 loop cadence on that budget instead of
+  a rate rounded to whole hertz.
+- **Sound hardware across level entry:** A level load that re-installs the same ROM
+  and audio profile no longer resets the sound chips. The ROM's sound driver keeps
+  running into the level, and the engine now keeps the chips with it; Sonic 3 &
+  Knuckles' Data Select hand-off used to rebuild them twice. A different ROM or
+  game, or a reset, still installs fresh hardware, and rewind restores the kept
+  chips exactly. The Sonic 3 & Knuckles title screen now opens with the ROM's
+  music fade-out request, which silences the PSG on entry as the console does.
 
 Rewind verification compares private records and complete captured opaque arrays
 by content, with explicit failures when snapshot inspection cannot complete. It also
@@ -303,3 +362,13 @@ display hold and retirement through their native movement and visibility latches
 Hidden-monitor conversion retains the occupied native SST through replacement
 cleanup. Both special-stage return prefixes pass; broader complete-route parity
 remains separate from these scoped native-owner checks.
+
+The AIZ2 bombing ship's two propellers are now native objects. They take
+the slots after the ship, turn at the original three-frame rate, and
+disappear when the ship's departure redraw begins. The departing ship hands
+its own slot to the small Eggman craft and starts the background-tree maker
+after it. The loop boundary moves only once that redraw completes.
+
+The AIZ2 background-tree maker now places all seventeen trees, one per frame,
+in the slots after itself. It retries when no slot is free and gives each tree
+its original drawing priority.

@@ -750,6 +750,11 @@ public class Sonic3kSuperStateController extends SuperStateController {
         return objectManager.createDynamicObject(() -> stars);
     }
 
+    /** Whether the VInt_8 Hyper flash branch (or its palette restore) is live for this V-int's palette upload. */
+    boolean hyperFlashStateLive() {
+        return hyperFlashFrames > 0 || hyperFlashRestorePending;
+    }
+
     void onPaletteUploadVInt() {
         if (hyperFlashFrames > 0) {
             uploadHyperFlashPalette();
@@ -1072,6 +1077,15 @@ public class Sonic3kSuperStateController extends SuperStateController {
             restoreNormalPalette();
         }
         player.setShieldVisible(true);
+        // SonicKnux_SuperHyper .revertToNormal also stores -1 in Player_prev_frame; Tails' revert does not.
+        if (!(player instanceof com.openggf.sprites.playable.Tails)) {
+            var level = player.currentLevelManagerIfAvailable();
+            var objects = level != null ? level.getObjectManager() : null;
+            if (objects != null && objects.getObjectServices().runtimeArtCoordinator()
+                    instanceof com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator art) {
+                art.vintDmaLedger().forcePlayerOneReload();
+            }
+        }
         LOGGER.info("Super Sonic deactivated (S3K)");
         activeFormTier = S3kFormTier.NORMAL;
     }

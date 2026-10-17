@@ -93,12 +93,15 @@ class TestAizBrittleLogBridge {
         };
         var stock = new AizCollapsingLogBridgeObjectInstance(SPAWN);
         stock.setServices(services);
+        // The parent has no Draw_Sprite; its display SST (loc_2AEB4) draws the logs.
         stock.appendRenderCommands(new java.util.ArrayList<>());
+        verify(renderer, never()).drawFrameIndex(anyInt(), anyInt(), anyInt(), anyBoolean(), anyBoolean());
+        stock.renderLogs(new java.util.ArrayList<>());
         verify(renderer, times(6)).drawFrameIndex(anyInt(), anyInt(), eq(SPAWN.y()), eq(false), eq(false));
         clearInvocations(renderer);
         var brittle = AizLogBridgeFactory.create(SPAWN, new AizLogBridgeRecipe(10));
         brittle.setServices(services);
-        brittle.appendRenderCommands(new java.util.ArrayList<>());
+        ((AizCollapsingLogBridgeObjectInstance) brittle).renderLogs(new java.util.ArrayList<>());
         verify(renderer, times(3)).drawFrameIndex(anyInt(), anyInt(), eq(SPAWN.y() + 2), eq(false), eq(false));
         verify(renderer, times(3)).drawFrameIndex(anyInt(), anyInt(), eq(SPAWN.y()), eq(false), eq(false));
         assertEquals(stock.getY(), brittle.getY());

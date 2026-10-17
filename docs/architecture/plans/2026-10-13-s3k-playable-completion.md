@@ -2248,6 +2248,28 @@ HardwareTiming 70/0/0 and the actual v2 run's 30/30 agreement with an
 independent head oracle. The parent gitlink now records that SHA. This is a
 pin and source-contract qualification, not a full native gate or engine suite.
 
+## Native CPU-ledger diagnostics pin (2026-10-17)
+
+The parent gitlink moves to TraceChaser main
+`4ae64e075d2e233539f5637fd16bd5ae7aa7d76e`, a fast-forward from
+`33c05c1623c2e7c2ebb7664e111a4ed3c0505e9d`. It adds:
+
+- the observation-only GPGX 68000 stall counters (stall ABI v1, published at
+  `0c0cef7`) and the diagnostic final-PCM window runner;
+- the callback-free 68000 CPU ledger (stall ABI v2, `393f0be`, hardened in
+  `5afbc3d`);
+- exact Kos service samples beside load-time v1 (`a081a02`);
+- the reviewed r2 documentation (`0801da8`). It explicitly limits the claims:
+  FIFO, rewind, lockup, STOPPED and H-int paths are not harness-tested; input
+  identity is separate from external conservation; SMS is outside the
+  contract.
+
+Source-only CI run 38991106862 on that SHA succeeded. Its optional
+native-integration job was skipped. The retained native proof is 12/12 within
+the documented unsupported-shape limits. This is a diagnostic pin: it is not
+full native timing or hardware closure, and supplies no 6+46 parity credit or
+engine gameplay input.
+
 ### Blue Sphere player projection and shadow publication (2026-10-17)
 
 Root compared the retained seven-Chaos native-v2 original PPM/VRAM/CRAM/RAM

@@ -27,6 +27,14 @@ Executed qualification and remaining campaign/rewind frontiers belong in the
 [dated stock audit](architecture/audits/2026-10-07-stock-parity-gap-verification.md#continued-swarm-from-the-delivered-base)
 and [known-bug record](status/s3k-known-bugs.md), rather than new intentional entries.
 
+**Authored AIZ lookout withdrawal (2026-10-16):** a local correction preserves
+native status7/own-dispatch deletion before parent-slot reuse can strand linked arms.
+The [known-bug record](status/s3k-known-bugs.md#authored-aiz-lookout-clears-a-physical-parent-before-its-arms-fixed)
+and [delivery evidence](architecture/plans/2026-10-15-second-strike-campaign-delivery.md#a5-owned-graph-retirement--current-source-continuation)
+separate focused lifecycle/replay and the completed fixed-input prefix from
+whole-route obligations. No accepted ROM deviation or default unknown-slot fields
+are introduced.
+
 **Ending presentation scope, 2026-10-13:** the three effects omitted from
 playable feature `c2103d5f7` are now implemented and locally qualified: IslandLift
 sprites/art, rescue/AIZ Master Emerald palette cycling and AIZ return-hold AnPal.
@@ -45,6 +53,19 @@ now deferred until actual ending use and fail closed before RAM/output changes;
 no fallback asset or intentional discrepancy is introduced. All 55 affected contract,
 scroll/RAM, lifecycle and pixel checks pass; scope is recorded in the
 [dated resource-boundary record](architecture/designs/2026-10-13-s3k-ending-lifecycle.md#deferred-ending-deformation-resources--2026-10-13).
+
+**Native white-palette repair (2026-10-17, local candidate):** managed white fades now follow the
+host ROM's distinct component routines and wait count, with the same display conversion on backdrop and
+water colours. This removes an implementation defect, not an accepted deviation. The
+[owner/evidence record](architecture/designs/2026-10-13-s3k-ending-lifecycle.md#native-white-palette-fade-owner-decision--2026-10-17-root)
+and [known-bug limits](status/s3k-known-bugs.md#super-emerald-stage-layout-set-and-results-digit-column-open)
+retain the remaining scene pixels, timing and native-product breadth; delivery validation is still pending.
+
+**Results presentation repair (2026-10-17, local candidate):** the ROM-backed score/bonus geometry and
+native opaque sprite priority are restored. All17 sampled results reveal checkpoints of the declared
+Tails320 NTSC seven-Chaos product match original native RGB; stage pixels and broader products remain open.
+The [results evidence](architecture/designs/2026-10-13-s3k-ending-lifecycle.md#native-results-geometry-and-painter-order--2026-10-17-root)
+records the162 focused passes and the reproducible maintained capture tool. No accepted deviation was added.
 
 ## Table of Contents
 

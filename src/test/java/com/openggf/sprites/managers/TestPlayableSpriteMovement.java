@@ -482,6 +482,49 @@ public class TestPlayableSpriteMovement {
                                 "release-frame AnglePos clears Secondary_Angle on Status_OnObj");
         }
 
+        @Test
+        public void spindashChargeAndReleaseFramesEaseTheCameraBiasLikeTheStandingPath() throws Exception {
+                // loc_11D5E (sonic3k.asm:23816-23823): every charge frame and the release frame
+                // (bra.s loc_11D5E) run addq.l #4,sp then step Distance_from_top toward $60 by 2.
+                // The start frame returns through addq.l #4,sp before reaching it.
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                CollisionSystem collisionSystem = new CollisionSystem(new TerrainCollisionManager());
+                installRuntimeCollisionSystem(collisionSystem);
+                Sonic sonic = new Sonic("sonic", (short) 0, (short) 0);
+                setGameRulesForTest(sonic, GameRules.SONIC_3K);
+                sonic.setGroundSensors(rightEdgeFloorSensors(sonic));
+                sonic.setAir(false);
+                sonic.setGroundMode(GroundMode.GROUND);
+                sonic.setAnimationProfile(new ScriptedVelocityAnimationProfile()
+                                .setDuckAnimId(8)
+                                .setSpindashAnimId(9)
+                                .setRollAnimId(2));
+                sonic.setAnimationId(8);
+                sonic.setCrouching(true);
+                Camera camera = sonic.currentCamera();
+                camera.setYPosBias((short) 0xB8);
+                PlayableSpriteMovement movement = new PlayableSpriteMovement(
+                                sonic, collisionSystem, GameServices.gameState());
+
+                sonic.setJumpInputPressed(true, true);
+                movement.handleMovement(false, true, false, false, true, false, false, false);
+                assertTrue(sonic.getSpindash(), "Down plus a fresh jump press starts the spindash");
+                assertEquals(0xB8, camera.getYPosBias(), "the start frame leaves before the bias step");
+
+                sonic.setJumpInputPressed(false, false);
+                movement.handleMovement(false, true, false, false, false, false, false, false);
+                assertEquals(0xB6, camera.getYPosBias(), "a held charge frame steps the bias toward $60");
+
+                sonic.setJumpInputPressed(true, true);
+                movement.handleMovement(false, true, false, false, true, false, false, false);
+                assertEquals(0xB4, camera.getYPosBias(), "a revving charge frame steps the bias too");
+
+                sonic.setJumpInputPressed(false, false);
+                movement.handleMovement(false, false, false, false, false, false, false, false);
+                assertFalse(sonic.getSpindash(), "releasing Down takes the release path");
+                assertEquals(0xB2, camera.getYPosBias(), "the release frame branches to the same bias step");
+        }
+
         private static Sensor fixedSensor(AbstractPlayableSprite sprite, Direction direction,
                                           byte angle, byte distance) {
                 return fixedSensor(sprite, direction, angle, distance, 1);
@@ -2796,11 +2839,11 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
-        public void s2ObjectOnlyPinballGuardDoesNotBlockRollingJump() throws Exception {
+        public void s2ReleasedObjectRollDoesNotBlockRollingJump() throws Exception {
                 setGameRulesForTest(GameRules.SONIC_2);
                 mockSprite.setAir(false);
                 mockSprite.setRolling(true);
-                mockSprite.setPinballMode(true);
+                mockSprite.setPinballMode(false);
                 mockSprite.setSpindash(false);
                 mockSprite.setAngle((byte) 0x00);
                 mockSprite.setYSpeed((short) 0);
@@ -2812,18 +2855,48 @@ public class TestPlayableSpriteMovement {
                 method.invoke(manager);
 
                 assertTrue(mockSprite.getAir(),
-                                "S2 Obj02_MdRoll should run Tails_Jump when only the engine Obj85/Obj86 roll guard is set");
+                                "S2 Obj02_MdRoll should run Tails_Jump after Obj85/Obj86 releases its control ownership");
                 assertTrue(mockSprite.getRollingJump(),
                                 "Rolling jump should set Status_RollJump");
                 assertFalse(mockSprite.getPinballMode(),
-                                "The synthetic object guard must be cleared before later pinball_mode tests");
+                                "Object roll ownership must leave native pinball_mode clear");
                 assertEquals((short) -0x0680, mockSprite.getYSpeed(),
                                 "Flat rolling jump should apply Tails/Sonic jump velocity");
         }
 
         @Test
+        public void s2ReleasedObjectRollUsesOrdinaryStopAndLandingRules() throws Exception {
+                setGameRulesForTest(GameRules.SONIC_2);
+                mockSprite.setRolling(true);
+                mockSprite.setPinballMode(false);
+                mockSprite.setAir(false);
+                mockSprite.setGSpeed((short) 0);
+                Method speed = PlayableSpriteMovement.class.getDeclaredMethod("doRollSpeed");
+                speed.setAccessible(true);
+                speed.invoke(manager);
+                assertFalse(mockSprite.getRolling(), "released Obj85 slope roll may stop normally");
+                assertEquals(0, mockSprite.getGSpeed(), "object ownership must not seed native $400 boosts");
+                mockSprite.setRolling(true);
+                mockSprite.setAir(true);
+                Method floor = PlayableSpriteMovement.class.getDeclaredMethod("resetOnFloor");
+                floor.setAccessible(true);
+                floor.invoke(manager);
+                assertFalse(mockSprite.getRolling(), "ordinary landing clears the released object roll");
+                assertFalse(mockSprite.getPinballMode());
+        }
+
+        @Test
         public void s2RomBackedPinballStillBlocksRollingJump() throws Exception {
                 setGameRulesForTest(GameRules.SONIC_2);
+                mockSprite.setGroundSensors(rightEdgeFloorSensors(mockSprite));
+                mockSprite.setCeilingSensors(new Sensor[] {
+                                fixedSensor(mockSprite, Direction.UP, (byte) 0, (byte) 0),
+                                fixedSensor(mockSprite, Direction.UP, (byte) 0, (byte) 0)
+                });
+                mockSprite.setPushSensors(new Sensor[] {
+                                fixedSensor(mockSprite, Direction.LEFT, (byte) 0, (byte) 0),
+                                fixedSensor(mockSprite, Direction.RIGHT, (byte) 0, (byte) 0)
+                });
                 mockSprite.setAir(false);
                 mockSprite.setRolling(true);
                 mockSprite.setPinballMode(true);
@@ -2832,11 +2905,11 @@ public class TestPlayableSpriteMovement {
                 setMovementField("inputJumpPress", true);
                 setMovementField("inputJump", true);
 
-                Method method = PlayableSpriteMovement.class.getDeclaredMethod("romPinballModeBlocksRollingJump");
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("modeRoll");
                 method.setAccessible(true);
-                boolean blocked = (Boolean) method.invoke(manager);
+                method.invoke(manager);
 
-                assertTrue(blocked,
+                assertFalse(mockSprite.getAir(),
                                 "S2 Obj84's ROM-backed pinball_mode/spindash mirror must still skip Tails_Jump");
                 assertTrue(mockSprite.getPinballMode(),
                                 "ROM-backed pinball_mode remains latched while the roll path continues");

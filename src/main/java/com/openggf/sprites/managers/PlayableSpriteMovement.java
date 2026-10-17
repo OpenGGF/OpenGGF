@@ -910,7 +910,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		short originalX = sprite.getX();
 		short originalY = sprite.getY();
 
-		if (inputJumpPress && !romPinballModeBlocksRollingJump() && doJump()) {
+		if (inputJumpPress && !sprite.getPinballMode() && doJump()) {
 			// ROM: Sonic_Jump uses addq.l #4,sp to pop the return address,
 			// skipping the rest of Obj01_MdRoll (RollRepel, RollSpeed,
 			// SpeedToPos, AnglePos, SlopeRepel). Air physics and position
@@ -940,24 +940,6 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			cpuController.despawn(SidekickCpuController.DespawnCause.LEVEL_BOUNDARY);
 		} else {
 			sprite.applyCrushDeath();
-		}
-		return true;
-	}
-
-	private boolean romPinballModeBlocksRollingJump() {
-		if (!sprite.getPinballMode()) {
-			return false;
-		}
-		PlayerMovementRules movementRules = playerMovementRulesOrNull();
-		if (movementRules != null
-				&& movementRules.rollingJumpPinballGateRequiresSpindashFlag()
-				&& !sprite.getSpindash()) {
-			// S2 Obj85/Obj86 do not write pinball_mode; the engine uses
-			// pinballMode there only to carry a temporary roll-preservation
-			// guard. Clear it before Sonic_Jump/Tails_Jump so later airborne
-			// pinball_mode tests also see the ROM byte as zero.
-			sprite.setPinballMode(false);
-			return false;
 		}
 		return true;
 	}
@@ -1344,8 +1326,22 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			sprite.setSpindashCounter(counter);
 		}
 
+		easeSpindashCameraBias();
 		doLevelBoundaryAndAnglePos();
 		return true;
+	}
+
+	/**
+	 * Every charge frame and the release frame (bra.s loc_11D5E) step Distance_from_top
+	 * toward $60 before Player_LevelBound: loc_11D5E (sonic3k.asm:23816-23823), Tails
+	 * loc_1537A (:28870-28878), S2 Obj01_Spindash_ResetScr (s2.asm:37687-37695). The start
+	 * frame returns through addq.l #4,sp before reaching it, so it keeps the bias.
+	 */
+	private void easeSpindashCameraBias() {
+		Camera camera = playerCameraBiasController();
+		if (camera != null) {
+			camera.easeYBiasToDefault();
+		}
 	}
 
 	/** Release charged spindash (s2.asm:37244) */
@@ -1381,6 +1377,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// only ground_vel has been published (sonic3k.asm:23662-23708,23797-23800).
 		// This matters at a camera edge: Player_Boundary_Sides can clamp x_pos and
 		// clear the new inertia before the first rolling displacement.
+		easeSpindashCameraBias();
 		doLevelBoundary();
 		short postBoundaryXSpeed = sprite.getXSpeed();
 		short postBoundaryYSpeed = sprite.getYSpeed();

@@ -48,7 +48,7 @@ class TestS2FlipperGraphRewind {
     }
 
     @Test
-    void flipperPlayerMapsRestoreToCurrentLivePlayerReferences() {
+    void flipperPlayerMapsRestoreToCurrentLivePlayerReferences() throws Exception {
         TestablePlayableSprite capturedMain = player("old-sonic");
         TestablePlayableSprite capturedSidekick = player("old-tails");
         Harness harness = Harness.create(capturedMain, List.of(capturedSidekick));
@@ -73,6 +73,18 @@ class TestS2FlipperGraphRewind {
         assertEquals(2, readInt(restored, "mappingFrame"));
         assertTrue(readBoolean(restored, "verticalLaunchTriggered"));
         assertPlayerMaps(restored, restoredMain, restoredSidekick, capturedMain, capturedSidekick);
+        // Native state can change after the object snapshot. Recreated Obj86
+        // owns movement suppression only, never a saved copy of Obj84's byte.
+        restoredSidekick.setPinballMode(true);
+        restoredSidekick.setSpindash(true);
+        com.openggf.sprites.playable.ObjectControlState.setMovementSuppressionPreservingOwnership(restoredSidekick, true);
+        var release = FlipperObjectInstance.class.getDeclaredMethod(
+                "releaseLockedPlayer", AbstractPlayableSprite.class);
+        release.setAccessible(true);
+        release.invoke(restored, restoredSidekick);
+        assertFalse(restoredSidekick.isObjectControlSuppressesMovement());
+        assertTrue(restoredSidekick.getPinballMode());
+        assertTrue(restoredSidekick.getSpindash());
     }
 
     private static void seedFlipper(

@@ -169,6 +169,7 @@ public class PlayableSpriteAnimation {
                 dynamicArtDecisionOwner.observe(sprite.getMappingFrame());
             }
         }
+        submitBodyLoadPlc();
         // Obj05 (Tails' tails) is NOT dispatched here. Its SST lives in
         // LevelOnly_Object_RAM, which starts after Object_RAM_End /
         // Dynamic_Object_RAM_End (docs/s2disasm/s2.constants.asm:1144-1152), so
@@ -176,6 +177,39 @@ public class PlayableSpriteAnimation {
         // Obj02. S3K places Tails_tails identically in Level_object_RAM after
         // Dynamic_object_RAM_end (docs/skdisasm/sonic3k.constants.asm:307-315).
         // SpriteManager.advanceTailsTailsAfterObjectExecution() owns that slot.
+    }
+
+    /**
+     * S3K Obj_Sonic/Obj_Tails/Obj_Knuckles call their {@code *_Load_PLC} right after {@code Animate_*}
+     * (sonic3k.asm loc_10C7A, and the Tails/Knuckles equivalents). The control routine skips both while
+     * {@code object_control} bit 1 hands the mapping frame to an object; a player ability's own raw frames (Knuckles'
+     * glide, slide and climb) still load. The hurt and death routines call them through sub_125E0/sub_15842/sub_17D1E
+     * without that test. A game that records V-int DMA work receives the routine's inputs, or learns that an object
+     * owned the frame; rendering keeps its own upload path.
+     */
+    private void submitBodyLoadPlc() {
+        if (sprite == null) {
+            return;
+        }
+        // Only the session's own playables run Obj_Sonic/Tails/Knuckles; ghost and preview copies never queue DMA.
+        var sprites = sprite.currentSpriteManagerOrNull();
+        if (sprites == null || !sprites.getAllSprites().contains(sprite)) {
+            return;
+        }
+        var level = sprite.currentLevelManagerIfAvailable();
+        var objects = level != null ? level.getObjectManager() : null;
+        var renderer = sprite.getSpriteRenderer();
+        if (objects != null && renderer != null && objects.getObjectServices().runtimeArtCoordinator()
+                instanceof com.openggf.game.internal.PlayerDplcDmaSink sink) {
+            boolean bypassesObjectControlTest = sprite.isHurt() || sprite.getDead() || sprite.isDrowningDeath();
+            if (com.openggf.sprites.playable.PlayableSpriteInternalAccess.objectOwnsMappingFrame(sprite)
+                    && !bypassesObjectControlTest) {
+                sink.playerLoadPlcOwnedByObject(sprite);
+                return;
+            }
+            int frame = sprite.getMappingFrame();
+            sink.playerLoadPlc(sprite, frame, renderer.dplcFrame(frame));
+        }
     }
 
     private void publishMappingFrame(int frame) {

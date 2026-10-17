@@ -27,6 +27,13 @@ final class Sonic3kAniPlcPublicationQueue {
         registerDestination(destination, payload.length / 32);
     }
 
+    /** Pending Add_To_DMA_Queue uploads in submission order: {destination tile, payload bytes}. */
+    List<int[]> pendingTransfers() {
+        List<int[]> out = new ArrayList<>(pending.size());
+        for (Upload upload : pending) out.add(new int[] {upload.destination(), upload.bytes.length});
+        return out;
+    }
+
     void publish(BiConsumer<Integer, byte[]> publisher) {
         // Consume before dispatch: the same physical VBlank cannot publish twice.
         List<Upload> ready = List.copyOf(pending);

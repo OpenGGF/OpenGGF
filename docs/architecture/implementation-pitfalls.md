@@ -142,6 +142,15 @@ against a disassembly trace without converting. Y increases downward (Mega Drive
 convention). VDP coordinates in the disassembly are offset by +128; the engine uses direct
 screen coordinates.
 
+**Missing terrain is not a grounding signal.** S3K horizontal spring
+`sub_2326C` rejects `Status_InAir`. Its engine ordering compensation may accept
+actual negative paired-foot terrain distance, but `ObjectTerrainUtils.noCollision`
+also describes real empty terrain, not just absent test services. Never substitute
+`player centreY >= springY` when both probes miss. Supply actual collision tiles
+in isolated landing fixtures and use the object's injected level/collision context;
+zero distance remains airborne on this pass. This removes the test-only exception
+left by `50a45804f` after the ICZ early-launch correction.
+
 **Replacing a player is not initializing a camera.** `Camera.setFocusedSprite`
 also resets live and render-copy coordinates to the sprite's top-left. During
 held gameplay, preserve and restore the camera snapshot around roster replacement;
@@ -1902,6 +1911,15 @@ identity map and explicitly ordered maps. A deterministic changed-bucket-order
 fixture checks replacement identities and duplicate character labels in both
 restore directions. Never filter snapshot bytes to hide this discrepancy.
 
+**Native white fades are distinct CRAM loops, not reversed screen overlays.** S3K `Pal_FromWhite`
+lowers all components together every third V-int; `Pal_ToWhite` raises only the first nonwhite R/G/B
+component each V-int. Retain the blocking loop's 22nd wait even when all colours have arrived.
+Step the final normal/water target before profile/range conversion; tinting an already-faded donor
+can erase its white floor. Keep raw published water inputs detached from pending writers when the
+white generation advances or restores. Saturate public colour-step values before compact cache-key
+storage: byte key 256 otherwise aliases step zero. See the
+[ROM owner and red/green evidence](designs/2026-10-13-s3k-ending-lifecycle.md#native-white-palette-fade-owner-decision--2026-10-17-root).
+
 **A capture does not need a second fade owner.** The runtime-ready GameLoop's
 PLC lifecycle already services the FadeManager once per presentation, exactly
 as the live Engine. A direct GameplayCaptureSession formerly also called its
@@ -1928,6 +1946,11 @@ propeller mapping overwrite an earlier main-body wheel. Keep SAT collection in
 native main-first order (`Render_Sprites` `$1AEE4/$1AF2A`). Independently reconstruct
 opaque ROM overlap and priority before excluding a covered player pixel; the
 native reunion's earlier wing legitimately covers20 of619 player pixels.
+The same applies to manual results painters: after correcting digit geometry,30 native
+icon/text pixels still differed because only each mapping was considered. Reverse the
+whole tally/reveal group as well as its pieces; the declared Tails results prefix then
+matches17 raw RGB checkpoints. An animation-phase explanation was rejected by opaque
+ROM pixels. Clearing a multipart child count does not suppress its parent's mapping.
 Scripted status-facing does not imply render_flags-facing when object mappings
 bypass the ordinary playable mapper. See the
 [ending publication evidence](designs/2026-10-13-s3k-ending-lifecycle.md#source-owned-initial-and-published-ending-presentation-2026-10-14).

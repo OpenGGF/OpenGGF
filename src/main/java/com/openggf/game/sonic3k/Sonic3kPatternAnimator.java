@@ -915,6 +915,11 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
                 script.destinationTileIndex(), script.copyFramePayload(tileId)));
     }
 
+    /** AniPLC uploads the next drain will publish: {destination tile, payload bytes}. */
+    java.util.List<int[]> pendingAniPlcTransfers() {
+        return aniPlcPublications.pendingTransfers();
+    }
+
     void publishAniPlcAtVBlank() {
         GraphicsManager graphics = GameServices.graphics();
         if (graphics != null) graphics.beginPatternAtlasBatch();

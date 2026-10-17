@@ -5900,7 +5900,44 @@ shared load bytes were false, so those bytes alone are not an actor-identity
 proof. Native ID3E is non-rendered conveyor logic; ID68 spinning-column art or
 dimensions cannot establish its body, motion or clearance.
 
-### Special-stage projection and shadow operators
+
+## A late owner callback cannot clear an earlier physical parent
+
+S3K `Child_Draw_Sprite` reads the physical parent SST's status bit7 after the
+child routine. `loc_85094` and `Go_Delete_Sprite` publish that bit plus a later
+`Delete_Current_Sprite` dispatch; they do not immediately clear the record.
+An authored owner can run after its lower-slot native body and higher linked
+arms. Immediate destruction then clears the parent before the arms observe it;
+setting the ordinary pending flag late is also too early, because the next
+body dispatch clears before the arms run. Capture a distinct withdrawal request,
+consume it at the body's own dispatch, retain native pending status for that
+whole pass, and clear on its following own dispatch. This is slot ordering,
+not an arbitrary frame delay. Prove requested/published restore and replay,
+all linked children, idempotence and actual reuse of the freed physical slot.
+Keep already launched independent projectiles on their own lifetime. Do not
+hide an orphan by inventing empty fields for an unsupported replacement owner.
+Origin: AIZ tree25/body4 with five higher arms, current-prefix34784 SkidDust slot4 abort;
+focused75404's setup failure and corrected29965 lifecycle cases, 2026-10-16.
+
+
+## Multipart parents and allocation holes survive simplified result graphs
+
+`LevResults_DisplayScore` keeps its mapping-frame1 parent zero plus seven BCD
+children; clearing `mainspr_childsprites` removes only the children. Native
+`Render_Sprites` draws that parent first, and the first opaque SAT sprite wins.
+A GL painter reverses the complete row group and each mapping, not just pieces.
+A declared results twin exposed420 geometry pixels and then30 overlap pixels;
+ROM-backed geometry/raster oracles and17 original-RGB checkpoints separate them.
+Do not assign a later actor the first slot after an initial table by counting
+rows. Conditional rows may already have deleted themselves. In the ordinary
+won/all-seven product, `loc_2EAC8` frees failure-message43 before the continue
+allocator scans; the icon takes43, not49, and both reveal tables preserve it.
+Trace the actual allocator and deletion branches before changing lifetime.
+Origin: S3K seven-Chaos results investigation, Root57774b451 plus correction,
+2026-10-17. The parent/priority/allocation lessons apply across games; the
+specific slots and conditional branches belong to this S3K product.
+
+## Special-stage projection and shadow operators
 
 `sub_953E` projects native player height/depth through ROM ScalarTable2 before
 signed DIVS. A ground screen offset plus linear jump scaling loses both integer

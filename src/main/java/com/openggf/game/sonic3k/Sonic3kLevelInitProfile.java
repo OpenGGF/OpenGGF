@@ -83,11 +83,57 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
         };
         if (!explicitDmaService && !nativeHandler) return;
         // The caller's existing token guard guarantees exactly-once dispatch.
+        recordVIntDma(phase, runtimeArtCoordinator, levelManager);
         if (levelManager != null
                 && levelManager.getAnimatedPatternManager() instanceof Sonic3kLevelAnimationManager animator) {
             animator.publishAniPlcAtVBlank();
         }
         S3kRuntimeArtCoordinator.from(runtimeArtCoordinator).publishPatternModuleDma();
+    }
+
+    /**
+     * Records this V-int's Process_DMA_Queue work before the queues publish: object entries already submitted, then
+     * Animate_Tiles uploads, then KosM completions (LevelLoop order). Diagnostic only; it decides nothing.
+     */
+    private static void recordVIntDma(com.openggf.game.resources.PlcLifecyclePhase phase,
+                                      com.openggf.game.RuntimeArtCoordinator runtimeArtCoordinator,
+                                      com.openggf.level.LevelManager levelManager) {
+        var art = S3kRuntimeArtCoordinator.from(runtimeArtCoordinator);
+        var ledger = art.vintDmaLedger();
+        var services = levelManager != null && levelManager.getObjectManager() != null
+                ? levelManager.getObjectManager().getObjectServices() : null;
+        if (!ledger.romBound() && services != null) {
+            try {
+                var reader = services.romReader();
+                // An accepted image shorter than the pinned VInt_8 code prices nothing (ROM_UNSUPPORTED).
+                ledger.bindRom(reader.size() < 0x6170 ? java.util.Optional.empty()
+                        : com.openggf.game.sonic3k.timing.S3kVIntDma.VInt8Transfers.tryDecode(reader.slice(0, 0x6170)));
+            } catch (java.io.IOException failure) {
+                throw new java.io.UncheckedIOException(failure);
+            }
+        }
+        var animateTiles = new java.util.ArrayList<com.openggf.game.sonic3k.timing.S3kVIntDmaLedger.QueuedEntry>();
+        if (levelManager != null && levelManager.getAnimatedPatternManager() instanceof Sonic3kLevelAnimationManager animator) {
+            for (int[] upload : animator.pendingAniPlcTransfers()) {
+                animateTiles.add(new com.openggf.game.sonic3k.timing.S3kVIntDmaLedger.QueuedEntry(
+                        com.openggf.game.sonic3k.timing.S3kVIntDmaLedger.Producer.ANIMATE_TILES,
+                        upload[1] / 2, upload[0] * 32));
+            }
+        }
+        // VInt_8: tst.b (Hyper_Sonic_flash_timer).w selects CPU CRAM writes instead of the palette DMA.
+        boolean hyperFlash = services != null
+                && services.playerQuery().mainPlayerOrNull() instanceof com.openggf.sprites.playable.AbstractPlayableSprite player
+                && player.getSuperStateController() instanceof Sonic3kSuperStateController controller
+                && controller.hyperFlashStateLive();
+        // The console region is the configured REGION, the same owner FrameRateResolver and the ending credits read.
+        String configuredRegion = services != null && services.configuration() != null
+                ? services.configuration().getString(com.openggf.configuration.SonicConfiguration.REGION) : null;
+        var region = "PAL".equalsIgnoreCase(configuredRegion)
+                ? com.openggf.game.sonic3k.timing.S3kVIntDmaLedger.VideoRegion.PAL
+                : "NTSC".equalsIgnoreCase(configuredRegion)
+                        ? com.openggf.game.sonic3k.timing.S3kVIntDmaLedger.VideoRegion.NTSC
+                        : com.openggf.game.sonic3k.timing.S3kVIntDmaLedger.VideoRegion.UNKNOWN;
+        ledger.serviceVInt(phase, region, hyperFlash, animateTiles, art.pendingKosModuleDmaEntries());
     }
 
     @Override
@@ -97,6 +143,15 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
                 "Level/loc_62B6: fixed title owner precedes layout placement",
                 () -> freshTitleCardSst.prepare(ctx)));
         if (ctx.permitsInitialProcessSpritesRequest()) {
+            // Same fresh-Level gate: $610E clears $F700-$F7FF (the three DPLC previous-frame bytes) and $61C6 empties
+            // DMA_queue, both before loc_62B6. Restoration, decode, preview and seamless continuation never run Level.
+            steps.addFirst(new InitStep("ResetFreshLevelDmaQueue",
+                    "Level/loc_60DE $610E clearRAM Tails_CPU_interact,$100; loc_61BE $61C6 DMA_queue reset",
+                    () -> {
+                        if (GameServices.runtimeArtCoordinator() instanceof S3kRuntimeArtCoordinator art) {
+                            art.vintDmaLedger().resetAtFreshLevel();
+                        }
+                    }));
             // Level/loc_60DE clears Lag_frame_count ($F62A), $58 bytes:
             // RNG_seed at $F636 lies inside it, before any new sprite dispatch.
             // This includes ending/stage-return loads, but not preview, pure

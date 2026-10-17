@@ -143,6 +143,10 @@ Entries should include:
 54. [AIZ2 First-Tree and HCZ1 Zero-Offset Animated Tile Uploads (FIXED)](#aiz2-first-tree-and-hcz1-zero-offset-animated-tile-uploads-fixed)
 55. [Knuckles Credits and Terminal Residuals (RESOLVED)](#knuckles-credits-and-terminal-residuals-resolved)
 56. [MHZ Rewind Snapshot Identity Gaps (RESOLVED)](#mhz-rewind-snapshot-identity-gaps-resolved)
+57. [Authored AIZ Lookout Clears a Physical Parent Before Its Arms (FIXED)](#authored-aiz-lookout-clears-a-physical-parent-before-its-arms-fixed)
+58. [Saved2 Return Star-Post Projection and LRZ Load-Frame Restore Words (RESOLVED)](#saved2-return-star-post-projection-and-lrz-load-frame-restore-words-resolved)
+59. [AnPal Shared Bank: Remaining Owners (OPEN)](#anpal-shared-bank-remaining-owners-open)
+60. [Super Emerald Stage Layout Set and Results Digit Column (OPEN)](#super-emerald-stage-layout-set-and-results-digit-column-open)
 
 ---
 
@@ -164,6 +168,30 @@ the15784-input native prefix and matches all51 registered keys after restore and
 semantic snapshot equality, not unrestricted byte equality or general rewind
 certification. Integration follows the normal delivery flow. The [delivery record](../architecture/plans/2026-10-15-second-strike-campaign-delivery.md#aiz-completed-history-restore-repair--2026-10-16)
 keeps the synthetic unit scope, semantic comparison limits and remaining route gates.
+
+## Authored AIZ Lookout Clears a Physical Parent Before Its Arms (FIXED)
+
+**Location:** `AizHollowTreeObjectInstance.onUnload` and native MonkeyDude body/arms.
+Current native-entry Second Strike prefix34784 aborts on input10584 when an orphan
+arm reads SST4 after skid dust reuses it. Earlier rows show tree25 unloading after
+body4/arms5,6,8,9,10 have run. Immediate authored body destruction bypasses the native
+status7 publication that `Child_Draw_Sprite` needs before parent deletion.
+
+The bounded correction captures a withdrawal request and consumes it only at the
+body's own dispatch. The body stays allocated and pending while higher arms mark
+themselves, then all clear on their next own dispatch. Detached coconuts retain
+their independent native lifetime. The unknown physical-owner projection still
+fails closed; this does not implement arbitrary native replacement-field reads.
+
+95 focused outcomes pass in75404; two new cases stop at a fixture's reveal-control
+slot prerequisite. Corrected two-method29965 passes actual dust reuse and
+requested/published destructive-world restore/replay, with no errors or skips.
+That is local lifecycle coverage across two runs, not a whole-route pass. The
+same-input current-prefix40328 then completes16524 ordinary inputs without the
+original abort or death, with the graph absent by10531. Recovery/full routes
+remain open. Exact sources, source review,
+negative history and artifact limits are in the
+[delivery record](../architecture/plans/2026-10-15-second-strike-campaign-delivery.md#a5-owned-graph-retirement--current-source-continuation).
 
 ## MHZ Cluckoid Visual Child After Explicit Parent Removal (OPEN)
 
@@ -6567,6 +6595,27 @@ A budget model without route keys that reproduces all six measured native counts
 (NTSC and PAL) and the 46 multi-valued corpus fingerprints. Evidence and rejected
 candidates are in the [ending lifecycle design](../architecture/designs/2026-10-13-s3k-ending-lifecycle.md#kos-idle-budget-measurement-of-the-hyper-sonic-residual-2026-10-15-opus-kos-budget-lane).
 
+### Progress
+- 2026-10-16: `S3kKosServiceModel` reproduces the shipped `Process_Kos_Queue` service
+  from ROM instructions and costs. It matches all 63 retained native windows (bytes,
+  bookmark or retirement, per-instruction counts) when it is given their measured
+  budgets. It is not registered: the budget still needs a per-frame CPU ledger (refresh,
+  Z80-bus/H-int waits, V-int, and every owner's frame-body cost), so the published
+  counts are unchanged. See the
+  [design record](../architecture/designs/2026-10-13-s3k-ending-lifecycle.md#resumable-kos-service-consumer-2026-10-16-kos-cycle-consumer-lane).
+- 2026-10-16: `S3kVIntDmaLedger` records each S3K V-int's DMA work and its GPGX bus freeze, from the engine's own
+  submissions (VInt_8 fixed transfers, the players' `*_Load_PLC`, `Tails_Tail_Load_PLC`, Animate_Tiles uploads, KosM
+  completions). It equals the native observation on all 35 retained ending V-ints (LF 4400-4406, NTSC and `REGION=PAL`
+  runs). Those are two independent observations with one positive entry. Its freeze is a conditional subtotal until the
+  V-int instruction terms fix each transfer's start. An object-owned player frame makes the body cache unknown, and the
+  record then states no figure (the ending's LF 4400-4406 records are refused this way). No count changes. See the
+  [design record](../architecture/designs/2026-10-13-s3k-ending-lifecycle.md#per-v-int-dma-work-ledger-2026-10-16-kos-cycle-consumer-lane-slice-2).
+- 2026-10-17: actual giant-ring capture now publishes native mapping ownership and the global
+  `Player_prev_frame=$FF` write at `loc_6173A`, including solo Tails. The three native-main local collision cases
+  restore/replay twice; eight representative Saved2 returns release ordinary mapping ownership. Unrecorded object
+  DPLC work still refuses a freeze figure, and the six-count/46-fingerprint removal condition remains open. See the
+  [r3 evidence](../architecture/designs/2026-10-13-s3k-ending-lifecycle.md#review-r3-actual-giant-ring-dma-ownership-2026-10-17).
+
 ---
 
 ## Level-Entry Title Card Residuals (OPEN)
@@ -6593,12 +6642,10 @@ Still open:
   the previous level across the reload.
 - The card leaves one frame late. It reaches COMPLETE, the `LoadEnemyArt` handoff, at counter
   36; the native card is deleted at counter 35.
-- The title card is drawn from the current step's state (`titleCard.draw()`), not with the
-  V-int publication that carries the sprite table, scroll, HUD and palette. On the direct HPZ
-  boot the card's exit (counters 23-36) matches native seq 131+k while every published layer
-  matches seq 130+k, so the card moves one frame early. Fixed 2026-10-16: the fade-in was
-  shown one V-int early in the same way (the "one-frame HUD lag" recorded earlier was this
-  palette, not the HUD; see the HPZ matrix).
+- On the direct HPZ boot Knuckles' animation runs one frame ahead of native after the card
+  release. At counters 33-38 his body (x 0-29, y 56-92) equals native seq 131+k while the
+  card, HUD, palette and level equal seq 130+k. The owner is the player's animation phase, not
+  the V-int publication; it is not attributed.
 - Rings draw under the card, where the original draws them above it (`Render_Sprites` emits
   `Render_Rings` before the object buckets, 36326-36329).
 - The `$D01`/`$1701` `Pal_FromWhite` reveal is not presented.
@@ -6720,3 +6767,157 @@ Evidence: `TestMhzRewindFidelitySweep#identityWindowsRestoreSnapshotExactly` (MH
 (every-frame restore and forward replay; red first: the LBZ release frame 64 and the mud's
 second frame diverged). Matrix:
 [MHZ act 1](../architecture/validation/levels/s3k-mhz-act1.md#rewind-fidelity-fixes-2026-10-16-902ba8a10).
+
+---
+
+## Saved2 Return Star-Post Projection and LRZ Load-Frame Restore Words (RESOLVED)
+
+Found by the declared native twin of the LRZ2 seven-Chaos giant-ring branch (2026-10-17,
+[LRZ act 2 matrix](../architecture/validation/levels/s3k-lrz-act2.md#declared-native-twin-of-the-seven-chaos-branch-2026-10-17)).
+Citations are to skdisasm `044fa46`.
+
+**LRZ load-frame restore (fixed).**
+
+- A registry restore of a direct-boot LRZ snapshot taken before the first scroll pass changed
+  captured `LrzZoneRuntimeState` words: act 2 `Camera_X/Y_pos_BG_copy`, the Death Egg word and
+  `Events_bg+$10/+$12`; act 1 `Camera_Y_pos_BG_copy` (0 to -23).
+- **Cause:** the post-restore presentation rebuild (`ParallaxManager.rebuildDerivedOutput`) ran
+  `SwScrlLrz.update`, which publishes those words as the native scroll dispatch does.
+- **Fix:** `SwScrlLrz` now implements the existing `ScrollOutputRebuilder` seam and derives its
+  output without writing them.
+- **Red/green:** `TestS3kLrzBackgroundInitRewind#immediateRestoreIsExactAndForwardReplaysMatch`
+  was red at the load frame for both acts, and exact at a mid-scroll released frame.
+
+**Star-post projection (no runtime defect; semantic difference recorded).**
+
+- **Two ROM bytes:**
+  - The stage exit ORs `$80` into `Last_star_post_hit` (:12157, :12712).
+  - `Tails_Init` (`loc_137A4`, :26195) copies the byte into `Tails_CPU_star_post_flag` during
+    level assembly.
+  - Only then does `loc_64DC` clear the return bit with `andi.b #$7F` (:7913). That keeps a
+    real checkpoint's low bits and leaves the Tails copy alone.
+- **Native RAM after the LRZ2 return:** `$FE2A` is 0 and `$F746` is `$80`.
+- **Engine:** one boolean, `LevelTransitionCoordinator.isLastStarPostHitSet()`, plays two roles:
+  - during load, the `Last_star_post_hit` gate for the Saved/Saved2 restore;
+  - after load, the `Tails_CPU_star_post_flag` copy, read by `Sonic3kCnzCarryTrigger` and
+    `Sonic3kIntroCarryParticipants`.
+- **Why it is not a runtime defect:** no consumer reads the masked live byte after load, and
+  each level assembly recomputes the boolean. Clearing it at the level-loop entry would break
+  the Tails-copy role. The return bit itself is not modelled separately.
+
+---
+
+## Super Emerald Stage Layout Set and Results Digit Column (OPEN)
+
+Found once `GameplayCaptureSession` presented live special stages (`39fb32b32`). The evidence
+is the declared native/engine twin of the LRZ2 seven-Chaos branch, paired on published reveal
+events ([LRZ act 2 matrix](../architecture/validation/levels/s3k-lrz-act2.md#declared-native-twin-of-the-seven-chaos-branch-2026-10-17)).
+Citations are to skdisasm `044fa46`.
+
+**Wrong layout set for a pedestal Super stage (FIXED, 2026-10-17).**
+
+- **Observed:** with native `Current_special_stage=2` and `SK_special_stage_flag=1`, native shows
+  72 blue spheres and its own sphere field. The engine shows 118 and a different field.
+- **ROM:** `sub_85B0` (sonic3k.asm:10845) reads `SStageLayoutPtrs` (the S3 set). It switches to
+  `SSLayoutOffs_RAM` (the Kosinski-decompressed S&K set) when `SK_special_stage_flag` is set, and
+  indexes either with `Current_special_stage & 7`.
+- **Engine:** `Sonic3kSpecialStageManager.loadRomData` picks the S&K set only for
+  `currentStage >= 8`. The pedestal request is stage 2 with `SUPER_EMERALD`, which sets
+  `superEmeraldMode` but still loads S3 layout 2.
+- **Fix:** `loadRomData` now selects that bank when the existing Super Emerald reward flag is set,
+  independently of the ordinal. Legacy indices 8–15 still select S&K layouts; the low three bits index the bank.
+- **Evidence:** the independent ROM-pointer/Kosinski oracle reproduces eight wrong Super layouts on old source;
+  the production pedestal lifecycle reproduces 1,424 wrong-layout assertions. Fixed focused coverage passes
+  1,525/0F/0E/0S, including all 1,426 pedestal cases, 16 direct bank/ordinal products, rewind/capture neighbors
+  and the required S3K loading checks (2026-10-17 02:52:09 UTC).
+- **Raw RGB:** the unchanged declared native twin now shows the native 72-sphere field. At reveal+20 the
+  difference falls from 6,692 to 763 pixels; at +22, 7,041 to 1,112. The entry fade still differs on every pixel
+  through +18: engine passes through yellow/red while native fades the channels together. Character pose and
+  remaining stage pixels are unqualified. These are event-paired 320×224 comparisons, Limited 238 / RAW_RGB,
+  without image shifts or normalization; no cold-route or timing credit.
+
+**White entry fade (corrected for the declared native320 Tails product, 2026-10-17).**
+
+The managed host rule now uses native CRAM colours: FromWhite lowers all components every third V-int,
+ToWhite raises the first nonwhite component each V-int, and the caller retains its 22 waits. Profile/range
+conversion follows the fade, including backdrop and final derived-water targets. Eight focused classes pass
+60/0F/0E/0S at 03:43:04 UTC. A later cache-bound regression is fixed, with 141/0F/0E/0S focused
+cache/lifecycle/SDK/Javadoc checks at 04:03:08 UTC. Fresh selected structural/API guards pass
+142/0F/0E/0S at 04:05:31 UTC; delivery-wide validation remains.
+The unchanged native-v2 versus engine-v4 pictures reduce stage reveal+0 from 71,680 raw RGB differences to
+446 (+10:667, +20:763, +22:1,112). Results sampled reveal+0,2,4,6,8 match exactly, then the 420-pixel residual
+returns. Root viewed the original event-paired pictures, with no normalization or image shifts. Other character,
+PAL, scene/timing products remain unqualified; the stage still has pose/scene residuals.
+
+**Results digit column and opaque sprite overlaps (corrected for the declared product, 2026-10-17).**
+
+`Map_Results` already positions the score digits. The bonus rows draw seven BCD children of the native word
+counter plus a separate permanent parent zero; clearing the child count retains that parent. Removing the
+extra score offset and restoring this graph reduces the settled difference from 420 to 30 pixels.
+The remaining 30 are icon/text overlaps, not the previously suspected animation phase: native earlier
+SST entries and mapping pieces win opaque overlaps, while the manual GL painter previously let later ones win.
+Reversing the piece and tally/reveal group emission removes all 30 in this product.
+
+The ROM-backed geometry oracle reproduces 85 failures before the fix. After the corrected independent
+priority oracle reproduces 30 pixels in each of four cases, the final nine-class selection passes
+162/0F/0E/0S at 04:57:09 UTC. Native-v2 versus engine-v6 has zero raw RGB differences at all 17 paired
+results reveal checkpoints +0 through +32, every two frames. The maintained capture CLI reproduces every
+PNG and both state/event CSVs byte-for-byte (05:10:48 UTC). Root inspected the original pictures.
+The initial ordinary-label palette-offset oracle and proposed continue-icon slot49 removal were rejected
+against source; no production continue lifetime was changed. See the
+[results evidence](../architecture/designs/2026-10-13-s3k-ending-lifecycle.md#native-results-geometry-and-painter-order--2026-10-17-root).
+
+### Removal condition
+The layout bank, white-fade product and sampled results prefix are corrected locally. Stage reveal pixels,
+other character/PAL/viewport/donor products, the rest of the results timeline and final candidate verification
+remain open. One declared native320 NTSC Tails Limited/RAW_RGB product is not whole-scene or timing parity.
+
+---
+
+## AnPal Shared Bank: Remaining Owners (OPEN)
+
+Every `AnPal_*` routine reads and writes one RAM bank: `Palette_cycle_counter0`,
+`Palette_cycle_counter1` and `Palette_cycle_counters` (sonic3k.constants.asm:580-596).
+Level's loc_60DE clears it (sonic3k.asm:7652), and a seamless act reload does not.
+`Sonic3kGlobalAnimationState` now holds that bank at ROM width. The fresh-Level step
+clears it, and it rides the animator's rewind snapshot. The AIZ1 and AIZ2 cycles read
+it, so AnPal_AIZ2 continues from AnPal_AIZ1's counters. The iteration that performs the
+reload runs AnPal_AIZ1: LevelLoop calls Animate_Palette (7923) before the
+DeformBgLayer/ScreenEvents work that reloads (7929-7930).
+
+AnPal_AIZ1 now matches its ROM boundaries:
+- Its counters+$02 cycle is gated by `Palette_cycle_counters+$00` (3217), not by
+  `Level_started_flag`. Obj_AIZPlaneIntro sets the byte at Sonic's x `$13D0`
+  (loc_67712, 135755-135756), and Obj_CutsceneKnuckles clears it when Knuckles leaves
+  (loc_61F22, 128795-128796). Both writes land after that frame's palette call, as
+  Process_Sprites (7926) follows Animate_Palette.
+- It reads a carried counters+$02 before wrapping it (3219-3223), including the ROM bytes
+  after AnPal_PalAIZ1_2 for a fire-branch `$30`/`$36`.
+- Its fire/normal branch uses `AIZ1_palette_cycle_flag` as AIZ1_Resize left it
+  (loc_1C46E, 38913-38917, run from DeformBgLayer after Animate_Palette).
+
+The `aiz_completerun` handoff and the AIZ2 window now show native's trickle entry on
+native's rows. Palette words and the bank, torch channel B included, equal native RAM on
+every row from the reload. A Knuckles AIZ1 start, which has no counters+$00 writer, matches
+native's bank on all 300 compared Level_frame_counter values. Covered by `TestS3kAizAnPalBankCarry`, `TestS3kAiz1AnPalBoundaries` and
+`TestS3kAiz1AnPalGateWrites`; evidence is in the
+[AIZ2 matrix](../architecture/validation/levels/s3k-aiz2.md).
+
+Still open:
+- The other zones' cycles keep private copies of the bank, so their seamless reloads
+  still restart those counters, and their `counters+$00` writers are not modelled
+  through the bank. Each needs its own native witness before it moves.
+- A reload consumed at the next frame top (`LevelSeamlessTransitionExecutor`) runs no
+  palette call on its transition row. Natively that iteration's Animate_Palette ran for
+  the outgoing act. Not measured.
+- AIZ1_Resize routine 4 writes `Normal_palette_line_3+$1E` from word_4FAEA for Knuckles
+  once camera X reaches `$2D80` (sonic3k.asm:39001-39010). The engine uses one colour for
+  every character there. This is from the source; no native witness yet.
+- `Adjust_AIZ1Chunks2`'s chunk edits for Knuckles (sonic3k.asm:104503-104538) are not
+  checked here; only its palette half is modelled.
+- The `GameplayCaptureSession` harness starts Knuckles AIZ1 with camera X `$1308`, where
+  native and the headless fixture start at `$1300`. Its Knuckles AIZ1 pictures are
+  therefore not a matched trajectory.
+
+### Removal condition
+Each item matches native RAM at its handoff, with a focused test.

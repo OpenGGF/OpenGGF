@@ -41,11 +41,16 @@ class TestSozLastCheckpointShortcutProduction {
         state.lighting().initializeSeamlessDarkness();
         var level=GameServices.level();var oldObjects=level.getObjectManager();
         int lives = GameServices.gameState().getLives();
-        var loop=new GameLoop(new InputHandler());
+        var input=new InputHandler();
+        var loop=new GameLoop(input);
         loop.setGameplayMode(fixture.gameplayMode());
         loop.setGameMode(GameMode.LEVEL);
+        // The PLC logical iteration services the gameplay fade (GameLoop step ->
+        // runLogicalIteration -> GameLoopContinueCoordinator.updateFade); a test-side
+        // FadeManager.update() would advance it twice per frame.
+        assertTrue(loop.ownsGameplayFadeLifecycle(), "production loop owns the gameplay fade");
         try {
-            for (int i = 0; i < 60; i++) loop.step();
+            for (int i = 0; i < 60; i++) step(loop);
             var sourceHistory = fixture.gameplayMode().getRewindController();
             assertNotNull(sourceHistory);
             assertTrue(sourceHistory.currentFrame() >= 50, "source room has rewind history");
@@ -54,7 +59,7 @@ class TestSozLastCheckpointShortcutProduction {
             assertTrue(level.hasPendingLevelExit(),"a coordinate-only teleport retains early-room event state");
             boolean reloaded=false;
             for(int i=0;i<1200;i++) {
-                fixture.gameplayMode().getFadeManager().update();loop.step();
+                step(loop);
                 if(level.getObjectManager()!=oldObjects){reloaded=true;break;}
             }
             assertTrue(reloaded);
@@ -68,19 +73,39 @@ class TestSozLastCheckpointShortcutProduction {
             assertEquals(0x4EC0,player.getCentreX()&65535);
             assertEquals(0x4A8,player.getCentreY()&65535);
             assertEquals(width,GameServices.camera().getWidth());
-            // Finish title/fade through the same loop before probing the room threshold.
-            for(int i=0;i<240;i++){fixture.gameplayMode().getFadeManager().update();loop.step();}
+            // Finish title/fade/assembly through the same production loop before probing the room threshold.
+            boolean released=false;
+            for(int i=0;i<500;i++) {
+                step(loop);var title=GameServices.module().getTitleCardProvider();
+                if(loop.getCurrentGameMode()==GameMode.LEVEL&&(title==null||title.isComplete())
+                        &&!fixture.gameplayMode().getFadeManager().isActive()
+                        &&!fixture.gameplayMode().getFadeManager().hasPendingCompletion()
+                        &&!level.hasPendingFreshLevelTransitionBoundary()
+                        &&!GameServices.sprites().getMainPlayable().isControlLocked()) {released=true;break;}
+            }
+            assertTrue(released,"actual title/fade/control release through the production loop");
+            assertEquals(lives, GameServices.gameState().getLives(), "release hides no restart");
+            // Released incoming world: two forward/reverse 45-input full-registry cycles; no raw branch crosses the load.
+            CheckpointIncomingReplay.verify(fixture, loop, input, 6, () -> {
+                assertEquals(width, GameServices.camera().getWidth());
+                assertEquals("sonic", GameServices.sprites().getMainPlayable().getCode());
+            });
             state=S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry()).orElseThrow();
             assertEquals(0x20,state.events().backgroundRoutine(),"destination screen init must select the late temple");
             state.lighting().initializeSeamlessDarkness();
             NativePositionOps.writeXPosResetSubpixel(player,0x5000);
             NativePositionOps.writeYPosResetSubpixel(player,0x650);
             GameServices.camera().setY((short)0x500);GameServices.camera().setFrozen(true);
-            loop.step();
+            step(loop);
             assertEquals(0,state.lighting().darknessLevel());
             assertEquals(0x24,state.events().backgroundRoutine());
             assertEquals(8,level.getObjectManager().activeObjectsOfType(SozBossWallObjectInstance.class).size());
             assertTrue(state.events().artJobOrdinal()>=0,"outer shell art must be submitted by real arena entry");
         } finally {loop.closePresence();}
+    }
+
+    /** One production iteration plus the headless pending-render drain, as the qualified checkpoint drivers do. */
+    private static void step(GameLoop loop) {
+        loop.step();GameServices.graphics().runPendingRenderThreadTasks();
     }
 }

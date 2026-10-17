@@ -10,6 +10,7 @@ import com.openggf.game.render.SpecialRenderEffectStage;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.AizBattleshipInstance;
+import com.openggf.game.sonic3k.objects.AizBattleshipPropellerInstance;
 import com.openggf.game.sonic3k.objects.AizShipBombInstance;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
@@ -17,7 +18,6 @@ import com.openggf.graphics.PatternRenderCommand;
 import com.openggf.level.LevelManager;
 import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.ObjectRenderManager;
-import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.logging.Logger;
 
@@ -26,8 +26,9 @@ import java.util.logging.Logger;
  *
  * <p>The main bombership body is drawn as a clipped strip over the top 64
  * scanlines. The source tiles come from the hidden AIZ2 boss strip in the
- * foreground layout while propellers remain separate sprite art rendered on
- * top of the strip.
+ * foreground layout. The propellers are their own SST objects
+ * ({@link AizBattleshipPropellerInstance}); the overlay only draws them on top
+ * of the strip from their ROM animation and translated position.
  */
 public final class AizBattleshipRenderFeature implements SpecialRenderEffect {
     private static final Logger LOG =
@@ -36,10 +37,6 @@ public final class AizBattleshipRenderFeature implements SpecialRenderEffect {
     private static final int STRIP_HEIGHT_PX = 0x40;
     private static final int TILE_SIZE = 8;
     private static final int EMPTY_PATTERN = 0;
-    private static final int PROPELLER_FRONT_X = 0x3FBC;
-    private static final int PROPELLER_BACK_X = 0x3DCC;
-    private static final int PROPELLER_Y = 0x0A71;
-    private static final int PROPELLER_FRAME_DELAY = 2;
 
     private final SonicConfigurationService configService = GameServices.configuration();
     private final PatternDesc reusableDesc = new PatternDesc();
@@ -116,7 +113,7 @@ public final class AizBattleshipRenderFeature implements SpecialRenderEffect {
         renderAttachedBombs(levelManager);
         graphicsManager.registerCommand(prepareOverlayCommand);
         renderShipStrip(camera, battleship, screenWidth, pendingStripHeight);
-        renderPropellers(camera, battleship, frameCounter, levelManager);
+        renderPropellers(levelManager);
         graphicsManager.registerCommand(cleanupOverlayCommand);
 
         if (!loggedFirstRender) {
@@ -175,40 +172,16 @@ public final class AizBattleshipRenderFeature implements SpecialRenderEffect {
         }
     }
 
-    private void renderPropellers(Camera camera,
-                                  AizBattleshipInstance battleship,
-                                  int frameCounter,
-                                  LevelManager levelManager) {
+    private void renderPropellers(LevelManager levelManager) {
         ObjectRenderManager renderManager = levelManager.getObjectRenderManager();
-        if (renderManager == null) {
+        if (renderManager == null || levelManager.getObjectManager() == null) {
             return;
         }
-
-        PatternSpriteRenderer renderer = renderManager.getRenderer(Sonic3kObjectArtKeys.AIZ2_SHIP_PROPELLER);
-        if (renderer == null || !renderer.isReady()) {
-            return;
+        for (var object : levelManager.getObjectManager().getActiveObjects()) {
+            if (object instanceof AizBattleshipPropellerInstance propeller) {
+                propeller.renderOverBattleship(renderManager);
+            }
         }
-
-        int frameIndex = (frameCounter / PROPELLER_FRAME_DELAY) & 0x3;
-        int cameraX = camera.getX();
-        int cameraY = camera.getY();
-        int shipX = battleship.getSecondaryCameraX();
-        int shipY = battleship.getSecondaryCameraY();
-
-        drawPropeller(renderer, frameIndex, cameraX, cameraY, shipX, shipY, PROPELLER_FRONT_X);
-        drawPropeller(renderer, frameIndex, cameraX, cameraY, shipX, shipY, PROPELLER_BACK_X);
-    }
-
-    private void drawPropeller(PatternSpriteRenderer renderer,
-                               int frameIndex,
-                               int cameraX,
-                               int cameraY,
-                               int shipX,
-                               int shipY,
-                               int sourceX) {
-        int worldX = cameraX + (sourceX - shipX);
-        int worldY = cameraY + (PROPELLER_Y - shipY);
-        renderer.drawFrameIndex(frameIndex, worldX, worldY, false, false);
     }
 
     private AizBattleshipInstance findActiveBattleship(LevelManager levelManager) {

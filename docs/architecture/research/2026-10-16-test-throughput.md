@@ -442,3 +442,61 @@ wrappers throughout linked worktrees or invoke the main wrapper by absolute path
 from the intended cwd. Older wrappers/direct Maven/IDE builds bypass the activity
 lease; existing 0.5-second process sampling rejects observed interference but can
 miss short overlaps. Different clones and arbitrary host load are not excluded.
+
+## Rollout across existing worktrees
+
+After `d07c7da6f` landed, the live queue still had idle capacity because processes
+were executing older wrappers. The AIZ5 lane at `6405313ce` classified its explicit
+`-Dsurefire.forkCount=1` command as exclusive; the identical arguments classified
+shared under main. The runtime measurement still used the `da6330ae6` retry loop.
+New source on main did not change either process's loaded scheduling code.
+
+The owners migrated only their unfinished waiting requests. Runtime owner
+confirmed old PID 128003 had no measurement child/audit, cancelled owned session
+38694 with exit 130, verified owned clients gone, then submitted one replacement
+through main's updated isolator in session 26774, PID 328549. Its five completed
+comparisons, pinned engine artifacts, inputs and flags were preserved. Its audit
+consumer accepts the new activity-lease evidence and retains historical tree-lock
+evidence for old completed measurements. AIZ5 owner verified no Maven child for
+PID 309044, cancelled that owned waiting request, confirmed exit, then submitted
+once through main's wrapper as PID 352270 with unchanged arguments/environment.
+The earlier PID 259924 had completed normally, not been cancelled for migration.
+The throughput thread independently observed the old isolator absent and AIZ5
+running shared beside launcher-startup at 18:28 UTC. Queue counts moved from one
+running/seven waiting at 18:23 to two running/two waiting at 18:28. These are live
+observations amid other completions, not a controlled throughput benchmark.
+
+Opus 5.5 recommended a small detection-only safeguard. The wrapper now stamps
+waiting and running records with `TOOLING_REVISION`. The dashboard reports current,
+older, newer and unknown relative to its loaded tooling. Missing/malformed metadata
+stays unknown; calling every unstamped client outdated was rejected because even
+the corrected `d07c7da6f` wrapper predates reporting. The stamp never changes
+validation, ordering, admission or reservations. Visible blocker names and waiting
+PIDs make owner coordination practical. The former "Run estimate" label now says
+"Scheduling estimate" and explains the class-count heuristic. Independent Opus
+review approved compatibility and advisory scope; its notes clarified that stamps
+are self-reported and restored the separate explanations for unknown timings and
+changing priority order.
+
+Shared Git aliases, forwarding to main, hot-patching imports and editing leased
+requests were rejected: they do not safely update a live process and can silently
+change tooling used by a pinned worktree. No global resource limits were changed.
+Owner coordination addressed the live blocker before adding detection.
+
+Validation at base `d07c7da6f` plus this follow-up uses only Python/process checks
+and browser inspection. `PYTHONPATH=tools/testing python3 -m unittest -v
+test_run_category_queue test_run_category_dashboard test_run_category_schedule
+test_run_category_running` exercised 111 checks in 24.734s. One added test had its
+constant imported in the wrong test method; after correcting that fixture,
+`test_run_category_queue.QueueTests.test_published_wait_reason_is_owner_authored_and_preserves_foreign_record`
+passed in 0.015s. The other 110 checks passed, including real leased records,
+mixed/future/invalid revisions and revision-independent scheduling.
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base
+d07c7da6f802d4186ac87f8c09d5c3f9f7da2d09 --preflight` passed prerequisites.
+This advisory metadata/UI change leaves Maven arguments, test selection and
+execution semantics unchanged; no engine suite was run or claimed.
+Browser checks used the live endpoint and display-only fixtures for unknown,
+older, current and newer reported revisions. Blocking worktree names containing
+HTML-like text rendered literally. Desktop 1280px and narrow 390px layouts had no
+page overflow; the narrow table retained its own horizontal scroll. The live view
+was restored after fixture inspection. No scheduler state was modified by the view.

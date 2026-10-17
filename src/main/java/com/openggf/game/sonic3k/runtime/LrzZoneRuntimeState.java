@@ -42,7 +42,7 @@ import java.util.Objects;
  */
 public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCameraStoredBounds {
     private static final int CAPTURE_BYTES =
-            S3kScreenShake.captureBytes() + 3 * Integer.BYTES + 22 * Short.BYTES + LrzBossActState.CAPTURE_BYTES;
+            S3kScreenShake.captureBytes() + 3 * Integer.BYTES + 23 * Short.BYTES + LrzBossActState.CAPTURE_BYTES;
 
     private final int zoneIndex;
     private final int actIndex;
@@ -51,6 +51,18 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
     private boolean centerNativeArenaCamera;
     public boolean centerNativeArenaCamera() { return centerNativeArenaCamera; }
     public void setCenterNativeArenaCamera(boolean value) { centerNativeArenaCamera = value; }
+
+    /**
+     * {@code LRZ1_BackgroundInit} / {@code LRZ2_BackgroundInit} run in the native level setup,
+     * before the first frame; the engine runs them at the first background event dispatch. Which of
+     * them has run is therefore restorable state: a rewind to a load frame must run them again.
+     */
+    private boolean act1BackgroundInitialised;
+    private boolean act2BackgroundInitialised;
+    public boolean act1BackgroundInitialised() { return act1BackgroundInitialised; }
+    public void markAct1BackgroundInitialised() { act1BackgroundInitialised = true; }
+    public boolean act2BackgroundInitialised() { return act2BackgroundInitialised; }
+    public void markAct2BackgroundInitialised() { act2BackgroundInitialised = true; }
 
     private final S3kScreenShake screenShake = new S3kScreenShake();
     private final LrzBossActState bossAct = new LrzBossActState();
@@ -320,6 +332,7 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
         buffer.putShort((short) (centerNativeArenaCamera ? 1 : 0));
         buffer.putInt(primaryPaletteTimerWrite);
         bossAct.captureTo(buffer);
+        buffer.putShort((short) ((act1BackgroundInitialised ? 1 : 0) | (act2BackgroundInitialised ? 2 : 0)));
         return buffer.array();
     }
 
@@ -356,5 +369,8 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
         centerNativeArenaCamera = buffer.getShort() != 0;
         primaryPaletteTimerWrite = buffer.getInt();
         bossAct.restoreFrom(buffer);
+        int initialised = buffer.getShort();
+        act1BackgroundInitialised = (initialised & 1) != 0;
+        act2BackgroundInitialised = (initialised & 2) != 0;
     }
 }

@@ -248,6 +248,10 @@ public class AudioManager implements MusicRestoreSink {
     private AudioVoiceRegistry shadowRegistry;
     private AudioPresentationProducer shadowProducer;
     private SmpsDriverSession shadowSmpsSession;
+    /** Opt-in capture/diagnostic native-compatible PCM stage for new presentation sessions; null by default. */
+    private com.openggf.audio.synth.NativeCompatiblePcmOutput.Config nativeCompatiblePcmCapture;
+    /** Presentation sessions built with the stage; a rebuild restarts the stage's clock origin. */
+    private int nativeCompatiblePcmSessions;
     private AudioRequestService shadowRequestService;
     /**
      * Frame rate the live {@link #shadowProducer} was constructed with. The
@@ -518,6 +522,38 @@ public class AudioManager implements MusicRestoreSink {
     /** Speaker starvation transitions in the current flushed source coordinate. */
     public long presentationUnderrunCount() {
         return presentationSink instanceof OpenAlPcmSink sink ? sink.underrunCount() : 0;
+    }
+
+    /**
+     * Opts new presentation sessions into the capture/diagnostic
+     * native-compatible PCM stage (see
+     * {@link com.openggf.audio.synth.NativeCompatiblePcmOutput}); {@code null}
+     * restores the default of none for sessions built later. Ordinary output is
+     * unchanged. Enable it before the presentation exists: an existing session
+     * keeps its configuration.
+     * Package-private: tools reach it through {@link AudioNativePcmCaptureAccess},
+     * outside the creator-facing API.
+     */
+    synchronized void setNativeCompatiblePcmCapture(
+            com.openggf.audio.synth.NativeCompatiblePcmOutput.Config config) {
+        if (config != null && shadowSmpsSession != null) {
+            throw new IllegalStateException("native-compatible PCM capture must be set before the presentation exists");
+        }
+        nativeCompatiblePcmCapture = config;
+        if (config != null) {
+            nativeCompatiblePcmSessions = 0; // count this capture's sessions only
+        }
+    }
+
+    /** Moves completed native-compatible stereo frames; zero without the stage or a session. */
+    synchronized int drainNativeCompatiblePcm(short[] target, int offsetSamples, int maxFrames) {
+        return shadowSmpsSession == null ? 0
+                : shadowSmpsSession.drainNativeCompatiblePcm(target, offsetSamples, maxFrames);
+    }
+
+    /** Presentation sessions built with the stage so far; more than one means its clock origin restarted. */
+    synchronized int nativeCompatiblePcmSessions() {
+        return nativeCompatiblePcmSessions;
     }
 
     public synchronized LiveCaptureAudioHandle beginLiveCaptureAudio(int frameRate) {
@@ -807,6 +843,9 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     public synchronized void setAudioProfile(GameAudioProfile audioProfile) {
+        if (reinstallsInstalledSource(audioProfile, baseAudioSource.rom())) {
+            return;
+        }
         beginSourceMutation();
         try {
             BaseAudioSource previous = baseAudioSource;
@@ -867,6 +906,9 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     public synchronized void setRom(Rom rom) {
+        if (reinstallsInstalledSource(baseAudioSource.profile(), rom)) {
+            return;
+        }
         beginSourceMutation();
         try {
             BaseAudioSource previous = baseAudioSource;
@@ -886,6 +928,23 @@ public class AudioManager implements MusicRestoreSink {
         } finally {
             endSourceMutation();
         }
+    }
+
+    /**
+     * Whether installing {@code profile} with {@code rom} would reinstall the
+     * very source already installed: the same profile and ROM instances, with
+     * its loader built. That is a same-game level entry
+     * ({@code LevelManager.configureAudio} on every load), not a source change.
+     * The ROM's Z80 driver keeps running into the level, so the presentation
+     * device (chip, filter, PSG and buffer state, the running session) is kept.
+     * A new ROM or profile instance, a reset, or a donor or mod source still
+     * goes through the full replacement.
+     */
+    private boolean reinstallsInstalledSource(GameAudioProfile profile, Object rom) {
+        BaseAudioSource installed = baseAudioSource;
+        return profile != null && rom != null
+                && profile == installed.profile() && rom == installed.rom()
+                && installed.loader() != null;
     }
 
     private static DacData loadDac(SmpsLoader loader) {
@@ -3708,13 +3767,22 @@ public class AudioManager implements MusicRestoreSink {
                         "smpsPhysicalPolicy")
                 : LegacyCompatibilitySmpsPhysicalPolicy.INSTANCE;
         com.openggf.configuration.SonicConfigurationService fmCoreConfig = configuredServicesOrNull();
+        // One presentation is one ROM hardware frame of sound-chip time, not 1/frameRate s of wall time.
+        boolean palRegion = fmCoreConfig != null && "PAL".equalsIgnoreCase(
+                fmCoreConfig.getString(SonicConfiguration.REGION));
         SmpsPhysicalDevice.Settings physicalSettings =
                 new SmpsPhysicalDevice.Settings(
-                        sampleRate, tuning.dacInterpolate(),
+                        com.openggf.audio.session.SmpsHardwareFrameBudget.exactSynthesisRate(
+                                sampleRate, frameRate, palRegion),
+                        tuning.dacInterpolate(),
                         fmCoreConfig != null
                                 ? com.openggf.audio.synth.FmCoreSelection.fromConfig(
                                         fmCoreConfig.getString(SonicConfiguration.AUDIO_FM_CORE))
-                                : com.openggf.audio.synth.FmCoreSelection.ACCURATE);
+                                : com.openggf.audio.synth.FmCoreSelection.ACCURATE,
+                        nativeCompatiblePcmCapture);
+        if (nativeCompatiblePcmCapture != null) {
+            nativeCompatiblePcmSessions++;
+        }
         SmpsDriverSessionConfiguration sessionConfiguration =
                 new SmpsDriverSessionConfiguration(base.profile() != null
                         ? base.profile().smpsStatefulCommandPolicy()

@@ -292,7 +292,7 @@ acceptance is claimed.
 | Team retirement / full-frame replay | Passing on Root `e0a136b83` | `TestS3kEndingRescue` 36/36 and `TestS3kEndingLifecycleCapture` 18/18 (0 skipped), one queued focused run on 2026-10-15 05:58–06:01 UTC, Root plus the test-only wrapped-particle correction | The 30 roster and 6 team replay failures recorded on `be2a3f6d3`/`2b9eb431d` do not reproduce. Which composed commit cleared them was not bisected |
 | Wrapped particle presentation | Resolved: test premise corrected | Bisect (first-parent `5b2ff8e78..da27f4f3d`) puts the 0/398 failure at `90897f41d`, the merge of `9a7070930`, which added native Plane B high-priority sea composition. Subtype `$41` is low priority (`loc_5EDFE` clears art_tile bit 15). Native Sonic/0 spots at polls 1279, 1398–1401 and 1535 (`B/declared-native-spots-sonic-chaos-320-islandlift-v1`; engine input 1400 is poll 1399) hold 512/512 B-high opaque sea pixels under the old particle box (screen 224–255 × 188–203) and B-low sky at 40–71 × 40–55, so the VDP hides the old vector. The visible wrapped-Y cases now use the same threshold vector in the sky (Y `$FEB0`), and new `wrappedLowPriorityParticleIsCoveredByTheHighPrioritySea` (320/800) asserts that the old vector shows no particle pixels. No production change | The engine's B-high composition between native spot checkpoints is covered by the declared-product comparisons, not by this vector |
 | PAL | Open; native tier for Sonic/+2 | Literal PAL tables and REGION=PAL lifecycles (earlier sections). [Native PAL Sonic/+2](#native-pal-50-hz-sonic2-product-ending-pal-lane-2026-10-16): raw RGB byte-identical at polls 1–3071; LF, V-int and RNG equal for 13,888 frames; native credits last 7,415 frames, as in the engine. First divergence at LF 3778: the AIZ1 Kos modules finish four frames earlier at PAL (`loc_5AC70`). Owned by the Kos CPU-budget model | Eight other Sonic/Tails PAL products, Knuckles at PAL, PCM and PAL pacing. Pixels from poll 4095 inherit the Kos phase. The S3 eyecatch palette and tail are fixed: Tails/+2 NTSC is raw-RGB identical at every terminal spot |
-| PCM / audio | Open (rendered PCM) | Request tier on all nine declared NTSC products: fade and credits requests on native-anchored frames; the credits request now loads and advances song `$32` ([ending audio request ledger](#ending-audio-request-ledger-and-credits-admission-ending-audio-lane-2026-10-16)) | No rendered PCM comparison; no native audio observation; Knuckles and PAL request dates |
+| PCM / audio | Open (rendered PCM) | Request tier on all nine declared NTSC products: fade and credits requests on native-anchored frames; the credits request now loads and advances song `$32` ([ending audio request ledger](#ending-audio-request-ledger-and-credits-admission-ending-audio-lane-2026-10-16)). Output-stage component tier only: the opt-in native-compatible PCM stage matches GPGX source vectors byte for byte on an identical synthetic FM/DAC strobe schedule ([component tier](../audio/2026-10-16-native-compatible-pcm-output.md)) | No ending window compared. The first real window (AIZ1, Sonic/Tails emeralds movie) measured a structural cadence defect and an unmatched warm-up, not parity. There is no native per-strobe schedule. The stage excludes PSG, has no MAME core (Knuckles) and models NTSC only. Knuckles and PAL request dates are missing |
 | SAT overflow / original RGB | Open | — | Native 20-sprite/320-dot overflow still needs a real witness; byte-RGB acceptance awaits the LIMITED colour profile |
 
 ### Knuckles credits against native frames (campaign-visual lane, 2026-10-15)
@@ -626,11 +626,11 @@ declared protocol: `AudioRequestObserver`, `musicFadeOutCount()` and
 
 On base `6405313ce` all nine products pass every assertion:
 
-- **A1** (`loc_5DE36`/`loc_5DE46`, sonic3k.asm:124064-124075): one fade, on the first
+- **A1** (`loc_5DE36`/`loc_5DE46`, skdisasm 044fa46 sonic3k.asm:124105-124116): one fade, on the first
   gate-true frame. That is Level_frame_counter 3281 for −2 and 3692 for 0/+2. The
   gate's `foregroundY` equals the published camera Y copy on every gate frame.
-- **A2** (`Obj_5DFEE`, :124232-124246): `$DC` only for +2, at 3714.
-- **A3** (`Obj_Ending` `loc_5E1C2`, :124375-124385): `$DC` at 3303 for −2 and 3714 for
+- **A2** (`Obj_5DFEE`, :124273-124287): `$DC` only for +2, at 3714.
+- **A3** (`Obj_Ending` `loc_5E1C2`, :124416-124426): `$DC` at 3303 for −2 and 3714 for
   0. It is absent for +2, although `Obj_Ending` still first runs there at 4403.
 - No other credits or fade request occurs in the 6144 inputs.
 
@@ -654,8 +654,8 @@ Red-first checks:
   across audio enabled, audio disabled and the v16-limited run.
 
 The `$0D01` load issues `mus_SSZ` (`$15`) from `LevelMusic_Playlist`
-(:7676-7701). The ROM's non-demo `Level` entry also sends `cmd_FadeOut` through
-`Play_SFX` (:7504-7509). The declared engine ingress records no request for it, which
+(:7712-7733). The ROM's non-demo `Level` entry also sends `cmd_FadeOut` through
+`Play_SFX` (:7540-7541). The declared engine ingress records no request for it, which
 is noted here and not asserted. Whether the ordinary mode transition issues it was not
 checked.
 
@@ -670,7 +670,7 @@ reached the seam on its native frame, but none was admitted:
 The fix follows the driver:
 
 - `zPlaySoundByIndex` tests `mus_CreditsK` first. `zPlayMusicCredits` then loads music
-  table entry `$32` as ordinary music (Sound/Z80 Sound Driver.asm:1641-1644,
+  table entry `$32` as ordinary music (skdisasm 044fa46 Sound/Z80 Sound Driver.asm:1641-1644,
   1709-1712).
 - The S3K profile declares that route through the non-API `NativeMailboxMusicRoutes`
   capability.

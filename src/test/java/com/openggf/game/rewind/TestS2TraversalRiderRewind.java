@@ -124,7 +124,7 @@ class TestS2TraversalRiderRewind {
     }
 
     @Test
-    void flipperLockedPinballModeSurvivesRewind() {
+    void flipperMovementOwnershipSurvivesRewind() {
         ObjectManager objectManager = harness();
         objectManager.setRewindInPlaceRestoreEnabledForTest(false);
 
@@ -132,7 +132,6 @@ class TestS2TraversalRiderRewind {
                 () -> new FlipperObjectInstance(new ObjectSpawn(
                         0x0300, 0x0200, 0x1F, 0, 0, false, 24), "Flipper"));
         mapPut(source, "lockedPlayerPrevSuppressed", player, Boolean.TRUE);
-        mapPut(source, "lockedPlayerPrevPinballMode", player, Boolean.TRUE);
         mapPut(source, "playerFlipperState", player, 1);
 
         ObjectRefId id = objectId(objectManager, source);
@@ -142,8 +141,6 @@ class TestS2TraversalRiderRewind {
 
         FlipperObjectInstance restored = objectById(objectManager, FlipperObjectInstance.class, id);
         assertNotSame(source, restored, "restore must recreate the flipper");
-        assertEquals(Boolean.TRUE, mapGet(restored, "lockedPlayerPrevPinballMode", player),
-                "restored flipper must remember the locked player's pre-lock pinball mode (else release clears it)");
         assertEquals(Boolean.TRUE, mapGet(restored, "lockedPlayerPrevSuppressed", player),
                 "restored flipper must remember the locked player's suppression flag");
         assertEquals(1, mapGet(restored, "playerFlipperState", player),

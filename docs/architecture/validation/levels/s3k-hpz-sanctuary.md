@@ -661,6 +661,99 @@ Exact source/argv/clock/crystal/SAT observations and hashes remain in the existi
 external `hpz-sanctuary-ceremony/publication-clock-a6ddbd14e/` task directory.
 Actual-ingress and publication-aligned native presentation remain the honest open scope.
 
+## Same-frame pedestal selection — 2026-10-17
+
+`loc_908DE` calls `SolidObjectTop` and tests `p1_standing_bit` in one routine
+(skdisasm 044fa46 sonic3k.asm:197807-197821), so `object_control $81` lands on the landing frame. A declared
+native twin of the LRZ2 seven-Chaos branch shows this on the same landing at (5805,896). The
+engine pedestal now resolves its solid at that call point (`MANUAL_CHECKPOINT`) instead of
+reading the next frame's ride. Evidence and checks are in the
+[LRZ act 2 matrix](s3k-lrz-act2.md#declared-native-twin-of-the-seven-chaos-branch-2026-10-17).
+
+## Super Emerald layout-bank correction — 2026-10-17
+
+`loc_90926` sets `SK_special_stage_flag=1` when a pedestal selects its ordinal; `sub_85B0` / `loc_85E4`
+(skdisasm `044fa46`:10845–10904,197827–197836) therefore uses the Kosinski-decompressed S&K layout bank,
+including ordinals 0–7. The manager previously chose S3 for those ordinals. It now honors the existing semantic
+Super Emerald reward independently of the ordinal, retaining legacy 8–15 S&K requests.
+
+`TestS3kSpecialStageLayoutBank` reads the ROM's SStageLayoutPtrs, LockOnROM_Start and
+SSCompressedLayoutPtrs, independently decodes the layouts, then compares every cell and the angle/X/Y/rings
+trailer for both rewards and all eight ordinals. The real pedestal test also compares every destination cell
+before its existing incoming-world capture/restore and two forward replays. The angle oracle uses the API's
+high-byte angle units; five draft failures from comparing a ROM word to that byte were test defects, not production bugs.
+
+On composed `ccd415257` plus the new tests, old production completed **1,442/1,432F/0E/0S** at
+02:47:41 UTC: eight direct Super bank failures and 1,424 production pedestal layout failures. The fix completed
+**1,525/0F/0E/0S** at 02:52:09 UTC with Java 25, normal queued Maven, surfaceless EGL, null OpenAL and the
+three original absolute ROM paths. Selection: TestS3kSpecialStageLayoutBank, TestS3kSanctuaryPedestalLifecycle,
+TestSonic3kSpecialStageRewindAdapter, TestSonic3kSpecialStageManagerSnapshot,
+TestSonic3kSpecialStageGameplaySnapshot, TestGameplayCaptureFrameRendering, TestS3kAiz1SkipHeadless,
+TestSonic3kLevelLoading, TestSonic3kBootstrapResolver and TestSonic3kDecodingUtils (`-Dmse=off`, `test`).
+
+The unchanged declared seven-Chaos twin input produced a new engine capture (`TmpSevenChaosEngineTwinV3`,
+1/0F/0E/0S at 02:53:42 UTC). Preserved native v2 is the reference. Durable pictures are under task
+`spot-checks/seven-chaos-{native-v2,engine-twin-v3,compare-v3}` in the existing S3K parity capture directory.
+The sampled pair at reveal+20 improves from **6,692 to 763** different raw RGB pixels; +22 improves
+from **7,041 to 1,112**. Both show 72 blue spheres. The earlier reveal frames still differ on all 71,680 pixels:
+the engine fade passes through yellow/red and native reduces the channels together. The reveal timestamps still
+have the inherited +24 engine / +138 native offset. Results retain their 420-pixel residual. This is a declared
+local scene, not an authentic cold route, whole-scene RGB equality or timing acceptance.
+
+A fresh separate guard JVM completed **142/2F/0E/0S** at 02:56:25 UTC. The rewind, Mod API and hardware-timing
+authority guards passed. The two failures are `TestArchitecturalSourceGuard.migratedObjectChildSpawnsStayOnManagedHelpers`
+and `TestObjectPhysicsStandardizationGuard.productionObjectLifecycleRawCallCountsDoNotGrow` in the composed
+object code (raw child additions, count 12 against budget 10). Layout selection changes no object-production
+source; these composition failures remain blockers for the delivery and are not waived by this focused pass.
+
+
+## Native white-fade correction and retained RGB limits — 2026-10-17
+
+On Root `fbfe2999c` plus the native white-fade change, the eight-class palette/rule/publication selection
+passes 60/0F/0E/0S (03:43:04 UTC). It reads real GPU uploads for every Genesis word in both directions,
+all three display profiles and both expansion settings; it also checks backdrop/framebuffer, water targets,
+private rows above 31, pending/displayed restore and two replays. Legacy fades and constructor defaults remain.
+The owning loops and exact selectors are in the
+[white-palette decision](../../designs/2026-10-13-s3k-ending-lifecycle.md#native-white-palette-fade-owner-decision--2026-10-17-root).
+
+The V4 engine twin retains the V3 declared inlet, controller input and screenshot schedule. Its single capture
+test passes at 03:50:03 UTC and returns to LRZ2 at frame 2423. Native v2 is unchanged. Raw active 320×224,
+Limited 238 / RAW_RGB, event-paired comparisons improve stage reveal+0 from 71,680 different pixels to 446;
++10 is 667, +20 763, +22 1,112. The yellow/red overlay is gone. Results reveal+0,2,4,6,8 match exactly;
+the settled card still differs by 420 pixels, including the digit column one tile left. Root viewed the
++0/+10 stage and +32 results comparisons. Durable pictures are
+`spot-checks/seven-chaos-{engine-twin-v4,compare-v4}` in the existing external S3K parity capture directory.
+
+Stage reveal offsets remain engine+24/native+138; results +52/+128. This is one declared Tails native320
+NTSC product, not cold input, PAL/character breadth, whole-scene RGB equality or timing qualification.
+The old raw-spawn guard failures above were repaired in `fbfe2999c` (fresh 142/0F/0E/0S at 03:02:54 UTC).
+Final cache/lifecycle/SDK/Javadoc/neighbour coverage passes 141/0F/0E/0S at 04:03:08 UTC, including all four
+required S3K loading tests. Fresh selected structural/API guards pass 142/0F/0E/0S at 04:05:31 UTC.
+Affected replay and delivery-wide validation remain; neither selection is a full-suite or all-guards pass.
+
+
+## Results geometry and native RGB prefix — 2026-10-17
+
+The results renderer now uses the unadjusted ROM score mappings and the bonus parent's zero plus seven
+word-BCD children. The parent's zero survives clearing the child count. Native first-opaque priority is
+preserved across both mapping pieces and the tally/reveal row groups. The independent ROM oracle has102
+cases, including five widths, normal/Super Tails and Super Knuckles score mappings, zero/nonzero counters,
+cleared parents, four opaque raster overlaps and two continue-retention negative controls. The final
+nine-class selection passes162/0F/0E/0S at04:57:09 UTC on `57774b451` plus the correction.
+The [source, rejected hypotheses and exact command](../../designs/2026-10-13-s3k-ending-lifecycle.md#native-results-geometry-and-painter-order--2026-10-17-root)
+retain the scope of those component inlets.
+
+Against unchanged native-v2 original RGB, engine-v6 results reveal+0..32 every two frames matches all17
+checkpoints exactly. Stage PNGs, every state row and the event ledger remain unchanged; the return is2423.
+Root inspected the pair. The maintained
+[seven-Chaos capture tool](../../../../src/main/java/com/openggf/tools/S3kSevenChaosGatewayCaptureTool.java)
+reproduces all174 files byte-for-byte (CLI exit0, 05:10:48 UTC). Invoke through the normal Maven queue with
+`-Dmse=off compile exec:java -Dexec.mainClass=com.openggf.tools.S3kSevenChaosGatewayCaptureTool` and
+`-Dexec.args="--rom ABSOLUTE_S3K_ROM --out-dir NEW_ABSOLUTE_DIRECTORY"`, surfaceless EGL, unset
+DISPLAY/WAYLAND_DISPLAY and null OpenAL. It verifies the ROM and fixes the same Limited/RAW_RGB protocol.
+This is a declared Tails320 NTSC journey. Stage pixels, the full results timeline, other characters,
+PAL/wide/donor native products, cold routes and timing remain inherited gaps; no blanket parity certificate.
+
 ## Blue Sphere presentation components — 2026-10-17
 
 The seven-Chaos gateway's saved native-v2/engine-v6 images exposed a separate

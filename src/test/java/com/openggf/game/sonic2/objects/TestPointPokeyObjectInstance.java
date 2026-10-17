@@ -46,6 +46,31 @@ class TestPointPokeyObjectInstance {
     }
 
     @Test
+    void capturedRollAndEjectDoNotBorrowOrRestoreNativePinballState() throws Exception {
+        for (boolean initial : new boolean[] {false, true}) {
+            var player = new TestablePlayableSprite("sonic", (short) 0x04C0, (short) 0x0460);
+            var pokey = new PointPokeyObjectInstance(
+                    new ObjectSpawn(0x04C0, 0x0460, 0xD6, 0, 0, false, 0), "PointPokey");
+            player.setPinballMode(initial);
+            player.setSpindash(initial);
+            invokeCapture(pokey, player);
+            assertTrue(player.getRolling());
+            assertTrue(player.isObjectControlSuppressesMovement());
+            assertEquals(initial, player.getPinballMode());
+            assertEquals(initial, player.getSpindash());
+            player.setPinballMode(!initial);
+            player.setSpindash(!initial);
+            Method eject = PointPokeyObjectInstance.class.getDeclaredMethod("ejectPlayer", AbstractPlayableSprite.class);
+            eject.setAccessible(true);
+            eject.invoke(pokey, player);
+            assertFalse(player.isObjectControlSuppressesMovement());
+            assertTrue(player.getAir());
+            assertEquals(!initial, player.getPinballMode());
+            assertEquals(!initial, player.getSpindash());
+        }
+    }
+
+    @Test
     void captureUsesObjectControlWithoutGlobalControlLockedLatch() throws Exception {
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x04D3, (short) 0x043C);
         player.setGameRulesForTest(GameRules.SONIC_2);

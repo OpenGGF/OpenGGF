@@ -9,6 +9,7 @@ import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
@@ -543,6 +544,11 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
         //   move.b #$53,object_control(a1)
         // and repeats the mapping_frame/anim/object_control triple on Player_2
         // only when (Flying_carrying_Sonic_flag) is set.
+        if (services().runtimeArtCoordinator() instanceof S3kRuntimeArtCoordinator art) {
+            // This is the global Player_prev_frame byte even when P1 is Tails;
+            // loc_6173A does not select the byte through the touched character.
+            art.vintDmaLedger().forcePlayerOneReload();
+        }
         player.setHidden(true);
         lockCapturedPlayerAnimation(player);
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
@@ -618,6 +624,9 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
         // frame by the time the ring's routine executes.
         captured.setMappingFrame(0);
         captured.setAnimationId(Sonic3kAnimationIds.BLANK);
+        // object_control=$53 includes bit 1: the following player passes skip
+        // ordinary Animate/Load_PLC until the fresh-level return releases them.
+        captured.setObjectMappingFrameControl(true);
     }
 
     /**

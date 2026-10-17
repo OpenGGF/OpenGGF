@@ -112814,3 +112814,116 @@ never reaches `Sonic_Init`, and the Slot runtime already models that pass. The r
 `prev_anim` re-ran `Animate_Sonic`'s change branch on the first `LevelLoop` pass. Fix
 `37991405c` lets custom-physics playables own their spawn pass. Gumball and Pachinko
 have no custom-physics playable, so their initial walk is unchanged.
+
+
+## 2026-10-16 — Horizontal spring terrain fallback removed; ICZ frontier unchanged
+
+`d7eb5e239` removes the test-only centre-Y landing approximation left by
+`50a45804f` and uses injected paired-foot terrain probes. Candidate `5b8001ae0`
+in `.worktrees/ai-s3k-spring-terrain` and baseline `c4f78fa1f` were compared with:
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay '-Dtest=TestS3kIczZoneSliceTraceReplay' '-Ds3k.rom.path=<main-workspace>/Sonic and Knuckles & Sonic 3 (W) [!].gen' test -B
+```
+
+Both completed one replay with no skips, 25,245 compared frames and 2,430 error
+spans (2,199 physics, 231 animation), zero warnings. First error is row 11,989,
+`x`, expected `0x66A2`, actual `0x66A8`. The complete canonical JSON report content
+is identical (SHA-256 `7f2a202ef107b8c671150274aa8bc70f4b4ea05320ad322c653f8a1042b4611b`).
+This is an unchanged inherited frontier, not a passing trace or whole-route
+qualification. Isolated fixtures now supply real terrain and reject absent,
+empty and zero-distance floor probes; slope and underwater gates are retained.
+
+### 2026-10-16 — AIZ2 tree maker on native slots: S3K chain segment 8 moves from 6111 to 6989
+
+`Obj_AIZ2MakeTree` (pinned skdisasm `044fa46`, sonic3k.asm:105553-105585) now walks `AIZMakeTreeScript` from ROM
+`$23C13C`: all 17 entries, one `AllocateObjectAfterCurrent` attempt per pass, the same entry
+retried after a failed allocation, deletion on the pass after the last tree, and the script's
+priority word on each tree. The engine used to keep 15 entries, take the lowest free slot,
+loop within a pass, and advance past a failed allocation. Tree work order: battleship
+propellers and exit (`a28c5ab47`), then this maker change on top.
+
+Commands (round-2 AIZ tree `t3-3b77f2e1`, `a28c5ab47` plus the uncommitted maker change; Java
+25, surfaceless EGL, three absolute ROM paths): canonical `python3 tools/testing/maven_queue.py
+-Dmse=off -Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+"-Dtest=TestS3kAizTraceReplay#replayMatchesTrace,TestS3kSonicTailsHczSegmentTraceReplay#replayMatchesTrace,TestS3kSonicTailsCompleteEmeraldRunPrefix,TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds" test`
+with the comparison-only slot probe; alternate `-Ptrace-segments
+"-Dtest=TestS3kAizZoneSliceTraceReplay#replayMatchesTrace"`.
+
+| Check | `a28c5ab47` | maker change |
+|---|---|---|
+| Canonical, Maven finished | 19:55:21 | 20:57:58 (5 run / 1 F) |
+| Chain segment 8 (`aiz_5`) | 1692 (1613 physics + 79 animation), first 6111 `sidekick_x_speed` | 35 (35 + 0), first 6989 `camera_y` +2 (Knuckles cutscene), first non-camera 7126 (HCZ destination row, native camera `$01E0`) |
+| Chain segment 11 | 81981, first 1768 `y` | 81981, first 1768 `y` |
+| Walk stop | BK2 68801, load generation 9 | same |
+| Segments 0/2/4/6/9; AIZ, HCZ segment, prefixes | 0; pass | 0; pass |
+| Alternate (`aiz_completerun`) | 19:57:45: 60 (25 + 35), first 25589 `player_animation_id` 13/05 | 20:59:22: 9 (9 + 0), first 25038 `queue.s3k_kos_direct.busy` |
+| Segment 8 native SST occupancy sets, rows 4001-4096 | 0 of 6 samples equal | 6 of 6 equal |
+
+The alternate's new first error is one frame early, not a maker defect. At 25038
+`Obj_EggCapsule` allocates `Obj_LevelResults` with `AllocateObject` (sub_86984, sonic3k.asm:182053-182055). Native puts it
+in slot 8, below the capsule's slot 10, so it first runs, and queues its Kos art, at 25039.
+The engine capsule now sits in slot 7. Results take slot 8, run the same pass and queue at
+25038. A matched baseline probe (`a28c5ab47` source, 21:16:43, 60 errors, first 25589
+reproduced) had the capsule in slot 12 and the boss in 11, so it matched by accident. The
+engine end-arena layout differs from native in both trees. Native: slot 4 `$65C04`, boss 5,
+drawbridge 6, StillSprite 7, `$67D42` (Robotnik head area) 8, capsule 10. Engine with the
+change: boss 5, StillSprite 6, capsule 7, drawbridge 10. The owner is that layout,
+inherited. Tree slots match native at every sampled row. Engine tree screen X equals native
+`x_pos` - 128 to row 22816 and is 3 px right from 22837 (the inherited Events_fg_1 model).
+Pairs 16/17 and 20/22 are swapped because the log-bridge child `$2AEB4` that holds slots 16
+and 20 natively at the allocating rows is absent (inherited).
+
+### 2026-10-16 — S3K chain segment 8 to the HCZ destination row; AIZ zone slice to its trailing row
+
+Three fixes on top of the tree maker (`d7c63f48e`), round-2 AIZ tree `t3-3b77f2e1`, same canonical and
+alternate commands as the entry above, with the comparison-only slot probe:
+
+- `11af51ca0` spin dash charge and release frames ease `Distance_from_top` toward $60 (`loc_11D5E`).
+  Native RAM (BK2 53332-53567, segment row r = BK2 r + 46432) shows the bias easing through the
+  charge at rows 6970-6976; the engine held $B8 for six frames, and its camera trailed native by
+  2 px from row 6989 until the bias reached $60.
+- `b96ef2c4d` the collapsing log bridge's display SST (`loc_2AEB4`), the first post-tree slot
+  divergence on `aiz_completerun` (row 22845).
+- `cdeb2dbc0` the end boss sets `$38` bit 4, the ship's escape signal, in `loc_69482` after the
+  `$3F` defeat wait instead of at the defeat.
+
+| Check | `d7c63f48e` | with the three fixes |
+|---|---|---|
+| Canonical, Maven finished | 20:57:58, 5 run / 1 F | 22:53:45, 5 run / 1 F |
+| Chain segment 8 | 35, first 6989 `camera_y` +2 | 4 (4 + 0), all on row 7126 |
+| Segment 11, walk stop, other segments | 81981 first 1768; BK2 68801; 0 | unchanged |
+| Alternate (`aiz_completerun`), Maven finished | 20:59:22, 9 (9 + 0), first 25038 Kos queue | 22:57:30, 1 (1 + 0), first 26179 `rings` |
+| `aiz_completerun` equal SST occupancy sets | 534 of 2172 samples (`a28c5ab47` probe) | 640 of 2172 |
+
+Row 7126 is the first row of the HCZ start position. During the HCZ load (`Game_Mode` $8C) native
+`Level` waits for the Nemesis PLC queue (`Nem_decomp_queue`, 10 entries from row 7054, six patterns
+per frame, the frame's remainder carried into the next entry) and writes the camera bounds and
+start position on the frame it empties, row 7126. The engine writes them one row later. The next
+finite observation is the engine's PLC queue progress over rows 7054-7127. Row 26179 (rings) is the
+alternate's trailing row and was present before. At the capsule's creation (row 24683) the engine
+capsule sits in slot 9 against native 10: native slot 9 still holds the child `loc_69482` creates
+(ChildObjDat_69D66, `$85B1E`), which the engine does not create; the results object now runs on the
+native pass anyway.
+
+## 2026-10-17 — Root AIZ composition preserves the qualified frontiers
+
+Root `a1a381dd5` plus the managed ship-exit sibling repair (this commit) composes `11af51ca0`..`704a49587` with
+the previously qualified parity lanes. The tree-maker allocation remains after the original ship's SST; the old
+wrapper retires without releasing the replacement craft's slot. Focused 360 and separate guards 142 pass, no skips.
+
+Using updated main-workspace maven_queue.py from `.worktrees/ai-s3k-dma-ring-r3`, normal lane, Java 25,
+`-Dmse=off -Dopenggf.headless.gl=surfaceless-egl`, unset DISPLAY/WAYLAND_DISPLAY, null OpenAL and original
+absolute ROM properties:
+
+- `-Ptrace-segments -Dtest=TestS3kAizZoneSliceTraceReplay#replayMatchesTrace test`: 1 test fails at the existing
+  single error, row 26179 `rings` (72 / 0), finished 03:04:59 UTC.
+- `-Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+  -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds test`: 1 test fails,
+  finished 03:08:38 UTC. Segment 8 retains four physics errors at 7126 (`x` first non-camera, `$0280` / `$0000`);
+  the walk still stops at input 68801 in segment 11, HCZ1/load generation 9. No green strict-chain claim.
+- Same trace profile/fork/order, `-Dtest=TestS2Ehz1TraceReplay#replayMatchesTrace test`: 1 pass, no skips,
+  03:09:05 UTC. No wider S2 replay credit.
+
+The later title-card archive WIP remains outside this composition. Its pending failures, ring/timer reset at
+`loc_63B4`, HCZ and downstream frontiers remain separate obligations. No full-suite run or new trace payload.

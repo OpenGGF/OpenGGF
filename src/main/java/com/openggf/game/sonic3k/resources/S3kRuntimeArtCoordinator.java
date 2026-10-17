@@ -20,6 +20,7 @@ import java.util.logging.Logger;
 public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator,
         com.openggf.game.internal.PatternModuleQueueOwner,
         com.openggf.game.internal.FrontendPatternHandoffOwner,
+        com.openggf.game.internal.PlayerDplcDmaSink,
         RewindSnapshottable<S3kRuntimeArtCoordinator.Snapshot> {
     public static final String REWIND_KEY = "s3k-runtime-art-coordinator";
 
@@ -30,6 +31,8 @@ public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator,
     private final S3kKosModuleQueue moduleQueue;
     private final S3kPatternModuleTransfer patternTransfer = new S3kPatternModuleTransfer();
     private final S3kFrontendPatternResidency frontendPatterns = new S3kFrontendPatternResidency();
+    private final com.openggf.game.sonic3k.timing.S3kVIntDmaLedger vintDmaLedger =
+            new com.openggf.game.sonic3k.timing.S3kVIntDmaLedger();
     public S3kFrontendPatternResidency frontendPatternResidency(){return frontendPatterns;}
     @Override public String frontendPatternFormat(){return "genesis-native-patterns-v1";}
     @Override public byte[] captureFrontendPatterns(){return frontendPatterns.handoff();}
@@ -128,6 +131,68 @@ public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator,
 
     /** Existing VInt DMA service is the only ordinary publication authority. */
     public void publishPatternModuleDma() { patternTransfer.publish(); }
+
+    /** {@code Tails_Tail_Load_PLC} submissions go to the V-int DMA record. */
+    @Override
+    public void tailsTailLoadPlc(int mappingFrame, com.openggf.level.render.SpriteDplcFrame dplc) {
+        vintDmaLedger.observeTailsTailFrame(mappingFrame, dplc);
+    }
+
+    /**
+     * {@code Sonic_Load_PLC} and {@code Knuckles_Load_PLC} share {@code Player_prev_frame} and ArtTile_Player_1;
+     * {@code Tails_Load_PLC} uses {@code Player_prev_frame_P2} and ArtTile_Player_2 whatever Tails' player slot.
+     */
+    @Override
+    public void playerLoadPlc(com.openggf.sprites.playable.AbstractPlayableSprite player, int mappingFrame,
+                              com.openggf.level.render.SpriteDplcFrame dplc) {
+        var slot = bodySlot(player);
+        if (!nativeBodyProducer()) {
+            // Donor art or the slot stage's engine player: its DPLC cues are not the ROM routine's.
+            vintDmaLedger.markPlayerFrameUnobserved(slot);
+            return;
+        }
+        vintDmaLedger.observePlayerFrame(slot, mappingFrame, dplc);
+    }
+
+    @Override
+    public void playerLoadPlcOwnedByObject(com.openggf.sprites.playable.AbstractPlayableSprite player) {
+        vintDmaLedger.markPlayerFrameUnobserved(bodySlot(player));
+    }
+
+    private static com.openggf.game.sonic3k.timing.S3kVIntDmaLedger.BodySlot bodySlot(
+            com.openggf.sprites.playable.AbstractPlayableSprite player) {
+        return player instanceof com.openggf.sprites.playable.Tails
+                ? com.openggf.game.sonic3k.timing.S3kVIntDmaLedger.BodySlot.TAILS
+                : com.openggf.game.sonic3k.timing.S3kVIntDmaLedger.BodySlot.SONIC_KNUCKLES;
+    }
+
+    /**
+     * Native {@code *_Load_PLC} statements need the ROM's own player art and the level's own player object. A
+     * cross-game donor draws with donor DPLC tables, and the slot stage's ROM player is the dedicated
+     * {@code Obj_Sonic_RotatingSlotBonus} that this engine replaces with the ordinary player.
+     */
+    private static boolean nativeBodyProducer() {
+        if (com.openggf.game.CrossGameFeatureProvider.isActive()) {
+            return false;
+        }
+        return !(GameServices.module() != null
+                && GameServices.module().getBonusStageProvider() instanceof com.openggf.game.sonic3k.Sonic3kBonusStageCoordinator bonus
+                && bonus.activeSlotRuntime() != null);
+    }
+
+    /** Per-V-int DMA work record (diagnostic budget term; never an activation input). */
+    public com.openggf.game.sonic3k.timing.S3kVIntDmaLedger vintDmaLedger() { return vintDmaLedger; }
+
+    /** KosM completions the next drain will DMA, as Add_To_DMA_Queue entries. */
+    public List<com.openggf.game.sonic3k.timing.S3kVIntDmaLedger.QueuedEntry> pendingKosModuleDmaEntries() {
+        var entries = new java.util.ArrayList<com.openggf.game.sonic3k.timing.S3kVIntDmaLedger.QueuedEntry>();
+        for (var write : patternTransfer.pendingDmaWrites()) {
+            entries.add(new com.openggf.game.sonic3k.timing.S3kVIntDmaLedger.QueuedEntry(
+                    com.openggf.game.sonic3k.timing.S3kVIntDmaLedger.Producer.KOS_MODULE,
+                    write.data().length / 2, write.destinationVramBytes()));
+        }
+        return entries;
+    }
 
     public S3kKosDecompressionQueue directQueue() {
         return directQueue;
@@ -354,12 +419,14 @@ public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator,
         registry.register(this);
         registry.register(patternTransfer);
         registry.register(frontendPatterns);
+        registry.register(vintDmaLedger);
     }
 
     @Override
     public void deregisterRewindAdapters(RewindRegistry registry) {
         registry.deregister(REWIND_KEY);
         registry.deregister(S3kPatternModuleTransfer.REWIND_KEY);
+        registry.deregister(com.openggf.game.sonic3k.timing.S3kVIntDmaLedger.REWIND_KEY);
         registry.deregister(S3kFrontendPatternResidency.KEY);
         registry.deregister(S3kKosDecompressionQueue.REWIND_KEY);
     }
@@ -367,6 +434,7 @@ public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator,
     @Override
     public void resetForMissingSnapshot() {
         patternTransfer.clear();
+        vintDmaLedger.clear();
         frontendPatterns.resetForMissingSnapshot();
         directQueue.resetForMissingSnapshot();
         moduleQueue.resetForMissingSnapshot();

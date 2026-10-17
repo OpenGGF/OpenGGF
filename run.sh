@@ -7,6 +7,7 @@ cd "$script_dir"
 
 # This is a normal, non-certifying local launcher. Keep the distributable in
 # this worktree's target/ directory.
+echo "Preparing OpenGGF: building the engine and bundled mods..."
 mvn -Dmse=off -DskipTests package -q
 
 manifest="$script_dir/target/openggf-artifact.properties"
@@ -28,6 +29,7 @@ if [[ ! -f "$jar" ]]; then
     exit 1
 fi
 
+echo "Starting OpenGGF..."
 exec "${JAVA_HOME:+$JAVA_HOME/bin/}java" \
     --enable-native-access=ALL-UNNAMED \
     --add-exports java.base/java.lang=ALL-UNNAMED \

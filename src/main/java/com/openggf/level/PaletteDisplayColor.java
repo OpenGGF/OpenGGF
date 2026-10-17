@@ -16,7 +16,22 @@ public final class PaletteDisplayColor {
     }
 
     public static int packed(Palette.Color color, GraphicsManager graphics) {
-        return DisplayColorConverter.toPackedRgb(color.r & 0xFF, color.g & 0xFF, color.b & 0xFF,
+        var fade = com.openggf.graphics.PaletteUploadPresentation.displayedFade(graphics);
+        int r = color.r & 255, g = color.g & 255, b = color.b & 255;
+        if (fade.affects(0) && (fade.mode() == com.openggf.graphics.PaletteFadePresentation.Mode.FROM_WHITE
+                || fade.mode() == com.openggf.graphics.PaletteFadePresentation.Mode.TO_WHITE)) {
+            int rgb = fade.fadeRgb(r, g, b);
+            r = (rgb >>> 16) & 255;
+            g = (rgb >>> 8) & 255;
+            b = rgb & 255;
+        }
+        return DisplayColorConverter.toPackedRgb(r, g, b,
+                graphics.getDisplayColorProfile(), graphics.getDisplayColorExpansion());
+    }
+
+    /** LevelManager has already resolved CRAM's line mask and displayed fade. */
+    static int packedDisplayed(Palette.Color color, GraphicsManager graphics) {
+        return DisplayColorConverter.toPackedRgb(color.r & 255, color.g & 255, color.b & 255,
                 graphics.getDisplayColorProfile(), graphics.getDisplayColorExpansion());
     }
 

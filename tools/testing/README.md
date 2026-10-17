@@ -357,6 +357,28 @@ inferred for older clients. Reports expire after 15 seconds; incomplete or stale
 observations remain unknown. An available backfill allowance is not a promise
 that a job will fit or start next.
 
+Live rows show the queue tooling revision and waiting PIDs, and name the earlier
+request when a fresh scheduler report identifies it. Revisions are self-reported
+and advisory; they never affect admission, priority or resource accounting.
+"Current" means the job reports the dashboard's revision, not verified source
+identity. A lower revision is older, a higher one is newer, and missing/malformed
+metadata is unknown. Unknown does not prove obsolete behavior: wrappers from before
+revision reporting can already contain the relevant fix. Bump `TOOLING_REVISION`
+when admission, ordering, validation or lease semantics change. These stamps do
+not identify the source commit or test coverage.
+
+Updating main does not update another worktree's files or a running Python
+process. Owners should use the current main-workspace wrapper by absolute path
+from their intended cwd for subsequent commands. If a verified admission defect
+requires replacing an obsolete waiting request, its owner first confirms that no
+test/measurement child has started, cancels through the owned command session,
+and confirms exit before one replacement with unchanged arguments and inputs.
+Leave executing jobs intact. Never restart solely for queue delay or a tooling
+badge, edit another owner's live request, or launch a duplicate.
+
+The displayed scheduling estimate is a coarse ordering hint, often based on
+class counts. It is not a measured runtime, a timeout, or a start-time prediction.
+
 Peak RSS sums shared pages and two-second sampling misses short peaks; see the
 [2026-09-15 profiling](../../docs/architecture/research/2026-09-15-maven-resource-admission.md).
 The [2026-10-07 focused-throughput investigation](../../docs/architecture/research/2026-10-07-maven-focused-throughput.md)
