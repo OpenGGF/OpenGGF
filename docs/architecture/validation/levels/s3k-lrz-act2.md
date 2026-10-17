@@ -1417,7 +1417,7 @@ same replay passes.
 `LrzZoneRuntimeState.delayedRowcount` was 0 on the first pass and -1 after the replay.
 
 - **Measured cause:** the capture lands on the first frame after the reload, before LRZ's
-  first background event. The engine runs `LRZ2_BackgroundInit` (:115655-115668), which
+  first background event. The engine runs `LRZ2_BackgroundInit` (skdisasm 044fa46 sonic3k.asm:115704-115717), which
   the native level setup runs before frame one, at that first dispatch. Its one-shot mark
   lived on `Sonic3kLRZEvents`, outside every rewind snapshot. After a restore the replay
   therefore took `loc_5700C`'s stage-0 refresh and allocated a second Death Egg
@@ -1437,11 +1437,12 @@ same replay passes.
 - `TestS3kLrzHpzSszColdCampaign#tailsGiantRingGatewayReturnsToLrzTwo`;
 - the four required S3K checks.
 
-**Recorded, not changed:** an immediate restore of a direct-boot LRZ load-frame snapshot
-republishes the derived background camera words before any scroll pass. Act 2's X goes
-0 to 1 and act 1's Y goes 0 to -23. The regression therefore compares the initializer's
-output and the whole world after replay, not restore idempotence. The Saved2-return
-capture does not show this.
+**Load-frame restore (fixed 2026-10-17).** An immediate restore of a direct-boot LRZ
+load-frame snapshot used to change captured scroll RAM: act 2's background X went 0 to 1 and
+act 1's Y 0 to -23. The post-restore rebuild ran `SwScrlLrz.update`, which publishes those
+words. `SwScrlLrz` now implements `ScrollOutputRebuilder`. The regression adds exact
+immediate-restore equality at the load frame and mid-scroll, with two forward replays; see
+the native-twin section below.
 
 **Cold continuation.**
 `TestS3kLrzHpzSszColdCampaign#tailsSevenChaosGiantRingFailsAPedestalStageAndReturnsToLrzTwo`
@@ -1456,7 +1457,7 @@ Authoring used `GameplayInputBranchTool`, restoring from a 50100-input prefix. T
 measured candidate search, not a fitted position:
 
 - Approaching pedestal 2 from the left always lands on its left edge.
-  `SolidObjectTop` (`loc_1E42E` :41987-42013) admits the first frame with
+  `SolidObjectTop` (`loc_1E42E`, skdisasm 044fa46 sonic3k.asm:42022-42048) admits the first frame with
   `x_pos(a1)-x_pos(a0)+$1B >= 0`, which leaves 0 px of margin.
 - The chosen tail coasts to a stop under the pedestal and jumps straight up through the
   top-only solid. It lands on the descent at x 5805, `d0=40` inside `[0,$36)`, with
@@ -1537,7 +1538,7 @@ The hub trajectories are identical frame for frame from release. Raw-RGB compari
 Findings:
 
 - **Fixed: pedestal selection was one frame late.** `loc_908DE` calls `SolidObjectTop` and tests
-  `p1_standing_bit` in the same routine (sonic3k.asm:197705-197719). The engine pedestal used
+  `p1_standing_bit` in the same routine (skdisasm 044fa46 sonic3k.asm:197807-197821). The engine pedestal used
   the automatic solid pass after its update, so it saw the ride one frame later.
   `HPZSuperEmeraldObjectInstance` now uses a manual checkpoint at that call point.
   `TestS3kLrzHpzSszColdCampaign`'s same-frame assertion was red (expected 50210, was 50211;
@@ -1553,16 +1554,44 @@ Findings:
   harnesses) have identical totals and first errors with and without the fix (12/19/15/41/28/13/30
   errors; Finished 01:31:46 and 01:33:48+01:00).
 - **Corrected test claim.** `Level` masks `Last_star_post_hit` with `andi.b #$7F` just before
-  `LevelLoop` (:7881); native `$FE2A` reads 0 on the first `$0C` frame. The two seven-Chaos tests
-  no longer assert that `$80` survives into gameplay. The engine's boolean load-gate proxy
-  stays set after the return: open, see the S3K known-bugs entry.
+  `LevelLoop` (`loc_64DC`, skdisasm 044fa46 sonic3k.asm:7913); native `$FE2A` reads 0 on the first `$0C` frame. The two seven-Chaos tests
+  no longer assert that `$80` survives into gameplay. After the return the engine boolean plays
+  the role of `Tails_CPU_star_post_flag`, which `Tails_Init` (`loc_137A4`, :26195) copies before
+  the mask; native `$F746` reads `$80`. This is a semantic projection, not a runtime defect (S3K
+  known-bugs #57).
+- **Fixed: LRZ load-frame restore.** `TestS3kLrzBackgroundInitRewind#immediateRestoreIsExactAndForwardReplaysMatch`
+  was red for both acts at the load frame (act 2 bytes 22-31, act 1 byte 25; Finished
+  02:03:51+01:00). It was exact for LRZ2 Tails mid-scroll. `SwScrlLrz.rebuildOutput` derives
+  output from the restored RAM without the native publications. Checks: 19 selectors,
+  144/0/0/0 (Finished 02:07:43+01:00), covering the regression (6), the Saved2-return controls
+  (gateway 4, cold s9 and seven-Chaos 2), `TestParallaxRewindSnapshot`, the LRZ scroll, dome,
+  seamless, crusher, Death Egg, pattern-animation and opacity tests, and the S3K four.
 - **Unattributed: intake +1** (483 px). Natively the flash is allocated in slot 5, below the ring's
   slot 6, and initialises next frame. The engine twin draws it on contact +1. The engine already
   models `AllocateObject`'s lowest free slot, so different slot occupancy under the declared
   hold is suspected; an engine slot log is needed.
-- **Capture limitation, not gameplay:** `GameplayCaptureSession.render()` draws the `$1701` level
-  under the special-stage palette during `SPECIAL_STAGE`, so stage frames are not compared. The
-  results +60 frames are not aligned, because the two sides define the results start differently.
+- **Capture limitation, fixed (`39fb32b32`).** The capture session drew the `$1701` level during
+  `SPECIAL_STAGE`, so the v1 stage frames were not comparable. It now follows Engine's dispatcher:
+  the level while the entry fade-to-white is active, then the provider's own draw.
+- **v2 pairs (2026-10-17).** Native v2 and engine twin v2 snapshots run every 2 frames over the first
+  160 frames of the stage and of results, plus +300. They are paired on the published reveal: the
+  first non-uniform frame after the white minimum.
+  - Stage: both hub frames fade to white (engine by +22, native by +20). The native screen then
+    stays white until +136 and reveals at +138; the engine reveals at +24. The engine's
+    fade-to-white flag ends at +29.
+  - Stage content: once live (reveal +20/+22) the engine shows a different Super stage, with 118
+    blue spheres against native's 72. `sub_85B0` (skdisasm `044fa46` sonic3k.asm:10845) selects
+    the S&K layout set from `SK_special_stage_flag`; the engine selects it only for indices 8 and
+    up (S3K known-bugs #58). The longer engine stage before failing is consistent with that
+    layout, and is not separately attributed.
+  - Results: the native mode starts during the stage fade-out and reveals the card at +128; the
+    engine reveals at +52. Paired on that event, the frames are identical for 8 frames. They then
+    reach a static 420 px, mostly the digit column, which the engine draws one tile left
+    (known-bugs #58).
+  - The native white hold of about 116 frames before the stage appears is recorded without a
+    timing claim.
+  - Pictures are in `seven-chaos-native-v2`, `seven-chaos-engine-twin-v2` and `seven-chaos-compare-v2`
+    (`pair_reveal_v2.json` and the reveal side-by-sides).
 
 Pictures: `$HOME/Videos/OGGF/s3k-parity-coverage-2026-10-14/spot-checks/seven-chaos-native-v1`,
 `seven-chaos-engine-twin-v1` and `seven-chaos-compare-v1`, which holds side-by-sides and

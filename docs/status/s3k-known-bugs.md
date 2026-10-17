@@ -144,8 +144,9 @@ Entries should include:
 55. [Knuckles Credits and Terminal Residuals (RESOLVED)](#knuckles-credits-and-terminal-residuals-resolved)
 56. [MHZ Rewind Snapshot Identity Gaps (RESOLVED)](#mhz-rewind-snapshot-identity-gaps-resolved)
 57. [Authored AIZ Lookout Clears a Physical Parent Before Its Arms (FIXED)](#authored-aiz-lookout-clears-a-physical-parent-before-its-arms-fixed)
-58. [Saved2 Return Star-Post Proxy and LRZ Load-Frame Restore Words (OPEN)](#saved2-return-star-post-proxy-and-lrz-load-frame-restore-words-open)
+58. [Saved2 Return Star-Post Projection and LRZ Load-Frame Restore Words (RESOLVED)](#saved2-return-star-post-projection-and-lrz-load-frame-restore-words-resolved)
 59. [AnPal Shared Bank: Remaining Owners (OPEN)](#anpal-shared-bank-remaining-owners-open)
+60. [Super Emerald Stage Layout Set and Results Digit Column (OPEN)](#super-emerald-stage-layout-set-and-results-digit-column-open)
 
 ---
 
@@ -6763,37 +6764,74 @@ second frame diverged). Matrix:
 
 ---
 
-## Saved2 Return Star-Post Proxy and LRZ Load-Frame Restore Words (OPEN)
+## Saved2 Return Star-Post Projection and LRZ Load-Frame Restore Words (RESOLVED)
 
 Found by the declared native twin of the LRZ2 seven-Chaos giant-ring branch (2026-10-17,
 [LRZ act 2 matrix](../architecture/validation/levels/s3k-lrz-act2.md#declared-native-twin-of-the-seven-chaos-branch-2026-10-17)).
+Citations are to skdisasm `044fa46`.
 
-**Star-post proxy after a special-stage Saved2 return.**
+**LRZ load-frame restore (fixed).**
 
-- **ROM:** the stage exit sets `Last_star_post_hit|$80` (sonic3k.asm:12673-12674). `Level`'s
-  last setup step, just before `LevelLoop`, is `andi.b #$7F,(Last_star_post_hit).w` (:7881).
-  Native RAM `$FE2A` goes from `$80` to 0 on the first `$0C` frame of the LRZ2 reload.
-- **Engine:** the engine models only a boolean load gate,
-  `LevelTransitionCoordinator.isLastStarPostHitSet()`. It stays set into gameplay, and the
-  native-CPU entry step deliberately keeps it past bank consumption.
-- **Effect:** no gameplay consumer was observed. The load consumers also require an
-  unconsumed Saved2.
+- A registry restore of a direct-boot LRZ snapshot taken before the first scroll pass changed
+  captured `LrzZoneRuntimeState` words: act 2 `Camera_X/Y_pos_BG_copy`, the Death Egg word and
+  `Events_bg+$10/+$12`; act 1 `Camera_Y_pos_BG_copy` (0 to -23).
+- **Cause:** the post-restore presentation rebuild (`ParallaxManager.rebuildDerivedOutput`) ran
+  `SwScrlLrz.update`, which publishes those words as the native scroll dispatch does.
+- **Fix:** `SwScrlLrz` now implements the existing `ScrollOutputRebuilder` seam and derives its
+  output without writing them.
+- **Red/green:** `TestS3kLrzBackgroundInitRewind#immediateRestoreIsExactAndForwardReplaysMatch`
+  was red at the load frame for both acts, and exact at a mid-scroll released frame.
 
-**LRZ load-frame restore.**
+**Star-post projection (no runtime defect; semantic difference recorded).**
 
-- **What happens:** a registry restore of a snapshot captured before the first scroll pass
-  republishes derived words into captured state. After a direct-boot load-frame restore,
-  act 2 `backgroundCameraX` goes 0 to 1 and act 1 `backgroundCameraY` goes 0 to -23.
-- **Path:** `LevelFrameRuntimeUpdater.refreshParallaxState(rebuild)` →
-  `ParallaxManager.rebuildDerivedOutput` → `SwScrlLrz.update` →
-  `LrzZoneRuntimeState.publishDeformationWords`.
-- **Scope:** the Saved2-return capture does not show it, because its first scroll pass has
-  already run.
+- **Two ROM bytes:**
+  - The stage exit ORs `$80` into `Last_star_post_hit` (:12157, :12712).
+  - `Tails_Init` (`loc_137A4`, :26195) copies the byte into `Tails_CPU_star_post_flag` during
+    level assembly.
+  - Only then does `loc_64DC` clear the return bit with `andi.b #$7F` (:7913). That keeps a
+    real checkpoint's low bits and leaves the Tails copy alone.
+- **Native RAM after the LRZ2 return:** `$FE2A` is 0 and `$F746` is `$80`.
+- **Engine:** one boolean, `LevelTransitionCoordinator.isLastStarPostHitSet()`, plays two roles:
+  - during load, the `Last_star_post_hit` gate for the Saved/Saved2 restore;
+  - after load, the `Tails_CPU_star_post_flag` copy, read by `Sonic3kCnzCarryTrigger` and
+    `Sonic3kIntroCarryParticipants`.
+- **Why it is not a runtime defect:** no consumer reads the masked live byte after load, and
+  each level assembly recomputes the boolean. Clearing it at the level-loop entry would break
+  the Tails-copy role. The return bit itself is not modelled separately.
+
+---
+
+## Super Emerald Stage Layout Set and Results Digit Column (OPEN)
+
+Found once `GameplayCaptureSession` presented live special stages (`39fb32b32`). The evidence
+is the declared native/engine twin of the LRZ2 seven-Chaos branch, paired on published reveal
+events ([LRZ act 2 matrix](../architecture/validation/levels/s3k-lrz-act2.md#declared-native-twin-of-the-seven-chaos-branch-2026-10-17)).
+Citations are to skdisasm `044fa46`.
+
+**Wrong layout set for a pedestal Super stage.**
+
+- **Observed:** with native `Current_special_stage=2` and `SK_special_stage_flag=1`, native shows
+  72 blue spheres and its own sphere field. The engine shows 118 and a different field.
+- **ROM:** `sub_85B0` (sonic3k.asm:10845) reads `SStageLayoutPtrs` (the S3 set). It switches to
+  `SSLayoutOffs_RAM` (the Kosinski-decompressed S&K set) when `SK_special_stage_flag` is set, and
+  indexes either with `Current_special_stage & 7`.
+- **Engine:** `Sonic3kSpecialStageManager.loadRomData` picks the S&K set only for
+  `currentStage >= 8`. The pedestal request is stage 2 with `SUPER_EMERALD`, which sets
+  `superEmeraldMode` but still loads S3 layout 2.
+- **Owner:** S3K special-stage layout selection, which is shared special-stage ownership.
+
+**Results digit column.**
+
+- With both sides paired on the card reveal, the cards match for 8 frames. The static card then
+  differs in 420 px.
+- About 390 of those are the right-hand digit column: native draws the score, ring-bonus and
+  perfect "0" glyphs at active x 248-255, the engine at 240-247, one 8-pixel tile to the left.
+- The rest is sphere-icon animation phase beside the labels.
+- **Owner:** `S3kSpecialStageResultsScreen` digit placement.
 
 ### Removal condition
-Model the `:7881` mask without breaking the native-CPU entry eligibility, and make the
-post-restore parallax rebuild leave captured runtime words unchanged. Each needs a focused
-red test first.
+Select the layout set from `SK_special_stage_flag` and place the results digits on the native
+column. Each needs a red test first and a native event-paired picture.
 
 ---
 

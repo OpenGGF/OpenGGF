@@ -365,6 +365,10 @@ public final class GameplayCaptureSession implements AutoCloseable {
             renderSpecialStageResults(graphics, level);
             return;
         }
+        if (loop.getCurrentGameMode() == GameMode.SPECIAL_STAGE && !specialStageEntryShowsLevel()) {
+            renderSpecialStage(graphics);
+            return;
+        }
         if (loop.getCurrentGameMode() == GameMode.TITLE_SCREEN && !loop.isTitleEntryShowingLevel()) {
             var title = loop.getTitleScreenProvider();
             title.setClearColor(); glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -439,6 +443,49 @@ public final class GameplayCaptureSession implements AutoCloseable {
     }
 
     /** Engine.drawSpecialStageResults: optional level backdrop, then the results sprites. */
+    /**
+     * Engine.specialStageEntryShowsLevel: during the stage's entry fade-to-white the level's last
+     * frame stays on screen, so the ordinary level path below draws it, as Engine's dispatcher does.
+     */
+    private boolean specialStageEntryShowsLevel() {
+        var provider = loop.getActiveSpecialStageProvider();
+        return provider != null && provider.isEntryFadeToWhiteActive();
+    }
+
+    /**
+     * Engine.applySpecialStageClearColor then drawSpecialStage, followed by Engine's frame flush and
+     * UI fade pass: the provider's clear colour (black without one), a screen-space camera, the
+     * provider's viewport for this capture's width, then the provider's own draw.
+     */
+    private void renderSpecialStage(GraphicsManager graphics) {
+        com.openggf.game.SpecialStageProvider provider = loop.getActiveSpecialStageProvider();
+        if (provider != null) {
+            provider.setClearColor();
+        } else {
+            org.lwjgl.opengl.GL11.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        }
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        Camera camera = GameServices.camera();
+        camera.setX((short) 0);
+        camera.setY((short) 0);
+        if (provider != null) {
+            provider.setSpecialStageViewport(com.openggf.game.SpecialStageViewport.fromLogicalWidth(width));
+            if (com.openggf.game.SpecialStageDebugCapabilities.orNone(provider.debugCapabilities()).spriteViewer()
+                    && provider.isSpriteDebugMode() && provider.getDebugProvider() != null) {
+                provider.getDebugProvider().draw();
+            } else {
+                provider.draw();
+            }
+        }
+        graphics.flush();
+        UiRenderPipeline ui = graphics.getUiRenderPipeline();
+        if (ui != null) {
+            ui.renderFadePass();
+        }
+        loop.renderHostedRunOverlay();
+        glFinish();
+    }
+
     private void renderSpecialStageResults(GraphicsManager graphics, LevelManager level) {
         ResultsScreen results = loop.getResultsScreen();
         // Engine.applySpecialStageResultsClearColor: the screen's CRAM backdrop, else white.
@@ -452,12 +499,21 @@ public final class GameplayCaptureSession implements AutoCloseable {
                 level.drawWithRenderOptions(GameServices.sprites(),
                         LevelManager.LevelRenderOptions.previewCapture());
                 graphics.flush();
+            } else {
+                // Engine.drawSpecialStageResults draws a backdrop-less screen in screen space.
+                GameServices.camera().setX((short) 0);
+                GameServices.camera().setY((short) 0);
             }
             results.setViewportWidth(width);
             graphics.beginPatternBatch();
             java.util.List<com.openggf.graphics.GLCommand> commands = new java.util.ArrayList<>();
             results.appendRenderCommands(commands);
             graphics.flushPatternBatch();
+            // Engine registers the screen's appended commands after the pattern batch.
+            if (!commands.isEmpty()) {
+                graphics.registerCommand(new com.openggf.graphics.GLCommandGroup(
+                        org.lwjgl.opengl.GL11.GL_LINES, commands));
+            }
             graphics.flushScreenSpace();
         }
         UiRenderPipeline ui = graphics.getUiRenderPipeline();

@@ -29,11 +29,11 @@ import static org.junit.jupiter.api.Assertions.*;
  * {@code _unkFA88} progress class. Rendered PCM is not compared here and remains open.
  *
  * <ul>
- * <li>A1 {@code loc_5DE36}/{@code loc_5DE46} (sonic3k.asm:124064-124075): {@code cmd_FadeOut}
+ * <li>A1 {@code loc_5DE36}/{@code loc_5DE46} (skdisasm 044fa46 sonic3k.asm:124105-124116): {@code cmd_FadeOut}
  * on the first frame that {@code _unkFA88<0} or {@code Camera_Y_pos_copy>=$78}.</li>
- * <li>A2 {@code Obj_5DFEE} (:124232-124246): {@code mus_CreditsK}; it is allocated only when
- * {@code Super_emerald_count>=7} (loc_5AC04, :120985-120989).</li>
- * <li>A3 {@code Obj_Ending} {@code loc_5E1C2} (:124375-124385): {@code mus_CreditsK}, skipped
+ * <li>A2 {@code Obj_5DFEE} (:124273-124287): {@code mus_CreditsK}; it is allocated only when
+ * {@code Super_emerald_count>=7} (loc_5AC04, :121026-121030).</li>
+ * <li>A3 {@code Obj_Ending} {@code loc_5E1C2} (:124416-124426): {@code mus_CreditsK}, skipped
  * when {@code _unkFA88==2}.</li>
  * </ul>
  *

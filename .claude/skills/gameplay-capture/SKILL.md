@@ -75,7 +75,7 @@ Use a task directory outside the repository for captures the user should keep.
 | `--interactive-pacing` | off | Use production presentation/input pacing, including menus and gameplay observer callbacks; P1 controller input only, fps 60, no debug stage completion |
 | `--audio` | off | Write `audio.wav` from one final SMPS PCM packet per outer frame; every=1, capture-from=0, matching 60-Hz presentation. Video remains silent until muxed |
 | `--title-card` | off | Keep and draw title-card presentations instead of omitting them |
-| `--complete-special-stage` | off | Request the debug special-stage completion while a special stage runs (awards its emerald with 50 rings; no key binding is involved), so the capture continues into the results screen; results frames render as `Engine` draws them, including the S3K Super Emerald sanctuary backdrop |
+| `--complete-special-stage` | off | Request the debug special-stage completion while a special stage runs (awards its emerald with 50 rings; no key binding is involved), so the capture continues into the results screen; results frames render as `Engine` draws them, including the S3K Super Emerald sanctuary backdrop. Special-stage frames do too: the level during the entry fade-to-white, then the stage's own provider draw |
 | `--frames <n>` | settle + log length | Total frames to step |
 | `--capture-from`, `--every` | `0`, `1` | First captured frame and PNG stride |
 | `--stills a,b` | none | Extra `still-<frame>.png` copies at those frames |
