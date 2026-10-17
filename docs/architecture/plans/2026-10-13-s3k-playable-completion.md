@@ -3557,3 +3557,38 @@ No jobs/observers remain. The worktree, branch, immutable observations and unrel
 TraceChaser gitlink remain for Root accounting; no Main edit, integration or push.
 This does not certify new RGB pairs, team causality, later exit, PAL/Knuckles/wide,
 cold campaign, strict hardware timing or6+46 acceptance.
+
+
+### Integrated delivery and published native diagnostic follow-up — 2026-10-17
+
+Main `develop` fast-forwarded `707b3c208` to **`460715cbca03d81b4f289051ccb9779cdc8ff5be`**, preserving
+its exact foreign dirty-path inventory and current branch. Main session38756 ran the current queue wrapper
+with `-Dmse=off -DskipTests package -B`: terminal0, Maven1m28s, **10:01:43 UTC**, explicit `Tests are skipped`.
+The resulting develop push was remote-verified at that exact commit. This delivers the qualified runtime
+and matrix changes recorded above; it does not close the remaining parity limits or turn baseline failures
+into passes. All consumed Root/Main validation diagnostics and one-off tail controllers were removed
+under normal metadata leases; no receipts, pass caches or raw-log archives were created.
+
+The separate passive ending observation tool `fe7efc795` is now composed locally. Its original18 focused
+checks and exactly two metadata-only products are recorded above; no new pictures or timing-profile edit
+is implied. Production observations establish the static profile gives the same four services to both
+reunion heads, while native Sonic and Tails have different caller-window budgets. A character-specific
+three-service override would break the Tails control and was not made.
+
+The retained native three-file FIFO repair was committed as **`322851cbfa2e1c1803332142e11ab74b4eb34eea`**,
+parent `4ae64e075`, then fast-forwarded/pushed through the existing native main integration tree. Root
+independently reviewed the busy-head end-cursor allowance and its positive/negative controls. Two forced-fresh
+current/published builds ran exactly four disputed selectors per source: each20pass/40fail/2skip. Thirty-nine
+S1/S2 behavioral failures match the previously published source by exact identity/assertion. The remaining
+failure on both builds is the historical executable hash pin (fresh builds differ from its frozen binary);
+no pin or fixture was refreshed. Fourteen earlier prerequisite failures remain explicit, unrerun limits.
+The unchanged18ExactKos,70HardwareTiming and CLI control results remain separate qualifications. Both native
+repository/history policies and guidance mirrors passed; consumed native diagnostics were deleted.
+
+Native source-only CI [39023704546](https://github.com/OpenGGF/TraceChaser/actions/runs/39023704546) completed
+**success** on322851c; its optional native-integration job was **skipped**. This is not native-gate or full-suite
+acceptance. The engine's optional immutable gitlink and its two literal boundary assertions now select that
+published revision. The foreign Main native checkout at `e0a2443e0` was preserved, including its independent
+KiS2 work. No native schema/ABI, gameplay writer, canonical fixture or CPU-budget prediction was changed.
+Focused engine tool/boundary/source checks on this follow-up composition are pending; its later Main
+integration/package/push and fully accounted worktree cleanup are not claimed yet.
