@@ -12028,3 +12028,43 @@ Full255/Limited238, the popup producer and AIZ2-tree/HCZ-waterline repairs are n
 reopened as missing implementations. No compiler/JVM/native/extra broad test was
 launched by this inventory. Main integration, final validation and cleanup remain
 unresolved.
+
+
+### Root water-return capacity warning matched baseline — 2026-10-18
+
+FDF R36 actual48911 completed145 tests/19 package classes/0F0E0S, including all
+five independent terrain cases and ten selected real-entry/portal pilots. Root
+read all originalXML/TXT testcase identities, statuses and streams; no skips or
+suppressed failures. The method
+TestBonusStageReturnWaterRestore#bonusStageReturn_restoresSavedWaterLevelImmediately
+logged `Failed to load S3K title card art: S3K KosM module FIFO is full`, despite
+passing its water assertion. The warning prevented unqualified acceptance until
+attribution. Its byte-exact Main803 test source reflectively calls private bonus
+entry then exit without ordinary title-queue steps; source context alone did not
+prove the warning inherited.
+
+Root submitted ONE normal exact-method baseline69090 on actual Main
+8030832d2ab6080e5324cdfe35e971677fd97b41, with the same Java25/singleJTO-EGL/NO
+CLIgl/all3 original absoluteROM/nullAL/surfaceless/no DISPLAY/WAYLAND/LD/Lua/fork1/
+reuse/alphabetical environment. Original command selection was
+`--normal -Dmse=off -Dtest=TestBonusStageReturnWaterRestore#bonusStageReturn_restoresSavedWaterLevelImmediately test -B`,
+with separate owned target report/diagnostic directories; exact full argv is in
+Root's registry. Normal admission7GiB/8cores/queue0; runtime up to date and4162
+tests compiledrelease25 inside that single lifecycle. TERMINAL0 at
+2026-10-17T23:07:52Z, Maven23.987s, actual1/0F0E0S/0skip, class0.673s/case0.358s,
+Java25.0.4.1. Parent elapsed unmeasured. The SAME method/logger/loadAllArt warning
+and exact FIFO-full message occur on Main803. This is an executed inherited
+diagnostic, not a readiness waiver or proof that the water fixture consumed art.
+Its retained XML has two FAST/no-manifest warnings as well; other console
+setup warnings are separate. Main HEAD/status/config.yaml hash+mtime unchanged.
+
+Root DIRECT-read both originals: XML22801B SHA256
+353ce65b5d5aedd4e2c3be82cb3ca0147b41670e7aeecc3b00a81bbde58dd9f1;
+TXT364B SHA256ca7b1176efe4082b30004ca998eca8018d88fb0d597427ed1154b50d6beaf9c3.
+After this durable checkpoint, consume only those23165B and empty owned
+directories under metadata_slot ALONE. No archive/copy/receipt or target class
+deletion. R36's separate expected full-FIFO negative control remains intentional;
+all other actual warnings retain their documented limits. Accept only bounded
+terrain-producer/affected-consumer qualification145green, with inherited
+water-fixture art-readiness unverified. No full offset, native birth, timing,
+SS/FDF, original route or delivery conclusion follows.
