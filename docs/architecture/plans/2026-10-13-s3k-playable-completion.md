@@ -5085,3 +5085,76 @@ all-group error3475 sidekick_animation_id17/1C; next non-camera beyond7808 is
 unmeasured. No fullcanonical/slice/alternate/GLFW/native/broad claim or next fix.
 Root owns further qualification/integration; local commit only.
 [Source, exact commands/hashes, clocks, all windows and limits](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r11-hczblock-full2-visibility-owner-closes7807-through7808--2026-10-17).
+
+
+### R8 ICZ1 bounded natural post-death controller authoring — 2026-10-17
+
+Same owned98d/native01a1496e/GPT6.1, clean AIZ branch FF to Root
+`a58bdc058ec440d6e2ce70f3be38ee0ebcecc9b5`; previous branch ref retained,
+new `feature/ai-s3k-icz-natural-post-coverage-gpt61` in the same tree. Exact
+returned R8 taskID is registered with native/workspace/24h expiry; R1–R7
+records are untouched. Own config is now a regular exact Main byte copy,
+not the T3 symlink. Main SHA-256 `6abd111c…f7da` and mtime_ns
+`1792141742849921547` were verified unchanged before/after all execution.
+
+Read the existing three failed authored routes, ROM placements and disassembly
+pin044fa467. The old temporary blob is unavailable in this object inventory,
+so reused the durable literal4594 input stream and production
+`CanonicalEntryMatrixSupport.boot` / `GameLoop` input contract. Original S3K
+ROM SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6` verified. Block1EE3CA
+confirms post3BD0/076F, harmful ice3BF3/06CE and3D10/0658, platform3CE0/0784
+and springs3CB6/07B3,3E0A/07B0. `sub_8B0B0` needs standing lower contact,
+speed at least200hex and matching facing; static ice subtype0 uses ordinary touch.
+
+ONE offline policy observed ground/air/position and live platform geometry to
+choose buttons: seek a grounded leftward approach from its right side, jump,
+steer toward its centre, release A at the observed ascent end, move right at
+platform height. Cap1200 additional inputs/12 jump starts, stop on natural
+death or cap. Velocities/hurt/rings/lives were observations only. No gameplay
+state writes, hydration, raw restore, API/runtime change, native/media,
+branch sweep, second candidate or extra validation JVM.
+
+All requests used the current Main absolute Maven wrapper from own cwd,
+normal ROM lane/all3 original ROMs/Java25/EGL/nullAL/no ambient display,
+Lua5.4/exact single-token JTO, single fork/reuse/alphabetical. Source was
+frozen queued/live; every queue wait was0. Prerequisites are separate:
+
+- 90341 terminal1 14:28:52UTC, Maven1m01: testCompile-only nonexistent
+  `GameStateManager.getRings`, no tests/gameplay. Corrected two read-only
+  observation calls to playable.getRingCount.
+- 3516 terminal1 14:30:41UTC, Maven23.411s,1/0F1E0S: input-tool separator
+  error BEFORE boot/GameLoop, zero gameplay. Added only the statement separator.
+- 53312 terminal1 14:32:25UTC, Maven22.963s,1/0F1E0S: exact1701/3523/4594
+  assertions pass, then optional dump called default getX on a null-spawn
+  synthetic owner. Zero continuation inputs/jumps. Root explicitly authorized
+  ONE exact rerun after the dump fix. Null metadata now avoids getX/getY;
+  optional isDestroyed is omitted because some overrides can mutate lifetime.
+
+Final53551 terminal1 at14:35:23UTC, Maven25.214s,1/1F0E0S,class1.797s:
+exact prefix assertions GREEN; sole continuation consumed1200 inputs/10 jump
+starts and capped alive at5794, x3D04/y0765, airtrue/hurtfalse/deadfalse,
+rings0/inv0/lives3/post1active, LF16A1/camera3C74/0720,gs0/VX−247/VY−195.
+No observer failure; only the explicit natural-death assertion fails.
+Actual platform ride sampled5482/5582 (X speeds−305/−318, below native200hex
+threshold); later samples return to the lower channel. No lethal owner or
+runtime defect proved. Exact literal31-block RLE, tested probe SHA-256
+`5648de0e5ac7fd924860e572af36e33bd2b30952cf48b7d16b84456741fc578f`,
+command/source/clock/endpoint/limits and prior prerequisites are recorded in
+[the existing ICZ1 matrix](../validation/levels/s3k-icz-act1.md#r8-ground-aware-post1-continuation--2026-10-17).
+Natural post death/life loss/saved-post reload/world replacement/history
+retirement and pre-contact/after-release twice-world replay remain OPEN.
+Existing semantic restart qualifications are unchanged; no runtime fix,
+changelog, strict trace frontier, integration or publication claim follows.
+Only docs syntax/link/diff/policy checks and local commit/consumed cleanup
+remain. Root owns composition/broad/Main; all four handles are terminal.
+Target last compiled the temporary observer, with no maintained rebuild.
+
+
+R8 final cleanup: removed the owned temporary source under the intended-tree
+lease, then consumed seven inspected diagnostic/input/compiled-class files
+(76451bytes) under the metadata slot alone. No archives/receipts remain.
+Exact durable RLE equals the executed literal (1200inputs/10 A holds/31blocks);
+new local links/anchors, Markdown fences and diff checks pass. Source diff is
+empty. Main config hash/mtime and own regular exact byte copy verified again.
+No extra Java execution. Preparing the normal local evidence-only commit;
+all seven policy trailers and final GPT-6.1 coauthor are parsed before commit.
