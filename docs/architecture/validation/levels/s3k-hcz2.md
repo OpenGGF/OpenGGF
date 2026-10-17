@@ -69,3 +69,22 @@ Corrected qualification, all on `0197c5a5a` plus this commit's test-only deltas 
 - Revised input test with the fix: 02:05:15–02:05:44 UTC, 1 test / 0 failures / 0 errors / 0 skips.
 
 Death/reload products, combined smoke and integration were not rerun here. This requalifies the held-Right entry floor only; it is not act certification.
+
+
+## Retained HCZ1-to-HCZ2 carrier boundary — 2026-10-17
+
+`TestSonic3kHCZEvents` now binds incoming X-lock ownership to both current and
+target bounds and checks each carrier's captured `$3A` target after camera motion.
+Actual manager/player/camera restoration twice replays both carriers through P1
+release and native size-child ownership; manager recreation and the schema guard
+also check distinct per-player target words. These local fixtures pass within
+worker focused1591/0/0/4; named guards113/0/0/0 pass on `b9c1c8b3d`, including
+Root prerequisite `534a69e74`. They add no fresh-entry matrix products.
+
+The [audit](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#final-single-invocation-strict-qualification)
+records three assertion-red qualifiers, returned-HCZ first reported non-camera
+physics7134 and absent owned exit, the separate load7126 boundary, and HCZ slice
+4353 spans first9482 `air` without matched-baseline attribution. Native-only 320
+Sonic+Tails images are inspected; the engine GLFW pixel oracle is blocked at init.
+Cold traversal, other products, arena completion and cross-load rewind policy
+retain their existing obligations; no general HCZ2 certification.

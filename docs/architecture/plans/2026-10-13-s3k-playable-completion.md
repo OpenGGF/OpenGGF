@@ -2619,3 +2619,25 @@ relative links and their target heading, whitespace, and mirrored camera-pitfall
 bytes pass. No architecture budget, comparator, API pin or gameplay fixture was
 changed. The original six-batch tail and final guards remain required before
 integration; this local commit is not a delivery claim.
+
+
+## Retained HCZ repair worker checkpoint — 2026-10-17
+
+Worker `t3-3aa3bc3c`, local `feature/ai-s3k-hcz-gpt61-repair`: `b6c4898e2`
+composes final pass4 and retained carrier/water WIP onto Root `2056a99cd`;
+`b9c1c8b3d` merges qualified prerequisite `534a69e74`. Stored targets, X-lock
+release ownership and actual manager/player/camera restore/replay are complete;
+Root-only rules, mapping access and title helpers remain. Candidate API gets the
+necessary semantic drowning flag while retaining its prior constructor and 0.7.0
+unpublished descriptor. Focused1591/0/0/4 (four external authored-AIZ JAR skips),
+named guards113/0/0/0; extra boss/transition37/1/0/0 fails only GLFW init.
+
+All three single qualifiers are assertion-red: returned HCZ's first reported
+non-camera physics is7134 `sidekick_x` over a longer window through14207, with
+no owned exit; segment8 load7126 stays separate. HCZ slice4353 first9482 `air`
+is not matched-baseline attributed; alternate has one26179 `rings` span.
+[Exact evidence/limits](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#final-single-invocation-strict-qualification),
+[HCZ1](../validation/levels/s3k-hcz1-sonic.md#retained-hcz-handlers-and-incoming-act-2-carrier--2026-10-17)
+and [HCZ2](../validation/levels/s3k-hcz2.md#retained-hcz1-to-hcz2-carrier-boundary--2026-10-17)
+retain the open obligations. No zero frontier, broad smoke/full-suite, Main write,
+push or retained-tree cleanup; Root owns follow-up and delivery validation.

@@ -2021,3 +2021,173 @@ are positioned authored AIZ-content cases, not stock HCZ checks. Queue wait was
 at test compilation (moved test's protected helper and mixed boxed-number list),
 not a gameplay failure. The corrected test fixture preserves protected access.
 Source guards and strict trace qualification are still pending at this checkpoint.
+
+
+At the next terminal writer boundary, checkpoint `b6c4898e2` committed the
+HCZ work and `b9c1c8b3d` merged Root prerequisite `534a69e74` under this tree's
+normal build lease. The prerequisite's six-line non-counter placement recovery
+is independently qualified by Root; no worker wide-route rerun is substituted
+for Root's delivery validation. The documentation hunks merged without conflicts.
+
+Fresh guards on `b9c1c8b3d`, invocation `81789`, completed 09:38:27 BST:
+**113/0 failures/0 errors/0 skips**, queue 50 seconds, Maven 85 seconds.
+Exact `-Pguards` selector: `TestRewindArchitectureGuard,TestArchitecturalSourceGuard,TestTraceReplayInvariantGuard,TestHardwareTimingAuthorityGuard,TestRewindCoverageGuard,TestHelperStateRewindCoverageGuard`.
+The 72 architectural-source assertions pass unchanged, including the playable
+size ratchet; no allowance, budget or behavior assertion was weakened. The other
+two previously reported unidentified guard failures were not reproduced by this
+fresh named selection. This does not certify unselected guards.
+
+Native presentation corroboration is a finite original-movie diagnostic using
+BizHawk/GPGX 2.11 and the published-video API. The helper compiler retained this
+tree's build lease and shared activity through its child; execution used normal
+7 GiB/8-core queue admission and inherited the lease descriptors. It made no
+RAM/setup writes, used no ambient display/Wayland or null OpenAL override, and
+captured actual 320x224 published RGB at completed BK2 frames 66876, 66908,
+69872 and 69900. The captured native zone/act is 1/0 for the monitor pair and
+1/1 for the carrier pair, all four non-lag. Images and `native-inputs.json` are
+under the external task root
+`$HCZ_TASK_ROOT`.
+The original movie SHA-256 is
+`ad40fb0b0a74fa12b08ab71b2e48a7455b388d14f43f4cded502ac4a15d1b3c0`;
+ROM SHA-1 is `CFBF98C36C776677290A872547AC47C53D2761D6`.
+The read-only headless source is `4fdf73880f93a3172d23bf9e157b15de3c78fc32`;
+the setup's existing submodule checkout differs from the parent gitlink and was
+not staged or cleaned. All four images were inspected. These native-only images
+corroborate the matching original 320 Sonic+Tails route; no engine/native pixel
+equality, wide viewport, other team/donor product or HUD/CPU same-frame identity
+is inferred from them.
+
+
+Additional boss/transition consumers, invocation `81847`, completed on
+`b9c1c8b3d` at 09:38:53 BST: **37 tests, 1 failure, 0 errors, 0 skips**,
+30 seconds queue and 25.746 seconds Maven. Selector:
+`TestHczMinibossRomParity,TestHczMinibossNativeRendering,TestHczMinibossVisualParity,TestHczMinibossMultiSidekick,TestHczMinibossRocketTouchRewind,TestLevelSeamlessTransitionExecutor,TestTraceHydrateSwitchDefault`.
+All 36 non-pixel consumers pass. The exact failure is
+`TestHczMinibossNativeRendering.allOrbitPhasesMatchRomSpriteCompositionInNativePixels`,
+line 53: `GLFW must initialize for pixel verification`, expected true / actual
+false. This unchanged test calls GLFW directly before ROM/art/scene verification;
+the supplied surfaceless-EGL property cannot select another backend there.
+`Xvfb`, `xvfb-run`, `weston` and `cage` are unavailable. No ambient display was
+used, no graphics helper changed and no pixel result is inferred from other
+native-only captures. This is an explicit remaining engine pixel-verification
+limit, not a claimed matched-baseline pass.
+
+All Java invocations use the current Main absolute
+`$MAIN_WORKSPACE/tools/testing/maven_queue.py` from this
+worker's cwd, `--normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl`,
+`env -u DISPLAY -u WAYLAND_DISPLAY -u ALSOFT_DRIVERS EGL_PLATFORM=surfaceless LUA_BIN=/usr/bin/lua5.4`,
+and original ROM paths under `$MAIN_WORKSPACE/`:
+`Sonic The Hedgehog (W) (REV01) [!].gen`,
+`Sonic The Hedgehog 2 (W) (REV01) [!].gen`,
+`Sonic and Knuckles & Sonic 3 (W) [!].gen`, with the corresponding
+`sonic1.rom.path`, `sonic2.rom.path` and `s3k.rom.path` properties.
+Only exact class/method selectors are used; no broad smoke/full-suite or push.
+
+
+### Final single-invocation strict qualification
+
+All three requested qualifications completed on executable source `b9c1c8b3d`,
+with no executable edits between submission and completion. Java sources, POM and
+candidate signature-pin path/content SHA-256 remained
+`49d4f9091ed26cab4d777000f04a421469473eb617f36a2f65f97dda36ce6097`.
+Each ran once. They queued concurrently and executed serially under this tree's
+normal lease. Waiting intervals overlap; their sum is not delivery elapsed time.
+The long wait was existing isolated-measurement admission, not replay execution.
+No queue/lock/resource override or foreign process signal was used.
+
+| Invocation | Selection | JUnit run/F/E/S | Finished BST | Queue wait / Maven / slot hold |
+| --- | --- | --- | --- | --- |
+| `25747` | canonical five-case controls/prefixes/chain | 5/1/0/0 | 10:03:18 | 1336.2s / about 98s / 99.6s |
+| `67547` | HCZ slice plus independent Poindexter control | 2/1/0/0 | 10:03:57 | 789.0s / 38.175s / 38.8s |
+| `45622` | alternate AIZ slice | 1/1/0/0 | 10:04:35 | 828.2s / 36.935s / 37.6s |
+
+Common options are as above, plus `-Dsurefire.forkCount=1
+-Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical test -B`.
+Exact profile and `-Dtest` values:
+
+- Canonical: `-Ptrace-replay`,
+  `TestS3kAizTraceReplay#replayMatchesTrace,TestS3kSonicTailsHczSegmentTraceReplay#replayMatchesTrace,TestS3kSonicTailsCompleteEmeraldRunPrefix,TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds`.
+- HCZ slice: `-Ptrace-segments`, `TestS3kHczZoneSliceTraceReplay`.
+- Alternate: `-Ptrace-segments`, `TestS3kAizZoneSliceTraceReplay#replayMatchesTrace`.
+
+**Canonical observations.** All four control/prefix cases pass. Standalone
+original AIZ reports zero errors/warnings/bootstrap errors, `total_frames=20463`;
+initial HCZ reports zero errors/warnings/bootstrap errors, `total_frames=3519`.
+The full chain has zero comparator errors in segments 0, 2, 4, 6 and 9.
+Segment 8 retains four physics errors at row **7126**, first reported non-camera
+`x`, ROM `$0280` / engine `$0000`; 62 lag frames and comparator `complete=true`.
+This remains the separate unqualified load boundary, not a certified walker-only
+problem and not an effect of the carrier repair.
+
+Returned segment 11 reports **133771 total comparator errors**: **114800 physics
++ 18971 animation**, zero bootstrap errors/warnings, 59 lag frames.
+Its first reported non-camera physics mismatch is row **7134 `sidekick_x`**,
+ROM `$0175` / engine `$0176` (one pixel). The report is `complete=true`, and its
+recent mismatch tail reaches row **14207**. The walk nevertheless fails because
+the `giant_ring` exit boundary is not observed within its window. No downstream
+campaign or exit success is claimed. Its close also reports unmatched direct Kos
+#220/#221 and module #154/#155 completions at rows 10162/14172 and 10163/14173.
+Those expected completions have no engine pending job; no readiness was fabricated.
+
+The chain file is summary-only. **7134 is the first reported non-camera physics
+row, not proof of the first error across every verification group**; its first
+animation-error row and full span history are unavailable. Historical pass4's
+29258 errors stopped at row 8525; comparing that total directly to 133771 over the
+longer current window would misstate the result. The old BK2-71601 death-restart
+stop is not reused as the current outcome; the current evidence is the complete
+comparator window and missing owned exit. The exact final BK2 cursor/load generation
+is not retained in this failure summary.
+
+**Alternate observations.** One physics span, no animation/bootstrap errors or
+warnings: row **26179 `rings`**, expected **72**, actual **0**;
+`total_frames=26041`. This is the current Root composition's measured result,
+not the historical 60-span alternate from the retained lane.
+
+**HCZ slice observations.** **4353 error spans** = **3424 physics + 929 animation**,
+zero bootstrap errors/warnings, `total_frames=29302`. The first error is row
+**9482 `air`**, expected **1**, actual **0**, followed on that row by Tails air
+and the two underwater/air status bytes. The first animation span is row 9486.
+The independent `hczPoindexterOccupiesRomSlotBeforeTailsBounce` case passes.
+The first edge coincides with the previously recorded boss-support gap, but
+**4353 is not claimed identical to historical 3738**. No matched baseline/current
+span attribution was run in this once-only qualification; the changed later span
+count remains unqualified. No unrelated donor/graphics/physics fix was added to
+change these totals.
+
+The standalone reports also list unobserved advertised auxiliary schemas. The
+HCZ/alternate list is cage state/execution, velocity writes, position writes,
+Sonic position history, Tails CPU normal-step and CNZ cylinder state/execution.
+Original AIZ additionally lists its ship-loop, boundary and transition-floor
+observations. Zero report warnings or passing physics/animation controls do not
+certify those missing auxiliary channels, native SST identity, pixels or audio.
+
+### Hand-back boundary
+
+The retained source composition, carrier/X-target lock, water-owner extraction,
+actual restore/replay and fresh named source guards are complete within this
+bounded slice. The three strict qualifications remain assertion-red as recorded;
+the extra GLFW pixel oracle also remains unqualified. Neither a zero frontier nor
+a generally green integration is claimed. Root owns follow-up on row 7134, the
+missing HCZ exit, slice-span attribution, actual title archive submission and its
+row-7126 load boundary, pixel verification and combined delivery validation.
+Only local commits are produced; no broad smoke/full-suite, Main write, push or
+retained-tree cleanup is performed. Consumed worker reports are removed after
+inspection; the committed evidence and explicitly retained native images are the
+handoff record.
+
+
+Exact focused selector for invocation `9100` (common environment/ROM options
+above, no trace/guards profile, `test -B`):
+
+```text
+-Dtest=TestSonic3kHCZEvents,TestSonic3kLevelEventRewindSnapshot,TestZoneEventRewindSchemaGuard,TestHCZHandLauncherObjectInstance,TestHczMinibossFightStartPhase,TestHczMinibossWaterEffectCleanup,TestHczMinibossVortexBubbleMotion,TestMegaChopperBadnikInstance,TestS3kMonitorContentsLifecycle,TestS3kMonitorGraphRewind,TestSonic3kMonitorContentOverride,com.openggf.game.sonic3k.objects.TestSonic3kMonitorObjectInstance,TestRewindSchemaRegistry,TestDrownedPlayerMotionOrder,TestDrownedSidekickCpuPause,TestDrownedUnderwaterStatus,TestDrowningControllerMusicSelection,TestTraceCharacterState,TestModApiSignatureSurface,TestEveryObjectRewindRoundTrip,TestS3kHczHandLauncherGraphRewind,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestSecondStrikeCheckpointGameplay
+```
+
+The fresh XML explicitly includes HCZ events9, level-event snapshots38 and zone
+schema guard18, all without failures/errors/skips. This verifies the newly named
+schema checks actually executed; they were not silently profile-excluded.
+
+
+`MAIN_WORKSPACE` denotes Root's main integration checkout;
+`HCZ_TASK_ROOT` denotes this run's external `r2-recovery/hcz-gpt61-repair`
+capture directory. The worker hand-back provides its concrete location.

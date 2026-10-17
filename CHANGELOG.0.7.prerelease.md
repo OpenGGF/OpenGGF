@@ -136,6 +136,8 @@ Unreleased. The earlier development themes remain in
   only left and right, so he must shake it off rather than roll, duck or jump.
   The Hydrocity miniboss spends the original start-up pass before it descends,
   so its dives, hits and whirlpool grab and release land on the original frames.
+  Its retained act-change carriers keep their captured swing targets and the
+  arena's camera lock until the original release event widens the boundaries.
   A drowning player sinks with the original motion, even while an object holds it,
   and in Sonic 3&K it keeps its underwater state until it dies, as in the original.
   A broken monitor's contents still rise and pay out after the player leaves the

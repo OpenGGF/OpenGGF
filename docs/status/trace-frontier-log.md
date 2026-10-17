@@ -113093,3 +113093,51 @@ seg11 spans after 3832 were not compared.
 
 **Next.** 6796 `sidekick_x` (Tails, 3 px) is unattributed. Zone slice 9482
 (boss-defeat support edge) remains the inherited gap; 13637 is its cascade.
+
+
+## 2026-10-17 — retained HCZ repair on Root: stored targets and qualified limits
+
+Worker `t3-3aa3bc3c`, local branch `feature/ai-s3k-hcz-gpt61-repair`:
+`b6c4898e2` composes the missing final pass4 source and retained carrier/water WIP
+onto Root `2056a99cd`; `b9c1c8b3d` merges qualified prerequisite `534a69e74`.
+The carrier reads its captured `$3A` target and the reload keeps both X easing
+targets locked until native P1 release owns widening. Fresh focused 1591/0/0/4
+has four external authored-AIZ Second Strike JAR skips; fresh named source,
+rewind and timing guards pass 113/0/0/0. Additional boss/transition checks are
+37/1/0/0, solely an unchanged hard-coded GLFW-init pixel failure before scene
+verification. Native-only original-movie 320 Sonic+Tails images are retained;
+no engine pixel-equality claim.
+
+Exactly one canonical, HCZ slice and alternate qualification each, all on
+`b9c1c8b3d` and unchanged executable inputs. Current Main absolute queue wrapper,
+normal admission, Java25/Lua5.4, surfaceless EGL, unset DISPLAY/WAYLAND/ALSOFT,
+original absolute ROM properties, one reused fork and alphabetical class order.
+Exact selectors/common command options and group limitations are in the
+[audit](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#final-single-invocation-strict-qualification).
+
+- `25747`, `-Ptrace-replay` canonical five-case controls/prefixes/chain:
+  **5/1/0/0**, finished 10:03:18 BST. Four controls pass; segments 0/2/4/6/9
+  have zero comparator errors. Segment8 retains **4** at row **7126** (first
+  reported non-camera `x`, `$0280/$0000`), a separate unqualified load boundary.
+  Returned HCZ11 has **133771 total** (114800 physics + 18971 animation),
+  zero bootstrap/warnings, lag59, comparator complete and tail at row14207.
+  First reported non-camera physics is **7134 `sidekick_x`**, `$0175/$0176`.
+  The owned giant-ring exit is absent; late native direct #220/#221 and module
+  #154/#155 completions have no prepared engine job. Summary-only reporting
+  does not establish the first animation error or full span history. The longer
+  comparison window makes the raw total incomparable to retained pass4's
+  row8525 cutoff; the old BK2-71601 stop is not transferred.
+- `67547`, `-Ptrace-segments -Dtest=TestS3kHczZoneSliceTraceReplay`:
+  **2/1/0/0**, 10:03:57 BST. **4353 spans** (3424 physics + 929 animation),
+  first **9482 `air`**, expected1/actual0; Poindexter slot control passes.
+  The initial edge coincides with the historical boss-support gap, but the
+  later count differs from historical3738 and is **not matched-baseline attributed**.
+- `45622`, `-Ptrace-segments -Dtest=TestS3kAizZoneSliceTraceReplay#replayMatchesTrace`:
+  **1/1/0/0**, 10:04:35 BST. **1** physics span at **26179 `rings`**, 72/0;
+  no animation/bootstrap errors or warnings. Historical60 is not current credit.
+
+Queue waits were 1336.2s / 789.0s / 828.2s respectively; those intervals overlap.
+No repeated qualifiers, reference edits, timing fitting or readiness fabrication.
+No downstream exit/campaign success, complete auxiliary coverage, all-preset or
+pixel/audio certification. Row7134, the owned exit, slice-span attribution and
+the title-load boundary remain Root follow-up; this is not a green delivery.

@@ -1170,3 +1170,21 @@ and short latch assertions fail; corrected focused112 and complete sanctuary
 entry/return matrices2006 pass without skips. The [completion plan](architecture/plans/2026-10-13-s3k-playable-completion.md#immediate-scene-fade-publication-after-rewind--2026-10-17)
 records exact commands and scope. Native RGB residuals, strict traces and
 configuration/cold/PAL/PCM limits outside these products remain open.
+
+
+## Retained HCZ replay qualification — 2026-10-17
+
+Worker source `b9c1c8b3d` closes the retained stored-carrier-target/X-lock and
+water-owner extraction with focused/rewind/source evidence, but strict replay
+remains red. Returned HCZ's first reported non-camera physics is7134 `sidekick_x`
+(`0175/0176`), with133771 total errors over a longer window through14207 and no
+owned giant-ring exit. Its summary does not expose the first animation error or
+full span history. Segment8's four load7126 errors stay separate; actual title
+archive submission/regression remains open and is not certified walker-only.
+
+HCZ slice has4353 spans first9482 `air` (1/0), with the changed later count not
+matched-baseline attributed; alternate AIZ retains one26179 `rings` span (72/0).
+The engine pixel oracle fails at GLFW init; native-only 320 Sonic+Tails images
+and passing named guards do not certify missing auxiliary channels, other
+products or downstream campaign. [Exact evidence and limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#final-single-invocation-strict-qualification),
+[frontier log](status/trace-frontier-log.md#2026-10-17--retained-hcz-repair-on-root-stored-targets-and-qualified-limits).

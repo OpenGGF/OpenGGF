@@ -5968,3 +5968,22 @@ low-priority far-sphere/overlap behavior as a separate remaining gap. Never
 reshape the reference or fit the asset mapping to hide it. This table is S3K;
 the pointer-alias versus inferred-geometry lesson applies across games.
 Origin: Root Blue Sphere original-RGB mapping comparison,2026-10-17.
+
+
+## HCZ carrier targets and release-owned camera bounds
+
+`loc_6A80C` captures `Camera_X_pos + $A0` once in the carrier word `$3A`;
+`sub_6A916` compares that word on every swing pass. Persist the captured target
+for each native player and rewind it with that carrier. A camera move after
+capture is a useful disconfirming regression for a recomputed target; restore
+and forward-replay the actual manager/player/camera snapshots through release.
+
+`Change_Act2Sizes` stores HCZ2's sizes but explicitly skips applying HCZ's
+current X bounds. P1 release at `loc_6A8AE` creates `Child1_Act2LevelSize`, whose
+children own the later widening. An engine reload that overrides current X
+bounds must also retain the X easing targets until that owner runs; leaving the
+new level's targets active releases the lock early. Keep the real stored act-2
+sizes available to those children. This is an HCZ owner fact; the captured-read
+and current/target-bound distinction is reusable across games.
+Origin: retained HCZ repair `b6c4898e2`, merged with Root at `b9c1c8b3d`,
+2026-10-17; native owners verified in the locked-on disassembly.

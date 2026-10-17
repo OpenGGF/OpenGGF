@@ -317,3 +317,21 @@ those same identities and passes 24 Python safety checks plus canonical
 preflight. See the [task record](../../plans/2026-10-15-architecture-debt-remediation.md#runtime-validation-handoff-2026-10-16)
 for commands and limits. This is bounded pilot evidence; remaining matrix
 obligations and general enforcement stay open.
+
+
+## Retained HCZ handlers and incoming act-2 carrier — 2026-10-17
+
+Worker source `b9c1c8b3d` composes final hand/chopper/miniboss/drowned/monitor
+contracts. `TestSonic3kHCZEvents` checks stored swing targets after camera motion,
+current/target X-lock ownership, and real manager/player/camera restore twice
+with forward release replay; `TestSonic3kLevelEventRewindSnapshot` and
+`TestZoneEventRewindSchemaGuard` cover both distinct captured target words.
+Focused1591/0/0/4 includes broader consumers, not 1591 HCZ products; four external
+authored-AIZ JAR cases skip. Named guards113/0/0/0 pass. The hard-coded GLFW
+pixel oracle fails before scene verification; native-only original 320 Sonic+Tails
+images do not replace engine pixel equality or additional viewport/donor/roster
+products. The [audit](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#final-single-invocation-strict-qualification)
+records the three assertion-red qualifiers, summary-only returned-HCZ7134 row,
+missing exit, load7126, unqualified slice spans and absent auxiliary coverage.
+Cold traversal, full product breadth, boss and cross-load/respawn obligations
+retain their inherited gaps; Root owns combined delivery validation.

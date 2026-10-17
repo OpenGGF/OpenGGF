@@ -1243,3 +1243,13 @@ and short latch assertions fail; corrected focused112 and complete sanctuary
 entry/return matrices2006 pass without skips. The [completion plan](../architecture/plans/2026-10-13-s3k-playable-completion.md#immediate-scene-fade-publication-after-rewind--2026-10-17)
 records exact commands and scope. Native RGB residuals, strict traces and
 configuration/cold/PAL/PCM limits outside these products remain open.
+
+
+Retained HCZ repair (2026-10-17, worker `t3-3aa3bc3c`):
+[HCZ1 local contracts](../architecture/validation/levels/s3k-hcz1-sonic.md#retained-hcz-handlers-and-incoming-act-2-carrier--2026-10-17)
+and [HCZ2 incoming boundary](../architecture/validation/levels/s3k-hcz2.md#retained-hcz1-to-hcz2-carrier-boundary--2026-10-17)
+now bind stored targets, X-lock release, actual restore/replay and final pass4
+regressions. Focused/named guards pass within their recorded scope; four external
+authored-AIZ JAR cases skip. All three single strict qualifiers remain red, slice
+span attribution and the hard-coded GLFW pixel oracle remain open. Other
+products/cold routes retain their matrix gaps; Root owns combined validation.
