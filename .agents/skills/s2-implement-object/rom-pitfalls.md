@@ -379,6 +379,19 @@ deferred-despawn flow to match S2 Obj02_Dead`.
 
 ---
 
+
+
+### Shared flight-timeout status is a literal byte write
+
+Unlike the death-flow difference above, S2 TailsCPU_Flying
+(s2.asm:39142–39155) and S3K Tails_FlySwim_Unknown
+(sonic3k.asm:26574–26588) both reset the entire status to02 at the
+offscreen300-update timeout. Preserve radii and water physics while clearing
+status flags; setting Air alone leaks the preceding legitimate LEFT facing.
+See the cross-game [literal-status pitfall](../s3k-implement-object/rom-pitfalls.md#literal-cpu-status-writes-preserve-independent-body-and-physics-fields).
+HCZ R44's independent natural-steering old-red and R46's bounded156green
+cover both game rules; they do not establish an actual route caller.
+
 ## P9 — Integer math drops y_sub carry in 16:16 position updates
 
 **Symptom.** Post-warp / post-teleport y_pos is exactly 1 pixel low (or

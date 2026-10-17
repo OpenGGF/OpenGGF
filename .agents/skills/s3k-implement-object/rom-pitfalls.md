@@ -6248,3 +6248,27 @@ forward replay before visibility flip and after release/recapture. Manual
 onSolidContact tests alone miss this retained managed latch. Origin: HCZ R18
 owner witnessdf2bbf, R19 genuine oldred57dd6a035 and R20/R21 local qualification,
 2026-10-17; existing dated trace audit/HCZ2 matrix record strict residual limits.
+
+
+## Literal CPU status writes preserve independent body and physics fields
+
+S3K Tails_FlySwim_Unknown (pinned044 sonic3k.asm:26574–26588) and S2
+TailsCPU_Flying (pinned34fc s2.asm:39142–39155) both write literal status02
+at the offscreen300-update timeout. Ordinary steering may legitimately face
+LEFT, and the on-screen branch only ORs InAir. A timeout that merely sets Air
+therefore retains status03 even though its integer-position marker is correct.
+
+Project the literal status through existing status-only operations: clear roll
+without restoring radii, clear underwater without restoring water speed constants,
+and clear rollingJump/OnObj/push/facing. Do not call generic setRolling(false),
+setInWater(false), a floor/ride reset or a global facing correction. The existing
+push setter clears derived push bookkeeping; it does not scan geometry.
+
+An independent component oracle can start at the public routine4 bootstrap with
+timer0, let299 actual updates establish LEFT, then check the native full-status
+write after update300. Keep the initial status fields declared independently of
+recorded rows; preserve ordinary/on-screen/handoff controls. Local sprite/CPU
+restore-forward coverage is not whole-world recreation or the actual route
+caller's witness. Origin: HCZ R43/R44 genuine S2/S3K status02/03 old-red after
+two local replay cycles per case; R45 timeout-only projection, R46 exact156green
+including separate declared7F/radii/water controls, R47 strict first13322.

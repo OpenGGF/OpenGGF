@@ -4077,6 +4077,15 @@ public class SidekickCpuController {
                 sidekick.setCentreXPreserveSubpixel((short) 0);
                 sidekick.setCentreYPreserveSubpixel((short) 0);
                 ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
+                // Tails_FlySwim_Unknown (sonic3k.asm:26574-26588) and
+                // TailsCPU_Flying (s2.asm:39142-39155) write status=$02.
+                // Status writes do not resize the body or restore water physics.
+                sidekick.clearRollingFlagPreserveRadii();
+                sidekick.clearUnderwaterStatusPreserveWaterPhysics();
+                sidekick.setRollingJump(false);
+                sidekick.setOnObject(false);
+                sidekick.setPushing(false);
+                sidekick.setDirection(Direction.RIGHT);
                 sidekick.setAir(true);
                 sidekick.setDoubleJumpFlag(1);
                 sidekick.setDoubleJumpProperty((byte) FLIGHT_FUEL);

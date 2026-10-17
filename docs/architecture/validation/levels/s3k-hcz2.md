@@ -424,3 +424,17 @@ no additional run, source variant, commit or delivery action in R41.
 R42 Root DIRECTread accepts all20current originals. Comparator warn0 remains
 separate from actual runtime468SMPSshadow+2FAST+1markRemembered warnings. Local
 preservation/cleanup does not change this coverage or prove the11920 writer.
+
+
+### R47 original canonical timeout-status measurement — 2026-10-17
+
+After independent S2/S3K timeout old-red->R46focused156green, one unchanged
+original AD40 fullcanonical35289 on d712+CPU8930 measures **complete returned
+HCZ14208, TOTAL6511=5447physics+1064animation**, firstNonCamera13322status09/01
+(lag59/warnbootstrap0), advancing historical R41first11920. Earlier animation
+3475 and strict residual remain; recent5 is not full-vector/no-regression proof.
+Six earlier complete windows stayzero. Actual giant_ring/SS6+return semantic
+assertions pass, but segment13 remains incomplete with ownership88306/gen10/
+act1-vs2 and4suppressed hardware identities, so no fullroute certificate.
+All original reports retained for RootDIRECTread; no runtime probe/native or
+actual11920 caller proof. [R47 exact result/limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r47-original-canonical-firstnoncamera13322-strict-red--2026-10-17).

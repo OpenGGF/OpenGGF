@@ -1412,3 +1412,19 @@ fails88306/act1 vs2 and its summary remains incomplete. First8775->11920 and
 fully green route; only recent5 is retained by the maintained summaries.
 Actual campaign8774 Aircaller/native001D producer and the11920 writer remain
 unqualified. [Exact old-red/source/focus/canonical/limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r41-original-canonical-advances-to11920-strict-route-remains-red--2026-10-17).
+
+
+R44–R48 native follower flight-timeout status (2026-10-17, CPU8930/test779247/4fcd):
+both S2 and S3K timeout owners write literal status02, not an OR of Air. The
+timeout-only projection clears status without restoring radii/water physics or
+clearing native interaction ownership. Independent naturalLEFT S2/S3K old-red
+after local restore-forward controls becomes green in exact R46focused156/0F0E0S;
+separate declared7F/radii/water controls also pass. R47 original canonical remains
+strict **1/1F0E0S**: returnedHCZ complete14208 TOTAL6511=5447physics+1064animation,
+firstNonCamera13322status0009/0001, earlier animation3475 retained. Six earlier
+windows are completezero; seg13 remains incomplete with ownership88306/act1-vs2
+and four suppressed hardware identities. Recent5/aggregate totals do not prove
+full-vector/no-regression equivalence. Actual11920 engine caller, native001D
+producer and campaign8774 Aircaller remain unobserved/separate. No fresh child
+fullguard or fullroute certificate: known LevelManager3153/3144 is parent-owned.
+[Exact old-red/source/focus/canonical/limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r47-original-canonical-firstnoncamera13322-strict-red--2026-10-17).

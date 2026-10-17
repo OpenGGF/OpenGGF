@@ -6280,3 +6280,232 @@ the20 hash-inventoried originals133157B may be consumed metadata_slot alone,
 without touching compiled maintained-candidate classes, copying/archive/receipt
 or unknown files. Source read/plan for11920 starts only after that commit and
 clean-accounting boundary; no new JVM, test/logger/runtime/native probe follows.
+
+
+## R43/R44 independent flight-timeout full-status old-red — 2026-10-17
+
+On d71264ed8 plus only reviewed flight-test77924700, R43ordinal47 appends
+two independent S2/S3K cases; all18 old methods/helpers/inlets are byte-exact
+after removing the additions/imports (original8883f72d). Native pinned044
+`Tails_FlySwim_Unknown` (sonic3k.asm:26574–26588) and pinned34fc
+`TailsCPU_Flying` (s2.asm:39142–39155) each reset the entire status byte to02
+at the offscreen300-word threshold. S3K alone additionally reloads flight fuel;
+the S2 test does not assert a nonexistent fuel write. This source-backed oracle
+is independent of the route's final11920 facing bit.
+
+R44ordinal48 runs exactly one normal Main-absolute-wrapper lifecycle:
+`-Dmse=off -Dtest=TestSidekickCpuControllerFlightAutoRecovery` (no profile),
+with the original three absolute ROM bindings, Java25, one EGL JAVA_TOOL_OPTIONS
+plus CLI flag, nullAL/no ambient display or LD_LIBRARY_PATH, Lua5.4, fork1/reuse/
+alphabetical. Session75570 ends **22:08:39UTC**, queue0/Maven24.488s, suite0.336s:
+**20 tests/2F0E0S**. Compiler is inside that request; runtime classes were
+up-to-date, test compilation completes, no separate build/retry/variant.
+
+Both new cases reach the final assertAll after natural299-update LEFT steering,
+FLIGHT/timer299/valid-cached-offscreen prerequisites and two in-place local
+leader/sprite/controller restore-forward cycles each. All captured post-timeout
+local-partition equality checks pass. The ONLY failures in each case are final
+modeled status expected02/actual03 (line655) and RIGHT/LEFT (line656). The other
+final footprint assertions pass: CATCH_UP/ROMroutine02/flightTimer0/integerXY0/
+unchanged1234,5678 fractions/control81/animation20; S3K fuelF0 passes before
+assertAll. All18 unchanged controls pass. Full20 XML identities/properties and
+both complete MultipleFailuresError/suppressed lists were inspected, 0 skips.
+Actual runtime output has24 FAST-load/no-manifest warnings, separate from the
+test failures; no setup/restore/CPU/prerequisite error occurred.
+
+Declared component inlet is existing TestableSprite/static synthetic leader
+history and public setInitialState(FLIGHT_AUTO_RECOVERY), starting actual timer0.
+No private299 seed, native pose/data input, CPU replacement, runtime hook or
+gameplay repair. The two restore cycles cover only the captured local partition,
+not world recreation or managed production entry. Actual11920 engine caller/
+consumed cache/timer remains unobserved; seg13 ownership88306 and native29/8774
+questions stay separate. This is a genuine independent old-red, not route parity
+or authorization to change the shared controller.
+
+Original XML39496B SHA0e07f1c15927f725f9761e991808aca7ac6a5e873e6d7653198a5b1da0452126
+and TXT8888B SHA994982ab296a0d18d9752d3d7c953165a0658e1a5dc9562114dc9c7156009773
+remain singly at the original target/surefire-reports paths for Root DIRECTread.
+No copy/archive/cleanup/commit. Post-run test779247/CPU4bb9/columna170/db5a/
+APS838c/movement3f324/shared sources/native4fdf/config SHA+mtime stay exact.
+Stop: no runtime fix or further JVM/probe is authorized in this phase.
+
+
+## R45 timeout literal-status candidate, source only — 2026-10-17
+
+Root DIRECT accepts R44's entire20case XML/full failures/properties and original
+XML0e07f1c1/TXT994982ab. At22:16:38UTC, only those2originals48384B are rehashed
+and consumed under metadata_slot alone after durable R44 facts; CPU/test class
+SHA+mtime are unchanged. No archive, copy, receipt or unknown deletion. Prior
+R44 IDs/results remain separate from R45ordinal49.
+
+Candidate CPU8930b6b4 adds exactly6 status operations plus3 native-citation lines
+inside updateFlightAutoRecovery's existing offscreen300 timeout, immediately
+before the unchanged setAir(true). Existing marker-owner operations clear roll
+without radii adjustment, underwater status without restoring water physics,
+rollingJump/OnObj/push, and facing. setPushing(false) also clears derived push
+bookkeeping; this is not a zero-side-effect claim. setOnObject(false) writes
+only the status projection, with no ride/latchedID/support-cache reset. The
+other timeout pose/fraction/control/timer/fuel/animation/state ordering and the
+on-screen OR-air/ordinary steering/handoff paths remain byte-exact. Removing
+those9 added lines recovers entire CPU4bb9f42f exactly. Native citations remain
+pinned044 sonic3k.asm26574–26588 and pinned34fc s2.asm39142–39155.
+
+Current TestArchitecturalSourceGuard has no explicit CPU class or
+updateFlightAutoRecovery method size budget; existing class/method ratchets and
+source guards are unchanged. No budget/allowance edit, counting rearrangement
+or extraction. APS838c/movement3f324/solid0624/provider31be/columna170/db5a and
+privateconfig SHA+mtime/native4fdf remain fixed.
+
+The genuine20case test779247 remains **byte-exact**. A separate source-only
+TestSidekickCpuControllerFlightTimeoutStatusInputs (4fcd746b) adds S2/S3K declared
+public-status input cases: actual299 updates from public routine4/timer0 with
+static synthetic component history, predeadline status7F/LEFT/valid-offscreen,
+then timeout status02 with7/14 radii, dimensions and underwater acceleration
+preserved. OnObj here is explicitly a declared status bit, not a managed ride.
+These two cases are **uncompiled/unexecuted**; do not transfer R44's observed
+bit0 old-red or passing local replay controls to the new status/radii oracles.
+No new runtime API/state/schema/provider or trace/native data input exists.
+
+Proposed focused gate: unchanged20case FlightAutoRecovery, new2case
+FlightTimeoutStatusInputs, existing CatchUpFlight, DespawnParity and
+RewindCapture classes; required S3K4 including both existing loading-class
+identities; affected runtime-access/trace-authority/rewind guards remain a
+separate parent-selected obligation. S2/S3K source status branches agree, with
+S3K fuel proof confined to its own oracle. No compiler/JVM/queue/native/route
+probe/logger/commit occurs in R45. Actual11920 engine caller/consumed branch
+remains unobserved; Root owns source review and the separate focused gate.
+
+
+## R46 native timeout status focused qualification — 2026-10-17
+
+After Root's actual-file approval, one normal no-profile Main-absolute-wrapper
+request96888 on d712+CPU8930/unchanged20case779247/new2case4fcd ends
+**22:22:52UTC**, queue0, Maven reports01:20min (rounded). Runtime4143/test4193
+sources compile within the same request; no standalone build/extra JVM. Original
+three absolute ROMs, Java25.0.4.1, one EGL JTO+CLI flag, nullAL/no ambient display
+or LD_LIBRARY_PATH, Lua5.4/fork1/reuse/alphabetical are unchanged.
+
+Actual **156/0F0E0S in10classes**, all XML testcase identities, full streams,
+properties, failure/error/skipped children and original TXT inspected:
+
+| Actual class | Cases | F/E/S |
+| --- | ---: | --- |
+| TestSidekickCpuControllerFlightAutoRecovery |20|0/0/0|
+| TestSidekickCpuControllerFlightTimeoutStatusInputs |2|0/0/0|
+| TestSidekickCpuControllerCatchUpFlight |7|0/0/0|
+| TestSidekickCpuDespawnParity |65|0/0/0|
+| TestSidekickCpuControllerRewindCapture |2|0/0/0|
+| TestS3kAiz1SkipHeadless |8|0/0/0|
+| com.openggf.game.sonic3k.TestSonic3kLevelLoading |36|0/0/0|
+| com.openggf.tests.TestSonic3kLevelLoading |7|0/0/0|
+| TestSonic3kBootstrapResolver |6|0/0/0|
+| TestSonic3kDecodingUtils |3|0/0/0|
+
+The **unchanged** natural-left S2/S3K R44 old-red now passes, including both
+local restore-forward cycles per case and all literal-status/pose/fraction/
+control/timer/fuel/animation oracles. Separately, the two previously unexecuted
+declared7F-input cases now pass literal02 and retained radii/dimensions/water
+acceleration. These are component status-input controls, not managed ride or
+actual11920 engine branch observations. Old ordinary steering/on-screen/handoff
+controls, shared S2/S3K catch-up/despawn/rewind consumers and mandatory S3K4
+(including both loading class identities) pass in the same exact selection.
+
+Actual XML runtime streams contain154 FAST/no-manifest warnings,1 rejected
+HURT/-1 fallback WAV warning and1 collision-index out-of-bounds diagnostic
+(chunkIndex3/offset6/tableLength6). These do not become a zero-warning claim.
+No unexpected failure/prerequisite/skip occurred. Post-run all source pins,
+privateconfig SHA+mtime, native4fdf and prior refs remain fixed. The20 inspected
+standard XML/TXT287086B are eligible for normal hashchecked metadata-slot-alone
+consumption after this durable account; preserve compiled candidate classes
+and unknown files. No commit/guards/original fullcase/native/extra JVM is
+authorized in R46. Canonical11920/source-caller and separate seg13 ownership
+88306 remain unqualified until a separately authorized original route run.
+
+
+## R47 original canonical firstNonCamera13322, strict red — 2026-10-17
+
+R47ordinal51 runs exactly one original maintained AD40/fromboot fullcase after
+R46focused156green. Session35289 uses the unchanged eb743 fullcase/base967c,
+trace-replay profile, normal Main-absolute wrapper, original3ROM/Java25.0.4.1/
+one EGL JTO+CLI/nullAL/no ambient display or LD_LIBRARY_PATH/Lua5.4/fork1/reuse/
+alphabetical. d712+CPU8930/20case779247/new2case4fcd/columna170/db5a stays frozen.
+No observer/output property/fixture/testbase/input change or standalone build.
+Terminal **22:27:01UTC**, queue0/Maven51.355s, method26.391/suite26.660s,
+**1/1F0E0S**. Runtime is up-to-date; test compilation is within this one request.
+
+All9JSON+9owner sidecars/fullJUnit XML+TXT and all available arrays/properties/
+skips/suppressed failures were inspected. Actual complete comparison windows:
+
+| Segment | Reference / complete compared rows | Total | Physics | Animation | Lag |
+| --- | ---: | ---: | ---: | ---: | ---: |
+|0 aiz|2290|0|0|0|0|
+|2 aiz_2|4023|0|0|0|11|
+|4 aiz_3|8235|0|0|0|14|
+|6 aiz_4|4103|0|0|0|16|
+|8 aiz_5|7175|0|0|0|62|
+|9 hcz|3574|0|0|0|55|
+|11 hcz_2|14208|6511|5447|1064|59|
+
+All these summaries have warningCount0/bootstrapErrorCount0. Counts are verified
+against actual original CSV row counts; complete means reference exhaustion in
+LiveTraceComparator.checkComplete, not an inferred movie offset. JSON does not
+independently emit a numeric compared cursor. Segment11 firstNonCamera is
+**13322 sidekick_status_byte native0009/engine0001**, delta8. First logged
+all-group mismatch is still3475 sidekick_animation_id native0017/engine001C.
+Seg11 summary SHA bac108c43163f1dd841fc51b355492de5187eaec4c05342e417d0dc2cb29ba77.
+R41's first11920/6553=5489+1064 becomes13322/6511=5447+1064 in this measurement;
+only a bounded recent5 buffer exists, so lower totals/different first fields
+are NOT exhaustive-vector equality/no-regression proof or a green prefix.
+Component R44oldred/R46green remain separate from actual11920 caller/consumed
+cache/timer observation, which is still absent. No new cause is assigned to13322.
+
+Segment13 remains **incomplete**, reference5393, actual compared count not
+emitted; its retained latest error row3208 is not substituted for that count.
+Summary63295=54642physics+8653animation, first287 y06D4/06DA, lag6/warnbootstrap0,
+SHA8d3f40103186273799f2d85b6d6bf20aa0dd271442e83330f2c52506d85f96f5. This entire
+available summary payload, six earlier zero payloads and gap payload are byte
+identical to R41; that does not extend to unretained full mismatch vectors.
+
+The maintained giant_ring entry assertion into SS6 and return-boundary
+admission into hcz_3 pass before segment13 loses production ownership at
+**BK2cursor88306, modeLEVEL/loadGeneration10/progressionZone1/romZone1/act1**,
+while segment13 expects act2. No segment beyond13 is qualified. Actual gap
+journal13gaps/0failures has hcz_2->ss_6 sourceclose/arm movieLogical77283/77283
+and ss_6->hcz_3 sourceclose83626/arm85096. Declared manifest event frames77284/
+85097 are separately named; exact observedBk2Frame is not serialized here,
+and no fitted offset is introduced. All gap/transition arrays are inspected.
+
+Full suppressed failures retain all4 identities and fingerprints: raw3256/
+PRE_MAIN_LOOP/KOS_DECOMPRESSION244 (different descriptor),3257/POST_OBJECTS/
+KOS_MODULE171 (different descriptor),5356/PRE_MAIN_LOOP/KOS_DECOMPRESSION245
+(no unclaimed submission),5357/POST_OBJECTS/KOS_MODULE172 (different descriptor).
+No readiness/descriptor/physics repair is attempted. Actual runtime streams
+contain468 SMPS presentation-shadow warnings,2 FAST/no-manifest warnings and
+1 markRemembered(4584,896),id1 warning, separate from comparator warningCount0.
+
+All original20files remain singly at target/trace-reports/run-chain and
+target/surefire-reports for Root DIRECTread; no copy/archive/cleanup/commit.
+Post-run all source/movie/config SHA+mtime/native4fdf/refs remain exact. No
+additional selector/JVM/native/logger/guard/repair is authorized. Root's known
+LevelManager3153/3144 extraction/fresh composed guards remain parent-owned and
+are not implied green by this run. Stop at13322/independent ownership88306.
+
+
+## R48 preservation before13322 source inventory — 2026-10-17
+
+Root DIRECT accepts all R47 20originals133156B/full available arrays/full2axis
+XML and four full hardware fingerprints. Preserve exact tested CPU8930,
+genuine20case779247 and declared2case4fcd with existing engineering evidence,
+current-POM CHANGELOG.0.7.prerelease.md fold and mirrored literal-status lesson.
+Historical CHANGELOG.0.7.md is untouched; Root separately owns its earlier
+Air-lock release sentence. R44old-red/R46focused156green/local restore controls
+and R47strict1F/first13322/ownership88306/warnings/limited vectors remain explicit.
+
+R48ordinal52 uses a normal local policy commit with seven trailers and parsed
+final GPT6.1 coauthor, then hash-consumes only accepted20 originals under
+metadata_slot alone, preserving all candidate classes. Tested source epoch is
+d712 plus exact CPU8930/779247/4fcd; a later documentation commit SHA is not a
+new execution epoch. No child fullguard is claimed: known LevelManager3153/
+3144 remains pending parent composition with separately tested48650119.
+Only after commit/clean accounting may existing native13319–13325 rows/source
+be read. No new test/logger/runtime/observer/native/JVM/probe/route/repair.
