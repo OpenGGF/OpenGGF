@@ -173,6 +173,8 @@ Unreleased. The earlier development themes remain in
   mod captures retain the accepted loader when restoring creator-owned child graphs.
   AIZ rewind preserves completed miniboss spawn history after the native results
   owner retires.
+  End signs allocate after the retained native boss/control slot, preserving
+  later Angel Island bridge slot identities when the Java flow is separate.
   Admitted title and save-menu ROM patterns survive the following level overlays,
   retaining unwritten spans while newer zero/art uploads supersede them.
   Prepared installation rejects detached art owners and stale generations.

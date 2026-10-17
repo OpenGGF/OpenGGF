@@ -3884,3 +3884,28 @@ helper and the Maven classworlds JVM; exact OS PID binding was not observed.
 The lead excluded the overlapping unrelated measurement pair. All subsequent
 JVM work used current Main's absolute wrapper and ordinary admission, including
 startup helpers. Queue-submit times were never used as execution timestamps.
+
+
+### Exact original AIZ standing-SST unit — 2026-10-17
+
+GPT-6.1 implementation checkout `t3-98d036a9`, local branch
+`bugfix/ai-s3k-aiz-bridge-standing-gpt61`, base8030832d2, qualifies original
+fullrun rows9510–9513 at actual SST12, the normal bridge identity and P1 centres.
+The [AIZ2 certificate](../validation/levels/s3k-aiz2.md#original-fullrun-normal-bridge-standing-sst--2026-10-17)
+contains the commands and exact evidence. Initial prefix77167 has four inner
+12/10 standing differences; authorized shorter prefix85012 pins the earlier
+signpost22/stub23 instead of native10/11. One runtime owner repair anchors
+`S3kBossDefeatSignpostFlow`'s signpost allocation to the retained native control.
+Independent short owner73232 is old-red18/20 after two whole-world restore/replay
+cycles; corrected detached/in-place/unset products pass with the same complete
+comparison. Focused60576 is88/0F/0E/0S, single corrected prefix99559 is1/0F/0E/0S
+(twenty assertions), fresh guards83910 are134/0F/0E/0S. Reports were inspected;
+queue waits are11s for focused controls and187s for guards, execution is separate.
+
+No allocator/bounds/min-Y owner, trace payload, original driver or Main source
+changed. The missing min-Y SST and exact three-worker lifetime/rewind, absent aux
+observations, other movies/configurations, full-prefix physics/animation and
+whole-chain/act certification remain separate obligations. The2828-class smoke
+preview was inspected; Root owns combined validation, composition with HCZ/CNZ,
+integration/push and eventual tree cleanup. This worker stops at its qualified
+local commit and preserves its checkout/branch for that handoff.

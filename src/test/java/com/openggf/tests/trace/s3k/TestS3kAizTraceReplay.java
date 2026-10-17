@@ -30,6 +30,7 @@ import java.util.Comparator;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_3K)
@@ -112,6 +113,85 @@ public class TestS3kAizTraceReplay extends AbstractTraceReplayTest {
     @Test
     public void replayMatchesTrace() throws Exception {
         super.replayMatchesTrace();
+    }
+
+    /**
+     * Exact normal-bridge standing SST in the original fullrun, not the later
+     * alternate movie's fire bridge. Aux rows 9510..9513 retain interact_slot=12;
+     * the parent changes from loc_2AE70 to loc_2AF70 in place (the display is SST17).
+     * Reach it exclusively through the existing bootstrap/input/lag driver.
+     */
+    @Test
+    public void normalBridgeStandingSstMatchesOriginalFullrun() throws Exception {
+        Path traceDir = traceDirectory();
+        assertTrue(Files.isDirectory(traceDir), "Required original AIZ fullrun fixture");
+        Path bk2Path = findBk2File(traceDir);
+        assertTrue(bk2Path != null, "Required original AIZ fullrun BK2");
+        TraceData trace = TraceData.load(traceDir);
+        java.util.List<org.junit.jupiter.api.function.Executable> standingChecks =
+                new java.util.ArrayList<>();
+        try (ReplayConfigScope scope = new ReplayConfigScope()) {
+            HeadlessTestFixture fixture = buildReplayFixture(trace, bk2Path);
+            TraceReplayBootstrap.ReplayStartState start = primeReplayFixture(trace, fixture);
+            TraceFrame previous = start.hasSeededTraceState()
+                    ? trace.getFrame(start.seededTraceIndex()) : null;
+            for (int row = start.startingTraceIndex(); row <= 9513; row++) {
+                TraceFrame current = trace.getFrame(row);
+                TraceExecutionPhase phase = TraceReplayBootstrap.phaseForReplay(trace, previous, current);
+                stepReplayFrame(trace, fixture, phase);
+                if (row >= 9391 && row <= 9393) {
+                    describeNormalBridgeAdmission(row, current, phase, fixture);
+                }
+                if (row >= 9510) {
+                    int sampledRow = row;
+                    int actualSlot = TraceCharacterState.fromSprite(fixture.sprite()).standOnObj();
+                    int actualX = fixture.sprite().getCentreX() & 0xFFFF;
+                    int actualY = fixture.sprite().getCentreY() & 0xFFFF;
+                    ObjectInstance ridden = GameServices.level().getObjectManager().getRidingObject(fixture.sprite());
+                    System.out.printf("AIZ_STANDING row=%d raw=%d phase=%s traceLF=%04X engineLF=%04X "
+                                    + "executed=%d expected=12 actual=%d%n",
+                            row, current.frame(), phase, current.gameplayFrameCounter(),
+                            GameServices.level().getFrameCounter(), fixture.frameCount(), actualSlot);
+                    standingChecks.add(() -> assertEquals(12, current.standOnObj(),
+                            "Original fullrun standing oracle at row " + sampledRow));
+                    standingChecks.add(() -> assertEquals(12, actualSlot,
+                            "Live player_stand at original fullrun row " + sampledRow));
+                    standingChecks.add(() -> assertEquals(current.x() & 0xFFFF, actualX,
+                            "Player centre X at original fullrun row " + sampledRow));
+                    standingChecks.add(() -> assertEquals(current.y() & 0xFFFF, actualY,
+                            "Player centre Y at original fullrun row " + sampledRow));
+                    standingChecks.add(() -> assertTrue(
+                            ridden instanceof com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance
+                                    && ridden.getSpawn().x() == 0x1AE5 && ridden.getSpawn().y() == 0x04F8
+                                    && ridden.getSpawn().subtype() == 8,
+                            "Standing owner must be the placed normal bridge at row " + sampledRow));
+                }
+                previous = current;
+            }
+            assertEquals(20, standingChecks.size(), "All four slot/position/owner samples were checked");
+            assertAll("Original fullrun normal bridge SST rows 9510..9513", standingChecks);
+        }
+    }
+
+    private void describeNormalBridgeAdmission(
+            int row, TraceFrame current, TraceExecutionPhase phase, HeadlessTestFixture fixture) {
+        ObjectManager objects = GameServices.level().getObjectManager();
+        System.out.printf("AIZ_ADMISSION row=%d raw=%d phase=%s traceLF=%04X engineLF=%04X "
+                        + "traceVint=%04X engineVint=%08X executed=%d occupancy=%s%n",
+                row, current.frame(), phase, current.gameplayFrameCounter(),
+                GameServices.level().getFrameCounter(), current.vblankCounter(),
+                com.openggf.game.session.EngineTiming.vIntRunCounter().value(), fixture.frameCount(),
+                new java.util.TreeMap<>(objects.occupiedDynamicSlotIdsWithReservations()));
+        for (int slot : new java.util.TreeSet<>(objects.occupiedDynamicSlotIdsWithReservations().keySet())) {
+            var owner = com.openggf.level.objects.NativeSstSlotAccess.currentOwner(objects, slot);
+            if (owner == null) {
+                continue; // Parent-held reservations remain explicit in occupancy above.
+            }
+            System.out.printf("AIZ_OCCUPANT row=%d slot=%d class=%s x=%04X y=%04X spawn=%s details=%s%n",
+                    row, slot, owner.getClass().getName(), owner.getX() & 0xFFFF, owner.getY() & 0xFFFF,
+                    owner.getSpawn(), com.openggf.level.objects.ObjectCallbackDispatch.call(
+                            objects, owner, owner::traceDebugDetails));
+        }
     }
 
     @Test

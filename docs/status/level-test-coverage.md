@@ -1,5 +1,15 @@
 # Level test coverage backlog
 
+Exact original AIZ standing SST (2026-10-17): the [AIZ2 certificate](../architecture/validation/levels/s3k-aiz2.md#original-fullrun-normal-bridge-standing-sst--2026-10-17)
+qualifies native320 Sonic + CPU Tails rows9510–9513 at SST12, including the actual
+placed bridge and player centre coordinates. One signpost allocation-anchor
+repair closes the earlier slot permutation; an independent owner scene restores
+and replays the complete registered world twice for detached, in-place and unset
+control boundaries. The omitted `Make_LevelSizeObj` min-Y SST, exact three-worker
+allocation/lifetimes, missing advertised auxiliary observations, other BK2s,
+viewport/donor/roster breadth and the full continuous chain remain open. This
+bounded standing result does not certify those obligations or a complete act.
+
 S3K horizontal spring terrain gate (2026-10-16): focused object fixtures sample
 real collision tiles for positive/zero/negative foot distances and a slope with
 only one penetrating foot; absent services, empty terrain and underwater descent

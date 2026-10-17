@@ -204,3 +204,92 @@ original absolute ROM paths:
 Commands used the updated main-workspace maven_queue.py from this composition's cwd, with `--normal -Dmse=off`.
 No broad smoke or release full suite was run in this slice. Title-card/load, strict HCZ and complete-route/native
 presentation obligations remain open.
+
+## Original fullrun normal bridge standing SST — 2026-10-17
+
+Bounded native320 Sonic + CPU Tails qualification, base `8030832d2ab6080e5324cdfe35e971677fd97b41`
+in T3 checkout `t3-98d036a9`, branch `bugfix/ai-s3k-aiz-bridge-standing-gpt61`.
+Only `S3kBossDefeatSignpostFlow.updateSpawnSignpost` changes runtime behavior.
+Its tested source SHA256 is `9339eadb3c26abb3115c2eb85f885392f68b58b0359d9c287276c2c9fb97a5da`.
+
+The original `aiz1_to_hcz_fullrun/s3-aiz1-2-sonictails.bk2` is unchanged
+(SHA256 `6837de0f67db7eb68f20b6f6df6a2872713a613d8b4dbc804847209c16b56e97`), as are
+its V5 CSV/aux data and the existing bootstrap/input/lag/clock driver. The original
+locked-on ROM has SHA1 `CFBF98C36C776677290A872547AC47C53D2761D6`.
+`TestS3kAizTraceReplay#normalBridgeStandingSstMatchesOriginalFullrun` reaches row9513
+and collects all four exact standing assertions, the normal bridge's actual
+placement `(1AE5,04F8)`, subtype8, and Sonic's centre X/Y. Comparison values never
+write gameplay. No assigned/seeded SST, movie-offset adjustment or native capture
+was used. The earlier `b96ef2c4d` display-child proof at alternate row22845 is not
+substituted for these original rows.
+
+The initial unchanged-runtime prefix (77167, terminal1 at10:39:14 UTC) has one
+failed case, four inner `player_stand` failures, zero errors/skips: rows9510–9513
+expect12 and read10. At completed row9391, engine decorations `(192A,049A)` and
+`(1982,04DD)` hold11/12 versus native10/11. Admission9392 therefore puts the normal
+bridge in engine10 versus native12; both display children already hold17.
+
+One authorized shorter diagnostic prefix ended at8941 (85012, 1/0F/0E/0S,
+10:42:12 UTC), using the same driver. At8938/39, the actual retained boss is7,
+results owner4, detached flow21, signpost22 and stub23. Native control7 instead
+creates signpost10/stub11. At8940 the engine's camera workers take10/11, while
+native X takes12. This earlier signpost allocation, not bridge initialization,
+causes the later decoration permutation. The temporary diagnostic method was
+removed after inspecting its result.
+
+`Obj_EndSignControlDoSign -> CreateChild6_Simple` calls `AllocateObjectAfterCurrent`
+from the native control SST (pinned skdisasm `044fa46`, sonic3k.asm:180483–180492,
+177205–177225,37952–37969). The repair uses existing
+`spawnChildAfterSlot(nativeControlSlot, factory)`; unset boundaries retain the
+current-flow fallback, and an in-place control uses its own slot. It changes no
+allocator, bounds worker, timing/input authority or trace field.
+
+| Obligation | Observed result |
+| --- | --- |
+| Exact standing / placed owner / P1 centres | Single post-fix prefix99559, 1/0F/0E/0S, twenty assertions, terminal0 at10:48:30 UTC; all four slots12 and centres match. At9392 decorations are10/11, parent12, display17. |
+| Independent allocation / recreation / forward replay | `TestS3kSignpostNativeControlSst`: normal allocation creates retained17, transient18, flow19; the transient retires itself. Old runtime73232 reads sign20 instead of18 after two complete-world restore/replay cycles (1/1F/0E/0S). Repaired detached case reads18; in-place and unset controls retain20. All three force recreation and compare every registered key immediately after restore and after45 neutral steps, twice. No slot is assigned. |
+| Existing owner controls and mandatory S3K4 |60576, 88/0F/0E/0S, terminal0 at10:47:27 UTC; both LevelLoading identities included. Queue wait11s, Maven1m09s. Independent owner3, existing flow4, signpost20, AIZ camera1, mandatory startup60. |
+| Fresh source / rewind / authority / object guards |83910, 134/0F/0E/0S, terminal0 at10:52:19 UTC; source72, rewind4, timing-authority25, object-standardization33. Queue wait187s, Maven32.965s. |
+
+All commands used Java25, normal admission through the current Main absolute
+`maven_queue.py` from this checkout, original absolute `s3k.gen`, surfaceless EGL,
+null OpenAL and no DISPLAY/WAYLAND_DISPLAY. With `MAIN_QUEUE` and `S3K_ROM` bound
+to those existing absolute paths, command prefix is:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk ALSOFT_DRIVERS=null python3 "$MAIN_QUEUE" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl
+```
+
+Append `-Ds3k.rom.path="$S3K_ROM" test -B` after each selection:
+
+- Exact initial/post-fix prefix: `-Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dtest=TestS3kAizTraceReplay#normalBridgeStandingSstMatchesOriginalFullrun`.
+- Independent old-red: `-Dtest=TestS3kSignpostNativeControlSst#detachedFlowAllocatesAfterTheRetainedControlAndReplaysTwice`.
+- Corrected focused controls: `-Dtest=TestS3kSignpostNativeControlSst,TestS3kBossDefeatSignpostFlow,TestS3kSignpostInstance,TestAizMinibossCameraUnlock,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`.
+- Fresh guards: `-Pguards -Dtest=TestArchitecturalSourceGuard,TestHardwareTimingAuthorityGuard,TestRewindArchitectureGuard,TestObjectPhysicsStandardizationGuard`.
+
+Rows9510–9513 are all `FULL_LEVEL_FRAME`: raw CSV values9510–9513,
+trace LF`23F6..23F9`, sampled engine LF`23F5..23F8`, fixture executed count9206–9209.
+Admission9391–9393 has trace LF`237F..2381`, sampled engine LF`237E..2380`,
+executed9087–9089. These are separate observed clocks, not a fitted row/BK2 offset.
+The supplemental `EngineTiming` facade read0 in this headless context; it is not
+used as an object-clock measurement or assertion.
+
+**Inherited three-worker gap:** exact ROM bytes at `$85DE0` jump to
+`CreateChild1_Normal` at `$84060`; table `$85DE8` has count-minus-one2 and pointers
+`$84A48` (X), `$84AA4` (min-Y), `$84AD2` (max-Y), each with zero position offsets.
+Native8940 retains X12 and max-Y14; min-Y13 is absent from the completed row.
+Its `$4000` first carry has integer part0 and the signed `ble` already-at/beyond-
+target branch snaps and deletes it. Native X retires at9272 and max-Y at8989.
+The AIZ engine owner still creates only X/max-Y and snaps min-Y directly. This
+unit does not repair or qualify that omitted SST, exact three-worker allocation,
+nontrivial min-Y continuation, allocation failure or those workers' rewind.
+They remain a separate source-owned obligation, not a standing-field waiver.
+
+The change-based preview against803 selects2828 smoke classes plus guards.
+The authorized bounded owner/startup/trace/guard selection replaces that broad
+run here; Root owns combined composition/integration validation. This certifies
+only these four standing rows, their placed owner/centres and the independent
+flow component replay. It is not a full-prefix physics/animation sweep, full SST
+or auxiliary-schema certificate, another BK2, native pixels, all configurations,
+full chain or act certification. Missing advertised aux families remain missing.
+No full chain, broad smoke or release suite was rerun.
