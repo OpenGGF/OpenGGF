@@ -113783,3 +113783,17 @@ corrected68955 affected4/0F0E0S with two forced-world replays. No unknown-zero
 fallback, async predecessor input, public snapshot/API, physics or timing change.
 These are separate source epochs; current campaign/HCZ frontiers stay historical
 and Root owns composed smoke/delivery. [Commands, sources and explicit limits](../architecture/validation/levels/s3k-icz-act1.md#r11-synchronous-known16-handoff-repair--2026-10-17).
+
+
+2026-10-17 workerR13 matched cold Sonic campaign (not a strict trace replay):
+original Main803 baseline38651 passes1/0F0E0S; exactf196 current49615 fails1/1F0E0S
+at originalcolddeath49613. Identical reviewed primitive observer qualifies52946/
+49884 rows; every explicit current key matches the baseline prefix, no alignment.
+First unequal P1 main48275 SSZ1,VInt48206/LF9027/OM9028: Y0A64/status29 versus
+0A6C/status21, cameraYphysical/copy0A04/0A0C; no clock/RNG/load/shield mismatch.
+First current ring deficit49581 follows baseline0→1/current0→0. The actual48275
+standing/contact writer is unobserved, no runtime repair/native correctness claim.
+Root independently inspected both original binaries; raw binaries then consumed
+metadata-slot-alone and temporary sources/instrumented classes removed. No extra
+JVM/native/media/sweep.
+[Exact commands, source pins, neighbors and limits](../architecture/validation/levels/s3k-ssz-act1.md#r13-matched-cold-campaign-first-tuple-difference--2026-10-17).

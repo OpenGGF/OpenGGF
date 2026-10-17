@@ -6559,3 +6559,71 @@ Only7,745bytes of targeted logs; no collision observer/replacement or gameplay
 writes. Temporary source/classes and owned XML/text consumed after facts.
 This closes the missing engine writer, not upstream regression/native-death
 causality. No runtime repair or additional execution; Root owns the next scope.
+
+
+### R13 matched cold-campaign baseline/current comparison — 2026-10-17
+
+Same98d/native01a1496e, sourceprep ordinal13 then baseline14/current15, separately
+registered exact returned task IDs; all earlier entries/refs/results preserved.
+Original maintained solo Sonic driver uses fixed BK2, not historical author policy.
+Source class9616921c…19c0/sessionb3e026f1…cb23/movie41cc9e73…d9b5 identical803/f196.
+Temporary originalclassSHA256`1ec8b9cbe7b0d2bdcb3bf061ff4473dfd1195dcbd85e70bd2c318708d5cde070`;
+external helper`a40197304e7f392921c672300d8e933cb8d368de0330f89a922f75ac103fef6e`;
+portable two-file diff`280231e8c2425a1c4599c0597f73d3a4f9f316b96509bf61310a89382f7c06ea`.
+Removing five marked added blocks restores original bytes; all original step/render/
+input/assert/capture/restore/history order remains.50 existing pure getter bodies
+are source-identical803/f196. Root reviewed source before compiler/gameplay gates.
+
+38651 baseline803 terminal0 18:17:02UTC,queue0/Maven1m46,method33.642s/class33.901s,
+1/0F0E0S. Original HPZ30123,SSZ39248/39249,GHZ43233,MTZ45735,Mecha49728,
+results50375,DEZ52067/52068,release52150,lastouter52270 all pass, with five45-step
+forward/two-replay windows.49615 current exactf196 terminal1 18:22:28UTC,
+queue0/Maven1m40,method30.874s/class31.170s,1/1F0E0S originalcolddeath49613.
+Compiler prerequisites passed unchanged reviewed source in each sole lifecycle;
+no repair/retry/separate build/targetcopy. DEZ WIP not adopted. Both commands
+(set `OPENGGF_MAIN` to the unchanged Main checkout; all ROM paths expand to the
+original absolute files):
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null \
+  LUA_BIN=/usr/bin/lua5.4 JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical \
+  '-Dtest=TestS3kLrzHpzSszColdCampaign#sonicColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory' \
+  -Dopenggf.cold.journal=target/cold-r12-base803-tuples.bin \
+  "-Dsonic1.rom.path=$OPENGGF_MAIN/s1.gen" \
+  "-Dsonic2.rom.path=$OPENGGF_MAIN/s2.gen" \
+  "-Ds3k.rom.path=$OPENGGF_MAIN/s3k.gen" test -B
+```
+
+Current changes ONLY output property to `target/cold-r13-current-f196-tuples.bin`;
+JDK_JAVA_OPTIONS/MAVEN_OPTS inherited unchanged, no profile. Explicit local branches
+preserve803 and70e refs; current branch starts exactlyf196, no Main/Root writes.
+
+Both journal structures, full41-field schema, limits, every serial/unique explicit
+key and raw BK2 P1/P2/host input validate.52946baseline/49884current rows ALL pass
+before/after primitive passivity. All49884 common keys match without fitted
+alignment; no comparison extends past a metadata mismatch (none occurs).
+First unequal P1 scalar main48275 (binaryseq48545), SSZ1,VInt48206/LF9027/OM9028:
+baseline Y0A64/status29 versuscurrent0A6C/status21, sameX187D.F000/Yfrac6800/
+vxgF400/vy0, following complete equality48274. Camera physical/copiedY first
+changes on same row0A04/0A0C. No clock/RNG/load/shield difference anywhere in
+sharedprefix. Firsthurt-state49161; first ring difference49201 current1/base0;
+both clearrings49375; first currentdeficit49581 is baseline0→1/current0→0,
+Y0634.0600/0633.FE00, then currentringlessdeath49613/basehurt. Actual48275
+contact/standing writer and49581 ring-count writer remain unobserved, so no cause,
+ROM truth, camera/RNG/physics/allocator correction or new owner unit is claimed.
+[Bounded neighbors, binary hashes and limits](../validation/levels/s3k-ssz-act1.md#r13-matched-cold-campaign-first-tuple-difference--2026-10-17).
+
+Root independently read both original schemas/binaries and joined explicit keys
+at48274/75/76,49161,49201,49375,49581,49613, confirming the bounded facts. Both raw
+binaries are then consumed under metadata-slot ALONE, no copy/archive/receipt.
+Inspected reports already consumed; all handles terminal. Original test source
+restored byte-exact9616921c…19c0, helper source removed and exactly two instrumented
+classes removed under intended writer before R14 source preparation. No runtime
+edit/further JVM/rebuild. Target last compiled f196+observer, whose instrumented
+cold/helper classes are now absent; do not call it a fresh maintained build.
+Main config6abd/mtime1792141742849921547 and private regular exact bytes/native
+checkouts/old refs preserved. Normal docs-only local evidence commit; seven parsed
+trailers/finalGPT6.1 coauthor/hooks. Root owns next owner/evidence scope/delivery.
