@@ -6047,3 +6047,28 @@ pop/landing/flight and next-pass hole reuse, copied-camera/vertical-wrap edge
 cases, and twice forced whole-world recreation/forward replay. Shared nonzero
 animal subtypes have additional player-relative branches; ending/capsule animal
 owners are separate. Neither is certified by the subtype0 correction.
+
+
+## Child_DrawSprite2 lifetime is separate from defeated-parent touch gating
+
+AIZ normal body/arm/three barrels remain live through the defeated parent's
+64-pass fade wait. Child_Draw_Sprite2/Child_DrawTouch_Sprite2 consume parent38
+bit4, install Delete_Current and clear on the next own SST entry. Status7 only
+suppresses body touch; loc_686E8 still runs Animate_Raw, while loc_68C12 runs its
+own barrel routine and may create a flare/FallingShot even on the flag-observing
+replacement pass. A formerly immediate parent cleanup can mask both wrong gates.
+
+Use a captured physical parent slot and only known consumed x/y/render/$38/status
+fields across same-slot control replacement, with native bclr1 supported before
+the tail. Do not retain an unregistered Java boss or fabricate unknown full RAM.
+FallingShot runs its own INIT/motion before reading physical grandparent status7;
+a final-pass birth needs that same retained-header contract. Test active routine
+work as well as occupancy, naturally allocated holes, pending deletion and twice
+forced whole-world recreation before/after replacement. A default Sonic scene
+cannot qualify the Knuckles-only natural barrel activation branch.
+
+Origin: AIZ R7,2026-10-17,skdisasm044fa46725c71187399e13f5ddb70e11d32dc024,
+loc_686E8/68720/68C12,Child_Draw*Sprite2,Go_Delete_Sprite_2,Obj_EndSignControl.
+Independent body/barrel red-first controls and the AIZ2 matrix record the exact
+line ranges, rejected inlet assumptions and bounded replay closure. No allocator,
+ring phase or general boss-dispatch rewrite follows from a later slot mismatch.

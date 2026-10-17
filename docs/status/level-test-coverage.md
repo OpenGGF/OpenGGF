@@ -28,6 +28,17 @@ full native SST comparison, missing advertised auxiliary observations,
 viewport/donor/roster breadth and the full continuous chain remain open. These
 bounded results do not certify a complete act.
 
+
+The subsequent [R7 child-retirement owner](../architecture/validation/levels/s3k-aiz2.md#r7-physical-parent-and-five-child-defeat-retirement--2026-10-17)
+closes the demonstrated early five-child cleanup: actual own-SST routines retain
+physical parent XY/flags through64wait, pending deletion and forced recreation.
+Final65 affected checks, exact2 guards and original/standing20/twoSS pass. The
+single alternate now has only the published803 trailing26179rings72/0 error;
+all ten new early spans are closed. The raw alternate remains red. These local
+results supersede the earlier unclosed-new-ring blocker, while fullaux, four
+native debris, broader SST/configuration/cold/BK2 and Root's composed validation
+remain open. Prior R1–R6 numbers retain their historical source/coverage limits.
+
 S3K horizontal spring terrain gate (2026-10-16): focused object fixtures sample
 real collision tiles for positive/zero/negative foot distances and a slope with
 only one penetrating foot; absent services, empty terrain and underwater descent

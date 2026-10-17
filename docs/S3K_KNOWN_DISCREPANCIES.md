@@ -1254,3 +1254,23 @@ as their complete explanation. Post-fix ring/SST causality, nonzero-subtype and
 ending/capsule animals, four native68E98 debris, fullaux/configuration/BK2/cold/
 viewport/roster/fullchain coverage remain open. Local result, no Main delivery.
 [Exact commands, profile qualification, evidence and limits](architecture/validation/levels/s3k-aiz2.md#r5-low-sst-journal-and-animal-lifetime-owner--2026-10-17).
+
+
+### AIZ component lifetime correction closes the new alternate rings (2026-10-17 R7)
+
+Normal body/arm/three barrels now keep their own SST dispatch through fatal
+status7 and the literal fade wait, then retire one own entry after the physical
+parent's bit4 tail. Captured known parent XY/render/$38/status survives same-slot
+replacement; body animation and active barrel callbacks continue before the
+separate touch/deletion gates. FallingShot reads that physical grandparent after
+its own routine, including a final replacement-pass birth. Independent natural
+production/forced-recreation controls and65 affected checks pass; original AIZ,
+all20 standing assertions, twoSS and exact affected guards pass.
+
+The once alternate72859 has only26179rings expected72/actual0, the exact remaining
+published803-control identity/values; ten new13740..16669 spans are resolved.
+The raw replay is still red for that inherited trailing field. Full aux/native
+SST/phase/position comparison, four omitted68E98 debris and cold/otherBK2/config/
+viewport/donor/roster/fullchain coverage remain open. This is a local owner
+qualification; Root owns composed validation and Main delivery.
+[Source, old-reds, review findings, commands and limits](architecture/validation/levels/s3k-aiz2.md#r7-physical-parent-and-five-child-defeat-retirement--2026-10-17).

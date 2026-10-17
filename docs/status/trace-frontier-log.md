@@ -113350,3 +113350,28 @@ ancestor/native/media/alternate/wholechain/broad checks or new owner edits.
 Independent source review no material finding; consumed diagnostics/no archives;
 local owner correction only. Root owns composition, remaining ring causality and
 combined smoke/source-authority guards; Main803 unchanged, no publication clearance.
+
+
+### 2026-10-17 — R7 native AIZ child retirement closes ten new alternate ring spans
+
+On owned98d HEAD0ee plus the reviewed local five-child/physical-header unit,
+[the R7 matrix](../architecture/validation/levels/s3k-aiz2.md#r7-physical-parent-and-five-child-defeat-retirement--2026-10-17)
+records source044fa467, independent production old-red42418 and active Knuckles
+old-red22347, actual64wait→bit4→pending→next-own-pass retirement, scalar physical
+parent recreation and the two independently found masked routine/animation gates.
+Final affected34345 passes65/0F0E0S; exact guards31137 pass2/0F0E0S.
+Earlier207 focused/116 unaffected guard cases retain their limited source epochs.
+
+99318 -Ptrace-replay exact original+standing20+twoSS selector (matrix command)
+passes3/0F0E0S at13:56:45UTC,59.964s/no queue. Original20463rows has zero
+physics/animation/warnings/bootstrap errors; raw9510..9513 each stand on12;
+seg0/2/4 complete with zero errors. Distinct72859 -Ptrace-segments exact
+TestS3kAizZoneSliceTraceReplay#replayMatchesTrace is1/1F0E0S at13:58:19UTC,
+37.343s/queue29s:26041rows, one physics error26179rings72/0, zero animation,
+warnings/bootstrap. All ten new13740..16669 ring spans disappear; the sole
+single-row/noncascading entry matches Root803 control78232. Raw alternate is
+still red; the local newly introduced ring blocker is closed, not a green
+full-route/integration certificate. Seven/eight advertised aux families, four
+native68E98 debris, fullSST/phase/positions/config/BK2/cold/fullchain remain open.
+No new captures/probes, source/input hydration or allocator/phase changes.
+Root owns composed requalification; local commit only, Main803 unchanged.

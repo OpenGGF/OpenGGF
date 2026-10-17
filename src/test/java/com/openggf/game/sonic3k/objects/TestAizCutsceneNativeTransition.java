@@ -201,7 +201,8 @@ class TestAizCutsceneNativeTransition {
         call(boss,"updateWaitTrigger");
         call(boss,"onInitialDelayComplete");
         assertEquals(6,manager.activeObjectsOfType(AizMinibossDebrisChild.class).size());
-        assertEquals(5,boss.getChildComponents().size());
+        assertEquals(5,AizMinibossComponent.family(manager,boss.getSlotIndex()).size());
+        assertTrue(boss.getChildComponents().isEmpty(),"the five native SSTs are not inline-parent callbacks");
         return boss;
     }
     private static void call(Object target,String name) throws Exception {

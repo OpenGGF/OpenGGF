@@ -182,7 +182,6 @@ class TestAizMinibossShotNativeInit {
             for (int slot = 7; slot <= 8; slot++) {
                 int index = slot - 7;
                 var barrel = manager.createDynamicObjectAtSlot(() -> new AizMinibossFlameBarrelChild(boss(), index, false), slot);
-                boss().getChildComponents().add(barrel);
             }
         }
         FrozenFightBoss boss() { return (FrozenFightBoss) NativeSstSlotAccess.currentOwner(manager, 6); }
