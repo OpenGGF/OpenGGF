@@ -157,3 +157,13 @@ wall-owner call per observed tick; floor/clamp calls pass unchanged. Native P2
 layer/selected terrain remains missing; no wrapping fault or production fix
 established. No new route/matrix/GLFW qualification. R7's partial assertion red
 is preserved. [Full selected metrics, passivity and native gaps](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r8-lexical-wall-owner-observer-and-actual7134-bg-result--2026-10-17).
+
+
+R9 source inventory (2026-10-17,32a): retained native7134 BG-1 now qualifies
+layers0E/0F/provider0200/0500. Source resolves FF907F94 to current HCZ shared
+16×16 ROM bytes and adjacent703E0179 to retained HCZ1 128×128 table tail.
+One cold-HCZ2 regression32483 is1/0F/1E/0S at missing block224 before lookup
+assertions; it is not an active-transition old-red. No runtime/API fix, retry,
+new engine trace, rewind/matrix/route qualification or native execution here.
+Internal address lookup plus resident-table/capture design handed back to Root.
+[Exact source and limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r9-native-word-layout-byte-provenance-and-resident-table-boundary--2026-10-17).

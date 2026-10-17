@@ -4343,3 +4343,18 @@ source inference is separate and negativeX does not establish a wrapping bug.
 No production edit or retry/new qualification. Generic test-only helper retained,
 temporary runner/consumed diagnostics removed; all jobs terminal. [Exact command,
 fingerprint, all windows and native limit](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r8-lexical-wall-owner-observer-and-actual7134-bg-result--2026-10-17).
+
+
+## R9 word-layout provenance; cross-load design handback — 2026-10-17
+
+Own tree safely FF32a, native4fdf retained, R9 exactID/ordinal10 registered.
+Root's retained native16359 proves BG7134-1 vs engine+31 with equal raw layers/
+provider. FF907F94 is Block_table+007F, low byte of current common HCZ E094;
+ROM3B91F8's entire0558-byte output matches all four native snapshots. It is not
+unknown stale layout RAM. Adjacent FF703E0179 instead belongs to HCZ1's retained
+128×128 tail6F80–79FF; HCZ2's shorter overwrite ends6F80. One cold loader/provider
+regression32483 errors at missing block224 before lookup assertions (1/0F/1E/0S),
+so no qualified old-red. No retry or production/API change. Stop before new
+encoded-layout addressing and resident-table/cross-load/rewind contracts; Root
+owns implementation authorization. Temporary test/diagnostics consumed. [Exact
+writers, command, source checks and bounded design](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r9-native-word-layout-byte-provenance-and-resident-table-boundary--2026-10-17).

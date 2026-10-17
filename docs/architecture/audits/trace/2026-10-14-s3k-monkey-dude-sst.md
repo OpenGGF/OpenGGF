@@ -3094,3 +3094,162 @@ provider/plane/layer; no expected tile is injected. Qualify callback PC
 before/after-instruction semantics explicitly. Existing compiled one-pass
 harness may be reused by Root with transparent RAM/PC observation; this worker
 starts no native process, build, new recording or source modification.
+
+
+## R9 native word-layout byte provenance and resident-table boundary — 2026-10-17
+
+Own clean4fa branch fast-forwarded under its intended-tree writer to Root
+32a3133d585d8519f6bf47fd821f91dc2d55f3b8 (two append-only evidence files;
+no runtime change). Actual native4fdf/gitlink322851cb preserved. Exact returned
+R9 taskId is recorded in both own registry entries, actual child ordinal10,
+24h expiry refreshed. R8 engine selectedBG+31 and all earlier results remain
+historical. This bounded slice makes **no production/API edit** and launches
+no native/capture, engine prefix, alternate, broad or guard request.
+
+### Qualified native input and source inventory
+
+Root's one native request16359 is terminal0. Existing task-directory
+`hcz-native7134-selected-wall-v1` retains provenance/callbacks/summary and four
+64KiB RAM snapshots for inputs70207–70210. They were read, not regenerated or
+modified. The original AD40 movie/input and clocks are those in the preceding
+brief. Native actual full VInt is00010FDC/00010FDD at7133/7134; LF1BA9/1BAA.
+A0 isFFFFB04A, raw P2 layers0E/0F, BGflagFF, diffs0200/0500. These now qualify
+the fields missing in R8; no P1-layer substitution or inferred native clock.
+
+| Owner row | FG signed distance | BG signed distance | Combined | Actual BG coordinate |
+| --- | ---: | ---: | ---: | --- |
+| 7133 | +18 | +2 | +2 | FF7D/0338 |
+| 7134 | +31 | -1 | -1 | FF80/0338 |
+
+Native7134 row mask007C, row index0018, row pointer address8022/value8E80,
+unsigned word X column01FF selectFF907F byte94. Find_Tile_BG returnsA1FF4A30,
+descriptorA216: tile0216, hFlip=false,vFlip=false, lrb15 set. Collision byte
+27758D=FF, angle0960FF=FF, rotated height0980F8=10. The adjacent FF70 query
+selectsFF907E byteE0, descriptor atFF703E=0179 with lrb15 clear. Native final
+0175.F800/vx0170/ground0/status60 is qualified by the existing endpoint.
+R8 engine FG/BG+31 with the same provider/layers is therefore a real lookup
+input disagreement; CPU nudge/layer/provider/metric-constant tuning is rejected.
+
+### Exact907F writer: current shared HCZ tile definitions
+
+`Load_Level` copies exactly1000 bytes from `LevelPtrs[zone*2+act]` to
+Level_layout_header8000–8FFF. ROM entry3 at09D5CC points to2834FA (HCZ2).
+**All1000 bytes match all four native RAM snapshots** at8000–8FFF. Thus907F
+is outside the loaded layout payload: it is **Block_table9000 +007F**.
+
+`LoadLevelLoadBlock2` loads the 16×16 primary stream to Block_table before
+appending the secondary stream at its running destination. Both HCZ LLB
+entries2/3 use primary ROM3B91F8 (`HCZ_16x16_Primary_Kos`). Static decoding
+with the existing pinned `tools/timing/s3k-instruction-ledgers/kos/kos_service.py`
+(read-only ROM input, fresh analysis state, unit instruction cost; no engine or
+native process/readiness input) emits0558 bytes in11544 modeled instructions.
+The entire decoded output equals RAM9000–9557 in all four existing snapshots.
+SHA256 `ec6b181dfeb7adb1684954a5fce2866a25493eccb94bdf3905e5611e25533234`.
+Offsets0078–007F are E091/E092/E093/**E094**;907F's94 is the low byte of the
+fourth pattern word of native tile15 (engine `Chunk(15).getPatternDesc(1,1)`).
+It is current ROM data, **not untouched layout or unknown previous-load RAM**.
+
+`HCZ1BGE_Normal` queues the HCZ2 16×16 secondary stream3BF17C to9558,
+so it leaves this common0558-byte prefix intact. The existing production
+loader independently confirms E094 and current block94/cell(0,3)=A216 in the
+short attempted regression below. No native RAM value is supplied to it.
+
+### Adjacent128×128 descriptor has a different, retained writer
+
+The second lookup also needs a resident table that a cold HCZ2 load truncates.
+Static original-ROM decoding establishes:
+
+| Native128×128 table writer | ROM source | Destination | Output length /exclusive end |
+| --- | --- | --- | --- |
+| HCZ common | 3BA2AA | 0000 | 0A00 /0A00 |
+| HCZ1 secondary | 3BD0CC | 0A00 | 7000 /7A00 |
+| HCZ2 secondary | 3C18EE | 0A00 | 6580 /6F80 |
+
+Common output, the entire HCZ2 overwrite0A00–6F7F, and retained HCZ1 tail
+6F80–79FF each exactly match all four native snapshots. Their decoded stream
+SHA256s respectively are
+`bfbb41fb6eb1e6e679c05f2b5ac7eabc1fee5d4734cf49f75d8c9cd3be33beb0`,
+`1b2e639deeac8b80c3d92daebf67f05d6c5779344e5fa080bcf3ad33da9a43cc`,
+`ef924e8ad40b21fcc062d4bf3525380e0107f8a3f8408b813b4fcceb069e68e7`.
+The first descriptor4A30=A216 is inside the current HCZ2 overwrite. The
+adjacent703E=0179 is outside it, at HCZ1 secondary output offset663E.
+Native Queue_Kos into RAM_start+A00 does not clear the remaining tail.
+This identifies the data's load provenance; no new RAM-write-PC capture was run.
+
+### Current owners and the one attempted short regression
+
+`Sonic3kLevel.loadMap` reads1000 ROM bytes, then `parseLayoutLayer` flattens
+only header-declared columns into Map and discards the encoded row-pointer/
+contiguous-byte workspace. `LevelLayoutLookup.getChunkDescAt` always wraps X
+by layer width and wraps BG Y by height before walking Map→Block→ChunkDesc.
+That cannot reproduce an unsigned word column spilling from the layout into
+resident Block_table bytes. `Sonic3kLevel.loadBlocksWithPlan/decodeBlocks`
+rebuild arrays to the target output length. HCZ's production transition queues
+and claims its native destination workloads, then requests RELOAD_TARGET_LEVEL;
+its captured build inputs retain frontend patterns, not this previous table tail.
+Cold HCZ2's valid table ends6F80 (223 complete blocks); native blockE0=224
+belongs to retained HCZ1 residency. The cold missing block is **not a measured
+new active-level failure** and cannot stand in for the real transition lifecycle.
+
+Exactly one independent ROM loader/provider regression was authored at32a,
+SHA256 `b2de44b215a45599dae758f88d5661a6554e8e922b19e98c3208484ea4532414`,
+method `TestS3kWordLayoutCollision#encodedBackgroundRowCanReadTheCurrentRomTileDefinitionBytes`.
+It uses SharedLevel's production HCZ2 load, DefaultBackgroundPlaneCollisionProvider
+with declared0200/0500 geometry, encoded ROM row6, negative/adjacent/positive
+coordinates; no fixture, native RAM, physics/aux rows or gameplay writes.
+It passes provider transform, ROM row pointer, current E094 and current
+block94/A216 sanity assertions, then errors while checking direct blockE0.
+Actual lookup/control assertions are **not reached**. This is **not qualified
+old-red, a parity result or rewind proof**. The cold setup omitted the native
+resident predecessor table; no second attempt is launched.
+
+Exact command from the own cwd, unchanged R3 absolute-path ROM/wrapper bindings:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_WORKSPACE/tools/testing/maven_queue.py" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" "-Ds3k.rom.path=$S3K_ROM" \
+  '-Dtest=TestS3kWordLayoutCollision#encodedBackgroundRowCanReadTheCurrentRomTileDefinitionBytes' \
+  -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical test -B
+```
+
+Request32483: **1/0F/1E/0S**, `IllegalArgumentException: Invalid block index:224`
+at the adjacent-table sanity check (line63), finished14:14:50 BST /13:14:50 UTC.
+Queue0s/Maven24.482s/JUnit0.581s. No retry, runtime change, descendant engine
+prefix, variant or wider suite. One-off test/classes and consumed XML/text are
+removed after inspection; useful native artifacts and prior results preserved.
+
+### Design handback before production/API or cross-load changes
+
+The demonstrated boundary needs two semantic owners, rather than a replacement
+wrap constant:
+
+1. An internal collision-layout addressing capability must preserve encoded row
+   pointers and resolve the native word address into the **current production
+   asset owners**.8000–8FFF is the loaded layout;9000 onward is the actual live
+   16×16 definition bytes (derivable from Chunk pattern words). It must use
+   unsigned word shifts/addition and the real row mask, without width modulo,
+   clamp, zone/row conditions or copying observation RAM. Keep the generic shared
+   lookup free of S3K name branches; existing render-only descriptor overrides
+   are not a collision hook. No public Mod API expansion is proposed here.
+2. Resident128×128 definitions must survive the owner's shorter destination
+   write across the actual level-build/commit boundary. Capture prior arrays as
+   value inputs and compose explicit ROM destination writes without clearing
+   unwritten bytes. A generic residency/carry contract is needed; neither a
+   cold HCZ2 default nor a forced blockE0 supplies the native predecessor.
+
+This is the requested stop boundary: it entails new internal collision and
+cross-load retention/capture contracts, so **Root must authorize the minimal
+implementation**. Do not silently model unknown RAM regions as width-wrap or
+empty data. Keep layout mutations/scene swaps coherent with encoded backing;
+current LevelSnapshot captures Block/Chunk refs and flattened Map bytes only,
+and SceneLayoutSnapshot likewise omits encoded pointers. Any new retained
+state must use existing per-game rewind ownership without casually expanding
+public snapshot signatures/pins. Required future proof is a short production
+HCZ1→HCZ2 owner transition, negative/adjacent/positive lookup controls and two
+forced full-world restores with forward replay. None is claimed by R9.
+
+Raw907F94 and adjacent703E0179 now have source-backed current/prior-load
+provenance. Production remains32a's runtime86171; canonical7134sidekick_x and
+independent9482air remain open, with no new trace counts or general HCZ claim.

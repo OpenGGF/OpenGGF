@@ -113388,3 +113388,17 @@ and exact R6 window/poststates agree. Native P2 layer/raw BG state/selected tile
 missing, no wrapping-owner inference or runtime change. No second/full/slice/
 alternate/native/media/guard/broad run or new GLFW certification. [Exact invocation,
 source fingerprint, windows and metrics](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r8-lexical-wall-owner-observer-and-actual7134-bg-result--2026-10-17).
+
+
+### 2026-10-17 — R9 native layout-word source attribution; engine frontier unchanged
+
+Source32a, no production change or engine replay. Root native16359's existing
+7134 FG+31/BG-1 with equal layers/provider narrows R8 engineBG+31 to layout
+addressing. Static current-ROM decoding plus all four retained snapshots proves
+FF907F94 is current16×16 tile data, while adjacent703E0179 is retained HCZ1
+128×128 data beyond HCZ2's shorter write. Sole normal/EGL ROM test32483,
+-Dtest=TestS3kWordLayoutCollision#encodedBackgroundRowCanReadTheCurrentRomTileDefinitionBytes,
+ends1/0F/1E/0S at missing cold block224 before lookup assertions. No qualified
+old-red, retry, fix or trace count/frontier advance. Root receives internal
+addressing plus cross-load residency/rewind design before implementation.
+[Exact command, provenance and stopping boundary](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r9-native-word-layout-byte-provenance-and-resident-table-boundary--2026-10-17).
