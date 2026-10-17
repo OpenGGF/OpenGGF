@@ -5307,3 +5307,38 @@ independent oracle; no raw archive or validation receipt. All earlier refs,
 native4fdf/private config/Main identity remain preserved. Normal local runtime/
 test+existing-doc commit is authorized after this bounded qualification; no
 further execution follows.
+
+
+#### Source basis after the native identity gate: clocks and observation limits
+
+Bounded source-only research after88245 identifies GPGX pin051d430d3d1b54625f9900c8f152d7f232e06daf,
+not another execution. In the cartridge path, system_frame_gen resets only
+mcycles_vdp on entry (system.c351–357), then subtracts the completed frame
+period from both signed CPU cycles and refresh_cycles at exit (685–689).
+The CD path's later rebasing lines are not the MD authority. Overshoot and
+relative refresh position survive. Hard reset initializes a nonzero,
+seven-MCLK-aligned CPU coordinate and schedules refresh; neither Open nor
+frame entry supplies a zero CPU initializer.
+
+Normal m68k_run execution calls the execute hook before opcode fetch,
+checks refresh afterward, then executes/charges the opcode (m68kcpu.c299–317).
+If C>=R at that check, R becomes C+896 and C gains14 MCLK. The delayed-IRQ
+path m68k_set_irq_delay (233–247) directly fetches/executes one instruction
+without the normal callback or refresh loop. Execute callbacks therefore
+cannot serve as a complete generic handler ledger. Read hooks follow their
+mapped handler while write hooks precede it (m68kcpu.h861–866,881–886,923–929);
+neither is a uniform bus phase. Interrupt acceptance can precede the first
+callback or occur inside an SR write. int_level alone does not supply the
+separate SR mask, assertion/acknowledgment history, live vector or bus waits.
+
+The stock ELF b4cc6dabc069a6f1b87790212d80f665d216e603aa4990955cc816d5bf98d218
+corroborates the signed fields and ordering: m68k36F025767E0,
+m68k_run36F000EF7D0, interrupt check36F00033F10. A source-only disconfirming
+local comparison could use the actual service instruction1C1A tst.w(FF0E)
+to1C1E, with a qualified same-run pair: base12 cycles=84MCLK, or98 with
+one refresh. This is a proposal, not an observed pair or a production budget.
+Actual FIFO-head/producer qualification, scheduler-boundary exclusion and
+final provenance would still be needed. The unused S3kKosBusTimeline has no
+production consumer; engine-owned Kos state, explicit rebase/phase origin,
+SR/IRQ/vector/bus/handler inputs and ending service context remain unresolved.
+No additional native/engine command, callback or fixture mutation occurred.

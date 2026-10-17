@@ -72,6 +72,20 @@ that looks like a real result.
 ### Measurement hazards — all produce plausible output
 
 
+Native execute callbacks are not a complete instruction ledger (2026-10-17,
+stock GPGX051d430d). The normal callback precedes opcode fetch and its refresh
+check; a VDP-triggered delayed-IRQ path directly executes another instruction
+without that callback or normal refresh check. Memory read hooks follow the
+mapped handler, whereas write hooks precede it. Do not interpret these hooks
+as uniform bus timestamps or infer absent handler work from missing events.
+The signed CPU and refresh counters are both rebased at frame exit, retaining
+overshoot; frame entry is not zero initialization. Identity-only binding with
+zero frames/callbacks proves access, not an observed clock origin, SR/IRQ or
+production readiness model. Source, ELF and claim limits are recorded in the
+existing S3K trace audit's native held-file identity checkpoint.
+
+
+
 A shared-fork test can erase a required launcher flag during cleanup
 (2026-10-17, graphics smoke). TestSurfacelessEglContext cleared the incoming
 headless backend instead of restoring it. Later real boots selected GLFW without
