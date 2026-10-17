@@ -113846,3 +113846,17 @@ or native correctness claim. Normal Main-absolute wrapper/no-profile except
 1m09,26.652s,52.053s. No new observer/native/variant/extra campaign after STOP.
 Local unit qualified, campaign/integration remain blocked. [Exact commands,
 source epochs, old-red/inlet distinctions and limits](../architecture/validation/levels/s3k-ssz-act1.md#r29-native-eggrobo-animal-launch-unit--2026-10-17).
+
+
+2026-10-17 cold R32/R33/R34 accepted post-launch pool comparison, not strict trace:
+exact803/committed781c same98d, original Sonic selector/no profile/normal Main-absolute
+queue/all3ROM/Java25/EGL/nullAL/fork1/reuse/alpha, same a690/f8ae source; only journal
+output differs.56945/70631 terminal0 each1/0F0E0S PREFIX48276/18603verifiedsamples.
+New launch path is active on629/630/631: FLY/FLY/WALK/frame1/X-512/Y-279/-256/-281;
+BASE MAIN/frame2/0/-1024. First common phase43944priorrender; first three pool spans
+self-close. Surviving48195 now removes630slot7, then629/63148196; bridge204 still
+BASE32/current8 andspring206BASE6/current9. No native/callback/uniqueparent/global
+motion proof; original uninstrumented full campaign96020 death49613 remains open.
+Root read all2642records/159typedobjects/fourreports; reusable tested helper retained,
+original driver restored/no maintained rebuild. No extra JVM/native/fix follows;
+next scope source-plan only. [Exact commands/epochs/hashes/limits](../architecture/plans/2026-10-13-s3k-playable-completion.md#r30r34-matched-typed-pool-evidence-and-preservation--2026-10-17).

@@ -71,6 +71,15 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Sparse structural deltas and typed last-sample poses have different contracts
+(2026-10-17, cold R32/R33). An intentionally internal full-pose key can advance
+without an emitted motion-only event; reconstruct only declared structural/phase
+keys. Six restore predecessor records repeat already emitted explicit keys, so
+checked key-record count differs from unique-key count. Keep actual metadata sparse,
+source-epoch ABSENT fields separate, and Java bindings run-local. Qualification
+requires the positive footer, verified post-footer write marker and terminal result;
+a prefix pass leaves later route finals unqualified.
+
 
 A shared-fork test can erase a required launcher flag during cleanup
 (2026-10-17, graphics smoke). TestSurfacelessEglContext cleared the incoming

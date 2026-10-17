@@ -4902,3 +4902,33 @@ current target contains frozen candidate plus maintained tests. R29 local commit
 preserves independently justified ROM behavior only; scaling/native-route/coverage
 limits and original completion blocker stay open. No further execution or probe
 authoring follows from this accounting; next scope is source-read provenance plan.
+
+
+## R32–R34 post-launch matched pool account (2026-10-17)
+
+Exact803 versus committed781c, same98d/original Sonic fixed driver and identical
+reviewed a690/f8ae observer.56945 and70631 each1/0F0E0S PREFIX through48276 only,
+18603verifiedsamples/6restoremarkers; ROOT DIRECT accepted all2642 strict JSON lines,
+159typed objects and four XML/TXT reports. BASE1323records/78typed versus CURRENT
+1319/81; common explicit keys2613 with equal clocks/load. Four absent803 launch
+fields stay separate from common phase comparison, and Java refs stay run-local.
+
+First common phase43944:264priorrendertrue/false. Structural splits43945→43956,
+44245→44254,47250→47262 close. First nonclosing48195 now removes current630slot7;
+629+631 retire48196. Both epochs show same48149/65/81 releaser624slot5 counterdrops
+and child IDs629/630/631. Current native launch mode is actually active: FLY/FLY/WALK,
+frame1,X-512,Y-279/-256/-281 versus BASE MAIN/frame2/0/-1024. No observed callback or
+unique parent link follows. At48201 BASEanimals occupy6/7/8 while current slots are
+free; layouts198/201/204 IDs632/633/634 take9/30/32 versus6/7/8. Spring20648213 takes
+6versus9. Known camera Y still first differs48275; no first arbitrary motion claim.
+This accepted launch unit has not closed the persistent pool/contact-order question
+or original full campaign death49613. Keep correct R5 and native initializer.
+
+R34 preserves tested helper f8ae functional body in place with header-only provenance
+and existing workflow entry; restores original Cold9616 and removes the four exact
+owned compiled outer/DeathEggCampaign/helper/Picture artifacts after hash inventory.
+No maintained uninstrumented rebuild follows. Accepted6originals10850465B are disposed
+only after the local commit under metadata_slot ALONE/fullhashchecks, no copies/
+archive/receipt. [Exact commands, counts, identities, original hashes and disposition](../../plans/2026-10-13-s3k-playable-completion.md#r30r34-matched-typed-pool-evidence-and-preservation--2026-10-17).
+Native scene/P1 truth, callback/retirement instruction and original route tail remain
+unqualified. Next step is source-read native-evidence inventory/plan only, no run.

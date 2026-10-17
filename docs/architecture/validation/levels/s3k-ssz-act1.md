@@ -2212,3 +2212,27 @@ open. No new campaign/native/media/diagnostic was run after STOP. All inspected
 standard reports were durably accounted then consumed metadata-slot ALONE, no
 copy/archive/receipt. The opt-in helper remains promoted; original driver has no
 instrumentation. R29 preserves this bounded fix locally, not integration clearance.
+
+
+## R32/R33 typed route evidence, R34 tool preservation — 2026-10-17
+
+Exact803/committed781c matched original Sonic prefixes56945/70631 both1/0F0E0S,
+no skips, through48276 AFTER original assertions/windows only. Each18603verified
+observations;1323/1319records,78/81typed events; all2642records/159objects/fourreports
+Root DIRECT inspected. Common2613actualkeys have equal clocks/load. First phase
+43944Animal264priorrendertrue/false precedes self-closing pool spans43945→43956,
+44245→44254,47250→47262. First surviving48195 now retires630slot7;629+631 current
+48196 versus BASE629/63048202 and63148204. Actual new launch mode is observed on
+629/630/631 at same48149/65/81: FLY/FLY/WALK, frame1, X-512, Y-279/-256/-281;
+BASE MAIN/frame2/0/-1024. Same releaser count drops are boundary associations only.
+Bridge204 still takesBASE32/current8 at48201, spring206BASE6/current9 at48213;
+known camera Y differs48275. This does not close original full-route49613 or prove
+native/unique-parent/callback/allocator truth. No arbitrary motion-only first split.
+
+Preserve the tested opt-in typed helper in existing tools, header-only relative
+f8ae; no installed campaign calls/property-only activation. Original Cold9616
+restored, known compiled instrumentation removed, no rebuild. Same normal Main
+absolute wrapper/no-profile/all3ROM/Java25/EGL/nullAL/noambient/fork1/reuse/alpha;
+queue1/0s, Maven1m46/1m41. Originals consumed only after normal local evidence commit
+under metadata_slot ALONE/fullhashchecks (10850465B), no archive/copy. Source/native
+planning only follows. [Exact commands, hashes, control limits and accounting](../../plans/2026-10-13-s3k-playable-completion.md#r30r34-matched-typed-pool-evidence-and-preservation--2026-10-17).

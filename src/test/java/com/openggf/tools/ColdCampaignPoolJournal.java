@@ -25,22 +25,38 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /**
- * Opt-in ColdCampaign pool journal; maintained-driver-call protocol, not a driver.
- * Purpose: compare SSZ1 ownership/reservation/admission boundaries across source
- * epochs without object callbacks or gameplay writes. Raw execution projections
- * may be stale; boundary sampling cannot resolve a birth and retirement inside a step.
- * Inputs: explicit calls from the original maintained driver's step/render/restore
- * boundaries, actual outer/input/context/cycle/step/load keys and original BK2 buttons;
- * {@code openggf.cold.poolJournal} selects one CREATE_NEW file under own target/.
- * Preserve every original call/assertion/replay window. Complete a prefix only after
- * original input48276 assertions/windows; positive SSZ activation/samples and equal
- * passivity counts are mandatory. A qualified prefix does not reach full-route finals.
- * No maintained campaign call blocks are installed; the property alone runs nothing.
- * Origin: cold-r16-earlier-pool-producer-source-prep-20261017, ordinal19/20 source;
- * R17/R18 matched8030832d2/f196e95da arms each verified18603 observations. Functional
- * source epoch c35c3a817c40bec8d31a8809170b7d71433c6d56b8fa35aac3cf36791805d164;
- * preservation changes this header only. Rewind ids are semantic, Java refs run-local;
- * neither is native SST identity or cross-run reference authority.
+ * Opt-in ColdCampaign pool and typed-phase journal; maintained-driver-call protocol,
+ * not a driver. No maintained campaign call blocks are installed, and the property
+ * alone runs nothing. The caller preserves original input, step/render, assertions,
+ * forward45, two-replay and restore ordering, then stops only after original48276
+ * assertions/windows. Use r30Open(session) with explicit before/after/restored calls.
+ *
+ * Purpose: compare SSZ1 registered ownership/reservation/admission and raw Animal /
+ * EggRobo phase boundaries across source epochs without object callbacks or writes.
+ * All registered animals/releasers are projected, with no fitted slot/actor filter.
+ * Motion-only pose changes do not emit: typed events carry the current and immediately
+ * previous actual sample; removals retain the last sampled pose. A counter/birth pair
+ * is boundary evidence, not a callback or unique parent link. Raw exec may be stale.
+ *
+ * Inputs: original BK2 buttons and explicit outer/input/context/cycle/window/load keys;
+ * openggf.cold.poolJournal selects one CREATE_NEW file under own target/. Hard bounds:
+ * 10MiB, 20k records/samples, 16k Java refs. Absent source-epoch fields are explicit
+ * ABSENT_IN_SOURCE_EPOCH, never synthesized POP/zero/null. Java refs are run-local;
+ * sparse structural absence does not fill clocks or arbitrary pose. Restore rebinding
+ * is not a gameplay birth. Four new launch fields are compared separately from803.
+ *
+ * Qualification requires positive SSZ activation, animal/releaser samples and typed
+ * events, equal sample/passivity counts, the footer, equal per-write/passivity counts,
+ * the post-footer R30_POOL_VALIDATED marker and terminal0. PREFIX is not full-route
+ * completion; full-route final assertions remain unreached at the opt-in stop.
+ *
+ * Origin: cold-r16-earlier-pool-producer-source-prep-20261017, ordinal19/20; original
+ * protocol c35c3a81 was preserved as8492f006. The16 TEMP R30 blocks retain reversible
+ * protocol provenance: strip them and restore the former header to recover8492.
+ * R30/R31 typed body f8aebe1b199f497d2e56e03a5a2ae426680dd14e65ad8884ebcff44e9d983b0e
+ * compiled/executed identically on BASE8030832d2 (R32/56945) and committed781c296ab
+ * (R33/70631), each18603 verified observations. R34 preservation changes this header
+ * only relative to that tested body; it installs no campaign instrumentation.
  */
 final class ColdCampaignPoolJournal {
     private static final String PROPERTY = "openggf.cold.poolJournal";
@@ -54,6 +70,17 @@ final class ColdCampaignPoolJournal {
     private static final Map<String, Field> BASE_FIELDS = new HashMap<>();
     private static ColdCampaignPoolJournal owned;
 
+    // TEMP R30 BEGIN typed-fields
+    // Temporary event-only extension. Strip all TEMP R30 blocks to recover8492.
+    private static GameplayCaptureSession r30OpeningSession;
+    private GameplayCaptureSession r30Session;
+    private long r30AnimalSamples, r30ReleaserSamples, r30TypedEvents, r30TypedEventRows;
+    private long r30WriteAttempts, r30VerifiedWrites;
+    private static final Map<Class<?>, Map<String, Field>> R30_FIELDS = new HashMap<>();
+    private static final Map<Class<?>, java.util.Set<String>> R30_ABSENT = new HashMap<>();
+    private static final String R30_SNAPSHOTS = "r30/typedSnapshots";
+    private static final String R30_PHASE = "r30/phase/";
+    // TEMP R30 END typed-fields
     private final OutputStream out;
     private final IdentityHashMap<Object, Integer> javaRefs = new IdentityHashMap<>();
     private TreeMap<String, Object> previous = new TreeMap<>();
@@ -71,10 +98,25 @@ final class ColdCampaignPoolJournal {
         if (!path.startsWith(target) || path.equals(target)) throw new AssertionError("R16 output outside own target");
         Files.createDirectories(path.getParent());
         out = Files.newOutputStream(path, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
+        // TEMP R30 BEGIN header-session
+        r30Session = r30OpeningSession;
+        if (r30Session == null) throw new AssertionError("R30 header requires original live session");
+        // TEMP R30 END header-session
         write(map("type", "HEADER", "schema", "COLD_POOL_R16_v1", "limitBytes", MAX_BYTES,
                 "limitRecords", MAX_RECORDS, "limitJavaIdentities", MAX_IDENTITIES, "limitSamples", MAX_SAMPLES,
                 "slotTupleColumns", List.of("allocatorState", "registeredRewindIds", "rawExecProjection",
                         "rawBorrowedOwnerProjection", "childReservationParentSources"),
+                // TEMP R30 BEGIN header-contract
+                "typedSchema", "COLD_POOL_R30_TYPED_PHASE_v1",
+                "typedScope", "all registered Animal and EggRobo instances; not live-owner or callback authority",
+                "typedEmission", "registration/structural/rebinding/phase transitions only; not first arbitrary motion difference",
+                "typedSnapshots", "previous actual sample/current at typed transitions; removal keeps last sampled state",
+                "typedAbsent", "ABSENT_IN_SOURCE_EPOCH is not POP, false, zero or null",
+                "parentGateInputs", "sampled x/y and raw cameraBounds; not an observed within-dispatch branch",
+                "parentUnavailable", "EggRobo has no stored prior-render bit or Animal-style defer/ground profile; never synthesize them",
+                "pairingLimit", "counter/birth association may be ambiguous; no persistent stock parent link",
+                "footerRule", "require terminal0 and R30_POOL_VALIDATED post-footer write/passivity marker",
+                // TEMP R30 END header-contract
                 "scope", "SSZ1 first observed activation through original main input 48276; PREFIX ONLY",
                 "driver", "original fixed BK2 plus original forward45/two replay windows",
                 "movieSha256", "41cc9e73afc5a62a901a7ad3afaedc509b19ac68127673be09ca018054b5d9b5",
@@ -88,6 +130,14 @@ final class ColdCampaignPoolJournal {
                         "between-step intervals can include original assertion/capture/history work")));
     }
 
+    // TEMP R30 BEGIN open-with-session
+    static void r30Open(GameplayCaptureSession session) throws IOException {
+        if (r30OpeningSession != null) throw new AssertionError("R30 overlapping open");
+        r30OpeningSession = session;
+        try { open(); } finally { r30OpeningSession = null; }
+    }
+
+    // TEMP R30 END open-with-session
     static void open() throws IOException {
         if (owned != null) throw new AssertionError("R16 observer already open");
         String path = System.getProperty(PROPERTY);
@@ -125,6 +175,10 @@ final class ColdCampaignPoolJournal {
         if (owned == null) return;
         if (!owned.activationSeen || owned.samples <= 0)
             throw new AssertionError("R16 prefix completed without observed SSZ activation/samples");
+        // TEMP R30 BEGIN positive-typed-prefix
+        if (!owned.r30Qualified())
+            throw new AssertionError("R30 prefix lacks positive typed observations/events or verified writes");
+        // TEMP R30 END positive-typed-prefix
         owned.prefixCompleted = true;
     }
 
@@ -140,10 +194,32 @@ final class ColdCampaignPoolJournal {
                     "restoreMarkers", journal.restoreMarkers, "activationSeen", journal.activationSeen,
                     "lastOriginalMainAssertions", journal.lastOriginalMainAssertions,
                     "prefixComplete", journal.prefixCompleted,
+                    // TEMP R30 BEGIN typed-footer
+                    "r30AnimalSamples", journal.r30AnimalSamples,
+                    "r30ReleaserSamples", journal.r30ReleaserSamples,
+                    "r30TypedEvents", journal.r30TypedEvents, "r30TypedEventRows", journal.r30TypedEventRows,
+                    "r30WriteAttemptsBeforeFooter", journal.r30WriteAttempts,
+                    "r30VerifiedWritesBeforeFooter", journal.r30VerifiedWrites,
+                    "r30TypedQualifiedBeforeFooter", journal.r30Qualified(),
+                    "r30FooterNeedsTerminal0AndPostWriteMarker", true,
+                    // TEMP R30 END typed-footer
                     "fullRouteFinalAssertionsReached", false,
                     "qualification", journal.activationSeen && journal.samples > 0
+                            // TEMP R30 BEGIN typed-footer-qualification
+                            && journal.r30Qualified()
+                            // TEMP R30 END typed-footer-qualification
                             && journal.samples == journal.verifiedSamples && journal.prefixCompleted
                             ? "COMPLETE_BOUNDED_PREFIX_OBSERVATION" : "INCOMPLETE_DO_NOT_ATTRIBUTE"));
+            // TEMP R30 BEGIN post-footer-proof
+            Picture r30BeforeMarker = journal.r30ReadWriteProjection();
+            System.out.println((journal.prefixCompleted && journal.r30Qualified()
+                    ? "R30_POOL_VALIDATED" : "R30_POOL_INCOMPLETE") + " samples=" + journal.samples
+                    + " verified=" + journal.verifiedSamples + " typedEvents=" + journal.r30TypedEvents
+                    + " writes=" + journal.r30WriteAttempts + " verifiedWrites=" + journal.r30VerifiedWrites
+                    + " records=" + journal.records);
+            if (!r30BeforeMarker.equals(journal.r30ReadWriteProjection()))
+                throw new AssertionError("R30 completion marker changed known projection");
+            // TEMP R30 END post-footer-proof
         } finally {
             try { journal.out.close(); } catch (IOException e) { throw new UncheckedIOException(e); }
         }
@@ -165,6 +241,9 @@ final class ColdCampaignPoolJournal {
         if (!before.ssz()) return;
         if (samples >= MAX_SAMPLES) throw new AssertionError("R16 sample cap; STOP incomplete");
         samples++;
+        // TEMP R30 BEGIN typed-positive-counts
+        r30CountTypedSample(before.state());
+        // TEMP R30 END typed-positive-counts
         var boundary = map("sample", samples, "outerMovieFrameIndex", outer, "inputListIndex", input,
                 "bk2FrameIndex", buttons.frameIndex(), "context", context, "cycle", cycle,
                 "windowStep", step, "windowLabel", label, "phase", phase,
@@ -177,6 +256,11 @@ final class ColdCampaignPoolJournal {
                 changed.put(entry.getKey(), entry.getValue());
         }
         for (String key : previous.keySet()) if (!before.state().containsKey(key)) removed.add(key);
+        // TEMP R30 BEGIN suppress-motion-only-emission
+        // Only the NEW full-pose key is internal; no original structural comparison is dropped.
+        changed.remove(R30_SNAPSHOTS);
+        removed.remove(R30_SNAPSHOTS);
+        // TEMP R30 END suppress-motion-only-emission
         boolean rebound = !before.bindings().equals(previousBindings);
         boolean targetAdmission = changed.entrySet().stream().anyMatch(entry -> entry.getKey().startsWith("object/")
                 && !previous.containsKey(entry.getKey()) && targetDescriptor(entry.getValue()));
@@ -201,7 +285,17 @@ final class ColdCampaignPoolJournal {
                 row.put("previousOrderedPool", orderedPool(previous));
             }
             if (activation) row.put("fullState", before.state());
+            // TEMP R30 BEGIN typed-event-payload
+            var typedEvents = r30Transitions(previous, before.state(), previousBindings, before.bindings(),
+                    activation || restore);
+            row.put("r30TypedTransitions", typedEvents);
+            row.put("r30TypedSnapshotMeaning", "last actual sample/current; not callback or first motion split");
+            // TEMP R30 END typed-event-payload
             write(row);
+            // TEMP R30 BEGIN typed-event-count
+            r30TypedEvents += typedEvents.size();
+            if (!typedEvents.isEmpty()) r30TypedEventRows++;
+            // TEMP R30 END typed-event-count
             emittedSamples++;
         }
         Picture after = picture(session);
@@ -284,6 +378,9 @@ final class ColdCampaignPoolJournal {
                     "rawDestroyedRespawnable", object instanceof AbstractObjectInstance ? baseRaw(object, "destroyedRespawnable") : null));
             bindings.put(key, ref(object));
         }
+        // TEMP R30 BEGIN typed-picture
+        r30ProjectActors(state, keys, union, activeSpawns, dynamicSet);
+        // TEMP R30 END typed-picture
         TreeMap<Integer, List<String>> reservations = new TreeMap<>();
         Map<?, ?> childSlots = (Map<?, ?>) raw(manager, "reservedChildSlots");
         var childReservations = new ArrayList<Object>();
@@ -365,6 +462,156 @@ final class ColdCampaignPoolJournal {
         return result;
     }
 
+    // TEMP R30 BEGIN typed-raw-protocol
+    private boolean r30Qualified() {
+        return r30AnimalSamples > 0 && r30ReleaserSamples > 0 && r30TypedEvents > 0
+                && samples == verifiedSamples && r30WriteAttempts == r30VerifiedWrites
+                && r30WriteAttempts == records;
+    }
+
+    private void r30CountTypedSample(TreeMap<String, Object> state) {
+        boolean animal = false, releaser = false;
+        for (Object value : r30Snapshots(state).values()) {
+            Map<?, ?> snapshot = (Map<?, ?>) value;
+            animal |= "ANIMAL".equals(snapshot.get("kind"));
+            releaser |= "EGG_ROBO".equals(snapshot.get("kind"))
+                    && "ANIMAL_RELEASER".equals(snapshot.get("mode"));
+        }
+        if (animal) r30AnimalSamples++;
+        if (releaser) r30ReleaserSamples++;
+    }
+
+    private void r30ProjectActors(TreeMap<String, Object> state, IdentityHashMap<Object, String> keys,
+                                 IdentityHashMap<Object, Boolean> union,
+                                 IdentityHashMap<Object, ObjectSpawn> activeSpawns,
+                                 IdentityHashMap<Object, Boolean> dynamics) throws ReflectiveOperationException {
+        var snapshots = new TreeMap<String, Object>();
+        for (Object object : union.keySet()) {
+            // Registration only; raw exec may be stale. Never query actor liveness.
+            if (!activeSpawns.containsKey(object) && !dynamics.containsKey(object)) continue;
+            TreeMap<String, Object> snapshot, phase;
+            if (object instanceof com.openggf.level.objects.AnimalObjectInstance) {
+                Class<?> owner = com.openggf.level.objects.AnimalObjectInstance.class;
+                snapshot = map("kind", "ANIMAL");
+                for (String name : List.of("currentX", "currentY", "xSubpixel", "ySubpixel", "xVelocity",
+                        "yVelocity", "groundXVelocity", "groundYVelocity", "animFrameTimer", "animFrame",
+                        "mappingSetIndex", "artVariant", "pointsValue"))
+                    snapshot.put(name, r30Scalar(object, owner, name, "int", false));
+                for (String name : List.of("firstDisplayFrame", "spawnedPoints", "deferArtVariantRng", "romRenderOnScreen"))
+                    snapshot.put(name, r30Scalar(object, owner, name, "boolean", false));
+                snapshot.put("state", r30Scalar(object, owner, "state", owner.getName() + "$State", false));
+                snapshot.put("definition", r30Scalar(object, owner, "definition", "com.openggf.level.objects.AnimalType", false));
+                snapshot.put("launchMode", r30Scalar(object, owner, "launchMode", owner.getName() + "$LaunchMode", true));
+                for (String name : List.of("launchTypeA", "launchTypeB"))
+                    snapshot.put(name, r30Scalar(object, owner, name, "com.openggf.level.objects.AnimalType", true));
+                snapshot.put("launchParentFlipX", r30Scalar(object, owner, "launchParentFlipX", "boolean", true));
+                phase = r30Pick(snapshot, List.of("kind", "state", "definition", "artVariant", "mappingSetIndex",
+                        "firstDisplayFrame", "deferArtVariantRng", "romRenderOnScreen", "launchMode",
+                        "launchTypeA", "launchTypeB", "launchParentFlipX"));
+            } else if (object instanceof com.openggf.game.sonic3k.objects.badniks.EggRoboBadnikInstance) {
+                Class<?> owner = com.openggf.game.sonic3k.objects.badniks.EggRoboBadnikInstance.class;
+                snapshot = map("kind", "EGG_ROBO");
+                for (String name : List.of("group", "x", "y", "flyX", "flyY", "xVelocity", "yVelocity",
+                        "animalsLeft", "previousY", "previousPreviousY", "swingMaximum", "swingAcceleration"))
+                    snapshot.put(name, r30Scalar(object, owner, name, "int", false));
+                for (String name : List.of("childrenSpawned", "lowPriorityArt", "flyByGateChecked", "swingDescending", "gunArmed"))
+                    snapshot.put(name, r30Scalar(object, owner, name, "boolean", false));
+                snapshot.put("mode", r30Scalar(object, owner, "mode", owner.getName() + "$Mode", false));
+                snapshot.put("state", r30Scalar(object, owner, "state", owner.getName() + "$State", false));
+                snapshot.put("facingLeft", r30Scalar(object, com.openggf.level.objects.AbstractBadnikInstance.class,
+                        "facingLeft", "boolean", false));
+                Class<?> mappingOwner = com.openggf.game.sonic3k.objects.badniks.EggRoboBadnikInstance.class.getSuperclass();
+                if (mappingOwner == null || !mappingOwner.getName().equals(
+                        "com.openggf.game.sonic3k.objects.badniks.AbstractS3kBadnikInstance"))
+                    throw new AssertionError("R31 EggRobo superclass field-owner contract");
+                snapshot.put("mappingFrame", r30Scalar(object, mappingOwner, "mappingFrame", "int", false));
+                Object bounds = baseRaw(null, "cameraBounds");
+                if (!(bounds instanceof com.openggf.level.objects.CameraBounds))
+                    throw new AssertionError("R30 cameraBounds declared type");
+                var gate = new TreeMap<String, Object>();
+                for (String name : List.of("left", "top", "right", "bottom", "verticalWrapRange"))
+                    gate.put(name, r30Scalar(bounds, com.openggf.level.objects.CameraBounds.class, name, "int", false));
+                snapshot.put("sampledParentGateCameraBounds", gate);
+                phase = r30Pick(snapshot, List.of("kind", "mode", "state", "animalsLeft", "childrenSpawned",
+                        "lowPriorityArt", "flyByGateChecked", "facingLeft"));
+            } else continue;
+            String key = keys.get(object);
+            if (key == null) throw new AssertionError("R30 registered actor missing semantic key");
+            snapshot.put("registration", state.get("object/" + key));
+            snapshots.put(key, snapshot);
+            state.put(R30_PHASE + key, phase);
+        }
+        state.put(R30_SNAPSHOTS, snapshots);
+    }
+
+    private static TreeMap<String, Object> r30Pick(Map<String, Object> values, List<String> names) {
+        var result = new TreeMap<String, Object>();
+        for (String name : names) result.put(name, values.get(name));
+        return result;
+    }
+
+    private static Object r30Scalar(Object object, Class<?> owner, String name, String expectedType,
+                                    boolean optionalInOlderEpoch) throws ReflectiveOperationException {
+        var absentNames = R30_ABSENT.computeIfAbsent(owner, ignored -> new java.util.HashSet<>());
+        if (optionalInOlderEpoch && absentNames.contains(name)) return "ABSENT_IN_SOURCE_EPOCH";
+        var fields = R30_FIELDS.computeIfAbsent(owner, ignored -> new HashMap<>());
+        Field field = fields.get(name);
+        if (field == null) {
+            try { field = owner.getDeclaredField(name); }
+            catch (NoSuchFieldException absent) {
+                if (optionalInOlderEpoch) { absentNames.add(name); return "ABSENT_IN_SOURCE_EPOCH"; }
+                throw absent;
+            }
+            if (!field.getType().getName().equals(expectedType))
+                throw new AssertionError("R30 declared type " + owner.getName() + "." + name + ": " + field.getType());
+            field.setAccessible(true);
+            fields.put(name, field);
+        }
+        Object value = field.get(object);
+        if (value == null) return null;
+        if (value instanceof Integer || value instanceof Boolean) return value;
+        if (value instanceof Enum<?> item) return item.name();
+        throw new AssertionError("R30 non-scalar field " + owner.getName() + "." + name);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> r30Snapshots(TreeMap<String, Object> state) {
+        Object value = state.get(R30_SNAPSHOTS);
+        return value == null ? java.util.Collections.emptyMap() : (Map<String, Object>) value;
+    }
+
+    private static TreeMap<String, Object> r30Transitions(TreeMap<String, Object> previous,
+                                                         TreeMap<String, Object> current,
+                                                         TreeMap<String, Object> previousBindings,
+                                                         TreeMap<String, Object> currentBindings,
+                                                         boolean fullBoundary) {
+        Map<String, Object> before = r30Snapshots(previous), after = r30Snapshots(current);
+        var keys = new java.util.TreeSet<String>(); keys.addAll(before.keySet()); keys.addAll(after.keySet());
+        var events = new TreeMap<String, Object>();
+        for (String key : keys) {
+            var reasons = new ArrayList<String>();
+            if (!before.containsKey(key)) reasons.add("REGISTERED_TYPED_APPEARANCE_NOT_CALLBACK");
+            if (!after.containsKey(key)) reasons.add("REGISTERED_TYPED_REMOVAL_NOT_DELETE_INSTRUCTION");
+            if (!java.util.Objects.equals(previous.get(R30_PHASE + key), current.get(R30_PHASE + key)))
+                reasons.add("TYPED_PHASE_CHANGED");
+            if (!java.util.Objects.equals(previous.get("object/" + key), current.get("object/" + key)))
+                reasons.add("STRUCTURAL_DESCRIPTOR_CHANGED");
+            if (!java.util.Objects.equals(previousBindings.get(key), currentBindings.get(key)))
+                reasons.add("RUN_LOCAL_REFERENCE_REBOUND_NOT_GAMEPLAY_BIRTH");
+            if (fullBoundary) reasons.add("INITIAL_OR_RESTORE_BOUNDARY");
+            if (!reasons.isEmpty()) events.put(key, map("reasons", reasons,
+                    "previousActualSample", before.get(key), "currentActualSample", after.get(key)));
+        }
+        return events;
+    }
+
+    private Picture r30ReadWriteProjection() {
+        if (r30Session == null) throw new AssertionError("R30 write without original session");
+        try { return picture(r30Session); }
+        catch (ReflectiveOperationException failure) { throw new AssertionError("R30 write projection contract", failure); }
+    }
+
+    // TEMP R30 END typed-raw-protocol
     private static List<Object> orderedPool(TreeMap<String, Object> state) {
         var result = new ArrayList<Object>();
         for (var entry : state.entrySet()) if (entry.getKey().startsWith("slot/"))
@@ -433,11 +680,21 @@ final class ColdCampaignPoolJournal {
         try { return JSON.writeValueAsString(value); } catch (IOException e) { throw new UncheckedIOException(e); }
     }
     private void write(Object row) {
+        // TEMP R30 BEGIN write-before-projection
+        Picture r30BeforeWrite = r30ReadWriteProjection();
+        r30WriteAttempts++;
+        // TEMP R30 END write-before-projection
         try {
             byte[] encoded = JSON.writeValueAsBytes(row);
             if (records >= MAX_RECORDS || bytes + encoded.length + 1 > MAX_BYTES)
                 throw new AssertionError("R16 journal cap; STOP incomplete; never truncate/continue");
             out.write(encoded); out.write('\n'); out.flush(); bytes += encoded.length + 1; records++;
+            // TEMP R30 BEGIN write-after-projection
+            Picture r30AfterWrite = r30ReadWriteProjection();
+            if (!r30BeforeWrite.equals(r30AfterWrite))
+                throw new AssertionError("R30 output changed declared primitive/reference projection");
+            r30VerifiedWrites++;
+            // TEMP R30 END write-after-projection
         } catch (IOException e) { throw new UncheckedIOException(e); }
     }
     private record Picture(boolean ssz, Object manager, TreeMap<String, Object> state,
