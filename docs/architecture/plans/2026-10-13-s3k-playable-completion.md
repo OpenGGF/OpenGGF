@@ -4368,3 +4368,56 @@ cannot express. No signature pin fabrication, hook edit or bypass. Eleven
 owned files remain staged on R4e207; all tested hashes/results and consumed
 diagnostic state are preserved. Root has the exact policy-owner handoff;
 no extra runtime/source variant or Maven run is justified by this blocker.
+
+
+### R6 actual post-animal route witness — 2026-10-17
+
+Exact task gpt61_aiz_post_animal_pool_r6, same native01a1496e/tree98d/branch,
+24h expiry registered, R5 entry preserved. Root explicitly allowed the one
+original-driver13742 diagnostic on frozen e207+11stagedR5files while its separate
+policy owner fixes the normal commit hook. Not a committed-R5 execution.
+Animal73f1c45485…b5ed/GameRules7b694eba…b1c/Aiz1878 unchanged. One9577,
+trace-segments exact #observePostAnimalLivePoolReadOnly, normal current Main
+absolute wrapper/all3ROM/EGL/nullAL/noambient/JTOsingle/singlefork/reuse/alpha.
+Terminal1 at13:14:15UTC,Maven41.509s/no wait,1/1F0E0S;13713comparedrows,
+known13740..13742rings1/2 only,0animation/warnings/bootstrap,eightmissingaux.
+223events/5,805,290bytes<10MB. Temporary observer source restored exactly and
+all11R5 staged path/blob identities unchanged. Temporary9577 observer class
+removed with its inspected diagnostics, no maintained-build claim. No additional JVM/native/media/variant.
+
+Actual animal rules are bothtrue;9373D80/2EC dx-8 rendertrue,9374D7D/2EC dx-9
+renderfalse,9375destroyed/free5. PathSwap1235 reuses9378→retire9463;15210/15332
+at9463,1595/1608 at9509,159retires12018 now match existing native facts. Thus
+isolated lifetime tests do reflect a real route correction despite unchanged11rings.
+The first remaining source-proven branch: engine destroys normal body10/arm15/
+barrels21..23 at fatal10837 via onDefeatStarted250..254; native keeps allfive
+through10900, installs Delete_Current_Sprite at10901 parent$38bit4, frees10902.
+Natural component births9768 match in both; no missing initial child allocation.
+Global SongFade therefore engine10/native34 at10901; sign15/stub21 versusnative
+sign10/stub15 at11021; X10/maxY23 versusnativeX21/maxY23 at12001. X10 then
+displaces layout220 to11 at12235, bridge display10/native17 at12510, monitor265
+engine11/native10 at12967, firsthurt-ring12/native11 andpositive00C4 engine13/
+phase96 versusnative12/countdown97 at13568. No allocator/phase defect or fix.
+
+Existing matrix records exact sourcepin044fa467/labels, ordered pools, separate
+realObjectVInt/LF/executed/BK2 clocks (13740VInt3934/LF358F/executed13711/
+nextcursor14682), nativeTouch_Process phase distinction and parentbit4 source
+versus absent directaux writer. Four loc68E98 debris remain outside this unit.
+Next proposal only: one independent red-first production normal-child fatal→64wait
+→physicalreplacement/bit4→next-own-pass retirement/reuse, with twice-recreated
+whole-world replay and independentmusic; use existing local native-pending paths
+and preserve physical-owner/recreation linkage. No new runtimeowner or API edit
+is authorized by this observation. Root has the causal handback; journal/reports
+are consumed metadataalone after facts recorded. Alternate remainsUNQUALIFIED,
+tennewvs803 block integration; R5 historical73+3 retain their exact limits.
+
+
+R5 normal local commit completed after exact tested policy adoption: prerequisite
+b834344890603c1f3919c302be245ffadd863994 duplicates only Root ff9e4be617c3d16ab3bb1f2c23ad0893c10694e5's
+three policy files; --only preserved all11staged R5 path/blobs and R6 doc bytes.
+R5 is3cce122ffcdb5e0c5371ed32f7a7158163b544c8, original11files with unchanged
+tested animal/rules hashes, seven parsed policy trailers/final exactGPT6.1coauthor
+and normal hooks. Root39policy cases/shell+PS syntax/review reused, no extraJava.
+R6 seven inspected diagnostic/class files consumed metadataalone, no archives,
+no live handles. Only existing R6 Plan/matrix evidence remains for its separate
+normal docs commit; R4e207 and R5 remain separate, Main803 untouched.

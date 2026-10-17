@@ -921,3 +921,151 @@ alone, with no receipts/log archives. No live handles remain. Current target is
 the final animal source plus maintained tests compiled by6148; no temporary
 observer source or compilation claim is carried forward. Local owner commit
 only; R4e207 remains separate, Main803 is untouched and publication is blocked.
+
+
+## R6 post-animal live pool and remaining boss-child lifetime — 2026-10-17
+
+One authorized read-only original-alternate-driver prefix9577 ran through raw
+row13742 on e207 plus the eleven staged R5 files, **before the R5 local commit**.
+Frozen SHA256: AnimalObjectInstance73f1c45485ca81a7ef055d58c0e26abda1664089456eba4f4f4829dff734b5ed,
+GameRules7b694eba04238262861a76cc6977f85eb93a8709f30464c1eb891fe4fecaeb1c,
+AizMinibossInstance1878f322bfa03f2c20970c5dd2a371839a4e90481b93c872c332695331027626.
+The sole unstaged observer added to the existing alternate test had SHA256
+f174c3665f074420f657f3da3707911a364ce9c34bb4ba93c236e59335a49c4e.
+It used the original superclass driver/bootstrap/input/lag/hardware-timing
+contract, its existing post-rewind-closure observer and semantic prefix seam;
+normal current Main absolute wrapper, all three original absolute ROMs, EGL/nullAL,
+no ambient display, inherited JDK_JAVA_OPTIONS/MAVEN_OPTS and the same explicit
+single-fork/reuse/alphabetical flags. Exact selection:
+`-Ptrace-segments -Dtest=TestS3kAizZoneSliceTraceReplay#observePostAnimalLivePoolReadOnly`.
+Use the preceding R5 command template for the unchanged environment/ROM flags.
+No trace gameplay hydration, input changes, timer/slot/RNG seeding, gameplay writes,
+production API/hooks, native/media, full alternate, broad run or second prefix.
+
+9577 terminal1 at13:14:15UTC, Maven41.509s, queue wait0s,1/1F0E0S.
+13713 compared rows, physics1/animation0, warnings/bootstrap0. The existing
+13740 rings expected1/actual2 error spans13740–13742; this diagnostic is red,
+not a trace certificate. Eight known advertised aux families remain absent.
+The target-only journal has223 events/5,805,290bytes under its10,000,000-byte cap.
+Only low-SST4–23 ownership/lifecycle changes and requested boundary pools were
+emitted, with selected source identities outside that window. It records
+completed observer passes, not within-pass transient allocation or110-slot
+certification. ObjectManager currentExecSlot is correctly -1 at this boundary.
+Stable registered ObjectRefId, original source spawn versus mutable live spawn,
+class/layout/subtype and actual allocated slot identify owners without assigning
+native-to-engine slot translations.
+
+The animal correction **does execute on the real route**:
+
+| Raw row | Actual engine result | Existing native comparison |
+| --- | --- | --- |
+|9279 |Animal identity19, registered dynamicId955, actual5, source0E10/033C, MAIN/firstDisplay=true; both lifetime/render semantic rules true |Obj_Animal2C778 birth5, same source centre |
+|9373 |FLY,0D80/02EC, copied/live camera0D88/02DA, signed dx-8, prior/current render bit true |Same centre/camera; right edge0 is included |
+|9374 |FLY,0D7D/02EC, copied/live0D86/02DA, dx-9; preceding bittrue, newly captured bitfalse |Same centre/camera; outside edge |
+|9375 |Fly work then prior-false poll retires5; retained diagnostic reference destroyed, allocator5free, registered identity removed |Actual object_removed5/2C778 on9375 |
+|9378–9463 |PathSwap source123,0CF0/02E8, naturally reuses5 at9378 and retires9463 |Same native5/code1CD8A lifetime |
+|9463 |1520F80/038A takes10,1530F85/0338 takes32 while PathSwap5 still owned at loading |Same native admissions; no guessed phase within the completed-frame observation |
+|9509–12018 |1591037/0322 returns in5,1601049/0346 in8;159 retires12018 |Same native placements/lifetimes |
+|9418 |The held animal remains destroyed and has no registered identity; its old physical slot number is not live occupancy |Rejects the old fresh64-margin retirement frontier |
+
+Actual clocks are separate from raw row labels and from each other. These are
+FULL_LEVEL_FRAME observations, with hex VInt/LF and decimal executed/input cursor:
+
+| Raw row | ObjectManager VInt | Level_frame_counter | Executed runner frames | Next BK2 cursor |
+| --- | --- | --- | --- | --- |
+|9279 |27C7 |2432 |9266 |10221 |
+|9375 |2827 |248D |9357 |10317 |
+|9463 |287F |24E5 |9445 |10405 |
+|9509 |28AD |2513 |9491 |10451 |
+|10837 |2DDD |2A41 |10817 |11779 |
+|10901 |2E1D |2A81 |10881 |11843 |
+|11021 |2E95 |2AF9 |11001 |11963 |
+|12001 |3269 |2EC8 |11976 |12943 |
+|13568 |3888 |34E3 |13539 |14510 |
+|13740 |3934 |358F |13711 |14682 |
+
+These clocks come from the attached ObjectManager, LevelManager and original
+fixture RecordingFrameDriver cursor, not the earlier unbound EngineTiming0.
+The native callback input14681 at13740 is a Touch_Process boundary; the table
+is after the completed engine row with the next input cursor14682. They are
+related by the original driver contract, not conflated as identical phases.
+
+The first remaining demonstrated lifetime branch in this recorded causal chain
+is the **normal miniboss's five component children**, not the animal or allocator:
+
+* At9768 engine/native births agree: body10 (native686E8), arm15 (68720),
+  barrels21/22/23 (68C12). They are real admitted children, not missing factories.
+* At10837 engine `AizMinibossInstance.onDefeatStarted`250–254 immediately marks
+  all five childComponents destroyed and clears the list. The prior completed
+  pool still had all five. Native status bit7 marks the defeated parent, while
+  all five child SSTs remain occupied through10900.
+* At10901 native control4 becomes EndSignControlWait85BD6; its child bit4 tail
+  changes these five pointers to Delete_Current_Sprite1ABB6. They actually clear
+  on10902. Native global music allocation therefore uses34, not10. Engine has
+  already freed10 and creates SongFadeTransition10 at10901.
+* At11021 engine control4 allocates sign15/stub21 while music10 is still occupied
+  at that earlier control pass; music then retires10 in its own pass. Native
+  sign10/stub15/music34 follow the same source allocation semantics with the
+  correct earlier lifetimes. No allocator helper fault follows from this.
+* At12001 native5–20 are occupied and X takes21/maxY23. Engine has a genuine
+  free10 and takes X10/maxY23. Both X workers retire12335. The source-consistent
+  minY22 transient is not directly visible at a completed-pass boundary.
+* At12235 still-live engine X10 displaces static layout220192A/049A to11;
+  native layout220 takes10. At12510 both bridge parents take9, while the actual
+  display child takes engine10/native17. Monitor2651C08/04E0 reloads12967 in
+  engine11/native10 because engine display10 still owns that hole.
+* At13567 engine11 is monitor265 and12 is genuinely free. Hurt rings13568
+  naturally take12 onward, versus native11 onward. The positive00C4 vector is
+  actual engine13/phaseOffset96 versus native12/countdown97. At13739/13740 it
+  remains1BB0/01EE with engine vyFE74 and is collected at13740, versus the
+  existing native callback1BB0/04B9/vy0C34. Static258 now occupies23 in both;
+  the animal repair corrected an earlier permutation without closing this one.
+
+Source authority is own skdisasm044fa46725c71187399e13f5ddb70e11d32dc024:
+body loc_686E8 at136974–136983; arm loc_68720 at136993–136995;
+Child_Draw_Sprite2/Child_DrawTouch_Sprite2 at178173–178197 test parent `$38`
+bit4, independently of parent status bit7. Go_Delete_Sprite_2 at179232–179235
+installs Delete_Current_Sprite for the following dispatch. Obj_EndSignControl
+at180463–180469 sets that bit4, after Wait_FadeToLevelMusic's global allocation
+at179742–179759 (AllocateObject call179751). Native pointer/retirement events and
+full slot_dump corroborate the source; the filtered aux does not itself expose
+all parent `$38` writes. Line numbers refer to this pin only.
+
+**Next bounded owner proposal, not an implemented fix:** one independent old-red
+with production-allocated normal AIZ body/arm/three barrels through fatal poll,
+literal64-pass wait, physical control replacement/bit4, and next-own-pass
+retirement/free reuse; include whole-world forced recreation/forward replay and
+independent music lifetime. Then, if authorized, correct only this normal AIZ
+child tail using existing native-pending/physical-owner semantics. Body/arm/barrel
+already have a captured nativeRetirementPending path for the cutscene; normal
+boss linkage/recreation after physical replacement must be preserved rather than
+introducing a generic dispatch/allocator contract. No slot assignment, phase tune,
+new arbitrary wait, LostRing/touch/debris implementation or collision rewrite.
+Further retirement/animation equivalence and matched replay closure are unproven.
+
+Temporary observer source is restored exactly; R5 staging is preserved unchanged.
+The journal/report facts above are retained here and in the existing Plan. Seven
+owned files were consumed under the metadata slot alone: two Surefire reports,
+three trace diagnostics, the journal and the compiled temporary alternate observer
+class. No raw archive/receipt or rebuild. Remaining target contents last came from
+9577 and are **not** claimed as a maintained build. All handles are terminal/leases
+released. No R6 production change or JVM
+beyond9577. R5 focused73/three controls remain their historical bounded results;
+alternate11/tennewvs803 still block integration. Four native loc68E98 debris,
+full aux/config/cold/BK2/wide/roster/fullchain limits remain open. Root owns the
+next owner authorization, policy prerequisite and combined composition/validation.
+
+
+R5 commit prerequisite is now resolved through Root's independently reviewed
+policy-only ff9e4be617c3d16ab3bb1f2c23ad0893c10694e5 (39 actual shell/PowerShell
+policy cases plus syntax/diff checks, supplied by Root; not rerun here). Its exact
+three committed files were copied under the owned build lease and committed with
+normal hooks using --only as b834344890603c1f3919c302be245ffadd863994. All eleven
+R5 staged path/blob identities and both R6 worktree document contents were verified
+unchanged afterward. Normal R5 commit3cce122ffcdb5e0c5371ed32f7a7158163b544c8
+then preserved the tested animal hashes and passed hooks; its seven policy trailers
+and final exact GPT-6.1 coauthor were parsed. No fabricated pin, API reshape,
+stash/reset, bypass or extra Java. The policy owner notes a pre-existing generic
+RHS-comma false positive outside this preset; that separate limitation was not
+widened into this patch. R6 remains an evidence-only handback, not child-tail
+implementation or integration clearance.
