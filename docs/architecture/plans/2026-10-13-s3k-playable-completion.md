@@ -11978,3 +11978,53 @@ R49/R50 writer evidence is separately gated. FDF corrected-origin terrain old-re
 26359 proves only its component omission; producer design must avoid activating
 an ordinary four-child title graph in a bonus scene. Root combined smoke remains
 incomplete, fresh combined guards/integration/push/task cleanup remain pending.
+
+
+### Root remaining-obligation inventory — 2026-10-18
+
+Read-only inventory at a800c137 retains the full parity/coverage objective beyond
+the active HCZ13322/ownership88306, FDF terrain/readiness and Cold49613 slices.
+This is a requirement map, not fresh runtime qualification or permission to fit
+missing native state. Existing historical checkpoints retain their tested SHAs.
+
+- Ending CPU/window ownership: the held-file reader proved identity/access with
+  zero phase/IRQ/SR observations. Continuous production caller/board history and
+  independent six-count,46-context,live4/5/4 predictions remain missing; a callee
+  subtotal cannot close them. See [ending queue causality](../validation/levels/s3k-ending.md#2026-10-17-passive-sonictails-reunion-queue-causality).
+- PAL/PCM: the declared PAL Sonic/+2 product diverges from LF3778; no actual ending
+  PCM window has been compared. Require fixed-window warm-up/strobe provenance,
+  with PAL queue completion still tied to the CPU dependency.
+- Ending terminal/full-table breadth: the nine-product sampler matched249/253
+  pairs; eight products stopped at6144/LEVEL. Declared fillers are not native
+  full-table population evidence. Terminal, unsampled-frame, cold/wide/donor,
+  scanline-capacity and transparent-plane obligations remain separate in the
+  [ending matrix](../validation/levels/s3k-ending.md).
+- ICZ physical post/natural-death flow: bounded controller candidates ended alive,
+  including1200inputs. Semantic two-death product tests do not establish physical
+  post activation, natural life loss/restarts, world/history replacement and
+  rewind-forward boundaries. See [ICZ1](../validation/levels/s3k-icz-act1.md).
+- Slot HUD samples:21/23/11/12/11 remaining pixels,78total=73life glyph+5counter
+  tails; no non-HUD residual in those five originals. Matched legitimate ingress
+  and displayed payload/writer history remain required; do not seed lives or
+  alter pixels. See [bonus matrix](../validation/levels/s3k-bonus-stage-transitions.md#r9-remaining-original-pixels-all-hud-no-scene-component--2026-10-17).
+- Pachinko team traces: historical Root28 arrays retain1638errors/first122rings
+  262/261 and1257/first469vx04F3/0100. These are dated matched frontiers, not fresh
+  a800 measurements; popup allocation is a separately repaired owner.
+- STOCK Cluckoid explicit-removal cleanup: source review must establish whether
+  the claimed retirement is a shipped native branch or an engine/API extension
+  contract. A status-bit7 parent predicate is not a code-pointer-zero test; do
+  not author a native old-red from the prior known-bug interpretation alone.
+- Saved-slot/configuration/route products: native320 Knuckles/Tails/team saved
+  exits do not qualify solo Sonic/donor/wide/other teams. Physical post/giant-ring
+  and load-history boundaries remain per-product obligations in the
+  [HPZ matrix](../validation/levels/s3k-hpz-act.md).
+
+Two stale gap labels are superseded only at their measured scope: SSZ arrival
+input1342 now0/71680 RGB at one declared inlet; cold Knuckles eyecatch offset619
+now0/71680 at one checkpoint. The seven-Chaos LRZ2$1701 branch is implemented and
+tested; its authentic cold native ingress, wider products and intake+1 attribution
+remain open. The current backlog wording is reconciled to those matrix records.
+Full255/Limited238, the popup producer and AIZ2-tree/HCZ-waterline repairs are not
+reopened as missing implementations. No compiler/JVM/native/extra broad test was
+launched by this inventory. Main integration, final validation and cleanup remain
+unresolved.
