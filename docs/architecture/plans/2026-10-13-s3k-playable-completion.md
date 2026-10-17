@@ -4230,3 +4230,54 @@ R1/R2 results remain historical, not erased. Consumed diagnostics/helpers are
 removed under the metadata lease. Target is final1878 plus maintained test/guard
 compilation; all jobs terminal/released. Local commit/clean handoff only, no Main edits,
 new worktree, integration or push.
+
+
+### AIZ ring birth R4 causal checkpoint — 2026-10-17
+
+Same owned tree, safe FF5da817090, runtime1878 unchanged; R3 preserved. Exact R4
+task/24h expiry/native identity are registered separately. One unchanged prefix69634
+through13742 reproduces first13740 rings1/2,1/1F0E0S,12:17:26UTC,1m11s/no wait.
+Engine uses actual firstFree12; native uses11. Birth-ring initial coordinates/count
+agree, but the positive00C4 ring isengine13/native12. Earlier placement permutation,
+not skipping a free reservation, is now the boundary. Exact source identities/ROM
+records256/258/265 and native appearance/retirement events are in the
+[R4 matrix](../validation/levels/s3k-aiz2.md#alternate-ring-birth-and-earlier-placement-admission--2026-10-17-r4).
+Root authorizes one next unchanged prefix ending13026 for those three placement
+events and real camera/deferred/cursor state. No production change, phase/slot fix
+or new native run. The ten new alternate ring spans remain integration blockers.
+
+
+R4 exact-placement continuation11174 ends13026,1/0F0E0S,12:27:37UTC,
+Maven32.766s/no wait. All256/258/265 birth/retire/reload rows match native;258
+is correctly deferred until13025 and the real cameras/Y coarse agree. The
+three-owner vertical-gate/monitor-timing hypothesis is rejected. Initial30691
+was an observer null-spawn error after3278 rows, not an engine failure; fixed
+diagnostic only, no behavioral credit. Before first256 admission, engine5 is
+already rock240 (native6); this shifts the later free-hole path. Existing native
+full dumps and actual appearance/retirement identify earlier208/209 and rock240/
+bridge243 as the next bounded admission question. No production edit or further
+Maven is authorized without a source-owned proposal. Native/engine phases and
+all known alternate blockers remain as recorded in the R4 matrix.
+
+
+R4 predecessor continuation81466 ends12555 on5da/runtime1878 unchanged,
+12:35:40UTC,1/0F0E0S,Maven32.568s/no wait,12527 compared rows/zero errors,
+warnings/bootstrap. All208/209 births12217 and retirements12554 match native;
+209 is AutoSpin(id26/sub80), not spikes. The completed12553 live-camera range
+query is already out-of-range, while that pass used prior18FD; the next pass's
+1901 correctly unloads both12554. Thus this is not the proposed culling repair.
+Engine X worker already occupies5 at12216; native corresponding84A48 is21
+(born12001,retired12335), so this is an earlier allocation permutation, not an
+extra worker/lifetime finding. Rock/bridge12510 then use actual engine holes
+5/7/9/10 versus native6/8/9/17. Native worker's birth pool5–20 is occupied;
+slot5 is exact source159 static1037/0322,id30/sub0,ROM1E4C30,first9509/retire12018.
+The engine source159/pool at worker birth12001 was not emitted by this bounded
+four-target observation. No source-backed independent old-red/runtime fix is
+justified until that earlier boundary is known. Detailed clocks/cameras/pools,
+source labels/pin and rejected hypotheses are in the existing R4 matrix.
+Observer source restored exactly HEAD; target retains its last temporary
+compilation.81466 terminal/released, no other workload. Prior11174 four reports
+consumed;81466 inspected outputs consumed normally after facts recorded.
+No production change, native, full alternate, canonical, guards or broad run;
+the alternate's ten new ring spans remain integration blockers. Root owns the
+next evidence/owner scope. R1/R2/R3 results and task entries remain preserved.
