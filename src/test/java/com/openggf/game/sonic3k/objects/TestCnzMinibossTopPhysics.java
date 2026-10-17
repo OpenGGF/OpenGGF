@@ -4,6 +4,7 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.tests.TestEnvironment;
 
 import com.openggf.game.GameServices;
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -175,6 +176,7 @@ class TestCnzMinibossTopPhysics {
         CnzMinibossInstance boss = new CnzMinibossInstance(
                 new ObjectSpawn(0x3240, 0x02B8, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
         boss.setServices(services);
+        CnzMinibossPhaseFixture.releasedStart(boss, fixture);
         CnzMinibossTopInstance top = new CnzMinibossTopInstance(
                 new ObjectSpawn(0x3240, 0x02E4, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
         top.setServices(services);
@@ -472,6 +474,7 @@ class TestCnzMinibossTopPhysics {
         CnzMinibossInstance boss = new CnzMinibossInstance(
                 new ObjectSpawn(0x3300, 0x029B, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
         boss.setServices(services);
+        CnzMinibossPhaseFixture.releasedStart(boss, fixture);
         CnzMinibossTopInstance top = new CnzMinibossTopInstance(
                 new ObjectSpawn(0x32E5, 0x0299, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
         top.setServices(services);
@@ -530,6 +533,7 @@ class TestCnzMinibossTopPhysics {
         CnzMinibossInstance boss = new CnzMinibossInstance(
                 new ObjectSpawn(0x3240, 0x02B8, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
         boss.setServices(services);
+        CnzMinibossPhaseFixture.releasedStart(boss, fixture);
         CnzMinibossTopInstance top = new CnzMinibossTopInstance(
                 new ObjectSpawn(0x3240, 0x0300, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
         top.setServices(services);
@@ -581,6 +585,7 @@ class TestCnzMinibossTopPhysics {
         CnzMinibossInstance boss = new CnzMinibossInstance(
                 new ObjectSpawn(0x335D, 0x029A, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
         boss.setServices(services);
+        CnzMinibossPhaseFixture.releasedStart(boss, fixture);
         for (int hit = 0; hit < Sonic3kConstants.CNZ_MINIBOSS_REAL_HITS; hit++) {
             boss.simulateHitForTest();
         }
@@ -620,6 +625,7 @@ class TestCnzMinibossTopPhysics {
         CnzMinibossInstance boss = new CnzMinibossInstance(
                 new ObjectSpawn(0x3240, 0x02B8, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
         boss.setServices(services);
+        CnzMinibossPhaseFixture.releasedStart(boss, fixture);
 
         int originalBossY = boss.getCentreY();
         boss.onArenaChunkDestroyed();
@@ -643,6 +649,7 @@ class TestCnzMinibossTopPhysics {
         CnzMinibossInstance boss = new CnzMinibossInstance(
                 new ObjectSpawn(0x3240, 0x02B8, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
         boss.setServices(services);
+        CnzMinibossPhaseFixture.releasedStart(boss, fixture);
         boss.forceOpenForTest();
         int originalHits = boss.getRemainingHits();
 
@@ -668,6 +675,7 @@ class TestCnzMinibossTopPhysics {
         CnzMinibossInstance boss = new CnzMinibossInstance(
                 new ObjectSpawn(0x3240, 0x02B8, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
         boss.setServices(services);
+        CnzMinibossPhaseFixture.releasedStart(boss, fixture);
         int originalHits = boss.getRemainingHits();
 
         boss.onPlayerAttack(fixture.sprite(), null);
@@ -693,6 +701,7 @@ class TestCnzMinibossTopPhysics {
         CnzMinibossInstance boss = new CnzMinibossInstance(
                 new ObjectSpawn(0x3240, 0x02B8, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
         boss.setServices(services);
+        CnzMinibossPhaseFixture.releasedStart(boss, fixture);
         boss.forcePlayerHitOpeningReadyForTest();
         int originalHits = boss.getRemainingHits();
 
@@ -719,6 +728,7 @@ class TestCnzMinibossTopPhysics {
         CnzMinibossInstance boss = new CnzMinibossInstance(
                 new ObjectSpawn(0x3300, 0x029B, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
         boss.setServices(services);
+        CnzMinibossPhaseFixture.releasedStart(boss, fixture);
         boss.forceRoutineForTest(0x04);
         boss.forceXVelForTest((short) 0x0100);
 
@@ -745,6 +755,7 @@ class TestCnzMinibossTopPhysics {
         CnzMinibossInstance boss = new CnzMinibossInstance(
                 new ObjectSpawn(0x3300, 0x029B, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
         boss.setServices(services);
+        CnzMinibossPhaseFixture.releasedStart(boss, fixture);
         boss.forceRoutineForTest(0x04);
         boss.forcePlayerHitOpeningReadyForTest();
         boss.forceXVelForTest((short) 0x0100);
@@ -776,6 +787,7 @@ class TestCnzMinibossTopPhysics {
         CnzMinibossInstance boss = new CnzMinibossInstance(
                 new ObjectSpawn(0x3300, 0x029B, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
         boss.setServices(services);
+        CnzMinibossPhaseFixture.releasedStart(boss, fixture);
         boss.forceRoutineForTest(0x0C);
 
         for (int frame = 0; frame < 25; frame++) {
@@ -801,6 +813,7 @@ class TestCnzMinibossTopPhysics {
         CnzMinibossInstance boss = new CnzMinibossInstance(
                 new ObjectSpawn(0x3240, 0x02B8, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
         boss.setServices(services);
+        CnzMinibossPhaseFixture.releasedStart(boss, fixture);
         boss.forcePlayerHitOpeningReadyForTest();
         int originalHits = boss.getRemainingHits();
 
@@ -858,6 +871,7 @@ class TestCnzMinibossTopPhysics {
         CnzMinibossInstance boss = new CnzMinibossInstance(
                 new ObjectSpawn(0x3240, 0x02B8, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
         boss.setServices(services);
+        CnzMinibossPhaseFixture.releasedStart(boss, fixture);
         boss.forcePlayerHitOpeningReadyForTest();
         boss.onPlayerAttack(fixture.sprite(),
                 new TouchResponseResult(0x0C, 0x14, 0x10, TouchCategory.ENEMY));
@@ -886,6 +900,7 @@ class TestCnzMinibossTopPhysics {
         CnzMinibossInstance boss = new CnzMinibossInstance(
                 new ObjectSpawn(0x3339, 0x029A, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
         boss.setServices(services);
+        CnzMinibossPhaseFixture.releasedStart(boss, fixture);
         CnzMinibossSparkInstance spark = new CnzMinibossSparkInstance(
                 new ObjectSpawn(0x3335, 0x02D6, Sonic3kObjectIds.CNZ_MINIBOSS, 4, 0, false, 0));
         spark.setServices(services);
@@ -926,6 +941,7 @@ class TestCnzMinibossTopPhysics {
         CnzMinibossInstance boss = new CnzMinibossInstance(
                 new ObjectSpawn(0x3240, 0x02B8, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
         boss.setServices(services);
+        CnzMinibossPhaseFixture.releasedStart(boss, fixture);
         int originalHits = boss.getRemainingHits();
 
         player.setCentreX((short) boss.getCentreX());
@@ -977,6 +993,7 @@ class TestCnzMinibossTopPhysics {
         CnzMinibossInstance boss = new CnzMinibossInstance(
                 new ObjectSpawn(0x3300, 0x029B, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
         boss.setServices(services);
+        CnzMinibossPhaseFixture.releasedStart(boss, fixture);
         boss.forceRoutineForTest(0x08);
 
         boss.onPlayerAttack(fixture.sprite(),
@@ -997,6 +1014,54 @@ class TestCnzMinibossTopPhysics {
         boss.update(0x10, fixture.sprite());
         assertEquals(0x0C, boss.getCollisionFlags(),
                 "After the $3A restore window, CNZMiniboss_CheckPlayerHit restores the backed-up body byte");
+    }
+
+    @Test
+    void parentDefeatDisplacesStandingPlayersBeforeDeletingTop() {
+        com.openggf.configuration.SonicConfigurationService.getInstance().setSessionOverride(
+                com.openggf.configuration.SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails,knuckles");
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0).build();
+        DefaultObjectServices services = TestEnvironment.objectServices();
+        CnzMinibossInstance boss = new CnzMinibossInstance(
+                new ObjectSpawn(0x32C0, 0x020C, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
+        boss.setServices(services);
+        CnzMinibossPhaseFixture.releasedStart(boss, fixture);
+        CnzMinibossTopInstance top = new CnzMinibossTopInstance(
+                new ObjectSpawn(0x326E, 0x02CC, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
+        top.setServices(services);
+        top.attachBossForTest(boss);
+        top.forceTopMainForTest();
+        var players = services.playerQuery().playersFor(
+                com.openggf.level.objects.ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+        assertEquals(3, players.size(), "declared main plus two followers");
+        // Isolated condition setup: these two players entered the standing mask
+        // before the parent's defeat; the third belongs to another solid owner.
+        var other = new CnzMinibossTopInstance(
+                new ObjectSpawn(0x3300, 0x0300, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
+        other.setServices(services);
+        var manager = services.objectManager();
+        manager.forceRidingObjectForBootstrap(players.get(0), top);
+        manager.forceRidingObjectForBootstrap(players.get(1), top);
+        manager.forceRidingObjectForBootstrap(players.get(2), other);
+        int[] x = players.stream().mapToInt(PlayableEntity::getCentreX).toArray();
+        int[] y = players.stream().mapToInt(PlayableEntity::getCentreY).toArray();
+        for (int hit = 0; hit < 4; hit++) boss.simulateHitForTest();
+        top.update(1, fixture.sprite());
+        assertTrue(top.isDestroyed());
+        assertEquals(0, top.getCollisionFlags());
+        for (int i = 0; i < 2; i++) {
+            var rider = players.get(i);
+            assertFalse(manager.hasObjectStandingBit(rider, top), "Displace_PlayerOffObject clears standing bit");
+            assertFalse(manager.isRidingObject(rider, top), "deleted top cannot retain folded support");
+            assertFalse(rider.isOnObject());
+            assertTrue(rider.getAir());
+            assertEquals(x[i], rider.getCentreX(), "displacement changes status, not position");
+            assertEquals(y[i], rider.getCentreY());
+        }
+        assertTrue(manager.isRidingObject(players.get(2), other), "another owner's support survives");
+        assertTrue(players.get(2).isOnObject());
+        assertFalse(players.get(2).getAir());
     }
 
     private static Sonic3kCNZEvents getCnzEvents() {

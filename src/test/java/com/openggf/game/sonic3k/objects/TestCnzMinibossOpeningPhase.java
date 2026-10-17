@@ -56,6 +56,7 @@ class TestCnzMinibossOpeningPhase {
         CnzMinibossInstance boss = new CnzMinibossInstance(
                 new ObjectSpawn(0x3240, 0x0100, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
         boss.setServices(services);
+        CnzMinibossPhaseFixture.releasedStart(boss, fixture);
         boss.forceRoutineForTest(6);
         boss.forceXVelForTest((short) 0x0100);
         boss.update(0, fixture.sprite());
@@ -74,6 +75,7 @@ class TestCnzMinibossOpeningPhase {
         CnzMinibossInstance boss = new CnzMinibossInstance(
                 new ObjectSpawn(0x3240, 0x0100, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
         boss.setServices(services);
+        CnzMinibossPhaseFixture.releasedStart(boss, fixture);
         // ROM dispatch: routine A == Obj_CNZMinibossWaitHit (sonic3k.asm:144954).
         boss.forceRoutineForTest(0xA);
         int routineBefore = boss.getCurrentRoutine();
@@ -92,6 +94,7 @@ class TestCnzMinibossOpeningPhase {
         CnzMinibossInstance boss = new CnzMinibossInstance(
                 new ObjectSpawn(0x3240, 0x0100, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
         boss.setServices(services);
+        CnzMinibossPhaseFixture.releasedStart(boss, fixture);
         // ROM dispatch: routine A == WaitHit; loc_6DB4E advances routine to C
         // when status bit 6 is set.
         boss.forceRoutineForTest(0xA);
