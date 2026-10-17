@@ -2791,3 +2791,185 @@ configurations, cold/donor/PAL/PCM products and strict timing/trace closure
 remain outside this bounded result. Resource checks establish reuse and
 cleanup, not a performance or frame-time claim. The task branch stays local;
 Root owns integration/publication.
+
+## 2026-10-17 maintained positioned ending sampler
+
+The recurring ending observation protocol now lives in
+[`S3kEndingSamplerTool`](../../../src/main/java/com/openggf/tools/S3kEndingSamplerTool.java)
+and the fail-closed [`compare_native_rgb.py`](../../../tools/bizhawk/compare_native_rgb.py).
+This bounded slice promotes external `EndingEnginePalProbeV2` (SHA-256
+`da6bff78c4c1ebd47f0305e3602990962644bf430284a1c5f7cfb8177f82b056`)
+from the retained ending-pal/native v2 experiment. It changes no ending runtime
+owner. The separate [ending route matrix](../validation/levels/s3k-ending.md)
+continues to distinguish positioned observations from final-fight continuations.
+
+The supported CLI product is explicitly **Tails solo / +2 / NTSC / native
+320×224 / LIMITED (238 maximum) / RAW_RGB**. All six options are required;
+other products, region/progress values, unknown/duplicate options, malformed,
+duplicate, empty or out-of-range outer indices fail. Output must be a new directory.
+The ingress is the frozen title-owner v2 protocol: production title setup through
+ACTIVE, a real logical Start directly through the title owner yielding EXITING,
+no data-select initialization, then an explicitly positioned fresh `$0D01` load
+with seven Super Emeralds. VInt0/RNG0 are authored once before initial dispatch.
+Every outer step thereafter uses neutral controller input through
+`GameplayCaptureSession` and renders the normal scene. This is not a cold
+campaign or a native-state replay. TITLE_SCREEN mode is the terminal check;
+the capture host does not certify interactive hub recovery.
+
+The caller supplies engine outer indices, one canonical decimal index per line.
+For retained native v2, select only `input-*` snapshots strictly before its first
+non-ending controller ordinal, assert the requested count, then author the
+observation list with **native poll p → engine outer p+1**. This mapping never
+enters a gameplay owner. Native inputs, physics, aux rows and screenshots supply
+no engine state. The tool records startup ownership, per-outer scene/clock/player/
+credits state, requested PNGs, ending-exit/title events and completion ledger,
+plus ROM/spot/source/runtime and final CSV hashes. Fresh preferences live inside
+the new output directory, so a checkout config link cannot migrate Main settings. It requires a source checkout;
+source and compiled runtime fingerprints must remain stable during capture.
+The external probe's reflective SST inventories, plane/texture dumps and palette
+reconstruction are deliberately outside this recurring raw-RGB question.
+
+Use the current integration checkout's queue wrapper by absolute path from the
+intended worktree. Build-only compilation takes its intended-tree/shared activity
+leases; release those before the queued capture. On Linux preserve surfaceless
+EGL and null audio with no ambient DISPLAY/WAYLAND_DISPLAY. For example, with
+`QUEUE`, `ROM`, `CAPTURE` and `NATIVE` set to absolute paths and a newly named
+capture label:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null \
+  python3 "$QUEUE" -Dmse=off compile -B
+env -u DISPLAY -u WAYLAND_DISPLAY EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null \
+  python3 "$QUEUE" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  exec:java -Dexec.mainClass=com.openggf.tools.S3kEndingSamplerTool \
+  "-Dexec.args=--rom '$ROM' --product tails-solo --region ntsc --progress +2 --out-dir '$CAPTURE/engine-current-v1' --spots '$CAPTURE/engine-outers.txt'"
+python3 tools/bizhawk/compare_native_rgb.py \
+  --native-dir "$NATIVE" --engine-dir "$CAPTURE/engine-current-v1" \
+  --spots "$CAPTURE/native-polls.txt" --mapping native-poll-plus-one \
+  --expected-count 165 --size 320x224 --report "$CAPTURE/comparison-current-v1.json"
+```
+
+The comparator requires every pair and equal resulting dimensions, including the
+explicit `--size` assertion. Default is **no crop**; optional `--native-crop` and
+`--engine-crop` each require an in-bounds `x,y,width,height` rectangle. The Tails
+product uses neither. Knuckles' separate 348×240 product must not inherit a Tails
+crop or acceptance claim. Raw R/G/B bytes are compared without normalization,
+shift, rescale, mask or alignment search. Reports include every pair's hashes,
+original dimensions, mismatch pixel count and first differing coordinate/bytes.
+Missing/bad files, duplicate/invalid spots, count/dimension/crop errors exit2;
+any pixel difference exits1; an exact comparison exits0. Existing report paths
+are refused. No pair can disappear silently.
+
+Focused controls:
+`python3 -m unittest discover -s tools/bizhawk -p test_compare_native_rgb.py -v`
+and queued `-Dtest=TestS3kEndingSamplerTool` cover missing/corrupt PNGs, dimensions
+with equal byte counts, exact RGB, low-bit pixel changes, explicit mapping,
+invalid/duplicate spots, crop bounds and report preservation, plus Java product/
+CLI and observation-plan rejection. No broad smoke/full suite, benchmark or PCM
+claim belongs to this tool-only slice. Current-source capture evidence follows
+only after its single completed run; historical Oct15 pictures are not acceptance
+inputs. The later retained after5 comparison supersedes those old errors and
+reports all165 pre-exit spots zero, including5119/6143, without proving current
+source acceptance.
+
+### Single current-source result
+
+One new capture, `${CAPTURE_ROOT}/s3k-ending-sampler-20261017-t3-0485d89b/engine-current-v1`,
+completed on 2026-10-17 at09:06:24UTC. Capture source was frozen composition
+`dc338d3e3a30916559a32d4684ff46e9ad77492c` plus the uncommitted maintained sampler;
+its exact Java file SHA-256 is
+`b47871f82488802ea2c9a356218825eb372b29c518804f65f57d24fdbe45161c`.
+The source-tree SHA-256 is
+`ad531ab7730e83ff55e2c9a8950f1fc08accb379985a1fc1f20f909f8af7fdb4`;
+the compiled runtime-directory SHA-256 is
+`975519879e1c303d01d312164797851f05dd443b641d2c59cebf3393bab43673`.
+The tool checked both source/runtime fingerprints again after capture. The later
+local commit packages those same sampler bytes; it does not retroactively turn
+the capture's recorded source HEAD into a clean committed build.
+
+Original native input is
+`${TASK_SCRATCH}/s3k-parity-coverage-20261014/ending-pal-native/native-tails-super-320-ntsc-v2`.
+Its `state.csv` SHA-256 is
+`efa88767158a71826df9e3f8540c35847fa10208ffcfcc49edd44b603c8769d6`,
+and `ledger.csv` is
+`ba925de564a6d0ef4681aa4990905d4d0e09f6bed705d20ef42d23167c0c7f63`.
+Retained `pal-spot-plan-v2.json` SHA-256 is
+`1bf7895e9ee47c18a8daed3fb0d2c6cfa2276041347c94b765a1b711dd217fe3`;
+retained `run_engine_v2.py` is
+`be9a09a2441011cf87d4952500e6b777c6f77f442e7df9f46b288c86b1b75e6f`.
+The native ledger has167 `input-*` snapshots. Native first non-ending poll15531
+excludes16383/17407, leaving exactly165 pre-exit requests. No set de-duplication
+or missing-picture skip reduced that count. The native-poll file hash is
+`9c209bd9e707f582920b793302e99551289121505648a98296d3e9edb2ce5335`;
+its explicit p+1 engine observation file is
+`f490ac9d7e083e83e2c54d8804d3de442f1f884a8ebb05784f663a39b00a53b8`.
+These hashes and protocol-source hashes are retained in the external task's
+`observation-provenance.json`; native rows selected only observation moments.
+
+Queued command sessions were build16052, focused31401 and capture54720, each
+observed by this worker only and now terminal0. Commands from this worktree used
+`${MAIN}/tools/testing/maven_queue.py`, Java25, `EGL_PLATFORM=surfaceless`,
+`ALSOFT_DRIVERS=null` and no DISPLAY/WAYLAND_DISPLAY. Build16052 ran
+`-Dmse=off compile -B` successfully after at least270s waiting for isolated
+measurement activity; Maven execution reported59.993s. After the material
+fresh-configuration isolation edit, focused31401 recompiled final sources and
+ran the following unchanged selection (81s queue wait; Maven1:20):
+
+```bash
+python3 "$QUEUE" --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestS3kEndingSamplerTool,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' \
+  "-Ds3k.rom.path=$ROM" test -B
+```
+
+All62 tests pass, with0 failures/errors/skips: sampler2, bootstrap6, decoding3,
+level-loading36+7 and AIZ skip8. Python's nine comparator controls pass with no
+skips. Test XML identities/counts were inspected before removing consumed owned
+reports. The change-based preview againstdc338d3e3 selected3496 smoke classes
+because these new tools are unclassified and an unrelated TraceChaser gitlink
+is present. The requested focused tool/domain/capture checks replace that
+selection: no gameplay owner, shared algorithm, timing contract or build policy
+changed. No broad/full suite, benchmark or PCM workload was launched. Root owns
+combined guards and integration. The unrelated gitlink is preserved unstaged.
+
+Capture54720 used the `exec:java` command above (plus `-Djava.awt.headless=true`),
+was admitted immediately and completed in12.919s Maven time. Actual title ACTIVE
+required305 neutral steps; real Start yielded EXITING with no data select.
+State outer0 has progress2, VInt0 and RNG0. Ending exit and TITLE_SCREEN mode
+occur at outer15532. The ledger ends
+`DONE,-1,requested=165;captured=165;title_mode=true`; its SHA-256 is
+`4392567cc986efa196380f84cb9f72792e7946ee2cf6a969925b4d443d24a60f`.
+Final engine `state.csv` SHA-256 is
+`95996e38208a631811fa6d7c1772bcf04a7dd558035e0cff48f5609328bc7f0e`.
+FAST load-time simulation remains the default; runtime logs include deterministic
+estimates for missing measured Kos profiles, not native readiness hydration.
+
+Configuration isolation was verified against the loader's actual JVM path:
+`SonicConfigurationService` reads through `resolveRelativeFile`, which uses the
+current `user.dir` for relative `config.yaml`/legacy JSON, and publishes its
+example beside `resolveConfigFile()`. The actual generated
+`engine-current-v1/configuration/config.yaml.example` exists (15419 bytes,
+mtime09:06:12.610630UTC), inside this capture's private scope. No private
+`config.yaml` existed to migrate. The checkout's pre-existing config link points
+at Main; that target's observed last modification remains
+2026-10-16T09:09:02.849921UTC, before this capture. Thus this run did not migrate
+Main config. The tool restores `user.dir` after closing the capture session.
+
+The maintained comparator (SHA-256
+`903bae9e12cdc4b2d0e29dc39b983a14c012e2ca2dc84b8a1af5d47dd0e4939f`)
+was then executed once with the exact165 requests, `native-poll-plus-one`,
+`--size 320x224` and **neither crop option**. It exited0 and reports **165/165
+pairs,0 mismatching pairs,0 differing raw RGB pixels**. Every original native
+and engine dimension in the report is320×224. Poll5119→outer5120 and
+poll6143→outer6144 each have0 differences; they are fresh current-source
+observations, not the superseded Oct15 errors. `comparison-current-v1.json`
+SHA-256 is `3a1ed2882c0a953e85a500b6367562ca00ff6b0d52f3d2dd7f6f79baac74b32a`.
+The actual outer6144 credit-scene PNG was inspected after reading its state.
+
+This establishes only the declared165 positioned Tails/+2 NTSC pictures and
+terminal mode for this exact source/runtime. It does not certify the unsampled
+frames, full prepared palette timeline, cold campaign, other products, PAL,
+Knuckles crops, PCM, strict hardware timing or interactive hub recovery. No
+ending runtime fix or pixel fitting was made. Worktree/branch remain local for
+Root to account; no Main integration, push or worktree removal belongs to this
+worker's slice. All worker execution handles are terminal; the stopping boundary
+is the maintained tool plus this one completed comparison.

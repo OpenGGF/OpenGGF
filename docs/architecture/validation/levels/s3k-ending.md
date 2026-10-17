@@ -921,3 +921,9 @@ No animation offset is fitted. This closes that checkpoint's overlap defect,
 not every Knuckles terminal picture or PAL/PCM/cold/wide/donor products. Earlier
 terminal original-RGB residuals remain open. See the
 [implementation and rejected diagnoses](../../designs/2026-10-13-s3k-ending-lifecycle.md#knuckles-eyecatch-child-priority-2026-10-17-root).
+
+## 2026-10-17 maintained Tails NTSC sampler
+
+The [maintained sampler and current-source evidence](../../plans/2026-10-13-s3k-playable-completion.md#2026-10-17-maintained-positioned-ending-sampler) replace the temporary engine-facing probe for the bounded Tails solo/+2/NTSC/native320 product. One capture from frozen `dc338d3e3` plus exact sampler source hash `b47871f82488802ea2c9a356218825eb372b29c518804f65f57d24fdbe45161c` reaches TITLE_SCREEN at outer15532 and captures every165 requested pre-exit picture. The fail-closed raw RGB comparator checks original320×224 dimensions on both sides with no crop and reports165/165 pairs,0 differing pixels, including native5119/6143 paired to engine5120/6144. CLI2, required S3K60 and comparator9 controls pass without skips. Source/runtime/plan/spot hashes and exact commands are linked above.
+
+This positioned title-owner ingress is not a cold campaign. Native ordinals select observation moments only; no native gameplay data hydrate engine state. Unsampled frames, prepared palettes, other native products, PAL/PCM, strict hardware timing and interactive hub recovery remain inherited gaps; no ending runtime behavior changed. Root owns combined guards and integration.
