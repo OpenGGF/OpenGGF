@@ -7,7 +7,7 @@ Character routes: MGZ1 falling entry applies to all three native mains; later tr
 Status: in progress. The bounded normal-entry and graph floor below is qualified; the act is not certified.
 Supported production presets are 320/352/400/528/800 via `WidescreenAspect` and `resolveDisplayAspect`. Configured main/donor support is off×{Sonic,Tails,Knuckles}, S1×Sonic and S2×{Sonic,Tails}. `LaunchProfile.sanitizedFor` owns configured fallback; script-created NPCs have their own native registration/art authority. Configured comma rosters are uncapped by `ActiveGameplayTeamResolver.parseConfiguredSidekicks`; pair, mixed, duplicate and declared large-roster examples do not establish a maximum.
 
-The initial native/default binding covers all three solo mains at 320; the finite product follow-up extends that floor. The 140 finite normal-entry products below now qualify all five production presets, supported main/donor pairs and solo/pair/mixed/duplicate/seven-follower examples. Independent actual death/reload now qualifies the same 140 supported products. Other entry mechanisms, physical posts, mechanic-specific authority and route composition remain separate obligations. Raw 512/640 injection, when used by older local tests, is custom geometry evidence rather than production-preset coverage.
+The initial native/default binding covers all three solo mains at 320; the finite product follow-up extends that floor. The 140 finite normal-entry products below now qualify all five production presets, supported main/donor pairs and solo/pair/mixed/duplicate/seven-follower examples. Independent actual death/reload now qualifies the same 140 supported products. Physical post 1 is qualified for native320 Sonic, the native pair and the 30 solo rows (2026-10-17 section). Other entry mechanisms, posts 2–3, multi-participant post products, mechanic-specific authority and route composition remain separate obligations. Raw 512/640 injection, when used by older local tests, is custom geometry evidence rather than production-preset coverage.
 
 ## Obligations
 
@@ -18,7 +18,7 @@ The initial native/default binding covers all three solo mains at 320; the finit
 | OBJECT / REWIND: top, pulley and mechanism families | `TestS3kMgzTopPlatformLiveRewind`, `TestS3kMgzPulleyGraphRewind`, `TestS3kMgzMechanismGraphRewind` | Local non-default owner/rider graphs; per-placement before/active/release and complete configuration products remain open. Listed bindings were setup-inspected, not independently rerun as a whole in this slice. |
 | OBJECT / CAMERA: top-platform movement and multiple riders | `TestS3kMgzTopPlatformParityHeadless`, `TestS3kMgzTopPlatformMultiSidekick`, `TestS3kMgzPulleyAndMantis`, `TestS3kMgzDashTriggerNoSpindashDonation` | Declared local owner/physics contexts, not a cold MGZ1 route. Listed bindings were setup-inspected, not independently rerun as a whole in this slice. |
 | BOSS / EVENT / LOAD: miniboss and MGZ1BGE_Transition | `TestMgzMinibossInstance`, `TestMgzMinibossSpikeArt`, `Sonic3kMGZEvents` | Component boss and source owner bindings; actual uninterrupted defeat/results/structural handoff plus destination replay remains open. Listed bindings were setup-inspected, not independently rerun as a whole in this slice. |
-| LIFE / LOAD: physical post, actual death/restart and incoming/outgoing worlds | Native checkpoint/death/reload owners and the edges listed above | All 140 supported preset/donor/main/roster products are qualified by `TestS3kMgz1EntryMatrix#actualDeathReloadPreservesTheSupportedProductAndReplaysEachIncomingWorldTwice`: two actual deaths/reloads, exactly one life lost per restart, new world owners, outgoing live-history retirement, restored current roster/camera and two complete-world 45-frame restore/replay cycles after each released destination. Physical post activation and incoming/outgoing route edges remain separate obligations. |
+| LIFE / LOAD: physical post, actual death/restart and incoming/outgoing worlds | Native checkpoint/death/reload owners and the edges listed above | All 140 supported preset/donor/main/roster products are qualified by `TestS3kMgz1EntryMatrix#actualDeathReloadPreservesTheSupportedProductAndReplaysEachIncomingWorldTwice`: two actual deaths/reloads, exactly one life lost per restart, new world owners, outgoing live-history retirement, restored current roster/camera and two complete-world 45-frame restore/replay cycles after each released destination. Physical post 1 activation → physical hazard death → real post respawn is qualified for 32 products ([2026-10-17](#physical-post-1-lifecycle-2026-10-17)): native320 Sonic, the native Sonic+Tails pair and all 30 supported solo preset/main/donor rows. The 110 multi-participant rows of that product, posts 2 and 3 and incoming/outgoing route edges remain open. |
 | PRESENT: actual viewport, palette/scroll/plane and audio | Act-owned ROM art/AniPLC/AnPal/event and music/SFX owners | Decoded playable source is checked at entry. Scene pixels, native audiovisual timing and viewport-edge parity require their own bounded native/GPU evidence. |
 | ROUTE: representative completion and compatibility axes | Authentic entry→mandatory mechanics→boss/results→released next state | Complete character-route composition, every preset/donor axis and applicable team-shape traversals remain open; short entry is not route certification. |
 | ORACLE: timing-sensitive native behavior | Existing MGZ trace bindings and [frontier log](../../../status/trace-frontier-log.md); no new strict trace run in this slice. | Preserve each owning strict-ledger result/source. Comparison rows do not supply gameplay; no strict trace or conformance sweep was run here. |
@@ -64,3 +64,57 @@ The first movement-only candidate was insufficient: request 60954 on `5d334596e`
 After each title/fade/fresh-assembly release, the complete registered world is captured, advanced for 45 neutral logical ticks, restored immediately and replayed twice. Each forward tick checks P1 survival, unchanged lives and actual configured owners. Intrinsic intro control remains native-owned; this is not a forced unlock or a raw restore across the load. Physical pit traversal, physical post capture/respawn, completion edges and later mechanic lifetimes remain separate.
 
 One coherent focused invocation qualified all eight acts: command session54147 on runtime `e57236d519a861c9fbc43ba867230793dbd6fb0d` plus this commit's nine test-only deltas, 1120 tests / 0 failures / 0 errors / 0 skips (each act 140/0/0/0), actual terminal exit0 at 13:42:47 BST (12:42:47 UTC), Maven 3m05s. Exact selection: `TestS3kAiz2EntryMatrix`, `TestS3kHcz2EntryMatrix`, `TestS3kMgz1EntryMatrix`, `TestS3kMgz2EntryMatrix`, `TestS3kCnz1EntryMatrix`, `TestS3kCnz2EntryMatrix`, `TestS3kIcz1EntryMatrix`, `TestS3kIcz2EntryMatrix`, each restricted with `#actualDeathReloadPreservesTheSupportedProductAndReplaysEachIncomingWorldTwice` in the comma-separated `-Dtest` selector. Command prefix: `env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null python3 tools/testing/maven_queue.py --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl`; original absolute S1/S2/S3K ROM properties were supplied, followed by `test`. Entry rows were not rerun merely to repeat their unchanged evidence. This is finite lifecycle qualification, not complete act, native-pixel, strict-trace or arbitrary roster certification; combined smoke/integration/push remain lead-owned.
+
+## Physical post 1 lifecycle (2026-10-17)
+
+[`TestS3kMgz1PhysicalCheckpointLifecycle`](../../../../src/test/java/com/openggf/tests/TestS3kMgz1PhysicalCheckpointLifecycle.java)
+covers the first physical star post through the production `GameLoop`. Independent oracles:
+`Levels/MGZ/Object Pos/1.bin` (posts 1–3 at (`$1180`,`$AF4`), (`$1E98`,`$3B4`), (`$2AE0`,`$E72`);
+upright spikes `$08` at (`$1310`,`$B1D`); `Obj_MGZSwingingSpikeBall` `$58` at (`$1400`,`$B34`)),
+`Obj_StarPost` (sonic3k.asm:61559: P1-only window `x-post+8` in `[0,$10)`, `y-post+$40` in
+`[0,$68)`; routine-6 twirl child with `$36=$20`; `sub_2D164` saves subtype and the post's own
+X/Y; a reloaded post with subtype ≤ `Last_star_post_hit` starts used), `Touch_Sizes`
+(:20713) and `HurtCharacter`/`Kill_Character` with no rings.
+
+- Inlet: a declared position 48 px left of the unactivated post at its own Y (not a cold
+  route). No checkpoint, life, ring, clock, position or death state is written.
+- Activation: ordinary Right input reaches the window edge (native Sonic: x 4473 ≥ 4472);
+  the test asserts index 1, Saved X/Y = the ROM placement, the live ROM-placed post object and
+  one orbit child. Rewind spots, each restored and replayed twice with full registered-world
+  comparison: before activation → contact frame; while the orbit child is live → 40 frames
+  later, after `$20` has retired it.
+- Death: ordinary input runs right, takes one running jump over the upright spikes (above
+  the rings over them), then stands under the swinging ball's anchor. The death frame must
+  overlap a placed hurt/enemy touch region by the ROM `Touch_Sizes` entry (or standing on the
+  spikes) with 0 rings; all 64 deaths in the qualifying run were on the ball at (5120,2868).
+  No semantic kill call.
+- Respawn: real reload (replacement object manager and runtime, MGZ1, exactly one life per
+  death, outgoing live history retired), P1 at the post's own Saved X/Y on the first reload
+  frame, title/fade/assembly/control release, current roster/camera width, the reloaded post
+  starts used and passing it again allocates no second orbit child. The released incoming
+  world is captured and replayed 45 neutral frames twice in both restore directions
+  (`CheckpointIncomingReplay`); no raw snapshot crosses the load. Two death/respawn cycles.
+- Negative: the same inlet with 16 Right frames then neutral settles left of the window and
+  never saves; resuming Right saves inside the window.
+
+Configurations: native320 Sonic (independent method), the native Sonic+Tails pair, and the
+30 supported solo rows of the entry generator (five production presets × off Sonic/Tails/
+Knuckles, S1 Sonic, S2 Sonic/Tails). Open: the 110 multi-participant rows. In the bounded
+authoring runs (p3/p4 on `0197c5a5a` plus this class), 25 of those 110 rows (mostly
+seven-follower rosters, some pairs at 400/800) left P1 standing under the ball's sweep with 0
+rings for 2400 frames without a hit, while every solo row died there. The owner is not
+established (ball phase/standing spot versus multi-follower touch arbitration; the ROM has only
+Player_2), so those rows are neither claimed nor forced. Posts 2 and 3, a cold route to the
+post and native pixel/audio acceptance also remain open.
+
+Red check: a temporary class (not committed) restored the pre-approach world and replayed one
+frame fewer than captured; the same full-world comparison failed (`dynamic-art-diagnostics`
+frame counters first). Observation for the entry matrix owner: `CanonicalEntryMatrixSupport`
+`advanceEntry` passes its `right` flag as `stepFrame`'s second (Down) argument, so the entry
+rows' 45-frame "Right" replay windows hold Down; not changed here.
+
+Qualifying run `q1`: `env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null python3 tools/testing/maven_queue.py --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Dtest=TestS3kMgz1PhysicalCheckpointLifecycle,TestMgz1RedTemp"`
+with the original absolute S1/S2/S3K ROM properties and `test`, on `0197c5a5a` plus this class:
+35 tests / 0 failures / 0 errors / 0 skips (class 34 in 12.35 s; temporary red 1), Maven
+finished 2026-10-17T01:39:47Z. Only class comments changed after the run. Test-only; no
+production source changed, so no neighbour or required-four rerun was needed.
