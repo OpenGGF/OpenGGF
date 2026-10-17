@@ -6167,3 +6167,68 @@ pass. Whole-file frontier fence count845 was already odd at077767 and unchanged;
 no unrelated Markdown repair. Local-only qualified owner commit follows under
 normal hooks/seven parsed trailers/final GPT6.1 coauthor. Root owns integration/
 combined smoke; no Main edit/push/tree cleanup or whole-act certification.
+
+
+### Root current-source and stopped-witness checkpoint — 2026-10-17 17:40 UTC
+
+Root composition `ace8f89c59e8a9de5a98dabe6eb8fb869cd9ad37` includes the
+qualified ICZ16 `70e8d10168d92cc30781e4072dc456f9d48093b8` and EGL-test cleanup
+`0d0c075ba987cf7fd7f330f3d910cb8d92e5c3e7`. Main remains `8030832d2`;
+no integration or push. Root's last maintained compilation was the EGL pair
+before the ICZ merge. Do not describe the combined current source as tested.
+The current change-based dry plan against Main selects **3,527 candidate classes,
+all ten smoke categories and fresh guards**. This was planning only, not a new
+run or a release-only full suite. The interrupted 65/71-batch run is acknowledged;
+its unexecuted tail and guards remain incomplete. A future current-source run is
+required after the focused blocking owners are qualified.
+
+Slot R7E request9026 finished 28/1F/0E/0S (17:30:12UTC, queue0/Maven1m17).
+The same real Slot registration-order unit still loses untouched byte2048,
+expected9/actual-79, after its level/map/animation/foreground prerequisites.
+The other27 checks pass; dedicated encoded-layout geometry rebind is insufficient.
+No fresh guards or original pilots were submitted on this red source. Nine owned
+paths remain uncommitted in the isolated Slot tree. R7F authorizes exactly one
+passive same-unit diagnostic to record actual flag-clearing and rebuild callers,
+with source fingerprints separate from the retained candidate. It authorizes no
+third source hypothesis, priority change, GPU check or five-image capture.
+
+The DEZ128 continuation candidate remains uncommitted. Its ordinary/emerald team
+routes pass, but the seven-case route selection has five later deaths, including
+soloSonic60811, versus a passing matched Main solo control. Diagnostic41244
+ended 1/0F/1E/0S at input60422: its own terrain observer dereferenced a legitimate
+null sensor result during a checkpoint helper. No death60811 was observed.
+The incomplete 64-step window contains only live states and is not evidence for
+a kill/support writer. Temporary instrumentation and consumed diagnostics were
+removed; the four previously accounted candidate/test/prose paths remain.
+No automatic retry followed the postboot observer failure. The next source-only
+question is a minimal rising-death writer/cause observation, before execution.
+
+Cold-campaign R16 request42765 independently reproduced original death49613 on
+committed `00c54ec82` (1/1F/0E/0S, queue0/Maven52.688s/JUnit30.105s,
+17:32:52UTC). Its observer completed without error. The final terrain event sees
+P1 alive; the first cloud-solid checkpoint already sees P1 dead. That brackets
+the writer but does not attribute it to a cloud. CollisionTrace has no touch or
+damage callback. Its 1,860 forwarded callbacks comprise474 terrain,693 solid
+entry and693 solid result events. Shared touch damage is a source-supported
+possibility, not an observed call. All63 sampled inputs already have zero rings;
+no earlier ring-loss cause is inferred. No campaign runtime repair is qualified.
+
+Read-only stock-core audit established a possible path to the unused Kos kernel's
+initial CPU state without a native rebuild. The stock ELF contains `m68k.cycles`
+(+280C, master clocks), `refresh_cycles` (+2810) and encoded IRQ-pin state (+28B8).
+These are not cumulative debugger CPU clocks. Waterbox maps ELF PT_LOAD virtual
+addresses while its owning host is active; synchronous execution callbacks retain
+that mapping. Existing memory-domain readers demonstrate nested same-thread
+monitor-scoped direct reads. This does not permit asynchronous readers or pointers
+retained after callback/host disposal. The relevant data symbols are STB_LOCAL,
+so the existing global-symbol resolver does not export them. A separate pure-leaf
+PCM mapping is not the live core, and SaveState callback reentrancy is unproven.
+
+The audit used retained BizHawk source pin427556b5ef3ac437eba754d90c5e7e9096c9a8df
+and the hash-identified stock ELF. Before any adapter execution, authentication
+must bind the actually loaded image, validated symbol ranges, an exported live
+mapping anchor and monitor lifetime. The loader does not expose a consumed-stream
+hash. A separate file hash alone is not that attestation. No adapter, emulator,
+compiler or native execution occurred in this read-only audit. Even a qualified
+initial-state reader would leave ordered per-instruction bus/IRQ/handler inputs
+open; the unused kernel is not production acceptance or a fitted readiness budget.
