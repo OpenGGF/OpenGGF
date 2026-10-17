@@ -13,6 +13,7 @@ import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -97,22 +98,66 @@ public final class HPZSuperEmeraldObjectInstance extends AbstractObjectInstance
         }
     }
 
+    /**
+     * {@code loc_908DE} calls {@code SolidObjectTop} inside the selectable routine and then tests
+     * {@code p1_standing_bit} (sonic3k.asm:197705-197719), so the landing frame already selects
+     * and {@code object_control $81} lands with the player, as a native capture of the same landing
+     * shows. The solid is therefore resolved at that call point; every other live path resolves it
+     * after its own work, where the automatic mode used to.
+     */
+    @Override
+    public SolidExecutionMode solidExecutionMode() {
+        return SolidExecutionMode.MANUAL_CHECKPOINT;
+    }
+
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
         lastFrameCounter = vIntRunCount;
         ensureState();
-        if (isDestroyed() || requestPublished) {
+        if (isDestroyed()) {
+            return;
+        }
+        if (requestPublished) {
+            resolveOwnSolid(player);
             return;
         }
         if (runtime.phase() == S3kSanctuaryRuntimeState.Phase.SELECTING
                 && runtime.selectedStage() == subtype) {
             updateSelection();
+            resolveOwnSolid(player);
             return;
         }
-        if (isSelectable() && tryServices() != null && services().objectManager() != null
-                && services().objectManager().isRidingObject(player, this)) {
+        if (!isSelectable() || tryServices() == null || services().objectManager() == null) {
+            resolveOwnSolid(player);
+            return;
+        }
+        Boolean standingNow = resolveOwnSolid(player);
+        boolean standing = standingNow != null
+                ? standingNow
+                : services().objectManager().isRidingObject(player, this);
+        if (standing) {
             beginSelection(player instanceof AbstractPlayableSprite sprite ? sprite : null);
         }
+    }
+
+    /**
+     * Resolves this pedestal's SolidObjectTop now and reports whether {@code player} stands on it;
+     * {@code null} only when no solid execution context is active.
+     */
+    private Boolean resolveOwnSolid(PlayableEntity player) {
+        if (tryServices() == null) {
+            return null;
+        }
+        var solid = services().solidExecution();
+        if (solid == null || solid.isInert()) {
+            return null;
+        }
+        var batch = solid.resolveSolidNowAll();
+        if (player == null) {
+            return false;
+        }
+        var contact = batch.perPlayer().get(player);
+        return contact != null && contact.standingNow();
     }
 
     public boolean beginSelection() {

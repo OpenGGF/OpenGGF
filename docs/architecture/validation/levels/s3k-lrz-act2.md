@@ -1485,5 +1485,86 @@ existing s9 Blue Sphere method in the same run was unchanged (49165/49912/50546)
 - Knuckles, wide presets and donors on this branch.
 - A won Super stage from an ordinary ring.
 - The other LRZ1/LRZ2 giant rings.
-- Native corroboration of the seven-Chaos route.
+- Native corroboration of the seven-Chaos cold route itself: no native movie reaches LRZ2 s9 under
+  seven Chaos (see the declared native twin below).
+
+### Declared native twin of the seven-Chaos branch (2026-10-17)
+
+**Why declared.** No authentic native ingress reaches this branch. Every native seven-Chaos
+`$1701` visit comes from MHZ: `s3k-tails-full-chain-all-emeralds` `dez23` at 240636 and
+`s3k-sonic-tails-complete-emeralds` `dez23` at 227779. All seven Super stages in those runs are
+won, so no native failure return exists either.
+
+The probe `Lrz2SevenChaosNativeProbe.cs` (external task dir `seven-chaos-native/probe`, outside
+TraceChaser) runs the pinned headless host `bf3c539` (sha256 `71b949a6…`) on the locked-on ROM
+`CFBF98C3…`, with SyncSettings from `s3k-full-chain-tails-all-emeralds.bk2` (`cb62a83a…`).
+Its declared setup, labelled as such:
+
+- After title Start, at `Game_mode $4C`, it writes `Player_option=2` (Tails),
+  `Current/Apparent_zone_and_act=$0901`, Chaos 7, Super 0, `1111111` and converted 0.
+- It sets VInt0/RNG0 once, before the initial ProcessSprites.
+- It holds Tails at (s9−40, y→s9_y−8) until the placed `$85/9` ring reaches mapping 8, then
+  makes one contact placement and writes no RAM afterwards.
+- The hub tail `45 R;46 -;1 A` starts at native release +20, then neutral input.
+
+A temporary engine twin runs the same declared scenario. It uses `GameplayCaptureSession`, a
+direct `$0901` boot and LIMITED+RAW_RGB applied after construction. Both are diagnostics, not
+certification, and make no timing acceptance claim.
+
+| Event (frames after the declared start) | Native | Engine twin |
+| --- | --- | --- |
+| Contact placement | 340 | 338 |
+| First `$1701` level frame | 467 | 403 |
+| Hub release (object control cleared) | 1353 | 1295 |
+| Pedestal 2 landing (5805,896) | release+130 | release+130 |
+| Selection (`object_control $81`) | release+130 | release+131 before this slice |
+| Special stage / results / LRZ2 reload | 1499 / 1902 / 2609 | 1442 / 1933 / 2567 |
+
+Native RAM confirms the gateway contract:
+
+- At the `$1701` restart: ring bit 9, Saved2 zone `$0901`, star post 0.
+- Ceremony release, then `Current_special_stage=2`.
+- The stage end writes zone `$0901` and star post `$80`.
+- The results rebuild `$1701`, and the reload lands at Saved2 (9792,1600).
+
+The hub trajectories are identical frame for frame from release. Raw-RGB comparison over the
+320×224 active area (native at (14,8), no normalization) gives:
+
+- 0 differing pixels at hub release, +20 and +130, and at intake +20.
+- 420 at results +300.
+- 902 at return +30, all title-card residue: the engine capture omits cards.
+
+Findings:
+
+- **Fixed: pedestal selection was one frame late.** `loc_908DE` calls `SolidObjectTop` and tests
+  `p1_standing_bit` in the same routine (sonic3k.asm:197705-197719). The engine pedestal used
+  the automatic solid pass after its update, so it saw the ride one frame later.
+  `HPZSuperEmeraldObjectInstance` now uses a manual checkpoint at that call point.
+  `TestS3kLrzHpzSszColdCampaign`'s same-frame assertion was red (expected 50210, was 50211;
+  Finished 00:34:42+01:00) before the fix.
+
+  After the fix, the cold route selects at 50210 and the Super stage starts at 50226
+  (selection+16, as native). Focused checks: 15 selectors, 2410/0/0/0 (Finished
+  01:22:27+01:00), covering both seven-Chaos tests, `TestS3kLrzBackgroundInitRewind`, both
+  sanctuary lifecycles (1426 pedestal cases), the HPZ sanctuary, results-backdrop, mutator
+  admission and graph-rewind tests, and the required S3K four.
+
+  The seven Tails full-chain `dez23` segment replays (`-Ptrace-replay-r7`, expected-red frontier
+  harnesses) have identical totals and first errors with and without the fix (12/19/15/41/28/13/30
+  errors; Finished 01:31:46 and 01:33:48+01:00).
+- **Corrected test claim.** `Level` masks `Last_star_post_hit` with `andi.b #$7F` just before
+  `LevelLoop` (:7881); native `$FE2A` reads 0 on the first `$0C` frame. The two seven-Chaos tests
+  no longer assert that `$80` survives into gameplay. The engine's boolean load-gate proxy
+  stays set after the return: open, see the S3K known-bugs entry.
+- **Unattributed: intake +1** (483 px). Natively the flash is allocated in slot 5, below the ring's
+  slot 6, and initialises next frame. The engine twin draws it on contact +1. The engine already
+  models `AllocateObject`'s lowest free slot, so different slot occupancy under the declared
+  hold is suspected; an engine slot log is needed.
+- **Capture limitation, not gameplay:** `GameplayCaptureSession.render()` draws the `$1701` level
+  under the special-stage palette during `SPECIAL_STAGE`, so stage frames are not compared. The
+  results +60 frames are not aligned, because the two sides define the results start differently.
+
+Pictures: `$HOME/Videos/OGGF/s3k-parity-coverage-2026-10-14/spot-checks/seven-chaos-native-v1`,
+`seven-chaos-engine-twin-v1` and `seven-chaos-compare-v1`, which holds side-by-sides and
+`compare.json`.
 

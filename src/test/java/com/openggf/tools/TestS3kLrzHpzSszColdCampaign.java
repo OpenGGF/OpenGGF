@@ -702,7 +702,8 @@ class TestS3kLrzHpzSszColdCampaign {
      * (sonic3k.asm:128438-128477), the sanctuary converts every Chaos Emerald to gray
      * (:197949-197987), the pedestal selects its Super stage by actual contact
      * (:197808-197841), neutral input fails it, and the results return to LRZ2 at Saved2
-     * (:12709-12712, :7571-7582). The exit band is not crossed by this route.
+     * (:12709-12712, :7571-7582). The exit band is not crossed by this route. A declared native
+     * twin of the hub-onward sequence lands on pedestal 2 at the same release-relative frame.
      */
     @Test
     void tailsSevenChaosGiantRingFailsAPedestalStageAndReturnsToLrzTwo() throws Exception {
@@ -713,7 +714,7 @@ class TestS3kLrzHpzSszColdCampaign {
         for (int f = 0; f < authoredFrom; f++) assertEquals(source.getFrame(f), movie.getFrame(f), "accepted s9 input " + f);
         var settings = new GameplayCaptureSession.Settings(320, "tails", "", "off", null, null, null, "1111111",
                 false, false);
-        int hub = -1, hubRelease = -1, pedestal = -1, stage = -1, results = -1, returned = -1, ringsBefore = -1;
+        int hub = -1, hubRelease = -1, pedestal = -1, selected = -1, stage = -1, results = -1, returned = -1, ringsBefore = -1;
         int markBefore = Integer.MIN_VALUE;
         Object outgoingObjects = null;
         com.openggf.level.BigRingReturnState saved = null;
@@ -756,6 +757,7 @@ class TestS3kLrzHpzSszColdCampaign {
                     pedestal = frame;
                     assertEquals(2, ridden.getSpawn().subtype(), "ordinary input lands on gray pedestal 2");
                 }
+                if (inHub && pedestal >= 0 && selected < 0 && session.player().isObjectControlled()) selected = frame;
                 if (mode == GameMode.SPECIAL_STAGE && stage < 0) {
                     stage = frame;
                     var provider = assertInstanceOf(com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageProvider.class,
@@ -776,7 +778,10 @@ class TestS3kLrzHpzSszColdCampaign {
                             "the collected giant ring is not respawned");
                     assertEquals(gray, GameServices.gameState().getS3kEmeraldStates(), "a failed stage keeps the pedestal gray");
                     assertTrue(GameServices.gameState().isEmeraldsConverted());
-                    assertTrue(level.getTransitions().isLastStarPostHitSet(), "stage exit ori.b #$80 survives the Saved2 restore");
+                    // Level masks the stage exit's ori.b #$80 off with andi.b #$7F,(Last_star_post_hit) just
+                    // before LevelLoop (sonic3k.asm:7881; native RAM $FE2A reads 0 on the first $0C frame), so
+                    // only the restored low-bit mark below is ROM state here. The engine's boolean load-gate
+                    // proxy (LevelTransitionCoordinator.isLastStarPostHitSet) stays set; recorded as open.
                     assertEquals(markBefore, level.getCheckpointState().getStarPostActivationMark(),
                             "loc_90926 restored Saved2_last_star_post_hit across the sanctuary detour");
                     assertFalse(level.hasBigRingReturn(), "Saved2 consumed by the destination restore");
@@ -792,6 +797,9 @@ class TestS3kLrzHpzSszColdCampaign {
         assertTrue(hubRelease > hub && hubRelease + 10 + 45 < pedestal, "hub replay window precedes the pedestal");
         assertTrue(pedestal >= authoredFrom && stage > pedestal && results > stage && returned > results,
                 "pedestal, stage, results and LRZ2 return in order");
+        // loc_908DE (sonic3k.asm:197705-197719) calls SolidObjectTop and tests p1_standing_bit in the
+        // same routine, so object_control $81 lands with the player (native twin: same frame).
+        assertEquals(pedestal, selected, "the landing frame selects the pedestal");
         assertTrue(returned + 245 < movie.getFrameCount(), "released LRZ2 return with replays");
     }
 

@@ -158,8 +158,10 @@ class TestS3kLrz2SevenChaosGiantRingGateway {
             assertEquals(List.of(2, 2, 2, 2, 2, 2, 2), GameServices.gameState().getS3kEmeraldStates(),
                     "a failed stage keeps the pedestal gray");
             assertTrue(GameServices.gameState().isEmeraldsConverted());
-            assertTrue(GameServices.level().getTransitions().isLastStarPostHitSet(),
-                    "stage exit ori.b #$80 survives the Saved2 restore");
+            // Level masks the stage exit's ori.b #$80 off with andi.b #$7F,(Last_star_post_hit) just
+            // before LevelLoop (sonic3k.asm:7881; native RAM $FE2A reads 0 on the first $0C frame), so
+            // only the restored low-bit mark below is ROM state here. The engine's boolean load-gate
+            // proxy (LevelTransitionCoordinator.isLastStarPostHitSet) stays set; recorded as open.
             assertEquals(markBefore, GameServices.level().getCheckpointState().getStarPostActivationMark(),
                     "loc_90926 restored Saved2_last_star_post_hit across the sanctuary detour");
             assertFalse(GameServices.level().getLevelGamestate().isTimerPaused(), "origin clock resumes");

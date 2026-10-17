@@ -83,6 +83,8 @@ Unreleased. The earlier development themes remain in
 
 - **S3K special stage results:** The results card sits on the locked-on game's
   grey backdrop instead of white, matching native frames of won and failed stages.
+  A Super Emerald pedestal selects its stage on the frame the player lands on it,
+  as the original does, instead of one frame later.
 
 - **S3K zone title cards:** Every level entry that passes through the game's level
   routine fades the level in from black over its first 21 frames, with the player,
