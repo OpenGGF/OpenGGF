@@ -112927,3 +112927,169 @@ absolute ROM properties:
 
 The later title-card archive WIP remains outside this composition. Its pending failures, ring/timer reset at
 `loc_63B4`, HCZ and downstream frontiers remain separate obligations. No full-suite run or new trace payload.
+
+### 2026-10-16 — returned HCZ hand launcher solid order and Mega Chopper control lock
+
+Owned `bugfix/ai-s3k-r2-hcz11-row1768` over round-2 integration `cc3e77ee9`.
+Commits `5096be6cc` (hand launcher) and `1eaa2cc4a` (Mega Chopper).
+[Native owners, observer and evidence](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#returned-hcz-hand-launcher-and-mega-chopper-control-lock--2026-10-16).
+**Both commits are unqualified for merge** (lead ruling): the HCZ zone-slice
+change below still needs attribution, and the 3475/5065 owners are open.
+
+Canonical command (Java 25, surfaceless EGL, ALSOFT_DRIVERS=null, three absolute
+original ROMs): `python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay
+-Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+'-Dtest=TestS3kAizTraceReplay#replayMatchesTrace,TestS3kSonicTailsHczSegmentTraceReplay#replayMatchesTrace,TestS3kSonicTailsCompleteEmeraldRunPrefix,TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds' test`.
+Every run is 5 tests, 1 failure, 0 errors, 0 skips.
+
+| Tree | Returned HCZ11 first error | Raw (physics + animation) | Last compared row | Stop |
+|---|---|---|---|---|
+| `cc3e77ee9` baseline (lead, 6405313ce profile) | 1768 Y $870/$871 | 81981 (69334 + 12647) | 5725 | ownership loss at BK2 68801, gen 9 act 0 |
+| `5096be6cc` hand only (19:58:18 BST) | 1891 x $24B3/$24AE | 22571 (21083 + 1488) | 4001 | walk-failure: KosM FIFO full at a starpost |
+| `1eaa2cc4a` both (20:32:38 BST) | 3475 sidekick_routine $0C/$02 | 36896 (33352 + 3544) | 7642 | ownership loss at BK2 70718, gen 9 act 1 (`DEATH_RESTART`) |
+
+AIZ5 (segment 8) is unchanged at 1692 (1613 + 79), first 6111
+`sidekick_x_speed`. Every other segment is 0.
+
+The alternate selector (`-Ptrace-segments`,
+`TestS3kAizZoneSliceTraceReplay#replayMatchesTrace`) is unchanged: 60 errors,
+first 25589 `player_animation_id` $13/$05 (20:42:57 BST).
+
+The HCZ zone slice (`-Ptrace-segments -Dtest=TestS3kHczZoneSliceTraceReplay`;
+2 tests, 1 failure) was measured as a matched pair, both with first error 9482
+`air` 1/0:
+
+- original-source arm: 4699 errors (20:53:45 BST);
+- `1eaa2cc4a`: 3746 errors (20:45:26 BST).
+
+Next owners:
+
+- **3475 (comparator only).** `TraceCharacterState.routineFromSprite` reports
+  $02 for an S3K drowning player. The ROM writes $C (`AirCountdown_ReduceAir`).
+  The engine air and drown timing match native.
+- **5065 (production).** Native P1 bounces off the HCZ miniboss (slot 6, $69F7A
+  status $40). The engine admits the hit one row late because its descent leads
+  native by one 4-px step. P1 diverges from 5066 and the engine P1 later dies
+  (about 7478), which triggers the gen-9 death reload.
+- **3477 (production, 1 px).** The drowned Tails' y is 1 px off: $06A2 against
+  native $06A3.
+
+### 2026-10-16 — S3K drown routine export, HCZ miniboss Init pass, drowned motion order
+
+Same branch, pass 2: `78eea96fc` (drown routine export), `a126d5104` (miniboss
+loop Init pass plus native vortex capture and release) and `d80c5ca0f`
+(drowned motion order).
+[Native dating and witnesses](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#pass-2-drown-export-miniboss-init-pass-drowned-motion--2026-10-16).
+Commands are unchanged from the entry above; each canonical run is 5 tests,
+1 failure, 0 errors, 0 skips.
+
+| Run (BST) | Returned HCZ11 first error | Raw | Last row | Stop |
+|---|---|---|---|---|
+| `1eaa2cc4a` (20:32:38) | 3475 sidekick_routine $0C/$02 | 36896 | 7642 | BK2 70718, gen 9 act 1 |
+| final tree (23:09:50) | 3483 sidekick_status_byte $42/$02 | 32876 (28942 + 3934) | 8525 | BK2 71601, gen 9 act 1 |
+
+AIZ5 is unchanged at 1692, first 6111. The alternate is unchanged: 60 errors,
+first 25589 (23:12:03 BST).
+
+HCZ zone slice (`-Ptrace-segments TestS3kHczZoneSliceTraceReplay`, 2 tests,
+1 failure), compared as a matched pair:
+
+| Arm | Errors | First error |
+|---|---|---|
+| original source `cc3e77ee9` | 4699 | 9482 `air` |
+| final tree (23:19:23 BST) | 3748 | 9482 `air` |
+
+- **Common prefix.** The first 810 error spans are identical.
+- **Resolved.** 1960 spans from 13549 resolve, including the old hand-launch
+  `g_speed` −$1000/−$0350.
+- **New.** 1009 spans start at 13637 (`x` $0942/$0943) and 411 spans change.
+
+An interim run before the vortex fixes moved the slice's first error to 9046
+and then 9338. The cause was a pair of compensating one-pass latches, which the
+final tree removes.
+
+Next:
+
+- **3483.** S3K's drowned routine $C never runs `Sonic_Water`/`Tails_Water`,
+  so the underwater bit persists. The engine's `LevelWaterCoordinator` still
+  updates the drowning player. The fix needs a per-game gameplay rule, and the
+  rule records are `@ModApi`.
+- **Slice 13637.** One pixel after the first-visit hand launch.
+
+### 2026-10-17 — returned HCZ drowned water check, CPU pause and dead underwater status
+
+Same branch, pass 3: `64b70ebf1` (drown routine rule plus water check),
+`0d7127e63` (no CPU step during routine $C) and `b3af7e635` (dead players keep
+underwater status).
+[Evidence](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#pass-3-drowned-routine-rule-cpu-pause-dead-underwater--2026-10-17).
+
+The canonical selection (unchanged commands, 5/1/0/0) moves the returned
+HCZ11 first error through four rows:
+
+| Tree | First error | Raw |
+|---|---|---|
+| `7a5b3996c` | 3483 | 32876 |
+| `64b70ebf1` (23:42:26 BST) | 3611 `sidekick_status_byte` $42/$43 | 32772 |
+| `0d7127e63` (23:58:40 BST) | 3619 `sidekick_status_byte` $42/$02 | 32764 |
+| `b3af7e635` (00:20:28 BST) | 3832 `rings` 104/94 | 32763 (28829 + 3934) |
+
+The walk-stop is unchanged at BK2 71601. AIZ5 stays at 1692 (first 6111) and
+the alternate at 60 (first 25589, 00:21:01 BST). The HCZ zone slice is
+unchanged at 3748 (first 9482) at `64b70ebf1`; neither slice trace contains a
+drowning row.
+
+The shared dead-status gate was checked with matched arms:
+
+- the S1/S2 fixtures with underwater deaths all pass
+  (`TestS1Lz1CompleteRunTraceReplay`, `TestS2Cpz2LevelSelectTraceReplay`,
+  `TestS2Cpz2Seg9/Seg10CompleteEmeraldsSegmentTraceReplay`);
+- the S3K LBZ slice is identical with and without the gate (1663 errors,
+  first 30582).
+
+**Next (attributed, not fixed).** The rings monitor (subtype 3) at
+($2D9C,$0270) breaks on the same row in both: 3800, per an engine print-only
+diagnostic. Natively its +10 rings land at 3832.
+
+The ROM broken shell (`Obj_MonitorAnimate` → `loc_1D61A`) runs
+`Sprite_OnScreen_Test` and is deleted offscreen, while the separate
+`Obj_MonitorContents` finishes its 32-step rise and award
+(sonic3k.asm:40504-40516).
+
+The engine runs the icon and award inside `Sonic3kMonitorObjectInstance` and
+destroys the contents slot in the shell's `onUnload`. Sonic outruns the monitor,
+so the award never happens. The fix is to move icon ownership to
+`MonitorContentsSlot`, which needs rewind and owner handling.
+
+**Slice 13637.** These spans are a cascade from the inherited 9482 boss-defeat
+error, not a hand-launch fault: x/y are already 1 px off at 13500-13546, and the
+grab preserves the incoming x_sub.
+
+### 2026-10-17 — returned HCZ monitor contents outlive their shell
+
+Same branch, pass 4: `5b747c95f` makes S3K `Obj_MonitorContents` an
+independent object.
+[Evidence](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#pass-4-independent-monitor-contents--2026-10-17).
+
+Canonical selection (unchanged commands, 5/1/0/0, 02:21:48 BST):
+
+| Tree | First error | Raw |
+|---|---|---|
+| `b3af7e635` | 3832 `rings` 104/94 | 32763 (28829 + 3934) |
+| `5b747c95f` source | 6796 `sidekick_x` $C5/$C2 | 29258 (25432 + 3826) |
+
+Lag (59), the last compared row (8525), the recent mismatches and the
+walk-stop (BK2 71601, gen 9 act 1) are unchanged. AIZ5 stays at 1692 (first
+6111), and segments 0/2/4/6/9 stay at 0. The chain report is summary-only, so
+seg11 spans after 3832 were not compared.
+
+- **Alternate** (02:30:45 BST): 60 errors, first 25589, all 60 spans identical
+  to the `b3af7e635` report.
+- **HCZ zone slice** (02:33:45 BST): 3738 errors, first 9482 `air`. A matched
+  arm with only the two fix sources at `0204eb045` (02:36:20 BST) gives an
+  identical span set, so the monitor change does not move the slice.
+- **Correction.** Pass 3's "3748, unchanged" was measured at `64b70ebf1`. The
+  later `0d7127e63`/`b3af7e635` change 60 cascading `tails_cpu_*` spans from
+  18466 (−10 errors); these were not separated per commit.
+
+**Next.** 6796 `sidekick_x` (Tails, 3 px) is unattributed. Zone slice 9482
+(boss-defeat support edge) remains the inherited gap; 13637 is its cascade.

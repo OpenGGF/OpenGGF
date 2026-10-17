@@ -191,7 +191,7 @@ class TestDrowningControllerMusicSelection {
         when(player.getGameRules()).thenReturn(GameRules.SONIC_2);
         when(player.getGameRules()).thenReturn(withDrowningBubbleRules(
                 GameRules.SONIC_2,
-                new DrowningBubbleRules(37, 8, true, -0x88)));
+                new DrowningBubbleRules(37, 8, true, -0x88, false)));
 
         DrowningController controller = new DrowningController(player);
 
@@ -207,7 +207,7 @@ class TestDrowningControllerMusicSelection {
         when(player.getGameRules()).thenReturn(GameRules.SONIC_2);
         when(player.getGameRules()).thenReturn(withDrowningBubbleRules(
                 GameRules.SONIC_2,
-                new DrowningBubbleRules(0, 3, true, -0x88)));
+                new DrowningBubbleRules(0, 3, true, -0x88, false)));
         DrowningController controller = new DrowningController(player);
         setPrivateInt(controller, "bubbleFlags", 1);
         setPrivateInt(controller, "bubblesRemainingInBurst", 1);

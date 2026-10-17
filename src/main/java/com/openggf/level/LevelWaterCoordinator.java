@@ -7,6 +7,7 @@ import com.openggf.game.LevelLoadContext;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.WaterDataProvider;
+import com.openggf.game.rules.GameRules;
 import com.openggf.data.Rom;
 import com.openggf.sprites.Sprite;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -144,11 +145,12 @@ final class LevelWaterCoordinator {
         }
     }
 
-    private void updatePlayableWaterState(AbstractPlayableSprite playable, int waterY) {
+    void updatePlayableWaterState(AbstractPlayableSprite playable, int waterY) {
         if (playable == null) {
             return;
         }
-        if (playable.isHurt() || isDeferredSidekickDeadFallWaterBypass(playable)) {
+        if (playable.isHurt() || isDeferredSidekickDeadFallWaterBypass(playable)
+                || routineSkipsWaterCheck(playable)) {
             return;
         }
         // Only S3K's water routine skips the velocity change under object_control
@@ -163,6 +165,25 @@ final class LevelWaterCoordinator {
             return;
         }
         playable.updateWaterState(waterY);
+    }
+
+    /**
+     * True while a routine that never calls the water check owns this player,
+     * so Status_Underwater keeps its value. Every game's death routine skips it:
+     * S3K loc_12390/loc_1578E (sonic3k.asm:24518-24533, 29263-29289), S2
+     * Obj01_Dead (s2.asm:38255-38270) and S1 Sonic_Death ("01 Sonic.asm":1967-1985).
+     * S3K's drown routine $C also skips it, because loc_125AC/loc_15810 never
+     * reach Sonic_Water/Tails_Water.
+     */
+    private static boolean routineSkipsWaterCheck(AbstractPlayableSprite playable) {
+        if (playable.getDead()) {
+            return true;
+        }
+        GameRules rules = playable.getGameRules();
+        return playable.isDrowningPreDeath()
+                && rules != null
+                && rules.drowningBubble() != null
+                && rules.drowningBubble().drownInstallsDedicatedPlayerRoutine();
     }
 
     private static boolean isDeferredSidekickDeadFallWaterBypass(AbstractPlayableSprite playable) {

@@ -868,3 +868,15 @@ act and leader. The normalized mutable `0.7` pin and runtime candidate descripti
 are updated together. The release descriptor was reviewed and remains byte-identical
 at unpublished candidate `0.7.0`: ordinary signature regeneration must not edit
 its publication or branch policy. No published baseline changes.
+
+### Drowned player routine rule (2026-10-16)
+
+`DrowningBubbleRules` gains `drownInstallsDedicatedPlayerRoutine`. S3K's
+`AirCountdown_ReduceAir` installs player routine $C, whose dispatch never runs
+`Sonic_Water`/`Tails_Water`, so a drowning S3K player keeps `Status_Underwater`.
+S1 and S2 keep the control routine, and its water check still runs.
+
+The record's canonical constructor now takes the flag; the four-argument candidate constructor remains available and defaults it to false. The stock factories in
+`GameRules` pass `false` for S1/S2 and `true` for S3K. The normalized mutable
+`0.7` pin and the `ModApiVersion` description change together. The descriptor
+remains the unpublished candidate `0.7.0`, and no published baseline changes.

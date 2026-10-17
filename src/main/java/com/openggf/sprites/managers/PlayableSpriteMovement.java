@@ -536,9 +536,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			return;
 		}
 
+		// A drowned player keeps moving under object_control: S3K's routine $C
+		// dispatch and S1/S2's countdown object move it regardless of the lock.
 		if (sprite.isObjectControlSuppressesMovement()
 				&& !sprite.isHurt()
-				&& !sprite.getDead()) {
+				&& !sprite.getDead()
+				&& !sprite.isDrowningPreDeath()) {
 			// S3K Knuckles_Control loc_165AE clears double_jump_flag when
 			// object_control bit 0 skips movement. Previously we only returned,
 			// leaving glide physics active after a grabbing object's release.
@@ -654,15 +657,18 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		short originalX = sprite.getX();
 		short originalY = sprite.getY();
 
-		// ROM-accurate drowning pre-death: 120 frames of slow sinking before death
-		// ROM ref: s2.asm:41729-41768 - addi.w #$10,y_vel; no terrain, no input
+		// ROM-accurate drowning pre-death: 120 frames of slow sinking before death.
+		// Move by the current velocity, then add $10: S1 .sinking SpeedToPos
+		// ("0A LZ Drowning Countdown.asm":280-285), S2 Obj0A ObjectMove
+		// (s2.asm:42186-42190), S3K MoveSprite_TestGravity2 in routine $C
+		// (sonic3k.asm:24702-24704, 29322-29324). No terrain, no input.
 		if (sprite.isDrowningPreDeath()) {
-			sprite.setYSpeed((short) (sprite.getYSpeed() + 0x10));
 			if (sprite.tickDrownPreDeath()) {
 				// Timer expired - transition to dead state (no upward bounce)
 				sprite.setDead(true);
 			}
 			moveSpriteTestGravity(sprite.getXSpeed(), sprite.getYSpeed());
+			sprite.setYSpeed((short) (sprite.getYSpeed() + 0x10));
 			sprite.updateSensors(originalX, originalY);
 			applyScreenYWrapValueAfterControl();
 			return;

@@ -112,6 +112,14 @@ public record TraceCharacterState(
         if (sprite.getDead()) {
             return 0x06;
         }
+        if (sprite.isDrowningPreDeath()
+                && sprite.getGameRules() != null
+                && sprite.getGameRules().drowningBubble() != null
+                && sprite.getGameRules().drowningBubble().drownInstallsDedicatedPlayerRoutine()) {
+            // Between running out of air and dying, S3K's AirCountdown_ReduceAir
+            // installs routine $C (sonic3k.asm:33539-33575); S1/S2 keep routine 2.
+            return 0x0C;
+        }
         boolean retainObjectLandingRoutine = sprite.getGameRules() != null
                 && sprite.getGameRules().playerMovement() != null
                 && sprite.getGameRules().playerMovement().objectSolidHurtLandingRetainsRoutine();

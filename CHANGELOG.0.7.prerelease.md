@@ -130,7 +130,16 @@ Unreleased. The earlier development themes remain in
 - **S3K objects and bosses:** The Angel Island end boss starts its defeat at the
   native hit check of whichever phase it is in. When the object table is full,
   pending placements wait for the next camera block crossing, which restores the
-  Hydrocity fan timing. Ending reunion loads use measured native decompression
+  Hydrocity fan timing. Hydrocity's hand launcher checks its top surface on every
+  pass, as in the original, so a rising hand catches a player rolling over it.
+  A Mega Chopper that catches Sonic alone locks his controls and passes through
+  only left and right, so he must shake it off rather than roll, duck or jump.
+  The Hydrocity miniboss spends the original start-up pass before it descends,
+  so its dives, hits and whirlpool grab and release land on the original frames.
+  A drowning player sinks with the original motion, even while an object holds it,
+  and in Sonic 3&K it keeps its underwater state until it dies, as in the original.
+  A broken monitor's contents still rise and pay out after the player leaves the
+  monitor behind. Ending reunion loads use measured native decompression
   costs, and the credits start on the original frame. Giant-ring capture retains
   the original blank-frame ownership and art-reload state; ordinary animation
   is released again on return. Robotnik's ship stays with the beaten boss through

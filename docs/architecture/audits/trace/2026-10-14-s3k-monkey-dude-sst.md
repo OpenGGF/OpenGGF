@@ -1538,6 +1538,351 @@ covers the last-free-slot stop.
 - **Observer confirmation:** the fan is now created at trace 1246, is active
   at 1505, and the belt phase rises from 1505 exactly as native.
 
+## Returned HCZ hand launcher and Mega Chopper control lock — 2026-10-16
+
+Round-2 lane hcz11, branch `bugfix/ai-s3k-r2-hcz11-row1768` over `cc3e77ee9`.
+
+### Row 1768: the rising hand launcher never lands anyone
+
+- **Native (hcz_2 aux).** `HCZHandLauncher_Main` ($30B58) is in slot 36 at
+  x $2420, resting at y $8C8 ($32 = $878, $30 = $50). Sonic's x reaches $2400 at
+  row 1762, inside the $40-wide range, so `HCZHandLauncher_WaitForGrab` subtracts 8
+  per pass. The hand reaches $890 at 1768. Its `SolidObjectTop` (d3 = $11) lands
+  the rolling Sonic (y_radius $E) at $890 − $11 − $E − 1 = $870: status $4C,
+  interact slot 36, `mode_change on_object 0→1`. At 1769 the continued ride
+  (`MvSonicOnPtfm`) gives $871, and at 1770 he rolls off the edge.
+- **Engine.** `HCZHandLauncherObjectInstance` uses `MANUAL_CHECKPOINT` and called
+  `checkpointAll()` only inside its grab and launch-release checks. A rising or
+  returning pass therefore resolved no solid, and Sonic stayed on the floor at $871.
+- **ROM order.** `HCZHandLauncher_UpdateSolid` writes y_pos and always calls
+  `SolidObjectTop`. `HCZHandLauncher_UpdateAfterLaunch` calls it only while
+  $30 <= $18 (sonic3k.asm:65824-65833, 65863-65874).
+  `HCZHandLauncher_CheckPlayers`, `HCZHandLauncher_TryGrabPlayer` and
+  `HCZHandLauncher_ReleaseHeldPlayers` read the standing bits that the previous
+  pass left in status(a0) (65814-65816, 65880-65918, 65966-65968).
+- **History.** Milestone 21 (`8d9a82d9f`, 2026-07-11) had already restored this
+  order. Merge `e20f4a3ba` (develop into next, 2026-07-17) kept `next`'s
+  variant without it, and later merges carried that variant back to this line.
+
+### Row 1891: a Mega Chopper locks Sonic's controls
+
+- **Native.** `Obj_MegaChopper` ($87F5C, slot 9) catches Player_1 alone at row 1863
+  (aux `control_lock_state ctrl1_locked 255`). `MegaChopper_CheckCapture` clears
+  `Ctrl_1_logical`, sets `Ctrl_1_locked` and sets bit 2 of `$38(a0)` only when
+  `collision_property` == 1 (sonic3k.asm:184431-184435). Each carry pass then writes
+  `Ctrl_1 & $8C8C` (left/right only) after the release checks (184356-184360).
+  Down is pressed from row 1891 but is masked. At 1893 the AutoSpin ($1E9E6) forces
+  the roll, anim 2 releases the chopper, and the lock clears
+  (`MegaChopper_ReleasePlayer`, 184393-184396; aux `ctrl1_locked 0` at 1893).
+- **Engine.** `MegaChopperBadnikInstance` never locked, so Down reached Sonic, who
+  rolled at 1891 and went 5 px off (x $24AE/$24B3, rolled y_radius).
+- **Repair.** A P1-only capture clears logical input and calls `setControlLocked(true)`.
+  Each carry pass publishes this frame's left/right through the existing
+  forced-input mask for the next player pass, and every release path unlocks.
+  Captures by P2, or by P1+P2 in the same pass, stay unlocked as in the ROM.
+  The `$38` bit 2 latch is a captured scalar; restore twice plus forward replay is
+  tested.
+
+### The hand-only KosM abort and why it disappears
+
+With only the hand fix, the walk aborted at row 4001 (`S3K KosM module FIFO is
+full`, thrown from `Sonic3kStarPostObjectInstance.activate` → `spawnBonusStars` →
+`queueStarPostBonusArt`).
+
+- **Native ledger.** The hcz_2 ledger repeats one four-module group (fingerprints
+  f7d726/a0cfa4/03987f/0956ed) at rows 37-49 (#130-133), 3652-3661 (#137-140) and
+  6789-6796.
+- **Port report.** The fail-closed port reported #137 at 3652 as "engine job is not
+  prepared", then "engine pending #137 f7d726" at 3656-3661. The engine submitted the
+  identical job (same kind and fingerprint) after native had completed it. The port
+  therefore never released the group, and the starpost's later submission found
+  four entries.
+- **Both fixes together.** The run reports no unmatched completion before the walk
+  stops. The only unconsumed edges are #154/#155 and #220/#221 at rows 10162+,
+  beyond the stop. So every KosM job through row 7642 (#130-#153) matched native
+  ordinal and fingerprint.
+- **Attribution.** The abort follows the 1891 divergence and ends when that cause
+  is fixed. The engine-side producer of the late #137 (the group's owner object)
+  was not instrumented.
+
+### Walk-stop observer (question B)
+
+A temporary engine-only observer, deleted after use, recorded receipts, the
+generation and P1/P2 drown/death state through the chain on 1eaa2cc4a:
+
+- Segment 11 is admitted at gen 8 with receipt `INTERIOR_RETURN@gen8/z1a0`.
+- The act 1 → 2 advance at observer label 6184 (native row 6183) keeps gen 8, the
+  seamless path.
+- Engine P1 dies at label 7478 (x $06FD, y $07B4, 2 rings) while native P1 is alive
+  (row 7643: routine 02, x $09E1).
+- At BK2 70718 the death-restart load completes with `DEATH_RESTART@gen9/z1a1`. The
+  coordinator correctly rejects it as an ownership loss.
+
+The stop is therefore a gameplay divergence (engine P1 death), not a
+coordinator/bootstrap defect.
+
+Labels are the cursor after the step, which is the trace row + 1. This is
+consistent with the air decrements: engine 1736/1796/.../3416 against native
+1735/1795/.../3415.
+
+### Row 3475: drowned sidekick routine is a comparator derivation gap
+
+- **Native.** Tails' `air_left` runs $1D → 0 by row 3415. `AirCountdown_ReduceAir`
+  then sets `routine` $C, anim $17 and a $78 drown timer at row 3475
+  (sonic3k.asm:33539-33573). `loc_1857C` later sets routine 6.
+- **Engine.** The observer shows the engine sidekick's air ticking on the same rows,
+  and its drown pre-death state starting on the same row (label 3476).
+- **Gap.** `TraceCharacterState.routineFromSprite` reports $02 for a drowning player.
+  S1 and S2 keep routine 2 while drowning (`0A LZ Drowning Countdown.asm`, s2.asm
+  near 42167), so S3K needs a per-game $C.
+- **Unrelated enum.** `NativePlayableRoutine` maps DROWN to $0A; the ROM writes $C.
+  Its only consumer is the MGZ CONTROL gate.
+- **Next owner.** The trace comparator, with S1 LZ and S2 drowning fixtures as
+  controls. Physics-route rows 1891-3474 now match.
+
+### First production divergence after the fixes: HCZ miniboss descent phase (row 5065)
+
+The same observer dumped engine P1/P2 positions per row. Its labels line up with
+native at +1: P1 has zero mismatches over rows 3400-3474 at offset 1 and 75 at
+offset 0. P1's first production mismatch after 3475 is row 5066.
+
+- **Native.** At row 5065 Sonic's velocity reverses (x_vel $FA7A → $059E,
+  y_vel $07B6 → $F812). At the same row the HCZ miniboss (slot 6, $69F7A,
+  `HCZMiniboss_*`, raw routine $0A) gains status $40.
+- **Engine.** `HczMinibossInstance` admits the hit one row later (hit count 6 → 5
+  at 5066). Across rows 5039-5071 the engine boss y leads native by exactly one
+  4-px step: $068C against $0688 at 5064.
+- **Why it matters.** Sonic's touch runs before the boss slot moves, so a boss
+  4 px lower is touched one frame later.
+- **Native descent.** The boss appears at ($36C0,$05F4) in routine $0A at row 5027
+  and makes its first +4 step at 5028.
+- **Engine descent.** The engine's descent starts one step early. Its entry row
+  was outside the observed window.
+- **Consequence.** P1 then diverges, and the engine P1 later dies (label 7478),
+  which produces the 70718 stop.
+- **Next owner.** The HCZ miniboss routine-$0A entry and first-move frame.
+
+The drowned Tails' y is 1 px off from row 3477 ($06A2 against native $06A3).
+That is a separate drowned-body motion difference, not attributed here.
+
+### HCZ zone slice matched pair
+
+`-Ptrace-segments -Dtest=TestS3kHczZoneSliceTraceReplay`, 2 tests and 1 failure
+in both arms:
+
+- original-source arm (both sources at `cc3e77ee9`): 4699 errors;
+- `1eaa2cc4a`: 3746 errors.
+
+Both keep the first error at 9482 `air` 1/0. The 953-error reduction is not
+attributed per field: the single-trace report keeps the first error, totals and
+recent rows only. The lead ruling therefore keeps both commits unqualified for
+merge.
+
+### Rejected / not done
+
+- No capacity change, readiness release, row realignment, hydration or fitted
+  timing.
+- The exporter routine byte is left as is; an S3K-only $C needs a game-owned
+  semantic rule plus S1/S2 controls.
+- The miniboss phase is unrepaired.
+
+## Pass 2: drown export, miniboss Init pass, drowned motion — 2026-10-16
+
+### Drown routine export (3475)
+
+`AirCountdown_ReduceAir` writes routine $C to the drowning player, and
+`loc_1857C` later writes 6 (sonic3k.asm:33539-33575). S1 and S2 keep routine 2
+while drowning (`0A LZ Drowning Countdown.asm`:266; s2.asm:42172).
+
+The exporter now asks the active module's `TracePlaybackProfile` for the byte:
+S3K uses `DEDICATED_DROWN_ROUTINE`, everything else `CONTROL_ROUTINE`. Dead (6)
+wins over drowning, and drowning wins over hurt. `NativePlayableRoutine.DROWN`
+is now $0C; $0A is `loc_12590`'s scroll wait. The value is comparison-only.
+
+### Miniboss Init pass (5065)
+
+`HCZMiniboss_StartFight` only installs `Obj_HCZ_MinibossLoop`.
+`HCZMinibossLoop_Init` runs on the next pass without moving
+(sonic3k.asm:139286-139294, 139319-139334). Native dating agrees in both traces:
+
+| Trace | StartFight (loop pointer, routine 0) | Init (routine 2) | Routine 4 |
+|---|---|---|---|
+| `hcz_completerun` | 7960 | 7961 | 8185 |
+| `hcz_2` | 4597 | — | 4822 |
+
+The old engine installed the descent on the StartFight pass. A per-row engine
+observer of the returned chain showed every phase one pass early: WAIT at 4821,
+RISE at 4881, DIVE at 4997. With the fix, an engine observer of the first visit
+matches native at 7960, 7961, 8185 and 8245.
+
+### Two compensating latches in the vortex
+
+The early boss had hidden two compensating one-pass latches, and fixing it
+exposed them:
+
+- **Capture.** `waterEffectPullReady` (from `04107a037`) spent the water effect's
+  first routine-8 pass. `loc_6A5D8` pulls on that pass: native enters routine 8
+  at 9045 and Sonic gains object_control at 9046.
+- **Release.** `vortexFinalPullPending` pulled and released one pass after
+  END_VORTEX. `loc_6A5FA` → `loc_6A986`/`sub_6A996` releases on the same pass
+  (sonic3k.asm:139849-139866).
+
+Both latches are removed.
+
+### Drowned motion (3477)
+
+S1 `.sinking`, S2 `Obj0A_PlayerHasDrowned` and S3K routine $C all move first
+and then add $10. None checks the player's object_control. The engine added
+first, and skipped the motion under a movement-suppressing object lock. In the
+returned chain the water wall holds the drowned Tails, so its $FE00 y_sub never
+carried a pixel.
+
+No S1/S2 fixture contains a drowning row: 0 of 127 physics files have
+anim $17 for the player or sidekick.
+
+### Matched HCZ zone slice
+
+| Arm | Errors | First error |
+|---|---|---|
+| original `cc3e77ee9` | 4699 | 9482 `air` |
+| final | 3748 | 9482 `air` |
+
+- **Common prefix.** 810 spans are identical.
+- **Resolved.** 1960 spans from 13549, including the old hand-launch `g_speed`
+  −$1000/−$0350.
+- **New.** 1009 spans from 13637: `x` $0942/$0943, `tails_x` and later
+  CPU/respawn fields.
+- **Changed.** 411 spans, the first a `tails_cpu_target_x` span at 12259 that
+  lengthens.
+
+The first new span sits one pixel after the first-visit hand launch, and the
+next owner is that launch path.
+
+### Remaining
+
+- **Returned HCZ11 first error, 3483** (`sidekick_status_byte` $42/$02). S3K
+  routine $C does not run the water check, but the engine's water coordinator
+  clears the drowned Tails' underwater bit. Fixing it needs a per-game gameplay
+  rule, and those rule records are `@ModApi`, so the change needs lead approval.
+- **Walk-stop at BK2 71601.** This is still a death-restart ownership loss
+  (gen 9, act 1).
+- **Not run here.** `TestHczMinibossNativeRendering` needs a GLFW display.
+
+## Pass 3: drowned routine rule, CPU pause, dead underwater — 2026-10-17
+
+### Water check during the drown (3483)
+
+S3K only calls `Sonic_Water`/`Tails_Water` from the routine-2 control path
+(sonic3k.asm:21998, 26242). The drowned routine $C (`loc_125AC`/`loc_15810`)
+never calls them. S1 (`f_playerctrl` bit 0 skips only the modes, so
+`Sonic_Water` at "01 Sonic.asm":82 still runs) and S2 (s2.asm:36251) keep the
+water check for a drowned player.
+
+That per-game fact now lives in `DrowningBubbleRules`, the existing owner of the
+drowning countdown, as `drownInstallsDedicatedPlayerRoutine`. Adding it is an
+unpublished-candidate API change: the canonical constructor changes, and the
+`0.7` pin gains three lines alongside the `ModApiVersion` description. The
+descriptor stays at `0.7.0`. The trace exporter's routine $C reads the same
+rule; the trace-profile enum from `78eea96fc` was removed.
+
+### CPU step during the drown (3611)
+
+`Tails_CPU_Control` is reached only from Tails' routine-2 path
+(sonic3k.asm:26180-26190). The engine CPU kept following Sonic, turning the
+drowned Tails left. The CPU update now returns with cleared inputs while the
+dedicated-routine rule applies. S2 Tails keeps routine 2 while drowning, so its
+CPU still runs; the control test confirms this.
+
+### Dead underwater status (3619)
+
+No game's death routine calls the water check: S3K
+`loc_12390`/`loc_1578E`, S2 `Obj01_Dead` and S1 `Sonic_Death`. Across every
+committed S1/S2/S3K fixture, the underwater bit never changes while a player
+stays in routine 6. The water-check gate now covers dead players in every game.
+
+Validation:
+
+- The S1/S2 underwater-death fixtures (LZ1, CPZ2 level select, CPZ2 seg9 and
+  seg10) all pass.
+- LBZ slice matched arms: identical 1663 errors, first 30582.
+
+### Zone slice 13637
+
+The errors are `cascading=true`, with x/y 1 px off from 13500 to 13546, before
+the 13549 grab. The grab preserves the incoming x_sub (ROM `move.w`), so the
+inherited subpixel resurfaces after the 13636 launch. The root is the
+pre-existing 9482 boss-defeat edge, unchanged from the original-source arm:
+natively both players lose their slot-47 support and go airborne, while the
+engine keeps them grounded.
+
+### Next
+
+The 3832 monitor at ($2D9C,$0270), type RINGS, subtype 3:
+
+- Native and engine both break it at 3800 (engine print-only diagnostic).
+- Natively the award lands at 3832. The broken shell (`loc_1D61A` via
+  `Obj_MonitorAnimate`, sonic3k.asm:40504-40516) is deleted by
+  `Sprite_OnScreen_Test`, but `Obj_MonitorContents` is a separate object
+  that completes its rise and award.
+- The engine keeps the icon state machine and the award in the shell, and
+  `onUnload` destroys the `MonitorContentsSlot`. When Sonic leaves the
+  monitor offscreen, the award is lost.
+- Next owner: move `updateIcon` into `MonitorContentsSlot`, keep it alive past
+  the shell's unload, and give it rewind/owner handling.
+
+## Pass 4: independent monitor contents — 2026-10-17
+
+### Owner (3832)
+
+`Obj_MonitorSpawnIcon` allocates `Obj_MonitorContents` with
+`AllocateObjectAfterCurrent`, copying x/y, anim, render_flags and the breaking
+player (sonic3k.asm:40640-40652). The shell's `loc_1D61A` deletes it offscreen;
+the contents run `sub_1D820`, award through `loc_1D850`, then wait out
+`loc_1DB2E`'s timer of 29. No contents routine checks the screen.
+
+`5b747c95f` moves the rise, award, timer, render and rewind state into
+`MonitorContentsSlot`. It follows S2 `MonitorContentsObjectInstance`. The shell no
+longer destroys it. Unit harnesses without an object manager still run the
+inherited routine on the shell.
+
+### Engine contracts found on the way
+
+The first fix still lost the payout. Two engine defaults also cancel an
+independent object:
+
+- **Offscreen unload.** `ObjectManager` runs the generic dynamic
+  `out_of_range` unload on every executed object unless it reports
+  `isPersistent()`.
+- **Rewind probe.** `ObjectRewindDynamicCodecs` probes only listed
+  constructor shapes. `(ObjectSpawn, MonitorType, PlayableEntity)` was
+  silently not recreated; the restore diff showed the contents missing.
+
+Persistence also exposes the object to the seamless-transition offset, so it
+needs `RomWorldPositionedObject`. All three are now in the implementation
+pitfalls.
+
+### Validation
+
+- **Red first** (`0204eb045` source): a new lifecycle class, 4 tests / 3 F.
+  The upright, inverted and rewind variants lose the payout when the shell
+  unloads; the loaded control pays once.
+- **Focused set:** 1511/0/0/4. The 4 skips are
+  `TestSecondStrikeCheckpointGameplay`, which needs the external
+  `secondstrike.checkpoint.jar`. The set includes every-object rewind round
+  trip, the graph/coverage guards, the CNZ monitor-slot trace check and the
+  mandatory S3K four.
+- **Canonical:** seg11 first error 3832 → 6796; raw 32763 → 29258.
+- **Alternate:** 60 identical spans.
+- **HCZ slice:** 3738, identical to a matched `0204eb045`-source arm.
+
+### Limits
+
+- The chain report is summary-only, so seg11 spans after 3832 were not
+  compared.
+- 6796 is unattributed.
+- The zone-slice 9482 boss-defeat edge stays inherited, and 13637 is its
+  cascade.
+
 ## Prepared independent colour-expansion feature — 2026-10-15
 
 The user requested a saved Full/Limited display setting during the measurement
@@ -1615,3 +1960,64 @@ engine spots680 and1341 with the retained native images/CRAM and actual image
 inspection; preserve source/core/movie/geometry/published-boundary provenance.
 Do not re-encode or normalize screenshots, repaint RGB, infer shadow/highlight,
 or claim full pixel parity from the range transfer. Root owns SSZ source/matrix.
+
+
+## Retained HCZ lane composed onto Root — 2026-10-17 (GPT-6.1)
+
+Work is confined to T3 tree `t3-3aa3bc3c`, branch
+`feature/ai-s3k-hcz-gpt61-repair`. The first writer operation fast-forwarded
+`707b3c208` to Root `2056a99cd4011dff1b725f401a905f8baa7ff779`
+under the current Main wrapper's `worktree_build_slot`. The retained tree
+`t3-178a77b5` at `720406940` and its seven WIP paths remain read-only.
+
+Source comparison, rather than ancestry alone, selected the missing final
+`cc3e77ee9..f8897c675` behavior: hand solid dispatch, Mega Chopper P1 control
+ownership, miniboss loop Init and final vortex dispatch, drowned motion,
+rule-owned water/CPU/exporter gates, and independent monitor contents with
+lifetime/recreation/world-offset/award behavior. The obsolete intermediate
+trace-profile classifier and `ec1d6b8dc` immediate title-entry change were not
+replayed. Root's final trace profile, palette-white-fade rule, player mapping
+access, new title helpers and unrelated API pins are retained.
+
+The unfinished carrier WIP now stores each native player's target once at
+capture, matching `loc_6A80C`'s word `$3A = Camera_X_pos + $A0`;
+`sub_6A916` compares that word even when the camera moves. The request also
+carries its locked current X bounds into both X easing targets.
+`Change_Act2Sizes` stores HCZ2 sizes but skips applying current HCZ X bounds;
+only P1 carrier release `loc_6A8AE` creates `Child1_Act2LevelSize`. The real
+stored act-2 sizes remain the later child owner's source. A manager-sidecar,
+playable and camera snapshot regression restores twice and replays both
+carriers before and after release. Distinct P1/P2 target words are also checked
+through manager recreation; the schema guard requires both fields.
+
+The water-check gate now belongs to `LevelWaterCoordinator`, preserving the
+sprite size ratchet and its existing public surface. Its moved test uses the
+configured stock module's rules, without exposing a protected test helper.
+`DrowningBubbleRules` needs the semantic dedicated-routine flag so hybrid rules
+carry the behavior without game-name checks. Its prior four-argument candidate
+constructor remains and defaults false. The five-argument constructor, accessor
+and record component are added to the mutable `0.7` pin; Root's pins are
+preserved. The descriptor is reviewed and remains unpublished candidate
+`0.7.0`; no publication/version/topology change is justified.
+
+Validation is recorded below when complete. Pass4 and composed-720 figures
+above are historical observations, never fresh passes of Root composition.
+The title-load boundary remains separate: the later recovery established that
+both drivers submit the archive late and that the slice's same-step preparation
+accidentally matches native. Native submission belongs on the load frame with
+preparation on the first title-loop step. Row 7126 is not certified as walker-only.
+
+
+Focused invocation `9100` completed on `2056a99c` plus the composed diff at
+2026-10-17 09:34:45 BST: **1591 tests, 0 failures, 0 errors, 4 skips**.
+The 26-class exact selector covers the new carrier/X-lock/manager-schema
+regressions, moved cross-game water checks, drowned motion/CPU/exporter,
+hand launcher, miniboss phase and water effects, chopper, monitor lifecycle,
+monitor graph/content, every-object rewind, candidate API pins, the four
+mandatory S3K startup classes and external Second Strike checkpoint gameplay.
+The four skips are that last class's `secondstrike.checkpoint.jar` gate; these
+are positioned authored AIZ-content cases, not stock HCZ checks. Queue wait was
+285 seconds; Maven execution 33.070 seconds. The prior attempt `34687` stopped
+at test compilation (moved test's protected helper and mixed boxed-number list),
+not a gameplay failure. The corrected test fixture preserves protected access.
+Source guards and strict trace qualification are still pending at this checkpoint.
