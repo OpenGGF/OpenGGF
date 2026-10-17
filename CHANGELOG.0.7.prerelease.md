@@ -84,6 +84,13 @@ Unreleased. The earlier development themes remain in
 - **S3K special stage results:** The results card sits on the locked-on game's
   grey backdrop instead of white, matching native frames of won and failed stages.
 
+- **S3K SEGA screen:** The title opens as the ROM's does: 22 frames of fade to
+  black, then the SEGA logo fades in over 22 frames in the console's own palette
+  steps, and the chant starts as the fade ends. Pressing Start during the logo
+  now stops the chant and runs the console's palette transition into the Sonic
+  animation, instead of jumping straight to the menu or skipping the chant. The console's boot and the logo's decompression time are
+  not yet included, so the logo still appears earlier than on hardware.
+
 - **S3K zone title cards:** Every level entry that passes through the game's level
   routine fades the level in from black over its first 21 frames, with the player,
   HUD and card already at full colour. This covers zone changes, new games from the
