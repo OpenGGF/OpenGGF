@@ -120,9 +120,24 @@ public final class S3kEndingSamplerTool {
         return spots;
     }
 
+    /** Tool-local passive seam; never installed in gameplay owners or timing authority. */
+    interface FrameObserver extends AutoCloseable {
+        void started(GameplayCaptureSession session) throws Exception;
+        void beforeStep(int outer);
+        void afterStep(int outer) throws Exception;
+        boolean finished();
+        @Override void close() throws Exception;
+    }
+
     static void run(Arguments args) throws Exception {
+        run(args, null);
+    }
+
+    static void run(Arguments args, FrameObserver observer) throws Exception {
+        boolean images = observer == null;
+        String completion = images ? args.completion() : "metadata-window";
         MutatorGameplayCaptureTool.requireDisplayFreeContext();
-        Set<Integer> requested = readSpots(args.spots());
+        Set<Integer> requested = images ? readSpots(args.spots()) : Set.of();
         if (!hash(args.rom(), "SHA-1").equalsIgnoreCase(ROM_SHA1)) throw new IllegalArgumentException("Requires original S3&K locked-on ROM");
         Path root = Path.of("").toAbsolutePath();
         String head = git(root, "rev-parse", "HEAD");
@@ -135,20 +150,20 @@ public final class S3kEndingSamplerTool {
         provenance.setProperty("source.java.sha256", sourceHash);
         provenance.setProperty("runtime.sha256", runtimeHash);
         provenance.setProperty("rom.sha1", ROM_SHA1);
-        provenance.setProperty("spots.sha256", hash(args.spots(), "SHA-256"));
+        if (images) provenance.setProperty("spots.sha256", hash(args.spots(), "SHA-256"));
         provenance.setProperty("product", args.product().cli + "/" + args.progressLabel() + "/" + args.region() + "/320x224/LIMITED238/RAW_RGB");
         provenance.setProperty("character.main", args.product().main);
         provenance.setProperty("character.sidekick", args.product().sidekick);
         provenance.setProperty("native.player_option", Integer.toString(args.product().nativePlayerOption));
         provenance.setProperty("progress", args.progressLabel());
         provenance.setProperty("emerald.states", args.emeraldStates());
-        provenance.setProperty("completion", args.completion());
+        provenance.setProperty("completion", completion);
         provenance.setProperty("ingress", "frozen-title-owner-v2; positioned, not cold campaign; title ACTIVE then real Start EXITING; no data select; fresh ending load; VInt=0/RNG=0 before initial dispatch only");
         provenance.setProperty("observation", "engine outer indices only; neutral controller stream; no native gameplay hydration");
         provenance.setProperty("started.utc", java.time.Instant.now().toString());
         // Atomic refusal of existing output: never overwrite a retained capture.
         Files.createDirectory(args.output());
-        Files.copy(args.spots(), args.output().resolve("spots.txt"));
+        if (images) Files.copy(args.spots(), args.output().resolve("spots.txt"));
         writeProperties(args.output(), provenance);
         var settings = args.settings();
         Set<Integer> captured = new TreeSet<>();
@@ -160,10 +175,11 @@ public final class S3kEndingSamplerTool {
         System.setProperty("user.dir", configurationDirectory.toString());
         int lastOuter = -1;
         GameMode lastMode = null;
-        int outerLimit = args.throughTitle() ? LIMIT : java.util.Collections.max(requested) + 1;
+        int outerLimit = !images || args.throughTitle() ? LIMIT : java.util.Collections.max(requested) + 1;
         try (var session = new GameplayCaptureSession(settings);
              var state = Files.newBufferedWriter(args.output().resolve("state.csv"));
-             var ledger = Files.newBufferedWriter(args.output().resolve("ledger.csv"))) {
+             var ledger = Files.newBufferedWriter(args.output().resolve("ledger.csv"));
+             FrameObserver observation = observer) {
             var configuration = GameServices.configuration();
             configuration.setSessionOverride(SonicConfiguration.DISPLAY_COLOR_EXPANSION, "LIMITED");
             configuration.setSessionOverride(SonicConfiguration.DISPLAY_COLOR_PROFILE, "RAW_RGB");
@@ -196,9 +212,11 @@ public final class S3kEndingSamplerTool {
                     + " real_Start=1 exit=" + title.getState() + " data_select_initialized=false\n");
             state.write("outer,game_mode,level_frame,object_ordinal,vint,progress,fg,bg,p1_x,p1_y,p1_mapping,rng,camera_x,camera_y,copy_x,copy_y,credits_routine,credits_part,credits_row,credits_delay,credits_speed,registered_sidekicks\n");
             ledger.write("event,outer,detail\n");
+            if (observation != null) observation.started(session);
             boolean exited = false;
             boolean titleReached = false;
             for (int outer = 0; outer < outerLimit; outer++) {
+                if (observation != null) observation.beforeStep(outer);
                 session.step(neutral(outer));
                 var image = session.render();
                 if (image.width() != 320 || image.height() != 224) throw new IllegalStateException("Expected native 320x224 image");
@@ -210,12 +228,12 @@ public final class S3kEndingSamplerTool {
                     if (!exited) {
                         exited = true;
                         ledger.write("ending_exit," + outer + "," + mode + "\n");
-                        ScreenshotCapture.savePNG(image, args.output().resolve("event-ending-exit.png"));
+                        if (images) ScreenshotCapture.savePNG(image, args.output().resolve("event-ending-exit.png"));
                     }
                     if (mode == GameMode.TITLE_SCREEN) {
                         titleReached = true;
                         ledger.write("title_mode," + outer + ",TITLE_SCREEN\n");
-                        ScreenshotCapture.savePNG(image, args.output().resolve("event-title-mode.png"));
+                        if (images) ScreenshotCapture.savePNG(image, args.output().resolve("event-title-mode.png"));
                         break;
                     }
                     continue;
@@ -236,20 +254,25 @@ public final class S3kEndingSamplerTool {
                         + "," + camera.getX() + "," + camera.getY() + "," + camera.getXCopy() + "," + camera.getYCopy()
                         + "," + credits.routine() + "," + credits.partIndex() + "," + credits.rowIndex()
                         + "," + credits.delay() + "," + Integer.toHexString(credits.speed()) + "," + GameServices.sprites().getRegisteredSidekicks().size() + "\n");
+                if (observation != null) {
+                    observation.afterStep(outer);
+                    if (observation.finished()) break;
+                }
                 if (requested.contains(outer)) {
                     ScreenshotCapture.savePNG(image, args.output().resolve(String.format("outer-%05d.png", outer)));
                     captured.add(outer);
                     ledger.write("snapshot," + outer + ",320x224\n");
                 }
             }
-            if (args.throughTitle() && (!exited || !titleReached)) {
+            if (images && args.throughTitle() && (!exited || !titleReached)) {
                 throw new IllegalStateException("No ending exit and title mode within " + LIMIT + " steps");
             }
-            if (!args.throughTitle() && (lastMode != GameMode.LEVEL || lastOuter != outerLimit - 1)) {
+            if (images && !args.throughTitle() && (lastMode != GameMode.LEVEL || lastOuter != outerLimit - 1)) {
                 throw new IllegalStateException("Ending observation bound not reached in LEVEL mode");
             }
+            if (observation != null && !observation.finished()) throw new IllegalStateException("Metadata window not reached");
             if (!captured.equals(requested)) throw new IllegalStateException("Requested spots missing before exit: " + difference(requested, captured));
-            ledger.write("DONE," + lastOuter + ",completion=" + args.completion() + ";requested=" + requested.size()
+            ledger.write("DONE," + lastOuter + ",completion=" + completion + ";requested=" + requested.size()
                     + ";captured=" + captured.size() + ";mode=" + lastMode + "\n");
         }
         finally {
@@ -272,11 +295,11 @@ public final class S3kEndingSamplerTool {
         }
         provenance.setProperty("configuration.example.sha256", hash(configurationDirectory.resolve("config.yaml.example"), "SHA-256"));
         provenance.setProperty("user.dir.restored", Boolean.toString(java.util.Objects.equals(previousUserDir, System.getProperty("user.dir"))));
-        provenance.setProperty("terminal", args.throughTitle() ? "TITLE_SCREEN mode; capture host does not certify hub recovery"
+        provenance.setProperty("terminal", !images ? "Metadata observation bound only; no pixel/ending exit/title certificate" : args.throughTitle() ? "TITLE_SCREEN mode; capture host does not certify hub recovery"
                 : "LEVEL observation bound only; no ending exit or title certificate");
         writeProperties(args.output(), provenance);
         System.out.println("Ending sampler completed: " + args.product().cli + "/" + args.progressLabel() + "/" + args.region()
-                + "; " + captured.size() + " requested spots; completion=" + args.completion() + "; outer=" + lastOuter + "; mode=" + lastMode);
+                + "; " + captured.size() + " requested spots; completion=" + completion + "; outer=" + lastOuter + "; mode=" + lastMode);
     }
 
     private static Set<Integer> difference(Set<Integer> requested, Set<Integer> captured) {

@@ -71,6 +71,16 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+
+A timing-boundary callback need not observe the completed physical facade
+(2026-10-17, ending queue causality). PRE_MAIN_LOOP observes after timing service
+but before runtime-art after-service; VINT/POST callbacks observe after both.
+A ready/physicallyRetired timing handle can still be the direct facade head at
+PRE. Keep outer, LF before-step, LF at observation, callback phase and real
+submission handles separately; the next outer VINT still reads the previous LF.
+Diagnostic queuedFingerprints are not submission fingerprints. Never infer a
+second service or shift clocks from these projections.
+
 Opcode pins alone do not authenticate instruction timing (2026-10-17, S3K V-int diagnostics).
 An unchanged `dbf` opcode can have a changed initial iteration count, and an unchanged `jsr` can call a different
 routine. Verify the complete supported code bytes, including immediates, displacements and call targets, before
