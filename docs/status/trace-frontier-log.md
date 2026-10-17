@@ -113659,3 +113659,13 @@ runtime363e7328… with no material finding. No trace/native/media/broad or CPU/
 camera/8329 edit. R12's first non-camera8329y_speed and absent exit remain
 historical bef8 observations, not new qualification; Root owns combined delivery.
 [Commands, source ownership, old-reds and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r13-residency-smoke-regressions-native-row-pointers-and-ddz-fixture-entry--2026-10-17).
+
+
+2026-10-17 ICZ R11 retained-resource smoke owner (same98d,077767+private carry):
+no trace frontier run or strict trace claim. Real handoff entry129 C131→0000
+old-red31728 (1/1F), then focused45686 77/0F0E0S reaches original ICZ16/pattern/
+publication tail. Review's distinct opaque688→718 P2 reproduced9826 (1/1F),
+corrected68955 affected4/0F0E0S with two forced-world replays. No unknown-zero
+fallback, async predecessor input, public snapshot/API, physics or timing change.
+These are separate source epochs; current campaign/HCZ frontiers stay historical
+and Root owns composed smoke/delivery. [Commands, sources and explicit limits](../architecture/validation/levels/s3k-icz-act1.md#r11-synchronous-known16-handoff-repair--2026-10-17).

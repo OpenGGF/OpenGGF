@@ -188,6 +188,8 @@ Unreleased. The earlier development themes remain in
   of snapping min-Y or reserving a remembered results slot.
   Admitted title and save-menu ROM patterns survive the following level overlays,
   retaining unwritten spans while newer zero/art uploads supersede them.
+  IceCap's in-frame act handoff preserves known resident 16×16 pattern words
+  until queued publication, with the destination's collision tables and rewind.
   Prepared installation rejects detached art owners and stale generations.
   Native title-card objects retain their fixed slots and child lifetimes after
   omitted presentation, with exact graph restoration before gameplay placements.

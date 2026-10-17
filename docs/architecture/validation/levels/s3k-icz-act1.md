@@ -340,3 +340,74 @@ The observer is removed back to the exact unstaged e06 hash; inspected journal,
 reports and its compiled test class are consumed without archive or rebuild.
 Root owns the next source/evidence decision and composition. R8 natural-death,
 all other act products, full aux/native/cold-route and campaign limits remain open.
+
+
+## R11 synchronous known16 handoff repair — 2026-10-17
+
+Bounded component qualification on077767/R13 production0cd plus this repair,
+branch `bugfix/ai-s3k-icz-retained-16-owner-gpt61`, same98d/native01a1496e.
+R10's genuine559 pattern losses are repaired without treating30 absent target
+entries688..717 as known zeros. Existing executing synchronous deferred loads
+capture immutable sparse native8byte pattern groups, bounded by Block_table's
+`$1800` actual bytes. Target non-deferred ROM writes replace the prefix;
+retained groups decode with independently selected **target** collision tables.
+The first entry129 is C131/C132/C133/C134 with target8/8 from SolidIndexes
+`$27A761`, not oldFF/FF from`$279B61`. No predecessor collision metadata is copied.
+Cold/detached/presentation and async-prepared builds keep an empty16 predecessor;
+async predecessor identity/generation is still an explicit extension limit.
+
+The short independent `TestS3kIczRetainedChunkHandoff` uses the existing real
+ICZ component inlet and production queue/service/handoff. Old-red31728 terminal1
+17:08:14UTC, queue0/Maven24.467s,1/1F0E0S: retained entry129 word0 expectedC131,
+actual0000. Source prerequisites read ICZ1secondary`$3D5958` independently and
+require target8/8. Corrected45686 terminal0 17:12:27UTC, queue0/Maven1m06,
+**77/0F0E0S** across11 actual classes. Original transition1 (.090s) now reaches
+all128/16/pattern/admission/claimed/payload/ordinary-reload assertions. Independent
+handoff1 (.177s) checks all559 retained pattern groups and target collision indices
+at prePOST/intermediate readiness boundaries, then all589 original target groups,
+including formerly unknown30, after the sole queued publication owner. It restores
+the new ICZ2 world twice and replays publication identically; no retired Act1
+history is restored. Sparse provenance2, deferred resources6, overlay3,
+native-word residency4 and mandatoryS3K4 selectors60 also pass without skips.
+
+Source review found one material P2 in the initial carry epoch: an owned opaque
+688-entry snapshot followed by a temporary entry717 overlay restored only a prefix,
+leaving718 entries and falsely exporting717 as known. New independent9826 was
+terminal1 17:14:47UTC, queue17s/Maven24.073s,1/1F0E0S (expected688/actual718).
+The minimal correction restores the saved extent ONLY for this owner's opaque
+snapshot; external six-word prefix writes retain their existing partial semantics.
+Private placeholder provenance follows geometry COW and whole-world references;
+collision-only LoadSolids clones and opaque value snapshots preserve unknowns.
+Actual zero writes remain known. Final affected68955 terminal0 17:16:43UTC,
+queue0/Maven1m11, **4/0F0E0S**: sparse3 + existing opaque-overlay restore1.
+The new counterexample covers temporary-tail removal, unknown holes, COW negatives,
+external-prefix control and two forced whole-world restores/replays. The original
+77 are an earlier construction/publication epoch, not a second final77 run.
+Neither ICZ method uses opaque snapshot/restore; its sole production consumer is
+AIZ intro terrain precomputation, so no unchanged ICZ handoff repeat was requested.
+
+Final runtime SHA-256: Sonic3k`1ec70e427f97c3fa8da696b4ec8818d66e5d608e14af47aa273e5c5440bfab2f`;
+Sonic3kLevel`d392aa6c8f807dc12b1d4787250ead0b33c3dea33efc0134516554a8316c3ab8`.
+The original128 oracle remains an immutable outgoing pretransition span, with
+independent ROM primary A00/end and detached-negative control.16 expectations
+now use outgoing known native4 plus independent target indices, explicitly retain
+absence for688..717 before publication and still compare the complete published
+payload. No comparison/clock/input/camera/physics/allocator/timing manifest changed.
+Native labels/pin and payload hashes remain the R10 evidence above; line numbers
+belong only to pin044fa46725c71187399e13f5ddb70e11d32dc024.
+[Exact commands and source epochs](../../plans/2026-10-13-s3k-playable-completion.md#icz-r11-synchronous-known16-repair-checkpoint--2026-10-17).
+
+This is a synchronous retained-resource component certificate. R8 natural death/
+post reload, cold-route/character/preset breadth, full aux/native/config/BK2,
+strict trace/fullchain and combined smoke/integration remain unqualified here.
+No extra observer, native/media, prepared-AIZ sweep or broad run was submitted.
+
+
+Final89633 source/API guards: terminal0 17:19:02UTC,queue0/Maven26.094s,
+5/0F0E0S (three exact architectural authority/mutation/timing-mirror methods,
+two exact current-pin/helper-nonleak methods), fresh `-Pguards` JVM. Root's bounded
+resolution inspection accepted d392aa6c/2680a205 and68955 controls with no remaining
+material objection. All5 own jobs terminal; inspected diagnostics consumed under
+metadata slot alone, no archives. Main config hash/mtime and private regular bytecopy
+preserved. Final target compiles the maintained source before commit; no postcommit
+rebuild, composed smoke or integration/push is claimed.

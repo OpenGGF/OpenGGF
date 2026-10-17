@@ -5414,3 +5414,92 @@ and own regular exact bytecopy verified unchanged. New local links/anchors,
 Markdown fences and diff checks pass. Preparing docs-only evidence commit;
 ICZ partial source remains deliberately unstaged/red. Root must authorize the
 next independent old-red/production owner unit; no extension is silently made.
+
+
+### ICZ R11 synchronous known16 repair checkpoint — 2026-10-17
+
+Same98d/native01a1496e/branch from077767, exact R11 task registered separately
+(ordinal12); R1–R10 untouched. Preserved e06 original128 migration, no new
+observer/native/trace or broad run. Independent real-handoff old-red31728:
+terminal1 17:08:14UTC, queue0/Maven24.467s,1/1F0E0S, first entry129 nativeword0
+C131→0000 (test .276s/class .532s). Independent ICZ1secondary3D5958 gives
+C131/C132/C133/C134; target SolidIndexes27A761 gives8/8, versus oldFF/FF.
+Full559 retention, unknown30 absence and complete589 publication tail are
+maintained assertions; old red stops at first native pattern loss.
+
+Two-file runtime correction is frozen for Root independent source review before
+corrected execution: synchronous executing predecessor only; immutable sparse
+known8byte groups bounded by actual Block_table1800bytes, target ROM prefix
+wins, current target collision tables decode. Validation-created placeholders
+have no native pattern writer. Private geometry marker follows existing COW
+arrays/whole-world restore; collision-only clones and existing opaque value
+snapshots preserve it. No public snapshot/API/pin, generic capacity behavior,
+async preparation input, queue ownership/readiness or physics change. Cold/
+detached/prepared construction receives an empty16 predecessor. Corrected
+focused selection will cover real publication with two forced whole-world
+restores/replays in the new ICZ2 timeline, independent sparse/zero/collision/
+value-snapshot provenance, existing deferred/overlay owners and mandatoryS3K4.
+No qualified green claim yet; Root owns composed smoke and delivery.
+
+
+R11 executed epochs: old-red31728 above; corrected45686 terminal0 at17:12:27UTC,
+queue0/Maven1m06,77/0F0E0S/11actualclasses. OriginalICZ1 now reaches all128/16/
+pattern/admission/claimed/publication/ordinary-load tail; independenthandoff1 and
+sparse2 exercise two forced world restores/replays, target8/8 versus oldFF/FF,
+known559/unknown30 and full589 payload. Existing deferred6/overlay3/nativeword4/
+mandatory60 green, no skips. Frozen runtime1ec70e/fdefa5 reviewed independently.
+Review found P2: opaque688 capture→temporary717 overlay→prefix restore left718
+and falsely exported717. Exact newmethod9826 terminal1 17:14:47UTC,queue17s/
+Maven24.073s,1/1F0E0S proves688/718. Minimum private correction restores saved
+extent for owned opaque snapshots, preserves external six-word prefix semantics.
+Final frozen runtime Sonic3k1ec70e427f97c3fa8da696b4ec8818d66e5d608e14af47aa273e5c5440bfab2f;
+Sonic3kLeveld392aa6c8f807dc12b1d4787250ead0b33c3dea33efc0134516554a8316c3ab8.
+Affected68955 terminal0 17:16:43UTC,queue0/Maven1m11,4/0F0E0S (sparse3 and
+opaque-overlayrestore1), including temporary-tail/unknown-hole/COW/externalprefix/
+twice-forced-world controls. Preserve77 as earlier construction/publication epoch;
+no77 rerun. Production rg finds only AizIntroTerrainSwap precompute uses opaque
+snapshot/restore, neither actualICZ method does; no ICZ handoff repeat warranted.
+
+All commands use current Main absolute queue from own cwd with `--normal -Dmse=off`,
+all3 original absolute ROM properties, Java25, EGL/nullAL/noambient/Lua5.4,
+exact single-token JTO, singlefork/reuse/alphabetical (same flags as R9 command).
+Selectors were exactly:
+
+```text
+31728 -Dtest=TestS3kIczRetainedChunkHandoff#synchronousHandoffRetainsKnownPatternsWithTargetCollisionUntilPublication
+45686 -Dtest=TestS3kIczRetainedChunkHandoff,TestS3kIczAct1TransitionHeadless,TestSonic3kResidentChunkPatterns,TestSonic3kDeferredLevelResourceLoading,TestSonic3kLevelOverlayRewindIsolation,TestS3kNativeWordLayoutResidency,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+9826 -Dtest=TestSonic3kResidentChunkPatterns#opaqueRestoreRetiresTemporaryTailWithoutChangingExternalPrefixWrites
+68955 -Dtest=TestSonic3kResidentChunkPatterns,TestSonic3kLevelOverlayRewindIsolation#restoreChunksLeavesPreviouslyCapturedChunkArrayUntouched
+```
+
+Normal `test -B`, no profile in these four runs. No extra observer/preparedAIZ/
+trace/native/media/broad run. Inspected diagnostics consumed under metadata slot
+alone (2oldred,22focused/P2,4finalaffected files); no archives. Latest target
+contains maintained source compiled for the affected epoch, not an old observer.
+R8 natural death/reload and full aux/config/native/BK2/cold/fullchain/combinedsmoke
+remain open; async16 carry needs independent predecessor identity before extension.
+Root owns composition/delivery. [Full bounded ICZ evidence](../validation/levels/s3k-icz-act1.md#r11-synchronous-known16-handoff-repair--2026-10-17).
+
+
+Final source/API89633 terminal0 17:19:02UTC,queue0/Maven26.094s,5/0F0E0S:
+ModApiSignatureSurface2 (.581s) and ArchitecturalSourceGuard3 (1.008s), fresh
+`-Pguards` JVM, exact selector below with the same wrapper/environment/ROM flags.
+No entire guard suite was repeated. Root independently inspected finald392aa6c
+restore1000..1020 + sparse2680a205, accepted the bounded P2 resolution and all4
+actual affected controls; no remaining material review objection, no extra round.
+
+```text
+89633 -Pguards -Dtest=TestArchitecturalSourceGuard#runtimeProductionCodeDoesNotReadDisassemblyAssets+productionGameplayCodeDoesNotBypassLevelMutationSurfaceWithRawLevelMutators+hardwareTimingAuthorityExceptionStaysDocumentedAndAgentGuidanceStaysMirrored,TestModApiSignatureSurface#candidateZeroSevenSurfaceIsPinnedToTheCurrentSurface+engineOnlyRuntimeHelpersDoNotLeakIntoTheZeroSevenSurface
+```
+
+All five own Maven handles31728/45686/9826/68955/89633 terminal/released; inspected
+2+22+4+4 diagnostic files consumed under metadata slot alone, no archives. Main
+configSHA2566abd111c…f7da/mtime_ns1792141742849921547 remains unchanged; own config
+is regular/exact bytes, original ROMs/submodules/previous refs preserved. Target
+contains maintained Java source compiled before this normal local commit (077767
+plus exact frozen source), with no temporary observer; no postcommit rebuild is
+claimed. New links/anchors, changed fence parity, skill mirrors and diff checks
+pass. Whole-file frontier fence count845 was already odd at077767 and unchanged;
+no unrelated Markdown repair. Local-only qualified owner commit follows under
+normal hooks/seven parsed trailers/final GPT6.1 coauthor. Root owns integration/
+combined smoke; no Main edit/push/tree cleanup or whole-act certification.

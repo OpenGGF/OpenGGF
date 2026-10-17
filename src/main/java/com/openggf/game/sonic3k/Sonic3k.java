@@ -297,7 +297,15 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
             throws IOException {
         LevelBuildInputs inputs = captureLevelBuildInputs(levelIdx);
         com.openggf.game.sonic3k.resources.S3kFrontendPatternResidency.validate(inputs.frontendPatterns());
-        Sonic3kLevel level = buildLevel(levelIdx, deferredResources, true, inputs);
+        // Load_Level does not clear Block_table. Capture only this synchronous,
+        // executing predecessor; prepared builds have no predecessor identity.
+        var levelManager = GameServices.levelOrNull();
+        Sonic3kLevel.ResidentChunkPatterns residentChunks =
+                levelManager != null && levelManager.getExecutingSeamlessTransitionRequest() != null
+                        && levelManager.getCurrentLevel() instanceof Sonic3kLevel resident
+                        && resident.hasStockRomZoneIdentity()
+                        ? resident.residentChunkPatterns() : Sonic3kLevel.ResidentChunkPatterns.EMPTY;
+        Sonic3kLevel level = buildLevel(levelIdx, deferredResources, true, inputs, residentChunks);
         finishLevelLoad(level, levelIdx);
         com.openggf.game.sonic3k.resources.S3kFrontendPatternResidency.installed(inputs.frontendPatterns());
         return level;
@@ -463,6 +471,14 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
             DeferredLevelResourceTracker deferredResources,
             boolean publishGraphics,
             LevelBuildInputs inputs) throws IOException {
+        return buildLevel(levelIdx, deferredResources, publishGraphics, inputs,
+                Sonic3kLevel.ResidentChunkPatterns.EMPTY);
+    }
+
+    private Sonic3kLevel buildLevel(
+            int levelIdx, DeferredLevelResourceTracker deferredResources,
+            boolean publishGraphics, LevelBuildInputs inputs,
+            Sonic3kLevel.ResidentChunkPatterns residentChunks) throws IOException {
         int[] zoneAct = zoneAndActOf(levelIdx);
         int zone = zoneAct[0];
         int act = zoneAct[1];
@@ -697,7 +713,7 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
                 publishGraphics,
                 new Sonic3kLevel.TerrainArtSources(primaryArtAddr, secondaryArtAddr),
                 inputs.frontendPatterns() == null ? new byte[0] : inputs.frontendPatterns().packed(),
-                inputs.residentBlocks());
+                inputs.residentBlocks(), residentChunks);
         validateCustomBounds(level, customResources);
         return level;
     }
