@@ -2403,3 +2403,158 @@ are not its baseline. No changed visual behavior or new native pixel product;
 previous useful native images remain retained. No broad smoke/full suite,
 children, new tree, Main/Root write or push. All own jobs are terminal; only
 append-only evidence changes follow merge21327. Root owns delivery and integration.
+
+
+## R4 retained title parent and child movement latch — 2026-10-17
+
+One bounded ownership correction after98e2c6029, same owned tree/branch and
+Main460 composition. Main467's passive follow-up was not adopted. No Main/Root,
+retained-lane or TraceChaser writes; no new worktree/children. Frozen executable
+Java/POM/signature digest for all green checks and both affected qualifiers:
+**e49c68da90e35b1bb8173ba57053464cefa9e5dbf273715f754cd0e453e01773**.
+
+### Native parent and ordering evidence
+
+R3's near-player aux rows did not expose the title parent or its $34 movement
+word. One passive diagnostic on the original canonical BK2 observes the actual
+instructions instead: results replacement loc_2DD06 ($2DD06), Obj_TitleCard
+wrapper ($2D690), Wait's $34 test ($2D804), loc_2D810 reset gate ($2D810), and
+horizontal/banner `st $34(a1)` ($2D996/$2D91C). Original-ROM bytes at every hook
+are verified before execution, including the wrapper, test/clear/return sequence,
+reset test and both latch stores. No native setup writes or engine hydration.
+S3K SHA1 remainscfbf98c36c776677290a872547ac47c53d2761d6; original movie SHA256
+ad40fb0b0a74fa12b08ab71b2e48a7455b388d14f43f4cded502ac4a15d1b3c0.
+Actual clean native checkout remains4fdf73880f93a3172d23bf9e157b15de3c78fc32.
+
+External `$HCZ_TASK_ROOT/r4-title-parent/native_title_parent.py` compiles its
+C# observer with current Main's intended-tree writer and shared build-activity
+lease, inheriting the descriptors. It releases those leases before one normal
+resource-aware admission and inherits that execution lease. No unleased JVM or
+native helper, outer activity shim, resource override, foreign signal or retry.
+Native PID2170922 is terminal. Execution admission wait0s; UTC execution bounds
+**2026-10-17T10:28:19.987470Z–10:29:16.324485Z**; compilation duration unknown.
+Exact expanded argv is retained in external `native-inputs.json`; with the
+existing original-ROM, owned-worktree and external-task-root bindings it is:
+
+```bash
+mono "$HCZ_TASK_ROOT/r4-title-parent/NativeTitleParent.exe" "$S3K_ROM" "$HCZ_WORKTREE/src/test/resources/traces/s3k/runs/s3k-sonic-tails-complete-emeralds/s3k-sonic-tails-complete-emeralds.bk2" "$HCZ_WORKTREE/src/test/resources/traces" "$HCZ_TASK_ROOT/r4-title-parent"
+```
+
+The temporary executable is removed. Source SHA256
+**8b46ca152e63805db5c79a4397d87e56e857a31aaf0a6f40a97daa4148d24aa2**,
+163 instruction events,206 parent/child state records, inputs and five actual
+published320x224 PNGs remain in that task directory. Callbacks are armed only
+for the bounded completed-frame window69660–69765; the original input prefix is
+fast-forwarded once, without producing a new chain trace or capture sweep.
+All five PNGs69746/69750/69755/69756/69765 were inspected. Published HUD digits
+and CPU writes are separate products:69756's CPU reset is not a claim that the
+published HUD had already consumed it;69765 visibly has zero rings/time.
+
+| Native completed frame | Actual retained parent/child event |
+| --- | --- |
+| 69716 | loc_2DD06 changes results slot15 ($B456) into Obj_TitleCard and returns. |
+| 69717 | Same slot15 runs Init, then polls Create until the real global KosM FIFO permits it. |
+| 69727 | Four children in slots16/18/19/20 move on their Create scan: X0250/02EC/0334, banner Y0020. Parent $34 isFF00. |
+| 69750 | Native rings114; act child still moves at X01C4 toward0184. This is canonical row6674. |
+| 69754 | Act child's28th $10 move reaches0184 and still writes $34. |
+| 69755 | Lower-slot Wait seesFF00, clears $34 and returns; rings remain114. |
+| 69756 | Following stationary parent poll sees0, executes loc_2D810, resets rings/time/air and advances routine4→6. |
+
+The72 horizontal movement writes are the literal table's20+24+28 moves; banner
+writes11 times. This is native geometry and dispatch order, not a six-frame
+correction. The fixture's offset63075 maps completed69750 to zero-based row6674
+and69756 to6680. No fitted clock is introduced.
+
+### Independent old-red and correction
+
+The production HCZ reload preserves the ring/time globals and the results SST,
+but formerly requested a zero-additional-dispatch manager policy. Results exit
+initialized an overlay on its next pass, then deleted its physical parent;
+HCZ never entered the existing literal title-child graph. The manager's24/phase
+count reset rings while the native act child was still moving. Changing fresh
+Level/loc_63B4 cannot repair this active-level owner.
+
+Initial independent old-red86962,11:33:17 BST, queue119s/Maven27.358s:
+**1/1F/0E/0S**, expected retained TITLE_CARD_INIT, actual RESULTS. To avoid
+expanding other explicitly counted retained transitions, the final test requests
+the already-existing `TitleCardResetGates.NATIVE_WAIT_GATE` semantic. Final
+pre-production selection48402,11:33:58 BST, queue0/Maven24.660s:
+**3/3F/0E/0S**. Missing retained INIT plus two independent -1/0 failures:
+the real HCZ request and request normalization/carry policy. Exact selector:
+`TestS3kRetainedTitleMovementLatch,TestLevelSeamlessTransitionExecutor#nativeWaitGateSurvivesNormalizationAndCarriedOwnerPolicy,TestSonic3kHCZEvents#act1TransitionKeepsTheArenaXLockUntilTheCarrierReleases`.
+
+One correction:
+
+- HCZ requests the native movement gate. Request normalization and the immutable
+  carried policy preserve that existing sentinel instead of clamping it to zero.
+- A carried publication owner receiving that gate retains its SST and uses the
+  already-implemented literal child Create/Wait graph. Other explicit dispatch
+  policies keep their existing behavior; no game/zone/row/fixture test is added
+  to shared runtime logic.
+- The retained owner keeps the request's control-lock ownership. Existing Wait2's
+  90, stagger and retirement semantics are untouched; no new fields, budget,
+  public signature, API pin, readiness input or archive recipe is introduced.
+
+`TestS3kRetainedTitleMovementLatch` is independent of BK2 rows. A declared
+post-results component boundary leaves one real occupied higher-slot hole;
+Create allocates41/43/44/45 and every child moves on that same actual manager
+scan. The final $10 move leaves rings17, the next parent clear leaves17, and
+only the following parent poll clears them. Complete registry snapshots at
+birth and latch-clear restore twice with in-place object reuse disabled and
+forward replay to the same reset state. Every registered world key is compared,
+including object identity/cursors/exact parents, title state and hardware
+jobs/ordinals. This proves recreation and replay of this local boundary, not
+cross-load timeline isolation or a cold-route product.
+
+### R4 finite validation and resulting frontiers
+
+All Maven commands use the R3 exact normal common prefix: current absolute Main
+wrapper from the owned cwd, original three absolute ROM properties, Java25,
+CLI surfaceless-EGL, nullAL, Lua5.4, DISPLAY/WAYLAND_DISPLAY unset. No sources
+changed while any request was queued/running. No broad smoke/full suite.
+
+- **Focused65721**,11:35:41 BST, queue0/Maven1m24s: **182/0F/0E/0S**.
+  Exact `-Dtest`: `TestS3kRetainedTitleMovementLatch,TestLevelSeamlessTransitionExecutor,TestSonic3kHCZEvents,TestS3kAizResultsNativeTitleGraph,TestS3kResultsScreenObjectInstance,TestFbzResultsTitleAndAct2Sizes,TestS3kResultsKosQueueAndChildren,TestS3kResultsKosQueueRewind,TestSonic3kTitleCardManagerRewind,TestSonic3kTitleCardKosQueue,TestS3kMgzLbzCarriedResultsTitleOwnership,TestS3kHeadlessInLevelTitleCardProgression,TestS3kTransitionWriteSupport,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestS3kFreshTitlePlcLoadBoundary,TestS3kFixedSstTransitionRewind,TestLevelTransitionCoordinatorPeeks,TestGameLoopFreshLevelHandoff`, then `test -B`.
+  Mandatory S3K four execute, including both36- and7-case loading classes.
+- **Guards22781**,11:36:17 BST, queue68s/Maven34.859s: **131/0F/0E/0S**.
+  `-Pguards '-Dtest=TestRewindArchitectureGuard,TestArchitecturalSourceGuard,TestTraceReplayInvariantGuard,TestHardwareTimingAuthorityGuard,TestRewindCoverageGuard,TestHelperStateRewindCoverageGuard,TestZoneEventRewindSchemaGuard' test -B`.
+  Source72, rewind4, helper1, coverage1, zone18, invariant10, authority25; no allowance or budget change.
+- **Canonical2015**,11:37:30 BST, queue0/Maven50.562s: **1/1F/0E/0S**.
+  `-Ptrace-replay '-Dtest=TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds' -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical test -B`.
+  Reached ordinary segments0/2/4/6/8/9 have complete zero physics/animation/bootstrap/warning reports,
+  with the same2290/4023/8235/4103/7175/3574-row reference windows and0/11/14/16/62/55 lag counts as R3.
+  Returned HCZ11 remains complete over **0–14207 (14208 rows)**, lag59,
+  **133771 field errors =114800 physics +18971 animation**, bootstrap/warnings0.
+  First reported non-camera physics is now **7134 `sidekick_x`0175/0176**:
+  R3's6674 ring frontier is closed. The summary does not expose first camera or
+  animation error, full span history, or an exact post-filter physics-row count.
+  Requested giant-ring exit remains absent, and the four late unmatched direct#220/#221,
+  module#154/#155 completions remain. Eleven dynamic-art gaps report0 failures;
+  this is not all-auxiliary/special-stage physics certification. R3's unchanged
+  standalone/prefix cases were not rerun; this one affected chain is a new measured result,
+  not transferred historical133771 credit.
+- **Independent HCZ65594**,11:38:09 BST, queue50s/Maven38.102s: **2/1F/0E/0S**.
+  `-Ptrace-segments '-Dtest=TestS3kHczZoneSliceTraceReplay'` with the same three
+  fork/reuse/order flags and `test -B`. All31482 reference rows,29302 comparison
+  records; **4353 spans =3424 physics +929 animation**, bootstrap/warnings0,
+  first9482–9484 `air`1/0, first animation9486–9488 player_animation_id0/5,
+  maximum mismatch row31461. Independent Poindexter passes. Entire sorted error-array
+  SHA256 remains **71f91e9494d9a6926cd2f032dcc174a0d289355d9f9a6658b3752ae61d96d251**,
+  so there is no new compared-field span on this distinct original BK2. Its earlier9482
+  divergence remains; this does not prove a second clean execution through the repaired owner.
+
+No unchanged request was duplicated. Alternate760's one26179 ring span is reused:
+AIZ already selects the same literal graph, and no AIZ caller adopts the newly
+preserved carried native-gate request in this fix. No fresh alternate pass is
+claimed. Matched dc3384699/8664353 remains mixed downstream evidence; historical3738
+is unmatched. The initial exact GLFW oracle still lacks a matching identity baseline;
+these actual native title images do not certify engine pixel equality or other products.
+
+**Stopping boundary:** one ROM-owned retained-parent/latch correction with short
+old-red/green, complete-world replay, focused182/guards131 and concrete new canonical
+frontier7134; independent strict slice remains4353/9482. No second fix or sweep.
+Fresh-load ring publication remains a separate unlanded finding. Missing returned
+HCZ exit, sidekick7134, support9482, full auxiliary coverage, configuration breadth,
+PAL/PCM and broader timing acceptance remain unqualified. All own jobs are terminal;
+consumed diagnostics are removed under current Main's worktree_metadata_slot alone.
+Root owns review/integration/broad validation and push. Local only.

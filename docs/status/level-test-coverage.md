@@ -1283,3 +1283,15 @@ mixed,3738 unmatched; alternate760's one26179 ring span is reused, not freshly
 passed. Active-level title-parent/movement-latch causality and the exact GLFW
 oracle remain open; no fitted delay or separate fresh-load fix was substituted.
 [Commands, windows, all groups and causal limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r3-current-composed-strict-qualification--2026-10-17).
+
+
+R4 HCZ retained-title correction (2026-10-17): the real parent survives until
+its higher-slot children stop writing the movement latch. Native reset follows
+last movement→parent clear→stationary parent poll; short whole-world replay twice,
+focused182 and guards131 pass. New canonical chain first reported non-camera
+frontier is7134 sidekick_x0175/0176, closing6674 rings;133771 field errors remain
+over the complete14208-row returned-HCZ window, with its giant-ring exit absent.
+The distinct independent HCZ slice reproduces all4353 spans/first9482air and
+passes Poindexter. No clean route/auxiliary/product/GLFW certification or second
+fix; alternate760 reused, matched4699/4353 mixed,3738 unmatched.
+[Exact native evidence, selectors, windows and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r4-retained-title-parent-and-child-movement-latch--2026-10-17).

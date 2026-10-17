@@ -920,12 +920,11 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
                         // itself does not create a separate title owner.
                         .showInLevelTitleCard(false)
                         .resetLevelGamestateAtInLevelTitleCardDisplay(true)
-                        // The carried Obj_LevelResults parent becomes
-                        // Obj_TitleCard before its four children receive their
-                        // native create/render dispatches. The retained owner
-                        // reaches Obj_TitleCardWait's reset on its next title
-                        // dispatch.
-                        .inLevelTitleCardResetAdditionalDispatches(0)
+                        // loc_2DD06 retains the parent SST. Obj_TitleCardWait
+                        // must consume the real higher-slot children's $34
+                        // movement latch, not an overlay dispatch countdown.
+                        .inLevelTitleCardResetAdditionalDispatches(
+                                com.openggf.game.TitleCardResetGates.NATIVE_WAIT_GATE)
                         .lockPlayerControlForInLevelTitleCard(true)
                         .inLevelTitleCardExitAdditionalDispatches(0)
                         // ROM subtracts $3600 from the live camera and its

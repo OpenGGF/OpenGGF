@@ -126,7 +126,8 @@ Unreleased. The earlier development themes remain in
   HUD, one frame after it is computed, as the original's palette and sprite uploads
   do, and a rewind shows what was on screen. The data
   select no longer fades the whole screen, card included, back in on top. Seamless
-  act changes still do not fade, as in the original. The score, time and ring
+  act changes still do not fade, as in the original. Hydrocity resets rings and
+  time after its act-change card pieces stop sliding. The score, time and ring
   counters are drawn over the card's red banner, as on hardware. Direct boots, new
   games, restarts and bonus stage entries and returns now hand control over with
   the card still holding for its last 22 frames, as zone changes already did, instead

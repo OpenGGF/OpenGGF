@@ -952,8 +952,12 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                 pendingPreloadedTitleHandoff = preloadedNextActHandoff;
                 pendingAizTitleHandoff = aizAct1MinibossTitleHandoff;
                 pendingRetainedReloadTitleHandoff = retainedReloadState;
-                if (fbzCarriedTitleOwner || aizAct1MinibossTitleHandoff) {
-                    nativeTitleChildrenOwned = aizAct1MinibossTitleHandoff;
+                boolean nativeCarriedTitleWait = retainedReloadState
+                        && titlePublicationOwnedByCarriedObject
+                        && carriedTitleResetAdditionalDispatches
+                                == com.openggf.game.TitleCardResetGates.NATIVE_WAIT_GATE;
+                if (fbzCarriedTitleOwner || aizAct1MinibossTitleHandoff || nativeCarriedTitleWait) {
+                    nativeTitleChildrenOwned = aizAct1MinibossTitleHandoff || nativeCarriedTitleWait;
                     // loc_2DD06 only replaces this SST's code pointer. The
                     // following Process_Sprites pass runs Obj_TitleCardInit.
                     carriedTitlePhase = CarriedTitlePhase.TITLE_CARD_INIT;
@@ -1024,6 +1028,9 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             if (retainedSstTitleOwner) {
                 if (nativeTitleChildrenOwned) s3kTitleCard.useNativeInLevelSstChildren();
                 else s3kTitleCard.useExternalInLevelGameplayOwner();
+                if (carriedTitleTimingExplicit && carriedTitleLockPlayerControl) {
+                    s3kTitleCard.requestInLevelPlayerControlLock();
+                }
             }
             if (pendingPreloadedTitleHandoff && !retainedSstTitleOwner) {
                 int releaseDispatches = carriedPreloadedActCameraReleaseDispatches;

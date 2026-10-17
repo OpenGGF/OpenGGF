@@ -168,6 +168,9 @@ class TestSonic3kHCZEvents {
         assertTrue(events.isTransitionRequested());
         SeamlessLevelTransitionRequest request = GameServices.level().consumeSeamlessTransitionRequest();
         assertNotNull(request);
+        assertEquals(com.openggf.game.TitleCardResetGates.NATIVE_WAIT_GATE,
+                request.inLevelTitleCardResetAdditionalDispatches(),
+                "Obj_TitleCardWait consumes its actual children's movement latch after HCZ Load_Level");
         int lock = 0x3680 - 0x3600;
         assertEquals(lock, request.postTransitionMinX());
         assertEquals(lock, request.postTransitionMaxX());

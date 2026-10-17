@@ -358,3 +358,16 @@ No new entry, viewport/donor/team, pixel, cold traversal or cross-load product i
 certified. Active-level ring-reset/title-latch ownership, later route exit and
 the exact GLFW oracle remain unqualified. No new runtime fix. [Exact source,
 commands, windows and rejected load attribution](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r3-current-composed-strict-qualification--2026-10-17).
+
+
+R4 title-owner follow-up (2026-10-17): HCZ's carried results SST now receives
+its native child-movement gate through the existing request/carry contract.
+Short real allocation-hole/latch tests recreate and replay every registered
+world key twice; focused182 and guards131 pass without skips. Native slot15's
+last child movement69754 precedes clear69755/reset69756. Canonical2015 moves the
+first reported non-camera frontier6674 rings→7134 sidekick_x0175/0176, with
+133771 field mismatches over the same14208-row returned-HCZ window and missing
+exit. Independent full HCZ65594 retains exactly4353 spans/first9482air, Poindexter
+passes; earlier divergence prevents a second clean repaired-owner claim. No new
+entry, product breadth, engine pixel or cross-load timeline certification.
+[Exact evidence and limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r4-retained-title-parent-and-child-movement-latch--2026-10-17).

@@ -3444,3 +3444,30 @@ interact pointers likewise do not prove deletion support ownership. Exact GLFW
 oracle, full route exit/auxiliary/products remain unqualified. No broad/full,
 children/new tree, Main writes or push; no own live jobs. [Exact selections,
 windows, all groups, rejected attribution and limits](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r3-current-composed-strict-qualification--2026-10-17).
+
+
+## R4 retained HCZ title-parent movement gate — 2026-10-17
+
+After98e2c6029, native instruction observation proves retained slot15 with
+children16/18/19/20: final movement69754, parent clears$3469755 and resets rings
+only69756 (canonical6680). The old manager countdown reset at6674 while the act
+child still moved. HCZ now requests the existing native-wait sentinel; request
+normalization/carry preserves it and the carried SST uses the existing literal
+child graph. Requested control lock and hold90 remain unchanged. No new state,
+public API, timing input, row/zone fit or source-budget allowance.
+
+Independent final old-red48402 is3/3F; focused65721 is182/0F/0E/0S including
+whole-world recreation/replay twice, actual higher-slot hole/latch order and
+mandatory S3K4; guards22781 are131/0/0/0. Frozen executable digest
+e49c68da90e35b1bb8173ba57053464cefa9e5dbf273715f754cd0e453e01773.
+Affected canonical chain2015 is1/1F/0E/0S: same14208-row returned-HCZ window,
+133771 field errors(114800physics/18971animation), first reported non-camera
+**7134 sidekick_x0175/0176**;6674 rings is closed. Exit remains absent; first
+camera/animation is not reported. Distinct-BK2 HCZ65594 is2/1F/0E/0S and its
+entire4353-span error array is unchanged:3424physics/929animation, first9482air,
+first animation9486, Poindexter passes. This is bounded proof, not a green route
+or second clean repaired-owner traversal. Alternate760 is reused, no new pass;
+matched4699/4353 remains mixed and3738 unmatched. Exact GLFW, broader products,
+auxiliary fields and later exit remain unqualified. One fix, no further sweep,
+broad/full, Main writes or push; own jobs terminal. [Native argv/UTC/pins, exact
+selectors, all groups and limits](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r4-retained-title-parent-and-child-movement-latch--2026-10-17).

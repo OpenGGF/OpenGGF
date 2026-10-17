@@ -5800,6 +5800,15 @@ an empty fresh-SST query alone does not prove completion. [Native graph and
 strict closure](../../../docs/architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-retained-resultstitle-sst-and-real-child-latches--2026-10-14).
 
 
+HCZ's carried reload uses the same `loc_2DD06`/Wait owner: an original-BK2
+instruction observer sees slot15 retain children16/18/19/20, the act child's
+final move still writes$34, the next parent clears it, and only the following
+poll clears rings. Carry the existing NATIVE_WAIT_GATE semantic intact through
+request normalization; clamping it to zero silently selects a countdown. A
+real allocation-hole component test restores/recreates every world key twice.
+[2026-10-17 HCZ observation and bounded closure](../../../docs/architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r4-retained-title-parent-and-child-movement-latch--2026-10-17).
+
+
 ## Same-SST code replacement must detach the obsolete Java handle
 
 Obj_HiddenMonitor loc_83760 changes the current SST to Obj_Monitor without
