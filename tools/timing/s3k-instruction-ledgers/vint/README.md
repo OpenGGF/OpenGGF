@@ -31,11 +31,20 @@
 | `vint_frame.py`, `test_vint_frame.py` | Composition of the closed VInt parts (R11-R13); 4 tests. |
 | `listing.py` | Helper: linear decode of ROM ranges with listing text and native per-PC counts. |
 
-Not promoted: the research `S3kVIntInstructionCycles.DRAFT.java` (the Java owner owns production; it was never compiled
-or executed) and the derived dumps `path-terms.json`, `closed-form-check.txt` and `dma-start-prefixes.json`, whose
-values are reproduced in the tables below and regenerate from `vint8_cost.py`. The research grid check found the
-draft's closed form equal to the walk for 3,840 states after two interactions were fixed in the draft (the flash
-path bypasses the water palette branch; deferred Do_Updates bypasses the Demo_timer test).
+The research draft is superseded by the Java-owned `S3kVIntInstructionCycles` diagnostic projection.
+`S3kVIntDmaLedger.Record.instructions()` records its conditional closed-handler term and explicitly names the
+unpriced callees. It supplies no readiness, gameplay state or timing-port input. Java tests compare the closed
+form with a 1,920-state grid exported from this independent ROM walk; the grid is never runtime input.
+The derived research dumps `path-terms.json`, `closed-form-check.txt` and `dma-start-prefixes.json` remain
+regenerable from `vint8_cost.py`. The earlier research grid checked 3,840 states after correcting the flash/water
+and deferred-Do_Updates/Demo_timer interactions.
+
+The Java projection verifies every byte of the original ROM prefix `[0,$4E810)`, SHA-256
+`29bc98328ecbdb7d8a8a6f00c98af597949b16fdd53ffe9276610aee4a7e4743`, through the routine-0
+`rts` at `$4E80E`. This deliberately conservative check includes immediates, displacements and absolute call
+targets; opcode-only pins accepted altered PAL delay counts and callees. It does not authenticate code after
+that prefix or certify modified ROM compatibility. The offline source oracle is run only with the original
+locked-on ROM identity specified in the parent README.
 
 **What the tests check:**
 - **Native oracle:** the walk reproduces native per-PC counts exactly in all closed routines for 42 buckets (6 captures, NTSC/PAL, idle/bookmarked, 0/1 DMA entries; 4,708 PCs, 30,598 executions). The native data supplies only test state and expected counts.
@@ -61,7 +70,10 @@ path bypasses the water palette branch; deferred Do_Updates bypasses the Demo_ti
 
 ## Engine inputs required
 
-Each input is the RAM value the ROM tests; none exists as an engine-owned per-VInt input today.
+Each input names the RAM value the ROM tests. The Java diagnostic currently uses engine-owned region,
+physical Kos-queue emptiness and water presence, plus a rewound fresh-level `Demo_timer` mirror. It refuses busy
+Kos, water, Hyper flash, unknown producers/region/timer and unsupported handler paths. The table below lists the
+full model's input obligations; it does not assert that every owner or writer is already available.
 
 | Input | ROM value | Source |
 |---|---|---|

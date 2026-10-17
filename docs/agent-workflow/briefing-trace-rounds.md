@@ -71,6 +71,12 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Opcode pins alone do not authenticate instruction timing (2026-10-17, S3K V-int diagnostics).
+An unchanged `dbf` opcode can have a changed initial iteration count, and an unchanged `jsr` can call a different
+routine. Verify the complete supported code bytes, including immediates, displacements and call targets, before
+using fixed instruction terms. The PAL `$5BA` operand and `$920` call-target negatives both passed the old sparse
+check incorrectly; the Java diagnostic now checks the complete declared prefix and refuses mismatches.
+
 A native-source C harness inherits the host libm, not the BizHawk core's
 (2026-10-16, native-compatible PCM). The harness was built from the pinned GPGX
 `eq.c` but linked glibc `sin`. That moved the 880 Hz ThreeBand cutoff by one
