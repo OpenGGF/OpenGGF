@@ -1684,8 +1684,8 @@ public class Sonic3kTitleCardManager
 
     /**
      * Loads bonus stage title card art.
-     * Same shared blocks (RedAct, S3KZone text) plus
-     * ArtKosM_BonusTitleCard at VRAM $54D instead of zone-specific art.
+     * Queues all four native archives: RedAct, S3KZone text, the act number,
+     * and ArtKosM_BonusTitleCard at VRAM $54D instead of zone-specific art.
      */
     private void loadBonusArt() {
         try {
@@ -1707,7 +1707,15 @@ public class Sonic3kTitleCardManager
             queueKosmArt(rom, Sonic3kConstants.ART_KOSM_TITLE_CARD_S3K_ZONE_ADDR,
                     Sonic3kConstants.VRAM_TITLE_CARD_ZONE_TEXT - VRAM_BASE);
 
-            // 3. Load bonus-specific letter art -> VRAM $54D (index $4D)
+            // 3. Obj_TitleCardInit queues the act number even when BONUS/STAGE does not draw it.
+            // Native Apparent_act selects Num1 for zero, Num2 otherwise.
+            int actArtAddr = (GameServices.level().getApparentAct() == 0)
+                    ? Sonic3kConstants.ART_KOSM_TITLE_CARD_NUM1_ADDR
+                    : Sonic3kConstants.ART_KOSM_TITLE_CARD_NUM2_ADDR;
+            queueKosmArt(rom, actArtAddr,
+                    Sonic3kConstants.VRAM_TITLE_CARD_ACT_NUM - VRAM_BASE);
+
+            // 4. Load bonus-specific letter art -> VRAM $54D (index $4D)
             queueKosmArt(rom, Sonic3kConstants.ART_KOSM_BONUS_TITLE_CARD_ADDR,
                     Sonic3kConstants.VRAM_TITLE_CARD_ZONE_ART - VRAM_BASE);
 

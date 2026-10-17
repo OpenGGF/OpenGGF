@@ -9130,3 +9130,628 @@ catalogue accounting enters the normal local docs commit. Same private/Main
 config, native/media/refs/results preserved; all owned requests/leases terminal.
 Then R24 may author only the independent ROM bonus-title component test source,
 with native act selection and restore-controls reviewed before any compiler/JVM.
+
+
+### R24 independent Gumball title Num1 component — source only, 2026-10-17
+
+R23 accounting is complete in LOCAL docs-only
+`74daf0939bec4ecd5f8ff7c8bc7414d9ff5058e6`, normal hooks/seven policies/parsed
+final GPT-6.1 co-author, only existing Plan/frontier/measurement catalogue. Exact
+maintained service9559 restored; temporary d060 subclass and6instrumented
+classes74921B removed under writer. All9 accepted originals238368B consumed
+metadata-slot-alone after full hash verification/durable facts; no archive,
+logger/public API or failing-test/runtime commit. Tracked tree was clean at
+that accounting boundary. Target79227 still denotes the removed diagnostic
+epoch, with no maintained rebuild. Exact R24 ordinal34/returned taskID remains
+registered24h preserving33..19/native01a14a19/config/native/media/all refs.
+
+Then, under SOURCE+test-authoring-only authority, read plc-system, s3k-plc-system
+(and its Kosinski runtime reference) and s3k-disasm-guide. Old bonus state-machine
+fixture deliberately removes its ROM and installs a lease-only provider; it is
+not suitable for this oracle. Existing TestSonic3kTitleCardKosQueue has a real-ROM
+three-archive BONUS_SOURCES oracle and manually isolated timing; it remains
+**unchanged**, including its conflicting three-count expectation. Existing
+normal four-archive coverage was inspected. The new normal control adds the
+actual Knuckles/live registered manager and semantic descriptors without fixed
+expected ordinals or a separate probe queue, rather than changing old oracles.
+
+#### Exact native selection and ROM identity
+
+Pinned disassembly044fa46725c71187399e13f5ddb70e11d32dc024 / asm SHA256
+d2ce907d1bad9447fbd11196a498a65a73f744ee8e57153b62c46581b1368ed1 / locked ROM
+SHA1CFBF98C36C776677290A872547AC47C53D2761D6. For the locked-on Gumball selection,
+portal61952 writes d1=$1300;61955..61959 copies it to current AND apparent
+zone/act and clears Last_star_post_hit. Thus Level7571..7584 bypasses saved-act
+restoration on this entry. Obj_TitleCardInit62143..62150 does not skip zone$13;
+its$1600/$1700 exceptions are false, Apparent_act=0 selects Num1 at62173..62179,
+and TitleCard_LevelGfx62482 selects BonusTitleCard. This proves the **declared
+Knuckles/Gumball act-zero component inlet**, not every bonus/type/act branch.
+
+Actual ROM header reads through the retained original ROM corroborate the
+existing archive constants (no native/engine execution):
+
+| Native archive | ROM address | Header output bytes | Native destination bytes |
+|---|---|---|---|
+| RedAct |0D6F28|1952|A000 ($500 tiles)|
+| S3KZone |15C3A2|384|A200 ($510 tiles)|
+| Num1 |0D6D84|512|A7A0 ($53D tiles)|
+| BonusTitle |0D726C|1344|A9A0 ($54D tiles)|
+| AIZ normal control |39BDC8|960|A9A0 ($54D tiles)|
+
+R23's actual origin-return Num1 independently had source880004/compressed185/
+destination42912/output512/existingFP705980...f6aa. That identity corroborates
+the archive, not a native enqueue clock or complete2module/4direct cause.
+
+#### Frozen new test and control reach
+
+Only new `src/test/java/com/openggf/game/sonic3k/titlecard/TestSonic3kBonusTitleNativeArchives.java`
+(220lines/11995B), SHA256
+`54633aa10bdc1771c1d90f21ae03fbb012b449dd256dadba1f316d59809f76c8`;
+new-file binary diff SHA256
+`a1480b322099d3aeadc0d56c0e9fba3cfc252e18c4f50f0c1694b8a1f317d513`.
+Maintained runtime/POM/fixtures/old tests are exact, no code fix. Compiler-free
+lexical delimiters/three-method/source-contract/readback checks pass, **not Java
+compilation or genuine old-red execution**. No classes/output created.
+
+All three methods select Knuckles/no-sidekick through normal session overrides,
+open the actual headless ROM level fixture (Gumball19/act0 or normal AIZ0/act0),
+assert actual Knuckles/zone/act and registered title/resource snapshot presence,
+and use the module's **actual registered** title/provider/timing/resource owners.
+There is no queue/timing reset, mock/probe queue, new timing port/controller,
+provider replacement, private reflection/write, seeded handle/ordinal, fixture
+hydration, timer/slot/RNG write or copied driver. Initial four-entry capacity is
+an explicit prerequisite, never manufactured by clearing work. If unavailable
+or an owner/registration is unknown, the future short gate stops before tuning.
+
+1. `knucklesGumballQueuesNum1AsItsOwnArchiveBeforeBonusGraphic` calls ordinary
+   initializeBonus, verifies newly submitted jobs are pending and owned by the
+   actual title handles, then compares the complete newly submitted descriptor
+   list to RedAct/$500, Zone/$510, Num1/$53D, Bonus/$54D. Kind/source/compressed
+   length/destination/output/modules/compression are compared; expected archive
+   shape is decoded from the original ROM image through KosinskiReader, and
+   native source supplies order/destinations. No ordinal/fingerprint/trace-row
+   literal chooses the oracle. The count/order assertion is expected to expose
+   the maintained three-archive omission; **it has not run**.
+2. `normalFreshOwnerKeepsNativeFourArchiveOrder` independently checks the real
+   normal act-zero initializer still submits all four normal archives. The
+   existing production prepareRuntimeArtForActTransition(TITLE_OWNER) creates
+   its normal lease before initialize(0,0), following existing component test
+   practice; it does not fake a queue, handle or ready flag.
+3. `pendingBonusJobsRestoreAndReplayThroughRegisteredOwnersTwice` is a separate
+   control, so it remains reachable when the independent semantic oracle is red.
+   It derives only actual submitted handles and requires the ACTUAL composite
+   snapshot's title entry to retain those nonempty handles. One real POST and
+   PRE service via existing HardwareBoundaryPump, followed by ordinary title
+   update, must create an actual additional direct job and leave the batch
+   pending; no fitted service count asserts final readiness. The control then
+   restores the original production registry snapshot twice and forwards the
+   same two semantic boundaries/update, comparing the five complete declared
+   owner snapshots each time: timing, direct FIFO, runtime-art coordinator,
+   title manager and object-art provider. RewindSnapshotDiff.keyEquals deeply
+   compares all fields/arrays for these keys; diff preview is capped20 lines,
+   not a full changed-array dump. It does not omit PlaneB fields from a claimed
+   world oracle: this is explicitly **title/resource partition qualification**,
+   not whole-world or full-title completion/route coverage. Production registry
+   restore/callbacks are used unchanged, with no manual adapter install.
+
+Capture/restore is expressible with existing registrations and APIs by source
+inspection. Actual capacity, live owner publication and child progress are
+prerequisites still awaiting runtime qualification; failure there is not credit
+for the independent semantic old-red, and grants no API/owner widening. The
+current test source is frozen pending Root review before any compiler/JVM.
+
+Proposed SHORT exact normal gate, NOT EXECUTED (three candidate JUnit methods;
+actual counts/skips unqualified), own cwd and original Main wrapper/ROMs:
+
+```bash
+MAIN_ROOT=/path/to/main/OpenGGF
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  PATH="/usr/lib/jvm/java-25-openjdk/bin:$PATH" \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_ROOT/tools/testing/maven_queue.py" --normal -Dmse=off \
+  -Dtest=TestSonic3kBonusTitleNativeArchives \
+  "-Dsonic1.rom.path=$MAIN_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$MAIN_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$MAIN_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true \
+  -Dsurefire.runOrder=alphabetical test -B
+```
+
+No trace profile/movie/prefix is needed for this component gate. Other inherited
+JVM environment remains preserved, no extra CLI GL flag/outer activity. It has
+not been submitted. No new original-prefix/current/baseline/native replay,
+production/resource fix, seed/renumber/drop/waiver or readiness/SS/fdf/full-route
+claim. Only this existing Plan and new test source are left uncommitted after
+the accounted docs commit; all owned jobs/leases terminal, earlier refs/config/
+native/media/results preserved.
+
+### R25 actual bonus-title native archives component old-red — 2026-10-17
+
+Root reviewed the frozen220line component and an independent GPT-6.1 actual-file/
+API/native source review found no material blocker. Actual returned phase is
+`fdf-r25-reviewed-bonus-native-archives-oldred-once-20261017`, ordinal35, separate
+from R24source34. ONE normal lifecycle ran in owned649/native01a14, session12160,
+on HEAD`74daf0939bec4ecd5f8ff7c8bc7414d9ff5058e6` / maintained Java3be7df,
+`src/main` tree`67b445e8c8a69c1e49d530d582707668cfabe39c`, plus ONLY the frozen
+new test SHA256`54633aa10bdc1771c1d90f21ae03fbb012b449dd256dadba1f316d59809f76c8`
+and existing Plan WIP. No runtime/POM/fixture/old-test edit or second lifecycle.
+Preflight found no equivalent own job or prior class reports. All three original
+ROM SHA1/CRC pins and regular private/Main config SHA256/mtime pins matched;
+post-run source/config pins remain identical.
+
+Exact executed command from the owned649 cwd (other inherited JVM environment
+preserved; inherited JDK_JAVA_OPTIONS/MAVEN_OPTS were absent):
+
+```bash
+MAIN_ROOT=/path/to/main/OpenGGF
+env -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  PATH="/usr/lib/jvm/java-25-openjdk/bin:$PATH" \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_ROOT/tools/testing/maven_queue.py" \
+  --normal -Dmse=off -Dtest=TestSonic3kBonusTitleNativeArchives \
+  "-Dsonic1.rom.path=$MAIN_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$MAIN_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$MAIN_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true \
+  -Dsurefire.runOrder=alphabetical test -B
+```
+
+Normal7GiB/8core admission waited0s. Compiler ran inside this ONE lifecycle with
+Java25.0.4.1 (4143main/4193test sources); no preboot correction or extra build.
+Terminal1 at2026-10-17T21:49:34UTC, Maven1m16s; parent elapsed is unmeasured.
+Actual class3T/1F/0E/0S,0skips,time0.735s:
+
+- `knucklesGumballQueuesNum1AsItsOwnArchiveBeforeBonusGraphic`: genuine semantic
+  old-red at final complete descriptor-list assertion line66,0.298s,
+  `org.opentest4j.AssertionFailedError`. Actual normal bootstrap/Knuckles/zone19/
+  act0/registered-owner/capacity/pending/handle assertions were reached and passed.
+  Actual newly submitted list is RedAct, Zone, Bonus; expected list is RedAct,
+  Zone, Num1, Bonus. The missing independent Num1 job has ROM source880004,
+  compressed185, destination42912($53D*32), output512, modules1,
+  compression`kosinski_moduled`, kind`KOS_MODULE_QUEUE`. The other three full
+  descriptors match their corresponding expected entries: source880424/470/
+  dest40960/out1952, source1426338/174/dest41472/out384, source881260/348/
+  dest43424/out1344; each modules1 and the same kind/compression. No fixed
+  ordinal or canonical completion timestamp enters this oracle.
+- `normalFreshOwnerKeepsNativeFourArchiveOrder`: PASS0.079s, actual fresh normal
+  Knuckles/AIZ act0 title lease/initializer submits the four ROM-derived native
+  descriptors including Num1 and AIZ graphic. No skipped control or count waiver.
+- `pendingBonusJobsRestoreAndReplayThroughRegisteredOwnersTwice`: PASS0.058s.
+  Actual production registry snapshot retained the nonempty submitted title
+  handles. Real POST/PRE plus title update produced a direct child while title
+  art stayed pending. Both restore/forward cycles completed with complete
+  five-key title/resource partition equality, using actual registered owners.
+  This is explicitly NOT whole-world, final art-readiness or route qualification.
+
+ALL72 XMLproperties, all three method identities/statuses and complete XML/TXT/
+per-method streams were inspected. Exactly ONE failure and no error/skip/
+suppressed exception/prerequisite failure. Console reports five FAST-without-
+manifest warnings falling back to NONE; XML method streams retain four of those
+(two primary, one normal, one rewind), with empty stdout. The remaining warning
+is outside the per-method streams, not missing route/bootstrap evidence. Build
+also reports existing resource-filter encoding/deprecated/unchecked warnings;
+no compile error. This component has no trace movie/profile, trace groups,
+comparison-window or timing-input readiness certificate.
+
+Original reports retained at originalpaths for Root DIRECT read, no copy/archive:
+`target/surefire-reports/TEST-com.openggf.game.sonic3k.titlecard.TestSonic3kBonusTitleNativeArchives.xml`
+26965B SHA256`3493a0694a702f78ff8175e1244fb6792787c9466daa6a0a9eb8b5a2e444e50c`;
+TXT of the same class2553B SHA256
+`1b2aa87901e4ea560e292a3a05f3b1ce243764ffd042fcc5152e3672aae779d1`.
+These are the only two reportfiles, total29518B, no dump files. Diagnostic
+inspection used metadata_slot ALONE. Session12160 and all owned execution/build/
+metadata leases are terminal; current target is this actual component compile,
+not a maintained full-suite/route build. Reports/classes/new source remain owned
+and retained pending review, with no failing-test commit or runtime fix.
+
+The bounded component omission is now independently observed, corroborating the
+R23 actual three-archive submit-site sequence. It does NOT establish the entire
+observed two-module/four-direct offset, native enqueue birthtimes, exact missing
+jobs elsewhere, repaired return-title readiness, SS/fdf consumption, independent
+liveCPU prediction, fullworld or original-route closure. No counters are seeded,
+renumbered/dropped, no art/title/timing owner is edited, and no second JVM/native/
+original-prefix/baseline/guard run or implementation is authorized by this result.
+
+### R26 accepted R25 originals and bounded Num1 source correction — 2026-10-17
+
+Root DIRECT-read ALL three original R25 XML methods/full failure/complete streams/
+properties and TXT, rehashing the original29518B as XML3493a0694a702f78ff8175e1244fb6792787c9466daa6a0a9eb8b5a2e444e50c
+and TXT1b2aa87901e4ea560e292a3a05f3b1ce243764ffd042fcc5152e3672aae779d1.
+Root accepts actual3T/1F0E0S as genuine old-red ONLY at final four-archive oracle66:
+missing independent Num1 source880004/compressed185/dest42912/output512/modules1;
+all prerequisites, normal fresh control and both five-key title/resource
+restore/forward cycles passed. This remains a component defect, not full offset,
+readiness or route proof. The two accepted originals are now eligible for exact
+hash-checked consumption metadata_slot ALONE, no archive/copy. Maintained new
+oracle54633 and generated new test classes stay unchanged. R26 authorizes source
+correction ONLY, no compiler/JVM/build/guards/prefix/native/failing-test commit.
+
+R26 exact returned task`fdf-r26-native-bonus-number-submission-source-20261017`,
+ordinal36, is separately registered preserving all preceding IDs/results. Both
+accepted originals were rehashed against the above exact hashes and ONLY those
+two files29518B were consumed under metadata_slot ALONE; no archive/copy/new-test
+class deletion. All execution/metadata leases terminal.
+
+SOURCE-ONLY runtime change is confined to existing
+`src/main/java/com/openggf/game/sonic3k/titlecard/Sonic3kTitleCardManager.java`:
+`loadBonusArt` now queues the actual act-number ROM archive between existing
+Zone and Bonus submissions, at existing VRAM_TITLE_CARD_ACT_NUM offset. Existing
+pure LevelManager.getApparentAct returns its scalar without lazy work; zero
+selects Num1 and nonzero Num2, matching Obj_TitleCardInit Apparent_act branch.
+The original three archives keep their relative order and existing queue/
+lease/owner paths. Its documentation now states four native archives and the
+branch comment cites the native owner; normal loadAllArt is unchanged. There is
+no visual-child-count gate, new helper/controller, queue-capacity or timing/
+prepared-payload/claim/port/fingerprint/API/interface/schema/pin change.
+Native source pin044/asm d2ce907d remains exact; the actual independently tested
+case is locked-on Knuckles/Gumball$1300/apparentact0, not all bonus acts/types.
+
+Frozen runtime SHA256
+`f02866ab02cd93f5ef462a24f2d6f9f534cf4f50e0ffbf740e1d91554732efc1`
+(base`7715a8e1e9e58d1268fed1a91af3ea32ed968197b5da2ea9b2bb5b04980bda02`);
+exact runtime binary diff SHA256
+`f5e2a28c7f40c4174f0774323600030d3be97767f8ad0b1bbe786d3a14f6396f`.
+Independent old-red test remains byte-exact54633aa10bdc1771c1d90f21ae03fbb012b449dd256dadba1f316d59809f76c8.
+HEAD74daf and all refs/config/privateMainhash+mtime/native/media are preserved.
+`git diff --check` passes; postfix compiler/JVM executions are ZERO. Last target
+compile12160 is explicitly pre-fix R25, not evidence for this candidate.
+
+Existing stale oracle is a concrete next gate prerequisite, not a source fix:
+`TestSonic3kTitleCardKosQueue#bonusCardQueuesThreeArchivesInOrderAndPollsUntilFinalPostObjects`
+line142 and its BONUS_SOURCES/BONUS_DESTINATIONS explicitly expect three and call
+that invented count native. R26 leaves ALL existing tests/oracles unchanged as
+instructed, including this one. Root needs a separate disposition/migration
+before expecting that affected class to go green. No test is excluded to waive
+the conflicting native submission contract.
+
+Proposed short affected ordinary gate AFTER Root's source review and stale-oracle
+disposition, NOT SUBMITTED: retain the R25 normal wrapper/environment/three-ROM/
+singlefork/reuse/alphabetical flags, replace only -Dtest with this selection:
+
+```text
+TestSonic3kBonusTitleNativeArchives,TestSonic3kBonusTitleCard,TestSonic3kBonusTitleCardMappings,TestSonic3kTitleCardKosQueue,TestSonic3kTitleCardManagerRewind,TestS3kTitleCardHoldRoutes,TestS3kKosDecompressionQueue,TestS3kKosDecompressionQueueLifecycle,TestRuntimeArtAdmissionContract,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestSonic3kPlcArtRegistry#s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits
+```
+
+This is13 complete candidate classes plus one exact mapping-corruption method
+from the14th class; actual case count/runtime/skips unqualified. It includes the
+new independent3case oracle, existing bonus/mapping/titlehold/rewind/queue and
+resource allocation/admission consumers, mandatory S3K4 and PLC guidance's exact
+mapping guard. Generic renderer behavior and shared timing implementation are
+unchanged; no trace profile/full original prefix/native replay is needed for
+this component gate. A separate fresh structural/authority invocation may use
+`-Pguards -Dtest=TestArchitecturalSourceGuard,TestHardwareTimingAuthorityGuard`
+with the same normal wrapper/environment/ROM pins, only after authorization;
+no API surface/pin change is proposed. These are selection proposals, not run
+results or permission to submit. No broad/fullpopulation/extra S3K4 ceremony,
+second component JVM, originaltrace/capture/guard or local source/failing-test
+commit occurred in R26.
+
+The next action is Root's actual frozen-runtime diff review and focused-gate
+scope disposition. Any new material source/owner/API boundary stops before
+widening. There is no claim of repaired entire two-module/four-direct offset,
+native enqueue times, recorded readiness, SS/fdf/liveCPU/fullworld or route
+closure; the independently observed component omission is the sole repair scope.
+
+### R27 native four-archive old-oracle migration — source only, 2026-10-17
+
+Root actual-read runtimef028's small native Apparent_act submission diff and the
+full existing queue test arrays/bonus method/expectedHandles/drain body. It
+approved that runtime design in principle and separately authorized ONLY the
+stale bonus-oracle migration, no compiler/JVM. Exact returned task is
+`fdf-r27-native-four-archive-oracle-source-correction-20261017`, ordinal37;
+separate ownership preserves ordinal36 and all earlier evidence/results.
+
+Existing apparent-act inlet was inspected before changing the oracle:
+RequiresRomCondition.beforeEach calls TestEnvironment.configureRomFixture, which
+resetAll/SessionManager.clear and recreates the gameplay mode around the actual
+S3K ROM. Its new WorldSession initializes apparentAct=0, and the new LevelManager
+copies that value on construction. The queue test's existing setUp only resets
+timing, gets the ROM, constructs/resets its title manager and calls unchanged
+prepareTitleLease; that lease uses existing public title-owner art transition
+for act0, with no apparent-act write. Thus the existing fresh component fixture
+has a source-backed apparent-act-zero contract. No gameplay/setup write or
+expected-value selection from the runtime getter was added. This old direct-
+manager fixture is NOT itself a real native Gumball portal/Knuckles boot; the
+separate actual Knuckles/Gumball component54633 provides that independent
+native act0 oracle and genuine R25 old-red. Future prerequisite failures remain
+STOP boundaries, not permission to reset or mirror the observed act value.
+
+ONLY old BONUS_SOURCES inserts ROM ART_KOSM_TITLE_CARD_NUM1_ADDR between Zone and
+Bonus, BONUS_DESTINATIONS inserts$53D at the same position, and the old bonus
+method/message changes Three/three to Four/four. All existing setup/helper/
+service/drain/replay/readiness/claim assertions and bodies remain byte-identical;
+normal arrays and tests are untouched. No fixed ordinal, exclusion, wait growth,
+queue reset or count waiver was introduced. Exact inverse of those three textual
+substitutions recovers old test SHA256
+`0669ad153b1975601829153f6040132312dc4f1716f3cafb01efffa4975479e3`
+byte-for-byte, without a saved backup or helper artifact.
+
+Frozen migrated
+`src/test/java/com/openggf/game/sonic3k/titlecard/TestSonic3kTitleCardKosQueue.java`
+SHA256`69c6f374abcda89326448174a82e2a17eec9ec169893fada7fbae424d371fe3e`;
+its exact binary diff SHA256
+`6a3c0e6c668230743724906e67118b7233427f731bb63e956e64b67715efe974`.
+Runtimef02866ab02cd93f5ef462a24f2d6f9f534cf4f50e0ffbf740e1d91554732efc1
+and independent old-red54633aa10bdc1771c1d90f21ae03fbb012b449dd256dadba1f316d59809f76c8
+remain exact. Runtime source is still only R26 loadBonusArt; HEAD74daf/POM/
+fixtures/API/schema/pins/config/native/refs/media unchanged. Whitespace check
+passes, but this is SOURCE ONLY: no compiler/test/guard/JVM/native/trace or commit.
+Last target remains R25 pre-fix session12160 and is not post-fix qualification.
+
+Frozen exact affected ordinary command for Root review, NOT SUBMITTED, same
+owned649 cwd and inherited JVM environment as R25. It selects13 full classes
+plus the exact required mapping guard method in a14th, with no traceprofile or
+movie; actual selected case counts/skips/runtime remain unqualified:
+
+```bash
+MAIN_ROOT=/path/to/main/OpenGGF
+env -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  PATH="/usr/lib/jvm/java-25-openjdk/bin:$PATH" \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_ROOT/tools/testing/maven_queue.py" \
+  --normal -Dmse=off \
+  '-Dtest=TestSonic3kBonusTitleNativeArchives,TestSonic3kBonusTitleCard,TestSonic3kBonusTitleCardMappings,TestSonic3kTitleCardKosQueue,TestSonic3kTitleCardManagerRewind,TestS3kTitleCardHoldRoutes,TestS3kKosDecompressionQueue,TestS3kKosDecompressionQueueLifecycle,TestRuntimeArtAdmissionContract,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestSonic3kPlcArtRegistry#s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits' \
+  "-Dsonic1.rom.path=$MAIN_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$MAIN_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$MAIN_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true \
+  -Dsurefire.runOrder=alphabetical test -B
+```
+
+All existing queue drain/readiness/recreation controls stay selected. No new
+parameter sweep or review round is launched. R26's separate structural/authority
+selection remains a proposal only, not an extra invocation authorized here.
+Current dirt is existing Plan, loadBonusArt runtime file, migrated old queue test,
+and unchanged new independent component test; no other owned source or generated
+artifact was changed. All leases terminal. Root's actual corrected-source read
+and explicit focused lifecycle authorization are the next gate; no full offset,
+native birth/readiness/SS/fdf/fullworld/route claim follows from this migration.
+
+### R28 reviewed native bonus-number affected focus — 2026-10-17
+
+Root actual-read frozen runtimef028, old queue69c6/exact inverse0669 and unchanged
+independent54633, approving ONE normal affected lifecycle. Root also source-
+checked actual GameLoop.doEnterBonusStage loads LevelManager.loadZoneAndAct
+before initializeBonus; that load writes both current and apparent act from the
+actual provider zone ID. Thus the Gumball$1300 path supplies apparent0 via the
+existing semantic getter without a new write. This remains source/ordinary
+component evidence, not an observed original-route callback in R28.
+
+Exact returned task`fdf-r28-reviewed-native-bonus-number-focused-once-20261017`,
+ordinal38, separately registered preserving37 and all earlier epochs/results.
+The EXACT R27 command above ran unchanged (normal Mainabsolute wrapper/all3
+original ROMs/Java25/single JTO EGL/NO CLI GL/EGL/nullAL/noambient/LDunset/Lua/
+singlefork/reuse/alphabetical, no traceprofile/movie). All ROM/native/config/
+source pins and no-equivalent-own-job preflight passed. Two Python-only
+preflight inspection assertions initially assumed unique prefixes/basenames;
+neither launched a JVM or changed source/selector. Corrected inventory retained
+literal selectors: BonusTitleCard is a prefix of separately selected Mappings,
+and TestSonic3kLevelLoading has TWO actual package classes. No selector was added,
+removed or narrowed to fit the forecast.
+
+ONE session16305 normal7GiB/8cores, queuewait0s, terminal0 at
+2026-10-17T22:00:03UTC; Maven1m23s, parentelapsed unmeasured. Compiler ran inside
+this lifecycle,4143main/4193test sources, Java25.0.4.1. Actual15 XMLclasses/
+120 UNIQUE JUnitidentities, **120T/0F/0E/0S**, no skips/aborts/suppression or
+setup/prerequisite/observer failure. Actual class counts/time (seconds):
+
+| Actual class | Tests | Seconds |
+|---|---:|---:|
+| `com.openggf.game.TestRuntimeArtAdmissionContract` | 3 | 0.285 |
+| `com.openggf.game.sonic3k.TestSonic3kBootstrapResolver` | 6 | 0.051 |
+| `com.openggf.game.sonic3k.TestSonic3kDecodingUtils` | 3 | 0.007 |
+| `com.openggf.game.sonic3k.TestSonic3kLevelLoading` | 36 | 1.282 |
+| `com.openggf.game.sonic3k.TestSonic3kPlcArtRegistry` | 1 | 0.158 |
+| `com.openggf.game.sonic3k.resources.TestS3kKosDecompressionQueue` | 10 | 0.035 |
+| `com.openggf.game.sonic3k.resources.TestS3kKosDecompressionQueueLifecycle` | 3 | 0.039 |
+| `com.openggf.game.sonic3k.titlecard.TestSonic3kBonusTitleCard` | 6 | 0.019 |
+| `com.openggf.game.sonic3k.titlecard.TestSonic3kBonusTitleCardMappings` | 6 | 0.004 |
+| `com.openggf.game.sonic3k.titlecard.TestSonic3kBonusTitleNativeArchives` | 3 | 0.166 |
+| `com.openggf.game.sonic3k.titlecard.TestSonic3kTitleCardKosQueue` | 11 | 0.118 |
+| `com.openggf.game.sonic3k.titlecard.TestSonic3kTitleCardManagerRewind` | 12 | 0.492 |
+| `com.openggf.tests.TestS3kAiz1SkipHeadless` | 8 | 1.216 |
+| `com.openggf.tests.TestSonic3kLevelLoading` | 7 | 0.278 |
+| `com.openggf.tools.TestS3kTitleCardHoldRoutes` | 5 | 0.926 |
+
+This is14 fully selected actual classes plus ONLY
+PlcArtRegistry#s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits in the15th;
+there are14 literal selectors, not13+1 unique actual package classes. Both
+LevelLoading packages executed (36+7cases); mandatory S3K4 are included. The
+PLC class executed exactly the single declared method and no other methods.
+
+All three independent component methods passed: the original genuine old-red
+Gumball full-four-descriptor oracle0.064s, normal fresh four-archive control
+0.044s, and pending five-key partition two restore/forward cycles0.049s (class
+0.166s). The migrated old queue method
+bonusCardQueuesFourArchivesInOrderAndPollsUntilFinalPostObjects passed0.009s
+with its original complete service/drain/readiness/claim controls intact.
+All11 queue-owner methods and12 title rewind methods passed. Actual hold-route
+class5passed, including bonusEntryAndReturnBothReleaseIntoTheHold0.393s and
+rewindInsideTheHoldRestoresTheCardAndReplaysForward0.116s. These bounded fixtures
+do not replace original recorded Knuckles route/fdf readiness evidence.
+
+ALL120 actual method identities, every assertion status/skip and all15 XML/TXT
+originals were inspected. Each XML had the same72 properties, including actual
+Java25.0.4.1/own user.dir, all3 correct absolute ROMs, surfaceless-egl and exact
+selector/fork/reuse/alphabetical settings; property differences across classes0.
+Complete XML method/suite streams were traversed, stdout empty, no suppressed
+exceptions. Console tool tail was truncated; assertions/counts/warnings are
+qualified from complete original XML/TXT, not that truncated display.
+
+XML streams contain116 FAST-without-manifest→NONE warnings;26 unmeasured
+s3k-kos-v1 direct-job deterministic-estimate warnings across7 fingerprints;
+7 ROM-unavailable warnings in existing intentionally ROM-free bonus-title logic
+controls (5bonus/2normal); one explicit collision-index bounds control warning;
+and2 presentation-shadow missing fallback music warnings. No ROM-backed test
+was skipped. These are not measured-profile/strict native scheduling proof. The
+console also includes existing compiler encoding/deprecation/unchecked messages
+and JOML sun.misc.Unsafe removal warnings. No new exception or failing owner was
+observed; no retry/edit/reset/wait change/extra lifecycle occurred.
+
+Current tested source is HEAD74daf plus runtime
+f02866ab02cd93f5ef462a24f2d6f9f534cf4f50e0ffbf740e1d91554732efc1,
+old queue69c6f374abcda89326448174a82e2a17eec9ec169893fada7fbae424d371fe3e,
+new independent54633aa10bdc1771c1d90f21ae03fbb012b449dd256dadba1f316d59809f76c8
+and existing Plan. Post-run source/config/privateMainhash+mtime remain exact.
+Current target is this actual post-fix16305 compile, superseding pre-fix12160 for
+this bounded component selection. Existing Java3be7df owners outside this local
+minimal patch remain unchanged. No commit, guards, broad/fullpopulation,
+originalprefix/current/base replay, native or capture ran in R28.
+
+All30 standard green original XML/TXT files396736B were hash-read/inspected;
+source facts were recorded here before normal hash-rechecked consumption under
+metadata_slot ALONE. No novel failure original needs retention, and no copy/
+archive/pass-cache/extra receipt is created. Maintained test sources/classes stay
+in place. Session16305 and all owned leases are terminal; ownership registry
+records compact actual class/method coverage/limits and cleanup. Only Plan,
+loadBonusArt, migrated queue test and unchanged new independent test are dirty.
+
+The genuine independent R25 old-red → R28 green now qualifies this native bonus
+act-number submission repair and the affected consumers above. It does NOT
+establish the entire observed two-module/four-direct difference, native birth
+clocks/unique missing jobs, recorded return readiness, SS/fdf consumed admission,
+independent liveCPU timing prediction, whole-world/route parity or full delivery.
+Further source/authority guards, release/docs folding/commit and original-route
+work require the next explicit gate; no extra execution follows automatically.
+
+### R29 conditional guard gate RED; original maintained route NOT LAUNCHED — 2026-10-17
+
+Root authorized two distinct phases: ONE exact fresh structural/authority guard
+lifecycle, then ONLY IF both complete classes/all methods0F0E0S and literal three
+source hashes unchanged, ONE ORIGINAL unmodified maintained MegaRunChain route.
+Actual returned task`fdf-r29-qualified-title-guards-then-original-mega-once-20261017`,
+ordinal39, is registered separately preserving38 and earlier identities/results.
+The new phase was initially recorded honestly awaiting its literal identity;
+actual relayed task/run replaced null fields without inventing an ordinal/ID.
+
+Preflight verified no own equivalent queue/running job; HEAD74daf and literal
+runtimef028/oldqueue69c6/new54633; original3ROM SHA1; native044/asmD2ce; regular
+private/Main config SHA+mtime; exact two guard class sources. Original maintained
+TestS3kMegaRunChain SHA74463d0a84cb070b564e9a4a29775886cd5988944889f4da65235f60ebaaa516
+was source-read: its multiBonusSpecialStageRoundTrip calls original
+assertChainReplay(RUN_DIR) once with s3-knux-multibonus-ss, no prefix/helper.
+Source fixture tree db73f445d9a07c616ef94d9ab793539326440cd3, original manifest
+149c879ccb3e31cbe806b492dbe40cb060c5e4414e7666a0ab5199f0c7228302 and movie
+d7485e13f427d1b335cbbb3c405ff6136a77326239b79d3aed61e902078af45c matched.
+These are preflight identities only, NOT evidence that the route executed.
+
+Actual ONE guard command from own649 cwd:
+
+```bash
+MAIN_ROOT=/path/to/main/OpenGGF
+env -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  PATH="/usr/lib/jvm/java-25-openjdk/bin:$PATH" \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_ROOT/tools/testing/maven_queue.py" \
+  --normal -Dmse=off -Pguards \
+  -Dtest=TestArchitecturalSourceGuard,TestHardwareTimingAuthorityGuard \
+  "-Dsonic1.rom.path=$MAIN_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$MAIN_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$MAIN_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true \
+  -Dsurefire.runOrder=alphabetical test -B
+```
+
+Normal7GiB/8core session68289, waited0s, terminal1 at
+2026-10-17T22:04:54UTC; Maven31.703s, parentelapsed unmeasured. Java25.0.4.1;
+main classes up-to-date,4193test sources compiled inside this lifecycle. No
+separate build or retry. Actual ONLY two requested classes,97T/1F/0E/0S:
+
+- `com.openggf.tests.TestArchitecturalSourceGuard`:72T/1F/0E/0S,3.366s.
+  Sole failure releaseCriticalLargeClassesDoNotGrowWithoutExtraction0.014s,
+  org.opentest4j.AssertionFailedError at1049→assertNoViolations1916:
+  `com/openggf/level/LevelManager.java is 3153 effective source lines; budget is 3144. Extract focused collaborators before growing this release-critical file.`
+- `com.openggf.trace.timing.TestHardwareTimingAuthorityGuard`:25T/0F/0E/0S,
+  4.323s. Every authority/refusal method executed and passed. No skip or waiver.
+
+ALL97 actual method identities, complete original XML/TXT failure/stack/streams/
+properties were inspected;72 properties per XML and differences0, exact guard
+selector/all3ROM/own user.dir/Java/EGL/fork/reuse/alphabetical values. Both XML
+streams are empty; the console contains two outside-method FASTmanifest→NONE
+warnings plus existing resource-filter/deprecation/unchecked compiler messages.
+No errors, skipped cases, suppressed exception, timing closure or route bootstrap/
+lag/comparison report exists for this guard-only execution.
+
+All three frozen source hashes and config/Mainhash+mtime remained exact AFTER
+terminal. The ratcheted LevelManager is byte-identical to HEAD74daf; its SHA256
+76193c0671bb235a3b7b494f37d170b25c3b58ebfc0861644990ca7b48eee3bd. This shows no LevelManager edit in this bounded bonus-number
+patch; it is NOT a matched executed baseline attribution, a budget waiver or
+permission to extract/change another owner. No source repair or baseline was
+attempted. R28's120green component/consumer epoch remains separately bounded.
+
+**STOP honored: conditional phase2 TestS3kMegaRunChain was NOT LAUNCHED.** There
+is no second Maven/route session, retry, source variant, new observer/helper,
+fixture/input/history waiver, native or commit. Actual Gumballstage_exit,
+returnedseg2 opening, SS12/fdf window and the full original route were UNVISITED
+in R29; no first new route mismatch or readiness/caller/offset conclusion can be
+reported. Historical98161/50308/3717/97317/79227 original prefix failures remain
+their distinct epochs. A preflight unchanged method/movie does not supply an
+executed route comparison or prove a matching caller.
+
+Retain all FOUR ORIGINAL failed-request reports62248B at originalpaths for Root
+DIRECT read (not copied/archived), target/surefire-reports:
+
+- TEST-com.openggf.tests.TestArchitecturalSourceGuard.xml34157B SHA256
+  c4f32ffe2de0cc5b4c61d5d0f351fea3dc0d28f9f4ee1a5475f174f5874434ac;
+- com.openggf.tests.TestArchitecturalSourceGuard.txt1320B SHA256
+  84adfb591a9db649cf28ee6e434ddd0ebe854c679dcdb0db0a451283dee3ab62;
+- TEST-com.openggf.trace.timing.TestHardwareTimingAuthorityGuard.xml26406B SHA256
+  910fb22e7bea12126302a129aeec86db40d9e314648762836dd12941315b9b9f;
+- com.openggf.trace.timing.TestHardwareTimingAuthorityGuard.txt365B SHA256
+  4f081ff6a5d765bee88d558b128ec41bdd8456f636e16d7baf980afd671ed9c0.
+
+Their inspection used metadata_slot ALONE. No standard all-green request was
+completed in R29, so the failed-request originals stay retained until Root's
+review/cleanup disposition. Latest target is guard68289 test-compile over the
+unchanged R28 maintained candidate, not an original-route build/result. All
+owned leases/processes terminal; exactly previous four owned source/Plan paths
+remain dirty, no other source/POM/fixture/config/Main/native/ref/media change.
+Next action is handback of the guard ratchet blocker, not another execution or
+automatic owner repair. No whole offset/nativebirth/readiness/SS/fdf/fullworld/
+route/delivery claim is made.
+
+### R30 local component preservation and accepted guard accounting — 2026-10-17
+
+Root DIRECT-read ALL97 actual guard method identities, the complete sole budget
+failure1049/1916, both complete XML/TXT/properties/streams and62248B hashes
+c4f32/84ad/910fb/4f081. It accepts Architectural71passes+1F(LevelManager3153vs3144)
+and HardwareAuthority25green, no conditional Mega execution. Root's separate
+read-only source audit owns measured-input/count/budget attribution and a
+meaningful extraction proposal; the worker does not waive or repair that owner.
+The unchanged-LevelManager observation alone is not an executed baseline result.
+
+Exact returned phase is
+`fdf-r30-qualified-title-accounting-canonical-next-producer-source-20261017`,
+ordinal40, separately registered preserving39 and all prior IDs/results. Local
+component preservation is authorized with sourcef028/oldqueue69c6/new54633 exact,
+independent native old-red→green and R28's120/15classes0skips, explicitly alongside
+R29's97/1F guard limit. This is NOT integration, delivery or full guard success.
+Only approved one title runtime/two green test files and existing relevant docs
+are staged; no failing test, LevelManager/runtime redesign, API/schema/pin/POM/
+fixture/timing authority change. Release prose folds into the existing S3K zone
+card theme; existing S3K discrepancy/bug/frontier/caller-audit and mirrored P52
+record the unused-art producer lesson and completion-versus-birth evidence limit.
+
+After durable facts and Root accepted full original read, ONLY the four guard
+XML/TXT originals62248B are hash-rechecked and consumed metadata_slot ALONE; no
+archive/copy/receipt or candidate-class deletion. Native/Main/private config,
+media, every prior ref and unknown artifacts remain preserved. Normal hooks,
+seven policy trailers and the full-message final parsed GPT-6.1 coauthor govern
+the local preservation commit. No compiler/JVM/native/probe/test/logger or route
+run is authorized in R30. The next canonical13/14/15 question is SOURCE/PLAN ONLY
+and starts after the clean accounting boundary, not before this commit.
+
+Commit-policy readback: the first normal hook invocation rejected machine-local
+user-home spellings in this Plan's three recorded command blocks. They now use
+the existing neutral MAIN_ROOT alias for the original Main absolute wrapper/ROM
+checkout; flags/arguments/source pins are unchanged, and no command was rerun.
+The hook is not bypassed. This is documentation portability repair, not a new
+validation/source epoch.

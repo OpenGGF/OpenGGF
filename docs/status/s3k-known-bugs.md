@@ -6186,6 +6186,19 @@ against `sub_32F56` (sonic3k.asm:68950-68992) and Obj_Bumper
 - **Suspected cause** — Unmeasured rather than known wrong: the only fixture that reaches the exit is `TestS3kMegaRunChain`, which is red in segment 0 on develop (`duplicate or reordered hardware service boundary at raw_frame=1053: VINT_SERVICE`).
 - **Removal condition** — `TestS3kMegaRunChain` reaches the gumball exit, the card loop and load span match the recorded rows through `HardwareTimingService` (manifest entry if a load span is needed), and the OPTION B re-anchor is deleted.
 
+**Bounded producer repair, 2026-10-17 (local preservation):** an independent actual
+Knuckles/Gumball ROM component exposed the omitted Num1 archive at `$53D`; the
+bonus initializer now submits all four native archives using apparent act.
+Its original semantic old-red and120 affected cases are green, including the
+unchanged drain/readiness/claim controls and two title/resource restore/forward
+cycles. This supersedes neither the original-route closure obligation nor the
+historical title/load-span timings above. The fresh97-case guard phase has one
+LevelManager source-size ratchet failure, so its conditional original maintained
+route was not launched after the fix. The full two-module/four-direct offset,
+recorded return readiness and SS/fdf consumption remain unqualified; no budget
+waiver or matching-baseline attribution was made. [Actual epochs, source pins
+and STOP](../architecture/plans/2026-10-13-s3k-playable-completion.md#r29-conditional-guard-gate-red-original-maintained-route-not-launched--2026-10-17).
+
 ---
 
 ## S3K Mega Run Chain: Duplicate VINT_SERVICE Boundary in Segment 0

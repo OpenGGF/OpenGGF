@@ -113994,3 +113994,39 @@ After accepted read, exact service restored and temporary test/6classes removed;
 9inspected originals consumed without archives. Target79227 remains diagnostic
 epoch, not maintained-source validation.
 [Exact caller evidence, clock limits and cleanup](../architecture/plans/2026-10-13-s3k-playable-completion.md#r23-actual-submit-site-provenance-r24-accepted-accounting--2026-10-17).
+
+
+### 2026-10-17 — Native bonus-title Num1 component qualified; maintained route guard-blocked
+
+Owned649 HEAD74daf/currentJava3be7df plus approved frozen titlef028/queue-test69c6/
+independent54633: actual-ROM Knuckles/Gumball R25 session12160 reached its final
+four-descriptor oracle and failed only because Num1(source880004,len185,
+dest42912,out512,module1) was absent. Normal fresh four-archive and two pending
+five-key restore/forward controls passed. The minimal loadBonusArt correction
+submits the apparent-act number between Zone and Bonus using the existing ROM
+queue; migrated old queue count retains all original drain/readiness/claim checks.
+
+ONE normal affected request16305, exact selection in the Plan, terminal0 at
+22:00:03UTC/queue0/Maven1m23, **120T/0F/0E/0S**,15 actual package classes. All120
+identities/15XML+TXT/properties/streams inspected; standard30 reports consumed
+normally. The new independent three cases, old four-archive polling control,
+title/queue/hold/rewind/resource consumers, mandatory S3K4 and single declared
+PLC method pass. Literal LevelLoading selects both package classes; no narrowing.
+
+The following ONE fresh
+`-Pguards -Dtest=TestArchitecturalSourceGuard,TestHardwareTimingAuthorityGuard`
+request68289 terminal1 at22:04:54UTC/queue0/Maven31.703s: **97T/1F/0E/0S**,
+sole releaseCriticalLargeClassesDoNotGrowWithoutExtraction at1049→1916 reports
+LevelManager3153 effective lines versus3144budget. HardwareAuthority25passes;
+Architectural71passes+1failure. Worker and Root read all97 identities and four
+original reports62248B. Root owns separate measured-input/budget attribution and
+extraction planning; no worker waiver/LevelManager change or baseline query.
+
+Conditional ORIGINAL TestS3kMegaRunChain#multiBonusSpecialStageRoundTrip was
+**NOT LAUNCHED**, so there is no new post-fix stage_exit, returnedseg2, SS/fdf or
+first route mismatch. R23's actual pre-fix births and earlier first1300X0000/
+2778 predecessor failure remain distinct epochs, not post-fix failure claims.
+The full two-module/four-direct difference, native birth context, recorded
+readiness, liveCPU prediction and route closure remain open. Approved LOCAL
+component preservation is not integration/delivery/full-guard qualification.
+[Exact source/commands, independent old-red/green and guard STOP](../architecture/plans/2026-10-13-s3k-playable-completion.md#r28-reviewed-native-bonus-number-affected-focus--2026-10-17).

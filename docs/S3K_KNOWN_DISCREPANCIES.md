@@ -308,6 +308,16 @@ and `TestS3kKosStructuralSequence` cover decoder parity, FIFO ownership,
 and consumer polling; `TestS3kKosTimingRewindIntegration` (ROM-gated) covers
 rewind across the recorded completion boundary.
 
+**Bonus title producer correction (2026-10-17, local preservation):** the actual
+Knuckles/Gumball apparent-act-zero owner now queues RedAct, Zone, Num1 and Bonus
+through the existing ROM pipeline, including the number archive that its banner
+does not draw. This removes an omitted producer, not an accepted deviation.
+The independent old-red and120 affected cases pass, including pending owner
+restore/forward twice; the fresh structural/authority phase remains97/1F because
+LevelManager exceeds its source-size budget. The conditional maintained route
+was not launched, so recorded readiness and the complete ordinal difference
+remain open. [Bounded qualification and guard limit](architecture/plans/2026-10-13-s3k-playable-completion.md#r28-reviewed-native-bonus-number-affected-focus--2026-10-17).
+
 ---
 
 

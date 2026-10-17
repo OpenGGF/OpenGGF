@@ -125,3 +125,30 @@ ordinals and submitted state in rewind snapshots. Queue facades and handles are 
 and rebound through `HardwareTimingService.pendingHandle(kind, ordinal)` after the timing
 ledger restores. Restoration must not resubmit a duplicate job. No static queue state or
 singleton access is required.
+
+
+## Bonus-title archive omission independently corrected — 2026-10-17
+
+The earlier broad title-owner inventory did not prove every specialized title
+initializer submitted the complete native batch. At skdisasm044
+Obj_TitleCardInit62143..62200, the locked-on Gumball portal61952..61959 writes
+current/apparent$1300 and still queues Num1 at$53D between Zone and Bonus.
+Visible BONUS/STAGE child count does not remove that physical archive. R23's
+actual successful-submit caller witness exposed three engine archives; the
+separate actual-ROM typed Knuckles/Gumball R25 component reached the final
+four-descriptor assertion and failed only for Num1(source880004/compressed185/
+dest42912/output512/module1). Existing apparent-act selection now submits it
+through loadBonusArt's unchanged queue/lease owner, leaving ordinary title loading
+and all timing admission/refusal contracts intact.
+
+R28's exact affected selection passes120 unique cases in15 actual classes,
+including the original independent oracle, complete four-archive service/drain/
+claim control and two registered five-key resource/title restore/forward cycles.
+R29's fresh two-class guard request is97/1F0E0S: the sole LevelManager3153vs3144
+size-ratchet failure blocks the conditional maintained original route. This is
+local component preservation, not integration, a full guard pass, repaired
+recorded readiness or complete two-module/four-direct producer attribution.
+Canonical completion descriptors have no native enqueue timestamp/caller. Keep
+R23's measured pre-fix births distinct from a statically inserted Num1 job;
+there is no post-fix route execution in this slice. [Exact epochs, commands and
+STOP](../plans/2026-10-13-s3k-playable-completion.md#r29-conditional-guard-gate-red-original-maintained-route-not-launched--2026-10-17).
