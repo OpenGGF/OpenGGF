@@ -494,3 +494,20 @@ The historical manifest act2 is one-based and matches engine act1. The
 reported generation10 ownership loss does not identify a load caller/cause.
 Later child R69 reports251 total (11 physics/240 animation), but remains red;
 this composition adds no fresh Root route or native certificate.
+
+
+
+### R68/R69 supplementary resource and registry boundaries — 2026-10-18
+
+Exact unchanged a9df has four passing cases inside R68's sole six-class
+**74/0F0E0S** lifecycle. Natural LBZ surface production and actual public art
+rebuild replace same-player controllers; all-session immediate restore and twice
+same-input forward equality include the supplied renderer binding. Separate
+owner-only cases prove genuine missing-key defaults with nondefault ordinary
+dust preserved and refusal after public P1/P2 removal before partial apply.
+[Actual command, assertions, warnings and scope](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r68r69-fixed-dust-resource-and-registry-boundary-coverage--2026-10-18).
+Cross-session/player-recreation/cache-pixel, simultaneous active-surface/spindash,
+missing-controller, uncaptured-live and active-water-missing-key branches remain
+open. This is component coverage, not R52 caller, canonical13322, following
+freed-SST CPU marker or independent ownership88306 parity. R62's joint142 and
+R66's hand149 retain their distinct observed epochs; no new result at docs SHA.

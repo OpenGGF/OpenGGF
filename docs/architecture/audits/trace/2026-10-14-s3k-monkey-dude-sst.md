@@ -7889,3 +7889,45 @@ resolveRecordedLevel subtracts one. Recorded HCZ act2 and engine act1 match;
 no act-number mismatch explains ownership88306. Generation/admission and
 load-cause observations are still required. Imported results are child
 epochs, not new Root executions.
+
+
+
+## R68/R69 fixed-Dust resource and registry boundary coverage — 2026-10-18
+
+The unchanged real-ROM component test a9df now has actual focused coverage;
+this adds no runtime, public record/API pin or presentation-cache state.
+R68 sole normal session78272 on1f9f05ae1 plus that untracked test completes
+**74/0F0E0S / six classes**. Actual counts: effects4, splash8, LBZ intro6, sprite
+rewind11, context registry29, core registry16. Maven27.379s, parent28.111s,
+normal admission wait0s; production was up to date and4196 test sources compiled
+inside that same lifecycle. All74 cases, six equal72-property maps/full8057-byte
+classpath and six complete TXT reports pass without suppressed failures/skips.
+Root DIRECT accepted all12 original XML/TXT166388B and44 stderr records15080B:
+70 FAST-no-manifest and16 deterministic-estimate warnings (three fingerprints),
+not an all-warnings-zero result. No unchanged policy or Java checks are repeated.
+
+The four actual new cases qualify: (1) ordinary LBZ surface production, actual
+public ROM-art controller replacement on the same players, retained supplied
+renderer identity, all session-registry keys and twice restore/same-input
+forward; (2) a genuine older owner-only capture before registration resets all
+supplementary defaults while preserving deliberately nondefault ordinary dust
+produced by real Down/Duck and fresh A input; (3–4) public removal of each native
+participant refuses restore before any partial supplementary application.
+Passing assertions qualify these current-owner branches; no new old-red was
+run for this coverage-only test and no actual draw caller is assigned.
+
+No simultaneous active surface/spindash, player recreation, cross-session
+renderer lifetime, mutable art-cache/pixel parity, missing-controller,
+uncaptured-live or active-water-missing-key coverage is claimed. The owner-only
+partition is explicit in its cases, distinct from the first case's all-session
+registry comparison. Actual R52 restore caller/native29 producer/campaign8774
+Air caller/11920 engine caller and next freed-SST CPU marker remain separate.
+R69 preserves exact tested a9df plus existing evidence only, without claiming a
+new engine result at its documentation SHA. Root owns subsequent composed
+guards, route qualification and delivery; historical canonical13322/6511 and
+independent ownership88306 are not certified by this component pass.
+
+Exact R68 selector: `TestPlayableDustEffectsRewind,TestSpindashDustControllerSplash,TestS3kLbz1GroundLaunchIntroHeadless,TestSpriteManagerRewindCapture,TestGameplayModeContextRewindRegistry,TestRewindRegistry`.
+Normal Main-absolute wrapper, original three ROMs/Java25/single JTO+CLI EGL,
+nullAL/no ambient DISPLAY/WAYLAND/LD/Lua/fork1/reuse/alphabetical; exact argv,
+all original hashes and current compiled ownership are in the existing entry.

@@ -15830,3 +15830,71 @@ preservation; all27 existing compiled hashes/mtimes, private/Main config and
 native4fdf are preserved. Literal R68 ordinal72 identity is retained for separate
 registration after the required clean accounting boundary; no fabricated ID or
 claim of clean state before it exists.
+
+
+### HCZ R68 phase2 — unchanged resource/registry boundaries measured once (2026-10-18)
+
+Phase1 ended with two normal local commits: policy825a76b7c and qualified owner/
+test/docs1f9f05ae1 (four and17 paths respectively), exact messages/seven policies/
+final GPT6.1 parsed before/after. All20 accepted R66 originals279814B were checked
+together then consumed under metadata_slot ALONE; all27 compiled SHA/mtime were
+preserved through that cleanup. Literal ordinal72 was registered after this real
+accounting boundary, with all prior IDs/results and R67's semantic STOP intact.
+
+Conditional sole normal six-class session78272 on committed1f9f05ae1 plus the
+unchanged untracked a9df test: **74/0F0E0S across six classes**, Maven27.379s,
+parent28.111s, admission wait0s (normal7GiB/8cores). Production classes were up
+to date;4196 test sources compiled inside that same lifecycle. No standalone
+build/version probe, extra JVM, source variant, guard, canonical or native run.
+Exact selector: `TestPlayableDustEffectsRewind,TestSpindashDustControllerSplash,TestS3kLbz1GroundLaunchIntroHeadless,TestSpriteManagerRewindCapture,TestGameplayModeContextRewindRegistry,TestRewindRegistry`.
+Original three absolute ROMs/Java25/EGL single JTO+CLI/nullAL/no ambient
+DISPLAY/WAYLAND/LD/Lua/fork1/reuse/alphabetical; exact argv remains in ownership.
+
+Actual suite counts: new effects4, splash8, LBZ intro6, sprite rewind11, context
+registry29, core registry16. All74 identities pass; all six72-property maps are
+identical, full classpath inspected, no failure/error/skip/suppressed nodes.
+All six full TXT reports and44 stderr records15080B/172lines (nine unique texts)
+were read;70 FAST-no-manifest and16 deterministic-estimate warnings (three
+actual fingerprints) remain explicit, stdout0. Initial large display truncation
+was repaired by compact complete identities and lossless unique-stream reads,
+not reconstruction or another run. Standard compile deprecation/unchecked
+notices are separate from the test XML streams.
+
+All four new cases pass unchanged: real LBZ surface production followed by actual
+ROM-art controller replacement on the same players, immediate all-key restore
+and twice same-input forward all-key comparisons; genuine older owner-only
+capture-before-registration reset with nondefault ordinary spindash dust retained;
+and real public removal of each P1/P2 refusing restore before any partial apply.
+This is current-owner regression coverage, not a new old-red experiment or the
+actual R52 caller. No simultaneous active-surface/spindash assertion, player
+recreation, cross-session renderer lifetime, mutable art-cache/pixel parity,
+missing-controller, uncaptured-live or active-water-missing-key proof is claimed.
+No new13322 route/freed-SST next CPU/native-at-PC/readiness certificate follows.
+
+All12 original XML/TXT166388B are retained unchanged at their single original
+paths for Root DIRECTread; complete sizes/SHA are in the R68 entry. New test
+remains untracked/a9df and is not committed. All27 previous class bytes remain
+exact; the necessary test compilation refreshed eight old test-class mtimes,
+which are captured with the new effects class in the current28-class inventory.
+Runtime8 SHA6dd81, source pins, configOwn/Main bytes/modes/mtimes, API pin and
+native4fdf remain exact. Only this compact Plan append is new tracked WIP after
+terminal; no cleanup/commit of new reports/test and no further execution.
+
+
+### HCZ R69 phase1 — qualified coverage preservation (2026-10-18)
+
+Root DIRECT accepted all12 R68 originals166388B, all74 actual identities/six full
+TXT/six identical72-property maps and8057-byte full classpath, all44 stderr
+records15080B/nine unique texts with complete ordered links. Actual74/0F0E0S
+and four new cases retain the R68 source1f9+a9df epoch; no new Java or policy
+run occurs at this preservation SHA. Existing audit/matrix/discrepancy now record
+actual same-player replacement/all-session twice-forward, owner-only missing-key
+with nondefault ordinary dust, and P1/P2 missing-participant refusal coverage,
+with missing-controller/uncaptured-live/active-water/cross-session/player-recreate/
+cache-pixel/simultaneous-active limits intact. No new release feature/runtime/API
+pin change. Normal local commit is restricted to exact a9df and these four owned
+existing docs. All runtime8 SHA6dd81/configMain-private/native4fdf/source pins and
+28 compiled hashes/mtimes are preserved. After this real commit boundary, the
+accepted12 reports will be checked together before metadata-only consumption;
+only then register the literal R69 ordinal73 and submit its separately authorized
+one original uninstrumented canonical. Historical R67 STOP and R68 results remain.

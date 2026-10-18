@@ -1510,3 +1510,13 @@ full-key cycles before the genuine R64 eight-leaf old-red; R66 exact ten-class
 149/0F0E0S turns every final native leaf green. [Owners, evidence and limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r64r68-native-hand-retirement-independent-old-red-to-bounded-green--2026-10-18).
 No new route13322, freed-SST next CPU marker, R52 actual restore caller or
 full-vector/ownership88306 certificate follows from this bounded component pass.
+
+
+Fixed-Dust supplementary coverage R68/R69 (2026-10-18): exact real-ROM a9df passes
+all four resource/registry cases in a sole six-class74/0F0E0S lifecycle. The
+same-player public ROM-art rebuild/all-session twice-forward contract, genuine
+older owner-only missing-key reset preserving nondefault ordinary dust, and
+P1/P2 removal refusal before partial apply are qualified. [Evidence and limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r68r69-fixed-dust-resource-and-registry-boundary-coverage--2026-10-18).
+Missing-controller/uncaptured-live/active-water-missing-key, cross-session and
+player recreation/cache-pixel branches remain unqualified. No new runtime or
+public API/pin change, actual R52 caller or route/frontier certificate follows.
