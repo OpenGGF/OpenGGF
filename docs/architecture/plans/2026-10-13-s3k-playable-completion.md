@@ -18450,7 +18450,8 @@ missing child sections, keeping each original command/result/source epoch.
 Mirrored pitfalls remain identical. No Root compiler/JVM/native execution or
 new combined validation occurred during composition; target is still the last
 partial R15 diagnostic compile with its inventoried temporary classes removed.
-Main develop803/config/foreign work is unchanged; no integration or push yet.
+Main was not mutated by Root; the current destination HEAD is checked separately
+before integration. No integrated delivery or push has occurred.
 
 Normal hooks passed each commit. Seven policy trailers are parsed as a separate
 message block with a neutral subject and blank line; the exact full message
@@ -18477,7 +18478,7 @@ returned463655 Advance calls follow the reached original control flow; exact
 final callback/getter/passivity totals are unavailable without the footer.
 
 Observed partial native outcomes:24 clock skips,one prior-render rejection
-(parent04 at actual lowVInt60),one admitted attempt(parent84/counter4->3),
+(parent04 at actual lowVInt0C60),one admitted attempt(parent84/counter4->3),
 Create6 parentB250->actual childB818/slot28 with actual parent3B250, own init and
 first draw. All77 emitted draw tokens are consumed once by actual render calls;
 zero-piece parent publication and one-piece child publication are observed.
@@ -18500,3 +18501,19 @@ pure stored receipt/generation/admission witness; no loader/ownership relaxation
 FDF R58 source-only public-return fixed-title graph question and Ending R9
 managed finite progress source candidate are independent, unexecuted scopes.
 All useful originals/sources remain owned; no raw copies/archives/receipts.
+
+
+#### Root destination advance before combined validation
+
+A fresh read found Main develop50348f299a2cc152a3c7e641b96974df504e2990,
+three independent upstream commits after803 (eb5e3f959,0517bd9e0,50348f299).
+Their44-file audit remediation includes GameLoop recording/rewind gates plus
+recording/editor/network/storage/PNG/audio repairs; these are foreign work, not
+Root changes. Fetch origin develop completed and HEAD/upstream both50348,0/0.
+Main private config6abd/0600/mtime1792141742849921547 and nine foreign status
+entries remain exact. Earlier source epochs bound to803 remain historical;
+the prior Root composition statement is corrected above and is not a claim
+that destination stayed803. Root will reconcile50348 before combined validation;
+no previous result is relabelled as covering it. Ending R9 prepared source-only
+progress changes await this explicit prospective epoch rebind; no compiler or
+native invocation has been authorized.
