@@ -278,3 +278,17 @@ readiness waiver, FIFO expansion/reset/drop or next producer implementation
 follows automatically. Root accepted full original reports before accounted
 cleanup; SS/FDF is still unvisited.
 [Source/test epochs and full limits](../plans/2026-10-13-s3k-playable-completion.md#r56-actual-fresh-guards-then-original-mega--conditional-two-phases-terminal).
+
+
+### Saved-return title owner qualified; current service chronology remains open
+
+FDF00ff5efed preserves installer53f199/testee1c after168 affected tests and99
+fresh guards passed. Native loc_62B6/loc_64DC admits the saved-return fixed graph
+without making the whole host load fresh. Original R62 Mega still errors at
+AIZ2 FIFO2932<-2926<-205; POST35's expected module21 is explicitly unprepared,
+while later expected direct34/module22 sees pending33/21. No renumbering, missing
+producer or physical retirement cause follows. Current consume+submit+queue
+chronology is a separate temporary diagnostic; its retained-only footer requires
+correction before execution. No diagnostic hook is included in this composition.
+
+[Composition and limits](../plans/2026-10-13-s3k-playable-completion.md#root-composition-saved-return-fixed-title-ownership-and-current-strict-limits-2026-10-18).

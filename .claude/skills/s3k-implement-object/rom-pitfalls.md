@@ -6433,3 +6433,23 @@ source epoch. Native044 Level saved path7575..7577 -> loc_6310/LoadLevelLoadBloc
 7793/9737; Knuckles/AIZ1 selects table26. Origin: FDF R51–R57,2026-10-18,
 LM b36ebe/testfbb120,144 affected+99 guards green; original AIZ2 FIFO error and
 unvisited SS/FDF limits remain in the existing Plan/caller audit/frontier.
+
+
+## Saved-origin return title ownership is separate from fresh-load art eligibility
+
+Native044 saved restore7575..7577 reaches loc_62B6 at7762..7767, installing the
+fixed SST8 Obj_TitleCard; loc_64DC7906..7910 retains the same parent into Wait2.
+The ordinary saved-origin public load need not carry queueFreshLevelRuntimeArt.
+Use its existing synchronous bonus-return semantic signal for this narrow
+installer eligibility, preserving FULL/include-post/assembly, every exclusion,
+and the existing graph/owner code. Do not turn the whole load fresh to install
+this owner: art submission and the SST graph have distinct admission contracts.
+
+Make an absent expected graph the final oracle after real return prerequisites,
+not a seeded object or an early prerequisite that prevents the old-red. Retained
+destroyed references are history, not physical live SST. Outside sampled drained
+children/retired parent/consumed lease can support a public component test but
+do not identify an in-service consume callback or explain current route FIFO
+occupants. Origin FDF R58–R63: genuine unchanged503-line public-return test,
+168 affected/99 guards green; original Mega FIFO error and20 unmatched timing
+identities remain. See the existing playable-completion Plan for source epochs.

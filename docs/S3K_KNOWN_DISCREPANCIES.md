@@ -1546,3 +1546,14 @@ P1/P2 removal refusal before partial apply are qualified. [Evidence and limits](
 Missing-controller/uncaptured-live/active-water-missing-key, cross-session and
 player recreation/cache-pixel branches remain unqualified. No new runtime or
 public API/pin change, actual R52 caller or route/frontier certificate follows.
+
+
+**Saved-return fixed title ownership (local composition,2026-10-18):** the existing
+bonus-return signal permits the existing fixed SST8 graph during FULL assembly.
+The unchanged public-return test now passes the graph/retirement/lease and nine
+ROM-parent checks; fresh and ordinary-host controls pass (child168 focused and99
+guards). The original route still ends at AIZ2 FIFO capacity with20 unmatched
+identities; returned partial21197/first34 busy remains, SS/FDF unvisited. Combined
+Root validation and current consume/physical-queue cause remain pending.
+
+[Composition and limits](architecture/plans/2026-10-13-s3k-playable-completion.md#root-composition-saved-return-fixed-title-ownership-and-current-strict-limits-2026-10-18).

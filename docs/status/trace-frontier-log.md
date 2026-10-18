@@ -114454,3 +114454,17 @@ UNREACHED. No actual R38 receipt, current four-occupant/native-birth/ordinal/
 readiness/full-route proof. Root DIRECT accepted all10 originals77701B before
 local preservation and authorized exact metadata-only consumption.
 [Exact two phases, observations and limits](../architecture/plans/2026-10-13-s3k-playable-completion.md#r56-actual-fresh-guards-then-original-mega--conditional-two-phases-terminal).
+
+
+### 2026-10-18 — Root composes qualified saved-return title ownership
+
+Child source28390 plus installer53f199/testee1c:168 focused/23classes and99 fresh
+guards pass without skips. Original R62 command remains
+`-Ptrace-replay-r7 -Dtest=TestS3kMegaRunChain#multiBonusSpecialStageRoundTrip`:1T0F1E0S,
+queue0/Maven28.742s, terminal03:47:31.962060UTC, AIZ2 KosM FIFO-full2932<-2926<-205.
+Incomplete1/16/21197; returned20428physics+769animation/first34busy true/false,20
+full unmatched timing identities; SS/FDF unvisited. Root adopts exact two-source
+delta from00ff5efed onto updated Main50348 composition, with Root verification
+still pending. Component graph/lease/order passes do not close route/readiness.
+
+[Composition and limits](../architecture/plans/2026-10-13-s3k-playable-completion.md#root-composition-saved-return-fixed-title-ownership-and-current-strict-limits-2026-10-18).

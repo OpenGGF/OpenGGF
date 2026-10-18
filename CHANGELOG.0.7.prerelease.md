@@ -139,7 +139,8 @@ Unreleased. The earlier development themes remain in
   number, then submit the stage's terrain art once the title is ready and Nemesis
   work clears, while retaining the bonus card's own layout.
   Saved-origin bonus returns use that title/Nemesis handoff for the restored
-  level's terrain, while ordinary host loads keep their existing art ownership.
+  level's terrain and retain its native fixed title owner and linked children
+  through their normal retirement; ordinary host loads keep their existing art ownership.
   Previously the level stayed black and then appeared at full brightness. Each fade
   step and each move of the card reaches the screen with the same frame's sprites and
   HUD, one frame after it is computed, as the original's palette and sprite uploads

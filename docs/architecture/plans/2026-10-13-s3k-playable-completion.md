@@ -18531,3 +18531,382 @@ recording-active rewind block and single outer recording-input owner are retaine
 This combined source has no new test result yet; child/native historical epochs
 are not relabelled. Destination updated base is50348 for delivery reconciliation,
 while the original task integration-base803 remains the change-selection anchor.
+
+
+### Ending R9: finite managed progress source candidate, no execution (2026-10-18)
+
+Root authorized SOURCE ONLY to locate R7's missing-progress boundary. The same
+three owned regular0600 external files now have combined freeze
+35ba09cb8a8827c2f0f414474ca91a3ff32349eca84234fbc61dd36a95ddfbbe:
+CS6047cf68326bb4c0d6be7fafdef82f517a98c1fc170b3bbb707f5378dd6b6036,
+launcher e7f01cf8cebccc445831fb3a962b56ed849e09224749f540df23ec750ef6f222,
+plan0bc2059400f19eef740f3e02883e52ea47bccc7cbbc09b15aee988c22214fc6e.
+It binds reconciled Root4821ee4332db1d816d5a27cdd569f9a564976b93/Main
+50348f299a2cc152a3c7e641b96974df504e2990 and preappend Plan1280446B/
+f7c8801c1c491c3d72ef52118a050a0a5d7570790727b31366a9a877bd11cf71.
+This append creates a later docs epoch, recorded separately for a future gate;
+historical R7/R8 Rootf854/Main803 facts remain unchanged.
+
+Nine finite provisional managed-only phases are Open-returned, Bind-completed,
+all-nine-registrations-completed, first-Advance-call-next, first normal return,
+then normal-return counts16/256/4096/65536. Root explicitly permits only the
+exact pure-managed Open-return marker between Open/Bind; Guard still directly
+precedes Open. The narrow source predicate rejects any other intervening code.
+Call-next is intention, never method-body entry. Markers copy observer counters,
+not native clocks/PC/SR; native projection at them is UNAVAILABLE. Source helper
+owner/counter/flag checks introduce no guest/native/getter/input/callback work.
+Existing Read/DoubleRead/Dispatch/Delivered/First/Second/RegisterSite/Literal
+bodies are byte-exact; producer arming/raw equality/projections/original input
+and Reader lifecycle remain unchanged.
+
+Reserve nine512B marker lines(4608B) and remaining record slots before raw writes;
+effective89 raw-pair slots +9progress +header/footer fit100total JSON records.
+Parent native262144B/footer8192B/aggregate304132B, raw3236952 triples, original
+getter38818032 attempts and600spawn/660teardown bounds are unchanged. Strict
+parent validation reconciles finite order, attempts vs normal returns, original
+indices, preceding raw rows and footer counters; unknown/type/bool/duplicate/
+missing/reordered/oversized records STOP. Stock52-line stdout+28Bstderr grammar,
+queue coalescing, primary/cleanup/audit/transport failure behavior stay exact.
+
+Full in-memory inverse proves original CSab3a/Pythonb9e5/plan7766; only two source
+selfpins among63artifacts changed, all other61+17startup pins remain exact.
+Source-only controls passed10 threshold-boundary metadata prefixes and rejected
+18malformed/type/order/byte/purity cases. AST-isolated JSON integration accepted
+10record minimum and100record/89pair boundary, rejected8malformed controls;
+startup removal was stubbed, so these models are not native/type/ABI/compiler
+qualification. Finite marker maximum is362UTF8B includingLF under512B. No actual
+compiler/load/native/admission/JVM/probe/model artifact or transcript file exists.
+Old53248B PE84de/mode0644/mtime1792287365732785352 remains retained and belongs to
+historical CSab3a, UNQUALIFIED for R9. Separate Root+fresh independent actual-file
+review and compiler-only authority/old-PE accounting are required next.
+
+Postchecks preserve R1, both private configs/hash/mode/mtimes, reconciled Root
+source/index and selected GameLoop/Ring/test bytes, Main foreign status and all
+17130Java classes97545344B/path-contentSHAc6ff63c233fe8cb44328efc8e72021dfda6db395e29583b92bad25baa2015230.
+Only this fresh-prefix append mutates Root. Own24h canonical R9 registry key
+records actual source facts, UUID unavailable/taskIdnull, authfalse/livejobs[];
+useful three sources plus oldPE cleanup_pending. Hidden board/IRQ/origins/
+continuous production/6+46/live4-5-4/readiness remain unqualified. STOP for review;
+no future compiler/native invocation is authorized by this source phase.
+
+
+### Ending R10: sole compiler gate passed, native unexecuted (2026-10-18)
+
+Root actual R9 source review and fresh independent finite-managed-progress review
+found no material findings (independent source read did not rerun models).
+Sole frozen compile used35ba09cb8a8827c2f0f414474ca91a3ff32349eca84234fbc61dd36a95ddfbbe
+from Root4821/Main50348. Before invocation, under the intended Rootwriter, actual
+old53248B PE84de/0644/mtime1792287365732785352 and its historical CSab3a binding
+were durably accepted in own R10 registry against the existing R9 Plan statement;
+ONLY that owned obsolete PE was then unlinked. No copy/archive/receipt/class
+cleanup occurred. Cleanupwriter released before the sole launcher command.
+
+Compiler and launcher exited0, actual owned-spawn compilerPID/PGID315103.
+The entire original1005B/5LF status stream is in tool chunks846e1b78B and
+b6d62a927B and a verbatim Root task message only; compiler stdout/stderr0B.
+All primary/cleanup/postIdentity/launchFailure/queue/relay errorsNULL,
+rawRelayComplete=true, no censored fields. Worktree acquired with no reported
+worktree/activity wait; no Maven/native admission. Exact PythonPID unavailable
+because the rapid-terminal /proc snapshot found no owned process; MonoPID is
+not substituted. Compiler execution seconds unreported; tool wait times are
+0.250466606s and0.00000842s, not execution measurements. Submission clock
+03:22:38UTC and no-process snapshot03:22:49.459975UTC bound the observed interval
+with inter-tool latency. One frozen MonoRoslyn invocation only, compiler30s/
+outer60s owned group teardown/reap and inheritedFD/lease release, no probe/retry.
+
+Static bytes ONLY: new ClockCausal.exe60416B/mode0644/mtime1792293760238723299,
+SHA3aaa443a0d46bd7d645a53c50cac88420fd3939202ffbcd30c46e24f946ca753,
+PE32/014C/CLIflags1/entry0600008A(Main), module ClockCausal.exe/assembly
+ClockCausal0.0.0.0; unique MVID5b14a72e-349d-4f02-a829-cc9fa6a0983d.
+Static references are mscorlib4.0, Newtonsoft.Json13.0, BizHawk.Headless.Gpgx0.0,
+System.Core4.0 and BizHawk.Emulation.Cores2.11; full static identities/argv in own
+R10 registry. This PE binds current CS6047cf/sourcefreeze35ba, not old CSab3a.
+No observer/host/Reader/library load, native advance/sample/admission, version
+probe, JVM or source change occurred. Compiler pass is not runtime qualification.
+
+Postchecks pass63+17 pins, exact3sources0600/freeze35ba, R1, configs/hash/mtimes,
+Root4821/Main50348/branches/index/selected Java/Mainforeignstatus and all17130
+classes97545344B/path-contentSHAc6ff63c233fe8cb44328efc8e72021dfda6db395e29583b92bad25baa2015230.
+Plan14bd/1284300B stayed exact through compilation; this separate postterminal
+fresh-prefix append is the later docs epoch for any future explicit gate.
+CompilerPID/group/ownedjobs absent; authority false, prior R2 gate restored
+exactly, all R2..R9 history preserved. NewPE+3sources retained cleanup_pending
+Root static review. STOP before native; separate new-PE review and authority
+required, with no recompile needed merely for this docs-only checkpoint.
+
+
+### Ending R11: native progress witnessed, parent600s partial STOP (2026-10-18)
+
+Root accepted R10 actual PE and authorized ONE unchanged35ba source/3aaa PE run
+from Root4821/Main50348, NORMAL7GiB8cores/estimate600, no outer writer/activity.
+Actual PythonPID/PGID320614 and MonoPID/PGID320664 were separately observed at
+exact argv/cwd; session52688. No compiler/version/JVM/source/variant/retry.
+
+Launcher exit2/Mono-15; original primary `RuntimeError: parent configured spawn
+deadline STOP`. Parent cleanup/postIdentity/launchFailure/queue/relay errorsNULL,
+rawRelayComplete=true/censoredDiagnosticFields[]. Whole original9334ASCII/UTF8B/
+68LF stream was DIRECT-read/accepted by Root as partial evidence only, in original
+tool chunks and verbatim task message, no rawfile/archive/receipt. Nonempty chunks
+aa0c58133B/0fee96103B/fdfdbe9098B; eight intermediate chunks empty. Native stdout
+8310B contains header3374B, exact52startup lines2137B and9progress lines2799B;
+exact source-owned stderr28B. Actual static source grammar and duplicate-key/
+type/order/512B marker checks match. There are10native JSON records: header+9
+provisional managed markers, zero raw observation rows, no childfooter and no
+parent-positive marker. Frozen parent stops on deadline before positive validation.
+
+All nine managed phases are present: actual Open returned, Bind completed, all
+nine registrations returned, first-Advance-call-next, first normal return, then
+normal-return counts16/256/4096/65536. Call-next remains intention, not method-body
+entry; separate normal-return marker establishes completion. Marker native
+projection is UNAVAILABLE throughout. Observer counters at completed milestones:
+
+| Normal returns | Original last index | Hook dispatches | Delivered raw triples | Getter attempts | Captured pairs |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 0 | 0 | 0 | 0 | 0 |
+| 16 | 15 | 0 | 0 | 0 | 0 |
+| 256 | 255 | 7 | 14 | 0 | 0 |
+| 4096 | 4095 | 3436 | 6872 | 0 | 0 |
+| 65536 | 65535 | 63690 | 127380 | 0 | 0 |
+
+These source-accounted completed raw deliveries are not emitted clock values.
+Final Advance/input/dispatch/raw/getter/pair counts AFTER65536 are UNKNOWN, not
+zero. No rawcycles/refresh/encodedIRQ/actual PC/SR/caller/FIFO/bookmark/producer/
+retirement values were reported. Binding table beforeCommon/EmulationCommon/Cores
+exact and BizInvoke absent, afterall4exact/count1/fileExacttrue, this process only.
+Reader final identity verification/disposal are unconfirmed without childfooter;
+parent OS teardown is distinct. R11 resolves its Open/Bind/registration/Advance
+boundary, without retroactively attributing R7 or supplying ending/clock/board/
+IRQ/origin/continuous-production/6+46/live4-5-4/readiness qualification.
+
+Actual admission telemetry: wait0.0s, hold600.7s,end2026-10-18T03:40:59UTC;
+outcome `completed` means lease-context return only. Submission clock03:30:58UTC,
+/proc snapshot03:31:10.536360UTC, terminal known by authority-disable
+03:41:22.907571UTC. Exact child execution seconds and marker walltimes were not
+reported; hold includes checks/teardown and is not native time. No throughput
+estimate follows from ordinal milestones. Original parent600spawn deadline was
+reached; frozen660outer cleanup returned without cleanup error.
+
+Postchecks pass63+17/source3tuple0600/freeze35ba/PE3aaa60416B/0644/
+mtime1792293760238723299, R1, both configs/hash/mtimes, Root4821/Main50348/index/
+selectedJava/Mainforeignstatus and all17130classes97545344B/path-contentSHA
+c6ff63c233fe8cb44328efc8e72021dfda6db395e29583b92bad25baa2015230.
+Plan1584067/1287356B stayed exact throughout the run. Both actual PIDs/groups and
+owned queued/running records are absent; FD/admission finally release completed,
+then this separate fresh-prefix Rootwriter append acquired/released normally.
+Authority false, exact prior R2 gate restored, R2..R10 histories preserved. Own
+canonical R11/UUIDunavailable/taskIdnull/24h records facts; useful3sources+PE remain
+cleanup_pending. STOP after this partial attempt; no source/probe/compiler/native
+followup or retry is authorized by it. Root decides later measurement scope.
+
+
+### Ending R12: managed host elapsed timing SOURCE ONLY (2026-10-18)
+
+Root accepted R11 as partial600deadline/all9markers/65536normal-return lower
+bound only. Same3owned0600 external files now freezeb47aa59af49e39e891f75e9ffc8faf43452972759ab66781fd6200477062024c:
+CSa16299c9400c7182aaef6fc382645dc0b17c3ca4bc2438b6634b7d3e91354035,
+Python65955e0da2ca8667a1cee09d77fd34af3abeeade1bc31f97e8b759f22dc091bd,
+JSONfb85645f4cf1ea711e2418bbb4a6e50a63fa9b8b8aebcc9018b4f4d2417657d4.
+Prospective Root4821/Main50348 and exactR11 Plan d7b239/1291476B prefix preserved;
+Root may explicitly relay a later FDF composition epoch before any future gate.
+R11/R10 bindings/results stay historical and unchanged.
+
+Exactly one hostElapsedTicks field is added to each SAME marker. Header identifies
+System.Diagnostics.Stopwatch, actual positive signed64 frequency/stopwatch ticks,
+origin observer-main-try-entry and sample before marker serialization. Origin is
+inside Main try after owner/Console setup, before arguments/artifacts/movie/
+managed-bindings/Open. It excludes process startup/pre-Main JIT/parent spawn and
+admission. Later deltas include previous output/intervening host work; they are
+not emulatedT/B/phase/nativeprojection or isolated guest execution time. No
+interpolation. Checked subtraction/regression/invalid frequency STOP; equal ticks
+allowed for resolution. Existing first-error/transport/audit behavior unchanged.
+Actual host frequency/times/runtime cost remain UNMEASURED.
+
+Parent validates exact clock fields/origin/units, frequency integer1..Int64Max,
+and marker elapsed integer0..Int64Max/nondecreasing; bool/float/unknown/missing/
+negative/overflow/regression rejected. Existing9markers/89pairs/100JSON/512Bline/
+4608reserve/native262144/footer8192/aggregate304132/raw/getter/input and600spawn/
+660cleanup caps stay exact. Conservative maximum401UTF8B/LF per marker; header
+clock object260B. At most10 explicit BCL timestamp calls(1origin+9markers) and one
+frequency field read; no per-frame/callback clock/output/threshold, filter/skipped
+raw copy, getter, input, hook, Advance loop or lifecycle change. Original raw/
+projection/callback/Apply/Guard-Open-Bind/disposal and queue/startup code exact.
+
+Full inverse recovers CS6047cf/Pythone7f01c/JSON0bc205. All61nonself artifact pins
+plus17startup pins/R1/configs/index/selectedJava/17130classes remain exact.
+Pure/data models:16valid and25malformed clock/tick/prefix/cap cases behaved as
+expected; JSON integration accepted10/100record boundaries and rejected18bad
+cases with startup removal stubbed. Not C#type/compiler/BCL/runtime/ABI/native/
+performance qualification. OldPE3aaa60416B/0644/mtime1792293760238723299 retained
+unchanged, UNSUITABLE for newCS; no deletion/compilation/load.
+
+Proposed compiler-only command, UNSUBMITTED, after Root+fresh independent actual
+file review and separate authority/oldPE accounting. Native remains separately
+gated on a later actual PE; existing600/660 bounds are unchanged.
+
+~~~text
+python3 "$TASK_SCRATCH/ending-causal-owner-r2/launch_causal.py" compile --freeze b47aa59af49e39e891f75e9ffc8faf43452972759ab66781fd6200477062024c
+~~~
+
+No compiler/probe/hostOpen/Readerload/admission/native/JVM/retry/optimization or
+wall-budget increase. Canonical R12/UUIDunavailable/taskIdnull/24h authfalse/
+livejobs[]; useful3sources+oldPE cleanup_pending. Native leases/groups were absent
+before intended writer; writer released before handback. STOP for Root actual
+and fresh independent source review.
+
+
+### Ending R13/R14: host-time observer COMPILER ONLY (2026-10-18)
+
+Root independently recovered all3 prior source hashes by the exact in-memory
+R12 inverse. R13 preparation STOP preceded any compiler/registry/PE deletion:
+exact Plan mtime1792295763489659285 was compared to a V8-rounded baseline
+1792295763489659400. This is owned bookkeeping failure, not artifact/native
+fault; R13 remains ZERO compiler/native execution. Separately authorized R14
+kept exact metadata integers wholly in Python and performed ONE frozen compile.
+
+Same3 regular0600 sources remain byte/mode/mtime exact; sourcefreeze
+b47aa59af49e39e891f75e9ffc8faf43452972759ab66781fd6200477062024c:
+CS a16299c9400c7182aaef6fc382645dc0b17c3ca4bc2438b6634b7d3e91354035;
+Python65955e0da2ca8667a1cee09d77fd34af3abeeade1bc31f97e8b759f22dc091bd;
+JSON fb85645f4cf1ea711e2418bbb4a6e50a63fa9b8b8aebcc9018b4f4d2417657d4.
+Executed from Root: python3 $TASK_SCRATCH/ending-causal-owner-r2/launch_causal.py
+compile --freeze b47aa59af49e39e891f75e9ffc8faf43452972759ab66781fd6200477062024c
+(actual absolute argv/cwd in own registry). Invocation epoch Root4821/Main50348
+and priorPlan1294972B/SHA59257fcb8fa66039f48e04db8a25e9cd653edfd0d09d07614b6ec0b4b020bec2;
+this appendix is a later documentation epoch, not a source/build rebind.
+
+Old owned PE60416B/3aaa443a0d46bd7d645a53c50cac88420fd3939202ffbcd30c46e24f946ca753,
+0644/mtime1792293760238723299, was durably accounted against compiledCS6047
+and freeze35ba before ONLY its exact obsolete path was unlinked under intended
+Rootwriter. Cleanupwriter released before frozen builder Rootwriter+Main shared
+activity/inheritedFDs; no native admission. Session85160, actual /proc PythonPID
+348508/Rootcwd; compilerPID/PGID348555 from owned-spawn. Compiler argv is source
+established, not independently sampled from /proc. Submission04:08:38UTC and
+terminal observed04:08:42UTC are coarse boundaries; compiler duration unknown.
+Launcher/child0; entire1005B/5LF original output chunks927085/6070e9 DIRECT read
+by Root, compilerstdout/stderr0B, six terminal errorsNULL, rawRelayComplete true,
+COMPLETE_OBSERVER_COMPILATION_ONLY. Existing compiler30s/cleanup60s unchanged.
+
+New retained PE64000B/SHA6b015837885e37593ffc850990d330c79473eb12136bf669f1e51d2eddd1d848,
+0644/mtime1792296519954285509; STATIC BYTES ONLY:
+PE32/014C/CLIflags1/entry0x06000097/Main, moduleClockCausal.exe,
+MVID31bad940-e990-4110-8c19-9ef8faac92e2, metadata v4.0.30319; assemblyClockCausal0.0.0.0
+unsigned/neutral. Source adds System4.0.0.0 reference usage; no assembly load.
+Root independently read these same actual PE bytes/metadata.
+
+Postaudit63artifact+17startup pins, source3/R1/config2 regular0600+originalmtime,
+Root/MainHEAD+indices, fourJava bytes+mtimes, all17130classes/97545344B content
+and mode+mtime aggregate, Main nine foreign entries and R2..R13 history exact.
+Shared all-refs hashes drifted during the interval; required Root/MainHEAD stayed
+exact and this agent performed no ref mutation. Both owned PIDs/PGIDs absent;
+frozen finally returned; separate Rootwriter reacquired for this exact-prefix
+append. Authfalse since04:09:18.172293UTC, oldR2gate restored exactly/livejobs[].
+Useful3sources+newPE retained cleanup_pending Rootreview. No log/archive/receipt.
+Compiler API resolution ONLY: actual host frequency/timing/cost/nativeperformance
+and ending/board/IRQ/origin/independentcontinuation remain unmeasured. No native
+run, retry, wall-budget increase or follow-up authority inferred.
+
+
+### Ending R15: actual host elapsed markers, PARTIAL native600deadline (2026-10-18)
+
+ONE separately authorized frozen native attempt, no compiler/source/input/host/
+Reader/core/API/JVM/variant/extra observation/retry. Sourcefreeze b47aa59af49e39e891f75e9ffc8faf43452972759ab66781fd6200477062024c
+and actual PE64000B/6b015837885e37593ffc850990d330c79473eb12136bf669f1e51d2eddd1d848,
+0644/mtime1792296519954285509 unchanged. Exact run argv in own canonical registry:
+python3 $TASK_SCRATCH/ending-causal-owner-r2/launch_causal.py run --freeze b47aa59af49e39e891f75e9ffc8faf43452972759ab66781fd6200477062024c --exe-sha256 6b015837885e37593ffc850990d330c79473eb12136bf669f1e51d2eddd1d848
+from Root4821/Main50348; invocation Plan1298450B/dd7d51391536d2c60ddd306e300d9e331d071babdf967ec01ff4c1f4a5e1a698.
+Main normal7GiB8cores/estimate600, no outerwriter/activity. Actual /procPython
+351644/PGID351644 and Mono351697/PGID351697, exactargv/Rootcwd separately observed.
+Session54808; submission04:13:57UTC, terminal observed04:23:59UTC are coarse;
+queueacquired reportedwait0s, actualadmissioninstant/exactchildduration unknown.
+Parent600s fromPopen reached; cleanup660s unchanged, child-15/launcher2. FIRST
+reported failure RuntimeError: parent configured spawn deadline STOP; cleanup,
+postIdentity, launchFailure, queueOutputFailure, relayOutputFailure allNULL;
+rawRelayComplete true. No child footer/parentpositive; outcome remainsPARTIAL.
+
+Entire original9851B/68LF ASCII stream sent verbatim to Root, nonempty chunks
+7d6d6a133B/1ec746103B/84933b9615B; all other observation chunks empty. Source-owned
+stdout-then-stderr relay gives native stdout8827B/62LF and exactstderr28B/1LF;
+tool presents merged launcher stdout. Actual finite52startup diagnostics match
+unchanged pinned grammar; header plus9progress JSON records, rawrows0/footer0/
+parentpositive0. Header managed table beforeBizInvokeabsent, other3exact; after
+all4exact. No module identity claim beyond this process/header point.
+
+Read-only actual-prefix checks matched unchanged exact header/binding/hostClock,
+finitephase/key/int-not-bool/nonnegative-monotone signed64/counter/order contracts;
+marker325..358B<512. Full validate_native was not called/passed after parent STOP;
+no synthetic footer or retroqualification. Actual Stopwatchfrequency10000000Hz,
+origin observer-main-try-entry, samplepointprogress-helper-before-serialization;
+separate parentSpawn/admission and emulatedclocks. Actual marker data:
+
+| Phase | Host elapsed ticks | Cumulative host seconds | Delta from prior marker seconds | Normal returns | Dispatch / completed raw triples |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| open-returned | 17914907 | 1.7914907 | 1.7914907 | 0 | 0 / 0 |
+| bind-completed | 23730441 | 2.3730441 | 0.5815534 | 0 | 0 / 0 |
+| all-nine-registrations-completed | 23738816 | 2.3738816 | 0.0008375 | 0 | 0 / 0 |
+| first-advance-call-next | 23745430 | 2.374543 | 0.0006614 | 0 | 0 / 0 |
+| first-advance-returned-normally | 23763437 | 2.3763437 | 0.0018007 | 1 | 0 / 0 |
+| normal-return-count16 | 24290954 | 2.4290954 | 0.0527517 | 16 | 0 / 0 |
+| normal-return-count256 | 32255153 | 3.2255153 | 0.7964199 | 256 | 7 / 14 |
+| normal-return-count4096 | 159917422 | 15.9917422 | 12.7662269 | 4096 | 3436 / 6872 |
+| normal-return-count65536 | 2144547006 | 214.4547006 | 198.4629584 | 65536 | 63690 / 127380 |
+
+First delta is from explicit Main origin, not isolated Open duration. Every later
+delta includes preceding serialization and all intervening host/scheduling work;
+normal shared admission is not an isolated performance measurement. No fullstream
+throughput extrapolation/interpolation or futurebudget guarantee. Call-next is
+intention only. At65536 normalreturns, originalinput65535/dispatch63690/completed
+rawtriples127380/getters0/pairs0. Later counts are UNKNOWN, never inferred zero.
+Native scalar values/PC/SR/projection/caller/producer/head/retirement/closure/
+finalReaderverify/disposal remain unreported; no ending/IRQ/board/origin/independent
+productioncontinuation/6+46/live4-5-4/readiness/PCM/routes claim.
+
+Postaudit63+17/source3/PE/R1/config2 exactSHA6abd+regular0600+originalmtime,
+Root4821/Main50348/bothindices/4Java/all17130classes97545344B content+mode+mtime/
+Mainforeign9/historyR2..R14 PASS. Sharedrefs drift is legitimateforeign scope;
+requiredRoot/MainHEAD exact, no own ref writes. Both PIDs/PGIDs absent, ownqueued/
+runningrecords[], frozen TERM/KILL/reap/finally returned; separateRootwriter was
+reacquired only after admission release for this exact-prefix append. Gatefalse
+since04:24:11.495080UTC, priorR2gate restored exactly; canonicalR15expiry24h/null
+unavailableUUID/taskId, useful3sources+PE retainedcleanup_pending. No newrawfile/
+log/archive/copy/receipt. STOP; no further native/compiler/optimization/budget gate.
+
+
+### Root composition: saved-return fixed title ownership and current strict limits (2026-10-18)
+
+Root adopts only the exact installer53f199 and unchanged503-line public-return
+testee1c from local FDF preservation00ff5efed; parent28390 qualification was
+R61 normal168 tests/23classes0F0E0S plus R62 fresh99 guards0F0E0S. Public return
+now reaches SST8/four linked higher children, sampled drain/retirement/lease and
+the independent nine-ROM-parent order. Fresh-positive/ordinary-host-negative
+controls pass. Ordinary host-load, assembly, exclusions, graph/queue/lease and
+timing contracts retain their prior owners; the whole load is not made fresh.
+
+R62 original Mega remains1T0F1E0S at AIZ2 KosM2932<-2926<-205 FIFO-full, with20
+unmatched timing identities and incomplete1/16/21197 comparisons (returned20428
+physics+769animation, first34 module.busy true/false). SS/FDF unvisited. Neither
+old R47/R50 occupants nor component passes identify this epoch's consume/submit/
+physical-holder/service chronology. All10 originals77709B were Root-DIRECT read
+before durable00ff5 preservation and metadata-only consumption;20 class hashes/
+mtimes stayed exact. Current combined Root has not yet rerun its affected tests.
+
+The separate current R64 witness review found one material scope defect: its
+footer called live project() after original cleanup. Only retained data may be
+serialized there; R65 source correction is pending. No diagnostic runtime seams
+are adopted here. Existing final observer identity/suppressed-completion branch
+must be preserved; an interface decorator changes an instanceof gate.
+
+Coverage audit of this updated base found no stable whole-game percentage
+denominator. Recorded normal-entry/death-restart floors for eight early acts
+are1120+1120 distinct rows; later incoming/post floors remain recorded, not
+new passes. Every applicable act/character/team/preset/donor/mechanic/rewind/
+route/native/presentation obligation still governs completion. Custom widths
+512/640 are not viewport presets. MGZ1 post1 is30 finite solo rows plus a native
+320method and pair control, not32 unique products. Active route/native/ending
+limits remain; historical counts and source-relative timing do not certify
+all presets, cold approaches, absolute audio phase or PCM.
+
+Ending R15 separately stopped at parent600s: all9 host-only markers inspected,
+65536 normal returns at214.4547006s from observer origin, later progress unknown.
+No raw target pair/footer/positive; sources/PE/configs/17130classes preserved.
+R15 post-append Plan74d0610f/1303259B is the exact prefix of this composition.
+No Root JVM/native test, integration or push is claimed by this local commit.
