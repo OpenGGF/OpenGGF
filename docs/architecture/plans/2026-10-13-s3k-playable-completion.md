@@ -19544,3 +19544,48 @@ up-to-date and4210 test sources compiled inside the lifecycle. Queue waits were0
 Maven times were26.331s/25.376s/24.934s for33/5/27 cases. Console truncation does
 not establish an exhaustive compiler-warning tally. This preservation contains
 only the nine qualified tests and this existing Plan, without Slot/SOZ witnesses.
+
+
+### Root Slot zero-payout prerequisite and focused verification, 2026-10-18
+
+Valid temporary step witness17920 showed each original short Slot case waiting
+for reward actors after a legal zero-prize round: no actors were due, the cage
+released, the goal triggered and the stage naturally returned to title.
+Its21 records and three unchanged final assertions had no diagnostic/binding/
+cap failure. An earlier concrete-controller equality assumption in witness37493
+was invalid: the normal exit owns a distinct controller with the same actual
+stage state. That invalid result is retained as invalid in the existing ledger.
+The witness was stripped to exact original24886c12 before the fixture correction.
+
+The corrected test3f1aaa94 independently reads the actual signed ROM reward table
+at4C8A4 and follows sub_4C7A2 match/zero/symbol-six branches. For an actual zero
+prize it requires no pending cage budget, reward actors or ring/spike lists,
+then twice restores/replays all registry keys through natural release. It waits
+for actual cooldown and publicly recaptures; eight rounds is a fail-closed test
+admission bound, not an RNG/frame seed or guaranteed positive prize. A naturally
+nonzero prize is still mandatory before the original byte-exact actor recreation,
+70-frame forward replay and payout-lifetime/full-key assertions execute. No
+runtime, input stream, capacity or prize rule changed. Fresh independent source
+review found no material issue. Removing the two owned regions recovers the
+complete original24886c12 source.
+
+One normal six-class focus32163 passed52 tests/0 failures/0 errors/0 skips:
+three short portal parameters, PrizeCalculator13, OptionCycle14, RewardObjects11,
+BonusCage8 and BonusGraphRewind3. The natural eight-round prerequisite and both
+zero/positive replay paths were reached by the unchanged three short cases.
+All52 identities, six complete TXT reports, equal72-property maps, the full
+8123-byte classpath and duplicate, and all ordered streams were inspected.
+All12 original report identities/full-size hashes remain in the existing ledger
+until metadata-only consumption; no archive or pass receipt is created.
+Maven32.432s; displayed queue wait19s; measured Popen-to-reap51.684156162s
+includes waiting and is not Maven execution time. Production was up-to-date,
+4210 tests compiled within the single lifecycle. Compiler console truncation
+does not qualify an exhaustive build-warning tally.
+
+The140 finite Slot products remain a separate affected check; this focus does
+not certify them or the complete composition. The independent SOZ diagnostic
+13473 remains5 tests/one original assertion failure: its45-step window3506
+contains the actual Glowing Sphere return at input3549 during step, with fresh
+INTERIOR_RETURN generation3 replacing ordinary interior generation2. No death,
+respawn, draw-triggered load or broken restore is observed. Its temporary source
+and two original reports remain separate from this preservation.

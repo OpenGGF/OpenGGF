@@ -225,15 +225,61 @@ class TestS3kBonusPortalMechanismProducts {
         int reel=firstSlotCell(runtime,1);positionAtSlotCell(reel,false);
         replayAction(session,1,()->step(session),()->assertTrue((runtime.activeLayoutForTest()[reel]&255)>=13,
                 "real wall contact starts its loaded cell animation"));
-        // The rotating marker is computed around the player. Its native fixed
-        // point is the cage's immediate ($460,$430), not yesterday's rendered marker.
-        positionFreePlayer(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomData.SLOT_BONUS_CAGE_CENTER_X,
-                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomData.SLOT_BONUS_CAGE_CENTER_Y);
-        for(int frame=0;frame<4&&runtime.activeSlotCageForTest().cageStateForTest()==0;frame++)step(session);
-        assertEquals(1,runtime.activeSlotCageForTest().cageStateForTest());assertTrue(player.isObjectControlled());
-        for(int frame=0;frame<1000&&runtime.stageController().activeRewardObjects()==0;frame++) {
-            step(session);assertEquals(GameMode.BONUS_STAGE,session.loop().getCurrentGameMode());
+        // sub_4C7A2 permits a zero prize; loc_4C172/214/23E then releases the
+        // empty cage. A later real capture, rather than a chosen RNG/clock value,
+        // must supply the nonzero actors required by the checks below.
+        boolean foundRewardActors=false;
+        for(int round=0;round<8&&!foundRewardActors;round++) {
+            // The rotating marker uses the cage's fixed centre, not its last rendered position.
+            positionFreePlayer(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomData.SLOT_BONUS_CAGE_CENTER_X,
+                    com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomData.SLOT_BONUS_CAGE_CENTER_Y);
+            for(int frame=0;frame<4&&runtime.activeSlotCageForTest().cageStateForTest()==0;frame++)step(session);
+            assertEquals(1,runtime.activeSlotCageForTest().cageStateForTest());assertTrue(player.isObjectControlled());
+            for(int frame=0;frame<1000&&runtime.stageController().activeRewardObjects()==0
+                    &&runtime.activeSlotCageForTest().cageStateForTest()==1;frame++) {
+                step(session);assertEquals(GameMode.BONUS_STAGE,session.loop().getCurrentGameMode());
+            }
+            assertTrue(runtime.stageController().isOptionCycleResolved(),"ordinary reel resolution must complete within the round admission bound");
+            int expectedPrize=slotPrizeFromActualRom(runtime.stageStateForTest());
+            assertEquals(expectedPrize,runtime.stageStateForTest().optionCycleLastPrize(),
+                    "settled actual reel triple obeys native sub_4C7A2");
+            if(runtime.stageController().activeRewardObjects()>0) {
+                assertNotEquals(0,expectedPrize,"actual reward actors require a nonzero native prize");
+                foundRewardActors=true;
+                break;
+            }
+            assertEquals(2,runtime.activeSlotCageForTest().cageStateForTest(),
+                    "the round must reach an observed empty payout before retrying");
+            assertTrue(runtime.stageController().isReelsFrozen());
+            assertEquals(0,expectedPrize,"only a native zero-prize round can lack reward actors");
+            assertNoSlotRewards(runtime);
+            var zeroRegistry=SessionManager.getCurrentGameplayMode().getRewindRegistry();
+            var zeroPayout=zeroRegistry.capture();int releaseFrames=0;
+            while(runtime.activeSlotCageForTest().cageStateForTest()!=3&&releaseFrames<1000) {
+                step(session);releaseFrames++;
+                assertEquals(GameMode.BONUS_STAGE,session.loop().getCurrentGameMode());assertNoSlotRewards(runtime);
+            }
+            assertEquals(3,runtime.activeSlotCageForTest().cageStateForTest(),"natural zero-prize release");
+            var zeroReleased=zeroRegistry.capture();
+            for(int cycle=0;cycle<2;cycle++) {
+                zeroRegistry.restore(zeroPayout);same(zeroPayout,zeroRegistry.capture());assertNoSlotRewards(runtime);
+                for(int frame=0;frame<releaseFrames;frame++) {
+                    step(session);assertEquals(GameMode.BONUS_STAGE,session.loop().getCurrentGameMode());
+                    assertNoSlotRewards(runtime);
+                }
+                same(zeroReleased,zeroRegistry.capture());
+                zeroRegistry.restore(zeroPayout);same(zeroPayout,zeroRegistry.capture());
+                zeroRegistry.restore(zeroReleased);same(zeroReleased,zeroRegistry.capture());assertNoSlotRewards(runtime);
+            }
+            // loc_4C292 owns cooldown. Wait for its actual idle state; the bound
+            // admits a finite test, and does not choose a V-int or reel result.
+            for(int frame=0;frame<1000&&runtime.activeSlotCageForTest().cageStateForTest()!=0;frame++) {
+                step(session);assertEquals(GameMode.BONUS_STAGE,session.loop().getCurrentGameMode());
+                assertNoSlotRewards(runtime);
+            }
+            assertEquals(0,runtime.activeSlotCageForTest().cageStateForTest(),"natural cooldown permits another capture");
         }
+        assertTrue(foundRewardActors,"a nonzero award must be naturally reached within eight cage rounds");
         assertTrue(runtime.stageController().isReelsFrozen());
         assertTrue(runtime.stageController().activeRewardObjects()>0,"natural resolved reels create real reward actors");
         var registry=SessionManager.getCurrentGameplayMode().getRewindRegistry();var occupied=registry.capture();
@@ -261,6 +307,34 @@ class TestS3kBonusPortalMechanismProducts {
             registry.restore(payoutBefore);same(payoutBefore,registry.capture());registry.restore(payoutAfter);same(payoutAfter,registry.capture());
         }
         assertFalse(player.getDead());
+    }
+    private static void assertNoSlotRewards(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotBonusStageRuntime runtime) {
+        assertEquals(0,runtime.activeSlotCageForTest().pendingRewardsForTest(),"zero prize has no pending cage spawn budget");
+        assertEquals(0,runtime.stageController().activeRewardObjects(),"zero prize has no active reward actors");
+        assertTrue(runtime.activeSlotRingRewardsForTest().isEmpty(),"zero prize has no ring reward actors");
+        assertTrue(runtime.activeSlotSpikeRewardsForTest().isEmpty(),"zero prize has no spike reward actors");
+    }
+    /** Independent ROM oracle for sub_4C7A2..4C8A2; never calls the production calculator. */
+    private static int slotPrizeFromActualRom(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState state) {
+        int a=state.optionCycleTargetReelA(),b=(state.optionCycleTargetPackedBC()>>>4)&15,
+                c=state.optionCycleTargetPackedBC()&15;
+        assertTrue(a>=0&&a<8&&b<8&&c<8,"all actual settled symbols index the native eight-word reward table");
+        short[] awards=new short[8];
+        try {
+            var rom=com.openggf.data.RomByteReader.fromRom(GameServices.rom().getRom());
+            for(int symbol=0;symbol<awards.length;symbol++)awards[symbol]=(short)rom.readU16BE(0x4C8A4+2*symbol);
+        } catch(java.io.IOException error) { throw new java.io.UncheckedIOException(error); }
+        // Native match dispatch at 4C7C8; zero-symbol pairs multiply the odd
+        // symbol by four, one zero beside a matching pair doubles that pair.
+        if(a==b&&a==c)return awards[a];
+        if(a==0&&b==0)return (short)(awards[c]*4);
+        if(a==0&&c==0)return (short)(awards[b]*4);
+        if(b==0&&c==0)return (short)(awards[a]*4);
+        if(a==b&&c==0)return (short)(awards[a]*2);
+        if(a==c&&b==0)return (short)(awards[a]*2);
+        if(b==c&&a==0)return (short)(awards[b]*2);
+        // loc_4C86C adds two per symbol 6; every other unmatched triple pays zero.
+        return (a==6?2:0)+(b==6?2:0)+(c==6?2:0);
     }
     private static int firstSlotCell(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotBonusStageRuntime runtime,int type) {
         var layout=runtime.activeLayoutForTest();
