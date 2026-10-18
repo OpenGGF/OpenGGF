@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 class TestGameplayCaptureOutputIsolation {
     @Test
     void outputDirectoryWithLineFeedStillProducesTheCapturedVideo() throws Exception {
-        assertTrue(FfmpegEncoder.findFfmpeg().isPresent(), "ffmpeg required");
+        assumeTrue(FfmpegEncoder.findFfmpeg().isPresent(), "ffmpeg required");
         Path directory;
         try {
             directory = TestTempFiles.createTempDirectory("capture-line\nbreak-'");

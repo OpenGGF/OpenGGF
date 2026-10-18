@@ -140,4 +140,3 @@ introduced. Advancement does not authorize unrelated future repository work.
 The final ledger records every submitted claim and ruling, accepted
 bug/fix counts, refutation awards, contributor/task IDs, tested source state,
 verification limits, integrated commits, and delivery/cleanup status.
-
