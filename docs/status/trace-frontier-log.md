@@ -114258,8 +114258,37 @@ CPU8930 to prior4bb9 (three output directories preserve originals),same command:
 is identical;15 old spans removed/16 added,first different covered frame2457.
 This is owner-variant attribution, not an observed setter/native-branch cause,
 regression waiver or rollback authority. CPU8930 source restored exactly;
-compiled Java is last OLDCPU4bb9. Comparator warnings/bootstrap0, no skips;
+compiled Java at that handback was OLDCPU4bb9. Comparator warnings/bootstrap0, no skips;
 FAST runtime warnings and absent advertised auxiliary writer schemas remain.
 No serialized independent compared/reference/complete certificate. Earliest
 ring122 and reward-vx469 ownership remain open. Full pins, commands, hashes and
 limits are in the existing Plan and r1/r2 ownership records; no extra probe/JVM.
+
+
+### 2026-10-18 — Native attracted-ring phase qualified; original Pachinko frontiers remain
+
+Rootb17a44350 + RingManager1bbe05c8/new phase testd5b60122/unit6a2c3aa3:
+R5 independent component3/1F proves only immediate award vs native own-pass;
+R10 normal `-Dtest=TestRingManager,TestS3kAttractedRingAwardPhase` passes41/0F0E0S
+(queue0/Maven24.583s), including all unchanged35 old oracles and6 pending-world,
+P2/dead/once-only controls. R8's previous per-instance fake-ledger failure is
+resolved by a fresh actual world LevelGamestate and inherited production accessors,
+not by changing the sidekick oracle. R12 `-Pguards` architectural/timing authority
+and two exact candidate0.7 API methods passes99/0F0E0S (queue0/Maven33.235s).
+
+Original R11 `-Ptrace-segments
+-Dtest=TestS3kSonicTailsPachinkoBonusTraceReplay,TestS3kSonicTailsPachinko2BonusTraceReplay`
+request14912 remains2T2F0E0S,queue0/Maven28.573s. Pachinko1 is1638
+(1051physics/587animation), first122 rings262/261 span122–174; Pachinko2 is1258
+(649/609), first469 vx04F3/0100. Full current error-array hashes
+04d9c7f698941706d4c0df5423dc936e97f35f9fdda4660d4ee5c37b7641159e and
+0c4ba6e41be8f196d8a8b7236799aac249399cba9b93b3295330617495f48586
+match the durable pre-ring hashes; consumed old raw arrays were not reconstructed
+for a paired diff/earliest split.0 comparator/bootstrap warnings/errors and no
+skips; FAST runtime warnings, eight missing aux writer/state schemas and original
+context truncation remain. total_frames2907/3571 is not a separate compared,
+reference or completeness field. Native acceptance/global-ledger phase and
+actual-collector policy attribution are distinguished in the
+[bonus matrix](../architecture/validation/levels/s3k-bonus-stage-transitions.md#attracted-ring-acceptance-and-owner-award--2026-10-18).
+No route122 caller cause, whole-frame/cold/native timing/pixel or global
+no-regression certificate is claimed. CPU8930 remains preserved.

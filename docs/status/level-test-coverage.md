@@ -27,6 +27,13 @@ Pachinko segment frontiers were exactly unchanged against Root28 at that
 producer epoch. The [current refresh](../architecture/validation/levels/s3k-bonus-stage-transitions.md#current-pachinko-refresh-and-matched-timeout-owner-attribution--2026-10-18)
 retains the first ring/vx frontiers but attributes a later changed status vector
 to the separately qualified CPU owner; this remains an open comparison limit.
+The [attracted-ring owner boundary](../architecture/validation/levels/s3k-bonus-stage-transitions.md#attracted-ring-acceptance-and-owner-award--2026-10-18)
+now has an independent native phase old-red followed by six passing controls,
+including naturally accepted pending whole-world restore/forward twice, actual
+P2/global ledger and declared dead-main completion. R10 passes41 cases and R12
+passes99 selected structural checks. Original paired route frontiers retain their
+recorded first errors and complete error-array hashes; no new route-product,
+viewport/donor breadth, native presentation or whole-frame certificate follows.
 
 Exact original AIZ standing SST (2026-10-17): the [AIZ2 certificate](../architecture/validation/levels/s3k-aiz2.md#original-fullrun-normal-bridge-standing-sst--2026-10-17)
 qualifies native320 Sonic + CPU Tails rows9510–9513 at SST12, including the actual

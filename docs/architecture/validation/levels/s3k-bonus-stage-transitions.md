@@ -2118,9 +2118,59 @@ does not identify the actual live setter or excuse the changed vector.
 Both requests used the same two exact `-Ptrace-segments` selectors, all3 original
 ROMs/Java25/EGL/single fork reuse-alpha and queue0/Maven76s. Three output-directory
 properties isolate the old-owner originals. Source8930 was restored, while Java
-target remains last old-owner compilation. All methods/properties/streams,
+target at that earlier handback remained the old-owner compilation. All methods/properties/streams,
 full arrays/owners and changed tuples were read. Comparator/bootstrap warnings0
 and no skips are separate from FAST runtime warnings. Serialized total_frames
 2907/3571 supplies no separate complete/compared/reference count. Ring122 and
 reward469 remain current questions; missing writer/retained-list evidence is not
 reconstructed from endpoint state. No component or route closure follows.
+
+
+## Attracted-ring acceptance and owner award — 2026-10-18
+
+The production ring pool now models native Touch_ChkValue acceptance separately
+from AttractedRing_GiveRing. Canonical locked-on ROM SHA1
+CFBF98C36C776677290A872547AC47C53D2761D6 statically corroborates routine=4 at
+$10012 (137C00040005), its own-pass dispatch at $1A88C (4A280005666E), and
+GiveRing call at $1A910 (6100FC84) before code1A920. GiveRing writes the global
+Ring_count regardless of accepting P1/P2. The engine-owned policy notification
+still attributes acceptance once to the actual collector; its skill-chain
+consumer reads identity/mask, not a post-award ring count. Global award, sound and
+sparkle transition now belong to the ring pass, before movement, preserving SST.
+
+Captured collected=true/sparkleStartFrame=-1 represents accepted pending state.
+Pending drawing retains prior spin; retirement excludes it. A non-null dead main
+still completes accepted pickups against the shared ledger; null/editor calls
+leave pending intact. Snapshot shape, public API and signature pins are unchanged.
+Ordinary placed/lost-ring ownership is unchanged; field-driven attraction uses
+the same pool and actual-collector acceptance hook.
+
+| Bounded product / checkpoint | Evidence and limit |
+|---|---|
+| Actual HCZ ROM owner/placement + public component geometry/control01 | Original source31301e failed before active placement; corrected sourcec3cd uses the real loaded ring and ordinary placement publication. No private pool/slot/clock/RNG writes. |
+| Independent native phase old-red | R5 request94557:3T1F0E0S; sole final afterTouch expected0/actual1, positive afterOwner1 and two controls pass. Queue0/Maven25.312s. |
+| Pending whole-registry boundary | Six-case class retains all keys, captures naturally accepted pending state, restores and forwards twice through award and no-double-award phases; checks coordinates/fractions/spin/SST. |
+| Native P2/global ledger and dead-main owner | Actual registered P2 pickup awards shared ledger once; declared public dead-main inlet still completes pending. No natural death-route or policy recording-port proof. |
+| Existing fake-ledger failure and correction | R8:144T1F0E0S; sole old sidekick test used a private per-instance counter. Fresh public LevelGamestate bootstrap plus inherited production accessors replaces that counter; all35 method bodies/oracles remain byte-identical. |
+| Corrected focused verification | R10 request96870:41T0F0E0S (35 old +6 new), queue0/Maven24.583s. R8's other9 actual classes remain their completed green coverage; they were not repeated. |
+| Fresh selected structural checks | R12 request46349:99T0F0E0S, queue0/Maven33.235s:72 architectural,25 hardware authority and exactly2 candidate0.7 API surface checks. This is the selected guard scope, not every guard/release suite. |
+| Original paired Pachinko comparison | R11 request14912:2T2F0E0S, queue0/Maven28.573s. Pachinko1 retains1638 errors, first122 rings262/261; Pachinko2 retains1258, first469 vx04F3/0100. |
+
+Current full sorted-json-default error-array hashes remain
+04d9c7f698941706d4c0df5423dc936e97f35f9fdda4660d4ee5c37b7641159e and
+0c4ba6e41be8f196d8a8b7236799aac249399cba9b93b3295330617495f48586,
+matching durable pre-ring hashes. Prior raw arrays were consumed; this is no
+paired raw diff, earliest-split or broad no-regression certificate. Both current
+reports have0 comparator/bootstrap warnings/errors and serialized total_frames
+2907/3571, without separate compared/reference/completeness values. Eight missing
+advertised schemas are cage state/execution, velocity/position writes, record-pos,
+CPU-normal-step and CNZ-cylinder state/execution; contexts retain their original
+serialized truncation. FAST/no-manifest and unit missing-WAV shadow warnings are
+recorded separately. Exact portable selectors and source/command epochs are in
+the [existing plan](../../plans/2026-10-13-s3k-playable-completion.md#pachinko-r10-component-qualification-and-r11-original-frontiers--2026-10-18).
+
+All execution used the original ROM paths, Java25/EGL/nullAL/Lua and one reused
+fork. No new route, viewport/donor/team breadth, native pixels/timing, full-frame
+Load_Sprites ordering, cold traversal or full-suite qualification follows. The
+ring122 and reward-vx469 engine writer/dispatcher questions remain open. Slot8's
+native code change alone is not evidence of an actual engine collector callback.

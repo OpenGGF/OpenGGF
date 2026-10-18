@@ -67,8 +67,9 @@ Unreleased. The earlier development themes remain in
   machine's native random seed, ejected balls also push the second player, and a
   companion that drops into the exit is removed as in the original (it rejoins
   on return). Pachinko orb rewards follow the level frame counter, and round
-  bumpers show their ten-point score with the native sprite priority. All three bonus
-  traces now replay without errors. The Slot cage keeps re-centring the machine
+  bumpers show their ten-point score with the native sprite priority.
+  Lightning-attracted rings award at the native object update and retain pending
+  pickups through rewind. The three standalone bonus traces replay without errors. The Slot cage keeps re-centring the machine
   through the goal wind-down, so the machine stays where the original shows it.
   Its background keeps moving at zero cage rotation and publishes queued rows
   at the native VBlank boundary, including through rewind. Restoring its layout

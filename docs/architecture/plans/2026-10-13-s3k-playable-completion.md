@@ -13155,6 +13155,210 @@ requires a natural production allocation/acceptance inlet and final phase
 oracles; endpoint code alone is not a callback witness. Independent vx469 reward
 and later status2457 remain separate. No route fix, hydration or clock/slot fit.
 
+### Pachinko ring-owner component R3 prerequisite gate — 2026-10-18
+
+On Root `b17a443503d560e855cbec41a9eed6d133856d7f`, one normal focused
+`-Dmse=off -Dtest=TestS3kAttractedRingAwardPhase test -B` lifecycle5803
+compiled candidate CPU8930 and source test31301e (all3 original ROM properties,
+Java25.0.4.1, fork1/reuse/alphabetical, JTO+CLI EGL/nullAL/Lua). Queue0,
+Maven72s; actual3T3F0E0S. All three cases fail the same setup prerequisite at
+component line114: no active ROM ring placement. Attraction/allocation, touch,
+owner update, positive acceptance and final award-phase oracles were not reached.
+This is not a genuine component old-red and supplies no route122 attribution.
+FAST/no-manifest runtime warnings remain distinct from those assertion failures.
+Root DIRECT-read original XML26748B/SHA6207696ac78ae0f5ed51188c8e6e914c70da3a131d0ec0cd594735f844e6f5e1
+and TXT2826B/SHAa77101d9d2c1617c31516108919081f8938b017e3d440ec3b2072fe7612131f8.
+The lifecycle supersedes the previous OLDCPU4bb9 compiled-target qualifier;
+candidate CPU8930/test31301e were compiled, with no edit or retry afterward.
+
+R4 is source-only setup correction: the real loaded level exposes ROM rings,
+and `RingManager.update(cameraX,player,actualLF,false)` publishes its placement
+window before collection/attraction gates. A declared real ROM ring and public
+camera/player geometry can establish that window without private active-list
+writes, synthetic placements or a timing search. Only component setup may
+change; all3 bodies/final phase oracles stay byte-identical. Execution remains
+unqualified pending frozen-source review and separately authorized validation.
+
+### Pachinko ring-owner R5 genuine local phase old-red — 2026-10-18
+
+ONE corrected-source request94557 on Rootb17/testc3cd5171 used the same normal
+no-profile class selection and original3ROM/Java25/JTO+CLI EGL/fork1 settings as
+R3. Queue0/Maven25.312s; actual3T1F0E0S. All loaded-ROM/canonical identity,
+window publication, actual attraction/allocation and SST prerequisites passed.
+The sole final assertAll failure is afterTouch expected0/actual1 (line56).
+Positive afterOwner+1, collected/sparkle/sameSST/start1/control01 all passed;
+non-overlap and ordinary placed-ring controls also passed. Root DIRECT-read
+all3 cases,72 properties, full sole failure/suppressed stack and streams in
+XML26903B/SHA9b6556e0b7218f9e5cf66064ecbe3c8ac6bab6cf9008603d79b5a318838ef603
+and TXT2750B/SHAa794097c34abeb58c4df57f2f5d6e6c16daebaaf80828e19fd12c0dfc4e2db87.
+FAST/no-manifest warnings remain separate. CPU8930/config/source stayed exact;
+no runtime repair or retry followed. This proves a local component phase mismatch,
+not trace122 causation, whole-frame/Load_Sprites, native execution or rewind.
+
+R6 source audit evaluates collected=true/sparkleStartFrame=-1 as an explicit
+pending sentinel, with no schema or slot-count encoding. Capture/restore retains
+those scalars; publication excludes collected entries. Draw must keep pending
+spin, retirement must exclude pending, and the own update must award once before
+movement and initialize sparkle. Native GiveRing writes global Ring_count; it
+does not retain the collector identity. The existing engine's native-policy
+notification does retain a semantic distinction: NativeMutatorRuntime.ringAcquired
+advances a skill-chain only for the main player. A P2-accepted ring currently
+notifies P2, whereas RingManager.update receives main P1. Replacing that recipient
+with the update argument would silently credit P2 pickups to P1's challenge;
+storing an uncaptured collector would lose that distinction after pending rewind.
+No implementation is authorized beyond the bounded captured-state/reference
+contract; this recipient issue requires a design handback before widening it.
+
+### Pachinko accepted-ring owner R7 source candidate — 2026-10-18
+
+Root resolved R6's semantic recipient boundary explicitly: the engine-owned
+native-policy hook attributes the accepted pickup once to its actual touch
+collector; global native GiveRing/count/SFX/sparkle remain ring-owner work.
+NativeMutatorRuntime.ringAcquired only updates skill-chain identity/mask and
+reads no post-award ring count. No alternate implementation or recording-port
+fixture was found. The source candidate leaves that hook at acceptance, excludes
+the accepted ring from further touch, and reuses captured collected=true with
+sparkleStartFrame=-1 as pending. No collector reference, scalar bit packing,
+RingSnapshot/public API/signature pin change, or new shared contract is needed.
+
+The own update now awards once before movement and advances the existing in-place
+sparkle timer/mapping while retaining the SST. Pending drawing uses its previous
+spin; sparkle projection and retirement exclude pending. Main-dead dispatch still
+completes accepted pickups against the same world ledger, without advancing
+ordinary unaccepted movement or already-running sparkle. Null/editor owner calls
+leave pending intact until a non-null world player is available. Native source
+and canonical bytes pin Touch_ChkValue10012, AttractedRing_GiveRing1A900/1A910 and
+GiveRing1A596's GLOBAL Ring_count, irrespective of accepting P1/P2. Normal placed
+and spilled-ring owners are unchanged; mutator field attraction uses this same
+pooled owner and retains actual-collector policy attribution at acceptance.
+
+All three executed genuine-old-red bodies/oracles remain byte-identical. Three
+separate source controls add a naturally accepted pending capture of the entire
+registered world, two restore/forward cycles comparing every key and both owner
+passes with no duplicate award; actual registered P2 acceptance into the shared
+ledger; and a declared public dead-player owner inlet. Pending coordinates,
+fractions, spin frame/timer are checked before capture. No renderer pixel output,
+policy notification recording-port proof, natural death-route proof, full-frame,
+Load_Sprites or trace122 attribution is claimed. Any unrelated registry restore
+failure must be reported, not repaired by weakening equality or shared state.
+
+This is SOURCE ONLY and uncompiled. Frozen RingManager SHA
+1bbe05c809d3aefa23413c2f6803b934263767173cde3a2ba1ee642a4f9e653b;
+new test SHA d5b601221fba9c1f02a9dac12dda0cf01f5dca3033aab037e4539894c5a53ac0.
+Proposed bounded affected selection, NOT submitted:
+TestS3kAttractedRingAwardPhase, TestRingManager, TestRingManagerRewindSnapshot,
+TestRingManagerActiveIndices, TestSlotAllocator, TestObjectManagerRewindSnapshot,
+TestS3kAiz1SkipHeadless, TestSonic3kLevelLoading, TestSonic3kBootstrapResolver,
+TestSonic3kDecodingUtils. Structural source budgets were read: RingManager/newtest
+are absent from the root/release-critical class/method ratchets; no waiver or
+budget change was made. Compiled target still represents pre-R7 runtime and
+corrected old-red testc3cd; this source candidate has no executed green result.
+
+### Pachinko R8 affected validation and R9 fixture-ledger gate — 2026-10-18
+
+ONE normal no-profile affected request85260 tested frozen RingManager1bbe05c8
+and newtestd5b60122 on Rootb17. Queue0/Maven74s; actual11 classes/144 unique
+cases/1F0E0S, all72 properties per XML and no skips. Both loading-package matches
+were intentional. All6 new component cases pass, including the genuine phase
+oracles, actual P2/shared ledger, dead-main completion, and pending whole-registry
+capture/restore-forward twice with every key retained. Sole failure is existing
+TestRingManager.testS3kAttractedRingCanBeCollectedBySidekick line855: expected1,
+actual0 in the sidekick's fake local counter. This focused result is not a green
+delivery or a native/full-frame/route122 certificate. Root DIRECT-read all22
+original XML/TXT305597B, full144 identities/outcomes/streams/properties and the
+sole failure. Serialized warnings include85 FAST/no-manifest,20 missing ring-WAV
+shadow rejections,1 spill-WAV rejection and1 negative decoding-bounds diagnostic;
+no matched warning baseline was run. No edit or retry followed.
+
+Source audit finds TestPlayableSprite's private ringCount and add/get/setRings
+overrides (1142–1157) differ from production APS1758–1775 shared world ledger.
+However the authorized removal-only fixture correction cannot yet be authored:
+TestRingManager.setUp merely attaches an active gameplay mode; it does not load a
+level or install a LevelState. GameplaySessionFactory75–95 constructs/attaches a
+LevelManager whose levelGamestate330 remains null. Production initialization is
+initPlayerAndCheckpoint1195 or public resetLevelGamestate1708; neither runs on
+this pure unit inlet. Thus inherited addRings would be a no-op and getRingCount
+would remain0 if only the duplicate fake ledger were removed. Session clear at
+tearDown supplies isolation, but does not create the missing ledger on setup.
+At the initial R9 gate, no test body, assertion, setup, helper or runtime had
+changed. The missing ledger was handed back before authoring; explicit setup
+authority was needed in addition to removing the duplicate overrides. The proposed narrow future selection is TestRingManager and
+TestS3kAttractedRingAwardPhase only, not submitted.
+
+R9 continued under Root's explicit source-only clarification: immediately after
+activeGameplayMode, setUp now calls existing public
+GameServices.level().resetLevelGamestate(new LevelGamestate()). Only the private
+fake ringCount and three add/get/setRingCount overrides were removed. Production
+APS accessors now use that fresh owned world ledger, shared by P1/P2; tearDown
+clears the session per test. All35 test methods, including the sidekick expected1,
+remain byte-identical, as do all other helpers and ordering. Removing precisely
+the new setup call and reinserting the deleted block reproduces original oldtest
+SHAfc2541d9f7f9d1136c097415d8a8add4801f65455a847f9c1c181290c706ba2c.
+Frozen corrected oldtest SHA
+6a2c3aa3e0d069fc9ab70b83600e4cccacdebd6116b7b8d34584c5fdf0746c8f.
+Method587's separate LevelGamestate is deliberately installed as the same world
+ledger before spill; its assertions still inspect that ledger and are unchanged.
+Method350 recreates a module/session mid-test but checks only attraction/window
+publication, without any ring-award/count oracle. No body or broader fixture
+initialization was changed. RingManager1bbe and newtestd5b6 stay exact; compiled
+classes/Ending PE/config are preserved. All22 accepted R8 originals305597B were
+verified in full as one group before any metadata-only deletion. This source
+candidate is uncompiled/unexecuted; the proposed next focused selection remains
+only TestRingManager,TestS3kAttractedRingAwardPhase and was not submitted.
+
+### Pachinko R10 component qualification and R11 original frontiers — 2026-10-18
+
+R10 ONE narrow normal lifecycle96870 on Rootb17/runtime1bbe/newtestd5b6/unit6a2c
+passed41T0F0E0S (35 existing unchanged oracles plus6 new controls), queue0,
+Maven24.583s. All41 identities,72 properties per XML and streams were read;
+FAST9 and missing-WAV shadow LEFT10/RIGHT10/SPILL1 warnings remain explicit.
+The four standard green reports59950B were rehashed as a group before metadata-only
+consumption, preserving compiled classes and Ending PE/files. This was bounded
+component qualification, not native/full-frame/trace122 proof.
+
+R11 ONE original paired trace-segments lifecycle14912 then used the same original
+fixtures/driver/input on Rootb17/runtime1bbe/newd5b6/unit6a2c. Queue0/Maven28.573s;
+actual2T2F0E0S. Pachinko1 remains1638 errors (1051 physics/587 animation), first122
+rings262/261 span122–174; animation first269 mapping96/97. Pachinko2 remains1258
+(649 physics/609 animation), first469 vx04F3/0100; animation1436 mapping99/96.
+Current full error-array sorted-json-default SHA04d9c7f698941706d4c0df5423dc936e97f35f9fdda4660d4ee5c37b7641159e
+and SHA0c4ba6e41be8f196d8a8b7236799aac249399cba9b93b3295330617495f48586
+match the durable pre-ring recorded hashes. Earlier raw arrays were consumed;
+no paired raw tuple diff, earliest split or totals-based no-regression claim is
+made. Both current comparison dictionaries have0 warnings/bootstrap errors or
+warnings; serialized total_frames2907/3571 does not separately serialize reference
+count, compared count or completeness. Eight advertised aux schemas remain absent.
+Six serialized FAST/no-manifest runtime warnings are separate from comparator
+warnings. Root DIRECT-read all10 originals842757B, both full arrays/schema/fields/
+groups, owner paths, inherently truncated serialized contexts, XML/TXT failures,
+72-property maps and streams. Runtime/newtest/unit/Plan/driver/fixtures/config and
+Ending PE stayed frozen during execution. The independent phase fix is qualified
+by its component tests; these original route frontiers are still unresolved.
+
+R12 authority is one fresh structural guard selection only, after exact accepted
+R11 report cleanup. No source repair, baseline or retry is implied by a red gate.
+
+### Pachinko R12 structural qualification and R13 local preservation — 2026-10-18
+
+R12 request46349 on the unchanged runtime1bbe/newd5b6/unit6a2c epoch passes
+99T0F0E0S:72 architectural,25 timing-authority and exactly two0.7 signature
+methods. Queue0/Maven33.235s; all99 identities/72 properties per XML inspected.
+Three FAST/no-manifest warnings were observed on the original console, with no
+serialized XML warning stream. Exact6 standard reports85831B were fully rehashed
+before metadata-only consumption; compiled classes/Ending PE were preserved.
+R10's41 green component/unit cases and R8's other9 green actual classes retain
+those exact bounded epochs; R11's original two route frontiers remain red with
+unchanged durable full-array hashes, not a route fix.
+
+R13 preserves only the three qualified source files plus this existing Plan,
+frontier log, bonus matrix, coverage backlog and a folded0.7 bonus entry. Earlier
+known Root-owned Ending source-only prerequisite/binding notes in this shared
+Plan are accounted as observations, not executable native ending qualification.
+No Main integration, push, branch creation, new JVM/native or widened source
+work is part of this local preservation. The next frame122 inventory remains
+source-only: actual AUX frame properties and P1/P2 geometry must qualify which
+native record/engine owner is involved before any callback/award inference.
+
 ### Root prerequisite checkpoints following corrected native compilers — 2026-10-18
 
 The corrected ending observer compiled28160B/SHA80112f33dd5e2823cbe21729414daa75253b1dc3aae905f0de128fc4ec52ed18
@@ -13193,3 +13397,48 @@ prerequisite. Initial actual event/registered-wall linkage and naturally differe
 published shake AND wall integer offset/X remain setup prerequisites. Restored
 linkage is an oracle. No wall/handler repair, dropped keys or new execution has
 occurred. Main remains803; goal, combined validation and integration stay open.
+
+### Ending startup output contract source correction — 2026-10-18
+
+Root directly read the complete original session62276 output. Its one original
+neutral input/one Advance produced one provisional Reader pair and an observer
+complete footer, but the original parent exited2 for nonempty stderr. The sole
+stderr line is the unconditional pinned gpgx_init startup fprintf,28B/oneLF.
+There are also52 source-owned stdout startup lines; merely permitting stderr
+would still fail the old legacy-at-index1/every-other-lineJSON parser. Historical
+parent failures20039/62276 retain their original qualification; no replay occurred.
+
+The bounded SOURCE-ONLY correction changes only the external launcher and plan.
+It requires that exact stderr literal once and one complete ordered52-line stdout
+startup block. ELF rows/layout come from held/pinned ELF headers and stock source
+options; only actual printed mirror addresses vary, constrained by64bit type,
+page alignment and matching range size. Successful allocation, ROM-present CD
+probe, sealing and original controller sequences have exact source-owned lines.
+Unknown/error/duplicate/reordered/incomplete/trailing diagnostics STOP. Only the
+validated block is removed before the unchanged strict JSON/pair/footer/identity
+qualification. Native262144B/100JSONrecords/98pairs, aggregate304132B, binding4096B,
+footer8192B, ONEAdvance,30/60s, normal admission and FD/group cleanup stay unchanged.
+The17 diagnostic-owner source pins supplement the existing52 artifact checks;
+source/binary format ownership is not reproducible-build or clock-origin proof.
+
+Three-file freeze054b847381642049d48473930e4c1b930c22a300c5b871e4af4261cd96d187e3:
+CS21913B/SHA32cfa04d0c81845b3e94a8acc92cacb927ded69e8a85c6dbf5286e902ff59a9d
+remains byte-exact; launcher23704B/SHA53bdeaf16418989395e591512f93890ec1c478c82e758f529e6b20625118f187;
+plan68701B/SHAc24b5b8ab49a39db3df06678a5262405d3da765f8d7a2ff4c57776c5a1029114.
+Same three external files now have mode0600. Unified-diff SHAs are
+6f92dedcffbd51103cb5207bb24c986fe2e26b267ad792fa88e8594e2fadb199 and
+bd2c083fb99c84776ce9f49412e2601687dbaf0e4a5233b162d0698f85d7d488.
+
+Offline AST/strictJSON/C#lexical, exact inverse to old launcher155a/plan0ec,
+unchanged strict JSON suffix, all52+17 pins, two synthetic valid mirror models
+and30 malformed puredata models passed their source checks. No subprocess/main,
+compiler/Mono/native/admission command was executed by those classifier checks;
+no fixture/log/archive/receipt was generated. This is no corrected runtime pass.
+The retained PE36352B/SHA97a256d90838939063529865d27f49e53cb3c95b7d3a2bd5469224fae8e3bacc
+and mtime1792282499532737854 remain exact and bound to the unchanged CS. No C#
+recompile is needed for this Python+plan-only delta. Source review precedes any
+separately authorized ONE future command, not executed:
+
+```text
+python3 "${TASK_SCRATCH}/ending-clock-positive-r1/launch_positive.py" run --freeze 054b847381642049d48473930e4c1b930c22a300c5b871e4af4261cd96d187e3 --exe-sha256 97a256d90838939063529865d27f49e53cb3c95b7d3a2bd5469224fae8e3bacc
+```
