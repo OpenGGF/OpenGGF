@@ -69,8 +69,16 @@ final class LiveRewindStepper implements RewindSeekAwareEngineStepper {
             PlcLifecycleFrame lifecycleFrame) {
         LevelFrameContext context = frameContextSupplier.get();
         com.openggf.game.internal.BonusStageFrameLifecycle.beforeReplayFrame(gameplayModeSupplier.get());
+        // Live history contains completed gameplay ticks, not the paused host
+        // presentations between them. The first recorded tick after gamepad
+        // unpause still holds Start; applying it as another ROM pause would
+        // suppress the tick being reconstructed. Preserve the original pad
+        // sample for gameplay below, but only re-admit the initial sprite pass.
+        if (context.gameStateManager() != null) {
+            context.gameStateManager().setGamePaused(false);
+        }
         var admission = LevelFrameStep.admit(
-                context, level, input.p1StartPressed());
+                context, level, false);
         if (admission.result() == LevelFrameResult.PAUSED) {
             LevelFrameStep.serviceVBlankOnly(
                     context, lifecycleFrame, PlcLifecyclePhase.NORMAL_PAUSE);

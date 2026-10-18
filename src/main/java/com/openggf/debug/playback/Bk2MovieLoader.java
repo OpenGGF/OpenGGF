@@ -37,6 +37,10 @@ public final class Bk2MovieLoader {
             throw new IOException("Movie file not found: " + bk2Path);
         }
 
+        return loadZip(bk2Path);
+    }
+
+    private Bk2Movie loadZip(Path bk2Path) throws IOException {
         try (ZipFile zip = new ZipFile(bk2Path.toFile())) {
             ZipEntry inputLogEntry = findEntryIgnoreCase(zip, INPUT_LOG_ENTRY);
             if (inputLogEntry == null) {
@@ -78,7 +82,7 @@ public final class Bk2MovieLoader {
         if (!Files.exists(path)) {
             throw new IOException("Movie file not found: " + path);
         }
-        return isZipFile(path) ? load(path) : loadInputLog(path);
+        return isZipFile(path) ? loadZip(path) : loadInputLog(path);
     }
 
     /** Parses in-memory input-log lines; {@code sourcePath} is diagnostic only. */

@@ -9,6 +9,22 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class TestClientRaceSession {
 
+    @Test
+    void joinDuringRoundEndRestoresThePodiumFromItsSnapshot() {
+        var winner = new ControlMessage.StandingsRow(
+                0, "Winner", "sonic", 3600, 1, "NONE");
+        var session = new ClientRaceSession(() -> now);
+        session.applyJoin(new ControlMessage.JoinAccepted("tok", 2,
+                new ControlMessage.RoomDescriptor(
+                        "LAN", "s3k", 0, 0, "OPEN", null, 8, false),
+                new ControlMessage.RoundSnapshot("ROUND_END",
+                        new ControlMessage.RoundConfig("s3k", 0, 0, 300, "OPEN", null),
+                        now - 310_000, now - 10_000, List.of(winner))));
+
+        assertEquals(ClientRaceSession.Phase.ROUND_END, session.phase());
+        assertEquals(List.of(winner), session.podiumTop(3));
+    }
+
     @Test void lateVerdictRefreshesPodium() {
         var session = session();
         session.onControl(new ControlMessage.RoundEnd(List.of(

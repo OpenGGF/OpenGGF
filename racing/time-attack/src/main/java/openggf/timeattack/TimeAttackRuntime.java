@@ -293,6 +293,9 @@ public final class TimeAttackRuntime implements RunHost {
         int lastDelta = attemptSplits.length == 0 ? Integer.MIN_VALUE
                 : TimeAttackDeltas.deltaAtSplit(attemptSplits, attempt.firstInputFrame(),
                         ghostSplits, ghostFirstInput, attemptSplits.length - 1);
+        if (attempt.phase() == TimeAttackAttempt.Phase.FINISHED && bestGhost != null) {
+            lastDelta = attempt.finalTimeFrames() - best;
+        }
         return new TimeAttackHudState(true, attempt.elapsedDisplayFrames(), best, lastDelta,
                 attempt.phase() == TimeAttackAttempt.Phase.FINISHED, newBest,saveNotice);
     }

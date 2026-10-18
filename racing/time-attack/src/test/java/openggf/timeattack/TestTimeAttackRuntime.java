@@ -10,6 +10,29 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class TestTimeAttackRuntime {
     @Test
+    void finishDeltaComparesTheFinishRatherThanTheLastCheckpoint(@TempDir Path root) throws Exception {
+        TimeAttackRuntime runtime = new TimeAttackRuntime(new GhostStore(root), root.resolve("identity"), () -> false);
+        runtime.armForLaunch(new TimeAttackLaunchRequest("s3k", 0, 0, "sonic", java.util.List.of()));
+        runtime.beginAttemptForTest("fp");
+        runtime.tickForTest(0x08, false, false, -1, frame(10));
+        runtime.tickForTest(0x08, false, false, 1, frame(11));
+        runtime.tickForTest(0x08, false, false, 1, frame(12));
+        runtime.tickForTest(0x08, false, false, 1, frame(13));
+        runtime.tickForTest(0x08, false, true, 1, frame(14));
+
+        runtime.onLevelReady(new com.openggf.mods.run.RunLevelStart(runtime.runSpec(), "fp", false, 0, 0));
+        runtime.tickForTest(0x08, false, false, -1, frame(10));
+        runtime.tickForTest(0x08, false, false, -1, frame(11));
+        runtime.tickForTest(0x08, false, false, 1, frame(12));
+        assertEquals(1, runtime.hudState().lastSplitDelta(), "the new attempt reaches the checkpoint one frame later");
+        runtime.tickForTest(0x08, false, true, 1, frame(14));
+
+        assertTrue(runtime.hudState().finished());
+        assertEquals(3, runtime.hudState().elapsedDisplayFrames());
+        assertEquals(4, runtime.hudState().bestTimeFrames());
+        assertEquals(-1, runtime.hudState().lastSplitDelta(), "the finish is one frame faster despite the slower checkpoint");
+    }
+    @Test
     void failedAndRejectedBestWritesHaveVisibleHonestOutcomes(@TempDir Path root) throws Exception {
         Path rejectedRoot=root.resolve("rejected");
         java.nio.file.Files.createDirectories(rejectedRoot.resolve("s3k"));

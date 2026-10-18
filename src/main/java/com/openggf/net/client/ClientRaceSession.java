@@ -51,6 +51,7 @@ public final class ClientRaceSession {
             countdownEndsAtHub = snapshot.countdownEndsAtHubMillis();
             deadlineHub = snapshot.deadlineHubMillis();
             standings = List.copyOf(snapshot.standings());
+            finalStandings = basePhase == Phase.ROUND_END ? standings : List.of();
         }
     }
 

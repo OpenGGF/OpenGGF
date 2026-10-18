@@ -185,6 +185,38 @@ class TestMasterClient {
     }
 
     @Test
+    void brokerPinnedIpv6DirectRoomJoinsOverTls(@TempDir Path dir) throws Exception {
+        server = MasterServer.start(TestMasterServer.testConfig(), dir);
+        PlayerIdentity hostIdentity = PlayerIdentity.loadOrCreate(dir.resolve("host"));
+        try (MasterClient host = MasterClient.connect(
+                URI.create("ws://[::1]:" + server.port() + "/master"),
+                hostIdentity, "HOST", FP, null).get(15, TimeUnit.SECONDS)) {
+            establish(dir.resolve("host"));
+            ControlMessage.RoomDescriptor descriptor = new ControlMessage.RoomDescriptor(
+                    "IPv6", "s3k", 0, 0, "OPEN", null, 8, false);
+            try (RaceRoomHost hostServer = com.openggf.net.host.jdk.JdkRaceHostServer.startTls(
+                    0, new RoomHostConfig("IPv6", "s3k", 0, 0, "OPEN", null, 8, FP),
+                    hostIdentity, TrackValidationProfileSource.none());
+                 MasterClient guest = connect(dir.resolve("guest"), "GUEST")) {
+                String roomId = host.createRoom(descriptor, "DIRECT", hostServer.port(), FP,
+                        List.of(), hostServer.tlsCertificateSha256())
+                        .get(10, TimeUnit.SECONDS).roomId();
+                RaceConnection room = guest.joinRoom(roomId,
+                                PlayerIdentity.loadOrCreate(dir.resolve("guest")), "GUEST", FP)
+                        .get(15, TimeUnit.SECONDS);
+                try {
+                    assertTrue(room instanceof RaceClient,
+                            "a reachable authenticated IPv6 room must use the direct connection");
+                    assertTrue(room.isOpen());
+                    assertEquals(0, room.playerSlot());
+                } finally {
+                    room.close();
+                }
+            }
+        }
+    }
+
+    @Test
     void lateJoinReplyCannotCompleteLaterRequest() throws Exception {
         ConcurrentLinkedQueue<CompletableFuture<ControlMessage.RoomJoinResult>> pending =
                 new ConcurrentLinkedQueue<>();

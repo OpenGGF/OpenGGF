@@ -79,6 +79,35 @@ class TestTimeAttackMenuState {
     }
 
     @Test
+    void importsForOtherTracksDoNotConsumeTheSelectedTracksGhostSlots(@TempDir Path root) throws Exception {
+        Path imports = root.resolve("s3k/import");
+        for (int index = 0; index < TimeAttackMenuState.MAX_GHOSTS_RACED; index++) {
+            writeImport(imports.resolve("a-other-" + index + ".ggfghost"), 1, 0);
+        }
+        Path matching = imports.resolve("z-selected.ggfghost");
+        writeImport(matching, 0, 0);
+        TimeAttackMenuState state = new TimeAttackMenuState(List.of("s3k"), "s3k", new GhostStore(root));
+
+        state.pressGo();
+        var request = state.consumeLaunchRequest();
+        TimeAttackRuntime runtime = new TimeAttackRuntime(new GhostStore(root), root.resolve("identity"), () -> false);
+        runtime.armForLaunch(request);
+        runtime.onLevelReady(new com.openggf.mods.run.RunLevelStart(runtime.runSpec(), "fp", false, 0, 0));
+
+        assertEquals(1, runtime.activeGhostsForTest().size(), "the selected act's valid ghost must be raced");
+    }
+
+    private static void writeImport(Path path, int zone, int act) throws Exception {
+        var header = new openggf.timeattack.ghost.GhostHeader(1, "s3k", zone, act, "sonic", "racer",
+                0, 1, new int[0], new byte[32]);
+        var capture = new openggf.timeattack.ghost.GhostCaptureBuffer();
+        capture.capture(10, 100, 1, false, false, 2, false, false);
+        capture.capture(11, 100, 1, false, false, 2, false, true);
+        var recording = new openggf.timeattack.ghost.GhostRecording(header, capture.toFrameData());
+        openggf.timeattack.ghost.GhostFileCodec.write(recording, path);
+    }
+
+    @Test
     void summaryReflectsSavedBestAndImportCount(@TempDir Path root) throws Exception {
         GhostStore store = new GhostStore(root);
         TimeAttackMenuState state = new TimeAttackMenuState(List.of("s3k"), "s3k", store);
