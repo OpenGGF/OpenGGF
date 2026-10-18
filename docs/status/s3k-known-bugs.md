@@ -8,6 +8,16 @@ deliberate bug-fixes of ROM data), see
 
 For general (cross-game) bugs, see [known-bugs.md](known-bugs.md).
 
+**Saved-origin bonus ring retention, 2026-10-18 (locally qualified):** bonus
+entry now carries the actual collected-ring table in the existing persistent
+respawn token; InitRings restores it after reset and before touch. The unchanged
+public Gumball return oracle and fresh-session ordinary-clear control pass in
+both FDF and Root affected selections (156 cases/20 classes each). FDF's original
+Mega still misses the next bonus boundary: returned total19510 comprises18427
+physics and1083animation, first non-camera physics502 `y`038A/0385. The moved
+frontier does not identify a pickup/collision caller or certify the route. See
+the [bounded matrix](../architecture/validation/levels/s3k-bonus-stage-transitions.md#kept-origin-ring-table-root-composition-2026-10-18).
+
 **AIZ2 post-boss handoff, 2026-10-12 (candidate):** the complete original
 `aiz1_to_hcz_fullrun` control improves from 57 errors to zero, including terminal
 hardware-work ownership. The alternate `aiz_completerun` improves from 99 to 59

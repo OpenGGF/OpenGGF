@@ -535,6 +535,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   during gameplay; the shared bonus loop no longer overrides the slot player's
   priority. Bonus title-card release completes the initial object setup before
   the first gameplay tick, preserving the first controller input and its movement.
+  Saved-origin bonus returns carry collected origin rings in the kept respawn-table
+  snapshot; ordinary level reloads continue to clear ring collection.
 
 - **Knuckles in Sonic 2:** selecting Knuckles as the Sonic 2 main
   character now activates a built-in game patch implemented from the s2disasm

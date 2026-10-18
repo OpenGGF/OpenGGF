@@ -2174,3 +2174,27 @@ fork. No new route, viewport/donor/team breadth, native pixels/timing, full-fram
 Load_Sprites ordering, cold traversal or full-suite qualification follows. The
 ring122 and reward-vx469 engine writer/dispatcher questions remain open. Slot8's
 native code change alone is not evidence of an actual engine collector callback.
+
+
+## Kept-origin ring table Root composition (2026-10-18)
+
+Root57074 plus the exact four whole files qualified by FDF48e082364 carries
+collected ring bits across a real public Knuckles AIZ Gumball return. The
+independent test first acquires an original ROM placement through ordinary input
+and clears its saved return position; only after natural title/Nemesis/history/
+new-manager/INTERIOR_RETURN prerequisites does its final oracle inspect the bit.
+A fresh-session ordinary same-origin reload independently requires it clear.
+Both cases remain byte-exact9aac and pass (Root0.501/0.360s).
+
+One normal affected request, session21915, selected20classes including both
+Loading identities, mandatoryS3K4, ring/rewind, lower/destroy object bits,
+checkpoint, receipt/terrain/title and two exact BigRing methods:156/0F0E0S.
+Its full command, source epoch, cases, original manifest and limits are in
+[the existing Plan](../../plans/2026-10-13-s3k-playable-completion.md#root-kept-ring-affected-qualification-and-cold-r97-direct-2026-10-18).
+No cross-load restore, direct collect, fabricated ring or HUD-only oracle is used.
+
+FDF's separate original Mega at48e082364 remains1F: next starpost_bonus missed,
+returned segment complete19510=18427physics+1083animation, first non-camera
+physics502y038A/0385;49timing completion mismatches persist. SS/FDFunreached.
+This is bounded component/composition evidence, not width/team/donor breadth,
+physical starpost traversal, native pickup caller, timing/readiness or full route.

@@ -114486,3 +114486,22 @@ Warnings98FAST/20audiofallback/onebounds remain scoped. No canonical3475 caller,
 route/native/rewind/fullvector proof; prior original HCZ251/segment13ownership
 88306/first287y remain historical until conditional R80 original request runs.
 [Actual ownership and qualification](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r77r80-fixed-countdown-owns-raw-drowning-animation--2026-10-18).
+
+
+### 2026-10-18 — Root composes kept-origin ring table; original route remains red
+
+FDF48e082364 preserves the independent ring-retention repair. Its one original
+`TestS3kMegaRunChain#multiBonusSpecialStageRoundTrip -Ptrace-replay-r7` invocation
+at own649 reports1T1F0E0S: next aiz_2 starpost_bonus unobserved, returned total
+19510=18427physics+1083animation, first non-camera PHYSICS502y038A/0385;
+first all-group186animation00/20, other35fields match including74rings. All49
+unmatched hardware completions remain; no row178 pickup/cause/full-route claim.
+
+Root57074 plus exact3runtime+unchanged9aac composes the same token handoff.
+One normal no-profile affected20class request (same FDFR90 selectors) passes
+156/0F0E0S, including both Loading identities, mandatoryS3K4 and actual Gumball
+retention/ordinary-clear controls. Full argv/environment/source hashes/case IDs
+and retained original manifests stay in the [existing Plan](../architecture/plans/2026-10-13-s3k-playable-completion.md#root-kept-ring-affected-qualification-and-cold-r97-direct-2026-10-18)
+and canonical root_current_slice. No Root original route/SOZ repeat follows.
+SOZ matched V2 first release is103calls on Main vs115on Root; native terrain wait
+is required, exact duration/death11174cause remains unqualified.

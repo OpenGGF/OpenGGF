@@ -1067,7 +1067,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      */
     public void initRings() {
         ringManager = LevelManagerInitializationSupport.initializeRings(this, touchResponseTable,
-                audioManager, camera, graphicsManager, transitions.bigRingReturnRingStatusTable());
+                audioManager, camera, graphicsManager, checkpointCoordinator.ringStatusTableForLoad(transitions.bigRingReturnRingStatusTable()));
     }
 
     /**

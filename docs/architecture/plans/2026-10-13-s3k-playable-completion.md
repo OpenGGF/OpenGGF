@@ -19709,3 +19709,888 @@ The earlier Root97406 two accepted originals47607B and MainR4 two originals
 metadata_slot ALONE. Root17159/Main17030 compiled SHA/size/mode/mtime were exact
 through cleanup. Earlier results/death11174 and normalized baseline five-green
 remain separate epochs; no logs were archived and no classes were deleted.
+
+### Root SOZ death witness: invalid footer and reviewed finite partition (2026-10-18)
+
+One original five-case normal lifecycle, session55534/wrapper791854, finished
+1F/0E/0S among five cases: the original solo Knuckles cold death remains input
+11174. Four other cases pass. Maven50.762s, Popen-to-reap51.460940599s, queue0;
+production up-to-date and4210 test sources compiled inside that one lifecycle.
+The sole diagnostic failed the footer size cap (finish717 -> emit697), so the
+witness is INVALID. No footer exists; no prefix pose/load/caller attribution is
+qualified. Original gameplay failure and diagnostic suppression were both read.
+
+Root DIRECT read all five identities, full XML failure/suppression byte-exact in
+TXT, all73 properties/full8123B classpath+duplicate and all nine stderr streams
+through54 full unique lines plus complete ordered links. Console truncation is
+separate; no exhaustive compiler-warning claim. The journal's75 strict-LF rows
+(header1/initial1/checkpoint16/change57) and437128 physical bytes are resource
+facts only. No missing footer was reconstructed. All three originals accepted
+for metadata-only consumption after durable accounting, with full hashes:
+- `target/soz-death-state-root.jsonl`:437128B, `aee289e17d244a1fda23b3bf73d59d16c80be7877c38beb94b883c57d71a845c`.
+- SOZ XML:44213B, `3e6ed00c344ff4e2acd35f87b22369e24b80d95c6a0d0ca98bb638910c49de77`.
+- SOZ TXT:4904B, `0b2aca1cadeca64179df0eba5c385300ccf7e409cbaf3a2a10e8ad3a2412d668`.
+
+Separate SOURCE decision changes ONLY FOOTER_RESERVE65536 ->131072 in the
+existing temporary witness. Current whole source `4c1c0acadd375fbbe375c23f06c1acd831eb87086ac0b5c121309dbab6e765ba`;
+reversing that one literal recovers entire tested `7a23d7904af71da2c61debc6f4537bddaad79575eb122e616e27a21ab6aec3b0`.
+Removing all22 diagnostic blocks still recovers the permanent semantic source
+`26bda778d82ea7c19ad6b7b1c4c4e2982caea119b0405d7e30823551d0d70a76`.
+Strict physical total remains <1MiB and<=256 records. Nonfooter attempted charge
+is<917504; footer including LF is<=131072; combined maximum1048575. Full attempted
+bytes+record remain reserved before both writes; partial attempts stay charged.
+No query/sample/ring-tail/action/input/error/semantic oracle was changed.
+
+Root actual-source/inverse and fresh targeted independent source review found
+no material resource issue. Independent arithmetic models qualify the partition,
+not future Java cap fit or gameplay. The corrected source is uncompiled; target
+still contains the earlier7a23 witness. After all three original sizes+fullSHA
+match together before any unlink under metadata_slot ALONE, preserve all17161
+compiled SHA/size/mode/mtime, then allow ONE changed-source five-case lifecycle
+with the exact prior argv/environment/property. No retry/tuning if invalid again.
+No Main baseline diagnostic or input/runtime repair is authorized by these facts.
+
+### Root SOZ valid phase/death witness and matched baseline gate (2026-10-18)
+
+The reviewed changed-source4c1 witness ran ONCE, session38448/wrapper830126,
+normal7GiB/8cores, displayed queue18s. Actual5T/1F/0E/0S; four original Sonic/
+Tails cases pass, solo Knuckles still fails original cold-death assertion11174.
+Production up-to-date/test4210 compiled INSIDE this lifecycle. Maven54.090s,
+Popen-to-reap72.560284651s/suite29.214s/Knuckles3.409s. No retry/source/input edit.
+
+THIS invocation's witness is VALID:76 strict-LF rows,517767B, complete retained
+footer80638B, firstDiagnostic null/additional0,12615 attempted=returned original
+steps,50705 read guards/74 output guards. ClosePending is resolved by no XML
+close/diagnostic suppression. Strict1MiB/256record/128KiB reserve fit is observed
+only here. Historical session55534 remains INVALID and its accepted originals
+were consumed only after all three full hashes/sizes matched before any unlink;
+all17161 compiled bytes/size/mode/mtime were preserved through that cleanup.
+
+Root DIRECT read full header/footer, all73 event metadata, all136 unique scalar
+state vectors, all eight complete retained step-pair scalars, original XML/TXT
+failure exact, five identities,73 properties/full8123B classpath+duplicate and all
+nine streams via53 full unique lines+ordered reconstruction. The source author
+completed all76 trees/136 states/1452 unique nearby rows/659 actual references/
+123 ordered nearby arrays; memory-only expansion reproduced original UTF8+LF
+bytes exactly. No copy/archive/receipt or derived raw file was created.
+
+Observed OUTER steps: bonus entry3215; TITLE-to-BONUS release3329; saved return
+3549; TITLE-to-LEVEL/control release3649; hurt3954..3998 and10875..10909; first
+dead11174. Final retained eight steps11167..11174 stay same level/player/gen3/
+INTERIOR_RETURN. Last pre centre(10352,3079), vy2800; post centre(10352,3072),
+vy-1736/deadtrue. These are raw step-boundary observations, NOT a death caller,
+geometry/contact or camera-bound branch proof. Nearby26 typed entries expose
+stored PRE_UPDATE coordinates of unknown age, never current actor geometry.
+
+All three originals remain SINGLE original paths for matched analysis:
+- journal SHA `9bece1e3efe96ad9af3efc0eaab9a1e5669e35e29e6e5645854e20e1bce6753b`.
+- XML43506B SHA `18ca77abf80e363ddd9503f909617a9ba0d99b25632c38067918b2b3da447bd8`.
+- TXT4196B SHA `ad728df1242e0bffedcff7b073a49fe47debbfb80bd3f8103ec42c0f707c3d1c`.
+The exact manifest remains in the existing ownership entry; no cleanup yet.
+
+A separate Main50348 matched-tree gate adopts only this whole witness with the
+two prior R4 expected receipt-label tokens normalized to observed ORDINARY:
+whole `f7ce3afaccfa56be06a5f6b9056eef869c828bed3de239647611a93fcb8ff267`.
+All22-block removal recovers Main0aa1; reversing only those two tokens recovers
+Root4c1. Distinct CREATE_NEW Main journal path, same five-case argv/env plus the
+single diagnostic property. No runtime/BK2/input changes. Sparse Main output may
+not contain input11174, so no equal-window/first-divergence claim from missing
+samples. Both per-run reference IDs remain local. Retain new originals; invalid
+or novel prerequisite/cap/compiler failure stops without tuning or retry.
+
+### Root checkpoint — owner-clock route, physical-world fixture, return-row ownership
+
+HCZ qualified runtime11/lifecycle/binding/independent OWN test (14 sources) were
+preserved normally in LOCAL `945b50d8f024c9417e2357d828bad53c6b32607b`.
+Historical R95 compiler STOP and R96 seven public patch-lookup passes remain
+separate. Original R97 canonical session42032 ran once:1T1F0E0S, HCZ62 equals
+11physics+51animation, byteexact R80/R85 payload. Incomplete seg13 now63222 equals
+54548physics+8674animation; physics94 fewer without rowwise localization.
+Historical +17P2 animation/+4mapping regression remains UNWAIVED. Ownership
+still lost88306/gen10/normalizedact1; no new receipt/death/caller witness.
+Root DIRECT read all20 retained originals131724B, full failure/hardware4/TXT,
+72props/classpath and all954 stderr lines via27 full unique lines+ordered vector.
+No cleanup or integration; actual activation-seam audit is read-only.
+
+Cold R84 session40992:124T3F0E0S/9classes,121pass. New bank14 and queue16 value
+checks and all other classes pass. Three world failures compare synthetic
+Camera shake(2,-1)/(3,-3) with restored(0,0), before full replay closure. Camera
+captures/restores offsets; AFTER entries restore, SSZ parallax rebuild derives
+its handler-owned(0,0) and writes Camera. SSZ launch shake uses Y-copy instead.
+This is an inconsistent declared synthetic fixture, not a reached restore bug.
+Root inspected all18 originals263651B/all124IDs/full3 failures+TXT/all72props/
+8057B classpath and eight full unique stderr lines+all case links. Retained.
+R85 SOURCE-only authorizes current Camera return to the asserted existing SSZ
+handler offsets AFTER physical words are copied, BEFORE registered capture;
+nonzero stored words/wrap oracle, ALL keys, real recreation and twice replay
+must remain. No runtime repair, comparison exemption or execution yet.
+
+Main SOZ R5 session result is INVALID:5T1F0E0S, diagnostic strict UTF8/footer
+reserve cap at input16678. Body916324B plus next4079B exceeded917504B reserved
+body ceiling. Footer exists, firstDiagnostic cap, original route exception null;
+route readiness23803/all29windows is original stdout, not a five-pass result.
+Three original files1005279B retained: journal959572B SHA
+`fa70bb4321651d5553ea67f95f8c6fe7a94825a55f0416cc8d451eaf6444316b`,
+XML41211B SHA`51138d66aadd1de24fbdf35b75ecd9fa03bcc11010b5d2da7c9ff5dee5f8df4a`,
+TXT4496B SHA`b0fc7ba1c65a0420f3b53fd3bae81e997a5338b400825caeb4d7506d3bcfaab7`.
+No Main row11174 sample; no valid matched window/first-divergence/caller claim.
+Root valid38448 remains separate; both sets retained, no retry/cap tuning.
+
+FDF R81 valid actual visits show both native and Java last childLF34/parentLF35;
+no owner wait-count fix supported. A separate source question is Option B's
+assumption that return row0 executed: base1763..1787 seeks+1/admits consumed1,
+while actual title release returns SETUP_ONLY before ordinary frame execution.
+Zero-based movie/input/endpoint contracts do not explain this as label offset.
+R82 SOURCE-only asks for an independent real release/attachment old-red and a
+genuine already-executed-row0 control. Caller-supplied rowsConsumed/seek is not
+execution proof. No runtime/offset/readiness change or new execution authorized.
+All11 R81 originals708995B and native qualified inputs remain untouched.
+
+No Root/Main runtime, fixture inputs, refs, config or native submodule changed.
+Root index empty; only existing Plan and temporary SOZ witness remain owned WIP.
+No live Root JVM; current child source/audit scopes and expiries are registered.
+Delivery remains blocked by unwaived regressions, open route frontiers and
+pending affected composition checks; no integration/push certificate.
+
+### Root native bonus-entry archive corroboration and bounded world closure
+
+Independent source/ROM read of native044 confirms the ACTUAL star-post Glowing
+Sphere path: loc2D4AE selects1400, loc2D4CA writes current/apparent and restart;
+Level reentry installs common Obj_TitleCard atB250. No ordinary SOZ Act3 skip.
+Its initializer queues Num1 before selecting bonus art/elements. Exact call PC,
+ROM source, VRAM byte destination, decoded size/module count:
+- 2D6D2:0D6F28 RedAct ->A000,1952B/1.
+- 2D6EE:15C3A2 S3KZone ->A200,384B/1.
+- 2D71A:0D6D84 Num1 ->A7A0,512B/1.
+- 2D750:0D726C Bonus ->A9A0,1344B/1.
+Four archives/four decoder modules/4192 decoded bytes; whole assets match ROM
+CRC63522553/SHA1cfbf98c36c776677290a872547ac47c53d2761d6. Later bonus elements
+use mapping13/14 and never draw the act number, but its queue call still occurs.
+Root titlef02866ab matches this selection; Main6e664c82 omits that archive.
+Separate bonus/character Nemesis PLCs and terrain are not title module parents.
+This is selection corroboration, not measured timing, invalid Main prefix cause
+or a death-branch proof. Fixed-frame engine-authored controller may need a
+separate public semantic-phase recipe; no input/runtime change is authored.
+
+Cold R86 corrected whole-world focus passed5/0F0E0S, session reportedcoarsewait5s,
+Maven24.913s/class.974s, parentelapsed unknown. Both pending/open controls reach
+twice forced actual actor recreation, all registered keys and same forward;
+copy/wrap/reset/new-world cases pass. Root read both retained originals25612B,
+all5 IDs/times/fullTXT/72props/8057CP equality+duplicate/all5fullstderr streams
+(11 FAST warnings), no issues/stdout. Local exact component preservation is
+separately authorized; native publication/renderer/Cold629/49613 remain OPEN.
+
+
+### Root checkpoint 2026-10-18: setup-only row ownership and finite SOZ ingress
+
+- FDF R84 whole base source 09851f20768ef9c8c73a4bac29c3789c39ae6eba98086ac8f9519b0f4fc66da4
+  restores input/comparison/admission base zero after the observed fresh saved-return
+  SETUP_ONLY release. Whole-region inverse recovers 967c9896; organic handling is unchanged.
+  Root and fresh independent review found no executable issue. Three obsolete comments
+  still prescribe Option-B row one; R85 reconciles only those comments before the
+  separately authorized sole original Mega method request. No FIFO or route forecast.
+- Main50348 SOZ R6 finite source 48ef20d2133ef20236e31c9862df5706eb8b33701c64525f88b6b29afa5c560f
+  replaces the INVALID long-route observer with actual bonus ingress plus 128 original
+  step/drawing pairs. Fifteen block removals recover semantic 0aa1; only two expected
+  receipt labels distinguish the strict Root variant. Entire source read. Fresh semantic
+  review found no material issue; resource review accepts prewrite accounting and limits,
+  but requires retaining later diagnostic exceptions and updating the successful tail
+  only after guarded output succeeds. R7 is these two source-only corrections.
+- Root's existing valid 38448 three originals remain retained and unconsumed. Main R5
+  INVALID three originals were accepted only for accounting and consumed by R6 after
+  joint full-size/SHA verification; all 17032 compiled artifacts were preserved.
+- Cold R87 local component preservation 37e906f9ad52414079855e3e8420ccca0e1f8260 and
+  the five-green corrected world fixture remain bounded component evidence. R88 now
+  authors only a native partial Animal header writer; no display publication is claimed.
+- HCZ R98 source work remains separate: actual activation operands plus final vectors;
+  historical localized +21 animation errors remain unwaived. No current route proof.
+- No Root JVM, integration, push, broad repeat, diagnostic copy/archive, or pass receipt.
+
+
+### Root finite SOZ ingress adoption and accepted prior diagnostic disposition
+
+- Main R7 source dd8c2b9fed3a10a76882befc80c5a62eff8876f4ae91e5387b48ffc82c793857
+  accepted after complete Root read, fresh semantic/resource reviews, and targeted
+  closure of both reporting findings. Tail insertion follows guarded output success;
+  later footer/close diagnostic exceptions are retained on the same first exception.
+- Root adopts exactly that source, reversing only the two expected saved-return receipt
+  labels from ORDINARY to INTERIOR_RETURN. Whole source is
+  fce92f8d0930c1859785551105df40e01fdbc6c61ea8d0db15982857b9a580f4; removing all
+  fifteen marked blocks recovers unchanged semantic 26bda. Removing the former
+  twenty-two blocks from 4c1c recovers the same whole semantic source.
+- Original runtime, movie, five-case flow, replay branches, drawing order, full-key
+  checks and 29-window obligations are unchanged. The finite observer stops all
+  world reads after its 128 pairs. ABI, reach and byte fit await the sole lifecycle.
+- Root DIRECT accepts all three valid 38448 originals (565469 bytes total) for
+  consumption after all three full-size/SHA checks together under metadata slot
+  alone. All 17161 compiled artifacts are preserved through adoption and cleanup.
+  Durable observations above remain bounded; no new raw copy/archive/receipt.
+- Next request changes only the observer property path to
+  target/soz-bonus-ingress-root.jsonl, retaining the exact original normal method
+  selection/environment. Original death at 11174 is not waived; no matched causal
+  conclusion exists until both new finite journals are qualified and compared.
+
+
+### Root actual finite SOZ ingress, session63066
+
+- Sole original five-case normal request, HEAD57074e49/sourcefce92f8d,
+  JTO-only EGL/no CLIgl. Main classes up to date;4210 test sources compiled
+  inside this lifecycle. Actual5/1F/0E/0S: original Knuckles cold death11174,
+  other four pass. Suite29.470s; case7.748/8.114/3.383/7.130/2.778s.
+  Maven55.926s; queue251s reported; Popen-to-reap308.282813953s.
+- Valid finite journal131records/279138B; header+ingress+128pairs+footer.
+  complete=true, firstDiagnostic=null/additional0. Original failure only,
+  no suppressed diagnostic. Guards7976read/129output; footer16260B, body
+  262878B. Limits satisfied THIS invocation. FullVInt null; retained footer
+  is not post-cleanup world state. No retry/extraJVM/guard/native run.
+- Entire JSON byte-exact reconstruction in memory, all386state trees, axes,
+  saved17/checkpoint21, archives and every state field read via lossless
+  pools/columns. Exact footer tail=pairs121..128. Every postStep=postDraw
+  and each pre joins previous postDraw within this recorded projection.
+- Request outer3193 pendingfalse->true; actual bonus load3215. Stored17:
+  [2048,2048,43,0,0,0,0,0,6704,1064,6559,950,12,13,2848,3194,0].
+  These are actual immutable saved values, not a callback timestamp.
+  Four archives observed; pair8/outer3223 clears artLoading/handles, sets
+  artLoaded and first moves elements. Pair19 enters DISPLAY;21titleReady;
+  102terrainStarted;114/outer3329 releases BONUS_STAGE/control. Pairs115..128
+  are original forward replay offsets1..14. Final pose310,3537, LF14/OM15.
+  Death11174 is OUTSIDE this window, caller/cause unobserved.
+- All5identities/fullTXT/failure3692B exact inTXT,73properties/full8123B
+  classpath6220a56c+duplicate and all9streams read. stdout1045B;stderr14132B
+  /112lines via54fullunique+allorderedcasevectors. FAST6/estimates49/one
+  EggPrisonno-services warning;18compiler deprecations/removals separate.
+  Initial combined tool display truncation repaired by complete CP/property/
+  stream read; no report/journal data accepted from a truncated view.
+- Retain SINGLE original3files326896B: journal7c23fe2c0324e048c9435eaf18aa1cbc2bf1c84a1b1e411ae976ab1b561a358c;
+  XML43562B/48c63c2adef5970ddf587f8f78dd509e01ba318a309cfbb073c114680656ab1f;
+  TXT4196B/17856c4e4ed9b1a26052c425632f9f674c69e6d7bbba834c880b31703a0b7ab9.
+  Current17163class SHA/size/mode/mtime inventory recorded. Prior17161
+  included2oldSozDeathWitness outputs now absent during authorized javac;
+  new finite witness3+generatedswitch output observed. No agent class deletion.
+  A local inventory expectation17164 was corrected to ACTUAL17163 before
+  any Plan/registry write, without another workload or output change.
+- Source/runtime/configOwnMain0600SHA-mtime exact/indexempty. Main member
+  pending terminal+coverage qualification. No offset/input repair/route waiver,
+  integration/push/cleanup/archive/copy/receipt. Root owned wrapper reaped.
+
+
+### Root DIRECT FDF R85: observed row-zero handoff advances to next boundary failure
+
+- Actual original Mega1T/1F/0E/0S, session42348, source2a569ab1/comment-only
+  reconciliation of executable09851f20. Queue522s displayed, Maven1:21display,
+  method5.809/suite6.084s; parent636.343675 includes queue/observer delay.
+  All retained10originals99309B fully read and jointly rehashed unchanged.
+- Original outer failure now next starpost_bonus boundary unobserved in returned
+  aiz_2; no FIFO-full exception THIS invocation. Actual returned JSON complete
+  true,21205TOTAL=20122physics+1083animation,lag135/bootstrapwarn0. First
+  noncamera178 rings74/75; all35other available fields match at that row.
+  Earlierseg0=1camera andGumball16/lag21 unchanged bounded reports; gap2/0.
+  No actual compared counts serialized, recent5 at2108 not exhaustive vectors.
+- Root read complete20867B error+allstacks/suppression tree;49FULL timing
+  identities (12earlier+37returned), exact TXT body+prefix/suffix,72props/full
+  8057B193f9bf9classpath+duplicate; all107stderr28049B via37fullunique lines
+  and exact order, including all3x36fieldtables/tails/nearactors. All4JSON+
+  4owners/fullarrays/paths read. TwoFAST+34SMPSshadow warnings, no timing
+  readiness/nativecause inference. First returned unmatched842PRE direct36
+  e070/843POSTmodule24b218 has no pending engine job; later currentpending
+  36/24 must not be relabeled/renumbered.
+- XML72200B981e442c40a528efd3613749767fa8bcded9d5d5798889308585547a21bb2b1a;
+  TXT21346B3832aa5d772533870ede703c851688967fdef6e9b42623e8f443abd627513edd;
+  other8originalJSON/owner bytes5763. Acceptance is for bounded qualified
+  row-zero harness correction and further-source accounting, not routegreen,
+  FIFOcausality/closure, nativebirth/readiness or SS/FDF (both UNREACHED).
+- Next delegated scope may locally preserve base+existingfacts docs with normal
+  hooks and then consume ONLY these10 after all10SHA/sizes jointly verified
+  under metadata slot alone, compiled52 preserved. NativeR78referenceinputs
+  stay retained. New source inventory starts at first178rings and actual next
+  starpost boundary ownership; no runtimefix/logger/newtest/extraJVM authority.
+
+
+### Root DIRECT Cold R89: bounded native partial-header writer qualified
+
+- Source92 six runtime paths+one new test, HEAD37e906; sole normal9wholeclass
+  request98031 terminal0. Actual79/0F/0E/0S: newpartial4/RNG7/launch4/pending4/
+  mandatoryS3K60 including both loading identities. New4 times.105/.065/.069/.062s.
+  All original mask/knownness/provenance, actualdispatch/RNG and twicepending+
+  initialized full-key recreation oracles reached; actual chosen RNG variants
+  remain unreported. This is not full-header or nativeCold629/49613 proof.
+- Entire18XMLTXT234829B Rootread+jointfullSHA/size/mode/mtime recheck. All79
+  identities/times/children/full9TXT,72equalprops/full8057Bclasspath3c94c239+
+  duplicate and all original streams read. Initial oversized combined display
+  repaired by complete compact79identity/child list and full nonCP properties.
+  No failures/errors/skips/suppression/stdout. Exact stream counts recorded
+  from originals; explicit collision negative belongs to passing decoding case.
+- New writer preserves nativecode/routine-before-RNG/artA-after-RNG order,
+  actualinjectedworld/OWNslot and untouched+6height/unknown holes. No actor
+  construction/restore initialization writes, no Draw_Sprite/queue/publication.
+  Four old-file inverses and three new-file absence inverses verified against
+  HEAD by fresh review; Root read all changed runtime/newtest source.
+- Root accepts originals for later bounded accounting. Local7source+existing
+  facts-doc preservation may precede metadata-slot-alone consumption of ONLY18
+  after all18fullSHA/sizes together; all17138 compiled artifacts preserved.
+  Old12b12 red test and all external native inputs/PE remain excluded/intact.
+  Next source inventory concerns actual native caller writes needed before
+  physical Draw_Sprite, with no default-zero height/pose or complete-header
+  claim. No new workload, runtime authoring or route gate follows automatically.
+
+
+### Root DIRECT finite SOZ Main member and explicitly limited matched prefix
+
+- Main R8 original XML/TXT reports5T0F0E0S, suite27.583s, Knucklesready23803/
+  29windows. Observer failed at admission; actual Maven exit/fullconsole and
+  exact per-class pre/post delta unavailable. Do not call the lifecycle green.
+  Original request was not repeated. Queue237.224s/hold52.8s per queue telemetry.
+- Three original files312124B fully read: XML37118B5875d27e4cd0b7234ca37d773151dd38b9c99dacf72b6ed9ddbc88c1b92f6f4e;
+  TXT332B244c7fda2db6f6e953ed8d807e88f293223681fc112c002e2e19bcec5bd003e7;
+  journal274674B4d79be381c65cb49e941ce7d0a45909570e16cfb8e97c7cb76ee2149dcb3571d.
+  All5IDs/times/fullTXT/73props/full8057CP8a9f8a12 normalized against previously
+  full-read RootCP+duplicate/all10fullstreams read. Every131JSONtree/386states
+  reconstructedbyte-exact with fullRootpools plus ALLnewMainvalues/orderedIDs;
+  footer last8 exact, complete128/diagNULL/additional0, body258494B.
+- WHOLE128 matched coverage FAILS at pair103: RootOUTER/offset-1/afterStep,
+  MainFORWARD/offset1/draw, despite same movie3318. No classification after102.
+  Ingress+102pairs independently qualify on declared case/type/allordered
+  relativePair/movie/replayOffset/branch/drawHook coordinates and keysets.
+  ALLsaved17 and request/preloadcheckpoint21/axis/player operands agree
+  (exclude ONLYrun-local refID tokens, no physicalcrossrunidentity claim).
+- Qualified prefix first differs at ingress: Root handoffIndex232/Main-1;
+  Root4archives/Main3. First2semanticrows agree; RootNum insert source880004/
+  compressed185/dest42912/decoded512/modules1, Stage thenfollows. Native4archive
+  selection is independently supported; it does not by itself explain delay.
+  Main artready/movement6 vsRoot8, atTarget/DISPLAY17 vs19, titleReady19 vs21.
+  Both terrainStarted true at102. Main releases at102/outer3317 withtimer84->0;
+  Rootat102timer82->83 staysTITLE, independently releases114/outer3329.
+  Allremaining captured primitive fields agree in qualifiedprefix except
+  exactly documented titlegates/elementX/timer andrelease mode/OM/control.
+- No original saved-state divergence or deathcause shown. Rootdeath11174 lies
+  outside both windows. Sources differ in several existing qualified runtime
+  components, not an isolated one-change experiment. Retain all6 originals
+  while exact sourcegate/engine-authored input contract is read; no rerun,
+  runtime revert/inputfit, nativeparity/whole128/route certificate.
+
+
+### Root DIRECT: HCZ R99 actual activation, 2026-10-18
+
+- Sole frozen original method request session43344 terminated1: 1T1F0E0S,
+  method27.995s/suite28.275s. Queue255s, Maven1:45 displayed; other durations
+  unknown. Same strict62-total segment11 and segment13 ownership88306 failure,
+  nested original ownership plus four hardware identities244/171/245/172.
+- All21 original files876374B jointly fullSHA/size/mode/mtime checked and read:
+  XML116347B5cc7efea604881411fe1436dce87fa2a8d18a3a2a5cf375bd0440f517b483747;
+  TXT5050B4166a9866186c47fe76b807ac82e148889286c54397752f45c10a612cf5cb3db;
+  journal743977B674f699a03fe21135658d64860c5854840264ee8635e2bec821ff7bb90873d81.
+  Full failure4485B exactTXT plus residual, all72properties/full8057B b26b
+  classpath+duplicate, all954stderr88565B through27full unique lines and exact
+  order, both34field tables/all10Snake actors read. Warnings465SMPS+2FAST+
+  1markRemembered separate from comparator0. All9payloads/9owners fully read.
+- Every3240 journal record read: header,18IDs,16owner packets,arm,3203 final
+  four-field vectors,retained footer. Exact in-memory dictionaries/backcopies,
+  scalar/clock runs reconstruct every value; whole JSON serialization byte-exact
+  after preserving original newline escape. Initial oversized clock display
+  repaired with complete compact clock runs. No durable derived raw copy.
+  Body740945B/footer3032B, owner30packets58452B including14ID definitions,
+  225176guards,2success scopes,firstDiagnosticNULL; original reports unchanged.
+- Actual first registered P2/Tails fixed underflow at generation8 LF3451 and
+  generation9 LF2036: original airEvent(0,-1,-1,true), OWN0, actual canStarttrue,
+  OWN120 before air reset, begin entryair30, success rawanimation17/sharedtimer0.
+  Current stock eventManager13 selected; original query46031/generation9 true
+  replaces stale retained query32594/generation8. Source and actual stacks join
+  fixed countdown -> event fixed dispatch -> GameLoop/LevelFrameStep and native
+  begin action. Finish at LF3571/gen8 and LF2156/gen9 sees OWN0 after prior
+  4/3/2/1 outside states, sets deadfalse->true/sharedtimer0. CPU entry unobserved.
+- Generation9 activation lies between final comparison2040 and2041; expected
+  P2animation stays0, actual becomes17. These are directly observed ENGINE
+  callers and operands, not corresponding native callback qualification.
+  All3203 final deliveries present four fields, refs14/15/16/17 stable, no
+  duplicates/all-absent. Comparison rows0..3208 omit1/6/12/14/17/30; all clocks
+  separate, fullVIntnull. Four error counts1232/2683/2266/2493 total8674.
+- All9payload bytes equal R97: HCZ complete14208/62=11physics51animation;
+  seg13 incomplete63222=54548physics8674animation. Recent3208 is not a count.
+  Retained footer final gen10/LF0 is pre-cleanup retained projection only.
+  Native activation/caller, -94physics localization, ownership cause and
+  historical+21 remain unresolved/unwaived. No route or readiness certificate.
+- Root accepts originals for existing-doc preservation and bounded cleanup only
+  after durable facts. No fix, retry, source variant or extra workload follows
+  automatically. Next source question is the independently qualifying native
+  activation/finish evidence available at corresponding original input/service
+  boundaries, with missing operands explicitly unknown.
+
+
+### Source checkpoint: independent ring carry, caller word and SOZ phase contract
+
+- FDF local54f3de67abed7707db096618d0afaebef29c8a79 preserves tested base2a569
+  plus3existing docs. Root reads all121source handback lines/26readpins, parses
+  committed7policyblock/finalGPT6.1; all52classes SHA,size,mode,mtime remain
+  exact and accepted10/99309B originals are absent after authorized consumption.
+  Native R78 journal/PE/four sources remain INPUT. No new execution.
+- Independent source review confirms bonus ring carry omission candidate:
+  native starpost sets keep; bonus13..15 bypass keep reset; Gumball restores
+  origin without clearing keep; subEB1A skips ring table wipe; death clears it.
+  Java coordinator captures object-only persistent state at79..83 (correcting
+  R86 line reference), queues it at118..119; new ring manager receives only the
+  separate big-ring table. This does not identify row178 pickup or starpost cause.
+  Pure isRingCollected false also means missing placement: both-load canonical
+  existence/uniqueness is required. New R87 source question uses actual ordinary
+  ROM-ring acquisition and public bonus return, plus independent non-kept reload;
+  no private bit seed/direct collect/pose teleport, no old-red forecast or run.
+- Cold local07d8c604ad127a4a1f5c34165b0127ba23e815f9 preserves exact7tested
+  sources+8existing docs. Root parses actual7policies/finalGPT6.1 and verifies
+  all17138compiled SHA,size,mode,mtime; accepted18/234829B reports now absent.
+  R90source128lines read. Next partial native write is child+46 parent3 word,
+  actual OWN addresses, after successful allocation before policy retirement.
+  Independent source design locates spawnChild before notifyOwnedChild and a
+  package-private pending-animal helper through existing internal capability.
+  New R91 candidate scope is ONLY that word with clock explicitly unobserved,
+  no public API/whole-header/pose/default/DrawSprite or publication claim.
+- SOZ R9 source handback98lines/37paired pins read from existing canonical phase9.
+  Root explicitly arms active-bonus terrain handoff, Main's context-only predicate
+  does not. Fresh completion requires terrainStarted plus no unprepared physical
+  module parent; witness omits relevant PLC/deferred/direct/preparation operands.
+  No release/death cause or whole128 comparison is inferred from prefix102.
+  Native four title archives remain correct. Original engine-authored script
+  documents historical frame retiming but does not declare exact presentation
+  repetitions versus playable action ownership. It cannot be segmented safely
+  from current102/114 release or a fitted12-frame hold. Smallest sound future
+  redesign is an explicitly authored test-owned three-segment action controller,
+  public post-release identity/control gate, continuous pad history, and external
+  cursor+last-pad restore beside full world replay. Exact boundary action content
+  still needs explicit authorship; old timed-route failure remains strict.
+- HCZ R100 normal docs hook stopped for incorrect Agent-Docs:updated trailer;
+  only four engineering docs were staged, no AGENTS/CLAUDE change. Root reads
+  all289 additions and actual rejection; jointly verifies95preserved class
+  artifacts+21retained originals. Original106 inventory plus3additional Drowning
+  outputs equals109;14proven source-bound outputs removed leaves95. Restored
+  five sources exact; target is deliberately incomplete, no rebuild freshness.
+  R101 authorizes ONLY correct Agent-Docs:n/a, normal single commit retry and
+  bounded accepted cleanup, then native-evidence source inventory. Historical
+  R100104 remains actual hook STOP, not a bypass. No new JVM/native workload.
+- Active sources: FDF R87/98, Cold R91/95, HCZ R101/105. Main R9/9 terminal.
+  Root no live job, same57074 source plus finite SOZ test/Plan WIP; no integration,
+  push, route green or waiver of HCZ+21/-94/ownership, Cold629/49613 or FDF limits.
+
+### Root checkpoint — reviewed ring retention and allocated parent word (2026-10-18)
+
+Root remains57074e49 with the existing finite SOZ observer source WIP; no Root JVM,
+integration or push in this slice. Main50348 and foreign dirt are preserved.
+HCZ R101 docs290db8e2 independently verified: exact four owned docs, committed
+message4dc520d4, seven policy trailers and full final GPT-6.1 coauthor. All95
+preserved classes match SHA/size/mode/mtime; five diagnostic sources match restored
+HEAD, fourteen previously removed owned outputs and temporary test are absent.
+All21 accepted R99 originals are absent after documented metadata-only consumption.
+Historical R100 hook STOP remains preserved. Current target remains a partially
+restored diagnostic compile epoch; no matching-bytecode or new gameplay pass claim.
+
+Root read the R101 native AUX/CSV endpoints: hcz_2 fixed95 OWN0/120/119 and1/0/0
+qualify independent native outcomes; hcz_3 selected windows retain OWN0/air30 with
+underwater clear. They do not identify the native branch or CPU/water writer.
+HCZ R102 source-plan106 now targets the earlier row287 Snake contact: original
+ROM placement/base/angle/respawn-pointer identity, using retained evidence first.
+No class/XY/subtype cross-map, near-dump absence inference or native execution.
+Historical +21 animation remains unwaived, -94 physics unlocalized, ownership88306.
+
+FDF R87 actual whole324-line source9aac7afe and Plan40fa4c9f read; independent
+fresh source review found no material defect. Natural same-frame placement-bit
+transition/count correlation, no Lightning attraction, new-world title/history
+and spatial reacquisition exclusions precede final independent retention/clear
+oracles. All acquisition and lifecycle reach remains unobserved. R88 actual99
+authorizes one frozen normal whole-class lifecycle only, original JTO-only EGL
+recipe, no CLIgl, retry or source tuning. Original reports must remain for direct read.
+
+Cold R91 six runtime changes and385-line testa50d2242 read; seven pins and six
+whole-file inverses match HEAD07d8, Plan0c84ea87 prefix exact. Fresh independent
+review found no material defect. Only child+46/+47 parent OWN low16 is written
+after allocation/before notification; clock remains UNOBSERVED. R92 actual96
+authorizes one stored12-class normal focus including required S3K consumers,
+frozen JTO+CLIgl recipe, no retry. No publication/native-birth or Cold-route claim.
+
+SOZ Main-matched R10 remains source-only: original release-gate decision/pending
+operands, route and input unchanged. The prior six Root/Main original artifacts
+remain retained. No semantic route rewrite, fitted hold, readiness or causality
+claim. Four literal delegated identities are recorded in the canonical Root slice;
+all results require actual terminal inspection before acceptance/consumption.
+
+### Root DIRECT — independent ring retention R88 (2026-10-18)
+
+Sole FDF normal whole-class request73580 at HEAD54f3/test9aac:2T1F0E0S,
+Maven24.924s/displayed queue0, suite2.001s. The positive public saved-GUMBALL
+return reaches FINAL line93: canonical RingSpawn5832,1004/placement1 was collected
+before entry but false after actual INTERIOR_RETURN and natural title/history
+release. All unchanged acquisition/count/clearance/unique-placement prerequisites
+pass. Independent fresh ordinary same-origin reload control passes. Numeric
+intermediate count/receipt/positions and negative placement are not serialized.
+No row178/FIFO/starpost/nativecaller/readiness/ordinal/SS/FDF causality follows.
+
+Root reads BOTH original reports28539B: XML27098/5208a033 andTXT1441/93fb2539,
+full934B failure/stack exactTXT, all72properties/full8057classpath193f9+duplicate,
+all3134B/28stderr lines (5FAST-NONE+9deterministic estimates), zero stdout/cause/
+suppression/skips/unknown children. Original sizes/SHA/mode/mtime plus all55
+current owned classes jointly verify exact. No new diagnostic file or raw copy.
+Root accepts both originals for existing-Plan durable account then metadata-slot-
+alone consumption before later source work. Preserve test9aac WHOLE and all55
+class metadata. No retry/fix/run is inferred from acceptance alone.
+
+Independent completion audit additionally finds ending PCM acceptance open:
+linked historical captures explicitly disable runtime audio; no qualified quiet-
+wind native/production pair is retained. Actual canonical Knuckles BK2 aa892856
+records typed GenesisFMSoundChip0/MAME_YM2612, Filter0/None; current production
+capture supports Nuked only and explicitly refuses chip0. A Nuked substitution
+would not qualify that movie. Native MAME synthesis/output/history support and
+independent register/DAC/PSG/sample accounting are distinct unimplemented work;
+request/expiry assertions stay qualified. No audio capture/core code was run.
+Main foreign HEAD685800df observed with the same unrelated dirt; no own adoption,
+rollback/rebase/ref writes or assertion of tested Main current epoch.
+
+### Root DIRECT — Cold allocated parent-word prerequisite STOP R92 (2026-10-18)
+
+Sole stored12-class normal request60527 at HEAD07d8/sourcef815018e ends95T6F0E0S.
+All six failures stop at new-test parent():339 touch predicate expectedtrue/false,
+before caller-word/all-key recreation oracles. Other11 classes pass88 tests and
+new unsupported/nonpending control passes; no component-word/Cold route certificate.
+Root reads all24 originals350543B, all95 case identities/times/12equal72properties,
+full8057classpath3c94c239+exactduplicate, all71stderr streams15240B via14complete
+unique strings and ordered exact reconstruction. Six full failure stacks reconstruct
+from complete25-line dictionary, exact matching TXT bodies/residuals; no cause,
+suppression, skip, error, stdout or unknown children. All24 original metadata and
+all17143 compiled SHA/size/mode/mtime independently verify. No raw copy or rerun.
+
+Source distinguishes the erroneous prerequisite: isOnScreenForTouch first rejects
+awaitingFirstTouchExecution or missing preUpdate snapshot; newly created parent
+has not dispatched. Actual EggRobo release body uses protected isOnScreen current
+camera geometry, not that touch predicate. Refresh geometry does not manufacture
+an executed touch snapshot. Correcting only this test prerequisite must preserve
+actual release/callback/allocation/count and every native-word/recreation oracle;
+no producer or prior-render marker may be seeded. A later source-only correction
+requires review before a separate sole-new-class focus. Root accepts originals
+for durable existing-Plan account then metadata-only consumption; preserve runtime6
+candidate and all17143 class metadata, known12b12 and every unrelated input.
+
+### Root SOZ original release-gate source adoption (2026-10-18)
+
+Root reads complete frozen R10 test1047lines and all three private runtime marker
+regions,109line handback/47paired source pins. Fresh independent review finds no
+material defect. Original release expression evaluates once with identical short
+circuit/exceptions; bridge returns unchanged result. Raw pending operands/strong
+bindings/known projection guards observe each actual new-GLOWING gate call through
+first true only; no later world reads. Original route/input/draw/45-call replay/
+29obligations remain exact. ABI/reach/capfit remain unexecuted and may invalidate.
+
+All47 paired source metadata and Root17163 class metadata match. ALL6 previously
+Root-DIRECT accepted originals639020B jointly checked fullSHA/size/mode/mtime before
+ANY unlink. Only Root3/326896B consumed under Root metadata_slot ALONE; Main3 stay
+exact/present for its separate owned cleanup. Root17163 metadata unchanged after.
+No archive/copy/receipt/class deletion. MainR8 Maven exit remains UNKNOWN.
+
+Under separate Root build writer, prior finite15marked blocks are replaced by R10
+Root test1f7176fd414a1e29a2cfa97211df16ea13af2862bb8513c5bb04d317eaddf20b.
+Marker inverse remains WHOLE26bda778 permanent test. Only2 existing expected return
+receipt labels differ from Main; actual observations never normalize receipts.
+Private runtime candidateb7b32cc8ba49f280a961fb86b63fc9df16bd9a25941380e773b6fab0cf3a205a
+reverses WHOLEf02866ab; no other runtime source changes. New root journal absent.
+One Root and one Main-matched5-case normal lifecycle are separately authorized,
+same original environment/3ROM/input, only respective fixed output property path.
+Strict192records/<1MiB/64KiBfooter/prewrite attempts and originalThrowable remain.
+Any prerequisite/ABI/diagnostic cap/I/O error stops that invocation without retry.
+No fitted input hold/controller rewrite/causal claim or route waiver follows.
+
+### Root SOZ original release-gate R10 sole execution: INVALID ID cap (2026-10-18)
+
+Sole normal method request session73696/wrapper1172523 observed exact argv/cwd,
+terminal/reaped exit1. Queue displayed0s; Maven01:38min display, finished12:43:24+01.
+Parent/hold precise timings unknown. Actual5T1F0E0S suite26.324s; original Knuckles
+case2.529s still fails cold death11174. Other4 cases pass. Source1f7176fd/runtime
+b7b32cc8 and original5movies/ROM/environment remain exact; compiler inside lifecycle.
+No retry or extra JVM. Original compiler-console middle truncation is not an
+exhaustive build-warning count; all original XML/TXT test streams are fully read.
+
+Observer INVALID: first run-local reference-ID bound at actual call46, suppressed
+after original cleanup on SAME original death. Journal47records/24051B has header,
+45 fully guarded CALLs, retained footer; first true never reached/recorded.
+All45 complete trees/operands/deltas/removals and envelope clocks reconstructed
+from EMPTY and read losslessly; header/footer/full failure6728B and exact TXT
+residual/5case identities/all72properties/full8123B classpath duplicate/full
+stdout and stderr ordered vectors inspected. No matched causal conclusion.
+
+Production Nemesis queue replaces activeEntry with a new immutable Entry for each
+progress step. Call45 actual active [ID128,1652826,904,268,202]; next reference hits
+128-ID cap. This is production value-carrier churn, not getter allocation.
+Independent targeted review confirms source59..66 and actual44 successive nonnull
+active references. Smallest unauthored remedy is explicit value projection of
+ALL four immutable Nemesis Entry operands/active-null/FIFO order, retaining actual
+raw refs in every per-sample read/serialization/output guard; no historical Entry
+identity tokens. Keep actual job/handle/descriptor IDs and every CALL unchanged.
+This changes observer schema only; no cap growth or future-fit forecast.
+
+All3 original files retained singly for DIRECT comparison; XML46605B/0993e15f,
+TXT7232B/1c1f3a62, journal24051B/283442bc. Full manifests/current compiled inventory
+and exact changes are in existing canonical Root entry. No cleanup/archive/copy/
+receipt/source restoration/class deletion/commit. Main counterpart remains owned
+by its existing single job. Ring R89/Cold R93 source reviews find no material
+defects; their separately bounded original focused requests have been issued.
++21 HCZ UNWAIVED, Cold native publication and SOZ cause/route limits remain open.
+
+### Root DIRECT Main R11 and explicit Nemesis value-schema disposition
+
+Root reads ALL3 Main originals77397B/full5identities/full6036B diagnostic-only
+failure/exact TXT residual/all73properties/8057B classpath duplicate (Root classpath
+normalized only by worktree prefix)/ALL10 full streams and61complete journal trees
+with original deltas/removal-order/envelopes. Main original Knuckles ready23803/
+29windows; diagnostic INVALID firstIDbound atattempt62,61fullyguardedCALLs, all
+resultsfalse/firsttrueunreached/originalThrowableNULL. Actual Main5T1F0E0S is
+diagnosticred after original success, not a routegreen lifecycle. Source2 exact,
+all17032 class fullSHA/size/mode/mtime independently verified. Root73 properties
+were also read; prior Root paragraph's72 was a prose miscount only.
+
+Main originals XML43278/bdd65940,TXT6540/7cc54f40,journal27579/9136b643 retained
+singly; Root3/77888B also retained. Both INVALID prefixes preserve different
+coverage; no matchedrelease/death attribution. Later source-only correction may
+project immutable Nemesis Entries as four scalar values, active null and complete
+FIFO order, preserving actual raw references in ALL per-sample guards but exporting
+no cross-call Entry identity. All other job/handle/descriptor identities, original
+CALL delivery/operands/limits/gate/route/input/error semantics stay unchanged.
+Both current-source inverses and INVALID originals remain evidence; no run here.
+
+One malformed SHA literal in ColdR94 inventory was uniquely repaired from actual
+unchanged classSHA/size/mode/mtime; strict JSON/all keys restored, no source or
+artifact change/backup. Existing .json.lock plus fresh-read/owned-subtree update/
+validated atomic0600 replace is now the required common writer protocol; inode
+locks/in-place writers cannot coordinate replacement. FDF's final postPlan fields
+were lost under competing old writer; native handback/Plan9a44/current original
+inventories remain. Root will reconcile only after DIRECT originals, not guess.
+
+Independent source research also finds CNZ2 playable-Knuckles screen-event trigger
+4880/B00 and separate capsule allocation missing from production; existing tests
+inject parent/route. Teleporter current early-arm/counter beam/next-level gaps
+preclude fullroute claims. Original layout85/0A late object is SSEntryRing, not
+checkpoint; rival82/10 deletes for playable Knuckles. No public short inlet proved.
+Ending original chip0=MAME fork source exists but1008-master-clock FM samples and
+independent PSG timestamps require distinct synthesis/output semantics; the old
+enhanced-chip harness cannot certify discrete core or final quiet-wind120 PCM.
+Source reuse licensing and exact tables/state history remain unresolved; no port
+or execution authored. Detailed owning pins/contracts retained in canonical Root
+source research entries. These are continuing requirements, not scope removals.
+
+### Root DIRECT FDF R90 kept-ring focus accepted (2026-10-18)
+
+Root directly reads all40 original XML/TXT544363B, all156unique case identities/
+times/20class totals, full20TXT, all20equal72property maps/full8057B193f9classpath
+plus exact duplicate. Initial display cut in35 RingManager IDs is repaired by
+complete bounded read. All102stdout/stderr streams reconstruct byteexact from59
+FULL line values/33 ordered vectors and all ordered case links; no unknown child,
+failure/error/skip/suppression. Both actual Loading identities/mandatoryS3K4 and
+exact2BigRing methods run. Warnings115FAST/100estimates27FPs/21fixture nullWAV/
+1intentionalcollisionnegative retain measurement limits; no readiness/audio proof.
+
+Actual156T0F0E0S/20classes. Unchanged genuine9aac positive ring-retention case now
+passes0.460s; independent ordinary-clear control passes0.343s. R88 finaloldred to
+R90 boundedgreen qualifies semantic fix, not row178/nativecaller/FIFO/whole-route
+cause. All40fullSHA/size/mode/mtime and83 source-bound class metadata verified,
+source3/test9aac exact. R89 snapshot/load ordering and null/legacy cleanup reviewed
+without material defect. All originals remain singly retained pending scoped
+local preservation and later consumption under metadata_slot ALONE. Native R78
+journal/PE/four source inputs retained. Next original maintained route is separate
+bounded validation after normal local preservation; no pass/frontier forecast.
+
+### Root DIRECT Cold R94 later release prerequisites remain unqualified
+
+Actual sole whole newclass7T6F0E0S suite1.144s. Corrected fresh-parent touch-false
+assertion now passes. Later public release still produces no child: four failures
+expected1/actual0 (onlyNewAnimal366,notification156,allocation181); two probe/restore
+cases expected animalsLeft3/actual4 at200, so actual allocation attempt absent.
+All6 full original failure stacks reconstructed byteexact from28complete lines
+and ordered vectors/exactTXT bodies/residual; all7identities/times/72properties/
+8057B3c94classpath duplicate,7stderr streams2355B/30LF/15FAST read. No stdout,
+error/skip/cause/suppression. Source c837 and runtime6 unchanged; intended word
+oracles/full-key replay branches remain UNREACHED, not an oldred or runtime proof.
+
+Original XML45768B/5a95c661 andTXT19927B/fa002d7b retained singly65695B; all17143
+compiled fullSHA/size/mode/mtime independently verify. Root accepts exact facts
+for durable ownPlan, not producer fix. Next bounded source-contract question may
+explain actual publicdispatch service/clock/currentgeometry/cache-binding with
+NO execution/fixture/private-state workaround; all runtime/test outputs retained
+until that question is resolved. No automatic correction/rerun or new native
+publication/Cold629/49613/caller/physical-queue certificate.
+
+### Root R12 Nemesis value projection adopted for separately bounded pair
+
+Root reads actual minimal four-region R12delta/97line handback and whole inverses;
+fresh targeted review finds no material finding. V2 exposes every immutable
+Nemesis Entry operand/active-null/completeFIFO with actual raw refs still in same
+per-sample guard order/arity, no historicalEntryIDs. Other ownershipIDs/everyCALL/
+gate/result/route/input/replay/limits/error semantics unchanged. Both actual
+INVALID prefix data-models preserve only written states, no missing/new sample
+or future capfit claim. CandidateMain3ac7bf84/prospectiveRoot0714033a wholeinverse
+oldc2cd/old1f717 and permanent0aa1/26bda exact; runtime b7b32 unchanged.
+
+ALL6 accepted originals155285B jointly fullSHA/size/mode/mtime verified BEFORE
+ANY unlink. OnlyRoot3/77888B consumed under Root metadata_slot ALONE; Main3 remain
+exact for separate owned consumption. Root17161/Main17032class metadata exact
+throughcleanup and sourceadoption. No archive/copy/receipt/classdeletion/rebuild.
+Root test77457B0714033a source adopted under intendedwriter, runtime unchanged.
+One Root and one Main matched original5case normal lifecycle separately gated;
+no selector/input/control/fixture/environment/timingflag change. All source/ABI/
+firsttrue/actualfit remain unexecuted; failedcap/prereq stops without retry.
+
+### Root HCZ R103/R104 endpoint source accepted for compiler-only qualification
+
+Root reads all newly authored C# logic and all four changed launcher bodies,
+full externalPlan/pins contracts, all133protected source/data hashes/95compiled
+fullSHA-size-mode-mtime/FDFborrowedPE+journal/config metadata. Existing module
+reflection block0c3957 and transport/prewrite block3c7345 remain exact reviewed
+borrowed scopes; untouched launcher25bodies are independently byte-verified.
+Two independent source reviews find only missing loaded-mode guard; R104 adds
+exactcapturedF600==0C qualification, falseUNBOUND/rawMode otherwise; strictPython
+rejects qualifiedtrue unless serialized integer0C. Fresh targeted correction
+review finds no material finding, four wholeinverses recover R103tuple.
+
+Current4 files CS4fd46eeb/launcherb75752a5/pins948a3bb4/plan83164627 retain the
+original AD40 six endpoints284..289/input85381..85386/all110raw4A+35regs+respawn
+table/all42controls,85387ordinaryAdvances, no callback/input/write/savestate/video/
+audio/drain and no native25 mapping until actualpointer+ROMtuplequalified.
+Exactmode is not masked; constructorprefix and contact/cull/caller remainunknown.
+Caps16records/physicalstrict1MiB/logical8MiB/footer4096each/knownprojection and
+first-error/retained-onlyfooter/after-close marker mandatory. SourceABI/reach/fit
+remain unexecuted. A separate ONE compiler-only gate may resolve source references;
+it grants NO native execution or new observation. Source4+PE/journal inputs stay
+retained; no source edits/cap widening/auto retry/commit implied.
+
+
+### Root checkpoint — HCZ R105 compiler DIRECT and Cold R96 targeted source acceptance (2026-10-18)
+
+HCZ actual109 compiler-only result directly read from original timeline command4310: one frozen
+launcher compile, owned child1202317, exit0/0.6073530279973056s, empty compiler diagnostics.
+Complete queue/status output has io0/secondary0/postauditPASSED and uncensored counters;
+RETURNED_UNVERIFIED is compiler transport bookkeeping, not native qualification. Parent/lease
+wait duration unknown. Root independently read full PE83456 bytes/SHA9bd6e4cb6da1fee2036a1e53889c47af3dc799df736031d299cea00ab2b2ace9
+and raw PE32/CLI IL-only/MVID2fe92261-720b-4431-b378-1817b2025aad/Main0600012D/RVA9010,
+all eight AssemblyRefs/versions/tokens/cultures/hash fields, and checked all source4 and95
+compiled full SHA/size/mode/mtime. Source tuple9d5a2e9e unchanged; journal absent. Original
+source-owned compile argv is provenance; metadata alone is not equivalent evidence. This
+allows one separately bounded native request using the same reviewed PE/source/protocol,
+not any new capture/controller/core modification, retry or automatic continuation.
+
+Cold actual100 source DIRECT: d87daf22a299f4ae168f98b905c85df0f38c3ec51b938a42fc17ebe6b03e718b
+moves exactly four existing public camera setters after existing setup frame and manager
+warming, plus one explanatory comment. Whole inverse c8379a09c3743e5d5aee551b9ca71140850ca14a95373790fba84c3108d2dceb;
+all bodies/oracles/other helpers and runtime6 unchanged. Independent fresh targeted review
+found no material issue: live/copied camera agree and existing parent setup refreshes manager
+bounds before public update. This is declared Java component geometry, not native prior-render
+proof. Candidate remains uncompiled/unexecuted; one unchanged whole-class normal request
+may follow accepted R94 two-original consumption, retaining all17143 compiled metadata.
+Neither source review forecasts a pass nor repairs runtime/clock/RNG/physical ownership.
+
+Root V2 session68543 is terminal1 with original cold death11174 and no diagnostic suppression.
+All115 journal CALL trees already read losslessly: first true115/input3329, diagnosticNULL;
+Main R13 reports103/input3317 and original five green. Root XML/streams/postpins and Main
+DIRECT originals are still being inspected. Native source waits for terrain before LevelLoop;
+the12-call difference does not prove engine service timing or death causality. No wait/input
+removal, fitted offset, renumbering, waiver or route-success claim follows.
+
+
+### Root DIRECT — SOZ V2 valid matched decisions and FDF R91 preserved ring repair (2026-10-18)
+
+Root session68543/wrapper1197482 terminal/reaped: one normal method request, queue0display,
+Maven49.921s/finish13:13:36+01, suite26.312s; parent/hold unknown. Main up-to-date, test4210
+sources compiled inside lifecycle. Actual5T1F0E0S; original cold death11174 remains primary,
+no cause/suppression/new diagnostic. All five IDs/times/full failure+TXT residual, actual73
+properties/full8123B classpath+duplicate and every stdout/stderr line/order directly read.
+Main R13 direct: 5T0F0E0S, suite25.794/Maven48.057s, supervised49.57125655398704s, measured
+queue0.0008343569934368134s. Knux ready23803/29windows. All73properties/full8057B classpath
+read; dependencies equal Root with owning first two entries distinct. JTO-only EGL preserved.
+All ten case streams reconstructed from73 complete unique raw lines and19ordered vectors.
+FAST-NONE, deterministic estimates and existing EggPrison no-services warning are bounded
+observations, not native/audio/readiness proof. Console/build-wide warning totals not invented.
+
+Root117records/115CALLs/575read+115output guards; first true115 at outer/input3329. Main105/
+103CALLs/515read+103output guards; first true103/input3317. All delta trees/columns/removed
+keys/envelopes reconstructed from EMPTY and inspected without copies. Both firstDiagnostic
+NULL, firstTrueFullyRecorded true, no extra diagnostic; original Root death/MainNULL retained.
+All shared first103 call envelopes match; raw receipt differs INTERIOR_RETURN vs ORDINARY,
+not normalized. Root has four initial title parents, Main three. Nemesis drains by103 in both.
+Root terrain parent81/prep84 starts103, source1DEB40/out12128/three modules; children at104,
+109,114 have sources1DEB42/1DF322/1DFA92, assigned4/4/1 and output4096/4096/3936. At115
+actual queue/handoff empty. Run-local IDs are not cross-run identities. No invented +/-12 offset.
+
+Owning native044 loc62CC waits title/Nemesis; loc6310 calls LoadLevelLoadBlock before initial
+sprites/LevelLoop. LoadLevelLoadBlock/loc7870 queues distinct terrain parents and blocks on
+Kos_modules_left with ProcessKos/WaitVSync/Nemesis/Module service. Thus Main's missing armed
+terrain is not native truth; deleting Root's wait to make this authored route pass is rejected.
+Exact producer deferral/service admission/publication duration and death causality remain
+unqualified. Next source-only question is retained original native1400 submission/service/
+release provenance, not changed input, fitted schedule, module readiness or ordinal renumbering.
+
+Root originals3/95495B retained: XML622d0e73/43512, TXTe814c48b/4196, journala2f2c2d2/47787.
+Main3/77664B: XML7bcacd98/37075, TXT4aec0422/332, journal08070172/40257. Full manifests in
+existing canonical entries. All Main17032 compiled fullmetadata verified; Root17161 inventoried,
+no paths added/removed/mode changes,9175mtime refresh, only test outer+witness bytes changed
+by V2 compile. Runtime class unchanged. Source frozen two files/movies/configOwn+Main0600
+SHAmtime/index/HEAD exact. No cleanup/source fix/retry/new Root JVM/commit/integration.
+
+FDF R91 DIRECT all10 originals99313B and83class SHA/size/mode/mtime exact. Local48e082364
+preserves exactly11 owned paths: tested3runtime/unchanged9aac plus seven existing docs/mirrors.
+Committed seven-policy block parsed with subject+blank framing; whole final GPT6.1 coauthor
+parsed. An initial Root bare-block parsing assertion failed read-only before corrected framing;
+no hook invocation/mutation. Worker normal commit0 with recorded nonfatal printf Brokenpipe.
+R90 accepted40 consumed only after joint check; real boundary then literal102 registered.
+Original sole Mega1T1F0E0S,5.482case/5.736suite/Maven29.216s/queue0display. All4JSON4owners,
+full20871B failure byteequalTXT+residual, all49hardware identities/reasons/stacks,72properties/
+8057CP+duplicate,107stderr28037B/37complete unique lines+ordered vector and3full36-field
+tables/actors read. Returned complete19510=18427physics+1083animation/135lag/bootstrap0;
+first all-group186anim00/20 with other35match incl74rings; first non-camera PHYSICS502y
+038A/0385. No row178/caller attribution. Next starpost boundary missed, SS/FDFunreached,
+49unmatched timing completions retained, earliest returned842PREdirect36 and843POSTmodule24
+pendingNONE. Neither complete segment nor absence of FIFO exception is a route/cause certificate.
+Only FDFPlan12cb2b50 WIP/nativegitlink/indexempty; no original cleanup authorized here.
+
+
+### Root composition candidate — qualified bonus-return kept ring table
+
+Intent-applied exactly the three small runtime hunks from local FDF48e082364, plus entire
+unchanged independent test9aac7afed08b648eb0da5fdeba73e3b1282cc99162b4489db946ca4a1106958b.
+Capture actual collected bits into existing PersistentRespawnState at bonus entry, expose
+pure retained camera-token ring selector, use it at existing InitRings restore-before-touch.
+No new state/API/reset policy; ordinary fallback and legacy big-ring path unchanged. Root
+LevelManager's other repairs are preserved, not replaced wholesale. SOZ diagnostic sources
+remain byte-exact and property-gated, with accepted originals retained. Source4 before/after
+pins in canonical root_current_slice; no validation claim until affected request completes.
+
+Planned ONE normal focused lifecycle: exact FDFR90 selection,20 actual classes including
+both Loading identities and two exact BigRing methods; expected prior156 cases is historical
+coverage, not a pass/count forecast. Prior request estimate35.4s, compilation may add cost;
+stop after the one lifecycle on any compiler/prerequisite/new failure, attribute narrowly
+before delivery. Root JDK25/JTO-only EGL/all3original LONG ROMs/noambient/fork1reusealpha;
+no CLIgl/profile/guard/broad/full-suite/native/route rerun. New checks are warranted by
+Root composition and its existing initialization/rewind/terrain consumers.
+
+
+### Root kept-ring affected qualification and Cold R97 DIRECT (2026-10-18)
+
+Root sole session21915/PID1210747 reaped, exit0, queue0display, Maven01:19min/finish13:37:24+01.
+Compiler4145main+4211test Java25 inside same lifecycle; no separate build or repeat. Actual
+20suites/156unique identities/0F0E0S, both Loading36+7 and mandatoryS3K4 green. Unchanged
+9aac public Gumball retention0.501s and ordinary-clear0.360s pass; natural acquisition/title/
+history/new-manager/receipt/clearance gates preceded final assertions. No unlogged placement
+coordinates or intermediate generation values invented. Actual all156IDs/times/full20TXT/
+20equal72property maps/full8123CP+duplicate read; no failure/error/skip/suppression/unknownchild.
+All102streams (426Bstdout/48639Bstderr) read losslessly through59full raw lines+ordered vectors.
+Warnings115FAST-NONE/100deterministic Kos estimates/21synthetic ring nullWAV/1explicit collision
+negative are fixture/timing limits, not readiness/audio proof. Final Maven display truncated in
+middle; full original JUnit streams repaired coverage, no exhaustive build-warning tally.
+All40 originals retained singly with fullmetadata canonical. All3 earlier SOZ originals exact.
+Root source4 WHOLE equals FDFR90-reviewed/tested four; existing SOZ diagnostic source unchanged.
+Full current class inventory/delta recorded; source/configOwnMain0600SHAmtime/index/HEAD exact.
+This qualifies the bounded Root composition; no original Mega or SOZ rerun, full-route/pixel/
+CPU/native timing certificate, integration/push or broader unchanged smoke repeated.
+
+Cold R97 actual101 DIRECT: sole whole-class7T0F0E0S, Maven23.843s/suite1.281s, queue0display,
+main up-to-date/test4200Java25compiled inside lifecycle, parent/hold unknown. All7actualcase
+IDs/times/fullTXT/72props/full8057CP3c94+duplicate and all7stderr streams/32lines/16FAST-NONE
+read. No stdout/failure/skip/suppression. Actual caller-word-before-policy/success/fullpool/
+probe+rewind/other-parent controls and both registered branch replays pass; no native prior
+publication/Cold629/49613/fullheader/route proof. Root jointly checked2originals26705B and
+ALL17143compiled SHA/size/mode/mtime +source7 exact. XMLacc0302f/26327, TXT229a1aea/378 retained.
+R94accepted2 consumed as authorized; history of six unmet allocation prerequisites unchanged.
+R97 boundary qualifies existing partial-word component only. Next bounded local preservation
+may include exact6runtime+newd87test and existing mapped docs; known untracked12b12 failed
+publication test remains excluded/preserved. Next SOURCE plan should identify remaining
+actual native first-display/publication gap and exact independent original contract, not
+claim full physical header from a partial word or repeat unchanged11class checks.

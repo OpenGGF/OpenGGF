@@ -4436,6 +4436,27 @@ Two consequences when implementing an S3K object:
   entry window. Anything that re-establishes the state *after* the entry-window scan is
   one scan too late.
 
+The same keep byte also covers `Ring_status_table`. Starpost bonus entry
+`loc_2D4CA` sets it before `Clear_SpriteRingMem` commits ring consumption
+(`sonic3k.asm:61954-61966,37983-38013`); Gumball `loc_61076` restores the origin
+without clearing it (`:127803-127814`). `sub_EB1A` skips the ring-table wipe
+when keep is set (`:18599-18616`), independently of the saved starpost index.
+Carrying only object bits or restoring the HUD count loses collected placements.
+
+Preserve both tables in the existing immutable respawn token. Object-window
+initialization can consume that token before ring initialization; the existing
+retained token for the later camera resnap must remain readable through InitRings.
+Apply ring bits immediately after reset and before touch/draw, without consuming
+the camera token or introducing another sticky keep flag. Keep the legacy giant-
+ring fallback and ordinary/death clearing independent. An empty capture restores
+nothing; a missing canonical placement must not masquerade as an uncollected bit.
+
+R88/R90 independently test natural input-driven acquisition before a public bonus
+request, saved return and final retained-bit assertion, plus a fresh-session
+ordinary reload that clears the bit. No cross-load snapshot, teleport, direct
+collection call, HUD-only oracle or current-route pickup attribution is involved.
+See the existing S3K completion Plan's R87-R90 evidence and bounded qualification.
+
 **Originating commit.** `<pending: S3K destroy-latch round trip>` -- AIZ1's rock at
 `(0x1D00, 0x04A9)`, smashed before the segment-0 giant ring, came back intact on the
 segment-2 return and blocked Sonic at `x = 0x1CDD` from frame 94. Chain frontier
