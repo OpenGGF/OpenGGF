@@ -181,6 +181,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Rewind preserves a fresh-load insta-shield's pending attack and slot state,
   leaving its registration to the next ordinary status tick. Fresh title
   boundaries retain their deferred assembly and publication state on rewind.
+  Carnival Night background rebuilds preserve captured event scroll state,
+  including fresh entry before its first deformation dispatch, while restoring
+  the displayed scroll output without running another gameplay publication.
   HCZ hanging bars read the native raw companion-controller directions,
   preserving neutral input while the follower CPU steers. Full native saves
   clear collected giant rings at their seven existing save points, including in
