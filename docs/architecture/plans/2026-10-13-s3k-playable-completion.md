@@ -18436,3 +18436,67 @@ preserve current LM/newtest/Mega compiledSHA+mtime. Register actual new source
 ordinal68 only after the clean preservation/accounting boundary, keeping literal
 identity pending in memory until then. Subsequent source inventory is Plan-only,
 not Java/logger/test/probe authoring or an execution/producer-fix permission.
+
+
+### Root qualified composition and original native partial read — 2026-10-18
+
+Root normal local preservation commits cbb33d85d (accepted evidence),526511590
+(exact reviewed policy825a bytes),bd3df9d68 (HCZ8runtime+two original tests),
+f5aba732e (a9df resource-boundary test),f1ed08f73 (529012/74f65 return receipt),
+and f0b8bc7d4 (b36ebe/fbb120 saved-origin terrain) compose the qualified owners.
+All runtime/test source bytes match their respective child preservation commits.
+Documentation conflicts preserve the entire Root Plan prefix and the complete
+missing child sections, keeping each original command/result/source epoch.
+Mirrored pitfalls remain identical. No Root compiler/JVM/native execution or
+new combined validation occurred during composition; target is still the last
+partial R15 diagnostic compile with its inventoried temporary classes removed.
+Main develop803/config/foreign work is unchanged; no integration or push yet.
+
+Normal hooks passed each commit. Seven policy trailers are parsed as a separate
+message block with a neutral subject and blank line; the exact full message
+parses the final GPT-6.1 coauthor block. For f0b8's first normal hook, two trailer
+values claimed root CHANGELOG.md/AGENTS mirrors that were not staged; only those
+message classifications were corrected to n/a with the actual develop release
+fold/task-doc explanation, then normal hooks passed. Nonfatal policy157 printf
+Broken-pipe stderr is retained as a hook diagnostic, not bypassed or repaired.
+The composed policy suite's actual72 SH+PS green remains its HCZ source epoch;
+compiled API guards and combined changed-source smoke are still Root obligations.
+
+Cold R61 sole frozen native session15066 terminal1: Root DIRECT-read the entire
+3998B/59-line process output SHA04b28d7fd5a67ac90199069640fee0bad1ad0be6d9ee12f3348b98cb8432e9f0
+and strict UTF8/LF866-record journal255757B SHA64f238406f4245079a2eefa6f787bbe1e959dac44f92d7ae55876ac3e0d561a5.
+All header23 disk modules plus exact source-owned generated module/reference
+booleans,420 actual16-value clock vectors,71 polls,71 render starts,70 endpoints,
+49 parent paths,77 draws/77 renders,26 gates and creation/init/lifetime records
+were inspected with lossless dictionaries/deltas and exact reconstruction.
+Every emitted endpoint3250..3319 independently matches all42 immutable CSV and
+27 AUX fields. At declared3320 ONLY input differs expected0018/actual0028;
+other41 CSV values match, current AUX assertion is unreached. No field waiver,
+alignment search, extra advance or retry. Native submitted input463654 and
+returned463655 Advance calls follow the reached original control flow; exact
+final callback/getter/passivity totals are unavailable without the footer.
+
+Observed partial native outcomes:24 clock skips,one prior-render rejection
+(parent04 at actual lowVInt60),one admitted attempt(parent84/counter4->3),
+Create6 parentB250->actual childB818/slot28 with actual parent3B250, own init and
+first draw. All77 emitted draw tokens are consumed once by actual render calls;
+zero-piece parent publication and one-piece child publication are observed.
+No delete/clear or final module/invocation closure/footer/postmarker is present.
+Both generations remain live at cutoff; parent loader birth is not observed.
+This is partial AD40 pair-scene evidence, not full253-control/native lifetime/
+SoloCold49613/unique629 qualification. No native gate disagreement cause follows.
+Queue wait0s is rounded; exact execution/parent timing is unavailable. Launcher
+235502/Mono235720/PGID235720 are gone, FDs/admission released, authorityfalse.
+Post-audit PASSED, raw untainted but RETURNED_UNVERIFIED, no IO/secondary error.
+Originals remain for separate accounted consumption after durable acceptance.
+
+HCZ R70 normal docs6772 preserves R69 original canonical251=11physics+240anim,
+complete seg11/ref14208/lag59; firstNonCamera key absent, not a full-vector claim.
+All20 accepted131723B consumed metadata-only after hashes;54 classes preserved.
+Source-only ownership88306 inventory confirms recorded act2 normalizes to engine1.
+Printed pre-step TRACKER gen10 is not post-step physical FULL generation.
+The cause remains unknown. R71 authoring is limited to an original-super-once
+pure stored receipt/generation/admission witness; no loader/ownership relaxation.
+FDF R58 source-only public-return fixed-title graph question and Ending R9
+managed finite progress source candidate are independent, unexecuted scopes.
+All useful originals/sources remain owned; no raw copies/archives/receipts.
