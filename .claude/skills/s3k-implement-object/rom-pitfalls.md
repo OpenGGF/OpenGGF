@@ -6411,3 +6411,25 @@ Origin: bounded FDF R40–R45,2026-10-18, GameLoop529012/test74f65. Actual origi
 Mega progress into returned AIZ ends in a separate KosM FIFO-full exception; the
 incomplete reports and unmatched completions are not native producer-birth proof.
 See the existing playable-completion Plan for exact epochs and stopping boundary.
+
+
+## An exited bonus provider cannot identify the saved-origin terrain load
+
+GameLoop calls the bonus provider's onExit before the synchronous saved-origin
+reload; activeType is already NONE. The existing checkpoint-derived bonus-return
+signal remains true during that load and is cleared finally. Use that semantic
+signal to arm the existing title terrain handoff. Do not turn the entire load
+into a fresh-runtime context: that can also install the ordinary four-child SST
+graph where a bonus owner has its own graph. Preserve ordinary host-load negatives.
+
+A title can mark terrainStarted before its publisher returns for a missing handoff
+index; that boolean alone proves no ROM queue submission. Require real public
+entry/return/title/Nemesis/history/receipt prerequisites and independent ROM
+primary/secondary descriptors before the final oracle. Fresh cached descriptor
+reads do not qualify a memoizing getter after rewind; retain full FIFO context.
+A component old-red-to-green and fresh guards do not prove current route submit/
+lease-consume/service timing or reassign historical physical occupants to a new
+source epoch. Native044 Level saved path7575..7577 -> loc_6310/LoadLevelLoadBlock
+7793/9737; Knuckles/AIZ1 selects table26. Origin: FDF R51–R57,2026-10-18,
+LM b36ebe/testfbb120,144 affected+99 guards green; original AIZ2 FIFO error and
+unvisited SS/FDF limits remain in the existing Plan/caller audit/frontier.

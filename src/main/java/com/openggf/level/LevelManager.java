@@ -3405,8 +3405,11 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         // tail, so arm that owner's handoff before choosing the render path.
         // Level:/loc_6310 -> LoadLevelLoadBlock queues bonus terrain too (S3K :7793).
         // Arm only that handoff; a bonus title retains its own two-child graph.
+        // Level's Saved_zone_and_act return still reaches loc_6310 -> LoadLevelLoadBlock
+        // (S3K :7575..7577,7793,9737); Knuckles AIZ1 selects the saved-level table26.
         var bonus = GameServices.bonusStageOrNull();
         if (ctx.isQueueFreshLevelRuntimeArt()
+                || transitions.isBonusStageReturn()
                 || (bonus != null && bonus.getActiveType() != BonusStageType.NONE)) {
             var titleCardProvider = activeGameModule().getTitleCardProvider();
             if (titleCardProvider != null) {

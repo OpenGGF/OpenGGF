@@ -114356,3 +114356,101 @@ remains an explicit warning limit, not an audio-readiness certificate.
 Root DIRECT-read all10 originals83638B before accepted R45 preservation/cleanup.
 No retry/source repair/native/probe/new workload or full route/readiness claim.
 [Commands, exact pins, partial arrays, warning and receipt limits](../architecture/plans/2026-10-13-s3k-playable-completion.md#r44-actual-fresh-guards-and-original-returned-aiz-frontier--2026-10-18).
+
+
+### 2026-10-18 — Extracted rewind geometry passes guards; original Mega return admission fails
+
+Owned649 HEAD04343e plus reviewed b0dcc/9693 relocation, titlef028/test1f3f/69c6/
+54633 unchanged: ONE normal current-Main absolute wrapper guard lifecycle30788,
+`-Pguards -Dtest=TestArchitecturalSourceGuard,TestHardwareTimingAuthorityGuard,TestModApiSignatureSurface#candidateZeroSevenSurfaceIsPinnedToTheCurrentSurface+engineOnlyRuntimeHelpersDoNotLeakIntoTheZeroSevenSurface`,
+terminal0/queue0/Maven1m23:99T0F0E0S (72+25+2), zero skips. Then ONE ORIGINAL
+`-Ptrace-replay-r7 -Dtest=TestS3kMegaRunChain#multiBonusSpecialStageRoundTrip`,
+same all3 original ROMs/JDK25/singleJTO-EGL/NO CLIgl/fork1/reuse/alphabetical,
+16285 terminal1 at2026-10-17T23:24:04UTC/queue0/Maven30.079s:1T1F0E0S.
+
+Failure: coordinator denied segment2 admission in TRANSITION_GAP. Earlier original
+stage_exit observation and assertReturnBoundary passed; actual LEVEL/release clock
+is not serialized. No returned-opening comparator attached; SS12/fdf UNREACHED.
+Partial AIZ1physics first4545 camera_y01F2/01EE and Gumball12physics firstNonCamera
+1300x0000/2778,0animation/warnings/bootstrap,lag0/21,both complete=false. Actual
+compared/reference counts unavailable; recent5 is not all12 vectors. Sole suppressed
+closure lists12 unmatched exact kind/ordinal/FP/boundary identities, not proof of
+missing producer or readiness refusal. Dynamic gap1/0F does not settle return.
+
+Root DIRECT-read all8 originals52835B/full first-row tables/tails/owners/XML/TXT.
+Following local qualified extraction/accounting preservation they are hash-checked
+ALL before cleanup metadataalone, with classes preserved. No retry/source repair,
+new observer/native, full route/readiness/native-birth or Main delivery claim.
+[Exact command, source epochs, full inspection and limits](../architecture/plans/2026-10-13-s3k-playable-completion.md#r38-phase2-original-route-actual-stop--2026-10-18).
+
+
+### 2026-10-18 — Original AIZ2 capacity frontier, actual outside-step occupants
+
+Owned649 HEADc4e71e8, temporary call-through sourcef3e8, sole normal request58628:
+`-Ptrace-replay-r7 -Dtest=TestS3kAiz2CapacityOutsideWitness#originalReturnAndAiz2Capacity`,
+all3 original ROMs/JDK25/JTO-only EGL/no CLIgl/fork1/reuse/alphabetical. Queue0,
+Maven30.920s,00:40:55UTC,1T0F1E0S: original AIZ2 primary module submission2926
+throws FIFO-full205. No inherited original test was executed a second time.
+
+Actual returned INTERIOR_RETURN/generation4 is observed; title parents15..18 are
+already claimed before later unprepared parents19..22 fill capacity. Prepared but
+unready child26 is actual direct head before event27..29. These OUTSIDE projections
+do not establish submit callers, native births or in-service chronology. Reports
+retain1/12/21196 errors (returned20427 physics+769 animation), firstNonCamera34
+module.busy native true/engine false, recent1/5/5 only, all incomplete/no actual
+compared/reference counts. SS12/FDF UNREACHED;29 unmatched timing identities and
+2FAST/34SMPS warnings remain qualified limits. No new parity/route certificate.
+
+Root DIRECT accepted all11 originals645631B/all177 journal rows/full XML/TXT and
+all comparator/owner trees before authorized exact cleanup. Temporary witness and
+its three classes are consumed separately from maintained classes; target58628 is
+not a fresh maintained-only compilation.
+[Full source/command/result and acceptance](../architecture/plans/2026-10-13-s3k-playable-completion.md#r48--accepted-outside-capacity-witness-accounting--2026-10-18).
+
+
+### 2026-10-18 — Actual successful-submit provenance at unchanged AIZ2 FIFO frontier
+
+Owned649 HEAD923da24 +temporary81096/40be, ONE normal exact-method request24638:
+`-Ptrace-replay-r7 -Dtest=TestS3kReturnSubmitOwnerWitness#originalReturnSubmissionOwners`,
+original full driver/movie/fixtures/all3ROM/JDK25/JTO-only EGL/no CLIgl/fork1/reuse/
+alphabetical. Queue0/Maven01:26min displayed, terminal01:23:33UTC,1T0F1E0S.
+Original AIZ2 primary module call2926 throws FIFO-full205, not a diagnostic failure.
+
+All36 successful submissions are recorded without diagnostic/cap/passivity/close
+errors. Actual enemy19..21 runtime-art-pass caller and fire22 Act1-event caller
+are established. Returned title generation4 has handoff index-1 and no returned
+terrain3A566A/3A944E submit among these36. Native birth/caller/VRAM and earlier
+flag writer remain unproved; source data does not license renumber/waiver/fix.
+
+Partial comparator payloads remain byte-equal R44/R47: AIZ1/1physics first4545
+camera_y01F2/01EE; Gumball12physics first1300x0000/2778,lag21; returned21196
+(20427physics+769animation),first34 module.busy true/false. All incomplete, recent
+1/5/5 only/no compared-reference counts;29 unmatched identities,2FAST/34SMPS warnings,
+gap2/0F and SS/FDF-unvisited limits persist. Root DIRECT accepted all11 originals
+457408B before normal docs-only accounting and authorized exact consumption.
+[Full actual evidence, command and cleanup boundary](../architecture/plans/2026-10-13-s3k-playable-completion.md#r51-accepted-submit-owner-evidence-and-accounting--2026-10-18).
+
+
+### 2026-10-18 — Saved-origin terrain component qualified; original AIZ2 FIFO frontier open
+
+Owned649 HEAD14bdcedc6 +exact LM b36ebe/testfbb120; R53 sole component35373 was
+4T/3finalF/0E/0S (missing native terrain pair only), then unchanged four bodies
+pass in R55 normal68493/144T19classes0F0E0S, including ordinary-negative/receipt/
+entryterrain/title/resource/PLC/S3K4/bothLoading/ten short pilots. R56 normal
+94592 adds99 fresh guards0F0E0S. Both use all3originalROM/JDK25/JTO-only EGL,
+no CLIgl/fork1/reuse/alphabetical. These are bounded component/guard qualifications.
+
+Exact original route93520: `-Ptrace-replay-r7 -Dtest=TestS3kMegaRunChain#multiBonusSpecialStageRoundTrip`,
+normal current Main wrapper from owned tree, same original driver/movie/fixtures
+and environment. Queue0/Maven30.463s/02:38:17UTC;1T0F1E0S. Original AIZ2 art
+submission2926 -> queueInternal205 throws FIFO-full. Returned segment2 comparator
+actually attached/compared; first34 queue.s3k_kos_module.busy native true/engine
+false. Partial1/16/21196 (returned20427physics+769animation), all incomplete/
+bootstrap-warning0/recent1/5/5 only/no actual compared-reference counts.
+Gumball firstNonCamera remains1300x0000/2778; its recent1380 direct-queue fields
+are present, without an exhaustive delta/causal inference. Twenty full unmatched
+identities/2FAST+34SMPS warnings remain. Gap2/0F is not route parity; SS/FDF
+UNREACHED. No actual R38 receipt, current four-occupant/native-birth/ordinal/
+readiness/full-route proof. Root DIRECT accepted all10 originals77701B before
+local preservation and authorized exact metadata-only consumption.
+[Exact two phases, observations and limits](../architecture/plans/2026-10-13-s3k-playable-completion.md#r56-actual-fresh-guards-then-original-mega--conditional-two-phases-terminal).

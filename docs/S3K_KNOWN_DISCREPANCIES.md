@@ -333,6 +333,22 @@ counts and LEVEL-release clocks are not serialized. SS/fdf remains unvisited.
 No unique actual R38 receipt cause, complete ordinal difference, native births,
 readiness or full route proof follows. [Exact component and original-route epochs](architecture/plans/2026-10-13-s3k-playable-completion.md#r44-actual-fresh-guards-and-original-returned-aiz-frontier--2026-10-18).
 
+
+**Saved-origin bonus terrain handoff (2026-10-18, local preservation):** the
+existing bonus-return signal now arms the same title/Nemesis-gated terrain
+publisher after the active bonus provider has exited. It does not mark ordinary
+host loads fresh or alter the bonus title graph, FIFO capacity or readiness.
+Three independent Knuckles/AIZ1 public bonus-return native descriptor old-reds
+now pass unchanged, with an ordinary non-fresh negative:144 affected tests/19
+classes and99 fresh architectural/authority/API guards pass without skips.
+Original Mega still ends in AIZ2 KosM FIFO-full (1 error); partial counts are
+1/16/21196, returned first34 module.busy true/false,20 unmatched identities.
+Gumball's retained1380 direct-queue fields changed; bounded recent arrays do not
+prove an exhaustive delta or its cause. SS/FDF remains unvisited; current physical
+occupants/submit/lease-consume/service chronology is not supplied by historical
+R47/R50 witnesses. No native-birth, ordinal alignment, readiness or full-route
+certificate. [Actual component and original-route epochs](architecture/plans/2026-10-13-s3k-playable-completion.md#r56-actual-fresh-guards-then-original-mega--conditional-two-phases-terminal).
+
 ---
 
 

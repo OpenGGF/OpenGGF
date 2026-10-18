@@ -197,3 +197,84 @@ submission births or the unique original R38 denial cause. Keep successful compo
 semantics separate from unchanged strict timing admission/physical capacity and the
 unvisited SS/fdf target. No queue expansion/reset/drop/ordinal renumber or readiness
 waiver follows. [Full original reports, source epochs and limits](../plans/2026-10-13-s3k-playable-completion.md#r44-actual-fresh-guards-and-original-returned-aiz-frontier--2026-10-18).
+
+
+## Post-extraction source guards and original route boundary — 2026-10-18
+
+R38's source-equivalent geometry relocation passes99 actual fresh guards
+(Architectural72/HardwareAuthority25/exact API2). Its following unmodified Mega
+route fails coordinator segment2 admission in TRANSITION_GAP after the original
+stage_exit and return assertions passed. This is neither proof of actual LEVEL
+release nor post-return SS/fdf readiness. The sole suppressed close reports12
+unmatched exact completion identities; no actual production head/preparation was
+sampled here, so never-submitted versus already-admitted/claimed remains ambiguous.
+Partial AIZ1/Gumball12 physics reports are incomplete, recent5 is bounded and actual
+compared/reference counts unavailable. Root read all8 original artifacts before
+accepted hash-checked cleanup; no additional execution, producer change, arithmetic
+renumber, forced alignment or admission waiver follows from these facts.
+[Actual commands, source pins and precise reached boundary](../plans/2026-10-13-s3k-playable-completion.md#r38-phase2-original-route-actual-stop--2026-10-18).
+
+
+## Actual later physical occupants, outside-step evidence — 2026-10-18
+
+R47's original-driver call-through witness at c4e71e8 observes the new returned
+INTERIOR_RETURN receipt/generation4 and all four return-title parents15..18 claimed.
+At the later AIZ2 FIFO-full, four different unprepared module parents19..22 occupy
+capacity: sources36800C/367DCA/3681FE/3AF5D0. Parent19's actual active child26 has
+a complete decoder/payload736 but is not ready; it remains physical direct head
+ahead of the three newly submitted event direct jobs27..29. Descriptor identity
+does not identify which enemy-loading caller submitted parents19..21.
+
+All177 rows/25 definitions/175 state and clock projections, original error/closure
+and comparator owner arrays were directly inspected and accepted by Root. No
+inside-service, successful-submit or native-birth context was recorded. Pending
+ledger/title-history handles must not be mistaken for physical capacity occupants.
+Original1E/partial21196 returned errors and SS/FDF-unvisited limits remain; no
+readiness waiver, renumber, queue expansion/reset/drop or producer fix follows.
+[Exact observations, acceptance and cleanup](../plans/2026-10-13-s3k-playable-completion.md#r48--accepted-outside-capacity-witness-accounting--2026-10-18).
+
+
+## Successful-submit callers and absent returned terrain — 2026-10-18
+
+R50's reviewed temporary private submit logger and original full-driver subclass
+provide actual successful-submit evidence on923da24+81096/40be, not another
+source-only caller inference. All36 successful submits/144 job-handle-submission-
+preparation refs are represented, with fresh raw owner/load/title/resource lease
+context on the same service. Enemy parents19..21 are submitted by the ordinary
+processRuntimeArtQueue -> processEnemyKosArt path; fire22 is submitted from
+updateAct1 -> ensureFireOverlayTilesLoaded. Neither is assigned to WaitFire by
+descriptor identity. Earlier lease-consume callback/clock remains unobserved.
+
+Gumball terrain14 is a production title-handoff job3FEE2E/9792bytes/3modules.
+Returned title15..18 initializes on generation4 but its handoff index is-1, and
+no3A566A/3A944E successful submit appears in this invocation. R48's raw native
+archive association is distinct evidence with no native enqueue PC/clock/final
+VRAM/explicit parent link. Do not substitute ordinals, force readiness or expand
+capacity from these facts. Original AIZ2 FIFO-full1E, incomplete comparator
+1/12/21196 errors and unvisited SS/FDF remain. Root directly accepted the entire
+63-row journal/XML/TXT/comparator/owner evidence before exact accounted cleanup.
+[Exact R50 inspection and R51 accounting](../plans/2026-10-13-s3k-playable-completion.md#r51-accepted-submit-owner-evidence-and-accounting--2026-10-18).
+
+
+## Saved-origin terrain producer component, unresolved route readiness — 2026-10-18
+
+R53 independently exercises public Gumball/Pachinko/Slot return to Knuckles/AIZ1:
+actual pending title/gates/new receipt/history/current identity precede the native
+six-parent oracle. All three fail only that oracle on b0dcc (four title parents,
+missing3A566A/3A944E); ordinary non-fresh control passes. LM b36ebe adds only the
+existing saved-bonus-return signal to title terrain-handoff eligibility, retaining
+actual resolved level sources and original queues/gates. The unchanged component
+passes in144 affected cases;99 fresh structural/authority/API guards pass.
+
+R56 original Mega still errors at AIZ2 primary module enqueue with FIFO full.
+The current route has20 unmatched completion identities and incomplete comparator
+1/16/21196 errors; actual returned first34 module.busy true/false. Gumball's
+recent1380 active direct source3A566C is retained evidence, not the exact caller/
+submit/service chronology. R50's actual enemy19..21 ordinary runtime-pass caller
+and R47's four unprepared occupants belong to OLD LM epochs; neither proves the
+current variant's birth sites/physical holders/lease consume callback. Canonical
+completion rows never fill those missing native birth fields. No renumber,
+readiness waiver, FIFO expansion/reset/drop or next producer implementation
+follows automatically. Root accepted full original reports before accounted
+cleanup; SS/FDF is still unvisited.
+[Source/test epochs and full limits](../plans/2026-10-13-s3k-playable-completion.md#r56-actual-fresh-guards-then-original-mega--conditional-two-phases-terminal).
