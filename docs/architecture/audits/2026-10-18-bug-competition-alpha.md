@@ -134,3 +134,74 @@ delivery selection, integration, push and task-worktree cleanup.
 
 All child tasks completed; Alpha has no live Maven jobs or independent workers.
 The source and ledger commits are local only. The tracked worktree is clean after the ledger commit; generated commit-message/source-backup files are removed. Preserve this task branch/worktree for the parent to review and integrate.
+
+## Author response/amendment — LF output-directory regression
+
+This is the single bounded author response to Beta's review of frozen Alpha
+`15dcee08c7b2ad869f216158a401d2a494998524`, on 2026-10-18. The complete frozen
+ledger above is preserved. **The objection is accepted and repaired; it is not
+an additional baseline discovery, an A11 claim, or a refutation of A01–A10.**
+Final fix credit remains with the parent judge.
+
+The parent reported Beta's independent public-entrypoint probe in review
+worktree `/mnt/LinuxData/T3/worktrees/OpenGGF/t3-417b94e6`: an LF-containing
+POSIX output directory encoded successfully on common-base production but
+failed with frozen Alpha's ffconcat patch. Alpha independently reproduced the
+failure on frozen production: two real S2 EHZ frames were saved as PNGs, then
+ffmpeg rejected manifest line 3 (`unknown keyword 'break-…/frames/00000.png'`)
+and `Report.video()` returned null. This amendment does not claim Alpha reran
+Beta's common-base arm; its provenance is the parent's review handoff.
+
+**Cause and correction.** Absolute PNG paths put user-supplied parent names in
+ffconcat's line-oriented entries; apostrophe escaping does not encode LF.
+The manifest remains beside the output, but its entries now contain only the
+invocation-owned relative paths such as `frames/00000.png`, with portable `/`
+separators. ffconcat resolves them beside its manifest. Exact current-run PNG
+enumeration, rational frame rate, process arguments and cleanup are retained.
+No working-directory change, glob, directory purge or arbitrary user-name
+escaping was introduced.
+
+**Regression.** Added
+`TestGameplayCaptureOutputIsolation#outputDirectoryWithLineFeedStillProducesTheCapturedVideo`
+in the existing capture test class. It calls `GameplayCaptureTool.run` with
+an output directory containing both LF and an apostrophe, asserts two captured
+PNGs and an encoded video containing exactly two frames via ffprobe. The final
+test asserts the ffmpeg prerequisite and skips the filename case only when
+the OS path provider rejects it with `InvalidPathException`. The actual Linux
+run did not skip. Existing stale-frame and apostrophe/rational-stride public
+entrypoint checks remain in the affected selection.
+
+**Old tested state:** frozen `15dcee08c7b2ad869f216158a401d2a494998524`
+production plus the newly added LF test. Red session `86100` completed
+**1 test, 1 intended failure, 0 errors, 0 skips**, exit 1; Maven elapsed
+24.665s, queue wait 0s. Its ffmpeg-availability assumption was true; the final
+test strengthens that prerequisite to an assertion without changing the
+capture/video oracle.
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestGameplayCaptureOutputIsolation#outputDirectoryWithLineFeedStillProducesTheCapturedVideo' -Dopenggf.headless.gl=surfaceless-egl "-Dsonic2.rom.path=${alpha_main_worktree}/s2.gen" test
+```
+
+**New tested state:** `7e15cb6ac525fca18a9f7c71da5845a1c422cfcc`. Green session `96138` tested
+the identical source/test content immediately before that commit, with these
+exact Git blobs:
+
+- `GameplayCaptureTool.java`: `866cd7733446ac61d4a6c2173869b60e10459821`.
+- `TestGameplayCaptureOutputIsolation.java`: `19b1ff44e9e6776d654c4fc6c4f88d50939ba490`.
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestGameplayCaptureVideoEncoding,TestGameplayCaptureOutputIsolation' -Dopenggf.headless.gl=surfaceless-egl "-Dsonic2.rom.path=${alpha_main_worktree}/s2.gen" test
+```
+
+Completed: **3 tests, 0 failures, 0 errors, 0 skips**, exit 0; Maven elapsed 1m16s, queue wait 0s. Both the LF-plus-apostrophe path check and the original stale-frame and rational-stride checks passed. No source/test content changed after this run.
+
+Only the two affected capture classes ran after correction. The earlier
+18-class selection and broad smoke/full suites were not repeated. Evidence
+is Linux POSIX filenames, real S2 EHZ rendering and ffmpeg/ffprobe output;
+Windows filename rejection is not a claim of verified Windows capture.
+Parent owns combined smoke/guards, final fix acceptance, integration and push.
+
+P0 implemented the correction, public-entrypoint regression and observed checks.
+P2 (`/root/alpha_playback`) provided bounded read-only confirmation of ffconcat
+relative resolution and separator handling; no new review round, edits or Maven
+job were delegated. No other claims or source owners changed.
