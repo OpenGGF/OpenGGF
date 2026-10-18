@@ -119,8 +119,10 @@ public final class DplcStaticFlattener {
                             int vramSlot = tileIdx + tileOffset;
                             int remappedTile = (vramSlot < vramToSource.length)
                                     ? vramToSource[vramSlot] : tileIdx + tileOffset;
-                            int xOff = piece.xOffset() + tx * 8;
-                            int yOff = piece.yOffset() + ty * 8;
+                            // A VDP flip reverses the tile positions as well as
+                            // pixels within each tile. Preserve both after splitting.
+                            int xOff = piece.xOffset() + (piece.hFlip() ? wTiles - 1 - tx : tx) * 8;
+                            int yOff = piece.yOffset() + (piece.vFlip() ? hTiles - 1 - ty : ty) * 8;
                             remappedPieces.add(new SpriteMappingPiece(
                                     xOff, yOff, 1, 1,
                                     remappedTile, piece.hFlip(), piece.vFlip(),

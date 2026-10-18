@@ -1,6 +1,6 @@
 formatVersion: 1
-id: {{MOD_ID}}
-name: {{DISPLAY_NAME}}
+id: "{{MOD_ID}}"
+name: "{{DISPLAY_NAME}}"
 version: 1.0.0
 authors:
   - Mod Author

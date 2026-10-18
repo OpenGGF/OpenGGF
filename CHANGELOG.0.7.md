@@ -17,7 +17,14 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   after verdicts, preserves result slot ownership, restores far-player positions
   after near streams expire, and supplies current votes to late joiners. Null
   configuration files recover safely, legacy Start bindings migrate, and capture
-  codec placeholders expand into separate ffmpeg arguments.
+  codec placeholders expand into separate ffmpeg arguments. Key names resolve
+  consistently across locales, legacy keypad bindings keep their physical keys,
+  and binding capture accepts modifier taps alongside chords. Editor composition
+  tools follow layer switches and adjust the selected cell's collision profile.
+  Full-window Kosinski backreferences decode correctly, and split DPLC sprite
+  pieces retain their flipped tile positions. Creator starter IDs produce valid
+  Java names and YAML strings, and packaged mod bytes stay stable across host
+  time zones.
 
 - **Stock-game results and issue fixes:** act and special-stage bonuses award
   the full native point totals, with S1/S2 trailing-zero art and S3K bonus digits

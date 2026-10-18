@@ -25,6 +25,56 @@ class TestEngineSettingsScreen {
     private static final int DISPLAY = 0, SOUND = 1, CONTROLS = 2, GAMEPLAY = 3, FILES = 4, CAPTURE = 5;
 
     @Test
+    void tappingAModifierCanCaptureItAsAPlayerButton() {
+        Fixture f = new Fixture();
+        f.tab(CONTROLS);
+        int buttonRow = new EngineSettingsDraft(f.config).keys(EngineSettingsDraft.Category.INPUT)
+                .stream().filter(key -> ConfigCatalog.meta(key).section().equals("input.player1"))
+                .toList().indexOf(P1_A);
+        f.press(GLFW_KEY_DOWN, buttonRow);
+        f.press(GLFW_KEY_ENTER); // Binding menu.
+        f.press(GLFW_KEY_ENTER); // Capture.
+        f.press(GLFW_KEY_RIGHT_SHIFT); // A supported player-button key (P2 A's stock binding).
+        assertFalse(f.texts().contains("Press a key or chord"),
+                "releasing a tapped modifier must finish capture rather than wait forever");
+        f.press(GLFW_KEY_ESCAPE);
+        f.press(GLFW_KEY_ENTER); // Save.
+        assertEquals("RIGHT_SHIFT", f.config.getString(P1_A), "the modifier must not qualify itself");
+        assertEquals(GLFW_KEY_RIGHT_SHIFT, f.config.getInt(P1_A));
+        assertEquals(GLFW_KEY_RIGHT_SHIFT,
+                SonicConfigurationService.createStandalone(directory).getInt(P1_A));
+    }
+
+    @Test
+    void heldModifiersStillCaptureChordsAndCancelledModifierTapsAreForgotten() {
+        Fixture f = new Fixture();
+        f.tab(CONTROLS);
+        int buttonRow = new EngineSettingsDraft(f.config).keys(EngineSettingsDraft.Category.INPUT)
+                .stream().filter(key -> ConfigCatalog.meta(key).section().equals("input.player1"))
+                .toList().indexOf(P1_A);
+        f.press(GLFW_KEY_DOWN, buttonRow);
+        f.press(GLFW_KEY_ENTER);
+        f.press(GLFW_KEY_ENTER);
+        f.input.handleKeyEvent(GLFW_KEY_RIGHT_SHIFT, GLFW_PRESS);
+        f.frame();
+        assertTrue(f.texts().contains("Press a key or chord"), "a held modifier may begin a chord");
+        f.press(GLFW_KEY_ESCAPE); // Cancel while the modifier is still held.
+        f.input.handleKeyEvent(GLFW_KEY_RIGHT_SHIFT, GLFW_RELEASE);
+        f.frame();
+        f.press(GLFW_KEY_ENTER); // Restart capture, without the cancelled modifier.
+        assertTrue(f.texts().contains("Press a key or chord"));
+        f.input.handleKeyEvent(GLFW_KEY_LEFT_CONTROL, GLFW_PRESS);
+        f.frame();
+        f.press(GLFW_KEY_K);
+        f.input.handleKeyEvent(GLFW_KEY_LEFT_CONTROL, GLFW_RELEASE);
+        f.frame();
+        f.press(GLFW_KEY_ESCAPE);
+        f.press(GLFW_KEY_ENTER);
+        assertEquals("CTRL+K", f.config.getString(P1_A));
+        assertEquals("CTRL+K", SonicConfigurationService.createStandalone(directory).getString(P1_A));
+    }
+
+    @Test
     void colourExpansionOffersFullAndLimitedAndSavesFromTheDisplayPage() {
         Fixture f = new Fixture();
         String profile = f.config.getString(DISPLAY_COLOR_PROFILE);
