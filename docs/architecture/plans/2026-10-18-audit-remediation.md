@@ -67,5 +67,69 @@ noted the documented wire-slot exhaustion tradeoff and a pre-existing empty
 podium when joining ROUND_END before any later delta; that separate join behavior
 is outside the twenty audited fixes.
 
-Combined change-based smoke/guards remain pending. The plan selects 3,503 ordinary candidate classes because shared GameLoop
-and capture code are touched. No release-only full suite is authorized or needed.
+### Completed delivery validation
+
+Production source tested at `0517bd9e0e2d3df438fbaf7304fb85b9fd3a12d9`.
+The final follow-up changes only the older spot-check test and this evidence.
+Java 25, Lua 5.4 and PowerShell preflight passed. Root ROMs were discovered and
+identity-verified by the category runner; no missing-ROM skip was reported.
+
+The shared GameLoop/capture changes selected 3,503 ordinary smoke candidate
+classes, partitioned into 71 batches, followed by guards. The stopping rule was
+completion or the configured 120-minute execution/no-output limits. Expected cost
+was a potentially hour-long ROM-heavy run; completed ordinary execution was
+5,589.82 seconds and guards 234.23 seconds (queue waiting is separate).
+Run `20261018T012238Z-20d4a453` completed every batch:
+
+- Ordinary: 36,984 tests, three failures, two errors, 81 skips.
+- Guards: 715 tests, four failures, zero errors/skips.
+- One ordinary failure was an older spot-check assertion requiring slot reuse.
+  That assertion now requires reserved-slot isolation, while preserving checks of
+  original identity and recording-request isolation. The affected four-class
+  network selection then passed 32 tests with zero failures/errors/skips.
+- The other four ordinary failures/errors and all four guard failures reproduce
+  on unchanged base `8030832d2ab6080e5324cdfe35e971677fd97b41`, by exact test and
+  assertion/stack. They were not repaired as part of this task.
+- Skips cover opt-in native graphics/audio, capture, measurement and soak checks;
+  unavailable local mod/BizHawk fixtures; 32 inapplicable platform/flyer route
+  cases; and a spin-tube capture/release assumption. These remain coverage limits.
+  This is bounded smoke validation, not a fully green or full-suite result.
+
+Exact remaining baseline failures:
+
+| Test | Baseline evidence |
+|---|---|
+| `TestTitleInputOwnership.captureChordIsConsumedWhileBlockedAndCannotFireAfterReturningWithKeyHeld` | line 105: expected true, got false |
+| `TestZoneLayoutMutationPipeline.levelFrameStepFlushesQueuedMutationsAfterCameraScrollAndEventsBeforeBoundary` | null `GameModule.getRules()` at `GameplaySessionFactory:60` |
+| `TestLevelManagerModPatternWindows.everyLoadAndEditorRebuildRegistersModWindowsBeforeStockArtCaching` | same null-rules stack at test line 65 |
+| `TestOrdinaryTitleScreenCommandEvidence.masterTitleDrawExpandsBackdropAndFitsActionPaneAtEveryWidth` | line 111: card-row footer START hint missing at width 320 |
+| `TestProductionSingletonClosureGuard.productionCodeDoesNotUseForbiddenProcessSingletonsOutsideEngineServices` | `MenuAudioProbeTool:41` uses `AudioManager.getInstance()` |
+| `TestProductionSingletonClosureGuard.productionCodeOnlyUsesRawGetInstanceAtEngineServicesBootstrapBridge` | same raw singleton call |
+| `TestArchUnitRules.shared_code_does_not_construct_concrete_sonic_provider_classes` | `HubMusicController:118` constructs three concrete audio profiles |
+| `TestArchUnitRules.shared_layers_do_not_depend_on_game_specific_packages` | same controller accesses the three profiles and game music enums |
+
+Commands below ran in the task worktree except the explicitly marked matched
+base checks, which ran in the unchanged main checkout. Environment used JDK 25
+and Lua 5.4; `--rom-directory` was the main checkout. The category diagnostics
+were inspected, including failures and skips, then acknowledged and deleted.
+
+```bash
+python3 tools/testing/run_categories.py --base 8030832d2ab6080e5324cdfe35e971677fd97b41 --preflight
+python3 tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestHostMasterLink,TestClientRaceSession,TestHostRoundEngineVerified,TestRemoteGhostPlayback,TestRoomHost,TestRoomHostVote,TestUserRecordingManifestJson,TestUserRecordingCatalog,TestUserRecordingSessionLauncher,TestModManagerScreen,TestEditorProjects,TestEditorSpawnFactory,TestPngTransparency,TestGameLoopTitleCardPause,TestGameLoopSpecialStageRewindGate,TestDecodedPcmCache,TestLegacyConfigMigration,TestConfigMigrationService,TestEditorMouseTransform,TestFfmpegCommandTemplate,TestModStorage' test
+# 201 tests passed before the reviewer follow-up.
+python3 tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestHostRoundEngineVerified,TestHostRoundEngine,TestRoomHost,TestRoomHostVote' test
+# 39 passed after the reviewer follow-up.
+python3 tools/testing/run_categories.py --base 8030832d2ab6080e5324cdfe35e971677fd97b41 --rom-directory <main-checkout> --max-minutes 120 --run
+# Matched base checks: 17 tests (one failure/one error), one test (one error),
+# nine tests (one failure), 73 tests (four failures), respectively; no skips.
+python3 tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestTitleInputOwnership,TestZoneLayoutMutationPipeline' test
+python3 tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestLevelManagerModPatternWindows' test
+python3 tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestOrdinaryTitleScreenCommandEvidence,TestSpotCheck' test
+python3 tools/testing/maven_queue.py -Dmse=off -Pguards '-Dtest=TestProductionSingletonClosureGuard,TestArchUnitRules' test
+# Final task-tree regression after aligning the spot-check expectation: 32 passed.
+python3 tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestSpotCheck,TestRoomHost,TestRoomHostVote,TestHostRoundEngineVerified' test
+python3 tools/testing/run_categories.py --acknowledge 20261018T012238Z-20d4a453
+```
+
+No release-only full suite was launched. No production source changed after the
+combined smoke/guards run; the final test-only correction was verified narrowly.
