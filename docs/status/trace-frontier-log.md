@@ -114468,3 +114468,21 @@ delta from00ff5efed onto updated Main50348 composition, with Root verification
 still pending. Component graph/lease/order passes do not close route/readiness.
 
 [Composition and limits](../architecture/plans/2026-10-13-s3k-playable-completion.md#root-composition-saved-return-fixed-title-ownership-and-current-strict-limits-2026-10-18).
+
+
+### 2026-10-18 — R77 old-red to R79 bounded countdown publication green; route not remeasured yet
+
+Source9e942 working manager505a0647/testb7e2ddaf/combined0f2e, original native044
+fixed-countdown rawanim17 owner: active predeath before ordinary guards and
+successful natural underflow publication. R77 genuine3T2F0E0S raw17/1C and
+following Tails9C/00 after all prerequisites; ordinary decrement/Blank passes.
+R79 sole normal no-profile source-frozen12selection session86939 queue0/Maven
+01:17min display/exit0 gives116/0F0E0S incl unchanged3oldcases and P1 companion.
+Exact executed argv/all case identities/full24original318222B manifests are in
+own R79 registry; original3cases+newP1/all S3K4 with BOTH Loading and fluid
+protection check green. Root DIRECT read all reports/properties/streams before
+normal R80 local preservation. Source-equivalent commit is not another run.
+Warnings98FAST/20audiofallback/onebounds remain scoped. No canonical3475 caller,
+route/native/rewind/fullvector proof; prior original HCZ251/segment13ownership
+88306/first287y remain historical until conditional R80 original request runs.
+[Actual ownership and qualification](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r77r80-fixed-countdown-owns-raw-drowning-animation--2026-10-18).

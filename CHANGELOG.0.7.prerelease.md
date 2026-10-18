@@ -176,6 +176,8 @@ Unreleased. The earlier development themes remain in
   arena's camera lock until the original release event widens the boundaries.
   A drowning player sinks with the original motion, even while an object holds it,
   and in Sonic 3&K it keeps its underwater state until it dies, as in the original.
+  Sonic 3&K's fixed air countdown also selects and maintains the drowning
+  animation when object control bypasses ordinary movement animation.
   Offscreen Tails flight recovery in Sonic 2 and Sonic 3&K resets the native
   player status while retaining body size, water physics and fractional position.
   A broken monitor's contents still rise and pay out after the player leaves the

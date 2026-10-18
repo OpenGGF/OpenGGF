@@ -511,3 +511,21 @@ missing-controller, uncaptured-live and active-water-missing-key branches remain
 open. This is component coverage, not R52 caller, canonical13322, following
 freed-SST CPU marker or independent ownership88306 parity. R62's joint142 and
 R66's hand149 retain their distinct observed epochs; no new result at docs SHA.
+
+
+### Fixed countdown raw-animation ownership R77–R80 — 2026-10-18
+
+Independent HCZ2 public real-ROM component old-red R77 (3T2F0E0S) reaches natural
+underflow and active predeath but retains rawBlank1C instead of nativeDrown17/
+following Tails map00 instead of9C; ordinary NEW-air-decrement Blank control
+passes. Owner-local manager505/testb7 source fixes publication at native fixed
+pass priority, with original3case bodies unchanged and one public P1 companion
+using its own ROM scripts. R79 exact12class lifecycle116/0F0E0S includes all4
+component cases, P1 eight phase oracles, both Loading identities and required
+S3K4 plus protection/timer/RNG control. Root DIRECT accepted all24 originals.
+[Source, command epoch and limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r77r80-fixed-countdown-owns-raw-drowning-animation--2026-10-18).
+This qualifies those component/consumer paths only: native-at-PC/canonical3475
+caller, fullroute, simultaneous untested branches and new rewind scope remain
+unqualified. Prior full canonical251/first animation3475 and ownership88306 are
+historical until the separately authorized R80 original run actually completes.
+No snapshot/API/cadence/CPU/animation pipeline or fixture change.

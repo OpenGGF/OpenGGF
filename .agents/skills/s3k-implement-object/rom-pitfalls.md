@@ -2423,6 +2423,19 @@ ordinary sidekick init path; the landing routine writes Walk before Animate,
 and flight recovery writes Walk during its routine-4-to-6 handoff
 (`docs/skdisasm/sonic3k.asm:8111-8148,24325-24329,26631-26648`).
 
+**Fixed countdown ownership.** S3K `AirCountdown_Countdown` tests active `$30`
+before routine/shield/underwater guards; `loc_1857C` writes raw `anim=$17` on
+each active predeath pass. `AirCountdown_ReduceAir` writes the same byte after
+`Player_TouchFloor` at natural underflow (`sonic3k.asm:33530-33544,33579-33614`).
+Keep those publications in the fixed countdown owner. A common movement
+animation fallback may never execute under scripted object control. Preserve
+the mapping already selected by the player pass, then let the next ordinary
+player pass consume the ROM Drown script; do not force its mapping or restart
+animator history. `TestS3kFixedCountdownDrownAnimationOwnership` uses declared
+Blank and real natural air exhaustion to separate raw publication from later
+mapping for Tails and P1. Its component old-red/green is not a canonical writer
+observation or route certificate. See the existing dated HCZ audit R77–R80.
+
 **Originating commits.** `b18c254e3`; `<pending: S3K intro landing milestone>`.
 
 ---

@@ -7931,3 +7931,54 @@ Exact R68 selector: `TestPlayableDustEffectsRewind,TestSpindashDustControllerSpl
 Normal Main-absolute wrapper, original three ROMs/Java25/single JTO+CLI EGL,
 nullAL/no ambient DISPLAY/WAYLAND/LD/Lua/fork1/reuse/alphabetical; exact argv,
 all original hashes and current compiled ownership are in the existing entry.
+
+
+## R77–R80 fixed countdown owns raw drowning animation — 2026-10-18
+
+Independent real-ROM component, not canonical row3475 state/caller replay:
+R77 exact external test58cdb was adopted byteexact and ran three methods on
+source9e942/runtime8SHA6dd81, sole normal session7326/queue0/Maven24.772s. Two
+positive cases reached final assertAll after all public geometry/roster/CPU/
+water/air/predeath/control prerequisites: six leaves raw17 expected/1C actual
+and following Tails mapping9C/00; ordinary NEW-air-decrement/Blank control passes.
+Both original reports/full failures/streams were DIRECT accepted by Root.
+
+Native044 AirCountdown_Countdown:33530..33544 checks active fixed$30 before
+routine/shield/super/underwater guards; loc_1857C:33609..33614 writes anim17
+on every active predeath fixed pass. ReduceAir:33579..33606 writes17 after
+Player_TouchFloor at natural underflow. The existing fixed S3K manager instead
+returned for active predeath and never published animation after successful
+applyDrownDeath. Scripted-control animation dispatch can bypass a fallback;
+correct pose/routine does not imply correct raw animation ownership.
+
+Only S3kFixedAirCountdownManager changes: existing predeath exclusion moves to
+a raw DROWN publication/return before ordinary protection/air guards; natural
+underflow publishes the same semantic raw byte only after existing boolean
+applyDrownDeath succeeds. No mapping/animator reset, new field, cadence/RNG/
+bubble/sound/history/pose/CPU/rule/public API/common APS change. Manager505a0647
+(13insertions/2deletions) reverses byteexact to predecessord86862dd. The optional
+public P1 companion uses ordinary frames and its own actual ROM scripts; remove
+its marked block from fulltestb7e2ddaf to recover whole original58cdb, including
+all3bodies/helpers/oracles/whitespace. Wider native active timer/bubble details
+are not newly certified by this animation-only change.
+
+R79 sole normal no-profile12-selection session86939/PID377241 actual116/0F0E0S:
+all4component methods pass, original two final three-leaf failures now GREEN
+unchanged, ordinary decrement/Blank remains GREEN, P1 prerequisites/eight phase
+oracles GREEN. Both explicit Loading identities/AIZskip/Bootstrap/Decoding and
+exact fluid-protection-before-timer/RNG check pass. Queue0; runtime4144/test4197
+compiled inside one lifecycle, Maven duration display01:17min/exit0 (exact
+subsecond/parent/hold unmeasured), finished05:59:58+01:00. Exact source was
+HEAD9e942+manager505/testb7/combined0f2e/Plan0e, not a result at a later docs SHA.
+
+Root DIRECT accepted all24original318222B/all116ids/times/full12TXT/all12same
+72properties/fullclasspathb26b8057+duplicate and all70stderr19750B/238lines
+through14fullunique lines+exact ordered case links. NoF/E/S/suppression or
+unknown child; actual warnings98FAST+20audiofallback+onebounds-warning remain
+explicit, not blanket preexisting/disposition waivers. Long Maven console was
+partly truncated but all original JUnit streams were fully inspected. Original
+R77 raw reports were already consumed only after acceptance. R79 reports may
+be consumed only after normal preservation and fullsize/SHA prechecks, with
+all59current class hashes/mtimes preserved. Source/config/native/API pins stay
+exact. No canonical3475 caller, route/native-at-PC/rewind/fullguard/otherfrontier
+proof follows. R80's conditional original canonical measurement is separate.

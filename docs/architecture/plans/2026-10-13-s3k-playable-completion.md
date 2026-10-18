@@ -18910,3 +18910,211 @@ Ending R15 separately stopped at parent600s: all9 host-only markers inspected,
 No raw target pair/footer/positive; sources/PE/configs/17130classes preserved.
 R15 post-append Plan74d0610f/1303259B is the exact prefix of this composition.
 No Root JVM/native test, integration or push is claimed by this local commit.
+
+
+### Ending R16: parent-only2700/2760 planning budget SOURCE ONLY (2026-10-18)
+
+Root DIRECT accepted R15 entire9851B/68LF and actual9hostmarkers as partial600
+parentdeadline/child-15 only. Latercounts/nativevalues/footer/finalReader remain
+unreported. Root explicitly chose2700s fromPopen/2760s outerteardown and NORMAL
+estimate2700 as a conservative finite FUTURE planning budget after two600s
+incompletes and actual65536point214.4547006hostseconds. It is NOT a prefix-rate
+extrapolation, runtime/acquisition guarantee or nativecause/outcome certificate.
+
+Source inventory corrected Root's conflation with Cold: Ending C# has NO existing
+secondary timeout. Root accepted the smaller parent-only change; C# remains
+byte/mode/mtime EXACT a16299c9400c7182aaef6fc382645dc0b17c3ca4bc2438b6634b7d3e91354035.
+Existing PE64000B/6b015837885e37593ffc850990d330c79473eb12136bf669f1e51d2eddd1d848,
+0644/mtime1792296519954285509/MVID31bad940-e990-4110-8c19-9ef8faac92e2,
+remains suitable SAME-C# API binding, retained untouched; NO recompile required.
+No new timer/check/read/field/threshold/heartbeat/filter/optimization. Python's
+existing NATIVE_SECONDS600->2700/OUTER_SECONDS660->2760, two exact source-owned
+queue regex estimate600->2700, actual maven_slot estimate600->2700 and linked
+comments/docstring are the ONLY launcher substitutions. Child/teardown/strict
+JSON/startup/hostclock/getter/raw/input/FD/firstfailure bodies byte-exact;
+compiler30/60/default7GiB8cores unchanged; queuewait stays outside Popen clock.
+
+Three regular0600 external files now freezef8d7c2480de46dace550b9f50023d368d8267caaf0f24709e04f2aa0c61077ff:
+CS a16299c9400c7182aaef6fc382645dc0b17c3ca4bc2438b6634b7d3e91354035;
+Pythonccf992e4a8582eb8677572f9a27b93e76337a91f35fb40d8d724abb38b404972;
+JSON9d13cb2685d3a08ee80b2b3ce72c165913b5491b8de88633d305e781eb4327b0.
+Prospective Root7304e795aae1e5cbde40d314e82978abe92f4781/Main50348;
+preappendPlan1305935B/5041e9a92e444f05a1e5b36c949b57df3f50c1189dbf86ec52abbdeb982e73bd.
+R15/R14/R12 and all prior sourceCorrection epoch/results preserved unchanged.
+Current6selectedsource set retains prior4 and adds installer53f199889e94b285c34b04c6cdb800e02e8e0498cec4d0f3b498398bad9eb23f
+plus actualpublic-return testee1c59f6abc3f6b57f9cff84bb1cf1ae016ad1f8c168ef315f981c3e3f8e4c33.
+Both new sourcepins are added to generic held-open artifact checks:65artifacts
+(61priornonself EXACT+2self+2new) and17startupsourcepins, no dependency waived.
+Same originalAD40poweron0..539491 once;3PC9callbacks/everywarmupraw/getter/pair/
+Apply/Advance/order/fences/89pairs/100JSON/9samehostmarkers512B/native262144/
+aggregate304132 and all memory/CPU/admission controls unchanged.
+
+Full actual readback and in-memory inverse recover prior CSa162/Python65955e0d/
+JSONfb85645f fullhashes exactly. Seven unique old/new Python substitutions and
+precise manifest inverse recipe are retained in own sourcephase/externalplan;
+no backup/copy/archive. Empty CSdiff; Pythondiff3732B/SHA8c8c28417819b28abd29193fcb97482d5779d3579ad4d47abb00b04e52afce23;
+JSONdiff28487B/SHA35798a112d2875eac37ac98dbf59f4ddbf921816b1413ac2662198da0ce50804.
+AST/unchangedCSlexical+data-only models:10000fragmented2700-estimate waits then
+acquisition retain exactcounts/laststate with2finite status records; old600 and
+wrong2701/resource/unknownlines rejected. Parentdeadline/outer arithmetic keeps
+60s cleanup margin; maxmodeledspawn113B<unchanged256Bbucket. Initial isolated
+model namespace omitted status_after_primary/_stdout; fixed IN MEMORY before
+any candidate mutation, then all controls passed. No realqueue/sleep/CLI/compiler/
+Mono/native/JVM/BCL/performance/outcome certificate.
+
+Postchecks65+17/source3/R1/config2/Root7304+Main50348/indices/current6Java/
+17130classes97545344B content+mode+mtime/Mainforeign9/historyR2..R15 exact.
+CanonicalR16 ownsourcephase/nullUUID/taskId/authfalse/livejobs[]/24hexpiry;
+useful3sources+samePE cleanup_pending. Separate intendedwriter released after
+external freeze and reacquired for this exact-prefix appendix only.
+Futurecommand below is NOT SUBMITTED and requires Root actual+FRESH independent
+source review and a separate ONE native execution gate; compiler gate not needed:
+python3 $TASK_SCRATCH/ending-causal-owner-r2/launch_causal.py run --freeze f8d7c2480de46dace550b9f50023d368d8267caaf0f24709e04f2aa0c61077ff --exe-sha256 6b015837885e37593ffc850990d330c79473eb12136bf669f1e51d2eddd1d848
+Root postcomposition tests remain pending separately. SOURCE ONLY STOP; no native,
+compiler, runtimeoptimization, fullstream forecast or delivery claim.
+
+
+### Ending R17: ONE authentic AD40 producer/head/retirement pilot COMPLETE (2026-10-18)
+
+Root DIRECT read ENTIRE original20151B/74LF stream (nonemptychunksa94268/279bf5/
+9d6cd4;28empty observerchunks), all52startup lines/headerbinding/hostClock/9markers/
+5fullnative+35register+FIFOpoints/footer/terminal/postmarker. Sole frozen native
+run, no compiler/source/API/core/input variant or extra measurement. Sourcefreeze
+f8d7c2480de46dace550b9f50023d368d8267caaf0f24709e04f2aa0c61077ff;
+sameCSa162 and PE64000B/6b015837885e37593ffc850990d330c79473eb12136bf669f1e51d2eddd1d848,
+0644/mtime1792296519954285509 unchanged. Actual Root7304/Main50348 and invocation
+Plan1310489B/17c9ec35251a95c6ba9e6fb1274d4f276794dcd2563cb3e45dd697aefc0c222c.
+Exact absolute argv/cwd retained in own registry; task-alias form:
+python3 $TASK_SCRATCH/ending-causal-owner-r2/launch_causal.py run --freeze f8d7c2480de46dace550b9f50023d368d8267caaf0f24709e04f2aa0c61077ff --exe-sha256 6b015837885e37593ffc850990d330c79473eb12136bf669f1e51d2eddd1d848
+One session1051, normalresource-aware/default7GiB8cores/estimate2700; no outer
+writer/activity. Reported queuewait0s; actual admissioninstant/exactchildwall
+unknown. Actual /procPython365554/PGID365554 and Mono365606/PGID365606 exactargv+
+Rootcwd observed separately. Submission04:41:59UTC, terminalobserved05:10:29UTC
+are coarse parent-invocation boundaries (~28m30), not emulatedtime/isolatedguest
+runtime. Existing parent2700/outer2760 bounds satisfied, no C#secondary timer.
+Launcher0/child0, allprimary/cleanup/postIdentity/launch/queue/relay errorsNULL,
+rawRelayComplete true, COMPLETE_PARENT_CAUSAL_OWNER_PILOT present.
+
+Stopped at FIRST qualified targetretirement after528745original normalAdvances,
+input0..528744 once (maximumallowed539492; no full539491consumption claim).
+Producer pair input528742; headservice inputs528742/528743/528744; retirement
+528744. All five recorded input literals equal originalneutralrow bytes.
+Unchanged frozen validate_native was rerun on ACTUAL originaldata only and PASS:
+52line pinned startup grammar, exact28Bstderr, duplicatekey/schema/intnotbool/
+caps/input/callback/raw/getter/context/closure/module/footer validation.
+Native stdout19110B/68LF+stderr28B/1LF,16JSON=header+9markers+5pairs+footer;
+JSON bytesBeforeFooter13017/recordsBeforeFooter15 reconcile exactly. Header and
+footer module tables identical: beforeBizInvokeabsent/other3exact, afterall4exact.
+FinalReaderidentityVerified true/failureNULL/cleanupFailures[]/phasefinal-projection-after.
+
+Actual paired clock/context points below. HookPC is registered dispatchmetadata;
+actualCPU PC is a separately copied getter value. Inputindex is formattermetadata.
+Cycles/refresh are signed raw scalars and encodedlevel unsigned, no normalization:
+
+| Pair/event | Input index | Hook PC metadata | Actual CPU PC | Raw cycles / refresh / encoded level | Actual SR | Raw queue word | Actual stacked return PC | Stored-valid / raw bookmark |
+| --- | ---: | --- | --- | ---: | ---: | ---: | --- | --- |
+| 0 producer-before-leas | 528742 | 0x05ADCE | 0x05ADCE | 519778 / 520030 / 0 | 8976 | 0 | NULL | false / 0x001CBA |
+| 1 occupied-target-head | 528742 | 0x001C1A | 0x001C1A | 621082 / 621432 / 0 | 8960 | 3 | 0x00651C | false / 0x001CBA |
+| 2 occupied-target-head | 528743 | 0x001C1A | 0x001C1A | 275294 / 275280 / 0 | 8976 | 32771 | 0x00651C | true / 0x001C44 |
+| 3 occupied-target-head | 528744 | 0x001C1A | 0x001C1A | 265135 / 265359 / 0 | 8976 | 32771 | 0x00651C | true / 0x001C58 |
+| 4 committed-target-retirement | 528744 | 0x001CE4 | 0x001CE4 | 886245 / 887015 / 0 | 8960 | 2 | 0x00651C | false / 0x001C58 |
+
+Raw context at allpoints: gameMode12/zoneAct3329/playerMode0/emeraldCount7;
+FGevent36 atproducer then40, BGevent16. Empty producerqueue0 means its FIFO bytes
+are stale, not active refs; pre-LEA incomingA1/A2 are not initializedtarget proof.
+Firstoccupied targetFIFO[0] source0x1D17A6->0xFFFF0000 and FIFO[1]
+0x1CF2D4->0xFFFF9000; subsequent occupied samples retain those actual refs.
+Continuation-valid samples carry rawstoredSR8981/8977, bookmarks0x1C44/0x1C58
+and copiedD0-D6/A0-A2 in the original fullrecords. Retirement reports queuecount2
+and rawslot0 targetend0x1D1DCE->0xFFFF0E80; invalidstoredfields are not live
+continuation. Caller0x651C source-authenticated at all4queue/retire points.
+Rawencoded0 is not decodedIRQ/interrupt-origin evidence; nativeSR staysraw.
+
+Terminal accounting:3headservices/5pairs, dispatch523866 bysite[1,522594,1271],
+registeredmanagedcallbacks1571598/Readercallbacks1047732/completedrawtriples1047732,
+prearmrawtriples1047724, undelivered0/uncertainreadmaximum0/exact0, no pendingpair,
+lastdelivery2. Policyrawcap3236952/scalarhardmaximum9710856 unchanged; actual
+completed3scalar groups=3143196reads, not a natural-rate bound. Getter2229414=
+1190registercalls+2228224RAMbytecalls, matching34knownprojections (6*5+4) each
+35registers+64KiBmainRAM. Callback and final double-read knownprojection passivity
+passed; this is not a wholeworld/nohiddenstate proof. Warmup reads were counted,
+not filtered; before-arm counter includes deliveries at armcommit per existingcode.
+
+Actual hostClockfrequency10000000Hz, observer-main-try-entry origin and existing
+progress-helper-before-serialization samplepoint, separate parentSpawn/admission
+and emulatedT. Exact cumulative/adjacent host marker values:
+
+| Phase | Host elapsed ticks | Cumulative host seconds | Delta from prior marker seconds |
+| --- | ---: | ---: | ---: |
+| open-returned | 17655758 | 1.7655758 | 1.7655758 |
+| bind-completed | 23201562 | 2.3201562 | 0.5545804 |
+| all-nine-registrations-completed | 23209667 | 2.3209667 | 0.0008105 |
+| first-advance-call-next | 23215949 | 2.3215949 | 0.0006282 |
+| first-advance-returned-normally | 23233012 | 2.3233012 | 0.0017063 |
+| normal-return-count16 | 23733502 | 2.3733502 | 0.050049 |
+| normal-return-count256 | 31406408 | 3.1406408 | 0.7672906 |
+| normal-return-count4096 | 154949153 | 15.4949153 | 12.3542745 |
+| normal-return-count65536 | 2142986009 | 214.2986009 | 198.8036856 |
+
+Firsthostinterval includes all preopen setup; later intervals include preceding
+serialization/interveninghostwork under normalsharedadmission. No laterhostsample,
+interpolation, fullstream performance forecast or futurebudget guarantee.
+
+Postaudit65artifact+17startupsourcepins/source3regular0600+mtime/samePE/R1/config2
+SHA6abd+0600+originalmtime/current6Java/17130classes97545344B content+mode+mtime/
+Root7304/Main50348/indices/wrapper77d/Mainforeign9/historyR2..R16 PASS. Sharedrefs
+foreigndrift qualified; requiredRoot/MainHEAD exact/no ownrefmutation. Both owned
+PIDs/PGIDs absent, no ownqueued/runningrecords, frozenTERM/KILL/reap/finally and
+admissionFDrelease returned; separate intendedwriter reacquired for this exactprefix
+append only. Authfalse restored05:10:50.636720UTC; R2gate restored EXACT; canonical
+R17/nullunavailableUUID/taskId/24hexpiry/livejobs[]/useful3sources+PE cleanup_pending.
+No rawfile/log/archive/receipt/newcode/compile/JVM/secondattempt was created.
+
+Qualified result is native producer/head/retirement pilot ONLY. Explicit unavailable
+absoluteT/frameOriginB/phaseOrigin/decodedIRQ/hiddenboard/independentproduction
+continuation/6+46/live4-5-4/readiness/PCM/allroutes remain unavailable. This is not
+Endingparity or an independent Javaengine continuation certificate. STOP afterthis
+ONE result; no further native/compiler/optimization/budget authority inferred.
+
+
+### Root composition: fixed-countdown animation owner after native R17 release (2026-10-18)
+
+Root7304 imports only the tested manager and new component test from local HCZ
+086c77f1e1dc7d0df2804803d612ee30063c3b85. Runtime505a064754a888d3c993f637c234e9534fa0a1179213496de2c1e53fcc2d6607
+and testb7e2ddafb5d592454ef7ff27b7fcb18f40f4c571181b8b3d327fdf36284b2377
+are byte-exact. Unchanged Root predecessor managerd86862dd reverses exactly;
+all prior runtime8/merged GameLoop763601/LMb36e/installer53f199 stay untouched.
+The old three-case test58cdb is recovered by deleting only its marked P1 block.
+Source diff is the original comment/import/publication change only, no shared
+animator/physics/CPU/timer/RNG/API/schema/fixture edit.
+
+R79 child epoch9e942+505a/b7/Plan0e is the actual116/0F0E0S twelve-class focus,
+including mandatory S3K4 with both Loading identities and exact fluid-protection
+method. Root directly inspected all24 original318222B hashes/sizes, all116ids,
+times/fullTXT/12equal72-property maps/full8057classpath+duplicate and all70
+stderr ordered case links/full unique lines. Warnings98FAST/20audiofallback/one
+collision-negative remain scoped; no native presentation/audio certificate.
+This source import is not a new Root run. Original HCZ R80 canonical measurement
+is independent; no row3475 writer/route closure is inferred from component green.
+
+Four child docs had append-context conflicts because Root had later independent
+records. Their exact child-parent prefixes were verified, then only the added
+blocks were appended, preserving every Root byte; audit prose corrects '14
+fullunique records' to '14 fullunique lines'. Other scoped source/test/mirror/
+changelog patches applied normally. No merge/tree copy or unrelated adoption.
+
+Native EndingR17 released its separate writer at05:16:07.549354UTC after actual
+data validator and full65+17/source3/PE/config2/current6Java/17130class-byte-mode-
+mtime audits. Root Plan73f12cfa prefix is preserved before this appendix. The
+20151B/74LF original was fully DIRECT read; pilot only, not Ending/full-route
+parity or independent board/IRQ/absolute-origin/6+46/live4-5-4/readiness proof.
+ColdR70 original970127B/3906 packets plus4100B output also directly validated:
+all253CSV42+AUX27 match original controls,463837Advances,42793verifiedcallbacks,
+760closeddraw/render tokens,6clears/no living generations; paired AD40 only,
+not SoloCold49613 or unique629 cause. Those child accounting commits are separate.
+
+Current composed source requires fresh affected integration validation/guards;
+child focused results are bounded evidence, not a Root campaign pass. No Main
+branch switch/integration/push/new JVM/native execution is performed by this
+source composition. Existing clean delivery policy and open coverage obligations
+remain.

@@ -1557,3 +1557,18 @@ identities; returned partial21197/first34 busy remains, SS/FDF unvisited. Combin
 Root validation and current consume/physical-queue cause remain pending.
 
 [Composition and limits](architecture/plans/2026-10-13-s3k-playable-completion.md#root-composition-saved-return-fixed-title-ownership-and-current-strict-limits-2026-10-18).
+
+
+Fixed air-countdown raw animation ownership R77–R80 (2026-10-18): native
+AirCountdown_ReduceAir and loc_1857C publish Drown17 from the fixed object pass,
+including active predeath before ordinary protection/underwater guards. The
+S3K fixed manager now publishes that raw byte after successful natural underflow
+and reasserts it on active predeath, without resetting mapping/animator history
+or changing shared physics/CPU/cadence/API. Genuine independent two-final-case
+old-red becomes green in sole R79 twelve-class116/0F0E0S; ordinary decrement
+control and new public P1 eight-oracle companion pass. All original3test bodies
+remain unchanged. [Source evidence and limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r77r80-fixed-countdown-owns-raw-drowning-animation--2026-10-18).
+Canonical3475 writer and full route are not observed by this component, and
+R80 original canonical measurement is separate. Existing digit-art DMA
+representation and wider active-countdown bubble/timer limitations are not
+closed by raw animation publication. No whole-world/guard/native certificate.
