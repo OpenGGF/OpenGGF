@@ -125,7 +125,8 @@ public final class ResumableKosinskiDecoder {
             int lowByte = readByte();
             int highByte = readByte();
             distance = ((highByte & 0xF8) << 5) | lowByte;
-            distance = ((distance ^ 0x1FFF) + 1) & 0x1FFF;
+            // Kos_SeparateRLE sign-extends its 13-bit offset; encoded zero is -8192.
+            distance = 0x2000 - distance;
             count = highByte & 0x07;
             if (count != 0) {
                 count += 2;
@@ -147,8 +148,8 @@ public final class ResumableKosinskiDecoder {
             if (popDescriptor()) {
                 count++;
             }
-            distance = (readByte() ^ 0xFF) + 1;
-            distance &= 0xFF;
+            // Kos_RLE .loop2 preserves the -1 high byte: zero means -256.
+            distance = 0x100 - readByte();
         }
 
         for (int i = 0; i < count; i++) {

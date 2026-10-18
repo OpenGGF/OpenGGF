@@ -3,6 +3,7 @@ package com.openggf.configuration;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.OptionalInt;
 import java.util.logging.Level;
@@ -97,7 +98,7 @@ public final class GlfwKeyNameResolver {
     }
 
     private static String normalise(String name) {
-        String upper = name.toUpperCase();
+        String upper = name.toUpperCase(Locale.ROOT);
         if (upper.startsWith(GLFW_KEY_PREFIX)) {
             return upper.substring(GLFW_KEY_PREFIX.length());
         }

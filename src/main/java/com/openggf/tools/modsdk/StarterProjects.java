@@ -26,9 +26,12 @@ final class StarterProjects {
             byte[] bytes = read(ROOT + entry);
             if (relative.endsWith(".java") || relative.endsWith(".xml") || relative.endsWith(".yaml")
                     || relative.endsWith(".json") || relative.endsWith(".md")) {
-                bytes = new String(bytes, StandardCharsets.UTF_8).replace(oldPackage, javaPackage)
-                        .replace(oldId, id).replace("0.7.prerelease", AppVersion.identity().baseVersion())
-                        .getBytes(StandardCharsets.UTF_8);
+                String text = new String(bytes, StandardCharsets.UTF_8).replace(oldPackage, javaPackage)
+                        .replace(oldId, id).replace("0.7.prerelease", AppVersion.identity().baseVersion());
+                if (relative.equals("src/main/resources/META-INF/openggf-mod.yaml")) {
+                    text = text.replace("\nid: " + id + "\n", "\nid: \"" + id + "\"\n");
+                }
+                bytes = text.getBytes(StandardCharsets.UTF_8);
             }
             if (relative.endsWith(".base64")) {
                 String decoded = relative.substring(0, relative.length() - ".base64".length());

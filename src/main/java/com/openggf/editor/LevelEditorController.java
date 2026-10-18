@@ -490,13 +490,14 @@ public final class LevelEditorController {
     }
 
     public void adjustSelectedChunkSolidTileIndex(int delta) {
+        finishPendingEdits();
         MutableLevel attachedLevel = level;
-        Integer chunkIndex = selection.selectedChunk();
-        if (attachedLevel == null || chunkIndex == null || !isCollisionIndexEditingDepth()
-                || !isValidChunkIndex(attachedLevel, chunkIndex)) {
+        if (attachedLevel == null || !isCollisionIndexEditingDepth()) {
             return;
         }
-        Chunk chunk = attachedLevel.getChunk(chunkIndex);
+        // The chunk brush can differ from the cell being edited in the block canvas.
+        Chunk chunk = selectedBlockCellPreview();
+        if (chunk == null) return;
         int current = collisionPath == EditorCollisionPath.PRIMARY
                 ? chunk.getSolidTileIndex() : chunk.getSolidTileAltIndex();
         int maxIndex = Math.max(0, attachedLevel.getSolidTileCount() - 1);
@@ -561,6 +562,7 @@ public final class LevelEditorController {
             return;
         }
         activeLayer = activeLayer == 0 ? 1 : 0;
+        refreshSelectionFromActiveTarget();
     }
 
     public boolean hasUndoHistory() {

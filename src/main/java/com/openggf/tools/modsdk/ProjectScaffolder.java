@@ -140,7 +140,7 @@ public final class ProjectScaffolder {
             writeText(root.resolve("src/main/java/" + pkg.replace('.', '/') + "/SceneMod.java"), "package " + pkg + ";\nimport com.openggf.mods.code.GgfMod;\nimport com.openggf.mods.code.ModContext;\npublic final class SceneMod implements GgfMod { public void register(ModContext context) { context.registerStartupScene(StarterScene::new); } }\n");
             writeText(root.resolve("src/main/java/" + pkg.replace('.', '/') + "/StarterScene.java"), "package " + pkg + ";\nimport com.openggf.mods.scene.*;\npublic final class StarterScene implements ModScene { private int ticks; public void enter(SceneContext ctx) { } public void update(SceneContext ctx) { ticks++; if (ctx.buttonPressed(SceneButtons.B)) ctx.exitToGameTitle(); } public void draw(SceneContext ctx, SceneCanvas canvas) { canvas.clear(0x102040); canvas.text(\"MY SCENE \" + ticks, 16, 16, 0xFFFFFFFF); } }\n");
         }
-        writeText(root.resolve("src/main/resources/META-INF/openggf-mod.yaml"), "formatVersion: 1\nid: " + id + "\nname: " + displayName(id) + "\nversion: 1.0.0\nauthors: [Mod Author]\ndescription: Original " + kind + " starter.\nengineApiRange: \">=0.7.0 <0.8.0\"\ntype: patch\nbaseGame: s2\ndependencies: []\naudioOverrides: " + (kind.equals("music") ? "{129: theme}" : "{}") + "\n" + manifestExtras);
+        writeText(root.resolve("src/main/resources/META-INF/openggf-mod.yaml"), "formatVersion: 1\nid: \"" + id + "\"\nname: \"" + displayName(id) + "\"\nversion: 1.0.0\nauthors: [Mod Author]\ndescription: Original " + kind + " starter.\nengineApiRange: \">=0.7.0 <0.8.0\"\ntype: patch\nbaseGame: s2\ndependencies: []\naudioOverrides: " + (kind.equals("music") ? "{129: theme}" : "{}") + "\n" + manifestExtras);
         String pom = render("simple-pom.xml.template", Map.of("{{MOD_ID}}", id, "{{PACKAGE}}", pkg, "{{CONVERSION}}", conversion));
         writeText(root.resolve("pom.xml"), pom);
     }
@@ -310,13 +310,17 @@ public final class ProjectScaffolder {
 
     private static String classPrefix(String id) {
         StringBuilder result = new StringBuilder();
-        for (String part : id.split("-"))
-            result.append(Character.toUpperCase(part.charAt(0))).append(part.substring(1));
+        for (String part : id.split("-")) {
+            if (!part.isEmpty())
+                result.append(Character.toUpperCase(part.charAt(0))).append(part.substring(1));
+        }
+        if (!Character.isJavaIdentifierStart(result.charAt(0))) result.insert(0, "Mod");
         return result.toString();
     }
 
     private static String displayName(String id) {
         return String.join(" ", java.util.Arrays.stream(id.split("-"))
+                .filter(p -> !p.isEmpty())
                 .map(p -> Character.toUpperCase(p.charAt(0)) + p.substring(1)).toList());
     }
 
