@@ -1,6 +1,7 @@
 package com.openggf.tests;
 
 import com.openggf.game.GameServices;
+import com.openggf.game.rewind.snapshot.ParallaxSnapshot;
 import com.openggf.game.ShieldType;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindRegistry;
@@ -109,6 +110,8 @@ class TestS3kAttractedRingAwardPhase {
     @Test
     void acceptedPendingWorldRestoresAndAwardsExactlyOnceAcrossTwoForwardReplays() {
         var component = component();
+        GameServices.parallax().initZone(GameServices.level().getCurrentZone(),
+                GameServices.level().getCurrentAct(), GameServices.camera().getX(), GameServices.camera().getY());
         var rings = component.rings();
         var player = component.player();
         var allocated = allocateThroughAttraction(component);
@@ -126,6 +129,8 @@ class TestS3kAttractedRingAwardPhase {
         assertEquals(allocated.ySub(), accepted.ySub());
         assertEquals(before, player.getRingCount());
         var pending = component.registry().capture();
+        var savedParallax = assertInstanceOf(ParallaxSnapshot.class, pending.get("parallax"));
+        assertNotNull(savedParallax.handlerRewindState(), "public zone entry must install the HCZ handler");
 
         rings.update(component.cameraX(), player, 1, false);
         assertEquals(before + 1, player.getRingCount());

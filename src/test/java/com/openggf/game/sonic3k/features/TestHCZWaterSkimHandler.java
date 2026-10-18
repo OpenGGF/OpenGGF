@@ -264,6 +264,9 @@ class TestHCZWaterSkimHandler {
         config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
         try {
             var fixture = HeadlessTestFixture.builder().withZoneAndAct(1,0).build();
+            // Select the actual zone handler before retained world capture.
+            GameServices.parallax().initZone(GameServices.level().getCurrentZone(),
+                    GameServices.level().getCurrentAct(), fixture.camera().getX(), fixture.camera().getY());
             var main = fixture.sprite();
             var p2 = GameServices.sprites().getSidekicks().getFirst();
             configureCandidate(main);
@@ -277,6 +280,10 @@ class TestHCZWaterSkimHandler {
             assertTrue(HCZWaterSkimHandler.isSkimActiveP2());
             var registry = fixture.gameplayMode().getRewindRegistry();
             var saved = registry.capture();
+            assertTrue(saved.get("parallax") instanceof
+                    com.openggf.game.rewind.snapshot.ParallaxSnapshot savedParallax
+                    && savedParallax.handlerRewindState() != null,
+                    "the saved parallax snapshot must retain the selected zone handler state");
             assertTrue(saved.entries().containsKey("hcz-water-skim"), "use the installed production static adapter");
             logicalInputTail(query,main,p2);
             var expected = registry.capture();

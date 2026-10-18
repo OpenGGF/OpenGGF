@@ -1,6 +1,7 @@
 package com.openggf.tests;
 
 import com.openggf.game.GameServices;
+import com.openggf.game.rewind.snapshot.ParallaxSnapshot;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.timing.HardwareServiceBoundary;
@@ -119,9 +120,13 @@ class TestS3kNativeWordLayoutResidency {
     @Test
     void sceneLayoutEncodingAndMapMutationRestoreWithoutChangingPublicSnapshots() throws Exception {
         var fixture = HeadlessTestFixture.builder().withZoneAndAct(Sonic3kZoneIds.ZONE_HCZ, 1).build();
+        GameServices.parallax().initZone(GameServices.level().getCurrentZone(),
+                GameServices.level().getCurrentAct(), fixture.camera().getX(), fixture.camera().getY());
         GameServices.level().getObjectManager().setRewindInPlaceRestoreEnabledForTest(false);
         var registry = fixture.gameplayMode().getRewindRegistry();
         var before = registry.capture();
+        var savedParallax = assertInstanceOf(ParallaxSnapshot.class, before.get("parallax"));
+        assertNotNull(savedParallax.handlerRewindState(), "public zone entry must install the HCZ handler");
         applySceneAndMapMutation();
         var after = registry.capture();
         for (int replay = 0; replay < 2; replay++) {

@@ -4,7 +4,6 @@ import com.openggf.tests.TestEnvironment;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic2.Sonic2GameModule;
-import com.openggf.trace.TraceCharacterState;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.level.WaterSystem;
@@ -608,7 +607,13 @@ class TestSidekickCpuControllerFlightAutoRecovery {
         assertSame(SidekickCpuController.State.FLIGHT_AUTO_RECOVERY, controller.getState());
         assertEquals(299, controller.getDiagnosticRespawnCounter());
         assertEquals(Direction.LEFT, tails.getDirection());
-        assertEquals(0x03, TraceCharacterState.statusByteFromSprite(tails));
+        assertTrue(tails.getDirection() == Direction.LEFT);
+        assertTrue(tails.getAir());
+        assertFalse(tails.getRolling());
+        assertFalse(tails.isOnObject());
+        assertFalse(tails.getRollingJump());
+        assertFalse(tails.getPushing());
+        assertFalse(tails.isInWater());
         assertTrue(tails.getCentreX() > sonic.getCentreX());
         assertTrue(tails.hasRenderFlagOnScreenState());
         assertFalse(tails.isRenderFlagOnScreen());
@@ -652,7 +657,13 @@ class TestSidekickCpuControllerFlightAutoRecovery {
                 () -> assertFalse(tails.isObjectControlAllowsCpu()),
                 () -> assertTrue(tails.isObjectControlSuppressesMovement()),
                 () -> assertEquals(0x20, tails.getAnimationId()),
-                () -> assertEquals(0x02, TraceCharacterState.statusByteFromSprite(tails)),
+                () -> assertFalse(tails.getDirection() == Direction.LEFT),
+                () -> assertTrue(tails.getAir()),
+                () -> assertFalse(tails.getRolling()),
+                () -> assertFalse(tails.isOnObject()),
+                () -> assertFalse(tails.getRollingJump()),
+                () -> assertFalse(tails.getPushing()),
+                () -> assertFalse(tails.isInWater()),
                 () -> assertEquals(Direction.RIGHT, tails.getDirection()));
     }
 }

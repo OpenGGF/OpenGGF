@@ -8,7 +8,6 @@ import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.TestSidekickCpuControllerFlightAutoRecovery.TestableSprite;
 import com.openggf.tests.TestEnvironment;
-import com.openggf.trace.TraceCharacterState;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -73,7 +72,13 @@ class TestSidekickCpuControllerFlightTimeoutStatusInputs {
         assertSame(SidekickCpuController.State.FLIGHT_AUTO_RECOVERY, controller.getState());
         assertEquals(299, controller.getDiagnosticRespawnCounter());
         assertEquals(Direction.LEFT, tails.getDirection());
-        assertEquals(0x7F, TraceCharacterState.statusByteFromSprite(tails));
+        assertTrue(tails.getDirection() == Direction.LEFT);
+        assertTrue(tails.getAir());
+        assertTrue(tails.getRolling());
+        assertTrue(tails.isOnObject());
+        assertTrue(tails.getRollingJump());
+        assertTrue(tails.getPushing());
+        assertTrue(tails.isInWater());
         assertTrue(tails.hasRenderFlagOnScreenState());
         assertFalse(tails.isRenderFlagOnScreen());
 
@@ -84,7 +89,13 @@ class TestSidekickCpuControllerFlightTimeoutStatusInputs {
         assertAll("Literal timeout status preserves independent body/physics fields",
                 () -> assertSame(SidekickCpuController.State.CATCH_UP_FLIGHT, controller.getState()),
                 () -> assertEquals(0, controller.captureRewindState().flightTimer()),
-                () -> assertEquals(0x02, TraceCharacterState.statusByteFromSprite(tails)),
+                () -> assertFalse(tails.getDirection() == Direction.LEFT),
+                () -> assertTrue(tails.getAir()),
+                () -> assertFalse(tails.getRolling()),
+                () -> assertFalse(tails.isOnObject()),
+                () -> assertFalse(tails.getRollingJump()),
+                () -> assertFalse(tails.getPushing()),
+                () -> assertFalse(tails.isInWater()),
                 () -> assertEquals(Direction.RIGHT, tails.getDirection()),
                 () -> assertEquals(7, tails.getXRadius()),
                 () -> assertEquals(14, tails.getYRadius()),

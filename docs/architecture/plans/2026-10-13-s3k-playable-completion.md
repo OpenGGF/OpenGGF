@@ -19482,3 +19482,65 @@ owned pilot classes may then be retired only after full hash/size/mtime inventor
 all other target classes remain unchanged until complete generated-target audit.
 Whole target/config/example/docslinks cleanup requires every entry owned/accounted;
 unknown files stop cleanup. No branch deletion/force or Main integration/push.
+
+
+### Root composition smoke: affected fixture and guard corrections, 2026-10-18
+
+Root pre-preservation HEAD19842ecc retains the combined source epoch tested from
+b5dd. The one change-based smoke run used base8030832d, all ten smoke categories
+and 3545 candidate classes. Preparation completed; all71 ordinary batches
+reported37228 tests/153 failures/3 errors/91 skips; the separate fresh guards
+reported715 tests/9 failures/0 errors/0 skips. All reported failures and skips
+were inspected by identity. The complete run was acknowledged and deleted via
+the category runner; no full-suite pass, green composition or delivery is claimed.
+
+Three registered-world test fixtures had captured an uninitialized parallax
+handler. Their public fixture entry now initializes the actual zone/act and
+camera before capture, and requires a non-null typed handler snapshot. Existing
+world keys, two forward replays and behavior assertions remain unchanged.
+The one normal six-class focus23979 passed33 tests: Skim13, attracted-ring6,
+native-word-layout4, moving-wall2, Parallax6 and SlotPlane2. Runtime is unchanged.
+The12 original reports were inspected then consumed under the metadata lease;
+the tested class inventory was preserved through cleanup.
+
+Five new guard failures had bounded test-contract causes. The provider-cache
+allowlist loses its deleted feature-provider method; the monitor uses the public
+module fixture entry; four CPU assertions inspect the same seven native flags
+directly rather than introducing a trace dependency. Two TraceChaser guards
+now pin exact4c3d6ba8, matching the deliberately preserved Root gitlink from
+8ae7c93b8; this is not floating acceptance or native route qualification.
+One fresh guards invocation11666 passed all five affected methods. One normal
+three-class invocation52121 passed27 consumers: Monitor5, FlightAuto20 and
+FlightTimeout2. Original actions, histories, radii and runtime source are unchanged.
+Full report identities/properties/streams and exact original manifests are in
+the existing ownership registry. No unrelated broad rerun was launched.
+
+Four other guard failures remain inherited: two singleton-closure assertions
+for MenuAudioProbeTool and two ArchUnit assertions for HubMusicController.
+The bounded original Main707b3c20 check had73 tests/four failures with the same
+identities and full messages; relevant files and frozen stores remain identical
+through base8030832d, Main50348f29 and Root. These failures are not waived or fixed
+by this test-only preservation. Main50348 also reproduces the audio CLI and
+title-footer assertions; its two racing transport cases pass, leaving the Root
+Netty failure intermittent/unattributed rather than an established regression.
+
+Slot and SOZ are separate unresolved work. A valid bounded Slot witness17920
+retained21 records across the three original short cases with no diagnostic
+failure: actual zero payout and empty reward lists preceded normal cage release,
+goal exit and return to title while the old test still awaited reward actors.
+The independent zero/positive fixture correction remains excluded and unexecuted.
+The fresh five-case SOZ check49061 has only Knuckles act0 failing: a level identity
+changes within the first45 forward steps of window3506, before any restore.
+Its temporary pure step/draw boundary witness is excluded and unexecuted.
+The remaining HCZ matched animation21-key regression, physical Cold projection,
+FDF route/timing and broader route/coverage limits are still open.
+
+All commands use the Main queue wrapper from the intended Root checkout, Java25,
+three original long-name ROM paths, Lua5.4, EGL and null audio. The recorded exact
+argv/environment and source fingerprints remain in the existing registry.
+For guards and27-consumer focuses, the only graphics flag was JVM-environment
+surfaceless-EGL. Each focus used one normal lifecycle/observer; production was
+up-to-date and4210 test sources compiled inside the lifecycle. Queue waits were0;
+Maven times were26.331s/25.376s/24.934s for33/5/27 cases. Console truncation does
+not establish an exhaustive compiler-warning tally. This preservation contains
+only the nine qualified tests and this existing Plan, without Slot/SOZ witnesses.
