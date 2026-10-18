@@ -129,6 +129,7 @@ public final class TimeAttackMenuState {
         List<Path> extraGhosts;
         try {
             extraGhosts = ghostStore.listImports(currentGameId()).stream()
+                    .filter(path -> matchesTrack(path, track))
                     .limit(MAX_GHOSTS_RACED)
                     .toList();
         } catch (IOException e) {
@@ -136,6 +137,17 @@ public final class TimeAttackMenuState {
             extraGhosts = List.of();
         }
         launchRequest = new TimeAttackLaunchRequest(currentGameId(), track.zone(), track.act(), character, extraGhosts);
+    }
+
+    private boolean matchesTrack(Path path, TimeAttackTrackCatalog.Track track) {
+        try {
+            var header = openggf.timeattack.ghost.GhostFileCodec.read(path).header();
+            return header.gameId().equals(currentGameId())
+                    && header.zone() == track.zone() && header.act() == track.act();
+        } catch (IOException invalid) {
+            LOGGER.log(Level.WARNING, "Skipping unreadable ghost import " + path, invalid);
+            return false;
+        }
     }
 
     public void refreshGhostSummary() {
