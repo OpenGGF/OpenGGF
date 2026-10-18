@@ -114292,3 +114292,35 @@ actual-collector policy attribution are distinguished in the
 [bonus matrix](../architecture/validation/levels/s3k-bonus-stage-transitions.md#attracted-ring-acceptance-and-owner-award--2026-10-18).
 No route122 caller cause, whole-frame/cold/native timing/pixel or global
 no-regression certificate is claimed. CPU8930 remains preserved.
+
+
+### 2026-10-18 — HCZ restore and native hand owners composed; original route stays red
+
+Root composes the exact eight runtime and two regression-test files from local
+1f9f05ae1 after policy825a76b7c (all72 SH/PowerShell safety methods passed).
+R62 joint142 and R66 hand149 focused passes remain their child source epochs.
+R68 resource focus passes74/0F0E0S and is preserved separately in15d94b2a5;
+no Root execution is inferred from this composition.
+
+On child15d94b2a5, sole original `-Ptrace-replay
+-Dtest=TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds`
+R69/session92948 is1T1F0E0S, queue0/Maven50.440s, method25.693s. Complete
+HCZ segment11/reference14208 reports251 total differences:11 physics and240
+animation, lag59/comparator+bootstrap warnings0. First all-group logged is3475
+sidekick_animation_id0017/001C. No firstNonCameraPhysicsMismatch key is emitted;
+the five retained mapping entries are not the full mismatch vector. Historical
+R47 reported6511=5447+1064 with firstNonCamera13322; the bounded improvement is
+not an isolated single-change attribution or a regression waiver.
+
+Six earlier complete zero payloads remain byte-identical. Segment13 remains
+incomplete63295=54642+8653, first287 y06D4/06DA, and loses ownership at88306
+in LEVEL/gen10/progression1/ROM1/act1. Manifest act2 is one-based and normalizes
+to engine act1; generation/admission/cause internals are not serialized. Four
+unmatched timing identities244/171/245/172 remain exact historical descriptors.
+No later route, freed-SST marker, actual R52 caller, native29 producer,
+campaign8774/11920 caller or full-vector/no-regression certificate follows.
+Root DIRECT-read all20 original131723B/full failure/TXT/72props, complete961-line
+stderr88558B via32 full unique lines+exact order, all nine JSON/owner pairs.
+Actual465 SMPS shadow+2 FAST+1 markRemembered runtime warnings are separate from
+comparator0. All expected sizes/full hashes and55 source pins matched; originals
+remain retained pending separate durable accounting/cleanup. Main803 is unchanged.

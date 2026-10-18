@@ -1483,6 +1483,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (aizEvents != null) {
             aizEvents.reconcileSequenceAfterRewindRestore();
         }
+        if (hczEvents != null && GameServices.hasRuntime()) {
+            hczEvents.reconcileWallAfterRewindRestore();
+        }
         // ZoneRuntimeRegistry restores FBZ's authoritative handler fields.
         // Reconcile only the adapter binding here; never restore a second sidecar.
         reconcileFbzRuntimeStateAfterRestore();

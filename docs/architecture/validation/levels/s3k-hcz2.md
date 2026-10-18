@@ -435,6 +435,62 @@ HCZ14208, TOTAL6511=5447physics+1064animation**, firstNonCamera13322status09/01
 3475 and strict residual remain; recent5 is not full-vector/no-regression proof.
 Six earlier complete windows stayzero. Actual giant_ring/SS6+return semantic
 assertions pass, but segment13 remains incomplete with ownership88306/gen10/
-act1-vs2 and4suppressed hardware identities, so no fullroute certificate.
+matching normalized act and4suppressed hardware identities, so no fullroute certificate.
 All original reports retained for RootDIRECTread; no runtime probe/native or
 actual11920 caller proof. [R47 exact result/limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r47-original-canonical-firstnoncamera13322-strict-red--2026-10-17).
+
+
+### R50 bounded unload-writer observation (2026-10-18 accounting)
+
+On04ed+reviewed temporary APS9a76/testd66f, sole originalAD40 prefix83339
+finishes22:55:30UTC2026-10-17, **1/1F0E0S**: only strict0/256 after cleanup.
+Current partial13324/reference14208/completefalse has16physics+240animation,
+firstNonCamera13322status09/01, lag59/warnbootstrap0. Ten bounded records and
+38-field known-projection checks pass; actual13322 caller is hand-launcher
+releaseWithoutLaunch499→onUnload512→ordinary manager range unload3427. At the
+clear, actual latched and ride references still identify the same launcher.
+NativeSST30 and engineinteract29 remain distinct; no allocator attribution.
+This is a local writer witness, not an independent old-red/fix, full-vector
+comparison or fullroute certificate. Actual11920/native29/8774/segment13 gaps
+remain independent. All18 originals104865B accepted by Root DIRECTread; normal
+accounting restores exact838c/deletes only inventoried diagnostic classes and
+consumes accepted reports. No new JVM. [Source, clocks and limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r49r50-observed-hand-launcher-unload-onobj-writer--2026-10-17).
+
+
+### R56–R63 independent moving-wall/shake rewind obligation — 2026-10-18
+
+Real HCZ2 component inlet and continuous ordinary frames produce distinct saved
+shake AND registered wall integer-X/offset values. Independent bbde originally
+fails both joint cases (R56 12/2F0E0S); after HCZ producer/recreated-wall ownership
+R58's151/1F retains only two active forward presentation comparisons. Accepted
+R60 raw splash-state witness supports the internal supplementary owner. R62's
+sole exact13-class normal lifecycle88571 on HEADdad+sevencombineda301 passes
+**142/0F0E0S**, including both moving/stationary immediate full-registry and
+twice same-input forward full-registry contracts. No key/oracle is dropped.
+[Commands, owners, red/partial/green evidence and limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r53r63-joint-hcz-restore-owners-independent-red-to-bounded-green--2026-10-18).
+This qualifies these independent component branches, not a route frontier,
+actual R52 caller or the unexecuted dedicated supplementary surface-resource/
+replacement-controller/missing-participant branches. Hand907443's prior restore prerequisite failure remains its historical epoch;
+R64/R66 below separately qualify the unchanged final native retention oracle.
+Existing canonical13322/6511, slice/alternate breadth and seg13ownership88306
+are not requalified by the component pass. Root owns composed guards/delivery.
+
+
+### R64–R68 ordinary hand retirement retention — 2026-10-18
+
+Unchanged real ROM/factory/SST/SolidObjectTop/visible-CPU-warm/range-unload test907443
+reaches every native final oracle after two before-birth and two held forced-world
+recreation/forward/full-key controls. Genuine R64 **19/1F0E0S**, eight final native
+control/status leaves, becomes R66 **149/0F0E0S / ten classes** on sole Hand817c
+plus restore owners a301. All legacy extension unload, omitted-extension,
+role-promotion, jump and visible-launch controls remain exact/green.
+[Native deletion owner, command, epochs and limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r64r68-native-hand-retirement-independent-old-red-to-bounded-green--2026-10-18).
+This qualifies local native-player preservation on ordinary object retirement,
+not the following freed-SST CPU marker, final post-delete ride reference/rewind,
+R52 actual caller, canonical13322 closure or independent ownership88306. New a9df
+resource/missing-participant cases remain uncompiled/excluded at preservation.
+
+The historical manifest act2 is one-based and matches engine act1. The
+reported generation10 ownership loss does not identify a load caller/cause.
+Later child R69 reports251 total (11 physics/240 animation), but remains red;
+this composition adds no fresh Root route or native certificate.

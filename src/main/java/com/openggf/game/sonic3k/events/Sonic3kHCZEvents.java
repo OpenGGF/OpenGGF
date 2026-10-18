@@ -1029,6 +1029,25 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
         }
     }
 
+    /** Rebind only after ObjectManager has recreated and restored its dynamic actors. */
+    public void reconcileWallAfterRewindRestore() {
+        if (act2BgRoutine != BG_WALL_MOVE) {
+            wallObject = null;
+            return;
+        }
+        // act2BgInit is this owner's sole wall allocation. Native Obj_HCZ2Wall
+        // reads live Events_bg on each update (sonic3k.asm:106272); a cached
+        // pre-restore actor cannot receive the event's next ordinary write.
+        var objects = Objects.requireNonNull(levelManager().getObjectManager(),
+                "HCZ wall rewind requires the restored object manager");
+        var walls = objects.activeObjectsOfType(HCZ2WallObjectInstance.class);
+        if (walls.size() > 1) {
+            throw new IllegalStateException("Ambiguous restored HCZ2 wall ownership: " + walls.size());
+        }
+        // AllocateObject can fail: no captured wall means no replacement is created here.
+        wallObject = walls.isEmpty() ? null : walls.getFirst();
+    }
+
     /**
      * BG state 0: HCZ2BGE_WallMoveInit.
      * ROM: sonic3k.asm line ~105995.

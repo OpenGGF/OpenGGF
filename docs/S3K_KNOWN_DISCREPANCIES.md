@@ -1484,3 +1484,29 @@ full-vector/no-regression equivalence. Actual11920 engine caller, native001D
 producer and campaign8774 Aircaller remain unobserved/separate. No fresh child
 fullguard or fullroute certificate: known LevelManager3153/3144 is parent-owned.
 [Exact old-red/source/focus/canonical/limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r47-original-canonical-firstnoncamera13322-strict-red--2026-10-17).
+
+
+HCZ restore follow-up R56–R63 (2026-10-18): the independent moving-wall/shake
+component's genuine joint12/2F old-red becomes R58's151/1F partial after restoring
+scroll producer state and rebinding the event to its recreated managed wall.
+The internal supplementary dust owner then restores omitted water/surface state
+without changing the public four-field record. R62 exact13-class lifecycle
+passes142/0F0E0S, including both immediate full-registry and twice identical-input
+forward-B branches in the unchanged moving/stationary tests. All original keys
+remain compared. [Exact scope and residual limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r53r63-joint-hcz-restore-owners-independent-red-to-bounded-green--2026-10-18).
+Dedicated supplementary surface-resource recreation/missing-participant cases
+remain unqualified at this R62 epoch; R64/R66 below separately qualify native
+hand retirement retention. The actual R52 restore caller remains unobserved. This is no
+new canonical/slice/alternate certificate or full-vector/no-regression waiver;
+existing strict13322/6511 and separate88306ownership remain historical epochs.
+
+
+HCZ hand retirement R64–R68 (2026-10-18): native044 deletion clears only its own
+SST; it does not release Sonic/Tails' held control/status. The local owner now
+drops its native grab references without writing players, while preserving the
+engine extension-release policy and all normal launch/jump bodies. Unchanged
+independent907443 completes two before-birth and two held forced-world/forward/
+full-key cycles before the genuine R64 eight-leaf old-red; R66 exact ten-class
+149/0F0E0S turns every final native leaf green. [Owners, evidence and limits](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r64r68-native-hand-retirement-independent-old-red-to-bounded-green--2026-10-18).
+No new route13322, freed-SST next CPU marker, R52 actual restore caller or
+full-vector/ownership88306 certificate follows from this bounded component pass.

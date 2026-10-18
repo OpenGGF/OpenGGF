@@ -422,6 +422,7 @@ public final class GameplayModeContext implements ModeContext {
             rewindRegistry.register(com.openggf.sprites.managers.SpriteManagerInternalAccess.nativePlayerArtAdapter(spriteManager));
             rewindRegistry.registerPostRestoreCallback("native-player-art-bindings",
                     () -> com.openggf.sprites.managers.SpriteManagerInternalAccess.restoreNativePlayerArtAfterRoster(spriteManager));
+            com.openggf.sprites.managers.SpriteManagerInternalAccess.registerDustEffectsRewind(spriteManager, rewindRegistry);
             rewindRegistry.register(new PaletteColorStateAdapter(
                     () -> levelPalettesOrNull(levelManager),
                     () -> underwaterPalettesOrNull(waterSystem, levelManager),

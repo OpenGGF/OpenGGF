@@ -6353,3 +6353,43 @@ restore-forward coverage is not whole-world recreation or the actual route
 caller's witness. Origin: HCZ R43/R44 genuine S2/S3K status02/03 old-red after
 two local replay cycles per case; R45 timeout-only projection, R46 exact156green
 including separate declared7F/radii/water controls, R47 strict first13322.
+
+
+## Restore the producer before rebuilding its retained publication
+
+A saved Camera shake value is insufficient when post-restore parallax rebuild
+publishes an uncaptured mutable scroll handler. HCZ2 wall-chase shake/offset
+state belongs to SwScrlHcz; restore that private value through its existing
+capture/restore contract before derived reconciliation. An event's cached wall
+reference must then bind to the unique actual managed wall after ObjectManager
+recreation, without advancing the event or assuming the first arbitrary actor.
+Native044 HCZ2_BackgroundInit/HCZ2_BackgroundEvent/HCZ2_Deform own normal updates;
+rewind must reproduce those owners, not seed native clocks or published values.
+
+Prepared presentation equality can still fail when fixed player effects retain
+uncaptured producer state. Keep the published snapshot/API contract separate
+from an engine-owned supplementary immutable value, and bind it to the actual
+restored roster/controller. A borrowed ROM renderer resource is an identity
+binding, not a copy of its mutable art/cache; qualify that lifetime separately.
+Do not add cache snapshots, drop full-world keys or assign a draw caller from
+pattern ranges alone. Origin: HCZ R56 genuine joint red, R58 two-owner partial,
+R60 scalar witness, R61 supplementary owner and R62 unchanged joint142-case
+focused green (2026-10-18); existing dated trace audit/HCZ2 matrix retain limits.
+
+
+## Native object deletion can retain held player fields
+
+Do not reuse an ordinary player-release helper merely because an object unloads.
+HCZ native044 loc_30C76 calls Sprite_OnScreen_Test then Delete_Referenced_Sprite:
+only the object's $4A-byte SST is cleared, without player status/control/pose or
+interaction writes. Retire the engine object's native grab/standing/owner
+references without clearing the players. Keep explicitly tested extra-player
+extension cleanup separate; that engine policy need not become a native rule.
+
+Prove the lifecycle through ordinary managed ROM birth, SolidObjectTop capture,
+a real visible CPU latch update and manager range unload, with recreated-world
+and same-input forward controls before the final native oracle. A prior restore
+prerequisite failure is not an unload old-red. Origin: HCZ R64's genuine eight
+native control/status leaves after all four world cycles, sole local Hand817c,
+R66 exact149-green focus; existing dated audit and HCZ2 matrix retain the route,
+post-delete ride/freed-SST marker and actual native-caller limits.

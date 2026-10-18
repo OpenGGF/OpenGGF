@@ -508,8 +508,13 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
 
     @Override
     public void onUnload() {
-        releaseWithoutLaunch(p1Owner, nativeStates[0]);
-        releaseWithoutLaunch(p2Owner, nativeStates[1]);
+        // Native loc_30C76 -> Sprite_OnScreen_Test -> Delete_Referenced_Sprite
+        // clears only this SST, not native players (sonic3k.asm:65909,37302,36156).
+        // Retire local grab/standing/owner state; keep extension release policy.
+        nativeStates[0].clear();
+        nativeStates[1].clear();
+        p1Owner = null;
+        p2Owner = null;
         for (Map.Entry<AbstractPlayableSprite, GrabState> entry : extensionStates.entrySet()) {
             releaseWithoutLaunch(entry.getKey(), entry.getValue());
         }

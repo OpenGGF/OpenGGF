@@ -97,6 +97,9 @@ Unreleased. The earlier development themes remain in
   every start without the plane intro.
   Launch Base's Death Egg rise reassigns its native background row pointers and
   preserves their later terrain edits through rewind.
+  Hydrocity 2 restores its moving wall and camera shake together, reconnecting
+  the event to the restored wall. Player water-splash animation resumes from
+  its saved phase instead of continuing from the abandoned timeline.
 
 - **S3K special stage presentation:** Blue Sphere players and their tails use
   the original perspective projection through jumps, with fixed ground shadows
@@ -152,6 +155,8 @@ Unreleased. The earlier development themes remain in
   pending placements wait for the next camera block crossing, which restores the
   Hydrocity fan timing. Hydrocity's hand launcher checks its top surface on every
   pass, as in the original, so a rising hand catches a player rolling over it.
+  Its removal preserves Sonic and Tails' held state, as in the original, while
+  ordinary launches still release them.
   Hydrocity solid blocks retain underside and side contacts while offscreen.
   Spinning columns use cached sprite visibility to release and recapture riders
   while preserving platform attachment. Airborne releases retain the movement

@@ -14472,3 +14472,1361 @@ The local pre-commit message assertion initially looked for policy trailers in
 the full final-block parse. Git parses the separate final co-author block there;
 the seven-policy block is now parsed separately before commit. This stopped
 before staging/commit or hook execution, with no runtime or test change.
+
+
+### Imported HCZ owner investigation and qualification histories
+
+The following R49-R68 sections preserve the child's original source/execution
+epochs. Their historical STOP and unexecuted labels remain scoped to those
+rounds; the later Root checkpoint above records R69 separately.
+
+### R49/R50 actual13322 OnObj unload writer — 2026-10-17
+
+Source53/execution54 remain separately registered. Sole normal originalAD40
+prefix83339 on HEAD04ed+APS9a76/testd66f (combinedd2a9) finishes22:55:30UTC,
+queue0/Maven01:35min, **1/1F0E0S**; only strict0-versus256 after original cleanup.
+All10 records/16591B/38fields/16callerframes and before-after known-projection
+checks pass. At13322 actual P2 OnObjtrue→false caller is hand-launcher
+releaseWithoutLaunch499→onUnload512→OM unloadCounterBasedOutOfRange3427/
+runExecLoop1202. At setter both latched/ride refs identify the same launcher;
+engine interactSlot29 is distinct from nativeSST30. Control is already cleared,
+Airfalse/pose21CF.D600,06C8.4800/vxvy0/gF000 preserved; POST ride null. Native
+retainsOnObj/control01 after its SST zero, then despawns13323; engine instead
+remains NORMAL at13323 with Airtrue/x21BE/vxF000. Exact clocks/phase limits and
+unobserved private/native inputs stay explicit. This witnesses the local unload
+writer, not a shared CPU/solid/timer fault or independent old-red/fix.
+
+Actual partial comparator13324/14208/completefalse is256=16physics+240animation,
+firstNonCamera13322status09/01, lag59/warnbootstrap0. Six prior complete zero
+reports/gap11failure0; recent5 is not fullvector/no-regression/fullroute proof.
+All18originals104865B retained singly for Root DIRECTread, no cleanup/commit.
+XML runtime warnings291SMPS+2FAST+1markRemembered are separate from comparator0.
+Sources/config/native remain frozen; no further validation or behavior work.
+[Full writer/clock/report evidence](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r49r50-observed-hand-launcher-unload-onobj-writer--2026-10-17).
+
+
+### R51 accounting before independent hand-launcher owner source — 2026-10-18
+
+Root accepts R50 all18originals104865B/full599stderr secondread, no rerun.
+All18 hashes checked before any deletion; restore APS exact838c by two marker
+strips, remove only d66f temporary test and exact two inventoried instrumented
+classes underwriter, then consume accepted reports metadata_slot alone. Preserve
+CPU8930/a170/db5a/779247/4fcd/04ed/native4fdf/privateconfig/allrefs. Normal
+docs-only local commit of existingaudit/Plan/matrix/frontier completes accounting
+before ordinal55 source registration. Next scope is only an independent managed
+factory/SST capture→ordinary cull test source with native retention and twice
+world recreation controls; no runtime edit/compiler/JVM or failingtestcommit.
+An unsupported public fixture/rewind inlet is a source handback, not permission
+to seed grab/cache/CPU/slots or broaden an API.
+
+
+### R51 independent hand-launcher unload owner test SOURCE ONLY — 2026-10-18
+
+Accounting commit `a023372121757995ae5e85d0610f82d4d294401e` preserves accepted
+R50 facts. APS is exact838c; the two inventoried instrumented classes and all18
+accepted original reports104865B were rehashed/consumed under their proper
+separate writer/metadata-alone leases, no archive/copy/receipt/JVM. Literal
+source55 task/run and refreshed24h expiry are registered separately after that
+commit; source53/execution54 and all prior results/refs remain intact.
+
+Unexecuted candidate only:
+`src/test/java/com/openggf/game/sonic3k/objects/TestHczHandLauncherNativeUnload.java`
+SHA256 `9074435e6e8439c942160ebec81f33c8b1894ede2c8e0cca4401edfc04773488`,
+287lines/two methods; complete add-file diff SHA256
+`4434ea050606f9132faa578effed43eeffe7840fb9716014c9bd71bc61f63aef`.
+No existing Java file changed; all runtime bytes equal04ed (CPU8930/column a170),
+column db5a/flight779247+4fcd/legacy hand387aa74f/graph fee29214 preserved.
+No compiler, JVM, queue, native run, logger, API or runtime/test commit in R51.
+
+Declared fixture uses real HCZ2 ROM placements, not a copied movie/native pose
+or assigned slot. The public placement list supplies a not-yet-admitted hand;
+ordinary S3K Load_Sprites/registry/allocator admits it. Dynamic-parent inlet was
+rejected by source: arm update requires isActiveObjectInstance(parent), whose
+current implementation checks the placed active map, not dynamicObjects.
+No resyncSpawnList/editor list replacement or dynamic-parent workaround is used.
+Public player/camera component inputs place both native players in the native
+TopSolid negative landing band: initial offset50->48, d3=11, d0=-8. Ordinary
+TopSolid standing precedes grab; finite source-derived lowering/capture and
+normal-launch deadlines never seed private timers. One actual visible fixture
+frame must preserve actual P2/controller/NORMAL-or-PANIC/ride and latch code high
+word3, or STOP as a setup failure. Actual publisher owns cached visibility.
+
+Native044 Obj_HCZHandLauncher loc30BE2 and loc30C06->30C50->30C76 end in
+Sprite_OnScreen_Test (sonic3k.asm65770..65910,37302..37321). Aligned camera input
+makes distance300>280; ordinary manager owner dispatch/range unload is the cull,
+never direct onUnload/destroy/remove/slot mutation. Delete_Current/Referenced
+36148..36166 zeros only the own SST; native player control/OnObj/interact have
+no deletion write. Both native retention oracles run only after two before-birth
+restore/forward cycles AND two independent held-world recreation/forward cycles,
+full registry key/value equality, fresh parent/child and actual ride/latched
+reference relinks. Child parent is a read-only final-field projection, matching
+the existing graph test; no private grab/ride/latch/cache/timer writes. The helper
+selects the exact parent reference, not a count of all nearby ROM hand arms.
+Normal visible launch is a separate source oracle from sub30C8C; all existing
+legacy visible/jump/extension bodies/inlets remain byte-exact, especially
+unloadReleasesEveryCapturedExtension. No genuine old-red or passing prerequisite
+has been observed in this source-only phase.
+
+Limits: post-deletion snapshots are forward-comparison endpoints, never restored.
+An absent parent no longer has a live rewind identity; held/birth restore is
+covered by existing manager/player relink contracts. A following CPU freed-SST
+marker oracle is omitted: ordinary placement may reuse the retired slot, so its
+actual replacement-code/empty-slot lifecycle is not qualified by this source
+candidate. No native29 producer/actual8774Aircaller/11920 engine caller/allocator
+or seg13 ownership claim. Any actual admission, capture, CPU warm, unrelated
+terrain/control, recreation or reference-closure failure is a prerequisite STOP,
+not a timer-old-red or permission to tune the inlet.
+
+Proposed SHORT focused command only, NOT SUBMITTED (execution requires the
+separate Root actual-file gate), from the owned3aa cwd, compiler within that one
+normal lifecycle:
+
+```bash
+# MAIN_CHECKOUT resolves the original main checkout and existing ROM paths.
+env -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${MAIN_CHECKOUT}/tools/testing/maven_queue.py" --normal \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${MAIN_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  -Dtest=TestHczHandLauncherNativeUnload,TestHCZHandLauncherObjectInstance,TestS3kHczHandLauncherGraphRewind \
+  -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true \
+  -Dsurefire.runOrder=alphabetical test -B
+```
+
+Only candidate test and this existing Plan section remain uncommitted beyond
+inherited native gitlink4fdf. Own/Main private regular0600 config hash+mtime,
+native4fdf/disasm044, all historical refs and maintained original driver/movie
+remain unchanged. No live owned JVM/wrapper job; source frozen for Root read.
+
+
+### R52 sole hand-launcher owner test — restoration prerequisite STOP — 2026-10-18
+
+Literal ordinal56/exact R52 task/run registered separately; source55 and all
+prior entries/results remain unchanged. Sole session35501 ran the exact R51
+three-class NORMAL/no-profile command above, HEADa023/runtimeall04ed/test907443.
+Queue77s, normal7GiB/8cores, compiler4143production+4194test files/release25 within
+this one lifecycle succeeded. Maven01:13min rounded; terminal1 at
+2026-10-17T23:22:30Z. No second request, source edit, retry or additional JVM.
+
+Actual19tests/1F0E0S: all15 legacy/2graph and new visible normal-launch control
+PASS. Retention method fails BEFORE its final native oracles:
+`camera: [camera.shakeOffsetY: A=0 B=1] ==> expected: <true> but was: <false>`
+at line46/first beforeBirth restore comparison -> assertWorld283. Initial real
+ROM admission/TopSolid/capture/visible CPU warm/latch3/ordinary range cull and
+post-cull capture completed by control flow. First registry.restore(beforeBirth)
+returned, then its immediate full-world comparison failed. ZERO completed birth
+replay cycles, ZERO held-world restore cycles; final native control/OnObj/status
+retention assertions UNREACHED. The unprinted firstDeleted values cannot be
+reconstructed. This is an unqualified restoration prerequisite, not a genuine
+native-player old-red, camera cause or permission to tune the fixture.
+
+All19 identities/full failure/no suppressed failures/case streams and all72
+properties inspected; full property maps equal across all3 suites. Actual
+Java25.0.4.1/EGL/all3ROM/fork1/reuse/alphabetical are correct. Captured new XML
+streams contain2FAST-no-manifest warnings in failed case and1 in visible control;
+console also contains FAST notices outside case capture, not zero runtime warnings.
+All6 original XML/TXT74471B retained singly at original target/surefire-reports
+paths for Root DIRECTread, no archives/copies/receipts/cleanup. Failed XML24554B
+SHA e083213a1d71c8db671db4da7ca1510f08f03b7cc13506b3a6c6600473988838,
+TXT1575B SHA3576bc0b68845075145293ba2239e5edcb7c6b3cc91824eabef6868414ba915e.
+Runtime/newtest/legacy/APS/CPU/column pins, ownHEAD/index and private Own/Main
+config hash+mode+mtime/native4fdf/disasm044 remain exact. Whole common-ref digest
+changed during concurrent foreign work; no whole-namespace equality claim or
+R52 Git mutation. No live own job. STOP pending Root handback; no commit/runtime
+repair/old-red claim/extra execution, and no test/camera oracle weakened.
+
+
+R53 accounting authorization: Root DIRECTread accepts all6 R52 originals74471B,
+all19 identities/72property maps/full prerequisite failure. Durable R51/R52
+source/result facts above are preserved in a normal docs-only local commit;
+newtest907443 and all runtime remain excluded. Exact6 originals are rehashed
+before ANY unlink under metadata_slot ALONE after durable accounting, no
+archives/copies/receipts or class deletion. All4 compiled component classes keep
+hash+mtime. No genuine native retention old-red is established. Next separate
+source-only inventory follows the accounting boundary; no JVM/test/source edit.
+
+
+### R53 source inventory: captured Camera shake versus HCZ derived publication — 2026-10-18
+
+Accounting is normal local docs-only `dad918f72ed1332eed9b6dc15bbc118b073c1b18`.
+All6 accepted R52 originals74471B were full-hash checked BEFORE ANY unlink,
+consumed metadata_slot ALONE, no archive/copy/receipt/class deletion. All4
+compiled component classes preserve SHA+mtime. Literal new source57 task/run
+registered only after this boundary; earlier56/55/results stay intact. New
+failing test907443/runtimeall04ed/APS838c/CPU8930/columna170 and old controls are
+unchanged. R53 runs no compiler/JVM/native/baseline/logger/probe or test edit.
+
+Source owners, not another observation:
+
+- Camera b448080f: only field initialization/resetState1497, setShakeOffsets1044,
+  and restore1606 write private shakeOffsetY. capture1580 reads it directly into
+  immutable CameraSnapshot.shakeOffsetY. restore writes that captured short, then
+  rebindFocusedSprite1635 only changes focusedSprite via live roster lookup.
+  Physical x/y, renderCopyY and shakeOffsetY remain separate captured fields;
+  rendering getYWithShake1072 adds renderCopyY+shake. No rebind shake derivation.
+- RewindRegistry5d48ae71 restore183 restores adapters, then invokes post-restore
+  callbacks195. GameplayModeContext013d10fc registers camera357 and the
+  parallax-derived-state callback429..431. Level frame-counter restore is in
+  LevelRewindSnapshotAdapter73; level-event HCZ scalar sidecar capture/restore
+  is Sonic3kLevelEventManager2503/2640/2897. Captured HCZ fields include wall
+  routine/movement/offset/shakeTimer/prephysics gates; that is not a snapshot
+  of the separate SwScrlHcz output. discardHardwareWorkFacades864 clears only
+  queue/handle facades. reconcileAfterRewindRestore1482 republishes no HCZ shake.
+- Parallax318a21d5 capture588 stores only activeHandler.captureRewindState().
+  SwScrlHcz96816038 inherits ZoneScrollHandler204 null capture/212 no-op restore;
+  its mutable screenShakeOffset69/setter90/getter125 is not reset by update130
+  or init(default no-op), nor recomputed from restored LF there. hcz2Phase and
+  wallChaseOffsetX are also handler inputs; do not assume a null handler snapshot
+  restores those projections. Parallax rebuildDerivedOutput468 calls handler
+  update for HCZ (not a ScrollOutputRebuilder), then copies handler shake at388.
+- LevelFrameRuntimeUpdater2753ce4f has the only runtime calls to Camera's shake
+  setter: ordinary animation/parallax update48 and refresh/rebuild105. Thus its
+  post-restore callback can overwrite a correctly restored Camera value with
+  the handler's current projection. Conditional example ONLY: camera saved0,
+  handler later1; restore Camera0 + no-op handler restore + rebuild publishes1.
+  R52 did not record the actual callback stack, handler value or producing branch;
+  this is a source-backed failure mechanism, not an observed R52 writer proof.
+
+Producer/order inventory: HCZ events8c6b1e4d init resets wallMoving=false,
+shakeTimer0 and BG_WALL_INIT. ZoneFeatureProvider6f36f095 prephysics810..832
+passes existing LevelManager LF to updateAct2Bg before player physics; main
+ScreenEvents update later honors act2BgUpdatedPrePhysics. Continuous shake is
+wallMoving ? table[LF&3F] :0 (1098/1264), timed shake decrements and publishes
+its table (1009/1273); transition1118 clears it. Separate geyser cutscene SHAKE
+owner e1a63cd1 publishes/clears the same handler (310/328/529/536); no R52 evidence
+establishes it active. Normal LevelFrameStep HCZ prephysics299 -> camera/ScreenEvents
+435..460 -> level.update573 (increments LF at1605 and publishes parallax/shake)
+-> visibility/presentation594. A registry.restore invokes no ordinary frame or
+HCZ event update, but DOES invoke the derived-output callback. No synthetic
+postrestore idle step may be inserted to conceal the difference.
+
+Native044 proof: HCZ2_BackgroundInit106041 selects wall/normal by cameraC00/500;
+HCZ2_WallMove106175/loc5102E starts at P1X680 and sets constant shake, then
+ShakeScreen_Setup104229 writes Screen_shake_offset using captured logical flags
+and LF (continuous LF&3F; timed countdown). HCZ2_ScreenEvent106035 separately
+adds the published offset to Camera_Y_pos_copy. These distinct ownership/phases
+are not permission to fit a table index or discard a captured camera word.
+The built-in HCZ2 start descriptor is0170/082C; skip-intro builder sets only the
+existing skip-intro config, not wall shake. Actual R52 selected ROM hand coords,
+wall state, exact LF/handler offset and callback setter values were not printed.
+The final0/1 difference alone cannot certify that the wall or geyser branch ran.
+
+Truth gate: whole-world Camera equality remains a valid current contract.
+CameraSnapshot explicitly retains shake and existing TestCameraRewindSnapshot
+checks it exactly; RewindSnapshotDiff compares the record without a shake
+exception. ParallaxSnapshot explicitly omits dense derived output, requiring
+rebuilding it consistently from restored producers. That does not authorize
+changing the captured Camera result. Current beforeBirth is taken after one
+ordinary fixture frame, before the test's component placement edits. No legitimate
+minimal inlet correction is established. A positioned start outside the wall
+arena could naturally select normal BG, but using that to bypass this active
+producer/restore question would change coverage; no phase/flag seed, artificial
+wait, disabled event, omitted key or weakened equality is justified.
+
+Smallest separate old-red QUESTION, not authored/executed: isolate real HCZ2
+camera/parallax/event restore without the hand. A declared public component
+start at the ROM-owned wall activation threshold, ordinary frame(s) only and
+actual live wall/clock prerequisites should establish two different naturally
+published shake values. Capture earlier complete world, advance once, restore,
+and compare exact captured Camera + full registry immediately, with twice
+restore/forward controls and an ordinary inactive-shake control if expressible.
+Use actual existing getters; no setShakeOffsets/setScreenShakeOffset, phase/LF/
+timer injection, private event writes or additional gameplay during restore.
+If the source-backed preconditions fail, stop, not wait/tune. The owning contract
+is restored HCZ producer -> parallax reconciliation -> captured Camera publication;
+no shared repair/public schema change or replayed ScreenEvents is authorized by
+this inventory. R52 native retention oracle and R50/campaign/seg13 questions
+remain separate. STOP at this source-plan handback before authoring/execution.
+
+
+### R54 source boundary: moving-wall relink precedes independent shake replay — 2026-10-18
+
+Literal source58 task/run is registered separately with 24h expiry; R53/57 and
+all earlier source/execution results remain intact. HEAD is docs-only dad918f72;
+all runtime remains 04ed, including Camera b448080f, CPU8930, columna170 and
+hand68da. Hand test907443 and its four compiled classes are unchanged. R54
+performs no compiler/JVM/queue/native execution and authors no new test or runtime
+source. This is an explicit pre-authoring round-trip contract boundary, not a
+new observed failure or an independent shake old-red.
+
+The intended independent inlet was the public real-HCZ2 builder centre start at
+P1 X=$680 (native continuous-shake threshold), stock descriptor Y=$82C, with
+ordinary zero-input frames and live wall/handler prerequisites. A finite $40
+continuous-table period would bound discovery of actual A!=B published shake;
+no table index, level clock, phase, flag or timer would be assigned. The desired
+oracle would retain every registry key, observe immediate Camera/full-world
+restore twice, defer the immediate equality errors until the final oracle, and
+first complete both identical ordinary forward-to-B controls. A naturally
+stationary below-threshold wall would be the separate inactive control. None of
+this setup has been executed or established by a new test.
+
+Source inventory found a distinct prerequisite for those active-wall forward
+controls:
+
+- Sonic3kHCZEvents8c6b1e4d stores wallObject as @RewindTransient at231. Init333
+  clears it; act2BgInit1054/55 constructs a wall and spawnObject routes through
+  Sonic3kZoneEvents246 to ObjectManager.addDynamicObject. The only later writes
+  clear the reference on chase end1079; the moving event drives its cached
+  reference with updateWallPosition1104/05. The scalar sidecar intentionally
+  excludes that reference, and restoreHczSidecar2897 restores the same handler
+  rather than initializing or reconstructing it.
+- ObjectManager8816e1fb restore4110 clears dynamic objects. Its default in-place
+  reuse indexes placed activeObjects only; dynamic phase4230 recreates captured
+  actors, with adoption limited to construction-produced children. This wall is
+  event-spawned, not a construction child. recreateDynamicObject4719 uses the
+  generic recreate path, and ZeroArgRewindRecreatable16414d5c instantiates the
+  exact no-arg class. Captured wall scalars are applied in phase2.
+- HCZ2WallObjectInstance3060b6c0 has only one wallOffsetSupplierValue writer,
+  updateWallPosition86. getX99 derives -offset+$5BE; update108 only handles the
+  active/deactivated flag. It has no recreate/relink/settled override. Inherited
+  AbstractObjectInstance66a3ad92 hooks306/339 are no-ops. HCZ manager reconcile1482
+  has no wall relink; HczZoneRuntimeState2bb8dd76 and ZoneRuntimeRegistry7c1dd947
+  restore only their existing scalar/binding contract, with no wall lookup.
+
+Conditional source consequence, NOT an executed result: after advancing a
+moving wall from A to B, restore A reconstructs the live wall with A's captured
+scalar, but the event still targets the pre-restore B object. The next event
+update does not advance the reconstructed actor. Therefore the required full
+registry forward-B control may fail on the wall independently of the retained
+Camera/SwScrlHcz publication mismatch. Default in-place restore cannot avoid
+this dynamic recreation. Selecting a coincident integer wall-offset phase,
+patching the event reference, excluding object-manager/Camera keys, waiting for
+the chase to stop or suppressing the wall would change the required coverage.
+No such workaround or new public/private seam was added.
+
+Pinned native044 sonic3k.asm: HCZ2_WallMove106175 subtracts the real $E000/$14000
+fixed-point speed from Events_bg; Obj_HCZ2Wall106272/loc_510E8 reads Events_bg
+anew each update and computes x=-offset+$5BE before Full2. This explains the
+producer/consumer obligation; it does not prove an actual R52 caller or a new
+runtime restore outcome. The exact wall source/restore pins are in phase58's
+existing ownership entry. The earlier Camera/handler publication question and
+this wall-reference question remain separate.
+
+STOP before test authoring: no independent new-file hash or executable selector
+exists to review. The smallest missing prerequisite is a source-backed HCZ
+event-to-recreated-wall relink contract (or an independently justified existing
+public round-trip that preserves the same moving-wall producer and all registry
+keys). That owner change is outside R54's test-only authority. No test907443,
+legacy Camera/Parallax rewind control, runtime, schema, API or fixture was edited;
+no source commit, further probe or validation request was made.
+
+
+### R55 joint wall/shake rewind component: source candidate only — 2026-10-18
+
+Root resolves the R54 methodological boundary without an owner change: expected
+immediate Camera/full-registry, wall-link and forward-world differences can be
+collected through the normal APIs and asserted jointly AFTER both honest replay
+branches. A predictable contract red is not an unexpected setup exception. R54's
+source risk remains recorded; it no longer blocks authoring this joint oracle.
+Literal new source59 task/run is separately registered with 24h expiry; 58 and
+all earlier results/IDs remain intact. HEAD stays dad918f72, runtime04ed exact.
+No compiler/JVM/queue/native/probe/source commit is authorized or performed.
+
+ONE new unexecuted source file:
+`src/test/java/com/openggf/game/rewind/TestS3kHczMovingWallShakeRewind.java`
+(270 lines/15140B), SHA-256
+`bbde3c46297708574de82771b26808f3d7ddae141132d913cb2fc0b2bcb5f59f`;
+add-file diff SHA-256
+`d35c2b26745566983f0a32aca234f490b0f0adfe3fd14a8194d9ea9d67622c52`.
+The file is removable in full: no marked runtime/logger block or existing test
+body was changed. Hand907443 and legacy Camera/Parallax/hand/graph controls remain
+byte-exact; no failing test is committed.
+
+Declared component inlet: the real HCZ2 builder with explicit centre X=$680,
+Y=$82C and ordinary skipped title intro; stock below-threshold X=$170 is the
+separate stationary control. Native044 HCZ2 start asset is 0170082c (4B), SHA
+`eec4ad0d41d549c789922ca84d90eab5ab910716ea6fa0053a7a8af1d8ea11b5`.
+These are public component starts, not actual hand/campaign entry proof. The
+camera must actually select the wall arena (X<C00,Y>=500), and the real HCZ
+manager/handler/wall must exist. Ordinary LF must advance once, with no unrelated
+death or object-control takeover. Active original generation requires wall
+routine4, WALL_CHASE, moving/not-stopped, timer0, no transition/cutscene, actual
+handler-to-Camera publication and the registered wall's native offset-derived
+pose. Cached event reference == registered wall is a prerequisite only before
+original A, not after restore.
+
+A is captured after one ordinary init/fallthrough frame. At most $40 ordinary
+zero-input frames discover the first B with BOTH actual published shake!=A AND
+registered wall's stored integer offset!=A AND X!=A. Native ShakeScreen_Setup's
+LF&3F bounds discovery; native E000 movement may hold an integer X on some pairs,
+so elapsed LF or a generic full-snapshot difference is insufficient. No absolute
+LF, table entry, phase, pose, clock or timer is seeded. B's full world is captured
+only after the positive generation checks. No phase coincidence or stopped-wall
+selection is used. The stationary control independently uses the same enabled
+wall event below the movement threshold and one ordinary zero-input A->B frame.
+Its link oracle remains a real contract, not a promised passing control.
+
+For EACH of two branches: normal registry.restore(A), immediate actual Camera
+and full registry capture, typed wall/reference/offset observations and complete
+per-key difference results; then exactly the original A->B count of ordinary
+zero-input frames, forward Camera/world/wall observations and differences. All
+expected equality/link/pose assertions are queued as Executables and invoked
+ONLY by the final assertAll after BOTH branches. Unexpected ordinary-step,
+reflection, capture/restore or diff-API exceptions remain immediate STOPs.
+Neither a post-restore link false nor an expected immediate/full-forward equality
+red preempts the second branch. Camera records compare exactly; all registry
+keys are retained (union/key-set check), including object-manager. Existing
+keyEquals evaluates complete per-key content; diffKey's 20-line text preview
+only bounds diagnostics. No callback or ScreenEvents is manually replayed.
+
+Read-only observation contracts: ObjectInstanceQueriesd1882260 collectMatches
+only collects/deduplicates references and sorts by AbstractObjectInstance's raw
+slot getter; no isDestroyed/spawn/provider owner query. Parallax.getHandler ->
+S3K providerede5713a returns an already loaded handler, with no lazy construction,
+init or memoization. Event getters and Camera.capture read stored values;
+SwScrlHcz phase/shake getters are direct fields. Reflection reads ONLY existing
+HCZ event wallObject and concrete wall wallOffsetSupplierValue. setAccessible
+changes reflection accessibility only; no gameplay field is assigned. Concrete
+HCZ2Wall3060b6c0 getX/getY are arithmetic/constant reads. No third runtime/test
+seam, general actor callback, new API or shared-state purity claim is added.
+Normal capture/restore owners perform their existing snapshot work.
+
+Native044 citations: HCZ2_BackgroundInit106041 camera arena gate;
+HCZ2_WallMove106175/loc5102E threshold680 and E000/14000 accumulator;
+ShakeScreen_Setup104229/loc4F3FA LF&3F continuous table;
+Obj_HCZ2Wall106272/loc510E8 reads Events_bg every dispatch and computes
+x=-offset+5BE,y=700 before Full2. Camera b448/registry5d48/diffd6b5,
+HCZevents8c6b/wall3060/manager37f7/SwScrlHcz9681/OM8816 remain unchanged.
+Source refs/hashes and literal future argv are preserved in only the new phase59
+ownership entry. The test intentionally measures a JOINT contract: forwarding
+from a mismatched restored A does not isolate two causal faults, identify the
+actual R52 setter/caller, or prove anything about hand deletion/native29/seg13.
+No setup pass, genuine old-red or full-world replay result is claimed.
+
+Proposed sole future NORMAL/no-profile lifecycle, NOT executed (MAIN_CHECKOUT is
+the original checkout containing all three original ROMs and current wrapper):
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$MAIN_CHECKOUT/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  -Dtest=TestS3kHczMovingWallShakeRewind,TestCameraRewindSnapshot,TestParallaxRewindSnapshot \
+  -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true \
+  -Dsurefire.runOrder=alphabetical test -B
+```
+
+STOP at exact source freeze for Root actual-file review before any compiler/JVM
+or admission. Own/Main private config hash/mode/mtime, all existing runtime/test
+pins, native4fdf/disasm044, prior refs and compiled hand classes are preserved.
+Only the new test plus this existing Plan append and new phase59 registry entry
+belong to R55; prior uncommitted R53/R54 Plan evidence is preserved by append.
+
+
+### R56 joint restore old-red: both honest branches reached final oracles — 2026-10-18
+
+Literal execution60 task/run is registered separately; source59 and earlier58..
+IDs/results are preserved. ONE exact R55 proposed NORMAL/no-profile lifecycle
+actually ran from this owned tree, current Main absolute wrapper, original three
+absolute ROMs/JDK25/single EGL JTO+CLI/nullAL/no ambient display or LD/Lua/fork1/
+reuse/alphabetical. Preflight found no equivalent owned queued/running request.
+HEADdad918/runtime04ed/testbbde/Plan4d88 were frozen through terminal. Session
+12407 waited23s; resource-aware admission7GiB/8cores. Compiler was inside the
+same lifecycle: production up-to-date,4195 test sources compiled at release25.
+No standalone build or second request. Maven25.777s, terminal1 at
+2026-10-18T00:00:19Z; overall parent elapsed is not independently measured.
+
+Actual ALL12 cases: TestCameraRewindSnapshot4PASS,
+TestS3kHczMovingWallShakeRewind2FAIL, TestParallaxRewindSnapshot6PASS;
+12T/2F/0E/0S, no omitted/skipped method. Both new failures are the final
+MultipleFailuresError at replayTwiceThenAssert136, invoked from active79 and
+stationary103. All real A-generation prerequisites and both complete
+restore(A)/ordinary same-input forward(B) branches finished before this final
+assertAll. No setup/step/death/takeover/reflection/capture exception or automatic
+repair/retry occurred. This is a genuine independent JOINT restore old-red,
+not an actual R52 setter/caller or two isolated causal proofs.
+
+Active method has16 final assertion failures, the same8 on EACH branch:
+
+- Immediate Camera: all29 printed CameraSnapshot fields were parsed/compared;
+  only shakeOffsetY differs, saved2 versus restored1. Immediate full-registry
+  differences report camera.shakeOffsetY2/1 only.
+- Immediate live event reference != registered wall. Event-held pose remains
+  offset-2/X1472/Y1792 where saved-A pose is-1/X1471/Y1792.
+- Forward original-B full-registry equality fails on BOTH
+  level-sprite-presentation and object-manager. Prepared tile-list length is
+  expected205/replayed217; patternVersions has38/50 keys, no missing expected
+  key and12 extra actual keys212992..212997 and229400..229405. All reported key
+  arrays were read, including ordering; no presentation/alias cause is assigned.
+- Forward managed wall remains offset-1/X1471/Y1792 versus original-B
+  offset-2/X1472/Y1792; reference equality remainsfalse and the current event
+  offset-derived pose oracle fails. Object-manager reports wall preUpdateX
+  1472/1471 and compact scalarData[1]FE/FF at engine dynamic slot13/dynamicId9.
+  Those are engine identity labels, not an asserted native SST allocation.
+
+The active positive generation gates require actual published shake AND
+registered stored integer offset/X changes, and final expected wall poses print
+A-1/1471 versus B-2/1472. Exact discovery N, LF and fixed-point accumulator values
+were not printed; do not reconstruct clocks/phase or claim a numeric frame count.
+The final source boundary proves both loop branches returned; this is not a
+new per-frame observer. Forward Camera equality itself has no failed assertion,
+but full-forward state remains RED and the extra presentation difference is
+unattributed. diffKey previews are bounded; complete keyEquals remains the
+oracle, with no key exclusions or full-world/native parity waiver.
+
+Stationary method has exactly4 final failures: immediate and forward event-link
+false on each of two branches. Its Camera, full-registry and wall-pose oracles
+pass, with naturally inactive zero shake established before capture. This does
+not waive the active forward mismatch or certify all moving-wall restoration.
+All16+4 top-level assertions and matching suppressed stacks were read; both XML
+failure bodies occur byte-for-byte in the original TXT, whose remaining suite/
+case headers were also read. Initial console/report displays truncated; bounded
+second reads completed all case identities, failure categories/arrays/stacks,
+streams and property maps rather than assuming the unseen tail.
+
+ALL3 XML maps have72 identical properties: Java25.0.4.1, original three ROM
+paths, own target/report/tmp roots, EGL, fork1/reuse/alphabetical and exact
+selection. Both complete8057-character classpaths compare exactly (80 entries
+including trailing empty; all nonempty paths exist). Case stdout is empty;
+XML stderr contains2 FAST/no-manifest warnings in active312B and1 in stationary
+156B. Console also emitted2 FAST warnings outside case capture and compiler
+deprecation warnings; this is not zero-all-warnings or a graphics oracle pass.
+
+ALL6 original XML/TXT files (168638B total) remain at their original
+`target/surefire-reports/` paths for Root DIRECT read, including successful
+Camera/Parallax controls. New XML SHA
+`5219971a2f96e03c57eb5942781ecbd2ed59161e749fcee835edf69557c9575e`,
+new TXT SHA `d346a2595933420a440d4738e8f7cc6e9190b46b4adb4747073abaae72672460`.
+Exact six full hashes/sizes/paths, all12 identities and final reach/limits are
+in only execution60's existing ownership entry; no archive/copy/receipt created.
+No report cleanup before Root acceptance.
+
+Postterminal all46 source pins,907443/legacyall/CPU8930/APS838c/columna170,
+private Own/Main regular0600 config SHA+mtime, native4fdf/disasm044 and HEAD/index
+are exact. Normal authorized test compilation refreshed four existing hand
+class mtimes with identical class bytes; no class was deleted/copied. Four new
+component class SHA+mtime are recorded. No owned JVM/build process remains;
+normal wrapper exited and this Plan-only writer lease was separately released.
+Only this compact Plan append and execution60 accounting follow terminal.
+STOP handback: no test/runtime edit, commit, native/probe/guard/canonical,
+additional JVM, causal presentation repair or original hand-oracle claim.
+
+
+R57 accounting boundary (2026-10-18): Root DIRECT acceptance covers ALL6 R56
+originals168638B with full hashes/sizes, all12 identities/72 identical properties,
+full streams, all20 suppressed assertions/full Camera29 fields/forward pattern
+arrays/stack set; XML failure bodies match original TXT. Genuine JOINT old-red
+accepted; R52 actual caller and isolated causal assignment remain unproven.
+Accepted six-report cleanup follows only after this durable note; no classes,
+archives, source/test changes or additional execution belong to that cleanup.
+
+
+### R57 HCZ restore owner candidates and third-key inventory — 2026-10-18
+
+Root accepted all R56 originals/identities/72 maps/full20 suppressed assertions,
+Camera29 fields and pattern arrays. After the durable acceptance note above,
+ALL6 original hashes/sizes were checked BEFORE ANY unlink under metadata_slot
+ALONE; exactly168638B consumed at2026-10-18T00:10:00.676148Z. All8 compiled
+component/hand class SHA+mtime were unchanged across cleanup; no archive/copy/
+receipt/class deletion. Prior execution60 result/IDs are retained, only accepted
+cleanup fields updated. Literal source61 task/run is newly registered with24h
+expiry. Source59 and58.. histories remain untouched.
+
+SOURCE-ONLY candidate on HEADdad918/runtime base04ed, not a tested repair:
+3 existing HCZ runtime files,42 added lines/no deletions. No test edit, compiler,
+JVM, queue, native, guard, canonical, retry or commit. Exact frozen files:
+
+| Owner | SHA-256 |
+| --- | --- |
+| Sonic3kLevelEventManager | e381d21d7834be6271472c11b3d3f3a32bebae13f4776a9b84768bc69a6956fe |
+| Sonic3kHCZEvents | cf1c61b983ca7ce4bccc38dc0a2e3579018304bfd1d33a5927186298ea5dfc0d |
+| SwScrlHcz | 6db7f722dc27f63bc200a15dfa0e93b7f340f78862e0a8cd32531532c051c064 |
+
+Ordered raw manager/events/scroll combined SHA
+`d931b072215c0f8706ad2f4db94a14d62c48b3327b04f1cde337fd90412c43e3`;
+three-file git diff SHA
+`c863607c39637b66022a45bb9d2545beacddf54e0609e03a3d9411f599f6c284`.
+Removing only these new blocks in memory recovers exact baseline manager37f7,
+events8c6b and scroll9681, including every ordinary update/solid/event body.
+
+1. SwScrlHcz overrides the EXISTING ZoneScrollHandler captureRewindState/
+   restoreRewindState hooks with a PRIVATE immutable three-value RewindState:
+   hcz2Phase, screenShakeOffset and wallChaseOffsetX. No buffers/arrays, public
+   snapshot record, interface, schema, descriptor or API signature pin changes.
+   Null/foreign state remains a no-op like existing handler implementations.
+   Derived lastBgCameraX/scroll factors/tables remain rebuilt from the restored
+   camera and these inputs. Parallax.restore applies the private record during
+   adapter restore; RewindRegistry completes ALL adapters before callbacks, so
+   existing parallax-derived-state rebuild sees saved producer/publication values.
+   No ordinary HCZ event tick, clock advance or ScreenEvents replay is added.
+   Native044 HCZ2_WallMove106175/ShakeScreen_Setup104229 distinguish retained
+   Events_bg/shake publication from later deformation.
+2. Existing Sonic3kLevelEventManager.reconcileAfterRewindRestore calls the HCZ
+   owner at the existing level-tilemap-event-reconcile postrestore closure.
+   GameplayModeContext975 explicitly invokes it AFTER object-manager restore;
+   no registration/order change. The small new HCZ-internal method (not an
+   exported Mod API type) clears only its transient wall reference outside the
+   existing BG_WALL_MOVE phase. In that phase it reads the actual restored
+   ObjectManager's concrete HCZ2Wall population, rejects >1 as ambiguous, uses
+   the sole actual instance or null when none exists. No arbitrary first actor,
+   liveness/provider callback, slot/address/pose fit or replacement allocation.
+   A missing restored object manager is an explicit contract error, not a
+   fabricated actor. Zero walls is compatible with native AllocateObject failure.
+   Source init333/reset creates no wall; sole ordinary allocation is
+   act2BgInit1054/55; end1078/79 deactivates/nulls it then moves to BG8.
+   Phase4 with pending Events_fg_5 must still rebind so the NEXT ordinary event
+   performs its own cleanup. Native Obj_HCZ2Wall106272 reads Events_bg every tick;
+   this correction only restores which managed actor receives the next event
+   write. It does not call updateWallPosition/deactivate/update during restore.
+
+Restore order is deliberately split: the handler record is restored BEFORE the
+existing derived rebuild; the live reference is rebound later, after all object
+states/recreation settle. S1/S2 default handlers/shared algorithms are untouched.
+Normal event/physics/collision/render publication and actor allocation stay with
+their original owners. Public signature pin1ebadc63 and all interfaces/public
+snapshot records remain byte-exact. No source-size budget or guard was changed;
+parent's known LM3153/base3144 obligation remains separate.
+
+Third observed forward key is INVENTORY ONLY, not repaired or dequalified:
+LevelSpritePresentation.Tables.capture76 stores immutable prepared/published/
+counter frames and scroll/fade state; restore82..97 assigns them back directly.
+The ordinary producer LevelFrameStep601 -> LevelSpritePresentation.prepare106
+-> LevelRenderer.prepareSpritePresentation994 builds a new prepared frame from
+live sprite/object/HUD producers. SpritePresentation.prepare keeps only mutable
+pattern versions actually referenced by emitted tiles; Frame defensively copies
+lists/maps. Other structural/transition paths75/212/247/554 call the same bridge;
+the actual R56 preparation caller was not observed. Thus the observed205/217
+tile and38/50 key differences involve a new forward preparation, not permission
+to drop that captured key.
+
+Concrete source candidate: Sonic3kDustArt31 uses base WATER_SURFACE+4000=$34000
+(decimal212992). LevelPlayableArtInitializer rebases later participants' dust
+banks into SIDEKICK_BANKS=$38000; actual cursor/bank ownership at R56 was not
+observed. SpindashDustController.draw160 draws water splash in addition to dust;
+triggerSplash89 writes splashActive/X/Y/facing/frame/tick, and drawSplash240
+selects mapping pieces from those fields. Yet capture262/restore266 and its
+public ModApi RewindState retain only four ordinary dust-animation fields;
+splash fields and surface-splash state are absent. PlayableSpriteController96/
+154 delegates that limited state through the existing player snapshot. Renderer
+DPLC/bank lifetimes and native-art rebinding are separate producers as well.
+This is a concrete source gap compatible with the extra pattern ranges, NOT
+proof the R56 extra12 tiles came from either player's splash or from this gap.
+Actual splash flags/frame/ticks, renderer/bank assignment and producing subject
+were not recorded. Prepared projection was equal immediately after restore under
+the existing comparator; later full-forward difference remains unqualified.
+No dust/public-state/API/shared presentation code, lower oracle, omitted key or
+count-derived causal assignment is included in R57.
+
+Proposed future bounded focused NORMAL/no-profile selection (NOT submitted):
+`TestS3kHczMovingWallShakeRewind,TestCameraRewindSnapshot,TestParallaxRewindSnapshot,SwScrlHczTest,TestSonic3kHCZEvents,TestSonic3kLevelEventRewindSnapshot,TestS3kZoneKosRewind,TestS3kAiz1SkipHeadless,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`.
+These are the affected handler/event/rewind controls plus mandatory S3K4 families,
+with the same original ROM/env/fork flags as R56 and compiler inside any separately
+authorized lifecycle. No full guard/smoke/route selection is proposed here. The
+third presentation oracle stays intact; no future green result is forecast.
+
+Frozen testbbde/hand907443/legacy04ed bodies, CPU8930/APS838c/columna170, all8
+compiled class bytes/mtimes, Main/private regular config SHA/mode/mtime,
+native4fdf/disasm044, own refs/HEAD/index and unknown WIP are preserved. Only
+these3 runtime files plus existing Plan and new source61 entry belong to R57.
+STOP for Root actual-file review BEFORE compiler/JVM, owner widening or any
+shared presentation repair. Actual R52 caller/native29/seg13 remain independent.
+
+
+### HCZ R58 — reviewed restore owners, one affected lifecycle (2026-10-18)
+
+Ordinal62/session77249 ran exactly the R57 proposed normal/no-profile twelve-class
+selection, with the original three absolute ROMs, Java25, single EGL JTO plus CLI,
+nullAL, no ambient DISPLAY/WAYLAND/LD, Lua5.4, fork1/reuse/alphabetical. The
+current Main absolute queue admitted immediately (normal7GiB/8cores, wait0s),
+00:24:42.954725→00:26:02.425208UTC: parent79.470483s, Maven reported1:18. Both
+production4143 and test4195 sources compiled inside this sole lifecycle. A
+preflight-only Python helper initially asserted argv length31 instead of actual26;
+it stopped before registry/queue/compiler/JVM, and only that helper assertion
+was corrected. Reviewed argv/source remained exact; there was one submission.
+
+Frozen HEADdad918f7 / base04ed, approved runtime manager e381d21d, HCZevents
+cf1c61b9, scroll6db7f722 (ordered raw combined d931b072; diffc863607c), joint
+testbbde3c46 and unselected hand9074435e were unchanged through terminal.
+Actual **151 tests / 1F / 0E / 0S**, twelve classes: Camera4, jointHCZ2,
+bootstrap6, decoding3, level-event-rewind38, game-level-loading36, zoneKos8,
+HCZevents9, SwScrlHcz24, Parallax6, AIZskip8, tests-level-loading7. All151
+identities and full failure/suppressed bodies, all twelve identical72-property
+maps and all streams were read. Initial console/tool displays truncated; bounded
+second reads completed the missing properties/stream classifications/body.
+
+The active joint test reached final assertAll136 **after both complete honest
+restore/ordinary-forward branches**, with exactly two suppressed failures: branch1
+and branch2 forward-B **full registry**, each exclusively
+`level-sprite-presentation.prepared.tiles`205/217 and patternVersion keys38/50.
+Both complete key arrays were inspected: no missing expected key, twelve extra
+actual212992..212997 and229400..229405. All keys remain in the unchanged oracle.
+Immediate Camera and full-registry equality, forward Camera, event→actual managed
+wall identity, registered/event-held wall poses/offsets and current Events_bg
+relationship passed at both checkpoints in both branches. The naturally stationary
+wall control passed its complete joint contract. Thus the two owner corrections
+close the exercised Camera/link/wall assertions; the active complete-world
+contract remains **RED**, and presentation's actual producing caller/state is
+unattributed. This does not isolate a third cause or identify actual R52's caller.
+No absent raw A/B/LF/phase values are reconstructed from passing assertions.
+
+Captured XML streams contain130 FAST-no-manifest warnings, one collision-index
+negative-control warning, twenty-one malformed-sidecar negative-control warnings,
+and nine deterministic KOS-profile estimates (161 warning records/322lines,
+26709B); no XML stdout. Console additionally has load warnings outside testcase
+capture and compiler deprecation/unchecked notices; there is no all-warning-zero
+claim. All twelve original XML/TXT pairs **24files/346912B** remain at
+`target/surefire-reports/` for Root DIRECT read regardless result. Joint XML
+6f12b1532bb608863dae9d8ae7ef4c30c662986802a5d9675c52147be8e66972
+(32779B), TXT7922ce82fc028414e660005acee86184494e40ccf4d80d265175419c2a068058
+(7670B). No archive/copy/receipt/cleanup, no class deletion, no third presentation
+repair, second JVM, guard, route/native run or commit. Source/config SHA/mode/mtime,
+HEAD/index/native4fdf/disasm044 and all prior refs remain preserved; compiled
+classes are retained with their post-lifecycle ownership inventory. All owned
+request processes are terminal and leases released. Stop for Root disposition.
+
+
+### HCZ R59 — accepted R58 boundary and producer-witness source preparation (2026-10-18)
+
+Root DIRECT-read accepted all24 originalR58files/346912B: all151 identities,
+twelve identical72-property maps/fullstreams and complete active failure with
+two suppressed stacks/pattern arrays. Both active branches reached final
+oracles; only forward full-registry presentation205/217 and keys38/50 remain
+red. Immediate Camera/fullregistry, wall linkage/poses/offsets and forward Camera
+passed; stationary complete joint contract passed. This qualifies the exercised
+two owner corrections, not active full-world equality or actual R52's caller.
+R59 is SOURCEONLY passive controller/presentation projection design in the
+existing joint test, with exact inverse-to-bbde proof required; no runtime/API/
+schema/fixture/oracle change, compiler/JVM/native/guard/route/commit authorized.
+The R57 three runtime files, bbde joint test,907443 hand and legacy sources
+remain uncommitted and exact. Accepted24 originals are consumed only after all
+expected full hashes/sizes match, under metadata_slot ALONE; compiled class
+hashes/mtimes remain retained. Any eventual projection diagnoses correlation;
+it cannot identify a specific pattern-producing draw caller by itself.
+
+
+R59 frozen source handback (uncompiled/unexecuted): only the existing joint test
+has twelve insertion-marked diagnostic blocks, 483lines/28425B, SHA256
+adbc178f0a9b7a7bafc3471f7020851fd0e102d02199ed66c43cacf28f844f18. Removing all twelve blocks recovers originalbbde exactly
+(including original method bodies/inlets/ordinary steps/captures/oracles/keys).
+Marked helper SHA256 803843128a22247191bb535b37563a1977510d930a5751dc0b735949103d5aa8; baseline→marked
+unified diff SHA256 9aa65ede34e1cfcc895b0878fe7ab8f7955e8a3c02a3f0ea45b144d77f653ae1 (17065B);
+ordered manager/events/scroll/marked-test combined SHA256
+5fbfa48bf3ec562ccc928c2d47aa8fdce1dbf5b10af8d45909ffc08b18dec7ea. Runtime three-file combinedd931/diffc863 remains
+exact;907443hand/legacy/CPU8930/APS838c/columna170/db5a/oldflight tests unchanged.
+
+At only the existing completed A/B and both immediate-A/forward-B captures, the
+helper reads actual registered P1/P2 references (fixture main plus the raw sole
+registered sidekick, explicitly null when absent). Registry membership and saved
+SpriteEntry binding are checked by actual reference equality; names/hash labels
+are display/indexing only. The existing sprite/controller/dust refs are retained
+in test-local context; mutable surface-renderer changes between boundaries are
+observed, not rejected. Exact prior ThreadLocal context is restored in finally;
+original exceptions/assertAll objects are not caught, wrapped or replaced.
+
+The APS controller, controller.spindashDust, dust-owned sprite/renderers and all
+ordinary4 + water splash6 + surface splash6 scalar fields are raw Field.get reads
+against their actual declaring classes. No private invoke, controller capture,
+art/cache resolve, draw/prepare/append/update, fresh visibility, owner liveness or
+provider callback is called. Already captured `sprites` -> SpriteEntry ->
+playerExtra.spindashDustState supplies the **actual four-value** public record,
+without extra registry/player/controller captures. The saved internal
+LevelSpritePresentation.Tables.State type is checked, then its prepared/published
+frame refs are raw-read; immutable Frame tile IDs/counts and complete pattern-key
+sets are read, without renderer lookup/initialization or mutable pattern uploads.
+
+One standard stdout record per boundary is shared-capped at16 records/32768 UTF8
+bytes for the class, checked before output with no truncation or file journal.
+Known player/controller/dust/renderer refs, raw scalar tuples, captured4, saved
+tables/frame refs and LF/sprite-manager/object-manager counters are read before
+and after EVERY output. A mismatch/cap/reflection/binding issue is a diagnostic
+STOP; this proves only that known projection, not whole-world observational
+purity. LF, sprite-manager execution counter and object-manager counter keep
+separate labels; full VInt/movie cursor are explicitly null/unobserved for this
+component. No native/campaign clocks or absent branch values are reconstructed.
+
+Source contract: SpindashDustController.capture262/restore266 and public ModApi
+RewindState279 retain only frameIndex/frameTick/currentFrame/activeLastTick,
+while its water/surface fields drive drawSplash/drawSurfaceSplash and persist
+separately. PlayableSpriteController93/152 and APS969/1253 delegate that exact
+record; no public record/API signature is expanded or pin waived. Native044
+Sonic_InWater/Sonic_OutWater write fixed Dust anim1; LBZ surface anim4 is a
+separate producer. The helper is correlation evidence only: even matching live
+splash state with extra pattern refs does NOT identify a specific actual draw
+caller. LevelRenderer994 -> ordinary presentation producer -> Sonic/Tails.draw
+-> dust.draw are source paths; actual intervening call/branch execution remains
+a separate missing witness. No cause from atlas ranges205/217 or38/50.
+
+A possible future internal extension boundary is the existing GameplayModeContext
+attach/detach RewindRegistry adapter registration beside sprites/native-player-art
+(410..429) and after-roster closure, with a private value owner analogous to
+NativePlayerArtBindings. This is only a design location to investigate if actual
+observations warrant it; no new adapter/key/resource lifetime contract or runtime
+repair is authored. Surface renderer binding and pattern/DPLC lifetime remain
+separate questions, and no public4-field record growth is assumed necessary.
+
+Proposed sole FUTURE command (NOT submitted): same R56 normal/no-profile
+`TestS3kHczMovingWallShakeRewind,TestCameraRewindSnapshot,TestParallaxRewindSnapshot`
+with original three absolute ROMs/Java25/current Main absolute wrapper, single
+EGL JTO+CLI/nullAL/noambient DISPLAY/WAYLAND/LD/Lua/fork1/reuse/alphabetical.
+It covers the two unchanged component methods plus existing Camera/Parallax
+controls, not a new route/native/guard. Full argv and source pins are in only
+R59's existing ownership entry. All runtime/config/native/ref/index pins and
+all15 compiled class SHA+mtimes remain exact; compiled classes still represent
+the prior uninstrumented source. AcceptedR58raws consumed as recorded, no archive.
+No compiler/JVM/test/queue/native/guard/commit or third presentation repair has
+run. STOP for Root actual-file review before any separate execution authority.
+
+Exact proposed command for a separately gated future request (**NOT executed**):
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH JAVA_HOME=/usr/lib/jvm/java-25-openjdk JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless LUA_BIN=/usr/bin/lua5.4 python3 "$MAIN_WORKSPACE/tools/testing/maven_queue.py" --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" "-Ds3k.rom.path=$S3K_ROM" -Dtest=TestS3kHczMovingWallShakeRewind,TestCameraRewindSnapshot,TestParallaxRewindSnapshot -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical test -B
+```
+
+Read-only contract source pins (SHA256):
+
+- `src/main/java/com/openggf/sprites/managers/SpindashDustController.java`: `3049c168d1ab01f3fe2695fc850abd4dfe3a02c02664bb0e87f8cd3ea7d6c452`.
+
+- `src/main/java/com/openggf/sprites/playable/PlayableSpriteController.java`: `32b56614eedab471e324dc6650b58e93ae29d40818e25e60aa0ae4e9dbac5013`.
+
+- `src/main/java/com/openggf/sprites/managers/SpriteManager.java`: `ed7b0bfafacec902859de34b2c0bd5b75b131dc6314c45f98311e84de2846558`.
+
+- `src/main/java/com/openggf/level/LevelSpritePresentation.java`: `64d7704547a78be87c3b85a87c5f238f29bcb5f96bd8806a816e23fe5428eae7`.
+
+- `src/main/java/com/openggf/graphics/SpritePresentation.java`: `eadc1c7f090364bea785413d0c21735337b9b493702c1f4ae24a212fc67eb247`.
+
+
+### HCZ R60 — bounded captured splash-state witness (2026-10-18)
+
+Actual ordinal64/session42430 ran ONE unchanged R59 proposed normal/no-profile
+three-class lifecycle (joint two methods +existing Camera/Parallax), original
+three absolute ROMs/Java25/single EGL JTO+CLI/nullAL/noambient DISPLAY/WAYLAND/LD/
+Lua/fork1/reuse/alphabetical. Queue wait0s, normal7GiB/8cores; submitted
+00:42:10.880961→terminal00:42:37.612917UTC, parent26.731956s, Maven26.049s.
+Production classes were up-to-date;4195 test sources compiled within this same
+sole lifecycle. No other request/build/JVM was submitted. The literal returned
+execution IDs were relayed after terminal and registered without guessing.
+
+Actual **12T/1F0E0S** (Camera4PASS, joint2/1F, Parallax6PASS). All twelve original
+R59 stdout records were read completely: active6/14349UTF8B, stationary6/13777B,
+class aggregate **12records/28126B**, within16/32768 cap. All declared post-output
+known-projection checks returned, exact registered player/controller/dust identity
+checks passed, both ordinary replay branches reached original final assertAll184.
+No cap/type/reflection/binding/passivity/prerequisite/observer failure occurred.
+This qualifies only the known reference/scalar projection, not whole-world purity.
+All twelve identities/three identical72-property maps/full XML failure +two full
+suppressed stacks and all TXT/streams were inspected; the failed XML body is an
+exact substring of its TXT. Initial console truncation was resolved by bounded
+complete original XML reads, not another execution or post-simulation state query.
+
+Observed active P1/P2 water-splash `(frame,tick)` progression, same for both:
+
+| Existing boundary | LF / SM execution / OM counter | Splash frame,tick | Prepared tiles / pattern keys | Published tile COUNT only |
+|---|---|---|---|---|
+| Original A |1/1/2|0,1|201/34|153|
+| Original B |2/2/3|0,0|205/38|201|
+| Restore1 immediate A |1/1/2|0,0|201/34|153|
+| Forward1 B |2/2/3|1,2|217/50|201|
+| Restore2 immediate A |1/1/2|1,2|201/34|153|
+| Forward2 B |2/2/3|1,1|217/50|201|
+
+Across all active samples splashActive=true, P1XY1690/1792 and P2XY1621/1792,
+facingLeft=false; actual strong refs stayed the registered players and their
+controllers/dust. Saved public4 values and raw ordinary4 stayed `(0,0,10,false)`
+for both. Surface-active=false/XY0/0/animation0/timer0/mapping22 and null surface
+renderer throughout. Original A's saved prepared Frame reference was restored
+in each immediate sample while live splash frame/tick retained the later values.
+Thus failure to restore these sampled splash scalars is directly observed;
+the four-value capture's source omission is exercised. Specific actual
+trigger/draw caller and assignment of extra patterns to a renderer remain
+**unqualified**: sampled-state/range correlation is not a draw-call witness.
+
+Stationary control: all six samples both players water-splash inactive with
+rawXY/frame/tick0, facingfalse; saved/liveordinary4 and surface fields as above.
+Prepared240tiles/101unique tileIDs/35patternkeys throughout, published tileCOUNT
+203/240/203/240/203/240. Its complete joint contract passed. Active prepared
+unique tile-ID counts98/102/98/114/98/114; all complete histograms/key lists read.
+FullVInt and movie cursor were explicitly null/unobserved. No published tile
+inventory/keys/contents were captured or inferred from these counts.
+
+The sole failure is the ORIGINAL final MultipleFailuresError, exactly two
+suppressed forward-B FULLregistry assertions: presentation tiles205/217 and
+keys38/50 in both branches, twelve extra actual212992..212997+229400..229405,
+no missing expected key. Immediate Camera/fullregistry/link/pose/offset and
+forward Camera/wall assertions passed. Full keys/oracles remain unchanged;
+active full-world equality is RED, with no actual R52 caller/full-route claim.
+Captured stderr has3 FAST-no-manifest warning records/468B; console has2 further
+FAST records outside testcase capture plus compiler deprecation/unchecked notices,
+so there is no all-warning-zero claim.
+
+ALL6 original XML/TXT115176B remain at `target/surefire-reports/` for Root DIRECT
+read, including control reports. Joint XML60730B SHA256
+5831cf7000a0146ec4441620c536fd64bbb3df8f5195276e5dd83e7d342029e1;
+TXT7670B SHA256fd2439e021112e18770ceeadaba15ea0e74f50dc3e8419d10633fd42298d41d6.
+No cleanup/archive/copy/receipt/class deletion/source restore or commit. Marked
+testadbc/inversebbde, runtime3d931/combined5fbf, hand907443/legacy/source pins,
+Main/privateconfig bytes/mode/mtime/native4fdf/disasm044/HEADdad/index/refs are
+preserved. Current compiled classes are inventoried and retained; all owned
+processes terminal, all leases released. Only this result/ownership entry and
+existing Plan changed after terminal. STOP: no fix, adapter/key/API/schema/pin
+change, additional query/probe/source work/JVM/guard/route/native execution.
+
+
+### HCZ R61 — accepted R60 state witness; internal owner source inventory (2026-10-18)
+
+Root DIRECT accepted all6 originalR60reports/115176B, all12 identities/72-property
+maps/classpaths/fullstreams, exact XML/TXT failure plus both complete suppressed
+stacks and all12 scalar/histogram/keyset records/28126B. Both players' water
+splash frame/tick survive restore while saved ordinary4 stay unchanged. Only
+two original forward-B full-registry presentation comparisons remain red. This
+qualifies a missing owner-state contract, not actual draw/pattern/R52 causality.
+All6 expected full SHA/sizes must match BEFORE ANYunlink under metadata_slot
+ALONE; compiled ownership hashes/mtimes remain preserved, no archives/copies/
+receipts/classesdelete. Only the12 R59 insertion blocks are stripped to exact
+bbde original test; full inlets/steps/captures/keys/oracles remain byte-exact.
+R61 SOURCEONLY will inventory supplementary water/surface fields, actual restored
+roster/controller binding and renderer-resource lifetime before minimal internal
+owner authoring. R57 runtime3 remain exact. No public4-record/API/schema/version/
+pin growth, runtime tick/publication/key-dropping workaround, compiler/JVM/queue/
+native/guard/test execution or commit authorized. Stop at a missing existing seam.
+
+
+R61 source freeze, uncompiled/unexecuted: four internal owner/integration files,
+no shared algorithm/API/schema/version/pin/oracle changes. The package-private
+`PlayableDustRewind` captures an immutable map keyed by the existing registered
+participant code. Each immutable supplementary record owns the twelve primitive
+water/surface values and a borrowed renderer **binding identity**, not a deep copy
+of the renderer's mutable art/DPLC/cache contents. It holds no player/controller
+instance, scene clock, RNG or prepared presentation state.
+
+| Supplementary owner fields | Ordinary writer / restore contract |
+|---|---|
+|splashActive/X/Y/facingLeft/frameIndex/tick|triggerSplash plus updateSplash; copy all6 exactly|
+|surfaceSplashActive/X/Y/animFrame/timer/mappingFrame|triggerSurfaceSplash plus updateSurfaceSplash; copy all6 exactly|
+|surfaceSplashRenderer resource binding|producer-supplied borrowed ROM resource, not a controller/cache snapshot|
+
+The public four-field RewindState and its original capture/restore/reset/update/
+draw/trigger logic remain exact. New package-private methods only capture/assign
+the supplement. Missing-key reset uses the actual constructor defaults (including
+surface mapping$16/null binding), touching none of the ordinary4. No render,
+prepare, upload, cache invalidation, event tick or gameplay call occurs on restore.
+
+Resource lifetime audited separately: LBZ intro gets its surface renderer from
+Sonic3kObjectArtProvider's already loaded DPLC map; the provider loads independent
+ROM ArtUnc_SplashDrown/Map_DashDust/DPLC bytes. Clearing provider maps releases
+their registrations, without disposing renderer resources. PlayerSpriteRenderer
+retains final artSet and GraphicsManager references and no launching actor/dust
+controller reference; it has no dispose/close operation. A captured binding keeps
+that already ROM-produced resource usable through actor/controller recreation in
+the same restorable graphics/session lifetime. It does not capture mutable cache
+contents, re-resolve game/zone keys, reload art, mark native readiness or force
+DPLC publication. Cross-session or invalid retired load history is not introduced
+or certified. Existing normal level-load rewind boundary/reset ownership remains
+unchanged; renderer/cache/DPLC behavior still needs affected execution proof.
+
+Restore stores only pending immutable values. A post-restore closure follows
+native-player-art rebinding and all adapter/roster/ObjectManager reconstruction,
+before existing parallax-derived reconciliation. It validates every captured
+participant against the actual restored manager/current dust controller before
+assigning any state, then resets only uncaptured live controllers' supplement.
+Missing captured participant/controller throws explicitly. No stale controller
+reference is carried across recreation. Refresh deregisters the exact owner key
+and closure before replacement, matching existing registry conventions. The
+internal facade uses existing requireEngineCaller before registry mutation,
+avoiding a new creator-callable registration deputy. New key is engine-owned
+`playable-dust-effects`; no API snapshot record or signature file is expanded.
+
+The runtime change is source-only and has not been observed closing presentation
+oracles. R60 qualifies the sampled water scalar gap, not a particular draw caller
+or actual R52 cause. Surface state/resource rebinding, missing-key reset and
+replacement-controller paths are SOURCE-backed/unexecuted limits, not passing
+controls. No test oracle/setup edit was made; exact strippedbbde is retained.
+
+- `src/main/java/com/openggf/sprites/managers/SpindashDustController.java`: SHA256 `d003515a682f97ccb96db675fa288db296917bc02e3bd8970a6dbf44268eef77`.
+
+- `src/main/java/com/openggf/sprites/managers/PlayableDustRewind.java`: SHA256 `b14fa97aa4306a63d1cc8baf3b2250f351d899e434b98cf4d06328e92092df9f`.
+
+- `src/main/java/com/openggf/sprites/managers/SpriteManagerInternalAccess.java`: SHA256 `396a3f2826947f573bab15c5e672f4e840c1eb103e3abe087b42ccc1dcab820d`.
+
+- `src/main/java/com/openggf/game/session/GameplayModeContext.java`: SHA256 `2a626d4bc28e5c7f17ef7e175f7a1fc33e7491891d45afbfa3bf59aced6f534f`.
+
+Four-file ordered raw combined SHA256 `9360f747dbcce56eb09900a816ad29882cc2682a32241dd69dc9c6219fb39f62`; complete candidate
+diff SHA256 `3b9b82a8f7faf31317e0cb482e992088946e491feca8dc1910b993cc492a7bfc` (9101B, three tracked diffs plus new owner).
+Removing only additions and reversing the two-line resource comment recovers
+HEADdad byte-exact for all three existing files: SpindashDustController.java=3049c168d1ab01f3fe2695fc850abd4dfe3a02c02664bb0e87f8cd3ea7d6c452, SpriteManagerInternalAccess.java=43af24c374b0f2dd2a8ba4fa73ac7933f33b828c2cea9688301ea31ab01f51f7, GameplayModeContext.java=013d10fc751e5b149f6fc764d16d51aff2e750f4f32b45fa15ab747d6d20aa59.
+
+R57 three-file combinedd931 stays exact; R57 plus these four files ordered
+combined SHA256 `a3014d98d636506ea9b047fb736b10e3997aa2b2f3ab5acc68643783d46aeabb`. Public API pin remains1ebadc. Current source-size
+ratchets do not budget these four owners; unchanged child LM3153vs3144 remains
+parent-owned/extraction486 followup, not waived or tested here. No guard budget
+or API descriptor/version/pin file was modified.
+
+Proposed separately gated normal/no-profile focused selection (NOT executed):
+`TestS3kHczMovingWallShakeRewind,TestCameraRewindSnapshot,TestParallaxRewindSnapshot,TestSpindashDustControllerSplash,TestSpriteManagerRewindCapture,TestGameplayModeContextRewindRegistry,TestRewindRegistry,TestS3kLbz1GroundLaunchIntroHeadless,TestS3kAiz1SkipHeadless,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`. This bounds water/surface lifecycle, actual registry/roster
+restore, existing Camera/Parallax and mandatory S3K loading checks; no whole route
+or broad sweep. Full original-ROM/env/Main-absolute argv lives in R61 entry.
+A later focused gate must decide any additional surface/recreated-resource oracle;
+none is silently substituted for the unchanged joint full-registry assertion.
+
+AllR57sources/907443/legacy/CPU8930/APS838c/columna170/db5a/test/publicAPIpins,
+Main+privateconfigSHA/mode/mtime/native4fdf/disasm044/HEADdad/index/refs remain
+preserved. All21 compiled classes still have priorR60 SHA/mtime; source is not
+compiled. Accepted six originals consumed only as recorded, no archive/class
+deletion. No compiler/JVM/queue/test/native/guard/commit. Stop for Root actual
+file review before any execution or further source expansion.
+
+
+### HCZ R62 — internal Dust supplement focused qualification (2026-10-18)
+
+Root approved the exact R61 four-file owner and existing R57 three-file set;
+sole session88571 executed the R61 exact13-class argv once, normal/no-profile
+through the current Main absolute wrapper77d3a3e5 from this owned tree. Tested
+HEADdad918f72 plus candidate4combined9360f747 / composed7combineda3014d98,
+unchanged jointtestbbde, sourcePlanc690bb06; no source/input/oracle variant.
+Original three absolute ROMs, Java25, single inherited EGL JTO plus CLI flag,
+nullAL, no ambient DISPLAY/WAYLAND/LD, Lua5.4 and fork1/reuse/alphabetical were
+retained. Incoming JDK_JAVA_OPTIONS/MAVEN_OPTS were absent and preserved.
+
+Submission01:04:47.253628Z; actual Maven finish01:06:06Z. Queue wait0.0s;
+recorded execution hold78.8s, peak3.419GiB/mean1.939cores under normal7GiB/8cores.
+Maven displayed01:18min (rounded); exact independent parent duration is unknown.
+Production4144 and test4195 sources compiled inside this sole lifecycle; no
+separate build/JVM. Terminal0, **142tests / 0F / 0E / 0S across13classes**:
+Camera4, Registry16, jointHCZ2, contextRegistry29, Bootstrap6, Decoding3,
+explicit game Loading36, Parallax6, Splash8, SpriteManagerRewind11, AIZskip8,
+LBZgroundlaunch6, explicit tests Loading7. All actual identities and all13 equal
+72-property maps/classpaths were inspected, including original ROM paths,
+Java25/EGL/fork/reuse/order. No failure/error/skipped/suppressed XML elements.
+
+Both original joint methods passed: moving and naturally stationary. The active
+method reached its source-positive natural shake AND registered-wall integer
+X/offset change, then both honest restoreA/immediate-capture/same-input-forwardB
+branches and final assertAll. Immediate Camera/full-registry, actual recreated
+wall link/offset/pose and both forward Camera/full-registry equality all passed.
+All complete keys, including presentation and the supplementary owner, remain
+compared; no key/oracle/phase/input change or post-simulation reconstruction.
+This closes the exercised R58/R60 two forward full-registry presentation reds
+on this composed owner set. It does not identify the exact earlier draw caller,
+assign individual pattern ranges, qualify actual R52 hand-caller behavior or
+prove an original campaign/route frontier.
+
+The other140 cases include ordinary water/surface lifetime, LBZ ROM surface-art
+production, roster/contact recreation, registration/teardown/missing-key controls,
+Camera/Parallax and mandatory S3K loading. Their passes do not substitute a
+dedicated supplementary surface-renderer-active recreation/cross-resource test:
+that binding/lifetime remains source-qualified beyond the sampled water replay.
+The actual supplementary missing-participant refusal, missing-key reset and
+replacement-controller branches have no separately targeted oracle in this run.
+No cross-session/retired-load-history, publicAPI/guard or full-suite claim.
+
+All XML streams were read:94 records/20239B/254lines, no stdout; captured warnings
+are122FAST-without-manifest,4 deterministic KOS estimates (same dc57dd59 fingerprint)
+and1 deliberate out-of-range collision negative control. The latter belongs to
+readCollisionIndexUsesStrideTwo; no novel warning body was present. Console also
+contains outside-case FAST notices and deprecation/unchecked compilation notices;
+this is not zero-all-warnings. The first long inspection display was truncated;
+full record contexts/non-timestamp lines were re-read in a bounded lossless table,
+without another engine execution.
+
+All26 original XML/TXT files are retained at their single original
+`target/surefire-reports/` paths for Root DIRECT read, including green controls;
+full sizes/SHA256 and actual142 identities are in the new R62 execution entry.
+Joint XML6b2e4cb5 (23656B), TXT45c60cd3 (360B). No cleanup/archive/copy/receipt,
+manual class deletion, source repair, commit, guard, native or route run followed.
+The normal recompilation replaced current classes and retired six obsolete R59
+marked-only inner classes; a read-only inventory initially assumed those still
+existed, then recorded their actual absence. No gameplay/test retry occurred.
+
+Post-run55 literal source/legacy/resource pins, sevencombineda301, jointbbde,
+hand907443/APIpin, Main/privateconfig bytes/mode/mtime, native4fdf/disasm044,
+HEADdad/index and branch remain exact. Current21 compiled candidate/test files
+are SHA/mtime inventoried; no owned live JVM/helper and all execution leases
+released. Only this compact Plan/result entry changed after terminal. STOP for
+Root DIRECT read/disposition; no additional validation or runtime work authorized.
+
+
+### HCZ R63 phase1 — Root-accepted restore preservation boundary (2026-10-18)
+
+Root DIRECTread accepted all26 R62 originals345990B, full142 identities/13equal
+72-property maps/classpaths/TXT/all94streams20239B, and exact sizes/fullSHA.
+Genuine joint R56 12/2F -> R58 151/1F partial -> R62 142/0F0E0S is now recorded
+in the existing dated audit, HCZ2 matrix/discrepancy, release scenery/rewind theme
+and mirrored owner pitfall. Seven runtime files remain ordered combineda301;
+green jointbbde is included. Hand907443 stays untracked/excluded, all legacy,
+CPU8930/columna170/db5a/API/native4fdf/private config bytes/mode/mtime preserved.
+No canonical/hand/R52caller or dedicated surface/resource-recreation claim.
+Normal local commit uses seven policy trailers and final parsed GPT-6.1 author.
+Then all26 accepted fullSHA/sizes are checked before any unlink metadata_slot
+ALONE; no archive/copy/receipt/class deletion, all21compiledSHAmtime preserved.
+Only after that boundary is one unchanged R51/R52 normal three-class hand
+lifecycle authorized; source remains frozen, first prerequisite failure stops,
+all new XML/TXT even green must remain for Root DIRECTread. No runtime repair,
+new oracle/inlet, guard/native/route run or further JVM is authorized here.
+
+R63 normal hook rejected the accumulated Plan machine-local path example before
+commit. Only its four path operands now use neutral MAIN_WORKSPACE/S1_ROM/S2_ROM/
+S3K_ROM bindings; exact original executed argv remains in the existing ownership
+entry. Runtime/test bytes and evidence contents are unchanged; no hook bypass.
+
+
+R63 preservation STOP before phase2: normal commit-msg policy reports
+`detectable @ModApi surface changes require updating the current candidate
+signature pin.` Exact read-only invocation of the unchanged hook extractor
+isolates its sole delta to the package-private EffectsRewindState record header
+inside annotated SpindashDustController; its record-selection expression does
+not exclude non-public nested declarations. Hook SHAef5d600794ff19922f125054e3319e0faaaf5cfe26dc5f0bf2e75b88b2ee7cae.
+The entire public capture/restore/four-field annotated record/getRenderer suffix
+is HEADdad byte-exact (SHAd84e4fda8fe0b13ecc36c5ffd2de9416d508b3fcd9fd1ca6a48f7bed66e9694d);
+no candidate pin or runtime/API source is changed to satisfy this heuristic.
+All15 exact owned preservation paths remain staged, HEADdad unchanged; no commit
+was created. All26 accepted R62 reports345990B remain at original paths and all
+21current compiled SHA/mtime stay exact. Hand907443 remains untracked/excluded,
+native/private config preserved. No deletion, hand request/JVM, retry/variant,
+hook bypass or policy/source repair. Literal R63ordinal67 was received but its
+new registry phase is deferred as instructed until the clean preservation
+boundary; earlier66.. identities/results remain. Root owns policy disposition;
+this is an accounting blocker, not a newly observed gameplay/test failure.
+
+
+### HCZ R64 — unchanged hand component reaches native deletion old-red (2026-10-18)
+
+Root separates accepted R62 cleanup/one hand measurement from blocked R63
+preservation. Historical literalR63ordinal67 is registered as actual normalhook
+STOP: no commit/cleanup/JVM in that phase. New literalR64ordinal68 is separate;
+no clean preservation boundary or hook waiver is claimed. Before R64 submission,
+all26 accepted R62 originals345990B matched every expected size/fullSHA BEFORE
+ANYunlink under metadata_slot ALONE. Only those26 were consumed; all21 current
+compiledSHAmtime and staged15 unchanged, no archive/copy/receipt/class deletion.
+
+Sole normal/no-profile session60899 reuses the byte-exact R52 argv/selector:
+`TestHczHandLauncherNativeUnload,TestHCZHandLauncherObjectInstance,TestS3kHczHandLauncherGraphRewind`.
+Current Main absolute wrapper77d3, original3 absoluteROMs/Java25/EGLsingleJTO+CLI/
+nullAL/noambientDISPLAY-WAYLAND-LD/Lua5.4/fork1reusealphabetical. HEADdad+runtime
+sevencombineda301/hand907443/legacy+graph sources unchanged; index15raw51aa and
+sourcePlan6137 frozen. No duplicate own job; reports absent. One read-only
+preflight helper had a39-character S1expected-hash typo; the authoritative
+40-character expected value and actual original3ROM identities matched after
+correcting that helper literal. No file/prerequisite/gameplay change or test
+retry occurred. Submission01:19:51.571774Z, finish01:20:19Z; queue0.0s/hold27.6s,
+Maven26.954s; normal7GiB8cores, measured peak2.36GiB/mean2.826cores. Production
+classes up-to-date;4195test sources compiled inside this same lifecycle only.
+
+Actual **19/1F0E0S**, no skips. Legacy15 (including extension unload, jump and
+ordinary launch), graph2 and new normalVisibleLaunch all pass. The sole failed
+method now completes both beforeBirth restore/immediate full-registry/birth+
+real arm/visible-CPU-warm/forward-cull loops AND both forced-held-parent/arm
+recreation, real ride/sticky-standing relink and forward-cull loops. All full
+registry keys/comparisons and repeated deletion scalar equality pass. Final
+assertAll72 is reached after those four complete controls, unlike R52's first
+restore prerequisite failure. No unprinted CPU state/timer/slot/clock value is
+inferred from reaching the NORMAL-or-PANIC and live-latch3 prerequisites.
+
+Final genuine independent native deletion oracle: both native P1/P2 have four
+failing booleans each: OnObj, objectControlled, allowsCpu and suppressMovement
+expectedtrue/actualfalse. Root MultipleFailuresError has two nested player
+containers/four leaf failures each;10 Suppressed markers total (2containers+
+8leaves). Airfalse, entire integer/fraction/velocity/ground Pose, sticky interact
+slot and latchedId equalities pass inside the same final assertAll. No final
+riding-reference, following freed-SST CPU marker/replacement owner or route pose
+oracle is present; these remain separate source questions, not invented values.
+The source-backed native SST-only deletion expectation is now independently red;
+this does not retrospectively identify R52's actual Camera writer or authorize
+an onUnload/shared cleanup/allocator/CPU repair.
+
+ALL19 actual identities/3equal72-property maps/fullclasspath/full XML/TXT and
+full failure17218B/two nested+eight leaf stacks read; XML body is exact in TXT.
+Only captured stderr is two records468B/6lines: failedcase2FAST plus normalcontrol
+1FAST. No stdout/new warning body. Console has additional outside-case FAST and
+compile deprecation/unchecked notices, not zero-all-warnings. All6 new originals
+108017B retained singly at original target/surefire-reports paths for Root
+DIRECTread, including passing controls. FailedXML41889B SHA256
+fe83263d9775f93df58072aba835f32c1cb5787141efef0e30b2b6f5d4bd3499;
+TXT17788B SHA25663bb39ca7a0556435e7c31b4b4c664daa270f00caa88828e2ed0056687b2625b.
+
+Postterminal all55 literal source/configMain-privateSHA-mode-mtime/native4fdf/
+disasm044/APIpin/hookef5d/HEADdad/index15 exact; no owned live JVM/helper. Current
+21compiledSHAmtime inventoried after normal test recompilation. This append is
+working-tree-only: original15 staged blobs remain unchanged. Normal preservation
+hook remains unresolved/unwaived, owned by separate isolated policy work. No
+commit/test or runtime edit/guard/canonical/native/extra JVM/new-report cleanup.
+STOP for Root DIRECTread and separate next scope.
+
+
+### HCZ R65 — accepted independent native-hand old-red; source-only boundary (2026-10-18)
+
+Root DIRECTread accepts all6 R64originals108017B/all19identities/3equal72-property
+maps/fullclasspath/full17218Bfailure tree+10Suppressed/TXT/streams. Eight final
+native P1/P2 boolean failures occur after all2birth+2held forced-world/fullkey
+controls; Airfalse/fullPose/stickyID+slot finalequalities and all18controls pass.
+This is bounded independent SST-only deletion old-red, not a native-at-PC/R52
+shakecaller/followingCPUmarker/route certificate. Root separately authorizes
+safe consumption of exact6 originals after ALL expected fullSHA/sizes match
+BEFORE ANYunlink metadata_slot ALONE; preserve21classSHAmtime, no archive/copy/
+receipt/classdelete. Normal preservation hook is still unresolved/unwaived.
+R65 authorizes only a source correction in the launcher onUnload native-owner
+retirement; test907443/legacy/graph and prior7runtime remain exact. No compiler,
+JVM/typecheck/guard/replay/native or commit; frozen diff must return for review.
+Original15stagedblobs stay exact, subsequent Plan/hand changes are UNSTAGED.
+
+
+R65 source freeze (UNCOMPILED/UNEXECUTED): only launcher onUnload changes two
+native releaseWithoutLaunch calls to existing nativeStates[0/1].clear() plus
+p1Owner/p2Owner=null. These write only this object's two grab/standing pairs and
+owner references. Existing extensionStates releaseWithoutLaunch loop, map clear,
+anyGrabbed=false, omitted-extension and role-promotion logic are byte-exact.
+Normal launch/jump/releaseWithoutLaunch bodies and every other source byte are
+unchanged; no native-player setter, fresh query, callback, liveness/visibility,
+ride/latch/pose/control/status or shared cleanup change is added.
+
+Native044 loc_30C76 (sonic3k.asm:65909) jumps Sprite_OnScreen_Test37302. Out-of-
+range clears placement respawn bit, then Delete_Current_Sprite36148 passes only
+its own a0 to a1; Delete_Referenced_Sprite36156 clears object_size74 bytes. It
+never targets Player_1/2. Ordinary sub_30C7C/sub_30C8C launch and jump release are
+different owners and remain untouched. Existing manager unload3398..3460 calls
+onUnload before removeActiveObject3782..3814, whose push/standing clears affect
+object-side latch maps only. Its removal notification drops touch-buffer entries
+and the inherited no-op onRemovedFromObjectManager; no native-player write is
+needed. The child expires at its own existing parent-liveness check. This source
+inventory supports a local correction; no shared contract widening is authored.
+
+Hand source SHA256817c0dbb262bf78066d92e12cd5cc47a7386bc968fd229c79ffc266b949ed2a5;
+minimal diff SHA256f183651ebf66cf9e7644f8ace497f9fdcf8969cced774ea861934f1e1b25f207
+(1190B). Reversing only that exact replacement recovers baseline SHA256
+68da71107cbd92332826e6927fe6bab83626c6ecd67f87cfb6ddc1eaca6652e8 byte-for-byte.
+Both new native test methods/file907443 and legacy387aa/graphfee remain exact;
+prior runtime7combineda301/jointbbde/CPU8930/APS838c/columna170/db5a/APIpin,
+Main-private config/native4fdf/disasm044/HEADdad and original15staged blobs51aa
+are preserved. Current21compiledSHAmtime remain from R64; new Hand source has
+NOT been compiled or typechecked. No Java/C# parser/build/JVM/queue/native/guard/
+replay/failing-test or runtime commit. R63 normal hook remains unresolved,
+unwaived and separately owned; no hook/API pin/representation repair is applied.
+
+Proposed separately reviewed normal/no-profile exact10-class focus (NOT submitted):
+`TestHczHandLauncherNativeUnload,TestHCZHandLauncherObjectInstance,TestS3kHczHandLauncherGraphRewind,TestHczSpinningColumnCachedRelease,TestSidekickCpuDespawnParity,TestS3kAiz1SkipHeadless,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`.
+Use the existing R52 normal Main-absolute original3ROM/Java25/singleJTOEGL+CLI/
+nullAL/noambientDISPLAY-WAYLAND-LD/Lua/fork1reusealpha argv with ONLY Dtest changed;
+full future argv/source contracts live in new R65 entry. No result/tally forecast,
+route advancement, native-at-PC or R52shakecaller proof follows from authoring.
+Stop for Root actual-file review before any possible focused execution gate.
+
+R65 final static label check: Delete_Current_Sprite is36148 and its fallthrough
+Delete_Referenced_Sprite is36156; object_size=$4A is74bytes (constants113). Only
+the new source comment citation was corrected before Root review; original907443
+source remains byte-exact. No runtime instruction/body change or execution.
+
+
+### HCZ R66 — native hand deletion independent old-red to focused green (2026-10-18)
+
+Root actual-file/native/shared-retirement review and independent review approve
+Hand817c/difff183/inverse68da. Literalordinal70 registered separately from69
+source/68genuineoldred/67normalhookSTOP. Sole exactstored10 normal/no-profile
+lifecycle session82199 executes HEADdad+eight-runtime combined6dd81 (prior7a301
+unchanged), test907443/legacy387aa/graphfee/jointbbde/CPU8930/APS838c/columna170/
+db5a/sourcePlan4394/index15raw51aa/config/native/APIpin/hooks exact. No owned
+live/queued equivalent; reports absent. Original3 absoluteROMs/Java25/singleEGL
+JTO+CLI/nullAL/noambientDISPLAY-WAYLAND-LD/Lua/fork1reusealpha and absent incoming
+JDK_JAVA_OPTIONS/MAVEN_OPTS retained. Current Main absolute wrapper77d3; complete
+executed argv preserved in new R66 entry, matching the R65 proposal byte-for-byte.
+
+Submission01:36:47.751400Z; finish01:38:09Z. Queue0.0s, measured hold82.1s,
+peak3.698GiB/mean1.767cores under normal7GiB8cores; Maven displayed01:21min
+(rounded), exact independent parent duration unmeasured. Compiler4144production+
+4195test sources inside this sole lifecycle; no separate build/probe. Terminal0,
+**149tests / 0F / 0E / 0S across10classes**: graph2, Bootstrap6, Decoding3,
+explicit game Loading36, legacyHand15, nativeHand2, cachedColumn5, CPUDespawn65,
+AIZskip8 and explicit tests Loading7. No tally was assumed before execution.
+
+The unchanged nativeHand method now passes both beforeBirth full-registry/
+actualfactory-parent+arm rebirth/visibleCPUwarm/forward-cull controls AND both
+forced-held parent/arm recreation, real ride/sticky-standing relink/full-registry
+and forward-cull controls, then finalassertAll72. All eight R64 final native
+control/status leaves (four perP1/P2) now pass alongside Airfalse/fullPose/
+fractions/velocities/g/stickyinteractslot+ID oracles. No test inlet/body/key/
+assertion changed. Legacy extension-unload/role-promotion/jump/ordinary launch
+controls stay green. This qualifies the bounded native-owner onUnload correction
+with independent old-red->green; no sharedsolid/CPU/timer/allocator/API repair.
+The absent final riding-reference/following freed-SST CPU marker/replacement-
+owner/post-delete restore oracle remains absent. Existing generic Despawn65
+controls do not certify that actual same-hand continuation, native-at-PC,
+R52shakecaller, original13322 closure or any route/strict-vector qualification.
+R62 joint component green remains its own earlier measured source epoch.
+
+All149 actual identities/statuses/skips/fullTXT and ten equal72-property maps
+were inspected. Both8057B classpaths exactly match the previously fully read
+classpath SHA b26b7289e17c1ac4512555323623f6e3a7ff91ff12aa629d41f0d88fc1a6f293.
+No failure/error/skipped/suppressed XML node. Complete streams are124stderr
+records/20345B/260lines, losslessly interned into10actual raw values and all
+case-order links after the console display truncated repetitive messages; no
+extra execution. No stdout. Captured warnings128FAST/no-manifest,1explicit
+collision out-of-bounds negative in readCollisionIndexUsesStrideTwo and1
+presentation-shadow HURT/-1/FALLBACK_NAME supplier-null warning in unchanged
+nonzeroInvulnerabilityTimerBlocksTouchHurt. That control source deliberately
+accepts a hit after its zero-timer transition; no separately measured warning
+baseline or audio-caller probe is claimed. Console also contains outside-case
+FAST and compile deprecation/unchecked notices; not zero-all-warnings.
+
+ALL20 original standard XML/TXT279814B retained singly at original
+ target/surefire-reports paths for Root DIRECTread, including green controls;
+all fullSHA/sizes in new R66 entry. NativeHand XML23598B SHA256
+ d2ae32526b3454d4e03bd6a96b27ef2352d1c2d4e1018bc1e14a773e65eca25e;
+TXT378B SHA25631ed0011d4a3e264964d865db20370e95d717c10060fd0d7bd3afff6a1e30c92.
+No cleanup/archive/copy/receipt/manualclassdelete/commit/normalhookretry/pin or
+policy apply/source repair/extraJVM/guard/canonical/native follows. Current27
+owned compiled files (prior21 plus6Hand outer/nested) have actualSHA/mtime
+inventory; source/config/native/hook/HEAD/branch/index15 exact, livejobs[].
+Only this compact Plan append is UNSTAGED after terminal; original15staged
+blobs and Hand/test staging state unchanged. Local preservation hook remains
+unresolved/unwaived, independently owned; no full-suite/integration claim.
+STOP for Root DIRECTread and separately authorized next scope.
+
+
+### HCZ R67 — reviewed policy composition stopped on retained initializer regressions (2026-10-18)
+
+Root directly accepted the R66 ten-class result: 149 tests, zero failures/errors/skips, all 20 original reports (279814 bytes). The native hand-unload retention oracle reached all two before-birth and two held world-recreation/forward controls before its final assertions. This remains component coverage, without a returned-HCZ route, following freed-SST CPU marker, or R52 caller claim.
+
+R67 composed only the two policy surface functions/comments from reviewed `6970113b96730913355fdaee1410c87632fa4c2f`, the 27 new policy test methods and helper changes, and the compatibility narrative. Both function bodies/comments match that source exactly; bytes outside those blocks and all 39 existing HCZ test bodies remain unchanged. The existing 12-line HCZ compatibility appendix is retained. The earlier flat-emitter `6df0c52` remains rejected.
+
+The sole command `python3 -B -m unittest tools.testing.test_release_snapshot_policy -v` (session 15009) ran all 66 identities in 138.763 seconds: **eight failing subtests in four methods, zero errors and zero suite skips**. The other 62 methods passed; the actual installed PowerShell was 7.6.5. Each failure occurred in both shell and PowerShell commit-message policy:
+
+- `SnapshotPolicyTests.test_actual_game_rules_preset_initializer_change_does_not_require_pin`
+- `SnapshotPolicyTests.test_class_multiline_initializer_does_not_capture_following_private_body`
+- `SnapshotPolicyTests.test_record_initializer_lambdas_arrays_and_multiple_fields_keep_only_declarations`
+- `SnapshotPolicyTests.test_record_preset_initializer_and_implementation_bodies_do_not_require_pin`
+
+Each expected policy exit 0 but received 1 with `detectable @ModApi surface changes require updating the current candidate signature pin`. The reviewed emitter retains public field initializer text; the retained HCZ regressions require preset/initializer value-only changes to leave the normalized surface unchanged. The new conservative-public-initializer and nested-owner movement controls passed. This is an unresolved semantic composition conflict, not a weakened or waived test.
+
+Stopped before either requested preservation commit, normal-hook retry, API pin change, algorithm rewrite, or diagnostic consumption. HEAD remains `dad918f72`; the 15 original staged blobs retain raw SHA `51aa1a5e7ee466e513e35b8dfe3ffbcdca5ee10e749373225a1bc654bf140536`. The four policy/doc changes remain unstaged beside the prior Plan append and qualified hand runtime; green hand test remains untracked. Runtime eight-file SHA `6dd81aa2e636123f7139c60c157d3721a4c7b7832a5162bef76b000cb373c6d7`, all 27 compiled hashes/mtimes, native `4fdf`, private/Main config bytes/modes/mtimes and the candidate API pin remain exact. All 20 accepted R66 originals are retained at their single original paths after a complete size/SHA check. No JVM, Maven, replay, native run, branch/ref change, Main/Root write, cleanup, or new archive. Literal ordinal 71 is separate from historical ordinal 67 normal-hook STOP; exact identity and full source proofs are in the existing ownership entries. Policy-owner reconciliation is required before preservation can proceed.
+
+
+### HCZ R68 — reviewed R4 composition and qualified local preservation (2026-10-18)
+
+R67 ordinal71 remains a genuine historical66-method/eight-SH+PS-subtest STOP.
+Reviewed R3/R4 `4f23ddfa` reconciles initializer exclusion with the compiled
+field exporter, keeps complete nested owner paths, annotation/default values
+and field declarators, and fixes explicit `new <T, Hidden>` constructor commas.
+Only the four authorized policy/doc paths were composed. All39 original HCZ
+methods/two staging helpers and all72 final methods/13 helpers match source;
+SH/PS full bytes are final reviewed f719b701/084e4094. Outside-function bytes and
+HCZ compatibility appendix remain exact. One normal Python suite, session19487:
+**72/0F0E0suiteSkip in171.311s** (parent171.393s), actual installed PS7.6.5;
+syntax/LF/diff checks pass. No Java/native execution in this policy phase.
+
+Normal policy-only commit `825a76b7cf216174aec121530e46e95506a4b921` passed all
+hooks and exact prepared/committed seven-policy/final-GPT6.1 parsing; original15
+staged blobs remained raw51aa. No API signature pin, descriptor, exporter or
+runtime change was used to satisfy policy. All source tests retain their
+original observed epochs: genuine R56 joint red → R58 partial → R62 exact142
+green, then genuine R64 hand eight-leaf old-red after all four world controls →
+R66 exact149-green/ten-class lifecycle. Hand817c + prior sevena301 remain exact
+eight-runtime6dd81; green jointbbde and hand907443 are unchanged. Relevant audit,
+HCZ matrix/discrepancy/release fold and mirrored pitfall record qualified scope.
+No new Java result is claimed at this documentation/preservation SHA.
+
+Preservation excludes the untracked/uncompiled coverage test a9df entirely;
+its resource/missing-participant assertions are a later conditional six-class
+measurement, not inferred from R62/R66. Canonical13322/6511, independent
+ownership88306, freed-SST next CPU marker and actual R52/campaign8774/native29/
+11920 callers remain distinct/unqualified. Accepted R66 all20 originals279814B
+will be rechecked together before metadata-only consumption after normal local
+preservation; all27 existing compiled hashes/mtimes, private/Main config and
+native4fdf are preserved. Literal R68 ordinal72 identity is retained for separate
+registration after the required clean accounting boundary; no fabricated ID or
+claim of clean state before it exists.
