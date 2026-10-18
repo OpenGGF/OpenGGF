@@ -24,6 +24,9 @@ public final class RemoteGhostRegistry {
     private record Roster(String displayName, String character) {
     }
 
+    // Allow short jitter stalls, then return to the current coarse roster position.
+    private static final int STALE_PLAYBACK_FRAMES = 120;
+    private final Map<Integer, Integer> quietFrames = new LinkedHashMap<>();
     private final Map<Integer, RemoteGhostPlayback> playbacks = new LinkedHashMap<>();
     private final Map<Integer, Roster> roster = new LinkedHashMap<>();
     private final Map<Integer, GhostPackets.RosterEntry> rosterState =
@@ -34,6 +37,7 @@ public final class RemoteGhostRegistry {
             if (!roster.containsKey(entry.playerSlot())) {
                 continue;
             }
+            quietFrames.put(entry.playerSlot(), 0);
             playbacks.computeIfAbsent(entry.playerSlot(), ignored -> new RemoteGhostPlayback())
                     .onEntry(entry);
         }
@@ -45,11 +49,13 @@ public final class RemoteGhostRegistry {
             roster.put(player.slot(), new Roster(player.displayName(), player.character()));
         }
         playbacks.keySet().removeIf(slot -> !roster.containsKey(slot));
+        quietFrames.keySet().retainAll(playbacks.keySet());
         rosterState.keySet().removeIf(slot -> !roster.containsKey(slot));
     }
 
     public void reset() {
         playbacks.clear();
+        quietFrames.clear();
         rosterState.clear();
     }
 
@@ -76,6 +82,9 @@ public final class RemoteGhostRegistry {
     }
 
     public List<RemoteGhost> advanceAll(int excludeSlot) {
+        quietFrames.replaceAll((slot, age) -> age + 1);
+        playbacks.keySet().removeIf(slot -> quietFrames.getOrDefault(slot, 0) > STALE_PLAYBACK_FRAMES);
+        quietFrames.keySet().retainAll(playbacks.keySet());
         List<RemoteGhost> ghosts = new ArrayList<>();
         for (Map.Entry<Integer, RemoteGhostPlayback> entry : playbacks.entrySet()) {
             if (entry.getKey() == excludeSlot) {

@@ -620,6 +620,10 @@ Placeholders for pass 1: `{width}` `{height}` `{fps}` `{scale}`
 For pass 2: `{videoIn}` `{audioIn}` `{sampleRate}` `{audioCodecArgs}`
 `{output}`.
 
+The unquoted `{videoCodecArgs}` and `{audioCodecArgs}` placeholders expand into
+separate ffmpeg arguments. Other placeholder values, including paths containing
+spaces, remain single values.
+
 Arguments split on whitespace. Quote a value whose expansion may contain
 spaces — `"{output}"` — and the placeholder still expands inside the quotes. An
 unknown placeholder fails when the recording starts, rather than reaching
@@ -677,7 +681,9 @@ capture:
 
 Both paths require `ffmpeg` on `PATH`; live media verification and inspection
 also use `ffprobe`. Live recording is distinct from the Shift+F9
-`debug.recording.recordKey` input/movie recorder.
+`debug.recording.recordKey` input/movie recorder. Rewind is blocked while
+an input/movie recording is active, because its input log cannot represent
+rolling the world back. Stop that recording before rewinding.
 
 Live recording treats an unavailable or failed audio tap as an audio-only
 failure: video continues and the MKV retains a phase-correct stereo-silence

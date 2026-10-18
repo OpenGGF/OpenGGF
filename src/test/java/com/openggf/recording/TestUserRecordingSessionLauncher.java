@@ -27,6 +27,22 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestUserRecordingSessionLauncher {
+
+    @Test void playbackAcceptsTheSameMissingIdentityMetadataAsTheCatalog() throws Exception {
+        var fixture=new Fixture();
+        Path file=writeRecording("old.bk2",fixture.liveContext,2);
+        try(var zip=java.nio.file.FileSystems.newFileSystem(file)) {
+            var path=zip.getPath("/OpenGGF/manifest.json");
+            var mapper=new com.fasterxml.jackson.databind.ObjectMapper();
+            var node=(com.fasterxml.jackson.databind.node.ObjectNode)mapper.readTree(Files.readString(path));
+            node.remove("engineIdentity"); Files.writeString(path,mapper.writeValueAsString(node));
+        }
+        var entry=new UserRecordingEntry(file,"old",null,2,fixture.now,RecordingVersionWarning.MISSING_METADATA,"");
+        assertEquals(UserRecordingPlaybackState.PLAYING,fixture.launcher().beginPlayback(entry,
+                new UserRecordingPlaybackOptions(0,false,false)));
+        assertEquals(List.of(fixture.liveContext),fixture.restarts);
+    }
+
     @TempDir
     Path tempDir;
 

@@ -25,6 +25,20 @@ import static org.mockito.Mockito.mock;
 
 @Isolated
 class TestGameLoopTitleCardPause {
+
+    @Test void admittedLevelDoesNotProcessTheOuterRecordingInputAgain() throws Exception {
+        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
+        var loop=new GameLoop(new InputHandler());
+        set(loop,"currentGameMode",GameMode.LEVEL);
+        set(loop,"gameplayMode",SessionManager.getCurrentGameplayMode());
+        set(loop,"levelManager",mock(LevelManager.class));
+        var controls=mock(com.openggf.game.recording.UserRecordingRuntimeControls.class);
+        set(loop,"userRecordingControls",controls);
+        Method admission=GameLoop.class.getDeclaredMethod("prepareAdmittedIteration",boolean.class,boolean.class);
+        admission.setAccessible(true);admission.invoke(loop,false,false);
+        org.mockito.Mockito.verify(controls,org.mockito.Mockito.never()).updateLevelControlInput(org.mockito.ArgumentMatchers.any());
+    }
+
     @AfterEach
     void cleanup() {
         TestEnvironment.resetAll();

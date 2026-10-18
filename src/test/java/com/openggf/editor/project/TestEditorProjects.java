@@ -16,6 +16,28 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestEditorProjects {
+
+    @Test void blankAllocatesRequiredEmptyTerrainBeforeReservingSpareCapacity() {
+        class OpaqueLibrary extends Fixture {
+            OpaqueLibrary(int blockSlots,int chunkSlots) {
+                super(GameId.S3K);
+                patterns[0].setPixel(0,0,(byte)1);
+                patterns[1]=new com.openggf.level.Pattern();
+                chunks=new com.openggf.level.Chunk[chunkSlots];chunkCount=chunkSlots;
+                for(int i=0;i<chunkSlots;i++)chunks[i]=new com.openggf.level.Chunk();
+                blocks=new com.openggf.level.Block[blockSlots];blockCount=blockSlots;
+                for(int i=0;i<blockSlots;i++)blocks[i]=new com.openggf.level.Block(side);
+            }
+        }
+        for(var library:List.of(new OpaqueLibrary(240,2),new OpaqueLibrary(2,960))) {
+            var blank=assertDoesNotThrow(()->EditorProjectLevel.blank(library,2,2));
+            int block=Byte.toUnsignedInt(blank.getMap().getValue(0,0,0));
+            int chunk=blank.getBlock(block).getChunkDesc(0,0).getChunkIndex();
+            int pattern=blank.getChunk(chunk).getPatternDesc(0,0).getPatternIndex();
+            assertEquals(0,blank.getPattern(pattern).getPixel(0,0));
+        }
+    }
+
     @TempDir Path directory;
 
     @ParameterizedTest

@@ -33,7 +33,7 @@ class TestSpotCheck {
     }
 
     @Test
-    void slotReuseKeepsSpotCheckOnOriginalIdentity(@TempDir Path dir) throws Exception {
+    void retainedResultReservesSlotAndKeepsSpotCheckOnOriginalIdentity(@TempDir Path dir) throws Exception {
         long[] now = {1_000_000};
         Path yaml = dir.resolve("master.yaml");
         Files.writeString(yaml, "plaintextForTest: true\nspotCheckTopTimes: 1\n");
@@ -73,7 +73,8 @@ class TestSpotCheck {
             access.room().onDisconnected(oldConnection);
             Connection newConnection = admit(manager, access, entry.roomId(),
                     replacement, "New");
-            assertEquals(0, last(newConnection, ControlMessage.JoinAccepted.class).playerSlot());
+            assertEquals(1, last(newConnection, ControlMessage.JoinAccepted.class).playerSlot(),
+                    "the original finish reserves slot 0 until the next round");
 
             now[0] += 10_000 + HostRoundEngine.FINISH_GRACE_MILLIS + 1;
             manager.tickAll();

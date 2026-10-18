@@ -71,8 +71,10 @@ public final class ClientRaceSession {
                 standings = List.copyOf(end.finalStandings());
                 finalStandings = standings;
             }
-            case ControlMessage.StandingsDelta delta ->
-                    standings = List.copyOf(delta.rows());
+            case ControlMessage.StandingsDelta delta -> {
+                standings = List.copyOf(delta.rows());
+                if (basePhase == Phase.ROUND_END) finalStandings = standings;
+            }
             case ControlMessage.ChatBroadcast line -> {
                 chat.addLast(line.displayName() + ": " + line.text());
                 while (chat.size() > CHAT_LINES_KEPT) {

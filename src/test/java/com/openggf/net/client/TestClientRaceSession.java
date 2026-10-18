@@ -8,6 +8,15 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestClientRaceSession {
+
+    @Test void lateVerdictRefreshesPodium() {
+        var session = session();
+        session.onControl(new ControlMessage.RoundEnd(List.of(
+                new ControlMessage.StandingsRow(0,"A","sonic",100,1,"PENDING"))));
+        session.onControl(new ControlMessage.StandingsDelta(List.of()));
+        assertTrue(session.podiumTop(3).isEmpty());
+    }
+
     private long now = 500_000;
 
     private ClientRaceSession session() {

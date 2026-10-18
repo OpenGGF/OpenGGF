@@ -43,7 +43,7 @@ public final class EditorSpawnFactory {
     }
 
     public RingSpawn createRingSpawn(int x, int y) {
-        if (x < 0 || x >= 0xFFFF || y < 0 || y > 0x0FFF) {
+        if (x < 0 || x >= 0xFFFF || y < 0 || y > (encoding.usesObjectBackedRingPlacements() ? 0x0FFF : 0xFFFF)) {
             throw new IllegalArgumentException("ring coordinates exceed stock placement encoding");
         }
         return new RingSpawn(x, y, ids.nextRingId());
@@ -60,7 +60,7 @@ public final class EditorSpawnFactory {
     }
 
     public RingSpawn moveRingSpawn(RingSpawn spawn, int x, int y) {
-        if (x < 0 || x >= 0xFFFF || y < 0 || y > 0x0FFF) {
+        if (x < 0 || x >= 0xFFFF || y < 0 || y > (encoding.usesObjectBackedRingPlacements() ? 0x0FFF : 0xFFFF)) {
             throw new IllegalArgumentException("ring coordinates exceed stock placement encoding");
         }
         return new RingSpawn(x, y, spawn.placementId());

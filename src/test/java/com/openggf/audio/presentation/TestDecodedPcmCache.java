@@ -11,6 +11,16 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TestDecodedPcmCache {
 
+    @Test void identicalStereoRegistrationReusesCacheAndChecksBothChannels() {
+        var cache = new DecodedPcmCache();
+        var pcm = new DecodedPcm("stereo", 2, 8000, new short[]{1, 2, 3, 4});
+        cache.register(pcm);
+        assertSame(pcm, cache.register(new DecodedPcm("stereo", 2, 8000, new short[]{1, 2, 3, 4})));
+        assertThrows(IllegalArgumentException.class,
+                () -> cache.register(new DecodedPcm("stereo", 2, 8000, new short[]{1, 9, 3, 4})));
+    }
+
+
     @Test
     void decodesOnlyOnceForAStableAssetIdentity() throws Exception {
         DecodedPcmCache cache = new DecodedPcmCache();

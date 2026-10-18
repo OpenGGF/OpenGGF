@@ -1064,6 +1064,8 @@ public class GameLoop {
         // fadeManager can be null in non-gameplay modes (e.g.
         // MASTER_TITLE_SCREEN with no active session).
         return GameLoopPauseInput.configurationPaused(currentGameMode)
+                // Input movies are append-only and cannot represent a world rollback.
+                || userRecordingSessionLauncher.hasActiveRecordingSession()
                 || isNonRewindableTransitionPending()
                 || (fadeManager != null && fadeManager.hasPendingCompletion())
                 || (levelManager != null && levelManager.hasPendingFreshLevelTransitionBoundary());
@@ -1527,9 +1529,7 @@ public class GameLoop {
         if (traceCameraFocusController != null) {
             traceCameraFocusController.tick(inputHandler);
         }
-        if (currentGameMode == GameMode.LEVEL) {
-            userRecordingControls.updateLevelControlInput(inputHandler);
-        }
+        // The outer input pass owns recording controls, including paused iterations.
         return true;
     }
 

@@ -12,6 +12,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestFfmpegCommandTemplate {
 
+    @Test void codecArgumentPlaceholdersExpandAsArgumentsWithoutSplittingPaths() {
+        assertEquals(List.of("-c:a", "aac", "-b:a", "192k", "/tmp/a b/out.mp4"),
+                FfmpegCommandTemplate.expand("{audioCodecArgs} {output}",
+                        Map.of("audioCodecArgs", "-c:a aac -b:a 192k", "output", "/tmp/a b/out.mp4")));
+    }
+
+
     private static final Map<String, String> VALUES = Map.of(
             "width", "320", "height", "224", "fps", "60",
             "output", "/tmp/a b/out.mkv");

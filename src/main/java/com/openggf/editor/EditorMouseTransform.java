@@ -25,7 +25,7 @@ public final class EditorMouseTransform {
         int[] point=logicalPoint(inputHandler,graphicsManager);
         if(point[2]==0)return Result.outside();
         int worldX=Short.toUnsignedInt(camera.getX())+point[0];
-        int worldY=Short.toUnsignedInt(camera.getY())+point[1];
+        int worldY=camera.getY()+point[1];
         return new Result(true,worldX,worldY,
                 clamp(worldX/level.getBlockPixelSize(),0,level.getMap().getWidth()-1),
                 clamp(worldY/level.getBlockPixelSize(),0,level.getMap().getHeight()-1));
@@ -75,7 +75,7 @@ public final class EditorMouseTransform {
         int gameX = (int) ((mouseX - viewportX) / scaleX);
         int gameY = (int) ((mouseY - viewportY) / scaleY);
         int worldX = Short.toUnsignedInt((short)cameraX) + gameX;
-        int worldY = Short.toUnsignedInt((short)cameraY) + gameY;
+        int worldY = (short)cameraY + gameY;
         int tileX = clamp(worldX / blockPixelSize, 0, mapWidth - 1);
         int tileY = clamp(worldY / blockPixelSize, 0, mapHeight - 1);
         return new Result(true, worldX, worldY, tileX, tileY);

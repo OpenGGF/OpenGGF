@@ -58,6 +58,19 @@ import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_LAST;
 import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_X;
 
 class TestModManagerScreen {
+
+    @Test void freedPendingPatternBudgetAllowsPreviouslyBlockedMod() {
+        List<ModDescriptor> mods=new ArrayList<>(); List<ModState.Entry> entries=new ArrayList<>();
+        for(int i=0;i<9;i++) {String id="pack-"+i;mods.add(descriptorWithWindows(id,id,16));
+            entries.add(new ModState.Entry(id,true,i,false,null));}
+        var state=new ModState(1,entries);var catalog=new EffectiveCatalogBuilder().build(mods,state);
+        var editor=new PendingModStateEditor(state,catalog.scanned(),new ModStateStore(temp.resolve("budget-recovery")));
+        var screen=new ModManagerScreen(catalog,editor,new ModRuntimeFindingStore(),textSink(new RecordingFont()));
+        screen.select(0);press(screen,Action.ACCEPT);
+        screen.select(8);press(screen,Action.ACCEPT);press(screen,Action.ACCEPT);
+        assertTrue(editor.pendingState().entries().stream().filter(e->e.id().equals("pack-8")).findFirst().orElseThrow().enabled());
+    }
+
     @TempDir Path temp;
 
     @Test

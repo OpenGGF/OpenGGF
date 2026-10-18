@@ -132,9 +132,13 @@ final class FileSceneStorage implements SceneStorage {
 
     @Override
     public boolean delete(String name) {
+        Path path = file(name);
+        Path legacy = legacyDirectory == null ? null : legacyDirectory.resolve(name);
+        if (!safe(path) || (legacy != null && !safe(legacy))) return false;
         try {
-            Path path = file(name);
-            return safe(path) && Files.deleteIfExists(path);
+            // Retire the fallback first, so deleting the canonical save cannot resurrect it.
+            boolean removed = legacy != null && Files.deleteIfExists(legacy);
+            return Files.deleteIfExists(path) || removed;
         } catch (IOException e) {
             return false;
         }
@@ -142,19 +146,21 @@ final class FileSceneStorage implements SceneStorage {
 
     @Override
     public List<String> list() {
-        List<String> out = new ArrayList<>();
-        if (!safe(directory) || !Files.isDirectory(directory, LinkOption.NOFOLLOW_LINKS)) {
-            return out;
-        }
-        try (Stream<Path> files = Files.list(directory)) {
+        java.util.Set<String> names = new java.util.TreeSet<>();
+        collectNames(directory, names);
+        if (legacyDirectory != null) collectNames(legacyDirectory, names);
+        return List.copyOf(names);
+    }
+
+    private void collectNames(Path source, java.util.Set<String> names) {
+        if (!safe(source) || !Files.isDirectory(source, LinkOption.NOFOLLOW_LINKS)) return;
+        try (Stream<Path> files = Files.list(source)) {
             files.filter(p -> safe(p) && Files.isRegularFile(p, LinkOption.NOFOLLOW_LINKS))
                     .map(p -> p.getFileName().toString())
                     .filter(n -> NAME.matcher(n).matches() && !n.startsWith("."))
-                    .sorted()
-                    .forEach(out::add);
+                    .forEach(names::add);
         } catch (IOException e) {
-            LOG.log(Level.WARNING, "Scene storage list failed: " + directory, e);
+            LOG.log(Level.WARNING, "Scene storage list failed: " + source, e);
         }
-        return out;
     }
 }

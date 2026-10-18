@@ -11,6 +11,39 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestHostRoundEngineVerified {
+    @Test void expiredImprovementReportsItsOwnIdentityAndRestoresVerifiedBest() {
+        long[] now = {0};
+        HostRoundEngine engine = running(now);
+        engine.setVerifiedRoom(true);
+        engine.setPendingHoldMillis(0);
+        List<String> expired = new ArrayList<>();
+        List<HostRoundEngine.Result> results = new ArrayList<>();
+        engine.setPendingExpiryListener((slot, attempt) -> expired.add(slot + ":" + attempt));
+        engine.setPendingResultExpiryListener(results::add);
+        engine.onAttemptFinish(1, "A", "sonic", finish(1, 200, "a"), false);
+        engine.onVerdict(1, 1, true);
+        engine.onAttemptFinish(1, "A", "sonic", finish(2, 100, "b"), false);
+        now[0] = 4001 + HostRoundEngine.FINISH_GRACE_MILLIS;
+        engine.onTick();
+        now[0] += HostRoundEngine.ROUND_END_LINGER_MILLIS;
+        engine.onTick();
+        assertEquals(List.of("1:2"), expired);
+        assertEquals(2, results.getFirst().finish().attemptId());
+        assertEquals("b".repeat(64), results.getFirst().finish().inputRecordingHashHex());
+        assertEquals(200, engine.standings().getFirst().bestTimeFrames());
+    }
+
+
+    @Test void failedImprovementPreservesVerifiedBest() {
+        long[] now = {0}; var engine = running(now); engine.setVerifiedRoom(true);
+        engine.onAttemptFinish(1,"A","sonic",finish(1,200,"a"),false);
+        engine.onVerdict(1,1,true);
+        engine.onAttemptFinish(1,"A","sonic",finish(2,100,"b"),false);
+        engine.onVerdict(1,2,false);
+        assertEquals(200,engine.standings().getFirst().bestTimeFrames());
+        assertEquals("VERIFIED",engine.standings().getFirst().verifyState());
+    }
+
     private static final ControlMessage.RoundConfig CONFIG =
             new ControlMessage.RoundConfig("s3k", 0, 0, 1, "OPEN", null);
 

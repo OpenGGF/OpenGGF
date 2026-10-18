@@ -6,6 +6,19 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 ## Gameplay and presentation
 
+- **Recording, editor and service reliability:** input movies keep a single recording
+  control tick and block rewind while recording; malformed metadata stays isolated,
+  and older movies with missing engine identity remain playable. Editor painting
+  follows signed vertical camera coordinates, blank projects reserve empty terrain
+  before spare slots, and separate ring layouts support their full height. Stereo
+  creator sounds replay correctly, PNG imports retain transparency keys, legacy
+  save deletion cannot restore older data, and Mod Manager reevaluates freed budgets.
+  Multiplayer retains verified bests after failed improvements, refreshes podiums
+  after verdicts, preserves result slot ownership, restores far-player positions
+  after near streams expire, and supplies current votes to late joiners. Null
+  configuration files recover safely, legacy Start bindings migrate, and capture
+  codec placeholders expand into separate ffmpeg arguments.
+
 - **Stock-game results and issue fixes:** act and special-stage bonuses award
   the full native point totals, with S1/S2 trailing-zero art and S3K bonus digits
   matching the score. Locked title cards consume the unpause press. Sonic 1

@@ -18517,3 +18517,17 @@ that destination stayed803. Root will reconcile50348 before combined validation;
 no previous result is relabelled as covering it. Ending R9 prepared source-only
 progress changes await this explicit prospective epoch rebind; no compiler or
 native invocation has been authorized.
+
+
+#### Root upstream reconciliation candidate
+
+Main fetch/pull --ff-only completed already-up-to-date at develop50348, with
+its nine foreign dirty entries/private config preserved. Root merges that exact
+current destination locally before combined checks. All43 non-GameLoop imported
+files equal Main50348 byte-for-byte. Reversing only Main's recording/rewind gate
+changes from the merged GameLoop recovers Root529012 exactly: its S3K return-cause
+mark/title/physics owners remain intact. No textual conflict occurred. Main's
+recording-active rewind block and single outer recording-input owner are retained.
+This combined source has no new test result yet; child/native historical epochs
+are not relabelled. Destination updated base is50348 for delivery reconciliation,
+while the original task integration-base803 remains the change-selection anchor.
