@@ -12,6 +12,9 @@ physics, trace authority, public API signatures or the network wire format.
 - Retained round results reserve their wire slots until the next round. New members
   use another protocol slot while the configured cap still limits active players.
   Adding participant identity to the wire was rejected to preserve protocol compatibility.
+  This bounds distinct retained-result sessions to 256 wire slots; exhausting them
+  blocks replacement admissions until the next round, including a returning owner.
+  Removing that bound requires a separate participant-identity protocol change.
 - Keep verified bests separately from pending improvements; rejection and timeout
   restore the last verified result. Near ghost streams expire after 120 local advances
   without an aggregate and can resume from a new jitter buffer.
@@ -55,6 +58,14 @@ reported eleven assertion failures and four errors (null manifests have two chec
 After repairs, the combined 21-class focused selection passed 201 tests, zero
 failures/errors/skips, using Java 25 and queued Maven `--lean -Dmse=off -Dtest=… test`.
 
-Requested high-reasoning Sol review and combined change-based smoke/guards remain
-pending. The plan selects 3,503 ordinary candidate classes because shared GameLoop
+High-reasoning GPT-6.1-Sol reviewed implementation `eb5e3f959` and found one
+introduced expiry callback identity error: collected map entries remained live
+while fallback restoration replaced their values. A new regression reproduced
+attempt 1 being reported instead of expired attempt 2; the repair snapshots the
+expired Best before restoration and uses it for both callbacks. The review also
+noted the documented wire-slot exhaustion tradeoff and a pre-existing empty
+podium when joining ROUND_END before any later delta; that separate join behavior
+is outside the twenty audited fixes.
+
+Combined change-based smoke/guards remain pending. The plan selects 3,503 ordinary candidate classes because shared GameLoop
 and capture code are touched. No release-only full suite is authorized or needed.

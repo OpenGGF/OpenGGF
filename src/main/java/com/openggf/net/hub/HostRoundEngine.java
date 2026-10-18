@@ -122,10 +122,10 @@ public final class HostRoundEngine {
                         .filter(entry -> "PENDING".equals(entry.getValue().verifyState()))
                         .toList();
                 for (Map.Entry<String, Best> entry : expired) {
-                    restoreVerifiedBest(entry.getKey());
-                    pendingExpiryListener.accept(entry.getValue().slot(),
-                            entry.getValue().finish().attemptId());
+                    // Map.Entry is live: restoring the fallback replaces its value.
                     Best best = entry.getValue();
+                    restoreVerifiedBest(entry.getKey());
+                    pendingExpiryListener.accept(best.slot(), best.finish().attemptId());
                     pendingResultExpiryListener.accept(new Result(best.slot(),
                             best.participantId(), best.fingerprint(), best.displayName(),
                             best.character(), best.timeFrames(), best.finish(),
