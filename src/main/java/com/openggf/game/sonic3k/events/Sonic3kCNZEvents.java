@@ -9,11 +9,16 @@ import com.openggf.game.mutation.MutationEffects;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.save.SessionSaveRequests;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
+import com.openggf.game.sonic3k.Sonic3kLevelTitlePlcService;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.CnzMinibossScrollControlInstance;
+import com.openggf.game.sonic3k.objects.CnzTeleporterInstance;
+import com.openggf.game.sonic3k.objects.CnzEggCapsuleInstance;
+import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.game.sonic3k.objects.S3kSignpostInstance;
 import com.openggf.level.Block;
 import com.openggf.level.ChunkDesc;
@@ -807,23 +812,49 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         }
     }
 
-    /**
-     * CNZ Act 2 foreground logic.
-     *
-     * <p>The current bring-up only needs the route selection and clamp
-     * publication. Later slices will add the teleporter and capsule object
-     * sequence.
-     */
+    /** CNZ2_ScreenEvent: native foreground admission; later completion remains separate. */
     private void updateAct2Fg() {
         updateAct2YStartLock();
         switch (fgRoutine) {
             case FG_ACT2_ENTRY -> {
-                if (knucklesTeleporterRouteActive) {
-                    fgRoutine = FG_ACT2_KNUCKLES_ROUTE;
-                    publishKnucklesTeleporterClamp();
-                } else {
+                if (playerCharacter() != PlayerCharacter.KNUCKLES) {
                     fgRoutine = FG_ACT2_NORMAL;
+                    break;
                 }
+                AbstractPlayableSprite player = spriteManager().getMainPlayable();
+                if (player == null || (player.getCentreX() & 0xFFFF) < 0x4880
+                        || (player.getCentreY() & 0xFFFF) < 0x0B00) {
+                    break;
+                }
+                // loc_5216C: AllocateObject, then CreateNewSprite4 continues AFTER
+                // that actual slot. Failure of either allocation still reaches loc_521BE.
+                var objects = levelManager().getObjectManager();
+                CnzTeleporterInstance teleporter = spawnObject(() -> new CnzTeleporterInstance(
+                        new ObjectSpawn(0, 0, 0, 0, 0, false, 0)));
+                if (teleporter != null) {
+                    CnzEggCapsuleInstance capsule = ObjectConstructionContext.construct(
+                            objects.getObjectServices(), () -> new CnzEggCapsuleInstance(
+                                    new ObjectSpawn(0x4980, 0x0A20,
+                                            Sonic3kObjectIds.EGG_CAPSULE, 0, 0, false, 0)));
+                    objects.addDynamicObjectAfterSlot(capsule, teleporter.getSlotIndex());
+                    if (capsule.getSlotIndex() >= 0 && !capsule.isDestroyed()) {
+                        // loc_5216C: only successful CreateNewSprite4 reaches
+                        // Load_PLC_Raw PLC_EggCapsule ($083D74). Append descriptors;
+                        // ordinary Nemesis service/tile publication is still OPEN.
+                        var plc = java.util.Objects.requireNonNull(objects.getObjectServices()
+                                .gameService(Sonic3kLevelTitlePlcService.class),
+                                "CNZ capsule requires its injected ROM-backed Nemesis queue");
+                        try {
+                            plc.appendRaw(0x083D74);
+                        } catch (IOException error) {
+                            throw new IllegalStateException("Failed to submit CNZ capsule raw PLC", error);
+                        }
+                    }
+                }
+                beginKnucklesTeleporterRoute();
+                gameState().setEndOfLevelFlag(false);
+                // loc_521BE advances to4 even on either pool failure; no retry.
+                // loc_521D2's global End_of_level_flag completion is still OPEN.
             }
             case FG_ACT2_KNUCKLES_ROUTE -> publishKnucklesTeleporterClamp();
             case FG_ACT2_NORMAL -> {
@@ -1402,6 +1433,8 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
     private void publishKnucklesTeleporterClamp() {
         cameraMinXClamp = KNUCKLES_ROUTE_MIN_X;
         cameraMaxXClamp = KNUCKLES_ROUTE_MAX_X;
+        camera().setMinX((short) KNUCKLES_ROUTE_MIN_X);
+        camera().setMaxX((short) KNUCKLES_ROUTE_MAX_X);
     }
 
     // =========================================================================

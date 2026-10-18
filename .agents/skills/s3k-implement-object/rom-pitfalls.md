@@ -6487,3 +6487,23 @@ do not identify an in-service consume callback or explain current route FIFO
 occupants. Origin FDF R58–R63: genuine unchanged503-line public-return test,
 168 affected/99 guards green; original Mega FIFO error and20 unmatched timing
 identities remain. See the existing playable-completion Plan for source epochs.
+
+
+## Event admission, object arming and raw PLC work have separate owners
+
+CNZ2 native044 `loc_5216C` admits actual Player_1 Knuckles at centre X >= `$4880`,
+Y >= `$B00`. This is earlier than `Obj_CNZTeleporter`’s `$4A38/$4A40` arm and
+airborne overshoot rule. Do not use a route-active flag or focused CPU to widen
+that object gate. Retain the two actual allocation results: the capsule searches
+after the teleporter’s slot, and only its success appends raw PLC `$083D74`; both
+failures still advance FG4 and publish the clamp.
+
+Keep arbitrary preceding FIFO descriptors/progress/order in the producer oracle.
+An empty-queue prerequisite can fail before reaching the question. Independent
+raw ROM count/source/destination/header values establish the expected append;
+readiness-only title/results drains do not prove ordinary Nemesis art publication.
+Check descriptor capacity before allocating/decoding rejected work. Ordinary
+service is after queued DMA and NemInit follows animated tiles; a producer-only
+pass leaves those stages, renderer refresh, world ownership and full-capacity
+retained-slot behavior open. Origin: Root2026-10-18 CNZ2 admission/raw-producer
+old-red/control gates, existing playable-completion Plan and CNZ2 coverage matrix.

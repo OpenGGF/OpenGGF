@@ -12,13 +12,15 @@ import com.openggf.level.resources.PlcParser.PlcDefinition;
 import com.openggf.level.resources.PlcParser.PlcEntry;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
 /**
- * The Nemesis FIFO drained by fresh-zone Level/loc_62CC and results loc_2E0C4 waits.
- * Assets are decoded by the ROM resource plan; this owner preserves the
- * independent readiness gate. It does not model later event-owned PLCs.
+ * Logical Nemesis FIFO for fresh-zone Level/loc_62CC and results loc_2E0C4 waits,
+ * plus raw event-owned descriptor submission. Title/results assets are decoded by
+ * the ROM resource plan; this owner preserves their independent readiness gate.
+ * Raw append does not publish art or qualify ordinary gameplay queue servicing.
  */
 public final class Sonic3kLevelTitlePlcService
         implements PlcLifecycleService, RewindSnapshottable<NemesisPlcQueueSnapshot> {
@@ -50,6 +52,47 @@ public final class Sonic3kLevelTitlePlcService
                         Sonic3kConstants.ART_NEM_RING_HUD_TEXT_ADDR,
                         Sonic3kConstants.VRAM_SS_RESULTS_HUD_TEXT)));
         queue.append(definition, NemesisPlcPatternCounts.derive(rom, definition));
+    }
+
+    /**
+     * Load_PLC_Raw appends the complete ROM definition without replacing either
+     * the prepared head or preceding descriptors. Decode validates workload only;
+     * no patterns are applied here. Ordinary service/publication remains separate.
+     * The logical queue supports at most fifteen occupied entries; the shipped
+     * FixBugs=0 retained-sixteenth-slot behavior is not modeled by this owner.
+     */
+    public void appendRaw(int definitionAddress) throws IOException {
+        long size = rom.getSize();
+        if (definitionAddress < 0 || (definitionAddress & 1) != 0
+                || (long) definitionAddress + 2 > size) {
+            throw new IOException("Raw Nemesis PLC definition is outside aligned ROM data");
+        }
+        int countMinusOne = (short) rom.read16BitAddr(definitionAddress);
+        if (countMinusOne < 0) return; // Native signed count: an empty definition appends nothing.
+        int count = countMinusOne + 1;
+        long end = (long) definitionAddress + 2 + (long) count * 6;
+        if (end > size) {
+            throw new IOException("Raw Nemesis PLC descriptors exceed ROM data");
+        }
+        int occupied = queue.queuedEntryCount() + (queue.capture().activeEntry() != null ? 1 : 0);
+        if (count > 15 - occupied) {
+            throw new IllegalStateException("Raw Nemesis PLC exceeds supported logical queue occupancy");
+        }
+        var entries = new ArrayList<PlcEntry>(count);
+        for (int index = 0; index < count; index++) {
+            long address = (long) definitionAddress + 2 + (long) index * 6;
+            int source = rom.read32BitAddr(address) & 0x00FFFFFF;
+            int destinationBytes = rom.read16BitAddr(address + 4) & 0xFFFF;
+            if ((destinationBytes & 31) != 0) {
+                throw new IOException("Raw Nemesis PLC destination is not representable as whole tiles");
+            }
+            entries.add(new PlcEntry(source, destinationBytes / 32));
+        }
+        // -1 is the existing unindexed/raw definition marker, not a native PLC ID.
+        var definition = new PlcDefinition(-1, List.copyOf(entries));
+        var patternCounts = NemesisPlcPatternCounts.derive(rom, definition);
+        // All descriptor reads, decode/count derivation and capacity checks precede mutation.
+        queue.append(definition, patternCounts);
     }
 
     private void append(int plcId) throws IOException {

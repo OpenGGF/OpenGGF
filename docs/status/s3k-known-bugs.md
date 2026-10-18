@@ -7024,3 +7024,20 @@ private-entry/private-exit art-FIFO warning; no art-readiness certificate or war
 suppression. Child source-size extraction/fresh combined guards, full producer
 ordinal attribution, recorded readiness/SS/fdf and full routes remain separate.
 [Actual source epochs, original results and matched warning limit](../architecture/plans/2026-10-13-s3k-playable-completion.md#r37-qualified-component-preservation-and-inherited-warning--2026-10-18).
+
+
+## CNZ2 Knuckles admission: bounded producer repair, pipeline still open
+
+The event now uses actual primary Knuckles and native `loc_5216C` X/Y gates,
+admits the teleporter and separate capsule through the two actual allocation
+paths, and appends `PLC_EggCapsule` only after the second succeeds. Failure still
+advances FG4 and publishes the native clamp. Event admission does not widen the
+teleporter’s later `$4A38/$4A40` airborne gate. The independent producer and real
+pool-exhaustion controls pass within the [CNZ2 record](../architecture/validation/levels/s3k-cnz-act2.md#knuckles-event-admission-and-raw-plc-producer--2026-10-18).
+
+This is not completion of the Knuckles route. Ordinary Nemesis preparation/service
+and pattern/renderer publication, shared-module versus world queue ownership,
+physical full-capacity behavior, managed results publication/FG4 retry/music/control
+and the uninterrupted outgoing route remain open. Existing title/results readiness
+queues and this raw descriptor submission do not qualify those operations. No ROM
+deviation is accepted.

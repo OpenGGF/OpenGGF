@@ -21077,3 +21077,132 @@ while live, no guard/native/extra JVM/commit. Nemesis and FG4 completion remain 
 - Root no liveworkload; retainedartifact accounting remains via exact
   prior manifests (do not infer totals from a directory). Main/Rootbranch/index
   preserved; no integration/push/full-suite. NativeR110currentjournal retained.
+
+### CNZ2 raw capsule PLC producer oracle: reviewed single lifecycle
+
+The separately removable TestS3kCnz2CapsulePlcAdmission source is frozen at
+667ad0d5e43489f765614e08e3e5baff4f1aa010b1e5b864226eac611c362c1d.
+Root read all 163 lines; fresh independent review found no material issue.
+The positive question uses the actual registered queue, original ROM descriptor
+083D74/source0DD990/destination9280/header0046, and successful gameplay allocation.
+The real pool zero/one controls require unchanged queue after the original FG4/clamp.
+Initial queue emptiness is a prerequisite; this does not certify prior-entry FIFO
+preservation, tile publication, the native 16-slot capacity, or preparation stage.
+Submit one normal whole-class lifecycle with the existing three-ROM/JDK25/EGL
+recipe, selector-only delta; no runtime edit or old-red reach forecast.
+All 17167 current compiled outputs and protected metadata verified before submission.
+CNZ rewind commit2b1c59543 is local; integration/push and native capsule completion remain open.
+
+CNZ capsule oracle terminal: sole normal class session13325, wrapper1284303
+reaped, exit1, actual3T/3F/0E/0S, suite0.635s/cases0.263,0.058,0.042s.
+All THREE failures are initial-queue prerequisites at requireEmptyRegisteredQueue129.
+Actual active=null and seven complete queued entries; the tests did not clear them.
+No allocation/FG4/raw-descriptor final assertion reached; no semantic old-red qualified.
+Main up to date,4215 test sources compiled within this lifecycle; Maven24.578s,
+finished2026-10-18T15:17:22+01, normal7GiB8core/wait0; parent/hold unknown.
+Both original XML/TXT52742B retained singly; all3full failures/stacks and TXT equality,
+all72properties/full8123B classpath+duplicate and10FAST warnings inspected.
+Console display truncated; no exhaustive Maven/compiler warning count.
+All source/protected pins and prior reports exact; all17167 old classes present,
+current full compiled metadata inventoried, no deletion/rebuild.
+Next SOURCE correction will preserve actual preceding FIFO entries and test one raw
+append, separating preparation-stage/tile-publication questions. No runtime fix yet.
+
+CNZ capsule oracle corrected SOURCE22ec4735b254bd8494c89606e2e5060f07bf3a834efedca24ffd504658e1cfbc
+(9783B): Root read all actual source; author whole inverse recovers667ad exactly.
+The existing real queue is retained. Before active=null prevents an already prepared
+head consuming this VBlank; no clearing/draining/extra title warmup occurs.
+Positive final oracle compares complete ordered active+queued entry sequence to
+its actual prior sequence plus the independently ROM-derived raw descriptor.
+Both allocation controls require the complete prior logical FIFO unchanged.
+Registered module/rewind-service binding is checked before and after the real frame.
+This is submission only: head preparation, publication,16-slot native behavior and
+route/caller remain separate. Root review found no material correction defect.
+Accepted prior2/52742B jointly fullmetadata checked, consumed metadata_slot ALONE;
+all17168 compiled SHA/size/mode/mtime exact through cleanup.
+Submit ONE same normal whole-class argv/env on corrected source; no runtime edit.
+
+CNZ raw append question QUALIFIED OLD-RED: corrected source22ec4735 unchanged,
+sole normal class session70120/wrapper1288244 reaped exit1,3T1F0E0S.
+Both actual pool0/1 failure controls pass (0.319/0.063s). Positive0.052s reaches
+final83 after independent ROM/ordinary LF/allocation/placement/FG4/clamp/service
+prerequisites: actual prior7 entries unchanged but the eighth raw capsule
+907664/tile1172/70patterns descriptor is absent. No setup/skip/type/error failure.
+Suite0.711s, main up to date/test4215 compiled inside lifecycle; Maven24.764s,
+finished2026-10-18T15:23:21+01,wait0/7GiB8core; parent/hold unknown.
+Full original console read including18legacy compiler warnings;11console FAST,
+XML10FAST/1560Bstderr/20LF/no stdout. Full failure/TXT equality/all3IDs/72props
+with exact prior8123B classpath+duplicate and full new command identity inspected.
+Both original reports retained singly; all source/protected pins exact and
+all17168 compiled outputs inventoried, no deletion/rebuild.
+This qualifies producer submission only; preparation/publication and native
+capacity/HInt/general-water/FG4/completion/caller/route remain open.
+
+### Root DIRECT: FDF R96 and Main R16 source boundary
+
+FDF R96 one original method lifecycle retains original1T1F0E0S/two-axis failure,
+19510 total=18427physics1083animation/135lag/complete; SS/FDF not reached.
+Root read all139 strict journal records, all137 owner states/136 verified deltas,
+26 strong-ref definitions, every lastOutside link and all19 rows488..506/phase order.
+Valid this invocation:635977B/SHA739c6e223c1ba9a508b29b5e45606093bb44dee94ec96ae2585e197d98d8bf4f,
+606037body/29940footer, missing[]/firstdiagNULL/secondary[]/exact restores.
+Root decoded full shared3-node/66-frame/105-string ledger including all49 full
+hardware identities/messages/order/repeated frames/causes/suppression; full21007B
+XML failure equals TXT, all72props/full8057B193f9 CP duplicate,107stderr lines
+through37 complete unique lines+order/all3x36 tables/tails/actors,4JSON4owners read.
+All11 originals735628B plus90 scoped compiled and63 source pins reverified exact.
+Activation501 preservescentre905. Actual502 integrationcentre906->glideterrain901
+with fraction3840 unchanged brackets ENGINE collision interval, not nativecause.
+Source audit identifies possible descending-floor correction/landing signature;
+actual branch/results/effectivegravity remain missing. No5pxfix justified.
+Retain originals/source seams; next source-only refinement may record actual
+returned sensor operands and original correction decision without another probe.
+Main R16 fourfile source4a4ffe reviewed: Root allC#/plan/newPython adapters and
+158 pins+17032 compiled+3originals exact. Independent native and launcher reviews
+found no material defect. Minor documented failure envelope is1030 including28B
+startup stderr, not1028; enforced16384B pipe remains unchanged.
+R17 authorizes that derived-arithmetic prose correction plus ONE pure unchanged
+marker-adapter unit; no compiler/native and no repeated796 grammar suite.
+
+### CNZ capsule raw producer candidate: affected focus
+
+Source ONLY2 runtime delta: service63a8b223263072d4aa038d433cf864acb9e970a06e4348ea34646e69350d2e7b
+and events cb11961b4abc7d446261d3f43d2cf87b5e03e2b3b5a8a18c111156ab8fbef1c6.
+Root read full service/actualeventcallsite/nativeLoad_PLC_Raw/loc5216C.
+Actual successful second managed allocation invokes injected typed service083D74.
+Complete raw ROM parse/ROM-derived counts and supported15occupied limit precede
+the sole append; head/prior entries/progress unchanged. No prepare/service/publish.
+Fresh review found unsupported oversized lists decoded before capacity rejection;
+corrected unchanged guard now precedes allocation/read/decode. Targeted review
+verified exact move/inverse and no remaining finding. Original test22ec unchanged.
+Both old predecessor whole inverses proven (service3b2b/events7464); all other
+source/protected metadata exact, current17168compiled inventory preserved.
+Accepted18 overlapping originals253664B jointly fullmetadata verified before
+unlink metadata_slotALONE; only18 consumed, other original metadata unchanged.
+One normal12whole-class request: capsule/admission/fullkey/P2/CNZAct1/titlePLC/
+Nemesisrewind/fresh-title plus mandatoryS3K4 including bothLoading. ExistingPLC
+shared algorithm unchanged; ordinary Nemesis service/tile/scheduling/FG4 remain
+separate. Expected focused cost about1-2min, stop on terminal/no automaticretry.
+
+
+### Root CNZ2 raw PLC producer — 12-class terminal accounting (2026-10-18)
+
+The sole reviewed normal lifecycle (session72315, printed wrapper1298024; first inspection already terminal, no live-process identity claim) passed all97 actual cases across the12 expected classes: 0failures/errors/skips. It compiled4145main+4215test sources inside that lifecycle; Maven displayed01:17 and finished15:45:02+01, queue0s/7GiB8cores. Precise parent/hold/compiler durations are unknown.
+
+The unchanged independent capsule oracle now reaches its final whole-FIFO descriptor assertion and passes; both real allocation-failure controls pass. Actual-primary admission, twice forced-recreation/full-registry rewind controls, title/Nemesis rewind consumers and mandatoryS3K loading checks pass. This qualifies raw descriptor submission only. Ordinary Nemesis scheduling/service, sparse pattern publication/renderer integration and the managed-results/FG4 completion chain remain OPEN.
+
+Root read all97identities/times,12fullTXT, all72equalproperties/full8123Bclasspath with exact duplicate and previously fully read SHA6220a56c, and every original XML stream through a lossless raw-line dictionary plus ordered case links. All24 originals retained singly (326423B), no failure/error/skip/unknownchild. Stderr23045B/288LF/86streams: FAST/no-manifest, one explicit collision-negative, one null-WAV music fallback and deterministic KOS estimates remain bounded warnings; no stdout. Console display was truncated, so no exhaustive compiler/console warning count is claimed.
+
+All10716source inventory entries and6protected inputs remained exact; all17168preexisting compiled outputs remain present, 3SHA/size changes and17168mtime changes from this sole authorized compile are inventoried canonically. Other18retained originals stayed fullmetadata-exact. HEAD2b1c5954/indexempty/configOwnMain/native/ROM/wrapper unchanged; no cleanup/commit/retry/extraJVM. The canonical root_current_slice stores all24SHA/size/mode/mtime originals, exact case/property/stream facts and full compiled inventory. Authorityoff/livejobs[].
+
+
+### Root SOZ R17 pure marker adapter DIRECT and HCZ R112 source review — 2026-10-18
+
+Root read the sole original R17 command/output at Main thread activity577/itemexec-70313501-b58c-47b2-b80e-388c04cb4618 completely across contiguous bounded offsets. Actual163 cases =12 accepted synthetic marker contexts +151 expected rejects/19 full error fingerprints/0 unexpected, measured pure-process0.025352s; no native/compiler/packet-validator/decoder call. Original52-line startup prefix was borrowed as rendered tool text, not retro raw-pipe provenance; only declared synthetic R16 marker counters varied. The exact minor1030-byte failure/1106949 aggregate prose inverses recover R16; C#40f9 and launcherc210 fullmetadata unchanged. Root independently reverified all158protected source/config/ROM/tool inputs,17032 compiled fullmetadata and3retained originals; corrected fourtuple0c27bc96 frozen. One initial read-only inventory check assumed list rather than actual dictionary and stopped before mutation; corrected data-only check passed. Native ABI/reach/full-pipeline fit remain UNKNOWN. Separate compiler-only gate may now use the corrected frozen source, with no native authority.
+
+Root read the complete R112859-line witness, both owning runtime diffs and120-line Plan. Runtime review initially missed call-site boxing: supplied VInt/int/boolean arguments convert to Object BEFORE entering the bridge try/property gate. Independent targeted follow-up confirmed this material forwarding/resource boundary. Test review also identified fresh saved-LevelIdentity IDs despite a scalar-only history declaration, and rendered StackTraceElement.toString lacks the exact five-field lossless ledger. Source correction is required before any execution; no runtime behavior/native contact/cull/cause proof follows. Original source116/history and all retained valid native114 inputs remain unchanged.
+
+
+### Root qualified CNZ2 admission/raw-producer local preservation boundary — 2026-10-18
+
+Preserve exactly3runtime sources (eventcb119/teleporter7bde/service63a8),3independent tests (event4b55/controls8851/producer22ec) and6existingdocs (thisPlan/release0.7/knownbugs/CNZ2matrix/bothobject-pitfall mirrors). The new world-ownership test is excluded/unexecuted; SOZ diagnostic pair remains excluded/unchanged. Normal commit only, seven policy lines independently framed/parsed and exact final GPT-6.1 coauthor parsed before/after; no integration/push. The97-green12class result and earlier qualified unaffected consumers justify only this admission/rawsubmission subset. No asset mapping/sheet/renderer was changed; mapping corruption checks do not exercise this descriptor-only delta. Broader pipeline/gameplay timing/FG4/fullroute checks stay pending rather than being waived. Current originals remain retained until exact metadata-only accepted cleanup after durable preservation; no class deletion/rebuild.

@@ -184,6 +184,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Carnival Night background rebuilds preserve captured event scroll state,
   including fresh entry before its first deformation dispatch, while restoring
   the displayed scroll output without running another gameplay publication.
+  Knuckles’ second-act Carnival Night event now admits its separate teleporter
+  and capsule at the ROM trigger, with allocation failures preserving the native
+  clamp transition. The object retains its later, independent airborne arming gate,
+  and successful capsule admission appends its original raw PLC descriptor.
   HCZ hanging bars read the native raw companion-controller directions,
   preserving neutral input while the follower CPU steers. Full native saves
   clear collected giant rings at their seven existing save points, including in

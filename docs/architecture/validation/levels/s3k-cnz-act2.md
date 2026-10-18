@@ -16,7 +16,7 @@ The initial native/default binding covers all three solo mains at 320; the finit
 | ENTRY / CAMERA: normal character start and current focus | `Sonic_Start_Locations` / `Knux_Start_Locations`; [`TestS3kCnz2EntryMatrix#normalEntryAppliesTheProductionPresetAndEveryDeclaredParticipantThenReplaysTwice`](../../../../src/test/java/com/openggf/tests/TestS3kCnz2EntryMatrix.java) | 140 supported products: actual host-ROM start table, all resolved production widths, typed admitted roster/ordered CPU leaders/current native P2 and camera focus, decoded current mappings and unchanged P1 lives. This is a fresh entry floor, not every intro/alternate-entry mechanism. |
 | REWIND: normal entry world | Complete registered-world capture/restore and 45 ordinary Right-input frames twice; all title-card pattern bytes compared by content | Qualified for all 140 finite products. Held Right is requalified by the 2026-10-17 input correction below; the 2026-10-14 runs held Down. No P1 death or hidden life loss is permitted. This does not certify later event/interaction/child lifetimes or cross-load history policy. |
 | OBJECT / EVENT / REWIND: water/cork and Knuckles switch graph | `TestS3kCnzWaterLevelCorkFloorGraphRewind`, `TestS3kCnz2CutsceneButtonGraphRewind`, `TestS3kCnzMechanismRewind`, `TestS3kCnzLocalMechanicsRewind` | Declared component graphs; actual placement and team/viewport/donor interaction breadth remain open. Listed bindings were setup-inspected, not independently rerun as a whole in this slice. |
-| EVENT / CAMERA / LOAD: Knuckles teleporter route | `TestS3kCnzAct1EventFlow#act2KnucklesEntryStartsTeleporterRoute_notModeOnly`, `#act2KnucklesRouteEndReleasesTeleporterClamp`, `TestS3kCnzTeleporterRouteHeadless` | Local production event/transport contexts; independent whole-route and actual outgoing-entry products remain open. Listed bindings were setup-inspected, not independently rerun as a whole in this slice. |
+| EVENT / CAMERA / LOAD: Knuckles teleporter route | `TestS3kCnz2KnucklesEventAdmission`, `TestS3kCnz2KnucklesAdmissionControls`, `TestS3kCnz2CapsulePlcAdmission`; existing event/teleporter consumers | Actual primary/role/X/Y admission, ordered separate allocations, physical clamp and unchanged full FIFO append are locally qualified below. Full-registry forced recreation/forward cycles and actual focused-P2/primary authority are covered. Ordinary Nemesis publication, real results/FG4 completion and uninterrupted outgoing entry remain open. |
 | BOSS / REWIND: end boss, children and scatter | `TestS3kCnzEndBossHeadless`, `TestS3kCnzEndBossGraphRewind` | Component/positioned boss contracts; natural arena and uninterrupted playable exit remain separate. Listed bindings were setup-inspected, not independently rerun as a whole in this slice. |
 | LIFE / LOAD: physical post, actual death/restart and incoming/outgoing worlds | Native checkpoint/death/reload owners and the edges listed above | All 140 supported preset/donor/main/roster products are qualified by `TestS3kCnz2EntryMatrix#actualDeathReloadPreservesTheSupportedProductAndReplaysEachIncomingWorldTwice`: two actual deaths/reloads, exactly one life lost per restart, new world owners, outgoing live-history retirement, restored current roster/camera and two complete-world 45-frame restore/replay cycles after each released destination. Physical post activation and incoming/outgoing route edges remain separate obligations. |
 | PRESENT: actual viewport, palette/scroll/plane and audio | Act-owned ROM art/AniPLC/AnPal/event and music/SFX owners | Decoded playable source is checked at entry. Scene pixels, native audiovisual timing and viewport-edge parity require their own bounded native/GPU evidence. |
@@ -70,3 +70,54 @@ Corrected qualification, all on `0197c5a5a` plus this commit's test-only deltas 
 - Revised input test with the fix: 02:05:15–02:05:44 UTC, 1 test / 0 failures / 0 errors / 0 skips.
 
 Death/reload products, combined smoke and integration were not rerun here. This requalifies the held-Right entry floor only; it is not act certification.
+
+
+## Knuckles event admission and raw PLC producer — 2026-10-18
+
+Native044 `CNZ2_ScreenEvent/loc_5216C` at107969–107994 checks Player_mode3 and
+actual Player_1 centre X >= `$4880`, Y >= `$B00`, independently of the later
+`Obj_CNZTeleporter` arm. `AllocateObject` admits the teleporter; `CreateNewSprite4`
+searches after that actual slot and admits capsule `$4980,$A20`. Only its success
+reaches raw PLC `$083D74` (one `$0DD990` source, `$9280` byte destination,70patterns).
+Either allocation failure still reaches FG4/clamp `$4750..$48E0` and clears End_flag.
+The teleporter keeps its separate `$4A38/$4A40` airborne gate; admission cannot
+force arming or a position snap.
+
+These are explicitly positioned native320 component inlets, not prior traversal.
+The original independent event oracle reached six final old-red leaves before
+repair. Role/X/Y controls, real0/1free-slot failures, an actual first-P2 camera
+focus control and two complete registered-world forced recreation/one-pass forward
+cycles now pass. The P2 control first failed because its ordinary INIT/CPU setup
+was unqualified; it now consumes the pending initial pass and one neutral CPU
+settling frame before its declared positioned input, without a private phase seed.
+The separate parallax rebuild fix is preserved at `2b1c5954`.
+
+The raw producer oracle retains every existing FIFO entry and progress field.
+Its first version failed an invalid empty-queue prerequisite (actual7queued entries),
+so it was corrected before assigning semantic credit. The unchanged corrected
+oracle then reached its final append assertion and failed: prior7 remained but
+the eighth original descriptor was absent. The raw submit implementation now
+passes that assertion and both allocation-failure controls. Aligned/span/count/
+capacity/decode checks complete before queue mutation; signed-negative definitions
+are empty. Reject unsupported occupancy before allocating/decoding entries.
+The logical15-entry limit does not model shipped retained-sixteenth-slot behavior.
+
+Root tree `ai-s3k-current-parity-composition`, HEAD`2b1c5954` plus qualified
+service63a8/CNZcb119/teleporter7bde/tests4b55,8851,22ec: sole normal12-class
+request72315 passed97/0F0E0S at15:45:02+01, Maven01:17, queue0s/7GiB8cores.
+It includes both loading classes, bootstrap/decoding/AIZ skip, title-load/queue
+rewind consumers, both admission classes, capsule producer and existing event flow.
+Exact command/environment and full original case/property/stream/artifact manifests
+are in the existing dated Plan/canonical root slice; Main absolute wrapper,3absolute
+ROM paths, Java25, JTO-only EGL, fork1/reuse/alphabetical, normal/no-profile.
+Earlier13-class377/2F had only the P2 fixture and derived-parallax restore failures;
+those were separately repaired/qualified, and unaffected entry/teleporter/capsule
+consumers retain their completed identities. No unchanged entry matrix was repeated.
+
+All24 current original XML/TXT were fully inspected, including97identities/times,
+72equalproperties, complete streams and skips. This is bounded local producer
+validation. Ordinary Nemesis service must follow queued DMA, and preparation must
+follow animated tiles; gameplay pattern publication/renderer refresh/world ownership,
+full occupancy, real results publication/FG4 allocation retry/native music/control,
+scene pixels and the full route still require their own implementation and evidence.
+No native caller/readiness/service or route certificate follows.

@@ -122,8 +122,13 @@ public final class CnzTeleporterInstance extends AbstractObjectInstance implemen
         services().camera().setMinX((short) ROUTE_CAMERA_MIN_X);
         services().camera().setMaxX((short) ROUTE_CAMERA_MAX_X);
 
-        if (!armed && (player.getCentreX() >= ARM_X_THRESHOLD || routeAlreadyActive)) {
-            armTeleporter(player, routeAlreadyActive);
+        if (!armed && (player.getCentreX() & 0xFFFF) >= ARM_X_THRESHOLD) {
+            // Obj_CNZTeleporter returns while airborne left of $4A40, even
+            // after passing $4A38. Event admission is not object arming.
+            if (player.getAir() && (player.getCentreX() & 0xFFFF) < TELEPORT_X) {
+                return;
+            }
+            armTeleporter(player);
             // ROM replaces the code pointer with Obj_CNZTeleporterMain and
             // returns; Kos_modules_left is first polled on the following frame.
             return;
@@ -148,21 +153,13 @@ public final class CnzTeleporterInstance extends AbstractObjectInstance implemen
      * motion, locks control, zeroes logical input, queues the dedicated KosM
      * art, and patches palette line 2 before handing off to the main routine.
      */
-    private void armTeleporter(AbstractPlayableSprite player, boolean routeAlreadyActive) {
+    private void armTeleporter(AbstractPlayableSprite player) {
         armed = true;
 
-        /**
-         * ROM: the arming frame snaps airborne overshoot back to {@code $4A40}.
-         *
-         * <p>S3K runs player physics before object execution. If the route was
-         * already activated through the explicit CNZ event seam, the player may
-         * have drifted slightly left of {@code $4A40} by the time this object
-         * gets its first frame. The teleporter still owes the same beam-aligned
-         * X snap in that case, so route activation widens the clamp condition
-         * beyond the raw local {@code x > $4A40} check.
-         */
-        if (player.getAir() && (player.getCentreX() > TELEPORT_X || routeAlreadyActive)) {
-            player.setCentreX((short) TELEPORT_X);
+        // Obj_CNZTeleporter: only actual airborne overshoot is snapped.
+        // The event's earlier route admission never widens this native gate.
+        if (player.getAir() && (player.getCentreX() & 0xFFFF) > TELEPORT_X) {
+            com.openggf.sprites.NativePositionOps.writeXPosPreserveSubpixel(player, TELEPORT_X);
         }
 
         player.setXSpeed((short) 0);
