@@ -19632,3 +19632,80 @@ Maven51.424s/wrapper52.161839280s/queue0 are separate from the preceding metadat
 lease wait. Both original reports remain retained for that matched comparison.
 Main and private configs retain exact hashes, regular0600 mode and original
 mtimes; Root source/API/policy/native selection is unchanged.
+
+
+### Root SOZ matched receipt baseline and controller provenance, 2026-10-18
+
+The exact26bda candidate on Main50348 first stopped at its expected
+INTERIOR_RETURN versus actual ORDINARY receipt assertion (R3), before Root's
+new death11174. R4 changed ONLY those two expected label tokens in the owned
+baseline checkout, to ORDINARY; reversing them recovers whole26bda. Root's
+strict INTERIOR_RETURN source remains unchanged. No gameplay, input, helper,
+window, restore, identity or control assertion changed. This is an explicitly
+normalized baseline contract, not a claim of whole-source equality.
+
+That one five-case normal lifecycle passed5/0F0E0S, including Knuckles ready23803
+and all29 windows with the three semantic bonus observations. Root DIRECT read
+all identities/times, full TXT, all72 properties, the prior-full-read8057-byte
+classpath and exact duplicate, all ten complete captured streams and warning
+fingerprints. XML36966B SHA8bf1bab16ce2068cfe6161dec33cad5d2610d178cf7dda25fb19ad92c9f9c622
+and TXT332B SHA104b1eb6dee5eb5ec8c67d12d038138be5784359da682a6061623e38769faa3c
+remain singly retained. Queue0.000830s, lease51.5s, Maven50.778s and suite28.359s
+are separate measurements. Root97406 remains5/1F, cold death11174; its cause,
+position, callback and relation to rewind remain unobserved. No baseline label
+normalization or passing total waives that new composed behavior.
+
+Independent full source inventory confirms this SOZ1 Knuckles movie is an
+engine-authored reachability controller, explicitly not a native comparison
+trace (SOZ1 matrix465). Its f2d6cdcc BK2 contains24005 fixed input rows; the
+d196a278 script has1040 held-count instructions. Full in-memory expansion
+equals every archived row; ZIP contains only Header and Input Log, author
+OpenGGF InputLogAuthorTool, no Start/Reset/Power/P2 input or semantic waits.
+The script/matrix570..617 document earlier retiming after fade/title-release
+changes, including prior unchanged-movie deaths15657/11231/4531. These dated
+findings do not explain today's failure. Input11174 is Up in the11027..11186
+interval (script477); this supplies no player XY or death mechanism. Fixed
+held-input alignment is a concrete hypothesis to measure, not a runtime or
+input repair. A temporary test-only actual step/load/death observation source
+is being prepared; no new run, input change or fitted behavior is implied.
+
+
+### Root active-session progression fixture, 2026-10-18
+
+Root smoke and the separately matched Main50348 method both failed the same
+active-gameplay-session prerequisite before the stubbed load in
+TestLevelManagerEndProgression.advanceToNextLevelUsesConfiguredSuccessorRedirect.
+The unit constructed an unattached manager, while the legitimate title ownership
+bridge now resolves the active gameplay manager. No runtime repair is implied.
+
+The test-only4ef24ba48f07a5f63866e8dbba9fb38d6946985ad0cdb10b40efc913e6a4ab90
+fixture uses public openGameplaySession/GameplaySessionFactory attachment, spies
+that actual manager, and publicly reattaches the same peers. It asserts the spy
+is GameServices.level(), retains the original ROM-independent public load stub
+and all topology/successor11/title/headless/loadCaptor/credits assertions, then
+clears only its current fixture session. Other seven methods/helpers are exact;
+EngineServices is neither configured nor read solely for bookkeeping.
+
+One normal queued whole-class lifecycle55016 passed8/0F0E0S, including the original
+failing method0.115s. Suite0.977s/Maven25.955s/wrapper26.642084287s/queue0; production
+was up-to-date,4210 tests compiled inside the sole lifecycle. The first process
+inventory mistakenly matched its own shell text and stopped BEFORE registry
+mutation/submission/compiler; the corrected exact Python/Java argv inventory
+found no actual Root job. This is not a repeated test invocation.
+
+Root DIRECT read all eight identities/times, full TXT,72 properties/full8123-byte
+classpath and duplicate; there are no captured streams or issue children.
+Console FAST/NONE and compiler deprecation/unchecked notices remain separate.
+Original XML24367B SHA5b886df7b8f7f761ba95b839b3383fe60005374ed07a49fe39ff47e027f2309b
+and TXT346B SHA492588873b2a670af07f1c409bcde35bbdcbc29f5058288e01bc4b60a282c0e0
+are accepted for metadata-only consumption after local preservation.
+The temporary SOZ witness7a23 compiled incidentally, property absent/journal
+absent; it was not executed as a diagnostic. Its full22-block inverse is26bda
+and independent source review found no material issue; actual cap/ABI/reach
+are unqualified until the separate five-case diagnostic invocation.
+
+The earlier Root97406 two accepted originals47607B and MainR4 two originals
+37298B were fully size/SHA checked before any unlink per tree, then consumed
+metadata_slot ALONE. Root17159/Main17030 compiled SHA/size/mode/mtime were exact
+through cleanup. Earlier results/death11174 and normalized baseline five-green
+remain separate epochs; no logs were archived and no classes were deleted.

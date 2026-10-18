@@ -10,12 +10,17 @@ import com.openggf.debug.PerformanceProfiler;
 import com.openggf.debug.playback.PlaybackDebugManager;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.GameModule;
+import com.openggf.game.GameRng;
+import com.openggf.game.GameServices;
 import com.openggf.game.LevelLoadMode;
 import com.openggf.game.LevelLoadContext;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.RomDetectionService;
 import com.openggf.game.ZoneProgressionPlan;
+import com.openggf.game.rules.GameRules;
 import com.openggf.game.session.EngineContext;
+import com.openggf.game.session.GameplaySessionFactory;
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.WorldSession;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.physics.CollisionSystem;
@@ -26,6 +31,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -83,35 +89,49 @@ class TestLevelManagerEndProgression {
 
     @Test
     void advanceToNextLevelUsesConfiguredSuccessorRedirect() throws Exception {
-        WorldSession worldSession = new WorldSession(mock(GameModule.class));
-        LevelManager levelManager = spy(new LevelManager(mock(Camera.class), mock(SpriteManager.class),
-                mock(ParallaxManager.class), mock(CollisionSystem.class), mock(WaterSystem.class),
-                new GameStateManager(), engineContext(), worldSession));
-        // Act advance retains native title-card ownership through a private overload.
-        // Stub the public load boundary actually reached, so this topology test
-        // cannot silently depend on a locally installed ROM.
-        doNothing().when(levelManager).loadLevel(org.mockito.ArgumentMatchers.anyInt(),
-                org.mockito.ArgumentMatchers.eq(LevelLoadMode.FULL),
-                org.mockito.ArgumentMatchers.any(LevelLoadContext.class));
-        for (int zone = 0; zone < 12; zone++) {
-            levelManager.levels.add(List.of(LevelData.DEATH_EGG));
+        GameModule module = mock(GameModule.class);
+        when(module.getRules()).thenReturn(GameRules.SONIC_2);
+        when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
+        var gameplay = SessionManager.openGameplaySession(module);
+        try {
+            EngineContext services = engineContext();
+            GameplaySessionFactory.attachManagers(gameplay, services, new Camera(services.configuration()));
+            WorldSession worldSession = gameplay.getWorldSession();
+            LevelManager levelManager = spy(gameplay.getLevelManager());
+            gameplay.attachLevelManagers(gameplay.getWaterSystem(), gameplay.getParallaxManager(),
+                    gameplay.getTerrainCollisionManager(), gameplay.getCollisionSystem(),
+                    gameplay.getSpriteManager(), levelManager);
+            assertSame(levelManager, GameServices.level());
+            // Act advance retains native title-card ownership through a private overload.
+            // Stub the public load boundary actually reached, so this topology test
+            // cannot silently depend on a locally installed ROM.
+            doNothing().when(levelManager).loadLevel(org.mockito.ArgumentMatchers.anyInt(),
+                    org.mockito.ArgumentMatchers.eq(LevelLoadMode.FULL),
+                    org.mockito.ArgumentMatchers.any(LevelLoadContext.class));
+            for (int zone = 0; zone < 12; zone++) {
+                levelManager.levels.add(List.of(LevelData.DEATH_EGG));
+            }
+            levelManager.currentZone = 7;
+            levelManager.currentAct = 0;
+            ZoneProgressionPlan.ZoneTopology topology = topologyWithAppendedMod();
+            levelManager.setZoneProgressionPlan(
+                    ZoneProgressionPlan.builder(topology).insertAfter(7, 11).build(), topology);
+
+            levelManager.advanceToNextLevel();
+
+            var context = org.mockito.ArgumentCaptor.forClass(LevelLoadContext.class);
+            verify(levelManager).loadLevel(org.mockito.ArgumentMatchers.eq(LevelData.DEATH_EGG.levelIndex()),
+                    org.mockito.ArgumentMatchers.eq(LevelLoadMode.FULL), context.capture());
+            assertTrue(context.getValue().isShowTitleCard());
+            assertTrue(context.getValue().isTitleCardRequiredInHeadlessMode());
+            assertEquals(11, worldSession.getCurrentZone());
+            assertEquals(0, worldSession.getCurrentAct());
+            assertFalse(levelManager.consumeCreditsRequest());
+        } finally {
+            if (SessionManager.getCurrentGameplayMode() == gameplay) {
+                SessionManager.clear();
+            }
         }
-        levelManager.currentZone = 7;
-        levelManager.currentAct = 0;
-        ZoneProgressionPlan.ZoneTopology topology = topologyWithAppendedMod();
-        levelManager.setZoneProgressionPlan(
-                ZoneProgressionPlan.builder(topology).insertAfter(7, 11).build(), topology);
-
-        levelManager.advanceToNextLevel();
-
-        var context = org.mockito.ArgumentCaptor.forClass(LevelLoadContext.class);
-        verify(levelManager).loadLevel(org.mockito.ArgumentMatchers.eq(LevelData.DEATH_EGG.levelIndex()),
-                org.mockito.ArgumentMatchers.eq(LevelLoadMode.FULL), context.capture());
-        assertTrue(context.getValue().isShowTitleCard());
-        assertTrue(context.getValue().isTitleCardRequiredInHeadlessMode());
-        assertEquals(11, worldSession.getCurrentZone());
-        assertEquals(0, worldSession.getCurrentAct());
-        assertFalse(levelManager.consumeCreditsRequest());
     }
 
     @Test
