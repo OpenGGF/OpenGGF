@@ -19571,8 +19571,10 @@ complete original24886c12 source.
 
 One normal six-class focus32163 passed52 tests/0 failures/0 errors/0 skips:
 three short portal parameters, PrizeCalculator13, OptionCycle14, RewardObjects11,
-BonusCage8 and BonusGraphRewind3. The natural eight-round prerequisite and both
-zero/positive replay paths were reached by the unchanged three short cases.
+BonusCage8 and BonusGraphRewind3. The naturally nonzero prerequisite and mandatory positive tail completed in
+all three short cases. The zero branch is conditional on the actual prize;
+per-round outcomes were not logged, so this focus alone does not count the
+number of zero-payout branches executed.
 All52 identities, six complete TXT reports, equal72-property maps, the full
 8123-byte classpath and duplicate, and all ordered streams were inspected.
 All12 original report identities/full-size hashes remain in the existing ledger
@@ -19589,3 +19591,44 @@ contains the actual Glowing Sphere return at input3549 during step, with fresh
 INTERIOR_RETURN generation3 replacing ordinary interior generation2. No death,
 respawn, draw-triggered load or broken restore is observed. Its temporary source
 and two original reports remain separate from this preservation.
+
+
+### Root complete finite Slot check and revised SOZ observation, 2026-10-18
+
+After the52-case focused pass, one exact finiteSlotMechanicsAndLiveHistoryProducts
+selection77131 passed all140 original parameters/0 failures/0 errors/0 skips.
+The tested source is3f1aaa94 at local preservation7127336e; no selector narrowing,
+fixture/input/runtime change, RNG seed, observation property or retry occurred.
+Production was up-to-date;4210 tests compiled inside the one normal lifecycle.
+Actual queue wait0; Maven displayed04:17min, suite234.530s and measured wrapper
+Popen-to-reap258.376889349s. Precise Maven seconds/hold are not reconstructed.
+All140 contiguous method identities, times, complete TXT and original XML
+children/properties were inspected. The72-property map has the same8123-byte
+classpath/duplicate as earlier focus. All140 stderr streams/677196UTF8B/5322lines
+contain141 FAST/NONE and2520 deterministic estimates across18 full fingerprints;
+all line pairs were classified, with no stdout or issue child. Console output
+was truncated separately, so no exhaustive compiler-console tally is claimed.
+Single original XML734825B SHA6aefef4d8f6d6d718d6d0412943b2ce4e3b2ecd1e14e3cc2eedbe873f1501d98
+and TXT358B SHA82f9c13c1c6018b0aaa9c4cfd4131153ad9a49de8e0fcceb97e8ed0b375e3822
+were Root-read and recorded before metadata-only consumption. Compiled outputs
+are preserved through cleanup. The earlier143 Slot smoke failures have affected
+coverage from the three short cases plus all140 finite products; this is not
+a whole-smoke rerun or composition-wide green claim.
+
+The separate SOZ candidate26bda778 replaces three stale movie-frame observations
+with actual bonus-title release, the existing45-input window length, and actual
+saved-origin/title/control release. Strong actual level refs, physical generation
+and fresh receipt bind each named window. The original45-step/restore/full-key
+helper and all periodic/boss/destination/two-load-history/29-window obligations
+remain unchanged. Root and fresh independent review found no material issue;
+no runtime behavior is changed. This source remains uncommitted and unqualified.
+One original five-case focus97406 is5 tests/1 failure/0 errors/0 skips: the four
+Sonic/Tails cases retain their prior completed destinations/windows; Knuckles
+passes the former3506 crossing point but dies at input11174, original assertion
+line148. The death cause and relation to rewind are UNOBSERVED. No29-window
+Knuckles completion or no-regression claim follows. Exact same candidate on
+Main50348 runtime is the next bounded matched check, not an assumed attribution.
+Maven51.424s/wrapper52.161839280s/queue0 are separate from the preceding metadata
+lease wait. Both original reports remain retained for that matched comparison.
+Main and private configs retain exact hashes, regular0600 mode and original
+mtimes; Root source/API/policy/native selection is unchanged.
