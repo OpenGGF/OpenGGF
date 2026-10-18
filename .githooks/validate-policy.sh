@@ -157,118 +157,169 @@ contains_mod_api_annotation() {
     printf '%s\n' "$1" | grep -Eq '^[[:space:]]*@(com\.openggf\.game\.)?ModApi([.([:space:]]|$)'
 }
 
-# Declaration text of a Java source that can change the normalized signature pin.
-# Classes and records exclude executable bodies and field initializer values;
-# the exporter records field types/modifiers/annotations, never their values.
-# Strip implementations before selecting public/protected declaration lines, so
-# multiline initializer calls cannot leak parentheses into signature continuations.
-# Other implicitly public type forms retain their conservative text comparison.
-# TestModApiSignatureSurface remains the exact signature check.
+# Source-only staging guard, mirrored by Get-ModApiSurfaceText in the PS hook.
+# Match recursiveTypes visibility: hidden nested owners contribute only when a
+# retained declaration references their name (or they carry @ModApi themselves).
+# References are followed to a fixed point; literals and implementation bodies
+# cannot make an owner public. Ambiguous names over-retain conservatively.
+# This is not Java name resolution: the compiled signature guard remains exact.
 mod_api_surface_text() {
     printf '%s\n' "$1" | awk '
-    BEGIN { inblock = 0; kind = ""; typeName = ""; n = 0 }
-    {
-        line = $0; out = ""
-        for (k = 1; k <= length(line); k++) {
-            c = substr(line, k, 1); pair = substr(line, k, 2)
-            if (inblock) {
-                if (pair == "*/") { inblock = 0; k++ }
-                continue
-            }
-            if (stripQuote != "") {
-                out = out c
-                if (stripEscaped) stripEscaped = 0
-                else if (c == "\\") stripEscaped = 1
-                else if (stripQuote == "text" && substr(line, k, 3) == "\"\"\"") {
-                    out = out "\"\""; k += 2; stripQuote = ""
-                } else if (c == stripQuote) stripQuote = ""
-                continue
-            }
-            if (pair == "//") break
-            if (pair == "/*") { inblock = 1; out = out " "; k++; continue }
-            if (substr(line, k, 3) == "\"\"\"") { stripQuote = "text"; out = out "\"\"\""; k += 2; continue }
-            if (c == "\"" || c == sprintf("%c", 39)) stripQuote = c
-            out = out c
-        }
-        lines[++n] = out
-        if (kind == "" && match(out, /(^|[ \t])(class|interface|record|enum|@interface)[ \t]+[A-Za-z_][A-Za-z0-9_]*/)) {
-            t = substr(out, RSTART, RLENGTH); sub(/^[ \t]+/, "", t); split(t, parts, /[ \t]+/); kind = parts[1]; typeName = parts[2]
-        }
+    function supported(s) { return s ~ /(^|[^A-Za-z0-9_$])(public|protected)[[:space:]]/ }
+    function references(s, name,    count,tokens,k) {
+        count = split(s,tokens,/[^A-Za-z0-9_$]+/)
+        for (k = 1; k <= count; k++) if (tokens[k] == name) return 1
+        return 0
     }
+    function owner_path(owner,    path) {
+        path = names[owner]
+        while (parents[owner] > 0) { owner = parents[owner]; path = names[owner] "/" path }
+        return path
+    }
+    function omit_initializer(first, last,    k) {
+        for (k = first; k <= last; k++) omitted[k] = 1
+    }
+    function generic_initializer_open(prefix) {
+        while (gsub(/<[^<>]*>/,"",prefix)) {}
+        return prefix ~ /[.=?:][[:space:]]*$/ || prefix ~ /->[[:space:]]*$/ ||
+            prefix ~ /(^|[^A-Za-z0-9_$])new[[:space:]]*$/ ||
+            prefix ~ /(^|[^A-Za-z0-9_$])new[[:space:]]+[A-Za-z0-9_$.@[:space:]]+$/
+    }
+    function declaration(first, last, owner,    a,b,c,k,pending) {
+        a = ""; b = ""
+        for (k = first; k <= last; k++) {
+            a = a (omitted[k] ? " " : substr(clean,k,1))
+            b = b (omitted[k] ? " " : substr(lex,k,1))
+        }
+        c = ""; pending = 0
+        for (k = 1; k <= length(a); k++) {
+            if (substr(b,k,1) ~ /[[:space:]]/) pending = (c != "")
+            else { if (pending) c = c " "; c = c substr(a,k,1); pending = 0 }
+        }
+        if (c != "") { decl[++nd] = c; refs[nd] = b; owners[nd] = owner }
+    }
+    { raw = raw $0 "\n" }
     END {
-        # Class/record members need declaration text, not executable bodies or
-        # field values (the normalized exporter records field type/modifiers only).
-        # Strip those first, so initializer calls cannot open continuation depth.
-        source = ""; for (i = 1; i <= n; i++) source = source lines[i] "\n"
-        if (kind == "class" || kind == "record") {
-            clean = ""; segment = ""; parens = 0; body = 0; initializer = 0
-            initParens = 0; initBraces = 0; initBrackets = 0; quote = ""; escaped = 0
-            for (j = 1; j <= length(source); j++) {
-                c = substr(source, j, 1)
-                if (quote != "") {
-                    if (!body && !initializer) { clean = clean c; segment = segment c }
-                    if (quote == "text" && !escaped && substr(source, j, 3) == "\"\"\"") {
-                        if (!body && !initializer) { clean = clean "\"\""; segment = segment "\"\"" }
-                        j += 2; quote = ""; continue
-                    }
+        # Java Unicode escapes precede lexing; unsupported identifiers/escapes
+        # must not make the source-only guard silently discard declarations.
+        if (raw ~ /\\u/) { printf "%s", raw; exit }
+        state = ""; escaped = 0; clean = ""; lex = ""
+        for (i = 1; i <= length(raw); i++) {
+            c = substr(raw,i,1); pair = substr(raw,i,2); triple = substr(raw,i,3)
+            if (state == "line") {
+                if (c == "\n") state = ""
+                clean = clean (c == "\n" ? c : " "); lex = lex (c == "\n" ? c : " ")
+            } else if (state == "block") {
+                if (pair == "*/") { state = ""; i++; clean = clean "  "; lex = lex "  " }
+                else { clean = clean (c == "\n" ? c : " "); lex = lex (c == "\n" ? c : " ") }
+            } else if (state != "") {
+                if (state == "text" && triple == "\"\"\"" && !escaped) {
+                    clean = clean triple; lex = lex "~~~"; i += 2; state = ""
+                } else {
+                    clean = clean c; lex = lex "~"
                     if (escaped) escaped = 0
                     else if (c == "\\") escaped = 1
-                    else if (c == quote) quote = ""
-                    continue
+                    else if (c == state) state = ""
                 }
-                if (substr(source, j, 3) == "\"\"\"") {
-                    quote = "text"
-                    if (!body && !initializer) { clean = clean "\"\"\""; segment = segment "\"\"\"" }
-                    j += 2; continue
-                }
-                if (c == "\"" || c == sprintf("%c", 39)) {
-                    quote = c
-                    if (!body && !initializer) { clean = clean c; segment = segment c }
-                    continue
-                }
-                if (body) {
-                    if (c == "{") body++
-                    else if (c == "}") body--
-                    continue
-                }
-                if (initializer) {
-                    if (initParens == 0 && initBraces == 0 && initBrackets == 0 && (c == ";" || c == ",")) initializer = 0
-                    else {
-                        if (c == "(") initParens++
-                        else if (c == ")") initParens--
-                        else if (c == "{") initBraces++
-                        else if (c == "}") initBraces--
-                        else if (c == "[") initBrackets++
-                        else if (c == "]") initBrackets--
-                        continue
-                    }
-                }
-                if (c == "=" && parens == 0) { initializer = 1; continue }
-                if (c == "{" && parens == 0) {
-                    if (segment !~ /(^|[ \t\n])(class|interface|record|enum|@interface)[ \t\n]+[A-Za-z_]/) {
-                        clean = clean "{}"; segment = ""; body = 1; continue
-                    }
-                    segment = ""
-                } else if (c == ";" || c == "}") segment = ""
-                else segment = segment c
+            } else if (pair == "//" || pair == "/*") {
+                state = (pair == "//" ? "line" : "block"); i++; clean = clean "  "; lex = lex "  "
+            } else if (triple == "\"\"\"") {
+                state = "text"; clean = clean triple; lex = lex "~~~"; i += 2
+            } else {
                 clean = clean c
-                if (c == "(") parens++
-                else if (c == ")") parens--
-            }
-            n = split(clean, lines, "\n")
-        }
-        whole = (kind != "class"); depth = 0
-        for (i = 1; i <= n; i++) {
-            l = lines[i]
-            if (l !~ /[^ \t]/) continue
-            if (whole) { print l; continue }
-            if (depth > 0 || l ~ /(^|[^A-Za-z0-9_])(public|protected)[ \t]/ || l ~ /^[ \t]*@/ \
-                    || l ~ /(^|[ \t])(class|interface|record|enum|extends|implements)[ \t]/) {
-                print l
-                t = l; opens = gsub(/\(/, "(", t); closes = gsub(/\)/, ")", t)
-                depth += opens - closes; if (depth < 0) depth = 0
+                if (c == "\"" || c == sprintf("%c",39)) { state = c; lex = lex "~" }
+                else lex = lex c
             }
         }
+        if ((state != "" && state != "line") || lex ~ /[^\t\r\n -~]/) { printf "%s", raw; exit }
+        first = 1; owner = 0; parens = 0; body = 0; init = 0; initDepth = 0; bodyFirst = 0; firstInit = 0; initAngles = 0; uncertainInit = 0
+        for (i = 1; i <= length(lex); i++) {
+            c = substr(lex,i,1)
+            if (body > 0) {
+                if (c == "{") body++
+                else if (c == "}" && --body == 0) {
+                    # Enum constant subclasses are part of the sealed closure.
+                    if (bodyFirst > 0) declaration(bodyFirst,i,owner)
+                    bodyFirst = 0; first = i + 1
+                }
+                continue
+            }
+            if (c == "(") parens++
+            else if (c == ")") parens--
+            if (parens != 0) continue
+            if (init > 0) {
+                if (c == "{") initDepth++
+                else if (c == "}") initDepth--
+                if (firstInit > 0 && initDepth == 0) {
+                    if (c == "<") {
+                        prefix = substr(lex,init,i - init)
+                        if (initAngles > 0 || generic_initializer_open(prefix)) initAngles++
+                        else if (prefix ~ /(^|[^A-Za-z0-9_$])new[[:space:]]+@/) uncertainInit = 1
+                    } else if (c == ">" && initAngles > 0) initAngles--
+                    else if (c == "," && initAngles == 0) {
+                        omit_initializer(init,i - 1); init = 0; continue
+                    }
+                }
+                if (c != ";" || initDepth != 0) continue
+                if (firstInit > 0) {
+                    if (initAngles != 0) { printf "%s", raw; exit }
+                    omit_initializer(init,i - 1)
+                }
+            }
+            if (c == "=" && init == 0 && !(kinds[owner] == "@interface" &&
+                    substr(lex,first,i - first) ~ /(^|[^A-Za-z0-9_$])default([^A-Za-z0-9_$]|$)/)) {
+                init = i; if (firstInit == 0) firstInit = i; initAngles = 0; continue
+            }
+            if (c == "{" || c == ";") {
+                h = substr(lex,first,(firstInit > 0 ? firstInit : (init > 0 ? init : i)) - first)
+                # Annotation defaults (including arrays) are signature values.
+                if (c == "{" && kinds[owner] == "@interface" && h ~ /(^|[^A-Za-z0-9_$])default([^A-Za-z0-9_$]|$)/) {
+                    init = i; initDepth = 1; continue
+                }
+                if (c == "{" && match(h, /(^|[[:space:]])(class|interface|record|enum|@interface)[[:space:]]+[A-Za-z_$][A-Za-z0-9_$]*/)) {
+                    t = substr(h,RSTART,RLENGTH); sub(/^[[:space:]]+/, "", t); split(t,parts, /[[:space:]]+/)
+                    id = ++nt; kinds[id] = parts[1]; names[id] = parts[2]; parents[id] = owner
+                    exposed[id] = supported(h) || (owner > 0 && (kinds[owner] == "interface" || kinds[owner] == "@interface"))
+                    visible[id] = (owner == 0 || h ~ /@([A-Za-z0-9_$.]+[.])?ModApi([^A-Za-z0-9_$]|$)/)
+                    inferredSealed[id] = h ~ /(^|[[:space:]])sealed[[:space:]]/ && h !~ /(^|[[:space:]])permits[[:space:]]/
+                    typeRefs[id] = h
+                    declaration(first,i - 1,id); owner = id
+                } else {
+                    keep = owner > 0 && (supported(h) || kinds[owner] != "class")
+                    # Field declarations retain every name/dimension, never values.
+                    # Retain compact-constructor annotations and annotation defaults;
+                    # exclude executable bodies except conservative enum bodies.
+                    if (keep && !(c == "{" && kinds[owner] == "enum")) declaration(first,i - 1,owner)
+                    if (c == "{") { body = 1; if (kinds[owner] == "enum") bodyFirst = first }
+                }
+                first = i + 1; init = 0; firstInit = 0; initAngles = 0
+            } else if (c == "}") {
+                if (kinds[owner] == "enum") declaration(first,i - 1,owner)
+                owner = parents[owner]; first = i + 1
+            }
+        }
+        if (owner != 0 || parens != 0 || body != 0 || initDepth != 0 || uncertainInit) { printf "%s", raw; exit }
+        # Preserve hidden types reached by annotations, generic/signature types or
+        # sealed permits, and then their own reachable members/nested types.
+        changed = 1
+        while (changed) {
+            changed = 0
+            for (t = 1; t <= nt; t++) {
+                if (visible[t]) {
+                    # A retained descendant also depends on its binary owner name.
+                    if (parents[t] > 0 && !visible[parents[t]]) { visible[parents[t]] = 1; changed = 1 }
+                    continue
+                }
+                reach = visible[parents[t]] && exposed[t]
+                for (d = 1; d <= nd && !reach; d++)
+                    if (visible[owners[d]] && references(refs[d],names[t])) reach = 1
+                for (s = 1; s <= nt && !reach; s++)
+                    if (visible[s] && inferredSealed[s] && references(typeRefs[t],names[s])) reach = 1
+                if (reach) { visible[t] = 1; changed = 1 }
+            }
+        }
+        # Scope is part of identity: moving the same declaration changes its owner.
+        for (d = 1; d <= nd; d++) if (visible[owners[d]]) print owner_path(owners[d]) "\t" decl[d]
     }'
 }
 
