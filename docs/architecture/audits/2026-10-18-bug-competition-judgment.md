@@ -336,9 +336,21 @@ integration; upstream develop remained `50348f299`. It was fast-forward merged
 to `9123b1bf8` without switching branches. Runtime sources and test inputs are
 identical to their tested states, including the previously dirty ffmpeg
 prerequisite; only the final prose is new. Completed execution is reused under
-the repository's policy, with no ceremonial broad rerun. At this ledger freeze,
-publication and removal of the six accounted task checkouts follow. Their
-observed completion will be recorded after those actions.
+the repository's policy, with no ceremonial broad rerun.
+
+Develop was successfully pushed at `cfb9b6fa36fe2526a0c0d2915a9d46c480b3da2b`;
+the pre-push release-tree audit checked 13,879 entries. Only develop was pushed.
+Post-push inspection confirmed all six owned checkouts were clean and every
+head was an ancestor of develop. Generated outputs and borrowed links were
+accounted for, including the rewind-probe report, test-created save/image-cache
+files, template-derived config examples, build output and Python caches.
+All six checkouts and their fully merged local branches were removed, and
+their scoped worktree metadata was verified absent. Borrowed link targets,
+foreign worktrees and the main workspace's original dirty submodules/untracked
+files were preserved. No owned Maven/test jobs or pending child runs remain;
+T3 histories and committed evidence are retained. This documentation-only
+completion record follows that observed publication and cleanup. The parent
+result identifies its final pushed tip.
 
 Focused and smoke results establish bounded coverage. They do not certify
 Internet/NAT behavior, exhaustive concurrency interleavings, physical controller
