@@ -185,7 +185,7 @@ public final class GameplayCaptureTool {
                 outDir.resolve("state.csv"));
     }
 
-    static Path encodeVideo(Path ffmpeg, List<Path> pngs, Path out, Arguments arguments) throws IOException {
+    private static Path encodeVideo(Path ffmpeg, List<Path> pngs, Path out, Arguments arguments) throws IOException {
         int scale = Math.max(1, arguments.scale());
         String fps = Math.max(1, arguments.fps()) + "/" + Math.max(1, arguments.every());
         // Enumerate this invocation's frames. A directory glob also picks up
