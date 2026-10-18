@@ -13442,3 +13442,1033 @@ separately authorized ONE future command, not executed:
 ```text
 python3 "${TASK_SCRATCH}/ending-clock-positive-r1/launch_positive.py" run --freeze 054b847381642049d48473930e4c1b930c22a300c5b871e4af4261cd96d187e3 --exe-sha256 97a256d90838939063529865d27f49e53cb3c95b7d3a2bd5469224fae8e3bacc
 ```
+
+### Ending first parent-qualified raw Reader control — 2026-10-18
+
+The ONE corrected native command below ran from actual Root epoch
+f854e0185d0c73295ed1258312acf4c9fa252050, using reviewed source freeze054b8473
+and unchanged observer PE36352B/SHA97a256d90838939063529865d27f49e53cb3c95b7d3a2bd5469224fae8e3bacc
+(mtime1792282499532737854). No compilation/rebuild/version/Java/JVM or source edit
+accompanied it. Session82580/owned childPID+PGID3599427 reached exit0 and both
+COMPLETE_READER_POSITIVE_CONTROL and COMPLETE_PARENT_READER_POSITIVE_CONTROL.
+
+```text
+python3 ${TASK_SCRATCH}/ending-clock-positive-r1/launch_positive.py run --freeze 054b847381642049d48473930e4c1b930c22a300c5b871e4af4261cd96d187e3 --exe-sha256 97a256d90838939063529865d27f49e53cb3c95b7d3a2bd5469224fae8e3bacc
+```
+
+The actual original82EA neutral row0 drove ONE Advance. Two registered sites
+produced two callback invocations and one ordered observation pair. Actual signed
+rawCycles=784462, signed rawRefreshDeadline=784896, unsigned rawEncodedIntLevel=0;
+the existing host getters returned actualRegisterPc=518 and actualRegisterSr=9988.
+registeredHookPc=518 is dispatch metadata, and originalInputIndex0/advanceOrdinal1/
+literal input are formatter metadata. They are not native clocks. The observer
+completed the known35-register/64KiB-RAM double-read checks and final Reader/
+artifact/projection controls with failure=null, cleanupFailures=[], identityVerified
+true, managedPhase=final-projection-after, bytesBeforeFooter3600/recordsBeforeFooter2.
+
+This process's managed table reported Common/EmulationCommon/Cores exact before;
+BizInvoke absent before setup, then allfour exact count1/fileExacttrue with pinned
+paths/fullnames/MVIDs afterward. The strict complete52-line startup stdout block,
+sole exact28B startup stderr and all3JSON records passed parent qualification.
+Retained-text-derived counts are stdout9044B/55LF (6907BJSON+2137Bdiagnostics),
+stderr28B/1LF, aggregate9072B; separate child arrays were not persisted. The entire
+bounded original output remains in the original tool transcript, without a new
+log/archive/receipt. Native startup/module/address output remains diagnostic
+metadata. Historical20039/62276 failures are not retroqualified or assigned new causes.
+
+Normal admission reported rounded0s wait, estimate30/default7GiB8cores. The Python
+launcher had already exited at the immediate postyield /proc inspection, so its
+PID is unavailable; the Mono child PID is not substituted. Exact child/launcher
+execution duration is unavailable; tool wait intervals are not summed as runtime.
+The fixed30s-from-spawn/60s-teardown bounds and all original caps remained enforced.
+Postchecks passed all52artifact+17sourcepins,3sourcefreeze/mode0600, PE hash/mtime,
+Mainconfigregular0600/hash/mtime, RootJava bytes+mtimes and MainHEAD/branch/foreign
+status. ChildPID is absent, no equivalent owned job remains, and native leases/
+process group were reaped. Authorization is false; native_output_phase keeps only
+owned compact facts and retained3sources+PE as cleanup_pending for Root review.
+
+This qualifies actual raw Reader observations at the authenticated reset hook
+for this one bounded control. AbsoluteT, frameOriginB, phaseOrigin, decodedIRQ,
+SR-origin, continuous production continuation, endingcontext,6+46/live4-5-4,
+prepared/readiness and ending parity remain unavailable. No further native,
+compiler, correction, commit or integration authority follows.
+
+### Ending accepted reset control and next causal source packet — 2026-10-18
+
+Root DIRECT-read the entire corrected82580 transcript and accepted the bounded
+ONEAdvance/two-invocation/one-pair actual raw Reader control, including exact
+startup52stdout+28stderr/3JSON/footer and parent marker, known35register+64KiBRAM
+checks, native identity, primaryNULL/cleanup[]. Earlier62276/20039 qualification
+and unknown earlier causes remain historical. The owned useful probe remains
+freeze054b8473/PE97a256/mode0600/52+17pins exact, cleanup_pending with24h ownership;
+no raw archive or transcript file is created. This acceptance authorizes only
+source reading/planning of authentic ending ingress and continuous CPU/caller/
+board/SR/IRQ and6+46/live4-5-4 dependencies, not another sample, observer or code.
+AbsoluteT/frameOriginB/phaseOrigin/decodedIRQ/endingcontext are not inferred from
+the reset pair. The existing ending matrix and owning source will constrain the
+next packet; no automatic authoring/native/compiler/JVM command follows.
+
+
+#### Ring R14: passive original Pachinko1 writer witness — SOURCE ONLY
+
+Local preservation remains `f854e0185d0c73295ed1258312acf4c9fa252050`.
+Two temporary Java paths now form an unexecuted source candidate: marked private
+RingManager observer blocks and `TestS3kPachinkoRingAcceptanceWitness`.
+Removing only the marked blocks restores the complete qualified RingManager
+SHA256 `1bbe05c809d3aefa23413c2f6803b934263767173cde3a2ba1ee642a4f9e653b` byte-for-byte.
+The six phase controls, corrected 35-method unit fixture, CPU owner correction,
+original driver/fixtures/assertions and other production Java remain unchanged.
+
+The new outer method calls original `replayMatchesTrace()` once; a private helper
+subclass uses existing comparison/closure observer seams. Actual registered actor,
+manager, shared ledger, canonical raw-ring list, pool and allocator references are
+bound without gameplay setters. Raw scalar/container projections bracket observer
+read/output groups; original guard continuation markers do not evaluate rules twice.
+Acceptance and the two actual RingManager `addRings` sites retain source order;
+caller stacks contain at most 12 frames. Events receive the actual row property
+from the post-forward closure hook. Rows 121–122 select diagnostics only; owner
+argument and raw manager clocks stay distinct and native V_int_run_count is unknown.
+
+One deferred stdout/XML journal is bounded to 64 records and 128 KiB UTF-8 including
+header/footer, after original report publication/cleanup. Unknown binding, missing
+required actor/writer hook, cap or passivity failure means STOP; original exceptions
+retain identity and diagnostics are suppressed/deferred. Static six-byte ring-object,
+lost-ring and other ledger writers remain unobserved. This is no route122 attribution,
+new native oracle, phase fix or global regression certificate. Neither Java compilation
+nor a JVM/native/trace command has run for this candidate.
+
+Proposed future focus only (NOT submitted):
+`-Ptrace-segments -Dtest=TestS3kPachinkoRingAcceptanceWitness#originalReplayOnceWithPassiveRingWitness`.
+The exact normal queue argv, original three absolute ROM properties and original
+headless JDK25 environment are in the owned R14 source entry. Inherited
+`replayMatchesTrace` must never be selected alongside the new method. Source review
+and fresh prerequisites/admission remain necessary before any possible execution.
+
+### Ending next causal source packet — 2026-10-18
+
+Source-only review after the accepted reset control identifies a conditional
+packet, not an execution-ready job. The requested currentending.md was absent
+in the scoped trees; the maintained s3k-ending validation matrix, lifecycle
+design, Root Plan and owning stock/disassembly source supply this packet. Exact
+22source-path/hash pins are in ending_causal_source_plan_phase in the existing
+owned registry. No observer/code/compiler/native/JVM or new sample was run.
+
+Pinned m68k.h defines cycles/refresh_cycles as signed C32 current master-cycle/
+external-refresh counters, and int_level as unsigned C32 interrupt-pin state,
+separate from SR mask. The ordinary hook precedes fetch/refresh handling; the
+delayed-IRQ path can execute one instruction outside that hook. Hard reset starts
+at a source-defined nonzero VDP-frame position; system.c rebases both signed
+counters at frame end, retaining carry/overshoot. These are source semantics,
+not observed absoluteT/frameOriginB/phaseOrigin or decoding of the reset pair.
+SR writes/RTE/IRQ acceptance, VDP FIFO/DMA/HInt/VInt and Z80/SMPS bus history,
+including PCM warm-up, remain continuous-state dependencies.
+
+Original power-on candidates exist: team/+2 AD40 (539492original rows; ending
+provenance offset524341) and Tails/+2 cb62 (499820rows; offset484147). Their
+original movie/input/settings identities were inspected. The82EA reset movie
+ends in early rescue and lacks the complete ending suffix. No original solo-
+Sonic/+2 power-on input was established. Declared scenes, comparison windows,
+hydration, alignment or invented neutral suffixes cannot replace authentic
+continuation. Existing Reader explicitly supports no state restore.
+
+Conditional design: replay the original prefix through unchanged Guard/Open/
+Bind, then at an independently authenticated pre-service original-input boundary
+arm three ROM-byte-checked seams: producer05ADCE, queue entry001C1A, retirement
+001CE4. Use existing Reader fields and callback-safe host getters/register/RAM
+projection only, ordered passive double checks and final identity/Reader/parent
+qualification. Check actual A7/stack range before reading a return PC;
+LevelLoop651C/title62D8 are source caller controls, not a forced caller. No new
+Reader/API is proposed. All records stay provisional until complete controls.
+
+The arming boundary is missing: retained ending offsets alone do not establish
+it. Hooks active throughout the full prefix risk the observation cap; ObserveAt
+rejects registration inside an active guest callback; waiting for Advance to
+return could miss the first same-Advance service. Full-prefix throughput and a
+justified warm-up/deadline/observation-window budget are unmeasured; the reset
+control's30s bound is not assumed adequate. Therefore no command or acquisition
+estimate is ready. Establish exact arming/caller/context first, then separately
+review a bounded execution design; no automatic authoring or run follows.
+
+The causal question remains independent prediction from continuous production
+CPU/caller/board/SR/IRQ history of the real3-versus4 service result, six ending
+cases,46 multi-valued contexts and live4/5/4. A raw seam packet can localize this
+question; it does not implement the missing continuation or qualify ending
+parity/readiness. The reset control closes only the raw-Reader prerequisite.
+
+Later promotion can reuse existing TraceChaser headless tests and
+S3kExactKosMeasurementObserver patterns, tests/TestMain.cs plus explicit test
+csproj registration, the README stock-native-clock section and current
+agent-workflow catalogue entry. Keep native control opt-in with pure fail-closed
+identity/output checks; no new recorder/profile/API/catalogue type. No promotion
+is implemented. The useful3sources/PE stay unchanged/owned cleanup_pending.
+Concurrent Root RingR14 source-only WIP is preserved; historical1bbe denotes the
+tested f854 epoch and is not asserted as current diagnostic source. Main config,
+foreign state and both protected test files remain exact.
+
+
+#### Ring R15: original Pachinko1 witness — terminal diagnostic STOP
+
+The ONE reviewed normal `trace-segments` lifecycle selected only
+`TestS3kPachinkoRingAcceptanceWitness#originalReplayOnceWithPassiveRingWitness`.
+It compiled inside that lifecycle at local HEAD `f854e0185`, runtime SHA `b1143bf4`
+and temporary test SHA `9e89bc71`; original three ROMs/JDK25/EGL/fork settings
+were retained. Session 69344 exited 1: one test, one failure, no errors or skips;
+reported queue wait 0 seconds, Maven total 01:16 min, suite 2.480 seconds and method
+2.239 seconds. Separate compilation/setup/observer elapsed times are unknown.
+
+The original strict failure remained 1638 errors, first frame122 rings262/261.
+All 1638 full error tuples have sorted-JSON-default SHA256
+`04d9c7f698941706d4c0df5423dc936e97f35f9fdda4660d4ee5c37b7641159e`, matching
+accepted R11: physics1051/animation587; first animation269 map0096/0097.
+The report serializes total_frames2907, not separate complete/reference/compared
+counts. The eight advertised-but-missing schemas and inherent context truncation
+remain missing; no reconstruction or output-property change was made.
+
+The original XML contains the entire 111442-byte journal: header,36 events and
+footer (38 records), all580 fields per vector parsed. Actual row properties121
+and122 have18 events each, both actors' nine entry/eligibility markers each row.
+Both actual shields and field mode are null; no attraction eligibility/allocation,
+retained acceptance, placed acceptance or RingManager award marker was emitted.
+All32 pool entries are inactive, shared ledger261 and active count40 throughout.
+The actual64-record raw list includes index11/placementId62 at00C0,0D68, active
+and uncollected. These actual owner observations do not identify the native122
+caller, another writer, an earlier shield acquisition cause or a correction.
+
+The footer is STOP, with suppressed `R14 required actor/owner writer hook absent`;
+no award stacks exist. The finalizer can overwrite an earlier diagnostic with
+that missing-hook exception, so its being the sole reported diagnostic does not
+prove no earlier diagnostic occurred. Finite output fits its caps, and no separate
+reflection/passivity/stamping failure is serialized; this is no whole-world
+passivity or positive-writer qualification. No retry or source repair followed.
+
+All five original XML/TXT/comparison/owner/context artifacts (583376 bytes total)
+remain at their single original `target/surefire-reports` and
+`target/trace-reports/trace` paths for Root direct read; exact full hashes are in
+the owned R15 registry entry. Three FAST warnings are serialized in stderr;
+four were observed on the console. Seventy-two XML properties were read; only
+test selector and unique Surefire launch paths differ from R11. Source/config/
+Ending three files and PE/Main state remained exact through terminal. Classes now
+contain the instrumented R15 compiler output, with post-hashes/mtimes recorded;
+no source restoration, build, deletion, commit or further execution is authorized.
+
+### Ending preinstalled semantic-arm correction — 2026-10-18
+
+Source refinement closes the previously reported post-Advance arming race:
+preinstall all finite producer05ADCE/queue001C1A/retirement001CE4 callback pairs
+after Bind and before first original Advance. Pinned MemoryCallbackSystem runs
+append-ordered callbacks synchronously; verified producer second callback can
+commit host-only semantic arm before later queue/retire callbacks in the same
+Advance. No callback registration occurs during guest execution. Incoming A1/A2
+at05ADCE precede the pinned LEAs; authenticate those operands, then validate
+actual FIFO target refs at the real queue instruction instead of assuming them.
+Reader still copies raw values before any arm predicate, so every warm-up hit
+must be honestly counted/accounted with a finite STOP budget separately from
+emitted armed pairs. The exact original AD40 stream has539492 rows and no Power,
+Reset or P2 activity. A proposed600s-from-spawn/660s-teardown bound permits a
+partial diagnostic without predicting throughput. No input-index/clock-phase
+arm is needed; full board/SR/IRQ origin and independent production continuation
+remain outside this narrower native producer/head/retirement pilot. Six declared-
+setup measured cases and46 contexts do not become qualified cold inputs.
+
+Root confirmed R15 session69344 terminal before this append. R2 source-only
+observer/launcher/manifest authoring is now authorized separately, preserving
+R1freeze054b/PE97a256 and concurrent Root source. No compiler/load/native/JVM
+is authorized; the source unit must return for actual-file review first.
+
+
+#### Ring R16: Root acceptance, bounded cleanup and next source question
+
+Root directly accepted all five R15 originals (583376 bytes), the full 38-record
+journal/580-field vectors and all 1638 error tuples. The original strict failure
+remains first frame122 rings262/261, full-vector SHA256
+`04d9c7f698941706d4c0df5423dc936e97f35f9fdda4660d4ee5c37b7641159e`.
+This acceptance retains diagnostic coverage STOP: finish overwrites `failure[0]`
+with missing-required-award-hook, so its sole serialized diagnostic cannot exclude
+an earlier diagnostic failure. No absent acceptance/award or qualified passivity
+claim follows. No retry, reporting fix or new execution is authorized.
+
+Owned `/root/hcz_8717_source_audit` R16 will consume only the five originals after
+checking every expected full SHA256 and size before any unlink, metadata slot
+alone; then restore RingManager by removing exactly eighteen TEMP blocks to
+qualified SHA256 `1bbe05c809d3aefa23413c2f6803b934263767173cde3a2ba1ee642a4f9e653b`,
+remove the exact owned temporary witness source and its two inventoried diagnostic
+classes under the worktree build writer. All maintained classes and Ending R1/R2
+source/PE remain untouched. Existing instrumented RingManager compiler output is
+retained and is not a compiled certificate for the restored source. No archives,
+copies, receipts, compilation/JVM/native/probe or commit. Subsequent work is
+source/data read-only: native AUX slot8/code/XY through122, item-orb/attracted-ring
+producers and entry/shield ownership; geometry or slot agreement is not lineage.
+
+R16 completed bounded cleanup: all5/583376B expected full hashes/sizes were
+checked before any unlink, metadata slot alone;18 TEMP blocks restore exact1bbe,
+owned9e89 source and its two inventoried witness classes are absent. All18 other
+durable R15 class size/SHA/mtime pins and Ending R1 three sources/PE remain exact;
+Ending R2 files were not modified. The first helper did not finish its final
+preservation/accounting assertion: its broad recursive Ending set mistakenly
+included the intentionally edited Root Plan and RingManager. Exact traceback was
+not surfaced; no cleanup block was rerun. Completed operations were independently
+confirmed. RingManager.class retains inventoried instrumented68c5992f bytes/mtime,
+explicitly stale against restored source; Root alone resolves any further removal.
+
+Native AUX0..122: slot8 is2D690 at0, removed36;4A0C6 at40, removed104; first
+1A88C at109 at00C0/0D68;121 is00D0/0D79;122 changes to1A920 at unchangedXY,
+with physics rings0105→0106. Slot12 item orb4A218 at00C0/0D50 has no observed
+conversion in the available object-state events. Neither slot nor XY binds an
+engine parent. Source owns the ring via Obj_Attracted_Ring/AttractedRing_GiveRing
+(asm35710/35774); the only textual allocation is Test_Ring_Collisions_AttractRing
+(18544), entered from a lightning-status branch. Current GameLoop2755 restores
+saved entry shields, matching SpawnLevelMainSprites_SpawnPowerup (asm8267);
+standalone TraceReplaySessionBootstrap784 constructs the bonus entry with zero
+saved status and does not invoke that restore. This is a source seam, not proof
+of native saved shield/caller or a permitted hydration/fix. Smallest missing
+witness: the actual allocation caller A0, both actual shield status bytes, saved
+entry status, allocatedA1 and original ring A3/status-tableA4/slot+30, together
+with the corresponding actual-engine entry shield dispatch before109. No new
+probe/logger/test/runtime edit, reporting fix, retry or execution was authorized.
+
+R16 retained raw inlet proof: original Pachinko AUX SHA256
+`0ab0049a0645ef0f599d1f3c334fb507355f9074010feb1516050906b9cd601b` contains
+exactly123 Sonic interact_state records at every row0..122, all
+`status_secondary=0x21`; all123 corresponding Tails values are0x00. Native
+constants184/189 define shield bit0/lightning bit5. Thus native P1 lightning is
+observed already at inlet, independently of allocation-source inference. The
+missing provenance is Saved_status_secondary/Saved2_status_secondary at actual
+entry and how the actual engine standalone driver derives that semantic saved
+state before invoking the existing shield restore. Current synthetic zero entry
+provides none; comparison AUX cannot seed it. Actual allocation caller/register
+lineage remains missing despite the native ring routine timeline. No new
+execution, authoring, fixture seed or runtime/bootstrap correction authorized.
+
+
+Root R16 final owned-class cleanup: the retained stale instrumented outer
+`target/classes/com/openggf/level/rings/RingManager.class` was independently
+verified44279B/SHA256`68c5992f18fc14ea8e8b7747b2d673952c18637f3e1d648c722afe8296301906`/
+mtime_ns1792284896621324096 and its constant-pool R14 marker. Root accounted
+that exact owned diagnostic bytecode here before removing ONLY that class under
+the intended worktree build writer. All other RingManager class hashes/mtimes
+remain exact. Restored source1bbe is not rebuilt; no compiler/JVM/native, raw
+archive, runtime correction or original trace certificate accompanies cleanup.
+
+### Ending R2 original-prefix causal-owner source freeze — 2026-10-18
+
+SOURCE ONLY: the separate owned ending-causal-owner-r2 unit has exactlythree
+regular0600 files. No compiler, assembly load, native/Java/JVM/admission or new
+clock sample ran. Root actual-file review is the next gate; no R2 PE exists.
+R1freeze054b/PE97a256/modes/52artifact+17sourcepins remain exact and useful;
+historical failed attempts are unchanged. Current Root RingR16 source/accounting
+and fresh concurrent Plan tail are preserved.
+
+- `ClockCausal.cs`: 31446B / SHA256 `ab3a2d8875af6963f8247e9c2af7040b676042ca4598b832cdd476664d5c5044`.
+- `launch_causal.py`: 35196B / SHA256 `e9643bf678f8957d9984d74b7067e16da770afa82f30f1f10872fa54fa810c4b`.
+- `causal-plan.json`: 66102B / SHA256 `eb34dbcf7666e010662fb6f526205c042588dfcb366fe02576ab07cd87a5979b`.
+
+Combined filename/NUL/hash/newline freeze: `24d51958c38afec2c4b75d5392a649d77f1b05e54b6771302e64462089a456c4`.
+Manifest pins63artifacts, retaining all original52 plus11R2/movie/source/PE pins,
+and the same17startup-source pins. Integrated c26 harness MVID is statically
+read from PE bytes as fabdbc1b-ae05-476e-acb7-b0fcea99d2b8; no PE load occurred.
+
+The source replays ONE authentic AD40 prefix from original row0 once, at most
+539492literal rows/Advances. Three source/ROM-authenticated PCs05ADCE/001C1A/
+001CE4 each install a passive managed counter then ordered ReaderA/B BEFORE
+first Advance:3counter+6Reader registrations, no extra PC/API. Only verified
+producer second callback arms host metadata. Incoming A1/A2 are pre-LEA; actual
+FIFO at head entry validates1D17A6→FFFF0000 and1CF2D4→FFFF9000, actual busy
+bookmark/stored continuation uses source bounds, and retirement validates real
+committed cursors1D1DCE/FFFF0E80/count and the last actual stacked caller.
+Empty producer FIFO is a narrow fail-closed pilot ingress precondition, not a
+claimed universal ROM rule. Unexpected context/caller/refs/closure STOP; no input
+change, retry, suffix, setup, checkpoint or widening. No count-of-three assertion.
+
+All warm-up raw triples are counted even without output. Policy B=539492×3×2=
+3236952 is a declared allowance, not a natural invocation/throughput bound.
+Equality poisons Reader before cap+1; same-PC counters count dispatches after
+poison. Completed deliveries, all Reader/counter invocations and undelivered
+callbacks remain separate. At one internal pre-delivery failure D<B, uncertain
+scalar count stays unavailable and3D+3≤3B; at D=B no later raw read occurs.
+Scalar-read ceiling is9710856. Getter attempts reserve before issuance:6known
+35-register+64KiB projections per emitted pair plus4final, at most38818032calls.
+The parent requires exact successful projection/getter totals and exact integer
+schemas, not permissive numeric equality. Emitted pairs≤98/JSONrecords≤100,
+262144Bnativepipe/4096Bstatus/8192Bfooter and304132Baggregate<1MiB remain strict.
+Proposed native600s-from-spawn/660steardown are partial-STOP limits, not measured
+performance. Compiler remains a separate30/60gate; current Main NORMAL admission,
+inheritedFDs/noouteractivity and owned-group finally/reap semantics are retained.
+
+Offline AST/C#lexical/all63+17pins, shared-helper inverse and one synthetic valid
+plus19malformed in-memory classifier models were checked. A pure fixture-assembly
+bytes/string TypeError was corrected before the completed model checks; no
+fixture/log/archive/receipt exists. Independent source review accepted callback
+sequence/poison accounting and found parent typing/getter/schema/naming gaps;
+those are corrected in this freeze. Final files still require Root full review,
+then separate compiler authority; no runtime/type/ABI/throughput qualification.
+
+Native producer/head/retirement facts would advance this prerequisite only.
+Hidden VDP/DMA/FIFO/IRQ/Z80/PCM history, absoluteT/B/phase/SR/IRQ origins and
+independent production continuation remain UNKNOWN. Six declared-setup measured
+ending cases,46multi-valued contexts/live4-5-4/readiness/parity are not supplied;
+FDF source0AE3EE is distinct from this target1D17A6. Existing tool/test/guide
+promotion locations remain plan-only. Exact diffs/pins/ownership24h are recorded
+only in the existing own registry; the3sources stay cleanup_pending for review.
+
+Proposed next compiler-only command, NOT EXECUTED/NOT AUTHORIZED:
+
+```text
+python3 ${TASK_SCRATCH}/ending-causal-owner-r2/launch_causal.py compile --freeze 24d51958c38afec2c4b75d5392a649d77f1b05e54b6771302e64462089a456c4
+```
+
+### Ending R3 exact original-movie marker source correction — 2026-10-18
+
+Root consolidated independent review found one material SOURCE mismatch in R2
+freeze24d51958c38afec2c4b75d5392a649d77f1b05e54b6771302e64462089a456c4:
+launcher expected `b'3\r\n'`, while the pinned original AD40 BizState1.0 entry
+is exactly `b'3\n'`,2B/SHA1121cfccd5913f0a63fec40a6ffd44ea64f9dc135c66634ba001d10bcf4302a2.
+This is a historical precompile STOP finding; no R2 compiler/native attempt
+occurred. The original movie/entry and all R1 history remain unchanged.
+
+R3 changes ONLY that exact Python byte literal and the JSON launcher's required
+selfpin length/hash. No CRLF/LF alternatives, state fallback or archive waiver is
+accepted. Full-function readback/single inverse recovers the entire old launcher
+e9643bf678f8957d9984d74b7067e16da770afa82f30f1f10872fa54fa810c4b;
+restoring the two selfpin fields recovers entire old planeb34dbcf7666e010662fb6f526205c042588dfcb366fe02576ab07cd87a5979b.
+C# remains byte-exactab3a2d8875af6963f8247e9c2af7040b676042ca4598b832cdd476664d5c5044.
+No classifier/cap/getter/pair/arm/FD/deadline/compilerargv/native behavior changed.
+All63artifact+17source checks pass, with only the launcher selfpin updated;
+AST/lexical/actualmarker source checks passed. Unchanged1valid/19malformed pure
+models were not repeated. No compiler/typecheck/assembly/native/JVM/admission,
+backup/archive/receipt/new artifact was created; no R2 PE exists.
+
+Same exactlythree regular0600 source files, new ordered freeze `7e14629b97bc75c87063d644c23d04e61886cf8bfa39870de708e67818fab67e`:
+- `ClockCausal.cs`: 31446B / SHA256 `ab3a2d8875af6963f8247e9c2af7040b676042ca4598b832cdd476664d5c5044`.
+- `launch_causal.py`: 35194B / SHA256 `dcdb2550d2ebf2d49ac0fc2a655c25258402dbd93182d0bf7271fd8068028c11`.
+- `causal-plan.json`: 66102B / SHA256 `3d8ffcc7c1f50f2ad6b76b189bb2cbe6daaf5ba3a910deda2f9362328ab85310`.
+
+New own R3 registry entry preserves R2 evidence/limits unchanged, canonical
+management/root/ending_clock_observation_source with UUID unavailable/no invented
+T3ID,24h expiry/authfalse/livejobs[]. The unchanged launcher still reads the
+existing R2 authorization key; any future compiler authority must explicitly
+set that gate to the separately reviewed NEW freeze without rewriting historical
+R2 source results. No such authority is set now. Proposed COMPILER ONLY command,
+NOT executed, pending Root actual-file review:
+
+```text
+python3 ${TASK_SCRATCH}/ending-causal-owner-r2/launch_causal.py compile --freeze 7e14629b97bc75c87063d644c23d04e61886cf8bfa39870de708e67818fab67e
+```
+
+### Root reviewed hand/source and successful-submit ownership checkpoint — 2026-10-18
+
+R65 local Hand source817c0dbb262bf78066d92e12cd5cc47a7386bc968fd229c79ffc266b949ed2a5
+was read against the full68da baseline. Its exact inverse restores that baseline;
+only native-player onUnload calls become local GrabState.clear/owner-null. Pinned
+044 loc30C76 -> Sprite_OnScreen_Test -> Delete_Referenced_Sprite clears the
+launcher SST, not captured native player control/status. Extension cleanup and
+all normal launch/jump/role-promotion paths are unchanged. Root and independent
+GPT-6.1 review found no material source issue; this is not an executed candidate
+pass. One separate R66 exact ten-class normal lifecycle was authorized and is
+source-frozen while live. R63 normal API-hook blocker remains unwaived; no pin
+change, hook bypass, commit or policy application was authorized in that run.
+
+Root DIRECT read R50 all eleven original artifacts457408B. Journalc341e391a8836934fcee74c7018e05554c79e64a854c545a086f17b0174a5769
+contains63 strict UTF8/LF/no-duplicate-key rows: header,25outside,36successful
+submissions,footer. All17module/19direct births use the same observed service13,
+144distinct job/handle/submission/preparation refs; all actual-submit clocks are
+null and last OUTSIDE clocks are separately labelled. Full owner trees were
+read by first-state plus complete lossless deltas/removals, all36 descriptor/
+fingerprint/ref vectors and all17 complete stacks through90unique frame values.
+Root also read all72 XML properties/full classpaths, full13587B primary error
+byte-exact in TXT,29 complete timing identities, all104stderr lines through34
+unique values, all3x36 first-error field tables/near objects, all4JSON/4owners.
+Initial display truncation was repaired with bounded complete representations.
+Strict footer/caps were positive; no diagnostic suppression/close error occurred.
+
+Actual enemy19..21 caller is processRuntimeArtQueue -> processEnemyKosArt;
+fire22 comes from updateAct1 -> ensureFireOverlayTilesLoaded. Gumball terrain14
+successfully submits3FEE2E through title's fresh-terrain publisher. Returned
+normal title15..18 originate in doExitBonusStage -> initialize/loadAllArt with
+new generation4 and index-1. Later terrainStarted is true while index remains-1;
+no3A566A/3A944E success exists among all36 submissions. These observations do
+not identify the earlier handoff-index writer or native birth/callback/finalVRAM.
+Original AIZ2 FIFO-full is still the primary runtime error; returned seg2 remains
+partial21196=20427physics+769animation, first34module.busy true/false. Earlier
+partials1/12 and gap2/0failure remain bounded; SS12/FDF are unreached. Accepted
+originals may be consumed only after durable child accounting/all expected full
+hashes before any unlink under metadata-slot alone. R51 then owns source read/
+plan only for the returned handoff; no query-driven runtime fix is inferred.
+
+Independent review rejected policy commit6df0c52 as presently incomplete:
+emitted retained declarations lose enclosing owner identity, so moving public
+Api$A$B to Api$B can compare equal and reject a correct pin update. An isolated
+follow-up must first reproduce that regression in SH/installed PowerShell for
+commit-msg and ci-push, preserve scope identity, and retain hidden-record/public
+controls. No policy change is composed or waived before correction and review.
+
+Ending R3 exact b'3\n' source expectation and required launcher selfpin fields
+were independently inverted by Root to the complete historical R2 launcher/
+plan. C# is unchanged. One separate compiler-only R4 phase is authorized at
+freeze7e14629b97bc75c87063d644c23d04e61886cf8bfa39870de708e67818fab67e;
+no native/run authority follows. Cold R56 adds only three prospective exact
+selected memory-runtime files; inverse recovers the entire R54 manifest.
+Independent review found a documentation-only rejected-alternative symlink
+claim to correct before the next native attempt; selected entries/guard remain
+unchanged. Runtime binding, native input ingress and all route limits stay open.
+
+### Ending R4 sole compiler-only result — 2026-10-18
+
+ONE frozen compile command below ran on Rootf854 after actualR3/source review.
+No source edit/retry/versionprobe/observer PE load/native admission/run/Java/JVM
+or host/core/Reader rebuild occurred. Session39474 terminal0 emitted onlyfive
+launcher status lines; actual compiler stdout0B/stderr0B/no diagnostics. Child
+PID/PGID3875189 came from owned-spawn; primary/cleanup/postIdentity/launchFailure
+were allnull and COMPLETE_OBSERVER_COMPILATION_ONLY marked runtimeUNEXECUTED.
+Both compileauthority flags were disabled immediately after terminal; no run
+flag was set. The unchanged launcher used the existing R2key with explicitR4
+compile-only linkage, retaining historical R2/R3 source findings/results.
+
+```text
+python3 ${TASK_SCRATCH}/ending-causal-owner-r2/launch_causal.py compile --freeze 7e14629b97bc75c87063d644c23d04e61886cf8bfa39870de708e67818fab67e
+```
+
+The exact Popen argv is source-proven from frozen compile_argv+manifest: pinned
+/usr/bin/mono and MonoRoslyncsc.exe, nologo/targetexe/noconfig/nostdlib+/C#7.3/
+deterministic+/optimize+, ownClockCausal.exe outpath, ten pinnedreferences and
+ONE ClockCausal.cs. Full exactargv is in the existing own registry. A single
+post250ms /proc snapshot found no exact launcher/compiler, so PythonlauncherPID
+and direct /proc argv observation are unavailable; no child PID is substituted
+for the launcher. Submission→terminal observation interval12.289s includes
+prechecks/locking/tool latency; initialtoolwait0.251498542s and finalpoll0.00000637s
+are not measured compiler execution. Actual compilerseconds unavailable.
+Compiler30s-from-spawn/60steardown bounds applied; no native600/660gate ran.
+
+Static FILE BYTES ONLY inspection found newPE53248B/mode0644/
+mtime1792287365732785352/SHA84de84301a0799fdff2cdd1627352b08767a9b8763ee2046d0b5095534e3f70d,
+MVID6c88eeb1-c844-489f-bd99-ee9c6e0b1c38. It is unsignedClockCausal0.0.0.0,
+PE32console/ILONLY, metadata v4.0.30319; entrytoken06000074 is
+ClockCausal.Main(string[]) returningint32(signature0001081d0e). Static binding
+refs are mscorlib4.0.0.0(PKb77a5c561934e089),Newtonsoft.Json13.0.0.0
+(PK30ad4fe6b2a6aeed),BizHawk.Headless.Gpgx0.0.0.0(unsigned),System.Core4.0.0.0
+(PKb77a5c561934e089),BizHawk.Emulation.Cores2.11.0.0(unsigned). No assembly/PE
+load or managed/native runtime probe was used for this inspection.
+
+Postchecks passed63artifact+17sourcepins, exact7e146threefilefreeze/regular0600,
+R1freeze054b/PE97a256/modes/hash/mtime, Mainconfigregular0600/hash/mtime and
+MainHEAD/branch/foreignstatus. RootHEAD/index/trackedchanges outside this Plan
+and all17130 existing Java classes(97545344B/orderedpath+content hash) remain
+exact. CompilerPID and owned PGID are absent; no equivalentown livejob remains.
+Frozen launcher finally released writer/activity/inheritedFDs and reaped its
+group; this fresh-prefix Plan append occurs under a separate released Rootwriter.
+NewPE+3sources remain useful cleanup_pending for Root actualPE review. Compiler
+pass supplies no native binding/Reader/ending/context/6+46/live4-5-4/readiness
+qualification or subsequent execution authority.
+
+
+### Ending causal owner R5: sole pilot stopped in queue status accounting (2026-10-18)
+
+Root separately authorized ONE original AD40 native pilot after accepting R4 PE
+84de84301a0799fdff2cdd1627352b08767a9b8763ee2046d0b5095534e3f70d
+(53248B/mtime1792287365732785352) and exact three-file source freeze
+7e14629b97bc75c87063d644c23d04e61886cf8bfa39870de708e67818fab67e.
+The sole exact launch_causal.py run command used that freeze and --exe-sha256
+84de84301a0799fdff2cdd1627352b08767a9b8763ee2046d0b5095534e3f70d
+from Rootf854, Main absolute NORMAL/default7GiB8cores/estimate600, without an
+outer writer/activity shim. Session12859; actual Python PID/PGID3963582 was
+observed via /proc exact argv/cwd. No substitute Mono PID was reported.
+
+Actual terminal exit2 was PARTIAL_FAILURE_STOP, typeRuntimeError, message
+`RuntimeError: bounded launcher status cap`. The entire original bounded output
+was relayed losslessly in the tool transcript and task message, not archived:
+4178ASCII/UTF8 bytes/25LF lines =24lease-status records4069B plus109B failure
+footer. Original chunks6f2001/c4dcc3/4e48f9/1b18bd/41bc3e/72b467/fda02c were
+339/340/1021/682/682/673/441B. Last emitted wait331s; existing shared queue
+telemetry independently records cancelled-waiting, wait361.2s, hold0s, end
+2026-10-18T01:49:31+00:00. Submission-to-terminal-observation361.860471s includes
+queue/precheck/tool latency; no child execution interval was measured or begun.
+
+Frozen launcher66-79 counts every QueueStatus.write through status against
+STATUS_CAP4096; only27B remained after those24lease records. Main
+maven_queue.py346-349 prints waiting messages before context yield355-357.
+The existing telemetry's cancelled-waiting/hold0 confirms no admission/yield.
+The next waiting-status write failed launcher70/need44 before child invocation;
+main486 captures launch_error, result staysNone, and main493 rethrows that
+managed error into the bounded final PARTIAL footer. No owned-spawn or
+owned-terminal event, native startup stdout/stderr, header, observation, causal
+footer, parent-positive marker, journal or observer-created output exists.
+Mono/Guard/Open/Bind/Advance/getters/hooks/producer/head/retirement were all
+unreached; no native clock or input row was observed/consumed by this attempt.
+The native600spawn/660teardown, raw/getter/output caps were not exercised.
+
+Postchecks passed all63 artifact+17 startup-source pins, exact7e146 regular0600
+three-file tuple, PE84de bytes/mode0644/mtime, retained R1freeze054b/PE97a256,
+Main and Root config regular0600/SHA6abd111c03f798dbe2a618cb4985aeb599127f44668edb2a8edbde118d11f7da/
+respective mtimes1792141742849921547 and1792233954468325347. RootHEADf854,
+MainHEAD8030832d2ab6080e5324cdfe35e971677fd97b41/branchdevelop/foreignstatus,
+Rootindex/trackedbytes outside this Plan and17130 existing Java classes
+(97545344B/path+contentSHAc6ff63c233fe8cb44328efc8e72021dfda6db395e29583b92bad25baa2015230)
+are unchanged. Target directory contains only the retained PE. Actual Python
+PID/PGID is absent; no equivalent owned process or own queue/running lease
+record remains. Both R2 launcher and new R5 run-authority flags are false;
+historical R2 source/R3/R4 evidence is byte-equivalent as structured values.
+
+This fresh-prefix append uses a separate Rootwriter after request teardown.
+Canonical management identity /root/ending_clock_observation_source, UUID
+unavailable/taskIdnull; new own registry key gpt61_ending_causal_owner_native_r5,
+24h expiry, useful three sources+PE cleanup_pending. No source correction,
+compile, native retry, extra sample, JVM, commit or integration occurred.
+The pre-admission failure establishes no causal/native/ending qualification;
+6+46/live4-5-4/absoluteT/B/IRQ origins/board/readiness/independent continuation
+remain unavailable. Stop for Root actual result review before any new authority.
+
+
+### Root checkpoint 2026-10-18: retained policy regression and bounded launcher status
+
+Main remains develop8030832d2 and Root f854e0185; no source integration,
+Root JVM, commit, push or delivery claim is added by this checkpoint.
+
+HCZ R66's149 green focused cases remain their eight-runtime6dd81 tested
+state. R67 composed the exact reviewed697 policy functions with all39
+retained HCZ policy test bodies and27 newer cases, then ran the actual66
+Python safety methods once. Session15009 returned1: four retained methods
+failed in both shell and PowerShell, eight subtests total, zero errors or
+suite skips. The failing identities are actual GameRules preset initializer,
+class multiline initializer/private-body boundary, record lambda/array/
+multiple-field declarations, and record preset/private implementation bodies.
+No preservation commit, hook retry, source rewrite or diagnostic cleanup was
+performed. The original15 staged blobs, hand817c source, all27 compiled
+ownership entries and accepted20 R66 originals279814B remain preserved.
+
+The compiled ModApiSignatureSurface field projection records declaration
+owner, modifiers, generic type, name and annotations, with no initializer or
+constant-value read. Therefore the newer source-hook test requiring a pin
+for public VALUE1-to2 was an incorrect additional contract. Policy R3 is
+reconciling initializer extraction with the actual exporter while retaining
+all old body/name/type/modifier/annotation/multiple-declarator obligations,
+complete declaration owner paths and hidden-type visibility. No API pin,
+Java exporter, schema or hook bypass is authorized. A fresh independent
+review and actual composed safety checks remain required before preservation.
+
+Ending R5 ended before admission with the actual bounded launcher-status
+cap error; its original25 tool-transcript lines4178B were fully read. Cold
+R58 session17132 ended1 with only18 queue notices4081B, last coarse wait512s,
+no acquired/spawn/error/header/marker and journal absent. Root read the full
+Cold original33447c70c5c6317314e10579f812aeb0ee52f9e197995a323193a5eeeea17a54.
+The same status-cap path is source-consistent for Cold, but its exact thrown
+exception and native child/runtime were not logged and remain unknown.
+Neither attempt qualifies a native gameplay observation or a timing result.
+Both request trees and admission leases are terminal/released.
+
+Ending R6 and Cold R59 are separate SOURCE-ONLY bounded queue-status
+coalescing/first-failure-preservation corrections. Existing status and
+aggregate caps, native parsers, fixed source pins, held PE bindings and
+native deadlines remain unchanged. Queue waiting must remain distinct from
+execution; repeated recognized progress notices must not terminate a single
+waiting request by consuming mandatory terminal/failure output space.
+No compiler/native retry is authorized by these source phases.
+
+FDF R52's complete419-line public saved-origin terrain test fbb120ad was
+read by Root and a fresh independent GPT-6.1 review with no material finding.
+Its four methods remain uncompiled/unexecuted at that review boundary.
+Historical R53 ordinal63 ended without execution waiting for the literal
+identity relay. Continuation ordinal64 now carries its own actual task/run
+identity; the sole unchanged normal class request is session35373, queued.
+No duplicate request, narrowed selector, trace observer or source edit was
+added. All gates and all original reports must be inspected before any
+clean old-red attribution; capacity, extra-owner or prerequisite failures
+remain stopping conditions. Readiness, SS/FDF and full route closure remain
+open. Remaining surface-resource replacement and missing-key/participant
+coverage is separately being authored source-only, with no runtime changes.
+
+
+### Ending causal owner R6: finite queue-status bridge, SOURCE ONLY (2026-10-18)
+
+R5 session12859/exit2/status-cap STOP remains unchanged and unqualified; the
+original25-line4178B transcript is preserved only in original tool/task messages.
+Root separately authorized R6 SOURCE accounting correction, then the adjacent
+raw-relay first-error guard. No compiler, managed/native load, CLI probe, actual
+admission/child/Advance/clock sample/JVM/retry occurred in R6.
+
+The exact same three external regular0600 files remain in
+`${TASK_SCRATCH}/ending-causal-owner-r2`:
+ClockCausal.cs31446B/SHAab3a2d8875af6963f8247e9c2af7040b676042ca4598b832cdd476664d5c5044
+is byte-exact; launch_causal.py43841B/SHAb9e5e729b7665ae2e5362fd86c9623d434bff501098c8f941181360724b0766d;
+causal-plan.json69427B/SHA77660cfbc941566bd96960ae8396b0302169f58fb0fe5095f27bb5375af1b5af.
+Actual ordered three-file freeze:
+98105b97cb44a2d0549b701e7904cb91d9bd60949092305701fea01829e5e6d7.
+Existing PE remains53248B/mode0644/mtime1792287365732785352/
+SHA84de84301a0799fdff2cdd1627352b08767a9b8763ee2046d0b5095534e3f70d;
+it was neither deleted/recompiled nor loaded in this phase.
+
+QueueStatus now frames complete ASCII source lines, at most1024B pending. Only
+five pinned Main print templates are ordinary progress: worktree wait/acquired
+(maven_queue.py79/84), nonexclusive activity wait(maven_activity.py42), Maven
+wait/acquired(maven_queue.py346/351). Paths are exact Main/Root, estimate600 and
+default7GiB/8cores; priority short-run/agedFIFO and mode resource-aware/serial
+are explicit finite alternatives. Git policy overrides, unknown/nonASCII,
+incomplete/overlong lines, duplicate acquisition or phase/order regressions
+STOP; no guessed prefix or generic nonJSON filtering is used. Acquired source
+message is not proof that the context body was entered. The lastSourceMessageState
+field describes actual printed metadata, not inferred current admission state.
+
+At most one lease-first plus one lease-summary preserves global first/last wait,
+last source-message state and counters for writes/characters/source lines/each
+fixed message kind. Counters saturate at2^63-1 with named countsCensored;
+rounded source seconds keep20 decimal digits with secondsCensored. This is
+bounded diagnostic coalescing, not an unbounded exact progress log or native
+clock. Repeated known wait notices add no output records and cannot exhaust
+status through cumulative progress bytes. Queue waiting still does not consume
+the unchanged native600-from-spawn/660teardown deadline.
+
+Single-use JSON+LF byte reservations are first512+summary1536+spawn256+
+terminal1280+one mutually exclusive completion512=4096; existing failure footer
+remains a separate<=1024B. Native262144/compiler32768/aggregate304132,
+original539492rows/ONE original prefix/no setup or alignment, threePCs,
+9registrations/raw3236952/getters38818032/pairs98/records100 and FD/process-group
+finally contracts are unchanged. Six terminal diagnostic fields retain encoded
+prefixes<=160B with explicit censoredDiagnosticFields; worst-case1256B fits1280.
+Original primary/cleanup/postIdentity/launchFailure remain separate. Managed
+queueOutputFailure never replaces the original launch failure. A summary or
+secondary terminal write preserves the selected first error. The exact original
+stdout-then-stderr relay body is unchanged modulo indentation; a transport
+exception is separately relayOutputFailure/rawRelayComplete=false, which blocks
+validation/parent-positive and makes raw transcript completeness unqualified.
+No raw bytes/order/caps/Reader/getter/native parser/filter were changed.
+
+AST and C# lexical-only checks pass; no typecheck/compiler was used. Full-file
+single inverse recovers historical launcher35194B/SHA
+dcdb2550d2ebf2d49ac0fc2a655c25258402dbd93182d0bf7271fd8068028c11;
+removing only the R6 manifest provenance and restoring its launcher size/SHA
+recovers historical plan66102B/SHA
+3d8ffcc7c1f50f2ad6b76b189bb2cbe6daaf5ba3a910deda2f9362328ab85310.
+Every other original function source segment, including check/environment/
+child/teardown/startup/strict native validator, is byte-exact. Full final diffs
+are in original tool result eeaf14: launcher diffSHA
+6669a5e706a595d42c596d79083b896755b4c322141580a25317c3de1436544c,
+manifest diffSHAcc2eef56652895eb3021881c4cbf621a0fa39405b2c81a55c65b88e802d34a5f.
+
+Pure in-memory source models passed10001wait reports/20003fragmented writes,
+one progress record during waiting, exact ordinary first/last/counters,
+censored saturation, all5source-generated templates and28failclosed cases.
+Exhaustive summary-shape overapprox1065B; sixUnicode terminal1190B;
+all mandatory long-wait status1212B. Thirteen AST-isolated main models used fake
+admission/child/validator and split in-memory raw/status sinks, including audit/
+parser errors, unknown progress, summary/terminal write failure, and raw relay
+transport failure preserving primary. Successful raw relay call vector remains
+stdout,newline,stderr,newline when source streams lackLF. No real queue/helper,
+subprocess, assembly or native call occurred in these models; they do not
+qualify a future workload. Independent actual-source GPT-6.1 helper+final relay
+delta read found no material findings; model execution was not independently
+repeated. Native parser's existing1valid/19malformed models were not repeated
+because that entire source remains exact.
+
+Explicit inherited limit: this bridge handles Python stdout from those Main
+helpers. Nonzero captured Git commands still raise; OS-level inherited stderr
+from a successful Git command is not newly captured/qualified. No blanket
+stderr allowance is introduced; native child stderr's strict finite contract
+is unchanged. Hidden board/IRQ/origins/engine continuation/6+46/live4-5-4/
+readiness and actual ending ingress remain unobserved by R6.
+
+Postchecks passed all63 current artifact pins(only own launcher selfpin changed)
+plus17 unchanged startup-source pins, three-file modes/set, unchangedPE/R1,
+Main+Rootconfigregular0600/hash/mtimes, Rootf854/Main803/branch/foreignstate/
+index/trackedbytes outside this Plan and all17130Java classes97545344B with
+ordered path/contentSHAc6ff63c233fe8cb44328efc8e72021dfda6db395e29583b92bad25baa2015230.
+Historical R2/R3/R4/R5 registry values remain exact. Own R6 key
+`gpt61_ending_causal_owner_queue_status_source_r6` has canonical management
+identity /root/ending_clock_observation_source, UUID unavailable/taskIdnull/24h;
+execution_authorized=false/livejobs[] and useful three sources+PE cleanup_pending.
+This fresh-prefix Plan append uses the intended Rootwriter after all real
+request activity ended. No commit/integration or later execution authority.
+
+Proposed ONE future command, NOT executed; requires separate Root actual-file
+review and explicit gate, using the retained same C# PE (no compile proposed):
+
+```text
+python3 ${TASK_SCRATCH}/ending-causal-owner-r2/launch_causal.py run --freeze 98105b97cb44a2d0549b701e7904cb91d9bd60949092305701fea01829e5e6d7 --exe-sha256 84de84301a0799fdff2cdd1627352b08767a9b8763ee2046d0b5095534e3f70d
+```
+
+
+### Ending causal owner R7: sole native pilot, parent600s partial STOP (2026-10-18)
+
+Root actual-reviewed R6freeze98105b97cb44a2d0549b701e7904cb91d9bd60949092305701fea01829e5e6d7
+and samePE84de84301a0799fdff2cdd1627352b08767a9b8763ee2046d0b5095534e3f70d,
+then authorized ONE original AD40 pilot. Sole frozen run command used those exact
+pins from Rootf854; session98092. Actual /proc PythonPID/PGID4187882 is distinct
+from actual owned-spawn and /proc MonoPID/PGID4189789. Default Main NORMAL
+7GiB/8cores/estimate600 admission, no outer writer/activity or resubmission.
+
+Actual launcher exit2; owned-terminal childexit-15, primary
+`RuntimeError: parent configured spawn deadline STOP`. Parent cleanup,
+postIdentity, launchFailure, queueOutputFailure and relayOutputFailure areNULL;
+rawRelayComplete=true/censoredDiagnosticFields[]. Both run-authority flags were
+disabled immediately at terminal observation. No source/compiler/model/variant/
+checkpoint/suffix/alignment/extra sample/retry was performed in this phase.
+
+The ENTIRE original produced stream is6655ASCII/UTF8B/59LF lines, relayed as
+plain original task message and tool text only, without copy/archive/log/receipt:
+nonempty original chunksabc1bb137B,9768a9105B,e9eb3d6413B; seven intervening
+chunks are empty. Native stdout5451B=header3314B plus52startup lines2137B;
+native stderr is exactly28B `Initializing GPGX native...` plusLF. Actual52-line
+startup block matches pinned stock/source grammar in read-only actual-stream
+inspection. There is ONE provisional native JSONheader, ZERO emitted observation
+rows, NO childfooter and NO parent-positive marker. Overall positive minimum
+predicate would reject native53lines as `complete startup block plus JSON records
+missing`; the actual parent stopped earlier on its deadline reason. Output cap
+was not exhausted: status1057B plus119B failurefooter and5479B native output.
+
+Header reports this-process managed binding prerequisite: before Common/
+EmulationCommon/Cores exact and BizInvoke absent, after all4exact/count1/
+fileExacttrue; no censorship/unknown table state. Header policy fields, registered
+PCs/registration counts/input maximum/projection sizes are managed metadata,
+not evidence those hooks/Advances/getters executed. Source order at
+ClockCausal.cs435-457 witnesses completed pre-open artifact/movie/ROM instruction/
+stream checks, managed prerequisite and header; native startup witnesses entry
+into GpgxHost.Open after Guard.BeforeOpen returned. There is no subsequent
+progress marker: Open return, Bind, nine installed callbacks, first or later
+Advance, input last/consumption, internal unarmed raw triples/dispatches/getters,
+producer arm/head/retirement, projections, Reader final identity and child
+Reader->Host->Guard disposal are UNAVAILABLE. Zero emitted rows does NOT imply
+zero internal progress/callbacks/copies. No guest cause or ending ingress fault
+is assigned. No actual rawcycles/refresh/encodedIRQ/registerPC/SR/caller/FIFO/
+bookmark values were emitted; all origins/board/continuation/6+46/live4-5-4/
+readiness remain unobserved. Parent process teardown is distinct from unconfirmed
+managed Reader disposal/verification.
+
+Queue summary counts6writes/693characters/3sourceLines/2waits+1acquisition,
+first0s,last30s,acquired48s/resource-aware; no counts/seconds censorship or
+rejection. Existing queue telemetry records wait48.3s, hold600.7s,end
+2026-10-18T02:25:04+00:00; telemetry outcome `completed` describes lease context
+return, NOT native success. Submitted02:14:15.340424UTC to terminal-observed
+02:25:09.041830UTC interval653.701406s includes queue/prechecks/tool latency.
+Exact child execution seconds are not emitted; parent600s deadline was reached.
+Hold600.7s is admission-context duration including checks, not a native clock or
+throughput result.
+
+Postchecks passed63artifact+17startup-source pins, exact98105threefile tuple/
+regular0600, samePE53248B/0644/mtime1792287365732785352, retainedR1sourcesPE,
+Main/Rootconfigregular0600/SHA6abd111c03f798dbe2a618cb4985aeb599127f44668edb2a8edbde118d11f7da/
+mtimes1792141742849921547 and1792233954468325347; Rootf854/Main803/develop,
+relevant symbolicrefs/index/trackedbytes outside this Plan/Mainforeignstatus
+and all17130classes97545344B/path-contentSHAc6ff63c233fe8cb44328efc8e72021dfda6db395e29583b92bad25baa2015230
+remain exact. Both actual PIDs/processgroups and owned waiting/running records
+are absent; target directory contains only retainedPE. Parent finally teardown/
+reap and inheritedFD/lease release completed, and this separate fresh-prefix
+Rootwriter append follows release. Own new24h R7key
+`gpt61_ending_causal_owner_native_r7`, canonicalidentity
+/root/ending_clock_observation_source/UUIDunavailable/taskIdnull, authfalse/
+livejobs[]; R2..R6 history preserved except required current R2 gate fields/link.
+Useful3sources+PE cleanup_pending. STOP for Root DIRECTread; no further source,
+compiler, native or integration authority inferred from this partial attempt.
+
+
+### Ending R8 source boundary inventory: Root acceptance of R7 (2026-10-18)
+
+Root DIRECT-read and accepts the ENTIRE original6655B R7 stream as the
+actual partial parent600s deadline/childexit-15/header+startup/no observation
+result. Open-return/Bind/registration/Advance/input/raw-copy/getter counts remain
+UNAVAILABLE; zero emitted rows is not zero internal progress. This acceptance
+does not qualify native ending/clock/Reader completion or authorize a retry.
+R7 source98105/PE84de and all prior limits/results remain unchanged. Root
+authorizes only R8 SOURCE/PIN/PLAN inventory of the missing-progress boundary,
+no diagnostic code edit/compiler/native/admission/probe/JVM/run.
+
+
+### Ending R8: Open-tail source inventory and bounded progress-witness proposal (2026-10-18)
+
+SOURCE/PIN/PLAN ONLY. Root's DIRECT acceptance of the entire original 6655B R7
+stream is recorded above and in its existing registry phase. The last actual
+`D:DEVICE_NONE` line is inside GPGXControlConverter.cs214-218, before that
+constructor finishes. R7 does not distinguish an Open-tail stall from later
+Bind/registration/Advance work; zero emitted raw rows does not establish zero
+internal progress. No cause, throughput, guest failure or new clock sample is
+assigned. No observer/launcher/manifest code, PE, native input, cap or deadline
+changed; no compiler/native/JVM/probe/admission/model/retry ran in R8.
+
+Remaining source order after that line: build the Genesis controller definition,
+add Power/Reset and actual PAD3B controls, MakeImmutable, and assign the completed
+ControllerDefinition (ControlConverter.cs220-298; GPGX.cs386-395). GPGX.cs138-159
+then calls UpdateVideo (Frame==0 selects managed initial black-buffer allocation,
+not the later gpgx_get_video path), SetMemoryDomains (14 gpgx_get_memdom calls,
+indices 0..13, then domain wiring/registration), gpgx_set_input_callback,
+PutSettings (draw-mask and sprite-limit setters), KillMemCallbacks, and Genesis
+GPGXTraceBuffer construction/service registration. The tracer base constructor
+checks callback support and calls GetCpuFlagsAndRegisters once; a null Sink does
+not register its tracing callback. The outer Waterbox monitor exits, _romfile is
+cleared and the core constructor returns. GpgxHost.Open199-239 still constructs
+the wrapper35-93: MutableController, RAM/service lookup and size checks, execute
+callback availability and M68K BUS scope checks. Only then does Open return.
+These are source-consistent remaining calls, not proof R7 reached any specific
+one or a new qualification of the source-to-DLL build lineage.
+
+ClockCausal.cs435-457 completes artifact/movie/ROM and managed-binding checks,
+emits the header, then calls consecutive Guard.BeforeOpen/Open/Bind. Lines459-464
+install three same-PC counter->ReaderA->ReaderB groups (nine registrations), then
+stream original input from row0, Apply it, increment the existing attempt counter
+and call Advance. A successful outside marker after Bind can prove Open and Bind
+both returned; after the registration loop it can prove all nine calls returned.
+A separate Open-return marker BETWEEN Open and Bind conflicts with Reader.cs168's
+immediately-after-Open contract and the frozen launcher's lexical consecutive
+predicate. Exact Open-vs-Bind separation therefore needs an explicitly reviewed,
+prospective narrow allowance for one pure managed marker there. No silent regex
+waiver or Reader/host/API change is proposed or made now. Keeping the consecutive
+calls instead gives one combined Open-and-Bind-completed marker and cannot isolate
+a Bind stall.
+
+An outside `first-advance-call-next` marker after original Apply and immediately
+before host.Advance proves intention/call-next only. It cannot prove entry into
+the host body if the process stops between write and call. A normal-return marker
+proves that GpgxHost.Advance289-294 returned, including its pending execute-callback
+exception check. Exact body-entry evidence cannot be supplied by outside markers
+without host instrumentation or another callback, both excluded here. A future
+observer must distinguish existing attempts from a new managed normal-return
+counter; neither is a native clock/frame/phase identity.
+
+Proposed next authoring scope, ONLY after Root review: at most nine strict finite
+JSON progress records: conditional Open-returned, Bind-completed, all-nine-
+registrations-completed, first-Advance-call-next, first-Advance-returned-normally,
+then normal-return counts16/256/4096/65536. Powers16 are a declared coarse
+reporting policy; the next value1048576 exceeds the original539492-row cap.
+They never arm gameplay, select inputs, add Advances or define native time.
+Each record would be <=512 UTF8 bytes including LF, metadataOnly/provisional,
+with primitive observer counters and finite phase/order/type checks. No host or
+Reader object/getter, reflection, callback registration or new raw read belongs
+in the formatter. Missing/unknown/duplicate/reordered records remain fail-closed;
+partial output proves only its reached markers. Existing startup52-line/28Bstderr
+source grammar, primary/cleanup handling and raw record schema stay exact.
+
+Reserve at most4608 marker bytes inside the existing253952 ordinary-output
+allowance and keep8192 for the footer; account outstanding reserve before each
+raw write. The whole native pipe262144B, launcher status4096B, failure1024B and
+aggregate304132B bounds stay unchanged. Combined100 JSON records means header1 +
+footer1 + progress9 leaves at most89 emitted raw pair records; the old98 pair
+ceiling remains an upper ceiling, with the effective combined budget narrowed
+explicitly to89. Exhaustion before real closure is partial STOP, not permission
+to widen. With the contract-compliant combined Open+Bind marker there are eight
+progress records and90 pair slots, but Open-return vs Bind remains unavailable.
+The current emitter's looser internal200 check cannot be reused as the combined
+100-record proof; future code must enforce/reserve the combined budget directly.
+
+The minimum witness uses a pure managed serializer/call graph and before/after
+observer-owned scalar snapshots, excluding its intentional progress/byte/record
+accounting. This does not certify a native projection at the marker: that stays
+explicitly UNAVAILABLE. Existing ReaderA/write/ReaderB raw equality and known
+35-register+64KiB projection checks remain unchanged. If Root instead requires
+runtime projection equality around all eight post-Bind marker writes, existing
+DoubleRead before and after adds32 projections; with89 pairs the total is
+6*89+4+32=570 projections or37375470 getter attempts, below the unchanged38818032
+ceiling. This adds2097152 RAM peeks and1120 host register reads. A pre-marker
+projection can itself consume the deadline and hide the completed phase; that is
+a cost/visibility tradeoff, not the recommended minimum witness. Open-return
+before Bind would remain managed-only, preserving attestation before extra reads.
+
+Source cost bounds explain a possible expense without locating R7's bottleneck.
+Reader.ObserveAt174-191 performs owner/reflection checks, two anchor lookups and
+three scalar copies for each delivered raw triple, including warm-up hits. Its
+3236952 delivery policy permits9710856 scalar reads and6473904 successful anchor
+lookups; it is not a natural hit-rate bound, and poisoned dispatch attempts can
+continue without deliveries. One observer projection makes35 ReadCpuRegister
+calls and65536 RAM peeks. Each named register read rebuilds the whole table via
+getmaxnumregs/getregs plus managed allocations; each swapped RAM byte read enters
+and exits the monitor. Outside active guest execution this can activate/deactivate
+the Waterbox host, unlike a nested callback. Current592-projection policy permits
+38818032 getter attempts (20720 full-table host reads and38797312 RAM peeks;
+41440 native register-getter entry calls). Actual R7 callback/raw/getter/Advance
+counts remain UNAVAILABLE.600s from spawn/660s teardown remain failure bounds,
+not a performance promise or permission for a new acquisition.
+
+R8 records16 held-open source pins in its own existing registry entry. Twelve are
+already in the frozen artifact/startup sets; four additional inspected references
+are GPGX.IVideoProvider.cs b7180f0a39f5d0af9052d9eed454ed18232d547e4bfede029a080c9114a8921b,
+GPGX.ITraceable.cs d8a81a7fc50a1ef65f520051b0e3457ff1b0aa63208d31690a433578de3d542b,
+GPGX.IEmulator.cs 8b923de004e9f4d758062d3b2cc019a3a30dc382b45eef2e0181621b3f1c8ffc,
+and CallbackBasedTraceBuffer.cs 87806e23c7b84b2bad24b721ae3869688a04825d2baec9c4f5b2941526daa1b6
+in the existing source checkout427556b5ef3ac437eba754d90c5e7e9096c9a8df.
+These are R8 inventory pins, not a changed execution manifest or new module build.
+The source98105 three-file unit and retained PE84de, accepted R1 control, original
+AD40 stream, producer-only semantic arm and counter/A/B registration order remain
+exact. Hidden board/IRQ/origins/continuous production/6+46/live4-5-4/readiness
+remain unqualified. Useful owned sources+PE remain cleanup_pending; authority is
+false/livejobs[]. STOP for Root actual source/Plan review before any authoring,
+compiler or future single native gate; no new command is authorized by R8.
+
+
+### Root qualification checkpoint: local owners and original-route limits (2026-10-18)
+
+This is a documentation epoch after Root f854e0185, with no new Root Java,
+compiler, JVM, native command, integration or push. Main remains develop
+8030832d2 and its foreign files/private configuration are preserved.
+Machine-local paths in six newly appended historical command/path examples
+are rendered through the existing TASK_SCRATCH alias; exact executed argv
+remain in their original registry/task records. Arguments and source/result
+identities are unchanged.
+
+HCZ R68 composed the reviewed declaration/initializer policy and passed all
+72 actual Python methods under shell and PowerShell. Normal local commits
+825a76b7c (policy only) and 1f9f05ae1 (seventeen qualified component paths)
+preserve runtime eight-file SHA6dd81. The six-class resource boundary run
+78272 passed all74 cases, including four new a9df test cases: actual same-
+player ROM-art controller replacement with full-registry replay, missing-key
+reset preserving naturally nondefault ordinary dust, and both participant-
+removal refusals before partial application. Root DIRECT-read all12 original
+reports166388B, full74 identities, six fullTXT, all72 equal property maps and
+8057B classpath/duplicate, all44 stderr records15080B/nine unique full values
+and their ordered links. All55 source pins and all report sizes/full hashes
+matched. Missing-controller, uncaptured-live, active-water missing-key,
+cross-session, player recreation, mutable cache and pixel paths remain open.
+R69 local test/coverage preservation15d94b2a5 followed normal hooks; accepted
+R68 reports were consumed metadata alone after all hashes, classes retained.
+
+The sole original R69 AD40 canonical run92948 still fails. Available complete
+HCZ segment11 is14208 rows/251 differences (11 physics+240 animation), lag59,
+bootstrap/comparator warnings0, and no serialized firstNonCamera key. Its
+available recent five mapping entries are not a full mismatch vector. Prior
+R47 had6511 differences; this is an observed bounded comparison, not an
+isolated single-change attribution or a route pass. Segment13 still loses
+production ownership at BK2cursor88306, LEVEL/loadGeneration10/progression1/
+ROM1/act1. The manifest act2 is one-based: resolveRecordedLevel subtracts one,
+so engine act1 matches it. Actual admitted generation, in-level advance set
+and pastRecordedLevelLoop predicate are not serialized; the cause remains
+unknown. Six earlier complete zero payloads, gap13/0 and the incomplete
+segment13 payload remain separate evidence. Root has directly read all nine
+JSONs/owners, full original JUnit failure/TXT/two nested suppressions/four
+hardware identities and the complete961-line stderr via32 full unique lines
+plus its exact ordered sequence. Root acceptance requires full20-file hash
+verification before any later cleanup; no cleanup or next repair follows here.
+
+FDF R54 added only the saved-origin-return eligibility to the existing title
+terrain handoff; inverse recovers b0dcc. Unchanged fbb120 public return cases
+passed in R55's144 cases/19 classes. Root directly read all38 reports562100B,
+all144 identities/fullTXT/72 equal maps and full classpath, all115 stderr
+records89226B/70 complete unique lines+ordered reconstruction. Source-qualified
+negative FIFO/ROM-null title/bounds/WAV fixture warnings are retained; no
+measured art/audio/readiness certificate follows. Accepted reports were
+consumed metadata alone with classes preserved by R56.
+
+R56 fresh guards94592 passed99 (72 architectural+25 timing authority+2 API),
+including the actual source-budget predicate. Conditional original Mega93520
+still errors at AIZ2 queueAct2KosArt2932/2926 -> queueInternal205 FIFO-full.
+Returned segment2 was admitted and compared, partial21196 differences,
+first34 module.busy native true/engine false; SS/FDF were not reached.
+Gumball partial count16 versus prior12 and twenty suppressed hardware
+identities (twelve earlier/eight returned) are available observations, not
+an exhaustive four-tuple regression attribution or ordinal repair license.
+Root DIRECT-read all ten originals77701B/full10356B problem/TXT/72 properties,
+classpath exact prior full read, all104 stderr lines27909B/34 full unique
+values+ordered sequence, three full field tables/nearby actors, and all four
+JSONs/owners. All ten expected sizes/full hashes matched. R57 may preserve
+this qualified component locally, consume accepted diagnostics exactly and
+perform source-only producer/activation/service inventory; no fix or new
+execution is implicit.
+
+Ending R7's complete6655B original stream is accepted only as parent600s
+partial STOP/child-15. Header/startup do not prove Open returned, Bind or
+registrations completed, or any input/Advance/callback/getter count. R8's
+bounded progress-witness proposal is source-only; all source/PE/pins are
+unchanged and authority is false. Cold R60's first-error/post-child audit
+correction990c was read by Root and a fresh GPT-6.1 reviewer with no material
+findings; independent inverse recovers R59. All96 AST controls are source
+models, not native execution. Only one separately registered R61 frozen
+native run is authorized, same C#/PE/deadlines/caps; no cause is assigned to
+historical R58. No native origin/board/IRQ/continuation/Cold49613 or complete
+ending/SS/FDF/route claim is added by this checkpoint.
+
+The local pre-commit message assertion initially looked for policy trailers in
+the full final-block parse. Git parses the separate final co-author block there;
+the seven-policy block is now parsed separately before commit. This stopped
+before staging/commit or hook execution, with no runtime or test change.
