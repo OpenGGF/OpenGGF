@@ -19118,3 +19118,367 @@ child focused results are bounded evidence, not a Root campaign pass. No Main
 branch switch/integration/push/new JVM/native execution is performed by this
 source composition. Existing clean delivery policy and open coverage obligations
 remain.
+
+
+### ICZ1 physical post1 external pilot sole-attempt handback — 2026-10-18
+
+Own isolated branch feature/ai-s3k-icz1-physical-post-pilot, exact base
+`b5dd1698eedf35114df3d1b1407adb423baad342`; external reviewed Java90229eec
+adopted WHOLE without edits. Cowtree used Root as READ-ONLY source,13926reflinks/
+ficlone/fallback=no. Normal post-checkout created8ROM/config/2docs links; ALL11
+readlink targets verified together before ONLY8ROM+config links were consumed
+metadata_slot ALONE. Two docs links retained. Private regular0600 config5880B
+SHA6abd111c, mtime_ns1792302994048870989; Main sameSHA/0600/mtime1792141742849921547
+preserved. Normal .githooks bytes unchanged. No commit/hooks bypass.
+
+ONE exact frozen external-plan normal/no-profile method-only queued command
+(all3 original LONG absolute ROMs/JDK25/JTO+CLIgl/EGL/nullAL/no ambient display,
+Wayland or LD/Lua/fork1reusealpha; inherited JDK_JAVA_OPTIONS/MAVEN_OPTS absent
+and preserved), session62475, actual direct Python wrapperPID488593/proc argv+cwd
+verified. Normal7GiB8cores/estimate30s/wait0s. Terminal1 at05:58:24UTC; Maven
+01:10 displayed/rounded, parent/hold exact duration UNKNOWN. Production4145+
+test4211 sources compiled inside sole lifecycle; no separate JVM/build/version
+probe. An initial read-only duplicate helper matched its own bash-script argument
+by substring; exact argv-token predicate corrected BEFORE submission, no source/
+command change or extra JVM.
+
+Actual1T1F0E0S, suite1.301/case1.007. Complete1780 prefix reproduced post1 at1701
+(sample3BE5/076E,44rings/lives3) and zero-ring natural hurt at1780 (3D23/0672,
+VX512/VY-1024,airtrue,hurttrue,inv120,deadfalse,lives3,index1). Saved post own
+coordinates3BD0/076F and pre-hurt/post prerequisites passed by control flow.
+FIRST failure: Targets.bind->owner476, unique typed currently managed owner for
+placement12 predicate false. Actual matching cardinality was NOT printed;
+absence/multiplicity/caller/culling reason remain UNKNOWN. BEFORE Policy
+construction/any additional input: additional0/Astarts0/incomingReplayfalse.
+This is AUTHORING PREREQUISITE STOP, not a runtime old-red or route certificate.
+No source query-driven repair/retry after failure.
+
+Original stdout2354B/47lines contains six scalar observations, fixed script and
+full27-hold1780-input emitted RLE; NEW continuation NONE. Production in-memory
+compiler/writer/parser roundtrip footer reached, all six P1/P2 held fields equal.
+No InputLogAuthorTool.author call or BK2/input/CSV/image/journal artifacts. ALL72
+properties/full8119Bclasspath b8322b9100ce+exact duplicate/fullTXT/fullfailure
+(body exact inTXT)/allstdout+stderr832B8lines read. Captured stderr2FAST_NONE+
+2deterministic Kos estimates; console additionally1FAST after cleanup and
+compile/deprecation/initial tmpdir notices, not zero-all-warnings. No error/skip/
+cause/suppression/unknown XML child.
+
+Retain BOTH SINGLE originals29971B in own target/surefire-reports for Root
+DIRECT read, no copies/archive/receipt/cleanup:
+`TEST-com.openggf.tests.TmpS3kIcz1PhysicalCheckpointPilot.xml`28126B SHA
+`0e65b5adaa238bd1db7cffd607197beef8d825a73db30d295c09688406c264e8`;
+`com.openggf.tests.TmpS3kIcz1PhysicalCheckpointPilot.txt`1845B SHA
+`83afe067e461edd3cfa4e11735d1a9f8abfa6bf446651c2628906b84e4cce79b`.
+External90229 source/planf4200600 unchanged, adopted90229 untracked. All28
+reviewed source pins unchanged; HEAD/index/native refs/config exact.
+
+Current owned pilot class path/bytes/SHA/mtime_ns:
+```text
+target/test-classes/com/openggf/tests/TmpS3kIcz1PhysicalCheckpointPilot$1.class 1163 0fc5114ca085cd53b0afe5a81f75feb158edf7a62594eb4e7e8b8948b9fb363d 1792303101647980388
+target/test-classes/com/openggf/tests/TmpS3kIcz1PhysicalCheckpointPilot$Driver.class 18967 7dc6940047304317dac2c4c4db1b90c9958e59751ea370cfe1a8d7a99e91f3ae 1792303101648811570
+target/test-classes/com/openggf/tests/TmpS3kIcz1PhysicalCheckpointPilot$Policy$Phase.class 1689 b743afc61a4cd73cfef7a81933dddb284b6cb2c0c67dc991591e48f97c636c87 1792303101648956411
+target/test-classes/com/openggf/tests/TmpS3kIcz1PhysicalCheckpointPilot$Policy.class 4860 4a6080c0e58df8e8982bce6c0bb5b5f0d1101d488d82f9093a9e50bdbc3a20bd 1792303101648980399
+target/test-classes/com/openggf/tests/TmpS3kIcz1PhysicalCheckpointPilot$Targets.class 5039 a80709b825f0e8c76ea45b8973973b8ff78c97bd395179583f1d5c15626f88e1 1792303101649179014
+target/test-classes/com/openggf/tests/TmpS3kIcz1PhysicalCheckpointPilot.class 15302 7312ea8ff187c977d2066d0b6f5df801825a8a86315a6a2463a243dee9871149 1792303101649471267
+```
+All 17165 target class path/size/SHA/mtime ordered digest 60686562e273c874ee1a5631d1742d1a7647852df1a64d02ead58bd9cb2ff5ad. No prior compiled tree copied or shared.
+Direct wrapper reaped/ownJVMs absent; all own leases released after this factual append.
+STOP: no retry, source/runtime/controller change, cleanup, commit, integration, push or further workload.
+
+
+### ICZ1 physical post pilot accepted prerequisite and bounded source correction — 2026-10-18
+
+Root DIRECT read ALL2 originals29971B and accepts the sole terminal1T1F
+AUTHORING_PREREQUISITE_STOP at Targets.bind436/owner476: LEFT static ice
+placement12 did not satisfy unique currently managed actor cardinality. Actual
+count remains UNPRINTED/UNKNOWN; no absent/multiple/cull/runtime/old-red/death
+attribution. All1780 prefix/post1/saved3BD0/076F/natural zero-ring hurt prerequisites
+remain actual; additional0/Astarts0/incomingReplayfalse. Root authorizes only
+source correction after accepted2 cleanup, not another execution or controller
+retune. Exact XML28126B/0e65b5adaa238bd1db7cffd607197beef8d825a73db30d295c09688406c264e8
+and TXT1845B/83afe067e461edd3cfa4e11735d1a9f8abfa6bf446651c2628906b84e4cce79b
+are durably accounted above. Cleanup must verify BOTH full sizes/SHA before ANY
+unlink, metadata_slot ALONE; preserve ALL6 pilot classes and every other target
+file SHA/mtime. External Java90229 and planf420 remain untouched. Root owns the
+shared registry update; this exact accepted-result boundary is relayed in the
+native task handback, without this worker mutating Root/Main/shared registry.
+
+
+Accepted2 cleanup completed2026-10-18T06:10:42.211422UTC, metadata_slot ALONE.
+BOTH29971B sizes/fullSHAs verified BEFORE ANY unlink; only XML/TXT above consumed.
+All19671 OTHER target files path/size/SHA/mtime before==after, ordered JSON digest
+`a6018db8c4e94815e0c55a578fd18248563d8803096bfb843f0ab361d9a05115`.
+ALL6 pilot class inventory above exact, no class deletion/mtime changes.
+
+SOURCE proof: IczHarmfulIceObjectInstance SHA
+`0d06902014d254d56c497b6d2b5a6eb2612743bee1823326251ad098b5489457`
+outer x/y assignments ONLY constructor69/70; ordinary update81..85 has no XY
+writes; subtype0 touch130 returns; getX167/getY172 return the unchanged fields.
+Separate nonzero debris update255 is not this outer actor. Pinned native044
+sonic3k.asm SHA`d2ce907d1bad9447fbd11196a498a65a73f744ee8e57153b62c46581b1368ed1`
+Obj_ICZHarmfulIce189831..41 selects Sprite_CheckDeleteTouch179098..105 for
+subtype0: camera range test, collision-list publication/draw, no XY motion.
+This permits route steering/height from the UNIQUE actual ROM ObjectSpawn
+metadata; it does NOT establish actual failed sample population/cull cause.
+
+ONLY own pilot source corrected: left/right fields now actual unique ROM-decoded
+ObjectSpawn records, same ID/subtype/XY/layout matching. Exactly3 right-target X
+reads and1 left-height Y read replaced by metadata access. Prefix1780, all
+policy branches/button formulas, native speed/facing/standing requirements,
+2400 additional/16A-starts/1800 reload+release and existing output caps unchanged.
+Dynamic platform remains required actual strong ref, exact typed placement,
+raw riding/piece/geometry and !destroyed; no XY-as-identity substitution.
+Optional typed managed ice query allows0/1, prints count and actual layout/XY plus
+IdentityHashMap reference display token when present (display ONLY, never target
+binding); >1 explicitly AUTHORING_STOP with actualCount. No actor stability is
+required across lawful cull/recreation. Queries are read-only existing owner
+projection, no spawn/lookup factory/lifecycle rescue or gameplay write. No
+actual cardinality has yet been observed by this new source.
+
+Own corrected Java35036B/564LFlines SHA`4a19047dd0d10814271b44e312afc70ddc5813934267dc9eae930c23adbc0140`,
+external90229->own unified diff9299B SHA`935a8672c00db9664db387d99c9b14ca452ff02fbc69ecdeba5abb00b118b71d`. In-memory exact
+inverse of all 9 replacement regions reconstructs ENTIRE external90229 byteexact.
+External Java90229 and planf420 remain exactly0600/unmodified. Original compiled
+ALL6 pilot classes still90229 epoch, candidate UNCOMPILED/UNEXECUTED. No Java
+parser/typecheck/compiler/JVM/Maven/native/probe/guard/rerun/commit/coverage claim.
+
+Future method-only normal argv/env is unchanged from external pinned planf420
+and sole-attempt command above, NOT EXECUTED for this candidate. Exact selector:
+`TmpS3kIcz1PhysicalCheckpointPilot#oneColdPost1NaturalDeathAndOrdinaryCheckpointReloadPilot`.
+Keep all3 original LONG absolute ROM args/Main absolute wrapper/Java25/JTO+CLI
+surfaceless EGL/nullAL/no ambient display-Wayland-LD/Lua/fork1reusealpha and
+inherited JDK_JAVA_OPTIONS/MAVEN_OPTS unchanged. This source-only authority does
+not authorize a request. Fixed stream coverage/death/reload/replay remain open.
+STOP for Root actual-file and fresh independent review; no other work inferred.
+
+
+Final source-only readback covered ALL564 Java lines, static LF/trailing-space
+checks and git diff --check clean. ALL28 external-plan source pins verified,
+Main HEAD50348 foreign9-item status/config6abd0600mtime1792141742849921547 and
+own config6abd0600mtime1792302994048870989 unchanged. Own HEADb5dd/branch/index
+empty and native044/tracechaser4c3d refs exact. No src/main or tracked-test diff.
+Exactly own untracked corrected pilot plus existing Plan WIP. External2files
+remain0600/fullhash exact. All19671 remaining target files STILL exact full
+path/size/SHA/mtime aggregate a6018db8 (includes17165 classes and the6 old90229
+pilot outputs); no build/output/class writes. A postcheck helper initially
+compared a JSON-encoded class subset against the earlier aggregate's encoding;
+that helper assertion was corrected without any source/candidate execution.
+Current compact-JSON class digest41a1c1a5 and unchanged all-target digest prove
+preservation; the six explicit class rows above are unchanged. Own wrapper/JVM
+process scan empty, leases released. No new request/session/run or coverage
+claim; corrected candidate4a19047d remains uncompiled for Root/fresh review.
+
+
+### ICZ1 query-corrected pilot sole lifecycle — 2026-10-18
+
+Root DIRECT9299B delta/fresh independent full564line+native044 source review
+NO material findings authorized ONE unchanged policy attempt after query repair.
+Preflight HEADb5dd/Java4a19047d/Plan961f03a5/all28sourcepins/six old90229classes/
+Main+private0600config SHA+mtime/native044/all3 original LONG ROM SHA1+CRC/
+Main wrapper77d3 PASS; own reports0/no equivalent queued/live job, index empty.
+Prior62475 exact method-only normal argv/env reused without variation:
+--normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dsurefire.forkCount=1
+-Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical
+-Dtest=TmpS3kIcz1PhysicalCheckpointPilot#oneColdPost1NaturalDeathAndOrdinaryCheckpointReloadPilot
+plus all3 original LONG absolute ROM properties/test/-B. JAVA_HOME/PATH Java25,
+JTO+CLI surfacelessEGL/nullAL/Lua; DISPLAY/WAYLAND_DISPLAY/LD_LIBRARY_PATH absent,
+inherited JDK_JAVA_OPTIONS/MAVEN_OPTS both ABSENT and preserved. Exact command
+is the unchanged external planf420 pinned argv and actual /proc argv relayed to
+Root; this Plan uses portable operands rather than machine-home examples.
+
+ONE session58144, initialchunk6e8e19 at06:15:47UTC; terminal1/chunkd4c183 at
+06:16:13UTC (Maven finish07:16:13+01). Normal7GiB8cores/estimate30s/wait0s.
+Actual direct Python wrapperPID521699/PGID521699 verified /proc exactargv+owncwd,
+now absent. Maven25.476s; precise parentelapsed/queuehold UNKNOWN. Production
+compile UP-TO-DATE; test4211 sources recompiled release25 INSIDE sole lifecycle.
+No separate compiler/JVM/version/probe/build/workload. No outer writer while live.
+
+Actual1T1F0E0S/suite1.629/case1.335. FIRST failure Driver201->need518:
+AUTHORING_PREREQUISITE_STOP cap-alive missing lethal-route authorship. Complete
+1780 cold prefix/post1 saved3BD0/076F/natural zero-ring hurt/control/history gates
+passed; actual policy then emitted ALL2400 additional inputs/four new A-starts.
+No type/population>1/platformbinding/outputcap/roundtrip error. At cap actual
+P1 15582/1966,VX-4061/VY399,airfalse/onObjfalse/facingLEFT/rings0/hurtfalse/inv0,
+deadfalse/lives3/post1; platform15584/1924,ridingfalse/piece-1. PhaseLEFT_RUNUP.
+No lethal contact, death, load, life loss, newgen receipt, retirement, released
+restart or incomingReplay assertion reached. AUTHORING STOP, not runtime old-red.
+No diagnosis/fix/tuning/retry/new policy/extra input candidate follows.
+
+Actual continuation-start left placement12 count0/right15 count1; later printed
+left count0/1 with changing actual-reference display tokens; right remains printed
+count1/display#1. At printed360..2400 points P1 same15582/1966; these are samples,
+not every-frame/collision-owner/cull-cause proof. All32 scalar observations fully
+read, fullVInt remains UNKNOWN. Do not transfer new observed0 to old90229 failure's
+unprinted cardinality. Dynamicplatform exact strong-binding gates passed all
+policy iterations, printed ridefalse does not prove no unsampled contact.
+
+ALL27 fixed holds1780 +11 new holds2400 =37 combined holds4180 (boundary L run
+coalesces). Full actual RLE read; independent text expansion equals exact fixed
+prefix+new continuation, four A-press edges. Existing production in-memory
+InputScriptCompiler/UserRecordingWriter/Bk2MovieLoader parser SIX held-field
+roundtrip footer reached for ALL4180 and continuation2400. No InputLogAuthorTool
+.author execution/input file/BK2/CSV/image. New policy RLE retained ONLY original
+XML stdout, not another artifact. stdout15275B/93lines SHA
+dcdffaa0be4345225f49c6958d10f5f2bcad02dbace8c44bfb2a50a465e34d02.
+
+ALL actual case/full XML tree+TXT/failure body text-exact inTXT/ALL72properties/
+8119Bclasspath b8322b9100ce+exact duplicate/full stdout+stderr read completely.
+No skipped/error/cause/suppression/unknown XML child/dump. Capturedstderr832B/
+8lines/4records:2FAST_NONE+2 deterministic KOS estimates(403b1d33,6bc566ef), SHA
+1cb03d9eb0d071acd4475c3a3e2856ccf8dbbaddbf43fe086d525d0c412ec6a5.
+Console additionally1FAST after cleanup plus compiler deprecation/unchecked and
+resource-encoding notices; no blanket zero-all-warnings claim.
+
+RETAIN BOTH SINGLE originals42496B unchanged for Root DIRECT read, no cleanup,
+copy/archive/receipt/commit:
+TEST-com.openggf.tests.TmpS3kIcz1PhysicalCheckpointPilot.xml40856B SHA
+d84021263cb8cdce54555da01d141dbca070795df254f12c216e5da0a8b8b76b;
+com.openggf.tests.TmpS3kIcz1PhysicalCheckpointPilot.txt1640B SHA
+dbc41939d020a4dd4c7456abf10041c1879d8acb1cc7959814c8a9b71de243ba.
+Both at own target/surefire-reports original paths, no novel other diagnostic file.
+
+Post ALL28sourcepins/Java4a19047/external90229+planf420/configMain+private SHA0600
+mtime/HEADb5dd/index/native044/wrapper77d3 exact; Main foreign currentHEAD/status
+not adopted or edited. Only own untracked candidate+existing Plan WIP. Six current
+pilot outputs are now compiled4a19047 epoch; compiler refreshed test mtimes normally.
+Current pilot class path/size/SHA/mtime_ns inventory:
+```text
+target/test-classes/com/openggf/tests/TmpS3kIcz1PhysicalCheckpointPilot$1.class 1163 d7db15ea4640d9ffe178f38cd10bf9cf1d031eaacb012b41bb73c682ca2ef300 1792304170465964173
+target/test-classes/com/openggf/tests/TmpS3kIcz1PhysicalCheckpointPilot$Driver.class 21163 ab13586fd30a87dd9d0cffdaa5a1f3e09f7f8bab6b3afab64e830c464d5765d1 1792304170466964185
+target/test-classes/com/openggf/tests/TmpS3kIcz1PhysicalCheckpointPilot$Policy$Phase.class 1689 6a318a46c7d8c4ab8b836b90ca5c63c2a17e52f0244cc968d86f4503c622dba3 1792304170467312948
+target/test-classes/com/openggf/tests/TmpS3kIcz1PhysicalCheckpointPilot$Policy.class 4725 a1b2ebf2f0cb6fab56db6ed035e62e6c88823c3149fd518acd988158a5dd7f34 1792304170467443159
+target/test-classes/com/openggf/tests/TmpS3kIcz1PhysicalCheckpointPilot$Targets.class 7091 80b43fef2b72de412fd0ed382b9d0ced8a5783fab39659d8c8fee8a0cd147a0f 1792304170467569621
+target/test-classes/com/openggf/tests/TmpS3kIcz1PhysicalCheckpointPilot.class 15302 16c98a887d1e59621f8d6019036b911958ebb787d39c0110eb95171016930efa 1792304170467886415
+```
+All current 17165 class path/size/SHA/mtime compact-JSON digest 157d422acc591d97e3dd1d4e9fe0960ab0eae6d35a3a6d7a25f5dd4f6934bf80.
+Own wrapper/JVM scans empty/livejobs[], admission/FDs released; factual append
+uses writer only AFTER terminal. Root owns shared registry update via native
+handback. STOP after this sole attempt: no cleanup/source edit/retry/guard/native/
+commit/integration/coverage certification. Natural-death route authorship remains
+OPEN and therefore all post-death/reload/incoming-replay obligations UNQUALIFIED.
+
+
+### ICZ1 pilot final preserved inputs and accounting boundary — 2026-10-18
+
+Root DIRECT accepts both attempts within their exact tested source epochs:
+90229 setup-query STOP after actual1780 (matching static-ice cardinality unprinted,
+not retroactively assigned), then4a190 query-corrected authoring STOP alive after
+actual1780+2400/fourAstarts. Neither is a runtime old-red or zone/character-route
+coverage certificate. Root has read all query-corrected originals42496B,
+72properties/full8119Bclasspath+duplicate/fullfailure/93stdoutlines/32observations/
+37holds4180+11holds2400/fourAstarts/832stderr. Root registry acceptance is durable
+under native_icz1_physical_post_pilot_query_corrected_execution. Scope is ONE
+LOCAL docs-only existing-Plan preservation commit, then only accepted diagnostics
+and known owned checkout cleanup. No new controller, test or runtime source,
+input candidate, source query, parser/compiler/JVM/Maven/native/probe/retry.
+External original90229 Java andf420 design remain exact0600 and retained.
+
+The following is actual controller input data, not comparison-row hydration or
+fitted gameplay state. RLE syntax is InputScriptCompiler's Genesis held buttons;
+P2 input/action/start and P1 start remain zero/false. Setup attempt emitted this
+complete27hold1780-input stream (the same fixed prefix of the later attempt):
+```text
+1185 -; 1 A; 109 -; 93 R; 4 -;
+1 D; 1 D+A; 1 D; 1 D+A; 1 D; 1 D+A; 2 D;
+4 -; 62 L; 10 -;
+75 R; 150 -;
+1 D; 1 D+A; 1 D; 1 D+A; 1 D; 1 D+A; 2 D;
+52 -; 14 L+A; 5 L;
+```
+Query-corrected continuation's complete11hold2400-input stream:
+```text
+65 L;
+1 L+A;
+1 L;
+31 L+A;
+33 L;
+13 R;
+31 R+A;
+30 R;
+25 R+A;
+6 L+A;
+2164 L;
+```
+Query-corrected combined complete37hold4180-input stream (the adjacent L boundary
+coalesces5+65 to70; prefix and newly chosen continuation remain distinct above):
+```text
+1185 -;
+1 A;
+109 -;
+93 R;
+4 -;
+1 D;
+1 D+A;
+1 D;
+1 D+A;
+1 D;
+1 D+A;
+2 D;
+4 -;
+62 L;
+10 -;
+75 R;
+150 -;
+1 D;
+1 D+A;
+1 D;
+1 D+A;
+1 D;
+1 D+A;
+2 D;
+52 -;
+14 L+A;
+70 L;
+1 L+A;
+1 L;
+31 L+A;
+33 L;
+13 R;
+31 R+A;
+30 R;
+25 R+A;
+6 L+A;
+2164 L;
+```
+All actual held frames production-roundtripped through compile/inputLogText/
+parseInputLogText before output; text expansion independently verifies exact
+prefix+continuation and four additional A-start edges. These streams reproduce
+only these attempts; no successful lethal-contact stream was authored.
+
+Preserved controller/query constraints: native320/donoroff/soloSonic, real intro,
+ordinary GameLoop and renderer-task drain, no state restoration during authoring.
+ROM placements post34/subtype1 at3BD0/076F; platformB4/subtype0 at3CE0/0784;
+leftB8/subtype0 at3BF3/06CE/layout12; rightB8/subtype0 at3D10/0658/layout15.
+Unique actual ROM ObjectSpawn metadata supplies static ice targetX/height only.
+Subtype0 outer constructor is the sole XY writer; native044 static touch/draw
+routine has no ordinary XY motion. Managed population0/1 is optional per placement,
+>1 explicit counted STOP; exact concrete type/layout/objectID/subtype binds the
+optional query, never XY. IdentityHashMap tokens label actual refs for display
+only; cull/recreation stability is not demanded. Actual corrected start hadleft0/
+right1; later printedleft0/1/display#2..20/right#1. Historical90229 failure's count
+remains UNKNOWN. No actual cull/owner callback/native-at-PC cause is assigned.
+
+Dynamic platform always requires unique exact placed actual strong reference,
+non-destroyed raw state and actual riding-object/piece equality for native launch
+candidate; no actor substitution, force spawn, liveness rescue or mutable action.
+Policy UPPER_ICE targets right-ice X unless P1 top is below lower-platform top;
+then LEFT_RUNUP uses placementX minus4*actual lower-halfWidth, grounded leftward
+arrival switches RIGHT_APPROACH. Rightward speed>=0x200 plus actual right facing/
+standing lower piece permits RIDE_UP; actual left lip/radii select one ordinary
+jump in LAND_PLATFORM. RIDE_UP waits natural ascent, then P1bottom<=leftIceY+0x14
+and platformY<placementY permits ordinary jump toward upper ice. Otherwise loss
+of ride returns to the same low/upper phase rule. Held A persists only in upward
+air; no forced speed/pose/facing/phase/timer/hurt/death/checkpoint callback.
+All budgets fixed1780+max2400/max16Astarts, reload/release max1800 each,
+max128scalarobservations/strict128KiB output. Actual four Astarts and printed
+360..2400 stable lower pose do not prove a selected collision/culling fault.
+No natural death occurred, so first replacement coordinates, DEATH_RESTART,
+one-life-loss/newowners/history retirement/released control/two same-world
+incoming full-registry forward cycles remain entirely UNREACHED/UNQUALIFIED.
+
+After this durable commit, Root authorizes verifying ALL2 accepted report sizes/
+fullSHAs together before ANY metadata-slot-only unlink. Source4a190 and six exact
+owned pilot classes may then be retired only after full hash/size/mtime inventory;
+all other target classes remain unchanged until complete generated-target audit.
+Whole target/config/example/docslinks cleanup requires every entry owned/accounted;
+unknown files stop cleanup. No branch deletion/force or Main integration/push.
