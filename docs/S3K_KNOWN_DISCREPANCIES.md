@@ -319,9 +319,19 @@ without enabling the ordinary four-child title graph. R36 covers145 cases in19
 classes without failures/errors/skips, including all three actual bonus terrain
 oracles and10 short entry/return pilots. Its water-only reflective entry/exit
 fixture emits the same full-art-FIFO warning on actual Main803; it does not certify
-art readiness. The child still carries the known uncomposed source-size ratchet;
-no fresh combined guard pass or maintained route was executed. Recorded readiness
-and the complete ordinal difference remain open. [Bounded component qualification and remaining gates](architecture/plans/2026-10-13-s3k-playable-completion.md#r37-qualified-component-preservation-and-inherited-warning--2026-10-18).
+art readiness. The reviewed geometry body relocation passes99 fresh source,
+hardware-authority and exact API guards. R38's original route was denied returned
+segment2 admission; an independent public-entry old-red then proved the saved-origin
+bonus load was labeled ORDINARY. The narrow synchronous load cause mark is qualified
+by128 affected cases and99 fresh guards, including an ordinary-load-after-return
+control. R44's unchanged original Mega now attaches/compares returned segment2 and
+stops with AIZ2 KosM transition-art FIFO-full. Partial errors are1/12/21196
+(20427 physics+769 animation in returned AIZ), first returned non-camera34
+module.busy native true/engine false;29 unmatched completion identities remain.
+All reports are incomplete, recent5 is bounded, and actual compared/reference row
+counts and LEVEL-release clocks are not serialized. SS/fdf remains unvisited.
+No unique actual R38 receipt cause, complete ordinal difference, native births,
+readiness or full route proof follows. [Exact component and original-route epochs](architecture/plans/2026-10-13-s3k-playable-completion.md#r44-actual-fresh-guards-and-original-returned-aiz-frontier--2026-10-18).
 
 ---
 

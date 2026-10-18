@@ -6393,3 +6393,21 @@ prerequisite failure is not an unload old-red. Origin: HCZ R64's genuine eight
 native control/status leaves after all four world cycles, sole local Hand817c,
 R66 exact149-green focus; existing dated audit and HCZ2 matrix retain the route,
 post-delete ride/freed-SST marker and actual native-caller limits.
+
+
+
+## Semantic interior-return cause belongs immediately before the actual load
+
+A bonus exit request/fade is earlier than its saved-origin synchronous load.
+After prepareReturnLoad succeeds, mark the existing interior-return load cause
+immediately before loadZoneAndAct; the successful receipt publication consumes
+that cause once. Do not mark method entry, null-saved-state fallback or ordinary
+loads. Prove natural public bonus entry/exit/title release/new generation/history
+retirement before the final cause oracle, then independently load another ordinary
+level to reject cause leakage. A green component does not serialize the receipt
+from an earlier failed route, or waive coordinator mode/title/readiness gates.
+
+Origin: bounded FDF R40–R45,2026-10-18, GameLoop529012/test74f65. Actual original
+Mega progress into returned AIZ ends in a separate KosM FIFO-full exception; the
+incomplete reports and unmatched completions are not native producer-birth proof.
+See the existing playable-completion Plan for exact epochs and stopping boundary.

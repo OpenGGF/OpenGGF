@@ -114324,3 +114324,35 @@ stderr88558B via32 full unique lines+exact order, all nine JSON/owner pairs.
 Actual465 SMPS shadow+2 FAST+1 markRemembered runtime warnings are separate from
 comparator0. All expected sizes/full hashes and55 source pins matched; originals
 remain retained pending separate durable accounting/cleanup. Main803 is unchanged.
+
+
+
+### 2026-10-18 — Saved-origin bonus receipt component; original Mega reaches returned AIZ
+
+Owned649 HEADd84f plus exact GameLoop529012/test74f65. ONE normal no-profile
+focused command (R42 Plan literal11 full selectors+2 five-pilot methods)78969:
+128T0F0E0S/14 package classes, queue16s/Maven1m30, terminal00:00:05UTC.
+Independent final receipt old-red ORDINARY->INTERIOR_RETURN is green, and a later
+ordinary HCZ load stays ORDINARY. No actual R38 receipt was serialized by that test.
+
+ONE fresh normal `-Pguards` with Architectural/HardwareAuthority/exact2 API method
+selectors62001:99T0F0E0S (72+25+2), queue0/Maven31.908s/00:10:21UTC. THEN ONLY
+`-Ptrace-replay-r7 -Dtest=TestS3kMegaRunChain#multiBonusSpecialStageRoundTrip`,
+original unmodified driver/movie/bootstrap, same all3 original ROM/JDK25/JTO-only
+EGL/NO CLIgl/fork1/reuse/alphabetical environment,78842:1T0F1E0S, queue0/
+Maven30.234s/00:12:30UTC. Runtime error Unable to queue AIZ2 KosM transition art
+at queueAct2KosArt2932, caused by FIFO-full at queueInternal205 via call2926.
+
+Returned segment2 comparator now attached/compared, whereas R38 stopped admission.
+AIZ/Gumball partial reports remain1/12 physics (first4545 camera_y01F2/01EE;
+firstNonCamera1300 x0000/2778). Returned AIZ has21196 errors=20427 physics+769
+animation, firstNonCamera34 module.busy native true/engine false. ALL completefalse,
+warning/bootstrap0; actual compared/reference counts absent, recent arrays1/5/5
+are not exhaustive. Gap2/0F does not certify release clocks. Sole suppressed close
+lists29 full unmatched timing identities (12+9+8); no producer/birth/ordinal repair
+is inferred. SS12/FDF UNREACHED. Actual stderr2 FAST+34 SMPS boundary rejections
+remains an explicit warning limit, not an audio-readiness certificate.
+
+Root DIRECT-read all10 originals83638B before accepted R45 preservation/cleanup.
+No retry/source repair/native/probe/new workload or full route/readiness claim.
+[Commands, exact pins, partial arrays, warning and receipt limits](../architecture/plans/2026-10-13-s3k-playable-completion.md#r44-actual-fresh-guards-and-original-returned-aiz-frontier--2026-10-18).

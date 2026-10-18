@@ -177,3 +177,23 @@ too (Root69090), so its water result is not art readiness. Existing child size
 ratchet and fresh combined guards remain separate. No post-fix original route,
 full remaining two-module/four-direct attribution, native births or recorded
 SS/fdf readiness is established. [Exact evidence and epochs](../plans/2026-10-13-s3k-playable-completion.md#r37-qualified-component-preservation-and-inherited-warning--2026-10-18).
+
+
+
+## Saved-origin return cause and next physical queue boundary — 2026-10-18
+
+An independent real public bonus-entry/exit test reaches its final receipt oracle
+with ORDINARY instead of INTERIOR_RETURN, after normal title release/new-generation/
+saved-origin/history checks. The synchronous saved-origin GameLoop load now marks
+its existing semantic cause immediately after prepareReturnLoad and before the
+load, following the special-return helper precedent. Null-state fallback and
+ordinary loads are unchanged; a separate later-ordinary-load control proves the
+mark is consumed once. Component128 and fresh99 guards pass on529012/74f65.
+
+The original unmodified Mega R44 subsequently attaches returned segment2 and fails
+AIZ2 event submission with real module FIFO-full. Its29 unmatched recorded identities
+and partial first34 busy mismatch do not identify actual queue occupants, native
+submission births or the unique original R38 denial cause. Keep successful component
+semantics separate from unchanged strict timing admission/physical capacity and the
+unvisited SS/fdf target. No queue expansion/reset/drop/ordinal renumber or readiness
+waiver follows. [Full original reports, source epochs and limits](../plans/2026-10-13-s3k-playable-completion.md#r44-actual-fresh-guards-and-original-returned-aiz-frontier--2026-10-18).

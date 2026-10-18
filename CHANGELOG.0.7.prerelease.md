@@ -77,7 +77,9 @@ Unreleased. The earlier development themes remain in
   Foreground tiles retain their original priority so rotated walls and peppermint
   pieces show correctly, and overlapping cells keep the original sprite priority;
   the Gumball background stays pinned as in the original instead of scrolling
-  with the camera, and Pachinko's background survives rewind.
+  with the camera, and Pachinko's background survives rewind. Saved-origin bonus
+  returns carry their interior-return load cause once, keeping later ordinary
+  loads independent.
 
 - **S3K animated scenery:** Angel Island, Hydrocity, Carnival Night, IceCap,
   Launch Base, Mushroom Hill, Sandopolis and Lava Reef animated tiles change on

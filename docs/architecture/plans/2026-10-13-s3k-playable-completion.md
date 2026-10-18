@@ -15898,3 +15898,965 @@ existing docs. All runtime8 SHA6dd81/configMain-private/native4fdf/source pins a
 accepted12 reports will be checked together before metadata-only consumption;
 only then register the literal R69 ordinal73 and submit its separately authorized
 one original uninstrumented canonical. Historical R67 STOP and R68 results remain.
+
+
+### Imported FDF extraction and saved-origin receipt histories
+
+The following child R38-R45 epochs retain their original scope and STOP
+limits. Root composition does not rerun or relabel those results.
+
+### R38 actual fresh guards and conditional original route — 2026-10-18
+
+Exact task `fdf-r38-reviewed-extraction-guards-then-original-mega-once-20261018`,
+native ordinal48,24h separately registered, preserving47/all earlier identities.
+Root actual-file accepted b0dcc/9693/1f3f/f028/69c6/54633 literal sources and exact
+486 context diff/body relocation. HEAD04343e plus two extraction runtime files
+and existing Plan WIP is the intended tested source. Preflight original3 ROMs,
+native044/private+Main configSHA/mtimes/source pins/fresh report paths/no own
+Java/queue requests passed. No source change while phase1 live.
+
+Phase1 sole30788 executed EXACT R37 proposed --normal -Pguards selector of full
+Architectural/HardwareAuthority and only two exact API methods, current Main
+absolute wrapper from owned649/all3 original absolute ROMs/JDK25/singleJTO-EGL/
+NO CLIgl/EGL/nullAL/noambientLD/Lua/fork1/reuse/alphabetical. Compiler inside
+same lifecycle compiled4143 main/4194 test sources, no separate JVM/build.
+Terminal0 at2026-10-17T23:21:15UTC / Oct18 00:21:15BST, queue0/Maven1m23
+(displayed precision). ACTUAL99T0F0E0S: API2/0.660s, Architectural72/2.964s,
+HardwareTimingAuthority25/4.421s. Original source-size predicate REALLY passes,
+not a static-count substitution. All99 method identities/full3XML+3TXT/72
+properties per suite inspected; XML streams empty/no suppressed/skips/dumps.
+Console has three known outside-method FAST-no-manifest->NONE warnings and
+existing compile/resource warnings; no new material postboot warning.
+
+The6 original green reports83538B are durably accounted here, then rehashed and
+consumed metadata_slot ALONE before a second lifecycle; no copies/archive/class
+deletion. All runtime/test/config pins rechecked exact after99green. This earns
+ONLY the separately authorized original-route phase2, not a route result.
+R29 registry supplies its original route selector, original fixture tree/movie/
+manifest/maintained source pins; its Plan records the unchanged shared command
+prefix/env. The trace-replay-r7 profile is the original authorized R29 intended
+route profile (R29 route was never executed). An inspection first guessed
+manifest.json, which does not exist; existing rg inventory resolved the ACTUAL
+run_manifest.json and its exact149c879c hash plus movieD748 before any route
+submission. No fixture/input or runtime prerequisite changed, no test rerun.
+No synthetic prefix/driver/observer/input/bootstrap/helper or new diagnostic
+property is introduced. Conditional phase2 outcome is pending, with no readiness/
+SS/fdf/native/route inference yet.
+
+
+#### R38 phase2 original route actual STOP — 2026-10-18
+
+After exact99-green inspection/guard cleanup and literal runtime/test/config
+recheck, ONE original maintained route was submitted. R29 registry's selector/
+fixture treeDB73/manifest149c/movieD748/source74463 and original intended profile
+were recovered; no R29 route had previously executed. The actual command FROM
+owned649 uses the same approved shared prefix/env/ROM flags, with these exact
+profile/selector substitutions, no shortened driver/prefix/new property:
+
+```bash
+MAIN_ROOT=/path/to/main/OpenGGF
+env -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  PATH="/usr/lib/jvm/java-25-openjdk/bin:$PATH" \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_ROOT/tools/testing/maven_queue.py" \
+  --normal -Dmse=off -Ptrace-replay-r7 \
+  '-Dtest=TestS3kMegaRunChain#multiBonusSpecialStageRoundTrip' \
+  "-Dsonic1.rom.path=$MAIN_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$MAIN_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$MAIN_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true \
+  -Dsurefire.runOrder=alphabetical test -B
+```
+
+Sole phase2 session16285, normal7GiB/8cores, queue0, terminal1 at
+2026-10-17T23:24:04UTC / Oct18 00:24:04BST; Maven30.079s, class5.610s,
+case5.341s. Main up-to-date;4194 tests compiled inside this lifecycle, no extra
+build. Actual ONLY multiBonusSpecialStageRoundTrip:1T1F0E0S. No observer/logger/
+temporary source or fixture/input/bootstrap/stop-phase change. Source frozen;
+no retry, repair, rebase/waiver, third JVM, native or commit after the failure.
+
+Main AssertionError: `coordinator denied segment 2 admission in phase TRANSITION_GAP`
+at AbstractRunChainTest1775 -> HeadlessRunCoordinatorAdapter.requireAdmission959.
+Read the original local1630..1665/1755..1782 ordering: earlier obs.observed()
+(stage_exit) assertTrue and assertReturnBoundary passed, then unchanged original
+OPTION B playback.startSession(returnOffset+1) and admitLevel ran. Admission
+failed BEFORE the returned segment2 comparator could be opened/attached. This
+proves the ORIGINAL boundary assertion was reached/passed; it does NOT prove a
+LEVEL-release time, exact exit callback/clock or returned-level opening parity.
+TRANSITION_GAP is the recorded COORDINATOR phase, not a serialized GameLoop mode.
+No actual observedBk2Frame/currentmode/latch snapshot was added. Returned segment2
+opening is NOT admitted/compared, and SS segment12/fdf is UNREACHED.
+
+ALL emitted comparator/owner JSONs, complete XML/TXT/failure+sole suppressed
+exception/full15015B stderr and72 properties were read. Only these comparator
+windows were emitted; both complete=false:
+
+| Actual report | Errors/groups | Warnings / lag / bootstrap | First available mismatch |
+|---|---|---|---|
+|seg0 / AIZ|1 physics,0 animation|0 /0 /0|4545 camera_y: native01F2 vs engine01EE,delta4; serialized recent array has this one entry. FirstNonCamera key absent.|
+|seg1 / Gumball|12 physics,0 animation|0 /21 /0|firstNonCamera1300 x: native0000 vs engine2778,delta10104; recent array holds ONLY5 queue entries at1300.|
+
+Neither report/XML/stream serializes actual compared-row/reference-row counts;
+they remain UNAVAILABLE, never inferred from frame1300, error/lag count or fixture
+length. Reports are incomplete, not full segment/route or exhaustive-vector
+certificates. The console's full FIRST-frame1300 comparison is available and
+contains12 ERROR fields: x,y,camera_x,camera_y; direct busy/prepared/active_source/
+active_destination; module busy/prepared/remaining_work/queued_fingerprints.
+At that row y0000/025C, camera_x0060/26D8, camera_y0240/01FC, direct source
+-1/880426 and destination-1/-12288. The module queued_fingerprints string has
+three diagnostic values; these are NOT stable HardwareWork submission fingerprints
+or producer labels. Do not use them to fabricate a missing job or alignment.
+
+An initial convenience regex crossed FieldComparison record boundaries when
+printing field names; discarded it and parsed each bracket-bounded record,
+hand-checking the resulting12-name list against the FULL original stream. No
+artifact or runtime state changed. This validates the available first-row field
+projection only, not a new complete mismatch array. Historical18-error headline
+and R12/R14/R17/R20/R23 prefix epochs are not an exhaustive matched-vector/current
+Main attribution. No source tuning or clock fit follows from this observation.
+
+The dynamic_art_gap JSON has gapCount1/failureCount0/failures[]; represented AIZ,
+next Gumball, movie-logical5384..5570, transition count0->0, added transitions[].
+That journal result does NOT settle hardware readiness or the failed return gap.
+All3 owner logical keys/64hex owner IDs/physical paths validated against their
+actual original payload files under this owned target; no alternate/copy report.
+
+Sole suppressed IllegalStateException at HardwareTimingReplayPort.close contains
+ALL12 unconsumed exact completion identities (full fingerprints read from XML):
+
+| Canonical raw_frame | Boundary | Expected identity | Fingerprint prefix |
+|---|---|---|---|
+|4570|PRE_MAIN_LOOP|KOS_DECOMPRESSION_QUEUE15|fbfc78d4|
+|4571|POST_OBJECTS|KOS_MODULE_QUEUE10|10eb568a|
+|4572|PRE_MAIN_LOOP|KOS_DECOMPRESSION_QUEUE16|513a9a90|
+|4573|POST_OBJECTS|KOS_MODULE_QUEUE11|05324378|
+|4574|PRE_MAIN_LOOP|KOS_DECOMPRESSION_QUEUE17|d24be135|
+|4575|POST_OBJECTS|KOS_MODULE_QUEUE12|7059802f|
+|4576|PRE_MAIN_LOOP|KOS_DECOMPRESSION_QUEUE18|159ca370|
+|4577|POST_OBJECTS|KOS_MODULE_QUEUE13|3f7193a2|
+|4640|PRE_MAIN_LOOP|KOS_DECOMPRESSION_QUEUE19|b82e0acc|
+|4644|PRE_MAIN_LOOP|KOS_DECOMPRESSION_QUEUE20|be87b230|
+|4647|PRE_MAIN_LOOP|KOS_DECOMPRESSION_QUEUE21|549df423|
+|4648|POST_OBJECTS|KOS_MODULE_QUEUE14|366bb346|
+
+Port wording is no unclaimed matching production identity: it was NEVER submitted
+OR was ALREADY admitted/claimed. No actual head/job/preparation/payload identity
+was observed inside this run; the diagnostic does not select one cause or prove
+prepared readiness/refusal/live CPU prediction. No renumbering, ordinal offset
+seed, drop or relaxation was made. Two outside FAST-no-manifest->NONE warnings,
+no FIFO capacity warning/dump/skip. Prior inherited water warning is not a waiver
+for this new admission/closure frontier. No full producer difference/native birth/
+recorded SS/fdf consumption or route parity claim.
+
+Retain SINGLE ORIGINAL8 artifacts52835B for RootDIRECTread; no cleanup/copy/archive:
+
+| Under target/ | Bytes | SHA256 |
+|---|---:|---|
+|surefire-reports/TEST-com.openggf.tests.trace.runs.TestS3kMegaRunChain.xml|43335|3a085fb46a5f0c04c1b3ac71cffa05377fb86c2d1fd8c28dee5a1e69402a16c2|
+|surefire-reports/com.openggf.tests.trace.runs.TestS3kMegaRunChain.txt|6101|e4084e800b3440f0e5ab84b130459eecfda6f79bf364d618655028dec8608f25|
+|trace-reports/run-chain/s3-knux-multibonus-ss_seg0-segment-0-17a9707c063734e8.json|453|71a13fc35e150125d39b8b05703dc904dcda34e3cf2faac166e702729ecb849a|
+|trace-reports/run-chain/s3-knux-multibonus-ss_seg0-segment-0-17a9707c063734e8.json.owner.json|293|57265a950a706ae8151ec175a5606c5f393be3f93783174c221254bcdddf8795|
+|trace-reports/run-chain/s3-knux-multibonus-ss_seg1-segment-1-9ca2e5c5c0f10d3e.json|1642|a3e78366fa0bd51983f6567a291c9cda8c44d673a1ba489177cbfc421da21852|
+|trace-reports/run-chain/s3-knux-multibonus-ss_seg1-segment-1-9ca2e5c5c0f10d3e.json.owner.json|293|400de420ab3127c49ac79d3f2dad104c305e682733deeb07f1f28286ccfe4e84|
+|trace-reports/run-chain/s3-knux-multibonus-ss_dynamic_art_gap-dynamic-art-gap-b46ce284954b08b6.json|397|370770130fe133222b51c343f72a58096e34011193903e29d9ae20fe450887dd|
+|trace-reports/run-chain/s3-knux-multibonus-ss_dynamic_art_gap-dynamic-art-gap-b46ce284954b08b6.json.owner.json|321|b66f9dbfc29c1becec980ce41a7fefc35f1a550c8d113598288703c8ae65d21f|
+
+All inspection metadata_slot ALONE, no archive/receipt/classes cleanup. Exact
+b0dcc/9693/1f3f/f028/69c6/54633/source74463 and Main/private configSHA+mtimes
+remain unchanged; HEAD04343e, same native044/ROM/fixture/movie/refs. Phase1 proves
+fresh99 guards on this source, phase2 separately fails the original route. Target
+last16285 trace-profile compile on the same frozen source. Only two extraction
+runtime files and existing Plan WIP remain uncommitted/index empty. Both handles
+terminal/no owned live job/all leases released. No extraction commit, integration,
+new owner hypothesis/source change or further workload is authorized by this result.
+
+
+### R39 qualified extraction preservation and accepted route accounting — 2026-10-18
+
+Root DIRECT-read all eight original R38 artifacts52835B, including all owner/path
+links, full XML/TXT and12 suppressed full fingerprints/72 properties. A second
+bounded read completed the first display's truncated first-row tables/classpath:
+all36 comparison fields at4545/1300 and diagnostic/near-object tails were covered.
+This is accepted inspection, not another execution. Fresh99 guards really pass
+on b0dcc/9693; original Mega session16285 remains1F at returned segment2 admission
+in coordinator TRANSITION_GAP. Original stage_exit observation and return-boundary
+assertions passed by unchanged driver ordering, but no actual LEVEL/release clock
+was serialized. The incomplete reports contain1+12 physics/0 animation; actual
+compared/reference counts are unavailable, recent5 is not an exhaustive vector.
+SS/fdf remains unvisited; all12 unmatched timing identities retain the ambiguous
+never-submitted OR already-admitted/claimed meaning.
+
+Preserve ONLY the reviewed two-file486 body relocation with existing Plan/frontier/
+caller-audit/discrepancy accounting. No executable change since30788/16285, no test,
+fixture/API/policy/budget change;3143 remains below unchanged3144. Existing release
+fold already describes preserving physical rows while rebuilding derived geometry,
+so no new user-visible release item is warranted for this internal relocation.
+Normal local hooks/seven trailers/final GPT-6.1 coauthor apply. Component04343 is
+separately Root-composed as f5e9; this preservation is not Main integration/push or
+route clearance. AFTER this durable commit, rehash ALL8 accepted originals against
+the preceding table BEFORE ANY delete, consume metadata_slot ALONE, keep maintained
+compiled classes and their mtimes; no instrumentation/classes/archive to remove.
+
+Only AFTER clean commit/accounting may ordinal49 be registered for source-only
+admission-owner research. No Java/test/logger authoring, compiler/JVM/guard/native/
+baseline/retry or runtime/admission/timing relaxation is authorized. Last target
+remains16285 on these exact reviewed source bodies. The next question is actual
+coordinator truth predicates versus consumed mode/load receipt/phase/clock, not
+an inferred title duration or fitted readiness/ordinal offset.
+
+
+#### R39 clean preservation, cleanup and source-only admission handback
+
+Normal local preservation commit **d84f602d8c3461f8948137bc38602c72fcd3f993**
+contains exactly the two reviewed extraction files plus this existing Plan,
+frontier, caller audit and S3K discrepancy (six paths). Exact b0dcc/9693 bodies
+unchanged; no semantic/test/fixture/API/budget edit. Seven policy trailers were
+parsed as their own block and the full message's final exact GPT-6.1 coauthor
+parsed before committing. Normal hooks exited0; validate-policy.sh157 printed
+printf Broken pipe/write error, also seen on04343. No bypass. Clean index/tree
+verified BEFORE registering only new ordinal49/exact relayed task/run identity;
+all prior registry entries/results preserved.
+
+AFTER durable commit, ALL eight Root-accepted originals52835B matched EVERY size
+and full SHA in the preceding R38 table BEFORE ANY delete. Consumed only those
+8 original files under metadata_slot ALONE, no copies/archive/receipt/classes.
+Maintained class SHA and mtime_ns before/after cleanup exactly equal:
+
+| Maintained compiled owner | SHA256 | mtime_ns |
+|---|---|---:|
+|LevelManager|4650e4947acaddfa5e39dd9399b29bc97be005ebc62ba93b5cd224a40e4a1c2e|1792279195828575836|
+|LevelTilemapRewindAccess|dac8d7aaa553fa65b1d763207030ee51ed866f580225f96b8ac875659b5770da|1792279198354857414|
+|TestS3kMegaRunChain|e0992a7f4deef0565ae159ed047b420f138d5360e26992bc414a7dae0298b187|1792279437509423129|
+
+Last target remains16285/trace-replay-r7 on this exact maintained source, not a new
+R39 build. No Java/Maven/compiler/native/guard/baseline/retry/source authoring ran.
+Only this subsequent source-plan append is WIP; no second commit is authorized.
+
+**Actual source truth gates, distinct from consumed runtime evidence:**
+
+* `HeadlessRunCoordinatorAdapter.closeCurrent`712..734 requires source publication
+  complete, forwards current observation with the retained before-production
+  owner to `afterProduction`. Coordinator325..356 checks ownership/exhaustion,
+  closes source and enters TRANSITION_GAP. Mode/receipt authority is not supplied
+  by the comparison report or BK2 reanchor. ComparedInteriorRowDrive26..33 closes
+  once after the real PhysicalMovieRowDrive returns and exhaustion is true.
+* Original driver1614..1665 awaits the persistent boundary, reports/closes the
+  source, asserts observed stage_exit, compares return carry state, detaches the
+  old payload. BoundaryProbe1338..1354 lazily latches only if currentMode==LEVEL
+  and actual cursor is in the declared window, then retains that observation.
+  Thus its source predicate refers to a LEVEL observation at latch, but the
+  R38 artifact does not serialize that instant/mode/clock or re-prove it at
+  admission. No claim that TITLE_CARD is the consumed failing gate follows.
+* `assertReturnBoundary`4000..4057 and TraceRunBoundaryComparator53..100 compare
+  applicable position/checkpoint/rings/emeralds (next-act only for its own policy).
+  They do NOT carry current GameMode, initial-title-request, load cause/generation,
+  coordinator remembered receipt or hardware readiness. Passing them cannot
+  establish those missing admission predicates.
+* OPTION B1762..1778 starts playback at returnOffset+1 and passes rowsConsumed1,
+  then demands admission. PlaybackDebugManager422..432 only replaces/resets its
+  input timeline/enabled/preparation state/status; it does not produce a level
+  load, assign a load cause, release a title, advance a gameplay step or publish
+  a coordinator receipt. The driver itself labels this reanchor NON-organic;
+  its1 does not prove an executed destination row0. Nothing here proposes changing
+  that existing scope, relaxing readiness or fitting a cursor.
+* Adapter827..858 emits StageExit(observedBk2Frame), captures current observation,
+  offers latest actual load receipt to beforeLoadedLevelActivation, falls back
+  to beforeAdmission, then requires exactly one AdmitDestination action. Failure
+  at959 proves no acceptable action, not which earlier condition denied it.
+* Coordinator228..254 remembers a return load only if destination progression/
+  ROM-zone/act match, generation differs from source, cause matches the semantic
+  boundary, and a matching stage-exit signal is retained. `stage_exit` requires
+  cause INTERIOR_RETURN (700..708). beforeAdmission299..321 requires GAP; ordinary
+  level destination413..475 also requires LEVEL, no pending initial-title request,
+  same remembered/current level identity, cursor >= destination offset and the
+  boundary signal. Neither receipt existence alone nor a matching position is
+  sufficient. Existing tests stageExitRequiresBothExitSignalAndMatchingReturnLoad
+  and loadedDestinationIsNotAdmittedUntilLevelModeIsActive cover only constructed
+  coordinator inputs, not actual bonus-return receipt production.
+
+**Concrete source candidate, not observed actual R38 receipt:**
+
+RunLevelLoadTracker23..35 starts/retains nextCause ORDINARY. observeLoaded75..92
+publishes only after completed-production generation changes/current level exists,
+then resets nextCause to ORDINARY. `latest()`95..97 and `generation()`99..101 are
+pure accessors; prime records initial generation without publishing a receipt.
+LevelManager525..528 advances generation for FULL load; ordinary synchronous
+load finishes through3677/3695..3700 -> TraceSessionLauncher2624..2628 ->2555..2568.
+The common seam calls observeLoaded BEFORE checking for an active trace session,
+so the actual session-owned receipt exists independently of visual trace launch.
+The headless adapter uses that same GameplayModeContext tracker.
+
+GameLoop.doExitBonusStage2870..2878 calls BonusStageTransitionCoordinator.
+prepareReturnLoad then plain loadZoneAndAct, consumes title request and later
+initializes the saved apparent title/enters TITLE_CARD2913..2927. The coordinator's
+prepareReturnLoad102..120 restores checkpoint/persistent respawn only; it does
+NOT mark a run load cause. Repository-wide actual mark caller inventory has
+SpecialStageTransitionSupport68 as the sole caller of markNextRunInteriorReturnLoad;
+that helper marks INTERIOR_RETURN before synchronous special-stage return loads.
+No equivalent call exists in the inspected bonus return path. Death restart and
+level-advance writers remain separate semantic paths. This makes missing bonus
+return cause classification a specific producer candidate. A prior mark could
+change nextCause; R38 did not retain that scalar or the actual published receipt,
+so do NOT elevate static default/source call absence into unique run attribution.
+
+**Smallest independent general old-red question (proposal ONLY, not authored):**
+
+Using the already-qualified GameplayCaptureSession real public bonus-entry inlet,
+boot/observe ordinary origin TITLE_CARD then natural LEVEL/no pending request/
+complete card/quiescent work, request real GUMBALL entry, and wait for the actual
+bonus title/Nemesis gates to release into BONUS_STAGE. On the SAME actual typed
+BonusStageProvider, invoke its existing semantic requestExit once (BonusStageProvider50;
+AbstractBonusStageCoordinator77 sets the completion request, the same request used
+by DefaultObjectServices584..588), then ordinary null-input steps drive GameLoop's
+real completion/fade/return/load/title. This is a declared component input, not a
+claim to reproduce the native Gumball exit contact/whole route. Observe the SAME
+RunLevelLoadTracker through pure latest()/generation(), current level identities,
+completed generation, current mode and isTitleCardRequested; no observer or logger
+is needed for this receipt question. No private timer/queue/flag writes, new port,
+mode/controller/provider replacement, snapshot hydration or fixed ordinal/FP.
+
+Independent final oracle: when the actual returned receipt is first published,
+it must be a NEW generation with correct saved origin level identity and semantic
+cause INTERIOR_RETURN; entering TITLE_CARD must not be mislabelled as released
+LEVEL. Continue only through natural title release to compare unchanged identity/
+receipt and no pending title request; preserve normal real capacity/art failures.
+A separate genuine ordinary public level load must retain ORDINARY cause, preventing
+blanket classification. Existing special-return source remains the positive semantic
+contrast; no extra special-stage replay is proposed. Question: **does actual ordinary
+bonus return publish ORDINARY despite the coordinator requiring INTERIOR_RETURN?**
+This tests producer semantics independently of the full original driver, not a
+mirrored coordinator branch or a synthetic manually marked tracker. It has not
+been authored, compiled or run; feasibility/prerequisites need separate review.
+
+**Precise missing witness if the original admission must be sampled later:**
+
+Use actual outside-step scalar/reference snapshots: current GameLoop mode;
+actual coordinator phase/current/source generation; session/level/manager/tracker
+identities; completed load generation and pure latest receipt cause+all identity
+fields; title-request flag; real playback cursor BEFORE and AFTER OPTION B;
+original observedBk2Frame and coordinator admitted-step ordinal; actual source/
+destination descriptor policy/identity. Keep trace row, movie cursor, VInt and
+admitted-step clocks distinct/null when absent. None are present in R38's emitted
+artifact at the failing call. A once-super stepEngineFrame wrapper is available
+package-locally5248..5295 for outside-step samples. It is NOT an inside-admission
+callback; coordinator/receipt fields are private, no existing read-only callback
+exposes the exact beforeLoadedLevelActivation/requireAdmission call bracket.
+Exact bracket evidence would require separately authorized passive test-adapter
+instrumentation/read-only private reflection; no such source is authored here.
+Do not call latched()/observation/capture/ensure or admission methods to observe,
+replay the boundary, replace observers, invoke gameplay owners or create work.
+The short independent receipt control is the smaller proposed first question.
+
+**Twelve unmatched timing identities stay a separate evidence limit:**
+
+HardwareTimingReplayPort565..580 compares currently unclaimed pending kind+
+ordinal+stable FP. Absence means never submitted OR admitted/claimed; it does not
+prove a missed native birth, and fingerprints do not assign ordinals. Actual
+HardwareTimingService741..782 requires recorded policy, actual serviced boundary,
+first awaiting FIFO kind, exact ordinal/FP and existing prepared payload plus
+isPrepared before admitReadiness. The12 R38 closure identities were read exactly;
+none is linked to an actual inside-run job/head/preparation/payload here. Static
+source cannot determine which refusal/absence branch actually ran. No arithmetic
+renumber, descriptor substitution, timing/cursor offset, producer manufacture,
+readiness/title/admission relaxation or waiver is proposed. SS12/fdf remains
+UNREACHED; this Plan contains no readiness/live CPU/native birth/full route proof.
+
+R39 source pins at d84f602d8 (read-only inventory; no source modification):
+
+| Repository source | SHA256 |
+|---|---|
+|`src/test/java/com/openggf/tests/trace/runs/AbstractRunChainTest.java`|967c9896bf566218e9198626ec7d256f181be9fb78ca5abc787d6b82932148bb|
+|`src/test/java/com/openggf/tests/trace/runs/ComparedInteriorRowDrive.java`|5e3dc5ea332b0a6c09dabcf8b1332c2ef401bfcfbad1037da5bc5be600e9eb54|
+|`src/main/java/com/openggf/trace/replay/runs/TraceRunPlaybackCoordinator.java`|3baf15de12fdfe6963c95fc7f018353c0dabf8896e33c7d86a211ecef08dfbcc|
+|`src/main/java/com/openggf/trace/replay/runs/RunLevelLoadTracker.java`|bedbfa6bdb404d05b87a588d39856eea7ee2066edde5e69a88df698a5ba222aa|
+|`src/main/java/com/openggf/trace/replay/runs/RunPlaybackObservation.java`|91475d2e9a4d6ea305c673f4f9538361d9fa5264f06425e2d1997a60f5c4d865|
+|`src/main/java/com/openggf/trace/replay/runs/DestinationAdmissionReceipt.java`|314fe91f1965b37d7b128bb120c7ec745a077166f3055b085d07b81a4f5c529f|
+|`src/main/java/com/openggf/trace/replay/runs/TraceRunBoundaryComparator.java`|d332355427d72e5fa34083ee5b82cffbc39bd6d8b703fb6cd739f51fafe0085d|
+|`src/main/java/com/openggf/trace/replay/runs/TraceRunReplayWalker.java`|49ae05dffdd9f5ea328ae0abf2ef8c9a694b4278b8964d167082f9157510bcbc|
+|`src/main/java/com/openggf/TraceSessionLauncher.java`|03237bfc766bd8f4040075814585a17156dbd24cf17eade23155a8cb978f4171|
+|`src/main/java/com/openggf/GameLoop.java`|5124502753d87e658cb717afb83701fe42ebb2bac64336dc480b1bedd6dbb85f|
+|`src/main/java/com/openggf/game/BonusStageTransitionCoordinator.java`|2a34df9f677da9a8e14549c1306b8a2ade31128c0fb2279d1db2cc7472dc27e1|
+|`src/main/java/com/openggf/SpecialStageTransitionSupport.java`|e0886cbaaa251c8511aca296670eb68a9fde8d2d1cd828205e75129393b14cd5|
+|`src/main/java/com/openggf/debug/playback/PlaybackDebugManager.java`|295669647f0d4fe7922e4862246baabe08b6d595513bc1fb491f4b644b5579d4|
+|`src/main/java/com/openggf/trace/timing/HardwareTimingReplayPort.java`|d29b080f1a81a94cc62cb68d9ac9eeeb5ecc21b3d4bf2ed2639b1454ba2be99f|
+|`src/main/java/com/openggf/game/timing/HardwareTimingService.java`|9559d54c5d09049301d963b9fadf0f2ce16a0c72cca4449c65f58cfef188938d|
+|`src/main/java/com/openggf/level/LevelManager.java`|b0dcc0519edf6b87ce091d9e428206975e2f9783dd0cc9908ef28b24dc3ae97d|
+|`src/main/java/com/openggf/level/LevelTilemapRewindAccess.java`|9693c50d75dbb14a20031eda8057d71e3a03a674b35fdd5f0d5549baab3af2d9|
+
+Original fixture db73f445d9a07c616ef94d9ab793539326440cd3, manifest149c879c/movieD748
+unchanged. First AIZ/Gumball/returned-AIZ offsets915/5570/7001 and recorded stage_exit
+7001 are descriptive fixture facts, not engine branch gates or native birth clocks.
+Native044fa46725c71187399e13f5ddb70e11d32dc024/ROMCFBF98... remains the owner pin;
+no native query/execution in this source slice. No authoring/extra build/test/run/
+route/native/baseline/guard/runtime/API/input/fixture/POM changes. Existing Plan
+only WIP, all leases released; STOP for Root disposition before any next authoring.
+
+
+### R40 independent public bonus-return receipt old-red SOURCE — 2026-10-18
+
+Literal returned task `fdf-r40-public-bonus-return-receipt-oldred-source-20261018`,
+native ordinal50, separately registered with exact relayed task/run/24h expiry;
+all49/48 and older source/execution IDs/results preserved. Same owned649/native
+01a14a19, HEADd84f602d8; preceding R39 Plan WIP prefix preserved. This phase
+AUTHORS SOURCE ONLY: no compiler/JVM/Maven/native/probe/route/baseline/fix/commit.
+
+ONE new class `src/test/java/com/openggf/tools/TestS3kBonusReturnLoadReceipt.java`,
+260 lines/13770 bytes, SHA256 **8b5e1fd4519fd0e2fe6208dfa3ee23da1a7a66844070835d6e8e63dabeedcc33**.
+Full-addition unified diff (/dev/null -> repository path, LF) SHA256 `e3121762903bcd93bd79a7cd0e5495c28c68115911269a25d880c35896eadbbd`.
+The full actual file was read back. Source whitespace and lexical delimiter
+checks pass, NOT a Java compiler/typecheck; full runtime/old tracked tests have
+zero diff against d84f. A mutable-local diagnostic message supplier was replaced
+by an eager string during uncompiled authoring; no failed compile or gameplay.
+A contemplated title-provider getter was removed before freeze because it calls
+getTitleCardProviderLazy. The frozen test never calls it; it observes the actual
+TITLE_CARD phase and natural LEVEL release instead of creating an owner to observe.
+
+Declared methods (both actual @Test, no inherited product selection):
+
+* `actualGumballReturnPublishesInteriorReturnReceiptAfterNaturalTitleRelease`:
+  actual Knuckles320/AIZ0/0 origin, showTitleCard=true with no teleport/donor/
+  emerald/ring/VInt/starpost seed; observe actual TITLE_CARD and natural LEVEL,
+  no pending title/fade/control/load boundary and actual unclaimed FIFO empty.
+  Enable ordinary LIVE_REWIND through its existing public configuration input,
+  wait only until installed history has more than one actual frame. Read the
+  actual context tracker latest/generation and actual completed LM generation/
+  progression/ROM-zone/act. Public requestBonusStageEntry(GUMBALL) once; require
+  actual new ordinary entry receipt/real bonus title and BONUS_STAGE fade/control
+  release; no manually marked/publication-created receipt. Confirm real typed
+  coordinator and nonnull saved origin. Invoke SAME provider.requestExit ONCE,
+  exactly the semantic completion request used by DefaultObjectServices. Ordinary
+  GameLoop steps own completion/fade/load/title, require actual new return receipt,
+  object manager replacement/history retirement and observed return TITLE_CARD
+  then natural LEVEL/request/fade/control release. BEFORE the sole final semantic
+  oracle require all identity/generation/prerequisite checks and provider NONE.
+  Final independent expected cause INTERIOR_RETURN comes from structural interior
+  return semantics, never current implementation value or fixed ordinal. No saved-
+  state-null fallback claim, original contact/route/native exit timing claim.
+* `ordinarySubsequentLoadAndBonusEntryKeepOrdinaryReceipts`: independent fresh
+  session/settled origin; actual public loadZoneAndAct(HCZ,0) publishes a NEW actual
+  receipt ORDINARY with LM-matching identity, replaces objects/retires prior history;
+  observe its normal title/LEVEL and installed history, then public Gumball entry
+  must publish another NEW ORDINARY receipt through its real title/release. This
+  rejects blanket classification and is independently reachable even if the return
+  oracle is red. There is no forced queue reset/drain/drop/filter/deadline extension.
+
+The shared step helper calls existing session.step(null) EXACTLY ONCE followed by
+normal session.renderFrame(), no readback/PNG/capture tool or replacement renderer.
+Null is the existing neutral-input contract; showTitleCard=true prevents the
+capture helper's omitted-title path, completeSpecialStage=false prevents debug
+completion. Settings have no positioned/gameplay bootstrap fields. No full route
+or copied chain driver. HeadlessGameBoot472/565 creates the actual GameLoop and
+calls ordinary loadZoneAndAct; the context exists before this load. The real
+LevelManager common load seam publishes RunLevelLoadTracker receipts even without
+an active trace session. The test never primes/marks/observes/publishes a tracker.
+
+Read contracts: context.runLevelLoads691 returns its existing final tracker;
+latest95..97/generation99..101 read actual state; completed LM generation and
+zone/act getters are scalar. HardwareTimingService308..312 pendingHandles is
+unclaimed-job stream projection only, no preparation/capture/claim. RewindController
+currentFrame101 and context.getRewindController1169 read existing values. Existing
+public bonus-return production precedent is TestS3kBonusStageReturnProducts100..149
+(request entry, same typed provider.requestExit, normal800-step fade/title return).
+No private doEnter/doExit, reflection, field writes, marks, request hooks, observer,
+hardware port/controller/provider replacement, timing snapshot/input hydration.
+
+History contract is intentionally limited: acquire actual outgoing history>1,
+then at FIRST actual new receipt require old history retired (null/new controller
+or lower currentFrame). LevelManager549..552 marks LEVEL_LOAD; LiveRewindManager
+396..420 clears unsupported history or resets supported input/controller to zero.
+Object manager must change. No receipt capture/restore, no cross-load rewind,
+no claimed two-world or two-cycle partition replay: tracker is not snapshotted,
+and prime does not clear nextCause. Existing R36 five-key stable-partition replay
+is retained at its actual epoch, not inherited as new R40 execution.
+
+Existing genuine special-return control is retained BYTE-UNCHANGED:
+`src/test/java/com/openggf/TestSpecialStageReturnLoadReceipt.java` SHA256 `3e83f8ec8524456684b9b6a17686f553af9619e85e24050784e83052a75cbb0e`,
+`synchronousReturnPublishesItsProductionLoadBeforePlaybackActivation` invokes
+actual SpecialStageTransitionSupport.loadSpecialStageReturnLevel with S2 ROM
+fixture and asserts its published INTERIOR_RETURN/new generation/identity. Its
+existing tracker.prime fixture setup is NOT copied into this new test. This
+phase does not reexecute it or add it to the proposed one-class gate. Constructed
+coordinator controls remain distinct; no new special public inlet is invented.
+
+Caps are inherited diagnostic ceilings, not fitted waits:600 per origin-title,
+subsequent-title, bonus-entry or history-acquisition loop;800 for return, all
+null-input ordinary once-steps. History acquisition is conditional on actual
+installed/nonempty history, not an unconditional frame delay. Each method is
+bounded by its finite loops (main <=3200 ordinary steps; control <=3600), no
+journal/logger/export and no screenshots. No pass prediction: any actual boot,
+receipt/context identity, FIFO/prerequisite/history/title/return failure would
+be a prerequisite STOP, not genuine semantic old-red. Both methods and their
+natural capacity/control reach are UNEXECUTED. R38 actual99guards/route1F and
+R36 actual145focus remain separate epochs; no new matching-R38-caller, readiness,
+12-FP offset/full2module4direct, native birth/liveCPU/SS/fdf/fullroute certificate.
+
+Proposed SHORT ONE NORMAL CLASS gate, NOT SUBMITTED (compiler would be inside
+this sole lifecycle only after separate Root actual-file review/authorization):
+
+```bash
+MAIN_ROOT="${OPENGGF_MAIN_ROOT:?set to the existing main checkout}"
+env -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  PATH="/usr/lib/jvm/java-25-openjdk/bin:$PATH" \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_ROOT/tools/testing/maven_queue.py" \
+  --normal -Dmse=off '-Dtest=TestS3kBonusReturnLoadReceipt' \
+  "-Dsonic1.rom.path=$MAIN_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$MAIN_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$MAIN_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true \
+  -Dsurefire.runOrder=alphabetical test -B
+```
+
+No profile/movie/CLIgl/property/logger/testbase/fixture/POM/API/pin/queuechange.
+All mandatory qualified runtime/oldtest pins b0dcc/9693/f028/69c6/54633/1f3f exact;
+Main/private config/ROM/native044/refs/media retained. New class+existing Plan
+only WIP, index empty; target remains R38 session16285 maintained source, not a
+compiled R40 test. All leases released, no live jobs/new diagnostic outputs.
+STOP at frozen actual source/hash for Root review before any old-red execution.
+
+
+### R41 ONE reviewed public bonus-return receipt lifecycle — 2026-10-18
+
+Exact returned task fdf-r41-reviewed-public-bonus-return-receipt-oldred-once-20261018,
+native ordinal51 separately registered; all50/source and earlier identities/results
+remain unchanged. Root full260-line source read and independent GPT-6.1 review found
+no material source blocker before the sole execution. Source HEADd84f602d8 +unchanged
+new8b5e1fd4 and R40 Plan752fdd62 frozen throughout execution. Preflight intended-tree
+lease verified all6 b0dcc/9693/f028/69c6/54633/1f3f pins/zero tracked runtime+oldtest
+diff, all3 original ROM SHA1+CRC/native044/private+Main configSHA+mtimes, fresh
+specific report paths and no own equivalent queue/JVM. The process inventory's first
+broad string filter also printed its own source-shell, not another Maven request;
+the final executable/argument-aware check found no actual wrapper/Surefire job.
+Preflight build lease RELEASED before normal admission; no outer activity shim.
+
+ONE actual command is EXACT R40 full proposed normal/no-profile
+`-Dtest=TestS3kBonusReturnLoadReceipt` lifecycle above, current Main absolute wrapper
+FROM owned649/all3 original absolute ROM/JDK25/JTO-only-EGL/NO CLIgl/EGL/nullAL/
+DISPLAY+WAYLAND+LD unset/Lua5.4/fork1/reuse/alphabetical. No inherited JDK_JAVA_OPTIONS
+or MAVEN_OPTS was set or erased. Sole session9629, queue0/normal7GiB8cores,
+terminal1 at2026-10-18T00:49:14+01 =2026-10-17T23:49:14UTC, Maven25.914s.
+Main up to date;4195 test sources compiled inside this single lifecycle, no separate
+build, compiler/import failure or additional JVM request. No edits/retry after boot.
+
+ACTUAL **2T/1F/0E/0S**, class1.706s, exact identities:
+
+| Method | Actual result/time | Reached boundary |
+|---|---|---|
+|actualGumballReturnPublishesInteriorReturnReceiptAfterNaturalTitleRelease|1F,1.095s|FINAL semantic cause assertion100 only; all public-entry/return/title/history/identity prerequisites passed.|
+|ordinarySubsequentLoadAndBonusEntryKeepOrdinaryReceipts|PASS,0.342s|Independent ordinary subsequent HCZ load AND Gumball entry retain actual ORDINARY/new-generation/identity receipts; normal title/history controls reached.|
+
+Sole org.opentest4j.AssertionFailedError, exact full reported cause/identity:
+`Receipt[cause=ORDINARY, identity=LevelIdentity[loadGeneration=3, progressionZone=0, romZone=0, act=0]]`
+expected INTERIOR_RETURN but ORDINARY. Stack at new test100 -> JUnit1156; no error,
+secondary/suppressed failure, skipped test or dump. This is a genuine independent
+component old-red at the intended final oracle, not an inlet/capacity/timeout failure.
+
+Before100, unchanged test control flow checked: actual ordinary origin title/release/
+quiescence; same actual tracker; actual entry receipt ORDINARY/new generation with
+LM-matching identity; observed bonus title and BONUS_STAGE fade/control release;
+real typed provider and nonnull saved-origin state; exactly one requestExit; actual
+new return load/object-manager replacement/outgoing-history retirement; observed
+return TITLE_CARD then natural LEVEL/no request/fade/control/pending boundary;
+provider NONE and saved-origin progression/ROM-zone/act/current LM generation.
+The printed actual returned generation is3. Entry numeric generation/history frame
+counts, precise clocks/which history-retirement disjunct are not serialized: do not
+invent them. No receipt prime/mark/observeLoaded, hidden mode/field writes, queue
+reset/filter/claim, snapshot across load or fabricated twice-world replay occurred.
+The return oracle is genuine for this independently declared public-input component;
+it does NOT observe the actual R38 failed admission receipt or uniquely attribute it.
+
+Inspected metadata_slot ALONE: both full actual case identities, failure type/message/
+full stack/TXT; ALL72 XML properties including both complete classpaths; complete
+1776B+1619B case stderr streams, no system-out, suite streams or suppressions.
+Properties confirm Java25.0.4.1, exact all3 absolute ROM flags, owned user.dir/tmp/
+reports, JTO-derived surfaceless-egl, single fork/reuse/alphabetical and exact selector.
+Streams: five FAST-no-manifest->NONE warnings and ten deterministic-estimate warnings
+(five actual direct fingerprints repeated in each case:513a9a90,d24be135,b82e0acc,
+be87b230,549df423). These estimates are normal no-profile service, not measured
+hardware/readiness or canonical admission evidence. Console additionally has existing
+compile deprecation/resource warnings and JOML Unsafe deprecation outside XML. No
+FIFO-full warning, capacity/prerequisite/title/history/identity error, dump or skip.
+Full streams/properties/failure were read, not just Maven's aggregate headline.
+
+Retain SINGLE ORIGINAL2 reports29086B unchanged for Root DIRECTread:
+
+| Under target/surefire-reports/ | Bytes | SHA256 |
+|---|---:|---|
+|TEST-com.openggf.tools.TestS3kBonusReturnLoadReceipt.xml|27538|f76dee3ffe81d1b953874f744d55d15a2b16138d0856a9ddd17ebeb2dc2d3852|
+|com.openggf.tools.TestS3kBonusReturnLoadReceipt.txt|1548|abfb0f2311a30a26e42711ef8e5f9c4ea66118033c002ccd11e76924fc0e6302|
+
+No copies/archive/receipt/diagnostic cleanup or class deletion. After terminal,
+source/new test/Plan freeze pins verified exact before ONLY this factual append;
+Main/private config SHA+mtime unchanged. HEADd84f remains; existing Plan+new test
+only WIP/indexempty. Target last9629 normal/no-profile compile includes frozen8b5e;
+R38 target16285 was the previous trace-profile epoch. R36 actual145 and R38 actual99
+remain separate bounded qualifications, not new R41 coverage. Existing special-return
+control was retained, not selected/executed in this ONE exact-class command.
+
+STOP: no runtime fix/test edit/commit/guard/campaign/probe/native/second JVM/retry.
+No actual R38 mode/receipt/readiness attribution, twelve-unmatched closure repair,
+full two-module/four-direct/native births/recorded SS/fdf/liveCPU or route claim.
+All command/build/execution/metadata leases terminal/released, no owned live job.
+Root direct acceptance/next bounded scope is required before any further action.
+
+
+### R42 accepted receipt old-red accounting and narrow source correction — 2026-10-18
+
+Root DIRECT read R41's original XML27538B/f76dee3f and TXT1548B/abfb0f23 in full,
+all2 actual methods/full sole final failure/72 properties/complete streams. Accepted
+2T1F0E0S genuine final semantic cause old-red: actual ORDINARY returned generation3/
+origin0/0 after all natural entry/return/title/history/identity prerequisites, and
+independent ordinary-load/bonus-entry control passes. This does not observe actual
+R38 admission receipt. Record acceptance BEFORE consuming only those2 original
+reports29086B: rehash ALL sizes/fullSHAs against R41 table BEFORE ANY unlink under
+metadata_slot ALONE; preserve all source and compiled classes, no archive/copy/receipt.
+Source phase has no further compiler/JVM/native/route/retry or commit authority.
+
+
+#### R42 frozen saved-origin cause mark and one-time consumption control
+
+Actual relayed task fdf-r42-saved-origin-bonus-return-cause-source-20261018,
+native ordinal52, separately registered literal task/run with24h expiry; prior51/
+source50 and every historical result unchanged. Root-accepted R41 reports were
+ALL size+fullSHA-checked before any unlink and consumed metadata_slot ALONE after
+the durable acceptance paragraph above. GameLoop/new-test compiled class hashes
+AND mtime_ns stayed unchanged across cleanup; no class/source/archive/copy/receipt.
+
+ONLY runtime change: GameLoop.doExitBonusStage after successful
+bonusStageTransitionCoordinator.prepareReturnLoad(levelManager,savedState) and
+IMMEDIATELY BEFORE synchronous levelManager.loadZoneAndAct(zone,act):
+
+```java
+// The synchronous saved-origin load consumes this semantic return cause once.
+TraceSessionLauncher.markNextRunInteriorReturnLoad();
+```
+
+No other call/assignment/condition/order changes. Marker is NOT at method entry,
+async request/exit/fade, null-saved-state fallback or ordinary load. This is the
+same existing package-private semantic helper SpecialStageTransitionSupport68
+uses before special-return production loads. The common successful load seam
+publishes the actual new receipt; RunLevelLoadTracker.observeLoaded resets
+nextCause to ORDINARY after publication, retaining its original one-time contract.
+No tracker/core/public API/schema/signature/pin, failure recovery, title/ready/
+admission/queue/timing/fingerprint/ordinal/input changes. Failed-load/callback
+recovery and null-saved-state fallback remain separate unqualified branches; do
+not broaden this to a method-entry mark or a readiness/admission waiver.
+
+Frozen runtime `src/main/java/com/openggf/GameLoop.java` SHA256
+**529012474cd66c165affefce9f06cf449e21b71ae4dc174908efe4551c24c42f**.
+Two-line diff SHA256 (unified LF a/.. -> b/.., no Git index metadata):
+`d075e3d54177ecf51467bcb830333a8537a67ee401c2936aeec6275d09ae42a8`.
+Remove EXACT inserted comment+call in memory -> original5124502753d87e658cb717afb83701fe42ebb2bac64336dc480b1bedd6dbb85f
+BYTE-EXACT. No backup source variant or unrelated runtime edit was created.
+
+New test full source317lines/17056B SHA256
+**74f65afb9f901f17b0fac1554e03862a5e9bf3219dc841123e5f2597aaa57fb0**.
+Only added57-line separately declared
+`ordinaryLoadAfterSavedOriginReturnDoesNotInheritItsCause` before the old settings
+helper. Inverse deletion of this exact block reproduces full original genuine
+old-red test8b5e1fd4519fd0e2fe6208dfa3ee23da1a7a66844070835d6e8e63dabeedcc33
+BYTE-EXACT: original two bodies/oracles/helpers and final100 assertion unchanged.
+Incremental test addition diff SHA256
+`9b71bd1038903e0a7ac6b10edd3d309fb0c2b8e8f77359c553ff40c8b0c4c510`.
+
+The separate control uses the same existing public boot/settle/entry contracts,
+actual typed provider with nonnull saved state, one requestExit and normal steps
+through observed return TITLE_CARD and natural LEVEL release. Prerequisite actual
+NEW returned receipt must match saved origin/current LM and INTERIOR_RETURN.
+THEN a distinct ordinary public HCZ load must publish a NEW actual ORDINARY
+receipt with matching generation/identity, retain it through its normal title
+release, proving cause consumption once rather than leaking into a later load.
+No prime/markNext/observeLoaded/reflection/controller/provider replacement/private
+field/gameplay/receipt seeding, cross-load capture/restore, filtered queue or fitted
+clock. Same existing600/800 ceilings/helpers; no widened waits. All three methods
+and actual post-fix prerequisite/control reach are UNEXECUTED in this source phase.
+Existing R41 two-method old-red+ordinary-control execution remains its own epoch;
+it is not green evidence for this extended test or runtime529012.
+
+Ratchet SOURCE inspection (not a guard/JVM): actual unchanged
+TestArchitecturalSourceGuard SHAeffa50492eb609231ce9c4570ffca3b4bfd3e5b859f2271b217c440a0111642f
+budgets GameLoop class3313 effective lines and doExitBonusStage142 physical lines.
+Faithful Python projection of its exact stripComments/effective annotation rule
+and brace-span algorithm: class **3288 ->3289**, method **113 ->115**
+(original2821..2933, candidate2821..2935). New executable line adds no concrete
+Sonic reference. No source-budget workaround/extraction/limit/pin or guard change;
+these static counts do not replace future actual structural/authority guards.
+
+Proposed next bounded focused normal/no-profile selection (NOT SUBMITTED):
+11 full simple selectors plus ONLY two existing declared five-pilot methods,
+14 actual package classes after source inventory (LevelLoading matches both
+packages). New test has3 declared methods, but actual JUnit parameter counts and
+results are NOT forecast. Existing actual special-return helper/control and
+strict coordinator admission consumers are included; no exhaustive return/portal
+products or repeated full smoke/trace/capture.
+
+```bash
+MAIN_ROOT="${OPENGGF_MAIN_ROOT:?set to the existing main checkout}"
+env -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  PATH="/usr/lib/jvm/java-25-openjdk/bin:$PATH" \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_ROOT/tools/testing/maven_queue.py" \
+  --normal -Dmse=off \
+  '-Dtest=TestS3kBonusReturnLoadReceipt,TestSpecialStageReturnLoadReceipt,TestBonusStageTransitionCoordinator,TestTraceRunPlaybackCoordinator,TestSonic3kBonusTitleCard,TestSonic3kTitleCardKosQueue,TestS3kTitleCardHoldRoutes,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestS3kBonusStageReturnProducts#declaredStageRequestLoadsAndReturnsThroughRealBoundaries,TestS3kBonusPortalMechanismProducts#shortPortalAndMechanismPilotsLoadAndReturnThroughRealBoundaries' \
+  "-Dsonic1.rom.path=$MAIN_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$MAIN_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$MAIN_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true \
+  -Dsurefire.runOrder=alphabetical test -B
+```
+
+Only AFTER separate future authorization and green affected result, proposed
+fresh guard lifecycle uses same env/ROM/forks above with -Pguards and exact
+`-Dtest=TestArchitecturalSourceGuard,TestHardwareTimingAuthorityGuard,TestModApiSignatureSurface#candidateZeroSevenSurfaceIsPinnedToTheCurrentSurface+engineOnlyRuntimeHelpersDoNotLeakIntoTheZeroSevenSurface`.
+That is the previously qualified99 selection, not a forecast pass or inherited
+R38 all-source qualification. No guard/test/compile/trace/Mega/native is submitted
+in R42; ordinary compiler would belong inside a separately approved lifecycle.
+
+Actual runtime diff/added57-line control and existing source/read contracts were
+read back; whitespace and exact inverse hashes verified. No compiler/typecheck
+or post-fix execution. No need for a new shared API, tracker callback, snapshot,
+semantic branch or ordinary-load wrapper. HEADd84f; GameLoop+new test+existing
+Plan only WIP/indexempty. All other b0dcc/9693/f028/69c6/54633/1f3f owners/oldtests
+unchanged; Main/private config/native044/ROM/refs/media preserved. Last target
+9629 compiles OLD GameLoop512450 and test8b5e, not candidate529012/74f65. All
+leases released/livejobsnone. STOP actual-file review before any execution/commit.
+No unique actualR38cause proof, twelve-identity closure/offset/recorded readiness/
+SS/fdf/live CPU/native birth or full route/integration/push claim.
+
+
+### R43 actual saved-origin cause focused qualification — 2026-10-18
+
+Exact returned task fdf-r43-reviewed-saved-origin-cause-focused-once-20261018,
+native ordinal53, separately registered preserving52/all historical IDs/results.
+Root actual GameLoop529012 +57-line test74f65/inverse8b5e/Plan7b69 review accepted
+before execution. Last preflight checked HEADd84f/all8 literal runtime/test pins,
+exact R42 selector/14 package source inventory, all3 original ROM SHA1+CRC/native044,
+Main/private configSHA+mtime, fresh0XML/0TXT and no equivalent own wrapper/JVM.
+Preflight tree lease released BEFORE admission; no outer activity lease/shim.
+
+ONE EXACT R42 proposed ordinary command above (11 full simple selectors +only2
+five-pilot methods), current Main absolute wrapper FROM owned649 --normal/no profile,
+all3 original absolute ROM/JDK25/JTO-only-EGL/NO CLIgl/EGL/nullAL/noambient DISPLAY/
+WAYLAND/LD/Lua5.4/fork1/reuse/alphabetical. Sole78969 waited16s, budget7GiB8cores,
+then compiled4143main/4195tests INSIDE this lifecycle. Terminal0 at
+2026-10-18T01:00:05+01 =2026-10-18T00:00:05UTC. Maven displayed1m30 (precision
+as emitted); parent total wall time unavailable, not fabricated from rounded time.
+No duplicate/restart/additional build/JVM/source edit while queued or executing.
+
+ACTUAL **128 unique JUnit identities /14 package classes /0F0E0S**:
+
+| Actual class (package distinction retained) | Tests | Suite seconds |
+|---|---:|---:|
+|com.openggf.TestSpecialStageReturnLoadReceipt|1|0.468|
+|com.openggf.game.TestBonusStageTransitionCoordinator|7|0.599|
+|com.openggf.game.sonic3k.TestSonic3kBootstrapResolver|6|0.038|
+|com.openggf.game.sonic3k.TestSonic3kDecodingUtils|3|0.005|
+|com.openggf.game.sonic3k.TestSonic3kLevelLoading|36|1.165|
+|com.openggf.game.sonic3k.titlecard.TestSonic3kBonusTitleCard|6|0.017|
+|com.openggf.game.sonic3k.titlecard.TestSonic3kTitleCardKosQueue|11|0.109|
+|com.openggf.tests.TestS3kAiz1SkipHeadless|8|1.529|
+|com.openggf.tests.TestS3kBonusPortalMechanismProducts (only declared pilots)|5|7.432|
+|com.openggf.tests.TestS3kBonusStageReturnProducts (only declared pilots)|5|3.397|
+|com.openggf.tests.TestSonic3kLevelLoading|7|0.132|
+|com.openggf.tests.trace.runs.TestTraceRunPlaybackCoordinator|25|0.021|
+|com.openggf.tools.TestS3kBonusReturnLoadReceipt|3|0.892|
+|com.openggf.tools.TestS3kTitleCardHoldRoutes|5|0.557|
+
+All three new independent receipt cases actually pass: original final return
+semantic oracle0.260s, ordinary-after-return once-consumption0.368s, independent
+ordinary subsequent load/bonus-entry0.257s. Their entry/return TITLE_CARD->LEVEL,
+actual saved origin/new generation/LM identity/history-retirement prerequisites
+were not waived. The unchanged genuine R41 final-cause old-red is now green on
+this declared component input; returned INTERIOR_RETURN followed by ordinary HCZ
+ORDINARY satisfies the new consumption oracle. Green XML does not serialize every
+actual numeric generation/frame/clock/disjunct, so do not manufacture those values.
+
+Actual S2 production special-return helper test passes, and strict coordinator25
+includes semantic cause/generation/request/title/mode refusal controls unchanged.
+Both Loading classes run (36+7), mandatory S3K4 complete; title hold/queue/registered
+resource rewind consumers and all10 selected public/portal pilots pass. This is
+bounded affected coverage, not all finite products/whole route or fresh guards.
+
+Inspection under metadata_slot ALONE covered ALL14XML+14TXT, ALL128 identities/
+node types with no duplicate/error/failure/skip/suppression/dump. All72 property
+name/value pairs are EXACTLY equal across14; complete classpaths read once and
+all remaining values checked, including exactselector/JDK25.0.4.1/owneduser.dir/
+all3ROM/fork1/reuse/alphabetical/JTO-derivedsurfacelessEGL. Initial console and one
+combined properties/streams view were display-truncated; a SECOND bounded read
+completed the cut property tail plus ALL60 distinct exact raw lines and ALL88
+stream-order arrays. Every original raw stream reconstructed byte-exact from
+those lines (timestamps retained), not a filtered error-only view. Full TXT read.
+
+NO FIFO-full/capacity warning or unexpected new field/prerequisite/restore failure.
+Other actual fixture diagnostics are explicitly bounded:
+
+* 107 FAST-no-manifest->NONE messages and deterministic unmeasured direct-work
+ estimates are the normal no-profile lane, NOT native measured timing/readiness.
+* One collision-index warning is the explicit table[3] beyond3-row negative read
+ at TestSonic3kDecodingUtils31. The expected zero oracle passes unchanged.
+* Five bonus-title/two normal-title ROM-unavailable warnings belong to the existing
+ TestSonic3kBonusTitleCard fixture's explicit RomManager.setRom(null)32 and lease-
+ only state-machine owner; that fixture does not claim ROM art loading.
+* Two fallback WAV shadow rejections (music1/2 supplier null) occur only in unchanged
+ direct TestSonic3kTitleCardKosQueue held/retained completion controls326/71. These
+ directly tick the title manager/lease/runtime queue, not GameLoop.doExitBonusStage's
+ modified path. Source/stream scope does not certify audio asset readiness or claim
+ a measured Main stream-equivalence baseline. No fixture/source edit or waiver.
+
+Standard green28 original reports396206B are fully inspected and durably accounted
+here/own53 registry before ALL size+fullSHA checks then consumption metadata_slot
+ALONE under this task's explicit standard-green authority. No archive/copy/receipt/
+class deletion or novel-red diagnostic exists. Inspection does not erase warning
+limits. Runtime529012/test74f65 and other6 qualified owners remained literal exact;
+Main/private configSHA+mtime unchanged before/after. Only this factual Plan append
+after terminal, GameLoop+new test remain uncommitted/indexempty; no commit authority.
+
+Target now78969 normal/no-profile compile of actual529012/74f65, separate from R41
+old-red9629 and R38 guard/route epochs. No guard/route/Mega/probe/native/retry/runtime
+repair or further JVM performed. Fresh relevant guards and original route require
+separate gates; this component pass does NOT observe actual R38 admission receipt,
+prove its unique cause, repair12 timing identities/whole ordinal difference,
+record SS/fdf readiness/live CPU/native births or establish full route/delivery.
+All command/execution/build/metadata leases terminal/released, no owned live job.
+
+
+R43 cleanup COMPLETE after durable facts: ALL28 originals396206B matched every
+expected size/full SHA before ANY unlink; consumed metadata_slot ALONE. Maintained
+GameLoop/new-test class SHA+mtime_ns identical before/after; no class deletion,
+copy/archive/receipt. All relevant source/config pins remain exact, no code change
+following execution. Only GameLoop/new test/existing Plan WIP/indexempty. No further
+workload or commit; final handback keeps actual R38 receipt/route gate open.
+
+
+### R44 actual fresh guards and original returned-AIZ frontier — 2026-10-18
+
+Literal returned task fdf-r44-qualified-return-guards-then-original-mega-once-20261018,
+native ordinal54, separately registered with24h expiry; prior53/source52/history
+preserved. HEADd84f602d8c3461f8948137bc38602c72fcd3f993 plus ONLY frozen
+GameLoop529012474cd66c165affefce9f06cf449e21b71ae4dc174908efe4551c24c42f
+and receipt test74f65afb9f901f17b0fac1554e03862a5e9bf3219dc841123e5f2597aaa57fb0.
+All other b0dcc/9693/f028/69c6/54633/1f3f owners remain literal exact. Existing R43
+128-green qualification remains its own epoch; no source edit between lifecycles.
+
+Phase1 ONE current Main absolute wrapper FROM owned649 --normal lifecycle, same
+R42 all3-original-ROM/JDK25/JTO-only-EGL/NO CLIgl/EGL/nullAL/noambient DISPLAY/
+WAYLAND/LD/Lua5.4/fork1/reuse/alphabetical environment, with -Pguards and EXACT
+`-Dtest=TestArchitecturalSourceGuard,TestHardwareTimingAuthorityGuard,TestModApiSignatureSurface#candidateZeroSevenSurfaceIsPinnedToTheCurrentSurface+engineOnlyRuntimeHelpersDoNotLeakIntoTheZeroSevenSurface`.
+Sole62001 wait0, Maven31.908s, terminal0 at2026-10-18T00:10:21UTC. Actual
+**99T0F0E0S**: Architectural72 (3.004s), HardwareAuthority25 (4.170s), API2 (0.633s).
+ALL99 unique identities/3XML+3TXT/72 exact shared properties including full classpaths
+read; empty XML streams/no skips/suppression/dumps. Three known outside FAST fallback
+warnings and normal compile messages, no new material guard warning. ALL6 standard
+reports83552B durably recorded in own54 registry, every size/fullSHA verified BEFORE
+ANY unlink, consumed metadata_slot ALONE; maintained class SHA+mtime preserved.
+No archive/copy/receipt. Fresh guard results actually qualify this source epoch.
+
+ONLY after actual99-green and literal post-source/config/ROM/native/driver/base/
+fixture pins stayed exact, phase2 ONE original UNMODIFIED maintained command used
+the SAME environment/ROM/fork arguments above, replacing guard profile/selector with
+`-Ptrace-replay-r7 -Dtest=TestS3kMegaRunChain#multiBonusSpecialStageRoundTrip`.
+Original full assertChainReplay, no prefix/helper/logger/observer/property/input/
+bootstrap/fixture/test-base replacement. Sole78842 wait0, Maven30.234s, terminal1
+at2026-10-18T00:12:30UTC. Actual **1T0F1E0S**, class5.940s/case5.680s.
+No duplicate/restart/separate build/JVM or source edit while queued/live.
+
+Original ERROR: `IllegalStateException: Unable to queue AIZ2 KosM transition art`,
+Sonic3kAIZEvents.queueAct2KosArt2932, caused by `S3K KosM module FIFO is full`
+at queueInternal205 -> queue76 -> queueAct2KosArt2926. Original path proceeds through
+applyFireTransitionMutation/updateFireTransition/updateAct1 -> level events ->
+GameLoop ordinary level iteration -> original awaitBoundary1966/step1967. This is
+an actual route exception, separate from the previously baseline-attributed water
+fixture warning. NO runtime cause/capacity repair or source investigation in this gate.
+
+Unlike R38's segment2 admission denial, a new actual returned-AIZ segment2 comparator
+was attached and compared. Original source admits before attaching this comparator;
+stage_exit and return-boundary assertions preceding that branch did not throw.
+This demonstrates progress ON THIS run, not a serialized actual R38 receipt/cause,
+numeric LEVEL-release clock, independently measured native birth or route parity.
+OPTIONB reanchor remains input-cursor alignment only. SS12/FDF are UNREACHED.
+
+| Actual partial comparator | Errors (physics / animation) | Lagged | First available mismatch |
+|---|---:|---:|---|
+|seg0 AIZ|1 (1 / 0)|0|4545 camera_y native01F2 / engine01EE delta4|
+|seg1 Gumball|12 (12 / 0)|21|firstNonCamera1300 x native0000 / engine2778 delta10104|
+|seg2 returned AIZ|21196 (20427 / 769)|0|firstNonCamera34 queue.s3k_kos_module.busy native true / engine false|
+
+ALL3 complete=false, warningCount0/bootstrapErrorCount0; no actual compared/reference
+row counts serialized. Recent arrays are ONLY1/5/5 entries, not exhaustive error
+vectors or row counts. Seg0/1 payload+owner SHAs equal R38 originals; equality of
+those bounded reports does not prove exhaustive route equivalence. Seg2 recent5
+at1581 concern module queued fingerprints/remaining work and direct queued
+fingerprints/destination/source. Diagnostic queue hashes are not stable submission
+fingerprints. Dynamic-art gap report has2 gaps/0 failures/empty transition arrays;
+AIZ->Gumball journal clocks5384/5570, Gumball->aiz_2 clocks6949/6949. These are
+that journal's labels, not native birth/LEVEL-release proof or a readiness waiver.
+
+Sole suppressed hardware-close exception contains EXACT29 full unmatched identities,
+all read/parsed:12 initial AIZ +9 Gumball +8 returned AIZ. The first21 explicitly
+retain the ambiguous never-submitted OR already-admitted/claimed diagnostic.
+Returned rows34 PRE direct33 and35 POST module21 have engine pending <none>;
+row37 expects direct34 but pending direct26 with the earlier expected direct33
+fingerprint c3e8ddd34bf587540ca7d131fc68d371538d1a746da64c4eee3ec01f524948b7;
+row38 expects module22 but pending module19 with earlier expected module21
+fingerprint65c8c371e1ca1f70acf3a74cc1fa689867dcffbe93617a8c968e3de9242f89b3.
+Further sampled rows40/41/842/843 retain those pending heads. No arithmetic
+renumber/relabel/FP substitution/offset or birth-caller inference is permitted.
+This is actual boundary diagnostic projection, not complete FIFO/preparation/
+payload/native birth evidence. Original closure remains failed, not suppressed away.
+
+Inspection covered ALL10 originals83638B: full XML/TXT/error13328B/72 properties,
+full stderr27909B (initial display truncated; second bounded field/line-count read
+completed all36 fields in EACH first-error table4545/1300/34, diagnostics/nearby
+objects and exact repeated tail), all8 JSON/owner files/physical-path links. One
+original error/one suppressed/no skips/dumps/stdout. Stderr contains2 known FAST
+fallbacks and34 presentation-boundary SMPS SFX rejection warnings in its final tail;
+these are reported, not an audio/readiness certificate. Full TXT contains the exact
+XML error unchanged. No hidden field omission or assertion waiver.
+
+Retain SINGLE ORIGINAL10 files IN PLACE for Root DIRECT read; no deletion/copy/
+archive/receipt. Under target/surefire-reports, TestS3kMegaRunChain XML63915B SHA
+8e3fd743059e28ca355bcd18aa2213d4e52a3d9aafd7c79c1b0d89e9d27d5d3d;
+TXT13805B SHA6143c5cbea779c5699c003123e32f038b2c5e212cbb6760a1191f5e05312949b.
+Under target/trace-reports/run-chain, original s3-knux-multibonus-ss logical keys
+seg0/seg1/seg2/dynamic_art_gap and their4 .owner.json files, exact paths/sizes/full
+hashes in own54 registry. All10 rehashed at final inspection; total83638B.
+
+Post-terminal all8 source pins/HEAD/private+Main config SHA+mtime/original3 ROM
+SHA1+CRC/native044 remain exact. Only this factual Plan append after execution;
+GameLoop/new receipt test/existing Plan only WIP, indexempty. Target last78842
+trace-replay-r7 compile on529012/74f65, not fresh source after any repair. Both
+sessions terminal, all command/build/execution/metadata leases released, no owned
+live job. Retained route artifacts await Root direct read/cleanup authority.
+STOP: no commit/integration/push, fix/retry/new probe/JVM/guard/native/input change,
+full-route/vector/two-module-four-direct/native-birth/SS/FDF/CPU-readiness claim.
+
+
+### R45 accepted return-cause preservation and accounting — 2026-10-18
+
+Root DIRECT-read ALL10 R44 originals83638B: XML/TXT exact full sole error and
+suppressed29 identities, all72 properties/full duplicate classpath, every stderr
+line via bounded field-table projection, all3 segment JSONs/owners and gap/owner.
+Accepted128 component-green+99 fresh guards on exact529012/74f65, then original
+Mega runtime1E/AIZ2 event FIFO-full and partial returned34 busy mismatch. No actual
+R38 receipt uniqueness, exhaustive vectors, gameplay/native births/readiness/
+SS/FDF/route claim. Preserve ONLY exact approved GameLoop+green independent test
+and relevant existing release/discrepancy/frontier/audit/mirrored lesson docs in a
+normal local commit; no source behavior/test oracle change after qualification.
+
+After durable commit, ALL10 original sizes/fullSHAs from own54 inventory must
+match BEFORE ANY unlink under metadata_slot ALONE. Compiled GameLoop/receipt-test
+class hashes+mtime_ns must remain exact; no archive/copy/receipt or class deletion.
+This accepted cleanup is not another validation epoch. R45 source phase may be
+registered only after the clean accounting boundary and actual literal ID relay.
+No new compiler/JVM/guard/route/native/logger/test/runtime authoring is authorized.
+
+Normal first commit hook rejected two machine-local MAIN_ROOT examples in the
+accumulated Plan; both now require OPENGGF_MAIN_ROOT. Actual historical argv stays
+in own execution records. This documentation-only correction changes no source,
+test selector or executed epoch; same normal hooks rerun without bypass.
