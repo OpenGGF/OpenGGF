@@ -225,7 +225,7 @@ public final class UserRecordingSessionLauncher {
             }
             try (var in = zip.getInputStream(entry)) {
                 String json = new String(in.readAllBytes(), StandardCharsets.UTF_8);
-                return UserRecordingJson.readManifest(json);
+                return UserRecordingCatalog.readCatalogManifest(json);
             }
         }
     }

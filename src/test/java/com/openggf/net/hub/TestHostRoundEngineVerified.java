@@ -11,6 +11,17 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestHostRoundEngineVerified {
+
+    @Test void failedImprovementPreservesVerifiedBest() {
+        long[] now = {0}; var engine = running(now); engine.setVerifiedRoom(true);
+        engine.onAttemptFinish(1,"A","sonic",finish(1,200,"a"),false);
+        engine.onVerdict(1,1,true);
+        engine.onAttemptFinish(1,"A","sonic",finish(2,100,"b"),false);
+        engine.onVerdict(1,2,false);
+        assertEquals(200,engine.standings().getFirst().bestTimeFrames());
+        assertEquals("VERIFIED",engine.standings().getFirst().verifyState());
+    }
+
     private static final ControlMessage.RoundConfig CONFIG =
             new ControlMessage.RoundConfig("s3k", 0, 0, 1, "OPEN", null);
 

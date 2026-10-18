@@ -20,6 +20,14 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestUserRecordingCatalog {
+
+    @Test void nullManifestDoesNotAbortLibraryScan() throws Exception {
+        var identity=new BuildIdentity("0.6.1","",false);
+        var bk2=writeRecording("null.bk2",manifest("null",identity,1));
+        replaceManifestEntry(bk2,"null");
+        assertFalse(singleEntry(identity).isLoadable());
+    }
+
     @TempDir
     Path tempDir;
 

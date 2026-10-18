@@ -94,11 +94,11 @@ public final class DecodedPcmCache {
     }
 
     private static boolean hasSamples(DecodedPcm pcm, short[] expected) {
-        if (pcm.sourceFrames() != expected.length) {
+        if ((long) pcm.sourceFrames() * pcm.channels() != expected.length) {
             return false;
         }
         for (int index = 0; index < expected.length; index++) {
-            if (pcm.sample(index, 0) != expected[index]) {
+            if (pcm.sample(index / pcm.channels(), index % pcm.channels()) != expected[index]) {
                 return false;
             }
         }

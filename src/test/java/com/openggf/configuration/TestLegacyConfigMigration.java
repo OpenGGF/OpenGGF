@@ -10,6 +10,13 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class TestLegacyConfigMigration {
 
+    @Test void nullYamlFallsBackWithoutCrashingStartup() throws Exception {
+        Files.writeString(tempDir.resolve("config.yaml"), "null\n");
+        var config = assertDoesNotThrow(() -> SonicConfigurationService.createStandalone(tempDir));
+        assertEquals(60, config.getInt(SonicConfiguration.FPS));
+    }
+
+
     @TempDir
     Path tempDir;
 

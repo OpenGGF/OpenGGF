@@ -359,6 +359,7 @@ public final class RoomHost {
         member.connection.sendText(codec.encode(null,
                 new ControlMessage.JoinAccepted(member.token, slot, descriptor(),
                         round.snapshot())));
+        round.sendVoteState(message -> send(member, message));
         broadcast(new ControlMessage.RoomState(players()));
     }
 
@@ -516,14 +517,16 @@ public final class RoomHost {
     }
 
     private int lowestFreeSlot() {
-        boolean[] used = new boolean[config.maxPlayers()];
+        if (playerCount() >= config.maxPlayers()) return -1;
+        boolean[] used = new boolean[Protocol.MAX_PLAYERS_RELAY];
         for (Member member : members.values()) {
             if (member.admitted && member.slot >= 0 && member.slot < used.length) {
                 used[member.slot] = true;
             }
         }
         for (int slot = 0; slot < used.length; slot++) {
-            if (!used[slot]) {
+            // A retained result still owns its wire identity until the next round.
+            if (!used[slot] && round.bestFinish(slot) == null) {
                 return slot;
             }
         }

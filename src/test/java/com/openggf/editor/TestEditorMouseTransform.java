@@ -8,6 +8,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestEditorMouseTransform {
 
+    @Test void negativeCameraYTargetsTheVisibleTopRows() {
+        var result = EditorMouseTransform.toWorldTile(40,64,0,-32,0,0,320,224,128,16,16);
+        assertEquals(32, result.worldY());
+        assertEquals(0, result.tileY());
+    }
+
+
     @Test
     void mapsMouseToWorldTileAtOneTimesScale() {
         EditorMouseTransform.Result result = EditorMouseTransform.toWorldTile(

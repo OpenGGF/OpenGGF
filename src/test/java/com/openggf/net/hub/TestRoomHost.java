@@ -22,6 +22,20 @@ import java.util.HexFormat;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestRoomHost {
+
+    @Test void departedResultSlotIsNotAssignedToReplacementDuringTheRound() throws Exception {
+        var old = new FakeHubConnection();
+        var joined = admit(old,"Old",dir.resolve("old"));
+        room.requestStartRound(new ControlMessage.RoundConfig("s3k",0,0,300,"OPEN",null));
+        now += HostRoundEngine.COUNTDOWN_MILLIS; room.tick();
+        room.round().onAttemptFinish(joined.playerSlot(),"Old","sonic",
+                new ControlMessage.AttemptFinish(1,100,0,100,"a".repeat(64),"ghost",null),false);
+        room.onDisconnected(old);
+        var replacement = admit(new FakeHubConnection(),"New",dir.resolve("new"));
+        assertNotEquals(joined.playerSlot(),replacement.playerSlot());
+        assertEquals("Old",room.round().standings().getFirst().displayName());
+    }
+
     private static final String FP = "0.6:cafe1234";
 
     @TempDir Path dir;

@@ -10,6 +10,21 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestModStorage {
+
+    @Test void legacyFilesAreListedAndDeletedWithoutResurrection() throws Exception {
+        Path legacy = root.resolve("sample/profile.txt");
+        Files.createDirectories(legacy.getParent()); Files.writeString(legacy, "old");
+        var storage = ModStorageFactory.forOwner(root, "sample");
+        assertEquals(java.util.List.of("profile.txt"), storage.list());
+        assertTrue(storage.write("profile.txt", "new"));
+        assertTrue(storage.delete("profile.txt"));
+        assertTrue(storage.read("profile.txt").isEmpty());
+        assertFalse(storage.delete("profile.txt"));
+        Files.writeString(legacy, "legacy only");
+        assertTrue(storage.delete("profile.txt"));
+        assertTrue(storage.read("profile.txt").isEmpty());
+    }
+
     @TempDir Path root;
     public static final class CreatorProbe {
         public static void claim(Path root) { ModStorageFactory.forOwner(root, "other-owner"); }

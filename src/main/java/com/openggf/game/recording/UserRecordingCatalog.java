@@ -113,7 +113,7 @@ public final class UserRecordingCatalog {
         }
     }
 
-    private static UserRecordingManifest readCatalogManifest(String json) throws IOException {
+    static UserRecordingManifest readCatalogManifest(String json) throws IOException {
         try {
             return UserRecordingJson.readManifest(json);
         } catch (IOException ex) {

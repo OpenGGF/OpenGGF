@@ -105,7 +105,11 @@ public final class HostMasterLink {
 
         @Override public void close(String reason) {
             if (guests.remove(guestId, this)) {
-                sink.sendControl(new ControlMessage.RelayGuestClose(guestId, reason));
+                try {
+                    sink.sendControl(new ControlMessage.RelayGuestClose(guestId, reason));
+                } finally {
+                    onDisconnected.accept(this);
+                }
             }
         }
 

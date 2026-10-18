@@ -78,8 +78,10 @@ public final class EditorProjectLevel extends AbstractLevel implements RingObjec
         // Asset extraction uses authored geometry immediately: native storage/camera
         // bounds and placements belong to the layout this operation discards.
         EditorProjectState.BlankCapture captured = EditorProjectState.captureBlankLibrary(library, width, height);
-        EditorProjectLevel result = withSpareSlots(new EditorProjectLevel(captured.state(), library.getRingSpriteSheet()));
+        EditorProjectLevel result = new EditorProjectLevel(captured.state(), library.getRingSpriteSheet());
+        // Required empty terrain gets first claim on capacity, before optional spare slots.
         int emptyBlock = result.ensureEmptyBlock();
+        result = withSpareSlots(result);
         result.map = new com.openggf.level.Map(2, width, height);
         Arrays.fill(result.map.getData(), (byte) emptyBlock);
         result.objects = List.of(); result.rings = List.of();

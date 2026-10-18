@@ -257,12 +257,18 @@ public final class PngCodec {
         return switch (colorType) {
             case 0 -> {
                 int grey = row[offset] & 0xFF;
-                yield 0xFF000000 | (grey << 16) | (grey << 8) | grey;
+                int alpha = paletteAlpha != null && paletteAlpha.length == 2
+                        && grey == (paletteAlpha[1] & 0xFF) ? 0 : 0xFF000000;
+                yield alpha | (grey << 16) | (grey << 8) | grey;
             }
-            case 2 -> 0xFF000000
-                    | ((row[offset] & 0xFF) << 16)
-                    | ((row[offset + 1] & 0xFF) << 8)
-                    | (row[offset + 2] & 0xFF);
+            case 2 -> {
+                int red = row[offset] & 0xFF, green = row[offset + 1] & 0xFF, blue = row[offset + 2] & 0xFF;
+                int alpha = paletteAlpha != null && paletteAlpha.length == 6
+                        && red == (paletteAlpha[1] & 0xFF)
+                        && green == (paletteAlpha[3] & 0xFF)
+                        && blue == (paletteAlpha[5] & 0xFF) ? 0 : 0xFF000000;
+                yield alpha | (red << 16) | (green << 8) | blue;
+            }
             case 3 -> {
                 int index = row[offset] & 0xFF;
                 if (palette == null || index * 3 + 2 >= palette.length) {

@@ -70,6 +70,17 @@ import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
  */
 class TestGameLoopSpecialStageRewindGate {
 
+    @Test void activeInputRecordingBlocksRewindWithoutFreezingGameplay(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
+        assertFalse((boolean)invokeNoArg(loop,"isRewindBlocked"));
+        var session=new com.openggf.game.recording.UserRecordingSession(
+                new com.openggf.game.recording.RecordingLaunchContext("s2",0,0,"sonic",java.util.List.of(),false,"current-act-fresh-start"),dir.resolve("test.bk2"));
+        var field=com.openggf.game.recording.UserRecordingSessionLauncher.class.getDeclaredField("activeRecordingSession");
+        field.setAccessible(true);field.set(loop.userRecordingSessionLauncher,session);
+        assertTrue((boolean)invokeNoArg(loop,"isRewindBlocked"));
+        assertFalse((boolean)invokeNoArg(loop,"isNonRewindableTransitionPending"));
+    }
+
+
     private SonicConfigurationService config;
     private GameLoop loop;
     private InputHandler input;

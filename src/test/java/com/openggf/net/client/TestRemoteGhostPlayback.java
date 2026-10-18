@@ -12,6 +12,21 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestRemoteGhostPlayback {
+
+    @Test void expiredNearPlaybackReturnsToFreshCoarseRosterAndCanResume() {
+        var registry = new RemoteGhostRegistry();
+        registry.onRoomState(List.of(new ControlMessage.PlayerInfo(0,"fp","A","sonic",false)));
+        registry.onAggregate(new GhostPackets.Aggregate(0,List.of(entry(1,0,9))));
+        assertFalse(registry.advanceAll(-1).isEmpty());
+        registry.onRoster(List.of(new GhostPackets.RosterEntry(0,200,3,1)));
+        for(int i=0;i<600;i++) registry.advanceAll(-1);
+        assertEquals(1,registry.farPlayers(-1).size());
+        assertTrue(registry.advanceAll(-1).isEmpty());
+        registry.onAggregate(new GhostPackets.Aggregate(601,List.of(entry(1,600,9))));
+        assertFalse(registry.advanceAll(-1).isEmpty());
+        assertTrue(registry.farPlayers(-1).isEmpty());
+    }
+
     private static byte[] frames(int startIndex, int count) {
         byte[] data = new byte[count * GhostFrameCodec.BYTES];
         for (int i = 0; i < count; i++) {

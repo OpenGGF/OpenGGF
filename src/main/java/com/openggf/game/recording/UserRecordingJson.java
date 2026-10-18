@@ -28,7 +28,13 @@ public final class UserRecordingJson {
     }
 
     public static UserRecordingManifest readManifest(String json) throws IOException {
-        return MAPPER.readValue(json, ManifestDto.class).toManifest();
+        ManifestDto dto = MAPPER.readValue(json, ManifestDto.class);
+        if (dto == null) throw new IOException("Manifest must be a JSON object");
+        try {
+            return dto.toManifest();
+        } catch (IllegalArgumentException | NullPointerException invalid) {
+            throw new IOException("Invalid manifest data", invalid);
+        }
     }
 
     public static UserRecordingManifest readManifest(Path path) throws IOException {

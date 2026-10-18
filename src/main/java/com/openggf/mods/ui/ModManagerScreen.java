@@ -714,7 +714,8 @@ public final class ModManagerScreen {
             if (frozen != null && frozen.status() == ModEligibility.Status.BLOCKED) {
                 String fixedReason = frozen.reasons().stream()
                         .filter(reason -> !Set.of("CODE_TRUST_REQUIRED", "DEPENDENCY_BLOCKED",
-                                "DEPENDENCY_DISABLED").contains(reason.code()))
+                                "DEPENDENCY_DISABLED", "PATTERN_WINDOW_BUDGET_EXCEEDED",
+                                "ORDERING_CYCLE").contains(reason.code()))
                         .map(ModEligibility.Reason::message).findFirst().orElse(null);
                 if (fixedReason != null) return fixedReason;
             }

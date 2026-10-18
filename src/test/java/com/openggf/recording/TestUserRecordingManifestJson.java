@@ -13,6 +13,11 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TestUserRecordingManifestJson {
+
+    @Test void nullManifestIsAReadableFormatFailure() {
+        assertThrows(IOException.class, () -> UserRecordingJson.readManifest("null"));
+    }
+
     @Test
     void manifestJsonRoundtripsMetadataAndToleratesReservedSidecarInterval() throws Exception {
         Instant createdAt = DEFAULT_CREATED_AT;

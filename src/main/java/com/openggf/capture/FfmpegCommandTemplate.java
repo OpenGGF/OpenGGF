@@ -107,8 +107,15 @@ public final class FfmpegCommandTemplate {
                             "unknown placeholder {" + name + "} in ffmpeg command;"
                                     + " known placeholders are " + values.keySet());
                 }
-                current.append(value);
-                inArgument = true;
+                // Codec placeholders represent argument lists; paths stay opaque.
+                if (quote == 0 && !inArgument
+                        && (name.equals("videoCodecArgs") || name.equals("audioCodecArgs"))
+                        && (end + 1 == template.length() || Character.isWhitespace(template.charAt(end + 1)))) {
+                    arguments.addAll(expand(value, Map.of()));
+                } else {
+                    current.append(value);
+                    inArgument = true;
+                }
                 i = end;
                 continue;
             }

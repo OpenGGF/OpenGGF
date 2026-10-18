@@ -23,6 +23,15 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_WORLD_1;
 
 class TestConfigMigrationService {
 
+    @Test void migratesBothPlayersStartBindings() {
+        Map<String,Object> config = new HashMap<>();
+        config.put("START", 8); config.put("P2_START", 10);
+        new ConfigMigrationService().migrateConfig(config);
+        assertEquals(259, config.get("START"));
+        assertEquals(257, config.get("P2_START"));
+    }
+
+
     @Test
     void migrateConfig_convertsLegacyAwtArrowAndActionKeys() {
         Map<String, Object> config = new HashMap<>();

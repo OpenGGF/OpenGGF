@@ -13,6 +13,25 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class TestRoomHostVote {
+
+    @Test void joiningDuringVoteReceivesCurrentOfferAndTally(@TempDir Path dir) throws Exception {
+        long[] now={1000000}; var identity=PlayerIdentity.loadOrCreate(dir.resolve("host"));
+        var room=new RoomHost(new RoomHostConfig("Vote","s3k",0,0,"OPEN",null,8,FP,
+                List.of("s3k:0:0","s3k:0:1","s3k:1:0")),identity,()->now[0],TrackValidationProfileSource.none());
+        room.requestStartRound(new ControlMessage.RoundConfig("s3k",0,0,1,"OPEN",null));
+        now[0]+=HostRoundEngine.COUNTDOWN_MILLIS+1001+HostRoundEngine.FINISH_GRACE_MILLIS;room.tick();
+        now[0]+=HostRoundEngine.ROUND_END_LINGER_MILLIS;room.tick();
+        var guest=new FakeHubConnection(); admit(room,guest,PlayerIdentity.loadOrCreate(dir.resolve("guest")),"Guest");
+        var client=new com.openggf.net.client.ClientRaceSession(()->now[0]);
+        for(String text:guest.text) {
+            var message=ControlCodec.decode(text).message();
+            if(message instanceof ControlMessage.JoinAccepted accepted)client.applyJoin(accepted);
+            else client.onControl(message);
+        }
+        assertEquals(room.round().voteOptions(),client.voteOptions());
+        org.junit.jupiter.api.Assertions.assertTrue(client.voteRemainingMillis()>0);
+    }
+
     private static final String FP = "0.6:cafe";
 
     @Test

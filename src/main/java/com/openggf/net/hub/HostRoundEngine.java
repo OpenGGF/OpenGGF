@@ -43,6 +43,7 @@ public final class HostRoundEngine {
     private final LongSupplier hubClockMillis;
     private final Consumer<ControlMessage> broadcaster;
     private final Map<String, Best> bests = new LinkedHashMap<>();
+    private final Map<String, Best> verifiedBests = new LinkedHashMap<>();
     private final Map<String, Integer> lastFinishedAttemptByParticipant = new LinkedHashMap<>();
     private final List<String> voteTrackPool = new ArrayList<>();
     private final Map<Integer, String> votesBySlot = new LinkedHashMap<>();
@@ -87,6 +88,7 @@ public final class HostRoundEngine {
         countdownEndsAt = now + COUNTDOWN_MILLIS;
         deadline = countdownEndsAt + newConfig.windowSeconds() * 1000L;
         bests.clear();
+        verifiedBests.clear();
         lastFinishedAttemptByParticipant.clear();
         achievedCounter = 0;
         votedNextConfig = null;
@@ -120,7 +122,7 @@ public final class HostRoundEngine {
                         .filter(entry -> "PENDING".equals(entry.getValue().verifyState()))
                         .toList();
                 for (Map.Entry<String, Best> entry : expired) {
-                    bests.remove(entry.getKey());
+                    restoreVerifiedBest(entry.getKey());
                     pendingExpiryListener.accept(entry.getValue().slot(),
                             entry.getValue().finish().attemptId());
                     Best best = entry.getValue();
@@ -220,13 +222,28 @@ public final class HostRoundEngine {
             return;
         }
         if (pass) {
-            bests.put(participantId, new Best(best.slot(), best.participantId(),
+            Best verified = new Best(best.slot(), best.participantId(),
                     best.fingerprint(), best.displayName(), best.character(),
-                    best.timeFrames(), best.achievedOrder(), best.finish(), "VERIFIED"));
+                    best.timeFrames(), best.achievedOrder(), best.finish(), "VERIFIED");
+            bests.put(participantId, verified);
+            verifiedBests.put(participantId, verified);
         } else {
-            bests.remove(participantId);
+            restoreVerifiedBest(participantId);
         }
         broadcaster.accept(new ControlMessage.StandingsDelta(broadcastStandings()));
+    }
+
+    private void restoreVerifiedBest(String participantId) {
+        Best verified = verifiedBests.get(participantId);
+        if (verified == null) bests.remove(participantId);
+        else bests.put(participantId, verified);
+    }
+
+    void sendVoteState(Consumer<ControlMessage> recipient) {
+        if (phase == Phase.VOTE) {
+            recipient.accept(new ControlMessage.TrackVoteOffer(voteOptions, voteEndsAt));
+            recipient.accept(new ControlMessage.TrackVoteTally(currentTally()));
+        }
     }
 
     public void onTrackVote(int slot, String trackKey) {

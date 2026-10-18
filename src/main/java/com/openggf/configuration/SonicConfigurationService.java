@@ -930,6 +930,10 @@ public class SonicConfigurationService {
 
 	private Map<String, Object> readYamlFlat(File file) throws IOException {
 		Map<String, Object> nested = new YAMLMapper().readValue(file, MAP_TYPE);
+		if (nested == null) {
+			throw com.fasterxml.jackson.databind.JsonMappingException.from(
+					(com.fasterxml.jackson.core.JsonParser) null, "Configuration must be a YAML mapping");
+		}
 		Object format = nested.remove(ConfigYamlWriter.FORMAT_KEY);
 		sparseFormatDeclared = format != null
 				&& String.valueOf(format).trim().equals(String.valueOf(ConfigYamlWriter.SPARSE_FORMAT));

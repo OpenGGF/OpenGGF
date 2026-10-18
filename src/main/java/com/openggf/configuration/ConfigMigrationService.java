@@ -34,6 +34,7 @@ public class ConfigMigrationService {
         SonicConfiguration.P1_A,
         SonicConfiguration.P1_B,
         SonicConfiguration.P1_C,
+        SonicConfiguration.START,
         SonicConfiguration.P2_UP,
         SonicConfiguration.P2_DOWN,
         SonicConfiguration.P2_LEFT,
