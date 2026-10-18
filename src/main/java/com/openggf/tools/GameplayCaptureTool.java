@@ -9,6 +9,7 @@ import com.openggf.graphics.RgbaImage;
 import com.openggf.graphics.ScreenshotCapture;
 
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -195,7 +196,12 @@ public final class GameplayCaptureTool {
             try (BufferedWriter list = Files.newBufferedWriter(sequence, StandardCharsets.UTF_8)) {
                 list.write("ffconcat version 1.0\n");
                 for (Path png : pngs) {
-                    list.write("file '" + png.toAbsolutePath().toString().replace("'", "'\\''") + "'\n");
+                    // These are invocation-owned frames/<number>.png names.
+                    // Keep user-chosen parent names (which may contain line
+                    // breaks) out of ffconcat's line-oriented entries.
+                    String relativePng = sequence.getParent().relativize(png.toAbsolutePath())
+                            .toString().replace(File.separatorChar, '/');
+                    list.write("file '" + relativePng.replace("'", "'\\''") + "'\n");
                 }
             }
             List<String> command = new ArrayList<>(List.of(
