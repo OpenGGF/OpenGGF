@@ -132,3 +132,76 @@ repeated. Task wall time and overlapping worker intervals were not measured.
 - All child work ended; no persistent CLI session or unmanaged worker process
   was created. Generated diagnostics were inspected and remain disposable
   worktree-local output, with no archived raw logs or validation receipts.
+
+
+## Author response A1 — canonical Phase 2 sample synchronization
+
+This is the single bounded implementation response requested after combined
+smoke, not a new bug claim or another opposing review round. The original
+B01–B10 ledger above is preserved verbatim. The parent reports Alpha supported
+all ten discoveries and accepts those discoveries; fix credit remains subject
+to delivery. No unrelated baseline failures are addressed here.
+
+**Cause and accepted objection.** B09 corrected the authoritative default
+`ggfmod init` manifest template to quote ID/name strings, but omitted the
+canonical checked output in
+`src/test/resources/mods/sample-mod-src/project/src/main/resources/META-INF/openggf-mod.yaml`.
+The fixture README defines that project as exact checked-in output of
+`ggfmod init --id phase2-sample --package example.phase2sample`.
+`TestPhase2SampleModIntegration.buildInitializedSample` regenerates the whole
+tree and `assertTreesEqual` checks inventory and `Files.mismatch == -1` before
+building the sample. Three downstream tests share that helper.
+
+The parent's completed observations in run `20261018T092507Z-2617724c`, combined
+candidate `02f3b84a2` plus the frozen optional-ffmpeg test/doc inputs, were:
+
+- `destroyedCreatorBadnikSubmitsTheGamesBadnikHitSound`
+- `realCreatorSampleBuildsAndRegistersAuthoredResourcesWithoutRom`
+- `realCreatorSampleLoadsZoneObjectRewindAndKeyedSave`
+
+Each failed `Checked sample differs from real ggfmod init at
+src/main/resources/META-INF/openggf-mod.yaml`, expected `-1`, actual `21`.
+This is a task-introduced sample-mirror regression, not a false baseline B09
+claim or an additional discovery/refutation claim. A source-only comparison
+of the frozen Beta fixture to the current rendered manifest template also
+reports byte21; after the two-line correction it reports `-1`.
+
+**Minimal repair and state.** Quote only `id: "phase2-sample"` and
+`name: "Phase2 Sample"` in that one canonical manifest. The generator,
+strict tree/byte assertions and other maintained sample manifests are unchanged.
+The worker inventory found no additional mirror requiring regeneration.
+The exact test input is frozen Beta HEAD
+`8b35a246800b744d1aba52a0d122380d9029885e` plus this two-line fixture edit;
+its Git blob is `16d8207acbe8c0c526a0248f33237238ab0013e7`.
+The only additional change is this labeled audit append; runtime/test Java
+and all other test resources retain frozen Beta contents.
+
+**Focused command.** From the Beta worktree above, the recorded command uses
+the three absolute ROM paths in the parent's main checkout; below
+`OPENGGF_COMPETITION_MAIN` denotes that supplied path, as in G1, to avoid
+committing a machine-local home path. No ROM copy/link was created.
+
+```bash
+python3 tools/testing/maven_queue.py --normal -Dmse=off "-Dsonic1.rom.path=$OPENGGF_COMPETITION_MAIN/s1.gen" "-Dsonic2.rom.path=$OPENGGF_COMPETITION_MAIN/s2.gen" "-Ds3k.rom.path=$OPENGGF_COMPETITION_MAIN/s3k.gen" '-Dopenggf.headless.gl=surfaceless-egl' '-Dtest=TestPhase2SampleModIntegration,TestProjectScaffolder,TestSampleModsPackage,TestPurposeStarters' test
+```
+
+Session70692 completed successfully at `2026-10-18T10:01:26Z`: **22 tests,
+zero failures/errors/skips**. Breakdown: `TestPhase2SampleModIntegration`4,
+`TestProjectScaffolder`13, `TestPurposeStarters`3, `TestSampleModsPackage`2.
+All three reported downstream failures now pass, alongside the fourth Phase2
+reskin case; the S2 ROM-backed zone/object/rewind/keyed-save test executed
+without a skip. This also verifies canonical tree/byte equality, actual sample
+build/SDK lifecycle, generated starters and all nine maintained sample packages.
+The queued wrapper reported61s admission wait and Maven45.195s execution;
+these intervals are distinct. Surefire XML totals, named tests and skips were
+inspected before consuming diagnostics. No claim of broader smoke coverage
+follows from this focused run.
+
+**Participants and limits.** Beta lead owns the repair, focused run and commit.
+Existing child `/root/resource_tools` performed a bounded source-only contract
+and mirror inventory; it edited no files and launched no Maven process.
+No new agent/session was created. The existing three failing tests remain the
+regression oracle; no implementation-mirror tests were added or assertions
+weakened. No broad smoke/full-suite, integration, push or PR is performed by
+Beta in this response. The integration tree remains untouched while the
+parent owns the active combined smoke and subsequent amendment integration.

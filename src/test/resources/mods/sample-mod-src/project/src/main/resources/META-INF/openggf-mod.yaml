@@ -1,6 +1,6 @@
 formatVersion: 1
-id: phase2-sample
-name: Phase2 Sample
+id: "phase2-sample"
+name: "Phase2 Sample"
 version: 1.0.0
 authors:
   - Mod Author
