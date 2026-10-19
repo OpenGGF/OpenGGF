@@ -1,0 +1,14 @@
+formatVersion: 1
+id: super-sonic-bros
+name: Super Sonic Bros.
+version: 0.1.0
+authors:
+  - OpenGGF contributors
+description: A platform fighter for one to four players. Sonic, Tails, Knuckles, Robotnik, Mecha Sonic, Egg Robo and Rhinobot battle on ten islands cut from Sonic 3 & Knuckles zones. Damage builds from 0% and the more you have, the further you fly. Stock, time and stamina modes, CPU opponents at nine levels, teams and monitors.
+engineApiRange: ">=0.7.0 <0.8.0"
+type: patch
+baseGame: s3k
+entrypoint: sonicbros.SuperSonicBrosMod
+dependencies: []
+audioOverrides: {}
+artOverrides: {}
