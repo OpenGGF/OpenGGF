@@ -89,8 +89,10 @@ the keyboard.
 | Shield | V (or right Shift) | R | Shoulders and triggers |
 | Pause | Enter | Q | Start |
 
-- **Tilt attacks**: hold a direction, then attack. **Smash attacks**: tap a direction and attack
-  together; hold attack to charge (up to 40% more damage).
+- **Tilt attacks**: hold a direction (you walk for the first moment), then attack. **Smash
+  attacks**: tap a direction and attack together; hold attack to charge (up to 40% more damage).
+  Attack while running is the dash attack. With up-to-jump on, up + attack still comes out as
+  the up smash.
 - **Shield** blocks hits but shrinks as it takes them; a broken shield leaves you dizzy.
   Shield + attack grabs, shield + left/right rolls, shield + down dodges, and shield in the air
   air-dodges.
@@ -99,6 +101,9 @@ the keyboard.
 - **Ledges**: fall near the island's edge to catch it. Climb (toward the stage), jump, roll
   (shield) or attack from the ledge.
 - Holding down on a platform drops through it.
+
+The main menu's **Move List** shows every fighter's moves with their inputs, damage and frame
+data, each played live against a training dummy.
 
 Menus: up/down to choose, attack/jump/start to confirm, special to go back. On the character
 screen move your cursor over a fighter and press attack; point at a panel's tab to add or
@@ -137,7 +142,7 @@ Knuckles on the master title. The mod lays out for the 400-pixel 16:9 view and s
 while it runs. Native builds cannot load code mods.
 
 Debug commands for tests and the capture tool (`BrosScene.debugJump`): `title`, `menu`,
-`rules`, `records`, `howto`, `select`, `stage`, and
+`rules`, `records`, `howto`, `select`, `stage`, `moves:<fighter>[:<move>]`, and
 `battle:<stage>:<fighter>[/c<level>],...[:stock3|time2|stamina150|items0..3|teams]`, for example
 
 ```bash
@@ -162,4 +167,8 @@ java -XstartOnFirstThread --enable-native-access=ALL-UNNAMED \
   draws the camera, effects and HUD, `BigFont` the lettering and `Gfx` the code-drawn props.
 - `input/Controls` turns two keyboard layouts and every gamepad into separate controllers.
 - `ui` — the screens: title, main menu, rules, character select, stage select, battle (with
-  pause), results, records and how to play.
+  pause), results, move list, records and how to play.
+
+`TestSuperSonicBrosScene` (engine test tree, needs the S3K ROM) drives the menus and character
+select by keyboard, builds and fights on every stage, plays a four-CPU battle to the results and
+opens the move list for every fighter.

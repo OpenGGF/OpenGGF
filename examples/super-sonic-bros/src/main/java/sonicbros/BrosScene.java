@@ -75,6 +75,13 @@ public final class BrosScene implements ModScene, DebuggableScene {
             case "stage" -> { game.jump(new StageScreen(game)); return true; }
             default -> { }
         }
+        if (command.startsWith("moves:")) {
+            String[] p = command.split(":");
+            int f = game.roster.indexOf(p[1]);
+            if (f < 0) return false;
+            game.jump(new sonicbros.ui.MovesScreen(game, f, p.length > 2 ? Integer.parseInt(p[2]) : 0));
+            return true;
+        }
         if (!command.startsWith("battle:")) return false;
         String[] parts = command.split(":");
         if (parts.length < 3) return false;

@@ -59,6 +59,8 @@ public final class MatchView {
     private final double[] hudShake;
     private final double[] shownDamage;
     private int goTimer = -1;
+    /** Draw the damage panels (off for the move list's demos). */
+    public boolean hud = true;
     private String[] tags;
     private int[] colors;
 
@@ -114,7 +116,19 @@ public final class MatchView {
         updateCamera();
     }
 
+    private double lockX = Double.NaN;
+    private double lockY;
+    private double lockZoom;
+
+    /** Fixes the camera (the move list's close-up). */
+    public void lockCamera(double x, double y, double z) {
+        lockX = camX = x;
+        lockY = camY = y;
+        lockZoom = zoom = z;
+    }
+
     private void updateCamera() {
+        if (!Double.isNaN(lockX)) { camX = lockX; camY = lockY; zoom = lockZoom; return; }
         Arena a = match.arena;
         double minX = Double.MAX_VALUE, maxX = -Double.MAX_VALUE, minY = Double.MAX_VALUE, maxY = -Double.MAX_VALUE;
         int count = 0;
@@ -308,8 +322,10 @@ public final class MatchView {
         for (Fighter f : match.fighters) drawTag(c, f);
         drawOffscreen(c);
         drawParticles(c, true);
-        drawHud(c);
-        drawBanner(c);
+        if (hud) {
+            drawHud(c);
+            drawBanner(c);
+        }
     }
 
     private void drawBackdrop(SceneCanvas c) {
@@ -390,9 +406,32 @@ public final class MatchView {
             }
         }
         drawMoveProps(c, f, true);
+        x += lunge(f) * zoom;
         fighters.draw(c, f.def.id, pose, x, feet, center, onFeet, f.facing, zoom, f.costume, flash, alpha, ticks);
         drawMoveProps(c, f, false);
         drawAuras(c, f, x, center);
+    }
+
+    /**
+     * The fighters with few animation frames (Robotnik, Egg Robo, Rhinobot) lean into their
+     * attacks: a few pixels toward the hit while it is live, easing back after.
+     */
+    private double lunge(Fighter f) {
+        String id = f.def.id;
+        if (!(id.equals("robotnik") || id.equals("eggrobo") || id.equals("rhinobot"))) return 0;
+        if (f.state != Fighter.State.ATTACK || f.move == null || f.rolling) return 0;
+        double best = 0;
+        for (Hit h : f.move.hits) {
+            int mf = f.moveFrame;
+            double amount;
+            if (mf < h.start() - 6 || mf > h.end() + 8) continue;
+            if (mf < h.start()) amount = -2 * (1 - (h.start() - mf) / 6.0);
+            else if (mf <= h.end()) amount = 5;
+            else amount = 5 * (1 - (mf - h.end()) / 8.0);
+            double dir = Math.signum(h.x()) == 0 ? 0 : Math.signum(h.x());
+            if (Math.abs(amount * dir) > Math.abs(best)) best = amount * dir;
+        }
+        return best * f.facing;
     }
 
     private void drawRespawnPad(SceneCanvas c, Fighter f) {
@@ -516,6 +555,20 @@ public final class MatchView {
             if (!h.live(mf)) continue;
             double hx = cx + h.x() * f.facing;
             double hy = cy + h.y();
+            if (h.grounded() && mf == h.start() && f.hitlag == 0) {
+                // Ground slams kick up dust along the floor both ways.
+                for (int k = 0; k < 6; k++) {
+                    Particle p = add(P_DUST, f.x + (k < 3 ? -1 : 1) * (6 + (k % 3) * 9), f.y - 2, 18 + (k % 3) * 3);
+                    p.vx = (k < 3 ? -1 : 1) * (1.2 + (k % 3) * 0.6);
+                    p.vy = -0.2;
+                }
+                shake = Math.max(shake, h.damage() >= 12 ? 2 : 1);
+            }
+            if (h.rehit() > 0 && ticks % 3 == 0 && h.effect() == Hit.FX_NORMAL) {
+                SceneImage s = art.image("sparkle");
+                c.draw(s, (float) (sx(hx + (ticks * 7 % 11) - 5) - 5), (float) (sy(hy + (ticks * 5 % 9) - 4) - 5),
+                        SceneDraw.plain().withTint(0xFFFFF0A0));
+            }
             if (h.effect() == Hit.FX_SLASH) {
                 SceneImage st = art.image("streak");
                 double w = h.r() * 2.6 * zoom;

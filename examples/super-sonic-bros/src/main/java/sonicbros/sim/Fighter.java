@@ -300,7 +300,10 @@ public final class Fighter {
         switch (state) {
             case IDLE, RUN, CROUCH, SKID -> groundActions();
             case JUMPSQUAT -> {
-                if (pressed(Pad.ATTACK) && pad.down(Pad.SHIELD)) { /* no jump grab */ }
+                // Up + attack (or special) during the jump's wind-up becomes the up smash (up special),
+                // so up-to-jump never eats them.
+                if (pad.down(Pad.UP) && pressed(Pad.ATTACK)) { consume(); startMove(Slot.USMASH); return; }
+                if (pad.down(Pad.UP) && pressed(Pad.SPECIAL)) { consume(); special(); return; }
                 if (timer >= st.jumpSquat()) {
                     boolean full = jumpHeld();
                     leaveGround();
@@ -391,6 +394,8 @@ public final class Fighter {
         }
     }
 
+    /** Frames of walking before a held direction becomes a run. */
+    static final int WALK_FRAMES = 10;
     private int landingLag = 4;
     private int rollDirection = 1;
     private int getupDirection;
@@ -435,13 +440,11 @@ public final class Fighter {
             if (state != State.RUN) {
                 setState(State.RUN);
                 runFrames = 0;
-                if (dirFreshX < 3) {
-                    vx = dx * st.run() * 0.75 * speedMul();
-                    match.event(Event.DUST, x - dx * 8, y, 0, 0, port);
-                }
             }
             runFrames++;
-            double target = dx * st.run() * speedMul();
+            // Walk for the first few frames (where side + attack is a tilt), then break into a run.
+            if (runFrames == WALK_FRAMES) match.event(Event.DUST, x - dx * 8, y, 0, 0, port);
+            double target = dx * (runFrames < WALK_FRAMES ? st.walk() : st.run()) * speedMul();
             vx += Math.signum(target - vx) * Math.min(Math.abs(target - vx), st.groundAccel());
         } else {
             if (state != State.IDLE) setState(State.IDLE);
@@ -453,8 +456,10 @@ public final class Fighter {
         int dx = pad.x();
         int dy = pad.y();
         boolean fresh = (dirFreshX <= 4 && dx != 0) || (dirFreshY <= 4 && dy != 0);
-        if (state == State.RUN && runFrames > 4 && fresh == false && dx != 0) { startMove(Slot.DASH); return; }
-        if (state == State.RUN && runFrames > 4 && dx == facing && !fresh) { startMove(Slot.DASH); return; }
+        if (state == State.RUN && runFrames >= WALK_FRAMES && dx == facing && Math.abs(vx) > st.walk() * 1.2) {
+            startMove(Slot.DASH);
+            return;
+        }
         if (fresh) {
             if (dy < 0 && dirFreshY <= 4) { startMove(Slot.USMASH); return; }
             if (dy > 0 && dirFreshY <= 4) { startMove(Slot.DSMASH); return; }

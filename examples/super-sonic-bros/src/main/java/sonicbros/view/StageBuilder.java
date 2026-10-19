@@ -72,7 +72,33 @@ public final class StageBuilder {
         }
         Arena arena = new Arena(left, surface, bottom, platforms, left - 190, -left + 190, -290, 210,
                 new double[] {left * 0.62, -left * 0.62, left * 0.22, -left * 0.22});
-        return new Built(s, arena, main.image(), left, -median, arts, kit.backdrop());
+        return new Built(s, arena, main.image(), left, -median, arts, crop(kit.backdrop(), s.bgCrop()));
+    }
+
+    /** Keeps the columns and row ranges {@code spec} names ({@code "x,width;top-bottom,..."}), as one slow band. */
+    static SceneBackdrop crop(SceneBackdrop bd, String spec) {
+        if (spec == null) return bd;
+        String[] parts = spec.split(";");
+        String[] cols = parts[0].split(",");
+        int x0 = Integer.parseInt(cols[0]);
+        int w = Math.min(Integer.parseInt(cols[1]), bd.image().width() - x0);
+        java.util.List<int[]> rows = new java.util.ArrayList<>();
+        int total = 0;
+        for (String r : parts[1].split(",")) {
+            String[] ab = r.split("-");
+            int a = Integer.parseInt(ab[0]);
+            int b = Math.min(Integer.parseInt(ab[1]), bd.image().height());
+            rows.add(new int[] {a, b});
+            total += b - a;
+        }
+        int[] px = new int[w * total];
+        int y = 0;
+        for (int[] r : rows) {
+            for (int sy = r[0]; sy < r[1]; sy++, y++) {
+                for (int x = 0; x < w; x++) px[y * w + x] = bd.image().pixel(x0 + x, sy) | 0xFF000000;
+            }
+        }
+        return new SceneBackdrop(new SceneImage(w, total, px), java.util.List.of(new SceneBackdrop.Band(0, total, 0.25, 0)));
     }
 
     private static int median(int[] values) {

@@ -157,6 +157,8 @@ public final class Controls {
 
     /** The pad for a device this tick (neutral when it disappeared). */
     public Pad pad(String device) {
+        if (physical && LOGICAL_1.equals(device)) device = KEYS_ARROWS;
+        if (physical && LOGICAL_2.equals(device)) device = KEYS_WASD;
         int now = held.getOrDefault(device, 0);
         int before = previous.getOrDefault(device, 0);
         return new Pad(now, now & ~before);
@@ -167,6 +169,8 @@ public final class Controls {
 
     /** Like {@link #pressed} for directions, but repeating while held, as menus scroll. */
     public boolean repeated(String device, int direction) {
+        if (physical && LOGICAL_1.equals(device)) device = KEYS_ARROWS;
+        if (physical && LOGICAL_2.equals(device)) device = KEYS_WASD;
         if (pressed(device, direction)) return true;
         int[] r = repeat.get(device);
         if (r == null) return false;

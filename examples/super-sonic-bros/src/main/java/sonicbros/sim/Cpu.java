@@ -300,6 +300,7 @@ public final class Cpu {
                 for (int i = 0; i < Math.min(12, reaction()); i++) plan.add(dir);
                 return;
             }
+            if (me.facing != face && me.state == Fighter.State.IDLE) plan.add(dir);
             plan.add(0);
             wait = reaction();
         } else {
@@ -392,7 +393,7 @@ public final class Cpu {
         for (Slot s : options) {
             Move m = me.def.move(s);
             if (m == null || m.hits.isEmpty()) continue;
-            if (s == Slot.DASH && me.state != Fighter.State.RUN) continue;
+            if (s == Slot.DASH && (me.state != Fighter.State.RUN || me.runFrames < 10)) continue;
             if (s == Slot.GRAB && !(target.shielding() || rng.chance(0.25)) || s == Slot.GRAB && !target.grounded()) continue;
             if ((s == Slot.NSPEC || s == Slot.DSPEC) && (!m.spawns.isEmpty() || m.custom != Move.Custom.NONE)) continue;
             int facingFor = ground ? face : me.facing;
@@ -429,7 +430,7 @@ public final class Cpu {
             case USMASH -> { plan.add(0); plan.add(Pad.UP | Pad.ATTACK); }
             case DSMASH -> { plan.add(0); plan.add(Pad.DOWN | Pad.ATTACK); }
             case GRAB -> { if (me.facing != face) { plan.add(dir); plan.add(0); } plan.add(Pad.SHIELD | Pad.ATTACK); }
-            case DASH -> plan.add(dir | Pad.ATTACK);
+            case DASH -> { for (int i = 0; i < 12; i++) plan.add(dir); plan.add(dir | Pad.ATTACK); }
             case NAIR -> plan.add(Pad.ATTACK);
             case FAIR -> plan.add((me.facing > 0 ? Pad.RIGHT : Pad.LEFT) | Pad.ATTACK);
             case BAIR -> plan.add((me.facing > 0 ? Pad.LEFT : Pad.RIGHT) | Pad.ATTACK);
