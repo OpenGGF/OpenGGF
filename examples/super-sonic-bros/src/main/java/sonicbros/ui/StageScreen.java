@@ -20,6 +20,7 @@ public final class StageScreen implements Screen {
 
     @Override public void enter() {
         cursor = g.lastStage >= 0 ? g.lastStage : 0;
+        g.voice("ann-choose-stage");
     }
 
     private int count() { return g.stages.size() + 1; }
@@ -39,6 +40,7 @@ public final class StageScreen implements Screen {
             int stage = cursor == n - 1 ? (int) ((System.nanoTime() / 1000) % g.stages.size()) : cursor;
             if (cursor != n - 1) g.lastStage = cursor;
             g.sfx(Game.SFX_ACCEPT);
+            if (cursor != n - 1) g.voice("ann-stage-" + new String[] {"aiz","hcz","mgz","cnz","icz","lbz","mhz","soz","ssz","dez"}[stage]);
             g.go(new BattleScreen(g, stage));
         }
     }

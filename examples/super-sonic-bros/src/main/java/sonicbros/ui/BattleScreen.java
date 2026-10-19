@@ -11,6 +11,7 @@ import sonicbros.sim.FighterDef;
 import sonicbros.sim.Match;
 import sonicbros.sim.Pad;
 import sonicbros.sim.Rng;
+import sonicbros.sim.Rules;
 import sonicbros.view.Costumes;
 import sonicbros.view.MatchView;
 import sonicbros.view.StageBuilder;
@@ -31,6 +32,8 @@ public final class BattleScreen implements Screen {
     private String pausedBy;
     private int pauseCursor;
     private boolean finished;
+    private int introHold;
+    private int nextIntro;
     private long t;
 
     /** Called with the decided match instead of opening the results (Classic mode). */
@@ -73,6 +76,8 @@ public final class BattleScreen implements Screen {
             slotOfPort.add(i);
         }
         match = new Match(rules != null ? rules : g.rules, built.arena(), entrants, g.seed ^ g.ticks * 0x9E3779B97F4A7C15L);
+        introHold = match.fighters.size() * 120;
+        nextIntro = 0;
         for (int p = 0; p < slotOfPort.size(); p++) {
             int st = g.slots[slotOfPort.get(p)].stocks;
             if (st > 0 && match.rules.mode == sonicbros.sim.Rules.Mode.STOCK) match.fighters.get(p).stocks = st;
@@ -118,7 +123,22 @@ public final class BattleScreen implements Screen {
             }
         }
         boolean wasOver = match.over;
+        if (introHold > 0) {
+            if (introHold % 120 == 0 && nextIntro < match.fighters.size()) {
+                g.voice("voice-" + match.fighters.get(nextIntro++).def.id + "-intro");
+            }
+            introHold--;
+            view.update(List.of(), g.width(), g.height(), false);
+            return;
+        }
+        if (match.countdown == 160) g.voice("ann-three");
+        else if (match.countdown == 110) g.voice("ann-two");
+        else if (match.countdown == 60) g.voice("ann-one");
+        else if (match.countdown == 10) g.voice("ann-go");
+        boolean beforeSuddenDeath = match.suddenDeath;
         match.step(pads);
+        if (!beforeSuddenDeath && match.suddenDeath) g.voice("ann-sudden-death");
+        if (!wasOver && match.over) g.voice(match.rules.mode == Rules.Mode.TIME ? "ann-time" : "ann-game");
         playSounds(match.events);
         view.update(match.events, g.width(), g.height(), true);
         music();

@@ -129,6 +129,9 @@ public final class Game {
 
     public void sfx(int id) { ctx.audio().playSfx(id); }
 
+    /** Play a voice entry declared in this mod audio manifest. */
+    public void voice(String id) { ctx.audio().playSfx(id); }
+
     // ------------------------------------------------------------------ stages
 
     /** The built stage, building it now if needed (may take a few hundred milliseconds). */

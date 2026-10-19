@@ -20,6 +20,7 @@ public final class TitleScreen implements Screen {
     @Override public void enter() {
         t = 0;
         g.music(Game.MUS_TITLE);
+        g.voice("ann-title");
     }
 
     @Override public void update() {

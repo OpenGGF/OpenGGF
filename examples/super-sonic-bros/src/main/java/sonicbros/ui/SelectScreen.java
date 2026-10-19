@@ -33,6 +33,7 @@ public final class SelectScreen implements Screen {
 
     @Override public void enter() {
         g.music(Game.MUS_SELECT);
+        g.voice("ann-choose-fighter");
         boolean anyone = false;
         for (Slot s : g.slots) if (s.active()) anyone = true;
         if (!anyone) {
@@ -142,6 +143,7 @@ public final class SelectScreen implements Screen {
                     me.fighter = i == cells() - 1 ? Slot.RANDOM : i;
                     me.costume = freeCostume(who, me.fighter, me.costume);
                     g.sfx(Game.SFX_ACCEPT);
+                    announceFighter(me.fighter);
                     return;
                 }
             }
@@ -247,8 +249,15 @@ public final class SelectScreen implements Screen {
         }
     }
 
+    private void announceFighter(int fighter) {
+        String id = fighter == Slot.RANDOM ? "ann-random" : "ann-name-" + g.roster.get(fighter).id;
+        g.voice(id);
+        if (fighter >= 0) g.voice("voice-" + g.roster.get(fighter).id + "-select");
+    }
+
     private void start() {
         g.sfx(Game.SFX_ACCEPT);
+        g.voice("ann-ready");
         g.go(new StageScreen(g));
     }
 

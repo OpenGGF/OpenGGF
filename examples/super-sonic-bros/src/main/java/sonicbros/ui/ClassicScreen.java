@@ -59,11 +59,17 @@ public final class ClassicScreen implements Screen {
 
     @Override public void enter() {
         timer = 0;
-        if (phase == Phase.SETUP) g.music(Game.MUS_SELECT);
-        if (phase == Phase.INTRO) g.forceMusic(Game.MUS_SELECT);
-        if (phase == Phase.CONTINUE) g.forceMusic(0x28);   // mus_Continue
-        if (phase == Phase.CLEAR) g.forceMusic(0x32);      // mus_Ending
-        if (phase == Phase.GAME_OVER) g.forceMusic(0x27);  // mus_GameOver
+        if (phase == Phase.SETUP) { g.music(Game.MUS_SELECT); g.voice("ann-choose-fighter"); }
+        if (phase == Phase.INTRO) {
+            g.forceMusic(Game.MUS_SELECT);
+            g.voice(round >= ROUNDS - 1 ? "ann-final-round" : "ann-round-" + (round + 1));
+            if (roundTitle().startsWith("TAG")) g.voice("ann-tag-team");
+            if (roundTitle().startsWith("HANDICAP")) g.voice("ann-handicap");
+            g.voice("ann-vs");
+        }
+        if (phase == Phase.CONTINUE) { g.forceMusic(0x28); g.voice("ann-continue"); }   // mus_Continue
+        if (phase == Phase.CLEAR) { g.forceMusic(0x32); g.voice("ann-congratulations"); }      // mus_Ending
+        if (phase == Phase.GAME_OVER) { g.forceMusic(0x27); g.voice("ann-game-over"); }  // mus_GameOver
     }
 
     private void restoreSlots() {
@@ -125,6 +131,8 @@ public final class ClassicScreen implements Screen {
         if (g.controls.pressed(device, Pad.SPECIAL)) { g.sfx(Game.SFX_BACK); leave(); return; }
         if (g.controls.pressed(device, Pad.ATTACK | Pad.JUMP | Pad.START)) {
             g.sfx(Game.SFX_ACCEPT);
+            g.voice("ann-name-" + g.roster.get(fighter).id);
+            g.voice("voice-" + g.roster.get(fighter).id + "-select");
             rng = new Rng(g.seed ^ g.ticks);
             round = 0;
             score = 0;

@@ -20,6 +20,9 @@ public final class ResultsScreen implements Screen {
     private final List<Integer> slotOfPort;
     private final StageBuilder.Built stage;
     private long t;
+    private List<String> voiceQueue = List.of();
+    private int voiceIndex;
+    private long nextVoiceTick;
 
     public ResultsScreen(Game g, Match match, List<Integer> slotOfPort, StageBuilder.Built stage) {
         this.g = g;
@@ -30,10 +33,30 @@ public final class ResultsScreen implements Screen {
 
     @Override public void enter() {
         g.forceMusic(Game.MUS_RESULTS);
+        List<Fighter> winners = match.winners();
+        java.util.ArrayList<String> lines = new java.util.ArrayList<>();
+        lines.add("ann-winner-is");
+        if (winners.isEmpty()) lines.add("ann-no-contest");
+        else if (match.rules.teams) {
+            int team = winners.get(0).team;
+            lines.add("ann-team-" + (team == 0 ? "red" : team == 1 ? "blue" : "green"));
+        } else if (winners.size() == 1) {
+            Fighter winner = winners.get(0);
+            lines.add("ann-name-" + winner.def.id);
+            lines.add("voice-" + winner.def.id + "-win");
+        }
+        voiceQueue = List.copyOf(lines);
+        voiceIndex = 0;
+        nextVoiceTick = 1;
     }
 
     @Override public void update() {
         t++;
+        if (voiceIndex < voiceQueue.size() && t >= nextVoiceTick) {
+            String id = voiceQueue.get(voiceIndex++);
+            g.voice(id);
+            nextVoiceTick = t + (id.equals("ann-winner-is") ? 100 : id.startsWith("ann-name-") ? 65 : 85);
+        }
         if (t > 60 && (g.controls.anyAccept() || g.controls.anyBack())) {
             g.sfx(Game.SFX_ACCEPT);
             g.go(new SelectScreen(g, null));

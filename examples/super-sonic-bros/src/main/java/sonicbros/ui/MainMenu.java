@@ -29,8 +29,8 @@ public final class MainMenu implements Screen {
         if (who == null) return;
         g.sfx(Game.SFX_ACCEPT);
         switch (cursor) {
-            case 0 -> g.go(new SelectScreen(g, who));
-            case 1 -> g.go(new ClassicScreen(g, who));
+            case 0 -> { g.voice("ann-versus"); g.go(new SelectScreen(g, who)); }
+            case 1 -> { g.voice("ann-classic"); g.go(new ClassicScreen(g, who)); }
             case 2 -> g.go(new RulesScreen(g));
             case 3 -> g.go(new MovesScreen(g, 0, 0));
             case 4 -> g.go(new RecordsScreen(g));
