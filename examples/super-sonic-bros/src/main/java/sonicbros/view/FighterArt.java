@@ -14,6 +14,8 @@ import sonicbros.content.Roster;
  */
 public final class FighterArt {
     private final Art art;
+    /** Set while drawing a fighter in Super form: Sonic switches to his Super sprites. */
+    public boolean superForm;
 
     public FighterArt(Art art) {
         this.art = art;
@@ -75,6 +77,14 @@ public final class FighterArt {
                 String key = id;
                 if (id.equals("tails")) drawTails(c, p, x, feet, center, onFeet, scale, costume, style, tick);
                 SceneSprite s = art.costumed(key, p, id, costume);
+                if (superForm && id.equals("sonic")) {
+                    SceneSprite gold = art.frame("super_sonic", p);
+                    // Super Sonic's set has no ball or a few special frames; keep Sonic's there.
+                    if (gold.width() > 1) {
+                        s = gold;
+                        style = style.withFlash(0);
+                    }
+                }
                 double oy = onFeet ? feet - (s.height() - s.originY()) * scale : center;
                 if (id.equals("rhinobot")) oy = feet - (s.height() - s.originY()) * scale;
                 c.draw(s, (float) x, (float) oy, style);

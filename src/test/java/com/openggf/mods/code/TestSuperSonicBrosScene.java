@@ -2,6 +2,7 @@ package com.openggf.mods.code;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_UP;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_Z;
@@ -110,6 +111,29 @@ class TestSuperSonicBrosScene {
             play(harness, 90);
             harness.press(GLFW_KEY_ENTER);
             assertTrue(until(harness, "select", 120), "results -> character select");
+            clean(harness);
+        }
+    }
+
+    @Test
+    void classicRoundLostLeadsToContinueAndGameOver() throws Exception {
+        try (ExampleModHarness harness = open()) {
+            play(harness, 2);
+            assertTrue(harness.debugJump("classic"));
+            play(harness, 20);
+            assertEquals("classic-setup", screen(harness));
+            harness.press(GLFW_KEY_ENTER);
+            assertTrue(until(harness, "classic-intro", 120), "setup -> round 1 card");
+            harness.press(GLFW_KEY_ENTER);
+            assertTrue(until(harness, "battle", 400), "round 1 starts");
+            // Standing still against a CPU loses both stocks eventually.
+            assertTrue(until(harness, "classic-continue", 60 * 60 * 10), "a lost round offers a continue");
+            harness.press(GLFW_KEY_DOWN);
+            harness.press(GLFW_KEY_ENTER);
+            assertTrue(until(harness, "classic-game_over", 120), "declining ends the run");
+            play(harness, 100);
+            harness.press(GLFW_KEY_ENTER);
+            assertTrue(until(harness, "menu", 120), "game over -> menu");
             clean(harness);
         }
     }

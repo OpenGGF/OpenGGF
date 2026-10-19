@@ -25,6 +25,7 @@ public final class Art {
     static final int PAL_MECHA = 0x07D850;         // Pal_SSZGHZMisc (Mecha Sonic, line 1)
     static final int PAL_CONTINUE = 0x05CBCA;      // Pal_ContinueScreen (Egg Robo, line 1)
     static final int PAL_KNUCKLES = 0x0A8AFC;      // Pal_Knuckles
+    static final int PALCYCLE_SUPER_SONIC = 0x00398E; // PalCycle_SuperSonic
 
     public final SceneRomArt rom;
     private final Map<String, SceneSpriteSet> sets = new HashMap<>();
@@ -50,6 +51,13 @@ public final class Art {
         SceneSpriteSet made = switch (key) {
             case "sonic", "tails", "knuckles" -> rom.character(key);
             case "tails_tails" -> rom.characterAccessory("tails");
+            // Super Sonic: ArtUnc_Sonic through Map_SuperSonic / PLC_SuperSonic, in the gold of
+            // PalCycle_SuperSonic's brightest step (three colours written over palette 2-4).
+            case "super_sonic" -> {
+                int[] pal = s3k(PAL_AIZ);
+                System.arraycopy(rom.palette(PALCYCLE_SUPER_SONIC + 6 * 6, 3), 0, pal, 2, 3);
+                yield rom.sprites(RomSpriteRequest.streamed(0x100000, 0x40060, 0x146816, 0x148378, DplcLayout.PLAYER, 0), pal);
+            }
             // ArtUnc_MechaSonic with Map/DPLC_MechaSonic; Pal_SSZGHZMisc over line 1.
             case "mecha" -> {
                 int[] pal = s3k(PAL_SSZ);

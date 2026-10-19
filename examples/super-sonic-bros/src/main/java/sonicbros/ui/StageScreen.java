@@ -9,7 +9,7 @@ import sonicbros.view.StageBuilder;
 public final class StageScreen implements Screen {
     private static final int COLS = 4;
     private static final int CW = 88;
-    private static final int CH = 50;
+    private static final int CH = 44;
     private final Game g;
     private int cursor;
     private long t;
@@ -45,7 +45,7 @@ public final class StageScreen implements Screen {
 
     private int cellX(int i) { return g.width() / 2 - COLS * (CW + 4) / 2 + (i % COLS) * (CW + 4) + 2; }
 
-    private int cellY(int i) { return 30 + (i / COLS) * (CH + 13); }
+    private int cellY(int i) { return 29 + (i / COLS) * (CH + 13); }
 
     @Override public void draw(SceneCanvas c) {
         int w = g.width();

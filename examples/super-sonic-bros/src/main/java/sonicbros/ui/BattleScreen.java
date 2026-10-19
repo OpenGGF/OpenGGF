@@ -33,9 +33,23 @@ public final class BattleScreen implements Screen {
     private boolean finished;
     private long t;
 
+    /** Called with the decided match instead of opening the results (Classic mode). */
+    private final java.util.function.Consumer<Match> onEnd;
+    private final sonicbros.sim.Rules rules;
+    /** Shown over the HUD during the countdown (Classic's round name), or null. */
+    private final String banner;
+
     public BattleScreen(Game g, int stageIndex) {
+        this(g, stageIndex, null, null, null);
+    }
+
+    public BattleScreen(Game g, int stageIndex, sonicbros.sim.Rules rules, String banner,
+            java.util.function.Consumer<Match> onEnd) {
         this.g = g;
         this.stageIndex = stageIndex;
+        this.rules = rules;
+        this.banner = banner;
+        this.onEnd = onEnd;
     }
 
     public Match match() { return match; }
@@ -58,8 +72,13 @@ public final class BattleScreen implements Screen {
             entrants.add(new Match.Entrant(def, costume, s.team, s.kind == Slot.Kind.CPU ? s.cpuLevel : 0));
             slotOfPort.add(i);
         }
-        match = new Match(g.rules, built.arena(), entrants, g.seed ^ g.ticks * 0x9E3779B97F4A7C15L);
+        match = new Match(rules != null ? rules : g.rules, built.arena(), entrants, g.seed ^ g.ticks * 0x9E3779B97F4A7C15L);
+        for (int p = 0; p < slotOfPort.size(); p++) {
+            int st = g.slots[slotOfPort.get(p)].stocks;
+            if (st > 0 && match.rules.mode == sonicbros.sim.Rules.Mode.STOCK) match.fighters.get(p).stocks = st;
+        }
         view = new MatchView(g.art, g.font, built, match);
+        if (g.debugSuper) for (var f : match.fighters) f.superTimer = 60 * 60;
         String[] tags = new String[entrants.size()];
         int[] colors = new int[entrants.size()];
         for (int p = 0; p < entrants.size(); p++) {
@@ -107,7 +126,8 @@ public final class BattleScreen implements Screen {
         if (match.over && match.endTimer > 150) {
             finished = true;
             recordResults();
-            g.go(new ResultsScreen(g, match, slotOfPort, built));
+            if (onEnd != null) onEnd.accept(match);
+            else g.go(new ResultsScreen(g, match, slotOfPort, built));
         }
     }
 
@@ -125,7 +145,8 @@ public final class BattleScreen implements Screen {
             finished = true;
             g.sfx(Game.SFX_BACK);
             g.ctx.audio().fadeOutMusic();
-            g.go(new SelectScreen(g, null));
+            if (onEnd != null) onEnd.accept(null);
+            else g.go(new SelectScreen(g, null));
         }
     }
 
@@ -163,6 +184,11 @@ public final class BattleScreen implements Screen {
 
     @Override public void draw(SceneCanvas c) {
         view.draw(c, paused);
+        if (banner != null && match.countdown > 0) {
+            int w = g.width();
+            c.fill(0, 16, w, 16, 0xA0000000);
+            g.font.drawCentered(c, banner, w / 2, 20, 0xFFFFE040);
+        }
         if (paused) {
             int w = g.width();
             int h = g.height();

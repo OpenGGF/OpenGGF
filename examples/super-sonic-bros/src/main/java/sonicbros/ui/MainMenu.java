@@ -5,7 +5,7 @@ import sonicbros.sim.Pad;
 
 /** VERSUS, RULES, RECORDS, HOW TO PLAY and EXIT. */
 public final class MainMenu implements Screen {
-    private final String[] items = {"VERSUS", "RULES", "MOVE LIST", "RECORDS", "HOW TO PLAY", "EXIT"};
+    private final String[] items = {"VERSUS", "CLASSIC", "RULES", "MOVE LIST", "RECORDS", "HOW TO PLAY", "EXIT"};
     private final Game g;
     private int cursor;
     private int t;
@@ -30,10 +30,11 @@ public final class MainMenu implements Screen {
         g.sfx(Game.SFX_ACCEPT);
         switch (cursor) {
             case 0 -> g.go(new SelectScreen(g, who));
-            case 1 -> g.go(new RulesScreen(g));
-            case 2 -> g.go(new MovesScreen(g, 0, 0));
-            case 3 -> g.go(new RecordsScreen(g));
-            case 4 -> g.go(new HowToScreen(g));
+            case 1 -> g.go(new ClassicScreen(g, who));
+            case 2 -> g.go(new RulesScreen(g));
+            case 3 -> g.go(new MovesScreen(g, 0, 0));
+            case 4 -> g.go(new RecordsScreen(g));
+            case 5 -> g.go(new HowToScreen(g));
             default -> g.ctx.exitToMasterTitle();
         }
     }
@@ -44,12 +45,12 @@ public final class MainMenu implements Screen {
         g.bigCentered(c, "SUPER SONIC BROS.", 3, w / 2, 14, 0xFFFFF060, 0xFFF06010);
         for (int i = 0; i < items.length; i++) {
             boolean sel = i == cursor;
-            int y = 58 + i * 25;
+            int y = 50 + i * 23;
             int bw = 180;
             int x = w / 2 - bw / 2 + (sel ? (int) (Math.sin(t * 0.2) * 2) : 0);
-            g.panel(c, x, y, bw, 22, sel ? 0xFFFFE040 : 0xFF405080);
-            if (sel) c.fill(x + 1, y + 1, bw - 2, 20, 0x403060C0);
-            g.bigCentered(c, items[i], 2, w / 2, y + 2, sel ? 0xFFFFFFFF : 0xFFA0A8C0, sel ? 0xFFFFE040 : 0xFF606880);
+            g.panel(c, x, y, bw, 20, sel ? 0xFFFFE040 : 0xFF405080);
+            if (sel) c.fill(x + 1, y + 1, bw - 2, 18, 0x403060C0);
+            g.bigCentered(c, items[i], 2, w / 2, y + 1, sel ? 0xFFFFFFFF : 0xFFA0A8C0, sel ? 0xFFFFE040 : 0xFF606880);
         }
         // A fighter cheering beside the menu.
         int fighter = (int) ((t / 180) % g.roster.all().size());

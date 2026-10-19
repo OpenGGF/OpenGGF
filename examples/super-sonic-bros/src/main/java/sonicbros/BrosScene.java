@@ -73,6 +73,7 @@ public final class BrosScene implements ModScene, DebuggableScene {
             case "howto" -> { game.jump(new HowToScreen(game)); return true; }
             case "select" -> { game.jump(new SelectScreen(game, null)); return true; }
             case "stage" -> { game.jump(new StageScreen(game)); return true; }
+            case "classic" -> { game.jump(new sonicbros.ui.ClassicScreen(game, null)); return true; }
             default -> { }
         }
         if (command.startsWith("moves:")) {
@@ -119,6 +120,7 @@ public final class BrosScene implements ModScene, DebuggableScene {
             else if (r.startsWith("stamina")) { game.rules.mode = Rules.Mode.STAMINA; game.rules.stamina = Integer.parseInt(r.substring(7)); }
             else if (r.startsWith("items")) game.rules.itemFrequency = Integer.parseInt(r.substring(5));
             else if (r.equals("teams")) game.rules.teams = true;
+            else if (r.equals("super")) game.debugSuper = true;
         }
         game.jump(new BattleScreen(game, stage));
         return true;

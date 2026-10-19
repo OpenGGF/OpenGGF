@@ -50,6 +50,8 @@ public final class Game {
     private int music = -1;
     public int lastStage = -1;
     public long seed;
+    /** Debug: fighters start in Super form (captures of the Super sprites). */
+    public boolean debugSuper;
 
     public Game(SceneContext ctx) {
         this.ctx = ctx;
@@ -152,25 +154,37 @@ public final class Game {
 
     // ------------------------------------------------------------------ drawing helpers
 
-    /** The animated menu backdrop: a deep blue gradient with drifting diagonal bands. */
+    private final SceneImage[] menuTiles = new SceneImage[2];
+
+    /** One 64-pixel-wide repeat of the menu backdrop: a vertical gradient with a diagonal band. */
+    private SceneImage menuTile(int hue) {
+        if (menuTiles[hue] != null) return menuTiles[hue];
+        int w = 64;
+        int h = height();
+        int[] px = new int[w * h];
+        int top = hue == 1 ? 0x401018 : 0x0A1850;
+        int bottom = hue == 1 ? 0x100408 : 0x020414;
+        int band = hue == 1 ? 0xFF4040 : 0x4080FF;
+        for (int y = 0; y < h; y++) {
+            int base = BigFont_lerp(top, bottom, y / (double) h);
+            for (int x = 0; x < w; x++) {
+                int col = base;
+                int d = Math.floorMod(x - y / 2, 64);
+                if (d < 24) col = BigFont_lerp(base, band, 0.0625);
+                px[y * w + x] = 0xFF000000 | col;
+            }
+        }
+        menuTiles[hue] = new SceneImage(w, h, px);
+        return menuTiles[hue];
+    }
+
+    /** The animated menu backdrop: a deep blue (or red) gradient with drifting diagonal bands. */
     public void menuBackground(SceneCanvas c, int hue) {
         int w = width();
         int h = height();
-        for (int y = 0; y < h; y += 2) {
-            double t = y / (double) h;
-            int top = hue == 1 ? 0x401018 : 0x0A1850;
-            int bottom = hue == 1 ? 0x100408 : 0x020414;
-            int col = BigFont_lerp(top, bottom, t);
-            c.fill(0, y, w, 2, 0xFF000000 | col);
-        }
+        SceneImage tile = menuTile(hue == 1 ? 1 : 0);
         int off = (int) (ticks % 64);
-        for (int i = -4; i < w / 32 + 6; i++) {
-            int x0 = i * 64 - off;
-            for (int y = 0; y < h; y += 4) {
-                int x = x0 + y / 2;
-                c.fill(x, y, 24, 4, hue == 1 ? 0x10FF4040 : 0x104080FF);
-            }
-        }
+        for (int x = -off; x < w; x += 64) c.draw(tile, x, 0);
         // A row of rings drifting along the bottom edge, for a little Sonic flavour.
         for (int i = 0; i < w / 40 + 2; i++) {
             var ring = art.frame("ring", (int) ((ticks / 6 + i) % 4));

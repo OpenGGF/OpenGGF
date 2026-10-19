@@ -49,6 +49,15 @@ behind it.
 | Sky Sanctuary — Temple in the Clouds | Twin platforms |
 | Death Egg — Final Platform | No platforms |
 
+## Classic
+
+One player climbs a six-round ladder at a chosen difficulty (Easy to Intense, CPU levels 2 to
+9, rising for the last two rounds): a rival hero on Angel Island, a badnik in Hydrocity, a
+tag-team round with a CPU partner in Marble Garden, a two-on-one handicap in Carnival Night,
+Mecha Sonic in Sky Sanctuary, and a three-on-one finale on the Death Egg. Each round opens with
+its own card; losing offers a continue for 2000 points. Clearing records the hardest difficulty
+beaten for that fighter and the high score, and plays the ending theme.
+
 ## Modes and rules
 
 - **Stock** (1–9 lives): the last fighter, or team, with lives left wins.
@@ -73,7 +82,7 @@ whoever broke it.
 | Invincibility | Eight seconds untouchable (with the invincibility theme) |
 | Speed Shoes | Ten seconds of extra speed |
 | Eggman | A trap: it explodes on whoever opens it |
-| Super Emerald ("S") | Twelve seconds of Super form: invincible, faster, stronger |
+| Super Emerald ("S") | Twelve seconds of Super form: invincible, faster, stronger (Sonic turns into Super Sonic, from his ROM sprites) |
 
 ## Controls
 
@@ -142,7 +151,7 @@ Knuckles on the master title. The mod lays out for the 400-pixel 16:9 view and s
 while it runs. Native builds cannot load code mods.
 
 Debug commands for tests and the capture tool (`BrosScene.debugJump`): `title`, `menu`,
-`rules`, `records`, `howto`, `select`, `stage`, `moves:<fighter>[:<move>]`, and
+`rules`, `records`, `howto`, `select`, `stage`, `classic`, `moves:<fighter>[:<move>]`, and
 `battle:<stage>:<fighter>[/c<level>],...[:stock3|time2|stamina150|items0..3|teams]`, for example
 
 ```bash
@@ -166,9 +175,10 @@ java -XstartOnFirstThread --enable-native-access=ALL-UNNAMED \
   `FighterArt` decode and assemble the ROM sprites (with `Costumes` recolouring), `MatchView`
   draws the camera, effects and HUD, `BigFont` the lettering and `Gfx` the code-drawn props.
 - `input/Controls` turns two keyboard layouts and every gamepad into separate controllers.
-- `ui` — the screens: title, main menu, rules, character select, stage select, battle (with
-  pause), results, move list, records and how to play.
+- `ui` — the screens: title, main menu, Classic, rules, character select, stage select, battle
+  (with pause), results, move list, records and how to play.
 
 `TestSuperSonicBrosScene` (engine test tree, needs the S3K ROM) drives the menus and character
 select by keyboard, builds and fights on every stage, plays a four-CPU battle to the results and
-opens the move list for every fighter.
+opens the move list for every fighter, and loses a Classic round through to the continue
+screen and game over.

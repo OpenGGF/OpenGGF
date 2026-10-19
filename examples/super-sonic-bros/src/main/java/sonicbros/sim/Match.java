@@ -595,15 +595,22 @@ public final class Match {
             order.sort(Comparator.comparingInt((Fighter f) -> f.state == Fighter.State.OUT ? 1 : 0)
                     .thenComparingInt(f -> -eliminated.indexOf(f)));
         }
+        if (rules.teams) {
+            // The whole winning team shares first place; everyone else follows in order.
+            int winningTeam = order.get(0).team;
+            int winners = 0;
+            for (Fighter f : order) if (f.team == winningTeam) { f.placement = 1; winners++; }
+            int place = winners + 1;
+            for (Fighter f : order) if (f.team != winningTeam) f.placement = place++;
+            return;
+        }
         int place = 1;
         for (int i = 0; i < order.size(); i++) {
             Fighter f = order.get(i);
             if (i > 0) {
                 Fighter prev = order.get(i - 1);
-                boolean tie = rules.mode == Rules.Mode.TIME && !suddenDeath
-                        ? teamScore(prev.team) == teamScore(f.team) : false;
-                boolean sameTeam = rules.teams && prev.team == f.team && prev.placement == 1 && place == 1;
-                if (!tie && !sameTeam) place = i + 1;
+                boolean tie = rules.mode == Rules.Mode.TIME && !suddenDeath && teamScore(prev.team) == teamScore(f.team);
+                if (!tie) place = i + 1;
             }
             f.placement = place;
         }

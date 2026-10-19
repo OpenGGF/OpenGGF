@@ -15,6 +15,8 @@ public final class Slot {
     /** Human cursor position on the select screen. */
     public double cursorX;
     public double cursorY;
+    /** Stocks for this fighter when not 0 (Classic's handicap rounds); otherwise the rules decide. */
+    public int stocks;
     /** The fighter actually used after resolving random, for this match. */
     public int resolved;
 

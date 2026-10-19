@@ -407,7 +407,9 @@ public final class MatchView {
         }
         drawMoveProps(c, f, true);
         x += lunge(f) * zoom;
+        fighters.superForm = f.superTimer > 0;
         fighters.draw(c, f.def.id, pose, x, feet, center, onFeet, f.facing, zoom, f.costume, flash, alpha, ticks);
+        fighters.superForm = false;
         drawMoveProps(c, f, false);
         drawAuras(c, f, x, center);
     }
