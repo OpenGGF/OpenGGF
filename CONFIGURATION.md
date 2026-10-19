@@ -678,7 +678,9 @@ capture:
 ```
 
 - **Trace capture:** the headless `TraceCaptureTool` renders a chosen trace.
-  Its scale, frame-rate, and codec settings remain trace-tool options.
+  Its scale, frame-rate, and video codec can be selected by trace-tool options;
+  `capture.container`, `capture.audioCodec`, and the ffmpeg pass settings control
+  the published container and audio mux, just as they do for live recording.
 
 Both paths require `ffmpeg` on `PATH`; live media verification and inspection
 also use `ffprobe`. Live recording is distinct from the Shift+F9

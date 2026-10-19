@@ -25,6 +25,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   configuration files recover safely, legacy Start bindings migrate, and capture
   codec placeholders expand into separate ffmpeg arguments. Gameplay videos use
   only their current capture's frames and retain the exact cadence of strided captures.
+  Trace video output honors the configured container, including MP4.
   Key names resolve consistently across locales, legacy keypad bindings keep their
   physical keys, and binding capture accepts modifier taps alongside chords.
   Editor composition tools follow layer switches and adjust the selected cell's
