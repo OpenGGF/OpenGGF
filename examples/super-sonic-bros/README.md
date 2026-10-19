@@ -134,6 +134,12 @@ for damage `d`, the target's percent `p` after the hit and weight `w`; launch sp
 0.059 px/frame per point, decaying by 0.085 px/frame², and hitstun is 0.4 frames per point.
 Repeating the same move stales it (up to 45% weaker), and fresh moves get a 5% bonus.
 
+## Voices
+
+[VOICES.md](VOICES.md) is the voice brief: style prompts for the announcer and each fighter,
+all 69 lines with their ids, when each plays, and the delivery format. Voice clips are not
+included yet.
+
 ## Records
 
 `saves/mods/super-sonic-bros/records.txt` keeps matches played, your wins, and per fighter
