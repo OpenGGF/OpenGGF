@@ -47,7 +47,6 @@ class TestAizMinibossCutsceneInstance {
 
         // Simulate a live tracked flame-barrel child present mid fly-off, as during the scene.
         AizMinibossFlameBarrelChild barrel = buildBarrel(cutscene, services);
-        cutscene.getChildComponents().add(barrel);
 
         // AIZ1 -> AIZ2 seamless transition world delta (LevelManager.offsetCarriedObjectsForTransition).
         cutscene.onCarriedAcrossSeamlessTransition(-0x2F00, -0x80);

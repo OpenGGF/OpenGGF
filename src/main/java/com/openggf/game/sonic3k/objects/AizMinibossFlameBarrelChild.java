@@ -7,7 +7,6 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -21,7 +20,7 @@ import java.util.List;
  * - Cutscene barrel: loc_6872C (ChildObjDat_69072)
  * - Miniboss barrel: loc_68C12 (ChildObjDat_69086)
  */
-public class AizMinibossFlameBarrelChild extends AbstractBossChild implements RewindRecreatable {
+public class AizMinibossFlameBarrelChild extends AizMinibossComponent implements RewindRecreatable {
     private static final int FLAG_PARENT_BITS = 0x38;
     private static final int PARENT_BIT_BARREL_ACTIVATE = 1 << 1;
 
@@ -64,75 +63,38 @@ public class AizMinibossFlameBarrelChild extends AbstractBossChild implements Re
     /** Native byte $39: FireLoop/FireShot's signed burst counter and the
      *  SAME byte read/written by SetShotPosition's unsigned +4 cycle. */
     private int positionCounter;
-    // Lower render bits copied by this barrel's Refresh_ChildPositionAdjusted dispatch.
-    private int nativeRenderFlags;
 
     public AizMinibossFlameBarrelChild(AbstractBossInstance parent, int barrelIndex, boolean cutsceneVariant) {
-        super(parent, "AIZMinibossBarrel" + barrelIndex, 4, 0x90);
+        super(parent, "AIZMinibossBarrel" + barrelIndex, 4, barrelIndex);
         this.barrelIndex = Math.max(0, Math.min(2, barrelIndex));
         this.cutsceneVariant = cutsceneVariant;
-        syncPositionWithParent();
+        initializeAdjustedPosition(parent, BARREL_OFFSETS[this.barrelIndex][0], BARREL_OFFSETS[this.barrelIndex][1]);
         updateDynamicSpawn();
     }
 
-    private AizMinibossFlameBarrelChild(ObjectSpawn spawn, AbstractBossInstance parent) {
-        this(parent, 0, false);
+    private AizMinibossFlameBarrelChild(ObjectSpawn spawn) {
+        super(spawn, "AIZMinibossBarrel" + spawn.subtype(), 4);
     }
 
-    @Override
-    public AizMinibossFlameBarrelChild recreateForRewind(RewindRecreateContext ctx) {
-        AbstractBossInstance boss = AizMinibossRewindLinks.nearestSharedBoss(ctx);
-        if (boss == null) {
-            return null;
-        }
-        int restoredIndex = AizMinibossRewindLinks.nearestBarrelIndex(ctx, boss);
-        return new AizMinibossFlameBarrelChild(boss, restoredIndex, false);
+    @Override public AizMinibossFlameBarrelChild recreateForRewind(RewindRecreateContext ctx) {
+        return new AizMinibossFlameBarrelChild(ctx.spawn());
     }
 
-    @Override
-    public void syncPositionWithParent() {
-        if (parent == null || parent.isDestroyed()) {
-            return;
-        }
-        int xOffset = BARREL_OFFSETS[barrelIndex][0];
-        int yOffset = BARREL_OFFSETS[barrelIndex][1];
-        nativeRenderFlags = parent.getState().renderFlags & 3;
-        boolean hFlip = (nativeRenderFlags & 1) != 0;
-        if (hFlip) {
-            xOffset = -xOffset;
-        }
-        this.currentX = parent.getX() + xOffset;
-        if ((nativeRenderFlags & 2) != 0) yOffset = -yOffset;
-        this.currentY = (parent.getY() + yOffset) & 0xFFFF;
-    }
-
-    private boolean nativeRetirementPending;
-
-    @Override
-    protected boolean destroyWhenParentDestroyed() {
-        // Cutscene children execute their own Child_Draw*Sprite2 bit4 tail.
-        return !(parent instanceof AizMinibossCutsceneInstance);
+    @Override public void syncPositionWithParent() {
+        refreshAdjustedPosition(BARREL_OFFSETS[barrelIndex][0], BARREL_OFFSETS[barrelIndex][1]);
     }
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        if (!shouldUpdate(vIntRunCount)) {
-            return;
-        }
-        if (nativeRetirementPending) {
-            com.openggf.level.objects.ObjectLifetimeOps.deleteNoRespawn(this);
+        if (!beginOwnDispatch(vIntRunCount)) {
             return;
         }
 
         syncPositionWithParent();
 
-        if (parent == null || parent.getState().defeated) {
-            state = State.IDLE;
-            mappingFrame = 3;
-            updateDynamicSpawn();
-            return;
-        }
+        // loc_6872C/loc_68C12 run the own routine before Child_Draw_Sprite2,
+        // including status7 defeat and the final parent38-bit4-observing entry.
 
         switch (state) {
             case INIT -> {
@@ -219,11 +181,7 @@ public class AizMinibossFlameBarrelChild extends AbstractBossChild implements Re
             case IDLE -> mappingFrame = 3;
         }
 
-        // Child_Draw_Sprite2 / Child_DrawTouch_Sprite2 returns through
-        // Go_Delete_Sprite_2 instead of drawing when parent $38 bit4 is set.
-        if (parent instanceof AizMinibossCutsceneInstance
-                && (parent.getCustomFlag(0x38) & 0x10) != 0) nativeRetirementPending = true;
-        updateDynamicSpawn();
+        finishNativeDrawTail();
     }
 
     private void fireCutsceneShot() {
@@ -247,7 +205,7 @@ public class AizMinibossFlameBarrelChild extends AbstractBossChild implements Re
         // ROM ChildObjDat_6909A / ChildObjDat_690A8 spawn a short muzzle-flare child
         // alongside the main shot object.
         spawnChild(() -> new AizMinibossBarrelShotFlareChild(this));
-        spawnChild(() -> new AizMinibossBarrelShotChild(parent, this, currentX, currentY + 4, mode));
+        spawnChild(() -> new AizMinibossBarrelShotChild(bossParent(), this, currentX, currentY + 4, mode));
     }
 
     private void spawnFallingShot() {
@@ -256,7 +214,7 @@ public class AizMinibossFlameBarrelChild extends AbstractBossChild implements Re
         }
         spawnChild(() -> new AizMinibossBarrelShotFlareChild(this));
         spawnChild(() -> new AizMinibossNapalmProjectile(
-                parent, this, currentX, currentY + 4, 2));
+                bossParent(), this, currentX, currentY + 4, 2));
     }
 
     private void enterClosingAnimation() {
@@ -290,16 +248,24 @@ public class AizMinibossFlameBarrelChild extends AbstractBossChild implements Re
 
     /** ROM render_flags(a1) read by AIZMiniboss_SetShotPosition. */
     boolean isFacingFlipped() {
-        return parent != null && (parent.getState().renderFlags & 1) != 0;
+        return (parentHeader().renderFlags() & 1) != 0;
     }
 
     private boolean isActivatedByParent() {
-        return (parent.getCustomFlag(FLAG_PARENT_BITS) & PARENT_BIT_BARREL_ACTIVATE) != 0;
+        return (parentHeader().flags38() & PARENT_BIT_BARREL_ACTIVATE) != 0;
     }
 
     private void clearParentActivationBit() {
-        int flags = parent.getCustomFlag(FLAG_PARENT_BITS);
-        parent.setCustomFlag(FLAG_PARENT_BITS, flags & ~PARENT_BIT_BARREL_ACTIVATE);
+        var owner = com.openggf.level.objects.NativeSstSlotAccess.currentOwner(
+                services().objectManager(), physicalParentSlot());
+        if (owner instanceof AbstractBossInstance boss) {
+            boss.setCustomFlag(FLAG_PARENT_BITS,
+                    boss.getCustomFlag(FLAG_PARENT_BITS) & ~PARENT_BIT_BARREL_ACTIVATE);
+        } else if (owner instanceof S3kBossDefeatSignpostFlow flow) {
+            flow.clearRetainedBarrelActivation();
+        } else {
+            throw new IllegalStateException("AIZ barrel has no known writable physical parent38");
+        }
     }
 
     @Override

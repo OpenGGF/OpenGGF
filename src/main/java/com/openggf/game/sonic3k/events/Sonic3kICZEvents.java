@@ -20,6 +20,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.IczBigSnowPileInstance;
 import com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance;
+import com.openggf.game.sonic3k.objects.IczTeleporterInstance;
 import com.openggf.game.sonic3k.resources.S3kKosDecompressionQueue;
 import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
 import com.openggf.game.sonic3k.resources.S3kKosRamDestinations;
@@ -35,6 +36,7 @@ import com.openggf.level.SeamlessTransitionResourceHandoffId;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.NativePositionOps;
 
 import java.io.IOException;
 import java.util.List;
@@ -52,7 +54,7 @@ import java.util.List;
  * </ul>
  *
  * <p>This pass enables the ICZ1 snowboard intro for the ROM Sonic player modes.
- * Tails-alone and Knuckles branches remain inactive until their ROM paths are ported.
+ * Knuckles instead enters through ICZ1_ScreenInit's teleporter arrival.
  */
 public class Sonic3kICZEvents extends Sonic3kZoneEvents {
     private static final int ICZ1_EVENTS_FG5_CAMERA_X_1 = 0x3700;
@@ -146,6 +148,7 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
 
     private boolean eventsFg5;
     private boolean introSpawned;
+    private boolean screenInitApplied;
     private boolean indoorPaletteCyclingActive;
     private int backgroundRoutine;
     private int bigSnowOffset;
@@ -195,6 +198,7 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
         activeAct = act;
         eventsFg5 = false;
         introSpawned = false;
+        screenInitApplied = false;
         snowboardIntro = null;
         backgroundRoutine = 0;
         bigSnowOffset = 0;
@@ -227,6 +231,25 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
         screenShakeAppliedOffsetY = 0;
         indoorPaletteCyclingActive = initialIndoorPaletteCycleState(act);
         applyInitialBackgroundPalette(act);
+    }
+
+    /** ICZ1_ScreenInit ($53608), called only by the fresh initial sprite dispatcher. */
+    public void applyScreenInitAtLoad(int act) {
+        if (screenInitApplied || act != 0 || !hasRuntime()) return;
+        screenInitApplied = true;
+        if (levelManager().getTransitions().isLastStarPostHitSet()
+                || playerCharacter() != PlayerCharacter.KNUCKLES) return;
+        var player = spriteManager().getMainPlayable();
+        if (player == null) return;
+        var teleporter = spawnObject(() -> new IczTeleporterInstance(
+                new ObjectSpawn(0, 0, 0, 0, 0, false, 0)));
+        if (teleporter == null) return; // Failed AllocateObject skips every forced word.
+        NativePositionOps.writeXPosPreserveSubpixel(player, 0x3640);
+        NativePositionOps.writeYPosPreserveSubpixel(player, 0x0660);
+        camera().setX((short) 0x35A0);
+        camera().setXCopy((short) 0x35A0);
+        camera().setY((short) 0x05FB);
+        camera().setYCopy((short) 0x05FB);
     }
 
     @Override

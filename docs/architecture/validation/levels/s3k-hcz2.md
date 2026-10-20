@@ -69,3 +69,626 @@ Corrected qualification, all on `0197c5a5a` plus this commit's test-only deltas 
 - Revised input test with the fix: 02:05:15–02:05:44 UTC, 1 test / 0 failures / 0 errors / 0 skips.
 
 Death/reload products, combined smoke and integration were not rerun here. This requalifies the held-Right entry floor only; it is not act certification.
+
+
+## Retained HCZ1-to-HCZ2 carrier boundary — 2026-10-17
+
+`TestSonic3kHCZEvents` now binds incoming X-lock ownership to both current and
+target bounds and checks each carrier's captured `$3A` target after camera motion.
+Actual manager/player/camera restoration twice replays both carriers through P1
+release and native size-child ownership; manager recreation and the schema guard
+also check distinct per-player target words. These local fixtures pass within
+worker focused1591/0/0/4; named guards113/0/0/0 pass on `b9c1c8b3d`, including
+Root prerequisite `534a69e74`. They add no fresh-entry matrix products.
+
+The [audit](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#final-single-invocation-strict-qualification)
+records three assertion-red qualifiers, returned-HCZ first reported non-camera
+physics7134 and absent owned exit, the separate load7126 boundary, and HCZ slice
+4353 spans first9482 `air` without matched-baseline attribution. Native-only 320
+Sonic+Tails images are inspected; the engine GLFW pixel oracle is blocked at init.
+Cold traversal, other products, arena completion and cross-load rewind policy
+retain their existing obligations; no general HCZ2 certification.
+
+
+Followup after866 (2026-10-17): the independent load/title owner is qualified narrowly by old-red/green, focused134, guards131 and a canonical prefix closing HCZ1-entry row7126. The distinct alternate retains its one26179 ring span. This adds no HCZ2 cold/fresh/arena or cross-load matrix product. Pre-fix dc338/866 full-slice comparison has identical windows but mixed span deltas (4699/4353);3738 is not a matched baseline. New-source full slice and returned HCZ11 remain unqualified. [Exact evidence](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#bounded-followup-qualification-and-limits).
+
+
+## R3 full strict qualification on Main460 composition — 2026-10-17
+
+Worker merge21327d78a: canonical3815 is6/1F/0E/0S, with all three prefixes,
+standalone AIZ and initial HCZ passing. Returned HCZ11 consumes14208 reference
+rows,134710 field mismatches(115689physics/19021animation), first reported
+non-camera6674 `rings`114/0 and missing giant-ring exit. HCZ90977 is2/1F/0E/0S:
+full31482 reference rows,29302 comparison records,4353 spans(3424physics/929animation),
+first9482 `air`1/0, first animation9486; independent Poindexter passes. The entire
+slice error array matches the prior4353 result. Matched4699/4353 deltas remain
+mixed;3738 is unmatched. Alternate760's one26179 ring span is reused, not rerun.
+No new entry, viewport/donor/team, pixel, cold traversal or cross-load product is
+certified. Active-level ring-reset/title-latch ownership, later route exit and
+the exact GLFW oracle remain unqualified. No new runtime fix. [Exact source,
+commands, windows and rejected load attribution](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r3-current-composed-strict-qualification--2026-10-17).
+
+
+R4 title-owner follow-up (2026-10-17): HCZ's carried results SST now receives
+its native child-movement gate through the existing request/carry contract.
+Short real allocation-hole/latch tests recreate and replay every registered
+world key twice; focused182 and guards131 pass without skips. Native slot15's
+last child movement69754 precedes clear69755/reset69756. Canonical2015 moves the
+first reported non-camera frontier6674 rings→7134 sidekick_x0175/0176, with
+133771 field mismatches over the same14208-row returned-HCZ window and missing
+exit. Independent full HCZ65594 retains exactly4353 spans/first9482air, Poindexter
+passes; earlier divergence prevents a second clean repaired-owner claim. No new
+entry, product breadth, engine pixel or cross-load timeline certification.
+[Exact evidence and limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r4-retained-title-parent-and-child-movement-latch--2026-10-17).
+
+
+HCZ7134 test-only decision (2026-10-17, base3896): independent one-tick coupled
+CPU/movement/wall/integration and no-nudge control pass in focused86494
+(7/0F/0E/0S total). Generic ordering is supported; actual7134 branch/probe/terrain
+is still unknown. Equal final X can conceal different velocity/Push results.
+No new route, matrix product or runtime qualification. [Exact evidence and
+missing live fields](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#hcz7134-coupled-cpu-and-ground-wall-decision--2026-10-17).
+
+
+R6 live witness (2026-10-17, Root86171 composition): one canonical prefix through
+7135 observes correct CPU nudge/acceleration/projection but missing wall response
+at7134. Engine final0176.F800/vx-ground0270/noPush vs native0175.F800/0170-0/Push.
+BG collision is active; selected distance, translated BG terrain and native layer
+comparison are still missing. Prefix217 errors/7136 rows is a partial window,
+not improvement versus full R4 or a matrix certification. No runtime change or
+new independent slice/GLFW qualification. [Fields/clocks and seam limit](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r6-actual-hcz7134-cpu-and-wall-input-witness--2026-10-17).
+
+
+R7 selected BG attempt (2026-10-17): actual7133 projected wall selects BG+18,
+empty tile0, provider0200/0500, translatedFF7D/0338. The single invocation67242
+fails an observer shared-probe count assertion after7133 (1/1F/0E/0S), so actual
+7134 selected distance/terrain remains unobserved. Partial206 errors over7134
+reference rows matches R6's same earlier window; no matrix/route certification.
+Native P2 layer/raw BG state fields are absent; inferred native diffs are kept
+separate. No retry or runtime edit. [Evidence and excluded stale vertical pool](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r7-native-inventory-and-partial-selected-bg-witness--2026-10-17).
+
+
+R8 corrected observer (2026-10-17, production86171 unchanged): original prefix
+44688 reaches7135 with the same217 comparator errors/7136 reference rows and
+first7134sidekick_x0175/0176. Observation assertions pass1/0F/0E/0S. Actual7134
+FG/BG/combined+31 selects BG, transformed0180/0838→FF80/0338, provider0200/0500,
+empty BG descriptor0/no flips/primary-secondary collision0. Exactly one lexical
+wall-owner call per observed tick; floor/clamp calls pass unchanged. Native P2
+layer/selected terrain remains missing; no wrapping fault or production fix
+established. No new route/matrix/GLFW qualification. R7's partial assertion red
+is preserved. [Full selected metrics, passivity and native gaps](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r8-lexical-wall-owner-observer-and-actual7134-bg-result--2026-10-17).
+
+
+R9 source inventory (2026-10-17,32a): retained native7134 BG-1 now qualifies
+layers0E/0F/provider0200/0500. Source resolves FF907F94 to current HCZ shared
+16×16 ROM bytes and adjacent703E0179 to retained HCZ1 128×128 table tail.
+One cold-HCZ2 regression32483 is1/0F/1E/0S at missing block224 before lookup
+assertions; it is not an active-transition old-red. No runtime/API fix, retry,
+new engine trace, rewind/matrix/route qualification or native execution here.
+Internal address lookup plus resident-table/capture design handed back to Root.
+[Exact source and limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r9-native-word-layout-byte-provenance-and-resident-table-boundary--2026-10-17).
+
+
+### R10 encoded collision and resident asset ownership — 2026-10-17
+
+Actual HCZ1→HCZ2 production job/request/build/commit now preserves unwritten
+128×128 destination bytes and encoded layout row addressing. Current live16×16
+bytes select A216 at FF80/0338; retained prior-act0179 selects the adjacent cell.
+Positive MOVEA.W aliases read the current constructor ROM's immutable bounded
+prefix, with source-derived zero/nonzero controls; unknown regions still fail.
+No public API expansion, observation hydration, zone or row fit.
+
+Independent transition old-red21043→green6557; ROM owner old-red53171→final3897
+7/0F/0E/0S. Every snapshot key matches after two forced whole-world recreations,
+live definition/map mutations, scene swap and forward replay. Captures start
+after the intentional cross-load history reset; no retired timeline is revived.
+
+Original prefix49095: actual7133 FG18/BG2/combined2;7134 FG31/BG-1/combined-1,
+P20175.F800/vx0170/g0/pushing matches native. Through7135, HCZ7136/14208 rows
+has206 errors (11camera physics/195animation), lag53 and no non-camera physics
+mismatch. Observer pass is not full parity. Full returned-HCZ, independent slice,
+alternate, viewport/roster/cold/PAL/auxiliary breadth and GLFW remain open.
+[Exact command, hashes, inherited failures and all compared windows](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r10-encoded-collision-words-resident-destinations-and-rom-aliases--2026-10-17).
+
+
+### R11 HCZBlock Full2 visibility and whole-world replay — 2026-10-17
+
+On152d07 composition, only HCZBlock's existing offscreen bypass capability
+changes to match loc1F3CA→SolidObjectFull2. Both the Player2 render gate and the
+object loc1DF88 gate are absent from that native path. Independent actual HCZ2
+object controls use visible/visible, visible/offscreen and offscreen/offscreen
+participants; corrected genuine old-red85345 fails only the last two. New four
+cases pass within41923's157 focused checks (mandatoryS3K4 included), including
+two forced whole-world recreations and complete registered-key forward replay.
+Affected source/authority/rewind guards22063 pass118 without skips.
+
+Final original prefix7687 consumes7809/14208 HCZ rows,206 errors=11camera physics+
+195animation, lag53, warnings/bootstrap0. Native7807/7808 P2 endpoints now match;
+no non-camera physics mismatch through7808. Earlier complete gameplay windows
+0/2/4/6/8/9 remain zero errors. First remaining all-group error3475 companion
+animation17/1C; later non-camera frontier not observed. The once final observer
+contains only post-row reads and is removed after facts are durable. No full
+act/returned exit/slice/alternate/GLFW/viewport/roster/native presentation
+certification; Root owns remaining route and delivery validation.
+[Source, controls, clocks, commands and exact window comparison](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r11-hczblock-full2-visibility-owner-closes7807-through7808--2026-10-17).
+
+
+### R12 actual composed full-window frontier and slice cause — 2026-10-17
+
+No production/test edit onbef8; R11 code/test bytes retained. Once existing full
+canonical17194 completes all14208 returnedHCZ rows with125612 field errors
+(107498physics/18114animation),lag59,warn/bootstrap0. First non-camera now8329
+y_speed0000/-0680; pre-R11 same-window133258 started7807sidekick_y. Earlier six
+gameplay windows remain complete zero-error. The giant_ring exit is still absent,
+so no onward segment/playable exit or act certification. Four suppressed unmatched
+hardware completions are not attributed to a new timing owner.
+
+Separate original82EA slice prefix68487 reaches10835, strict1/1F/0E/0S and104
+spans/10773 compared rows.10833camera copy019A (native0199) makes the real render
+edge negative instead of inclusive0; valid cached false correctly yields counter1
+on10834, then resets10835 after visibility returns. Fresh-entry delay is disabled.
+No CPU/cache/width fix. Selected camera P1/history/latch inputs were not captured;
+actual native aux lacks those selected-history/scroll fields. Observer's
+PRE_MAIN_LOOP label corrected to loop tail. Independent disconfirming test design
+is handed back, not run; all temporary observers removed before canonical.
+Full independent-slice delta attribution, later8329 owner/exit, other BK2/GLFW/
+viewport/roster/native presentation breadth remain open. Root owns delivery.
+[Exact source, clocks, comparison windows and limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r12-slice-cached-visibility-consequence-and-full-composed-canonical--2026-10-17).
+
+### R14 slice camera history input limit — 2026-10-17
+
+On unchanged0cd178d8f production, sole original82EA prefix63258 compares10773
+rows through10835 with104=92physics+12animation spans, strict1/1F/0E/0S, first
+9482air1/0. Four actual camera-entry samples prove delay2→1→0 selects0226 then
+023A; at10833currentP10231.CD00 differs from latesthistory023A. Correct native
+camera arithmetic for these engine inputs yields019A. No Camera/CPU/counter fix
+or independent old-red is supported. Native final poses/index/copies do not
+supply matching selected history, H_scroll, forced/latch or camera-entry P1.
+No new native/fullslice/canonical/alternate/8329/GLFW/broad or matrix breadth
+qualification. Temporary observer removed; R12's returned8329/absent exit and
+mixed whole-slice vector limits remain. Root owns missing native-plan review.
+[Actual source pins, fixture identity, clocks and passivity](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r14-slice-camera-entry-history-inputs-no-camera-or-cpu-repair--2026-10-17).
+
+### R15 original native selected camera input observed — 2026-10-17
+
+One original82EA native power-on pass46154,0..38005, observes raw10831..35.
+All four10832..35 endpoint controls,60 ordered/passive callbacks and immediate
+pre/post identity guards pass. Actual10833 RecordPos0239.E0 writesFFE548;
+delay0100 selects0239 ->camera0199. R14 engine latest023A ->019A uses the same
+correct rule. Native prior selected0225 vs engine0226 shows producer divergence
+already before this camera consequence. Exact earlier engine P1 writer remains
+unknown; no Camera/CPU or unobserved late-object repair is justified.
+No new engine replay/focused pass, matrix product, full route/exit, alternate,
+GLFW or native visual acceptance. Existing strict slice/8329/exit limits remain.
+[Exact original inputs, byte pins, CPU/publication phases and disconfirming proposal](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r15-original-native-camerahistory-input-plan--2026-10-17).
+
+
+## R18 spinning-column owner witness (2026-10-17)
+
+On Rootf196, one unchanged original AD40 boot prefix10733 reaches row8720
+inclusive. Actual8717 column slot11/P2 binding is intact, cached visibility
+valid/false, private rider active/prior-standing true, yet the column selects
+hold. Native AUX binds the same code326B6/sub2/interactB32E/SST11 and publishes
+Air/control release at8717. The exact engine checkpoint retains player OnObj but
+leaves its private rider standing flag false; next8718 existing release clears
+OnObj/control without Air. See the [R18 audit](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r18-hcz8717-column-cached-visibility-owner-witness--2026-10-17).
+Strict prefix remains red:213=15physics+198animation/8721 rows, first non-camera
+8717 sidekick_air1/0, lag59/0warnings/bootstrap,1/1F0E0S. Earlier six gameplay
+windows complete zero. No independent old-red, runtime repair, new native,
+whole canonical or viewport/roster qualification. Logs are removed after facts;
+this records an owner question and preserves all existing coverage limits.
+
+
+## R19 independent column release old-red (2026-10-17)
+
+TestHczSpinningColumnCachedRelease uses actual ROM factory/normal allocation,
+SST FullSolid landing/capture and the real copied-camera/body visibility
+publisher. Focused79315 on R18df2bbf/runtimef196 is **2/1F0E0S**: visible hold/jump
+passes; the intended offscreen release/retained-standing recapture assertions
+fail. First hidden dispatch holds Airfalse/controlTTT and moves0408→0407 while
+OnObj, actual ride binding and native standing bit remain. Twice forced whole-
+world recreate/forward comparisons at both before-flip and actual post-dispatch
+boundaries pass before native expectations. Correct native release/post-release
+replay is **not** proven; the old state is held. The existing standing-bit getter
+supports a column-local correction, with no shared/API widening. See the
+[R19 source/design/results](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r19-independent-column-cached-release-old-red--2026-10-17).
+No runtime fix, new native, trace qualification or broader roster/viewport
+coverage; the existing8717 frontier and all earlier qualification limits remain.
+
+
+## R20 local column release and measured limits (2026-10-17)
+
+On f196+local column owner (d8119e4a), unchanged R19oracle now passes real SST
+capture, actual cached release/retained-standing recapture and twice forced
+whole-world replay around before-flip and actual release boundaries. Visible
+hold/jump and unmanaged clear-held/positive-control controls also pass. Sole
+focus62518 is73/0F0E0S, including required S3K loading checks. No shared/API change.
+Root-reviewed source then runs one originalAD40 boot prefix93493 through8720;
+actual8715..20pose/fractions/velocities/status/control match the retained native
+sequence, including8717Airtrue/control0/OnObjtrue. Its JUnit1/0F is **not strict
+qualification**: unfinished seg11 aggregate was not captured. No current total/
+group/firstNonCamera count or213→current comparison is available. Earlier six
+completed gameplay reports/gap remain zero. See [R20 evidence and reporting gap](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r20-local-column-release-owner-and-prefix-reporting-limit--2026-10-17).
+No later frontier, full returned-HCZ/exit, independent slice/alternate, new native,
+GLFW or wider viewport/roster qualification; dedicated hurt/dead cases remain open.
+Stop after handback before any additional execution.
+
+
+## R21 actual partial report closes R20's count gap (2026-10-17)
+
+One separately authorized reporting-only execution95476 on the same frozen
+d811/c35d/6c741 source actually records8721 compared/14208 reference rows,
+completefalse: **206=11camera physics+195animation**, firstNonCameraNULL through
+8720, lag59/warnbootstrap0. Strict1/1F0E0S is solely0-versus206 after original
+prefix cleanup. No diagnostic failure or behavioral variant. Same-window10733
+is213=15physics+198animation; only aggregate/group deltas and available recent
+identities are proved, not an exhaustive error-array difference. First all-group
+3475sidekick_animation_id17/1C remains; six earlier complete windows/gap are zero.
+[Exact source/identity/phase/report and counts](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r21-actual-final-prefix-report-qualifies-the-local-column-repair--2026-10-17).
+With73focused0skip, real twice-world release/recapture and R20's native-matching
+8715..20 endpoints, the local owner is qualified through8720. No later frontier,
+full returned-HCZ/exit, independent slice/alternate, new native, exact GLFW or
+wider roster/viewport/auxiliary certification. Hurt/dead and multi-owner breadth
+remain limited to the recorded source argument. No further execution here.
+
+
+## R22 composed fullcanonical returned-HCZ window (2026-10-17)
+
+On committed7df991e289b93f92b34e10e79dc4f9900ec67eaa, unchanged maintained
+original AD40 fullcase76850 (trace-replay/all3ROM/normalqueue/EGL/singlefork)
+finishes1/1F0E0S, no skips. ReturnedHCZ completes all14208 rows:
+**11118=10054physics+1064animation**, lag59/0warnings/bootstrap, firstNonCamera
+**8775 sidekick_status_byte native000B / engine000A**. Repaired8717 is passed;
+no new writer is observed. Earlier complete six gameplay windows remain
+all-group zero. Actual13gaps/0failures includes giant_ring77284 and SS6→hcz_3
+stage_exit85097: returned-HCZ exit is present, SS parity is not certified.
+Seg13 remains partial (5393 reference, exact compared count not emitted),63295
+errors/first287y06D4/06DA/recent3208, ownership loss88306 atLEVEL/gen10/zone1/
+act1; four suppressed unmatched hardware edges remain. No onward route green.
+[Exact source/command, group/window table, recent arrays and timing limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r22-composed-full-canonical-reaches8775-status-strict-route-remains-red--2026-10-17).
+The available recent5 ring does not permit exhaustive residual-set comparison;
+historical49197 total26153 is same-window aggregate evidence only. R21's206
+partial and73focused source epochs remain distinct. No independent slice,
+alternate, auxiliary/GLFW/native or viewport/roster breadth is newly qualified.
+No runtime edit/probe/rerun; next8775 causal scope belongs to Root. Own docs-only
+accounting/consumed cleanup follows this single maintained route measurement.
+
+
+## R25 bounded8775 facing-writer observation (2026-10-17)
+
+On51320/Java7df, sole originalAD40 boot prefix8612 compares8777/14208,
+completefalse:207=12physics+195animation, firstNonCamera8775status000B/000A,
+lag59/warningsbootstrap0. JUnit1/1F0E0S is the unchanged strict0-versus207
+assertion after original cleanup; no observer error/skip/retry. Existing six
+complete earlier windows/gap remain zero. Actual setter stack identifies
+SidekickCpuController.updatePanic3424, with moveLock0/g0/spinfalse/pinballfalse/
+manual0/signedlockfalse. Engine moveLock1→0 is observed across preceding8774,
+but its writer and native gate inputs are missing. No CPU/column/facing repair
+is justified from the correct current PANIC arithmetic. [Exact source/command,
+phases/clocks/stack, report and native limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r24r25-actual8775-facing-writer-native-guard-still-missing--2026-10-17).
+This does not change R22's full14208/actual exit or certify seg13ownership88306,
+slice/alternate/native/GLFW/roster/viewport breadth. Temporary source/classes and
+inspected own diagnostics are removed after facts; no runtime change/new run.
+
+## R28 native8775 PANIC guard observation (2026-10-17)
+
+On513781/Java7df/native4fdf, after separately reviewed source and compiler,
+one originalAD40 power-on pass observes raw8773..76/input71848..51 only.
+Session66263 exits0; all4original endpoint controls,32callback+4endpoint
+passivity checks and conditional callback order match. Actual nativeCPU/PANIC
+executes, returning13F44→13FBE with move_lock001D on all four frames, idle/
+spin/g/signedCtrl2lock0. No facing hook executes. FullVInt00011644..47,
+LF8715..18 and callbackCompletedFrame71848..51 are separate from after-core.
+P2pose/velocities and column release/recapture endpoints match original CSV/AUX.
+[Exact command, reviewed hashes, counts/phases and retained originals](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r26r28-original-native-panic-returns-on-retained-move_lock--2026-10-17).
+Historical R25engine moveLock0 at8775 differs upstream of its correct facing
+choice. Earlier native timer producer and engine1→0 writer remain missing;
+no shared timer/movement/CPU/column repair or independent old-red is proved.
+Native observation is not engine trace green; R22full11118/first8775, actualexit,
+R25partial207 and separate seg13ownership88306 remain. Originals held for Root
+read; no additional run/fixture/runtime change or broader certification.
+
+## R30 actual8774 move-lock writer (2026-10-17)
+
+On24cd/Java7df plus two reviewed passive sources, sole originalAD40 prefix41203
+is1/1F0E0S, no skip/observer failure. Actual8777/14208 partial207=12physics+
+195animation/lag59/warnbootstrap0/first8775statusB/A; serialized03052 summary
+matches R25's bounded report, not a complete error-vector proof. One real setter
+at8774 old1/incoming0 is doSlopeRepel reached from modeNormal. PREAirtrue becomes
+false by setter time, OnObjtrue; actual Air writer and prior native001D producer
+remain unknown. This proves the countdown caller, not a global countdown defect.
+[Exact phases/stack/source/command/results and limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r29r30-actual-move-lock-writer-reaches-ground-dispatch--2026-10-17).
+All10records,8reports/8owners/XML/TXT inspected; source/classes restored/removed,
+raw18files retained until Rootread. No repair/oldred/newnative/broader coverage.
+R22full11118/exit/R28nativeguard/seg13ownership88306 remain prior epochs.
+
+
+## R38 to R41 stale-air ride capability and current canonical (2026-10-17)
+
+An independent real bubble/column/visible-CPU inlet establishes genuine final
+lock35/34 old-red only after two held-world plus two released-world forced
+recreation/forward cycles. Grounded K-1/natural0/old controls pass. Local column
+capability a170 (all other Java7df runtime unchanged) plus unchanged testdb5a
+passes one exact affected R40focus:76/0F0E0S, mandatory S3K4 included. No generic
+CPU/timer/movement change. R41 then runs one original maintained fullcanonical:
+returned HCZ complete14208 **6553=5489physics+1064animation**, firstNonCamera11920
+sidekick_status_byte0002/0003, lag59/warnbootstrap0. Animation3475 remains.
+Earlier six windows zero; actual SS6 entry/hcz_3 return observed, but seg13
+ownership still fails88306/actualact1 vs expected2. Its incomplete summary is
+byte-identical to R22. Recent5 is not a full error vector; lower11118->6553
+cannot certify all fields. [Exact commands/windows/source/results/limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r41-original-canonical-advances-to11920-strict-route-remains-red--2026-10-17).
+No current native/independent-BK2/caller-producer/general-route certificate;
+strict residuals and later ownership remain. Originals retained for Root read;
+no additional run, source variant, commit or delivery action in R41.
+
+R42 Root DIRECTread accepts all20current originals. Comparator warn0 remains
+separate from actual runtime468SMPSshadow+2FAST+1markRemembered warnings. Local
+preservation/cleanup does not change this coverage or prove the11920 writer.
+
+
+### R47 original canonical timeout-status measurement — 2026-10-17
+
+After independent S2/S3K timeout old-red->R46focused156green, one unchanged
+original AD40 fullcanonical35289 on d712+CPU8930 measures **complete returned
+HCZ14208, TOTAL6511=5447physics+1064animation**, firstNonCamera13322status09/01
+(lag59/warnbootstrap0), advancing historical R41first11920. Earlier animation
+3475 and strict residual remain; recent5 is not full-vector/no-regression proof.
+Six earlier complete windows stayzero. Actual giant_ring/SS6+return semantic
+assertions pass, but segment13 remains incomplete with ownership88306/gen10/
+matching normalized act and4suppressed hardware identities, so no fullroute certificate.
+All original reports retained for RootDIRECTread; no runtime probe/native or
+actual11920 caller proof. [R47 exact result/limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r47-original-canonical-firstnoncamera13322-strict-red--2026-10-17).
+
+
+### R50 bounded unload-writer observation (2026-10-18 accounting)
+
+On04ed+reviewed temporary APS9a76/testd66f, sole originalAD40 prefix83339
+finishes22:55:30UTC2026-10-17, **1/1F0E0S**: only strict0/256 after cleanup.
+Current partial13324/reference14208/completefalse has16physics+240animation,
+firstNonCamera13322status09/01, lag59/warnbootstrap0. Ten bounded records and
+38-field known-projection checks pass; actual13322 caller is hand-launcher
+releaseWithoutLaunch499→onUnload512→ordinary manager range unload3427. At the
+clear, actual latched and ride references still identify the same launcher.
+NativeSST30 and engineinteract29 remain distinct; no allocator attribution.
+This is a local writer witness, not an independent old-red/fix, full-vector
+comparison or fullroute certificate. Actual11920/native29/8774/segment13 gaps
+remain independent. All18 originals104865B accepted by Root DIRECTread; normal
+accounting restores exact838c/deletes only inventoried diagnostic classes and
+consumes accepted reports. No new JVM. [Source, clocks and limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r49r50-observed-hand-launcher-unload-onobj-writer--2026-10-17).
+
+
+### R56–R63 independent moving-wall/shake rewind obligation — 2026-10-18
+
+Real HCZ2 component inlet and continuous ordinary frames produce distinct saved
+shake AND registered wall integer-X/offset values. Independent bbde originally
+fails both joint cases (R56 12/2F0E0S); after HCZ producer/recreated-wall ownership
+R58's151/1F retains only two active forward presentation comparisons. Accepted
+R60 raw splash-state witness supports the internal supplementary owner. R62's
+sole exact13-class normal lifecycle88571 on HEADdad+sevencombineda301 passes
+**142/0F0E0S**, including both moving/stationary immediate full-registry and
+twice same-input forward full-registry contracts. No key/oracle is dropped.
+[Commands, owners, red/partial/green evidence and limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r53r63-joint-hcz-restore-owners-independent-red-to-bounded-green--2026-10-18).
+This qualifies these independent component branches, not a route frontier,
+actual R52 caller or the unexecuted dedicated supplementary surface-resource/
+replacement-controller/missing-participant branches. Hand907443's prior restore prerequisite failure remains its historical epoch;
+R64/R66 below separately qualify the unchanged final native retention oracle.
+Existing canonical13322/6511, slice/alternate breadth and seg13ownership88306
+are not requalified by the component pass. Root owns composed guards/delivery.
+
+
+### R64–R68 ordinary hand retirement retention — 2026-10-18
+
+Unchanged real ROM/factory/SST/SolidObjectTop/visible-CPU-warm/range-unload test907443
+reaches every native final oracle after two before-birth and two held forced-world
+recreation/forward/full-key controls. Genuine R64 **19/1F0E0S**, eight final native
+control/status leaves, becomes R66 **149/0F0E0S / ten classes** on sole Hand817c
+plus restore owners a301. All legacy extension unload, omitted-extension,
+role-promotion, jump and visible-launch controls remain exact/green.
+[Native deletion owner, command, epochs and limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r64r68-native-hand-retirement-independent-old-red-to-bounded-green--2026-10-18).
+This qualifies local native-player preservation on ordinary object retirement,
+not the following freed-SST CPU marker, final post-delete ride reference/rewind,
+R52 actual caller, canonical13322 closure or independent ownership88306. New a9df
+resource/missing-participant cases remain uncompiled/excluded at preservation.
+
+The historical manifest act2 is one-based and matches engine act1. The
+reported generation10 ownership loss does not identify a load caller/cause.
+Later child R69 reports251 total (11 physics/240 animation), but remains red;
+this composition adds no fresh Root route or native certificate.
+
+
+
+### R68/R69 supplementary resource and registry boundaries — 2026-10-18
+
+Exact unchanged a9df has four passing cases inside R68's sole six-class
+**74/0F0E0S** lifecycle. Natural LBZ surface production and actual public art
+rebuild replace same-player controllers; all-session immediate restore and twice
+same-input forward equality include the supplied renderer binding. Separate
+owner-only cases prove genuine missing-key defaults with nondefault ordinary
+dust preserved and refusal after public P1/P2 removal before partial apply.
+[Actual command, assertions, warnings and scope](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r68r69-fixed-dust-resource-and-registry-boundary-coverage--2026-10-18).
+Cross-session/player-recreation/cache-pixel, simultaneous active-surface/spindash,
+missing-controller, uncaptured-live and active-water-missing-key branches remain
+open. This is component coverage, not R52 caller, canonical13322, following
+freed-SST CPU marker or independent ownership88306 parity. R62's joint142 and
+R66's hand149 retain their distinct observed epochs; no new result at docs SHA.
+
+
+### Fixed countdown raw-animation ownership R77–R80 — 2026-10-18
+
+Independent HCZ2 public real-ROM component old-red R77 (3T2F0E0S) reaches natural
+underflow and active predeath but retains rawBlank1C instead of nativeDrown17/
+following Tails map00 instead of9C; ordinary NEW-air-decrement Blank control
+passes. Owner-local manager505/testb7 source fixes publication at native fixed
+pass priority, with original3case bodies unchanged and one public P1 companion
+using its own ROM scripts. R79 exact12class lifecycle116/0F0E0S includes all4
+component cases, P1 eight phase oracles, both Loading identities and required
+S3K4 plus protection/timer/RNG control. Root DIRECT accepted all24 originals.
+[Source, command epoch and limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r77r80-fixed-countdown-owns-raw-drowning-animation--2026-10-18).
+This qualifies those component/consumer paths only: native-at-PC/canonical3475
+caller, fullroute, simultaneous untested branches and new rewind scope remain
+unqualified. Prior full canonical251/first animation3475 and ownership88306 are
+historical until the separately authorized R80 original run actually completes.
+No snapshot/API/cadence/CPU/animation pipeline or fixture change.
+
+
+## Native ship escape component — 2026-10-20
+
+Obj_RobotnikShip2Wait retains subtype/mapping frame 5. READY compares unsigned
+word Y with (Camera_Y + $40).w before decrementing Y; equality/below starts
+escape without clamping position, and the decrement preserves the fractional
+word. ESCAPE moves first, subtracts one from the word timer and deletes only
+when the signed result is negative: a $100 timer permits 257 movement dispatches.
+
+The local correction has nine cases in
+[TestHczEndBossRobotnikShip](../../../../src/test/java/com/openggf/game/sonic3k/objects/bosses/TestHczEndBossRobotnikShip.java):
+wrapped camera/unsigned Y, fractions, full countdown, signed-word wrap and two
+repeated capture/recreation/forward vectors. All nine pass, as do existing
+bucket (3), boss (5) and graph (2) controls. These are declared component-state
+fixtures with a real isolated manager, not a naturally entered arena.
+
+Qualification: local HEAD691de5183, uncommitted fullsrc+pom fingerprint
+f5aee9ac65e0ffca4fbea2e02c2f2f357e839001cf5ab01e8cd385478e8d045e.
+Candidate-2 is historically85T/1F/2E/0S; all19HCZ and61existing S3K controls pass.
+The other three issues are new DEZ/ICZ fixture premises, corrected separately.
+See the [composition plan](../../plans/2026-10-13-s3k-playable-completion.md#native-ship-and-dez-launcher-art--2026-10-20).
+
+The later inline-head scalar qualification below supersedes that animation gap.
+Actual head allocation/parent link, flame, independent lifetime after boss
+removal and Knuckles art remain separate. No native trace mismatch, physical
+queue, route or whole escape lifetime is attributed by these component checks.
+
+
+## Inline Eggman head state — 2026-10-20
+
+The existing inline visual now keeps native INIT/MAIN/END state, raw cursor,
+byte timer and stored mapping. INIT does not animate. The first MAIN underflows
+timer0, writes frame1 and reloads5; later raw frames last six MAIN dispatches.
+Raw state advances before hurt overwrites mapping with2. Clearing hurt leaves
+that mapping until the next raw write. Defeat writes3 and latches END.
+
+Seven added literal-native cases cover these boundaries, including twice-repeated
+capture/recreation forward vectors for running hurt state and frozen END.
+All16 ship cases plus bucket3/boss5/graph2 pass in the local candidate-4 run,
+alongside two existing EggRobo fighter checks and one distinct ICZ observation:
+29T/0F/0E/0S, Maven1m16s, printed queue0s. Fullsrc+pom fingerprint
+71b28bf073867504d903ca0fe0fabba1cb32f33874c5500618a3dd5276c8e947.
+Root read the actual source and all originals; a fresh independent source review
+found no material issue. The exact command is in the
+[composition plan](../../plans/2026-10-13-s3k-playable-completion.md#inline-head-qualification-and-short-icz-approach-question--2026-10-20).
+
+This qualifies captured scalar behavior in the existing folded renderer. Actual
+allocated-head dispatch, exact parent3 linkage, allocation failure, independent
+head/ship lifetime, flame, Knuckles art/delay, complete world/route and native
+pixel/physical publication remain unqualified. No screenshot was captured.
+
+
+## Managed Robotnik ship, head and flame — 2026-10-20
+
+The later correction replaces the folded head visual with independent managed
+Ship/Head/Flame objects. Captured references identify the actual creator; pure
+recreation shells neither search for nearby bosses nor spawn substitutes.
+Ship INIT allocates Head once; READY allocates Flame once. A full later-slot
+pool leaves the child absent without retry. Head has its own INIT/MAIN/END raw
+animation and mapping. Flame INIT does not draw; MAIN uses supplied VInt parity
+and word ship velocity.
+
+This supersedes the earlier immediate-deletion wording: ESCAPE underflow selects
+pending deletion after movement and still draws that pass. The next Ship
+dispatch deletes. Head/Flame follow their separate parent-delete boundaries.
+Native drawing is not suppressed by control bit6.
+
+Candidate-7 passes227T/0F/0E/0S across26 classes at fullsrc+pom
+242087bf240661d9d39019a16d205681ab26e36077d6baf147df6ebe7e7e2c3f.
+The HCZ subset is Ship10/Head12/Flame6/bucket3/graph4/boss5:40 cases. Coverage
+includes allocation failure, identical-coordinate families with exact links,
+flips/art priority, managed dispatch/draw order, two recreate/forward cycles
+and the pending-delete tail after boss retirement. Graph entry uses declared
+defeat/flee component inlets and the real onFleeComplete callback; it does not
+prove a natural fight, health/timer path or complete route.
+
+Root read all original reports, case identities and streams; no skips or issues.
+The [composition record](../../plans/2026-10-13-s3k-playable-completion.md#managed-hcz-graph-world-clear-and-icz-landing--2026-10-20)
+has the exact command and compiler-only fixture correction. Knuckles-specific
+head art/script submission, ship-owned subtype4 explosion and full boss/results
+flow remain separate. No native pixels, physical display-list production or
+trace cause is certified.
+
+
+## Knuckles head art and Ship-owned explosions — 2026-10-20
+
+Head INIT now selects EggRobo from actual session P1 CharacterKey.KNUCKLES,
+independently of the configured default, sidekick and update argument. It
+submits the existing global KosM job once, retains selection through rewind,
+and reads the native $0F raw script. The HCZ2 four-frame sheet references the
+actual32 resident Patterns at tile$52E; completed module work is distinct from
+VInt DMA presentation. No new allocation/rebind path or Head-owned claim exists.
+
+Ship MAIN now attempts one actual subtype4 explosion controller on defeat.
+It follows exact Ship identity, emits immediately and every third entry, and
+keeps the native signed-negative$80 lifetime. Failed effect allocation consumes
+neither shared RNG nor SFX. Successful allocation uses low/high16 word-wrapped
+offsets; the explosion child's first own dispatch owns SFX. Parent bit5 or absent
+code selects a deferred controller delete before position refresh/emission.
+HCZ root's nonnative fixed-centre subtype0 surrogate is removed.
+
+Candidate-8 at fullsrc+pom
+a7daed03f95a177aa0a6489764e581b7eee69ae84875033c575f2d6dbb39cf5a
+has158T/1F/0E/0S: all8 art cases and10 explosion cases pass, including two
+recreated exact-family/shared-RNG forward cycles, resident identity, real archive
+publication and pending/presented replay. The sole failure is an older graph
+test: it removes the new intervening controller, then assumes allocating after
+Head must return Flame. Root changes only the allocation probe to start at
+Flame's actual predecessor. Candidate-9, source
+b7f77975f032b507f0b5471ff44d3a41f1b2eab365a2024cc12984d8a4e68337,
+passes all4 graph cases. No runtime was changed between those runs.
+
+Both source changes received independent no-material-finding review. Root read
+all original reports and skips; exact commands/epochs are in the
+[composition plan](../../plans/2026-10-13-s3k-playable-completion.md#knuckles-head-ship-explosions-and-physical-icz-contact--2026-10-20).
+This supersedes the two component gaps above. Existing global enqueue partial
+failure, native timings/pixels, retained boss/results/geyser terminal ownership,
+natural fight and whole route remain outside these bounded passes.
+
+## Retained terminal candidate and open world failures — 2026-10-20
+
+The source candidate retains the hidden root through capsule/results wait,
+owns the current min-X/flag poll/control/music restoration, allocates capsule
+and geysers first-free, and selects root deletion for its next own dispatch.
+The capsule no longer substitutes for that root. Six new component cases pass,
+including actual P1 Knuckles selection, both music branches and allocation
+failure. The existing four Ship-family graph cases also pass; the independent
+family-tail fixture now explicitly removes the retained root and names that inlet.
+
+The three new complete-world cases fail in candidate10: immediate restore has
+null-versus-initialized parallax handler state; one results slot order loses the
+new geyser; the other restores a dynamic owner at slot4 instead of15.
+The overall result is239T/3F/0E/0S. These failures are under source investigation;
+source-review NMF and passing component cases do not replace those world proofs.
+No retained terminal rewind, natural fight, native-pixel/timing or route closure
+is claimed. See the [composition record](../../plans/2026-10-13-s3k-playable-completion.md#jet-dispatch-lower-platform-excursion-and-terminal-world-failures--2026-10-20).
+
+## Terminal full-world forward replay — 2026-10-20
+
+Candidate13 passes all9 terminal ownership cases, including the3 previously
+failing complete-world cases, plus the4 Ship-family graph controls. The declared
+final-FLEE/hidden-WAIT and genuine results-publication/pending-delete boundaries
+restore fresh actors and forward twice, including both relative slot orders.
+
+Candidate11 had already passed immediate restoration; its remaining slot and
+workqueue differences appeared after forward execution. The retained diagnostic
+identified dynamicId27 as HczEndBossGeyserCutscene in the second results order.
+Those findings supersede the earlier immediate-slot-restore description.
+ObjectManager resync discarded placed owners while leaving their native SST
+reservations occupied. It now retires each outgoing placed slot and only its
+unconsumed child reservations before clearing the placed map. Live dynamic
+children, IDs, order and consumed reservations remain intact. Three new lifecycle
+cases and the unchanged full-world terminal comparisons pass; no slot seeding
+or world-comparison filter was added.
+
+Candidate11 separately passes14 parallax and shared scroll/SlotPlane/CNZ
+controls for restoration before native initialization and current-owner binding.
+Candidate12 stopped at test compilation and supplied no test result. Candidate13
+overall is240T/1F/0E/0S because of a separate synthetic solid fixture. These
+terminal checks retain declared FLEE/results/STATE_EXIT component inlets; they
+do not prove a natural eight-hit fight, native resource causality, native pixels,
+the old strict trace's four axes or complete HCZ route closure.

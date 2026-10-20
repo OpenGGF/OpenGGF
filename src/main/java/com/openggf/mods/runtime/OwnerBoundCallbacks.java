@@ -68,44 +68,57 @@ public final class OwnerBoundCallbacks {
             }
             String local = rewindKey;
             final String[] canonical = {null};
-            InvocationHandler handler = (proxy,method,args) -> {
-                if (method.getDeclaringClass() == Object.class) return switch(method.getName()) {
-                    case "equals" -> proxy == args[0];
-                    case "hashCode" -> System.identityHashCode(proxy);
-                    case "toString" -> "OwnedCallback["+owner+"]";
-                    default -> throw new UnsupportedOperationException(method.toString());
-                };
-                if (canonical[0] != null && method.getName().equals("key") && method.getParameterCount() == 0)
-                    return canonical[0];
-                return boundary.call(owner, () -> {
-                    Object admitted = OwnerBoundDifficultyPolicies.invoke(value,method,args,
-                            offeredArgs -> invoke(value,method,offeredArgs));
-                    Object result = OwnerBoundInitialization.returned(owner,boundary,limit,value,method,admitted);
-                    if (value instanceof RewindSnapshottable<?> && method.getName().equals("capture")
-                            && method.getParameterCount() == 0)
-                        result = Objects.requireNonNull(result,"Owned rewind snapshot");
-                    if (value instanceof com.openggf.game.zone.ZoneRuntimeState && method.getName().equals("captureBytes"))
-                        result = Objects.requireNonNull(result,"Owned zone runtime snapshot");
-                    if (value instanceof com.openggf.game.render.SpecialRenderEffect && method.getName().equals("stage"))
-                        result = Objects.requireNonNull(result,"Owned render effect stage");
-                    if (value instanceof com.openggf.game.mode.GameplayFrameController && method.getName().equals("beforeFrame"))
-                        result = Objects.requireNonNull(result,"Owned gameplay frame disposition");
-                    if (value instanceof com.openggf.game.save.SaveSnapshotProvider && method.getName().equals("captureSaveFields"))
-                        return com.openggf.game.save.RuntimeSaveCapture.freezeFields(saveFields(result));
-                    Class<?> returned = method.getReturnType();
-                    return result != null && publicInterface(returned)
-                            && (method.getParameterCount() == 0 || functionalInterface(returned))
-                            ? wrap(returned,result) : result;
-                });
-            };
+            InvocationHandler handler = new CallbackHandler(value, canonical);
             ClassLoader loader = value.getClass().getClassLoader();
             if (loader == null) loader = OwnerBoundCallbacks.class.getClassLoader();
-            Object proxy = Proxy.newProxyInstance(loader,interfaces.toArray(Class<?>[]::new),handler);
+            Object proxy = Proxy.newProxyInstance(loader,interfaces.toArray(Class<?>[]::new),
+                    com.openggf.game.internal.NativeProviderDispatch.authenticate(handler, value));
             if (local != null) canonical[0] = RewindAdapterOwnership.bindDelegate(proxy,value,owner,local);
             wrappers.put(value,proxy);
             return proxy;
         }
     }
+    private final class CallbackHandler implements InvocationHandler {
+        private final Object value;
+        private final String[] canonical;
+
+        private CallbackHandler(Object value, String[] canonical) {
+            this.value = value;
+            this.canonical = canonical;
+        }
+
+        @Override public Object invoke(Object proxy, Method method, Object[] args) {
+            if (method.getDeclaringClass() == Object.class) return switch(method.getName()) {
+                case "equals" -> proxy == args[0];
+                case "hashCode" -> System.identityHashCode(proxy);
+                case "toString" -> "OwnedCallback["+owner+"]";
+                default -> throw new UnsupportedOperationException(method.toString());
+            };
+            if (canonical[0] != null && method.getName().equals("key") && method.getParameterCount() == 0)
+                return canonical[0];
+            return boundary.call(owner, () -> {
+                Object admitted = OwnerBoundDifficultyPolicies.invoke(value,method,args,
+                        offeredArgs -> OwnerBoundCallbacks.invoke(value,method,offeredArgs));
+                Object result = OwnerBoundInitialization.returned(owner,boundary,limit,value,method,admitted);
+                if (value instanceof RewindSnapshottable<?> && method.getName().equals("capture")
+                        && method.getParameterCount() == 0)
+                    result = Objects.requireNonNull(result,"Owned rewind snapshot");
+                if (value instanceof com.openggf.game.zone.ZoneRuntimeState && method.getName().equals("captureBytes"))
+                    result = Objects.requireNonNull(result,"Owned zone runtime snapshot");
+                if (value instanceof com.openggf.game.render.SpecialRenderEffect && method.getName().equals("stage"))
+                    result = Objects.requireNonNull(result,"Owned render effect stage");
+                if (value instanceof com.openggf.game.mode.GameplayFrameController && method.getName().equals("beforeFrame"))
+                    result = Objects.requireNonNull(result,"Owned gameplay frame disposition");
+                if (value instanceof com.openggf.game.save.SaveSnapshotProvider && method.getName().equals("captureSaveFields"))
+                    return com.openggf.game.save.RuntimeSaveCapture.freezeFields(saveFields(result));
+                Class<?> returned = method.getReturnType();
+                return result != null && publicInterface(returned)
+                        && (method.getParameterCount() == 0 || functionalInterface(returned))
+                        ? wrap(returned,result) : result;
+            });
+        }
+    }
+
     private static boolean publicInterface(Class<?> type) {
         return type.isInterface() && Modifier.isPublic(type.getModifiers()) && !type.isSealed()
                 && (type.getPackageName().startsWith("com.openggf")

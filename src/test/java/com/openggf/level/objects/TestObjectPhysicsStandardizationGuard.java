@@ -155,7 +155,9 @@ class TestObjectPhysicsStandardizationGuard {
     // DefaultPowerUpSpawner collapsed into one rules-driven helper when the S1
     // splash moved to its ROM fixed SST (v_splash, slot 12) instead of
     // consuming a level-object slot.
-    private static final int RAW_ADD_DYNAMIC_OBJECT_OBJECT_PACKAGE_BUDGET = 10;
+    // 2026-10-17: 10 -> 9. AIZ defeat uses the independent native subtype-$10
+    // controller through the sibling helper, removing its inline raw insert.
+    private static final int RAW_ADD_DYNAMIC_OBJECT_OBJECT_PACKAGE_BUDGET = 9;
 
     @Test
     void objectManagerUsesNativePositionOpsForPlayablePreserveSubpixelWrites() throws IOException {

@@ -157,7 +157,7 @@ public final class Sonic3kEndingEvents extends Sonic3kZoneEvents {
         camera().setY((short)0);camera().setYCopy((short)0);
         S3kEndingCoordinator.updateCredits(objectServices());
     }
-    private void updateBackground(){var ram=state().screen();
+    private void updateBackground(){var ram=state().screen();int backgroundRoutineAtEntry=ram.backgroundRoutine;
         switch(ram.backgroundRoutine){
             case 0 -> {if(ram.backgroundSignal){ram.backgroundSignal=false;ram.backgroundRoutine=4;
                 ram.scrollYFixed=(ram.scrollYFixed&0xFFFF)|(0x220<<16);
@@ -209,9 +209,23 @@ public final class Sonic3kEndingEvents extends Sonic3kZoneEvents {
             com.openggf.game.sonic3k.scroll.SwScrlEnding.prepareBackgroundEvent(services);
             state().ending().scene().background().streamRows(0x200,ram.backgroundCameraY,32,
                     levelManager()::getBackgroundTileDescriptorAtWorld);
+            prepareApplyDeformation(objectServices(),backgroundRoutineAtEntry);
             if(ram.backgroundRoutine==0)ram.aizPalette.tickEndingSky(services);
             else ram.aizPalette.tickEndingWater(services);
         }
+    }
+    /** loc_5AFAA: distinct from HScroll parameter preparation and before palette cycling. */
+    public static void prepareApplyDeformation(com.openggf.level.objects.ObjectServices services,int routineAtEntry){
+        var ram=((EndingZoneRuntimeState)services.zoneRuntimeState()).screen();
+        // A delayed-redraw entry may publish state4 on this call; it is still outside this bounded producer.
+        if((routineAtEntry!=0&&routineAtEntry!=4)||(ram.backgroundRoutine!=0&&ram.backgroundRoutine!=4))return;
+        int table=ram.backgroundRoutine==0?
+                com.openggf.game.sonic3k.timing.S3kEndingApplyDeformationWork.ISLAND_BANDS:
+                com.openggf.game.sonic3k.timing.S3kEndingApplyDeformationWork.CLOUD_BANDS;
+        try {ram.applyDeformationWork.recordExecution(services.romReader(),services.levelManager().getFrameCounter(),
+                table,ram.backgroundCameraY);}
+        catch(java.io.IOException unavailable){ram.applyDeformationWork.recordExecution(null,
+                services.levelManager().getFrameCounter(),table,ram.backgroundCameraY);}
     }
     private void drawBackground(int next){var ram=state().screen();
         boolean finished=EndingSceneResourceHandoff.drawDelayedRow(objectServices(),true);

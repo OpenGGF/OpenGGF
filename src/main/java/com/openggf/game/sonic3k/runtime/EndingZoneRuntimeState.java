@@ -19,6 +19,10 @@ public final class EndingZoneRuntimeState implements S3kZoneRuntimeState, com.op
         public int fadeTimer, redrawRows, aizBackgroundScrollFixed;
         public int backgroundRedrawRows, backgroundScrollFrame=Integer.MIN_VALUE, cloudDriftFixed, backgroundCameraY;
         public int aizDeformationFrame=Integer.MIN_VALUE;
+        public final com.openggf.game.sonic3k.timing.S3kAizDeformInstructionWork aizDeformWork =
+                new com.openggf.game.sonic3k.timing.S3kAizDeformInstructionWork();
+        public final com.openggf.game.sonic3k.timing.S3kEndingApplyDeformationWork applyDeformationWork =
+                new com.openggf.game.sonic3k.timing.S3kEndingApplyDeformationWork();
         public int initialPaletteDelay; // Pal_fade_delay2 FACE; Level clearRAMFA80..FAFF initializes zero.
         public final short[] hScrollWords=new short[140];
         public boolean foregroundSignal, backgroundSignal, catcherReady, initialized;
@@ -27,7 +31,9 @@ public final class EndingZoneRuntimeState implements S3kZoneRuntimeState, com.op
         public final com.openggf.game.sonic3k.ending.S3kEndingAizPaletteState aizPalette =
                 new com.openggf.game.sonic3k.ending.S3kEndingAizPaletteState();
         private static final int BYTES = 19 * Integer.BYTES + 5 + 140 * Short.BYTES
-                + com.openggf.game.sonic3k.ending.S3kEndingAizPaletteState.BYTES;
+                + com.openggf.game.sonic3k.ending.S3kEndingAizPaletteState.BYTES
+                + com.openggf.game.sonic3k.timing.S3kAizDeformInstructionWork.BYTES
+                + com.openggf.game.sonic3k.timing.S3kEndingApplyDeformationWork.BYTES;
         private void captureTo(ByteBuffer b) {
             b.putInt(foregroundRoutine).putInt(backgroundRoutine).putInt(scrollXFixed).putInt(scrollYFixed)
                     .putInt(backgroundAnchorX).putInt(backgroundYFixed).putInt(backgroundAcceleration)
@@ -38,7 +44,8 @@ public final class EndingZoneRuntimeState implements S3kZoneRuntimeState, com.op
             b.putInt(backgroundRedrawRows).putInt(backgroundScrollFrame).putInt(cloudDriftFixed).putInt(backgroundCameraY)
                     .putInt(aizDeformationFrame).putInt(initialPaletteDelay);
             for(short word:hScrollWords)b.putShort(word);
-            b.putInt(catcherSlot);b.put((byte)masterPaletteMode);aizPalette.captureTo(b);
+            b.putInt(catcherSlot);b.put((byte)masterPaletteMode);aizPalette.captureTo(b);aizDeformWork.captureTo(b);
+            applyDeformationWork.captureTo(b);
         }
         private void restoreFrom(ByteBuffer b) {
             foregroundRoutine=b.getInt();backgroundRoutine=b.getInt();scrollXFixed=b.getInt();scrollYFixed=b.getInt();
@@ -49,7 +56,8 @@ public final class EndingZoneRuntimeState implements S3kZoneRuntimeState, com.op
             backgroundRedrawRows=b.getInt();backgroundScrollFrame=b.getInt();cloudDriftFixed=b.getInt();backgroundCameraY=b.getInt();
             aizDeformationFrame=b.getInt();initialPaletteDelay=b.getInt();
             for(int i=0;i<hScrollWords.length;i++)hScrollWords[i]=b.getShort();
-            catcherSlot=b.getInt();masterPaletteMode=b.get();aizPalette.restoreFrom(b);
+            catcherSlot=b.getInt();masterPaletteMode=b.get();aizPalette.restoreFrom(b);aizDeformWork.restoreFrom(b);
+            applyDeformationWork.restoreFrom(b);
         }
     }
 

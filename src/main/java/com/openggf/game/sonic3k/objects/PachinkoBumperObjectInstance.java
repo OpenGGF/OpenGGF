@@ -233,6 +233,13 @@ public class PachinkoBumperObjectInstance extends AbstractObjectInstance
             // Keep gameplay logic independent from audio state.
         }
         services().gameState().addScore(10);
+        // ROM sub_32F56 / loc_32FC4 (sonic3k.asm, skdisasm 044fa46):
+        // credit precedes AllocateObject, so a full
+        // SST pool loses only the display. Obj_EnemyScore receives the bumper's
+        // centre and mapping_frame 4 ("10"); its existing owner handles motion,
+        // art and lifetime. Keep the existing score/respawn-credit semantics here.
+        spawnFreeChild(() -> new Sonic3kPointsObjectInstance(
+                new ObjectSpawn(spawn.x(), spawn.y(), 0x29, 0, 0, false, 0), services(), 10));
     }
 
     /**

@@ -112927,3 +112927,1673 @@ absolute ROM properties:
 
 The later title-card archive WIP remains outside this composition. Its pending failures, ring/timer reset at
 `loc_63B4`, HCZ and downstream frontiers remain separate obligations. No full-suite run or new trace payload.
+
+### 2026-10-16 — returned HCZ hand launcher solid order and Mega Chopper control lock
+
+Owned `bugfix/ai-s3k-r2-hcz11-row1768` over round-2 integration `cc3e77ee9`.
+Commits `5096be6cc` (hand launcher) and `1eaa2cc4a` (Mega Chopper).
+[Native owners, observer and evidence](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#returned-hcz-hand-launcher-and-mega-chopper-control-lock--2026-10-16).
+**Both commits are unqualified for merge** (lead ruling): the HCZ zone-slice
+change below still needs attribution, and the 3475/5065 owners are open.
+
+Canonical command (Java 25, surfaceless EGL, ALSOFT_DRIVERS=null, three absolute
+original ROMs): `python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay
+-Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+'-Dtest=TestS3kAizTraceReplay#replayMatchesTrace,TestS3kSonicTailsHczSegmentTraceReplay#replayMatchesTrace,TestS3kSonicTailsCompleteEmeraldRunPrefix,TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds' test`.
+Every run is 5 tests, 1 failure, 0 errors, 0 skips.
+
+| Tree | Returned HCZ11 first error | Raw (physics + animation) | Last compared row | Stop |
+|---|---|---|---|---|
+| `cc3e77ee9` baseline (lead, 6405313ce profile) | 1768 Y $870/$871 | 81981 (69334 + 12647) | 5725 | ownership loss at BK2 68801, gen 9 act 0 |
+| `5096be6cc` hand only (19:58:18 BST) | 1891 x $24B3/$24AE | 22571 (21083 + 1488) | 4001 | walk-failure: KosM FIFO full at a starpost |
+| `1eaa2cc4a` both (20:32:38 BST) | 3475 sidekick_routine $0C/$02 | 36896 (33352 + 3544) | 7642 | ownership loss at BK2 70718, gen 9 act 1 (`DEATH_RESTART`) |
+
+AIZ5 (segment 8) is unchanged at 1692 (1613 + 79), first 6111
+`sidekick_x_speed`. Every other segment is 0.
+
+The alternate selector (`-Ptrace-segments`,
+`TestS3kAizZoneSliceTraceReplay#replayMatchesTrace`) is unchanged: 60 errors,
+first 25589 `player_animation_id` $13/$05 (20:42:57 BST).
+
+The HCZ zone slice (`-Ptrace-segments -Dtest=TestS3kHczZoneSliceTraceReplay`;
+2 tests, 1 failure) was measured as a matched pair, both with first error 9482
+`air` 1/0:
+
+- original-source arm: 4699 errors (20:53:45 BST);
+- `1eaa2cc4a`: 3746 errors (20:45:26 BST).
+
+Next owners:
+
+- **3475 (comparator only).** `TraceCharacterState.routineFromSprite` reports
+  $02 for an S3K drowning player. The ROM writes $C (`AirCountdown_ReduceAir`).
+  The engine air and drown timing match native.
+- **5065 (production).** Native P1 bounces off the HCZ miniboss (slot 6, $69F7A
+  status $40). The engine admits the hit one row late because its descent leads
+  native by one 4-px step. P1 diverges from 5066 and the engine P1 later dies
+  (about 7478), which triggers the gen-9 death reload.
+- **3477 (production, 1 px).** The drowned Tails' y is 1 px off: $06A2 against
+  native $06A3.
+
+### 2026-10-16 — S3K drown routine export, HCZ miniboss Init pass, drowned motion order
+
+Same branch, pass 2: `78eea96fc` (drown routine export), `a126d5104` (miniboss
+loop Init pass plus native vortex capture and release) and `d80c5ca0f`
+(drowned motion order).
+[Native dating and witnesses](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#pass-2-drown-export-miniboss-init-pass-drowned-motion--2026-10-16).
+Commands are unchanged from the entry above; each canonical run is 5 tests,
+1 failure, 0 errors, 0 skips.
+
+| Run (BST) | Returned HCZ11 first error | Raw | Last row | Stop |
+|---|---|---|---|---|
+| `1eaa2cc4a` (20:32:38) | 3475 sidekick_routine $0C/$02 | 36896 | 7642 | BK2 70718, gen 9 act 1 |
+| final tree (23:09:50) | 3483 sidekick_status_byte $42/$02 | 32876 (28942 + 3934) | 8525 | BK2 71601, gen 9 act 1 |
+
+AIZ5 is unchanged at 1692, first 6111. The alternate is unchanged: 60 errors,
+first 25589 (23:12:03 BST).
+
+HCZ zone slice (`-Ptrace-segments TestS3kHczZoneSliceTraceReplay`, 2 tests,
+1 failure), compared as a matched pair:
+
+| Arm | Errors | First error |
+|---|---|---|
+| original source `cc3e77ee9` | 4699 | 9482 `air` |
+| final tree (23:19:23 BST) | 3748 | 9482 `air` |
+
+- **Common prefix.** The first 810 error spans are identical.
+- **Resolved.** 1960 spans from 13549 resolve, including the old hand-launch
+  `g_speed` −$1000/−$0350.
+- **New.** 1009 spans start at 13637 (`x` $0942/$0943) and 411 spans change.
+
+An interim run before the vortex fixes moved the slice's first error to 9046
+and then 9338. The cause was a pair of compensating one-pass latches, which the
+final tree removes.
+
+Next:
+
+- **3483.** S3K's drowned routine $C never runs `Sonic_Water`/`Tails_Water`,
+  so the underwater bit persists. The engine's `LevelWaterCoordinator` still
+  updates the drowning player. The fix needs a per-game gameplay rule, and the
+  rule records are `@ModApi`.
+- **Slice 13637.** One pixel after the first-visit hand launch.
+
+### 2026-10-17 — returned HCZ drowned water check, CPU pause and dead underwater status
+
+Same branch, pass 3: `64b70ebf1` (drown routine rule plus water check),
+`0d7127e63` (no CPU step during routine $C) and `b3af7e635` (dead players keep
+underwater status).
+[Evidence](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#pass-3-drowned-routine-rule-cpu-pause-dead-underwater--2026-10-17).
+
+The canonical selection (unchanged commands, 5/1/0/0) moves the returned
+HCZ11 first error through four rows:
+
+| Tree | First error | Raw |
+|---|---|---|
+| `7a5b3996c` | 3483 | 32876 |
+| `64b70ebf1` (23:42:26 BST) | 3611 `sidekick_status_byte` $42/$43 | 32772 |
+| `0d7127e63` (23:58:40 BST) | 3619 `sidekick_status_byte` $42/$02 | 32764 |
+| `b3af7e635` (00:20:28 BST) | 3832 `rings` 104/94 | 32763 (28829 + 3934) |
+
+The walk-stop is unchanged at BK2 71601. AIZ5 stays at 1692 (first 6111) and
+the alternate at 60 (first 25589, 00:21:01 BST). The HCZ zone slice is
+unchanged at 3748 (first 9482) at `64b70ebf1`; neither slice trace contains a
+drowning row.
+
+The shared dead-status gate was checked with matched arms:
+
+- the S1/S2 fixtures with underwater deaths all pass
+  (`TestS1Lz1CompleteRunTraceReplay`, `TestS2Cpz2LevelSelectTraceReplay`,
+  `TestS2Cpz2Seg9/Seg10CompleteEmeraldsSegmentTraceReplay`);
+- the S3K LBZ slice is identical with and without the gate (1663 errors,
+  first 30582).
+
+**Next (attributed, not fixed).** The rings monitor (subtype 3) at
+($2D9C,$0270) breaks on the same row in both: 3800, per an engine print-only
+diagnostic. Natively its +10 rings land at 3832.
+
+The ROM broken shell (`Obj_MonitorAnimate` → `loc_1D61A`) runs
+`Sprite_OnScreen_Test` and is deleted offscreen, while the separate
+`Obj_MonitorContents` finishes its 32-step rise and award
+(sonic3k.asm:40504-40516).
+
+The engine runs the icon and award inside `Sonic3kMonitorObjectInstance` and
+destroys the contents slot in the shell's `onUnload`. Sonic outruns the monitor,
+so the award never happens. The fix is to move icon ownership to
+`MonitorContentsSlot`, which needs rewind and owner handling.
+
+**Slice 13637.** These spans are a cascade from the inherited 9482 boss-defeat
+error, not a hand-launch fault: x/y are already 1 px off at 13500-13546, and the
+grab preserves the incoming x_sub.
+
+### 2026-10-17 — returned HCZ monitor contents outlive their shell
+
+Same branch, pass 4: `5b747c95f` makes S3K `Obj_MonitorContents` an
+independent object.
+[Evidence](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#pass-4-independent-monitor-contents--2026-10-17).
+
+Canonical selection (unchanged commands, 5/1/0/0, 02:21:48 BST):
+
+| Tree | First error | Raw |
+|---|---|---|
+| `b3af7e635` | 3832 `rings` 104/94 | 32763 (28829 + 3934) |
+| `5b747c95f` source | 6796 `sidekick_x` $C5/$C2 | 29258 (25432 + 3826) |
+
+Lag (59), the last compared row (8525), the recent mismatches and the
+walk-stop (BK2 71601, gen 9 act 1) are unchanged. AIZ5 stays at 1692 (first
+6111), and segments 0/2/4/6/9 stay at 0. The chain report is summary-only, so
+seg11 spans after 3832 were not compared.
+
+- **Alternate** (02:30:45 BST): 60 errors, first 25589, all 60 spans identical
+  to the `b3af7e635` report.
+- **HCZ zone slice** (02:33:45 BST): 3738 errors, first 9482 `air`. A matched
+  arm with only the two fix sources at `0204eb045` (02:36:20 BST) gives an
+  identical span set, so the monitor change does not move the slice.
+- **Correction.** Pass 3's "3748, unchanged" was measured at `64b70ebf1`. The
+  later `0d7127e63`/`b3af7e635` change 60 cascading `tails_cpu_*` spans from
+  18466 (−10 errors); these were not separated per commit.
+
+**Next.** 6796 `sidekick_x` (Tails, 3 px) is unattributed. Zone slice 9482
+(boss-defeat support edge) remains the inherited gap; 13637 is its cascade.
+
+
+## 2026-10-17 — retained HCZ repair on Root: stored targets and qualified limits
+
+Worker `t3-3aa3bc3c`, local branch `feature/ai-s3k-hcz-gpt61-repair`:
+`b6c4898e2` composes the missing final pass4 source and retained carrier/water WIP
+onto Root `2056a99cd`; `b9c1c8b3d` merges qualified prerequisite `534a69e74`.
+The carrier reads its captured `$3A` target and the reload keeps both X easing
+targets locked until native P1 release owns widening. Fresh focused 1591/0/0/4
+has four external authored-AIZ Second Strike JAR skips; fresh named source,
+rewind and timing guards pass 113/0/0/0. Additional boss/transition checks are
+37/1/0/0, solely an unchanged hard-coded GLFW-init pixel failure before scene
+verification. Native-only original-movie 320 Sonic+Tails images are retained;
+no engine pixel-equality claim.
+
+Exactly one canonical, HCZ slice and alternate qualification each, all on
+`b9c1c8b3d` and unchanged executable inputs. Current Main absolute queue wrapper,
+normal admission, Java25/Lua5.4, surfaceless EGL, unset DISPLAY/WAYLAND/ALSOFT,
+original absolute ROM properties, one reused fork and alphabetical class order.
+Exact selectors/common command options and group limitations are in the
+[audit](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#final-single-invocation-strict-qualification).
+
+- `25747`, `-Ptrace-replay` canonical five-case controls/prefixes/chain:
+  **5/1/0/0**, finished 10:03:18 BST. Four controls pass; segments 0/2/4/6/9
+  have zero comparator errors. Segment8 retains **4** at row **7126** (first
+  reported non-camera `x`, `$0280/$0000`), a separate unqualified load boundary.
+  Returned HCZ11 has **133771 total** (114800 physics + 18971 animation),
+  zero bootstrap/warnings, lag59, comparator complete and tail at row14207.
+  First reported non-camera physics is **7134 `sidekick_x`**, `$0175/$0176`.
+  The owned giant-ring exit is absent; late native direct #220/#221 and module
+  #154/#155 completions have no prepared engine job. Summary-only reporting
+  does not establish the first animation error or full span history. The longer
+  comparison window makes the raw total incomparable to retained pass4's
+  row8525 cutoff; the old BK2-71601 stop is not transferred.
+- `67547`, `-Ptrace-segments -Dtest=TestS3kHczZoneSliceTraceReplay`:
+  **2/1/0/0**, 10:03:57 BST. **4353 spans** (3424 physics + 929 animation),
+  first **9482 `air`**, expected1/actual0; Poindexter slot control passes.
+  The initial edge coincides with the historical boss-support gap, but the
+  later count differs from historical3738 and is **not matched-baseline attributed**.
+- `45622`, `-Ptrace-segments -Dtest=TestS3kAizZoneSliceTraceReplay#replayMatchesTrace`:
+  **1/1/0/0**, 10:04:35 BST. **1** physics span at **26179 `rings`**, 72/0;
+  no animation/bootstrap errors or warnings. Historical60 is not current credit.
+
+Queue waits were 1336.2s / 789.0s / 828.2s respectively; those intervals overlap.
+No repeated qualifiers, reference edits, timing fitting or readiness fabrication.
+No downstream exit/campaign success, complete auxiliary coverage, all-preset or
+pixel/audio certification. Row7134, the owned exit, slice-span attribution and
+the title-load boundary remain Root follow-up; this is not a green delivery.
+
+
+## 2026-10-17 — native load PLC submission closes canonical HCZ-entry row7126
+
+Same worker branch after866e68501; frozen executable digest8b1e770e6904e76fec9822267e2fc75ad994a8c1068c86d3bdeb7901c5920232. Level now fills the Nemesis FIFO on the load frame; the live first loc_62CC iteration prepares it, while Obj_TitleCardInit retains its own KosM submissions. Independent old-red4/3F/0E/0S becomes4/0/0/0, with twice-restored hardware queues/ordinals; affected focused134 and named source/authority/schema guards131 pass without skips. Native original-BK2 completed frames53487/53488/53489 show queued0-prepared ->56 ->50 patterns;53559 installs native P1/camera.
+
+Commands use the current absolute Main queue from the owned cwd, --normal, -Dmse=off, CLI surfaceless-EGL, no DISPLAY/WAYLAND_DISPLAY, nullAL, Java25/Lua5.4 and original three absolute ROM properties. Add single-fork/reuse/alphabetical flags:
+
+- `-Ptrace-replay '-Dtest=TestS3kSonicTailsCompleteEmeraldRunPrefix#aiz1ThroughHczLoadBoundary' test -B`: session10857,10:53:22 BST,1/0F/0E/0S. First segment9 row driven; completed segment0/2/4/6/8 reports0 physics/animation/bootstrap/warnings. Segment8 declared7175 rows complete, lag62; previous four row7126 fields now match.
+- `-Ptrace-segments '-Dtest=TestS3kAizZoneSliceTraceReplay#replayMatchesTrace' test -B`: session69802,10:53:58 BST,1/1F/0E/0S. Exactly one physics span26179–26179 `rings` expected72/actual0; animation/bootstrap/warnings0, total_frames26041. Distinct original BK2; existing ring-publication boundary remains unqualified.
+
+Before new production edits, one exact dc338d3e3 HCZ-slice baseline and the necessary866 span regeneration both ran the full class, including independent Poindexter. Matched windows total_frames29302 / maximum mismatch row31461; baseline4699(3973physics/726animation), current4353(3424/929); both first9482 `air`1/0, Poindexter passes.1132 exact common spans,3567 baseline-only,3221 current-only; first newly mismatching field/row10834 `tails_cpu_respawn_counter`0/1. This is mixed downstream coverage, not proof of improvement or an attribution of historical3738. [Exact span identities, commands, native products and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#bounded-followup-qualification-and-limits).
+
+No new-source full canonical/returned-HCZ11/full-HCZ-slice qualification, general green or auxiliary/breadth certification. Prior7134 sidekick_x/missing-exit evidence remains historical and unresolved. Specific GLFW pixel-init failure has no matched identity baseline. Root owns combination and broad validation; local only, no Main writes/push.
+
+
+## R3 composed strict HCZ qualification — 2026-10-17
+
+Local merge21327d78a combines worker760 with published Main460715cbc, preserving
+both append-only Plan contributions, Root's fresh-title/DPLC/white-fade APIs and
+the actual clean TraceChaser4fdf checkout difference. Frozen executable digest
+8b2bb7e6e6bc297554c97501fa1051555bbdd20e018e6da4b6f95a04a9d7048d.
+Canonical3815 finishes6/1F/0E/0S: all3 prefixes and standalone AIZ/initial HCZ pass;
+returned HCZ11 consumes0–14207 and reports134710 field mismatches
+(115689physics/19021animation), bootstrap/warnings0, first reported non-camera
+6674 `rings`114/0; giant-ring exit absent. The summary does not identify first
+camera/animation or a full span history. HCZ90977 finishes2/1F/0E/0S, all31482
+reference rows,29302 comparison records,4353 spans(3424physics/929animation),
+first9482 `air`1/0, first animation9486, Poindexter passes. Its entire error array
+matches the prior4353 digest, not merely its total. Matched dc3384699/8664353
+remains mixed; historical3738 is unmatched. Alternate760's one26179 ring span is
+reused with no post-merge alternate pass claimed.
+
+No runtime fix followed: a separate fresh-load37-ring semantic trial70863 failed
+2/2F, but native canonical6674 is an active in-level boundary and does not prove
+that load owner caused it. The trial is removed, committed checks untouched.
+Obj_TitleCardWait's real child-movement/reset ownership still needs matched live
+parent/latch evidence; no fitted dispatch delay is justified. Slice9482's stale
+interact pointers likewise do not prove deletion support ownership. Exact GLFW
+oracle, full route exit/auxiliary/products remain unqualified. No broad/full,
+children/new tree, Main writes or push; no own live jobs. [Exact selections,
+windows, all groups, rejected attribution and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r3-current-composed-strict-qualification--2026-10-17).
+
+
+## R4 retained HCZ title-parent movement gate — 2026-10-17
+
+After98e2c6029, native instruction observation proves retained slot15 with
+children16/18/19/20: final movement69754, parent clears$3469755 and resets rings
+only69756 (canonical6680). The old manager countdown reset at6674 while the act
+child still moved. HCZ now requests the existing native-wait sentinel; request
+normalization/carry preserves it and the carried SST uses the existing literal
+child graph. Requested control lock and hold90 remain unchanged. No new state,
+public API, timing input, row/zone fit or source-budget allowance.
+
+Independent final old-red48402 is3/3F; focused65721 is182/0F/0E/0S including
+whole-world recreation/replay twice, actual higher-slot hole/latch order and
+mandatory S3K4; guards22781 are131/0/0/0. Frozen executable digest
+e49c68da90e35b1bb8173ba57053464cefa9e5dbf273715f754cd0e453e01773.
+Affected canonical chain2015 is1/1F/0E/0S: same14208-row returned-HCZ window,
+133771 field errors(114800physics/18971animation), first reported non-camera
+**7134 sidekick_x0175/0176**;6674 rings is closed. Exit remains absent; first
+camera/animation is not reported. Distinct-BK2 HCZ65594 is2/1F/0E/0S and its
+entire4353-span error array is unchanged:3424physics/929animation, first9482air,
+first animation9486, Poindexter passes. This is bounded proof, not a green route
+or second clean repaired-owner traversal. Alternate760 is reused, no new pass;
+matched4699/4353 remains mixed and3738 unmatched. Exact GLFW, broader products,
+auxiliary fields and later exit remain unqualified. One fix, no further sweep,
+broad/full, Main writes or push; own jobs terminal. [Native argv/UTC/pins, exact
+selectors, all groups and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r4-retained-title-parent-and-child-movement-latch--2026-10-17).
+
+## 2026-10-17 — Original AIZ normal-bridge standing SST12 qualified at four exact rows
+
+Base `8030832d2ab6080e5324cdfe35e971677fd97b41`, T3 `t3-98d036a9`, local
+`bugfix/ai-s3k-aiz-bridge-standing-gpt61`; one runtime change in
+`S3kBossDefeatSignpostFlow.updateSpawnSignpost`. The original fullrun's bootstrap,
+BK2, clock/lag driver and V5 payloads are unchanged. The [AIZ2 certificate](../architecture/validation/levels/s3k-aiz2.md#original-fullrun-normal-bridge-standing-sst--2026-10-17)
+records exact commands, source/movie hashes, occupants, clocks and coverage limits.
+
+Normal Main-wrapper admission, Java25, EGL/nullAL, original absolute S3K ROM:
+`-Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true
+-Dtest=TestS3kAizTraceReplay#normalBridgeStandingSstMatchesOriginalFullrun test -B`.
+Initial77167 (10:39:14 UTC) is 1/1F/0E/0S with four inner differences, first
+row9510 `player_stand`, expected12/actual10. A shorter causal prefix85012 ends8941:
+engine detached flow21 spawns sign22/stub23 versus native control7/sign10/stub11;
+later X-worker10 instead of12 permutes the decoration admissions. The bridge's
+display17 was already correct, so the later `b96ef2c4d` alternate proof is not the cause.
+
+The repaired signpost uses native `CreateChild6_Simple`'s retained control cursor
+through existing `spawnChildAfterSlot`. Single post-fix99559 (10:48:30 UTC)
+passes1/0F/0E/0S, all twenty assertions: live SST12, correct normal bridge and
+P1 centre X/Y at9510–9513; admission9392 parent12/display17. The independent
+allocation scene is old-red18/20 and corrected18/18 with two whole-world replay
+cycles; unset/in-place controls retain20. Focused60576 is88/0F/0E/0S;
+fresh guards83910 are134/0F/0E/0S. These counts are selected cases, not full suites.
+
+The omitted min-Y SST in AIZ's three-worker `Make_LevelSizeObj` contract remains
+explicit in the matrix/backlog. Missing advertised aux families, other BK2s,
+whole-prefix physics/animation, full SST/chain, configurations and act coverage
+are not certified. No fixture hydration, field removal/waiver, allocator/bounds
+rewrite, new native/media capture or repeated full chain was used. Root owns
+later composition and delivery.
+
+## 2026-10-17 — AIZ three-worker handoff qualified; matched R1 alternate frontier retained
+
+R2 on local R1 `da70653308ecf6290b3df020ebed3fd624399789`, T3 `t3-98d036a9`,
+same standing-SST branch. Only `AizMinibossInstance` runtime changes: existing
+X/min-Y/max-Y owners take AfterCurrent slots in native order; no min-Y snap or
+remembered-results reservation. The [R2 matrix](../architecture/validation/levels/s3k-aiz2.md#three-act2-level-size-workers--2026-10-17-r2)
+records own disassembly pin, source hash, old-red, exact commands and bounds.
+
+Normal Main-wrapper lane/Java25/EGL/nullAL/original absolute S3K ROM, no ambient
+display. Old-red12271 is2/2F/0E/0S; corrected70 focused cases and13 strengthened
+recreation cases have no failures/errors/skips. Both prehandoff and live-worker
+full-world snapshots force recreation/replay twice. Fresh guards87743 pass134.
+The original `-Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true
+-Dtest=TestS3kAizTraceReplay#normalBridgeStandingSstMatchesOriginalFullrun test -B`
+runs once on R2 (36591,11:11:22 UTC):1/0F/0E/0S, all20 assertions, four actual
+standing slots12, correct placed bridge/P1 centres and parent12/display17 at9392.
+
+Distinct existing `-Ptrace-segments
+-Dtest=TestS3kAizZoneSliceTraceReplay#replayMatchesTrace test -B` is red on R2
+(45125,11:13:37 UTC) and authorized exact R1 control (75679,11:17:01 UTC):
+1/1F/0E/0S each, complete76-entry error arrays equal, zero warnings. First11350
+`player_animation_id`13/5; eight queue entries11350–11351,67 animation entries
+through11858, trailing26179 `rings`72/0. There is no R2 worsening; the R1-only
+title frontier remains explicit and differs from the earlier composed single-ring
+result. No title repair or another alternate was attempted.
+
+Exact tested R2 source hash was restored after the matched control; target still
+contains its last R1 compilation. Root will fresh-compile the composition. No
+new native/media, input changes, field waiver, full chain or broad smoke here.
+Inspected reports/helper are consumed normally; full SST/aux/breadth and complete
+act qualification remain open, while this three-worker owner unit is closed.
+
+
+## 2026-10-17 — AIZ physical handoff closes canonical regressions; alternate ring blocker
+
+R3 on Root7ed6ba5b8 in t3-98d036a9 changes only AizMinibossInstance runtime,
+SHA2561878f322bfa03f2c20970c5dd2a371839a4e90481b93c872c332695331027626.
+The [R3 matrix](../architecture/validation/levels/s3k-aiz2.md#physical-miniboss-handoff-and-alternate-ring-blocker--2026-10-17-r3)
+records exact common Main-wrapper/env/ROM commands, matched controls, old-red and
+source pin044fa467. R2-off59027 retains Root original80/segment4 11789 exactly;
+both-AIZ-off58516 clears original80. Physical native control replacement plus
+post-routine fatal poll/literal63/global music and independent subtype10 tail
+replace unowned13/catch-up terms. Literal63 is source-backed by fallthrough; the
+'invented63' hypothesis is rejected. Three camera workers remain native owners.
+
+Final75120 passes77/0F0E0S,11:56:09UTC,wait36s/Maven1m15s. Exact56721 uses
+-Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true
+-Dsurefire.runOrder=alphabetical with
+-Dtest=TestS3kSonicTailsCompleteEmeraldRunPrefix#twoSpecialStageReturnsThroughThirdEntry,TestS3kAizTraceReplay#normalBridgeStandingSstMatchesOriginalFullrun+replayMatchesTrace:
+3/0F0E0S,11:57:19UTC,no wait/Maven59.417s. Original AIZ20463 rows has0errors,
+0warnings/bootstrap; segment4complete0physics/animation (previous first6749
+x_speed,11789errors); all20 standing assertions at9510–9513 pass actual12,
+admission9392 bridge12/display17. Seven advertised original aux remain absent.
+
+Distinct -Ptrace-segments -Dtest=TestS3kAizZoneSliceTraceReplay#replayMatchesTrace,
+same env/fork/order:33952,11:58:08UTC,1/1F0E0S,no wait/Maven40.703s,26041rows,
+11physics ring errors,0animation/other fields/warnings/bootstrap. First13740
+rings1/2; ten new spans through16669 plus inherited26179 rings72/0. These are
+not the historical76-entry R1/R2 array and not a qualified alternate.
+
+One authorized actual original-driver observation86679 through13742,12:02:23UTC,
+1/1F0E0S,no wait/Maven31.570s, identifies engineLostRing SST13 at1BB0/01EE
+starting collection/addRings at13740; LF358F,Vbla3934,executed13711,nextBK2cursor14682.
+Native slot_dump includes bouncing rings but filtered aux gives no ring position/
+routine/writer witness. A preceding diagnostic compile20566 ran no replay. The
+temporary observer is removed; no shared ring/touch change or extra variant.
+**Alternate UNQUALIFIED; ten newly exposed ring spans block integration.**
+Guards40441 are134/1F0E0S (12:05:39UTC,33.151s/no wait):133pass and exact raw
+inventory10/current9 after removing AIZ inline insertion. Tightened ratchet10→9,
+then only that method27275 passes1/0F0E0S (12:07:05UTC,24.683s/no wait). No repeat134.
+Final target compiled runtime1878 and maintained restored tests; inspected
+diagnostics/helpers consumed under metadata lease, no archives/live jobs.
+Root owns ring attribution/composed validation. Four
+native debris children/fullSST, aux/config/BK2/cold/fullchain limits remain.
+
+
+### 2026-10-17 — HCZ7134 bounded coupled pipeline check; frontier unchanged
+
+Base3896, same owned feature tree: new independent geometry regression/control
+and existing related checks pass7/0F/0E/0S in normal/EGL focused86494. CPU nudge,
+underwater acceleration, actual projected probe, wall response and integration
+compose correctly; initial56102's2 failures were a test accessor-stub error.
+No production edit or trace/native/broad invocation. Prior canonical7134
+`sidekick_x`0175/0176 and independent9482`air`1/0 remain unqualified, with no new
+error count/window claimed. Missing live engine CPU branch, full pre-wall state
+and probe/distance/terrain prevent a causal owner assignment. [Exact selector,
+math, outcomes and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#hcz7134-coupled-cpu-and-ground-wall-decision--2026-10-17).
+
+
+### 2026-10-17 — exact803 alternate baseline distinguishes candidate ring regressions
+
+Root's clean pinned8030832d2 checkout, current Main queue wrapper, normal
+`-Ptrace-replay -Dtest=TestS3kAizZoneSliceTraceReplay#replayMatchesTrace`, explicit
+original ROMs, single fork, preserved surfaceless graphics/null audio and private
+configuration:78232 terminal1 at12:52:40.260085UTC,1/1F/0E/0S,26041 observations.
+Complete array: only26179 rings72/0; animation/warnings/bootstrap zero, eight
+advertised aux schemas absent. Candidate AIZ1878's ten13740..16669 rings1/2
+spans are consequently new relative to the exact integration base and remain
+blocking. No new target fix, whole-route pass or broad run is claimed. The
+[task plan](../architecture/plans/2026-10-13-s3k-playable-completion.md#exact-published-base-alternate-control-and-pending-animal-owner--2026-10-17)
+records the matched environment and source-backed animal-lifetime investigation.
+
+
+### 2026-10-17 — R6 live HCZ7134 wall input witness; first non-camera field unchanged
+
+Root86171 composition in the same owned feature tree; one normal/EGL canonical
+prefix56073 stops after7135 (7136 of14208 rows, lag53). JUnit1/0F/0E/0S only
+means the intentional prefix completed: active comparator217=20physics+197animation,
+bootstrap/warnings0, first non-camera7134sidekick_x0175/0176. Earlier206 errors
+(11physics+195animation) are already present by7132. CPU nudge+1 and acceleration
+026A→0270 yield the native projected0180/0838, but the actual wall call leaves
+0270/ground0270/noPush and integrates to0176.F800. BG active, engine layers0E/0F;
+selected BG distance/terrain/transforms and native layer bytes were not captured.
+No runtime edit, second invocation, full/slice/alternate/native/media/guard/broad
+qualification; no replacement of R4's longer-window totals or exact GLFW limit.
+[Exact command, all groups, fields and clocks](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r6-actual-hcz7134-cpu-and-wall-input-witness--2026-10-17).
+
+
+### 2026-10-17 — R7 partial selected BG witness;7134 observation incomplete
+
+Same runtime86171/docs786 source, one normal/EGL prefix67242. It fails the
+observer's one-shared-probe-call assertion after7133 (actual4 includes floor/
+left/right tails):1/1F/0E/0S. Qualified7133 projected wall selects BG on the
+FG/BG+18 tie, provider0200/0500, translatedFF7D/0338 and empty BG descriptors.
+Partial7134/14208 reference rows (0–7133),206=11physics+195animation, lag53,
+bootstrap/warnings0 matches R6 before its7134 frontier. No new7134/7135 result,
+frontier move, full/slice/alternate/GLFW/native/guard/broad qualification. Native
+P2 layer/raw BG fields remain missing; source-derived diffs are inference.
+[Exact command/fingerprint, selected sample and observer failure](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r7-native-inventory-and-partial-selected-bg-witness--2026-10-17).
+
+
+### 2026-10-17 — R8 corrected actual7134 selected BG witness; frontier unchanged
+
+Same owned tree5daf/runtime86171. One original normal/EGL prefix44688 with
+-Ptrace-replay -Dtest=TestS3kHcz7134LexicalBgWitness#canonicalThroughHcz7135,
+original3ROMs/input/bootstrap/lag/singlefork reaches7135:1/0F/0E/0S observer
+success, open comparator217=20physics+197animation,7136/14208rows,lag53,
+bootstrap/warnings0. First non-camera7134sidekick_x0175/0176 remains; earlier
+206 errors at7132/7133 retained. Actual wall FG/BG/combined+31 selectsBG,
+provider0200/0500 transforms0180/0838→FF80/0338; BG descriptor/collision0,
+no flips. Lexical caller filter permits legitimate floor/clamp scans; passivity
+and exact R6 window/poststates agree. Native P2 layer/raw BG state/selected tile
+missing, no wrapping-owner inference or runtime change. No second/full/slice/
+alternate/native/media/guard/broad run or new GLFW certification. [Exact invocation,
+source fingerprint, windows and metrics](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r8-lexical-wall-owner-observer-and-actual7134-bg-result--2026-10-17).
+
+
+### 2026-10-17 — R9 native layout-word source attribution; engine frontier unchanged
+
+Source32a, no production change or engine replay. Root native16359's existing
+7134 FG+31/BG-1 with equal layers/provider narrows R8 engineBG+31 to layout
+addressing. Static current-ROM decoding plus all four retained snapshots proves
+FF907F94 is current16×16 tile data, while adjacent703E0179 is retained HCZ1
+128×128 data beyond HCZ2's shorter write. Sole normal/EGL ROM test32483,
+-Dtest=TestS3kWordLayoutCollision#encodedBackgroundRowCanReadTheCurrentRomTileDefinitionBytes,
+ends1/0F/1E/0S at missing cold block224 before lookup assertions. No qualified
+old-red, retry, fix or trace count/frontier advance. Root receives internal
+addressing plus cross-load residency/rewind design before implementation.
+[Exact command, provenance and stopping boundary](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r9-native-word-layout-byte-provenance-and-resident-table-boundary--2026-10-17).
+
+
+### 2026-10-17 — R5 freed-animal previous-render lifetime; alternate frontier unchanged
+
+Own t3-98d036a9, parent e207faf7d (separate R4 evidence), runtime AizMiniboss1878
+unchanged plus Animal73f1c45485ca81a7ef055d58c0e26abda1664089456eba4f4f4829dff734b5ed /
+GameRules7b694eba04238262861a76cc6977f85eb93a8709f30464c1eb891fe4fecaeb1c.
+One original passive prefix84110 ending12019 pins animal5 native deletion9375
+versus engine9418 and the earlier hole/admission permutation. Correct only that
+native owner: prior Render_Sprites bit7, width8/height0, copied camera/wrappedY;
+MAIN pre-motion versus walk/fly post-work. No physics/RNG/points/allocator change.
+
+Normal current Main absolute queue/all-three-original-ROM/EGL/nullAL/no-ambient,
+JTOsingle surfaceless flag, singlefork/reuse/alphabetical. Commands/selectors:
+15578 `-Dtest=TestS3kFreedAnimalRenderLifetime` old-red2/2F0E0S,12:55:08UTC;
+27140 newanimal/S2/RNG/destruction/rewind/S3K4 exact focused selection73/0F0E0S,
+12:57:40UTC.39799 `-Ptrace-segments -Dtest=TestS3kAizZoneSliceTraceReplay#replayMatchesTrace`
+1/1F0E0S,12:59:18UTC,Maven36.231s/no wait,26041rows,11rings errors/zero
+animation/warnings/bootstrap,first13740rings1/2. All eleven field/span/values
+match R3; the owner fix alone does not close that frontier. Root's published803
+78232 used exact alternate with trace-replay (same fork/runtime properties,
+different suite selection), retaining only26179rings72/0. Ten early spans are
+therefore NEWvs803 and remain integration blockers, not inherited waivers.
+
+6148 `-Ptrace-replay -Dtest=TestS3kAizTraceReplay#normalBridgeStandingSstMatchesOriginalFullrun+replayMatchesTrace,TestS3kSonicTailsCompleteEmeraldRunPrefix#twoSpecialStageReturnsThroughThirdEntry`
+3/0F0E0S,13:01:20UTC,Maven1m01/no wait: original20463rows/zeroerrors,warnings,
+bootstrap;exact9510..13actualSST12/all20assertions;prefix0/2/4complete/zeroerrors.
+Original seven/alternate eight advertised aux families remain absent. No further
+ancestor/native/media/alternate/wholechain/broad checks or new owner edits.
+[Full command template, source/recreation evidence and limits](../architecture/validation/levels/s3k-aiz2.md#r5-low-sst-journal-and-animal-lifetime-owner--2026-10-17).
+Independent source review no material finding; consumed diagnostics/no archives;
+local owner correction only. Root owns composition, remaining ring causality and
+combined smoke/source-authority guards; Main803 unchanged, no publication clearance.
+
+
+### 2026-10-17 — R7 native AIZ child retirement closes ten new alternate ring spans
+
+On owned98d HEAD0ee plus the reviewed local five-child/physical-header unit,
+[the R7 matrix](../architecture/validation/levels/s3k-aiz2.md#r7-physical-parent-and-five-child-defeat-retirement--2026-10-17)
+records source044fa467, independent production old-red42418 and active Knuckles
+old-red22347, actual64wait→bit4→pending→next-own-pass retirement, scalar physical
+parent recreation and the two independently found masked routine/animation gates.
+Final affected34345 passes65/0F0E0S; exact guards31137 pass2/0F0E0S.
+Earlier207 focused/116 unaffected guard cases retain their limited source epochs.
+
+99318 -Ptrace-replay exact original+standing20+twoSS selector (matrix command)
+passes3/0F0E0S at13:56:45UTC,59.964s/no queue. Original20463rows has zero
+physics/animation/warnings/bootstrap errors; raw9510..9513 each stand on12;
+seg0/2/4 complete with zero errors. Distinct72859 -Ptrace-segments exact
+TestS3kAizZoneSliceTraceReplay#replayMatchesTrace is1/1F0E0S at13:58:19UTC,
+37.343s/queue29s:26041rows, one physics error26179rings72/0, zero animation,
+warnings/bootstrap. All ten new13740..16669 ring spans disappear; the sole
+single-row/noncascading entry matches Root803 control78232. Raw alternate is
+still red; the local newly introduced ring blocker is closed, not a green
+full-route/integration certificate. Seven/eight advertised aux families, four
+native68E98 debris, fullSST/phase/positions/config/BK2/cold/fullchain remain open.
+No new captures/probes, source/input hydration or allocator/phase changes.
+Root owns composed requalification; local commit only, Main803 unchanged.
+
+
+### 2026-10-17 — bounded Pachinko score producer; existing segment frontiers unchanged
+
+Owned `t3-649fee32` / `feature/ai-s3k-pachinko-score-popup-gpt61`, over
+Root `28fd18de8212f8a844763d8399c9bcd000684a79`. Added only the native bumper
+`Obj_EnemyScore` allocation and authorized S3K points bucket1/high-bit header;
+score/cap/physics/allocator and trace contracts are unchanged.
+[Exact commands and runtime hashes](../architecture/validation/levels/s3k-bonus-stage-transitions.md#pachinko-bumper-score-popup-producer--2026-10-17).
+All commands use CURRENT MAIN absolute `tools/testing/maven_queue.py` from the
+owned cwd, Java25/surfaceless EGL and all3 original absolute ROM paths.
+
+75651 (`-Dmse=off -Ptrace-replay-r7 -Dsurefire.forkCount=1`, exact
+`TestS3kPachinkoBonusTraceReplay,TestS3kGumballBonusTraceReplay,TestS3kSlotsBonusTraceReplay`)
+passes3/0F0E0S at13:53:55UTC: canonical Pachinko2900/Gumball1277/KnucklesSlot1024
+rows, zero errors/warnings/bootstrap. 63341 (`-Ptrace-segments`, same other flags,
+exact `TestS3kSonicTailsPachinkoBonusTraceReplay,TestS3kSonicTailsPachinko2BonusTraceReplay,TestS3kSonicTailsPachinko3BonusTraceReplay,TestS3kSonicTailsGumballBonusTraceReplay`)
+finishes4/2F0E0S at13:55:05UTC: Pachinko3(188rows)/Gumball(590rows) green;
+Pachinko1 1638errors/2907rows, first122 `rings`262/261 (physics1051/animation587);
+Pachinko2 1257errors/3571rows, first469 `x_speed`$04F3/$0100 (physics648/animation609).
+
+34084 repeats ONLY those two failing selectors on Root28 runtime, identical
+candidate test source/environment/private config/profile:2/2F0E0S at13:57:45UTC.
+Complete field/span/value/severity/group error arrays exactly match by hashes
+`04d9c7f698941706d4c0df5423dc936e97f35f9fdda4660d4ee5c37b7641159e` and
+`72a46f982f33f4af53077e288848a04849e1c1ef5f5d80e7301eaa4889dc845e` respectively.
+Both warning/bootstrap lists empty, zero JUnit skips; missing advertised aux
+schemas remain explicit in the matrix. No new/worsened frontier, no timing/SAT/
+VRAM/RGB certificate. Candidate source restored exactly afterward; last local
+target is attribution-baseline compiled. Root owns fresh composition validation.
+Reports/XML are consumed after inspection; no archives or pass caches retained.
+### 2026-10-17 — R10 native7134 wall owner closes through7135; residual206
+
+Own t3-3aa3bc3c, e757 + final runtime SHA256
+0b1f59eb135fd284a5e058e0f08e8f438d2869193935d06c3c9da1531318b676.
+Internal encoded collision addressing, actual destination residency, and bounded
+immutable current-ROM positive aliases have independent old-red/green and two
+forced whole-world restore/replay controls. Earlier74271 refused ROM00007F after
+AIZ segment8 2195/7175 rows; this remains an incomplete distinct result. Root's
+subsequently authorized ROM extension passes3897 seven affected checks.
+
+49095 uses `-Ptrace-replay -Dtest=TestS3kHcz7135ResidentLayoutWitness#canonicalThroughHcz7135`
+through the current Main absolute normal wrapper, original AD40 BK2/3ROMs,
+EGL/nullAL/noambient/singlefork.1/0F/0E/0S observer, queue0s/Maven48.198s,
+finished14:01:25UTC. Six complete gameplay windows0/2/4/6/8/9 have0errors;
+returned HCZ11 consumes7136/14208 rows, **206=11physics(camera)+195animation**,
+lag53, warning/bootstrap0. First non-camera physics mismatch is absent through
+7135; no later frontier is measured. Actual7134 selected BG-1 produces native
+0175.F800/vx0170/g0/push;7133 selectedBG+2 also matches. Recent remaining camera
+fields include6790–6792/6947–6948 camera_y; first remaining animation identity is
+not established by this report. Not zero-frontier or full-route parity.
+
+No full returned-HCZ/slice/alternate/GLFW qualification on this runtime. Matched
+historical4699/4353 remains mixed,3738 unmatched. Focused122 has one exactly
+matched inherited mock error; guards179 have two inherited MenuAudio failures.
+[Exact selectors, source epochs, all windows, intermediate failures and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r10-encoded-collision-words-resident-destinations-and-rom-aliases--2026-10-17).
+
+
+### 2026-10-17 — Composed canonical152d07 advances returned-HCZ non-camera frontier to7807
+
+Normal Main-wrapper request93212 atRoot152d07 (all originalROMs, trace-replay,
+EGL/nullAL/noambient/singlefork) completed14:12:04UTC,6/1F0E0S,Maven2m46s,
+queue0. OriginalAIZ+standing20 and all3prefix methods pass; complete windows0/2/
+4/6/8/9 have0errors/warnings/bootstrap. Fullchain remainsred: HCZ11complete14208
+rows,133258errors (113873physics+19385animation),lag59,warnings/bootstrap0;
+firstnoncamera7807 sidekick_y066F/0669, giant_ringexitabsent. Earlier7134 wall
+causal unit is fixed; no later-physics or fullroute certificate follows.
+Main803's older incomplete result is not an exact waiver for these later rows.
+Root retains inspected reports temporarily for the activeR11 causal owner;
+no archives or pass caches. Four distinct segment checks pending, broad smoke
+not yet launched; see existing completion Plan for exact selector/environment.
+
+
+### 2026-10-17 — Exact published HCZ slice comparison exposes mixed composed delta
+
+Current Roota58bdc058/runtime152d07, current Main absolute Maven wrapper,
+`-Dmse=off -Ptrace-segments` and exact classes
+`TestS3kAizZoneSliceTraceReplay,TestS3kSonicTailsHczSegmentTraceReplay,TestS3kHczZoneSliceTraceReplay`,
+normal/all3originalROMs/EGL/nullAL/noambient/singlefork/reuse/alpha:
+67653 terminal1 at14:16:10UTC,4/2F0E0S, queue0/Maven48.013s. AIZ slice's
+sole26179 rings72/0 matches actual803 baseline78232; team HCZ and Poindexter
+pass. HCZ slice completes29302 observations,4353 errors=3424physics+929anim,
+first9482 air1/0, warnings/bootstrap0.
+
+Matched actual Main80317155 used only
+`TestS3kHczZoneSliceTraceReplay#replayMatchesTrace` with the same profile,
+ROMs/flags/environment, terminal1 at14:24:23UTC,1/1F0E0S,
+queue0/Maven35.057s:29302 observations,4699=3973physics+726anim,
+same first9482 air1/0 and same eight missing aux schemas. Main foreign
+status and config bytes/mtime are unchanged. Full records share1132 exact
+identities;3221current/3567baseline are unmatched, including split spans.
+The first genuinely new field/row is10834 tails_cpu_respawn_counter0000/0001;
+Main's comparator has no counter error there. Lower totals do not waive it.
+This mixed delta remains an integration blocker; read-only causal attribution
+is separate from original-route R11's7807 block gate. No broad smoke or
+full-suite result is claimed. Exact commands, bounds and cleanup obligations
+are in the existing playable-completion plan.
+
+
+### 2026-10-17 — Slot native band publication, bounded traces retained green
+
+Owned `t3-649fee32`, `feature/ai-s3k-slot-native-publication-gpt61`, Root e8f2
+plus the two runtime files at [recorded hashes and exact execution](../architecture/validation/levels/s3k-bonus-stage-transitions.md#slot-zero-step-and-native-row-publication--2026-10-17).
+Current Main absolute queue wrapper from owned cwd, exact Java25/surfaceless
+EGL/nullAL/Lua5.4 environment and all3 original absolute ROM paths.
+`-Dmse=off -Ptrace-replay-r7 -Dsurefire.forkCount=1 -Dtest=TestS3kSlotsBonusTraceReplay test`
+(session3566,14:24:58UTC,24.773s/zero queue) passes Knuckles1/0F0E0S/1024rows.
+Same selector with `-Ptrace-replay` (78564,14:29:07UTC,26.298s/zero queue) passes
+team1/0F0E0S/5259rows. Both errors/warnings/bootstrap lists and physics/animation
+counts zero, no first-error field; advertised missing aux schemas remain explicit.
+No frontier fit or extra sweep/baseline run. Five fixed current RGB comparisons
+retain661/360/50/52/58 differing pixels; not a zero-RGB or whole-route certificate.
+Independent source review found no material finding; combined delivery remains Root's.
+
+
+### 2026-10-17 — Slot original-pixel cell overlap, physics frontiers reused
+
+Bounded R4 in owned649 over670cf only reverses Slot direct cell paint order.
+Native SAT13 opaque-black versus laterSAT14 blue is independently old-red in
+32764; final40686 passes24 render/Slot cases. R2 Knuckles1024/team5259 trace
+physics/animation/error/warning/bootstrap-zero results remain reused at their
+original epochs, not rerun for the presentation-only loop. Missing aux schemas
+and bounded timing/SAT coverage remain. [Exact commands/source hashes](../architecture/validation/levels/s3k-bonus-stage-transitions.md#slot-native-cell-priority-r3r4--2026-10-17).
+One fixed five-PNG48918 (14:58:10UTC,3.415s/33s queue) compares unchanged native
+originals at971/974/1017/1022/1026:661/360/50/52/58→599/295/41/52/57,
+137 original pixels recovered and zero newly bad. Original578/267 components
+remain identical/unattributed; HUD native4/engine3 unqualified bootstrap life
+state persists. No new trace frontier, zero-RGB claim or further owner repair.
+
+
+### 2026-10-17 — R11 native HCZBlock Full2 closes7807 through7808
+
+Base152d07 in owned3aa3, branchbugfix/ai-s3k-hcz-7807-causal-owner. HCZBlock
+loc1F3CA calls Full2: both player and object offscreen gates are bypassed.
+Independent real-object controls85345 old-red3/2F (on-screen passes) →41923
+focused157/0F/0E/0S, twice whole-world recreation/replay; guards22063 118/0F/0E/0S.
+Only existing HCZBlock bypass capability changes; no shared movement/API/state.
+
+Current Main absolute wrapper, normal lane, original three ROMs, Java25/Lua5.4,
+EGL/nullAL/no ambient display, single reusable fork/alphabetical, `-Dmse=off
+-Ptrace-replay -Dtest=TestS3kHcz7808QualifiedPrefix#originalCanonicalThrough7808
+ test -B` runs sole final7687 from original AD40 bootstrap/input/lag. Temporary
+sensor/checkpoint observer removed before it. Observer1/0F/0E/0S is not parity.
+HCZ7809/14208 rows:206=11camera physics+195animation, lag53, warning/bootstrap0,
+no non-camera physics mismatch through7808. Pre-fix46246 same window214/19+195;
+eight non-camera fields close. Row7807 P209B1.FD00/066F.F700/vxFEA2/vy-g0 and
+7808 P209B0.9300/066F.F700/vxFE96/vy0038/g0 match native. Earlier complete
+0/2/4/6/8/9 windows remain zero errors. First remaining all-group3475
+sidekick_animation_id17/1C; later non-camera frontier unmeasured. No zero-frontier,
+full returned-HCZ/exit, slice, alternate or exact GLFW qualification. Root owns
+combined validation and delivery; no Main write/push.
+[Exact source hashes, commands, compared windows and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r11-hczblock-full2-visibility-owner-closes7807-through7808--2026-10-17).
+
+
+### 2026-10-17 — Composed R11/Slot source preserves the exact mixed HCZ slice vector
+
+Rootbef8f27ca includes qualified Slot670cf353d and HCZcd94d7ca4 byte-for-byte,
+plus docs-only ICZc8703d172. Normal Main-wrapper58673 ran only
+`TestS3kHczZoneSliceTraceReplay#replayMatchesTrace -Ptrace-segments`, with
+all3originalROMs/EGL/nullAL/noambient/singlefork/reuse/alpha. Terminal1 at
+14:45:55UTC:1/1F0E0S, queue0/Maven1m23s,29302observations,
+4353=3424physics+929animation, first9482air1/0, warnings/bootstrap0.
+Full sorted error-array SHA25671f91e9494d9a6926cd2f032dcc174a0d289355d9f9a6658b3752ae61d96d251
+matches pre-R11/current/historical R3 exactly. No new slice delta from these
+bounded owners; published803's4699 vector still differs, and10834 CPUcounter
+0000/0001 remains unresolved. Source history locates the earliest compound
+boundary b6c4898e2, not a single proven counter cause; R12 observes visibility
+before any correction. Native10833..35 render_flags84/routine6/counter0.
+
+One complete actual change-based smoke plan now selects3523candidates/all10
+categories plus guards, <=50 per ordinary batch, max150execution minutes/10min
+no-output/queueexcluded. This is separate from trace acceptance; neither a
+lower total nor the planned broad run certifies HCZ, SlotRGB, ICZdeath or the
+coherent ending timeline. Source/commands/limits are in the existing plan.
+
+### 2026-10-17 — R12 composed canonical first non-camera7807→8329; exit absent
+
+Sourcebef8f27ca in owned3aa, branchbugfix/ai-s3k-hcz-slice-cpu-visibility-gpt61,
+production/maintained tests unchanged. Root authorized once existing original
+AD40 full selector: current Main absolute wrapper, normal lane, Java25/Lua5.4,
+original3ROM/EGL/nullAL/no ambient display/single reusable fork/alphabetical,
+`-Dmse=off -Ptrace-replay
+-Dtest=TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds
+ test -B`.17194 is1/1F/0E/0S, queue32s/Maven50.504s, finished15:05:18UTC.
+All six earlier gameplay windows0/2/4/6/8/9 complete0errors. ReturnedHCZ11
+complete14208 rows,125612TOTAL=107498physics+18114animation,lag59,warn/bootstrap0.
+First non-camera **8329 y_speed native0000/engine-0680**, versus pre-R11 Root93212
+same14208 rows133258=113873+19385/first7807sidekick_y. Lower matched totals do not
+certify parity. Second failure axis remains giant_ring exit never observed;
+no onward segment/playable exit. Four suppressed unmatched hardware completions
+are retained unattributed. No new-field investigation/fix/rerun.
+
+Separate82EA slice witness68487 through10835 isstrictred104spans/10773 compared
+rows/first9482air1/0. New10834counter0/1 correctly follows previous valid cached
+false: engine10833copiedcamera019A versus native0199 atP2x0181,width18 changes
+inclusive left edge0→-1. Fresh-entry rule/consumed false. Camera/P1 input/history
+producer remains unqualified; no CPU/cache fix. PRE_MAIN_LOOP label corrected
+to actual post-camera loop tail. All temporary observer source/classes removed
+before canonical; no native/fullslice/alternate/broad/guard or runtime edit.
+[Exact separate fixtures, source gaps, clock phases and results](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r12-slice-cached-visibility-consequence-and-full-composed-canonical--2026-10-17).
+
+
+### 2026-10-17 — R13 local residency smoke repair; no new route qualification
+
+Owned3aa/25d3500cd + bounded LBZ pointer-owner and DDZ test-inlet changes.
+43333 reproduces15/1F/14E; actual-ROM pointer old-red5006 is1/1F at encoded
+index10 (8F00 required,8EF8 retained). Final16322 passes86 focused and48957
+passes118 source/authority/rewind guards, all0F/0E/0S. DDZ keeps explicit FF82AF
+unknown-definition refusal; LBZ copies native row pointer words, preserving bytes,
+mutation aliases and twice-restored world replay. Root reviewed exact frozen
+runtime363e7328… with no material finding. No trace/native/media/broad or CPU/
+camera/8329 edit. R12's first non-camera8329y_speed and absent exit remain
+historical bef8 observations, not new qualification; Root owns combined delivery.
+[Commands, source ownership, old-reds and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r13-residency-smoke-regressions-native-row-pointers-and-ddz-fixture-entry--2026-10-17).
+
+### 2026-10-17 — R14 engine camera input observed; native selected input remains open
+
+Owned3aa/base0cd178d8f production unchanged; original82EA temporary observer
+63258 once through10835 isstrict1/1F/0E/0S,10773 compared rows/104spans
+(92physics/12animation), first9482air1/0,10834CPUcounter0/1 still present;
+warning/bootstrap0. Same Main absolute wrapper/normal/original3ROM/EGL/nullAL/
+noambient/singlefork/alpha, `-Ptrace-segments
+-Dtest=TestS3kHczSliceCameraInputWitness#replayMatchesTrace test -B`.
+20passive samples show10833camera186 + (selectedhistory23A−186−A0)=019A,
+delay1, actualcurrentP10231.CD00. Correct arithmetic, no Camera/CPU repair.
+Native selected history/entry P1/delay/forced latches are missing; no row shift
+or final-pose inference. Byte-verified RecordPos entry10D66 differs from existing
+named10D80 operand pin, which is unchanged. Observer/diagnostics consumed; no
+further execution or full-window improvement claim. Root owns native-plan review.
+[Exact commands, hashes, phase clocks and remaining field-owner gap](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r14-slice-camera-entry-history-inputs-no-camera-or-cpu-repair--2026-10-17).
+
+### 2026-10-17 — R15 native history input resolved; upstream P1 writer unqualified
+
+Owned3aa/source72d1be929 production unchanged. Root-reviewed/authorized one
+original82EA native46154 terminal0, queue248s, native10.3544623s, all four
+endpoint controls and60 passive/ordered callbacks match through raw10835.
+Current Main absolute maven_slot defaultnormal/estimate90, original ROM/movie/
+power-on bootstrap, nullAL/EGL/no ambient; exact external command in audit.
+Native10833 RecordPos0239.E0 ->selected0239@FFE548/delay0100 ->camera0199,
+versus R14 engine latest023A/delay1 ->019A. Correct Camera/CPU consumers; input
+producer differs already before camera. The exact earlier engine P1 writer is
+unproven, and RecordPos→Deform position change is only a bracket. No runtime
+fix, old-red, extra engine/native execution or full-window parity claim. Existing
+104-prefix/mixed4353/4699 and returned8329/absentexit limits remain explicit.
+[Identity guards, actual clocks/pins and smallest disconfirming design](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r15-original-native-camerahistory-input-plan--2026-10-17).
+
+
+### 2026-10-17 — Combined smoke stops incomplete; qualified local HCZ frontier advances
+
+Root02b run20261017T145127Z-5f175bf9 parent15826 returned143 with65/71 ordinary
+batches recorded (35353 tests/2788F26E86S). Its already-admitted batch66 children
+finished later;50 class XMLs report289 tests/1F2E3S separately. Batches67–71
+(223 candidates) and guards were not run. The signal cause is unknown; no pass
+or automatic replay is claimed. Family controls and remaining gates are in the
+existing [plan](../architecture/plans/2026-10-13-s3k-playable-completion.md#combined-smoke-interruption-and-matched-consumer-gates--2026-10-17).
+
+Local0c7d9f20's maintained originalAD40 canonical49197 is1F, queue151s/Maven52.840s:
+returnedHCZ complete14208rows,26153=23312physics+2841animation,warn/bootstrap0,
+lag59; first non-camera now8717 sidekick_air1/0 after logical-skim press repair.
+All six earlier gameplay windows remain complete zero. Giant-ring77284 and
+stage-exit85097 manifest boundaries are crossed (gap ledger0failures); hcz_3
+later loses expected act2 ownership at BK2cursor88306/actualact1, with only a
+partial recent row3208. No further route, strict animation, auxiliary or SS
+parity claim. Native R15's separate82EA history evidence locates an upstream
+recorded-P1 difference, not a Camera/CPU defect; it does not qualify this AD40
+frontier or waive the mixed-slice field differences.
+
+
+
+### 2026-10-17 — canonical returned HCZ8329 water-skim owner candidate
+
+Owned fa8 at53dbe8fd plus one HCZWaterSkimHandler predicate and independent tests;
+runtime/test SHA25699957690/2dd28e9b (full hashes in the [audit](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#canonical-returned-hcz8329-water-skim-input-owner--2026-10-17)).
+Original AD40 prefix21228 through8330 observes the first non-camera8329 Yspeed
+0/-680 with no logical pressed edge. Native loc385D2 tests that pressed byte;
+independent old-red5337 is2/2F0E0S, then affected skim/water/S3K4 focused9066
+passes80/0F0E0S and fresh authority7703 passes25/0F0E0S. No shared movement,
+input, camera/visibility or timing-authority edit.
+
+One authorized postrow-only same-driver prefix9812 uses
+`-Ptrace-replay -Dtest=TestS3kCanonicalHczSkimPrefix#originalAd40HeldSkimDoesNotLaunchThrough8330 -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical`,
+all three original absolute ROMs/current Main absolute wrapper from the owned
+cwd, JTO single surfaceless-EGL token/nullAL/no ambient display (full commands in
+[Plan](../architecture/plans/2026-10-13-s3k-playable-completion.md#canonical-hcz8329-skim-logical-press-owner--2026-10-17)).
+At16:42:13UTC it is1/1F0E0S,queue29s/Maven50.427s. Actual8329 no-false-jump
+assertions pass and8330 velocity matches; firstNonCameraPhysicsMismatch is null
+through8330. Live partial206=11physics(camera only)+195animation,0warnings/
+bootstrap,54lag. The failing extra animation0 assertion was an unsupported
+diagnostic assumption; the initial218-total witness omitted group splits, so
+no new/inherited animation attribution follows from that alone. Prefix remains
+red; no automatic corrected prefix rerun or tuning. The separately required
+maintained canonical result follows below.
+The separate82EA slice/R14 camera-input question and existing coverage limits
+remain owned/open independently.
+
+
+Required maintained canonical49197 used that exact original AD40 selection and
+single-EGL-token environment, no cutoff/observer/extra assertion. On53dbe8fd plus
+reviewed runtime99957690/test2dd28e9b it finished16:51:28UTC, queue151s,
+Maven52.840s/JUnit27.372s, **1/1F0E0S**. Seg11 completes14208rows:
+26153=23312physics+2841animation,0warnings/bootstrap,lag59; first non-camera
+moves8329 y_speed0/-680→8717 sidekick_air1/0. Prior17194 same-window125612
+(107498+18114) is a bounded aggregate comparison, not full-vector acceptance.
+Earlier0/2/4/6/8/9 remain complete-zero;13 gaps have0failures, including actual
+hcz_2→ss_6→hcz_3 (manifest giant_ring/stage_exit). The giant-ring exit is reached,
+while the strict chain remains red. Seg13 is incomplete:63295=54642physics+
+8653animation,0warnings/bootstrap,lag6,first287 y06D4/06DA, recent row3208;
+walk loses ownership at BK2cursor88306 (LEVEL/gen10/zone1/act1; manifest expects
+act2). Four future hardware edges3256/3257/5356/5357 remain suppressed unmatched;
+no hydration, descriptor fitting or SS parity total is inferred. Full details
+and exact reviewed hashes are in the linked audit. Stop: no further probe/fix/
+selection; Root owns next frontier, composition and ending6+46/PAL/PCM limits.
+
+
+
+2026-10-17 ICZ R11 retained-resource smoke owner (same98d,077767+private carry):
+no trace frontier run or strict trace claim. Real handoff entry129 C131→0000
+old-red31728 (1/1F), then focused45686 77/0F0E0S reaches original ICZ16/pattern/
+publication tail. Review's distinct opaque688→718 P2 reproduced9826 (1/1F),
+corrected68955 affected4/0F0E0S with two forced-world replays. No unknown-zero
+fallback, async predecessor input, public snapshot/API, physics or timing change.
+These are separate source epochs; current campaign/HCZ frontiers stay historical
+and Root owns composed smoke/delivery. [Commands, sources and explicit limits](../architecture/validation/levels/s3k-icz-act1.md#r11-synchronous-known16-handoff-repair--2026-10-17).
+
+
+2026-10-17 workerR13 matched cold Sonic campaign (not a strict trace replay):
+original Main803 baseline38651 passes1/0F0E0S; exactf196 current49615 fails1/1F0E0S
+at originalcolddeath49613. Identical reviewed primitive observer qualifies52946/
+49884 rows; every explicit current key matches the baseline prefix, no alignment.
+First unequal P1 main48275 SSZ1,VInt48206/LF9027/OM9028: Y0A64/status29 versus
+0A6C/status21, cameraYphysical/copy0A04/0A0C; no clock/RNG/load/shield mismatch.
+First current ring deficit49581 follows baseline0→1/current0→0. The actual48275
+standing/contact writer is unobserved, no runtime repair/native correctness claim.
+Root independently inspected both original binaries; raw binaries then consumed
+metadata-slot-alone and temporary sources/instrumented classes removed. No extra
+JVM/native/media/sweep.
+[Exact commands, source pins, neighbors and limits](../architecture/validation/levels/s3k-ssz-act1.md#r13-matched-cold-campaign-first-tuple-difference--2026-10-17).
+
+### 2026-10-17 — HCZ column cached release closes8717 through8720; strict residuals remain
+
+Owned3aa3 branchbugfix/ai-s3k-hcz-column-held-release-gpt61, basef196/HEAD57dd
+plus one column owner SHA d8119e4a; no later Root source merge/execution claim.
+Native044sub32784 reads cached visibility before routine/standing/hold, preserves
+OnObj on release, clears only held on lost standing, and recaptures from its
+actual native standing bit despite positive control3. Existing manager getter
+supplies that retained bit; no shared solid/CPU/camera/cache/API changes.
+Independent actual production oracle R19oldred79315(2/1F)→R20focus62518
+**73/0F0E0S**, including unchanged new2, old controls, mechanism/recreation and
+S3K4. Twice forced whole-world continuations pass before/after actual release.
+R20prefix93493 directly matches native8715..20endpoint/status/control sequence,
+but omits unfinished comparator counts; its JUnit0F is not strict green.
+
+Separately reviewed report-only R21sourcea625 runs originalAD40 from boot once,
+selector TestS3kCanonicalHczColumnReleasePrefix#originalAd40ColumnThrough8720,
+normal Main absolute wrapper/EGL/nullAL/original all3ROM/singlefork. Actual95476
+18:52:31UTC, queue0/Maven51.190s, **1/1F0E0S**: compared8721/reference14208,
+completefalse, **206=11camera physics+195animation**, firstNonCameraNULL,
+lag59/warningbootstrap0. Its strict-zero fails after original cleanup, preserving
+all residuals. Actual matched10733 same-window213=15physics+198animation now
+reduces by group counts; no exhaustive error-set delta is inferred from the
+five-entry recent ring. First all-group3475sidekick_animation_id17/1C remains.
+Six earlier completed gameplay windows0/2/4/6/8/9 remain all-group zero and gap0.
+[Exact hashes, commands, report identities, source/phase and available mismatch rows](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r21-actual-final-prefix-report-qualifies-the-local-column-repair--2026-10-17).
+No later non-camera frontier, full route/exit, independent slice/alternate,
+auxiliary, exact GLFW or new native qualification; no general green. Root owns
+combined guards/smoke/integration/push. Temporary reporting source/classes and
+consumed owned diagnostics are removed; local runtime/test+docs only.
+
+
+### 2026-10-17 — HCZ composed fullcanonical first8775 status; actual exit reached
+
+Owned3aa safely FFs preserved a46 to committed7df991e289b93f92b34e10e79dc4f9900ec67eaa,
+branchbugfix/ai-s3k-hcz-composed-canonical-frontier-gpt61, column d811 exact;
+no runtime/test/fixture/observer edits. Sole actual unchanged maintained selector
+`-Ptrace-replay -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds`,
+originalAD40 fromboot/bootstrap/defaultlag, all3absoluteROM/Java25/normal Main
+absolutequeue/JTOsingleEGL/nullAL/noambient/fork1/reusetrue/alphabetical.
+Session76850 terminal1 at19:02:24UTC, queue0/displayedMaven01:38min,
+JUnit1/1F0E0S (method26.092s/suite26.359s). ReturnedHCZ COMPLETE14208:
+**11118=10054physics+1064animation**, lag59/warnbootstrap0, firstNonCamera
+**8775 sidekick_status_byte000B/000A**, after repaired8717. First all-group
+3475animation17/1C remains. Earlier0/2/4/6/8/9 complete all-group zero.
+Actual13gaps/0failures and giant_ring77284/stage_exit85097 show returnedHCZ exit,
+SS6 and hcz_3 reached. Seg13 partial63295=54642+8653/5393reference,
+exact partial count not emitted, first287y06D4/06DA/recent3208, lag6/0warnings/
+bootstrap; ownership fails BK2cursor88306 atLEVEL/gen10/zone1/act1, expectedact2.
+Four suppressed unmatched completion edges3256/3257/5356/5357 remain.
+[Exact invocation, source pins, windows, arrays and descriptor limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r22-composed-full-canonical-reaches8775-status-strict-route-remains-red--2026-10-17).
+Historical49197's complete14208 total26153/first8717 is an aggregate comparison;
+bounded recent5 is not exhaustive-vector/regression-free proof. No8775 owner
+attribution, strict-green/fullroute certificate or extra run/probe/repair.
+R21partial206 and73focused remain their actual epochs. Normal docs-only local
+accounting/consumed cleanup; Root owns next causal scope, combined validation,
+integration and push. R22ordinal25 separate; queuedR23 is not started here.
+
+
+2026-10-17 cold Sonic contact R14/R15, exact803 versus f196 in same98d:
+sole original maintained Sonic selector via normal wrapper/no profile/all3ROMs/
+Java25/EGL/nullAL/singlefork/reuse/alpha; only owned journal output filename
+changes.39089 terminal0 18:54:32UTC and1886 terminal0 19:00:47UTC are each
+**1/0F0E0S PREFIX through original48276 only** (later fullroute finals UNREACHED),
+3keys/152verifiedevents each. R13 first end-of-step48275 Y/OnObj divergence is
+now bracketed at actual flat bridge204: baseline spring206slot6 runs before
+bridge204slot32, while current bridge204slot8 runs before spring206slot9.
+Radius/width/eligibility/clocks/12terrain payloads agree; baseline snaps0A6C→0A64,
+current sees X1882outside before spring pushes187D. Earlier slot producer is
+already different at first observed BEFORE48274 and remains unknown; no native
+truth/allocator defect/fix or cold completion claim. Root inspected ORIGINAL
+bounded journals before normal consumption; DOCS ONLY, no new trace/native/
+media/broad. [Exact audit and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#matched-cold-contact-order-r14-and-r15--2026-10-17).
+
+### 2026-10-17 — Original Knuckles Gumball predecessor blocks the first-fdf witness
+
+Owned649 `bugfix/ai-s3k-fdf-recorded-consumption-witness-gpt61`, committed source
+`3be3949fabb12e0c342318ff3536f7f4495c0ba0` (current Java source epoch
+`7df991e289b93f92b34e10e79dc4f9900ec67eaa`), plus reviewed temporary witness
+SHA256 `acc5334f45724a8775c03b61c9348ca821e0f8eac2a4bc19a34b5b7352c72b74`
+before cleanup. This is one original maintained chain drive from its normal boot,
+not an SS rebase or an independent live timing experiment. Exact selector:
+`-Ptrace-replay-r7 -Dtest=TestS3kFdfRecordedConsumptionWitness#firstRecordedDirectRetirement`,
+through the current Main absolute Maven queue wrapper from owned649, normal
+all3 original ROM/Java25/EGL/nullAL/no ambient display/Lua5.4, single fork/reuse,
+alphabetical; unchanged chain prefix `(RUN_DIR,12,4367)`.
+
+Actual98161 terminal1 **19:25:48UTC**, normal queue0s/Maven1m24s,
+**1T/1F/0E/0S (0 skips)**. Production/test compilation succeeds without source
+correction. Original `AbstractRunChainTest:1661` fails because Gumball seg1's
+`stage_exit` boundary was never observed within its original boundary window.
+Seg0 AIZ is partial:1physics/0animation,0warnings/bootstrap,lag0; camera_y4545
+ROM01F2/engine01EE. Seg1 Gumball comparator completes its reference1430-row
+window with18physics/0animation,0warnings/bootstrap,lag21, first non-camera
+**1300 x ROM0000/engine2778 (delta10104)**. Its five-entry recent ring retains
+only1380 queue fields and cannot enumerate the full18-error identity set.
+Original timing-close failure is suppressed on the original assertion:29 unmatched
+completion records (18direct/11module;12unconsumed-at-end/17pending mismatches).
+One AIZ→Gumball gap report has0failures; this is not whole-chain completion.
+Two runtime warnings report FAST missing-manifest→NONE.
+
+**SS/fdf UNREACHED.** Seg12's direct211/fdf PRE at4365 and parent137 POST at4366
+remain canonical reference edges, with no actual witness sample. The observer
+was never installed; only the terminal journal summary exists (1event/254journal
+bytes,334 framed stdout bytes). No target submission/preparation/admission/
+retirement evidence, matching803 attribution, CPU/SR/IRQ initialization,
+independent live4/5/4, whole-SS, ending or whole-route claim follows. No retry,
+rebase, skip, source repair, native recording or additional engine run.
+
+[Source-preparation/review, full exact command, phase labels, report coverage and cleanup](../architecture/plans/2026-10-13-s3k-playable-completion.md#r12-one-actual-first-fdf-witness-original-gumball-gate-target-unreached--2026-10-17).
+Eight inspected reports/sidecars and six temporary classes were consumed under
+the metadata lease alone; the one temporary source was removed under the intended
+tree lease, restoring exact committed source. Existing docs only, no raw archive
+or pass receipt. Prior refs, private config, native/media and Root/Main are
+preserved. Root owns causal attribution/next scope and combined validation.
+
+
+2026-10-17 cold R16–R18 matched pool predecessor (98d, exact803/f196): original
+TestS3kLrzHpzSszColdCampaign#sonicColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory,
+normal Main-absolute queue/no profile/all3ROM/EGL, identical reviewed temporary
+observer. BASE70778/CURRENT81089 each1/0F0E0S PREFIX ONLY through48276,
+18603positive verified samples/6real restore markers. Full-route death49613 frontier
+unchanged. First43945 Animal264 span closes43956;44245→44254 and47250→47262 also close.
+First surviving48195 Animal629 removal (630/631 later) frees CURRENT6/7/8 before same
+48201 admissions632/633/634:BASE9/30/32 vsCURRENT6/7/8; same48213spring635 BASE6/current9.
+No sparse BASE clock, allocator fault or native correctness inferred. Source candidate
+is inherited EggRobo loc_917C0 special-launch inlet; shared-render revert not justified.
+Root inspected both originals before metadata-only consumption; no runtime edit/newrun.
+[Commands, exact pins/counts/hashes and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#matched-cold-pool-producer-r16-to-r18-2026-10-17).
+
+
+R14 matched original-inlet baseline50308 (separate from current98161): reviewed
+19-line helper7475c909 invokes only original `(RUN_DIR,2,1)`, requiring natural
+Gumball exit and returned-level opening. Same owned649 temporary local baseline
+branch at **8030832d2ab6080e5324cdfe35e971677fd97b41**, all other tracked source/
+POM exact803; same command/environment as98161 except selector/base, normal
+current Main absolute wrapper/all3ROM/Java25/EGL/nullAL/noambient/Lua/fork1reusealpha.
+Actual terminal1 **19:46:12UTC**, queue0/Maven1m22, **1T/1F/0E/0S** (0skips),
+class5.570s. It reproduces the **exact original1661 Gumball stage_exit assertion**;
+returned seg2 row1 is unreached. AIZpartial1physics/camera4545 and Gumball
+comparator-complete18physics/first1300x0000/2778,0animation/warnings/bootstrap,
+lag0/21 and five recent1380 field/value entries match current's retained record.
+Recent5 is not full18-vector equality. All29 baseline suppressed identities were
+inspected (18direct/11module=12unconsumed+17pending mismatches); current retained
+counts/endpoints match, not an exhaustive29 delta. TwoFAST→NONE warnings persist.
+This qualifies that **particular original route assertion on actualMain803**;
+no blanket inheritance waiver, producer/closure cause, route advance or native
+correctness. SS/fdf remainsUNREACHED in both, with no readiness/kernel/wholeSS/
+whole-route claim. No current rerun/rebase/repair/extra execution. Candidateb0b4
+and exact Plan WIP restored, helpers/inspected diagnostics/backup consumed,
+all refs/config/native/media preserved; target last compiled803, not current.
+[Exact source/flags, attribution and restoration limits](../architecture/plans/2026-10-13-s3k-playable-completion.md#r14-actual-main803-natural-gumball-exit-prefix--2026-10-17).
+
+### 2026-10-17 — HCZ8775 native PANIC guard observed; engine frontier unchanged
+
+Owned3aa513781/Java7df/native4fdf; sole reviewed originalAD40 power-on native
+session66263 exits0, reportedqueue0/C#56.2263242s. Command is task-local
+`run_native_panic_gates.py run --expected-launcher-sha256 9c01499b6146aeb0f5b7430fb631ed790c7ed7428eb29e2422bce8755ff2ec26`,
+through current Main normal maven_slot/allFDs. Original inputs0..71851 once,
+only71848..51/raw8773..76 observed; all4endpoint controls and32callback+
+4endpoint passivity checks match. Native CPU/PANIC executes each frame but
+returns on move_lock001D at13F44→13FBE before facing; no CPUskip/facecallback.
+Historical engine8775setter sees0. Earlier nativeproducer/engine1→0 actualwriter
+remain unknown; no timer/facing/CPU/camera fix or additional probe/test follows.
+[Exact source/command/hashes/clocks/counts and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r26r28-original-native-panic-returns-on-retained-move_lock--2026-10-17).
+No engine trace is run: prior R25partial207/8777 and R22full11118/14208,
+firstNonCamera8775statusB/A/actualexit/separate seg13ownership88306 unchanged.
+Native originals retained for Root read; no new green or route certification.
+
+### 2026-10-17 — HCZ8774 move-lock decrement caller observed; no frontier move
+
+Owned3aa24cd/Java7df plus reviewed APS5ecf9/test3e53, sole originalAD40 boot
+prefix41203 with `-Ptrace-replay -Dtest=TestS3kCanonicalHczMoveLockWriterPrefix#originalAd40MoveLockWriterThrough8776`,
+normal Main absolutequeue/original3ROM/Java25/EGL/nullAL/noambient/singlefork.
+Terminal1 at20:21:04UTC, queue0/displayedMaven01:41min,1/1F0E0S; only strict0vs207
+fails after cleanup. Actualpartial8777/14208/completefalse207=12physics+195anim,
+lag59/warnbootstrap0, first8775statusB/A; serializedsummary03052 exactR25 bounded
+report. Actual8774setter1→0 caller is doSlopeRepel3871 via modeNormal901; PREAir
+true is false by setter time, Air writer/native29producer not observed. No global
+countdown/facing/CPU/column fix or extra oldred/probe/run. [Full source, clocks,
+stack, command and report limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r29r30-actual-move-lock-writer-reaches-ground-dispatch--2026-10-17).
+Earlier six reports/gap zero; R22full11118/actualexit and seg13ownership88306
+remain distinct. Two temporarysources/classes restored/removed;18rawfiles held
+for Rootread. NativeR28 original9files were consumed only after Rootread.
+
+
+### 2026-10-17 — Knuckles Gumball trigger fires and origin returns, title release unassigned
+
+Owned649 HEAD`d092a584c5315b39ea76f98bedd3486bc314e58c`, current Java3be/7df,
+plus reviewed temporary helperab2f61/runtime diagnostic7f24b3. One original
+boot-to-`(RUN_DIR,2,1)` prefix, selector
+`-Ptrace-replay-r7 -Dtest=TestS3kGumballTriggerChronologyWitness#originalGumballExitChronology`,
+normal current Main absolute wrapper/all3ROM/Java25/EGL/nullAL/noambient/Lua,
+fork1reusealpha, no extra CLI GL property. Actual3717 terminal1 **20:24:14UTC**,
+queue0/Maven1m19, **1T/1F/0E/0S**; original1661 stage_exit assertion unchanged.
+Only original29 timing-close completion records are suppressed; diagnostic error
+is null. All10 original JSONL records/18131B and matched XML were inspected by
+worker and directly by Root:4actual trigger entries,1after-fired event,
+4lifecycle changes,9known-projection passivity checks/6190once-forward steps.
+
+Actual real trigger engine slot31/rawspawn0100/0368 consumes main P1 at
+1277/movie6847 centre0101/035C, flips exitFired, then the SAME provider holds
+exitRequested=true and starts black fade. Actual origin load returns at emitted
+cursor1299/movie6869 into **TITLE_CARD**, load generation3→4, P1 restored2778/025C,
+loop provider null/contextNoOp/fade callback absent. Final cursor1430/movie7121
+remains TITLE_CARD; original stage_exit1→2@7001 raw latch stays null both before
+and after driver cleanup. Final port raw latch/last boundary are null, edge17;
+missing clocks remain missing. This proves actual engine trigger/request/origin
+load, **not the cause of absent TITLE_CARD→LEVEL release** or native cleanup.
+No trigger-failure claim, fitted title/window/clock, fake LEVEL or repair.
+
+AIZpartial1physics/0animation,camera4545 and Gumball comparator-complete1430rows /
+18physics,first1300X0000/2778,0animation/warnings/bootstrap,lag0/21 remain. Recent5
+at1380 is not full18-vector proof. Seg2 opening/SS/fdf remainUNREACHED, with no
+readiness/kernel/live4/5/4/wholeSS/fullroute claim. No retry/native/capture.
+[Exact source/command, all actual phase samples, report limits and accepted cleanup](../architecture/plans/2026-10-13-s3k-playable-completion.md#r17-actual-trigger-request-and-origin-return-witnessed-title-release-unassigned--2026-10-17).
+After Root read originals, exact runtime restored/test removed;9 inspected owned
+diagnostics85122B and13 owner/helper classes95780B consumed metadata-slot-alone.
+Only existing Plan/frontier docs committed; target3717 diagnostics is not a fresh
+maintained build after cleanup. Main/private config/refs/native/media preserved.
+
+
+### 2026-10-17 — Knuckles returned title waits on prepared child with recorded ordinal mismatch
+
+Owned649 HEAD2de3/current maintained Java3be/7df plus frozen temporary b772 test.
+One original boot-to-`(RUN_DIR,2,1)` prefix, selector
+`-Ptrace-replay-r7 -Dtest=TestS3kReturnTitleFirstGateWitness#originalReturnTitleFirstGate`,
+normal current Main absolute wrapper/all3ROM/Java25/single JTO EGL/no CLI GL/
+EGL/nullAL/noambient/Lua/fork1reusealpha. Actual97317 terminal1 **20:54:03UTC**,
+queue0/Maven1m20, **1T/1F/0E/0S**; original1661 stage_exit assertion and29 original
+timing-close suppressed records retained, no diagnostic suppression. Worker and
+Root DIRECT inspected all83 original JSONL records/965233B plus matched XML;
+82known-projection passivity checks,6190once-forward original steps, no cap/type/
+identity/prerequisite failure. Outside samples are not actual service-entry proof.
+
+Actual returned title remains SLIDE_IN/artLoading with four actual module parents
+13..16 blocked through comparison1430/movie7121. Stable prepared direct18 is the
+physical FIFO head/active child of parent13, with an existing1952B payload,
+ready/claimed/retired=false. Original recorded refusals expect direct22 at
+seg1raw1302/PRE and parent15 at1303/POST, each with its matching fingerprint.
+The observed four-direct/two-module offset does not identify missing production
+submissions or authorize renumbering. Actual Nemesis drains to empty1379; title
+art stays blocked. Earlier submission/retirement/handoff provenance is missing,
+so no unique producer/port/handoff cause or title-time fix is claimed.
+
+Comparator AIZpartial1physics/camera4545 and Gumball1430rows/18physics,
+firstNonCamera1300X0000/2778,0animation/warnings/bootstrap,lag0/21 remain. Recent5
+is not full18-vector proof; two FAST manifest warnings are separately reported.
+Returned seg2 opening/SS/fdf remain **UNREACHED**; no readiness consumption, CPU/
+live4/5/4/wholeSS/fullroute or new baseline attribution. No retry/native/capture.
+After accepted original read, temporary test/two classes and all nine inspected
+original diagnostics consumed; no runtime change. Target97317 is the diagnostic
+epoch, not fresh maintained-source verification.
+[Exact command, job identities, bounds and cleanup](../architecture/plans/2026-10-13-s3k-playable-completion.md#r20-actual-outside-return-title-gate-prepared-direct-child-held-unready--2026-10-17).
+
+
+2026-10-17 cold R29 independent EggRobo animal launch (not a strict trace run):
+parentb264/runtimef196 + frozen Animal944a/EggRobob9e3 in same98d. Native044
+loc_917C0's fixed table/full RNG/facing/direct WALK-FLY/frame1/firstdraw and fixed
+render flip now use captured semantic launch state. R20 70304 compiler-only and
+24069 fixture+1 stop are not old-red;50817 raw registration projection explains
+the inlet before four existing camera assignments move to pre-warm0d2d. Genuine
+96038 fourcase old-red reaches twice-world prerequisites and fails exactly4launch
+fields/case. Corrected36866 passes78/0F0E0S across10classes; fresh51551 exact
+rewind/trace/no-hydrate/API guards6/0F0E0S. The single original UNINSTRUMENTED
+`TestS3kLrzHpzSszColdCampaign#sonicColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory`
+96020 still1/1F0E0S: SAME first original `cold death49613`, expectedfalse/actualtrue
+at454→506. Full-route tail UNREACHED; no post-fix first-split/pool/uniqueAnimal629
+or native correctness claim. Normal Main-absolute wrapper/no-profile except
+`-Pguards`/all3ROMs/Java25/EGL/nullAL/noambient/fork1/reuse/alpha; queue0/Maven
+1m09,26.652s,52.053s. No new observer/native/variant/extra campaign after STOP.
+Local unit qualified, campaign/integration remain blocked. [Exact commands,
+source epochs, old-red/inlet distinctions and limits](../architecture/validation/levels/s3k-ssz-act1.md#r29-native-eggrobo-animal-launch-unit--2026-10-17).
+
+
+## DEZ maintained-route regression closure, not a trace sweep — 2026-10-17
+
+Ownedfa8 base271457 plus native definition carry/scene-owned unused layout clear:
+`maven_queue.py --normal -Dmse=off -Dtest=TestDezIncomingFinalRouteCapture test -B`
+with documented all3absoluteROM/Java25/EGL/nullAL/noambient/fork1reusealpha
+flags (exact command in existing audit), run54531 at21:05:15UTC:7/0F0E0S,
+all original methods/movies/strict assertions and replay windows unchanged.
+Earlier five first deaths60811/67976/60189/16647/16652 no longer reproduce;
+there is no current first failed frame/field in this bounded class. Separate
+122affected and5exactguards pass without skips. No trace fixture was replayed
+by this selection, so no new trace error count or native descriptor/clock parity
+is inferred. Four native alias writes and broader products remain open.
+[Matched evidence and failed epochs](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#dez-screeninit-unused-encoded-layout-owner-source-and-independent-red-design--2026-10-17).
+
+
+### 2026-10-17 — HCZ column stale-air capability: canonical non-camera frontier11920
+
+Owned3aa HEAD17480+a170 column/testdb5a, maintainedeb743/base967c unchanged;
+sole62139 `--normal -Dmse=off -Ptrace-replay -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds`,
+current Main absolutewrapper/originalAD40/fromboot/defaultlag/all3ROM/Java25/
+EGL JTO+CLI/nullAL/noambient/Lua/fork1reusealpha. Terminal21:47:19UTC,
+queue0/Maven51.362s, **1/1F0E0S**. Six earlier windows completezero. Current
+returnedHCZ complete14208 total6553=5489physics+1064animation, firstNonCamera
+11920sidekick_status_byte native0002/engine0003, lag59/warnbootstrap0; earlier
+animation3475 remains. R22samewindow11118/first8775 is historical; recent5 arrays
+and lower counts do not prove full-vector regressionabsence. Current seg13
+summary is byte-identical R22/incomplete63295/first287y, same ownership88306/act1
+vs expected2. Actual SS6 entry/hcz_3 return semantic assertions pass, gap13/0F;
+no onward segment beyond13 qualified. [All current windows/groups/source/clocks/limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r41-original-canonical-advances-to11920-strict-route-remains-red--2026-10-17).
+R40exactaffected76green precedes this run. Exact20 originalreports133157B retained
+for Root DIRECTread; no cleanup/archive/retry/newprobe/fix/extraJVM/commit.
+
+R42 accounting: Root directly accepts all20originals/full available arrays.
+Comparatorwarn0 is separate from actualruntime468SMPSshadow+2FAST+1markRemembered
+warnings. No additional trace, source variant or11920 owner proof follows.
+
+
+### 2026-10-17 — Native flight-timeout status: returned HCZ first noncamera13322
+
+Owned3aa HEADd71264ed8 +CPU8930/20case779247/new2case4fcd, column a170/db5a.
+R44's independent S2/S3K naturalLEFT status02/03 and RIGHT/LEFT old-red after
+299 updates/two local restore-forward cycles per case becomes green in R46's
+exact10class156/0F0E0S (mandatoryS3K4 and both loading identities included).
+
+R47 sole35289 `--normal -Dmse=off -Ptrace-replay
+-Dtest=TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds`,
+current Main absolute wrapper/originalAD40/fromboot/all3ROM/Java25/EGL oneJTO+CLI/
+nullAL/noambient/Lua/fork1reusealpha, ends22:27:01UTC queue0/Maven51.355s,
+**1/1F0E0S**. Six earlier windows completezero. ReturnedHCZ complete14208
+**TOTAL6511=5447physics+1064animation**, firstNonCamera13322status0009/0001,
+lag59/comparatorwarnbootstrap0. First all-group3475animation0017/001C remains.
+R41 first11920/TOTAL6553 is historical; recent5/lower counts are not exhaustive
+vector/no-regression proof, and do not observe the actual11920 caller.
+
+Segment13 stays incomplete/ref5393/comparedcountunknown/63295/first287y, same
+ownership88306 LEVEL/gen10/zone1act1-vs2 and4suppressed hardware identities.
+Giant-ring/SS6 and return semantic assertions pass; no onward certificate.
+Runtime468SMPS+2FAST+1markRemembered warnings stay separate from comparator0.
+Root DIRECTread accepted all20 originals133156B; R48 preserves exact runtime/
+tests/docs locally before normal metadata-only consumption, no new JVM/guard/
+probe/native/repair/integration. [Complete windows, clocks and limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r47-original-canonical-firstnoncamera13322-strict-red--2026-10-17).
+
+
+2026-10-17 cold R32/R33/R34 accepted post-launch pool comparison, not strict trace:
+exact803/committed781c same98d, original Sonic selector/no profile/normal Main-absolute
+queue/all3ROM/Java25/EGL/nullAL/fork1/reuse/alpha, same a690/f8ae source; only journal
+output differs.56945/70631 terminal0 each1/0F0E0S PREFIX48276/18603verifiedsamples.
+New launch path is active on629/630/631: FLY/FLY/WALK/frame1/X-512/Y-279/-256/-281;
+BASE MAIN/frame2/0/-1024. First common phase43944priorrender; first three pool spans
+self-close. Surviving48195 now removes630slot7, then629/63148196; bridge204 still
+BASE32/current8 andspring206BASE6/current9. No native/callback/uniqueparent/global
+motion proof; original uninstrumented full campaign96020 death49613 remains open.
+Root read all2642records/159typedobjects/fourreports; reusable tested helper retained,
+original driver restored/no maintained rebuild. No extra JVM/native/fix follows;
+next scope source-plan only. [Exact commands/epochs/hashes/limits](../architecture/plans/2026-10-13-s3k-playable-completion.md#r30r34-matched-typed-pool-evidence-and-preservation--2026-10-17).
+
+
+### 2026-10-17 — First actual bonus-title submit sequence disagrees at parent12
+
+Owned649 HEADc3ce/currentJava3be/7df plus frozen temporaryc463/d060, ONE original
+boot-to-(RUN_DIR,2,1) prefix:
+`-Ptrace-replay-r7 -Dtest=TestS3kSubmissionProvenanceWitness#originalFirstBonusSubmissionProvenance`,
+normal Main absolute wrapper/all3ROM/Java25/JTO-onlyEGL/noCLIgl/EGL/nullAL/
+noambient/Lua/fork1reusealpha. Actual79227 terminal1 **21:25:20UTC**,queue0/
+Maven1m23, **1F0E0S**, unchanged1661 stage_exit assertion, only original29
+timing-close suppression records. All60 original171370B JSONL records/field
+trees/stacks/38outside contexts/footer and matchedXML/TXT/6trace JSONs read by
+worker and Root.19actual births,2lifecycle,positive explicit-projection passivity,
+no diagnostic failure/cap/type/identity error.
+
+Actual same service2 starts with port bases module6/direct11. Consumed
+doEnterBonusStage→initializeBonus→loadBonusArt submits10RedAct/11zone/12bonus,
+with direct15/16/17; these are marked unrepresented during the actual gap. First
+SAME-kind/ordinal fingerprint difference is parent12(actual bonus vs canonical
+act-number), direct17 likewise. Origin doExitBonusStage→loadAllArt submits13..16,
+then direct18. This proves actual engine caller/descriptor order, not native
+enqueue timestamps or the full2module/4direct cause. Latest OUTSIDE clocks are
+not submit clocks; no counters/recorded completions are used to force alignment.
+
+AIZpartial1physics/camera4545; Gumball1430rows/18physics,first1300X0000/2778,
+0animation/warnings/bootstrap,lag0/21,recent5NOTfull18;gap1/0F;2FASTwarnings.
+Returned seg2/SS/fdf UNREACHED; no readiness/CPU/fullroute certificate or retry.
+After accepted read, exact service restored and temporary test/6classes removed;
+9inspected originals consumed without archives. Target79227 remains diagnostic
+epoch, not maintained-source validation.
+[Exact caller evidence, clock limits and cleanup](../architecture/plans/2026-10-13-s3k-playable-completion.md#r23-actual-submit-site-provenance-r24-accepted-accounting--2026-10-17).
+
+
+### 2026-10-17 — Native bonus-title Num1 component qualified; maintained route guard-blocked
+
+Owned649 HEAD74daf/currentJava3be7df plus approved frozen titlef028/queue-test69c6/
+independent54633: actual-ROM Knuckles/Gumball R25 session12160 reached its final
+four-descriptor oracle and failed only because Num1(source880004,len185,
+dest42912,out512,module1) was absent. Normal fresh four-archive and two pending
+five-key restore/forward controls passed. The minimal loadBonusArt correction
+submits the apparent-act number between Zone and Bonus using the existing ROM
+queue; migrated old queue count retains all original drain/readiness/claim checks.
+
+ONE normal affected request16305, exact selection in the Plan, terminal0 at
+22:00:03UTC/queue0/Maven1m23, **120T/0F/0E/0S**,15 actual package classes. All120
+identities/15XML+TXT/properties/streams inspected; standard30 reports consumed
+normally. The new independent three cases, old four-archive polling control,
+title/queue/hold/rewind/resource consumers, mandatory S3K4 and single declared
+PLC method pass. Literal LevelLoading selects both package classes; no narrowing.
+
+The following ONE fresh
+`-Pguards -Dtest=TestArchitecturalSourceGuard,TestHardwareTimingAuthorityGuard`
+request68289 terminal1 at22:04:54UTC/queue0/Maven31.703s: **97T/1F/0E/0S**,
+sole releaseCriticalLargeClassesDoNotGrowWithoutExtraction at1049→1916 reports
+LevelManager3153 effective lines versus3144budget. HardwareAuthority25passes;
+Architectural71passes+1failure. Worker and Root read all97 identities and four
+original reports62248B. Root owns separate measured-input/budget attribution and
+extraction planning; no worker waiver/LevelManager change or baseline query.
+
+Conditional ORIGINAL TestS3kMegaRunChain#multiBonusSpecialStageRoundTrip was
+**NOT LAUNCHED**, so there is no new post-fix stage_exit, returnedseg2, SS/fdf or
+first route mismatch. R23's actual pre-fix births and earlier first1300X0000/
+2778 predecessor failure remain distinct epochs, not post-fix failure claims.
+The full two-module/four-direct difference, native birth context, recorded
+readiness, liveCPU prediction and route closure remain open. Approved LOCAL
+component preservation is not integration/delivery/full-guard qualification.
+[Exact source/commands, independent old-red/green and guard STOP](../architecture/plans/2026-10-13-s3k-playable-completion.md#r28-reviewed-native-bonus-number-affected-focus--2026-10-17).
+
+
+### 2026-10-18 — Native bonus terrain producer component; original route unvisited
+
+Owned649/8b1e965-based LMc65/test1f3f: one normal current-Main wrapper focused
+selection (exact15 full selectors+3 methods in existing Plan R35), all3 original
+ROMs/JDK25/singleJTO-EGL/fork1/reuse/alphabetical, session48911 terminal0 at
+2026-10-17T23:04:43UTC, queue0/Maven1m28:145T0F0E0S in19 actual classes. Preserved
+native Gumball five-versus-four descriptor old-red26359 is now green; separately
+declared real Pachinko/Slot terrain oracles, HCZ fresh control, pending five-key
+resource restore/forward twice and10 short entry/return pilots pass. No first
+trace error/frame exists for this selection because it is not trace replay.
+
+Root actual Main803 exact water method69090 reproduces SAME loadAllArt FIFO-full
+warning,1/0F0E0S, terminal23:07:52UTC, queue0/Maven23.987s; source byte-identical,
+private entry then immediate exit with no queue iteration. Parent-provided proof
+is accounted at Root a2c00d01eea02e137e10ab29b52a1713f4b75978; no worker baseline
+rerun/full-stream-equality or water-fixture art-readiness claim. Root DIRECT-read
+all38 R36 reports; their526017B were all rehashed before consumed metadataalone.
+No archive/receipt or class deletion.
+
+The caller-only fresh-load switch was rejected because it also enables an
+ordinary four-child SST title graph; the minimal fix arms only the existing
+captured resource handoff on actual active bonus entry. This local component
+preservation does not clear the known child3155 size ratchet, count as fresh
+combined guards, or launch the conditional original Mega route. Earliest route
+facts remain their earlier epochs. Full missing ordinal attribution/native birth,
+recorded readiness/SS/fdf/live CPU prediction/route parity remain open.
+[Exact old-red/source/145-case qualification and limits](../architecture/plans/2026-10-13-s3k-playable-completion.md#r37-qualified-component-preservation-and-inherited-warning--2026-10-18).
+
+
+### 2026-10-18 — Current Pachinko frontier refresh; CPU-only vector attribution
+
+Root4bfd18e18/current CPU8930, normal queued32759 with `-Ptrace-segments
+-Dtest=TestS3kSonicTailsPachinkoBonusTraceReplay,TestS3kSonicTailsPachinko2BonusTraceReplay`,
+all3 original ROM/JDK25/EGL/fork1-reuse-alpha:2T2F0E0S,queue0/Maven76s.
+Pachinko1 remains1638 (1051phys/587anim),first122 rings262/261,fullarray04d9c7f6
+exact historical. Pachinko2 becomes1258 (649phys/609anim),first469 vx04F3/0100,
+fullarray0c4ba6e4 versus historical1257/72a46f98. Matched63729 changes ONLY
+CPU8930 to prior4bb9 (three output directories preserve originals),same command:
+2T2F0E0S,queue0/Maven76s; old array exactly72a46f98. Every non-tails-status tuple
+is identical;15 old spans removed/16 added,first different covered frame2457.
+This is owner-variant attribution, not an observed setter/native-branch cause,
+regression waiver or rollback authority. CPU8930 source restored exactly;
+compiled Java at that handback was OLDCPU4bb9. Comparator warnings/bootstrap0, no skips;
+FAST runtime warnings and absent advertised auxiliary writer schemas remain.
+No serialized independent compared/reference/complete certificate. Earliest
+ring122 and reward-vx469 ownership remain open. Full pins, commands, hashes and
+limits are in the existing Plan and r1/r2 ownership records; no extra probe/JVM.
+
+
+### 2026-10-18 — Native attracted-ring phase qualified; original Pachinko frontiers remain
+
+Rootb17a44350 + RingManager1bbe05c8/new phase testd5b60122/unit6a2c3aa3:
+R5 independent component3/1F proves only immediate award vs native own-pass;
+R10 normal `-Dtest=TestRingManager,TestS3kAttractedRingAwardPhase` passes41/0F0E0S
+(queue0/Maven24.583s), including all unchanged35 old oracles and6 pending-world,
+P2/dead/once-only controls. R8's previous per-instance fake-ledger failure is
+resolved by a fresh actual world LevelGamestate and inherited production accessors,
+not by changing the sidekick oracle. R12 `-Pguards` architectural/timing authority
+and two exact candidate0.7 API methods passes99/0F0E0S (queue0/Maven33.235s).
+
+Original R11 `-Ptrace-segments
+-Dtest=TestS3kSonicTailsPachinkoBonusTraceReplay,TestS3kSonicTailsPachinko2BonusTraceReplay`
+request14912 remains2T2F0E0S,queue0/Maven28.573s. Pachinko1 is1638
+(1051physics/587animation), first122 rings262/261 span122–174; Pachinko2 is1258
+(649/609), first469 vx04F3/0100. Full current error-array hashes
+04d9c7f698941706d4c0df5423dc936e97f35f9fdda4660d4ee5c37b7641159e and
+0c4ba6e41be8f196d8a8b7236799aac249399cba9b93b3295330617495f48586
+match the durable pre-ring hashes; consumed old raw arrays were not reconstructed
+for a paired diff/earliest split.0 comparator/bootstrap warnings/errors and no
+skips; FAST runtime warnings, eight missing aux writer/state schemas and original
+context truncation remain. total_frames2907/3571 is not a separate compared,
+reference or completeness field. Native acceptance/global-ledger phase and
+actual-collector policy attribution are distinguished in the
+[bonus matrix](../architecture/validation/levels/s3k-bonus-stage-transitions.md#attracted-ring-acceptance-and-owner-award--2026-10-18).
+No route122 caller cause, whole-frame/cold/native timing/pixel or global
+no-regression certificate is claimed. CPU8930 remains preserved.
+
+
+### 2026-10-18 — HCZ restore and native hand owners composed; original route stays red
+
+Root composes the exact eight runtime and two regression-test files from local
+1f9f05ae1 after policy825a76b7c (all72 SH/PowerShell safety methods passed).
+R62 joint142 and R66 hand149 focused passes remain their child source epochs.
+R68 resource focus passes74/0F0E0S and is preserved separately in15d94b2a5;
+no Root execution is inferred from this composition.
+
+On child15d94b2a5, sole original `-Ptrace-replay
+-Dtest=TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds`
+R69/session92948 is1T1F0E0S, queue0/Maven50.440s, method25.693s. Complete
+HCZ segment11/reference14208 reports251 total differences:11 physics and240
+animation, lag59/comparator+bootstrap warnings0. First all-group logged is3475
+sidekick_animation_id0017/001C. No firstNonCameraPhysicsMismatch key is emitted;
+the five retained mapping entries are not the full mismatch vector. Historical
+R47 reported6511=5447+1064 with firstNonCamera13322; the bounded improvement is
+not an isolated single-change attribution or a regression waiver.
+
+Six earlier complete zero payloads remain byte-identical. Segment13 remains
+incomplete63295=54642+8653, first287 y06D4/06DA, and loses ownership at88306
+in LEVEL/gen10/progression1/ROM1/act1. Manifest act2 is one-based and normalizes
+to engine act1; generation/admission/cause internals are not serialized. Four
+unmatched timing identities244/171/245/172 remain exact historical descriptors.
+No later route, freed-SST marker, actual R52 caller, native29 producer,
+campaign8774/11920 caller or full-vector/no-regression certificate follows.
+Root DIRECT-read all20 original131723B/full failure/TXT/72props, complete961-line
+stderr88558B via32 full unique lines+exact order, all nine JSON/owner pairs.
+Actual465 SMPS shadow+2 FAST+1 markRemembered runtime warnings are separate from
+comparator0. All expected sizes/full hashes and55 source pins matched; originals
+remain retained pending separate durable accounting/cleanup. Main803 is unchanged.
+
+
+
+### 2026-10-18 — Saved-origin bonus receipt component; original Mega reaches returned AIZ
+
+Owned649 HEADd84f plus exact GameLoop529012/test74f65. ONE normal no-profile
+focused command (R42 Plan literal11 full selectors+2 five-pilot methods)78969:
+128T0F0E0S/14 package classes, queue16s/Maven1m30, terminal00:00:05UTC.
+Independent final receipt old-red ORDINARY->INTERIOR_RETURN is green, and a later
+ordinary HCZ load stays ORDINARY. No actual R38 receipt was serialized by that test.
+
+ONE fresh normal `-Pguards` with Architectural/HardwareAuthority/exact2 API method
+selectors62001:99T0F0E0S (72+25+2), queue0/Maven31.908s/00:10:21UTC. THEN ONLY
+`-Ptrace-replay-r7 -Dtest=TestS3kMegaRunChain#multiBonusSpecialStageRoundTrip`,
+original unmodified driver/movie/bootstrap, same all3 original ROM/JDK25/JTO-only
+EGL/NO CLIgl/fork1/reuse/alphabetical environment,78842:1T0F1E0S, queue0/
+Maven30.234s/00:12:30UTC. Runtime error Unable to queue AIZ2 KosM transition art
+at queueAct2KosArt2932, caused by FIFO-full at queueInternal205 via call2926.
+
+Returned segment2 comparator now attached/compared, whereas R38 stopped admission.
+AIZ/Gumball partial reports remain1/12 physics (first4545 camera_y01F2/01EE;
+firstNonCamera1300 x0000/2778). Returned AIZ has21196 errors=20427 physics+769
+animation, firstNonCamera34 module.busy native true/engine false. ALL completefalse,
+warning/bootstrap0; actual compared/reference counts absent, recent arrays1/5/5
+are not exhaustive. Gap2/0F does not certify release clocks. Sole suppressed close
+lists29 full unmatched timing identities (12+9+8); no producer/birth/ordinal repair
+is inferred. SS12/FDF UNREACHED. Actual stderr2 FAST+34 SMPS boundary rejections
+remains an explicit warning limit, not an audio-readiness certificate.
+
+Root DIRECT-read all10 originals83638B before accepted R45 preservation/cleanup.
+No retry/source repair/native/probe/new workload or full route/readiness claim.
+[Commands, exact pins, partial arrays, warning and receipt limits](../architecture/plans/2026-10-13-s3k-playable-completion.md#r44-actual-fresh-guards-and-original-returned-aiz-frontier--2026-10-18).
+
+
+### 2026-10-18 — Extracted rewind geometry passes guards; original Mega return admission fails
+
+Owned649 HEAD04343e plus reviewed b0dcc/9693 relocation, titlef028/test1f3f/69c6/
+54633 unchanged: ONE normal current-Main absolute wrapper guard lifecycle30788,
+`-Pguards -Dtest=TestArchitecturalSourceGuard,TestHardwareTimingAuthorityGuard,TestModApiSignatureSurface#candidateZeroSevenSurfaceIsPinnedToTheCurrentSurface+engineOnlyRuntimeHelpersDoNotLeakIntoTheZeroSevenSurface`,
+terminal0/queue0/Maven1m23:99T0F0E0S (72+25+2), zero skips. Then ONE ORIGINAL
+`-Ptrace-replay-r7 -Dtest=TestS3kMegaRunChain#multiBonusSpecialStageRoundTrip`,
+same all3 original ROMs/JDK25/singleJTO-EGL/NO CLIgl/fork1/reuse/alphabetical,
+16285 terminal1 at2026-10-17T23:24:04UTC/queue0/Maven30.079s:1T1F0E0S.
+
+Failure: coordinator denied segment2 admission in TRANSITION_GAP. Earlier original
+stage_exit observation and assertReturnBoundary passed; actual LEVEL/release clock
+is not serialized. No returned-opening comparator attached; SS12/fdf UNREACHED.
+Partial AIZ1physics first4545 camera_y01F2/01EE and Gumball12physics firstNonCamera
+1300x0000/2778,0animation/warnings/bootstrap,lag0/21,both complete=false. Actual
+compared/reference counts unavailable; recent5 is not all12 vectors. Sole suppressed
+closure lists12 unmatched exact kind/ordinal/FP/boundary identities, not proof of
+missing producer or readiness refusal. Dynamic gap1/0F does not settle return.
+
+Root DIRECT-read all8 originals52835B/full first-row tables/tails/owners/XML/TXT.
+Following local qualified extraction/accounting preservation they are hash-checked
+ALL before cleanup metadataalone, with classes preserved. No retry/source repair,
+new observer/native, full route/readiness/native-birth or Main delivery claim.
+[Exact command, source epochs, full inspection and limits](../architecture/plans/2026-10-13-s3k-playable-completion.md#r38-phase2-original-route-actual-stop--2026-10-18).
+
+
+### 2026-10-18 — Original AIZ2 capacity frontier, actual outside-step occupants
+
+Owned649 HEADc4e71e8, temporary call-through sourcef3e8, sole normal request58628:
+`-Ptrace-replay-r7 -Dtest=TestS3kAiz2CapacityOutsideWitness#originalReturnAndAiz2Capacity`,
+all3 original ROMs/JDK25/JTO-only EGL/no CLIgl/fork1/reuse/alphabetical. Queue0,
+Maven30.920s,00:40:55UTC,1T0F1E0S: original AIZ2 primary module submission2926
+throws FIFO-full205. No inherited original test was executed a second time.
+
+Actual returned INTERIOR_RETURN/generation4 is observed; title parents15..18 are
+already claimed before later unprepared parents19..22 fill capacity. Prepared but
+unready child26 is actual direct head before event27..29. These OUTSIDE projections
+do not establish submit callers, native births or in-service chronology. Reports
+retain1/12/21196 errors (returned20427 physics+769 animation), firstNonCamera34
+module.busy native true/engine false, recent1/5/5 only, all incomplete/no actual
+compared/reference counts. SS12/FDF UNREACHED;29 unmatched timing identities and
+2FAST/34SMPS warnings remain qualified limits. No new parity/route certificate.
+
+Root DIRECT accepted all11 originals645631B/all177 journal rows/full XML/TXT and
+all comparator/owner trees before authorized exact cleanup. Temporary witness and
+its three classes are consumed separately from maintained classes; target58628 is
+not a fresh maintained-only compilation.
+[Full source/command/result and acceptance](../architecture/plans/2026-10-13-s3k-playable-completion.md#r48--accepted-outside-capacity-witness-accounting--2026-10-18).
+
+
+### 2026-10-18 — Actual successful-submit provenance at unchanged AIZ2 FIFO frontier
+
+Owned649 HEAD923da24 +temporary81096/40be, ONE normal exact-method request24638:
+`-Ptrace-replay-r7 -Dtest=TestS3kReturnSubmitOwnerWitness#originalReturnSubmissionOwners`,
+original full driver/movie/fixtures/all3ROM/JDK25/JTO-only EGL/no CLIgl/fork1/reuse/
+alphabetical. Queue0/Maven01:26min displayed, terminal01:23:33UTC,1T0F1E0S.
+Original AIZ2 primary module call2926 throws FIFO-full205, not a diagnostic failure.
+
+All36 successful submissions are recorded without diagnostic/cap/passivity/close
+errors. Actual enemy19..21 runtime-art-pass caller and fire22 Act1-event caller
+are established. Returned title generation4 has handoff index-1 and no returned
+terrain3A566A/3A944E submit among these36. Native birth/caller/VRAM and earlier
+flag writer remain unproved; source data does not license renumber/waiver/fix.
+
+Partial comparator payloads remain byte-equal R44/R47: AIZ1/1physics first4545
+camera_y01F2/01EE; Gumball12physics first1300x0000/2778,lag21; returned21196
+(20427physics+769animation),first34 module.busy true/false. All incomplete, recent
+1/5/5 only/no compared-reference counts;29 unmatched identities,2FAST/34SMPS warnings,
+gap2/0F and SS/FDF-unvisited limits persist. Root DIRECT accepted all11 originals
+457408B before normal docs-only accounting and authorized exact consumption.
+[Full actual evidence, command and cleanup boundary](../architecture/plans/2026-10-13-s3k-playable-completion.md#r51-accepted-submit-owner-evidence-and-accounting--2026-10-18).
+
+
+### 2026-10-18 — Saved-origin terrain component qualified; original AIZ2 FIFO frontier open
+
+Owned649 HEAD14bdcedc6 +exact LM b36ebe/testfbb120; R53 sole component35373 was
+4T/3finalF/0E/0S (missing native terrain pair only), then unchanged four bodies
+pass in R55 normal68493/144T19classes0F0E0S, including ordinary-negative/receipt/
+entryterrain/title/resource/PLC/S3K4/bothLoading/ten short pilots. R56 normal
+94592 adds99 fresh guards0F0E0S. Both use all3originalROM/JDK25/JTO-only EGL,
+no CLIgl/fork1/reuse/alphabetical. These are bounded component/guard qualifications.
+
+Exact original route93520: `-Ptrace-replay-r7 -Dtest=TestS3kMegaRunChain#multiBonusSpecialStageRoundTrip`,
+normal current Main wrapper from owned tree, same original driver/movie/fixtures
+and environment. Queue0/Maven30.463s/02:38:17UTC;1T0F1E0S. Original AIZ2 art
+submission2926 -> queueInternal205 throws FIFO-full. Returned segment2 comparator
+actually attached/compared; first34 queue.s3k_kos_module.busy native true/engine
+false. Partial1/16/21196 (returned20427physics+769animation), all incomplete/
+bootstrap-warning0/recent1/5/5 only/no actual compared-reference counts.
+Gumball firstNonCamera remains1300x0000/2778; its recent1380 direct-queue fields
+are present, without an exhaustive delta/causal inference. Twenty full unmatched
+identities/2FAST+34SMPS warnings remain. Gap2/0F is not route parity; SS/FDF
+UNREACHED. No actual R38 receipt, current four-occupant/native-birth/ordinal/
+readiness/full-route proof. Root DIRECT accepted all10 originals77701B before
+local preservation and authorized exact metadata-only consumption.
+[Exact two phases, observations and limits](../architecture/plans/2026-10-13-s3k-playable-completion.md#r56-actual-fresh-guards-then-original-mega--conditional-two-phases-terminal).
+
+
+### 2026-10-18 — Root composes qualified saved-return title ownership
+
+Child source28390 plus installer53f199/testee1c:168 focused/23classes and99 fresh
+guards pass without skips. Original R62 command remains
+`-Ptrace-replay-r7 -Dtest=TestS3kMegaRunChain#multiBonusSpecialStageRoundTrip`:1T0F1E0S,
+queue0/Maven28.742s, terminal03:47:31.962060UTC, AIZ2 KosM FIFO-full2932<-2926<-205.
+Incomplete1/16/21197; returned20428physics+769animation/first34busy true/false,20
+full unmatched timing identities; SS/FDF unvisited. Root adopts exact two-source
+delta from00ff5efed onto updated Main50348 composition, with Root verification
+still pending. Component graph/lease/order passes do not close route/readiness.
+
+[Composition and limits](../architecture/plans/2026-10-13-s3k-playable-completion.md#root-composition-saved-return-fixed-title-ownership-and-current-strict-limits-2026-10-18).
+
+
+### 2026-10-18 — R77 old-red to R79 bounded countdown publication green; route not remeasured yet
+
+Source9e942 working manager505a0647/testb7e2ddaf/combined0f2e, original native044
+fixed-countdown rawanim17 owner: active predeath before ordinary guards and
+successful natural underflow publication. R77 genuine3T2F0E0S raw17/1C and
+following Tails9C/00 after all prerequisites; ordinary decrement/Blank passes.
+R79 sole normal no-profile source-frozen12selection session86939 queue0/Maven
+01:17min display/exit0 gives116/0F0E0S incl unchanged3oldcases and P1 companion.
+Exact executed argv/all case identities/full24original318222B manifests are in
+own R79 registry; original3cases+newP1/all S3K4 with BOTH Loading and fluid
+protection check green. Root DIRECT read all reports/properties/streams before
+normal R80 local preservation. Source-equivalent commit is not another run.
+Warnings98FAST/20audiofallback/onebounds remain scoped. No canonical3475 caller,
+route/native/rewind/fullvector proof; prior original HCZ251/segment13ownership
+88306/first287y remain historical until conditional R80 original request runs.
+[Actual ownership and qualification](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r77r80-fixed-countdown-owns-raw-drowning-animation--2026-10-18).
+
+
+### 2026-10-18 — Root composes kept-origin ring table; original route remains red
+
+FDF48e082364 preserves the independent ring-retention repair. Its one original
+`TestS3kMegaRunChain#multiBonusSpecialStageRoundTrip -Ptrace-replay-r7` invocation
+at own649 reports1T1F0E0S: next aiz_2 starpost_bonus unobserved, returned total
+19510=18427physics+1083animation, first non-camera PHYSICS502y038A/0385;
+first all-group186animation00/20, other35fields match including74rings. All49
+unmatched hardware completions remain; no row178 pickup/cause/full-route claim.
+
+Root57074 plus exact3runtime+unchanged9aac composes the same token handoff.
+One normal no-profile affected20class request (same FDFR90 selectors) passes
+156/0F0E0S, including both Loading identities, mandatoryS3K4 and actual Gumball
+retention/ordinary-clear controls. Full argv/environment/source hashes/case IDs
+and retained original manifests stay in the [existing Plan](../architecture/plans/2026-10-13-s3k-playable-completion.md#root-kept-ring-affected-qualification-and-cold-r97-direct-2026-10-18)
+and canonical root_current_slice. No Root original route/SOZ repeat follows.
+SOZ matched V2 first release is103calls on Main vs115on Root; native terrain wait
+is required, exact duration/death11174cause remains unqualified.
+
+
+### 2026-10-18 — Root composes player-owned glide and native-P2 hurt tails
+
+Root `691de518` plus exactly six maintained source deltas from local FDF
+`8bcf0ab6` and HCZ `dae6c29e`, together with physical publisher V2 source15 tuple
+`7cee940caed98db9e6d45e9f17f6ed666a4e0f6f6f84f9037e3c3d72f5d1d5f9`,
+passed the sole normal combined lifecycle, session71445: **379T0F0E0S across46
+report suites**. The unchanged ordinary physical Nemesis oracle and registered
+full-key two restore/forward controls passed. FDF's isolated R110 selection
+(113T0F0E0S/12 classes) and HCZ's isolated R127 selection (195T0F0E0S/14 classes)
+remain separate qualified epochs. The former preserves player solidity/array
+arguments through real terrain scans; the latter changes only the profile-gated
+first native-P2 damage tail.
+
+The47-class request included nested-only `TestNemesisPlcRomVectors`, whose parent
+produced no report under ordinary nested-class exclusion; it was neither a pass
+nor a JUnit skip. A separately queued fresh guard lifecycle, session93642,
+completed **107T2F0E0S**: ArchUnit31/2, source guards72/0, exact ModAPI2/0 and the
+explicit nested S1/S2 ROM vectors1 each green. Both guard failure identities,
+attributes, full messages and complete stacks are byte-exact to prior105/2;
+HubMusicController's whole source equals integration base `8030832d`. No new
+guard failure was observed. Eight FAST warnings in the nested vectors leave
+readiness unqualified. Commands, selections and original accounting are in the
+[existing playable-completion Plan](../architecture/plans/2026-10-13-s3k-playable-completion.md).
+
+The maintained FDF R112 original used the normal Main queue wrapper with
+`--normal -Dmse=off -Ptrace-replay-r7
+-Dtest=TestS3kMegaRunChain#multiBonusSpecialStageRoundTrip test` from owned649 at
+`8bcf0ab6`, with original movie/fixtures and all three original ROMs. Session 71142
+ended 1T1F0E0S. All four reports are incomplete: AIZ1 has 1 camera-physics error;
+Gumball has 16 physics errors, first 1300 `x`0000/2778; returned AIZ2 has 166 = 1 camera physics +
+165 animation, without a serialized first non-camera mismatch. Slots has 7,974 =
+7,620 physics + 354 animation, first non-camera 220 `x_speed`0000/`-0400`, before loss
+of production ownership in TITLE_CARD, generation 6/cursor 10161. Twenty-eight
+unmatched hardware identities, 2 FAST/34 SMPS warnings and unvisited SS/FDF remain.
+
+The maintained HCZ R128 original used the same normal wrapper with
+`--normal -Dmse=off -Ptrace-replay
+-Dtest=TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds test`
+from owned3aa at `dae6c29e`, with its original movie/fixtures and original ROMs.
+Session 31023 ended 1T1F0E0S. All nine available R122 logical payloads remain
+byte-identical: segment 11 complete: 62 = 11 physics + 51 animation, lag 59; segment 13
+complete: 37,930 = 33,300 physics + 4,630 animation, lag 7, first non-camera 442
+`sidekick_x_speed` 01C7/`-0100`. The walk stops in uncompared SS7 results at
+movie/destination97208. XML retains 2 FAST/1 markRemembered/465 SMPS warnings;
+no current 88306 ownership observation was emitted. +21 UNWAIVED/-94 UNLOCALIZED,
+CPU-water/native-caller/resource/audio/Deform limits remain. Counts do not prove
+aligned residual vectors, actual damage contact or route improvement.
+
+Native source contracts are Sonic_CheckFloor/FindFloor (pinned044
+sonic3k.asm:19875..19927), reverse Sonic_CheckCeiling:20278..20311 and HurtCharacter
+21101..21153; S2's corresponding second-player tail is 85604..85670. Exact
+isolated epochs and Root composition accounting remain in the existing
+[playable-completion Plan](../architecture/plans/2026-10-13-s3k-playable-completion.md).
+These bounded component and guard results do not qualify full routes, native
+VRAM, water or H-int publication. No Root original-route remeasurement,
+integration or push is claimed here.
+
+
+### 2026-10-19 — Root HCZ1 direct water art publication component
+
+Root workspace ai-s3k-current-parity-composition, HEAD691de518, plus the
+uncommitted eight-source tupleaa0310dcaaa9ba6355905cafd9eeeb9ff5485538eee5b1209ab2d8b437aa7af9,
+ran one normal/no-profile whole-class29 request through Main's queue wrapper:
+--normal -Dmse=off -Dtest=<29 explicit FQNs> test -B, all three original ROM
+properties, JDK25, surfaceless EGL, null AL and single reused fork.
+Full exact argv/FQNs/environment are in the
+[existing Plan](../architecture/plans/2026-10-13-s3k-playable-completion.md)
+and canonical root_hcz1_direct_ff_reviewed_focus29_once_sol.
+
+Session46923 ended232T/0F/0E/0S, all232 identities/times and all58 XML/TXT
+originals inspected. The unchanged
+TestS3kHcz1DirectWaterNemesisPublication#hcz1DirectWaterFramePublishesThreePreparedNemesisPatterns
+now passes, together with the six producer/admission/restore controls. Physical
+publication follows the actual selected water/load owner and the captured world
+schedule, with failure/replacement revocation. It is not readiness or comparison
+data supplying gameplay values. Native044 order/branch/service owners are pinned
+in the Plan; no H-int2 or renderer outcome is inferred.
+
+Reported queue wait0s; Maven01:23min, finished11:54:10+01:00; compiler/parent
+intervals separately unknown. The ordinary lifecycle compiled4154main/4223test
+sources once. Case stderr206FAST/28 deterministic KOS estimates/four expected
+logged rejection/failure stacks, missing-player/null-ROM/collision negatives and
+26 compiler warnings remain qualified; no warning waiver.
+
+All58 new originals836367B and other28 prior originals retained singly. Source8
+and selected29 tests stayed fullmetadata exact; compilation preserved17220 prior
+paths and added six pre-absent source-bound outputs. Current17226 class inventory
+is accounting, not behavior inferred from hashes. No repeated run, native
+invocation, commit, integration or push followed. This focus does not replace
+the remaining original-route evidence or close native caller/CPU-water/+21/-94.

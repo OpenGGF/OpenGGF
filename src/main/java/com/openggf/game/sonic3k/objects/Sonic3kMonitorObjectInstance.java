@@ -10,11 +10,11 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
-import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.AbstractMonitorObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.objects.RewindRecreateContext;
@@ -26,6 +26,7 @@ import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SolidRoutineProfile;
+import com.openggf.level.objects.SpawnNullableReferenceRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseProfile;
@@ -116,9 +117,9 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
     private PlayableEntity p2RecentlyClearedSolidContact;
     private int p2SolidContactClearedFrame = Integer.MIN_VALUE;
     private boolean pendingBreakContactRelease;
-    private MonitorContentsSlot monitorContentsSlot;
 
-    // (Icon rising state is managed by AbstractMonitorObjectInstance)
+    // Obj_MonitorContents is an independent SST object (MonitorContentsSlot).
+    // The inherited icon state runs on the shell only without an object pool.
 
     public Sonic3kMonitorObjectInstance(ObjectSpawn spawn) {
         this(spawn, spawn.subtype());
@@ -362,9 +363,7 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
 
         mappingFrame = BROKEN_FRAME;
 
-        // Initialize icon rising
-        startIconRise(posY(), player);
-        spawnMonitorContentsSlot(objectManager);
+        spawnMonitorContents(objectManager, player);
 
         // Spawn explosion
         ObjectRenderManager renderManager = services().renderManager();
@@ -381,24 +380,39 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         services().playSfx(Sonic3kSfx.BREAK.id);
     }
 
-    private void spawnMonitorContentsSlot(ObjectManager objectManager) {
-        if (objectManager == null || monitorContentsSlot != null) {
+    private void spawnMonitorContents(ObjectManager objectManager, AbstractPlayableSprite player) {
+        if (objectManager == null) {
+            // Unmanaged harnesses have no SST pool to allocate from; the shell
+            // runs the same contents routine through its inherited icon state.
+            startIconRise(posY(), player);
             return;
         }
-        monitorContentsSlot = new MonitorContentsSlot(this, buildSpawnAt(posX(), posY()));
-        // The parent shell can be broken by TouchResponse before ObjectManager
-        // is executing the monitor slot. Anchor AllocateObjectAfterCurrent to
-        // this monitor's SST slot so the content object still lands after the
-        // shell, matching Obj_MonitorSpawnIcon (sonic3k.asm:40640-40652).
-        objectManager.addDynamicObjectAfterSlot(monitorContentsSlot, getSlotIndex());
+        // Obj_MonitorSpawnIcon: AllocateObjectAfterCurrent creates an independent
+        // Obj_MonitorContents copying x/y, anim, render_flags and the breaking
+        // player (docs/skdisasm/sonic3k.asm:40640-40652). The shell can be broken
+        // by TouchResponse before ObjectManager executes its slot, so the sibling
+        // allocation anchors to this monitor's SST slot. The contents do not
+        // belong to the shell: its offscreen delete (loc_1D61A) leaves them running.
+        MonitorType contentsType = type;
+        spawnAfterCurrentSibling(() -> {
+            MonitorContentsSlot contents = new MonitorContentsSlot(buildSpawnAt(posX(), posY()), player);
+            // Obj_MonitorSpawnIcon copies the shell's anim, which may differ from
+            // the placement subtype when a content override chose it.
+            contents.type = contentsType;
+            return contents;
+        });
     }
 
     /**
      * Apply the monitor's power-up effect.
-     * ROM: Pow_ChkX branch table (sonic3k.asm ~line 40780)
+     * ROM: off_1D87C branch table (docs/skdisasm/sonic3k.asm:40789-40800)
      */
     @Override
     protected void applyPowerup(PlayableEntity playerEntity) {
+        awardContents(type, playerEntity, services());
+    }
+
+    private static void awardContents(MonitorType type, PlayableEntity playerEntity, ObjectServices services) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (type) {
             case EGGMAN, EGGMAN_2 -> {
@@ -414,45 +428,45 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
                 }
             }
             case ONE_UP -> {
-                services().gameState().addLife();
-                services().playMusic(GameMusic.EXTRA_LIFE);
+                services.gameState().addLife();
+                services.playMusic(GameMusic.EXTRA_LIFE);
             }
             case RINGS -> {
-                if (!com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(services())) return;
+                if (!com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(services)) return;
                 player.addRings(RING_MONITOR_REWARD);
-                services().playSfx(GameSound.RING);
+                services.playSfx(GameSound.RING);
             }
             case SPEED_SHOES -> {
                 player.giveSpeedShoes();
-                GameAudioProfile audioProfile = services().audioManager().getAudioProfile();
+                GameAudioProfile audioProfile = services.audioManager().getAudioProfile();
                 if (audioProfile != null) {
                     // S3K monitor code writes 8 directly to zTempoSpeedup;
                     // E2/E3 are unrelated driver commands.
-                    services().audioManager().setSpeedMultiplier(
+                    services.audioManager().setSpeedMultiplier(
                             audioProfile.getSpeedMultiplierValue());
                 }
             }
             case FIRE_SHIELD -> {
                 player.giveShield(ShieldType.FIRE);
-                services().playSfx(GameSound.FIRE_SHIELD);
+                services.playSfx(GameSound.FIRE_SHIELD);
             }
             case LIGHTNING_SHIELD -> {
                 player.giveShield(ShieldType.LIGHTNING);
-                services().playSfx(GameSound.LIGHTNING_SHIELD);
+                services.playSfx(GameSound.LIGHTNING_SHIELD);
             }
             case BUBBLE_SHIELD -> {
                 player.giveShield(ShieldType.BUBBLE);
-                services().playSfx(GameSound.BUBBLE_SHIELD);
+                services.playSfx(GameSound.BUBBLE_SHIELD);
             }
             case INVINCIBILITY -> {
                 // Skip invincibility if player is already Super Sonic
                 if (!player.isSuperSonic()) {
                     player.giveInvincibility();
-                    services().playMusic(GameMusic.INVINCIBILITY);
+                    services.playMusic(GameMusic.INVINCIBILITY);
                 }
             }
             case SUPER -> {
-                if (com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(services())) player.addRings(SUPER_RING_REWARD);
+                if (com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(services)) player.addRings(SUPER_RING_REWARD);
                 SuperStateController superState = player.getSuperStateController();
                 if (superState != null && superState.activateFromMonitor()) {
                     LOGGER.info("Super monitor collected - transformation started");
@@ -460,28 +474,6 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
                     LOGGER.info("Super monitor collected");
                 }
             }
-        }
-    }
-
-    @Override
-    protected void onIconDeactivated() {
-        destroyMonitorContentsSlot();
-    }
-
-    @Override
-    public void onUnload() {
-        destroyMonitorContentsSlot();
-    }
-
-    private boolean isMonitorContentsSlotActive() {
-        return iconActive;
-    }
-
-    private void destroyMonitorContentsSlot() {
-        if (monitorContentsSlot != null) {
-            monitorContentsSlot.setDestroyed(true);
-            monitorContentsSlot.parent = null;
-            monitorContentsSlot = null;
         }
     }
 
@@ -501,33 +493,35 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
             appendFallbackBox(commands, broken);
         }
 
-        // Draw rising icon
+        // Unmanaged shells draw the contents they run in place.
         if (iconActive) {
-            if (hasRenderer) {
-                int iconFrame = resolveIconFrame();
-                ObjectSpriteSheet sheet = renderManager.getMonitorSheet();
-                if (iconFrame >= 0 && sheet != null && iconFrame < sheet.getFrameCount()) {
-                    SpriteMappingFrame frame = sheet.getFrame(iconFrame);
-                    if (frame != null && !frame.pieces().isEmpty()) {
-                        // Draw only the first piece (the icon overlay, not the box base)
-                        SpriteMappingPiece iconPiece = frame.pieces().get(0);
-                        renderer.drawPieces(List.of(iconPiece), posX(), iconSubY >> 8,
-                                (spawn.renderFlags() & 1) != 0, (spawn.renderFlags() & 2) != 0);
-                    }
-                }
-            } else {
-                // Fallback: small box for rising icon
-                appendFallbackIcon(commands, posX(), iconSubY >> 8);
-            }
+            appendContentsIcon(commands, renderManager, type, posX(), iconSubY >> 8, spawn.renderFlags());
         }
     }
 
     /**
-     * Resolve the mapping frame index for the rising icon.
-     * ROM: Pow_Main sets obFrame = obAnim + 2
+     * Draws the rising contents: loc_1D7FC selects Map_Monitor frame anim+1
+     * and points mappings at its first piece (docs/skdisasm/sonic3k.asm:40737-40746).
      */
-    private int resolveIconFrame() {
-        return type.animId + ICON_FRAME_OFFSET;
+    private static void appendContentsIcon(List<GLCommand> commands, ObjectRenderManager renderManager,
+            MonitorType type, int x, int y, int renderFlags) {
+        PatternSpriteRenderer renderer = renderManager != null ? renderManager.getMonitorRenderer() : null;
+        if (renderer == null || !renderer.isReady()) {
+            // Fallback: small box for rising icon
+            appendFallbackIcon(commands, x, y);
+            return;
+        }
+        int iconFrame = type.animId + ICON_FRAME_OFFSET;
+        ObjectSpriteSheet sheet = renderManager.getMonitorSheet();
+        if (iconFrame >= 0 && sheet != null && iconFrame < sheet.getFrameCount()) {
+            SpriteMappingFrame frame = sheet.getFrame(iconFrame);
+            if (frame != null && !frame.pieces().isEmpty()) {
+                // Draw only the first piece (the icon overlay, not the box base)
+                SpriteMappingPiece iconPiece = frame.pieces().get(0);
+                renderer.drawPieces(List.of(iconPiece), x, y,
+                        (renderFlags & 1) != 0, (renderFlags & 2) != 0);
+            }
+        }
     }
 
     private void appendFallbackBox(List<GLCommand> commands, boolean isBroken) {
@@ -545,13 +539,13 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         appendWireRect(commands, left, top, right, bottom, r, g, b);
     }
 
-    private void appendFallbackIcon(List<GLCommand> commands, int cx, int cy) {
+    private static void appendFallbackIcon(List<GLCommand> commands, int cx, int cy) {
         int half = 6;
         appendWireRect(commands, cx - half, cy - half, cx + half, cy + half,
                 1.0f, 1.0f, 0.4f);
     }
 
-    private void appendWireRect(List<GLCommand> commands,
+    private static void appendWireRect(List<GLCommand> commands,
             int left, int top, int right, int bottom,
             float r, float g, float b) {
         commands.add(new GLCommand(GLCommand.CommandType.VERTEX2I, -1, GLCommand.BlendType.SOLID, r, g, b, left, top, 0, 0));
@@ -867,55 +861,93 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         player.setAir(true);
     }
 
-    private static final class MonitorContentsSlot extends AbstractObjectInstance implements RewindRecreatable {
-        private Sonic3kMonitorObjectInstance parent;
+    /**
+     * Obj_MonitorContents (docs/skdisasm/sonic3k.asm:40667-40777, 41027-41030).
+     * Obj_MonitorSpawnIcon allocates it as an independent object, so the broken
+     * shell's offscreen delete does not reach it. loc_1D7CE falls through into
+     * sub_1D820 on its first execution; loc_1D850 awards the breaking player and
+     * loc_1DB2E deletes it only when anim_frame_timer goes negative.
+     */
+    private static final class MonitorContentsSlot extends AbstractMonitorObjectInstance
+            implements SpawnNullableReferenceRewindRecreatable, RomWorldPositionedObject {
+        // loc_1D7CE: move.w #$180,priority(a0).
+        private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x180);
 
-        private MonitorContentsSlot(Sonic3kMonitorObjectInstance parent, ObjectSpawn spawn) {
+        private MonitorType type;
+
+        /** Rewind recreates with a null breaker; scalar restore replaces type, rise and timer. */
+        private MonitorContentsSlot(ObjectSpawn spawn, PlayableEntity breaker) {
             super(spawn, "MonitorContents");
-            this.parent = parent;
+            this.type = MonitorType.fromSubtype(spawn.subtype());
+            startIconRise(spawn.y(), breaker);
         }
 
-        private MonitorContentsSlot(Sonic3kMonitorObjectInstance parent) {
-            this(parent, parent.buildSpawnAt(parent.posX(), parent.posY()));
+        /** Rewind probe constructor. */
+        private MonitorContentsSlot(ObjectSpawn spawn) {
+            this(spawn, null);
         }
 
         @Override
-        public MonitorContentsSlot recreateForRewind(RewindRecreateContext ctx) {
-            // Detached shell: the generic object-id fixup restores the exact captured owner.
-            return new MonitorContentsSlot(null, ctx.spawn());
+        public boolean isPersistent() {
+            // loc_1D81A/loc_1DB2E only draw; nothing in Obj_MonitorContents
+            // deletes it offscreen, only the award timer.
+            return true;
+        }
+
+        @Override
+        protected boolean isIconRiseInverted() {
+            // loc_1D7CE/sub_1D820 test render_flags bit 1 copied from the shell.
+            return (spawn.renderFlags() & 2) != 0;
         }
 
         @Override
         public void update(int vIntRunCount, PlayableEntity player) {
-            if (parent == null || !parent.isMonitorContentsSlotActive()) {
-                setDestroyed(true);
-            }
+            updateIcon();
+            updateDynamicSpawn(getX(), getY());
         }
 
         @Override
-        public int getX() {
-            return parent == null ? spawn.x() : parent.posX();
+        protected void applyPowerup(PlayableEntity player) {
+            awardContents(type, player, services());
+        }
+
+        @Override
+        protected void onIconDeactivated() {
+            ObjectLifetimeOps.expireDynamic(this);
         }
 
         @Override
         public int getY() {
-            return parent == null ? spawn.y() : parent.iconSubY >> 8;
+            return iconSubY >> 8;
         }
 
         @Override
-        public ObjectSpawn getSpawn() {
-            return parent == null ? spawn : parent.buildSpawnAt(getX(), getY());
+        public void offsetNativePositionWordsPreserveSubpixel(int offsetX, int offsetY) {
+            // loc_1D7CE sets render_flags bit 2, so transitions move x_pos/y_pos;
+            // the rise keeps its y subpixel byte in iconSubY.
+            iconSubY = ((((iconSubY >> 8) + offsetY) & 0xFFFF) << 8) | (iconSubY & 0xFF);
+            updateDynamicSpawn((getX() + offsetX) & 0xFFFF, getY());
         }
 
         @Override
-        public boolean isDestroyed() {
-            return super.isDestroyed() || parent != null && parent.isDestroyed();
+        public int getPriorityBucket() {
+            return PRIORITY_BUCKET;
+        }
+
+        @Override
+        public boolean isHighPriority() {
+            // loc_1D7CE: make_art_tile(ArtTile_Monitors,0,1) sets the art-word priority bit.
+            return true;
         }
 
         @Override
         public void appendRenderCommands(List<GLCommand> commands) {
-            // Slot-only mirror of ROM Obj_MonitorContents. The parent shell
-            // still owns the existing embedded icon render/update state.
+            if (isDestroyed() || !iconActive) {
+                return;
+            }
+            ObjectServices ctx = tryServices();
+            appendContentsIcon(commands, ctx != null ? ctx.renderManager() : null,
+                    type, getX(), getY(), spawn.renderFlags());
         }
     }
 

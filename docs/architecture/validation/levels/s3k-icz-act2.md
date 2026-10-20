@@ -91,3 +91,15 @@ Corrected qualification, all on `0197c5a5a` plus this commit's test-only deltas 
 - Revised input test with the fix: 02:05:15–02:05:44 UTC, 1 test / 0 failures / 0 errors / 0 skips.
 
 Death/reload products, combined smoke and integration were not rerun here. This requalifies the held-Right entry floor only; it is not act certification.
+
+
+## Incoming synchronous retained16 handoff — 2026-10-17
+
+ICZ R11 preserves559 known outgoing native pattern groups with current ICZ2
+collision indices until the existing queued payload publishes all589 groups.
+The independent component checks two forced whole-world restores/publication
+replays within the new ICZ2 timeline. Initial77 focused cases and the later4
+opaque-extent repair cases are separate source epochs, not one combined rerun.
+Unknown688..717 remain absent until publication; async/cold/presentation builds
+receive no new predecessor. [Exact sources, old-reds, commands and limits](s3k-icz-act1.md#r11-synchronous-known16-handoff-repair--2026-10-17).
+No ICZ2 route, native pixel, full aux, physical death/reload or full-act claim follows.

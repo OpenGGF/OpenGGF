@@ -43,31 +43,38 @@ final class LevelLoadAttempt {
     }
 
     void execute(Supplier<GameModule> moduleSource, int levelIndex) {
-        WorldSessionPolicyAccess.beforeAssembly(world, admissionCause);
-        afterAdmission.accept(admissionCause);
-        // Replay/bootstrap resets retire structural sprite bindings. Reinject the world
-        // owner before any assembly recreates or dispatches players.
-        WorldSessionPolicyAccess.bindRoster(world, sprites);
-        context.resetInitialProcessSpritesRequestForLoadAttempt();
-        GameModule module = moduleSource.get();
-        LevelInitProfile profile = module.getLevelInitProfile();
-        context.setLevelIndex(levelIndex);
-        context.setLoadMode(mode);
-        var steps = profile.levelLoadSteps(context);
-        if (steps.isEmpty()) {
-            throw new IllegalStateException("No level load steps defined for " + module.getClass().getSimpleName()
-                    + ". All game modules must implement levelLoadSteps().");
-        }
-        for (InitStep step : steps) {
-            long start = System.nanoTime();
-            try {
-                step.execute();
-            } catch (ObjectCallbackAbortException aborted) {
-                deferredStepAbort = aborted;
-                throw aborted;
+        if (world != null) com.openggf.game.LevelLoadRuntimeAccess.bindWorld(context, world);
+        try (var physicalLoad = com.openggf.game.internal.NativePhysicalLevelLoad.begin(
+                java.lang.invoke.MethodHandles.lookup(), world, context, mode)) {
+            WorldSessionPolicyAccess.beforeAssembly(world, admissionCause);
+            afterAdmission.accept(admissionCause);
+            // Replay/bootstrap resets retire structural sprite bindings. Reinject the world
+            // owner before any assembly recreates or dispatches players.
+            WorldSessionPolicyAccess.bindRoster(world, sprites);
+            context.resetInitialProcessSpritesRequestForLoadAttempt();
+            GameModule module = moduleSource.get();
+            LevelInitProfile profile = module.getLevelInitProfile();
+            context.setLevelIndex(levelIndex);
+            context.setLoadMode(mode);
+            var steps = profile.levelLoadSteps(context);
+            if (steps.isEmpty()) {
+                throw new IllegalStateException("No level load steps defined for " + module.getClass().getSimpleName()
+                        + ". All game modules must implement levelLoadSteps().");
             }
-            long elapsed = (System.nanoTime() - start) / 1_000_000;
-            LevelManager.LOGGER.fine(() -> String.format("  [%s] %dms — %s", step.name(), elapsed, step.romRoutine()));
+            for (InitStep step : steps) {
+                long start = System.nanoTime();
+                try {
+                    try (var physicalStep = com.openggf.game.internal.NativePhysicalLevelLoad.step(
+                            java.lang.invoke.MethodHandles.lookup(), step)) {
+                        step.execute();
+                    }
+                } catch (ObjectCallbackAbortException aborted) {
+                    deferredStepAbort = aborted;
+                    throw aborted;
+                }
+                long elapsed = (System.nanoTime() - start) / 1_000_000;
+                LevelManager.LOGGER.fine(() -> String.format("  [%s] %dms — %s", step.name(), elapsed, step.romRoutine()));
+            }
         }
     }
 

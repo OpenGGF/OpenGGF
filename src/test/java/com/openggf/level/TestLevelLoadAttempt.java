@@ -62,6 +62,24 @@ class TestLevelLoadAttempt {
         verify(profile).cancelPendingLevelLoadWork();
     }
 
+    @Test void selectedStepAbortClosesItsScopeAndPreservesDeferredFailureIdentity() {
+        var module = mock(GameModule.class); var profile = mock(LevelInitProfile.class);
+        when(module.getLevelInitProfile()).thenReturn(profile);
+        var original = new HostAbort("actual selected step");
+        when(profile.levelLoadSteps(any())).thenReturn(java.util.List.of(
+                new com.openggf.game.InitStep("throw", "test selected source", () -> { throw original; })));
+        var attempt = new LevelLoadAttempt(null, null, LevelLoadMode.FULL, new LevelLoadContext());
+        assertSame(original, assertThrows(HostAbort.class, () -> attempt.execute(() -> module, 0)));
+        var deferred = attempt.failure(original, () -> module, () -> {}, 0);
+        assertInstanceOf(DeferredLevelLoadException.class, deferred);
+        assertSame(original, deferred.getCause());
+        var reached = new AtomicBoolean();
+        when(profile.levelLoadSteps(any())).thenReturn(java.util.List.of(
+                new com.openggf.game.InitStep("next", "new actual attempt", () -> reached.set(true))));
+        new LevelLoadAttempt(null, null, LevelLoadMode.FULL, new LevelLoadContext()).execute(() -> module, 0);
+        assertTrue(reached.get());
+    }
+
     @Test void ioCauseIsUnwrappedAfterQuarantinedCancellation() {
         var module = mock(GameModule.class);
         var profile = mock(LevelInitProfile.class);

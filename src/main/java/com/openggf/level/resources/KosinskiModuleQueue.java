@@ -360,6 +360,52 @@ public final class KosinskiModuleQueue
         return flushPendingPatternRestore() && applyDma(new DmaChunk(destinationVramBytes, data));
     }
 
+    /**
+     * Engine-only physical confirmation. Legacy unbound applyImmediateDma keeps
+     * its logical contract; this inlet never treats absence of a target as a write.
+     */
+    boolean publishConfirmedPattern(int destination, byte[] pattern) {
+        if (pattern == null || pattern.length != 32 || destination < 0
+                || destination > 0xFFE0 || (destination & 31) != 0)
+            throw new IllegalArgumentException("Physical Nemesis publication requires one aligned VRAM pattern");
+        if (dmaTarget == null || !dmaTarget.isAvailable()) return false;
+        if (!flushPendingPatternRestore()) return false;
+        DmaTarget target = dmaTarget;
+        byte[] bytes = pattern.clone();
+        byte[] before = target.read(destination, bytes.length);
+        if (before == null || before.length != bytes.length)
+            throw new IllegalStateException("Physical pattern target returned an incomplete baseline");
+        before = before.clone(); // A target may reuse its read buffer during apply.
+        try {
+            target.apply(new DmaChunk(destination, bytes));
+            if (!target.isAvailable() || !Arrays.equals(bytes, target.read(destination, bytes.length)))
+                throw new IllegalStateException("Physical pattern target did not confirm the complete pattern");
+        } catch (RuntimeException | Error original) {
+            // A partial/throwing sink must not leave a falsely committed journal
+            // or a retired decoder pattern. Roll back only this unconfirmed
+            // pattern; earlier complete patterns remain committed. Preserve the
+            // original Throwable even if a broken sink also rejects rollback.
+            try {
+                target.apply(new DmaChunk(destination, before));
+                if (!target.isAvailable() || !Arrays.equals(before, target.read(destination, before.length)))
+                    throw new IllegalStateException("Physical pattern rollback was not confirmed");
+            } catch (RuntimeException | Error rollback) {
+                if (rollback != original) original.addSuppressed(rollback);
+            }
+            throw original;
+        }
+        recordAppliedBytes(destination, before, bytes);
+        return true;
+    }
+
+    private void recordAppliedBytes(int destination, byte[] before, byte[] bytes) {
+        for (int index = 0; index < bytes.length; index++) {
+            int address = destination + index;
+            baselineBytes.putIfAbsent(address, before[index]);
+            appliedBytes.put(address, bytes[index]);
+        }
+    }
+
     private boolean applyDma(DmaChunk chunk) {
         if (dmaTarget == null) return true;
         if (!dmaTarget.isAvailable()) return false;

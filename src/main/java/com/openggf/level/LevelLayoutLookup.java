@@ -122,6 +122,10 @@ final class LevelLayoutLookup {
     }
 
     ChunkDesc getChunkDescAt(byte layer, int x, int y) {
+        if (owner.level instanceof com.openggf.game.internal.EncodedCollisionLayout encoded
+                && encoded.hasEncodedCollisionLayout()) {
+            return encoded.collisionChunkDescAt(layer, x, y);
+        }
         if (owner.level == null || owner.level.getMap() == null) {
             return null;
         }

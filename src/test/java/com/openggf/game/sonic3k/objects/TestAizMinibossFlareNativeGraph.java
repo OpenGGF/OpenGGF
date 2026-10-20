@@ -257,7 +257,6 @@ class TestAizMinibossFlareNativeGraph {
             for (int slot = 7; slot <= 8; slot++) {
                 int index = slot - 7;
                 var barrel = manager.createDynamicObjectAtSlot(() -> new AizMinibossFlameBarrelChild(boss(), index, true), slot);
-                boss().getChildComponents().add(barrel);
             }
         }
         FrozenBoss boss() { return (FrozenBoss) NativeSstSlotAccess.currentOwner(manager, 6); }

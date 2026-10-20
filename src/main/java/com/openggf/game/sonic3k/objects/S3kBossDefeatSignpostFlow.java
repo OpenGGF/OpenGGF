@@ -74,6 +74,35 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
     private boolean usesShortResultsChildRetireTail;
     private boolean changeAct2SizesOnTitleComplete;
     private int nativeControlSlot = -1;
+    private boolean hasRetainedChildDrawHeader;
+    private int nativeChildX;
+    private int nativeChildY;
+    private int nativeChildRenderFlags;
+    private int nativeChildFlags38;
+    private boolean nativeChildParentDefeated;
+
+    void retainChildDrawHeader(S3kChildDrawParentHeader header) {
+        nativeChildX = header.x();
+        nativeChildY = header.y();
+        // Wait_FadeToLevelMusic clears bit7 before tail-calling the native replacement.
+        nativeChildRenderFlags = header.renderFlags() & 0x7F;
+        nativeChildFlags38 = header.flags38();
+        nativeChildParentDefeated = header.defeated();
+        hasRetainedChildDrawHeader = true;
+    }
+
+    void clearRetainedBarrelActivation() {
+        if (!hasRetainedChildDrawHeader) throw new IllegalStateException("AIZ barrel wrote an uncaptured control header");
+        // loc_68C84 bclr1,$38(parent3), before Child_Draw_Sprite2 tests bit4.
+        nativeChildFlags38 &= ~2;
+    }
+
+    S3kChildDrawParentHeader retainedChildDrawHeader() {
+        if (!hasRetainedChildDrawHeader) throw new IllegalStateException("Native child consumed an uncaptured control header");
+        return new S3kChildDrawParentHeader(nativeChildX, nativeChildY,
+                nativeChildRenderFlags, nativeChildFlags38, nativeChildParentDefeated);
+    }
+
     private boolean initialized;
     private boolean nativeResultsControlRestored;
 
@@ -173,6 +202,7 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
      */
     public S3kBossDefeatSignpostFlow beginNativeReplacement(int slot) {
         nativeControlSlot = slot;
+        if (hasRetainedChildDrawHeader) nativeChildFlags38 |= 0x10; // Obj_EndSignControl,044fa467:180466
         ensureInitialized();
         return this;
     }
@@ -201,6 +231,10 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
     @Override
     public void offsetNativePositionWordsPreserveSubpixel(int offsetX, int offsetY) {
         signpostX = (signpostX + offsetX) & 0xFFFF;
+        if (hasRetainedChildDrawHeader) {
+            nativeChildX = (nativeChildX + offsetX) & 0xFFFF;
+            nativeChildY = (nativeChildY + offsetY) & 0xFFFF;
+        }
     }
 
     @Override
@@ -293,12 +327,19 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
         services().gameState().setCurrentBossId(0);
 
         // Spawn signpost above camera
-        S3kSignpostInstance signpost = new S3kSignpostInstance(
-                signpostX, apparentAct, signpostResultsTimerCatchUpEntries, resultsWaitDurationAdjustment,
-                resultsPostControlHandoffDelayEntries, preservesGroundedResultsDispatchBoundary,
-                usesShortResultsChildRetireTail);
-        signpost.preserveNativeControlAllocationBoundary(nativeControlSlot);
-        spawnDynamicObject(signpost);
+        // Obj_EndSignControlDoSign -> CreateChild6_Simple calls
+        // AllocateObjectAfterCurrent from the retained boss/control SST
+        // (sonic3k.asm:180483-180492,177205-177225). A detached Java flow
+        // must not move that allocation cursor to its own auxiliary SST.
+        // An unset native boundary keeps the current execution-slot fallback.
+        spawnChildAfterSlot(nativeControlSlot, () -> {
+            var signpost = new S3kSignpostInstance(
+                    signpostX, apparentAct, signpostResultsTimerCatchUpEntries, resultsWaitDurationAdjustment,
+                    resultsPostControlHandoffDelayEntries, preservesGroundedResultsDispatchBoundary,
+                    usesShortResultsChildRetireTail);
+            signpost.preserveNativeControlAllocationBoundary(nativeControlSlot);
+            return signpost;
+        });
         LOG.fine("S3K defeat flow spawned signpost at X=" + signpostX);
 
         runCleanupAction();

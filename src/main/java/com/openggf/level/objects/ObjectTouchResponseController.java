@@ -1128,7 +1128,7 @@ final class ObjectTouchResponseController {
         }
 
         switch (result.category()) {
-            case HURT -> applyHurt(player, instance, result);
+            case HURT -> applyHurt(player, instance, result, profile);
             case ENEMY -> {
                 if (isPlayerAttacking(player, instance)) {
                     // ROM: Touch_Enemy_Part2 checks collision_property BEFORE decrementing HP.
@@ -1180,7 +1180,7 @@ final class ObjectTouchResponseController {
                         }
                     }
                 } else {
-                    applyHurt(player, instance, result);
+                    applyHurt(player, instance, result, profile);
                 }
             }
             case SPECIAL -> {
@@ -1194,7 +1194,7 @@ final class ObjectTouchResponseController {
                     }
                     applyBossBounce(player, profile);
                 } else {
-                    applyHurt(player, instance, result);
+                    applyHurt(player, instance, result, profile);
                 }
             }
         }
@@ -1343,7 +1343,19 @@ final class ObjectTouchResponseController {
         return null;
     }
 
-    private void applyHurt(PlayableEntity player, ObjectInstance instance, TouchResponseResult result) {
+    private boolean usesNativeP2HurtTail(PlayableEntity player, TouchResponseProfile profile) {
+        var module = objectManager.services().gameModule();
+        // Native companion gameplay currently has no competitive-mode state.
+        // S3K HurtCharacter (sonic3k.asm:21101..21111), and S2's equivalent
+        // (s2.asm:85604..85611), branch by player slot before checking rings.
+        return profile != null
+                && profile.actorContextPolicy() == TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY
+                && module != null && module.supportsSidekick()
+                && player == objectManager.services().playerQuery().nativeP2OrNull();
+    }
+
+    private void applyHurt(PlayableEntity player, ObjectInstance instance, TouchResponseResult result,
+            TouchResponseProfile profile) {
         if (player.getInvulnerable()) {
             return;
         }
@@ -1374,19 +1386,25 @@ final class ObjectTouchResponseController {
                 : fireHit ? DamageCause.FIRE
                 : DamageCause.NORMAL;
 
-        boolean hadRings = player.getRingCount() > 0;
-        boolean suppressLostRingSpawn = player instanceof AbstractPlayableSprite aps
-                && aps.suppressesLostRingSpawnOnHurt();
-        if (hadRings && !player.hasShield() && !suppressLostRingSpawn) {
-            // Requires the concrete playable type, but still goes through ObjectServices.
-            if (player instanceof AbstractPlayableSprite aps) {
-                // ROM Obj37 allocation becomes visible after the current player slot's
-                // hurt handling, but later playable slots do not refresh their CPU
-                // interact latch from those new rings until their next object tick.
-                objectManager.services().spawnLostRingsAfterCurrentFrame(aps, currentFrameCounter - 1);
+        if (usesNativeP2HurtTail(player, profile)) {
+            // Keep this pass's overlap, attack, listener and damage-cause handling.
+            // Only the registered native P2 bypasses the ring-loss/death choice.
+            player.applyHurt(sourceX, cause);
+        } else {
+            boolean hadRings = player.getRingCount() > 0;
+            boolean suppressLostRingSpawn = player instanceof AbstractPlayableSprite aps
+                    && aps.suppressesLostRingSpawnOnHurt();
+            if (hadRings && !player.hasShield() && !suppressLostRingSpawn) {
+                // Requires the concrete playable type, but still goes through ObjectServices.
+                if (player instanceof AbstractPlayableSprite aps) {
+                    // ROM Obj37 allocation becomes visible after the current player slot's
+                    // hurt handling, but later playable slots do not refresh their CPU
+                    // interact latch from those new rings until their next object tick.
+                    objectManager.services().spawnLostRingsAfterCurrentFrame(aps, currentFrameCounter - 1);
+                }
             }
+            player.applyHurtOrDeath(sourceX, cause, hadRings);
         }
-        player.applyHurtOrDeath(sourceX, cause, hadRings);
         var policies = com.openggf.game.mutators.NativeObjectPolicyAccess.port(objectManager.services());
         if (policies != null && instance != null) policies.projectileImpact(instance, player);
     }

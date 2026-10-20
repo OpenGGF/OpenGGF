@@ -960,7 +960,7 @@ public class GameLoop {
                 || !levelManager.consumeTitleCardRequest()) {
             return false;
         }
-        enterTitleCard(levelManager.getTitleCardZone(), levelManager.getTitleCardAct());
+        GameLoopTitleCardLifecycle.enterPending(this, gameplayMode, levelManager, activePlcLifecycleFrame);
         return true;
     }
 
@@ -1709,12 +1709,12 @@ public class GameLoop {
         TitleCardProvider tcp = getTitleCardProviderLazy();
         TraceSuppressedRowClosure.executeUnownedTitleCardWork(
                 playbackDebugManager.isCurrentGameplayTickSuppressed(),
-                tcp, this::startPendingInLevelTitleCard,
-                this::applyTitleCardControlLock);
+                false, tcp, this::startPendingInLevelTitleCard,
+                this::applyTitleCardControlLock, gameplayMode.getWorldSession());
 
         // Check if a title card was requested (new level loaded)
         if (levelManager.consumeTitleCardRequest()) {
-            enterTitleCard(levelManager.getTitleCardZone(), levelManager.getTitleCardAct());
+            GameLoopTitleCardLifecycle.enterPending(this, gameplayMode, levelManager, activePlcLifecycleFrame);
             levelIterationAdmission.finishPlaybackBoundary(
                     false, playbackDebugManager, userRecordingControls);
             updateNonGameplayAudio(doFrameStep);
@@ -2101,7 +2101,8 @@ public class GameLoop {
     private void updateBonusStageMode(boolean doFrameStep) {
         // Continue updating title card overlay during bonus stage
         // (EXIT phase: elements slide off screen after exitTitleCard transitioned here)
-        com.openggf.game.internal.BonusStageFrameLifecycle.updateOverlay(getTitleCardProviderLazy());
+        com.openggf.game.internal.BonusStageFrameLifecycle.updateOverlay(
+                getTitleCardProviderLazy(), gameplayMode.getWorldSession());
 
         if (levelManager.getRomZoneId() == Sonic3kZoneIds.ZONE_GLOWING_SPHERE) {
             ensureBonusStageBootstrapObjectPresent(BonusStageType.GLOWING_SPHERE);
@@ -2873,6 +2874,8 @@ public class GameLoop {
             // Suppress auto-music: zone music starts below during the title card
             levelManager.setSuppressNextMusicChange(true);
             bonusStageTransitionCoordinator.prepareReturnLoad(levelManager, savedState);
+            // The synchronous saved-origin load consumes this semantic return cause once.
+            TraceSessionLauncher.markNextRunInteriorReturnLoad();
             levelManager.loadZoneAndAct(zone, act);
             // Consume the auto-generated title card request — we initialize it ourselves below
             levelManager.consumeTitleCardRequest();
@@ -3156,8 +3159,8 @@ public class GameLoop {
 
         // Create results screen with current emerald count via provider
         int totalEmeralds = gameState.getEmeraldCount();
-        resultsScreen = ssProvider.createResultsScreen(
-                ssRingsCollected, ssEmeraldCollected, ssStageIndex, totalEmeralds);
+        resultsScreen = com.openggf.game.sonic3k.specialstage.S3kSpecialStageWorldAccess.createResults(
+                ssProvider, gameplayMode, ssRingsCollected, ssEmeraldCollected, ssStageIndex, totalEmeralds);
 
         if (resultsScreen == null) {
             resultsScreen = NoOpResultsScreen.INSTANCE;

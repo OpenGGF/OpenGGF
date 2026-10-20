@@ -750,6 +750,14 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
     }
 
+    /** ScreenInit authority belonging to the fresh Level assembly, not ordinary positioned updates. */
+    void prepareFreshScreenObjects() {
+        prepareInitialScreenObjects();
+        if (iczEvents != null && currentZone == Sonic3kZoneIds.ZONE_ICZ) {
+            iczEvents.applyScreenInitAtLoad(currentAct);
+        }
+    }
+
     @Override
     public void updatePrePhysics() {
         // D01 Animate_Palette precedes SpecialEvents/Process_Sprites. The
@@ -1483,6 +1491,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (aizEvents != null) {
             aizEvents.reconcileSequenceAfterRewindRestore();
         }
+        if (hczEvents != null && GameServices.hasRuntime()) {
+            hczEvents.reconcileWallAfterRewindRestore();
+        }
         // ZoneRuntimeRegistry restores FBZ's authoritative handler fields.
         // Reconcile only the adapter binding here; never restore a second sidecar.
         reconcileFbzRuntimeStateAfterRestore();
@@ -1510,7 +1521,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                 new com.openggf.game.sonic3k.features.HCZWaterSkimStaticAdapter(),
                 new com.openggf.game.sonic3k.features.HCZWaterTunnelStaticAdapter(),
                 new com.openggf.game.sonic3k.objects.HCZBreakableBarStaticAdapter(),
-                new com.openggf.game.sonic3k.objects.HCZWaterRushPaletteCycleStaticAdapter());
+                new com.openggf.game.sonic3k.objects.HCZWaterRushPaletteCycleStaticAdapter(),
+                new com.openggf.game.sonic3k.S3kCollisionLayoutRewindAdapter());
     }
 
     @Override

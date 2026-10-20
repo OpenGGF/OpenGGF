@@ -50,6 +50,18 @@ public final class TraceSuppressedRowClosure {
             TitleCardProvider provider,
             Runnable startPendingInLevelTitleCard,
             Consumer<Boolean> applyInLevelTitleCardControlLock) {
+        executeUnownedTitleCardWork(rowSuppressed, overlayDispatchedByRepresentedOwner, provider,
+                startPendingInLevelTitleCard, applyInLevelTitleCardControlLock, null);
+    }
+
+    /** Engine path carrying the actual world's PLC owner without changing provider APIs. */
+    public static void executeUnownedTitleCardWork(
+            boolean rowSuppressed,
+            boolean overlayDispatchedByRepresentedOwner,
+            TitleCardProvider provider,
+            Runnable startPendingInLevelTitleCard,
+            Consumer<Boolean> applyInLevelTitleCardControlLock,
+            com.openggf.game.session.WorldSession world) {
         // A suppressed row is a ROM lag frame: V_int ran, but the loop that
         // owns the title card did not complete an iteration, so its object
         // scan never dispatched. That holds for every title-card phase in all
@@ -80,7 +92,7 @@ public final class TraceSuppressedRowClosure {
         boolean deferOverlay =
                 overlayDispatchedByRepresentedOwner || rowSuppressed;
         if (provider != null && provider.isOverlayActive() && !deferOverlay) {
-            provider.update();
+            com.openggf.game.sonic3k.titlecard.S3kTitleCardWorldAccess.update(provider, world);
             if (provider.ownsInLevelPlayerControlLock()) {
                 applyInLevelTitleCardControlLock.accept(
                         provider.shouldLockPlayerControlForInLevelOverlay());
@@ -158,7 +170,8 @@ public final class TraceSuppressedRowClosure {
                     lifecycleFrame,
                     PlcLifecyclePhase.LEVEL_TITLE_CARD,
                     () -> {
-                        titleCardProvider.update();
+                        com.openggf.game.sonic3k.titlecard.S3kTitleCardWorldAccess.update(
+                                titleCardProvider, levelManager.getWorldSession());
                         if (titleCardProvider
                                 .ownsRetainedResultsHeldLevelCounter()
                                 && levelEvents != null) {

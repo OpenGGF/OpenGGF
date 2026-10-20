@@ -125,3 +125,170 @@ ordinals and submitted state in rewind snapshots. Queue facades and handles are 
 and rebound through `HardwareTimingService.pendingHandle(kind, ordinal)` after the timing
 ledger restores. Restoration must not resubmit a duplicate job. No static queue state or
 singleton access is required.
+
+
+## Bonus-title archive omission independently corrected — 2026-10-17
+
+The earlier broad title-owner inventory did not prove every specialized title
+initializer submitted the complete native batch. At skdisasm044
+Obj_TitleCardInit62143..62200, the locked-on Gumball portal61952..61959 writes
+current/apparent$1300 and still queues Num1 at$53D between Zone and Bonus.
+Visible BONUS/STAGE child count does not remove that physical archive. R23's
+actual successful-submit caller witness exposed three engine archives; the
+separate actual-ROM typed Knuckles/Gumball R25 component reached the final
+four-descriptor assertion and failed only for Num1(source880004/compressed185/
+dest42912/output512/module1). Existing apparent-act selection now submits it
+through loadBonusArt's unchanged queue/lease owner, leaving ordinary title loading
+and all timing admission/refusal contracts intact.
+
+R28's exact affected selection passes120 unique cases in15 actual classes,
+including the original independent oracle, complete four-archive service/drain/
+claim control and two registered five-key resource/title restore/forward cycles.
+R29's fresh two-class guard request is97/1F0E0S: the sole LevelManager3153vs3144
+size-ratchet failure blocks the conditional maintained original route. This is
+local component preservation, not integration, a full guard pass, repaired
+recorded readiness or complete two-module/four-direct producer attribution.
+Canonical completion descriptors have no native enqueue timestamp/caller. Keep
+R23's measured pre-fix births distinct from a statically inserted Num1 job;
+there is no post-fix route execution in this slice. [Exact epochs, commands and
+STOP](../plans/2026-10-13-s3k-playable-completion.md#r29-conditional-guard-gate-red-original-maintained-route-not-launched--2026-10-17).
+
+
+## Bonus terrain handoff independently retained — 2026-10-18 local component
+
+The plain bonus load does not own the ordinary fresh-load context/SST graph, but
+native Level/loc_6310 -> LoadLevelLoadBlock still submits its ROM terrain after
+Obj_TitleCardWait and Nemesis readiness. R34 actual production Knuckles/Gumball
+entry reached the final independent descriptor oracle: four correct title jobs,
+missing terrain3FEE2E/compressed3407/dest0/output9792/modules3. R32's earlier extra
+AIZ title batch was an inlet boundary, not clean old-red credit; observe the real
+origin TITLE_CARD phase and consumed pending title request before declaring boot
+quiescence. Do not hide those jobs with filters or reset the FIFO.
+
+The narrow LevelManager eligibility now retains the existing captured title
+resource index for an actual active bonus as well as the old fresh-load cause.
+GameLoop onEnter sets active type before loading and onExit clears it before
+return. Omitted(false)/initializeBonus preserve the index until the native gate;
+no caller mode switch, ordinary four-child graph, queue/admission/ordinal/schema
+change or public API. R36 preserves all original three oracles and adds real
+Pachinko/Slots controls:145/0F0E0S,19 actual classes,10 selected entry/return pilots.
+WaterRestore's immediate reflective enter/exit logs FIFO-full on actual Main803
+too (Root69090), so its water result is not art readiness. Existing child size
+ratchet and fresh combined guards remain separate. No post-fix original route,
+full remaining two-module/four-direct attribution, native births or recorded
+SS/fdf readiness is established. [Exact evidence and epochs](../plans/2026-10-13-s3k-playable-completion.md#r37-qualified-component-preservation-and-inherited-warning--2026-10-18).
+
+
+
+## Saved-origin return cause and next physical queue boundary — 2026-10-18
+
+An independent real public bonus-entry/exit test reaches its final receipt oracle
+with ORDINARY instead of INTERIOR_RETURN, after normal title release/new-generation/
+saved-origin/history checks. The synchronous saved-origin GameLoop load now marks
+its existing semantic cause immediately after prepareReturnLoad and before the
+load, following the special-return helper precedent. Null-state fallback and
+ordinary loads are unchanged; a separate later-ordinary-load control proves the
+mark is consumed once. Component128 and fresh99 guards pass on529012/74f65.
+
+The original unmodified Mega R44 subsequently attaches returned segment2 and fails
+AIZ2 event submission with real module FIFO-full. Its29 unmatched recorded identities
+and partial first34 busy mismatch do not identify actual queue occupants, native
+submission births or the unique original R38 denial cause. Keep successful component
+semantics separate from unchanged strict timing admission/physical capacity and the
+unvisited SS/fdf target. No queue expansion/reset/drop/ordinal renumber or readiness
+waiver follows. [Full original reports, source epochs and limits](../plans/2026-10-13-s3k-playable-completion.md#r44-actual-fresh-guards-and-original-returned-aiz-frontier--2026-10-18).
+
+
+## Post-extraction source guards and original route boundary — 2026-10-18
+
+R38's source-equivalent geometry relocation passes99 actual fresh guards
+(Architectural72/HardwareAuthority25/exact API2). Its following unmodified Mega
+route fails coordinator segment2 admission in TRANSITION_GAP after the original
+stage_exit and return assertions passed. This is neither proof of actual LEVEL
+release nor post-return SS/fdf readiness. The sole suppressed close reports12
+unmatched exact completion identities; no actual production head/preparation was
+sampled here, so never-submitted versus already-admitted/claimed remains ambiguous.
+Partial AIZ1/Gumball12 physics reports are incomplete, recent5 is bounded and actual
+compared/reference counts unavailable. Root read all8 original artifacts before
+accepted hash-checked cleanup; no additional execution, producer change, arithmetic
+renumber, forced alignment or admission waiver follows from these facts.
+[Actual commands, source pins and precise reached boundary](../plans/2026-10-13-s3k-playable-completion.md#r38-phase2-original-route-actual-stop--2026-10-18).
+
+
+## Actual later physical occupants, outside-step evidence — 2026-10-18
+
+R47's original-driver call-through witness at c4e71e8 observes the new returned
+INTERIOR_RETURN receipt/generation4 and all four return-title parents15..18 claimed.
+At the later AIZ2 FIFO-full, four different unprepared module parents19..22 occupy
+capacity: sources36800C/367DCA/3681FE/3AF5D0. Parent19's actual active child26 has
+a complete decoder/payload736 but is not ready; it remains physical direct head
+ahead of the three newly submitted event direct jobs27..29. Descriptor identity
+does not identify which enemy-loading caller submitted parents19..21.
+
+All177 rows/25 definitions/175 state and clock projections, original error/closure
+and comparator owner arrays were directly inspected and accepted by Root. No
+inside-service, successful-submit or native-birth context was recorded. Pending
+ledger/title-history handles must not be mistaken for physical capacity occupants.
+Original1E/partial21196 returned errors and SS/FDF-unvisited limits remain; no
+readiness waiver, renumber, queue expansion/reset/drop or producer fix follows.
+[Exact observations, acceptance and cleanup](../plans/2026-10-13-s3k-playable-completion.md#r48--accepted-outside-capacity-witness-accounting--2026-10-18).
+
+
+## Successful-submit callers and absent returned terrain — 2026-10-18
+
+R50's reviewed temporary private submit logger and original full-driver subclass
+provide actual successful-submit evidence on923da24+81096/40be, not another
+source-only caller inference. All36 successful submits/144 job-handle-submission-
+preparation refs are represented, with fresh raw owner/load/title/resource lease
+context on the same service. Enemy parents19..21 are submitted by the ordinary
+processRuntimeArtQueue -> processEnemyKosArt path; fire22 is submitted from
+updateAct1 -> ensureFireOverlayTilesLoaded. Neither is assigned to WaitFire by
+descriptor identity. Earlier lease-consume callback/clock remains unobserved.
+
+Gumball terrain14 is a production title-handoff job3FEE2E/9792bytes/3modules.
+Returned title15..18 initializes on generation4 but its handoff index is-1, and
+no3A566A/3A944E successful submit appears in this invocation. R48's raw native
+archive association is distinct evidence with no native enqueue PC/clock/final
+VRAM/explicit parent link. Do not substitute ordinals, force readiness or expand
+capacity from these facts. Original AIZ2 FIFO-full1E, incomplete comparator
+1/12/21196 errors and unvisited SS/FDF remain. Root directly accepted the entire
+63-row journal/XML/TXT/comparator/owner evidence before exact accounted cleanup.
+[Exact R50 inspection and R51 accounting](../plans/2026-10-13-s3k-playable-completion.md#r51-accepted-submit-owner-evidence-and-accounting--2026-10-18).
+
+
+## Saved-origin terrain producer component, unresolved route readiness — 2026-10-18
+
+R53 independently exercises public Gumball/Pachinko/Slot return to Knuckles/AIZ1:
+actual pending title/gates/new receipt/history/current identity precede the native
+six-parent oracle. All three fail only that oracle on b0dcc (four title parents,
+missing3A566A/3A944E); ordinary non-fresh control passes. LM b36ebe adds only the
+existing saved-bonus-return signal to title terrain-handoff eligibility, retaining
+actual resolved level sources and original queues/gates. The unchanged component
+passes in144 affected cases;99 fresh structural/authority/API guards pass.
+
+R56 original Mega still errors at AIZ2 primary module enqueue with FIFO full.
+The current route has20 unmatched completion identities and incomplete comparator
+1/16/21196 errors; actual returned first34 module.busy true/false. Gumball's
+recent1380 active direct source3A566C is retained evidence, not the exact caller/
+submit/service chronology. R50's actual enemy19..21 ordinary runtime-pass caller
+and R47's four unprepared occupants belong to OLD LM epochs; neither proves the
+current variant's birth sites/physical holders/lease consume callback. Canonical
+completion rows never fill those missing native birth fields. No renumber,
+readiness waiver, FIFO expansion/reset/drop or next producer implementation
+follows automatically. Root accepted full original reports before accounted
+cleanup; SS/FDF is still unvisited.
+[Source/test epochs and full limits](../plans/2026-10-13-s3k-playable-completion.md#r56-actual-fresh-guards-then-original-mega--conditional-two-phases-terminal).
+
+
+### Saved-return title owner qualified; current service chronology remains open
+
+FDF00ff5efed preserves installer53f199/testee1c after168 affected tests and99
+fresh guards passed. Native loc_62B6/loc_64DC admits the saved-return fixed graph
+without making the whole host load fresh. Original R62 Mega still errors at
+AIZ2 FIFO2932<-2926<-205; POST35's expected module21 is explicitly unprepared,
+while later expected direct34/module22 sees pending33/21. No renumbering, missing
+producer or physical retirement cause follows. Current consume+submit+queue
+chronology is a separate temporary diagnostic; its retained-only footer requires
+correction before execution. No diagnostic hook is included in this composition.
+
+[Composition and limits](../plans/2026-10-13-s3k-playable-completion.md#root-composition-saved-return-fixed-title-ownership-and-current-strict-limits-2026-10-18).

@@ -37,6 +37,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_3K)
@@ -986,14 +987,18 @@ class TestS3kMgzTopPlatformParityHeadless {
         touchResponsesField.setAccessible(true);
         Object touchResponses = touchResponsesField.get(objectManager);
         assertNotNull(touchResponses, "Expected ObjectManager touch responses to be available");
+        assertSame(sprite, objectManager.getObjectServices().playerQuery().mainPlayerOrNull(),
+                "Shared hurt-tail control requires the actual registered main player");
 
         Method applyHurt = touchResponses.getClass()
                 .getDeclaredMethod("applyHurt",
                         com.openggf.game.PlayableEntity.class,
                         ObjectInstance.class,
-                        TouchResponseResult.class);
+                        TouchResponseResult.class,
+                        com.openggf.level.objects.TouchResponseProfile.class);
         applyHurt.setAccessible(true);
-        applyHurt.invoke(touchResponses, sprite, source, null);
+        applyHurt.invoke(touchResponses, sprite, source, null,
+                com.openggf.level.objects.TouchResponseProfile.standardEnemy());
     }
 
     private int activeLostRingCount() throws Exception {

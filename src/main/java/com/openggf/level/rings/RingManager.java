@@ -144,7 +144,20 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     public void update(int cameraX, AbstractPlayableSprite player, int frameCounter,
                        boolean collectStageRingsInUpdate) {
         placement.update(cameraX);
-        if (player == null || player.getDead()) {
+        if (player == null) {
+            // Editor/null-player updates have no native global-ledger owner.
+            // Keep accepted pickups pending until a real world player is available.
+            return;
+        }
+        if (player.getDead()) {
+            // AttractedRing_GiveRing is an object-slot routine, independent of
+            // Player_1's live/dead dispatcher. Already accepted pickups still
+            // award the shared ledger; ordinary dead-player movement stays paused.
+            for (AttractedRing ring : activeAttractedRingsInSlotOrder()) {
+                if (ring.collected && ring.sparkleStartFrame == -1) {
+                    updateCollectedAttractedRing(ring, player, frameCounter);
+                }
+            }
             return;
         }
 
@@ -259,11 +272,15 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                     || !attractedRingOverlapsPlayerTouchBox(ring, player)) {
                 continue;
             }
-            player.addRings(1);
-            notifyNativeRingPickup(player);
-            playRingAcquisitionSound();
+            // Touch_ChkValue ($10012: 137C00040005) writes routine=4;
+            // AttractedRing_GiveRing awards only in the ring's next own pass.
+            // The captured collected/-1 pair is accepted but not yet sparkling.
             ring.collected = true;
-            ring.sparkleStartFrame = frameCounter;
+            ring.listedForTouchThisFrame = false;
+            // This engine-owned policy hook attributes ACCEPTANCE to the actual
+            // collector (including P2). It intentionally stays at touch time;
+            // global GiveRing bookkeeping/SFX belong to the later ring pass.
+            notifyNativeRingPickup(player);
             return;
         }
     }
@@ -590,7 +607,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             if (!ar.active) {
                 continue;
             }
-            if (ar.collected) {
+            if (ar.collected && ar.sparkleStartFrame != -1) {
                 int sparkleFrame = attractedSparkleFrame(ar, frameCounter);
                 if (sparkleFrame >= 0) {
                     renderer.drawFrameIndex(sparkleFrame, ar.x, ar.y);
@@ -965,10 +982,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         for (AttractedRing ar : activeAttractedRingsInSlotOrder()) {
             if (!ar.active) continue;
 
-            if (ar.collected) {
-                if (advanceAttractedRingSparkle(ar)) {
-                    deactivateAttractedRing(ar);
-                }
+            if (updateCollectedAttractedRing(ar, player, frameCounter)) {
                 continue;
             }
 
@@ -1116,8 +1130,27 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         return false;
     }
 
+    /** Runs the accepted/spinning -> GiveRing -> in-place sparkle owner phase. */
+    private boolean updateCollectedAttractedRing(AttractedRing ring,
+                                                 AbstractPlayableSprite player, int frameCounter) {
+        if (!ring.collected) return false;
+        if (ring.sparkleStartFrame == -1) {
+            // Native $1A900 clears touch flags, then $1A910 (6100FC84) calls
+            // GiveRing $1A596, which writes GLOBAL Ring_count even for a P2
+            // acceptance. The update player supplies that same world ledger;
+            // no collector reference or policy attribution is reconstructed here.
+            ring.sparkleStartFrame = frameCounter;
+            player.addRings(1);
+            playRingAcquisitionSound();
+        }
+        // loc_1A920 falls through into Animate_Sprite in the award pass, using
+        // the existing timer/mapping bytes. No movement runs after acceptance.
+        if (advanceAttractedRingSparkle(ring)) deactivateAttractedRing(ring);
+        return true;
+    }
+
     private int attractedSparkleFrame(AttractedRing ar, int frameCounter) {
-        if (!ar.collected || renderer == null) {
+        if (!ar.collected || ar.sparkleStartFrame == -1 || renderer == null) {
             return -1;
         }
         return ar.mappingFrame;
@@ -1174,7 +1207,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             return;
         }
         for (AttractedRing ar : attractedRings) {
-            if (ar.active && ar.collected
+            if (ar.active && ar.collected && ar.sparkleStartFrame != -1
                     && ar.sparkleAnimationFrame > renderer.getSparkleFrameCount()) {
                 deactivateAttractedRing(ar);
             }
@@ -1382,6 +1415,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         int xVel, yVel;    // velocity in subpixels/frame (ROM: x_vel/y_vel, 16-bit signed)
         int objectSlotIndex = -1;
         boolean slotAllocationPending;
+        // collected + start=-1 is accepted/pending; a non-sentinel start is sparkle.
         boolean collected;
         int sparkleStartFrame = -1;
         int mappingFrame;

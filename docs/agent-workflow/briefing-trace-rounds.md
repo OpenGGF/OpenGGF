@@ -71,6 +71,101 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A cleanup exception can erase the first diagnostic failure (2026-10-18,
+ending-clock positive control). The observer stopped before its header/first
+Advance, then a finally artifact check overwrote the primary exception. Its
+zero callbacks/raw values and partial footer are not a clock observation or
+unique artifact cause. Preserve the first exception type/message, report cleanup
+failures separately under the same output cap, and keep provisional rows
+unqualified until parent exit/identity/count acceptance. Do not infer the hidden
+cause from a later successful parent-side hash check or retry unchanged input.
+
+Sparse structural deltas and typed last-sample poses have different contracts
+(2026-10-17, cold R32/R33). An intentionally internal full-pose key can advance
+without an emitted motion-only event; reconstruct only declared structural/phase
+keys. Six restore predecessor records repeat already emitted explicit keys, so
+checked key-record count differs from unique-key count. Keep actual metadata sparse,
+source-epoch ABSENT fields separate, and Java bindings run-local. Qualification
+requires the positive footer, verified post-footer write marker and terminal result;
+a prefix pass leaves later route finals unqualified.
+
+A submit-site caller is not the attached outside clock (2026-10-17, S3K R23).
+The real timing-service submit hook proves which original production stack
+created a handle, while the latest outside mode/load/movie sample may predate
+that callback. Keep actual caller, service/handle identity and OUTSIDE clocks
+separate; leave an unobserved birth clock null. Canonical completion counters/
+fingerprints do not supply enqueue timestamps or unique caller provenance.
+Compare identities without forced alignment or renumbering. A temporary private
+property-gated logger may check an explicit scalar/reference projection around
+its writes, forward the original driver once and preserve its Throwable/report/
+cleanup; that is not whole-world passivity or readiness/route parity. R23's
+original60-record bounded witness and exact strip recovery are recorded in the
+[existing S3K plan](../architecture/plans/2026-10-13-s3k-playable-completion.md#r23-actual-submit-site-provenance-r24-accepted-accounting--2026-10-17).
+
+
+Native execute callbacks are not a complete instruction ledger (2026-10-17,
+stock GPGX051d430d). The normal callback precedes opcode fetch and its refresh
+check; a VDP-triggered delayed-IRQ path directly executes another instruction
+without that callback or normal refresh check. Memory read hooks follow the
+mapped handler, whereas write hooks precede it. Do not interpret these hooks
+as uniform bus timestamps or infer absent handler work from missing events.
+The signed CPU and refresh counters are both rebased at frame exit, retaining
+overshoot; frame entry is not zero initialization. Identity-only binding with
+zero frames/callbacks proves access, not an observed clock origin, SR/IRQ or
+production readiness model. Source, ELF and claim limits are recorded in the
+existing S3K trace audit's native held-file identity checkpoint.
+
+
+
+A shared-fork test can erase a required launcher flag during cleanup
+(2026-10-17, graphics smoke). TestSurfacelessEglContext cleared the incoming
+headless backend instead of restoring it. Later real boots selected GLFW without
+the requested null-platform hint. An alphabetical two-class Main control reproduced
+two initialization errors; restoring the incoming value made the same five cases
+pass. Check the shared-fork predecessor and preserve incoming global properties;
+an isolated class pass or successful preflight does not prove that later tests
+still have the launch environment. This does not attribute an unrelated signal exit.
+
+
+Equal instruction/stall totals do not fix CPU phase (2026-10-17, ending Kos core).
+GPGX051d430d refreshes only after opcode fetch and restarts its deadline from that
+fetch. Moving112 MCLK of wait from execution to fetch can add a14-MCLK refresh
+while leaving both supplied totals identical. Native counter rebasing also changes
+`(counter/7)%10`; capture its explicit origin, not an assigned scene clock.
+`m68ki_set_sr` checks IRQ inside RTE before its20 base cycles are charged, so a
+pending VInt places those cycles in the following interval. A fixed acceptance
+constant, scalar callee sum or post-RTE-only IRQ check can all look plausible.
+The independent `TestS3kKosBusTimeline` controls cover these distinctions. Its
+explicit event inputs and two-forward captures prove an unused pure core, not
+the existence of production boot/caller/bus/handler producers or6+46 prediction.
+Refusal must also preserve the whole coupled state: checking a literal's
+destination after source postincrement, or checking memory after charging a
+fetch wait, leaks state on unsupported memory. Validate every operand before
+either the CPU timeline or instruction mutates; a per-instruction 64KiB copy is
+unnecessary for this closed routine's bounded accesses.
+
+A negative layout word can read a neighbouring RAM owner (2026-10-17, HCZ R9).
+Native907F is outside the layout buffer and aliases current16×16 ROM definitions;
+the next cell's128×128 definition can be an unwritten prior-act tail. Trace the
+byte writer and each table's destination extent before replacing width wrapping.
+A cold target-level load is not an independent control for retained predecessor
+RAM: R9's cold test errored before lookup assertions, and is not old-red proof.
+
+One shared sensor is not one gameplay-owner call (2026-10-17, HCZ BG witness).
+CalcRoomInFront, the fatal BG floor and post-move wall clamps share a probe. Tag
+the actual caller, copy the returned pool immediately, and distinguish vertical
+`bgScanResult` from horizontal `bgWallScanResult`. R7's one-call assertion aborted
+at7133; its vertical read of the horizontal pool was stale and is excluded. R8
+filters the actual lexical wall-owner stack: one eligible wall scan and three
+legitimate tails per tick, forwarding the identical real result.
+
+An intentional chain-prefix stop can pass with a red open comparator (2026-10-17,
+HCZ7134 witness). `ReplayPrefixReached` ends before closing/asserting that segment;
+R6 returned1/0F while its live partial comparator contained217 errors. Capture the
+comparator before detachment, state consumed versus full reference rows and all
+groups, and retain earlier camera/animation errors. A bounded observation's JUnit
+success is not a strict parity pass or a replacement for a longer-window total.
+
 
 A timing-boundary callback need not observe the completed physical facade
 (2026-10-17, ending queue causality). PRE_MAIN_LOOP observes after timing service
@@ -79,7 +174,20 @@ A ready/physicallyRetired timing handle can still be the direct facade head at
 PRE. Keep outer, LF before-step, LF at observation, callback phase and real
 submission handles separately; the next outer VINT still reads the previous LF.
 Diagnostic queuedFingerprints are not submission fingerprints. Never infer a
-second service or shift clocks from these projections.
+second service or shift clocks from these projections. PRE_MAIN_LOOP is also
+not a pre-CPU observation in the ordinary LevelFrameStep: that service boundary
+runs after CPU, camera and ScreenEvents. HCZ R12's compact callback already had
+the new CPU LF; its temporary pre-CPU label was rejected. Use the actual caller
+order and previous cached publication/next post-CPU bracket, or identify the
+missing player hook, rather than renaming a late sample to match its question. R14 also separates
+RecordPos writes from final P1 pose and Camera-entry selected history: correct
+arithmetic on a divergent history word is not a camera-owner old-red. Verify
+real instruction boundaries against ROM bytes before using a named recorder pin;
+its label alone does not establish an entry callback. R15 then verifies
+RecordPos pre/post and Camera-entry at real PCs: native selects239 while engine
+selects23A, so correct arithmetic cannot identify the earlier P1 writer. Recheck
+all pinned identities after queue admission immediately before native launch and
+after terminal; a pre-queue hash alone is not execution provenance.
 
 Opcode pins alone do not authenticate instruction timing (2026-10-17, S3K V-int diagnostics).
 An unchanged `dbf` opcode can have a changed initial iteration count, and an unchanged `jsr` can call a different
@@ -4591,3 +4699,20 @@ runtime directory and audio backend; verify the actual backend rather than the
 property name. Legacy baseline graphics may require a separate authenticated
 virtual framebuffer, never the user's display. Keep that server's ownership and
 cleanup bounded. The feature's explicit EGL captures do not need it.
+
+
+### Intentional prefix return can omit the unfinished comparator report
+
+AbstractRunChainTest's ReplayPrefixReached path aborts timing and clears the
+active comparator without asserting/writing the unfinished segment. A JUnit
+prefix pass can therefore coexist with strict camera/animation errors. Read the
+actual current comparator after final playable/dynamic-art comparisons and
+before abort, reuse its existing session-owned summary, and retain the original
+stop/cleanup order. Keep a strict-zero assertion after original cleanup. Record
+actual compared cursor separately from the loaded reference frameCount and
+complete flag. A five-entry recent mismatch ring is not an exhaustive error
+array or proof of exact residual-set equality. R20's93493 reached the correct
+native endpoints but omitted counts; separately reviewed/authorized R21's95476
+actually records8721/14208/completefalse and206 errors. No total was recovered
+from the earlier terminal JVM or borrowed from another source epoch. See the
+[dated owner/report evidence](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r21-actual-final-prefix-report-qualifies-the-local-column-repair--2026-10-17).

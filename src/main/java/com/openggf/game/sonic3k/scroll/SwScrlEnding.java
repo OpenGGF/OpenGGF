@@ -61,6 +61,7 @@ public final class SwScrlEnding extends AbstractZoneScrollHandler implements Scr
             var activeBands=aizBands(); // Validate before the first native bank write.
             if(!rebuild&&ram.aizDeformationFrame!=frame){
                 ram.aizDeformationFrame=frame;aizParameters(ram,cameraX,cameraY);
+                applyAizCallerAdjustment(ram);
             }
             vscrollFactorBG=(short)ram.backgroundCameraY;
             composeFrom(output,cameraX,ram.backgroundCameraY,ram.hScrollWords,activeBands,4);
@@ -109,6 +110,9 @@ public final class SwScrlEnding extends AbstractZoneScrollHandler implements Scr
         for(int offset=0x12;offset>=8;offset-=2){value+=wave;put(ram,offset,value>>16);value+=base;}
         value=base;increment=base>>3;
         for(int offset=0x16;offset<=0x2E;offset+=2){value+=increment;put(ram,offset,value>>16);}
+    }
+    /** loc_5B012's subtraction is caller work, outside the closed AIZ1_Deform callee. */
+    private static void applyAizCallerAdjustment(EndingZoneRuntimeState.ScreenRam ram){
         if(ram.backgroundRoutine==16)ram.backgroundCameraY=(short)(ram.backgroundCameraY-(ram.aizBackgroundScrollFixed>>16));
     }
     /** loc_5AFF0/5B012 owns exactly one AIZ deformation before its Draw_BG tail. */
@@ -118,6 +122,11 @@ public final class SwScrlEnding extends AbstractZoneScrollHandler implements Scr
         if(ram.aizDeformationFrame==levelFrame)return;
         ram.aizDeformationFrame=levelFrame;
         aizParameters(ram,services.camera().getXCopy(),services.camera().getYCopy());
+        // Only this actual logical owner publishes instruction work. The draw fallback
+        // and pure post-restore output rebuild above never submit a second term.
+        try { ram.aizDeformWork.recordExecution(services.romReader(),levelFrame); }
+        catch(IOException unavailable){ram.aizDeformWork.recordExecution(null,levelFrame);}
+        applyAizCallerAdjustment(ram);
     }
     private static int word(EndingZoneRuntimeState.ScreenRam ram,int offset){return ram.hScrollWords[offset/2];}
     private static void put(EndingZoneRuntimeState.ScreenRam ram,int offset,int value){ram.hScrollWords[offset/2]=(short)value;}

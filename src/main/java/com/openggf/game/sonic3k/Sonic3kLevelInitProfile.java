@@ -30,6 +30,18 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
     private final Sonic3kLevelEventManager levelEventManager;
     private final Sonic3kFreshTitleCardSst freshTitleCardSst = new Sonic3kFreshTitleCardSst();
 
+    private static final class FreshPhysicalClear implements Runnable {
+        private final Sonic3kLevelInitProfile profile;
+        private final LevelLoadContext context;
+        private FreshPhysicalClear(Sonic3kLevelInitProfile profile, LevelLoadContext context) {
+            this.profile = profile; this.context = context;
+        }
+        @Override public void run() {
+            com.openggf.game.internal.NativePhysicalLevelLoad.clearFresh(
+                    java.lang.invoke.MethodHandles.lookup(), this, profile, context);
+        }
+    }
+
     Sonic3kFreshTitleCardSst freshTitleCardSst() { return freshTitleCardSst; }
 
     public Sonic3kLevelInitProfile(Sonic3kLevelEventManager levelEventManager) {
@@ -89,6 +101,21 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
             animator.publishAniPlcAtVBlank();
         }
         S3kRuntimeArtCoordinator.from(runtimeArtCoordinator).publishPatternModuleDma();
+        // VInt8/10: Process_DMA_Queue -> SpecialVInt_Function -> VInt_DrawLevel
+        // (sonic3k.asm, skdisasm 044fa46). VIntC and Do_ControllerPal DMA do not
+        // call DrawLevel; a DMA-only declaration is not that additional authority.
+        boolean drawsLevel = phase != null && switch (phase) {
+            case ORDINARY_LEVEL, CREDITS_DEMO, NORMAL_PAUSE -> true;
+            default -> false;
+        };
+        var objects = levelManager != null ? levelManager.getObjectManager() : null;
+        var services = objects != null ? objects.getObjectServices() : null;
+        var parallax = services != null ? services.parallaxManager() : null;
+        if (drawsLevel && parallax != null
+                && parallax.getHandler(levelManager.getCurrentZone())
+                instanceof com.openggf.game.sonic3k.scroll.SwScrlSlots slots) {
+            slots.publishBackgroundPlaneRows(levelManager);
+        }
     }
 
     /**
@@ -148,6 +175,20 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
     @Override
     public List<InitStep> levelLoadSteps(LevelLoadContext ctx) {
         List<InitStep> steps = buildCoreSteps(ctx);
+        if (ctx.permitsInitialProcessSpritesRequest()) {
+            // Level/loc_6068 and loc_60DA fill Nem_decomp_queue before
+            // loc_62B6 installs Obj_TitleCard, with no intervening VBlank.
+            // Decode, preview, restoration and seamless loads do not run Level.
+            steps.add(1, ioStep("SubmitFreshLevelTitlePlcs",
+                    "Level/loc_6068, loc_60DA: submit before the loc_62CC wait",
+                    () -> {
+                        var world = com.openggf.game.LevelLoadRuntimeAccess.requireWorld(ctx);
+                        com.openggf.game.session.WorldPlcLifecycleAccess.require(world, Sonic3kLevelTitlePlcService.class)
+                                .beginFreshZoneTitle(world.getCurrentZone(), world.getCurrentAct(),
+                                        com.openggf.game.session.ActiveGameplayTeamResolver.resolveMainCharacterCode(
+                                                world, GameServices.configuration()));
+                    }));
+        }
         steps.addFirst(new InitStep("PrepareFreshTitleCardSst",
                 "Level/loc_62B6: fixed title owner precedes layout placement",
                 () -> freshTitleCardSst.prepare(ctx)));
@@ -168,6 +209,10 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
             steps.addFirst(new InitStep("ClearFreshLevelRng",
                     "Level/loc_60DE: clearRAM Lag_frame_count,$58 includes RNG_seed",
                     () -> GameServices.rng().setSeed(0)));
+            // addFirst AFTER RNG insertion: native loc_60DE input/Object_RAM clears precede Lag_frame_count.
+            steps.addFirst(new InitStep("ClearFreshPhysicalDisplayRam",
+                    "Level/loc_60DE: clearRAM Sprite_table_input,$400 and Object_RAM range",
+                    new FreshPhysicalClear(this, ctx)));
         }
         if (ctx.isIncludePostLoadAssembly()) {
             steps.add(new InitStep("PublishNativeCpuSavedEntryFlag",
@@ -193,6 +238,22 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
             steps.add(resetPlayerStateStep(ctx));
             steps.add(initCameraStep(ctx));
             steps.add(initLevelEventsStep());
+            // BEGIN HCZ1_DIRECT_FF_FRESH: Level $6310 water producer after camera/ScreenInit.
+            if (ctx.permitsInitialProcessSpritesRequest()) {
+                steps.add(new InitStep("RetainFreshWaterNemesisSchedule",
+                        "Level $6182/$6310: retain the actual stock HCZ1 direct-$FF water decision",
+                        () -> {
+                            var world = com.openggf.game.LevelLoadRuntimeAccess.requireWorld(ctx);
+                            var manager = GameServices.level();
+                            if (manager.getWorldSession() != world || manager.getCurrentLevel() != ctx.getLevel())
+                                throw new IllegalStateException("Fresh water producer requires its actual loaded world");
+                            if (ctx.getLevel() instanceof Sonic3kLevel level)
+                                com.openggf.game.session.WorldPlcLifecycleAccess.require(
+                                        world, Sonic3kLevelTitlePlcService.class)
+                                        .recordFreshWaterSchedule(manager, level, GameServices.camera().getX());
+                        }));
+            }
+            // END HCZ1_DIRECT_FF_FRESH
             steps.add(spawnSidekickStep());
             steps.add(initZonePlayerStateStep(ctx));
             steps.add(requestInitialProcessSpritesStep(ctx));
@@ -205,6 +266,17 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
                 freshTitleCardSst::finishInstallation));
         return List.copyOf(steps);
     }
+
+    // BEGIN HCZ1_DIRECT_FF_SELECTED_CANCEL: existing load-failure lifecycle revokes pending/committed authority.
+    @Override
+    public void cancelPendingLevelLoadWork() {
+        var manager = GameServices.levelOrNull();
+        var world = manager != null ? manager.getWorldSession() : null;
+        if (world != null && com.openggf.game.session.WorldPlcLifecycleAccess.owned(world)
+                instanceof Sonic3kLevelTitlePlcService plc)
+            plc.beginWaterScheduleSelection(true);
+    }
+    // END HCZ1_DIRECT_FF_SELECTED_CANCEL
 
     /**
      * ROM: SpawnLevelMainSprites zone-specific player state (sonic3k.asm:8132).

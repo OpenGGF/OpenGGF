@@ -1,6 +1,7 @@
 package com.openggf.game.rewind;
 
 import com.openggf.camera.Camera;
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance;
@@ -13,6 +14,7 @@ import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.StubObjectServices;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,14 +25,16 @@ import java.lang.reflect.Method;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestS3kMonitorGraphRewind {
     private static final String CONTENTS_CLASS =
             "com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance$MonitorContentsSlot";
+    private static final String MONITOR_TYPE_CLASS =
+            "com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance$MonitorType";
     private static final ObjectSpawn MONITOR_SPAWN =
             new ObjectSpawn(0x0580, 0x0520, Sonic3kObjectIds.MONITOR, 0x03, 0, false, 0x0520, 11);
     private static final ObjectSpawn DIVERGENT_CONTENTS_SPAWN =
@@ -47,20 +51,19 @@ class TestS3kMonitorGraphRewind {
     }
 
     @Test
-    void monitorContentsRestoresFreshExactStateAndRelinksParent() throws Exception {
+    void independentMonitorContentsRestoreTheirOwnExactState() throws Exception {
         Harness harness = Harness.create();
         ObjectManager objectManager = harness.objectManager();
         objectManager.setRewindInPlaceRestoreEnabledForTest(false);
         Sonic3kMonitorObjectInstance sourceMonitor = only(objectManager, Sonic3kMonitorObjectInstance.class);
-        writeBooleanField(sourceMonitor, "iconActive", true);
-        writeIntField(sourceMonitor, "iconSubY", 0x0500 << 8);
-        writeIntField(sourceMonitor, "iconVelY", -0x240);
-        writeIntField(sourceMonitor, "iconWaitFrames", 9);
-        writeBooleanField(sourceMonitor, "effectApplied", false);
         writeBooleanField(sourceMonitor, "broken", true);
         writeIntField(sourceMonitor, "mappingFrame", 0x0B);
-        spawnMonitorContentsSlot(sourceMonitor, objectManager);
+        spawnMonitorContents(sourceMonitor, objectManager);
         ObjectInstance sourceContents = onlyContents(objectManager);
+        writeIntField(sourceContents, "iconSubY", 0x0500 << 8);
+        writeIntField(sourceContents, "iconVelY", -0x240);
+        writeIntField(sourceContents, "iconWaitFrames", 9);
+        writeBooleanField(sourceContents, "effectApplied", false);
         ObjectRefId monitorId = objectId(objectManager, sourceMonitor);
         ObjectRefId contentsId = objectId(objectManager, sourceContents);
 
@@ -69,9 +72,9 @@ class TestS3kMonitorGraphRewind {
 
         objectManager.removeDynamicObject(sourceContents);
         ObjectInstance divergentContents = objectManager.createDynamicObject(
-                () -> constructContents(sourceMonitor, DIVERGENT_CONTENTS_SPAWN));
+                () -> constructContents(DIVERGENT_CONTENTS_SPAWN, "EGGMAN"));
         assertEquals(1, liveContents(objectManager).size(),
-                "diverge step should leave one unrelated S3K monitor contents slot before restore");
+                "diverge step should leave one unrelated S3K monitor contents object before restore");
 
         rewindRegistry.restore(snapshot);
 
@@ -79,37 +82,33 @@ class TestS3kMonitorGraphRewind {
                 objectById(objectManager, Sonic3kMonitorObjectInstance.class, monitorId);
         ObjectInstance restoredContents = objectByIdRaw(objectManager, Class.forName(CONTENTS_CLASS), contentsId);
         assertEquals(1, liveContents(objectManager).size(),
-                "restore must keep exactly the captured S3K monitor contents slot");
+                "restore must keep exactly the captured S3K monitor contents object");
         assertNotSame(sourceMonitor, restoredMonitor,
-                "restore must recreate the S3K monitor parent");
+                "restore must recreate the S3K monitor shell");
         assertNotSame(sourceContents, restoredContents,
-                "restore must recreate the S3K monitor contents slot");
+                "restore must recreate the S3K monitor contents object");
         assertNotSame(divergentContents, restoredContents,
-                "restore must drop the divergent S3K monitor contents slot");
-        assertTrue(readBooleanField(restoredMonitor, "iconActive"),
-                "restored monitor must keep captured icon-active state");
-        assertEquals(0x0500 << 8, readIntField(restoredMonitor, "iconSubY"),
-                "restored monitor must keep captured icon subpixel y");
-        assertEquals(-0x240, readIntField(restoredMonitor, "iconVelY"),
-                "restored monitor must keep captured icon velocity");
-        assertEquals(9, readIntField(restoredMonitor, "iconWaitFrames"),
-                "restored monitor must keep captured icon wait frames");
+                "restore must drop the divergent S3K monitor contents object");
         assertTrue(readBooleanField(restoredMonitor, "broken"),
                 "restored monitor must keep captured broken-shell state");
         assertEquals(0x0B, readIntField(restoredMonitor, "mappingFrame"),
                 "restored monitor must keep captured mapping frame");
-        assertEquals("RINGS", readObjectField(restoredMonitor, "type").toString(),
-                "restored monitor must keep subtype-derived monitor type");
-        assertSame(restoredMonitor, readObjectField(restoredContents, "parent"),
-                "monitor contents parent must resolve to the restored monitor");
-        assertSame(restoredContents, readObjectField(restoredMonitor, "monitorContentsSlot"),
-                "restored monitor must point at the restored contents slot");
-        assertNotSame(sourceMonitor, readObjectField(restoredContents, "parent"),
-                "monitor contents must not retain the stale pre-restore parent");
-        assertEquals(restoredMonitor.getX(), restoredContents.getX(),
-                "restored contents should read x through the restored parent");
+        assertFalse(readBooleanField(restoredMonitor, "iconActive"),
+                "a managed shell does not run the contents routine itself");
+        assertTrue(readBooleanField(restoredContents, "iconActive"),
+                "restored contents must keep captured active state");
+        assertEquals(0x0500 << 8, readIntField(restoredContents, "iconSubY"),
+                "restored contents must keep captured subpixel y");
+        assertEquals(-0x240, readIntField(restoredContents, "iconVelY"),
+                "restored contents must keep captured velocity");
+        assertEquals(9, readIntField(restoredContents, "iconWaitFrames"),
+                "restored contents must keep captured wait frames");
+        assertEquals("RINGS", readObjectField(restoredContents, "type").toString(),
+                "restored contents must keep the captured content type");
+        assertEquals(MONITOR_SPAWN.x(), restoredContents.getX(),
+                "restored contents keep their own x");
         assertEquals(0x0500, restoredContents.getY(),
-                "restored contents should read icon y through the restored parent");
+                "restored contents read y from their own rise state");
     }
 
     @Test
@@ -152,25 +151,28 @@ class TestS3kMonitorGraphRewind {
         return rewindRegistry;
     }
 
-    private static void spawnMonitorContentsSlot(
+    private static void spawnMonitorContents(
             Sonic3kMonitorObjectInstance monitor,
             ObjectManager objectManager) throws Exception {
-        Method method = Sonic3kMonitorObjectInstance.class
-                .getDeclaredMethod("spawnMonitorContentsSlot", ObjectManager.class);
+        Method method = Sonic3kMonitorObjectInstance.class.getDeclaredMethod(
+                "spawnMonitorContents", ObjectManager.class, AbstractPlayableSprite.class);
         method.setAccessible(true);
-        method.invoke(monitor, objectManager);
+        method.invoke(monitor, objectManager, null);
     }
 
-    private static ObjectInstance constructContents(
-            Sonic3kMonitorObjectInstance parent,
-            ObjectSpawn spawn) {
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static ObjectInstance constructContents(ObjectSpawn spawn, String typeName) {
         try {
             Class<?> type = Class.forName(CONTENTS_CLASS);
-            Constructor<?> ctor = type.getDeclaredConstructor(Sonic3kMonitorObjectInstance.class, ObjectSpawn.class);
+            Class<? extends Enum> monitorType = (Class<? extends Enum>) Class.forName(MONITOR_TYPE_CLASS);
+            Constructor<?> ctor = type.getDeclaredConstructor(ObjectSpawn.class, PlayableEntity.class);
             ctor.setAccessible(true);
-            return (ObjectInstance) ctor.newInstance(parent, spawn);
+            ObjectInstance contents = (ObjectInstance) ctor.newInstance(spawn, null);
+            Field field = field(contents, "type");
+            field.set(contents, Enum.valueOf(monitorType, typeName));
+            return contents;
         } catch (ReflectiveOperationException e) {
-            throw new AssertionError("failed to construct S3K monitor contents slot", e);
+            throw new AssertionError("failed to construct S3K monitor contents", e);
         }
     }
 

@@ -952,3 +952,78 @@ All253 required pairs have original320×224 dimensions with no crop or normaliza
 The [two-product production-handle observation](../../plans/2026-10-13-s3k-playable-completion.md#2026-10-17-passive-reunion-queue-causality) runs once each for Sonic solo/+2 and Tails solo/+2, NTSC320/FAST/LIVE with the same frozen title-owner ingress, on3896035af plus the recorded passive tool source. Each emits187 metadata rows over all47 LF4400..4446, no images; per-product4447-row state prefixes match R2. Observer/user.dir restoration and actual private config publication are verified; Main config is unchanged. Focused controls pass18/0F/0E/0S.
 
 Direct handle19, source `$1D17A6`, actual submission fingerprint `5b4280f6…`, is MEASURED `s3k-kos-v1`, assigned4 PRE_MAIN_LOOP services for both products. Their observed production queue chains are identical: head retirement4405, final parent retirement4433/4440/4443 and gate4444. Retained native Sonic retires that head4404 and gates4443; Tails retires4405 and gates4444. This establishes the production profile's collapse of native three-/four-window behavior; the existing instruction-budget research supplies the native cost explanation. Missing engine-owned CPU/hardware budgets prevent a supported timing repair. No manifest/readiness/runtime mutation or new RGB qualification follows; R2's Sonic/team late171/194 residuals remain open. Team, PAL/wide/cold/terminal breadth and6+46 acceptance are outside this metadata slice.
+
+
+## 2026-10-17 cold Knuckles eyecatch offset 619
+
+The [single-pair cold Knuckles observation](../../plans/2026-10-13-s3k-playable-completion.md#2026-10-17-cold-knuckles-eyecatch-offset-619)
+uses the original LRZ → HPZ → shipped SSZ2 controller route, ordinary Mecha
+defeat, and the sole seven-Super-Emerald inlet after defeat. From actual
+Obj_5EF68 init71034 it uses canonical native controller rows at equal offsets.
+On Main803 runtime plus the promoted capture tool, engine frame71653 (offset619,
+phase6) exactly matches retained native input433328: **0/71680 RGB pixel
+differences**, native348×240 activecrop14,8,320,224 versus engine320×224
+LIMITED238/RAW_RGB. It consumed71654 inputs (71035 route +619 native suffix).
+Source/runtime/input/ROM/spot hashes and exact command live in the linked plan
+and immutable capture provenance. CLI/private-scope controls pass3/0/0/0;
+private config publication, user.dir restoration and unchanged Main config
+hash/mtime were verified. No gameplay source changed and no further capture ran.
+
+This adds one checkpoint beyond the first32 matching eyecatch pictures and the
+independent +576/offset1163 sprite-order witness. Remaining frames, older
+terminal-init inlet limits, PAL, PCM, wide/cold native parity and timing remain
+open; it is not whole-ending certification.
+
+
+## 2026-10-17 producer-owned AIZ deformation instruction work
+
+The [bounded production unit](../../plans/2026-10-13-s3k-playable-completion.md#2026-10-17-producer-owned-aiz-deformation-instruction-work)
+exposes the existing logical Ending_BackgroundEvent AIZ1_Deform preparation as
+one ROM-authenticated **1094-instruction-cycle callee term**. All 150 code bytes,
+including operands, must match. The existing R16 hand sum and 28 complete native
+callee PC paths supply its source/comparison evidence; no new native capture ran.
+The state-$10 caller subtraction stays outside the term. Unsupported code refuses
+qualification without changing ordinary gameplay; draw/rebuild paths add no work.
+
+Short declared background-state8/12/16 fixtures verify fixed-point RAM,
+same-frame deduplication, the next actual logical call, an in-memory operand
+negative, every-byte authentication, and six-frame whole-world capture/restore
+with two forward replays of live work. Final focused coverage97 and separate
+source/authority/rewind guards112 pass with0 failures/errors/skips; exact commands,
+source identity, the short old-red and corrected camera-source fixture are in the
+linked plan. These are phase controls, not new cold-route or character breadth.
+
+Caller, ApplyDeformation, raw water/deformation and hardware availability remain
+unpriced; this diagnostic does not supply a CPU/window budget or alter profiles,
+manifests, readiness or service counts. The common term cannot distinguish the
+native Sonic3/Tails4 service behavior. The four-service production collapse,
+late +2 Sonic/team171/194 RGB residuals, remaining native breadth and6+46 timing
+acceptance stay open. Root owns later composition and combined validation.
+
+
+## 2026-10-17 producer-owned ending ApplyDeformation work
+
+The [bounded BG0/4 producer](../../plans/2026-10-13-s3k-playable-completion.md#2026-10-17-producer-owned-ending-applydeformation-work)
+records the actual event-owned ApplyDeformation call after row streaming and
+before palette cycling, independently of HScroll-bank preparation. Its captured
+descriptor uses the post-dispatch ROM table `$5B144`/`$5B15A`, prepared background
+Y and native224 lines. Complete140-byte callee authentication includes operands;
+unsupported ROM/input refuses qualification without changing ordinary output.
+C5's1094-cycle AIZ1_Deform term remains separate.
+
+Short independent controls cover both declared BG states, same-frame/draw/rebuild
+non-submission, the next logical event,63 R16 source-oracle boundary vectors,
+an independent4014-cycle hand sum, every-byte authentication and an in-memory
+operand refusal. Both states force object recreation and compare all registered
+world state immediately after restore and after two identical six-frame forward
+replays, including live descriptor state. Final108 focused and132 guards pass
+with0 failures/errors/skips; the linked plan records exact commands, source
+identity, old-red assertions and the corrected fixture epoch errors. No route or
+character breadth was added.
+
+Existing native ApplyDeformation evidence covers entry/exit rather than the full
+input-dependent body. This instruction term does not supply caller windows or
+hardware availability, and changes no profiles/manifests/readiness/service counts.
+AIZ water/delayed redraw, other caller costs, interrupt/hardware terms, the BG16
+head19 Sonic3/Tails4 difference, Hyper/Kos6+46 and PAL/PCM remain open. Root owns
+later composition and combined validation; no native/media capture ran here.

@@ -1,5 +1,14 @@
 # S3K AIZ act 1 — Sonic route matrix
 
+Original fullrun follow-up (2026-10-17): the unchanged intro/bootstrap and original
+controller route now qualify the later normal bridge's exact standing SST at
+rows9510–9513. That bridge is in the reloaded Act2 world; its bounded certificate,
+source repair, independent owner replay and inherited auxiliary gaps belong
+to the [AIZ2 matrix](s3k-aiz2.md#original-fullrun-normal-bridge-standing-sst--2026-10-17).
+The separate [R2 three-worker component qualification](s3k-aiz2.md#three-act2-level-size-workers--2026-10-17-r2)
+closes the omitted min-Y handoff owner; it adds no cold-route breadth.
+This adds no Act1 route/configuration certification.
+
 Canonical game/zone/act: Sonic 3 & Knuckles, Angel Island, act 1.
 Runtime slots: zone 0, act 0; outgoing seamless reload: zone 0, act 1.
 The trace metadata uses display act 1; it is not the runtime act index.
@@ -975,3 +984,15 @@ counters from 23 to 60, the boundary frames included. Evidence:
 
 Evidence and native pictures (`native-knux-aiz1-lfc34/35/39`):
 `spot-checks/aiz-palette-bank-v3/`.
+
+
+## Physical miniboss control follow-up — 2026-10-17 R3
+
+The [AIZ2 R3 record](s3k-aiz2.md#physical-miniboss-handoff-and-alternate-ring-blocker--2026-10-17-r3)
+keeps matched R1/R2 attribution and the complete native handoff correction.
+Final1878 runtime passes original AIZ20463 rows, exact four standing rows/all20
+assertions and the two-special-stage prefix;77 focused cases include twice-forced
+full-world recreation. The distinct alternate remains UNQUALIFIED:11 ring errors,
+first13740 rings1/2, ten newly exposed spans without native ring-position/writer
+evidence. Native four-debris/full-SST, missing aux, configuration/BK2/cold/fullchain
+limits remain; this is no act or integration certificate.

@@ -8,6 +8,16 @@ deliberate bug-fixes of ROM data), see
 
 For general (cross-game) bugs, see [known-bugs.md](known-bugs.md).
 
+**Saved-origin bonus ring retention, 2026-10-18 (locally qualified):** bonus
+entry now carries the actual collected-ring table in the existing persistent
+respawn token; InitRings restores it after reset and before touch. The unchanged
+public Gumball return oracle and fresh-session ordinary-clear control pass in
+both FDF and Root affected selections (156 cases/20 classes each). FDF's original
+Mega still misses the next bonus boundary: returned total19510 comprises18427
+physics and1083animation, first non-camera physics502 `y`038A/0385. The moved
+frontier does not identify a pickup/collision caller or certify the route. See
+the [bounded matrix](../architecture/validation/levels/s3k-bonus-stage-transitions.md#kept-origin-ring-table-root-composition-2026-10-18).
+
 **AIZ2 post-boss handoff, 2026-10-12 (candidate):** the complete original
 `aiz1_to_hcz_fullrun` control improves from 57 errors to zero, including terminal
 hardware-work ownership. The alternate `aiz_completerun` improves from 99 to 59
@@ -19,6 +29,15 @@ diagnosis is pending; no route-specific delay is accepted. The
 contains commands and rejected variants. These observations are over source
 `a0e2b79cc` in `.worktrees/ai-runtime-perf-series`; updated-base validation and
 integration remain pending.
+
+**AIZ R3 alternate ring blocker, 2026-10-17:** the physical miniboss/control
+handoff candidate on7ed6ba5b8 closes original AIZ80 and chain segment4 11789
+errors while preserving all20 exact standing assertions. Its distinct alternate
+now reports11 ring errors: ten newly exposed rings1/2 spans beginning13740, plus
+inherited26179 rings72/0. Engine LostRing SST13 increments at13740; existing
+native aux lacks the ring-position/routine/writer evidence for attribution. This
+is unqualified and blocks integration; no ring-count waiver or fitted behavior.
+See the [R3 matrix](../architecture/validation/levels/s3k-aiz2.md#physical-miniboss-handoff-and-alternate-ring-blocker--2026-10-17-r3).
 
 > **Audit note, 2026-06-12:** this file still contains many historical dedicated-trace entries
 > retained for diagnosis context. The canonical current S3K parity ledger is
@@ -88,7 +107,7 @@ Entries should include:
 ## Table of Contents
 
 1. [AIZ Completed Miniboss History on Rewind (FIXED)](#aiz-completed-miniboss-history-on-rewind-fixed)
-2. [MHZ Cluckoid Visual Child After Explicit Parent Removal (OPEN)](#mhz-cluckoid-visual-child-after-explicit-parent-removal-open)
+2. [MHZ Cluckoid Explicit-Removal Observation (NATIVE BUG UNPROVEN)](#mhz-cluckoid-visual-child-after-explicit-parent-removal-open)
 3. [ICZ2 Folded Boss Children and Reserved Slots on Rewind (OPEN)](#icz2-folded-boss-children-and-reserved-slots-on-rewind-open)
 4. [Native Ending Presentation Gaps (RESOLVED)](#native-ending-presentation-gaps-resolved)
 5. [AIZ1 Ledge — Ground Sensors and `checkFloorDist` Disagree About Solidity (OPEN — question, not yet a diagnosis)](#aiz1-ledge--ground-sensors-and-checkfloordist-disagree-about-solidity-open--question-not-yet-a-diagnosis)
@@ -195,8 +214,10 @@ negative history and artifact limits are in the
 
 ## MHZ Cluckoid Visual Child After Explicit Parent Removal (OPEN)
 
-**Location:** `CluckoidBadnikInstance.ArrowChild`; native `loc_8E2CE` and
-`Child_Draw_Sprite` retire a child when its parent has status bit7.
+**Disposition, 2026-10-18:** observed engine/API explicit-removal cleanup behavior;
+**not a source-proved shipped-ROM defect**. OPEN here means that the intended
+explicit-removal contract and separate native lifetime qualification remain
+unresolved. The prior native-deletion interpretation is rejected below.
 
 **Observed scope, 2026-10-15:** an explicit in-range dynamic-parent removal leaves
 STOCK's managed visual arrow alive through the next ordinary manager dispatch,
@@ -207,11 +228,38 @@ ordinary execution after removal. The arrow has no touch-response collision; det
 leaves intentionally continue native motion. Natural offscreen retirement and death
 were not shown broken by this test, since they can retire both actors independently.
 
+**Verified native predicate:** original locked-on ROM SHA-1
+`CFBF98C36C776677290A872547AC47C53D2761D6`, skdisasm
+`044fa46725c71187399e13f5ddb70e11d32dc024`. `loc_8E2CE` jumps to
+`Child_Draw_Sprite` at `$084920`: load `parent3` at `$46`, test only bit7 of
+`status` at parent `$2A`, branch to `Go_Delete_Sprite` if set, otherwise draw.
+There is **no parent-code-pointer-zero predicate**. `Go_Delete_Sprite` at
+`$0852A0` installs `Delete_Current_Sprite` and sets the object's status7;
+only its following own dispatch clears the whole SST at `$01ABB6`. A directly
+zeroed parent SST has status0, so that state alone cannot justify native arrow
+retirement on the next pass. The native pending-delete marker and immediate
+engine removal are different inlets.
+
+**Engine/API distinction:** `ObjectManager.removeDynamicObject` removes the
+requested registration and SST ownership before `onUnload`; STOCK's unload
+callback does not set `destroyed`. `ObjectInstance.onUnload` documents an optional
+cleanup hook (default no-op), and `AbstractObjectInstance.onRemovedFromObjectManager`
+offers owner-reference detachment. Neither named contract guarantees immediate
+cascade retirement of all attached children. No explicit authority for such an
+API guarantee was identified in these seams. Any desired cleanup extension must
+be specified independently, not called native parity or inferred from a cleared
+code pointer.
+
 Second Strike's PULSED opt-in unload defense retires its arrow and stops further
-pressure/emissions; it does not silently repair STOCK. The scoped tests and rejected
-broader interpretation are recorded in the [MHZ native plan](../architecture/plans/2026-10-15-second-strike-c2-mhz.md).
-**Removal condition:** native owner/child lifetime qualification covering explicit
-removal, normal offscreen/death, and rewind without altering detached leaves.
+pressure/emissions; it does not silently alter STOCK. The historical diagnostics
+and narrower PULSED behavior are recorded in the
+[MHZ native plan](../architecture/plans/2026-10-15-second-strike-c2-mhz.md).
+No runtime/test change, new old-red, execution or native capture was made for
+this correction. It neither fixes arbitrary explicit removal nor certifies
+normal offscreen/death/rewind behavior. Future native lifetime controls must
+start from a source-backed status7/pending-delete inlet and preserve detached
+leaves; any explicit API cleanup requirement remains a separate authority decision.
+[Rejected interpretation and exact immutable-ROM kill evidence](../architecture/plans/2026-10-13-s3k-playable-completion.md#cluckoid-explicit-removal-native-oracle-rejected--2026-10-18).
 
 ## ICZ2 Folded Boss Children and Reserved Slots on Rewind (OPEN)
 
@@ -6177,6 +6225,19 @@ against `sub_32F56` (sonic3k.asm:68950-68992) and Obj_Bumper
 - **Suspected cause** — Unmeasured rather than known wrong: the only fixture that reaches the exit is `TestS3kMegaRunChain`, which is red in segment 0 on develop (`duplicate or reordered hardware service boundary at raw_frame=1053: VINT_SERVICE`).
 - **Removal condition** — `TestS3kMegaRunChain` reaches the gumball exit, the card loop and load span match the recorded rows through `HardwareTimingService` (manifest entry if a load span is needed), and the OPTION B re-anchor is deleted.
 
+**Bounded producer repair, 2026-10-17 (local preservation):** an independent actual
+Knuckles/Gumball ROM component exposed the omitted Num1 archive at `$53D`; the
+bonus initializer now submits all four native archives using apparent act.
+Its original semantic old-red and120 affected cases are green, including the
+unchanged drain/readiness/claim controls and two title/resource restore/forward
+cycles. This supersedes neither the original-route closure obligation nor the
+historical title/load-span timings above. The fresh97-case guard phase has one
+LevelManager source-size ratchet failure, so its conditional original maintained
+route was not launched after the fix. The full two-module/four-direct offset,
+recorded return readiness and SS/fdf consumption remain unqualified; no budget
+waiver or matching-baseline attribution was made. [Actual epochs, source pins
+and STOP](../architecture/plans/2026-10-13-s3k-playable-completion.md#r29-conditional-guard-gate-red-original-maintained-route-not-launched--2026-10-17).
+
 ---
 
 ## S3K Mega Run Chain: Duplicate VINT_SERVICE Boundary in Segment 0
@@ -6407,10 +6468,10 @@ and a missing Hyper mutation hook; those are covered by the encounter regression
 
 ## Object `$78` Is Registered Twice; the First Implementation Is Dead Code
 
-- **Location** — `Sonic3kObjectRegistry.registerDefaultFactories`, lines 217-218 and 1411-1412; `FbzDezPlayerLauncherInstance` (303 lines) and `FbzDezPlayerLauncherObjectInstance` (95 lines)
-- **Symptom** — `Sonic3kObjectIds.FBZ_DEZ_PLAYER_LAUNCHER` (`$78`, `Obj_FBZDEZPlayerLauncher`) is `factories.put(...)` twice in the same method. The later call wins, so every `$78` placement — 10 of them in Death Egg act 1, plus the Flying Battery ones — resolves to `FbzDezPlayerLauncherObjectInstance`, and `FbzDezPlayerLauncherInstance` never runs. Both are full implementations of the same ROM object and they differ in detail (only the dead one implements `SolidRoutineProfile` and plays a `Sonic3kSfx`), so the shadowing is silent behaviour selection, not a harmless duplicate.
-- **Suspected cause** — Two independent ports of the same ROM object landed without either noticing the other; no test asserts that a given id has exactly one factory.
-- **Removal condition** — One class owns `$78`, with the behavioural difference between the two resolved against `sonic3k.asm $3B942-$3BA8A`; the other is deleted; a registry test asserts no id is registered twice.
+- **Location** — Sonic3kObjectRegistry.registerDefaultFactories registers FbzDezPlayerLauncherInstance and later replaces it with FbzDezPlayerLauncherObjectInstance for the same $78 key.
+- **Current scope (2026-10-20)** — The later factory remains active for all ten DEZ1 placements and the FBZ placements. It already returns SolidRoutineProfile.topSolid(false) and plays Sonic3kSfx.FLOOR_LAUNCHER; the former claim that only the shadowed class had those behaviors was stale. No additional motion/rider/return omission was established by this source audit.
+- **Separate local correction** — The missing DEZ1 art profile is corrected and all four [launcher art checks](../architecture/validation/levels/s3k-dez-act1.md#native-player-launcher-art-publication--2026-10-20) pass. Fresh DEZ2 lacks the required PLC resource and receives no fabricated profile. This does not remove duplicate registration or certify physical/native presentation.
+- **Removal condition** — Reconcile both implementations against sonic3k.asm $3B942-$3BA8A, retain one factory/class without changing currently qualified behavior, and add a registry uniqueness check. Placement census/factory-winner checks alone do not establish uniqueness.
 
 ---
 
@@ -6519,21 +6580,37 @@ needs its own ROM check and focused test before changing.
   appear swapped (ROM frames 3,3,4,5).
   `objects/AizMinibossFlameChild` — explode frames drawn from the wrong sheet;
   `AizMinibossImpactFlameChild` — uses the explosion art instead of the flame art.
-- **Location:** `objects/AizFlippingBridgeObjectInstance.java`, the `sfx_GlideLand` gate. Its
-  `+ 3` is genuine (`move.b (Level_frame_counter+1).w,d0 / addq.b #3,d0 / andi.b #7,d0`), but
-  the engine applies it to `V_int_run_count` instead of `Level_frame_counter`, so the sound's
-  8-frame phase depends on how far the two counters have drifted apart. The EggRobo, EggRobo
+- **Locally corrected, 2026-10-20:** `objects/AizFlippingBridgeObjectInstance.java` now applies
+  the native `sfx_GlideLand` gate `((Level_frame_counter low byte + 3) & 7) == 0` to the
+  injected level counter. Native `sub_2AA7E` and original ROM bytes at `$2AAB4/$2AADC`
+  confirm that `(Level_frame_counter+1).w` selects the low byte, not an increment or
+  `V_int_run_count`. Eight focused component checks pass without failures/errors/skips,
+  including both directions, timer/offscreen controls and existing recreation coverage.
+  Actual placed-route cadence, audible PCM and complete-world replay of both clock owners
+  remain unqualified; see the [AIZ2 matrix](../architecture/validation/levels/s3k-aiz2.md#flipping-bridge-sound-clock--2026-10-20).
+  The EggRobo, EggRobo
   shot and Cluckoid gates listed here before were byte-address misreads of
   `(V_int_run_count+3)` and were fixed on 2026-10-09.
-- **Location:** `objects/badniks/EggRoboBadnikInstance.java:145` — the fighter subtype never
-  bobs: ROM `loc_918C4` falls through into `sub_918E2` (y_vel `$100`, `Swing_UpAndDown`
-  max `$100`, accel 8), but the engine leaves the swing at 0 for `Mode.FIGHTER`, so its legs
-  stay on frame 5.
-- **Location:** `objects/bosses/HczEndBossRobotnikShip.java:57,76` — Robotnik's head toggles
-  every 5 frames (`AniRaw_RobotnikHead` delay 5 shows each frame 6), and the escaping ship
-  uses frame 10 where `Obj_RobotnikShip2` keeps frame 5. `HczEndBossInstance.java:1030-1032`
-  draws the lower housing (frame 1) a second time at the body's priority, besides
-  `HczEndBossLowerHousing`.
+- **EggRobo fighter swing claim disconfirmed locally, 2026-10-20:** Current
+  inherited composition WIP already initializes x velocity0, swing maximum/Y
+  velocity $100 and acceleration8, then swings before full fractional movement,
+  matching loc_918C4/sub_918E2/loc_9159A. Two existing flip cases pass the first
+  eight literal hover steps. The jet child selects frames6/5/4 at the native
+  velocity thresholds in source. No new fighter gameplay patch was made here;
+  full reversal/jet-frame runtime coverage and the natural paired route remain
+  separate. NPC/boss EggRobo owners were not audited.
+- **HCZ managed ship graph locally corrected, 2026-10-20:** Ship/Head/Flame
+  have actual managed dispatch, exact captured parent references and pure
+  recreation shells. Rise/countdown/raw-head animation, one-shot allocation
+  failure, Flame parity and pending-delete draw tail are covered. All40 HCZ
+  cases pass within the227-case focused selection; see the
+  [current HCZ2 scope](../architecture/validation/levels/s3k-hcz2.md#managed-robotnik-ship-head-and-flame--2026-10-20).
+  Underflow still draws; the next Ship dispatch deletes. Declared component
+  defeat/flee inlets do not prove a natural fight or route. The later
+  [Knuckles art and subtype4 explosion correction](../architecture/validation/levels/s3k-hcz2.md#knuckles-head-art-and-ship-owned-explosions--2026-10-20)
+  has8+10 passing maintained cases; the existing graph class passes4 after one
+  test-only exact-slot probe correction. Retained-root/results/geyser flow,
+  native pixels and the earlier lower-housing finding remain separate.
 - **Location:** `objects/bosses/LbzFinalBoss1Instance.java` — every child reports bucket 4,
   where the ROM uses `$280` (head, thrusters, sparks), `$180` (laser turrets), `$300` (orb) and
   `$100` (muzzle); laser turrets flicker every other frame in idle, which the ROM only does
@@ -6935,3 +7012,71 @@ Still open:
 
 ### Removal condition
 Each item matches native RAM at its handoff, with a focused test.
+
+
+### Pachinko round-bumper score sprite — fixed in bounded 2026-10-17 candidate
+
+Actual round-bumper contact credited 10 points without allocating native
+`Obj_EnemyScore`. The [bounded producer and presentation dependency](../architecture/validation/levels/s3k-bonus-stage-transitions.md#pachinko-bumper-score-popup-producer--2026-10-17)
+now allocate the existing frame-4 popup after credit and retain score on pool
+exhaustion; S3K points use native bucket 1/high plane priority. Score/cap/
+persistence behavior is unchanged. Two pre-existing Sonic+Tails Pachinko trace
+frontiers remain exactly equal to Root28; cold-route/native RGB qualification
+and Root integration are not claimed by this local unit.
+
+
+### Bonus terrain handoff independently repaired — local 2026-10-18 component
+
+Native Level/loc_6310 calls LoadLevelLoadBlock after title/Nemesis readiness for
+bonus zones too. Ordinary public Knuckles/Gumball entry previously produced only
+the four title archives, missing ROM3FEE2E/VRAM0/output9792/modules3. The corrected
+origin-title inlet proved native five-versus-four old-red before the narrow
+active-bonus eligibility fix. The existing captured title handoff index now
+survives omitted presentation and bonus initialization; load flags, two-child
+bonus graph and queue/timing authority are unchanged. Gumball/Pachinko/Slot ROM
+terrain/dedup, normal-fresh and five-key twice-restore controls pass within R36's
+145 cases/19 classes/0 skips. Main803 reproduces the water-only fixture's immediate
+private-entry/private-exit art-FIFO warning; no art-readiness certificate or warning
+suppression. Child source-size extraction/fresh combined guards, full producer
+ordinal attribution, recorded readiness/SS/fdf and full routes remain separate.
+[Actual source epochs, original results and matched warning limit](../architecture/plans/2026-10-13-s3k-playable-completion.md#r37-qualified-component-preservation-and-inherited-warning--2026-10-18).
+
+
+## CNZ2 Knuckles admission: bounded producer repair, pipeline still open
+
+The event now uses actual primary Knuckles and native `loc_5216C` X/Y gates,
+admits the teleporter and separate capsule through the two actual allocation
+paths, and appends `PLC_EggCapsule` only after the second succeeds. Failure still
+advances FG4 and publishes the native clamp. Event admission does not widen the
+teleporter’s later `$4A38/$4A40` airborne gate. The independent producer and real
+pool-exhaustion controls pass within the [CNZ2 record](../architecture/validation/levels/s3k-cnz-act2.md#knuckles-event-admission-and-raw-plc-producer--2026-10-18).
+
+This is not completion of the Knuckles route. Ordinary Nemesis preparation/service
+and pattern/renderer publication, shared-module versus world queue ownership,
+physical full-capacity behavior and the uninterrupted outgoing route remain open. Existing title/results readiness
+queues and this raw descriptor submission do not qualify those operations. No ROM
+deviation is accepted.
+
+The [2026-10-20 capsule handoff](../architecture/validation/levels/s3k-cnz-act2.md#knuckles-capsule-results-and-camera-opening--2026-10-20)
+now qualifies real results publication, FG4 allocation refusal/retry, P1 control
+restoration and gradual camera opening in the positioned native320 Knuckles inlet,
+including two complete-world replay cycles and focused-P2 authority. Level music
+is requested on the successful handoff; native scene/music identity and explicit
+Super-state controls remain unqualified.
+
+The [native charge prefix](../architecture/validation/levels/s3k-cnz-act2.md#knuckles-native-beam-capture-and-lift-prefix--2026-10-20)
+now uses the shared beam, native capture and lift through progress `$11`, with
+ROM-backed graphics and reciprocal rewind links. The native320/off solo Knuckles
+fixture starts from the declared positioned button inlet before actual results;
+all later travel uses ordinary Right and grounded-state Jump inputs. It restores
+and replays all 59 registered keys twice. Thirty-one unchanged focused controls
+passed in the initial selection, and the affected three-case charge class passed
+after correcting its separate positioned component inlet; this is not one green
+34-case invocation. The later [actual ICZ handoff](../architecture/validation/levels/s3k-cnz-act2.md#knuckles-hide-camera-rise-and-icz-handoff--2026-10-20)
+now qualifies hide `$18`, camera rise, real fade/load and released ICZ with two
+complete-world replay cycles from that same positioned pre-results inlet. The
+affected 14-class composition passed 250/0F/0E/0S after correcting production
+allocation/initial-animation-domain defects and the separate beam test identity
+context. Cold traversal, product breadth and physical KosM/VRAM/pixel evidence
+remain open. These local results do not widen the earlier producer run or certify
+the entire act.
