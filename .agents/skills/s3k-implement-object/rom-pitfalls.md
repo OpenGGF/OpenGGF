@@ -6543,3 +6543,22 @@ HCZ real-manager/ROM old-red and local `dae6c29e`, 2026-10-18. Its 195-test isol
 qualification covers both P2 input variants and bit7/P1 controls. Root's combined
 component lifecycle71445 subsequently passed379T0F0E0S; the original route, native
 row 442 caller, competition and extra-player breadth remain unqualified.
+
+## Packed art scaling samples bytes, with a separate partial-tail boundary
+
+`sub_246DA` advances byte offsets, then masks alternating high/low nibbles.
+For modified scale 8, `loc_24984` merges HIGH(byte0)|LOW(byte1): literal
+`12 34` becomes `14`, not `13`. Modified 9 skips every ninth source byte;
+the smaller specialized branches mix whole-byte copies and nibble merges.
+Do not replace them with a pixel-coordinate sampler.
+
+Only `sub_24802` clears the just-read sample after ADD/ADDX makes the NEW
+byte index reach `$40`; `loc_2479C` full blocks retain that last sample.
+Both stock MGZ and EggRobo source banks duplicate every byte's nibbles,
+concealing interior nibble mistakes. At original scale `$7C`, MGZ row 16
+bytes `00/44/55/BB` at offsets `0/16/32/48` still produce `04 50`, not `04 5B`,
+because the fourth sample is cleared. Use literal instruction controls and
+separate full-block/tail tests; a second coordinate formula or an unexplained
+output CRC is not an independent oracle. Origin: packed-scaler correction,
+2026-10-20; `TestMgzEndBossArtScaler` and the MGZ2 coverage matrix. The Java
+caller is MGZ only; this does not establish an SSZ producer or scene parity.
