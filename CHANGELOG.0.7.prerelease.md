@@ -5,6 +5,11 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Multiplayer services:** The master recording/verifier API bounds outstanding
+  requests and copied bodies across connections, closes overlapping HTTP pipelines,
+  and releases queued work on disconnect or timeout. Netty and Jackson use their
+  patched 4.1.139.Final and 2.22.3 releases.
+
 - **Super Sonic Bros.:** a new example mod, a platform fighter for one to four
   players (people or CPUs) on Sonic 3 & Knuckles. Sonic, Tails, Knuckles, Robotnik,
   Mecha Sonic, Egg Robo and Rhinobot each have a full move set (tilts, chargeable
