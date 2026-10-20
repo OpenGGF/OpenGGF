@@ -65,7 +65,10 @@ verifier exists — main spec §2).
   and one replaceable pending challenge, and cancels superseded work inside
   the hashing loop. A solve has a 30-second deadline; connection admission's
   shorter timeout also cancels it. Retirement, failure and close stop the worker,
-  and a superseded proof waiting on transport backpressure is discarded.
+  and a superseded proof waiting on transport backpressure is discarded. Proof
+  writes retain one replaceable slot behind the active write, reserving one
+  outbound ordering position regardless of how many challenges finish; replacing
+  the slot does not append send-chain continuations. Retirement clears the slot.
 - Identity is deliberately *not* prevention against regeneration — it is the
   substrate that makes bans stick, names unforgeable, and trust accruable.
   Sybil economics are handled by the trust ladder (§4).
@@ -321,6 +324,8 @@ caps, a global speed ceiling from the repo's physics constants).
   may use `ws://`/`http://` only with literal loopback IPv4/IPv6 addresses.
   Hostnames such as `localhost`, shortened IPv4 forms, user-info and fragment
   authorities do not grant that exception. No DNS resolution grants trust.
+  RecordingUploader itself restricts insecure TLS trust to literal loopback
+  before retaining or copying upload work, independently of scene/session gates.
   A reverse proxy must preserve the certificate identity seen by both protocol
   endpoints; independently terminated TLS certificates cannot share proofs.
   A future trusted-edge deployment requires an authenticated server-side binding

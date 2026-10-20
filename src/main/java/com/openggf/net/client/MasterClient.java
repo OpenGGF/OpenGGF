@@ -61,6 +61,10 @@ public final class MasterClient implements AutoCloseable {
             new ArrayBlockingQueue<>(1), Thread.ofVirtual().name("master-pow-", 0).factory());
     private FutureTask<Void> powTask;
     private volatile long powGeneration;
+    /** Under sendLock: one replaceable proof behind the current transport write. */
+    private String pendingPowText;
+    private long pendingPowGeneration;
+    private boolean powWriteQueued;
     private volatile WebSocket webSocket;
     private volatile ControlMessage.JoinAccepted joinAccepted;
     private volatile HostMasterLink hostLink;
@@ -537,18 +541,41 @@ public final class MasterClient implements AutoCloseable {
             if (powTask != null) { powTask.cancel(true); powTask = null; }
             powExecutor.shutdownNow();
         }
+        synchronized (sendLock) {
+            pendingPowText = null;
+        }
     }
 
     private void sendPowText(String text, long generation) {
         WebSocket socket = webSocket;
         if (socket == null) return;
-        PendingSend send;
+        PendingSend send = null;
         synchronized (sendLock) {
-            if (retired.get()) return;
-            send = reserveSend(() -> discardQueuedSends || generation != powGeneration
-                    ? CompletableFuture.completedFuture(socket) : socket.sendText(text, true));
+            if (retired.get() || generation != powGeneration) return;
+            pendingPowText = text;
+            pendingPowGeneration = generation;
+            if (!powWriteQueued) {
+                powWriteQueued = true;
+                // Reserve this ordering position once. Further solves replace the
+                // slot instead of retaining another continuation per challenge.
+                send = reserveSend(() -> dispatchPowText(socket));
+            }
         }
-        send.dispatch();
+        if (send != null) send.dispatch();
+    }
+
+    private CompletableFuture<WebSocket> dispatchPowText(WebSocket socket) {
+        String text;
+        long generation;
+        synchronized (sendLock) {
+            text = pendingPowText;
+            generation = pendingPowGeneration;
+            pendingPowText = null;
+            powWriteQueued = false;
+        }
+        // No transport calls or user continuations run while holding sendLock.
+        return text == null || retired.get() || discardQueuedSends || generation != powGeneration
+                ? CompletableFuture.completedFuture(socket) : socket.sendText(text, true);
     }
 
     private boolean completeReply(ControlMessage message) {

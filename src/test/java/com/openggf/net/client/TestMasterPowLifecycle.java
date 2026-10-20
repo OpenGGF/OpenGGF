@@ -13,6 +13,71 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class TestMasterPowLifecycle {
     @Test
+    void closeClearsCoalescedProofBeforeBackpressureReleases(@TempDir Path dir) throws Exception {
+        var client = client(dir);
+        var firstSend = new CompletableFuture<WebSocket>();
+        var closed = new CountDownLatch(1);
+        var socket = new Socket() {
+            @Override public CompletableFuture<WebSocket> sendText(CharSequence text, boolean last) {
+                super.sendText(text, last); return firstSend;
+            }
+            @Override public CompletableFuture<WebSocket> sendClose(int code, String reason) {
+                closed.countDown(); return CompletableFuture.completedFuture(this);
+            }
+        };
+        set(client, "webSocket", socket);
+        var admitted = new CompletableFuture<MasterClient>();
+        try {
+            receive(client, socket, new ControlMessage.PowChallenge("JOIN", "AA==", 0), admitted);
+            ((Future<?>) field(client, "powTask")).get(1, TimeUnit.SECONDS);
+            receive(client, socket, new ControlMessage.PowChallenge("IDENTITY", "AA==", 0), admitted);
+            ((Future<?>) field(client, "powTask")).get(1, TimeUnit.SECONDS);
+            assertNotNull(field(client, "pendingPowText"));
+            client.close();
+            assertNull(field(client, "pendingPowText"), "retirement releases pending proof custody immediately");
+            firstSend.complete(socket);
+            assertTrue(closed.await(1, TimeUnit.SECONDS));
+            assertEquals(1, socket.messages.size(), "retirement cannot dispatch the pending proof");
+        } finally { client.close(); firstSend.complete(socket); }
+    }
+
+    @Test
+    void solvedChallengeStormRetainsOnePendingProofWrite(@TempDir Path dir) throws Exception {
+        var client = client(dir);
+        var firstSend = new CompletableFuture<WebSocket>();
+        var socket = new Socket() {
+            @Override public CompletableFuture<WebSocket> sendText(CharSequence text, boolean last) {
+                super.sendText(text, last);
+                return messages.size() == 1 ? firstSend : CompletableFuture.completedFuture(this);
+            }
+        };
+        set(client, "webSocket", socket);
+        var admitted = new CompletableFuture<MasterClient>();
+        try {
+            receive(client, socket, new ControlMessage.PowChallenge("JOIN", "AA==", 0), admitted);
+            ((Future<?>) field(client, "powTask")).get(1, TimeUnit.SECONDS);
+            assertEquals(1, socket.messages.size());
+            receive(client, socket, new ControlMessage.PowChallenge("JOIN", "AA==", 0), admitted);
+            ((Future<?>) field(client, "powTask")).get(1, TimeUnit.SECONDS);
+            Object pendingTail = field(client, "sendChain");
+            for (int index = 0; index < 500; index++) {
+                receive(client, socket, new ControlMessage.PowChallenge(
+                        index == 499 ? "IDENTITY" : "JOIN", "AA==", 0), admitted);
+                ((Future<?>) field(client, "powTask")).get(1, TimeUnit.SECONDS);
+                assertSame(pendingTail, field(client, "sendChain"),
+                        "solved stale proofs must replace one pending write, not append retained continuations");
+            }
+            assertEquals(1, socket.messages.size());
+            firstSend.complete(socket);
+            ((CompletableFuture<?>) pendingTail).get(1, TimeUnit.SECONDS);
+            assertEquals(2, socket.messages.size());
+            var last = assertInstanceOf(ControlMessage.PowSolution.class,
+                    new com.openggf.net.protocol.ControlJsonCodec().decode(socket.messages.getLast()).message());
+            assertEquals("IDENTITY", last.kind());
+        } finally { client.close(); firstSend.complete(socket); }
+    }
+
+    @Test
     void repeatedChallengesKeepOnlyOneQueuedSolverAndOnlyLatestProof(@TempDir Path dir) throws Exception {
         var client = client(dir);
         var socket = new Socket();

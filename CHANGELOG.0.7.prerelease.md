@@ -8,8 +8,10 @@ Unreleased. The earlier development themes remain in
 - **Time Attack multiplayer security:** identity proofs bind the complete join
   intent to the master, direct-room or relay-room role and observed TLS
   certificate. Remote browser, join and recording endpoints require TLS;
-  plaintext is restricted to literal-loopback development. Master challenge
-  solving is serial, cancellable and limited to 24 bits and 30 seconds.
+  plaintext and insecure TLS trust are restricted to literal-loopback development,
+  including recording uploads. Master challenge solving is serial, cancellable and
+  limited to 24 bits and 30 seconds, with one coalesced pending proof write under
+  transport backpressure.
 
 - **Super Sonic Bros.:** a new example mod, a platform fighter for one to four
   players (people or CPUs) on Sonic 3 & Knuckles. Sonic, Tails, Knuckles, Robotnik,
