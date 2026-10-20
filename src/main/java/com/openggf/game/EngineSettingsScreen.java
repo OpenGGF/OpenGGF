@@ -72,6 +72,7 @@ public final class EngineSettingsScreen {
     private int choice;
     private boolean keyMenu;
     private boolean capturing;
+    private int captureModifier = GLFW_KEY_UNKNOWN;
     private boolean prompt;
     private int promptChoice;
     private MenuTextEditor textEditor;
@@ -592,7 +593,7 @@ public final class EngineSettingsScreen {
         if (MenuInput.accept(input)) {
             MenuFeedback.emit(CONFIRM);
             switch (choice) {
-                case 0 -> capturing = true;
+                case 0 -> { captureModifier = GLFW_KEY_UNKNOWN; capturing = true; }
                 case 1 -> openTextEditor();
                 case 2 -> { draft.set(selected(), ""); keyMenu = false; }
                 case 3 -> { draft.reset(selected()); keyMenu = false; }
@@ -602,21 +603,39 @@ public final class EngineSettingsScreen {
     }
 
     private void updateCapture(InputHandler input) {
-        if (MenuInput.textBack(input)) { capturing = false; MenuFeedback.emit(CANCEL); return; }
+        if (MenuInput.textBack(input)) {
+            capturing = false;
+            captureModifier = GLFW_KEY_UNKNOWN;
+            MenuFeedback.emit(CANCEL);
+            return;
+        }
         for (int key = GLFW_KEY_SPACE; key <= GLFW_KEY_LAST; key++) {
-            if (key >= GLFW_KEY_LEFT_SHIFT && key <= GLFW_KEY_RIGHT_SUPER) continue;
             if (!MenuInput.textKeyPressed(input, key)) continue;
+            if (key >= GLFW_KEY_LEFT_SHIFT && key <= GLFW_KEY_RIGHT_SUPER) {
+                // Wait for a following key to distinguish a chord from a modifier tap.
+                captureModifier = key;
+                continue;
+            }
             String chord = (input.isPhysicalControlDown() ? "CTRL+" : "")
                     + (input.isPhysicalShiftDown() ? "SHIFT+" : "")
                     + (input.isPhysicalAltDown() ? "ALT+" : "")
                     + (input.isPhysicalSuperDown() ? "META+" : "")
                     + GlfwKeyNameResolver.nameOf(key);
-            draft.set(selected(), chord);
-            MenuFeedback.emit(CONFIRM);
-            capturing = false;
-            keyMenu = false;
+            finishCapture(chord);
             return;
         }
+        if (captureModifier != GLFW_KEY_UNKNOWN && !input.isPhysicalKeyDown(captureModifier)) {
+            // Modifier keys are valid player buttons too (stock P2 A uses Right Shift).
+            finishCapture(GlfwKeyNameResolver.nameOf(captureModifier));
+        }
+    }
+
+    private void finishCapture(String chord) {
+        draft.set(selected(), chord);
+        MenuFeedback.emit(CONFIRM);
+        capturing = false;
+        captureModifier = GLFW_KEY_UNKNOWN;
+        keyMenu = false;
     }
 
     public boolean consumeCloseRequested() {

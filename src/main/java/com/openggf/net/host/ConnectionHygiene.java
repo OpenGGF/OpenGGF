@@ -1,6 +1,7 @@
 package com.openggf.net.host;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /** Shared per-IP connection and per-channel message-rate hygiene. */
@@ -20,12 +21,18 @@ public final class ConnectionHygiene {
         }
 
         public boolean tryAcquire(String host) {
-            AtomicInteger count = counts.computeIfAbsent(host, ignored -> new AtomicInteger());
-            if (count.incrementAndGet() <= maxPerIp) {
-                return true;
-            }
-            release(host);
-            return false;
+            AtomicBoolean acquired = new AtomicBoolean();
+            // Membership and admission must share release's per-key critical section:
+            // an increment on a counter just removed by release is otherwise untracked.
+            counts.compute(host, (ignored, existing) -> {
+                AtomicInteger count = existing == null ? new AtomicInteger() : existing;
+                if (count.get() < maxPerIp) {
+                    count.incrementAndGet();
+                    acquired.set(true);
+                }
+                return count.get() == 0 ? null : count;
+            });
+            return acquired.get();
         }
 
         public void release(String host) {

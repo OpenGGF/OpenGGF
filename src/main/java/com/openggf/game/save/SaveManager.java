@@ -95,7 +95,12 @@ public final class SaveManager {
 
     private byte[] encodeEnvelope(String game, int slot, Map<String, Object> payload) throws IOException {
         String payloadJson = mapper.writeValueAsString(payload);
-        SaveEnvelope env = new SaveEnvelope(1, game, slot, payload, sha256(payloadJson));
+        // Check the representation the reader actually verifies. Permitted
+        // decimals such as BigDecimal("12.3400") decode as Double 12.34 in an
+        // untyped JSON map; hashing the original numeric spelling made an
+        // untouched save fail its own checksum after that normal conversion.
+        String checksumJson = mapper.writeValueAsString(mapper.readValue(payloadJson, MAP_TYPE));
+        SaveEnvelope env = new SaveEnvelope(1, game, slot, payload, sha256(checksumJson));
         return mapper.writeValueAsBytes(env);
     }
 

@@ -5,6 +5,16 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Super Sonic Bros.:** a new example mod, a platform fighter for one to four
+  players (people or CPUs) on Sonic 3 & Knuckles. Sonic, Tails, Knuckles, Robotnik,
+  Mecha Sonic, Egg Robo and Rhinobot each have a full move set (tilts, chargeable
+  smashes, aerials, four specials, grabs and throws) drawn from their ROM sprites, and
+  fight on ten islands carved from real acts with their own backdrops and music.
+  Damage builds from 0% and drives knockback; stock, time and stamina modes, teams,
+  eight monitors, nine CPU levels, a six-round single-player Classic ladder, a live
+  move list, two keyboard layouts plus gamepads, saved rules and records. See
+  [the README](examples/super-sonic-bros/README.md).
+
 - **Colour expansion:** Settings → Display offers a saved Full/Limited range
   independently of the existing colour profile. Full keeps current output;
   Limited caps palette RGB at 238 after fades and profile conversion, including

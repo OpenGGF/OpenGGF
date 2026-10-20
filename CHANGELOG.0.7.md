@@ -8,16 +8,31 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 - **Recording, editor and service reliability:** input movies keep a single recording
   control tick and block rewind while recording; malformed metadata stays isolated,
-  and older movies with missing engine identity remain playable. Editor painting
+  and older movies with missing engine identity remain playable. ZIP movie detection
+  follows file contents, live rewind preserves completed ticks across gamepad pause,
+  and decimal-valued standalone saves retain valid checksums. Time Attack imports
+  ghosts for the selected act before applying its race limit and shows the finish
+  delta against the previous best. Editor painting
   follows signed vertical camera coordinates, blank projects reserve empty terrain
   before spare slots, and separate ring layouts support their full height. Stereo
   creator sounds replay correctly, PNG imports retain transparency keys, legacy
   save deletion cannot restore older data, and Mod Manager reevaluates freed budgets.
   Multiplayer retains verified bests after failed improvements, refreshes podiums
   after verdicts, preserves result slot ownership, restores far-player positions
-  after near streams expire, and supplies current votes to late joiners. Null
+  after near streams expire, supplies current votes and podiums to late joiners,
+  joins authenticated IPv6 hosts, and retains per-address connection limits during
+  concurrent turnover. Null
   configuration files recover safely, legacy Start bindings migrate, and capture
-  codec placeholders expand into separate ffmpeg arguments.
+  codec placeholders expand into separate ffmpeg arguments. Gameplay videos use
+  only their current capture's frames and retain the exact cadence of strided captures.
+  Trace video output honors the configured container, including MP4.
+  Key names resolve consistently across locales, legacy keypad bindings keep their
+  physical keys, and binding capture accepts modifier taps alongside chords.
+  Editor composition tools follow layer switches and adjust the selected cell's
+  collision profile. Full-window Kosinski backreferences decode correctly, and
+  split DPLC sprite pieces retain their flipped tile positions. Creator starter
+  IDs produce valid Java names and YAML strings, and packaged mod bytes stay
+  stable across host time zones.
 
 - **Stock-game results and issue fixes:** act and special-stage bonuses award
   the full native point totals, with S1/S2 trailing-zero art and S3K bonus digits

@@ -133,7 +133,9 @@ public class KosinskiReader {
                     int highByte = readByte.read();
 
                     distance = ((highByte & 0xF8) << 5) | lowByte;
-                    distance = ((distance ^ 0x1FFF) + 1) & 0x1FFF; // Convert from negative two's complement to positive
+                    // Kos_SeparateRLE sign-extends the encoded 13-bit offset:
+                    // zero is -8192, rather than a reference to the write head.
+                    distance = SLIDING_WINDOW_SIZE - distance;
 
                     count = highByte & 0x07;
 
@@ -177,8 +179,9 @@ public class KosinskiReader {
                         count += 1;
                     }
 
-                    distance = (readByte.read() ^ 0xFF) + 1; // Convert from negative two's complement to positive
-                    distance &= 0xFF; // Ensure byte range
+                    // Kos_RLE .loop2 starts d2 at -1 then replaces its low byte,
+                    // so the full short-match range is -256 through -1.
+                    distance = 0x100 - readByte.read();
 
                     if (printDebugInformation) {
                         System.err.printf("%X - Inline match: At %X, src %X, len %X%n",

@@ -159,6 +159,18 @@ animation phase with decoded images; a UV-only test or one screenshot misses
 an intrinsically reversed pose. Facing should follow AI intent, since damage
 recoil reverses velocity without changing the target.
 
+
+Super Sonic Bros. repeated this in the 2026-10-20 facing audit (base `4ffa7d4f50`):
+Mecha Sonic's raw art faces left; Sonic $B4 and Knuckles $B5 hang left. `SceneDraw.flipX`
+is a geometric mirror, not semantic facing. Compose source orientation, desired
+pose direction and actor facing once. Do not normalize every frame globally:
+Sonic $CC is left-facing when used alone but belongs unchanged in a full spin.
+Egg Robo's `sub_91930` mirrors child offsets using the parent's final render flags;
+mirroring just the image breaks the assembly. A direction change before SKID also
+means its art must depict the old travel direction. Inspect decoded ROM pixels,
+then test complete poses in both directions (including accessories and offsets).
+See [the mod audit](audits/2026-10-20-super-sonic-bros-facing.md).
+
 **A scene kit's zone number is not its decoder level index.** When re-encoding
 S1 kit blocks into an additive act, use the decoder's level table, not the public
 SceneLevelKit zone ordering. Starpost Real Ruins (base `3da4cd930`, 2026-10-10)

@@ -11,6 +11,7 @@ import com.openggf.net.protocol.ProtocolViolationException;
 
 import javax.net.ssl.SSLContext;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.WebSocket;
 import java.nio.ByteBuffer;
@@ -174,8 +175,14 @@ public final class MasterClient implements AutoCloseable {
                 return CompletableFuture.failedFuture(new RaceClient.JoinRejectedException(
                         "direct room has no authenticated host identity"));
             }
-            URI directUri = URI.create("wss://" + result.directHost() + ":"
-                    + result.directPort() + "/race");
+            final URI directUri;
+            try {
+                // The broker supplies a numeric address, including unbracketed IPv6.
+                directUri = new URI("wss", null, result.directHost(),
+                        result.directPort(), "/race", null, null);
+            } catch (URISyntaxException e) {
+                return CompletableFuture.failedFuture(e);
+            }
             return RaceClient.connect(directUri, roomIdentity, displayName,
                             determinismFingerprint, result.certificateSha256(),
                             result.hostServerId())

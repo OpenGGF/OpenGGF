@@ -3,6 +3,9 @@ package com.openggf.game.rewind;
 import com.openggf.LevelFrameContext;
 import com.openggf.LevelFrameResult;
 import com.openggf.control.InputHandler;
+import com.openggf.control.LogicalInputSnapshot;
+import com.openggf.control.PlayerInputState;
+import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.game.GameModule;
 import com.openggf.game.BonusStageProvider;
@@ -34,13 +37,14 @@ import static org.mockito.Mockito.when;
 class TestLiveRewindStepperPlcLifecycle {
 
     @Test
-    void heldPauseServicesNormalPauseWithoutPreparation() {
+    void completedGameplayRowRunsIndependentlyOfCurrentPauseState() {
         Fixture fixture = fixture(true);
 
         LevelFrameResult result = fixture.step(false);
 
-        assertEquals(LevelFrameResult.PAUSED, result);
-        assertEquals(List.of("service:NORMAL_PAUSE"), fixture.events);
+        assertEquals(LevelFrameResult.GAMEPLAY_FRAME, result);
+        assertEquals(List.of("service:ORDINARY_LEVEL", "prepare:ORDINARY_LEVEL"), fixture.events);
+        org.junit.jupiter.api.Assertions.assertFalse(fixture.context.gameStateManager().isGamePaused());
     }
 
     @Test
@@ -53,6 +57,38 @@ class TestLiveRewindStepperPlcLifecycle {
         assertEquals(List.of(
                 "service:ORDINARY_LEVEL",
                 "prepare:ORDINARY_LEVEL"), fixture.events);
+    }
+
+    @Test
+    void replayingRecordedHostUnpauseDoesNotToggleRomPause() {
+        // Gamepad Start pauses/resumes the host. Paused presentations are not
+        // recorded; the first completed gameplay row after resume still holds Start.
+        GameStateManager state = new GameStateManager();
+        List<String> events = new ArrayList<>();
+        var lifecycle = new PlcFrameLifecycleCoordinator(recording(events));
+        SpriteManager sprites = mock(SpriteManager.class);
+        GameModule module = mock(GameModule.class);
+        LevelFrameContext context = new LevelFrameContext(module, null, null, null,
+                sprites, state, null, null, null, new HardwareTimingService(), null,
+                RuntimeArtCoordinator.NONE);
+        LiveRewindInputSource inputs = new LiveRewindInputSource();
+        InputHandler input = new InputHandler();
+        input.setLogicalOverride(LogicalInputSnapshot.ofPlayers(
+                PlayerInputState.of(0, 0, 0, 0, true, true), PlayerInputState.neutral()));
+        inputs.appendFrame(input, SonicConfigurationService.getInstance());
+        input.clearLogicalOverride();
+        var stepper = new LiveRewindStepper(inputs, () -> input, () -> context, () -> null);
+        var frame = lifecycle.latchBeforeFadeUpdate();
+        try {
+            assertEquals(LevelFrameResult.GAMEPLAY_FRAME, stepper.step(inputs.read(1),
+                    sprites, mock(LevelManager.class), mock(com.openggf.camera.Camera.class),
+                    input, frame), "a recorded completed gameplay row must execute its body");
+        } finally {
+            frame.finish();
+        }
+        org.mockito.Mockito.verify(sprites).update(input);
+        org.junit.jupiter.api.Assertions.assertFalse(state.isGamePaused());
+        assertEquals(List.of("service:ORDINARY_LEVEL", "prepare:ORDINARY_LEVEL"), events);
     }
 
     @ParameterizedTest
@@ -121,9 +157,8 @@ class TestLiveRewindStepperPlcLifecycle {
         PlcLifecycleService service = recording(events);
         PlcFrameLifecycleCoordinator coordinator =
                 new PlcFrameLifecycleCoordinator(service);
-        GameStateManager state = mock(GameStateManager.class);
-        when(state.applyPauseToggle(org.mockito.ArgumentMatchers.anyBoolean()))
-                .thenReturn(remainsPaused);
+        GameStateManager state = new GameStateManager();
+        state.setGamePaused(remainsPaused);
         GameModule module = mock(GameModule.class);
         LevelFrameContext context = new LevelFrameContext(
                 module, null, null, null, mock(SpriteManager.class), state,

@@ -41,7 +41,8 @@ import java.util.List;
  * <em>same</em> bootstrap and per-frame drive that {@code AbstractTraceReplayTest}
  * uses (via {@link TraceReplaySessionBootstrap} + {@link RecordingFrameDriver} +
  * {@link TraceReplayBootstrap} phase logic), and records the rendered frames +
- * chip audio to a lossless MKV via {@link FfmpegEncoder} / {@link CaptureRecorder}.
+ * chip audio via {@link FfmpegEncoder} / {@link CaptureRecorder}, using the
+ * configured capture container and codecs.
  *
  * <p>The capture used to drive frames through the live {@code GameLoop}/
  * {@code PlaybackDebugManager} playback path, which omits the P2/sidekick input
@@ -56,8 +57,9 @@ import java.util.List;
  *       "-Dexec.args=--trace aiz1 --out-dir target/trace-videos"
  * </pre>
  *
- * <p>Output: {@code &lt;out-dir&gt;/capture-&lt;label&gt;-&lt;UTC&gt;.mkv}. MKV frame index
- * equals trace gameplay-comparison index, so frame N of the MKV is trace frame N.
+ * <p>Output: {@code &lt;out-dir&gt;/capture-&lt;label&gt;-&lt;UTC&gt;.&lt;container&gt;},
+ * using {@code capture.container}. Frame index equals trace gameplay-comparison
+ * index, so frame N is trace frame N.
  *
  * <p>{@code --verify} runs the same bootstrap + drive headlessly with NO GL
  * capture and prints the player rings + camera_x at requested trace frames, so
@@ -364,7 +366,8 @@ public final class TraceCaptureTool {
                 captureConfig.getString(SonicConfiguration.CAPTURE_FFMPEG_PASS2_ARGS));
         CaptureRecorder recorder = new CaptureRecorder(
                 encoder, BackpressurePolicy.BLOCK, /* queueCapacity */ 8,
-                args.outDir(), label, timestamp);
+                args.outDir(), label, timestamp,
+                captureConfig.getString(SonicConfiguration.CAPTURE_CONTAINER));
 
         GlReadPixelsGrabber grabber = new GlReadPixelsGrabber(
                 dimensions.physicalWidth(), dimensions.physicalHeight());

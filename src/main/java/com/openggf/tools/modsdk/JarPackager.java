@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -21,8 +22,12 @@ import com.openggf.io.SnapshotModAssetRoot;
 
 /** Deterministically packages and validates an exploded mod directory. */
 public final class JarPackager {
-    /** ZIP's portable epoch (1980-01-01T00:00:00Z). */
-    static final long ENTRY_TIMESTAMP = 315_532_800_000L;
+    /**
+     * ZIP stores a local DOS date/time; an epoch instant would depend on the host zone.
+     * January 1 at midnight is also the JDK's pre-1980 sentinel and emits an extended
+     * timestamp derived from the host zone, so use the following fully portable day.
+     */
+    static final LocalDateTime ENTRY_TIME = LocalDateTime.of(1980, 1, 2, 0, 0);
     private static final Set<String> WINDOWS_DEVICE_NAMES = Set.of(
             "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5",
             "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5",
@@ -140,7 +145,7 @@ public final class JarPackager {
             byte[] buffer = new byte[8192];
             for (int index = 0; index < files.size(); index++) {
                 JarEntry entry = new JarEntry(names.get(index));
-                entry.setTime(ENTRY_TIMESTAMP);
+                entry.setTimeLocal(ENTRY_TIME);
                 output.putNextEntry(entry);
                 try (InputStream input = Files.newInputStream(files.get(index))) {
                     int read;

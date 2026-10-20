@@ -12,6 +12,27 @@ import org.junit.jupiter.api.Test;
 class TestDplcStaticFlattener {
 
     @Test
+    void splitPiecesKeepWholePieceFlipPositions() {
+        // Column-major source tiles 10,11,99,100 occupy the opposite corners
+        // when the original 2x2 VDP piece is flipped on both axes.
+        SpriteMappingPiece piece = new SpriteMappingPiece(-5, 3, 2, 2, 0, true, true, 2, true);
+        SpriteDplcFrame dplc = new SpriteDplcFrame(
+                List.of(new TileLoadRequest(10, 2), new TileLoadRequest(99, 2)));
+        List<SpriteMappingPiece> pieces = DplcStaticFlattener.applyDplcRemap(
+                List.of(new SpriteMappingFrame(List.of(piece))), List.of(dplc)).getFirst().pieces();
+
+        assertEquals(List.of(10, 11, 99, 100), pieces.stream().map(SpriteMappingPiece::tileIndex).toList());
+        assertEquals(List.of(3, 3, -5, -5), pieces.stream().map(SpriteMappingPiece::xOffset).toList());
+        assertEquals(List.of(11, 3, 11, 3), pieces.stream().map(SpriteMappingPiece::yOffset).toList());
+        for (SpriteMappingPiece split : pieces) {
+            assertTrue(split.hFlip());
+            assertTrue(split.vFlip());
+            assertTrue(split.priority());
+            assertEquals(2, split.paletteIndex());
+        }
+    }
+
+    @Test
     void contiguousPieceIsRemappedToAbsoluteSourceTiles() {
         // One frame: a 2x2-tile piece at vram tile 0.
         // DPLC frame 0 loads 4 contiguous source tiles starting at source tile 10.

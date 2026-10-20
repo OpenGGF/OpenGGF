@@ -180,7 +180,7 @@ public final class CreatorCatalogProbe {
         }
     }
 
-    private static void entry(JarOutputStream out, String name) throws Exception { var entry = new JarEntry(name); entry.setTime(JarPackager.ENTRY_TIMESTAMP); out.putNextEntry(entry); }
+    private static void entry(JarOutputStream out, String name) throws Exception { var entry = new JarEntry(name); entry.setTimeLocal(JarPackager.ENTRY_TIME); out.putNextEntry(entry); }
     private static long heapPeak() { return ManagementFactory.getMemoryPoolMXBeans().stream().filter(pool -> pool.getType() == java.lang.management.MemoryType.HEAP).mapToLong(pool -> pool.getPeakUsage().getUsed()).sum(); }
     private static long peakResidentBytes() {
         try {

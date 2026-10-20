@@ -9,6 +9,7 @@ import com.openggf.graphics.RgbaImage;
 import com.openggf.graphics.ScreenshotCapture;
 
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -177,7 +178,7 @@ public final class GameplayCaptureTool {
             } else if (pngs.size() < 2) {
                 videoNote = "video skipped (fewer than two frames captured)";
             } else {
-                video = encodeVideo(ffmpeg.get(), framesDir, outDir.resolve("capture.mp4"), arguments);
+                video = encodeVideo(ffmpeg.get(), pngs, outDir.resolve("capture.mp4"), arguments);
                 videoNote = video == null ? "video failed (see ffmpeg output above)" : "video " + video;
             }
         }
@@ -185,27 +186,44 @@ public final class GameplayCaptureTool {
                 outDir.resolve("state.csv"));
     }
 
-    private static Path encodeVideo(Path ffmpeg, Path framesDir, Path out, Arguments arguments) throws IOException {
+    private static Path encodeVideo(Path ffmpeg, List<Path> pngs, Path out, Arguments arguments) throws IOException {
         int scale = Math.max(1, arguments.scale());
-        int fps = Math.max(1, arguments.fps() / Math.max(1, arguments.every()));
-        List<String> command = new ArrayList<>(List.of(
-                ffmpeg.toString(), "-y", "-loglevel", "error",
-                "-framerate", Integer.toString(fps),
-                "-pattern_type", "glob", "-i", framesDir.resolve("*.png").toString(),
-                "-vf", "scale=iw*" + scale + ":ih*" + scale + ":flags=neighbor",
-                "-pix_fmt", "yuv420p", "-crf", "18", out.toString()));
-        Process process = new ProcessBuilder(command).inheritIO().start();
+        String fps = Math.max(1, arguments.fps()) + "/" + Math.max(1, arguments.every());
+        // Enumerate this invocation's frames. A directory glob also picks up
+        // PNGs left by an earlier, longer capture into the same output root.
+        Path sequence = Files.createTempFile(out.toAbsolutePath().getParent(), ".capture-video-", ".ffconcat");
         try {
-            if (!process.waitFor(10, TimeUnit.MINUTES)) {
+            try (BufferedWriter list = Files.newBufferedWriter(sequence, StandardCharsets.UTF_8)) {
+                list.write("ffconcat version 1.0\n");
+                for (Path png : pngs) {
+                    // These are invocation-owned frames/<number>.png names.
+                    // Keep user-chosen parent names (which may contain line
+                    // breaks) out of ffconcat's line-oriented entries.
+                    String relativePng = sequence.getParent().relativize(png.toAbsolutePath())
+                            .toString().replace(File.separatorChar, '/');
+                    list.write("file '" + relativePng.replace("'", "'\\''") + "'\n");
+                }
+            }
+            List<String> command = new ArrayList<>(List.of(
+                    ffmpeg.toString(), "-y", "-loglevel", "error",
+                    "-r", fps, "-f", "concat", "-safe", "0", "-i", sequence.toString(),
+                    "-vf", "scale=iw*" + scale + ":ih*" + scale + ":flags=neighbor",
+                    "-pix_fmt", "yuv420p", "-crf", "18", out.toString()));
+            Process process = new ProcessBuilder(command).inheritIO().start();
+            try {
+                if (!process.waitFor(10, TimeUnit.MINUTES)) {
+                    process.destroyForcibly();
+                    return null;
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
                 process.destroyForcibly();
                 return null;
             }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            process.destroyForcibly();
-            return null;
+            return process.exitValue() == 0 && Files.exists(out) ? out : null;
+        } finally {
+            Files.deleteIfExists(sequence);
         }
-        return process.exitValue() == 0 && Files.exists(out) ? out : null;
     }
 
     /** What was captured and where; {@code summary()} is the console report. */

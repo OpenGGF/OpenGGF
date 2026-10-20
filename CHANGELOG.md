@@ -5,6 +5,7 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`next` / 0.8)
 
+- Added original synthesized voice lines for Super Sonic Bros., with announcer effects, pitched-down Sonic and Tails voices, robot processing, and in-game dialogue triggers. Corrected fighter facing in ledge hangs, skids, lying poses, Mecha Sonic and Rhinobot animations, Egg Robo multipart spins, and directional flames.
 - Refined the game hub with quiet, bounded setup badges and direct ROM location;
   removed the game browser. Settings and Game Setup have explicit Save changes
   actions, clearer inherited values, calmer backgrounds and more readable text.

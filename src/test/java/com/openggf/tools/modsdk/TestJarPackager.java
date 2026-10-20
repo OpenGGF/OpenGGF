@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.TimeZone;
 import java.util.jar.JarFile;
 import com.openggf.io.ModInputLimits;
 
@@ -18,6 +19,24 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestJarPackager {
     @TempDir Path temp;
+
+    @Test
+    void packageBytesAreIndependentOfHostTimeZone() throws Exception {
+        Path input = validInput(temp.resolve("time-zone-input"));
+        TimeZone previous = TimeZone.getDefault();
+        try {
+            TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
+            Path utc = temp.resolve("utc.jar");
+            JarPackager.packageDirectory(input, utc);
+            TimeZone.setDefault(TimeZone.getTimeZone("America/Los_Angeles"));
+            Path pacific = temp.resolve("pacific.jar");
+            JarPackager.packageDirectory(input, pacific);
+            assertArrayEquals(Files.readAllBytes(utc), Files.readAllBytes(pacific),
+                    "unchanged mod content must produce the same distributable on each host");
+        } finally {
+            TimeZone.setDefault(previous);
+        }
+    }
 
     @Test
     void packagesAValidDirectoryInStableNameOrderWithFixedTimestamps() throws Exception {
@@ -37,7 +56,7 @@ class TestJarPackager {
         try (JarFile jar = new JarFile(first.toFile())) {
             List<String> names = jar.stream().map(entry -> entry.getName()).toList();
             assertEquals(names.stream().sorted().toList(), names);
-            assertTrue(jar.stream().allMatch(entry -> entry.getTime() == JarPackager.ENTRY_TIMESTAMP));
+            assertTrue(jar.stream().allMatch(entry -> entry.getTimeLocal().equals(JarPackager.ENTRY_TIME)));
         }
     }
 

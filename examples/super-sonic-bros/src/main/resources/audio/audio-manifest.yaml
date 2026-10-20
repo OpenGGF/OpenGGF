@@ -1,0 +1,210 @@
+formatVersion: 1
+tracks: []
+sfx:
+  - id: ann-title
+    assetPath: audio/voice/ann-title.ogg
+    gain: 1.0
+  - id: ann-versus
+    assetPath: audio/voice/ann-versus.ogg
+    gain: 1.0
+  - id: ann-classic
+    assetPath: audio/voice/ann-classic.ogg
+    gain: 1.0
+  - id: ann-choose-fighter
+    assetPath: audio/voice/ann-choose-fighter.ogg
+    gain: 1.0
+  - id: ann-ready
+    assetPath: audio/voice/ann-ready.ogg
+    gain: 1.0
+  - id: ann-choose-stage
+    assetPath: audio/voice/ann-choose-stage.ogg
+    gain: 1.0
+  - id: ann-name-sonic
+    assetPath: audio/voice/ann-name-sonic.ogg
+    gain: 1.0
+  - id: ann-name-tails
+    assetPath: audio/voice/ann-name-tails.ogg
+    gain: 1.0
+  - id: ann-name-knuckles
+    assetPath: audio/voice/ann-name-knuckles.ogg
+    gain: 1.0
+  - id: ann-name-robotnik
+    assetPath: audio/voice/ann-name-robotnik.ogg
+    gain: 1.0
+  - id: ann-name-mecha
+    assetPath: audio/voice/ann-name-mecha.ogg
+    gain: 1.0
+  - id: ann-name-eggrobo
+    assetPath: audio/voice/ann-name-eggrobo.ogg
+    gain: 1.0
+  - id: ann-name-rhinobot
+    assetPath: audio/voice/ann-name-rhinobot.ogg
+    gain: 1.0
+  - id: ann-random
+    assetPath: audio/voice/ann-random.ogg
+    gain: 1.0
+  - id: ann-stage-aiz
+    assetPath: audio/voice/ann-stage-aiz.ogg
+    gain: 1.0
+  - id: ann-stage-hcz
+    assetPath: audio/voice/ann-stage-hcz.ogg
+    gain: 1.0
+  - id: ann-stage-mgz
+    assetPath: audio/voice/ann-stage-mgz.ogg
+    gain: 1.0
+  - id: ann-stage-cnz
+    assetPath: audio/voice/ann-stage-cnz.ogg
+    gain: 1.0
+  - id: ann-stage-icz
+    assetPath: audio/voice/ann-stage-icz.ogg
+    gain: 1.0
+  - id: ann-stage-lbz
+    assetPath: audio/voice/ann-stage-lbz.ogg
+    gain: 1.0
+  - id: ann-stage-mhz
+    assetPath: audio/voice/ann-stage-mhz.ogg
+    gain: 1.0
+  - id: ann-stage-soz
+    assetPath: audio/voice/ann-stage-soz.ogg
+    gain: 1.0
+  - id: ann-stage-ssz
+    assetPath: audio/voice/ann-stage-ssz.ogg
+    gain: 1.0
+  - id: ann-stage-dez
+    assetPath: audio/voice/ann-stage-dez.ogg
+    gain: 1.0
+  - id: ann-three
+    assetPath: audio/voice/ann-three.ogg
+    gain: 1.0
+  - id: ann-two
+    assetPath: audio/voice/ann-two.ogg
+    gain: 1.0
+  - id: ann-one
+    assetPath: audio/voice/ann-one.ogg
+    gain: 1.0
+  - id: ann-go
+    assetPath: audio/voice/ann-go.ogg
+    gain: 1.0
+  - id: ann-sudden-death
+    assetPath: audio/voice/ann-sudden-death.ogg
+    gain: 1.0
+  - id: ann-game
+    assetPath: audio/voice/ann-game.ogg
+    gain: 1.0
+  - id: ann-time
+    assetPath: audio/voice/ann-time.ogg
+    gain: 1.0
+  - id: ann-winner-is
+    assetPath: audio/voice/ann-winner-is.ogg
+    gain: 1.0
+  - id: ann-team-red
+    assetPath: audio/voice/ann-team-red.ogg
+    gain: 1.0
+  - id: ann-team-blue
+    assetPath: audio/voice/ann-team-blue.ogg
+    gain: 1.0
+  - id: ann-team-green
+    assetPath: audio/voice/ann-team-green.ogg
+    gain: 1.0
+  - id: ann-no-contest
+    assetPath: audio/voice/ann-no-contest.ogg
+    gain: 1.0
+  - id: ann-round-1
+    assetPath: audio/voice/ann-round-1.ogg
+    gain: 1.0
+  - id: ann-round-2
+    assetPath: audio/voice/ann-round-2.ogg
+    gain: 1.0
+  - id: ann-round-3
+    assetPath: audio/voice/ann-round-3.ogg
+    gain: 1.0
+  - id: ann-round-4
+    assetPath: audio/voice/ann-round-4.ogg
+    gain: 1.0
+  - id: ann-round-5
+    assetPath: audio/voice/ann-round-5.ogg
+    gain: 1.0
+  - id: ann-final-round
+    assetPath: audio/voice/ann-final-round.ogg
+    gain: 1.0
+  - id: ann-tag-team
+    assetPath: audio/voice/ann-tag-team.ogg
+    gain: 1.0
+  - id: ann-handicap
+    assetPath: audio/voice/ann-handicap.ogg
+    gain: 1.0
+  - id: ann-vs
+    assetPath: audio/voice/ann-vs.ogg
+    gain: 1.0
+  - id: ann-continue
+    assetPath: audio/voice/ann-continue.ogg
+    gain: 1.0
+  - id: ann-game-over
+    assetPath: audio/voice/ann-game-over.ogg
+    gain: 1.0
+  - id: ann-congratulations
+    assetPath: audio/voice/ann-congratulations.ogg
+    gain: 1.0
+  - id: voice-sonic-select
+    assetPath: audio/voice/voice-sonic-select.ogg
+    gain: 1.0
+  - id: voice-sonic-intro
+    assetPath: audio/voice/voice-sonic-intro.ogg
+    gain: 1.0
+  - id: voice-sonic-win
+    assetPath: audio/voice/voice-sonic-win.ogg
+    gain: 1.0
+  - id: voice-tails-select
+    assetPath: audio/voice/voice-tails-select.ogg
+    gain: 1.0
+  - id: voice-tails-intro
+    assetPath: audio/voice/voice-tails-intro.ogg
+    gain: 1.0
+  - id: voice-tails-win
+    assetPath: audio/voice/voice-tails-win.ogg
+    gain: 1.0
+  - id: voice-knuckles-select
+    assetPath: audio/voice/voice-knuckles-select.ogg
+    gain: 1.0
+  - id: voice-knuckles-intro
+    assetPath: audio/voice/voice-knuckles-intro.ogg
+    gain: 1.0
+  - id: voice-knuckles-win
+    assetPath: audio/voice/voice-knuckles-win.ogg
+    gain: 1.0
+  - id: voice-robotnik-select
+    assetPath: audio/voice/voice-robotnik-select.ogg
+    gain: 1.0
+  - id: voice-robotnik-intro
+    assetPath: audio/voice/voice-robotnik-intro.ogg
+    gain: 1.0
+  - id: voice-robotnik-win
+    assetPath: audio/voice/voice-robotnik-win.ogg
+    gain: 1.0
+  - id: voice-mecha-select
+    assetPath: audio/voice/voice-mecha-select.ogg
+    gain: 1.0
+  - id: voice-mecha-intro
+    assetPath: audio/voice/voice-mecha-intro.ogg
+    gain: 1.0
+  - id: voice-mecha-win
+    assetPath: audio/voice/voice-mecha-win.ogg
+    gain: 1.0
+  - id: voice-eggrobo-select
+    assetPath: audio/voice/voice-eggrobo-select.ogg
+    gain: 1.0
+  - id: voice-eggrobo-intro
+    assetPath: audio/voice/voice-eggrobo-intro.ogg
+    gain: 1.0
+  - id: voice-eggrobo-win
+    assetPath: audio/voice/voice-eggrobo-win.ogg
+    gain: 1.0
+  - id: voice-rhinobot-select
+    assetPath: audio/voice/voice-rhinobot-select.ogg
+    gain: 1.0
+  - id: voice-rhinobot-intro
+    assetPath: audio/voice/voice-rhinobot-intro.ogg
+    gain: 1.0
+  - id: voice-rhinobot-win
+    assetPath: audio/voice/voice-rhinobot-win.ogg
+    gain: 1.0

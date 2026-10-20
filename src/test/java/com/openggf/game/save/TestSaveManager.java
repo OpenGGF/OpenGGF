@@ -24,6 +24,21 @@ class TestSaveManager {
     Path root;
 
     @Test
+    void writeSlot_roundTripsPermittedBigDecimalFieldsWithoutHashWarning() throws Exception {
+        SaveManager manager = new SaveManager(root);
+        // The provider snapshot contract explicitly accepts immutable JSON decimal values.
+        Map<String, Object> payload = RuntimeSaveFields.freeze(
+                Map.of("ratio", new java.math.BigDecimal("12.3400")));
+
+        manager.writeSlot("standalone-test", 1, payload);
+        SaveSlotSummary summary = manager.readSlotSummary("standalone-test", 1);
+
+        assertEquals(SaveSlotState.VALID, summary.state(),
+                "an untouched save written by this manager must pass its own checksum");
+        assertEquals(12.34, ((Number) summary.payload().get("ratio")).doubleValue());
+    }
+
+    @Test
     void malformedFile_isRenamedToCorrupt() throws Exception {
         Path slot = root.resolve("s3k").resolve("slot1.json");
         Files.createDirectories(slot.getParent());

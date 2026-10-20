@@ -23,6 +23,25 @@ public class TestBk2MovieLoader {
     private final Bk2MovieLoader loader = new Bk2MovieLoader();
 
     @Test
+    public void magicDetectedZipDoesNotRequireTheBk2Extension() throws Exception {
+        Path source = createBk2("""
+                [Input]
+                LogKey:|UDLRSABC|
+                |...R....|
+                [/Input]
+                """);
+        Path extensionless = source.resolveSibling(source.getFileName() + "-movie");
+        Files.move(source, extensionless);
+        extensionless.toFile().deleteOnExit();
+
+        Bk2Movie movie = loader.loadMovieOrInputLog(extensionless);
+
+        assertEquals(extensionless, movie.getSourcePath());
+        assertEquals(1, movie.getFrameCount());
+        assertEquals(AbstractPlayableSprite.INPUT_RIGHT, movie.getFrame(0).p1InputMask());
+    }
+
+    @Test
     public void parsesNamedP1Columns() throws Exception {
         Path bk2 = createBk2("""
                 [Input]

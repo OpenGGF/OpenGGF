@@ -378,7 +378,8 @@ highlighted key on the keypad or accepts the value in the text field; the keypad
 also has an **OK** key. Typing directly returns focus to the field. Switching input
 devices changes prompts without moving focus. This editor is shared with recording
 target frames, join addresses, and lobby chat. Key bindings also offer physical
-key/chord capture.
+key/chord capture. Hold modifiers with a key for a chord; tap and release a
+modifier to bind that key alone.
 
 Each tab has a confirmed **Reset tab to defaults** action; Controls offers
 **Reset all bindings**. Resets remain draft edits until saved. Changed rows carry
@@ -677,7 +678,9 @@ capture:
 ```
 
 - **Trace capture:** the headless `TraceCaptureTool` renders a chosen trace.
-  Its scale, frame-rate, and codec settings remain trace-tool options.
+  Its scale, frame-rate, and video codec can be selected by trace-tool options;
+  `capture.container`, `capture.audioCodec`, and the ffmpeg pass settings control
+  the published container and audio mux, just as they do for live recording.
 
 Both paths require `ffmpeg` on `PATH`; live media verification and inspection
 also use `ffprobe`. Live recording is distinct from the Shift+F9

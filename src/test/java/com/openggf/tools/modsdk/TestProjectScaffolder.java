@@ -116,6 +116,28 @@ class TestProjectScaffolder {
     }
 
     @ParameterizedTest
+    @ValueSource(strings = {"3d-rings", "rings--plus"})
+    void acceptedManifestIdsProduceCompilableJavaNames(String id) throws Exception {
+        com.openggf.game.ModKeySyntax.requireManifestId(id);
+        Path project = new ProjectScaffolder().scaffold(temp.resolve(id), id, "example.boundary");
+        Path classes = temp.resolve("classes");
+        Files.createDirectories(classes);
+        compileSources(project.resolve("src/main/java"), classes,
+                TestSessionOutputPaths.compiledClasses().toAbsolutePath().toString());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"object", "music", "reskin", "scene", "character", "standalone"})
+    void acceptedYamlKeywordIdsRemainManifestStrings(String kind) throws Exception {
+        com.openggf.game.ModKeySyntax.requireManifestId("null");
+        Path project = new ProjectScaffolder().scaffold(temp.resolve(kind), "null", "example.boundary", kind);
+        var manifest = new com.openggf.mods.ModManifestParser().parse(Files.readAllBytes(
+                project.resolve("src/main/resources/META-INF/openggf-mod.yaml")));
+        assertEquals("null", manifest.id());
+        assertFalse(manifest.name().isBlank());
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = {"music", "reskin", "scene"})
     void generatedIntegrationTestsCoverDataOnlyAndCodeStarters(String kind) throws Exception {
         Path project = new ProjectScaffolder().scaffold(temp.resolve(kind),

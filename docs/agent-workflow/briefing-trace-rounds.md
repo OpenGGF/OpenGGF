@@ -358,6 +358,16 @@ Bounded category batches now yield shared admission while retaining target/
 ownership. This creates opportunities for short jobs, not a per-batch time bound.
 See [queue evidence](../architecture/research/2026-10-13-maven-queue-contention.md).
 
+Interrupted category totals can include completed classes from an unfinished
+batch (2026-10-18, bug competition). A run stopped after 65 completed batches
+also counted five passing tests from interrupted batch 66. Restarting the exact
+pending tail repeats those five; adding both invocation totals overstates unique
+coverage. Record completed batches, partial cases and each invocation's outcome
+separately. Verify the complete original inventory before continuing its pending
+tail with normal locks, admission and fingerprint checks. A timeout remains
+incomplete, and changed fixtures need affected checks before earlier coverage
+can be reused. See the [judgment](../architecture/audits/2026-10-18-bug-competition-judgment.md).
+
 Fork options and child-launcher output (2026-10-14, S3K composition): an admitted
 headless flag does not prove propagation into a test fork. With the current
 Maven3.9.16/Surefire3.2.5 POM, `MAVEN_OPTS` supplies parent JVM properties;
