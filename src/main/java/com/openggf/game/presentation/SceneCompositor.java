@@ -10,6 +10,9 @@ public final class SceneCompositor {
         if (offsetX < -32_768 || offsetX > 32_768 || offsetY < -32_768 || offsetY > 32_768) {
             throw new IllegalArgumentException("Survey offset exceeds limits");
         }
+        // Surveying can bring previously offscreen geometry into view; re-admit
+        // its actual clipped work before allocating or resolving any art.
+        SceneRasterWork.requireBudget(frame.width(), frame.height(), frame.tiles(), frame.primitives(), offsetX, offsetY);
         int[] pixels = new int[frame.width() * frame.height()];
         Arrays.fill(pixels, frame.backdropArgb());
         int[] priorities = new int[pixels.length]; Arrays.fill(priorities, -1);
@@ -81,12 +84,15 @@ public final class SceneCompositor {
     }
 
     private static void line(int[] pixels, int width, int height, int x0, int y0, int x1, int y1, int color) {
-        int dx = Math.abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
-        int dy = -Math.abs(y1 - y0), sy = y0 < y1 ? 1 : -1, error = dx + dy;
+        long[] clipped = SceneRasterWork.clip(width, height, x0, y0, x1, y1);
+        if (clipped == null) return;
+        x0 = (int)clipped[0]; y0 = (int)clipped[1]; x1 = (int)clipped[2]; y1 = (int)clipped[3];
+        long dx = Math.abs((long)x1 - x0), sx = x0 < x1 ? 1 : -1;
+        long dy = -Math.abs((long)y1 - y0), sy = y0 < y1 ? 1 : -1, error = dx + dy;
         while (true) {
             plot(pixels, width, height, x0, y0, color);
             if (x0 == x1 && y0 == y1) return;
-            int twice = 2 * error;
+            long twice = 2 * error;
             if (twice >= dy) { error += dy; x0 += sx; }
             if (twice <= dx) { error += dx; y0 += sy; }
         }

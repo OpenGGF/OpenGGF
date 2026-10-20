@@ -23,6 +23,9 @@ final class RomSceneViewPresenter implements SceneViewPresenter {
     private TexturedQuadRenderer quad;
     private int texture;
     private ByteBuffer rgba;
+    private SceneImage cachedImage;
+    private ScenePlayerPose cachedPose;
+    private int cachedX, cachedY;
 
     RomSceneViewPresenter(RomSceneArtCatalog art, GraphicsManager graphics, int width, int height) {
         this(art, graphics, width, height, null);
@@ -42,6 +45,7 @@ final class RomSceneViewPresenter implements SceneViewPresenter {
         // Validate the complete locally resolved view before replacing the last good frame.
         for (var tile : value.tiles()) art.resolve(tile.art());
         frame = value;
+        cachedImage = null; cachedPose = null;
         return true;
     }
 
@@ -50,13 +54,15 @@ final class RomSceneViewPresenter implements SceneViewPresenter {
     @Override public SceneImage image(int offsetX, int offsetY) {
         if (closed) throw new IllegalStateException("Scene presenter is closed");
         if (frame == null) throw new IllegalStateException("No accepted scene");
-        return SceneCompositor.compose(frame, art, offsetX, offsetY);
+        if (cachedImage != null && cachedPose == null && cachedX == offsetX && cachedY == offsetY) return cachedImage;
+        return cache(SceneCompositor.compose(frame, art, offsetX, offsetY), offsetX, offsetY, null);
     }
 
     @Override public SceneImage image(int offsetX, int offsetY, ScenePlayerPose player) {
         if (player.pose().kind() == PlayerPresentationPose.Kind.NATIVE) return image(offsetX, offsetY);
         if (closed || frame == null) throw new IllegalStateException("No accepted scene");
         if (poses == null) throw new IllegalStateException("No local native pose resources");
+        if (cachedImage != null && player.equals(cachedPose) && cachedX == offsetX && cachedY == offsetY) return cachedImage;
         var tiles = new java.util.ArrayList<ScenePresentationFrame.Tile>();
         int[] insertions = new int[frame.tiles().size() + 1];
         boolean inserted = false;
@@ -75,7 +81,11 @@ final class RomSceneViewPresenter implements SceneViewPresenter {
                 insertions[value.beforeTile()], value.kind(), value.method(), value.vertices())).toList();
         var view = new ScenePresentationFrame(frame.revision(), frame.act(), frame.width(), frame.height(),
                 frame.cameraX(), frame.cameraY(), frame.backdropArgb(), frame.paletteArgb(), tiles, primitives);
-        return SceneCompositor.compose(view, art, offsetX, offsetY);
+        return cache(SceneCompositor.compose(view, art, offsetX, offsetY), offsetX, offsetY, player);
+    }
+
+    private SceneImage cache(SceneImage image, int x, int y, ScenePlayerPose pose) {
+        cachedX = x; cachedY = y; cachedPose = pose; return cachedImage = image;
     }
 
     @Override public void draw(int offsetX, int offsetY, ScenePlayerPose player) {
@@ -137,7 +147,7 @@ final class RomSceneViewPresenter implements SceneViewPresenter {
 
     @Override public void close() {
         if (closed) return;
-        closed = true; frame = null;
+        closed = true; frame = null; cachedImage = null; cachedPose = null;
         if (quad != null) { quad.cleanup(); quad = null; }
         if (texture != 0) { glDeleteTextures(texture); texture = 0; }
         if (rgba != null) { MemoryUtil.memFree(rgba); rgba = null; }

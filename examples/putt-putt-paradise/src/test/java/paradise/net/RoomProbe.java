@@ -9,6 +9,30 @@ import static paradise.net.ProtocolProbe.*;
 
 /** Two production rooms using actual sockets; gameplay decisions remain in this caller fixture. */
 public final class RoomProbe {
+    public static void lanInvitationPrecedesSeatAndSurvivesReconnect() throws Exception {
+        var host = GolfRoom.hostLan(0, prints(), "sonic");
+        GolfRoom guest = null;
+        try (host; var stranger = GolfConnection.connect("127.0.0.1#00000000000000000000000000000000", host.boundPort())) {
+            stranger.send(new Hello(prints(), "sonic"));
+            TransportProbe.await(stranger::isClosed, 3000, "uninvited compatible peer is refused");
+            host.tick();
+            check(host.state().roomToken() == null && !host.state().connected(), "failed proof cannot reserve first guest seat");
+            guest = GolfRoom.join("127.0.0.1#" + host.inviteCode(), host.boundPort(), prints(), "tails");
+            GolfRoom invited = guest;
+            pump(host, invited, () -> host.state().ready() && invited.state().ready(), "invited room handshake");
+            check(host.state().guestCharacter().equals("tails"), "intended guest owns seat");
+            UUID token = host.state().roomToken();
+            connection(invited).close();
+            pump(host, invited, () -> !host.state().connected(), "invited disconnect");
+            pump(host, invited, () -> host.state().ready() && invited.state().ready(), "reconnect proves invitation again");
+            check(token.equals(host.state().roomToken()), "reconnect retains original room identity");
+        } finally {
+            host.close(); if (guest != null) guest.close();
+            GolfRoom ownedGuest = guest;
+            TransportProbe.await(() -> host.activeWorkers() == 0 && (ownedGuest == null || ownedGuest.activeWorkers() == 0),
+                    3000, "LAN room workers retire");
+        }
+    }
     static void pump(GolfRoom host, GolfRoom guest, BooleanSupplier condition, String message) throws Exception {
         long deadline = System.nanoTime() + Duration.ofSeconds(5).toNanos();
         boolean satisfied = condition.getAsBoolean();

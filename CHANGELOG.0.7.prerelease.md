@@ -5,6 +5,13 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Putt Putt Paradise multiplayer:** Scene admission bounds aggregate clipped
+  raster work, lines clip before traversal, and unchanged presentations reuse
+  composed images. Incoming scenes coalesce within ordered packet boundaries
+  under a 4 MiB retained-byte cap. Hosting defaults to literal loopback; explicit
+  LAN hosting displays a private session invite and verifies a fresh HMAC proof
+  before admitting a guest. LAN game traffic remains plaintext.
+
 - **Super Sonic Bros.:** a new example mod, a platform fighter for one to four
   players (people or CPUs) on Sonic 3 & Knuckles. Sonic, Tails, Knuckles, Robotnik,
   Mecha Sonic, Egg Robo and Rhinobot each have a full move set (tilts, chargeable

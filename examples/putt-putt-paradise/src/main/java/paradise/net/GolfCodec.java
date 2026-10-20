@@ -32,7 +32,7 @@ public final class GolfCodec {
                 Hello.class, Ready.class, TurnOpened.class, ShotRequest.class, ShotAccepted.class,
                 ViewFrame.class, TurnCommitted.class, Pause.class, Resume.class, Leave.class,
                 Reconnect.class, SoundCue.class, Rejected.class, ShotControl.class, ShotStatus.class,
-                IncompatibleProtocolException.class}) Objects.requireNonNull(type);
+                IncompatibleProtocolException.class, Decoded.class}) Objects.requireNonNull(type);
         Objects.requireNonNull(Outcome.SETTLED);
         Objects.requireNonNull(ShotAction.REWIND); Objects.requireNonNull(ShotPhase.AIM);
     }
@@ -78,6 +78,12 @@ public final class GolfCodec {
 
     /** Returns null only at clean frame-boundary EOF. Partial, unknown and malformed frames are fatal. */
     public static GolfPacket read(InputStream stream) throws IOException {
+        Decoded decoded = readFrame(stream);
+        return decoded == null ? null : decoded.packet();
+    }
+    /** Charge the actual validated outer frame length, never a scene's declared inner length. */
+    record Decoded(GolfPacket packet, int encodedBytes) { }
+    static Decoded readFrame(InputStream stream) throws IOException {
         int first = stream.read();
         if (first < 0) return null;
         var header = new DataInputStream(stream);
@@ -107,7 +113,7 @@ public final class GolfCodec {
                 default -> throw new IOException("unknown packet type");
             };
             if (in.available() != 0) throw new IOException("trailing packet bytes");
-            return packet;
+            return new Decoded(packet, length + 4);
         } catch (IllegalArgumentException invalid) { throw new IOException("invalid packet value", invalid); }
     }
     private static byte[] scene(DataInputStream in) throws IOException {

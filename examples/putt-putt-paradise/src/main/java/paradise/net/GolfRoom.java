@@ -79,6 +79,12 @@ public final class GolfRoom implements AutoCloseable {
         if (fingerprints.protocol() != GolfCodec.SCHEMA) throw new IllegalArgumentException("unsupported room protocol");
         return new GolfRoom(true, GolfListener.listen(port), null, port, fingerprints, hostCharacter);
     }
+    public static GolfRoom hostLan(int port, Fingerprints fingerprints, String hostCharacter) throws IOException {
+        new Hello(fingerprints, hostCharacter);
+        if (fingerprints.protocol() != GolfCodec.SCHEMA) throw new IllegalArgumentException("unsupported room protocol");
+        return new GolfRoom(true, GolfListener.listenLan(port), null, port, fingerprints, hostCharacter);
+    }
+    public String inviteCode() { return host ? listener.inviteCode() : ""; }
     public static GolfRoom join(String address, int port, Fingerprints fingerprints, String guestCharacter) {
         return new GolfRoom(false, null, address, port, fingerprints, guestCharacter);
     }

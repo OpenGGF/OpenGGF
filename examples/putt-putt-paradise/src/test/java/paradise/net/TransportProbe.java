@@ -11,6 +11,116 @@ import static paradise.net.ProtocolProbe.*;
 
 /** Real localhost sockets and deterministic bounded-queue probes. */
 public final class TransportProbe {
+    public static void inboundViewsAreByteBoundedAndCoalesced() throws Exception {
+        try (var listener = GolfListener.listen(0); var raw = new Socket("127.0.0.1", listener.boundPort())) {
+            var accepted = new ArrayList<GolfConnection>();
+            await(() -> { accepted.addAll(listener.drain()); return !accepted.isEmpty(); }, 3000, "accept flood");
+            var peer = accepted.getFirst();
+            for (int i = 0; i < 8; i++) GolfCodec.write(raw.getOutputStream(),
+                    new ViewFrame(id(0, 0), i, i, new byte[GolfCodec.MAX_VIEW_BYTES]));
+            GolfCodec.write(raw.getOutputStream(), new Resume(MATCH, 123));
+            var queueField = GolfConnection.class.getDeclaredField("incoming"); queueField.setAccessible(true);
+            @SuppressWarnings("unchecked") var queue = (ArrayDeque<GolfConnection.Received>)queueField.get(peer);
+            await(() -> { synchronized (queue) { return queue.stream().anyMatch(r -> r.packet() instanceof Resume); } },
+                    3000, "inbound flood decoded through ordered sentinel");
+            check(peer.stats().incomingBytes() <= GolfCodec.MAX_FRAME_BYTES + 128, "only one max-size scene retained");
+            // The ordered sentinel proves the reader consumed all preceding scenes.
+            var received = new ArrayList<GolfConnection.Event>();
+            await(() -> { received.addAll(peer.drain()); return received.stream().anyMatch(e ->
+                    e instanceof GolfConnection.Received r && r.packet() instanceof Resume); }, 3000, "sentinel");
+            var views = received.stream().filter(e -> e instanceof GolfConnection.Received r
+                    && r.packet() instanceof ViewFrame).toList();
+            check(views.size() == 1, "pending views must coalesce before presentation drain");
+            check(((ViewFrame)((GolfConnection.Received)views.getFirst()).packet()).revision() == 7, "newest view survives");
+            check(peer.stats().incomingBytes() == 0, "drain releases byte charge");
+        }
+    }
+
+    public static void inboundBytesBoundViewsSeparatedByOrderedPackets() throws Exception {
+        try (var listener = GolfListener.listen(0); var raw = new Socket("127.0.0.1", listener.boundPort())) {
+            var accepted = new ArrayList<GolfConnection>();
+            await(() -> { accepted.addAll(listener.drain()); return !accepted.isEmpty(); }, 3000, "accept ordered flood");
+            var peer = accepted.getFirst();
+            var field = GolfConnection.class.getDeclaredField("outbound"); field.setAccessible(true);
+            synchronized (field.get(peer)) {
+                for (int i = 0; i < 3; i++) {
+                    GolfCodec.write(raw.getOutputStream(), new ViewFrame(id(0, 0), i, i, new byte[GolfCodec.MAX_VIEW_BYTES]));
+                    GolfCodec.write(raw.getOutputStream(), new Resume(MATCH, i));
+                }
+                await(peer::isClosed, 3000, "byte overflow closes before hundreds of MiB can accumulate");
+                check(peer.stats().incomingBytes() <= GolfConnection.MAX_INCOMING_BYTES, "retained bytes capped");
+                var received = peer.drain();
+                check(received.stream().filter(e -> e instanceof GolfConnection.Received r && r.packet() instanceof ViewFrame).count() == 2,
+                        "ordered barriers preserve both admitted views");
+                check(received.stream().filter(e -> e instanceof GolfConnection.Received r && r.packet() instanceof Resume).count() == 2,
+                        "ordered commands cannot coalesce");
+                check(peer.stats().incomingBytes() == 0, "poll releases all charges");
+            }
+            disconnectEvents(peer, "incoming queue overflow");
+            check(peer.stats().incomingBytes() == 0, "disconnect releases all charges");
+        }
+    }
+
+    public static void lanInviteRejectsWrongAndReplayedProofBeforePublishingPeer() throws Exception {
+        try (var listener = GolfListener.listenLan(0)) {
+            check(listener.inviteCode().matches("[0-9a-f]{32}"), "128-bit session invite surfaced");
+            byte[] oldNonce, captured;
+            try (var raw = new Socket("127.0.0.1", listener.boundPort())) {
+                raw.setSoTimeout(3000); var in = new DataInputStream(raw.getInputStream());
+                check(in.readInt() == 0x50474931 && in.readUnsignedByte() == GolfCodec.SCHEMA, "bounded challenge domain/version");
+                oldNonce = in.readNBytes(32);
+                var mac = javax.crypto.Mac.getInstance("HmacSHA256");
+                mac.init(new javax.crypto.spec.SecretKeySpec(java.util.HexFormat.of().parseHex(listener.inviteCode()), "HmacSHA256"));
+                mac.update("OpenGGF/Putt/guest/admission/v1".getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+                mac.update((byte)GolfCodec.SCHEMA); captured = mac.doFinal(oldNonce);
+                check(listener.drain().isEmpty(), "a challenge cannot claim the room seat");
+                raw.getOutputStream().write(new byte[32]);
+                check(in.read() == -1, "wrong proof closes without publishing a peer");
+            }
+            try (var replay = new Socket("127.0.0.1", listener.boundPort())) {
+                replay.setSoTimeout(3000); var in = new DataInputStream(replay.getInputStream());
+                in.readInt(); in.readByte(); byte[] fresh = in.readNBytes(32);
+                check(!Arrays.equals(oldNonce, fresh), "each socket gets a fresh nonce");
+                replay.getOutputStream().write(captured);
+                check(in.read() == -1 && listener.drain().isEmpty(), "captured proof cannot authenticate another socket");
+            }
+            try (var guest = GolfConnection.connect("127.0.0.1#" + listener.inviteCode(), listener.boundPort())) {
+                var accepted = new ArrayList<GolfConnection>();
+                await(() -> { accepted.addAll(listener.drain()); return !accepted.isEmpty(); }, 3000, "invited guest obtains first seat");
+                guest.send(new Resume(MATCH, 9));
+                check(events(accepted.getFirst(), 1).getFirst() instanceof GolfConnection.Received r
+                        && r.packet() instanceof Resume, "authenticated guest exchanges ordinary protocol");
+            }
+        }
+    }
+
+    public static void idleInviteExpiresAndListenerCloseOwnsPendingSockets() throws Exception {
+        var listener = GolfListener.listenLan(0);
+        try (listener; var raw = new Socket("127.0.0.1", listener.boundPort())) {
+            raw.setSoTimeout(3500); check(raw.getInputStream().readNBytes(37).length == 37, "fresh invite challenge");
+            check(raw.getInputStream().read() == -1, "idle proof expires");
+            check(listener.drain().isEmpty(), "expired challenge never becomes room candidate");
+            try (var pending = new Socket("127.0.0.1", listener.boundPort());
+                 var second = new Socket("127.0.0.1", listener.boundPort())) {
+                pending.setSoTimeout(3000); check(pending.getInputStream().readNBytes(37).length == 37, "second challenge");
+                second.setSoTimeout(3000); check(second.getInputStream().readNBytes(37).length == 37, "bounded second pending challenge");
+                try (var excess = new Socket("127.0.0.1", listener.boundPort())) {
+                    excess.setSoTimeout(3000); check(excess.getInputStream().read() == -1, "excess unauthenticated socket is refused");
+                }
+                listener.close();
+                check(pending.getInputStream().read() == -1, "listener teardown closes authenticating sockets");
+                check(second.getInputStream().read() == -1, "listener teardown closes every pending socket");
+            }
+            await(() -> listener.activeWorkers() == 0, 3000, "invite workers retire");
+        }
+    }
+
+    public static void defaultListenerBindsLiteralLoopback() throws Exception {
+        try (var listener = GolfListener.listen(0)) {
+            var field = GolfListener.class.getDeclaredField("server"); field.setAccessible(true);
+            check(((ServerSocket)field.get(listener)).getInetAddress().isLoopbackAddress(), "default host must bind loopback");
+        }
+    }
     static void await(BooleanSupplier condition, long millis, String message) throws Exception {
         long end = System.nanoTime() + Duration.ofMillis(millis).toNanos();
         while (!condition.getAsBoolean() && System.nanoTime() < end) Thread.sleep(5);

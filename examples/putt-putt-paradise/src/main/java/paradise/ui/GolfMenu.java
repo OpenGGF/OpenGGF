@@ -29,12 +29,16 @@ public final class GolfMenu implements TitleScreenProvider {
         public int pixelWidth() { return width; }
         public String configName() { return name(); }
     }
-    public enum Field { MODE, PLAYER_ONE, PLAYER_TWO, ACT, VIEWPORT, REWINDS_HOLE, REWINDS_TURN, ADDRESS, PORT, START, BACK }
+    public enum Field { MODE, PLAYER_ONE, PLAYER_TWO, ACT, VIEWPORT, REWINDS_HOLE, REWINDS_TURN, ADDRESS, PORT, EXPOSURE, START, BACK }
     /** Menu sounds requested from the adapter, which plays them from the ROM. */
     public enum Cue { MUSIC, MOVE, ENTER, LAUNCH, ERROR }
 
     public record Selection(Mode mode, CharacterChoice playerOne, CharacterChoice playerTwo,
-                            int actIndex, String address, int port, Viewport viewport, RewindAllowance.Rules rewinds) {
+                            int actIndex, String address, int port, Viewport viewport, RewindAllowance.Rules rewinds, boolean lanHost) {
+        public Selection(Mode mode, CharacterChoice playerOne, CharacterChoice playerTwo,
+                         int actIndex, String address, int port, Viewport viewport, RewindAllowance.Rules rewinds) {
+            this(mode, playerOne, playerTwo, actIndex, address, port, viewport, rewinds, false);
+        }
         public Selection(Mode mode, CharacterChoice playerOne, CharacterChoice playerTwo,
                          int actIndex, String address, int port, Viewport viewport) {
             this(mode, playerOne, playerTwo, actIndex, address, port, viewport, RewindAllowance.Rules.defaults());
@@ -71,6 +75,7 @@ public final class GolfMenu implements TitleScreenProvider {
     private RewindAllowance.Rules rewinds = RewindAllowance.Rules.defaults();
     private String address = "127.0.0.1";
     private String portText = "20502";
+    private boolean lanHost;
     private boolean editing;
     private String editBuffer = "";
     private boolean replaceOnType;
@@ -137,7 +142,7 @@ public final class GolfMenu implements TitleScreenProvider {
         else if (setup != wasSetup || newRow != oldRow || !values().equals(oldValues) || wasEditing && !editing) cues.accept(Cue.MOVE);
     }
 
-    private String values() { return playerOne + "/" + playerTwo + "/" + practiceAct + "/" + viewport + "/" + rewinds + "/" + address + "/" + portText; }
+    private String values() { return playerOne + "/" + playerTwo + "/" + practiceAct + "/" + viewport + "/" + rewinds + "/" + address + "/" + portText + "/" + lanHost; }
 
     private void handle(InputHandler input) {
         controlsHint = MenuInput.controller(input)
@@ -168,7 +173,7 @@ public final class GolfMenu implements TitleScreenProvider {
 
     private void activate(Field field) {
         switch (field) {
-            case PLAYER_ONE, PLAYER_TWO, ACT, VIEWPORT, REWINDS_HOLE, REWINDS_TURN -> change(field, 1);
+            case PLAYER_ONE, PLAYER_TWO, ACT, VIEWPORT, REWINDS_HOLE, REWINDS_TURN, EXPOSURE -> change(field, 1);
             case ADDRESS, PORT -> {
                 editing = true; editBuffer = field == Field.ADDRESS ? address : portText;
                 replaceOnType = true; error = "";
@@ -213,6 +218,7 @@ public final class GolfMenu implements TitleScreenProvider {
             case PLAYER_TWO -> playerTwo = playerTwo == CharacterChoice.SONIC ? CharacterChoice.TAILS : CharacterChoice.SONIC;
             case ACT -> practiceAct = 1 - practiceAct;
             case VIEWPORT -> viewport = Viewport.values()[Math.floorMod(viewport.ordinal() + direction, Viewport.values().length)];
+            case EXPOSURE -> lanHost = !lanHost;
             case REWINDS_HOLE -> rewinds = new RewindAllowance.Rules(cycle(new int[]{0, 3, 5, -1}, rewinds.perHole(), direction), rewinds.perTurn());
             case REWINDS_TURN -> rewinds = new RewindAllowance.Rules(rewinds.perHole(), cycle(new int[]{1, 3, -1}, rewinds.perTurn(), direction));
             default -> { }
@@ -259,7 +265,7 @@ public final class GolfMenu implements TitleScreenProvider {
     private void launch() {
         if (address.isBlank() || !validPort(portText)) { error = "CHECK ADDRESS AND PORT"; return; }
         Selection choice = new Selection(mode, playerOne, playerTwo, mode == Mode.PRACTICE ? practiceAct : 0,
-                address, Integer.parseInt(portText), viewport, rewinds);
+                address, Integer.parseInt(portText), viewport, rewinds, mode == Mode.HOST && lanHost);
         launchConsumer.accept(choice);
         selected = choice; exitAction = TitleScreenAction.ONE_PLAYER; state = State.EXITING;
     }
@@ -268,7 +274,7 @@ public final class GolfMenu implements TitleScreenProvider {
         return switch (mode) {
             case PRACTICE -> List.of(Field.PLAYER_ONE, Field.ACT, Field.VIEWPORT, Field.REWINDS_HOLE, Field.REWINDS_TURN, Field.START, Field.BACK);
             case LOCAL -> List.of(Field.PLAYER_ONE, Field.PLAYER_TWO, Field.VIEWPORT, Field.REWINDS_HOLE, Field.REWINDS_TURN, Field.START, Field.BACK);
-            case HOST -> List.of(Field.PLAYER_ONE, Field.VIEWPORT, Field.REWINDS_HOLE, Field.REWINDS_TURN, Field.PORT, Field.START, Field.BACK);
+            case HOST -> List.of(Field.PLAYER_ONE, Field.VIEWPORT, Field.REWINDS_HOLE, Field.REWINDS_TURN, Field.PORT, Field.EXPOSURE, Field.START, Field.BACK);
             case JOIN -> List.of(Field.PLAYER_ONE, Field.VIEWPORT, Field.REWINDS_HOLE, Field.REWINDS_TURN, Field.ADDRESS, Field.PORT, Field.START, Field.BACK);
         };
     }
@@ -363,7 +369,7 @@ public final class GolfMenu implements TitleScreenProvider {
             int y = 124 + i * 9;
             String label = switch (field) {
                 case PLAYER_ONE -> mode == Mode.HOST || mode == Mode.JOIN ? "YOUR CHARACTER" : "PLAYER 1"; case PLAYER_TWO -> "PLAYER 2"; case ACT -> "PRACTICE ACT";
-                case VIEWPORT -> "VIEWPORT"; case ADDRESS -> "HOST ADDRESS"; case PORT -> "PORT";
+                case VIEWPORT -> "VIEWPORT"; case ADDRESS -> "HOST/IP#CODE"; case PORT -> "PORT"; case EXPOSURE -> "HOST ACCESS";
                 case REWINDS_HOLE -> "REWINDS / HOLE"; case REWINDS_TURN -> "REWINDS / TURN";
                 case START -> "READY - START"; case BACK -> "BACK TO MODES"; default -> "";
             };
@@ -371,6 +377,7 @@ public final class GolfMenu implements TitleScreenProvider {
                 case PLAYER_ONE -> playerOne.name(); case PLAYER_TWO -> playerTwo.name(); case ACT -> "EHZ " + (practiceAct + 1);
                 case VIEWPORT -> viewport.pixelWidth() + " PX"; case ADDRESS -> address; case PORT -> portText; default -> "";
                 case REWINDS_HOLE -> rewinds.holeLabel(); case REWINDS_TURN -> rewinds.turnLabel();
+                case EXPOSURE -> lanHost ? "LAN + INVITE" : "LOOPBACK ONLY";
             };
             boolean on = i == row;
             if (editing && on) value = editBuffer + (GolfMotion.blink(animationTick, 30) ? "_" : " ");

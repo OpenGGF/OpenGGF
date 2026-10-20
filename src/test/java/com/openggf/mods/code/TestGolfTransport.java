@@ -7,6 +7,25 @@ import java.nio.file.Path;
 class TestGolfTransport {
     @TempDir Path temp;
 
+    @Test void inboundViewsHaveBoundedRetentionAndNewestSurvives() throws Exception {
+        TestGolfProtocol.runProbe(temp, "TransportProbe", "inboundViewsAreByteBoundedAndCoalesced");
+    }
+    @Test void defaultHostOnlyBindsLoopback() throws Exception {
+        TestGolfProtocol.runProbe(temp, "TransportProbe", "defaultListenerBindsLiteralLoopback");
+    }
+    @Test void inboundByteCapPreservesOrderedBarriersAndReleasesCharges() throws Exception {
+        TestGolfProtocol.runProbe(temp, "TransportProbe", "inboundBytesBoundViewsSeparatedByOrderedPackets");
+    }
+    @Test void lanInviteRejectsWrongAndReplayedProofBeforeRoomSeatAdmission() throws Exception {
+        TestGolfProtocol.runProbe(temp, "TransportProbe", "lanInviteRejectsWrongAndReplayedProofBeforePublishingPeer");
+    }
+    @Test void inviteTimeoutAndListenerCloseReleaseUnauthenticatedSockets() throws Exception {
+        TestGolfProtocol.runProbe(temp, "TransportProbe", "idleInviteExpiresAndListenerCloseOwnsPendingSockets");
+    }
+    @Test void lanRoomInvitationPrecedesSeatAndSurvivesReconnect() throws Exception {
+        TestGolfProtocol.runProbe(temp, "RoomProbe", "lanInvitationPrecedesSeatAndSurvivesReconnect");
+    }
+
     @Test void localhostOrderingBoundsDeadlineAndCleanup() throws Exception {
         TestGolfProtocol.runProbe(temp, "TransportProbe", "run");
     }

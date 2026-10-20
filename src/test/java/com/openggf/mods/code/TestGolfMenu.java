@@ -58,6 +58,7 @@ class TestGolfMenu {
     @Test void heldAcceptCannotEnterSetupAndLaunchInOnePress() throws Exception { check("heldAccept"); }
     @Test void joinEditorValidatesAddressAndPortWithoutStartingGameplay() throws Exception { check("joinValidation"); }
     @Test void hostCanEditPortAndTextCancelRestoresTheOldValue() throws Exception { check("hostEditing"); }
+    @Test void lanHostingRequiresExplicitSelectionAndJoinPreservesCompleteInvite() throws Exception { check("lanExposureRequiresExplicitMenuSelection"); }
     @Test void returnToModePickerDoesNotLaunchOrLeakTypedText() throws Exception { check("backAndReset"); }
     @Test void everyConfigViewportQueuesBoundedMenuAndOverlayGeometry() throws Exception { check("renderWidths"); }
     @Test void allRequestedRewindLimitsAreSelectableInEveryMode() throws Exception { check("rewindSettings"); }

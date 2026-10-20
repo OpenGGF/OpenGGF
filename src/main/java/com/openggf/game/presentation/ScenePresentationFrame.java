@@ -92,6 +92,7 @@ public record ScenePresentationFrame(long revision, int act, int width, int heig
             }
             previous = primitive.beforeTile();
         }
+        SceneRasterWork.requireBudget(width, height, tiles, primitives, 0, 0);
     }
 
     @Override public int[] paletteArgb() { return paletteArgb.clone(); }
