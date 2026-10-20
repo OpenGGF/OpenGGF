@@ -1,9 +1,10 @@
 package com.openggf.net.client;
 
-import com.openggf.net.hub.HostHandshake;
 import com.openggf.net.identity.PlayerIdentity;
 import com.openggf.net.protocol.ControlMessage;
 import com.openggf.net.protocol.Protocol;
+import com.openggf.net.protocol.AuthenticationTranscript;
+import java.util.function.Supplier;
 
 import java.security.GeneralSecurityException;
 import java.util.Base64;
@@ -14,6 +15,9 @@ public final class ClientHandshake {
     private final String displayName;
     private final String determinismFingerprint;
     private final String expectedServerId;
+    private final AuthenticationTranscript.Role role;
+    private final Supplier<String> transportBinding;
+    private boolean signed;
     private String serverId;
 
     public ClientHandshake(PlayerIdentity identity, String displayName,
@@ -23,10 +27,19 @@ public final class ClientHandshake {
 
     public ClientHandshake(PlayerIdentity identity, String displayName,
                            String determinismFingerprint, String expectedServerId) {
+        this(identity, displayName, determinismFingerprint, expectedServerId,
+                AuthenticationTranscript.Role.ROOM_DIRECT, () -> AuthenticationTranscript.LOCAL_PLAINTEXT);
+    }
+
+    public ClientHandshake(PlayerIdentity identity, String displayName,
+                           String determinismFingerprint, String expectedServerId,
+                           AuthenticationTranscript.Role role, Supplier<String> transportBinding) {
         this.identity = identity;
         this.displayName = displayName;
         this.determinismFingerprint = determinismFingerprint;
         this.expectedServerId = expectedServerId;
+        this.role = role;
+        this.transportBinding = transportBinding;
     }
 
     public ControlMessage.Hello hello() {
@@ -39,7 +52,7 @@ public final class ClientHandshake {
 
     public ControlMessage.AuthProof onWelcome(ControlMessage.Welcome welcome)
             throws GeneralSecurityException {
-        if (welcome.protocolVersion() != Protocol.VERSION) {
+        if (signed || welcome.protocolVersion() != Protocol.VERSION) {
             throw new GeneralSecurityException("protocol version mismatch");
         }
         if (expectedServerId != null && !expectedServerId.equals(welcome.serverId())) {
@@ -52,7 +65,10 @@ public final class ClientHandshake {
         } catch (IllegalArgumentException e) {
             throw new GeneralSecurityException("invalid nonce", e);
         }
-        byte[] signature = identity.sign(HostHandshake.signedBytes(nonce, serverId));
+        if (nonce.length != 32) throw new GeneralSecurityException("invalid nonce length");
+        byte[] signature = identity.sign(AuthenticationTranscript.encode(
+                role, hello(), nonce, serverId, transportBinding.get()));
+        signed = true;
         return new ControlMessage.AuthProof(Base64.getEncoder().encodeToString(signature));
     }
 

@@ -50,6 +50,8 @@ class TestRelayFallbackTunnel {
         QueueSink hostOut = new QueueSink();
         HostMasterLink link = new HostMasterLink(room::onConnected, room::onText,
                 room::onBinary, room::onDisconnected, hostOut);
+        com.openggf.net.host.HostLinkAuthentication.bind(link,
+                () -> com.openggf.net.protocol.AuthenticationTranscript.LOCAL_PLAINTEXT);
 
         FakeGuestConnection guest = new FakeGuestConnection();
         QueueSink masterToHost = new QueueSink();
@@ -81,7 +83,9 @@ class TestRelayFallbackTunnel {
         pump.run();
 
         PlayerIdentity guestIdentity = PlayerIdentity.loadOrCreate(dir.resolve("guest"));
-        ClientHandshake handshake = new ClientHandshake(guestIdentity, "GUEST", "0.6:cafe");
+        ClientHandshake handshake = new ClientHandshake(guestIdentity, "GUEST", "0.6:cafe", null,
+                com.openggf.net.protocol.AuthenticationTranscript.Role.ROOM_RELAY,
+                () -> com.openggf.net.protocol.AuthenticationTranscript.LOCAL_PLAINTEXT);
         router.guestText(guestId, ControlCodec.encode(null, handshake.hello()));
         pump.run();
         ControlMessage.Welcome welcome = (ControlMessage.Welcome) ControlCodec.decode(

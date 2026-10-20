@@ -80,7 +80,9 @@ public class TestMasterServer {
     void browsesOverRealSocketWithIdentityPow(@TempDir Path dir) throws Exception {
         server = MasterServer.start(testConfig(), dir);
         PlayerIdentity identity = PlayerIdentity.loadOrCreate(dir.resolve("id"));
-        ClientHandshake handshake = new ClientHandshake(identity, "A", "0.6:cafe");
+        ClientHandshake handshake = new ClientHandshake(identity, "A", "0.6:cafe", null,
+                com.openggf.net.protocol.AuthenticationTranscript.Role.MASTER,
+                () -> com.openggf.net.protocol.AuthenticationTranscript.LOCAL_PLAINTEXT);
         Probe probe = new Probe();
         WebSocket socket = HttpClient.newHttpClient().newWebSocketBuilder()
                 .buildAsync(URI.create("ws://127.0.0.1:" + server.port() + "/master"), probe)
@@ -132,7 +134,9 @@ public class TestMasterServer {
     void adminTimeoutImmediatelyRevokesAnActiveSession(@TempDir Path dir) throws Exception {
         server = MasterServer.start(testConfig(), dir);
         PlayerIdentity identity = PlayerIdentity.loadOrCreate(dir.resolve("id"));
-        ClientHandshake handshake = new ClientHandshake(identity, "A", "0.6:cafe");
+        ClientHandshake handshake = new ClientHandshake(identity, "A", "0.6:cafe", null,
+                com.openggf.net.protocol.AuthenticationTranscript.Role.MASTER,
+                () -> com.openggf.net.protocol.AuthenticationTranscript.LOCAL_PLAINTEXT);
         Probe probe = new Probe();
         WebSocket socket = HttpClient.newHttpClient().newWebSocketBuilder()
                 .buildAsync(URI.create("ws://127.0.0.1:" + server.port() + "/master"), probe)

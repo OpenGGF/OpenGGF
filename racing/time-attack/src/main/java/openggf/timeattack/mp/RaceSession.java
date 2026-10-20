@@ -227,7 +227,9 @@ public final class RaceSession implements AutoCloseable {
         }
         URI uri;
         try {
-            uri = URI.create(configured.trim());
+            uri = NetworkEndpoints.webSocket(URI.create(configured.trim()));
+            if (settings.masterTrustInsecure() && !NetworkEndpoints.literalLoopback(uri.getHost()))
+                throw new IllegalArgumentException("insecure TLS trust is local-development only");
         } catch (IllegalArgumentException e) {
             fail("Invalid master server URL: " + e.getMessage());
             return;

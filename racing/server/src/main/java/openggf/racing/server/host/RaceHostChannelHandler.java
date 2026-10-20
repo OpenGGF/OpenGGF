@@ -94,7 +94,8 @@ final class RaceHostChannelHandler extends SimpleChannelInboundHandler<WebSocket
         context.close();
     }
 
-    private record NettyHubConnection(Channel channel, String remoteHost) implements HubConnection {
+    private record NettyHubConnection(Channel channel, String remoteHost) implements HubConnection, com.openggf.net.hub.HandshakeTransport {
+        @Override public String authenticationBinding() { return NettyHandshakeBinding.localCertificate(channel, remoteHost); }
         @Override
         public void sendText(String text) {
             channel.writeAndFlush(new TextWebSocketFrame(text));

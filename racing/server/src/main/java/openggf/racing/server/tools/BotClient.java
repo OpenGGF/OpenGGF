@@ -111,7 +111,9 @@ public final class BotClient {
         publisher.beginAttempt(1);
     }
 
-    private static final class Connection implements HubConnection {
+    /** In-process load harness: no socket or remote peer supplies this explicit test binding. */
+    private static final class Connection implements HubConnection, com.openggf.net.hub.HandshakeTransport {
+        @Override public String authenticationBinding() { return com.openggf.net.protocol.AuthenticationTranscript.LOCAL_PLAINTEXT; }
         private final java.util.List<String> text = new java.util.ArrayList<>();
         private boolean closed;
         private int maxPacketBytes;

@@ -24,7 +24,8 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestRelayRoomManager {
-    static final class FakeConnection implements HubConnection {
+    static final class FakeConnection implements HubConnection, com.openggf.net.hub.HandshakeTransport {
+        @Override public String authenticationBinding() { return com.openggf.net.protocol.AuthenticationTranscript.LOCAL_PLAINTEXT; }
         final List<String> text = new ArrayList<>();
         final List<byte[]> binary = new ArrayList<>();
         String closedReason;

@@ -23,7 +23,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestRoomBroker {
     private static final String DIRECT_CERT_PIN = "ab".repeat(32);
-    static final class FakeConnection implements HubConnection {
+    static final class FakeConnection implements HubConnection, com.openggf.net.hub.HandshakeTransport {
+        @Override public String authenticationBinding() { return com.openggf.net.protocol.AuthenticationTranscript.LOCAL_PLAINTEXT; }
         final List<String> text = new ArrayList<>();
         String closedReason;
 
@@ -103,7 +104,9 @@ class TestRoomBroker {
     private String admit(FakeConnection connection, Path identityDir, String name)
             throws Exception {
         PlayerIdentity identity = PlayerIdentity.loadOrCreate(identityDir);
-        ClientHandshake handshake = new ClientHandshake(identity, name, "0.6:cafe");
+        ClientHandshake handshake = new ClientHandshake(identity, name, "0.6:cafe", null,
+                com.openggf.net.protocol.AuthenticationTranscript.Role.MASTER,
+                () -> com.openggf.net.protocol.AuthenticationTranscript.LOCAL_PLAINTEXT);
         broker.onConnected(connection);
         broker.onText(connection, ControlCodec.encode(null, handshake.hello()));
         broker.onText(connection, ControlCodec.encode(null,

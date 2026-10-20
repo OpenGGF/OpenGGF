@@ -4,7 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** Recording transport used by hub-layer tests. */
-class FakeHubConnection implements HubConnection {
+class FakeHubConnection implements HubConnection, HandshakeTransport {
+    @Override public String authenticationBinding() { return com.openggf.net.protocol.AuthenticationTranscript.LOCAL_PLAINTEXT; }
     final List<String> text = new ArrayList<>();
     final List<byte[]> binary = new ArrayList<>();
     String closedReason;

@@ -218,7 +218,13 @@ final class MasterChannelHandler extends SimpleChannelInboundHandler<WebSocketFr
     }
 
     private record NettyMasterConnection(Channel channel, String remoteHost)
-            implements HubConnection {
+            implements HubConnection, com.openggf.net.hub.HandshakeTransport {
+        @Override public String authenticationBinding() {
+            return openggf.racing.server.host.NettyHandshakeBinding.localCertificate(channel, remoteHost);
+        }
+        @Override public com.openggf.net.protocol.AuthenticationTranscript.Role authenticationRole() {
+            return com.openggf.net.protocol.AuthenticationTranscript.Role.ROOM_RELAY;
+        }
         @Override public void sendText(String text) {
             channel.writeAndFlush(new TextWebSocketFrame(text));
         }
