@@ -6,16 +6,21 @@ import com.openggf.net.protocol.VerdictCodec;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.QueryStringDecoder;
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.ScheduledFuture;
 
 import java.security.MessageDigest;
 import java.util.Base64;
@@ -25,6 +30,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.LongSupplier;
@@ -49,9 +56,30 @@ public final class MasterHttpRoutes extends SimpleChannelInboundHandler<FullHttp
     private final VerificationJobQueue jobs;
     private final VerdictConsequences consequences;
     private final LongSupplier clock;
-    private final Executor brokerLoop;
     private final BiConsumer<VerificationJobQueue.Job, Boolean> verdictRouter;
     private final Map<String, Long> lastUploadByIdentity;
+    private final MasterHttpAdmission admission;
+    private Pending pending;
+    private boolean terminal;
+    private boolean responsePending;
+    private ScheduledFuture<?> closeTimeout;
+
+    private static final class Pending {
+        final MasterHttpAdmission.Ticket ticket;
+        ScheduledFuture<?> timeout;
+
+        Pending(MasterHttpAdmission.Ticket ticket) {
+            this.ticket = ticket;
+        }
+
+        void finish() {
+            try {
+                cancelTimeout(timeout);
+            } finally {
+                ticket.finish();
+            }
+        }
+    }
 
     public MasterHttpRoutes(MasterConfig config,
                             Function<String, Optional<String>> sessionIdentity,
@@ -60,6 +88,18 @@ public final class MasterHttpRoutes extends SimpleChannelInboundHandler<FullHttp
                             LongSupplier clock, Executor brokerLoop,
                             BiConsumer<VerificationJobQueue.Job, Boolean> verdictRouter,
                             Map<String, Long> lastUploadByIdentity) {
+        this(config, sessionIdentity, blobs, verifiers, jobs, consequences, clock,
+                brokerLoop, verdictRouter, lastUploadByIdentity,
+                new MasterHttpAdmission(brokerLoop));
+    }
+
+    MasterHttpRoutes(MasterConfig config,
+                     Function<String, Optional<String>> sessionIdentity,
+                     RecordingBlobStore blobs, VerifierRegistry verifiers,
+                     VerificationJobQueue jobs, VerdictConsequences consequences,
+                     LongSupplier clock, Executor brokerLoop,
+                     BiConsumer<VerificationJobQueue.Job, Boolean> verdictRouter,
+                     Map<String, Long> lastUploadByIdentity, MasterHttpAdmission admission) {
         this.config = config;
         this.sessionIdentity = sessionIdentity;
         this.blobs = blobs;
@@ -67,9 +107,9 @@ public final class MasterHttpRoutes extends SimpleChannelInboundHandler<FullHttp
         this.jobs = jobs;
         this.consequences = consequences;
         this.clock = clock;
-        this.brokerLoop = brokerLoop;
         this.verdictRouter = verdictRouter;
         this.lastUploadByIdentity = lastUploadByIdentity;
+        this.admission = admission;
     }
 
     public MasterHttpRoutes(MasterConfig config,
@@ -96,36 +136,173 @@ public final class MasterHttpRoutes extends SimpleChannelInboundHandler<FullHttp
 
     @Override
     protected void channelRead0(ChannelHandlerContext context, FullHttpRequest request) {
+        if (!context.channel().isActive() || terminal) return;
+        if (pending != null || responsePending) {
+            // autoRead cannot stop messages already decoded from the current TCP read.
+            // Closing without a second response preserves HTTP response ordering.
+            context.close();
+            return;
+        }
         String path;
         try {
             path = new QueryStringDecoder(request.uri()).path();
         } catch (IllegalArgumentException malformedUri) {
-            write(context, response(HttpResponseStatus.BAD_REQUEST),
-                    HttpUtil.isKeepAlive(request));
+            reject(context, HttpResponseStatus.BAD_REQUEST, HttpUtil.isKeepAlive(request));
             return;
         }
         if (!path.startsWith("/recordings") && !path.startsWith("/verifier")) {
             context.fireChannelRead(request.retain());
             return;
         }
-        RequestData data = new RequestData(request.method(), path,
-                request.headers().get(HttpHeaderNames.AUTHORIZATION),
-                request.headers().get("X-Worker-Id"),
-                ByteBufUtil.getBytes(request.content()), HttpUtil.isKeepAlive(request));
-        brokerLoop.execute(() -> {
-            ResponseData response;
-            try {
-                response = handle(data);
-            } catch (IllegalArgumentException badRequest) {
-                response = response(HttpResponseStatus.BAD_REQUEST);
-            } catch (RuntimeException serverFailure) {
-                LOG.log(System.Logger.Level.ERROR, "master HTTP route failed", serverFailure);
-                response = response(HttpResponseStatus.INTERNAL_SERVER_ERROR);
+        int bytes = request.content().readableBytes();
+        if (bytes > maxHttpBodyBytes(config)) {
+            reject(context, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE);
+            return;
+        }
+        MasterHttpAdmission.Ticket ticket = admission.reserve(bytes);
+        if (ticket == null) {
+            reject(context, HttpResponseStatus.SERVICE_UNAVAILABLE);
+            return;
+        }
+        Pending accepted = new Pending(ticket);
+        pending = accepted;
+        context.channel().config().setAutoRead(false);
+        try {
+            accepted.timeout = context.executor().schedule(() -> {
+                if (pending == accepted) context.close();
+            }, 30, TimeUnit.SECONDS);
+            RequestData data = new RequestData(request.method(), path,
+                    request.headers().get(HttpHeaderNames.AUTHORIZATION),
+                    request.headers().get("X-Worker-Id"),
+                    ByteBufUtil.getBytes(request.content()), HttpUtil.isKeepAlive(request));
+            admission.dispatch(ticket, () -> {
+                if (ticket.isFinished()) return;
+                ResponseData response;
+                try {
+                    response = handle(data);
+                } catch (IllegalArgumentException badRequest) {
+                    response = response(HttpResponseStatus.BAD_REQUEST);
+                } catch (Throwable serverFailure) {
+                    LOG.log(System.Logger.Level.ERROR, "master HTTP route failed", serverFailure);
+                    response = response(HttpResponseStatus.INTERNAL_SERVER_ERROR);
+                }
+                ResponseData completed = response;
+                boolean keepAlive = data.keepAlive();
+                try {
+                    context.executor().execute(() -> complete(context, accepted,
+                            completed, keepAlive));
+                } catch (RuntimeException | Error stopped) {
+                    accepted.finish();
+                    context.close();
+                }
+            }, context::close);
+        } catch (RuntimeException | Error failure) {
+            pending = null;
+            accepted.finish();
+            reject(context, HttpResponseStatus.SERVICE_UNAVAILABLE);
+        }
+    }
+
+    private void reject(ChannelHandlerContext context, HttpResponseStatus status) {
+        reject(context, status, false);
+    }
+
+    private void reject(ChannelHandlerContext context, HttpResponseStatus status, boolean keepAlive) {
+        // A write may remain pending: stop both new reads and already-decoded messages
+        // before submitting the response, without retaining a body ticket.
+        terminal = !keepAlive;
+        responsePending = true;
+        context.channel().config().setAutoRead(false);
+        try {
+            closeTimeout = context.executor().schedule(() -> {
+                context.close();
+            }, 30, TimeUnit.SECONDS);
+            write(context, response(status), keepAlive).addListener(future -> {
+                cancelTimeout(closeTimeout);
+                responsePending = false;
+                if (future.isSuccess() && keepAlive && context.channel().isActive()) {
+                    context.channel().config().setAutoRead(true);
+                }
+            });
+        } catch (RuntimeException | Error stopped) {
+            context.close();
+        }
+    }
+
+    private static void cancelTimeout(ScheduledFuture<?> timeout) {
+        try {
+            if (timeout != null) timeout.cancel(false);
+        } catch (RejectedExecutionException stopped) {
+            // Netty may reject removal of a canceled timer during executor shutdown.
+        }
+    }
+
+    static int maxHttpBodyBytes(MasterConfig config) {
+        return (int) Math.min(MasterHttpAdmission.MAX_BODY_BYTES,
+                (long) config.maxRecordingBytes() + 8192);
+    }
+
+    /** Install before aggregation, which may otherwise emit an oversized second response. */
+    ChannelInboundHandlerAdapter pipelineGuard() {
+        return new ChannelInboundHandlerAdapter() {
+            @Override
+            public void channelRead(ChannelHandlerContext context, Object message) {
+                if (terminal) {
+                    ReferenceCountUtil.release(message);
+                } else if (!context.channel().isActive()
+                        || (message instanceof HttpRequest && (pending != null || responsePending))) {
+                    ReferenceCountUtil.release(message);
+                    context.close();
+                } else {
+                    context.fireChannelRead(message);
+                }
             }
-            ResponseData completed = response;
-            context.executor().execute(() -> write(
-                    context, completed, data.keepAlive()));
+        };
+    }
+
+    private void complete(ChannelHandlerContext context, Pending accepted,
+                          ResponseData response, boolean keepAlive) {
+        if (pending != accepted || !context.channel().isActive()) {
+            accepted.finish();
+            return;
+        }
+        write(context, response, keepAlive).addListener(future -> {
+            accepted.finish();
+            if (pending == accepted) {
+                pending = null;
+                if (future.isSuccess() && keepAlive && context.channel().isActive()) {
+                    context.channel().config().setAutoRead(true);
+                } else {
+                    context.close();
+                }
+            }
         });
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext context) throws Exception {
+        cancelTimeout(closeTimeout);
+        if (pending != null) {
+            pending.finish();
+            pending = null;
+        }
+        super.channelInactive(context);
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext context, Throwable cause) {
+        context.close();
+    }
+
+    @Override
+    public void handlerRemoved(ChannelHandlerContext context) {
+        cancelTimeout(closeTimeout);
+        if (terminal || responsePending) context.close();
+        if (pending != null) {
+            pending.finish();
+            pending = null;
+            context.close();
+        }
     }
 
     private ResponseData handle(RequestData request) {
@@ -298,7 +475,7 @@ public final class MasterHttpRoutes extends SimpleChannelInboundHandler<FullHttp
         return new ResponseData(status, "text/plain; charset=utf-8", new byte[0]);
     }
 
-    private static void write(ChannelHandlerContext context, ResponseData response,
+    private static ChannelFuture write(ChannelHandlerContext context, ResponseData response,
                               boolean keepAlive) {
         var message = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
                 response.status(), Unpooled.wrappedBuffer(response.body()));
@@ -306,11 +483,14 @@ public final class MasterHttpRoutes extends SimpleChannelInboundHandler<FullHttp
         message.headers().set(HttpHeaderNames.CONTENT_TYPE, response.contentType());
         if (keepAlive) {
             message.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
+        } else {
+            message.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
         }
-        context.writeAndFlush(message).addListener(future -> {
+        return context.writeAndFlush(message).addListener(future -> {
             if (!future.isSuccess()) {
                 LOG.log(System.Logger.Level.ERROR, "master HTTP response write failed", future.cause());
             }
+            if (!keepAlive || !future.isSuccess()) context.close();
         });
     }
 }
