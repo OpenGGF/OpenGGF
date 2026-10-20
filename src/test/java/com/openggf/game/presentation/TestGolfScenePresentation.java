@@ -28,6 +28,104 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestGolfScenePresentation {
     private SharedLevel bootstrap;
 
+    @Test void horizontallyInvisibleRectangleBombExecutesNoRasterRows() throws Exception {
+        var vertices = java.util.Collections.nCopies(256, new ScenePresentationFrame.Vertex(321, 0, 322, 224, -1));
+        var scene = new ScenePresentationFrame(1, 0, 320, 224, 0, 0, 0xFF000000, palette(), List.of(),
+                java.util.Collections.nCopies(400, new ScenePresentationFrame.Primitive(
+                        0, ScenePresentationFrame.PrimitiveKind.RECTANGLE, 0, vertices)));
+        assertEquals(174080, SceneRasterWork.estimate(320, 224, scene.tiles(), scene.primitives(), 0, 0));
+        var measured = CompositorRowProbe.compose(scene, new RomSceneArtCatalog());
+        assertEquals(0, measured.rows(), "empty clipped width must skip the row loop before iteration");
+        assertTrue(Arrays.stream(measured.image().argb()).allMatch(pixel -> pixel == 0xFF000000));
+    }
+
+    @Test void horizontallyInvisibleTileBombExecutesNoRasterRows() throws Exception {
+        var art = new RomSceneArtCatalog(); art.addRecipe("test/invisible", new Pattern[]{solid(1)});
+        var tile = new ScenePresentationFrame.Tile(ScenePresentationFrame.Layer.OBJECT,
+                new ScenePresentationFrame.ArtReference("test/invisible", 0), 0, false, false, false,
+                321, 0, 1, 224, 0, 8, 0, 255);
+        var scene = new ScenePresentationFrame(1, 0, 320, 224, 0, 0, 0xFF000000, palette(),
+                java.util.Collections.nCopies(65536, tile), List.of());
+        assertEquals(137216, SceneRasterWork.estimate(320, 224, scene.tiles(), scene.primitives(), 0, 0));
+        var measured = CompositorRowProbe.compose(scene, art);
+        assertEquals(0, measured.rows(), "empty clipped tile width must skip the row loop before iteration");
+        assertTrue(Arrays.stream(measured.image().argb()).allMatch(pixel -> pixel == 0xFF000000));
+    }
+
+    @Test void rowProbeCountsTheActualVisibleProductionLoop() throws Exception {
+        var rectangle = new ScenePresentationFrame.Primitive(0, ScenePresentationFrame.PrimitiveKind.RECTANGLE, 0,
+                List.of(new ScenePresentationFrame.Vertex(0, 0, 1, 224, -1)));
+        var scene = new ScenePresentationFrame(1, 0, 320, 224, 0, 0, 0, palette(), List.of(), List.of(rectangle));
+        assertEquals(224, CompositorRowProbe.compose(scene, new RomSceneArtCatalog()).rows(), "measurement positive control");
+    }
+
+    @Test void aggregateRasterWorkRejectsValidSizeRectangleBomb() {
+        var vertices = java.util.Collections.nCopies(256,
+                new ScenePresentationFrame.Vertex(0, 0, 320, 224, -1));
+        var primitives = java.util.Collections.nCopies(400, new ScenePresentationFrame.Primitive(
+                0, ScenePresentationFrame.PrimitiveKind.RECTANGLE, 0, vertices));
+        assertThrows(IllegalArgumentException.class, () -> new ScenePresentationFrame(1, 0, 320, 224,
+                0, 0, 0, palette(), List.of(), primitives));
+    }
+
+    @Test void decoderRejectsAggregateBombBelowWireByteLimit() throws Exception {
+        var vertices = java.util.Collections.nCopies(256, new ScenePresentationFrame.Vertex(0, 0, 0, 0, -1));
+        var primitives = java.util.Collections.nCopies(400, new ScenePresentationFrame.Primitive(
+                0, ScenePresentationFrame.PrimitiveKind.RECTANGLE, 0, vertices));
+        byte[] encoded = SceneFrameCodec.encode(new ScenePresentationFrame(1, 0, 320, 224,
+                0, 0, 0, palette(), List.of(), primitives));
+        assertTrue(encoded.length < SceneFrameCodec.MAX_BYTES);
+        var wire = java.nio.ByteBuffer.wrap(encoded);
+        wire.position(encoded.length - 400 * (8 + 256 * 20));
+        for (int p = 0; p < 400; p++) {
+            wire.position(wire.position() + 8);
+            for (int v = 0; v < 256; v++) {
+                wire.putInt(0).putInt(0).putInt(320).putInt(224).putInt(-1);
+            }
+        }
+        assertThrows(IOException.class, () -> SceneFrameCodec.decode(encoded));
+    }
+
+    @Test void unchangedImageAndDrawReuseComposedImageUntilOffsetOrFrameChanges() {
+        var graphics = new com.openggf.graphics.GraphicsManager(); graphics.initHeadless();
+        try (var presenter = new RomSceneViewPresenter(new RomSceneArtCatalog(), graphics, 320, 224)) {
+            presenter.accept(frame(List.of()));
+            var first = presenter.image(0, 0);
+            presenter.draw(0, 0);
+            assertSame(first, presenter.image(0, 0));
+            var shifted = presenter.image(1, 0);
+            assertNotSame(first, shifted);
+            assertSame(shifted, presenter.image(1, 0));
+            presenter.accept(new ScenePresentationFrame(2, 0, 320, 224, 0, 0, 0,
+                    palette(), List.of(), List.of()));
+            assertNotSame(shifted, presenter.image(1, 0));
+        }
+    }
+
+    @Test void extremeLinesClipBeforeTraversalAndEstimatorCountsOnlyVisibleVisits() {
+        assertArrayEquals(new long[]{0, 10, 319, 10}, SceneRasterWork.clip(320, 224, -65536, 10, 65536, 10));
+        assertNull(SceneRasterWork.clip(320, 224, -65536, -10, 65536, -10));
+        assertArrayEquals(new long[]{0, 0, 223, 223}, SceneRasterWork.clip(320, 224, -65536, -65536, 65536, 65536));
+        var line = new ScenePresentationFrame.Primitive(0, ScenePresentationFrame.PrimitiveKind.VERTEX, 1,
+                List.of(new ScenePresentationFrame.Vertex(-65536, 10, 0, 0, -1),
+                        new ScenePresentationFrame.Vertex(65536, 10, 0, 0, -1)));
+        var scene = new ScenePresentationFrame(1, 0, 320, 224, 0, 0, 0xFF000000,
+                palette(), List.of(), List.of(line));
+        assertEquals(72002, SceneRasterWork.estimate(320, 224, List.of(), List.of(line), 0, 0));
+        assertEquals(320, Arrays.stream(SceneCompositor.compose(scene, new RomSceneArtCatalog(), 0, 0).argb())
+                .filter(pixel -> pixel == -1).count());
+    }
+
+    @Test void surveyingCannotBringAnOffscreenRectangleBombPastAdmission() {
+        var vertices = java.util.Collections.nCopies(256,
+                new ScenePresentationFrame.Vertex(32768, 0, 33088, 224, -1));
+        var scene = new ScenePresentationFrame(1, 0, 320, 224, 0, 0, 0, palette(), List.of(),
+                java.util.Collections.nCopies(400, new ScenePresentationFrame.Primitive(
+                        0, ScenePresentationFrame.PrimitiveKind.RECTANGLE, 0, vertices)));
+        assertDoesNotThrow(() -> SceneCompositor.compose(scene, new RomSceneArtCatalog(), 0, 0));
+        assertThrows(IllegalArgumentException.class, () -> SceneCompositor.compose(scene, new RomSceneArtCatalog(), 32768, 0));
+    }
+
     @AfterEach void reset() {
         if (bootstrap != null) bootstrap.dispose();
         SonicConfigurationService.getInstance().clearSessionOverrides();
@@ -204,6 +302,8 @@ class TestGolfScenePresentation {
             var pose = new ScenePlayerPose("tails", monitor.x(), monitor.y() - 32,
                     new PlayerPresentationPose(PlayerPresentationPose.Kind.DUCK, 0, -1));
             var local = guest.image(0, 0, pose);
+            guest.draw(0, 0, pose);
+            assertSame(local, guest.image(0, 0, pose), "unchanged projected pose must reuse its composed image");
             guest.draw(7, 3, pose);
             var charge = new ScenePlayerPose("tails", monitor.x(), monitor.y() - 32,
                     new PlayerPresentationPose(PlayerPresentationPose.Kind.SPINDASH, 10, 1));

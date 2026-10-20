@@ -11,6 +11,15 @@ Unreleased. The earlier development themes remain in
   on disconnect or timeout even during executor shutdown. Netty and Jackson use their
   patched 4.1.139.Final and 2.22.3 releases.
 
+- **Putt Putt Paradise multiplayer:** Scene admission bounds aggregate clipped
+  raster work, lines clip before traversal, and unchanged presentations reuse
+  composed images; invisible geometry skips raster row traversal. Incoming scenes
+  coalesce within ordered packet boundaries at transport and room delivery, with
+  each mailbox capped at 256 entries / 4 MiB retained bytes. Ended room state stays
+  final across buffered reconnects and failed sends. Hosting defaults to literal
+  loopback; explicit LAN hosting displays a private session invite and verifies a
+  fresh HMAC proof before admitting a guest. LAN game traffic remains plaintext.
+
 - **Super Sonic Bros.:** a new example mod, a platform fighter for one to four
   players (people or CPUs) on Sonic 3 & Knuckles. Sonic, Tails, Knuckles, Robotnik,
   Mecha Sonic, Egg Robo and Rhinobot each have a full move set (tilts, chargeable

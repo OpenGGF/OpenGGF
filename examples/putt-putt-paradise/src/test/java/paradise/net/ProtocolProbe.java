@@ -44,7 +44,10 @@ public final class ProtocolProbe {
                 new TurnOpened(shot.id(), 10, 20, 224, 5, score, score, true),
                 new ShotControl(shot.id(), ShotAction.READY), new ShotStatus(shot.id(), ShotPhase.HANDOFF, 3, 1));
         var combined = new ByteArrayOutputStream();
-        for (var packet : packets) GolfCodec.write(combined, packet);
+        for (var packet : packets) {
+            check(GolfCodec.encodedSize(packet) == GolfCodec.encode(packet).length, "retained charge matches actual encoded packet size");
+            GolfCodec.write(combined, packet);
+        }
         InputStream fragmented = new FilterInputStream(new ByteArrayInputStream(combined.toByteArray())) {
             @Override public int read(byte[] b, int off, int len) throws IOException {
                 return super.read(b, off, Math.min(1, len));

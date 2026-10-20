@@ -9,6 +9,236 @@ import static paradise.net.ProtocolProbe.*;
 
 /** Two production rooms using actual sockets; gameplay decisions remain in this caller fixture. */
 public final class RoomProbe {
+    private static void primeHostMailboxWithOrderedControls(Rooms rooms, int count) throws Exception {
+        for (int i = 0; i < count; i++) {
+            rooms.host.tick(); rooms.host.resume();
+            boolean[] delivered = {false};
+            TransportProbe.await(() -> {
+                rooms.guest.tick(); delivered[0] |= rooms.guest.drainEvents().stream().anyMatch(event ->
+                        event instanceof GolfRoom.Received r && r.packet() instanceof Resume);
+                return delivered[0];
+            }, 3000, "priming control delivered");
+        }
+        check(mailbox(rooms.host).size() == count, "room retains the ordered priming controls");
+    }
+
+    public static void sendFailureCountOverflowCannotPublishAfterTerminal() throws Exception {
+        try (var rooms = new Rooms()) {
+            var host = rooms.host; var guest = rooms.guest;
+            pump(host, guest, () -> host.state().ready() && guest.state().ready(), "send-failure room ready");
+            var turn = new ShotId(host.state().match(), 1, 1, 1, 0); var score = new Score(0, 0, false);
+            host.publishTurn(new TurnOpened(turn, 100, 200, 0, 5, score, score));
+            pump(host, guest, () -> guest.state().remoteTurnOpened() != null, "send-failure turn");
+            host.drainEvents(); guest.drainEvents();
+            primeHostMailboxWithOrderedControls(rooms, 256);
+            connection(host).close(); // Publication sees a failed send before tick observes disconnect.
+            host.acceptShot(request(turn));
+            var state = host.state(); var terminal = host.drainEvents();
+            check(state.ended() && !state.ready() && !state.connected() && state.held()
+                            && state.message().equals("room event queue overflow")
+                            && terminal.size() == 1 && terminal.getFirst() instanceof GolfRoom.Disconnected d
+                            && d.reason().equals("room event queue overflow"),
+                    "an in-flight publication cannot append after count-overflow end: " + terminal);
+            check(retainedBytes(host) == 0, "terminal drain releases in-flight failure accounting");
+        }
+    }
+
+    public static void reconnectCandidateCountOverflowKeepsTerminalStateAndOrderingFinal() throws Exception {
+        try (var rooms = new Rooms()) {
+            var host = rooms.host; var guest = rooms.guest;
+            pump(host, guest, () -> host.state().ready() && guest.state().ready(), "authenticated first connection");
+            UUID match = guest.state().match(), token = guest.state().roomToken();
+            host.drainEvents(); guest.drainEvents();
+            // Fill through normal host publication, draining only the remote consumer.
+            // This makes the reconnect batch reach the room count bound before its
+            // outbound control queue could become a competing overflow mechanism.
+            primeHostMailboxWithOrderedControls(rooms, 250);
+            connection(guest).close(); // Do not tick the guest again: reconnect is the controlled raw peer below.
+            TransportProbe.await(() -> { host.tick(); return !host.state().connected(); }, 3000, "host registers disconnect");
+            TransportProbe.await(() -> host.activeWorkers() == 1, 3000, "original socket retires before reconnect");
+            try (var raw = new java.net.Socket("127.0.0.1", host.boundPort())) {
+                var bytes = new java.io.ByteArrayOutputStream();
+                GolfCodec.write(bytes, new Hello(prints(), "tails"));
+                GolfCodec.write(bytes, new Reconnect(match, 1, token, 0, 0));
+                for (int i = 0; i < 130; i++) GolfCodec.write(bytes, new Ready(match, 1, token, prints(), "tails"));
+                raw.getOutputStream().write(bytes.toByteArray());
+                // Observe admission only: the actual tick must drain this entire
+                // decoded socket batch and exercise the candidate-to-peer handoff.
+                Field listenerField = GolfRoom.class.getDeclaredField("listener"); listenerField.setAccessible(true);
+                GolfListener listener = (GolfListener)listenerField.get(host);
+                Field acceptedField = GolfListener.class.getDeclaredField("accepted"); acceptedField.setAccessible(true);
+                Field peersField = GolfListener.class.getDeclaredField("peers"); peersField.setAccessible(true);
+                @SuppressWarnings("unchecked") var pending = (ArrayDeque<GolfConnection>)acceptedField.get(listener);
+                Object peersLock = peersField.get(listener);
+                var candidate = new GolfConnection[1];
+                TransportProbe.await(() -> {
+                    synchronized (peersLock) { candidate[0] = pending.peekFirst(); }
+                    return candidate[0] != null && candidate[0].stats().incomingCommands() == 132;
+                }, 3000, "complete reconnect candidate batch buffered below the transport count cap");
+                host.tick();
+                var state = host.state(); var terminal = host.drainEvents();
+                check(state.ended() && !state.ready() && !state.connected() && state.held()
+                                && state.message().equals("room event queue overflow")
+                                && terminal.size() == 1 && terminal.getFirst() instanceof GolfRoom.Disconnected d
+                                && d.reason().equals("room event queue overflow"),
+                        "count-overflow terminal state/order must remain final: " + state + ", queued=" + terminal.size());
+                check(candidate[0].isClosed() && retainedBytes(host) == 0, "terminal transport and accounting stay closed/empty");
+                host.tick();
+                check(host.state().equals(state) && host.drainEvents().isEmpty(), "later ticks cannot revive terminal state or delivery");
+            }
+        }
+    }
+    @SuppressWarnings("unchecked")
+    private static ArrayDeque<GolfRoom.Event> mailbox(GolfRoom room) throws Exception {
+        Field field = GolfRoom.class.getDeclaredField("events"); field.setAccessible(true);
+        return (ArrayDeque<GolfRoom.Event>)field.get(room);
+    }
+    private static int retainedBytes(GolfRoom room) throws Exception {
+        Field field = GolfRoom.class.getDeclaredField("eventBytes"); field.setAccessible(true);
+        return field.getInt(room);
+    }
+    private static void receiveView(Rooms rooms, ShotId id, long revision) throws Exception {
+        var queue = mailbox(rooms.guest);
+        check(connection(rooms.host).send(new ViewFrame(id, revision, revision, new byte[GolfCodec.MAX_VIEW_BYTES])), "send bounded view");
+        pump(rooms.host, rooms.guest, () -> rooms.guest.state().ended() || queue.stream().anyMatch(event ->
+                event instanceof GolfRoom.Received r && r.packet() instanceof ViewFrame view && view.revision() == revision), "view admitted or room overflow");
+    }
+    public static void roomByteOverflowClosesAndReleasesScenesWithTerminalDelivery() throws Exception {
+        try (var rooms = new Rooms()) {
+            var host = rooms.host; var guest = rooms.guest;
+            pump(host, guest, () -> host.state().ready() && guest.state().ready(), "byte-bound room ready");
+            var turn = new ShotId(host.state().match(), 1, 1, 1, 1); var score = new Score(0, 0, false);
+            host.publishTurn(new TurnOpened(turn, 100, 200, 0, 5, score, score));
+            pump(host, guest, () -> guest.state().remoteTurnOpened() != null, "byte-bound turn");
+            host.drainEvents(); guest.drainEvents();
+            var queue = mailbox(guest);
+            int viewBytes = GolfCodec.encode(new ViewFrame(turn, 0, 0, new byte[GolfCodec.MAX_VIEW_BYTES])).length;
+            for (int revision = 1; revision <= 3; revision++) {
+                receiveView(rooms, turn, revision);
+                check(!guest.state().ended() && retainedBytes(guest) == viewBytes,
+                        "adjacent max-size replacements release old charges exactly");
+            }
+            check(queue.size() == 1, "one adjacent same-shot view retained");
+            guest.drainEvents(); check(retainedBytes(guest) == 0, "ordinary scene drain releases charge");
+            for (int i = 1; i <= 2; i++) {
+                receiveView(rooms, turn, i + 3);
+                var sound = new SoundCue(turn, i, 0, "charge"); host.cue(sound);
+                pump(host, guest, () -> queue.stream().anyMatch(event -> event instanceof GolfRoom.Received r
+                        && r.packet().equals(sound)), "ordered barrier follows scene");
+            }
+            receiveView(rooms, turn, 6);
+            check(guest.state().ended(), "third near-max scene across barriers must close the room at its byte cap");
+            check(connection(guest).isClosed(), "room overflow closes transport instead of dropping ordered data silently");
+            check(retainedBytes(guest) <= 4 * 1024 * 1024 && queue.size() <= 256, "downstream mailbox remains bounded");
+            var terminal = guest.drainEvents();
+            check(terminal.stream().noneMatch(event -> event instanceof GolfRoom.Received r && r.packet() instanceof ViewFrame),
+                    "overflow releases every scene payload");
+            check(terminal.stream().filter(event -> event instanceof GolfRoom.Disconnected d
+                    && d.reason().equals("room event queue overflow")).count() == 1, "explicit overflow terminal delivered once");
+            check(retainedBytes(guest) == 0 && guest.drainEvents().isEmpty(), "drain releases terminal charge exactly once");
+        }
+    }
+    public static void roomEndReleasesScenesAndPreservesOrderedSoundAndConcession() throws Exception {
+        try (var rooms = new Rooms()) {
+            var host = rooms.host; var guest = rooms.guest;
+            pump(host, guest, () -> host.state().ready() && guest.state().ready(), "terminal-bound room ready");
+            var turn = new ShotId(host.state().match(), 1, 1, 1, 1); var score = new Score(0, 0, false);
+            host.publishTurn(new TurnOpened(turn, 100, 200, 0, 5, score, score));
+            pump(host, guest, () -> guest.state().remoteTurnOpened() != null, "terminal-bound turn");
+            host.drainEvents(); guest.drainEvents(); receiveView(rooms, turn, 1);
+            var sound = new SoundCue(turn, 1, 0, "charge"); host.cue(sound);
+            var queue = mailbox(guest);
+            pump(host, guest, () -> queue.stream().anyMatch(event -> event instanceof GolfRoom.Received r
+                    && r.packet().equals(sound)), "sound queued behind scene");
+            host.concede(); pump(host, guest, () -> guest.state().ended(), "host concession delivered");
+            check(queue.stream().noneMatch(event -> event instanceof GolfRoom.Received r && r.packet() instanceof ViewFrame),
+                    "end releases retained scene payloads");
+            var terminal = guest.drainEvents();
+            check(terminal.size() == 3 && terminal.get(0) instanceof GolfRoom.Received r && r.packet().equals(sound)
+                    && terminal.get(1) instanceof GolfRoom.Received leave && leave.packet() instanceof Leave l
+                    && l.owner() == 0 && l.reason().equals("conceded") && terminal.get(2) instanceof GolfRoom.Disconnected,
+                    "ordered sound and explicit concession survive terminal cleanup");
+            check(retainedBytes(guest) == 0, "terminal drain releases all accounting");
+        }
+    }
+    public static void roomCoalescesOnlyAdjacentSameShotViewsAcrossWireDelivery() throws Exception {
+        GolfRoom guest = null;
+        try (var server = new java.net.ServerSocket(0, 1, java.net.InetAddress.getByAddress(new byte[]{127, 0, 0, 1}))) {
+            guest = GolfRoom.join("127.0.0.1", server.getLocalPort(), prints(), "tails");
+            GolfRoom consumer = guest;
+            try (var raw = server.accept()) {
+                raw.setSoTimeout(3000);
+                check(GolfCodec.read(raw.getInputStream()) instanceof Hello, "real guest hello");
+                GolfCodec.write(raw.getOutputStream(), new Ready(MATCH, 1, UUID.randomUUID(), prints(), "sonic"));
+                TransportProbe.await(() -> { consumer.tick(); return consumer.state().roomToken() != null; }, 3000, "guest ready response");
+                check(GolfCodec.read(raw.getInputStream()) instanceof Resume, "guest pause intent before ready");
+                check(GolfCodec.read(raw.getInputStream()) instanceof Ready, "guest ready confirmation");
+                var a = id(1, 1); var b = id(2, 0); var score = new Score(0, 0, false);
+                GolfCodec.write(raw.getOutputStream(), new Resume(MATCH, 0));
+                GolfCodec.write(raw.getOutputStream(), new TurnOpened(a, 100, 200, 0, 5, score, score));
+                TransportProbe.await(() -> { consumer.tick(); return consumer.state().remoteTurnOpened() != null; }, 3000, "first turn");
+                consumer.drainEvents();
+
+                var a1 = new ViewFrame(a, 1, 1, new byte[0]); var a2 = new ViewFrame(a, 2, 2, new byte[0]);
+                var sound = new SoundCue(a, 1, 0, "charge"); var a3 = new ViewFrame(a, 3, 3, new byte[0]);
+                var pause = new Pause(MATCH, "hold"); var a4 = new ViewFrame(a, 4, 4, new byte[0]);
+                var resume = new Resume(MATCH, 5); var a5 = new ViewFrame(a, 5, 5, new byte[0]);
+                var result = new TurnCommitted(a, Outcome.SETTLED, 110, 200, score, score, 0);
+                var a6 = new ViewFrame(a, 6, 6, new byte[0]);
+                var turn = new TurnOpened(b, 120, 200, 0, 5, score, score);
+                var b1 = new ViewFrame(b, 1, 7, new byte[0]); var b2 = new ViewFrame(b, 2, 8, new byte[0]);
+                var accepted = new ShotAccepted(b, 9, 500); var b3 = new ViewFrame(b, 3, 9, new byte[0]);
+                var status = new ShotStatus(b, ShotPhase.AIM, 3, 1); var b4 = new ViewFrame(b, 4, 10, new byte[0]);
+                var sentinel = new Rejected(b, "barrier sentinel");
+                var bytes = new java.io.ByteArrayOutputStream();
+                for (GolfPacket packet : List.of(a1, a2, sound, a3, pause, a4, resume, a5, result, a6,
+                        turn, b1, b2, accepted, b3, status, b4, sentinel)) GolfCodec.write(bytes, packet);
+                raw.getOutputStream().write(bytes.toByteArray());
+                // Hold the consumer's event drain across all transport batches, including every barrier.
+                TransportProbe.await(() -> { consumer.tick(); return consumer.state().message().equals("barrier sentinel"); },
+                        3000, "entire wire sequence consumed by production room");
+                var expected = List.<GolfPacket>of(a2, sound, a3, pause, a4, resume, a5, result, a6, turn,
+                        b2, accepted, b3, status, b4, sentinel);
+                check(retainedBytes(consumer) == expected.stream().mapToInt(p -> GolfCodec.encode(p).length).sum(),
+                        "room charges actual encoded sizes after adjacent drops and ordered barriers");
+                var actual = packets(consumer);
+                check(expected.equals(actual), "room must retain views on both sides of each ordered barrier: " + actual);
+                check(retainedBytes(consumer) == 0, "ordered event drain releases exact charge");
+            }
+        } finally {
+            if (guest != null) guest.close();
+            GolfRoom owned = guest;
+            TransportProbe.await(() -> owned == null || owned.activeWorkers() == 0, 3000, "wire room workers retire");
+        }
+    }
+    public static void lanInvitationPrecedesSeatAndSurvivesReconnect() throws Exception {
+        var host = GolfRoom.hostLan(0, prints(), "sonic");
+        GolfRoom guest = null;
+        try (host; var unanswered = new java.net.Socket("127.0.0.1", host.boundPort());
+             var stranger = GolfConnection.connect("127.0.0.1#00000000000000000000000000000000", host.boundPort())) {
+            unanswered.setSoTimeout(3000);
+            check(unanswered.getInputStream().readNBytes(37).length == 37, "unanswered peer holds a concurrent fresh challenge");
+            stranger.send(new Hello(prints(), "sonic"));
+            TransportProbe.await(stranger::isClosed, 3000, "uninvited compatible peer is refused");
+            TransportProbe.await(() -> host.activeWorkers() == 2, 1000, "wrong proof retires while unanswered peer remains pending");
+            host.tick();
+            check(host.state().roomToken() == null && !host.state().connected(), "failed proof cannot reserve first guest seat");
+            guest = GolfRoom.join("127.0.0.1#" + host.inviteCode(), host.boundPort(), prints(), "tails");
+            GolfRoom invited = guest;
+            pump(host, invited, () -> host.state().ready() && invited.state().ready(), "invited room handshake");
+            check(host.state().guestCharacter().equals("tails"), "intended guest owns seat");
+            UUID token = host.state().roomToken();
+            connection(invited).close();
+            pump(host, invited, () -> !host.state().connected(), "invited disconnect");
+            pump(host, invited, () -> host.state().ready() && invited.state().ready(), "reconnect proves invitation again");
+            check(token.equals(host.state().roomToken()), "reconnect retains original room identity");
+        } finally {
+            host.close(); if (guest != null) guest.close();
+            GolfRoom ownedGuest = guest;
+            TransportProbe.await(() -> host.activeWorkers() == 0 && (ownedGuest == null || ownedGuest.activeWorkers() == 0),
+                    3000, "LAN room workers retire");
+        }
+    }
     static void pump(GolfRoom host, GolfRoom guest, BooleanSupplier condition, String message) throws Exception {
         long deadline = System.nanoTime() + Duration.ofSeconds(5).toNanos();
         boolean satisfied = condition.getAsBoolean();

@@ -706,6 +706,15 @@ public final class GolfMode implements GameplayFrameController, RewindSnapshotta
                     List.of(true, rewind, true, true), pauseRow,
                     "REWINDS LEFT  HOLE " + RewindAllowance.Rules.label(holeLeft) + "  TURN " + RewindAllowance.Rules.label(turnLeft), pauseAge);
         }
+        if (online != null && online.state().host() && !online.state().ready() && !online.inviteCode().isEmpty()) {
+            // Keep every invite digit visible even on the native viewport; the ordinary
+            // one-line HUD hint intentionally truncates long messages.
+            canvas.panel(8, 48, viewport - 16, 57, 0x101C38, 0.96f, paradise.ui.GolfText.GOLD);
+            canvas.text("LAN HOST - PORT " + online.port(), 16, 55, 1, paradise.ui.GolfText.GOLD);
+            canvas.text("INVITE " + online.inviteCode().toUpperCase(java.util.Locale.ROOT), 16, 67, 1, paradise.ui.GolfText.CREAM);
+            canvas.text("JOIN: HOST IP#INVITE + SAME PORT", 16, 79, 1, paradise.ui.GolfText.CREAM);
+            canvas.text("SHARE PRIVATELY - PLAINTEXT LAN", 16, 91, 1, paradise.ui.GolfText.CREAM);
+        }
     }
     private boolean viewerOwnsTurn(int owner) { return online == null || owner == online.state().localOwner(); }
     private GolfOverlay.Motion motion(List<GolfOverlay.PlayerScore> scores) {
