@@ -41,6 +41,11 @@ final class LevelWaterCoordinator {
      * which enables water in cases that a direct load would disable.
      */
     void initialize(boolean seamlessTransition) throws IOException {
+        // BEGIN HCZ1_DIRECT_FF_SELECTED_LOAD_BEGIN: invalidate before any original selection can fail.
+        var nemesisPublication = waterSchedulePublication();
+        if (nemesisPublication != null) nemesisPublication.beginWaterScheduleSelection(true);
+        var nemesisLevel = levelManager.level;
+        // END HCZ1_DIRECT_FF_SELECTED_LOAD_BEGIN
         GameModule gameModule = levelManager.gameModule;
         WaterDataProvider waterProvider = levelManager.hasContributedZoneRuntime()
                 ? java.util.Objects.requireNonNullElse(levelManager.contributedZoneRuntime.waterProviderOrNull(), DRY_CONTRIBUTION)
@@ -66,9 +71,18 @@ final class LevelWaterCoordinator {
                 fallback.run();
             }
         }
+        // BEGIN HCZ1_DIRECT_FF_SELECTED_LOAD_END: no remap/provider/water/camera requery.
+        if (nemesisPublication != null)
+            nemesisPublication.retainWaterScheduleSelection(nemesisLevel, featureZone, featureAct, true);
+        // END HCZ1_DIRECT_FF_SELECTED_LOAD_END
     }
 
     void advanceDynamicWaterLevel() {
+        // BEGIN HCZ1_DIRECT_FF_SELECTED_ORDINARY_BEGIN: the previous decision was consumed at VBlank.
+        var nemesisPublication = waterSchedulePublication();
+        if (nemesisPublication != null) nemesisPublication.beginWaterScheduleSelection(false);
+        var nemesisLevel = levelManager.level;
+        // END HCZ1_DIRECT_FF_SELECTED_ORDINARY_BEGIN
         int featureZone = levelManager.getFeatureZoneId();
         int featureAct = levelManager.getFeatureActId();
         if (levelManager.level != null
@@ -78,7 +92,19 @@ final class LevelWaterCoordinator {
                     featureZone, featureAct, levelManager.camera.getX(), levelManager.camera.getY());
             levelManager.waterSystem.update();
         }
+        // BEGIN HCZ1_DIRECT_FF_SELECTED_ORDINARY_END: carry the unconditional original locals, even without P1.
+        if (nemesisPublication != null)
+            nemesisPublication.retainWaterScheduleSelection(nemesisLevel, featureZone, featureAct, false);
+        // END HCZ1_DIRECT_FF_SELECTED_ORDINARY_END
     }
+
+    // BEGIN HCZ1_DIRECT_FF_SELECTED_OWNER: raw world-owned capability; no module/provider selection.
+    private com.openggf.game.internal.WorldPlcPatternPublication waterSchedulePublication() {
+        var world = levelManager.getWorldSession();
+        return world != null && com.openggf.game.session.WorldPlcLifecycleAccess.owned(world)
+                instanceof com.openggf.game.internal.WorldPlcPatternPublication publication ? publication : null;
+    }
+    // END HCZ1_DIRECT_FF_SELECTED_OWNER
 
     void advanceDynamicWaterLevelAfterPlayerPhysicsIfNeeded() {
         if (!levelManager.advanceWaterLevelBeforePlayerPhysics()) {

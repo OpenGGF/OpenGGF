@@ -1197,3 +1197,42 @@ R7 fatal/physical-handoff world replays are reused at their recorded source
 epoch; this test does not rerun or replace those route qualifications. Exact
 commands, shared displayed-fade repair and limits are in the existing
 [playable-completion Plan](../../plans/2026-10-13-s3k-playable-completion.md#presentation-rewind-smoke-repair-r5--2026-10-17).
+
+### Flipping-bridge sound clock — 2026-10-20
+
+Native `sub_2AA7E` at pinned skdisasm `044fa46725c71187399e13f5ddb70e11d32dc024`
+reads the low byte of `Level_frame_counter` after an animation-timer expiry,
+then requests `sfx_GlideLand` only when `((lowByte + 3) & 7) == 0` and the
+display child is on screen. Both directions have the same gate. Original
+locked-on ROM SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6` corroborates
+`move.b ($FE05).w,d0 / addq.b #3,d0 / andi.b #7,d0` at `$2AAB4/$2AADC`.
+The address `+1` selects the word's low byte; it is not a counter increment.
+The two actual AIZ2 records at ROM `$1E5422/$1E54DC` are flipped subtype `$52`
+bridges at centres `($2C40,$0514)` and `($2E40,$05F4)`.
+
+`AizFlippingBridgeObjectInstance` now reads the injected level manager's
+already-incremented counter instead of the independent V-int argument. Only
+components without a level manager retain their explicit input clock, matching
+the nearby object idiom. Animation, visibility, collision and child-slot behavior
+are unchanged; no persistent state is added.
+
+On Root HEAD `691de5183` plus the composed uncommitted sources, one normal queued
+focused request completed **8 tests, 0 failures, 0 errors, 0 skips, exit 0**.
+Its selection was `TestAizFlippingBridgeRewind` (all seven cases) and
+`TestCnzHoverFanObjectInstance#hoverpadSoundGatesOnTheLevelFrameCounterLowByte`
+(one neighboring clock control). Maven reported 1m15s and queue wait 0s;
+4154 main and 4225 test sources compiled inside that lifecycle. The all-source
+freeze `ff368df0239d03611c5566436093f62b39a04cb718bcfb90c1f27bab77268340`
+remained unchanged through execution. Bridge runtime/test SHA-256 values are
+`56aaba17a99cfc3891e765ae15e5fa7f4ef3bd921a09f0f04f7eed289399879f` and
+`8fc9e33d00b054a45e4841acf0d492dc35a1a5ab735b05c3cb977f5cfe69af5c`.
+
+The new mocked-level component controls separate level `$0105`/V-int `$0200`
+(emit) from level `$0104` or `$0106`/V-int `$0205` (silent), in both directions.
+Timer and offscreen negatives, explicit-clock fallback and the three existing
+recreation/codec/child-slot controls pass. The declared local dynamic-object
+inlet does not establish actual placed-route admission. Audible PCM, natural
+route cadence, retained display-child visibility, viewport/donor/team breadth
+and complete-world replay restoring both level and object clocks remain
+unqualified. This local source correction is not native audio or whole-act
+certification; combined delivery and integration remain Root-owned.

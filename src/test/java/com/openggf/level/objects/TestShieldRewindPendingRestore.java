@@ -1,6 +1,9 @@
 package com.openggf.level.objects;
 
+import com.openggf.camera.Camera;
 import com.openggf.game.PowerUpObject;
+import com.openggf.game.rewind.RewindSnapshotDiff;
+import com.openggf.game.rewind.identity.PlayerRefId;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.ShieldType;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
@@ -18,6 +21,8 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TestShieldRewindPendingRestore {
 
@@ -192,6 +197,146 @@ class TestShieldRewindPendingRestore {
         assertSame(tails, tailsShieldObject.getPlayer());
         assertEquals(50, tailsShieldObject.getSlotIndex(),
                 "tails' entry should remain pending until tails refreshes");
+    }
+
+    @Test
+    void freshRegisteredOwnersRestoreCapturedIdsInReverseRefreshOrderAndLeaveNextOrdinal() {
+        var owners = new RegisteredOwners();
+        var p1 = player("sonic");
+        var p2 = player("tails");
+        owners.roster(p1, p2);
+        var spawner = new DefaultPowerUpSpawner(owners.manager);
+        spawner.spawnShield(p1, ShieldType.BASIC);
+        spawner.spawnShield(p2, ShieldType.BASIC);
+        var saved = owners.manager.rewindSnapshottable().capture();
+        var p1Entry = saved.dynamicObjects().stream()
+                .filter(e -> PlayerRefId.mainPlayer().equals(e.playerOwnerId())).findFirst().orElseThrow();
+        var p2Entry = saved.dynamicObjects().stream()
+                .filter(e -> PlayerRefId.sidekick(0).equals(e.playerOwnerId())).findFirst().orElseThrow();
+        assertNull(p1Entry.playerOwner(), "modern snapshots contain no player incarnation reference");
+        assertNull(p2Entry.playerOwner());
+
+        var freshP1 = player("sonic");
+        var freshP2 = player("tails");
+        owners.roster(freshP1, freshP2);
+        owners.manager.rewindSnapshottable().restore(saved);
+        var restoredP2 = (ObjectInstance) spawner.spawnShield(freshP2, ShieldType.BASIC);
+        var restoredP1 = (ObjectInstance) spawner.spawnShield(freshP1, ShieldType.BASIC);
+        var ids = owners.manager.captureIdentityContext().requireIdentityTable();
+        assertEquals(p1Entry.objectId(), ids.idFor(restoredP1));
+        assertEquals(p2Entry.objectId(), ids.idFor(restoredP2));
+        var restored = owners.manager.rewindSnapshottable().capture();
+        assertTrue(RewindSnapshotDiff.keyEquals("object-manager", saved, restored),
+                () -> RewindSnapshotDiff.diffKey("object-manager", saved, restored).toString());
+        assertEquals(saved.dynamicObjectIdCounter(), restored.dynamicObjectIdCounter());
+
+        // Generic probes retry deferred entries. No duplicate may survive to steal this real spawn.
+        var next = (ObjectInstance) spawner.spawnShield(freshP1, ShieldType.BASIC);
+        assertEquals(saved.dynamicObjectIdCounter(), owners.manager.captureIdentityContext()
+                .requireIdentityTable().idFor(next).dynamicId());
+    }
+
+    @Test
+    void capturedRegisteredOwnerMissingFromRestoredRosterFailsClosed() {
+        var owners = new RegisteredOwners();
+        var p1 = player("sonic");
+        var p2 = player("tails");
+        owners.roster(p1, p2);
+        new DefaultPowerUpSpawner(owners.manager).spawnShield(p2, ShieldType.BASIC);
+        var saved = owners.manager.rewindSnapshottable().capture();
+        assertEquals(PlayerRefId.sidekick(0), saved.dynamicObjects().getFirst().playerOwnerId());
+        owners.manager.enqueuePendingPlayerBoundEntry(ShieldObjectInstance.class,
+                shieldEntryFor(owners.manager, player("unregistered"), 60));
+        owners.roster(player("sonic"));
+        var failure = assertThrows(IllegalStateException.class,
+                () -> owners.manager.rewindSnapshottable().restore(saved));
+        assertTrue(failure.getMessage().contains("Missing required player reference"));
+        assertNull(owners.manager.consumePendingPlayerBoundEntry(ShieldObjectInstance.class),
+                "even an early failed restore retires the previous pending lifetime");
+    }
+
+    @Test
+    void wrongClassAndUnregisteredOwnerDoNotConsumeCapturedShield() {
+        var owners = new RegisteredOwners();
+        var old = player("sonic");
+        owners.roster(old);
+        var spawner = new DefaultPowerUpSpawner(owners.manager);
+        spawner.spawnShield(old, ShieldType.BASIC);
+        var saved = owners.manager.rewindSnapshottable().capture();
+        var expectedId = saved.dynamicObjects().getFirst().objectId();
+        var fresh = player("sonic");
+        owners.roster(fresh);
+        owners.manager.rewindSnapshottable().restore(saved);
+        var otherClass = ObjectConstructionContext.construct(owners,
+                () -> new OtherShield(fresh));
+        spawner.registerObject(otherClass);
+        var otherOwner = (ObjectInstance) spawner.spawnShield(player("sonic"), ShieldType.BASIC);
+        var restored = (ObjectInstance) spawner.spawnShield(fresh, ShieldType.BASIC);
+        var ids = owners.manager.captureIdentityContext().requireIdentityTable();
+        assertEquals(expectedId, ids.idFor(restored));
+        assertNotEquals(expectedId, ids.idFor(otherClass));
+        assertNotEquals(expectedId, ids.idFor(otherOwner));
+        assertEquals(saved.dynamicObjectIdCounter() + 2,
+                owners.manager.rewindSnapshottable().capture().dynamicObjectIdCounter());
+    }
+
+    @Test
+    void pendingRetryUsesEntryIdentityAndRejectsDistinctCapturedIdCollision() {
+        var manager = new ObjectManager(List.of(), null, 0, null, null);
+        var owner = player("sonic");
+        new DefaultPowerUpSpawner(manager).spawnShield(owner, ShieldType.BASIC);
+        var entry = manager.rewindSnapshottable().capture().dynamicObjects().getFirst();
+        manager.enqueuePendingPlayerBoundEntry(ShieldObjectInstance.class, entry);
+        manager.enqueuePendingPlayerBoundEntry(ShieldObjectInstance.class, entry);
+        var conflicting = new ObjectManagerSnapshot.DynamicObjectEntry(entry.className(), entry.spawn(),
+                entry.slotIndex(), entry.state(), entry.playerOwner(), entry.objectId(), entry.ownerModId(),
+                entry.rewindableAuxiliary(), entry.playerOwnerId());
+        assertThrows(IllegalStateException.class,
+                () -> manager.enqueuePendingPlayerBoundEntry(ShieldObjectInstance.class, conflicting));
+        assertSame(entry, manager.consumePendingPlayerBoundEntry(ShieldObjectInstance.class));
+        manager.enqueuePendingPlayerBoundEntry(ShieldObjectInstance.class, entry);
+        assertNull(manager.consumePendingPlayerBoundEntry(ShieldObjectInstance.class));
+        assertThrows(IllegalStateException.class,
+                () -> manager.enqueuePendingPlayerBoundEntry(ShieldObjectInstance.class, conflicting));
+    }
+
+    @Test
+    void equalLegacyPendingEntriesStayDistinctAndResetRetiresAdmission() {
+        var manager = new ObjectManager(List.of(), null, 0, null, null);
+        var entry = shieldEntryFor(manager, player("sonic"), 60);
+        var equalCopy = new ObjectManagerSnapshot.DynamicObjectEntry(entry.className(), entry.spawn(),
+                entry.slotIndex(), entry.state(), entry.playerOwner());
+        assertEquals(entry, equalCopy);
+        manager.enqueuePendingPlayerBoundEntry(ShieldObjectInstance.class, entry);
+        manager.enqueuePendingPlayerBoundEntry(ShieldObjectInstance.class, equalCopy);
+        assertSame(entry, manager.consumePendingPlayerBoundEntry(ShieldObjectInstance.class));
+        assertSame(equalCopy, manager.consumePendingPlayerBoundEntry(ShieldObjectInstance.class));
+        assertNull(manager.consumePendingPlayerBoundEntry(ShieldObjectInstance.class));
+        manager.reset(0);
+        manager.enqueuePendingPlayerBoundEntry(ShieldObjectInstance.class, entry);
+        assertSame(entry, manager.consumePendingPlayerBoundEntry(ShieldObjectInstance.class));
+    }
+
+    private static TestablePlayableSprite player(String code) {
+        return new TestablePlayableSprite(code, (short) 100, (short) 200);
+    }
+
+    private static final class RegisteredOwners extends StubObjectServices {
+        private final Camera camera = new Camera();
+        private List<PlayableEntity> sidekicks = List.of();
+        private final ObjectManager manager = new ObjectManager(List.of(), null, 0, null, null,
+                null, camera, this);
+        void roster(TestablePlayableSprite main, PlayableEntity... others) {
+            camera.setFocusedSprite(main);
+            sidekicks = List.of(others);
+        }
+        @Override public Camera camera() { return camera; }
+        @Override public List<PlayableEntity> sidekicks() { return sidekicks; }
+        @Override public ObjectManager objectManager() { return manager; }
+    }
+
+    private static final class OtherShield extends ShieldObjectInstance {
+        OtherShield(PlayableEntity owner) { super(owner); }
     }
 
     private static ObjectManagerSnapshot.DynamicObjectEntry shieldEntryFor(

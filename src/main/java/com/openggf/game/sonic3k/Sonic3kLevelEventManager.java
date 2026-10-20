@@ -750,6 +750,14 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
     }
 
+    /** ScreenInit authority belonging to the fresh Level assembly, not ordinary positioned updates. */
+    void prepareFreshScreenObjects() {
+        prepareInitialScreenObjects();
+        if (iczEvents != null && currentZone == Sonic3kZoneIds.ZONE_ICZ) {
+            iczEvents.applyScreenInitAtLoad(currentAct);
+        }
+    }
+
     @Override
     public void updatePrePhysics() {
         // D01 Animate_Palette precedes SpecialEvents/Process_Sprites. The

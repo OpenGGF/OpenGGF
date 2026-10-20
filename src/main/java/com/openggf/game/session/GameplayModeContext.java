@@ -108,6 +108,7 @@ public final class GameplayModeContext implements ModeContext {
     };
 
     private final WorldSession worldSession;
+    private RewindSnapshottable<?> worldRewindAdapter;
     private final int spawnX;
     private final int spawnY;
     private final EditorPlaytestStash resumeStash;
@@ -244,9 +245,15 @@ public final class GameplayModeContext implements ModeContext {
         this.seamlessTransitionResourceHandoffs =
                 new SeamlessTransitionResourceHandoffRegistry();
         this.dynamicArtLifecycle = new DynamicArtLifecycleService();
-        this.plcFrameLifecycle =
-                new PlcFrameLifecycleCoordinator(
-                        worldSession.getGameModule(), dynamicArtLifecycle);
+        var worldPlc = WorldPlcLifecycleAccess.owned(worldSession);
+        if (worldPlc != null) {
+            var rules = worldSession.getGameModule().getRules();
+            this.plcFrameLifecycle = new PlcFrameLifecycleCoordinator(worldPlc, dynamicArtLifecycle,
+                    rules != null ? rules.dynamicArtDmaService()
+                            : com.openggf.game.rules.DynamicArtDmaServiceModel.EVERY_CLAIM);
+        } else {
+            this.plcFrameLifecycle = new PlcFrameLifecycleCoordinator(worldSession.getGameModule(), dynamicArtLifecycle);
+        }
         this.recordedCompletionAuthority =
                 checkedPolicy == HardwareReadinessAdmissionPolicy.RECORDED
                         ? (recordedPolicies == null
@@ -348,10 +355,12 @@ public final class GameplayModeContext implements ModeContext {
         }
 
         this.rewindRegistry = new RewindRegistry(profiler, worldSession.getGameModule().gameplayFrameController());
+        this.worldRewindAdapter = null;
         this.levelEventExtraRewindKeys.clear();
         this.contributedZoneRewindKeys.clear();
         this.rewindRegistry.register(hardwareTiming);
         this.rewindRegistry.register(dynamicArtLifecycle);
+        WorldPlcLifecycleAccess.register(worldSession, this.rewindRegistry);
         runtimeArtCoordinator.registerRewindAdapters(this.rewindRegistry);
         this.rewindRegistry.register(seamlessTransitionResourceHandoffs);
         this.rewindRegistry.register(camera);
@@ -407,6 +416,10 @@ public final class GameplayModeContext implements ModeContext {
             rewindRegistry.deregister("parallax");
             rewindRegistry.deregister("water");
             rewindRegistry.deregister("collision-system");
+            if (worldRewindAdapter != null) {
+                rewindRegistry.deregister(worldRewindAdapter.key());
+                worldRewindAdapter = null;
+            }
             rewindRegistry.deregister("sprites");
             rewindRegistry.deregister("native-player-art-bindings");
             rewindRegistry.deregisterPostRestoreCallback("native-player-art-bindings");
@@ -419,6 +432,7 @@ public final class GameplayModeContext implements ModeContext {
             rewindRegistry.register(waterSystem);
             rewindRegistry.register(collisionSystem);
             rewindRegistry.register(spriteManager.rewindSnapshottable());
+            registerWorldRewindAdapter();
             rewindRegistry.register(com.openggf.sprites.managers.SpriteManagerInternalAccess.nativePlayerArtAdapter(spriteManager));
             rewindRegistry.registerPostRestoreCallback("native-player-art-bindings",
                     () -> com.openggf.sprites.managers.SpriteManagerInternalAccess.restoreNativePlayerArtAfterRoster(spriteManager));
@@ -782,8 +796,7 @@ public final class GameplayModeContext implements ModeContext {
     /** Captures comparison-only physical queue state at the logical frame boundary. */
     public List<QueueDiagnosticSnapshot> captureQueueDiagnostics() {
         List<QueueDiagnosticSnapshot> snapshots = new ArrayList<>();
-        PlcLifecycleService plc = worldSession.getGameModule()
-                .getGameService(PlcLifecycleService.class);
+        PlcLifecycleService plc = WorldPlcLifecycleAccess.service(worldSession);
         if (plc != null) {
             snapshots.addAll(plc.captureQueueDiagnostics());
         }
@@ -905,6 +918,7 @@ public final class GameplayModeContext implements ModeContext {
         // instance captured by rewind is the live service, not the empty
         // pre-ROM module graph seen when the gameplay session was attached.
         registerGameModuleRewindAdapters();
+        if (spriteManager != null) registerWorldRewindAdapter();
         // A production level load calls this after its tilemap owner exists.
         // Retaining the game-service registration here also makes the lifecycle
         // safe for an early caller: it must not install a level-tilemap adapter
@@ -999,6 +1013,11 @@ public final class GameplayModeContext implements ModeContext {
     private void registerLevelEventAdapter(RewindSnapshottable<?> adapter) {
         rewindRegistry.registerOrRefresh(adapter);
         levelEventExtraRewindKeys.add(adapter.key());
+    }
+
+    private void registerWorldRewindAdapter() {
+        worldRewindAdapter = WorldRewindAdapterAccess.register(
+                java.lang.invoke.MethodHandles.lookup(), worldSession, rewindRegistry);
     }
 
     /**
@@ -1343,6 +1362,7 @@ public final class GameplayModeContext implements ModeContext {
         rewindBoundaryReporter = RewindBoundaryReporter.NO_OP;
         levelEventExtraRewindKeys.clear();
         contributedZoneRewindKeys.clear();
+        worldRewindAdapter = null;
         rewindRegistry = null;
     }
 

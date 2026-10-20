@@ -1275,7 +1275,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                 } else
                 if (services().titleCardProvider() instanceof Sonic3kTitleCardManager title
                         && !title.isExternalInLevelWaitReady()) {
-                    title.updateExternalInLevelChildren();
+                    com.openggf.game.sonic3k.titlecard.S3kTitleCardWorldAccess.updateExternalChildren(title,
+                            services().levelManager() == null ? null : services().levelManager().getWorldSession());
                     return;
                 }
                 // ROM mutates this same SST owner into Obj_TitleCardWait, then
@@ -1324,7 +1325,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                     ObjectLifetimeOps.deleteNoRespawn(this);
                 } else if (provider instanceof Sonic3kTitleCardManager title) {
                     title.startExternalInLevelChildExit();
-                    title.updateExternalInLevelChildren();
+                    com.openggf.game.sonic3k.titlecard.S3kTitleCardWorldAccess.updateExternalChildren(title,
+                            services().levelManager() == null ? null : services().levelManager().getWorldSession());
                 }
             }
             case RESULTS, DONE -> {
@@ -1360,7 +1362,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
 
     private void advanceExternalTitleChildren() {
         if (services().titleCardProvider() instanceof Sonic3kTitleCardManager title) {
-            title.updateExternalInLevelChildren();
+            com.openggf.game.sonic3k.titlecard.S3kTitleCardWorldAccess.updateExternalChildren(title,
+                            services().levelManager() == null ? null : services().levelManager().getWorldSession());
         }
     }
 

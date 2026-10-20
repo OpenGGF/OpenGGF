@@ -2236,3 +2236,249 @@ absolute wrapper/no-profile/all3ROM/Java25/EGL/nullAL/noambient/fork1/reuse/alph
 queue1/0s, Maven1m46/1m41. Originals consumed only after normal local evidence commit
 under metadata_slot ALONE/fullhashchecks (10850465B), no archive/copy. Source/native
 planning only follows. [Exact commands, hashes, control limits and accounting](../../plans/2026-10-13-s3k-playable-completion.md#r30r34-matched-typed-pool-evidence-and-preservation--2026-10-17).
+
+## EggRobo entry and movement components — 2026-10-20
+
+The first two invocations below retain their historical source scope. The
+retained-render correction and third invocation at the end supersede that owner.
+
+Isolated candidate worktree `ai-s3k-ssz-eggrobo-gameplay-20261020`, base
+`685800dfa3bcb2dcb237fe9d10e3449e5df9c30e`, runtime owner SHA-256
+`59a870641c81d26440daa443e6836a700923fc97077c123d66575ad0ec3d8401`.
+`Obj_EggRobo` resumes subtype initialization only after the retained-render
+placeholder and pointer-restore dispatches (`sonic3k.asm:180271–180303,198438`).
+`loc_918C4` falls through into `sub_918E2`: fighter X velocity stays zero,
+Y velocity/maximum are `$100`, acceleration is 8. The selected active routine
+then runs in the initialization dispatch. `MoveSprite2` retains both 16.16
+position fractions; `loc_915F6` launches with `-$300` when render bit 0 is clear
+and `+$300` when set. No runtime art-scaling work is included.
+
+The unchanged new clock/geometry oracles reproduce seven baseline assertion
+failures: three entry/subtype cases, two fighter-velocity cases and both launch
+directions. Baseline invocation completed 27/7F/2E/0S at 07:36:40Z; the two errors
+were a new replay fixture locating moving actors by dynamic spawn X, corrected
+to the captured actual SST slot. They are not native defect evidence.
+
+Candidate invocation completed 27/0F/0E/0S at 07:40:17Z, Java 25.0.4.1, Maven 1m19s,
+queue 0s (baseline queue 30s). `TestSszEggRoboClockGates` contributes 10 cases,
+`TestSszEggRoboPresentation` 9 and `TestS3kSszEggRobo` 8. Command, from this tree:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl ALSOFT_DRIVERS=null \
+  python3 <MAIN_WORKSPACE>/tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestSszEggRoboClockGates,TestSszEggRoboPresentation,TestS3kSszEggRobo' \
+  '-Ds3k.rom.path=<MAIN_WORKSPACE>/Sonic and Knuckles & Sonic 3 (W) [!].gen' test
+```
+
+Component replay captures the retained visibility bit, restored-but-uninitialized
+continuation and active fractional positions separately, destroys the body/children,
+then compares every registered world key after restoration and forward dispatch.
+Existing gun/muzzle/child and retirement cases remain passing. These components
+explicitly supply the fighter pairing bit; they do not prove natural pairing or
+cold traversal. Existing placed-object tests retain their positioned-inlet scope.
+The inspected streams contain the existing FAST-load/no-manifest warning; no
+timing/readiness, native pixels, complete act, roster/donor/viewport breadth or
+whole-route claim follows. Combined validation, integration and push remain open.
+
+### Retained render visibility correction
+
+Review found that the original 27-case qualification did not disconfirm the live
+centre-based checks still implementing `loc_91548` and `loc_915F6`. Both native branches
+read the preceding `Render_Sprites` bit 7. `loc_85B02` restores the continuation
+without calling `Draw_Sprite`, so even a camera move must retain that bit until
+an actual subsequent submission is rendered (`sonic3k.asm:180279–180303,
+198455–198467,198512–198519,36318–36395`). This is a source-backed correction;
+no extra baseline/native invocation was used to manufacture timing evidence.
+
+Revised owner SHA-256 is
+`3b75827f644ebb58e9f5d80cd93d58916038a2c761052d8d5cbc287626054285`.
+The owner captures the retained bit and pending draw submission. Only submitted
+draws refresh visibility, using the current native half extents: placeholder and
+fly-by `$20,$20`; releaser `4,4`; fighter and converted releaser `$14,$18`
+(`ObjDat3_9199A/919A6/919B2`). The undrawn restore dispatch preserves the bit.
+
+Six additional component cases cover releaser centres 1/3/4/31 pixels outside
+the viewport, a 32-pixel camera move while remaining in the coarse-X window,
+the 4-pixel active releaser extent, fly-by pairing while the render box still
+overlaps, and destructive restoration of the undrawn retained-visibility state.
+The fly-by reaches negative velocity through its actual acceleration without
+supplying velocity, phase or pairing-word state. These remain declared component
+camera inlets, not cold traversal.
+
+The same exact command above completed its third invocation at 07:52:07Z:
+33 tests / 0 failures / 0 errors / 0 skips, Maven 1m19s, queue 1s. Inspected original
+XML confirms Java 25.0.4.1 and the original absolute ROM path. ClockGates contributes
+15 cases, Presentation 10 and the existing placed-object class 8. All stream lines
+are the existing FAST-load/no-manifest warning. The earlier seven old-red oracle
+failures and two corrected fixture errors are retained with their original scope;
+the later 27-case pass is not evidence for the six added edges. No runtime/test
+edit followed this 33-case run. The prior route/configuration/native acceptance
+limits and integration obligations remain open.
+
+A fresh independent source-only review of this revised owner reported no material
+findings. Root checked the full runtime diff and all three original XML reports;
+the retained-render P2 is resolved within this component scope. This review adds
+no executed coverage or route/native-presentation qualification.
+
+## Composed EggRobo confirmation (2026-10-20)
+
+The reviewed EggRobo candidate is composed locally over Root HEAD
+`691de5183b8563f32ff3f5ed35c96ba8709fe770`, with uncommitted runtime SHA-256
+`95ce2280443d5a791eebd739b884f9a4924678a69b14ed7520e2baad5e01fe3f`.
+This preserves Root's `AnimalType`, corrected class comment and complete R29
+animal-release method. The three accepted EggRobo test files remain unchanged.
+The R29 real-parent inlet (`f415f9037bb3ceab70d7ee9020fca3fa29c08d39c2f6274cd46ad87744b2fc17`)
+now uses ordinary placeholder/restore/init passes before its original release
+boundary, preserving allocation, RNG, native launch oracles and twice-recreated
+world replay. The opt-in journal source
+`9914bfc453b2ec3e6daf25b2fcd8ada53d3b8301420a7650abb0100141f64ad4`
+records explicit source-epoch absence for old/new entry fields and reads position
+fractions from their actual superclass owner, outside sparse phase keys.
+A fresh independent consumer/R29-preservation review found no material findings.
+
+Root's combined confirmation selected the same fourteen classes against frozen
+compiled inputs using **`surefire:test` only, without recompilation**. Session
+`70535`, chunks `f53742`/`134c9a`, ended **exit 0 / BUILD SUCCESS: 139T0F0E0S**,
+Java 25.0.4.1, Maven 6.792s, queue wait 0s; terminal recorded 2026-10-20T09:02:07Z.
+EggRobo contributes 33 cases and R29 animal launch/recreation another 8; Slot and
+the mandatory S3K four provide the remaining 98. All 114 prior reports, 17,226
+compiled classes and 10,734 source/POM inputs remained exact in bytes, mode and
+integer nanosecond mtime across confirmation. Its 28 new reports remain in
+`target/gameplay-composition-focus-20261020-confirm/surefire-reports`.
+
+The first lifecycle's 139 test passes and lost Maven exit record retain their
+original scope. Confirmation closes that concrete recording gap on unchanged
+compiled inputs; it does not create 278 unique cases. The [combined confirmation
+entry](s3k-bonus-stage-transitions.md#composed-slot-and-eggrobo-confirmation-2026-10-20)
+contains all four current owner hashes, the complete fourteen-class selector and
+actual command with the three absolute original ROM paths, headless EGL, null
+OpenAL and Java/Lua environment.
+
+Natural pairing, cold traversal, opt-in journal execution, broader loading and
+roster/donor/viewport breadth, native capture/pixel/timing parity and whole-route
+completion remain unqualified. The component tests' declared pairing/camera and
+positioned inlets do not become cold-route evidence. Main integration and push
+remain open; inherited matrix obligations above still apply.
+
+## Jet allocation and own-dispatch lifecycle — 2026-10-20
+
+The Jet now preserves the raw unmirrored table-row birth at (-$C,$1C), then
+executes a separate INIT with frame6/priority5/extents$C,$10 and no MAIN refresh
+or draw. MAIN refreshes the exact parent and chooses the signed-word velocity
+frame before checking parent retirement. That check selects an undrawn
+next-own-dispatch deletion; captured phase/draw/pending state survives recreation.
+
+Candidate10 passes all12 new TestSszEggRoboJetNativeDispatch cases, the10 affected
+Presentation cases,15 ClockGates cases and8 placed-ROM EggRobo cases.
+The new checks include zero/one available after-current slots without retry,
+both raw-birth flips, signed thresholds/wrapping coordinates, actual final
+retired-parent refresh and twice-recreated exact-ID equal-coordinate families.
+A deliberately pre-dispatch unregistered-parent snapshot is a missing-link
+delayed-retirement negative; it does not certify unavailable final XY operands.
+
+These45 SSZ cases pass inside the overall239T/3F/0E/0S focused run. All three
+failures belong to the new HCZ world tests, not these SSZ assertions.
+The [composition record](../../plans/2026-10-13-s3k-playable-completion.md#jet-dispatch-lower-platform-excursion-and-terminal-world-failures--2026-10-20)
+records the exact command and source epoch. This is component/registered-world
+coverage, not natural pairing, cold traversal, complete SSZ/native pixels.
+Gun INIT, vertical flip/copied art priority and earlier broader gaps remain open.
+
+## Gun dispatch and deferred retirement — 2026-10-20
+
+Candidate13 passes all19 new Gun dispatch cases plus Jet12, Presentation10,
+ClockGates15 and placed-ROM EggRobo8:64 SSZ cases, without skips. The Gun keeps
+the raw unmirrored second child-table row, an undrawn INIT, MAIN's actual
+parent refresh and fire before the retirement tail, and the literal cooldown
+underflow. Pending deletion is undrawn and retires on its next own dispatch.
+Zero/one/two-slot allocation prefixes and failed Shot allocation do not retry.
+
+Exact-ID equal-coordinate families and raw/INIT/cooldown/underflow states
+survive two fresh recreation cycles. The retired MAIN case preserves its final
+refresh/fire through recreation; retired cooldown checks are component cases.
+These are declared parent-word/dispatch inlets, not a natural paired-fighter
+route or native-pixel certificate. The [composition result](../../plans/2026-10-13-s3k-playable-completion.md#resync-retirement-piece-standing-and-gun-validation--2026-10-20)
+records the source epoch and240T/1F/0E/0S overall result; the sole failure is a
+separate synthetic solid-contact fixture. Shot charging-parent lifetime,
+copied art priority, vertical flip, aiming and wider swing behavior remain open.
+
+## Charging Shot parent lifetime — 2026-10-20
+
+Candidate14 passes all 22 TestSszEggRoboShotNativeLifetime cases and the
+64 affected Gun/Jet/presentation/clock/placed controls. Production allocation
+binds a charging Shot to its immediate Gun. Each charge entry preserves the
+native flash, decrement and possible arming velocity/collision/SFX before
+Child_DrawTouch_Sprite checks that Gun's retirement. A Gun in pending DELETE
+already has the native retirement status although it is not physically deleted.
+The Shot suppresses current touch publication and drawing, then physically
+deletes on its next own entry. A successfully armed Shot releases the link;
+its independent moving routine does not keep consulting the Gun.
+
+The new checks cover both orientations, repeated/nonconsecutive V-int values
+versus one decrement per routine entry, early/mid/arming retirement, exact SFX
+ordering, pending versus latched-retired versus missing/unregistered parents,
+public unparented/player-owned inlets, actual collision-list and CPU output,
+and two fresh full-registry replay cycles at four boundaries with two distinct
+equal-coordinate families. The production-manager case uses real Body alignment
+and the real onPlayerAttack destruction owner before one actual same-pass
+Gun-to-Shot dispatch. Its direct callback inlet does not prove natural selected
+touch or a complete SSZ route.
+
+The [composition record](../../plans/2026-10-13-s3k-playable-completion.md#charging-shot-lifetime-and-solid-fixture-closure--2026-10-20)
+records the exact source and command:187T/0F/0E/0S, with no skips. Generic Gun
+unload/native physical slot reuse, copied art priority, vertical flip, aiming,
+swing breadth and raw Shot initialization remain separate obligations.
+
+## Art priority copied at allocation — 2026-10-20
+
+Candidate15 passes all 14 TestSszEggRoboArtPriority cases and the 86 affected
+SSZ lifetime, dispatch, presentation, clock and placement controls. Raw bodies
+remain low before the actual attributes write; a rejected fighter does not
+acquire priority merely because initialization was entered. Accepted rows set
+the body's high bit. Releaser conversion clears it before allocating children,
+and the rising threshold later raises only the body. Gun and Jet retain their
+own allocation copies through delayed INIT; Shot copies the Gun and keeps that
+bit after releasing its charging-parent link. Public/probe/player-shot and the
+existing three-argument binder preserve their previous low defaults.
+
+Checks use the original ROM attribute rows and all 17 fighter mapping pieces,
+actual CPU tiles, real manager masks and slot order, complete SAT collector
+entries, prepared versus published frames, and two fresh full-registry replay
+cycles at four boundaries with distinct equal-coordinate families. The
+controlled render manager uses the actual S3K registry and no placements;
+separate world-replay cases use the fixture's registered manager. Pairing words,
+fire requests and manual routine entries are explicit component inlets.
+
+The [composition record](../../plans/2026-10-13-s3k-playable-completion.md#eggrobo-priority-copy-validation--2026-10-20)
+records the exact 193T/0F/0E/0S run and tested source. This closes copied-priority
+coverage within those inlets. Ordinary physical display-bank/queue integration,
+global native input/SAT admission, native pixels, fly-by scaled art, aiming,
+vertical-flip carriers, broader swing/route and generic unload remain separate.
+
+Original-ROM placement control also narrows the flip obligation: the complete
+SSZ1 list contains 26 EggRobos, 18 with flags0 and eight with horizontal flags1;
+SSZ2 contains none. No stock EggRobo row has initial vertical flags2/3. This
+does not establish later runtime writers or implement the missing carrier.
+
+## Signed word aiming validation — 2026-10-20
+
+Candidate16 passes all20 TestSszEggRoboPresentation cases, including ten added
+cases for the signed WORD BodyX minus Player1X branch. Equality selects the
+native left-facing result; wrap and the8000 boundary follow SUB.W/BPL rather
+than unsigned coordinate ordering. Both initial horizontal flags, a body and
+gun that first faced right, and the inclusive Y-distance8 gate are exercised.
+The original X getter executes once, and swing, movement, history, targeting
+guards and charging behavior retain their order.
+
+Literal coordinate expectations and public player-pose writes drive the real
+fighter initialization. Two fresh whole-registry restore/forward cycles at
+each tie/wrap boundary retain exact body/Gun/Jet IDs, complete world keys and
+immutable frames. The declared pairing-word and manual routine-entry inlets
+remain component controls. The selected17 classes pass203T/0F/0E/0S with no
+skips; the14 art-priority cases and all affected lifetime/dispatch/clock/loading
+controls pass again. See the [composition record](../../plans/2026-10-13-s3k-playable-completion.md#eggrobo-signed-word-aim-validation--2026-10-20).
+
+This closes the scoped aim branch and its replay controls. Natural route and
+touch coverage, vertical-flip carriers, full swing breadth, generic unloading,
+scaled fly-by art, ordinary physical display production and native pixels
+remain separate obligations.

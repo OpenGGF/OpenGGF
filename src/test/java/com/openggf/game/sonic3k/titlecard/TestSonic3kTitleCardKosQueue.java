@@ -75,27 +75,27 @@ class TestSonic3kTitleCardKosQueue {
                 com.openggf.game.TitleCardResetGates.NATIVE_WAIT_GATE);
         var original = GameServices.level().getLevelGamestate();
         original.setRings(37);
-        for (int poll = 0; poll < 50; poll++) manager.update();
+        for (int poll = 0; poll < 50; poll++) S3kTitleCardWorldAccess.update(manager, GameServices.level().getWorldSession());
         assertEquals(37, original.getRings());
         org.junit.jupiter.api.Assertions.assertSame(original, GameServices.level().getLevelGamestate(),
                 "owner polls cannot reset counters while its ROM archives are still pending");
         drainThroughPostObjects(moduleHandles());
         for (int poll = 0; poll < 100 && manager.getStateName().equals("SLIDE_IN"); poll++) {
-            manager.update();
+            S3kTitleCardWorldAccess.update(manager, GameServices.level().getWorldSession());
         }
         assertEquals("DISPLAY", manager.getStateName());
         var lastMovement = manager.capture();
         assertEquals(0, lastMovement.stateTimer());
         assertTrue(lastMovement.heldLevelCounterDispatchOwned());
         assertTrue(lastMovement.retainedResultsHeldLevelCounterOwned());
-        manager.update();
+        S3kTitleCardWorldAccess.update(manager, GameServices.level().getWorldSession());
         org.junit.jupiter.api.Assertions.assertSame(original, GameServices.level().getLevelGamestate(),
                 "the first parent poll clears the last movement latch and returns");
         manager.restore(lastMovement);
-        manager.update();
+        S3kTitleCardWorldAccess.update(manager, GameServices.level().getWorldSession());
         org.junit.jupiter.api.Assertions.assertSame(original, GameServices.level().getLevelGamestate(),
                 "rewind restores the unconsumed movement latch");
-        manager.update();
+        S3kTitleCardWorldAccess.update(manager, GameServices.level().getWorldSession());
         org.junit.jupiter.api.Assertions.assertNotSame(original, GameServices.level().getLevelGamestate());
         assertEquals(0, GameServices.level().getLevelGamestate().getRings());
         assertEquals(2, manager.capture().stateTimer(),
@@ -170,7 +170,7 @@ class TestSonic3kTitleCardKosQueue {
         assertEquals(titleHandles, moduleHandles(),
                 "readiness alone is not native title-card retirement");
 
-        manager.update();
+        S3kTitleCardWorldAccess.update(manager, GameServices.level().getWorldSession());
         provider.processRuntimeArtQueue();
 
         assertEquals(0, provider.titleCardRetirementCount,
@@ -196,7 +196,7 @@ class TestSonic3kTitleCardKosQueue {
             assertEquals(4, moduleHandles().size(),
                     "Obj_TitleCardInit queues its archives on every Level: entry");
 
-            manager.update();
+            S3kTitleCardWorldAccess.update(manager, GameServices.level().getWorldSession());
             S3kRuntimeArtCoordinator.current().afterTimingService(
                     HardwareServiceBoundary.PRE_MAIN_LOOP);
 
@@ -219,10 +219,9 @@ class TestSonic3kTitleCardKosQueue {
         setLevelManagerGame(game);
         setField(GameServices.level(), "level",
                 game.loadLevel(LevelData.S3K_ANGEL_ISLAND_1.getLevelIndex()));
-        var previousPlc = GameServices.module().getGameService(
+        var plc = com.openggf.game.session.WorldPlcLifecycleAccess.require(GameServices.level().getWorldSession(),
                 com.openggf.game.sonic3k.Sonic3kLevelTitlePlcService.class);
-        var plc = new com.openggf.game.sonic3k.Sonic3kLevelTitlePlcService(rom);
-        setField(GameServices.module(), "levelTitlePlcService", plc);
+        var previousPlc = plc.capture();
         // Level submits the FIFO before this isolated Obj_TitleCard fixture.
         plc.beginFreshZoneTitle(0, 0, "sonic");
         try {
@@ -238,10 +237,10 @@ class TestSonic3kTitleCardKosQueue {
             setField(manager, "state", Sonic3kTitleCardState.DISPLAY);
             setField(manager, "freshLevelChildMovementObserved", true);
             var movementBoundary = manager.capture();
-            manager.update();
+            S3kTitleCardWorldAccess.update(manager, GameServices.level().getWorldSession());
             assertFalse(manager.capture().freshLevelTitleReady(),
                     "the first parent poll only clears the preceding movement flag");
-            manager.update();
+            S3kTitleCardWorldAccess.update(manager, GameServices.level().getWorldSession());
             assertTrue(manager.capture().freshLevelTitleReady());
             assertFalse(manager.shouldPublishFreshLevelTransitionInitialBoundary(),
                     "title readiness alone cannot bypass the Nemesis FIFO");
@@ -254,16 +253,16 @@ class TestSonic3kTitleCardKosQueue {
                 plc.serviceVBlank(com.openggf.game.resources.PlcLifecyclePhase.LEVEL_TITLE_CARD);
             }
             assertFalse(plc.isBusy());
-            manager.update();
+            S3kTitleCardWorldAccess.update(manager, GameServices.level().getWorldSession());
             assertTrue(moduleHandles().isEmpty());
-            manager.update();
+            S3kTitleCardWorldAccess.update(manager, GameServices.level().getWorldSession());
             assertEquals(Sonic3kTitleCardState.DISPLAY, manager.capture().state());
             assertTrue(manager.shouldPublishFreshLevelTransitionInitialBoundary());
             assertFalse(manager.shouldCompleteFreshLevelTransitionBoundary(),
                     "LoadLevelLoadBlock must drain before ordinary gameplay begins");
             assertEquals(2, moduleHandles().size());
             var terrainWait = manager.capture();
-            manager.update();
+            S3kTitleCardWorldAccess.update(manager, GameServices.level().getWorldSession());
             assertEquals(terrainWait.stateTimer(), manager.capture().stateTimer(),
                     "loc_7870 does not dispatch the surviving title owner");
             assertEquals(2, moduleHandles().size(), "terrain submission is one-shot");
@@ -272,8 +271,7 @@ class TestSonic3kTitleCardKosQueue {
             assertTrue(directQueue().capture().entries().isEmpty(),
                     "terrain parents queued after loc_62CC's module pass cannot expose a direct child in that pass");
         } finally {
-            plc.resetForMissingSnapshot();
-            setField(GameServices.module(), "levelTitlePlcService", previousPlc);
+            plc.restore(previousPlc);
             setPendingFreshLevelTransitionBoundary(false);
             setLevelManagerGame(previousGame);
             setField(GameServices.level(), "level", previousLevel);
@@ -289,7 +287,7 @@ class TestSonic3kTitleCardKosQueue {
         setField(manager, "combinedPatterns", new com.openggf.level.Pattern[0x100]);
 
         manager.initialize(0, 0);
-        manager.update();
+        S3kTitleCardWorldAccess.update(manager, GameServices.level().getWorldSession());
 
         assertEquals(0, provider.titleCardRetirementCount,
                 "cached title art has no payload-readiness retirement edge");
@@ -305,7 +303,7 @@ class TestSonic3kTitleCardKosQueue {
         manager.initializeInLevel(0, 0);
         prepareExitForCompletion(manager);
 
-        manager.update();
+        S3kTitleCardWorldAccess.update(manager, GameServices.level().getWorldSession());
 
         PlcProgressSnapshot completed = provider.capture();
         assertTrue(manager.isComplete());
@@ -332,7 +330,7 @@ class TestSonic3kTitleCardKosQueue {
         manager.requestLevelGamestateResetAfterCreateDispatches(1);
         prepareExitForCompletion(manager);
 
-        manager.update();
+        S3kTitleCardWorldAccess.update(manager, GameServices.level().getWorldSession());
 
         PlcProgressSnapshot completed = provider.capture();
         assertTrue(manager.isComplete());
@@ -358,13 +356,13 @@ class TestSonic3kTitleCardKosQueue {
         setField(manager, "artLoading", false);
         prepareExitForCompletion(manager);
 
-        manager.update();
+        S3kTitleCardWorldAccess.update(manager, GameServices.level().getWorldSession());
 
         assertTrue(manager.isComplete());
         assertEquals(1, provider.titleCardRetirementCount,
                 "the EXIT to COMPLETE transition is the sole title-owner release");
 
-        manager.update();
+        S3kTitleCardWorldAccess.update(manager, GameServices.level().getWorldSession());
         manager.reset();
 
         assertEquals(1, provider.titleCardRetirementCount,
@@ -387,9 +385,9 @@ class TestSonic3kTitleCardKosQueue {
             service(HardwareServiceBoundary.PRE_MAIN_LOOP);
             service(HardwareServiceBoundary.POST_OBJECTS);
         }
-        manager.update();
+        S3kTitleCardWorldAccess.update(manager, GameServices.level().getWorldSession());
         prepareExitForCompletion(manager);
-        manager.update();
+        S3kTitleCardWorldAccess.update(manager, GameServices.level().getWorldSession());
         provider.processRuntimeArtQueue();
 
         List<HardwareWorkHandle> enemyHandles =
@@ -439,7 +437,7 @@ class TestSonic3kTitleCardKosQueue {
         for (int frame = 0; frame < 4096 && readyCount(handles) < handles.size(); frame++) {
             int readyBefore = readyCount(handles);
 
-            manager.update();
+            S3kTitleCardWorldAccess.update(manager, GameServices.level().getWorldSession());
             assertTrue(isArtLoading(manager),
                     "the title-card consumer must keep polling until every archive is ready");
             assertEquals(readyBefore, readyCount(handles),
@@ -472,7 +470,7 @@ class TestSonic3kTitleCardKosQueue {
         assertTrue(isArtLoading(manager),
                 "the state step publishes readiness without running the consumer");
 
-        manager.update();
+        S3kTitleCardWorldAccess.update(manager, GameServices.level().getWorldSession());
 
         assertFalse(isArtLoading(manager));
         assertTrue(timing.pendingHandles().isEmpty(),

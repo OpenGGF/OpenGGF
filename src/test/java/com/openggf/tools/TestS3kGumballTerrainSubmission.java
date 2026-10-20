@@ -292,7 +292,7 @@ class TestS3kGumballTerrainSubmission {
         assertFalse(title.artLoading(), "title archives must drain before native terrain");
         assertTrue(title.freshLevelTitleReady(), "actual title movement gate must have opened");
         assertTrue(title.freshLevelTerrainStarted());
-        var plc = GameServices.module().getGameService(Sonic3kLevelTitlePlcService.class);
+        var plc = com.openggf.game.session.WorldPlcLifecycleAccess.require(GameServices.level().getWorldSession(), Sonic3kLevelTitlePlcService.class);
         assertNotNull(plc);
         assertFalse(plc.isBusy(), "native Nemesis gate must also have opened");
     }

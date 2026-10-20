@@ -196,8 +196,27 @@ class TestS3kSlotPlanePublication {
     }
 
     private static Object publishedValue(Object state) throws Exception {
+        if (state == null) throw new IllegalArgumentException("Missing captured parallax data");
+        var type = state.getClass();
+        if (type.getEnclosingClass() == com.openggf.level.ParallaxManager.class) {
+            var components = type.isRecord()
+                    ? java.util.Arrays.stream(type.getRecordComponents())
+                            .map(java.lang.reflect.RecordComponent::getName)
+                            .collect(java.util.stream.Collectors.toSet())
+                    : java.util.Set.<String>of();
+            if (!components.equals(java.util.Set.of(
+                    "initializedZone", "initializedAct", "selection", "logicalState"))) {
+                throw new IllegalArgumentException("Unknown captured parallax payload: " + type.getName());
+            }
+            var logical = type.getDeclaredMethod("logicalState");
+            logical.setAccessible(true);
+            state = logical.invoke(state);
+            if (state == null) throw new IllegalArgumentException("Missing captured Slot logical data");
+        }
         var accessor = state.getClass().getDeclaredMethod("publishedPlane");accessor.setAccessible(true);
-        return accessor.invoke(state);
+        Object published = accessor.invoke(state);
+        if (published == null) throw new IllegalArgumentException("Missing captured published plane");
+        return published;
     }
     private static byte[] publishedBytes(Object value) throws Exception {
         var accessor = value.getClass().getDeclaredMethod("bytes");accessor.setAccessible(true);

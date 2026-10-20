@@ -6,6 +6,9 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.game.GameServices;
+import com.openggf.game.GameMode;
+import com.openggf.game.BonusStageType;
+import com.openggf.trace.replay.runs.RunLevelLoadCause;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindSnapshotDiff;
 import com.openggf.game.session.SessionManager;
@@ -75,11 +78,16 @@ class TestSozColdRouteCapture {
                 : java.util.Set.of(27290, 28090, 28150, 29200, 29400,
                         29575, 29720, 29855, 29900, 30850, 31020);
         long outgoingHistory = 0;
+        Object bonusInteriorLevel = null, bonusReturnedLevel = null;
+        long bonusInteriorGeneration = -1, bonusReturnedGeneration = -1;
+        int bonusReleaseFrame = -1;
+        boolean bonusReturnTitleReleased = false;
         var drawing = new RouteFrameDrawing("openggf.soz.drawEveryFrame");
         try (var session = new GameplayCaptureSession(settings)) {
             GameServices.configuration().setSessionOverride(SonicConfiguration.S3K_SKIP_INTROS, false);
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 8, act, settings);
             assertTrue(GameServices.level().consumePendingInitialProcessSpritesPass());
+            var bonusOriginLevel = GameServices.level().getCurrentLevel();
             if (knucklesActTwo) {
                 assertInstanceOf(com.openggf.sprites.playable.Knuckles.class, session.player());
                 assertFalse(com.openggf.game.CrossGameFeatureProvider.isActive());
@@ -97,6 +105,7 @@ class TestSozColdRouteCapture {
                 if (bonusRoute && frame == 3753)
                     GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, false);
                 var beforeLevel = GameServices.level().getCurrentLevel();
+                var beforeMode = session.loop().getCurrentGameMode();
                 var beforeHistory = SessionManager.getCurrentGameplayMode().getRewindController();
                 long beforeHistoryFrame = beforeHistory == null ? 0 : beforeHistory.currentFrame();
                 var pendingSpots = new HashSet<String>();
@@ -110,6 +119,31 @@ class TestSozColdRouteCapture {
                     assertTrue(afterHistory == null || afterHistory.currentFrame() < beforeHistoryFrame,
                             "bonus boundary clears outgoing timeline at " + frame);
                     bonusLoads++;
+                    var loaded = GameServices.level();
+                    if (bonusLoads == 1) {
+                        assertSame(bonusOriginLevel, beforeLevel, "bonus entry replaces the actual origin");
+                        bonusInteriorLevel = loaded.getCurrentLevel();
+                        bonusInteriorGeneration = loaded.getCompletedProductionLoadGeneration();
+                        assertNotSame(bonusOriginLevel, bonusInteriorLevel);
+                        assertEquals(0x14, loaded.getCurrentZone());
+                        assertEquals(0, loaded.getCurrentAct());
+                        assertBonusReplayScene(session, bonusInteriorLevel, bonusInteriorGeneration,
+                                GameMode.TITLE_CARD, BonusStageType.GLOWING_SPHERE, RunLevelLoadCause.ORDINARY);
+                        var savedOrigin = GameServices.bonusStageOrNull().getSavedState();
+                        assertNotNull(savedOrigin);
+                        assertEquals((8 << 8) | act, savedOrigin.savedZoneAndAct());
+                    } else {
+                        assertEquals(2, bonusLoads, "only entry and saved-origin return replace the level");
+                        assertSame(bonusInteriorLevel, beforeLevel, "return replaces the actual interior");
+                        bonusReturnedLevel = loaded.getCurrentLevel();
+                        bonusReturnedGeneration = loaded.getCompletedProductionLoadGeneration();
+                        assertNotSame(bonusOriginLevel, bonusReturnedLevel);
+                        assertNotSame(bonusInteriorLevel, bonusReturnedLevel);
+                        assertEquals(8, loaded.getCurrentZone());
+                        assertEquals(act, loaded.getCurrentAct());
+                        assertBonusReplayScene(session, bonusReturnedLevel, bonusReturnedGeneration,
+                                GameMode.TITLE_CARD, BonusStageType.NONE, RunLevelLoadCause.INTERIOR_RETURN);
+                    }
                 }
                 assertFalse(session.player().getDead(), "cold death at " + frame);
                 assertEquals(main, session.player().characterKey().persisted());
@@ -183,6 +217,31 @@ class TestSozColdRouteCapture {
                                         .seamlessEntry())
                         && readyFrame < 0)
                     readyFrame = frame;
+                String bonusReplaySpot = null;
+                if (bonusRoute) {
+                    var mode = session.loop().getCurrentGameMode();
+                    if (beforeMode == GameMode.TITLE_CARD && mode == GameMode.BONUS_STAGE) {
+                        assertEquals(-1, bonusReleaseFrame, "one actual bonus title release");
+                        assertFalse(session.player().isControlLocked(), "bonus title releases player input");
+                        bonusReleaseFrame = frame;
+                        bonusReplaySpot = "bonus-interior-release";
+                    } else if (bonusReleaseFrame >= 0 && frame == bonusReleaseFrame + 45) {
+                        bonusReplaySpot = "bonus-interior-next-window";
+                    }
+                    if (bonusReplaySpot != null) {
+                        assertBonusReplayScene(session, bonusInteriorLevel, bonusInteriorGeneration,
+                                GameMode.BONUS_STAGE, BonusStageType.GLOWING_SPHERE, RunLevelLoadCause.ORDINARY);
+                    }
+                    if (bonusReturnedLevel != null && beforeMode == GameMode.TITLE_CARD && mode == GameMode.LEVEL)
+                        bonusReturnTitleReleased = true;
+                    if (bonusReturnTitleReleased && !semanticChecked.contains("bonus-return-released")
+                            && !session.player().isControlLocked() && !session.player().isObjectControlled()) {
+                        assertBonusReplayScene(session, bonusReturnedLevel, bonusReturnedGeneration,
+                                GameMode.LEVEL, BonusStageType.NONE, RunLevelLoadCause.INTERIOR_RETURN);
+                        bonusReplaySpot = "bonus-return-released";
+                    }
+                    if (bonusReplaySpot != null) pendingSpots.add(bonusReplaySpot);
+                }
                 // Fixed input observations cover the cold traversal and boss/results approach;
                 // a window must never restore the outgoing registry across a level load.
                 // Tails and the shorter solo Sonic route reach their destinations earlier;
@@ -190,9 +249,8 @@ class TestSozColdRouteCapture {
                 int lastSourceSpot = knucklesActTwo ? 35000 : bonusRoute ? 23000 : main.equals("tails") ? (act == 0 ? 16000 : 28000)
                         : shorterSoloRoute ? 28000 : act == 0 && paired ? 26000 : 31000;
                 if ((frame >= 100 && frame <= lastSourceSpot && (frame == 100 || frame % 1000 == 0))
-                        // Bonus spots: before the entry, 89/189 frames after BONUS_STAGE releases
-                        // (3317) and 9 after the return card releases (3644).
-                        || (bonusRoute && (frame == 3100 || frame == 3406 || frame == 3506 || frame == 3653))
+                        // Bonus windows follow actual scene release, not a fitted movie-frame schedule.
+                        || (bonusRoute && (frame == 3100 || bonusReplaySpot != null))
                         || (knucklesActTwo && knucklesPuzzleSpots.contains(frame))
                         || (readyFrame >= 0 && frame == readyFrame + 30)) {
                     replay(session, movie, frame, drawing);
@@ -209,7 +267,12 @@ class TestSozColdRouteCapture {
                     break;
                 }
             }
-            if (bonusRoute) assertEquals(2, bonusLoads, "real bonus entry and return loads");
+            if (bonusRoute) {
+                assertEquals(2, bonusLoads, "real bonus entry and return loads");
+                assertTrue(semanticChecked.contains("bonus-interior-release"), "first playable interior window");
+                assertTrue(semanticChecked.contains("bonus-interior-next-window"), "second distinct interior window");
+                assertTrue(semanticChecked.contains("bonus-return-released"), "saved-origin released window");
+            }
             assertTrue(bossSeen, "cold route reaches its real boss");
             assertTrue(resultsSeen && resultsFinished, "actual results sequence finishes");
             if (act == 0) {
@@ -240,6 +303,21 @@ class TestSozColdRouteCapture {
                     + ", width=" + width + ", replay windows=" + checked.size() + ", semantic=" + semanticChecked
                     + ", drawn frames=" + drawing.drawnFrames() + ", skipped draws=" + drawing.skippedFrames());
         }
+    }
+    private static void assertBonusReplayScene(GameplayCaptureSession session, Object expectedLevel,
+            long generation, GameMode mode, BonusStageType bonusType, RunLevelLoadCause cause) {
+        var level = GameServices.level();
+        assertNotNull(expectedLevel, "observed actual bonus load before selecting its replay window");
+        assertSame(expectedLevel, level.getCurrentLevel());
+        assertEquals(generation, level.getCompletedProductionLoadGeneration());
+        assertEquals(mode, session.loop().getCurrentGameMode());
+        assertEquals(bonusType, GameServices.bonusStageOrNull().getActiveType());
+        var receipt = SessionManager.getCurrentGameplayMode().runLevelLoads().latest().orElseThrow();
+        assertEquals(cause, receipt.cause());
+        assertEquals(generation, receipt.identity().loadGeneration(), "receipt belongs to current physical load");
+        assertEquals(level.getCurrentZone(), receipt.identity().progressionZone());
+        assertEquals(level.getRomZoneId(), receipt.identity().romZone());
+        assertEquals(level.getCurrentAct(), receipt.identity().act());
     }
     private static Bk2FrameInput input(com.openggf.debug.playback.Bk2Movie movie, int frame) {
         return frame < movie.getFrameCount() ? movie.getFrame(frame)

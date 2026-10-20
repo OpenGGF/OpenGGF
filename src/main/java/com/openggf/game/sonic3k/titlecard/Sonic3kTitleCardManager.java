@@ -49,7 +49,7 @@ import java.util.logging.Logger;
  * </table>
  */
 public class Sonic3kTitleCardManager
-        implements TitleCardProvider,
+        implements S3kTitleCardWorldAccess.ContextualUpdate, TitleCardProvider,
         com.openggf.game.internal.FreshLevelTitleBoundaryPublication,
         com.openggf.game.internal.TitleCardBeneathLevelHud,
         com.openggf.game.internal.TitleCardVintPublication,
@@ -829,10 +829,14 @@ public class Sonic3kTitleCardManager
 
     /** Advances higher-slot visual children after their real parent dispatch. */
     public void updateExternalInLevelChildren() {
+        updateExternalInLevelChildrenWithPlc(null);
+    }
+
+    void updateExternalInLevelChildrenWithPlc(com.openggf.game.sonic3k.Sonic3kLevelTitlePlcService plc) {
         if (!inLevelGameplayOwnedExternally) {
             throw new IllegalStateException("Title children have no retained gameplay owner");
         }
-        updateOwnedChildren();
+        updateOwnedChildren(plc);
     }
 
     /** Obj_TitleCardWait2 publishes $32 only after its own wait reaches zero. */
@@ -978,9 +982,19 @@ public class Sonic3kTitleCardManager
 
     @Override
     public void update() {
+        updateWithPlc(null);
+    }
+
+    @Override
+    public void updateInWorld(com.openggf.game.session.WorldSession world) {
+        updateWithPlc(world == null ? null : com.openggf.game.session.WorldPlcLifecycleAccess.require(
+                world, com.openggf.game.sonic3k.Sonic3kLevelTitlePlcService.class));
+    }
+
+    void updateWithPlc(com.openggf.game.sonic3k.Sonic3kLevelTitlePlcService plc) {
         // The overlay remains renderable, but its real retained SST owns the
         // only child dispatch. An earlier generic overlay tick must not run it.
-        if (!inLevelGameplayOwnedExternally) updateOwnedChildren();
+        if (!inLevelGameplayOwnedExternally) updateOwnedChildren(plc);
     }
 
     /**
@@ -997,7 +1011,7 @@ public class Sonic3kTitleCardManager
         return displayHoldFrames == FRESH_LEVEL_TRANSITION_HOLD_FRAMES && !inLevelMode;
     }
 
-    private void updateOwnedChildren() {
+    private void updateOwnedChildren(com.openggf.game.sonic3k.Sonic3kLevelTitlePlcService plc) {
         if (freshLevelTransitionMode && freshLevelTerrainStarted) {
             // LoadLevelLoadBlock/loc_7870 services the queues but does not call
             // Process_Sprites. The carried title owner resumes in LevelLoop.
@@ -1061,9 +1075,8 @@ public class Sonic3kTitleCardManager
             case COMPLETE -> {}
         }
         if (freshLevelTransitionMode && freshLevelTitleReady && !freshLevelTerrainStarted) {
-            var plc = GameServices.module().getGameService(
-                    com.openggf.game.sonic3k.Sonic3kLevelTitlePlcService.class);
-            if (plc == null || !plc.isBusy()) {
+            if (plc == null) throw new IllegalStateException("Fresh S3K title polling requires an explicit world PLC owner");
+            if (!plc.isBusy()) {
                 // loc_62CC's two gates have opened. LoadLevelLoadBlock owns
                 // these terrain parents; Wait2/LoadEnemyArt remains separate.
                 freshLevelTerrainStarted = true;

@@ -12,11 +12,13 @@ import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.Sonic3kLevelTitlePlcService;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
+import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.CnzMinibossScrollControlInstance;
 import com.openggf.game.sonic3k.objects.CnzTeleporterInstance;
 import com.openggf.game.sonic3k.objects.CnzEggCapsuleInstance;
+import com.openggf.game.sonic3k.objects.S3kIncLevelEndXGradualInstance;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.game.sonic3k.objects.S3kSignpostInstance;
@@ -30,6 +32,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.Sprite;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -812,7 +815,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         }
     }
 
-    /** CNZ2_ScreenEvent: native foreground admission; later completion remains separate. */
+    /** CNZ2_ScreenEvent: admission and the capsule-results camera/control handoff. */
     private void updateAct2Fg() {
         updateAct2YStartLock();
         switch (fgRoutine) {
@@ -854,19 +857,63 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
                 beginKnucklesTeleporterRoute();
                 gameState().setEndOfLevelFlag(false);
                 // loc_521BE advances to4 even on either pool failure; no retry.
-                // loc_521D2's global End_of_level_flag completion is still OPEN.
             }
-            case FG_ACT2_KNUCKLES_ROUTE -> publishKnucklesTeleporterClamp();
+            case FG_ACT2_KNUCKLES_ROUTE -> updateKnucklesCapsuleCompletion();
             case FG_ACT2_NORMAL -> {
                 // Normal Act 2 draw path.
             }
             default -> {
                 if (knucklesTeleporterRouteActive) {
                     fgRoutine = FG_ACT2_KNUCKLES_ROUTE;
-                    publishKnucklesTeleporterClamp();
                 }
             }
         }
+    }
+
+    /** Native loc_521D2..521FC, after Process_Sprites has published results completion. */
+    private void updateKnucklesCapsuleCompletion() {
+        if (!gameState().isEndOfLevelFlag()) {
+            return;
+        }
+        AbstractPlayableSprite player = spriteManager().getMainPlayable();
+        if (player == null) {
+            return;
+        }
+        // AllocateObject failure returns before stored bounds, music, P1 control
+        // or Events_routine_fg change. The same completed flag is retried later.
+        S3kIncLevelEndXGradualInstance worker =
+                spawnObject(() -> new S3kIncLevelEndXGradualInstance(0, 0));
+        if (worker == null) {
+            return;
+        }
+        cameraStoredMaxXPos = (short) 0x49A0;
+        camera().setMaxXTarget(cameraStoredMaxXPos);
+        // ScreenEvents runs after the object pass: the new worker first runs
+        // next pass. Suppress the engine's generic 2px easing on this allocation
+        // frame; Obj_IncLevEndXGradual owns every later $4000 accumulator step.
+        camera().claimCustomMaxXBoundaryEasing();
+
+        // Restore_LevelMusic ($85B60) derives Current_music from the apparent
+        // zone/act and selects invincibility playback from P1's secondary status.
+        int music = levelManager().getApparentLevelMusicId();
+        if (player.getInvincibleFrames() > 0 || player.isSuperSonic()) {
+            music = Sonic3kMusic.INVINCIBILITY.id;
+        }
+        if (music >= 0) {
+            audio().playMusic(music);
+        }
+
+        // Restore_PlayerControl ($85B8A) addresses native P1, not camera focus
+        // or P2. Preserve velocities, rolling status and standing-object lineage.
+        ObjectControlState.none().applyTo(player);
+        player.setControlLocked(false); // Release the capsule's engine input-lock projection.
+        player.clearAirForNativeControlRestore();
+        player.setAnimationId(Sonic3kAnimationIds.WAIT);
+        player.getAnimationManager().publishPreviousAnimationId(Sonic3kAnimationIds.WAIT.id());
+        player.setAnimationFrameIndex(0);
+        player.setAnimationTick(0);
+        fgRoutine = FG_ACT2_NORMAL;
+        // Native code leaves End_of_level_flag set; FG8 prevents another allocation.
     }
 
     private void invalidateMinibossArenaTilemaps() {
@@ -1106,19 +1153,15 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
     /**
      * Enters the Knuckles-only Act 2 teleporter route.
      *
-     * <p>The route is represented by a dedicated FG routine plus the camera
-     * clamp values the ROM applies while the teleporter sequence is active.
+     * <p>The route starts with the admission clamp. Its later results handoff
+     * releases maximum X through a separate gradual worker.
      */
     public void beginKnucklesTeleporterRoute() {
         knucklesTeleporterRouteActive = true;
         bossBackgroundMode = BossBackgroundMode.ACT2_KNUCKLES_TELEPORTER;
         fgRoutine = FG_ACT2_KNUCKLES_ROUTE;
-        /**
-         * ROM: the late Knuckles route clamps the camera to the teleporter lane
-         * while {@code Obj_CNZTeleporter} owns the cutscene-specific player and
-         * palette state. Publishing the route transition here keeps the object
-         * dependency explicit instead of burying it in object-local booleans.
-         */
+        // loc_521BE writes these limits once. Neither the teleporter parent nor
+        // later FG4 entries may overwrite Obj_IncLevEndXGradual's opening.
         publishKnucklesTeleporterClamp();
     }
 

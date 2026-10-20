@@ -6468,10 +6468,10 @@ and a missing Hyper mutation hook; those are covered by the encounter regression
 
 ## Object `$78` Is Registered Twice; the First Implementation Is Dead Code
 
-- **Location** — `Sonic3kObjectRegistry.registerDefaultFactories`, lines 217-218 and 1411-1412; `FbzDezPlayerLauncherInstance` (303 lines) and `FbzDezPlayerLauncherObjectInstance` (95 lines)
-- **Symptom** — `Sonic3kObjectIds.FBZ_DEZ_PLAYER_LAUNCHER` (`$78`, `Obj_FBZDEZPlayerLauncher`) is `factories.put(...)` twice in the same method. The later call wins, so every `$78` placement — 10 of them in Death Egg act 1, plus the Flying Battery ones — resolves to `FbzDezPlayerLauncherObjectInstance`, and `FbzDezPlayerLauncherInstance` never runs. Both are full implementations of the same ROM object and they differ in detail (only the dead one implements `SolidRoutineProfile` and plays a `Sonic3kSfx`), so the shadowing is silent behaviour selection, not a harmless duplicate.
-- **Suspected cause** — Two independent ports of the same ROM object landed without either noticing the other; no test asserts that a given id has exactly one factory.
-- **Removal condition** — One class owns `$78`, with the behavioural difference between the two resolved against `sonic3k.asm $3B942-$3BA8A`; the other is deleted; a registry test asserts no id is registered twice.
+- **Location** — Sonic3kObjectRegistry.registerDefaultFactories registers FbzDezPlayerLauncherInstance and later replaces it with FbzDezPlayerLauncherObjectInstance for the same $78 key.
+- **Current scope (2026-10-20)** — The later factory remains active for all ten DEZ1 placements and the FBZ placements. It already returns SolidRoutineProfile.topSolid(false) and plays Sonic3kSfx.FLOOR_LAUNCHER; the former claim that only the shadowed class had those behaviors was stale. No additional motion/rider/return omission was established by this source audit.
+- **Separate local correction** — The missing DEZ1 art profile is corrected and all four [launcher art checks](../architecture/validation/levels/s3k-dez-act1.md#native-player-launcher-art-publication--2026-10-20) pass. Fresh DEZ2 lacks the required PLC resource and receives no fabricated profile. This does not remove duplicate registration or certify physical/native presentation.
+- **Removal condition** — Reconcile both implementations against sonic3k.asm $3B942-$3BA8A, retain one factory/class without changing currently qualified behavior, and add a registry uniqueness check. Placement census/factory-winner checks alone do not establish uniqueness.
 
 ---
 
@@ -6580,21 +6580,37 @@ needs its own ROM check and focused test before changing.
   appear swapped (ROM frames 3,3,4,5).
   `objects/AizMinibossFlameChild` — explode frames drawn from the wrong sheet;
   `AizMinibossImpactFlameChild` — uses the explosion art instead of the flame art.
-- **Location:** `objects/AizFlippingBridgeObjectInstance.java`, the `sfx_GlideLand` gate. Its
-  `+ 3` is genuine (`move.b (Level_frame_counter+1).w,d0 / addq.b #3,d0 / andi.b #7,d0`), but
-  the engine applies it to `V_int_run_count` instead of `Level_frame_counter`, so the sound's
-  8-frame phase depends on how far the two counters have drifted apart. The EggRobo, EggRobo
+- **Locally corrected, 2026-10-20:** `objects/AizFlippingBridgeObjectInstance.java` now applies
+  the native `sfx_GlideLand` gate `((Level_frame_counter low byte + 3) & 7) == 0` to the
+  injected level counter. Native `sub_2AA7E` and original ROM bytes at `$2AAB4/$2AADC`
+  confirm that `(Level_frame_counter+1).w` selects the low byte, not an increment or
+  `V_int_run_count`. Eight focused component checks pass without failures/errors/skips,
+  including both directions, timer/offscreen controls and existing recreation coverage.
+  Actual placed-route cadence, audible PCM and complete-world replay of both clock owners
+  remain unqualified; see the [AIZ2 matrix](../architecture/validation/levels/s3k-aiz2.md#flipping-bridge-sound-clock--2026-10-20).
+  The EggRobo, EggRobo
   shot and Cluckoid gates listed here before were byte-address misreads of
   `(V_int_run_count+3)` and were fixed on 2026-10-09.
-- **Location:** `objects/badniks/EggRoboBadnikInstance.java:145` — the fighter subtype never
-  bobs: ROM `loc_918C4` falls through into `sub_918E2` (y_vel `$100`, `Swing_UpAndDown`
-  max `$100`, accel 8), but the engine leaves the swing at 0 for `Mode.FIGHTER`, so its legs
-  stay on frame 5.
-- **Location:** `objects/bosses/HczEndBossRobotnikShip.java:57,76` — Robotnik's head toggles
-  every 5 frames (`AniRaw_RobotnikHead` delay 5 shows each frame 6), and the escaping ship
-  uses frame 10 where `Obj_RobotnikShip2` keeps frame 5. `HczEndBossInstance.java:1030-1032`
-  draws the lower housing (frame 1) a second time at the body's priority, besides
-  `HczEndBossLowerHousing`.
+- **EggRobo fighter swing claim disconfirmed locally, 2026-10-20:** Current
+  inherited composition WIP already initializes x velocity0, swing maximum/Y
+  velocity $100 and acceleration8, then swings before full fractional movement,
+  matching loc_918C4/sub_918E2/loc_9159A. Two existing flip cases pass the first
+  eight literal hover steps. The jet child selects frames6/5/4 at the native
+  velocity thresholds in source. No new fighter gameplay patch was made here;
+  full reversal/jet-frame runtime coverage and the natural paired route remain
+  separate. NPC/boss EggRobo owners were not audited.
+- **HCZ managed ship graph locally corrected, 2026-10-20:** Ship/Head/Flame
+  have actual managed dispatch, exact captured parent references and pure
+  recreation shells. Rise/countdown/raw-head animation, one-shot allocation
+  failure, Flame parity and pending-delete draw tail are covered. All40 HCZ
+  cases pass within the227-case focused selection; see the
+  [current HCZ2 scope](../architecture/validation/levels/s3k-hcz2.md#managed-robotnik-ship-head-and-flame--2026-10-20).
+  Underflow still draws; the next Ship dispatch deletes. Declared component
+  defeat/flee inlets do not prove a natural fight or route. The later
+  [Knuckles art and subtype4 explosion correction](../architecture/validation/levels/s3k-hcz2.md#knuckles-head-art-and-ship-owned-explosions--2026-10-20)
+  has8+10 passing maintained cases; the existing graph class passes4 after one
+  test-only exact-slot probe correction. Retained-root/results/geyser flow,
+  native pixels and the earlier lower-housing finding remain separate.
 - **Location:** `objects/bosses/LbzFinalBoss1Instance.java` — every child reports bucket 4,
   where the ROM uses `$280` (head, thrusters, sparks), `$180` (laser turrets), `$300` (orb) and
   `$100` (muzzle); laser turrets flicker every other frame in idle, which the ROM only does
@@ -7037,7 +7053,30 @@ pool-exhaustion controls pass within the [CNZ2 record](../architecture/validatio
 
 This is not completion of the Knuckles route. Ordinary Nemesis preparation/service
 and pattern/renderer publication, shared-module versus world queue ownership,
-physical full-capacity behavior, managed results publication/FG4 retry/music/control
-and the uninterrupted outgoing route remain open. Existing title/results readiness
+physical full-capacity behavior and the uninterrupted outgoing route remain open. Existing title/results readiness
 queues and this raw descriptor submission do not qualify those operations. No ROM
 deviation is accepted.
+
+The [2026-10-20 capsule handoff](../architecture/validation/levels/s3k-cnz-act2.md#knuckles-capsule-results-and-camera-opening--2026-10-20)
+now qualifies real results publication, FG4 allocation refusal/retry, P1 control
+restoration and gradual camera opening in the positioned native320 Knuckles inlet,
+including two complete-world replay cycles and focused-P2 authority. Level music
+is requested on the successful handoff; native scene/music identity and explicit
+Super-state controls remain unqualified.
+
+The [native charge prefix](../architecture/validation/levels/s3k-cnz-act2.md#knuckles-native-beam-capture-and-lift-prefix--2026-10-20)
+now uses the shared beam, native capture and lift through progress `$11`, with
+ROM-backed graphics and reciprocal rewind links. The native320/off solo Knuckles
+fixture starts from the declared positioned button inlet before actual results;
+all later travel uses ordinary Right and grounded-state Jump inputs. It restores
+and replays all 59 registered keys twice. Thirty-one unchanged focused controls
+passed in the initial selection, and the affected three-case charge class passed
+after correcting its separate positioned component inlet; this is not one green
+34-case invocation. The later [actual ICZ handoff](../architecture/validation/levels/s3k-cnz-act2.md#knuckles-hide-camera-rise-and-icz-handoff--2026-10-20)
+now qualifies hide `$18`, camera rise, real fade/load and released ICZ with two
+complete-world replay cycles from that same positioned pre-results inlet. The
+affected 14-class composition passed 250/0F/0E/0S after correcting production
+allocation/initial-animation-domain defects and the separate beam test identity
+context. Cold traversal, product breadth and physical KosM/VRAM/pixel evidence
+remain open. These local results do not widen the earlier producer run or certify
+the entire act.

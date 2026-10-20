@@ -442,9 +442,11 @@ class TestS3kBonusReturnTitleOwner {
             var state = flags(title);
             assertFalse(state.artLoading());
             assertTrue(state.ready() && state.terrain(), "actual movement and terrain/Nemesis gate decisions");
-            Object plc = raw(Sonic3kGameModule.class, module, "levelTitlePlcService");
+            Object plc = com.openggf.game.session.WorldPlcLifecycleAccess.require(
+                    GameServices.level().getWorldSession(), Sonic3kLevelTitlePlcService.class);
             assertFalse(assertInstanceOf(Sonic3kLevelTitlePlcService.class, plc).isBusy());
-            assertTrue(plc == raw(Sonic3kGameModule.class, module, "levelTitlePlcService"));
+            assertTrue(plc == com.openggf.game.session.WorldPlcLifecycleAccess.require(
+                    GameServices.level().getWorldSession(), Sonic3kLevelTitlePlcService.class));
             assertEquals(RuntimeArtAdmissionOwnerKind.TITLE_OWNER, lease.ownerKind());
             assertEquals(lease.id(), state.leaseId());
         }

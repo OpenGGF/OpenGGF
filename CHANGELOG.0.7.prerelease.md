@@ -68,6 +68,7 @@ Unreleased. The earlier development themes remain in
   companion that drops into the exit is removed as in the original (it rejoins
   on return). Pachinko orb rewards follow the level frame counter, and round
   bumpers show their ten-point score with the native sprite priority.
+  Each Slot-machine spike impact removes one carried ring while any remain.
   Lightning-attracted rings award at the native object update and retain pending
   pickups through rewind. The three standalone bonus traces replay without errors. The Slot cage keeps re-centring the machine
   through the goal wind-down, so the machine stays where the original shows it.
@@ -138,6 +139,8 @@ Unreleased. The earlier development themes remain in
   Bonus title cards load the complete native art batch, including the unused act
   number, then submit the stage's terrain art once the title is ready and Nemesis
   work clears, while retaining the bonus card's own layout.
+  Hydrocity 1's direct water path publishes prepared art in three-pattern batches,
+  including after rewind; replacing or failing a load cannot reuse its selection.
   Saved-origin bonus returns use that title/Nemesis handoff for the restored
   level's terrain and retain its native fixed title owner and linked children
   through their normal retirement; ordinary host loads keep their existing art ownership.
@@ -156,12 +159,16 @@ Unreleased. The earlier development themes remain in
   fade the card in from black.
 
 - **S3K objects and bosses:** The Angel Island end boss starts its defeat at the
-  native hit check of whichever phase it is in. When the object table is full,
+  native hit check of whichever phase it is in. Angel Island's flipping bridges
+  time their landing sound from the level clock. When the object table is full,
   pending placements wait for the next camera block crossing, which restores the
   Hydrocity fan timing. Hydrocity's hand launcher checks its top surface on every
   pass, as in the original, so a rising hand catches a player rolling over it.
   Its removal preserves Sonic and Tails' held state, as in the original, while
   ordinary launches still release them.
+  Knuckles' glide foot probes use his own live solidity bits and collision array,
+  including inverted ceiling contacts, independently of camera focus. The native
+  second player keeps its ringless hurt response under human control.
   Hydrocity solid blocks retain underside and side contacts while offscreen.
   Spinning columns use cached sprite visibility to release and recapture riders
   while preserving platform attachment. Airborne releases retain the movement
@@ -186,11 +193,33 @@ Unreleased. The earlier development themes remain in
   verified instruction terms from work that is still unpriced. Giant-ring capture retains
   the original blank-frame ownership and art-reload state; ordinary animation
   is released again on return. Robotnik's ship stays with the beaten boss through
-  its defeat pause before flying off, as in the original.
+  its defeat pause before flying off, as in the original. Its ship component now uses
+  the original escape frame and rise/countdown timing. Its separate head and
+  flame keep their original dispatch, animation and deletion behavior through
+  rewind. Knuckles gets the EggRobo head art, and defeat explosions follow the
+  ship. Death Egg Act 1's player launchers receive their missing ROM-backed art.
   Carnival Night's miniboss stays dormant until the arena camera gate and native
   wait release it, including at wide viewports. Its defeated top releases standing
   riders before deletion, preserving their status and the rewindable encounter.
-  Sky Sanctuary's EggRobo releases animals directly into their original walking
+  After Knuckles' Act 2 capsule results, control returns to him and the camera
+  opens gradually toward the teleporter lane; a full object pool leaves the
+  handoff pending until allocation succeeds. The teleporter uses the native
+  charging beam, capture and lift, with ROM-backed beam graphics and rewindable
+  parent/child links, then hides Knuckles and raises the camera into the real
+  IceCap load. His fresh IceCap arrival has its native contracting beam, swing
+  release and solid pad, with allocation retry and complete-world restoration.
+  IceCap's direct animation tiles enter the snapshot domain before their first
+  upload, preserving the earlier displayed bytes through entry rewind.
+  Sky Sanctuary's EggRobo starts on the original object pass, hovers and launches
+  with the original fractional motion, and retains its last drawn visibility
+  through camera movement and rewind. Its jet flame and gun arm keep their own
+  first-dispatch setup and original retirement order through recreation. The arm
+  preserves its cooldown and last parent refresh before retirement. Charging
+  shots stop with their gun, while fired shots continue independently. Art
+  priority follows the original body writes and child copies at allocation. Its
+  aim now follows the original signed word comparison, including equal and
+  wrapped coordinates.
+  It releases animals directly into their original walking
   or flying launch, with native facing, random lift and stationary first drawing;
   the launch and rendering state survive recreation. Scaled fly-by art remains
   an implementation gap. Ordinary freed animals retire from the preceding

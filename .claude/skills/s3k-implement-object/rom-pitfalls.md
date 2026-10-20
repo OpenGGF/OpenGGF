@@ -4856,6 +4856,20 @@ injected background-collision provider independently. Do not equate foreground v
 background planes with primary vs secondary solidity paths. Covered by
 `TestSozPushableRock` with the service's focused-player path set secondary.
 
+The reciprocal player entry is distinct: Sonic_CheckFloor selects its collision
+array from the querying player's live top_solid_bit and supplies that bit to both
+FindFloor calls (pinned044 sonic3k.asm:19875..19927). Reverse sub_11FD6 retains the
+caller's live LRB bit through Sonic_CheckCeiling:20278..20311. Carry the selected
+bit and array through extension, regress and edge scans; keep FG/BG layout and
+provider translation independent. The legacy camera-focused object entry cannot
+stand in for this player contract. Independently vary player bits, camera focus,
+scan branch and gravity, and retain an object-default control. Equal probe XY or
+a helper distance does not identify the native winning tile or a route cause.
+Origin: FDF player-query component and local `8bcf0ab6`, 2026-10-18; its 113-test
+isolated qualification is a separate source epoch. Root's combined component
+lifecycle71445 subsequently passed379T0F0E0S; the maintained original route remains
+red, without a native winning-tile or route-cause attribution.
+
 
 ## SOZ1's entry lock requires a jump, not an idle delay
 
@@ -6507,3 +6521,25 @@ service is after queued DMA and NemInit follows animated tiles; a producer-only
 pass leaves those stages, renderer refresh, world ownership and full-capacity
 retained-slot behavior open. Origin: Root2026-10-18 CNZ2 admission/raw-producer
 old-red/control gates, existing playable-completion Plan and CNZ2 coverage matrix.
+
+
+## Native second-player damage ownership is independent of CPU input
+
+Pinned044 HurtCharacter (sonic3k.asm:21101..21153) selects the non-competition
+secondary-player hurt tail by native slot before checking rings. S2 has the same
+ownership distinction (s2.asm:85604..85670). Use the actual first
+playerQuery.nativeP2OrNull identity with the existing companion-support and touch
+profile contracts; changing CPU input ownership does not turn that actor into P1.
+Do not reroute its whole touch pass: overlap, attack, listener, protection and
+damage-cause decisions retain their own owners. Keep P1, extra/unregistered
+actors and MAIN_ONLY profiles distinct; competition needs an explicit contract.
+
+A real candidate list alone does not prove damage eligibility. Render-gated
+hazards require ordinary managed execution to establish their visibility and
+first-touch state, independent ROM overlap geometry and actual roster binding.
+Public touch-disabled preparation can establish those prerequisites without
+prior damage; do not privately prime visibility or clear hurt/death. Origin:
+HCZ real-manager/ROM old-red and local `dae6c29e`, 2026-10-18. Its 195-test isolated
+qualification covers both P2 input variants and bit7/P1 controls. Root's combined
+component lifecycle71445 subsequently passed379T0F0E0S; the original route, native
+row 442 caller, competition and extra-player breadth remain unqualified.

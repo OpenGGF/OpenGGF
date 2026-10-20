@@ -103,6 +103,12 @@ final class DefaultObjectRewindPolicies {
     );
 
     private static final Map<FieldKey, RewindFieldPolicy> EXACT_FIELD_POLICIES = Map.ofEntries(
+            // HCZ independently lived ship family: exact parent3/$44, including after boss removal.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossRobotnikShip", "boss"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossRobotnikHead", "ship"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossRobotnikHead", "boss"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossRobotnikFlame", "ship"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossShipExplosionController", "ship"), RewindFieldPolicy.CAPTURED),
             // Fresh title child parent2 is native graph identity, not a nearest owner hint.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kFreshTitleCardElementObjectInstance", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kInLevelTitleCardElementObjectInstance", "parent"), RewindFieldPolicy.CAPTURED),
@@ -557,7 +563,6 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.CnzEndBossFieldChild", "xOffset"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleInstance", "explosionController"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossInstance", "cameraGate"), RewindFieldPolicy.DEFERRED),
-            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossInstance", "defeatExplosionController"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance", "arenaCameraGate"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance", "effectChildren"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance", "extendedFrostCaptures"), RewindFieldPolicy.CAPTURED),

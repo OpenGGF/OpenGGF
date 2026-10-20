@@ -529,3 +529,166 @@ caller, fullroute, simultaneous untested branches and new rewind scope remain
 unqualified. Prior full canonical251/first animation3475 and ownership88306 are
 historical until the separately authorized R80 original run actually completes.
 No snapshot/API/cadence/CPU/animation pipeline or fixture change.
+
+
+## Native ship escape component — 2026-10-20
+
+Obj_RobotnikShip2Wait retains subtype/mapping frame 5. READY compares unsigned
+word Y with (Camera_Y + $40).w before decrementing Y; equality/below starts
+escape without clamping position, and the decrement preserves the fractional
+word. ESCAPE moves first, subtracts one from the word timer and deletes only
+when the signed result is negative: a $100 timer permits 257 movement dispatches.
+
+The local correction has nine cases in
+[TestHczEndBossRobotnikShip](../../../../src/test/java/com/openggf/game/sonic3k/objects/bosses/TestHczEndBossRobotnikShip.java):
+wrapped camera/unsigned Y, fractions, full countdown, signed-word wrap and two
+repeated capture/recreation/forward vectors. All nine pass, as do existing
+bucket (3), boss (5) and graph (2) controls. These are declared component-state
+fixtures with a real isolated manager, not a naturally entered arena.
+
+Qualification: local HEAD691de5183, uncommitted fullsrc+pom fingerprint
+f5aee9ac65e0ffca4fbea2e02c2f2f357e839001cf5ab01e8cd385478e8d045e.
+Candidate-2 is historically85T/1F/2E/0S; all19HCZ and61existing S3K controls pass.
+The other three issues are new DEZ/ICZ fixture premises, corrected separately.
+See the [composition plan](../../plans/2026-10-13-s3k-playable-completion.md#native-ship-and-dez-launcher-art--2026-10-20).
+
+The later inline-head scalar qualification below supersedes that animation gap.
+Actual head allocation/parent link, flame, independent lifetime after boss
+removal and Knuckles art remain separate. No native trace mismatch, physical
+queue, route or whole escape lifetime is attributed by these component checks.
+
+
+## Inline Eggman head state — 2026-10-20
+
+The existing inline visual now keeps native INIT/MAIN/END state, raw cursor,
+byte timer and stored mapping. INIT does not animate. The first MAIN underflows
+timer0, writes frame1 and reloads5; later raw frames last six MAIN dispatches.
+Raw state advances before hurt overwrites mapping with2. Clearing hurt leaves
+that mapping until the next raw write. Defeat writes3 and latches END.
+
+Seven added literal-native cases cover these boundaries, including twice-repeated
+capture/recreation forward vectors for running hurt state and frozen END.
+All16 ship cases plus bucket3/boss5/graph2 pass in the local candidate-4 run,
+alongside two existing EggRobo fighter checks and one distinct ICZ observation:
+29T/0F/0E/0S, Maven1m16s, printed queue0s. Fullsrc+pom fingerprint
+71b28bf073867504d903ca0fe0fabba1cb32f33874c5500618a3dd5276c8e947.
+Root read the actual source and all originals; a fresh independent source review
+found no material issue. The exact command is in the
+[composition plan](../../plans/2026-10-13-s3k-playable-completion.md#inline-head-qualification-and-short-icz-approach-question--2026-10-20).
+
+This qualifies captured scalar behavior in the existing folded renderer. Actual
+allocated-head dispatch, exact parent3 linkage, allocation failure, independent
+head/ship lifetime, flame, Knuckles art/delay, complete world/route and native
+pixel/physical publication remain unqualified. No screenshot was captured.
+
+
+## Managed Robotnik ship, head and flame — 2026-10-20
+
+The later correction replaces the folded head visual with independent managed
+Ship/Head/Flame objects. Captured references identify the actual creator; pure
+recreation shells neither search for nearby bosses nor spawn substitutes.
+Ship INIT allocates Head once; READY allocates Flame once. A full later-slot
+pool leaves the child absent without retry. Head has its own INIT/MAIN/END raw
+animation and mapping. Flame INIT does not draw; MAIN uses supplied VInt parity
+and word ship velocity.
+
+This supersedes the earlier immediate-deletion wording: ESCAPE underflow selects
+pending deletion after movement and still draws that pass. The next Ship
+dispatch deletes. Head/Flame follow their separate parent-delete boundaries.
+Native drawing is not suppressed by control bit6.
+
+Candidate-7 passes227T/0F/0E/0S across26 classes at fullsrc+pom
+242087bf240661d9d39019a16d205681ab26e36077d6baf147df6ebe7e7e2c3f.
+The HCZ subset is Ship10/Head12/Flame6/bucket3/graph4/boss5:40 cases. Coverage
+includes allocation failure, identical-coordinate families with exact links,
+flips/art priority, managed dispatch/draw order, two recreate/forward cycles
+and the pending-delete tail after boss retirement. Graph entry uses declared
+defeat/flee component inlets and the real onFleeComplete callback; it does not
+prove a natural fight, health/timer path or complete route.
+
+Root read all original reports, case identities and streams; no skips or issues.
+The [composition record](../../plans/2026-10-13-s3k-playable-completion.md#managed-hcz-graph-world-clear-and-icz-landing--2026-10-20)
+has the exact command and compiler-only fixture correction. Knuckles-specific
+head art/script submission, ship-owned subtype4 explosion and full boss/results
+flow remain separate. No native pixels, physical display-list production or
+trace cause is certified.
+
+
+## Knuckles head art and Ship-owned explosions — 2026-10-20
+
+Head INIT now selects EggRobo from actual session P1 CharacterKey.KNUCKLES,
+independently of the configured default, sidekick and update argument. It
+submits the existing global KosM job once, retains selection through rewind,
+and reads the native $0F raw script. The HCZ2 four-frame sheet references the
+actual32 resident Patterns at tile$52E; completed module work is distinct from
+VInt DMA presentation. No new allocation/rebind path or Head-owned claim exists.
+
+Ship MAIN now attempts one actual subtype4 explosion controller on defeat.
+It follows exact Ship identity, emits immediately and every third entry, and
+keeps the native signed-negative$80 lifetime. Failed effect allocation consumes
+neither shared RNG nor SFX. Successful allocation uses low/high16 word-wrapped
+offsets; the explosion child's first own dispatch owns SFX. Parent bit5 or absent
+code selects a deferred controller delete before position refresh/emission.
+HCZ root's nonnative fixed-centre subtype0 surrogate is removed.
+
+Candidate-8 at fullsrc+pom
+a7daed03f95a177aa0a6489764e581b7eee69ae84875033c575f2d6dbb39cf5a
+has158T/1F/0E/0S: all8 art cases and10 explosion cases pass, including two
+recreated exact-family/shared-RNG forward cycles, resident identity, real archive
+publication and pending/presented replay. The sole failure is an older graph
+test: it removes the new intervening controller, then assumes allocating after
+Head must return Flame. Root changes only the allocation probe to start at
+Flame's actual predecessor. Candidate-9, source
+b7f77975f032b507f0b5471ff44d3a41f1b2eab365a2024cc12984d8a4e68337,
+passes all4 graph cases. No runtime was changed between those runs.
+
+Both source changes received independent no-material-finding review. Root read
+all original reports and skips; exact commands/epochs are in the
+[composition plan](../../plans/2026-10-13-s3k-playable-completion.md#knuckles-head-ship-explosions-and-physical-icz-contact--2026-10-20).
+This supersedes the two component gaps above. Existing global enqueue partial
+failure, native timings/pixels, retained boss/results/geyser terminal ownership,
+natural fight and whole route remain outside these bounded passes.
+
+## Retained terminal candidate and open world failures — 2026-10-20
+
+The source candidate retains the hidden root through capsule/results wait,
+owns the current min-X/flag poll/control/music restoration, allocates capsule
+and geysers first-free, and selects root deletion for its next own dispatch.
+The capsule no longer substitutes for that root. Six new component cases pass,
+including actual P1 Knuckles selection, both music branches and allocation
+failure. The existing four Ship-family graph cases also pass; the independent
+family-tail fixture now explicitly removes the retained root and names that inlet.
+
+The three new complete-world cases fail in candidate10: immediate restore has
+null-versus-initialized parallax handler state; one results slot order loses the
+new geyser; the other restores a dynamic owner at slot4 instead of15.
+The overall result is239T/3F/0E/0S. These failures are under source investigation;
+source-review NMF and passing component cases do not replace those world proofs.
+No retained terminal rewind, natural fight, native-pixel/timing or route closure
+is claimed. See the [composition record](../../plans/2026-10-13-s3k-playable-completion.md#jet-dispatch-lower-platform-excursion-and-terminal-world-failures--2026-10-20).
+
+## Terminal full-world forward replay — 2026-10-20
+
+Candidate13 passes all9 terminal ownership cases, including the3 previously
+failing complete-world cases, plus the4 Ship-family graph controls. The declared
+final-FLEE/hidden-WAIT and genuine results-publication/pending-delete boundaries
+restore fresh actors and forward twice, including both relative slot orders.
+
+Candidate11 had already passed immediate restoration; its remaining slot and
+workqueue differences appeared after forward execution. The retained diagnostic
+identified dynamicId27 as HczEndBossGeyserCutscene in the second results order.
+Those findings supersede the earlier immediate-slot-restore description.
+ObjectManager resync discarded placed owners while leaving their native SST
+reservations occupied. It now retires each outgoing placed slot and only its
+unconsumed child reservations before clearing the placed map. Live dynamic
+children, IDs, order and consumed reservations remain intact. Three new lifecycle
+cases and the unchanged full-world terminal comparisons pass; no slot seeding
+or world-comparison filter was added.
+
+Candidate11 separately passes14 parallax and shared scroll/SlotPlane/CNZ
+controls for restoration before native initialization and current-owner binding.
+Candidate12 stopped at test compilation and supplied no test result. Candidate13
+overall is240T/1F/0E/0S because of a separate synthetic solid fixture. These
+terminal checks retain declared FLEE/results/STATE_EXIT component inlets; they
+do not prove a natural eight-hit fight, native resource causality, native pixels,
+the old strict trace's four axes or complete HCZ route closure.

@@ -17,14 +17,14 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 
 /**
- * ROM {@code loc_916A8}/{@code loc_916CC} (sonic3k.asm:198606-198625): the EggRobo's jet flame,
+ * ROM {@code loc_916A8}/{@code loc_916CC} (sonic3k.asm:198569-198594): the EggRobo's jet flame,
  * the first row of {@code ChildObjDat_919D0} at {@code (-$C,$1C)}.
  *
- * <p>{@code word_919BE} gives it priority {@code $280}, {@code $C} by {@code $10} pixels and
- * mapping frame 6, and the init clears its own render bit 2 when the parent's is clear.
- * {@code loc_916CC} then picks the flame's length from the parent's {@code y_vel}: frame 6 while
- * the parent is rising, 5 while it is descending slowly, and 4 once {@code y_vel} reaches
- * {@code $20} — so the flame is longest when the robot is pushing hardest downward.
+ * <p>INIT loads {@code word_919BE}: priority {@code $280}, {@code $C} by {@code $10} pixels and
+ * mapping frame 6, then returns without following or drawing. MAIN follows the exact parent and
+ * chooses frame 6 for negative word {@code y_vel}, 5 for {@code 0..$1F}, or 4 for {@code $20..$7FFF}.
+ * Only afterward does {@code Child_Draw_Sprite} test the parent's status bit 7; its
+ * {@code Go_Delete_Sprite} selects an undrawn next-dispatch delete.
  */
 public final class EggRoboJetFlameChildInstance extends AbstractObjectInstance
         implements RewindRecreatable {
@@ -43,10 +43,17 @@ public final class EggRoboJetFlameChildInstance extends AbstractObjectInstance
     private EggRoboBadnikInstance parent;
     private int x;
     private int y;
-    private int mappingFrame = FRAME_RISING;
+    private int mappingFrame;
     private boolean hFlip;
+    /** CreateChild1_Normal copies art_tile before this child ever executes INIT. */
+    private boolean artHigh;
+    private boolean initialized;
+    private boolean drawSubmitted;
+    private boolean pendingDelete;
 
-    private record RewindExtra(ObjectRefId parentId, int x, int y, int mappingFrame, boolean hFlip)
+    private record RewindExtra(ObjectRefId parentId, int x, int y, int mappingFrame, boolean hFlip,
+                               boolean initialized, boolean drawSubmitted, boolean pendingDelete,
+                               boolean worldPositioned, boolean artHigh)
             implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
 
     public EggRoboJetFlameChildInstance(ObjectSpawn spawn, EggRoboBadnikInstance parent) {
@@ -54,10 +61,19 @@ public final class EggRoboJetFlameChildInstance extends AbstractObjectInstance
         this.parent = parent;
         this.x = spawn.x();
         this.y = spawn.y();
-        this.hFlip = (spawn.renderFlags() & 1) != 0;
+        // CreateChild1_Normal copies mappings/art but no render flags into the cleared SST.
+        setRomWorldPositioned(false);
     }
 
-    /** Probe/rewind constructor. */
+    /** Pure native allocation copy; public/probe constructors retain cleared art priority. */
+    static EggRoboJetFlameChildInstance nativeChild(ObjectSpawn spawn, EggRoboBadnikInstance parent,
+                                                        boolean artHigh) {
+        var child = new EggRoboJetFlameChildInstance(spawn, parent);
+        child.artHigh = artHigh;
+        return child;
+    }
+
+    /** Pure probe/rewind shell; the captured exact parent ID is resolved during restore. */
     public EggRoboJetFlameChildInstance(ObjectSpawn spawn) {
         this(spawn, null);
     }
@@ -69,35 +85,63 @@ public final class EggRoboJetFlameChildInstance extends AbstractObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
-        if (parent == null || parent.isDestroyed()) {
+        drawSubmitted = false;
+        if (isDestroyed()) {
+            return;
+        }
+        if (pendingDelete) {
             ObjectLifetimeOps.deleteNoRespawn(this);
             return;
         }
-        // Refresh_ChildPositionAdjusted: the offset mirrors with the parent's render bit 0.
+        if (!initialized) {
+            // loc_916A8 / SetUp_ObjAttributes3: no MAIN refresh, frame choice or draw.
+            initialized = true;
+            mappingFrame = FRAME_RISING;
+            setRomWorldPositioned(parent == null || parent.participatesInRomWorldTransitionOffset());
+            return;
+        }
+        if (parent == null) {
+            // A missing captured owner cannot supply native refresh operands.
+            // Fail closed without inventing an identity or a visible frame.
+            pendingDelete = true;
+            return;
+        }
+        // Refresh_ChildPositionAdjusted runs even when the raw parent has retired.
         hFlip = !parent.badnikFacingLeft();
         int dx = hFlip ? -CHILD_DX : CHILD_DX;
         x = (parent.getX() + dx) & 0xFFFF;
         y = (parent.getY() + CHILD_DY) & 0xFFFF;
-        int velocity = parent.currentYVelocity();
+        int velocity = (short) parent.currentYVelocity();
         mappingFrame = velocity < 0 ? FRAME_RISING
                 : velocity < FAST_THRESHOLD ? FRAME_SLOW : FRAME_FAST;
         updateDynamicSpawn(x, y);
+        // Child_Draw_Sprite tests parent status bit 7 only after refresh/frame selection.
+        if (parent.isDestroyed()) {
+            pendingDelete = true;
+            parent = null; // Delete_Current_Sprite will not use this link on the next entry.
+            return;
+        }
+        drawSubmitted = true;
     }
 
+    @Override public boolean isHighPriority() { return artHigh; }
     @Override public int getX() { return x; }
     @Override public int getY() { return y; }
-    @Override public int getPriorityBucket() { return PRIORITY_BUCKET; }
-    @Override public int getOnScreenHalfWidth() { return 0x0C; }
-    @Override public int getOnScreenHalfHeight() { return 0x10; }
+    @Override public int getPriorityBucket() { return initialized ? PRIORITY_BUCKET : 0; }
+    @Override public int getOnScreenHalfWidth() { return initialized ? 0x0C : 0; }
+    @Override public int getOnScreenHalfHeight() { return initialized ? 0x10 : 0; }
 
     public int mappingFrameForTest() { return mappingFrame; }
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        if (!drawSubmitted || pendingDelete || isDestroyed()) {
+            return;
+        }
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.SSZ_EGG_ROBO);
         if (renderer != null && renderer.isReady()) {
-            renderer.drawFrameIndex(mappingFrame, x, y,
-                    hFlip, false, 0);
+            renderer.drawFrameIndexForcedPriority(mappingFrame, x, y,
+                    hFlip, false, 0, artHigh);
         }
     }
 
@@ -106,7 +150,8 @@ public final class EggRoboJetFlameChildInstance extends AbstractObjectInstance
         ObjectRefId parentId = context.identityTable()
                 .map(table -> table.encodeObject(parent)).orElse(null);
         return super.captureRewindState(context)
-                .withObjectSubclassExtra(new RewindExtra(parentId, x, y, mappingFrame, hFlip));
+                .withObjectSubclassExtra(new RewindExtra(parentId, x, y, mappingFrame, hFlip,
+                        initialized, drawSubmitted, pendingDelete, participatesInRomWorldTransitionOffset(), artHigh));
     }
 
     @Override
@@ -117,6 +162,11 @@ public final class EggRoboJetFlameChildInstance extends AbstractObjectInstance
             y = extra.y();
             mappingFrame = extra.mappingFrame();
             hFlip = extra.hFlip();
+            artHigh = extra.artHigh();
+            initialized = extra.initialized();
+            drawSubmitted = extra.drawSubmitted();
+            pendingDelete = extra.pendingDelete();
+            setRomWorldPositioned(extra.worldPositioned());
             parent = extra.parentId() == null ? null
                     : (EggRoboBadnikInstance) context.requireIdentityTable()
                     .resolveObject(extra.parentId(), true);

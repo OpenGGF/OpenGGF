@@ -794,6 +794,14 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
                 }
             }
         }
+        // BEGIN HCZ1_DIRECT_FF_ORDINARY: supplied physical camera, after this water phase and before animation.
+        var manager = GameServices.levelOrNull();
+        var world = manager != null ? manager.getWorldSession() : null;
+        if (world != null && manager.getZoneFeatureProvider() == this
+                && com.openggf.game.session.WorldPlcLifecycleAccess.owned(world)
+                instanceof Sonic3kLevelTitlePlcService plc)
+            plc.recordOrdinaryWaterSchedule(manager, cameraX, zoneIndex);
+        // END HCZ1_DIRECT_FF_ORDINARY
     }
 
     private ObjectPlayerQuery playerQueryFromRuntime(AbstractPlayableSprite player) {

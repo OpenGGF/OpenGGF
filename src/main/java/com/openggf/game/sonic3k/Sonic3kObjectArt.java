@@ -855,7 +855,23 @@ public class Sonic3kObjectArt {
             }
             List<SpriteMappingFrame> mappings =
                     S3kSpriteDataLoader.loadMappingFrames(reader, Sonic3kConstants.MAP_SSZ_HPZ_TELEPORTER_ADDR);
-            return new ObjectSpriteSheet(patterns, mappings, 0, 1);
+            // Obj_TeleporterBeam's CNZ art word is $24EE, while Queue_Kos_Module
+            // writes ArtKosM_CNZTeleport at tile $500. Beam frames 1/2 use
+            // mapping tile $12 (local 0); expanded frames 3..8 use $16 (local 4).
+            // The shared contraction exit uses frame 9's tile $12 (local 0).
+            // Frames 0/10 belong to HPZ/SSZ pads and are never drawn by the CNZ
+            // parent. Keep their frame numbers but no foreign pad tiles.
+            List<SpriteMappingFrame> beamMappings = new ArrayList<>(mappings.size());
+            for (int frame = 0; frame < mappings.size(); frame++) {
+                List<SpriteMappingPiece> pieces = new ArrayList<>();
+                if (frame >= 1 && frame <= 9) {
+                    for (SpriteMappingPiece piece : mappings.get(frame).pieces()) {
+                        pieces.add(SpriteMappingPieces.withTileIndex(piece, piece.tileIndex() - 0x12));
+                    }
+                }
+                beamMappings.add(new SpriteMappingFrame(pieces));
+            }
+            return new ObjectSpriteSheet(patterns, beamMappings, 0, 1);
         } catch (IOException e) {
             LOG.warning("Failed loading CNZ teleporter art: " + e.getMessage());
             return null;

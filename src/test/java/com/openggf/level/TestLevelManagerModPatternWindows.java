@@ -55,6 +55,7 @@ class TestLevelManagerModPatternWindows {
             return ((Integer) invocation.getArgument(1)) + 1;
         });
         GameModule module = mock(GameModule.class);
+        when(module.getRules()).thenReturn(com.openggf.game.rules.GameRules.SONIC_2);
         when(module.getObjectArtProvider()).thenReturn(provider);
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
         WorldSession world = new WorldSession(module);

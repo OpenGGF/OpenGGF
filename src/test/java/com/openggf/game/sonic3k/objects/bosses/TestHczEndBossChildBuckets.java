@@ -61,7 +61,9 @@ class TestHczEndBossChildBuckets {
                 0x80, true);
         // ObjDat_RobotnikShip / ObjDat_RobotnikHead $280, make_art_tile(ArtTile_RobotnikShip,0,0).
         assertChild(construct(services, () -> new HczEndBossRobotnikShip(boss)), 0x280, false);
-        assertChild(construct(services, () -> new HczEndBossRobotnikHead(boss)), 0x280, false);
+        HczEndBossRobotnikShip ship = construct(services, () -> new HczEndBossRobotnikShip(boss));
+        assertChild(construct(services, () -> new HczEndBossRobotnikHead(ship)), 0x280, false);
+        assertChild(construct(services, () -> new HczEndBossRobotnikFlame(ship)), 0x280, false);
     }
 
     /**
@@ -96,37 +98,31 @@ class TestHczEndBossChildBuckets {
      * (sonic3k.asm:136415-136416, 176924-176929), an AllocateObjectAfterCurrent, so
      * the head occupies a later slot than the ship. Both are priority $280 and
      * Draw_Sprite appends in slot order with the lower sprite-table entry in
-     * front, so the ship covers the head: the folded renderer paints the head first.
+     * front, so the independently managed head must paint before its ship.
      */
     @Test
     void shipPaintsAfterItsHeadBecauseTheHeadSlotFollowsTheShipSlot() {
         PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
         when(renderer.isReady()).thenReturn(true);
-        ObjectServices services = new TestObjectServices() {
-            @Override
-            public ObjectRenderManager renderManager() {
-                return new ObjectRenderManager(null) {
-                    @Override
-                    public PatternSpriteRenderer getRenderer(String key) {
-                        return Sonic3kObjectArtKeys.ROBOTNIK_SHIP.equals(key) ? renderer : null;
-                    }
-                };
-            }
-        }.withConfiguration(SonicConfigurationService.createStandalone());
-        HczEndBossInstance boss = boss(services);
-        HczEndBossRobotnikShip ship = construct(services, () -> new HczEndBossRobotnikShip(boss));
-        ship.setServices(services);
-        ship.update(1, null);
-
-        ship.appendRenderCommands(new java.util.ArrayList<>());
-
+        var family = TestHczEndBossRobotnikShip.Fixture.create(0x100, renderer);
+        family.ship().update(0, null);
+        var heads = family.manager().activeObjectsOfType(HczEndBossRobotnikHead.class);
+        assertEquals(1, heads.size());
+        var head = heads.getFirst();
+        head.update(0, null);
+        assertTrue(head.getSlotIndex() > family.ship().getSlotIndex());
+        var observedOrder = new java.util.ArrayList<com.openggf.level.objects.ObjectInstance>();
+        family.manager().drawUnifiedBucket(RenderPriority.fromS3kWord(0x280),
+                (object, high) -> observedOrder.add(object));
+        assertEquals(java.util.List.of(head, family.ship()), observedOrder);
         InOrder order = inOrder(renderer);
-        // Head frames are 0-3 (Obj_RobotnikHeadMain); the ship body is frame 5.
-        order.verify(renderer).drawFrameIndex(eq(0), anyInt(), anyInt(), anyBoolean(), eq(false));
-        order.verify(renderer).drawFrameIndex(eq(5), anyInt(), anyInt(), anyBoolean(), eq(false));
+        order.verify(renderer).drawFrameIndexForcedPriority(eq(0), anyInt(), anyInt(),
+                anyBoolean(), eq(false), eq(0), eq(true));
+        order.verify(renderer).drawFrameIndexForcedPriority(eq(5), anyInt(), anyInt(),
+                anyBoolean(), eq(false), eq(0), eq(true));
     }
 
-    private static void assertChild(AbstractBossChild child, int priorityWord, boolean highPriority) {
+    private static void assertChild(AbstractObjectInstance child, int priorityWord, boolean highPriority) {
         assertEquals(RenderPriority.fromS3kWord(priorityWord), child.getPriorityBucket(),
                 child.getClass().getSimpleName() + " bucket");
         assertEquals(highPriority, child.isHighPriority(),

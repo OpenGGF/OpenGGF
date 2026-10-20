@@ -16,7 +16,7 @@ The initial native/default binding covers all three solo mains at 320; the finit
 | ENTRY / CAMERA: normal character start and current focus | `Sonic_Start_Locations` / `Knux_Start_Locations`; [`TestS3kCnz2EntryMatrix#normalEntryAppliesTheProductionPresetAndEveryDeclaredParticipantThenReplaysTwice`](../../../../src/test/java/com/openggf/tests/TestS3kCnz2EntryMatrix.java) | 140 supported products: actual host-ROM start table, all resolved production widths, typed admitted roster/ordered CPU leaders/current native P2 and camera focus, decoded current mappings and unchanged P1 lives. This is a fresh entry floor, not every intro/alternate-entry mechanism. |
 | REWIND: normal entry world | Complete registered-world capture/restore and 45 ordinary Right-input frames twice; all title-card pattern bytes compared by content | Qualified for all 140 finite products. Held Right is requalified by the 2026-10-17 input correction below; the 2026-10-14 runs held Down. No P1 death or hidden life loss is permitted. This does not certify later event/interaction/child lifetimes or cross-load history policy. |
 | OBJECT / EVENT / REWIND: water/cork and Knuckles switch graph | `TestS3kCnzWaterLevelCorkFloorGraphRewind`, `TestS3kCnz2CutsceneButtonGraphRewind`, `TestS3kCnzMechanismRewind`, `TestS3kCnzLocalMechanicsRewind` | Declared component graphs; actual placement and team/viewport/donor interaction breadth remain open. Listed bindings were setup-inspected, not independently rerun as a whole in this slice. |
-| EVENT / CAMERA / LOAD: Knuckles teleporter route | `TestS3kCnz2KnucklesEventAdmission`, `TestS3kCnz2KnucklesAdmissionControls`, `TestS3kCnz2CapsulePlcAdmission`; existing event/teleporter consumers | Actual primary/role/X/Y admission, ordered separate allocations, physical clamp and unchanged full FIFO append are locally qualified below. Full-registry forced recreation/forward cycles and actual focused-P2/primary authority are covered. Ordinary Nemesis publication, real results/FG4 completion and uninterrupted outgoing entry remain open. |
+| EVENT / CAMERA / LOAD: Knuckles teleporter route | `TestS3kCnz2KnucklesEventAdmission`, `TestS3kCnz2KnucklesAdmissionControls`, `TestS3kCnz2CapsulePlcAdmission`, `TestS3kCnz2KnucklesCapsuleHandoff`, `TestS3kCnz2KnucklesTeleporterCharge`; existing event/teleporter consumers | Actual primary/role/X/Y admission, separate allocations, physical clamp and full FIFO append are locally qualified below. The [capsule handoff](#knuckles-capsule-results-and-camera-opening--2026-10-20) covers real results/FG4 completion, allocation retry, P1 control and gradual camera opening. The [native charge prefix](#knuckles-native-beam-capture-and-lift-prefix--2026-10-20) and [real ICZ handoff](#knuckles-hide-camera-rise-and-icz-handoff--2026-10-20) extend that positioned pre-results inlet through ordinary controller travel, beam/capture/lift, hide `$18`, camera rise and actual ICZ release with complete-world replay. The combined gate retains two ICZ failures; physical publication, product breadth and cold traversal remain open. |
 | BOSS / REWIND: end boss, children and scatter | `TestS3kCnzEndBossHeadless`, `TestS3kCnzEndBossGraphRewind` | Component/positioned boss contracts; natural arena and uninterrupted playable exit remain separate. Listed bindings were setup-inspected, not independently rerun as a whole in this slice. |
 | LIFE / LOAD: physical post, actual death/restart and incoming/outgoing worlds | Native checkpoint/death/reload owners and the edges listed above | All 140 supported preset/donor/main/roster products are qualified by `TestS3kCnz2EntryMatrix#actualDeathReloadPreservesTheSupportedProductAndReplaysEachIncomingWorldTwice`: two actual deaths/reloads, exactly one life lost per restart, new world owners, outgoing live-history retirement, restored current roster/camera and two complete-world 45-frame restore/replay cycles after each released destination. Physical post activation and incoming/outgoing route edges remain separate obligations. |
 | PRESENT: actual viewport, palette/scroll/plane and audio | Act-owned ROM art/AniPLC/AnPal/event and music/SFX owners | Decoded playable source is checked at entry. Scene pixels, native audiovisual timing and viewport-edge parity require their own bounded native/GPU evidence. |
@@ -121,3 +121,134 @@ follow animated tiles; gameplay pattern publication/renderer refresh/world owner
 full occupancy, real results publication/FG4 allocation retry/native music/control,
 scene pixels and the full route still require their own implementation and evidence.
 No native caller/readiness/service or route certificate follows.
+
+## Knuckles capsule results and camera opening — 2026-10-20
+
+The native `CNZ2_ScreenEvent/loc_521D2..loc_521FC` waits for the real
+End_of_level_flag, allocates the ordinary gradual camera worker, targets `$49A0`,
+restores level music and P1 control, then advances FG4 to FG8. Allocation refusal
+returns with the handoff still pending. `Restore_PlayerControl` restores air,
+object control and WAIT animation state; it does not address the camera's focused
+sidekick. The capsule continuation now leaves the results flag for that event.
+The teleporter parent no longer rewrites the old `$48E0` clamp each pass.
+
+[`TestS3kCnz2KnucklesCapsuleHandoff`](../../../../src/test/java/com/openggf/tests/TestS3kCnz2KnucklesCapsuleHandoff.java)
+uses a declared native320/off Knuckles positioned inlet, the actual admitted
+capsule's solid button, ordinary grounded results and the real results exit.
+The unchanged first oracle failed seven handoff assertions before the repair;
+it passes afterward. The gradual worker's original fractional motion opens the
+camera through41 entries, and two complete registered-world restore/replay cycles
+match both the results handoff and the opening. A separate declared component
+inlet splits the real object pass from ScreenEvent, fills the actual public pool,
+checks refusal without side effects, frees one real slot and verifies retry.
+With P2 focused, only P1 is restored; FG8 does not repeat allocation/music requests.
+These are positioned/component checks, not a cold route recording.
+
+On Root's `ai-s3k-current-parity-composition` at HEAD`691de5183`, the five-class
+handoff/admission/capsule/teleporter request passed18 tests with0 failures, errors
+or skips (Maven1m21s, reported queue0s). The separate four required S3K selectors
+matched five actual classes, including both `TestSonic3kLevelLoading` packages,
+and passed60/0F0E0S (Maven28.900s, queue0s). No unchanged matrix was repeated.
+Exact selections, environment and source identity are in the [dated Plan](../../plans/2026-10-13-s3k-playable-completion.md#cnz2-knuckles-capsule-handoff--2026-10-20).
+
+Coverage stops before the teleporter's independent `$4A38/$4A40` airborne arm.
+Beam/lift, capture/hide, camera rise, ICZ entry, physical Nemesis/renderer
+publication, scene/music identity, explicit Super-state controls and remaining
+viewport/donor/team/cold-route products stay open. The act is not certified.
+
+## Knuckles native beam, capture and lift prefix — 2026-10-20
+
+`Obj_CNZTeleporterMain` now allocates the existing shared `Obj_TeleporterBeam`
+after its own native slot. Refusal retains the Main state without publishing
+beam/event, parent-X or sound effects; success sets parent/child X `$4A40` and
+child Y `$A38`, leaving P1 X alone. The child performs the real first `$10` wait,
+six signed `0/$FF` build pairs, second `$10` wait and odd-Level-frame expansion,
+incrementing only when both low clock bits are set. CNZ uses `word_467FC`'s
+flat-Y columns, art word `$24EE` (palette1, low plane priority, bucket1), and the
+ROM KosM module at tile `$500`. Dedicated mapping rebasing resolves `$12` to
+local0 and `$16` to local4 within its16 patterns. The parent draws no pad.
+
+The lower parent slot reads prior child progress: signed values below8 return;
+every entry at8 writes native object_control1 and roll status/animation2 without
+changing position, fractions, velocities, radii or skid state. Progress9..`$17`
+lifts one Y word on odd actual Level_frame_counter and moves X one word toward
+the parent only when bit1 is also set. Explicit captured object references
+restore both parent/beam links; the captured art selector retains the CNZ variant
+through recreation. HPZ/SSZ variants retain their own table, palette and priority.
+
+[`TestS3kCnz2KnucklesTeleporterCharge`](../../../../src/test/java/com/openggf/tests/TestS3kCnz2KnucklesTeleporterCharge.java)
+keeps the public positioned button inlet **before** the real capsule/results
+sequence. After actual results release, its primary method supplies only ordinary
+Right and state-selected grounded Jump buttons. The qualified sequence uses97
+travel entries, with jumps at actual X `$4980` and `$4A15`; then one art/landing
+entry admits the real beam at LF1146. Build, capture and lift-end boundaries are
+LF1163/1232/1267. All59 registered keys restore and replay twice through beam
+admission, signed build, capture and lift `$11`. These measured positions select
+no production condition; exact controller buttons repeat on replay. The prior
+Right-only and single initial airborne-Jump attempts failed before arming at
+`$4A15/$A2C`; they provide no semantic beam old-red credit.
+
+Two independent short component checks cover real pool exhaustion/retry without
+P1/sound/event effects and a declared positioned native parent-arm dispatch.
+The first positioned version failed before arming at `$4A08`: it omitted results
+opening, so the ordinary player boundary still read `$48E0+$128`. Its corrected
+inlet explicitly invokes the original parent arm on the public posed P1 before
+the first component snapshot. It does not establish capsule travel or weaken
+the primary method. Both forward paths retain two full registered-world cycles.
+
+On Root's composition HEAD`691de5183`, candidate1 used frozen Java/POM
+fingerprint`11c6e9546ad81f1762f55d6749bd162e5ac62bf4d292029a10feb0d21180a163`
+and completed34T/1F/0E/0S (Maven1m22s). The sole failure was that positioned inlet;
+ordinary travel, allocation/art, existing CNZ handoff/route, beam rendering/graph,
+HPZ transport and SSZ arrival/pads passed. After the test-only correction,
+candidate2 fingerprint`5c3a5cfaa91757e14aacdfdff523dec8cbdfc66144404c07b16584c869864f98`
+passed the affected three-case class, 3T/0F/0E/0S (Maven28.712s), without repeating
+the31 unchanged control identities outside that class. Both fingerprints hash sorted `src/**/*.java` and
+`pom.xml` relative-path-NUL/content-NUL inputs; production was identical between
+the requests. The [dated Plan](../../plans/2026-10-13-s3k-playable-completion.md#cnz2-knuckles-native-charge-prefix--2026-10-20)
+records exact selections/environment and the one failed setup. An independent
+source review found no material issue; no integration, commit or push is claimed.
+
+This qualifies native320/off solo Knuckles from the declared pre-results button
+inlet through lift progress `$11`. It does not qualify cold traversal to that
+button, viewport/donor/team breadth, explicit Super-state vectors, native pixels,
+physical KosM/VRAM and renderer publication, hide `$18`, camera rise or ICZ entry.
+The act and full Knuckles completion route remain uncertified.
+
+## Knuckles hide, camera rise and ICZ handoff — 2026-10-20
+
+Root's combined `cnz-icz-native-handoff-20261020/candidate-1` completed203 tests:
+201 passed, two failed, none errored or skipped. Within that invocation, all four
+`TestS3kCnz2KnucklesTeleporterCharge` cases passed. The new tail retains the
+original positioned **pre-results** button inlet and controller-only travel after
+real results release. It proves prior-child `$18` admission, native control3,
+Y-word zero with retained pose fractions/velocities/radii, animation/map0 and
+Scroll_lock. Subsequent parent dispatches subtract camera Y by `$10`; only an
+unsigned new word below `$780` sends the native fade and `$0500` request.
+
+The real `GameLoop` runs fade, title and fresh assembly into ICZ's typed Knuckles
+arrival owner, releases P1 with current focus, and excludes Sonic's snowboard.
+Native hide/rise restore and replay twice. Nonempty outgoing history retires at
+the actual load; the incoming released world then restores and replays all59 keys
+through45 ordinary frames twice. Its exact stdout records `riseEntries=31`,
+`exitCameraY=1913` (`$779`), `sourceLF=1330`, `outgoingHistory=77` and
+`incomingKeys=59`. The31 count starts after the test's three-entry rise checkpoint;
+it is not a fitted production timer or the total rise duration.
+
+That first invocation was not green: ICZ arrival pool admission and the
+pattern-animator preinitialization snapshot domain failed. Both production
+corrections subsequently passed in the 318-case composition run; four new beam
+component cases then exposed a missing test-owned parent identity context. After
+correcting that fixture, the affected 14-class composed run passed
+**250 tests, no failures, errors or skips**, at all-`src`/POM fingerprint
+`5ba31bd613122cb704f74d4b340d6abf62c5b4ec3081d1422f56fc348e9b7af6`.
+This includes all four charge/tail cases, ten ICZ arrival cases, 140 ICZ entry
+products, beam rendering, shared rewind identities/contacts, and HPZ/SSZ controls.
+
+CNZ's sheet retains the generic terminal frame9 (eight ROM `$12` pieces, local0)
+alongside frames1..8; pads0/10 stay empty. Its complete ROM-art assertion passes,
+without claiming the CNZ route contracts its beam. The real outgoing fade/load
+and released ICZ world replay qualify the positioned route tail. Cold traversal
+to the button, product breadth, native pixels and physical KosM/VRAM/renderer
+publication remain open. These local results are not integration or a complete
+act certificate.

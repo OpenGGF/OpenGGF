@@ -120,7 +120,6 @@ class TestS3kBonusPortalMechanismProducts {
             var oldRewind=SessionManager.getCurrentGameplayMode().getRewindController();
             assertNotNull(oldRewind);assertTrue(oldRewind.currentFrame()>10);
             long oldFrame=oldRewind.currentFrame();
-            int lives=GameServices.gameState().getLives();
             var configured=GameServices.sprites().getMainPlayable();
             int configuredFrames=configured.getAnimationFrameCount();
             int configuredBank=configured.getSpriteRenderer().patternBankCapacity();
@@ -159,12 +158,16 @@ class TestS3kBonusPortalMechanismProducts {
             }
             if(liveSlotChecks) verifyActualSlotController(session,coordinator);
             if(slotMechanics) verifyActualSlotMechanics(session,coordinator);
-            replayWorld(session, 18, GameMode.BONUS_STAGE, main, width, lives);
+            int replayEntryLives=GameServices.gameState().getLives();
+            replayWorld(session, 18, GameMode.BONUS_STAGE, main, width, replayEntryLives);
             var interior=GameServices.level().getObjectManager();
             var saved=coordinator.getSavedState();
             reachStageOwnedExit(session, type, coordinator);
             if(type==BonusStageType.SLOT_MACHINE) verifySlotGoalWindAndFade(session,coordinator,main+"-"+width+"-"+donor);
-            int expectedLives=lives+coordinator.getRewards().lives();
+            assertSame(interior,GameServices.level().getObjectManager(),"deferred rewards are sampled in the retained interior");
+            assertEquals(GameMode.BONUS_STAGE,session.loop().getCurrentGameMode());
+            int liveLivesBeforeReturn=GameServices.gameState().getLives();
+            int expectedLives=liveLivesBeforeReturn+coordinator.getRewards().lives();
             int expectedRings=GameServices.sprites().getMainPlayable().getRingCount();
             boolean returned=false;
             for(int frame=0;frame<800;frame++) {
@@ -292,22 +295,144 @@ class TestS3kBonusPortalMechanismProducts {
         assertEquals(oldRewards.size(),freshRewards.size());
         for(var reward:freshRewards)assertFalse(oldRewards.stream().anyMatch(old->old==reward),"reward actors are freshly recreated");
         replayAction(session,70,()->step(session),()->assertEquals(GameMode.BONUS_STAGE,session.loop().getCurrentGameMode()));
+        var payoutObjects=GameServices.level().getObjectManager();
         var payoutBefore=registry.capture();int payoutFrames=0;
         while(runtime.activeSlotCageForTest().cageStateForTest()!=3&&payoutFrames<2000) {
             step(session);payoutFrames++;assertEquals(GameMode.BONUS_STAGE,session.loop().getCurrentGameMode());
+            assertSame(payoutObjects,GameServices.level().getObjectManager());
         }
         assertEquals(3,runtime.activeSlotCageForTest().cageStateForTest(),"natural payout, expiry and ejection complete before the goal inlet");
         assertEquals(0,runtime.stageController().activeRewardObjects());
-        assertTrue(runtime.activeSlotRingRewardsForTest().isEmpty());assertTrue(runtime.activeSlotSpikeRewardsForTest().isEmpty());
+        // Native Obj_SlotRing/loc_1AA02 accounts for the ring before loc_1AA56's
+        // cosmetic sparkle. Cage release (loc_4C23E/loc_4C250) does not retire it.
+        while((!runtime.activeSlotRingRewardsForTest().isEmpty()
+                ||!runtime.activeSlotSpikeRewardsForTest().isEmpty())&&payoutFrames<2000) {
+            step(session);payoutFrames++;assertEquals(GameMode.BONUS_STAGE,session.loop().getCurrentGameMode());
+            assertSame(payoutObjects,GameServices.level().getObjectManager());
+        }
+        // BEGIN BONUS_RETIREMENT_OBSERVATION_ASSERTIONS
+        final String rewardRetirement = slotRewardRetirementDiagnostic(runtime);
+        assertTrue(runtime.activeSlotRingRewardsForTest().isEmpty(), () -> "ring-list retirement: " + rewardRetirement);
+        assertTrue(runtime.activeSlotSpikeRewardsForTest().isEmpty(), () -> "spike-list retirement: " + rewardRetirement);
+        // END BONUS_RETIREMENT_OBSERVATION_ASSERTIONS
         var payoutAfter=registry.capture();
         for(int cycle=0;cycle<2;cycle++) {
             registry.restore(payoutBefore);same(payoutBefore,registry.capture());
-            for(int frame=0;frame<payoutFrames;frame++)step(session);
+            for(int frame=0;frame<payoutFrames;frame++) {
+                step(session);assertEquals(GameMode.BONUS_STAGE,session.loop().getCurrentGameMode());
+                assertSame(payoutObjects,GameServices.level().getObjectManager());
+            }
             same(payoutAfter,registry.capture());
             registry.restore(payoutBefore);same(payoutBefore,registry.capture());registry.restore(payoutAfter);same(payoutAfter,registry.capture());
         }
         assertFalse(player.getDead());
     }
+    // BEGIN BONUS_RETIREMENT_OBSERVATION: retained test diagnostics, never gameplay actions.
+    private static String slotRewardRetirementDiagnostic(Object runtime) {
+        var observation = new SlotRewardObservation();
+        try {
+            Object mode = SessionManager.getCurrentGameplayMode();
+            Object world = SessionManager.getCurrentWorldSession();
+            Object manager = observation.raw(mode, "levelManager");
+            Object objects = observation.raw(manager, "objectManager");
+            Object level = observation.raw(manager, "level");
+            Object bootstrap = observation.raw(runtime, "bootstrapGameplayMode");
+            Object controller = observation.raw(runtime, "slotStageController");
+            Object state = observation.raw(runtime, "slotStageState");
+            Object cage = observation.raw(runtime, "slotCage");
+            var dynamic = observation.list(observation.raw(objects, "dynamicObjects"));
+            observation.add("runtime=" + observation.ref(runtime) + " currentWorld=" + observation.ref(world)
+                    + " currentMode=" + observation.ref(mode) + " modeWorld="
+                    + observation.ref(observation.raw(mode, "worldSession")) + " levelManager="
+                    + observation.ref(manager) + " level=" + observation.ref(level) + " objectManager="
+                    + observation.ref(objects) + " bootstrapMode=" + observation.ref(bootstrap)
+                    + " bootstrapIsCurrent=" + (bootstrap == mode) + " bootstrapWorld="
+                    + observation.ref(observation.raw(bootstrap, "worldSession")) + " bootstrapLevelManager="
+                    + observation.ref(observation.raw(bootstrap, "levelManager")) + " worldLevel="
+                    + observation.ref(observation.raw(world, "currentLevel")) + " rawDynamicCount=" + dynamic.size());
+            observation.add("\nstage=" + observation.ref(state) + " controller=" + observation.ref(controller)
+                    + " controllerOwnsStage=" + (observation.raw(controller, "stageState") == state)
+                    + " activeRewardObjects=" + observation.scalar(observation.raw(state, "activeRewardObjects"))
+                    + " cage=" + observation.ref(cage) + " cageController="
+                    + observation.ref(observation.raw(cage, "controller")) + " cageOwnsController="
+                    + (observation.raw(cage, "controller") == controller) + " cageState="
+                    + observation.scalar(observation.raw(cage, "cageState")) + " pendingCageBudget="
+                    + observation.scalar(observation.raw(cage, "rewardsToSpawn")) + " payoutInitialized="
+                    + observation.scalar(observation.raw(cage, "payoutInitialized")) + " cageWaitTimer="
+                    + observation.scalar(observation.raw(cage, "waitTimer")));
+            observation.rewards("rings", observation.list(observation.raw(runtime, "slotRingRewards")),
+                    dynamic, controller, true);
+            observation.rewards("spikes", observation.list(observation.raw(runtime, "slotSpikeRewards")),
+                    dynamic, controller, false);
+            return observation.text.toString();
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError failure) {
+            String detail = failure.getMessage();
+            return "DIAG_INVALID " + failure.getClass().getSimpleName() + ": "
+                    + (detail == null ? "no detail" : detail.substring(0, Math.min(256, detail.length())));
+        }
+    }
+    /** Raw instance fields and immutable scalar rendering only; reference labels are local identities. */
+    private static final class SlotRewardObservation {
+        private final StringBuilder text = new StringBuilder();
+        private final IdentityHashMap<Object, Integer> identities = new IdentityHashMap<>();
+        private void add(String value) {
+            if (value.length() > 8000 - text.length()) throw new IllegalStateException("8192-character diagnostic budget");
+            text.append(value);
+        }
+        private String ref(Object value) {
+            if (value == null) return "null";
+            Integer id = identities.get(value);
+            if (id == null) {
+                if (identities.size() >= 256) throw new IllegalStateException("reference budget");
+                id = identities.size() + 1;identities.put(value, id);
+            }
+            return "r" + id;
+        }
+        private String scalar(Object value) {
+            if (value == null) return "null";
+            if (value instanceof Boolean || value instanceof Integer || value instanceof Long
+                    || value instanceof Short || value instanceof Byte) return value.toString();
+            if (value instanceof Enum<?> choice) return choice.name();
+            throw new IllegalStateException("non-scalar diagnostic field");
+        }
+        private Object raw(Object target, String name) throws ReflectiveOperationException {
+            if (target == null) throw new IllegalStateException("missing owner for " + name);
+            for (Class<?> type = target.getClass(); type != null; type = type.getSuperclass()) {
+                try {
+                    var field = type.getDeclaredField(name);field.setAccessible(true);return field.get(target);
+                } catch (NoSuchFieldException absent) { /* Continue only through the actual inheritance chain. */ }
+            }
+            throw new NoSuchFieldException(name);
+        }
+        private java.util.List<?> list(Object value) {
+            if (!(value instanceof java.util.List<?> result) || result.size() > 512)
+                throw new IllegalStateException("raw list type/size");
+            return result;
+        }
+        private int identityIndex(java.util.List<?> values, Object target) {
+            for (int index = 0; index < values.size(); index++) if (values.get(index) == target) return index;
+            return -1;
+        }
+        private void rewards(String label, java.util.List<?> rewards, java.util.List<?> dynamic,
+                Object controller, boolean rings) throws ReflectiveOperationException {
+            add("\n" + label + "RawOrderedCount=" + rewards.size() + " [");
+            for (int index = 0; index < rewards.size(); index++) {
+                Object actor = rewards.get(index);
+                Class<?> expected = rings ? com.openggf.game.sonic3k.objects.S3kSlotRingRewardObjectInstance.class
+                        : com.openggf.game.sonic3k.objects.S3kSlotSpikeRewardObjectInstance.class;
+                if (actor == null || actor.getClass() != expected) throw new IllegalStateException("reward binding type");
+                int dynamicIndex = identityIndex(dynamic, actor);
+                add((index == 0 ? "" : "; ") + index + ":" + ref(actor) + " slot=" + scalar(raw(actor, "slotIndex"))
+                        + " destroyed=" + scalar(raw(actor, "destroyed")) + " active=" + scalar(raw(actor, "active"))
+                        + " rawDynamicMember=" + (dynamicIndex >= 0) + " rawDynamicIndex=" + dynamicIndex
+                        + " controller=" + ref(raw(actor, "controller")) + " sameController="
+                        + (raw(actor, "controller") == controller) + " framesRemaining=" + scalar(raw(actor, "framesRemaining")));
+                if (rings) add(" inSparkle=" + scalar(raw(actor, "inSparkle")) + " sparkleTimer=" + scalar(raw(actor, "sparkleTimer")));
+            }
+            add("]");
+        }
+    }
+    // END BONUS_RETIREMENT_OBSERVATION
     private static void assertNoSlotRewards(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotBonusStageRuntime runtime) {
         assertEquals(0,runtime.activeSlotCageForTest().pendingRewardsForTest(),"zero prize has no pending cage spawn budget");
         assertEquals(0,runtime.stageController().activeRewardObjects(),"zero prize has no active reward actors");

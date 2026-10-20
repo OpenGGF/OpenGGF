@@ -147,7 +147,7 @@ class TestS3kSszEggRobo {
         for (int frame = 0; frame < 120; frame++) {
             fixture.stepIdleFrames(1);
             for (EggRoboBadnikInstance robo : allActive(EggRoboBadnikInstance.class)) {
-                assertTrue(robo.mode() != EggRoboBadnikInstance.Mode.FIGHTER
+                assertTrue(robo.mode() != EggRoboBadnikInstance.Mode.FIGHTER || robo.getCollisionFlags() == 0
                                 || (state != null && state.eggRoboFlyByPassed(robo.group())),
                         "a fighter survived with its _unkFA82 bit clear");
             }

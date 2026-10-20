@@ -25,7 +25,11 @@ public final class ActiveGameplayTeamResolver {
      * Falls back to the configured default when no session-owned team is active.
      */
     public static String resolveMainCharacterCode(SonicConfigurationService configService) {
-        WorldSession worldSession = SessionManager.getCurrentWorldSession();
+        return resolveMainCharacterCode(SessionManager.getCurrentWorldSession(), configService);
+    }
+
+    /** Explicit-world counterpart for work owned by a bound load/context rather than the current session. */
+    public static String resolveMainCharacterCode(WorldSession worldSession, SonicConfigurationService configService) {
         if (worldSession != null
                 && worldSession.getSaveSessionContext() != null
                 && worldSession.getSaveSessionContext().selectedTeam() != null) {

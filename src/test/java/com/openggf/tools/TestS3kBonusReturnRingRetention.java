@@ -272,7 +272,7 @@ class TestS3kBonusReturnRingRetention {
 
     private static boolean released(GameplayCaptureSession session, GameMode mode) {
         var context = SessionManager.getCurrentGameplayMode();
-        var plc = GameServices.module().getGameService(Sonic3kLevelTitlePlcService.class);
+        var plc = com.openggf.game.session.WorldPlcLifecycleAccess.require(GameServices.level().getWorldSession(), Sonic3kLevelTitlePlcService.class);
         assertNotNull(plc, "actual production title Nemesis owner required");
         return session.loop().getCurrentGameMode() == mode && !GameServices.level().isTitleCardRequested()
                 && !context.getFadeManager().isActive() && !context.getFadeManager().hasPendingCompletion()

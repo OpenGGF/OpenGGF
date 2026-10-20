@@ -230,15 +230,14 @@ class TestS3kCnzMechanismRewind {
 
         CnzTeleporterInstance sourceTeleporter = objectManager.createDynamicObject(
                 () -> new CnzTeleporterInstance(TELEPORTER_SPAWN));
-        CnzTeleporterBeamInstance sourceBeam = objectManager.createDynamicObject(
-                () -> new CnzTeleporterBeamInstance(TELEPORTER_BEAM_SPAWN));
+        TeleporterBeamObjectInstance sourceBeam = objectManager.createDynamicObject(
+                () -> TeleporterBeamObjectInstance.cnzTransportBeam(TELEPORTER_BEAM_SPAWN, sourceTeleporter));
         setBooleanField(sourceTeleporter, "armed", true);
         setBooleanField(sourceTeleporter, "paletteLine2Patched", true);
         setBooleanField(sourceTeleporter, "teleportArtQueued", true);
         setBooleanField(sourceTeleporter, "beamSpawned", true);
-        setBooleanField(sourceTeleporter, "playerCaptured", true);
         setObjectField(sourceTeleporter, "beam", sourceBeam);
-        setIntField(sourceBeam, "beamCounter", CnzTeleporterBeamInstance.PLAYER_CAPTURE_COUNTER);
+        setIntField(sourceBeam, "progress", 8);
 
         ObjectRefId teleporterId = objectId(objectManager, sourceTeleporter);
         ObjectRefId beamId = objectId(objectManager, sourceBeam);
@@ -248,20 +247,20 @@ class TestS3kCnzMechanismRewind {
         objectManager.removeDynamicObject(sourceTeleporter);
         CnzTeleporterInstance divergentTeleporter = objectManager.createDynamicObject(
                 () -> new CnzTeleporterInstance(DIVERGENT_TELEPORTER_SPAWN));
-        CnzTeleporterBeamInstance divergentBeam = objectManager.createDynamicObject(
-                () -> new CnzTeleporterBeamInstance(DIVERGENT_TELEPORTER_BEAM_SPAWN));
+        TeleporterBeamObjectInstance divergentBeam = objectManager.createDynamicObject(
+                () -> TeleporterBeamObjectInstance.cnzTransportBeam(DIVERGENT_TELEPORTER_BEAM_SPAWN, divergentTeleporter));
         setObjectField(divergentTeleporter, "beam", divergentBeam);
 
         registryFor(objectManager).restore(snapshot);
 
         assertEquals(1, liveObjects(objectManager, CnzTeleporterInstance.class).size(),
                 "restore must keep exactly the captured CNZ teleporter parent");
-        assertEquals(1, liveObjects(objectManager, CnzTeleporterBeamInstance.class).size(),
+        assertEquals(1, liveObjects(objectManager, TeleporterBeamObjectInstance.class).size(),
                 "restore must keep exactly the captured CNZ teleporter beam");
         CnzTeleporterInstance restoredTeleporter =
                 objectById(objectManager, CnzTeleporterInstance.class, teleporterId);
-        CnzTeleporterBeamInstance restoredBeam =
-                objectById(objectManager, CnzTeleporterBeamInstance.class, beamId);
+        TeleporterBeamObjectInstance restoredBeam =
+                objectById(objectManager, TeleporterBeamObjectInstance.class, beamId);
         assertNotSame(sourceTeleporter, restoredTeleporter,
                 "restore must recreate the CNZ teleporter parent");
         assertNotSame(sourceBeam, restoredBeam,
@@ -275,19 +274,19 @@ class TestS3kCnzMechanismRewind {
         assertNotSame(sourceBeam, readObjectField(restoredTeleporter, "beam"),
                 "CNZ teleporter must not retain the stale pre-restore beam");
         assertTrue(readBooleanField(restoredTeleporter, "armed"),
-                "teleporter armed state must restore from compact state");
+                "teleporter armed state must restore from captured state");
         assertTrue(readBooleanField(restoredTeleporter, "paletteLine2Patched"),
-                "teleporter palette state must restore from compact state");
+                "teleporter palette state must restore from captured state");
         assertTrue(readBooleanField(restoredTeleporter, "teleportArtQueued"),
-                "teleporter queued-art state must restore from compact state");
+                "teleporter queued-art state must restore from captured state");
         assertTrue(readBooleanField(restoredTeleporter, "beamSpawned"),
-                "teleporter beam-spawned state must restore from compact state");
-        assertTrue(readBooleanField(restoredTeleporter, "playerCaptured"),
-                "teleporter player-captured state must restore from compact state");
+                "teleporter beam-spawned state must restore from captured state");
+        assertSame(restoredTeleporter, readObjectField(restoredBeam, "parent"),
+                "shared native beam parent resolves to the recreated CNZ owner");
         assertFalse(readBooleanField(restoredTeleporter, "playerHidden"),
                 "uncaptured teleporter player-hidden state must remain false");
-        assertEquals(CnzTeleporterBeamInstance.PLAYER_CAPTURE_COUNTER, restoredBeam.getBeamCounter(),
-                "beam counter must restore from compact state");
+        assertEquals(8, restoredBeam.progress(),
+                "signed beam progress must restore from captured state");
     }
 
     @Test
@@ -295,7 +294,7 @@ class TestS3kCnzMechanismRewind {
         Harness harness = Harness.create();
         CnzTeleporterInstance teleporter = harness.objectManager().createDynamicObject(
                 () -> new CnzTeleporterInstance(TELEPORTER_SPAWN));
-        CnzTeleporterBeamInstance unmanagedBeam = new CnzTeleporterBeamInstance(TELEPORTER_BEAM_SPAWN);
+        TeleporterBeamObjectInstance unmanagedBeam = TeleporterBeamObjectInstance.cnzTransportBeam(TELEPORTER_BEAM_SPAWN, teleporter);
         unmanagedBeam.setServices(harness.services());
         setObjectField(teleporter, "beam", unmanagedBeam);
 

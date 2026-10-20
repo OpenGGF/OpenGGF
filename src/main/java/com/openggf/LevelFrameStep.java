@@ -517,7 +517,7 @@ public final class LevelFrameStep {
         // placement could not represent.
         serviceBoundary(context, HardwareServiceBoundary.PRE_MAIN_LOOP);
         context.runtimeArtCoordinator().finishHeldLoopTailClosure();
-        if (frame.isOwnedBy(phase)) {
+        if (frame.isOwnedBy(phase) && !frame.preparesAfterLevelAnimation()) {
             frame.prepareAfterLoop(phase);
         }
 
@@ -552,6 +552,8 @@ public final class LevelFrameStep {
                 spriteManager.refreshPlayableRenderFlags(camera);
             }
             LevelSpritePresentation.prepare(levelManager, spriteManager);
+            if (frame.isOwnedBy(phase) && frame.preparesAfterLevelAnimation())
+                frame.omitUnreachedLevelAnimationTail();
             if (phase == PlcLifecyclePhase.ORDINARY_LEVEL)
                 com.openggf.game.session.WorldSessionPolicyAccess.afterNativeTick(context);
             return LevelFrameResult.GAMEPLAY_FRAME;
@@ -580,6 +582,13 @@ public final class LevelFrameStep {
         LevelEventProvider loopTailEvents = context.levelEventProvider();
         if (loopTailEvents != null) {
             wrapper.wrap("level-loop-tail", loopTailEvents::updateAtLevelLoopTail);
+        }
+
+        // Native044 Level_NotLRZ: Animate_Tiles -> Process_Nem_Queue_Init
+        // -> Process_Kos_Module_Queue (sonic3k.asm:7938-7940). Preparing here
+        // changes no pixels and cannot spend this VBlank's remaining budget.
+        if (frame.isOwnedBy(phase) && frame.preparesAfterLevelAnimation()) {
+            frame.prepareAfterLoop(phase);
         }
 
         // S3K LevelLoop's Process_Kos_Module_Queue slot follows the level
@@ -636,7 +645,7 @@ public final class LevelFrameStep {
                             context.runtimeArtCoordinator(), context.levelManager());
                 }
             }
-        });
+        }, context.levelManager(), context.kosinskiModuleQueue());
     }
 
     private static void startPendingInLevelTitleCard(

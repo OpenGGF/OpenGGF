@@ -131,9 +131,9 @@ class TestS3kCnz2CapsulePlcAdmission {
     }
 
     private static Sonic3kLevelTitlePlcService requireRegisteredQueue(HeadlessTestFixture fixture) {
-        var service = GameServices.module().getGameService(Sonic3kLevelTitlePlcService.class);
+        var service = com.openggf.game.session.WorldPlcLifecycleAccess.require(GameServices.level().getWorldSession(), Sonic3kLevelTitlePlcService.class);
         assertNotNull(service, "actual S3K Nemesis service is required");
-        assertSame(service, GameServices.module().getGameService(PlcLifecycleService.class));
+        assertSame(service, com.openggf.game.session.WorldPlcLifecycleAccess.service(GameServices.level().getWorldSession()));
         var snapshot = service.capture();
         var world = fixture.gameplayMode().getRewindRegistry().capture();
         assertTrue(world.entries().containsKey(service.key()), "actual queue owner must be registered");

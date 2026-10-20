@@ -81,13 +81,14 @@ class TestSszEggRoboAnimalLaunch {
         fixture.camera().setXCopy((short) CAMERA_X);
         fixture.camera().setYCopy((short) CAMERA_Y);
         // Actual manager passes publish camera bounds and initialize ordinary scene
-        // owners. Stop before a real release-eligible V-int (16 modulo32), avoiding
+        // owners. Leave the placeholder, continuation-restore and initialization
+        // dispatches before a real release-eligible V-int (16 modulo32), avoiding
         // the unrelated arrival ship's 32-tick missile creation, not a movie clock.
         for (int passes = 0; passes < 32
-                && ((manager.getVblaCounter() + 1) & 0x1F) != 0x10; passes++) {
+                && ((manager.getVblaCounter() + 4) & 0x1F) != 0x10; passes++) {
             scan(fixture);
         }
-        assertEquals(0x10, (manager.getVblaCounter() + 1) & 0x1F);
+        assertEquals(0x10, (manager.getVblaCounter() + 4) & 0x1F);
         var spawn = new ObjectSpawn(PARENT_X, PARENT_Y, 0xA0, 4,
                 parentBit0, false, 0);
         int free = manager.firstFreeDynamicSlot();
@@ -101,6 +102,12 @@ class TestSszEggRoboAnimalLaunch {
         manager.snapshotTouchResponseState();
         manager.refreshPostCameraRenderState();
         assertTrue(parent.isOnScreenForTouch(), "declared parent is inside published camera bounds");
+        scan(fixture); // Obj_WaitOffscreen submits the placeholder for rendering.
+        scan(fixture); // loc_85B02 restores the continuation without drawing.
+        scan(fixture); // loc_918FC initializes the active releaser on a non-release pass.
+        assertEquals(EggRoboBadnikInstance.ANIMAL_RELEASES, parent.animalsLeftForTest(),
+                "ordinary entry completes before the first release boundary");
+        assertEquals(0x10, (manager.getVblaCounter() + 1) & 0x1F);
         Set<Integer> beforeAnimals = animalSlots(manager);
         int beforeCount = manager.getActiveObjectSlotCount();
         int beforeScore = GameServices.gameState().getScore();

@@ -438,10 +438,10 @@ matrices; never collapse skipped or unrun into pass.
 | S3K | `S3K_MARBLE_GARDEN_1` | [Act 1 matrix](../architecture/validation/levels/s3k-mgz-act1.md) — bounded normal-entry/restart and object-graph floor qualified (1120 finite restart products across eight acts, `d13585237`; its normal-entry replay held Down, not Right, until the 2026-10-17 input correction); physical post 1 activation → hazard death → real post respawn with two-cycle world replay qualified for native320 Sonic, the native pair and the 30 supported solo preset/main/donor rows (2026-10-17; multi-participant rows open); the act is not certified. Route, interaction, lifecycle and native presentation breadth remain open |
 | S3K | `S3K_MARBLE_GARDEN_2` | [Act 2 matrix](../architecture/validation/levels/s3k-mgz-act2.md) — bounded normal-entry/restart and object-graph floor qualified (1120 finite restart products across eight acts, `d13585237`; its normal-entry replay held Down, not Right, until the 2026-10-17 input correction); the act is not certified. Route, interaction, lifecycle and native presentation breadth remain open |
 | S3K | `S3K_CARNIVAL_NIGHT_1` | [Act 1 matrix](../architecture/validation/levels/s3k-cnz-act1.md) — bounded normal-entry/restart and object-graph floor qualified (1120 finite restart products across eight acts, `d13585237`; its normal-entry replay held Down, not Right, until the 2026-10-17 input correction); five native/off positioned-inlet miniboss→released-CNZ2 products (Sonic solo/pair at320/800, Knuckles solo at800) now qualify nine complete-world spots with two forward replays each (2026-10-17); cold/physical-post/native320-Knuckles and remaining axes stay open. The act is not certified. Route, interaction, lifecycle and native presentation breadth remain open |
-| S3K | `S3K_CARNIVAL_NIGHT_2` | [Act 2 matrix](../architecture/validation/levels/s3k-cnz-act2.md) — bounded normal-entry/restart and object-graph floor qualified (1120 finite restart products across eight acts, `d13585237`; its normal-entry replay held Down, not Right, until the 2026-10-17 input correction); the act is not certified. Route, interaction, lifecycle and native presentation breadth remain open |
+| S3K | `S3K_CARNIVAL_NIGHT_2` | [Act 2 matrix](../architecture/validation/levels/s3k-cnz-act2.md) — bounded normal-entry/restart and object-graph floor qualified (1120 finite restart products across eight acts, `d13585237`; its normal-entry replay held Down, not Right, until the 2026-10-17 input correction); the [native320 Knuckles capsule handoff](../architecture/validation/levels/s3k-cnz-act2.md#knuckles-capsule-results-and-camera-opening--2026-10-20) locally qualifies real results, allocation retry, P1 control and gradual camera opening with two complete-world replay cycles. The [native beam and actual ICZ handoff](../architecture/validation/levels/s3k-cnz-act2.md#knuckles-hide-camera-rise-and-icz-handoff--2026-10-20) now qualify charge/lift, hide `$18`, camera rise, real fade/load and released ICZ with two full-world replay cycles from the positioned pre-results button inlet (affected 250/0F/0E/0S composition); cold traversal, broader products and native physical presentation remain open; the act is not certified. Route, interaction, lifecycle and native presentation breadth remain open |
 | S3K | `S3K_FLYING_BATTERY_1` | [Act 1 coverage matrix](../architecture/validation/levels/s3k-fbz-act1.md) — partial; execution/route/visual gaps remain |
 | S3K | `S3K_FLYING_BATTERY_2` | [Act 2 coverage matrix](../architecture/validation/levels/s3k-fbz-act2.md) — native Sonic/Tails/Knuckles and donor completion routes pass; broader rewind/visual certification remains partial |
-| S3K | `S3K_ICECAP_1` | [Act 1 matrix](../architecture/validation/levels/s3k-icz-act1.md) — bounded normal-entry/restart and object-graph floor qualified (1120 finite restart products across eight acts, `d13585237`; its normal-entry replay held Down, not Right, until the 2026-10-17 input correction); three historical native320 solo Sonic physical-post1 authoring candidates reached post contact/ring-loss hits but ended alive at the final 4594-input zero-ring endpoint; [R8 ground-aware continuation](../architecture/validation/levels/s3k-icz-act1.md#r8-ground-aware-post1-continuation--2026-10-17) (2026-10-17) reproduced that endpoint and regained platform support, then capped at 5794 after 1200 additional inputs/10 jump starts alive with zero rings, so natural death/respawn/rewind remains open; the act is not certified. Route, interaction, lifecycle and native presentation breadth remain open |
+| S3K | `S3K_ICECAP_1` | [Act 1 matrix](../architecture/validation/levels/s3k-icz-act1.md) — bounded normal-entry/restart and object-graph floor qualified (1120 finite restart products across eight acts, `d13585237`; its normal-entry replay held Down, not Right, until the 2026-10-17 input correction); three historical native320 solo Sonic physical-post1 authoring candidates reached post contact/ring-loss hits but ended alive at the final 4594-input zero-ring endpoint; [R8 ground-aware continuation](../architecture/validation/levels/s3k-icz-act1.md#r8-ground-aware-post1-continuation--2026-10-17) (2026-10-17) reproduced that endpoint and regained platform support, then capped at 5794 after 1200 additional inputs/10 jump starts alive with zero rings, so natural death/respawn/rewind remains open; a [native Knuckles teleporter arrival candidate](../architecture/validation/levels/s3k-icz-act1.md#knuckles-native-teleporter-arrival-candidate--2026-10-20) locally qualifies the missing ScreenInit/swing/beam owner, real pool-refusal/retry and two-cycle world restoration, with ten Arrival cases and 140 entry products passing in the affected 250-case composition. Cold traversal, other route products and native physical presentation remain open. The act is not certified. Route, interaction, lifecycle and native presentation breadth remain open |
 | S3K | `S3K_ICECAP_2` | [Act 2 matrix](../architecture/validation/levels/s3k-icz-act2.md) — bounded normal-entry/restart and object-graph floor qualified (1120 finite restart products across eight acts, `d13585237`; its normal-entry replay held Down, not Right, until the 2026-10-17 input correction); the act is not certified. Route, interaction, lifecycle and native presentation breadth remain open |
 | S3K | `S3K_LAUNCH_BASE_1` | [Act 1 matrix](../architecture/validation/levels/s3k-lbz-act1.md) — partial; cold traversal and viewport/donor/team, lifecycle and native presentation breadth remain open |
 | S3K | `S3K_LAUNCH_BASE_2` | [Act 2 matrix](../architecture/validation/levels/s3k-lbz-act2.md) — actual placed Knuckles CD entry and positioned CA→CC→released MHZ are qualified; R13 native launch row-pointer/source-byte/mutation-alias and twice-world-replay controls pass; cold traversal and donor/team, lifecycle and native presentation breadth remain open |
@@ -1463,3 +1463,160 @@ with two forced world replays before all tail assertions. Prior five route death
 no longer reproduce in that class. Four native alias writes, native whole-route
 descriptors/pixels/clocks, additional supported products/lifecycle and the separate
 cold campaign remain open; no full-suite/native-equivalence claim.
+
+
+### Local ship and launcher presentation corrections — 2026-10-20
+
+The [HCZ2 ship component](../architecture/validation/levels/s3k-hcz2.md#native-ship-escape-component--2026-10-20)
+has nine native frame/rise/countdown cases plus ten boss/bucket/graph controls
+passing. Head state, linkage, flame and independent lifetime remain separate.
+The [DEZ1 launcher art](../architecture/validation/levels/s3k-dez-act1.md#native-player-launcher-art-publication--2026-10-20)
+has four passing ROM/plan/fresh-provider checks, unchanged FBZ control and a
+negative DEZ2 resource profile. Neither certifies native physical presentation
+or a complete route.
+
+A separate ICZ1 authoring episode physically activates post1, retains44rings
+at contact, loses rings through ordinary hurt at input1780, then reaches the
+2400-new-input cap alive with3lives and no lower-platform contact. It adds no
+natural death/reload obligation: no maintained physical-checkpoint lifecycle
+test or successful lethal route was authored from that result.
+
+
+The [inline HCZ Eggman head state](../architecture/validation/levels/s3k-hcz2.md#inline-eggman-head-state--2026-10-20)
+is now locally qualified: INIT/raw timer/cursor/stored hurt mapping/END latch
+and recreated forward vectors, with all26 HCZ checks passing. Actual allocated
+head linkage/lifetime and native physical/pixel presentation remain open.
+The [short ICZ post1 approach observation](../architecture/validation/levels/s3k-icz-act1.md#short-post-1-approach-observation--2026-10-20)
+finds collapsing-platform contact loss after10 Left inputs following actual
+hurt recovery. Left is confirmed; reversal, death/reload and a gameplay defect
+are not established. The stale EggRobo frozen-swing claim is disconfirmed in
+inherited WIP by source audit and two passing initial-fraction cases; full-cycle
+and natural paired-route coverage remain separate.
+
+
+ICZ post1 route authoring (2026-10-20): the [left-charge episode](../architecture/validation/levels/s3k-icz-act1.md#left-charge-departure-and-airborne-approach--2026-10-20)
+passes its one focused case and crosses the approach X gate after107 ordinary
+added inputs. P1 remains airborne, alive with zero rings and post1 intact.
+Earlier support loss is consistent with walking off its west edge; collapse
+expiry is not proved. First landing/contact and natural checkpoint
+death/reload/rewind remain open.
+
+
+### Managed HCZ graph and world clear boundary — 2026-10-20
+
+The [managed HCZ Ship/Head/Flame graph](../architecture/validation/levels/s3k-hcz2.md#managed-robotnik-ship-head-and-flame--2026-10-20)
+has40 passing component/identity/draw/allocation/recreation cases within227
+focused tests. This supersedes the allocated Head/Flame/lifetime gap above;
+Knuckles art, ship explosion, natural fight/route and native pixels remain open.
+
+The same run passes19 native world-clear/restore cases,30 unchanged physical
+queue/header-bank leaves and selected loader/registry/authority/reference
+controls. Fresh stock S3K load clears world-owned DATA channels once before
+RNG/DMA/title; nonclear profiles retain them. Stable world ownership, mixed
+channel refusal before mutation, nested/reentrant authority revocation and two
+restore/forward cycles are covered. Ordinary current physical RAM writers,
+display-list producers, SAT and rendering are not integrated by this boundary.
+
+The [ICZ landing episode](../architecture/validation/levels/s3k-icz-act1.md#charged-approach-landing-and-bounded-return--2026-10-20)
+reaches actual ground after4 Right inputs and a90-input return cap before lower
+platform contact. Natural checkpoint death/reload/rewind remains open.
+No broad smoke or integrated delivery is claimed.
+
+
+### Knuckles presentation, explosion ownership and ICZ contact — 2026-10-20
+
+The [HCZ2 follow-up](../architecture/validation/levels/s3k-hcz2.md#knuckles-head-art-and-ship-owned-explosions--2026-10-20)
+passes8 maintained Knuckles-art and10 managed subtype4 explosion cases within
+candidate-8's158T/1F/0E/0S. Its sole graph slot-probe fixture failure is corrected;
+all4 graph cases pass in candidate-9. Runtime is unchanged between runs.
+This qualifies those component/resource/identity/RNG/replay paths, not native
+pixel/timing parity, natural fight or the retained boss/results/geyser handoff.
+
+The [ICZ episode](../architecture/validation/levels/s3k-icz-act1.md#confirmed-lower-platform-contact--2026-10-20)
+explicitly configures native320 solo Sonic, donor off, and reaches exact managed
+lower-piece standing contact at1988 after208 added ordinary inputs. This is not
+Knuckles route coverage. It retains1ring/3lives/post1, so ride/hazard travel and natural
+death/reload/rewind still need separate evidence. The subtype0 platform is a
+circular swing/reset owner; no falling-platform route is inferred.
+
+### Jet lifecycle, physical lower-platform excursion and open HCZ world checks — 2026-10-20
+
+The [SSZ Jet follow-up](../architecture/validation/levels/s3k-ssz-act1.md#jet-allocation-and-own-dispatch-lifecycle--2026-10-20)
+passes12 new dispatch/allocation/exact-ID recreation cases and33 existing EggRobo
+controls. The [solo-Sonic ICZ episode](../architecture/validation/levels/s3k-icz-act1.md#sampled-lower-platform-rise-and-return--2026-10-20)
+now retains actual lower-piece riding through8 braking and32 neutral inputs to
+the first sampled rise-to-return boundary; maintained full-world extraction is
+still unvalidated. Neither observation transfers to a Knuckles physical route.
+
+Candidate10 overall is239T/3F/0E/0S. Six new HCZ terminal components pass, while
+[all three new terminal world checks](../architecture/validation/levels/s3k-hcz2.md#retained-terminal-candidate-and-open-world-failures--2026-10-20)
+fail at parallax restoration, geyser lifetime or slot restoration. These remain
+open; no broad smoke, complete-route or integrated-delivery claim follows.
+
+### Resync, child standing bits and Gun dispatch — 2026-10-20
+
+Candidate13 completes240T/1F/0E/0S with no skips. All9
+[HCZ terminal cases](../architecture/validation/levels/s3k-hcz2.md#terminal-full-world-forward-replay--2026-10-20)
+now pass unchanged complete-world forward comparisons. The maintained
+[solo-Sonic ICZ lower-piece episode](../architecture/validation/levels/s3k-icz-act1.md#maintained-physical-lower-piece-replay--2026-10-20)
+passes real-input contact/ride and two fresh world replays at each spot.
+The [SSZ Gun follow-up](../architecture/validation/levels/s3k-ssz-act1.md#gun-dispatch-and-deferred-retirement--2026-10-20)
+adds19 passing cases to45 passing Jet/presentation/clock/placed controls.
+
+The sole current failure is a new synthetic multipart-contact fixture that
+never establishes its first ride. Candidate12 was compiler-only and is not
+counted as a test run. Native routes/pixels, Knuckles physical ICZ travel,
+natural terminal fights and the separately listed SSZ omissions remain open.
+The final combined change-based smoke and integration have not run.
+
+### Shot lifetime and independent child-contact closure — 2026-10-20
+
+Candidate14 passes187T/0F/0E/0S across17 focused classes, including22 new
+[Shot lifetime cases](../architecture/validation/levels/s3k-ssz-act1.md#charging-shot-parent-lifetime--2026-10-20),
+64 affected SSZ controls and all eight corrected solid-contact tests.
+The former synthetic landing failure is closed by the normal first object-pass
+snapshot, with geometry/assertions intact. The maintained
+[ICZ physical replay](../architecture/validation/levels/s3k-icz-act1.md#maintained-physical-lower-piece-replay--2026-10-20)
+and HCZ terminal qualification remain at their unchanged Candidate13 epoch.
+
+The owned ICZ discovery source is accounted and removed; its successful real
+inputs, failed approaches and useful lessons remain in existing maintained
+coverage/docs. Natural SSZ route contact, generic unload/physical slot reuse,
+copied priority/flip/aim/swing, ordinary physical display-bank integration,
+combined smoke and integrated delivery remain open.
+
+### EggRobo priority copy validation — 2026-10-20
+
+Candidate15 passes193T/0F/0E/0S across17 focused classes:14 new
+[art-priority cases](../architecture/validation/levels/s3k-ssz-act1.md#art-priority-copied-at-allocation--2026-10-20),
+86 affected SSZ controls and the selected reference/schema/dynamic/API/S3K
+loading regressions. Actual write timing, allocation copies, CPU tile/mask/SAT
+collector output, immutable publication and fresh full-world replay are covered
+within declared component inlets. The unchanged solid-contact fixture retains
+Candidate14's eight-case pass; HCZ terminal and maintained ICZ physical replay
+retain Candidate13 qualification.
+
+Natural SSZ selected touch/route, scaled fly-by art, aiming, vertical-flip
+carriers, full swing breadth, generic unload and ordinary physical display
+production remain open. The stock placement scan supplies only flags0/1 for
+26 EggRobos. Source audits and green focused checks do not certify the missing
+shared RAM/queue/SAT or shared scaled-art DMA producer paths. Combined smoke,
+foreign upstream reconciliation and integrated delivery are still pending.
+
+### EggRobo signed word aim validation — 2026-10-20
+
+Candidate16 passes203T/0F/0E/0S across17 focused classes. The existing
+[Presentation class now has20 cases](../architecture/validation/levels/s3k-ssz-act1.md#signed-word-aiming-validation--2026-10-20):
+signed WORD equality/wrap boundaries, both initial H flags, reached right-to-tie
+body/Gun output, inclusive Y gate and two fresh full-world replay cycles at two
+boundaries. All14 copied-priority cases and the affected dispatch/lifetime/clock,
+identity/schema/API and mandatory S3K loading controls pass in the same source
+epoch. No skips occurred.
+
+The scoped aim obligation is closed within these component inlets. Scaled
+fly-by art and shared DMA/pattern publication, natural route/touch coverage,
+vertical flip, broader swing and ordinary physical display production remain
+open. Existing complete-run bootstrap imports comparison-derived initial
+gameplay values/clocks, so its historical results are not production-entry
+route proof. The original power-on movie still contains the omitted title
+input prelude; an input-only production inlet remains to be established.

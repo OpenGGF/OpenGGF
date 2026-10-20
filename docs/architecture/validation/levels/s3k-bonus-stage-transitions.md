@@ -2198,3 +2198,109 @@ returned segment complete19510=18427physics+1083animation, first non-camera
 physics502y038A/0385;49timing completion mismatches persist. SS/FDFunreached.
 This is bounded component/composition evidence, not width/team/donor breadth,
 physical starpost traversal, native pickup caller, timing/readiness or full route.
+
+## Slot repeated spike penalties — 2026-10-20 candidate
+
+On base `685800dfa3bcb2dcb237fe9d10e3449e5df9c30e` plus the uncommitted controller
+and test changes in `.worktrees/ai-s3k-slot-spike-penalty-20261020`, each spike
+impact checks live rings independently of signed reward bookkeeping. ROM
+`Obj_SlotSpike / loc_4C3CA` tests live word `Ring_count` and decrements it when
+nonzero. The prior sum of live rings and net rewards stopped a repeated penalty
+with ten of twenty carried rings still available.
+
+[TestS3kSlotRewardObjects](../../../../src/test/java/com/openggf/game/sonic3k/objects/TestS3kSlotRewardObjects.java)
+drives ordinary ring/spike children through expiry, with both a changing playable
+ring total and a changing `LevelState` fallback:
+
+| Control | Observed candidate outcome |
+| --- | --- |
+| Repeated impacts on twenty carried rings, then another impact at zero | All twenty are consumed; bookkeeping and bonus publication both stop at -20 |
+| Four ordinary reward-ring grants followed by five spike impacts | Earned rings are consumed once; live rings and net reward publication return to zero |
+| Zero live rings with positive bookkeeping after a grant and public live-ring loss | The spike consumes nothing and leaves bookkeeping/publication unchanged |
+
+The matched regression run on unchanged production source completed 29T4F0E0S:
+both repeated-impact cases expected 0 / actual 10, and both zero-live cases
+expected bookkeeping 1 / actual 0. The earned-ring controls passed. With the controller
+repair, the command below completed **45T0F0E0S** at 2026-10-20T07:37:57Z on
+Java 25.0.4.1; queue wait 38s is separate from Maven's 1:16 execution time.
+Run from the candidate worktree:
+
+```bash
+python3 <MAIN_WORKSPACE>/tools/testing/maven_queue.py -Dmse=off '-Dtest=com.openggf.game.sonic3k.objects.TestS3kSlotRewardObjects,com.openggf.game.sonic3k.bonusstage.slots.TestS3kSlotStageController,com.openggf.game.sonic3k.objects.TestS3kSlotRingRewardObjectInstance,com.openggf.game.sonic3k.objects.TestS3kSlotBonusCageObjectInstance,com.openggf.game.sonic3k.objects.TestMutatorBonusRingProducers' '-Ds3k.rom.path=<MAIN_WORKSPACE>/Sonic and Knuckles & Sonic 3 (W) [!].gen' test
+```
+
+This is component coverage using the existing ROM-derived mechanics fixture bank;
+the absolute ROM property does not make it a natural negative-prize route test.
+No natural capture/reel-selected negative payout, complete hundred-spike route,
+viewport/donor/team product, rewind, trace frontier or bonus-to-origin title
+closure was qualified by this slice. Integration and combined delivery validation
+remain pending; the inherited matrix obligations above remain open.
+
+## Composed Slot and EggRobo confirmation (2026-10-20)
+
+Root composition `691de5183b8563f32ff3f5ed35c96ba8709fe770` plus its uncommitted
+reviewed gameplay changes now has a bounded combined qualification. These are
+source identities, not a claim that the dirty composition was committed:
+
+| Owner | SHA-256 |
+| --- | --- |
+| Slot controller | `7527ed561a465f23c361fe497942c8818fb87304810cdcf583d6a3a51d99234b` |
+| Composed EggRobo | `95ce2280443d5a791eebd739b884f9a4924678a69b14ed7520e2baad5e01fe3f` |
+| R29 real-parent test inlet | `f415f9037bb3ceab70d7ee9020fca3fa29c08d39c2f6274cd46ad87744b2fc17` |
+| Opt-in cold journal source | `9914bfc453b2ec3e6daf25b2fcd8ada53d3b8301420a7650abb0100141f64ad4` |
+
+The accepted isolated Slot/EggRobo tests were preserved. Composition retains
+Root's R29 animal-release method byte-for-byte. Its real-parent test now executes
+ordinary placeholder, continuation-restore and initialization passes before the
+same real VInt release boundary; allocation, RNG, native launch oracles and both
+whole-world recreation/replay cycles remain. The journal declares optional old/new
+entry fields and superclass-owned fractions outside sparse phase keys. A fresh
+independent review of these two consumers and R29 preservation found no material
+findings; the journal was compiled but its opt-in execution was not selected.
+
+The first lifecycle produced 139 passing cases, but its Maven exit record was lost.
+To close that concrete recording gap, Root confirmed the same fourteen classes
+with `surefire:test` against unchanged compiled inputs, without recompilation.
+Root DIRECT session `70535`, chunks `f53742`/`134c9a`, ended **exit 0 / BUILD SUCCESS,
+139 tests, 0 failures, 0 errors, 0 skips**; terminal recorded 2026-10-20T09:02:07Z.
+Maven reported 6.792s, queue wait 0s, Java 25.0.4.1. This is 139 distinct cases,
+not 278 unique coverage. The first run's missing exit remains a historical gap.
+
+| Selected component group | Classes / cases |
+| --- | --- |
+| Slot controller, reward children, cage and mutator ring producers | 5 / 45 |
+| EggRobo clocks, presentation and placed-object checks | 3 / 33 |
+| R29 real-parent and pending animal launch/recreation | 2 / 8 |
+| Mandatory AIZ skip, level loading, bootstrap and decoding controls | 4 / 53 |
+
+Root verified all 114 prior reports, 17,226 compiled class files and 10,734 frozen
+source/POM inputs exact in bytes, mode and integer nanosecond mtime across this
+confirmation. The 28 new XML/TXT originals remain in the confirmation namespace.
+The actual command below uses shell abbreviations for the expanded paths/selector;
+the launch PATH had the JDK 25 bin directory prefixed to the recorded host PATH.
+
+```bash
+MAIN="<MAIN_WORKSPACE>"
+ROOT="$MAIN/.worktrees/ai-s3k-current-parity-composition"
+SELECTOR='com.openggf.game.sonic3k.objects.TestS3kSlotRewardObjects,com.openggf.game.sonic3k.bonusstage.slots.TestS3kSlotStageController,com.openggf.game.sonic3k.objects.TestS3kSlotRingRewardObjectInstance,com.openggf.game.sonic3k.objects.TestS3kSlotBonusCageObjectInstance,com.openggf.game.sonic3k.objects.TestMutatorBonusRingProducers,com.openggf.game.sonic3k.objects.badniks.TestSszEggRoboClockGates,com.openggf.game.sonic3k.objects.badniks.TestSszEggRoboPresentation,com.openggf.tests.TestS3kSszEggRobo,com.openggf.game.sonic3k.objects.badniks.TestSszEggRoboAnimalLaunch,com.openggf.game.sonic3k.objects.badniks.TestSszEggRoboPendingAnimalLaunch,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils'
+cd "$ROOT"
+env -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH \
+  -u JDK_JAVA_OPTIONS -u _JAVA_OPTIONS -u MAVEN_OPTS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  PATH="/usr/lib/jvm/java-25-openjdk/bin:$PATH" \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN/tools/testing/maven_queue.py" --normal -Dmse=off \
+  "-Dtest=$SELECTOR" \
+  '-Dopenggf.surefire.reports=target/gameplay-composition-focus-20261020-confirm/surefire-reports' \
+  "-Dsonic1.rom.path=$MAIN/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$MAIN/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$MAIN/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  surefire:test -B
+```
+
+This confirms the composed components and named controls, not a natural negative
+payout route, natural EggRobo pairing, cold traversal, opt-in cold journal execution,
+the other loading suites, native capture/pixel/timing parity or a whole-game pass.
+Existing route and product obligations remain open. Main integration and push are
+unqualified. See the [SSZ composition note](s3k-ssz-act1.md#composed-eggrobo-confirmation-2026-10-20).

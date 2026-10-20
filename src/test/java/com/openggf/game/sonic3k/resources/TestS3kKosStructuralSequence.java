@@ -678,13 +678,13 @@ class TestS3kKosStructuralSequence {
     }
 
     private static void advanceTitleToCompletion(Sonic3kTitleCardManager title) {
-        var plc = GameServices.module().getGameService(
+        var plc = com.openggf.game.session.WorldPlcLifecycleAccess.require(GameServices.level().getWorldSession(),
                 com.openggf.game.sonic3k.Sonic3kLevelTitlePlcService.class);
         var phase = com.openggf.game.resources.PlcLifecyclePhase.LEVEL_TITLE_CARD;
         for (int dispatch = 0; dispatch < 1_000 && !title.isComplete(); dispatch++) {
             // loc_62CC: VInt's Process_Nem_Queue, Process_Sprites, then Process_Nem_Queue_Init.
             if (plc != null) plc.serviceVBlank(phase);
-            title.update();
+            com.openggf.game.sonic3k.titlecard.S3kTitleCardWorldAccess.update(title, GameServices.level().getWorldSession());
             if (plc != null) plc.prepareAfterLoop(phase);
             // loc_64DC hands the settled owner to LevelLoop with its $16 hold.
             if (title.shouldCompleteFreshLevelTransitionBoundary()) {

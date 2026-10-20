@@ -221,6 +221,14 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
     // =========================================================================
 
     @Override
+    public boolean isPersistent() {
+        // HCZEndBossGeyser_LoadArt through LiftPlayerAndExit use RTS/Obj_Wait/
+        // Draw_Sprite, never MarkObjGone. The hidden primary and delayed P2
+        // owner must survive even while their native x_pos is still zero.
+        return true;
+    }
+
+    @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         serviceQueuedArt();
         if (initialRoutineDispatchesRemaining > 0) {
@@ -321,7 +329,7 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
             if (!targetsNativeP2 && services().playerQuery().nativeP2OrNull() != null) {
                 // loc_6B804 allocates a second owner with subtype=-1 and a
                 // four-count Obj_Wait before loc_6B832 targets Player_2.
-                spawnChild(() -> new HczEndBossGeyserCutscene(
+                spawnFreeChild(() -> new HczEndBossGeyserCutscene(
                         geyserX, geyserY, true, 4));
             }
             // Shake complete -- set up the geyser column (ROM: loc_6B832)

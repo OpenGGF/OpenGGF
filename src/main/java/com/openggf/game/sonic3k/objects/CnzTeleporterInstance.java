@@ -2,18 +2,21 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
-import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.rewind.identity.ObjectRefId;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
+import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
+import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
 import com.openggf.graphics.GLCommand;
-import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.SpawnRewindRecreatable;
-import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
@@ -32,7 +35,7 @@ import java.util.List;
  *   <li>Zero {@code x_vel} and {@code ground_vel}, lock control, clear logical
  *   input, queue {@code ArtKosM_CNZTeleport}, and patch palette line 2</li>
  *   <li>Wait for the queued art load to drain and for Knuckles to be grounded</li>
- *   <li>Fix both X positions to {@code $4A40}, spawn the shared
+ *   <li>Set the parent and beam X positions to {@code $4A40}, spawn the shared
  *   {@code Obj_TeleporterBeam} at {@code y=$0A38}, play {@code sfx_Charging},
  *   and watch the beam progress thresholds</li>
  * </ul>
@@ -42,14 +45,15 @@ import java.util.List;
  * through {@code PaletteOwnershipRegistry}, preserving the ROM's immediate
  * CRAM patch without bypassing other CNZ palette writers.
  */
-public final class CnzTeleporterInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public final class CnzTeleporterInstance extends AbstractObjectInstance
+        implements SpawnRewindRecreatable, TeleporterBeamOwner {
     /**
      * Verified arming threshold from {@code Obj_CNZTeleporter}.
      */
     private static final int ARM_X_THRESHOLD = 0x4A38;
 
     /**
-     * Verified beam/transport X used by both the player and the shared beam.
+     * Verified parent/beam X; P1 is centered gradually during the lift.
      */
     private static final int TELEPORT_X = 0x4A40;
 
@@ -58,33 +62,36 @@ public final class CnzTeleporterInstance extends AbstractObjectInstance implemen
      */
     private static final int TELEPORT_BEAM_Y = 0x0A38;
 
-    /**
-     * Verified late-route camera clamp published by the CNZ event script.
-     */
-    private static final int ROUTE_CAMERA_MIN_X = 0x4750;
-    private static final int ROUTE_CAMERA_MAX_X = 0x48E0;
-
     private static final int[] TELEPORT_PALETTE_INDICES = {1, 2, 8, 10};
     private static final int[] TELEPORT_PALETTE_WORDS = {0x0EEE, 0x00EC, 0x0EA2, 0x0E80};
 
+    private int centreX;
     private int centreY;
 
     private boolean armed;
     private boolean paletteLine2Patched;
     private boolean teleportArtQueued;
     private boolean beamSpawned;
-    private boolean playerCaptured;
+    /** Native code pointer loc_523CA, entered after the Y-word disappearance. */
     private boolean playerHidden;
-    private CnzTeleporterBeamInstance beam;
+    private boolean transitionRequested;
+    private TeleporterBeamObjectInstance beam;
+
+    private record RewindExtra(int centreX, int centreY, boolean armed,
+                               boolean paletteLine2Patched, boolean teleportArtQueued,
+                               boolean beamSpawned, boolean playerHidden, boolean transitionRequested,
+                               ObjectRefId beamId)
+            implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
 
     public CnzTeleporterInstance(ObjectSpawn spawn) {
         super(spawn, "CNZTeleporter");
+        this.centreX = spawn.x();
         this.centreY = spawn.y();
     }
 
     @Override
     public int getX() {
-        return TELEPORT_X;
+        return centreX;
     }
 
     @Override
@@ -99,12 +106,16 @@ public final class CnzTeleporterInstance extends AbstractObjectInstance implemen
 
     @Override
     public int getPriorityBucket() {
-        return RenderPriority.clamp(5);
+        // Obj_CNZTeleporter never initializes priority or calls Draw_Sprite.
+        return 0;
     }
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (!(playerEntity instanceof AbstractPlayableSprite player)) {
+            return;
+        }
+        if (transitionRequested) {
             return;
         }
 
@@ -113,14 +124,9 @@ public final class CnzTeleporterInstance extends AbstractObjectInstance implemen
             return;
         }
 
-        /**
-         * The teleporter route must already have been published through CNZ
-         * event state. Once that explicit seam is active, the object mirrors the
-         * late-route camera clamp locally so the cutscene stays locked to the
-         * teleporter lane while the player/beam choreography runs.
-         */
-        services().camera().setMinX((short) ROUTE_CAMERA_MIN_X);
-        services().camera().setMaxX((short) ROUTE_CAMERA_MAX_X);
+        // Native Obj_CNZTeleporter ($522A0) does not write camera boundaries.
+        // CNZ2_ScreenEvent installs its clamp once, then loc_521D2 opens max X
+        // through a gradual worker after the separate capsule's results finish.
 
         if (!armed && (player.getCentreX() & 0xFFFF) >= ARM_X_THRESHOLD) {
             // Obj_CNZTeleporter returns while airborne left of $4A40, even
@@ -136,9 +142,16 @@ public final class CnzTeleporterInstance extends AbstractObjectInstance implemen
         if (!armed) {
             return;
         }
+        if (playerHidden) {
+            advanceCameraRise();
+            return;
+        }
 
         if (!beamSpawned && isTeleportArtReady() && !player.getAir()) {
-            spawnBeamAndCharge(player);
+            spawnBeamAndCharge();
+            // Obj_CNZTeleporterMain replaces its code pointer and returns.
+            // The lower-slot parent first observes child progress next pass.
+            return;
         }
         if (beamSpawned) {
             watchBeamProgress(player);
@@ -209,21 +222,27 @@ public final class CnzTeleporterInstance extends AbstractObjectInstance implemen
      * Verified {@code Obj_CNZTeleporterMain} handoff once queued art is ready
      * and Knuckles has landed.
      */
-    private void spawnBeamAndCharge(AbstractPlayableSprite player) {
+    private void spawnBeamAndCharge() {
+        var admitted = spawnChild(() -> TeleporterBeamObjectInstance.cnzTransportBeam(
+                new ObjectSpawn(TELEPORT_X, TELEPORT_BEAM_Y, 0, 0, 0, false, 0), this));
+        // AllocateObjectAfterCurrent refusal leaves the code pointer at Main.
+        // spawnChild can return a constructed but unregistered object.
+        if (admitted == null || admitted.getSlotIndex() < 0 || admitted.isDestroyed()) {
+            return;
+        }
+        beam = admitted;
+        centreX = TELEPORT_X;
         beamSpawned = true;
-        player.setCentreX((short) TELEPORT_X);
-        beam = spawnChild(() -> new CnzTeleporterBeamInstance(
-                new ObjectSpawn(TELEPORT_X, TELEPORT_BEAM_Y, 0, 0, 0, false, 0)));
         services().playSfx(Sonic3kSfx.CHARGING.id);
         com.openggf.game.sonic3k.events.S3kCnzEventWriteSupport.markTeleporterBeamSpawned(services());
     }
 
     /**
-     * Observes the shared beam thresholds exported by {@link CnzTeleporterBeamInstance}.
+     * Native loc_5234A reads the prior entry's signed child progress byte.
      *
      * <p>Verified parent reactions:
      * <ul>
-     *   <li>{@code counter == 8}: take full object control and force rolling</li>
+     *   <li>{@code counter == 8}: write object_control=1 and roll status/animation</li>
      *   <li>{@code counter >= $18}: hide the player, play transporter SFX, and
      *   keep the route scroll-locked</li>
      * </ul>
@@ -234,31 +253,65 @@ public final class CnzTeleporterInstance extends AbstractObjectInstance implemen
             return;
         }
 
-        int beamCounter = beam.getBeamCounter();
-        if (!playerCaptured && beamCounter == CnzTeleporterBeamInstance.PLAYER_CAPTURE_COUNTER) {
-            playerCaptured = true;
-            ObjectControlState.nativeBit7FullControl().applyTo(player);
-            player.setControlLocked(true);
-            player.setRolling(true);
-            player.setCentreX((short) TELEPORT_X);
-            player.setXSpeed((short) 0);
-            player.setYSpeed((short) 0);
-            player.setGSpeed((short) 0);
+        int beamCounter = beam.progress();
+        if (beamCounter < 8) {
+            return;
         }
-
-        if (!playerHidden && beamCounter >= CnzTeleporterBeamInstance.PLAYER_HIDE_COUNTER) {
+        if (beamCounter == 8) {
+            // loc_523B6 executes on EVERY parent entry at eight. This bset
+            // changes status only: no radius, pose, subpixel or velocity write.
+            ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
+            boolean skidding = player.getSkidding();
+            int skidDustTimer = player.getSkidDustTimer();
+            boolean fixedSkidDustActive = player.isFixedSkidDustActive();
+            player.setRollingFlagPreserveRadii(true);
+            // The generic roll helper also clears skid state; this ROM bset
+            // does not. Preserve those independent fields as well as radii.
+            player.setSkidding(skidding);
+            player.setSkidDustTimer(skidDustTimer);
+            player.setFixedSkidDustActive(fixedSkidDustActive);
+            player.setAnimationId(Sonic3kAnimationIds.ROLL.id());
+            return;
+        }
+        if (beamCounter < 0x18) {
+            int levelFrameCounter = services().levelManager().getFrameCounter();
+            if ((levelFrameCounter & 1) != 0) {
+                NativePositionOps.writeYPosPreserveSubpixel(player, (player.getCentreY() - 1) & 0xFFFF);
+                int playerX = player.getCentreX() & 0xFFFF;
+                if ((levelFrameCounter & 2) != 0 && playerX != centreX) {
+                    NativePositionOps.writeXPosPreserveSubpixel(player,
+                            playerX + (playerX < centreX ? 1 : -1));
+                }
+            }
+            return;
+        }
+        if (!playerHidden) {
             playerHidden = true;
-            player.setHidden(true);
+            // loc_5238E writes object_control=3: bit0 holds movement, bit1
+            // skips native animation. P1 disappears by Y-word zero, not by a
+            // renderer visibility flag; its fractional position survives.
+            ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
+            player.setObjectMappingFrameControl(true);
+            NativePositionOps.writeYPosPreserveSubpixel(player, 0);
+            player.setAnimationId(0);
+            player.setMappingFrame(0);
             services().playSfx(Sonic3kSfx.TRANSPORTER.id);
+            services().camera().setScrollLocked(true);
+            // The new code pointer runs on the next parent dispatch.
+        }
+    }
 
-            /**
-             * The verified ROM note says the route becomes scroll-locked once
-             * the beam reaches {@code >= $18}. Task 8 keeps the late-route CNZ
-             * clamp active here as the minimal explicit lock without claiming the
-             * rest of the later cutscene choreography.
-             */
-            services().camera().setMinX((short) ROUTE_CAMERA_MIN_X);
-            services().camera().setMaxX((short) ROUTE_CAMERA_MAX_X);
+    /** loc_523CA: word subtraction and unsigned comparison on every own entry. */
+    private void advanceCameraRise() {
+        var camera = services().camera();
+        int nextY = ((camera.getY() & 0xFFFF) - 0x10) & 0xFFFF;
+        camera.setY((short) nextY);
+        if (nextY < 0x780) {
+            transitionRequested = true;
+            services().fadeOutMusic();
+            // StartNewLevel $0500: the existing transition owner retires the
+            // source level and performs the normal fade/title/ICZ assembly.
+            services().requestZoneAndAct(Sonic3kZoneIds.ZONE_ICZ, 0, true);
         }
     }
 
@@ -279,15 +332,38 @@ public final class CnzTeleporterInstance extends AbstractObjectInstance implemen
         return false;
     }
 
+    /** The shared child's clr.b $38(parent) is unused by this native parent. */
+    @Override
+    public void onBeamFinished() {
+    }
+
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (!teleportArtQueued && !paletteLine2Patched) {
-            return;
+        // Obj_CNZTeleporter never calls Draw_Sprite; only its shared beam draws.
+    }
+
+    @Override
+    public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
+        return super.captureRewindState(context).withObjectSubclassExtra(new RewindExtra(
+                centreX, centreY, armed, paletteLine2Patched, teleportArtQueued,
+                beamSpawned, playerHidden, transitionRequested,
+                context.identityTable().map(table -> table.encodeObject(beam)).orElse(null)));
+    }
+
+    @Override
+    public void restoreRewindState(PerObjectRewindSnapshot snapshot, RewindCaptureContext context) {
+        super.restoreRewindState(snapshot, context);
+        if (snapshot.objectSubclassExtra() instanceof RewindExtra extra) {
+            centreX = extra.centreX();
+            centreY = extra.centreY();
+            armed = extra.armed();
+            paletteLine2Patched = extra.paletteLine2Patched();
+            teleportArtQueued = extra.teleportArtQueued();
+            beamSpawned = extra.beamSpawned();
+            playerHidden = extra.playerHidden();
+            transitionRequested = extra.transitionRequested();
+            beam = extra.beamId() == null ? null : (TeleporterBeamObjectInstance)
+                    context.requireIdentityTable().resolveObject(extra.beamId(), true);
         }
-        PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.CNZ_TELEPORTER);
-        if (renderer == null) {
-            return;
-        }
-        renderer.drawFrameIndex(0, TELEPORT_X, centreY, false, false);
     }
 }

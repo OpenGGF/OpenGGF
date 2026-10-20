@@ -183,6 +183,7 @@ public final class Sonic3kObjectArtKeys {
     public static final String ICZ_PLATFORMS = "icz_platforms";
     // Map_ICZPlatforms rendered with ArtTile_ICZIntroSprites base (breakable-wall break debris).
     public static final String ICZ_PLATFORMS_INTRO = "icz_platforms_intro";
+    public static final String ICZ_TELEPORTER = "icz_teleporter";
     public static final String ICZ_PLATFORMS_MISC2 = "icz_platforms_misc2";
     public static final String ICZ_WALL_AND_COLUMN = "icz_wall_and_column";
     public static final String TENSION_BRIDGE_HCZ = "tension_bridge_hcz";

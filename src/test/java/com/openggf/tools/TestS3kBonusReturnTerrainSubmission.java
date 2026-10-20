@@ -184,7 +184,7 @@ class TestS3kBonusReturnTerrainSubmission {
             assertFalse(title.artLoading());
             assertTrue(title.freshLevelTitleReady(), "actual title movement gate opened");
             assertTrue(title.freshLevelTerrainStarted(), "owner reached its terrain publication decision");
-            var plc = GameServices.module().getGameService(Sonic3kLevelTitlePlcService.class);
+            var plc = com.openggf.game.session.WorldPlcLifecycleAccess.require(GameServices.level().getWorldSession(), Sonic3kLevelTitlePlcService.class);
             assertNotNull(plc);
             assertFalse(plc.isBusy(), "actual Nemesis gate opened, not a forced release");
             assertNotNull(observed);

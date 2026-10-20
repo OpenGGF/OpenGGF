@@ -2626,12 +2626,21 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// Both feet still compete by signed distance; only the world-facing
 		// probe and the final angle change, not the returned distance's sign.
 		boolean reversed = isReverseGravityActive();
+		// Sonic_CheckFloor selects Collision_addr from this player's top bit.
+		// Reverse sub_11FD6 keeps its caller's live LRB bit for Sonic_CheckCeiling.
+		int topSolidBit = sprite.getTopSolidBit() & 0xFF;
+		boolean secondaryCollisionPath = topSolidBit != 0x0C;
+		int solidityBit = reversed ? sprite.getLrbSolidBit() & 0xFF : topSolidBit;
 		var right = reversed
-				? ObjectTerrainUtils.checkCeilingDistWithFlipAwareAngle(cx + xRad, cy, yRad)
-				: ObjectTerrainUtils.checkFloorDistWithFlipAwareAngle(cx + xRad, cy + yRad);
+				? ObjectTerrainUtils.checkPlayerCeilingDistWithFlipAwareAngle(
+						cx + xRad, cy, yRad, solidityBit, secondaryCollisionPath)
+				: ObjectTerrainUtils.checkPlayerFloorDistWithFlipAwareAngle(
+						cx + xRad, cy + yRad, solidityBit, secondaryCollisionPath);
 		var left = reversed
-				? ObjectTerrainUtils.checkCeilingDistWithFlipAwareAngle(cx - xRad, cy, yRad)
-				: ObjectTerrainUtils.checkFloorDistWithFlipAwareAngle(cx - xRad, cy + yRad);
+				? ObjectTerrainUtils.checkPlayerCeilingDistWithFlipAwareAngle(
+						cx - xRad, cy, yRad, solidityBit, secondaryCollisionPath)
+				: ObjectTerrainUtils.checkPlayerFloorDistWithFlipAwareAngle(
+						cx - xRad, cy + yRad, solidityBit, secondaryCollisionPath);
 		TerrainCheckResult chosen;
 		if (left == null) {
 			chosen = right;

@@ -1572,3 +1572,60 @@ Canonical3475 writer and full route are not observed by this component, and
 R80 original canonical measurement is separate. Existing digit-art DMA
 representation and wider active-countdown bubble/timer limitations are not
 closed by raw animation publication. No whole-world/guard/native certificate.
+
+
+## Player-owned glide and native-P2 damage — qualified local components
+
+The maintained glide correction in local `8bcf0ab6` carries the querying player's
+live top solidity bit and collision array through both foot probes and the
+extension, regress and edge scans. Reverse ceiling probes retain the player's
+live LRB bit. Object defaults and foreground/background provider selection remain
+separate. Its isolated R110 affected selection passed 113 tests in 12 classes,
+including 18 independent terrain-query cases; that result belongs to that isolated
+source epoch.
+
+The local `dae6c29e` damage correction selects the ringless hurt tail by actual
+first native-P2 identity, the existing touch profile and module companion support,
+independently of CPU input ownership. Overlap, attack, listener, protection and
+cause handling retain their existing owners. Isolated R127 passed 195 tests in 14
+classes, including both P2 input variants, bit7 rejection and ringless P1 death.
+It does not qualify competition, extra-player or decorated-game breadth.
+
+Root's composed source on `691de518` passed the bounded combined lifecycle
+(session71445): **379T0F0E0S across46 report suites**, including the unchanged
+ordinary physical Nemesis oracle and full-key two restore/forward controls.
+Fresh guards (session93642) retained **107T2F0E0S**: both failures are byte-exact
+to the prior HubMusic issues; no new guard failure was observed. These are
+component and guard results. Both maintained original-route invocations remain
+**1T1F0E0S**.
+FDF R112's returned segment 2 is incomplete: 166 = 1 camera physics + 165 animation;
+Slots segment 3 is incomplete: 7,974 = 7,620 physics + 354 animation, first non-camera
+frame 220 `x_speed` ROM0/engine`-0400`. Production ownership is lost in TITLE_CARD,
+generation 6/cursor 10161, with 28 unmatched completions; SS/FDF remain unvisited.
+HCZ R128 retains the nine R122 logical payloads byte-for-byte: complete segment 11
+62 = 11 physics + 51 animation, complete segment 13 37,930 = 33,300 physics + 4,630 animation,
+first non-camera 442 `sidekick_x_speed` 01C7/`-0100`, then uncompared SS7 results at
+movie/destination97208. Historical ownership at 88306 is not reobserved.
++21 remains UNWAIVED and -94 UNLOCALIZED. Neither component pass nor aggregate
+route totals identify a native winning tile, contact/damage caller or full-route
+cause. [Commands and retained qualification limits](status/trace-frontier-log.md#2026-10-18--root-composes-player-owned-glide-and-native-p2-hurt-tails).
+
+
+## HCZ1 direct water art — bounded physical publication coverage
+
+Root HEAD691de518 with source8 tupleaa0310dc now carries the actual selected
+water producer into its load-owned Nemesis publication path. The selected unsigned
+physical-X branch retains the native three-pattern service; incompatible selection,
+replacement and enclosing load failure cannot borrow an earlier admission.
+The queue and selected schedule restore together through the existing world registry.
+The source contract is native044 Level load/water order7674/7931/7938..7939,
+HCZ1 unsigned branch8521..8538 and direct V-int path792..809. H-int2's separate
+flag-clear branch at1276 is not part of this component claim.
+
+The sole normal/no-profile 29-class focus, session46923, passed232T/0F/0E/0S.
+All seven water cases passed, including the unchanged physical publication oldred
+and twice full-registry restore/forward control, alongside load/rewind/transition
+consumers and required S3K checks. This is a local uncommitted tested source epoch.
+It does not certify H-int rendering, an actual complete route or native caller,
+and does not waive the earlier HCZ/FDF/Cold residuals or +21/-94 limits.
+[Exact command, original report accounting and source limits](architecture/plans/2026-10-13-s3k-playable-completion.md).

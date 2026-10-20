@@ -514,8 +514,13 @@ final class ColdCampaignPoolJournal {
                 for (String name : List.of("group", "x", "y", "flyX", "flyY", "xVelocity", "yVelocity",
                         "animalsLeft", "previousY", "previousPreviousY", "swingMaximum", "swingAcceleration"))
                     snapshot.put(name, r30Scalar(object, owner, name, "int", false));
-                for (String name : List.of("childrenSpawned", "lowPriorityArt", "flyByGateChecked", "swingDescending", "gunArmed"))
+                for (String name : List.of("childrenSpawned", "lowPriorityArt", "swingDescending", "gunArmed"))
                     snapshot.put(name, r30Scalar(object, owner, name, "boolean", false));
+                // Entry/render ownership changed across source epochs. Preserve explicit
+                // absence for both the legacy gate and its independent replacement fields.
+                for (String name : List.of("flyByGateChecked", "waitingForOnscreen", "renderedOnscreen",
+                        "drawSubmitted", "initialized"))
+                    snapshot.put(name, r30Scalar(object, owner, name, "boolean", true));
                 snapshot.put("mode", r30Scalar(object, owner, "mode", owner.getName() + "$Mode", false));
                 snapshot.put("state", r30Scalar(object, owner, "state", owner.getName() + "$State", false));
                 snapshot.put("facingLeft", r30Scalar(object, com.openggf.level.objects.AbstractBadnikInstance.class,
@@ -525,6 +530,10 @@ final class ColdCampaignPoolJournal {
                         "com.openggf.game.sonic3k.objects.badniks.AbstractS3kBadnikInstance"))
                     throw new AssertionError("R31 EggRobo superclass field-owner contract");
                 snapshot.put("mappingFrame", r30Scalar(object, mappingOwner, "mappingFrame", "int", false));
+                // MoveSprite2 uses the superclass's position fractions; these remain pose
+                // samples, not sparse phase-event triggers.
+                for (String name : List.of("xSubpixel", "ySubpixel"))
+                    snapshot.put(name, r30Scalar(object, mappingOwner, name, "int", false));
                 Object bounds = baseRaw(null, "cameraBounds");
                 if (!(bounds instanceof com.openggf.level.objects.CameraBounds))
                     throw new AssertionError("R30 cameraBounds declared type");
@@ -533,7 +542,8 @@ final class ColdCampaignPoolJournal {
                     gate.put(name, r30Scalar(bounds, com.openggf.level.objects.CameraBounds.class, name, "int", false));
                 snapshot.put("sampledParentGateCameraBounds", gate);
                 phase = r30Pick(snapshot, List.of("kind", "mode", "state", "animalsLeft", "childrenSpawned",
-                        "lowPriorityArt", "flyByGateChecked", "facingLeft"));
+                        "lowPriorityArt", "flyByGateChecked", "waitingForOnscreen", "renderedOnscreen",
+                        "drawSubmitted", "initialized", "facingLeft"));
             } else continue;
             String key = keys.get(object);
             if (key == null) throw new AssertionError("R30 registered actor missing semantic key");

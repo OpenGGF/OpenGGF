@@ -118,11 +118,11 @@ public final class ControlledFrameRuntime {
             }
         };
         com.openggf.trace.replay.TraceSuppressedRowClosure.executeUnownedTitleCardWork(
-                false, provider,
+                false, false, provider,
                 () -> com.openggf.game.InLevelTitleCardCoordinator.startIfRequested(
                         context.getLevelManager(), provider,
                         context.getGameStateManager().isEndOfLevelActive(), controlLock),
-                controlLock);
+                controlLock, context.getWorldSession());
     }
 
     /**

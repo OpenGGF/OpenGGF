@@ -114505,3 +114505,95 @@ and retained original manifests stay in the [existing Plan](../architecture/plan
 and canonical root_current_slice. No Root original route/SOZ repeat follows.
 SOZ matched V2 first release is103calls on Main vs115on Root; native terrain wait
 is required, exact duration/death11174cause remains unqualified.
+
+
+### 2026-10-18 — Root composes player-owned glide and native-P2 hurt tails
+
+Root `691de518` plus exactly six maintained source deltas from local FDF
+`8bcf0ab6` and HCZ `dae6c29e`, together with physical publisher V2 source15 tuple
+`7cee940caed98db9e6d45e9f17f6ed666a4e0f6f6f84f9037e3c3d72f5d1d5f9`,
+passed the sole normal combined lifecycle, session71445: **379T0F0E0S across46
+report suites**. The unchanged ordinary physical Nemesis oracle and registered
+full-key two restore/forward controls passed. FDF's isolated R110 selection
+(113T0F0E0S/12 classes) and HCZ's isolated R127 selection (195T0F0E0S/14 classes)
+remain separate qualified epochs. The former preserves player solidity/array
+arguments through real terrain scans; the latter changes only the profile-gated
+first native-P2 damage tail.
+
+The47-class request included nested-only `TestNemesisPlcRomVectors`, whose parent
+produced no report under ordinary nested-class exclusion; it was neither a pass
+nor a JUnit skip. A separately queued fresh guard lifecycle, session93642,
+completed **107T2F0E0S**: ArchUnit31/2, source guards72/0, exact ModAPI2/0 and the
+explicit nested S1/S2 ROM vectors1 each green. Both guard failure identities,
+attributes, full messages and complete stacks are byte-exact to prior105/2;
+HubMusicController's whole source equals integration base `8030832d`. No new
+guard failure was observed. Eight FAST warnings in the nested vectors leave
+readiness unqualified. Commands, selections and original accounting are in the
+[existing playable-completion Plan](../architecture/plans/2026-10-13-s3k-playable-completion.md).
+
+The maintained FDF R112 original used the normal Main queue wrapper with
+`--normal -Dmse=off -Ptrace-replay-r7
+-Dtest=TestS3kMegaRunChain#multiBonusSpecialStageRoundTrip test` from owned649 at
+`8bcf0ab6`, with original movie/fixtures and all three original ROMs. Session 71142
+ended 1T1F0E0S. All four reports are incomplete: AIZ1 has 1 camera-physics error;
+Gumball has 16 physics errors, first 1300 `x`0000/2778; returned AIZ2 has 166 = 1 camera physics +
+165 animation, without a serialized first non-camera mismatch. Slots has 7,974 =
+7,620 physics + 354 animation, first non-camera 220 `x_speed`0000/`-0400`, before loss
+of production ownership in TITLE_CARD, generation 6/cursor 10161. Twenty-eight
+unmatched hardware identities, 2 FAST/34 SMPS warnings and unvisited SS/FDF remain.
+
+The maintained HCZ R128 original used the same normal wrapper with
+`--normal -Dmse=off -Ptrace-replay
+-Dtest=TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds test`
+from owned3aa at `dae6c29e`, with its original movie/fixtures and original ROMs.
+Session 31023 ended 1T1F0E0S. All nine available R122 logical payloads remain
+byte-identical: segment 11 complete: 62 = 11 physics + 51 animation, lag 59; segment 13
+complete: 37,930 = 33,300 physics + 4,630 animation, lag 7, first non-camera 442
+`sidekick_x_speed` 01C7/`-0100`. The walk stops in uncompared SS7 results at
+movie/destination97208. XML retains 2 FAST/1 markRemembered/465 SMPS warnings;
+no current 88306 ownership observation was emitted. +21 UNWAIVED/-94 UNLOCALIZED,
+CPU-water/native-caller/resource/audio/Deform limits remain. Counts do not prove
+aligned residual vectors, actual damage contact or route improvement.
+
+Native source contracts are Sonic_CheckFloor/FindFloor (pinned044
+sonic3k.asm:19875..19927), reverse Sonic_CheckCeiling:20278..20311 and HurtCharacter
+21101..21153; S2's corresponding second-player tail is 85604..85670. Exact
+isolated epochs and Root composition accounting remain in the existing
+[playable-completion Plan](../architecture/plans/2026-10-13-s3k-playable-completion.md).
+These bounded component and guard results do not qualify full routes, native
+VRAM, water or H-int publication. No Root original-route remeasurement,
+integration or push is claimed here.
+
+
+### 2026-10-19 — Root HCZ1 direct water art publication component
+
+Root workspace ai-s3k-current-parity-composition, HEAD691de518, plus the
+uncommitted eight-source tupleaa0310dcaaa9ba6355905cafd9eeeb9ff5485538eee5b1209ab2d8b437aa7af9,
+ran one normal/no-profile whole-class29 request through Main's queue wrapper:
+--normal -Dmse=off -Dtest=<29 explicit FQNs> test -B, all three original ROM
+properties, JDK25, surfaceless EGL, null AL and single reused fork.
+Full exact argv/FQNs/environment are in the
+[existing Plan](../architecture/plans/2026-10-13-s3k-playable-completion.md)
+and canonical root_hcz1_direct_ff_reviewed_focus29_once_sol.
+
+Session46923 ended232T/0F/0E/0S, all232 identities/times and all58 XML/TXT
+originals inspected. The unchanged
+TestS3kHcz1DirectWaterNemesisPublication#hcz1DirectWaterFramePublishesThreePreparedNemesisPatterns
+now passes, together with the six producer/admission/restore controls. Physical
+publication follows the actual selected water/load owner and the captured world
+schedule, with failure/replacement revocation. It is not readiness or comparison
+data supplying gameplay values. Native044 order/branch/service owners are pinned
+in the Plan; no H-int2 or renderer outcome is inferred.
+
+Reported queue wait0s; Maven01:23min, finished11:54:10+01:00; compiler/parent
+intervals separately unknown. The ordinary lifecycle compiled4154main/4223test
+sources once. Case stderr206FAST/28 deterministic KOS estimates/four expected
+logged rejection/failure stacks, missing-player/null-ROM/collision negatives and
+26 compiler warnings remain qualified; no warning waiver.
+
+All58 new originals836367B and other28 prior originals retained singly. Source8
+and selected29 tests stayed fullmetadata exact; compilation preserved17220 prior
+paths and added six pre-absent source-bound outputs. Current17226 class inventory
+is accounting, not behavior inferred from hashes. No repeated run, native
+invocation, commit, integration or push followed. This focus does not replace
+the remaining original-route evidence or close native caller/CPU-water/+21/-94.

@@ -71,9 +71,12 @@ final class GameLoopTitleCardLifecycle {
         if (hardwareTimedProviderScan) {
             LevelFrameStep.executeHardwareTimedObjectScan(
                     frameContext, frame,
-                    PlcLifecyclePhase.LEVEL_TITLE_CARD, titleCard::update);
+                    PlcLifecyclePhase.LEVEL_TITLE_CARD, () ->
+                            com.openggf.game.sonic3k.titlecard.S3kTitleCardWorldAccess.update(
+                                    titleCard, gameplayMode.getWorldSession()));
         } else if (titleCard != null) {
-            titleCard.update();
+            com.openggf.game.sonic3k.titlecard.S3kTitleCardWorldAccess.update(
+                    titleCard, gameplayMode.getWorldSession());
         }
 
         // Publish while the provider still owns its fresh mode; completing

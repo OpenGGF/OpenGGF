@@ -1709,8 +1709,8 @@ public class GameLoop {
         TitleCardProvider tcp = getTitleCardProviderLazy();
         TraceSuppressedRowClosure.executeUnownedTitleCardWork(
                 playbackDebugManager.isCurrentGameplayTickSuppressed(),
-                tcp, this::startPendingInLevelTitleCard,
-                this::applyTitleCardControlLock);
+                false, tcp, this::startPendingInLevelTitleCard,
+                this::applyTitleCardControlLock, gameplayMode.getWorldSession());
 
         // Check if a title card was requested (new level loaded)
         if (levelManager.consumeTitleCardRequest()) {
@@ -2101,7 +2101,8 @@ public class GameLoop {
     private void updateBonusStageMode(boolean doFrameStep) {
         // Continue updating title card overlay during bonus stage
         // (EXIT phase: elements slide off screen after exitTitleCard transitioned here)
-        com.openggf.game.internal.BonusStageFrameLifecycle.updateOverlay(getTitleCardProviderLazy());
+        com.openggf.game.internal.BonusStageFrameLifecycle.updateOverlay(
+                getTitleCardProviderLazy(), gameplayMode.getWorldSession());
 
         if (levelManager.getRomZoneId() == Sonic3kZoneIds.ZONE_GLOWING_SPHERE) {
             ensureBonusStageBootstrapObjectPresent(BonusStageType.GLOWING_SPHERE);
@@ -3158,8 +3159,8 @@ public class GameLoop {
 
         // Create results screen with current emerald count via provider
         int totalEmeralds = gameState.getEmeraldCount();
-        resultsScreen = ssProvider.createResultsScreen(
-                ssRingsCollected, ssEmeraldCollected, ssStageIndex, totalEmeralds);
+        resultsScreen = com.openggf.game.sonic3k.specialstage.S3kSpecialStageWorldAccess.createResults(
+                ssProvider, gameplayMode, ssRingsCollected, ssEmeraldCollected, ssStageIndex, totalEmeralds);
 
         if (resultsScreen == null) {
             resultsScreen = NoOpResultsScreen.INSTANCE;

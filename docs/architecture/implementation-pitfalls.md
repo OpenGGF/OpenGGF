@@ -2182,3 +2182,78 @@ edit before discriminating all tail bytes. Do not infer definition0 emptiness or
 native route equality from a clear or a successful authored route. The separate
 native four alias-word writes remain unimplemented. Origin: DEZ final residency/
 first-difference task,2026-10-17; see existing trace audit and final-boss matrix.
+
+### Piece-scoped standing bits need their own rewind key
+
+A folded multi-piece object can represent several native SSTs, each with an
+independent standing bit. Preserve the base spawn/instance identity channel and
+piece index in both live standing keys and their pre-clear snapshots, resolving
+fresh owner/player identities through the existing restore context. The riding
+piece index is an independent channel: retaining a rider must not synthesize
+an explicitly cleared live bit. An unscoped parent standing query does not
+measure a child's bit. The2026-10-20 ICZ solo-Sonic maintained lower-platform
+episode exposed the missing codec key; Candidate13 passes its complete-world
+contact/ride replays twice per spot. Its separate synthetic two-piece landing
+fixture still failed setup, so that result does not certify fresh sibling contact.
+
+### Resync must retire the placed ownership it discards
+
+When an in-place placement resync clears its active map, first retire the
+outgoing placed actors' SST slots and unconsumed child reservations using the
+existing owner-aware helpers. Otherwise the live allocator retains orphan bits
+that capture cannot recover from live actors: immediate restore can compare
+equal while the next allocation/dispatch order diverges. Preserve live dynamic
+children and consumed reservations. Do not move this retirement into a generic
+clear used during restoration. Candidate13's ObjectManager lifecycle controls
+and all9 HCZ terminal cases pass after this bounded correction.
+
+### Charging and moving projectiles can have different parent lifetimes
+
+S3K CreateChild10_NormalAdjusted writes the immediate Gun into a Shot's parent3.
+loc_9176C ends at Child_DrawTouch_Sprite after charge work, including arming
+collision/velocity/SFX. Go_Delete_Sprite sets status7 before physical deletion,
+so an engine isDestroyed check alone misses a pending Gun. Suppress the
+retiring child's actual touch-list publication and draw without falsifying its
+collision byte, then run physical deletion on its next own entry.
+
+After a successful last charging tail, loc_917B4 never reads the Gun again.
+Release that captured raw link at this actual last use; neither a permanent
+parent dependency nor an early pre-charge guard matches the routine. Keep
+missing/unregistered owners distinct from observed retirement. Generic rewind
+must encode the required link through exact object identity while it is live;
+a field excluded as a structural parent needs an explicit captured policy.
+Candidate14's 22 SSZ Shot tests cover actual manager same-pass order, SFX/list/
+draw edges and two fresh replay cycles at four boundaries.
+
+The earlier synthetic two-piece standing fixture now passes all eight class
+cases in Candidate14 after the normal pre-update lifecycle snapshot. Its
+former failure was setup, not authority to change collision geometry or seed
+standing bits.
+
+### Physical display queues require current bytes and a shared producer stream
+
+A native display queue stores physical address words, not retained Java owners.
+S3K Draw_Sprite preserves duplicate submissions, counts each bucket's 63 entries,
+and spills into later buckets. Render_Sprites dereferences current slot bytes,
+updates render_flags bit7 before zero-mapping or exhausted-budget exits, and
+shares its 80-piece budget with preceding HUD/ring output. A static plant queue
+cannot be inserted by slot into legacy Java buckets and acquire those semantics:
+the omitted actors also consume input positions, ordering and output capacity.
+
+Fresh Level clear establishes known bytes only until subsequent writes. An
+unmigrated actor can leave the bank stale; allocating its slot to a plant does
+not repair that history. The native loader and plant INIT write partial fields,
+allocation probes without clearing, and retirement clears exactly $4A bytes.
+A queued address reused before consumption must see the new current bytes,
+including preserved residue. Neither the old Java owner nor zero-filled defaults
+is an admissible fallback. Rewind constructors must not replay original loader
+or INIT writes.
+
+Before migrating an issuer, define the canonical mixed submission/output stream,
+all relevant field writers or invalidation, the exact legacy exclusion rule,
+shared admission, and atomic preparation/publication/restore. A DATA bank or
+queue round trip alone proves none of this ordinary integration. Native owners
+are Draw_Sprite/Render_Sprites, Load_Sprites, Delete_Referenced_Sprite and
+Obj_AIZForegroundPlant; the
+[2026-10-20 source audit](plans/2026-10-13-s3k-playable-completion.md#physical-display-producer-integration-boundary--2026-10-20)
+records the concrete gap without claiming an observed pixel failure.

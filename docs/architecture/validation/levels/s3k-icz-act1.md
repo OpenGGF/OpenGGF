@@ -411,3 +411,240 @@ material objection. All5 own jobs terminal; inspected diagnostics consumed under
 metadata slot alone, no archives. Main config hash/mtime and private regular bytecopy
 preserved. Final target compiles the maintained source before commit; no postcommit
 rebuild, composed smoke or integration/push is claimed.
+
+## Knuckles native teleporter arrival candidate — 2026-10-20
+
+**Locally verified candidate; integration and broader routes remain open.** The original
+locked-on ROM SHA-1 `cfbf98c36c776677290a872547ac47c53d2761d6` owns a fresh
+Knuckles arrival that the earlier entry floor omitted. `ICZ1_ScreenInit`
+`$53608..$53666` (94 bytes, SHA-256
+`cb88d83baeb0193921a41834a9bcb25ba2be34d20d9027b8fec9b79e3a9cf76d`)
+tests `Last_star_post_hit == 0`, `Player_mode == 3`, and successful
+`AllocateObject`, then overwrites actual P1's word position with `$3640/$0660`
+and both camera/copy words with `$35A0/$05FB`. Knuckles' start table itself
+contains `$3640/$065C`; the canonical assertion must execute genuine deferred
+initial assembly before expecting the ScreenInit override. Checkpoint, other
+player modes and allocation failure retain their normal entry words. The fresh
+dispatcher hook has no ordinary positioned/decode/seamless fallback authority.
+
+`Obj_ICZTeleporter` `$53AD4..$53C04` (304 bytes, SHA-256
+`4e7b812c1dcb1da3b33e8823de84a35722edce7da45f7ce4235e5f011bfb5a39`)
+retries `AllocateObjectAfterCurrent` without init effects on failure. Success
+installs pad frame `$1A` at `$3640/$670`, bucket1, art `$2347`; saves P1's Y;
+starts the shared beam expanded and contracting with progress `$18`, two
+segments, base Y `$670-$80`, table `word_467FC`, bucket1 and art `$255E`; writes
+only Target palette line2 colours8/10 `$EA2/$E80`; and writes P1 control1,
+animation2 and the roll status bit. The existing roll helper also clears skid
+state, so a small engine-only direct-status helper preserves native skid,
+velocity, radii and box semantics. The exact existing `S3kGradualSwing`
+implements `Gradual_SwingOffset($20000,$800)` in the init pass and each Main
+pass. Non-negative signed speed releases control/animation and immediately
+enters the solid-pad check. Camera X copy `$3780` restores Normal line2
+colours8/10 `$002C/$0000` and deletes; earlier copies call full solid with
+`d1=$23,d2=$10,d3=1`.
+
+The beam uses ICZ's actual level PLC, not another zone's graphics:
+`PLC_1E_1F` entry `$92680 = 00159cd0ae00` loads the Nemesis archive at
+`$159CD0` into tile `$570`. Its 45 compressed bytes uniquely match the optional
+reference asset, SHA-256
+`783ce8124fbcedc1292122ca9fb5950f1be7c087dbbbe6efa2a9a898b31f6e80`.
+The registry's `$55E` base plus shared mapping `$12/$16` therefore selects
+physical `$570/$574`. Rewind captures the ICZ art selector, `$80` base offset,
+phase/progress, swing and reciprocal parent/beam identities.
+
+`TestS3kIczKnucklesArrival` covers the native320/off fresh component inlet,
+actual P1 versus P2 focus, no duplicate ScreenInit, Sonic/Tails and saved-entry
+negative branches, both real pool allocation-failure boundaries, ROM art tiles,
+and two complete registered-world restore/forward cycles through real initial
+assembly, contraction and release. Its camera-copy deletion boundary is an
+explicit component inlet, not proof of ordinary travel to `$3780`.
+`TestTeleporterBeamRendering` adds the ICZ profile/recreation oracle while
+retaining HPZ/SSZ/CNZ controls. Root owns the combined executable selection and
+the actual CNZ results/beam/fade/load/title-to-released-ICZ composition test.
+Root's affected 14-class composed run passed **250 tests, no failures, errors or
+skips**, including all ten Arrival cases, nine shared beam cases, 140 ICZ entry
+products, the real CNZ-to-released-ICZ handoff and HPZ/SSZ consumers. The tested
+all-`src`/POM fingerprint is
+`5ba31bd613122cb704f74d4b340d6abf62c5b4ec3081d1422f56fc348e9b7af6`;
+the source remained unchanged through the sole run. Four earlier beam fixture
+errors required an explicit test-owned parent identity context; contextless
+capture remains rejected.
+
+The preinitialization world replay also exposed direct ICZ animation ranges
+missing from the animator's initial capture domain. Construction now registers
+horizontal `$10E/16` and, only in Act 1, vertical `$122/15` after their existing
+art guards. Capture still reads the actual currently presented bytes; no early
+animation or upload occurs. The preceding 318-case run passed all 20 publication
+cases, including before-first-submission, pending/legal/stale VBlank and Act 2
+exclusion controls; its only four errors were the subsequently corrected beam
+fixtures. Those unchanged animation controls were not rerun as a ceremony.
+
+Natural post-1 death/reload, other viewport/donor/team route breadth, native
+pixels and the full cold route remain unqualified. The local focused results do
+not certify the whole act or the excluded native physical-display framework.
+
+
+## Short post-1 approach observation — 2026-10-20
+
+The preceding one-policy authoring attempt reaches post1 and ordinary zero-ring
+hurt but exhausts2400 added inputs alive; it is not a death/reload regression.
+A separate temporary selector,
+TmpIczPost1RouteAuthoring#observeFirstLeftApproachEdge, preserves that attempt
+byte for byte. It replays the real1780-input prefix, waits neutral until actual
+hurt recovery (cap180), then holds only Left until the first public contact/motion
+edge, the historical approach X window, or120 inputs. No pose/state/timer/life,
+callback, world restore or trace hydration is supplied.
+
+Actual recovery takes66 neutral inputs, grounded on the placed collapsing
+platform at $3DD5/$0730. The first Left input is submitted/held/pressed mask4
+and changes VX0 to-12. After10 Left inputs, the same platform's standing contact
+goes true to false and its riding owner to null; P1 becomes airborne at
+$3DA4/$06F3, VX-120, with110 immunity frames, zero rings and all3 lives.
+No velocity or displacement reversal is observed before this stop. Nearby
+spring geometry is context, not proof of a selected spring callback.
+
+Contact loss is consistent with walking off the support's west edge: its ICZ
+half-width is $30, placing that edge at $3DA5. This does not establish collapse
+timer expiry; the native fragmented parent can retain invisible solid support.
+
+The episode passes as a completed observation inside candidate-4's29T/0F/0E/0S
+run, fullsrc+pom71b28bf073867504d903ca0fe0fabba1cb32f33874c5500618a3dd5276c8e947.
+No jump, natural death, reload or rewind is attempted. The previous2400-input
+result remains NOLETHAL; the maintained physical checkpoint lifecycle is still
+unauthored. The next route design must account for the actual collapsing support
+before trying to return west; no production gameplay defect follows yet.
+
+
+## Left charge departure and airborne approach — 2026-10-20
+
+The temporary charge, landing/return, contact and braked-ride selectors explicitly
+configure native320 solo Sonic with donor off. Their measured route progress does
+not qualify Knuckles; a maintained extraction must assert the actual P1 identity.
+
+A distinct temporary selector,
+TmpIczPost1RouteAuthoring#authorLeftChargeDepartureToApproach, preserves both
+previous episodes. It uses the same actual 1780-input prefix, neutral until hurt
+recovery, one existing eight-input spindash charge, then held Left. Additional
+input is capped at309, with three charge presses and no extra jump or Right.
+
+The original candidate-5 passes1T/0F/0E/0S at fullsrc+pom
+0dac6ecb9cdc9b1604e4b8dd2d31352f99622e7eed7b364597ba11d8343f50f5.
+Actual recovery remains66 neutral inputs on the same placed support. Charge
+admission occurs at1848; release1855 clears spindash, enters rolling and
+publishes GSpeed-2432 while VX is still0. The next dispatch departs the support
+at$3D9D/$06F7, VX-2426. After32 subsequent Left inputs, the approach X gate is
+crossed at input1887, $3C77/$075D, VX-2426/VY1736. P1 is still airborne and
+rolling, alive with0rings/79immunity frames/3lives, post1 and the same world.
+The total added input is107:66neutral+8charge+1release+32Left. All10events and
+the exact input script are retained in the original report.
+
+This qualifies an ordinary admitted charge and horizontal approach crossing,
+not grounded approach, first subsequent landing/contact, natural death/reload,
+rewind or native collision cause. The moving-platform lower piece was not
+contacted before this stop; spring and harmful-ice proximity remains context.
+The next route question starts with this actual airborne state.
+
+
+## Charged approach landing and bounded return — 2026-10-20
+
+Temporary authorChargedApproachLandingAndReturn reuses the unchanged admitted
+charge episode and submits only Right after the actual airborne approach.
+First landing occurs after4 Right inputs, at1891: $3C52/$076D,
+VX-2330/VY0, grounded with no object contact. Actual lower-piece entry-side
+and standing-height checks admit a Right return. After90 further Right inputs
+the declared cap stops at1981, $3CA3/$076E, VX1002/VY0, still grounded.
+One ring was naturally recollected; all3 lives, post1 and the original
+objects/runtime remain. The lower piece was not contacted.
+
+The episode uses201 added inputs including107 in the inlet, three inlet charge
+presses and no extra action presses. All seven events and the exact executed
+input script appear in the original report. It passes as one completed
+observation in candidate-7's227T/0F/0E/0S selection. This advances airborne-only
+progress to actual landing and ground return, but does not qualify platform
+callback, natural death/reload, rewind or native collision cause.
+
+
+## Confirmed lower-platform contact — 2026-10-20
+
+The next temporary selector, authorLandingReturnToLowerPieceContact, preserves
+the preceding201-input landing/return episode. Seven additional Right inputs
+produce actual managed lower-piece contact at input1988: exact retained platform
+owner, piece0, standing=true. P1 is $3CC0/$0770, VX1086/VY0, grounded,
+one ring/no immunity/3lives/post1 and the original objects/runtime. The episode
+uses208 added inputs, only the original three charge presses, five events and
+no suppressed events.
+
+Before that input P1 is $3CBC/$0770, VX1074. That public pre-step velocity is
+context, not a captured inner solid callback operand. The lower-piece landing
+half-width changes32 to43; this is compatible with activation, not a natural-ride
+or callback-cause certificate. The placed subtype0 remains a circular swing/reset
+owner; its detach/fall/slide branch is excluded by source.
+
+The episode passes in candidate-8's158T/1F/0E/0S run; the unrelated HCZ graph
+slot-probe fixture failure is corrected and its four cases pass separately.
+The [composition record](../../plans/2026-10-13-s3k-playable-completion.md#knuckles-head-ship-explosions-and-physical-icz-contact--2026-10-20)
+contains the exact commands. Natural ride/hazard travel, ring-loss then death,
+checkpoint reload and rewind remain open; one retained ring prevents treating
+the next ordinary hit as a lethal certificate.
+
+## Sampled lower-platform rise and return — 2026-10-20
+
+The temporary solo-Sonic selector authorLowerPieceBrakedRideExcursion now
+actually retains the same managed piece0/standing contact through8 Left braking
+inputs and32 neutral inputs after the1988 contact. At1996 the public GSpeed is62
+against RunDecel128, and the controller permanently releases to neutral.
+The first sampled lower-piece upward step is at1990; after a minimum piece Y1889,
+the first strictly positive Y delta is3 at2028. Quantized flat steps are not
+labelled reversal. P1 ends at$3D2C/$0749 with zero speeds, grounded,1ring/3lives/
+post1 and the same object/runtime owners. The parent spawn is$3CE0/$0784;
+the lower-piece centre at initial contact is$3CE0/$078C.
+
+The completed observation uses248 added inputs (208 inlet plus40 tail), no
+additional action presses,8 events and no suppressed events. Candidate10's one
+temporary case passes; the overall selection is239T/3F/0E/0S because of separate
+HCZ world failures. The full input stream and sampled states remain in its
+original report. This is one sampled excursion, not a full oscillation, natural
+hazard/death/reload, Knuckles or native-cause certificate. Maintained full-world
+contact/ride replay extraction is authorized separately and is not yet validated.
+
+## Maintained physical lower-piece replay — 2026-10-20
+
+TestS3kIcz1PhysicalLowerPlatformReplay now passes its maintained solo-Sonic
+episode in Candidate13. Real recorded controller edges reach the authentic
+pre-contact1987 state, land on actual managed piece0 at1988, and retain the
+same standing/riding owner through8 Left and32 neutral inputs to2028.
+Pre-contact, ridden and sampled return-boundary spots each restore into fresh
+platform incarnations and replay twice, comparing the complete registry key
+set and existing whole-world content comparator. The driver also restores its
+previous BK2 input baseline and input count. Forty-one ridden observations
+retain current P1/placement identity, piece0 standing bit, ground/latch state,
+one naturally recollected ring, three lives, post1 and the same world.
+
+The standing-bit snapshot codec now retains each piece index alongside the
+existing spawn/instance owner channel, for both live bits and the independent
+pre-clear snapshot. It never reconstructs a live standing bit from riding
+membership. The old two-argument parent query remains an unscoped query; the
+maintained oracle reads the actual captured lower-child key for current P1.
+
+Candidate13 is240T/1F/0E/0S: this maintained episode and all13 existing ICZ
+platform cases pass. The unrelated new synthetic multipart-landing fixture
+fails before establishing its first ride; it remains under investigation.
+This does not certify a Knuckles physical route, full oscillation, natural
+hazard/death/checkpoint reload, native cause or complete act traversal.
+
+## Independent child-contact fixture closure — 2026-10-20
+
+Candidate14 passes all eight TestObjectSolidContactController cases. The new
+two-piece landing fixture now performs the ordinary object's pre-update snapshot
+once before both contacts; that lifecycle call clears the constructor's initial
+solid-contact skip. Geometry, ordinary resolution and standing/riding assertions
+are unchanged. Two independently created fixture players establish actual
+piece0 and piece1 standing keys; the existing registered-reference, pre-clear,
+explicitly cleared live-bit and legacy unscoped cases also pass.
+
+The maintained solo-Sonic physical episode remains qualified by Candidate13;
+it was not rerun for this test-only setup correction. The temporary discovery
+class was removed only after all six precursor/successful episodes, rejected
+approach findings, input stream and method lessons were mapped to the maintained
+test, this matrix and the existing Plan. No additional Knuckles, death/reload
+or route coverage follows from deleting that owned temporary file.
