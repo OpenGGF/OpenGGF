@@ -22949,3 +22949,117 @@ ordinary physical display production and native pixels remain open. This local
 commit does not claim Root's independent review, broad smoke/guards, integration,
 push or publication. The differing inherited tools/tracechaser submodule checkout
 is preserved untouched and is outside this commit.
+
+
+## Literal EggRobo full cycle and paused history — 2026-10-20
+
+This isolated test-only continuation starts exactly at accepted V correction
+`545aac9389baea8be5501c8b5efb3b2e80cf5975` (parent
+`cf3cfd0b715050d94a3c2ac7d550126ecd733a83`) on
+`feature/ai-s3k-eggrobo-cycle-coverage-20261020`. The assigned T3 checkout is
+`<OWNED_WORKTREE>`; its clean new owned branch
+could not fast-forward from the setup commit, so only that branch was set to545
+with `reset --keep`. The differing inherited TraceChaser checkout is preserved.
+Main and the parent's live composition workspace/job were not changed or
+observed. Exact task/run IDs, preimages, count-one literal inverses, source/Plan
+metadata, invocation and original report manifests are retained only in this
+worker's existing lifecycle-registry entry.
+
+Independent literal design and bounded native/static corroboration use
+`sonic3k.asm` from skdisasm HEAD
+`1a454a0e335137a1a016d1090a9f4528d36944cf`:
+`Swing_UpAndDown`177856..177890, `MoveSprite2`36053, hover198484,
+initialization198769, Gun198610 and delayed-history selection198805.
+No production fix was required. `ySubpixel` is already protected in the test's
+package; actual velocity uses existing `currentYVelocity()` because EggRobo's
+private field shadows its superclass field. No production/helper/accessor,
+private phase/direction/history access, reflection or snapshot seed was added.
+
+The existing test helpers now cover44 cases,12 added. Twenty literal rows
+check actual hover entries1/2,28/29,31/32/33,62/63/64/65,94/95/96,98/99 and
+125/126/127/128 for every H/V flag. Motion has period126 with net zero; +/-15.5
+extrema hold twice. Trial FF00 at64 sets direction then adds8 toFF08;
+trial0100 at127 clears direction then subtracts8 to00F8. Subsequent FF10/00F0
+observations infer direction without reading it. Entry127 repeats entry1
+motion but not its delayed history; entry128 closes both history words. Gun
+uses delayed32 (or zero-word live fallback) before V; Jet uses live Y and
+velocity frames6negative,5for0..1F,4from20. Original ROM mapping expansion
+checks CPU tiles and actual SAT replay output.
+
+The pause inlet reaches61 without a player, then uses public Player1 Y C09 at62
+(distance9 rejects) and C08 at63 (distance8 arms after movement). All H/V
+controls preserve the same Body aiming meaning. Gun X1E4/21C and Y BFD/C05
+produce Shot X1EF/211 and Y BF9/C01; Shot always subtracts4 and inherits H
+only. After firing, Player1 moves across and vertically away. Gun firing MAIN
+stores95 without decrement.95 subsequent ordered Body→Gun→Jet passes reach0,
+freezing movement, history and facing. Shot's own charging entries are separate
+manual dispatches in forward replay, not claimed as95 complete scene frames.
+On the96th cooldown entry Body has already run armed; Gun underflowsFFFF and
+clears the parent. Next Body selects HOVER and returns; the following entries
+perform64 (BFF.0800/FF08) and65 (BFE.1800/FF10). Resumed Gun anchor C00 also
+checks the history retained through the pause.
+
+Only unarmed63 before the endpoint and naturally armed63/cooldown0 before
+underflow were added as snapshot spots. Both H directions pair equal-XY
+opposite-V families. Each records immutable boundary frames and four ordered
+forward frames/worlds, destructively removes the families, restores and resolves
+exact IDs to fresh instances, compares complete remaining namespaces and all
+registered keys, then repeats a second fresh cycle. Original Shot parent/link
+checks remain in the existing path. Rejected alternatives were changing
+production swing, private direction/history observations, snapshot seeding,
+new generic motion oracles, and calling in-place mutation a fresh restore.
+
+Validation is restricted to one ordinary queued run of the five whole classes
+VerticalFlip, ClockGates, Presentation, GunNativeDispatch and JetNativeDispatch.
+The source/test candidate was completely read, native/static reviewed and
+`git diff --check` passed before submission. All three original root ROM files
+matched the repository CRC32/SHA-1 identities; no ROM copies/links were created.
+The exact argv and Java25/surfaceless/Lua5.4 environment are recorded in the own
+registry entry, with a fresh candidate-1 report namespace under this worktree's
+`target/ssz-eggrobo-cycle-20261020/`. No broad/category/full-suite lane,
+Main/composition build, integration or push is part of this worker's result.
+
+The [matrix](../validation/levels/s3k-ssz-act1.md#literal-eggrobo-swing-and-paused-history--2026-10-20)
+and [backlog](../../status/level-test-coverage.md#eggrobo-literal-swing-and-pausehistory-coverage--2026-10-20)
+close only the literal component obligation. Pairing state, manual dispatch,
+flags and public Player1 poses do not establish natural BK2 route/native clock
+coverage. Stock SSZ1 remains26 flags0/1 placements and SSZ2 has none; natural
+route/touch, generic unloading/physical SST reuse, fly-by scaling/shared DMA,
+ordinary physical display production and native pixels remain open. Root owns
+its independent live broad smoke and final delivery.
+
+The single candidate-1 invocation completed with exit0:
+110T/0F/0E/0S across five whole classes, including44 VerticalFlip,
+15 ClockGates,20 Presentation,19 GunNativeDispatch and12 JetNativeDispatch.
+All ten original XML/TXT reports,110 testcase children, issues/skips, every
+property, classpath entry and full stdout/stderr streams were read. Runtime
+and test classpaths match with80 unique present entries; the invocation-only
+Surefire launcher JAR is absent after Maven exit, as recorded in the original
+property. The streams contain115 known FAST-manifest-fallback warnings and
+no other warning/error/exception/failure/skip lines. They do not establish a
+native scene clock. Actual JVM was Java25.0.4.1 with surfaceless EGL and all
+three original absolute ROM paths. The compiler processed4163 production
+and4249 test sources with release25. Queue waiting was43s; Maven reported
+01:25 execution. Compiler-only and total delivery timing were not measured.
+
+```bash
+env -u JDK_JAVA_OPTIONS -u _JAVA_OPTIONS -u MAVEN_OPTS -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 \
+  python3 <MAIN_WORKSPACE>/tools/testing/maven_queue.py --normal -Dmse=off -Dtest=com.openggf.game.sonic3k.objects.badniks.TestSszEggRoboVerticalFlip,com.openggf.game.sonic3k.objects.badniks.TestSszEggRoboClockGates,com.openggf.game.sonic3k.objects.badniks.TestSszEggRoboPresentation,com.openggf.game.sonic3k.objects.badniks.TestSszEggRoboGunNativeDispatch,com.openggf.game.sonic3k.objects.badniks.TestSszEggRoboJetNativeDispatch -Dopenggf.surefire.reports=<OWNED_WORKTREE>/target/ssz-eggrobo-cycle-20261020/candidate-1/surefire-reports -Dopenggf.test.tmpdir=<OWNED_WORKTREE>/target/ssz-eggrobo-cycle-20261020/candidate-1/test-tmp -Dopenggf.trace.reports=<OWNED_WORKTREE>/target/ssz-eggrobo-cycle-20261020/candidate-1/trace-reports '-Dsonic1.rom.path=<MAIN_WORKSPACE>/Sonic The Hedgehog (W) (REV01) [!].gen' '-Dsonic2.rom.path=<MAIN_WORKSPACE>/Sonic The Hedgehog 2 (W) (REV01) [!].gen' '-Ds3k.rom.path=<MAIN_WORKSPACE>/Sonic and Knuckles & Sonic 3 (W) [!].gen' -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical test -B
+```
+
+Reports remain at the original
+`<OWNED_WORKTREE>/target/ssz-eggrobo-cycle-20261020/candidate-1/surefire-reports/`
+for Root to read; no report/log copies or separate validation receipts exist.
+The source fingerprint before and after is
+`6a2092552d97be95136b9e33d5ed31ac663103dd3b211a0ba83ba74ec20c4500`.
+Definition: SHA-256 over10769 files (every file under `src` plus `pom.xml`),
+sorted by relative path, each UTF-8 path + NUL + original bytes + NUL.
+There was one test source epoch, one queued request, no source correction,
+no retry and no broad/category run. An initial report-reader assertion wrongly
+required the transient Surefire launcher to remain after exit; inspecting its
+property corrected the diagnostic without changing or rerunning tests.
+Owned session32164 exited0, its Python wrapper and Maven/JVM processes are
+absent, and this worker holds no live job or lease. Local commit and handoff
+retain the task branch/check-out and original reports; no integration or push
+is authorized in this worker.

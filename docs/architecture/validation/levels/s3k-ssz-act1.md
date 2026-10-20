@@ -2528,3 +2528,54 @@ claimed. Broader swing, natural route/touch, generic unloading/physical slot
 reuse, scaled fly-by art/shared DMA, ordinary physical display production and
 native pixels remain open. Broad smoke/guards, independent review, integration
 and publication belong to Root and are not results of this isolated run.
+
+
+## Literal EggRobo swing and paused history — 2026-10-20
+
+The test-only continuation of accepted V carrier commit
+`545aac9389baea8be5501c8b5efb3b2e80cf5975` extends
+`TestSszEggRoboVerticalFlip` from32 to44 cases. Four flag0/1/2/3 controls use20
+literal native waypoints through actual hover entry128, counting fighter INIT's
+same-dispatch first hover as entry1. They check signed velocity WORD, full16.16
+Y, delayed Gun versus live Jet anchors and independent mapping-based CPU/SAT
+frames. `Swing_UpAndDown`, `MoveSprite2`, `sub_918E2`, `loc_9159A` and
+`sub_91930` own the operands; no Java motion helper computes the expected rows.
+The repeated negative endpoint at64 is FF08, followed by FF10 at65; the positive
+endpoint at127 repeats00F8, followed by00F0 at128. The126-entry motion period
+has zero displacement, with +/-15.5 extrema held at31/32 and94/95. Entry127
+repeats entry1 motion but retains a different delayed history; entry128 closes
+the two-word history as well.
+
+Four pause controls reach entry61 with null-player dispatches, reject public
+Player1 distance9 at62, and arm at distance8 after movement63. Gun stores95 on
+firing MAIN;95 subsequent Body→Gun→Jet passes reach zero without movement,
+history advancement, reaiming or following the moved Player1. The96th cooldown
+underflows toFFFF after Body already ran armed; the next Body selects HOVER
+and returns, then movement64/65 resumes with the literal fractions and C00 Gun
+anchor. Gun Y is BFD/C05 by V; Shot remains H-only at GunY-4 (BF9/C01), with
+H-dependent Gun/Shot X1E4/1EF or21C/211. Jet uses live Y and the signed velocity
+bands for frames6/5/4.
+
+Two new restore spots cover unarmed63 before the endpoint and naturally
+armed63 at cooldown0 before underflow. Each H direction supplies equal-XY
+opposite-V families, two destructive removal/fresh recreation cycles, exact
+Body/Gun/Jet/Shot IDs and complete remaining namespace, immutable boundary
+frames, four ordered forward passes and all registered keys at every pass.
+Existing Shot link/restoration checks remain in the same helper path. The
+Shot's own charging dispatches occur in the forward segment; the95 pause
+passes intentionally dispatch only Body/Gun/Jet.
+
+These are bounded component controls using declared pairing state, public
+placement flags and Player1 poses, and manual own-routine dispatch. They do
+not establish a natural BK2 route, native scene clock, physical SST reuse,
+stock flags2/3 placement, route/touch completion, fly-by scaling/shared DMA,
+ordinary physical display production or native pixels. The
+[dated plan](../../plans/2026-10-13-s3k-playable-completion.md#literal-eggrobo-full-cycle-and-paused-history--2026-10-20)
+records the focused run and its limits; Root retains broad smoke and delivery.
+
+The single focused five-class run passes110T/0F/0E/0S: VerticalFlip44,
+ClockGates15, Presentation20, GunNativeDispatch19 and JetNativeDispatch12.
+Original reports verify Java25.0.4.1, surfaceless EGL and all three original
+absolute ROM paths. The test/source fingerprint is unchanged before/after;
+there was one source epoch and no retry. This is focused qualification, not
+a broad smoke or full-suite result.

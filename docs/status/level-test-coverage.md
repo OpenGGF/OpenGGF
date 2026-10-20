@@ -1640,3 +1640,28 @@ physical slot reuse, scaled fly-by/shared DMA, ordinary physical display
 production and native pixels remain open. Root owns independent review,
 delivery-wide smoke/guards, integration and publication; this worker ran none
 of those lanes. See the [plan record](../architecture/plans/2026-10-13-s3k-playable-completion.md#isolated-eggrobo-vertical-facing-correction--2026-10-20).
+
+
+### EggRobo literal swing and pause/history coverage — 2026-10-20
+
+The [SSZ matrix](../architecture/validation/levels/s3k-ssz-act1.md#literal-eggrobo-swing-and-paused-history--2026-10-20)
+adds12 bounded cases to the existing32 vertical-facing cases:20 literal hover
+waypoints through128 for flags0/1/2/3, post-movement9/8 arming,95→0→FFFF
+cooldown with frozen motion/history and two-dispatch resume, Gun delayed/live
+versus Jet live anchors, and fixed H-only/-4 Shot operands. Unarmed63 and
+armed63/cooldown0 are the only added snapshot spots. Equal-XY opposite-V
+families run two destructive fresh complete-world cycles with exact IDs,
+remaining namespace, immutable frames and four forward registered-key worlds.
+
+This closes the specified literal full-cycle/pause/history component gap.
+Declared pairing/manual dispatch/public flags and poses remain component
+inlets; natural BK2 route/clock, stock V placement, route/touch coverage,
+generic unloading/physical SST reuse, scaled fly-by/shared DMA, ordinary
+physical display production and native pixels remain open. See the
+[plan record](../architecture/plans/2026-10-13-s3k-playable-completion.md#literal-eggrobo-full-cycle-and-paused-history--2026-10-20)
+for focused qualification; no production behavior or release note changes.
+
+The one five-whole-class focused run passes110T/0F/0E/0S, including all44
+VerticalFlip cases. Original reports and source fingerprint were inspected;
+Java25.0.4.1/surfaceless EGL/original ROM paths are verified. No retry or broad
+run was made; Root's delivery-wide validation remains independent.

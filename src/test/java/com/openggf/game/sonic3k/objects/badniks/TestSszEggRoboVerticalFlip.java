@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
 import com.openggf.game.GameServices;
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindSnapshotDiff;
 import com.openggf.game.rewind.identity.ObjectRefId;
@@ -41,6 +42,7 @@ class TestSszEggRoboVerticalFlip {
     private record Family(EggRoboBadnikInstance body, EggRoboGunArmChildInstance gun,
                           EggRoboJetFlameChildInstance jet, EggRoboShotInstance shot) { }
     private record Ids(ObjectRefId body, ObjectRefId gun, ObjectRefId jet, ObjectRefId shot) { }
+    private record Forward(List<SpritePresentation.Frame> frames, List<CompositeSnapshot> worlds) { }
     private record Tile(int pattern, int palette, boolean h, boolean v, boolean high,
                         int mask, float x, float y, float width, float height) { }
 
@@ -69,6 +71,77 @@ class TestSszEggRoboVerticalFlip {
         assertAnchors(f, flags, 0xC00, 0xC02);
         assertPictures(f, flags, 1, 4);
         assertNotNull(fixture.gameplayMode().getRewindRegistry());
+    }
+
+    /**
+     * Native loc_9159A entries, including INIT's first hover: Swing_UpAndDown
+     * (177856), MoveSprite2 (36053), sub_918E2 (198769), history (198484/198805).
+     * Literal WORD velocity / 16.16 Y / delayed Gun anchor / Jet frame, not a Java oracle.
+     */
+    @ParameterizedTest
+    @ValueSource(ints = {0, 1, 2, 3})
+    void literalFullSwingIncludesBothRepeatedEndpointsAndHistoryClosure(int flags) throws Exception {
+        scene(); Family f = fighter(flags); init(f); main(f);
+        int[][] rows = {
+                {1, 0x00F8, 0x0C00, 0xF800, 0x0C00, 4},
+                {2, 0x00F0, 0x0C01, 0xE800, 0x0C00, 4},
+                {28, 0x0020, 0x0C0F, 0x5000, 0x0C0F, 4},
+                {29, 0x0018, 0x0C0F, 0x6800, 0x0C0F, 5},
+                {31, 0x0008, 0x0C0F, 0x8000, 0x0C0F, 5},
+                {32, 0x0000, 0x0C0F, 0x8000, 0x0C0F, 5},
+                {33, 0xFFF8, 0x0C0F, 0x7800, 0x0C0F, 6},
+                {62, 0xFF10, 0x0C00, 0xF800, 0x0C02, 6},
+                {63, 0xFF08, 0x0C00, 0x0000, 0x0C01, 6},
+                {64, 0xFF08, 0x0BFF, 0x0800, 0x0C00, 6},
+                {65, 0xFF10, 0x0BFE, 0x1800, 0x0C00, 6},
+                {94, 0xFFF8, 0x0BF0, 0x8000, 0x0BF0, 6},
+                {95, 0x0000, 0x0BF0, 0x8000, 0x0BF0, 5},
+                {96, 0x0008, 0x0BF0, 0x8800, 0x0BF0, 5},
+                {98, 0x0018, 0x0BF0, 0xB000, 0x0BF0, 5},
+                {99, 0x0020, 0x0BF0, 0xD000, 0x0BF0, 4},
+                {125, 0x00F0, 0x0BFF, 0x0800, 0x0BFD, 4},
+                {126, 0x00F8, 0x0C00, 0x0000, 0x0BFE, 4},
+                {127, 0x00F8, 0x0C00, 0xF800, 0x0BFF, 4},
+                {128, 0x00F0, 0x0C01, 0xE800, 0x0C00, 4}
+        };
+        int entry = 1;
+        for (int[] row : rows) {
+            while (entry < row[0]) ordered(f, 2 * ++entry, null);
+            assertMotion(f, row[1], row[2], row[3]);
+            assertEquals("HOVER", f.body().stateForTest());
+            assertAnchors(f, flags, row[4], row[2]);
+            assertPictures(f, flags, 1, row[5]);
+        }
+        // Motion repeats after 126 entries, with extrema +/-15.5 held at31/32 and94/95.
+        // n127 repeats n1 motion, but $32=BFF rather than zero; n128 closes both history words.
+        // The repeated velocities at64/127 and their following values infer private direction.
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, 1, 2, 3})
+    void endpointPausePreservesHistoryThroughUnderflowAndTwoDispatchResume(int flags) throws Exception {
+        var fixture = scene(); Family f = endpoint(fixture, fighter(flags), flags, true);
+        assertPictures(f, flags, 1, 6);
+        assertEquals((flags & 1) == 0 ? 0x1EF : 0x211, f.shot().getX());
+        assertEquals((flags & 2) == 0 ? 0xBF9 : 0xC01, f.shot().getY(), "Shot always adds -4");
+        assertMapping(f.shot(), 7, f.shot().getX(), f.shot().getY(), (flags & 1) != 0, false);
+        ordered(f, 400, fixture.sprite()); // Body ran armed before Gun's 96th cooldown underflow.
+        assertEquals(-1, f.gun().cooldownForTest());
+        assertEquals("HOVER_SHOOTING", f.body().stateForTest());
+        assertMotion(f, 0xFF08, 0xC00, 0);
+        assertAnchors(f, flags, 0xC01, 0xC00);
+        ordered(f, 402, fixture.sprite()); // Select HOVER and return, without history writes.
+        assertEquals("HOVER", f.body().stateForTest());
+        assertMotion(f, 0xFF08, 0xC00, 0);
+        assertAnchors(f, flags, 0xC01, 0xC00);
+        ordered(f, 404, null); // Actual hover64: repeated negative endpoint and frozen $30 -> $32.
+        assertMotion(f, 0xFF08, 0xBFF, 0x0800);
+        assertAnchors(f, flags, 0xC00, 0xBFF);
+        assertPictures(f, flags, 1, 6);
+        ordered(f, 406, null);
+        assertMotion(f, 0xFF10, 0xBFE, 0x1800);
+        assertAnchors(f, flags, 0xC00, 0xBFE);
+        assertPictures(f, flags, 1, 6);
     }
 
     @ParameterizedTest
@@ -144,7 +217,8 @@ class TestSszEggRoboVerticalFlip {
 
     @ParameterizedTest
     @CsvSource({"0,0", "1,0", "2,0", "3,0", "2,1", "3,1", "2,2", "3,2",
-            "2,3", "3,3", "2,4", "3,4", "2,5", "3,5", "2,6", "3,6"})
+            "2,3", "3,3", "2,4", "3,4", "2,5", "3,5", "2,6", "3,6",
+            "0,7", "1,7", "0,8", "1,8"})
     void twoFreshCompleteWorldCyclesPreserveExactFamiliesAndImmutableFrames(int flags, int boundary) {
         var fixture = scene();
         Family a = fighter(flags), b = fighter(flags ^ 2); // Same XY and H, different native V.
@@ -157,7 +231,7 @@ class TestSszEggRoboVerticalFlip {
         var registry = fixture.gameplayMode().getRewindRegistry();
         CompositeSnapshot before = registry.capture();
         List<SpritePresentation.Frame> atBoundary = pictures(a, b);
-        List<SpritePresentation.Frame> forward = forward(a, b);
+        Forward forward = forward(fixture, a, b, boundary);
         CompositeSnapshot after = registry.capture();
         for (int cycle = 0; cycle < 2; cycle++) {
             Family oldA = a, oldB = b;
@@ -169,12 +243,18 @@ class TestSszEggRoboVerticalFlip {
             assertEquals(namespace, namespace(), "complete remaining identity namespace");
             assertWorld(before, registry.capture());
             assertEquals(atBoundary, pictures(a, b), "latched V/draw across fresh restore");
-            assertEquals(forward, forward(a, b));
+            Forward replay = forward(fixture, a, b, boundary);
+            assertEquals(forward.frames(), replay.frames(), "four ordered passes at endpoint spots");
+            assertEquals(forward.worlds().size(), replay.worlds().size());
+            for (int entry = 0; entry < forward.worlds().size(); entry++) {
+                assertWorld(forward.worlds().get(entry), replay.worlds().get(entry));
+            }
             assertWorld(after, registry.capture());
         }
     }
 
     private static Family checkpoint(HeadlessTestFixture fixture, Family f, int flags, int boundary) {
+        if (boundary >= 7) return endpoint(fixture, f, flags, boundary == 8);
         if (boundary == 0) return f; // Raw cleared children.
         init(f);
         if (boundary == 1) return f; // INIT returned; no MAIN draw.
@@ -197,17 +277,72 @@ class TestSszEggRoboVerticalFlip {
         return f;
     }
 
-    private static List<SpritePresentation.Frame> forward(Family a, Family b) {
+    private static Forward forward(HeadlessTestFixture fixture, Family a, Family b, int boundary) {
         var frames = new ArrayList<SpritePresentation.Frame>();
-        for (int entry = 0; entry < 3; entry++) {
+        var worlds = new ArrayList<CompositeSnapshot>();
+        for (int entry = 0; entry < (boundary >= 7 ? 4 : 3); entry++) {
             for (Family f : List.of(a, b)) {
-                f.body().update(400 + entry, null);
-                main(f);
+                ordered(f, 400 + entry, null);
                 if (f.shot() != null) f.shot().update(400 + entry, null);
+                if (boundary == 8 && entry < 2) {
+                    assertMotion(f, 0xFF08, 0xC00, 0);
+                    assertEquals(entry == 0 ? "HOVER_SHOOTING" : "HOVER", f.body().stateForTest());
+                    assertEquals(-1, f.gun().cooldownForTest());
+                } else if (boundary == 7 && entry < 2 || boundary == 8 && entry >= 2) {
+                    int resumed = boundary == 7 ? entry : entry - 2;
+                    assertMotion(f, resumed == 0 ? 0xFF08 : 0xFF10,
+                            resumed == 0 ? 0xBFF : 0xBFE, resumed == 0 ? 0x0800 : 0x1800);
+                }
             }
             frames.addAll(pictures(a, b));
+            worlds.add(fixture.gameplayMode().getRewindRegistry().capture());
         }
-        return List.copyOf(frames);
+        return new Forward(List.copyOf(frames), List.copyOf(worlds));
+    }
+
+    /** Only Body/Gun/Jet dispatch here; Shot's own charging entries remain explicit in forward(). */
+    private static Family endpoint(HeadlessTestFixture fixture, Family f, int flags, boolean armed) {
+        init(f); main(f);
+        for (int n = 2; n <= 61; n++) ordered(f, 2 * n, null);
+        pose(fixture, (flags & 1) == 0 ? 0x100 : 0x300, 0xC09);
+        int shots = manager().activeObjectsOfType(EggRoboShotInstance.class).size();
+        ordered(f, 124, fixture.sprite()); // n62 post-movement distance9 rejects.
+        assertMotion(f, 0xFF10, 0xC00, 0xF800);
+        assertEquals("HOVER", f.body().stateForTest());
+        assertEquals(shots, manager().activeObjectsOfType(EggRoboShotInstance.class).size());
+        assertAnchors(f, flags, 0xC02, 0xC00);
+        if (!armed) {
+            ordered(f, 126, null);
+            assertMotion(f, 0xFF08, 0xC00, 0);
+            assertEquals("HOVER", f.body().stateForTest());
+            assertAnchors(f, flags, 0xC01, 0xC00);
+            return f;
+        }
+        f = fire(fixture, f, flags, 126, 0xC08); // n63 distance8 arms after movement.
+        assertMotion(f, 0xFF08, 0xC00, 0);
+        assertAnchors(f, flags, 0xC01, 0xC00);
+        assertEquals((flags & 2) == 0 ? 0xBFD : 0xC05, f.gun().getY());
+        pose(fixture, (flags & 1) == 0 ? 0x300 : 0x100, 0xB00);
+        for (int entry = 0; entry < 95; entry++) {
+            ordered(f, 200 + 2 * entry, fixture.sprite());
+            assertEquals(94 - entry, f.gun().cooldownForTest());
+            assertEquals("HOVER_SHOOTING", f.body().stateForTest());
+            assertMotion(f, 0xFF08, 0xC00, 0);
+            assertAnchors(f, flags, 0xC01, 0xC00);
+        }
+        return f;
+    }
+
+    private static void assertMotion(Family f, int velocityWord, int yWord, int fraction) {
+        assertEquals(0x200, f.body().getX());
+        assertEquals(velocityWord, f.body().currentYVelocity() & 0xFFFF, "native signed velocity WORD");
+        assertEquals(yWord, f.body().getY(), "native integer Y");
+        assertEquals(fraction, f.body().ySubpixel & 0xFFFF, "native 16-bit fraction");
+    }
+
+    private static void ordered(Family f, int vIntRunCount, PlayableEntity player) {
+        f.body().update(vIntRunCount, player);
+        main(f, vIntRunCount); // Body -> Gun -> Jet: actual parent-clear visibility on next pass.
     }
 
     private static HeadlessTestFixture scene() {
@@ -242,7 +377,10 @@ class TestSszEggRoboVerticalFlip {
         assertTrue(picture(f.jet(), true).tiles().isEmpty());
     }
     private static void init(Family f) { f.jet().update(0, null); f.gun().update(0, null); }
-    private static void main(Family f) { f.jet().update(2, null); f.gun().update(2, null); }
+    private static void main(Family f) { main(f, 2); }
+    private static void main(Family f, int vIntRunCount) {
+        f.gun().update(vIntRunCount, null); f.jet().update(vIntRunCount, null);
+    }
     private static void assertAnchors(Family f, int flags, int delayed, int live) {
         assertEquals((flags & 1) == 0 ? 0x1E4 : 0x21C, f.gun().getX());
         assertEquals((flags & 1) == 0 ? 0x1F4 : 0x20C, f.jet().getX());
@@ -256,9 +394,12 @@ class TestSszEggRoboVerticalFlip {
         assertMapping(f.jet(), jetFrame, f.jet().getX(), f.jet().getY(), h, v);
     }
     private static Family fire(HeadlessTestFixture fixture, Family f, int flags) {
-        pose(fixture, (flags & 1) == 0 ? 0x100 : 0x300, 0xC00);
+        return fire(fixture, f, flags, 8, 0xC00);
+    }
+    private static Family fire(HeadlessTestFixture fixture, Family f, int flags, int vIntRunCount, int playerY) {
+        pose(fixture, (flags & 1) == 0 ? 0x100 : 0x300, playerY);
         var shots = List.copyOf(manager().activeObjectsOfType(EggRoboShotInstance.class));
-        f.body().update(8, fixture.sprite()); main(f);
+        ordered(f, vIntRunCount, fixture.sprite());
         assertEquals("HOVER_SHOOTING", f.body().stateForTest());
         assertEquals(95, f.gun().cooldownForTest());
         var born = manager().activeObjectsOfType(EggRoboShotInstance.class).stream()
