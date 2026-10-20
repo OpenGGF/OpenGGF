@@ -18,6 +18,7 @@ with patch.object(sys, 'dont_write_bytecode', True), patch.object(sys, 'path', [
 BASELINE = '45cecf566825aa50612f5e687b2682fc9681aed1'
 NEXT_BASELINE = '218b8fff1a829c7a509331c453d2f3be7e51533b'
 PUBLISHED_BASELINE = '37aeb6b84d6634457616c942187cdd40dd93c24f'
+SHARED_DEVELOPMENT_BASELINE = 'f514a5f13d353550f8421462c773f17f90a04100'
 OID = 'a' * 40
 AUTHORED_ROOT = 'src/test/resources/mods/sample-two-act-campaign-src/project/src/main/resources/levels/tide'
 AUTHORED_PATH = AUTHORED_ROOT + '/act1/patterns.bin'
@@ -139,6 +140,8 @@ class SnapshotPolicyTests(unittest.TestCase):
             text = (ROOT / '.githooks' / name).read_text().replace(BASELINE, baseline)
             text = text.replace(NEXT_BASELINE, getattr(self, 'next_baseline', NEXT_BASELINE))
             text = text.replace(PUBLISHED_BASELINE, getattr(self, 'published_baseline', PUBLISHED_BASELINE))
+            text = text.replace(SHARED_DEVELOPMENT_BASELINE,
+                                getattr(self, 'shared_baseline', SHARED_DEVELOPMENT_BASELINE))
             (directory / name).write_text(text)
         yield ['sh', str(directory / 'validate-policy.sh')]
         if shutil.which('pwsh'):
@@ -338,6 +341,37 @@ class SnapshotPolicyTests(unittest.TestCase):
         self.assert_policy(baseline, target, head, 'master', None)
         self.write('new.txt', 'must carry trailers\n'); head = self.commit('missing new trailers')
         self.assert_policy(baseline, target, head, 'master', 'documentation policy')
+
+    def test_shared_line_admits_frozen_import_but_rejects_later_trailer_debt(self):
+        self.write('imported.txt', 'published next history')
+        self.shared_baseline = self.commit('imported history without trailers')
+        self.assert_policy(self.base, self.base, self.shared_baseline, 'develop', None)
+        self.write('later.txt', 'new work'); head = self.commit('new missing trailers')
+        self.assert_policy(self.base, self.base, head, 'develop', 'documentation policy')
+
+    def test_shared_line_boundary_does_not_admit_new_uncoupled_api_changes(self):
+        self.shared_baseline = self.base
+        self.write('src/main/java/example/NewApi.java', '@ModApi\npublic interface NewApi {}\n')
+        head = self.commit('chore: add API\n\n' + '\n'.join(
+            key + ': n/a' for key in ['Changelog', 'Guide', 'Known-Discrepancies',
+                                     'S3K-Known-Discrepancies', 'Agent-Docs',
+                                     'Configuration-Docs', 'Skills']))
+        self.assert_policy(self.base, self.base, head, 'develop', 'candidate signature pin')
+
+    def test_shared_line_boundary_does_not_hide_imported_resource_violations(self):
+        self.write('traces/physics.csv', 'x' * 1048576); self.commit('imported oversized trace')
+        self.git('rm', 'traces/physics.csv'); self.shared_baseline = self.commit('remove violation')
+        self.assert_policy(self.base, self.base, self.shared_baseline, 'develop', 'uncompressed trace payload')
+
+    def test_shared_line_boundary_does_not_grandfather_unrelated_merged_work(self):
+        self.git('switch', '-c', 'imported-next')
+        self.write('imported.txt', 'published next history')
+        self.shared_baseline = self.commit('imported history without trailers')
+        self.git('switch', 'main')
+        self.write('unrelated.txt', 'unreviewed history'); self.commit('unrelated missing trailers')
+        self.git('merge', '--no-ff', 'imported-next', '-m', 'merge imported history')
+        head = self.git('rev-parse', 'HEAD')
+        self.assert_policy(self.base, self.base, head, 'develop', 'documentation policy')
 
 
 if __name__ == '__main__':

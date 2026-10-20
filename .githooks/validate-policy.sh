@@ -11,6 +11,9 @@ RELEASE_RESOURCE_BASELINE=45cecf566825aa50612f5e687b2682fc9681aed1
 NEXT_ROLLOVER_RESOURCE_BASELINE=218b8fff1a829c7a509331c453d2f3be7e51533b
 NEXT_ROLLOVER_TRAILER_BASELINE=218b8fff1a829c7a509331c453d2f3be7e51533b
 PUBLISHED_RELEASE_TRAILER_BASELINE=37aeb6b84d6634457616c942187cdd40dd93c24f
+# Frozen next history imported by the shared-line merge; never a moving branch ref.
+# Current API pins are verified separately; resource history is not grandfathered.
+SHARED_DEVELOPMENT_TRAILER_BASELINE=f514a5f13d353550f8421462c773f17f90a04100
 RELEASE_RANGE_BASE=
 ROM_LIKE_DENYLIST_EXTENSIONS=".gen .smd .bin .sms .gg .32x"
 EMPTY_TREE_OID=4b825dc642cb6eb9a060e54bf8d69288fbee4904
@@ -1396,7 +1399,7 @@ validate_ci_commit_range() {
     fi
 
     trailer_commits=$commits
-    for trailer_baseline in "$NEXT_ROLLOVER_TRAILER_BASELINE" "$PUBLISHED_RELEASE_TRAILER_BASELINE"; do
+    for trailer_baseline in "$NEXT_ROLLOVER_TRAILER_BASELINE" "$PUBLISHED_RELEASE_TRAILER_BASELINE" "$SHARED_DEVELOPMENT_TRAILER_BASELINE"; do
         if git merge-base --is-ancestor "$trailer_baseline" "$head_sha" 2>/dev/null; then
             reviewed_trailer_commits=$(git rev-list "$trailer_baseline") ||
                 die "could not enumerate reviewed rollover trailer history."

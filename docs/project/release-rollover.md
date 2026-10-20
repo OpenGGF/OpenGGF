@@ -36,7 +36,9 @@ As of 2026-10-20, `develop` and `next` intentionally share one commit and
 `0.7.prerelease`. The descriptor uses `targetBranch=develop` with optional
 `candidateBranchAliases=next`; its ordered line fields reserve 0.8 for a future
 split. Current changes from either branch belong in `CHANGELOG.0.7.prerelease.md`.
-This does not publish the candidate API or move `master`.
+This does not publish the candidate API or move `master`. The integration record
+[explains the fixed imported-history boundary](../architecture/validation/2026-10-20-shared-development-line.md#imported-history-audit)
+for old next trailer/API-coupling debt; it never exempts resource checks or later work.
 
 To resume separate release lines, remove the alias from both branch descriptors,
 retain `targetBranch=develop` on develop, and advance next's POM, bundle version,

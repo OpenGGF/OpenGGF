@@ -65,8 +65,33 @@ python3 tools/testing/maven_queue.py -Dmse=off \
   '-Dtest=TestModApiReleasePolicy,TestModApiPinPolicy,TestModApiSignatureSurface,TestEngineSettingsScreen,TestMenuTextEditor,TestHudRenderManagerWidescreen,TestConfigCatalog,TestSparseUserConfig,TestSettingTiming' test -B
 ```
 
-An explicit `-DmodApi.destinationBranch=next -Dtest=TestModApiReleasePolicy`
-queued check is pending, followed by broad smoke/guards. Complete them once on the
+Merge commit: `fe88bfb19` (parents `ff5088abf`, `f514a5f13`). The explicit queued
+`-DmodApi.destinationBranch=next -Dtest=TestModApiReleasePolicy` check also passed:
+15 tests, no failures/errors/skips. Broad smoke/guards follow the policy fix below.
+
+### Imported history audit
+
+`ci-push f514a5f13 fe88bfb19 next` passed the next-side incoming-history audit.
+`ci-push ff5088abf fe88bfb19 develop` rejected historical next commit `92826f4c6`
+for detectable API declarations without a candidate-pin operation. Those changes
+are already represented in develop's current networking and the focused merged
+signature inventory passed. Rewriting old public next commits was rejected.
+
+The shell and PowerShell policies now freeze imported trailer/API-coupling debt
+at exact pre-task next tip `f514a5f13d353550f8421462c773f17f90a04100`, using the
+existing ancestry-bound trailer-baseline mechanism. This is not a resource-policy
+exception: tree and incoming resource history still undergo their independent
+checks. Descendants and unrelated merged commits retain trailer and API-coupling
+checks. No moving remote ref or validation pass cache is used.
+
+The snapshot-policy safety suite covers imported debt admission, descendant
+trailer/API failures, unrelated merge history and imported-but-removed resource
+violations in shell and PowerShell. The Java guard pins the new baseline in both
+implementations. The candidate alias and its publication restrictions are
+independent of this fixed historical boundary. Complete them once on the
 stable merged source; attribute disputed failures by exact matched baseline/current
 test identity rather than repeating broad suites. Do not advance or push either
 ref until required verification and failure attribution are accounted for.
+
+`python3 tools/testing/test_release_snapshot_policy.py` passed all 36 Python
+safety cases, exercising both installed shell and PowerShell implementations.
