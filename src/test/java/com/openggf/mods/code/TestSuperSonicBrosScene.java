@@ -152,4 +152,23 @@ class TestSuperSonicBrosScene {
             clean(harness);
         }
     }
+    @Test
+    void romPoseFacingAndMultipartOrigins() throws Exception {
+        try (ExampleModHarness harness = open()) {
+            Path checks = java.nio.file.Files.createDirectories(work.resolve("facing-checks"));
+            String cp = work.resolve("build/classes") + java.io.File.pathSeparator + System.getProperty("java.class.path");
+            assertEquals(0, javax.tools.ToolProvider.getSystemJavaCompiler().run(null, null, null,
+                    "--release", "25", "-cp", cp, "-d", checks.toString(),
+                    PROJECT.resolve("src/test/java/sonicbros/view/FacingChecks.java").toString()));
+            try (var loader = new java.net.URLClassLoader(new java.net.URL[] {checks.toUri().toURL(),
+                    work.resolve("build/classes").toUri().toURL()}, getClass().getClassLoader())) {
+                var rom = com.openggf.mods.scene.host.SceneRomArtFactory.forModule(
+                        GameServices.module(), GameServices.rom().getRom());
+                loader.loadClass("sonicbros.view.FacingChecks")
+                        .getMethod("check", com.openggf.mods.scene.SceneRomArt.class).invoke(null, rom);
+            }
+            clean(harness);
+        }
+    }
+
 }

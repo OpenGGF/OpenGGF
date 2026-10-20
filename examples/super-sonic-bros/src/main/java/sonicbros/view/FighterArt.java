@@ -22,9 +22,10 @@ public final class FighterArt {
     }
 
     /** Whether the fighter's sprites face right before mirroring. */
-    static boolean facesRight(String id) {
+    static boolean facesRight(String id, int frame) {
         return switch (id) {
-            case "rhinobot", "eggrobo", "robotnik" -> false;
+            case "rhinobot" -> frame == 3; // Map_Rhinobot's opposite-facing turn pose.
+            case "mecha", "eggrobo", "robotnik" -> false;
             default -> true;
         };
     }
@@ -66,13 +67,13 @@ public final class FighterArt {
         boolean flipPose = (pose & Roster.FLIP) != 0;
         int p = pose & 0xFFFF;
         boolean right = facing > 0;
-        boolean mirror = facesRight(id) != right;
+        boolean mirror = facesRight(id, p) != right;
         if (flipPose) mirror = !mirror;
         SceneDraw style = SceneDraw.plain().withScale((float) scale).withFlipX(mirror).withFlash(flash).withAlpha(alpha);
         int dir = right ? 1 : -1;
         switch (id) {
             case "robotnik" -> drawRobotnik(c, p, x, feet, dir, scale, costume, style, tick);
-            case "eggrobo" -> drawEggRobo(c, p, x, feet, dir, scale, costume, style, tick);
+            case "eggrobo" -> drawEggRobo(c, p, x, feet, scale, costume, style, tick);
             default -> {
                 String key = id;
                 if (id.equals("tails")) drawTails(c, p, x, feet, center, onFeet, scale, costume, style, tick);
@@ -131,15 +132,19 @@ public final class FighterArt {
         c.draw(mobile, (float) x, (float) mobileY, style);
     }
 
-    private void drawEggRobo(SceneCanvas c, int p, double x, double feet, int dir, double scale, int costume,
+    private void drawEggRobo(SceneCanvas c, int p, double x, double feet, double scale, int costume,
             SceneDraw style, long tick) {
         int legs = 4;
         if (p == Roster.ROBO_WALK) legs = 4 + (int) ((tick / 5) % 3);
         SceneSprite legSprite = art.costumed("eggrobo", legs, "eggrobo", costume);
         double legY = feet - (legSprite.height() - legSprite.originY()) * scale;
         double bodyY = legY - 0x1C * scale;
-        // Offsets are authored for the sprite's natural left-facing; mirror them when facing right.
-        double m = -dir;
+        // Mirror the whole assembly around its origin, including pose/spin overrides.
+        // Obj_EggRobo's children inherit parent render_flags, not logical fighter facing.
+        if (p == Roster.ROBO_SPIN && (tick / 3) % 2 == 0) {
+            style = style.withFlipX(!style.flipX());
+        }
+        double m = style.flipX() ? -1 : 1;
         double legX = x + (-0xC) * m * scale;
         double gunDx = -0x1C;
         double bodyDx = 0;
@@ -151,16 +156,11 @@ public final class FighterArt {
             case Roster.ROBO_HURT -> bodyDx = 3;
             default -> { }
         }
-        SceneDraw legStyle = style;
-        if (p == Roster.ROBO_SPIN && (tick / 3) % 2 == 0) {
-            style = style.withFlipX(!style.flipX());
-            legStyle = style;
-        }
         int bodyFrame = p == Roster.ROBO_THRUST ? 3 : 1;
         if (p == Roster.ROBO_THRUST && tick % 2 == 0) bodyFrame = 1;
         SceneSprite gun = art.costumed("eggrobo", 2, "eggrobo", costume);
         SceneSprite body = art.costumed("eggrobo", bodyFrame, "eggrobo", costume);
-        c.draw(legSprite, (float) (legX + legDx * m * scale), (float) legY, legStyle);
+        c.draw(legSprite, (float) (legX + legDx * m * scale), (float) legY, style);
         c.draw(body, (float) (x + bodyDx * m * scale), (float) bodyY, style);
         c.draw(gun, (float) (x + gunDx * m * scale), (float) (bodyY - 4 * scale), style);
     }

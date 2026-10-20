@@ -145,6 +145,16 @@ public final class Gfx {
         return new SceneSprite(new SceneImage(width, length, px), width / 2, 0);
     }
 
+    /** A flame pointing right, with its base at the origin; x-flip makes leftward exhaust. */
+    public static SceneSprite sideFlame(int width, int length, int phase) {
+        SceneImage down = flame(width, length, phase).image();
+        int[] pixels = new int[width * length];
+        for (int y = 0; y < width; y++) {
+            for (int x = 0; x < length; x++) pixels[y * length + x] = down.pixel(width - 1 - y, x);
+        }
+        return new SceneSprite(new SceneImage(length, width, pixels), 0, width / 2);
+    }
+
     /** A spring: red base, yellow coil top. */
     public static SceneSprite spring() {
         int w = 22;

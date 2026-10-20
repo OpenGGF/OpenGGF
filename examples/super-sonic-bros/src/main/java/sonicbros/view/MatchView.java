@@ -633,8 +633,8 @@ public final class MatchView {
 
     private void flameSide(SceneCanvas c, double x, double y, int dir) {
         SceneSprite fl = art.prop("flame" + (ticks / 2) % 3);
-        // A downward flame laid on its side: squash it wide and short.
-        c.draw(fl, (float) sx(x), (float) sy(y - 5), SceneDraw.plain().withScale((float) (zoom * 1.6), (float) (zoom * 0.6)).withFlipX(dir < 0));
+        // The asset points right from its base; mirror it around that base for leftward fire.
+        c.draw(fl, (float) sx(x), (float) sy(y), SceneDraw.plain().withScale((float) (zoom * 1.6), (float) (zoom * 0.6)).withFlipX(dir < 0));
     }
 
     private void drawTag(SceneCanvas c, Fighter f) {
@@ -720,7 +720,7 @@ public final class MatchView {
                 case Projectile.K_MISSILE -> {
                     c.draw(art.prop("missile"), (float) x, (float) y, st.withFlipX(p.vx < 0));
                     SceneSprite fl = art.prop("flame" + (ticks / 2) % 3);
-                    c.draw(fl, (float) (x - Math.signum(p.vx) * 12 * zoom), (float) (y - 3 * zoom),
+                    c.draw(fl, (float) (x - Math.signum(p.vx) * 12 * zoom), (float) y,
                             SceneDraw.plain().withScale((float) (zoom * 1.0), (float) (zoom * 0.45)).withFlipX(p.vx > 0));
                 }
                 case Projectile.K_LASER -> {
@@ -740,7 +740,7 @@ public final class MatchView {
                     SceneSprite s = art.frame("eggrobo", 2);
                     c.draw(s, (float) x, (float) y, st.withFlipX(p.vx > 0));
                     SceneSprite fl = art.prop("flame" + (ticks / 2) % 3);
-                    c.draw(fl, (float) (x - Math.signum(p.vx) * 14 * zoom), (float) (y - 3 * zoom),
+                    c.draw(fl, (float) (x - Math.signum(p.vx) * 14 * zoom), (float) y,
                             SceneDraw.plain().withScale((float) zoom, (float) (zoom * 0.45)).withFlipX(p.vx > 0));
                 }
                 case Projectile.K_SPRING -> c.draw(art.prop("spring"), (float) x, (float) (y + p.def.radius() * zoom), st);

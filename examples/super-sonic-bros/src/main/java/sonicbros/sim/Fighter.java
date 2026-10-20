@@ -1135,6 +1135,7 @@ public final class Fighter {
                 }
                 match.ledgeOwner[idx] = this;
                 ledgeSide = side;
+                facing = -side; // Publish inward facing on the catch frame, before ledgeActions runs.
                 move = null;
                 rolling = false;
                 vx = vy = lx = ly = 0;

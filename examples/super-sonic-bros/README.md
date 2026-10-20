@@ -188,3 +188,17 @@ java -XstartOnFirstThread --enable-native-access=ALL-UNNAMED \
 select by keyboard, builds and fights on every stage, plays a four-CPU battle to the results and
 opens the move list for every fighter, and loses a Classic round through to the continue
 screen and game over.
+
+### Animation facing
+
+Pose ids are raw mapping frames, not facing-normalized animations. `FighterArt` combines the
+source art's direction, fighter facing and `Roster.FLIP`. Mecha Sonic's art faces left;
+Rhinobot frame 3 faces right while 0–1 face left. Sonic/Knuckles wall hangs need explicit pose flips; forward and rear attacks must be checked
+against the attacking limb, not inferred from the character's silhouette.
+Full spin/dizzy sequences retain their intentional turns. Skids show the previous travel
+orientation because the simulation has already accepted the new facing direction.
+
+A multipart pose mirrors both its pixels and child offsets using the final draw flip. Small
+flames are authored horizontally, so x-flip can aim fire/exhaust in either direction.
+`TestSuperSonicBrosScene#romPoseFacingAndMultipartOrigins` checks both facings with real ROM
+art, including Super Sonic hangs, rear attacks, skid/lying poses and Egg Robo spin offsets.

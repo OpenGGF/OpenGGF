@@ -27,7 +27,7 @@ import sonicbros.sim.Sfx;
  * roughly 40% and 60% of the time.
  */
 public final class Roster {
-    /** Draw this pose mirrored. */
+    /** Mirror the complete pose relative to fighter facing, including attached pieces. */
     public static final int FLIP = 0x10000;
 
     // Robotnik's assembled poses.
@@ -93,14 +93,19 @@ public final class Roster {
     /** The ball-spin poses all three heroes share in their sprite sets. */
     private static final int BALL_A = 0x96;
 
+    // Ledge $B4 (Sonic) / $B5 (Knuckles) hang left in the raw mappings.
+    // SKID poses face the old travel direction: groundActions already changed facing
+    // to the requested direction before entering SKID. Full spin/dizzy cycles keep
+    // their authored turns; only static lying poses are aligned to fighter facing.
+
     // ------------------------------------------------------------------ Sonic
 
     private FighterDef sonic() {
         Stats s = new Stats(85, 1.6, 3.7, 0.32, 0.22, 2.1, 0.12, 0.03, 0.30, 3.9, 6.0, 6.8, 4.4, 6.4, 1, 18, 34, 0, 3);
         int[] ball = a(0x96, 0x97, 0x96, 0x98, 0x96, 0x99, 0x96, 0x9A);
         Poses p = new Poses(a(0xBA), a(7, 8, 1, 2, 3, 4, 5, 6), a(0x21, 0x22, 0x23, 0x24), ball, ball, ball, a(0x9C),
-                a(0x9B), a(0x8C), a(0x8C, 0x8D), a(0x9C), a(0x80), ball, a(0xA4, 0xA5, 0xA6),
-                a(0xB0, 0xB1, 0xB2, 0xB3), a(0x8E), a(0x9F), a(0x9D, 0x9E, 0x9F, 0xA0), a(0xCC), 4);
+                a(0x9B), a(0x8C), a(0x8C, 0x8D), a(0x9C), a(0xB4 | FLIP), ball, a(0xA4, 0xA5, 0xA6),
+                a(0xB0, 0xB1, 0xB2, 0xB3), a(0x8E), a(0x9F), a(0x9D | FLIP, 0x9E | FLIP, 0x9F | FLIP, 0xA0 | FLIP), a(0xCC | FLIP), 4);
         Map<Slot, Move> m = new EnumMap<>(Slot.class);
         m.put(Slot.JAB, Move.of("sonic.jab", "Quick Jab", 16).pose(0x9E, 3).pose(0x9F, 6).pose(0x9E, 7)
                 .hit(h(3, 5, 14, -4, 9, 3, Hit.SAKURAI, 18, 25)).sound(2, Sfx.SKID).build());
@@ -162,7 +167,7 @@ public final class Roster {
         int[] swipe = a(0xC5, 0xC6, 0xC7, 0xC8, 0xC9, 0xCA);
         Poses p = new Poses(a(0xAD), a(7, 8, 1, 2, 3, 4, 5, 6), a(0x21, 0x22, 0x23, 0x24), ball, a(0xA7, 0xA8), fly, a(0x99),
                 a(0x99), a(0x9C), a(0x9C, 0x9F), a(0x99), a(0x80), ball, a(0x9A, 0x9B),
-                a(0xB0, 0xB1, 0xB2, 0xB3), a(0xC2, 0xCD, 0xCE), a(0xA4), a(0x8E, 0x8F), a(0xB6), 4);
+                a(0xB0, 0xB1, 0xB2, 0xB3), a(0xC2, 0xCD, 0xCE), a(0xA4), a(0x8E | FLIP, 0x8F | FLIP), a(0xB6 | FLIP), 4);
         Map<Slot, Move> m = new EnumMap<>(Slot.class);
         m.put(Slot.JAB, Move.of("tails.jab", "Tail Swipe", 18).cycle(12, 2, swipe).pose(0xAD, 6)
                 .hit(h(2, 9, 12, 2, 12, 1.5, 361, 10, 15).rehit(4)).hit(h(10, 11, 14, 0, 13, 2.5, 361, 30, 60).group(1))
@@ -224,8 +229,8 @@ public final class Roster {
         int[] ball = a(0x9A, 0x96, 0x9A, 0x97, 0x9A, 0x98, 0x9A, 0x99);
         int[] glide = a(0xC0);
         Poses p = new Poses(a(0x56), a(7, 8, 1, 2, 3, 4, 5, 6), a(0x21, 0x22, 0x23, 0x24), ball, ball, ball, a(0x9C),
-                a(0x9B), a(0x8C), a(0x8C, 0x8D), a(0x9C), a(0xB5), ball, a(0xA1, 0xA2, 0xA3),
-                a(0xE4, 0xE5), a(0xCA, 0xCB), a(0xDD), a(0x9D, 0x9E), a(0xCC), 4);
+                a(0x9B), a(0x8C), a(0x8C, 0x8D), a(0x9C), a(0xB5 | FLIP), ball, a(0xA1, 0xA2, 0xA3),
+                a(0xE4, 0xE5), a(0xCA, 0xCB), a(0xDD), a(0x9D | FLIP, 0x9E | FLIP), a(0xCC), 4);
         Map<Slot, Move> m = new EnumMap<>(Slot.class);
         m.put(Slot.JAB, Move.of("knuckles.jab", "One-Two", 20).pose(0xDC, 3).pose(0xDE, 6).pose(0xDD, 3).pose(0xDE, 4).pose(0x56, 4)
                 .hit(h(3, 5, 15, -4, 10, 3, Hit.SAKURAI, 15, 25)).hit(h(10, 12, 17, -4, 11, 4, Hit.SAKURAI, 30, 50).group(1))
@@ -351,7 +356,7 @@ public final class Roster {
         Stats s = new Stats(102, 1.5, 3.4, 0.26, 0.2, 1.9, 0.1, 0.02, 0.32, 4.1, 6.2, 6.7, 4.3, 6.3, 1, 22, 40, 0, 4);
         int[] ball = a(3, 4, 5);
         Poses p = new Poses(a(0, 1), a(8, 9), a(16), ball, a(17), ball, a(2), a(2), a(12), a(12, 13), a(2), a(17), ball,
-                a(12, 13), a(10, 11), a(17), a(20), a(15), a(7), 6);
+                a(12, 13), a(10, 11), a(17), a(20), a(15 | FLIP), a(7), 6);
         Map<Slot, Move> m = new EnumMap<>(Slot.class);
         m.put(Slot.JAB, Move.of("mecha.jab", "Claw Jab", 18).pose(19, 3).pose(18, 7).pose(0, 8)
                 .hit(h(3, 6, 16, -4, 10, 4, Hit.SAKURAI, 20, 30).fx(Hit.FX_SLASH)).build());
@@ -472,7 +477,7 @@ public final class Roster {
     private FighterDef rhinobot() {
         Stats s = new Stats(92, 1.7, 3.6, 0.30, 0.2, 1.7, 0.09, 0.02, 0.30, 3.8, 5.8, 6.4, 4.2, 6.0, 1, 30, 28, 0, 3);
         Poses p = new Poses(a(0), a(0, 3), a(0, 3), a(0), a(0), a(1, 2), a(0), a(0), a(1), a(1, 2), a(0), a(1), a(1, 2),
-                a(1, 2), a(0, 3), a(1), a(0), a(1), a(1), 5);
+                a(1, 2), a(0, 3), a(1), a(0), a(1 | FLIP), a(1), 5);
         Map<Slot, Move> m = new EnumMap<>(Slot.class);
         m.put(Slot.JAB, Move.of("rhino.jab", "Horn Poke", 16).pose(0, 16)
                 .hit(h(3, 5, 18, -2, 10, 3.5, Hit.SAKURAI, 20, 30)).addV(2, 1.4, Double.NaN).build());
@@ -480,7 +485,7 @@ public final class Roster {
                 .hit(h(5, 8, 20, -2, 11, 8, Hit.SAKURAI, 24, 86)).addV(4, 2.4, Double.NaN).build());
         m.put(Slot.UTILT, Move.of("rhino.utilt", "Horn Toss", 24).pose(3, 24)
                 .hit(h(5, 10, 10, -16, 13, 7, 95, 32, 85)).build());
-        m.put(Slot.DTILT, Move.of("rhino.dtilt", "Tail Swipe", 18).pose(0 | FLIP, 18)
+        m.put(Slot.DTILT, Move.of("rhino.dtilt", "Tail Swipe", 18).pose(0, 18)
                 .hit(h(4, 7, -16, 4, 10, 6, 70, 32, 45).groundOnly()).build());
         m.put(Slot.DASH, Move.of("rhino.dash", "Stampede", 34).pose(0, 34)
                 .hit(h(3, 20, 16, 0, 14, 10, 40, 42, 72)).setV(2, 5.2, Double.NaN).slide().sound(2, Sfx.DASH).build());
@@ -495,7 +500,7 @@ public final class Roster {
                 .hit(h(4, 18, 0, 0, 17, 10, 361, 28, 85)).landingLag(9).build());
         m.put(Slot.FAIR, Move.of("rhino.fair", "Flying Horn", 34).pose(0, 34)
                 .hit(h(6, 11, 20, 0, 12, 11, 45, 28, 96)).addV(6, 1.2, Double.NaN).landingLag(11).build());
-        m.put(Slot.BAIR, Move.of("rhino.bair", "Mule Kick", 30).pose(0 | FLIP, 30)
+        m.put(Slot.BAIR, Move.of("rhino.bair", "Mule Kick", 30).pose(0, 30)
                 .hit(h(5, 8, -20, 2, 12, 11, 40, 30, 96)).landingLag(10).build());
         m.put(Slot.UAIR, Move.of("rhino.uair", "Horn Flip", 30).cycle(30, 4, 3, 1)
                 .hit(h(5, 10, 6, -18, 13, 7, 85, 26, 90)).landingLag(10).build());
@@ -512,7 +517,7 @@ public final class Roster {
         m.put(Slot.USPEC, Move.of("rhino.leap", "Spring Horn", 40).pose(3, 40)
                 .hit(h(4, 14, 8, -14, 14, 9, 85, 40, 75)).setV(4, Double.NaN, -9.4).addV(4, 1.8, Double.NaN)
                 .airControl(0.7).helpless().ledgeGrab().landingLag(14).sound(4, Sfx.SPRING).build());
-        m.put(Slot.DSPEC, Move.of("rhino.dig", "Dust Kick", 30).pose(0 | FLIP, 30)
+        m.put(Slot.DSPEC, Move.of("rhino.dig", "Dust Kick", 30).pose(0, 30)
                 .spawn(8, shot(Projectile.K_SHOCKWAVE, -3.6, 0, 0, 40, 8, h(0, 0, 0, 0, 8, 6, 60, 35, 40),
                         null, 0, false, true, 2, true), -16, 8)
                 .sound(8, Sfx.SKID).landingLag(8).build());

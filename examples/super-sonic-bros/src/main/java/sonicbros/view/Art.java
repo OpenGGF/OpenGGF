@@ -140,9 +140,9 @@ public final class Art {
             case "bomb" -> Gfx.bomb(6);
             case "missile" -> Gfx.missile();
             case "spring" -> Gfx.spring();
-            case "flame0" -> Gfx.flame(10, 18, 0);
-            case "flame1" -> Gfx.flame(10, 18, 1);
-            case "flame2" -> Gfx.flame(10, 18, 2);
+            case "flame0" -> Gfx.sideFlame(10, 18, 0);
+            case "flame1" -> Gfx.sideFlame(10, 18, 1);
+            case "flame2" -> Gfx.sideFlame(10, 18, 2);
             case "bigflame0" -> Gfx.flame(18, 30, 3);
             case "bigflame1" -> Gfx.flame(18, 30, 4);
             default -> throw new IllegalArgumentException("Unknown prop " + key);
