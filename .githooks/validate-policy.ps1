@@ -16,6 +16,9 @@ $script:ReleaseResourceBaseline = "45cecf566825aa50612f5e687b2682fc9681aed1"
 $script:NextRolloverResourceBaseline = "218b8fff1a829c7a509331c453d2f3be7e51533b"
 $script:NextRolloverTrailerBaseline = "218b8fff1a829c7a509331c453d2f3be7e51533b"
 $script:PublishedReleaseTrailerBaseline = "37aeb6b84d6634457616c942187cdd40dd93c24f"
+# Frozen next history imported by the shared-line merge; never a moving branch ref.
+# Current API pins are verified separately; resource history is not grandfathered.
+$script:SharedDevelopmentTrailerBaseline = "f514a5f13d353550f8421462c773f17f90a04100"
 $script:ReleaseRangeBase = ""
 $script:ResourcePolicyCutover = "ccdd33edf4f9cd4a7937791f1d4c2f37cbeeb5e0"
 $script:RomLikeDenylistExtensions = @(".gen", ".smd", ".bin", ".sms", ".gg", ".32x")
@@ -1281,7 +1284,7 @@ function Validate-CiCommitRange([string]$EffectiveBaseSha, [string]$HeadSha) {
     }
 
     $reviewedTrailerCommits = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
-    foreach ($trailerBaseline in @($script:NextRolloverTrailerBaseline, $script:PublishedReleaseTrailerBaseline)) {
+    foreach ($trailerBaseline in @($script:NextRolloverTrailerBaseline, $script:PublishedReleaseTrailerBaseline, $script:SharedDevelopmentTrailerBaseline)) {
         if (Test-GitSuccess @("merge-base", "--is-ancestor", $trailerBaseline, $HeadSha)) {
             foreach ($reviewed in (Invoke-GitLines @("rev-list", $trailerBaseline))) {
                 [void]$reviewedTrailerCommits.Add($reviewed)

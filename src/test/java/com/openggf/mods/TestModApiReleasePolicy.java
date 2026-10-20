@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -46,10 +47,47 @@ class TestModApiReleasePolicy {
         assertTrue(ModApiReleasePolicy.BRANCHES.contains(destination),
                 () -> "Invalid modApi.destinationBranch '" + destination
                         + "': use next, develop, or master");
-        assertEquals(policy.targetBranch(), destination,
+        assertTrue(policy.acceptsDestination(destination),
                 () -> "Mod API policy targets '" + policy.targetBranch()
-                        + "' but CI destination is '" + destination
-                        + "'; update targetBranch or run against the intended destination branch");
+                        + "' with candidate aliases " + policy.candidateBranchAliases()
+                        + " but CI destination is '" + destination
+                        + "'; update the descriptor or run against the intended destination branch");
+    }
+
+    @Test
+    void developmentAliasesAdmitBothBranchesWithoutAdmittingMasterOrFeatureBranches() {
+        String shared = VALID.replace("targetBranch=next", "targetBranch=develop")
+                .replace("currentApi=0.7.0", "currentApi=0.6.0")
+                + "candidateBranchAliases=next\n";
+        ModApiReleasePolicy policy = ModApiReleasePolicy.parse(shared);
+        assertTrue(policy.acceptsDestination("develop"));
+        assertTrue(policy.acceptsDestination("next"));
+        assertFalse(policy.acceptsDestination("master"));
+        assertFalse(policy.acceptsDestination("feature/ai-example"));
+        assertThrows(UnsupportedOperationException.class, () -> policy.candidateBranchAliases().clear());
+        ModApiReleasePolicy separate = ModApiReleasePolicy.parse(VALID);
+        assertTrue(separate.acceptsDestination("next"));
+        assertFalse(separate.acceptsDestination("develop"));
+        assertFalse(separate.acceptsDestination("master"));
+    }
+
+    @Test
+    void aliasesAreExplicitUniqueDevelopmentBranchesAndCannotBypassPublicationOrApiLines() {
+        for (String aliases : List.of("master", "feature", "next", "develop,develop", " develop", "develop,")) {
+            assertInvalid(VALID + "candidateBranchAliases=" + aliases + "\n",
+                    "candidateBranchAliases", aliases);
+        }
+        assertInvalid(VALID + "candidateBranchAliases=develop\ncandidateBranchAliases=develop\n",
+                "candidateBranchAliases", "develop");
+        assertInvalid(VALID + "candidateBranchAliases=develop\n", "currentApi", "0.7.0");
+        String master = VALID.replace("targetBranch=next", "targetBranch=master")
+                .replace("currentApi=0.7.0", "currentApi=0.5.0");
+        assertInvalid(master + "candidateBranchAliases=next\n", "candidateBranchAliases", "next");
+        String published = master.replace("currentStatus=candidate", "currentStatus=published")
+                .replace("publishedBaselines=", "publishedBaselines=0.5.0");
+        assertInvalid(published + "candidateBranchAliases=develop\n", "candidateBranchAliases", "develop");
+        assertTrue(ModApiReleasePolicy.parse(published + "candidateBranchAliases=\n")
+                .acceptsDestination("master"));
     }
 
     @Test

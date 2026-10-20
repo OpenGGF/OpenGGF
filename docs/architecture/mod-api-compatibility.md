@@ -80,15 +80,22 @@ descriptor is the sole authority for branch topology, current version and status
 and the published-baseline set. This guide explains that policy but does not define
 version state. The current descriptor has an empty published set.
 
-`targetBranch` identifies the destination branch checked by CI; the three line
-fields describe engine versions. Pushes to `master`, `develop` and `next` must
-agree with that destination. Feature-branch pushes still validate the descriptor,
-but omit the optional destination property because a feature ref is not a release
-integration destination. Pull-request jobs check their base branch. An unpublished candidate on `develop` or `next`
-may retain an API line at or below its engine line. Thus both the 0.7 and 0.8 engine
-lines carry the same 0.7.0 candidate until an explicit API policy change. This does
-not publish a baseline or rename the candidate pin. Master and publication checks
-continue to require the selected release line.
+`targetBranch` identifies the primary destination checked by CI. An optional
+`candidateBranchAliases` comma-separated list admits the other development branch
+when both intentionally share one commit and engine version. Aliases are explicit,
+unique `develop`/`next` names, exclude the primary target, and are allowed only for
+non-master candidates. Omission or an empty value retains single-destination
+checking. Master and published policies cannot have aliases, and a candidate API
+cannot lead either the primary or any aliased engine line. Feature-branch pushes
+validate the descriptor without a destination; pull requests check their base.
+
+Currently `targetBranch=develop` and `candidateBranchAliases=next` let both branches
+carry `0.7.prerelease` with the unpublished `0.7.0` API candidate. `nextLine=0.8`
+reserves the later independent line; it does not change the shared POM version.
+To split `next` onto 0.8 again, clear aliases in both descriptors, set its primary
+target to `next`, and update its POM, bundle version and runnable examples together.
+Before master promotion, clear aliases and select `targetBranch=master` with the
+matching release/API policy. No baseline is published by branch synchronization.
 
 Creator manifests should declare the maintained candidate range:
 
@@ -824,7 +831,7 @@ tools are outside that surface. `RuntimeException` (typed connection/protocol re
 and `IntSupplier` (room capacity callbacks) are individually audited JDK signature types;
 no third-party signature or package-prefix exemption is added.
 
-The mutable `mod-api-signatures-0.7.txt` pin is regenerated against develop's complete
+The mutable `mod-api-signatures-0.7.txt` pin is regenerated against the shared development line's complete
 surface, including its existing scene art/audio capabilities. `ModApiVersion` describes
 the additions; the policy descriptor remains unpublished candidate `0.7.0` and published
 baselines remain untouched.

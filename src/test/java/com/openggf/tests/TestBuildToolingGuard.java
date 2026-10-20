@@ -2855,6 +2855,7 @@ class TestBuildToolingGuard {
                 Map.entry("NEXT_ROLLOVER_RESOURCE_BASELINE", "218b8fff1a829c7a509331c453d2f3be7e51533b"),
                 Map.entry("NEXT_ROLLOVER_TRAILER_BASELINE", "218b8fff1a829c7a509331c453d2f3be7e51533b"),
                 Map.entry("PUBLISHED_RELEASE_TRAILER_BASELINE", "37aeb6b84d6634457616c942187cdd40dd93c24f"),
+                Map.entry("SHARED_DEVELOPMENT_TRAILER_BASELINE", "f514a5f13d353550f8421462c773f17f90a04100"),
                 Map.entry("RESOURCE_POLICY_CUTOVER", RESOURCE_POLICY_CUTOVER),
                 Map.entry("EMPTY_TREE_OID", "4b825dc642cb6eb9a060e54bf8d69288fbee4904"),
                 Map.entry("ALL_ZERO_OID", ALL_ZERO_OID),
@@ -2870,6 +2871,7 @@ class TestBuildToolingGuard {
                 Map.entry("NEXT_ROLLOVER_RESOURCE_BASELINE", "NextRolloverResourceBaseline"),
                 Map.entry("NEXT_ROLLOVER_TRAILER_BASELINE", "NextRolloverTrailerBaseline"),
                 Map.entry("PUBLISHED_RELEASE_TRAILER_BASELINE", "PublishedReleaseTrailerBaseline"),
+                Map.entry("SHARED_DEVELOPMENT_TRAILER_BASELINE", "SharedDevelopmentTrailerBaseline"),
                 Map.entry("RESOURCE_POLICY_CUTOVER", "ResourcePolicyCutover"),
                 Map.entry("EMPTY_TREE_OID", "EmptyTreeOid"),
                 Map.entry("ALL_ZERO_OID", "AllZeroOid"),
@@ -4591,6 +4593,49 @@ class TestBuildToolingGuard {
         assertEquals(originalTarget, Files.readSymbolicLink(link),
                 "unknown user-authored symlink must remain untouched");
         assertEquals(unknownSource.toRealPath(), link.toRealPath());
+    }
+
+    @Test
+    void postCheckoutRepairsRelativeLinkBrokenByWorktreeMove(@TempDir Path temporaryDirectory)
+            throws Exception {
+        Path mainRepository = newRepository(temporaryDirectory, "moved-link-main");
+        createInitialCommit(mainRepository);
+        Path source = mainRepository.resolve("config.yaml");
+        Files.writeString(source, "source\n");
+        Path linkedWorktree = temporaryDirectory.resolve("moved-link-worktree");
+        git(mainRepository, "worktree", "add", "-b", "feature/moved-link", linkedWorktree.toString());
+        // Written for a worktree nested two levels inside the main checkout.
+        Path link = linkedWorktree.resolve("config.yaml");
+        Files.createSymbolicLink(link, Path.of("../../config.yaml"));
+        assertFalse(Files.exists(link), "fixture link must be broken at the moved location");
+
+        ProcessResult result = run(linkedWorktree,
+                List.of("bash", POST_CHECKOUT_HOOK.toString(), ALL_ZERO_OID, ALL_ZERO_OID, "1"), null);
+
+        assertEquals(0, result.exitCode(), () -> "post-checkout failed:\n" + result.output());
+        Path target = Files.readSymbolicLink(link);
+        assertFalse(target.isAbsolute(), "repaired link must stay relative: " + target);
+        assertEquals(source.toRealPath(), link.toRealPath());
+    }
+
+    @Test
+    void postCheckoutPreservesBrokenRelativeLinkToDifferentResource(@TempDir Path temporaryDirectory)
+            throws Exception {
+        Path mainRepository = newRepository(temporaryDirectory, "foreign-link-main");
+        createInitialCommit(mainRepository);
+        Files.writeString(mainRepository.resolve("config.yaml"), "source\n");
+        Path linkedWorktree = temporaryDirectory.resolve("foreign-link-worktree");
+        git(mainRepository, "worktree", "add", "-b", "feature/foreign-link", linkedWorktree.toString());
+        Path link = linkedWorktree.resolve("config.yaml");
+        Path originalTarget = Path.of("../elsewhere/personal.yaml");
+        Files.createSymbolicLink(link, originalTarget);
+
+        ProcessResult result = run(linkedWorktree,
+                List.of("bash", POST_CHECKOUT_HOOK.toString(), ALL_ZERO_OID, ALL_ZERO_OID, "1"), null);
+
+        assertEquals(0, result.exitCode(), () -> "post-checkout failed:\n" + result.output());
+        assertEquals(originalTarget, Files.readSymbolicLink(link),
+                "broken user-authored link to another resource must remain untouched");
     }
 
     @Test

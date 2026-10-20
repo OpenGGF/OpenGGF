@@ -64,7 +64,10 @@ Each `RoomHost` and `GhostHub` is confined to a single room thread, and the mast
 reuses those room classes unchanged. Production masters
 require TLS (`plaintextForTest: true` is loopback-test only); the localhost admin HTTP
 endpoint requires its bearer token and appends to `admin-audit.jsonl`. Identity age, clean
-rounds, sanctions, and trust tiers persist in SQLite. Verified rooms are relay-only and
+rounds, sanctions, and trust tiers persist in SQLite. An active BAN or TIMEOUT rejects
+admission and immediately closes existing master sessions, their tokens, hosted rooms,
+and attached relay connections. TIMEOUT preserves earned standing after expiry; BAN
+resets clean-round standing. Verified rooms are relay-only and
 need a live replay-verifier worker matching the room's determinism fingerprint; ROM bytes
 never cross the network and worker verdicts are Ed25519-signed. The host accepts attempt
 controls and ghost data only during the running phase, permits one strictly increasing

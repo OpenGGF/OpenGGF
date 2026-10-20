@@ -84,8 +84,10 @@ canonical_existing_path() {
     printf '%s/%s\n' "$parent" "$leaf"
 }
 
-# Replace only an absolute link that resolves to the resource this hook owns.
-# Unknown, broken, relative, or user-authored links remain untouched.
+# Replace an absolute link that resolves to the resource this hook owns, or a
+# broken relative link to a same-named resource: relative links break when a
+# worktree is moved (`git worktree move`) to a different depth. Working
+# relative links and unknown or user-authored links remain untouched.
 migrate_legacy_link() {
     local resource="$1"
     local src="$2"
@@ -95,12 +97,18 @@ migrate_legacy_link() {
     local resolved_source
     local relative_main
     local replacement
+    local action="Migrated legacy link"
 
     old_target="$(readlink "$dst")" || return 1
-    absolute_link_target "$old_target" || return 0
-    resolved_target="$(canonical_existing_path "$old_target" 2>/dev/null)" || return 0
-    resolved_source="$(canonical_existing_path "$src" 2>/dev/null)" || return 0
-    [ "$resolved_target" = "$resolved_source" ] || return 0
+    if absolute_link_target "$old_target"; then
+        resolved_target="$(canonical_existing_path "$old_target" 2>/dev/null)" || return 0
+        resolved_source="$(canonical_existing_path "$src" 2>/dev/null)" || return 0
+        [ "$resolved_target" = "$resolved_source" ] || return 0
+    else
+        [ ! -e "$dst" ] || return 0
+        [ "$(basename "$old_target")" = "$(basename "$resource")" ] || return 0
+        action="Repaired moved-worktree link"
+    fi
 
     relative_main="$(relative_main_tree "$(dirname "$dst")")" || return 1
     replacement="$dst.policy-link.$$"
@@ -118,7 +126,7 @@ migrate_legacy_link() {
         rm "$replacement" 2>/dev/null
         return 1
     fi
-    echo "  Migrated legacy link: $resource"
+    echo "  $action: $resource"
 }
 
 # Link a single file (idempotent, never clobbers)

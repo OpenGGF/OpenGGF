@@ -29,6 +29,10 @@ Unreleased. The earlier development themes remain in
   loopback; explicit LAN hosting displays a private session invite and verifies a
   fresh HMAC proof before admitting a guest. LAN game traffic remains plaintext.
 
+- **Widescreen HUD position:** score, time, rings and lives can keep their
+  centered native-frame position or align to the screen's left edge. Native
+  4:3 positioning is unchanged.
+
 - **Super Sonic Bros.:** a new example mod, a platform fighter for one to four
   players (people or CPUs) on Sonic 3 & Knuckles. Sonic, Tails, Knuckles, Robotnik,
   Mecha Sonic, Egg Robo and Rhinobot each have a full move set (tilts, chargeable
@@ -36,8 +40,10 @@ Unreleased. The earlier development themes remain in
   fight on ten islands carved from real acts with their own backdrops and music.
   Damage builds from 0% and drives knockback; stock, time and stamina modes, teams,
   eight monitors, nine CPU levels, a six-round single-player Classic ladder, a live
-  move list, two keyboard layouts plus gamepads, saved rules and records. See
-  [the README](examples/super-sonic-bros/README.md).
+  move list, two keyboard layouts plus gamepads, saved rules and records.
+  Original synthesized announcer and character voices accompany in-game events.
+  Fighter facing follows ledge hangs, skids, lying poses, multipart spins and
+  directional effects. See [the README](examples/super-sonic-bros/README.md).
 
 - **Colour expansion:** Settings → Display offers a saved Full/Limited range
   independently of the existing colour profile. Full keeps current output;
@@ -60,6 +66,8 @@ Unreleased. The earlier development themes remain in
   The hub remembers the last game after navigation settles, with optional
   quiet title music. Controller hints
   follow the last device used. Compact Controls, Advanced and ROM browsing pages,
+  direct ROM location, bounded setup badges, explicit Save changes actions,
+  clearer inherited values, calmer backgrounds and more readable text,
   player binding groups, conflict warnings, confirmed tab resets and save summaries
   make setup easier to review. Expert loading and rewind tuning live in Advanced;
   first-run discovery can locate one ROM or scan a folder for all three games,

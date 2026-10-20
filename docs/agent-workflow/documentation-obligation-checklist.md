@@ -44,15 +44,15 @@ do not instruct maintainers to create the version tag before the workflow.
 
 ### Which version am I writing for?
 
-Read the relevant branch's `pom.xml`: each branch declares its own version.
-`develop`'s version selects the `CHANGELOG.<version>.md` that receives its
-new prose; a `next` checkout's POM identifies the next line, not develop's.
-The current mapping is: **master 0.6.20260911, develop
-0.7.prerelease, next 0.8.prerelease.** Nothing on `develop` is written up under
-`next`'s version; unreleased `next` prose accumulates in `CHANGELOG.md`'s
-"Unreleased" section until that release file is cut. Do not hardcode these
-numbers into new guidance — re-read the relevant branch's POM instead.
-Promoting all three at release time follows [the release rollover process](../project/release-rollover.md).
+Read the relevant branch's `pom.xml`; it selects the current release line.
+Currently **master is 0.6.20260911, and both develop and next are
+0.7.prerelease**. The development refs intentionally share a commit, with
+`targetBranch=develop` and `candidateBranchAliases=next` in the policy descriptor.
+New prose from either branch belongs in `CHANGELOG.0.7.prerelease.md`; earlier
+0.7 themes remain in `CHANGELOG.0.7.md`. Root `CHANGELOG.md` is the index and
+shared-line pointer. The 0.8 roadmap remains future scope. When next becomes an
+independent line, clear aliases, advance its POM and related metadata, and restore
+its root Unreleased section through [release rollover](../project/release-rollover.md).
 
 ### Where each kind of prose goes
 

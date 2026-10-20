@@ -90,7 +90,7 @@ client changes):
 | NEW | fresh identity | "new player" badge; cannot enter verified rooms; cannot create rooms; tight rate limits; chat delayed (read-only first N minutes per room) |
 | ESTABLISHED | ≥ 48 h wall-clock age **and** ≥ 10 clean completed rounds | normal limits; can create casual rooms |
 | TRUSTED | ≥ 14 days **and** ≥ 50 clean rounds, no sanctions | can enter/create verified rooms; eligible for future ranked play |
-| SANCTIONED | ban/timeout verdict | rejected at handshake (permanent) or per-scope restricted (timeout) |
+| SANCTIONED | active ban or timeout | admission rejected and live master sessions closed for the sanction's duration |
 
 - Accrual requires **wall-clock time + participation**, so trust cannot be
   farmed quickly in bulk. Demotion is instant on a cheat verdict (§6) or
@@ -319,9 +319,13 @@ caps, a global speed ceiling from the repo's physics constants).
   unbounded input.
 - Pre-parse per-connection and per-IP message/byte rate caps.
 - Handshake timeout, idle timeout, max concurrent connections per IP.
-- **TLS required for remote endpoints:** masters and direct rooms require
-  `wss://`; recording upload URLs require `https://`. Explicit development/tests
-  may use `ws://`/`http://` only with literal loopback IPv4/IPv6 addresses.
+- **TLS required for remote endpoints:** masters, broker-listed direct rooms and
+  manual LAN joins require `wss://`; recording upload URLs require `https://`.
+  Broker-listed rooms pin a fresh certificate digest through the authenticated
+  broker session. Manual LAN joins require a complete invite carrying both the
+  certificate and host-identity pins; a bare address is rejected. Explicit
+  development/tests may use `ws://`/`http://` only with literal loopback IPv4/IPv6
+  addresses, and never as a pinned broker-listed or manual-LAN direct room.
   Hostnames such as `localhost`, shortened IPv4 forms, user-info and fragment
   authorities do not grant that exception. No DNS resolution grants trust.
   RecordingUploader itself restricts insecure TLS trust to literal loopback
@@ -391,7 +395,9 @@ caps, a global speed ceiling from the repo's physics constants).
 
 The rule embedded in this table: **every protocol field, storage interface,
 and hub check exists by phase 2–3; only the verifier service and its
-enforcement flip are deferred.** Nothing post-v1 requires a protocol break.
+enforcement flip are deferred.** Direct-room authentication subsequently added
+required certificate-pin fields and advanced the wire protocol from 1 to 2;
+version 1 peers cannot join version 2 control sessions.
 
 ## 12. Out of scope
 

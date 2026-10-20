@@ -17,6 +17,7 @@ final class ModApiReleasePolicy {
     private static final Set<String> REQUIRED_KEYS = Set.of(
             "schemaVersion", "targetBranch", "masterLine", "developLine", "nextLine",
             "currentApi", "currentStatus", "publishedBaselines");
+    private static final Set<String> OPTIONAL_KEYS = Set.of("candidateBranchAliases");
 
     enum Status { CANDIDATE, PUBLISHED }
 
@@ -56,6 +57,7 @@ final class ModApiReleasePolicy {
     }
 
     private final String targetBranch;
+    private final Set<String> candidateBranchAliases;
     private final ReleaseLine masterLine;
     private final ReleaseLine developLine;
     private final ReleaseLine nextLine;
@@ -64,10 +66,11 @@ final class ModApiReleasePolicy {
     private final List<SemanticVersion> publishedBaselines;
     private final Map<String, SemanticVersion> expectedPins;
 
-    private ModApiReleasePolicy(String targetBranch, ReleaseLine masterLine,
+    private ModApiReleasePolicy(String targetBranch, Set<String> candidateBranchAliases, ReleaseLine masterLine,
             ReleaseLine developLine, ReleaseLine nextLine, SemanticVersion currentApi,
             Status currentStatus, List<SemanticVersion> publishedBaselines) {
         this.targetBranch = targetBranch;
+        this.candidateBranchAliases = Set.copyOf(candidateBranchAliases);
         this.masterLine = masterLine;
         this.developLine = developLine;
         this.nextLine = nextLine;
@@ -107,11 +110,11 @@ final class ModApiReleasePolicy {
             if (!key.equals(key.trim())) {
                 throw invalid(key, value, "remove whitespace around the key");
             }
-            if (!REQUIRED_KEYS.contains(key)) {
-                throw invalid(key, value, "remove the unknown key or use a documented required key");
+            if (!REQUIRED_KEYS.contains(key) && !OPTIONAL_KEYS.contains(key)) {
+                throw invalid(key, value, "remove the unknown key or use a documented policy key");
             }
             if (values.putIfAbsent(key, value) != null) {
-                throw invalid(key, value, "define each required key exactly once");
+                throw invalid(key, value, "define each key at most once");
             }
         }
         for (String key : REQUIRED_KEYS) {
@@ -147,6 +150,21 @@ final class ModApiReleasePolicy {
         } else {
             throw invalid("currentStatus", values.get("currentStatus"), "use candidate or published");
         }
+        String aliasesValue = values.getOrDefault("candidateBranchAliases", "");
+        Set<String> aliases = new LinkedHashSet<>();
+        if (!aliasesValue.isEmpty()) {
+            if (status != Status.CANDIDATE || branch.equals("master")) {
+                throw invalid("candidateBranchAliases", aliasesValue,
+                        "aliases are only allowed for development candidates; clear them before master promotion");
+            }
+            for (String alias : aliasesValue.split(",", -1)) {
+                if (!(alias.equals("develop") || alias.equals("next"))
+                        || alias.equals(branch) || !aliases.add(alias)) {
+                    throw invalid("candidateBranchAliases", aliasesValue,
+                            "list distinct develop/next aliases other than targetBranch without whitespace");
+                }
+            }
+        }
         ReleaseLine selected = switch (branch) {
             case "master" -> master;
             case "develop" -> develop;
@@ -166,6 +184,13 @@ final class ModApiReleasePolicy {
         if (status == Status.CANDIDATE && !branch.equals("master") && current.patch() != 0) {
             throw invalid("currentApi", current.toString(),
                     "use patch zero for a " + branch + " candidate");
+        }
+        for (String alias : aliases) {
+            ReleaseLine aliasLine = alias.equals("develop") ? develop : next;
+            if (apiLine.compareTo(aliasLine) > 0) {
+                throw invalid("currentApi", current.toString(),
+                        "use a candidate API line no later than alias " + alias + " engine line " + aliasLine);
+            }
         }
 
         List<SemanticVersion> baselines = parseBaselines(values.get("publishedBaselines"));
@@ -187,7 +212,7 @@ final class ModApiReleasePolicy {
             throw invalid("publishedBaselines", current.toString(),
                     "remove currentApi while currentStatus=candidate");
         }
-        return new ModApiReleasePolicy(branch, master, develop, next, current, status, baselines);
+        return new ModApiReleasePolicy(branch, aliases, master, develop, next, current, status, baselines);
     }
 
     private static List<SemanticVersion> parseBaselines(String value) {
@@ -254,6 +279,10 @@ final class ModApiReleasePolicy {
     }
 
     String targetBranch() { return targetBranch; }
+    Set<String> candidateBranchAliases() { return candidateBranchAliases; }
+    boolean acceptsDestination(String branch) {
+        return targetBranch.equals(branch) || candidateBranchAliases.contains(branch);
+    }
     ReleaseLine masterLine() { return masterLine; }
     ReleaseLine developLine() { return developLine; }
     ReleaseLine nextLine() { return nextLine; }

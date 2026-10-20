@@ -21,6 +21,9 @@ promoting versions.
 - Full ordinary validation is public-release-only: use explicit `-Pfull-suite`
   for release preparation. Plain Maven, category runs, PRs and routine manual CI
   use smoke. The Release workflow explicitly opts into the full suite.
+- Development branches may intentionally share a candidate commit through
+  `candidateBranchAliases`. Before master promotion, clear aliases and set
+  `targetBranch=master`; never carry the shared-development alias into publication.
 - Read the POM version and check its remote `v<version>` tag before pushing.
   The workflow creates the tag at the validated `github.sha` and rejects an
   existing tag. Do not pre-create, delete, or move tags to make a retry pass.
