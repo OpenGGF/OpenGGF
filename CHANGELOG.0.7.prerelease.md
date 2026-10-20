@@ -228,7 +228,9 @@ Unreleased. The earlier development themes remain in
   shots stop with their gun, while fired shots continue independently. Art
   priority follows the original body writes and child copies at allocation. Its
   aim now follows the original signed word comparison, including equal and
-  wrapped coordinates.
+  wrapped coordinates. Body and attachment drawing preserve vertical facing;
+  the gun mirrors its delayed Y offset and the jet mirrors its live Y offset,
+  while shots retain their original horizontal-only facing.
   It releases animals directly into their original walking
   or flying launch, with native facing, random lift and stationary first drawing;
   the launch and rendering state survive recreation. Scaled fly-by art remains

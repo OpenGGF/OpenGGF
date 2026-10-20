@@ -1163,11 +1163,17 @@ when grabbing a player. The native `$E5`/`$E9` mapping selection keeps logical
 facing intact and avoids reversing the left hang pose.
 
 SSZ EggRobo attachment (2026-09-30): the body now renders from its live native
-position rather than inherited spawn coordinates. Gun, flame and muzzle flash
-use the body's render-flip convention, including mirrored child offsets.
+position rather than inherited spawn coordinates. Gun and flame copy the body's
+horizontal and vertical render flips in MAIN, including mirrored child offsets;
+raw birth and INIT keep their cleared flips and unmirrored birth positions.
+The muzzle flash copies only horizontal facing and always starts at GunY-4.
 `sub_91930` retains delayed hover Y, falls back to live Y while `$32` is zero,
 and latches gun position/flags during firing. The flame uses live Y from
 `Refresh_ChildPositionAdjusted`. Scaled fly-by art remains an inherited gap.
+The [bounded vertical-flip correction](architecture/validation/levels/s3k-ssz-act1.md#vertical-facing-and-child-y-offsets--2026-10-20)
+is qualified with explicit flags0/1/2/3 component inlets, CPU/SAT replay output
+and fresh complete-world restoration. Stock SSZ1 placements contain only flags0/1;
+natural vertical-facing route relevance and native pixel parity remain unproved.
 The specialized animal launch is now source-backed and independently qualified:
 fixed Rabbit/Chicken table, one full RNG draw, captured parent facing, direct
 WALK/FLY entry/frame1 and stationary first draw, with persistent native render

@@ -45,13 +45,14 @@ public final class EggRoboJetFlameChildInstance extends AbstractObjectInstance
     private int y;
     private int mappingFrame;
     private boolean hFlip;
+    private boolean vFlip;
     /** CreateChild1_Normal copies art_tile before this child ever executes INIT. */
     private boolean artHigh;
     private boolean initialized;
     private boolean drawSubmitted;
     private boolean pendingDelete;
 
-    private record RewindExtra(ObjectRefId parentId, int x, int y, int mappingFrame, boolean hFlip,
+    private record RewindExtra(ObjectRefId parentId, int x, int y, int mappingFrame, boolean hFlip, boolean vFlip,
                                boolean initialized, boolean drawSubmitted, boolean pendingDelete,
                                boolean worldPositioned, boolean artHigh)
             implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
@@ -110,7 +111,10 @@ public final class EggRoboJetFlameChildInstance extends AbstractObjectInstance
         hFlip = !parent.badnikFacingLeft();
         int dx = hFlip ? -CHILD_DX : CHILD_DX;
         x = (parent.getX() + dx) & 0xFFFF;
-        y = (parent.getY() + CHILD_DY) & 0xFFFF;
+        // Refresh_ChildPositionAdjusted / loc_843D2 (FixBugs=0): live Y,
+        // then copy render bit 1 and mirror the signed child_dy word.
+        vFlip = parent.nativeVFlip();
+        y = (parent.getY() + (vFlip ? -CHILD_DY : CHILD_DY)) & 0xFFFF;
         int velocity = (short) parent.currentYVelocity();
         mappingFrame = velocity < 0 ? FRAME_RISING
                 : velocity < FAST_THRESHOLD ? FRAME_SLOW : FRAME_FAST;
@@ -141,7 +145,7 @@ public final class EggRoboJetFlameChildInstance extends AbstractObjectInstance
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.SSZ_EGG_ROBO);
         if (renderer != null && renderer.isReady()) {
             renderer.drawFrameIndexForcedPriority(mappingFrame, x, y,
-                    hFlip, false, 0, artHigh);
+                    hFlip, vFlip, 0, artHigh);
         }
     }
 
@@ -150,7 +154,7 @@ public final class EggRoboJetFlameChildInstance extends AbstractObjectInstance
         ObjectRefId parentId = context.identityTable()
                 .map(table -> table.encodeObject(parent)).orElse(null);
         return super.captureRewindState(context)
-                .withObjectSubclassExtra(new RewindExtra(parentId, x, y, mappingFrame, hFlip,
+                .withObjectSubclassExtra(new RewindExtra(parentId, x, y, mappingFrame, hFlip, vFlip,
                         initialized, drawSubmitted, pendingDelete, participatesInRomWorldTransitionOffset(), artHigh));
     }
 
@@ -162,6 +166,7 @@ public final class EggRoboJetFlameChildInstance extends AbstractObjectInstance
             y = extra.y();
             mappingFrame = extra.mappingFrame();
             hFlip = extra.hFlip();
+            vFlip = extra.vFlip();
             artHigh = extra.artHigh();
             initialized = extra.initialized();
             drawSubmitted = extra.drawSubmitted();

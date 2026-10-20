@@ -486,6 +486,13 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
 
     int currentYVelocity() { return yVelocity; }
 
+    /**
+     * Native placement render bit 1: SetUp_ObjAttributes only sets bit 2, and the
+     * EggRobo's closed set of body render writers never changes V (FixBugs=0).
+     * Dynamic position spawns preserve these original low bits; no mutable copy is needed.
+     */
+    boolean nativeVFlip() { return (getSpawn().renderFlags() & 2) != 0; }
+
     public Mode mode() { return mode; }
     public int group() { return group; }
     public int scaleIndexForTest() { return scaleIndex; }
@@ -513,7 +520,7 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
         var renderer = renderManager.getRenderer(Sonic3kObjectArtKeys.SSZ_EGG_ROBO);
         if (renderer != null && renderer.isReady()) {
             renderer.drawFrameIndexForcedPriority(
-                    mappingFrame, getRenderAnchorX(), getRenderAnchorY(), !facingLeft, false, -1, artHigh);
+                    mappingFrame, getRenderAnchorX(), getRenderAnchorY(), !facingLeft, nativeVFlip(), -1, artHigh);
         }
     }
 
