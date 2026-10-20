@@ -9,6 +9,7 @@ import java.util.concurrent.Executor;
  * cannot leave an unbounded number of canceled tasks in the broker executor.
  */
 final class MasterHttpAdmission {
+    private static final System.Logger LOG = System.getLogger(MasterHttpAdmission.class.getName());
     static final int MAX_REQUESTS = 32;
     static final int MAX_BODY_BYTES = 8 * 1024 * 1024;
 
@@ -106,6 +107,9 @@ final class MasterHttpAdmission {
             }
             try {
                 action.run();
+            } catch (RuntimeException | Error failure) {
+                LOG.log(System.Logger.Level.ERROR, "master HTTP broker action failed", failure);
+                rejectSafely(ticket);
             } finally {
                 synchronized (this) {
                     ticket.running = false;
@@ -123,8 +127,17 @@ final class MasterHttpAdmission {
             } catch (RuntimeException | Error stopped) {
                 drainScheduled = false;
                 Ticket canceled;
-                while ((canceled = queue.poll()) != null) canceled.reject();
+                while ((canceled = queue.poll()) != null) rejectSafely(canceled);
             }
+        }
+    }
+
+    private void rejectSafely(Ticket ticket) {
+        try {
+            ticket.reject();
+        } catch (RuntimeException | Error failure) {
+            // One channel's cleanup must not strand the drain or other reservations.
+            LOG.log(System.Logger.Level.ERROR, "master HTTP rejection callback failed", failure);
         }
     }
 

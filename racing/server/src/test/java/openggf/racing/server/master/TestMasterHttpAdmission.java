@@ -12,6 +12,8 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.ScheduledFuture;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
@@ -30,8 +32,296 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doThrow;
 
 class TestMasterHttpAdmission {
+    @Test
+    void malformedKeepAliveResponsePausesReadsAndRejectsSameReadOverlap() {
+        for (boolean guard : new boolean[]{false, true}) {
+            for (String completion : new String[]{"success", "overlap", "timeout"}) {
+                var admission = new MasterHttpAdmission(Runnable::run);
+                var held = new ArrayList<Object>();
+                var promises = new ArrayList<ChannelPromise>();
+                var routes = routes(admission, Runnable::run, MasterConfig.defaults());
+                var channel = new EmbeddedChannel(new HttpServerCodec(), new ChannelOutboundHandlerAdapter() {
+                    @Override
+                    public void write(ChannelHandlerContext context, Object message, ChannelPromise promise) {
+                        held.add(message);
+                        promises.add(promise);
+                    }
+                });
+                if (guard) channel.pipeline().addLast(routes.pipelineGuard());
+                channel.pipeline().addLast(new HttpObjectAggregator(73_728), routes);
+                String request = "POST /verifier/%zz HTTP/1.1\r\nHost: localhost\r\n"
+                        + "Content-Length: 16\r\n\r\n" + "x".repeat(16);
+                var wire = Unpooled.copiedBuffer(request.repeat(completion.equals("overlap") ? 1000 : 1),
+                        StandardCharsets.US_ASCII);
+                try {
+                    channel.writeInbound(wire);
+                    assertEquals(1, held.size(), completion);
+                    assertFalse(channel.config().isAutoRead(), completion);
+                    assertEquals(0, wire.refCnt());
+                    if (completion.equals("success")) {
+                        assertTrue(channel.isOpen());
+                        promises.getFirst().trySuccess();
+                        channel.runPendingTasks();
+                        assertTrue(channel.isOpen());
+                        assertTrue(channel.config().isAutoRead());
+                    } else {
+                        if (completion.equals("timeout")) {
+                            channel.advanceTimeBy(31, TimeUnit.SECONDS);
+                            channel.runScheduledPendingTasks();
+                        }
+                        assertFalse(channel.isOpen(), completion);
+                        promises.getFirst().trySuccess();
+                        assertFalse(channel.config().isAutoRead(), completion);
+                    }
+                } finally {
+                    held.forEach(io.netty.util.ReferenceCountUtil::release);
+                    promises.forEach(promise -> promise.trySuccess());
+                    channel.finishAndReleaseAll();
+                }
+            }
+        }
+    }
+
+    @Test
+    void terminalRejectionDeadlineClosesStalledWrite() {
+        for (String failure : new String[]{"exhausted", "oversized", "dispatch", "malformed"}) {
+            var admission = new MasterHttpAdmission(task -> {
+                throw new RejectedExecutionException("stopped");
+            });
+            var occupied = failure.equals("exhausted")
+                    ? admission.reserve(8 * 1024 * 1024) : null;
+            var held = new ArrayList<Object>();
+            var promises = new ArrayList<ChannelPromise>();
+            var routes = routes(admission, Runnable::run, MasterConfig.defaults());
+            var channel = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
+                @Override
+                public void write(ChannelHandlerContext context, Object message, ChannelPromise promise) {
+                    held.add(message);
+                    promises.add(promise);
+                }
+            }, routes.pipelineGuard(), routes);
+            var first = request(new byte[failure.equals("oversized") ? 73_729 : 16]);
+            if (failure.equals("malformed")) {
+                first.setUri("/verifier/%zz");
+                first.headers().set("Connection", "close");
+            }
+            var second = request(new byte[16]);
+            try {
+                channel.writeInbound(first, second);
+                assertEquals(1, held.size(), failure);
+                assertFalse(channel.config().isAutoRead(), failure);
+                assertEquals(0, first.refCnt());
+                assertEquals(0, second.refCnt());
+                channel.advanceTimeBy(29, TimeUnit.SECONDS);
+                channel.runScheduledPendingTasks();
+                assertTrue(channel.isOpen(), failure);
+                channel.advanceTimeBy(2, TimeUnit.SECONDS);
+                channel.runScheduledPendingTasks();
+                assertFalse(channel.isOpen(), failure + ": stalled write must have a close deadline");
+            } finally {
+                held.forEach(io.netty.util.ReferenceCountUtil::release);
+                promises.forEach(promise -> promise.trySuccess());
+                channel.finishAndReleaseAll();
+                if (occupied != null) occupied.finish();
+            }
+        }
+    }
+
+    @Test
+    void throwingRejectionCallbackDoesNotAbortContinuationCleanup() {
+        var broker = new ArrayDeque<Runnable>();
+        var submissions = new AtomicInteger();
+        var admission = new MasterHttpAdmission(task -> {
+            if (submissions.getAndIncrement() == 1) throw new RejectedExecutionException("stopped");
+            broker.add(task);
+        });
+        var executed = new AtomicInteger();
+        var rejected = new AtomicInteger();
+        class Arrival implements Runnable {
+            @Override
+            public void run() {
+                if (executed.incrementAndGet() < 32) {
+                    var next = admission.reserve(1);
+                    assertNotNull(next);
+                    admission.dispatch(next, () -> {
+                        try { run(); } finally { next.finish(); }
+                    }, () -> { });
+                } else {
+                    for (int index = 0; index < 2; index++) {
+                        var next = admission.reserve(1);
+                        assertNotNull(next);
+                        admission.dispatch(next, () -> { }, () -> {
+                            if (rejected.getAndIncrement() == 0) {
+                                throw new IllegalStateException("broken rejection callback");
+                            }
+                        });
+                    }
+                }
+            }
+        }
+        var first = admission.reserve(1);
+        assertNotNull(first);
+        admission.dispatch(first, () -> {
+            try { new Arrival().run(); } finally { first.finish(); }
+        }, () -> { });
+        assertDoesNotThrow(() -> broker.remove().run());
+        assertEquals(32, executed.get());
+        assertEquals(2, rejected.get());
+        var available = admission.reserve(8 * 1024 * 1024);
+        assertNotNull(available);
+        admission.dispatch(available, available::finish, () -> { });
+        assertEquals(1, broker.size(), "later dispatch must restart the broker drain");
+        broker.remove().run();
+        var reused = admission.reserve(8 * 1024 * 1024);
+        assertNotNull(reused);
+        reused.finish();
+    }
+
+    @Test
+    void exhaustedAdmissionKeepsOnlyOneRejectionWhileOutboundPromiseStalls() {
+        var broker = new ArrayDeque<Runnable>();
+        var admission = new MasterHttpAdmission(broker::add);
+        var occupied = admission.reserve(8 * 1024 * 1024);
+        assertNotNull(occupied);
+        var held = new ArrayList<Object>();
+        var promises = new ArrayList<ChannelPromise>();
+        var routes = routes(admission, broker::add, MasterConfig.defaults());
+        var channel = new EmbeddedChannel(new HttpServerCodec(), new ChannelOutboundHandlerAdapter() {
+            @Override
+            public void write(ChannelHandlerContext context, Object message, ChannelPromise promise) {
+                held.add(message);
+                promises.add(promise);
+            }
+        }, routes.pipelineGuard(), new HttpObjectAggregator(73_728), routes);
+        var wire = Unpooled.copiedBuffer(("POST /verifier/verdicts HTTP/1.1\r\n"
+                + "Host: localhost\r\nContent-Length: 16\r\n\r\n" + "x".repeat(16)).repeat(1000),
+                StandardCharsets.US_ASCII);
+        try {
+            channel.writeInbound(wire);
+            assertEquals(1, held.size(), "a held rejection must block further same-read responses");
+            assertFalse(channel.config().isAutoRead());
+            assertEquals(0, wire.refCnt(), "discarded same-read bodies must be released");
+            assertEquals(0, broker.size());
+        } finally {
+            held.forEach(io.netty.util.ReferenceCountUtil::release);
+            promises.forEach(promise -> promise.trySuccess());
+            channel.finishAndReleaseAll();
+            occupied.finish();
+        }
+    }
+
+    @Test
+    void allTerminalRejectionsDiscardFurtherFullRequestsWhileWriteStalls() {
+        for (String failure : new String[]{"exhausted", "oversized", "dispatch"}) {
+            for (boolean guard : new boolean[]{false, true}) {
+                var admission = new MasterHttpAdmission(task -> {
+                    throw new RejectedExecutionException("stopped");
+                });
+                var occupied = failure.equals("exhausted")
+                        ? admission.reserve(8 * 1024 * 1024) : null;
+                var held = new ArrayList<Object>();
+                var promises = new ArrayList<ChannelPromise>();
+                var routes = routes(admission, Runnable::run, MasterConfig.defaults());
+                var channel = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
+                    @Override
+                    public void write(ChannelHandlerContext context, Object message, ChannelPromise promise) {
+                        held.add(message);
+                        promises.add(promise);
+                    }
+                });
+                if (guard) channel.pipeline().addLast(routes.pipelineGuard());
+                channel.pipeline().addLast(routes);
+                var first = request(new byte[failure.equals("oversized") ? 73_729 : 16]);
+                var second = request(new byte[16]);
+                try {
+                    channel.writeInbound(first, second);
+                    assertEquals(1, held.size(), failure + ": terminal response must be unique");
+                    assertFalse(channel.config().isAutoRead(), failure);
+                    assertEquals(0, first.refCnt());
+                    assertEquals(0, second.refCnt());
+                } finally {
+                    held.forEach(io.netty.util.ReferenceCountUtil::release);
+                    promises.forEach(promise -> promise.trySuccess());
+                    channel.finishAndReleaseAll();
+                    if (occupied != null) occupied.finish();
+                }
+            }
+        }
+    }
+
+    @Test
+    void completionAndTimerCancellationRejectionStillReleaseAndPermitLaterBrokerWork() throws Exception {
+        var broker = new ArrayDeque<Runnable>();
+        var admission = new MasterHttpAdmission(broker::add);
+        var routes = routes(admission, broker::add, MasterConfig.defaults());
+        var channel = new EmbeddedChannel();
+        var context = mock(ChannelHandlerContext.class);
+        var executor = mock(EventExecutor.class);
+        var timeout = mock(ScheduledFuture.class);
+        when(context.channel()).thenReturn(channel);
+        when(context.executor()).thenReturn(executor);
+        when(executor.schedule(any(Runnable.class), anyLong(), eq(TimeUnit.SECONDS))).thenReturn(timeout);
+        doThrow(new RejectedExecutionException("completion executor stopped"))
+                .when(executor).execute(any(Runnable.class));
+        when(timeout.cancel(false)).thenThrow(new RejectedExecutionException("timer removal stopped"));
+        when(context.close()).thenAnswer(call -> channel.close());
+        try {
+            routes.channelRead(context, request(new byte[4096]));
+            assertDoesNotThrow(() -> broker.remove().run());
+            var available = admission.reserve(8 * 1024 * 1024);
+            assertNotNull(available, "timer cancellation failure must not leak the ticket");
+            var completed = new AtomicBoolean();
+            admission.dispatch(available, () -> {
+                completed.set(true);
+                available.finish();
+            }, () -> { });
+            assertEquals(1, broker.size(), "drain scheduling must remain live");
+            broker.remove().run();
+            assertTrue(completed.get());
+        } finally {
+            channel.finishAndReleaseAll();
+        }
+    }
+
+    @Test
+    void escapingBrokerActionDoesNotStrandOtherOrFutureRequests() {
+        var broker = new ArrayDeque<Runnable>();
+        var admission = new MasterHttpAdmission(broker::add);
+        var failed = admission.reserve(4096);
+        var healthy = admission.reserve(4096);
+        assertNotNull(failed);
+        assertNotNull(healthy);
+        var completed = new AtomicInteger();
+        admission.dispatch(failed, () -> {
+            throw new IllegalStateException("unexpected cleanup failure");
+        }, () -> { });
+        admission.dispatch(healthy, () -> {
+            completed.incrementAndGet();
+            healthy.finish();
+        }, () -> { });
+        assertDoesNotThrow(() -> broker.remove().run());
+        while (!broker.isEmpty()) broker.remove().run();
+        assertEquals(1, completed.get());
+        var available = admission.reserve(8 * 1024 * 1024);
+        assertNotNull(available, "escaping actions must release their reservation");
+        admission.dispatch(available, () -> {
+            completed.incrementAndGet();
+            available.finish();
+        }, () -> { });
+        assertEquals(1, broker.size());
+        broker.remove().run();
+        assertEquals(2, completed.get());
+    }
+
     @Test
     void brokerDrainYieldsAfterOneBoundedSliceUnderContinuousArrival() {
         var broker = new ArrayDeque<Runnable>();

@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
@@ -59,6 +60,9 @@ public final class MasterHttpRoutes extends SimpleChannelInboundHandler<FullHttp
     private final Map<String, Long> lastUploadByIdentity;
     private final MasterHttpAdmission admission;
     private Pending pending;
+    private boolean terminal;
+    private boolean responsePending;
+    private ScheduledFuture<?> closeTimeout;
 
     private static final class Pending {
         final MasterHttpAdmission.Ticket ticket;
@@ -69,8 +73,11 @@ public final class MasterHttpRoutes extends SimpleChannelInboundHandler<FullHttp
         }
 
         void finish() {
-            if (timeout != null) timeout.cancel(false);
-            ticket.finish();
+            try {
+                cancelTimeout(timeout);
+            } finally {
+                ticket.finish();
+            }
         }
     }
 
@@ -129,8 +136,8 @@ public final class MasterHttpRoutes extends SimpleChannelInboundHandler<FullHttp
 
     @Override
     protected void channelRead0(ChannelHandlerContext context, FullHttpRequest request) {
-        if (!context.channel().isActive()) return;
-        if (pending != null) {
+        if (!context.channel().isActive() || terminal) return;
+        if (pending != null || responsePending) {
             // autoRead cannot stop messages already decoded from the current TCP read.
             // Closing without a second response preserves HTTP response ordering.
             context.close();
@@ -140,8 +147,7 @@ public final class MasterHttpRoutes extends SimpleChannelInboundHandler<FullHttp
         try {
             path = new QueryStringDecoder(request.uri()).path();
         } catch (IllegalArgumentException malformedUri) {
-            write(context, response(HttpResponseStatus.BAD_REQUEST),
-                    HttpUtil.isKeepAlive(request));
+            reject(context, HttpResponseStatus.BAD_REQUEST, HttpUtil.isKeepAlive(request));
             return;
         }
         if (!path.startsWith("/recordings") && !path.startsWith("/verifier")) {
@@ -150,12 +156,12 @@ public final class MasterHttpRoutes extends SimpleChannelInboundHandler<FullHttp
         }
         int bytes = request.content().readableBytes();
         if (bytes > maxHttpBodyBytes(config)) {
-            write(context, response(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE), false);
+            reject(context, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE);
             return;
         }
         MasterHttpAdmission.Ticket ticket = admission.reserve(bytes);
         if (ticket == null) {
-            write(context, response(HttpResponseStatus.SERVICE_UNAVAILABLE), false);
+            reject(context, HttpResponseStatus.SERVICE_UNAVAILABLE);
             return;
         }
         Pending accepted = new Pending(ticket);
@@ -193,7 +199,41 @@ public final class MasterHttpRoutes extends SimpleChannelInboundHandler<FullHttp
         } catch (RuntimeException | Error failure) {
             pending = null;
             accepted.finish();
-            write(context, response(HttpResponseStatus.SERVICE_UNAVAILABLE), false);
+            reject(context, HttpResponseStatus.SERVICE_UNAVAILABLE);
+        }
+    }
+
+    private void reject(ChannelHandlerContext context, HttpResponseStatus status) {
+        reject(context, status, false);
+    }
+
+    private void reject(ChannelHandlerContext context, HttpResponseStatus status, boolean keepAlive) {
+        // A write may remain pending: stop both new reads and already-decoded messages
+        // before submitting the response, without retaining a body ticket.
+        terminal = !keepAlive;
+        responsePending = true;
+        context.channel().config().setAutoRead(false);
+        try {
+            closeTimeout = context.executor().schedule(() -> {
+                context.close();
+            }, 30, TimeUnit.SECONDS);
+            write(context, response(status), keepAlive).addListener(future -> {
+                cancelTimeout(closeTimeout);
+                responsePending = false;
+                if (future.isSuccess() && keepAlive && context.channel().isActive()) {
+                    context.channel().config().setAutoRead(true);
+                }
+            });
+        } catch (RuntimeException | Error stopped) {
+            context.close();
+        }
+    }
+
+    private static void cancelTimeout(ScheduledFuture<?> timeout) {
+        try {
+            if (timeout != null) timeout.cancel(false);
+        } catch (RejectedExecutionException stopped) {
+            // Netty may reject removal of a canceled timer during executor shutdown.
         }
     }
 
@@ -207,8 +247,10 @@ public final class MasterHttpRoutes extends SimpleChannelInboundHandler<FullHttp
         return new ChannelInboundHandlerAdapter() {
             @Override
             public void channelRead(ChannelHandlerContext context, Object message) {
-                if (!context.channel().isActive()
-                        || (message instanceof HttpRequest && pending != null)) {
+                if (terminal) {
+                    ReferenceCountUtil.release(message);
+                } else if (!context.channel().isActive()
+                        || (message instanceof HttpRequest && (pending != null || responsePending))) {
                     ReferenceCountUtil.release(message);
                     context.close();
                 } else {
@@ -239,6 +281,7 @@ public final class MasterHttpRoutes extends SimpleChannelInboundHandler<FullHttp
 
     @Override
     public void channelInactive(ChannelHandlerContext context) throws Exception {
+        cancelTimeout(closeTimeout);
         if (pending != null) {
             pending.finish();
             pending = null;
@@ -253,6 +296,8 @@ public final class MasterHttpRoutes extends SimpleChannelInboundHandler<FullHttp
 
     @Override
     public void handlerRemoved(ChannelHandlerContext context) {
+        cancelTimeout(closeTimeout);
+        if (terminal || responsePending) context.close();
         if (pending != null) {
             pending.finish();
             pending = null;

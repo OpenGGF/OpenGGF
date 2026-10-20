@@ -7,7 +7,8 @@ Unreleased. The earlier development themes remain in
 
 - **Multiplayer services:** The master recording/verifier API bounds outstanding
   requests and copied bodies across connections, closes overlapping HTTP pipelines,
-  and releases queued work on disconnect or timeout. Netty and Jackson use their
+  discards further input during terminal rejection writes, and releases queued work
+  on disconnect or timeout even during executor shutdown. Netty and Jackson use their
   patched 4.1.139.Final and 2.22.3 releases.
 
 - **Super Sonic Bros.:** a new example mod, a platform fighter for one to four
