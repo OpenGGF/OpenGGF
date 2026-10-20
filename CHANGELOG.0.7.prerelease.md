@@ -9,7 +9,8 @@ Unreleased. The earlier development themes remain in
   raster work, lines clip before traversal, and unchanged presentations reuse
   composed images; invisible geometry skips raster row traversal. Incoming scenes
   coalesce within ordered packet boundaries at transport and room delivery, with
-  each mailbox capped at 256 entries / 4 MiB retained bytes. Hosting defaults to literal loopback; explicit
+  each mailbox capped at 256 entries / 4 MiB retained bytes. Ended room state stays
+  final across buffered reconnects and failed sends. Hosting defaults to literal loopback; explicit
   LAN hosting displays a private session invite and verifies a fresh HMAC proof
   before admitting a guest. LAN game traffic remains plaintext.
 

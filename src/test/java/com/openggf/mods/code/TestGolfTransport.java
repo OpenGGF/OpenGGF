@@ -7,6 +7,13 @@ import java.nio.file.Path;
 class TestGolfTransport {
     @TempDir Path temp;
 
+    @Test void reconnectCandidateCountOverflowCannotReviveTerminalStateOrAppendControls() throws Exception {
+        TestGolfProtocol.runProbe(temp, "RoomProbe", "reconnectCandidateCountOverflowKeepsTerminalStateAndOrderingFinal");
+    }
+    @Test void inFlightSendFailureCannotPublishAfterCountOverflowEndsRoom() throws Exception {
+        TestGolfProtocol.runProbe(temp, "RoomProbe", "sendFailureCountOverflowCannotPublishAfterTerminal");
+    }
+
     @Test void roomPreservesViewsAcrossOrderedWireBarriers() throws Exception {
         TestGolfProtocol.runProbe(temp, "RoomProbe", "roomCoalescesOnlyAdjacentSameShotViewsAcrossWireDelivery");
     }

@@ -126,7 +126,9 @@ public final class GolfRoom implements AutoCloseable {
                 if (candidates.size() >= 2) connection.close(); else candidates.add(new Candidate(connection, seconds()));
             }
             for (Candidate candidate : List.copyOf(candidates)) {
+                if (ended) return;
                 for (GolfConnection.Event event : candidate.connection.drain()) {
+                    if (ended) return;
                     if (event instanceof GolfConnection.Received received) {
                         if (candidate.connection == peer) fromGuest(received.packet()); else handshake(candidate, received.packet());
                     } else {
@@ -354,6 +356,7 @@ public final class GolfRoom implements AutoCloseable {
         end(CONCEDED_REASON, true, leave);
     }
     private void emit(GolfPacket packet) {
+        if (ended) return; // An in-flight send can fail and end the room before publication resumes.
         if (packet instanceof ViewFrame view && events.peekLast() instanceof Received received
                 && received.packet() instanceof ViewFrame previous && previous.id().equals(view.id())) {
             if (view.revision() <= previous.revision()) return;

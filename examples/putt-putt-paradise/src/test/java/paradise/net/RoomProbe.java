@@ -9,6 +9,85 @@ import static paradise.net.ProtocolProbe.*;
 
 /** Two production rooms using actual sockets; gameplay decisions remain in this caller fixture. */
 public final class RoomProbe {
+    private static void primeHostMailboxWithOrderedControls(Rooms rooms, int count) throws Exception {
+        for (int i = 0; i < count; i++) {
+            rooms.host.tick(); rooms.host.resume();
+            boolean[] delivered = {false};
+            TransportProbe.await(() -> {
+                rooms.guest.tick(); delivered[0] |= rooms.guest.drainEvents().stream().anyMatch(event ->
+                        event instanceof GolfRoom.Received r && r.packet() instanceof Resume);
+                return delivered[0];
+            }, 3000, "priming control delivered");
+        }
+        check(mailbox(rooms.host).size() == count, "room retains the ordered priming controls");
+    }
+
+    public static void sendFailureCountOverflowCannotPublishAfterTerminal() throws Exception {
+        try (var rooms = new Rooms()) {
+            var host = rooms.host; var guest = rooms.guest;
+            pump(host, guest, () -> host.state().ready() && guest.state().ready(), "send-failure room ready");
+            var turn = new ShotId(host.state().match(), 1, 1, 1, 0); var score = new Score(0, 0, false);
+            host.publishTurn(new TurnOpened(turn, 100, 200, 0, 5, score, score));
+            pump(host, guest, () -> guest.state().remoteTurnOpened() != null, "send-failure turn");
+            host.drainEvents(); guest.drainEvents();
+            primeHostMailboxWithOrderedControls(rooms, 256);
+            connection(host).close(); // Publication sees a failed send before tick observes disconnect.
+            host.acceptShot(request(turn));
+            var state = host.state(); var terminal = host.drainEvents();
+            check(state.ended() && !state.ready() && !state.connected() && state.held()
+                            && state.message().equals("room event queue overflow")
+                            && terminal.size() == 1 && terminal.getFirst() instanceof GolfRoom.Disconnected d
+                            && d.reason().equals("room event queue overflow"),
+                    "an in-flight publication cannot append after count-overflow end: " + terminal);
+            check(retainedBytes(host) == 0, "terminal drain releases in-flight failure accounting");
+        }
+    }
+
+    public static void reconnectCandidateCountOverflowKeepsTerminalStateAndOrderingFinal() throws Exception {
+        try (var rooms = new Rooms()) {
+            var host = rooms.host; var guest = rooms.guest;
+            pump(host, guest, () -> host.state().ready() && guest.state().ready(), "authenticated first connection");
+            UUID match = guest.state().match(), token = guest.state().roomToken();
+            host.drainEvents(); guest.drainEvents();
+            // Fill through normal host publication, draining only the remote consumer.
+            // This makes the reconnect batch reach the room count bound before its
+            // outbound control queue could become a competing overflow mechanism.
+            primeHostMailboxWithOrderedControls(rooms, 250);
+            connection(guest).close(); // Do not tick the guest again: reconnect is the controlled raw peer below.
+            TransportProbe.await(() -> { host.tick(); return !host.state().connected(); }, 3000, "host registers disconnect");
+            TransportProbe.await(() -> host.activeWorkers() == 1, 3000, "original socket retires before reconnect");
+            try (var raw = new java.net.Socket("127.0.0.1", host.boundPort())) {
+                var bytes = new java.io.ByteArrayOutputStream();
+                GolfCodec.write(bytes, new Hello(prints(), "tails"));
+                GolfCodec.write(bytes, new Reconnect(match, 1, token, 0, 0));
+                for (int i = 0; i < 130; i++) GolfCodec.write(bytes, new Ready(match, 1, token, prints(), "tails"));
+                raw.getOutputStream().write(bytes.toByteArray());
+                // Observe admission only: the actual tick must drain this entire
+                // decoded socket batch and exercise the candidate-to-peer handoff.
+                Field listenerField = GolfRoom.class.getDeclaredField("listener"); listenerField.setAccessible(true);
+                GolfListener listener = (GolfListener)listenerField.get(host);
+                Field acceptedField = GolfListener.class.getDeclaredField("accepted"); acceptedField.setAccessible(true);
+                Field peersField = GolfListener.class.getDeclaredField("peers"); peersField.setAccessible(true);
+                @SuppressWarnings("unchecked") var pending = (ArrayDeque<GolfConnection>)acceptedField.get(listener);
+                Object peersLock = peersField.get(listener);
+                var candidate = new GolfConnection[1];
+                TransportProbe.await(() -> {
+                    synchronized (peersLock) { candidate[0] = pending.peekFirst(); }
+                    return candidate[0] != null && candidate[0].stats().incomingCommands() == 132;
+                }, 3000, "complete reconnect candidate batch buffered below the transport count cap");
+                host.tick();
+                var state = host.state(); var terminal = host.drainEvents();
+                check(state.ended() && !state.ready() && !state.connected() && state.held()
+                                && state.message().equals("room event queue overflow")
+                                && terminal.size() == 1 && terminal.getFirst() instanceof GolfRoom.Disconnected d
+                                && d.reason().equals("room event queue overflow"),
+                        "count-overflow terminal state/order must remain final: " + state + ", queued=" + terminal.size());
+                check(candidate[0].isClosed() && retainedBytes(host) == 0, "terminal transport and accounting stay closed/empty");
+                host.tick();
+                check(host.state().equals(state) && host.drainEvents().isEmpty(), "later ticks cannot revive terminal state or delivery");
+            }
+        }
+    }
     @SuppressWarnings("unchecked")
     private static ArrayDeque<GolfRoom.Event> mailbox(GolfRoom room) throws Exception {
         Field field = GolfRoom.class.getDeclaredField("events"); field.setAccessible(true);
