@@ -8,6 +8,9 @@ import com.openggf.net.protocol.ControlMessage;
 import com.openggf.net.protocol.GhostPackets;
 import com.openggf.net.protocol.Protocol;
 import com.openggf.net.protocol.ProtocolViolationException;
+import com.openggf.net.protocol.AuthenticationTranscript;
+import com.openggf.net.protocol.NetworkEndpointPolicy;
+import com.openggf.net.host.HostLinkAuthentication;
 
 import javax.net.ssl.SSLContext;
 import java.net.URI;
@@ -27,6 +30,9 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.FutureTask;
 
 /** Client for master browsing plus direct/relay room join orchestration. */
 @com.openggf.game.ModApi
@@ -49,6 +55,16 @@ public final class MasterClient implements AutoCloseable {
     private final ControlJsonCodec codec = new ControlJsonCodec();
     private final PlayerIdentity identity;
     private final ClientHandshake handshake;
+    private volatile Supplier<String> transportBinding = () -> AuthenticationTranscript.LOCAL_PLAINTEXT;
+    private final Object powLock = new Object();
+    private final ThreadPoolExecutor powExecutor = new ThreadPoolExecutor(1, 1, 0, TimeUnit.MILLISECONDS,
+            new ArrayBlockingQueue<>(1), Thread.ofVirtual().name("master-pow-", 0).factory());
+    private FutureTask<Void> powTask;
+    private volatile long powGeneration;
+    /** Under sendLock: one replaceable proof behind the current transport write. */
+    private String pendingPowText;
+    private long pendingPowGeneration;
+    private boolean powWriteQueued;
     private volatile WebSocket webSocket;
     private volatile ControlMessage.JoinAccepted joinAccepted;
     private volatile HostMasterLink hostLink;
@@ -58,19 +74,30 @@ public final class MasterClient implements AutoCloseable {
     private MasterClient(PlayerIdentity identity, String displayName,
                          String determinismFingerprint) {
         this.identity = identity;
-        handshake = new ClientHandshake(identity, displayName, determinismFingerprint);
+        handshake = new ClientHandshake(identity, displayName, determinismFingerprint, null,
+                AuthenticationTranscript.Role.MASTER, () -> transportBinding.get());
     }
 
     public static CompletableFuture<MasterClient> connect(
             URI uri, PlayerIdentity identity, String displayName,
             String determinismFingerprint, SSLContext sslContextOrNull) {
+        try { NetworkEndpointPolicy.requireWebSocket(uri); }
+        catch (IllegalArgumentException invalid) { return CompletableFuture.failedFuture(invalid); }
         MasterClient client = new MasterClient(identity, displayName, determinismFingerprint);
         CompletableFuture<MasterClient> admitted = new CompletableFuture<>();
         WebSocket.Listener listener = client.listener(admitted);
         HttpClient.Builder http = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofMillis(MASTER_REPLY_TIMEOUT_MILLIS));
-        if (sslContextOrNull != null) {
-            http.sslContext(sslContextOrNull);
+        if ("wss".equalsIgnoreCase(uri.getScheme())) {
+            try {
+                ObservedTlsContext observed = new ObservedTlsContext(
+                        sslContextOrNull == null ? SSLContext.getDefault() : sslContextOrNull);
+                client.transportBinding = observed::binding;
+                http.sslContext(observed);
+            } catch (java.security.GeneralSecurityException invalid) {
+                client.close();
+                return CompletableFuture.failedFuture(invalid);
+            }
         }
         http.build().newWebSocketBuilder().buildAsync(uri, listener)
                 .whenComplete((socket, error) -> {
@@ -235,7 +262,10 @@ public final class MasterClient implements AutoCloseable {
         CompletableFuture<RaceConnection> joined = new CompletableFuture<>();
         Thread.ofVirtual().name("relay-room-handshake").start(() -> {
             ClientHandshake handshake = new ClientHandshake(
-                    identity, displayName, determinismFingerprint, expectedServerId);
+                    identity, displayName, determinismFingerprint, expectedServerId,
+                    AuthenticationTranscript.Role.ROOM_RELAY,
+                    raw instanceof RelayRaceConnection relay ? () -> relay.parent.transportBinding.get()
+                            : () -> { throw new IllegalStateException("relay has no authenticated master transport"); });
             raw.sendControl(handshake.hello());
             long deadline = System.nanoTime()
                     + TimeUnit.MILLISECONDS.toNanos(RaceClient.JOIN_TIMEOUT_MILLIS);
@@ -308,6 +338,7 @@ public final class MasterClient implements AutoCloseable {
     }
 
     public void bindHostLink(HostMasterLink link) {
+        HostLinkAuthentication.bind(link, () -> transportBinding.get());
         hostLink = link;
     }
 
@@ -446,8 +477,9 @@ public final class MasterClient implements AutoCloseable {
                 case ControlMessage.Welcome welcome -> sendRawText(codec.encode(
                         null, handshake.onWelcome(welcome)));
                 case ControlMessage.PowChallenge challenge ->
-                        Thread.ofVirtual().start(() -> solveChallenge(socket, challenge, admitted));
+                        startChallenge(socket, challenge, admitted);
                 case ControlMessage.JoinAccepted accepted -> {
+                    cancelPow();
                     if (accepted.playerSlot() != -1 || accepted.room() != null
                             || accepted.round() != null) {
                         throw new ProtocolViolationException("invalid master admission");
@@ -468,21 +500,82 @@ public final class MasterClient implements AutoCloseable {
         }
     }
 
-    private void solveChallenge(WebSocket socket, ControlMessage.PowChallenge challenge,
+    private void startChallenge(WebSocket socket, ControlMessage.PowChallenge challenge,
                                 CompletableFuture<MasterClient> admitted) {
-        try {
-            long nonce = switch (challenge.kind()) {
-                case "IDENTITY" -> identity.creationPowNonce(challenge.difficultyBits());
-                case "JOIN" -> ProofOfWork.solve(
-                        Base64.getDecoder().decode(challenge.prefixBase64()),
-                        challenge.difficultyBits());
-                default -> throw new ProtocolViolationException("unknown proof challenge");
-            };
-            sendRawText(codec.encode(null,
-                    new ControlMessage.PowSolution(challenge.kind(), nonce)));
-        } catch (Exception e) {
-            fail(socket, admitted, e);
+        if (challenge.difficultyBits() < 0 || challenge.difficultyBits() > 24)
+            throw new ProtocolViolationException("proof challenge exceeds client work budget");
+        byte[] payload = switch (challenge.kind()) {
+            case "IDENTITY" -> identity.publicKeyEncoded();
+            case "JOIN" -> Base64.getDecoder().decode(challenge.prefixBase64());
+            default -> throw new ProtocolViolationException("unknown proof challenge");
+        };
+        synchronized (powLock) {
+            if (retired.get() || admitted.isDone()) return;
+            long generation = ++powGeneration;
+            if (powTask != null) powTask.cancel(true);
+            powExecutor.purge();
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30);
+            powTask = new FutureTask<>(() -> {
+                try {
+                    long nonce = ProofOfWork.solve(payload, challenge.difficultyBits(), deadline);
+                    synchronized (powLock) {
+                        if (generation != powGeneration || retired.get() || admitted.isDone()) return null;
+                        // Supersession and proof reservation share the lock; stale workers cannot reorder proofs.
+                        sendPowText(codec.encode(null, new ControlMessage.PowSolution(challenge.kind(), nonce)), generation);
+                    }
+                } catch (Exception failure) {
+                    synchronized (powLock) {
+                        if (generation != powGeneration || retired.get()) return null;
+                    }
+                    fail(socket, admitted, failure);
+                }
+                return null;
+            });
+            powExecutor.execute(powTask);
         }
+    }
+
+    private void cancelPow() {
+        synchronized (powLock) {
+            ++powGeneration;
+            if (powTask != null) { powTask.cancel(true); powTask = null; }
+            powExecutor.shutdownNow();
+        }
+        synchronized (sendLock) {
+            pendingPowText = null;
+        }
+    }
+
+    private void sendPowText(String text, long generation) {
+        WebSocket socket = webSocket;
+        if (socket == null) return;
+        PendingSend send = null;
+        synchronized (sendLock) {
+            if (retired.get() || generation != powGeneration) return;
+            pendingPowText = text;
+            pendingPowGeneration = generation;
+            if (!powWriteQueued) {
+                powWriteQueued = true;
+                // Reserve this ordering position once. Further solves replace the
+                // slot instead of retaining another continuation per challenge.
+                send = reserveSend(() -> dispatchPowText(socket));
+            }
+        }
+        if (send != null) send.dispatch();
+    }
+
+    private CompletableFuture<WebSocket> dispatchPowText(WebSocket socket) {
+        String text;
+        long generation;
+        synchronized (sendLock) {
+            text = pendingPowText;
+            generation = pendingPowGeneration;
+            pendingPowText = null;
+            powWriteQueued = false;
+        }
+        // No transport calls or user continuations run while holding sendLock.
+        return text == null || retired.get() || discardQueuedSends || generation != powGeneration
+                ? CompletableFuture.completedFuture(socket) : socket.sendText(text, true);
     }
 
     private boolean completeReply(ControlMessage message) {
@@ -596,6 +689,7 @@ public final class MasterClient implements AutoCloseable {
             drainPending(pendingCreates, pending);
             drainPending(pendingJoins, pending);
         }
+        cancelPow();
         for (CompletableFuture<?> future : pending) future.completeExceptionally(failure);
         RelayRaceConnection relay = attached.get();
         if (relay != null) relay.signalDisconnected(failure.getMessage());

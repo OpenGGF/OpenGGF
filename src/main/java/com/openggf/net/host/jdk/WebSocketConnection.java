@@ -28,7 +28,14 @@ import javax.net.ssl.SSLSocket;
  * serialized room executor, in order, after {@code onConnected} and before
  * {@code onDisconnected}.
  */
-final class WebSocketConnection implements HubConnection {
+final class WebSocketConnection implements HubConnection, com.openggf.net.hub.HandshakeTransport {
+    @Override public String authenticationBinding() {
+        String pin = host.tlsCertificateSha256();
+        if (pin != null) return "tls-leaf-sha256:" + pin;
+        if (com.openggf.net.protocol.NetworkEndpointPolicy.literalLoopback(remoteHost()))
+            return com.openggf.net.protocol.AuthenticationTranscript.LOCAL_PLAINTEXT;
+        throw new IllegalArgumentException("plaintext room requires literal loopback");
+    }
     private static final int READ_BUFFER_BYTES = 8192;
     private static final int WRITE_BUFFER_BYTES = 16384;
 

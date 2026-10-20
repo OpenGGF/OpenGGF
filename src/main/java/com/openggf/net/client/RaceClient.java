@@ -5,6 +5,8 @@ import com.openggf.net.protocol.ControlJsonCodec;
 import com.openggf.net.protocol.ControlMessage;
 import com.openggf.net.protocol.GhostPackets;
 import com.openggf.net.protocol.ProtocolViolationException;
+import com.openggf.net.protocol.AuthenticationTranscript;
+import com.openggf.net.protocol.NetworkEndpointPolicy;
 
 import java.net.URI;
 import java.net.Socket;
@@ -94,6 +96,8 @@ public final class RaceClient implements RaceConnection {
             URI wsUri, PlayerIdentity identity, String displayName,
             String determinismFingerprint, String certificateSha256,
             String expectedServerId) {
+        try { NetworkEndpointPolicy.requireWebSocket(wsUri); }
+        catch (IllegalArgumentException invalid) { return CompletableFuture.failedFuture(invalid); }
         if ((certificateSha256 == null) != (expectedServerId == null)
                 || (expectedServerId != null && expectedServerId.isBlank())) {
             return CompletableFuture.failedFuture(new IllegalArgumentException(
@@ -104,8 +108,17 @@ public final class RaceClient implements RaceConnection {
                     "pinned direct rooms require wss"));
         }
         RaceClient client = new RaceClient();
+        final ObservedTlsContext tls;
+        try {
+            tls = "wss".equalsIgnoreCase(wsUri.getScheme()) ? new ObservedTlsContext(
+                    certificateSha256 == null ? SSLContext.getDefault() : pinnedSslContext(certificateSha256)) : null;
+        } catch (GeneralSecurityException | IllegalArgumentException invalid) {
+            return CompletableFuture.failedFuture(invalid);
+        }
         ClientHandshake handshake = new ClientHandshake(
-                identity, displayName, determinismFingerprint, expectedServerId);
+                identity, displayName, determinismFingerprint, expectedServerId,
+                AuthenticationTranscript.Role.ROOM_DIRECT,
+                tls == null ? () -> AuthenticationTranscript.LOCAL_PLAINTEXT : tls::binding);
         CompletableFuture<RaceClient> joined = new CompletableFuture<>();
 
         WebSocket.Listener listener = new WebSocket.Listener() {
@@ -226,13 +239,7 @@ public final class RaceClient implements RaceConnection {
 
         HttpClient.Builder http = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofMillis(JOIN_TIMEOUT_MILLIS));
-        if (certificateSha256 != null) {
-            try {
-                http.sslContext(pinnedSslContext(certificateSha256));
-            } catch (GeneralSecurityException | IllegalArgumentException e) {
-                return CompletableFuture.failedFuture(e);
-            }
-        }
+        if (tls != null) http.sslContext(tls);
         http.build()
                 .newWebSocketBuilder()
                 .buildAsync(wsUri, listener)

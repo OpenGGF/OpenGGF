@@ -13,6 +13,8 @@ import java.util.function.Consumer;
 /** Player-host endpoint for guests tunneled through the host's master connection. */
 @com.openggf.game.ModApi
 public final class HostMasterLink {
+    volatile java.util.function.Supplier<String> authenticationBinding =
+            () -> { throw new IllegalStateException("master transport has not been bound"); };
     @com.openggf.game.ModApi
     public interface MessageSink {
         void sendControl(ControlMessage message);
@@ -52,7 +54,10 @@ public final class HostMasterLink {
     public void onMasterControl(ControlMessage message) {
         switch (message) {
             case ControlMessage.RelayGuestOpen open -> {
-                HubConnection connection = new TunnelConnection(open.guestId());
+                TunnelConnection tunnel = new TunnelConnection(open.guestId());
+                HubConnection connection = HostLinkAuthentication.boundTunnel(tunnel,
+                        () -> authenticationBinding.get());
+                tunnel.registeredConnection = connection;
                 HubConnection previous = guests.put(open.guestId(), connection);
                 if (previous != null) {
                     onDisconnected.accept(previous);
@@ -90,6 +95,7 @@ public final class HostMasterLink {
 
     private final class TunnelConnection implements HubConnection {
         private final int guestId;
+        private HubConnection registeredConnection = this;
 
         private TunnelConnection(int guestId) {
             this.guestId = guestId;
@@ -104,11 +110,11 @@ public final class HostMasterLink {
         }
 
         @Override public void close(String reason) {
-            if (guests.remove(guestId, this)) {
+            if (guests.remove(guestId, registeredConnection)) {
                 try {
                     sink.sendControl(new ControlMessage.RelayGuestClose(guestId, reason));
                 } finally {
-                    onDisconnected.accept(this);
+                    onDisconnected.accept(registeredConnection);
                 }
             }
         }

@@ -784,8 +784,8 @@ folder. Edit them from the **Settings** row of the Time Attack menu; changes sav
 | `hostPort` | `27888` | Port for player-hosted rooms (manual LAN and master-listed direct rooms), served as a pinned TLS WebSocket. |
 | `lastJoinAddress` | `""` | Most recently joined complete LAN invite; it prefills the invite field. |
 | `displayName` | `""` | Multiplayer display name; blank uses the identity prefix. |
-| `masterUrl` | `""` | Master-server WebSocket URL for browsing rooms; browsing is unavailable while blank. |
-| `masterTrustInsecure` | `false` | Development only: trust any master-server TLS certificate. |
+| `masterUrl` | `""` | Master-server `wss://` URL for browsing rooms; blank disables browsing. Plaintext `ws://` is allowed only with a literal loopback IPv4/IPv6 address, not `localhost` or other hostnames. |
+| `masterTrustInsecure` | `false` | Local development only: trust master-server and recording-upload TLS certificates at literal loopback addresses. Insecure upload mode rejects remote endpoints before taking custody of a recording; remote masters/uploads require normal certificate validation. |
 | `minimap` | `true` | Show the multiplayer minimap progress strip. |
 
 ### Racing server: master verifier settings

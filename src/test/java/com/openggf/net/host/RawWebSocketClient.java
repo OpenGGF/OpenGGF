@@ -128,7 +128,14 @@ public final class RawWebSocketClient implements AutoCloseable {
         if (upgrade() != 101) {
             throw new IOException("upgrade refused");
         }
-        ClientHandshake handshake = new ClientHandshake(identity, displayName, fingerprint);
+        ClientHandshake handshake = new ClientHandshake(identity, displayName, fingerprint, null,
+                com.openggf.net.protocol.AuthenticationTranscript.Role.ROOM_DIRECT,
+                () -> {
+                    if (!(socket instanceof SSLSocket tls)) return com.openggf.net.protocol.AuthenticationTranscript.LOCAL_PLAINTEXT;
+                    try { return com.openggf.net.protocol.AuthenticationTranscript.certificateBinding(
+                            tls.getSession().getPeerCertificates()[0]); }
+                    catch (javax.net.ssl.SSLPeerUnverifiedException e) { throw new IllegalStateException(e); }
+                });
         sendText(ControlCodec.encode(null, handshake.hello()));
         ControlMessage welcome = nextControl();
         if (!(welcome instanceof ControlMessage.Welcome typed)) {

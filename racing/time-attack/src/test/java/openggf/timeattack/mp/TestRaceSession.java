@@ -59,6 +59,17 @@ import static org.junit.jupiter.api.Assertions.fail;
  */
 @Timeout(120)
 class TestRaceSession {
+    @ParameterizedTest
+    @ValueSource(strings = {"ws://example.com/master", "ws://localhost/master", "wss://user@example.com/master"})
+    void browserRejectsUnsafeEndpointBeforeLaunchingAConnectWorker(String url) {
+        var settings = settings(27900);
+        settings.setMasterUrl(url);
+        var session = session("unsafe", settings, new MemoryModStorage(), new Launches());
+        session.browse(SETUP, FP);
+        assertEquals(RaceSession.State.IDLE, session.state());
+        assertEquals(0, session.connectWorkersRunning());
+        assertTrue(session.consumeNotice().startsWith("Invalid master server URL"));
+    }
     private static final String FP = "0.8:cafe1234";
     private static final RaceSession.RoundSetup SETUP =
             new RaceSession.RoundSetup("s2", 0, 0, "sonic", "OPEN", null, 60);

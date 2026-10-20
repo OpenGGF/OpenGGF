@@ -117,7 +117,8 @@ public final class RoomHost {
     public void onConnected(HubConnection connection) {
         members.put(connection, new Member(connection,
                 new HostHandshake(hostIdentity.fingerprint(),
-                        config.requiredDeterminismFingerprint()),
+                        config.requiredDeterminismFingerprint(), HandshakeTransport.role(connection),
+                        HandshakeTransport.binding(connection)),
                 wallClockMillis.getAsLong()));
     }
 
