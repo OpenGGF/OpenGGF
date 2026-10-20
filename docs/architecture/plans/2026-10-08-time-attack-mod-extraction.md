@@ -524,3 +524,64 @@ not introduced into next where those examples do not exist.
   changes are made. Next therefore has **675 passing guards and one inherited failure**,
   not a green guard suite.
 - Final next `-DskipTests package`: passed; bundled Time Attack validator reports zero findings. Artifact inspection confirms shared core networking, separate mod/server code, and no Netty/SQLite/Bouncy Castle runtime classes in the engine artifact.
+
+### Full develop → next integration — 2026-10-12
+
+User requested the feature branch into develop, then develop into next. The
+feature tip already equals remote develop `f02bdbfd57`; local develop fast-forwards
+from `e76a380c3d`. Next's pre-integration base is `e82efe28be`. This merge brings
+both histories together instead of another selective Time Attack forward-port.
+
+The 27 textual conflicts resolve to develop's Java 25 packaging, retained
+scene/act bridge, mutator admission, scene audio, mod reload and creator API
+additions. Both mutator restrictions and hosted-run restrictions survive stage
+entry. Time Attack, shared networking, the scene host and gameplay launch/return
+implementation match develop. Next retains its 0.8.prerelease release line,
+policy target, HUD left-edge option, address clipboard input and security records.
+Its compiler guard keeps file-backed diagnostics and guaranteed child cleanup,
+with develop's measured 2 GiB heap and six-minute timeout; the competing pipe
+reader is removed. Both branches' measurement hazards are retained. The candidate
+0.7 API pin is exported from the actual compiled merged source.
+
+Validation uses Java 25 from a temporary Temurin JDK and all three verified
+absolute ROM paths. The change-based plan against `e82efe28be` selects 3,155
+ordinary candidates and guards. The documented macOS AWT/GLFW full-suite stall
+above remains a host limitation: do not repeat that same long-lived test JVM.
+Local validation therefore consists of 124 focused integration classes, a fresh
+guards JVM, and packaging. This is explicitly partial validation; the full
+ordinary suite and separate trace/native profiles are not certified by this merge.
+
+- Java 25/Lua 5.4/PowerShell preflight passed. Queued `clean test-compile`
+  passed (3,833 production and 3,805 test sources).
+- The compiled signature export contains 19,835 lines, with no annotation or
+  external signature errors. Its only difference from develop's pin is next's
+  existing `SonicConfiguration.DISPLAY_HUD_ANCHOR` constant.
+- Focused queued Java 25 selection: **869 tests passed, zero failures/errors/skips**
+  across 124 classes. Includes core networking, operator servers, Time Attack,
+  hosted-run/scene/act lifecycle, mod registration/reload, mutator policies, API
+  pins/hooks, bundled packaging, next's HUD/clipboard settings and the four
+  required S3K loading/bootstrap checks. Maven completed in 3m48s.
+- Merge commit: `1d24eef76b` (parents `e82efe28be`, `f02bdbfd57`). The full
+  `ci-push e82efe28be 1d24eef76b next` policy audit passed, including the release
+  tree audit and incoming commit/API documentation coupling.
+- Fresh queued `-Dmse=off -Pguards test -B`: **679 tests, 678 passed, one
+  failure, zero errors/skips**, 9m46s. The sole failure remains
+  `TestBuildToolingGuard.releaseGateToolsShouldRejectCorruptAndChangedEvidence`:
+  the Python checkout-path normalization assertion sees `/var` instead of
+  `/private/var`. The collector and its test are unchanged from `e82efe28be`;
+  the matched baseline/current attribution recorded above still applies. No
+  unrelated release-tool changes were made. This is not a green local guard run.
+- Queued `-Dmse=off -DskipTests package`: passed in 38s, including bundled mod
+  validation with zero findings. The engine contains shared network classes but
+  no Time Attack/server classes or Netty/SQLite/Bouncy Castle payloads. The bundled
+  Time Attack jar contains no copied networking; catalog size and SHA-256 match.
+- Full Linux CI was manually dispatched for `1d24eef76b` (ordinary suite and guards,
+  trace replay disabled): https://github.com/OpenGGF/OpenGGF/actions/runs/38284185849.
+- Full Linux CI **passed** at merge `1d24eef76b`: ordinary Maven summary
+  **23,983 tests, zero failures/errors, 4,370 skips** (19,613 passed), with the
+  default-coverage assertion passing; the job took 8m57s. Skipped cases include
+  ROM-dependent/native setup checks absent on the hosted runner; this does not
+  certify every ROM route or the separate trace profile. The fresh Linux guards
+  passed **679 tests, zero failures/errors/skips**, with the job taking 14m13s.
+  This independently passes the guard that fails on macOS. The final follow-up
+  changes this validation record only; no engine retest is required for prose.

@@ -3,16 +3,13 @@
 OpenGGF keeps one changelog file per release so that release notes remain
 readable and historical versions can be referenced directly.
 
-## Unreleased (`next` / 0.8)
+## Unreleased (`develop` and `next` / 0.7)
 
-- Added original synthesized voice lines for Super Sonic Bros., with announcer effects, pitched-down Sonic and Tails voices, robot processing, and in-game dialogue triggers. Corrected fighter facing in ledge hangs, skids, lying poses, Mecha Sonic and Rhinobot animations, Egg Robo multipart spins, and directional flames.
-- Refined the game hub with quiet, bounded setup badges and direct ROM location;
-  removed the game browser. Settings and Game Setup have explicit Save changes
-  actions, clearer inherited values, calmer backgrounds and more readable text.
-  Technical display controls now live in Advanced settings.
-
-Work promoted from `next` is recorded in
-[CHANGELOG.0.7.prerelease.md](CHANGELOG.0.7.prerelease.md).
+Both development branches currently share the same commit and release line.
+Current changes are recorded in
+[CHANGELOG.0.7.prerelease.md](CHANGELOG.0.7.prerelease.md), with earlier themes in
+[CHANGELOG.0.7.md](CHANGELOG.0.7.md). The [0.8 roadmap](docs/project/v0.8-roadmap.md)
+remains future scope; `next` has no separate 0.8 implementation line yet.
 
 ## Release files
 

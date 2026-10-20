@@ -23,6 +23,20 @@ class TestMenuTextEditor {
     @TempDir Path directory;
 
     @Test
+    void addressEditorPastesCompleteLanInviteWithinExpandedLimit() {
+        Fixture f = new Fixture("", 192, MenuTextEditor.Mode.ADDRESS);
+        String invite = "[2001:db8::1]:27888#" + "A".repeat(86);
+        f.editor.setClipboardReader(() -> invite);
+        f.input.handleKeyEvent(GLFW_KEY_LEFT_CONTROL, GLFW_PRESS);
+        f.input.handleKeyEvent(GLFW_KEY_V, GLFW_PRESS);
+        f.frame();
+        f.input.handleKeyEvent(GLFW_KEY_V, GLFW_RELEASE);
+        f.input.handleKeyEvent(GLFW_KEY_LEFT_CONTROL, GLFW_RELEASE);
+        f.frame();
+        assertEquals(invite, f.editor.value());
+    }
+
+    @Test
     void physicalTypingAndCaretEditingIgnoreGameplayLetterBindings() {
         Fixture f = new Fixture("ab", 64);
         f.config.setConfigValue(P1_A, "X");

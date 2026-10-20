@@ -378,13 +378,16 @@ touches the README release section only when it adds or changes a version
 theme; most merges leave it alone, and no hook requires it.
 
 Use the [documentation obligation checklist](docs/agent-workflow/documentation-obligation-checklist.md)
-when staging. Each branch's `pom.xml` names its own release line. On
-`develop`, release prose goes in `CHANGELOG.<develop version>.md`; `next`
-prose stays in the root changelog's Unreleased section until promotion
-(`master` is the last released version and `next` the one after `develop`; today that is master
-0.6.20260911, develop 0.7.prerelease, next 0.8.prerelease; promoting them at
-release time follows [release rollover](docs/project/release-rollover.md)).
-Root `CHANGELOG.md` holds the release index and next's Unreleased prose
+when staging. Read each branch's `pom.xml` for its active release line. Currently
+master is 0.6.20260911; develop and next both carry 0.7.prerelease and are intended
+to share a commit. `targetBranch=develop` plus `candidateBranchAliases=next`
+explicitly admits both CI destinations. New prose from either ref goes in
+`CHANGELOG.0.7.prerelease.md`; earlier themes remain in `CHANGELOG.0.7.md`.
+0.8 remains a reserved future line. Clear aliases before separating next or
+promoting master; an independent next line keeps its prose in the root Unreleased
+section until promotion. Version promotion follows
+[release rollover](docs/project/release-rollover.md).
+Root `CHANGELOG.md` holds the release index and the current development-line pointer
 (its exact path owns the hook trailer). The README release section is only a very
 high-level summary of the version's themes, not a change log; a fix to a
 feature introduced in that same unreleased version folds into the existing

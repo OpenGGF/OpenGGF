@@ -7,6 +7,7 @@ import com.sun.source.util.JavacTask;
 import com.sun.source.util.TreePathScanner;
 import com.sun.source.util.Trees;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
@@ -19,9 +20,7 @@ import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardJavaFileManager;
 import javax.tools.ToolProvider;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -112,39 +111,34 @@ class TestObjectUpdateClockTerminologyGuard {
                     "vIntRunCount", "globalFrameCounter"));
 
     @Test
-    void objectUpdateClockUsesVIntRunCountTerminologyAcrossBoundaryAndFrameworkHooks() throws Exception {
+    void objectUpdateClockUsesVIntRunCountTerminologyAcrossBoundaryAndFrameworkHooks(@TempDir Path temporary)
+            throws Exception {
+        Path log = temporary.resolve("terminology-guard.log");
         Process process = new ProcessBuilder(
                 Path.of(System.getProperty("java.home"), "bin", "java").toString(),
                 GUARD_HEAP,
                 "-cp", System.getProperty("java.class.path"),
                 GuardProcess.class.getName())
                 .redirectErrorStream(true)
+                // A failing compiler can fill a pipe before waitFor returns.
+                .redirectOutput(log.toFile())
                 .start();
-        // Drain while the child runs: a full pipe would stall it, and destroyForcibly() closes the stream.
-        ByteArrayOutputStream captured = new ByteArrayOutputStream();
-        Thread drain = new Thread(() -> copyUntilClosed(process.getInputStream(), captured),
-                "terminology-guard-output");
-        drain.setDaemon(true);
-        drain.start();
-        boolean finished = process.waitFor(GUARD_TIMEOUT_MINUTES, TimeUnit.MINUTES);
-        if (!finished) {
-            process.destroyForcibly().waitFor();
-        }
-        drain.join(TimeUnit.SECONDS.toMillis(30));
-        String output = captured.toString();
-        assertTrue(finished, () -> "terminology guard subprocess timed out after "
-                + GUARD_TIMEOUT_MINUTES + " minutes:\n" + output);
-        assertTrue(process.exitValue() == 0, () -> "terminology guard subprocess failed:\n" + output);
-    }
-
-    private static void copyUntilClosed(InputStream input, ByteArrayOutputStream output) {
-        byte[] buffer = new byte[8192];
-        try (input) {
-            for (int read; (read = input.read(buffer)) >= 0; ) {
-                output.write(buffer, 0, read);
+        try {
+            // Retain next's file-backed diagnostics and guaranteed cleanup with
+            // develop's measured heap and CI timeout bounds.
+            boolean finished = process.waitFor(GUARD_TIMEOUT_MINUTES, TimeUnit.MINUTES);
+            if (!finished) {
+                process.destroyForcibly();
+                assertTrue(process.waitFor(10, TimeUnit.SECONDS), "terminology guard subprocess did not stop");
             }
-        } catch (IOException closedByDestroy) {
-            // Keep whatever the child printed before it was killed.
+            String output = Files.readString(log);
+            assertTrue(finished, "terminology guard subprocess timed out:\n" + output);
+            assertTrue(process.exitValue() == 0, () -> "terminology guard subprocess failed:\n" + output);
+        } finally {
+            if (process.isAlive()) {
+                process.destroyForcibly();
+                process.waitFor(10, TimeUnit.SECONDS);
+            }
         }
     }
 

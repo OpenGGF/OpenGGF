@@ -138,6 +138,13 @@ stable across compilation too: tests added after their production classes were
 read can otherwise see the prior API. Coordinate with the user before stopping
 an unrelated IDE build; a missing class during compilation is not a test failure.
 
+Exact allocation budgets can include the measuring harness (2026-10-09, PR 217):
+the audible-cursor assertion reported 88 bytes in CI while its primitive query path
+passed in isolation. A shared probe's polymorphic `Runnable` call site can add
+class-loading or deoptimization costs to a workload counter. Warm the actual
+measured query loop and read per-thread counters directly around it; retain the
+zero-byte assertion and verify it rejects a deliberate escaping allocation.
+The isolated pass alone does not establish the cause of the CI-only bytes.
 Offscreen editor captures can leak pointer projection into later tests
 (2026-10-14, editor guide pictures). `GraphicsManager.cleanup()` and its test
 reset retain viewport/projection overrides. A 426px capture followed by a

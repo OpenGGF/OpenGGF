@@ -25,10 +25,24 @@ API publication or changing compatibility ranges.
 |---|---|---|---|
 | `master` | last released | `<major>.<YYYYMMDD>` | `0.6.20260911` |
 | `develop` | in development | `<major>.prerelease` | `0.7.prerelease` |
-| `next` | after that | `<major>.prerelease` | `0.8.prerelease` |
+| `next` | temporarily tracks `develop` | `<major>.prerelease` | `0.7.prerelease` |
 
 A release stamps the date at the moment it is cut; prerelease branches never
 carry a date.
+
+## Shared development line
+
+As of 2026-10-20, `develop` and `next` intentionally share one commit and
+`0.7.prerelease`. The descriptor uses `targetBranch=develop` with optional
+`candidateBranchAliases=next`; its ordered line fields reserve 0.8 for a future
+split. Current changes from either branch belong in `CHANGELOG.0.7.prerelease.md`.
+This does not publish the candidate API or move `master`.
+
+To resume separate release lines, remove the alias from both branch descriptors,
+retain `targetBranch=develop` on develop, and advance next's POM, bundle version,
+examples and `targetBranch=next` together. Update the shared-line guidance at the
+same time. The following rollover describes the separate-line model; a release
+promotion to master must always clear aliases and use its own destination.
 
 ## Rollover steps
 
@@ -108,7 +122,9 @@ keeping `CLAUDE.md` and `AGENTS.md` byte-identical:
 - This guide, the README, and the current roadmap.
 - `mod-api-release-policy.properties` — engine branch lines and candidate
   ownership; retain the API version and publication state unless separately
-  releasing the API. Each branch's `targetBranch` names that branch: the master
+  releasing the API. Independent branches use their own `targetBranch`; shared
+  development candidates may explicitly name the other branch in
+  `candidateBranchAliases`. Clear aliases before release: the master
   push's release tests and any pull request into `master` pass
   `-DmodApi.destinationBranch=master`, so the promoted descriptor (and the
   `TestModApiReleasePolicy` expectation for it) must read `master` or the
@@ -134,7 +150,9 @@ the ones that needed it last time.
   new version rather than a stale filtered resource — `mvn clean` first, since
   incremental builds keep the old `version.properties`.
 - `git show <branch>:pom.xml | grep -m1 '<version>'` for all three branches:
-  they must be three different versions.
+  independent lines have different versions; intentionally shared development
+  refs have the same version and an explicit candidate alias. Verify policy checks
+  for both destinations. Master never uses a candidate alias.
 - No `.prerelease` on `master`, and no date suffix on `develop` or `next`.
 
 

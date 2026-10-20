@@ -28,6 +28,11 @@ tuning. A manual dispatch on a candidate branch with `validate_roms=false`
 checks hosted-platform packaging without publishing; it does not replace required
 ROM/trace validation.
 
+`develop` and `next` currently share the 0.7 development line through an explicit
+candidate alias in the release-policy descriptor. That alias is not a publication
+permission: clear `candidateBranchAliases` and select `targetBranch=master` when
+preparing the release. See [release rollover](release-rollover.md).
+
 ## Prepare and publish
 
 1. Run the full ordinary suite explicitly with

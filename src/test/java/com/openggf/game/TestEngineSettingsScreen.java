@@ -25,6 +25,13 @@ class TestEngineSettingsScreen {
     private static final int DISPLAY = 0, SOUND = 1, CONTROLS = 2, GAMEPLAY = 3, FILES = 4, CAPTURE = 5;
 
     @Test
+    void widescreenHudAnchorHasReadableChoiceLabels() {
+        assertEquals("Widescreen HUD position", EngineSettingLabels.label(DISPLAY_HUD_ANCHOR));
+        assertEquals("Centered native position", EngineSettingLabels.value(DISPLAY_HUD_ANCHOR, "DEFAULT"));
+        assertEquals("Screen left edge", EngineSettingLabels.value(DISPLAY_HUD_ANCHOR, "LEFT_EDGE"));
+    }
+
+    @Test
     void tappingAModifierCanCaptureItAsAPlayerButton() {
         Fixture f = new Fixture();
         f.tab(CONTROLS);

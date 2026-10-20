@@ -35,7 +35,8 @@ class TestSettingTiming {
         // Read when a game starts: a new audio backend per launch, the team, the launch profile.
         for (SonicConfiguration key : List.of(SonicConfiguration.REGION, SonicConfiguration.AUDIO_FM_CORE,
                 SonicConfiguration.MAIN_CHARACTER_CODE, SonicConfiguration.CROSS_GAME_SOURCE,
-                SonicConfiguration.DISPLAY_ASPECT, SonicConfiguration.LIVE_REWIND_ENABLED)) {
+                SonicConfiguration.DISPLAY_ASPECT, SonicConfiguration.DISPLAY_HUD_ANCHOR,
+                SonicConfiguration.LIVE_REWIND_ENABLED)) {
             assertEquals(NEXT_GAME, SettingTiming.of(key), key.name());
         }
         // Read when used.
@@ -49,6 +50,10 @@ class TestSettingTiming {
     void aPausedGameNeverWaitsOnARestartAndAlwaysTakesImmediateSettings() {
         for (SonicConfiguration key : ConfigCatalog.emitOrder()) {
             if (key == SonicConfiguration.DISPLAY_ASPECT) continue;
+            if (key == SonicConfiguration.DISPLAY_HUD_ANCHOR) {
+                assertFalse(LiveSettings.appliesOnResume(key, true),
+                        "HUD anchoring is installed when a level loads, not when a paused game resumes");
+            }
             if (SettingTiming.of(key) == RESTART) assertFalse(LiveSettings.appliesOnResume(key, true), key.name());
             if (SettingTiming.of(key) == NOW) assertTrue(LiveSettings.appliesOnResume(key, false), key.name());
         }

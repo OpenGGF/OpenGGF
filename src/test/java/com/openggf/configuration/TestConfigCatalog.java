@@ -47,6 +47,18 @@ class TestConfigCatalog {
     }
 
     @Test
+    void widescreenHudAnchorIsAUserFacingDisplayOptionWithDefaultValue(@TempDir Path tempDir) {
+        ConfigKeyMeta meta = ConfigCatalog.meta(SonicConfiguration.DISPLAY_HUD_ANCHOR);
+        assertEquals(ConfigType.ENUM, meta.type());
+        assertEquals("display", meta.section());
+        assertEquals("hudAnchor", meta.leaf());
+        assertEquals(Set.of("DEFAULT", "LEFT_EDGE"), meta.allowedValues());
+
+        SonicConfigurationService cfg = SonicConfigurationService.createStandalone(tempDir);
+        assertEquals("DEFAULT", cfg.getString(SonicConfiguration.DISPLAY_HUD_ANCHOR));
+    }
+
+    @Test
     void derivedKeysAreNotInEmitOrder() {
         assertFalse(ConfigCatalog.emitOrder().contains(SonicConfiguration.SCREEN_WIDTH_PIXELS));
         assertFalse(ConfigCatalog.emitOrder().contains(SonicConfiguration.SCREEN_HEIGHT_PIXELS));
