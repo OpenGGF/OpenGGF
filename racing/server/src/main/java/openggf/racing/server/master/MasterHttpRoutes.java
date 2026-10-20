@@ -14,10 +14,13 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.ScheduledFuture;
@@ -217,6 +220,12 @@ public final class MasterHttpRoutes extends SimpleChannelInboundHandler<FullHttp
             closeTimeout = context.executor().schedule(() -> {
                 context.close();
             }, 30, TimeUnit.SECONDS);
+            if (terminal) {
+                // MessageAggregator can call read() while autoRead is false and a
+                // partial body exists. Removal releases that body and stops its reads.
+                var aggregator = context.pipeline().get(HttpObjectAggregator.class);
+                if (aggregator != null) context.pipeline().remove(aggregator);
+            }
             write(context, response(status), keepAlive).addListener(future -> {
                 cancelTimeout(closeTimeout);
                 responsePending = false;
@@ -242,9 +251,13 @@ public final class MasterHttpRoutes extends SimpleChannelInboundHandler<FullHttp
                 (long) config.maxRecordingBytes() + 8192);
     }
 
-    /** Install before aggregation, which may otherwise emit an oversized second response. */
+    /** Own rejection before aggregation can emit an unbounded sequence of automatic responses. */
     ChannelInboundHandlerAdapter pipelineGuard() {
+        int maxBodyBytes = maxHttpBodyBytes(config);
         return new ChannelInboundHandlerAdapter() {
+            private int bodyBytes;
+            private boolean readingRequest;
+
             @Override
             public void channelRead(ChannelHandlerContext context, Object message) {
                 if (terminal) {
@@ -254,8 +267,53 @@ public final class MasterHttpRoutes extends SimpleChannelInboundHandler<FullHttp
                     ReferenceCountUtil.release(message);
                     context.close();
                 } else {
+                    if (message instanceof HttpRequest request) {
+                        readingRequest = true;
+                        bodyBytes = 0;
+                        // Match HTTP's applicability rule; HTTP/1.0 ignores Expect.
+                        // Check every field so a supported first value cannot hide another.
+                        if (request.protocolVersion().compareTo(HttpVersion.HTTP_1_1) >= 0) {
+                            for (String expectation : request.headers().getAll(HttpHeaderNames.EXPECT)) {
+                                if (!HttpHeaderValues.CONTINUE.toString().equalsIgnoreCase(expectation)) {
+                                    rejectMessage(context, message, HttpResponseStatus.EXPECTATION_FAILED);
+                                    return;
+                                }
+                            }
+                        }
+                        try {
+                            if (HttpUtil.getContentLength(request, -1L) > maxBodyBytes) {
+                                rejectMessage(context, message, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE);
+                                return;
+                            }
+                        } catch (NumberFormatException malformedLength) {
+                            rejectMessage(context, message, HttpResponseStatus.BAD_REQUEST);
+                            return;
+                        }
+                    }
+                    if (message instanceof HttpContent content) {
+                        int bytes = content.content().readableBytes();
+                        if (bytes > maxBodyBytes - bodyBytes) {
+                            rejectMessage(context, message, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE);
+                            return;
+                        }
+                        bodyBytes += bytes;
+                        if (message instanceof LastHttpContent) {
+                            readingRequest = false;
+                            bodyBytes = 0;
+                        }
+                    }
                     context.fireChannelRead(message);
                 }
+            }
+
+            private void rejectMessage(ChannelHandlerContext context, Object message, HttpResponseStatus status) {
+                ReferenceCountUtil.release(message);
+                reject(context, status);
+            }
+
+            @Override
+            public void handlerRemoved(ChannelHandlerContext context) {
+                if (readingRequest || terminal || responsePending || pending != null) context.close();
             }
         };
     }
