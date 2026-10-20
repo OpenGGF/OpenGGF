@@ -96,9 +96,12 @@ do not encrypt scenes, shots or reconnect tokens, or protect against an active
 network intermediary. Use a trusted LAN or an encrypted private network, and
 never publish the invite or forward this service to an untrusted network.
 
-Incoming packets have both count and retained-byte limits (4 MiB per connection).
-Only consecutive pending views of the same shot coalesce; ordered control,
-results and sound cues stay ordered. Scenes also have an aggregate raster-work
+Incoming packets and downstream room events each have both count and retained-byte
+limits (256 entries / 4 MiB per mailbox). Only consecutive pending views of the
+same shot coalesce; ordered control, results and sound cues stay ordered. A room
+mailbox overflow closes the room with an explicit terminal failure; ending a room
+releases pending scene payloads while preserving ordered terminal delivery.
+Scenes also have an aggregate raster-work
 budget, viewport-clipped line traversal, and cached composition while their
 revision, projected pose and survey offset stay unchanged.
 

@@ -11,6 +11,7 @@ import static paradise.net.GolfPacket.*;
  */
 public final class GolfRoom implements AutoCloseable {
     public static final int MAX_EVENTS = 256;
+    public static final int MAX_EVENT_BYTES = 4 * 1024 * 1024;
     public static final int RECONNECT_SECONDS = 30;
     public static final String CONCEDED_REASON = "conceded";
     private static final long RETRY_NANOS = 250_000_000L;
@@ -37,6 +38,7 @@ public final class GolfRoom implements AutoCloseable {
     private final ViewRevisions revisions = new ViewRevisions();
     private final SoundCues sounds = new SoundCues();
     private final ArrayDeque<Event> events = new ArrayDeque<>();
+    private int eventBytes;
     private final ArrayList<Candidate> candidates = new ArrayList<>(2);
     private final ArrayList<GolfConnection> retiring = new ArrayList<>(2);
     private final long startedNanos = System.nanoTime();
@@ -91,7 +93,7 @@ public final class GolfRoom implements AutoCloseable {
     public int boundPort() { return host ? listener.boundPort() : port; }
     public State state() { return new State(match, roomToken, host, connected, ready, held, ended, message,
             hostCharacter, guestCharacter, host ? 0 : 1, owner, turn, player0, player1); }
-    public List<Event> drainEvents() { var result = List.copyOf(events); events.clear(); return result; }
+    public List<Event> drainEvents() { var result = List.copyOf(events); events.clear(); eventBytes = 0; return result; }
     public int activeWorkers() {
         // Host listener retains all accepted connections through worker retirement.
         // Counting room peer/candidates again would double-count the same workers.
@@ -352,14 +354,34 @@ public final class GolfRoom implements AutoCloseable {
         end(CONCEDED_REASON, true, leave);
     }
     private void emit(GolfPacket packet) {
-        if (packet instanceof ViewFrame) events.removeIf(event -> event instanceof Received received && received.packet() instanceof ViewFrame);
+        if (packet instanceof ViewFrame view && events.peekLast() instanceof Received received
+                && received.packet() instanceof ViewFrame previous && previous.id().equals(view.id())) {
+            if (view.revision() <= previous.revision()) return;
+            eventBytes -= charge(events.removeLast());
+        }
         add(new Received(packet));
     }
+    private static int charge(Event event) {
+        if (event instanceof Received received) return GolfCodec.encodedSize(received.packet());
+        // Locally generated terminal status has no wire frame; reserve its value storage.
+        return 64 + ((Disconnected)event).reason().length() * 2;
+    }
     private void add(Event event) {
-        if (events.size() >= MAX_EVENTS) {
-            events.clear(); held = true; ready = false; connected = false; message = "room event queue overflow";
-            if (peer != null) peer.close(); events.addLast(new Disconnected(message));
-        } else events.addLast(event);
+        int bytes = charge(event);
+        if (events.size() >= MAX_EVENTS || bytes > MAX_EVENT_BYTES - eventBytes) {
+            // Overflow is a terminal failure, never a silent loss of ordered controls.
+            // Keep an explicit concession/Leave even when it is the overflowing event.
+            Received terminal = event instanceof Received r && r.packet() instanceof Leave ? r : events.stream()
+                    .filter(e -> e instanceof Received r && r.packet() instanceof Leave)
+                    .map(e -> (Received)e).reduce((a, b) -> b).orElse(null);
+            events.clear(); eventBytes = 0;
+            if (terminal != null) { events.addLast(terminal); eventBytes = charge(terminal); }
+            if (!ended) end("room event queue overflow", false);
+            else {
+                message = "room event queue overflow";
+                var failure = new Disconnected(message); events.addLast(failure); eventBytes += charge(failure);
+            }
+        } else { events.addLast(event); eventBytes += bytes; }
     }
     private void retire(GolfConnection connection) {
         retiring.removeIf(old -> old.activeWorkers() == 0);
@@ -390,6 +412,14 @@ public final class GolfRoom implements AutoCloseable {
         if (peer != null) { if (notify && leave != null) peer.finish(leave); else peer.close(); }
         for (Candidate candidate : candidates) if (!notify) candidate.connection.close();
         pendingRemote = null; pendingGuest = null; latestView = null; receipts.clear(); sessions.clear();
+        // Terminal scenes have no future render authority. Release their payloads,
+        // retaining ordered sound/control/result/Leave events until the caller drains.
+        events.removeIf(event -> {
+            if (event instanceof Received r && r.packet() instanceof ViewFrame) {
+                eventBytes -= charge(event); return true;
+            }
+            return false;
+        });
         add(new Disconnected(reason));
     }
     @Override public void close() { end(host ? "host left" : "guest left", true); }

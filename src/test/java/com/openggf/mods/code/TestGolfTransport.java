@@ -7,6 +7,16 @@ import java.nio.file.Path;
 class TestGolfTransport {
     @TempDir Path temp;
 
+    @Test void roomPreservesViewsAcrossOrderedWireBarriers() throws Exception {
+        TestGolfProtocol.runProbe(temp, "RoomProbe", "roomCoalescesOnlyAdjacentSameShotViewsAcrossWireDelivery");
+    }
+    @Test void downstreamRoomByteOverflowClosesAndDeliversTerminalOnce() throws Exception {
+        TestGolfProtocol.runProbe(temp, "RoomProbe", "roomByteOverflowClosesAndReleasesScenesWithTerminalDelivery");
+    }
+    @Test void roomEndReleasesScenesButPreservesOrderedSoundAndConcession() throws Exception {
+        TestGolfProtocol.runProbe(temp, "RoomProbe", "roomEndReleasesScenesAndPreservesOrderedSoundAndConcession");
+    }
+
     @Test void inboundViewsHaveBoundedRetentionAndNewestSurvives() throws Exception {
         TestGolfProtocol.runProbe(temp, "TransportProbe", "inboundViewsAreByteBoundedAndCoalesced");
     }

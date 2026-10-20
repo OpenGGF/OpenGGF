@@ -25,16 +25,17 @@ public final class SceneCompositor {
             if (index == frame.tiles().size()) break;
             var tile = frame.tiles().get(index);
             var pattern = art.resolve(tile.art());
-            int left = tile.x() - offsetX, top = tile.y() - offsetY;
-            int startX = Math.max(0, left), endX = Math.min(frame.width(), left + tile.width());
-            int startY = Math.max(0, top + (tile.rowStart() * tile.height() + 7) / 8);
-            int endY = Math.min(frame.height(), top + (tile.rowEnd() * tile.height() + 7) / 8);
+            long left = (long)tile.x() - offsetX, top = (long)tile.y() - offsetY;
+            int startX = clip(left, frame.width()), endX = clip(left + tile.width(), frame.width());
+            int startY = clip(top + (tile.rowStart() * tile.height() + 7) / 8, frame.height());
+            int endY = clip(top + (tile.rowEnd() * tile.height() + 7) / 8, frame.height());
+            if (startX >= endX || startY >= endY) continue;
             boolean terrain = tile.layer() == ScenePresentationFrame.Layer.BACKGROUND
                     || tile.layer() == ScenePresentationFrame.Layer.FOREGROUND;
             for (int y = startY; y < endY; y++) {
-                int py = (y - top) * 8 / tile.height(); if (tile.vFlip()) py = 7 - py;
+                int py = (int)((y - top) * 8 / tile.height()); if (tile.vFlip()) py = 7 - py;
                 for (int x = startX; x < endX; x++) {
-                    int px = (x - left) * 8 / tile.width(); if (tile.hFlip()) px = 7 - px;
+                    int px = (int)((x - left) * 8 / tile.width()); if (tile.hFlip()) px = 7 - px;
                     int color = RomSceneArtCatalog.pixel(pattern, px, py);
                     if (color == 0) continue;
                     int destination = y * frame.width() + x;
@@ -54,10 +55,11 @@ public final class SceneCompositor {
                                       int[] pixels, int dx, int dy) {
         if (primitive.kind() == ScenePresentationFrame.PrimitiveKind.RECTANGLE) {
             for (var vertex : primitive.vertices()) {
-                int x0 = Math.max(0, Math.min(vertex.x1(), vertex.x2()) - dx);
-                int x1 = Math.min(width, Math.max(vertex.x1(), vertex.x2()) - dx);
-                int y0 = Math.max(0, Math.min(vertex.y1(), vertex.y2()) - dy);
-                int y1 = Math.min(height, Math.max(vertex.y1(), vertex.y2()) - dy);
+                int x0 = clip((long)Math.min(vertex.x1(), vertex.x2()) - dx, width);
+                int x1 = clip((long)Math.max(vertex.x1(), vertex.x2()) - dx, width);
+                int y0 = clip((long)Math.min(vertex.y1(), vertex.y2()) - dy, height);
+                int y1 = clip((long)Math.max(vertex.y1(), vertex.y2()) - dy, height);
+                if (x0 >= x1 || y0 >= y1) continue;
                 for (int y = y0; y < y1; y++) for (int x = x0; x < x1; x++) {
                     int index = y * width + x; pixels[index] = blend(pixels[index], vertex.argb(), vertex.argb() >>> 24);
                 }
@@ -81,6 +83,10 @@ public final class SceneCompositor {
             var first = vertices.getFirst(); var last = vertices.getLast();
             line(pixels, width, height, last.x1() - dx, last.y1() - dy, first.x1() - dx, first.y1() - dy, first.argb());
         }
+    }
+
+    private static int clip(long coordinate, int extent) {
+        return (int)Math.max(0, Math.min(extent, coordinate));
     }
 
     private static void line(int[] pixels, int width, int height, int x0, int y0, int x1, int y1, int color) {

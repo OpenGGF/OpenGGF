@@ -76,6 +76,12 @@ public final class GolfCodec {
 
     public static void write(OutputStream out, GolfPacket packet) throws IOException { out.write(encode(packet)); }
 
+    /** Actual validated value size; avoid copying a scene just to account for its retained bytes. */
+    static int encodedSize(GolfPacket packet) {
+        // Outer length 4, schema/type 2, ShotId 34, revision/tick 16, scene length 4.
+        return packet instanceof ViewFrame view ? 60 + view.payloadLength() : encode(packet).length;
+    }
+
     /** Returns null only at clean frame-boundary EOF. Partial, unknown and malformed frames are fatal. */
     public static GolfPacket read(InputStream stream) throws IOException {
         Decoded decoded = readFrame(stream);

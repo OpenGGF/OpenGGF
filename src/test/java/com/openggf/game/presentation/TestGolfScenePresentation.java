@@ -28,6 +28,37 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestGolfScenePresentation {
     private SharedLevel bootstrap;
 
+    @Test void horizontallyInvisibleRectangleBombExecutesNoRasterRows() throws Exception {
+        var vertices = java.util.Collections.nCopies(256, new ScenePresentationFrame.Vertex(321, 0, 322, 224, -1));
+        var scene = new ScenePresentationFrame(1, 0, 320, 224, 0, 0, 0xFF000000, palette(), List.of(),
+                java.util.Collections.nCopies(400, new ScenePresentationFrame.Primitive(
+                        0, ScenePresentationFrame.PrimitiveKind.RECTANGLE, 0, vertices)));
+        assertEquals(174080, SceneRasterWork.estimate(320, 224, scene.tiles(), scene.primitives(), 0, 0));
+        var measured = CompositorRowProbe.compose(scene, new RomSceneArtCatalog());
+        assertEquals(0, measured.rows(), "empty clipped width must skip the row loop before iteration");
+        assertTrue(Arrays.stream(measured.image().argb()).allMatch(pixel -> pixel == 0xFF000000));
+    }
+
+    @Test void horizontallyInvisibleTileBombExecutesNoRasterRows() throws Exception {
+        var art = new RomSceneArtCatalog(); art.addRecipe("test/invisible", new Pattern[]{solid(1)});
+        var tile = new ScenePresentationFrame.Tile(ScenePresentationFrame.Layer.OBJECT,
+                new ScenePresentationFrame.ArtReference("test/invisible", 0), 0, false, false, false,
+                321, 0, 1, 224, 0, 8, 0, 255);
+        var scene = new ScenePresentationFrame(1, 0, 320, 224, 0, 0, 0xFF000000, palette(),
+                java.util.Collections.nCopies(65536, tile), List.of());
+        assertEquals(137216, SceneRasterWork.estimate(320, 224, scene.tiles(), scene.primitives(), 0, 0));
+        var measured = CompositorRowProbe.compose(scene, art);
+        assertEquals(0, measured.rows(), "empty clipped tile width must skip the row loop before iteration");
+        assertTrue(Arrays.stream(measured.image().argb()).allMatch(pixel -> pixel == 0xFF000000));
+    }
+
+    @Test void rowProbeCountsTheActualVisibleProductionLoop() throws Exception {
+        var rectangle = new ScenePresentationFrame.Primitive(0, ScenePresentationFrame.PrimitiveKind.RECTANGLE, 0,
+                List.of(new ScenePresentationFrame.Vertex(0, 0, 1, 224, -1)));
+        var scene = new ScenePresentationFrame(1, 0, 320, 224, 0, 0, 0, palette(), List.of(), List.of(rectangle));
+        assertEquals(224, CompositorRowProbe.compose(scene, new RomSceneArtCatalog()).rows(), "measurement positive control");
+    }
+
     @Test void aggregateRasterWorkRejectsValidSizeRectangleBomb() {
         var vertices = java.util.Collections.nCopies(256,
                 new ScenePresentationFrame.Vertex(0, 0, 320, 224, -1));
