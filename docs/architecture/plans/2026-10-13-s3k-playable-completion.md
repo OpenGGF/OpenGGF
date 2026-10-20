@@ -22849,3 +22849,103 @@ Their actual submitted jobs and initial ordinal/entry association remain
 unestablished; provenance movie frames cannot silently schedule readiness.
 Existing capture setup also forces intro skipping and invokes replay resets.
 No existing capture or chain command was promoted into production-route proof.
+
+
+### Isolated EggRobo vertical-facing correction — 2026-10-20
+
+Bounded implementation only, based on committed parity base
+`cf3cfd0b715050d94a3c2ac7d550126ecd733a83`. The clean T3-bound checkout
+fast-forwarded from `ff5088abf5cce5878f143817f03c941805f11880` and renamed only
+its own branch from `s3k-eggrobo-vflip` to
+`feature/ai-s3k-eggrobo-vflip-20261020`. Main and Root's frozen composition
+checkout, jobs and target were not modified or observed. Root's C16
+203T/0F/0E/0S metadata and the read-only vertical audit were inherited evidence,
+not this worker's execution. The registry's exact returned task/run/backing IDs,
+owned path/branch/HEAD and expiry were registered before source edits.
+
+Native owning labels were reread in the checkout's disassembly: SetUp_ObjAttributes
+only sets render bit2; CreateChild1_Normal copies no render flips and applies
+unmirrored birth offsets. Body's inspected closed render-writer set preserves
+placement V. Gun sub_91930 selects delayed `$32` or live fallback Y, then copies
+V and negates signed DY. Jet Refresh_ChildPositionAdjusted uses live Y before
+mirroring DY. CreateChild10_NormalAdjusted copies H only and leaves ShotY=GunY-4.
+The shipped FixBugs=0 behavior is retained; no fixed branch is substituted.
+
+Only Body/Gun/Jet production files changed. Body reads the existing immutable
+placement carrier, whose low bits survive dynamic position updates and recreation.
+Each child's new private V primitive is written only in MAIN, used locally by
+drawing and included in its existing private RewindExtra. INIT, allocation order,
+no-retry behavior, cooldown95->0->-1, final retired-parent work, exact parent
+ObjectRefIds, pure recreation, original art copies, signed-word aim, inclusive
+Y8 and policy guards retain their prior paths. Shot is byte-exact against the
+base (SHA-256 `8578830d829fa2b75d5a51dd40550707fef3b8a5c53e7e92a6989b5464e94b3c`).
+
+Rejected alternatives: no shared renderer/base/policy/API change; no new body
+mutable carrier when preserved metadata suffices; no parent read during child
+draw/cooldown; no birth/INIT V propagation; no Shot V inheritance or mirrored
+muzzle DY. The source-supported swing coverage gap justifies no swing rewrite.
+No later native V writer or stock vertical-facing route is asserted.
+
+The32 new TestSszEggRoboVerticalFlip cases use actual registered SSZ managers and
+ROM art with public flags0/1/2/3, declared pairing/manual dispatch inlets and
+public player pose for arming. They cover literal birth/hover/delayed/live/fallback
+operands, CPU tiles and actual SAT replay flags/masks against independently
+expanded ROM mappings,96th cooldown underflow, retired-parent final work, and
+charging/armed/moving Shot V=false. Sixteen checkpoint cases each perform two
+fresh complete-world restore/forward cycles at raw, INIT, MAIN, cooldown95,
+cooldown0, pending deletion or armed Shot boundaries. Equal-coordinate opposite-V
+families retain exact IDs, the complete remaining namespace, all registered keys
+and immutable frames. No private phase/parent/timer/history/snapshot seed,
+reflection, mock manager or policy bypass is used. The private SAT collector is
+not inspected; this is actual SAT admission/replay output, not global native
+SAT/RAM or pixel parity proof.
+
+One initial queued request was cancelled with exit130 before admission or
+compilation because static review caught a wrong NativePositionOps import.
+The corrected source was submitted once, with a fresh report/testtmp/trace root;
+no unchanged retry, standalone JVM or broad worker suite was run. Exact command
+below uses portable placeholders for original absolute paths. All three original
+ROM CRC32/SHA-1 identities matched; no ROM links/copies were made.
+
+```bash
+env -u JDK_JAVA_OPTIONS -u _JAVA_OPTIONS -u MAVEN_OPTS -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 \
+  python3 <MAIN_WORKSPACE>/tools/testing/maven_queue.py --normal -Dmse=off \
+  '-Dtest=com.openggf.game.sonic3k.objects.badniks.TestSszEggRoboShotNativeLifetime,com.openggf.game.sonic3k.objects.badniks.TestSszEggRoboGunNativeDispatch,com.openggf.game.sonic3k.objects.badniks.TestSszEggRoboPresentation,com.openggf.game.sonic3k.objects.badniks.TestSszEggRoboJetNativeDispatch,com.openggf.game.sonic3k.objects.badniks.TestSszEggRoboClockGates,com.openggf.tests.TestS3kSszEggRobo,com.openggf.game.rewind.schema.TestRewindReferenceClosureValidation,com.openggf.level.objects.TestObjectManagerRewindReferenceClosure,com.openggf.level.objects.TestObjectManagerRewindDynamicClassification,com.openggf.level.objects.TestTwoPhaseRestoreOrdering,com.openggf.mods.TestModApiSignatureSurface#engineInternalTerminalsArePinnedAndStayOutOfTheSurface+engineOnlyRuntimeHelpersDoNotLeakIntoTheZeroSevenSurface,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils,com.openggf.game.sonic3k.objects.badniks.TestSszEggRoboArtPriority,com.openggf.game.sonic3k.objects.badniks.TestSszEggRoboVerticalFlip' \
+  -Dopenggf.surefire.reports=<OWNED_WORKTREE>/target/ssz-eggrobo-vflip-20261020/candidate-2/surefire-reports \
+  -Dopenggf.test.tmpdir=<OWNED_WORKTREE>/target/ssz-eggrobo-vflip-20261020/candidate-2/test-tmp \
+  -Dopenggf.trace.reports=<OWNED_WORKTREE>/target/ssz-eggrobo-vflip-20261020/candidate-2/trace-reports \
+  '-Dsonic1.rom.path=<MAIN_WORKSPACE>/Sonic The Hedgehog (W) (REV01) [!].gen' \
+  '-Dsonic2.rom.path=<MAIN_WORKSPACE>/Sonic The Hedgehog 2 (W) (REV01) [!].gen' \
+  '-Ds3k.rom.path=<MAIN_WORKSPACE>/Sonic and Knuckles & Sonic 3 (W) [!].gen' \
+  -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical test -B
+```
+
+Actual18-class result:235T/0F/0E/0S, exit0, including all203 existing C16
+controls and32 new V cases. All original18 XML/TXT reports,235 testcase children,
+issues/skips, complete properties/streams and classpath uniqueness were read;
+there were no skips or issues. Actual test JVM was Java25.0.4.1 with
+`openggf.headless.gl=surfaceless-egl` and the original three absolute ROM paths.
+The compiler processed4163 production and4249 test source files with release25.
+The wrapper reported119s queue waiting; Maven reported87s execution including
+compilation. Compiler-only duration was not measured. Observer timestamps span
+21:02:16.227167Z admission observation to21:03:46.374207Z terminal accounting;
+that90.147s includes observer/registry overhead and is not a compiler/test-only
+measurement. Source fingerprint was unchanged before/after execution:
+`399a688a364036ad62a9c96678998c6eb5733a04a382e2887535455df8981ee2`.
+Definition: SHA-256 of every file under src plus pom.xml, sorted by relative path,
+each encoded as UTF-8 path, NUL, original file bytes, NUL. Original argv, owned
+job/session identity and compact qualification remain in the existing lifecycle
+registry; no raw log archive or separate validation receipt was created.
+
+The [SSZ matrix](../validation/levels/s3k-ssz-act1.md#vertical-facing-and-child-y-offsets--2026-10-20)
+and [backlog](../../status/level-test-coverage.md#eggrobo-vertical-facing-component-validation--2026-10-20)
+record the scoped closure. Stock SSZ1 has26 EggRobos with flags0/1, SSZ2 none;
+flags2/3 coverage does not prove a natural stock V route. Full swing, natural
+route/touch, generic unloading/physical SST reuse, scaled fly-by/shared DMA,
+ordinary physical display production and native pixels remain open. This local
+commit does not claim Root's independent review, broad smoke/guards, integration,
+push or publication. The differing inherited tools/tracechaser submodule checkout
+is preserved untouched and is outside this commit.

@@ -1620,3 +1620,23 @@ open. Existing complete-run bootstrap imports comparison-derived initial
 gameplay values/clocks, so its historical results are not production-entry
 route proof. The original power-on movie still contains the omitted title
 input prelude; an input-only production inlet remains to be established.
+
+### EggRobo vertical-facing component validation — 2026-10-20
+
+The [SSZ vertical-facing correction](../architecture/validation/levels/s3k-ssz-act1.md#vertical-facing-and-child-y-offsets--2026-10-20)
+passes32 new cases and all203 C16 controls in one affected18-class run:
+235T/0F/0E/0S, with no skips. Body preserves initial placement V; Gun mirrors
+signed DY after delayed/live selection and Jet uses live Y. Birth/INIT, local
+cooldown/retirement latches and Shot's unchanged H-only/-4 contract are covered.
+Original mapping-based CPU/SAT replay tiles and two fresh whole-world cycles
+at seven boundaries retain exact family IDs, the remaining namespace, complete
+registered keys and immutable frames. Pairing, public flags0/1/2/3 and manual
+own-routine calls remain explicit component inlets.
+
+This closes only the scoped V carrier/offset obligation. Stock SSZ1's26
+placements have flags0/1 and SSZ2 has none; component flags2/3 are not natural
+stock-route evidence. Broader swing, natural route/touch, generic unloading,
+physical slot reuse, scaled fly-by/shared DMA, ordinary physical display
+production and native pixels remain open. Root owns independent review,
+delivery-wide smoke/guards, integration and publication; this worker ran none
+of those lanes. See the [plan record](../architecture/plans/2026-10-13-s3k-playable-completion.md#isolated-eggrobo-vertical-facing-correction--2026-10-20).

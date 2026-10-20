@@ -2482,3 +2482,49 @@ This closes the scoped aim branch and its replay controls. Natural route and
 touch coverage, vertical-flip carriers, full swing breadth, generic unloading,
 scaled fly-by art, ordinary physical display production and native pixels
 remain separate obligations.
+
+## Vertical facing and child Y offsets — 2026-10-20
+
+The isolated correction on `feature/ai-s3k-eggrobo-vflip-20261020`, based on
+`cf3cfd0b715050d94a3c2ac7d550126ecd733a83`, preserves the body's initial render
+bit1 through its existing immutable placement carrier. Native SetUp only sets
+world-coordinate bit2; the inspected EggRobo body writer set never changes V.
+Gun MAIN copies V after choosing delayed `$32` Y or its zero-word live fallback,
+then mirrors signed `child_dy`; Jet MAIN mirrors its offset against live Y.
+Each child's captured local V survives cooldown and the final parent-link clear.
+Birth/INIT stay unmirrored and undrawn. Shot source is unchanged: CreateChild10
+copies H only, and ShotY always equals GunY-4.
+
+`TestSszEggRoboVerticalFlip` passes32 cases with the actual ROM, registered
+managers, original child allocation and real INIT/MAIN. Public ObjectSpawn
+flags0/1/2/3, pairing state and manual own-routine calls are declared component
+inlets; no private state, snapshot seeds, reflection or policy bypass is used.
+Literal controls cover C00 Gun/Jet anchors, C01/C02 native hover advancement,
+delayed Gun versus live Jet, and the real releaser's zero-history fallback.
+Natural public-player arming covers the96th cooldown underflow, latched drawing,
+charging/armed/moving Shot V=false and the fixed -4 muzzle offset. Actual retired
+parents still supply the last MAIN operands before undrawn pending deletion.
+
+Original ROM mappings independently check complete CPU tile geometry, H/V flags,
+palette, art priority and occlusion masks, including actual SAT admission/replay
+output. This does not inspect the private SAT collector or prove native global
+SAT admission. Sixteen checkpoint cases each run two fresh complete-world
+restore/forward cycles: raw, after INIT, after MAIN, charging/cooldown95,
+cooldown0, pending parent retirement and armed Shot. Equal-coordinate families
+with opposing V retain exact Body/Gun/Jet/Shot IDs, the complete remaining ID
+namespace, all registered world keys and immutable frames.
+
+The affected18-class selection passes235T/0F/0E/0S, including all203 existing
+C16 cases and the32 new cases. Java25.0.4.1 and the required surfaceless backend
+and original absolute ROM paths were verified in the original reports; all three
+ROM CRC32/SHA-1 identities matched. Source fingerprint
+`399a688a364036ad62a9c96678998c6eb5733a04a382e2887535455df8981ee2`
+was unchanged through execution. The [existing plan](../../plans/2026-10-13-s3k-playable-completion.md#isolated-eggrobo-vertical-facing-correction--2026-10-20)
+records the command, source definition, rejected alternatives and execution limits.
+
+This closes the scoped component carrier/offset gap. SSZ1's26 stock EggRobos
+still have only flags0/1, and SSZ2 has none: no natural stock V-route proof is
+claimed. Broader swing, natural route/touch, generic unloading/physical slot
+reuse, scaled fly-by art/shared DMA, ordinary physical display production and
+native pixels remain open. Broad smoke/guards, independent review, integration
+and publication belong to Root and are not results of this isolated run.

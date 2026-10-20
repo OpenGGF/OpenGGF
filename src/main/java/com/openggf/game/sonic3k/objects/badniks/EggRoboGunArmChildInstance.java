@@ -50,6 +50,7 @@ public final class EggRoboGunArmChildInstance extends AbstractObjectInstance
     private int x;
     private int y;
     private boolean hFlip;
+    private boolean vFlip;
     /** CreateChild1_Normal copies art_tile before this child ever executes INIT. */
     private boolean artHigh;
     private int mappingFrame;
@@ -58,7 +59,7 @@ public final class EggRoboGunArmChildInstance extends AbstractObjectInstance
     private Phase phase = Phase.INIT;
     private boolean drawSubmitted;
 
-    private record RewindExtra(ObjectRefId parentId, int x, int y, int cooldown, boolean hFlip,
+    private record RewindExtra(ObjectRefId parentId, int x, int y, int cooldown, boolean hFlip, boolean vFlip,
                                int mappingFrame, Phase phase, boolean drawSubmitted,
                                boolean worldPositioned, boolean artHigh)
             implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
@@ -122,7 +123,11 @@ public final class EggRoboGunArmChildInstance extends AbstractObjectInstance
             // sub_91930 precedes the fire request and the final parent-status test.
             hFlip = !parent.badnikFacingLeft();
             x = (parent.getX() + (hFlip ? -CHILD_DX : CHILD_DX)) & 0xFFFF;
-            y = (parent.childAnchorY() + CHILD_DY) & 0xFFFF;
+            // sub_91930 / loc_91964 (FixBugs=0): select $32/live Y first, then
+            // copy render bit 1 and negate the signed child_dy word when set.
+            int anchorY = parent.childAnchorY();
+            vFlip = parent.nativeVFlip();
+            y = (anchorY + (vFlip ? -CHILD_DY : CHILD_DY)) & 0xFFFF;
             updateDynamicSpawn(x, y);
             if (parent.gunArmed()
                     && com.openggf.game.mutators.NativeObjectPolicyAccess.permitsFiring(services(), parent.getX())) {
@@ -169,7 +174,7 @@ public final class EggRoboGunArmChildInstance extends AbstractObjectInstance
         }
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.SSZ_EGG_ROBO);
         if (renderer != null && renderer.isReady()) {
-            renderer.drawFrameIndexForcedPriority(mappingFrame, x, y, hFlip, false, 0, artHigh);
+            renderer.drawFrameIndexForcedPriority(mappingFrame, x, y, hFlip, vFlip, 0, artHigh);
         }
     }
 
@@ -178,7 +183,7 @@ public final class EggRoboGunArmChildInstance extends AbstractObjectInstance
         ObjectRefId parentId = context.identityTable()
                 .map(table -> table.encodeObject(parent)).orElse(null);
         return super.captureRewindState(context)
-                .withObjectSubclassExtra(new RewindExtra(parentId, x, y, cooldown, hFlip,
+                .withObjectSubclassExtra(new RewindExtra(parentId, x, y, cooldown, hFlip, vFlip,
                         mappingFrame, phase, drawSubmitted, participatesInRomWorldTransitionOffset(), artHigh));
     }
 
@@ -190,6 +195,7 @@ public final class EggRoboGunArmChildInstance extends AbstractObjectInstance
             y = extra.y();
             cooldown = extra.cooldown();
             hFlip = extra.hFlip();
+            vFlip = extra.vFlip();
             artHigh = extra.artHigh();
             mappingFrame = extra.mappingFrame();
             phase = extra.phase();
