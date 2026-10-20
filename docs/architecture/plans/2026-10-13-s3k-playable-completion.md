@@ -23063,3 +23063,45 @@ Owned session32164 exited0, its Python wrapper and Maven/JVM processes are
 absent, and this worker holds no live job or lease. Local commit and handoff
 retain the task branch/check-out and original reports; no integration or push
 is authorized in this worker.
+
+## Local source integration preparation — 2026-10-20 (UNVALIDATED)
+
+The isolated source candidate starts from Main `c13be267fd06771b982679a5ec840a23c2a26b11`
+and merges the complete accepted histories, without squash or rebase:
+Root composition `cf3cfd0b715050d94a3c2ac7d550126ecd733a83`, EggRobo vertical facing
+`545aac9389baea8be5501c8b5efb3b2e80cf5975`, MGZ packed-byte scaler
+`d69841ebbfae5ee3ccc85115e2b43850ed8fdf11`, and test-only literal swing controls
+`045a93ffbe3a5320ec2c01563b4631e625be1649`. Local merge commits are
+`1a3d077a4`, `f92765df5`, `d2d7c7abb` and `eca60c98d`, respectively.
+The accepted runtime/test blobs remain unchanged. Their earlier bounded focus
+records remain attached to their owning source; they do not validate this union.
+
+The composition/Main merge reproduces Root's preview tree
+`418daf0855d2692f6c0b299c5799033f91ceec87`. It retains the world/load/PLC work,
+Main's HUD anchor installation, both hook scanners and frozen ancestry-only
+trailer baseline, the drowning/HUD candidate-pin union, shared 0.7 branch-alias
+guidance, ADDRESS input/worktree-link handling and both documentation histories.
+Candidate API remains `0.7.0`, unpublished. The branch alias grants no authority
+to push `next`.
+
+Only after those merges, six exact Root-prepared corrections were applied:
+startup audio, HCZ progression-save and initial ProcessSprites fixtures use real
+native-root decorators; the rewind graph inventory names Flame, ship explosion
+and ICZ teleporter evidence; the finite fresh-load prefix includes physical RAM
+clear before RNG, DMA reset and title publication; and the sorted SONIC3K stock
+art catalogue includes `icz_teleporter`. All six whole preimages, count-one
+operations, postimage hashes and exact inverse checks are recorded in the
+implementation agent's existing private registry subtree. Assertions, error
+scopes, nonfresh gates, queued-DMA replay, isolated/exemption resources and
+production authority remain unchanged. The rejected mirrored classifier test
+was not added. The MGZ matrix's new machine-local checkout prose uses the
+explained `<OWNED_WORKTREE>` placeholder; the exact path remains private.
+
+This is LOCAL UNVALIDATED source/git preparation. No combined validation has
+been performed on this candidate, and no test outcome is inferred from source
+checks. Root owns the one original broad smoke at composition `cf3cfd0b`, its
+complete results/guards/skips read and diagnostic acknowledgment, then the
+accepted frozen candidate's 43 ordinary classes, eight fresh guards and Python
+policy checks. This worker did not inspect that run or launch validation,
+write `target/`, integrate into Main, push or clean up worktrees. The unchanged
+setup TraceChaser checkout remains unstaged against the merged gitlink.

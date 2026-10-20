@@ -481,6 +481,12 @@ public final class RewindRoundTripHarness {
                     "com.openggf.game.sonic3k.objects.bosses.HczEndBossRobotnikShip",
                     "TestS3kHczEndBossGraphRewind"),
             Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.HczEndBossRobotnikFlame",
+                    "TestS3kHczEndBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.HczEndBossShipExplosionController",
+                    "com.openggf.game.sonic3k.objects.bosses.TestHczEndBossShipExplosion"),
+            Map.entry(
                     "com.openggf.game.sonic3k.objects.bosses.HczEndBossTurbine",
                     "TestS3kHczEndBossGraphRewind"),
             Map.entry(
@@ -540,6 +546,9 @@ public final class RewindRoundTripHarness {
             Map.entry(
                     "com.openggf.game.sonic3k.objects.HCZCGZFanObjectInstance$FanPlatformChild",
                     "TestS3kHczCgzFanGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.IczTeleporterInstance",
+                    "com.openggf.tests.TestS3kIczKnucklesArrival"),
             Map.entry(
                     "com.openggf.game.sonic3k.objects.IczBigSnowPileInstance",
                     "com.openggf.game.sonic3k.objects.TestRewindFixS3KIczBigSnowPileCodec"),

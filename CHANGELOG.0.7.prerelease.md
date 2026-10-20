@@ -226,6 +226,7 @@ Unreleased. The earlier development themes remain in
   parent/child links, then hides Knuckles and raises the camera into the real
   IceCap load. His fresh IceCap arrival has its native contracting beam, swing
   release and solid pad, with allocation retry and complete-world restoration.
+  Its ROM-backed teleporter beam is also listed in the stock art catalogue.
   IceCap's direct animation tiles enter the snapshot domain before their first
   upload, preserving the earlier displayed bytes through entry rewind.
   Sky Sanctuary's EggRobo starts on the original object pass, hovers and launches

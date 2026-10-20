@@ -49,7 +49,7 @@ differences alone are not stock visual proof.
 
 Focused validation completed at 2026-10-20 21:09:22 UTC on base `cf3cfd0b7`
 plus this change, branch `feature/ai-s3k-packed-art-scaler-20261020`, isolated
-T3 checkout `/mnt/LinuxData/T3/worktrees/OpenGGF/t3-cb8a1a4d`.
+T3 checkout `<OWNED_WORKTREE>` (the task-owned isolated checkout).
 `JAVA_HOME=/usr/lib/jvm/java-25-openjdk` (25.0.4.1), its `bin` first on `PATH`,
 `env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null`, and the Main absolute
 `tools/testing/maven_queue.py --normal -Dmse=off

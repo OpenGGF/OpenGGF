@@ -122,8 +122,9 @@ class TestS3kVIntDmaLedgerProduction {
         fresh.setIncludePostLoadAssembly(true);
         fresh.setAssemblyKind(com.openggf.game.LevelAssemblyKind.FRESH_LEVEL_ASSEMBLY);
         List<String> names = profile.levelLoadSteps(fresh).stream().map(com.openggf.game.InitStep::name).toList();
-        assertEquals(List.of("ClearFreshLevelRng", "ResetFreshLevelDmaQueue", "PrepareFreshTitleCardSst"),
-                names.subList(0, 3), "$610E/$61C6 precede loc_62B6");
+        assertEquals(List.of("ClearFreshPhysicalDisplayRam", "ClearFreshLevelRng",
+                        "ResetFreshLevelDmaQueue", "PrepareFreshTitleCardSst"),
+                names.subList(0, 4), "loc_60DE clears physical display RAM before RNG; $61C6 precedes loc_62B6");
         for (var kind : List.of(com.openggf.game.LevelAssemblyKind.STATE_RESTORATION,
                 com.openggf.game.LevelAssemblyKind.DECODE_ONLY)) {
             var other = new com.openggf.game.LevelLoadContext();

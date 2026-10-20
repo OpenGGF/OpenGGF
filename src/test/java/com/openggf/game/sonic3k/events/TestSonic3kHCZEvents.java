@@ -5,11 +5,13 @@ import com.openggf.tests.TestEnvironment;
 
 import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
+import com.openggf.game.patch.DelegatingGameModule;
 import com.openggf.game.GameRng;
 import com.openggf.game.GameServices;
 import com.openggf.game.ScrollHandlerProvider;
 import com.openggf.game.ScrollHandlerProvider.ZoneConstants;
 import com.openggf.game.save.SaveSessionContext;
+import com.openggf.game.save.SaveSnapshotProvider;
 import com.openggf.game.save.SelectedTeam;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
@@ -52,7 +54,6 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 @RequiresRom(SonicGame.SONIC_3K)
@@ -78,9 +79,17 @@ class TestSonic3kHCZEvents {
         Path saveDir = Path.of("saves").resolve(gameCode);
         deleteRecursively(saveDir);
 
-        GameModule sessionModule = spy(new Sonic3kGameModule());
-        when(sessionModule.getSaveSnapshotProvider()).thenReturn((reason, ctx) -> Map.of("marker", "hcz_transition"));
-        when(sessionModule.rngFlavour()).thenReturn(GameRng.Flavour.S3K);
+        GameModule sessionModule = new DelegatingGameModule(new Sonic3kGameModule(), "test:hcz-transition") {
+            @Override
+            public SaveSnapshotProvider getSaveSnapshotProvider() {
+                return (reason, ctx) -> Map.of("marker", "hcz_transition");
+            }
+
+            @Override
+            public GameRng.Flavour rngFlavour() {
+                return GameRng.Flavour.S3K;
+            }
+        };
 
         SaveSessionContext saveContext = SaveSessionContext.forSlot(
                 gameCode, 1, new SelectedTeam("sonic", List.of("tails")), 1, 0);
