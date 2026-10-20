@@ -19,8 +19,61 @@ The initial native/default binding covers all three solo mains at 320; the finit
 | BOSS / LOAD: rescue, Knuckles boss, capsule/results and CNZ fade | `TestSonic3kMgz2EndBossEvents`, `TestMgzEndBossHandoffHeadless` | Late component fights and actual local handoff checks. The method named `eventSpawnedKnucklesBossCompletesRealFightCapsuleResultsAndAutoWalk` changes the config code after the shared Sonic fixture exists; it is a Knuckles event/boss context, not typed cold-Knuckles traversal. Listed bindings were setup-inspected, not independently rerun as a whole in this slice. |
 | LIFE / LOAD: physical post, actual death/restart and incoming/outgoing worlds | Native checkpoint/death/reload owners and the edges listed above | All 140 supported preset/donor/main/roster products are qualified by `TestS3kMgz2EntryMatrix#actualDeathReloadPreservesTheSupportedProductAndReplaysEachIncomingWorldTwice`: two actual deaths/reloads, exactly one life lost per restart, new world owners, outgoing live-history retirement, restored current roster/camera and two complete-world 45-frame restore/replay cycles after each released destination. Physical post activation and incoming/outgoing route edges remain separate obligations. |
 | PRESENT: actual viewport, palette/scroll/plane and audio | Act-owned ROM art/AniPLC/AnPal/event and music/SFX owners | Decoded playable source is checked at entry. Scene pixels, native audiovisual timing and viewport-edge parity require their own bounded native/GPU evidence. |
+| PRESENT: flying-boss warning packed art | [`TestMgzEndBossArtScaler`](../../../../src/test/java/com/openggf/game/sonic3k/objects/TestMgzEndBossArtScaler.java), production caller in `TestMgzDrillingRobotnikInstance` | The [bounded scaler correction](#packed-byte-warning-art-correction--2026-10-20) checks native copy/merge branches, separate full blocks/partial tail, vertical carry and mapping banks. It does not certify full-scene pixels, DMA/readiness timing, restored drawing or additional viewport/donor/team products. |
 | ROUTE: representative completion and compatibility axes | Authentic entry→mandatory mechanics→boss/results→released next state | Complete character-route composition, every preset/donor axis and applicable team-shape traversals remain open; short entry is not route certification. |
 | ORACLE: timing-sensitive native behavior | Existing MGZ trace bindings and [frontier log](../../../status/trace-frontier-log.md); no new strict trace run in this slice. | Preserve each owning strict-ledger result/source. Comparison rows do not supply gameplay; no strict trace or conformance sweep was run here. |
+
+## Packed-byte warning art correction — 2026-10-20
+
+Native authority is `sub_246DA` through `loc_24BD6`, including `loc_24984`,
+`loc_24906`, `loc_2479C` and `sub_24802`, plus `Map_ScaledArt`. The source is
+one ROM-backed 4096-byte bank with 64-byte scanlines. The former pixel-coordinate
+sampler chose the wrong nibble from alternate source bytes and missed the
+partial tail's after-advance clearing. Its test-only repeated-coordinate
+formula and unexplained output CRCs were rejected as independent evidence.
+The replacement preserves all modified-scale 4..9 special copy/merge branches,
+generic full blocks versus the partial tail, separate vertical fractional
+carry, existing mapping extents and column-major tile indices. It allocates
+one 64-byte row buffer per call and adds no retained state or new art producer.
+
+Literal tests include `12 34 -> 14` at original scale 4, modified 9's ninth-byte
+skip, fractional generic 12 and integer generic 16, full-block retention at
+index 64, partial-tail clearing and 32-row banks. Stock MGZ source at ROM
+`$36C572..$36D572` is pinned by SHA-256
+`a6217a7e6879aec9d7845e4f4fbeeb9dbed0d5bc66c5449b45a53a62dbb751f9`.
+At original scale `$7C`, source row 16 bytes `00/44/55/BB` at offsets `0/16/32/48`
+produce `04 50`, with the fourth sample cleared. A separately pinned stock
+EggRobo bank is only an additional input vector; the production helper remains
+MGZ-only. Both banks duplicate high/low nibbles, so interior synthetic nibble
+differences alone are not stock visual proof.
+
+Focused validation completed at 2026-10-20 21:09:22 UTC on base `cf3cfd0b7`
+plus this change, branch `feature/ai-s3k-packed-art-scaler-20261020`, isolated
+T3 checkout `/mnt/LinuxData/T3/worktrees/OpenGGF/t3-cb8a1a4d`.
+`JAVA_HOME=/usr/lib/jvm/java-25-openjdk` (25.0.4.1), its `bin` first on `PATH`,
+`env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null`, and the Main absolute
+`tools/testing/maven_queue.py --normal -Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl -Dtest=... -Dsurefire.forkCount=1
+-Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical test -B` completed
+226 tests / 0 failures / 0 errors / 0 skips. The selector comprised the whole
+classes `TestMgzEndBossArtScaler` (13), `TestMgzDrillingRobotnikInstance` (64),
+`TestMgzEndBossHandoffHeadless` (7), `TestSonic3kPlcArtRegistry` (82),
+`TestSonic3kBootstrapResolver` (6), `TestSonic3kDecodingUtils` (3),
+`com.openggf.game.sonic3k.TestSonic3kLevelLoading` (36),
+`TestS3kAiz1SkipHeadless` (8) and `com.openggf.tests.TestSonic3kLevelLoading` (7).
+All three verified root ROMs were supplied by absolute `sonic1.rom.path`,
+`sonic2.rom.path` and `s3k.rom.path`; reports and native temporary files used
+this checkout's `target/packed-scaler-focused-20261020/candidate-1/`.
+Queue waiting was 11 s; Maven execution was 1m22s, including compilation.
+The tracked source/build-input fingerprint was SHA-256
+`8828862e4652900d20573a057630b94ba0fedfb6723cd149ba7faa5774f2221c`;
+the exact argument vector and fingerprint definition remain in the task's
+existing implementation registry entry for Root's handoff.
+
+Inherited native rendered-scene, DMA/readiness timing, full-world
+restore/re-render and route/preset/donor/team breadth remain open. No strict
+trace, SSZ producer adoption, broad smoke or full-suite result is claimed here;
+Root owns combined integration and delivery.
 
 ## Qualification — 2026-10-14
 

@@ -348,6 +348,8 @@ Unreleased. The earlier development themes remain in
   Rhinobot waits for its native placeholder render sign and keeps initialization
   and delayed slot retirement as separate phases, including through rewind.
   It remains dormant while vertically hidden.
+  Marble Garden's flying-boss warning art follows the ROM's packed-byte merges
+  and final partial-block clearing.
   AIZ muzzle flares keep their native initialization, raw-animation and delayed
   retirement phases. Their physical parent link reads cleared or reused slots
   without borrowing a detached parent, and restores through rewind.
