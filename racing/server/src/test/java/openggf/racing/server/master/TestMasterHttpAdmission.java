@@ -11,7 +11,9 @@ import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ScheduledFuture;
 import org.junit.jupiter.api.Test;
@@ -41,6 +43,272 @@ import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.doThrow;
 
 class TestMasterHttpAdmission {
+    @Test
+    void unsupportedExpectationStormHasOneTerminalResponseAndBoundedCleanup() {
+        assertExpectationRejectionBounded("unsupported", 0, HttpResponseStatus.EXPECTATION_FAILED);
+    }
+
+    @Test
+    void oversizedContinueExpectationStormHasOneTerminalResponseAndBoundedCleanup() {
+        assertExpectationRejectionBounded("100-continue", 73_729,
+                HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE);
+    }
+
+    @Test
+    void oversizedDeclaredBodyWithoutExpectationHasOneTerminalResponseAndBoundedCleanup() {
+        assertPreAggregationRejectionBounded("POST /verifier/verdicts HTTP/1.1\r\n"
+                        + "Host: localhost\r\nContent-Length: 73729\r\n\r\n", 1000,
+                "oversized declared body", HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE);
+    }
+
+    @Test
+    void oversizedChunkedBodyHasOneTerminalResponseAndBoundedCleanup() {
+        assertPreAggregationRejectionBounded("POST /verifier/verdicts HTTP/1.1\r\n"
+                        + "Host: localhost\r\nTransfer-Encoding: chunked\r\n\r\n12001\r\n"
+                        + "x".repeat(73_729) + "\r\n0\r\n\r\n", 3,
+                "oversized chunked body", HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE);
+    }
+
+    @Test
+    void mixedExpectationFieldsCannotHideAnUnsupportedValue() {
+        for (String expectations : new String[]{"100-continue\r\nExpect: unsupported",
+                "unsupported\r\nExpect: 100-continue", "100-continue, unsupported"}) {
+            assertExpectationRejectionBounded(expectations, 0, HttpResponseStatus.EXPECTATION_FAILED);
+        }
+    }
+
+    private static void assertExpectationRejectionBounded(String expectation, int contentLength,
+                                                           HttpResponseStatus status) {
+        assertPreAggregationRejectionBounded("POST /verifier/verdicts HTTP/1.1\r\nHost: localhost\r\nExpect: "
+                + expectation + "\r\nContent-Length: " + contentLength + "\r\n\r\n", 1000,
+                expectation, status);
+    }
+
+    private static void assertPreAggregationRejectionBounded(String request, int repetitions,
+                                                               String scenario, HttpResponseStatus status) {
+        for (String completion : new String[]{"storm", "timeout", "success", "disconnect", "removal"}) {
+            var broker = new ArrayDeque<Runnable>();
+            var admission = new MasterHttpAdmission(broker::add);
+            var held = new ArrayList<Object>();
+            var promises = new ArrayList<ChannelPromise>();
+            var reads = new AtomicInteger();
+            var routes = routes(admission, broker::add, MasterConfig.defaults());
+            var channel = new EmbeddedChannel(new HttpServerCodec(), new ChannelOutboundHandlerAdapter() {
+                @Override
+                public void read(ChannelHandlerContext context) {
+                    reads.incrementAndGet();
+                    context.read();
+                }
+
+                @Override
+                public void write(ChannelHandlerContext context, Object message, ChannelPromise promise) {
+                    held.add(message);
+                    promises.add(promise);
+                }
+            }, routes.pipelineGuard(), new HttpObjectAggregator(73_728), routes);
+            var wire = Unpooled.copiedBuffer(request.repeat(completion.equals("storm") ? repetitions : 1),
+                    StandardCharsets.US_ASCII);
+            try {
+                int previousReads = reads.get();
+                channel.writeInbound(wire);
+                assertEquals(1, held.size(), scenario + ": rejected requests must not amplify writes");
+                assertEquals(status, ((FullHttpResponse) held.getFirst()).status());
+                assertEquals("close", ((FullHttpResponse) held.getFirst()).headers().get("Connection"));
+                assertFalse(channel.config().isAutoRead());
+                assertEquals(previousReads, reads.get(), "terminal rejection must not request more input");
+                assertNull(channel.pipeline().get(HttpObjectAggregator.class), "release partial aggregation");
+                // The default decoder can independently close a storm at its pipeline-depth cap.
+                // A single request must remain open so its held write actually tests the deadline.
+                if (!completion.equals("storm")) {
+                    assertTrue(channel.isOpen(), "the test holds the response write pending");
+                }
+                assertEquals(0, wire.refCnt());
+                assertTrue(broker.isEmpty());
+                var available = admission.reserve(8 * 1024 * 1024);
+                assertNotNull(available, "rejected headers must not retain a body reservation");
+                available.finish();
+                switch (completion) {
+                    case "timeout" -> {
+                        channel.advanceTimeBy(29, TimeUnit.SECONDS);
+                        channel.runScheduledPendingTasks();
+                        assertTrue(channel.isOpen());
+                        channel.advanceTimeBy(2, TimeUnit.SECONDS);
+                        channel.runScheduledPendingTasks();
+                    }
+                    case "storm", "success" -> promises.getFirst().trySuccess();
+                    case "disconnect" -> channel.close();
+                    case "removal" -> channel.pipeline().remove(routes);
+                    default -> throw new AssertionError(completion);
+                }
+                assertFalse(channel.isOpen(), completion);
+                promises.getFirst().trySuccess();
+                assertFalse(channel.config().isAutoRead());
+                assertEquals(-1L, channel.runScheduledPendingTasks(), "deadline must be cleaned up");
+            } finally {
+                held.forEach(io.netty.util.ReferenceCountUtil::release);
+                promises.forEach(promise -> promise.trySuccess());
+                channel.finishAndReleaseAll();
+            }
+        }
+    }
+
+    @Test
+    void splitChunkedOverflowReleasesPartialAggregateWithoutAnotherRead() {
+        var admission = new MasterHttpAdmission(Runnable::run);
+        var held = new ArrayList<Object>();
+        var promises = new ArrayList<ChannelPromise>();
+        var reads = new AtomicInteger();
+        var routes = routes(admission, Runnable::run, MasterConfig.defaults());
+        var channel = new EmbeddedChannel(new HttpServerCodec(), new ChannelOutboundHandlerAdapter() {
+            @Override
+            public void read(ChannelHandlerContext context) {
+                reads.incrementAndGet();
+                context.read();
+            }
+
+            @Override
+            public void write(ChannelHandlerContext context, Object message, ChannelPromise promise) {
+                held.add(message);
+                promises.add(promise);
+            }
+        }, routes.pipelineGuard(), new HttpObjectAggregator(73_728), routes);
+        var prefix = Unpooled.copiedBuffer("POST /verifier/verdicts HTTP/1.1\r\nHost: localhost\r\n"
+                + "Transfer-Encoding: chunked\r\n\r\n12000\r\n" + "x".repeat(73_728) + "\r\n",
+                StandardCharsets.US_ASCII);
+        var overflow = Unpooled.copiedBuffer("1\r\nx\r\n0\r\n\r\n", StandardCharsets.US_ASCII);
+        try {
+            channel.writeInbound(prefix);
+            assertTrue(prefix.refCnt() > 0, "positive control: aggregator owns the incomplete body");
+            assertTrue(held.isEmpty());
+            int previousReads = reads.get();
+            channel.writeInbound(overflow);
+            assertEquals(1, held.size());
+            assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, ((FullHttpResponse) held.getFirst()).status());
+            assertEquals(previousReads, reads.get(), "partial aggregator must not request another read");
+            assertNull(channel.pipeline().get(HttpObjectAggregator.class));
+            assertEquals(0, prefix.refCnt(), "release the partial body before the response completes");
+            assertEquals(0, overflow.refCnt());
+            assertFalse(channel.config().isAutoRead());
+            assertTrue(channel.isOpen());
+            channel.advanceTimeBy(31, TimeUnit.SECONDS);
+            channel.runScheduledPendingTasks();
+            assertFalse(channel.isOpen());
+        } finally {
+            held.forEach(io.netty.util.ReferenceCountUtil::release);
+            promises.forEach(promise -> promise.trySuccess());
+            channel.finishAndReleaseAll();
+        }
+    }
+
+    @Test
+    void removingGuardClosesActiveOrTerminalExchangeAndReleasesItsState() {
+        for (String exchange : new String[]{"aggregating", "broker", "terminal"}) {
+            var broker = new ArrayDeque<Runnable>();
+            var admission = new MasterHttpAdmission(broker::add);
+            var held = new ArrayList<Object>();
+            var promises = new ArrayList<ChannelPromise>();
+            var routes = routes(admission, broker::add, MasterConfig.defaults());
+            var guard = routes.pipelineGuard();
+            var channel = new EmbeddedChannel(new HttpServerCodec(), new ChannelOutboundHandlerAdapter() {
+                @Override
+                public void write(ChannelHandlerContext context, Object message, ChannelPromise promise) {
+                    held.add(message);
+                    promises.add(promise);
+                }
+            }, guard, new HttpObjectAggregator(73_728), routes);
+            String request = exchange.equals("terminal")
+                    ? "POST /verifier/verdicts HTTP/1.1\r\nExpect: unsupported\r\nContent-Length: 0\r\n\r\n"
+                    : "POST /verifier/verdicts HTTP/1.1\r\nContent-Length: 16\r\n\r\n"
+                    + "x".repeat(exchange.equals("aggregating") ? 4 : 16);
+            var wire = Unpooled.copiedBuffer(request, StandardCharsets.US_ASCII);
+            try {
+                channel.writeInbound(wire);
+                assertTrue(channel.isOpen());
+                channel.pipeline().remove(guard);
+                assertFalse(channel.isOpen(), exchange);
+                assertEquals(0, wire.refCnt(), exchange);
+                while (!broker.isEmpty()) broker.remove().run();
+                var available = admission.reserve(8 * 1024 * 1024);
+                assertNotNull(available, exchange);
+                available.finish();
+                assertEquals(exchange.equals("terminal") ? 1 : 0, held.size(), exchange);
+                assertEquals(-1L, channel.runScheduledPendingTasks());
+            } finally {
+                held.forEach(io.netty.util.ReferenceCountUtil::release);
+                promises.forEach(promise -> promise.trySuccess());
+                channel.finishAndReleaseAll();
+            }
+        }
+    }
+
+    @Test
+    void idleGuardPassesWebSocketFramesAndCanBeRemovedWithoutClosing() {
+        var admission = new MasterHttpAdmission(Runnable::run);
+        var routes = routes(admission, Runnable::run, MasterConfig.defaults());
+        var guard = routes.pipelineGuard();
+        var channel = new EmbeddedChannel(guard, routes);
+        var frame = new TextWebSocketFrame("upgraded traffic");
+        try {
+            channel.writeInbound(frame);
+            assertEquals(frame, channel.readInbound());
+            channel.pipeline().remove(guard);
+            assertTrue(channel.isOpen());
+        } finally {
+            frame.release();
+            channel.finishAndReleaseAll();
+        }
+    }
+
+    @Test
+    void validContinueExpectationStillAggregatesAndAllowsSequentialKeepAlive() {
+        var broker = new ArrayDeque<Runnable>();
+        var admission = new MasterHttpAdmission(broker::add);
+        var statuses = new ArrayList<HttpResponseStatus>();
+        var routes = routes(admission, broker::add, MasterConfig.defaults());
+        var channel = new EmbeddedChannel(new HttpServerCodec(), new ChannelOutboundHandlerAdapter() {
+            @Override
+            public void write(ChannelHandlerContext context, Object message, ChannelPromise promise)
+                    throws Exception {
+                if (message instanceof HttpResponse response) statuses.add(response.status());
+                super.write(context, message, promise);
+            }
+        }, routes.pipelineGuard(), new HttpObjectAggregator(73_728), routes);
+        try {
+            channel.writeInbound(Unpooled.copiedBuffer("POST /verifier/verdicts HTTP/1.1\r\n"
+                    + "Host: localhost\r\nExpect: 100-CONTINUE\r\nContent-Length: 16\r\n\r\n",
+                    StandardCharsets.US_ASCII));
+            assertEquals(java.util.List.of(HttpResponseStatus.CONTINUE), statuses);
+            assertTrue(broker.isEmpty());
+            channel.writeInbound(Unpooled.copiedBuffer("x".repeat(16), StandardCharsets.US_ASCII));
+            assertEquals(1, broker.size());
+            broker.remove().run();
+            channel.runPendingTasks();
+            channel.writeInbound(Unpooled.copiedBuffer("POST /verifier/verdicts HTTP/1.1\r\n"
+                    + "Host: localhost\r\nContent-Length: 0\r\n\r\n", StandardCharsets.US_ASCII));
+            assertEquals(1, broker.size());
+            broker.remove().run();
+            channel.runPendingTasks();
+            String chunked = "POST /verifier/verdicts HTTP/1.1\r\nHost: localhost\r\n"
+                    + "Transfer-Encoding: chunked\r\n\r\n12000\r\n" + "x".repeat(73_728) + "\r\n0\r\n\r\n";
+            for (String next : new String[]{chunked, chunked,
+                    "POST /verifier/verdicts HTTP/1.0\r\nHost: localhost\r\nConnection: keep-alive\r\n"
+                            + "Expect: unsupported\r\nContent-Length: 0\r\n\r\n"}) {
+                channel.writeInbound(Unpooled.copiedBuffer(next, StandardCharsets.US_ASCII));
+                assertEquals(1, broker.size());
+                broker.remove().run();
+                channel.runPendingTasks();
+            }
+            assertEquals(java.util.List.of(HttpResponseStatus.CONTINUE,
+                    HttpResponseStatus.UNAUTHORIZED, HttpResponseStatus.UNAUTHORIZED,
+                    HttpResponseStatus.UNAUTHORIZED, HttpResponseStatus.UNAUTHORIZED,
+                    HttpResponseStatus.UNAUTHORIZED), statuses);
+            assertTrue(channel.isOpen());
+            assertTrue(channel.config().isAutoRead());
+        } finally {
+            channel.finishAndReleaseAll();
+        }
+    }
+
     @Test
     void malformedKeepAliveResponsePausesReadsAndRejectsSameReadOverlap() {
         for (boolean guard : new boolean[]{false, true}) {

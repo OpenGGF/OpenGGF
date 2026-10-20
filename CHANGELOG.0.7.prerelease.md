@@ -15,7 +15,8 @@ Unreleased. The earlier development themes remain in
 
 - **Multiplayer services:** The master recording/verifier API bounds outstanding
   requests and copied bodies across connections, closes overlapping HTTP pipelines,
-  discards further input during terminal rejection writes, and releases queued work
+  bounds rejection writes before HTTP aggregation, discards further input during
+  terminal rejection writes, and releases queued work
   on disconnect or timeout even during executor shutdown. Netty and Jackson use their
   patched 4.1.139.Final and 2.22.3 releases.
 
