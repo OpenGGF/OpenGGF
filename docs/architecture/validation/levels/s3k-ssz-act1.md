@@ -4187,7 +4187,7 @@ full-route correctness and why the group2 gate rejects remain unqualified.
 
 Expected46, every maintained movie/assertion and runtime stay unchanged. All
 temporary source is restored whole byte exact; its compiled classes and inspected
-raw output are consumed. The [dated R5 plan](../../plans/2026-10-13-s3k-playable-completion.md#widepaired800-fighter-gun-shot-and-pickup-attribution-r5-2026-10-21)
+raw output are consumed. The [dated R5 plan](../../plans/2026-10-13-s3k-playable-completion.md#widepaired800-fighter-gun-shot-and-pickup-attribution-r5--2026-10-21)
 records native owners, strong bindings, source verdict and limits. No third request,
 maintained-class/broad/native run, oracle adaptation or current paired800
 MTZ/Mecha/DEZ certification follows this attribution; Main complete remains unknown.
