@@ -735,6 +735,59 @@ Java heap fell from 103.2 to 97.2 MiB; the one- and two-room samples stayed near
 below baseline. That single native-RSS result is measurement variance or off-heap
 retention until reproduced. It is not evidence for reducing the 4 GiB allocation.
 
+### Lifecycle-stage performance interpretation
+
+The scale report deliberately separates admission counters from a common steady
+traffic window. Finish, standings, reset, reconnect and room removal happen after
+that window and are asserted for correctness, but their duration, bytes, CPU and
+memory are not currently recorded as separate phase metrics. The table therefore
+labels each observation by its actual boundary rather than distributing whole-run
+cost across stages.
+
+| Lifecycle stage | Measured boundary | Components doing material work | Four-room optimized observation | Scaling interpretation |
+|---|---|---|---|---|
+| Cold process boot and configuration | Outside the scale process window; present only in whole-recording profiles | JVM/class loading, Netty, HTTP server, configuration, track catalogue, SQLite schema/index setup, blob reconciliation | No isolated elapsed, CPU or allocation total | Usually amortized. Blob reconciliation remains O(stored files) at boot and should be timed once stores reach production cardinality. |
+| Room creation and directory publication | Before lobby fill; browser probes also run every 2 s during steady traffic | Master broker, room directory, relay ownership, browser JSON | Worst browser request was 10.78 ms with four published rooms | Current room count is too small to judge directory scale. Accepted browser requests still scan and copy matching rooms, so many-room discovery needs its own matrix before adding an index. |
+| Identity, authentication and lobby admission | Per-room counter from first join until the complete 256-member roster is observed | Source admission, proof of work, SQLite identity lookup, control JSON, broker routing, room membership | Slowest fill 7.662 s; worst join p99 49.61 ms; 1.59 MiB upstream and 51.19 MiB downstream for 1,024 players | Membership deltas removed the immediate cubic-byte failure. Production TLS, 20/22-bit PoW, fresh identities and shared NAT remain outside this result and can dominate first-use latency. |
+| Lobby idle and countdown | Three-second warmup before the measured traffic window; bytes and CPU are not split from adjacent phases | Round configuration/start, control fanout, pings, publisher priming, JIT warmup | All clients agreed on one countdown and entered the round | Countdown is a synchronization boundary rather than a proven cheap phase. Add a stage marker before using it to set timeout or CPU budgets. |
+| Steady race relay | Exact common 10.000 s process and TCP window after warmup | Client publishers, binary codec, validator, room actor, hub/relevance, aggregate fanout, broker/browser/admission probes | Server 6.58 CPU-s; 591.9 MiB peak sampled RSS; 97.2 MiB peak used heap; 11 ms GC; 6.36 MiB upstream and 48.35 MiB downstream | About 0.66 server core and 40.6 Mbit/s downstream payload. Tick p99 5.07 ms and queue p99 0.043 ms remain well inside the 50 ms hub cadence. Egress leads CPU at this scale. |
+| Rendered middle-pack gameplay | One 53.933 s JFR route window inside the separate 106.775 s recording | Engine gameplay, client pump, jitter buffers, ghost registry, HUD, sprites, renderer, colocated bots/server | Rank 130/256; 181 distinct ghosts; peak eight active; 91.7 ms aggregate GC pauses; 1,216 Java execution observations | Visibility replacement works under movement. The recording is paced, captured and colocated, so it establishes component presence and allocation priorities, not incremental client frame cost. |
+| Finish burst | Begins after the scale process/TCP window | Attempt validation, round engine, standings sort/rank lookup, top-ten delta encode and fanout | All 1,024 finishes accepted; phase time/CPU/bytes unmeasured | Each improved finish broadcasts to the room, giving O(n²) delivered control messages. This is the most important missing burst measurement and may become client-decode or egress bound before server serialization bound. |
+| Full standings retrieval and round end | After every accepted finish and outside the measured window | Standings pagination, control codec, client decode, round-end fanout | 26 pages per room, 104 total, returned every player with unique ranks | Page payload is bounded, but full ranking/sorting and concurrent client decode should be timed separately from the finish storm. |
+| Next-round reset and reconnect | After standings and outside the measured window | Room reset, membership deltas, session issuance, client registry/playback retirement | One reset and one replacement reconnect per room completed cleanly | Correct lifecycle is established; latency and retained-state cost are not. Repeated churn and reconnect storms remain a capacity gap. |
+| Host departure and teardown | Final harness phase | Broker disconnect, hosted-room removal, tunnel/client close, executor and port retirement | All rooms disappeared, proxies terminated and the server port was released | Clean ownership is established. Large simultaneous disconnect storms and slow-close peers are unmeasured. |
+| Recording upload and blob admission | Separate focused microbenchmark/correctness coverage | HTTP admission, hash/name checks, staged atomic publication, blob accounting, verification queue | With 10,000 files, 20 unique writes improved from 22.18 ms p50 / 28.07 ms p95 to 0.055 / 0.349 ms | Metadata scans are removed from the hot write path. Disk flush latency, concurrent uploads and a full storage volume still need production-media measurements. |
+| Verification and verdict | Allocation microbench plus focused lifecycle tests; no completed ROM-backed scale replay | Input decode, engine replay, hashes, heartbeat lease, verdict/signature, identity/sanction update | 36,000-frame mask scan improved from 96.3 ms and 1.297 GB allocated to 1.29 ms and 36 KB; one worker still runs one replay at a time | Worker throughput is intentionally unknown. Scale on queue age and measured replay time; CPU and ROM-backed replay duration are likely to lead, not the optimized mask scan. |
+
+The profiled rendered recording provides a coarse wall-clock envelope: 33.039 s
+from recording start to the route marker, 53.933 s in the route, and 19.803 s from
+natural-route marker end through post-finish work and owned shutdown. Those outer
+intervals include process setup, synchronization, diagnostics and capture teardown;
+they are not lobby and finish timings. The final unprofiled demonstration is
+96.133 s end to end and likewise must not be decomposed without explicit markers.
+
+Across components, the dominant phase changes over the lifecycle:
+
+| Component | Phase where it matters most | Current evidence | Operational signal |
+|---|---|---|---|
+| Master broker and directory | Admission, browser polling, departure | Admission and browser latency plus broker-dispatch JFR | Browser latency correlated with room ticks; broker dispatch p99; active rooms per process |
+| Authentication, PoW and identity SQLite | First connection and reconnect | Optimized PoW microbenchmark and indexed predicates; production login storm unmeasured | Auth p50/p95/p99 by established/new identity, PoW difficulty and TLS state; SQLite busy time |
+| Room actor and round engine | Start, finish storm, reset | Tick/queue metrics during steady racing; lifecycle assertions afterward | Queue delay, handler duration and pending events by phase |
+| Ghost validator, hub and relevance | Steady racing | 5.07 ms worst room-tick p99; dense candidate discovery still quadratic | Candidate visits, drained senders, output neighbors, degraded/roster-only clients |
+| Relay and WebSocket egress | Admission and steady racing | 98.5% admission and 24.4% steady downstream reductions | Bytes per room/player/phase, socket write backlog and slow-consumer age |
+| Client codec and inbound pump | Admission, racing, finish storm | Client control JSON led sampled relay Java owners; queue capped at 512 events | Decode time, queue high-water mark, dropped/coalesced events and main-thread drain budget |
+| Jitter buffer and remote ghost registry | Racing and reconnect | 181 identities rotated through a peak of eight active ghosts | Buffered frames per slot, interpolation delay, extrapolation count and stale-retirement lag |
+| HUD and rendering | Rendered race, finish/round-end UI | Component presence and allocation samples, without matched frame-time control | CPU/GPU frame percentiles with multiplayer disabled/enabled on the same route |
+| Recording and uploader | Whole attempt and immediate post-finish | Recording mask allocation fixed; upload concurrency bounded | Recording bytes/minute, pending uploads, retries, upload age and failure reason |
+| Blob store and verification queue | Post-finish | Focused write benchmark and correctness tests | Disk latency/free space, queue age/depth, lease age and deduplication ratio |
+| Verifier worker | Post-finish asynchronous replay | Heartbeat correctness and allocation microbench only | Replay wall/CPU seconds per gameplay second, lease renewals, verdict latency and worker saturation |
+
+The first production instrumentation should add explicit markers around cold start,
+room publication, lobby fill, countdown, finish burst, standings, reset/reconnect,
+upload and verifier replay. The steady-race window is already sufficient to set a
+pilot relay envelope; assigning its averages to those burst phases would hide the
+remaining scaling risks.
+
 ### Removed hotspots
 
 Three allocation/storage costs were fixed after reproducing them independently:
